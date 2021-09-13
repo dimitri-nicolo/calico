@@ -1,5 +1,5 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
-package gateway
+package handlers
 
 import (
 	"crypto/tls"
@@ -9,16 +9,15 @@ import (
 	"net/http"
 	"net/http/httputil"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/es-gateway/pkg/middlewares"
 	"github.com/tigera/es-gateway/pkg/proxy"
 )
 
 // GetProxyHandler generates an HTTP proxy handler based on the given Target.
-func GetProxyHandler(t *proxy.Target) (func(http.ResponseWriter, *http.Request), error) {
+func GetProxyHandler(t *proxy.Target, modifyResponseFunc func(*http.Response) error) (http.HandlerFunc, error) {
 	p := httputil.NewSingleHostReverseProxy(t.Dest)
 	p.FlushInterval = -1
 
@@ -81,10 +80,7 @@ func GetProxyHandler(t *proxy.Target) (func(http.ResponseWriter, *http.Request),
 
 		// Use the modify response hook function to log the return value for response.
 		// This is useful for troubleshooting and debugging.
-		p.ModifyResponse = func(res *http.Response) error {
-			log.Debugf("Response to request %s (proxied to %s): [HTTP %s]", res.Request.URL, t.Dest, res.Status)
-			return nil
-		}
+		p.ModifyResponse = modifyResponseFunc
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {

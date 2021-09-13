@@ -48,6 +48,10 @@ type Config struct {
 	KibanaClientKeyPath   string `default:"/certs/kibana/client.key" split_words:"true"`
 	KibanaClientCertPath  string `default:"/certs/kibana/client.crt" split_words:"true"`
 	EnableKibanaMutualTLS bool   `default:"false" split_words:"true"`
+
+	// Prometheus metrics are exposed on this port.
+	MetricsEnabled bool `default:"false" split_words:"true"`
+	MetricsPort    int  `default:"9091" split_words:"true"`
 }
 
 // Return a string representation on the Config instance.

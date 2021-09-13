@@ -18,7 +18,8 @@ import (
 type GatewayContextKey string
 
 const (
-	ESUserKey GatewayContextKey = "esUser"
+	ESUserKey    GatewayContextKey = "esUser"
+	ClusterIDKey GatewayContextKey = "clusterID"
 )
 
 // User contains the revelant user metadata we want to pass between middlewares.

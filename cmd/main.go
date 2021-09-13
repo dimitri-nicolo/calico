@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/tigera/es-gateway/pkg/metrics"
+
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 
@@ -169,9 +171,28 @@ func main() {
 		server.WithAdminUser(cfg.ElasticUsername, cfg.ElasticPassword),
 	}
 
+	var collector metrics.Collector
+
+	if cfg.MetricsEnabled {
+		log.Debugf("starting a metrics server on port %v", cfg.MetricsPort)
+		collector, err = metrics.NewCollector()
+		if err != nil {
+			log.Fatal(err)
+		}
+		opts = append(opts, server.WithCollector(collector))
+	}
+
 	srv, err := server.New(opts...)
 	if err != nil {
 		log.WithError(err).Fatal("failed to create ES Gateway server.")
+	}
+
+	if cfg.MetricsEnabled {
+		metricsAddr := fmt.Sprintf("%v:%v", cfg.Host, cfg.MetricsPort)
+		go func() {
+			log.Infof("ES Gateway listening for metrics requests at %s", metricsAddr)
+			log.Fatal(collector.Serve(metricsAddr))
+		}()
 	}
 
 	log.Infof("ES Gateway listening for HTTPS requests at %s", addr)

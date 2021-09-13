@@ -15,8 +15,9 @@ import (
 	"github.com/tigera/es-gateway/pkg/clients/elastic"
 	"github.com/tigera/es-gateway/pkg/clients/kibana"
 	"github.com/tigera/es-gateway/pkg/clients/kubernetes"
-	"github.com/tigera/es-gateway/pkg/handlers/gateway"
+	"github.com/tigera/es-gateway/pkg/handlers"
 	"github.com/tigera/es-gateway/pkg/handlers/health"
+	"github.com/tigera/es-gateway/pkg/metrics"
 	mid "github.com/tigera/es-gateway/pkg/middlewares"
 	"github.com/tigera/es-gateway/pkg/proxy"
 )
@@ -46,7 +47,8 @@ type Server struct {
 	adminESUsername string // Used to store the username for a real ES admin user
 	adminESPassword string // Used to store the password for a real ES admin user
 
-	cache cache.SecretsCache // Used to store secrets related authN and credential swapping
+	cache     cache.SecretsCache // Used to store secrets related authN and credential swapping
+	collector metrics.Collector  // Used to collect prometheus metrics.
 }
 
 // New returns a new ES Gateway server. Validate and set the server options. Set up the Elasticsearch and Kibana
@@ -81,19 +83,14 @@ func New(opts ...Option) (*Server, error) {
 	// Set up all routing for ES Gateway server (using Gorilla Mux).
 	// -----------------------------------------------------------------------------------------------------
 	router := mux.NewRouter()
-	middlewares := mid.GetHandlerMap(
-		srv.esClient,
-		srv.cache,
-		srv.adminESUsername,
-		srv.adminESPassword,
-	)
+	middlewares := mid.GetHandlerMap(srv.cache)
 
 	// Route Handling #1: Handle the ES Gateway health check endpoint
 	healthHandler := health.GetHealthHandler(srv.esClient, srv.kbClient, srv.k8sClient)
 	router.HandleFunc("/health", healthHandler).Name("health")
 
 	// Route Handling #2: Handle any Kibana request, which we expect will have a common path prefix.
-	kibanaHandler, err := gateway.GetProxyHandler(srv.kibanaTarget)
+	kibanaHandler, err := handlers.GetProxyHandler(srv.kibanaTarget, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +101,7 @@ func New(opts ...Option) (*Server, error) {
 		srv.kibanaTarget.Routes,
 		srv.kibanaTarget.CatchAllRoute,
 		middlewares,
-		http.HandlerFunc(kibanaHandler),
+		kibanaHandler,
 	)
 	if err != nil {
 		return nil, err
@@ -112,7 +109,7 @@ func New(opts ...Option) (*Server, error) {
 
 	// Route Handling #3: Handle any Elasticsearch request. We do the Elasticsearch section last because
 	// these routes do not have a universally common path prefix.
-	esHandler, err := gateway.GetProxyHandler(srv.esTarget)
+	esHandler, err := handlers.GetProxyHandler(srv.esTarget, handlers.ElasticModifyResponseFunc(srv.collector))
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +118,7 @@ func New(opts ...Option) (*Server, error) {
 		srv.esTarget.Routes,
 		srv.esTarget.CatchAllRoute,
 		middlewares,
-		http.HandlerFunc(esHandler),
+		esHandler,
 	)
 	if err != nil {
 		return nil, err

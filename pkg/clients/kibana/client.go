@@ -85,15 +85,14 @@ func (c *client) GetKibanaStatus() error {
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
 
-	// Dump response
-	data, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return err
-	}
-
-	if res.StatusCode != http.StatusOK {
+	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
+		// Dump response
+		defer res.Body.Close()
+		data, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return err
+		}
 		return fmt.Errorf(string(data))
 	}
 

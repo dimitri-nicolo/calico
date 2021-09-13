@@ -2,6 +2,7 @@
 package middlewares
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -16,8 +17,9 @@ const (
 	ElasticsearchCredsSecretSuffix = "elasticsearch-access-gateway"
 	ESGatewayPasswordSecretSuffix  = "gateway-verification-credentials"
 	// Below are the expected fields within the data section of an ES credential K8s secret.
-	SecretDataFieldUsername = "username"
-	SecretDataFieldPassword = "password"
+	SecretDataFieldUsername    = "username"
+	SecretDataFieldPassword    = "password"
+	SecretDataFieldClusterName = "cluster_name"
 )
 
 // swapElasticCredHandler returns an HTTP handler which acts as a middleware to swap the credentials attached to
@@ -37,18 +39,22 @@ func swapElasticCredHandler(c cache.SecretsCache, next http.Handler) http.Handle
 
 		// Attempt to lookup a credentials for matching ES user (i.e. can be used with ES API) that matches to the current user.
 		secretName := fmt.Sprintf("%s-%s", user.Username, ElasticsearchCredsSecretSuffix)
-		username, password, err := getPlainESCredentials(c, secretName)
+		username, password, clusterID, err := getPlainESCredentials(c, secretName)
 		if err != nil {
 			log.Errorf("unable to authenticate user: %s", err)
 			http.Error(w, "unable to authenticate user", http.StatusUnauthorized)
 			return
 		}
 		// Set swapped ES user credentials on the request
-		r.SetBasicAuth(string(username), string(password))
+		r.SetBasicAuth(username, password)
 		log.Debugf("Found ES credentials for real user [%s] for request with URI %s", username, r.RequestURI)
 
+		// Add the clusterID to the context for other handlers to read.
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, ClusterIDKey, clusterID)
+
 		// Call the next handler, which can be another middleware in the chain, or the final handler.
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
@@ -60,21 +66,26 @@ func NewSwapElasticCredMiddlware(c cache.SecretsCache) func(http.Handler) http.H
 }
 
 // getPlainESCredentials attempts to retrieve credentials from the given secretName using the provided k8s client for given request.
-func getPlainESCredentials(c cache.SecretsCache, secretName string) (string, string, error) {
+func getPlainESCredentials(c cache.SecretsCache, secretName string) (string, string, string, error) {
 	secret, err := c.GetSecret(secretName)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	// Extract the username and password from the alternate ES credential secret
 	data := secret.Data
 	username, usernameFound := data[SecretDataFieldUsername]
 	if !usernameFound {
-		return "", "", fmt.Errorf("k8s secret did not contain username field")
+		return "", "", "", fmt.Errorf("k8s secret did not contain username field")
 	}
 	password, passwordFound := data[SecretDataFieldPassword]
 	if !passwordFound {
-		return "", "", fmt.Errorf("k8s secret did not contain username field")
+		return "", "", "", fmt.Errorf("k8s secret did not contain username field")
+	}
+	clusterName, ok := data[SecretDataFieldClusterName]
+	var clusterNameStr string
+	if ok {
+		clusterNameStr = string(clusterName)
 	}
 
-	return string(username), string(password), nil
+	return string(username), string(password), clusterNameStr, nil
 }

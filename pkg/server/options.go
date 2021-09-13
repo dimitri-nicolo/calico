@@ -3,6 +3,7 @@ package server
 
 import (
 	"crypto/tls"
+	"github.com/tigera/es-gateway/pkg/metrics"
 	"io/ioutil"
 
 	"github.com/tigera/es-gateway/pkg/clients/elastic"
@@ -13,6 +14,14 @@ import (
 
 // Option is a common format for New() options
 type Option func(*Server) error
+
+// WithCollector adds a collector for Prometheus metrics.
+func WithCollector(collector metrics.Collector) Option {
+	return func(s *Server) error {
+		s.collector = collector
+		return nil
+	}
+}
 
 // WithAddr changes the address where the server accepts
 // connections when Listener is not provided.
