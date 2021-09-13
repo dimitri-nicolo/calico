@@ -124,7 +124,7 @@ func NewAWSSubnetManager(
 			ipamClient,
 			k8sClient,
 			nodeName,
-			dpConfig.AWSTimeout,
+			dpConfig.AWSRequestTimeout,
 		),
 	}
 	sm.queueAWSResync("first run")

@@ -239,8 +239,8 @@ type Config struct {
 	Collector collector.Collector
 
 	// AWS-specials.
-	AWSSubnetSupport bool
-	AWSTimeout       time.Duration
+	AWSSecondaryIPSupport bool
+	AWSRequestTimeout     time.Duration
 
 	// Config for DNS policy.
 	DNSCacheFile         string
@@ -595,7 +595,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	var awsTableIndexes []int
-	if config.AWSSubnetSupport {
+	if config.AWSSecondaryIPSupport {
 		// FIXME allocate these on demand or at least allocate the right number for the number of possible ENIs.
 		for i := 0; i < 16; i++ {
 			rti, err := config.RouteTableManager.GrabIndex()
@@ -1102,7 +1102,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	captureManager := newCaptureManager(activeCaptures, config.RulesConfig.WorkloadIfacePrefixes)
 	dp.RegisterManager(captureManager)
 
-	if config.AWSSubnetSupport {
+	if config.AWSSecondaryIPSupport {
 		awsSubnetManager := NewAWSSubnetManager(
 			config.HealthAggregator,
 			config.IPAMClient,
