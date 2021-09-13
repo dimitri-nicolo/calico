@@ -20,6 +20,7 @@ import (
 
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/jitter"
+	logutil "github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
@@ -112,33 +113,40 @@ type Config struct {
 // Note that the dataplane statistics channel (ds) is currently just used for the
 // policy syncer but will eventually also include NFLOG stats as well.
 type collector struct {
-	packetInfoReader    PacketInfoReader
-	conntrackInfoReader ConntrackInfoReader
-	processInfoCache    ProcessInfoCache
-	luc                 *calc.LookupsCache
-	epStats             map[Tuple]*Data
-	ticker              jitter.JitterTicker
-	sigChan             chan os.Signal
-	config              *Config
-	dumpLog             *log.Logger
-	reporterMgr         *ReporterManager
-	ds                  chan *proto.DataplaneStats
-	dnsLogReporter      DNSLogReporterInterface
-	l7LogReporter       L7LogReporterInterface
+	packetInfoReader      PacketInfoReader
+	conntrackInfoReader   ConntrackInfoReader
+	processInfoCache      ProcessInfoCache
+	luc                   *calc.LookupsCache
+	epStats               map[Tuple]*Data
+	ticker                jitter.JitterTicker
+	sigChan               chan os.Signal
+	config                *Config
+	dumpLog               *log.Logger
+	reporterMgr           *ReporterManager
+	ds                    chan *proto.DataplaneStats
+	dnsLogReporter        DNSLogReporterInterface
+	l7LogReporter         L7LogReporterInterface
+	displayDebugTraceLogs bool
 }
 
 // newCollector instantiates a new collector. The StartDataplaneStatsCollector function is the only public
 // function for collector instantiation.
 func newCollector(lc *calc.LookupsCache, rm *ReporterManager, cfg *Config) Collector {
+	displayTraceLogs := false
+	if rm != nil {
+		displayTraceLogs = rm.displayDebugTraceLogs
+	}
+
 	return &collector{
-		luc:         lc,
-		epStats:     make(map[Tuple]*Data),
-		ticker:      jitter.NewTicker(cfg.ExportingInterval, cfg.ExportingInterval/10),
-		sigChan:     make(chan os.Signal, 1),
-		config:      cfg,
-		dumpLog:     log.New(),
-		reporterMgr: rm,
-		ds:          make(chan *proto.DataplaneStats, 1000),
+		luc:                   lc,
+		epStats:               make(map[Tuple]*Data),
+		ticker:                jitter.NewTicker(cfg.ExportingInterval, cfg.ExportingInterval/10),
+		sigChan:               make(chan os.Signal, 1),
+		config:                cfg,
+		dumpLog:               log.New(),
+		reporterMgr:           rm,
+		ds:                    make(chan *proto.DataplaneStats, 1000),
+		displayDebugTraceLogs: displayTraceLogs,
 	}
 }
 
@@ -404,12 +412,14 @@ func (c *collector) LookupProcessInfoCacheAndUpdate(data *Data) {
 	// be post-DNAT, because of connecttime load balancer. Hence if the lookup with preDNAT tuple fails,
 	// do a lookup with post DNAT tuple.
 	if !ok && c.config.IsBPFDataplane {
-		log.Debugf("Lookup process cache for post DNAT tuple %+v for Outbound traffic", data.Tuple)
+		logutil.Tracef(c.displayDebugTraceLogs,
+			"Lookup process cache for post DNAT tuple %+v for Outbound traffic", data.Tuple)
 		processInfo, ok = c.processInfoCache.Lookup(data.Tuple, TrafficDirOutbound)
 	}
 
 	if ok {
-		log.Debugf("Setting source process name to %s and pid to %d for tuple %+v", processInfo.Name, processInfo.Pid, data.Tuple)
+		logutil.Tracef(c.displayDebugTraceLogs,
+			"Setting source process name to %s and pid to %d for tuple %+v", processInfo.Name, processInfo.Pid, data.Tuple)
 		if !data.reported && data.SourceProcessData().Name == "" && data.SourceProcessData().Pid == 0 {
 			data.SetSourceProcessData(processInfo.Name, processInfo.Arguments, processInfo.Pid)
 		}
@@ -417,18 +427,21 @@ func (c *collector) LookupProcessInfoCacheAndUpdate(data *Data) {
 			data.SetTcpSocketStats(processInfo.TcpStatsData)
 			// Since we have read the data TCP stats data from the cache, set it to false
 			c.processInfoCache.Update(t, false)
-			log.Debugf("Setting tcp stats to %+v for tuple %+v", processInfo.TcpStatsData, processInfo.Tuple)
+			logutil.Tracef(c.displayDebugTraceLogs,
+				"Setting tcp stats to %+v for tuple %+v", processInfo.TcpStatsData, processInfo.Tuple)
 		}
 	}
 
 	processInfo, ok = c.processInfoCache.Lookup(t, TrafficDirInbound)
 	if !ok && c.config.IsBPFDataplane {
-		log.Debugf("Lookup process cache for post DNAT tuple %+v for Inbound traffic", data.Tuple)
+		logutil.Tracef(c.displayDebugTraceLogs,
+			"Lookup process cache for post DNAT tuple %+v for Inbound traffic", data.Tuple)
 		processInfo, ok = c.processInfoCache.Lookup(data.Tuple, TrafficDirInbound)
 	}
 
 	if ok {
-		log.Debugf("Setting dest process name to %s and pid to %d from reverse tuple %+v", processInfo.Name, processInfo.Pid, t.GetReverseTuple())
+		logutil.Tracef(c.displayDebugTraceLogs,
+			"Setting dest process name to %s and pid to %d from reverse tuple %+v", processInfo.Name, processInfo.Pid, t.GetReverseTuple())
 		if !data.reported && data.DestProcessData().Name == "" && data.DestProcessData().Pid == 0 {
 			data.SetDestProcessData(processInfo.Name, processInfo.Arguments, processInfo.Pid)
 		}
@@ -436,7 +449,8 @@ func (c *collector) LookupProcessInfoCacheAndUpdate(data *Data) {
 			data.SetTcpSocketStats(processInfo.TcpStatsData)
 			// Since we have read the data TCP stats data from the cache, set it to false
 			c.processInfoCache.Update(t, false)
-			log.Debugf("Setting tcp stats to %+v for tuple %+v", processInfo.TcpStatsData, processInfo.Tuple)
+			logutil.Tracef(c.displayDebugTraceLogs,
+				"Setting tcp stats to %+v for tuple %+v", processInfo.TcpStatsData, processInfo.Tuple)
 		}
 	}
 }
@@ -466,7 +480,7 @@ func (c *collector) reportMetrics(data *Data, force bool) bool {
 		// - The verdict rules have not been found for the local endpoints.
 		// In this case data will be reported later during ticker processing.
 		if !foundService || !data.VerdictFound() {
-			log.Debugf("Service not found - delay statistics reporting until normal flush processing")
+			log.Debug("Service not found - delay statistics reporting until normal flush processing")
 			return false
 		}
 	}
@@ -687,7 +701,7 @@ func (c *collector) applyPacketInfo(pktInfo PacketInfo) {
 // convertDataplaneStatsAndApplyUpdate merges the proto.DataplaneStatistics into the current
 // data stored for the specific connection tuple.
 func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats) {
-	log.Debugf("Received dataplane stats update %+v", d)
+	logutil.Tracef(c.displayDebugTraceLogs, "Received dataplane stats update %+v", d)
 	// Create a Tuple representing the DataplaneStats.
 	t, err := extractTupleFromDataplaneStats(d)
 	if err != nil {
@@ -826,7 +840,7 @@ func reportDataplaneStatsUpdateErrorMetrics(dataplaneErrorDelta uint32) {
 // When called, clear the contents of the file Config.StatsDumpFilePath before
 // writing the stats to it.
 func (c *collector) dumpStats() {
-	log.Debugf("Dumping Stats to %v", c.config.StatsDumpFilePath)
+	logutil.Tracef(c.displayDebugTraceLogs, "Dumping Stats to %v", c.config.StatsDumpFilePath)
 
 	_ = os.Truncate(c.config.StatsDumpFilePath, 0)
 	c.dumpLog.Infof("Stats Dump Started: %v", time.Now().Format("2006-01-02 15:04:05.000"))
@@ -868,10 +882,10 @@ func (c *collector) LogDNS(src, dst net.IP, dns *layers.DNS, latencyIfKnown *tim
 	if serverEP == nil {
 		serverEP, _ = c.luc.GetNetworkset(ipTo16Byte(src))
 	}
-	log.Debugf("Src %v -> Server %v", src, serverEP)
-	log.Debugf("Dst %v -> Client %v", dst, clientEP)
+	logutil.Tracef(c.displayDebugTraceLogs, "Src %v -> Server %v", src, serverEP)
+	logutil.Tracef(c.displayDebugTraceLogs, "Dst %v -> Client %v", dst, clientEP)
 	if latencyIfKnown != nil {
-		log.Debugf("DNS-LATENCY: Log %v", *latencyIfKnown)
+		logutil.Tracef(c.displayDebugTraceLogs, "DNS-LATENCY: Log %v", *latencyIfKnown)
 	}
 	update := DNSUpdate{
 		ClientIP:       dst,

@@ -12,6 +12,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	logutil "github.com/projectcalico/felix/logutils"
+
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
@@ -172,13 +174,13 @@ type FlowSpec struct {
 	resetAggrData bool
 }
 
-func NewFlowSpec(mu *MetricUpdate, maxOriginalIPsSize int, includeProcess bool, processLimit, processArgsLimit int) *FlowSpec {
+func NewFlowSpec(mu *MetricUpdate, maxOriginalIPsSize int, includeProcess bool, processLimit, processArgsLimit int, displayDebugTraceLogs bool) *FlowSpec {
 	// NewFlowStatsByProcess potentially needs to update fields in mu *MetricUpdate hence passing it by pointer
 	// TODO: reconsider/refactor the inner functions called in NewFlowStatsByProcess to avoid above scenario
 	return &FlowSpec{
 		FlowLabels:         NewFlowLabels(*mu),
 		FlowPolicies:       NewFlowPolicies(*mu),
-		FlowStatsByProcess: NewFlowStatsByProcess(mu, includeProcess, processLimit, processArgsLimit),
+		FlowStatsByProcess: NewFlowStatsByProcess(mu, includeProcess, processLimit, processArgsLimit, displayDebugTraceLogs),
 		flowExtrasRef:      NewFlowExtrasRef(*mu, maxOriginalIPsSize),
 	}
 }
@@ -574,9 +576,8 @@ func NewFlowStats(mu MetricUpdate) FlowStats {
 	return flowStats
 }
 
-func (f *FlowStats) aggregateFlowTCPStats(mu MetricUpdate) {
-	// FIXME HACK Disable spammy logs.
-	// log.Debugf("Aggregrate TCP stats %+v with flow %+v", mu, f)
+func (f *FlowStats) aggregateFlowTCPStats(mu MetricUpdate, displayDebugTraceLogs bool) {
+	logutil.Tracef(displayDebugTraceLogs, "Aggregrate TCP stats %+v with flow %+v", mu, f)
 	// Here we check if the metric update has a valid TCP stats.
 	// If the TCP stats is not valid (example: config is disabled),
 	// it is indicated by one of sendCongestionWnd, smoothRtt, minRtt, Mss
@@ -640,7 +641,7 @@ func (f *FlowStats) aggregateFlowTCPStats(mu MetricUpdate) {
 	f.Count += 1
 }
 
-func (f *FlowStats) aggregateFlowStats(mu MetricUpdate) {
+func (f *FlowStats) aggregateFlowStats(mu MetricUpdate, displayDebugTraceLogs bool) {
 	if f.resetProcessIDs {
 		// Only clear process IDs when aggregating a new metric update and after
 		// a prior export.
@@ -671,7 +672,7 @@ func (f *FlowStats) aggregateFlowStats(mu MetricUpdate) {
 	f.BytesOut += mu.outMetric.deltaBytes
 	f.HTTPRequestsAllowedIn += mu.inMetric.deltaAllowedHTTPRequests
 	f.HTTPRequestsDeniedIn += mu.inMetric.deltaDeniedHTTPRequests
-	f.aggregateFlowTCPStats(mu)
+	f.aggregateFlowTCPStats(mu, displayDebugTraceLogs)
 }
 
 func (f *FlowStats) getActiveFlowsCount() int {
@@ -700,26 +701,29 @@ func (f *FlowStats) reset() {
 // Flow logs should be constructed by calling toFlowProcessReportedStats and then flattening the resulting
 // slice with FlowMeta and other FlowLog information such as policies and labels.
 type FlowStatsByProcess struct {
+
 	// statsByProcessName stores aggregated flow statistics grouped by a process name.
 	statsByProcessName map[string]*FlowStats
 	// processNames stores the order in which process information is tracked and aggrgated.
 	// this is done so that when we export flow logs, we do so in the order they appeared.
-	processNames     *list.List
-	includeProcess   bool
-	processLimit     int
-	processArgsLimit int
+	processNames          *list.List
+	displayDebugTraceLogs bool
+	includeProcess        bool
+	processLimit          int
+	processArgsLimit      int
 	// TODO(doublek): Track the most significant stats and show them as part
 	// of the flows that are included in the process limit. Current processNames
 	// only tracks insertion order.
 }
 
-func NewFlowStatsByProcess(mu *MetricUpdate, includeProcess bool, processLimit, processArgsLimit int) FlowStatsByProcess {
+func NewFlowStatsByProcess(mu *MetricUpdate, includeProcess bool, processLimit, processArgsLimit int, displayDebugTraceLogs bool) FlowStatsByProcess {
 	f := FlowStatsByProcess{
-		statsByProcessName: make(map[string]*FlowStats),
-		processNames:       list.New(),
-		includeProcess:     includeProcess,
-		processLimit:       processLimit,
-		processArgsLimit:   processArgsLimit,
+		displayDebugTraceLogs: displayDebugTraceLogs,
+		statsByProcessName:    make(map[string]*FlowStats),
+		processNames:          list.New(),
+		includeProcess:        includeProcess,
+		processLimit:          processLimit,
+		processArgsLimit:      processArgsLimit,
 	}
 	f.aggregateFlowStatsByProcess(mu)
 	return f
@@ -732,15 +736,12 @@ func (f *FlowStatsByProcess) aggregateFlowStatsByProcess(mu *MetricUpdate) {
 		mu.processArgs = flowLogFieldNotIncluded
 	}
 	if stats, ok := f.statsByProcessName[mu.processName]; ok {
-		// FIXME HACK Disable spammy log
-		//log.Debugf("Process stats found %+v for metric update %+v", stats, mu)
-		stats.aggregateFlowStats(*mu)
-		// FIXME HACK Disable spammy log
-		// log.Debugf("Aggregated stats %+v after processing metric update %+v", stats, mu)
+		logutil.Tracef(f.displayDebugTraceLogs, "Process stats found %+v for metric update %+v", stats, mu)
+		stats.aggregateFlowStats(*mu, f.displayDebugTraceLogs)
+		logutil.Tracef(f.displayDebugTraceLogs, "Aggregated stats %+v after processing metric update %+v", stats, mu)
 		f.statsByProcessName[mu.processName] = stats
 	} else {
-		// FIXME HACK Disable spammy log
-		// log.Debugf("Process stats not found for metric update %+v", mu)
+		logutil.Tracef(f.displayDebugTraceLogs, "Process stats not found for metric update %+v", mu)
 		f.processNames.PushBack(mu.processName)
 		stats := NewFlowStats(*mu)
 		f.statsByProcessName[mu.processName] = &stats

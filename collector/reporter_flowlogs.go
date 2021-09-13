@@ -12,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/jitter"
+	logutil "github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/libcalico-go/lib/health"
 )
 
@@ -32,11 +33,12 @@ type flowLogAverage struct {
 
 // FlowLogsReporter implements the MetricsReporter interface.
 type FlowLogsReporter struct {
-	dispatchers   map[string]LogDispatcher
-	aggregators   []aggregatorRef
-	flushInterval time.Duration
-	flushTicker   jitter.JitterTicker
-	hepEnabled    bool
+	dispatchers           map[string]LogDispatcher
+	aggregators           []aggregatorRef
+	flushInterval         time.Duration
+	flushTicker           jitter.JitterTicker
+	hepEnabled            bool
+	displayDebugTraceLogs bool
 
 	healthAggregator *health.HealthAggregator
 	logOffset        LogOffset
@@ -103,7 +105,7 @@ func (fr *FlowLogsReporter) resetFlowLogsAvg() {
 
 // NewFlowLogsReporter constructs a FlowLogs MetricsReporter using
 // a dispatcher and aggregator.
-func NewFlowLogsReporter(dispatchers map[string]LogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator, hepEnabled bool, logOffset LogOffset) *FlowLogsReporter {
+func NewFlowLogsReporter(dispatchers map[string]LogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator, hepEnabled, displayDebugTraceLogs bool, logOffset LogOffset) *FlowLogsReporter {
 	if healthAggregator != nil {
 		healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, healthInterval*2)
 	}
@@ -229,16 +231,18 @@ func (fr *FlowLogsReporter) run() {
 	}
 }
 
-func (c *FlowLogsReporter) estimateLevel(agg aggregatorRef, factor FlowAggregationKind, isBehind bool) FlowAggregationKind {
-	log.Debugf("Evaluate aggregation level. Logs are marked as behind = %v for level %v", isBehind, agg.a.GetCurrentAggregationLevel())
-
+func (c *FlowLogsReporter) estimateLevel(
+	agg aggregatorRef, factor FlowAggregationKind, isBehind bool,
+) FlowAggregationKind {
+	logutil.Tracef(c.displayDebugTraceLogs, "Evaluate aggregation level. Logs are marked as behind = %v for level %v",
+		isBehind, agg.a.GetCurrentAggregationLevel())
 	var newLevel = agg.a.GetCurrentAggregationLevel()
 	if isBehind {
 		newLevel = agg.a.GetCurrentAggregationLevel() + factor
 	} else if agg.a.HasAggregationLevelChanged() {
 		newLevel = agg.a.GetDefaultAggregationLevel()
 	}
-	log.Debugf("Estimate aggregation level to %d", newLevel)
+	logutil.Tracef(c.displayDebugTraceLogs, "Estimate aggregation level to %d", newLevel)
 	return newLevel
 }
 

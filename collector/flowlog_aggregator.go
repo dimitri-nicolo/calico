@@ -11,6 +11,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
+	logutil "github.com/projectcalico/felix/logutils"
+
 	"github.com/projectcalico/felix/rules"
 )
 
@@ -20,6 +22,7 @@ type FlowLogGetter interface {
 
 type FlowLogAggregator interface {
 	FlowLogGetter
+	DisplayDebugTraceLogs(bool) FlowLogAggregator
 	IncludeLabels(bool) FlowLogAggregator
 	IncludePolicies(bool) FlowLogAggregator
 	IncludeService(bool) FlowLogAggregator
@@ -91,6 +94,7 @@ type flowLogAggregator struct {
 	perFlowProcessLimit     int
 	includeTcpStats         bool
 	perFlowProcessArgsLimit int
+	displayDebugTraceLogs   bool
 }
 
 type flowEntry struct {
@@ -145,6 +149,12 @@ func (c *flowLogAggregator) AggregateOver(kind FlowAggregationKind) FlowLogAggre
 	c.previous = kind
 	return c
 }
+
+func (c *flowLogAggregator) DisplayDebugTraceLogs(b bool) FlowLogAggregator {
+	c.displayDebugTraceLogs = b
+	return c
+}
+
 func (c *flowLogAggregator) IncludeTcpStats(b bool) FlowLogAggregator {
 	c.includeTcpStats = b
 	return c
@@ -201,7 +211,7 @@ func (fa *flowLogAggregator) FeedUpdate(mu *MetricUpdate) error {
 	}
 	// Filter out any action that we aren't configured to handle.
 	if fa.handledAction != noRuleActionDefined && fa.handledAction != lastRuleID.Action {
-		log.Debugf("Update %v not handled", *mu)
+		logutil.Tracef(fa.displayDebugTraceLogs, "Update %v not handled", *mu)
 		return nil
 	}
 
@@ -213,13 +223,13 @@ func (fa *flowLogAggregator) FeedUpdate(mu *MetricUpdate) error {
 	fa.flMutex.Lock()
 	defer fa.flMutex.Unlock()
 
-	log.Debugf("Flow Log Aggregator got Metric Update: %+v", *mu)
+	logutil.Tracef(fa.displayDebugTraceLogs, "Flow Log Aggregator got Metric Update: %+v", *mu)
 
 	fl, ok := fa.flowStore[flowMeta]
 
 	if !ok {
-		log.Debugf("flowMeta %+v not found, creating new flowspec for metric update %+v", flowMeta, *mu)
-		spec := NewFlowSpec(mu, fa.maxOriginalIPsSize, fa.includeProcess, fa.perFlowProcessLimit, fa.perFlowProcessArgsLimit)
+		logutil.Tracef(fa.displayDebugTraceLogs, "flowMeta %+v not found, creating new flowspec for metric update %+v", flowMeta, *mu)
+		spec := NewFlowSpec(mu, fa.maxOriginalIPsSize, fa.includeProcess, fa.perFlowProcessLimit, fa.perFlowProcessArgsLimit, fa.displayDebugTraceLogs)
 
 		newEntry := &flowEntry{
 			spec:         spec,
@@ -238,9 +248,7 @@ func (fa *flowLogAggregator) FeedUpdate(mu *MetricUpdate) error {
 
 		fa.flowStore[flowMeta] = newEntry
 	} else {
-		// FIXME HACK Disable spammy logs.
-		// log.Debugf("flowMeta %+v found, aggregating flowspec with metric update %+v", flowMeta, *mu)
-
+		logutil.Tracef(fa.displayDebugTraceLogs, "flowMeta %+v found, aggregating flowspec with metric update %+v", flowMeta, *mu)
 		fl.spec.AggregateMetricUpdate(mu)
 		fl.shouldExport = true
 		fa.flowStore[flowMeta] = fl
@@ -299,7 +307,7 @@ func (fa *flowLogAggregator) calibrateFlowStore(flowMeta FlowMeta, newLevel Flow
 	// discontinue tracking the stats associated with the
 	// flow meta if no more associated 5-tuples exist.
 	if remainingActiveFlowsCount == 0 {
-		log.Debugf("Deleting %v", flowMeta)
+		logutil.Tracef(fa.displayDebugTraceLogs, "Deleting %v", flowMeta)
 		delete(fa.flowStore, flowMeta)
 
 		return
@@ -314,8 +322,7 @@ func (fa *flowLogAggregator) calibrateFlowStore(flowMeta FlowMeta, newLevel Flow
 		entry.shouldExport = false
 	}
 
-	log.Debugf("Resetting %v", flowMeta)
-
+	logutil.Tracef(fa.displayDebugTraceLogs, "Resetting %v", flowMeta)
 	// reset flow stats for the next interval
 	entry.spec.Reset()
 

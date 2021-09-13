@@ -481,7 +481,7 @@ var _ = Describe("NFLOG Datasource", func() {
 			ExportingInterval:            time.Duration(1) * time.Second,
 			MaxOriginalSourceIPsIncluded: 5,
 		}
-		rm := NewReporterManager()
+		rm := NewReporterManager(true)
 		BeforeEach(func() {
 			epMap := map[[16]byte]*calc.EndpointData{
 				localIp1:  localEd1,
@@ -793,7 +793,7 @@ var _ = Describe("Conntrack Datasource", func() {
 		ExportingInterval:            time.Duration(1) * time.Second,
 		MaxOriginalSourceIPsIncluded: 5,
 	}
-	rm := NewReporterManager()
+	rm := NewReporterManager(true)
 	BeforeEach(func() {
 		epMap := map[[16]byte]*calc.EndpointData{
 			localIp1:  localEd1,
@@ -1362,7 +1362,7 @@ var _ = Describe("Reporting Metrics", func() {
 		}
 
 		lm = newMockLookupsCache(epMap, nflogMap, nil, nil)
-		rm = NewReporterManager()
+		rm = NewReporterManager(true)
 		mockReporter = newMockReporter()
 		rm.RegisterMetricsReporter(mockReporter)
 		rm.Start()
@@ -2026,7 +2026,7 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 		ExportingInterval:            time.Duration(1) * time.Second,
 		MaxOriginalSourceIPsIncluded: 5,
 	}
-	rm := NewReporterManager()
+	rm := NewReporterManager(true)
 	lm := newMockLookupsCache(epMap, nflogMap, nil, nil)
 	nflogReader := NewNFLogReader(lm, 0, 0, 0, false)
 	c := newCollector(lm, rm, conf).(*collector)
@@ -2059,7 +2059,7 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 		ExportingInterval:            time.Duration(1) * time.Second,
 		MaxOriginalSourceIPsIncluded: 5,
 	}
-	rm := NewReporterManager()
+	rm := NewReporterManager(true)
 	lm := newMockLookupsCache(epMap, nflogMap, nil, nil)
 	nflogReader := NewNFLogReader(lm, 0, 0, 0, false)
 	c := newCollector(lm, rm, conf).(*collector)

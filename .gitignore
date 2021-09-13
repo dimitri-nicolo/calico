@@ -56,6 +56,8 @@ bpf/report/
 /k8sfv/prometheus/prometheus.yml
 /k8sfv/output/
 
+/fv/dns/server/dns-server
+
 .semaphore-cache/
 /fv/cwlogs
 /rpm/felix.spec
