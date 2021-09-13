@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 	"syscall"
 
 	"github.com/sirupsen/logrus"
@@ -55,13 +56,21 @@ type awsIPManager struct {
 
 	routeTableIndexByIfaceName map[string]int
 	freeRouteTableIndexes      []int
-	routeTables                map[int]routeTable
+	routeTablesByTable         map[int]routeTable
+	routeTablesByIfaceName     map[string]routeTable
 	routeRules                 *routerule.RouteRules
-	lastRules                  []*routerule.Rule
+	routeRulesInDataplane      map[awsRuleKey]*routerule.Rule
 	dataplaneResyncNeeded      bool
 	dpConfig                   Config
+	expectedPrimaryIPs         map[string]string
 
 	opRecorder logutils.OpRecorder
+}
+
+// awsRuleKey is a hashable struct containing the salient aspects of the routing rules that we need to program.
+type awsRuleKey struct {
+	addr           ip.Addr
+	routingTableID int
 }
 
 func NewAWSSubnetManager(
@@ -101,11 +110,14 @@ func NewAWSSubnetManager(
 
 		routeTableIndexByIfaceName: map[string]int{},
 		freeRouteTableIndexes:      routeTableIndexes,
-		routeTables:                map[int]routeTable{},
+		routeTablesByIfaceName:     map[string]routeTable{},
+		routeTablesByTable:         map[int]routeTable{},
+		expectedPrimaryIPs:         map[string]string{},
 
-		routeRules: rules,
-		dpConfig:   dpConfig,
-		opRecorder: opRecorder,
+		routeRules:            rules,
+		routeRulesInDataplane: map[awsRuleKey]*routerule.Rule{},
+		dpConfig:              dpConfig,
+		opRecorder:            opRecorder,
 
 		ifaceProvisioner: aws.NewSecondaryIfaceProvisioner(
 			healthAgg,
@@ -133,6 +145,33 @@ func (a *awsIPManager) OnUpdate(msg interface{}) {
 		a.onRouteUpdate(ip.MustParseCIDROrIP(msg.Dst), msg)
 	case *proto.RouteRemove:
 		a.onRouteUpdate(ip.MustParseCIDROrIP(msg.Dst), nil)
+	case *ifaceUpdate:
+		logrus.WithField("update", msg).Debug("Interface state changed.")
+		if _, ok := a.expectedPrimaryIPs[msg.Name]; ok {
+			a.queueDataplaneResync("Interface changed state")
+		}
+	case *ifaceAddrsUpdate:
+		logrus.WithField("update", msg).Debug("Interface addrs changed.")
+		if expAddr, ok := a.expectedPrimaryIPs[msg.Name]; ok && msg.Addrs != nil {
+			// This is an interface that we care about.  Check if the address it has corresponds with what we want.
+			seenExpected := false
+			seenUnexpected := false
+			msg.Addrs.Iter(func(item interface{}) error {
+				addrStr := item.(string)
+				if strings.Contains(addrStr, ":") {
+					return nil // Ignore IPv6
+				}
+				if expAddr == addrStr {
+					seenExpected = true
+				} else {
+					seenUnexpected = true
+				}
+				return nil
+			})
+			if !seenExpected || seenUnexpected {
+				a.queueDataplaneResync("IPs out of sync on a secondary interface " + msg.Name)
+			}
+		}
 	}
 }
 
@@ -278,9 +317,8 @@ func (a *awsIPManager) CompleteDeferredWork() error {
 		a.awsResyncNeeded = false
 	}
 
-	var err error
 	if a.dataplaneResyncNeeded {
-		err = a.resyncWithDataplane()
+		err := a.resyncWithDataplane()
 		if err != nil {
 			return err
 		}
@@ -289,12 +327,10 @@ func (a *awsIPManager) CompleteDeferredWork() error {
 
 	// TODO update k8s Node with capacities
 
-	return err
+	return nil
 }
 
 func (a *awsIPManager) resyncWithDataplane() error {
-	// TODO Listen for interface updates and resync after any relevant ones.
-
 	if a.awsState == nil {
 		logrus.Debug("No AWS information yet, not syncing dataplane.")
 		return nil
@@ -305,140 +341,238 @@ func (a *awsIPManager) resyncWithDataplane() error {
 	if err != nil {
 		return fmt.Errorf("failed to load local interfaces: %w", err)
 	}
-	var rules []*routerule.Rule
+	activeRules := set.New() /* awsRuleKey */
+	activeIfaceNames := set.New()
+	var finalErr error
+
 	for _, iface := range ifaces {
-		ifaceName := iface.Attrs().Name
+		// Skip NICs that don't match anything in AWS.
 		mac := iface.Attrs().HardwareAddr.String()
-		awsNIC, ok := a.awsState.SecondaryNICsByMAC[mac]
-		if !ok {
+		awsNIC, awsNICExists := a.awsState.SecondaryNICsByMAC[mac]
+		if !awsNICExists {
 			continue
 		}
+		ifaceName := iface.Attrs().Name
 		logrus.WithFields(logrus.Fields{
 			"mac":      mac,
 			"name":     ifaceName,
 			"awsNICID": awsNIC.ID,
-		}).Info("Matched local NIC with AWS NIC.")
+		}).Debug("Matched local NIC with AWS NIC.")
+		activeIfaceNames.Add(ifaceName)
 
-		// Enable the NIC.
-		err := netlink.LinkSetUp(iface)
+		// Enable the NIC and configure its IPs.
+		priAddrStr := awsNIC.PrimaryIPv4Addr.String()
+		a.expectedPrimaryIPs[ifaceName] = priAddrStr
+		err := a.configureNIC(iface, ifaceName, priAddrStr)
 		if err != nil {
-			ifaceName := iface.Attrs().Name
-			logrus.WithError(err).WithField("name", ifaceName).Error("Failed to set link up")
-		}
-
-		{
-			// Make sure the interface has its primary IP.  This is needed for ARP to work.
-			addrs, err := netlink.AddrList(iface, netlink.FAMILY_V4)
-			if err != nil {
-				logrus.WithError(err).WithField("name", ifaceName).Error("Failed to query interface addrs.")
-			} else {
-				found := false
-				addrStr := awsNIC.PrimaryIPv4Addr.String()
-				newAddr, err := netlink.ParseAddr(addrStr + "/" + fmt.Sprint(a.awsState.SubnetCIDR.Prefix()))
-				if err != nil {
-					logrus.WithError(err).WithFields(logrus.Fields{
-						"name": ifaceName,
-						"addr": addrStr,
-					}).Error("Failed to parse address.")
-				}
-				newAddr.Scope = int(netlink.SCOPE_LINK)
-
-				for _, a := range addrs {
-					if a.Equal(*newAddr) {
-						found = true
-						continue
-					}
-					err := netlink.AddrDel(iface, &a)
-					if err != nil {
-						logrus.WithError(err).WithFields(logrus.Fields{
-							"name": ifaceName,
-							"addr": a,
-						}).Error("Failed to clean up old address.")
-					}
-				}
-				if !found {
-					err := netlink.AddrAdd(iface, newAddr)
-					if err != nil {
-						logrus.WithError(err).WithFields(logrus.Fields{
-							"name": ifaceName,
-							"addr": newAddr,
-						}).Error("Failed to add new address.")
-					} else {
-						logrus.WithError(err).WithFields(logrus.Fields{
-							"name": ifaceName,
-							"addr": newAddr,
-						}).Info("Added address to secondary ENI.")
-					}
-				}
-			}
+			finalErr = err
 		}
 
 		// For each IP assigned to the NIC, we'll add a routing rule that sends traffic _from_ that IP to
 		// a dedicated routing table for the NIC.
 		routingTableID := a.getOrAllocRoutingTableID(ifaceName)
 
-		for _, privateIP := range awsNIC.SecondaryIPv4Addrs {
-			logrus.WithFields(logrus.Fields{
-				"addr": privateIP,
-				"rtID": routingTableID,
-			}).Info("Adding routing rule.")
-			rule := routerule.NewRule(4, 101).MatchSrcAddress(privateIP.AsCIDR().ToIPNet()).GoToTable(routingTableID)
-			rules = append(rules, rule)
-		}
-
-		// Program routes into the NIC-specific routing table.  These work as follows:
-		// - Add a default route via the AWS subnet's gateway.  This is how traffic to the outside world gets
-		//   routed properly.
-		// - Add narrower routes for Calico IP pools that throw the packet back to the main routing tables.
-		//   this is required to make RPF checks pass when traffic arrives from a Calico tunnel going to an
-		//   AWS-networked pod.
+		// Program routes into the NIC-specific routing table.
 		rt := a.getOrAllocRoutingTable(routingTableID, ifaceName)
-		{
-			routes := []routetable.Target{
-				{
-					Type: routetable.TargetTypeGlobalUnicast,
-					CIDR: a.awsState.GatewayAddr.AsCIDR(),
-				},
-				{
-					Type: routetable.TargetTypeGlobalUnicast,
-					CIDR: ip.MustParseCIDROrIP("0.0.0.0/0"),
-					GW:   a.awsState.GatewayAddr,
-				},
+		a.programIfaceRoutes(rt, ifaceName)
+
+		// Accumulate routing rules for all the active IPs.
+		a.addIfaceActiveRules(activeRules, awsNIC, routingTableID)
+	}
+
+	// Scan for entries in expectedPrimaryIPs that are no longer needed.
+	a.cleanUpPrimaryIPs(activeIfaceNames)
+
+	// Scan for routing tables that are no longer needed.
+	a.cleanUpRoutingTables(activeIfaceNames)
+
+	// Queue up delta updates to add/remove routing rules.
+	a.updateRouteRules(activeRules)
+
+	return finalErr
+}
+
+func (a *awsIPManager) cleanUpPrimaryIPs(matchedNICs set.Set) {
+	if matchedNICs.Len() != len(a.expectedPrimaryIPs) {
+		// Clean up primary IPs of interfaces that no longer exist.
+		for iface := range a.expectedPrimaryIPs {
+			if matchedNICs.Contains(iface) {
+				continue
 			}
-			rt.SetRoutes(ifaceName, routes)
+			delete(a.expectedPrimaryIPs, iface)
 		}
-		{
-			var noIFRoutes []routetable.Target
-			for _, pool := range a.poolsByID {
-				if !pool.Masquerade {
-					continue // Assuming that non-masquerade pools are reachable over the main network.
-				}
-				noIFRoutes = append(noIFRoutes, routetable.Target{
-					Type: routetable.TargetTypeThrow,
-					CIDR: ip.MustParseCIDROrIP(pool.Cidr),
-				})
-			}
-			rt.SetRoutes(routetable.InterfaceNone, noIFRoutes)
+	}
+}
+
+// configureNIC Brings the given NIC up and ensures its has the expected IP assigned.
+func (a *awsIPManager) configureNIC(iface netlink.Link, ifaceName string, primaryIPStr string) error {
+	ifaceIsAdminUp := iface.Attrs().RawFlags&syscall.IFF_UP != 0
+	if !ifaceIsAdminUp {
+		err := netlink.LinkSetUp(iface)
+		if err != nil {
+			ifaceName := iface.Attrs().Name
+			logrus.WithError(err).WithField("name", ifaceName).Error("Failed to set link up")
 		}
 	}
 
-	// TODO Release unused routing table IDs, being careful to clear the routing table and rule before disposing of them
-	// TODO Avoid reprogramming all rules every time just to clean up.
-	for _, r := range a.lastRules {
-		a.routeRules.RemoveRule(r)
+	// Make sure the interface has its primary IP.  This is needed for ARP to work.
+	addrs, err := netlink.AddrList(iface, netlink.FAMILY_V4)
+	if err != nil {
+		logrus.WithError(err).WithField("name", ifaceName).Error("Failed to query interface addrs.")
+		return err
 	}
-	for _, r := range rules {
-		a.routeRules.SetRule(r)
+
+	foundPrimaryIP := false
+	newAddr, err := netlink.ParseAddr(primaryIPStr + "/" + fmt.Sprint(a.awsState.SubnetCIDR.Prefix()))
+	if err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"name": ifaceName,
+			"addr": primaryIPStr,
+		}).Error("Failed to parse address.")
 	}
-	a.lastRules = rules
+	newAddr.Scope = int(netlink.SCOPE_LINK)
+
+	for _, a := range addrs {
+		if a.Equal(*newAddr) {
+			foundPrimaryIP = true
+			continue
+		}
+
+		// Unexpected address.
+		err := netlink.AddrDel(iface, &a)
+		if err != nil {
+			logrus.WithError(err).WithFields(logrus.Fields{
+				"name": ifaceName,
+				"addr": a,
+			}).Error("Failed to clean up old address.")
+		}
+	}
+
+	if foundPrimaryIP {
+		return nil
+	}
+
+	err = netlink.AddrAdd(iface, newAddr)
+	if err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"name": ifaceName,
+			"addr": newAddr,
+		}).Error("Failed to add new primary IP to secondary interface.")
+		return err
+	} else {
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"name": ifaceName,
+			"addr": newAddr,
+		}).Info("Added primary address to secondary ENI.")
+	}
 
 	return nil
 }
 
+// addIfaceActiveRules awsRuleKey values to activeRules according to the secondary IPs of the AWS NIC.
+func (a *awsIPManager) addIfaceActiveRules(activeRules set.Set, awsNIC aws.Iface, routingTableID int) {
+	for _, privateIP := range awsNIC.SecondaryIPv4Addrs {
+		logrus.WithFields(logrus.Fields{"addr": privateIP, "rtID": routingTableID}).Debug("Adding routing rule.")
+		activeRules.Add(awsRuleKey{
+			addr:           privateIP,
+			routingTableID: routingTableID,
+		})
+	}
+}
+
+// programIfaceRoutes updates the routing table for the given interface with the correct routes.
+func (a *awsIPManager) programIfaceRoutes(rt routeTable, ifaceName string) {
+	// Add a default route via the AWS subnet's gateway.  This is how traffic to the outside world gets
+	// routed properly.
+	routes := []routetable.Target{
+		{
+			Type: routetable.TargetTypeGlobalUnicast,
+			CIDR: a.awsState.GatewayAddr.AsCIDR(),
+		},
+		{
+			Type: routetable.TargetTypeGlobalUnicast,
+			CIDR: ip.MustParseCIDROrIP("0.0.0.0/0"),
+			GW:   a.awsState.GatewayAddr,
+		},
+	}
+	rt.SetRoutes(ifaceName, routes)
+
+	// Add narrower routes for Calico IP pools that throw the packet back to the main routing tables.
+	// this is required to make RPF checks pass when traffic arrives from a Calico tunnel going to an
+	// AWS-networked pod.
+	var noIFRoutes []routetable.Target
+	for _, pool := range a.poolsByID {
+		if !pool.Masquerade {
+			// Assuming that non-masquerade pools are reachable over the main network.
+			// Disabled non-Masquerade rules are often used to mark an external CIDR as "reachable without
+			// SNAT".
+			continue
+		}
+		noIFRoutes = append(noIFRoutes, routetable.Target{
+			Type: routetable.TargetTypeThrow,
+			CIDR: ip.MustParseCIDROrIP(pool.Cidr),
+		})
+	}
+	rt.SetRoutes(routetable.InterfaceNone, noIFRoutes)
+
+}
+
+// cleanUpRoutingTables scans routeTableIndexByIfaceName for routing tables that are no longer needed (i.e. no
+// longer appear in activeIfaceNames and releases them.
+func (a *awsIPManager) cleanUpRoutingTables(activeIfaceNames set.Set) {
+	for ifaceName, idx := range a.routeTableIndexByIfaceName {
+		if activeIfaceNames.Contains(ifaceName) {
+			continue // NIC is known to AWS and the local dataplane.  All good.
+		}
+		if _, ok := a.routeTablesByIfaceName[ifaceName]; !ok {
+			continue // RouteTable has already been flushed.
+		}
+
+		// NIC must have existed before but it no longer does.  Flush any routes from its routing table.
+		rt := a.routeTablesByTable[idx]
+		rt.SetRoutes(ifaceName, nil)
+		rt.SetRoutes(routetable.InterfaceNone, nil)
+
+		// Only delete from the a.routeTablesByIfaceName map.  This means that the routing table will live
+		// on in a.routeTableIndexByIfaceName until we reuse its index.  We want the table to live on so that
+		// it has a chance to actually apply the flush.  We use a LIFO queue when allocating table indexes so
+		// the routeing table will be overwritten as soon as a new interface is added.
+		delete(a.routeTablesByIfaceName, ifaceName)
+		// Free the index so it can be reused.
+		a.releaseRoutingTableID(ifaceName)
+	}
+}
+
+// updateRouteRules calculates route rule deltas between the active rules and the set of rules that we've
+// previously programmed.  It sends those to the RouteRules instance.
+func (a *awsIPManager) updateRouteRules(activeRuleKeys set.Set /* awsRulesKey */) {
+	for k, r := range a.routeRulesInDataplane {
+		if activeRuleKeys.Contains(k) {
+			continue // Route was present and still wanted; nothing to do.
+		}
+		// Route no longer wanted, clean it up.
+		a.routeRules.RemoveRule(r)
+		delete(a.routeRulesInDataplane, k)
+	}
+	activeRuleKeys.Iter(func(item interface{}) error {
+		k := item.(awsRuleKey)
+		if _, ok := a.routeRulesInDataplane[k]; ok {
+			return nil // Route already present.  Nothing to do.
+		}
+		rule := routerule.
+			NewRule(4, 101).
+			MatchSrcAddress(k.addr.AsCIDR().ToIPNet()).
+			GoToTable(k.routingTableID)
+		a.routeRules.SetRule(rule)
+		a.routeRulesInDataplane[k] = rule
+		return nil
+	})
+}
+
 func (a *awsIPManager) getOrAllocRoutingTable(tableIndex int, ifaceName string) routeTable {
-	if _, ok := a.routeTables[tableIndex]; !ok {
+	if rt, ok := a.routeTablesByIfaceName[ifaceName]; !ok {
 		logrus.WithField("ifaceName", ifaceName).Info("Making routing table for AWS interface.")
-		a.routeTables[tableIndex] = routetable.New(
+		rt = routetable.New(
 			[]string{"^" + regexp.QuoteMeta(ifaceName) + "$", routetable.InterfaceNone},
 			4,
 			false,
@@ -449,14 +583,17 @@ func (a *awsIPManager) getOrAllocRoutingTable(tableIndex int, ifaceName string) 
 			tableIndex,
 			a.opRecorder,
 		)
+		a.routeTablesByIfaceName[ifaceName] = rt
+		a.routeTablesByTable[tableIndex] = rt
 	}
-	return a.routeTables[tableIndex]
+	return a.routeTablesByIfaceName[ifaceName]
 }
 
 func (a *awsIPManager) getOrAllocRoutingTableID(ifaceName string) int {
 	if _, ok := a.routeTableIndexByIfaceName[ifaceName]; !ok {
-		a.routeTableIndexByIfaceName[ifaceName] = a.freeRouteTableIndexes[0]
-		a.freeRouteTableIndexes = a.freeRouteTableIndexes[1:]
+		lastIdx := len(a.freeRouteTableIndexes) - 1
+		a.routeTableIndexByIfaceName[ifaceName] = a.freeRouteTableIndexes[lastIdx]
+		a.freeRouteTableIndexes = a.freeRouteTableIndexes[:lastIdx]
 	}
 	return a.routeTableIndexByIfaceName[ifaceName]
 }
@@ -469,7 +606,7 @@ func (a *awsIPManager) releaseRoutingTableID(ifaceName string) {
 
 func (a *awsIPManager) GetRouteTableSyncers() []routeTableSyncer {
 	var rts []routeTableSyncer
-	for _, t := range a.routeTables {
+	for _, t := range a.routeTablesByTable {
 		rts = append(rts, t)
 	}
 	return rts
