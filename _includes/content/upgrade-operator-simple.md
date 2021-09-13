@@ -5,7 +5,7 @@
 
 1. Download the new manifests for Prometheus operator.
 
-   **Note**: If you have an existing Prometheus operator in your cluster that you want to use, skip this step. To work with Calico Enterprise, your Prometheus operator must be v0.30.0 or higher.
+   **Note**: If you have an existing Prometheus operator in your cluster that you want to use, skip this step. To work with Calico Enterprise, your Prometheus operator must be v0.40.0 or higher.
    {: .alert .alert-info}
 
    ```bash
