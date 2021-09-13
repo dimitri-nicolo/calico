@@ -74,7 +74,7 @@ func NewAWSSubnetManager(
 	opRecorder logutils.OpRecorder,
 ) *awsIPManager {
 	logrus.WithFields(logrus.Fields{
-		"nodeName": nodeName,
+		"nodeName":    nodeName,
 		"routeTables": routeTableIndexes,
 	}).Info("Creating AWS subnet manager.")
 	rules, err := routerule.New(
