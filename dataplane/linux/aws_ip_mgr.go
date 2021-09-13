@@ -148,14 +148,14 @@ func (a *awsIPManager) OnUpdate(msg interface{}) {
 	case *proto.RouteRemove:
 		a.onRouteUpdate(ip.MustParseCIDROrIP(msg.Dst), nil)
 	case *ifaceUpdate:
-		logrus.WithField("update", msg).Debug("Interface state changed.")
 		if _, ok := a.expectedPrimaryIPs[msg.Name]; ok {
+			logrus.WithField("update", msg).Debug("Secondary ENI state changed.")
 			a.queueDataplaneResync("Interface changed state")
 		}
 	case *ifaceAddrsUpdate:
-		logrus.WithField("update", msg).Debug("Interface addrs changed.")
 		if expAddr, ok := a.expectedPrimaryIPs[msg.Name]; ok && msg.Addrs != nil {
 			// This is an interface that we care about.  Check if the address it has corresponds with what we want.
+			logrus.WithField("update", msg).Debug("Secondary ENI addrs changed.")
 			seenExpected := false
 			seenUnexpected := false
 			msg.Addrs.Iter(func(item interface{}) error {
@@ -352,6 +352,7 @@ func (a *awsIPManager) resyncWithDataplane() error {
 		if err != nil {
 			return err
 		}
+		logrus.WithField("mtu", mtu).Info("Found primary interface MTU.")
 		a.primaryIfaceMTU = mtu
 	}
 
