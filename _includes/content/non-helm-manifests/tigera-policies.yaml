@@ -633,6 +633,13 @@ spec:
       destination:
         ports: [5554]
       protocol: TCP
+      source:
+        selector: k8s-app == 'tigera-dpi'
+        namespaceSelector: name == 'tigera-dpi'
+    - action: Allow
+      destination:
+        ports: [5554]
+      protocol: TCP
       # The operator needs access to Elasticsearch and Kibana (through ES Gateway), however, since the operator is on the
       # hostnetwork it's hard to create specific network policies for it.
       # If the node CIDRs are known they can be added to this rule to restrict access to just the nodes in the cluster
@@ -1401,6 +1408,49 @@ spec:
         namespaceSelector: projectcalico.org/name == 'tigera-dex'
         selector: k8s-app == 'tigera-dex'
         ports: [5556]
+
+---
+
+# Allow internal communication from tigera-dpi to apiserver, coredns and elasticsearch.
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-tigera.tigera-dpi
+  namespace: tigera-dpi
+spec:
+  order: 1
+  tier: allow-tigera
+  selector: k8s-app == 'tigera-dpi'
+  types:
+  - Egress
+  egress:
+  - action: Allow
+    protocol: TCP
+    destination:
+      services:
+        namespace: default
+        name: kubernetes
+{%- if include.containerOrchestrationPlatform == "openshift" %}
+  - action: Allow
+    protocol: UDP
+    destination:
+      services:
+        namespace: default
+        name: openshift-dns
+{%- else %}
+  - action: Allow
+    protocol: UDP
+    destination:
+      services:
+        namespace: kube-system
+        name: kube-dns
+{%- endif %}
+  - action: Allow
+    protocol: TCP
+    destination:
+      services:
+        namespace: tigera-elasticsearch
+        name: tigera-secure-es-gateway-http
 
 ---
 

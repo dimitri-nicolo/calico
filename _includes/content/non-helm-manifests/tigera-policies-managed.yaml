@@ -419,6 +419,14 @@ spec:
       source:
         namespaceSelector: projectcalico.org/name == 'tigera-intrusion-detection'
         selector: job-name == 'intrusion-detection-es-job-installer'
+    - action: Allow
+      destination:
+        ports:
+          - 8080
+      protocol: TCP
+      source:
+        namespaceSelector: projectcalico.org/name == 'tigera-dpi'
+        selector: k8s-app == 'tigera-dpi'
   egress:
     - action: Allow
       protocol: TCP
@@ -666,6 +674,49 @@ spec:
         selector: k8s-app == 'kube-dns'
         ports: [53]
 {%- endif %}
+
+---
+
+# Allow internal communication from tigera-dpi to apiserver, coredns and guardian.
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-tigera.tigera-dpi
+  namespace: tigera-dpi
+spec:
+  order: 1
+  tier: allow-tigera
+  selector: k8s-app == 'tigera-dpi'
+  types:
+  - Egress
+  egress:
+  - action: Allow
+    protocol: TCP
+    destination:
+      services:
+        namespace: default
+        name: kubernetes
+{%- if include.containerOrchestrationPlatform == "openshift" %}
+  - action: Allow
+    protocol: UDP
+    destination:
+      services:
+        namespace: default
+        name: openshift-dns
+{%- else %}
+  - action: Allow
+    protocol: UDP
+    destination:
+      services:
+        namespace: kube-system
+        name: kube-dns
+{%- endif %}
+  - action: Allow
+    protocol: TCP
+    destination:
+      services:
+        namespace: tigera-guardian
+        name: tigera-guardian
 
 ---
 
