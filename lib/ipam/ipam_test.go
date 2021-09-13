@@ -161,7 +161,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 		var hostname string
 		var err error
 		var pool20, pool32, pool26 []cnet.IPNet
-		var initialLogLevel log.Level
+		var origLogLevel log.Level
 
 		BeforeEach(func() {
 			initialLogLevel = log.GetLevel()
@@ -197,11 +197,18 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 			// Create the node object.
 			hostname = "host-perf"
 			applyNode(bc, kc, hostname, map[string]string{"foo": "bar"})
+
+			// Set log level to Info and save original value to be restored later
+			origLogLevel = log.GetLevel()
+			log.SetLevel(log.InfoLevel)
+
 		})
 
 		AfterEach(func() {
 			deleteNode(bc, kc, hostname)
-			log.SetLevel(initialLogLevel)
+
+			// Restore original log level value
+			log.SetLevel(origLogLevel)
 		})
 
 		Measure("It should be able to allocate a single address quickly - blocksize 32", func(b Benchmarker) {
