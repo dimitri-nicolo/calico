@@ -132,6 +132,7 @@ type Iface struct {
 
 func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, doneC chan struct{}) {
 	defer close(doneC)
+	logrus.Info("AWS secondary interface provisioner running in background.")
 
 	// Response channel is masked (nil) until we're ready to send something.
 	var responseC chan *SecondaryIfaceState
@@ -1066,8 +1067,6 @@ func (m *SecondaryIfaceProvisioner) createAWSNICs(awsNICState *nicSnapshot, resy
 		// >1 IP in place already.
 		resyncState.freeIPv4CapacityByNICID[*cno.NetworkInterface.NetworkInterfaceId] =
 			m.networkCapabilities.MaxIPv4PerInterface - len(cno.NetworkInterface.PrivateIpAddresses)
-
-		// TODO disable source/dest check?
 	}
 
 	if finalErr != nil {
