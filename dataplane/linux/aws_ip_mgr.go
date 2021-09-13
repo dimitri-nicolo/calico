@@ -137,6 +137,7 @@ func (a *awsIPManager) OnUpdate(msg interface{}) {
 }
 
 func (a *awsIPManager) OnSecondaryIfaceStateUpdate(msg *aws.SecondaryIfaceState) {
+	logrus.WithField("awsState", msg).Debug("Received AWS state update.")
 	a.queueDataplaneResync("AWS fabric updated")
 	a.awsState = msg
 }

@@ -187,7 +187,8 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 		stopBackoffTimer()
 
 		if m.resyncNeeded {
-			response, err := m.resync(ctx)
+			var err error
+			response, err = m.resync(ctx)
 			m.healthAgg.Report(healthNameAWSInSync, &health.HealthReport{Ready: err == nil, Live: true})
 			if err != nil {
 				logrus.WithError(err).Error("Failed to resync with AWS. Will retry after backoff.")
