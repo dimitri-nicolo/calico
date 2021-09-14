@@ -43,7 +43,7 @@ This feature is in a technical preview stage. PacketCapture does not support:
 - [Enforce RBAC for packet capture](#enforce-rbac-for-packet-capture)
 - [Access packet capture files](#access-packet-capture-files)
 
-#### Capture live traffic
+### Capture live traffic
 
 
 Capturing live traffic will start by creating a [PacketCapture]({{site.baseurl}}/reference/resources/packetcapture) resource.
@@ -101,7 +101,7 @@ spec:
 
 More examples for filtering traffic are provided at [PacketCapture]({{site.baseurl}}/reference/resources/packetcapture) resource definition.
 
-#### Schedule to capture traffic
+### Schedule to capture traffic
 
 You can schedule a `PacketCapture` to start and/or stop at a certain time. Start and end time are defined using RFC3339 format. 
 
@@ -125,7 +125,7 @@ scheduled and targeted by the selector to cycle between states: `Scheduled`, `Ca
 
 More examples for scheduling to capture traffic are provided at [PacketCapture]({{site.baseurl}}/reference/resources/packetcapture) resource definition.
 
-#### Configure packet capture rotation
+### Configure packet capture rotation
 
 Live traffic will be stored as pcap files that will be rotated by size and time. All packet capture files rotate using
 parameters defined in [FelixConfig]({{site.baseurl}}/reference/resources/felixconfig).
@@ -138,7 +138,7 @@ For example, in order to extend the time rotation to one day, the command below 
 kubectl patch felixconfiguration default -p '{"spec":{"captureRotationSeconds":"86400"}}'
 ```
 
-#### Enforce RBAC for packet capture
+### Enforce RBAC for packet capture
 
 Packet Capture permissions are enforced using the standard Kubernetes RBAC based on Role and RoleBindings within a namespace.
 
@@ -169,7 +169,7 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ```
 
-In order to allow user jane to access the capture files generated for a specific namespace, a role/role binding similar to the one below can be used:
+In order to allow user jane to access (retrieve and delete) the capture files generated for a specific namespace, a role/role binding similar to the one below can be used:
 
 ```
 apiVersion: rbac.authorization.k8s.io/v1
@@ -202,7 +202,7 @@ metadata:
 rules:
 - apiGroups: ["projectcalico.org"]
   resources: ["packetcaptures/files"]
-  verbs: ["get"]
+  verbs: ["get", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -219,9 +219,14 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ```
 
-#### Access packet capture files
+### Access packet capture files
 
 Capture files will be stored on the host mounted volume used for calico nodes. These can be visualized using tools such as Wireshark.
+
+Packet capture files will be stored using the following directory structure: {namespace}/{packet capture resource name} under the capture directory defined via FelixConfig.
+The active packet capture file will be identified using the following schema: {workload endpoint name}_{host network interface}.pcap. Rotated capture files name will contain an index matching the rotation timestamp.
+
+Packet capture files will be deleted after the packet capture resource has been deleted.
 
 In order to locate the capture files generated, query the status of the [PacketCapture]({{site.baseurl}}/reference/resources/packetcapture)
 
@@ -252,6 +257,8 @@ status:
     state: Capturing
 ```
 
+#### Access packet capture files via API
+
 To access the capture files locally, you can use the following api that is available via tigera-manager service:
 
 ```bash
@@ -266,9 +273,28 @@ Retrieving capture files from a managed cluster is performed by calling the same
 ```bash
 kubectl port-forward -n tigera-manager service/tigera-manager 9443:9443 &
 NS=<REPLACE_WITH_PACKETCAPTURE_NS> NAME=<REPLACE_WITH_PACKETCAPTURE_NAME> TOKEN=<REPLACE_WITH_YOUR_TOKEN> MANAGED_CLUSTER=<REPLACE_WITH_THE_NAME_OF_MANAGED_CLUSTER>\
-curl "https://localhost:9443/packet-capture/download/$NS/$NAME/files.zip" -L -O k \
+curl "https://localhost:9443/packet-capture/download/$NS/$NAME/files.zip" -L -O -k \
 -H "Authorization: Bearer $TOKEN" -H "X-CLUSTER-ID: $MANAGED_CLUSTER"
 ```
+
+In addition, capture files can be deleted at any point in time once a PacketCapture was marked as `Finished`.
+
+```bash
+kubectl port-forward -n tigera-manager service/tigera-manager 9443:9443 &
+NS=<REPLACE_WITH_PACKETCAPTURE_NS> NAME=<REPLACE_WITH_PACKETCAPTURE_NAME> TOKEN=<REPLACE_WITH_YOUR_TOKEN> \
+curl -X DELETE "https://localhost:9443/packet-capture/files/$NS/$NAME/files.zip" -k \
+-H "Authorization: Bearer $TOKEN"
+```
+
+Deleting capture files from a managed cluster is performed by calling the same API:
+
+```bash
+kubectl port-forward -n tigera-manager service/tigera-manager 9443:9443 &
+NS=<REPLACE_WITH_PACKETCAPTURE_NS> NAME=<REPLACE_WITH_PACKETCAPTURE_NAME> TOKEN=<REPLACE_WITH_YOUR_TOKEN> MANAGED_CLUSTER=<REPLACE_WITH_THE_NAME_OF_MANAGED_CLUSTER>\
+curl -X DELETE "https://localhost:9443/packet-capture/download/$NS/$NAME/files.zip" -k \
+-H "Authorization: Bearer $TOKEN" -H "X-CLUSTER-ID: $MANAGED_CLUSTER"
+```
+
 
 Users accessing packet captures from management and managed clusters need to be allowed `CREATE` actions for `authenticationreviews` in api group `projectcalico.org` in the management cluster, as in the example in the section above.
 
@@ -278,6 +304,8 @@ Using the running example of a service account named, `jane` in the default name
 ```bash
 {% raw %}kubectl get secret $(kubectl get serviceaccount jane -o jsonpath='{range .secrets[*]}{.name}{"\n"}{end}' | grep token) -o go-template='{{.data.token | base64decode}}' && echo{% endraw %}
 ```
+
+#### Access packet capture files via CLI
 
 Alternatively, you can access the capture files locally using [calicoctl]({{site.baseurl}}/reference/calicoctl/captured-packets) CLI:
 
@@ -294,11 +322,6 @@ kubectl get pods -ntigera-fluentd --no-headers --field-selector spec.nodeName="<
 ```bash
 kubectl cp tigera-fluentd/<REPLACE_WITH_POD_NAME>:var/log/calico/pcap/sample/sample-capture/ .
 ```
-
-Packet capture files will be stored using the following directory structure: {namespace}/{packet capture resource name} under the capture directory defined via FelixConfig.
-The active packet capture file will be identified using the following schema: {workload endpoint name}_{host network interface}.pcap. Rotated capture files name will contain an index matching the rotation timestamp.
-
-Packet capture files will be deleted after the packet capture resource has been deleted.
 
 [calicoctl]({{site.baseurl}}/reference/calicoctl/captured-packets) CLI can be used to clean capture files:
 
