@@ -373,8 +373,11 @@ func (capture *rotatingPcapFile) Write(packets chan gopacket.Packet) error {
 	}
 	capture.updateStatus(capture.extractFileNames(files), proto.PacketCaptureStatusUpdate_CAPTURING)
 
-	var endAfter = capture.endTime.Sub(capture.startTime)
-	log.WithField("CAPTURE", capture.loggingID).Debugf("PacketCapture will stop after %v", endAfter)
+	var delay = capture.endTime.Sub(time.Now())
+	var endAfter = time.After(delay)
+	if capture.endTime.Before(calcCapture.MaxTime) {
+		log.WithField("CAPTURE", capture.loggingID).Infof("PacketCapture will stop after %v with start %v and end %v", delay, capture.startTime, capture.endTime)
+	}
 
 	for {
 		select {
@@ -403,8 +406,8 @@ func (capture *rotatingPcapFile) Write(packets chan gopacket.Packet) error {
 				log.WithError(err).WithField("CAPTURE", capture.loggingID).Error("Could not rotate file")
 				return err
 			}
-		case <-time.After(endAfter):
-			log.WithField("CAPTURE", capture.loggingID).Debug("Stop writing packets to pcap files")
+		case <-endAfter:
+			log.WithField("CAPTURE", capture.loggingID).Info("Stop writing packets to pcap files")
 			err, files := capture.listFiles(false)
 			if err != nil {
 				return err
@@ -422,13 +425,16 @@ func (capture *rotatingPcapFile) doDone() {
 	if err = capture.close(); err != nil {
 		log.WithError(err).WithField("CAPTURE", capture.loggingID).Error("Could not close file")
 	}
+	capture.isDone = true
 	close(capture.done)
 	capture.ticker.Stop()
 }
 
 func (capture *rotatingPcapFile) Done() {
-	capture.isDone = true
-	capture.done <- struct{}{}
+	if !capture.isDone {
+		capture.isDone = true
+		capture.done <- struct{}{}
+	}
 }
 
 func (capture *rotatingPcapFile) Clean() error {
@@ -474,22 +480,33 @@ func (capture *rotatingPcapFile) writeHeader() error {
 }
 
 func (capture *rotatingPcapFile) Start() error {
+	var err, files = capture.listFiles(false)
+	if err != nil {
+		log.WithError(err).WithField("CAPTURE", capture.loggingID).Error("Could not list files")
+		return err
+	}
+
 	if capture.endTime.Before(time.Now()) {
-		return fmt.Errorf("failed to start capture as endTime %v is in the past", capture.endTime)
+		log.WithField("CAPTURE", capture.loggingID).Info("EndTime is in the past. The capture will be considered already finished")
+		capture.updateStatus(capture.extractFileNames(files), proto.PacketCaptureStatusUpdate_FINISHED)
+		return nil
 	}
 
 	var delay = time.Second * 0
 	if capture.startTime.After(time.Now()) {
 		delay = capture.startTime.Sub(time.Now())
-		log.WithField("CAPTURE", capture.loggingID).Debugf("Setting a delay of %v", delay)
-		capture.updateStatus([]string{}, proto.PacketCaptureStatusUpdate_SCHEDULED)
+		log.WithField("CAPTURE", capture.loggingID).Infof("Setting a delay of %v", delay)
+		capture.updateStatus(capture.extractFileNames(files), proto.PacketCaptureStatusUpdate_SCHEDULED)
 	}
 
+	var timeAfter = time.After(delay)
+
 	select {
-	case <-time.After(delay):
+	case <-timeAfter:
 		return capture.captureTraffic()
 	case <-capture.context.Done():
 		log.WithField("CAPTURE", capture.loggingID).Debug("Cancelling context")
+		return nil
 	}
 
 	return nil
@@ -515,9 +532,12 @@ func (capture *rotatingPcapFile) captureTraffic() error {
 }
 
 func (capture *rotatingPcapFile) Stop() {
+	log.WithField("CAPTURE", capture.loggingID).Info("Calling stop")
 	capture.cancel()
-	capture.Done()
-	capture.handle.Close()
+	if capture.handle != nil {
+		capture.Done()
+		capture.handle.Close()
+	}
 
 	var err, files = capture.listFiles(false)
 	if err != nil {
@@ -527,10 +547,7 @@ func (capture *rotatingPcapFile) Stop() {
 }
 
 func (capture *rotatingPcapFile) StopAndClean() error {
-	capture.cancel()
-	capture.Done()
-	capture.handle.Close()
-
+	capture.Stop()
 	return capture.Clean()
 }
 
