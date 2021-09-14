@@ -898,8 +898,8 @@ github.com/tigera/api v0.0.0-20210914202238-099729e260f9 h1:1Dmti0agBVJg/CrIwFBm
 github.com/tigera/api v0.0.0-20210914202238-099729e260f9/go.mod h1:tQDYzO/oh0HZL2MpIwyijRwJf67hPR/Gkex1vt9EwLE=
 github.com/tigera/apiserver v0.0.0-20210914205520-18cab3815a29 h1:uKsFTInx0pSjyDY3eI1bXHvASC7q+E4F7Xe+agg995U=
 github.com/tigera/apiserver v0.0.0-20210914205520-18cab3815a29/go.mod h1:ktqRPpGnLbSp/uClKq1f/UXrgciwaGXbxwGit4inbNs=
-github.com/tigera/compliance v0.0.0-20210914211043-7371748ca1f8 h1:5E9GMmihjej7c9VVRey+qcCgY8+leMQ2qBojQE5ARAc=
-github.com/tigera/compliance v0.0.0-20210914211043-7371748ca1f8/go.mod h1:pKidww4EG7wwna6Ra6mlrRWEk/Al/YbUC9YxtQwKKEg=
+github.com/tigera/compliance v0.0.0-20210914213241-49a8578a4023 h1:79XMyf5vtHMTSxUalQztU23CUeszNoBsL0WbfUdqEIs=
+github.com/tigera/compliance v0.0.0-20210914213241-49a8578a4023/go.mod h1:z38+KqU1Mci3IHpDTEsnL7KC15laxF8wXs1vImPLpZo=
 github.com/tigera/felix-private v0.0.0-20210914010121-5ec7b801be7f h1:e3+flUxMVQVzwRkHMEnGmvSNoemk5QJFi6M+RxbGXzw=
 github.com/tigera/felix-private v0.0.0-20210914010121-5ec7b801be7f/go.mod h1:KJazdd0W5BLQ6xYDHQ4xVut4nJjGtYXIc/+A++UtQW8=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210914204733-7bca782c7303 h1:xJXQ1T3rwpv3qyDX2hGsHVZFlgd+fpkRd7EWJ2I+laE=
