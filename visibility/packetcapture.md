@@ -39,6 +39,7 @@ This feature is in a technical preview stage. PacketCapture does not support:
 ### How To
 
 - [Capture live traffic](#capture-live-traffic)
+- [Schedule traffic capture](#schedule-traffic-capture)
 - [Configure packet capture rotation](#configure-packet-capture-rotation)
 - [Enforce RBAC for packet capture](#enforce-rbac-for-packet-capture)
 - [Access packet capture files](#access-packet-capture-files)
@@ -101,11 +102,11 @@ spec:
 
 More examples for filtering traffic are provided at [PacketCapture]({{site.baseurl}}/reference/resources/packetcapture) resource definition.
 
-### Schedule to capture traffic
+### Schedule traffic capture
 
 You can schedule a `PacketCapture` to start and/or stop at a certain time. Start and end time are defined using RFC3339 format. 
 
-In the following example, we schedule to capture traffic for 10 minutes between 00:30 UTC and 00:40 UTC for all workload
+In the following example, we schedule traffic capture for 10 minutes between 00:30 UTC and 00:40 UTC for all workload
 endpoints in `sample` namespace.
 
 ```yaml
@@ -257,6 +258,16 @@ status:
     state: Capturing
 ```
 
+#### Access packet capture files via Service Graph
+
+[Service Graph]({{site.baseurl}}/visibility/get-started-cem) lets you access captured traffic for your workload endpoints.
+
+By selecting a service graph vertex that corresponds to a namespace, you can schedule a capture job that selects all workload endpoints within that particular namespace.
+
+![initiate-capture-job]({{site.baseurl}}/images/initiate-capture-job.png)
+
+From the Capture Jobs tab in the bottom panel, you can: rerun/stop a capture job, retrieve and delete capture files, view YAML files and delete a capture job.
+
 #### Access packet capture files via API
 
 To access the capture files locally, you can use the following api that is available via tigera-manager service:
@@ -334,3 +345,8 @@ Alternatively, the following command can be used to clean up capture files:
 ```bash
 kubectl exec -it tigera-fluentd/<REPLACE_WITH_POD_NAME> -- sh -c "rm -r /var/log/calico/pcap/sample/sample-capture/"
 ```
+
+### Above and beyond
+
+- [Configure access to the Manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager)
+- [Get started with Calico Enterprise Manager]({{site.baseurl}}/visibility/get-started-cem)
