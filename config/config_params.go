@@ -298,8 +298,8 @@ type Config struct {
 
 	AWSSrcDstCheck                    string        `config:"oneof(DoNothing,Enable,Disable);DoNothing;non-zero"`
 	AWSSecondaryIPSupport             string        `config:"oneof(Disabled,Enabled);Disabled"`
+	AWSSecondaryIPRoutingRulePriority int           `config:"int(0:4294967295);101"`
 	AWSRequestTimeout                 time.Duration `config:"seconds;30"`
-	AWSSecondaryIPRoutingRulePriority int           `config:"int;101"`
 
 	ServiceLoopPrevention string `config:"oneof(Drop,Reject,Disabled);Drop"`
 
