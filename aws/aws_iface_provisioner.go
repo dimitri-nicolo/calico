@@ -16,7 +16,6 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/logutils"
@@ -36,7 +35,6 @@ type SecondaryIfaceProvisioner struct {
 	healthAgg  *health.HealthAggregator
 	opRecorder logutils.OpRecorder
 	ipamClient ipam.Interface
-	k8sClient  *kubernetes.Clientset
 
 	// resyncNeeded is set to true if we need to do any kind of resync.
 	resyncNeeded bool
@@ -58,7 +56,8 @@ type SecondaryIfaceProvisioner struct {
 	ds DatastoreState
 
 	// ResponseC is our channel back to the main dataplane loop.
-	responseC chan *IfaceState
+	responseC        chan *IfaceState
+	capacityCallback func(SecondaryIfaceCapacities)
 }
 
 type DatastoreState struct {
@@ -70,14 +69,42 @@ type DatastoreState struct {
 const (
 	healthNameENICapacity = "aws-eni-capacity"
 	healthNameAWSInSync   = "aws-eni-addresses-in-sync"
+	defaultTimeout        = 30 * time.Second
 )
 
+type IfaceProvOpt func(provisioner *SecondaryIfaceProvisioner)
+
+func OptTimeout(to time.Duration) IfaceProvOpt {
+	return func(provisioner *SecondaryIfaceProvisioner) {
+		provisioner.timeout = to
+	}
+}
+
+func OptCapacityCallback(cb func(SecondaryIfaceCapacities)) IfaceProvOpt {
+	return func(provisioner *SecondaryIfaceProvisioner) {
+		provisioner.capacityCallback = cb
+	}
+}
+
+func OptClockOverride(c clock.Clock) IfaceProvOpt {
+	return func(provisioner *SecondaryIfaceProvisioner) {
+		provisioner.clock = c
+	}
+}
+
+type SecondaryIfaceCapacities struct {
+	MaxCalicoSecondaryIPs int
+}
+
+func (c SecondaryIfaceCapacities) Equals(caps SecondaryIfaceCapacities) bool {
+	return c == caps
+}
+
 func NewSecondaryIfaceProvisioner(
+	nodeName string,
 	healthAgg *health.HealthAggregator,
 	ipamClient ipam.Interface,
-	k8sClient *kubernetes.Clientset,
-	nodeName string,
-	awsTimeout time.Duration,
+	options ...IfaceProvOpt,
 ) *SecondaryIfaceProvisioner {
 	healthAgg.RegisterReporter(healthNameENICapacity, &health.HealthReport{
 		Ready: true,
@@ -96,18 +123,26 @@ func NewSecondaryIfaceProvisioner(
 		Live:  true,
 	})
 
-	return &SecondaryIfaceProvisioner{
+	sip := &SecondaryIfaceProvisioner{
 		healthAgg:  healthAgg,
 		ipamClient: ipamClient,
-		k8sClient:  k8sClient,
 		nodeName:   nodeName,
-		timeout:    awsTimeout,
+		timeout:    defaultTimeout,
 		opRecorder: logutils.NewSummarizer("AWS secondary IP reconciliation loop"),
 
 		datastoreUpdateC: make(chan DatastoreState, 1),
 		responseC:        make(chan *IfaceState, 1),
 		clock:            clock.RealClock{},
+		capacityCallback: func(c SecondaryIfaceCapacities) {
+			logrus.WithField("cap", c).Debug("Capacity updated but no callback configured.")
+		},
 	}
+
+	for _, o := range options {
+		o(sip)
+	}
+
+	return sip
 }
 
 func (m *SecondaryIfaceProvisioner) Start(ctx context.Context) (done chan struct{}) {
@@ -247,7 +282,7 @@ func (m *SecondaryIfaceProvisioner) resync(ctx context.Context) (*IfaceState, er
 		response, awsResyncErr = m.attemptResync()
 		if errors.Is(awsResyncErr, errResyncNeeded) {
 			// Expected retry needed for some more complex cases...
-			logrus.Info("Restarting resync after modifying AWS state.")
+			logrus.Debug("Restarting resync after modifying AWS state.")
 			continue
 		} else if awsResyncErr != nil {
 			logrus.WithError(awsResyncErr).Warn("Failed to resync AWS subnet state.")
@@ -279,6 +314,11 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*IfaceState, error) {
 
 	// Collect the current state of this instance and our NICs according to AWS.
 	awsSnapshot, resyncState, err := m.loadAWSNICsState()
+
+	// Let the kubernetes Node updater know our capacity.
+	m.capacityCallback(SecondaryIfaceCapacities{
+		MaxCalicoSecondaryIPs: m.calculateMaxCalicoSecondaryIPs(awsSnapshot),
+	})
 
 	// Scan for IPs that are present on our AWS NICs but no longer required by Calico.
 	awsIPsToRelease := m.findUnusedAWSIPs(awsSnapshot)
@@ -486,12 +526,13 @@ func (m *SecondaryIfaceProvisioner) getMyNetworkCapabilities() (*NetworkCapabili
 
 // nicSnapshot captures the current state of the AWS NICs attached to this host, indexed in various ways.
 type nicSnapshot struct {
-	primaryNIC          *ec2types.NetworkInterface
-	calicoOwnedNICsByID map[string]ec2types.NetworkInterface
-	nicIDsBySubnet      map[string][]string
-	nicIDByIP           map[ip.CIDR]string
-	nicIDByPrimaryIP    map[ip.CIDR]string
-	attachmentIDByNICID map[string]string
+	primaryNIC             *ec2types.NetworkInterface
+	calicoOwnedNICsByID    map[string]ec2types.NetworkInterface
+	nonCalicoOwnedNICsByID map[string]ec2types.NetworkInterface
+	nicIDsBySubnet         map[string][]string
+	nicIDByIP              map[ip.CIDR]string
+	nicIDByPrimaryIP       map[ip.CIDR]string
+	attachmentIDByNICID    map[string]string
 }
 
 func (s *nicSnapshot) PrimaryNICSecurityGroups() []string {
@@ -546,6 +587,7 @@ func (m *SecondaryIfaceProvisioner) loadAWSNICsState() (s *nicSnapshot, r *nicRe
 
 	s = &nicSnapshot{
 		calicoOwnedNICsByID: map[string]ec2types.NetworkInterface{},
+		nonCalicoOwnedNICsByID: map[string]ec2types.NetworkInterface{},
 		nicIDsBySubnet:      map[string][]string{},
 		nicIDByIP:           map[ip.CIDR]string{},
 		nicIDByPrimaryIP:    map[ip.CIDR]string{},
@@ -579,6 +621,7 @@ func (m *SecondaryIfaceProvisioner) loadAWSNICsState() (s *nicSnapshot, r *nicRe
 			if s.primaryNIC == nil || n.Attachment != nil && n.Attachment.DeviceIndex != nil && *n.Attachment.DeviceIndex == 0 {
 				s.primaryNIC = &n
 			}
+			s.nonCalicoOwnedNICsByID[*n.NetworkInterfaceId] = n
 			continue
 		}
 		// Found one of our managed interfaces; collect its IPs.
@@ -1172,6 +1215,14 @@ func (m *SecondaryIfaceProvisioner) ec2Client() (*EC2Client, error) {
 	}
 	m.cachedEC2Client = c
 	return m.cachedEC2Client, nil
+}
+
+func (m *SecondaryIfaceProvisioner) calculateMaxCalicoSecondaryIPs(snapshot *nicSnapshot) int {
+	caps := m.networkCapabilities
+	maxSecondaryIPsPerNIC := caps.MaxIPv4PerInterface - 1
+	maxCalicoNICs := caps.MaxNetworkInterfaces - len(snapshot.nonCalicoOwnedNICsByID)
+	maxCapacity := maxCalicoNICs * maxSecondaryIPsPerNIC
+	return maxCapacity
 }
 
 func trimPrefixLen(cidr string) string {

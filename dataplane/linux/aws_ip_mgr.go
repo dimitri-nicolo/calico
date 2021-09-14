@@ -14,6 +14,8 @@ import (
 	"github.com/vishvananda/netlink"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/projectcalico/felix/k8sutils"
+
 	"github.com/projectcalico/felix/aws"
 
 	"github.com/projectcalico/felix/logutils"
@@ -46,8 +48,9 @@ type awsIPManager struct {
 	// ifaceProvisioner manages the AWS fabric resources.  It runs in the background to decouple AWS fabric updates
 	// from the main thread.  We send it datastore snapshots; in return, it sends back SecondaryIfaceState objects
 	// telling us what state the AWS fabric is in.
-	ifaceProvisioner        *aws.SecondaryIfaceProvisioner
-	ifaceProvisionerStarted bool
+	ifaceProvisioner         *aws.SecondaryIfaceProvisioner
+	k8sCapacityUpdater       *k8sutils.CapacityUpdater
+	backgroundWorkersStarted bool
 
 	// awsState is the most recent update we've got from the background thread telling us what state it thinks
 	// the AWS fabric should be in. <nil> means "don't know", i.e. we're not ready to touch the dataplane yet.
@@ -104,6 +107,9 @@ func NewAWSSubnetManager(
 		logrus.WithError(err).Panic("Failed to init routing rules manager.")
 	}
 
+	// TODO How to make sure we get the right k8s Node?  Is node name sufficient?
+	k8sCapacityUpdater := k8sutils.NewCapacityUpdater(nodeName, k8sClient)
+
 	sm := &awsIPManager{
 		poolsByID:                 map[string]*proto.IPAMPool{},
 		poolIDsBySubnetID:         map[string]set.Set{},
@@ -121,12 +127,13 @@ func NewAWSSubnetManager(
 		dpConfig:              dpConfig,
 		opRecorder:            opRecorder,
 
+		k8sCapacityUpdater: k8sCapacityUpdater,
 		ifaceProvisioner: aws.NewSecondaryIfaceProvisioner(
+			nodeName,
 			healthAgg,
 			ipamClient,
-			k8sClient,
-			nodeName,
-			dpConfig.AWSRequestTimeout,
+			aws.OptTimeout(dpConfig.AWSRequestTimeout),
+			aws.OptCapacityCallback(k8sCapacityUpdater.OnCapacityChange),
 		),
 	}
 	sm.queueAWSResync("first run")
@@ -293,9 +300,10 @@ func (a *awsIPManager) queueDataplaneResync(reason string) {
 }
 
 func (a *awsIPManager) CompleteDeferredWork() error {
-	if !a.ifaceProvisionerStarted {
+	if !a.backgroundWorkersStarted {
 		a.ifaceProvisioner.Start(context.Background())
-		a.ifaceProvisionerStarted = true
+		a.k8sCapacityUpdater.Start(context.Background())
+		a.backgroundWorkersStarted = true
 	}
 	if a.awsResyncNeeded {
 		// Datastore has been updated, send a new snapshot to the background thread.  It will configure the AWS
@@ -326,8 +334,6 @@ func (a *awsIPManager) CompleteDeferredWork() error {
 		}
 		a.dataplaneResyncNeeded = false
 	}
-
-	// TODO update k8s Node with capacities
 
 	return nil
 }
