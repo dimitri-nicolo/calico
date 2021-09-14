@@ -1,16 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 
 package clientv3
 
@@ -284,6 +272,11 @@ func convertIpPoolFromStorage(pool *apiv3.IPPool) error {
 		}
 	}
 
+	// Default allowed uses if not set.
+	if len(pool.Spec.AllowedUses) == 0 {
+		pool.Spec.AllowedUses = []apiv3.IPPoolAllowedUse{apiv3.IPPoolAllowedUseWorkload, apiv3.IPPoolAllowedUseTunnel}
+	}
+
 	// Default the nodeSelector if it wasn't previously set.
 	if pool.Spec.NodeSelector == "" {
 		pool.Spec.NodeSelector = "all()"
@@ -351,6 +344,11 @@ func (r ipPools) validateAndSetDefaults(ctx context.Context, new, old *apiv3.IPP
 		} else {
 			new.Spec.BlockSize = 122
 		}
+	}
+
+	// Default allowed uses if not set.
+	if len(new.Spec.AllowedUses) == 0 {
+		new.Spec.AllowedUses = []apiv3.IPPoolAllowedUse{apiv3.IPPoolAllowedUseWorkload, apiv3.IPPoolAllowedUseTunnel}
 	}
 
 	// Check that the blockSize hasn't changed since updates are not supported.

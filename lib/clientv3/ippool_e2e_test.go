@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 package clientv3_test
 
 import (
+	"context"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -23,8 +24,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/libcalico-go/lib/ipam"
-
-	"context"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -50,6 +49,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool tests", testutils.DatastoreAll, f
 		VXLANMode:    apiv3.VXLANModeNever,
 		BlockSize:    26,
 		NodeSelector: "all()",
+		AllowedUses:  []apiv3.IPPoolAllowedUse{apiv3.IPPoolAllowedUseWorkload, apiv3.IPPoolAllowedUseTunnel},
 	}
 	spec1_2 := apiv3.IPPoolSpec{
 		CIDR:         "1.2.3.0/24",
@@ -58,6 +58,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool tests", testutils.DatastoreAll, f
 		VXLANMode:    apiv3.VXLANModeAlways,
 		BlockSize:    26,
 		NodeSelector: `foo == "bar"`,
+		AllowedUses:  []apiv3.IPPoolAllowedUse{apiv3.IPPoolAllowedUseWorkload, apiv3.IPPoolAllowedUseTunnel},
 	}
 	spec2 := apiv3.IPPoolSpec{
 		CIDR:         "2001::/120",
@@ -66,6 +67,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool tests", testutils.DatastoreAll, f
 		VXLANMode:    apiv3.VXLANModeNever,
 		BlockSize:    122,
 		NodeSelector: "all()",
+		AllowedUses:  []apiv3.IPPoolAllowedUse{apiv3.IPPoolAllowedUseWorkload, apiv3.IPPoolAllowedUseTunnel},
 	}
 	spec2_1 := apiv3.IPPoolSpec{
 		CIDR:         "2001::/120",
@@ -73,6 +75,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool tests", testutils.DatastoreAll, f
 		VXLANMode:    apiv3.VXLANModeNever,
 		BlockSize:    122,
 		NodeSelector: "all()",
+		AllowedUses:  []apiv3.IPPoolAllowedUse{apiv3.IPPoolAllowedUseWorkload, apiv3.IPPoolAllowedUseTunnel},
 	}
 
 	It("should error when creating an IPPool with no name", func() {
@@ -994,7 +997,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool tests (etcd only)", testutils.Dat
 			Expect(err).NotTo(HaveOccurred())
 
 			// Allocate an IP so that a block is allocated
-			v4ia, _, err := c.IPAM().AutoAssign(ctx, ipam.AutoAssignArgs{Num4: 1, Hostname: host})
+			v4ia, _, err := c.IPAM().AutoAssign(ctx, ipam.AutoAssignArgs{Num4: 1, Hostname: host, IntendedUse: apiv3.IPPoolAllowedUseWorkload})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(v4ia).ToNot(BeNil())
 			var assigned []cnet.IP
@@ -1070,7 +1073,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool tests (etcd only)", testutils.Dat
 			Expect(err).NotTo(HaveOccurred())
 
 			// Allocate an IP so that a block is allocated
-			v4ia, _, err := c.IPAM().AutoAssign(ctx, ipam.AutoAssignArgs{Num4: 1, Hostname: host})
+			v4ia, _, err := c.IPAM().AutoAssign(ctx, ipam.AutoAssignArgs{Num4: 1, Hostname: host, IntendedUse: apiv3.IPPoolAllowedUseWorkload})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(v4ia).ToNot(BeNil())
 			Expect(v4ia.IPs).To(HaveLen(1))
@@ -1087,7 +1090,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool tests (etcd only)", testutils.Dat
 
 			// Allocate an IP so that a block is allocated
 			pool2 := []cnet.IPNet{cnet.MustParseCIDR(p2.Spec.CIDR)}
-			v4ia, _, err = c.IPAM().AutoAssign(ctx, ipam.AutoAssignArgs{IPv4Pools: pool2, Num4: 1, Hostname: host})
+			v4ia, _, err = c.IPAM().AutoAssign(ctx, ipam.AutoAssignArgs{IPv4Pools: pool2, Num4: 1, Hostname: host, IntendedUse: apiv3.IPPoolAllowedUseWorkload})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(v4ia).ToNot(BeNil())
 			Expect(v4ia.IPs).To(HaveLen(1))
