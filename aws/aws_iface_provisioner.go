@@ -29,7 +29,7 @@ import (
 
 const (
 	// MaxInterfacesPerInstance is the current maximum total number of ENIs supported by any AWS instance type.
-	// We only support the first netowrk card on an instance right now so limiting to the maximum that one network
+	// We only support the first network card on an instance right now so limiting to the maximum that one network
 	// card can support.
 	MaxInterfacesPerInstance = 15
 
