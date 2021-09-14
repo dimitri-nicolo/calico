@@ -76,7 +76,7 @@ replace (
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210803101820-5d9c25feb29f
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 
-	github.com/tigera/api => github.com/fasaxc/api-tigera v0.0.0-20210913085846-5139916a22cf
+	github.com/tigera/api => github.com/fasaxc/api-tigera v0.0.0-20210914134226-9b548fbfb96c
 
 	// Need replacements for all the k8s subsidiary projects that are pulled in indirectly because
 	// the kubernets repo pulls them in via a replacement to its own vendored copies, which doesn't work for

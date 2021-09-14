@@ -349,8 +349,8 @@ github.com/evanphx/json-patch/v5 v5.2.0 h1:8ozOH5xxoMYDt5/u+yMTsVXydVCbTORFnOOoq
 github.com/evanphx/json-patch/v5 v5.2.0/go.mod h1:G79N1coSVB93tBe7j6PhzjmR3/2VvlbKOFpnXhI9Bw4=
 github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d h1:105gxyaGwCFad8crR9dcMQWvV9Hvulu6hwUh4tWPJnM=
 github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d/go.mod h1:ZZMPRZwes7CROmyNKgQzC3XPs6L/G2EJLHddWejkmf4=
-github.com/fasaxc/api-tigera v0.0.0-20210913085846-5139916a22cf h1:tIK4svDLUN9KF4yRqAM3PZmm2pYiO2w6F+MWXHU/b1M=
-github.com/fasaxc/api-tigera v0.0.0-20210913085846-5139916a22cf/go.mod h1:tQDYzO/oh0HZL2MpIwyijRwJf67hPR/Gkex1vt9EwLE=
+github.com/fasaxc/api-tigera v0.0.0-20210914134226-9b548fbfb96c h1:RhVd0ut9d/RQDjdMMjbErc4fZItFdHur4Jrw5wefs5g=
+github.com/fasaxc/api-tigera v0.0.0-20210914134226-9b548fbfb96c/go.mod h1:tQDYzO/oh0HZL2MpIwyijRwJf67hPR/Gkex1vt9EwLE=
 github.com/fasaxc/libcalico-go-private v1.7.2-0.20210913090545-540a8d955b13 h1:QEVh8JomE1vpoE07qRas/kjT4QFc9DG09gvUm7iltUs=
 github.com/fasaxc/libcalico-go-private v1.7.2-0.20210913090545-540a8d955b13/go.mod h1:cSS8UmO/vf3B/HiT+qjqH/C5M9w+I+Anc1XTzUbuNmc=
 github.com/fastly/go-utils v0.0.0-20180712184237-d95a45783239 h1:Ghm4eQYC0nEPnSJdVkTrXpu9KtoVCSo1hg7mtI7G9KU=
