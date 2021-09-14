@@ -138,7 +138,7 @@ var _ = Describe("Windows DNS policy test", func() {
 			goexampleIPs := getDomainIPs("gobyexample.com")
 			log.Printf("gobyexample ip %v", goexampleIPs)
 
-			// TODO: re-enable these assertions
+			// TODO: re-enable these assertions: https://tigera.atlassian.net/browse/CORE-7161
 			//Expect(len(googleIP)).NotTo(BeZero())
 			//Expect(len(goexampleIPs)).NotTo(BeZero())
 
