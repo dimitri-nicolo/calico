@@ -239,8 +239,9 @@ type Config struct {
 	Collector collector.Collector
 
 	// AWS-specials.
-	AWSSecondaryIPSupport bool
-	AWSRequestTimeout     time.Duration
+	AWSSecondaryIPSupport             bool
+	AWSRequestTimeout                 time.Duration
+	AWSSecondaryIPRoutingRulePriority int
 
 	// Config for DNS policy.
 	DNSCacheFile         string
@@ -596,8 +597,9 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	var awsTableIndexes []int
 	if config.AWSSecondaryIPSupport {
-		// FIXME allocate these on demand or at least allocate the right number for the number of possible ENIs.
-		for i := 0; i < 16; i++ {
+		// Since the egress gateway machinery claims all remaining indexes below, claim enough for all possible
+		// AWS secondary NICs now.
+		for i := 0; i < aws.SecondaryInterfaceCap; i++ {
 			rti, err := config.RouteTableManager.GrabIndex()
 			if err != nil {
 				logrus.WithError(err).Panic("Failed to allocate route table index for AWS subnet manager.")

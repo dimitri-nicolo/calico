@@ -27,6 +27,17 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
+const (
+	// MaxInterfacesPerInstance is the current maximum total number of ENIs supported by any AWS instance type.
+	// We only support the first netowrk card on an instance right now so limiting to the maximum that one network
+	// card can support.
+	MaxInterfacesPerInstance = 15
+
+	// SecondaryInterfaceCap is the maximum number of Calico secondary ENIs that we support.  The only reason to
+	// cap this right now is so that we can pre-allocate one routing table per possible secondary ENI.
+	SecondaryInterfaceCap = MaxInterfacesPerInstance - 1
+)
+
 type SecondaryIfaceProvisioner struct {
 	nodeName string
 	timeout  time.Duration
@@ -521,6 +532,12 @@ func (m *SecondaryIfaceProvisioner) getMyNetworkCapabilities() (*NetworkCapabili
 	if err != nil {
 		return nil, err
 	}
+
+	if netCaps.MaxNetworkInterfaces > MaxInterfacesPerInstance {
+		logrus.Infof("Instance type supports %v interfaces, limiting to our interface cap (%v)",
+			netCaps.MaxNetworkInterfaces, MaxInterfacesPerInstance)
+		netCaps.MaxNetworkInterfaces = MaxInterfacesPerInstance
+	}
 	return &netCaps, nil
 }
 
@@ -586,12 +603,12 @@ func (m *SecondaryIfaceProvisioner) loadAWSNICsState() (s *nicSnapshot, r *nicRe
 	}
 
 	s = &nicSnapshot{
-		calicoOwnedNICsByID: map[string]ec2types.NetworkInterface{},
+		calicoOwnedNICsByID:    map[string]ec2types.NetworkInterface{},
 		nonCalicoOwnedNICsByID: map[string]ec2types.NetworkInterface{},
-		nicIDsBySubnet:      map[string][]string{},
-		nicIDByIP:           map[ip.CIDR]string{},
-		nicIDByPrimaryIP:    map[ip.CIDR]string{},
-		attachmentIDByNICID: map[string]string{},
+		nicIDsBySubnet:         map[string][]string{},
+		nicIDByIP:              map[ip.CIDR]string{},
+		nicIDByPrimaryIP:       map[ip.CIDR]string{},
+		attachmentIDByNICID:    map[string]string{},
 	}
 
 	r = &nicResyncState{

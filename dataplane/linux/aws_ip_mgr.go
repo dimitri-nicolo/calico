@@ -93,10 +93,10 @@ func NewAWSSubnetManager(
 	}).Info("Creating AWS subnet manager.")
 	rules, err := routerule.New(
 		4,
-		101,
+		dpConfig.AWSSecondaryIPRoutingRulePriority,
 		set.FromArray(routeTableIndexes),
-		routerule.RulesMatchSrcFWMarkTable,
-		routerule.RulesMatchSrcFWMark,
+		routerule.RulesMatchPrioSrcTable,
+		routerule.RulesMatchPrioSrcTable,
 		dpConfig.NetlinkTimeout,
 		func() (routerule.HandleIface, error) {
 			return netlink.NewHandle(syscall.NETLINK_ROUTE)
