@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -219,12 +220,13 @@ func (r *eventGenerator) convertAlertToESDoc(alertText string) (docID string, es
 	index := 0
 
 	tm, err := time.Parse(timeLayout, s[index])
-	index++
 	if err != nil {
 		log.WithError(err).Errorf("Failed to parse time from alert")
+	} else {
+		index++
+		// Time format in ElasticSearch events index is epoch_second
+		esDoc.Time = tm.Unix()
 	}
-	// Time format in ElasticSearch events index is epoch_second
-	esDoc.Time = tm.Unix()
 
 	//skip through all optional fields till we get to signature information
 	for i, k := range s {
@@ -235,22 +237,46 @@ func (r *eventGenerator) convertAlertToESDoc(alertText string) (docID string, es
 	}
 	// Extract snort signature information
 	sigInfo := strings.Split(s[index], ":")
-	esDoc.Record = elastic.Record{
-		SnortSignatureID:       sigInfo[1],
-		SnortSignatureRevision: strings.TrimSuffix(sigInfo[2], "]"),
-		SnortAlert:             alertText,
+	if len(sigInfo) == 3 {
+		esDoc.Record = elastic.Record{
+			SnortSignatureID:       sigInfo[1],
+			SnortSignatureRevision: strings.TrimSuffix(sigInfo[2], "]"),
+			SnortAlert:             alertText,
+		}
+	} else {
+		log.Errorf("Missing snort signature information in alert")
+		esDoc.Record = elastic.Record{
+			SnortAlert: alertText,
+		}
 	}
 
-	esDoc.SourceIP = s[len(s)-3]
-	esDoc.DestIP = s[len(s)-1]
+	if len(s) >= 3 && s[len(s)-2] == "->" {
+		src := s[len(s)-3]
+		esDoc.SourceIP, esDoc.SourcePort, err = net.SplitHostPort(src)
+		if err != nil && strings.Contains(err.Error(), "missing port in address") {
+			esDoc.SourceIP = src
+		} else {
+			log.WithError(err).Errorf("Failed to parse source IP %s from snort alert", src)
+		}
+
+		dst := s[len(s)-1]
+		esDoc.DestIP, esDoc.DestPort, err = net.SplitHostPort(dst)
+		if err != nil && strings.Contains(err.Error(), "missing port in address") {
+			esDoc.DestIP = dst
+		} else {
+			log.WithError(err).Errorf("Failed to parse destination IP %s from snort alert", dst)
+		}
+	} else {
+		log.WithError(err).Errorf("Failed to parse source and destination IP from snort alert: %s", alertText)
+	}
 
 	_, esDoc.SourceName, esDoc.SourceNamespace = r.wepCache.Get(esDoc.SourceIP)
 	_, esDoc.DestName, esDoc.DestNamespace = r.wepCache.Get(esDoc.DestIP)
 
 	// Construct a unique document ID for the ElasticSearch document built.
 	// Use _ as a separator as it's allowed in URLs, but not in any of the components of this ID
-	docID = fmt.Sprintf("%s_%s_%d_%s_%s_%s", r.dpiKey.Namespace, r.dpiKey.Name, tm.UnixNano(),
-		esDoc.SourceIP, esDoc.DestIP, esDoc.Host)
+	docID = fmt.Sprintf("%s_%s_%d_%s_%s_%s_%s_%s", r.dpiKey.Namespace, r.dpiKey.Name, tm.UnixNano(),
+		esDoc.SourceIP, esDoc.SourcePort, esDoc.DestIP, esDoc.DestPort, esDoc.Host)
 
 	return docID, esDoc
 }

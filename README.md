@@ -54,10 +54,7 @@ COPY local.rules /usr/local/etc/rules/
 Set environment variable `DPI_LOG_LEVEL` with value `debug`
 
 ## Code flow
-```flow
-M=>Main:
-```
-![Alt text](flow_diagram.svg)<img src="flow_diagram.svg">
+![Alt text](flow_diagram.svg)
 
 ```mermaid
 sequenceDiagram

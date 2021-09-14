@@ -57,15 +57,11 @@ var _ = Describe("File Parser", func() {
 	}
 
 	BeforeEach(func() {
-		//mockCalicoClient = &processor.MockClientInterface{}
-		//mockDPIInterface = &processor.MockDeepPacketInspectionInterface{}
-		//mockDPIInterface.AssertExpectations(GinkgoT())
 		mockDPIUpdater = &dpiupdater.MockDPIStatusUpdater{}
 		mockDPIUpdater.AssertExpectations(GinkgoT())
 		mockESClient = &elastic.MockClient{}
 		mockESClient.AssertExpectations(GinkgoT())
 		ctx = context.Background()
-		//mockCalicoClient.On("DeepPacketInspections").Return(mockDPIInterface)
 		mockESForwarder = &elastic.MockESForwarder{}
 		mockESForwarder.AssertExpectations(GinkgoT())
 		cfg = &config.Config{SnortAlertFileBasePath: "test"}
@@ -102,20 +98,28 @@ var _ = Describe("File Parser", func() {
 			Type:            "alert",
 			Host:            "",
 			SourceIP:        "74.125.124.100",
+			SourcePort:      "9090",
 			SourceName:      "",
 			SourceNamespace: "",
 			DestIP:          "10.28.0.13",
-			DestName:        "",
-			DestNamespace:   "",
+			DestPort:        "",
+			DestName:        "podname",
+			DestNamespace:   "dpi-ns",
 			Description:     "Signature Triggered Alert",
 			Severity:        100,
-			Record:          elastic.Record{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100 -> 10.28.0.13"},
+			Record:          elastic.Record{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100:9090 -> 10.28.0.13"},
 		}
-		docID := fmt.Sprintf("%s_%s_1630343977337831000_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, esDoc.SourceIP, esDoc.DestIP, esDoc.Host)
+		docID := fmt.Sprintf("%s_%s_1630343977337831000_%s_%s_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, esDoc.SourceIP, esDoc.SourcePort, esDoc.DestIP, esDoc.DestPort, esDoc.Host)
 		mockESForwarder.On("Forward", elastic.EventData{ID: docID, Doc: esDoc}).Return(nil).Times(1)
 
 		// GenerateEventsForWEP should parse file and call elastic service.
 		wepCache := cache2.NewWEPCache()
+		wepCache.Update(bapi.UpdateTypeKVNew, model.KVPair{
+			Key: wepKey,
+			Value: &model.WorkloadEndpoint{
+				IPv4Nets: []net.IPNet{mustParseNet("10.28.0.13/32")},
+			},
+		})
 		r := eventgenerator.NewEventGenerator(cfg, mockESForwarder, mockDPIUpdater, dpiKey, wepCache)
 		r.GenerateEventsForWEP(wepKey)
 		Eventually(func() int { return len(mockESForwarder.Calls) }, 5*time.Second).Should(Equal(1))
@@ -182,16 +186,18 @@ var _ = Describe("File Parser", func() {
 			Type:            "alert",
 			Host:            cfg.NodeName,
 			SourceIP:        "74.125.124.100",
+			SourcePort:      "9090",
 			SourceName:      "",
 			SourceNamespace: "",
 			DestIP:          "10.28.0.13",
+			DestPort:        "",
 			DestName:        podName,
 			DestNamespace:   dpiNs,
 			Description:     "Signature Triggered Alert",
 			Severity:        100,
-			Record:          elastic.Record{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100 -> 10.28.0.13"},
+			Record:          elastic.Record{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100:9090 -> 10.28.0.13"},
 		}
-		docID := fmt.Sprintf("%s_%s_1630343977337831000_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, esDoc.SourceIP, esDoc.DestIP, esDoc.Host)
+		docID := fmt.Sprintf("%s_%s_1630343977337831000_%s_%s_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, esDoc.SourceIP, esDoc.SourcePort, esDoc.DestIP, esDoc.DestPort, esDoc.Host)
 		mockESForwarder.On("Forward", elastic.EventData{Doc: esDoc, ID: docID}).Return(nil).Times(1)
 
 		wepCache := cache2.NewWEPCache()
@@ -379,12 +385,12 @@ var _ = Describe("File Parser", func() {
 		copyAlertFile(path1, "3_alert_fast.txt", "alert_fast.txt.1731063433")
 		copyAlertFile(path1, "4_alert_fast.txt", "alert_fast.txt.1831063433")
 
-		mockESClient.On("Upsert", mock.Anything, mock.Anything, mock.Anything).Return(nil).Times(19)
+		mockESClient.On("Upsert", mock.Anything, mock.Anything, mock.Anything).Return(nil).Times(20)
 
 		wepCache := cache2.NewWEPCache()
 		r := eventgenerator.NewEventGenerator(cfg, esForwarder, mockDPIUpdater, dpiKey, wepCache)
 		r.GenerateEventsForWEP(wepKey)
-		Eventually(func() int { return len(mockESClient.Calls) }, 5*time.Second).Should(Equal(19))
+		Eventually(func() int { return len(mockESClient.Calls) }, 5*time.Second).Should(Equal(20))
 
 		// StopGeneratingEventsForWEP should delete the alert file after parsing all alerts
 		r.StopGeneratingEventsForWEP(wepKey)

@@ -77,9 +77,11 @@ type Doc struct {
 	Type            string `json:"type"`
 	Host            string `json:"host"`
 	SourceIP        string `json:"source_ip"`
+	SourcePort      string `json:"source_port"`
 	SourceName      string `json:"source_name"`
 	SourceNamespace string `json:"source_namespace"`
 	DestIP          string `json:"dest_ip"`
+	DestPort        string `json:"dest_port"`
 	DestName        string `json:"dest_name"`
 	DestNamespace   string `json:"dest_namespace"`
 	Description     string `json:"description"`
