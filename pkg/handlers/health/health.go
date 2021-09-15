@@ -3,7 +3,6 @@ package health
 
 import (
 	"net/http"
-	"sync"
 
 	log "github.com/sirupsen/logrus"
 
@@ -14,49 +13,56 @@ import (
 	"github.com/tigera/es-gateway/pkg/clients/kubernetes"
 )
 
-func GetHealthHandler(es elastic.Client, kb kibana.Client, k8s kubernetes.Client) func(http.ResponseWriter, *http.Request) {
+// GetHealthHandler returns an HTTP handler to check whether Kube API is ready. This is the only
+// dependency that ES gateway needs in order to perform it's responsibility (which is to proxy
+// traffic to its configured destinations).
+func GetHealthHandler(k8s kubernetes.Client) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Tracef("%s for %s from %s", r.Method, r.URL, r.RemoteAddr)
 		switch r.Method {
 		case http.MethodGet:
-			isHealthy := true
-			var wg sync.WaitGroup
-
-			// Make calls to check each dependency in parallel.
-			wg.Add(1)
-			go func(wg *sync.WaitGroup) {
-				defer wg.Done()
-				if esErr := es.GetClusterHealth(); esErr != nil {
-					log.Errorf("ES health check failed: [%s]", esErr)
-					isHealthy = false
-				}
-			}(&wg)
-
-			wg.Add(1)
-			go func(wg *sync.WaitGroup) {
-				defer wg.Done()
-				if kbErr := kb.GetKibanaStatus(); kbErr != nil {
-					log.Errorf("Kibana health check failed: [%s]", kbErr)
-					isHealthy = false
-				}
-			}(&wg)
-
-			wg.Add(1)
-			go func(wg *sync.WaitGroup) {
-				defer wg.Done()
-				if k8sErr := k8s.GetK8sReadyz(); k8sErr != nil {
-					log.Errorf("Kube API health check failed: [%s]", k8sErr)
-					isHealthy = false
-				}
-			}(&wg)
-
-			// Ensure all separate checks have returned before proceeding.
-			wg.Wait()
-			if isHealthy {
-				httpUtils.ReturnJSON(w, "ok")
-			} else {
+			if k8sErr := k8s.GetK8sReadyz(); k8sErr != nil {
+				log.Errorf("Kube API health check failed: [%s]", k8sErr)
 				http.Error(w, `"unavailable"`, http.StatusServiceUnavailable)
+				return
 			}
+			httpUtils.ReturnJSON(w, "ok")
+		default:
+			http.NotFound(w, r)
+		}
+	}
+}
+
+// GetESHealthHandler returns an HTTP handler to check the health status of Elasticsearch API.
+func GetESHealthHandler(es elastic.Client) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Tracef("%s for %s from %s", r.Method, r.URL, r.RemoteAddr)
+		switch r.Method {
+		case http.MethodGet:
+			if esErr := es.GetClusterHealth(); esErr != nil {
+				log.Errorf("ES health check failed: [%s]", esErr)
+				http.Error(w, `"unavailable"`, http.StatusServiceUnavailable)
+				return
+			}
+			httpUtils.ReturnJSON(w, "ok")
+		default:
+			http.NotFound(w, r)
+		}
+	}
+}
+
+// GetKBHealthHandler returns an HTTP handler to check the health status of Kibana API.
+func GetKBHealthHandler(kb kibana.Client) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Tracef("%s for %s from %s", r.Method, r.URL, r.RemoteAddr)
+		switch r.Method {
+		case http.MethodGet:
+			if kbErr := kb.GetKibanaStatus(); kbErr != nil {
+				log.Errorf("Kibana health check failed: [%s]", kbErr)
+				http.Error(w, `"unavailable"`, http.StatusServiceUnavailable)
+				return
+			}
+			httpUtils.ReturnJSON(w, "ok")
 		default:
 			http.NotFound(w, r)
 		}
