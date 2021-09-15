@@ -53,80 +53,6 @@ var (
 	resourceListType = reflect.TypeOf(model.ResourceListOptions{})
 )
 
-func init() {
-	ver := schema.GroupVersion{
-		Group:   "crd.projectcalico.org",
-		Version: "v1",
-	}
-	// Register resources once only.
-	schemeBuilder := runtime.NewSchemeBuilder(
-		func(scheme *runtime.Scheme) error {
-			scheme.AddKnownTypes(
-				ver,
-				&apiv3.FelixConfiguration{},
-				&apiv3.FelixConfigurationList{},
-				&apiv3.IPPool{},
-				&apiv3.IPPoolList{},
-				&apiv3.BGPPeer{},
-				&apiv3.BGPPeerList{},
-				&apiv3.BGPConfiguration{},
-				&apiv3.BGPConfigurationList{},
-				&apiv3.ClusterInformation{},
-				&apiv3.ClusterInformationList{},
-				&apiv3.LicenseKey{},
-				&apiv3.LicenseKeyList{},
-				&apiv3.GlobalNetworkSet{},
-				&apiv3.GlobalNetworkSetList{},
-				&apiv3.NetworkSet{},
-				&apiv3.NetworkSetList{},
-				&apiv3.GlobalNetworkPolicy{},
-				&apiv3.GlobalNetworkPolicyList{},
-				&apiv3.StagedGlobalNetworkPolicy{},
-				&apiv3.StagedGlobalNetworkPolicyList{},
-				&apiv3.NetworkPolicy{},
-				&apiv3.NetworkPolicyList{},
-				&apiv3.StagedNetworkPolicy{},
-				&apiv3.StagedNetworkPolicyList{},
-				&apiv3.StagedKubernetesNetworkPolicy{},
-				&apiv3.StagedKubernetesNetworkPolicyList{},
-				&apiv3.Tier{},
-				&apiv3.TierList{},
-				&apiv3.HostEndpoint{},
-				&apiv3.HostEndpointList{},
-				&apiv3.RemoteClusterConfiguration{},
-				&apiv3.RemoteClusterConfigurationList{},
-				&libapiv3.BlockAffinity{},
-				&libapiv3.BlockAffinityList{},
-				&libapiv3.IPAMBlock{},
-				&libapiv3.IPAMBlockList{},
-				&libapiv3.IPAMHandle{},
-				&libapiv3.IPAMHandleList{},
-				&libapiv3.IPAMConfig{},
-				&libapiv3.IPAMConfigList{},
-				&apiv3.GlobalAlert{},
-				&apiv3.GlobalAlertList{},
-				&apiv3.GlobalAlertTemplate{},
-				&apiv3.GlobalAlertTemplateList{},
-				&apiv3.GlobalThreatFeed{},
-				&apiv3.GlobalThreatFeedList{},
-				&apiv3.GlobalReport{},
-				&apiv3.GlobalReportList{},
-				&apiv3.GlobalReportType{},
-				&apiv3.GlobalReportTypeList{},
-				&apiv3.ManagedCluster{},
-				&apiv3.ManagedClusterList{},
-				&apiv3.PacketCapture{},
-				&apiv3.PacketCaptureList{},
-				&apiv3.DeepPacketInspection{},
-				&apiv3.DeepPacketInspectionList{},
-			)
-			metav1.AddToGroupVersion(scheme, ver)
-			return nil
-		})
-
-	schemeBuilder.AddToScheme(scheme.Scheme)
-}
-
 type KubeClient struct {
 	// Main Kubernetes clients.
 	ClientSet *kubernetes.Clientset
@@ -236,6 +162,18 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv3.KindTier,
 		resources.NewTierClient(cs, crdClientV1),
+	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindUISettings,
+		resources.NewUISettingsClient(cs, crdClientV1),
+	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindUISettingsGroup,
+		resources.NewUISettingsGroupClient(cs, crdClientV1),
 	)
 	kubeClient.registerResourceClient(
 		reflect.TypeOf(model.ResourceKey{}),
@@ -379,7 +317,6 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 			libapiv3.KindIPAMConfig,
 			resources.NewIPAMConfigClient(cs, crdClientV1),
 		)
-
 	}
 
 	return kubeClient, nil
@@ -613,6 +550,8 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindStagedNetworkPolicy,
 		apiv3.KindStagedKubernetesNetworkPolicy,
 		apiv3.KindTier,
+		apiv3.KindUISettings,
+		apiv3.KindUISettingsGroup,
 		apiv3.KindGlobalNetworkSet,
 		apiv3.KindNetworkSet,
 		apiv3.KindIPPool,
@@ -710,7 +649,6 @@ func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 	// since this really only needs to happen one time.
 	addToSchemeOnce.Do(func() {
 		// We also need to register resources.
-		// We also need to register resources.
 		schemeBuilder := runtime.NewSchemeBuilder(
 			func(scheme *runtime.Scheme) error {
 				scheme.AddKnownTypes(
@@ -725,20 +663,28 @@ func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 					&apiv3.BGPConfigurationList{},
 					&apiv3.ClusterInformation{},
 					&apiv3.ClusterInformationList{},
+					&apiv3.LicenseKey{},
+					&apiv3.LicenseKeyList{},
 					&apiv3.GlobalNetworkSet{},
 					&apiv3.GlobalNetworkSetList{},
+					&apiv3.NetworkSet{},
+					&apiv3.NetworkSetList{},
 					&apiv3.GlobalNetworkPolicy{},
 					&apiv3.GlobalNetworkPolicyList{},
-					&apiv3.NetworkPolicy{},
-					&apiv3.NetworkPolicyList{},
 					&apiv3.StagedGlobalNetworkPolicy{},
 					&apiv3.StagedGlobalNetworkPolicyList{},
+					&apiv3.NetworkPolicy{},
+					&apiv3.NetworkPolicyList{},
 					&apiv3.StagedNetworkPolicy{},
 					&apiv3.StagedNetworkPolicyList{},
 					&apiv3.StagedKubernetesNetworkPolicy{},
 					&apiv3.StagedKubernetesNetworkPolicyList{},
+					&apiv3.Tier{},
+					&apiv3.TierList{},
 					&apiv3.HostEndpoint{},
 					&apiv3.HostEndpointList{},
+					&apiv3.RemoteClusterConfiguration{},
+					&apiv3.RemoteClusterConfigurationList{},
 					&libapiv3.BlockAffinity{},
 					&libapiv3.BlockAffinityList{},
 					&libapiv3.IPAMBlock{},
@@ -749,6 +695,26 @@ func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 					&libapiv3.IPAMConfigList{},
 					&apiv3.KubeControllersConfiguration{},
 					&apiv3.KubeControllersConfigurationList{},
+					&apiv3.GlobalAlert{},
+					&apiv3.GlobalAlertList{},
+					&apiv3.GlobalAlertTemplate{},
+					&apiv3.GlobalAlertTemplateList{},
+					&apiv3.GlobalThreatFeed{},
+					&apiv3.GlobalThreatFeedList{},
+					&apiv3.GlobalReport{},
+					&apiv3.GlobalReportList{},
+					&apiv3.GlobalReportType{},
+					&apiv3.GlobalReportTypeList{},
+					&apiv3.ManagedCluster{},
+					&apiv3.ManagedClusterList{},
+					&apiv3.PacketCapture{},
+					&apiv3.PacketCaptureList{},
+					&apiv3.DeepPacketInspection{},
+					&apiv3.DeepPacketInspectionList{},
+					&apiv3.UISettingsGroup{},
+					&apiv3.UISettingsGroupList{},
+					&apiv3.UISettings{},
+					&apiv3.UISettingsList{},
 				)
 				return nil
 			})

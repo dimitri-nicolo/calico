@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	calicoconversion "github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 
@@ -169,6 +170,9 @@ var (
 
 	allDigits = regexp.MustCompile(`^\d+$`)
 	portRange = regexp.MustCompile(`^(\d+):(\d+)$`)
+
+	// Hostname have to be a strings up to 64 characters.
+	uiSettingsRegexp = regexp.MustCompile(`[a-zA-Z0-9_]{1,64}$`)
 )
 
 // Validate is used to validate the supplied structure according to the
@@ -269,6 +273,12 @@ func init() {
 
 	registerFieldValidator("clusterAccessSecret", validateClusterAccessSecret)
 
+	// Register UI settings validators
+	registerFieldValidator("uiDescription", validateUIDescription)
+	registerFieldValidator("servicegraphId", validateServiceGraphId)
+	registerFieldValidator("servicegraphNodeType", validateServiceGraphNodeType)
+
+	// Register struct validators.
 	registerStructValidator(validate, validateProtocol, numorstring.Protocol{})
 	registerStructValidator(validate, validateProtoPort, api.ProtoPort{})
 	registerStructValidator(validate, validatePort, numorstring.Port{})
@@ -280,6 +290,7 @@ func init() {
 	registerStructValidator(validate, validateNodeSpec, libapi.NodeSpec{})
 	registerStructValidator(validate, validateObjectMeta, metav1.ObjectMeta{})
 	registerStructValidator(validate, validateTier, api.Tier{})
+	registerStructValidator(validate, validateUISettings, api.UISettings{})
 	registerStructValidator(validate, validateHTTPRule, api.HTTPMatch{})
 	registerStructValidator(validate, validateFelixConfigSpec, api.FelixConfigurationSpec{})
 	registerStructValidator(validate, validateWorkloadEndpointSpec, libapi.WorkloadEndpointSpec{})
@@ -314,7 +325,6 @@ func init() {
 	registerStructValidator(validate, validatePacketCaptureSpec, api.PacketCaptureSpec{})
 	registerStructValidator(validate, validatePacketCaptureRule, api.PacketCaptureRule{})
 	registerStructValidator(validate, validateDeepPacketInspection, api.DeepPacketInspection{})
-
 }
 
 // reason returns the provided error reason prefixed with an identifier that
@@ -995,6 +1005,34 @@ func validateEtcdEndpoints(fl validator.FieldLevel) bool {
 	return etcdEndpointsRegex.MatchString(s)
 }
 
+func validateUIDescription(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate UI description: %s", s)
+
+	// Just check the length of the runes (limit to 64)
+	runes := utf8.RuneCountInString(s)
+	return runes > 0 && runes < 65
+}
+
+func validateServiceGraphId(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate Service Graph ID: %s", s)
+
+	// TODO(rlb): Move service graph API defs into API and then move ID management into libcalico-go. For now just
+	//            allow.
+	return true
+}
+
+func validateServiceGraphNodeType(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate Service Graph Node Type: %s", s)
+
+	// TODO(rlb): Move service graph API defs into API and then move ID management into libcalico-go. For now just
+	//            check for a sensible length.
+	l := len(s)
+	return l > 0 && l < 64
+}
+
 func validateFelixConfigSpec(structLevel validator.StructLevel) {
 	c := structLevel.Current().Interface().(api.FelixConfigurationSpec)
 
@@ -1628,6 +1666,38 @@ func validateTier(structLevel validator.StructLevel) {
 
 	validateObjectMetaAnnotations(structLevel, tier.Annotations)
 	validateObjectMetaLabels(structLevel, tier.Labels)
+}
+
+func validateUISettings(structLevel validator.StructLevel) {
+	uisettings := structLevel.Current().Interface().(api.UISettings)
+
+	numSettings := 0
+	var settingsField string
+	if uisettings.Spec.View != nil {
+		numSettings++
+		settingsField = "Spec.View"
+	}
+	if uisettings.Spec.Layer != nil {
+		numSettings++
+		settingsField = "Spec.Layer"
+	}
+	if uisettings.Spec.Dashboard != nil {
+		numSettings++
+		settingsField = "Spec.Dashboard"
+	}
+
+	if numSettings != 1 {
+		structLevel.ReportError(
+			reflect.ValueOf(uisettings.Name),
+			settingsField,
+			"",
+			reason("UISettings should consists of exactly one View, Layer or Dashboard"),
+			"",
+		)
+	}
+
+	validateObjectMetaAnnotations(structLevel, uisettings.Annotations)
+	validateObjectMetaLabels(structLevel, uisettings.Labels)
 }
 
 func validateNetworkPolicySpec(spec *api.NetworkPolicySpec, structLevel validator.StructLevel) {

@@ -73,6 +73,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointMetadata": schema_libcalico_go_lib_apis_v1_WorkloadEndpointMetadata(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v1.WorkloadEndpointSpec":     schema_libcalico_go_lib_apis_v1_WorkloadEndpointSpec(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.AllocationAttribute":      schema_libcalico_go_lib_apis_v3_AllocationAttribute(ref),
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.AuthorizedResourceGroup":  schema_libcalico_go_lib_apis_v3_AuthorizedResourceGroup(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinity":            schema_libcalico_go_lib_apis_v3_BlockAffinity(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinityList":        schema_libcalico_go_lib_apis_v3_BlockAffinityList(ref),
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.BlockAffinitySpec":        schema_libcalico_go_lib_apis_v3_BlockAffinitySpec(ref),
@@ -2097,6 +2098,42 @@ func schema_libcalico_go_lib_apis_v3_AllocationAttribute(ref common.ReferenceCal
 						},
 					},
 				},
+			},
+		},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_AuthorizedResourceGroup(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"tier": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The tier. This is only valid for tiered policies, and tiers.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"namespace": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The namespace. If this is empty then the user is authorized cluster-wide (i.e. across all namespaces). This willalways be empty for cluster-scoped resources when the user is authorized.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"uiSettingsGroup": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The UISettingsGroup name. This is only valid for uisettingsgroup/data sub resources.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"namespace", "uiSettingsGroup"},
 			},
 		},
 	}

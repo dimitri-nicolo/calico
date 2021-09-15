@@ -149,6 +149,16 @@ func init() {
 		reflect.TypeOf(apiv3.Tier{}),
 	)
 	registerResourceInfo(
+		apiv3.KindUISettingsGroup,
+		"uisettingsgroups",
+		reflect.TypeOf(apiv3.UISettingsGroup{}),
+	)
+	registerResourceInfo(
+		apiv3.KindUISettings,
+		"uisettings",
+		reflect.TypeOf(apiv3.UISettings{}),
+	)
+	registerResourceInfo(
 		libapiv3.KindNode,
 		"nodes",
 		reflect.TypeOf(libapiv3.Node{}),
