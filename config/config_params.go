@@ -417,6 +417,7 @@ type Config struct {
 	DebugDisableLogDropping         bool          `config:"bool;false"`
 	DebugSimulateCalcGraphHangAfter time.Duration `config:"seconds;0"`
 	DebugSimulateDataplaneHangAfter time.Duration `config:"seconds;0"`
+	DebugConsoleEnabled             bool          `config:"bool;false"`
 	DebugUseShortPollIntervals      bool          `config:"bool;false"`
 	DebugCloudWatchLogsFile         string        `config:"file;;"`
 	DebugWindowsPktMonStartArgs     string        `config:"string;"`

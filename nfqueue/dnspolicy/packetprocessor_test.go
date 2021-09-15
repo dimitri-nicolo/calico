@@ -3,10 +3,14 @@
 package dnspolicy_test
 
 import (
+	"fmt"
 	"net"
+	"sync"
 	"time"
 
-	"github.com/projectcalico/felix/nfqueue/dnspolicy"
+	"github.com/stretchr/testify/mock"
+
+	nfqdnspolicy "github.com/projectcalico/felix/nfqueue/dnspolicy"
 
 	gonfqueue "github.com/florianl/go-nfqueue"
 	. "github.com/onsi/ginkgo"
@@ -39,11 +43,11 @@ var _ = Describe("DNSPolicyPacketProcessor", func() {
 				nf.On("SetVerdict", uint32(2), gonfqueue.NfRepeat).Return(nil)
 				nf.On("PacketAttributesChannel").Return(readOnlyCh)
 
-				processor := dnspolicy.NewPacketProcessor(
+				processor := nfqdnspolicy.NewPacketProcessor(
 					nf,
 					dnrMarkBit,
-					dnspolicy.WithPacketDropTimeout(100*time.Millisecond),
-					dnspolicy.WithPacketReleaseTimeout(20*time.Millisecond),
+					nfqdnspolicy.WithPacketDropTimeout(100*time.Millisecond),
+					nfqdnspolicy.WithPacketReleaseTimeout(20*time.Millisecond),
 				)
 				processor.Start()
 
@@ -91,11 +95,11 @@ var _ = Describe("DNSPolicyPacketProcessor", func() {
 					}
 				}
 
-				processor := dnspolicy.NewPacketProcessor(
+				processor := nfqdnspolicy.NewPacketProcessor(
 					nf,
 					dnrMarkBit,
-					dnspolicy.WithPacketDropTimeout(100*time.Millisecond),
-					dnspolicy.WithPacketReleaseTimeout(20*time.Millisecond),
+					nfqdnspolicy.WithPacketDropTimeout(100*time.Millisecond),
+					nfqdnspolicy.WithPacketReleaseTimeout(20*time.Millisecond),
 				)
 				processor.Start()
 
@@ -124,11 +128,11 @@ var _ = Describe("DNSPolicyPacketProcessor", func() {
 				nf.On("SetVerdictWithMark", uint32(2), gonfqueue.NfRepeat, int(dnrMarkBit)).Return(nil).Once()
 				nf.On("PacketAttributesChannel").Return(readOnlyattrChan)
 
-				processor := dnspolicy.NewPacketProcessor(
+				processor := nfqdnspolicy.NewPacketProcessor(
 					nf,
 					dnrMarkBit,
-					dnspolicy.WithPacketDropTimeout(100*time.Millisecond),
-					dnspolicy.WithPacketReleaseTimeout(20*time.Millisecond),
+					nfqdnspolicy.WithPacketDropTimeout(100*time.Millisecond),
+					nfqdnspolicy.WithPacketReleaseTimeout(20*time.Millisecond),
 				)
 
 				processor.Start()
@@ -165,11 +169,11 @@ var _ = Describe("DNSPolicyPacketProcessor", func() {
 				nf.On("SetVerdict", uint32(2), gonfqueue.NfDrop).Return(nil).Once()
 				nf.On("PacketAttributesChannel").Return(readOnlyattrChan)
 
-				processor := dnspolicy.NewPacketProcessor(
+				processor := nfqdnspolicy.NewPacketProcessor(
 					nf,
 					dnrMarkBit,
-					dnspolicy.WithPacketDropTimeout(100*time.Millisecond),
-					dnspolicy.WithPacketReleaseTimeout(20*time.Millisecond),
+					nfqdnspolicy.WithPacketDropTimeout(100*time.Millisecond),
+					nfqdnspolicy.WithPacketReleaseTimeout(20*time.Millisecond),
 				)
 
 				processor.Start()
@@ -188,6 +192,90 @@ var _ = Describe("DNSPolicyPacketProcessor", func() {
 
 				nf.AssertExpectations(GinkgoT())
 			})
+		})
+	})
+})
+
+var _ = Describe("DNSPolicyPacketProcessorWithNfqueueRestarter", func() {
+	When("Nfqueue sends a shutdown signal", func() {
+		It("recreates the nfqueue connections and continues processing new packets", func() {
+			packetID := uint32(2)
+			packetPayload := newTestIPV4Packet(net.IP{8, 8, 8, 8}, net.IP{9, 9, 9, 9}, layers.TCPPort(300), layers.TCPPort(600))
+
+			attrChan1, attrChan2 := make(chan gonfqueue.Attribute), make(chan gonfqueue.Attribute)
+			shutdownChan1, shutdownChan2 := make(chan struct{}), make(chan struct{})
+
+			defer close(attrChan1)
+			defer close(attrChan2)
+
+			var readOnlyattrChan1, readOnlyattrChan2 <-chan gonfqueue.Attribute
+			readOnlyattrChan1 = attrChan1
+			readOnlyattrChan2 = attrChan2
+
+			var readOnlyShutdownChan1, readOnlyShutdownChan2 <-chan struct{}
+			readOnlyShutdownChan1 = shutdownChan1
+			readOnlyShutdownChan2 = shutdownChan2
+
+			var wg1, wg2, wg3 sync.WaitGroup
+
+			nf1 := new(nfqueue.MockNfqueue)
+
+			wg1.Add(2)
+			nf1.On("PacketAttributesChannel").Run(func(arguments mock.Arguments) {
+				wg1.Done()
+			}).Return(readOnlyattrChan1)
+			nf1.On("ShutdownNotificationChannel").Run(func(arguments mock.Arguments) {
+				wg1.Done()
+			}).Return(readOnlyShutdownChan1)
+
+			nf2 := new(nfqueue.MockNfqueue)
+
+			nf2.On("PacketAttributesChannel").Return(readOnlyattrChan2)
+			nf2.On("ShutdownNotificationChannel").Return(readOnlyShutdownChan2)
+			wg3.Add(1)
+			nf2.On("Close").Run(func(args mock.Arguments) {
+				wg3.Done()
+			}).Return(nil)
+			wg2.Add(1)
+			nf2.On("SetVerdict", uint32(2), gonfqueue.NfRepeat).Run(func(arguments mock.Arguments) {
+				wg2.Done()
+			}).Return(nil)
+
+			nfs := make(chan *nfqueue.MockNfqueue, 2)
+			nfs <- nf1
+			nfs <- nf2
+
+			restarter := nfqdnspolicy.NewPacketProcessorWithNfqueueRestarter(func() (nfqueue.Nfqueue, error) {
+				select {
+				case nf := <-nfs:
+					return nf, nil
+				default:
+					return nil, fmt.Errorf("failed to create nfqueue")
+				}
+			}, dnrMarkBit)
+
+			go func() {
+				restarter.Start()
+			}()
+
+			// TODO make this a timeout wait.
+			wg1.Wait()
+
+			close(shutdownChan1)
+
+			attrChan2 <- gonfqueue.Attribute{
+				PacketID: &packetID,
+				Payload:  &packetPayload,
+			}
+
+			wg2.Wait()
+
+			restarter.Stop()
+
+			wg3.Wait()
+
+			nf1.AssertExpectations(GinkgoT())
+			nf2.AssertExpectations(GinkgoT())
 		})
 	})
 })

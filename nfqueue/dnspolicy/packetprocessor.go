@@ -6,6 +6,7 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/projectcalico/felix/nfqueue"
@@ -87,6 +88,92 @@ const (
 
 	failedToSetVerdictMessage = "failed to set the nfqueue verdict for the packet"
 )
+
+type PacketProcessorWithNfqueueRestarter struct {
+	nfqueueCreator func() (nfqueue.Nfqueue, error)
+	dnrMark        uint32
+	options        []Option
+	done           chan struct{}
+	closeOnce      sync.Once
+
+	// The current in use nfqueue instance, stored for testing and debugging purposes ONLY and is NOT thread safe to
+	// access or use.
+	debugKillNfqueueConnChan chan chan error
+}
+
+func NewPacketProcessorWithNfqueueRestarter(nfqueueCreator func() (nfqueue.Nfqueue, error), dnrMark uint32, options ...Option) *PacketProcessorWithNfqueueRestarter {
+	return &PacketProcessorWithNfqueueRestarter{
+		nfqueueCreator:           nfqueueCreator,
+		dnrMark:                  dnrMark,
+		options:                  options,
+		done:                     make(chan struct{}),
+		debugKillNfqueueConnChan: make(chan chan error),
+	}
+}
+
+// Start kicks off the internal loop to start the packet processor and open the nfqueue connection, and restart if
+// something should go wrong. If the loop fails to start (without being gracefully closed) then it panics.
+func (restarter *PacketProcessorWithNfqueueRestarter) Start() {
+	go func() {
+		if err := restarter.loop(); err != nil {
+			log.WithError(err).Panic("failed to start nfqueue dns policy packet processor")
+		}
+	}()
+}
+
+func (restarter *PacketProcessorWithNfqueueRestarter) loop() error {
+done:
+	for {
+		nf, err := restarter.nfqueueCreator()
+		if err != nil {
+			return err
+		}
+
+		processor := NewPacketProcessor(nf, restarter.dnrMark, restarter.options...)
+		processor.Start()
+
+	loop:
+		for {
+			select {
+			case <-nf.ShutdownNotificationChannel():
+				processor.Stop()
+				break loop
+			case <-restarter.done:
+				processor.Stop()
+				if err := nf.Close(); err != nil {
+					log.WithError(err).Warning("an error occurred while closing nfqueue.")
+				}
+				break done
+			case errChan := <-restarter.debugKillNfqueueConnChan:
+				errChan <- nf.DebugKillConnection()
+				close(errChan)
+			}
+		}
+
+		log.Info("recreating NFQUEUE connection...")
+	}
+
+	return nil
+}
+
+func (restarter *PacketProcessorWithNfqueueRestarter) Stop() {
+	restarter.closeOnce.Do(func() {
+		close(restarter.done)
+		close(restarter.debugKillNfqueueConnChan)
+	})
+}
+
+// DebugKillCurrentNfqueueConnection calls DebugKillConnection on the currently use nfqueue instance, destroying the
+// underlying connection. This is used for testing purposes only, and in general is not safe to use or even thread safe.
+// This was note made thread safe as we want to add as little debug code to interfere with the mainline production code.
+//
+// In general, DO NOT USE THIS FUNCTION.
+func (restarter *PacketProcessorWithNfqueueRestarter) DebugKillCurrentNfqueueConnection() error {
+	errChan := make(chan error)
+	restarter.debugKillNfqueueConnChan <- errChan
+
+	return <-errChan
+}
 
 // PacketProcessor listens for incoming nfqueue packets on a given channel and holds it until it receives a
 // signal.

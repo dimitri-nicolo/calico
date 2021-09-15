@@ -14,6 +14,34 @@ type MockNfqueue struct {
 	mock.Mock
 }
 
+// Close provides a mock function with given fields:
+func (_m *MockNfqueue) Close() error {
+	ret := _m.Called()
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DebugKillConnection provides a mock function with given fields:
+func (_m *MockNfqueue) DebugKillConnection() error {
+	ret := _m.Called()
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // PacketAttributesChannel provides a mock function with given fields:
 func (_m *MockNfqueue) PacketAttributesChannel() <-chan nfqueue.Attribute {
 	ret := _m.Called()
@@ -53,6 +81,22 @@ func (_m *MockNfqueue) SetVerdictWithMark(id uint32, verdict int, mark int) erro
 		r0 = rf(id, verdict, mark)
 	} else {
 		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ShutdownNotificationChannel provides a mock function with given fields:
+func (_m *MockNfqueue) ShutdownNotificationChannel() <-chan struct{} {
+	ret := _m.Called()
+
+	var r0 <-chan struct{}
+	if rf, ok := ret.Get(0).(func() <-chan struct{}); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(<-chan struct{})
+		}
 	}
 
 	return r0
