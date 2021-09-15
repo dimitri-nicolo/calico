@@ -17,6 +17,14 @@ type MockClientInterface struct {
 	mock.Mock
 }
 
+func (_m *MockClientInterface) UISettingsGroups() clientv3.UISettingsGroupInterface {
+    panic("implement me")
+}
+
+func (_m *MockClientInterface) UISettings() clientv3.UISettingsInterface {
+    panic("implement me")
+}
+
 func (_m *MockClientInterface) BGPConfigurations() clientv3.BGPConfigurationInterface {
 	return nil
 }
