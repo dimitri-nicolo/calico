@@ -246,6 +246,14 @@ type mockDatastore struct {
 	failInit                     bool
 }
 
+func (b *mockDatastore) UISettingsGroups() clientv3.UISettingsGroupInterface {
+	panic("implement me")
+}
+
+func (b *mockDatastore) UISettings() clientv3.UISettingsInterface {
+	panic("implement me")
+}
+
 func (b *mockDatastore) PacketCaptures() clientv3.PacketCaptureInterface {
 	panic("implement me")
 }
