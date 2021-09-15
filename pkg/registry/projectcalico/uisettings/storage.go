@@ -1,6 +1,6 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
-package uisettingsgroup
+package uisettings
 
 import (
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -30,12 +30,12 @@ func (r *REST) Categories() []string {
 
 // EmptyObject returns an empty instance
 func EmptyObject() runtime.Object {
-	return &calico.UISettingsGroup{}
+	return &calico.UISettings{}
 }
 
 // NewList returns a new shell of a binding list
 func NewList() runtime.Object {
-	return &calico.UISettingsGroupList{}
+	return &calico.UISettingsList{}
 }
 
 // NewREST returns a RESTStorage object that will work against API services.
@@ -60,8 +60,8 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, error) {
 		prefix,
 		keyFunc,
 		strategy,
-		func() runtime.Object { return &calico.UISettingsGroup{} },
-		func() runtime.Object { return &calico.UISettingsGroupList{} },
+		func() runtime.Object { return &calico.UISettings{} },
+		func() runtime.Object { return &calico.UISettingsList{} },
 		GetAttrs,
 		nil,
 		nil,
@@ -70,15 +70,15 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, error) {
 		return nil, err
 	}
 	store := &genericregistry.Store{
-		NewFunc:     func() runtime.Object { return &calico.UISettingsGroup{} },
-		NewListFunc: func() runtime.Object { return &calico.UISettingsGroupList{} },
+		NewFunc:     func() runtime.Object { return &calico.UISettings{} },
+		NewListFunc: func() runtime.Object { return &calico.UISettingsList{} },
 		KeyRootFunc: opts.KeyRootFunc(false),
 		KeyFunc:     opts.KeyFunc(false),
 		ObjectNameFunc: func(obj runtime.Object) (string, error) {
-			return obj.(*calico.UISettingsGroup).Name, nil
+			return obj.(*calico.UISettings).Name, nil
 		},
-		PredicateFunc:            MatchNetworkSet,
-		DefaultQualifiedResource: calico.Resource("uisettingsgroups"),
+		PredicateFunc:            MatchUISettings,
+		DefaultQualifiedResource: calico.Resource("uisettings"),
 
 		CreateStrategy:          strategy,
 		UpdateStrategy:          strategy,

@@ -1,6 +1,6 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
-package uisettingsgroup
+package uisettings
 
 import (
 	"context"
@@ -57,16 +57,16 @@ func (apiServerStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Ob
 }
 
 func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
-	apiserver, ok := obj.(*calico.UISettingsGroup)
+	apiserver, ok := obj.(*calico.UISettings)
 	if !ok {
-		return nil, nil, fmt.Errorf("given object is not a UISettingsGroup")
+		return nil, nil, fmt.Errorf("given object is not a UISettings")
 	}
-	return labels.Set(apiserver.ObjectMeta.Labels), NetworkSetToSelectableFields(apiserver), nil
+	return labels.Set(apiserver.ObjectMeta.Labels), UISettingsToSelectableFields(apiserver), nil
 }
 
-// MatchNetworkSet is the filter used by the generic etcd backend to watch events
+// MatchUISettings is the filter used by the generic etcd backend to watch events
 // from etcd to clients of the apiserver only interested in specific labels/fields.
-func MatchNetworkSet(label labels.Selector, field fields.Selector) storage.SelectionPredicate {
+func MatchUISettings(label labels.Selector, field fields.Selector) storage.SelectionPredicate {
 	return storage.SelectionPredicate{
 		Label:    label,
 		Field:    field,
@@ -74,7 +74,7 @@ func MatchNetworkSet(label labels.Selector, field fields.Selector) storage.Selec
 	}
 }
 
-// NetworkSetToSelectableFields returns a field set that represents the object.
-func NetworkSetToSelectableFields(obj *calico.UISettingsGroup) fields.Set {
+// UISettingsToSelectableFields returns a field set that represents the object.
+func UISettingsToSelectableFields(obj *calico.UISettings) fields.Set {
 	return generic.ObjectMetaFieldsSet(&obj.ObjectMeta, false)
 }
