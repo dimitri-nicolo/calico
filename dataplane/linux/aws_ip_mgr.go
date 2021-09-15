@@ -321,7 +321,7 @@ func (a *awsIPManager) CompleteDeferredWork() error {
 			ds.LocalRouteDestsBySubnetID[k] = v.Copy()
 		}
 		for k, v := range a.poolIDsBySubnetID {
-			ds.PoolIDsBySubnetID[k] = v
+			ds.PoolIDsBySubnetID[k] = v.Copy()
 		}
 		a.ifaceProvisioner.OnDatastoreUpdate(ds)
 		a.awsResyncNeeded = false
@@ -353,15 +353,6 @@ func (a *awsIPManager) resyncWithDataplane() error {
 	activeIfaceNames := set.New()
 	var finalErr error
 
-	if a.primaryIfaceMTU == 0 {
-		mtu, err := a.findPrimaryInterfaceMTU(ifaces)
-		if err != nil {
-			return err
-		}
-		logrus.WithField("mtu", mtu).Info("Found primary interface MTU.")
-		a.primaryIfaceMTU = mtu
-	}
-
 	for _, iface := range ifaces {
 		// Skip NICs that don't match anything in AWS.
 		mac := iface.Attrs().HardwareAddr.String()
@@ -376,6 +367,16 @@ func (a *awsIPManager) resyncWithDataplane() error {
 			"awsNICID": awsNIC.ID,
 		}).Debug("Matched local NIC with AWS NIC.")
 		activeIfaceNames.Add(ifaceName)
+
+		// Make sure we know the primary NIC's MTU.
+		if a.primaryIfaceMTU == 0 {
+			mtu, err := a.findPrimaryInterfaceMTU(ifaces)
+			if err != nil {
+				return err
+			}
+			logrus.WithField("mtu", mtu).Info("Found primary interface MTU.")
+			a.primaryIfaceMTU = mtu
+		}
 
 		// Enable the NIC and configure its IPs.
 		priAddrStr := awsNIC.PrimaryIPv4Addr.String()
@@ -417,7 +418,7 @@ var (
 func (a *awsIPManager) findPrimaryInterfaceMTU(ifaces []netlink.Link) (int, error) {
 	for _, iface := range ifaces {
 		mac := iface.Attrs().HardwareAddr.String()
-		if mac == a.awsState.PrimaryNIC.MAC.String() {
+		if mac == a.awsState.PrimaryNICMAC {
 			// Found the primary interface.
 			if iface.Attrs().MTU == 0 { // defensive
 				return 0, errPrimaryIfaceZeroMTU

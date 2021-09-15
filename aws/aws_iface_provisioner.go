@@ -85,7 +85,7 @@ type SecondaryIfaceProvisioner struct {
 type DatastoreState struct {
 	LocalAWSRoutesByDst       map[ip.CIDR]*proto.RouteUpdate
 	LocalRouteDestsBySubnetID map[string]set.Set /*ip.CIDR*/
-	PoolIDsBySubnetID         map[string]set.Set
+	PoolIDsBySubnetID         map[string]set.Set /*string*/
 }
 
 const (
@@ -182,7 +182,7 @@ func (m *SecondaryIfaceProvisioner) Start(ctx context.Context) (done chan struct
 }
 
 type IfaceState struct {
-	PrimaryNIC         *Iface
+	PrimaryNICMAC      string
 	SecondaryNICsByMAC map[string]Iface
 	SubnetCIDR         ip.CIDR
 	GatewayAddr        ip.Addr
@@ -497,7 +497,7 @@ func (m *SecondaryIfaceProvisioner) calculateResponse(awsNICState *nicSnapshot) 
 		return nil, err
 	}
 	return &IfaceState{
-		PrimaryNIC:         primaryNIC,
+		PrimaryNICMAC:      primaryNIC.MAC.String(),
 		SecondaryNICsByMAC: ifacesByMAC,
 		SubnetCIDR:         m.awsSubnetCIDR,
 		GatewayAddr:        m.awsGatewayAddr,
@@ -634,55 +634,56 @@ func (m *SecondaryIfaceProvisioner) loadAWSNICsState() (s *nicSnapshot, r *nicRe
 		freeIPv4CapacityByNICID: map[string]int{},
 	}
 
-	for _, n := range myNICs {
-		if n.NetworkInterfaceId == nil {
+	for _, nic := range myNICs {
+		nic := nic
+		if nic.NetworkInterfaceId == nil {
 			logrus.Debug("AWS NIC had no NetworkInterfaceId.")
 			continue
 		}
-		if n.Attachment != nil {
-			if n.Attachment.DeviceIndex != nil {
-				r.inUseDeviceIndexes[*n.Attachment.DeviceIndex] = true
+		if nic.Attachment != nil {
+			if nic.Attachment.DeviceIndex != nil {
+				r.inUseDeviceIndexes[*nic.Attachment.DeviceIndex] = true
 			}
-			if n.Attachment.NetworkCardIndex != nil && *n.Attachment.NetworkCardIndex != 0 {
+			if nic.Attachment.NetworkCardIndex != nil && *nic.Attachment.NetworkCardIndex != 0 {
 				// Ignore NICs that aren't on the primary network card.  We only support one network card for now.
-				logrus.Debugf("Ignoring NIC on non-primary network card: %d.", *n.Attachment.NetworkCardIndex)
+				logrus.Debugf("Ignoring NIC on non-primary network card: %d.", *nic.Attachment.NetworkCardIndex)
 				continue
 			}
-			if n.Attachment.AttachmentId != nil {
-				s.attachmentIDByNICID[*n.NetworkInterfaceId] = *n.Attachment.AttachmentId
+			if nic.Attachment.AttachmentId != nil {
+				s.attachmentIDByNICID[*nic.NetworkInterfaceId] = *nic.Attachment.AttachmentId
 			}
 		}
-		if !NetworkInterfaceIsCalicoSecondary(n) {
-			if s.primaryNIC == nil || n.Attachment != nil && n.Attachment.DeviceIndex != nil && *n.Attachment.DeviceIndex == 0 {
-				s.primaryNIC = &n
+		if !NetworkInterfaceIsCalicoSecondary(nic) {
+			if s.primaryNIC == nil || nic.Attachment != nil && nic.Attachment.DeviceIndex != nil && *nic.Attachment.DeviceIndex == 0 {
+				s.primaryNIC = &nic
 			}
-			s.nonCalicoOwnedNICsByID[*n.NetworkInterfaceId] = n
+			s.nonCalicoOwnedNICsByID[*nic.NetworkInterfaceId] = nic
 			continue
 		}
 		// Found one of our managed interfaces; collect its IPs.
-		logCtx := logrus.WithField("id", *n.NetworkInterfaceId)
+		logCtx := logrus.WithField("id", *nic.NetworkInterfaceId)
 		logCtx.Debug("Found Calico NIC")
-		s.calicoOwnedNICsByID[*n.NetworkInterfaceId] = n
-		s.nicIDsBySubnet[*n.SubnetId] = append(s.nicIDsBySubnet[*n.SubnetId], *n.NetworkInterfaceId)
-		for _, addr := range n.PrivateIpAddresses {
+		s.calicoOwnedNICsByID[*nic.NetworkInterfaceId] = nic
+		s.nicIDsBySubnet[*nic.SubnetId] = append(s.nicIDsBySubnet[*nic.SubnetId], *nic.NetworkInterfaceId)
+		for _, addr := range nic.PrivateIpAddresses {
 			if addr.PrivateIpAddress == nil {
 				continue
 			}
 			cidr := ip.MustParseCIDROrIP(*addr.PrivateIpAddress)
 			if addr.Primary != nil && *addr.Primary {
 				logCtx.WithField("ip", *addr.PrivateIpAddress).Debug("Found primary IP on Calico NIC")
-				s.nicIDByPrimaryIP[cidr] = *n.NetworkInterfaceId
+				s.nicIDByPrimaryIP[cidr] = *nic.NetworkInterfaceId
 			} else {
 				logCtx.WithField("ip", *addr.PrivateIpAddress).Debug("Found secondary IP on Calico NIC")
-				s.nicIDByIP[cidr] = *n.NetworkInterfaceId
+				s.nicIDByIP[cidr] = *nic.NetworkInterfaceId
 			}
 		}
 
-		r.freeIPv4CapacityByNICID[*n.NetworkInterfaceId] = m.networkCapabilities.MaxIPv4PerInterface - len(n.PrivateIpAddresses)
-		logCtx.WithField("availableIPs", r.freeIPv4CapacityByNICID[*n.NetworkInterfaceId]).Debug("Calculated available IPs")
-		if r.freeIPv4CapacityByNICID[*n.NetworkInterfaceId] < 0 {
-			logCtx.Errorf("NIC appears to have more IPs (%v) that it should (%v)", len(n.PrivateIpAddresses), m.networkCapabilities.MaxIPv4PerInterface)
-			r.freeIPv4CapacityByNICID[*n.NetworkInterfaceId] = 0
+		r.freeIPv4CapacityByNICID[*nic.NetworkInterfaceId] = m.networkCapabilities.MaxIPv4PerInterface - len(nic.PrivateIpAddresses)
+		logCtx.WithField("availableIPs", r.freeIPv4CapacityByNICID[*nic.NetworkInterfaceId]).Debug("Calculated available IPs")
+		if r.freeIPv4CapacityByNICID[*nic.NetworkInterfaceId] < 0 {
+			logCtx.Errorf("NIC appears to have more IPs (%v) that it should (%v)", len(nic.PrivateIpAddresses), m.networkCapabilities.MaxIPv4PerInterface)
+			r.freeIPv4CapacityByNICID[*nic.NetworkInterfaceId] = 0
 		}
 	}
 
@@ -801,6 +802,7 @@ func (m *SecondaryIfaceProvisioner) unassignAWSIPs(awsIPsToRelease set.Set, awsN
 
 	needRefresh := false
 	for nicID, ipsToRelease := range ipsToReleaseByNICID {
+		nicID := nicID
 		_, err := ec2Client.EC2Svc.UnassignPrivateIpAddresses(ctx, &ec2.UnassignPrivateIpAddressesInput{
 			NetworkInterfaceId: &nicID,
 			PrivateIpAddresses: ipsToRelease,
