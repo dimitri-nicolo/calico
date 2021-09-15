@@ -37,3 +37,11 @@ METRICS_PORT/metrics exposing two metrics:
 
 The values should be closely related to actual data sent to and from Elasticsearch broken down per cluster id. The
 cluster id is derived from the identity of the sender of the request and not on the payload or URL.
+
+## Health Reporting
+
+ES gateway has the following health check endpoints: 
+
+- `/health` reports on the health of ES gateway by hitting a [Kubernetes API readyz endpoint](https://kubernetes.io/docs/reference/using-api/health-checks/#api-endpoints-for-health). ES gateway only requires access to the Kubernetes API server in order to be operational. This is because it requires access to a set of secrets containing credentials so that it can perform credential swapping on incoming requests.
+- `/es-health` reports on the health of Elasticsearch API by hitting a [cluster status endpoint](http://www.elastic.co/guide/en/elasticsearch/reference/master/cluster-health.html).
+- `/kb-health` reports the health of Kibana API by hitting a [status endpoint](https://www.elastic.co/guide/en/kibana/master/access.html#status).

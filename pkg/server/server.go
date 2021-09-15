@@ -86,8 +86,12 @@ func New(opts ...Option) (*Server, error) {
 	middlewares := mid.GetHandlerMap(srv.cache)
 
 	// Route Handling #1: Handle the ES Gateway health check endpoint
-	healthHandler := health.GetHealthHandler(srv.esClient, srv.kbClient, srv.k8sClient)
+	healthHandler := health.GetHealthHandler(srv.k8sClient)
 	router.HandleFunc("/health", healthHandler).Name("health")
+	healthCheckES := health.GetESHealthHandler(srv.esClient)
+	router.HandleFunc("/es-health", healthCheckES).Name("es-health")
+	healthCheckKB := health.GetKBHealthHandler(srv.kbClient)
+	router.HandleFunc("/kb-health", healthCheckKB).Name("kb-health")
 
 	// Route Handling #2: Handle any Kibana request, which we expect will have a common path prefix.
 	kibanaHandler, err := handlers.GetProxyHandler(srv.kibanaTarget, nil)

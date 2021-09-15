@@ -111,7 +111,7 @@ func (c *client) GetSecretWatcher(ctx context.Context, namespace string, labels 
 // GetK8sReadyz checks the readyz endpoint of the Kube API that the client is connected to.
 // If the response is anything other than "ok", then an error is returned.
 // Otherwise, we return nil.
-// http://www.elastic.co/guide/en/elasticsearch/reference/master/cluster-health.html
+// https://kubernetes.io/docs/reference/using-api/health-checks/#api-endpoints-for-health
 func (c *client) GetK8sReadyz() error {
 	path := "/readyz"
 	content, err := c.Discovery().RESTClient().Get().Timeout(httpCommon.HealthCheckTimeout).AbsPath(path).DoRaw(context.TODO())
