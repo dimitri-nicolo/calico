@@ -20,7 +20,7 @@ require (
 )
 
 replace (
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210914232634-b22130537353
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20210915043019-9424d840011b
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210914204733-7bca782c7303
 	// Need to pin typha to get go mod updates for felix to go through.
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210914210708-399d15f0e213
