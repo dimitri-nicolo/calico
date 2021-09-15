@@ -30,3 +30,5 @@ section:
     path: /threat/honeypod/honeypods
   - title: Monitor honeypods
     path: /threat/honeypod/honeypod-controller
+- title: Deep packet inspection
+  path: /threat/deeppacketinspection
