@@ -363,22 +363,23 @@ func (c *EC2Client) GetMyNetworkCapabilities(ctx context.Context) (netc NetworkC
 }
 
 func InstanceTypeNetworkCapabilities(instType *types.InstanceTypeInfo) (netc NetworkCapabilities, err error) {
-	if instType.NetworkInfo == nil {
+	netInfo := instType.NetworkInfo
+	if netInfo == nil {
 		err = fmt.Errorf("intance type missing network info")
 		return
 	}
-	if instType.NetworkInfo.MaximumNetworkInterfaces == nil ||
-		instType.NetworkInfo.Ipv4AddressesPerInterface == nil {
+	if netInfo.MaximumNetworkInterfaces == nil ||
+		netInfo.Ipv4AddressesPerInterface == nil {
 		err = fmt.Errorf("instance type missing values")
 	}
-	netc.MaxNetworkInterfaces = int(*instType.NetworkInfo.MaximumNetworkInterfaces)
-	netc.MaxIPv4PerInterface = int(*instType.NetworkInfo.Ipv4AddressesPerInterface)
-	if instType.NetworkInfo.Ipv6Supported != nil && *instType.NetworkInfo.Ipv6Supported {
-		if instType.NetworkInfo.Ipv6AddressesPerInterface != nil {
-			netc.MaxIPv6PerInterface = int(*instType.NetworkInfo.Ipv6AddressesPerInterface)
+	netc.MaxNetworkInterfaces = int(*netInfo.MaximumNetworkInterfaces)
+	netc.MaxIPv4PerInterface = int(*netInfo.Ipv4AddressesPerInterface)
+	if netInfo.Ipv6Supported != nil && *netInfo.Ipv6Supported {
+		if netInfo.Ipv6AddressesPerInterface != nil {
+			netc.MaxIPv6PerInterface = int(*netInfo.Ipv6AddressesPerInterface)
 		}
 	}
-	netc.NetworkCards = instType.NetworkInfo.NetworkCards
+	netc.NetworkCards = netInfo.NetworkCards
 	return
 }
 

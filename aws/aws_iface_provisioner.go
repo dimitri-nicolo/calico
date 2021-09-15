@@ -38,14 +38,25 @@ const (
 	SecondaryInterfaceCap = MaxInterfacesPerInstance - 1
 )
 
+// ipamInterface is just the parts of the IPAM interface that we need.
+type ipamInterface interface {
+	AutoAssign(ctx context.Context, args ipam.AutoAssignArgs) (*ipam.IPAMAssignments, *ipam.IPAMAssignments, error)
+	ReleaseIPs(ctx context.Context, ips []calinet.IP) ([]calinet.IP, error)
+	IPsByHandle(ctx context.Context, handleID string) ([]calinet.IP, error)
+}
+
+// Compile-time assert: ipamInterface should match the real interface.
+var _ ipamInterface = ipam.Interface(nil)
+
 type SecondaryIfaceProvisioner struct {
-	nodeName string
-	timeout  time.Duration
-	clock    clock.Clock
+	nodeName     string
+	timeout      time.Duration
+	clock        clock.Clock
+	newEC2Client func(ctx context.Context) (*EC2Client, error)
 
 	healthAgg  *health.HealthAggregator
 	opRecorder logutils.OpRecorder
-	ipamClient ipam.Interface
+	ipamClient ipamInterface
 
 	// resyncNeeded is set to true if we need to do any kind of resync.
 	resyncNeeded bool
@@ -103,6 +114,12 @@ func OptClockOverride(c clock.Clock) IfaceProvOpt {
 	}
 }
 
+func OptNewEC2ClientkOverride(f func(ctx context.Context) (*EC2Client, error)) IfaceProvOpt {
+	return func(provisioner *SecondaryIfaceProvisioner) {
+		provisioner.newEC2Client = f
+	}
+}
+
 type SecondaryIfaceCapacities struct {
 	MaxCalicoSecondaryIPs int
 }
@@ -114,7 +131,7 @@ func (c SecondaryIfaceCapacities) Equals(caps SecondaryIfaceCapacities) bool {
 func NewSecondaryIfaceProvisioner(
 	nodeName string,
 	healthAgg *health.HealthAggregator,
-	ipamClient ipam.Interface,
+	ipamClient ipamInterface,
 	options ...IfaceProvOpt,
 ) *SecondaryIfaceProvisioner {
 	healthAgg.RegisterReporter(healthNameENICapacity, &health.HealthReport{
@@ -147,6 +164,7 @@ func NewSecondaryIfaceProvisioner(
 		capacityCallback: func(c SecondaryIfaceCapacities) {
 			logrus.WithField("cap", c).Debug("Capacity updated but no callback configured.")
 		},
+		newEC2Client: NewEC2Client,
 	}
 
 	for _, o := range options {
@@ -1226,7 +1244,7 @@ func (m *SecondaryIfaceProvisioner) ec2Client() (*EC2Client, error) {
 
 	ctx, cancel := m.newContext()
 	defer cancel()
-	c, err := NewEC2Client(ctx)
+	c, err := m.newEC2Client(ctx)
 	if err != nil {
 		return nil, err
 	}
