@@ -86,7 +86,38 @@ spec:
         securityContext:
           privileged: true
           allowPrivilegeEscalation: true
+        startupProbe:
+          httpGet:
+            path: /ad/ping
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 40
+          periodSeconds: 30
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 10
+        livenessProbe:
+          httpGet:
+            path: /ad/ping
+            port: 8000
+            scheme: HTTP
+          periodSeconds: 20
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 5
+        readinessProbe:
+          httpGet:
+            path: /ad/ping
+            port: 8000
+            scheme: HTTP
+          periodSeconds: 20
+          timeoutSeconds: 1
+          successThreshold: 1
+          failureThreshold: 5
         env:
+          - name: AD_NEED_API
+            value: "true"
+          - name:
           - name: ELASTIC_HOST
             value: "tigera-secure-es-gateway-http.tigera-elasticsearch.svc"
           - name: CLUSTER_NAME
