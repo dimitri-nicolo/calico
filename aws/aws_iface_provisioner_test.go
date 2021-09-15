@@ -32,11 +32,12 @@ import (
 	"github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/transport/http"
 	. "github.com/onsi/gomega"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"k8s.io/apimachinery/pkg/util/clock"
+
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/set"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/util/clock"
 
 	"github.com/projectcalico/libcalico-go/lib/health"
 	"github.com/projectcalico/libcalico-go/lib/ipam"
@@ -84,7 +85,9 @@ type sipTestFakes struct {
 func setup(t *testing.T) (*SecondaryIfaceProvisioner, *sipTestFakes) {
 	RegisterTestingT(t)
 	fakeIPAM := newMockIPAM()
-	fakeClock := clock.NewFakeClock(time.Now())
+	theTime, err := time.Parse("2006-01-02 15:04:05.000", "2021-09-15 16:00:00.000")
+	Expect(err).NotTo(HaveOccurred())
+	fakeClock := clock.NewFakeClock(theTime)
 	capacityC := make(chan SecondaryIfaceCapacities, 10)
 	ec2Client, fakeEC2 := newEC2Client()
 
@@ -162,7 +165,7 @@ func TestSecondaryIfaceProvisioner_NoPoolsOrWorkloadsMainline(t *testing.T) {
 	})
 
 	// Should get an empty response.
-	Eventually(sip.responseC).Should(Receive(Equal(&IfaceState{})))
+	Eventually(sip.ResponseC()).Should(Receive(Equal(&IfaceState{})))
 }
 
 func TestSecondaryIfaceProvisioner_AWSPoolsButNoWorkloadsMainline(t *testing.T) {
@@ -179,7 +182,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsButNoWorkloadsMainline(t *testing.T) 
 	})
 
 	// Should respond with the Calico subnet details for the node's AZ..
-	Eventually(sip.responseC).Should(Receive(Equal(&IfaceState{
+	Eventually(sip.ResponseC()).Should(Receive(Equal(&IfaceState{
 		PrimaryNICMAC:      primaryNICMAC,
 		SecondaryNICsByMAC: map[string]Iface{},
 		SubnetCIDR:         ip.MustParseCIDROrIP(subnetWest1CIDRCalico),
@@ -187,12 +190,9 @@ func TestSecondaryIfaceProvisioner_AWSPoolsButNoWorkloadsMainline(t *testing.T) 
 	})))
 }
 
-func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkloadMainline(t *testing.T) {
-	sip, _, cancel := setupAndStart(t)
-	defer cancel()
-
-	wl1CIDR := ip.MustParseCIDROrIP(wl1Addr)
-	sip.OnDatastoreUpdate(DatastoreState{
+var (
+	wl1CIDR                 = ip.MustParseCIDROrIP(wl1Addr)
+	singleWorkloadDatastore = DatastoreState{
 		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
 			wl1CIDR: &proto.RouteUpdate{
 				Dst:           wl1Addr,
@@ -207,30 +207,87 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkloadMainline(t *testing.T) 
 			subnetIDWest1Calico: set.FromArray([]string{ipPoolIDWest1Hosts, ipPoolIDWest1Gateways}),
 			subnetIDWest2Calico: set.FromArray([]string{ipPoolIDWest2Hosts, ipPoolIDWest2Gateways}),
 		},
-	})
-
-	// Should respond with the Calico subnet details for the node's AZ..
-	mac, err := net.ParseMAC("00:00:e8:03:00:00")
-	if err != nil {
-		panic(err)
 	}
-	Eventually(sip.responseC).Should(Receive(Equal(&IfaceState{
-		PrimaryNICMAC:      primaryNICMAC,
+	firstAllocatedMAC, _   = net.ParseMAC("00:00:e8:03:00:00")
+	singleWorkloadResponse = &IfaceState{
+		PrimaryNICMAC: primaryNICMAC,
 		SecondaryNICsByMAC: map[string]Iface{
 			"00:00:e8:03:00:00": {
-				ID: "eni-000000000000003e8",
-				MAC: mac,
-				PrimaryIPv4Addr: ip.FromString(calicoHostIP1),
+				ID:                 "eni-000000000000003e8",
+				MAC:                firstAllocatedMAC,
+				PrimaryIPv4Addr:    ip.FromString(calicoHostIP1),
 				SecondaryIPv4Addrs: []ip.Addr{ip.MustParseCIDROrIP(wl1Addr).Addr()},
 			},
 		},
-		SubnetCIDR:         ip.MustParseCIDROrIP(subnetWest1CIDRCalico),
-		GatewayAddr:        ip.FromString(subnetWest1GatewayCalico),
-	})))
+		SubnetCIDR:  ip.MustParseCIDROrIP(subnetWest1CIDRCalico),
+		GatewayAddr: ip.FromString(subnetWest1GatewayCalico),
+	}
+)
+
+func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_Mainline(t *testing.T) {
+	sip, _, cancel := setupAndStart(t)
+	defer cancel()
+
+	sip.OnDatastoreUpdate(singleWorkloadDatastore)
+
+	// Since this is a fresh system with only one NIC being allocated, everything is deterministic and we should
+	// always get the same result.
+	Eventually(sip.ResponseC()).Should(Receive(Equal(singleWorkloadResponse)))
+}
+
+func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_ErrBackoff(t *testing.T) {
+	sip, fake, cancel := setupAndStart(t)
+	defer cancel()
+
+	// Queue up an error on a key AWS call.
+	fake.EC2.ErrDescribeNetworkInterfaces = errUnauthorized("DescribeNetworkInterfaces")
+
+	sip.OnDatastoreUpdate(singleWorkloadDatastore)
+
+	// Should fail to respond.
+	Consistently(sip.ResponseC()).ShouldNot(Receive())
+
+	// Advance time to trigger the backoff.
+	// Initial backoff should be between 1000 and 1100 ms (due to jitter).
+	Expect(fake.Clock.HasWaiters()).To(BeTrue())
+	fake.Clock.Step(999 * time.Millisecond)
+	Expect(fake.Clock.HasWaiters()).To(BeTrue())
+	fake.Clock.Step(102 * time.Millisecond)
+	Expect(fake.Clock.HasWaiters()).To(BeFalse())
+
+	// Since this is a fresh system with only one NIC being allocated, everything is deterministic and we should
+	// always get the same result.
+	Eventually(sip.ResponseC()).Should(Receive(Equal(singleWorkloadResponse)))
+}
+
+func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_ErrBackoffInterrupted(t *testing.T) {
+	sip, fake, cancel := setupAndStart(t)
+	defer cancel()
+
+	// Queue up an error on a key AWS call.
+	fake.EC2.ErrDescribeNetworkInterfaces = errUnauthorized("DescribeNetworkInterfaces")
+
+	sip.OnDatastoreUpdate(singleWorkloadDatastore)
+
+	// Should fail to respond.
+	Consistently(sip.ResponseC()).ShouldNot(Receive())
+
+	// Should be a timer waiting for backoff.
+	Expect(fake.Clock.HasWaiters()).To(BeTrue())
+
+	// Send a datastore update, should trigger the backoff to be abandoned.
+	sip.OnDatastoreUpdate(singleWorkloadDatastore)
+
+	// Since this is a fresh system with only one NIC being allocated, everything is deterministic and we should
+	// always get the same result.
+	Eventually(sip.ResponseC()).Should(Receive(Equal(singleWorkloadResponse)))
+	Expect(fake.Clock.HasWaiters()).To(BeFalse())
 }
 
 type fakeEC2 struct {
 	lock sync.Mutex
+
+	ErrDescribeNetworkInterfaces error
 
 	InstancesByID map[string]types.Instance
 	NICsByID      map[string]types.NetworkInterface
@@ -388,6 +445,12 @@ func (f *fakeEC2) DescribeInstanceTypes(ctx context.Context, params *ec2.Describ
 func (f *fakeEC2) DescribeNetworkInterfaces(ctx context.Context, params *ec2.DescribeNetworkInterfacesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeNetworkInterfacesOutput, error) {
 	f.lock.Lock()
 	defer f.lock.Unlock()
+
+	if f.ErrDescribeNetworkInterfaces != nil {
+		err := f.ErrDescribeNetworkInterfaces
+		f.ErrDescribeNetworkInterfaces = nil
+		return nil, err
+	}
 
 	if params.DryRun != nil || params.MaxResults != nil || params.NextToken != nil {
 		panic("fakeEC2 doesn't support requested feature")

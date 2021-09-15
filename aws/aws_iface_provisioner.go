@@ -343,6 +343,9 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*IfaceState, error) {
 
 	// Collect the current state of this instance and our NICs according to AWS.
 	awsSnapshot, resyncState, err := m.loadAWSNICsState()
+	if err != nil {
+		return nil, err
+	}
 
 	// Let the kubernetes Node updater know our capacity.
 	m.capacityCallback(SecondaryIfaceCapacities{
