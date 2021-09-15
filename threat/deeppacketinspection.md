@@ -23,7 +23,7 @@ This how-to guide uses the following {{site.prodname}} features:
 
 For each deep packet inspection resource (DeepPacketInspection), {{site.prodname}} creates a live network monitor that inspects the header and payload information of packets that match the Snort community rules. Whenever malicious activities are suspected, an alert is automatically added to the Alerts page in the {{site.prodname}} Manager.
 
-{{site.prodname}} DPI uses AF_PACKET, a Linux socket that allows an application to receive and send raw packets. It is commonly used for troubleshooting (like tcdump and Wireshark), but also for network intrusion detection. For details, see {% include open-new-window.html text='AF_Packet' url='https://man7.org/linux/man-pages/man7/packet.7.html' %}
+{{site.prodname}} DPI uses AF_PACKET, a Linux socket that allows an application to receive and send raw packets. It is commonly used for troubleshooting (like tcdump and Wireshark), but also for network intrusion detection. For details, see {% include open-new-window.html text='AF_Packet' url='https://man7.org/linux/man-pages/man7/packet.7.html' %}.
 
 ### Before you begin
 
