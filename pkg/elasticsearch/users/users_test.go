@@ -168,6 +168,33 @@ var _ = Describe("ElasticseachUsers", func() {
 							},
 						}},
 					},
+					"tigera-ee-performance-hotspots": {
+						Username: "tigera-ee-performance-hotspots-managed-cluster-secure",
+						Roles: []elasticsearch.Role{{
+							Name: "tigera-ee-performance-hotspots-managed-cluster-secure",
+							Definition: &elasticsearch.RoleDefinition{
+								Cluster: []string{"monitor", "manage_index_templates"},
+								Indices: []elasticsearch.RoleIndex{
+									{
+										Names:      []string{"tigera_secure_ee_flows.managed-cluster.*"},
+										Privileges: []string{"read"},
+									},
+									{
+										Names:      []string{"tigera_secure_ee_dns.managed-cluster.*"},
+										Privileges: []string{"read"},
+									},
+									{
+										Names:      []string{"tigera_secure_ee_l7.managed-cluster.*"},
+										Privileges: []string{"read"},
+									},
+									{
+										Names:      []string{"tigera_secure_ee_events.managed-cluster"},
+										Privileges: []string{"read", "write"},
+									},
+								},
+							},
+						}},
+					},
 				},
 				map[users.ElasticsearchUserName]elasticsearch.User{
 					"tigera-fluentd": {
@@ -193,6 +220,9 @@ var _ = Describe("ElasticseachUsers", func() {
 					},
 					"tigera-ee-ad-job": {
 						Username: "tigera-ee-ad-job-managed-cluster",
+					},
+					"tigera-ee-performance-hotspots": {
+						Username: "tigera-ee-performance-hotspots-managed-cluster",
 					},
 				},
 			)
@@ -387,6 +417,33 @@ var _ = Describe("ElasticseachUsers", func() {
 							},
 						}},
 					},
+					"tigera-ee-performance-hotspots": {
+						Username: "tigera-ee-performance-hotspots-secure",
+						Roles: []elasticsearch.Role{{
+							Name: "tigera-ee-performance-hotspots-secure",
+							Definition: &elasticsearch.RoleDefinition{
+								Cluster: []string{"monitor", "manage_index_templates"},
+								Indices: []elasticsearch.RoleIndex{
+									{
+										Names:      []string{"tigera_secure_ee_flows.cluster.*"},
+										Privileges: []string{"read"},
+									},
+									{
+										Names:      []string{"tigera_secure_ee_dns.cluster.*"},
+										Privileges: []string{"read"},
+									},
+									{
+										Names:      []string{"tigera_secure_ee_l7.cluster.*"},
+										Privileges: []string{"read"},
+									},
+									{
+										Names:      []string{"tigera_secure_ee_events.cluster"},
+										Privileges: []string{"read", "write"},
+									},
+								},
+							},
+						}},
+					},
 					"tigera-ee-compliance-server": {
 						Username: "tigera-ee-compliance-server-secure",
 						Roles: []elasticsearch.Role{{
@@ -481,6 +538,9 @@ var _ = Describe("ElasticseachUsers", func() {
 					},
 					"tigera-ee-ad-job": {
 						Username: "tigera-ee-ad-job",
+					},
+					"tigera-ee-performance-hotspots": {
+						Username: "tigera-ee-performance-hotspots",
 					},
 					"tigera-ee-compliance-server": {
 						Username: "tigera-ee-compliance-server",
