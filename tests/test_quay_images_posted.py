@@ -24,10 +24,24 @@ with open('%s/../_data/versions.yml' % PATH) as f:
     release = versions[0]
     RELEASE_VERSION = release.get('title')
     print '[INFO] using _data/versions.yaml, discovered version: {0}'.format(RELEASE_VERSION)
-    VERSION_MAPPED_IMAGES = {k: v for k, v in release.get('components').items() if v.has_key('image') and v.get('image').startswith('tigera/')}
+    
+    VERSION_MAPPED_IMAGES={}
+    
+    # add all components from the versions.yml file that declares an image field
+    for k,v in release.get('components').items():
+        if v.has_key('image'):
+            VERSION_MAPPED_IMAGES.update({k:v})
+
     # add tigera-operator to VERSION_MAPPED_IMAGES to check tigera-operator release tag
     VERSION_MAPPED_IMAGES.update({'tigera-operator':release.get('tigera-operator')})
     headers = {'Content-Type': 'application/json', 'Authorization': 'Bearer {}'.format(QUAY_API_TOKEN)}
+
+
+@parameterized(VERSION_MAPPED_IMAGES.items())
+def test_release_images_are_limited_to_tigera_registries(component, details):
+    assert details.get('image').startswith('tigera/') or details.get('image').startswith('calico/')
+    if details.has_key('registry'):
+        assert details.get('registry') == 'quay.io'
 
 
 @parameterized(VERSION_MAPPED_IMAGES.items())
