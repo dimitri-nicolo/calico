@@ -106,6 +106,20 @@
    watch kubectl get tigerastatus/apiserver
    ```
 
+1. If your cluster is management or standalone cluster using v3.8 or older, follow these steps:
+   
+   a. Install the network policies to secure {{site.prodname}} component communications with ElasticSearch
+
+   ```bash
+   kubectl apply -f {{ "/manifests/tigera-policies-es-access.yaml" | absolute_url }}
+   ```
+
+   b. Wait until all components of tigerastatus shows a status of `Available`, then proceed to the next section. You can monitor progress with the following 
+
+   ```bash
+   watch kubectl get tigerastatus
+   ```
+
 1. Install the new network policies to secure {{site.prodname}} component communications.
 
    If your cluster is a **managed** cluster, apply this manifest.
