@@ -472,18 +472,34 @@ func (f *fakeEC2) DescribeNetworkInterfaces(ctx context.Context, params *ec2.Des
 		}
 
 		allFiltersMatch := true
-		for _, f := range params.Filters {
+		for _, filter := range params.Filters {
 			filterMatches := false
-			switch *f.Name {
+			switch *filter.Name {
 			case "attachment.instance-id":
-				for _, v := range f.Values {
+				for _, v := range filter.Values {
 					if *nic.Attachment.InstanceId == v {
 						filterMatches = true
 						break
 					}
 				}
+			case "status":
+				for _, v := range filter.Values {
+					if string(nic.Status) == v {
+						filterMatches = true
+						break
+					}
+				}
+			case "tag:calico:instance":
+				for _, v := range filter.Values {
+					for _, tag := range nic.TagSet {
+						if *tag.Key == "calico:instance" && *tag.Value == v {
+							filterMatches = true
+							break
+						}
+					}
+				}
 			default:
-				panic("fakeEC2 doesn't understand filter " + *f.Name)
+				panic("fakeEC2 doesn't understand filter " + *filter.Name)
 			}
 			allFiltersMatch = allFiltersMatch && filterMatches
 		}
@@ -718,7 +734,8 @@ func (f *fakeEC2) DeleteNetworkInterface(ctx context.Context, params *ec2.Delete
 }
 
 type ipamAlloc struct {
-	Addr string
+	Addr ip.Addr
+	Handle string
 	Args ipam.AutoAssignArgs
 }
 
@@ -770,7 +787,8 @@ func (m *fakeIPAM) AutoAssign(ctx context.Context, args ipam.AutoAssignArgs) (*i
 		}
 		chosenIP := m.freeIPs[0]
 		m.allocations = append(m.allocations, ipamAlloc{
-			Addr: chosenIP,
+			Addr: ip.FromString(chosenIP),
+			Handle: *args.HandleID,
 			Args: args,
 		})
 		m.freeIPs = m.freeIPs[1:]
@@ -788,14 +806,42 @@ func (m *fakeIPAM) ReleaseIPs(ctx context.Context, ips []cnet.IP) ([]cnet.IP, er
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	panic("implement me")
+	releaseCount := 0
+	var out []cnet.IP
+	var newAllocs []ipamAlloc
+	for _, ipToRelease := range ips {
+		addrToRelease := ip.FromCalicoIP(ipToRelease)
+		for _, alloc := range m.allocations {
+			if alloc.Addr == addrToRelease {
+				out = append(out, addrToRelease.AsCalicoNetIP())
+				releaseCount++
+				continue
+			}
+			newAllocs = append(newAllocs, alloc)
+		}
+	}
+	m.allocations = newAllocs
+
+	if releaseCount != len(ips) {
+		// TODO not sure how calico IPAM handles this
+		panic("asked to release non-allocated IP")
+	}
+
+	return out, nil
 }
 
 func (m *fakeIPAM) IPsByHandle(ctx context.Context, handleID string) ([]cnet.IP, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	panic("implement me")
+	var out []cnet.IP
+	for _, alloc := range m.allocations {
+		if alloc.Handle == handleID {
+			out = append(out, alloc.Addr.AsCalicoNetIP())
+		}
+	}
+
+	return out, nil
 }
 
 func newMockIPAM() *fakeIPAM {
