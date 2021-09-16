@@ -78,7 +78,7 @@ spec:
       imagePullSecrets:
       - name: tigera-pull-secret
       containers:
-      - name: ad-jobs
+      - name: performance-hotspots
         image: {{page.registry}}{% include component_image component="performance_hotspots" %}
         resources:
           requests:
