@@ -63,6 +63,28 @@ the more data the PH service ingests, the more costly it becomes in terms of dat
 The PH service default settings are configured for optimal detection quality. However, you can 
 configure the amount of data that goes to the PH service, and the number of alerts.
 
+#### How it works
+
+The performance hotspots model uses these fields from the logs:
+- `flows` log: `bytes_in`, `bytes_out`, `num_flows`, `num_flows_started`, `num_flows_completed`, 
+`packets_in`, `packets_out`, `http_requests_allowed_in`, `http_requests_denied_in`, `num_process_names`, 
+`num_process_ids`, `num_original_source_ips` 
+- `dns` log: `latency_count`, `latency_mean`, `latency_max`
+- `l7` log: `count`, `duration_mean`, `duration_max`, `bytes_in`, `bytes_out`
+
+
+If some log is not presented, the model is not using fields
+from this log. You don't have to do any additional configuration for this. You also can remove
+some logs from the processing with the **PH_PROCESSED_LOGS** environment variable.
+
+A model is trained to find patters in these fields. It searches for the patterns 
+for all fields. 
+
+Performance hotspots can represent an abnormal behaviour of a single field or a set of fields.
+
+**Note:** The model adds more data to the training each day. Potentially it improves the detection quality.
+But if abnormal behaviour follows the pattern, the model can stop recognize it as an anomaly.
+
 
 ### How To
 
@@ -85,11 +107,11 @@ configure the amount of data that goes to the PH service, and the number of aler
    
 Where:
 - **CLUSTER_NAME** - Default: "cluster". 
-Name of standalone, management cluster, or managed cluster where 
-the PH service will detect performance hotspots.
+Name of the cluster where the PH service will detect performance hotspots. Replace this value only for
+managed clusters.
 - **PH_PROCESSED_LOGS** - Default: "flows,l7,dns". 
 The {{site.prodname}} logs used as the service input data. 
-- **PH_max_docs** - Default: 2000000. 
+- **PH_MAX_DOCS** - Default: 2000000. 
 Maximum number of records of individual logs used for training. The larger the number, the more 
 precise the training models, but also the more data that is read from the Elasticsearch storage, 
 and the longer the training.
@@ -123,17 +145,9 @@ Example:
 
 4. Verify that the PH service is running.
 
-   The PH service has a special endpoint to check the service availability. Use this script:
-
-   ```bash
-   curl <REPLACE_WITH_SERVICE_URL>/ph/ping
-   ```   
-
-     If the PH service is running, you receive a response:
-   
-   ```json
-   {"service":"performance_hotspots_service","utcnow":"2021-08-11T16:05:48.322045"}
-   ```
+   The PH service has the {% include open-new-window.html text='startup, readiness, and liveness probes' url='https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes' %}. 
+   They automatically check the service availability when it starts and runs. 
+   If one of the probe fails, the kubelet kills the container, and the container is subjected to its restart policy.
 
 ### Above and beyond
 
