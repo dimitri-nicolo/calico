@@ -33,6 +33,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
+
 	"github.com/projectcalico/cni-plugin/internal/pkg/testutils"
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
 	"github.com/projectcalico/cni-plugin/pkg/types"
@@ -45,8 +48,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/names"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/options"
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/api/pkg/lib/numorstring"
 )
 
 func ensureNamespace(clientset *kubernetes.Clientset, name string) {
@@ -1149,9 +1150,10 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			v4ia, _, err := calicoClient.IPAM().AutoAssign(
 				context.Background(),
 				ipam.AutoAssignArgs{
-					Num4:      256,
-					HandleID:  &handle,
-					IPv4Pools: []cnet.IPNet{cnet.IPNet{IPNet: *pool1CIDR}},
+					Num4:        256,
+					HandleID:    &handle,
+					IPv4Pools:   []cnet.IPNet{cnet.IPNet{IPNet: *pool1CIDR}},
+					IntendedUse: api.IPPoolAllowedUseWorkload,
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -1206,9 +1208,10 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			v4ia, _, err := calicoClient.IPAM().AutoAssign(
 				context.Background(),
 				ipam.AutoAssignArgs{
-					Num4:      256,
-					HandleID:  &handle,
-					IPv4Pools: []cnet.IPNet{cnet.IPNet{IPNet: *pool1CIDR}},
+					Num4:        256,
+					HandleID:    &handle,
+					IPv4Pools:   []cnet.IPNet{cnet.IPNet{IPNet: *pool1CIDR}},
+					IntendedUse: api.IPPoolAllowedUseWorkload,
 				},
 			)
 			Expect(err).NotTo(HaveOccurred())
