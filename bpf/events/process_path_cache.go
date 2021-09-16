@@ -143,7 +143,7 @@ func (r *BPFProcessPathCache) getPathFromProc(Pid int) (ProcessPathInfo, bool) {
 	// Add to processPathCache
 	path, args, err := r.readProcCmdline(Pid)
 	if err != nil {
-		log.WithError(err).Error("error reading /proc dir")
+		log.WithError(err).Debug("error reading /proc dir")
 	} else {
 		return ProcessPathInfo{
 			Pid: Pid,
@@ -224,7 +224,7 @@ func (r *BPFProcessPathCache) readProcCmdline(procId int) (string, string, error
 		procPath := fmt.Sprintf("/proc/%d/cmdline", pid)
 		content, err := ioutil.ReadFile(procPath)
 		if err != nil {
-			log.WithError(err).Errorf("error reading %v", procPath)
+			log.WithError(err).Debugf("error reading %v", procPath)
 			if pid == procId {
 				rerror = err
 				IsPidPresent = true
