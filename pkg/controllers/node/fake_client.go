@@ -1,3 +1,5 @@
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+
 package node
 
 import (
@@ -33,6 +35,14 @@ func NewFakeCalicoClient() *FakeCalicoClient {
 type FakeCalicoClient struct {
 	nodeClient clientv3.NodeInterface
 	ipamClient ipam.Interface
+}
+
+func (f *FakeCalicoClient) UISettingsGroups() clientv3.UISettingsGroupInterface {
+	panic("implement me")
+}
+
+func (f *FakeCalicoClient) UISettings() clientv3.UISettingsInterface {
+	panic("implement me")
 }
 
 // StagedGlobalNetworkPolicies returns an interface for managing staged global network policy resources.
