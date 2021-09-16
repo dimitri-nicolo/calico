@@ -453,7 +453,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					Workload:           "",
 					ContainerID:        containerID,
 					Orchestrator:       api.OrchestratorKubernetes,
-					Ports: []api.EndpointPort{{
+					Ports: []libapi.WorkloadEndpointPort{{
 						Name:     "anamedport",
 						Protocol: numorstring.ProtocolFromString("TCP"),
 						Port:     555,
@@ -2795,7 +2795,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Workload:           "",
 				ContainerID:        containerID,
 				Orchestrator:       api.OrchestratorKubernetes,
-				Ports: []api.EndpointPort{{
+				Ports: []libapi.WorkloadEndpointPort{{
 					Name:     "anamedport",
 					Protocol: numorstring.ProtocolFromString("TCP"),
 					Port:     555,
@@ -2948,7 +2948,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				Workload:           "",
 				ContainerID:        containerID,
 				Orchestrator:       api.OrchestratorKubernetes,
-				Ports: []api.EndpointPort{{
+				Ports: []libapi.WorkloadEndpointPort{{
 					Name:     "anamedport",
 					Protocol: numorstring.ProtocolFromString("TCP"),
 					Port:     555,
