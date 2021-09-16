@@ -70,6 +70,8 @@ blocks:
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true; fi
+            # Run the Cloud/Tesla version of make cd.
+            - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true TESLA=true; fi
 
 promotions:
   - name: Update Pins
