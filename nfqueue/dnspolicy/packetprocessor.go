@@ -144,9 +144,11 @@ done:
 					log.WithError(err).Warning("an error occurred while closing nfqueue.")
 				}
 				break done
-			case errChan := <-restarter.debugKillNfqueueConnChan:
-				errChan <- nf.DebugKillConnection()
-				close(errChan)
+			case errChan, ok := <-restarter.debugKillNfqueueConnChan:
+				if ok {
+					errChan <- nf.DebugKillConnection()
+					close(errChan)
+				}
 			}
 		}
 
