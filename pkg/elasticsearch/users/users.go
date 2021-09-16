@@ -22,6 +22,7 @@ const (
 	ElasticsearchUserNameComplianceServer      ElasticsearchUserName = "tigera-ee-compliance-server"
 	ElasticsearchUserNameIntrusionDetection    ElasticsearchUserName = "tigera-ee-intrusion-detection"
 	ElasticsearchUserNameADJob                 ElasticsearchUserName = "tigera-ee-ad-job"
+	ElasticsearchUserNamePerformanceHotspots   ElasticsearchUserName = "tigera-ee-performance-hotspots"
 	ElasticsearchUserNameInstaller             ElasticsearchUserName = "tigera-ee-installer"
 	ElasticsearchUserNameManager               ElasticsearchUserName = "tigera-ee-manager"
 	ElasticsearchUserNameCurator               ElasticsearchUserName = "tigera-ee-curator"
@@ -183,6 +184,35 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 				},
 			},
 		},
+		ElasticsearchUserNamePerformanceHotspots: {
+			Username: formatName(ElasticsearchUserNamePerformanceHotspots, clusterName, management, true),
+			Roles: []elasticsearch.Role{
+				{
+					Name: formatName(ElasticsearchUserNamePerformanceHotspots, clusterName, management, true),
+					Definition: &elasticsearch.RoleDefinition{
+						Cluster: []string{"monitor", "manage_index_templates"},
+						Indices: []elasticsearch.RoleIndex{
+							{
+								Names:      []string{indexPattern("tigera_secure_ee_flows", clusterName, ".*")},
+								Privileges: []string{"read"},
+							},
+							{
+								Names:      []string{indexPattern("tigera_secure_ee_dns", clusterName, ".*")},
+								Privileges: []string{"read"},
+							},
+							{
+								Names:      []string{indexPattern("tigera_secure_ee_l7", clusterName, ".*")},
+								Privileges: []string{"read"},
+							},
+							{
+								Names:      []string{indexPattern("tigera_secure_ee_events", clusterName, "")},
+								Privileges: []string{"read", "write"},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	publicUsers := map[ElasticsearchUserName]elasticsearch.User{
 		ElasticsearchUserNameFluentd: {
@@ -208,6 +238,9 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 		},
 		ElasticsearchUserNameADJob: {
 			Username: formatName(ElasticsearchUserNameADJob, clusterName, management, false),
+		},
+		ElasticsearchUserNamePerformanceHotspots: {
+			Username: formatName(ElasticsearchUserNamePerformanceHotspots, clusterName, management, false),
 		},
 	}
 
