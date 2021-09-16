@@ -196,7 +196,7 @@ func (d *Files) Delete(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if file.State != nil && *file.State != v3.PacketCaptureStateFinished {
-			var err = fmt.Errorf("capture state %v is not Finished", file.State)
+			var err = fmt.Errorf("capture state is not Finished")
 			log.WithError(err).Errorf("Failed delete files for %s/%s", namespace, captureName)
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return

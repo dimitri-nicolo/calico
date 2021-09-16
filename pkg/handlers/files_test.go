@@ -314,7 +314,7 @@ var _ = Describe("FilesDelete", func() {
 	)
 
 	DescribeTable("Fail to delete files for packetCapture with non-finished states",
-		func(packetCapture *v3.PacketCapture, expectedStatus int) {
+		func(packetCapture *v3.PacketCapture, expectedStatus int, expectedErrMsg string) {
 			// Bootstrap the files
 			var mockCache = &cache.MockClientCache{}
 			var mockLocator = &capture.MockLocator{}
@@ -328,10 +328,11 @@ var _ = Describe("FilesDelete", func() {
 			handler.ServeHTTP(recorder, req)
 
 			Expect(recorder.Code).To(Equal(expectedStatus))
+			Expect(strings.Trim(recorder.Body.String(), "\n")).To(Equal(expectedErrMsg))
 		},
-		Entry("All nodes in different state", differentStatesPacketCaptureMultipleNodes, http.StatusForbidden),
-		Entry("Missing finished state", packetCaptureMultipleNodes, http.StatusForbidden),
-		Entry("One finished state", oneFinishedPacketCaptureMultipleNodes, http.StatusForbidden),
+		Entry("All nodes in different state", differentStatesPacketCaptureMultipleNodes, http.StatusForbidden, "capture state is not Finished"),
+		Entry("Missing finished state", packetCaptureMultipleNodes, http.StatusForbidden, "capture state cannot be determined"),
+		Entry("One finished state", oneFinishedPacketCaptureMultipleNodes, http.StatusForbidden, "capture state is not Finished"),
 	)
 
 	It("Delete returns an error via io.Reader", func() {
