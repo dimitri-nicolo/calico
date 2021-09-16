@@ -20,9 +20,9 @@ spec:
     protocol: TCP
     destination:
       namespaceSelector: name == 'tigera-elasticsearch'
-      selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+      selector: k8s-app == 'tigera-secure-es-gateway'
       ports:
-      - 9200
+      - 5554
   - action: Allow
     protocol: UDP
     destination:
@@ -41,18 +41,18 @@ apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
   name: allow-tigera.elasticsearch-access-performance-hotspots
-  namespace: tigera-intrusion-detection
+  namespace: tigera-elasticsearch
 spec:
   tier: allow-tigera
   order: 1
-  selector: elasticsearch.k8s.elastic.co/cluster-name == 'tigera-secure'
+  selector: k8s-app == 'tigera-secure-es-gateway'
   types:
   - Ingress
   ingress:
   - action: Allow
     destination:
       ports:
-      - 9200
+      - 5554
     protocol: TCP
     source:
       namespaceSelector: name == 'tigera-intrusion-detection'
@@ -78,7 +78,7 @@ spec:
       imagePullSecrets:
       - name: tigera-pull-secret
       containers:
-      - name: ad-jobs
+      - name: performance-hotspots
         image: {{page.registry}}{% include component_image component="performance_hotspots" %}
         resources:
           requests:
@@ -115,6 +115,8 @@ spec:
           successThreshold: 1
           failureThreshold: 5
         env:
+          - name: ELASTIC_HOST
+            value: "tigera-secure-es-gateway-http.tigera-elasticsearch.svc"
           - name: CLUSTER_NAME
             value: "cluster"
           - name: ELASTIC_PORT
@@ -148,7 +150,7 @@ spec:
             items:
               - key: tls.crt
                 path: es-ca.pem
-            secretName: tigera-secure-es-http-certs-public
+            secretName: tigera-secure-es-gateway-http-certs-public
         - name: host-volume
           hostPath:
             path: /var/log/calico/performance_hotspots
