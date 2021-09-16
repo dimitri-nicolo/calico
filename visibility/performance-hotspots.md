@@ -77,7 +77,7 @@ If some log is not presented, the model is not using fields
 from this log. You don't have to do any additional configuration for this. You also can remove
 some logs from the processing with the **PH_PROCESSED_LOGS** environment variable.
 
-A model is trained to find patters in these fields. It searches for the patterns 
+A model is trained to find patterns in these fields. It searches for the patterns 
 for all fields. 
 
 Performance hotspots can represent an abnormal behaviour of a single field or a set of fields.
@@ -145,10 +145,6 @@ Example:
 
 4. Verify that the PH service is running.
 
-   The PH service has the {% include open-new-window.html text='startup, readiness, and liveness probes' url='https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes' %}. 
-   They automatically check the service availability when it starts and runs. 
-   If one of the probe fails, the kubelet kills the container, and the container is subjected to its restart policy.
-   
    Use this command to check if pod is ready or not:
    ```bash
     kubectl get pods -n tigera-intrusion-detection -l k8s-app=performance-hotspots
