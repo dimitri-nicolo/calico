@@ -148,7 +148,7 @@ spec:
             items:
               - key: tls.crt
                 path: es-ca.pem
-            secretName: tigera-secure-es-http-certs-public
+            secretName: tigera-secure-es-gateway-http-certs-public
         - name: host-volume
           hostPath:
             path: /var/log/calico/performance_hotspots
