@@ -312,6 +312,6 @@ func buildWildcardQuery(tierName string, namespace string) string {
 	} else if tierName != "" {
 		return fmt.Sprintf("*|%s|*|*", tierName)
 	} else {
-		return fmt.Sprintf("*|__PROFILE__|__PROFILE__.kns.%s|allow", namespace)
+		return fmt.Sprintf("*|__PROFILE__|__PROFILE__.kns.%s|allow*", namespace)
 	}
 }
