@@ -33,6 +33,35 @@ var _ = Describe("Load config from environments", func() {
 		Expect(cfg.ParsedReportEnd.Unix()).To(Equal(nowPlusHour.Unix()))
 	})
 
+	It("should handle relative times", func() {
+		By("parsing with valid config")
+		os.Setenv(ReportNameEnv, reportName)
+		os.Setenv(ReportStartEnv, "now-14m")
+		os.Setenv(ReportEndEnv, "now")
+
+		By("validating the environments parsed correct")
+		cfg, err := LoadConfig()
+		Expect(cfg).ToNot(BeNil())
+		Expect(err).ToNot(HaveOccurred())
+		Expect(cfg.ReportName).To(Equal(reportName))
+
+		// We expect the time difference to be 14m, but odd things may occur around daylight savings, so avoid test
+		// failures by re-running with an additional hour removed from each time.
+		if cfg.ParsedReportEnd.Sub(cfg.ParsedReportStart) != 14*time.Minute {
+			By("parsing with valid config")
+			os.Setenv(ReportNameEnv, reportName)
+			os.Setenv(ReportStartEnv, "now-74m")
+			os.Setenv(ReportEndEnv, "now - 60m")
+
+			By("validating the environments parsed correct")
+			cfg, err := LoadConfig()
+			Expect(cfg).ToNot(BeNil())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(cfg.ReportName).To(Equal(reportName))
+			Expect(cfg.ParsedReportEnd.Sub(cfg.ParsedReportStart)).To(Equal(14 * time.Minute))
+		}
+	})
+
 	It("should error with invalid configuration", func() {
 		By("parsing with invalid start time")
 		os.Setenv(ReportNameEnv, reportName)
