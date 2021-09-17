@@ -183,6 +183,14 @@ func NewMockIPAMClient(bc bapi.Client) client.Interface {
 	}
 }
 
+func (c *MockIPAMClient) UISettingsGroups() client.UISettingsGroupInterface {
+	return nil
+}
+
+func (c *MockIPAMClient) UISettings() client.UISettingsInterface {
+	return nil
+}
+
 func (c *MockIPAMClient) StagedGlobalNetworkPolicies() client.StagedGlobalNetworkPolicyInterface {
 	return nil
 }
