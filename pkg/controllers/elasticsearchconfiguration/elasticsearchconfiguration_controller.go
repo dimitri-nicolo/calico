@@ -137,11 +137,13 @@ func New(
 		notifications...,
 	)
 
-	w.AddWatch(
-		cache.NewListWatchFromClient(esK8sCLI, "elasticsearches", resource.TigeraElasticsearchNamespace,
-			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.DefaultTSEEInstanceName))),
-		&esv1.Elasticsearch{},
-	)
+	if enableElasticsearchWatch {
+		w.AddWatch(
+			cache.NewListWatchFromClient(esK8sCLI, "elasticsearches", resource.TigeraElasticsearchNamespace,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.DefaultTSEEInstanceName))),
+			&esv1.Elasticsearch{},
+		)
+	}
 
 	// This is a managed cluster and we need to watch some Elasticsearch secrets and config maps we know when to copy
 	// them over to the managed clusters.

@@ -12,6 +12,9 @@ import (
 	"github.com/projectcalico/kube-controllers/pkg/resource"
 )
 
+// enableElasticsearchWatch enables watching the Elasticsearch CR in the Enterprise variant.
+var enableElasticsearchWatch = true
+
 // reconcileConfigMap copies the tigera-secure-elasticsearch ConfigMap in the management cluster to the managed cluster,
 // changing the clusterName data value to the cluster name this ConfigMap is being copied to
 func (c *reconciler) reconcileConfigMap() error {
