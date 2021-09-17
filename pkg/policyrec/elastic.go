@@ -170,7 +170,7 @@ func buildTierQuery(tierName string) elastic.Query {
 }
 
 func buildUnprotectedQuery(namespace string) elastic.Query {
-	namespaceProfile := fmt.Sprintf("*|__PROFILE__|__PROFILE__.kns.%s|allow", namespace)
+	namespaceProfile := fmt.Sprintf("*|__PROFILE__|__PROFILE__.kns.%s|allow*", namespace)
 	return elastic.NewWildcardQuery("policies.all_policies", namespaceProfile)
 }
 
