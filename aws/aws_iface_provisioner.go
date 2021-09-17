@@ -243,7 +243,7 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 			m.ds = snapshot
 		case responseC <- response:
 			// Mask the response channel so we don't resend again and again.
-			logrus.Debug("Sent AWS state back to main goroutine")
+			logrus.WithField("repsonse", response).Debug("Sent AWS state back to main goroutine")
 			responseC = nil
 			continue // Don't want sending a response to trigger an early resync.
 		case <-backoffC:
@@ -320,13 +320,13 @@ func (m *SecondaryIfaceProvisioner) resync(ctx context.Context) (*IfaceState, er
 		} else if awsResyncErr != nil {
 			logrus.WithError(awsResyncErr).Warn("Failed to resync AWS subnet state.")
 			m.cachedEC2Client = nil  // Maybe something wrong with client?
-			return nil, awsResyncErr // Will trigger backoff.
+			break
 		}
 		m.resyncNeeded = false
 		break
 	}
 	if awsResyncErr != nil {
-		return nil, awsResyncErr
+		return nil, awsResyncErr // Will trigger backoff.
 	}
 	return response, nil
 }
@@ -1198,6 +1198,7 @@ func (m *SecondaryIfaceProvisioner) assignSecondaryIPsToNICs(resyncState *nicRes
 
 	attemptedSomeAssignments := false
 	remainingRoutes := filteredRoutes
+	var fatalErr error
 	for nicID, freeIPs := range resyncState.freeIPv4CapacityByNICID {
 		if freeIPs == 0 {
 			continue
@@ -1222,7 +1223,8 @@ func (m *SecondaryIfaceProvisioner) assignSecondaryIPsToNICs(resyncState *nicRes
 		})
 		if err != nil {
 			logrus.WithError(err).WithField("nidID", nicID).Error("Failed to assign IPs to my NIC.")
-			continue
+			fatalErr = fmt.Errorf("failed to assign workload IPs to secondary ENI: %w", err)
+			continue // Carry on trying to assign more IPs.
 		}
 		logrus.WithFields(logrus.Fields{"nicID": nicID, "addrs": ipAddrs}).Info("Assigned IPs to secondary NIC.")
 	}
@@ -1231,9 +1233,14 @@ func (m *SecondaryIfaceProvisioner) assignSecondaryIPsToNICs(resyncState *nicRes
 		logrus.Warn("Failed to assign all Calico IPs to local ENIs.  Insufficient secondary IP capacity on the available ENIs.")
 	}
 
+	if fatalErr != nil {
+		return fatalErr
+	}
+
 	if attemptedSomeAssignments {
 		return errResyncNeeded
 	}
+
 	return nil
 }
 
