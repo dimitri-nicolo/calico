@@ -274,6 +274,10 @@ func setToSlice(setOfThings set.Set) []string {
 
 func (m *IPSetsManager) handleDomainIPSetDeltaUpdate(ipSetId string, domainsRemoved []string, domainsAdded []string) {
 	log.Infof("Domain set delta update: id=%v removed=%v added=%v", ipSetId, domainsRemoved, domainsAdded)
+	m.handleDomainIPSetDeltaUpdateNoLog(ipSetId, domainsRemoved, domainsAdded)
+}
+
+func (m *IPSetsManager) handleDomainIPSetDeltaUpdateNoLog(ipSetId string, domainsRemoved []string, domainsAdded []string) {
 
 	// Get the current programming for this domain set.
 	ipToDomains := m.domainSetProgramming[ipSetId]
@@ -366,7 +370,7 @@ func (m *IPSetsManager) OnDomainInfoChange(msg *DomainInfoChanged) (dataplaneSyn
 		// domain name and adjust its overall IP set accordingly.
 		domainSetIds.Iter(func(item interface{}) error {
 			// Handle as a delta update where the same domain name is removed and then re-added.
-			m.handleDomainIPSetDeltaUpdate(item.(string), []string{msg.Domain}, []string{msg.Domain})
+			m.handleDomainIPSetDeltaUpdateNoLog(item.(string), []string{msg.Domain}, []string{msg.Domain})
 			return nil
 		})
 	}
