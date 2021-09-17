@@ -156,6 +156,104 @@ metadata:
 ...
    ```
 
+
+### Enable WireGuard statistics
+
+To access wireguard statistics, [prometheus stats](({{site.baseurl}}/reference/felix/prometheus)) should be turned on. A quick way to do this is to apply the following command and manifest:
+
+
+1. Enable `nodeMetricsPort`:
+
+  ```bash
+   kubectl patch installation.operator.tigera.io default --type merge -p '{"spec":{"nodeMetricsPort":9091}}'
+  ```
+
+1. Apply Service, ServiceMonitor, NetworkPolicy manifests:
+
+  ```bash
+cat <<EOF | kubectl apply -f -
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: calico-prometheus-metrics
+  namespace: calico-system
+  labels:
+    k8s-app: calico-node
+spec:
+  ports:
+  - name: calico-prometheus-metrics-port
+    port: 9091
+    protocol: TCP
+  selector:
+    k8s-app: calico-node
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  generation: 1
+  labels:
+    team: network-operators
+  name: calico-node-monitor-additional
+  namespace: tigera-prometheus
+spec:
+  endpoints:
+  - bearerTokenSecret:
+      key: ""
+    honorLabels: true
+    interval: 5s
+    port: calico-prometheus-metrics-port
+    scrapeTimeout: 5s
+  namespaceSelector:
+    matchNames:
+    - calico-system
+  selector:
+    matchLabels:
+      k8s-app: calico-node
+---
+apiVersion: crd.projectcalico.org/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    projectcalico.org/tier: allow-tigera
+  name: allow-tigera.prometheus-calico-node-prometheus-metrics-egress
+  namespace: tigera-prometheus
+spec:
+  egress:
+  - action: Allow
+    destination:
+      ports:
+      - 9091
+    protocol: TCP
+    source: {}
+  selector: app == 'prometheus' && prometheus == 'calico-node-prometheus'
+  tier: allow-tigera
+  types:
+  - Egress
+---
+apiVersion: crd.projectcalico.org/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    projectcalico.org/tier: allow-tigera
+  name: allow-tigera.calico-node-prometheus-metrics-ingress
+  namespace: calico-system
+spec:
+  tier: allow-tigera
+  selector: k8s-app == 'calico-node'
+  types:
+  - Ingress
+  ingress:
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: app == 'prometheus' && prometheus == 'calico-node-prometheus'
+    destination:
+      ports:
+      - 9091
+EOF
+  ```
+
 #### Disable WireGuard for an individual node
 
 To disable WireGuard on a specific node with WireGuard installed, modify the node-specific Felix configuration. e.g., to turn off encryption for pod traffic on node `my-node`, use the following command:
