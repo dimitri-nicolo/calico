@@ -66,7 +66,7 @@ spec:
   reportType: cis-benchmark
   schedule: 0 0 * * *
   cis:
-    resultsFilter:
+    resultsFilters:
     - benchmarkSelection: { kubernetesVersion: "1.13" }
       exclude: ["1.1.4", "1.2.5"]
 ```
