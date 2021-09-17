@@ -61,6 +61,12 @@ var (
 		"policies.all_policies":    NullValidator,
 		"original_source_ips":      IPValidator,
 		"num_original_source_ips":  PositiveIntValidator,
+		"process_name":             DomainValidator,
+		"num_process_names":        PositiveIntValidator,
+		"process_id":               DomainValidator,
+		"num_process_ids":          PositiveIntValidator,
+		"process_args":             NullValidator,
+		"num_process_args":         PositiveIntValidator,
 	}
 )
 
