@@ -240,7 +240,7 @@
         },
         "process_args": {
             /* This is an array of keywords. It is not necessary to declare this as an array. Elastic will automatically accept a list of strings here */
-            "type": "keyword",
+            "type": "keyword"
         },
         "num_process_args": {
             "type": "long"
