@@ -39,14 +39,23 @@ This feature is:
 the {{site.prodname}} resources.
 1. Apply patches.
 
+   Create the cluster using the following command.
+
    ```
    cd <your-local-directory-archive>/ocp-manifests/install-manifests && kubectl create -f
+   ```
+
+   To install {{site.prodname}} resources apply the following command.
+
+   ```
+   cd <your-local-directory-archive>/ocp-manifests/enterprise-resources && kubectl create -f
    ```
 
    **Example**
    
    ```
    cd /mylocaldir/release-v3.0.0-v1.6.3/ocp-manifests/install-manifests && kubectl create -f
+   cd /mylocaldir/release-v3.0.0-v1.6.3/ocp-manifests/enterprise-resources && kubectl create -f
    ```  
 
 **All other users**
