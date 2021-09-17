@@ -103,6 +103,7 @@ func OptTimeout(to time.Duration) IfaceProvOpt {
 }
 
 func OptCapacityCallback(cb func(SecondaryIfaceCapacities)) IfaceProvOpt {
+
 	return func(provisioner *SecondaryIfaceProvisioner) {
 		provisioner.capacityCallback = cb
 	}

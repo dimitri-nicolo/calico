@@ -247,7 +247,7 @@ func TestSecondaryIfaceProvisioner_NoPoolsOrWorkloadsMainline(t *testing.T) {
 	})
 
 	// Should get an empty response.
-	Eventually(sip.ResponseC(), "1s", "1ms").Should(Receive(Equal(&IfaceState{})))
+	Eventually(sip.ResponseC()).Should(Receive(Equal(&IfaceState{})))
 	Eventually(fakes.CapacityC).Should(Receive(Equal(SecondaryIfaceCapacities{
 		MaxCalicoSecondaryIPs: t3LargeCapacity,
 	})))
@@ -267,7 +267,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsButNoWorkloadsMainline(t *testing.T) 
 	})
 
 	// Should respond with the Calico subnet details for the node's AZ..
-	Eventually(sip.ResponseC(), "1s", "1ms").Should(Receive(Equal(&IfaceState{
+	Eventually(sip.ResponseC()).Should(Receive(Equal(&IfaceState{
 		PrimaryNICMAC:      primaryNICMAC,
 		SecondaryNICsByMAC: map[string]Iface{},
 		SubnetCIDR:         ip.MustParseCIDROrIP(subnetWest1CIDRCalico),
@@ -283,7 +283,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_Mainline(t *testing.T)
 
 	// Since this is a fresh system with only one NIC being allocated, everything is deterministic and we should
 	// always get the same result.
-	Eventually(sip.ResponseC(), "1s", "1ms").Should(Receive(Equal(singleWorkloadResponse)))
+	Eventually(sip.ResponseC()).Should(Receive(Equal(singleWorkloadResponse)))
 	Eventually(fakes.CapacityC).Should(Receive(Equal(SecondaryIfaceCapacities{
 		MaxCalicoSecondaryIPs: t3LargeCapacity,
 	})))
@@ -332,7 +332,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_ErrBackoff(t *testing.
 				// allocation performed.
 				expResponse = singleWorkloadResponseAltHostIP
 			}
-			Eventually(sip.ResponseC(), "1s", "1ms").Should(Receive(Equal(expResponse)))
+			Eventually(sip.ResponseC()).Should(Receive(Equal(expResponse)))
 
 			// Whether we did an IPAM reallocation or not, we should have only one IP in use at the end.
 			Expect(fake.IPAM.NumUsedIPs()).To(BeNumerically("==", 1))
@@ -360,7 +360,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_ErrBackoffInterrupted(
 
 	// Since this is a fresh system with only one NIC being allocated, everything is deterministic and we should
 	// always get the same result.
-	Eventually(sip.ResponseC(), "1s", "1ms").Should(Receive(Equal(singleWorkloadResponse)))
+	Eventually(sip.ResponseC()).Should(Receive(Equal(singleWorkloadResponse)))
 	Expect(fake.Clock.HasWaiters()).To(BeFalse())
 }
 
