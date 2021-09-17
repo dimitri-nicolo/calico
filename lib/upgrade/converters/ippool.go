@@ -66,6 +66,10 @@ func (_ IPPool) BackendV1ToAPIV3(kvp *model.KVPair) (Resource, error) {
 		NATOutgoing:  pool.Masquerade,
 		Disabled:     pool.Disabled,
 		NodeSelector: "all()",
+		AllowedUses: []apiv3.IPPoolAllowedUse{
+			apiv3.IPPoolAllowedUseWorkload,
+			apiv3.IPPoolAllowedUseTunnel,
+		},
 	}
 
 	// Set the blocksize based on IP address family.
