@@ -14,7 +14,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.6.1
-	github.com/tigera/api v0.0.0-20210917225655-809fb76c7701
+	github.com/tigera/api v0.0.0-20210917233738-3fea29c333ab
 	gopkg.in/square/go-jose.v2 v2.2.3-0.20190111193340-cbf0fd6a984a
 	k8s.io/api v0.21.0
 	k8s.io/apimachinery v0.21.0
