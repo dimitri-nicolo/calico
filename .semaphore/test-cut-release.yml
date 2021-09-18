@@ -1,5 +1,5 @@
 version: v1.0
-name: Cut Release
+name: Test Cut Release
 
 execution_time_limit:
   minutes: 30
@@ -28,7 +28,7 @@ global_job_config:
       - git fetch --unshallow || true
 
 blocks:
-  - name: 'Cut Release'
+  - name: 'Test Cut Release'
     task:
       secrets:
         - name: google-service-account-for-gcr
@@ -41,7 +41,7 @@ blocks:
           # Login to docker in order to pull images.
           - echo $QUAY_TOKEN | docker login --username $QUAY_USERNAME https://quay.io --password-stdin
       jobs:
-        - name: Cut Release
+        - name: Test Cut Release
           commands:
           - make git-config CONFIRM=true
-          - make cut-release CONFIRM=true
+          - make cut-release DRYRUN=true
