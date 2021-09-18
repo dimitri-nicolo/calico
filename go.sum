@@ -482,10 +482,12 @@ github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69
 github.com/tchap/go-patricia/v2 v2.3.1/go.mod h1:VZRHKAb53DLaG+nA9EaYYiaEx6YztwDlLElMsnSHD4k=
 github.com/tigera/api v0.0.0-20210917225655-809fb76c7701 h1:9zHQuWbtf2Zs07KhrcvFAVtElrf3h7xcAJBRpvCmTMY=
 github.com/tigera/api v0.0.0-20210917225655-809fb76c7701/go.mod h1:tQDYzO/oh0HZL2MpIwyijRwJf67hPR/Gkex1vt9EwLE=
-github.com/tigera/libcalico-go-private v1.7.2-0.20210917232034-3707191c53fb h1:V7etJahOkCS9vxTfD3Sii/PWPZQWOQKRfxMkWuAKGfw=
-github.com/tigera/libcalico-go-private v1.7.2-0.20210917232034-3707191c53fb/go.mod h1:w1wHY32jiGvCucam3ff3Cnhh0hs2wC0cisM0eY/kPxA=
-github.com/tigera/typha-private v0.6.0-beta1.0.20210917233529-ecb96434d463 h1:LbwfaiuWrtK8uUSJvawboUIDK9OpVvZi2xDNHgkWIOo=
-github.com/tigera/typha-private v0.6.0-beta1.0.20210917233529-ecb96434d463/go.mod h1:cjr/GuOaruJ6nKwgWyF8LUb931vqoPtRMKLstgTwUFk=
+github.com/tigera/api v0.0.0-20210917233738-3fea29c333ab h1:Mkmq+jrtg0mshOQx2FqkBbCdCwdOmG5twaqHPDQAQEY=
+github.com/tigera/api v0.0.0-20210917233738-3fea29c333ab/go.mod h1:tQDYzO/oh0HZL2MpIwyijRwJf67hPR/Gkex1vt9EwLE=
+github.com/tigera/libcalico-go-private v1.7.2-0.20210918011844-ce26e733b393 h1:6uhf1r+aUq6qJzAcryU//tQGXflBEaLD807VHsEk1xg=
+github.com/tigera/libcalico-go-private v1.7.2-0.20210918011844-ce26e733b393/go.mod h1:w1wHY32jiGvCucam3ff3Cnhh0hs2wC0cisM0eY/kPxA=
+github.com/tigera/typha-private v0.6.0-beta1.0.20210918013309-eb77c7e6a7fc h1:HunDCVgXXWFTON1tXPcHn/yliij4v7qjxWyUbihxz6I=
+github.com/tigera/typha-private v0.6.0-beta1.0.20210918013309-eb77c7e6a7fc/go.mod h1:hjdp/tZ4fo7QRuNAKaG5ASXVKTnX6AHThrMNX9Ubx1Q=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 h1:LnC5Kc/wtumK+WB441p7ynQJzVuNRJiqddSIE3IlSEQ=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
