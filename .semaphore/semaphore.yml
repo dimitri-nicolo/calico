@@ -106,6 +106,7 @@ blocks:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make image-all cd CONFIRM=true; fi
             # Run CD for the cloud build of kube-controllers.
+            - make clean
             - export TESLA=true
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make image-all cd CONFIRM=true; fi
 
