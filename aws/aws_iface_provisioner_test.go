@@ -110,6 +110,11 @@ var (
 		subnetIDWest1CalicoAlt: set.FromArray([]string{ipPoolIDWest1HostsAlt, ipPoolIDWest1GatewaysAlt}),
 		subnetIDWest2Calico:    set.FromArray([]string{ipPoolIDWest2Hosts, ipPoolIDWest2Gateways}),
 	}
+	mixedPools = map[string]set.Set{
+		subnetIDWest1Calico: set.FromArray([]string{ipPoolIDWest1Hosts, ipPoolIDWest1Gateways}),
+		subnetIDWest1CalicoAlt: set.FromArray([]string{ipPoolIDWest1HostsAlt, ipPoolIDWest1GatewaysAlt}),
+		subnetIDWest2Calico:    set.FromArray([]string{ipPoolIDWest2Hosts, ipPoolIDWest2Gateways}),
+	}
 
 	noWorkloadDatastore = DatastoreState{
 		LocalAWSRoutesByDst:       nil,
@@ -154,6 +159,8 @@ var (
 		},
 		PoolIDsBySubnetID: defaultPools,
 	}
+	// nonLocalWorkloadDatastore has one workload that's in the local subnet and one that is in
+	// a subnet that's not in our AZ.
 	nonLocalWorkloadDatastore = DatastoreState{
 		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
 			wl1CIDR: {
@@ -172,6 +179,27 @@ var (
 			subnetIDWest2Calico: set.FromArray([]ip.CIDR{west2WlCIDR}),
 		},
 		PoolIDsBySubnetID: defaultPools,
+	}
+	// mixedSubnetDatastore has two workloads, each of which is in a different subnet, both of which are
+	// in our AZ.
+	mixedSubnetDatastore = DatastoreState{
+		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
+			wl1CIDR: {
+				Dst:           wl1Addr,
+				LocalWorkload: true,
+				AwsSubnetId:   subnetIDWest1Calico,
+			},
+			west2WlCIDR: {
+				Dst:           wl1AddrAlt,
+				LocalWorkload: true,
+				AwsSubnetId:   subnetIDWest1CalicoAlt,
+			},
+		},
+		LocalRouteDestsBySubnetID: map[string]set.Set{
+			subnetIDWest1Calico: set.FromArray([]ip.CIDR{wl1CIDR}),
+			subnetIDWest1CalicoAlt: set.FromArray([]ip.CIDR{wl1CIDRAlt}),
+		},
+		PoolIDsBySubnetID: mixedPools,
 	}
 	hostClashWorkloadDatastore = DatastoreState{
 		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
@@ -324,7 +352,7 @@ func (f sipTestFakes) expectSingleBackoffAndStep() {
 
 func setup(t *testing.T) (*SecondaryIfaceProvisioner, *sipTestFakes) {
 	RegisterTestingT(t)
-	fakeIPAM := newMockIPAM()
+	fakeIPAM := newFakeIPAM()
 	theTime, err := time.Parse("2006-01-02 15:04:05.000", "2021-09-15 16:00:00.000")
 	Expect(err).NotTo(HaveOccurred())
 	fakeClock := clock.NewFakeClock(theTime)
@@ -750,6 +778,35 @@ func TestSecondaryIfaceProvisioner_NonLocalWorkload(t *testing.T) {
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
 }
 
+// TestSecondaryIfaceProvisioner_NonLocalWorkload verifies handling of workloads from the wrong subnet. They
+// Should be ignored.
+func TestSecondaryIfaceProvisioner_WorkloadMixedSubnets(t *testing.T) {
+	sip, fake, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Start with one local workload.  This will cement its subnet as the valid one for this node.
+	sip.OnDatastoreUpdate(singleWorkloadDatastore)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+
+	// Then add a second workload on a different subnet, it should be ignored.
+	sip.OnDatastoreUpdate(mixedSubnetDatastore)
+
+	// Should act like remote subnet is not there.
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+
+	// Now send a snapshot that doesn't include the first workload.  Now the "alternative" IP pool will be chosen as
+	// the "best" one and everything should swap over.
+	fake.IPAM.setFreeIPs(calicoHostIP1Alt) // Our mock IPAM is too dumb to handle node selectors.
+	sip.OnDatastoreUpdate(singleWorkloadDatastoreAltPool)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseAltPoolSingleWorkload)))
+	Expect(fake.EC2.NumNICs()).To(BeNumerically("==", 2))
+
+	// Add the first workload back, now the "alternative" wins.
+	sip.OnDatastoreUpdate(mixedSubnetDatastore)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseAltPoolSingleWorkload)))
+	Expect(fake.EC2.NumNICs()).To(BeNumerically("==", 2))
+}
+
 // TestSecondaryIfaceProvisioner_WorkloadHostIPClash tests that workloads that try to use the host's primary
 // IP are ignores.
 func TestSecondaryIfaceProvisioner_WorkloadHostIPClash(t *testing.T) {
@@ -771,8 +828,8 @@ func TestSecondaryIfaceProvisioner_NoSecondaryIPsPossible(t *testing.T) {
 	sip, fake, tearDown := setupAndStart(t)
 	defer tearDown()
 
-	// Make our instance type tiiiny.  Note: AWS actually doesn't have any instance types with _no_ secondary
-	// ENIs at all so this is made up.
+	// Make our instance type tiny, with no available secondary IPs.  Note: AWS actually doesn't have any
+	// instance types with _no_ secondary ENIs at all so this is made up.
 	inst := fake.EC2.InstancesByID[instanceID]
 	inst.InstanceType = instanceTypeT0Pico
 	fake.EC2.InstancesByID[instanceID] = inst
@@ -786,6 +843,8 @@ func TestSecondaryIfaceProvisioner_NoSecondaryIPsPossible(t *testing.T) {
 }
 
 // TODO Security group copying
+// TODO IPAM failure
+// TODO IPAM cleanup
 
 type fakeEC2 struct {
 	lock sync.Mutex
@@ -1468,6 +1527,8 @@ type ipamAlloc struct {
 type fakeIPAM struct {
 	lock sync.Mutex
 
+	Errors testutils.ErrorProducer
+
 	freeIPs     []string
 	requests    []ipam.AutoAssignArgs
 	allocations []ipamAlloc
@@ -1487,6 +1548,10 @@ func (m *fakeIPAM) AutoAssign(ctx context.Context, args ipam.AutoAssignArgs) (*i
 	defer m.lock.Unlock()
 	if ctx.Err() != nil {
 		return nil, nil, ctx.Err()
+	}
+
+	if err := m.Errors.NextErrorByCaller(); err != nil {
+		return nil, nil, err
 	}
 
 	m.requests = append(m.requests, args)
@@ -1538,6 +1603,10 @@ func (m *fakeIPAM) ReleaseIPs(ctx context.Context, ips []cnet.IP) ([]cnet.IP, er
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
+	if err := m.Errors.NextErrorByCaller(); err != nil {
+		return nil, err
+	}
+
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -1571,6 +1640,9 @@ func (m *fakeIPAM) IPsByHandle(ctx context.Context, handleID string) ([]cnet.IP,
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
+	if err := m.Errors.NextErrorByCaller(); err != nil {
+		return nil, err
+	}
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -1607,12 +1679,13 @@ func (m *fakeIPAM) setFreeIPs(ips ...string) {
 	m.freeIPs = ips
 }
 
-func newMockIPAM() *fakeIPAM {
+func newFakeIPAM() *fakeIPAM {
 	return &fakeIPAM{
 		freeIPs: []string{
 			calicoHostIP1,
 			calicoHostIP2,
 		},
+		Errors: testutils.NewErrorProducer(),
 	}
 }
 
