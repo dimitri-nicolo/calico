@@ -17,7 +17,6 @@ type errorProducer struct {
 	newErr func(queueName string) error
 }
 
-
 type ErrorProducer interface {
 	QueueError(queueName string)
 	QueueNErrors(queueName string, n int)
@@ -89,7 +88,7 @@ func (e *errorProducer) NextErrorByCaller() error {
 			frame, more := frames.Next()
 			fullName := frame.Func.Name()
 			parts := strings.Split(fullName, ".")
-			funcName := parts[len(parts) - 1]
+			funcName := parts[len(parts)-1]
 			if funcName == "NextErrorByCaller" {
 				if !more {
 					panic("Couldn't find caller's frame")

@@ -161,7 +161,7 @@ func NewSecondaryIfaceProvisioner(
 
 		// Do the extra scans on first run.
 		orphanNICResyncNeeded: true,
-		hostIPAMResyncNeeded: true,
+		hostIPAMResyncNeeded:  true,
 
 		datastoreUpdateC: make(chan DatastoreState, 1),
 		responseC:        make(chan *IfaceState, 1),
@@ -320,7 +320,7 @@ func (m *SecondaryIfaceProvisioner) resync(ctx context.Context) (*IfaceState, er
 			continue
 		} else if awsResyncErr != nil {
 			logrus.WithError(awsResyncErr).Warn("Failed to resync AWS subnet state.")
-			m.cachedEC2Client = nil  // Maybe something wrong with client?
+			m.cachedEC2Client = nil // Maybe something wrong with client?
 			break
 		}
 		m.resyncNeeded = false
@@ -849,7 +849,7 @@ func (m *SecondaryIfaceProvisioner) releaseAWSNICs(nicsToRelease set.Set, awsNIC
 	nicsToRelease.Iter(func(item interface{}) error {
 		nicID := item.(string)
 		attachID := awsNICState.attachmentIDByNICID[nicID]
-		_, err := ec2Client.EC2Svc.(*ec2.Client).DetachNetworkInterface(ctx, &ec2.DetachNetworkInterfaceInput{
+		_, err := ec2Client.EC2Svc.DetachNetworkInterface(ctx, &ec2.DetachNetworkInterfaceInput{
 			AttachmentId: &attachID,
 			Force:        boolPtr(true),
 		})
@@ -861,7 +861,7 @@ func (m *SecondaryIfaceProvisioner) releaseAWSNICs(nicsToRelease set.Set, awsNIC
 		}
 		// Worth trying this even if detach fails.  Possible the failure was caused by it already
 		// being detached.
-		_, err = ec2Client.EC2Svc.(*ec2.Client).DeleteNetworkInterface(ctx, &ec2.DeleteNetworkInterfaceInput{
+		_, err = ec2Client.EC2Svc.DeleteNetworkInterface(ctx, &ec2.DeleteNetworkInterfaceInput{
 			NetworkInterfaceId: &nicID,
 		})
 		if err != nil {

@@ -31,11 +31,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/transport/http"
+	"github.com/davecgh/go-spew/spew"
 	. "github.com/onsi/gomega"
-	"github.com/projectcalico/felix/testutils"
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/util/clock"
+
+	"github.com/projectcalico/felix/testutils"
 
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/proto"
@@ -58,30 +60,60 @@ const (
 	azWest1 = "us-west-1"
 	azWest2 = "us-west-2"
 
-	subnetIDWest1Calico  = "subnet-ca100000000000001"
-	subnetIDWest2Calico  = "subnet-ca100000000000002"
-	subnetIDWest1Default = "subnet-def00000000000001"
-	subnetIDWest2Default = "subnet-def00000000000002"
+	subnetIDWest1Calico    = "subnet-ca100000000000001"
+	subnetIDWest1CalicoAlt = "subnet-ca100000000000011"
+	subnetIDWest2Calico    = "subnet-ca100000000000002"
+	subnetIDWest1Default   = "subnet-def00000000000001"
+	subnetIDWest2Default   = "subnet-def00000000000002"
 
-	subnetWest1CIDRCalico    = "100.64.1.0/24"
-	subnetWest1GatewayCalico = "100.64.1.1"
-	subnetWest2CIDRCalico    = "100.64.2.0/24"
+	subnetWest1CIDRCalico       = "100.64.1.0/24"
+	subnetWest1CIDRCalicoAlt    = "100.64.3.0/24"
+	subnetWest1GatewayCalico    = "100.64.1.1"
+	subnetWest1GatewayCalicoAlt = "100.64.3.1"
+	subnetWest2CIDRCalico       = "100.64.2.0/24"
 
-	calicoHostIP1 = "100.64.1.5"
-	calicoHostIP2 = "100.64.1.6"
+	calicoHostIP1    = "100.64.1.5"
+	calicoHostIP1Alt = "100.64.3.5"
+	calicoHostIP2    = "100.64.1.6"
 
-	wl1Addr = "100.64.1.64/32"
+	wl1Addr    = "100.64.1.64/32"
+	wl1AddrAlt = "100.64.3.64/32"
 
-	ipPoolIDWest1Hosts    = "pool-west-1-hosts"
-	ipPoolIDWest2Hosts    = "pool-west-2-hosts"
-	ipPoolIDWest1Gateways = "pool-west-1-gateways"
-	ipPoolIDWest2Gateways = "pool-west-2-gateways"
+	ipPoolIDWest1Hosts       = "pool-west-1-hosts"
+	ipPoolIDWest1HostsAlt    = "pool-west-1-hosts-alt"
+	ipPoolIDWest2Hosts       = "pool-west-2-hosts"
+	ipPoolIDWest1Gateways    = "pool-west-1-gateways"
+	ipPoolIDWest1GatewaysAlt = "pool-west-1-gateways-alt"
+	ipPoolIDWest2Gateways    = "pool-west-2-gateways"
 
 	t3LargeCapacity = 22
 )
 
 var (
-	wl1CIDR                 = ip.MustParseCIDROrIP(wl1Addr)
+	wl1CIDR    = ip.MustParseCIDROrIP(wl1Addr)
+	wl1CIDRAlt = ip.MustParseCIDROrIP(wl1AddrAlt)
+
+	defaultPools = map[string]set.Set{
+		subnetIDWest1Calico: set.FromArray([]string{ipPoolIDWest1Hosts, ipPoolIDWest1Gateways}),
+		subnetIDWest2Calico: set.FromArray([]string{ipPoolIDWest2Hosts, ipPoolIDWest2Gateways}),
+	}
+
+	alternatePools = map[string]set.Set{
+		subnetIDWest1CalicoAlt: set.FromArray([]string{ipPoolIDWest1HostsAlt, ipPoolIDWest1GatewaysAlt}),
+		subnetIDWest2Calico:    set.FromArray([]string{ipPoolIDWest2Hosts, ipPoolIDWest2Gateways}),
+	}
+
+	noWorkloadDatastore = DatastoreState{
+		LocalAWSRoutesByDst:       nil,
+		LocalRouteDestsBySubnetID: nil,
+		PoolIDsBySubnetID:         defaultPools,
+	}
+
+	noWorkloadDatastoreAltPools = DatastoreState{
+		LocalAWSRoutesByDst:       nil,
+		LocalRouteDestsBySubnetID: nil,
+		PoolIDsBySubnetID:         alternatePools,
+	}
 
 	singleWorkloadDatastore = DatastoreState{
 		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
@@ -94,19 +126,36 @@ var (
 		LocalRouteDestsBySubnetID: map[string]set.Set{
 			subnetIDWest1Calico: set.FromArray([]ip.CIDR{wl1CIDR}),
 		},
-		PoolIDsBySubnetID: map[string]set.Set{
-			subnetIDWest1Calico: set.FromArray([]string{ipPoolIDWest1Hosts, ipPoolIDWest1Gateways}),
-			subnetIDWest2Calico: set.FromArray([]string{ipPoolIDWest2Hosts, ipPoolIDWest2Gateways}),
+		PoolIDsBySubnetID: defaultPools,
+	}
+	singleWorkloadDatastoreAltPool = DatastoreState{
+		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
+			wl1CIDR: &proto.RouteUpdate{
+				Dst:           wl1AddrAlt,
+				LocalWorkload: true,
+				AwsSubnetId:   subnetIDWest1CalicoAlt,
+			},
 		},
+		LocalRouteDestsBySubnetID: map[string]set.Set{
+			subnetIDWest1CalicoAlt: set.FromArray([]ip.CIDR{wl1CIDRAlt}),
+		},
+		PoolIDsBySubnetID: alternatePools,
 	}
 
-	firstAllocatedMAC, _   = net.ParseMAC("00:00:e8:03:00:00")
+	firstAllocatedMAC, _  = net.ParseMAC("00:00:00:00:10:00")
+	secondAllocatedMAC, _ = net.ParseMAC("00:00:00:00:10:01")
 
-	singleWorkloadResponse = &IfaceState{
+	responsePoolsNoNICs = &IfaceState{
+		PrimaryNICMAC:      primaryNICMAC,
+		SecondaryNICsByMAC: map[string]Iface{},
+		SubnetCIDR:         ip.MustParseCIDROrIP(subnetWest1CIDRCalico),
+		GatewayAddr:        ip.FromString(subnetWest1GatewayCalico),
+	}
+	responseSingleWorkload = &IfaceState{
 		PrimaryNICMAC: primaryNICMAC,
 		SecondaryNICsByMAC: map[string]Iface{
-			"00:00:e8:03:00:00": {
-				ID:                 "eni-000000000000003e8",
+			firstAllocatedMAC.String(): {
+				ID:                 "eni-00000000000001000",
 				MAC:                firstAllocatedMAC,
 				PrimaryIPv4Addr:    ip.FromString(calicoHostIP1),
 				SecondaryIPv4Addrs: []ip.Addr{ip.MustParseCIDROrIP(wl1Addr).Addr()},
@@ -115,11 +164,24 @@ var (
 		SubnetCIDR:  ip.MustParseCIDROrIP(subnetWest1CIDRCalico),
 		GatewayAddr: ip.FromString(subnetWest1GatewayCalico),
 	}
+	responseNICAfterWorkloadsDeleted = &IfaceState{
+		PrimaryNICMAC: primaryNICMAC,
+		SecondaryNICsByMAC: map[string]Iface{
+			firstAllocatedMAC.String(): {
+				ID:                 "eni-00000000000001000",
+				MAC:                firstAllocatedMAC,
+				PrimaryIPv4Addr:    ip.FromString(calicoHostIP1),
+				SecondaryIPv4Addrs: nil,
+			},
+		},
+		SubnetCIDR:  ip.MustParseCIDROrIP(subnetWest1CIDRCalico),
+		GatewayAddr: ip.FromString(subnetWest1GatewayCalico),
+	}
 	singleWorkloadResponseAltHostIP = &IfaceState{
 		PrimaryNICMAC: primaryNICMAC,
 		SecondaryNICsByMAC: map[string]Iface{
-			"00:00:e8:03:00:00": {
-				ID:                 "eni-000000000000003e8",
+			firstAllocatedMAC.String(): {
+				ID:                 "eni-00000000000001000",
 				MAC:                firstAllocatedMAC,
 				PrimaryIPv4Addr:    ip.FromString(calicoHostIP2), // Different IP
 				SecondaryIPv4Addrs: []ip.Addr{ip.MustParseCIDROrIP(wl1Addr).Addr()},
@@ -127,6 +189,39 @@ var (
 		},
 		SubnetCIDR:  ip.MustParseCIDROrIP(subnetWest1CIDRCalico),
 		GatewayAddr: ip.FromString(subnetWest1GatewayCalico),
+	}
+
+	responseAltPoolsNoNICs = &IfaceState{
+		PrimaryNICMAC:      primaryNICMAC,
+		SecondaryNICsByMAC: map[string]Iface{},
+		SubnetCIDR:         ip.MustParseCIDROrIP(subnetWest1CIDRCalicoAlt),
+		GatewayAddr:        ip.FromString(subnetWest1GatewayCalicoAlt),
+	}
+	responseAltPoolsAfterWorkloadsDeleted = &IfaceState{
+		PrimaryNICMAC: primaryNICMAC,
+		SecondaryNICsByMAC: map[string]Iface{
+			secondAllocatedMAC.String(): {
+				ID:                 "eni-00000000000001001",
+				MAC:                secondAllocatedMAC,
+				PrimaryIPv4Addr:    ip.FromString(calicoHostIP1Alt),
+				SecondaryIPv4Addrs: nil,
+			},
+		},
+		SubnetCIDR:  ip.MustParseCIDROrIP(subnetWest1CIDRCalicoAlt),
+		GatewayAddr: ip.FromString(subnetWest1GatewayCalicoAlt),
+	}
+	responseAltPoolSingleWorkload = &IfaceState{
+		PrimaryNICMAC: primaryNICMAC,
+		SecondaryNICsByMAC: map[string]Iface{
+			secondAllocatedMAC.String(): {
+				ID:                 "eni-00000000000001001",
+				MAC:                secondAllocatedMAC,
+				PrimaryIPv4Addr:    ip.FromString(calicoHostIP1Alt),
+				SecondaryIPv4Addrs: []ip.Addr{ip.MustParseCIDROrIP(wl1AddrAlt).Addr()},
+			},
+		},
+		SubnetCIDR:  ip.MustParseCIDROrIP(subnetWest1CIDRCalicoAlt),
+		GatewayAddr: ip.FromString(subnetWest1GatewayCalicoAlt),
 	}
 )
 
@@ -157,6 +252,7 @@ func setup(t *testing.T) (*SecondaryIfaceProvisioner, *sipTestFakes) {
 	fakeEC2.addSubnet(subnetIDWest1Default, azWest1, "192.164.1.0/24")
 	fakeEC2.addSubnet(subnetIDWest2Default, azWest2, "192.164.2.0/24")
 	fakeEC2.addSubnet(subnetIDWest1Calico, azWest1, subnetWest1CIDRCalico)
+	fakeEC2.addSubnet(subnetIDWest1CalicoAlt, azWest1, subnetWest1CIDRCalicoAlt)
 	fakeEC2.addSubnet(subnetIDWest2Calico, azWest2, subnetWest2CIDRCalico)
 
 	fakeEC2.NICsByID[primaryNICID] = types.NetworkInterface{
@@ -215,7 +311,7 @@ func setupAndStart(t *testing.T) (*SecondaryIfaceProvisioner, *sipTestFakes, fun
 	}
 }
 
-func TestSecondaryIfaceProvisioner_OnDatastoreUpdate(t *testing.T) {
+func TestSecondaryIfaceProvisioner_OnDatastoreUpdateShouldNotBlock(t *testing.T) {
 	sip, _ := setup(t)
 
 	// Hit on-update many times without starting the main loop, it should never block.
@@ -234,8 +330,7 @@ func TestSecondaryIfaceProvisioner_OnDatastoreUpdate(t *testing.T) {
 	Eventually(done).Should(BeClosed())
 }
 
-
-func TestSecondaryIfaceProvisioner_NoPoolsOrWorkloadsMainline(t *testing.T) {
+func TestSecondaryIfaceProvisioner_NoPoolsOrWorkloadsStartOfDay(t *testing.T) {
 	sip, fakes, tearDown := setupAndStart(t)
 	defer tearDown()
 
@@ -267,34 +362,34 @@ func TestSecondaryIfaceProvisioner_AWSPoolsButNoWorkloadsMainline(t *testing.T) 
 	})
 
 	// Should respond with the Calico subnet details for the node's AZ..
-	Eventually(sip.ResponseC()).Should(Receive(Equal(&IfaceState{
-		PrimaryNICMAC:      primaryNICMAC,
-		SecondaryNICsByMAC: map[string]Iface{},
-		SubnetCIDR:         ip.MustParseCIDROrIP(subnetWest1CIDRCalico),
-		GatewayAddr:        ip.FromString(subnetWest1GatewayCalico),
-	})))
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responsePoolsNoNICs)))
 }
 
 func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_Mainline(t *testing.T) {
 	sip, fakes, tearDown := setupAndStart(t)
 	defer tearDown()
 
+	// Send snapshot with single workload.
 	sip.OnDatastoreUpdate(singleWorkloadDatastore)
 
 	// Since this is a fresh system with only one NIC being allocated, everything is deterministic and we should
 	// always get the same result.
-	Eventually(sip.ResponseC()).Should(Receive(Equal(singleWorkloadResponse)))
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
 	Eventually(fakes.CapacityC).Should(Receive(Equal(SecondaryIfaceCapacities{
 		MaxCalicoSecondaryIPs: t3LargeCapacity,
 	})))
+
+	// Remove the workload again, IP should be released.
+	sip.OnDatastoreUpdate(noWorkloadDatastore)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseNICAfterWorkloadsDeleted)))
 }
 
 func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_ErrBackoff(t *testing.T) {
 	// Test that a range of different errors all result in a successful retry with backoff.
-	// The fakeEC2 methods are all instrumented with the ErrorProducer that so we can make them fail
+	// The fakeEC2 methods are all instrumented with the ErrorProducer so that we can make them fail
 	// on command >:)
 
-	for _, callToFail := range []string {
+	for _, callToFail := range []string{
 		"DescribeInstances",
 		"DescribeNetworkInterfaces",
 		"DescribeSubnets",
@@ -326,7 +421,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_ErrBackoff(t *testing.
 			Expect(fake.Clock.HasWaiters()).To(BeFalse())
 
 			// With only one NIC being added, FakeIPAM and FakeEC2 are deterministic.
-			expResponse := singleWorkloadResponse
+			expResponse := responseSingleWorkload
 			if callToFail == "CreateNetworkInterface" {
 				// Failing CreateNetworkInterface triggers the allocated IP to be released and then a second
 				// allocation performed.
@@ -360,9 +455,58 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_ErrBackoffInterrupted(
 
 	// Since this is a fresh system with only one NIC being allocated, everything is deterministic and we should
 	// always get the same result.
-	Eventually(sip.ResponseC()).Should(Receive(Equal(singleWorkloadResponse)))
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
 	Expect(fake.Clock.HasWaiters()).To(BeFalse())
 }
+
+// TestSecondaryIfaceProvisioner_PoolChange Checks that changing the IP pools to use a different subnet causes the
+// provisioner to release NICs and provision the new ones.
+func TestSecondaryIfaceProvisioner_PoolChange(t *testing.T) {
+	sip, fakes, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Send snapshot with single workload on the original subnet.
+	sip.OnDatastoreUpdate(singleWorkloadDatastore)
+
+	// Since this is a fresh system with only one NIC being allocated, everything is deterministic and we should
+	// always get the same result.
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+	Eventually(fakes.CapacityC).Should(Receive(Equal(SecondaryIfaceCapacities{
+		MaxCalicoSecondaryIPs: t3LargeCapacity,
+	})))
+
+	// Remove the workload again, IP should be released but NIC should stick around.
+	sip.OnDatastoreUpdate(noWorkloadDatastore)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseNICAfterWorkloadsDeleted)))
+
+	// Change the pools.
+	sip.OnDatastoreUpdate(noWorkloadDatastoreAltPools)
+	// Should get a response with updated gateway addresses _but_ no secondary NIC (because there was no workload
+	// to trigger addition of the secondary NIC).
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseAltPoolsNoNICs)))
+
+	// Swap IPAM to prefer the alt host pool.  Normally the label selector on the pool would ensure the right
+	// pool is used but we don't have that much function here.
+	fakes.IPAM.setFreeIPs(calicoHostIP1Alt)
+
+	// Add a workload in the alt pool, should get a secondary NIC using the alt pool.
+	sip.OnDatastoreUpdate(singleWorkloadDatastoreAltPool)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseAltPoolSingleWorkload)))
+
+	// Delete the workload.  Should keep the NIC but remove the secondary IP.
+	sip.OnDatastoreUpdate(noWorkloadDatastoreAltPools)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseAltPoolsAfterWorkloadsDeleted)))
+}
+
+// TODO Security group copying
+// TODO max out number of IPs
+// TODO non-local workload
+// TODO Local workload clashes with primary IP
+// TODO Add second workload; first workload should be unaffected
+// TODO UnassignPrivateIpAddresses fails
+// TODO DetachNetworkInterface fails
+// TODO DeleteNEtowrkInterface fails
+// TODO Clean up orphan NICs
 
 type fakeEC2 struct {
 	lock sync.Mutex
@@ -387,8 +531,8 @@ func newFakeEC2Client() (*EC2Client, *fakeEC2) {
 			return errBadParam(queueName, "ErrorFactory.Error")
 		})),
 
-		nextNICNum:    1000,
-		nextAttachNum: 1000,
+		nextNICNum:    0x1000,
+		nextAttachNum: 0x1000,
 	}
 	return &EC2Client{
 		EC2Svc:     mockEC2,
@@ -417,6 +561,9 @@ func (f *fakeEC2) DescribeInstances(ctx context.Context, params *ec2.DescribeIns
 
 	if err := f.Errors.NextErrorByCaller(); err != nil {
 		return nil, err
+	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
 	}
 
 	if len(params.InstanceIds) != 1 {
@@ -447,6 +594,12 @@ func (f *fakeEC2) ModifyNetworkInterfaceAttribute(ctx context.Context, params *e
 	if err := f.Errors.NextErrorByCaller(); err != nil {
 		return nil, err
 	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	if len(optFns) > 0 {
+		panic("fakeEC2 doesn't understand opts")
+	}
 
 	panic("fakeEC2 doesn't support requested feature")
 }
@@ -457,6 +610,12 @@ func (f *fakeEC2) DescribeSubnets(ctx context.Context, params *ec2.DescribeSubne
 
 	if err := f.Errors.NextErrorByCaller(); err != nil {
 		return nil, err
+	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	if len(optFns) > 0 {
+		panic("fakeEC2 doesn't understand opts")
 	}
 
 	if params.DryRun != nil || params.MaxResults != nil || params.NextToken != nil {
@@ -508,6 +667,12 @@ func (f *fakeEC2) DescribeInstanceTypes(ctx context.Context, params *ec2.Describ
 	if err := f.Errors.NextErrorByCaller(); err != nil {
 		return nil, err
 	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	if len(optFns) > 0 {
+		panic("fakeEC2 doesn't understand opts")
+	}
 
 	if params.DryRun != nil || params.MaxResults != nil || params.NextToken != nil {
 		panic("fakeEC2 doesn't support requested feature")
@@ -548,6 +713,12 @@ func (f *fakeEC2) DescribeNetworkInterfaces(ctx context.Context, params *ec2.Des
 
 	if err := f.Errors.NextErrorByCaller(); err != nil {
 		return nil, err
+	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	if len(optFns) > 0 {
+		panic("fakeEC2 doesn't understand opts")
 	}
 
 	if params.DryRun != nil || params.MaxResults != nil || params.NextToken != nil {
@@ -622,11 +793,17 @@ func (f *fakeEC2) CreateNetworkInterface(ctx context.Context, params *ec2.Create
 	if err := f.Errors.NextErrorByCaller(); err != nil {
 		return nil, err
 	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	if len(optFns) > 0 {
+		panic("fakeEC2 doesn't understand opts")
+	}
 
 	if params.DryRun != nil || len(params.PrivateIpAddresses) > 0 {
 		panic("fakeEC2 doesn't support requested feature")
 	}
-	if *params.SubnetId != subnetIDWest1Calico {
+	if *params.SubnetId != subnetIDWest1Calico && *params.SubnetId != subnetIDWest1CalicoAlt {
 		panic("wrong subnet ID" + *params.SubnetId)
 	}
 	if params.PrivateIpAddress == nil {
@@ -635,7 +812,7 @@ func (f *fakeEC2) CreateNetworkInterface(ctx context.Context, params *ec2.Create
 
 	nicID := fmt.Sprintf("eni-%017x", f.nextNICNum)
 	mac := make(net.HardwareAddr, 6)
-	encoding_binary.LittleEndian.PutUint32(mac[2:], uint32(f.nextNICNum))
+	encoding_binary.BigEndian.PutUint32(mac[2:], uint32(f.nextNICNum))
 	f.nextNICNum++
 
 	var tags []types.Tag
@@ -673,6 +850,8 @@ func (f *fakeEC2) CreateNetworkInterface(ctx context.Context, params *ec2.Create
 	}
 	f.NICsByID[nicID] = nic
 
+	logrus.WithField("nic", spew.Sdump(nic)).Info("FakeEC2: Created NIC.")
+
 	return &ec2.CreateNetworkInterfaceOutput{
 		NetworkInterface: &nic,
 	}, nil
@@ -684,6 +863,12 @@ func (f *fakeEC2) AttachNetworkInterface(ctx context.Context, params *ec2.Attach
 
 	if err := f.Errors.NextErrorByCaller(); err != nil {
 		return nil, err
+	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	if len(optFns) > 0 {
+		panic("fakeEC2 doesn't understand opts")
 	}
 
 	if params.DryRun != nil || params.NetworkCardIndex != nil && *params.NetworkCardIndex != 0 {
@@ -760,12 +945,74 @@ func (f *fakeEC2) AttachNetworkInterface(ctx context.Context, params *ec2.Attach
 	}, nil
 }
 
+func (f *fakeEC2) DetachNetworkInterface(ctx context.Context, params *ec2.DetachNetworkInterfaceInput, optFns ...func(*ec2.Options)) (*ec2.DetachNetworkInterfaceOutput, error) {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	if err := f.Errors.NextErrorByCaller(); err != nil {
+		return nil, err
+	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	if len(optFns) > 0 {
+		panic("fakeEC2 doesn't understand opts")
+	}
+
+	if params.Force == nil || !*params.Force {
+		panic("Expecting use of Force.")
+	}
+
+	var instID string
+	found := false
+	for nicID, nic := range f.NICsByID {
+		if nic.Attachment != nil && nic.Attachment.AttachmentId != nil && *nic.Attachment.AttachmentId == *params.AttachmentId {
+			logrus.WithField("id", nicID).Info("FakeEC2 found NIC to dettach.")
+			nic.Status = types.NetworkInterfaceStatusAvailable
+			instID = *nic.Attachment.InstanceId
+			nic.Attachment = nil
+			f.NICsByID[nicID] = nic
+			found = true
+		}
+	}
+	if !found {
+		return nil, errNotFound("DetachNetworkInterface", "AttachmentId.NotFound")
+	}
+
+	inst, ok := f.InstancesByID[instID]
+	if !ok {
+		panic("FakeEC2: BUG, couldn't find instance for NIC attachment")
+	}
+	var updatedNICs []types.InstanceNetworkInterface
+	found = false
+	for _, nic := range inst.NetworkInterfaces {
+		if *nic.Attachment.AttachmentId == *params.AttachmentId {
+			found = true
+			continue
+		}
+		updatedNICs = append(updatedNICs, nic)
+	}
+	if !found {
+		panic("FakeEC2: BUG, couldn't find NIC on instance")
+	}
+	inst.NetworkInterfaces = updatedNICs
+	f.InstancesByID[instID] = inst
+
+	return &ec2.DetachNetworkInterfaceOutput{ /* not currently used by caller */ }, nil
+}
+
 func (f *fakeEC2) AssignPrivateIpAddresses(ctx context.Context, params *ec2.AssignPrivateIpAddressesInput, optFns ...func(*ec2.Options)) (*ec2.AssignPrivateIpAddressesOutput, error) {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
 	if err := f.Errors.NextErrorByCaller(); err != nil {
 		return nil, err
+	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	if len(optFns) > 0 {
+		panic("fakeEC2 doesn't understand opts")
 	}
 
 	if params.NetworkInterfaceId == nil {
@@ -829,19 +1076,47 @@ func (f *fakeEC2) UnassignPrivateIpAddresses(ctx context.Context, params *ec2.Un
 	if err := f.Errors.NextErrorByCaller(); err != nil {
 		return nil, err
 	}
-
-	panic("implement me")
-}
-
-func (f *fakeEC2) DetachNetworkInterface(ctx context.Context, params *ec2.DetachNetworkInterfaceInput, optFns ...func(*ec2.Options)) (*ec2.DetachNetworkInterfaceOutput, error) {
-	f.lock.Lock()
-	defer f.lock.Unlock()
-
-	if err := f.Errors.NextErrorByCaller(); err != nil {
-		return nil, err
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	if len(optFns) > 0 {
+		panic("fakeEC2 doesn't understand opts")
 	}
 
-	panic("implement me")
+	if params.NetworkInterfaceId == nil {
+		return nil, errBadParam("UnassignPrivateIpAddresses", "NetworkInterfaceId.Missing")
+	}
+
+	if len(params.PrivateIpAddresses) == 0 {
+		panic("BUG: releasing 0 IPs?")
+	}
+
+	// Find the NIC.
+	nic, ok := f.NICsByID[*params.NetworkInterfaceId]
+	if !ok {
+		return nil, errNotFound("UnassignPrivateIpAddresses", "NIC.NotFound")
+	}
+	for _, newAddr := range params.PrivateIpAddresses {
+		var updatedAddrs []types.NetworkInterfacePrivateIpAddress
+		found := false
+		for _, addr := range nic.PrivateIpAddresses {
+			if *addr.PrivateIpAddress == newAddr {
+				found = true
+				continue
+			}
+			updatedAddrs = append(updatedAddrs, addr)
+		}
+		if !found {
+			return nil, errNotFound("UnassignPrivateIpAddresses", "Address.NotFound")
+		}
+		nic.PrivateIpAddresses = updatedAddrs
+	}
+
+	f.NICsByID[*params.NetworkInterfaceId] = nic
+
+	return &ec2.UnassignPrivateIpAddressesOutput{
+		// Not currently used so not bothering to fill in
+	}, nil
 }
 
 func (f *fakeEC2) DeleteNetworkInterface(ctx context.Context, params *ec2.DeleteNetworkInterfaceInput, optFns ...func(*ec2.Options)) (*ec2.DeleteNetworkInterfaceOutput, error) {
@@ -851,8 +1126,28 @@ func (f *fakeEC2) DeleteNetworkInterface(ctx context.Context, params *ec2.Delete
 	if err := f.Errors.NextErrorByCaller(); err != nil {
 		return nil, err
 	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	if len(optFns) > 0 {
+		panic("fakeEC2 doesn't understand opts")
+	}
 
-	panic("implement me")
+	if params.NetworkInterfaceId == nil {
+		panic("BUG: caller should supply network interface ID")
+	}
+
+	nic, ok := f.NICsByID[*params.NetworkInterfaceId]
+	if !ok {
+		return nil, errNotFound("DeleteNetworkInterface", "NetworkInterfaceId.NotFound")
+	}
+
+	if nic.Status != types.NetworkInterfaceStatusAvailable {
+		return nil, errBadParam("DeleteNetworkInterface", "NetworkInterface.IsAttached")
+	}
+
+	delete(f.NICsByID, *params.NetworkInterfaceId)
+	return &ec2.DeleteNetworkInterfaceOutput{ /* not used by caller */ }, nil
 }
 
 type ipamAlloc struct {
@@ -881,6 +1176,9 @@ func (m *fakeIPAM) Allocations() []ipamAlloc {
 func (m *fakeIPAM) AutoAssign(ctx context.Context, args ipam.AutoAssignArgs) (*ipam.IPAMAssignments, *ipam.IPAMAssignments, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
+	if ctx.Err() != nil {
+		return nil, nil, ctx.Err()
+	}
 
 	m.requests = append(m.requests, args)
 	if args.Num6 > 0 {
@@ -931,6 +1229,9 @@ func (m *fakeIPAM) ReleaseIPs(ctx context.Context, ips []cnet.IP) ([]cnet.IP, er
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	releaseCount := 0
 	var out []cnet.IP
 	var newAllocs []ipamAlloc
@@ -961,6 +1262,10 @@ func (m *fakeIPAM) IPsByHandle(ctx context.Context, handleID string) ([]cnet.IP,
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
 	var out []cnet.IP
 	for _, alloc := range m.allocations {
 		if alloc.Handle == handleID {
@@ -984,6 +1289,13 @@ func (m *fakeIPAM) NumUsedIPs() int {
 	defer m.lock.Unlock()
 
 	return len(m.allocations)
+}
+
+func (m *fakeIPAM) setFreeIPs(ips ...string) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	m.freeIPs = ips
 }
 
 func newMockIPAM() *fakeIPAM {
