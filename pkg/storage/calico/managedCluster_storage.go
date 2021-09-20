@@ -48,7 +48,7 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 			return nil, cerrors.ErrorValidation{
 				ErroredFields: []cerrors.ErroredField{{
 					Name:   "Metadata.Name",
-					Reason: fmt.Sprintf("This API is not available"),
+					Reason: "ManagementCluster must be configured before adding ManagedClusters",
 					Value:  res.ObjectMeta.Name,
 				}},
 			}

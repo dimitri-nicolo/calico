@@ -2588,7 +2588,7 @@ func TestManagedClusterClient(t *testing.T) {
 		if err == nil {
 			t.Fatal("Expected API to be disabled")
 		}
-		if !strings.Contains(err.Error(), "This API is not available") {
+		if !strings.Contains(err.Error(), "ManagementCluster must be configured before adding ManagedClusters") {
 			t.Fatalf("Expected API err to indicate that API is disabled. Received: %v", err)
 		}
 	})
