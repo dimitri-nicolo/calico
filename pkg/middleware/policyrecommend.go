@@ -40,6 +40,11 @@ func PolicyRecommendationHandler(k8sClientFactory datastore.ClusterCtxK8sClientF
 		}
 
 		clusterID := req.Header.Get(clusterIdHeader)
+		if clusterID == "" {
+			log.Debug("Cluster ID not present, setting default")
+			clusterID = datastore.DefaultCluster
+		}
+		log.WithField("cluster", clusterID).Debug("Cluster ID for index")
 
 		// Ensure index is properly scoped by to the correct cluster.
 		params.DocumentIndex = lmaindex.FlowLogs().GetIndex(elasticvariant.AddIndexInfix(clusterID))
