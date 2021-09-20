@@ -16,6 +16,10 @@ import (
 
 var tenantID = os.Getenv("ELASTIC_INDEX_TENANT_ID")
 
+// enableElasticsearchWatch disables watching the Elasticsearch CR in the Cloud/Tesla variant since
+// the Elasticsearch is external.
+var enableElasticsearchWatch = false
+
 // reconcileConfigMap copies the tigera-secure-elasticsearch ConfigMap in the management cluster to the managed cluster,
 // changing the clusterName data value to include the Tenant ID (to support multi-tenancy) and the cluster name this ConfigMap is being copied to
 func (c *reconciler) reconcileConfigMap() error {
