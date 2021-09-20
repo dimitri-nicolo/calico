@@ -774,7 +774,8 @@ func (m *SecondaryIfaceProvisioner) findRoutesWithNoAWSAddr(awsNICState *nicSnap
 			logrus.WithFields(logrus.Fields{
 				"addr": addr,
 				"nic":  nicID,
-			}).Warn("Local workload IP clashes with host's primary IP on one of its secondary interfaces.")
+			}).Warn("Local workload IP clashes with host's primary IP on one of its secondary interfaces. " +
+				"Workload will not be properly networked.")
 			continue
 		}
 		if nicID, ok := awsNICState.nicIDByIP[addr]; ok {

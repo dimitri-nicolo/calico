@@ -70,7 +70,9 @@ const (
 	subnetWest1CIDRCalicoAlt    = "100.64.3.0/24"
 	subnetWest1GatewayCalico    = "100.64.1.1"
 	subnetWest1GatewayCalicoAlt = "100.64.3.1"
-	subnetWest2CIDRCalico       = "100.64.2.0/24"
+
+	subnetWest2CIDRCalico = "100.64.2.0/24"
+	west2WlIP             = "100.64.2.5"
 
 	calicoHostIP1    = "100.64.1.5"
 	calicoHostIP1Alt = "100.64.3.5"
@@ -91,9 +93,11 @@ const (
 )
 
 var (
-	wl1CIDR    = ip.MustParseCIDROrIP(wl1Addr)
-	wl1CIDRAlt = ip.MustParseCIDROrIP(wl1AddrAlt)
-	wl2CIDR    = ip.MustParseCIDROrIP(wl2Addr)
+	wl1CIDR         = ip.MustParseCIDROrIP(wl1Addr)
+	wl1CIDRAlt      = ip.MustParseCIDROrIP(wl1AddrAlt)
+	wl2CIDR         = ip.MustParseCIDROrIP(wl2Addr)
+	west2WlCIDR     = ip.MustParseCIDROrIP(west2WlIP)
+	calicoHostCIDR1 = ip.MustParseCIDROrIP(calicoHostIP1)
 
 	defaultPools = map[string]set.Set{
 		subnetIDWest1Calico: set.FromArray([]string{ipPoolIDWest1Hosts, ipPoolIDWest1Gateways}),
@@ -119,7 +123,7 @@ var (
 
 	singleWorkloadDatastore = DatastoreState{
 		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
-			wl1CIDR: &proto.RouteUpdate{
+			wl1CIDR: {
 				Dst:           wl1Addr,
 				LocalWorkload: true,
 				AwsSubnetId:   subnetIDWest1Calico,
@@ -132,12 +136,12 @@ var (
 	}
 	twoWorkloadsDatastore = DatastoreState{
 		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
-			wl1CIDR: &proto.RouteUpdate{
+			wl1CIDR: {
 				Dst:           wl1Addr,
 				LocalWorkload: true,
 				AwsSubnetId:   subnetIDWest1Calico,
 			},
-			wl2CIDR: &proto.RouteUpdate{
+			wl2CIDR: {
 				Dst:           wl2Addr,
 				LocalWorkload: true,
 				AwsSubnetId:   subnetIDWest1Calico,
@@ -148,9 +152,47 @@ var (
 		},
 		PoolIDsBySubnetID: defaultPools,
 	}
+	nonLocalWorkloadDatastore = DatastoreState{
+		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
+			wl1CIDR: {
+				Dst:           wl1Addr,
+				LocalWorkload: true,
+				AwsSubnetId:   subnetIDWest1Calico,
+			},
+			west2WlCIDR: {
+				Dst:           west2WlIP,
+				LocalWorkload: true,
+				AwsSubnetId:   subnetIDWest2Calico,
+			},
+		},
+		LocalRouteDestsBySubnetID: map[string]set.Set{
+			subnetIDWest1Calico: set.FromArray([]ip.CIDR{wl1CIDR}),
+			subnetIDWest2Calico: set.FromArray([]ip.CIDR{west2WlCIDR}),
+		},
+		PoolIDsBySubnetID: defaultPools,
+	}
+	hostClashWorkloadDatastore = DatastoreState{
+		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
+			wl1CIDR: {
+				Dst:           wl1Addr,
+				LocalWorkload: true,
+				AwsSubnetId:   subnetIDWest1Calico,
+			},
+			calicoHostCIDR1: {
+				Dst:           calicoHostCIDR1.String(),
+				LocalWorkload: true,
+				AwsSubnetId:   subnetIDWest1Calico,
+			},
+		},
+		LocalRouteDestsBySubnetID: map[string]set.Set{
+			subnetIDWest1Calico: set.FromArray([]ip.CIDR{wl1CIDR}),
+			subnetIDWest2Calico: set.FromArray([]ip.CIDR{west2WlCIDR}),
+		},
+		PoolIDsBySubnetID: defaultPools,
+	}
 	singleWorkloadDatastoreAltPool = DatastoreState{
 		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
-			wl1CIDR: &proto.RouteUpdate{
+			wl1CIDR: {
 				Dst:           wl1AddrAlt,
 				LocalWorkload: true,
 				AwsSubnetId:   subnetIDWest1CalicoAlt,
@@ -451,7 +493,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_ErrBackoff(t *testing.
 
 			// Advance time to trigger the backoff.
 			// Initial backoff should be between 1000 and 1100 ms (due to jitter).
-			Expect(fake.Clock.HasWaiters()).To(BeTrue())
+			Eventually(fake.Clock.HasWaiters).Should(BeTrue())
 			fake.Clock.Step(999 * time.Millisecond)
 			Expect(fake.Clock.HasWaiters()).To(BeTrue())
 			fake.Clock.Step(102 * time.Millisecond)
@@ -485,7 +527,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_ErrBackoffInterrupted(
 	Consistently(sip.ResponseC()).ShouldNot(Receive())
 
 	// Should be a timer waiting for backoff.
-	Expect(fake.Clock.HasWaiters()).To(BeTrue())
+	Eventually(fake.Clock.HasWaiters).Should(BeTrue())
 
 	// Send a datastore update, should trigger the backoff to be abandoned.
 	sip.OnDatastoreUpdate(singleWorkloadDatastore)
@@ -641,12 +683,41 @@ func nWorkloadDatastore(n int) (DatastoreState, []ip.Addr) {
 	return ds, addrs
 }
 
+// TestSecondaryIfaceProvisioner_NonLocalWorkload verifies handling of workloads from the wrong subnet. They
+// Should be ignored.
+func TestSecondaryIfaceProvisioner_NonLocalWorkload(t *testing.T) {
+	sip, _, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Send snapshot with one workload in a local subnet and one in a remote one.
+	sip.OnDatastoreUpdate(nonLocalWorkloadDatastore)
+	// Should act like remote subnet is not there.
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+}
+
+// TestSecondaryIfaceProvisioner_WorkloadHostIPClash tests that workloads that try to use the host's primary
+// IP are ignores.
+func TestSecondaryIfaceProvisioner_WorkloadHostIPClash(t *testing.T) {
+	sip, fake, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Send snapshot with one workload in a local subnet and one in a remote one.
+	sip.OnDatastoreUpdate(hostClashWorkloadDatastore)
+
+	// Since the IP is only assigned to the NIC after we check the routes, it only gets picked up after the
+	// first failure triggers a backoff.
+	Eventually(fake.Clock.HasWaiters).Should(BeTrue())
+	fake.Clock.Step(1200 * time.Millisecond)
+	Expect(fake.Clock.HasWaiters()).To(BeFalse())
+
+	// Should act like remote subnet is not there.
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+}
+
 // TODO Security group copying
-// TODO non-local workload
-// TODO Local workload clashes with primary IP
 // TODO UnassignPrivateIpAddresses fails
 // TODO DetachNetworkInterface fails
-// TODO DeleteNEtowrkInterface fails
+// TODO DeleteNetworkInterface fails
 // TODO Clean up orphan NICs
 
 type fakeEC2 struct {
