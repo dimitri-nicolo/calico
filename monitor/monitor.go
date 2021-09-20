@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	defaultPollInterval = 30 * time.Second
+	defaultPollInterval = 10 * time.Minute
 )
 
 // LicenseMonitor is an interface which enables monitoring of license and feature enablement status.
