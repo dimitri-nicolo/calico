@@ -49,6 +49,8 @@ import (
 )
 
 const (
+	instanceTypeT0Pico types.InstanceType = "t0.pico"
+
 	nodeName   = "test-node"
 	instanceID = "i-ca1ic000000000001"
 	testVPC    = "vpc-01234567890123456"
@@ -765,9 +767,25 @@ func TestSecondaryIfaceProvisioner_WorkloadHostIPClash(t *testing.T) {
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
 }
 
+func TestSecondaryIfaceProvisioner_NoSecondaryIPsPossible(t *testing.T) {
+	sip, fake, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Make our instance type tiiiny.  Note: AWS actually doesn't have any instance types with _no_ secondary
+	// ENIs at all so this is made up.
+	inst := fake.EC2.InstancesByID[instanceID]
+	inst.InstanceType = instanceTypeT0Pico
+	fake.EC2.InstancesByID[instanceID] = inst
+
+	// Try to add a workload.
+	sip.OnDatastoreUpdate(singleWorkloadDatastore)
+	Eventually(fake.Clock.HasWaiters).Should(BeTrue())
+	fake.Clock.Step(1200 * time.Millisecond)
+	Consistently(sip.ResponseC()).ShouldNot(Receive())
+	Eventually(fake.Clock.HasWaiters).Should(BeTrue()) // Should keep backing off
+}
+
 // TODO Security group copying
-// TODO UnassignPrivateIpAddresses fails
-// TODO Clean up orphan NICs
 
 type fakeEC2 struct {
 	lock sync.Mutex
@@ -956,6 +974,28 @@ func (f *fakeEC2) DescribeInstanceTypes(ctx context.Context, params *ec2.Describ
 						NetworkCards: []types.NetworkCardInfo{
 							{
 								MaximumNetworkInterfaces: int32Ptr(3),
+								NetworkCardIndex:         int32Ptr(0),
+							},
+						},
+					},
+				},
+			},
+		}, nil
+	case instanceTypeT0Pico:
+		// Made up type without any secondary ENI capacity.
+		return &ec2.DescribeInstanceTypesOutput{
+			InstanceTypes: []types.InstanceTypeInfo{
+				{
+					InstanceType: instanceTypeT0Pico,
+					NetworkInfo: &types.NetworkInfo{
+						Ipv4AddressesPerInterface: int32Ptr(1),
+						Ipv6AddressesPerInterface: int32Ptr(1),
+						Ipv6Supported:             boolPtr(true),
+						MaximumNetworkCards:       int32Ptr(1),
+						MaximumNetworkInterfaces:  int32Ptr(2),
+						NetworkCards: []types.NetworkCardInfo{
+							{
+								MaximumNetworkInterfaces: int32Ptr(2),
 								NetworkCardIndex:         int32Ptr(0),
 							},
 						},
