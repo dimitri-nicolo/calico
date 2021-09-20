@@ -311,6 +311,15 @@ type sipTestFakes struct {
 	CapacityC chan SecondaryIfaceCapacities
 }
 
+func (f sipTestFakes) expectSingleBackoffAndStep() {
+	// Initial backoff should be between 1000 and 1100 ms (due to jitter).
+	Eventually(f.Clock.HasWaiters).Should(BeTrue())
+	f.Clock.Step(999 * time.Millisecond)
+	Expect(f.Clock.HasWaiters()).To(BeTrue())
+	f.Clock.Step(102 * time.Millisecond)
+	Expect(f.Clock.HasWaiters()).To(BeFalse())
+}
+
 func setup(t *testing.T) (*SecondaryIfaceProvisioner, *sipTestFakes) {
 	RegisterTestingT(t)
 	fakeIPAM := newMockIPAM()
@@ -410,7 +419,7 @@ func TestSecondaryIfaceProvisioner_OnDatastoreUpdateShouldNotBlock(t *testing.T)
 }
 
 func TestSecondaryIfaceProvisioner_NoPoolsOrWorkloadsStartOfDay(t *testing.T) {
-	sip, fakes, tearDown := setupAndStart(t)
+	sip, fake, tearDown := setupAndStart(t)
 	defer tearDown()
 
 	// Send an empty snapshot.
@@ -422,7 +431,7 @@ func TestSecondaryIfaceProvisioner_NoPoolsOrWorkloadsStartOfDay(t *testing.T) {
 
 	// Should get an empty response.
 	Eventually(sip.ResponseC()).Should(Receive(Equal(&IfaceState{})))
-	Eventually(fakes.CapacityC).Should(Receive(Equal(SecondaryIfaceCapacities{
+	Eventually(fake.CapacityC).Should(Receive(Equal(SecondaryIfaceCapacities{
 		MaxCalicoSecondaryIPs: t3LargeCapacity,
 	})))
 }
@@ -445,7 +454,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsButNoWorkloadsMainline(t *testing.T) 
 }
 
 func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_Mainline(t *testing.T) {
-	sip, fakes, tearDown := setupAndStart(t)
+	sip, fake, tearDown := setupAndStart(t)
 	defer tearDown()
 
 	// Send snapshot with single workload.
@@ -454,7 +463,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_Mainline(t *testing.T)
 	// Since this is a fresh system with only one NIC being allocated, everything is deterministic and we should
 	// always get the same result.
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
-	Eventually(fakes.CapacityC).Should(Receive(Equal(SecondaryIfaceCapacities{
+	Eventually(fake.CapacityC).Should(Receive(Equal(SecondaryIfaceCapacities{
 		MaxCalicoSecondaryIPs: t3LargeCapacity,
 	})))
 
@@ -492,12 +501,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_ErrBackoff(t *testing.
 			Consistently(sip.ResponseC()).ShouldNot(Receive())
 
 			// Advance time to trigger the backoff.
-			// Initial backoff should be between 1000 and 1100 ms (due to jitter).
-			Eventually(fake.Clock.HasWaiters).Should(BeTrue())
-			fake.Clock.Step(999 * time.Millisecond)
-			Expect(fake.Clock.HasWaiters()).To(BeTrue())
-			fake.Clock.Step(102 * time.Millisecond)
-			Expect(fake.Clock.HasWaiters()).To(BeFalse())
+			fake.expectSingleBackoffAndStep()
 
 			// With only one NIC being added, FakeIPAM and FakeEC2 are deterministic.
 			expResponse := responseSingleWorkload
@@ -541,7 +545,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_ErrBackoffInterrupted(
 // TestSecondaryIfaceProvisioner_PoolChange Checks that changing the IP pools to use a different subnet causes the
 // provisioner to release NICs and provision the new ones.
 func TestSecondaryIfaceProvisioner_PoolChange(t *testing.T) {
-	sip, fakes, tearDown := setupAndStart(t)
+	sip, fake, tearDown := setupAndStart(t)
 	defer tearDown()
 
 	// Send snapshot with single workload on the original subnet.
@@ -550,7 +554,7 @@ func TestSecondaryIfaceProvisioner_PoolChange(t *testing.T) {
 	// Since this is a fresh system with only one NIC being allocated, everything is deterministic and we should
 	// always get the same result.
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
-	Eventually(fakes.CapacityC).Should(Receive(Equal(SecondaryIfaceCapacities{
+	Eventually(fake.CapacityC).Should(Receive(Equal(SecondaryIfaceCapacities{
 		MaxCalicoSecondaryIPs: t3LargeCapacity,
 	})))
 
@@ -566,7 +570,7 @@ func TestSecondaryIfaceProvisioner_PoolChange(t *testing.T) {
 
 	// Swap IPAM to prefer the alt host pool.  Normally the label selector on the pool would ensure the right
 	// pool is used but we don't have that much function here.
-	fakes.IPAM.setFreeIPs(calicoHostIP1Alt)
+	fake.IPAM.setFreeIPs(calicoHostIP1Alt)
 
 	// Add a workload in the alt pool, should get a secondary NIC using the alt pool.
 	sip.OnDatastoreUpdate(singleWorkloadDatastoreAltPool)
@@ -575,6 +579,36 @@ func TestSecondaryIfaceProvisioner_PoolChange(t *testing.T) {
 	// Delete the workload.  Should keep the NIC but remove the secondary IP.
 	sip.OnDatastoreUpdate(noWorkloadDatastoreAltPools)
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseAltPoolsAfterWorkloadsDeleted)))
+}
+
+func TestSecondaryIfaceProvisioner_PoolChangeWithFailure(t *testing.T) {
+	for _, callToFail := range []string{
+		"DetachNetworkInterface",
+		"DeleteNetworkInterface",
+	} {
+		t.Run(callToFail, func(t *testing.T) {
+			sip, fake, tearDown := setupAndStart(t)
+			defer tearDown()
+
+			fake.EC2.Errors.QueueError(callToFail)
+
+			// Send the usual snapshot with single workload on the original subnet.
+			sip.OnDatastoreUpdate(singleWorkloadDatastore)
+			Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+
+			// Change the pools.
+			fake.IPAM.setFreeIPs(calicoHostIP1Alt)
+			sip.OnDatastoreUpdate(singleWorkloadDatastoreAltPool)
+			
+			// Advance time to trigger the backoff.
+			fake.expectSingleBackoffAndStep()
+
+			// After backoff, should get the expected result.
+			Eventually(sip.ResponseC()).Should(Receive(Equal(responseAltPoolSingleWorkload)))
+
+			Expect(fake.EC2.NumNICs()).To(BeNumerically("==", 2 /* one primary, one secondary*/))
+		})
+	}
 }
 
 func TestSecondaryIfaceProvisioner_SecondWorkload(t *testing.T) {
@@ -591,6 +625,25 @@ func TestSecondaryIfaceProvisioner_SecondWorkload(t *testing.T) {
 
 	// Remove the workloads again, IPs should be released.
 	sip.OnDatastoreUpdate(noWorkloadDatastore)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseNICAfterWorkloadsDeleted)))
+}
+
+func TestSecondaryIfaceProvisioner_UnassignIPFail(t *testing.T) {
+	sip, fake, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Queue up a transient failure.
+	fake.EC2.Errors.QueueError("UnassignPrivateIpAddresses")
+
+	// Add two workloads.
+	sip.OnDatastoreUpdate(twoWorkloadsDatastore)
+	Eventually(sip.ResponseC()).Should(Receive())
+
+	// Remove the workloads again, should try to release IPs, triggering backoff.
+	sip.OnDatastoreUpdate(noWorkloadDatastore)
+	fake.expectSingleBackoffAndStep()
+
+	// After backoff, should get the expected result.
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseNICAfterWorkloadsDeleted)))
 }
 
@@ -706,9 +759,7 @@ func TestSecondaryIfaceProvisioner_WorkloadHostIPClash(t *testing.T) {
 
 	// Since the IP is only assigned to the NIC after we check the routes, it only gets picked up after the
 	// first failure triggers a backoff.
-	Eventually(fake.Clock.HasWaiters).Should(BeTrue())
-	fake.Clock.Step(1200 * time.Millisecond)
-	Expect(fake.Clock.HasWaiters()).To(BeFalse())
+	fake.expectSingleBackoffAndStep()
 
 	// Should act like remote subnet is not there.
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
@@ -716,8 +767,6 @@ func TestSecondaryIfaceProvisioner_WorkloadHostIPClash(t *testing.T) {
 
 // TODO Security group copying
 // TODO UnassignPrivateIpAddresses fails
-// TODO DetachNetworkInterface fails
-// TODO DeleteNetworkInterface fails
 // TODO Clean up orphan NICs
 
 type fakeEC2 struct {
@@ -958,7 +1007,7 @@ func (f *fakeEC2) DescribeNetworkInterfaces(ctx context.Context, params *ec2.Des
 			switch *filter.Name {
 			case "attachment.instance-id":
 				for _, v := range filter.Values {
-					if nic.Attachment.InstanceId != nil && *nic.Attachment.InstanceId == v {
+					if nic.Attachment != nil && nic.Attachment.InstanceId != nil && *nic.Attachment.InstanceId == v {
 						filterMatches = true
 						break
 					}
@@ -1118,6 +1167,7 @@ func (f *fakeEC2) AttachNetworkInterface(ctx context.Context, params *ec2.Attach
 		NetworkCardIndex:    int32Ptr(0),
 		Status:              types.AttachmentStatusAttached,
 	}
+	nic.Status = types.NetworkInterfaceStatusAssociated
 
 	var privIPs []types.InstancePrivateIpAddress
 	for _, ip := range nic.PrivateIpAddresses {
@@ -1360,6 +1410,13 @@ func (f *fakeEC2) DeleteNetworkInterface(ctx context.Context, params *ec2.Delete
 
 	delete(f.NICsByID, *params.NetworkInterfaceId)
 	return &ec2.DeleteNetworkInterfaceOutput{ /* not used by caller */ }, nil
+}
+
+func (f *fakeEC2) NumNICs() int {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	return len(f.NICsByID)
 }
 
 type ipamAlloc struct {

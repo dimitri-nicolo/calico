@@ -103,7 +103,7 @@ func (e *errorProducer) NextErrorByCaller() error {
 }
 
 func (e *errorProducer) ExpectAllErrorsConsumed() {
-	gomega.ExpectWithOffset(1, e.queue).To(gomega.BeEmpty())
+	gomega.ExpectWithOffset(1, e.queue).To(gomega.BeEmpty(), "Some errors were not consumed.")
 }
 
 var _ ErrorProducer = (*errorProducer)(nil)

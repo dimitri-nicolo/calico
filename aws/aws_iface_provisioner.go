@@ -813,7 +813,7 @@ func (m *SecondaryIfaceProvisioner) unassignAWSIPs(awsIPsToRelease set.Set, awsN
 		return nil
 	})
 
-	needRefresh := false
+	var finalErr error
 	for nicID, ipsToRelease := range ipsToReleaseByNICID {
 		nicID := nicID
 		_, err := ec2Client.EC2Svc.UnassignPrivateIpAddresses(ctx, &ec2.UnassignPrivateIpAddressesInput{
@@ -822,15 +822,14 @@ func (m *SecondaryIfaceProvisioner) unassignAWSIPs(awsIPsToRelease set.Set, awsN
 		})
 		if err != nil {
 			logrus.WithError(err).WithField("nicID", nicID).Error("Failed to release AWS IPs.")
-			return nil
+			finalErr = fmt.Errorf("failed to release some AWS IPs: %w", err)
 		}
-		needRefresh = true
+		if finalErr == nil {
+			finalErr = errResyncNeeded
+		}
 	}
 
-	if needRefresh {
-		return errResyncNeeded
-	}
-	return nil
+	return finalErr
 }
 
 // releaseAWSNICs tries to unattach and release the given NICs.  Returns errResyncNeeded if the nicSnapshot now needs
@@ -851,6 +850,7 @@ func (m *SecondaryIfaceProvisioner) releaseAWSNICs(nicsToRelease set.Set, awsNIC
 	}
 
 	// Release any NICs we no longer want.
+	finalErr := errResyncNeeded
 	nicsToRelease.Iter(func(item interface{}) error {
 		nicID := item.(string)
 		attachID := awsNICState.attachmentIDByNICID[nicID]
@@ -863,6 +863,7 @@ func (m *SecondaryIfaceProvisioner) releaseAWSNICs(nicsToRelease set.Set, awsNIC
 				"nicID":    nicID,
 				"attachID": attachID,
 			}).Error("Failed to detach unneeded NIC")
+			// Not setting finalErr here since the following deletion might solve the problem.
 		}
 		// Worth trying this even if detach fails.  Possible the failure was caused by it already
 		// being detached.
@@ -873,11 +874,13 @@ func (m *SecondaryIfaceProvisioner) releaseAWSNICs(nicsToRelease set.Set, awsNIC
 			logrus.WithError(err).WithFields(logrus.Fields{
 				"nicID":    nicID,
 				"attachID": attachID,
-			}).Error("Failed to delete unneeded NIC")
+			}).Error("Failed to delete unneeded NIC; triggering retry/backoff.")
+			finalErr = err // Trigger retry/backoff.
+			m.orphanNICResyncNeeded = true
 		}
 		return nil
 	})
-	return errResyncNeeded
+	return finalErr
 }
 
 // calculateBestSubnet Tries to calculate a single "best" AWS subnet for this host.  When we're configured correctly
@@ -987,7 +990,7 @@ func (m *SecondaryIfaceProvisioner) attachOrphanNICs(resyncState *nicResyncState
 			nicID := safeReadString(nic.NetworkInterfaceId)
 			logrus.WithField("nicID", nicID).Info(
 				"Found unattached NIC that belongs to this node and is no longer needed, deleting.")
-			_, err = ec2Client.EC2Svc.(*ec2.Client).DeleteNetworkInterface(ctx, &ec2.DeleteNetworkInterfaceInput{
+			_, err = ec2Client.EC2Svc.DeleteNetworkInterface(ctx, &ec2.DeleteNetworkInterfaceInput{
 				NetworkInterfaceId: nic.NetworkInterfaceId,
 			})
 			if err != nil {
