@@ -253,18 +253,22 @@ func (r *eventGenerator) convertAlertToESDoc(alertText string) (docID string, es
 	if len(s) >= 3 && s[len(s)-2] == "->" {
 		src := s[len(s)-3]
 		esDoc.SourceIP, esDoc.SourcePort, err = net.SplitHostPort(src)
-		if err != nil && strings.Contains(err.Error(), "missing port in address") {
-			esDoc.SourceIP = src
-		} else {
-			log.WithError(err).Errorf("Failed to parse source IP %s from snort alert", src)
+		if err != nil {
+			if strings.Contains(err.Error(), "missing port in address") {
+				esDoc.SourceIP = src
+			} else {
+				log.WithError(err).Errorf("Failed to parse source IP %s from snort alert", src)
+			}
 		}
 
 		dst := s[len(s)-1]
 		esDoc.DestIP, esDoc.DestPort, err = net.SplitHostPort(dst)
-		if err != nil && strings.Contains(err.Error(), "missing port in address") {
-			esDoc.DestIP = dst
-		} else {
-			log.WithError(err).Errorf("Failed to parse destination IP %s from snort alert", dst)
+		if err != nil {
+			if strings.Contains(err.Error(), "missing port in address") {
+				esDoc.DestIP = dst
+			} else {
+				log.WithError(err).Errorf("Failed to parse destination IP %s from snort alert", dst)
+			}
 		}
 	} else {
 		log.WithError(err).Errorf("Failed to parse source and destination IP from snort alert: %s", alertText)
