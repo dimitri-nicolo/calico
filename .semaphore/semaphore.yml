@@ -73,6 +73,7 @@ blocks:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true; fi
             # Run CD for the Cloud/Tesla build of ES Proxy.
+            - make clean
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd TESLA=true CONFIRM=true; fi
 
 promotions:
