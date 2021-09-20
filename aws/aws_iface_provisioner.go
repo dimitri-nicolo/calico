@@ -444,9 +444,11 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*IfaceState, error) {
 		return nil, err
 	}
 
+	numNICsToCreate := numNICsNeeded
 	if numNICsNeeded > 0 {
+		// Check if we _can_ create that many NICs.
 		numNICsPossible := resyncState.calculateUnusedNICCapacity(m.networkCapabilities)
-		haveNICCapacity := numNICsNeeded <= numNICsPossible
+		haveNICCapacity := numNICsToCreate <= numNICsPossible
 		m.healthAgg.Report(healthNameENICapacity, &health.HealthReport{
 			Live:  true,
 			Ready: haveNICCapacity,
@@ -454,12 +456,14 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*IfaceState, error) {
 		if !haveNICCapacity {
 			logrus.Warnf("Need %d more AWS secondary ENIs to support local workloads but only %d are "+
 				"available.  Some local workloads will not have requested AWS connectivity.",
-				numNICsNeeded, numNICsPossible)
-			numNICsNeeded = numNICsPossible // Avoid trying to create NICs that we know will fail.
+				numNICsToCreate, numNICsPossible)
+			numNICsToCreate = numNICsPossible // Avoid trying to create NICs that we know will fail.
 		}
+	}
 
-		logrus.WithField("num", numNICsNeeded).Info("Allocating IPs for new AWS NICs.")
-		v4addrs, err := m.allocateCalicoHostIPs(numNICsNeeded)
+	if numNICsToCreate > 0 {
+		logrus.WithField("num", numNICsToCreate).Info("Allocating IPs for new AWS NICs.")
+		v4addrs, err := m.allocateCalicoHostIPs(numNICsToCreate)
 		if err != nil {
 			// Queue up a clean up of any IPs we may have leaked.
 			m.hostIPAMResyncNeeded = true

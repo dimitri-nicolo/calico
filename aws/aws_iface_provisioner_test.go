@@ -78,6 +78,7 @@ const (
 
 	wl1Addr    = "100.64.1.64/32"
 	wl1AddrAlt = "100.64.3.64/32"
+	wl2Addr    = "100.64.1.65/32"
 
 	ipPoolIDWest1Hosts       = "pool-west-1-hosts"
 	ipPoolIDWest1HostsAlt    = "pool-west-1-hosts-alt"
@@ -92,6 +93,7 @@ const (
 var (
 	wl1CIDR    = ip.MustParseCIDROrIP(wl1Addr)
 	wl1CIDRAlt = ip.MustParseCIDROrIP(wl1AddrAlt)
+	wl2CIDR    = ip.MustParseCIDROrIP(wl2Addr)
 
 	defaultPools = map[string]set.Set{
 		subnetIDWest1Calico: set.FromArray([]string{ipPoolIDWest1Hosts, ipPoolIDWest1Gateways}),
@@ -128,6 +130,24 @@ var (
 		},
 		PoolIDsBySubnetID: defaultPools,
 	}
+	twoWorkloadsDatastore = DatastoreState{
+		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
+			wl1CIDR: &proto.RouteUpdate{
+				Dst:           wl1Addr,
+				LocalWorkload: true,
+				AwsSubnetId:   subnetIDWest1Calico,
+			},
+			wl2CIDR: &proto.RouteUpdate{
+				Dst:           wl2Addr,
+				LocalWorkload: true,
+				AwsSubnetId:   subnetIDWest1Calico,
+			},
+		},
+		LocalRouteDestsBySubnetID: map[string]set.Set{
+			subnetIDWest1Calico: set.FromArray([]ip.CIDR{wl1CIDR, wl2CIDR}),
+		},
+		PoolIDsBySubnetID: defaultPools,
+	}
 	singleWorkloadDatastoreAltPool = DatastoreState{
 		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
 			wl1CIDR: &proto.RouteUpdate{
@@ -159,6 +179,23 @@ var (
 				MAC:                firstAllocatedMAC,
 				PrimaryIPv4Addr:    ip.FromString(calicoHostIP1),
 				SecondaryIPv4Addrs: []ip.Addr{ip.MustParseCIDROrIP(wl1Addr).Addr()},
+			},
+		},
+		SubnetCIDR:  ip.MustParseCIDROrIP(subnetWest1CIDRCalico),
+		GatewayAddr: ip.FromString(subnetWest1GatewayCalico),
+	}
+	responseTwoWorkloads = &IfaceState{
+		PrimaryNICMAC: primaryNICMAC,
+		SecondaryNICsByMAC: map[string]Iface{
+			firstAllocatedMAC.String(): {
+				ID:              "eni-00000000000001000",
+				MAC:             firstAllocatedMAC,
+				PrimaryIPv4Addr: ip.FromString(calicoHostIP1),
+				SecondaryIPv4Addrs: []ip.Addr{
+					// Note: we assume the order here, which is only guaranteed if we first add wl1, then wl2.
+					ip.MustParseCIDROrIP(wl1Addr).Addr(),
+					ip.MustParseCIDROrIP(wl2Addr).Addr(),
+				},
 			},
 		},
 		SubnetCIDR:  ip.MustParseCIDROrIP(subnetWest1CIDRCalico),
@@ -498,11 +535,115 @@ func TestSecondaryIfaceProvisioner_PoolChange(t *testing.T) {
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseAltPoolsAfterWorkloadsDeleted)))
 }
 
+func TestSecondaryIfaceProvisioner_SecondWorkload(t *testing.T) {
+	sip, _, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Send snapshot with single workload.  Should get expected result.
+	sip.OnDatastoreUpdate(singleWorkloadDatastore)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+
+	// Add second workload, should get added to same NIC.
+	sip.OnDatastoreUpdate(twoWorkloadsDatastore)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseTwoWorkloads)))
+
+	// Remove the workloads again, IPs should be released.
+	sip.OnDatastoreUpdate(noWorkloadDatastore)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseNICAfterWorkloadsDeleted)))
+}
+
+// TestSecondaryIfaceProvisioner_MultiNIC ramps up the number of AWS IPs needed until it forces multiple AWS
+// NICs to be added.  It then tests what happens if the limit on IPs is exceeded.
+func TestSecondaryIfaceProvisioner_MultiNIC(t *testing.T) {
+	sip, _, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Fill up the first interface with progressively more IPs.
+	const secondaryIPsPerNIC = 11
+	for numNICs := 1; numNICs <= secondaryIPsPerNIC; numNICs++ {
+		ds, addrs := nWorkloadDatastore(numNICs)
+		sip.OnDatastoreUpdate(ds)
+		var response *IfaceState
+		Eventually(sip.ResponseC()).Should(Receive(&response))
+
+		// Check all the IPs ended up on the first NIC.
+		Expect(response.SecondaryNICsByMAC).To(HaveLen(1), "Expected only one AWS interface")
+		iface := response.SecondaryNICsByMAC[firstAllocatedMAC.String()]
+		Expect(iface.SecondaryIPv4Addrs).To(ConsistOf(addrs))
+	}
+	// Now send in even more IPs, progressively filling up the second interface.
+	for numNICs := secondaryIPsPerNIC + 1; numNICs <= secondaryIPsPerNIC*2; numNICs++ {
+		ds, addrs := nWorkloadDatastore(numNICs)
+		sip.OnDatastoreUpdate(ds)
+		var response *IfaceState
+		Eventually(sip.ResponseC()).Should(Receive(&response))
+
+		Expect(response.SecondaryNICsByMAC).To(HaveLen(2), "Expected exactly two AWS NICs.")
+		// Check the first NIC keep the first few IPs.
+		firstIface := response.SecondaryNICsByMAC[firstAllocatedMAC.String()]
+		Expect(firstIface.SecondaryIPv4Addrs).To(ConsistOf(addrs[:secondaryIPsPerNIC]))
+		// Second interface should have the remainder.
+		secondIface := response.SecondaryNICsByMAC[secondAllocatedMAC.String()]
+		Expect(secondIface.SecondaryIPv4Addrs).To(ConsistOf(addrs[secondaryIPsPerNIC:]))
+	}
+	{
+		// Add one more IP, it should have nowhere to go because this instance type only supports 2 secondary NICs.
+		ds, addrs := nWorkloadDatastore(secondaryIPsPerNIC*2 + 1)
+		sip.OnDatastoreUpdate(ds)
+		var response *IfaceState
+		Eventually(sip.ResponseC()).Should(Receive(&response))
+		Expect(response.SecondaryNICsByMAC).To(HaveLen(2), "Expected exactly two AWS NICs.")
+		// Check the first NIC keep the first few IPs.
+		firstIface := response.SecondaryNICsByMAC[firstAllocatedMAC.String()]
+		Expect(firstIface.SecondaryIPv4Addrs).To(ConsistOf(addrs[:secondaryIPsPerNIC]))
+		// Second interface should have the remainder.
+		secondIface := response.SecondaryNICsByMAC[secondAllocatedMAC.String()]
+		Expect(secondIface.SecondaryIPv4Addrs).To(ConsistOf(addrs[secondaryIPsPerNIC : secondaryIPsPerNIC*2]))
+	}
+	{
+		// Drop back down to 1 IP.
+		ds, addrs := nWorkloadDatastore(1)
+		sip.OnDatastoreUpdate(ds)
+		var response *IfaceState
+		Eventually(sip.ResponseC()).Should(Receive(&response))
+
+		// Should keep the second NIC but with no IPs.
+		Expect(response.SecondaryNICsByMAC).To(HaveLen(2), "Expected exactly two AWS NICs.")
+		// Check the first NIC keep the first few IPs.
+		firstIface := response.SecondaryNICsByMAC[firstAllocatedMAC.String()]
+		Expect(firstIface.SecondaryIPv4Addrs).To(ConsistOf(addrs))
+		// Second interface should have the remainder.
+		secondIface := response.SecondaryNICsByMAC[secondAllocatedMAC.String()]
+		Expect(secondIface.SecondaryIPv4Addrs).To(HaveLen(0))
+	}
+}
+
+func nWorkloadDatastore(n int) (DatastoreState, []ip.Addr) {
+	ds := DatastoreState{
+		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{},
+		LocalRouteDestsBySubnetID: map[string]set.Set{
+			subnetIDWest1Calico: set.New(),
+		},
+		PoolIDsBySubnetID: defaultPools,
+	}
+	var addrs []ip.Addr
+
+	for i := 0; i < n; i++ {
+		addr := ip.V4Addr{100, 64, 1, byte(64 + i)}
+		addrs = append(addrs, addr)
+		ds.LocalAWSRoutesByDst[addr.AsCIDR()] = &proto.RouteUpdate{
+			Dst:           addr.AsCIDR().String(),
+			LocalWorkload: true,
+			AwsSubnetId:   subnetIDWest1Calico,
+		}
+		ds.LocalRouteDestsBySubnetID[subnetIDWest1Calico].Add(addr.AsCIDR())
+	}
+	return ds, addrs
+}
+
 // TODO Security group copying
-// TODO max out number of IPs
 // TODO non-local workload
 // TODO Local workload clashes with primary IP
-// TODO Add second workload; first workload should be unaffected
 // TODO UnassignPrivateIpAddresses fails
 // TODO DetachNetworkInterface fails
 // TODO DeleteNEtowrkInterface fails
