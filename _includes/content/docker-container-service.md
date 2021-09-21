@@ -16,11 +16,11 @@ kubectl create clusterrolebinding $SA_NAME --serviceaccount=calico-system:$HOST_
 > applied to other init daemons such as upstart.
 {: .alert .alert-info}
 
-#### Step 3: Create environment file
+#### Step 2: Create environment file
 
 {% include content/environment-file.md install="container" target="calico/node" %}
 
-#### Step 4: Configure the init system
+#### Step 3: Configure the init system
 
 Use an init daemon (like systemd or upstart) to start the the {{site.nodecontainer}} image as a service using the EnvironmentFile values.
 
