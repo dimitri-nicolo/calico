@@ -256,9 +256,9 @@ var (
 	// ENI ID we can be sure that the expected number of allocations took place (at the cost of having
 	// different expected return values depending on how many have taken place).
 
-	firstAllocatedENIID = "eni-00000000000001000"
+	firstAllocatedENIID   = "eni-00000000000001000"
 	firstAllocatedMAC, _  = net.ParseMAC("00:00:00:00:10:00")
-	secondAllocatedENIID = "eni-00000000000001001"
+	secondAllocatedENIID  = "eni-00000000000001001"
 	secondAllocatedMAC, _ = net.ParseMAC("00:00:00:00:10:01")
 
 	// Canned responses.
@@ -416,6 +416,16 @@ func setup(t *testing.T) (*SecondaryIfaceProvisioner, *sipTestFakes) {
 		},
 		PrivateIpAddress: stringPtr("192.164.1.5"),
 		MacAddress:       stringPtr(primaryNICMAC),
+		Groups: []types.GroupIdentifier{
+			{
+				GroupId:   stringPtr("sg-01234567890123456"),
+				GroupName: stringPtr("sg-01234567890123456 name"),
+			},
+			{
+				GroupId:   stringPtr("sg-01234567890123457"),
+				GroupName: stringPtr("sg-01234567890123457 name"),
+			},
+		},
 	}
 
 	sip := NewSecondaryIfaceProvisioner(
@@ -522,6 +532,32 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_Mainline(t *testing.T)
 	Eventually(fake.CapacityC).Should(Receive(Equal(SecondaryIfaceCapacities{
 		MaxCalicoSecondaryIPs: t3LargeCapacity,
 	})))
+
+	// Check the NIC looks right on the AWS side.
+	nic := fake.EC2.GetNIC(firstAllocatedENIID)
+	Expect(nic.Groups).To(ConsistOf(
+		types.GroupIdentifier{
+			GroupId:   stringPtr("sg-01234567890123456"),
+			GroupName: stringPtr("sg-01234567890123456 name"),
+		},
+		types.GroupIdentifier{
+			GroupId:   stringPtr("sg-01234567890123457"),
+			GroupName: stringPtr("sg-01234567890123457 name"),
+		},
+	), "ENI should have same security groups as primary ENI")
+	Expect(nic.Status).To(Equal(types.NetworkInterfaceStatusAssociated), "Expected NIC to be attached.")
+	Expect(nic.Attachment).ToNot(BeNil(), "Expected NIC to be attached.")
+	Expect(*nic.Attachment.InstanceId).To(Equal(instanceID), "Expected NIC to be attached to correct isntance.")
+	Expect(nic.TagSet).To(ConsistOf([]types.Tag{
+		{
+			Key:   stringPtr("calico:instance"),
+			Value: stringPtr("i-ca1ic000000000001"),
+		},
+		{
+			Key:   stringPtr("calico:use"),
+			Value: stringPtr("secondary"),
+		},
+	}))
 
 	// Remove the workload again, IP should be released.
 	sip.OnDatastoreUpdate(noWorkloadDatastore)
@@ -951,8 +987,6 @@ func TestSecondaryIfaceProvisioner_IPAMAssignFailure(t *testing.T) {
 	fake.expectSingleBackoffAndStep()
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
 }
-
-// TODO Security group copying
 
 // errNotFound returns an error with the same structure as the AWSv2 client returns.  The code under test
 // unwraps errors with errors.As() so it's important that we return something that's the right shape.

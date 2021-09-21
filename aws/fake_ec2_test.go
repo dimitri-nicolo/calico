@@ -373,6 +373,14 @@ func (f *fakeEC2) CreateNetworkInterface(ctx context.Context, params *ec2.Create
 			tags = append(tags, t)
 		}
 	}
+	var sgs []types.GroupIdentifier
+
+	for _, g := range params.Groups{
+		sgs = append(sgs, types.GroupIdentifier{
+			GroupId:   stringPtr(g),
+			GroupName: stringPtr(g + " name"),
+		})
+	}
 
 	nic := types.NetworkInterface{
 		NetworkInterfaceId: stringPtr(nicID),
@@ -382,7 +390,7 @@ func (f *fakeEC2) CreateNetworkInterface(ctx context.Context, params *ec2.Create
 			Status: types.AttachmentStatusDetached,
 		},
 		AvailabilityZone: stringPtr(azWest1),
-		Groups:           nil, // FIXME
+		Groups:           sgs,
 		InterfaceType:    "eni",
 		MacAddress:       stringPtr(mac.String()),
 		PrivateIpAddress: params.PrivateIpAddress,
@@ -705,4 +713,11 @@ func (f *fakeEC2) NumNICs() int {
 	defer f.lock.Unlock()
 
 	return len(f.NICsByID)
+}
+
+func (f *fakeEC2) GetNIC(eniid string) types.NetworkInterface {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	return f.NICsByID[eniid]
 }
