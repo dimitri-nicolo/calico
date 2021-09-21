@@ -261,8 +261,6 @@ func (processor *PacketProcessor) Start() {
 
 func (processor *PacketProcessor) Stop() {
 	close(processor.done)
-
-	processor.timeManager.Stop()
 }
 
 func (processor *PacketProcessor) listenForIncomingPackets() {
@@ -275,7 +273,7 @@ func (processor *PacketProcessor) listenForIncomingPackets() {
 	defer ticker.Stop()
 	defer close(processor.packetReleaseChan)
 	defer close(processor.packetFinalReleaseChan)
-
+	defer processor.timeManager.Stop()
 done:
 	for {
 		select {
