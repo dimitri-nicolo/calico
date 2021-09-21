@@ -121,13 +121,19 @@ func (r *REST) Create(ctx context.Context, obj runtime.Object, _ rest.ValidateOb
 				} else if ms[i].Namespace > ms[j].Namespace {
 					return false
 				}
-				return ms[i].Tier < ms[j].Tier
+				if ms[i].Tier < ms[j].Tier {
+					return true
+				} else if ms[i].Tier > ms[j].Tier {
+					return false
+				}
+				return ms[i].UISettingsGroup < ms[j].UISettingsGroup
 			})
 
 			for _, m := range ms {
 				rgs = append(rgs, v3.AuthorizedResourceGroup{
-					Tier:      m.Tier,
-					Namespace: m.Namespace,
+					Tier:            m.Tier,
+					Namespace:       m.Namespace,
+					UISettingsGroup: m.UISettingsGroup,
 				})
 			}
 			res.Verbs = append(res.Verbs, v3.AuthorizedResourceVerb{

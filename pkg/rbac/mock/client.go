@@ -23,6 +23,7 @@ type MockClient struct {
 	ClusterRoleBindings []string
 	Namespaces          []string
 	Tiers               []string
+	UISettingsGroups    []string
 	ResourcesQueries    int
 }
 
@@ -59,6 +60,8 @@ func (m *MockClient) ServerPreferredResources() ([]*meta_v1.APIResourceList, err
 				{Name: "stagedglobalnetworkpolicies", Namespaced: false},
 				{Name: "networksets", Namespaced: true},
 				{Name: "globalnetworksets", Namespaced: false},
+				{Name: "uisettings", Namespaced: false},
+				{Name: "uisettingsgroups", Namespaced: false},
 			},
 		},
 
@@ -204,4 +207,21 @@ func (m *MockClient) ListTiers() ([]*v3.Tier, error) {
 		}
 	}
 	return tiers, nil
+}
+
+func (m *MockClient) ListUISettingsGroups() ([]*v3.UISettingsGroup, error) {
+	if m.UISettingsGroups == nil {
+		log.Debug("ListUISettingsGroups returning error")
+		return nil, fmt.Errorf("no UISettingsGroups set")
+	}
+	log.Debugf("ListUISettingsGroups returning %d results", len(m.UISettingsGroups))
+	gps := make([]*v3.UISettingsGroup, len(m.UISettingsGroups))
+	for i, name := range m.UISettingsGroups {
+		gps[i] = &v3.UISettingsGroup{
+			ObjectMeta: meta_v1.ObjectMeta{
+				Name: name,
+			},
+		}
+	}
+	return gps, nil
 }
