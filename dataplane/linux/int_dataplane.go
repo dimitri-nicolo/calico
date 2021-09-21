@@ -28,6 +28,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/projectcalico/felix/dataplane/linux/debugconsole"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
@@ -217,6 +219,7 @@ type Config struct {
 	SidecarAccelerationEnabled bool
 
 	DebugSimulateDataplaneHangAfter time.Duration
+	DebugConsoleEnabled             bool
 	DebugUseShortPollIntervals      bool
 
 	FelixHostname string
@@ -250,9 +253,11 @@ type Config struct {
 	DNSExtraTTL          time.Duration
 	DNSLogsLatency       bool
 
-	DNSPolicyNfqueueID    int
-	DebugDNSResponseDelay time.Duration
-	LookPathOverride      func(file string) (string, error)
+	DNSPolicyNfqueueID              int
+	DebugDNSResponseDelay           time.Duration
+	DisableDNSPolicyPacketProcessor bool
+
+	LookPathOverride func(file string) (string, error)
 
 	IPAMClient    ipam.Interface
 	KubeClientSet *kubernetes.Clientset
@@ -379,9 +384,10 @@ type InternalDataplane struct {
 
 	loopSummarizer *logutils.Summarizer
 
-	packetProcessor *nfqdnspolicy.PacketProcessor
-	awsStateUpdC    <-chan *aws.IfaceState
-	awsSubnetMgr    *awsIPManager
+	packetProcessorRestarter *nfqdnspolicy.PacketProcessorWithNfqueueRestarter
+
+	awsStateUpdC <-chan *aws.IfaceState
+	awsSubnetMgr *awsIPManager
 }
 
 const (
@@ -451,17 +457,14 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		stopChan:          stopChan,
 	}
 
-	if config.RulesConfig.IptablesMarkDNSPolicy != 0x0 {
-		nf, err := nfqueue.NewNfqueue(config.DNSPolicyNfqueueID)
+	if config.RulesConfig.IptablesMarkDNSPolicy != 0x0 && !config.DisableDNSPolicyPacketProcessor {
+		packetProcessorRestarter := nfqdnspolicy.NewPacketProcessorWithNfqueueRestarter(
+			nfqueue.DefaultNfqueueCreator(config.DNSPolicyNfqueueID),
+			config.RulesConfig.IptablesMarkSkipDNSPolicyNfqueue)
 
-		if err == nil {
-			packetProcessor := nfqdnspolicy.NewPacketProcessor(nf, config.RulesConfig.IptablesMarkSkipDNSPolicyNfqueue)
+		packetProcessorRestarter.Start()
 
-			packetProcessor.Start()
-			dp.packetProcessor = packetProcessor
-		} else {
-			log.WithError(err).Error("failed to open NFQUEUE, DNS optimizations are now disabled")
-		}
+		dp.packetProcessorRestarter = packetProcessorRestarter
 	}
 
 	dp.applyThrottle.Refill() // Allow the first apply() immediately.
@@ -1302,6 +1305,11 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	}
 
+	if config.DebugConsoleEnabled {
+		console := debugconsole.New(dp.packetProcessorRestarter)
+		console.Start()
+	}
+
 	return dp
 }
 
@@ -1522,8 +1530,8 @@ func (d *InternalDataplane) Start() {
 }
 
 func (d *InternalDataplane) Stop() {
-	if d.packetProcessor != nil {
-		d.packetProcessor.Stop()
+	if d.packetProcessorRestarter != nil {
+		d.packetProcessorRestarter.Stop()
 	}
 }
 

@@ -129,6 +129,12 @@ func (f *Felix) ReadFlowLogsFile() ([]collector.FlowLog, error) {
 	return flowLogs, nil
 }
 
+func (f *Felix) RunDebugConsoleCommand(commandAndArgs ...string) (string, error) {
+	f.EnsureBinary("run-debug-console-command")
+	return f.ExecCombinedOutput(append([]string{"/run-debug-console-command"}, commandAndArgs...)...)
+
+}
+
 func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 	log.Info("Starting felix")
 	ipv6Enabled := fmt.Sprint(options.EnableIPv6)

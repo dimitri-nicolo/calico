@@ -699,7 +699,7 @@ func (s *DomainInfoStore) GetDomainIPs(domain string) []string {
 		}
 		s.resultsCache[domain] = ips
 	}
-	log.Infof("GetDomainIPs(%v) -> %v", domain, ips)
+	log.Debugf("GetDomainIPs(%v) -> %v", domain, ips)
 	return ips
 }
 

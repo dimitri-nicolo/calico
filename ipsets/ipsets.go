@@ -775,7 +775,7 @@ func (s *IPSets) writeUpdates(ipSet *ipSet, w io.Writer) error {
 			logCxt.Debug("Skipping delta write, IP set not dirty.")
 			return nil
 		}
-		logCxt.Info("Calculating deltas to IP set")
+		logCxt.Debug("Calculating deltas to IP set")
 		return s.writeDeltas(ipSet, w, logCxt)
 	}
 	// In full-rewrite mode.

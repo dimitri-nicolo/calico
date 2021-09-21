@@ -375,7 +375,7 @@ func (f *fakeEC2) CreateNetworkInterface(ctx context.Context, params *ec2.Create
 	}
 	var sgs []types.GroupIdentifier
 
-	for _, g := range params.Groups{
+	for _, g := range params.Groups {
 		sgs = append(sgs, types.GroupIdentifier{
 			GroupId:   stringPtr(g),
 			GroupName: stringPtr(g + " name"),
