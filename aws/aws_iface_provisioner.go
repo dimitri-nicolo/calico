@@ -48,6 +48,48 @@ type ipamInterface interface {
 // Compile-time assert: ipamInterface should match the real interface.
 var _ ipamInterface = ipam.Interface(nil)
 
+// SecondaryIfaceProvisioner manages the AWS resources required to route certain local workload traffic
+// (i.e. egress gateways) over the AWS fabric with a "real" AWS IP.
+//
+// As an API, it accepts snapshots of the current state of the relevant local workloads via the
+// OnDatastoreUpdate method.  That method queues the update to the background goroutine via a channel.
+// When the AWs state has converged, the background loop sends a response back on the ResponseC() channel.
+// This contains the state of the AWS interfaces attached to this host in order for the main dataplane
+// goroutine to program appropriate local routes.
+//
+// The background goroutine's main loop:
+// - Waits for a new snapshot.
+// - When a new snapshot arrives, it triggers a resync against AWS.
+// - On AWS or IPAM failure, it does exponential backoff.
+//
+// Resyncs consist of:
+// - Reading the capacity limits of our node type.
+// - Reading the current state of our instance and ENIs over the AWS API. If the node has additional
+//   non-calico ENIs they are taken into account when calculating the capacity available to Calico
+// - Call the "capacityCallback" to tell other components how many IPs we can support.
+// - Analysing the datastore state to choose a single "best" AWS subnet.  We only support a single AWS
+//   subnet per node to avoid having to balance IPs between multiple ENIs on different subnets.
+//   (It's a misconfiguration to have muiltiple valid subnets but we need to tolerate it to do IP pool
+//   migrations.)
+// - Comparing the set of local workload routes against the IPs that we've already assigned to ENIs.
+// - Remove any AWs IPs that are no longer needed.
+// - If there are more IPs than the exisitng ENIs can handle, try to allocate additional host IPs in
+//   calico IPAM and then create and attach new AWS ENIs with those IPs.
+// - Allocate the new IPs to ENIs and assign them in AWS.
+// - Respond to the main thread.
+//
+// Since failures can occur at any stage, we check for
+// - Leaked IPs
+// - Created but unattached ENIs
+// - etc
+// and clean those up pro-actively.
+//
+// If the number of local workloads we need exceeds the capacity of the node for secondary ENIs then we
+// make a best effort; assigning as many as possible and signaling the problem through a health report.
+//
+//
+// To ensure that we can spot _our_ ENIs even if we fail to attach them, we label them with a "tag" containing
+// our instance ID at creation time.
 type SecondaryIfaceProvisioner struct {
 	nodeName     string
 	timeout      time.Duration
@@ -103,7 +145,6 @@ func OptTimeout(to time.Duration) IfaceProvOpt {
 }
 
 func OptCapacityCallback(cb func(SecondaryIfaceCapacities)) IfaceProvOpt {
-
 	return func(provisioner *SecondaryIfaceProvisioner) {
 		provisioner.capacityCallback = cb
 	}
