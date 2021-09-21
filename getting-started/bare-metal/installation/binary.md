@@ -13,28 +13,27 @@ Install {{site.prodname}} directly when a package manager isn't available, or yo
 ### Before you begin
 
 1. Ensure the {{site.prodname}} datastore is up and accessible from the host
-2. Ensure the host meets the minimum [system requirements](../requirements)
-3. If you want to install {{site.prodname}} with networking (so that you can communicate with cluster workloads), you should choose the [container install method](./container)
-4. [Install and configure `calicoctl`]({{site.baseurl}}/maintenance/clis/calicoctl/)
+1. Ensure the host meets the minimum [system requirements](../requirements)
+1. If you want to install {{site.prodname}} with networking (so that you can communicate with cluster workloads), you should choose the [container install method](./container)
+1. [Install and configure `calicoctl`]({{site.baseurl}}/maintenance/clis/calicoctl/)
 
 ### How to
 
 This guide covers installing Felix, the {{site.prodname}} daemon that handles network policy.
 
-#### Step 1: (Optional) Create a kubeconfig for the host
+#### Step 1: (Optional) Configure access for the non-cluster-host
 In order to run Calico Node as a binary, it will need a kubeconfig. You can skip this step if you already have a kubeconfig ready to use.
 
 {% include content/create-kubeconfig.md %}
 
-#### Step 2: (Optional) Grant the read-only RBAC permissions to your service account
 Run the following two commands to create a cluster role with read-only access and a corresponding cluster role binding.
 
 ```bash
 kubectl apply -f {{ "/manifests/non-cluster-host-clusterrole.yaml" | absolute_url }}
-kubectl create clusterrolebinding $HOST_NAME --serviceaccount=calico-system:$HOST_NAME --clusterrole=non-cluster-host
+kubectl create clusterrolebinding $SA_NAME --serviceaccount=calico-system:$HOST_NAME --clusterrole=non-cluster-host-read-only
 ```
 
-#### Step 3: Download and extract the binary
+#### Step 2: Download and extract the binary
 
 This step requires Docker, but it can be run from any machine with Docker installed. It doesn't have to be the host you will run it on (i.e your laptop is fine).
 
@@ -78,15 +77,15 @@ This step requires Docker, but it can be run from any machine with Docker instal
    chmod +x {{site.nodecontainer}}
    ```
 
-#### Step 4: Copy the `calico-node` binary
+#### Step 3: Copy the `calico-node` binary
 
 Copy the binary from Step 1 to the target machine, using any means (`scp`, `ftp`, USB stick, etc.).
 
-#### Step 5: Create environment file
+#### Step 4: Create environment file
 
 {% include content/environment-file.md install="binary" target="felix" %}
 
-#### Step 6: Create a start-up script
+#### Step 5: Create a start-up script
 
 Felix should be started at boot by your init system and the init system
 **must** be configured to restart Felix if it stops. Felix relies on
@@ -166,7 +165,7 @@ Once you've configured Felix, start it up via your init system.
 ```bash
 service calico-felix start
 ```
-#### Step 5: Initialize the datastore
+#### Step 6: Initialize the datastore
 
 {% include content/felix-init-datastore.md %}
 

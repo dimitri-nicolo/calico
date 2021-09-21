@@ -2,13 +2,13 @@
 1. Create a service account
 
    ```bash
-   HOST_NAME=my-host
-   kubectl create serviceaccount $HOST_NAME -n calico-system -o yaml
+   SA_NAME=my-host
+   kubectl create serviceaccount $SA_NAME -n calico-system -o yaml
    ```
 
 1. Obtain the token for the secret associated with your host
    ```bash
-   kubectl describe secret -n calico-system $(kubectl get serviceaccount -n calico-system $HOST_NAME -o=jsonpath="{.secrets[0].name}")
+   kubectl describe secret -n calico-system $(kubectl get serviceaccount -n calico-system $SA_NAME -o=jsonpath="{.secrets[0].name}")
    ```
 
 1. Use a text editor to create a kubeconfig file

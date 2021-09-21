@@ -22,20 +22,19 @@ Packaged binaries of {{site.prodname}} are easy to consume and upgrade. This met
 
 This guide covers installing Felix, the {{site.prodname}} daemon that handles network policy.
 
-#### Step 1: (Optional) Create a kubeconfig for the host
+#### Step 1: (Optional) Configure access for the non-cluster-host
 In order to run Calico Node as a binary, it will need a kubeconfig. You can skip this step if you already have a kubeconfig ready to use.
 
 {% include content/create-kubeconfig.md %}
 
-#### Step 2: (Optional) Grant the read-only RBAC permissions to your service account
 Run the following two commands to create a cluster role with read-only access and a corresponding cluster role binding.
 
 ```bash
 kubectl apply -f {{ "/manifests/non-cluster-host-clusterrole.yaml" | absolute_url }}
-kubectl create clusterrolebinding $HOST_NAME --serviceaccount=calico-system:$HOST_NAME --clusterrole=non-cluster-host
+kubectl create clusterrolebinding $SA_NAME --serviceaccount=calico-system:$HOST_NAME --clusterrole=non-cluster-host-read-only
 ```
 
-#### Step 3: Install binaries
+#### Step 2: Install binaries
 
 {% include ppa_repo_name %}
 
@@ -65,7 +64,7 @@ Until you initialize the database, Felix will make a regular log that it
 is in state "wait-for-ready". The default location for the log file is
 `/var/log/calico/felix.log`.
 
-#### Step 4: Configure the datastore connection
+#### Step 3: Configure the datastore connection
 
 {% include content/environment-file.md target="felix" %}
 
@@ -75,6 +74,6 @@ Modify the included init system unit to include the `EnvironmentFile`.  For exam
 EnvironmentFile=/etc/calico/calico.env
 ```
 
-#### Step 5: Initialize the datastore
+#### Step 4: Initialize the datastore
 
 {% include content/felix-init-datastore.md %}
