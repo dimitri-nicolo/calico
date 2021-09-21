@@ -5,7 +5,7 @@ canonical_url: '/getting-started/bare-metal/installation/binary'
 ---
 
 ### Big picture
-Install {{site.prodname}} binary on non-cluster hosts without a package manager.
+Install Calico Node as binary on non-cluster hosts without a package manager.
 
 ### Value
 Install {{site.prodname}} directly when a package manager isn't available, or your provisioning system can easily handle copying binaries to hosts.
@@ -22,7 +22,7 @@ Install {{site.prodname}} directly when a package manager isn't available, or yo
 This guide covers installing Felix, the {{site.prodname}} daemon that handles network policy.
 
 #### Step 1: (Optional) Create a kubeconfig for the host
-In order to run {{site.prodname}} binary, it will need a kubeconfig. You can skip this step if you already have a kubeconfig ready to use.
+In order to run Calico Node as a binary, it will need a kubeconfig. You can skip this step if you already have a kubeconfig ready to use.
 
 {% include content/create-kubeconfig.md %}
 

@@ -23,7 +23,7 @@ Packaged binaries of {{site.prodname}} are easy to consume and upgrade. This met
 This guide covers installing Felix, the {{site.prodname}} daemon that handles network policy.
 
 #### Step 1: (Optional) Create a kubeconfig for the host
-In order to run {{site.prodname}} binary, it will need a kubeconfig. You can skip this step if you already have a kubeconfig ready to use.
+In order to run Calico Node as a binary, it will need a kubeconfig. You can skip this step if you already have a kubeconfig ready to use.
 
 {% include content/create-kubeconfig.md %}
 
