@@ -1039,6 +1039,8 @@ func (m *SecondaryIfaceProvisioner) freeUnusedHostCalicoIPs(awsNICState *nicSnap
 	if err != nil && !errors.Is(err, calierrors.ErrorResourceDoesNotExist{}) {
 		return fmt.Errorf("failed to look up our existing IPs: %w", err)
 	}
+
+	var finalErr error
 	for _, addr := range ourIPs {
 		cidr := ip.CIDRFromNetIP(addr.IP)
 		if _, ok := awsNICState.nicIDByPrimaryIP[cidr]; !ok {
@@ -1050,11 +1052,12 @@ func (m *SecondaryIfaceProvisioner) freeUnusedHostCalicoIPs(awsNICState *nicSnap
 			if err != nil {
 				logrus.WithError(err).WithField("ip", addr).Error(
 					"Failed to free host IP that we no longer need.")
+				finalErr = err
 			}
 		}
 	}
 
-	return nil
+	return finalErr
 }
 
 // calculateNumNewNICsNeeded does the maths to figure out how many NICs we need to add given the number of
