@@ -1,7 +1,7 @@
 This section describes how to run `{{site.nodecontainer}}` as a Docker container.
 
 #### Step 1: (Optional) Create a kubeconfig for the host
-In order to run {{site.prodname}} binary, it will need a kubeconfig. You can skip this step if you already have a kubeconfig ready to use.
+In order to run Calico Node as a container, it will need a kubeconfig. You can skip this step if you already have a kubeconfig ready to use.
 
 {% include content/create-kubeconfig.md %}
 
