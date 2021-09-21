@@ -40,6 +40,6 @@ require (
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/sirupsen/logrus v1.7.0
 	github.com/tigera/licensing v1.0.1-0.20210921001346-c6d34de49578
-	github.com/tigera/lma v0.0.0-20210921002351-c3ddfa75b00e
+	github.com/tigera/lma v0.0.0-20210921142715-a6fed1344632
 	k8s.io/client-go v11.0.0+incompatible // indirect
 )
