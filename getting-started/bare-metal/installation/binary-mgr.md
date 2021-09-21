@@ -13,10 +13,12 @@ Packaged binaries of {{site.prodname}} are easy to consume and upgrade. This met
 ### Before you begin
 
 1. Ensure the {{site.prodname}} datastore is up and accessible from the host
-1. Ensure the host meets the minimum [system requirements](../requirements)
-1. If your system is not an Ubuntu- or RedHat-derived system, you will need to choose a different install method.
-1. If you want to install {{site.prodname}} with networking (so that you can communicate with cluster workloads), you should choose the [container install method](./container)
-1. [Install and configure `calicoctl`]({{site.baseurl}}/maintenance/clis/calicoctl/)
+2. Ensure the host meets the minimum [system requirements](../requirements)
+3. If your system is not an Ubuntu- or RedHat-derived system, you will need to choose a different install method.
+4. If you want to install {{site.prodname}} with networking (so that you can communicate with cluster workloads), you should choose the [container install method](./container)
+5. [Install and configure `calicoctl`]({{site.baseurl}}/maintenance/clis/calicoctl/)
+6. Create a kubeconfig for your node and bind it to an RBAC role. The minimum permissions can be found in [this manifest]({{ "/manifests/non-cluster-host-clusterrole.yaml" | absolute_url }}).
+
 
 ### How to
 
