@@ -13,16 +13,28 @@ Packaged binaries of {{site.prodname}} are easy to consume and upgrade. This met
 ### Before you begin
 
 1. Ensure the {{site.prodname}} datastore is up and accessible from the host
-1. Ensure the host meets the minimum [system requirements](../requirements)
-1. If your system is not an Ubuntu- or RedHat-derived system, you will need to choose a different install method.
-1. If you want to install {{site.prodname}} with networking (so that you can communicate with cluster workloads), you should choose the [container install method](./container)
-1. [Install and configure `calicoctl`]({{site.baseurl}}/maintenance/clis/calicoctl/)
+2. Ensure the host meets the minimum [system requirements](../requirements)
+3. If your system is not an Ubuntu- or RedHat-derived system, you will need to choose a different install method.
+4. If you want to install {{site.prodname}} with networking (so that you can communicate with cluster workloads), you should choose the [container install method](./container)
+5. [Install and configure `calicoctl`]({{site.baseurl}}/maintenance/clis/calicoctl/)
 
 ### How to
 
 This guide covers installing Felix, the {{site.prodname}} daemon that handles network policy.
 
-#### Step 1: Install binaries
+#### Step 1: (Optional) Configure access for the non-cluster-host
+In order to run Calico Node as a binary, it will need a kubeconfig. You can skip this step if you already have a kubeconfig ready to use.
+
+{% include content/create-kubeconfig.md %}
+
+Run the following two commands to create a cluster role with read-only access and a corresponding cluster role binding.
+
+```bash
+kubectl apply -f {{ "/manifests/non-cluster-host-clusterrole.yaml" | absolute_url }}
+kubectl create clusterrolebinding $SA_NAME --serviceaccount=calico-system:$HOST_NAME --clusterrole=non-cluster-host-read-only
+```
+
+#### Step 2: Install binaries
 
 {% include ppa_repo_name %}
 
@@ -52,7 +64,7 @@ Until you initialize the database, Felix will make a regular log that it
 is in state "wait-for-ready". The default location for the log file is
 `/var/log/calico/felix.log`.
 
-#### Step 2: Configure the datastore connection
+#### Step 3: Configure the datastore connection
 
 {% include content/environment-file.md target="felix" %}
 
@@ -62,6 +74,6 @@ Modify the included init system unit to include the `EnvironmentFile`.  For exam
 EnvironmentFile=/etc/calico/calico.env
 ```
 
-#### Step 3: Initialize the datastore
+#### Step 4: Initialize the datastore
 
 {% include content/felix-init-datastore.md %}

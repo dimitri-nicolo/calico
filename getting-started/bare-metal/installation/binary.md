@@ -5,7 +5,7 @@ canonical_url: '/getting-started/bare-metal/installation/binary'
 ---
 
 ### Big picture
-Install {{site.prodname}} binary on non-cluster hosts without a package manager.
+Install Calico Node as binary on non-cluster hosts without a package manager.
 
 ### Value
 Install {{site.prodname}} directly when a package manager isn't available, or your provisioning system can easily handle copying binaries to hosts.
@@ -21,7 +21,19 @@ Install {{site.prodname}} directly when a package manager isn't available, or yo
 
 This guide covers installing Felix, the {{site.prodname}} daemon that handles network policy.
 
-#### Step 1: Download and extract the binary
+#### Step 1: (Optional) Configure access for the non-cluster-host
+In order to run Calico Node as a binary, it will need a kubeconfig. You can skip this step if you already have a kubeconfig ready to use.
+
+{% include content/create-kubeconfig.md %}
+
+Run the following two commands to create a cluster role with read-only access and a corresponding cluster role binding.
+
+```bash
+kubectl apply -f {{ "/manifests/non-cluster-host-clusterrole.yaml" | absolute_url }}
+kubectl create clusterrolebinding $SA_NAME --serviceaccount=calico-system:$HOST_NAME --clusterrole=non-cluster-host-read-only
+```
+
+#### Step 2: Download and extract the binary
 
 This step requires Docker, but it can be run from any machine with Docker installed. It doesn't have to be the host you will run it on (i.e your laptop is fine).
 
@@ -65,15 +77,15 @@ This step requires Docker, but it can be run from any machine with Docker instal
    chmod +x {{site.nodecontainer}}
    ```
 
-#### Step 2: Copy the `calico-node` binary
+#### Step 3: Copy the `calico-node` binary
 
 Copy the binary from Step 1 to the target machine, using any means (`scp`, `ftp`, USB stick, etc.).
 
-#### Step 3: Create environment file
+#### Step 4: Create environment file
 
 {% include content/environment-file.md install="binary" target="felix" %}
 
-#### Step 4: Create a start-up script
+#### Step 5: Create a start-up script
 
 Felix should be started at boot by your init system and the init system
 **must** be configured to restart Felix if it stops. Felix relies on
@@ -153,7 +165,7 @@ Once you've configured Felix, start it up via your init system.
 ```bash
 service calico-felix start
 ```
-#### Step 5: Initialize the datastore
+#### Step 6: Initialize the datastore
 
 {% include content/felix-init-datastore.md %}
 

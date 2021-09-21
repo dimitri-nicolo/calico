@@ -8,13 +8,13 @@ canonical_url: '/getting-started/bare-metal/installation/container'
 Install {{site.prodname}} on non-cluster hosts using a Docker container for both networking and policy.
 
 ### Value
-Installing {{site.prodname}} with a Docker container includes everything you need for both networking and policy. It also automatically adds the appropriate per-node configuration to the datastore.
+Installing {{site.prodname}} with a Docker container includes everything you need for both networking and policy.
 
 ### Before you begin
 
 1. Ensure Docker is installed
-1. Ensure the {{site.prodname}} datastore is up and accessible from the host
-1. Ensure the host meets the minimum [system requirements](../requirements)
+2. Ensure the {{site.prodname}} datastore is up and accessible from the host
+3. Ensure the host meets the minimum [system requirements](../requirements)
 
 ### How to
 
