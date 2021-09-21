@@ -896,8 +896,8 @@ github.com/tigera/api v0.0.0-20210917233738-3fea29c333ab h1:Mkmq+jrtg0mshOQx2Fqk
 github.com/tigera/api v0.0.0-20210917233738-3fea29c333ab/go.mod h1:tQDYzO/oh0HZL2MpIwyijRwJf67hPR/Gkex1vt9EwLE=
 github.com/tigera/apiserver v0.0.0-20210921003414-58c39e3b6f2a h1:75Ye9T3hYLQwny/matgR49hIOjN7C2m2d1ti2TZ1Bo4=
 github.com/tigera/apiserver v0.0.0-20210921003414-58c39e3b6f2a/go.mod h1:0JQgUwm7wa9FUKvPmJjvMuBzlLrGJSbG3AZfk1aU048=
-github.com/tigera/compliance v0.0.0-20210921145716-0985b6fcdccb h1:Rb3itmYTISAVQQn+v26pzElFHMUWrsnP2mPQKa1oJxI=
-github.com/tigera/compliance v0.0.0-20210921145716-0985b6fcdccb/go.mod h1:f2IhDiYvSPGArXroOJaRFqGWvI9a7tvtGDnG9GTPjQQ=
+github.com/tigera/compliance v0.0.0-20210921153056-9ecf9cedc4e2 h1:Q0ii44umrs4uvWpw/ai8jdQU/jipOfA5tT7dXDyUtzY=
+github.com/tigera/compliance v0.0.0-20210921153056-9ecf9cedc4e2/go.mod h1:Au2t1XXweioNSm/XwjrBRl1dbcQqZYPcL0HtFZ930Q0=
 github.com/tigera/felix-private v0.0.0-20210921134702-a09c0a8fb9ed h1:A3cAAV127hscRe5nj3xp6rp59Bh06+4x1YcMWNAySaM=
 github.com/tigera/felix-private v0.0.0-20210921134702-a09c0a8fb9ed/go.mod h1:pnlu57pcmiEsry5GhJYZcCt/DY2o1UjvLjv6MK65e4Y=
 github.com/tigera/libcalico-go-private v1.7.2-0.20210920180715-4da3c75f1eca h1:f5123eHNNAGxZyLeN4hTYWLHKvI0XCcuXNiOUh5MCks=
@@ -906,8 +906,6 @@ github.com/tigera/licensing v1.0.1-0.20210910000828-1c102b4795e1 h1:qrYoukLsJt7u
 github.com/tigera/licensing v1.0.1-0.20210910000828-1c102b4795e1/go.mod h1:ndfYz0WYwxlQI9vpQUme1iWxPhLwM7gZsHtkjsbkgU8=
 github.com/tigera/licensing v1.0.1-0.20210921001346-c6d34de49578 h1:m2u3pfdGr+2YqWwLBaLZTtMp3hVLRqw8OJj/90lkv+M=
 github.com/tigera/licensing v1.0.1-0.20210921001346-c6d34de49578/go.mod h1:NA90fGKdkcuNdV38r1nDZCleZqKKZwNzbnNW4Nt5t8g=
-github.com/tigera/lma v0.0.0-20210921142715-a6fed1344632 h1:MHSeikCsOgU25AxGKA+3O5Lx21ibi1Umqvzs6q9okTk=
-github.com/tigera/lma v0.0.0-20210921142715-a6fed1344632/go.mod h1:OnuDwx7vH4XPKMHHa38Hl2TUuB6LUX28pAL5cV9K8BA=
 github.com/tigera/lma v0.0.0-20210921145543-4f129c52d16a h1:x3BcEVM3O55j3HZDJ0WRJFI65uFEspVRilo9fOxMImw=
 github.com/tigera/lma v0.0.0-20210921145543-4f129c52d16a/go.mod h1:OnuDwx7vH4XPKMHHa38Hl2TUuB6LUX28pAL5cV9K8BA=
 github.com/tigera/nfnetlink v0.0.0-20210819183736-75abca8ede69/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
