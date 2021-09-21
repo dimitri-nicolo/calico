@@ -16,7 +16,7 @@ require (
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/sirupsen/logrus v1.7.0
 	github.com/tigera/api v0.0.0-20210917233738-3fea29c333ab
-	github.com/tigera/licensing v1.0.1-0.20210921001346-c6d34de49578
+	github.com/tigera/licensing v1.0.1-0.20210921174157-1f272b1250af
 )
 
 replace (
