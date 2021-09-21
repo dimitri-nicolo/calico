@@ -286,7 +286,7 @@ var (
 		SubnetCIDR:  ip.MustParseCIDROrIP(subnetWest1CIDRCalico),
 		GatewayAddr: ip.FromString(subnetWest1GatewayCalico),
 	}
-	singleWorkloadResponseAltHostIP = &IfaceState{
+	responseSingleWorkloadOtherHostIP = &IfaceState{
 		PrimaryNICMAC: primaryNICMAC,
 		SecondaryNICsByMAC: map[string]Iface{
 			firstAllocatedMAC.String(): {
@@ -538,7 +538,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_ErrBackoff(t *testing.
 			if callToFail == "CreateNetworkInterface" {
 				// Failing CreateNetworkInterface triggers the allocated IP to be released and then a second
 				// allocation performed.
-				expResponse = singleWorkloadResponseAltHostIP
+				expResponse = responseSingleWorkloadOtherHostIP
 			}
 			Eventually(sip.ResponseC()).Should(Receive(Equal(expResponse)))
 
@@ -842,9 +842,31 @@ func TestSecondaryIfaceProvisioner_NoSecondaryIPsPossible(t *testing.T) {
 	Eventually(fake.Clock.HasWaiters).Should(BeTrue()) // Should keep backing off
 }
 
+func TestSecondaryIfaceProvisioner_IPAMCleanup(t *testing.T) {
+	sip, fake, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Pre-assign an IP to the node.  It should appear to be leaked and get cleaned up.
+	_, _, err := fake.IPAM.AutoAssign(context.TODO(), sip.ipamAssignArgs(1))
+	Expect(err).NotTo(HaveOccurred())
+	// Check we allocatred exactly what we expected.
+	addrs, err := fake.IPAM.IPsByHandle(context.TODO(), sip.ipamHandle())
+	Expect(err).NotTo(HaveOccurred())
+	Expect(addrs).To(ConsistOf(cnet.MustParseIP(calicoHostIP1)))
+
+	// Send snapshot with single workload.
+	sip.OnDatastoreUpdate(singleWorkloadDatastore)
+	// The IP we leaked gets released _first_ so we expect the second IP to get used for the new NIC.
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkloadOtherHostIP)))
+
+	// Check that the leaked IP was freed.
+	addrs, err = fake.IPAM.IPsByHandle(context.TODO(), sip.ipamHandle())
+	Expect(err).NotTo(HaveOccurred())
+	Expect(addrs).To(ConsistOf(cnet.MustParseIP(calicoHostIP2)))
+}
+
 // TODO Security group copying
-// TODO IPAM failure
-// TODO IPAM cleanup
+// TODO IPAM failures
 
 type fakeEC2 struct {
 	lock sync.Mutex

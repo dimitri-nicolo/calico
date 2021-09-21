@@ -1077,17 +1077,7 @@ func (m *SecondaryIfaceProvisioner) calculateNumNewNICsNeeded(awsNICState *nicSn
 func (m *SecondaryIfaceProvisioner) allocateCalicoHostIPs(numNICsNeeded int) (*ipam.IPAMAssignments, error) {
 	ipamCtx, ipamCancel := m.newContext()
 
-	handle := m.ipamHandle()
-	v4addrs, _, err := m.ipamClient.AutoAssign(ipamCtx, ipam.AutoAssignArgs{
-		Num4:     numNICsNeeded,
-		HandleID: &handle,
-		Attrs: map[string]string{
-			ipam.AttributeType: "aws-secondary-iface",
-			ipam.AttributeNode: m.nodeName,
-		},
-		Hostname:    m.nodeName,
-		IntendedUse: v3.IPPoolAllowedUseHostSecondary,
-	})
+	v4addrs, _, err := m.ipamClient.AutoAssign(ipamCtx, m.ipamAssignArgs(numNICsNeeded))
 	ipamCancel()
 	if err != nil {
 		return nil, err
@@ -1103,6 +1093,20 @@ func (m *SecondaryIfaceProvisioner) allocateCalicoHostIPs(numNICsNeeded int) (*i
 		}).Warn("Wasn't able to allocate enough ENI primary IPs. IP pool may be full.")
 	}
 	return v4addrs, nil
+}
+
+// ipamAssignArgs is mainly broken out for testing.
+func (m *SecondaryIfaceProvisioner) ipamAssignArgs(numNICsNeeded int) ipam.AutoAssignArgs {
+	return ipam.AutoAssignArgs{
+		Num4:     numNICsNeeded,
+		HandleID: stringPtr(m.ipamHandle()),
+		Attrs: map[string]string{
+			ipam.AttributeType: "aws-secondary-iface",
+			ipam.AttributeNode: m.nodeName,
+		},
+		Hostname:    m.nodeName,
+		IntendedUse: v3.IPPoolAllowedUseHostSecondary,
+	}
 }
 
 // createAWSNICs creates one AWS secondary ENI in the given subnet for each given IP address and attempts to
