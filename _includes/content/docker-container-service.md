@@ -1,14 +1,27 @@
 This section describes how to run `{{site.nodecontainer}}` as a Docker container.
 
+#### Step 1: (Optional) Create a kubeconfig for the host
+In order to run {{site.prodname}} binary, it will need a kubeconfig. You can skip this step if you already have a kubeconfig ready to use.
+
+{% include content/create-kubeconfig.md %}
+
+#### Step 2: (Optional) Grant the read-only RBAC permissions to your service account
+Run the following two commands to create a cluster role with read-only access and a corresponding cluster role binding.
+
+```bash
+kubectl apply -f {{ "/manifests/non-cluster-host-clusterrole.yaml" | absolute_url }}
+kubectl create clusterrolebinding $HOST_NAME --serviceaccount=calico-system:$HOST_NAME --clusterrole=non-cluster-host
+```
+
 > **Note**: We include examples for systemd, but the commands can be
 > applied to other init daemons such as upstart.
 {: .alert .alert-info}
 
-#### Step 1: Create environment file
+#### Step 3: Create environment file
 
 {% include content/environment-file.md install="container" target="calico/node" %}
 
-#### Step 2: Configure the init system
+#### Step 4: Configure the init system
 
 Use an init daemon (like systemd or upstart) to start the the {{site.nodecontainer}} image as a service using the EnvironmentFile values.
 

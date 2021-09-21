@@ -15,7 +15,6 @@ Installing {{site.prodname}} with a Docker container includes everything you nee
 1. Ensure Docker is installed
 2. Ensure the {{site.prodname}} datastore is up and accessible from the host
 3. Ensure the host meets the minimum [system requirements](../requirements)
-4. Create a kubeconfig for your node and bind it to an RBAC role. The minimum permissions can be found in [this manifest]({{ "/manifests/non-cluster-host-clusterrole.yaml" | absolute_url }}).
 
 ### How to
 
