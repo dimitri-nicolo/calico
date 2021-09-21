@@ -11,7 +11,7 @@ require (
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.6.1
 	github.com/tigera/api v0.0.0-20210917233738-3fea29c333ab
-	github.com/tigera/lma v0.0.0-20210921002351-c3ddfa75b00e
+	github.com/tigera/lma v0.0.0-20210921142715-a6fed1344632
 	k8s.io/api v0.21.0
 	k8s.io/apimachinery v0.21.0
 	k8s.io/apiserver v0.21.0
