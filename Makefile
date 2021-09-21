@@ -355,110 +355,25 @@ cd: check-dirty image-all cd-common
 ###############################################################################
 # Release
 ###############################################################################
-PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
 
-## Tags and builds a release from start to finish.
-release: release-prereqs
-	$(MAKE) VERSION=$(VERSION) release-tag
-	$(MAKE) VERSION=$(VERSION) release-build
-	$(MAKE) VERSION=$(VERSION) release-verify
-
-	@echo ""
-	@echo "Release build complete. Next, push the produced images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish"
-	@echo ""
-
-## Produces a git tag for the release.
-release-tag: release-prereqs release-notes
-	git tag $(VERSION) -F release-notes-$(VERSION)
-	@echo ""
-	@echo "Now you can build the release:"
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-build"
-	@echo ""
-
-## Produces a clean build of release artifacts at the specified version.
-release-build: release-prereqs clean
-# Check that the correct code is checked out.
-ifneq ($(VERSION), $(GIT_VERSION))
-	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
+release-verify-version: var-require-all-VERSION
+ifdef CONFIRM
+	$(eval CURRENT_RELEASE_VERSION := $(git-release-tag-for-current-commit))
+	$(if $(CURRENT_RELEASE_VERSION),,echo Current commit has not been tagged with a release version && exit 1)
+	$(if $(filter $(VERSION),$(git-release-tag-for-current-commit)),,\
+		echo Current version $(CURRENT_RELEASE_VERSION) does not match given version $(VERSION) && exit 1)
 endif
-	$(MAKE) build-all image-all
-	$(MAKE) retag-build-images-with-registries IMAGETAG=$(VERSION)
-	$(MAKE) retag-build-images-with-registries IMAGETAG=latest
 
-	# Copy the amd64 variant to calicoctl - for now various downstream projects
-	# expect this naming convention. Until they can be swapped over, we still need to
-	# publish a binary called calicoctl.
-	$(MAKE) bin/calicoctl
-
-## Verifies the release artifacts produces by `make release-build` are correct.
-release-verify: release-prereqs
-	# Check the reported version is correct for each release artifact.
-	if ! docker run $(CALICOCTL_IMAGE):$(VERSION)-$(ARCH) version | grep 'Version:\s*$(VERSION)$$'; then \
-	  echo "Reported version:" `docker run $(CALICOCTL_IMAGE):$(VERSION)-$(ARCH) version` "\nExpected version: $(VERSION)"; \
-	  false; \
-	else \
-	  echo "Version check passed\n"; \
-	fi
-
-## Generates release notes based on commits in this version.
-release-notes: release-prereqs
-	mkdir -p dist
-	echo "# Changelog" > release-notes-$(VERSION)
-	sh -c "git cherry -v $(PREVIOUS_RELEASE) | cut '-d ' -f 2- | sed 's/^/- /' >> release-notes-$(VERSION)"
-
-## Pushes a github release and release artifacts produced by `make release-build`.
-release-publish: release-prereqs
-	# Push the git tag.
-	git push origin $(VERSION)
-
-	# Push images.
-	$(MAKE) push-images-to-registries push-manifests IMAGETAG=$(VERSION)
-
-	# Push binaries to GitHub release.
-	# Requires ghr: https://github.com/tcnksm/ghr
-	# Requires GITHUB_TOKEN environment variable set.
-	ghr -u projectcalico -r calicoctl \
-		-b "Release notes can be found at https://docs.projectcalico.org" \
-		-n $(VERSION) \
-		$(VERSION) ./bin/
-
-	@echo "Confirm that the release was published at the following URL."
-	@echo ""
-	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
-	@echo ""
-	@echo "If this is the latest stable release, then run the following to push 'latest' images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish-latest"
-	@echo ""
-
-# WARNING: Only run this target if this release is the latest stable release. Do NOT
-# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
-## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
-release-publish-latest: release-prereqs
-	# Check latest versions match.
-	if ! docker run $(CALICOCTL_IMAGE):latest-$(ARCH) version | grep 'Version:\s*$(VERSION)$$'; then \
-	  echo "Reported version:" `docker run $(CALICOCTL_IMAGE):latest-$(ARCH) version` "\nExpected version: $(VERSION)"; \
-	  false; \
-	else \
-	  echo "Version check passed\n"; \
-	fi
-
-	$(MAKE) push-images-to-registries push-manifests IMAGETAG=latest
-
-# release-prereqs checks that the environment is configured properly to create a release.
-release-prereqs:
-ifndef VERSION
-	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
+## Builds and pushed binaries to the public s3 bucket.
+release-publish-binaries: var-require-one-of-CONFIRM-DRYRUN var-require-all-VERSION release-verify-version build-all
+ifdef CONFIRM
+	aws --profile helm s3 cp bin/calicoctl s3://tigera-public/ee/binaries/$(VERSION)/calicoctl --acl public-read
+	aws --profile helm s3 cp bin/calicoctl-darwin-amd64 s3://tigera-public/ee/binaries/$(VERSION)/calicoctl-darwin-amd64 --acl public-read
+	aws --profile helm s3 cp bin/calicoctl-windows-amd64.exe s3://tigera-public/ee/binaries/$(VERSION)/calicoctl-windows-amd64.exe --acl public-read
+else
+	@echo [DRYRUN] aws --profile helm s3 cp bin/calicoctl s3://tigera-public/ee/binaries/$(VERSION)/calicoctl --acl public-read
+	@echo [DRYRUN] aws --profile helm s3 cp bin/calicoctl-darwin-amd64 s3://tigera-public/ee/binaries/$(VERSION)/calicoctl-darwin-amd64 --acl public-read
+	@echo [DRYRUN] aws --profile helm s3 cp bin/calicoctl-windows-amd64.exe s3://tigera-public/ee/binaries/$(VERSION)/calicoctl-windows-amd64.exe --acl public-read
 endif
-ifdef LOCAL_BUILD
-	$(error LOCAL_BUILD must not be set for a release)
-endif
-ifndef GITHUB_TOKEN
-	$(error GITHUB_TOKEN must be set for a release)
-endif
-ifeq (, $(shell which ghr))
-	$(error Unable to find `ghr` in PATH, run this: go get -u github.com/tcnksm/ghr)
-endif
+
+
