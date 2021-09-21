@@ -252,11 +252,13 @@ var (
 		PoolIDsBySubnetID: alternatePools,
 	}
 
-	// Canned MAC addresses.  The fake EC2 allocates MACs in sequence so, by asserting the MAC and the
+	// Canned MAC addresses and IDs.  The fake EC2 allocates MACs in sequence so, by asserting the MAC and the
 	// ENI ID we can be sure that the expected number of allocations took place (at the cost of having
 	// different expected return values depending on how many have taken place).
 
+	firstAllocatedENIID = "eni-00000000000001000"
 	firstAllocatedMAC, _  = net.ParseMAC("00:00:00:00:10:00")
+	secondAllocatedENIID = "eni-00000000000001001"
 	secondAllocatedMAC, _ = net.ParseMAC("00:00:00:00:10:01")
 
 	// Canned responses.
@@ -271,7 +273,7 @@ var (
 		PrimaryNICMAC: primaryNICMAC,
 		SecondaryNICsByMAC: map[string]Iface{
 			firstAllocatedMAC.String(): {
-				ID:                 "eni-00000000000001000",
+				ID:                 firstAllocatedENIID,
 				MAC:                firstAllocatedMAC,
 				PrimaryIPv4Addr:    ip.FromString(calicoHostIP1),
 				SecondaryIPv4Addrs: []ip.Addr{ip.MustParseCIDROrIP(wl1Addr).Addr()},
@@ -284,7 +286,7 @@ var (
 		PrimaryNICMAC: primaryNICMAC,
 		SecondaryNICsByMAC: map[string]Iface{
 			firstAllocatedMAC.String(): {
-				ID:              "eni-00000000000001000",
+				ID:              firstAllocatedENIID,
 				MAC:             firstAllocatedMAC,
 				PrimaryIPv4Addr: ip.FromString(calicoHostIP1),
 				SecondaryIPv4Addrs: []ip.Addr{
@@ -301,7 +303,7 @@ var (
 		PrimaryNICMAC: primaryNICMAC,
 		SecondaryNICsByMAC: map[string]Iface{
 			firstAllocatedMAC.String(): {
-				ID:                 "eni-00000000000001000",
+				ID:                 firstAllocatedENIID,
 				MAC:                firstAllocatedMAC,
 				PrimaryIPv4Addr:    ip.FromString(calicoHostIP1),
 				SecondaryIPv4Addrs: nil,
@@ -314,7 +316,7 @@ var (
 		PrimaryNICMAC: primaryNICMAC,
 		SecondaryNICsByMAC: map[string]Iface{
 			firstAllocatedMAC.String(): {
-				ID:                 "eni-00000000000001000",
+				ID:                 firstAllocatedENIID,
 				MAC:                firstAllocatedMAC,
 				PrimaryIPv4Addr:    ip.FromString(calicoHostIP2), // Different IP
 				SecondaryIPv4Addrs: []ip.Addr{ip.MustParseCIDROrIP(wl1Addr).Addr()},
@@ -334,7 +336,7 @@ var (
 		PrimaryNICMAC: primaryNICMAC,
 		SecondaryNICsByMAC: map[string]Iface{
 			secondAllocatedMAC.String(): {
-				ID:                 "eni-00000000000001001",
+				ID:                 secondAllocatedENIID,
 				MAC:                secondAllocatedMAC,
 				PrimaryIPv4Addr:    ip.FromString(calicoHostIP1Alt),
 				SecondaryIPv4Addrs: nil,
@@ -347,7 +349,7 @@ var (
 		PrimaryNICMAC: primaryNICMAC,
 		SecondaryNICsByMAC: map[string]Iface{
 			secondAllocatedMAC.String(): {
-				ID:                 "eni-00000000000001001",
+				ID:                 secondAllocatedENIID,
 				MAC:                secondAllocatedMAC,
 				PrimaryIPv4Addr:    ip.FromString(calicoHostIP1Alt),
 				SecondaryIPv4Addrs: []ip.Addr{ip.MustParseCIDROrIP(wl1AddrAlt).Addr()},
@@ -765,6 +767,27 @@ func TestSecondaryIfaceProvisioner_MultiNIC(t *testing.T) {
 		secondIface := response.SecondaryNICsByMAC[secondAllocatedMAC.String()]
 		Expect(secondIface.SecondaryIPv4Addrs).To(HaveLen(0))
 	}
+}
+
+func TestSecondaryIfaceProvisioner_MultiNICSingleShot(t *testing.T) {
+	sip, _, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Blast in the maximum number of IPs in one shot.
+	ds, addrs := nWorkloadDatastore(t3LargeCapacity)
+	sip.OnDatastoreUpdate(ds)
+	var response *IfaceState
+	Eventually(sip.ResponseC()).Should(Receive(&response))
+
+	// Verify the result.
+	Expect(response.SecondaryNICsByMAC).To(HaveLen(2), "Expected exactly two AWS NICs.")
+
+	// IPs will be assigned randomly to the two NICs so grab and compare the full list.
+	firstIface := response.SecondaryNICsByMAC[firstAllocatedMAC.String()]
+	secondIface := response.SecondaryNICsByMAC[secondAllocatedMAC.String()]
+	allIPs := append([]ip.Addr{}, firstIface.SecondaryIPv4Addrs...)
+	allIPs = append(allIPs, secondIface.SecondaryIPv4Addrs...)
+	Expect(allIPs).To(ConsistOf(addrs))
 }
 
 func nWorkloadDatastore(n int) (DatastoreState, []ip.Addr) {
