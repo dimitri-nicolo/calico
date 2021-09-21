@@ -698,16 +698,28 @@ WINDOWS_GCS_BUCKET := gs://tigera-windows/dev/
 # When merging, keep the 'release-windows-archive' target in private.
 #
 # This target builds the Windows installation zip file and uploads it to GCS.
-# If the git tag is a release tag (i.e. has the form vX.Y.Z) then it goes into
-# the GCS bucket for releases; otherwise the zip file goes into the dev bucket.
 push-windows-archive-gcs: build-windows-archive
-ifneq ($(shell echo ${NODE_GIT_VERSION} | grep -E "${RELEASE_TAG_REGEX}"),)
-	@echo "GIT_VERSION is a release tag; using release bucket location for Windows artifact"
-	$(eval WINDOWS_GCS_BUCKET := gs://tigera-windows/)
-endif
 	gcloud auth activate-service-account --key-file ~/secrets/gcp-registry-pusher-service-account.json
 	gsutil cp dist/tigera-calico-windows-$(NODE_GIT_VERSION).zip $(WINDOWS_GCS_BUCKET)
 	gcloud auth revoke registry-pusher@unique-caldron-775.iam.gserviceaccount.com
+
+release-verify-version: var-require-all-VERSION
+ifdef CONFIRM
+	$(if $(filter $(VERSION),$(NODE_GIT_VERSION)),,\
+		echo Current version $(CURRENT_RELEASE_VERSION) does not match given version $(VERSION) && exit 1)
+endif
+
+# Create and publish the windows archive for the release.
+release-publish-windows-archive-gcs: var-require-one-of-CONFIRM-DRYRUN var-require-all-VERSION release-verify-version build-windows-archive
+ifdef CONFIRM
+	gcloud auth activate-service-account --key-file ~/secrets/gcp-registry-pusher-service-account.json
+	gsutil cp dist/tigera-calico-windows-$(NODE_GIT_VERSION).zip $gs://tigera-windows/
+	gcloud auth revoke registry-pusher@unique-caldron-775.iam.gserviceaccount.com
+else
+	@echo [DRYRUN] gcloud auth activate-service-account --key-file ~/secrets/gcp-registry-pusher-service-account.json
+	@echo [DRYRUN] gsutil cp dist/tigera-calico-windows-$(NODE_GIT_VERSION).zip $gs://tigera-windows/
+	@echo [DRYRUN] gcloud auth revoke registry-pusher@unique-caldron-775.iam.gserviceaccount.com
+endif
 
 $(WINDOWS_ARCHIVE_BINARY): $(WINDOWS_BINARY)
 	cp $< $@
