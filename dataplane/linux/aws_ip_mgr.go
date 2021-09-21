@@ -3,7 +3,6 @@
 package intdataplane
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"regexp"
@@ -13,18 +12,13 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 
-	"github.com/projectcalico/felix/k8sutils"
-
 	"github.com/projectcalico/felix/aws"
 
+	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/logutils"
+	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/routerule"
 	"github.com/projectcalico/felix/routetable"
-	"github.com/projectcalico/libcalico-go/lib/health"
-	"github.com/projectcalico/libcalico-go/lib/ipam"
-
-	"github.com/projectcalico/felix/ip"
-	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
@@ -47,9 +41,7 @@ type awsIPManager struct {
 	// ifaceProvisioner manages the AWS fabric resources.  It runs in the background to decouple AWS fabric updates
 	// from the main thread.  We send it datastore snapshots; in return, it sends back SecondaryIfaceState objects
 	// telling us what state the AWS fabric is in.
-	ifaceProvisioner         *aws.SecondaryIfaceProvisioner
-	k8sCapacityUpdater       *k8sutils.CapacityUpdater
-	backgroundWorkersStarted bool
+	ifaceProvisioner awsIfaceProvisioner
 
 	// awsState is the most recent update we've got from the background thread telling us what state it thinks
 	// the AWS fabric should be in. <nil> means "don't know", i.e. we're not ready to touch the dataplane yet.
@@ -71,6 +63,10 @@ type awsIPManager struct {
 	opRecorder logutils.OpRecorder
 }
 
+type awsIfaceProvisioner interface {
+	OnDatastoreUpdate(ds aws.DatastoreState)
+}
+
 // awsRuleKey is a hashable struct containing the salient aspects of the routing rules that we need to program.
 type awsRuleKey struct {
 	addr           ip.Addr
@@ -78,18 +74,12 @@ type awsRuleKey struct {
 }
 
 func NewAWSSubnetManager(
-	healthAgg *health.HealthAggregator,
-	ipamClient ipam.Interface,
-	k8sClient k8sutils.KubeClient,
-	nodeName string,
 	routeTableIndexes []int,
 	dpConfig Config,
 	opRecorder logutils.OpRecorder,
+	ifaceProvisioner awsIfaceProvisioner,
 ) *awsIPManager {
-	logrus.WithFields(logrus.Fields{
-		"nodeName":    nodeName,
-		"routeTables": routeTableIndexes,
-	}).Info("Creating AWS subnet manager.")
+	logrus.WithField("routeTables", routeTableIndexes).Info("Creating AWS subnet manager.")
 	rules, err := routerule.New(
 		4,
 		dpConfig.AWSSecondaryIPRoutingRulePriority,
@@ -105,8 +95,6 @@ func NewAWSSubnetManager(
 	if err != nil {
 		logrus.WithError(err).Panic("Failed to init routing rules manager.")
 	}
-
-	k8sCapacityUpdater := k8sutils.NewCapacityUpdater(nodeName, k8sClient)
 
 	sm := &awsIPManager{
 		poolsByID:                 map[string]*proto.IPAMPool{},
@@ -125,21 +113,10 @@ func NewAWSSubnetManager(
 		dpConfig:              dpConfig,
 		opRecorder:            opRecorder,
 
-		k8sCapacityUpdater: k8sCapacityUpdater,
-		ifaceProvisioner: aws.NewSecondaryIfaceProvisioner(
-			nodeName,
-			healthAgg,
-			ipamClient,
-			aws.OptTimeout(dpConfig.AWSRequestTimeout),
-			aws.OptCapacityCallback(k8sCapacityUpdater.OnCapacityChange),
-		),
+		ifaceProvisioner: ifaceProvisioner,
 	}
 	sm.queueAWSResync("first run")
 	return sm
-}
-
-func (a *awsIPManager) ResponseC() <-chan *aws.IfaceState {
-	return a.ifaceProvisioner.ResponseC()
 }
 
 func (a *awsIPManager) OnUpdate(msg interface{}) {
@@ -298,11 +275,6 @@ func (a *awsIPManager) queueDataplaneResync(reason string) {
 }
 
 func (a *awsIPManager) CompleteDeferredWork() error {
-	if !a.backgroundWorkersStarted {
-		a.ifaceProvisioner.Start(context.Background())
-		a.k8sCapacityUpdater.Start(context.Background())
-		a.backgroundWorkersStarted = true
-	}
 	if a.awsResyncNeeded {
 		// Datastore has been updated, send a new snapshot to the background thread.  It will configure the AWS
 		// fabric appropriately and then send us a SecondaryIfaceState.

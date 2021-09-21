@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/projectcalico/felix/dataplane/linux/debugconsole"
+	"github.com/projectcalico/felix/k8sutils"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
@@ -1108,17 +1109,24 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	dp.RegisterManager(captureManager)
 
 	if config.AWSSecondaryIPSupport {
-		awsSubnetManager := NewAWSSubnetManager(
+		k8sCapacityUpdater := k8sutils.NewCapacityUpdater(config.FelixHostname, config.KubeClientSet.CoreV1())
+		k8sCapacityUpdater.Start(context.Background())
+		secondaryIfaceProv := aws.NewSecondaryIfaceProvisioner(
+			config.FelixHostname,
 			config.HealthAggregator,
 			config.IPAMClient,
-			config.KubeClientSet.CoreV1(),
-			config.FelixHostname,
+			aws.OptTimeout(dp.config.AWSRequestTimeout),
+			aws.OptCapacityCallback(k8sCapacityUpdater.OnCapacityChange),
+		)
+		secondaryIfaceProv.Start(context.Background())
+		awsSubnetManager := NewAWSSubnetManager(
 			awsTableIndexes,
 			dp.config,
 			dp.loopSummarizer,
+			secondaryIfaceProv,
 		)
 		dp.RegisterManager(awsSubnetManager)
-		dp.awsStateUpdC = awsSubnetManager.ResponseC()
+		dp.awsStateUpdC = secondaryIfaceProv.ResponseC()
 		dp.awsSubnetMgr = awsSubnetManager
 	}
 

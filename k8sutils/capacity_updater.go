@@ -18,6 +18,8 @@ import (
 	"github.com/projectcalico/felix/aws"
 )
 
+// CapacityUpdater manages a background goroutine that maintains the "projectcalico.org/aws-secondary-ipv4"
+// "extended resource" quota.
 type CapacityUpdater struct {
 	nodeName        string
 	timeout         time.Duration
