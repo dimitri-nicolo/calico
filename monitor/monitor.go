@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	lapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/jitter"
@@ -16,7 +17,7 @@ import (
 )
 
 const (
-	defaultPollInterval = 30 * time.Second
+	defaultPollInterval = 10 * time.Minute
 )
 
 // LicenseMonitor is an interface which enables monitoring of license and feature enablement status.
@@ -32,6 +33,7 @@ type LicenseMonitor interface {
 
 type bapiClient interface {
 	Get(ctx context.Context, key model.Key, revision string) (*model.KVPair, error)
+	Watch(ctx context.Context, list model.ListInterface, revision string) (lapi.WatchInterface, error)
 }
 
 // licenseMonitor uses a libcalico-go (backend) client to monitor the status of the active license.
@@ -116,12 +118,21 @@ func (l *licenseMonitor) SetStatusChangedCallback(f func(newLicenseStatus lclien
 }
 
 func (l *licenseMonitor) MonitorForever(ctx context.Context) error {
+
+	licenseWatcher, err := l.datastoreClient.Watch(ctx, model.ResourceListOptions{
+		Kind:      api.KindLicenseKey,
+		Name:      "default",
+		Namespace: ""}, "")
+	if err != nil {
+		return err
+	}
+
 	// TODO: use jitter package in libcalico-go once it has been ported to
 	// libcalico-go-private.
 	refreshTicker := l.newJitteredTicker(l.PollInterval, l.PollInterval/10)
 	defer refreshTicker.Stop()
 
-	for ctx.Err() == nil {
+	for ctx.Err() == nil && !licenseWatcher.HasTerminated() {
 		// We may have already loaded the license (if someone called RefreshLicense() before calling this method).
 		// Trigger any needed notification now and make sure the timer is scheduled.  We also hit this each time around
 		// the loop after any license refresh and transition so this call covers all the bases.
@@ -134,9 +145,16 @@ func (l *licenseMonitor) MonitorForever(ctx context.Context) error {
 			_ = l.RefreshLicense(ctx)
 		case <-l.licenseTransitionC:
 			log.Debug("License transition timer popped, checking license status...")
+		case licUpdate := <- licenseWatcher.ResultChan():
+			log.Debug("License was just updated.")
+			if licUpdate.Error != nil {
+				return err
+			}
+			if licUpdate.New != nil {
+				_ = l.refreshLicense(licUpdate.New)
+			}
 		}
 	}
-
 	return ctx.Err()
 }
 
@@ -211,14 +229,7 @@ func (l *licenseMonitor) maybeStartTransitionTimer() {
 
 // RefreshLicense polls the datastore for a license and updates the active license field.  Typically called by
 // the polling loop MonitorForever but may be called by client code in order to explicitly refresh the license.
-func (l *licenseMonitor) RefreshLicense(ctx context.Context) error {
-	log.Debug("Refreshing license from datastore")
-	lic, err := l.datastoreClient.Get(ctx, model.ResourceKey{
-		Kind:      api.KindLicenseKey,
-		Name:      "default",
-		Namespace: "",
-	}, "")
-
+func (l *licenseMonitor) refreshLicense(lic *model.KVPair) error {
 	// invoke callback after the activeLicense is in place and the lock on activeLicense is done.
 	var invokeCb bool
 	defer func() {
@@ -238,28 +249,6 @@ func (l *licenseMonitor) RefreshLicense(ctx context.Context) error {
 		ttl = l.activeLicense.Expiry.Time().Sub(l.now())
 		oldFeatures = set.FromArray(l.activeLicense.Features)
 		log.Debug("Existing license will expire after ", ttl)
-	}
-
-	if err != nil {
-		switch err.(type) {
-		case cerrors.ErrorResourceDoesNotExist:
-			if ttl > 0 {
-				log.WithError(err).Error("No product license found in the datastore; please contact support; "+
-					"already loaded license will expire after ", ttl, " or if component is restarted.")
-			} else {
-				log.WithError(err).Error("No product license found in the datastore; please install a license " +
-					"to enable commercial features.")
-			}
-			return err
-		default:
-			if ttl > 0 {
-				log.WithError(err).Error("Failed to load product license from datastore; "+
-					"already loaded license will expire after ", ttl, " or if component is restarted.")
-			} else {
-				log.WithError(err).Error("Failed to load product license from datastore.")
-			}
-			return err
-		}
 	}
 
 	license := lic.Value.(*api.LicenseKey)
@@ -294,4 +283,45 @@ func (l *licenseMonitor) RefreshLicense(ctx context.Context) error {
 	l.activeRawLicense = license
 	l.activeLicense = &newActiveLicense
 	return nil
+}
+
+// RefreshLicense polls the datastore for a license and updates the active license field.  Typically called by
+// the polling loop MonitorForever but may be called by client code in order to explicitly refresh the license.
+func (l *licenseMonitor) RefreshLicense(ctx context.Context) error {
+	log.Debug("Refreshing license from datastore")
+	lic, err := l.datastoreClient.Get(ctx, model.ResourceKey{
+		Kind:      api.KindLicenseKey,
+		Name:      "default",
+		Namespace: "",
+	}, "")
+
+	l.activeLicenseLock.Lock()
+	var ttl time.Duration
+	active := l.activeLicense
+	if active != nil {
+		ttl = active.Expiry.Time().Sub(l.now())
+	}
+	l.activeLicenseLock.Unlock()
+	if err != nil {
+		switch err.(type) {
+		case cerrors.ErrorResourceDoesNotExist:
+			if ttl > 0 {
+				log.WithError(err).Error("No product license found in the datastore; please contact support; "+
+					"already loaded license will expire after ", ttl, " or if component is restarted.")
+			} else {
+				log.WithError(err).Error("No product license found in the datastore; please install a license " +
+					"to enable commercial features.")
+			}
+			return err
+		default:
+			if ttl > 0 {
+				log.WithError(err).Error("Failed to load product license from datastore; "+
+					"already loaded license will expire after ", ttl, " or if component is restarted.")
+			} else {
+				log.WithError(err).Error("Failed to load product license from datastore.")
+			}
+			return err
+		}
+	}
+	return l.refreshLicense(lic)
 }
