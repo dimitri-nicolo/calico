@@ -12,7 +12,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
-	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/felix/k8sutils"
 
@@ -81,7 +80,7 @@ type awsRuleKey struct {
 func NewAWSSubnetManager(
 	healthAgg *health.HealthAggregator,
 	ipamClient ipam.Interface,
-	k8sClient *kubernetes.Clientset,
+	k8sClient k8sutils.KubeClient,
 	nodeName string,
 	routeTableIndexes []int,
 	dpConfig Config,
@@ -107,7 +106,6 @@ func NewAWSSubnetManager(
 		logrus.WithError(err).Panic("Failed to init routing rules manager.")
 	}
 
-	// TODO How to make sure we get the right k8s Node?  Is node name sufficient?
 	k8sCapacityUpdater := k8sutils.NewCapacityUpdater(nodeName, k8sClient)
 
 	sm := &awsIPManager{

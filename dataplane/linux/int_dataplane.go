@@ -1111,7 +1111,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		awsSubnetManager := NewAWSSubnetManager(
 			config.HealthAggregator,
 			config.IPAMClient,
-			config.KubeClientSet,
+			config.KubeClientSet.CoreV1(),
 			config.FelixHostname,
 			awsTableIndexes,
 			dp.config,
