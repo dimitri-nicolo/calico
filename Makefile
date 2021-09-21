@@ -237,3 +237,23 @@ clean:
 	-docker rmi $(CALICO_BUILD) -f
 	-docker rmi $(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) -f
 	-rm -f $(TOOLING_IMAGE_CREATED)
+
+###############################################################################
+# Release
+###############################################################################
+
+release-verify-version: var-require-all-VERSION
+ifdef CONFIRM
+	$(eval CURRENT_RELEASE_VERSION := $(git-release-tag-for-current-commit))
+	$(if $(CURRENT_RELEASE_VERSION),,echo Current commit has not been tagged with a release version && exit 1)
+	$(if $(filter $(VERSION),$(git-release-tag-for-current-commit)),,\
+		echo Current version $(CURRENT_RELEASE_VERSION) does not match given version $(VERSION) && exit 1)
+endif
+
+## Builds and pushed binaries to the public s3 bucket.
+release-publish-binaries: var-require-one-of-CONFIRM-DRYRUN var-require-all-VERSION release-verify-version build
+ifdef CONFIRM
+	aws --profile helm s3 cp bin/calicoq s3://tigera-public/ee/binaries/$(VERSION)/calicoq --acl public-read
+else
+	@echo [DRYRUN] aws --profile helm s3 bin/cp calicoq s3://tigera-public/ee/binaries/$(VERSION)/calicoq --acl public-read
+endif
