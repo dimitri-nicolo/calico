@@ -184,13 +184,13 @@ e.g.:
 
 ## Adding resources to cnx-apiserver
 
-The cnx-apiserver uses client-go code generation tools to fill out golang
-code for activities such as deep copy of structs, openapi interfaces, and more.
+Add the new resource defintions to tigera/api and associated code in libcalico-go.  Ensure the
+code autogeneration is run (make gen-files) in both repositories.
 
 The overall approach is largely identical for both namespaced (e.g. network policy)
 as well as non-namespaced (e.g. globalnetworkset) resources:
 
-* Add the resource type defintions to `pkg/apis/projectcalico/types.go`. This is
+* Add the resource type defintions to tigera/api. This is
   likely comprised of a List struct type and an individual resource type. For
   example:
 

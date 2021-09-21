@@ -164,6 +164,16 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		aapi := &aapi.DeepPacketInspection{}
 		DeepPacketInspectionConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
+	case *api.UISettingsGroup:
+		api := libcalicoObject.(*api.UISettingsGroup)
+		aapi := &aapi.UISettingsGroup{}
+		UISettingsGroupConverter{}.convertToAAPI(api, aapi)
+		return aapi
+	case *api.UISettings:
+		api := libcalicoObject.(*api.UISettings)
+		aapi := &aapi.UISettings{}
+		UISettingsConverter{}.convertToAAPI(api, aapi)
+		return aapi
 	default:
 		klog.Infof("Unrecognized libcalico object (type %v)", reflect.TypeOf(libcalicoObject))
 		return nil

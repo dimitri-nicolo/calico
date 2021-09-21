@@ -3217,3 +3217,234 @@ func testDeepPacketInspectionClient(client calicoclient.Interface, name string) 
 	wg.Wait()
 	return nil
 }
+
+// TestUISettingsGroupClient exercises the UISettingsGroup client.
+func TestUISettingsGroupClient(t *testing.T) {
+	rootTestFunc := func() func(t *testing.T) {
+		const name = "test-uisettingsgroup"
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &v3.UISettingsGroup{}
+			}, true)
+			defer shutdownServer()
+			if err := testUISettingsGroupClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run("test-uisettingsgroup", rootTestFunc()) {
+		t.Errorf("test-uisettingsgroup failed")
+	}
+}
+
+func testUISettingsGroupClient(client calicoclient.Interface, name string) error {
+	ctx := context.Background()
+	err := createEnterprise(client, ctx)
+	if err == nil {
+		return fmt.Errorf("Could not create a license")
+	}
+
+	uiSettingsGroupClient := client.ProjectcalicoV3().UISettingsGroups()
+	uiSettingsGroup := &v3.UISettingsGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: v3.UISettingsGroupSpec{Description: "this is a settings group"},
+	}
+
+	// start from scratch
+	uiSettingsGroups, err := uiSettingsGroupClient.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing uiSettingsGroups (%s)", err)
+	}
+	if uiSettingsGroups.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+	if len(uiSettingsGroups.Items) > 0 {
+		return fmt.Errorf("uiSettingsGroup should not exist on start, had %v uiSettingsGroup", len(uiSettingsGroups.Items))
+	}
+
+	uiSettingsGroupServer, err := uiSettingsGroupClient.Create(ctx, uiSettingsGroup, metav1.CreateOptions{})
+	if nil != err {
+		return fmt.Errorf("error creating the uiSettingsGroup '%v' (%v)", uiSettingsGroup, err)
+	}
+
+	updatedUISettingsGroup := uiSettingsGroupServer.DeepCopy()
+	updatedUISettingsGroup.Labels = map[string]string{"foo": "bar"}
+	updatedUISettingsGroup.Spec.Description = "updated description"
+	uiSettingsGroupServer, err = uiSettingsGroupClient.Update(ctx, updatedUISettingsGroup, metav1.UpdateOptions{})
+	if nil != err {
+		return fmt.Errorf("error in updating the uiSettingsGroup '%v' (%v)", uiSettingsGroup, err)
+	}
+	if !reflect.DeepEqual(uiSettingsGroupServer.Labels, updatedUISettingsGroup.Labels) {
+		return fmt.Errorf("didn't update label %#v", uiSettingsGroupServer.Labels)
+
+	}
+	if !reflect.DeepEqual(uiSettingsGroupServer.Spec, updatedUISettingsGroup.Spec) {
+		return fmt.Errorf("didn't update spec %#v", uiSettingsGroupServer.Spec)
+	}
+
+	// Should be listing the uiSettingsGroup.
+	uiSettingsGroups, err = uiSettingsGroupClient.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing uiSettingss (%s)", err)
+	}
+	if len(uiSettingsGroups.Items) != 1 {
+		return fmt.Errorf("should have exactly one uiSettingsGroup, had %v uiSettingss", len(uiSettingsGroups.Items))
+	}
+
+	uiSettingsGroupServer, err = uiSettingsGroupClient.Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting uiSettingsGroup %s (%s)", name, err)
+	}
+	if name != uiSettingsGroupServer.Name &&
+		uiSettingsGroup.ResourceVersion == uiSettingsGroupServer.ResourceVersion {
+		return fmt.Errorf("didn't get the same uiSettingsGroup back from the server \n%+v\n%+v", uiSettingsGroup, uiSettingsGroupServer)
+	}
+
+	// Watch Test:
+	opts := v1.ListOptions{Watch: true}
+	wIface, err := uiSettingsGroupClient.Watch(ctx, opts)
+	if nil != err {
+		return fmt.Errorf("Error on watch")
+	}
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for e := range wIface.ResultChan() {
+			fmt.Println("Watch object: ", e)
+			break
+		}
+	}()
+
+	err = uiSettingsGroupClient.Delete(ctx, name, metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("uiSettingsGroup should be deleted (%s)", err)
+	}
+
+	wg.Wait()
+	return nil
+}
+
+// TestUISettingsClient exercises the UISettings client.
+func TestUISettingsClient(t *testing.T) {
+	rootTestFunc := func() func(t *testing.T) {
+		const name = "test-uisettings"
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &v3.UISettings{}
+			}, true)
+			defer shutdownServer()
+			if err := testUISettingsClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run("test-uisettings", rootTestFunc()) {
+		t.Errorf("test-uisettings failed")
+	}
+}
+
+func testUISettingsClient(client calicoclient.Interface, name string) error {
+	ctx := context.Background()
+	err := createEnterprise(client, ctx)
+	if err == nil {
+		return fmt.Errorf("Could not create a license")
+	}
+
+	uiSettingsClient := client.ProjectcalicoV3().UISettings()
+	uiSettings := &v3.UISettings{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: v3.UISettingsSpec{
+			Group:       "group-a",
+			Description: "namespace 123",
+			View:        nil,
+			Layer:       &v3.UIGraphLayer{
+				Nodes: []v3.UIGraphNode{{
+					Type: "this",
+					Name: "name",
+					Namespace: "namespace",
+					ID: "this/namespace/name",
+				}},
+				Icon:  "svg-1",
+			},
+			Dashboard:   nil,
+		},
+	}
+
+	// start from scratch
+	uiSettingsList, err := uiSettingsClient.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing uiSettings (%s)", err)
+	}
+	if uiSettingsList.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+	if len(uiSettingsList.Items) > 0 {
+		return fmt.Errorf("uiSettings should not exist on start, had %v uiSettings", len(uiSettingsList.Items))
+	}
+
+	uiSettingsServer, err := uiSettingsClient.Create(ctx, uiSettings, metav1.CreateOptions{})
+	if nil != err {
+		return fmt.Errorf("error creating the uiSettings '%v' (%v)", uiSettings, err)
+	}
+
+	updatedUISettings := uiSettingsServer.DeepCopy()
+	updatedUISettings.Labels = map[string]string{"foo": "bar"}
+	updatedUISettings.Spec.Description = "updated description"
+	uiSettingsServer, err = uiSettingsClient.Update(ctx, updatedUISettings, metav1.UpdateOptions{})
+	if nil != err {
+		return fmt.Errorf("error in updating the uiSettings '%v' (%v)", uiSettings, err)
+	}
+	if !reflect.DeepEqual(uiSettingsServer.Labels, updatedUISettings.Labels) {
+		return fmt.Errorf("didn't update label %#v", uiSettingsServer.Labels)
+
+	}
+	if !reflect.DeepEqual(uiSettingsServer.Spec, updatedUISettings.Spec) {
+		return fmt.Errorf("didn't update spec %#v", uiSettingsServer.Spec)
+
+	}
+
+	// Should be listing the uiSettings.
+	uiSettingsList, err = uiSettingsClient.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing uiSettingss (%s)", err)
+	}
+	if len(uiSettingsList.Items) != 1 {
+		return fmt.Errorf("should have exactly one uiSettings, had %v uiSettingss", len(uiSettingsList.Items))
+	}
+
+	uiSettingsServer, err = uiSettingsClient.Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting uiSettings %s (%s)", name, err)
+	}
+	if name != uiSettingsServer.Name &&
+		uiSettings.ResourceVersion == uiSettingsServer.ResourceVersion {
+		return fmt.Errorf("didn't get the same uiSettings back from the server \n%+v\n%+v", uiSettings, uiSettingsServer)
+	}
+
+	// Watch Test:
+	opts := v1.ListOptions{Watch: true}
+	wIface, err := uiSettingsClient.Watch(ctx, opts)
+	if nil != err {
+		return fmt.Errorf("Error on watch")
+	}
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for e := range wIface.ResultChan() {
+			fmt.Println("Watch object: ", e)
+			break
+		}
+	}()
+
+	err = uiSettingsClient.Delete(ctx, name, metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("uiSettings should be deleted (%s)", err)
+	}
+
+	wg.Wait()
+	return nil
+}
