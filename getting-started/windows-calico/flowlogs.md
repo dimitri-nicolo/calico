@@ -43,6 +43,6 @@ key features like Flow Visualizer, metrics in the dashboard and Policy Board, po
 
 - [Configure RBAC for Elasticsearch logs]({{site.baseurl}}/visibility/elastic/rbac-elasticsearch)
 - [Configure flow log aggregation]({{site.baseurl}}/visibility/elastic/flow/aggregation)
-- [Log storage requirements]({{site.baseurl}}/maintenance/logstorage/log-storage-requirements)
+- [Log storage recommendations]({{site.baseurl}}/maintenance/logstorage/log-storage-recommendations)
 - [Archive logs]({{site.baseurl}}/visibility/elastic/archive-storage)
 - [Log collection options]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.LogCollectorSpec)

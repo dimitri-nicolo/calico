@@ -32,9 +32,9 @@ This how-to guide uses the following {{site.prodname}} features:
 
 ### Before you begin...
 
-**Review log storage requirements**
+**Review log storage recommendations**
 
-Review [Log storage requirements]({{site.baseurl}}/maintenance/logstorage/log-storage-requirements) for guidance on the number of nodes and resources to configure for your environment.
+Review [Log storage recommendations]({{site.baseurl}}/maintenance/logstorage/log-storage-recommendations) for guidance on the number of nodes and resources to configure for your environment.
 
 ### How to
 

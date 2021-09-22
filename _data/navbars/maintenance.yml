@@ -12,7 +12,7 @@ section:
   - title: Configure an external identity provider
     path: /getting-started/cnx/configure-identity-provider
   - title: Configure user roles and permissions
-    path: /getting-started/cnx/roles-and-permissions  
+    path: /getting-started/cnx/roles-and-permissions
 - title: Secure component communications
   path: /security/comms/
   section:
@@ -68,8 +68,8 @@ section:
 - title: Storage
   path: /maintenance/logstorage/
   section:
-  - title: Log storage requirements
-    path: /maintenance/logstorage/log-storage-requirements
+  - title: Log storage recommendations
+    path: /maintenance/logstorage/log-storage-recommendations
   - title: Configure storage
     path: /getting-started/create-storage
   - title: Adjust log storage size
@@ -78,30 +78,30 @@ section:
     path: /maintenance/logstorage/advanced-node-scheduling
 - title: License expiration and renewal
   path: /maintenance/license-options
-- title: Monitoring 
+- title: Monitoring
   path: /maintenance/monitor/
-  section: 
+  section:
   - title: Prometheus
     path: /maintenance/monitor/prometheus/
-    section: 
+    section:
     - title: Configure Prometheus
       path: /maintenance/monitor/prometheus/prometheus
     - title: Configure Alertmanager
       path: /maintenance/monitor/prometheus/alertmanager
   - title: Metrics
     path: /maintenance/monitor/metrics/
-    section: 
+    section:
     - title: BGP metrics
       path: /maintenance/monitor/metrics/bgp-metrics
     - title: License metrics
       path: /maintenance/monitor/metrics/license-agent
-    - title: Policy metrics 
+    - title: Policy metrics
       path: /maintenance/monitor/metrics/metrics
     - title: Elasticsearch and Fluentd metrics
       path: /maintenance/monitor/metrics/elasticsearch-and-fluentd-metrics
 - title: eBPF
   path: /maintenance/ebpf/
-  section: 
+  section:
   - title: About eBPF
     path: /maintenance/ebpf/about-ebpf
   - title: Install eBPF on a new cluster
@@ -111,11 +111,11 @@ section:
   - title: Create an EKS cluster for eBPF mode
     path: /maintenance/ebpf/ebpf-and-eks
   - title: Troubleshoot eBPF dataplane
-    path: /maintenance/ebpf/troubleshoot-ebpf  
+    path: /maintenance/ebpf/troubleshoot-ebpf
 - title: Reduce node impacts on datastore
   path: /reference/typha/overview
 - title: Remove nodes from a cluster
-  path: /maintenance/decommissioning-a-node    
+  path: /maintenance/decommissioning-a-node
 - title: Troubleshooting
   path: /maintenance/troubleshoot/
   section:

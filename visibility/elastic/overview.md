@@ -93,7 +93,7 @@ You configure Elasticsearch log access per cluster using RBAC and the Kubernetes
 
 ### Above and beyond
 
-- [Log storage requirements]({{site.baseurl}}/maintenance/logstorage/log-storage-requirements)
+- [Log storage recommendations]({{site.baseurl}}/maintenance/logstorage/log-storage-requirements)
 - [Configure RBAC for Elasticsearch logs]({{site.baseurl}}/visibility/elastic/rbac-elasticsearch)
 - [Configure flow log aggregation]({{site.baseurl}}/visibility/elastic/flow/aggregation)
 - [Audit logs]({{site.baseurl}}/visibility/elastic/ee-audit)

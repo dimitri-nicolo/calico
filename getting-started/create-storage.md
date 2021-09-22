@@ -31,9 +31,9 @@ The storage provided by the cluster. Storage classes can be used with dynamic pr
 
 ### Before you begin...
 
-**Review log storage requirements**
+**Review log storage recommendations**
 
-Review [Log storage requirements]({{site.baseurl}}/maintenance/logstorage/log-storage-requirements) for guidance on the number of nodes and resources to configure for your environment.
+Review [Log storage recommendations]({{site.baseurl}}/maintenance/logstorage/log-storage-recommendations) for guidance on the number of nodes and resources to configure for your environment.
 
 **Determine storage support**
 
