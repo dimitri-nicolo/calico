@@ -45,3 +45,9 @@ blocks:
           commands:
           - make git-config CONFIRM=true
           - make cut-release CONFIRM=true
+
+promotions:
+  - name: Publish Release Binaries
+    pipeline_file: publish-release-binaries.yml
+    auto_promote:
+      when: "result = 'passed'"
