@@ -6,6 +6,7 @@ import (
 	"archive/tar"
 	"archive/zip"
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -44,13 +45,13 @@ var _ = Describe("FilesDownload", func() {
 		req = req.WithContext(middleware.WithCaptureName(req.Context(), "name"))
 	})
 
-	It("Downloads files from a single node", func() {
+	It("Can archive a pcap file with only its header", func() {
 		// Create a temp directory to store all the files needed for the test
 		var tempDir, err = ioutil.TempDir("/tmp", "test")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Create dummy files and add them to a tar archive
-		var tarFile = createTarArchive(tempDir, files)
+		var tarFile = createTarArchive(tempDir, files, pcapHeader())
 		defer os.RemoveAll(tempDir)
 
 		tarFileReader, err := os.Open(tarFile.Name())
@@ -81,7 +82,47 @@ var _ = Describe("FilesDownload", func() {
 		// Write the body to file
 		_, err = io.Copy(archive, recorder.Body)
 		Expect(err).NotTo(HaveOccurred())
-		validateArchive(archive, files)
+		validateArchive(archive, files, pcapHeader())
+	})
+
+	It("Downloads files from a single node", func() {
+		// Create a temp directory to store all the files needed for the test
+		var tempDir, err = ioutil.TempDir("/tmp", "test")
+		Expect(err).NotTo(HaveOccurred())
+
+		// Create dummy files and add them to a tar archive
+		var tarFile = createTarArchive(tempDir, files, []byte(loremLipsum))
+		defer os.RemoveAll(tempDir)
+
+		tarFileReader, err := os.Open(tarFile.Name())
+		Expect(err).NotTo(HaveOccurred())
+
+		// Bootstrap the download
+		var mockCache = &cache.MockClientCache{}
+		var mockLocator = &capture.MockLocator{}
+		var mockFileRetrieval = &capture.MockFileCommands{}
+		mockLocator.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureOneNode, nil)
+		mockLocator.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockFileRetrieval.On("OpenTarReader", "cluster", point).Return(tarFileReader, nil, nil)
+		var download = handlers.NewFiles(mockCache, mockLocator, mockFileRetrieval)
+
+		// Bootstrap the http recorder
+		recorder := httptest.NewRecorder()
+		handler := http.HandlerFunc(download.Download)
+		handler.ServeHTTP(recorder, req)
+
+		Expect(recorder.Code).To(Equal(http.StatusOK))
+		Expect(recorder.Header().Get("Content-Type")).To(Equal("application/zip"))
+		Expect(recorder.Header().Get("Content-Disposition")).To(Equal("attachment; filename=files.zip"))
+		Expect(recorder.Header().Get("Content-Length")).NotTo(Equal(""))
+
+		archive, err := ioutil.TempFile(tempDir, "result.*.zip")
+		Expect(err).NotTo(HaveOccurred())
+
+		// Write the body to file
+		_, err = io.Copy(archive, recorder.Body)
+		Expect(err).NotTo(HaveOccurred())
+		validateArchive(archive, files, []byte(loremLipsum))
 	})
 
 	It("Downloads files from a multiple node", func() {
@@ -90,8 +131,8 @@ var _ = Describe("FilesDownload", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Create dummy files and add them to a tar archive
-		var tarFileNodeOne = createTarArchive(tempDir, files)
-		var tarFileNodeTwo = createTarArchive(tempDir, otherFiles)
+		var tarFileNodeOne = createTarArchive(tempDir, files, []byte(loremLipsum))
+		var tarFileNodeTwo = createTarArchive(tempDir, otherFiles, []byte(loremLipsum))
 		defer os.RemoveAll(tempDir)
 
 		tarFileReaderOne, err := os.Open(tarFileNodeOne.Name())
@@ -129,7 +170,7 @@ var _ = Describe("FilesDownload", func() {
 		var allFiles []string
 		allFiles = append(allFiles, files...)
 		allFiles = append(allFiles, otherFiles...)
-		validateArchive(archive, allFiles)
+		validateArchive(archive, allFiles, []byte(loremLipsum))
 	})
 
 	DescribeTable("Failure to get packet capture",
@@ -182,7 +223,7 @@ var _ = Describe("FilesDownload", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Create dummy files and add them to a tar archive
-		var tarFile = createTarArchive(tempDir, files)
+		var tarFile = createTarArchive(tempDir, files, []byte(loremLipsum))
 		defer os.RemoveAll(tempDir)
 
 		tarFileReader, err := os.Open(tarFile.Name())
@@ -217,7 +258,7 @@ var _ = Describe("FilesDownload", func() {
 		// Write the body to file
 		_, err = io.Copy(archive, recorder.Body)
 		Expect(err).NotTo(HaveOccurred())
-		validateArchive(archive, files)
+		validateArchive(archive, files, []byte(loremLipsum))
 	})
 
 	It("Fails to locate an entry pod", func() {
@@ -238,6 +279,23 @@ var _ = Describe("FilesDownload", func() {
 		Expect(strings.Trim(recorder.Body.String(), "\n")).To(Equal("any error"))
 	})
 })
+
+func pcapHeader() []byte {
+	const magicMicroseconds = 0xA1B2C3D4
+	const versionMajor = 2
+	const versionMinor = 4
+	const snapshotLength = 1024
+	const linkTypeEthernet = 1
+
+	var pcapHeader = make([]byte, 24)
+	binary.LittleEndian.PutUint32(pcapHeader[0:4], magicMicroseconds)
+	binary.LittleEndian.PutUint16(pcapHeader[4:6], versionMajor)
+	binary.LittleEndian.PutUint16(pcapHeader[6:8], versionMinor)
+	binary.LittleEndian.PutUint32(pcapHeader[16:20], snapshotLength)
+	binary.LittleEndian.PutUint32(pcapHeader[20:24], uint32(linkTypeEthernet))
+
+	return pcapHeader
+}
 
 var _ = Describe("FilesDelete", func() {
 	var req *http.Request
@@ -377,7 +435,7 @@ var _ = Describe("FilesDelete", func() {
 	})
 })
 
-func validateArchive(archive *os.File, files []string) {
+func validateArchive(archive *os.File, files []string, expectedData []byte) {
 	defer GinkgoRecover()
 
 	zipReader, err := zip.OpenReader(archive.Name())
@@ -391,12 +449,12 @@ func validateArchive(archive *os.File, files []string) {
 		_, err = io.Copy(&content, file)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(content.String()).To(Equal(loremLipsum))
+		Expect(content.String()).To(Equal(string(expectedData)))
 		file.Close()
 	}
 }
 
-func createTarArchive(dir string, files []string) *os.File {
+func createTarArchive(dir string, files []string, data []byte) *os.File {
 	defer GinkgoRecover()
 
 	// Create the file for the tar archive
@@ -410,7 +468,7 @@ func createTarArchive(dir string, files []string) *os.File {
 		// Create a temporary file with some random data in it
 		file, err := ioutil.TempFile(dir, fmt.Sprintf("%s.*.txt", file))
 		Expect(err).NotTo(HaveOccurred())
-		_, err = file.Write([]byte(loremLipsum))
+		_, err = file.Write(data)
 		Expect(err).NotTo(HaveOccurred())
 		file.Close()
 

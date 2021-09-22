@@ -70,7 +70,7 @@ func (d *Files) Download(w http.ResponseWriter, r *http.Request) {
 	var zipWriter = zip.NewWriter(w)
 	var totalContentLength uint64 = 0
 	for _, file := range packetCapture.Status.Files {
-		log.Debugf("Copying files %v", file)
+		log.Debugf("Copying files %v", file.FileNames)
 		ns, pod, err := d.Locator.GetEntryPod(clusterID, file.Node)
 		if err != nil {
 			log.WithError(err).Errorf("Failed locate entry pods for %s/%s", namespace, captureName)
@@ -118,12 +118,16 @@ func (d *Files) Download(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return
 				}
-				_, err = io.Copy(writer, tarReader)
+				var written int64
+				written, err = io.Copy(writer, tarReader)
 				if err != nil {
 					log.WithError(err).Errorf("Failed add to archive file %s from %s", header.FileInfo().Name(), file.Node)
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return
 				}
+				zipWriter.Flush()
+				log.Debugf("Compressed size is %v, while file size is %v", zipHeader.CompressedSize64, header.FileInfo().Size())
+				log.Debugf("Written data is %v for %s", written, header.FileInfo().Name())
 				totalContentLength = totalContentLength + zipHeader.CompressedSize64
 			}
 		}
