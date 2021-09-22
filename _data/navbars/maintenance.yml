@@ -104,6 +104,8 @@ section:
   section:
   - title: About eBPF
     path: /maintenance/ebpf/about-ebpf
+  - title: eBPF use cases
+    path: /maintenance/ebpf/use-cases-ebpf  
   - title: Install eBPF on a new cluster
     path: /maintenance/ebpf/install
   - title: Enable eBPF on an existing cluster
