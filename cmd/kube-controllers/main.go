@@ -219,7 +219,7 @@ func main() {
 
 		// any subsequent changes trigger a restart
 		controllerCtrl.restartCfgChan = cCtrlr.ConfigChan()
-		controllerCtrl.InitControllers(ctx, runCfg, k8sClientset, calicoClient, esClientBuilder)
+		controllerCtrl.InitControllers(ctx, runCfg, k8sClientset, calicoClient, esClientBuilder, cfg.KubeControllersConfigName)
 	}
 
 	// Create the status file. We will only update it if we have healthchecks enabled.
@@ -474,7 +474,7 @@ type controllerState struct {
 }
 
 func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.RunConfig,
-	k8sClientset *kubernetes.Clientset, calicoClient client.Interface, esClientBuilder elasticsearch.ClientBuilder) {
+	k8sClientset *kubernetes.Clientset, calicoClient client.Interface, esClientBuilder elasticsearch.ClientBuilder, kubeControllersConfigName string) {
 	cc.shortLicensePolling = cfg.ShortLicensePolling
 
 	// Create a shared informer factory to allow cache sharing between controllers monitoring the
@@ -520,7 +520,7 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 		}
 		cc.needLicenseMonitoring = true
 	}
-	if cfg.Controllers.ElasticsearchConfiguration != nil {
+	if cfg.Controllers.ElasticsearchConfiguration != nil && kubeControllersConfigName == "elasticsearch" {
 		esK8sREST, err := relasticsearch.NewRESTClient(cfg.Controllers.ElasticsearchConfiguration.RESTConfig)
 		if err != nil {
 			log.WithError(err).Fatal("failed to build elasticsearch rest client")
@@ -537,7 +537,7 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 				true,
 				*cfg.Controllers.ElasticsearchConfiguration),
 		}
-	} else {
+	} else if kubeControllersConfigName == "elasticsearch" {
 		// Elasticsearch is often removed due to the removal of the LogStorage CR, in which case calico-kube-controllers
 		// will restart without the elasticsearch controller. For this use-case we can do a one-time attempt to delete them.
 		err := elasticsearchconfiguration.CleanUpESUserSecrets(k8sClientset)
