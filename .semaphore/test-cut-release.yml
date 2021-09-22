@@ -45,3 +45,9 @@ blocks:
           commands:
           - make git-config CONFIRM=true
           - make cut-release DRYRUN=true
+
+promotions:
+  - name: Test Publish Release Binaries
+    pipeline_file: test-publish-release-windows-artifacts.yml
+    auto_promote:
+      when: "result = 'passed'"
