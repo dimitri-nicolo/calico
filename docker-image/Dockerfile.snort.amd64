@@ -43,12 +43,6 @@ RUN wget https://github.com/snort3/snort3/archive/refs/tags/${SNORT3_VERSION}.ta
 
 RUN snort -V
 
-# Install snort 3 rule
-RUN mkdir /usr/local/etc/rules \
-    && wget https://www.snort.org/downloads/community/snort3-community-rules.tar.gz \
-    && tar xzf snort3-community-rules.tar.gz -C /usr/local/etc/rules/ \
-    && ls /usr/local/etc/rules/snort3-community-rules/
-
 # Installing Snort OpenAppID
 RUN wget https://snort.org/downloads/openappid/${OPEN_APPID_VERSION} -O OpenAppId-${OPEN_APPID_VERSION}.tgz \
     && tar -xzvf OpenAppId-${OPEN_APPID_VERSION}.tgz \

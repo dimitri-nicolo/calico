@@ -13,8 +13,9 @@ SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_DEEP_PACKET_INSPECTION_PROJECT_ID)
 #############################################
 # Env vars related to packaging and releasing
 #############################################
-DEEP_PACKET_INSPECTION_IMAGE   	?=tigera/deep-packet-inspection
-SNORT_IMAGE 					?=tigera/snort
+DEEP_PACKET_INSPECTION_IMAGE			?=tigera/deep-packet-inspection
+SNORT_IMAGE      				?=tigera/snort3
+SNORT3_VERSION      				?=3.1.8.0
 BUILD_IMAGES					?=$(SNORT_IMAGE) $(DEEP_PACKET_INSPECTION_IMAGE)
 ARCHES             				?=amd64
 DEV_REGISTRIES     				?=gcr.io/unique-caldron-775/cnx
@@ -112,11 +113,19 @@ sub-image-%:
 image: $(BUILD_IMAGES)
 $(SNORT_IMAGE): $(SNORT_IMAGE)-$(ARCH)
 $(SNORT_IMAGE)-$(ARCH):
-	rm -rf docker-image/bin
-	mkdir -p docker-image/bin
-	docker build --pull -t $(SNORT_IMAGE):latest-$(ARCH) -t $(SNORT_IMAGE) --file ./docker-image/Dockerfile.snort.$(ARCH) docker-image
+	op="$(shell docker manifest inspect $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT3_VERSION))"; \
+	if [ $(.SHELLSTATUS) = 0 ]; then \
+  		echo "Using existing snort image $(SNORT_IMAGE):$(SNORT3_VERSION)"; \
+  		docker pull $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT3_VERSION) ;\
+  		docker tag $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT3_VERSION) $(SNORT_IMAGE):$(SNORT3_VERSION) ;\
+  	else \
+  	  	echo "Snort image  $(SNORT_IMAGE):$(SNORT3_VERSION) doesn't exist in $(DEV_REGISTRIES), building it" ; \
+  	  	rm -rf docker-image/bin; \
+  	  	mkdir -p docker-image/bin; \
+  	  	docker build -t $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT3_VERSION)-$(ARCH) -t $(SNORT_IMAGE):$(SNORT3_VERSION) --file ./docker-image/Dockerfile.snort.$(ARCH) docker-image; \
+  	fi
 ifeq ($(ARCH),amd64)
-	docker tag $(SNORT_IMAGE):latest-$(ARCH) $(SNORT_IMAGE):latest
+	docker tag $(SNORT_IMAGE):$(SNORT3_VERSION)-$(ARCH) $(SNORT_IMAGE):$(SNORT3_VERSION)
 endif
 
 $(DEEP_PACKET_INSPECTION_IMAGE): $(DEEP_PACKET_INSPECTION_IMAGE)-$(ARCH)
