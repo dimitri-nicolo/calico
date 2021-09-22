@@ -1,5 +1,5 @@
 version: v1.0
-name: Cut Release
+name: Publish Release Binaries
 
 execution_time_limit:
   minutes: 30
@@ -14,7 +14,9 @@ global_job_config:
     - name: docker-hub
     - name: marvin-github-ssh-private-key
     - name: tigera-dev-ci-pull-credentials
-    - name: quay-robot-ee-push
+    - name: marvin-aws-config
+    - name: marvin-aws-credentials
+    - name: tigera-dev-ci-pull-credentials
   prologue:
     commands:
       - echo $DOCKERHUB_PASSWORD | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
@@ -28,26 +30,9 @@ global_job_config:
       - git fetch --unshallow || true
 
 blocks:
-  - name: 'Cut Release'
+  - name: 'Publish Release Binaries'
     task:
-      secrets:
-        - name: google-service-account-for-gcr
-      prologue:
-        commands:
-          # Correct permissions since they are too open by default:
-          - chmod 0600 ~/.keys/*
-          # Add the key to the ssh agent:
-          - ssh-add ~/.keys/*
-          # Login to docker in order to pull images.
-          - echo $QUAY_TOKEN | docker login --username $QUAY_USERNAME https://quay.io --password-stdin
       jobs:
-        - name: Cut Release
+        - name: Publish Release Binaries
           commands:
-          - make git-config CONFIRM=true
-          - make cut-release CONFIRM=true
-
-promotions:
-  - name: Publish Release Binaries
-    pipeline_file: publish-release-binaries.yml
-    auto_promote:
-      when: "result = 'passed'"
+            - CONFIRM=true bash ./.semaphore/scripts/publish-release-binaries.sh
