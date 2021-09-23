@@ -1119,7 +1119,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			aws.OptCapacityCallback(k8sCapacityUpdater.OnCapacityChange),
 		)
 		secondaryIfaceProv.Start(context.Background())
-		awsSubnetManager := NewAWSSubnetManager(
+		awsSubnetManager := NewAWSIPManager(
 			awsTableIndexes,
 			dp.config,
 			dp.loopSummarizer,
