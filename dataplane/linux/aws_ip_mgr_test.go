@@ -475,6 +475,18 @@ var _ = Describe("awsIPManager tests", func() {
 				expectSecondaryLinkConfigured()
 			})
 
+			It("should provide the route tables.", func() {
+				secondaryLink.attrs = netlink.LinkAttrs{
+					Name:         "eth1",
+					HardwareAddr: secondaryMAC,
+				}
+				fakes.Links = append(fakes.Links, secondaryLink)
+				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+
+				Expect(m.GetRouteTableSyncers()).To(HaveLen(1))
+				Expect(m.GetRouteRules()).To(ConsistOf(fakes.Rules))
+			})
+
 			It("should handle AWS interface going away.", func() {
 				secondaryLink.attrs = netlink.LinkAttrs{
 					Name:         "eth1",
@@ -498,6 +510,21 @@ var _ = Describe("awsIPManager tests", func() {
 					Expect(rt.Routes["eth1"]).To(BeEmpty())
 					Expect(rt.Routes[routetable.InterfaceNone]).To(BeEmpty())
 				}
+				Expect(fakes.Rules.Rules).To(BeEmpty())
+			})
+
+			It("should remove an extra IP on the ENI", func() {
+				secondaryLink.attrs = netlink.LinkAttrs{
+					Name:         "eth1",
+					HardwareAddr: secondaryMAC,
+				}
+				bogusAddr, err := netlink.ParseAddr("1.2.3.4/24")
+				secondaryLink.addrs = append(secondaryLink.addrs, *bogusAddr)
+				Expect(err).NotTo(HaveOccurred())
+				fakes.Links = append(fakes.Links, secondaryLink)
+
+				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+				expectSecondaryLinkConfigured()
 			})
 		})
 	})
@@ -554,12 +581,25 @@ func (f *fakeAWSIPMgrFakes) AddrList(iface netlink.Link, family int) ([]netlink.
 	return iface.(*fakeLink).addrs, nil
 }
 
-func (f *fakeAWSIPMgrFakes) AddrDel(_ netlink.Link, _ *netlink.Addr) error {
-	panic("implement me")
+func (f *fakeAWSIPMgrFakes) AddrDel(iface netlink.Link, addr *netlink.Addr) error {
+	link := iface.(*fakeLink)
+	newAddrs := link.addrs[:0]
+	found := false
+	for _, a := range link.addrs {
+		if a.Equal(*addr) {
+			found = true
+			continue
+		}
+		newAddrs = append(newAddrs, a)
+	}
+	Expect(found).To(BeTrue(), "Asked to delete non-existent IP")
+	link.addrs = newAddrs
+	return nil
 }
 
 func (f *fakeAWSIPMgrFakes) AddrAdd(iface netlink.Link, addr *netlink.Addr) error {
-	iface.(*fakeLink).addrs = append(iface.(*fakeLink).addrs, *addr)
+	link := iface.(*fakeLink)
+	link.addrs = append(link.addrs, *addr)
 	return nil
 }
 
