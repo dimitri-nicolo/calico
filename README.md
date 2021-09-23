@@ -55,7 +55,7 @@ Set environment variable `DPI_LOG_LEVEL` with value `debug`
 
 ## Update Snort3 version
 
-To update the Snort3 version used for DPI, update the version number assigned to the variable `SNORT3_VERSION` in Makefile, Dockerfile.amd64 and Dockerfile.snort.amd64 files.
+To update the Snort3 version used for DPI, update the version number assigned to the variable `SNORT3_VERSION` in Makefile.
 
 ## Code flow
 ![Alt text](flow_diagram.svg)

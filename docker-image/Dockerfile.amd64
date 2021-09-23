@@ -1,9 +1,9 @@
-ENV SNORT3_VERSION=3.1.8.0
+ARG SNORT3_VERSION
 
 FROM tigera/snort3:${SNORT3_VERSION} as snort
 
 # Install snort 3 rule
-RUN mkdir /usr/local/etc/rules \
+RUN mkdir -p /usr/local/etc/rules \
     && wget https://www.snort.org/downloads/community/snort3-community-rules.tar.gz \
     && tar xzf snort3-community-rules.tar.gz -C /usr/local/etc/rules/ \
     && ls /usr/local/etc/rules/snort3-community-rules/
