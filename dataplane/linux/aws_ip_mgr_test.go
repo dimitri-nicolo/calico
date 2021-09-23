@@ -4,6 +4,7 @@ package intdataplane
 
 import (
 	"net"
+	"reflect"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -36,6 +37,9 @@ var _ = Describe("awsIPManager tests", func() {
 		primaryMAC      net.HardwareAddr
 		secondaryMACStr = "12:34:56:78:90:22"
 		secondaryMAC    net.HardwareAddr
+		
+		egressGWIP = "100.64.2.5"
+		egressGWCIDR = "100.64.2.5/32"
 	)
 
 	BeforeEach(func() {
@@ -56,7 +60,7 @@ var _ = Describe("awsIPManager tests", func() {
 		m = NewAWSIPManager(
 			awsRTIndexes,
 			Config{
-				AWSSecondaryIPRoutingRulePriority: 101,
+				AWSSecondaryIPRoutingRulePriority: 105,
 				NetlinkTimeout:                    awsTestNetlinkTimeout,
 			},
 			opRecorder,
@@ -68,8 +72,7 @@ var _ = Describe("awsIPManager tests", func() {
 	})
 
 	It("should send empty snapshot if there are no datastore resources", func() {
-		err := m.CompleteDeferredWork()
-		Expect(err).NotTo(HaveOccurred())
+		Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 
 		Expect(fakes.DatastoreState).To(Equal(&aws.DatastoreState{
 			LocalAWSRoutesByDst:       map[ip.CIDR]*proto.RouteUpdate{},
@@ -78,9 +81,18 @@ var _ = Describe("awsIPManager tests", func() {
 		}))
 	})
 
+	It("should not fail on an interface update before an AWS update", func() {
+		m.OnUpdate(&ifaceUpdate{
+			Name:  "eth1",
+			Index: 123,
+			State: ifacemonitor.StateDown,
+		})
+
+		Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+	})
+
 	It("should do nothing if dataplane is empty and no AWS interfaces are needed", func() {
-		err := m.CompleteDeferredWork()
-		Expect(err).NotTo(HaveOccurred())
+		Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 
 		Expect(fakes.DatastoreState).To(Equal(&aws.DatastoreState{
 			LocalAWSRoutesByDst:       map[ip.CIDR]*proto.RouteUpdate{},
@@ -90,20 +102,25 @@ var _ = Describe("awsIPManager tests", func() {
 
 		m.OnSecondaryIfaceStateUpdate(&aws.IfaceState{})
 
-		err = m.CompleteDeferredWork()
-		Expect(err).NotTo(HaveOccurred())
+		Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 	})
 
 	Context("with pools, a local AWS pod and a non-AWS pod", func() {
 		var workloadRoute *proto.RouteUpdate
 
 		BeforeEach(func() {
-			// Send in a non-AWS pool and an AWS pool for hosts and a pool for workloads.
+			// Send in non-AWS pools and an AWS pool for hosts and a pool for workloads.
 			m.OnUpdate(&proto.IPAMPoolUpdate{
-				Id: "non-aws-pool",
+				Id: "non-aws-pool-masq",
 				Pool: &proto.IPAMPool{
 					Cidr:       "192.168.0.0/16",
-					Masquerade: false,
+					Masquerade: true,
+				},
+			})
+			m.OnUpdate(&proto.IPAMPoolUpdate{
+				Id: "non-aws-pool-non-masq",
+				Pool: &proto.IPAMPool{
+					Cidr: "192.168.0.0/16",
 				},
 			})
 			m.OnUpdate(&proto.RouteUpdate{
@@ -149,7 +166,7 @@ var _ = Describe("awsIPManager tests", func() {
 			workloadRoute = &proto.RouteUpdate{
 				Type:          proto.RouteType_LOCAL_WORKLOAD,
 				IpPoolType:    proto.IPPoolType_VXLAN,
-				Dst:           "100.64.2.5/32",
+				Dst:           egressGWCIDR,
 				NatOutgoing:   false,
 				LocalWorkload: true, // This means "really a workload, not just a local IPAM block"
 				AwsSubnetId:   "subnet-123456789012345657",
@@ -166,8 +183,7 @@ var _ = Describe("awsIPManager tests", func() {
 			}
 			m.OnUpdate(nonAWSWorkloadRoute)
 
-			err := m.CompleteDeferredWork()
-			Expect(err).NotTo(HaveOccurred())
+			Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 		})
 
 		It("should send the right snapshot", func() {
@@ -186,7 +202,93 @@ var _ = Describe("awsIPManager tests", func() {
 			}))
 		})
 
+		It("should handle a change of subnet", func() {
+			m.OnUpdate(&proto.IPAMPoolUpdate{
+				Id: "workloads-pool",
+				Pool: &proto.IPAMPool{
+					Cidr:        "100.64.2.0/24",
+					Masquerade:  false,
+					AwsSubnetId: "subnet-000002",
+				},
+			})
+			m.OnUpdate(&proto.RouteUpdate{
+				Type:          proto.RouteType_CIDR_INFO,
+				IpPoolType:    proto.IPPoolType_VXLAN,
+				Dst:           "100.64.2.0/24",
+				NatOutgoing:   false,
+				LocalWorkload: false,
+				AwsSubnetId:   "subnet-000002",
+			})
+			workloadRoute = &proto.RouteUpdate{
+				Type:          proto.RouteType_LOCAL_WORKLOAD,
+				IpPoolType:    proto.IPPoolType_VXLAN,
+				Dst:           egressGWCIDR,
+				NatOutgoing:   false,
+				LocalWorkload: true, // This means "really a workload, not just a local IPAM block"
+				AwsSubnetId:   "subnet-000002",
+			}
+			m.OnUpdate(workloadRoute)
+
+			Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+
+			// Should send the expected snapshot with updated subnets.
+			workloadCIDR := ip.MustParseCIDROrIP(workloadRoute.Dst)
+			Expect(fakes.DatastoreState).To(Equal(&aws.DatastoreState{
+				LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
+					workloadCIDR: workloadRoute,
+				},
+				LocalRouteDestsBySubnetID: map[string]set.Set{
+					"subnet-000002": set.From(workloadCIDR),
+				},
+				PoolIDsBySubnetID: map[string]set.Set{
+					"subnet-123456789012345657": set.From("hosts-pool"),
+					"subnet-000002":             set.From("workloads-pool"),
+				},
+			}))
+		})
+
+		It("should handle a pool deletion", func() {
+			m.OnUpdate(&proto.IPAMPoolRemove{
+				Id: "workloads-pool",
+			})
+			m.OnUpdate(&proto.RouteRemove{
+				Dst: "100.64.2.0/24",
+			})
+			workloadRoute = &proto.RouteUpdate{
+				Type:          proto.RouteType_LOCAL_WORKLOAD,
+				IpPoolType:    proto.IPPoolType_VXLAN,
+				Dst:           egressGWCIDR,
+				NatOutgoing:   false,
+				LocalWorkload: true, // This means "really a workload, not just a local IPAM block"
+			}
+			m.OnUpdate(workloadRoute)
+
+			// Should send the expected snapshot
+			Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+			Expect(fakes.DatastoreState).To(Equal(&aws.DatastoreState{
+				LocalAWSRoutesByDst:       map[ip.CIDR]*proto.RouteUpdate{},
+				LocalRouteDestsBySubnetID: map[string]set.Set{},
+				PoolIDsBySubnetID: map[string]set.Set{
+					"subnet-123456789012345657": set.From("hosts-pool"),
+				},
+			}))
+
+			// Delete the other pool, should clean up.
+			m.OnUpdate(&proto.IPAMPoolRemove{
+				Id: "hosts-pool",
+			})
+
+			// Should send the expected snapshot
+			Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+			Expect(fakes.DatastoreState).To(Equal(&aws.DatastoreState{
+				LocalAWSRoutesByDst:       map[ip.CIDR]*proto.RouteUpdate{},
+				LocalRouteDestsBySubnetID: map[string]set.Set{},
+				PoolIDsBySubnetID:         map[string]set.Set{},
+			}))
+		})
+
 		Context("after responding with expected AWS state", func() {
+			var secondaryLink *fakeLink
 			BeforeEach(func() {
 				// Pretend the background thread attached a new ENI.
 				m.OnSecondaryIfaceStateUpdate(&aws.IfaceState{
@@ -195,19 +297,58 @@ var _ = Describe("awsIPManager tests", func() {
 						secondaryMACStr: {
 							ID:              "eni-0001",
 							MAC:             secondaryMAC,
-							PrimaryIPv4Addr: ip.FromString("100.64.0.1"),
+							PrimaryIPv4Addr: ip.FromString("100.64.0.5"),
 							SecondaryIPv4Addrs: []ip.Addr{
-								ip.FromString("100.64.2.5"),
+								ip.FromString(egressGWIP),
 							},
 						},
 					},
 					SubnetCIDR:  ip.MustParseCIDROrIP("100.64.0.0/16"),
 					GatewayAddr: ip.FromString("100.64.0.1"),
 				})
+				secondaryLink = newFakeLink()
 			})
 
+			expectSecondaryLinkConfigured := func() {
+				// Only the primary IP gets added.
+				secondaryIfacePriIP, err := netlink.ParseAddr("100.64.0.5/16")
+				secondaryIfacePriIP.Scope = int(netlink.SCOPE_LINK)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(secondaryLink.addrs).To(ConsistOf(*secondaryIfacePriIP))
+				Expect(secondaryLink.attrs.OperState).To(Equal(netlink.LinkOperState(netlink.OperUp)))
+
+				Expect(fakes.RouteTables).To(HaveLen(1))
+				var rtID int
+				for _, rt := range fakes.RouteTables {
+					gwAddrAsCIDR := ip.MustParseCIDROrIP("100.64.0.1/32")
+					Expect(rt.Routes["eth1"]).To(ConsistOf(
+						routetable.Target{
+							Type: routetable.TargetTypeGlobalUnicast,
+							CIDR: gwAddrAsCIDR,
+						},
+						routetable.Target{
+							Type: routetable.TargetTypeGlobalUnicast,
+							CIDR: ip.MustParseCIDROrIP("0.0.0.0/0"),
+							GW:   gwAddrAsCIDR.Addr(),
+						},
+					), "Expected gateway and default routes.")
+					Expect(rt.Routes[routetable.InterfaceNone]).To(ConsistOf(
+						routetable.Target{
+							Type: routetable.TargetTypeThrow,
+							CIDR: ip.MustParseCIDROrIP("192.168.0.0/16"),
+						},
+					), "Expected a 'throw' route for the non-AWS IP pool.")
+					rtID = rt.Index()
+				}
+
+				// Rule for each egress gateway workload.
+				Expect(fakes.Rules.Rules).To(ConsistOf(routerule.
+					NewRule(4, 105).
+					MatchSrcAddress(ip.MustParseCIDROrIP(egressGWIP).ToIPNet()).
+					GoToTable(rtID)))
+			}
+
 			It("with the interface present, it should network the interface", func() {
-				secondaryLink := newFakeLink()
 				secondaryLink.attrs = netlink.LinkAttrs{
 					Name:         "eth1",
 					HardwareAddr: secondaryMAC,
@@ -215,44 +356,148 @@ var _ = Describe("awsIPManager tests", func() {
 				fakes.Links = append(fakes.Links, secondaryLink)
 
 				// CompleteDeferredWork should configure the interface.
-				err := m.CompleteDeferredWork()
-				Expect(err).NotTo(HaveOccurred())
+				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 
-				// Only the primary IP gets added.
-				secondaryIfacePriIP, err := netlink.ParseAddr("100.64.0.1/16")
-				secondaryIfacePriIP.Scope = int(netlink.SCOPE_LINK)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(secondaryLink.addrs).To(ConsistOf(*secondaryIfacePriIP))
+				// IP should be added.
+				expectSecondaryLinkConfigured()
 			})
 
 			It("with the interface missing, it should handle the interface showing up.", func() {
-				// Should do nothing.
-				err := m.CompleteDeferredWork()
-				Expect(err).NotTo(HaveOccurred())
+				// Should do nothing to start with.
+				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 
 				// Interface shows up.
-				secondaryLink := newFakeLink()
 				secondaryLink.attrs = netlink.LinkAttrs{
 					Name:         "eth1",
 					HardwareAddr: secondaryMAC,
 				}
 				fakes.Links = append(fakes.Links, secondaryLink)
 
+				// CompleteDeferredWork should not do anything yet.
+				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+				Expect(secondaryLink.addrs).To(BeEmpty())
+
+				// But sending in an interface update should trigger it.
 				m.OnUpdate(&ifaceUpdate{
 					Name:  "eth1",
 					Index: 123,
 					State: ifacemonitor.StateDown,
 				})
 
-				// CompleteDeferredWork should configure the interface.
-				err = m.CompleteDeferredWork()
-				Expect(err).NotTo(HaveOccurred())
+				// CompleteDeferredWork should then configure the interface.
+				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 
-				// Only the primary IP gets added.
-				secondaryIfacePriIP, err := netlink.ParseAddr("100.64.0.1/16")
-				secondaryIfacePriIP.Scope = int(netlink.SCOPE_LINK)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(secondaryLink.addrs).To(ConsistOf(*secondaryIfacePriIP))
+				// IP should be added.
+				expectSecondaryLinkConfigured()
+			})
+
+			It("should handle an interface flap.", func() {
+				// Should do nothing to start with.
+				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+
+				// Interface shows up.
+				secondaryLink.attrs = netlink.LinkAttrs{
+					Name:         "eth1",
+					HardwareAddr: secondaryMAC,
+				}
+				fakes.Links = append(fakes.Links, secondaryLink)
+				m.OnUpdate(&ifaceUpdate{
+					Name:  "eth1",
+					Index: 123,
+					State: ifacemonitor.StateDown,
+				})
+
+				// CompleteDeferredWork should then configure the interface.
+				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+				expectSecondaryLinkConfigured()
+
+				// Interface re-added with new index
+				secondaryLink.attrs = netlink.LinkAttrs{
+					Name:         "eth1",
+					HardwareAddr: secondaryMAC,
+				}
+				secondaryLink.addrs = nil
+				m.OnUpdate(&ifaceUpdate{
+					Name:  "eth1",
+					Index: 124,
+					State: ifacemonitor.StateDown,
+				})
+
+				// CompleteDeferredWork should then configure the interface.
+				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+				expectSecondaryLinkConfigured()
+			})
+
+			It("should handle an interface delete/re-add.", func() {
+				// Should do nothing to start with.
+				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+
+				// Interface shows up.
+				secondaryLink.attrs = netlink.LinkAttrs{
+					Name:         "eth1",
+					HardwareAddr: secondaryMAC,
+				}
+				fakes.Links = append(fakes.Links, secondaryLink)
+				m.OnUpdate(&ifaceUpdate{
+					Name:  "eth1",
+					Index: 123,
+					State: ifacemonitor.StateDown,
+				})
+
+				// CompleteDeferredWork should then configure the interface.
+				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+				expectSecondaryLinkConfigured()
+
+				// Interface re-added with new index
+				secondaryLink.attrs = netlink.LinkAttrs{
+					Name:         "eth1",
+					HardwareAddr: secondaryMAC,
+				}
+				secondaryLink.addrs = nil
+
+				// Delete.
+				m.OnUpdate(&ifaceUpdate{
+					Name:  "eth1",
+					Index: 123,
+					State: ifacemonitor.StateUnknown,
+				})
+				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+
+				// Re-add
+				m.OnUpdate(&ifaceUpdate{
+					Name:  "eth1",
+					Index: 124,
+					State: ifacemonitor.StateDown,
+				})
+
+				// CompleteDeferredWork should then configure the interface.
+				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+				expectSecondaryLinkConfigured()
+			})
+
+			It("should handle AWS interface going away.", func() {
+				secondaryLink.attrs = netlink.LinkAttrs{
+					Name:         "eth1",
+					HardwareAddr: secondaryMAC,
+				}
+				fakes.Links = append(fakes.Links, secondaryLink)
+				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+
+				m.OnSecondaryIfaceStateUpdate(&aws.IfaceState{
+					PrimaryNICMAC:      primaryMACStr,
+					SecondaryNICsByMAC: map[string]aws.Iface{},
+					SubnetCIDR:         ip.MustParseCIDROrIP("100.64.0.0/16"),
+					GatewayAddr:        ip.FromString("100.64.0.1"),
+				})
+
+				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+
+				// Routing table should be flushed.
+				Expect(fakes.RouteTables).To(HaveLen(1))
+				for _, rt := range fakes.RouteTables {
+					Expect(rt.Routes["eth1"]).To(BeEmpty())
+					Expect(rt.Routes[routetable.InterfaceNone]).To(BeEmpty())
+				}
 			})
 		})
 	})
@@ -304,11 +549,12 @@ func (f *fakeAWSIPMgrFakes) LinkSetUp(iface netlink.Link) error {
 	return nil
 }
 
-func (f *fakeAWSIPMgrFakes) AddrList(iface netlink.Link, v int) ([]netlink.Addr, error) {
+func (f *fakeAWSIPMgrFakes) AddrList(iface netlink.Link, family int) ([]netlink.Addr, error) {
+	Expect(family).To(Equal(netlink.FAMILY_V4))
 	return iface.(*fakeLink).addrs, nil
 }
 
-func (f *fakeAWSIPMgrFakes) AddrDel(iface netlink.Link, n *netlink.Addr) error {
+func (f *fakeAWSIPMgrFakes) AddrDel(_ netlink.Link, _ *netlink.Addr) error {
 	panic("implement me")
 }
 
@@ -360,7 +606,7 @@ func (f *fakeAWSIPMgrFakes) NewRouteRules(
 	opRecorder logutils.OpRecorder) (routeRules, error) {
 
 	Expect(ipVersion).To(Equal(4))
-	Expect(priority).To(Equal(101))
+	Expect(priority).To(Equal(105))
 	Expect(tableIndexSet).To(Equal(set.FromArray(awsRTIndexes)))
 	Expect(updateFunc).ToNot(BeNil())
 	Expect(removeFunc).ToNot(BeNil())
@@ -405,27 +651,44 @@ func (f *fakeRouteTable) SetRoutes(ifaceName string, targets []routetable.Target
 	f.Routes[ifaceName] = targets
 }
 
-func (f *fakeRouteTable) RouteRemove(ifaceName string, cidr ip.CIDR) {
+func (f *fakeRouteTable) RouteRemove(_ string, _ ip.CIDR) {
 	panic("implement me")
 }
 
-func (f *fakeRouteTable) SetL2Routes(ifaceName string, targets []routetable.L2Target) {
+func (f *fakeRouteTable) SetL2Routes(_ string, _ []routetable.L2Target) {
 	panic("implement me")
 }
 
-func (f *fakeRouteTable) QueueResyncIface(ifaceName string) {
+func (f *fakeRouteTable) QueueResyncIface(_ string) {
 	panic("implement me")
 }
 
 type fakeRouteRules struct {
+	Rules []*routerule.Rule
 }
 
 func (f *fakeRouteRules) SetRule(rule *routerule.Rule) {
-
+	for _, r :=  range f.Rules{
+		// Can't easily inspect the contents of routerule.Rule but comparison is good enough for now.
+		if reflect.DeepEqual(r, rule) {
+			return
+		}
+	}
+	f.Rules = append(f.Rules, rule)
 }
 
 func (f *fakeRouteRules) RemoveRule(rule *routerule.Rule) {
-
+	newRules := f.Rules[:0]
+	found := false
+	for _, r :=  range f.Rules {
+		if reflect.DeepEqual(r, rule) {
+			found = true
+			continue
+		}
+		newRules = append(newRules, r)
+	}
+	Expect(found).To(BeTrue(), "asked to delete non-existent rule")
+	f.Rules = newRules
 }
 
 func (f *fakeRouteRules) QueueResync() {

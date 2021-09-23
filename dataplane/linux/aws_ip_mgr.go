@@ -390,7 +390,6 @@ func (a *awsIPManager) resyncWithDataplane() error {
 	activeIfaceNames := set.New()
 	var finalErr error
 
-	numNICsMatched := 0
 	for _, iface := range ifaces {
 		// Skip NICs that don't match anything in AWS.
 		mac := iface.Attrs().HardwareAddr.String()
@@ -404,7 +403,6 @@ func (a *awsIPManager) resyncWithDataplane() error {
 			"name":     ifaceName,
 			"awsNICID": awsNIC.ID,
 		}).Debug("Matched local NIC with AWS NIC.")
-		numNICsMatched++
 		activeIfaceNames.Add(ifaceName)
 
 		// Make sure we know the primary NIC's MTU.
@@ -438,9 +436,11 @@ func (a *awsIPManager) resyncWithDataplane() error {
 	}
 
 	// Record whether we still need to match some interfaces.
-	a.allAWSIfacesFound = len(a.awsState.SecondaryNICsByMAC) == numNICsMatched
+	a.allAWSIfacesFound = len(a.awsState.SecondaryNICsByMAC) == activeIfaceNames.Len()
 
-	// Scan for entries in expectedPrimaryIPs that are no longer needed.
+	// Scan for entries in expectedPrimaryIPs that are no longer needed.  We don't bother to remove IPs from
+	// interfaces that no longer have a corresponding AWS NIC because the only time that happens is if the NIC
+	// is being deleted anyway.
 	a.cleanUpPrimaryIPs(activeIfaceNames)
 
 	// Scan for routing tables that are no longer needed.
@@ -647,7 +647,7 @@ func (a *awsIPManager) updateRouteRules(activeRuleKeys set.Set /* awsRulesKey */
 			return nil // Route already present.  Nothing to do.
 		}
 		rule := routerule.
-			NewRule(4, 101).
+			NewRule(4, a.dpConfig.AWSSecondaryIPRoutingRulePriority).
 			MatchSrcAddress(k.addr.AsCIDR().ToIPNet()).
 			GoToTable(k.routingTableID)
 		a.routeRules.SetRule(rule)
@@ -729,12 +729,6 @@ type routeTableNewFn func(
 	tableIndex int,
 	opReporter logutils.OpRecorder,
 ) routeTable
-
-type routeTableIface interface {
-}
-
-type routeRulesIface interface {
-}
 
 type awsNetlinkIface interface {
 	LinkList() ([]netlink.Link, error)
