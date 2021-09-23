@@ -8,8 +8,11 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/vishvananda/netlink"
+
+	"github.com/projectcalico/felix/testutils"
 
 	"github.com/projectcalico/felix/aws"
 	"github.com/projectcalico/felix/ifacemonitor"
@@ -362,6 +365,43 @@ var _ = Describe("awsIPManager tests", func() {
 				expectSecondaryLinkConfigured()
 			})
 
+			errEntry := func(name string) table.TableEntry {
+				return table.Entry(name, name)
+			}
+			table.DescribeTable("with queued error",
+				func(name string) {
+					fakes.Errors.QueueError(name)
+
+					secondaryLink.attrs = netlink.LinkAttrs{
+						Name:         "eth1",
+						HardwareAddr: secondaryMAC,
+					}
+
+					// Add a bonus address so that AddrDel will be called.
+					extraNLAddr, err := netlink.ParseAddr("1.2.3.4/32")
+					Expect(err).NotTo(HaveOccurred())
+					secondaryLink.addrs = append(secondaryLink.addrs, *extraNLAddr)
+
+					fakes.Links = append(fakes.Links, secondaryLink)
+
+					// CompleteDeferredWork should fail once, then succeed.
+					Expect(m.CompleteDeferredWork()).To(HaveOccurred())
+					Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+
+					// IP should be added.
+					expectSecondaryLinkConfigured()
+
+					fakes.Errors.ExpectAllErrorsConsumed()
+				},
+				errEntry("LinkList"),
+				errEntry("LinkSetMTU"),
+				errEntry("LinkSetUp"),
+				errEntry("AddrList"),
+				errEntry("AddrAdd"),
+				errEntry("AddrDel"),
+				errEntry("ParseAddr"),
+			)
+
 			It("with the interface missing, it should handle the interface showing up.", func() {
 				// Should do nothing to start with.
 				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
@@ -628,10 +668,14 @@ var _ = Describe("awsIPManager tests", func() {
 	})
 })
 
+// TODO Test multiple routing tables
+// TODO Test churn reuses table IDs
 
 func newAWSMgrFakes() *awsIPMgrFakes {
+	errorProd := testutils.NewErrorProducer()
 	return &awsIPMgrFakes{
 		RouteTables: map[int]*fakeRouteTable{},
+		Errors:      errorProd,
 	}
 }
 
@@ -642,6 +686,14 @@ type awsIPMgrFakes struct {
 
 	RouteTables map[int]*fakeRouteTable
 	Rules       *fakeRouteRules
+	Errors      testutils.ErrorProducer
+}
+
+func (f *awsIPMgrFakes) ParseAddr(s string) (*netlink.Addr, error) {
+	if err := f.Errors.NextErrorByCaller(); err != nil {
+		return nil, err
+	}
+	return netlink.ParseAddr(s)
 }
 
 func (f *awsIPMgrFakes) OnDatastoreUpdate(ds aws.DatastoreState) {
@@ -649,21 +701,33 @@ func (f *awsIPMgrFakes) OnDatastoreUpdate(ds aws.DatastoreState) {
 }
 
 func (f *awsIPMgrFakes) LinkSetMTU(iface netlink.Link, mtu int) error {
+	if err := f.Errors.NextErrorByCaller(); err != nil {
+		return err
+	}
 	iface.(*fakeLink).attrs.MTU = mtu
 	return nil
 }
 
 func (f *awsIPMgrFakes) LinkSetUp(iface netlink.Link) error {
+	if err := f.Errors.NextErrorByCaller(); err != nil {
+		return err
+	}
 	iface.(*fakeLink).attrs.OperState = netlink.OperUp
 	return nil
 }
 
 func (f *awsIPMgrFakes) AddrList(iface netlink.Link, family int) ([]netlink.Addr, error) {
+	if err := f.Errors.NextErrorByCaller(); err != nil {
+		return nil, err
+	}
 	Expect(family).To(Equal(netlink.FAMILY_V4))
 	return iface.(*fakeLink).addrs, nil
 }
 
 func (f *awsIPMgrFakes) AddrDel(iface netlink.Link, addr *netlink.Addr) error {
+	if err := f.Errors.NextErrorByCaller(); err != nil {
+		return err
+	}
 	link := iface.(*fakeLink)
 	newAddrs := link.addrs[:0]
 	found := false
@@ -680,12 +744,18 @@ func (f *awsIPMgrFakes) AddrDel(iface netlink.Link, addr *netlink.Addr) error {
 }
 
 func (f *awsIPMgrFakes) AddrAdd(iface netlink.Link, addr *netlink.Addr) error {
+	if err := f.Errors.NextErrorByCaller(); err != nil {
+		return err
+	}
 	link := iface.(*fakeLink)
 	link.addrs = append(link.addrs, *addr)
 	return nil
 }
 
 func (f *awsIPMgrFakes) LinkList() ([]netlink.Link, error) {
+	if err := f.Errors.NextErrorByCaller(); err != nil {
+		return nil, err
+	}
 	return f.Links, nil
 }
 
@@ -712,6 +782,7 @@ func (f *awsIPMgrFakes) NewRouteTable(
 		Protocol: deviceRouteProtocol,
 		index:    index,
 		Routes:   map[string][]routetable.Target{},
+		Errors:   f.Errors,
 	}
 	f.RouteTables[index] = rt
 	return rt
@@ -727,6 +798,10 @@ func (f *awsIPMgrFakes) NewRouteRules(
 	newNetlinkHandle func() (routerule.HandleIface, error),
 	opRecorder logutils.OpRecorder) (routeRules, error) {
 
+	if err := f.Errors.NextErrorByCaller(); err != nil {
+		return nil, err
+	}
+
 	Expect(ipVersion).To(Equal(4))
 	Expect(priority).To(Equal(105))
 	Expect(tableIndexSet).To(Equal(set.FromArray(awsRTIndexes)))
@@ -739,7 +814,9 @@ func (f *awsIPMgrFakes) NewRouteRules(
 	Expect(h).ToNot(BeNil())
 	Expect(f.Rules).To(BeNil())
 
-	f.Rules = &fakeRouteRules{}
+	f.Rules = &fakeRouteRules{
+		Errors: f.Errors,
+	}
 
 	return f.Rules, nil
 }
@@ -767,6 +844,7 @@ type fakeRouteTable struct {
 	Protocol netlink.RouteProtocol
 	index    int
 	Routes   map[string][]routetable.Target
+	Errors   testutils.ErrorProducer
 }
 
 func (f *fakeRouteTable) OnIfaceStateChanged(s string, state ifacemonitor.State) {
@@ -803,7 +881,8 @@ func (f *fakeRouteTable) QueueResyncIface(_ string) {
 }
 
 type fakeRouteRules struct {
-	Rules []*routerule.Rule
+	Rules  []*routerule.Rule
+	Errors testutils.ErrorProducer
 }
 
 func (f *fakeRouteRules) SetRule(rule *routerule.Rule) {

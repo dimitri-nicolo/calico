@@ -11,9 +11,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
+
+	"github.com/projectcalico/felix/ifacemonitor"
 
 	"github.com/projectcalico/felix/aws"
 
@@ -512,15 +513,17 @@ func (a *awsIPManager) configureNIC(iface netlink.Link, ifaceName string, primar
 	}
 
 	foundPrimaryIP := false
-	newAddr, err := netlink.ParseAddr(primaryIPStr + "/" + fmt.Sprint(a.awsState.SubnetCIDR.Prefix()))
+	newAddr, err := a.nl.ParseAddr(primaryIPStr + "/" + fmt.Sprint(a.awsState.SubnetCIDR.Prefix()))
 	if err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"name": ifaceName,
 			"addr": primaryIPStr,
 		}).Error("Failed to parse address.")
+		return fmt.Errorf("failed to parse AWS primary IP of secondary ENI %q: %w", primaryIPStr, err)
 	}
 	newAddr.Scope = int(netlink.SCOPE_LINK)
 
+	var finalErr error
 	for _, addr := range addrs {
 		if addr.Equal(*newAddr) {
 			foundPrimaryIP = true
@@ -534,6 +537,7 @@ func (a *awsIPManager) configureNIC(iface netlink.Link, ifaceName string, primar
 				"name": ifaceName,
 				"addr": a,
 			}).Error("Failed to clean up old address.")
+			finalErr = err
 		}
 	}
 
@@ -547,7 +551,7 @@ func (a *awsIPManager) configureNIC(iface netlink.Link, ifaceName string, primar
 			"name": ifaceName,
 			"addr": newAddr,
 		}).Error("Failed to add new primary IP to secondary interface.")
-		return err
+		finalErr = err
 	} else {
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"name": ifaceName,
@@ -555,7 +559,7 @@ func (a *awsIPManager) configureNIC(iface netlink.Link, ifaceName string, primar
 		}).Info("Added primary address to secondary ENI.")
 	}
 
-	return nil
+	return finalErr
 }
 
 // addIfaceActiveRules awsRuleKey values to activeRules according to the secondary IPs of the AWS NIC.
@@ -738,6 +742,7 @@ type awsNetlinkIface interface {
 	AddrList(iface netlink.Link, v4 int) ([]netlink.Addr, error)
 	AddrDel(iface netlink.Link, n *netlink.Addr) error
 	AddrAdd(iface netlink.Link, addr *netlink.Addr) error
+	ParseAddr(s string) (*netlink.Addr, error)
 }
 
 func realRouteRuleNew(
@@ -769,6 +774,10 @@ func realRouteTableNew(
 }
 
 type awsRealNetlink struct{}
+
+func (a awsRealNetlink) ParseAddr(s string) (*netlink.Addr, error) {
+	return netlink.ParseAddr(s)
+}
 
 func (a awsRealNetlink) LinkSetMTU(iface netlink.Link, mtu int) error {
 	return netlink.LinkSetMTU(iface, mtu)
