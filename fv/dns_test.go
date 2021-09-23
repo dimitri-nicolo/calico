@@ -871,7 +871,8 @@ var _ = Describe("DNS Policy Improvements", func() {
 
 			waitForIptablesChain(felix, policyChainName)
 
-			Expect(checkSingleShotDNSConnectivity(workload1, "foobar.com", dnsserver.IP)).ShouldNot(HaveOccurred())
+			output, err := checkSingleShotDNSConnectivity(workload1, "foobar.com", dnsserver.IP)
+			Expect(err).ShouldNot(HaveOccurred(), output)
 
 			iptablesSaveOutput, err := felix.ExecCombinedOutput("iptables-save", "-c")
 			Expect(err).ShouldNot(HaveOccurred())
@@ -898,7 +899,8 @@ var _ = Describe("DNS Policy Improvements", func() {
 				output, err := felix.RunDebugConsoleCommand("close-nfqueue-conn")
 				Expect(err).ShouldNot(HaveOccurred(), output)
 
-				Expect(checkSingleShotDNSConnectivity(workload1, "foobar.com", dnsserver.IP)).ShouldNot(HaveOccurred())
+				output, err = checkSingleShotDNSConnectivity(workload1, "foobar.com", dnsserver.IP)
+				Expect(err).ShouldNot(HaveOccurred(), output)
 
 				iptablesSaveOutput, err := felix.ExecCombinedOutput("iptables-save", "-c")
 				Expect(err).ShouldNot(HaveOccurred())
@@ -931,11 +933,10 @@ func waitForIptablesChain(felix *infrastructure.Felix, chainName string) {
 
 // checkSingleShotDNSConnectivity sends a single udp request to the domain name from the given workload on port 8055.
 // The dnsServerIP is used to tell the test-connection script what dns server to use to resolve the IP for the domain.
-func checkSingleShotDNSConnectivity(w *workload.Workload, domainName, dnsServerIP string) error {
+func checkSingleShotDNSConnectivity(w *workload.Workload, domainName, dnsServerIP string) (string, error) {
 	w.C.EnsureBinary("test-connection")
 	output, err := w.ExecCombinedOutput("/test-connection", "-", domainName, "8055", "--protocol=udp", fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
-	log.Debug(output)
-	return err
+	return output, err
 }
 
 // getIptablesSavePacketCount searches the given iptables-save output for the iptables rule identified by the chain and
