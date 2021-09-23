@@ -31,14 +31,14 @@ var _ = Describe("awsIPManager tests", func() {
 	)
 	var (
 		m               *awsIPManager
-		fakes           *fakeAWSIPMgrFakes
+		fakes           *awsIPMgrFakes
 		primaryLink     *fakeLink
 		primaryMACStr   = "12:34:56:78:90:12"
 		primaryMAC      net.HardwareAddr
 		secondaryMACStr = "12:34:56:78:90:22"
 		secondaryMAC    net.HardwareAddr
-		
-		egressGWIP = "100.64.2.5"
+
+		egressGWIP   = "100.64.2.5"
 		egressGWCIDR = "100.64.2.5/32"
 	)
 
@@ -426,6 +426,104 @@ var _ = Describe("awsIPManager tests", func() {
 				// CompleteDeferredWork should then configure the interface.
 				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 				expectSecondaryLinkConfigured()
+
+				// Resulting signal of the interface going up shouldn't cause a resync.
+				m.OnUpdate(&ifaceUpdate{
+					Name:  "eth1",
+					Index: 124,
+					State: ifacemonitor.StateUp,
+				})
+				Expect(m.dataplaneResyncNeeded).To(BeFalse())
+
+				// Resulting signal of the interface going up shouldn't cause a resync but if it goes down
+				// then we do care.
+				m.OnUpdate(&ifaceUpdate{
+					Name:  "eth1",
+					Index: 124,
+					State: ifacemonitor.StateDown,
+				})
+				Expect(m.dataplaneResyncNeeded).To(BeTrue())
+			})
+
+			It("should handle an interface IP added.", func() {
+				// Interface shows up.
+				secondaryLink.attrs = netlink.LinkAttrs{
+					Name:         "eth1",
+					HardwareAddr: secondaryMAC,
+				}
+				fakes.Links = append(fakes.Links, secondaryLink)
+				m.OnUpdate(&ifaceUpdate{
+					Name:  "eth1",
+					Index: 123,
+					State: ifacemonitor.StateDown,
+				})
+
+				// CompleteDeferredWork should then configure the interface.
+				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+				expectSecondaryLinkConfigured()
+
+				// New IP added to interface and signalled.
+				extraNLAddr, err := netlink.ParseAddr("1.2.3.4/32")
+				Expect(err).NotTo(HaveOccurred())
+				secondaryLink.addrs = append(secondaryLink.addrs, *extraNLAddr)
+				m.OnUpdate(&ifaceAddrsUpdate{
+					Name: "eth1",
+					Addrs: set.From(
+						"daed:beef::",
+						"1.2.3.4",
+						"100.64.0.5",
+					),
+				})
+
+				// CompleteDeferredWork should clean up the incorrect IP.
+				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+				expectSecondaryLinkConfigured()
+			})
+
+			It("should handle an interface IP removed.", func() {
+				// Interface shows up.
+				secondaryLink.attrs = netlink.LinkAttrs{
+					Name:         "eth1",
+					HardwareAddr: secondaryMAC,
+				}
+				fakes.Links = append(fakes.Links, secondaryLink)
+				m.OnUpdate(&ifaceUpdate{
+					Name:  "eth1",
+					Index: 123,
+					State: ifacemonitor.StateDown,
+				})
+
+				// CompleteDeferredWork should then configure the interface.
+				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+				expectSecondaryLinkConfigured()
+
+				// IP deleted.
+				secondaryLink.addrs = nil
+				m.OnUpdate(&ifaceAddrsUpdate{
+					Name: "eth1",
+					Addrs: set.From(
+						"daed:beef::", // IPv6 ignored.
+					),
+				})
+
+				// CompleteDeferredWork should add the correct IP.
+				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+				expectSecondaryLinkConfigured()
+
+				// Finally signal the correct state.
+				m.OnUpdate(&ifaceAddrsUpdate{
+					Name: "eth1",
+					Addrs: set.From(
+						"daed:beef::",
+						"100.64.0.5",
+					),
+				})
+
+				// Should spot it's correct and not schedule an update.
+				Expect(m.dataplaneResyncNeeded).To(BeFalse())
+
+				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+				expectSecondaryLinkConfigured()
 			})
 
 			It("should handle an interface delete/re-add.", func() {
@@ -530,30 +628,14 @@ var _ = Describe("awsIPManager tests", func() {
 	})
 })
 
-func newFakeLink() *fakeLink {
-	return &fakeLink{}
-}
 
-type fakeLink struct {
-	attrs netlink.LinkAttrs
-	addrs []netlink.Addr
-}
-
-func (f *fakeLink) Attrs() *netlink.LinkAttrs {
-	return &f.attrs
-}
-
-func (f *fakeLink) Type() string {
-	return "device"
-}
-
-func newAWSMgrFakes() *fakeAWSIPMgrFakes {
-	return &fakeAWSIPMgrFakes{
+func newAWSMgrFakes() *awsIPMgrFakes {
+	return &awsIPMgrFakes{
 		RouteTables: map[int]*fakeRouteTable{},
 	}
 }
 
-type fakeAWSIPMgrFakes struct {
+type awsIPMgrFakes struct {
 	DatastoreState *aws.DatastoreState
 
 	Links []netlink.Link
@@ -562,26 +644,26 @@ type fakeAWSIPMgrFakes struct {
 	Rules       *fakeRouteRules
 }
 
-func (f *fakeAWSIPMgrFakes) OnDatastoreUpdate(ds aws.DatastoreState) {
+func (f *awsIPMgrFakes) OnDatastoreUpdate(ds aws.DatastoreState) {
 	f.DatastoreState = &ds
 }
 
-func (f *fakeAWSIPMgrFakes) LinkSetMTU(iface netlink.Link, mtu int) error {
+func (f *awsIPMgrFakes) LinkSetMTU(iface netlink.Link, mtu int) error {
 	iface.(*fakeLink).attrs.MTU = mtu
 	return nil
 }
 
-func (f *fakeAWSIPMgrFakes) LinkSetUp(iface netlink.Link) error {
+func (f *awsIPMgrFakes) LinkSetUp(iface netlink.Link) error {
 	iface.(*fakeLink).attrs.OperState = netlink.OperUp
 	return nil
 }
 
-func (f *fakeAWSIPMgrFakes) AddrList(iface netlink.Link, family int) ([]netlink.Addr, error) {
+func (f *awsIPMgrFakes) AddrList(iface netlink.Link, family int) ([]netlink.Addr, error) {
 	Expect(family).To(Equal(netlink.FAMILY_V4))
 	return iface.(*fakeLink).addrs, nil
 }
 
-func (f *fakeAWSIPMgrFakes) AddrDel(iface netlink.Link, addr *netlink.Addr) error {
+func (f *awsIPMgrFakes) AddrDel(iface netlink.Link, addr *netlink.Addr) error {
 	link := iface.(*fakeLink)
 	newAddrs := link.addrs[:0]
 	found := false
@@ -597,17 +679,17 @@ func (f *fakeAWSIPMgrFakes) AddrDel(iface netlink.Link, addr *netlink.Addr) erro
 	return nil
 }
 
-func (f *fakeAWSIPMgrFakes) AddrAdd(iface netlink.Link, addr *netlink.Addr) error {
+func (f *awsIPMgrFakes) AddrAdd(iface netlink.Link, addr *netlink.Addr) error {
 	link := iface.(*fakeLink)
 	link.addrs = append(link.addrs, *addr)
 	return nil
 }
 
-func (f *fakeAWSIPMgrFakes) LinkList() ([]netlink.Link, error) {
+func (f *awsIPMgrFakes) LinkList() ([]netlink.Link, error) {
 	return f.Links, nil
 }
 
-func (f *fakeAWSIPMgrFakes) NewRouteTable(
+func (f *awsIPMgrFakes) NewRouteTable(
 	regexes []string,
 	version uint8,
 	vxlan bool,
@@ -635,7 +717,7 @@ func (f *fakeAWSIPMgrFakes) NewRouteTable(
 	return rt
 }
 
-func (f *fakeAWSIPMgrFakes) NewRouteRules(
+func (f *awsIPMgrFakes) NewRouteRules(
 	ipVersion int,
 	priority int,
 	tableIndexSet set.Set,
@@ -660,6 +742,23 @@ func (f *fakeAWSIPMgrFakes) NewRouteRules(
 	f.Rules = &fakeRouteRules{}
 
 	return f.Rules, nil
+}
+
+func newFakeLink() *fakeLink {
+	return &fakeLink{}
+}
+
+type fakeLink struct {
+	attrs netlink.LinkAttrs
+	addrs []netlink.Addr
+}
+
+func (f *fakeLink) Attrs() *netlink.LinkAttrs {
+	return &f.attrs
+}
+
+func (f *fakeLink) Type() string {
+	return "device"
 }
 
 type fakeRouteTable struct {
@@ -708,7 +807,7 @@ type fakeRouteRules struct {
 }
 
 func (f *fakeRouteRules) SetRule(rule *routerule.Rule) {
-	for _, r :=  range f.Rules{
+	for _, r := range f.Rules {
 		// Can't easily inspect the contents of routerule.Rule but comparison is good enough for now.
 		if reflect.DeepEqual(r, rule) {
 			return
@@ -720,7 +819,7 @@ func (f *fakeRouteRules) SetRule(rule *routerule.Rule) {
 func (f *fakeRouteRules) RemoveRule(rule *routerule.Rule) {
 	newRules := f.Rules[:0]
 	found := false
-	for _, r :=  range f.Rules {
+	for _, r := range f.Rules {
 		if reflect.DeepEqual(r, rule) {
 			found = true
 			continue

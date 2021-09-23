@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 
@@ -293,7 +294,7 @@ func (a *awsIPManager) onIfaceUpdate(msg *ifaceUpdate) {
 			return
 		}
 	}
-	if _, ok := a.expectedPrimaryIPs[msg.Name]; ok {
+	if _, ok := a.expectedPrimaryIPs[msg.Name]; ok && msg.State != ifacemonitor.StateUp {
 		// Interface that we've already matched with AWS changed state.
 		logrus.WithField("update", msg).Debug("Secondary ENI state changed.")
 		a.queueDataplaneResync("Interface changed state")
