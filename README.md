@@ -14,3 +14,7 @@ The current implementation contains a DaemonSet deployment that polls the events
 
 ## Testing
 `make ut` and e2e has been created.
+
+## Updating Snort2 version
+
+To update the Snort2 version used, update the version number assigned to the variable `SNORT_VERSION` in Makefile.

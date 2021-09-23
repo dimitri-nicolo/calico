@@ -35,6 +35,8 @@ EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 # Define some constants
 ##############################################################################
 HONEYPOD_CONTROLLER_IMAGE ?=tigera/honeypod-controller
+SNORT_IMAGE               ?=tigera/snort2
+SNORT_VERSION             ?=2.9.18.1
 BUILD_IMAGES              ?=$(HONEYPOD_CONTROLLER_IMAGE)
 ARCHES                    ?=amd64
 DEV_REGISTRIES            ?=gcr.io/unique-caldron-775/cnx
@@ -137,16 +139,41 @@ images-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) images ARCH=$*
 
+.PHONY: $(SNORT_IMAGE)
+
+$(SNORT_IMAGE): $(SNORT_IMAGE)-$(ARCH)
+$(SNORT_IMAGE)-$(ARCH):
+	op="$(shell docker manifest inspect $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT_VERSION)-$(ARCH))"; \
+	if [ $(.SHELLSTATUS) = 0 ]; then \
+  		echo "Using existing snort image $(SNORT_IMAGE):$(SNORT_VERSION)-$(ARCH)"; \
+  		docker pull $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT_VERSION)-$(ARCH) ;\
+  		docker tag $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT_VERSION)-$(ARCH) $(SNORT_IMAGE):$(SNORT_VERSION)-$(ARCH) ;\
+  	else \
+  	  	echo "Snort image  $(SNORT_IMAGE):$(SNORT_VERSION) doesn't exist in $(DEV_REGISTRIES), building it" ; \
+  	  	rm -rf docker-image/bin; \
+  	  	mkdir -p docker-image/bin; \
+  	  	docker build -t $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT_VERSION)-$(ARCH) -t $(SNORT_IMAGE):$(SNORT_VERSION)-$(ARCH) --build-arg SNORT_VERSION=$(SNORT_VERSION) --file ./docker-image/snort/Dockerfile docker-image/snort; \
+  	  	docker tag $(SNORT_IMAGE):$(SNORT_VERSION)-$(ARCH) $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT_VERSION)-$(ARCH) ; \
+  	fi
+ifeq ($(ARCH),amd64)
+	docker tag $(SNORT_IMAGE):$(SNORT_VERSION)-$(ARCH) $(SNORT_IMAGE):$(SNORT_VERSION)
+	docker tag $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT_VERSION)-$(ARCH) $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT_VERSION)
+endif
+
 # Build the tigera/honeypod-controller docker image.
-$(HONEYPOD_CONTROLLER_IMAGE): bin/controller-$(ARCH) register
+$(HONEYPOD_CONTROLLER_IMAGE): $(SNORT_IMAGE) bin/controller-$(ARCH) register
 	rm -rf docker-image/controller/bin
 	mkdir -p docker-image/controller/bin
 	cp bin/controller-$(ARCH) docker-image/controller/bin/
-	docker build --pull -t snort:local --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/snort/Dockerfile docker-image/snort
-	docker build --pull -t $(HONEYPOD_CONTROLLER_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/controller/Dockerfile.$(ARCH) docker-image/controller --pull=false
+	docker build --pull -t $(HONEYPOD_CONTROLLER_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg SNORT_VERSION=$(SNORT_VERSION) --build-arg SNORT_IMAGE=$(SNORT_IMAGE) --file ./docker-image/controller/Dockerfile.$(ARCH) docker-image/controller --pull=false
 ifeq ($(ARCH),amd64)
 	docker tag $(HONEYPOD_CONTROLLER_IMAGE):latest-$(ARCH) $(HONEYPOD_CONTROLLER_IMAGE):latest
 endif
+
+.PHONY: push-snort-image
+push-snort-image:
+	docker push $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT_VERSION)-$(ARCH)
+
 
 ###############################################################################
 # Updating pins
@@ -340,7 +367,7 @@ version: images
 ci: images-all static-checks ut
 
 ## Deploys images to registry
-cd: cd-common
+cd: push-snort-image cd-common
 
 ###############################################################################
 # Developer helper scripts (not used by build or test)

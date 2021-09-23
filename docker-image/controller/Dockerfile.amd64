@@ -1,8 +1,11 @@
-FROM snort:local AS snort
+ARG SNORT_VERSION
+ARG SNORT_IMAGE
+
+FROM ${SNORT_IMAGE}:${SNORT_VERSION} AS snort
 
 FROM scratch
 
-ENV SNORT_VERSION=2.9.18.1
+ARG SNORT_VERSION
 
 COPY --from=snort /usr/local/lib/ /usr/local/lib/
 
