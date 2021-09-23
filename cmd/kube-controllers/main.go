@@ -219,7 +219,7 @@ func main() {
 
 		// any subsequent changes trigger a restart
 		controllerCtrl.restartCfgChan = cCtrlr.ConfigChan()
-		controllerCtrl.InitControllers(ctx, runCfg, k8sClientset, calicoClient, esClientBuilder, cfg.KubeControllersConfigName)
+		controllerCtrl.InitControllers(ctx, runCfg, k8sClientset, calicoClient, esClientBuilder)
 	}
 
 	// Create the status file. We will only update it if we have healthchecks enabled.
@@ -474,7 +474,7 @@ type controllerState struct {
 }
 
 func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.RunConfig,
-	k8sClientset *kubernetes.Clientset, calicoClient client.Interface, esClientBuilder elasticsearch.ClientBuilder, kubeControllersConfigName string) {
+	k8sClientset *kubernetes.Clientset, calicoClient client.Interface, esClientBuilder elasticsearch.ClientBuilder) {
 	cc.shortLicensePolling = cfg.ShortLicensePolling
 
 	// Create a shared informer factory to allow cache sharing between controllers monitoring the
