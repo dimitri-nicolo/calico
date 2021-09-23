@@ -520,31 +520,22 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 		}
 		cc.needLicenseMonitoring = true
 	}
-	if kubeControllersConfigName == config.EsKubeControllerConfigName {
-		if cfg.Controllers.ElasticsearchConfiguration != nil {
-			esK8sREST, err := relasticsearch.NewRESTClient(cfg.Controllers.ElasticsearchConfiguration.RESTConfig)
-			if err != nil {
-				log.WithError(err).Fatal("failed to build elasticsearch rest client")
-			}
+	if cfg.Controllers.ElasticsearchConfiguration != nil {
+		esK8sREST, err := relasticsearch.NewRESTClient(cfg.Controllers.ElasticsearchConfiguration.RESTConfig)
+		if err != nil {
+			log.WithError(err).Fatal("failed to build elasticsearch rest client")
+		}
 
-			cc.controllerStates["ElasticsearchConfiguration"] = &controllerState{
-				controller: elasticsearchconfiguration.New(
-					"cluster",
-					"",
-					k8sClientset,
-					k8sClientset,
-					esK8sREST,
-					esClientBuilder,
-					true,
-					*cfg.Controllers.ElasticsearchConfiguration),
-			}
-		} else {
-			// Elasticsearch is often removed due to the removal of the LogStorage CR, in which case calico-kube-controllers
-			// will restart without the elasticsearch controller. For this use-case we can do a one-time attempt to delete them.
-			err := elasticsearchconfiguration.CleanUpESUserSecrets(k8sClientset)
-			if err != nil {
-				log.WithError(err).Warn("failed to remove existing elasticsearch secrets")
-			}
+		cc.controllerStates["ElasticsearchConfiguration"] = &controllerState{
+			controller: elasticsearchconfiguration.New(
+				"cluster",
+				"",
+				k8sClientset,
+				k8sClientset,
+				esK8sREST,
+				esClientBuilder,
+				true,
+				*cfg.Controllers.ElasticsearchConfiguration),
 		}
 	}
 	if cfg.Controllers.ManagedCluster != nil {

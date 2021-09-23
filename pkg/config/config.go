@@ -28,9 +28,6 @@ const (
 	EnvAutoHostEndpoints  = "AUTO_HOST_ENDPOINTS"
 )
 
-// Since we have splitted the kube-controllers component, we need to handle some special cases specific to ES kube-controllers
-const EsKubeControllerConfigName = "elasticsearch"
-
 var AllEnvs = []string{EnvLogLevel, EnvReconcilerPeriod, EnvEnabledControllers, EnvCompactionPeriod, EnvHealthEnabled, EnvSyncNodeLabels, EnvAutoHostEndpoints}
 
 // Config represents the configuration we load from the environment variables
