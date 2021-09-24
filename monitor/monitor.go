@@ -148,9 +148,8 @@ func (l *licenseMonitor) MonitorForever(ctx context.Context) error {
 		case licUpdate := <- licenseWatcher.ResultChan():
 			log.Debug("License was just updated.")
 			if licUpdate.Error != nil {
-				return err
-			}
-			if licUpdate.New != nil {
+				log.Errorf("An error occurred for an incoming license watch event: %v", err)
+			} else if licUpdate.New != nil {
 				_ = l.refreshLicense(licUpdate.New)
 			}
 		}
