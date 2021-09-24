@@ -55,6 +55,12 @@ var (
 	}, {
 		APIGroup: "",
 		Resource: "pods",
+	}, {
+		APIGroup: "projectcalico.org",
+		Resource: "uisettingsgroups",
+	}, {
+		APIGroup: "projectcalico.org",
+		Resource: "uisettings",
 	}}
 )
 
@@ -77,6 +83,10 @@ func isTieredPolicy(rt ResourceType) bool {
 		return true
 	}
 	return false
+}
+
+func isUISettings(rt ResourceType) bool {
+	return rt.APIGroup == "projectcalico.org" && rt.Resource == "uisettings"
 }
 
 func isNamespaced(rt ResourceType) bool {
@@ -106,30 +116,6 @@ var _ = Describe("RBAC calculator tests", func() {
 	var mock *rbacmock.MockClient
 	var myUser user.Info
 
-	// Calculate the distribution of default resources that are namespaced and tiered.
-	var numNonNSNonTiered, numNonNSTiered, numNSNonTiered, numNSTiered, numNonTiered, numTiered, numNS, numNonNS int
-	for _, rt := range defaultResourceTypes {
-		if isNamespaced(rt) {
-			if isTieredPolicy(rt) {
-				numNSTiered++
-				numTiered++
-			} else {
-				numNSNonTiered++
-				numNonTiered++
-			}
-			numNS++
-		} else {
-			if isTieredPolicy(rt) {
-				numNonNSTiered++
-				numTiered++
-			} else {
-				numNonNSNonTiered++
-				numNonTiered++
-			}
-			numNonNS++
-		}
-	}
-
 	BeforeEach(func() {
 		mock = &rbacmock.MockClient{
 			Roles:               map[string][]rbac_v1.PolicyRule{},
@@ -138,6 +124,7 @@ var _ = Describe("RBAC calculator tests", func() {
 			ClusterRoleBindings: []string{},
 			Namespaces:          []string{"ns1", "ns2", "ns3", "ns4", "ns5"},
 			Tiers:               []string{"default", "tier1", "tier2", "tier3", "tier4"},
+			UISettingsGroups:    []string{"group1", "group2", "group3", "group4"},
 		}
 		calc = NewCalculator(mock, mock, mock, mock, mock, mock, mock, 0)
 		myUser = &user.DefaultInfo{
@@ -224,17 +211,27 @@ var _ = Describe("RBAC calculator tests", func() {
 				} else if r.Resource == "tiers" && v == VerbGet {
 					Expect(ms).To(HaveLen(5))
 					Expect(ms).To(Equal([]Match{{Tier: "default"}, {Tier: "tier1"}, {Tier: "tier2"}, {Tier: "tier3"}, {Tier: "tier4"}}))
+				} else if r.Resource == "uisettingsgroups" && v == VerbGet {
+					Expect(ms).To(HaveLen(4))
+					Expect(ms).To(Equal([]Match{
+						{UISettingsGroup: "group1"},
+						{UISettingsGroup: "group2"},
+						{UISettingsGroup: "group3"},
+						{UISettingsGroup: "group4"},
+					}))
 				}
 			}
 		}
 	})
 
-	It("matches cluster scoped wildcard tier matches for all resources with get access to limited Tiers", func() {
+	It("matches cluster scoped wildcard tier matches for all resources with get access to limited Tiers and UISettingsGroups", func() {
 		gettableTiers := []string{"default", "tier2"}
-		mock.ClusterRoleBindings = []string{"all-resources", "get-tiers"}
+		gettableUISettingsGroups := []string{"group1", "group2"}
+		mock.ClusterRoleBindings = []string{"all-resources", "get-tiers", "get-uisettingsgroups"}
 		mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
-			"all-resources": {{Verbs: []string{"delete", "patch"}, Resources: []string{"*"}, APIGroups: []string{"*"}}},
-			"get-tiers":     {{Verbs: []string{"get"}, Resources: []string{"tiers"}, ResourceNames: gettableTiers, APIGroups: []string{"projectcalico.org"}}},
+			"all-resources":        {{Verbs: []string{"delete", "patch"}, Resources: []string{"*"}, APIGroups: []string{"*"}}},
+			"get-tiers":            {{Verbs: []string{"get"}, Resources: []string{"tiers"}, ResourceNames: gettableTiers, APIGroups: []string{"projectcalico.org"}}},
+			"get-uisettingsgroups": {{Verbs: []string{"get"}, Resources: []string{"uisettingsgroups"}, ResourceNames: gettableUISettingsGroups, APIGroups: []string{"projectcalico.org"}}},
 		}
 
 		// Matches for tiered policy should only contain the gettable Tiers. Also tier get should contain separate
@@ -255,10 +252,16 @@ var _ = Describe("RBAC calculator tests", func() {
 				Expect(vs).To(HaveKey(v))
 				ms := vs[v]
 				if r.Resource == "tiers" && v == VerbGet {
-					// We expect tier get and watch to be expanded by gettable Tiers.
+					// We expect tier get to be expanded by gettable Tiers.
 					Expect(ms).To(HaveLen(len(gettableTiers)))
 					for _, t := range gettableTiers {
 						Expect(ms).To(ContainElement(Match{Namespace: "", Tier: t}))
+					}
+				} else if r.Resource == "uisettingsgroups" && v == VerbGet {
+					// We expect UISettingsGroups get to be expanded by gettable uisettingsgroups.
+					Expect(ms).To(HaveLen(len(gettableUISettingsGroups)))
+					for _, gp := range gettableUISettingsGroups {
+						Expect(ms).To(ContainElement(Match{Namespace: "", UISettingsGroup: gp}))
 					}
 				} else if !expectedVerbs[v] {
 					// Not delete or patch, so expect no results.
@@ -269,6 +272,12 @@ var _ = Describe("RBAC calculator tests", func() {
 					for _, t := range gettableTiers {
 						Expect(ms).To(ContainElement(Match{Namespace: "", Tier: t}))
 					}
+				} else if r.Resource == "uisettings" {
+					// UISettings, expect delete/patch for each group.
+					Expect(ms).To(HaveLen(len(gettableUISettingsGroups)))
+					for _, gp := range gettableUISettingsGroups {
+						Expect(ms).To(ContainElement(Match{Namespace: "", UISettingsGroup: gp}))
+					}
 				} else {
 					// Non-tiered policy, expect delete/patch.
 					Expect(ms).To(HaveLen(1))
@@ -278,10 +287,11 @@ var _ = Describe("RBAC calculator tests", func() {
 		}
 	})
 
-	It("matches wildcard name matches for all resources in namespace ns1, get access all Tiers", func() {
-		mock.ClusterRoleBindings = []string{"get-tiers"}
+	It("matches wildcard name matches for all resources in namespace ns1, get access all Tiers and UISettingsGroups", func() {
+		mock.ClusterRoleBindings = []string{"get-tiers", "get-uisettingsgroups"}
 		mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
-			"get-tiers": {{Verbs: []string{"get"}, Resources: []string{"tiers"}, APIGroups: []string{"projectcalico.org"}}},
+			"get-tiers":            {{Verbs: []string{"get"}, Resources: []string{"tiers"}, APIGroups: []string{"projectcalico.org"}}},
+			"get-uisettingsgroups": {{Verbs: []string{"get"}, Resources: []string{"uisettingsgroups"}, APIGroups: []string{"projectcalico.org"}}},
 		}
 		mock.RoleBindings = map[string][]string{"ns1": {"/all-resources"}}
 		mock.Roles = map[string][]rbac_v1.PolicyRule{
@@ -308,6 +318,10 @@ var _ = Describe("RBAC calculator tests", func() {
 					// We expect all Tiers to be gettable.
 					Expect(ms).To(HaveLen(5))
 					Expect(ms).To(Equal([]Match{{Tier: "default"}, {Tier: "tier1"}, {Tier: "tier2"}, {Tier: "tier3"}, {Tier: "tier4"}}))
+				} else if r.Resource == "uisettingsgroups" && v == VerbGet {
+					// We expect all Tiers to be gettable.
+					Expect(ms).To(HaveLen(4))
+					Expect(ms).To(Equal([]Match{{UISettingsGroup: "group1"}, {UISettingsGroup: "group2"}, {UISettingsGroup: "group3"}, {UISettingsGroup: "group4"}}))
 				} else if !expectedVerbs[v] {
 					// If not one of the expected verbs then we expect a nil match set.
 					Expect(ms).To(BeNil())
@@ -329,7 +343,7 @@ var _ = Describe("RBAC calculator tests", func() {
 		}
 	})
 
-	It("matches namespace scoped wildcard name matches for all resources, no get access to any tier", func() {
+	It("matches namespace scoped wildcard name matches for all resources, no get access to any tier nor any UISettingsGroup", func() {
 		mock.RoleBindings = map[string][]string{"ns1": {"/all-resources"}}
 		mock.Roles = map[string][]rbac_v1.PolicyRule{
 			"ns1/all-resources": {{Verbs: []string{"update", "create", "list"}, Resources: []string{"*"}, APIGroups: []string{"*"}}},
@@ -511,6 +525,28 @@ var _ = Describe("RBAC calculator tests", func() {
 		Expect(nps[VerbWatch]).To(Equal([]Match{{}}))
 	})
 
+	It("has fully gettable and watchable UISettingsGroups, but not listable", func() {
+		mock.ClusterRoleBindings = []string{"get-watch-UISettingsGroups"}
+		mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
+			"get-watch-UISettingsGroups": {{
+				Verbs:     []string{"get", "watch"},
+				Resources: []string{"uisettingsgroups"},
+				APIGroups: []string{"projectcalico.org"},
+			}},
+		}
+
+		// We should have watch access at cluster scope
+		rt := ResourceType{APIGroup: "projectcalico.org", Resource: "uisettingsgroups"}
+		res, err := calc.CalculatePermissions(myUser, []ResourceVerbs{{rt, AllVerbs}})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(res).To(HaveKey(rt))
+		nps := res[rt]
+		Expect(nps).To(HaveKey(VerbList))
+		Expect(nps).To(HaveKey(VerbWatch))
+		Expect(nps[VerbList]).To(BeNil())
+		Expect(nps[VerbWatch]).To(Equal([]Match{{}}))
+	})
+
 	It("has fully gettable Tiers, but no list and limited watch access to Tiers", func() {
 		mock.ClusterRoleBindings = []string{"get-tiers", "watch-list-tiers1-2"}
 		mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
@@ -537,6 +573,34 @@ var _ = Describe("RBAC calculator tests", func() {
 		Expect(nps).To(HaveKey(VerbWatch))
 		Expect(nps[VerbList]).To(BeNil())
 		Expect(nps[VerbWatch]).To(Equal([]Match{{Tier: "tier1"}, {Tier: "tier2"}}))
+	})
+
+	It("has fully gettable UISettingsGroups, but no list and limited watch access to UISettingsGroups", func() {
+		mock.ClusterRoleBindings = []string{"get-UISettingsGroups", "watch-list-UISettingsGroups1-2"}
+		mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
+			"get-UISettingsGroups": {{
+				Verbs:     []string{"get"},
+				Resources: []string{"uisettingsgroups"},
+				APIGroups: []string{"projectcalico.org"},
+			}},
+			"watch-list-UISettingsGroups1-2": {{
+				Verbs:         []string{"watch"},
+				Resources:     []string{"uisettingsgroups"},
+				ResourceNames: []string{"group1", "group2"},
+				APIGroups:     []string{"projectcalico.org"},
+			}},
+		}
+
+		// We should have watch access for specific gettable Tiers.
+		rt := ResourceType{APIGroup: "projectcalico.org", Resource: "uisettingsgroups"}
+		res, err := calc.CalculatePermissions(myUser, []ResourceVerbs{{rt, AllVerbs}})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(res).To(HaveKey(rt))
+		nps := res[rt]
+		Expect(nps).To(HaveKey(VerbList))
+		Expect(nps).To(HaveKey(VerbWatch))
+		Expect(nps[VerbList]).To(BeNil())
+		Expect(nps[VerbWatch]).To(Equal([]Match{{UISettingsGroup: "group1"}, {UISettingsGroup: "group2"}}))
 	})
 
 	It("has fully gettable and createable namespaces limited watch access to Namespaces", func() {
@@ -631,6 +695,37 @@ var _ = Describe("RBAC calculator tests", func() {
 		Expect(nps[VerbWatch]).To(Equal([]Match{{Tier: "tier1"}, {Tier: "tier2"}}))
 	})
 
+	It("has listable uisettings in all UISettingsGroups and watchable in group1 and group2", func() {
+		mock.ClusterRoleBindings = []string{"get-watch-uisettings"}
+		mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
+			"get-watch-uisettings": {{
+				Verbs:     []string{"get"},
+				Resources: []string{"uisettingsgroups"},
+				APIGroups: []string{"projectcalico.org"},
+			}, {
+				Verbs:     []string{"list"},
+				Resources: []string{"uisettingsgroups/data"},
+				APIGroups: []string{"projectcalico.org"},
+			}, {
+				Verbs:         []string{"watch"},
+				Resources:     []string{"uisettingsgroups/data"},
+				ResourceNames: []string{"group1", "group2"},
+				APIGroups:     []string{"projectcalico.org"},
+			}},
+		}
+
+		// List access for each tier, watch access limited to two Tiers.
+		rt := ResourceType{APIGroup: "projectcalico.org", Resource: "uisettings"}
+		res, err := calc.CalculatePermissions(myUser, []ResourceVerbs{{rt, AllVerbs}})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(res).To(HaveKey(rt))
+		nps := res[rt]
+		Expect(nps).To(HaveKey(VerbList))
+		Expect(nps).To(HaveKey(VerbWatch))
+		Expect(nps[VerbList]).To(Equal([]Match{{UISettingsGroup: "group1"}, {UISettingsGroup: "group2"}, {UISettingsGroup: "group3"}, {UISettingsGroup: "group4"}}))
+		Expect(nps[VerbWatch]).To(Equal([]Match{{UISettingsGroup: "group1"}, {UISettingsGroup: "group2"}}))
+	})
+
 	It("has listable/watchable networkpolicies in all Tiers, gettable only in tier2 and tier3", func() {
 		mock.ClusterRoleBindings = []string{"get-watch-np"}
 		mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
@@ -721,8 +816,8 @@ var _ = Describe("RBAC calculator tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		expected := `{
-  "networkpolicies.projectcalico.org": {"get": [{"tier": "a", "namespace": "b"}]},
-  "pods": {"list": [{"tier": "", "namespace": "b"}]}
+  "networkpolicies.projectcalico.org": {"get": [{"tier": "a", "namespace": "b", "uisettingsgroup": ""}]},
+  "pods": {"list": [{"tier": "", "namespace": "b", "uisettingsgroup": ""}]}
 }`
 		Expect(v).To(MatchJSON(expected))
 

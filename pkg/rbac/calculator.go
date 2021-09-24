@@ -38,6 +38,9 @@ const (
 
 const (
 	resourceTiers                       = "tiers"
+	resourceUISettings                  = "uisettings"
+	resourceUISettingsGroups            = "uisettingsgroups"
+	resourceUISettingsGroupsData        = "uisettingsgroups/data"
 	resourceNamespaces                  = "namespaces"
 	resourceNetworkPolicies             = "networkpolicies"
 	resourceGlobalNetworkPolicies       = "globalnetworkpolicies"
@@ -105,6 +108,8 @@ func (r ResourceType) String() string {
 // string indicates a wildcard match.
 // - A blank namespace indicates a cluster-wide match. This is applicable to namespaced and cluster-scoped resource
 //   types.
+// - The UISettingsGroup field will never be wildcarded for UISettings, i.e. the response will contain explicit
+//   match entries for each authorized UISettingsGroup.
 // - The Tier field will never be wildcarded for Calico tiered policies, i.e. the response will contain explicit
 //   match entries for each authorized tier.
 // - For Namespace queries: the Namespace field will never be wildcarded for the "get" verb, it may be wildcarded or
@@ -113,9 +118,13 @@ func (r ResourceType) String() string {
 // - For Tier queries: the Tier field will never be wildcarded for the "get" verb, it may be wildcarded or explicit for
 //   "watch", and is only ever wildcarded for remaining verbs (e.g. the RBAC calculator never expands down to individual
 //   tiers for "create", "delete" etc.)
+// - For UISettingsGroup queries: the UISettingsGroup field will never be wildcarded for the "get" verb, it may be
+//   wildcarded or explicit for "watch", and is only ever wildcarded for remaining verbs (e.g. the RBAC calculator never
+//   expands down to individual UISettingsGroups for "create", "delete" etc.)
 type Match struct {
-	Namespace string `json:"namespace"`
-	Tier      string `json:"tier"`
+	Namespace       string `json:"namespace"`
+	Tier            string `json:"tier"`
+	UISettingsGroup string `json:"uisettingsgroup"`
 }
 
 func (m Match) String() string {
@@ -125,7 +134,7 @@ func (m Match) String() string {
 // NewCalculator creates a new RBAC Calculator.
 func NewCalculator(resourceLister ResourceLister, clusterRoleGetter ClusterRoleGetter, clusterRoleBindingLister ClusterRoleBindingLister,
 	roleGetter RoleGetter, roleBindingLister RoleBindingLister,
-	namespaceLister NamespaceLister, tierLister TierLister,
+	namespaceLister NamespaceLister, calicoResourceLister CalicoResourceLister,
 	minResourceRefreshInterval time.Duration) Calculator {
 
 	// Split out the cluster and namespaced rule resolvers - this allows us to perform namespace queries without
@@ -144,7 +153,7 @@ func NewCalculator(resourceLister ResourceLister, clusterRoleGetter ClusterRoleG
 	return &calculator{
 		resourceLister:             resourceLister,
 		namespaceLister:            namespaceLister,
-		tierLister:                 tierLister,
+		calicoResourceLister:       calicoResourceLister,
 		clusterRuleResolver:        clusterRuleResolver,
 		namespacedRuleResolver:     namespacedRuleResolver,
 		minResourceRefreshInterval: minResourceRefreshInterval,
@@ -176,9 +185,10 @@ type NamespaceLister interface {
 	ListNamespaces() ([]*corev1.Namespace, error)
 }
 
-// TierLister interface is used to list all Tiers.
-type TierLister interface {
+// CalicoResourceLister interface is used to list the required Calico resource types.
+type CalicoResourceLister interface {
 	ListTiers() ([]*v3.Tier, error)
+	ListUISettingsGroups() ([]*v3.UISettingsGroup, error)
 }
 
 // ResourceLister interface is used to list registered resource types.
@@ -208,6 +218,22 @@ func (ar apiResource) isTier() bool {
 	return ar.Resource == resourceTiers
 }
 
+// isUISettingsGroup returns true if the apiResource represents a Calico UISettingsGroup.
+func (ar apiResource) isUISettingsGroup() bool {
+	if ar.APIGroup != v3.Group {
+		return false
+	}
+	return ar.Resource == resourceUISettingsGroups
+}
+
+// isUISettings returns true if the apiResource represents a Calico UISettings.
+func (ar apiResource) isUISettings() bool {
+	if ar.APIGroup != v3.Group {
+		return false
+	}
+	return ar.Resource == resourceUISettings
+}
+
 // isTieredPolicy returns true is the apiResource represents a Calico tiered network policy.
 func (ar apiResource) isTieredPolicy() bool {
 	if ar.APIGroup != v3.Group {
@@ -221,11 +247,15 @@ func (ar apiResource) isTieredPolicy() bool {
 }
 
 // rbacResource returns the resource type actually used to calculate the users RBAC. For most resources this is
-// simply the resource plural form unchanged, however, for Calico tiered policies we use a special "tier.xxx" format
-// to allow special case processing for fine grained access control at the tier level.
+// simply the resource plural form unchanged, except:
+// - for Calico tiered policies we use a special "tier.xxx" format to allow special case processing for fine grained
+//   access control at the tier level
+// - for uisettings resources, the RBAC is controlled by the uisettingsgroups/data sub resource.
 func (ar apiResource) rbacResource() string {
 	if ar.isTieredPolicy() {
 		return "tier." + ar.Resource
+	} else if ar.isUISettings() {
+		return resourceUISettingsGroupsData
 	}
 	return ar.Resource
 }
@@ -234,7 +264,7 @@ func (ar apiResource) rbacResource() string {
 type calculator struct {
 	resourceLister         ResourceLister
 	namespaceLister        NamespaceLister
-	tierLister             TierLister
+	calicoResourceLister   CalicoResourceLister
 	clusterRuleResolver    validation.AuthorizationRuleResolver
 	namespacedRuleResolver validation.AuthorizationRuleResolver
 
@@ -348,21 +378,24 @@ func (c *calculator) newUserCalculator(user user.Info, resources map[ResourceTyp
 
 // userCalculator is used to gather user specific Calculator permissions.
 type userCalculator struct {
-	resources              map[ResourceType]apiResource
-	resourcesUpdated       bool
-	resourcesUpdateTime    time.Time
-	user                   user.Info
-	errors                 []error
-	calculator             *calculator
-	allTiers               []string
-	gettableTiers          []string
-	allNamespaces          []string
-	gettableNamespaces     []string
-	clusterRules           []rbacv1.PolicyRule
-	namespacedRules        map[string][]rbacv1.PolicyRule
-	canGetAllTiersVal      *bool
-	canGetAllNamespacesVal *bool
-	permissions            Permissions
+	resources                    map[ResourceType]apiResource
+	resourcesUpdated             bool
+	resourcesUpdateTime          time.Time
+	user                         user.Info
+	errors                       []error
+	calculator                   *calculator
+	allTiers                     []string
+	gettableTiers                []string
+	allUISettingsGroups          []string
+	gettableUISettingsGroups     []string
+	allNamespaces                []string
+	gettableNamespaces           []string
+	clusterRules                 []rbacv1.PolicyRule
+	namespacedRules              map[string][]rbacv1.PolicyRule
+	canGetAllTiersVal            *bool
+	canGetAllUISettingsGroupsVal *bool
+	canGetAllNamespacesVal       *bool
+	permissions                  Permissions
 }
 
 // getMatches returns the calculated matches for a specific resource and verb.
@@ -400,6 +433,15 @@ func (u *userCalculator) getMatches(verb Verb, ar apiResource) []Match {
 		}
 
 		return matches
+	} else if ar.isUISettingsGroup() && verb == VerbGet {
+		// Special case UISettingsGroups gets - we always expand get across Namespaces, so include all configured Namespaces.
+		log.Debug("Return gettable Namespaces")
+		for _, gp := range u.getGettableUISettingsGroups() {
+			match.UISettingsGroup = gp
+			matches = append(matches, match)
+		}
+
+		return matches
 	} else if ar.isNamespace() && verb == VerbGet {
 		// Special case namespace gets - we always expand get across Namespaces, so include all configured Namespaces.
 		log.Debug("Return gettable Namespaces")
@@ -415,29 +457,44 @@ func (u *userCalculator) getMatches(verb Verb, ar apiResource) []Match {
 	if rbac_auth.RulesAllow(record, u.getClusterRules()...) {
 		log.Debug("Full wildcard match")
 
-		if !ar.isTieredPolicy() {
-			// This is not a tiered policy so include the match unchanged.
-			log.Debug("Add wildcard namespace match for non-tiered policy")
-			matches = append(matches, match)
-		} else {
+		if ar.isTieredPolicy() {
 			// This is a tiered policy, expand the results by gettable tier.
 			for _, tier := range u.getGettableTiers() {
-				log.Debugf("Add wildcard namespace match for tiered-policy: tier=%s", tier)
+				log.Debugf("Add cluster match for tiered-policy: tier=%s", tier)
 				match.Tier = tier
 				matches = append(matches, match)
 			}
+		} else if ar.isUISettings() {
+			// For UISettings expand by UISettingsGroup.
+			for _, gp := range u.getGettableUISettingsGroups() {
+				log.Debugf("Add cluster match for UISettings: gp=%s", gp)
+				match.UISettingsGroup = gp
+				matches = append(matches, match)
+			}
+		} else {
+			// This is not a tiered policy so include the match unchanged.
+			log.Debug("Add cluster match for non-tiered policy")
+			matches = append(matches, match)
 		}
 
 		return matches
 	}
 
-	// Not allowed cluster-wide with full wildcarded-name.
-	// If we are handling watch for tier or namespace resources then expand by name.
+	// If not allowed cluster-wide with full wildcarded-name, then expand watch for tier, namespace and uisettings.
 	if ar.isTier() && verb == VerbWatch {
 		log.Debug("Return individual watchable Tiers")
 		tiers := u.expandClusterResourceByName(u.getAllTiers(), verb, ar)
 		for _, tier := range tiers {
 			match.Tier = tier
+			matches = append(matches, match)
+		}
+		// Nothing else to do for this resource.
+		return matches
+	} else if ar.isUISettingsGroup() && verb == VerbWatch {
+		log.Debug("Return individual watchable UISettingsGroup")
+		gps := u.expandClusterResourceByName(u.getAllUISettingsGroups(), verb, ar)
+		for _, gp := range gps {
+			match.UISettingsGroup = gp
 			matches = append(matches, match)
 		}
 		// Nothing else to do for this resource.
@@ -479,6 +536,19 @@ func (u *userCalculator) getMatches(verb Verb, ar apiResource) []Match {
 			// per-namespace.
 			log.Debug("All Tiers individually matched cluster-wide")
 			return matches
+		}
+	} else if ar.isUISettings() {
+		// If we are processing a UISettings, check if the user has cluster-scoped access within the group. We do this
+		// by checking the group sub resource /data.
+		log.Debug("Check cluster-scoped UISettings in each gettable UISettingsGroup")
+
+		for _, gp := range u.getGettableUISettingsGroups() {
+			record.Name = gp
+			if rbac_auth.RulesAllow(record, u.getClusterRules()...) {
+				log.Debugf("Rules allow cluster-scoped policy in UISettingGroup(%s)", gp)
+				match.UISettingsGroup = gp
+				matches = append(matches, match)
+			}
 		}
 	}
 
@@ -551,7 +621,7 @@ func (u *userCalculator) canGetAllTiers() bool {
 // getAllTiers returns the current set of configured Tiers.
 func (u *userCalculator) getAllTiers() []string {
 	if u.allTiers == nil {
-		if tiers, err := u.calculator.tierLister.ListTiers(); err != nil {
+		if tiers, err := u.calculator.calicoResourceLister.ListTiers(); err != nil {
 			log.WithError(err).Debug("Failed to list Tiers")
 			u.errors = append(u.errors, err)
 			u.allTiers = make([]string, 0)
@@ -583,6 +653,59 @@ func (u *userCalculator) getGettableTiers() []string {
 	}
 
 	return u.gettableTiers
+}
+
+// canGetAllUISettingsGroups determines whether the user is able to get all UISettingsGroups.
+func (u *userCalculator) canGetAllUISettingsGroups() bool {
+	if u.canGetAllUISettingsGroupsVal == nil {
+		allUISettingsGroups := rbac_auth.RulesAllow(authorizer.AttributesRecord{
+			Verb:            string(VerbGet),
+			APIGroup:        v3.Group,
+			Resource:        resourceUISettingsGroups,
+			Name:            "",
+			ResourceRequest: true,
+		}, u.getClusterRules()...)
+		u.canGetAllUISettingsGroupsVal = &allUISettingsGroups
+	}
+
+	return *u.canGetAllUISettingsGroupsVal
+}
+
+// getAllUISettingsGroups returns the current set of configured UISettingsGroups.
+func (u *userCalculator) getAllUISettingsGroups() []string {
+	if u.allUISettingsGroups == nil {
+		if tiers, err := u.calculator.calicoResourceLister.ListUISettingsGroups(); err != nil {
+			log.WithError(err).Debug("Failed to list UISettingsGroups")
+			u.errors = append(u.errors, err)
+			u.allUISettingsGroups = make([]string, 0)
+		} else {
+			for _, tier := range tiers {
+				u.allUISettingsGroups = append(u.allUISettingsGroups, tier.Name)
+			}
+		}
+		log.Debugf("getAllUISettingsGroups returns %v", u.allUISettingsGroups)
+	}
+	return u.allUISettingsGroups
+}
+
+// getGettableUISettingsGroups determines which UISettingsGroups the user is able to get.
+func (u *userCalculator) getGettableUISettingsGroups() []string {
+	if u.gettableUISettingsGroups == nil {
+		for _, tier := range u.getAllUISettingsGroups() {
+			if u.canGetAllUISettingsGroups() || rbac_auth.RulesAllow(authorizer.AttributesRecord{
+				Verb:            string(VerbGet),
+				APIGroup:        v3.Group,
+				Resource:        resourceUISettingsGroups,
+				Name:            tier,
+				ResourceRequest: true,
+			}, u.getClusterRules()...) {
+				u.gettableUISettingsGroups = append(u.gettableUISettingsGroups, tier)
+			}
+		}
+		log.Debugf("getGettableUISettingsGroups returns %v", u.gettableUISettingsGroups)
+	}
+
+	return u.gettableUISettingsGroups
 }
 
 // expandClusterResourceByName checks authorization of a verb on a specific cluster-wide resource type for individual

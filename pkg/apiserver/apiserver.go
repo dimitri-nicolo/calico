@@ -191,11 +191,12 @@ func (c completedConfig) NewRBACCalculator() (rbac.Calculator, error) {
 	cc := calico.CreateClientFromConfig()
 
 	// Create the various lister and getters required by the RBAC calculator. Note that we use an informer/cache for the
-	// k8s resources to minimize the number of queries underpinning a single request. For the Calico tiers we implement
-	// our own syncer-based cache.
-	tierLister := &calicoTierLister{
-		client: cc.(backendClient).Backend(),
-		tiers:  make(map[string]*v3.Tier),
+	// k8s resources to minimize the number of queries underpinning a single request. For the Calico resources we
+	// implement our own syncer-based cache.
+	calicoLister := &calicoResourceLister{
+		client:           cc.(backendClient).Backend(),
+		tiers:            make(map[string]*v3.Tier),
+		uisettingsgroups: make(map[string]*v3.UISettingsGroup),
 	}
 
 	resourceLister := discovery.NewDiscoveryClientForConfigOrDie(c.ExtraConfig.KubernetesAPIServerConfig)
@@ -208,14 +209,14 @@ func (c completedConfig) NewRBACCalculator() (rbac.Calculator, error) {
 	// Start, and wait for the informers to sync.
 	stopCh := make(chan struct{})
 	c.GenericConfig.SharedInformerFactory.Start(stopCh)
-	tierLister.Start()
+	calicoLister.Start()
 	c.GenericConfig.SharedInformerFactory.WaitForCacheSync(stopCh)
-	tierLister.WaitForCacheSync(stopCh)
+	calicoLister.WaitForCacheSync(stopCh)
 
 	// Create the rbac calculator
 	return rbac.NewCalculator(
 		resourceLister, clusterRoleGetter, clusterRoleBindingLister, roleGetter, roleBindingLister,
-		namespaceLister, tierLister, c.ExtraConfig.MinResourceRefreshInterval,
+		namespaceLister, calicoLister, c.ExtraConfig.MinResourceRefreshInterval,
 	), nil
 }
 
@@ -264,16 +265,17 @@ func (n *k8sNamespaceLister) ListNamespaces() ([]*corev1.Namespace, error) {
 	return n.namespaceLister.List(labels.Everything())
 }
 
-// calicoTierLister implements the TierLister interface returning Tiers.
-type calicoTierLister struct {
-	client api.Client
-	syncer api.Syncer
-	lock   sync.Mutex
-	sync   chan struct{}
-	tiers  map[string]*v3.Tier
+// calicoResourceLister implements the CalicoResourceLister interface returning Tiers.
+type calicoResourceLister struct {
+	client           api.Client
+	syncer           api.Syncer
+	lock             sync.Mutex
+	sync             chan struct{}
+	tiers            map[string]*v3.Tier
+	uisettingsgroups map[string]*v3.UISettingsGroup
 }
 
-func (t *calicoTierLister) ListTiers() ([]*v3.Tier, error) {
+func (t *calicoResourceLister) ListTiers() ([]*v3.Tier, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	tiers := make([]*v3.Tier, 0, len(t.tiers))
@@ -283,37 +285,59 @@ func (t *calicoTierLister) ListTiers() ([]*v3.Tier, error) {
 	return tiers, nil
 }
 
-func (t *calicoTierLister) Start() {
+func (t *calicoResourceLister) ListUISettingsGroups() ([]*v3.UISettingsGroup, error) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	sgs := make([]*v3.UISettingsGroup, 0, len(t.uisettingsgroups))
+	for _, sg := range t.uisettingsgroups {
+		sgs = append(sgs, sg)
+	}
+	return sgs, nil
+}
+
+func (t *calicoResourceLister) Start() {
 	t.sync = make(chan struct{})
 	t.syncer = watchersyncer.New(
 		t.client,
-		[]watchersyncer.ResourceType{{ListInterface: model.ResourceListOptions{Kind: v3.KindTier}}},
+		[]watchersyncer.ResourceType{
+			{ListInterface: model.ResourceListOptions{Kind: v3.KindTier}},
+			{ListInterface: model.ResourceListOptions{Kind: v3.KindUISettingsGroup}},
+		},
 		t,
 	)
 	t.syncer.Start()
 }
 
-func (t *calicoTierLister) WaitForCacheSync(stopCh <-chan struct{}) {
+func (t *calicoResourceLister) WaitForCacheSync(stopCh <-chan struct{}) {
 	select {
 	case <-t.sync:
 	case <-stopCh:
 	}
 }
 
-func (t *calicoTierLister) OnStatusUpdated(status api.SyncStatus) {
+func (t *calicoResourceLister) OnStatusUpdated(status api.SyncStatus) {
 	if status == api.InSync {
 		close(t.sync)
 	}
 }
 
-func (t *calicoTierLister) OnUpdates(updates []api.Update) {
+func (t *calicoResourceLister) OnUpdates(updates []api.Update) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	for _, u := range updates {
-		if u.UpdateType == api.UpdateTypeKVDeleted {
-			delete(t.tiers, u.Key.(model.ResourceKey).Name)
-		} else {
-			t.tiers[u.Key.(model.ResourceKey).Name] = u.Value.(*v3.Tier)
+		switch u.Key.(model.ResourceKey).Kind {
+		case v3.KindTier:
+			if u.UpdateType == api.UpdateTypeKVDeleted {
+				delete(t.tiers, u.Key.(model.ResourceKey).Name)
+			} else {
+				t.tiers[u.Key.(model.ResourceKey).Name] = u.Value.(*v3.Tier)
+			}
+		case v3.KindUISettingsGroup:
+			if u.UpdateType == api.UpdateTypeKVDeleted {
+				delete(t.uisettingsgroups, u.Key.(model.ResourceKey).Name)
+			} else {
+				t.uisettingsgroups[u.Key.(model.ResourceKey).Name] = u.Value.(*v3.UISettingsGroup)
+			}
 		}
 	}
 }

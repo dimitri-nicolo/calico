@@ -3248,7 +3248,7 @@ func testUISettingsGroupClient(client calicoclient.Interface, name string) error
 	uiSettingsGroupClient := client.ProjectcalicoV3().UISettingsGroups()
 	uiSettingsGroup := &v3.UISettingsGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec: v3.UISettingsGroupSpec{Description: "this is a settings group"},
+		Spec:       v3.UISettingsGroupSpec{Description: "this is a settings group"},
 	}
 
 	// start from scratch
@@ -3360,16 +3360,16 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 			Group:       "group-a",
 			Description: "namespace 123",
 			View:        nil,
-			Layer:       &v3.UIGraphLayer{
+			Layer: &v3.UIGraphLayer{
 				Nodes: []v3.UIGraphNode{{
-					Type: "this",
-					Name: "name",
+					Type:      "this",
+					Name:      "name",
 					Namespace: "namespace",
-					ID: "this/namespace/name",
+					ID:        "this/namespace/name",
 				}},
-				Icon:  "svg-1",
+				Icon: "svg-1",
 			},
-			Dashboard:   nil,
+			Dashboard: nil,
 		},
 	}
 
