@@ -23,7 +23,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
 	github.com/tigera/api v0.0.0-20210917233738-3fea29c333ab
-	github.com/tigera/licensing v1.0.1-0.20210921174157-1f272b1250af
+	github.com/tigera/licensing v1.0.1-0.20210924010057-4f905ac44e0d
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
