@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,14 +29,16 @@ import (
 
 const (
 	// Common attributes which may be set on allocations by clients.
-	IPAMBlockAttributePod           = "pod"
-	IPAMBlockAttributeNamespace     = "namespace"
-	IPAMBlockAttributeNode          = "node"
-	IPAMBlockAttributeType          = "type"
-	IPAMBlockAttributeTypeIPIP      = "ipipTunnelAddress"
-	IPAMBlockAttributeTypeVXLAN     = "vxlanTunnelAddress"
-	IPAMBlockAttributeTypeWireguard = "wireguardTunnelAddress"
-	IPAMBlockAttributeTimestamp     = "timestamp"
+	IPAMBlockAttributePod       = "pod"
+	IPAMBlockAttributeNamespace = "namespace"
+	IPAMBlockAttributeNode      = "node"
+
+	IPAMBlockAttributeType             = "type"
+	IPAMBlockAttributeTypeIPIP         = "ipipTunnelAddress"
+	IPAMBlockAttributeTypeVXLAN        = "vxlanTunnelAddress"
+	IPAMBlockAttributeTypeWireguard    = "wireguardTunnelAddress"
+	IPAMBlockAttributeTypeAWSSecondary = "awsSecondaryIface"
+	IPAMBlockAttributeTimestamp        = "timestamp"
 )
 
 var (
