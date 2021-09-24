@@ -150,7 +150,10 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 	getLastMicrosoftALog := func() (lastLog string) {
 		dnsLogs, err := getDNSLogs(path.Join(dnsDir, "dns.log"))
-		Expect(err).NotTo(HaveOccurred())
+		if err != nil {
+			log.Infof("Error getting DNS logs: %v", err)
+			return // empty string, so won't match anything that higher levels are looking for
+		}
 		for _, log := range dnsLogs {
 			if strings.Contains(log, `"qname":"microsoft.com"`) && strings.Contains(log, `"qtype":"A"`) {
 				lastLog = log
