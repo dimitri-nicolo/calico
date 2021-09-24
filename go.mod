@@ -11,7 +11,7 @@ require (
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.6.1
 	github.com/tigera/api v0.0.0-20210917233738-3fea29c333ab
-	github.com/tigera/lma v0.0.0-20210921145543-4f129c52d16a
+	github.com/tigera/lma v0.0.0-20210924011618-736b20628b72
 	k8s.io/api v0.21.0
 	k8s.io/apimachinery v0.21.0
 	k8s.io/apiserver v0.21.0
@@ -19,7 +19,7 @@ require (
 )
 
 replace (
-	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210921003414-58c39e3b6f2a
+	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20210924010946-3360c7e3a5bb
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210920180715-4da3c75f1eca
 
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
