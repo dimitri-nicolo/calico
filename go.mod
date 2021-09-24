@@ -12,5 +12,5 @@ require (
 	github.com/prometheus/client_golang v1.7.1
 	github.com/sirupsen/logrus v1.7.0
 	github.com/tigera/api v0.0.0-20210917233738-3fea29c333ab
-	github.com/tigera/licensing v1.0.1-0.20210921174157-1f272b1250af
+	github.com/tigera/licensing v1.0.1-0.20210924010057-4f905ac44e0d
 )
