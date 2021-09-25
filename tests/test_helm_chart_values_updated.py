@@ -73,6 +73,7 @@ EXCLUDED_IMAGES = [
     'packetcapture-api',
     'tigera-prometheus-service',
     'es-gateway',
+    'deep-packet-inspection',
 
     # third party images
     'elasticsearch',

@@ -24,9 +24,9 @@ with open('%s/../_data/versions.yml' % PATH) as f:
     release = versions[0]
     RELEASE_VERSION = release.get('title')
     print '[INFO] using _data/versions.yaml, discovered version: {0}'.format(RELEASE_VERSION)
-    
+
     VERSION_MAPPED_IMAGES={}
-    
+
     # add all components from the versions.yml file that declares an image field
     for k,v in release.get('components').items():
         if v.has_key('image'):
