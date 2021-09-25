@@ -56,6 +56,8 @@ MAPPED_COMPONENTS = {
     'calico-private': 'calico-private',
     'libcalico-go-private': 'libcalico-go-private',
     'tigera-api': 'api',
+    'deep-packet-inspection': 'deep-packet-inspection',
+    'performance_hotspots': 'performance_hotspots',
 }
 
 SKIP_COMPONENTS = [

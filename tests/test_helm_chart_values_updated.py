@@ -74,6 +74,7 @@ EXCLUDED_IMAGES = [
     'tigera-prometheus-service',
     'es-gateway',
     'deep-packet-inspection',
+    'performance_hotspots',
 
     # third party images
     'elasticsearch',
