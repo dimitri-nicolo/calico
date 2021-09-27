@@ -388,7 +388,7 @@ type InternalDataplane struct {
 
 	loopSummarizer *logutils.Summarizer
 
-	packetProcessorRestarter *nfqdnspolicy.PacketProcessorWithNfqueueRestarter
+	packetProcessor nfqdnspolicy.PacketProcessorWithNfqueueRestarter
 
 	awsStateUpdC <-chan *aws.LocalAWSNetworkState
 	awsSubnetMgr *awsIPManager
@@ -468,7 +468,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 		packetProcessorRestarter.Start()
 
-		dp.packetProcessorRestarter = packetProcessorRestarter
+		dp.packetProcessor = packetProcessorRestarter
 	}
 
 	dp.applyThrottle.Refill() // Allow the first apply() immediately.
@@ -1316,8 +1316,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	}
 
-	if config.DebugConsoleEnabled {
-		console := debugconsole.New(dp.packetProcessorRestarter)
+	if config.DebugConsoleEnabled && dp.packetProcessor != nil {
+		console := debugconsole.New(dp.packetProcessor)
 		console.Start()
 	}
 
@@ -1541,8 +1541,8 @@ func (d *InternalDataplane) Start() {
 }
 
 func (d *InternalDataplane) Stop() {
-	if d.packetProcessorRestarter != nil {
-		d.packetProcessorRestarter.Stop()
+	if d.packetProcessor != nil {
+		d.packetProcessor.Stop()
 	}
 }
 
@@ -2413,9 +2413,24 @@ func (d *InternalDataplane) apply() {
 	for _, ipSets := range d.ipSets {
 		ipSetsWG.Add(1)
 		go func(ipSets common.IPSetsDataplane) {
-			ipSets.ApplyUpdates()
+			defer ipSetsWG.Done()
+
+			updatedIPSets := ipSets.ApplyUpdates(func(ipSetName string) bool {
+				// Collect only Domain IP set updates so we don't overload the packet processor with irrelevant ips.
+				return ipSetName[0:2] == "d:"
+			})
+
 			d.reportHealth()
-			ipSetsWG.Done()
+
+			if d.packetProcessor == nil || updatedIPSets == nil {
+				return
+			}
+
+			for _, ipSetMembers := range updatedIPSets {
+				if ipSetMembers.Len() == 0 {
+					d.packetProcessor.OnIPSetMemberUpdates(ipSetMembers)
+				}
+			}
 		}(ipSets)
 	}
 

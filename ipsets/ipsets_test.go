@@ -208,7 +208,7 @@ var _ = Describe("IP sets dataplane", func() {
 	//v6VersionConf := NewIPVersionConfig(IPFamilyV6, "cali", nil, nil)
 
 	apply := func() {
-		ipsets.ApplyUpdates()
+		ipsets.ApplyUpdates(nil)
 		ipsets.ApplyDeletions()
 	}
 
@@ -241,7 +241,7 @@ var _ = Describe("IP sets dataplane", func() {
 		// Apply updates.
 		ipsets.ApplyDeletions() // No-op
 		dataplane.ExpectMembers(map[string][]string{})
-		ipsets.ApplyUpdates()
+		ipsets.ApplyUpdates(nil)
 		dataplane.ExpectMembers(map[string][]string{
 			v4MainIPSetName: {"10.0.0.2", "10.0.0.3"},
 		})
@@ -613,7 +613,7 @@ var _ = Describe("IP sets dataplane", func() {
 			})
 			It("should panic eventually", func() {
 				ipsets.AddMembers(ipSetID, []string{"10.0.0.5"})
-				Expect(ipsets.ApplyUpdates).To(Panic())
+				Expect(func() { ipsets.ApplyUpdates(nil) }).To(Panic())
 				Expect(dataplane.CumulativeSleep).To(BeNumerically(">", time.Second))
 			})
 		})
@@ -623,7 +623,7 @@ var _ = Describe("IP sets dataplane", func() {
 			})
 			It("should panic eventually", func() {
 				ipsets.QueueResync()
-				Expect(ipsets.ApplyUpdates).To(Panic())
+				Expect(func() { ipsets.ApplyUpdates(nil) }).To(Panic())
 				Expect(dataplane.CumulativeSleep).To(BeNumerically(">", time.Second))
 			})
 		})
@@ -634,7 +634,7 @@ var _ = Describe("IP sets dataplane", func() {
 			})
 			It("should panic eventually", func() {
 				ipsets.QueueResync()
-				Expect(ipsets.ApplyUpdates).To(Panic())
+				Expect(func() { ipsets.ApplyUpdates(nil) }).To(Panic())
 				Expect(dataplane.CumulativeSleep).To(BeNumerically(">", time.Second))
 			})
 		})

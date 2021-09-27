@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
 package timeshim
 
@@ -15,6 +15,7 @@ type Interface interface {
 	Until(t time.Time) time.Duration
 	After(t time.Duration) <-chan time.Time
 	NewTimer(d Duration) Timer
+	NewTicker(d Duration) Ticker
 	KTimeNanos() int64
 }
 
@@ -22,6 +23,12 @@ type Time = time.Time
 type Duration = time.Duration
 
 type Timer interface {
+	Stop() bool
+	Reset(clean Duration)
+	Chan() <-chan Time
+}
+
+type Ticker interface {
 	Stop() bool
 	Reset(clean Duration)
 	Chan() <-chan Time
@@ -38,6 +45,11 @@ type realTime struct{}
 
 func (t realTime) NewTimer(d Duration) Timer {
 	timer := time.NewTimer(d)
+	return (*timerWrapper)(timer)
+}
+
+func (t realTime) NewTicker(d Duration) Ticker {
+	timer := time.NewTicker(d)
 	return (*timerWrapper)(timer)
 }
 
