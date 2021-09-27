@@ -44,9 +44,9 @@ func TestMonitorLoop(t *testing.T) {
 	// license transition timer.
 	m.SetPollInterval(11 * time.Minute)
 	defer h.cancel()
-	h.SetLicense("good", h.Now().Add(30*time.Minute))
-
 	go m.MonitorForever(h.ctx)
+
+	h.SetLicense("good", h.Now().Add(30*time.Minute))
 
 	// Wait for the timer to be set up.
 	Eventually(h.GetNumTimers).Should(Equal(1))
@@ -95,6 +95,7 @@ func TestRefreshLicense(t *testing.T) {
 		RegisterTestingT(t)
 		m, h := setUpMonitorAndMocks()
 		defer h.cancel()
+		go m.MonitorForever(h.ctx)
 		h.SetLicense("good", h.Now().Add(30*time.Minute))
 
 		m.RefreshLicense(h.ctx)
@@ -134,6 +135,7 @@ func TestRefreshLicense(t *testing.T) {
 		RegisterTestingT(t)
 		m, h := setUpMonitorAndMocks()
 		defer h.cancel()
+		go m.MonitorForever(h.ctx)
 		h.SetLicense("in-grace", h.Now().Add(-1*time.Minute))
 
 		m.RefreshLicense(h.ctx)
@@ -147,6 +149,7 @@ func TestRefreshLicense(t *testing.T) {
 		RegisterTestingT(t)
 		m, h := setUpMonitorAndMocks()
 		defer h.cancel()
+		go m.MonitorForever(h.ctx)
 		h.SetLicense("expired", h.Now().Add(-25*time.Hour))
 
 		m.RefreshLicense(h.ctx)
