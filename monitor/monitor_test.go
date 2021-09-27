@@ -1,20 +1,24 @@
 package monitor
 
 import (
+	"context"
+	"sort"
+	"sync"
 	"testing"
+	"time"
 
 	. "github.com/onsi/gomega"
 
-	"context"
+	lapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/jitter"
-	log "github.com/sirupsen/logrus"
+
 	"github.com/tigera/api/pkg/apis/projectcalico/v3"
 	lclient "github.com/tigera/licensing/client"
+
+	log "github.com/sirupsen/logrus"
+
 	"gopkg.in/square/go-jose.v2/jwt"
-	"sort"
-	"sync"
-	"time"
 )
 
 func TestBasicFunction(t *testing.T) {
@@ -154,8 +158,33 @@ func TestRefreshLicense(t *testing.T) {
 	})
 }
 
+func TestWatch(t *testing.T) {
+	RegisterTestingT(t)
+	m, h := setUpMonitorAndMocks()
+	m.SetPollInterval(10 * time.Minute)
+	defer h.cancel()
+	go m.MonitorForever(h.ctx)
+
+	// Add slight delay to make sure the routine is running.
+	time.Sleep(50 * time.Millisecond)
+	Expect(m.GetLicenseStatus()).To(Equal(lclient.NoLicenseLoaded))
+
+	h.SetLicense("good", h.Now().Add(30*time.Minute))
+	time.Sleep(50 * time.Millisecond)
+	Expect(m.GetLicenseStatus()).To(Equal(lclient.Valid))
+
+	h.SetLicense("expired", h.Now().Add(-25*time.Hour))
+	time.Sleep(50 * time.Millisecond)
+	Expect(m.GetLicenseStatus()).To(Equal(lclient.Expired))
+
+	h.SetLicense("in-grace", h.Now().Add(-1*time.Minute))
+	time.Sleep(50 * time.Millisecond)
+	Expect(m.GetLicenseStatus()).To(Equal(lclient.InGracePeriod))
+}
+
 func setUpMonitorAndMocks() (*licenseMonitor, *harness) {
 	mockBapiClient := &mockBapiClient{}
+	mockBapiClient.watchChan = make(chan lapi.WatchEvent)
 	m := New(mockBapiClient).(*licenseMonitor)
 	mockTime := &mockTime{
 		now: time.Now(), // Start the time epoch now because we can't easily mock the license logic itself.
@@ -197,6 +226,21 @@ type mockBapiClient struct {
 
 	license     string
 	licenseTime time.Time
+	bapiClient
+	watchChan chan lapi.WatchEvent
+	terminated bool
+}
+
+func (m *mockBapiClient) Stop() {
+	m.terminated = true
+}
+
+func (m *mockBapiClient) ResultChan() <-chan lapi.WatchEvent {
+	return m.watchChan
+}
+
+func (m *mockBapiClient) HasTerminated() bool {
+	return m.terminated
 }
 
 func (m *mockBapiClient) SetLicense(l string, licenseTime time.Time) {
@@ -205,6 +249,15 @@ func (m *mockBapiClient) SetLicense(l string, licenseTime time.Time) {
 
 	m.license = l
 	m.licenseTime = licenseTime
+
+	event := lapi.WatchEvent{
+		New: &model.KVPair{Value: &v3.LicenseKey{Spec: v3.LicenseKeySpec{Token: m.license}}},
+	}
+	m.watchChan <- event
+}
+
+func (m *mockBapiClient) Watch(ctx context.Context, list model.ListInterface, revision string) (lapi.WatchInterface, error) {
+	return m, nil
 }
 
 func (m *mockBapiClient) Get(ctx context.Context, key model.Key, revision string) (*model.KVPair, error) {

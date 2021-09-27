@@ -119,15 +119,14 @@ func (l *licenseMonitor) SetStatusChangedCallback(f func(newLicenseStatus lclien
 
 func (l *licenseMonitor) MonitorForever(ctx context.Context) error {
 
-	var licenseWatcher lapi.WatchInterface
-	var err error
+	licenseWatcher := l.createLicenseWatcher(ctx)
 
 	// TODO: use jitter package in libcalico-go once it has been ported to
 	// libcalico-go-private.
 	refreshTicker := l.newJitteredTicker(l.PollInterval, l.PollInterval/10)
 	defer refreshTicker.Stop()
 
-	for ctx.Err() == nil {
+	for ctx.Err() == nil{
 		// We may have already loaded the license (if someone called RefreshLicense() before calling this method).
 		// Trigger any needed notification now and make sure the timer is scheduled.  We also hit this each time around
 		// the loop after any license refresh and transition so this call covers all the bases.
@@ -139,11 +138,9 @@ func (l *licenseMonitor) MonitorForever(ctx context.Context) error {
 		case <-refreshTicker.C:
 			_ = l.RefreshLicense(ctx)
 
+			// For as long as this loop runs, we want to make sure we are watching incoming events.
 			if licenseWatcher == nil  || licenseWatcher.HasTerminated() {
-				licenseWatcher, err = l.createWatch(ctx)
-				if err != nil {
-					log.Errorf("An error occurred while creating a license watcher: %v", err)
-				}
+				licenseWatcher = l.createLicenseWatcher(ctx)
 			}
 
 		case <-l.licenseTransitionC:
@@ -151,13 +148,25 @@ func (l *licenseMonitor) MonitorForever(ctx context.Context) error {
 		case licUpdate := <- licenseWatcher.ResultChan():
 			log.Debug("License was just updated.")
 			if licUpdate.Error != nil {
-				log.Errorf("An error occurred for an incoming license watch event: %v", err)
+				log.Errorf("An error occurred for an incoming license watch event: %v", licUpdate.Error)
 			} else if licUpdate.New != nil {
 				_ = l.refreshLicense(licUpdate.New)
 			}
 		}
 	}
 	return ctx.Err()
+}
+
+// createLicenseWatcher creates a watcher based on the libcalico library that creates a channel event on every license update.
+func (l *licenseMonitor) createLicenseWatcher(ctx context.Context) lapi.WatchInterface {
+	licenseWatcher, err := l.datastoreClient.Watch(ctx, model.ResourceListOptions{
+		Kind:      api.KindLicenseKey,
+		Name:      "default",
+		Namespace: ""}, "")
+	if err != nil {
+		log.Errorf("An error occurred while creating a license watcher: %v", err)
+	}
+	return licenseWatcher
 }
 
 // maybeNotifyLicenseStatusAndReschedule notifies the callback of any change in license state and reschedules the
@@ -326,11 +335,4 @@ func (l *licenseMonitor) RefreshLicense(ctx context.Context) error {
 		}
 	}
 	return l.refreshLicense(lic)
-}
-
-func (l *licenseMonitor) createWatch(ctx context.Context) (lapi.WatchInterface, error) {
-	return l.datastoreClient.Watch(ctx, model.ResourceListOptions{
-		Kind:      api.KindLicenseKey,
-		Name:      "default",
-		Namespace: ""}, "")
 }
