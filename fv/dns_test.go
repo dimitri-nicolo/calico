@@ -371,9 +371,9 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 			}}
 			_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
+		})
 
-			// Test that a pod cannot get to microsoft.com, so as to ensure
-			// that the above deny policy is really in place.
+		It("cannot wget microsoft.com", func() {
 			cannotWgetMicrosoft()
 		})
 
