@@ -255,6 +255,8 @@ github.com/evanphx/json-patch v4.9.0+incompatible h1:kLcOMZeuLAJvL2BPWLMIj5oaZQo
 github.com/evanphx/json-patch v4.9.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
 github.com/evanphx/json-patch/v5 v5.2.0/go.mod h1:G79N1coSVB93tBe7j6PhzjmR3/2VvlbKOFpnXhI9Bw4=
 github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d/go.mod h1:ZZMPRZwes7CROmyNKgQzC3XPs6L/G2EJLHddWejkmf4=
+github.com/fasaxc/libcalico-go-private v1.7.2-0.20210924131822-195e3e1a21f8 h1:USiDja2q5h3BMq74BzTBVRZqpvRIkxTCBsZ3QajuG8A=
+github.com/fasaxc/libcalico-go-private v1.7.2-0.20210924131822-195e3e1a21f8/go.mod h1:znKGEpUfVb9a6ARIrpL+2rfMOQ0wLgeHlJdtllMbtjQ=
 github.com/fastly/go-utils v0.0.0-20180712184237-d95a45783239 h1:Ghm4eQYC0nEPnSJdVkTrXpu9KtoVCSo1hg7mtI7G9KU=
 github.com/fastly/go-utils v0.0.0-20180712184237-d95a45783239/go.mod h1:Gdwt2ce0yfBxPvZrHkprdPPTTS3N5rwmLE8T22KBXlw=
 github.com/fatih/camelcase v1.0.0/go.mod h1:yN2Sb0lFhZJUdVvtELVWefmrXpuZESvPmqwoZc+/fpc=
@@ -901,8 +903,6 @@ github.com/tigera/api v0.0.0-20210917233738-3fea29c333ab h1:Mkmq+jrtg0mshOQx2Fqk
 github.com/tigera/api v0.0.0-20210917233738-3fea29c333ab/go.mod h1:tQDYzO/oh0HZL2MpIwyijRwJf67hPR/Gkex1vt9EwLE=
 github.com/tigera/felix-private v0.0.0-20210923043953-4c352f6b7c38 h1:DJYghmMG57spTJ+zFUpl/DpnziobKRR75KUfNHk7CcE=
 github.com/tigera/felix-private v0.0.0-20210923043953-4c352f6b7c38/go.mod h1:GfSEkigWo9190rWuLQ3FJCeFLYZNz3A5ATxDawGSO0Q=
-github.com/tigera/libcalico-go-private v1.7.2-0.20210920180715-4da3c75f1eca h1:f5123eHNNAGxZyLeN4hTYWLHKvI0XCcuXNiOUh5MCks=
-github.com/tigera/libcalico-go-private v1.7.2-0.20210920180715-4da3c75f1eca/go.mod h1:znKGEpUfVb9a6ARIrpL+2rfMOQ0wLgeHlJdtllMbtjQ=
 github.com/tigera/licensing v1.0.1-0.20210921174157-1f272b1250af h1:KpgwHhuzfR37EsJq4cUMUyYt0VGu86/vNsa8lrQqzVE=
 github.com/tigera/licensing v1.0.1-0.20210921174157-1f272b1250af/go.mod h1:NA90fGKdkcuNdV38r1nDZCleZqKKZwNzbnNW4Nt5t8g=
 github.com/tigera/nfnetlink v0.0.0-20210819183736-75abca8ede69 h1:trFbRbXqFW94EU6ssWyYbVXyA8R3dDV6RiMSz5Okyhs=
