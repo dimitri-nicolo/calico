@@ -28,6 +28,8 @@ repository: projectcalico/calico
 
 noderunning: calico-node
 
+open_source: false
+
 ocpMinVersion: 4.6
 ocpMaxVersion: 4.8
 
