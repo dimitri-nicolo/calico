@@ -117,7 +117,6 @@ spec:
         env:
           - name: AD_NEED_API
             value: "true"
-          - name:
           - name: ELASTIC_HOST
             value: "tigera-secure-es-gateway-http.tigera-elasticsearch.svc"
           - name: CLUSTER_NAME
