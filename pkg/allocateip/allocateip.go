@@ -23,24 +23,23 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/tunnelipsyncer"
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/ipam"
 	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/options"
-	"github.com/projectcalico/typha/pkg/syncclientutils"
-	"github.com/projectcalico/typha/pkg/syncproto"
-
 	"github.com/projectcalico/node/buildinfo"
 	"github.com/projectcalico/node/pkg/calicoclient"
+	"github.com/projectcalico/typha/pkg/syncclientutils"
+	"github.com/projectcalico/typha/pkg/syncproto"
 )
 
 // This file contains the main processing and common logic for assigning tunnel addresses,
@@ -423,12 +422,13 @@ func assignHostTunnelAddr(ctx context.Context, c client.Interface, nodename stri
 	logCtx := getLogger(attrType)
 
 	args := ipam.AutoAssignArgs{
-		Num4:      1,
-		Num6:      0,
-		HandleID:  &handle,
-		Attrs:     attrs,
-		Hostname:  nodename,
-		IPv4Pools: cidrs,
+		Num4:        1,
+		Num6:        0,
+		HandleID:    &handle,
+		Attrs:       attrs,
+		Hostname:    nodename,
+		IPv4Pools:   cidrs,
+		IntendedUse: v3.IPPoolAllowedUseTunnel,
 	}
 
 	v4Assignments, _, err := c.IPAM().AutoAssign(ctx, args)
