@@ -30,9 +30,9 @@ const (
 	instanceID = "i-ca1ic000000000001"
 	testVPC    = "vpc-01234567890123456"
 
-	primaryNICID       = "eni-00000000000000001"
-	primaryNICAttachID = "attach-00000000000000001"
-	primaryNICMAC      = "00:00:00:00:00:01"
+	primaryENIID       = "eni-00000000000000001"
+	primaryENIAttachID = "attach-00000000000000001"
+	primaryENIMAC      = "00:00:00:00:00:01"
 
 	azWest1 = "us-west-1"
 	azWest2 = "us-west-2"
@@ -249,15 +249,15 @@ var (
 
 	// Canned responses.
 
-	responsePoolsNoNICs = &IfaceState{
-		PrimaryNICMAC:      primaryNICMAC,
-		SecondaryNICsByMAC: map[string]Iface{},
+	responsePoolsNoENIs = &LocalAWSNetworkState{
+		PrimaryENIMAC:      primaryENIMAC,
+		SecondaryENIsByMAC: map[string]Iface{},
 		SubnetCIDR:         ip.MustParseCIDROrIP(subnetWest1CIDRCalico),
 		GatewayAddr:        ip.FromString(subnetWest1GatewayCalico),
 	}
-	responseSingleWorkload = &IfaceState{
-		PrimaryNICMAC: primaryNICMAC,
-		SecondaryNICsByMAC: map[string]Iface{
+	responseSingleWorkload = &LocalAWSNetworkState{
+		PrimaryENIMAC: primaryENIMAC,
+		SecondaryENIsByMAC: map[string]Iface{
 			firstAllocatedMAC.String(): {
 				ID:                 firstAllocatedENIID,
 				MAC:                firstAllocatedMAC,
@@ -268,9 +268,9 @@ var (
 		SubnetCIDR:  ip.MustParseCIDROrIP(subnetWest1CIDRCalico),
 		GatewayAddr: ip.FromString(subnetWest1GatewayCalico),
 	}
-	responseTwoWorkloads = &IfaceState{
-		PrimaryNICMAC: primaryNICMAC,
-		SecondaryNICsByMAC: map[string]Iface{
+	responseTwoWorkloads = &LocalAWSNetworkState{
+		PrimaryENIMAC: primaryENIMAC,
+		SecondaryENIsByMAC: map[string]Iface{
 			firstAllocatedMAC.String(): {
 				ID:              firstAllocatedENIID,
 				MAC:             firstAllocatedMAC,
@@ -285,9 +285,9 @@ var (
 		SubnetCIDR:  ip.MustParseCIDROrIP(subnetWest1CIDRCalico),
 		GatewayAddr: ip.FromString(subnetWest1GatewayCalico),
 	}
-	responseNICAfterWorkloadsDeleted = &IfaceState{
-		PrimaryNICMAC: primaryNICMAC,
-		SecondaryNICsByMAC: map[string]Iface{
+	responseENIAfterWorkloadsDeleted = &LocalAWSNetworkState{
+		PrimaryENIMAC: primaryENIMAC,
+		SecondaryENIsByMAC: map[string]Iface{
 			firstAllocatedMAC.String(): {
 				ID:                 firstAllocatedENIID,
 				MAC:                firstAllocatedMAC,
@@ -298,9 +298,9 @@ var (
 		SubnetCIDR:  ip.MustParseCIDROrIP(subnetWest1CIDRCalico),
 		GatewayAddr: ip.FromString(subnetWest1GatewayCalico),
 	}
-	responseSingleWorkloadOtherHostIP = &IfaceState{
-		PrimaryNICMAC: primaryNICMAC,
-		SecondaryNICsByMAC: map[string]Iface{
+	responseSingleWorkloadOtherHostIP = &LocalAWSNetworkState{
+		PrimaryENIMAC: primaryENIMAC,
+		SecondaryENIsByMAC: map[string]Iface{
 			firstAllocatedMAC.String(): {
 				ID:                 firstAllocatedENIID,
 				MAC:                firstAllocatedMAC,
@@ -312,15 +312,15 @@ var (
 		GatewayAddr: ip.FromString(subnetWest1GatewayCalico),
 	}
 
-	responseAltPoolsNoNICs = &IfaceState{
-		PrimaryNICMAC:      primaryNICMAC,
-		SecondaryNICsByMAC: map[string]Iface{},
+	responseAltPoolsNoENIs = &LocalAWSNetworkState{
+		PrimaryENIMAC:      primaryENIMAC,
+		SecondaryENIsByMAC: map[string]Iface{},
 		SubnetCIDR:         ip.MustParseCIDROrIP(subnetWest1CIDRCalicoAlt),
 		GatewayAddr:        ip.FromString(subnetWest1GatewayCalicoAlt),
 	}
-	responseAltPoolsAfterWorkloadsDeleted = &IfaceState{
-		PrimaryNICMAC: primaryNICMAC,
-		SecondaryNICsByMAC: map[string]Iface{
+	responseAltPoolsAfterWorkloadsDeleted = &LocalAWSNetworkState{
+		PrimaryENIMAC: primaryENIMAC,
+		SecondaryENIsByMAC: map[string]Iface{
 			secondAllocatedMAC.String(): {
 				ID:                 secondAllocatedENIID,
 				MAC:                secondAllocatedMAC,
@@ -331,9 +331,9 @@ var (
 		SubnetCIDR:  ip.MustParseCIDROrIP(subnetWest1CIDRCalicoAlt),
 		GatewayAddr: ip.FromString(subnetWest1GatewayCalicoAlt),
 	}
-	responseAltPoolSingleWorkload = &IfaceState{
-		PrimaryNICMAC: primaryNICMAC,
-		SecondaryNICsByMAC: map[string]Iface{
+	responseAltPoolSingleWorkload = &LocalAWSNetworkState{
+		PrimaryENIMAC: primaryENIMAC,
+		SecondaryENIsByMAC: map[string]Iface{
 			secondAllocatedMAC.String(): {
 				ID:                 secondAllocatedENIID,
 				MAC:                secondAllocatedMAC,
@@ -385,12 +385,12 @@ func setup(t *testing.T) (*SecondaryIfaceProvisioner, *sipTestFakes) {
 	fakeEC2.addSubnet(subnetIDWest1CalicoAlt, azWest1, subnetWest1CIDRCalicoAlt)
 	fakeEC2.addSubnet(subnetIDWest2Calico, azWest2, subnetWest2CIDRCalico)
 
-	fakeEC2.NICsByID[primaryNICID] = types.NetworkInterface{
-		NetworkInterfaceId: stringPtr(primaryNICID),
+	fakeEC2.ENIsByID[primaryENIID] = types.NetworkInterface{
+		NetworkInterfaceId: stringPtr(primaryENIID),
 		Attachment: &types.NetworkInterfaceAttachment{
 			DeviceIndex:      int32Ptr(0),
 			NetworkCardIndex: int32Ptr(0),
-			AttachmentId:     stringPtr(primaryNICAttachID),
+			AttachmentId:     stringPtr(primaryENIAttachID),
 			InstanceId:       stringPtr(instanceID),
 		},
 		SubnetId: stringPtr(subnetIDWest1Default),
@@ -401,7 +401,7 @@ func setup(t *testing.T) (*SecondaryIfaceProvisioner, *sipTestFakes) {
 			},
 		},
 		PrivateIpAddress: stringPtr("192.164.1.5"),
-		MacAddress:       stringPtr(primaryNICMAC),
+		MacAddress:       stringPtr(primaryENIMAC),
 		Groups: []types.GroupIdentifier{
 			{
 				GroupId:   stringPtr("sg-01234567890123456"),
@@ -427,7 +427,7 @@ func setup(t *testing.T) (*SecondaryIfaceProvisioner, *sipTestFakes) {
 			}
 			capacityC <- capacities
 		}),
-		OptNewEC2ClientkOverride(func(ctx context.Context) (*EC2Client, error) {
+		OptNewEC2ClientOverride(func(ctx context.Context) (*EC2Client, error) {
 			return ec2Client, nil
 		}),
 	)
@@ -482,7 +482,7 @@ func TestSecondaryIfaceProvisioner_NoPoolsOrWorkloadsStartOfDay(t *testing.T) {
 	})
 
 	// Should get an empty response.
-	Eventually(sip.ResponseC()).Should(Receive(Equal(&IfaceState{})))
+	Eventually(sip.ResponseC()).Should(Receive(Equal(&LocalAWSNetworkState{})))
 	Eventually(fake.CapacityC).Should(Receive(Equal(SecondaryIfaceCapacities{
 		MaxCalicoSecondaryIPs: t3LargeCapacity,
 	})))
@@ -502,7 +502,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsButNoWorkloadsMainline(t *testing.T) 
 	})
 
 	// Should respond with the Calico subnet details for the node's AZ..
-	Eventually(sip.ResponseC()).Should(Receive(Equal(responsePoolsNoNICs)))
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responsePoolsNoENIs)))
 }
 
 func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_Mainline(t *testing.T) {
@@ -512,16 +512,16 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_Mainline(t *testing.T)
 	// Send snapshot with single workload.
 	sip.OnDatastoreUpdate(singleWorkloadDatastore)
 
-	// Since this is a fresh system with only one NIC being allocated, everything is deterministic and we should
+	// Since this is a fresh system with only one ENI being allocated, everything is deterministic and we should
 	// always get the same result.
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
 	Eventually(fake.CapacityC).Should(Receive(Equal(SecondaryIfaceCapacities{
 		MaxCalicoSecondaryIPs: t3LargeCapacity,
 	})))
 
-	// Check the NIC looks right on the AWS side.
-	nic := fake.EC2.GetNIC(firstAllocatedENIID)
-	Expect(nic.Groups).To(ConsistOf(
+	// Check the ENI looks right on the AWS side.
+	eni := fake.EC2.GetENI(firstAllocatedENIID)
+	Expect(eni.Groups).To(ConsistOf(
 		types.GroupIdentifier{
 			GroupId:   stringPtr("sg-01234567890123456"),
 			GroupName: stringPtr("sg-01234567890123456 name"),
@@ -531,10 +531,10 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_Mainline(t *testing.T)
 			GroupName: stringPtr("sg-01234567890123457 name"),
 		},
 	), "ENI should have same security groups as primary ENI")
-	Expect(nic.Status).To(Equal(types.NetworkInterfaceStatusAssociated), "Expected NIC to be attached.")
-	Expect(nic.Attachment).ToNot(BeNil(), "Expected NIC to be attached.")
-	Expect(*nic.Attachment.InstanceId).To(Equal(instanceID), "Expected NIC to be attached to correct isntance.")
-	Expect(nic.TagSet).To(ConsistOf([]types.Tag{
+	Expect(eni.Status).To(Equal(types.NetworkInterfaceStatusAssociated), "Expected ENI to be attached.")
+	Expect(eni.Attachment).ToNot(BeNil(), "Expected ENI to be attached.")
+	Expect(*eni.Attachment.InstanceId).To(Equal(instanceID), "Expected ENI to be attached to correct isntance.")
+	Expect(eni.TagSet).To(ConsistOf([]types.Tag{
 		{
 			Key:   stringPtr("calico:instance"),
 			Value: stringPtr("i-ca1ic000000000001"),
@@ -547,7 +547,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_Mainline(t *testing.T)
 
 	// Remove the workload again, IP should be released.
 	sip.OnDatastoreUpdate(noWorkloadDatastore)
-	Eventually(sip.ResponseC()).Should(Receive(Equal(responseNICAfterWorkloadsDeleted)))
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseENIAfterWorkloadsDeleted)))
 }
 
 func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_ErrBackoff(t *testing.T) {
@@ -581,7 +581,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_ErrBackoff(t *testing.
 			// Advance time to trigger the backoff.
 			fake.expectSingleBackoffAndStep()
 
-			// With only one NIC being added, FakeIPAM and FakeEC2 are deterministic.
+			// With only one ENI being added, FakeIPAM and FakeEC2 are deterministic.
 			expResponse := responseSingleWorkload
 			if callToFail == "CreateNetworkInterface" {
 				// Failing CreateNetworkInterface triggers the allocated IP to be released and then a second
@@ -614,14 +614,14 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_ErrBackoffInterrupted(
 	// Send a datastore update, should trigger the backoff to be abandoned.
 	sip.OnDatastoreUpdate(singleWorkloadDatastore)
 
-	// Since this is a fresh system with only one NIC being allocated, everything is deterministic and we should
+	// Since this is a fresh system with only one ENI being allocated, everything is deterministic and we should
 	// always get the same result.
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
 	Expect(fake.Clock.HasWaiters()).To(BeFalse())
 }
 
 // TestSecondaryIfaceProvisioner_PoolChange Checks that changing the IP pools to use a different subnet causes the
-// provisioner to release NICs and provision the new ones.
+// provisioner to release ENIs and provision the new ones.
 func TestSecondaryIfaceProvisioner_PoolChange(t *testing.T) {
 	sip, fake, tearDown := setupAndStart(t)
 	defer tearDown()
@@ -629,32 +629,32 @@ func TestSecondaryIfaceProvisioner_PoolChange(t *testing.T) {
 	// Send snapshot with single workload on the original subnet.
 	sip.OnDatastoreUpdate(singleWorkloadDatastore)
 
-	// Since this is a fresh system with only one NIC being allocated, everything is deterministic and we should
+	// Since this is a fresh system with only one ENI being allocated, everything is deterministic and we should
 	// always get the same result.
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
 	Eventually(fake.CapacityC).Should(Receive(Equal(SecondaryIfaceCapacities{
 		MaxCalicoSecondaryIPs: t3LargeCapacity,
 	})))
 
-	// Remove the workload again, IP should be released but NIC should stick around.
+	// Remove the workload again, IP should be released but ENI should stick around.
 	sip.OnDatastoreUpdate(noWorkloadDatastore)
-	Eventually(sip.ResponseC()).Should(Receive(Equal(responseNICAfterWorkloadsDeleted)))
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseENIAfterWorkloadsDeleted)))
 
 	// Change the pools.
 	sip.OnDatastoreUpdate(noWorkloadDatastoreAltPools)
-	// Should get a response with updated gateway addresses _but_ no secondary NIC (because there was no workload
-	// to trigger addition of the secondary NIC).
-	Eventually(sip.ResponseC()).Should(Receive(Equal(responseAltPoolsNoNICs)))
+	// Should get a response with updated gateway addresses _but_ no secondary ENI (because there was no workload
+	// to trigger addition of the secondary ENI).
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseAltPoolsNoENIs)))
 
 	// Swap IPAM to prefer the alt host pool.  Normally the label selector on the pool would ensure the right
 	// pool is used but we don't have that much function here.
 	fake.IPAM.setFreeIPs(calicoHostIP1Alt)
 
-	// Add a workload in the alt pool, should get a secondary NIC using the alt pool.
+	// Add a workload in the alt pool, should get a secondary ENI using the alt pool.
 	sip.OnDatastoreUpdate(singleWorkloadDatastoreAltPool)
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseAltPoolSingleWorkload)))
 
-	// Delete the workload.  Should keep the NIC but remove the secondary IP.
+	// Delete the workload.  Should keep the ENI but remove the secondary IP.
 	sip.OnDatastoreUpdate(noWorkloadDatastoreAltPools)
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseAltPoolsAfterWorkloadsDeleted)))
 }
@@ -684,7 +684,7 @@ func TestSecondaryIfaceProvisioner_PoolChangeWithFailure(t *testing.T) {
 			// After backoff, should get the expected result.
 			Eventually(sip.ResponseC()).Should(Receive(Equal(responseAltPoolSingleWorkload)))
 
-			Expect(fake.EC2.NumNICs()).To(BeNumerically("==", 2 /* one primary, one secondary*/))
+			Expect(fake.EC2.NumENIs()).To(BeNumerically("==", 2 /* one primary, one secondary*/))
 		})
 	}
 }
@@ -697,13 +697,13 @@ func TestSecondaryIfaceProvisioner_SecondWorkload(t *testing.T) {
 	sip.OnDatastoreUpdate(singleWorkloadDatastore)
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
 
-	// Add second workload, should get added to same NIC.
+	// Add second workload, should get added to same ENI.
 	sip.OnDatastoreUpdate(twoWorkloadsDatastore)
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseTwoWorkloads)))
 
 	// Remove the workloads again, IPs should be released.
 	sip.OnDatastoreUpdate(noWorkloadDatastore)
-	Eventually(sip.ResponseC()).Should(Receive(Equal(responseNICAfterWorkloadsDeleted)))
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseENIAfterWorkloadsDeleted)))
 }
 
 func TestSecondaryIfaceProvisioner_UnassignIPFail(t *testing.T) {
@@ -722,91 +722,91 @@ func TestSecondaryIfaceProvisioner_UnassignIPFail(t *testing.T) {
 	fake.expectSingleBackoffAndStep()
 
 	// After backoff, should get the expected result.
-	Eventually(sip.ResponseC()).Should(Receive(Equal(responseNICAfterWorkloadsDeleted)))
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseENIAfterWorkloadsDeleted)))
 }
 
-// TestSecondaryIfaceProvisioner_MultiNIC ramps up the number of AWS IPs needed until it forces multiple AWS
-// NICs to be added.  It then tests what happens if the limit on IPs is exceeded.
-func TestSecondaryIfaceProvisioner_MultiNIC(t *testing.T) {
+// TestSecondaryIfaceProvisioner_MultiENI ramps up the number of AWS IPs needed until it forces multiple AWS
+// ENIs to be added.  It then tests what happens if the limit on IPs is exceeded.
+func TestSecondaryIfaceProvisioner_MultiENI(t *testing.T) {
 	sip, _, tearDown := setupAndStart(t)
 	defer tearDown()
 
 	// Fill up the first interface with progressively more IPs.
-	const secondaryIPsPerNIC = 11
-	for numNICs := 1; numNICs <= secondaryIPsPerNIC; numNICs++ {
-		ds, addrs := nWorkloadDatastore(numNICs)
+	const secondaryIPsPerENI = 11
+	for numENIs := 1; numENIs <= secondaryIPsPerENI; numENIs++ {
+		ds, addrs := nWorkloadDatastore(numENIs)
 		sip.OnDatastoreUpdate(ds)
-		var response *IfaceState
+		var response *LocalAWSNetworkState
 		Eventually(sip.ResponseC()).Should(Receive(&response))
 
-		// Check all the IPs ended up on the first NIC.
-		Expect(response.SecondaryNICsByMAC).To(HaveLen(1), "Expected only one AWS interface")
-		iface := response.SecondaryNICsByMAC[firstAllocatedMAC.String()]
+		// Check all the IPs ended up on the first ENI.
+		Expect(response.SecondaryENIsByMAC).To(HaveLen(1), "Expected only one AWS interface")
+		iface := response.SecondaryENIsByMAC[firstAllocatedMAC.String()]
 		Expect(iface.SecondaryIPv4Addrs).To(ConsistOf(addrs))
 	}
 	// Now send in even more IPs, progressively filling up the second interface.
-	for numNICs := secondaryIPsPerNIC + 1; numNICs <= secondaryIPsPerNIC*2; numNICs++ {
-		ds, addrs := nWorkloadDatastore(numNICs)
+	for numENIs := secondaryIPsPerENI + 1; numENIs <= secondaryIPsPerENI*2; numENIs++ {
+		ds, addrs := nWorkloadDatastore(numENIs)
 		sip.OnDatastoreUpdate(ds)
-		var response *IfaceState
+		var response *LocalAWSNetworkState
 		Eventually(sip.ResponseC()).Should(Receive(&response))
 
-		Expect(response.SecondaryNICsByMAC).To(HaveLen(2), "Expected exactly two AWS NICs.")
-		// Check the first NIC keep the first few IPs.
-		firstIface := response.SecondaryNICsByMAC[firstAllocatedMAC.String()]
-		Expect(firstIface.SecondaryIPv4Addrs).To(ConsistOf(addrs[:secondaryIPsPerNIC]))
+		Expect(response.SecondaryENIsByMAC).To(HaveLen(2), "Expected exactly two AWS ENIs.")
+		// Check the first ENI keep the first few IPs.
+		firstIface := response.SecondaryENIsByMAC[firstAllocatedMAC.String()]
+		Expect(firstIface.SecondaryIPv4Addrs).To(ConsistOf(addrs[:secondaryIPsPerENI]))
 		// Second interface should have the remainder.
-		secondIface := response.SecondaryNICsByMAC[secondAllocatedMAC.String()]
-		Expect(secondIface.SecondaryIPv4Addrs).To(ConsistOf(addrs[secondaryIPsPerNIC:]))
+		secondIface := response.SecondaryENIsByMAC[secondAllocatedMAC.String()]
+		Expect(secondIface.SecondaryIPv4Addrs).To(ConsistOf(addrs[secondaryIPsPerENI:]))
 	}
 	{
-		// Add one more IP, it should have nowhere to go because this instance type only supports 2 secondary NICs.
-		ds, addrs := nWorkloadDatastore(secondaryIPsPerNIC*2 + 1)
+		// Add one more IP, it should have nowhere to go because this instance type only supports 2 secondary ENIs.
+		ds, addrs := nWorkloadDatastore(secondaryIPsPerENI*2 + 1)
 		sip.OnDatastoreUpdate(ds)
-		var response *IfaceState
+		var response *LocalAWSNetworkState
 		Eventually(sip.ResponseC()).Should(Receive(&response))
-		Expect(response.SecondaryNICsByMAC).To(HaveLen(2), "Expected exactly two AWS NICs.")
-		// Check the first NIC keep the first few IPs.
-		firstIface := response.SecondaryNICsByMAC[firstAllocatedMAC.String()]
-		Expect(firstIface.SecondaryIPv4Addrs).To(ConsistOf(addrs[:secondaryIPsPerNIC]))
+		Expect(response.SecondaryENIsByMAC).To(HaveLen(2), "Expected exactly two AWS ENIs.")
+		// Check the first ENI keep the first few IPs.
+		firstIface := response.SecondaryENIsByMAC[firstAllocatedMAC.String()]
+		Expect(firstIface.SecondaryIPv4Addrs).To(ConsistOf(addrs[:secondaryIPsPerENI]))
 		// Second interface should have the remainder.
-		secondIface := response.SecondaryNICsByMAC[secondAllocatedMAC.String()]
-		Expect(secondIface.SecondaryIPv4Addrs).To(ConsistOf(addrs[secondaryIPsPerNIC : secondaryIPsPerNIC*2]))
+		secondIface := response.SecondaryENIsByMAC[secondAllocatedMAC.String()]
+		Expect(secondIface.SecondaryIPv4Addrs).To(ConsistOf(addrs[secondaryIPsPerENI : secondaryIPsPerENI*2]))
 	}
 	{
 		// Drop back down to 1 IP.
 		ds, addrs := nWorkloadDatastore(1)
 		sip.OnDatastoreUpdate(ds)
-		var response *IfaceState
+		var response *LocalAWSNetworkState
 		Eventually(sip.ResponseC()).Should(Receive(&response))
 
-		// Should keep the second NIC but with no IPs.
-		Expect(response.SecondaryNICsByMAC).To(HaveLen(2), "Expected exactly two AWS NICs.")
-		// Check the first NIC keep the first few IPs.
-		firstIface := response.SecondaryNICsByMAC[firstAllocatedMAC.String()]
+		// Should keep the second ENI but with no IPs.
+		Expect(response.SecondaryENIsByMAC).To(HaveLen(2), "Expected exactly two AWS ENIs.")
+		// Check the first ENI keep the first few IPs.
+		firstIface := response.SecondaryENIsByMAC[firstAllocatedMAC.String()]
 		Expect(firstIface.SecondaryIPv4Addrs).To(ConsistOf(addrs))
 		// Second interface should have the remainder.
-		secondIface := response.SecondaryNICsByMAC[secondAllocatedMAC.String()]
+		secondIface := response.SecondaryENIsByMAC[secondAllocatedMAC.String()]
 		Expect(secondIface.SecondaryIPv4Addrs).To(HaveLen(0))
 	}
 }
 
-func TestSecondaryIfaceProvisioner_MultiNICSingleShot(t *testing.T) {
+func TestSecondaryIfaceProvisioner_MultiENISingleShot(t *testing.T) {
 	sip, _, tearDown := setupAndStart(t)
 	defer tearDown()
 
 	// Blast in the maximum number of IPs in one shot.
 	ds, addrs := nWorkloadDatastore(t3LargeCapacity)
 	sip.OnDatastoreUpdate(ds)
-	var response *IfaceState
+	var response *LocalAWSNetworkState
 	Eventually(sip.ResponseC()).Should(Receive(&response))
 
 	// Verify the result.
-	Expect(response.SecondaryNICsByMAC).To(HaveLen(2), "Expected exactly two AWS NICs.")
+	Expect(response.SecondaryENIsByMAC).To(HaveLen(2), "Expected exactly two AWS ENIs.")
 
-	// IPs will be assigned randomly to the two NICs so grab and compare the full list.
-	firstIface := response.SecondaryNICsByMAC[firstAllocatedMAC.String()]
-	secondIface := response.SecondaryNICsByMAC[secondAllocatedMAC.String()]
+	// IPs will be assigned randomly to the two ENIs so grab and compare the full list.
+	firstIface := response.SecondaryENIsByMAC[firstAllocatedMAC.String()]
+	secondIface := response.SecondaryENIsByMAC[secondAllocatedMAC.String()]
 	allIPs := append([]ip.Addr{}, firstIface.SecondaryIPv4Addrs...)
 	allIPs = append(allIPs, secondIface.SecondaryIPv4Addrs...)
 	Expect(allIPs).To(ConsistOf(addrs))
@@ -868,12 +868,12 @@ func TestSecondaryIfaceProvisioner_WorkloadMixedSubnets(t *testing.T) {
 	fake.IPAM.setFreeIPs(calicoHostIP1Alt) // Our mock IPAM is too dumb to handle node selectors.
 	sip.OnDatastoreUpdate(singleWorkloadDatastoreAltPool)
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseAltPoolSingleWorkload)))
-	Expect(fake.EC2.NumNICs()).To(BeNumerically("==", 2))
+	Expect(fake.EC2.NumENIs()).To(BeNumerically("==", 2))
 
 	// Add the first workload back, now the "alternative" wins.
 	sip.OnDatastoreUpdate(mixedSubnetDatastore)
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseAltPoolSingleWorkload)))
-	Expect(fake.EC2.NumNICs()).To(BeNumerically("==", 2))
+	Expect(fake.EC2.NumENIs()).To(BeNumerically("==", 2))
 }
 
 // TestSecondaryIfaceProvisioner_WorkloadHostIPClash tests that workloads that try to use the host's primary
@@ -885,7 +885,7 @@ func TestSecondaryIfaceProvisioner_WorkloadHostIPClash(t *testing.T) {
 	// Send snapshot with one workload in a local subnet and one in a remote one.
 	sip.OnDatastoreUpdate(hostClashWorkloadDatastore)
 
-	// Since the IP is only assigned to the NIC after we check the routes, it only gets picked up after the
+	// Since the IP is only assigned to the ENI after we check the routes, it only gets picked up after the
 	// first failure triggers a backoff.
 	fake.expectSingleBackoffAndStep()
 
@@ -925,7 +925,7 @@ func TestSecondaryIfaceProvisioner_IPAMCleanup(t *testing.T) {
 
 	// Send snapshot with single workload.
 	sip.OnDatastoreUpdate(singleWorkloadDatastore)
-	// The IP we leaked gets released _first_ so we expect the second IP to get used for the new NIC.
+	// The IP we leaked gets released _first_ so we expect the second IP to get used for the new ENI.
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkloadOtherHostIP)))
 
 	// Check that the leaked IP was freed.
@@ -951,7 +951,7 @@ func TestSecondaryIfaceProvisioner_IPAMCleanupFailure(t *testing.T) {
 			// Failure should trigger a backoff/retry.
 			fake.expectSingleBackoffAndStep()
 
-			// The IP we leaked gets released _first_ so we expect the second IP to get used for the new NIC.
+			// The IP we leaked gets released _first_ so we expect the second IP to get used for the new ENI.
 			Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkloadOtherHostIP)))
 
 			// Check that the leaked IP was freed.

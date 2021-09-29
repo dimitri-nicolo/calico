@@ -27,24 +27,24 @@ type fakeEC2 struct {
 	Errors testutils.ErrorProducer
 
 	InstancesByID map[string]types.Instance
-	NICsByID      map[string]types.NetworkInterface
+	ENIsByID      map[string]types.NetworkInterface
 	SubnetsByID   map[string]types.Subnet
 
-	nextNICNum    int
+	nextENINum    int
 	nextAttachNum int
 }
 
 func newFakeEC2Client() (*EC2Client, *fakeEC2) {
 	mockEC2 := &fakeEC2{
 		InstancesByID: map[string]types.Instance{},
-		NICsByID:      map[string]types.NetworkInterface{},
+		ENIsByID:      map[string]types.NetworkInterface{},
 		SubnetsByID:   map[string]types.Subnet{},
 
 		Errors: testutils.NewErrorProducer(testutils.WithErrFactory(func(queueName string) error {
 			return errBadParam(queueName, "ErrorFactory.Error")
 		})),
 
-		nextNICNum:    0x1000,
+		nextENINum:    0x1000,
 		nextAttachNum: 0x1000,
 	}
 	return &EC2Client{
@@ -164,7 +164,7 @@ func (f *fakeEC2) DescribeSubnets(ctx context.Context, params *ec2.DescribeSubne
 			continue
 		}
 
-		// NIC matches
+		// ENI matches
 		subnets = append(subnets, subnet)
 	}
 
@@ -260,13 +260,13 @@ func (f *fakeEC2) DescribeNetworkInterfaces(ctx context.Context, params *ec2.Des
 		panic("fakeEC2 doesn't support requested feature")
 	}
 
-	var nics []types.NetworkInterface
-	for nicID, nic := range f.NICsByID {
-		nic := nic
+	var ENIs []types.NetworkInterface
+	for ENIID, ENI := range f.ENIsByID {
+		ENI := ENI
 		if params.NetworkInterfaceIds != nil {
 			found := false
 			for _, id := range params.NetworkInterfaceIds {
-				if nicID == id {
+				if ENIID == id {
 					found = true
 				}
 			}
@@ -281,21 +281,21 @@ func (f *fakeEC2) DescribeNetworkInterfaces(ctx context.Context, params *ec2.Des
 			switch *filter.Name {
 			case "attachment.instance-id":
 				for _, v := range filter.Values {
-					if nic.Attachment != nil && nic.Attachment.InstanceId != nil && *nic.Attachment.InstanceId == v {
+					if ENI.Attachment != nil && ENI.Attachment.InstanceId != nil && *ENI.Attachment.InstanceId == v {
 						filterMatches = true
 						break
 					}
 				}
 			case "status":
 				for _, v := range filter.Values {
-					if string(nic.Status) == v {
+					if string(ENI.Status) == v {
 						filterMatches = true
 						break
 					}
 				}
 			case "tag:calico:instance":
 				for _, v := range filter.Values {
-					for _, tag := range nic.TagSet {
+					for _, tag := range ENI.TagSet {
 						if *tag.Key == "calico:instance" && *tag.Value == v {
 							filterMatches = true
 							break
@@ -311,13 +311,13 @@ func (f *fakeEC2) DescribeNetworkInterfaces(ctx context.Context, params *ec2.Des
 			continue
 		}
 
-		// NIC matches
-		nics = append(nics, nic)
+		// ENI matches
+		ENIs = append(ENIs, ENI)
 	}
 
 	// DescribeNetworkInterfaces seems to return an empty list rather than a not-found error.
 	return &ec2.DescribeNetworkInterfacesOutput{
-		NetworkInterfaces: nics,
+		NetworkInterfaces: ENIs,
 	}, nil
 }
 
@@ -345,10 +345,10 @@ func (f *fakeEC2) CreateNetworkInterface(ctx context.Context, params *ec2.Create
 		panic("expected specific IP address")
 	}
 
-	nicID := fmt.Sprintf("eni-%017x", f.nextNICNum)
+	ENIID := fmt.Sprintf("eni-%017x", f.nextENINum)
 	mac := make(net.HardwareAddr, 6)
-	encoding_binary.BigEndian.PutUint32(mac[2:], uint32(f.nextNICNum))
-	f.nextNICNum++
+	encoding_binary.BigEndian.PutUint32(mac[2:], uint32(f.nextENINum))
+	f.nextENINum++
 
 	var tags []types.Tag
 	for _, tagSpec := range params.TagSpecifications {
@@ -368,8 +368,8 @@ func (f *fakeEC2) CreateNetworkInterface(ctx context.Context, params *ec2.Create
 		})
 	}
 
-	nic := types.NetworkInterface{
-		NetworkInterfaceId: stringPtr(nicID),
+	ENI := types.NetworkInterface{
+		NetworkInterfaceId: stringPtr(ENIID),
 		SubnetId:           params.SubnetId,
 		Description:        params.Description,
 		Attachment: &types.NetworkInterfaceAttachment{
@@ -391,12 +391,12 @@ func (f *fakeEC2) CreateNetworkInterface(ctx context.Context, params *ec2.Create
 		TagSet:          tags,
 		VpcId:           stringPtr(testVPC),
 	}
-	f.NICsByID[nicID] = nic
+	f.ENIsByID[ENIID] = ENI
 
-	logrus.WithField("nic", spew.Sdump(nic)).Info("FakeEC2: Created NIC.")
+	logrus.WithField("ENI", spew.Sdump(ENI)).Info("FakeEC2: Created ENI.")
 
 	return &ec2.CreateNetworkInterfaceOutput{
-		NetworkInterface: &nic,
+		NetworkInterface: &ENI,
 	}, nil
 }
 
@@ -419,19 +419,19 @@ func (f *fakeEC2) AttachNetworkInterface(ctx context.Context, params *ec2.Attach
 	}
 
 	if params.InstanceId == nil || params.NetworkInterfaceId == nil {
-		panic("missing instance ID or NIC ID on attach call")
+		panic("missing instance ID or ENI ID on attach call")
 	}
 
 	inst, ok := f.InstancesByID[*params.InstanceId]
 	if !ok {
 		return nil, errNotFound("AttachNetworkInterface", "InstanceId.NotFound")
 	}
-	nic, ok := f.NICsByID[*params.NetworkInterfaceId]
+	ENI, ok := f.ENIsByID[*params.NetworkInterfaceId]
 	if !ok {
 		return nil, errNotFound("AttachNetworkInterface", "NetworkInterfaceId.NotFound")
 	}
 
-	if nic.Attachment != nil && nic.Attachment.InstanceId != nil {
+	if ENI.Attachment != nil && ENI.Attachment.InstanceId != nil {
 		return nil, errBadParam("AttachNetworkInterface", "NetworkInterface.AlreadyAttached")
 	}
 
@@ -441,7 +441,7 @@ func (f *fakeEC2) AttachNetworkInterface(ctx context.Context, params *ec2.Attach
 		}
 	}
 
-	nic.Attachment = &types.NetworkInterfaceAttachment{
+	ENI.Attachment = &types.NetworkInterfaceAttachment{
 		AttachmentId:        stringPtr(f.nextAttachID()),
 		DeleteOnTermination: boolPtr(false),
 		DeviceIndex:         params.DeviceIndex,
@@ -449,10 +449,10 @@ func (f *fakeEC2) AttachNetworkInterface(ctx context.Context, params *ec2.Attach
 		NetworkCardIndex:    int32Ptr(0),
 		Status:              types.AttachmentStatusAttached,
 	}
-	nic.Status = types.NetworkInterfaceStatusAssociated
+	ENI.Status = types.NetworkInterfaceStatusAssociated
 
 	var privIPs []types.InstancePrivateIpAddress
-	for _, ip := range nic.PrivateIpAddresses {
+	for _, ip := range ENI.PrivateIpAddresses {
 		privIPs = append(privIPs, types.InstancePrivateIpAddress{
 			Primary:          ip.Primary,
 			PrivateIpAddress: ip.PrivateIpAddress,
@@ -461,30 +461,30 @@ func (f *fakeEC2) AttachNetworkInterface(ctx context.Context, params *ec2.Attach
 	inst.NetworkInterfaces = append(inst.NetworkInterfaces, types.InstanceNetworkInterface{
 		Association: nil,
 		Attachment: &types.InstanceNetworkInterfaceAttachment{
-			AttachmentId:        nic.Attachment.AttachmentId,
+			AttachmentId:        ENI.Attachment.AttachmentId,
 			DeleteOnTermination: boolPtr(false),
 			DeviceIndex:         params.DeviceIndex,
 			NetworkCardIndex:    int32Ptr(0),
 			Status:              types.AttachmentStatusAttached,
 		},
-		Description:        nic.Description,
-		Groups:             nic.Groups,
-		InterfaceType:      stringPtr(string(nic.InterfaceType)),
-		MacAddress:         nic.MacAddress,
+		Description:        ENI.Description,
+		Groups:             ENI.Groups,
+		InterfaceType:      stringPtr(string(ENI.InterfaceType)),
+		MacAddress:         ENI.MacAddress,
 		NetworkInterfaceId: params.NetworkInterfaceId,
-		PrivateIpAddress:   nic.PrivateIpAddress,
+		PrivateIpAddress:   ENI.PrivateIpAddress,
 		PrivateIpAddresses: privIPs,
-		SourceDestCheck:    nic.SourceDestCheck,
+		SourceDestCheck:    ENI.SourceDestCheck,
 		Status:             types.NetworkInterfaceStatusAssociated,
-		SubnetId:           nic.SubnetId,
-		VpcId:              nic.VpcId,
+		SubnetId:           ENI.SubnetId,
+		VpcId:              ENI.VpcId,
 	})
 
 	f.InstancesByID[*params.InstanceId] = inst
-	f.NICsByID[*params.NetworkInterfaceId] = nic
+	f.ENIsByID[*params.NetworkInterfaceId] = ENI
 
 	return &ec2.AttachNetworkInterfaceOutput{
-		AttachmentId:     nic.Attachment.AttachmentId,
+		AttachmentId:     ENI.Attachment.AttachmentId,
 		NetworkCardIndex: int32Ptr(0),
 	}, nil
 }
@@ -509,13 +509,13 @@ func (f *fakeEC2) DetachNetworkInterface(ctx context.Context, params *ec2.Detach
 
 	var instID string
 	found := false
-	for nicID, nic := range f.NICsByID {
-		if nic.Attachment != nil && nic.Attachment.AttachmentId != nil && *nic.Attachment.AttachmentId == *params.AttachmentId {
-			logrus.WithField("id", nicID).Info("FakeEC2 found NIC to dettach.")
-			nic.Status = types.NetworkInterfaceStatusAvailable
-			instID = *nic.Attachment.InstanceId
-			nic.Attachment = nil
-			f.NICsByID[nicID] = nic
+	for ENIID, ENI := range f.ENIsByID {
+		if ENI.Attachment != nil && ENI.Attachment.AttachmentId != nil && *ENI.Attachment.AttachmentId == *params.AttachmentId {
+			logrus.WithField("id", ENIID).Info("FakeEC2 found ENI to dettach.")
+			ENI.Status = types.NetworkInterfaceStatusAvailable
+			instID = *ENI.Attachment.InstanceId
+			ENI.Attachment = nil
+			f.ENIsByID[ENIID] = ENI
 			found = true
 		}
 	}
@@ -525,21 +525,21 @@ func (f *fakeEC2) DetachNetworkInterface(ctx context.Context, params *ec2.Detach
 
 	inst, ok := f.InstancesByID[instID]
 	if !ok {
-		panic("FakeEC2: BUG, couldn't find instance for NIC attachment")
+		panic("FakeEC2: BUG, couldn't find instance for ENI attachment")
 	}
-	var updatedNICs []types.InstanceNetworkInterface
+	var updatedENIs []types.InstanceNetworkInterface
 	found = false
-	for _, nic := range inst.NetworkInterfaces {
-		if *nic.Attachment.AttachmentId == *params.AttachmentId {
+	for _, ENI := range inst.NetworkInterfaces {
+		if *ENI.Attachment.AttachmentId == *params.AttachmentId {
 			found = true
 			continue
 		}
-		updatedNICs = append(updatedNICs, nic)
+		updatedENIs = append(updatedENIs, ENI)
 	}
 	if !found {
-		panic("FakeEC2: BUG, couldn't find NIC on instance")
+		panic("FakeEC2: BUG, couldn't find ENI on instance")
 	}
-	inst.NetworkInterfaces = updatedNICs
+	inst.NetworkInterfaces = updatedENIs
 	f.InstancesByID[instID] = inst
 
 	return &ec2.DetachNetworkInterfaceOutput{ /* not currently used by caller */ }, nil
@@ -574,10 +574,10 @@ func (f *fakeEC2) AssignPrivateIpAddresses(ctx context.Context, params *ec2.Assi
 		panic("fakeEC2 doesn't support AWS IPAM")
 	}
 
-	// Find the NIC.
-	nic := f.NICsByID[*params.NetworkInterfaceId]
+	// Find the ENI.
+	ENI := f.ENIsByID[*params.NetworkInterfaceId]
 	for _, newAddr := range params.PrivateIpAddresses {
-		for _, addr := range nic.PrivateIpAddresses {
+		for _, addr := range ENI.PrivateIpAddresses {
 			if *addr.PrivateIpAddress == newAddr {
 				return nil, errBadParam("AssignPrivateIpAddresses", "Address.AlreadyAssigned")
 			}
@@ -585,27 +585,27 @@ func (f *fakeEC2) AssignPrivateIpAddresses(ctx context.Context, params *ec2.Assi
 	}
 
 	for _, newAddr := range params.PrivateIpAddresses {
-		nic.PrivateIpAddresses = append(nic.PrivateIpAddresses, types.NetworkInterfacePrivateIpAddress{
+		ENI.PrivateIpAddresses = append(ENI.PrivateIpAddresses, types.NetworkInterfacePrivateIpAddress{
 			Primary:          boolPtr(false),
 			PrivateIpAddress: stringPtr(newAddr),
 		})
 	}
-	f.NICsByID[*params.NetworkInterfaceId] = nic
+	f.ENIsByID[*params.NetworkInterfaceId] = ENI
 
-	for nicID, nic := range f.NICsByID {
-		if nicID == *params.NetworkInterfaceId {
+	for ENIID, ENI := range f.ENIsByID {
+		if ENIID == *params.NetworkInterfaceId {
 			continue
 		}
 		for _, newAddr := range params.PrivateIpAddresses {
-			for i, addr := range nic.PrivateIpAddresses {
+			for i, addr := range ENI.PrivateIpAddresses {
 				if *addr.PrivateIpAddress == newAddr {
-					// Other NIC has this IP, delete it.
-					nic.PrivateIpAddresses[i] = nic.PrivateIpAddresses[len(nic.PrivateIpAddresses)-1]
-					nic.PrivateIpAddresses = nic.PrivateIpAddresses[:len(nic.PrivateIpAddresses)-1]
+					// Other ENI has this IP, delete it.
+					ENI.PrivateIpAddresses[i] = ENI.PrivateIpAddresses[len(ENI.PrivateIpAddresses)-1]
+					ENI.PrivateIpAddresses = ENI.PrivateIpAddresses[:len(ENI.PrivateIpAddresses)-1]
 				}
 			}
 		}
-		f.NICsByID[nicID] = nic
+		f.ENIsByID[ENIID] = ENI
 	}
 
 	return &ec2.AssignPrivateIpAddressesOutput{
@@ -635,15 +635,15 @@ func (f *fakeEC2) UnassignPrivateIpAddresses(ctx context.Context, params *ec2.Un
 		panic("BUG: releasing 0 IPs?")
 	}
 
-	// Find the NIC.
-	nic, ok := f.NICsByID[*params.NetworkInterfaceId]
+	// Find the ENI.
+	ENI, ok := f.ENIsByID[*params.NetworkInterfaceId]
 	if !ok {
-		return nil, errNotFound("UnassignPrivateIpAddresses", "NIC.NotFound")
+		return nil, errNotFound("UnassignPrivateIpAddresses", "ENI.NotFound")
 	}
 	for _, newAddr := range params.PrivateIpAddresses {
 		var updatedAddrs []types.NetworkInterfacePrivateIpAddress
 		found := false
-		for _, addr := range nic.PrivateIpAddresses {
+		for _, addr := range ENI.PrivateIpAddresses {
 			if *addr.PrivateIpAddress == newAddr {
 				found = true
 				continue
@@ -653,10 +653,10 @@ func (f *fakeEC2) UnassignPrivateIpAddresses(ctx context.Context, params *ec2.Un
 		if !found {
 			return nil, errNotFound("UnassignPrivateIpAddresses", "Address.NotFound")
 		}
-		nic.PrivateIpAddresses = updatedAddrs
+		ENI.PrivateIpAddresses = updatedAddrs
 	}
 
-	f.NICsByID[*params.NetworkInterfaceId] = nic
+	f.ENIsByID[*params.NetworkInterfaceId] = ENI
 
 	return &ec2.UnassignPrivateIpAddressesOutput{
 		// Not currently used so not bothering to fill in
@@ -681,29 +681,29 @@ func (f *fakeEC2) DeleteNetworkInterface(ctx context.Context, params *ec2.Delete
 		panic("BUG: caller should supply network interface ID")
 	}
 
-	nic, ok := f.NICsByID[*params.NetworkInterfaceId]
+	ENI, ok := f.ENIsByID[*params.NetworkInterfaceId]
 	if !ok {
 		return nil, errNotFound("DeleteNetworkInterface", "NetworkInterfaceId.NotFound")
 	}
 
-	if nic.Status != types.NetworkInterfaceStatusAvailable {
+	if ENI.Status != types.NetworkInterfaceStatusAvailable {
 		return nil, errBadParam("DeleteNetworkInterface", "NetworkInterface.IsAttached")
 	}
 
-	delete(f.NICsByID, *params.NetworkInterfaceId)
+	delete(f.ENIsByID, *params.NetworkInterfaceId)
 	return &ec2.DeleteNetworkInterfaceOutput{ /* not used by caller */ }, nil
 }
 
-func (f *fakeEC2) NumNICs() int {
+func (f *fakeEC2) NumENIs() int {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
-	return len(f.NICsByID)
+	return len(f.ENIsByID)
 }
 
-func (f *fakeEC2) GetNIC(eniid string) types.NetworkInterface {
+func (f *fakeEC2) GetENI(eniid string) types.NetworkInterface {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
-	return f.NICsByID[eniid]
+	return f.ENIsByID[eniid]
 }

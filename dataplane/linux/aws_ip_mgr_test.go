@@ -110,7 +110,7 @@ var _ = Describe("awsIPManager tests", func() {
 			PoolIDsBySubnetID:         map[string]set.Set{},
 		}))
 
-		m.OnSecondaryIfaceStateUpdate(&aws.IfaceState{})
+		m.OnSecondaryIfaceStateUpdate(&aws.LocalAWSNetworkState{})
 
 		Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 	})
@@ -301,9 +301,9 @@ var _ = Describe("awsIPManager tests", func() {
 			var secondaryLink *fakeLink
 			BeforeEach(func() {
 				// Pretend the background thread attached a new ENI.
-				m.OnSecondaryIfaceStateUpdate(&aws.IfaceState{
-					PrimaryNICMAC: primaryMACStr,
-					SecondaryNICsByMAC: map[string]aws.Iface{
+				m.OnSecondaryIfaceStateUpdate(&aws.LocalAWSNetworkState{
+					PrimaryENIMAC: primaryMACStr,
+					SecondaryENIsByMAC: map[string]aws.Iface{
 						secondaryMACStr: {
 							ID:              "eni-0001",
 							MAC:             secondaryMAC,
@@ -367,7 +367,7 @@ var _ = Describe("awsIPManager tests", func() {
 					GoToTable(rtID)))
 			}
 
-			Context("With second egress gateway on second NIC", func() {
+			Context("With second egress gateway on second ENI", func() {
 				var (
 					extraWorkloadRoute *proto.RouteUpdate
 					thirdLink          *fakeLink
@@ -387,9 +387,9 @@ var _ = Describe("awsIPManager tests", func() {
 					m.OnUpdate(extraWorkloadRoute)
 
 					// Pretend the background thread attached a new ENI.
-					m.OnSecondaryIfaceStateUpdate(&aws.IfaceState{
-						PrimaryNICMAC: primaryMACStr,
-						SecondaryNICsByMAC: map[string]aws.Iface{
+					m.OnSecondaryIfaceStateUpdate(&aws.LocalAWSNetworkState{
+						PrimaryENIMAC: primaryMACStr,
+						SecondaryENIsByMAC: map[string]aws.Iface{
 							secondaryMACStr: {
 								ID:              "eni-0001",
 								MAC:             secondaryMAC,
@@ -490,9 +490,9 @@ var _ = Describe("awsIPManager tests", func() {
 					))
 
 					// Pretend the background thread attached a new ENI.
-					m.OnSecondaryIfaceStateUpdate(&aws.IfaceState{
-						PrimaryNICMAC: primaryMACStr,
-						SecondaryNICsByMAC: map[string]aws.Iface{
+					m.OnSecondaryIfaceStateUpdate(&aws.LocalAWSNetworkState{
+						PrimaryENIMAC: primaryMACStr,
+						SecondaryENIsByMAC: map[string]aws.Iface{
 							secondaryMACStr: {
 								ID:              "eni-0001",
 								MAC:             secondaryMAC,
@@ -763,9 +763,9 @@ var _ = Describe("awsIPManager tests", func() {
 				fakes.AddFakeLink(secondaryLink)
 				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 
-				m.OnSecondaryIfaceStateUpdate(&aws.IfaceState{
-					PrimaryNICMAC:      primaryMACStr,
-					SecondaryNICsByMAC: map[string]aws.Iface{},
+				m.OnSecondaryIfaceStateUpdate(&aws.LocalAWSNetworkState{
+					PrimaryENIMAC:      primaryMACStr,
+					SecondaryENIsByMAC: map[string]aws.Iface{},
 					SubnetCIDR:         ip.MustParseCIDROrIP("100.64.0.0/16"),
 					GatewayAddr:        ip.FromString("100.64.0.1"),
 				})

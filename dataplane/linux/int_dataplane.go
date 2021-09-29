@@ -387,7 +387,7 @@ type InternalDataplane struct {
 
 	packetProcessorRestarter *nfqdnspolicy.PacketProcessorWithNfqueueRestarter
 
-	awsStateUpdC <-chan *aws.IfaceState
+	awsStateUpdC <-chan *aws.LocalAWSNetworkState
 	awsSubnetMgr *awsIPManager
 }
 

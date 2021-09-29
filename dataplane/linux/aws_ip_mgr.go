@@ -49,7 +49,7 @@ type awsIPManager struct {
 
 	// awsState is the most recent update we've got from the background thread telling us what state it thinks
 	// the AWS fabric should be in. <nil> means "don't know", i.e. we're not ready to touch the dataplane yet.
-	awsState *aws.IfaceState
+	awsState *aws.LocalAWSNetworkState
 
 	// Dataplane state.
 
@@ -180,7 +180,7 @@ func (a *awsIPManager) OnUpdate(msg interface{}) {
 	}
 }
 
-func (a *awsIPManager) OnSecondaryIfaceStateUpdate(msg *aws.IfaceState) {
+func (a *awsIPManager) OnSecondaryIfaceStateUpdate(msg *aws.LocalAWSNetworkState) {
 	logrus.WithField("awsState", msg).Debug("Received AWS state update.")
 	a.queueDataplaneResync("AWS fabric updated")
 	a.awsState = msg
@@ -383,7 +383,7 @@ func (a *awsIPManager) resyncWithDataplane() error {
 	}
 	logrus.Debug("Syncing dataplane secondary ENIs.")
 
-	// Find all the local NICs and match them up with AWS NICs.
+	// Find all the local NICs and match them up with AWS ENIs.
 	ifaces, err := a.nl.LinkList()
 	if err != nil {
 		return fmt.Errorf("failed to load local interfaces: %w", err)
@@ -395,19 +395,19 @@ func (a *awsIPManager) resyncWithDataplane() error {
 	for _, iface := range ifaces {
 		// Skip NICs that don't match anything in AWS.
 		mac := iface.Attrs().HardwareAddr.String()
-		awsNIC, awsNICExists := a.awsState.SecondaryNICsByMAC[mac]
-		if !awsNICExists {
+		awsENI, awsENIExists := a.awsState.SecondaryENIsByMAC[mac]
+		if !awsENIExists {
 			continue
 		}
 		ifaceName := iface.Attrs().Name
 		logrus.WithFields(logrus.Fields{
 			"mac":      mac,
 			"name":     ifaceName,
-			"awsNICID": awsNIC.ID,
-		}).Debug("Matched local NIC with AWS NIC.")
+			"awsENIID": awsENI.ID,
+		}).Debug("Matched local NIC with AWS ENI.")
 		activeIfaceNames.Add(ifaceName)
 
-		// Make sure we know the primary NIC's MTU.
+		// Make sure we know the primary ENI's MTU.
 		if a.primaryIfaceMTU == 0 {
 			mtu, err := a.findPrimaryInterfaceMTU(ifaces)
 			if err != nil {
@@ -418,7 +418,7 @@ func (a *awsIPManager) resyncWithDataplane() error {
 		}
 
 		// Enable the NIC and configure its IPs.
-		priAddrStr := awsNIC.PrimaryIPv4Addr.String()
+		priAddrStr := awsENI.PrimaryIPv4Addr.String()
 		a.expectedPrimaryIPs[ifaceName] = priAddrStr
 		err := a.configureNIC(iface, ifaceName, priAddrStr)
 		if err != nil {
@@ -434,14 +434,14 @@ func (a *awsIPManager) resyncWithDataplane() error {
 		a.programIfaceRoutes(rt, ifaceName)
 
 		// Accumulate routing rules for all the active IPs.
-		a.addIfaceActiveRules(activeRules, awsNIC, routingTableID)
+		a.addIfaceActiveRules(activeRules, awsENI, routingTableID)
 	}
 
 	// Record whether we still need to match some interfaces.
-	a.allAWSIfacesFound = len(a.awsState.SecondaryNICsByMAC) == activeIfaceNames.Len()
+	a.allAWSIfacesFound = len(a.awsState.SecondaryENIsByMAC) == activeIfaceNames.Len()
 
 	// Scan for entries in expectedPrimaryIPs that are no longer needed.  We don't bother to remove IPs from
-	// interfaces that no longer have a corresponding AWS NIC because the only time that happens is if the NIC
+	// interfaces that no longer have a corresponding AWS ENI because the only time that happens is if the ENI
 	// is being deleted anyway.
 	a.cleanUpPrimaryIPs(activeIfaceNames)
 
@@ -462,7 +462,7 @@ var (
 func (a *awsIPManager) findPrimaryInterfaceMTU(ifaces []netlink.Link) (int, error) {
 	for _, iface := range ifaces {
 		mac := iface.Attrs().HardwareAddr.String()
-		if mac == a.awsState.PrimaryNICMAC {
+		if mac == a.awsState.PrimaryENIMAC {
 			// Found the primary interface.
 			if iface.Attrs().MTU == 0 { // defensive
 				return 0, errPrimaryIfaceZeroMTU
@@ -562,9 +562,9 @@ func (a *awsIPManager) configureNIC(iface netlink.Link, ifaceName string, primar
 	return finalErr
 }
 
-// addIfaceActiveRules awsRuleKey values to activeRules according to the secondary IPs of the AWS NIC.
-func (a *awsIPManager) addIfaceActiveRules(activeRules set.Set, awsNIC aws.Iface, routingTableID int) {
-	for _, privateIP := range awsNIC.SecondaryIPv4Addrs {
+// addIfaceActiveRules awsRuleKey values to activeRules according to the secondary IPs of the AWS ENI.
+func (a *awsIPManager) addIfaceActiveRules(activeRules set.Set, awsENI aws.Iface, routingTableID int) {
+	for _, privateIP := range awsENI.SecondaryIPv4Addrs {
 		logrus.WithFields(logrus.Fields{"addr": privateIP, "rtID": routingTableID}).Debug("Adding routing rule.")
 		activeRules.Add(awsRuleKey{
 			addr:           privateIP,

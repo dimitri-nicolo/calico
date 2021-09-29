@@ -341,7 +341,7 @@ type NetworkCapabilities struct {
 	MaxIPv6PerInterface  int
 }
 
-func (n NetworkCapabilities) MaxNICsForCard(idx int) int {
+func (n NetworkCapabilities) MaxENIsForCard(idx int) int {
 	if idx >= len(n.NetworkCards) { // defensive; would be an AWS bug.
 		log.Warn("Asked about network card that doesn't exist, returning 0.")
 		return 0
