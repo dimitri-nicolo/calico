@@ -259,15 +259,12 @@ func (c *EC2Client) GetMyInstance(ctx context.Context) (instance *types.Instance
 				log.WithField("instance-id", c.InstanceID).Debug("retrying getting network-interface-id")
 				continue
 			}
-			return
-		} else {
-			break
 		}
+		break
 	}
 
-	if out == nil {
-		// Defensive: feel like this would be an API bug?
-		return nil, fmt.Errorf("describe instances returned nil result for ID %s", c.InstanceID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve AWS instance %s: %w", c.InstanceID, err)
 	}
 
 	// Instances are grouped by "Reservation", which is the original request to create a particular set of instances.
@@ -294,7 +291,7 @@ func (c *EC2Client) GetAZLocalSubnets(ctx context.Context) ([]types.Subnet, erro
 		return nil, fmt.Errorf("failed to get my instance: %w", err)
 	}
 	if inst.Placement == nil || inst.Placement.AvailabilityZone == nil || inst.VpcId == nil {
-		return nil, fmt.Errorf("instance had no placement information")
+		return nil, fmt.Errorf("AWS instance missing placement information: %v", inst)
 	}
 	dso, err := c.EC2Svc.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
 		Filters: []types.Filter{
@@ -365,12 +362,12 @@ func (c *EC2Client) GetMyNetworkCapabilities(ctx context.Context) (netc NetworkC
 func InstanceTypeNetworkCapabilities(instType *types.InstanceTypeInfo) (netc NetworkCapabilities, err error) {
 	netInfo := instType.NetworkInfo
 	if netInfo == nil {
-		err = fmt.Errorf("intance type missing network info")
+		err = fmt.Errorf("instance type missing network info")
 		return
 	}
 	if netInfo.MaximumNetworkInterfaces == nil ||
 		netInfo.Ipv4AddressesPerInterface == nil {
-		err = fmt.Errorf("instance type missing values")
+		err = fmt.Errorf("instance type missing values: %v", netInfo)
 	}
 	netc.MaxNetworkInterfaces = int(*netInfo.MaximumNetworkInterfaces)
 	netc.MaxIPv4PerInterface = int(*netInfo.Ipv4AddressesPerInterface)
