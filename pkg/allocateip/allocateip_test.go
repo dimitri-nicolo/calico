@@ -1113,3 +1113,11 @@ func (c shimClient) StagedKubernetesNetworkPolicies() client.StagedKubernetesNet
 func (c shimClient) StagedNetworkPolicies() client.StagedNetworkPolicyInterface {
 	panic("not implemented")
 }
+
+func (c shimClient) UISettings() client.UISettingsInterface {
+	panic("not implemented")
+}
+
+func (c shimClient) UISettingsGroups() client.UISettingsGroupInterface {
+	panic("not implemented")
+}
