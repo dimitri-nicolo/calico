@@ -35,8 +35,11 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
-	"github.com/projectcalico/libcalico-go/lib/set"
 	"github.com/tigera/api/pkg/lib/numorstring"
+
+	"github.com/projectcalico/libcalico-go/lib/set"
+
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -47,7 +50,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/node/pkg/lifecycle/startup/autodetection"
 	"github.com/projectcalico/node/pkg/lifecycle/utils"
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var exitCode int

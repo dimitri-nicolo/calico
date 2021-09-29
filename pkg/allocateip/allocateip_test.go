@@ -29,6 +29,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend"
@@ -39,7 +41,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/options"
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 func allocateIPDescribe(description string, tunnelType []string, body func(tunnelType string)) bool {
@@ -1111,5 +1112,13 @@ func (c shimClient) StagedKubernetesNetworkPolicies() client.StagedKubernetesNet
 }
 
 func (c shimClient) StagedNetworkPolicies() client.StagedNetworkPolicyInterface {
+	panic("not implemented")
+}
+
+func (c shimClient) UISettings() client.UISettingsInterface {
+	panic("not implemented")
+}
+
+func (c shimClient) UISettingsGroups() client.UISettingsGroupInterface {
 	panic("not implemented")
 }

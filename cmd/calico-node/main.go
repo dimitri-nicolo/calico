@@ -21,6 +21,7 @@ import (
 
 	confdConfig "github.com/kelseyhightower/confd/pkg/config"
 	confd "github.com/kelseyhightower/confd/pkg/run"
+
 	"github.com/projectcalico/node/pkg/nodeinit"
 
 	"github.com/sirupsen/logrus"
@@ -34,9 +35,9 @@ import (
 	"github.com/projectcalico/node/pkg/cni"
 	"github.com/projectcalico/node/pkg/earlynetworking"
 	"github.com/projectcalico/node/pkg/health"
-	"github.com/projectcalico/node/pkg/metrics"
 	"github.com/projectcalico/node/pkg/lifecycle/shutdown"
 	"github.com/projectcalico/node/pkg/lifecycle/startup"
+	"github.com/projectcalico/node/pkg/metrics"
 )
 
 // Create a new flag set.
