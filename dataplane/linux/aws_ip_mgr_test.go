@@ -352,7 +352,11 @@ var _ = Describe("awsIPManager tests", func() {
 						Type: routetable.TargetTypeThrow,
 						CIDR: ip.MustParseCIDROrIP("192.168.0.0/16"),
 					},
-				), "Expected a 'throw' route for the non-AWS IP pool.")
+					routetable.Target{
+						Type: routetable.TargetTypeThrow,
+						CIDR: ip.MustParseCIDROrIP("10.23.0.0/16"),
+					},
+				), "Expected 'throw' route for the non-AWS IP pools.")
 			}
 
 			expectSecondaryLinkConfigured := func() {

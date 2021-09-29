@@ -157,7 +157,7 @@ func (u *CapacityUpdater) loopUpdatingK8s(ctx context.Context, doneC chan struct
 			logrus.Debug("Resync needed...")
 			err := u.handleCapacityChange(caps)
 			if err != nil {
-				logrus.WithError(err).Error("Failed to resync with AWS. Will retry after backoff.")
+				logrus.WithError(err).Error("Failed to resync with Kubernetes. Will retry after backoff.")
 				backoffTimer = backoffMgr.Backoff()
 				backoffC = backoffTimer.C()
 			} else {

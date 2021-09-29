@@ -59,107 +59,194 @@ func TestCapacityUpdater_Mainline(t *testing.T) {
 	}))
 }
 
-func TestCapacityUpdater_ErrBackoff(t *testing.T) {
-	for _, actionToFail := range []string{"get", "patch"} {
-		t.Run(actionToFail, func(t *testing.T) {
-			cu, fake, tearDown := setupAndStart(t)
-			defer tearDown()
+func TestCapacityUpdater_ErrBackoffGet(t *testing.T) {
+	cu, fake, tearDown := setupAndStart(t)
+	defer tearDown()
 
-			first := true
-			fake.Kube.PrependReactor("get", "nodes", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
-				if first {
-					first = false
-					return true, nil, errors.New("surprise")
-				}
-				return false, nil, nil
-			})
+	first := true
+	fake.Kube.PrependReactor("get", "nodes", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+		if first {
+			first = false
+			return true, nil, errors.New("surprise")
+		}
+		return false, nil, nil
+	})
 
-			cu.OnCapacityChange(aws.SecondaryIfaceCapacities{
-				MaxCalicoSecondaryIPs: 22,
-			})
+	cu.OnCapacityChange(aws.SecondaryIfaceCapacities{
+		MaxCalicoSecondaryIPs: 22,
+	})
 
-			// Expect the read then backoff.
-			Eventually(fake.Kube.Actions).Should(HaveLen(1))
-			Consistently(fake.Kube.Actions).Should(HaveLen(1))
-			actions := fake.Kube.Actions()
-			Expect(actions[0].Matches("get", "nodes")).To(BeTrue())
-			Expect(actions[0].(k8stesting.GetAction).GetName()).To(Equal(nodeName))
+	// Expect the read then backoff.
+	Eventually(fake.Kube.Actions).Should(HaveLen(1))
+	Consistently(fake.Kube.Actions).Should(HaveLen(1))
+	actions := fake.Kube.Actions()
+	Expect(actions[0].Matches("get", "nodes")).To(BeTrue())
+	Expect(actions[0].(k8stesting.GetAction).GetName()).To(Equal(nodeName))
 
-			// Backoff should be between 1000 and 1100 ms due to jitter.
-			Eventually(fake.Clock.HasWaiters).Should(BeTrue())
-			fake.Clock.Step(999 * time.Millisecond)
-			Consistently(fake.Kube.Actions).Should(HaveLen(1))
-			fake.Clock.Step(102 * time.Millisecond)
+	// Backoff should be between 1000 and 1100 ms due to jitter.
+	Eventually(fake.Clock.HasWaiters).Should(BeTrue())
+	fake.Clock.Step(999 * time.Millisecond)
+	Consistently(fake.Kube.Actions).Should(HaveLen(1))
+	fake.Clock.Step(102 * time.Millisecond)
 
-			// When the backoff is done, we should get a fresh GET and PATCH.
-			Eventually(fake.Kube.Actions).Should(HaveLen(3))
-			Consistently(fake.Kube.Actions).Should(HaveLen(3))
-			actions = fake.Kube.Actions()
-			Expect(actions[1].Matches("get", "nodes")).To(BeTrue())
-			Expect(actions[1].(k8stesting.GetAction).GetName()).To(Equal(nodeName))
-			Expect(actions[2].Matches("patch", "nodes")).To(BeTrue())
-			Expect(actions[2].(k8stesting.PatchAction).GetName()).To(Equal(nodeName))
+	// When the backoff is done, we should get a fresh GET and PATCH.
+	Eventually(fake.Kube.Actions).Should(HaveLen(3))
+	Consistently(fake.Kube.Actions).Should(HaveLen(3))
+	actions = fake.Kube.Actions()
+	Expect(actions[1].Matches("get", "nodes")).To(BeTrue())
+	Expect(actions[1].(k8stesting.GetAction).GetName()).To(Equal(nodeName))
+	Expect(actions[2].Matches("patch", "nodes")).To(BeTrue())
+	Expect(actions[2].(k8stesting.PatchAction).GetName()).To(Equal(nodeName))
 
-			// Expect the capacity update to be in place.
-			node, err := fake.Kube.Tracker().Get(nodeGVR, "", nodeName)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(node.(*v1.Node).Status.Capacity).To(Equal(v1.ResourceList{
-				"projectcalico.org/aws-secondary-ipv4": resource.MustParse("22"),
-			}))
-		})
-	}
+	// Expect the capacity update to be in place.
+	node, err := fake.Kube.Tracker().Get(nodeGVR, "", nodeName)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(node.(*v1.Node).Status.Capacity).To(Equal(v1.ResourceList{
+		"projectcalico.org/aws-secondary-ipv4": resource.MustParse("22"),
+	}))
 }
 
-func TestCapacityUpdater_ErrBackoffInterrupted(t *testing.T) {
-	for _, actionToFail := range []string{"get", "patch"} {
-		t.Run(actionToFail, func(t *testing.T) {
-			cu, fake, tearDown := setupAndStart(t)
-			defer tearDown()
+func TestCapacityUpdater_ErrBackoffPatch(t *testing.T) {
+	cu, fake, tearDown := setupAndStart(t)
+	defer tearDown()
 
-			first := true
-			fake.Kube.PrependReactor("get", "nodes", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
-				if first {
-					first = false
-					return true, nil, errors.New("surprise")
-				}
-				return false, nil, nil
-			})
+	first := true
+	fake.Kube.PrependReactor("patch", "nodes", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+		if first {
+			first = false
+			return true, nil, errors.New("surprise")
+		}
+		return false, nil, nil
+	})
 
-			cu.OnCapacityChange(aws.SecondaryIfaceCapacities{
-				MaxCalicoSecondaryIPs: 22,
-			})
+	cu.OnCapacityChange(aws.SecondaryIfaceCapacities{
+		MaxCalicoSecondaryIPs: 22,
+	})
 
-			// Expect the read then backoff.
-			Eventually(fake.Kube.Actions).Should(HaveLen(1))
-			Consistently(fake.Kube.Actions).Should(HaveLen(1))
-			actions := fake.Kube.Actions()
-			Expect(actions[0].Matches("get", "nodes")).To(BeTrue())
-			Expect(actions[0].(k8stesting.GetAction).GetName()).To(Equal(nodeName))
+	// Expect the read then backoff.
+	Eventually(fake.Kube.Actions).Should(HaveLen(2))
+	Consistently(fake.Kube.Actions).Should(HaveLen(2))
+	actions := fake.Kube.Actions()
+	Expect(actions[1].Matches("patch", "nodes")).To(BeTrue())
+	Expect(actions[1].(k8stesting.PatchAction).GetName()).To(Equal(nodeName))
 
-			// Backoff should be between 1000 and 1100 ms due to jitter.
-			Eventually(fake.Clock.HasWaiters).Should(BeTrue())
-			fake.Clock.Step(999 * time.Millisecond)
+	// Backoff should be between 1000 and 1100 ms due to jitter.
+	Eventually(fake.Clock.HasWaiters).Should(BeTrue())
+	fake.Clock.Step(999 * time.Millisecond)
+	Consistently(fake.Kube.Actions).Should(HaveLen(2))
+	fake.Clock.Step(102 * time.Millisecond)
 
-			// Send fresh capacity update, should cancel backoff.
-			cu.OnCapacityChange(aws.SecondaryIfaceCapacities{
-				MaxCalicoSecondaryIPs: 42,
-			})
+	// When the backoff is done, we should get a fresh GET and PATCH.
+	Eventually(fake.Kube.Actions).Should(HaveLen(4))
+	Consistently(fake.Kube.Actions).Should(HaveLen(4))
+	actions = fake.Kube.Actions()
+	Expect(actions[2].Matches("get", "nodes")).To(BeTrue())
+	Expect(actions[2].(k8stesting.GetAction).GetName()).To(Equal(nodeName))
+	Expect(actions[3].Matches("patch", "nodes")).To(BeTrue())
+	Expect(actions[3].(k8stesting.PatchAction).GetName()).To(Equal(nodeName))
 
-			// Expect a fresh get and patch.
-			Eventually(fake.Kube.Actions).Should(HaveLen(3))
-			Consistently(fake.Kube.Actions).Should(HaveLen(3))
-			actions = fake.Kube.Actions()
-			Expect(actions[1].Matches("get", "nodes")).To(BeTrue())
-			Expect(actions[2].Matches("patch", "nodes")).To(BeTrue())
+	// Expect the capacity update to be in place.
+	node, err := fake.Kube.Tracker().Get(nodeGVR, "", nodeName)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(node.(*v1.Node).Status.Capacity).To(Equal(v1.ResourceList{
+		"projectcalico.org/aws-secondary-ipv4": resource.MustParse("22"),
+	}))
+}
 
-			// Expect the capacity update to be in place.
-			node, err := fake.Kube.Tracker().Get(nodeGVR, "", nodeName)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(node.(*v1.Node).Status.Capacity).To(Equal(v1.ResourceList{
-				"projectcalico.org/aws-secondary-ipv4": resource.MustParse("42"),
-			}))
-		})
-	}
+func TestCapacityUpdater_ErrBackoffInterruptedGet(t *testing.T) {
+	cu, fake, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	first := true
+	fake.Kube.PrependReactor("get", "nodes", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+		if first {
+			first = false
+			return true, nil, errors.New("surprise")
+		}
+		return false, nil, nil
+	})
+
+	cu.OnCapacityChange(aws.SecondaryIfaceCapacities{
+		MaxCalicoSecondaryIPs: 22,
+	})
+
+	// Expect the read then backoff.
+	Eventually(fake.Kube.Actions).Should(HaveLen(1))
+	Consistently(fake.Kube.Actions).Should(HaveLen(1))
+	actions := fake.Kube.Actions()
+	Expect(actions[0].Matches("get", "nodes")).To(BeTrue())
+	Expect(actions[0].(k8stesting.GetAction).GetName()).To(Equal(nodeName))
+
+	// Backoff should be between 1000 and 1100 ms due to jitter.
+	Eventually(fake.Clock.HasWaiters).Should(BeTrue())
+	fake.Clock.Step(999 * time.Millisecond)
+
+	// Send fresh capacity update, should cancel backoff.
+	cu.OnCapacityChange(aws.SecondaryIfaceCapacities{
+		MaxCalicoSecondaryIPs: 42,
+	})
+
+	// Expect a fresh get and patch.
+	Eventually(fake.Kube.Actions).Should(HaveLen(3))
+	Consistently(fake.Kube.Actions).Should(HaveLen(3))
+	actions = fake.Kube.Actions()
+	Expect(actions[1].Matches("get", "nodes")).To(BeTrue())
+	Expect(actions[2].Matches("patch", "nodes")).To(BeTrue())
+
+	// Expect the capacity update to be in place.
+	node, err := fake.Kube.Tracker().Get(nodeGVR, "", nodeName)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(node.(*v1.Node).Status.Capacity).To(Equal(v1.ResourceList{
+		"projectcalico.org/aws-secondary-ipv4": resource.MustParse("42"),
+	}))
+}
+
+func TestCapacityUpdater_ErrBackoffInterruptedPAtch(t *testing.T) {
+	cu, fake, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	first := true
+	fake.Kube.PrependReactor("patch", "nodes", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+		if first {
+			first = false
+			return true, nil, errors.New("surprise")
+		}
+		return false, nil, nil
+	})
+
+	cu.OnCapacityChange(aws.SecondaryIfaceCapacities{
+		MaxCalicoSecondaryIPs: 22,
+	})
+
+	// Expect the read then backoff.
+	Eventually(fake.Kube.Actions).Should(HaveLen(2))
+	Consistently(fake.Kube.Actions).Should(HaveLen(2))
+	actions := fake.Kube.Actions()
+	Expect(actions[1].Matches("patch", "nodes")).To(BeTrue())
+	Expect(actions[1].(k8stesting.PatchAction).GetName()).To(Equal(nodeName))
+
+	// Backoff should be between 1000 and 1100 ms due to jitter.
+	Eventually(fake.Clock.HasWaiters).Should(BeTrue())
+	fake.Clock.Step(999 * time.Millisecond)
+
+	// Send fresh capacity update, should cancel backoff.
+	cu.OnCapacityChange(aws.SecondaryIfaceCapacities{
+		MaxCalicoSecondaryIPs: 42,
+	})
+
+	// Expect a fresh get and patch.
+	Eventually(fake.Kube.Actions).Should(HaveLen(4))
+	Consistently(fake.Kube.Actions).Should(HaveLen(4))
+	actions = fake.Kube.Actions()
+	Expect(actions[2].Matches("get", "nodes")).To(BeTrue())
+	Expect(actions[3].Matches("patch", "nodes")).To(BeTrue())
+
+	// Expect the capacity update to be in place.
+	node, err := fake.Kube.Tracker().Get(nodeGVR, "", nodeName)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(node.(*v1.Node).Status.Capacity).To(Equal(v1.ResourceList{
+		"projectcalico.org/aws-secondary-ipv4": resource.MustParse("42"),
+	}))
 }
 
 func TestCapacityUpdater_PeriodicResync(t *testing.T) {

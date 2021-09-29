@@ -493,7 +493,7 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 		})
 		if !haveENICapacity {
 			logrus.Warnf("Need %d more AWS secondary ENIs to support local workloads but only %d are "+
-				"available.  Some local workloads (typically egress gateways) will not have connectivity on " +
+				"available.  Some local workloads (typically egress gateways) will not have connectivity on "+
 				"the AWS fabric.", numENIsToCreate, numENIsPossible)
 			numENIsToCreate = numENIsPossible // Avoid trying to create ENIs that we know will fail.
 		}
@@ -1030,9 +1030,9 @@ func (m *SecondaryIfaceProvisioner) attachOrphanENIs(resyncState *eniResyncState
 		subnetID := safeReadString(eni.SubnetId)
 		eniID := safeReadString(eni.NetworkInterfaceId)
 		logCtx := logrus.WithFields(logrus.Fields{
-			"eniID": eniID,
+			"eniID":        eniID,
 			"activeSubnet": bestSubnetID,
-			"eniSubnet": subnetID,
+			"eniSubnet":    subnetID,
 		})
 		if subnetID != bestSubnetID || int(devIdx) >= m.networkCapabilities.MaxENIsForCard(0) {
 			if subnetID != bestSubnetID {
@@ -1084,7 +1084,7 @@ func (m *SecondaryIfaceProvisioner) attachOrphanENIs(resyncState *eniResyncState
 	}
 	// Set some limit on how many ENIs we'll leak before we say "no more".
 	if numLeakedENIs > m.networkCapabilities.MaxNetworkInterfaces {
-		return fmt.Errorf("detected multiple ENIs that belong to this node but cannot be attached or deleted, " +
+		return fmt.Errorf("detected multiple ENIs that belong to this node but cannot be attached or deleted, "+
 			"backing off to prevent further leaks: %w", lastLeakErr)
 	}
 	if attachedOrphan {
@@ -1153,7 +1153,7 @@ func (m *SecondaryIfaceProvisioner) allocateCalicoHostIPs(numENIsNeeded int) (*i
 		logrus.WithFields(logrus.Fields{
 			"needed":    numENIsNeeded,
 			"allocated": len(v4addrs.IPs),
-			"reasons": v4addrs.Msgs, // Contains messages like "pool X is full"
+			"reasons":   v4addrs.Msgs, // Contains messages like "pool X is full"
 		}).Warn("Wasn't able to allocate enough ENI primary IPs. IP pool may be full.")
 	}
 	return v4addrs, nil
