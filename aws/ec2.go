@@ -35,11 +35,11 @@ import (
 )
 
 const (
-	TagPrefix                         = "calico:"
-	NetworkInterfaceTagUse            = TagPrefix + "use"
-	NetworkInterfaceTagOwningInstance = TagPrefix + "instance"
+	CalicoTagPrefix                         = "calico:"
+	CalicoNetworkInterfaceTagUse            = CalicoTagPrefix + "use"
+	CalicoNetworkInterfaceTagOwningInstance = CalicoTagPrefix + "instance"
 
-	NetworkInterfaceUseSecondary = "secondary"
+	CalicoNetworkInterfaceUseSecondary = "secondary"
 )
 
 const (
@@ -505,8 +505,8 @@ func (c *EC2Client) SetEC2SourceDestinationCheck(ctx context.Context, ec2NetId s
 }
 
 func NetworkInterfaceIsCalicoSecondary(nic types.NetworkInterface) bool {
-	v, _ := LookupTag(nic.TagSet, NetworkInterfaceTagUse)
-	return v == NetworkInterfaceUseSecondary
+	v, _ := LookupTag(nic.TagSet, CalicoNetworkInterfaceTagUse)
+	return v == CalicoNetworkInterfaceUseSecondary
 }
 
 func LookupTag(tags []types.Tag, key string) (value string, found bool) {
