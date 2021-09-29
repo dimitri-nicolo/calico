@@ -713,11 +713,11 @@ endif
 release-publish-windows-archive-gcs: var-require-one-of-CONFIRM-DRYRUN var-require-all-VERSION release-verify-version build-windows-archive
 ifdef CONFIRM
 	gcloud auth activate-service-account --key-file ~/secrets/gcp-registry-pusher-service-account.json
-	gsutil cp dist/tigera-calico-windows-$(NODE_GIT_VERSION).zip $gs://tigera-windows/
+	gsutil cp dist/tigera-calico-windows-$(NODE_GIT_VERSION).zip gs://tigera-windows/
 	gcloud auth revoke registry-pusher@unique-caldron-775.iam.gserviceaccount.com
 else
 	@echo [DRYRUN] gcloud auth activate-service-account --key-file ~/secrets/gcp-registry-pusher-service-account.json
-	@echo [DRYRUN] gsutil cp dist/tigera-calico-windows-$(NODE_GIT_VERSION).zip $gs://tigera-windows/
+	@echo [DRYRUN] gsutil cp dist/tigera-calico-windows-$(NODE_GIT_VERSION).zip gs://tigera-windows/
 	@echo [DRYRUN] gcloud auth revoke registry-pusher@unique-caldron-775.iam.gserviceaccount.com
 endif
 
