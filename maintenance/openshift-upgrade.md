@@ -1,13 +1,22 @@
 ---
-title: Upgrade Calico Enterprise from an earlier release on OpenShift
-description: Upgrading from an earlier release of Calico Enterprise on OpenShift.
+title: Upgrade Calico Enterprise installed with OpenShift
+description: Upgrade to a newer version of Calico Enterprise installed with OpenShift.
 canonical_url: /maintenance/openshift-upgrade
 show_toc: false
 openshift_manifests_ignore_pullsecret: true
 openshift_manifests_ignore_installation_cr: true
 ---
 
-## Prerequisites
+### Upgrades paths
+
+You can upgrade your cluster to a maximum of **two releases** from your existing version. For example, if you are on version 3.6, you can upgrade to 3.7, or you can upgrade directly to 3.8. However, you cannot upgrade beyond **two releases**; upgrading from 3.6 to 3.9 (three releases) is not supported. 
+
+If you are several versions behind where you want to be, you must go through each group of two releases to get there. For example, if you are on version 3.6, and you want to get to 3.10, you can upgrade to 3.8, then upgrade from 3.8 directly to 3.10.
+
+>**Note**: Always check the [Release Notes]({{site.baseurl}}/release-notes/) for exceptions; limitations can override the above pattern.  
+{: .alert .alert-info}
+
+### Prerequisites
 
 Ensure that your {{site.prodname}} OpenShift cluster is running OpenShift Container Platform 
 {{site.ocpMinVersion}} or {{site.ocpMaxVersion}}, and the {{site.prodname}} operator version is v1.2.4 or greater.
@@ -94,20 +103,6 @@ mkdir manifests
 
    ```bash
    watch kubectl get tigerastatus
-   ```
-
-1. To secure the components which make up {{site.prodname}}, install the following set of network policies.
-
-   If your cluster is a **managed** cluster, apply this manifest.
-   
-   ```bash
-   oc apply -f {{ "/manifests/ocp/tigera-policies-managed.yaml" | absolute_url }}
-   ```
-   
-   For other clusters, use this manifest.
-   
-   ```bash
-   oc apply -f {{ "/manifests/ocp/tigera-policies.yaml" | absolute_url }}
    ```
 
 1. You can now monitor the upgrade progress with the following command:

@@ -5,7 +5,16 @@ canonical_url: /maintenance/kubernetes-upgrade-tsee
 show_toc: false
 ---
 
-## Prerequisites
+### Upgrades paths
+
+You can upgrade your cluster to a maximum of **two releases** from your existing version. For example, if you are on version 3.6, you can upgrade to 3.7, or you can upgrade directly to 3.8. However, you cannot upgrade beyond **two releases**; upgrading from 3.6 to 3.9 (three releases) is not supported. 
+
+If you are several versions behind where you want to be, you must go through each group of two releases to get there. For example, if you are on version 3.6, and you want to get to 3.10, you can upgrade to 3.8, then upgrade from 3.8 directly to 3.10. 
+
+>**Note**: Always check the [Release Notes]({{site.baseurl}}/release-notes/) for exceptions; limitations can override the above pattern.  
+{: .alert .alert-info}
+
+### Prerequisites
 
 Verify that your Kubernetes cluster is using a version of {{site.prodname}} installed with the operator, by running 
 `kubectl get tigerastatus`. If the result is successful, then your installation is using the operator.
@@ -14,7 +23,7 @@ If your cluster is on a version earlier than 2.6 or does not use the operator, c
 
 If your cluster has a Calico installation, contact Tigera support to upgrade.
 
-## Prepare your cluster for the upgrade
+### Prepare your cluster for the upgrade
 
 During the upgrade the controller that manages Elasticsearch is updated. Because of this, the {{site.prodname}} LogStorage 
 CR is temporarily removed during upgrade. Features that depend on LogStorage are temporarily unavailable, among which

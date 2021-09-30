@@ -1,11 +1,20 @@
 ---
 title: Upgrade Calico Enterprise installed with Helm
-description: Upgrade from an earlier release of Calico Enterprise with Helm.
+description: Upgrade to a newer version of Calico Enterprise installed with Helm.
 canonical_url: /maintenance/kubernetes-upgrade-tsee
 show_toc: false
 ---
 
-## Prerequisites
+### Upgrades paths
+
+You can upgrade your cluster to a maximum of **two releases** from your existing version. For example, if you are on version 3.6, you can upgrade to 3.7, or you can upgrade directly to 3.8. However, you cannot upgrade beyond **two releases**; upgrading from 3.6 to 3.9 (three releases) is not supported. 
+
+If you are several versions behind where you want to be, you must go through each group of two releases to get there. For example, if you are on version 3.6, and you want to get to 3.10, you can upgrade to 3.8, then upgrade from 3.8 directly to 3.10.
+
+>**Note**: Always check the [Release Notes]({{site.baseurl}}/release-notes/) for exceptions; limitations can override the above pattern.  
+{: .alert .alert-info}
+
+### Prerequisites
 
 Verify that your Kubernetes cluster is using a version of {{site.prodname}} installed with Helm, by running
 `kubectl get tigerastatus`. If the result is successful, then your installation is using Helm.
@@ -14,7 +23,7 @@ If your cluster is on a version earlier than 3.0, contact Tigera support to upgr
 
 If your cluster has a Calico installation, contact Tigera support to upgrade.
 
-## Prepare your cluster for the upgrade
+### Prepare your cluster for the upgrade
 
 During the upgrade the controller that manages Elasticsearch is updated. Because of this, the {{site.prodname}} LogStorage
 CR is temporarily removed during upgrade. Features that depend on LogStorage are temporarily unavailable, among which
@@ -28,7 +37,7 @@ the upgrade.
 
 If your cluster has Windows nodes and uses custom TLS certificates for log storage then, prior to upgrade, prepare and apply new certificates for [log storage]({{site.baseurl}}/security/comms/log-storage-tls) that include the required service DNS names.
 
-## Upgrade from 3.0 or later
+### Upgrade from 3.0 or later
 
 **Note**: These steps differ based on your cluster type. If you are unsure of your cluster type, look at the field `clusterManagementType` when you run `kubectl get installation -o yaml` before you proceed.
 {: .alert .alert-info}
@@ -118,20 +127,6 @@ If your cluster has Windows nodes and uses custom TLS certificates for log stora
 
    ```bash
    watch kubectl get tigerastatus
-   ```
-
-1. Install the new network policies to secure {{site.prodname}} component communications.
-
-   If your cluster is a **managed** cluster, apply this manifest.
-
-   ```bash
-   kubectl apply -f {{ "/manifests/tigera-policies-managed.yaml" | absolute_url }}
-   ```
-
-   For other clusters, use this manifest.
-
-   ```bash
-   kubectl apply -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
    ```
 
 1. You can monitor progress with the following command:

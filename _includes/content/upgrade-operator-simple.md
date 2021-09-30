@@ -142,17 +142,4 @@
     **Note**: If there are any problems you can use `kubectl get tigerastatus -o yaml` to get more details.
     {: .alert .alert-info}
 
-1. Remove unused policies in your cluster.
-
-   If your cluster is a **managed** cluster, run this command:
-
-   ```bash
-   kubectl delete -f {{ "/manifests/default-tier-policies-managed.yaml" | absolute_url }}
-   ```
-
-   For other clusters, run this command:
-
-   ```bash
-   kubectl delete -f {{ "/manifests/default-tier-policies.yaml" | absolute_url }}
-   ```
 {% endif %}
