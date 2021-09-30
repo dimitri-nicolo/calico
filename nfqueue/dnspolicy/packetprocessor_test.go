@@ -13,7 +13,9 @@ import (
 	nfqdnspolicy "github.com/projectcalico/felix/nfqueue/dnspolicy"
 
 	gonfqueue "github.com/florianl/go-nfqueue"
+
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/felix/nfqueue"
@@ -29,40 +31,51 @@ const (
 var _ = Describe("DNSPolicyPacketProcessor", func() {
 	Context("Packet hasn't expired", func() {
 		When("a single packet is sent for processing", func() {
-			It("releases the packet after holding it for it's maximum duration", func() {
-				packetID := uint32(2)
-				packetPayload := newTestIPV4Packet(net.IP{8, 8, 8, 8}, net.IP{9, 9, 9, 9}, layers.TCPPort(300), layers.TCPPort(600))
+			DescribeTable("releases the packet after holding it for it's maximum duration",
+				func(packetPayload []byte) {
+					packetID := uint32(2)
 
-				ch := make(chan gonfqueue.Attribute)
-				defer close(ch)
+					ch := make(chan gonfqueue.Attribute)
+					defer close(ch)
 
-				var readOnlyCh <-chan gonfqueue.Attribute
-				readOnlyCh = ch
+					var readOnlyCh <-chan gonfqueue.Attribute
+					readOnlyCh = ch
 
-				nf := new(nfqueue.MockNfqueue)
-				nf.On("SetVerdict", uint32(2), gonfqueue.NfRepeat).Return(nil)
-				nf.On("PacketAttributesChannel").Return(readOnlyCh)
+					nf := new(nfqueue.MockNfqueue)
+					nf.On("SetVerdict", uint32(2), gonfqueue.NfRepeat).Return(nil)
+					nf.On("PacketAttributesChannel").Return(readOnlyCh)
 
-				processor := nfqdnspolicy.NewPacketProcessor(
-					nf,
-					dnrMarkBit,
-					nfqdnspolicy.WithPacketDropTimeout(100*time.Millisecond),
-					nfqdnspolicy.WithPacketReleaseTimeout(20*time.Millisecond),
-				)
-				processor.Start()
+					processor := nfqdnspolicy.NewPacketProcessor(
+						nf,
+						dnrMarkBit,
+						nfqdnspolicy.WithPacketDropTimeout(100*time.Millisecond),
+						nfqdnspolicy.WithPacketReleaseTimeout(20*time.Millisecond),
+					)
+					processor.Start()
 
-				now := time.Now()
+					now := time.Now()
 
-				ch <- gonfqueue.Attribute{
-					Timestamp: &now,
-					PacketID:  &packetID,
-					Payload:   &packetPayload,
-				}
-				defer processor.Stop()
+					ch <- gonfqueue.Attribute{
+						Timestamp: &now,
+						PacketID:  &packetID,
+						Payload:   &packetPayload,
+					}
+					defer processor.Stop()
 
-				time.Sleep(200 * time.Millisecond)
-				nf.AssertExpectations(GinkgoT())
-			})
+					time.Sleep(200 * time.Millisecond)
+					nf.AssertExpectations(GinkgoT())
+				},
+				Entry(
+					"IPV4 TCP",
+					ipv4Layer(net.IP{8, 8, 8, 8}, net.IP{9, 9, 9, 9},
+						tcpLayer(layers.TCPPort(300), layers.TCPPort(600), gopacket.NewSerializeBuffer())).Bytes(),
+				),
+				Entry(
+					"IPV6 TCP",
+					ipv6Layer(net.ParseIP("2607:f8b0:400a:80a::200e"), net.ParseIP("fc00:f853:ccd:e777::1"), layers.IPProtocolTCP,
+						tcpLayer(layers.TCPPort(300), layers.TCPPort(600), gopacket.NewSerializeBuffer())).Bytes(),
+				),
+			)
 		})
 
 		When("multiple packets are sent for processing", func() {
@@ -300,4 +313,44 @@ func newTestIPV4Packet(srcIP, dstIP net.IP, srcPort, dstPort layers.TCPPort) []b
 	Expect(err).ShouldNot(HaveOccurred())
 
 	return buff.Bytes()
+}
+
+func ipv4Layer(srcIP, dstIP net.IP, buff gopacket.SerializeBuffer) gopacket.SerializeBuffer {
+	defer GinkgoRecover()
+	err := (&layers.IPv4{
+		Version:  4,
+		IHL:      5,
+		Protocol: layers.IPProtocolTCP,
+		SrcIP:    srcIP,
+		DstIP:    dstIP,
+	}).SerializeTo(buff, gopacket.SerializeOptions{})
+	Expect(err).ShouldNot(HaveOccurred())
+
+	return buff
+}
+
+func ipv6Layer(srcIP, dstIP net.IP, nextHeader layers.IPProtocol, buff gopacket.SerializeBuffer) gopacket.SerializeBuffer {
+	defer GinkgoRecover()
+	err := (&layers.IPv6{
+		Length:     20,
+		Version:    6,
+		SrcIP:      srcIP,
+		DstIP:      dstIP,
+		NextHeader: nextHeader,
+	}).SerializeTo(buff, gopacket.SerializeOptions{})
+	Expect(err).ShouldNot(HaveOccurred())
+
+	return buff
+}
+
+func tcpLayer(srcPort, dstPort layers.TCPPort, buff gopacket.SerializeBuffer) gopacket.SerializeBuffer {
+	defer GinkgoRecover()
+	err := (&layers.TCP{
+		DataOffset: 5,
+		SrcPort:    srcPort,
+		DstPort:    dstPort,
+	}).SerializeTo(buff, gopacket.SerializeOptions{})
+	Expect(err).ShouldNot(HaveOccurred())
+
+	return buff
 }
