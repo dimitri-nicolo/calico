@@ -144,7 +144,7 @@ Now the [IsolationForest model] from scikit-learn is used in this detector.
     
     It is a list of the `flow` log numeric fields separated by `,`.
     A separate model is trained for each field in this list.
-    Remove a field from this list if you don't want to detect alerts for it.
+    Remove a field from this list if you don't want to detect anomalies for it.
 - **AD_GENERIC_FLOWS_ALERTS_PER_DAY** - Default: 2.5 
  
   Each model automatically tuned up to detect a desired number of alerts per day. It doesn't mean
@@ -156,7 +156,7 @@ Now the [IsolationForest model] from scikit-learn is used in this detector.
     
     It is a list of the `DNS` log numeric fields separated by `,`.
     A separate model is trained for each field in this list.
-    Remove a field from this list if you don't want to detect alerts for it.
+    Remove a field from this list if you don't want to detect anomalies for it.
 - **AD_GENERIC_DNS_ALERTS_PER_DAY** - Default: 2.5 
  
   Each model automatically tuned up to detect a desired number of alerts per day. It doesn't mean
@@ -168,7 +168,7 @@ Now the [IsolationForest model] from scikit-learn is used in this detector.
     
     It is a list of the `L7` log numeric fields separated by `,`.
     A separate model is trained for each field in this list.
-    Remove a field from this list if you don't want to detect alerts for it.
+    Remove a field from this list if you don't want to detect anomalies for it.
 - **AD_GENERIC_L7_ALERTS_PER_DAY** - Default: 2.5 
  
   Each model automatically tuned up to detect a desired number of alerts per day. It doesn't mean

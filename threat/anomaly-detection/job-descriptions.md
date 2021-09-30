@@ -74,25 +74,25 @@ Presence of the DGA could indicate presence of the malware code.
 ### flows log anomaly 
 **Job ID**: `generic_flows`
 
-The job looks for the most of the numeric fields in the `flows` log.
-It looks for the excessive values of the fields.
-This could indicate a denial of service attack, data exfiltrating, or other attacks.
+The job looks for several numeric fields in the `flows` log.
+It detects the excessive values of the fields.
+This anomaly could indicate a denial of service attack, data exfiltrating, or other attacks.
 
 
 ### DNS log anomaly 
 **Job ID**: `generic_dns`
 
-The job looks for the most of the numeric fields in the `DNS` log.
-It looks for the excessive values of the fields.
-This could indicate a denial of service attack, data exfiltrating, or other attacks.
+The job looks for several numeric fields in the `DNS` log.
+It detects the excessive values of the fields.
+This anomaly could indicate a denial of service attack, data exfiltrating, or other attacks.
 
 
 ### L7 log anomaly 
 **Job ID**: `generic_l7`
 
-The job looks for the most of the numeric fields in the `L7` log.
-It looks for the excessive values of the fields.
-This could indicate a denial of service attack, data exfiltrating, or other attacks.
+The job looks for several numeric fields in the `L7` log.
+It detects the excessive values of the fields.
+This anomaly could indicate a denial of service attack, data exfiltrating, or other attacks.
 
 
 [Domain Generation Algorithms (DGA)]: https://en.wikipedia.org/wiki/Domain_generation_algorithm
