@@ -887,8 +887,8 @@ github.com/tigera/api v0.0.0-20210917233738-3fea29c333ab h1:Mkmq+jrtg0mshOQx2Fqk
 github.com/tigera/api v0.0.0-20210917233738-3fea29c333ab/go.mod h1:tQDYzO/oh0HZL2MpIwyijRwJf67hPR/Gkex1vt9EwLE=
 github.com/tigera/api v0.0.0-20210929195803-639677823e3d h1:b+Sh0bhMtYQGmMwNg57BtXW7PEDLvEzTHiCd6ULSRU8=
 github.com/tigera/api v0.0.0-20210929195803-639677823e3d/go.mod h1:tQDYzO/oh0HZL2MpIwyijRwJf67hPR/Gkex1vt9EwLE=
-github.com/tigera/cni-plugin-private v1.11.1-0.20210930223025-4e30ca23e1ae h1:8x4Z8z5AC0tuBW3ZH5jYSYArGJO6aqzdz2MFI+k1X3E=
-github.com/tigera/cni-plugin-private v1.11.1-0.20210930223025-4e30ca23e1ae/go.mod h1:vNZb0aqsC1h6izueLvZg8wPeBa+Ga2PttxMFv1iulV8=
+github.com/tigera/cni-plugin-private v1.11.1-0.20211001002246-a4be69f06e0b h1:fH+5sbjDSXINydH3NUFj1zTaJCF8omASSCPXXYc5HtI=
+github.com/tigera/cni-plugin-private v1.11.1-0.20211001002246-a4be69f06e0b/go.mod h1:Q/VhGRXD/CzIAGhcwQHIkY9IrubiH1Ys1W1DtatTrwc=
 github.com/tigera/confd-private v1.0.1-0.20210929202553-6f73314cec5f h1:j8RNpB7raYI/0gKda6b779+yqEBCIjQiRb0N7fbqQ/Q=
 github.com/tigera/confd-private v1.0.1-0.20210929202553-6f73314cec5f/go.mod h1:L3nsTvaPiL7ed31kquZp+fgrwbFJXG17RTB6ecAptYs=
 github.com/tigera/felix-private v0.0.0-20210930231244-8846e195466e h1:JN2Iq5jWRaqBW5haFZJKtXXnyzib5gsaTWgauglVmBY=
