@@ -131,6 +131,21 @@ ginkgo watch -r
 ```
 Ginkgo will re-run tests as files are modified and saved.
 
+## How can I debug the Felix FV tests using goland?
+First, set up the necessary environment variables in goland:
+- FV_CWLOGDIR <path-to-felix-project>/fv/cwlogs
+- PRIVATE_KEY: <path-to-felix-project>/fv/private.key
+- FV_FELIXIMAGE: tigera/felix-test:latest-amd64
+
+Next, build the `felix-test` image to compile and bundle up the current code on your branch into an image that will be
+run by the fv tests:
+````
+make image-test
+````
+
+Lastly, set your break points and focuses in the tests you want to debug in the `fv` directory and run the
+`fv/fv_suite_test.go` file.
+
 ## How do I build packages/run Felix?
 
 ### Docker
