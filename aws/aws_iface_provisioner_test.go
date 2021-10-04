@@ -867,7 +867,7 @@ func TestSecondaryIfaceProvisioner_NoSecondaryIPsPossible(t *testing.T) {
 	Eventually(fake.Clock.HasWaiters).Should(BeTrue())
 	fake.Clock.Step(1200 * time.Millisecond)
 	Consistently(sip.ResponseC()).ShouldNot(Receive())
-	Eventually(fake.Clock.HasWaiters).Should(BeTrue()) // Should keep backing off FIXME Backing off may do no good here; something needs to change
+	Eventually(fake.Clock.HasWaiters).Should(BeTrue()) // Should keep backing off
 }
 
 func TestSecondaryIfaceProvisioner_IPAMCleanup(t *testing.T) {
