@@ -95,9 +95,10 @@ type SecondaryIfaceProvisioner struct {
 	clock        clock.Clock
 	newEC2Client func(ctx context.Context) (*EC2Client, error)
 
-	healthAgg  *health.HealthAggregator
-	opRecorder logutils.OpRecorder
-	ipamClient ipamInterface
+	healthAgg       healthAggregator
+	livenessEnabled bool
+	opRecorder      logutils.OpRecorder
+	ipamClient      ipamInterface
 
 	// resyncNeeded is set to true if we need to do any kind of resync.
 	resyncNeeded bool
@@ -130,9 +131,13 @@ type DatastoreState struct {
 }
 
 const (
-	healthNameENICapacity = "aws-eni-capacity"
-	healthNameAWSInSync   = "aws-eni-addresses-in-sync"
-	defaultTimeout        = 30 * time.Second
+	healthNameAWSProvisioner = "aws-eni-provisioner"
+	healthNameENICapacity    = "aws-eni-capacity"
+	healthNameAWSInSync      = "aws-eni-addresses-in-sync"
+	defaultTimeout           = 30 * time.Second
+
+	livenessReportInterval = 30 * time.Second
+	livenessTimeout        = 300 * time.Second
 )
 
 type IfaceProvOpt func(provisioner *SecondaryIfaceProvisioner)
@@ -140,6 +145,12 @@ type IfaceProvOpt func(provisioner *SecondaryIfaceProvisioner)
 func OptTimeout(to time.Duration) IfaceProvOpt {
 	return func(provisioner *SecondaryIfaceProvisioner) {
 		provisioner.timeout = to
+	}
+}
+
+func OptLivenessEnabled(livenessEnabled bool) IfaceProvOpt {
+	return func(provisioner *SecondaryIfaceProvisioner) {
+		provisioner.livenessEnabled = livenessEnabled
 	}
 }
 
@@ -169,35 +180,24 @@ func (c SecondaryIfaceCapacities) Equals(caps SecondaryIfaceCapacities) bool {
 	return c == caps
 }
 
+type healthAggregator interface {
+	RegisterReporter(name string, reports *health.HealthReport, timeout time.Duration)
+	Report(name string, report *health.HealthReport)
+}
+
 func NewSecondaryIfaceProvisioner(
 	nodeName string,
-	healthAgg *health.HealthAggregator,
+	healthAgg healthAggregator,
 	ipamClient ipamInterface,
 	options ...IfaceProvOpt,
 ) *SecondaryIfaceProvisioner {
-	healthAgg.RegisterReporter(healthNameENICapacity, &health.HealthReport{
-		Ready: true,
-		Live:  false,
-	}, 0)
-	healthAgg.Report(healthNameENICapacity, &health.HealthReport{
-		Ready: true,
-		Live:  true,
-	})
-	healthAgg.RegisterReporter(healthNameAWSInSync, &health.HealthReport{
-		Ready: true,
-		Live:  false,
-	}, 0)
-	healthAgg.Report(healthNameAWSInSync, &health.HealthReport{
-		Ready: true,
-		Live:  true,
-	})
-
 	sip := &SecondaryIfaceProvisioner{
-		healthAgg:  healthAgg,
-		ipamClient: ipamClient,
-		nodeName:   nodeName,
-		timeout:    defaultTimeout,
-		opRecorder: logutils.NewSummarizer("AWS secondary IP reconciliation loop"),
+		healthAgg:       healthAgg,
+		livenessEnabled: true,
+		ipamClient:      ipamClient,
+		nodeName:        nodeName,
+		timeout:         defaultTimeout,
+		opRecorder:      logutils.NewSummarizer("AWS secondary IP reconciliation loop"),
 
 		// Do the extra scans on first run.
 		orphanENIResyncNeeded: true,
@@ -214,6 +214,23 @@ func NewSecondaryIfaceProvisioner(
 
 	for _, o := range options {
 		o(sip)
+	}
+
+	// Readiness flag used to indicate if we've got enough ENI capacity to handle all the local workloads
+	// that need it. No liveness, we reserve that for the main loop watchdog (set up below).
+	healthAgg.RegisterReporter(healthNameENICapacity, &health.HealthReport{Ready: true}, 0)
+	healthAgg.Report(healthNameENICapacity, &health.HealthReport{Ready: true, Live: true})
+	// Similarly, readiness flag to report whether we succeeded in syncing with AWS.
+	healthAgg.RegisterReporter(healthNameAWSInSync, &health.HealthReport{Ready: true}, 0)
+	healthAgg.Report(healthNameAWSInSync, &health.HealthReport{Ready: true, Live: true})
+	if sip.livenessEnabled {
+		// Health/liveness watchdog for our main loop.  We let this be diabled for ease of UT.
+		healthAgg.RegisterReporter(
+			healthNameAWSProvisioner,
+			&health.HealthReport{Ready: true, Live: true},
+			livenessTimeout,
+		)
+		healthAgg.Report(healthNameAWSProvisioner, &health.HealthReport{Ready: true, Live: true})
 	}
 
 	return sip
@@ -268,6 +285,12 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 	}
 	defer stopBackoffTimer()
 
+	var livenessC <-chan time.Time
+	if m.livenessEnabled {
+		livenessTicker := m.clock.NewTicker(livenessReportInterval)
+		livenessC = livenessTicker.C()
+	}
+
 	for {
 		// Thread safety: we receive messages _from_, and, send messages _to_ the dataplane main loop.
 		// To avoid deadlock,
@@ -288,6 +311,8 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 			logrus.WithField("response", response).Debug("Sent AWS state back to main goroutine")
 			responseC = nil
 			continue // Don't want sending a response to trigger an early resync.
+		case <-livenessC:
+			m.healthAgg.Report(healthNameAWSProvisioner, &health.HealthReport{Ready: true, Live: true})
 		case <-backoffC:
 			// Important: nil out the timer so that stopBackoffTimer() won't try to stop it again (and deadlock).
 			backoffC = nil

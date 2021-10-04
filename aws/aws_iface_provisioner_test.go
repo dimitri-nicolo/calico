@@ -6,6 +6,7 @@ import (
 	"context"
 	"net"
 	nethttp "net/http"
+	"sync"
 	"testing"
 	"time"
 
@@ -346,111 +347,6 @@ var (
 	}
 )
 
-type sipTestFakes struct {
-	IPAM      *fakeIPAM
-	EC2       *fakeEC2
-	Clock     *clock.FakeClock
-	CapacityC chan SecondaryIfaceCapacities
-}
-
-func (f sipTestFakes) expectSingleBackoffAndStep() {
-	// Initial backoff should be between 1000 and 1100 ms (due to jitter).
-	Eventually(f.Clock.HasWaiters).Should(BeTrue())
-	f.Clock.Step(999 * time.Millisecond)
-	Expect(f.Clock.HasWaiters()).To(BeTrue())
-	f.Clock.Step(102 * time.Millisecond)
-	Expect(f.Clock.HasWaiters()).To(BeFalse())
-}
-
-func setup(t *testing.T) (*SecondaryIfaceProvisioner, *sipTestFakes) {
-	RegisterTestingT(t)
-	fakeIPAM := newFakeIPAM()
-	theTime, err := time.Parse("2006-01-02 15:04:05.000", "2021-09-15 16:00:00.000")
-	Expect(err).NotTo(HaveOccurred())
-	fakeClock := clock.NewFakeClock(theTime)
-	capacityC := make(chan SecondaryIfaceCapacities, 1)
-	ec2Client, fakeEC2 := newFakeEC2Client()
-
-	fakeEC2.InstancesByID[instanceID] = types.Instance{
-		InstanceId:   stringPtr(instanceID),
-		InstanceType: types.InstanceTypeT3Large,
-		Placement: &types.Placement{
-			AvailabilityZone: stringPtr(azWest1),
-		},
-		VpcId: stringPtr(testVPC),
-	}
-	fakeEC2.addSubnet(subnetIDWest1Default, azWest1, "192.164.1.0/24")
-	fakeEC2.addSubnet(subnetIDWest2Default, azWest2, "192.164.2.0/24")
-	fakeEC2.addSubnet(subnetIDWest1Calico, azWest1, subnetWest1CIDRCalico)
-	fakeEC2.addSubnet(subnetIDWest1CalicoAlt, azWest1, subnetWest1CIDRCalicoAlt)
-	fakeEC2.addSubnet(subnetIDWest2Calico, azWest2, subnetWest2CIDRCalico)
-
-	fakeEC2.ENIsByID[primaryENIID] = types.NetworkInterface{
-		NetworkInterfaceId: stringPtr(primaryENIID),
-		Attachment: &types.NetworkInterfaceAttachment{
-			DeviceIndex:      int32Ptr(0),
-			NetworkCardIndex: int32Ptr(0),
-			AttachmentId:     stringPtr(primaryENIAttachID),
-			InstanceId:       stringPtr(instanceID),
-		},
-		SubnetId: stringPtr(subnetIDWest1Default),
-		PrivateIpAddresses: []types.NetworkInterfacePrivateIpAddress{
-			{
-				Primary:          boolPtr(true),
-				PrivateIpAddress: stringPtr("192.164.1.5"),
-			},
-		},
-		PrivateIpAddress: stringPtr("192.164.1.5"),
-		MacAddress:       stringPtr(primaryENIMAC),
-		Groups: []types.GroupIdentifier{
-			{
-				GroupId:   stringPtr("sg-01234567890123456"),
-				GroupName: stringPtr("sg-01234567890123456 name"),
-			},
-			{
-				GroupId:   stringPtr("sg-01234567890123457"),
-				GroupName: stringPtr("sg-01234567890123457 name"),
-			},
-		},
-	}
-
-	sip := NewSecondaryIfaceProvisioner(
-		nodeName,
-		health.NewHealthAggregator(),
-		fakeIPAM,
-		OptClockOverride(fakeClock),
-		OptCapacityCallback(func(capacities SecondaryIfaceCapacities) {
-			// Drain any previous message.
-			select {
-			case <-capacityC:
-			default:
-			}
-			capacityC <- capacities
-		}),
-		OptNewEC2ClientOverride(func(ctx context.Context) (*EC2Client, error) {
-			return ec2Client, nil
-		}),
-	)
-
-	return sip, &sipTestFakes{
-		IPAM:      fakeIPAM,
-		EC2:       fakeEC2,
-		Clock:     fakeClock,
-		CapacityC: capacityC,
-	}
-}
-
-func setupAndStart(t *testing.T) (*SecondaryIfaceProvisioner, *sipTestFakes, func()) {
-	sip, fake := setup(t)
-	ctx, cancel := context.WithCancel(context.Background())
-	doneC := sip.Start(ctx)
-	return sip, fake, func() {
-		cancel()
-		Eventually(doneC).Should(BeClosed())
-		fake.EC2.Errors.ExpectAllErrorsConsumed()
-	}
-}
-
 func TestSecondaryIfaceProvisioner_OnDatastoreUpdateShouldNotBlock(t *testing.T) {
 	sip, _ := setup(t)
 
@@ -486,6 +382,45 @@ func TestSecondaryIfaceProvisioner_NoPoolsOrWorkloadsStartOfDay(t *testing.T) {
 	Eventually(fake.CapacityC).Should(Receive(Equal(SecondaryIfaceCapacities{
 		MaxCalicoSecondaryIPs: t3LargeCapacity,
 	})))
+}
+
+func TestSecondaryIfaceProvisioner_Liveness(t *testing.T) {
+	_, fake, tearDown := setupAndStart(t, OptLivenessEnabled(true))
+	defer tearDown()
+
+	// Initial registration and report should happen synchronously.
+	Expect(fake.Health.getRegistrations()).To(HaveKeyWithValue(
+		healthNameAWSProvisioner,
+		registration{
+			Reports: health.HealthReport{Live: true, Ready: true},
+			Timeout: 300 * time.Second,
+		}))
+	Expect(fake.Health.getLastReports()).To(HaveKeyWithValue(
+		healthNameAWSProvisioner,
+		health.HealthReport{Live: true, Ready: true},
+	))
+
+	// Next report after 30s...
+	Eventually(fake.Clock.HasWaiters).Should(BeTrue())
+	fake.Health.clearReports()
+	fake.Clock.Step(29 * time.Second)
+	Consistently(fake.Health.getLastReports).ShouldNot(HaveKey(
+		healthNameAWSProvisioner,
+	))
+	fake.Clock.Step(2 * time.Second)
+	Eventually(fake.Health.getLastReports).Should(HaveKeyWithValue(
+		healthNameAWSProvisioner,
+		health.HealthReport{Live: true, Ready: true},
+	))
+
+	// Then every 30s.
+	Eventually(fake.Clock.HasWaiters).Should(BeTrue())
+	fake.Health.clearReports()
+	fake.Clock.Step(30 * time.Second)
+	Eventually(fake.Health.getLastReports).Should(HaveKeyWithValue(
+		healthNameAWSProvisioner,
+		health.HealthReport{Live: true, Ready: true},
+	))
 }
 
 func TestSecondaryIfaceProvisioner_AWSPoolsButNoWorkloadsMainline(t *testing.T) {
@@ -998,6 +933,122 @@ func TestSecondaryIfaceProvisioner_IPAMAssignFailure(t *testing.T) {
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
 }
 
+type sipTestFakes struct {
+	IPAM      *fakeIPAM
+	EC2       *fakeEC2
+	Clock     *clock.FakeClock
+	Health    *fakeHealth
+	CapacityC chan SecondaryIfaceCapacities
+}
+
+func (f sipTestFakes) expectSingleBackoffAndStep() {
+	// Initial backoff should be between 1000 and 1100 ms (due to jitter).
+	Eventually(f.Clock.HasWaiters).Should(BeTrue())
+	f.Clock.Step(999 * time.Millisecond)
+	Expect(f.Clock.HasWaiters()).To(BeTrue())
+	f.Clock.Step(102 * time.Millisecond)
+	Expect(f.Clock.HasWaiters()).To(BeFalse())
+}
+
+func setup(t *testing.T, opts ...IfaceProvOpt) (*SecondaryIfaceProvisioner, *sipTestFakes) {
+	RegisterTestingT(t)
+	fakeIPAM := newFakeIPAM()
+	theTime, err := time.Parse("2006-01-02 15:04:05.000", "2021-09-15 16:00:00.000")
+	Expect(err).NotTo(HaveOccurred())
+	fakeClock := clock.NewFakeClock(theTime)
+	capacityC := make(chan SecondaryIfaceCapacities, 1)
+	ec2Client, fakeEC2 := newFakeEC2Client()
+
+	fakeEC2.InstancesByID[instanceID] = types.Instance{
+		InstanceId:   stringPtr(instanceID),
+		InstanceType: types.InstanceTypeT3Large,
+		Placement: &types.Placement{
+			AvailabilityZone: stringPtr(azWest1),
+		},
+		VpcId: stringPtr(testVPC),
+	}
+	fakeEC2.addSubnet(subnetIDWest1Default, azWest1, "192.164.1.0/24")
+	fakeEC2.addSubnet(subnetIDWest2Default, azWest2, "192.164.2.0/24")
+	fakeEC2.addSubnet(subnetIDWest1Calico, azWest1, subnetWest1CIDRCalico)
+	fakeEC2.addSubnet(subnetIDWest1CalicoAlt, azWest1, subnetWest1CIDRCalicoAlt)
+	fakeEC2.addSubnet(subnetIDWest2Calico, azWest2, subnetWest2CIDRCalico)
+
+	fakeEC2.ENIsByID[primaryENIID] = types.NetworkInterface{
+		NetworkInterfaceId: stringPtr(primaryENIID),
+		Attachment: &types.NetworkInterfaceAttachment{
+			DeviceIndex:      int32Ptr(0),
+			NetworkCardIndex: int32Ptr(0),
+			AttachmentId:     stringPtr(primaryENIAttachID),
+			InstanceId:       stringPtr(instanceID),
+		},
+		SubnetId: stringPtr(subnetIDWest1Default),
+		PrivateIpAddresses: []types.NetworkInterfacePrivateIpAddress{
+			{
+				Primary:          boolPtr(true),
+				PrivateIpAddress: stringPtr("192.164.1.5"),
+			},
+		},
+		PrivateIpAddress: stringPtr("192.164.1.5"),
+		MacAddress:       stringPtr(primaryENIMAC),
+		Groups: []types.GroupIdentifier{
+			{
+				GroupId:   stringPtr("sg-01234567890123456"),
+				GroupName: stringPtr("sg-01234567890123456 name"),
+			},
+			{
+				GroupId:   stringPtr("sg-01234567890123457"),
+				GroupName: stringPtr("sg-01234567890123457 name"),
+			},
+		},
+	}
+
+	defaultOpts := []IfaceProvOpt{
+		OptClockOverride(fakeClock),
+		OptCapacityCallback(func(capacities SecondaryIfaceCapacities) {
+			// Drain any previous message.
+			select {
+			case <-capacityC:
+			default:
+			}
+			capacityC <- capacities
+		}),
+		OptNewEC2ClientOverride(func(ctx context.Context) (*EC2Client, error) {
+			return ec2Client, nil
+		}),
+		// Disable the watchdog by default so that we can more easily check other timers.
+		OptLivenessEnabled(false),
+	}
+
+	opts = append(defaultOpts, opts...)
+
+	fakeHealth := NewFakeHealth()
+	sip := NewSecondaryIfaceProvisioner(
+		nodeName,
+		fakeHealth,
+		fakeIPAM,
+		opts...,
+	)
+
+	return sip, &sipTestFakes{
+		IPAM:      fakeIPAM,
+		EC2:       fakeEC2,
+		Clock:     fakeClock,
+		Health:    fakeHealth,
+		CapacityC: capacityC,
+	}
+}
+
+func setupAndStart(t *testing.T, opts ...IfaceProvOpt) (*SecondaryIfaceProvisioner, *sipTestFakes, func()) {
+	sip, fake := setup(t, opts...)
+	ctx, cancel := context.WithCancel(context.Background())
+	doneC := sip.Start(ctx)
+	return sip, fake, func() {
+		cancel()
+		Eventually(doneC).Should(BeClosed())
+		fake.EC2.Errors.ExpectAllErrorsConsumed()
+	}
+}
+
 // errNotFound returns an error with the same structure as the AWSv2 client returns.  The code under test
 // unwraps errors with errors.As() so it's important that we return something that's the right shape.
 func errNotFound(op string, code string) error {
@@ -1055,4 +1106,66 @@ func errUnauthorized(op string) error {
 			},
 		},
 	}
+}
+
+type fakeHealth struct {
+	lock          sync.Mutex
+	registrations map[string]registration
+	lastReport    map[string]health.HealthReport
+}
+
+func NewFakeHealth() *fakeHealth {
+	return &fakeHealth{
+		registrations: map[string]registration{},
+		lastReport:    map[string]health.HealthReport{},
+	}
+}
+
+type registration struct {
+	Reports health.HealthReport
+	Timeout time.Duration
+}
+
+func (f *fakeHealth) RegisterReporter(name string, reports *health.HealthReport, timeout time.Duration) {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+	f.registrations[name] = registration{
+		Reports: *reports,
+		Timeout: timeout,
+	}
+}
+
+func (f *fakeHealth) Report(name string, report *health.HealthReport) {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+	if _, ok := f.registrations[name]; !ok {
+		panic("missing registration " + name)
+	}
+	f.lastReport[name] = *report
+}
+
+func (f *fakeHealth) getRegistrations() map[string]registration {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+	cp := make(map[string]registration)
+	for k, v := range f.registrations {
+		cp[k] = v
+	}
+	return cp
+}
+
+func (f *fakeHealth) getLastReports() map[string]health.HealthReport {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+	cp := make(map[string]health.HealthReport)
+	for k, v := range f.lastReport {
+		cp[k] = v
+	}
+	return cp
+}
+
+func (f *fakeHealth) clearReports() {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+	f.lastReport = map[string]health.HealthReport{}
 }
