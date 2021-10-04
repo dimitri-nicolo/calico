@@ -48,8 +48,8 @@ require (
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.6.1
 	github.com/tebeka/strftime v0.1.5 // indirect
-	github.com/tigera/api v0.0.0-20210917233738-3fea29c333ab
-	github.com/tigera/licensing v1.0.1-0.20210921174157-1f272b1250af
+	github.com/tigera/api v0.0.0-20211004105355-ea10aedf5f56
+	github.com/tigera/licensing v1.0.1-0.20211004105751-423255f6f87a
 	github.com/tigera/nfnetlink v0.0.0-20210819183736-75abca8ede69
 	github.com/tigera/windows-networking v0.0.0-20210505211919-0de3e1e53cff
 	github.com/vishvananda/netlink v1.1.1-0.20210703095558-21f2c55a7727
@@ -73,11 +73,9 @@ require (
 replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/projectcalico/libcalico-go => github.com/fasaxc/libcalico-go-private v1.7.2-0.20210924131822-195e3e1a21f8
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210803101820-5d9c25feb29f
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20210929210118-3be02f50399b
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20210929212329-03f68c12b8aa
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
-
-	github.com/tigera/api => github.com/fasaxc/api-tigera v0.0.0-20210914135237-91181540d61f
 
 	// Need replacements for all the k8s subsidiary projects that are pulled in indirectly because
 	// the kubernets repo pulls them in via a replacement to its own vendored copies, which doesn't work for

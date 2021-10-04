@@ -77,13 +77,13 @@ func getDNSLogs(logFile string) ([]string, error) {
 var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 	var (
-		etcd   *containers.Container
-		felix  *infrastructure.Felix
-		client client.Interface
-		infra  infrastructure.DatastoreInfra
-		w      [1]*workload.Workload
-		dnsDir string
-
+		etcd        *containers.Container
+		felix       *infrastructure.Felix
+		client      client.Interface
+		infra       infrastructure.DatastoreInfra
+		w           [1]*workload.Workload
+		dnsDir      string
+		dnsServerIP string
 		// Path to the save file from the point of view inside the Felix container.
 		// (Whereas dnsDir is the directory outside the container.)
 		saveFile                       string
@@ -107,7 +107,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 	wgetMicrosoftErr := func() error {
 		w[0].C.EnsureBinary("test-dns")
-		out, err := w[0].ExecCombinedOutput("/test-dns", "-", "microsoft.com")
+		out, err := w[0].ExecCombinedOutput("/test-dns", "-", "microsoft.com", fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
 		return logAndReport(out, err)
 	}
 
@@ -123,7 +123,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 	hostWgetMicrosoftErr := func() error {
 		felix.EnsureBinary("test-dns")
-		out, err := felix.ExecCombinedOutput("/test-dns", "-", "microsoft.com")
+		out, err := felix.ExecCombinedOutput("/test-dns", "-", "microsoft.com", fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
 		return logAndReport(out, err)
 	}
 
@@ -150,7 +150,10 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 	getLastMicrosoftALog := func() (lastLog string) {
 		dnsLogs, err := getDNSLogs(path.Join(dnsDir, "dns.log"))
-		Expect(err).NotTo(HaveOccurred())
+		if err != nil {
+			log.Infof("Error getting DNS logs: %v", err)
+			return // empty string, so won't match anything that higher levels are looking for
+		}
 		for _, log := range dnsLogs {
 			if strings.Contains(log, `"qname":"microsoft.com"`) && strings.Contains(log, `"qtype":"A"`) {
 				lastLog = log
@@ -279,6 +282,10 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		var err error
 		dnsDir, err = ioutil.TempDir("", "dnsinfo")
 		Expect(err).NotTo(HaveOccurred())
+
+		nameservers := GetLocalNameservers()
+		dnsServerIP = nameservers[0]
+
 		opts.ExtraVolumes[dnsDir] = "/dnsinfo"
 		opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = saveFile
 		// For this test file, configure DNSCacheSaveInterval to be much longer than any

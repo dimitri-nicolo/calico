@@ -32,7 +32,10 @@ import (
 const usage = `test-dns: test connection to a host name, for Felix FV testing.
 
 Usage:
-  test-dns <namespace-path> <host-name>
+  test-dns <namespace-path> <host-name> [--dns-server=<dns-server>]
+
+Options:
+  --dns-server=<dns-server> If specified use the given address to do the DNS lookup.
 
 If connection is successful, test-dns exits successfully.
 
@@ -52,9 +55,10 @@ func main() {
 	log.WithField("args", arguments).Info("Parsed arguments")
 	namespacePath := arguments["<namespace-path>"].(string)
 	hostName := arguments["<host-name>"].(string)
+	dnsServer, _ := arguments.String("--dns-server")
 
 	if namespacePath == "-" {
-		err = tryConnect(hostName)
+		err = tryConnect(hostName, dnsServer)
 	} else {
 		// Get the specified network namespace (representing a workload).
 		var namespace ns.NetNS
@@ -66,7 +70,7 @@ func main() {
 
 		// Now, in that namespace, try connecting to the target.
 		err = namespace.Do(func(_ ns.NetNS) error {
-			return tryConnect(hostName)
+			return tryConnect(hostName, dnsServer)
 		})
 	}
 
@@ -75,10 +79,26 @@ func main() {
 	}
 }
 
-func tryConnect(hostName string) error {
+func tryConnect(hostName, dnsServer string) error {
 	for try := 0; try < 4; try++ {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		addrs, err := net.DefaultResolver.LookupHost(ctx, hostName)
+
+		var resolver *net.Resolver
+		if dnsServer != "" {
+			resolver = &net.Resolver{
+				PreferGo: true,
+				Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+					d := net.Dialer{
+						Timeout: 10000 * time.Millisecond,
+					}
+					return d.DialContext(ctx, network, dnsServer)
+				},
+			}
+		} else {
+			resolver = net.DefaultResolver
+		}
+
+		addrs, err := resolver.LookupHost(ctx, hostName)
 		cancel()
 		log.WithField("addrs", addrs).WithError(err).Info("DNS lookup")
 		if err == nil {
