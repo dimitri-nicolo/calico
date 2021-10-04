@@ -426,12 +426,12 @@ func (f *fakeEC2) AttachNetworkInterface(ctx context.Context, params *ec2.Attach
 	if !ok {
 		return nil, errNotFound("AttachNetworkInterface", "InstanceId.NotFound")
 	}
-	ENI, ok := f.ENIsByID[*params.NetworkInterfaceId]
+	eni, ok := f.ENIsByID[*params.NetworkInterfaceId]
 	if !ok {
 		return nil, errNotFound("AttachNetworkInterface", "NetworkInterfaceId.NotFound")
 	}
 
-	if ENI.Attachment != nil && ENI.Attachment.InstanceId != nil {
+	if eni.Attachment != nil && eni.Attachment.InstanceId != nil {
 		return nil, errBadParam("AttachNetworkInterface", "NetworkInterface.AlreadyAttached")
 	}
 
@@ -441,7 +441,7 @@ func (f *fakeEC2) AttachNetworkInterface(ctx context.Context, params *ec2.Attach
 		}
 	}
 
-	ENI.Attachment = &types.NetworkInterfaceAttachment{
+	eni.Attachment = &types.NetworkInterfaceAttachment{
 		AttachmentId:        stringPtr(f.nextAttachID()),
 		DeleteOnTermination: boolPtr(false),
 		DeviceIndex:         params.DeviceIndex,
@@ -449,10 +449,10 @@ func (f *fakeEC2) AttachNetworkInterface(ctx context.Context, params *ec2.Attach
 		NetworkCardIndex:    int32Ptr(0),
 		Status:              types.AttachmentStatusAttached,
 	}
-	ENI.Status = types.NetworkInterfaceStatusAssociated
+	eni.Status = types.NetworkInterfaceStatusAssociated
 
 	var privIPs []types.InstancePrivateIpAddress
-	for _, ip := range ENI.PrivateIpAddresses {
+	for _, ip := range eni.PrivateIpAddresses {
 		privIPs = append(privIPs, types.InstancePrivateIpAddress{
 			Primary:          ip.Primary,
 			PrivateIpAddress: ip.PrivateIpAddress,
@@ -461,30 +461,30 @@ func (f *fakeEC2) AttachNetworkInterface(ctx context.Context, params *ec2.Attach
 	inst.NetworkInterfaces = append(inst.NetworkInterfaces, types.InstanceNetworkInterface{
 		Association: nil,
 		Attachment: &types.InstanceNetworkInterfaceAttachment{
-			AttachmentId:        ENI.Attachment.AttachmentId,
+			AttachmentId:        eni.Attachment.AttachmentId,
 			DeleteOnTermination: boolPtr(false),
 			DeviceIndex:         params.DeviceIndex,
 			NetworkCardIndex:    int32Ptr(0),
 			Status:              types.AttachmentStatusAttached,
 		},
-		Description:        ENI.Description,
-		Groups:             ENI.Groups,
-		InterfaceType:      stringPtr(string(ENI.InterfaceType)),
-		MacAddress:         ENI.MacAddress,
+		Description:        eni.Description,
+		Groups:             eni.Groups,
+		InterfaceType:      stringPtr(string(eni.InterfaceType)),
+		MacAddress:         eni.MacAddress,
 		NetworkInterfaceId: params.NetworkInterfaceId,
-		PrivateIpAddress:   ENI.PrivateIpAddress,
+		PrivateIpAddress:   eni.PrivateIpAddress,
 		PrivateIpAddresses: privIPs,
-		SourceDestCheck:    ENI.SourceDestCheck,
+		SourceDestCheck:    eni.SourceDestCheck,
 		Status:             types.NetworkInterfaceStatusAssociated,
-		SubnetId:           ENI.SubnetId,
-		VpcId:              ENI.VpcId,
+		SubnetId:           eni.SubnetId,
+		VpcId:              eni.VpcId,
 	})
 
 	f.InstancesByID[*params.InstanceId] = inst
-	f.ENIsByID[*params.NetworkInterfaceId] = ENI
+	f.ENIsByID[*params.NetworkInterfaceId] = eni
 
 	return &ec2.AttachNetworkInterfaceOutput{
-		AttachmentId:     ENI.Attachment.AttachmentId,
+		AttachmentId:     eni.Attachment.AttachmentId,
 		NetworkCardIndex: int32Ptr(0),
 	}, nil
 }
