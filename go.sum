@@ -883,14 +883,12 @@ github.com/tebeka/strftime v0.1.5 h1:1NQKN1NiQgkqd/2moD6ySP/5CoZQsKa1d3ZhJ44Jpmg
 github.com/tebeka/strftime v0.1.5/go.mod h1:29/OidkoWHdEKZqzyDLUyC+LmgDgdHo4WAFCDT7D/Ig=
 github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLYM/iQ8KXej1AwM=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
-github.com/tigera/api v0.0.0-20211004105355-ea10aedf5f56 h1:3Xc2glUOpmCynkEaLR3estQd/fbafjW3mCEJhf81epM=
-github.com/tigera/api v0.0.0-20211004105355-ea10aedf5f56/go.mod h1:tQDYzO/oh0HZL2MpIwyijRwJf67hPR/Gkex1vt9EwLE=
 github.com/tigera/api v0.0.0-20211005124757-00510eafc0ca h1:GXaqIY/UN/wnpPcoCV02TjfjYm4cc2Pv1Sg5VvLb3Xo=
 github.com/tigera/api v0.0.0-20211005124757-00510eafc0ca/go.mod h1:tQDYzO/oh0HZL2MpIwyijRwJf67hPR/Gkex1vt9EwLE=
 github.com/tigera/api v0.0.0-20211005191943-b63a8d918d09 h1:cPJgps67vB3gRuKfu2zfmtNvJtA1Cl3mmrVrA+aMmO8=
 github.com/tigera/api v0.0.0-20211005191943-b63a8d918d09/go.mod h1:tQDYzO/oh0HZL2MpIwyijRwJf67hPR/Gkex1vt9EwLE=
-github.com/tigera/cni-plugin-private v1.11.1-0.20211004152753-178adf9bd934 h1:+CL9dsTjAI8JcVaCTwYftzbN/6pFm6F9wjMjbnySKsc=
-github.com/tigera/cni-plugin-private v1.11.1-0.20211004152753-178adf9bd934/go.mod h1:J6QBy/2dg9LT4xjxIFDzH9ZD38NZJ4739sI2soyxRsQ=
+github.com/tigera/cni-plugin-private v1.11.1-0.20211005220135-b7dd74440851 h1:XflMV9rixEgjV51/iJuFHJyOgUTm5/8H+KK9cB76yAo=
+github.com/tigera/cni-plugin-private v1.11.1-0.20211005220135-b7dd74440851/go.mod h1:eaSQuBgVCVPeJaKLo2YaT6X1nq1DdHF160bdIkYRIt0=
 github.com/tigera/confd-private v1.0.1-0.20211005205136-2b681b486dfe h1:XDjQeZFgiV+1P/YLaWEKq3xZtdOcCcek7w7S6YPzzmI=
 github.com/tigera/confd-private v1.0.1-0.20211005205136-2b681b486dfe/go.mod h1:UUv1/d6tCmlrHrZjpAB3ARsUaD4MQnuVD0F6l9rxP+0=
 github.com/tigera/felix-private v0.0.0-20211005140308-27bc31c9260c h1:MCHqChbY8QK1zQL5cn4QHficI8A0BX/1h62rDatYFQI=
