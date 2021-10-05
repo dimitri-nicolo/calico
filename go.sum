@@ -674,8 +674,8 @@ github.com/tigera/api v0.0.0-20211005124757-00510eafc0ca h1:GXaqIY/UN/wnpPcoCV02
 github.com/tigera/api v0.0.0-20211005124757-00510eafc0ca/go.mod h1:tQDYzO/oh0HZL2MpIwyijRwJf67hPR/Gkex1vt9EwLE=
 github.com/tigera/libcalico-go-private v1.7.2-0.20211005163846-bc7d8a230d0b h1:hGZQuoRTCUvl6kBANYCfPpA4BFdwqWR+7RTQhsY3Ogc=
 github.com/tigera/libcalico-go-private v1.7.2-0.20211005163846-bc7d8a230d0b/go.mod h1:87zOi6Ra49eaCV/GwA3ziVN+DBEe4pggVZv2LofDmT4=
-github.com/tigera/licensing v1.0.1-0.20211005125122-907c1150b7b3 h1:kVlB+fow24mgt+4wW3dQVdT5tyidAVlzkeSHXO9Ml0M=
-github.com/tigera/licensing v1.0.1-0.20211005125122-907c1150b7b3/go.mod h1:iYi56yg3aMNn18xwgzSrVRxul6YwRsx+j9bCkNWx8N4=
+github.com/tigera/licensing v1.0.1-0.20211005190942-83ccc4b96b8f h1:mU05zWIR7JUOMJkJ7OmB7T9FwFZodj69kId9NbFe4Nw=
+github.com/tigera/licensing v1.0.1-0.20211005190942-83ccc4b96b8f/go.mod h1:F5476I8Ud4DOqFj7ZgTIeI3JRsfpsv+FiMKxrduRVns=
 github.com/tinylib/msgp v1.0.2/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 h1:LnC5Kc/wtumK+WB441p7ynQJzVuNRJiqddSIE3IlSEQ=
