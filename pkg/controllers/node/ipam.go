@@ -641,7 +641,7 @@ func (c *ipamController) checkAllocations() ([]string, error) {
 		logc.Debug("Checking node")
 
 		// Host-owned addresses (such as tunnel addresses) are special - they should only be marked
-		// is a leak if the node itself is deleted, and there are no other valid allocations on the
+		// as a leak if the node itself is deleted, and there are no other valid allocations on the
 		// node. Keep track of them in this slice so we can mark them for GC when we decide if the
 		// node should be cleaned up or not.
 		hostOwnedAddresses := []*allocation{}
