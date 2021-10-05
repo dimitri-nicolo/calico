@@ -22,3 +22,5 @@ tests/crds.yaml
 tests/crds
 tests/fv/*.log
 pkg/report/
+*.test
+test.log
