@@ -14,7 +14,7 @@ require (
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
-	github.com/tigera/api v0.0.0-20211005124757-00510eafc0ca
+	github.com/tigera/api v0.0.0-20211005191943-b63a8d918d09
 	gopkg.in/square/go-jose.v2 v2.2.3-0.20190111193340-cbf0fd6a984a
 	gopkg.in/yaml.v2 v2.4.0
 )
