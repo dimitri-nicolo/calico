@@ -927,13 +927,13 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 		return err
 	}
 	//Check for Maxiumum nodes
-	if lic.Status.MaxNodes != 100 {
+	if lic.Status.MaxNodes != 50 {
 		fmt.Printf("Valid License's Maxiumum Node doesn't match :%d\n", lic.Status.MaxNodes)
 		return fmt.Errorf("Incorrect Maximum Nodes in LicenseKey")
 	}
 
 	//Check for Certificate Expiry date
-	if lic.Status.Expiry.Time.String() != "2021-10-01 23:59:59 +0000 UTC" {
+	if lic.Status.Expiry.Time.String() != "2022-10-02 04:38:32 +0000 UTC" {
 		fmt.Printf("Valid License's Expiry date don't match with Certificate:%v\n", lic.Status.Expiry)
 		return fmt.Errorf("License Expiry date don't match")
 	}
