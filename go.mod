@@ -25,8 +25,8 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/stretchr/testify v1.6.1
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
-	github.com/tigera/api v0.0.0-20211005124757-00510eafc0ca
-	github.com/tigera/licensing v1.0.1-0.20211005190942-83ccc4b96b8f
+	github.com/tigera/api v0.0.0-20211005191943-b63a8d918d09
+	github.com/tigera/licensing v1.0.1-0.20211005192307-3f8f1c7c54c6
 	github.com/vishvananda/netlink v0.0.0-20180501223456-f07d9d5231b9 // indirect
 	github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc // indirect
 	gopkg.in/square/go-jose.v2 v2.4.1
@@ -38,6 +38,6 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211005163846-bc7d8a230d0b
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211005194607-cdcf4e861472
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
