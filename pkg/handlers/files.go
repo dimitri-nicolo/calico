@@ -67,8 +67,14 @@ func (d *Files) Download(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if d.hasNoFiles(packetCapture) {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
 	var zipWriter = zip.NewWriter(w)
 	var totalContentLength uint64 = 0
+	var filesRead = 0
 	for _, file := range packetCapture.Status.Files {
 		log.Debugf("Copying files %v", file.FileNames)
 		ns, pod, err := d.Locator.GetEntryPod(clusterID, file.Node)
@@ -105,6 +111,7 @@ func (d *Files) Download(w http.ResponseWriter, r *http.Request) {
 					continue
 				}
 
+				filesRead++
 				zipHeader, err := zip.FileInfoHeader(header.FileInfo())
 				if err != nil {
 					log.WithError(err).Errorf("Failed write tar header to archive file %s from %s", header.FileInfo().Name(), file.Node)
@@ -140,14 +147,39 @@ func (d *Files) Download(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Write headers for the request
-	cd := mime.FormatMediaType("attachment", map[string]string{"filename": middleware.ZipFiles})
-	w.Header().Set("Content-Disposition", cd)
-	w.Header().Set("Content-Type", "application/zip")
-	w.Header().Set("Content-Length", fmt.Sprint(totalContentLength))
+	if filesRead == 0 {
+		// Close the zip writer
+		zipWriter.Flush()
+		zipWriter.Close()
 
-	zipWriter.Flush()
-	zipWriter.Close()
+		// Delete the header set by the zip writer
+		w.Header().Del("Content-Type")
+		// Return 204 No Content
+		w.WriteHeader(http.StatusNoContent)
+		return
+	} else {
+		// Write headers for the request
+		cd := mime.FormatMediaType("attachment", map[string]string{"filename": middleware.ZipFiles})
+		w.Header().Set("Content-Disposition", cd)
+		w.Header().Set("Content-Length", fmt.Sprint(totalContentLength))
+
+		// Close the zip writer
+		zipWriter.Flush()
+		zipWriter.Close()
+	}
+}
+
+func (d *Files) hasNoFiles(packetCapture *v3.PacketCapture) bool {
+	if len(packetCapture.Status.Files) == 0 {
+		return true
+	}
+
+	var reportedFiles = 0
+	for _, filesPerNode := range packetCapture.Status.Files {
+		reportedFiles = reportedFiles + len(filesPerNode.FileNames)
+	}
+
+	return reportedFiles == 0
 }
 
 func readErrorFromStream(errorReader io.Reader) error {

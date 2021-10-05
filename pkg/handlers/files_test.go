@@ -125,6 +125,38 @@ var _ = Describe("FilesDownload", func() {
 		validateArchive(archive, files, []byte(loremLipsum))
 	})
 
+	It("Downloads files from 0 files", func() {
+		// Create a temp directory to store all the files needed for the test
+		var tempDir, err = ioutil.TempDir("/tmp", "test")
+		Expect(err).NotTo(HaveOccurred())
+
+		// Create dummy files and add them to a tar archive
+		var tarFile = createTarArchive(tempDir, noFiles, []byte(loremLipsum))
+		defer os.RemoveAll(tempDir)
+
+		tarFileReader, err := os.Open(tarFile.Name())
+		Expect(err).NotTo(HaveOccurred())
+
+		// Bootstrap the download
+		var mockCache = &cache.MockClientCache{}
+		var mockLocator = &capture.MockLocator{}
+		var mockFileRetrieval = &capture.MockFileCommands{}
+		mockLocator.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureNoFiles, nil)
+		mockLocator.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockFileRetrieval.On("OpenTarReader", "cluster", point).Return(tarFileReader, nil, nil)
+		var download = handlers.NewFiles(mockCache, mockLocator, mockFileRetrieval)
+
+		// Bootstrap the http recorder
+		recorder := httptest.NewRecorder()
+		handler := http.HandlerFunc(download.Download)
+		handler.ServeHTTP(recorder, req)
+
+		Expect(recorder.Code).To(Equal(http.StatusNoContent))
+		Expect(recorder.Header().Get("Content-Type")).To(Equal(""))
+		Expect(recorder.Header().Get("Content-Disposition")).To(Equal(""))
+		Expect(recorder.Header().Get("Content-Length")).To(Equal(""))
+	})
+
 	It("Downloads files from a multiple node", func() {
 		// Create a temp directory to store all the files needed for the test
 		var tempDir, err = ioutil.TempDir("/tmp", "test")
@@ -192,6 +224,27 @@ var _ = Describe("FilesDownload", func() {
 		},
 		Entry("Missing resource", http.StatusNotFound, errors.ErrorResourceDoesNotExist{}),
 		Entry("Failure to get resource", http.StatusInternalServerError, fmt.Errorf("any error")),
+	)
+
+	DescribeTable("PacketCapture has no files attached",
+		func(packetCapture *v3.PacketCapture) {
+			// Bootstrap the download
+			var mockCache = &cache.MockClientCache{}
+			var mockLocator = &capture.MockLocator{}
+			var mockFileRetrieval = &capture.MockFileCommands{}
+			mockLocator.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCapture, nil)
+			var download = handlers.NewFiles(mockCache, mockLocator, mockFileRetrieval)
+
+			// Bootstrap the http recorder
+			recorder := httptest.NewRecorder()
+			handler := http.HandlerFunc(download.Download)
+			handler.ServeHTTP(recorder, req)
+
+			Expect(recorder.Code).To(Equal(http.StatusNoContent))
+		},
+		Entry("Empty status", packetCaptureEmptyStatus),
+		Entry("Missing status", packetCaptureNoStatus),
+		Entry("No files generated for packet capture", packetCaptureNoFiles),
 	)
 
 	It("TarError returns an error via io.Reader", func() {

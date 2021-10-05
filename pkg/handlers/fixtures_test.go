@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+var noFiles = []string{}
 var files = []string{"a", "b"}
 var otherFiles = []string{"c", "d"}
 var packetCaptureOneNode = &v3.PacketCapture{
@@ -51,6 +52,46 @@ var packetCaptureMultipleNodes = &v3.PacketCapture{
 				FileNames: otherFiles,
 			},
 		},
+	},
+}
+
+var packetCaptureNoFiles = &v3.PacketCapture{
+	TypeMeta: metav1.TypeMeta{
+		Kind:       "",
+		APIVersion: "",
+	},
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "name",
+		Namespace: "ns",
+	},
+	Status: v3.PacketCaptureStatus{
+		Files: []v3.PacketCaptureFile{
+			{
+				Node:      "node",
+				Directory: "dir",
+			},
+		},
+	},
+}
+var packetCaptureEmptyStatus = &v3.PacketCapture{
+	TypeMeta: metav1.TypeMeta{
+		Kind:       "",
+		APIVersion: "",
+	},
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "name",
+		Namespace: "ns",
+	},
+	Status: v3.PacketCaptureStatus{},
+}
+var packetCaptureNoStatus = &v3.PacketCapture{
+	TypeMeta: metav1.TypeMeta{
+		Kind:       "",
+		APIVersion: "",
+	},
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "name",
+		Namespace: "ns",
 	},
 }
 
