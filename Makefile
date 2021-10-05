@@ -144,12 +144,13 @@ sub-image-%:
 $(SNORT_IMAGE): $(SNORT_IMAGE)-$(ARCH)
 $(SNORT_IMAGE)-$(ARCH):
 	op="$(shell docker manifest inspect $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT_VERSION)-$(ARCH))"; \
-	if [ $(.SHELLSTATUS) = 0 ]; then \
+	EXIT_CODE=$$?;\
+	if [ "$$EXIT_CODE" = 0 ]; then \
   		echo "Using existing snort image $(SNORT_IMAGE):$(SNORT_VERSION)-$(ARCH)"; \
   		docker pull $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT_VERSION)-$(ARCH) ;\
   		docker tag $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT_VERSION)-$(ARCH) $(SNORT_IMAGE):$(SNORT_VERSION)-$(ARCH) ;\
   	else \
-  	  	echo "Snort image  $(SNORT_IMAGE):$(SNORT_VERSION) doesn't exist in $(DEV_REGISTRIES), building it" ; \
+  	  	echo "Snort image  $(SNORT_IMAGE):$(SNORT_VERSION)-$(ARCH)) doesn't exist in $(DEV_REGISTRIES), building it" ; \
   	  	rm -rf docker-image/bin; \
   	  	mkdir -p docker-image/bin; \
   	  	docker build -t $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT_VERSION)-$(ARCH) -t $(SNORT_IMAGE):$(SNORT_VERSION)-$(ARCH) --build-arg SNORT_VERSION=$(SNORT_VERSION) --file ./docker-image/snort/Dockerfile docker-image/snort; \
