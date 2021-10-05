@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -107,6 +107,13 @@ func (r *Rule) Copy() *Rule {
 
 // Functions to check if two rules has same matching condition (and table index to go to).
 type RulesMatchFunc func(r, p *Rule) bool
+
+func RulesMatchPrioSrcTable(r, p *Rule) bool {
+	return (r.nlRule.Priority == p.nlRule.Priority) &&
+		(r.nlRule.Family == p.nlRule.Family) &&
+		(r.nlRule.Invert == p.nlRule.Invert) &&
+		ip.IPNetsEqual(r.nlRule.Src, p.nlRule.Src)
+}
 
 func RulesMatchSrcFWMark(r, p *Rule) bool {
 	return (r.nlRule.Priority == p.nlRule.Priority) &&

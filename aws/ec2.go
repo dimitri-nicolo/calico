@@ -35,6 +35,14 @@ import (
 )
 
 const (
+	CalicoTagPrefix                         = "calico:"
+	CalicoNetworkInterfaceTagUse            = CalicoTagPrefix + "use"
+	CalicoNetworkInterfaceTagOwningInstance = CalicoTagPrefix + "instance"
+
+	CalicoNetworkInterfaceUseSecondary = "secondary"
+)
+
+const (
 	timeout         = 20 * time.Second
 	retries         = 3
 	deviceIndexZero = 0
@@ -110,7 +118,7 @@ func PrimaryInterface() (*types.InstanceNetworkInterface, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	ec2Cli, err := newEC2Client(ctx)
+	ec2Cli, err := NewEC2Client(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -123,24 +131,30 @@ func PrimaryInterface() (*types.InstanceNetworkInterface, error) {
 	return ec2Iface, nil
 }
 
+type EC2SrcDstCheckUpdater struct{}
+
+func NewEC2SrcDstCheckUpdater() *EC2SrcDstCheckUpdater {
+	return &EC2SrcDstCheckUpdater{}
+}
+
 func (updater *EC2SrcDstCheckUpdater) Update(caliCheckOption string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	ec2Cli, err := newEC2Client(ctx)
+	ec2Cli, err := NewEC2Client(ctx)
 	if err != nil {
 		return err
 	}
 
 	// We are only modifying network interface with device-id-0 to update
 	// instance source-destination-check.
-	ec2NetId, err := ec2Cli.GetMyPrimaryEC2NetworkInterfaceId(ctx)
+	ec2NetId, err := ec2Cli.GetMyPrimaryEC2NetworkInterfaceID(ctx)
 	if err != nil {
 		return fmt.Errorf("error getting ec2 network-interface-id: %s", convertError(err))
 	}
 
 	checkEnabled := caliCheckOption == apiv3.AWSSrcDstCheckOptionEnable
-	err = ec2Cli.setEC2SourceDestinationCheck(ctx, ec2NetId, checkEnabled)
+	err = ec2Cli.SetEC2SourceDestinationCheck(ctx, ec2NetId, checkEnabled)
 	if err != nil {
 		return fmt.Errorf("error setting src-dst-check for network-interface-id: %s", convertError(err))
 	}
@@ -162,6 +176,15 @@ type ec2MetadaAPI interface {
 type ec2API interface {
 	DescribeInstances(ctx context.Context, params *ec2.DescribeInstancesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error)
 	ModifyNetworkInterfaceAttribute(ctx context.Context, params *ec2.ModifyNetworkInterfaceAttributeInput, optFns ...func(*ec2.Options)) (*ec2.ModifyNetworkInterfaceAttributeOutput, error)
+	DescribeSubnets(ctx context.Context, params *ec2.DescribeSubnetsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeSubnetsOutput, error)
+	DescribeInstanceTypes(ctx context.Context, params *ec2.DescribeInstanceTypesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstanceTypesOutput, error)
+	DescribeNetworkInterfaces(ctx context.Context, params *ec2.DescribeNetworkInterfacesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeNetworkInterfacesOutput, error)
+	CreateNetworkInterface(ctx context.Context, params *ec2.CreateNetworkInterfaceInput, optFns ...func(*ec2.Options)) (*ec2.CreateNetworkInterfaceOutput, error)
+	AttachNetworkInterface(ctx context.Context, params *ec2.AttachNetworkInterfaceInput, optFns ...func(*ec2.Options)) (*ec2.AttachNetworkInterfaceOutput, error)
+	AssignPrivateIpAddresses(ctx context.Context, params *ec2.AssignPrivateIpAddressesInput, optFns ...func(*ec2.Options)) (*ec2.AssignPrivateIpAddressesOutput, error)
+	UnassignPrivateIpAddresses(ctx context.Context, params *ec2.UnassignPrivateIpAddressesInput, optFns ...func(*ec2.Options)) (*ec2.UnassignPrivateIpAddressesOutput, error)
+	DetachNetworkInterface(ctx context.Context, params *ec2.DetachNetworkInterfaceInput, optFns ...func(*ec2.Options)) (*ec2.DetachNetworkInterfaceOutput, error)
+	DeleteNetworkInterface(ctx context.Context, params *ec2.DeleteNetworkInterfaceInput, optFns ...func(*ec2.Options)) (*ec2.DeleteNetworkInterfaceOutput, error)
 }
 
 func getEC2InstanceID(ctx context.Context, svc ec2MetadaAPI) (string, error) {
@@ -182,12 +205,12 @@ func getEC2Region(ctx context.Context, svc ec2MetadaAPI) (string, error) {
 	return region.Region, nil
 }
 
-type ec2Client struct {
-	EC2Svc        ec2API
-	ec2InstanceId string
+type EC2Client struct {
+	EC2Svc     ec2API
+	InstanceID string
 }
 
-func newEC2Client(ctx context.Context) (*ec2Client, error) {
+func NewEC2Client(ctx context.Context) (*EC2Client, error) {
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error loading AWS config: %w", err)
@@ -211,18 +234,18 @@ func newEC2Client(ctx context.Context) (*ec2Client, error) {
 		return nil, fmt.Errorf("error connecting to EC2 service")
 	}
 
-	return &ec2Client{
-		EC2Svc:        ec2Svc,
-		ec2InstanceId: instanceId,
+	return &EC2Client{
+		EC2Svc:     ec2Svc,
+		InstanceID: instanceId,
 	}, nil
 }
 
-func (c *ec2Client) GetMyPrimaryEC2NetworkInterface(ctx context.Context) (*types.InstanceNetworkInterface, error) {
-	var err error
+var ErrNotFound = errors.New("resource not found")
 
+func (c *EC2Client) GetMyInstance(ctx context.Context) (instance *types.Instance, err error) {
 	input := &ec2.DescribeInstancesInput{
 		InstanceIds: []string{
-			c.ec2InstanceId,
+			c.InstanceID,
 		},
 	}
 
@@ -233,7 +256,164 @@ func (c *ec2Client) GetMyPrimaryEC2NetworkInterface(ctx context.Context) (*types
 			if retriable(err) {
 				// if error is temporary, try again in a second.
 				time.Sleep(1 * time.Second)
-				log.WithField("instance-id", c.ec2InstanceId).Debug("retrying getting network-interface")
+				log.WithField("instance-id", c.InstanceID).Debug("retrying getting network-interface-id")
+				continue
+			}
+		}
+		break
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve AWS instance %s: %w", c.InstanceID, err)
+	}
+
+	// Instances are grouped by "Reservation", which is the original request to create a particular set of instances.
+	// Seems likely that at most one instance can be returned here.  Not clear if the reservation would include
+	// any other instances that were created at the same time but it's easy to be defensive by looping over both.
+	for _, resv := range out.Reservations {
+		for _, instance := range resv.Instances {
+			if instance.InstanceId == nil || *instance.InstanceId != c.InstanceID {
+				// A reservation can contain more than one instance. Not clear if more than one can be returned here
+				// but be defensive.
+				continue
+			}
+			// Found our instance.
+			return &instance, nil
+		}
+	}
+	return nil, fmt.Errorf("no returned results matched ID %s: %w",
+		c.InstanceID, ErrNotFound)
+}
+
+func (c *EC2Client) GetAZLocalSubnets(ctx context.Context) ([]types.Subnet, error) {
+	inst, err := c.GetMyInstance(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get my instance: %w", err)
+	}
+	if inst.Placement == nil || inst.Placement.AvailabilityZone == nil || inst.VpcId == nil {
+		return nil, fmt.Errorf("AWS instance missing placement information: %v", inst)
+	}
+	dso, err := c.EC2Svc.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
+		Filters: []types.Filter{
+			{
+				Name:   aws.String("availability-zone"),
+				Values: []string{*inst.Placement.AvailabilityZone},
+			},
+			{
+				Name:   aws.String("vpc-id"),
+				Values: []string{*inst.VpcId},
+			},
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list subnets: %w", err)
+	}
+	return dso.Subnets, nil
+}
+
+func (c *EC2Client) GetMyInstanceType(ctx context.Context) (*types.InstanceTypeInfo, error) {
+	inst, err := c.GetMyInstance(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get my instance: %w", err)
+	}
+	ito, err := c.EC2Svc.DescribeInstanceTypes(ctx, &ec2.DescribeInstanceTypesInput{
+		InstanceTypes: []types.InstanceType{inst.InstanceType},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve instance type %v: %w", inst.InstanceType, err)
+	}
+	for _, it := range ito.InstanceTypes {
+		if it.InstanceType == inst.InstanceType {
+			return &it, nil
+		}
+	}
+	return nil, fmt.Errorf("failed to retrieve instance type %v: query returned no results",
+		inst.InstanceType)
+}
+
+type NetworkCapabilities struct {
+	MaxNetworkInterfaces int
+	NetworkCards         []types.NetworkCardInfo
+	MaxIPv4PerInterface  int
+	MaxIPv6PerInterface  int
+}
+
+func (n NetworkCapabilities) MaxENIsForCard(idx int) int {
+	if idx >= len(n.NetworkCards) { // defensive; would be an AWS bug.
+		log.Warn("Asked about network card that doesn't exist, returning 0.")
+		return 0
+	}
+	maxPtr := n.NetworkCards[idx].MaximumNetworkInterfaces
+	if maxPtr == nil { // defensive; would be an AWS bug.
+		log.Error("AWS failed to return maximum network interfaces value on query.")
+		return 0
+	}
+	return int(*maxPtr)
+}
+
+func (c *EC2Client) GetMyNetworkCapabilities(ctx context.Context) (netc NetworkCapabilities, err error) {
+	instType, err := c.GetMyInstanceType(ctx)
+	if err != nil {
+		return
+	}
+	return InstanceTypeNetworkCapabilities(instType)
+}
+
+func InstanceTypeNetworkCapabilities(instType *types.InstanceTypeInfo) (netc NetworkCapabilities, err error) {
+	netInfo := instType.NetworkInfo
+	if netInfo == nil {
+		err = fmt.Errorf("instance type missing network info")
+		return
+	}
+	if netInfo.MaximumNetworkInterfaces == nil ||
+		netInfo.Ipv4AddressesPerInterface == nil {
+		err = fmt.Errorf("instance type missing values: %v", netInfo)
+	}
+	netc.MaxNetworkInterfaces = int(*netInfo.MaximumNetworkInterfaces)
+	netc.MaxIPv4PerInterface = int(*netInfo.Ipv4AddressesPerInterface)
+	if netInfo.Ipv6Supported != nil && *netInfo.Ipv6Supported {
+		if netInfo.Ipv6AddressesPerInterface != nil {
+			netc.MaxIPv6PerInterface = int(*netInfo.Ipv6AddressesPerInterface)
+		}
+	}
+	netc.NetworkCards = netInfo.NetworkCards
+	return
+}
+
+func (c *EC2Client) GetMyEC2NetworkInterfaces(ctx context.Context) ([]types.NetworkInterface, error) {
+	// We use DescribeNetworkInterfaces rather than retrieving the list attached to the Instance so that we can
+	// see the tags.
+	nio, err := c.EC2Svc.DescribeNetworkInterfaces(ctx, &ec2.DescribeNetworkInterfacesInput{
+		Filters: []types.Filter{
+			{
+				Name:   aws.String("attachment.instance-id"),
+				Values: []string{c.InstanceID},
+			},
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list attached network interfaces: %w", err)
+	}
+	return nio.NetworkInterfaces, nil
+}
+
+func (c *EC2Client) GetMyPrimaryEC2NetworkInterface(ctx context.Context) (*types.InstanceNetworkInterface, error) {
+	var err error
+
+	input := &ec2.DescribeInstancesInput{
+		InstanceIds: []string{
+			c.InstanceID,
+		},
+	}
+
+	var out *ec2.DescribeInstancesOutput
+	for i := 0; i < retries; i++ {
+		out, err = c.EC2Svc.DescribeInstances(ctx, input)
+		if err != nil {
+			if retriable(err) {
+				// if error is temporary, try again in a second.
+				time.Sleep(1 * time.Second)
+				log.WithField("instance-id", c.InstanceID).Debug("retrying getting network-interface")
 				continue
 			}
 			return nil, err
@@ -243,13 +423,13 @@ func (c *ec2Client) GetMyPrimaryEC2NetworkInterface(ctx context.Context) (*types
 	}
 
 	if out == nil || len(out.Reservations) == 0 {
-		return nil, fmt.Errorf("no network-interface found for EC2 instance %s", c.ec2InstanceId)
+		return nil, fmt.Errorf("no network-interface found for EC2 instance %s", c.InstanceID)
 	}
 
 	var interfaceId string
 	for _, instance := range out.Reservations[0].Instances {
 		if len(instance.NetworkInterfaces) == 0 {
-			return nil, fmt.Errorf("no network-interface found for EC2 instance %s", c.ec2InstanceId)
+			return nil, fmt.Errorf("no network-interface found for EC2 instance %s", c.InstanceID)
 		}
 		// An instance can have multiple interfaces and the API response can be
 		// out-of-order interface list. We compare the device-id in the
@@ -260,32 +440,40 @@ func (c *ec2Client) GetMyPrimaryEC2NetworkInterface(ctx context.Context) (*types
 				*(networkInterface.Attachment.DeviceIndex) == deviceIndexZero {
 				return &networkInterface, nil
 			}
-			log.Debugf("instance-id: %s, network-interface-id: %s", c.ec2InstanceId, interfaceId)
+			log.Debugf("instance-id: %s, network-interface-id: %s", c.InstanceID, interfaceId)
 		}
 	}
 
-	return nil, fmt.Errorf("no primary network-interface found for EC2 instance %s", c.ec2InstanceId)
+	return nil, fmt.Errorf("no primary network-interface found for EC2 instance %s", c.InstanceID)
 }
 
-func (c *ec2Client) GetMyPrimaryEC2NetworkInterfaceId(ctx context.Context) (string, error) {
-	iface, err := c.GetMyPrimaryEC2NetworkInterface(ctx)
+func (c *EC2Client) GetMyPrimaryEC2NetworkInterfaceID(ctx context.Context) (networkInstanceId string, err error) {
+	instance, err := c.GetMyInstance(ctx)
 	if err != nil {
 		return "", err
 	}
 
-	if iface.NetworkInterfaceId == nil {
-		return "", fmt.Errorf("no network-interface-id found for EC2 instance %s", c.ec2InstanceId)
+	if len(instance.NetworkInterfaces) == 0 {
+		return "", fmt.Errorf("no network-interface-id found for EC2 instance %s", c.InstanceID)
 	}
 
-	ifaceId := *(iface.NetworkInterfaceId)
-	if ifaceId != "" {
-		log.Debugf("instance-id: %s, network-interface-id: %s", c.ec2InstanceId, ifaceId)
-		return ifaceId, nil
+	// An instance can have more than one interface.  By definition, the "primary" interface has
+	// DeviceIndex equal to 0.
+	for _, networkInterface := range instance.NetworkInterfaces {
+		if networkInterface.Attachment != nil &&
+			networkInterface.Attachment.DeviceIndex != nil &&
+			*(networkInterface.Attachment.DeviceIndex) == deviceIndexZero {
+			interfaceId := *(networkInterface.NetworkInterfaceId)
+			if interfaceId != "" {
+				log.Debugf("Found device-0: instance-id: %s, network-interface-id: %s", c.InstanceID, interfaceId)
+				return interfaceId, nil
+			}
+		}
 	}
-	return "", fmt.Errorf("no network-interface-id found for EC2 instance %s", c.ec2InstanceId)
+	return "", fmt.Errorf("no network-interface-id found for EC2 instance %s", c.InstanceID)
 }
 
-func (c *ec2Client) setEC2SourceDestinationCheck(ctx context.Context, ec2NetId string, checkVal bool) error {
+func (c *EC2Client) SetEC2SourceDestinationCheck(ctx context.Context, ec2NetId string, checkVal bool) error {
 	input := &ec2.ModifyNetworkInterfaceAttributeInput{
 		NetworkInterfaceId: aws.String(ec2NetId),
 		SourceDestCheck: &types.AttributeBooleanValue{
@@ -311,4 +499,22 @@ func (c *ec2Client) setEC2SourceDestinationCheck(ctx context.Context, ec2NetId s
 	}
 
 	return err
+}
+
+func NetworkInterfaceIsCalicoSecondary(nic types.NetworkInterface) bool {
+	v, _ := LookupTag(nic.TagSet, CalicoNetworkInterfaceTagUse)
+	return v == CalicoNetworkInterfaceUseSecondary
+}
+
+func LookupTag(tags []types.Tag, key string) (value string, found bool) {
+	for _, t := range tags {
+		if t.Key != nil && *t.Key == key {
+			found = true
+			if t.Value != nil {
+				value = *t.Value
+			}
+			return
+		}
+	}
+	return
 }

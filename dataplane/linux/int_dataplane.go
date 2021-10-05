@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/projectcalico/felix/dataplane/linux/debugconsole"
+	"github.com/projectcalico/felix/k8sutils"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
@@ -74,6 +75,7 @@ import (
 	"github.com/projectcalico/felix/throttle"
 	"github.com/projectcalico/felix/wireguard"
 	"github.com/projectcalico/libcalico-go/lib/health"
+	"github.com/projectcalico/libcalico-go/lib/ipam"
 	lclogutils "github.com/projectcalico/libcalico-go/lib/logutils"
 	cprometheus "github.com/projectcalico/libcalico-go/lib/prometheus"
 	"github.com/projectcalico/libcalico-go/lib/set"
@@ -240,6 +242,11 @@ type Config struct {
 	// Optional stats collector
 	Collector collector.Collector
 
+	// AWS-specials.
+	AWSSecondaryIPSupport             bool
+	AWSRequestTimeout                 time.Duration
+	AWSSecondaryIPRoutingRulePriority int
+
 	// Config for DNS policy.
 	DNSCacheFile         string
 	DNSCacheSaveInterval time.Duration
@@ -253,6 +260,7 @@ type Config struct {
 
 	LookPathOverride func(file string) (string, error)
 
+	IPAMClient    ipam.Interface
 	KubeClientSet *kubernetes.Clientset
 
 	FeatureDetectOverrides map[string]string
@@ -378,6 +386,9 @@ type InternalDataplane struct {
 	loopSummarizer *logutils.Summarizer
 
 	packetProcessorRestarter *nfqdnspolicy.PacketProcessorWithNfqueueRestarter
+
+	awsStateUpdC <-chan *aws.LocalAWSNetworkState
+	awsSubnetMgr *awsIPManager
 }
 
 const (
@@ -585,6 +596,19 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		tproxyRTIndex6, err = config.RouteTableManager.GrabIndex()
 		if err != nil {
 			log.WithError(err).Fatal("Failed to allocate routing table index for tproxy v6")
+		}
+	}
+
+	var awsTableIndexes []int
+	if config.AWSSecondaryIPSupport {
+		// Since the egress gateway machinery claims all remaining indexes below, claim enough for all possible
+		// AWS secondary NICs now.
+		for i := 0; i < aws.SecondaryInterfaceCap; i++ {
+			rti, err := config.RouteTableManager.GrabIndex()
+			if err != nil {
+				logrus.WithError(err).Panic("Failed to allocate route table index for AWS subnet manager.")
+			}
+			awsTableIndexes = append(awsTableIndexes, rti)
 		}
 	}
 
@@ -1084,6 +1108,28 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	captureManager := newCaptureManager(activeCaptures, config.RulesConfig.WorkloadIfacePrefixes)
 	dp.RegisterManager(captureManager)
 
+	if config.AWSSecondaryIPSupport {
+		k8sCapacityUpdater := k8sutils.NewCapacityUpdater(config.FelixHostname, config.KubeClientSet.CoreV1())
+		k8sCapacityUpdater.Start(context.Background())
+		secondaryIfaceProv := aws.NewSecondaryIfaceProvisioner(
+			config.FelixHostname,
+			config.HealthAggregator,
+			config.IPAMClient,
+			aws.OptTimeout(dp.config.AWSRequestTimeout),
+			aws.OptCapacityCallback(k8sCapacityUpdater.OnCapacityChange),
+		)
+		secondaryIfaceProv.Start(context.Background())
+		awsSubnetManager := NewAWSIPManager(
+			awsTableIndexes,
+			dp.config,
+			dp.loopSummarizer,
+			secondaryIfaceProv,
+		)
+		dp.RegisterManager(awsSubnetManager)
+		dp.awsStateUpdC = secondaryIfaceProv.ResponseC()
+		dp.awsSubnetMgr = awsSubnetManager
+	}
+
 	if config.IPv6Enabled {
 		mangleTableV6 := iptables.NewTable(
 			"mangle",
@@ -1290,7 +1336,13 @@ func findHostMTU(matchRegex *regexp.Regexp) (int, error) {
 		// Skip links that we know are not external interfaces.
 		fields := log.Fields{"mtu": l.Attrs().MTU, "name": l.Attrs().Name}
 		if matchRegex == nil || !matchRegex.MatchString(l.Attrs().Name) {
-			log.WithFields(fields).Debug("Skipping interface for MTU detection")
+			log.WithFields(fields).Debug("Skipping interface for MTU detection (name is excluded by regex)")
+			continue
+		}
+		// Skip links that are down.  In particular, we want to ignore newly-added AWS secondary ENIs until
+		// the AWS IP manager has had a chance to configure them.
+		if l.Attrs().OperState != netlink.OperUp {
+			log.WithFields(fields).Debug("Skipping interface for MTU detection (link is down)")
 			continue
 		}
 		log.WithFields(fields).Debug("Examining link for MTU calculation")
@@ -2124,6 +2176,8 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 					}
 				}
 			}
+		case msg := <-d.awsStateUpdC:
+			d.awsSubnetMgr.OnSecondaryIfaceStateUpdate(msg)
 		case <-ipSetsRefreshC:
 			log.Debug("Refreshing IP sets state")
 			d.forceIPSetsRefresh = true

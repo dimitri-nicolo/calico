@@ -463,6 +463,7 @@ configRetry:
 		configChangedRestartCallback,
 		fatalErrorCallback,
 		childExitedRestartCallback,
+		v3Client.IPAM(),
 		k8sClientSet,
 		lookupsCache,
 	)
@@ -1390,7 +1391,7 @@ func removeUnlicensedFeaturesFromConfig(configParams *config.Config, licenseMoni
 		}
 
 		if configParams.EgressIPSupport != "Disabled" && !licenseMonitor.GetFeatureStatus(features.EgressAccessControl) {
-			log.Warn("Not licensed for Egress Access Controles feature. License either invalid or expired. " +
+			log.Warn("Not licensed for Egress Access Control feature. License either invalid or expired. " +
 				"Contact Tigera support or email licensing@tigera.io")
 			licenseOverrides["EgressIPSupport"] = "Disabled"
 		}

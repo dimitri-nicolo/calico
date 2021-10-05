@@ -81,9 +81,11 @@ const (
 type TargetType string
 
 const (
-	TargetTypeLocal   TargetType = "local"
-	TargetTypeVXLAN   TargetType = "vxlan"
-	TargetTypeNoEncap TargetType = "noencap"
+	TargetTypeLocal         TargetType = "local"
+	TargetTypeVXLAN         TargetType = "vxlan"
+	TargetTypeNoEncap       TargetType = "noencap"
+	TargetTypeOnLink        TargetType = "onlink"
+	TargetTypeGlobalUnicast TargetType = "unicast"
 
 	// The following target types should be used with InterfaceNone.
 	TargetTypeBlackhole   TargetType = "blackhole"
@@ -145,14 +147,31 @@ func (t Target) RouteScope() netlink.Scope {
 	switch t.Type {
 	case TargetTypeLocal:
 		return netlink.SCOPE_HOST
+	case TargetTypeGlobalUnicast:
+		return netlink.SCOPE_UNIVERSE
+	case TargetTypeNoEncap:
+		return netlink.SCOPE_UNIVERSE
+	case TargetTypeVXLAN:
+		return netlink.SCOPE_UNIVERSE
 	case TargetTypeThrow:
 		return netlink.SCOPE_UNIVERSE
 	case TargetTypeBlackhole:
 		return netlink.SCOPE_UNIVERSE
 	case TargetTypeProhibit:
 		return netlink.SCOPE_UNIVERSE
+	case TargetTypeOnLink:
+		return netlink.SCOPE_LINK
 	default:
 		return netlink.SCOPE_LINK
+	}
+}
+
+func (t Target) Flags() netlink.NextHopFlag {
+	switch t.Type {
+	case TargetTypeVXLAN, TargetTypeNoEncap, TargetTypeOnLink:
+		return syscall.RTNH_F_ONLINK
+	default:
+		return 0
 	}
 }
 
@@ -733,7 +752,10 @@ func (r *RouteTable) syncRoutesForLink(ifaceName string, fullSync bool, firstTry
 			if firstTry {
 				logCxt.WithError(err).Debug("Failed to add route on first attempt, retrying...")
 			} else {
-				logCxt.WithError(err).Warn("Failed to add route")
+				logCxt.WithError(err).WithFields(log.Fields{
+					"route":  route,
+					"target": target,
+				}).Warn("Failed to add route")
 			}
 			updatesFailed = true
 		} else {
@@ -840,9 +862,8 @@ func (r *RouteTable) createL3Route(linkAttrs *netlink.LinkAttrs, target Target) 
 		route.MultiPath = hops
 	}
 
-	if target.Type == TargetTypeVXLAN || target.Type == TargetTypeNoEncap {
-		route.Scope = netlink.SCOPE_UNIVERSE
-		route.SetFlag(syscall.RTNH_F_ONLINK)
+	if f := target.Flags(); f != 0 {
+		route.SetFlag(f)
 	}
 
 	return route

@@ -25,13 +25,11 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-
 	log "github.com/sirupsen/logrus"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/vishvananda/netlink"
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/kubernetes"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/felix/aws"
 	"github.com/projectcalico/felix/bpf"
@@ -52,6 +50,7 @@ import (
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/felix/wireguard"
 	"github.com/projectcalico/libcalico-go/lib/health"
+	"github.com/projectcalico/libcalico-go/lib/ipam"
 	"github.com/projectcalico/libcalico-go/lib/security"
 )
 
@@ -61,6 +60,7 @@ func StartDataplaneDriver(configParams *config.Config,
 	configChangedRestartCallback func(),
 	fatalErrorCallback func(error),
 	childExitedRestartCallback func(),
+	ipamClient ipam.Interface,
 	k8sClientSet *kubernetes.Clientset,
 	lc *calc.LookupsCache) (DataplaneDriver, *exec.Cmd, chan *sync.WaitGroup) {
 
@@ -469,6 +469,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			FlowLogsFileIncludeService:         configParams.FlowLogsFileIncludeService,
 			NfNetlinkBufSize:                   configParams.NfNetlinkBufSize,
 
+			IPAMClient:    ipamClient,
 			KubeClientSet: k8sClientSet,
 
 			FeatureDetectOverrides: configParams.FeatureDetectOverride,
@@ -483,6 +484,10 @@ func StartDataplaneDriver(configParams *config.Config,
 			DNSCacheEpoch:        configParams.DNSCacheEpoch,
 			DNSExtraTTL:          configParams.GetDNSExtraTTL(),
 			DNSLogsLatency:       configParams.DNSLogsLatency,
+
+			AWSSecondaryIPSupport:             configParams.AWSSecondaryIPSupport == "Enabled",
+			AWSRequestTimeout:                 configParams.AWSRequestTimeout,
+			AWSSecondaryIPRoutingRulePriority: configParams.AWSSecondaryIPRoutingRulePriority,
 
 			PacketCapture: capture.Config{
 				Directory:       configParams.CaptureDir,

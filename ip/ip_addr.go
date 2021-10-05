@@ -24,6 +24,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math/big"
 	"math/bits"
 	"net"
 	"strings"
@@ -46,6 +47,7 @@ type Addr interface {
 	AsCIDR() CIDR
 	String() string
 	AsBinary() string
+	Add(int) Addr
 }
 
 type V4Addr [4]byte
@@ -92,6 +94,14 @@ func (a V4Addr) AsBinary() string {
 	return ipInBinary
 }
 
+func (a V4Addr) Add(n int) Addr {
+	myValue := int(binary.BigEndian.Uint32(a[:]))
+	offsetValue := (uint32)(myValue + n)
+	var newAddr V4Addr
+	binary.BigEndian.PutUint32(newAddr[:], offsetValue)
+	return newAddr
+}
+
 func Int2NetIP(addr uint32) net.IP {
 	ip := make(net.IP, 4)
 	binary.BigEndian.PutUint32(ip, addr)
@@ -132,6 +142,22 @@ func (a V6Addr) AsBinary() string {
 	}
 
 	return ipInBinary
+}
+
+func (a V6Addr) Add(n int) Addr {
+	var myVal, nVal, newVal big.Int
+
+	myVal.SetBytes(a[:])
+	nVal.SetInt64(int64(n))
+	newVal.Add(&myVal, &nVal)
+
+	var newAddr V6Addr
+	b := newVal.Bytes()
+	bLen := len(b)
+	offset := len(a) - bLen
+	copy(newAddr[offset:], b)
+
+	return newAddr
 }
 
 type CIDR interface {

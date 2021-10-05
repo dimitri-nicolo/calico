@@ -111,9 +111,3 @@ func PrimaryInterfaceName() (string, error) {
 
 	return ifaceName, err
 }
-
-type EC2SrcDstCheckUpdater struct{}
-
-func NewEC2SrcDstCheckUpdater() *EC2SrcDstCheckUpdater {
-	return &EC2SrcDstCheckUpdater{}
-}

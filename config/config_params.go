@@ -296,7 +296,10 @@ type Config struct {
 	AllowVXLANPacketsFromWorkloads bool `config:"bool;false"`
 	AllowIPIPPacketsFromWorkloads  bool `config:"bool;false"`
 
-	AWSSrcDstCheck string `config:"oneof(DoNothing,Enable,Disable);DoNothing;non-zero"`
+	AWSSrcDstCheck                    string        `config:"oneof(DoNothing,Enable,Disable);DoNothing;non-zero"`
+	AWSSecondaryIPSupport             string        `config:"oneof(Disabled,Enabled);Disabled"`
+	AWSSecondaryIPRoutingRulePriority int           `config:"int(0:4294967295);101"`
+	AWSRequestTimeout                 time.Duration `config:"seconds;30"`
 
 	ServiceLoopPrevention string `config:"oneof(Drop,Reject,Disabled);Drop"`
 

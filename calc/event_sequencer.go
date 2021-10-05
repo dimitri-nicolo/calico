@@ -15,11 +15,10 @@
 package calc
 
 import (
+	"fmt"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-
-	"fmt"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -553,8 +552,9 @@ func (buf *EventSequencer) flushIPPoolUpdates() {
 		buf.Callback(&proto.IPAMPoolUpdate{
 			Id: cidrToIPPoolID(key),
 			Pool: &proto.IPAMPool{
-				Cidr:       pool.CIDR.String(),
-				Masquerade: pool.Masquerade,
+				Cidr:        pool.CIDR.String(),
+				Masquerade:  pool.Masquerade,
+				AwsSubnetId: pool.AWSSubnetID,
 			},
 		})
 		buf.sentIPPools.Add(key)

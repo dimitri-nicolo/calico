@@ -33,10 +33,12 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-const (
-	testRegion = "us-west-2"
-	testEniId  = "eni-i-000"
-	testInstId = "i-000"
+var (
+	testRegion  = "us-west-2"
+	testEniId   = "eni-i-000"
+	testEniId1  = "eni-i-001"
+	testInstId  = "i-000"
+	testInstId1 = "i-001"
 )
 
 type mockClient struct {
@@ -76,16 +78,27 @@ func (c *mockClient) DescribeInstances(ctx context.Context, params *ec2.Describe
 	c.UsageCounter++
 
 	deviceIndexZero := int32(0)
-	eniId := testEniId
 
 	return &ec2.DescribeInstancesOutput{
 		Reservations: []types.Reservation{
 			{
 				Instances: []types.Instance{
 					{
+						InstanceId: &testInstId1,
 						NetworkInterfaces: []types.InstanceNetworkInterface{
 							{
-								NetworkInterfaceId: &eniId,
+								NetworkInterfaceId: &testEniId1,
+								Attachment: &types.InstanceNetworkInterfaceAttachment{
+									DeviceIndex: &deviceIndexZero,
+								},
+							},
+						},
+					},
+					{
+						InstanceId: &testInstId,
+						NetworkInterfaces: []types.InstanceNetworkInterface{
+							{
+								NetworkInterfaceId: &testEniId,
 								Attachment: &types.InstanceNetworkInterfaceAttachment{
 									DeviceIndex: &deviceIndexZero,
 								},
@@ -96,6 +109,42 @@ func (c *mockClient) DescribeInstances(ctx context.Context, params *ec2.Describe
 			},
 		},
 	}, nil
+}
+
+func (c *mockClient) CreateNetworkInterface(ctx context.Context, params *ec2.CreateNetworkInterfaceInput, optFns ...func(*ec2.Options)) (*ec2.CreateNetworkInterfaceOutput, error) {
+	panic("implement me")
+}
+
+func (c *mockClient) AttachNetworkInterface(ctx context.Context, params *ec2.AttachNetworkInterfaceInput, optFns ...func(*ec2.Options)) (*ec2.AttachNetworkInterfaceOutput, error) {
+	panic("implement me")
+}
+
+func (c *mockClient) AssignPrivateIpAddresses(ctx context.Context, params *ec2.AssignPrivateIpAddressesInput, optFns ...func(*ec2.Options)) (*ec2.AssignPrivateIpAddressesOutput, error) {
+	panic("implement me")
+}
+
+func (c *mockClient) UnassignPrivateIpAddresses(ctx context.Context, params *ec2.UnassignPrivateIpAddressesInput, optFns ...func(*ec2.Options)) (*ec2.UnassignPrivateIpAddressesOutput, error) {
+	panic("implement me")
+}
+
+func (c *mockClient) DetachNetworkInterface(ctx context.Context, params *ec2.DetachNetworkInterfaceInput, optFns ...func(*ec2.Options)) (*ec2.DetachNetworkInterfaceOutput, error) {
+	panic("implement me")
+}
+
+func (c *mockClient) DeleteNetworkInterface(ctx context.Context, params *ec2.DeleteNetworkInterfaceInput, optFns ...func(*ec2.Options)) (*ec2.DeleteNetworkInterfaceOutput, error) {
+	panic("implement me")
+}
+
+func (c *mockClient) DescribeSubnets(ctx context.Context, params *ec2.DescribeSubnetsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeSubnetsOutput, error) {
+	panic("implement me")
+}
+
+func (c *mockClient) DescribeInstanceTypes(ctx context.Context, params *ec2.DescribeInstanceTypesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeInstanceTypesOutput, error) {
+	panic("implement me")
+}
+
+func (c *mockClient) DescribeNetworkInterfaces(ctx context.Context, params *ec2.DescribeNetworkInterfacesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeNetworkInterfacesOutput, error) {
+	panic("implement me")
 }
 
 var (
@@ -191,18 +240,18 @@ var _ = Describe("AWS Tests", func() {
 
 	It("should handle EC2 interactions correctly", func() {
 		mock := newMockClient()
-		client := &ec2Client{
-			EC2Svc:        mock,
-			ec2InstanceId: testInstId,
+		client := &EC2Client{
+			EC2Svc:     mock,
+			InstanceID: testInstId,
 		}
 
-		Expect(client.GetMyPrimaryEC2NetworkInterfaceId(context.TODO())).To(Equal(testEniId))
-		Expect(client.setEC2SourceDestinationCheck(context.TODO(), testEniId, false)).NotTo(HaveOccurred())
+		Expect(client.GetMyPrimaryEC2NetworkInterfaceID(context.TODO())).To(Equal(testEniId))
+		Expect(client.SetEC2SourceDestinationCheck(context.TODO(), testEniId, false)).NotTo(HaveOccurred())
 		Expect(mock.UsageCounter).To(BeNumerically("==", 2))
 
 		By("verifying Availability")
 		os.Setenv("AWS_EC2_METADATA_DISABLED", "true")
-		_, err := newEC2Client(context.TODO())
+		_, err := NewEC2Client(context.TODO())
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("access disabled to EC2 IMDS via client option"))
 	})
