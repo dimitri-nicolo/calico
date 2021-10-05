@@ -63,6 +63,22 @@ The address must be within a configured {{site.prodname}} IP pool and not curren
 
 Note that currently only a single IP address is supported per-pod using this annotation.
 
+#### Reserving IPs for manual assignments
+
+The `cni.projectcalico.org/ipAddrs` annotation requires the IP address to be within an IP pool.  This means that,
+by default, {{site.prodname}} may decide to use the IP address that you select for another workload or for an internal
+tunnel address.  To prevent this, there are several options:
+
+* To reserve a whole IPPool for manual allocations, you can set its [node selector](../reference/resources/ippool) to `"!all()"`.  Since the `!all()`  
+  cannot match any nodes, the IPPool will not be used for any automatic assignments.
+
+* To reserve part of a pool, you can create an [`IPReservation` resource](../reference/ipreservation). This allows for certain IPs to be reserved so
+  that Calico IPAM will not use them automatically.  However, manual assignments (using the annotation) can still use 
+  IPs that are "reserved".
+
+* To prevent {{site.prodname}} from using IPs from a certain pool for internal IPIP and/or VXLAN tunnel addresses, you 
+  can set the `allowedUses` field on the [IPPool](../reference/resources/ippool) to `["Workload"]`.
+
 ### Above and beyond
 
 For help configuring {{site.prodname}} CNI and {{site.prodname}} IPAM, see [Configuring the {{site.prodname}} CNI Plugins]({{ site.baseurl }}/reference/cni-plugin/configuration).
