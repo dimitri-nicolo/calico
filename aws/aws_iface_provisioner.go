@@ -219,12 +219,12 @@ func NewSecondaryIfaceProvisioner(
 	// Readiness flag used to indicate if we've got enough ENI capacity to handle all the local workloads
 	// that need it. No liveness, we reserve that for the main loop watchdog (set up below).
 	healthAgg.RegisterReporter(healthNameENICapacity, &health.HealthReport{Ready: true}, 0)
-	healthAgg.Report(healthNameENICapacity, &health.HealthReport{Ready: true, Live: true})
+	healthAgg.Report(healthNameENICapacity, &health.HealthReport{Ready: true})
 	// Similarly, readiness flag to report whether we succeeded in syncing with AWS.
 	healthAgg.RegisterReporter(healthNameAWSInSync, &health.HealthReport{Ready: true}, 0)
-	healthAgg.Report(healthNameAWSInSync, &health.HealthReport{Ready: true, Live: true})
+	healthAgg.Report(healthNameAWSInSync, &health.HealthReport{Ready: true})
 	if sip.livenessEnabled {
-		// Health/liveness watchdog for our main loop.  We let this be diabled for ease of UT.
+		// Health/liveness watchdog for our main loop.  We let this be disabled for ease of UT.
 		healthAgg.RegisterReporter(
 			healthNameAWSProvisioner,
 			&health.HealthReport{Ready: true, Live: true},
@@ -326,7 +326,7 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 		if m.resyncNeeded {
 			var err error
 			response, err = m.resync(ctx)
-			m.healthAgg.Report(healthNameAWSInSync, &health.HealthReport{Ready: err == nil, Live: true})
+			m.healthAgg.Report(healthNameAWSInSync, &health.HealthReport{Ready: err == nil})
 			if err != nil {
 				logrus.WithError(err).Error("Failed to resync with AWS. Will retry after backoff.")
 				backoffTimer = backoffMgr.Backoff()
@@ -375,6 +375,18 @@ func (m *SecondaryIfaceProvisioner) resync(ctx context.Context) (*LocalAWSNetwor
 	var awsResyncErr error
 	m.opRecorder.RecordOperation("aws-fabric-resync")
 	var response *LocalAWSNetworkState
+
+	// attemptResync() returns two types of error:
+	//
+	// - errResyncNeeded, which indicates that _we_ made a change to AWS state and need to restart the resync
+	//   to pick up the results of the change.
+	// - General AWS/IPAM/etc errors.
+	//
+	// We want to retry the first type immediately; they're part of our normal processing. The other type can
+	// mean that AWS is overloaded, or throttling us, so we bubble up the error and trigger backoff.
+	//
+	// attemptResync() should only return errResyncNeeded at most a handful of times so, if we see lots of those
+	// we also bubble up the error and start backing off.
 	for attempt := 0; attempt < 5; attempt++ {
 		if err := ctx.Err(); err != nil {
 			return nil, err
@@ -512,10 +524,7 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 		// Check if we _can_ create that many ENIs.
 		numENIsPossible := resyncState.calculateUnusedENICapacity(m.networkCapabilities)
 		haveENICapacity := numENIsToCreate <= numENIsPossible
-		m.healthAgg.Report(healthNameENICapacity, &health.HealthReport{
-			Live:  true,
-			Ready: haveENICapacity,
-		})
+		m.healthAgg.Report(healthNameENICapacity, &health.HealthReport{Ready: haveENICapacity})
 		if !haveENICapacity {
 			logrus.Warnf("Need %d more AWS secondary ENIs to support local workloads but only %d are "+
 				"available.  Some local workloads (typically egress gateways) will not have connectivity on "+

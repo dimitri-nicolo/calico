@@ -201,7 +201,7 @@ func TestCapacityUpdater_ErrBackoffInterruptedGet(t *testing.T) {
 	}))
 }
 
-func TestCapacityUpdater_ErrBackoffInterruptedPAtch(t *testing.T) {
+func TestCapacityUpdater_ErrBackoffInterruptedPatch(t *testing.T) {
 	cu, fake, tearDown := setupAndStart(t)
 	defer tearDown()
 
