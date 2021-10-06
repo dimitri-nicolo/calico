@@ -45,7 +45,7 @@ spec:
                 type: boolean
               awsSrcDstCheck:
                 description: 'Set source-destination-check on AWS EC2 instances. Accepted
-                  value must be one of "DoNothing", "Enabled" or "Disabled". [Default:
+                  value must be one of "DoNothing", "Enable" or "Disable". [Default:
                   DoNothing]'
                 enum:
                 - DoNothing
@@ -96,14 +96,6 @@ spec:
                   node appears to use the IP of the ingress node; this requires a
                   permissive L2 network.  [Default: Tunnel]'
                 type: string
-              bpfExtToServiceConnmark:
-                description: 'BPFExtToServiceConnmark in BPF mode, controls a
-                  32bit mark that is set on connections from an external client to
-                  a local service. This mark allows us to control how packets of
-                  that connection are routed within the host and how is routing
-                  intepreted by RPF check. [Default: 0]'
-                type: integer
-
               bpfKubeProxyEndpointSlicesEnabled:
                 description: BPFKubeProxyEndpointSlicesEnabled in BPF mode, controls
                   whether Felix's embedded kube-proxy accepts EndpointSlices or not.
@@ -983,6 +975,10 @@ spec:
               wireguardEnabled:
                 description: 'WireguardEnabled controls whether Wireguard is enabled.
                   [Default: false]'
+                type: boolean
+              wireguardHostEncryptionEnabled:
+                description: 'WireguardHostEncryptionEnabled controls whether Wireguard
+                  host-to-host encryption is enabled. [Default: false]'
                 type: boolean
               wireguardInterfaceName:
                 description: 'WireguardInterfaceName specifies the name to use for
