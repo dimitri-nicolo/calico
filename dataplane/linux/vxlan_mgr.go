@@ -27,7 +27,6 @@ import (
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
-	"golang.org/x/sys/unix"
 
 	"github.com/projectcalico/felix/dataplane/common"
 	"github.com/projectcalico/felix/ethtool"
@@ -130,8 +129,9 @@ func newVXLANManager(
 		func(interfaceRegexes []string, ipVersion uint8, vxlan bool, netlinkTimeout time.Duration,
 			deviceRouteSourceAddress net.IP, deviceRouteProtocol netlink.RouteProtocol, removeExternalRoutes bool) routeTable {
 			return routetable.New(interfaceRegexes, ipVersion, vxlan, netlinkTimeout,
-				deviceRouteSourceAddress, deviceRouteProtocol, removeExternalRoutes, unix.RT_TABLE_UNSPEC,
-				opRecorder)
+				deviceRouteSourceAddress, deviceRouteProtocol, removeExternalRoutes, 0,
+				opRecorder,
+			)
 		},
 	)
 }
