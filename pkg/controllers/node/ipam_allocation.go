@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019,2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package node
 
 import (
@@ -112,11 +113,12 @@ func (a *allocation) isPodIP() bool {
 	return ns != "" && pod != ""
 }
 
-func (a *allocation) isTunnelAddress() bool {
+func (a *allocation) isHostOwnedAddress() bool {
 	ipip := a.attrs[ipam.AttributeType] == ipam.AttributeTypeIPIP
 	vxlan := a.attrs[ipam.AttributeType] == ipam.AttributeTypeVXLAN
 	wg := a.attrs[ipam.AttributeType] == ipam.AttributeTypeWireguard
-	return ipip || vxlan || wg
+	awsIP := a.attrs[ipam.AttributeType] == ipam.AttributeTypeAWSSecondary
+	return ipip || vxlan || wg || awsIP
 }
 
 func (a *allocation) isWindowsReserved() bool {

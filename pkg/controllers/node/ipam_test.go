@@ -19,6 +19,7 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/projectcalico/kube-controllers/pkg/config"
 	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -313,6 +314,157 @@ var _ = Describe("IPAM controller UTs", func() {
 			return fakeClient.affinityReleased("cnode")
 		}, 5*time.Second, 100*time.Millisecond).Should(BeTrue())
 	})
+
+	It("should clean up host-owned IPs of deleted nodes.", func() {
+		// Start the controller.
+		c.Start(make(chan struct{}))
+
+		// Add a new block with one allocation.
+		cidr := net.MustParseCIDR("10.0.0.0/30")
+		aff := "host:cnode"
+		key := model.BlockKey{CIDR: cidr}
+		b := model.AllocationBlock{
+			CIDR:        cidr,
+			Affinity:    &aff,
+			Allocations: []*int{intPtr(0), intPtr(1), intPtr(2), intPtr(3)},
+			Unallocated: []int{},
+			Attributes: []model.AllocationAttribute{
+				{
+					AttrPrimary: stringPtr("ipip-tunnel-addr-cnode"),
+					AttrSecondary: map[string]string{
+						ipam.AttributeNode: "cnode",
+						ipam.AttributeType: ipam.AttributeTypeIPIP,
+					},
+				},
+				{
+					AttrPrimary: stringPtr("vxlan-tunnel-addr-cnode"),
+					AttrSecondary: map[string]string{
+						ipam.AttributeNode: "cnode",
+						ipam.AttributeType: ipam.AttributeTypeVXLAN,
+					},
+				},
+				{
+					AttrPrimary: stringPtr("wireguard-tunnel-addr-cnode"),
+					AttrSecondary: map[string]string{
+						ipam.AttributeNode: "cnode",
+						ipam.AttributeType: ipam.AttributeTypeWireguard,
+					},
+				},
+				{
+					AttrPrimary: stringPtr("aws-secondary-ifaces-cnode"),
+					AttrSecondary: map[string]string{
+						ipam.AttributeNode: "cnode",
+						ipam.AttributeType: ipam.AttributeTypeAWSSecondary,
+					},
+				},
+			},
+		}
+		kvp := model.KVPair{
+			Key:   key,
+			Value: &b,
+		}
+		blockCIDR := kvp.Key.(model.BlockKey).CIDR.String()
+		update := bapi.Update{KVPair: kvp, UpdateType: bapi.UpdateTypeKVNew}
+		c.onUpdate(update)
+
+		// Wait for internal caches to update.
+		Eventually(func() bool {
+			done := c.pause()
+			defer done()
+			_, ok := c.allBlocks[blockCIDR]
+			return ok
+		}, 1*time.Second, 100*time.Millisecond).Should(BeTrue())
+
+		// Mark the syncer as InSync so that the GC will be enabled.
+		c.onStatusUpdate(bapi.InSync)
+
+		// Trigger a node deletion. The node referenced in the allocation above
+		// never existed in the k8s API so this should result in a GC.
+		c.OnKubernetesNodeDeleted()
+
+		// Confirm the IP and block affinity were released.
+		fakeClient := cli.IPAM().(*fakeIPAMClient)
+		Eventually(func() map[string]bool {
+			return fakeClient.handlesReleased
+		}, 5*time.Second, 100*time.Millisecond).Should(HaveLen(4))
+		Eventually(func() bool {
+			return fakeClient.affinityReleased("cnode")
+		}, 5*time.Second, 100*time.Millisecond).Should(BeTrue())
+	})
+
+	table.DescribeTable("should NOT clean up host-owned IPs of existing nodes.",
+		func(allocType string) {
+			// Create a valid node, should keep the host-owned IPs alive.
+			n := libapiv3.Node{}
+			n.Name = "cnode"
+			n.Spec.OrchRefs = []libapiv3.OrchRef{{NodeName: "kname", Orchestrator: apiv3.OrchestratorKubernetes}}
+			_, err := cli.Nodes().Create(context.TODO(), &n, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Add the matching Kubernetes node.
+			kn := v1.Node{}
+			kn.Name = "kname"
+			_, err = cs.CoreV1().Nodes().Create(context.TODO(), &kn, metav1.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Start the controller.
+			c.Start(make(chan struct{}))
+
+			// Add a new block with one allocation.
+			cidr := net.MustParseCIDR("10.0.0.0/30")
+			aff := "host:cnode"
+			key := model.BlockKey{CIDR: cidr}
+			b := model.AllocationBlock{
+				CIDR:        cidr,
+				Affinity:    &aff,
+				Allocations: []*int{intPtr(0)},
+				Unallocated: []int{1, 2, 3},
+				Attributes: []model.AllocationAttribute{
+					{
+						AttrPrimary: stringPtr(allocType + "-cnode"),
+						AttrSecondary: map[string]string{
+							ipam.AttributeNode: "cnode",
+							ipam.AttributeType: allocType,
+						},
+					},
+				},
+			}
+			kvp := model.KVPair{
+				Key:   key,
+				Value: &b,
+			}
+			blockCIDR := kvp.Key.(model.BlockKey).CIDR.String()
+			update := bapi.Update{KVPair: kvp, UpdateType: bapi.UpdateTypeKVNew}
+			c.onUpdate(update)
+
+			// Wait for internal caches to update.
+			Eventually(func() bool {
+				done := c.pause()
+				defer done()
+				_, ok := c.allBlocks[blockCIDR]
+				return ok
+			}, 1*time.Second, 100*time.Millisecond).Should(BeTrue())
+
+			// Mark the syncer as InSync so that the GC will be enabled.
+			c.onStatusUpdate(bapi.InSync)
+
+			// Trigger a node deletion. The node referenced in the allocation above
+			// never existed in the k8s API so this should result in a GC.
+			c.OnKubernetesNodeDeleted()
+
+			// Wait for at least one timed sync to complete (we set LeakGracePeriod to 5s, which means syncs
+			// run ever 2.5s).
+			fakeClient := cli.IPAM().(*fakeIPAMClient)
+			Consistently(func() map[string]bool {
+				return fakeClient.handlesReleased
+			}, 3*time.Second, 100*time.Millisecond).Should(BeEmpty())
+			Expect(fakeClient.affinityReleased("cnode")).To(BeFalse())
+		},
+		table.Entry(ipam.AttributeTypeIPIP, ipam.AttributeTypeIPIP),
+		table.Entry(ipam.AttributeTypeVXLAN, ipam.AttributeTypeVXLAN),
+		table.Entry(ipam.AttributeTypeWireguard, ipam.AttributeTypeWireguard),
+		table.Entry(ipam.AttributeTypeAWSSecondary, ipam.AttributeTypeAWSSecondary),
+	)
 
 	It("should clean up leaked IP addresses", func() {
 		// Add a new block with one allocation - on a valid node but no corresponding pod.
@@ -906,3 +1058,11 @@ var _ = Describe("IPAM controller UTs", func() {
 	})
 
 })
+
+func intPtr(i int) *int {
+	return &i
+}
+
+func stringPtr(s string) *string {
+	return &s
+}

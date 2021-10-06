@@ -640,11 +640,11 @@ func (c *ipamController) checkAllocations() ([]string, error) {
 		}
 		logc.Debug("Checking node")
 
-		// Tunnel addresses are special - they should only be marked as a leak if the node itself
-		// is deleted, and there are no other valid allocations on the node. Keep track of them
-		// in this slice so we can mark them for GC when we decide if the node should be cleaned up
-		// or not.
-		tunnelAddresses := []*allocation{}
+		// Host-owned addresses (such as tunnel addresses) are special - they should only be marked
+		// as a leak if the node itself is deleted, and there are no other valid allocations on the
+		// node. Keep track of them in this slice so we can mark them for GC when we decide if the
+		// node should be cleaned up or not.
+		hostOwnedAddresses := []*allocation{}
 
 		// To increase our confidence, go through each IP address and
 		// check to see if the pod it references exists. If all the pods on that node are gone,
@@ -664,9 +664,9 @@ func (c *ipamController) checkAllocations() ([]string, error) {
 				continue
 			}
 
-			if !a.isPodIP() && !a.isTunnelAddress() {
-				// Skip any allocations which are not either a Kubernetes pod, or a node's
-				// IPIP, VXLAN or Wireguard address. In practice, we don't expect these, but they might exist.
+			if !a.isPodIP() && !a.isHostOwnedAddress() {
+				// Skip any allocations which are not either a Kubernetes pod, or a node's IPIP, VXLAN,
+				// Wireguard (or other) address. In practice, we don't expect these, but they might exist.
 				// When they do, they will need to be released outside of this controller in order for
 				// the block to be cleaned up.
 				logc.Info("IP allocation on node is from an unknown source. Will be unable to cleanup block until it is removed.")
@@ -674,9 +674,9 @@ func (c *ipamController) checkAllocations() ([]string, error) {
 				continue
 			}
 
-			if a.isTunnelAddress() {
-				// Handle tunnel addresses below.
-				tunnelAddresses = append(tunnelAddresses, a)
+			if a.isHostOwnedAddress() {
+				// Handle tunnel addresses (and other host-owned addresses) below.
+				hostOwnedAddresses = append(hostOwnedAddresses, a)
 				continue
 			}
 
@@ -717,8 +717,8 @@ func (c *ipamController) checkAllocations() ([]string, error) {
 				continue
 			}
 
-			// Mark the node's tunnel addresses for GC.
-			for _, a := range tunnelAddresses {
+			// Mark the node's own tunnel/other addresses for GC.
+			for _, a := range hostOwnedAddresses {
 				a.markConfirmedLeak()
 				c.confirmedLeaks[a.handle] = a
 			}
@@ -739,8 +739,8 @@ func (c *ipamController) allocationIsValid(a *allocation, preferCache bool) bool
 	pod := a.attrs[ipam.AttributePod]
 	logc := log.WithFields(a.fields())
 
-	if a.isTunnelAddress() {
-		// Tunnel addresses are only valid if the hosting node still exists.
+	if a.isHostOwnedAddress() {
+		// Tunnel/other host addresses are only valid if the hosting node still exists.
 		return a.knode != ""
 	}
 
