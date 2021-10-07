@@ -34,6 +34,8 @@ curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_stagedglobalnetwor
 curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_stagedkubernetesnetworkpolicies.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_stagedkubernetesnetworkpolicies.yaml 
 curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_stagednetworkpolicies.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_stagednetworkpolicies.yaml 
 curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_tiers.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_tiers.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_uisettings.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_uisettings.yaml 
+curl {{ "/manifests/ocp/crds/calico/kdd/crd.projectcalico.org_uisettingsgroups.yaml" | absolute_url }} -o manifests/crd.projectcalico.org_uisettingsgroups.yaml 
 curl {{ "/manifests/ocp/tigera-operator/00-namespace-tigera-operator.yaml" | absolute_url }} -o manifests/00-namespace-tigera-operator.yaml
 curl {{ "/manifests/ocp/tigera-operator/02-rolebinding-tigera-operator.yaml" | absolute_url }} -o manifests/02-rolebinding-tigera-operator.yaml
 curl {{ "/manifests/ocp/tigera-operator/02-role-tigera-operator.yaml" | absolute_url }} -o manifests/02-role-tigera-operator.yaml
