@@ -20,8 +20,8 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211005194607-cdcf4e861472
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211007224120-ec8f0ec6ea9a
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211007224325-09235ed4dc67
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211007225951-38f35470c543
 
 	// k8s apiserver upgrade
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
