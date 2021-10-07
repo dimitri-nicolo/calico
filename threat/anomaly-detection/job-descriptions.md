@@ -70,4 +70,29 @@ The [Domain Generation Algorithms (DGA)] are frequently used by the malware.
 Generated domain names (URLs) are used to communicate between the malware code and the malware servers.
 Presence of the DGA could indicate presence of the malware code.
 
+
+### flows log anomaly 
+**Job ID**: `generic_flows`
+
+The job looks for several numeric fields in the `flows` log.
+It detects the excessive values of the fields.
+This anomaly could indicate a denial of service attack, data exfiltrating, or other attacks.
+
+
+### DNS log anomaly 
+**Job ID**: `generic_dns`
+
+The job looks for several numeric fields in the `DNS` log.
+It detects the excessive values of the fields.
+This anomaly could indicate a denial of service attack, data exfiltrating, or other attacks.
+
+
+### L7 log anomaly 
+**Job ID**: `generic_l7`
+
+The job looks for several numeric fields in the `L7` log.
+It detects the excessive values of the fields.
+This anomaly could indicate a denial of service attack, data exfiltrating, or other attacks.
+
+
 [Domain Generation Algorithms (DGA)]: https://en.wikipedia.org/wiki/Domain_generation_algorithm

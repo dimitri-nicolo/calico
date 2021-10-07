@@ -137,6 +137,43 @@ Now the CatBoostClassifier model from the [CatBoost] package is used in this det
     Increase this parameter if you want fewer alerts.
     Decrease it if you want more alerts.
 
+#### generic_flows Job
+Now the [IsolationForest model] from scikit-learn is used in this detector.
+- **AD_GENERIC_FLOWS_FIELDS** - Default: "bytes_in,bytes_out,num_flows,num_flows_started,
+    num_flows_completed,packets_in,packets_out,num_process_names,num_process_ids,num_original_source_ips" 
+    
+    It is a list of the `flow` log numeric fields separated by `,`.
+    A separate model is trained for each field in this list.
+    Remove a field from this list if you don't want to detect anomalies for it.
+- **AD_GENERIC_FLOWS_ALERTS_PER_DAY** - Default: 2.5 
+ 
+  Each model automatically tuned up to detect a desired number of alerts per day. It doesn't mean
+  the model detects exactly this number of anomalies. This parameter changes the model sensitivity.
+
+#### generic_dns Job
+Now the [IsolationForest model] from scikit-learn is used in this detector.
+- **AD_GENERIC_DNS_FIELDS** - Default: "count,latency_count,latency_mean,latency_max"
+    
+    It is a list of the `DNS` log numeric fields separated by `,`.
+    A separate model is trained for each field in this list.
+    Remove a field from this list if you don't want to detect anomalies for it.
+- **AD_GENERIC_DNS_ALERTS_PER_DAY** - Default: 2.5 
+ 
+  Each model automatically tuned up to detect a desired number of alerts per day. It doesn't mean
+  the model detects exactly this number of anomalies. This parameter changes the model sensitivity.
+
+#### generic_l7 Job
+Now the [IsolationForest model] from scikit-learn is used in this detector.
+- **AD_GENERIC_L7_FIELDS** - Default: "duration_mean,duration_max,bytes_in,bytes_out,count"
+    
+    It is a list of the `L7` log numeric fields separated by `,`.
+    A separate model is trained for each field in this list.
+    Remove a field from this list if you don't want to detect anomalies for it.
+- **AD_GENERIC_L7_ALERTS_PER_DAY** - Default: 2.5 
+ 
+  Each model automatically tuned up to detect a desired number of alerts per day. It doesn't mean
+  the model detects exactly this number of anomalies. This parameter changes the model sensitivity.
+
 [Multi-cluster management]: /multicluster/index
 [IsolationForest model]: https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.IsolationForest.html
 [CatBoost]: https://catboost.ai/docs
