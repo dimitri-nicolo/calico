@@ -495,6 +495,8 @@ github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69
 github.com/tchap/go-patricia/v2 v2.3.1/go.mod h1:VZRHKAb53DLaG+nA9EaYYiaEx6YztwDlLElMsnSHD4k=
 github.com/tigera/api v0.0.0-20211005191943-b63a8d918d09 h1:cPJgps67vB3gRuKfu2zfmtNvJtA1Cl3mmrVrA+aMmO8=
 github.com/tigera/api v0.0.0-20211005191943-b63a8d918d09/go.mod h1:tQDYzO/oh0HZL2MpIwyijRwJf67hPR/Gkex1vt9EwLE=
+github.com/tigera/api v0.0.0-20211008155011-6d6ef40a0564 h1:iRByoriJz0vFupXM2Oscbj/7SRnQcDq72ABhkCxThG4=
+github.com/tigera/api v0.0.0-20211008155011-6d6ef40a0564/go.mod h1:tQDYzO/oh0HZL2MpIwyijRwJf67hPR/Gkex1vt9EwLE=
 github.com/tigera/libcalico-go-private v1.7.2-0.20211007224325-09235ed4dc67 h1:l8mbJePmXC8LpSfSMU9YdAeWwByMVwYNfxCxquletsM=
 github.com/tigera/libcalico-go-private v1.7.2-0.20211007224325-09235ed4dc67/go.mod h1:478njSoJdMa88NDBiWcRFNSBSWQO40Ijl1sMa30ILAQ=
 github.com/tigera/typha-private v0.6.0-beta1.0.20211007225951-38f35470c543 h1:lW8gtqTW6pi7WtAVWSERgQTQkAHeWr6nLsi7p8VOEsc=

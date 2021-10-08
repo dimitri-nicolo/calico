@@ -13,7 +13,7 @@ require (
 	github.com/projectcalico/typha v0.7.3-0.20210524104642-ae095e9e80f3
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.6.1
-	github.com/tigera/api v0.0.0-20211005191943-b63a8d918d09
+	github.com/tigera/api v0.0.0-20211008155011-6d6ef40a0564
 	k8s.io/api v0.21.0
 	k8s.io/apimachinery v0.21.0
 	k8s.io/client-go v0.21.0
