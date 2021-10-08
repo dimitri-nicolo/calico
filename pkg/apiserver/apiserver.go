@@ -3,40 +3,35 @@
 package apiserver
 
 import (
-	"context"
 	"sync"
 	"time"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/projectcalico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
-	"github.com/projectcalico/libcalico-go/lib/options"
+	"github.com/tigera/licensing/monitor"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/version"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/informers"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/klog"
 
 	"github.com/projectcalico/apiserver/pkg/helpers"
 	"github.com/projectcalico/apiserver/pkg/rbac"
-	"github.com/projectcalico/apiserver/pkg/storage/calico"
-
 	calicorest "github.com/projectcalico/apiserver/pkg/registry/projectcalico/rest"
+	"github.com/projectcalico/apiserver/pkg/storage/calico"
+	"github.com/projectcalico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
 )
 
 var (
@@ -82,9 +77,11 @@ type Config struct {
 
 // ProjectCalicoServer contains state for a Kubernetes cluster master/api server.
 type ProjectCalicoServer struct {
-	GenericAPIServer *genericapiserver.GenericAPIServer
-	RBACCalculator   rbac.Calculator
-	calico.LicenseCache
+	GenericAPIServer      *genericapiserver.GenericAPIServer
+	RBACCalculator        rbac.Calculator
+	CalicoResourceLister  CalicoResourceLister
+	LicenseMonitor        monitor.LicenseMonitor
+	SharedInformerFactory informers.SharedInformerFactory
 }
 
 type completedConfig struct {
@@ -142,21 +139,33 @@ func (c completedConfig) New() (*ProjectCalicoServer, error) {
 		}
 	}
 
-	calculator, err := c.NewRBACCalculator()
+	// Create a backend Calico v3 clientset.
+	cc := calico.CreateClientFromConfig().(backendClient).Backend()
+
+	// Create the various lister and getters required by the RBAC calculator. Note that we use an informer/cache for the
+	// k8s resources to minimize the number of queries underpinning a single request. For the Calico resources we
+	// implement our own syncer-based cache.
+	calicoLister := NewCalicoResourceLister(cc)
+
+	// Create the RBAC calculator,
+	calculator, err := c.NewRBACCalculator(calicoLister)
 	if err != nil {
 		return nil, err
 	}
 
-	licenseCache := c.initLicenseCache()
+	// Create the license monitor.
+	licenseMonitor := monitor.New(cc)
 
 	s := &ProjectCalicoServer{
-		GenericAPIServer: genericServer,
-		RBACCalculator:   calculator,
-		LicenseCache:     licenseCache,
+		GenericAPIServer:      genericServer,
+		RBACCalculator:        calculator,
+		CalicoResourceLister:  calicoLister,
+		LicenseMonitor:        licenseMonitor,
+		SharedInformerFactory: c.GenericConfig.SharedInformerFactory,
 	}
 
 	apiGroupInfo.VersionedResourcesStorageMap["v3"], err = calicostore.NewV3Storage(
-		Scheme, c.GenericConfig.RESTOptionsGetter, c.GenericConfig.Authorization.Authorizer, res, calculator, licenseCache,
+		Scheme, c.GenericConfig.RESTOptionsGetter, c.GenericConfig.Authorization.Authorizer, res, calculator, licenseMonitor,
 	)
 	if err != nil {
 		return nil, err
@@ -169,49 +178,13 @@ func (c completedConfig) New() (*ProjectCalicoServer, error) {
 	return s, nil
 }
 
-func (c completedConfig) initLicenseCache() calico.LicenseCache {
-	// Create a Calico v3 clientset.
-	cc := calico.CreateClientFromConfig()
-	licenseCache := calico.NewLicenseCache()
-
-	// Read the license if it was previously created
-	license, err := cc.LicenseKey().Get(context.Background(), "default", options.GetOptions{ResourceVersion: ""})
-	if err != nil {
-		klog.Warning("No license is found to initialize the license cache. The cache will be created without a license")
-		return licenseCache
-	}
-
-	licenseCache.Store(*license)
-
-	return licenseCache
-}
-
-func (c completedConfig) NewRBACCalculator() (rbac.Calculator, error) {
-	// Create a Calico v3 clientset.
-	cc := calico.CreateClientFromConfig()
-
-	// Create the various lister and getters required by the RBAC calculator. Note that we use an informer/cache for the
-	// k8s resources to minimize the number of queries underpinning a single request. For the Calico resources we
-	// implement our own syncer-based cache.
-	calicoLister := &calicoResourceLister{
-		client:           cc.(backendClient).Backend(),
-		tiers:            make(map[string]*v3.Tier),
-		uisettingsgroups: make(map[string]*v3.UISettingsGroup),
-	}
-
+func (c completedConfig) NewRBACCalculator(calicoLister CalicoResourceLister) (rbac.Calculator, error) {
 	resourceLister := discovery.NewDiscoveryClientForConfigOrDie(c.ExtraConfig.KubernetesAPIServerConfig)
 	namespaceLister := &k8sNamespaceLister{c.GenericConfig.SharedInformerFactory.Core().V1().Namespaces().Lister()}
 	roleGetter := &k8sRoleGetter{c.GenericConfig.SharedInformerFactory.Rbac().V1().Roles().Lister()}
 	roleBindingLister := &k8sRoleBindingLister{c.GenericConfig.SharedInformerFactory.Rbac().V1().RoleBindings().Lister()}
 	clusterRoleGetter := &k8sClusterRoleGetter{c.GenericConfig.SharedInformerFactory.Rbac().V1().ClusterRoles().Lister()}
 	clusterRoleBindingLister := &k8sClusterRoleBindingLister{c.GenericConfig.SharedInformerFactory.Rbac().V1().ClusterRoleBindings().Lister()}
-
-	// Start, and wait for the informers to sync.
-	stopCh := make(chan struct{})
-	c.GenericConfig.SharedInformerFactory.Start(stopCh)
-	calicoLister.Start()
-	c.GenericConfig.SharedInformerFactory.WaitForCacheSync(stopCh)
-	calicoLister.WaitForCacheSync(stopCh)
 
 	// Create the rbac calculator
 	return rbac.NewCalculator(
@@ -263,6 +236,21 @@ type k8sNamespaceLister struct {
 
 func (n *k8sNamespaceLister) ListNamespaces() ([]*corev1.Namespace, error) {
 	return n.namespaceLister.List(labels.Everything())
+}
+
+func NewCalicoResourceLister(cc api.Client) CalicoResourceLister {
+	return &calicoResourceLister{
+		client:           cc,
+		tiers:            make(map[string]*v3.Tier),
+		uisettingsgroups: make(map[string]*v3.UISettingsGroup),
+	}
+}
+
+type CalicoResourceLister interface {
+	Start()
+	WaitForCacheSync(stopCh <-chan struct{})
+	ListTiers() ([]*v3.Tier, error)
+	ListUISettingsGroups() ([]*v3.UISettingsGroup, error)
 }
 
 // calicoResourceLister implements the CalicoResourceLister interface returning Tiers.

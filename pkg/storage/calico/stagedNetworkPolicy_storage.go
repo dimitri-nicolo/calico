@@ -8,7 +8,6 @@ import (
 
 	"golang.org/x/net/context"
 
-	licClient "github.com/tigera/licensing/client"
 	features "github.com/tigera/licensing/client/features"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
@@ -16,9 +15,7 @@ import (
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
-	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
@@ -32,7 +29,7 @@ func NewStagedNetworkPolicyStorage(opts Options) (registry.DryRunnableStorage, f
 	c := CreateClientFromConfig()
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.StagedNetworkPolicy)
+		res := obj.(*v3.StagedNetworkPolicy)
 		if strings.HasPrefix(res.Name, conversion.K8sNetworkPolicyNamePrefix) {
 			return nil, cerrors.ErrorOperationNotSupported{
 				Operation:  "create or apply",
@@ -44,7 +41,7 @@ func NewStagedNetworkPolicyStorage(opts Options) (registry.DryRunnableStorage, f
 	}
 	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.StagedNetworkPolicy)
+		res := obj.(*v3.StagedNetworkPolicy)
 		if strings.HasPrefix(res.Name, conversion.K8sNetworkPolicyNamePrefix) {
 			return nil, cerrors.ErrorOperationNotSupported{
 				Operation:  "update or apply",
@@ -77,24 +74,19 @@ func NewStagedNetworkPolicyStorage(opts Options) (registry.DryRunnableStorage, f
 		olo := opts.(options.ListOptions)
 		return c.StagedNetworkPolicies().Watch(ctx, olo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
-		if !claims.ValidateFeature(features.EgressAccessControl) && HasDNSDomains(obj.GetObjectKind().GroupVersionKind().String(), obj) {
-			return true
-		}
-
-		return false
-
+	hasRestrictionsFn := func(obj resourceObject) bool {
+		res := obj.(*v3.StagedNetworkPolicy)
+		return !opts.LicenseMonitor.GetFeatureStatus(features.EgressAccessControl) && rulesHaveDNSDomain(res.Spec.Egress)
 	}
-
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         &etcd.APIObjectVersioner{},
-		aapiType:          reflect.TypeOf(aapi.StagedNetworkPolicy{}),
-		aapiListType:      reflect.TypeOf(aapi.StagedNetworkPolicyList{}),
-		libCalicoType:     reflect.TypeOf(libcalicoapi.StagedNetworkPolicy{}),
-		libCalicoListType: reflect.TypeOf(libcalicoapi.StagedNetworkPolicyList{}),
+		aapiType:          reflect.TypeOf(v3.StagedNetworkPolicy{}),
+		aapiListType:      reflect.TypeOf(v3.StagedNetworkPolicyList{}),
+		libCalicoType:     reflect.TypeOf(v3.StagedNetworkPolicy{}),
+		libCalicoListType: reflect.TypeOf(v3.StagedNetworkPolicyList{}),
 		isNamespaced:      true,
 		create:            createFn,
 		update:            updateFn,
@@ -104,7 +96,6 @@ func NewStagedNetworkPolicyStorage(opts Options) (registry.DryRunnableStorage, f
 		watch:             watchFn,
 		resourceName:      "StagedNetworkPolicy",
 		converter:         StagedNetworkPolicyConverter{},
-		licenseCache:      opts.LicenseCache,
 		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
@@ -114,21 +105,21 @@ type StagedNetworkPolicyConverter struct {
 }
 
 func (rc StagedNetworkPolicyConverter) convertToLibcalico(aapiObj runtime.Object) resourceObject {
-	aapiPolicy := aapiObj.(*aapi.StagedNetworkPolicy)
-	lcgPolicy := &libcalicoapi.StagedNetworkPolicy{}
+	aapiPolicy := aapiObj.(*v3.StagedNetworkPolicy)
+	lcgPolicy := &v3.StagedNetworkPolicy{}
 	lcgPolicy.TypeMeta = aapiPolicy.TypeMeta
 	lcgPolicy.ObjectMeta = aapiPolicy.ObjectMeta
-	lcgPolicy.Kind = libcalicoapi.KindStagedNetworkPolicy
-	lcgPolicy.APIVersion = libcalicoapi.GroupVersionCurrent
+	lcgPolicy.Kind = v3.KindStagedNetworkPolicy
+	lcgPolicy.APIVersion = v3.GroupVersionCurrent
 	lcgPolicy.Spec = aapiPolicy.Spec
 	return lcgPolicy
 }
 
 func (rc StagedNetworkPolicyConverter) convertToAAPI(libcalicoObject resourceObject, aapiObj runtime.Object) {
-	lcgPolicy := libcalicoObject.(*libcalicoapi.StagedNetworkPolicy)
-	aapiPolicy := aapiObj.(*aapi.StagedNetworkPolicy)
+	lcgPolicy := libcalicoObject.(*v3.StagedNetworkPolicy)
+	aapiPolicy := aapiObj.(*v3.StagedNetworkPolicy)
 	aapiPolicy.Spec = lcgPolicy.Spec
-	// Tier field maybe left blank when policy created vi OS libcalico.
+	// Tier field maybe left blank when policy created via OS libcalico.
 	// Initialize it to default in that case to make work with field selector.
 	if aapiPolicy.Spec.Tier == "" {
 		aapiPolicy.Spec.Tier = "default"
@@ -145,16 +136,16 @@ func (rc StagedNetworkPolicyConverter) convertToAAPI(libcalicoObject resourceObj
 }
 
 func (rc StagedNetworkPolicyConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
-	lcgPolicyList := libcalicoListObject.(*libcalicoapi.StagedNetworkPolicyList)
-	aapiPolicyList := aapiListObj.(*aapi.StagedNetworkPolicyList)
+	lcgPolicyList := libcalicoListObject.(*v3.StagedNetworkPolicyList)
+	aapiPolicyList := aapiListObj.(*v3.StagedNetworkPolicyList)
 	if libcalicoListObject == nil {
-		aapiPolicyList.Items = []aapi.StagedNetworkPolicy{}
+		aapiPolicyList.Items = []v3.StagedNetworkPolicy{}
 		return
 	}
 	aapiPolicyList.TypeMeta = lcgPolicyList.TypeMeta
 	aapiPolicyList.ListMeta = lcgPolicyList.ListMeta
 	for _, item := range lcgPolicyList.Items {
-		aapiPolicy := aapi.StagedNetworkPolicy{}
+		aapiPolicy := v3.StagedNetworkPolicy{}
 		rc.convertToAAPI(&item, &aapiPolicy)
 		if matched, err := pred.Matches(&aapiPolicy); err == nil && matched {
 			aapiPolicyList.Items = append(aapiPolicyList.Items, aapiPolicy)

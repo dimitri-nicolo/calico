@@ -7,7 +7,6 @@ import (
 
 	"golang.org/x/net/context"
 
-	licClient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
@@ -15,9 +14,7 @@ import (
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
-	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -29,12 +26,12 @@ func NewTierStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyF
 	c := CreateClientFromConfig()
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.Tier)
+		res := obj.(*v3.Tier)
 		return c.Tiers().Create(ctx, res, oso)
 	}
 	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.Tier)
+		res := obj.(*v3.Tier)
 		return c.Tiers().Update(ctx, res, oso)
 	}
 	getFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
@@ -53,8 +50,8 @@ func NewTierStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyF
 		olo := opts.(options.ListOptions)
 		return c.Tiers().Watch(ctx, olo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
-		return !claims.ValidateFeature(features.Tiers)
+	hasRestrictionsFn := func(obj resourceObject) bool {
+		return !opts.LicenseMonitor.GetFeatureStatus(features.Tiers)
 	}
 
 	// TODO(doublek): Inject codec, client for nicer testing.
@@ -62,10 +59,10 @@ func NewTierStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyF
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         etcd.APIObjectVersioner{},
-		aapiType:          reflect.TypeOf(aapi.Tier{}),
-		aapiListType:      reflect.TypeOf(aapi.TierList{}),
-		libCalicoType:     reflect.TypeOf(libcalicoapi.Tier{}),
-		libCalicoListType: reflect.TypeOf(libcalicoapi.TierList{}),
+		aapiType:          reflect.TypeOf(v3.Tier{}),
+		aapiListType:      reflect.TypeOf(v3.TierList{}),
+		libCalicoType:     reflect.TypeOf(v3.Tier{}),
+		libCalicoListType: reflect.TypeOf(v3.TierList{}),
 		isNamespaced:      false,
 		create:            createFn,
 		update:            updateFn,
@@ -75,7 +72,6 @@ func NewTierStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyF
 		watch:             watchFn,
 		resourceName:      "Tier",
 		converter:         TierConverter{},
-		licenseCache:      opts.LicenseCache,
 		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
@@ -85,35 +81,35 @@ type TierConverter struct {
 }
 
 func (tc TierConverter) convertToLibcalico(aapiObj runtime.Object) resourceObject {
-	aapiTier := aapiObj.(*aapi.Tier)
-	lcgTier := &libcalicoapi.Tier{}
+	aapiTier := aapiObj.(*v3.Tier)
+	lcgTier := &v3.Tier{}
 	lcgTier.TypeMeta = aapiTier.TypeMeta
 	lcgTier.ObjectMeta = aapiTier.ObjectMeta
-	lcgTier.Kind = libcalicoapi.KindTier
-	lcgTier.APIVersion = libcalicoapi.GroupVersionCurrent
+	lcgTier.Kind = v3.KindTier
+	lcgTier.APIVersion = v3.GroupVersionCurrent
 	lcgTier.Spec = aapiTier.Spec
 	return lcgTier
 }
 
 func (tc TierConverter) convertToAAPI(libcalicoObject resourceObject, aapiObj runtime.Object) {
-	lcgTier := libcalicoObject.(*libcalicoapi.Tier)
-	aapiTier := aapiObj.(*aapi.Tier)
+	lcgTier := libcalicoObject.(*v3.Tier)
+	aapiTier := aapiObj.(*v3.Tier)
 	aapiTier.Spec = lcgTier.Spec
 	aapiTier.TypeMeta = lcgTier.TypeMeta
 	aapiTier.ObjectMeta = lcgTier.ObjectMeta
 }
 
 func (tc TierConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
-	lcgTierList := libcalicoListObject.(*libcalicoapi.TierList)
-	aapiTierList := aapiListObj.(*aapi.TierList)
+	lcgTierList := libcalicoListObject.(*v3.TierList)
+	aapiTierList := aapiListObj.(*v3.TierList)
 	if libcalicoListObject == nil {
-		aapiTierList.Items = []aapi.Tier{}
+		aapiTierList.Items = []v3.Tier{}
 		return
 	}
 	aapiTierList.TypeMeta = lcgTierList.TypeMeta
 	aapiTierList.ListMeta = lcgTierList.ListMeta
 	for _, item := range lcgTierList.Items {
-		aapiTier := aapi.Tier{}
+		aapiTier := v3.Tier{}
 		tc.convertToAAPI(&item, &aapiTier)
 		if matched, err := pred.Matches(&aapiTier); err == nil && matched {
 			aapiTierList.Items = append(aapiTierList.Items, aapiTier)

@@ -6,6 +6,8 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 
+	"github.com/tigera/licensing/monitor"
+
 	"k8s.io/apiserver/pkg/registry/generic"
 )
 
@@ -26,5 +28,5 @@ type ManagedClusterResources struct {
 type Options struct {
 	RESTOptions generic.RESTOptions
 	*ManagedClusterResources
-	LicenseCache
+	LicenseMonitor monitor.LicenseMonitor
 }

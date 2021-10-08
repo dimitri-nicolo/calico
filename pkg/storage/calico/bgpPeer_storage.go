@@ -7,17 +7,13 @@ import (
 
 	"golang.org/x/net/context"
 
-	licClient "github.com/tigera/licensing/client"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -29,12 +25,12 @@ func NewBGPPeerStorage(opts Options) (registry.DryRunnableStorage, factory.Destr
 	c := CreateClientFromConfig()
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*api.BGPPeer)
+		res := obj.(*v3.BGPPeer)
 		return c.BGPPeers().Create(ctx, res, oso)
 	}
 	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*api.BGPPeer)
+		res := obj.(*v3.BGPPeer)
 		return c.BGPPeers().Update(ctx, res, oso)
 	}
 	getFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
@@ -53,7 +49,7 @@ func NewBGPPeerStorage(opts Options) (registry.DryRunnableStorage, factory.Destr
 		olo := opts.(options.ListOptions)
 		return c.BGPPeers().Watch(ctx, olo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
+	hasRestrictionsFn := func(obj resourceObject) bool {
 		return false
 	}
 
@@ -61,10 +57,10 @@ func NewBGPPeerStorage(opts Options) (registry.DryRunnableStorage, factory.Destr
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         etcd.APIObjectVersioner{},
-		aapiType:          reflect.TypeOf(aapi.BGPPeer{}),
-		aapiListType:      reflect.TypeOf(aapi.BGPPeerList{}),
-		libCalicoType:     reflect.TypeOf(api.BGPPeer{}),
-		libCalicoListType: reflect.TypeOf(api.BGPPeerList{}),
+		aapiType:          reflect.TypeOf(v3.BGPPeer{}),
+		aapiListType:      reflect.TypeOf(v3.BGPPeerList{}),
+		libCalicoType:     reflect.TypeOf(v3.BGPPeer{}),
+		libCalicoListType: reflect.TypeOf(v3.BGPPeerList{}),
 		isNamespaced:      false,
 		create:            createFn,
 		update:            updateFn,
@@ -72,10 +68,9 @@ func NewBGPPeerStorage(opts Options) (registry.DryRunnableStorage, factory.Destr
 		delete:            deleteFn,
 		list:              listFn,
 		watch:             watchFn,
-		hasRestrictions:   hasRestrictionsFn,
 		resourceName:      "BGPPeer",
 		converter:         BGPPeerConverter{},
-		licenseCache:      opts.LicenseCache,
+		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -84,35 +79,35 @@ type BGPPeerConverter struct {
 }
 
 func (gc BGPPeerConverter) convertToLibcalico(aapiObj runtime.Object) resourceObject {
-	aapiBGPPeer := aapiObj.(*aapi.BGPPeer)
-	lcgBGPPeer := &api.BGPPeer{}
+	aapiBGPPeer := aapiObj.(*v3.BGPPeer)
+	lcgBGPPeer := &v3.BGPPeer{}
 	lcgBGPPeer.TypeMeta = aapiBGPPeer.TypeMeta
 	lcgBGPPeer.ObjectMeta = aapiBGPPeer.ObjectMeta
-	lcgBGPPeer.Kind = api.KindBGPPeer
-	lcgBGPPeer.APIVersion = api.GroupVersionCurrent
+	lcgBGPPeer.Kind = v3.KindBGPPeer
+	lcgBGPPeer.APIVersion = v3.GroupVersionCurrent
 	lcgBGPPeer.Spec = aapiBGPPeer.Spec
 	return lcgBGPPeer
 }
 
 func (gc BGPPeerConverter) convertToAAPI(libcalicoObject resourceObject, aapiObj runtime.Object) {
-	lcgBGPPeer := libcalicoObject.(*api.BGPPeer)
-	aapiBGPPeer := aapiObj.(*aapi.BGPPeer)
+	lcgBGPPeer := libcalicoObject.(*v3.BGPPeer)
+	aapiBGPPeer := aapiObj.(*v3.BGPPeer)
 	aapiBGPPeer.Spec = lcgBGPPeer.Spec
 	aapiBGPPeer.TypeMeta = lcgBGPPeer.TypeMeta
 	aapiBGPPeer.ObjectMeta = lcgBGPPeer.ObjectMeta
 }
 
 func (gc BGPPeerConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
-	lcgBGPPeerList := libcalicoListObject.(*api.BGPPeerList)
-	aapiBGPPeerList := aapiListObj.(*aapi.BGPPeerList)
+	lcgBGPPeerList := libcalicoListObject.(*v3.BGPPeerList)
+	aapiBGPPeerList := aapiListObj.(*v3.BGPPeerList)
 	if libcalicoListObject == nil {
-		aapiBGPPeerList.Items = []aapi.BGPPeer{}
+		aapiBGPPeerList.Items = []v3.BGPPeer{}
 		return
 	}
 	aapiBGPPeerList.TypeMeta = lcgBGPPeerList.TypeMeta
 	aapiBGPPeerList.ListMeta = lcgBGPPeerList.ListMeta
 	for _, item := range lcgBGPPeerList.Items {
-		aapiBGPPeer := aapi.BGPPeer{}
+		aapiBGPPeer := v3.BGPPeer{}
 		gc.convertToAAPI(&item, &aapiBGPPeer)
 		if matched, err := pred.Matches(&aapiBGPPeer); err == nil && matched {
 			aapiBGPPeerList.Items = append(aapiBGPPeerList.Items, aapiBGPPeer)

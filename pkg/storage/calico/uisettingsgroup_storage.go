@@ -7,14 +7,13 @@ import (
 
 	"golang.org/x/net/context"
 
-	licClient "github.com/tigera/licensing/client"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
-	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -26,12 +25,12 @@ func NewUISettingsGroupStorage(opts Options) (registry.DryRunnableStorage, facto
 	c := CreateClientFromConfig()
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*aapi.UISettingsGroup)
+		res := obj.(*v3.UISettingsGroup)
 		return c.UISettingsGroups().Create(ctx, res, oso)
 	}
 	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*aapi.UISettingsGroup)
+		res := obj.(*v3.UISettingsGroup)
 		return c.UISettingsGroups().Update(ctx, res, oso)
 	}
 	getFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
@@ -50,7 +49,7 @@ func NewUISettingsGroupStorage(opts Options) (registry.DryRunnableStorage, facto
 		olo := opts.(options.ListOptions)
 		return c.UISettingsGroups().Watch(ctx, olo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
+	hasRestrictionsFn := func(obj resourceObject) bool {
 		return false
 	}
 
@@ -59,10 +58,10 @@ func NewUISettingsGroupStorage(opts Options) (registry.DryRunnableStorage, facto
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         etcd.APIObjectVersioner{},
-		aapiType:          reflect.TypeOf(aapi.UISettingsGroup{}),
-		aapiListType:      reflect.TypeOf(aapi.UISettingsGroupList{}),
-		libCalicoType:     reflect.TypeOf(aapi.UISettingsGroup{}),
-		libCalicoListType: reflect.TypeOf(aapi.UISettingsGroupList{}),
+		aapiType:          reflect.TypeOf(v3.UISettingsGroup{}),
+		aapiListType:      reflect.TypeOf(v3.UISettingsGroupList{}),
+		libCalicoType:     reflect.TypeOf(v3.UISettingsGroup{}),
+		libCalicoListType: reflect.TypeOf(v3.UISettingsGroupList{}),
 		isNamespaced:      false,
 		create:            createFn,
 		update:            updateFn,
@@ -72,7 +71,6 @@ func NewUISettingsGroupStorage(opts Options) (registry.DryRunnableStorage, facto
 		watch:             watchFn,
 		resourceName:      "UISettingsGroup",
 		converter:         UISettingsGroupConverter{},
-		licenseCache:      opts.LicenseCache,
 		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
@@ -82,35 +80,35 @@ type UISettingsGroupConverter struct {
 }
 
 func (gc UISettingsGroupConverter) convertToLibcalico(aapiObj runtime.Object) resourceObject {
-	aapiUISettingsGroup := aapiObj.(*aapi.UISettingsGroup)
-	lcgUISettingsGroup := &aapi.UISettingsGroup{}
+	aapiUISettingsGroup := aapiObj.(*v3.UISettingsGroup)
+	lcgUISettingsGroup := &v3.UISettingsGroup{}
 	lcgUISettingsGroup.TypeMeta = aapiUISettingsGroup.TypeMeta
 	lcgUISettingsGroup.ObjectMeta = aapiUISettingsGroup.ObjectMeta
-	lcgUISettingsGroup.Kind = aapi.KindGlobalReport
-	lcgUISettingsGroup.APIVersion = aapi.GroupVersionCurrent
+	lcgUISettingsGroup.Kind = v3.KindUISettingsGroup
+	lcgUISettingsGroup.APIVersion = v3.GroupVersionCurrent
 	lcgUISettingsGroup.Spec = aapiUISettingsGroup.Spec
 	return lcgUISettingsGroup
 }
 
 func (gc UISettingsGroupConverter) convertToAAPI(libcalicoObject resourceObject, aapiObj runtime.Object) {
-	lcgUISettingsGroup := libcalicoObject.(*aapi.UISettingsGroup)
-	aapiUISettingsGroup := aapiObj.(*aapi.UISettingsGroup)
+	lcgUISettingsGroup := libcalicoObject.(*v3.UISettingsGroup)
+	aapiUISettingsGroup := aapiObj.(*v3.UISettingsGroup)
 	aapiUISettingsGroup.Spec = lcgUISettingsGroup.Spec
 	aapiUISettingsGroup.TypeMeta = lcgUISettingsGroup.TypeMeta
 	aapiUISettingsGroup.ObjectMeta = lcgUISettingsGroup.ObjectMeta
 }
 
 func (gc UISettingsGroupConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
-	lcgUISettingsGroupList := libcalicoListObject.(*aapi.UISettingsGroupList)
-	aapiUISettingsGroupList := aapiListObj.(*aapi.UISettingsGroupList)
+	lcgUISettingsGroupList := libcalicoListObject.(*v3.UISettingsGroupList)
+	aapiUISettingsGroupList := aapiListObj.(*v3.UISettingsGroupList)
 	if libcalicoListObject == nil {
-		aapiUISettingsGroupList.Items = []aapi.UISettingsGroup{}
+		aapiUISettingsGroupList.Items = []v3.UISettingsGroup{}
 		return
 	}
 	aapiUISettingsGroupList.TypeMeta = lcgUISettingsGroupList.TypeMeta
 	aapiUISettingsGroupList.ListMeta = lcgUISettingsGroupList.ListMeta
 	for _, item := range lcgUISettingsGroupList.Items {
-		aapiUISettingsGroup := aapi.UISettingsGroup{}
+		aapiUISettingsGroup := v3.UISettingsGroup{}
 		gc.convertToAAPI(&item, &aapiUISettingsGroup)
 		if matched, err := pred.Matches(&aapiUISettingsGroup); err == nil && matched {
 			aapiUISettingsGroupList.Items = append(aapiUISettingsGroupList.Items, aapiUISettingsGroup)

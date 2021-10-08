@@ -16,11 +16,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
 
-	licClient "github.com/tigera/licensing/client"
-
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // NewHostEndpointStorage creates a new libcalico-based storage.Interface implementation for HostEndpoints
@@ -28,12 +24,12 @@ func NewHostEndpointStorage(opts Options) (registry.DryRunnableStorage, factory.
 	c := CreateClientFromConfig()
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*api.HostEndpoint)
+		res := obj.(*v3.HostEndpoint)
 		return c.HostEndpoints().Create(ctx, res, oso)
 	}
 	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*api.HostEndpoint)
+		res := obj.(*v3.HostEndpoint)
 		return c.HostEndpoints().Update(ctx, res, oso)
 	}
 	getFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
@@ -52,7 +48,7 @@ func NewHostEndpointStorage(opts Options) (registry.DryRunnableStorage, factory.
 		olo := opts.(options.ListOptions)
 		return c.HostEndpoints().Watch(ctx, olo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
+	hasRestrictionsFn := func(obj resourceObject) bool {
 		return false
 	}
 
@@ -60,10 +56,10 @@ func NewHostEndpointStorage(opts Options) (registry.DryRunnableStorage, factory.
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         etcd.APIObjectVersioner{},
-		aapiType:          reflect.TypeOf(aapi.HostEndpoint{}),
-		aapiListType:      reflect.TypeOf(aapi.HostEndpointList{}),
-		libCalicoType:     reflect.TypeOf(api.HostEndpoint{}),
-		libCalicoListType: reflect.TypeOf(api.HostEndpointList{}),
+		aapiType:          reflect.TypeOf(v3.HostEndpoint{}),
+		aapiListType:      reflect.TypeOf(v3.HostEndpointList{}),
+		libCalicoType:     reflect.TypeOf(v3.HostEndpoint{}),
+		libCalicoListType: reflect.TypeOf(v3.HostEndpointList{}),
 		isNamespaced:      false,
 		create:            createFn,
 		update:            updateFn,
@@ -73,7 +69,6 @@ func NewHostEndpointStorage(opts Options) (registry.DryRunnableStorage, factory.
 		watch:             watchFn,
 		resourceName:      "HostEndpoint",
 		converter:         HostEndpointConverter{},
-		licenseCache:      opts.LicenseCache,
 		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
@@ -83,35 +78,35 @@ type HostEndpointConverter struct {
 }
 
 func (gc HostEndpointConverter) convertToLibcalico(aapiObj runtime.Object) resourceObject {
-	aapiHostEndpoint := aapiObj.(*aapi.HostEndpoint)
-	lcgHostEndpoint := &api.HostEndpoint{}
+	aapiHostEndpoint := aapiObj.(*v3.HostEndpoint)
+	lcgHostEndpoint := &v3.HostEndpoint{}
 	lcgHostEndpoint.TypeMeta = aapiHostEndpoint.TypeMeta
 	lcgHostEndpoint.ObjectMeta = aapiHostEndpoint.ObjectMeta
-	lcgHostEndpoint.Kind = api.KindHostEndpoint
-	lcgHostEndpoint.APIVersion = api.GroupVersionCurrent
+	lcgHostEndpoint.Kind = v3.KindHostEndpoint
+	lcgHostEndpoint.APIVersion = v3.GroupVersionCurrent
 	lcgHostEndpoint.Spec = aapiHostEndpoint.Spec
 	return lcgHostEndpoint
 }
 
 func (gc HostEndpointConverter) convertToAAPI(libcalicoObject resourceObject, aapiObj runtime.Object) {
-	lcgHostEndpoint := libcalicoObject.(*api.HostEndpoint)
-	aapiHostEndpoint := aapiObj.(*aapi.HostEndpoint)
+	lcgHostEndpoint := libcalicoObject.(*v3.HostEndpoint)
+	aapiHostEndpoint := aapiObj.(*v3.HostEndpoint)
 	aapiHostEndpoint.Spec = lcgHostEndpoint.Spec
 	aapiHostEndpoint.TypeMeta = lcgHostEndpoint.TypeMeta
 	aapiHostEndpoint.ObjectMeta = lcgHostEndpoint.ObjectMeta
 }
 
 func (gc HostEndpointConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
-	lcgHostEndpointList := libcalicoListObject.(*api.HostEndpointList)
-	aapiHostEndpointList := aapiListObj.(*aapi.HostEndpointList)
+	lcgHostEndpointList := libcalicoListObject.(*v3.HostEndpointList)
+	aapiHostEndpointList := aapiListObj.(*v3.HostEndpointList)
 	if libcalicoListObject == nil {
-		aapiHostEndpointList.Items = []aapi.HostEndpoint{}
+		aapiHostEndpointList.Items = []v3.HostEndpoint{}
 		return
 	}
 	aapiHostEndpointList.TypeMeta = lcgHostEndpointList.TypeMeta
 	aapiHostEndpointList.ListMeta = lcgHostEndpointList.ListMeta
 	for _, item := range lcgHostEndpointList.Items {
-		aapiHostEndpoint := aapi.HostEndpoint{}
+		aapiHostEndpoint := v3.HostEndpoint{}
 		gc.convertToAAPI(&item, &aapiHostEndpoint)
 		if matched, err := pred.Matches(&aapiHostEndpoint); err == nil && matched {
 			aapiHostEndpointList.Items = append(aapiHostEndpointList.Items, aapiHostEndpoint)

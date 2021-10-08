@@ -7,7 +7,6 @@ import (
 
 	"golang.org/x/net/context"
 
-	licClient "github.com/tigera/licensing/client"
 	features "github.com/tigera/licensing/client/features"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
@@ -15,9 +14,7 @@ import (
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
-	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -29,12 +26,12 @@ func NewPacketCaptureStorage(opts Options) (registry.DryRunnableStorage, factory
 	c := CreateClientFromConfig()
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.PacketCapture)
+		res := obj.(*v3.PacketCapture)
 		return c.PacketCaptures().Create(ctx, res, oso)
 	}
 	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.PacketCapture)
+		res := obj.(*v3.PacketCapture)
 		return c.PacketCaptures().Update(ctx, res, oso)
 	}
 	getFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
@@ -53,18 +50,18 @@ func NewPacketCaptureStorage(opts Options) (registry.DryRunnableStorage, factory
 		olo := opts.(options.ListOptions)
 		return c.PacketCaptures().Watch(ctx, olo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
-		return !claims.ValidateFeature(features.PacketCapture)
+	hasRestrictionsFn := func(obj resourceObject) bool {
+		return !opts.LicenseMonitor.GetFeatureStatus(features.PacketCapture)
 	}
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         etcd.APIObjectVersioner{},
-		aapiType:          reflect.TypeOf(aapi.PacketCapture{}),
-		aapiListType:      reflect.TypeOf(aapi.PacketCaptureList{}),
-		libCalicoType:     reflect.TypeOf(libcalicoapi.PacketCapture{}),
-		libCalicoListType: reflect.TypeOf(libcalicoapi.PacketCaptureList{}),
+		aapiType:          reflect.TypeOf(v3.PacketCapture{}),
+		aapiListType:      reflect.TypeOf(v3.PacketCaptureList{}),
+		libCalicoType:     reflect.TypeOf(v3.PacketCapture{}),
+		libCalicoListType: reflect.TypeOf(v3.PacketCaptureList{}),
 		isNamespaced:      true,
 		create:            createFn,
 		update:            updateFn,
@@ -74,7 +71,6 @@ func NewPacketCaptureStorage(opts Options) (registry.DryRunnableStorage, factory
 		watch:             watchFn,
 		resourceName:      "PacketCapture",
 		converter:         PacketCaptureConverter{},
-		licenseCache:      opts.LicenseCache,
 		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
@@ -84,20 +80,20 @@ type PacketCaptureConverter struct {
 }
 
 func (gc PacketCaptureConverter) convertToLibcalico(aapiObj runtime.Object) resourceObject {
-	aapiPacketCapture := aapiObj.(*aapi.PacketCapture)
-	lcgPacketCapture := &libcalicoapi.PacketCapture{}
+	aapiPacketCapture := aapiObj.(*v3.PacketCapture)
+	lcgPacketCapture := &v3.PacketCapture{}
 	lcgPacketCapture.TypeMeta = aapiPacketCapture.TypeMeta
 	lcgPacketCapture.ObjectMeta = aapiPacketCapture.ObjectMeta
-	lcgPacketCapture.Kind = libcalicoapi.KindPacketCapture
-	lcgPacketCapture.APIVersion = libcalicoapi.GroupVersionCurrent
+	lcgPacketCapture.Kind = v3.KindPacketCapture
+	lcgPacketCapture.APIVersion = v3.GroupVersionCurrent
 	lcgPacketCapture.Spec = aapiPacketCapture.Spec
 	lcgPacketCapture.Status = aapiPacketCapture.Status
 	return lcgPacketCapture
 }
 
 func (gc PacketCaptureConverter) convertToAAPI(libcalicoObject resourceObject, aapiObj runtime.Object) {
-	lcgPacketCapture := libcalicoObject.(*libcalicoapi.PacketCapture)
-	aapiPacketCapture := aapiObj.(*aapi.PacketCapture)
+	lcgPacketCapture := libcalicoObject.(*v3.PacketCapture)
+	aapiPacketCapture := aapiObj.(*v3.PacketCapture)
 	aapiPacketCapture.Spec = lcgPacketCapture.Spec
 	aapiPacketCapture.Status = lcgPacketCapture.Status
 	aapiPacketCapture.TypeMeta = lcgPacketCapture.TypeMeta
@@ -105,16 +101,16 @@ func (gc PacketCaptureConverter) convertToAAPI(libcalicoObject resourceObject, a
 }
 
 func (gc PacketCaptureConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
-	lcgPacketCaptureList := libcalicoListObject.(*libcalicoapi.PacketCaptureList)
-	aapiPacketCaptureList := aapiListObj.(*aapi.PacketCaptureList)
+	lcgPacketCaptureList := libcalicoListObject.(*v3.PacketCaptureList)
+	aapiPacketCaptureList := aapiListObj.(*v3.PacketCaptureList)
 	if libcalicoListObject == nil {
-		aapiPacketCaptureList.Items = []aapi.PacketCapture{}
+		aapiPacketCaptureList.Items = []v3.PacketCapture{}
 		return
 	}
 	aapiPacketCaptureList.TypeMeta = lcgPacketCaptureList.TypeMeta
 	aapiPacketCaptureList.ListMeta = lcgPacketCaptureList.ListMeta
 	for _, item := range lcgPacketCaptureList.Items {
-		aapiPacketCapture := aapi.PacketCapture{}
+		aapiPacketCapture := v3.PacketCapture{}
 		gc.convertToAAPI(&item, &aapiPacketCapture)
 		if matched, err := pred.Matches(&aapiPacketCapture); err == nil && matched {
 			aapiPacketCaptureList.Items = append(aapiPacketCaptureList.Items, aapiPacketCapture)

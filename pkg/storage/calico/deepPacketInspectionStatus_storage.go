@@ -7,15 +7,12 @@ import (
 
 	"golang.org/x/net/context"
 
-	licClient "github.com/tigera/licensing/client"
 	features "github.com/tigera/licensing/client/features"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
-	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -26,31 +23,30 @@ func NewDeepPacketInspectionStatusStorage(opts Options) (registry.DryRunnableSto
 	c := CreateClientFromConfig()
 	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.DeepPacketInspection)
+		res := obj.(*v3.DeepPacketInspection)
 		return c.DeepPacketInspections().UpdateStatus(ctx, res, oso)
 	}
 	getFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
 		ogo := opts.(options.GetOptions)
 		return c.DeepPacketInspections().Get(ctx, ns, name, ogo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
-		return !claims.ValidateFeature(features.ThreatDefense)
+	hasRestrictionsFn := func(obj resourceObject) bool {
+		return !opts.LicenseMonitor.GetFeatureStatus(features.ThreatDefense)
 	}
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         etcd.APIObjectVersioner{},
-		aapiType:          reflect.TypeOf(aapi.DeepPacketInspection{}),
-		aapiListType:      reflect.TypeOf(aapi.DeepPacketInspectionList{}),
-		libCalicoType:     reflect.TypeOf(libcalicoapi.DeepPacketInspection{}),
-		libCalicoListType: reflect.TypeOf(libcalicoapi.DeepPacketInspectionList{}),
+		aapiType:          reflect.TypeOf(v3.DeepPacketInspection{}),
+		aapiListType:      reflect.TypeOf(v3.DeepPacketInspectionList{}),
+		libCalicoType:     reflect.TypeOf(v3.DeepPacketInspection{}),
+		libCalicoListType: reflect.TypeOf(v3.DeepPacketInspectionList{}),
 		isNamespaced:      true,
 		update:            updateFn,
 		get:               getFn,
 		resourceName:      "DeepPacketInspectionStatus",
 		converter:         DeepPacketInspectionConverter{},
-		licenseCache:      opts.LicenseCache,
 		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}

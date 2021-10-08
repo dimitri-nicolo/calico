@@ -7,7 +7,6 @@ import (
 
 	"golang.org/x/net/context"
 
-	licClient "github.com/tigera/licensing/client"
 	features "github.com/tigera/licensing/client/features"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
@@ -15,9 +14,7 @@ import (
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
-	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -29,12 +26,12 @@ func NewDeepPacketInspectionStorage(opts Options) (registry.DryRunnableStorage, 
 	c := CreateClientFromConfig()
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.DeepPacketInspection)
+		res := obj.(*v3.DeepPacketInspection)
 		return c.DeepPacketInspections().Create(ctx, res, oso)
 	}
 	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.DeepPacketInspection)
+		res := obj.(*v3.DeepPacketInspection)
 		return c.DeepPacketInspections().Update(ctx, res, oso)
 	}
 	getFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
@@ -53,18 +50,18 @@ func NewDeepPacketInspectionStorage(opts Options) (registry.DryRunnableStorage, 
 		olo := opts.(options.ListOptions)
 		return c.DeepPacketInspections().Watch(ctx, olo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
-		return !claims.ValidateFeature(features.ThreatDefense)
+	hasRestrictionsFn := func(obj resourceObject) bool {
+		return !opts.LicenseMonitor.GetFeatureStatus(features.ThreatDefense)
 	}
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         etcd.APIObjectVersioner{},
-		aapiType:          reflect.TypeOf(aapi.DeepPacketInspection{}),
-		aapiListType:      reflect.TypeOf(aapi.DeepPacketInspectionList{}),
-		libCalicoType:     reflect.TypeOf(libcalicoapi.DeepPacketInspection{}),
-		libCalicoListType: reflect.TypeOf(libcalicoapi.DeepPacketInspectionList{}),
+		aapiType:          reflect.TypeOf(v3.DeepPacketInspection{}),
+		aapiListType:      reflect.TypeOf(v3.DeepPacketInspectionList{}),
+		libCalicoType:     reflect.TypeOf(v3.DeepPacketInspection{}),
+		libCalicoListType: reflect.TypeOf(v3.DeepPacketInspectionList{}),
 		isNamespaced:      true,
 		create:            createFn,
 		update:            updateFn,
@@ -74,7 +71,6 @@ func NewDeepPacketInspectionStorage(opts Options) (registry.DryRunnableStorage, 
 		watch:             watchFn,
 		resourceName:      "DeepPacketInspection",
 		converter:         DeepPacketInspectionConverter{},
-		licenseCache:      opts.LicenseCache,
 		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
@@ -84,20 +80,20 @@ type DeepPacketInspectionConverter struct {
 }
 
 func (gc DeepPacketInspectionConverter) convertToLibcalico(aapiObj runtime.Object) resourceObject {
-	aapiDeepPacketInspection := aapiObj.(*aapi.DeepPacketInspection)
-	lcgDeepPacketInspection := &libcalicoapi.DeepPacketInspection{}
+	aapiDeepPacketInspection := aapiObj.(*v3.DeepPacketInspection)
+	lcgDeepPacketInspection := &v3.DeepPacketInspection{}
 	lcgDeepPacketInspection.TypeMeta = aapiDeepPacketInspection.TypeMeta
 	lcgDeepPacketInspection.ObjectMeta = aapiDeepPacketInspection.ObjectMeta
-	lcgDeepPacketInspection.Kind = libcalicoapi.KindDeepPacketInspection
-	lcgDeepPacketInspection.APIVersion = libcalicoapi.GroupVersionCurrent
+	lcgDeepPacketInspection.Kind = v3.KindDeepPacketInspection
+	lcgDeepPacketInspection.APIVersion = v3.GroupVersionCurrent
 	lcgDeepPacketInspection.Spec = aapiDeepPacketInspection.Spec
 	lcgDeepPacketInspection.Status = aapiDeepPacketInspection.Status
 	return lcgDeepPacketInspection
 }
 
 func (gc DeepPacketInspectionConverter) convertToAAPI(libcalicoObject resourceObject, aapiObj runtime.Object) {
-	lcgDeepPacketInspection := libcalicoObject.(*libcalicoapi.DeepPacketInspection)
-	aapiDeepPacketInspection := aapiObj.(*aapi.DeepPacketInspection)
+	lcgDeepPacketInspection := libcalicoObject.(*v3.DeepPacketInspection)
+	aapiDeepPacketInspection := aapiObj.(*v3.DeepPacketInspection)
 	aapiDeepPacketInspection.Spec = lcgDeepPacketInspection.Spec
 	aapiDeepPacketInspection.Status = lcgDeepPacketInspection.Status
 	aapiDeepPacketInspection.TypeMeta = lcgDeepPacketInspection.TypeMeta
@@ -105,16 +101,16 @@ func (gc DeepPacketInspectionConverter) convertToAAPI(libcalicoObject resourceOb
 }
 
 func (gc DeepPacketInspectionConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
-	lcgDeepPacketInspectionList := libcalicoListObject.(*libcalicoapi.DeepPacketInspectionList)
-	aapiDeepPacketInspectionList := aapiListObj.(*aapi.DeepPacketInspectionList)
+	lcgDeepPacketInspectionList := libcalicoListObject.(*v3.DeepPacketInspectionList)
+	aapiDeepPacketInspectionList := aapiListObj.(*v3.DeepPacketInspectionList)
 	if libcalicoListObject == nil {
-		aapiDeepPacketInspectionList.Items = []aapi.DeepPacketInspection{}
+		aapiDeepPacketInspectionList.Items = []v3.DeepPacketInspection{}
 		return
 	}
 	aapiDeepPacketInspectionList.TypeMeta = lcgDeepPacketInspectionList.TypeMeta
 	aapiDeepPacketInspectionList.ListMeta = lcgDeepPacketInspectionList.ListMeta
 	for _, item := range lcgDeepPacketInspectionList.Items {
-		aapiDeepPacketInspection := aapi.DeepPacketInspection{}
+		aapiDeepPacketInspection := v3.DeepPacketInspection{}
 		gc.convertToAAPI(&item, &aapiDeepPacketInspection)
 		if matched, err := pred.Matches(&aapiDeepPacketInspection); err == nil && matched {
 			aapiDeepPacketInspectionList.Items = append(aapiDeepPacketInspectionList.Items, aapiDeepPacketInspection)

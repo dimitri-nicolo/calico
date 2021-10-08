@@ -387,8 +387,8 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
 If an API is restricted by a license, you need to see if the feature is defined in the [licensing library](https://github.com/tigera/licensing/blob/master/client/features/features.go). A sample of implementing restrictions can be found at `pkg/storage/calico/globalReport_storage.go`
 
 ```
-hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
-		return !claims.ValidateFeature(features.AlertManagement)
+hasRestrictionsFn := func(obj resourceObject) bool {
+    return !opts.LicenseMonitor.GetFeatureStatus(features.AlertManagement)
 }
 ```
 

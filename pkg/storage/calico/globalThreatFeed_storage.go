@@ -12,16 +12,13 @@ import (
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
-	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
 
-	licClient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
-
-	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // NewGlobalThreatFeedStorage creates a new libcalico-based storage.Interface implementation for GlobalThreatFeeds
@@ -29,12 +26,12 @@ func NewGlobalThreatFeedStorage(opts Options) (registry.DryRunnableStorage, fact
 	c := CreateClientFromConfig()
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.GlobalThreatFeed)
+		res := obj.(*v3.GlobalThreatFeed)
 		return c.GlobalThreatFeeds().Create(ctx, res, oso)
 	}
 	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.GlobalThreatFeed)
+		res := obj.(*v3.GlobalThreatFeed)
 		return c.GlobalThreatFeeds().Update(ctx, res, oso)
 	}
 	getFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
@@ -53,18 +50,18 @@ func NewGlobalThreatFeedStorage(opts Options) (registry.DryRunnableStorage, fact
 		olo := opts.(options.ListOptions)
 		return c.GlobalThreatFeeds().Watch(ctx, olo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
-		return !claims.ValidateFeature(features.ThreatDefense)
+	hasRestrictionsFn := func(obj resourceObject) bool {
+		return !opts.LicenseMonitor.GetFeatureStatus(features.ThreatDefense)
 	}
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         etcd.APIObjectVersioner{},
-		aapiType:          reflect.TypeOf(aapi.GlobalThreatFeed{}),
-		aapiListType:      reflect.TypeOf(aapi.GlobalThreatFeedList{}),
-		libCalicoType:     reflect.TypeOf(libcalicoapi.GlobalThreatFeed{}),
-		libCalicoListType: reflect.TypeOf(libcalicoapi.GlobalThreatFeedList{}),
+		aapiType:          reflect.TypeOf(v3.GlobalThreatFeed{}),
+		aapiListType:      reflect.TypeOf(v3.GlobalThreatFeedList{}),
+		libCalicoType:     reflect.TypeOf(v3.GlobalThreatFeed{}),
+		libCalicoListType: reflect.TypeOf(v3.GlobalThreatFeedList{}),
 		isNamespaced:      false,
 		create:            createFn,
 		update:            updateFn,
@@ -74,7 +71,6 @@ func NewGlobalThreatFeedStorage(opts Options) (registry.DryRunnableStorage, fact
 		watch:             watchFn,
 		resourceName:      "GlobalThreatFeed",
 		converter:         GlobalThreatFeedConverter{},
-		licenseCache:      opts.LicenseCache,
 		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
@@ -84,20 +80,20 @@ type GlobalThreatFeedConverter struct {
 }
 
 func (gc GlobalThreatFeedConverter) convertToLibcalico(aapiObj runtime.Object) resourceObject {
-	aapiGlobalThreatFeed := aapiObj.(*aapi.GlobalThreatFeed)
-	lcgGlobalThreatFeed := &libcalicoapi.GlobalThreatFeed{}
+	aapiGlobalThreatFeed := aapiObj.(*v3.GlobalThreatFeed)
+	lcgGlobalThreatFeed := &v3.GlobalThreatFeed{}
 	lcgGlobalThreatFeed.TypeMeta = aapiGlobalThreatFeed.TypeMeta
 	lcgGlobalThreatFeed.ObjectMeta = aapiGlobalThreatFeed.ObjectMeta
-	lcgGlobalThreatFeed.Kind = libcalicoapi.KindGlobalThreatFeed
-	lcgGlobalThreatFeed.APIVersion = libcalicoapi.GroupVersionCurrent
+	lcgGlobalThreatFeed.Kind = v3.KindGlobalThreatFeed
+	lcgGlobalThreatFeed.APIVersion = v3.GroupVersionCurrent
 	lcgGlobalThreatFeed.Spec = aapiGlobalThreatFeed.Spec
 	lcgGlobalThreatFeed.Status = aapiGlobalThreatFeed.Status
 	return lcgGlobalThreatFeed
 }
 
 func (gc GlobalThreatFeedConverter) convertToAAPI(libcalicoObject resourceObject, aapiObj runtime.Object) {
-	lcgGlobalThreatFeed := libcalicoObject.(*libcalicoapi.GlobalThreatFeed)
-	aapiGlobalThreatFeed := aapiObj.(*aapi.GlobalThreatFeed)
+	lcgGlobalThreatFeed := libcalicoObject.(*v3.GlobalThreatFeed)
+	aapiGlobalThreatFeed := aapiObj.(*v3.GlobalThreatFeed)
 	aapiGlobalThreatFeed.Spec = lcgGlobalThreatFeed.Spec
 	aapiGlobalThreatFeed.Status = lcgGlobalThreatFeed.Status
 	aapiGlobalThreatFeed.TypeMeta = lcgGlobalThreatFeed.TypeMeta
@@ -105,16 +101,16 @@ func (gc GlobalThreatFeedConverter) convertToAAPI(libcalicoObject resourceObject
 }
 
 func (gc GlobalThreatFeedConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
-	lcgGlobalThreatFeedList := libcalicoListObject.(*libcalicoapi.GlobalThreatFeedList)
-	aapiGlobalThreatFeedList := aapiListObj.(*aapi.GlobalThreatFeedList)
+	lcgGlobalThreatFeedList := libcalicoListObject.(*v3.GlobalThreatFeedList)
+	aapiGlobalThreatFeedList := aapiListObj.(*v3.GlobalThreatFeedList)
 	if libcalicoListObject == nil {
-		aapiGlobalThreatFeedList.Items = []aapi.GlobalThreatFeed{}
+		aapiGlobalThreatFeedList.Items = []v3.GlobalThreatFeed{}
 		return
 	}
 	aapiGlobalThreatFeedList.TypeMeta = lcgGlobalThreatFeedList.TypeMeta
 	aapiGlobalThreatFeedList.ListMeta = lcgGlobalThreatFeedList.ListMeta
 	for _, item := range lcgGlobalThreatFeedList.Items {
-		aapiGlobalThreatFeed := aapi.GlobalThreatFeed{}
+		aapiGlobalThreatFeed := v3.GlobalThreatFeed{}
 		gc.convertToAAPI(&item, &aapiGlobalThreatFeed)
 		if matched, err := pred.Matches(&aapiGlobalThreatFeed); err == nil && matched {
 			aapiGlobalThreatFeedList.Items = append(aapiGlobalThreatFeedList.Items, aapiGlobalThreatFeed)

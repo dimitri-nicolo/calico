@@ -11,7 +11,6 @@ import (
 
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 
-	licClient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
 
 	"github.com/projectcalico/apiserver/pkg/helpers"
@@ -23,13 +22,11 @@ import (
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
-	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
-
-	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // AnnotationActiveCertificateFingerprint is an annotation that is used to store the fingerprint for
@@ -42,7 +39,7 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 	resources := opts.ManagedClusterResources
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.ManagedCluster)
+		res := obj.(*v3.ManagedCluster)
 
 		if resources == nil {
 			return nil, cerrors.ErrorValidation{
@@ -86,7 +83,7 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 
 	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.ManagedCluster)
+		res := obj.(*v3.ManagedCluster)
 		return c.ManagedClusters().Update(ctx, res, oso)
 	}
 	getFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
@@ -105,18 +102,17 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 		olo := opts.(options.ListOptions)
 		return c.ManagedClusters().Watch(ctx, olo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
-		return !claims.ValidateFeature(features.MultiClusterManagement)
+	hasRestrictionsFn := func(obj resourceObject) bool {
+		return !opts.LicenseMonitor.GetFeatureStatus(features.MultiClusterManagement)
 	}
-
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         etcd.APIObjectVersioner{},
-		aapiType:          reflect.TypeOf(aapi.ManagedCluster{}),
-		aapiListType:      reflect.TypeOf(aapi.ManagedClusterList{}),
-		libCalicoType:     reflect.TypeOf(libcalicoapi.ManagedCluster{}),
-		libCalicoListType: reflect.TypeOf(libcalicoapi.ManagedClusterList{}),
+		aapiType:          reflect.TypeOf(v3.ManagedCluster{}),
+		aapiListType:      reflect.TypeOf(v3.ManagedClusterList{}),
+		libCalicoType:     reflect.TypeOf(v3.ManagedCluster{}),
+		libCalicoListType: reflect.TypeOf(v3.ManagedClusterList{}),
 		isNamespaced:      false,
 		create:            createFn,
 		update:            updateFn,
@@ -124,10 +120,9 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 		delete:            deleteFn,
 		list:              listFn,
 		watch:             watchFn,
+		hasRestrictions:   hasRestrictionsFn,
 		resourceName:      "ManagedCluster",
 		converter:         ManagedClusterConverter{},
-		licenseCache:      opts.LicenseCache,
-		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
@@ -136,20 +131,20 @@ type ManagedClusterConverter struct {
 }
 
 func (gc ManagedClusterConverter) convertToLibcalico(aapiObj runtime.Object) resourceObject {
-	aapiManagedCluster := aapiObj.(*aapi.ManagedCluster)
-	lcgManagedCluster := &libcalicoapi.ManagedCluster{}
+	aapiManagedCluster := aapiObj.(*v3.ManagedCluster)
+	lcgManagedCluster := &v3.ManagedCluster{}
 	lcgManagedCluster.TypeMeta = aapiManagedCluster.TypeMeta
 	lcgManagedCluster.ObjectMeta = aapiManagedCluster.ObjectMeta
-	lcgManagedCluster.Kind = libcalicoapi.KindManagedCluster
-	lcgManagedCluster.APIVersion = libcalicoapi.GroupVersionCurrent
+	lcgManagedCluster.Kind = v3.KindManagedCluster
+	lcgManagedCluster.APIVersion = v3.GroupVersionCurrent
 	lcgManagedCluster.Spec = aapiManagedCluster.Spec
 	lcgManagedCluster.Status = aapiManagedCluster.Status
 	return lcgManagedCluster
 }
 
 func (gc ManagedClusterConverter) convertToAAPI(libcalicoObject resourceObject, aapiObj runtime.Object) {
-	lcgManagedCluster := libcalicoObject.(*libcalicoapi.ManagedCluster)
-	aapiManagedCluster := aapiObj.(*aapi.ManagedCluster)
+	lcgManagedCluster := libcalicoObject.(*v3.ManagedCluster)
+	aapiManagedCluster := aapiObj.(*v3.ManagedCluster)
 	aapiManagedCluster.Spec = lcgManagedCluster.Spec
 	aapiManagedCluster.Status = lcgManagedCluster.Status
 	aapiManagedCluster.TypeMeta = lcgManagedCluster.TypeMeta
@@ -157,16 +152,16 @@ func (gc ManagedClusterConverter) convertToAAPI(libcalicoObject resourceObject, 
 }
 
 func (gc ManagedClusterConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
-	lcgManagedClusterList := libcalicoListObject.(*libcalicoapi.ManagedClusterList)
-	aapiManagedClusterList := aapiListObj.(*aapi.ManagedClusterList)
+	lcgManagedClusterList := libcalicoListObject.(*v3.ManagedClusterList)
+	aapiManagedClusterList := aapiListObj.(*v3.ManagedClusterList)
 	if libcalicoListObject == nil {
-		aapiManagedClusterList.Items = []aapi.ManagedCluster{}
+		aapiManagedClusterList.Items = []v3.ManagedCluster{}
 		return
 	}
 	aapiManagedClusterList.TypeMeta = lcgManagedClusterList.TypeMeta
 	aapiManagedClusterList.ListMeta = lcgManagedClusterList.ListMeta
 	for _, item := range lcgManagedClusterList.Items {
-		aapiManagedCluster := aapi.ManagedCluster{}
+		aapiManagedCluster := v3.ManagedCluster{}
 		gc.convertToAAPI(&item, &aapiManagedCluster)
 		if matched, err := pred.Matches(&aapiManagedCluster); err == nil && matched {
 			aapiManagedClusterList.Items = append(aapiManagedClusterList.Items, aapiManagedCluster)

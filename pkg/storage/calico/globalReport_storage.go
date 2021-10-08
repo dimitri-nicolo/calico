@@ -12,16 +12,13 @@ import (
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
-	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
 
-	licClient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
-
-	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // NewGlobalReportStorage creates a new libcalico-based storage.Interface implementation for GlobalReports
@@ -29,12 +26,12 @@ func NewGlobalReportStorage(opts Options) (registry.DryRunnableStorage, factory.
 	c := CreateClientFromConfig()
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.GlobalReport)
+		res := obj.(*v3.GlobalReport)
 		return c.GlobalReports().Create(ctx, res, oso)
 	}
 	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.GlobalReport)
+		res := obj.(*v3.GlobalReport)
 		return c.GlobalReports().Update(ctx, res, oso)
 	}
 	getFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
@@ -53,18 +50,17 @@ func NewGlobalReportStorage(opts Options) (registry.DryRunnableStorage, factory.
 		olo := opts.(options.ListOptions)
 		return c.GlobalReports().Watch(ctx, olo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
-		return !claims.ValidateFeature(features.ComplianceReports)
+	hasRestrictionsFn := func(obj resourceObject) bool {
+		return !opts.LicenseMonitor.GetFeatureStatus(features.ComplianceReports)
 	}
-
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         etcd.APIObjectVersioner{},
-		aapiType:          reflect.TypeOf(aapi.GlobalReport{}),
-		aapiListType:      reflect.TypeOf(aapi.GlobalReportList{}),
-		libCalicoType:     reflect.TypeOf(libcalicoapi.GlobalReport{}),
-		libCalicoListType: reflect.TypeOf(libcalicoapi.GlobalReportList{}),
+		aapiType:          reflect.TypeOf(v3.GlobalReport{}),
+		aapiListType:      reflect.TypeOf(v3.GlobalReportList{}),
+		libCalicoType:     reflect.TypeOf(v3.GlobalReport{}),
+		libCalicoListType: reflect.TypeOf(v3.GlobalReportList{}),
 		isNamespaced:      false,
 		create:            createFn,
 		update:            updateFn,
@@ -74,7 +70,6 @@ func NewGlobalReportStorage(opts Options) (registry.DryRunnableStorage, factory.
 		watch:             watchFn,
 		resourceName:      "GlobalReport",
 		converter:         GlobalReportConverter{},
-		licenseCache:      opts.LicenseCache,
 		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
@@ -84,20 +79,20 @@ type GlobalReportConverter struct {
 }
 
 func (gc GlobalReportConverter) convertToLibcalico(aapiObj runtime.Object) resourceObject {
-	aapiGlobalReport := aapiObj.(*aapi.GlobalReport)
-	lcgGlobalReport := &libcalicoapi.GlobalReport{}
+	aapiGlobalReport := aapiObj.(*v3.GlobalReport)
+	lcgGlobalReport := &v3.GlobalReport{}
 	lcgGlobalReport.TypeMeta = aapiGlobalReport.TypeMeta
 	lcgGlobalReport.ObjectMeta = aapiGlobalReport.ObjectMeta
-	lcgGlobalReport.Kind = libcalicoapi.KindGlobalReport
-	lcgGlobalReport.APIVersion = libcalicoapi.GroupVersionCurrent
+	lcgGlobalReport.Kind = v3.KindGlobalReport
+	lcgGlobalReport.APIVersion = v3.GroupVersionCurrent
 	lcgGlobalReport.Spec = aapiGlobalReport.Spec
 	lcgGlobalReport.Status = aapiGlobalReport.Status
 	return lcgGlobalReport
 }
 
 func (gc GlobalReportConverter) convertToAAPI(libcalicoObject resourceObject, aapiObj runtime.Object) {
-	lcgGlobalReport := libcalicoObject.(*libcalicoapi.GlobalReport)
-	aapiGlobalReport := aapiObj.(*aapi.GlobalReport)
+	lcgGlobalReport := libcalicoObject.(*v3.GlobalReport)
+	aapiGlobalReport := aapiObj.(*v3.GlobalReport)
 	aapiGlobalReport.Spec = lcgGlobalReport.Spec
 	aapiGlobalReport.Status = lcgGlobalReport.Status
 	aapiGlobalReport.TypeMeta = lcgGlobalReport.TypeMeta
@@ -105,16 +100,16 @@ func (gc GlobalReportConverter) convertToAAPI(libcalicoObject resourceObject, aa
 }
 
 func (gc GlobalReportConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
-	lcgGlobalReportList := libcalicoListObject.(*libcalicoapi.GlobalReportList)
-	aapiGlobalReportList := aapiListObj.(*aapi.GlobalReportList)
+	lcgGlobalReportList := libcalicoListObject.(*v3.GlobalReportList)
+	aapiGlobalReportList := aapiListObj.(*v3.GlobalReportList)
 	if libcalicoListObject == nil {
-		aapiGlobalReportList.Items = []aapi.GlobalReport{}
+		aapiGlobalReportList.Items = []v3.GlobalReport{}
 		return
 	}
 	aapiGlobalReportList.TypeMeta = lcgGlobalReportList.TypeMeta
 	aapiGlobalReportList.ListMeta = lcgGlobalReportList.ListMeta
 	for _, item := range lcgGlobalReportList.Items {
-		aapiGlobalReport := aapi.GlobalReport{}
+		aapiGlobalReport := v3.GlobalReport{}
 		gc.convertToAAPI(&item, &aapiGlobalReport)
 		if matched, err := pred.Matches(&aapiGlobalReport); err == nil && matched {
 			aapiGlobalReportList.Items = append(aapiGlobalReportList.Items, aapiGlobalReport)

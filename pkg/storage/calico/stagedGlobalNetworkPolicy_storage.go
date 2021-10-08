@@ -5,7 +5,6 @@ import (
 
 	"golang.org/x/net/context"
 
-	licClient "github.com/tigera/licensing/client"
 	features "github.com/tigera/licensing/client/features"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
@@ -13,9 +12,7 @@ import (
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
-	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -27,12 +24,12 @@ func NewStagedGlobalNetworkPolicyStorage(opts Options) (registry.DryRunnableStor
 	c := CreateClientFromConfig()
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.StagedGlobalNetworkPolicy)
+		res := obj.(*v3.StagedGlobalNetworkPolicy)
 		return c.StagedGlobalNetworkPolicies().Create(ctx, res, oso)
 	}
 	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.StagedGlobalNetworkPolicy)
+		res := obj.(*v3.StagedGlobalNetworkPolicy)
 		return c.StagedGlobalNetworkPolicies().Update(ctx, res, oso)
 	}
 	getFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
@@ -51,24 +48,19 @@ func NewStagedGlobalNetworkPolicyStorage(opts Options) (registry.DryRunnableStor
 		olo := opts.(options.ListOptions)
 		return c.StagedGlobalNetworkPolicies().Watch(ctx, olo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
-		if !claims.ValidateFeature(features.EgressAccessControl) && HasDNSDomains(obj.GetObjectKind().GroupVersionKind().String(), obj) {
-			return true
-		}
-
-		return false
-
+	hasRestrictionsFn := func(obj resourceObject) bool {
+		res := obj.(*v3.StagedGlobalNetworkPolicy)
+		return !opts.LicenseMonitor.GetFeatureStatus(features.EgressAccessControl) && rulesHaveDNSDomain(res.Spec.Egress)
 	}
-
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         etcd.APIObjectVersioner{},
-		aapiType:          reflect.TypeOf(aapi.StagedGlobalNetworkPolicy{}),
-		aapiListType:      reflect.TypeOf(aapi.StagedGlobalNetworkPolicyList{}),
-		libCalicoType:     reflect.TypeOf(libcalicoapi.StagedGlobalNetworkPolicy{}),
-		libCalicoListType: reflect.TypeOf(libcalicoapi.StagedGlobalNetworkPolicyList{}),
+		aapiType:          reflect.TypeOf(v3.StagedGlobalNetworkPolicy{}),
+		aapiListType:      reflect.TypeOf(v3.StagedGlobalNetworkPolicyList{}),
+		libCalicoType:     reflect.TypeOf(v3.StagedGlobalNetworkPolicy{}),
+		libCalicoListType: reflect.TypeOf(v3.StagedGlobalNetworkPolicyList{}),
 		isNamespaced:      false,
 		create:            createFn,
 		update:            updateFn,
@@ -78,7 +70,6 @@ func NewStagedGlobalNetworkPolicyStorage(opts Options) (registry.DryRunnableStor
 		watch:             watchFn,
 		resourceName:      "StagedGlobalNetworkPolicy",
 		converter:         StagedGlobalNetworkPolicyConverter{},
-		licenseCache:      opts.LicenseCache,
 		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
@@ -88,19 +79,19 @@ type StagedGlobalNetworkPolicyConverter struct {
 }
 
 func (gc StagedGlobalNetworkPolicyConverter) convertToLibcalico(aapiObj runtime.Object) resourceObject {
-	aapiStagedGlobalNetworkPolicy := aapiObj.(*aapi.StagedGlobalNetworkPolicy)
-	lcgStagedGlobalNetworkPolicy := &libcalicoapi.StagedGlobalNetworkPolicy{}
+	aapiStagedGlobalNetworkPolicy := aapiObj.(*v3.StagedGlobalNetworkPolicy)
+	lcgStagedGlobalNetworkPolicy := &v3.StagedGlobalNetworkPolicy{}
 	lcgStagedGlobalNetworkPolicy.TypeMeta = aapiStagedGlobalNetworkPolicy.TypeMeta
 	lcgStagedGlobalNetworkPolicy.ObjectMeta = aapiStagedGlobalNetworkPolicy.ObjectMeta
-	lcgStagedGlobalNetworkPolicy.Kind = libcalicoapi.KindStagedGlobalNetworkPolicy
-	lcgStagedGlobalNetworkPolicy.APIVersion = libcalicoapi.GroupVersionCurrent
+	lcgStagedGlobalNetworkPolicy.Kind = v3.KindStagedGlobalNetworkPolicy
+	lcgStagedGlobalNetworkPolicy.APIVersion = v3.GroupVersionCurrent
 	lcgStagedGlobalNetworkPolicy.Spec = aapiStagedGlobalNetworkPolicy.Spec
 	return lcgStagedGlobalNetworkPolicy
 }
 
 func (gc StagedGlobalNetworkPolicyConverter) convertToAAPI(libcalicoObject resourceObject, aapiObj runtime.Object) {
-	lcgStagedGlobalNetworkPolicy := libcalicoObject.(*libcalicoapi.StagedGlobalNetworkPolicy)
-	aapiStagedGlobalNetworkPolicy := aapiObj.(*aapi.StagedGlobalNetworkPolicy)
+	lcgStagedGlobalNetworkPolicy := libcalicoObject.(*v3.StagedGlobalNetworkPolicy)
+	aapiStagedGlobalNetworkPolicy := aapiObj.(*v3.StagedGlobalNetworkPolicy)
 	aapiStagedGlobalNetworkPolicy.Spec = lcgStagedGlobalNetworkPolicy.Spec
 	// Tier field maybe left blank when policy created vi OS libcalico.
 	// Initialize it to default in that case to make work with field selector.
@@ -119,16 +110,16 @@ func (gc StagedGlobalNetworkPolicyConverter) convertToAAPI(libcalicoObject resou
 }
 
 func (gc StagedGlobalNetworkPolicyConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
-	lcgStagedGlobalNetworkPolicyList := libcalicoListObject.(*libcalicoapi.StagedGlobalNetworkPolicyList)
-	aapiStagedGlobalNetworkPolicyList := aapiListObj.(*aapi.StagedGlobalNetworkPolicyList)
+	lcgStagedGlobalNetworkPolicyList := libcalicoListObject.(*v3.StagedGlobalNetworkPolicyList)
+	aapiStagedGlobalNetworkPolicyList := aapiListObj.(*v3.StagedGlobalNetworkPolicyList)
 	if libcalicoListObject == nil {
-		aapiStagedGlobalNetworkPolicyList.Items = []aapi.StagedGlobalNetworkPolicy{}
+		aapiStagedGlobalNetworkPolicyList.Items = []v3.StagedGlobalNetworkPolicy{}
 		return
 	}
 	aapiStagedGlobalNetworkPolicyList.TypeMeta = lcgStagedGlobalNetworkPolicyList.TypeMeta
 	aapiStagedGlobalNetworkPolicyList.ListMeta = lcgStagedGlobalNetworkPolicyList.ListMeta
 	for _, item := range lcgStagedGlobalNetworkPolicyList.Items {
-		aapiStagedGlobalNetworkPolicy := aapi.StagedGlobalNetworkPolicy{}
+		aapiStagedGlobalNetworkPolicy := v3.StagedGlobalNetworkPolicy{}
 		gc.convertToAAPI(&item, &aapiStagedGlobalNetworkPolicy)
 		if matched, err := pred.Matches(&aapiStagedGlobalNetworkPolicy); err == nil && matched {
 			aapiStagedGlobalNetworkPolicyList.Items = append(aapiStagedGlobalNetworkPolicyList.Items, aapiStagedGlobalNetworkPolicy)
