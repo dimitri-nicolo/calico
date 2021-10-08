@@ -73,7 +73,6 @@ KUBE_CONTROLLERS_VERSION?=$(shell git describe --tags --dirty --always --abbrev=
 # Mocks auto generated testify mocks by mockery. Run `make gen-mocks` to regenerate the testify mocks.
 MOCKERY_FILE_PATHS= \
 	pkg/elasticsearch/ClientBuilder \
-	pkg/controllers/controller/Controller \
 
 ETCD_IMAGE?=quay.io/coreos/etcd:$(ETCD_VERSION)-$(BUILDARCH)
 # If building on amd64 omit the arch in the container name.

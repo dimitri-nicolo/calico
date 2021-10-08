@@ -7,11 +7,8 @@ import (
 	"time"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
-	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
-	"github.com/projectcalico/kube-controllers/pkg/controllers/dpi"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/set"
@@ -23,13 +20,12 @@ import (
 // NewStatusUpdateController creates a new controller responsible for cleaning the node
 // specific status field in resource when corresponding node is deleted.
 func NewStatusUpdateController(calicoClient client.Interface, calicoV3Client tigeraapi.Interface, nodeCache func() []string) *statusUpdateController {
-	dpiReconciler := dpi.NewReconciler(calicoV3Client)
+	dpiWch := NewDPIWatcher(calicoV3Client)
 	return &statusUpdateController{
 		rl:               workqueue.DefaultControllerRateLimiter(),
 		calicoClient:     calicoClient,
 		calicoV3Client:   calicoV3Client,
-		dpiCache:         dpiReconciler.GetCachedDPIs,
-		dpiCtrl:          dpi.New(calicoV3Client, dpiReconciler),
+		dpiWch:           dpiWch,
 		nodeCacheFn:      nodeCache,
 		reconcilerPeriod: time.Minute * 5,
 	}
@@ -39,14 +35,13 @@ type statusUpdateController struct {
 	rl               workqueue.RateLimiter
 	calicoClient     client.Interface
 	calicoV3Client   tigeraapi.Interface
-	dpiCtrl          controller.Controller
-	dpiCache         func() []*v3.DeepPacketInspection
+	dpiWch           Watcher
 	nodeCacheFn      func() []string
 	reconcilerPeriod time.Duration
 }
 
 func (c *statusUpdateController) Start(stop chan struct{}) {
-	go c.dpiCtrl.Run(stop)
+	go c.dpiWch.Run(stop)
 	go c.acceptScheduledRequest(stop)
 }
 
@@ -67,18 +62,21 @@ func (c *statusUpdateController) acceptScheduledRequest(stopCh <-chan struct{}) 
 // no longer in the cached list of nodes.
 func (c *statusUpdateController) cleanDeletedNodeStatus() {
 	log.Debugf("Cleaning the deleted nodes status from DeepPacketInspection resources.")
-	dpiResources := c.dpiCache()
+	dpiResources := c.dpiWch.GetExistingResources()
 	if len(dpiResources) == 0 {
 		// No dpi resource to cleanup
 		return
 	}
 
 	existingNodes := set.FromArray(c.nodeCacheFn())
-	ctx := context.Background()
-	for _, dpi := range dpiResources {
-		if err := c.updateDPIStatus(ctx, dpi, existingNodes); err != nil {
-			log.WithFields(log.Fields{"deepPacketInspection": dpi.Name, "namespace": dpi.Namespace}).
-				WithError(err).Error("Failed to update status, will retry later.")
+	for _, res := range dpiResources {
+		if dpi, ok := res.(*v3.DeepPacketInspection); ok {
+			if err := c.updateDPIStatus(context.Background(), dpi, existingNodes); err != nil {
+				log.WithFields(log.Fields{"deepPacketInspection": dpi.Name, "namespace": dpi.Namespace}).
+					WithError(err).Error("Failed to update status, will retry later.")
+			}
+		} else {
+			log.Errorf("Failed to get DeepPacketInspection resource from #%v", res)
 		}
 	}
 }
@@ -87,6 +85,9 @@ func (c *statusUpdateController) cleanDeletedNodeStatus() {
 // from status corresponding to the node not in cached node.
 func (c *statusUpdateController) updateDPIStatus(ctx context.Context, dpi *v3.DeepPacketInspection, existingNodes set.Set) error {
 	var err error
+	if len(dpi.Status.Nodes) == 0 {
+		return nil
+	}
 	if existingNodes.Len() == 0 {
 		dpi.Status.Nodes = nil
 		_, err = c.calicoClient.DeepPacketInspections().UpdateStatus(ctx, dpi, options.SetOptions{})
