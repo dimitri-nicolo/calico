@@ -108,6 +108,9 @@ breadcrumbs:
 # Set to 'true' to show warning that points users to latest version of each page.
 is_latest: false
 
+# Supported
+support_matrix_list: ['aks', 'kOps', 'eks', 'kubeadm', 'gke', 'k8s', 'OpenShift', 'rke']
+
 defaults:
   -
     scope:
