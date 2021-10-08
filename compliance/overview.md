@@ -61,9 +61,6 @@ Compliance reports provide the following high-level information:
 - AWS using kOps
 - RKE
 
-**Not supported**
-- OpenShift
-
 **Required**
 
 - Stop using `calicoctl`  
