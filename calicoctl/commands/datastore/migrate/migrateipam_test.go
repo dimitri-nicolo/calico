@@ -275,6 +275,11 @@ func (c *MockIPAMClient) IPPools() client.IPPoolInterface {
 	return nil
 }
 
+func (c *MockIPAMClient) IPReservations() client.IPReservationInterface {
+	// DO NOTHING
+	return nil
+}
+
 func (c *MockIPAMClient) Profiles() client.ProfileInterface {
 	// DO NOTHING
 	return nil

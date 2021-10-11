@@ -34,7 +34,6 @@ func (k *kubectlCmd) Execute(cmdStr string) (string, error) {
 	return "", err
 }
 
-
 // ExecCmd is a convenience function that wraps exec.Command.
 func ExecCmd(cmdStr string) (*bytes.Buffer, error) {
 	var result bytes.Buffer

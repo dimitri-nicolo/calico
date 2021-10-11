@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/capture"
 	"github.com/stretchr/testify/mock"
 
+	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/capture"
+
 	. "github.com/onsi/gomega"
+
 	"github.com/projectcalico/libcalico-go/lib/logutils"
 
 	log "github.com/sirupsen/logrus"
@@ -207,7 +209,7 @@ func TestCommands_List(t *testing.T) {
 	var captureWithMultipleNs = fmt.Sprintf("%s/%s/%s\n%s/%s/%s", any, ns1, any, any, ns2, any)
 
 	var tables = []struct {
-		namespace string
+		namespace             string
 		getFluentDNodesOutput string
 		findOutputPerPods     map[string]string
 		errOutputForPods      []string
