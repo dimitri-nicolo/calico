@@ -469,10 +469,10 @@ github.com/stretchr/testify v1.6.1 h1:hDPOHmpOpP40lSULcqw7IrRb/u7w6RpDC9399XyoNd
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69rRypqCw=
 github.com/tchap/go-patricia/v2 v2.3.1/go.mod h1:VZRHKAb53DLaG+nA9EaYYiaEx6YztwDlLElMsnSHD4k=
-github.com/tigera/api v0.0.0-20211005191943-b63a8d918d09 h1:cPJgps67vB3gRuKfu2zfmtNvJtA1Cl3mmrVrA+aMmO8=
-github.com/tigera/api v0.0.0-20211005191943-b63a8d918d09/go.mod h1:tQDYzO/oh0HZL2MpIwyijRwJf67hPR/Gkex1vt9EwLE=
-github.com/tigera/libcalico-go-private v1.7.2-0.20211007224325-09235ed4dc67 h1:l8mbJePmXC8LpSfSMU9YdAeWwByMVwYNfxCxquletsM=
-github.com/tigera/libcalico-go-private v1.7.2-0.20211007224325-09235ed4dc67/go.mod h1:478njSoJdMa88NDBiWcRFNSBSWQO40Ijl1sMa30ILAQ=
+github.com/tigera/api v0.0.0-20211008155011-6d6ef40a0564 h1:iRByoriJz0vFupXM2Oscbj/7SRnQcDq72ABhkCxThG4=
+github.com/tigera/api v0.0.0-20211008155011-6d6ef40a0564/go.mod h1:tQDYzO/oh0HZL2MpIwyijRwJf67hPR/Gkex1vt9EwLE=
+github.com/tigera/libcalico-go-private v1.7.2-0.20211008161821-9234ab751daa h1:wZPZ+Ledg9g9faIDka8AirKpQMW/8AsBow+d0wUYMpk=
+github.com/tigera/libcalico-go-private v1.7.2-0.20211008161821-9234ab751daa/go.mod h1:RwuwaEN5S5g/sQolCI3qRzBv4kTDriBcwBIg3AnZwSM=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/urfave/cli v1.20.0/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijbERA=
