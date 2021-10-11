@@ -38,6 +38,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
 	"github.com/projectcalico/cni-plugin/pkg/dataplane"
 	"github.com/projectcalico/cni-plugin/pkg/k8s"
@@ -46,7 +48,6 @@ import (
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/libcalico-go/lib/options"
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 )

@@ -20,6 +20,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/cni-plugin/internal/pkg/testutils"
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
 	grpc_dataplane "github.com/projectcalico/cni-plugin/pkg/dataplane/grpc"
@@ -29,7 +31,6 @@ import (
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/names"
 	"github.com/projectcalico/libcalico-go/lib/options"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var _ = Describe("CalicoCni", func() {

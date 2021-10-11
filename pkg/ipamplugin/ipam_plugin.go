@@ -22,16 +22,15 @@ import (
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
+	"github.com/projectcalico/cni-plugin/pkg/types"
+	"github.com/projectcalico/cni-plugin/pkg/upgrade"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/ipam"
 	"github.com/projectcalico/libcalico-go/lib/logutils"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
-
-	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
-	"github.com/projectcalico/cni-plugin/pkg/types"
-	"github.com/projectcalico/cni-plugin/pkg/upgrade"
 )
 
 func Main(version string) {
