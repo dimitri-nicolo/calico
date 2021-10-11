@@ -17,8 +17,9 @@ package converter_test
 import (
 	"math/rand"
 
-	"github.com/projectcalico/kube-controllers/pkg/converter"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/kube-controllers/pkg/converter"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"

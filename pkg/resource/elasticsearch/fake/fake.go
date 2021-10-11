@@ -11,9 +11,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	v1 "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1"
-	"github.com/projectcalico/kube-controllers/pkg/resource"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	restfake "k8s.io/client-go/rest/fake"
+
+	"github.com/projectcalico/kube-controllers/pkg/resource"
 )
 
 type RESTClient struct {

@@ -7,11 +7,12 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/projectcalico/kube-controllers/pkg/controllers/license"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	tigeraapifake "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/projectcalico/kube-controllers/pkg/controllers/license"
 )
 
 var _ = Describe("License Controller tests", func() {

@@ -32,6 +32,7 @@ import (
 
 	gocidr "github.com/apparentlymart/go-cidr/cidr"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/kube-controllers/tests/testutils"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"

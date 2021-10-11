@@ -6,8 +6,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
 
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"

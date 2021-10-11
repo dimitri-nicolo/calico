@@ -16,18 +16,20 @@ package config_test
 
 import (
 	"context"
-	"github.com/projectcalico/kube-controllers/pkg/config/configfactory"
 	"os"
 	"time"
 
+	"github.com/projectcalico/kube-controllers/pkg/config/configfactory"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/projectcalico/libcalico-go/lib/errors"
-	"github.com/projectcalico/libcalico-go/lib/options"
-	"github.com/projectcalico/libcalico-go/lib/watch"
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/projectcalico/libcalico-go/lib/errors"
+	"github.com/projectcalico/libcalico-go/lib/options"
+	"github.com/projectcalico/libcalico-go/lib/watch"
 
 	"github.com/projectcalico/kube-controllers/pkg/config"
 )

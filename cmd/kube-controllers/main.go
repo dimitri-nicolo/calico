@@ -26,9 +26,10 @@ import (
 
 	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/projectcalico/kube-controllers/pkg/controllers/authorization"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/elasticsearchconfiguration"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	log "github.com/sirupsen/logrus"
 	"go.etcd.io/etcd/clientv3"
@@ -58,14 +59,15 @@ import (
 	"github.com/projectcalico/kube-controllers/pkg/controllers/serviceaccount"
 	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
 
-	"github.com/projectcalico/kube-controllers/pkg/status"
-	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/libcalico-go/lib/backend/k8s"
-	"github.com/projectcalico/typha/pkg/cmdwrapper"
 	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	lclient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
 	"github.com/tigera/licensing/monitor"
+
+	"github.com/projectcalico/kube-controllers/pkg/status"
+	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/libcalico-go/lib/backend/k8s"
+	"github.com/projectcalico/typha/pkg/cmdwrapper"
 )
 
 // backendClientAccessor is an interface to access the backend client from the main v2 client.

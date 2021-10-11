@@ -27,11 +27,12 @@ import (
 	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
 	"github.com/projectcalico/kube-controllers/pkg/converter"
 
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	v1 "k8s.io/api/core/v1"
 	uruntime "k8s.io/apimachinery/pkg/util/runtime"

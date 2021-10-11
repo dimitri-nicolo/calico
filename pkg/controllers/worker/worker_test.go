@@ -8,8 +8,9 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/projectcalico/kube-controllers/pkg/controllers/worker"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/projectcalico/kube-controllers/pkg/controllers/worker"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
