@@ -43,6 +43,21 @@ spec:
                   will add a rule to drop VXLAN encapsulated traffic from workloads
                   [Default: false]'
                 type: boolean
+              awsRequestTimeout:
+                description: 'AWSRequestTimeout is the timeout on AWS API requests.
+                  [Default: 30s]'
+                type: string
+              awsSecondaryIPRoutingRulePriority:
+                description: 'AWSSecondaryIPRoutingRulePriority controls the priority
+                  that Felix will use for routing rules when programming them for
+                  AWS Secondary IP support. [Default: 101]'
+                type: integer
+              awsSecondaryIPSupport:
+                description: 'AWSSecondaryIPSupport controls whether Felix will try
+                  to provision AWS secondary ENIs and secondary IPs for workloads
+                  that have IPs from IP pools that are configured with an AWS subnet
+                  ID. [Default: Disabled]'
+                type: string
               awsSrcDstCheck:
                 description: 'Set source-destination-check on AWS EC2 instances. Accepted
                   value must be one of "DoNothing", "Enable" or "Disable". [Default:
@@ -244,6 +259,11 @@ spec:
                 description: 'DNSLogsLatency indicates to include measurements of
                   DNS request/response latency in each DNS log. [Default: true]'
                 type: boolean
+              dnsPolicyNfqueueID:
+                description: 'DNSPolicyNfqueueID is the NFQUEUE ID to use for DNS
+                  Policy re-evaluation when the domains IP hasn''t been programmed
+                  to ipsets yet. [Default: 100]'
+                type: integer
               dnsTrustedServers:
                 description: 'The DNS servers that Felix should trust. Each entry
                   here must be `<ip>[:<port>]` - indicating an explicit DNS server
@@ -364,13 +384,22 @@ spec:
                 description: 'FlowLogsCollectProcessInfo, if enabled Felix will load
                   the kprobe BPF programs to collect process info. [Default: false]'
                 type: boolean
+              flowLogsCollectProcessPath:
+                description: 'When FlowLogsCollectProcessPath and FlowLogsCollectProcessInfo
+                  are both enabled, each flow log will include information about the
+                  process that is sending or receiving the packets in that flow: the
+                  `process_name` field will contain the full path of the process executable,
+                  and the `process_args` field will have the arguments with which
+                  the executable was invoked.  Process information will not be reported
+                  for connections which use raw sockets.'
+                type: boolean
               flowLogsCollectTcpStats:
                 description: FlowLogsCollectTcpStats enables flow logs reporting TCP
                   socket stats
                 type: boolean
-              flowLogsCollectProcessPath:
-                description: FlowLogsCollectProcessPath enables flow logs reporting process path
-                  and args
+              flowLogsCollectorDebugTrace:
+                description: When FlowLogsCollectorDebugTrace is set to true, enables
+                  the logs in the collector to be printed in their entirety.
                 type: boolean
               flowLogsDynamicAggregationEnabled:
                 description: FlowLogsDynamicAggregationEnabled is used to enable/disable
@@ -442,15 +471,15 @@ spec:
                 description: FlowLogsFileMaxFiles sets the number of log files to
                   keep.
                 type: integer
+              flowLogsFilePerFlowProcessArgsLimit:
+                description: FlowLogsFilePerFlowProcessArgsLimit is used to specify
+                  the maximum number of distinct process args that will appear in
+                  the flowLogs. Default value is 5
+                type: integer
               flowLogsFilePerFlowProcessLimit:
                 description: 'FlowLogsFilePerFlowProcessLimit, is used to specify
                   the maximum number of flow log entries with distinct process information
                   beyond which process information will be aggregated. [Default: 2]'
-                type: integer
-              flowLogsFilePerFlowProcessArgsLimit:
-                description: 'flowLogsFilePerFlowProcessArgsLimit, is used to specify
-                  the maximum number of distinct arguments in flowlogs, beyond which
-                  arguments will be aggregated. [Default: 5]'
                 type: integer
               flowLogsFlushInterval:
                 description: FlowLogsFlushInterval configures the interval at which
@@ -600,12 +629,11 @@ spec:
               ipv6Support:
                 type: boolean
               kubeMasqueradeBit:
-                description: 'KubeMasqueradeBit should be set to the same value
-                  as --iptables-masquerade-bit of kube-proxy when TPROXY is
-                  used.  This defaults to the corresponding kube-proxy default
-                  value so it only needs to change if kube-proxy is using a
-                  non-standard setting.  Must be within the range of 0-31.
-                  OpenShift sets the bit to 0 by default. [Default: 14].'
+                description: 'KubeMasqueradeBit should be set to the same value as
+                  --iptables-masquerade-bit of kube-proxy when TPROXY is used. The
+                  default is the same as kube-proxy default thus only needs a change
+                  if kube-proxy is using a non-standard setting. Must be within the
+                  range of 0-31.  [Default: 14]'
                 type: integer
               kubeNodePortRanges:
                 description: 'KubeNodePortRanges holds list of port ranges used for
@@ -914,6 +942,12 @@ spec:
               tproxyPort:
                 description: 'TPROXYPort sets to which port proxied traffic should
                   be redirected. [Default: 16001]'
+                type: integer
+              tproxyUpstreamConnMark:
+                description: 'TPROXYUpstreamConnMark tells Felix which mark is used
+                  by the proxy for its upstream connections so that Felix can program
+                  the dataplane correctly.  [Default: 0x17]'
+                format: int32
                 type: integer
               usageReportingEnabled:
                 description: 'UsageReportingEnabled reports anonymous Calico version
