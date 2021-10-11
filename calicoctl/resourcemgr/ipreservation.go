@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019,2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017,2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,9 +17,8 @@ package resourcemgr
 import (
 	"context"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -27,45 +26,45 @@ import (
 
 func init() {
 	registerResource(
-		api.NewGlobalNetworkSet(),
-		newGlobalNetworkSetList(),
+		api.NewIPReservation(),
+		newIPReservationList(),
 		false,
-		[]string{"globalnetworkset", "globalnetworksets", "gnetsets"},
+		[]string{"ipreservation", "ipreservations", "reservation", "reservations"},
 		[]string{"NAME"},
-		[]string{"NAME", "NETS"},
+		[]string{"NAME", "CIDRS"},
 		map[string]string{
-			"NAME": "{{.ObjectMeta.Name}}",
-			"NETS": "{{joinAndTruncate .Spec.Nets \",\" 80}}",
+			"NAME":  "{{.ObjectMeta.Name}}",
+			"CIDRS": "{{joinAndTruncate .Spec.ReservedCIDRs \",\" 80}}",
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
-			r := resource.(*api.GlobalNetworkSet)
-			return client.GlobalNetworkSets().Create(ctx, r, options.SetOptions{})
+			r := resource.(*api.IPReservation)
+			return client.IPReservations().Create(ctx, r, options.SetOptions{})
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
-			r := resource.(*api.GlobalNetworkSet)
-			return client.GlobalNetworkSets().Update(ctx, r, options.SetOptions{})
+			r := resource.(*api.IPReservation)
+			return client.IPReservations().Update(ctx, r, options.SetOptions{})
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
-			r := resource.(*api.GlobalNetworkSet)
-			return client.GlobalNetworkSets().Delete(ctx, r.Name, options.DeleteOptions{ResourceVersion: r.ResourceVersion})
+			r := resource.(*api.IPReservation)
+			return client.IPReservations().Delete(ctx, r.Name, options.DeleteOptions{ResourceVersion: r.ResourceVersion})
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
-			r := resource.(*api.GlobalNetworkSet)
-			return client.GlobalNetworkSets().Get(ctx, r.Name, options.GetOptions{ResourceVersion: r.ResourceVersion})
+			r := resource.(*api.IPReservation)
+			return client.IPReservations().Get(ctx, r.Name, options.GetOptions{ResourceVersion: r.ResourceVersion})
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceListObject, error) {
-			r := resource.(*api.GlobalNetworkSet)
-			return client.GlobalNetworkSets().List(ctx, options.ListOptions{ResourceVersion: r.ResourceVersion, Name: r.Name})
+			r := resource.(*api.IPReservation)
+			return client.IPReservations().List(ctx, options.ListOptions{ResourceVersion: r.ResourceVersion, Name: r.Name})
 		},
 	)
 }
 
-// newNetworkSetList creates a new (zeroed) NetworkSetList struct with the TypeMetadata initialised to the current
+// newIPReservationList creates a new (zeroed) IPReservationList struct with the TypeMetadata initialised to the current
 // version.
-func newGlobalNetworkSetList() *api.GlobalNetworkSetList {
-	return &api.GlobalNetworkSetList{
+func newIPReservationList() *api.IPReservationList {
+	return &api.IPReservationList{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       api.KindGlobalNetworkSetList,
+			Kind:       api.KindIPReservationList,
 			APIVersion: api.GroupVersionCurrent,
 		},
 	}

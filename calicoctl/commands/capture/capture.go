@@ -3,11 +3,13 @@ package capture
 
 import (
 	"fmt"
-	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/common"
-	log "github.com/sirupsen/logrus"
 	"path"
 	"regexp"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/common"
 )
 
 // CopyCommand is a kubectl command that will be executed to copy capture files from a pod
@@ -24,6 +26,7 @@ const FindCaptureFileCommand = "kubectl exec -n %s %s -c %s -- find %s -type d -
 
 // CaptureNamespace used to execute commands inside pods
 const TigeraFluentDNS = "tigera-fluentd"
+
 // Container name used to execute commands inside pods
 const TigeraFluentD = "fluentd"
 
