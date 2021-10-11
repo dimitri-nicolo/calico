@@ -137,6 +137,7 @@ spec:
                       - Finished
                       - Scheduled
                       - Error
+                      - WaitingForTraffic
                       type: string
                   type: object
                 type: array

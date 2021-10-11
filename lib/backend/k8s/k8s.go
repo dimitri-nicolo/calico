@@ -106,6 +106,12 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 	kubeClient.registerResourceClient(
 		reflect.TypeOf(model.ResourceKey{}),
 		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindIPReservation,
+		resources.NewIPReservationClient(cs, crdClientV1),
+	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv3.KindGlobalNetworkPolicy,
 		resources.NewGlobalNetworkPolicyClient(cs, crdClientV1),
 	)
@@ -555,6 +561,7 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindGlobalNetworkSet,
 		apiv3.KindNetworkSet,
 		apiv3.KindIPPool,
+		apiv3.KindIPReservation,
 		apiv3.KindHostEndpoint,
 		apiv3.KindKubeControllersConfiguration,
 		apiv3.KindRemoteClusterConfiguration,
@@ -657,6 +664,8 @@ func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 					&apiv3.FelixConfigurationList{},
 					&apiv3.IPPool{},
 					&apiv3.IPPoolList{},
+					&apiv3.IPReservation{},
+					&apiv3.IPReservationList{},
 					&apiv3.BGPPeer{},
 					&apiv3.BGPPeerList{},
 					&apiv3.BGPConfiguration{},

@@ -182,8 +182,7 @@ func (b *AllocationBlock) IPToOrdinal(ip net.IP) (int, error) {
 
 // Calculates the IP at the given position within the block.  ord=0 gives the first IP in the block.
 func (b *AllocationBlock) OrdinalToIP(ord int) net.IP {
-	sum := big.NewInt(0).Add(net.IPToBigInt(net.IP{IP: b.CIDR.IP}), big.NewInt(int64(ord)))
-	return net.BigIntToIP(sum)
+	return b.CIDR.NthIP(ord)
 }
 
 type AllocationAttribute struct {
