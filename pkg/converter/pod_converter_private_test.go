@@ -17,10 +17,11 @@ package converter_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/projectcalico/kube-controllers/pkg/converter"
 	k8sconversion "github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
-	"k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Private repo tests to keep the private tests from conflicting with changes

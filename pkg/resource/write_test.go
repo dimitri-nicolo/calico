@@ -7,12 +7,13 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/projectcalico/kube-controllers/pkg/resource"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	tigeraapifake "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+
+	"github.com/projectcalico/kube-controllers/pkg/resource"
 )
 
 var _ = Describe("ConfigMap", func() {

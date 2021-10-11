@@ -5,15 +5,16 @@ package license
 import (
 	"fmt"
 
-	"github.com/projectcalico/kube-controllers/pkg/config"
-	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
-	"github.com/projectcalico/kube-controllers/pkg/controllers/worker"
-	"github.com/projectcalico/kube-controllers/pkg/resource"
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/tools/cache"
+
+	"github.com/projectcalico/kube-controllers/pkg/config"
+	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
+	"github.com/projectcalico/kube-controllers/pkg/controllers/worker"
+	"github.com/projectcalico/kube-controllers/pkg/resource"
 )
 
 type licenseController struct {

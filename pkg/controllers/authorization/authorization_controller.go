@@ -17,11 +17,12 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/worker"
 	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
 	"github.com/projectcalico/kube-controllers/pkg/resource"
-	log "github.com/sirupsen/logrus"
 )
 
 // authorizationController synchronizes kubernetes RBAC authorization with Elasticsearch authorization. At a high level,

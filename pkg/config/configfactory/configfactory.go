@@ -1,9 +1,10 @@
 package configfactory
 
 import (
+	"time"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"time"
 )
 
 func NewDefaultKubeControllersConfig(configName string) (*v3.KubeControllersConfiguration, error) {

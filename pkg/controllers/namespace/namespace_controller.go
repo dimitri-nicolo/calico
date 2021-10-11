@@ -21,6 +21,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	rcache "github.com/projectcalico/kube-controllers/pkg/cache"
 	"github.com/projectcalico/kube-controllers/pkg/config"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
@@ -29,7 +31,6 @@ import (
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

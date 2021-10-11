@@ -5,12 +5,13 @@ package license
 import (
 	"context"
 
-	"github.com/projectcalico/kube-controllers/pkg/resource"
 	log "github.com/sirupsen/logrus"
 	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/projectcalico/kube-controllers/pkg/resource"
 )
 
 type reconciler struct {

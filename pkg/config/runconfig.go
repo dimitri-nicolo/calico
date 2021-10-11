@@ -16,12 +16,13 @@ package config
 import (
 	"context"
 	"fmt"
-	"github.com/projectcalico/kube-controllers/pkg/config/configfactory"
 	"os"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/projectcalico/kube-controllers/pkg/config/configfactory"
 
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -31,10 +32,11 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	restclient "k8s.io/client-go/rest"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const datastoreBackoff = time.Second

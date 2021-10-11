@@ -26,12 +26,13 @@ import (
 	"github.com/projectcalico/kube-controllers/pkg/config"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
 
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/kube-controllers/pkg/converter"
 	kdd "github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

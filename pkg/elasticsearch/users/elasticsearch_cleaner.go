@@ -3,9 +3,11 @@
 package users
 
 import (
-	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
-	log "github.com/sirupsen/logrus"
 	"regexp"
+
+	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
 )
 
 // ESCleaner deletes residue elastic users and roles associated with

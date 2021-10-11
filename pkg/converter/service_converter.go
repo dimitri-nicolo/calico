@@ -22,8 +22,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
 
 	log "github.com/sirupsen/logrus"
 

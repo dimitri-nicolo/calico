@@ -19,12 +19,13 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/federatedservices"
 	"github.com/projectcalico/kube-controllers/tests/testutils"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 )
