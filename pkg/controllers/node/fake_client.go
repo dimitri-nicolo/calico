@@ -139,6 +139,11 @@ func (f *FakeCalicoClient) IPPools() clientv3.IPPoolInterface {
 	panic("not implemented")
 }
 
+// IPReservations returns an interface for managing IP pool resources.
+func (f *FakeCalicoClient) IPReservations() clientv3.IPReservationInterface {
+	panic("not implemented")
+}
+
 // Profiles returns an interface for managing profile resources.
 func (f *FakeCalicoClient) Profiles() clientv3.ProfileInterface {
 	panic("not implemented")
