@@ -29,6 +29,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
 	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
@@ -39,7 +41,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/net"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/options"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const (
