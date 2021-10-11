@@ -109,6 +109,11 @@ func (c client) IPPools() IPPoolInterface {
 	return ipPools{client: c}
 }
 
+// IPReservations returns an interface for managing IP pool resources.
+func (c client) IPReservations() IPReservationInterface {
+	return ipReservations{client: c}
+}
+
 // Profiles returns an interface for managing profile resources.
 func (c client) Profiles() ProfileInterface {
 	return profiles{client: c}
@@ -156,7 +161,7 @@ func (c client) UISettingsGroups() UISettingsGroupInterface {
 
 // IPAM returns an interface for managing IP address assignment and releasing.
 func (c client) IPAM() ipam.Interface {
-	return ipam.NewIPAMClient(c.backend, poolAccessor{client: &c})
+	return ipam.NewIPAMClient(c.backend, poolAccessor{client: &c}, c.IPReservations())
 }
 
 // BGPConfigurations returns an interface for managing the BGP configuration resources.

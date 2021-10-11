@@ -113,6 +113,11 @@ func init() {
 		reflect.TypeOf(apiv3.IPPool{}),
 	)
 	registerResourceInfo(
+		apiv3.KindIPReservation,
+		"ipreservations",
+		reflect.TypeOf(apiv3.IPReservation{}),
+	)
+	registerResourceInfo(
 		apiv3.KindNetworkPolicy,
 		"networkpolicies",
 		reflect.TypeOf(apiv3.NetworkPolicy{}),

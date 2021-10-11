@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,6 +35,8 @@ type Interface interface {
 	StagedKubernetesNetworkPolicies() StagedKubernetesNetworkPolicyInterface
 	// IPPools returns an interface for managing IP pool resources.
 	IPPools() IPPoolInterface
+	// IPReservations returns an interface for managing IP reservation resources.
+	IPReservations() IPReservationInterface
 	// Profiles returns an interface for managing profile resources.
 	Profiles() ProfileInterface
 	// GlobalNetworkSets returns an interface for managing global network sets resources.
