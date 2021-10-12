@@ -230,6 +230,11 @@ func (c client) DeepPacketInspections() DeepPacketInspectionInterface {
 	return deepPacketInspections{client: c}
 }
 
+// CalicoNodeStatus returns an interface for managing the CalicoNodeStatus resource.
+func (c client) CalicoNodeStatus() CalicoNodeStatusInterface {
+	return calicoNodeStatus{client: c}
+}
+
 type poolAccessor struct {
 	client *client
 }

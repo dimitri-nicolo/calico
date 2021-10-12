@@ -86,6 +86,8 @@ type Interface interface {
 	PacketCaptures() PacketCaptureInterface
 	// DeepPacketInspections returns an interface for managing the DPI resources.
 	DeepPacketInspections() DeepPacketInspectionInterface
+	// CalicoNodeStatus returns an interface for managing CalicoNodeStatus resources.
+	CalicoNodeStatus() CalicoNodeStatusInterface
 
 	// EnsureInitialized is used to ensure the backend datastore is correctly
 	// initialized for use by Calico.  This method may be called multiple times, and
