@@ -41,7 +41,7 @@ global_job_config:
       - git fetch --unshallow
 
 blocks:
-  - name: "Tests"
+  - name: "General Tests"
     dependencies: []
     task:
       secrets:
@@ -71,7 +71,7 @@ blocks:
           - make ut
           - make fv
 
-  - name: "System Tests"
+  - name: "Build amd64 Image"
     dependencies: []
     task:
       agent:
@@ -83,6 +83,16 @@ blocks:
         - name: private-repo
         # Mount a secret for pulling images from GCR.
         - name: tigera-dev-ci-pull-credentials
+      jobs:
+        - name: "Build amd64 Image"
+          execution_time_limit:
+            minutes: 120
+          commands:
+            - make image
+
+  - name: "System Tests"
+    dependencies: ["Build amd64 Image"]
+    task:
       prologue:
         commands:
           # Correct permissions since they are too open by default:
@@ -171,7 +181,7 @@ blocks:
           execution_time_limit:
             minutes: 120
           commands:
-            - make k8s-test K8ST_RIG=vanilla
+            - make k8s-test
         - name: "Dual Tor Tests"
           execution_time_limit:
             minutes: 120
@@ -221,7 +231,7 @@ blocks:
       jobs:
       - name: "make cd"
         execution_time_limit:
-          minutes: 30
+          minutes: 120
         commands:
         - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
         - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make image-all cd CONFIRM=true; fi

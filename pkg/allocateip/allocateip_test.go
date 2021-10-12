@@ -980,8 +980,12 @@ func (c shimClient) PacketCaptures() client.PacketCaptureInterface {
 	return c.client.PacketCaptures()
 }
 
+func (c shimClient) IPReservations() client.IPReservationInterface {
+	return c.client.IPReservations()
+}
+
 func newShimClientWithPoolAccessor(c client.Interface, be bapi.Client, pool ipam.PoolAccessorInterface) shimClient {
-	return shimClient{client: c, ic: ipam.NewIPAMClient(be, pool)}
+	return shimClient{client: c, ic: ipam.NewIPAMClient(be, pool, c.IPReservations())}
 }
 
 // Nodes returns an interface for managing node resources.
