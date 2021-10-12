@@ -20,14 +20,13 @@ require (
 	github.com/mitchellh/copystructure v1.1.1 // indirect
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.1
-	github.com/projectcalico/api v0.0.0-20211011193936-5bcbc3a5e8a9
 	github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba // indirect
 	github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54
 	github.com/prometheus/client_golang v1.11.0
 	github.com/robfig/cron v1.2.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/tchap/go-patricia/v2 v2.3.1
-	github.com/tigera/api v0.0.0-20211012184633-6179d1e61c8d
+	github.com/tigera/api v0.0.0-20211012203540-a8058565e3ef
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
 	golang.org/x/net v0.0.0-20210520170846-37e1c6afe023
