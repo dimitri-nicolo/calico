@@ -15,10 +15,10 @@
 package nodestatussyncer
 
 import (
-	apiv3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // New creates a new CalicoNodeStatus v1 Syncer.
