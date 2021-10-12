@@ -79,6 +79,7 @@ rules:
       - globalnetworksets
       - remoteclusterconfigurations
       - ippools
+      - ipreservations
       - kubecontrollersconfigurations
       - networkpolicies
       - networksets
