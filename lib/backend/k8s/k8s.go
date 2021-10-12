@@ -244,6 +244,12 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 	kubeClient.registerResourceClient(
 		reflect.TypeOf(model.ResourceKey{}),
 		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindCalicoNodeStatus,
+		resources.NewCalicoNodeStatusClient(cs, crdClientV1),
+	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv3.KindGlobalAlert,
 		resources.NewGlobalAlertClient(cs, crdClientV1),
 	)
@@ -549,6 +555,7 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindBGPPeer,
 		apiv3.KindClusterInformation,
 		apiv3.KindLicenseKey,
+		apiv3.KindCalicoNodeStatus,
 		apiv3.KindFelixConfiguration,
 		apiv3.KindGlobalNetworkPolicy,
 		apiv3.KindStagedGlobalNetworkPolicy,
@@ -724,6 +731,8 @@ func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 					&apiv3.UISettingsGroupList{},
 					&apiv3.UISettings{},
 					&apiv3.UISettingsList{},
+					&apiv3.CalicoNodeStatus{},
+					&apiv3.CalicoNodeStatusList{},
 				)
 				return nil
 			})

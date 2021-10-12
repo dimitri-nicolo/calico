@@ -1,6 +1,6 @@
 module github.com/projectcalico/libcalico-go
 
-go 1.15
+go 1.16
 
 require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
@@ -9,10 +9,6 @@ require (
 	github.com/alecthomas/participle v0.7.1
 	github.com/coreos/go-semver v0.3.0
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f // indirect
-	github.com/emicklei/go-restful v2.11.2-0.20200112161605-a7c079c43d51+incompatible // indirect
-	github.com/go-openapi/jsonreference v0.19.4-0.20191224164422-1f9748e5f45e // indirect
-	github.com/go-openapi/spec v0.19.5
-	github.com/go-openapi/swag v0.19.7 // indirect
 	github.com/go-playground/locales v0.12.1 // indirect
 	github.com/go-playground/universal-translator v0.0.0-20170327191703-71201497bace // indirect
 	github.com/google/gopacket v1.1.17
@@ -26,6 +22,7 @@ require (
 	github.com/mitchellh/copystructure v1.1.1 // indirect
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.1
+	github.com/projectcalico/api v0.0.0-20211011193936-5bcbc3a5e8a9
 	github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba // indirect
 	github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54
 	github.com/prometheus/client_golang v1.7.1
@@ -36,8 +33,8 @@ require (
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
 	go.uber.org/zap v1.13.0 // indirect
-	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
-	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
+	golang.org/x/net v0.0.0-20210520170846-37e1c6afe023
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
 	google.golang.org/grpc v1.27.1
 	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
@@ -46,12 +43,12 @@ require (
 
 	// validator.v9 must be at v9.30.2
 	gopkg.in/go-playground/validator.v9 v9.30.2
-	k8s.io/api v0.21.0
-	k8s.io/apimachinery v0.21.0
+	k8s.io/api v0.22.0
+	k8s.io/apimachinery v0.22.0
 	k8s.io/apiserver v0.21.0
-	k8s.io/client-go v0.21.0
+	k8s.io/client-go v0.22.0
 	k8s.io/code-generator v0.21.2
-	k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
+	k8s.io/kube-openapi v0.0.0-20210421082810-95288971da7e
 	sigs.k8s.io/kind v0.11.1
 )
 

@@ -1,5 +1,5 @@
-PACKAGE_NAME =github.com/projectcalico/libcalico-go
-GO_BUILD_VER =v0.55
+PACKAGE_NAME = github.com/projectcalico/libcalico-go
+GO_BUILD_VER = v0.57
 API_REPO     = github.com/tigera/api
 
 ORGANIZATION=tigera
@@ -232,7 +232,7 @@ $(BINDIR)/kind:
 
 $(BINDIR)/kubectl:
 	mkdir -p $(BINDIR)
-	curl -L https://storage.googleapis.com/kubernetes-release/release/v1.17.0/bin/linux/amd64/kubectl -o $@
+	curl -L https://storage.googleapis.com/kubernetes-release/release/$(K8S_VERSION)/bin/linux/amd64/kubectl -o $@
 	chmod +x $(BINDIR)/kubectl
 
 ## Stop the etcd container (calico-etcd)
