@@ -124,7 +124,7 @@ section:
     - title: Policy audit report
       path: /reference/compliance-reports/policy-audit
     - title: CIS Benchmark
-      path: /reference/compliance-reports/cis-benchmark  
+      path: /reference/compliance-reports/cis-benchmark
   - title: Deep packet inspection
     path: /reference/resources/deeppacketinspection
   - title: Felix configuration
@@ -143,6 +143,8 @@ section:
     path: /reference/resources/hostendpoint
   - title: IP pool
     path: /reference/resources/ippool
+  - title: IP reservation
+    path: /reference/resources/ipreservation
   - title: License key
     path: /reference/resources/licensekey
   - title: Kubernetes controllers configuration
@@ -180,7 +182,7 @@ section:
     path: /reference/architecture/data-path
   - title: Network design
     path: /reference/architecture/design/
-    section: 
+    section:
     - title: Calico Enterprise over Ethernet fabrics
       path: /reference/architecture/design/l2-interconnect-fabric
     - title: Calico Enterprise over IP fabrics
@@ -199,7 +201,7 @@ section:
       path: /reference/kube-controllers/prometheus
   - title: Calico Enterprise node (cnx-node)
     path: /reference/node/
-    section: 
+    section:
     - title: cnx-node
       path: /reference/node/configuration
     - title: Felix
