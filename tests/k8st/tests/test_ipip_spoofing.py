@@ -98,8 +98,9 @@ class TestSpoof(TestBase):
 
             # clear conntrack table on all hosts
             self.clear_conntrack()
+
             # test connectivity works pod-pod
-            retry_until_success(self.send_and_check, function_args=["ipip-normal", remote_pod_ip])
+            retry_until_success(self.send_and_check, retries=120, function_args=["ipip-normal", remote_pod_ip])
 
             # clear conntrack table on all hosts
             self.clear_conntrack()
@@ -139,8 +140,9 @@ class TestSpoof(TestBase):
 
             # clear conntrack table on all hosts
             self.clear_conntrack()
+
             # test connectivity works pod-pod
-            retry_until_success(self.send_and_check, function_args=["vxlan-normal", remote_pod_ip])
+            retry_until_success(self.send_and_check, retries=120, function_args=["vxlan-normal", remote_pod_ip])
 
             # clear conntrack table on all hosts
             self.clear_conntrack()

@@ -387,7 +387,8 @@ cluster-create: $(BINDIR)/kubectl $(BINDIR)/kind
 
 ## Deploy resources on the kind cluster that are needed for tests
 deploy-test-resources: $(BINDIR)/kubectl calico-node.tar
-	KUBECONFIG=$(KUBECONFIG) ./tests/k8st/deploy_resources_on_kind_cluster.sh
+	KUBECONFIG=$(KUBECONFIG) GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) TSEE_TEST_LICENSE=$(TSEE_TEST_LICENSE) \
+		   ./tests/k8st/deploy_resources_on_kind_cluster.sh
 
 ## Destroy local kind cluster
 cluster-destroy: $(BINDIR)/kubectl $(BINDIR)/kind
@@ -575,6 +576,13 @@ tests/k8st/reliable-nc/bin/reliable-nc: tests/k8st/reliable-nc/reliable-nc.go
 ## --nocapture --nologcapture" to K8ST_TO_RUN.  For example:
 ##
 ## make k8s-test K8ST_TO_RUN="tests/test_dns_policy.py -s --nocapture --nologcapture"
+##
+## K8ST_RIG can be "dual_stack" or "vanilla".  "dual_stack" means set
+## up for dual stack testing; it requires KIND changes that have not
+## yet been merged to master, and runs kube-proxy in IPVS mode.
+## "vanilla" means use vanilla upstream master KIND.
+K8ST_RIG?=dual_stack
+K8ST_TO_RUN?=-A $(K8ST_RIG)
 
 .PHONY: k8s-test
 k8s-test:
@@ -593,6 +601,7 @@ kind-k8st-run-test: calico_test.created $(KUBECONFIG)
 	    -v $(CURDIR)/$(KUBECONFIG):/root/.kube/config \
 	    -v $(CURDIR)/$(BINDIR)/kubectl:/bin/kubectl \
 	    -e ROUTER_IMAGE=$(BIRD_IMAGE) \
+	    -e K8ST_RIG=$(K8ST_RIG) \
 	    --privileged \
 	    --net host \
 	${TEST_CONTAINER_NAME} \
@@ -629,6 +638,7 @@ st: image remote-deps dist/calicoctl busybox.tar cnx-node.tar workload.tar run-e
 		   --net=host \
 		   --privileged \
 		   -v $(CURDIR):/code \
+		   -v $(TSEE_TEST_LICENSE):/license.yaml \
 		   -e HOST_CHECKOUT_DIR=$(CURDIR) \
 		   -e DEBUG_FAILURES=$(DEBUG_FAILURES) \
 		   -e MY_IP=$(LOCAL_IP_ENV) \

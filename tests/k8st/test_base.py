@@ -22,7 +22,6 @@ from unittest import TestCase
 from deepdiff import DeepDiff
 from kubernetes import client, config
 
-from utils.utils import DOCKER_RUN_NET_ARG
 from utils.utils import retry_until_success, run, kubectl
 
 logger = logging.getLogger(__name__)
@@ -256,7 +255,7 @@ class TestBase(TestCase):
     def get_ds_env(self, ds, ns, key):
         config.load_kube_config(os.environ.get('KUBECONFIG'))
         api = client.AppsV1Api(client.ApiClient())
-        node_ds = api.read_namespaced_daemon_set(ds, ns, exact=True, export=True)
+        node_ds = api.read_namespaced_daemon_set(ds, ns, exact=True, export=False)
         for container in node_ds.spec.template.spec.containers:
             if container.name == ds:
                 for env in container.env:
@@ -328,8 +327,7 @@ TestBase.dual_tor = False
 class Container(object):
 
     def __init__(self, image, args, flags=""):
-        self.id = run("docker run --rm -d %s %s %s %s" % (
-            DOCKER_RUN_NET_ARG,
+        self.id = run("docker run --rm -d --net=kind %s %s %s" % (
             flags,
             image,
             args)).strip().split("\n")[-1].strip()
@@ -367,7 +365,7 @@ class Container(object):
 
 class Pod(object):
 
-    def __init__(self, ns, name, node=None, image=None, labels=None, annotations=None, yaml=None):
+    def __init__(self, ns, name, node=None, image=None, labels=None, annotations=None, yaml=None, cmd=None):
         if yaml:
             # Caller has provided the complete pod YAML.
             kubectl("""apply -f - <<'EOF'
@@ -399,6 +397,8 @@ EOF
                 pod["metadata"]["annotations"] = annotations
             if labels:
                 pod["metadata"]["labels"] = labels
+            if cmd:
+                pod["spec"]["containers"][0]["command"] = cmd
             kubectl("""apply -f - <<'EOF'
 %s
 EOF

@@ -130,6 +130,7 @@ nodeLoop:
 	}
 	if thisNode == nil {
 		logrus.WithField("routerID", routerID).Fatal("Failed to find config for this node")
+		return
 	}
 	logrus.WithField("cfg", *thisNode).Info("Found config for this node")
 

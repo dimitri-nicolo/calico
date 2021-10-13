@@ -254,6 +254,7 @@ class TestBGPAdvertV6(_TestBGPAdvertV6):
     def get_extra_peer_spec(self):
         return """
 spec:
+  nodeSelector: all()
   peerIP: %s
   asNumber: 64512
 """ % self.external_node_ip

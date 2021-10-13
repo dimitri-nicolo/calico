@@ -15,10 +15,6 @@ TEST_DIR=./tests/k8st
 # kind binary.
 : ${KIND:=./bin/kind}
 
-function dual_stack {
-    test "${K8ST_RIG}" = dual_stack
-}
-
 function checkModule(){
   MODULE="$1"
   echo "Checking kernel module $MODULE ..."
@@ -38,7 +34,6 @@ function load_image() {
 
 function update_calico_manifest() {
     local yaml=$1
-    if dual_stack; then
 	# Based on instructions in http://docs.projectcalico.org/master/networking/dual-stack.md
 	# add assign_ipv4 and assign_ipv6 to CNI config
 	sed -i -e '/"type": "calico-ipam"/r /dev/stdin' "${yaml}" <<EOF
@@ -62,10 +57,9 @@ EOF
 EOF
 	# update FELIX_IPV6SUPPORT=true
 	sed -i '/FELIX_IPV6SUPPORT/!b;n;c\              value: "true"' "${yaml}"
-    else
-	# For vanilla setup, we don't want any IP-IP or VXLAN overlay.
+
+	# We don't want any IP-IP or VXLAN overlay.
 	sed -i 's/Always/Never/' "${yaml}"
-    fi
 
     # update calico/node image
     sed -i 's,image: .*calico/node:.*,image: tigera/cnx-node:latest-amd64,' "${yaml}"
@@ -102,7 +96,7 @@ ${kubectl} -n kube-system create secret generic cnx-pull-secret \
 
 echo "Install Calico and Calicoctl for dualstack"
 cp $TEST_DIR/infra/calico-kdd.yaml $TEST_DIR/infra/calico.yaml.tmp
-enable_dual_stack $TEST_DIR/infra/calico.yaml.tmp
+update_calico_manifest $TEST_DIR/infra/calico.yaml.tmp
 ${kubectl} apply -f $TEST_DIR/infra/calico.yaml.tmp
 rm $TEST_DIR/infra/calico.yaml.tmp
 

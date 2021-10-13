@@ -181,7 +181,7 @@ blocks:
           execution_time_limit:
             minutes: 120
           commands:
-            - make k8s-test
+            - make k8s-test K8ST_RIG=vanilla
         - name: "Dual Tor Tests"
           execution_time_limit:
             minutes: 120
@@ -209,7 +209,7 @@ blocks:
   # If tests passed, then build and push images.
   # We'll only do this on non-PR builds, where we have credentials to do so.
   - name: "Push images and Windows installation zip file (non-PR builds only)"
-    dependencies: ["Tests", "System Tests", "Specialized Tests"]
+    dependencies: ["General Tests", "System Tests", "Specialized Tests"]
     task:
       secrets:
         # Mount a secret for pulling images from GCR.
