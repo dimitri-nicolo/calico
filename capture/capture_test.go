@@ -66,6 +66,8 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 	var captureDir string
 
 	BeforeEach(func() {
+		defer GinkgoRecover()
+
 		var err error
 
 		baseDir, err = ioutil.TempDir("/tmp", "pcap-tests")
@@ -74,6 +76,8 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 	})
 
 	AfterEach(func() {
+		defer GinkgoRecover()
+
 		var err = os.RemoveAll(baseDir)
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -122,9 +126,12 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		assertPcapFiles(captureDir, expectedFiles)
 
 		// Assert that an update was sent
-		var update *proto.PacketCaptureStatusUpdate
-		Eventually(updates).Should(Receive(&update))
-		assertStatusUpdates(update, expectedFiles, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
+		var waitingForTrafficUpdate *proto.PacketCaptureStatusUpdate
+		var capturingUpdate *proto.PacketCaptureStatusUpdate
+		Eventually(updates).Should(Receive(&waitingForTrafficUpdate))
+		Eventually(updates).Should(Receive(&capturingUpdate))
+		assertStatusUpdates(waitingForTrafficUpdate, []outputFile{}, namespace, name, proto.PacketCaptureStatusUpdate_WAITING_FOR_TRAFFIC)
+		assertStatusUpdates(capturingUpdate, expectedFiles, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
 	}, 10)
 
 	It("Writes 10 packet in a pcap file", func(done Done) {
@@ -177,9 +184,12 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		assertPcapFiles(captureDir, expectedFiles)
 
 		// Assert that an update was sent
-		var update *proto.PacketCaptureStatusUpdate
-		Eventually(updates).Should(Receive(&update))
-		assertStatusUpdates(update, expectedFiles, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
+		var waitingForTrafficUpdate *proto.PacketCaptureStatusUpdate
+		var capturingUpdate *proto.PacketCaptureStatusUpdate
+		Eventually(updates).Should(Receive(&waitingForTrafficUpdate))
+		Eventually(updates).Should(Receive(&capturingUpdate))
+		assertStatusUpdates(waitingForTrafficUpdate, []outputFile{}, namespace, name, proto.PacketCaptureStatusUpdate_WAITING_FOR_TRAFFIC)
+		assertStatusUpdates(capturingUpdate, expectedFiles, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
 	}, 10)
 
 	It("Rotates pcap files using size", func(done Done) {
@@ -232,13 +242,15 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		assertPcapFiles(captureDir, expectedFiles)
 
 		// Assert that three updates were sent
-		var update = make([]*proto.PacketCaptureStatusUpdate, 3)
+		var update = make([]*proto.PacketCaptureStatusUpdate, 4)
 		Eventually(updates).Should(Receive(&update[0]))
 		Eventually(updates).Should(Receive(&update[1]))
 		Eventually(updates).Should(Receive(&update[2]))
-		assertStatusUpdates(update[0], []outputFile{currentOrderTwoFileSizeOnePacket}, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
-		assertStatusUpdates(update[1], []outputFile{currentOrderTwoFileSizeOnePacket, rotatedFileOrderOneSizeOnePacket}, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
-		assertStatusUpdates(update[2], expectedFiles, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
+		Eventually(updates).Should(Receive(&update[3]))
+		assertStatusUpdates(update[0], []outputFile{}, namespace, name, proto.PacketCaptureStatusUpdate_WAITING_FOR_TRAFFIC)
+		assertStatusUpdates(update[1], []outputFile{currentOrderTwoFileSizeOnePacket}, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
+		assertStatusUpdates(update[2], []outputFile{currentOrderTwoFileSizeOnePacket, rotatedFileOrderOneSizeOnePacket}, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
+		assertStatusUpdates(update[3], expectedFiles, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
 	}, 10)
 
 	It("Rotates pcap files using time", func(done Done) {
@@ -301,21 +313,23 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		})
 
 		// Assert that three updates were sent
-		var update = make([]*proto.PacketCaptureStatusUpdate, 3)
+		var update = make([]*proto.PacketCaptureStatusUpdate, 4)
 		Eventually(updates).Should(Receive(&update[0]))
 		Eventually(updates).Should(Receive(&update[1]))
 		Eventually(updates).Should(Receive(&update[2]))
-		assertStatusUpdates(update[0], []outputFile{currentOrderTwoFileSizeOnePacket}, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
-		assertStatusUpdates(update[1], []outputFile{
+		Eventually(updates).Should(Receive(&update[3]))
+		assertStatusUpdates(update[0], []outputFile{}, namespace, name, proto.PacketCaptureStatusUpdate_WAITING_FOR_TRAFFIC)
+		assertStatusUpdates(update[1], []outputFile{currentOrderTwoFileSizeOnePacket}, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
+		assertStatusUpdates(update[2], []outputFile{
 			currentOrderTwoFileSizeOnePacket,
 			rotatedFileOrderOneSizeOnePacket}, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
-		assertStatusUpdates(update[2], []outputFile{
+		assertStatusUpdates(update[3], []outputFile{
 			currentOrderTwoFileSizeOnePacket,
 			rotatedFileOrderOneSizeOnePacket,
 			rotatedFileOrderZeroSizeOnePacket}, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
 	}, 10)
 
-	It("Do not rotate an empty file", func(done Done) {
+	It("No pcap file will be written until first packet", func(done Done) {
 		defer close(done)
 		var err error
 		var maxAge = 1
@@ -346,21 +360,10 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		// wait for time rotation to be invoked
 		timeChan <- time.Now()
 
-		// Define expected files
-		var expectedFiles = []outputFile{
-			{
-				Name: fmt.Sprintf("%s_%s.pcap", podName, deviceName),
-				Size: capture.GlobalHeaderLen,
-			},
-		}
-
-		// Assert written files on disk
-		assertPcapFiles(captureDir, expectedFiles)
-
 		// Assert that an update was sent
 		var update *proto.PacketCaptureStatusUpdate
 		Eventually(updates).Should(Receive(&update))
-		assertStatusUpdates(update, expectedFiles, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
+		assertStatusUpdates(update, []outputFile{}, namespace, name, proto.PacketCaptureStatusUpdate_WAITING_FOR_TRAFFIC)
 	}, 10)
 
 	It("Invoke size rotation before time rotation in a stream of data", func(done Done) {
@@ -491,11 +494,13 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 			rotatedFileOrderZeroSizeFivePackets,
 		})
 		// Assert that two updates were sent
-		var update = make([]*proto.PacketCaptureStatusUpdate, 2)
+		var update = make([]*proto.PacketCaptureStatusUpdate, 3)
 		Eventually(updates).Should(Receive(&update[0]))
 		Eventually(updates).Should(Receive(&update[1]))
-		assertStatusUpdates(update[0], []outputFile{currentFileOrderOneSizeFivePackets}, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
-		assertStatusUpdates(update[1], []outputFile{
+		Eventually(updates).Should(Receive(&update[2]))
+		assertStatusUpdates(update[0], []outputFile{}, namespace, name, proto.PacketCaptureStatusUpdate_WAITING_FOR_TRAFFIC)
+		assertStatusUpdates(update[1], []outputFile{currentFileOrderOneSizeFivePackets}, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
+		assertStatusUpdates(update[2], []outputFile{
 			currentFileOrderOneSizeFivePackets,
 			rotatedFileOrderZeroSizeFivePackets}, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
 	}, 10)
@@ -551,16 +556,17 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		})
 
 		// Assert that three updates were sent
-		var update = make([]*proto.PacketCaptureStatusUpdate, 10)
+		var update = make([]*proto.PacketCaptureStatusUpdate, 11)
 		for i := 0; i < numberOfPackets; i++ {
 			Eventually(updates).Should(Receive(&update[i]))
 		}
 
-		assertStatusUpdates(update[0], []outputFile{currentOrderTwoFileSizeOnePacket}, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
-		assertStatusUpdates(update[1], []outputFile{
+		assertStatusUpdates(update[0], []outputFile{}, namespace, name, proto.PacketCaptureStatusUpdate_WAITING_FOR_TRAFFIC)
+		assertStatusUpdates(update[1], []outputFile{currentOrderTwoFileSizeOnePacket}, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
+		assertStatusUpdates(update[2], []outputFile{
 			currentOrderTwoFileSizeOnePacket,
 			rotatedFileOrderOneSizeOnePacket}, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
-		for i := 2; i < numberOfPackets; i++ {
+		for i := 3; i < numberOfPackets; i++ {
 			assertStatusUpdates(update[i], []outputFile{
 				currentOrderTwoFileSizeOnePacket,
 				rotatedFileOrderOneSizeOnePacket,
@@ -599,9 +605,12 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 			currentOrderTwoFileSizeOnePacket,
 		})
 		// Assert that an update was sent
-		var updateOne *proto.PacketCaptureStatusUpdate
-		Eventually(updates).Should(Receive(&updateOne))
-		assertStatusUpdates(updateOne, []outputFile{
+		var updateOne = make([]*proto.PacketCaptureStatusUpdate, 2)
+		Eventually(updates).Should(Receive(&updateOne[0]))
+		Eventually(updates).Should(Receive(&updateOne[1]))
+		assertStatusUpdates(updateOne[0], []outputFile{}, namespace, name,
+			proto.PacketCaptureStatusUpdate_WAITING_FOR_TRAFFIC)
+		assertStatusUpdates(updateOne[1], []outputFile{
 			currentOrderTwoFileSizeOnePacket,
 		}, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
 
@@ -625,9 +634,13 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 			currentOrderTwoFileSizeTwoPackets,
 		})
 		// Assert that an update was sent
-		var updateTwo *proto.PacketCaptureStatusUpdate
-		Eventually(updates).Should(Receive(&updateTwo))
-		assertStatusUpdates(updateTwo, []outputFile{
+		var updateTwo = make([]*proto.PacketCaptureStatusUpdate, 2)
+		Eventually(updates).Should(Receive(&updateTwo[0]))
+		Eventually(updates).Should(Receive(&updateTwo[1]))
+		assertStatusUpdates(updateTwo[0], []outputFile{
+			currentOrderTwoFileSizeTwoPackets,
+		}, namespace, name, proto.PacketCaptureStatusUpdate_WAITING_FOR_TRAFFIC)
+		assertStatusUpdates(updateTwo[1], []outputFile{
 			currentOrderTwoFileSizeTwoPackets,
 		}, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
 	}, 10)
@@ -661,9 +674,13 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 			currentOrderTwoFileSizeOnePacket,
 		})
 		// Assert that an update was sent
-		var update *proto.PacketCaptureStatusUpdate
-		Eventually(updates).Should(Receive(&update))
-		assertStatusUpdates(update, []outputFile{
+		var waitingForTrafficUpdate *proto.PacketCaptureStatusUpdate
+		var capturingUpdate *proto.PacketCaptureStatusUpdate
+		Eventually(updates).Should(Receive(&waitingForTrafficUpdate))
+		Eventually(updates).Should(Receive(&capturingUpdate))
+		assertStatusUpdates(waitingForTrafficUpdate, []outputFile{}, namespace, name,
+			proto.PacketCaptureStatusUpdate_WAITING_FOR_TRAFFIC)
+		assertStatusUpdates(capturingUpdate, []outputFile{
 			currentOrderTwoFileSizeOnePacket,
 		}, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
 	}, 10)
@@ -763,9 +780,14 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		})
 
 		// Assert that an update was sent
-		var update *proto.PacketCaptureStatusUpdate
-		Eventually(updates).Should(Receive(&update))
-		assertStatusUpdates(update, []outputFile{
+		var waitingForTrafficUpdate *proto.PacketCaptureStatusUpdate
+		var capturingUpdate *proto.PacketCaptureStatusUpdate
+		Eventually(updates).Should(Receive(&waitingForTrafficUpdate))
+		Eventually(updates).Should(Receive(&capturingUpdate))
+		assertStatusUpdates(waitingForTrafficUpdate, []outputFile{
+			dummyFile,
+		}, namespace, name, proto.PacketCaptureStatusUpdate_WAITING_FOR_TRAFFIC)
+		assertStatusUpdates(capturingUpdate, []outputFile{
 			currentOrderTwoFileSizeOnePacket,
 			dummyFile,
 		}, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
@@ -800,9 +822,13 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 			currentOrderTwoFileSizeOnePacket,
 		})
 		// Assert that an update was sent
-		var update *proto.PacketCaptureStatusUpdate
-		Eventually(updates).Should(Receive(&update))
-		assertStatusUpdates(update, []outputFile{
+		var waitingForTrafficUpdate *proto.PacketCaptureStatusUpdate
+		var capturingUpdate *proto.PacketCaptureStatusUpdate
+		Eventually(updates).Should(Receive(&waitingForTrafficUpdate))
+		Eventually(updates).Should(Receive(&capturingUpdate))
+		assertStatusUpdates(waitingForTrafficUpdate, []outputFile{}, namespace, name,
+			proto.PacketCaptureStatusUpdate_WAITING_FOR_TRAFFIC)
+		assertStatusUpdates(capturingUpdate, []outputFile{
 			currentOrderTwoFileSizeOnePacket,
 		}, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
 
@@ -860,10 +886,13 @@ var _ = Describe("PacketCapture Capture Tests", func() {
 		assertPcapFiles(captureDir, expectedFiles)
 
 		// Assert that an update was sent
+		var waitingForTrafficUpdate *proto.PacketCaptureStatusUpdate
 		var capturingUpdate *proto.PacketCaptureStatusUpdate
 		var finishedUpdate *proto.PacketCaptureStatusUpdate
+		Eventually(updates).Should(Receive(&waitingForTrafficUpdate))
 		Eventually(updates).Should(Receive(&capturingUpdate))
 		Eventually(updates).Should(Receive(&finishedUpdate))
+		assertStatusUpdates(waitingForTrafficUpdate, []outputFile{}, namespace, name, proto.PacketCaptureStatusUpdate_WAITING_FOR_TRAFFIC)
 		assertStatusUpdates(capturingUpdate, expectedFiles, namespace, name, proto.PacketCaptureStatusUpdate_CAPTURING)
 		assertStatusUpdates(finishedUpdate, expectedFiles, namespace, name, proto.PacketCaptureStatusUpdate_FINISHED)
 	}, 15)

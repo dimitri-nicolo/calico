@@ -73,15 +73,16 @@ type rotatingPcapFile struct {
 	endTime         time.Time
 
 	// the parameters below should not be made available to users
-	currentSize  int
-	lastRotation time.Time
-	output       *os.File
-	writer       *pcapgo.Writer
-	handle       *pcap.Handle
-	ticker       *time.Ticker
-	loggingID    string
-	context      context.Context
-	cancel       context.CancelFunc
+	currentSize       int
+	lastRotation      time.Time
+	output            *os.File
+	writer            *pcapgo.Writer
+	handle            *pcap.Handle
+	ticker            *time.Ticker
+	loggingID         string
+	context           context.Context
+	cancel            context.CancelFunc
+	isCaptureFileOpen bool
 }
 
 type Option func(file *rotatingPcapFile)
@@ -231,11 +232,14 @@ func (capture *rotatingPcapFile) open() error {
 		capture.currentSize = int(info.Size())
 	}
 
-	return err
+	capture.isCaptureFileOpen = true
+
+	return nil
 }
 
 func (capture *rotatingPcapFile) close() error {
 	log.WithField("CAPTURE", capture.loggingID).Debug("Closing pcap file")
+	capture.isCaptureFileOpen = false
 	return capture.output.Close()
 }
 
@@ -359,19 +363,13 @@ func (capture *rotatingPcapFile) Write(packets chan gopacket.Packet) error {
 	if capture.isDone {
 		return fmt.Errorf("capture has been already closed")
 	}
-
-	var err error
-	log.WithField("CAPTURE", capture.loggingID).Debug("Start writing packets to pcap files")
-	if err = capture.open(); err != nil {
-		return err
-	}
 	defer capture.doDone()
 
-	err, files := capture.listFiles(false)
+	var err, files = capture.listFiles(false)
 	if err != nil {
 		return err
 	}
-	capture.updateStatus(capture.extractFileNames(files), proto.PacketCaptureStatusUpdate_CAPTURING)
+	capture.updateStatus(capture.extractFileNames(files), proto.PacketCaptureStatusUpdate_WAITING_FOR_TRAFFIC)
 
 	var delay = capture.endTime.Sub(time.Now())
 	var endAfter = time.After(delay)
@@ -384,6 +382,18 @@ func (capture *rotatingPcapFile) Write(packets chan gopacket.Packet) error {
 		case packet := <-packets:
 			if packet == nil {
 				continue
+			}
+
+			if capture.isCaptureFileOpen == false {
+				log.WithField("CAPTURE", capture.loggingID).Debug("Start writing packets to pcap files")
+				if err = capture.open(); err != nil {
+					return err
+				}
+				err, files := capture.listFiles(false)
+				if err != nil {
+					return err
+				}
+				capture.updateStatus(capture.extractFileNames(files), proto.PacketCaptureStatusUpdate_CAPTURING)
 			}
 
 			// check if rotation is needed due to size

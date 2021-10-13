@@ -790,6 +790,7 @@ message PacketCaptureStatusUpdate {
     CAPTURING = 1;
     FINISHED = 2;
     ERROR = 3;
+    WAITING_FOR_TRAFFIC = 4;
   }
   PacketCaptureState state = 3;
 }

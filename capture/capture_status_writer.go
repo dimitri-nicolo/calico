@@ -115,6 +115,8 @@ func convert(state proto.PacketCaptureStatusUpdate_PacketCaptureState) v3.Packet
 		return v3.PacketCaptureStateScheduled
 	case proto.PacketCaptureStatusUpdate_ERROR:
 		return v3.PacketCaptureStateError
+	case proto.PacketCaptureStatusUpdate_WAITING_FOR_TRAFFIC:
+		return v3.PacketCaptureStateWaitingForTraffic
 	}
 
 	return v3.PacketCaptureStateError
