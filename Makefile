@@ -1,5 +1,5 @@
 PACKAGE_NAME=github.com/projectcalico/cni-plugin
-GO_BUILD_VER?=v0.55
+GO_BUILD_VER=v0.58
 
 GIT_USE_SSH = true
 
@@ -48,6 +48,9 @@ $(LOCAL_BUILD_DEP):
 	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
 endif
 
+# Add in local static-checks
+LOCAL_CHECKS=check-boring-ssl
+
 include Makefile.common
 
 ###############################################################################
@@ -71,6 +74,13 @@ ETCD_CONTAINER ?= quay.io/coreos/etcd:$(ETCD_VERSION)-$(BUILDARCH)
 # If building on amd64 omit the arch in the container name.
 ifeq ($(BUILDARCH),amd64)
 	ETCD_CONTAINER=quay.io/coreos/etcd:$(ETCD_VERSION)
+endif
+
+# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
+ifeq ($(ARCH), $(filter $(ARCH),amd64))
+CGO_ENABLED=1
+else
+CGO_ENABLED=0
 endif
 
 .PHONY: clean
@@ -125,22 +135,15 @@ sub-build-%:
 $(BIN)/install binary: $(LOCAL_BUILD_DEP) $(SRC_FILES)
 	-mkdir -p .go-pkg-cache
 	-mkdir -p $(BIN)
-	$(DOCKER_RUN) \
-	-e ARCH=$(ARCH) \
-	$(GOARCH_FLAGS) \
-	-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-	-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-	-v $(CURDIR)/$(BIN):/go/src/$(PACKAGE_NAME)/$(BIN):rw \
-	$(LOCAL_BUILD_MOUNTS) \
-	-w /go/src/$(PACKAGE_NAME) \
-	-e GOCACHE=/go-cache \
-	    $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-		go build -v -o $(BIN)/install -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" $(PACKAGE_NAME)/cmd/calico'
+	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
+		$(GIT_CONFIG_SSH) go build -v -o $(BIN)/install -ldflags "-X main.VERSION=$(GIT_VERSION) -w" $(PACKAGE_NAME)/cmd/calico && \
+		go tool nm $(BIN)/install > $(BIN)/tags.txt && grep '_Cfunc__goboringcrypto_' $(BIN)/tags.txt 1> /dev/null
 
 ## Build the Calico network plugin and ipam plugins for Windows
 $(BIN_WIN)/calico.exe $(BIN_WIN)/calico-ipam.exe: $(LOCAL_BUILD_DEP) $(SRC_FILES)
 	$(DOCKER_RUN) \
 	-e GOOS=windows \
+	-e CGO_ENABLED=1 \
 	    $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 		go build -v -o $(BIN_WIN)/calico.exe -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" $(PACKAGE_NAME)/cmd/calico && \
 		go build -v -o $(BIN_WIN)/calico-ipam.exe -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" $(PACKAGE_NAME)/cmd/calico'
@@ -189,6 +192,11 @@ ut: run-k8s-controller $(BIN)/install $(BIN)/host-local $(BIN)/calico-ipam $(BIN
 	$(MAKE) ut-datastore DATASTORE_TYPE=etcdv3
 	$(MAKE) ut-datastore DATASTORE_TYPE=kubernetes
 
+check-boring-ssl: $(BIN)/install
+	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
+		go tool nm $(BIN)/install > $(BIN)/tags.txt && grep '_Cfunc__goboringcrypto_' $(BIN)/tags.txt 1> /dev/null
+	-rm -f $(BIN)/tags.txt
+
 $(BIN)/calico-ipam $(BIN)/calico: $(BIN)/install
 	cp "$<" "$@"
 
@@ -205,8 +213,9 @@ ut-datastore: $(LOCAL_BUILD_DEP)
 	-e CNI_SPEC_VERSION=$(CNI_SPEC_VERSION) \
 	-e DATASTORE_TYPE=$(DATASTORE_TYPE) \
 	-e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 \
-	-e K8S_API_ENDPOINT=http://127.0.0.1:8080 \
+	-e KUBECONFIG=/home/user/certs/kubeconfig \
 	-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+	-v $(CURDIR)/tests/certs:/home/user/certs \
 	$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 			cd  /go/src/$(PACKAGE_NAME) && \
 			ginkgo -cover -r -skipPackage pkg/install $(GINKGO_ARGS)'
@@ -239,12 +248,24 @@ config/crd: mod-download
 run-k8s-apiserver: config/crd stop-k8s-apiserver run-etcd
 	docker run --detach --net=host \
 	  --name calico-k8s-apiserver \
-	  -v `pwd`/config:/config \
-	  -v `pwd`/internal/pkg/testutils/private.key:/private.key \
-	  gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION) kube-apiserver \
+	  -v $(CURDIR)/config:/config \
+	  -v $(CURDIR)/tests/certs:/home/user/certs \
+	  -e KUBECONFIG=/home/user/certs/kubeconfig \
+	  $(CALICO_BUILD) kube-apiserver \
 	    --etcd-servers=http://$(LOCAL_IP_ENV):2379 \
 	    --service-cluster-ip-range=10.101.0.0/16 \
-	    --service-account-key-file=/private.key
+            --authorization-mode=RBAC \
+            --service-account-key-file=/home/user/certs/service-account.pem \
+            --service-account-signing-key-file=/home/user/certs/service-account-key.pem \
+            --service-account-issuer=https://localhost:443 \
+            --api-audiences=kubernetes.default \
+            --client-ca-file=/home/user/certs/ca.pem \
+            --tls-cert-file=/home/user/certs/kubernetes.pem \
+            --tls-private-key-file=/home/user/certs/kubernetes-key.pem \
+            --enable-priority-and-fairness=false \
+            --max-mutating-requests-inflight=0 \
+            --max-requests-inflight=0
+
 	# Wait until the apiserver is accepting requests.
 	while ! docker exec calico-k8s-apiserver kubectl get nodes; do echo "Waiting for apiserver to come up..."; sleep 2; done
 	while ! docker exec calico-k8s-apiserver kubectl apply -f /config/crd; do echo "Waiting for CRDs..."; sleep 2; done
@@ -253,14 +274,16 @@ run-k8s-apiserver: config/crd stop-k8s-apiserver run-etcd
 run-k8s-controller: stop-k8s-controller run-k8s-apiserver
 	docker run --detach --net=host \
 	  --name calico-k8s-controller \
-	  -v `pwd`/internal/pkg/testutils/private.key:/private.key \
-	  gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION) kube-controller-manager \
-	    --master=127.0.0.1:8080 \
-	    --min-resync-period=3m \
-	    --allocate-node-cidrs=true \
-	    --cluster-cidr=192.168.0.0/16 \
-	    --v=5 \
-	    --service-account-private-key-file=/private.key
+	  -v $(PWD)/tests/certs:/home/user/certs \
+	  $(CALICO_BUILD) kube-controller-manager \
+            --master=https://127.0.0.1:6443 \
+            --kubeconfig=/home/user/certs/kube-controller-manager.kubeconfig \
+            --min-resync-period=3m \
+            --allocate-node-cidrs=true \
+            --cluster-cidr=192.168.0.0/16 \
+            --v=5 \
+            --service-account-private-key-file=/home/user/certs/service-account-key.pem \
+            --root-ca-file=/home/user/certs/ca.pem
 
 ## Stop Kubernetes apiserver
 stop-k8s-apiserver:
@@ -333,11 +356,6 @@ $(BIN_WIN)/win-fv.exe: $(LOCAL_BUILD_DEP) $(WINFV_SRCFILES)
 ###############################################################################
 # Developer helper scripts (not used by build or test)
 ###############################################################################
-## Run kube-proxy
-run-kube-proxy:
-	-docker rm -f calico-kube-proxy
-	docker run --name calico-kube-proxy -d --net=host --privileged gcr.io/google_containers/hyperkube:$(K8S_VERSION) kube-proxy --master=http://127.0.0.1:8080 --v=2
-
 .PHONY: test-watch
 ## Run the unit tests, watching for changes.
 test-watch: $(BIN)/install run-etcd run-k8s-apiserver
