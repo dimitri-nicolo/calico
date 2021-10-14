@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 
 package main_test
 
@@ -17,7 +17,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/projectcalico/cni-plugin/internal/pkg/testutils"
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
@@ -94,24 +93,16 @@ var _ = Describe("CalicoCni Private", func() {
 			    "subnet": "10.0.0.0/8"
 			  },
 			  "kubernetes": {
-			    "k8s_api_root": "http://127.0.0.1:8080"
+			    "kubeconfig": "/home/user/certs/kubeconfig"
 			  },
 			  "policy": {"type": "k8s"},
 			  "nodename_file_optional": true,
-			  "log_level":"info"
+			  "log_level":"debug"
 			}`, cniVersion, os.Getenv("ETCD_IP"), os.Getenv("DATASTORE_TYPE"))
 
 			It("converts AWS SecurityGroup annotation to label", func() {
-				config, err := clientcmd.DefaultClientConfig.ClientConfig()
-				if err != nil {
-					panic(err)
-				}
-				clientset, err := kubernetes.NewForConfig(config)
+				clientset := getKubernetesClient()
 				ensureNamespace(clientset, "test2")
-
-				if err != nil {
-					panic(err)
-				}
 
 				name := fmt.Sprintf("run%d", rand.Uint32())
 
@@ -137,7 +128,6 @@ var _ = Describe("CalicoCni Private", func() {
 					_, err = testutils.DeleteContainer(netconf, contNs.Path(), name, "test2")
 					Expect(err).ShouldNot(HaveOccurred())
 				}()
-
 				Expect(err).ShouldNot(HaveOccurred())
 
 				// The endpoint is created
@@ -211,7 +201,7 @@ var _ = Describe("CalicoCNI Private Kubernetes CNI tests", func() {
 				Type:                    "calico",
 				EtcdEndpoints:           fmt.Sprintf("http://%s:2379", os.Getenv("ETCD_IP")),
 				DatastoreType:           os.Getenv("DATASTORE_TYPE"),
-				Kubernetes:              types.Kubernetes{K8sAPIRoot: "http://127.0.0.1:8080"},
+				Kubernetes:              types.Kubernetes{Kubeconfig: "/home/user/certs/kubeconfig"},
 				Policy:                  types.Policy{PolicyType: "k8s"},
 				NodenameFileOptional:    true,
 				LogLevel:                "info",
@@ -226,10 +216,7 @@ var _ = Describe("CalicoCNI Private Kubernetes CNI tests", func() {
 			testutils.MustCreateNewIPPoolBlockSize(calicoClient, pool1, false, false, true, 31)
 
 			// Set up clients.
-			config, err := clientcmd.DefaultClientConfig.ClientConfig()
-			Expect(err).NotTo(HaveOccurred())
-			clientset, err = kubernetes.NewForConfig(config)
-			Expect(err).NotTo(HaveOccurred())
+			clientset = getKubernetesClient()
 		})
 
 		AfterEach(func() {
