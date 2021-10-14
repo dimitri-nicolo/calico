@@ -511,6 +511,7 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 
 	// Calico Enterprise controllers:
 	if cfg.Controllers.Service != nil {
+		log.Warning("The Service controller is deprecated and will be removed in a future release. Please use the 'services' match field in network policy rules instead")
 		serviceController := service.NewServiceController(ctx, k8sClientset, calicoClient, *cfg.Controllers.Service)
 		cc.controllerStates["Service"] = &controllerState{controller: serviceController}
 	}
