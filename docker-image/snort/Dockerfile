@@ -26,6 +26,7 @@ RUN set -xe \
     && yum clean all
 
 COPY snort.conf /etc/snort/snort.conf
+RUN sed -i "s/SNORT_VERSION/${SNORT_VERSION}/g" /etc/snort/snort.conf
 
 ENTRYPOINT ["snort"]
 CMD ["--help"]
