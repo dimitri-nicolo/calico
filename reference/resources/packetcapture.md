@@ -145,7 +145,7 @@ If the value is changed to the past, capture will stop immediately.
 | directory | The path inside the calico-node container for the the generated files. |
 | fileNames | The name of the generated file for a `PacketCapture` ordered alphanumerically. </br> The active packet capture file will be identified using the following schema: "{workload endpoint name}_{host network interface}.pcap". </br> Rotated capture files name will contain an index matching the rotation timestamp. |
 | node      | The hostname of the Kubernetes node the files are located on. |
-| state     | Determines whether a PacketCapture is capturing traffic from any interface attached to the current node. Possible values include: Capturing, Scheduled, Finished, Error |
+| state     | Determines whether a PacketCapture is capturing traffic from any interface attached to the current node. Possible values include: Capturing, Scheduled, Finished, Error, WaitingForTraffic |
 
 [Packet Capture]: /visibility/packetcapture
 
