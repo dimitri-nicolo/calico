@@ -906,8 +906,11 @@ var _ = Describe("DNS Policy Improvements", func() {
 				output, err := felix.RunDebugConsoleCommand("close-nfqueue-conn")
 				Expect(err).ShouldNot(HaveOccurred(), output)
 
-				output, err = checkSingleShotDNSConnectivity(workload1, "foobar.com", dnsserver.IP)
-				Expect(err).ShouldNot(HaveOccurred(), output)
+				output = ""
+				Eventually(func() error {
+					output, err = checkSingleShotDNSConnectivity(workload1, "foobar.com", dnsserver.IP)
+					return err
+				}, "10s", "1s").ShouldNot(HaveOccurred(), output)
 
 				iptablesSaveOutput, err := felix.ExecCombinedOutput("iptables-save", "-c")
 				Expect(err).ShouldNot(HaveOccurred())
