@@ -17,6 +17,8 @@ package rest
 import (
 	"fmt"
 
+	"github.com/tigera/licensing/monitor"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/apiserver/pkg/registry/generic"
@@ -74,7 +76,7 @@ func (p RESTStorageProvider) NewV3Storage(
 	authorizer authorizer.Authorizer,
 	resources *calicostorage.ManagedClusterResources,
 	calculator rbac.Calculator,
-	licenseCache calicostorage.LicenseCache,
+	licenseMonitor monitor.LicenseMonitor,
 ) (map[string]rest.Storage, error) {
 	policyRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("networkpolicies"))
 	if err != nil {
@@ -91,8 +93,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  policyRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    policyRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -114,8 +116,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  networksetRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    networksetRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -137,8 +139,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  stagedk8spolicyRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    stagedk8spolicyRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -160,8 +162,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  stagedpolicyRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    stagedpolicyRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -183,8 +185,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  tierRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    tierRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -206,8 +208,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  gpolicyRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    gpolicyRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -229,8 +231,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  stagedgpolicyRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    stagedgpolicyRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -252,8 +254,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  gNetworkSetRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    gNetworkSetRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -275,8 +277,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  licenseKeyRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    licenseKeyRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -298,8 +300,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  gAlertRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    gAlertRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -321,8 +323,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  gAlertTemplateRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    gAlertTemplateRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -352,8 +354,8 @@ func (p RESTStorageProvider) NewV3Storage(
 	gThreatFeedOpts := server.NewOptions(
 		sharedGlobalThreatFeedEtcdOpts,
 		calicostorage.Options{
-			RESTOptions:  gThreatFeedRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    gThreatFeedRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -363,8 +365,8 @@ func (p RESTStorageProvider) NewV3Storage(
 	gThreatFeedStatusOpts := server.NewOptions(
 		sharedGlobalThreatFeedEtcdOpts,
 		calicostorage.Options{
-			RESTOptions:  gThreatFeedStatusRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    gThreatFeedStatusRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -386,8 +388,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  hostEndpointRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    hostEndpointRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -409,8 +411,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  globalReportRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    globalReportRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -432,8 +434,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  globalReportTypeRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    globalReportTypeRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -455,8 +457,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  ipPoolRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    ipPoolRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -478,8 +480,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  bgpConfigurationRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    bgpConfigurationRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -501,8 +503,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  bgpPeerRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    bgpPeerRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -524,8 +526,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  profileRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    profileRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -547,8 +549,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  remoteclusterconfigRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    remoteclusterconfigRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -570,8 +572,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  felixConfigRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    felixConfigRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -593,8 +595,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  kubeControllersConfigsRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    kubeControllersConfigsRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -618,7 +620,7 @@ func (p RESTStorageProvider) NewV3Storage(
 		calicostorage.Options{
 			RESTOptions:             managedClusterRESTOptions,
 			ManagedClusterResources: resources,
-			LicenseCache:            licenseCache,
+			LicenseMonitor:          licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -640,8 +642,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  clusterInformationRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    clusterInformationRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -663,8 +665,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  packetCaptureRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    packetCaptureRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -694,8 +696,8 @@ func (p RESTStorageProvider) NewV3Storage(
 	deepPacketInspectionOpts := server.NewOptions(
 		deepPacketInspectionEtcdOpts,
 		calicostorage.Options{
-			RESTOptions:  deepPacketInspectionRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    deepPacketInspectionRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -705,8 +707,8 @@ func (p RESTStorageProvider) NewV3Storage(
 	deepPacketInspectionStatusOpts := server.NewOptions(
 		deepPacketInspectionEtcdOpts,
 		calicostorage.Options{
-			RESTOptions:  deepPacketInspectionStatusRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    deepPacketInspectionStatusRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -728,8 +730,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  uiSettingsGroupRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    uiSettingsGroupRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,
@@ -751,8 +753,8 @@ func (p RESTStorageProvider) NewV3Storage(
 			Trigger:       nil,
 		},
 		calicostorage.Options{
-			RESTOptions:  uiSettingsRESTOptions,
-			LicenseCache: licenseCache,
+			RESTOptions:    uiSettingsRESTOptions,
+			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
 		authorizer,

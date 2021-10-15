@@ -17,6 +17,7 @@ limitations under the License.
 package server
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -51,20 +52,48 @@ func RunServer(opts *CalicoServerOptions, server *apiserver.ProjectCalicoServer)
 	readinessPath := "/tmp/ready"
 	_ = os.Remove(readinessPath)
 
-	allStop := make(chan struct{})
+	// Create a context rather than using the stop channel - it's a little more versatile.
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		// Wait for the stop channel and cancel.
+		select {
+		case <-opts.StopCh:
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+
 	go func() {
 		klog.Infoln("Starting watch extension")
-		changed, err := WatchExtensionAuth(allStop)
+		changed, err := WatchExtensionAuth(ctx)
 		if err != nil {
 			klog.Errorln("Unable to watch the extension auth ConfigMap: ", err)
 		}
 		if changed {
 			klog.Infoln("Detected change in extension-apiserver-authentication ConfigMap, exiting so apiserver can be restarted")
+			cancel()
 		}
 	}()
 
 	go func() {
+		klog.Infoln("Start license monitor")
+		server.LicenseMonitor.MonitorForever(ctx)
+	}()
+
+	go func() {
 		klog.Infoln("Running the API server")
+
+		// Refresh the license to make sure it is loaded (since the MonitorForever above is handled on another go
+		// routine).  We can ignore errors if we don't manage to load the license.
+		if err := server.LicenseMonitor.RefreshLicense(ctx); err != nil {
+			klog.Infoln("Unable to get license, watching in background: ", err)
+		}
+
+		// Start the Calico resource handler and shared informers and wait for sync before starting other components.
+		server.CalicoResourceLister.Start()
+		server.SharedInformerFactory.Start(ctx.Done())
+		server.CalicoResourceLister.WaitForCacheSync(ctx.Done())
+		server.SharedInformerFactory.WaitForCacheSync(ctx.Done())
 
 		// Add a post-start hook to write the readiness file, which is used for
 		// readiness probes.
@@ -89,16 +118,13 @@ func RunServer(opts *CalicoServerOptions, server *apiserver.ProjectCalicoServer)
 					return nil
 				})
 		}
-		if err := server.GenericAPIServer.PrepareRun().Run(allStop); err != nil {
+		if err := server.GenericAPIServer.PrepareRun().Run(ctx.Done()); err != nil {
 			klog.Errorln("Error running API server: ", err)
 		}
 	}()
 
-	select {
-	case <-allStop:
-	case <-opts.StopCh:
-		close(allStop)
-	}
+	// Wait until the context is done.
+	<-ctx.Done()
 
 	return nil
 }

@@ -23,17 +23,13 @@ import (
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/klog"
 
-	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	calicowatch "github.com/projectcalico/libcalico-go/lib/watch"
 
-	licClient "github.com/tigera/licensing/client"
-
-	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type resourceObject interface {
@@ -57,7 +53,7 @@ type clientObjectOperator func(context.Context, clientv3.Interface, resourceObje
 type clientNameOperator func(context.Context, clientv3.Interface, string, string, clientOpts) (resourceObject, error)
 type clientLister func(context.Context, clientv3.Interface, clientOpts) (resourceListObject, error)
 type clientWatcher func(context.Context, clientv3.Interface, clientOpts) (calicowatch.Interface, error)
-type clientLicenseCheck func(obj resourceObject, claims *licClient.LicenseClaims) bool
+type clientLicenseCheck func(obj resourceObject) bool
 
 type resourceStore struct {
 	client             clientv3.Interface
@@ -77,7 +73,6 @@ type resourceStore struct {
 	hasRestrictions    clientLicenseCheck
 	resourceName       string
 	converter          resourceConverter
-	licenseCache       LicenseCache
 	registeredFeatures []string
 }
 
@@ -131,13 +126,12 @@ func (rs *resourceStore) Create(ctx context.Context, key string, obj, out runtim
 	klog.Infof("Create called with key: %v for resource %v\n", key, rs.resourceName)
 	lcObj := rs.converter.convertToLibcalico(obj)
 
-	var gvk = lcObj.GetObjectKind().GroupVersionKind().String()
-	var features = rs.licenseCache.FetchRegisteredFeatures()
-	if rs.hasRestrictions(lcObj, features) == true {
+	if rs.hasRestrictions(lcObj) {
 		return aapierrors.NewForbidden(
-			schema.GroupResource{Group: calico.GroupName, Resource: lcObj.GetObjectKind().GroupVersionKind().Kind},
+			schema.GroupResource{Group: v3.GroupName, Resource: lcObj.GetObjectKind().GroupVersionKind().Kind},
 			key,
-			fmt.Errorf("License does not support creating resources for this API. Contact Tigera support or email licensing@tigera.io for further questions about changing/upgrading your license"))
+			fmt.Errorf("License does not support creating resources for this API. Contact Tigera support or email licensing@tigera.io for further questions about changing/upgrading your license"),
+		)
 	}
 
 	opts := options.SetOptions{TTL: time.Duration(ttl) * time.Second}
@@ -151,10 +145,6 @@ func (rs *resourceStore) Create(ctx context.Context, key string, obj, out runtim
 		default:
 			return aapiError(err, key)
 		}
-	}
-
-	if gvk == libcalicoapi.NewLicenseKey().GetObjectKind().GroupVersionKind().String() {
-		rs.licenseCache.Store(*lcObj.(*libcalicoapi.LicenseKey))
 	}
 
 	rs.converter.convertToAAPI(createdObj, out)
@@ -196,11 +186,6 @@ func (rs *resourceStore) Delete(ctx context.Context, key string, out runtime.Obj
 	if err != nil {
 		klog.Errorf("Clientv3 error deleting resource %v with key %v error %v\n", rs.resourceName, key, err)
 		return aapiError(err, key)
-	}
-
-	var gvk = libcalicoObj.GetObjectKind().GroupVersionKind().String()
-	if gvk == libcalicoapi.NewLicenseKey().GetObjectKind().GroupVersionKind().String() {
-		rs.licenseCache.Clear()
 	}
 
 	rs.converter.convertToAAPI(libcalicoObj, out)
@@ -453,6 +438,14 @@ func (rs *resourceStore) GuaranteedUpdate(
 		}
 		libcalicoObj := rs.converter.convertToLibcalico(updatedRes)
 
+		if rs.hasRestrictions(libcalicoObj) {
+			return aapierrors.NewForbidden(
+				schema.GroupResource{Group: v3.GroupName, Resource: libcalicoObj.GetObjectKind().GroupVersionKind().Kind},
+				key,
+				fmt.Errorf("License does not support updating resources for this API. Contact Tigera support or email licensing@tigera.io for further questions about changing/upgrading your license"),
+			)
+		}
+
 		var opts options.SetOptions
 		if ttl != nil {
 			opts = options.SetOptions{TTL: time.Duration(*ttl) * time.Second}
@@ -485,11 +478,6 @@ func (rs *resourceStore) GuaranteedUpdate(
 				}
 				return e
 			}
-		}
-
-		var gvk = libcalicoObj.GetObjectKind().GroupVersionKind().String()
-		if gvk == libcalicoapi.NewLicenseKey().GetObjectKind().GroupVersionKind().String() {
-			rs.licenseCache.Store(*libcalicoObj.(*libcalicoapi.LicenseKey))
 		}
 
 		rs.converter.convertToAAPI(createdLibcalicoObj, out)

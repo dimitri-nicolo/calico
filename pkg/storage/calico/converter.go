@@ -12,9 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/storage"
 
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 func aapiError(err error, key string) error {
@@ -34,144 +32,144 @@ func aapiError(err error, key string) error {
 // This is common code. Refactor this workflow.
 func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 	switch libcalicoObject.(type) {
-	case *api.Tier:
-		lcgTier := libcalicoObject.(*api.Tier)
-		aapiTier := &aapi.Tier{}
+	case *v3.Tier:
+		lcgTier := libcalicoObject.(*v3.Tier)
+		aapiTier := &v3.Tier{}
 		TierConverter{}.convertToAAPI(lcgTier, aapiTier)
 		return aapiTier
-	case *api.NetworkPolicy:
-		lcgPolicy := libcalicoObject.(*api.NetworkPolicy)
-		aapiPolicy := &aapi.NetworkPolicy{}
+	case *v3.NetworkPolicy:
+		lcgPolicy := libcalicoObject.(*v3.NetworkPolicy)
+		aapiPolicy := &v3.NetworkPolicy{}
 		NetworkPolicyConverter{}.convertToAAPI(lcgPolicy, aapiPolicy)
 		return aapiPolicy
-	case *api.StagedKubernetesNetworkPolicy:
-		lcgPolicy := libcalicoObject.(*api.StagedKubernetesNetworkPolicy)
-		aapiPolicy := &aapi.StagedKubernetesNetworkPolicy{}
+	case *v3.StagedKubernetesNetworkPolicy:
+		lcgPolicy := libcalicoObject.(*v3.StagedKubernetesNetworkPolicy)
+		aapiPolicy := &v3.StagedKubernetesNetworkPolicy{}
 		StagedKubernetesNetworkPolicyConverter{}.convertToAAPI(lcgPolicy, aapiPolicy)
 		return aapiPolicy
-	case *api.StagedNetworkPolicy:
-		lcgPolicy := libcalicoObject.(*api.StagedNetworkPolicy)
-		aapiPolicy := &aapi.StagedNetworkPolicy{}
+	case *v3.StagedNetworkPolicy:
+		lcgPolicy := libcalicoObject.(*v3.StagedNetworkPolicy)
+		aapiPolicy := &v3.StagedNetworkPolicy{}
 		StagedNetworkPolicyConverter{}.convertToAAPI(lcgPolicy, aapiPolicy)
 		return aapiPolicy
-	case *api.GlobalNetworkPolicy:
-		lcgPolicy := libcalicoObject.(*api.GlobalNetworkPolicy)
-		aapiPolicy := &aapi.GlobalNetworkPolicy{}
+	case *v3.GlobalNetworkPolicy:
+		lcgPolicy := libcalicoObject.(*v3.GlobalNetworkPolicy)
+		aapiPolicy := &v3.GlobalNetworkPolicy{}
 		GlobalNetworkPolicyConverter{}.convertToAAPI(lcgPolicy, aapiPolicy)
 		return aapiPolicy
-	case *api.StagedGlobalNetworkPolicy:
-		lcgPolicy := libcalicoObject.(*api.StagedGlobalNetworkPolicy)
-		aapiPolicy := &aapi.StagedGlobalNetworkPolicy{}
+	case *v3.StagedGlobalNetworkPolicy:
+		lcgPolicy := libcalicoObject.(*v3.StagedGlobalNetworkPolicy)
+		aapiPolicy := &v3.StagedGlobalNetworkPolicy{}
 		StagedGlobalNetworkPolicyConverter{}.convertToAAPI(lcgPolicy, aapiPolicy)
 		return aapiPolicy
-	case *api.GlobalNetworkSet:
-		lcgNetworkSet := libcalicoObject.(*api.GlobalNetworkSet)
-		aapiNetworkSet := &aapi.GlobalNetworkSet{}
+	case *v3.GlobalNetworkSet:
+		lcgNetworkSet := libcalicoObject.(*v3.GlobalNetworkSet)
+		aapiNetworkSet := &v3.GlobalNetworkSet{}
 		GlobalNetworkSetConverter{}.convertToAAPI(lcgNetworkSet, aapiNetworkSet)
 		return aapiNetworkSet
-	case *api.NetworkSet:
-		lcgNetworkSet := libcalicoObject.(*api.NetworkSet)
-		aapiNetworkSet := &aapi.NetworkSet{}
+	case *v3.NetworkSet:
+		lcgNetworkSet := libcalicoObject.(*v3.NetworkSet)
+		aapiNetworkSet := &v3.NetworkSet{}
 		NetworkSetConverter{}.convertToAAPI(lcgNetworkSet, aapiNetworkSet)
 		return aapiNetworkSet
-	case *api.LicenseKey:
-		lcgLicense := libcalicoObject.(*api.LicenseKey)
-		aapiLicenseKey := &aapi.LicenseKey{}
+	case *v3.LicenseKey:
+		lcgLicense := libcalicoObject.(*v3.LicenseKey)
+		aapiLicenseKey := &v3.LicenseKey{}
 		LicenseKeyConverter{}.convertToAAPI(lcgLicense, aapiLicenseKey)
 		return aapiLicenseKey
-	case *api.GlobalAlert:
-		lcg := libcalicoObject.(*api.GlobalAlert)
-		aapi := &aapi.GlobalAlert{}
+	case *v3.GlobalAlert:
+		lcg := libcalicoObject.(*v3.GlobalAlert)
+		aapi := &v3.GlobalAlert{}
 		GlobalAlertConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
-	case *api.GlobalAlertTemplate:
-		lcg := libcalicoObject.(*api.GlobalAlertTemplate)
-		aapi := &aapi.GlobalAlertTemplate{}
+	case *v3.GlobalAlertTemplate:
+		lcg := libcalicoObject.(*v3.GlobalAlertTemplate)
+		aapi := &v3.GlobalAlertTemplate{}
 		GlobalAlertTemplateConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
-	case *api.GlobalThreatFeed:
-		lcg := libcalicoObject.(*api.GlobalThreatFeed)
-		aapi := &aapi.GlobalThreatFeed{}
+	case *v3.GlobalThreatFeed:
+		lcg := libcalicoObject.(*v3.GlobalThreatFeed)
+		aapi := &v3.GlobalThreatFeed{}
 		GlobalThreatFeedConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
-	case *api.HostEndpoint:
-		lcg := libcalicoObject.(*api.HostEndpoint)
-		aapi := &aapi.HostEndpoint{}
+	case *v3.HostEndpoint:
+		lcg := libcalicoObject.(*v3.HostEndpoint)
+		aapi := &v3.HostEndpoint{}
 		HostEndpointConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
-	case *api.GlobalReport:
-		lcg := libcalicoObject.(*api.GlobalReport)
-		aapi := &aapi.GlobalReport{}
+	case *v3.GlobalReport:
+		lcg := libcalicoObject.(*v3.GlobalReport)
+		aapi := &v3.GlobalReport{}
 		GlobalReportConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
-	case *api.GlobalReportType:
-		lcg := libcalicoObject.(*api.GlobalReportType)
-		aapi := &aapi.GlobalReportType{}
+	case *v3.GlobalReportType:
+		lcg := libcalicoObject.(*v3.GlobalReportType)
+		aapi := &v3.GlobalReportType{}
 		GlobalReportTypeConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
-	case *api.IPPool:
-		lcg := libcalicoObject.(*api.IPPool)
-		aapi := &aapi.IPPool{}
+	case *v3.IPPool:
+		lcg := libcalicoObject.(*v3.IPPool)
+		aapi := &v3.IPPool{}
 		IPPoolConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
-	case *api.BGPConfiguration:
-		lcg := libcalicoObject.(*api.BGPConfiguration)
-		aapi := &aapi.BGPConfiguration{}
+	case *v3.BGPConfiguration:
+		lcg := libcalicoObject.(*v3.BGPConfiguration)
+		aapi := &v3.BGPConfiguration{}
 		BGPConfigurationConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
-	case *api.BGPPeer:
-		lcg := libcalicoObject.(*api.BGPPeer)
-		aapi := &aapi.BGPPeer{}
+	case *v3.BGPPeer:
+		lcg := libcalicoObject.(*v3.BGPPeer)
+		aapi := &v3.BGPPeer{}
 		BGPPeerConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
-	case *api.Profile:
-		lcg := libcalicoObject.(*api.Profile)
-		aapi := &aapi.Profile{}
+	case *v3.Profile:
+		lcg := libcalicoObject.(*v3.Profile)
+		aapi := &v3.Profile{}
 		ProfileConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
-	case *api.RemoteClusterConfiguration:
-		lcg := libcalicoObject.(*api.RemoteClusterConfiguration)
-		aapi := &aapi.RemoteClusterConfiguration{}
+	case *v3.RemoteClusterConfiguration:
+		lcg := libcalicoObject.(*v3.RemoteClusterConfiguration)
+		aapi := &v3.RemoteClusterConfiguration{}
 		RemoteClusterConfigurationConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
-	case *api.FelixConfiguration:
-		lcg := libcalicoObject.(*api.FelixConfiguration)
-		aapi := &aapi.FelixConfiguration{}
+	case *v3.FelixConfiguration:
+		lcg := libcalicoObject.(*v3.FelixConfiguration)
+		aapi := &v3.FelixConfiguration{}
 		FelixConfigurationConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
-	case *api.KubeControllersConfiguration:
-		lcg := libcalicoObject.(*api.KubeControllersConfiguration)
-		aapi := &aapi.KubeControllersConfiguration{}
+	case *v3.KubeControllersConfiguration:
+		lcg := libcalicoObject.(*v3.KubeControllersConfiguration)
+		aapi := &v3.KubeControllersConfiguration{}
 		KubeControllersConfigurationConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
-	case *api.ManagedCluster:
-		lcg := libcalicoObject.(*api.ManagedCluster)
-		aapi := &aapi.ManagedCluster{}
+	case *v3.ManagedCluster:
+		lcg := libcalicoObject.(*v3.ManagedCluster)
+		aapi := &v3.ManagedCluster{}
 		ManagedClusterConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
-	case *api.ClusterInformation:
-		lcg := libcalicoObject.(*api.ClusterInformation)
-		aapi := &aapi.ClusterInformation{}
+	case *v3.ClusterInformation:
+		lcg := libcalicoObject.(*v3.ClusterInformation)
+		aapi := &v3.ClusterInformation{}
 		ClusterInformationConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
-	case *api.PacketCapture:
-		lcg := libcalicoObject.(*api.PacketCapture)
-		aapi := &aapi.PacketCapture{}
+	case *v3.PacketCapture:
+		lcg := libcalicoObject.(*v3.PacketCapture)
+		aapi := &v3.PacketCapture{}
 		PacketCaptureConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
-	case *api.DeepPacketInspection:
-		lcg := libcalicoObject.(*api.DeepPacketInspection)
-		aapi := &aapi.DeepPacketInspection{}
+	case *v3.DeepPacketInspection:
+		lcg := libcalicoObject.(*v3.DeepPacketInspection)
+		aapi := &v3.DeepPacketInspection{}
 		DeepPacketInspectionConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
-	case *api.UISettingsGroup:
-		api := libcalicoObject.(*api.UISettingsGroup)
-		aapi := &aapi.UISettingsGroup{}
+	case *v3.UISettingsGroup:
+		api := libcalicoObject.(*v3.UISettingsGroup)
+		aapi := &v3.UISettingsGroup{}
 		UISettingsGroupConverter{}.convertToAAPI(api, aapi)
 		return aapi
-	case *api.UISettings:
-		api := libcalicoObject.(*api.UISettings)
-		aapi := &aapi.UISettings{}
+	case *v3.UISettings:
+		api := libcalicoObject.(*v3.UISettings)
+		aapi := &v3.UISettings{}
 		UISettingsConverter{}.convertToAAPI(api, aapi)
 		return aapi
 	default:

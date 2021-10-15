@@ -12,16 +12,13 @@ import (
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
-	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
 
-	licClient "github.com/tigera/licensing/client"
 	features "github.com/tigera/licensing/client/features"
-
-	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // NewGlobalAlertStorage creates a new libcalico-based storage.Interface implementation for GlobalAlerts
@@ -29,13 +26,13 @@ func NewGlobalAlertStorage(opts Options) (registry.DryRunnableStorage, factory.D
 	c := CreateClientFromConfig()
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.GlobalAlert)
+		res := obj.(*v3.GlobalAlert)
 
 		return c.GlobalAlerts().Create(ctx, res, oso)
 	}
 	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.GlobalAlert)
+		res := obj.(*v3.GlobalAlert)
 		return c.GlobalAlerts().Update(ctx, res, oso)
 	}
 	getFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
@@ -54,18 +51,18 @@ func NewGlobalAlertStorage(opts Options) (registry.DryRunnableStorage, factory.D
 		olo := opts.(options.ListOptions)
 		return c.GlobalAlerts().Watch(ctx, olo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
-		return !claims.ValidateFeature(features.AlertManagement)
+	hasRestrictionsFn := func(obj resourceObject) bool {
+		return !opts.LicenseMonitor.GetFeatureStatus(features.AlertManagement)
 	}
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         etcd.APIObjectVersioner{},
-		aapiType:          reflect.TypeOf(aapi.GlobalAlert{}),
-		aapiListType:      reflect.TypeOf(aapi.GlobalAlertList{}),
-		libCalicoType:     reflect.TypeOf(libcalicoapi.GlobalAlert{}),
-		libCalicoListType: reflect.TypeOf(libcalicoapi.GlobalAlertList{}),
+		aapiType:          reflect.TypeOf(v3.GlobalAlert{}),
+		aapiListType:      reflect.TypeOf(v3.GlobalAlertList{}),
+		libCalicoType:     reflect.TypeOf(v3.GlobalAlert{}),
+		libCalicoListType: reflect.TypeOf(v3.GlobalAlertList{}),
 		isNamespaced:      false,
 		create:            createFn,
 		update:            updateFn,
@@ -75,7 +72,6 @@ func NewGlobalAlertStorage(opts Options) (registry.DryRunnableStorage, factory.D
 		watch:             watchFn,
 		resourceName:      "GlobalAlert",
 		converter:         GlobalAlertConverter{},
-		licenseCache:      opts.LicenseCache,
 		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
@@ -85,11 +81,11 @@ type GlobalAlertConverter struct {
 }
 
 func (gc GlobalAlertConverter) convertToLibcalico(aapiObj runtime.Object) resourceObject {
-	aapiGlobalAlert := aapiObj.(*aapi.GlobalAlert)
-	lcgGlobalAlert := &libcalicoapi.GlobalAlert{}
+	aapiGlobalAlert := aapiObj.(*v3.GlobalAlert)
+	lcgGlobalAlert := &v3.GlobalAlert{}
 	lcgGlobalAlert.TypeMeta = aapiGlobalAlert.TypeMeta
-	lcgGlobalAlert.Kind = libcalicoapi.KindGlobalAlert
-	lcgGlobalAlert.APIVersion = libcalicoapi.GroupVersionCurrent
+	lcgGlobalAlert.Kind = v3.KindGlobalAlert
+	lcgGlobalAlert.APIVersion = v3.GroupVersionCurrent
 	lcgGlobalAlert.ObjectMeta = aapiGlobalAlert.ObjectMeta
 	lcgGlobalAlert.Spec = aapiGlobalAlert.Spec
 	lcgGlobalAlert.Status = aapiGlobalAlert.Status
@@ -97,8 +93,8 @@ func (gc GlobalAlertConverter) convertToLibcalico(aapiObj runtime.Object) resour
 }
 
 func (gc GlobalAlertConverter) convertToAAPI(libcalicoObject resourceObject, aapiObj runtime.Object) {
-	lcgGlobalAlert := libcalicoObject.(*libcalicoapi.GlobalAlert)
-	aapiGlobalAlert := aapiObj.(*aapi.GlobalAlert)
+	lcgGlobalAlert := libcalicoObject.(*v3.GlobalAlert)
+	aapiGlobalAlert := aapiObj.(*v3.GlobalAlert)
 	aapiGlobalAlert.Spec = lcgGlobalAlert.Spec
 	aapiGlobalAlert.Status = lcgGlobalAlert.Status
 	aapiGlobalAlert.TypeMeta = lcgGlobalAlert.TypeMeta
@@ -106,16 +102,16 @@ func (gc GlobalAlertConverter) convertToAAPI(libcalicoObject resourceObject, aap
 }
 
 func (gc GlobalAlertConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
-	lcgGlobalAlertList := libcalicoListObject.(*libcalicoapi.GlobalAlertList)
-	aapiGlobalAlertList := aapiListObj.(*aapi.GlobalAlertList)
+	lcgGlobalAlertList := libcalicoListObject.(*v3.GlobalAlertList)
+	aapiGlobalAlertList := aapiListObj.(*v3.GlobalAlertList)
 	if libcalicoListObject == nil {
-		aapiGlobalAlertList.Items = []aapi.GlobalAlert{}
+		aapiGlobalAlertList.Items = []v3.GlobalAlert{}
 		return
 	}
 	aapiGlobalAlertList.TypeMeta = lcgGlobalAlertList.TypeMeta
 	aapiGlobalAlertList.ListMeta = lcgGlobalAlertList.ListMeta
 	for _, item := range lcgGlobalAlertList.Items {
-		aapiGlobalAlert := aapi.GlobalAlert{}
+		aapiGlobalAlert := v3.GlobalAlert{}
 		gc.convertToAAPI(&item, &aapiGlobalAlert)
 		if matched, err := pred.Matches(&aapiGlobalAlert); err == nil && matched {
 			aapiGlobalAlertList.Items = append(aapiGlobalAlertList.Items, aapiGlobalAlert)

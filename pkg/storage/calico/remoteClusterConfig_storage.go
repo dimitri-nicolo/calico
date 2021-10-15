@@ -12,16 +12,13 @@ import (
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
-	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
 
-	licClient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
-
-	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // NewRemoteClusterConfigurationStorage creates a new libcalico-based storage.Interface implementation for RemoteClusterConfigurations
@@ -29,12 +26,12 @@ func NewRemoteClusterConfigurationStorage(opts Options) (registry.DryRunnableSto
 	c := CreateClientFromConfig()
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.RemoteClusterConfiguration)
+		res := obj.(*v3.RemoteClusterConfiguration)
 		return c.RemoteClusterConfigurations().Create(ctx, res, oso)
 	}
 	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.RemoteClusterConfiguration)
+		res := obj.(*v3.RemoteClusterConfiguration)
 		return c.RemoteClusterConfigurations().Update(ctx, res, oso)
 	}
 	getFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
@@ -53,18 +50,18 @@ func NewRemoteClusterConfigurationStorage(opts Options) (registry.DryRunnableSto
 		olo := opts.(options.ListOptions)
 		return c.RemoteClusterConfigurations().Watch(ctx, olo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
-		return !claims.ValidateFeature(features.FederatedServices)
+	hasRestrictionsFn := func(obj resourceObject) bool {
+		return !opts.LicenseMonitor.GetFeatureStatus(features.FederatedServices)
 	}
 
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         etcd.APIObjectVersioner{},
-		aapiType:          reflect.TypeOf(aapi.RemoteClusterConfiguration{}),
-		aapiListType:      reflect.TypeOf(aapi.RemoteClusterConfigurationList{}),
-		libCalicoType:     reflect.TypeOf(libcalicoapi.RemoteClusterConfiguration{}),
-		libCalicoListType: reflect.TypeOf(libcalicoapi.RemoteClusterConfigurationList{}),
+		aapiType:          reflect.TypeOf(v3.RemoteClusterConfiguration{}),
+		aapiListType:      reflect.TypeOf(v3.RemoteClusterConfigurationList{}),
+		libCalicoType:     reflect.TypeOf(v3.RemoteClusterConfiguration{}),
+		libCalicoListType: reflect.TypeOf(v3.RemoteClusterConfigurationList{}),
 		isNamespaced:      false,
 		create:            createFn,
 		update:            updateFn,
@@ -74,7 +71,6 @@ func NewRemoteClusterConfigurationStorage(opts Options) (registry.DryRunnableSto
 		watch:             watchFn,
 		resourceName:      "RemoteClusterConfiguration",
 		converter:         RemoteClusterConfigurationConverter{},
-		licenseCache:      opts.LicenseCache,
 		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
@@ -84,35 +80,35 @@ type RemoteClusterConfigurationConverter struct {
 }
 
 func (gc RemoteClusterConfigurationConverter) convertToLibcalico(aapiObj runtime.Object) resourceObject {
-	aapiConfig := aapiObj.(*aapi.RemoteClusterConfiguration)
-	lcgConfig := &libcalicoapi.RemoteClusterConfiguration{}
+	aapiConfig := aapiObj.(*v3.RemoteClusterConfiguration)
+	lcgConfig := &v3.RemoteClusterConfiguration{}
 	lcgConfig.TypeMeta = aapiConfig.TypeMeta
 	lcgConfig.ObjectMeta = aapiConfig.ObjectMeta
-	lcgConfig.Kind = libcalicoapi.KindRemoteClusterConfiguration
-	lcgConfig.APIVersion = libcalicoapi.GroupVersionCurrent
+	lcgConfig.Kind = v3.KindRemoteClusterConfiguration
+	lcgConfig.APIVersion = v3.GroupVersionCurrent
 	lcgConfig.Spec = aapiConfig.Spec
 	return lcgConfig
 }
 
 func (gc RemoteClusterConfigurationConverter) convertToAAPI(libcalicoObject resourceObject, aapiObj runtime.Object) {
-	lcgConfig := libcalicoObject.(*libcalicoapi.RemoteClusterConfiguration)
-	aapiConfig := aapiObj.(*aapi.RemoteClusterConfiguration)
+	lcgConfig := libcalicoObject.(*v3.RemoteClusterConfiguration)
+	aapiConfig := aapiObj.(*v3.RemoteClusterConfiguration)
 	aapiConfig.Spec = lcgConfig.Spec
 	aapiConfig.TypeMeta = lcgConfig.TypeMeta
 	aapiConfig.ObjectMeta = lcgConfig.ObjectMeta
 }
 
 func (gc RemoteClusterConfigurationConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
-	lcgConfigList := libcalicoListObject.(*libcalicoapi.RemoteClusterConfigurationList)
-	aapiConfigList := aapiListObj.(*aapi.RemoteClusterConfigurationList)
+	lcgConfigList := libcalicoListObject.(*v3.RemoteClusterConfigurationList)
+	aapiConfigList := aapiListObj.(*v3.RemoteClusterConfigurationList)
 	if libcalicoListObject == nil {
-		aapiConfigList.Items = []aapi.RemoteClusterConfiguration{}
+		aapiConfigList.Items = []v3.RemoteClusterConfiguration{}
 		return
 	}
 	aapiConfigList.TypeMeta = lcgConfigList.TypeMeta
 	aapiConfigList.ListMeta = lcgConfigList.ListMeta
 	for _, item := range lcgConfigList.Items {
-		aapiConfig := aapi.RemoteClusterConfiguration{}
+		aapiConfig := v3.RemoteClusterConfiguration{}
 		gc.convertToAAPI(&item, &aapiConfig)
 		if matched, err := pred.Matches(&aapiConfig); err == nil && matched {
 			aapiConfigList.Items = append(aapiConfigList.Items, aapiConfig)

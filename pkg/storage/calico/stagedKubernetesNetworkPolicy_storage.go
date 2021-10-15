@@ -7,17 +7,13 @@ import (
 
 	"golang.org/x/net/context"
 
-	licClient "github.com/tigera/licensing/client"
-	features "github.com/tigera/licensing/client/features"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
-	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -29,12 +25,12 @@ func NewStagedKubernetesNetworkPolicyStorage(opts Options) (registry.DryRunnable
 	c := CreateClientFromConfig()
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.StagedKubernetesNetworkPolicy)
+		res := obj.(*v3.StagedKubernetesNetworkPolicy)
 		return c.StagedKubernetesNetworkPolicies().Create(ctx, res, oso)
 	}
 	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
-		res := obj.(*libcalicoapi.StagedKubernetesNetworkPolicy)
+		res := obj.(*v3.StagedKubernetesNetworkPolicy)
 		return c.StagedKubernetesNetworkPolicies().Update(ctx, res, oso)
 	}
 	getFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
@@ -53,23 +49,19 @@ func NewStagedKubernetesNetworkPolicyStorage(opts Options) (registry.DryRunnable
 		olo := opts.(options.ListOptions)
 		return c.StagedKubernetesNetworkPolicies().Watch(ctx, olo)
 	}
-	hasRestrictionsFn := func(obj resourceObject, claims *licClient.LicenseClaims) bool {
-		if !claims.ValidateFeature(features.EgressAccessControl) && HasDNSDomains(obj.GetObjectKind().GroupVersionKind().String(), obj) {
-			return true
-		}
-
+	hasRestrictionsFn := func(obj resourceObject) bool {
 		return false
-
 	}
+
 	// TODO(doublek): Inject codec, client for nicer testing.
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         &etcd.APIObjectVersioner{},
-		aapiType:          reflect.TypeOf(aapi.StagedKubernetesNetworkPolicy{}),
-		aapiListType:      reflect.TypeOf(aapi.StagedKubernetesNetworkPolicyList{}),
-		libCalicoType:     reflect.TypeOf(libcalicoapi.StagedKubernetesNetworkPolicy{}),
-		libCalicoListType: reflect.TypeOf(libcalicoapi.StagedKubernetesNetworkPolicyList{}),
+		aapiType:          reflect.TypeOf(v3.StagedKubernetesNetworkPolicy{}),
+		aapiListType:      reflect.TypeOf(v3.StagedKubernetesNetworkPolicyList{}),
+		libCalicoType:     reflect.TypeOf(v3.StagedKubernetesNetworkPolicy{}),
+		libCalicoListType: reflect.TypeOf(v3.StagedKubernetesNetworkPolicyList{}),
 		isNamespaced:      true,
 		create:            createFn,
 		update:            updateFn,
@@ -79,7 +71,6 @@ func NewStagedKubernetesNetworkPolicyStorage(opts Options) (registry.DryRunnable
 		watch:             watchFn,
 		resourceName:      "StagedKubernetesNetworkPolicy",
 		converter:         StagedKubernetesNetworkPolicyConverter{},
-		licenseCache:      opts.LicenseCache,
 		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
@@ -89,19 +80,19 @@ type StagedKubernetesNetworkPolicyConverter struct {
 }
 
 func (rc StagedKubernetesNetworkPolicyConverter) convertToLibcalico(aapiObj runtime.Object) resourceObject {
-	aapiPolicy := aapiObj.(*aapi.StagedKubernetesNetworkPolicy)
-	lcgPolicy := &libcalicoapi.StagedKubernetesNetworkPolicy{}
+	aapiPolicy := aapiObj.(*v3.StagedKubernetesNetworkPolicy)
+	lcgPolicy := &v3.StagedKubernetesNetworkPolicy{}
 	lcgPolicy.TypeMeta = aapiPolicy.TypeMeta
 	lcgPolicy.ObjectMeta = aapiPolicy.ObjectMeta
-	lcgPolicy.Kind = libcalicoapi.KindStagedKubernetesNetworkPolicy
-	lcgPolicy.APIVersion = libcalicoapi.GroupVersionCurrent
+	lcgPolicy.Kind = v3.KindStagedKubernetesNetworkPolicy
+	lcgPolicy.APIVersion = v3.GroupVersionCurrent
 	lcgPolicy.Spec = aapiPolicy.Spec
 	return lcgPolicy
 }
 
 func (rc StagedKubernetesNetworkPolicyConverter) convertToAAPI(libcalicoObject resourceObject, aapiObj runtime.Object) {
-	lcgPolicy := libcalicoObject.(*libcalicoapi.StagedKubernetesNetworkPolicy)
-	aapiPolicy := aapiObj.(*aapi.StagedKubernetesNetworkPolicy)
+	lcgPolicy := libcalicoObject.(*v3.StagedKubernetesNetworkPolicy)
+	aapiPolicy := aapiObj.(*v3.StagedKubernetesNetworkPolicy)
 	aapiPolicy.Spec = lcgPolicy.Spec
 	aapiPolicy.TypeMeta = lcgPolicy.TypeMeta
 	aapiPolicy.ObjectMeta = lcgPolicy.ObjectMeta
@@ -114,17 +105,17 @@ func (rc StagedKubernetesNetworkPolicyConverter) convertToAAPI(libcalicoObject r
 }
 
 func (rc StagedKubernetesNetworkPolicyConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
-	lcgPolicyList := libcalicoListObject.(*libcalicoapi.StagedKubernetesNetworkPolicyList)
-	aapiPolicyList := aapiListObj.(*aapi.StagedKubernetesNetworkPolicyList)
+	lcgPolicyList := libcalicoListObject.(*v3.StagedKubernetesNetworkPolicyList)
+	aapiPolicyList := aapiListObj.(*v3.StagedKubernetesNetworkPolicyList)
 	if libcalicoListObject == nil {
-		aapiPolicyList.Items = []aapi.StagedKubernetesNetworkPolicy{}
+		aapiPolicyList.Items = []v3.StagedKubernetesNetworkPolicy{}
 		return
 	}
 	aapiPolicyList.TypeMeta = lcgPolicyList.TypeMeta
 	aapiPolicyList.ListMeta = lcgPolicyList.ListMeta
 
 	for _, item := range lcgPolicyList.Items {
-		aapiPolicy := aapi.StagedKubernetesNetworkPolicy{}
+		aapiPolicy := v3.StagedKubernetesNetworkPolicy{}
 		rc.convertToAAPI(&item, &aapiPolicy)
 		aapiPolicyList.Items = append(aapiPolicyList.Items, aapiPolicy)
 	}
