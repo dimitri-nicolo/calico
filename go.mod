@@ -8,19 +8,19 @@ require (
 	github.com/onsi/gomega v1.10.4
 	github.com/projectcalico/apiserver v0.0.0-20210423155446-68f31180801c
 	github.com/projectcalico/libcalico-go v1.7.3
-	github.com/sirupsen/logrus v1.7.0
+	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.6.1
-	github.com/tigera/api v0.0.0-20211008155011-6d6ef40a0564
-	github.com/tigera/lma v0.0.0-20211008161217-b5565517bcf1
-	k8s.io/api v0.21.0
-	k8s.io/apimachinery v0.21.0
-	k8s.io/apiserver v0.21.0
+	github.com/tigera/api v0.0.0-20211012203540-a8058565e3ef
+	github.com/tigera/lma v0.0.0-20211015043140-a0dc4d21b473
+	k8s.io/api v0.22.0
+	k8s.io/apimachinery v0.22.0
+	k8s.io/apiserver v0.22.0
 	k8s.io/client-go v10.0.0+incompatible
 )
 
 replace (
-	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20211008160901-0859476ef25a
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211007224325-09235ed4dc67
+	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20211015042453-0027f7a48b1f
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211012210304-c179bc61146c
 
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.0-rc.0
