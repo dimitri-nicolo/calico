@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -137,7 +137,7 @@ func encapedResponse(pktR gopacket.Packet) []byte {
 	vxlanR := vxlanL.(*layers.VXLAN)
 
 	inner := gopacket.NewPacket(vxlanR.LayerPayload(), layers.LayerTypeEthernet, gopacket.Default)
-	resp := udpResposeRaw(inner.Data())
+	resp := udpResponseRaw(inner.Data())
 
 	pkt := gopacket.NewSerializeBuffer()
 	err := gopacket.SerializeLayers(pkt, gopacket.SerializeOptions{ComputeChecksums: false},

@@ -1033,6 +1033,8 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(policyDirection PolDirection
 	ap.DSR = m.dsrEnabled
 	ap.LogLevel = m.bpfLogLevel
 	ap.VXLANPort = m.vxlanPort
+	ap.PSNATStart = 20000
+	ap.PSNATEnd = 30000
 
 	return ap
 }

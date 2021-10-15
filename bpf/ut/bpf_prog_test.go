@@ -166,8 +166,10 @@ func setupAndRun(logger testLogger, loglevel, section string, rules *polprog.Rul
 	runFn func(progName string), opts ...testOption) {
 
 	topts := testOpts{
-		subtests: true,
-		logLevel: log.DebugLevel,
+		subtests:  true,
+		logLevel:  log.DebugLevel,
+		psnaStart: 20000,
+		psnatEnd:  30000,
 	}
 
 	for _, o := range opts {
@@ -241,6 +243,7 @@ outter:
 	bin.PatchVXLANPort(testVxlanPort)
 	bin.PatchIsEgressClient(false)
 	bin.PatchIsEgressGateway(false)
+	bin.PatchPSNATPorts(topts.psnaStart, topts.psnatEnd)
 	tempObj := tempDir + "bpf.o"
 	err = bin.WriteToFile(tempObj)
 	Expect(err).NotTo(HaveOccurred())
@@ -614,6 +617,8 @@ type testOpts struct {
 	logLevel  log.Level
 	extraMaps []bpf.Map
 	xdp       bool
+	psnaStart uint32
+	psnatEnd  uint32
 }
 
 type testOption func(opts *testOpts)
@@ -639,6 +644,13 @@ func withExtraMap(m bpf.Map) testOption {
 func withXDP() testOption {
 	return func(o *testOpts) {
 		o.xdp = true
+	}
+}
+
+func withPSNATPorts(start, end uint16) testOption {
+	return func(o *testOpts) {
+		o.psnaStart = uint32(start)
+		o.psnatEnd = uint32(end)
 	}
 }
 
@@ -669,7 +681,7 @@ func layersMatchFields(l gopacket.Layer, ignore ...string) GomegaMatcher {
 	return PointTo(MatchFields(IgnoreMissing|IgnoreExtras, f))
 }
 
-func udpResposeRaw(in []byte) []byte {
+func udpResponseRaw(in []byte) []byte {
 	pkt := gopacket.NewPacket(in, layers.LayerTypeEthernet, gopacket.Default)
 	ethL := pkt.Layer(layers.LayerTypeEthernet)
 	ethR := ethL.(*layers.Ethernet)
@@ -693,6 +705,34 @@ func udpResposeRaw(in []byte) []byte {
 	out := gopacket.NewSerializeBuffer()
 	err := gopacket.SerializeLayers(out, gopacket.SerializeOptions{ComputeChecksums: true},
 		ethR, ipv4R, udpR, gopacket.Payload(resposeDefault))
+	Expect(err).NotTo(HaveOccurred())
+
+	return out.Bytes()
+}
+
+func tcpResponseRaw(in []byte) []byte {
+	pkt := gopacket.NewPacket(in, layers.LayerTypeEthernet, gopacket.Default)
+	ethL := pkt.Layer(layers.LayerTypeEthernet)
+	ethR := ethL.(*layers.Ethernet)
+	ethR.SrcMAC, ethR.DstMAC = ethR.DstMAC, ethR.SrcMAC
+
+	ipv4L := pkt.Layer(layers.LayerTypeIPv4)
+	ipv4R := ipv4L.(*layers.IPv4)
+	ipv4R.SrcIP, ipv4R.DstIP = ipv4R.DstIP, ipv4R.SrcIP
+
+	tcpL := pkt.Layer(layers.LayerTypeTCP)
+	tcpR := tcpL.(*layers.TCP)
+	tcpR.SrcPort, tcpR.DstPort = tcpR.DstPort, tcpR.SrcPort
+
+	if tcpR.SYN {
+		tcpR.ACK = true
+	}
+
+	_ = tcpR.SetNetworkLayerForChecksum(ipv4R)
+
+	out := gopacket.NewSerializeBuffer()
+	err := gopacket.SerializeLayers(out, gopacket.SerializeOptions{ComputeChecksums: true},
+		ethR, ipv4R, tcpR, gopacket.Payload(pkt.ApplicationLayer().Payload()))
 	Expect(err).NotTo(HaveOccurred())
 
 	return out.Bytes()
