@@ -301,7 +301,12 @@ def apply_cnx_license(host):
     :return: None
     """
     # The TSEE license is mounted into the test container at this location.
-    host.calicoctl("apply -f /license.yaml")
+    with open("/license.yaml") as f:
+        lines = f.readlines()
+        license = "".join(lines)
+        host.writefile("cnxlicense.yaml", license)
+        host.calicoctl("apply -f cnxlicense.yaml")
+        host.execute("rm -f cnxlicense.yaml")
 
 @debug_failures
 def assert_profile(host, profile_name):

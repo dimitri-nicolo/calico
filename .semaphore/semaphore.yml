@@ -93,6 +93,9 @@ blocks:
   - name: "System Tests"
     dependencies: ["Build amd64 Image"]
     task:
+      secrets:
+        # Need a license for the tests to apply.
+        - name: test-customer-license
       prologue:
         commands:
           # Correct permissions since they are too open by default:
