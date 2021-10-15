@@ -188,14 +188,16 @@ blocks:
       - name: WINDOWS_VERSION
         value: "1903"
     jobs:
-      - name: VXLAN - Windows FV
-        execution_time_limit:
-          minutes: 120
-        commands:
-          - ./.semaphore/run-win-fv
-        env_vars:
-          - name: BACKEND
-            value: vxlan
+      # TODO: Reinstate VXLAN job
+      # Temporarily disable VXLAN job
+      #- name: VXLAN - Windows FV
+      #  execution_time_limit:
+      #    minutes: 120
+      #  commands:
+      #    - ./.semaphore/run-win-fv
+      #  env_vars:
+      #    - name: BACKEND
+      #      value: vxlan
       - name: BGP - Windows FV
         execution_time_limit:
           minutes: 120
