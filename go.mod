@@ -9,6 +9,7 @@ require (
 	github.com/containernetworking/plugins v0.8.5
 	github.com/gofrs/flock v0.8.0
 	github.com/gogo/protobuf v1.3.2
+	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/howeyc/fsnotify v0.9.0
 	github.com/juju/clock v0.0.0-20190205081909-9c5c9712527c
 	github.com/juju/errors v0.0.0-20200330140219-3fe23663418f
@@ -40,7 +41,7 @@ require (
 
 replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211012210304-c179bc61146c
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211015131530-2a7fc0d73c0b
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	google.golang.org/grpc => google.golang.org/grpc v1.27.1
 
