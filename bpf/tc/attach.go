@@ -61,6 +61,8 @@ type AttachPoint struct {
 	IsEgressGateway      bool
 	IsEgressClient       bool
 	ForceReattach        bool
+	PSNATStart           uint16
+	PSNATEnd             uint16
 }
 
 var tcLock sync.RWMutex

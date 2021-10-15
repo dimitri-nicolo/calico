@@ -101,7 +101,7 @@ func TestCountsPodPodXNode(t *testing.T) {
 		Expect(e.B2A.Bytes).To(Equal(uint64(0)))
 	}
 
-	respPkt := udpResposeRaw(pktBytes)
+	respPkt := udpResponseRaw(pktBytes)
 
 	for i := 1; i <= countRX; i++ {
 		skbMark = 0
@@ -234,7 +234,7 @@ func TestCountsPodPodSameNode(t *testing.T) {
 		Expect(e.B2A.Bytes).To(Equal(uint64(0)))
 	}
 
-	respPkt := udpResposeRaw(pktBytes)
+	respPkt := udpResponseRaw(pktBytes)
 
 	for i := 1; i <= countRX; i++ {
 		skbMark = 0
@@ -339,7 +339,7 @@ func TestCountsHostPodSameNode(t *testing.T) {
 		Expect(e.B2A.Bytes).To(Equal(uint64(0)))
 	}
 
-	respPkt := udpResposeRaw(pktBytes)
+	respPkt := udpResponseRaw(pktBytes)
 
 	for i := 1; i <= countRX; i++ {
 		skbMark = 0
@@ -413,7 +413,7 @@ func TestCountsHostToOutside(t *testing.T) {
 		Expect(e.B2A.Bytes).To(Equal(uint64(0)))
 	}
 
-	respPkt := udpResposeRaw(pktBytes)
+	respPkt := udpResponseRaw(pktBytes)
 
 	for i := 1; i <= countRX; i++ {
 		skbMark = 0
