@@ -186,7 +186,7 @@ blocks:
       - name: K8S_VERSION
         value: 1.22.1
       - name: WINDOWS_VERSION
-        value: "2004"
+        value: "1903"
     jobs:
       - name: VXLAN - Windows FV
         execution_time_limit:
