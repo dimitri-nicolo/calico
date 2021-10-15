@@ -132,7 +132,11 @@ var (
 	protocolPortsMsg      = "rules that specify ports must set protocol to TCP or UDP or SCTP"
 	protocolIcmpMsg       = "rules that specify ICMP fields must set protocol to ICMP"
 	protocolAndHTTPMsg    = "rules that specify HTTP fields must set protocol to TCP or empty"
-	invalidAWSSubnetID    = "AWS subnet ID is invalid; should be 'subnet-' followed by 8 or 17 lower-case hex digits"
+
+	awsSubnetRE        = regexp.MustCompile(`^subnet-[0-9a-f]{8,17}$`)
+	invalidAWSSubnetID = "AWS subnet ID is invalid; should be 'subnet-' followed by 8 or 17 lower-case hex digits"
+	ipv6AWSSubnet      = "IPv6 is not supported for AWS-backed IP pools"
+
 	globalSelectorEntRule = fmt.Sprintf("%v can only be used in an EntityRule namespaceSelector", globalSelector)
 	globalSelectorOnly    = fmt.Sprintf("%v cannot be combined with other selectors", globalSelector)
 
@@ -1305,6 +1309,28 @@ func validateIPPoolSpec(structLevel validator.StructLevel) {
 			"IPpool.IPIPMode", "", reason("IPIPMode and VXLANMode cannot both be enabled on the same IP pool"), "")
 	}
 
+	if pool.AWSSubnetID != "" {
+		// AWS-backed IP pools have additional restrictions...
+		if !awsSubnetRE.MatchString(pool.AWSSubnetID) {
+			structLevel.ReportError(reflect.ValueOf(pool.AWSSubnetID),
+				"IPpool.AWSSubnetID", "", reason(invalidAWSSubnetID), "")
+		}
+		if ipAddr.Version() != 4 {
+			structLevel.ReportError(reflect.ValueOf(pool.AWSSubnetID),
+				"IPpool.CIDR", "", reason(ipv6AWSSubnet), "")
+		}
+		if pool.BlockSize == 0 {
+			// AWS doesn't require aggregation into blocks and the main use case of AWS-backed pools is for
+			// egress gateways, which often have fixed IPs.  We don't want to allocate large blocks and then
+			// get stuck with an affinity that blocks us from moving the block if IP borrowing is turned off.
+			pool.BlockSize = 32
+		}
+		if pool.BlockSize != 32 {
+			structLevel.ReportError(reflect.ValueOf(pool.AWSSubnetID),
+				"IPpool.BlockSize", "", reason("AWS-backed IP pools should use block size 32"), "")
+		}
+	}
+
 	// Default the blockSize
 	if pool.BlockSize == 0 {
 		if ipAddr.Version() == 4 {
@@ -1352,12 +1378,6 @@ func validateIPPoolSpec(structLevel validator.StructLevel) {
 	if cidr.Version() == 6 && cidr.IsNetOverlap(ipv6LinkLocalNet) {
 		structLevel.ReportError(reflect.ValueOf(pool.CIDR),
 			"IPpool.CIDR", "", reason(overlapsV6LinkLocal), "")
-	}
-
-	subnetRE := regexp.MustCompile(`^subnet-[0-9a-f]{8,17}$`)
-	if pool.AWSSubnetID != "" && !subnetRE.MatchString(pool.AWSSubnetID) {
-		structLevel.ReportError(reflect.ValueOf(pool.AWSSubnetID),
-			"IPpool.AWSSubnetID", "", reason(invalidAWSSubnetID), "")
 	}
 }
 
@@ -2140,7 +2160,7 @@ func validateStagedGlobalNetworkPolicy(structLevel validator.StructLevel) {
 	_, enforced := api.ConvertStagedGlobalPolicyToEnforced(&staged)
 
 	if staged.Spec.StagedAction == api.StagedActionDelete {
-		//the network policy fields should all "zero-value" when the update type is "delete"
+		// the network policy fields should all "zero-value" when the update type is "delete"
 		empty := api.GlobalNetworkPolicySpec{}
 		empty.Tier = enforced.Spec.Tier
 		if !reflect.DeepEqual(empty, enforced.Spec) {
@@ -2170,7 +2190,7 @@ func validateStagedKubernetesNetworkPolicy(structLevel validator.StructLevel) {
 	validateObjectMetaLabels(structLevel, staged.Labels)
 
 	if staged.Spec.StagedAction == api.StagedActionDelete {
-		//the network policy fields should all "zero-value" when the update type is "delete"
+		// the network policy fields should all "zero-value" when the update type is "delete"
 		empty := api.NewStagedKubernetesNetworkPolicy()
 		empty.Spec.StagedAction = api.StagedActionDelete
 		if !reflect.DeepEqual(empty.Spec, staged.Spec) {
@@ -2371,7 +2391,7 @@ func validateRouteTableRange(structLevel validator.StructLevel) {
 func validateBGPConfigurationSpec(structLevel validator.StructLevel) {
 	spec := structLevel.Current().Interface().(api.BGPConfigurationSpec)
 
-	//check if Spec.Communities[] are valid
+	// check if Spec.Communities[] are valid
 	communities := spec.Communities
 	for _, community := range communities {
 		isValid := isValidCommunity(community.Value, "Spec.Communities[].Value", structLevel)

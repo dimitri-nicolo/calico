@@ -1176,6 +1176,29 @@ func init() {
 					AWSSubnetID: "subnet-0123456789abcdef0",
 				},
 			}, true),
+		Entry("should reject IP pool with valid AWS subnet ID but IPv6",
+			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
+				Spec: api.IPPoolSpec{
+					CIDR:        netv6_1,
+					AWSSubnetID: "subnet-0123456789abcdef0",
+				},
+			}, false),
+		Entry("should accept IP pool with AWS subnet ID and block size 32",
+			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
+				Spec: api.IPPoolSpec{
+					CIDR:        netv4_3,
+					AWSSubnetID: "subnet-0123456789abcdef0",
+					BlockSize:   32,
+				},
+			}, true),
+		Entry("should reject IP pool with AWS subnet ID and block size 31",
+			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
+				Spec: api.IPPoolSpec{
+					CIDR:        netv4_3,
+					AWSSubnetID: "subnet-0123456789abcdef0",
+					BlockSize:   31,
+				},
+			}, false),
 		Entry("should accept IP pool with valid short AWS subnet ID",
 			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"},
 				Spec: api.IPPoolSpec{
@@ -3751,7 +3774,7 @@ func init() {
 				},
 			},
 		}, false),
-		//DeepPacketInspection validation
+		// DeepPacketInspection validation
 		Entry("should reject a deep packet inspection resource with an invalid selector", api.DeepPacketInspection{
 			ObjectMeta: v1.ObjectMeta{
 				Name: "test-dpi",
