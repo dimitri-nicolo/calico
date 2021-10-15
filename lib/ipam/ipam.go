@@ -115,7 +115,7 @@ func (c ipamClient) AutoAssign(ctx context.Context, args AutoAssignArgs) (*IPAMA
 				return nil, nil, fmt.Errorf("provided IPv4 IPPools list contains one or more IPv6 IPPools")
 			}
 		}
-		v4ia, err = c.autoAssign(ctx, args.Num4, args.HandleID, args.Attrs, args.IPv4Pools, 4, hostname, args.MaxBlocksPerHost, args.HostReservedAttrIPv4s, args.IntendedUse)
+		v4ia, err = c.autoAssign(ctx, args.Num4, args.HandleID, args.Attrs, args.IPv4Pools, 4, hostname, args.MaxBlocksPerHost, args.HostReservedAttrIPv4s, args.IntendedUse, args.AWSSubnetIDs)
 		if err != nil {
 			log.Errorf("Error assigning IPV4 addresses: %v", err)
 			return v4ia, nil, err
@@ -130,7 +130,7 @@ func (c ipamClient) AutoAssign(ctx context.Context, args AutoAssignArgs) (*IPAMA
 				return nil, nil, fmt.Errorf("provided IPv6 IPPools list contains one or more IPv4 IPPools")
 			}
 		}
-		v6ia, err = c.autoAssign(ctx, args.Num6, args.HandleID, args.Attrs, args.IPv6Pools, 6, hostname, args.MaxBlocksPerHost, args.HostReservedAttrIPv6s, args.IntendedUse)
+		v6ia, err = c.autoAssign(ctx, args.Num6, args.HandleID, args.Attrs, args.IPv6Pools, 6, hostname, args.MaxBlocksPerHost, args.HostReservedAttrIPv6s, args.IntendedUse, args.AWSSubnetIDs)
 		if err != nil {
 			log.Errorf("Error assigning IPV6 addresses: %v", err)
 			return v4ia, v6ia, err
@@ -327,7 +327,7 @@ func (c ipamClient) determinePools(ctx context.Context, requestedPoolNets []net.
 // prepareAffinityBlocksForHost returns a list of blocks affine to a node based on requested IP pools.
 // It also releases any emptied blocks still affine to this host but no longer part of an IP Pool which
 // selects this node. It returns matching pools, list of host-affine blocks and any error encountered.
-func (c ipamClient) prepareAffinityBlocksForHost(ctx context.Context, requestedPools []net.IPNet, version int, host string, rsvdAttr *HostReservedAttr, use v3.IPPoolAllowedUse) ([]v3.IPPool, []net.IPNet, error) {
+func (c ipamClient) prepareAffinityBlocksForHost(ctx context.Context, requestedPools []net.IPNet, version int, host string, rsvdAttr *HostReservedAttr, use v3.IPPoolAllowedUse, awsSubnetIDs []string) ([]v3.IPPool, []net.IPNet, error) {
 	// Retrieve node for given hostname to use for ip pool node selection
 	node, err := c.client.Get(ctx, model.ResourceKey{Kind: libapiv3.KindNode, Name: host}, "")
 	if err != nil {
@@ -363,6 +363,14 @@ func (c ipamClient) prepareAffinityBlocksForHost(ctx context.Context, requestedP
 	// If there are no allowed pools, we cannot assign addresses.
 	if len(poolsAllowedByUse) == 0 {
 		return nil, nil, fmt.Errorf("%w, no pools match the required use (%v)", ErrNoQualifiedPool, use)
+	}
+
+	// Further, filter the pools by the AWS subnet ID.  (Reusing variable name here to avoid introducing conflicts
+	// with OS.)
+	poolsAllowedByUse = filterPoolsByAWSSubnetID(poolsAllowedByUse, awsSubnetIDs)
+	log.Debugf("Pools filtered by AWS subnet ID: %v", poolsAllowedByUse)
+	if len(poolsAllowedByUse) == 0 {
+		return nil, nil, fmt.Errorf("%w, no pools match the required AWS subnets (%v)", ErrNoQualifiedPool, awsSubnetIDs)
 	}
 
 	logCtx := log.WithFields(log.Fields{"host": host})
@@ -445,6 +453,39 @@ func filterPoolsByUse(pools []v3.IPPool, use v3.IPPoolAllowedUse) []v3.IPPool {
 			}
 		}
 	}
+	return filteredPools
+}
+
+// filterPoolsByAWSSubnetID returns a slice containing the subset of the input pools that correspond to the given AWS
+// subnets (if specified); or, if awsSubnetIDs is empty, only returns non-AWS pools.
+func filterPoolsByAWSSubnetID(pools []v3.IPPool, awsSubnetIDs []string) []v3.IPPool {
+	var filteredPools []v3.IPPool
+
+	if len(awsSubnetIDs) == 0 {
+		// Filter _out_ AWS pools.
+		log.Debug("No AWS Subnet IDs specified on IPAM request, only returning non-AWS-backed pools.")
+		for _, p := range pools {
+			if p.Spec.AWSSubnetID != "" {
+				continue
+			}
+			filteredPools = append(filteredPools, p)
+		}
+	} else {
+		// Filter _in_ matching pools.
+		log.Debug("AWS Subnet IDs specified on IPAM request, only returning matching AWS-backed pools.")
+		for _, p := range pools {
+			if p.Spec.AWSSubnetID == "" {
+				continue
+			}
+			for _, id := range awsSubnetIDs {
+				if p.Spec.AWSSubnetID == id {
+					filteredPools = append(filteredPools, p)
+					break
+				}
+			}
+		}
+	}
+
 	return filteredPools
 }
 
@@ -638,7 +679,7 @@ func (i *IPAMAssignments) PartialFulfillmentError() error {
 
 var ErrUseRequired = errors.New("must specify the intended use when assigning an IP")
 
-func (c ipamClient) autoAssign(ctx context.Context, num int, handleID *string, attrs map[string]string, requestedPools []net.IPNet, version int, host string, maxNumBlocks int, rsvdAttr *HostReservedAttr, use v3.IPPoolAllowedUse) (*IPAMAssignments, error) {
+func (c ipamClient) autoAssign(ctx context.Context, num int, handleID *string, attrs map[string]string, requestedPools []net.IPNet, version int, host string, maxNumBlocks int, rsvdAttr *HostReservedAttr, use v3.IPPoolAllowedUse, awsSubnetIDs []string) (*IPAMAssignments, error) {
 	// Default parameters.
 	if use == "" {
 		log.Error("Attempting to auto-assign an IP without specifying intended use.")
@@ -657,7 +698,7 @@ func (c ipamClient) autoAssign(ctx context.Context, num int, handleID *string, a
 		logCtx = logCtx.WithField("handle", *handleID)
 	}
 	logCtx.Info("Looking up existing affinities for host")
-	pools, affBlocks, err := c.prepareAffinityBlocksForHost(ctx, requestedPools, version, host, rsvdAttr, use)
+	pools, affBlocks, err := c.prepareAffinityBlocksForHost(ctx, requestedPools, version, host, rsvdAttr, use, awsSubnetIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -2026,7 +2067,7 @@ func (c ipamClient) EnsureBlock(ctx context.Context, args BlockArgs) (*net.IPNet
 				return nil, nil, fmt.Errorf("provided IPv4 IPPools list contains one or more IPv6 IPPools")
 			}
 		}
-		v4Net, err = c.ensureBlock(ctx, args.HostReservedAttrIPv4s, args.IPv4Pools, 4, hostname)
+		v4Net, err = c.ensureBlock(ctx, args.HostReservedAttrIPv4s, args.IPv4Pools, 4, hostname, args.AWSSubnetIDs)
 		if err != nil {
 			log.Errorf("Error ensure IPv4 block: %v", err)
 			return nil, nil, err
@@ -2039,7 +2080,7 @@ func (c ipamClient) EnsureBlock(ctx context.Context, args BlockArgs) (*net.IPNet
 				return nil, nil, fmt.Errorf("provided IPv6 IPPools list contains one or more IPv4 IPPools")
 			}
 		}
-		v6Net, err = c.ensureBlock(ctx, args.HostReservedAttrIPv6s, args.IPv4Pools, 6, hostname)
+		v6Net, err = c.ensureBlock(ctx, args.HostReservedAttrIPv6s, args.IPv4Pools, 6, hostname, args.AWSSubnetIDs)
 		if err != nil {
 			log.Errorf("Error ensure IPv6 block: %v", err)
 			return nil, nil, err
@@ -2082,13 +2123,13 @@ func getMaxPrefixLen(version int, attrs *HostReservedAttr) (int, error) {
 	return maxPrefixLen, nil
 }
 
-func (c ipamClient) ensureBlock(ctx context.Context, rsvdAttr *HostReservedAttr, requestedPools []net.IPNet, version int, host string) (*net.IPNet, error) {
+func (c ipamClient) ensureBlock(ctx context.Context, rsvdAttr *HostReservedAttr, requestedPools []net.IPNet, version int, host string, awsSubnetIDs []string) (*net.IPNet, error) {
 	// This function is similar to autoAssign except it does not allocate ips.
 
 	logCtx := log.WithFields(log.Fields{"host": host})
 
 	logCtx.Info("Looking up existing affinities for host")
-	pools, affBlocks, err := c.prepareAffinityBlocksForHost(ctx, requestedPools, version, host, rsvdAttr, v3.IPPoolAllowedUseWorkload)
+	pools, affBlocks, err := c.prepareAffinityBlocksForHost(ctx, requestedPools, version, host, rsvdAttr, v3.IPPoolAllowedUseWorkload, awsSubnetIDs)
 	if err != nil {
 		return nil, err
 	}
