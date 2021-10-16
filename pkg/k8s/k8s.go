@@ -28,7 +28,6 @@ import (
 	cnitypes "github.com/containernetworking/cni/pkg/types"
 	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/containernetworking/plugins/pkg/ipam"
-
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -227,6 +226,7 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	var profiles []string
 	var generateName string
 	var serviceAccount string
+	var awsIPRequired bool
 
 	// Only attempt to fetch the labels and annotations from Kubernetes
 	// if the policy type has been set to "k8s". This allows users to
@@ -239,7 +239,7 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 		}
 		logger.WithField("NS Annotations", annotNS).Debug("Fetched K8s namespace annotations")
 
-		labels, annot, ports, profiles, generateName, serviceAccount, err = getK8sPodInfo(pod, args.IfName)
+		labels, annot, ports, profiles, generateName, serviceAccount, awsIPRequired, err = getK8sPodInfo(pod, args.IfName)
 		if err != nil {
 			return nil, err
 		}
@@ -250,7 +250,6 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 
 		// If this is for the default pod interface check for calico IPAM specific annotations and set them if needed.
 		if podInterface.IsDefault && conf.IPAM.Type == "calico-ipam" {
-
 			var v4pools, v6pools string
 
 			// Sets  the Namespace annotation for IP pools as default
@@ -267,7 +266,9 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 				v6pools = v6poolpod
 			}
 
-			if len(v4pools) != 0 || len(v6pools) != 0 {
+			if len(v4pools) != 0 || len(v6pools) != 0 || awsIPRequired {
+				// We have some custom data we need to pass to the IPAM plugin. Parse and update our input JSON data.
+				// We parse into a raw map so that we can pass through unknown fields.
 				var stdinData map[string]interface{}
 				if err := json.Unmarshal(args.StdinData, &stdinData); err != nil {
 					return nil, err
@@ -297,6 +298,16 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 					}
 					stdinData["ipam"].(map[string]interface{})["ipv6_pools"] = v6PoolSlice
 					logger.WithField("ipv6_pools", v6pools).Debug("Setting IPv6 Pools")
+				}
+				if awsIPRequired {
+					// Pod requires an AWS-backed pool, load the valid pools from file and add to the IPAM config.
+					awsSubnetIDs, err := utils.DetermineAWSSubnets(conf.AWSSubnetsFile)
+					if err != nil {
+						return nil, err
+					}
+					stdinData["ipam"].(map[string]interface{})["aws_subnet_ids"] = awsSubnetIDs
+					logger.WithField("awsSubnetIDs", awsSubnetIDs).Debug(
+						"Setting aws_subnet_ids field to tell IPAM to use an AWS pool.")
 				}
 
 				newData, err := json.Marshal(stdinData)
@@ -918,13 +929,13 @@ func getK8sNSInfo(client *kubernetes.Clientset, podNamespace string) (annotation
 	return ns.Annotations, nil
 }
 
-func getK8sPodInfo(pod *corev1.Pod, iface string) (labels map[string]string, annotations map[string]string, ports []libapi.WorkloadEndpointPort, profiles []string, generateName, serviceAccount string, err error) {
+func getK8sPodInfo(pod *corev1.Pod, iface string) (labels map[string]string, annotations map[string]string, ports []libapi.WorkloadEndpointPort, profiles []string, generateName, serviceAccount string, awsIPRequired bool, err error) {
 	logrus.Debugf("pod info %+v", pod)
 
 	c := k8sconversion.NewConverter()
 	kvps, err := c.PodToWorkloadEndpoints(pod)
 	if err != nil {
-		return nil, nil, nil, nil, "", "", err
+		return nil, nil, nil, nil, "", "", false, err
 	}
 
 	var wep *libapi.WorkloadEndpoint
@@ -948,7 +959,19 @@ func getK8sPodInfo(pod *corev1.Pod, iface string) (labels map[string]string, ann
 	generateName = wep.GenerateName
 	serviceAccount = wep.Spec.ServiceAccountName
 
-	return labels, pod.Annotations, ports, profiles, generateName, serviceAccount, nil
+	for _, c := range pod.Spec.Containers {
+		req, ok := c.Resources.Requests["projectcalico.org/aws-secondary-ipv4"]
+		if !ok {
+			continue
+		}
+		if !req.IsZero() {
+			logrus.Debug("Pod requests an AWS secondary IP.")
+			awsIPRequired = true
+			break
+		}
+	}
+
+	return labels, pod.Annotations, ports, profiles, generateName, serviceAccount, awsIPRequired, nil
 }
 
 func getPodCidr(client *kubernetes.Clientset, conf types.NetConf, nodename string) (string, error) {

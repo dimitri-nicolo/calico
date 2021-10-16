@@ -120,6 +120,31 @@ func MustCreateNewIPPoolBlockSize(c client.Interface, cidr string, ipip, natOutg
 	return pool.Name
 }
 
+// MustCreateNewIPPoolAWS creates a new Calico IPAM IP Pool with the given AWS subnet ID.
+func MustCreateNewIPPoolAWS(c client.Interface, cidr string, awsSubnetID string) string {
+	log.SetLevel(log.DebugLevel)
+
+	log.SetOutput(os.Stderr)
+
+	name := strings.Replace(cidr, ".", "-", -1)
+	name = strings.Replace(name, ":", "-", -1)
+	name = strings.Replace(name, "/", "-", -1)
+
+	pool := api.NewIPPool()
+	pool.Name = name
+	pool.Spec.CIDR = cidr
+	pool.Spec.NATOutgoing = false
+	pool.Spec.VXLANMode = api.VXLANModeCrossSubnet
+	pool.Spec.BlockSize = 32
+	pool.Spec.AWSSubnetID = awsSubnetID
+
+	_, err := c.IPPools().Create(context.Background(), pool, options.SetOptions{})
+	if err != nil {
+		panic(err)
+	}
+	return pool.Name
+}
+
 // Used for passing arguments to the CNI plugin.
 type cniArgs struct {
 	Env []string

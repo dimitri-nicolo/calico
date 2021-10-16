@@ -241,6 +241,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			MaxBlocksPerHost: maxBlocks,
 			Attrs:            attrs,
 			IntendedUse:      v3.IPPoolAllowedUseWorkload,
+			AWSSubnetIDs:     conf.IPAM.AWSSubnetIDs, // Set by the CNI plugin if the pod needs an AWS pool.
 		}
 		if runtime.GOOS == "windows" {
 			rsvdAttrWindows := &ipam.HostReservedAttr{

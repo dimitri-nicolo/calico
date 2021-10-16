@@ -77,12 +77,17 @@ type NetConf struct {
 		AssignIpv6 *string  `json:"assign_ipv6"`
 		IPv4Pools  []string `json:"ipv4_pools,omitempty"`
 		IPv6Pools  []string `json:"ipv6_pools,omitempty"`
+
+		// AWSSubnetIDs is auto-filled by the CNI plugin if the workload we're operating on requires an IP from one
+		// of the given AWS subnets.
+		AWSSubnetIDs []string `json:"aws_subnet_ids"`
 	} `json:"ipam,omitempty"`
 	Args                 Args                   `json:"args"`
 	MTU                  int                    `json:"mtu"`
 	NumQueues            int                    `json:"num_queues"`
 	Nodename             string                 `json:"nodename"`
 	NodenameFile         string                 `json:"nodename_file"`
+	AWSSubnetsFile       string                 `json:"aws_subnets_file"`
 	IPAMLockFile         string                 `json:"ipam_lock_file"`
 	NodenameFileOptional bool                   `json:"nodename_file_optional"`
 	DatastoreType        string                 `json:"datastore_type"`

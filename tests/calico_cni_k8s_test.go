@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/containernetworking/cni/pkg/types/current"
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -1421,6 +1422,212 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 		})
 
+	})
+
+	Context("AWS subnet tests", func() {
+		var nc types.NetConf
+		var netconf string
+		var normalPool = "172.16.0.0/16"
+		var localAWSPool = "172.17.0.0/16"
+		var remoteAWSPool = "172.18.0.0/16"
+		var normalPoolCIDR, localAWSPoolCIDR *net.IPNet
+		var localAWSPoolName, remoteAWSPoolName string
+		var clientset *kubernetes.Clientset
+		var name string
+		BeforeEach(func() {
+			// Build the network config for this set of tests.
+			nc = types.NetConf{
+				CNIVersion:           cniVersion,
+				Name:                 "calico-uts",
+				Type:                 "calico",
+				EtcdEndpoints:        fmt.Sprintf("http://%s:2379", os.Getenv("ETCD_IP")),
+				DatastoreType:        os.Getenv("DATASTORE_TYPE"),
+				Kubernetes:           types.Kubernetes{Kubeconfig: "/home/user/certs/kubeconfig"},
+				Policy:               types.Policy{PolicyType: "k8s"},
+				NodenameFileOptional: true,
+				AWSSubnetsFile:       "/tmp/aws-subnets",
+				LogLevel:             "debug",
+			}
+			nc.IPAM.Type = "calico-ipam"
+			ncb, err := json.Marshal(nc)
+			Expect(err).NotTo(HaveOccurred())
+			netconf = string(ncb)
+
+			// Create three IP pools, a normal one, one with a valid, local AWS subnet and one with a non-local AWS subnet.
+			testutils.MustCreateNewIPPool(calicoClient, normalPool, false, false, true)
+			_, normalPoolCIDR, err = net.ParseCIDR(normalPool)
+			Expect(err).NotTo(HaveOccurred())
+
+			localAWSPoolName = testutils.MustCreateNewIPPoolAWS(calicoClient, localAWSPool, "subnet-00000000000000002")
+			_ = localAWSPoolName
+			_, localAWSPoolCIDR, err = net.ParseCIDR(localAWSPool)
+			Expect(err).NotTo(HaveOccurred())
+
+			remoteAWSPoolName = testutils.MustCreateNewIPPoolAWS(calicoClient, remoteAWSPool, "subnet-00000000000000003")
+			_ = remoteAWSPoolName
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create a kubernetes clientset.
+			clientset = getKubernetesClient()
+
+			// Ensure a namespace exists.
+			ensureNamespace(clientset, testutils.K8S_TEST_NS)
+
+			// Write out the AWS subnets file to tell the CNI plugin which subnets are local.
+			err = ioutil.WriteFile(
+				"/tmp/aws-subnets",
+				[]byte(`{"aws_subnet_ids": ["subnet-00000000000000001", "subnet-00000000000000002"]}`),
+				0644,
+			)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			// Delete pod
+			ensurePodDeleted(clientset, testutils.K8S_TEST_NS, name)
+
+			// Delete the IP Pools.
+			testutils.MustDeleteIPPool(calicoClient, normalPool)
+			testutils.MustDeleteIPPool(calicoClient, localAWSPool)
+			testutils.MustDeleteIPPool(calicoClient, remoteAWSPool)
+
+			// Delete the AWS subnets file.
+			err := os.Remove("/tmp/aws-subnets")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("assigns an IP address from the normal IP pool by default", func() {
+			name = fmt.Sprintf("run%d", rand.Uint32())
+			pod := ensurePodCreated(clientset, testutils.K8S_TEST_NS, &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: name,
+				},
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{{
+						Name:  name,
+						Image: "ignore",
+					}},
+					NodeName: hostname,
+				},
+			})
+			log.Infof("Created POD object: %v", pod)
+
+			_, _, _, contAddresses, _, contNs, err := testutils.CreateContainer(netconf, name, testutils.K8S_TEST_NS, "")
+			Expect(err).NotTo(HaveOccurred())
+			defer func() {
+				// Delete the container.
+				_, err = testutils.DeleteContainer(netconf, contNs.Path(), name, testutils.K8S_TEST_NS)
+				Expect(err).ShouldNot(HaveOccurred())
+			}()
+
+			podIP := contAddresses[0].IP
+			log.Infof("All container IPs: %v", contAddresses)
+			log.Infof("Container got IP address: %s", podIP)
+			Expect(normalPoolCIDR.Contains(podIP)).To(BeTrue())
+		})
+
+		It("assigns an IP from the correct AWS pool if AWS resource request is made", func() {
+			name = fmt.Sprintf("run%d", rand.Uint32())
+			pod := ensurePodCreated(clientset, testutils.K8S_TEST_NS, &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: name,
+				},
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{{
+						Name:  name,
+						Image: "ignore",
+						Resources: v1.ResourceRequirements{
+							Requests: map[v1.ResourceName]resource.Quantity{
+								"projectcalico.org/aws-secondary-ipv4": resource.MustParse("1"),
+							},
+							Limits: map[v1.ResourceName]resource.Quantity{
+								"projectcalico.org/aws-secondary-ipv4": resource.MustParse("1"),
+							},
+						},
+					}},
+					NodeName: hostname,
+				},
+			})
+			log.Infof("Created POD object: %v", pod)
+
+			_, _, _, contAddresses, _, contNs, err := testutils.CreateContainer(netconf, name, testutils.K8S_TEST_NS, "")
+			Expect(err).NotTo(HaveOccurred())
+			defer func() {
+				// Delete the container.
+				_, err = testutils.DeleteContainer(netconf, contNs.Path(), name, testutils.K8S_TEST_NS)
+				Expect(err).ShouldNot(HaveOccurred())
+			}()
+
+			podIP := contAddresses[0].IP
+			log.Infof("All container IPs: %v", contAddresses)
+			log.Infof("Container got IP address: %s", podIP)
+			Expect(localAWSPoolCIDR.Contains(podIP)).To(BeTrue(), fmt.Sprintf(
+				"IP %v was not chosen from expected pool %v", podIP.String(), localAWSPoolCIDR.String()))
+		})
+
+		It("fails if an AWS pool is required but the annotation specifies incompatible pools", func() {
+			name = fmt.Sprintf("run%d", rand.Uint32())
+			pod := ensurePodCreated(clientset, testutils.K8S_TEST_NS, &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: name,
+					Annotations: map[string]string{
+						"cni.projectcalico.org/ipv4pools": "[\"172.16.0.0/16\", \"172.18.0.0/16\"]",
+					},
+				},
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{{
+						Name:  name,
+						Image: "ignore",
+						Resources: v1.ResourceRequirements{
+							Requests: map[v1.ResourceName]resource.Quantity{
+								"projectcalico.org/aws-secondary-ipv4": resource.MustParse("1"),
+							},
+							Limits: map[v1.ResourceName]resource.Quantity{
+								"projectcalico.org/aws-secondary-ipv4": resource.MustParse("1"),
+							},
+						},
+					}},
+					NodeName: hostname,
+				},
+			})
+			log.Infof("Created POD object: %v", pod)
+
+			_, _, _, _, _, contNs, err := testutils.CreateContainer(netconf, name, testutils.K8S_TEST_NS, "")
+			Expect(err).To(HaveOccurred())
+			defer func() {
+				// Delete the container.
+				_, err = testutils.DeleteContainer(netconf, contNs.Path(), name, testutils.K8S_TEST_NS)
+				Expect(err).ShouldNot(HaveOccurred())
+			}()
+		})
+
+		It("fails if a normal pool is required but the annotation specifies incompatible pools", func() {
+			name = fmt.Sprintf("run%d", rand.Uint32())
+			pod := ensurePodCreated(clientset, testutils.K8S_TEST_NS, &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: name,
+					Annotations: map[string]string{
+						"cni.projectcalico.org/ipv4pools": "[\"172.17.0.0/16\"]",
+					},
+				},
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{{
+						Name:  name,
+						Image: "ignore",
+					}},
+					NodeName: hostname,
+				},
+			})
+			log.Infof("Created POD object: %v", pod)
+
+			_, _, _, _, _, contNs, err := testutils.CreateContainer(netconf, name, testutils.K8S_TEST_NS, "")
+			Expect(err).To(HaveOccurred())
+			defer func() {
+				// Delete the container.
+				_, err = testutils.DeleteContainer(netconf, contNs.Path(), name, testutils.K8S_TEST_NS)
+				Expect(err).ShouldNot(HaveOccurred())
+			}()
+		})
 	})
 
 	Context("using floatingIPs annotation to assign a DNAT", func() {
