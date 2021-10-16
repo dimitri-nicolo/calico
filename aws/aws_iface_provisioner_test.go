@@ -4,8 +4,11 @@ package aws
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
 	"net"
 	nethttp "net/http"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -30,6 +33,8 @@ const (
 	nodeName   = "test-node"
 	instanceID = "i-ca1ic000000000001"
 	testVPC    = "vpc-01234567890123456"
+
+	awsSubnetsFilename = "/tmp/aws-subnets"
 
 	primaryENIID       = "eni-00000000000000001"
 	primaryENIAttachID = "attach-00000000000000001"
@@ -436,8 +441,14 @@ func TestSecondaryIfaceProvisioner_AWSPoolsButNoWorkloadsMainline(t *testing.T) 
 		},
 	})
 
-	// Should respond with the Calico subnet details for the node's AZ..
+	// Should respond with the Calico subnet details for the node's AZ.
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responsePoolsNoENIs)))
+
+	// Should write out the aws-subnets file.
+	rawSubnets, err := ioutil.ReadFile(awsSubnetsFilename)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(rawSubnets).To(MatchJSON(fmt.Sprintf(`{"aws_subnet_ids": ["%s", "%s", "%s"]}`,
+		subnetIDWest1Calico, subnetIDWest1CalicoAlt, subnetIDWest1Default)))
 }
 
 func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_Mainline(t *testing.T) {
@@ -952,6 +963,9 @@ func (f sipTestFakes) expectSingleBackoffAndStep() {
 
 func setup(t *testing.T, opts ...IfaceProvOpt) (*SecondaryIfaceProvisioner, *sipTestFakes) {
 	RegisterTestingT(t)
+
+	cleanUpAWSSubnetsFile()
+
 	fakeIPAM := newFakeIPAM()
 	theTime, err := time.Parse("2006-01-02 15:04:05.000", "2021-09-15 16:00:00.000")
 	Expect(err).NotTo(HaveOccurred())
@@ -1017,6 +1031,7 @@ func setup(t *testing.T, opts ...IfaceProvOpt) (*SecondaryIfaceProvisioner, *sip
 		}),
 		// Disable the watchdog by default so that we can more easily check other timers.
 		OptLivenessEnabled(false),
+		OptSubnetsFileOverride(awsSubnetsFilename),
 	}
 
 	opts = append(defaultOpts, opts...)
@@ -1038,11 +1053,19 @@ func setup(t *testing.T, opts ...IfaceProvOpt) (*SecondaryIfaceProvisioner, *sip
 	}
 }
 
+func cleanUpAWSSubnetsFile() {
+	if _, err := os.Stat(awsSubnetsFilename); err == nil {
+		err := os.Remove(awsSubnetsFilename)
+		Expect(err).NotTo(HaveOccurred())
+	}
+}
+
 func setupAndStart(t *testing.T, opts ...IfaceProvOpt) (*SecondaryIfaceProvisioner, *sipTestFakes, func()) {
 	sip, fake := setup(t, opts...)
 	ctx, cancel := context.WithCancel(context.Background())
 	doneC := sip.Start(ctx)
 	return sip, fake, func() {
+		defer cleanUpAWSSubnetsFile()
 		cancel()
 		Eventually(doneC).Should(BeClosed())
 		fake.EC2.Errors.ExpectAllErrorsConsumed()
