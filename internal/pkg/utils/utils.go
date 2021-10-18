@@ -95,6 +95,32 @@ func nodenameFromFile(filename string) string {
 	return string(data)
 }
 
+// AWSSubnetsFileData contents of the aws-subnets file.  We write a JSON dict for extensibility.
+// Must match the definition in the felix's aws_iface_provisioner.go.
+type AWSSubnetsFileData struct {
+	AWSSubnetIDs []string `json:"aws_subnet_ids"`
+}
+
+// DetermineAWSSubnets read the /var/lib/calico/aws-subnets file, which is written by Felix and returns
+// the subnet IDs that it contains.  These should be the subnets that are valid for use on this host.
+func DetermineAWSSubnets(filename string) ([]string, error) {
+	if filename == "" {
+		filename = "/var/lib/calico/aws-subnets"
+	}
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		logrus.Errorf("Failed to read AWS subnets file %q: %s; Felix should create the file. "+
+			"Is Felix running and configured to enable AWS subnet support?", filename, err.Error())
+		return nil, fmt.Errorf("failed to read AWS subnets file %q: %w", filename, err)
+	}
+	var parsedData AWSSubnetsFileData
+	err = json.Unmarshal(data, &parsedData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode AWS subnets file %q: %w", filename, err)
+	}
+	return parsedData.AWSSubnetIDs, nil
+}
+
 // MTUFromFile reads the /var/lib/calico/mtu file if it exists and
 // returns the MTU within.
 func MTUFromFile(filename string) (int, error) {
