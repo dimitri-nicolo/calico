@@ -59,7 +59,7 @@ spec:
 | description | Human-readable description of the template. | string | yes |
 | summary | Template for the description field in generated events. See the summary section below for more details. `description` is used if this is omitted. | string | no |
 | severity | Severity of the alert for display in Manager. | int | yes | 1 - 100 |
-| dataSet | Which data set to execute the alert against. | string | yes | audit, dns, flows |
+| dataSet | Which data set to execute the alert against. | string | yes | audit, dns, flows, l7 |
 | period | How often the query is run. | duration | no | 1h 2m 3s | 5m |
 | lookback | How much data to gather at once. Must exceed audit log flush interval, `dnsLogsFlushInterval`, or `flowLogsFlushInterval` as appropriate. | duration | no | 1h 2m 3s | 10m |
 | query | Which data to include from the source data set. Written in a domain-specific query language. See the query section below. | string | no |
