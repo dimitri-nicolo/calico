@@ -23,8 +23,8 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -374,6 +374,7 @@ func correctAllocationWithHandle(ctx context.Context, c client.Interface, addr, 
 	ipAddr := net.ParseIP(addr)
 	if ipAddr == nil {
 		log.Fatalf("Failed to parse node tunnel address '%s'", addr)
+		return nil
 	}
 
 	// Release the old allocation.
@@ -428,7 +429,7 @@ func assignHostTunnelAddr(ctx context.Context, c client.Interface, nodename stri
 		Attrs:       attrs,
 		Hostname:    nodename,
 		IPv4Pools:   cidrs,
-		IntendedUse: v3.IPPoolAllowedUseTunnel,
+		IntendedUse: api.IPPoolAllowedUseTunnel,
 	}
 
 	v4Assignments, _, err := c.IPAM().AutoAssign(ctx, args)

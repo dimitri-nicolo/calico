@@ -12,28 +12,30 @@ require (
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/projectcalico/pod2daemon v3.8.2+incompatible // indirect
 	github.com/projectcalico/typha v0.7.3-0.20210730161404-dccc9fee3e51
-	github.com/prometheus/client_golang v1.10.0
-	github.com/sirupsen/logrus v1.7.0
-	github.com/tigera/api v0.0.0-20211005191943-b63a8d918d09
+	github.com/prometheus/client_golang v1.11.0
+	github.com/sirupsen/logrus v1.8.1
+	github.com/tigera/api v0.0.0-20211012203540-a8058565e3ef
 	github.com/vishvananda/netlink v1.1.1-0.20210703095558-21f2c55a7727
-	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	gopkg.in/fsnotify/fsnotify.v1 v1.4.7
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.21.0
-	k8s.io/apimachinery v0.21.0
-	k8s.io/client-go v0.21.0
+	k8s.io/api v0.22.0
+	k8s.io/apimachinery v0.22.0
+	k8s.io/client-go v0.22.0
+	sigs.k8s.io/kind v0.11.1
 )
 
 replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/kelseyhightower/confd => github.com/tigera/confd-private v1.0.1-0.20211005205136-2b681b486dfe
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20211005232238-1505faebf7e7
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20211007224429-84991123be7a
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211007224325-09235ed4dc67
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211007224120-ec8f0ec6ea9a
+	github.com/kelseyhightower/confd => github.com/tigera/confd-private v1.0.1-0.20211014004425-33a35f6e1ba3
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20211011153220-8940bffc1237
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20211013145115-9f0b9a5fad19
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211012210304-c179bc61146c
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211012203043-504b49c39103
 
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
+	google.golang.org/grpc => google.golang.org/grpc v1.27.1
 
 	// Need replacements for all the k8s subsidiary projects that are pulled in indirectly because
 	// the kubernets repo pulls them in via a replacement to its own vendored copies, which doesn't work for

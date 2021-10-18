@@ -22,7 +22,6 @@ from unittest import TestCase
 from deepdiff import DeepDiff
 from kubernetes import client, config
 
-from utils.utils import DOCKER_RUN_NET_ARG
 from utils.utils import retry_until_success, run, kubectl
 
 logger = logging.getLogger(__name__)
@@ -123,6 +122,19 @@ class TestBase(TestCase):
         Creates a deployment and corresponding service with the given
         parameters.
         """
+        # Use a pod anti-affinity so that the scheduler prefers deploying the
+        # pods on different nodes. This makes our tests more reliable, since
+        # some tests expect pods to be scheduled to different nodes.
+        selector = {'matchLabels': {'app': name}}
+        terms = [client.V1WeightedPodAffinityTerm(
+            pod_affinity_term=client.V1PodAffinityTerm(
+                label_selector=selector,
+                topology_key="kubernetes.io/hostname"),
+            weight=100,
+            )]
+        anti_aff = client.V1PodAntiAffinity(
+                preferred_during_scheduling_ignored_during_execution=terms)
+
         # Run a deployment with <replicas> copies of <image>, with the
         # pods labelled with "app": <name>.
         deployment = client.V1Deployment(
@@ -131,14 +143,18 @@ class TestBase(TestCase):
             metadata=client.V1ObjectMeta(name=name),
             spec=client.V1DeploymentSpec(
                 replicas=replicas,
-                selector={'matchLabels': {'app': name}},
+                selector=selector,
                 template=client.V1PodTemplateSpec(
                     metadata=client.V1ObjectMeta(labels={"app": name}),
-                    spec=client.V1PodSpec(containers=[
-                        client.V1Container(name=name,
-                                           image=image,
-                                           ports=[client.V1ContainerPort(container_port=port)]),
+                    spec=client.V1PodSpec(
+                        affinity=client.V1Affinity(pod_anti_affinity=anti_aff),
+                        containers=[
+                          client.V1Container(name=name,
+                                             image=image,
+                                             ports=[client.V1ContainerPort(container_port=port)]),
                     ]))))
+
+        # Create the deployment.
         api_response = client.AppsV1Api().create_namespaced_deployment(
             body=deployment,
             namespace=ns)
@@ -173,13 +189,25 @@ class TestBase(TestCase):
         if cluster_ip:
           service.spec["clusterIP"] = cluster_ip
         if ipv6:
-          service.spec["ipFamily"] = "IPv6"
+          service.spec["ipFamilies"] = ["IPv6"]
 
         api_response = self.cluster.create_namespaced_service(
             body=service,
             namespace=ns,
         )
-        logger.debug("service created, status='%s'" % str(api_response.status))
+        logger.debug("Additional Service created. status='%s'" % str(api_response.status))
+
+    def check_calico_version(self):
+        config.load_kube_config(os.environ.get('KUBECONFIG'))
+        api = client.AppsV1Api(client.ApiClient())
+        node_ds = api.read_namespaced_daemon_set("calico-node", "kube-system", exact=True, export=False)
+        for container in node_ds.spec.template.spec.containers:
+            if container.name == "calico-node":
+                if container.image != "calico/node:latest-amd64":
+                    container.image = "calico/node:latest-amd64"
+                    api.replace_namespaced_daemon_set("calico-node", "kube-system", node_ds)
+                    time.sleep(3)
+                    retry_until_success(self.check_pod_status, retries=20, wait_time=3, function_args=["kube-system"])
 
     def wait_until_exists(self, name, resource_type, ns="default"):
         retry_until_success(kubectl, function_args=["get %s %s -n%s" %
@@ -227,7 +255,7 @@ class TestBase(TestCase):
     def get_ds_env(self, ds, ns, key):
         config.load_kube_config(os.environ.get('KUBECONFIG'))
         api = client.AppsV1Api(client.ApiClient())
-        node_ds = api.read_namespaced_daemon_set(ds, ns, exact=True, export=True)
+        node_ds = api.read_namespaced_daemon_set(ds, ns, exact=True, export=False)
         for container in node_ds.spec.template.spec.containers:
             if container.name == ds:
                 for env in container.env:
@@ -238,7 +266,7 @@ class TestBase(TestCase):
     def update_ds_env(self, ds, ns, env_vars):
         config.load_kube_config(os.environ.get('KUBECONFIG'))
         api = client.AppsV1Api(client.ApiClient())
-        node_ds = api.read_namespaced_daemon_set(ds, ns, exact=True, export=True)
+        node_ds = api.read_namespaced_daemon_set(ds, ns, exact=True, export=False)
         for container in node_ds.spec.template.spec.containers:
             if container.name == ds:
                 for k, v in env_vars.items():
@@ -299,8 +327,7 @@ TestBase.dual_tor = False
 class Container(object):
 
     def __init__(self, image, args, flags=""):
-        self.id = run("docker run --rm -d %s %s %s %s" % (
-            DOCKER_RUN_NET_ARG,
+        self.id = run("docker run --rm -d --net=kind %s %s %s" % (
             flags,
             image,
             args)).strip().split("\n")[-1].strip()
@@ -338,7 +365,7 @@ class Container(object):
 
 class Pod(object):
 
-    def __init__(self, ns, name, node=None, image=None, labels=None, annotations=None, yaml=None):
+    def __init__(self, ns, name, node=None, image=None, labels=None, annotations=None, yaml=None, cmd=None):
         if yaml:
             # Caller has provided the complete pod YAML.
             kubectl("""apply -f - <<'EOF'
@@ -370,6 +397,8 @@ EOF
                 pod["metadata"]["annotations"] = annotations
             if labels:
                 pod["metadata"]["labels"] = labels
+            if cmd:
+                pod["spec"]["containers"][0]["command"] = cmd
             kubectl("""apply -f - <<'EOF'
 %s
 EOF

@@ -42,7 +42,6 @@ class _TestEgressIP(TestBase):
     def test_access_service_node_port(self):
 
         def check_source_ip(client, dest_ip, port, expected_ips=[], not_expected_ips=[]):
-            #client.can_connect(dest_ip, port, command="wget")
             retry_until_success(client.can_connect, retries=3, wait_time=1, function_kwargs={"ip": dest_ip, "port": port, "command": "wget"})
             reply = client.get_last_output()
             m = re.match(r"^.*client_address=([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+).*$", reply.replace("\n",""))
@@ -420,6 +419,20 @@ EOF
 
         return client, server, gateway
 
+    def copy_pull_secret(self, ns):
+        out = run("kubectl get secret cnx-pull-secret -n kube-system -o json")
+
+        # Remove revision and UID information so we can re-apply cleanly.
+        # This used to be done with --export, but that option has been removed from kubectl.
+        sec = json.loads(out)
+        del sec["metadata"]["resourceVersion"]
+        del sec["metadata"]["uid"]
+        sec["metadata"]["namespace"] = ns
+        secIn = json.dumps(sec)
+
+        # Reapply in the new namespace.
+        run("echo '%s' | kubectl apply -f -" % secIn)
+
     def server_add_route(self, server, pod):
         """
         add route to a pod for a server
@@ -460,7 +473,8 @@ spec:
         """
         Create egress gateway pod, with an IP from that pool.
         """
-        run("kubectl get secret cnx-pull-secret -n kube-system --export -o yaml | kubectl apply --namespace=%s -f -" % ns)
+        self.copy_pull_secret(ns)
+
         gateway = Pod(ns, name, image=None, yaml="""
 apiVersion: v1
 kind: Pod
@@ -518,7 +532,8 @@ class NetcatServerTCP(Container):
 class NetcatClientTCP(Pod):
 
     def __init__(self, ns, name, node=None, labels=None, annotations=None):
-        super(NetcatClientTCP, self).__init__(ns, name, image="spaster/alpine-sleep", node=node, labels=labels, annotations=annotations)
+        cmd = ["sleep", "3600"]
+        super(NetcatClientTCP, self).__init__(ns, name, image="alpine", node=node, labels=labels, annotations=annotations, cmd=cmd)
         self.last_output = ""
 
     def can_connect(self, ip, port, command="nc"):

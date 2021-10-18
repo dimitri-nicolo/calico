@@ -25,9 +25,6 @@ import time
 _log = logging.getLogger(__name__)
 
 ROUTER_IMAGE = os.getenv("ROUTER_IMAGE", "calico/bird:latest")
-K8ST_RIG = os.getenv("K8ST_RIG", "")
-DOCKER_RUN_NET_ARG = "--net=kind" if K8ST_RIG == "vanilla" else ""
-
 
 # Helps with printing diags after a test.
 class DiagsCollector(object):
@@ -74,11 +71,7 @@ def start_external_node_with_bgp(name, bird_peer_config=None, bird6_peer_config=
     run("df -h")
 
     # Setup external node: use privileged mode for setting routes.
-    run("docker run -d --privileged %s --name %s %s" % (
-        DOCKER_RUN_NET_ARG,
-        name,
-        ROUTER_IMAGE)
-    )
+    run("docker run -d --privileged --net=kind --name %s %s" % (name, ROUTER_IMAGE))
 
     # Check how much space there is inside the container.  We may need
     # to retry this, as it may take a while for the image to download
@@ -251,7 +244,7 @@ def generate_unique_id(length, prefix=""):
 # We have to define and use this static map, from each node name to
 # its IPv6 address, because Kubernetes does not yet allow for an IPv6
 # address field in its host resource.  The mappings here must match
-# the code in tests/k8st/create_kind_cluster.sh that assigns an IPv6
+# the code in tests/k8st/deploy_resources_on_kind_cluster.sh that assigns an IPv6
 # address to each node.
 ipv6_map = {
     "kind-control-plane": "2001:20::8",

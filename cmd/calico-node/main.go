@@ -35,6 +35,7 @@ import (
 	"github.com/projectcalico/node/pkg/cni"
 	"github.com/projectcalico/node/pkg/earlynetworking"
 	"github.com/projectcalico/node/pkg/health"
+	"github.com/projectcalico/node/pkg/hostpathinit"
 	"github.com/projectcalico/node/pkg/lifecycle/shutdown"
 	"github.com/projectcalico/node/pkg/lifecycle/startup"
 	"github.com/projectcalico/node/pkg/metrics"
@@ -81,6 +82,9 @@ var confdCalicoConfig = flagSet.String("confd-calicoconfig", "", "Calico configu
 
 // Early networking flags
 var runEarlyNetworking = flagSet.Bool("early", false, "Do early networking setup (e.g. for a dual-homed node)")
+
+// non-root hostpath init flags
+var initHostpaths = flagSet.Bool("hostpath-init", false, "Initialize hostpaths for non-root access")
 
 func main() {
 	// Log to stdout.  this prevents our logs from being interpreted as errors by, for example,
@@ -171,6 +175,9 @@ func main() {
 	} else if *runEarlyNetworking {
 		logrus.SetFormatter(&logutils.Formatter{Component: "early-networking"})
 		earlynetworking.Run()
+	} else if *initHostpaths {
+		logrus.SetFormatter(&logutils.Formatter{Component: "hostpath-init"})
+		hostpathinit.Run()
 	} else {
 		fmt.Println("No valid options provided. Usage:")
 		flagSet.PrintDefaults()
