@@ -20,6 +20,6 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211018121636-265d25820f14
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211018200247-19e5cb0b08f4
 	google.golang.org/grpc => google.golang.org/grpc v1.29.1
 )
