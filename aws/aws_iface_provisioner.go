@@ -599,8 +599,10 @@ func (m *SecondaryIfaceProvisioner) updateAWSSubnetFile(subnets map[string]ec2ty
 		return err
 	}
 
-	// Avoid rewriting the file if it hasn't changed.  This avoids potential races between the CNI plugin reading
-	// and Felix writing the file.
+	// Avoid rewriting the file if it hasn't changed.  Since subnet updates are rare, this reduces the chance
+	// of the CNI plugin seeing a partially-written file.  If the file is missing/partial then the CNI plugin
+	// will fail to read/parse the file and bail out.  The CNI plugin only tries to read this file if the pod
+	// has the aws-secondary-ip resource request so only AWS-backed pods are in danger of failing.
 	oldData, err := ioutil.ReadFile(m.awsSubnetsFilename)
 	if err == nil {
 		if bytes.Equal(oldData, encoded) {
