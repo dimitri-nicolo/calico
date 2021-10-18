@@ -3,10 +3,14 @@
 package aws
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
+	"sort"
 	"strings"
 	"time"
 
@@ -90,10 +94,11 @@ var _ ipamInterface = ipam.Interface(nil)
 // To ensure that we can spot _our_ ENIs even if we fail to attach them, we label them with an "owned by
 // Calico" tag and a second tag that contains the instance ID of this node.
 type SecondaryIfaceProvisioner struct {
-	nodeName     string
-	timeout      time.Duration
-	clock        clock.Clock
-	newEC2Client func(ctx context.Context) (*EC2Client, error)
+	nodeName           string
+	awsSubnetsFilename string
+	timeout            time.Duration
+	clock              clock.Clock
+	newEC2Client       func(ctx context.Context) (*EC2Client, error)
 
 	healthAgg       healthAggregator
 	livenessEnabled bool
@@ -166,6 +171,12 @@ func OptClockOverride(c clock.Clock) IfaceProvOpt {
 	}
 }
 
+func OptSubnetsFileOverride(filename string) IfaceProvOpt {
+	return func(provisioner *SecondaryIfaceProvisioner) {
+		provisioner.awsSubnetsFilename = filename
+	}
+}
+
 func OptNewEC2ClientOverride(f func(ctx context.Context) (*EC2Client, error)) IfaceProvOpt {
 	return func(provisioner *SecondaryIfaceProvisioner) {
 		provisioner.newEC2Client = f
@@ -192,12 +203,13 @@ func NewSecondaryIfaceProvisioner(
 	options ...IfaceProvOpt,
 ) *SecondaryIfaceProvisioner {
 	sip := &SecondaryIfaceProvisioner{
-		healthAgg:       healthAgg,
-		livenessEnabled: true,
-		ipamClient:      ipamClient,
-		nodeName:        nodeName,
-		timeout:         defaultTimeout,
-		opRecorder:      logutils.NewSummarizer("AWS secondary IP reconciliation loop"),
+		healthAgg:          healthAgg,
+		livenessEnabled:    true,
+		ipamClient:         ipamClient,
+		nodeName:           nodeName,
+		awsSubnetsFilename: "/var/lib/calico/aws-subnets",
+		timeout:            defaultTimeout,
+		opRecorder:         logutils.NewSummarizer("AWS secondary IP reconciliation loop"),
 
 		// Do the extra scans on first run.
 		orphanENIResyncNeeded: true,
@@ -458,6 +470,13 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 		return nil, err
 	}
 
+	// Let the CNI plugin know our local subnets.  Do this now before the possible early return if there's no
+	// "best" subnet below.
+	err = m.updateAWSSubnetFile(localSubnetsByID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write AWS subnets to file: %w", err)
+	}
+
 	// Figure out which Calico IPs are not present on our AWS ENIs.
 	allCalicoRoutesNotInAWS := m.findRoutesWithNoAWSAddr(awsSnapshot, localSubnetsByID)
 
@@ -535,7 +554,7 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 
 	if numENIsToCreate > 0 {
 		logrus.WithField("num", numENIsToCreate).Info("Allocating IPs for new AWS ENIs.")
-		v4addrs, err := m.allocateCalicoHostIPs(numENIsToCreate)
+		v4addrs, err := m.allocateCalicoHostIPs(numENIsToCreate, bestSubnetID)
 		if err != nil {
 			// Queue up a clean up of any IPs we may have leaked.
 			m.hostIPAMResyncNeeded = true
@@ -561,6 +580,44 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 		return nil, err
 	}
 	return m.calculateResponse(awsSnapshot)
+}
+
+// subnetsFileData contents of the aws-subnets file.  We write a JSON dict for extensibility.
+// Must match the definition in the CNI plugin's utils.go.
+type subnetsFileData struct {
+	AWSSubnetIDs []string `json:"aws_subnet_ids"`
+}
+
+func (m *SecondaryIfaceProvisioner) updateAWSSubnetFile(subnets map[string]ec2types.Subnet) error {
+	var data subnetsFileData
+	for id := range subnets {
+		data.AWSSubnetIDs = append(data.AWSSubnetIDs, id)
+	}
+	sort.Strings(data.AWSSubnetIDs)
+	encoded, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	// Avoid rewriting the file if it hasn't changed.  Since subnet updates are rare, this reduces the chance
+	// of the CNI plugin seeing a partially-written file.  If the file is missing/partial then the CNI plugin
+	// will fail to read/parse the file and bail out.  The CNI plugin only tries to read this file if the pod
+	// has the aws-secondary-ip resource request so only AWS-backed pods are in danger of failing.
+	oldData, err := ioutil.ReadFile(m.awsSubnetsFilename)
+	if err == nil {
+		if bytes.Equal(oldData, encoded) {
+			logrus.Debug("AWS subnets file already correct.")
+			return nil
+		}
+	} else {
+		logrus.WithError(err).Debug("Failed to read old aws-subnets file.  Rewriting it...")
+	}
+
+	err = ioutil.WriteFile(m.awsSubnetsFilename, encoded, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (m *SecondaryIfaceProvisioner) calculateResponse(awsENIState *eniSnapshot) (*LocalAWSNetworkState, error) {
@@ -1174,10 +1231,10 @@ func (m *SecondaryIfaceProvisioner) calculateNumNewENIsNeeded(awsENIState *eniSn
 }
 
 // allocateCalicoHostIPs allocates the given number of IPPoolAllowedUseHostSecondary IPs to this host in Calico IPAM.
-func (m *SecondaryIfaceProvisioner) allocateCalicoHostIPs(numENIsNeeded int) (*ipam.IPAMAssignments, error) {
+func (m *SecondaryIfaceProvisioner) allocateCalicoHostIPs(numENIsNeeded int, subnetID string) (*ipam.IPAMAssignments, error) {
 	ipamCtx, ipamCancel := m.newContext()
 
-	v4addrs, _, err := m.ipamClient.AutoAssign(ipamCtx, m.ipamAssignArgs(numENIsNeeded))
+	v4addrs, _, err := m.ipamClient.AutoAssign(ipamCtx, m.ipamAssignArgs(numENIsNeeded, subnetID))
 	ipamCancel()
 	if err != nil {
 		return nil, fmt.Errorf("failed to allocate primary IP for secondary interface: %w", err)
@@ -1194,7 +1251,7 @@ func (m *SecondaryIfaceProvisioner) allocateCalicoHostIPs(numENIsNeeded int) (*i
 }
 
 // ipamAssignArgs is mainly broken out for testing.
-func (m *SecondaryIfaceProvisioner) ipamAssignArgs(numENIsNeeded int) ipam.AutoAssignArgs {
+func (m *SecondaryIfaceProvisioner) ipamAssignArgs(numENIsNeeded int, subnetID string) ipam.AutoAssignArgs {
 	return ipam.AutoAssignArgs{
 		Num4:     numENIsNeeded,
 		HandleID: stringPtr(m.ipamHandle()),
@@ -1204,6 +1261,8 @@ func (m *SecondaryIfaceProvisioner) ipamAssignArgs(numENIsNeeded int) ipam.AutoA
 		},
 		Hostname:    m.nodeName,
 		IntendedUse: v3.IPPoolAllowedUseHostSecondary,
+		// Make sure we get an IP from the right subnet.
+		AWSSubnetIDs: []string{subnetID},
 	}
 }
 
