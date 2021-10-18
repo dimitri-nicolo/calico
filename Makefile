@@ -360,7 +360,7 @@ else
 FV_BINARY=calico-felix-amd64
 endif
 
-image-test: image fv/Dockerfile.test.amd64 bin/pktgen bin/test-workload bin/test-connection bin/test-dns bin/tproxy bin/$(FV_BINARY) image-wgtool
+image-test: image fv/Dockerfile.test.amd64 bin/pktgen bin/test-workload bin/test-connection bin/test-dns bin/tproxy bin/$(FV_BINARY) image-wgtool fv/infrastructure/crds
 	docker build -t $(FELIX_IMAGE)-test:latest-$(ARCH) --build-arg FV_BINARY=$(FV_BINARY) --file ./fv/Dockerfile.test.$(ARCH) bin;
 ifeq ($(ARCH),amd64)
 	docker tag $(FELIX_IMAGE)-test:latest-$(ARCH) $(FELIX_IMAGE)-test:latest

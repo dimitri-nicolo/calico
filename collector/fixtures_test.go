@@ -1063,4 +1063,46 @@ var (
 			deltaUnRecoveredRTO: 8,
 		},
 	}
+
+	// Metric update without a connection (ingress stats match those of muConn1Rule1AllowUpdate).
+	muWithSNATPort = MetricUpdate{
+		updateType:      UpdateTypeReport,
+		tuple:           tuple1,
+		natOutgoingPort: 6789,
+		srcEp: &calc.EndpointData{
+			Key: model.WorkloadEndpointKey{
+				Hostname:       "node-01",
+				OrchestratorID: "k8s",
+				WorkloadID:     "kube-system/iperf-4235-5623461",
+				EndpointID:     "4352",
+			},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235-", Labels: map[string]string{"test-app": "true"}},
+		},
+
+		dstEp: &calc.EndpointData{
+			Key: model.WorkloadEndpointKey{
+				Hostname:       "node-02",
+				OrchestratorID: "k8s",
+				WorkloadID:     "default/nginx-412354-5123451",
+				EndpointID:     "4352",
+			},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+		},
+
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
+		isConnection: false,
+		inMetric: MetricValue{
+			deltaPackets: 1,
+			deltaBytes:   20,
+		},
+		sendCongestionWnd: &sendCongestionWnd,
+		smoothRtt:         &smoothRtt,
+		minRtt:            &minRtt,
+		mss:               &mss,
+		tcpMetric: TCPMetricValue{
+			deltaTotalRetrans:   7,
+			deltaLostOut:        6,
+			deltaUnRecoveredRTO: 8,
+		},
+	}
 )

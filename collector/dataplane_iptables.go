@@ -172,9 +172,18 @@ func convertCtEntryToConntrackInfo(ctEntry nfnetlink.CtEntry, markProxy uint32) 
 	// conntrack entry.
 	entryExpired := (ctTuple.ProtoNum == nfnl.TCP_PROTO && ctEntry.ProtoInfo.State >= nfnl.TCP_CONNTRACK_TIME_WAIT)
 
+	var natOutgoingPort int
+	// Keep track of the nat outgoing port if the packet was SNAT'd and the source and post DNAT destination aren't the
+	// same (if they're the same it means the source opened a connection with itself via a service, so the packet didn't
+	// leave the node).
+	if ctEntry.IsSNAT() && tuple.src != tuple.dst {
+		natOutgoingPort = ctEntry.ReplyTuple.L4Dst.Port
+	}
+
 	ctInfo := ConntrackInfo{
-		Tuple:   tuple,
-		Expired: entryExpired,
+		Tuple:           tuple,
+		NatOutgoingPort: natOutgoingPort,
+		Expired:         entryExpired,
 		Counters: ConntrackCounters{
 			Packets: ctEntry.OriginalCounters.Packets,
 			Bytes:   ctEntry.OriginalCounters.Bytes,
