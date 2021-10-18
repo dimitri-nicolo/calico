@@ -15,17 +15,16 @@
 package daemon_test
 
 import (
+	"context"
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"os"
 	"strconv"
 	"sync"
 	"time"
 
 	. "github.com/projectcalico/typha/pkg/daemon"
-
-	"context"
-	"fmt"
-	"io/ioutil"
-	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -244,6 +243,10 @@ type mockDatastore struct {
 	dpiSyncerCalled              bool
 	initCalled                   int
 	failInit                     bool
+}
+
+func (b *mockDatastore) CalicoNodeStatus() clientv3.CalicoNodeStatusInterface {
+	panic("implement me")
 }
 
 func (b *mockDatastore) UISettingsGroups() clientv3.UISettingsGroupInterface {
