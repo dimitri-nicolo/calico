@@ -1,6 +1,6 @@
 ---
-title: Calico for Windows
-description: Install and configure Calico for Windows.
+title: Calico Enterprise for Windows
+description: Install and configure Calico Enterprise for Windows.
 show_read_time: false
 show_toc: false
 canonical_url: '/getting-started/windows-calico/index'
