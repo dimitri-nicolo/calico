@@ -15,6 +15,8 @@
 package winfv_test
 
 import (
+	"os"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -31,6 +33,6 @@ func init() {
 
 func TestNetworkingWindows(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../report/fv_suite.xml")
+	junitReporter := reporters.NewJUnitReporter(os.Getenv("REPORT"))
 	RunSpecsWithDefaultAndCustomReporters(t, "Felix windows Suite", []Reporter{junitReporter})
 }
