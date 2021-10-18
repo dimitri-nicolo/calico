@@ -38,7 +38,7 @@ require (
 	github.com/onsi/gomega v1.10.4
 	github.com/pkg/errors v0.9.1
 	github.com/projectcalico/libcalico-go v1.7.2
-	github.com/projectcalico/pod2daemon v0.0.0-20210818162850-fa9ba6fd57c4
+	github.com/projectcalico/pod2daemon v0.0.0-20211012221525-ebb83b8c009a
 	github.com/projectcalico/typha v0.7.3-0.20210428181500-9e435d5fd964
 	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/client_model v0.2.0
@@ -49,7 +49,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/tebeka/strftime v0.1.5 // indirect
 	github.com/tigera/api v0.0.0-20211015224852-6fd66c20261e
-	github.com/tigera/licensing v1.0.1-0.20211005125122-907c1150b7b3
+	github.com/tigera/licensing v1.0.1-0.20211011145843-5b9d7479c171
 	github.com/tigera/nfnetlink v0.0.0-20210819183736-75abca8ede69
 	github.com/tigera/windows-networking v0.0.0-20210505211919-0de3e1e53cff
 	github.com/vishvananda/netlink v1.1.1-0.20210703095558-21f2c55a7727
