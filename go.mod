@@ -11,15 +11,15 @@ require (
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.1
 	github.com/projectcalico/libcalico-go v0.0.0-00010101000000-000000000000
-	github.com/prometheus/client_golang v1.7.1
-	github.com/sirupsen/logrus v1.7.0
-	github.com/tigera/api v0.0.0-20211011145306-c30ec4ee24ee
-	k8s.io/api v0.21.0
-	k8s.io/apimachinery v0.21.0
-	k8s.io/client-go v0.21.0
+	github.com/prometheus/client_golang v1.11.0
+	github.com/sirupsen/logrus v1.8.1
+	github.com/tigera/api v0.0.0-20211015224852-6fd66c20261e
+	k8s.io/api v0.22.0
+	k8s.io/apimachinery v0.22.0
+	k8s.io/client-go v0.22.0
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211011151708-a224c236b8a9
-	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211018121636-265d25820f14
+	google.golang.org/grpc => google.golang.org/grpc v1.29.1
 )
