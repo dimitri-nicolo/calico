@@ -74,8 +74,8 @@ require (
 replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/projectcalico/libcalico-go => github.com/fasaxc/libcalico-go-private v1.7.2-0.20211015141621-c0081dd6b3d5
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211011094338-1cd25b4ba522
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211018121636-265d25820f14
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211018130659-5beb3a5b778a
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 
 	// The GRPC library seems to float to latest without this (not sure why!) and v1.30+ are incompatible with
