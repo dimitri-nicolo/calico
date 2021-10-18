@@ -827,6 +827,11 @@ func TestSecondaryIfaceProvisioner_WorkloadMixedSubnets(t *testing.T) {
 	sip.OnDatastoreUpdate(singleWorkloadDatastore)
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
 
+	// Check Felix allocated from the correct subnet.
+	allocs := fake.IPAM.Allocations()
+	Expect(allocs).To(HaveLen(1))
+	Expect(allocs[0].Args.AWSSubnetIDs).To(ConsistOf(subnetIDWest1Calico))
+
 	// Then add a second workload on a different subnet, it should be ignored.
 	sip.OnDatastoreUpdate(mixedSubnetDatastore)
 
@@ -839,6 +844,11 @@ func TestSecondaryIfaceProvisioner_WorkloadMixedSubnets(t *testing.T) {
 	sip.OnDatastoreUpdate(singleWorkloadDatastoreAltPool)
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseAltPoolSingleWorkload)))
 	Expect(fake.EC2.NumENIs()).To(BeNumerically("==", 2))
+
+	// Check Felix allocated from the correct subnet.
+	allocs = fake.IPAM.Allocations()
+	Expect(allocs).To(HaveLen(1))
+	Expect(allocs[0].Args.AWSSubnetIDs).To(ConsistOf(subnetIDWest1CalicoAlt))
 
 	// Add the first workload back, now the "alternative" wins.
 	sip.OnDatastoreUpdate(mixedSubnetDatastore)
@@ -886,7 +896,7 @@ func TestSecondaryIfaceProvisioner_IPAMCleanup(t *testing.T) {
 	defer tearDown()
 
 	// Pre-assign an IP to the node.  It should appear to be leaked and get cleaned up.
-	_, _, err := fake.IPAM.AutoAssign(context.TODO(), sip.ipamAssignArgs(1))
+	_, _, err := fake.IPAM.AutoAssign(context.TODO(), sip.ipamAssignArgs(1, subnetIDWest1Calico))
 	Expect(err).NotTo(HaveOccurred())
 	// Check we allocated exactly what we expected.
 	addrs, err := fake.IPAM.IPsByHandle(context.TODO(), sip.ipamHandle())
@@ -912,7 +922,7 @@ func TestSecondaryIfaceProvisioner_IPAMCleanupFailure(t *testing.T) {
 			fake.IPAM.Errors.QueueError(callToFail)
 
 			// Pre-assign an IP to the node.  It should appear to be leaked and get cleaned up.
-			_, _, err := fake.IPAM.AutoAssign(context.TODO(), sip.ipamAssignArgs(1))
+			_, _, err := fake.IPAM.AutoAssign(context.TODO(), sip.ipamAssignArgs(1, subnetIDWest1Calico))
 			Expect(err).NotTo(HaveOccurred())
 
 			// Send snapshot with single workload.

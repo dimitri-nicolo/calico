@@ -55,6 +55,9 @@ func (m *fakeIPAM) Allocations() []ipamAlloc {
 func (m *fakeIPAM) AutoAssign(ctx context.Context, args ipam.AutoAssignArgs) (*ipam.IPAMAssignments, *ipam.IPAMAssignments, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
+
+	logrus.Infof("FakeIPAM allocation request: %v", args)
+
 	if ctx.Err() != nil {
 		return nil, nil, ctx.Err()
 	}
@@ -78,6 +81,9 @@ func (m *fakeIPAM) AutoAssign(ctx context.Context, args ipam.AutoAssignArgs) (*i
 	}
 	if args.IntendedUse != v3.IPPoolAllowedUseHostSecondary {
 		return nil, nil, errors.New("expected AllowedUseHostSecondary")
+	}
+	if len(args.AWSSubnetIDs) != 1 {
+		return nil, nil, errors.New("AWSSubnetIDs to be set")
 	}
 
 	v4Allocs := &ipam.IPAMAssignments{

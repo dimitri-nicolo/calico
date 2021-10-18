@@ -554,7 +554,7 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 
 	if numENIsToCreate > 0 {
 		logrus.WithField("num", numENIsToCreate).Info("Allocating IPs for new AWS ENIs.")
-		v4addrs, err := m.allocateCalicoHostIPs(numENIsToCreate)
+		v4addrs, err := m.allocateCalicoHostIPs(numENIsToCreate, bestSubnetID)
 		if err != nil {
 			// Queue up a clean up of any IPs we may have leaked.
 			m.hostIPAMResyncNeeded = true
@@ -1229,10 +1229,10 @@ func (m *SecondaryIfaceProvisioner) calculateNumNewENIsNeeded(awsENIState *eniSn
 }
 
 // allocateCalicoHostIPs allocates the given number of IPPoolAllowedUseHostSecondary IPs to this host in Calico IPAM.
-func (m *SecondaryIfaceProvisioner) allocateCalicoHostIPs(numENIsNeeded int) (*ipam.IPAMAssignments, error) {
+func (m *SecondaryIfaceProvisioner) allocateCalicoHostIPs(numENIsNeeded int, subnetID string) (*ipam.IPAMAssignments, error) {
 	ipamCtx, ipamCancel := m.newContext()
 
-	v4addrs, _, err := m.ipamClient.AutoAssign(ipamCtx, m.ipamAssignArgs(numENIsNeeded))
+	v4addrs, _, err := m.ipamClient.AutoAssign(ipamCtx, m.ipamAssignArgs(numENIsNeeded, subnetID))
 	ipamCancel()
 	if err != nil {
 		return nil, fmt.Errorf("failed to allocate primary IP for secondary interface: %w", err)
@@ -1249,7 +1249,7 @@ func (m *SecondaryIfaceProvisioner) allocateCalicoHostIPs(numENIsNeeded int) (*i
 }
 
 // ipamAssignArgs is mainly broken out for testing.
-func (m *SecondaryIfaceProvisioner) ipamAssignArgs(numENIsNeeded int) ipam.AutoAssignArgs {
+func (m *SecondaryIfaceProvisioner) ipamAssignArgs(numENIsNeeded int, subnetID string) ipam.AutoAssignArgs {
 	return ipam.AutoAssignArgs{
 		Num4:     numENIsNeeded,
 		HandleID: stringPtr(m.ipamHandle()),
@@ -1259,6 +1259,8 @@ func (m *SecondaryIfaceProvisioner) ipamAssignArgs(numENIsNeeded int) ipam.AutoA
 		},
 		Hostname:    m.nodeName,
 		IntendedUse: v3.IPPoolAllowedUseHostSecondary,
+		// Make sure we get an IP from the right subnet.
+		AWSSubnetIDs: []string{subnetID},
 	}
 }
 
