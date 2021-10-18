@@ -25,6 +25,7 @@ type Set interface {
 	Len() int
 	Add(interface{})
 	AddAll(itemArray interface{})
+	AddSet(other Set)
 	Discard(interface{})
 	Clear()
 	Contains(interface{}) bool
@@ -74,11 +75,18 @@ func (set mapSet) Add(item interface{}) {
 }
 
 func (set mapSet) AddAll(itemArray interface{}) {
-
 	arrVal := reflect.ValueOf(itemArray)
 	for i := 0; i < arrVal.Len(); i++ {
 		set.Add(arrVal.Index(i).Interface())
 	}
+}
+
+// AddSet adds the contents of set "other" into the set.
+func (set mapSet) AddSet(other Set) {
+	other.Iter(func(item interface{}) error {
+		set.Add(item)
+		return nil
+	})
 }
 
 func (set mapSet) Discard(item interface{}) {
