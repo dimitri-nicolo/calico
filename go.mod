@@ -40,30 +40,31 @@ require (
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/projectcalico/pod2daemon v0.0.0-20210818162850-fa9ba6fd57c4
 	github.com/projectcalico/typha v0.7.3-0.20210428181500-9e435d5fd964
-	github.com/prometheus/client_golang v1.10.0
+	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/client_model v0.2.0
-	github.com/prometheus/common v0.18.0
-	github.com/sirupsen/logrus v1.7.0
+	github.com/prometheus/common v0.26.0
+	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.6.1
 	github.com/tebeka/strftime v0.1.5 // indirect
-	github.com/tigera/api v0.0.0-20211011084451-556d977afc02
+	github.com/tigera/api v0.0.0-20211015224852-6fd66c20261e
 	github.com/tigera/licensing v1.0.1-0.20211005125122-907c1150b7b3
 	github.com/tigera/nfnetlink v0.0.0-20210819183736-75abca8ede69
 	github.com/tigera/windows-networking v0.0.0-20210505211919-0de3e1e53cff
 	github.com/vishvananda/netlink v1.1.1-0.20210703095558-21f2c55a7727
 	github.com/willf/bitset v1.1.11
-	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
-	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
-	golang.org/x/sys v0.0.0-20210426230700-d19ff857e887
+	go.uber.org/zap v1.13.0 // indirect
+	golang.org/x/net v0.0.0-20210520170846-37e1c6afe023
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	golang.org/x/sys v0.0.0-20210603081109-ebe580a85c40
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
-	google.golang.org/grpc v1.27.1
+	google.golang.org/grpc v1.38.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/tchap/go-patricia.v2 v2.3.0
-	k8s.io/api v0.21.0
-	k8s.io/apimachinery v0.21.0
-	k8s.io/client-go v0.21.0
+	k8s.io/api v0.22.0
+	k8s.io/apimachinery v0.22.0
+	k8s.io/client-go v0.22.0
 	k8s.io/kubernetes v1.21.0-rc.0
 	k8s.io/utils v0.0.0-20210802155522-efc7438f0176
 	modernc.org/memory v1.0.4
@@ -73,9 +74,13 @@ require (
 replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211011094247-43312d160f7c
+	github.com/projectcalico/libcalico-go => github.com/fasaxc/libcalico-go-private v1.7.2-0.20211015141621-c0081dd6b3d5
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211011094338-1cd25b4ba522
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
+
+	// The GRPC library seems to float to latest without this (not sure why!) and v1.30+ are incompatible with
+	// the etcd client.
+	google.golang.org/grpc => google.golang.org/grpc v1.29.1
 
 	// Need replacements for all the k8s subsidiary projects that are pulled in indirectly because
 	// the kubernets repo pulls them in via a replacement to its own vendored copies, which doesn't work for
