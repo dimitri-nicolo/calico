@@ -73,6 +73,10 @@ type AutoAssignArgs struct {
 	// The intended use for the IP address.  Used to filter the available IP pools on their AllowedUses field.
 	// This field is required.
 	IntendedUse v3.IPPoolAllowedUse
+
+	// If specified, only IP pools backed by an AWS subnet with one of the given IDs will be considered.
+	// If nil or empty, AWS-backed IP pools will be excluded.
+	AWSSubnetIDs []string
 }
 
 // IPAMConfig contains global configuration options for Calico IPAM.
@@ -159,4 +163,8 @@ type BlockArgs struct {
 
 	// If specified, the attributes of reserved IPv6 addresses in this block.
 	HostReservedAttrIPv6s *HostReservedAttr
+
+	// If specified, only IP pools backed by an AWS subnet with one of the given IDs will be considered.
+	// If nil or empty, AWS-backed IP pools will be excluded.
+	AWSSubnetIDs []string
 }

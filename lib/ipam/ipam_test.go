@@ -59,6 +59,7 @@ type pool struct {
 	enabled      bool
 	nodeSelector string
 	allowedUses  []v3.IPPoolAllowedUse
+	awsSubnetID  string
 }
 
 func (i *ipPoolAccessor) GetEnabledPools(ipVersion int) ([]v3.IPPool, error) {
@@ -87,6 +88,7 @@ func (i *ipPoolAccessor) getPools(sorted []string, ipVersion int, caller string)
 				CIDR:         p,
 				NodeSelector: i.pools[p].nodeSelector,
 				AllowedUses:  i.pools[p].allowedUses,
+				AWSSubnetID:  i.pools[p].awsSubnetID,
 			}}
 			if len(pool.Spec.AllowedUses) == 0 {
 				pool.Spec.AllowedUses = []v3.IPPoolAllowedUse{v3.IPPoolAllowedUseWorkload, v3.IPPoolAllowedUseTunnel}
@@ -453,6 +455,131 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreAll, fun
 				Expect(err).To(BeAssignableToTypeOf(cerrors.ErrorResourceDoesNotExist{}))
 				Expect(attrs).To(BeEmpty())
 				Expect(handle).To(BeNil())
+			})
+		})
+	})
+
+	Describe("With an AWS-backed pool", func() {
+		var hostname string
+		var poolCIDR = cnet.MustParseCIDR("10.0.0.0/26")
+
+		BeforeEach(func() {
+			// Remove all data in the datastore.
+			bc.Clean()
+
+			// Create an IP pool
+			deleteAllPools()
+			applyPoolWithAWSSubnet(poolCIDR.String(), true, "all()", "subnet-01234567890123456")
+
+			// Create the node object.
+			hostname = "allocation-attributes"
+			applyNode(bc, kc, hostname, nil)
+		})
+
+		AfterEach(func() {
+			bc.Clean()
+		})
+
+		It("requesting normal allocation should fail", func() {
+			handle := "my-test-handle"
+			args := AutoAssignArgs{
+				Num4:        1,
+				Hostname:    hostname,
+				HandleID:    &handle,
+				IntendedUse: v3.IPPoolAllowedUseWorkload,
+			}
+			v4, _, err := ic.AutoAssign(context.Background(), args)
+			Expect(err).To(HaveOccurred())
+			Expect(v4).To(BeNil())
+		})
+		It("requesting allocation with wrong subnet ID should fail", func() {
+			handle := "my-test-handle"
+			args := AutoAssignArgs{
+				Num4:         1,
+				Hostname:     hostname,
+				HandleID:     &handle,
+				IntendedUse:  v3.IPPoolAllowedUseWorkload,
+				AWSSubnetIDs: []string{"subnet-00000000000000000"},
+			}
+			v4, _, err := ic.AutoAssign(context.Background(), args)
+			Expect(err).To(HaveOccurred())
+			Expect(v4).To(BeNil())
+		})
+		It("requesting allocation with wrong subnet ID and a pool should fail", func() {
+			handle := "my-test-handle"
+			args := AutoAssignArgs{
+				Num4:         1,
+				Hostname:     hostname,
+				HandleID:     &handle,
+				IntendedUse:  v3.IPPoolAllowedUseWorkload,
+				IPv4Pools:    []cnet.IPNet{poolCIDR},
+				AWSSubnetIDs: []string{"subnet-00000000000000000"},
+			}
+			v4, _, err := ic.AutoAssign(context.Background(), args)
+			Expect(err).To(HaveOccurred())
+			Expect(v4).To(BeNil())
+		})
+		It("requesting allocation with right subnet ID should succeed", func() {
+			handle := "my-test-handle"
+			args := AutoAssignArgs{
+				Num4:         1,
+				Hostname:     hostname,
+				HandleID:     &handle,
+				IntendedUse:  v3.IPPoolAllowedUseWorkload,
+				AWSSubnetIDs: []string{"subnet-01234567890123456"},
+			}
+			v4, _, err := ic.AutoAssign(context.Background(), args)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(v4.IPs).To(HaveLen(1))
+		})
+		It("requesting allocation with right subnet ID and a pool should succeed", func() {
+			handle := "my-test-handle"
+			args := AutoAssignArgs{
+				Num4:         1,
+				Hostname:     hostname,
+				HandleID:     &handle,
+				IntendedUse:  v3.IPPoolAllowedUseWorkload,
+				IPv4Pools:    []cnet.IPNet{poolCIDR},
+				AWSSubnetIDs: []string{"subnet-01234567890123456"},
+			}
+			v4, _, err := ic.AutoAssign(context.Background(), args)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(v4.IPs).To(HaveLen(1))
+		})
+
+		Describe("with a normal pool too", func() {
+			var pool2CIDR = cnet.MustParseCIDR("10.0.1.0/26")
+
+			BeforeEach(func() {
+				applyPool(pool2CIDR.String(), true, "all()")
+			})
+
+			It("requesting allocation with right subnet ID should succeed", func() {
+				handle := "my-test-handle"
+				args := AutoAssignArgs{
+					Num4:         1,
+					Hostname:     hostname,
+					HandleID:     &handle,
+					IntendedUse:  v3.IPPoolAllowedUseWorkload,
+					AWSSubnetIDs: []string{"subnet-01234567890123456"},
+				}
+				v4, _, err := ic.AutoAssign(context.Background(), args)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(v4.IPs).To(HaveLen(1))
+				Expect(poolCIDR.Contains(v4.IPs[0].IP)).To(BeTrue())
+			})
+			It("requesting allocation with no subnet ID should succeed", func() {
+				handle := "my-test-handle"
+				args := AutoAssignArgs{
+					Num4:        1,
+					Hostname:    hostname,
+					HandleID:    &handle,
+					IntendedUse: v3.IPPoolAllowedUseWorkload,
+				}
+				v4, _, err := ic.AutoAssign(context.Background(), args)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(v4.IPs).To(HaveLen(1))
+				Expect(pool2CIDR.Contains(v4.IPs[0].IP)).To(BeTrue())
 			})
 		})
 	})
@@ -3116,6 +3243,10 @@ func applyPoolWithUses(cidr string, enabled bool, nodeSelector string, uses []v3
 
 func applyPoolWithBlockSize(cidr string, enabled bool, nodeSelector string, blockSize int) {
 	ipPools.pools[cidr] = pool{enabled: enabled, nodeSelector: nodeSelector, blockSize: blockSize}
+}
+
+func applyPoolWithAWSSubnet(cidr string, enabled bool, nodeSelector string, awsSubnetID string) {
+	ipPools.pools[cidr] = pool{enabled: enabled, nodeSelector: nodeSelector, blockSize: 32, awsSubnetID: awsSubnetID}
 }
 
 func deletePool(cidr string) {
