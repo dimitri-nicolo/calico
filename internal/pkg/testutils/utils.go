@@ -122,10 +122,6 @@ func MustCreateNewIPPoolBlockSize(c client.Interface, cidr string, ipip, natOutg
 
 // MustCreateNewIPPoolAWS creates a new Calico IPAM IP Pool with the given AWS subnet ID.
 func MustCreateNewIPPoolAWS(c client.Interface, cidr string, awsSubnetID string) string {
-	log.SetLevel(log.DebugLevel)
-
-	log.SetOutput(os.Stderr)
-
 	name := strings.Replace(cidr, ".", "-", -1)
 	name = strings.Replace(name, ":", "-", -1)
 	name = strings.Replace(name, "/", "-", -1)
