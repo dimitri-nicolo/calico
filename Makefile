@@ -1,5 +1,5 @@
 PACKAGE_NAME = github.com/projectcalico/libcalico-go
-GO_BUILD_VER = v0.57
+GO_BUILD_VER = v0.59
 API_REPO     = github.com/tigera/api
 
 ORGANIZATION=tigera
@@ -116,6 +116,8 @@ LINT_ARGS += --disable gosimple,unused,structcheck,errcheck,deadcode,varcheck,in
 .PHONY: check-gen-files
 check-gen-files: gen-files
 	git diff --exit-code -- $(GENERATED_FILES) || (echo "The generated targets changed, please 'make gen-files' and commit the results"; exit 1)
+	@if [ "$$(git status --porcelain config/crd)" != "" ]; then \
+	echo "The following CRD file updates to be added"; git status --porcelain config/crd; exit 1; fi
 
 .PHONY: check-format
 check-format:

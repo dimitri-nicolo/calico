@@ -31,7 +31,11 @@ const (
 	AnnotationPodIP = "cni.projectcalico.org/podIP"
 
 	// AnnotationPodIPs is similar for the plural PodIPs field.
-	AnnotationPodIPs                  = "cni.projectcalico.org/podIPs"
+	AnnotationPodIPs = "cni.projectcalico.org/podIPs"
+
+	// AnnotationPodIPs is the annotation set by the Amazon VPC CNI plugin.
+	AnnotationAWSPodIPs = "vpc.amazonaws.com/pod-ips"
+
 	AnnotationSecurityGroups          = "aws.tigera.io/security-groups"
 	AnnotationEgressSelector          = "egress.projectcalico.org/selector"
 	AnnotationEgressNamespaceSelector = "egress.projectcalico.org/namespaceSelector"
