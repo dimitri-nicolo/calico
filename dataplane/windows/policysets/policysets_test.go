@@ -458,7 +458,7 @@ func TestIpPortRuleRendering(t *testing.T) {
 	ps := NewPolicySets(&h, []IPSetCache{&ipsc}, mockReader(""))
 
 	// Tests of basic policy matches: CIDRs, protocol, ports.
-	ps.AddOrReplacePolicySet("basic", &proto.Policy{
+	ps.AddOrReplacePolicySet("policy-basic", &proto.Policy{
 		OutboundRules: []*proto.Rule{
 			{
 				Action:          "Allow",
@@ -469,7 +469,7 @@ func TestIpPortRuleRendering(t *testing.T) {
 		InboundRules: []*proto.Rule{},
 	})
 
-	Expect(ps.GetPolicySetRules([]string{"basic"}, false)).To(Equal([]*hns.ACLPolicy{
+	Expect(ps.GetPolicySetRules([]string{"policy-basic"}, false)).To(Equal([]*hns.ACLPolicy{
 		{
 			Type: hns.ACL, Action: hns.Allow, Direction: hns.Out, RuleType: hns.Switch,
 			Priority:        1000,
@@ -512,7 +512,7 @@ func TestIpPortRuleRenderingMultiPort(t *testing.T) {
 
 	ps := NewPolicySets(&h, []IPSetCache{&ipsc}, mockReader(""))
 
-	ps.AddOrReplacePolicySet("basic", &proto.Policy{
+	ps.AddOrReplacePolicySet("policy-basic", &proto.Policy{
 		OutboundRules: []*proto.Rule{
 			{
 				Action:          "Allow",
@@ -524,7 +524,7 @@ func TestIpPortRuleRenderingMultiPort(t *testing.T) {
 	})
 
 	// Should combine the first two endpoints since they share a protocol / port.
-	Expect(ps.GetPolicySetRules([]string{"basic"}, false)).To(Equal([]*hns.ACLPolicy{
+	Expect(ps.GetPolicySetRules([]string{"policy-basic"}, false)).To(Equal([]*hns.ACLPolicy{
 		{
 			Type: hns.ACL, Action: hns.Allow, Direction: hns.Out, RuleType: hns.Switch,
 			Priority:        1000,
@@ -565,7 +565,7 @@ func TestIpPortRuleRenderingEmptyIPSet(t *testing.T) {
 
 	ps := NewPolicySets(&h, []IPSetCache{&ipsc}, mockReader(""))
 
-	ps.AddOrReplacePolicySet("basic", &proto.Policy{
+	ps.AddOrReplacePolicySet("policy-basic", &proto.Policy{
 		OutboundRules: []*proto.Rule{
 			{
 				Action:          "Allow",
@@ -577,7 +577,7 @@ func TestIpPortRuleRenderingEmptyIPSet(t *testing.T) {
 	})
 
 	// Should only have the default rules.
-	Expect(ps.GetPolicySetRules([]string{"basic"}, false)).To(Equal([]*hns.ACLPolicy{
+	Expect(ps.GetPolicySetRules([]string{"policy-basic"}, false)).To(Equal([]*hns.ACLPolicy{
 		// Default deny rule.
 		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.Out, RuleType: hns.Switch, Priority: 1001},
 		// Default host/pod rule.
