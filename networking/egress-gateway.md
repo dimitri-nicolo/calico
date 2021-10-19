@@ -135,7 +135,7 @@ happens to be on the same node as the client).
 
 **Supported**
 
-- Kubernetes on-premises only
+- Kubernetes on-premises only; for AWS, see [this guide](./egress-gateway-aws).
 
 ### How to
 

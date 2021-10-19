@@ -1,0 +1,625 @@
+---
+title: Direct outbound traffic through egress gateways in AWS
+description: Arrange for particular application traffic to exit the cluster through an egress gateway with a native AWS IP address.
+---
+
+### Big picture
+
+Control the source IP address seen by external services  appliances by routing the traffic from certain pods 
+through egress gateways.  Use native AWS Subnet IP addresses for the egress gateways so that the IPs are valid in 
+the AWS fabric.
+
+### Value
+
+Controlling the source IP seen when traffic leaves the cluster allows groups of pods to be identified 
+by external firewalls, appliances and services (even as the groups are scaled up/down or pods restarted).
+{{site.prodname}} controls the source IP by directing traffic through one or more "egress gateway" pods, which
+change the source IP of the traffic to their own IP. The egress gateways used can be chosen at the pod or namespace 
+scope allowing for flexibility in how the cluster is seen from outside.
+
+In AWS, egress gateway source IP addresses are chosen from an IP pool backed by an [AWS Subnet](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Subnets.html)
+using {{site.prodname}} IPAM.   {{site.prodname}} IPAM allows the IP addresses to be precisely controlled, this allows
+for static configuration of external appliances. Using an IP pool backed by an AWS subnet allows {{site.prodname}} to 
+configure the AWS fabric to route traffic to and from the egress gateway using its own IP address.
+
+### Features
+
+This how-to guide uses the following features:
+
+- AWS features:
+
+  - VPC networking
+  - VPC Subnets
+  - VPC Routing tables
+  - VPC CIDR blocks
+  - VPC Peerings and/or VPN Peerings
+  - Secondary ENIs
+  - Availability zones
+  - IAM roles
+
+- {{site.prodname}} CNI and IPAM.  The ability to control the egress gateway's IP is a feature of 
+  {{site.prodname}} CNI and IPAM.  AWS VPC CNI does not support that feature so it is incompatible with 
+  egress gateways.
+
+  - `IPPool` resources.  In particular, AWS-backed IP pools.
+  - `IPReservation` resources.
+
+- Egress gateway pods and their associated Kubernetes **Namespace** and **Pod** annotations:
+
+  - `egress.projectcalico.org/namespaceSelector`
+  - `egress.projectcalico.org/selector`
+
+- Node selectors.
+
+- Felix, {{site.prodname}}'s per-host agent.
+
+### Concepts
+
+#### Egress gateway
+
+An egress gateway acts as a transit pod for the outbound application traffic that is configured to
+use it.  As traffic leaving the cluster passes through the egress gateway, its source IP is changed
+to that of the egress gateway pod, and the traffic is then forwarded on.
+
+#### Source IP
+
+When an outbound application flow leaves the cluster, its IP packets will have a source IP.
+This begins as the pod IP of the pod that originated the flow, then:
+
+- _If no egress gateway is configured_ and the pod IP came from an [IP pool]({{site.baseurl}}/reference/resources/ippool) 
+  with `natOutgoing: true`, the node hosting the pod will change the source IP to its own as the 
+  traffic leaves the host.  This allows the pod to communicate with external service even though the 
+  external network is unaware of the pod's IP.
+
+- _If the pod is configured with an egress gateway_, the traffic is first forwarded to the egress gateway, which
+  changes the source IP to its own and then sends the traffic on.  To function correctly, egress gateways
+  should have IPs from an IP pool with `natOutgoing: false`, meaning their host forwards the packet onto
+  the network without changing the source IP again.  Since the egress gateway's IP is visible to
+  the underlying network fabric, the fabric must be configured to know about the egress gateway's
+  IP and to send response traffic back to the same host.
+
+#### Secondary Elastic Network Interfaces (ENIs)
+
+To arrange for AWS to route traffic to and from egress gateways, {{site.prodname}} makes use of _secondary_ IP addresses
+assigned to _secondary_ ENIs.
+
+Elastic network interfaces are network interfaces that can be added and removed from an instance dynamically. Each 
+ENI has a primary IP address from the AWS Subnet that it belongs to, and it may also have one or more secondary IP 
+addresses, chosen for the same subnet.  While the primary IP address is fixed and cannot be changed, the secondary
+IP addresses can be added and removed at runtime.
+
+When {{site.prodname}} needs to set up the networking for an egress gateway with an address in an AWS subnet, it first
+ensures that it has a secondary ENI bound to that AWS subnet.  Then it adds the egress gateway's IP address to the 
+ENI as a secondary IP (moving it from another ENI if required).  If a new ENI is needed, {{site.prodname}} IPAM is used 
+to claim an IP from the AWS subnet for the host to use as the primary address of the ENI.  Unfortunately, this
+IP cannot be used for egress gateways because it belongs to the host itself and it cannot be moved if the egress gateway
+is moved to another host.
+
+The number of ENIs that an instance can support and the number of secondary IPs that each ENI can support depends on 
+the instance type according to [this table](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#AvailableIpPerENI).
+Note: the table list the total number of network interfaces and IP addresses but the first interface on the host (the 
+primary interface) and the first IP of each interface (its primary IP) cannot be used for egress gateways.
+
+The primary interface cannot be used for egress gateways because it belongs to the AWS Subnet that is
+in use for Kubernetes hosts; this means that a planned egress gateway IP could get used by AWS as the primary IP of
+an instance (for example when scaling up the cluster).
+
+### Before you begin
+
+**Supported**
+
+- Kubernetes in AWS only; for on-prem, see [this guide](./egress-gateway).
+
+### How to
+
+<!-- TODO contents --> 
+-  [Enable egress gateway support](#enable-egress-gateway-support)
+-  [Provision an egress IP pool](#provision-an-egress-ip-pool)
+-  [Copy pull secret into egress gateway namespace](#copy-pull-secret-into-egress-gateway-namespace)
+-  [Deploy a group of egress gateways](#deploy-a-group-of-egress-gateways)
+-  [Configure a Namespace or Pod to use egress gateways](#configure-a-namespace-or-pod-to-use-egress-gateways)
+-  [Optionally enable ECMP load balancing](#optionally-enable-ecmp-load-balancing)
+-  [Verify the feature operation](#verify-the-feature-operation)
+
+#### Plan your AWS network
+
+
+
+##### Dedicated AWS Subnets
+
+{{site.prodname}} requires a dedicated AWS Subnet in each AWS availability zone that you wish to deploy egress 
+gateways into.  The subnet must be dedicated to {{site.prodname}} so that AWS will not
+use IP addresses from the subnet for other purposes (as this could clash with an egress gateway's IP).
+
+Some IP addresses from the dedicated subnet are reserved for AWS and {{side.prodname}} internal use:
+
+* The first four IP addresses in the subnet cannot be used.  These are reserved by AWS for internal use.
+* Similarly, the last IP in the subnet (the broadcast address) cannot be used.
+* {{site.prodname}} requires one IP address from the subnet per secondary ENI that it provisions (for use as 
+  the primary IP address of the ENI).
+
+Example:
+
+* You anticipate having up to 30 instances running in each availability zone (AZ).
+* You intend to use `t3.large` instances, [these are limited to](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#AvailableIpPerENI) 
+  3 ENIs per host (one of which is the primary) and each ENI can handle 12 IP addresses, (one of which is the primary).
+* So, each host can accept 2 secondary ENIs and each secondary ENI could handle 11 egress gateway pods.
+* Each in-use secondary ENI requires one IP from the AWS subnet (up to 60 in this case) and AWS requires 5 IPs to be 
+  reserved so that's up to 65 IPs reserved in total.
+* With 2 ENIs and 11 IPs per ENI, the part of the cluster in this AZ could handle up to `30 * 2 * 11 = 660` egress 
+  gateways.
+* Since AWS Subnets are allocated by CIDR, a `/22` Subnet containing 1024 IP addresses would comfortably fit the 65 
+  reserved IPs as well as the 660 possible gateways.
+
+{{site.prodname}} allocates ENIs on-demand so each instance will only claim one of those reserved IP addresses when the 
+first egress gateway is assigned to that node.  It will only claim its second IP when that ENI becomes full and then an
+extra egress gateway is provisioned.
+
+> **Tip**: If you need to minimize the size of the subnet: you can limit the number of IP addresses required by {{site.prodname}}
+> in a couple of ways: 
+> * Use node-specific Felix configuration to only enable AWS subnets on a subset of nodes.  This will prevent egress
+>   gateways from being scheduled to other nodes and, in turn, that will prevent ENIs and IPs from being allocated.
+> * Use node selectors to pin egress gateways to particular groups of nodes.  Only nodes that have egress gateways will
+>   require ENIs and IPs.
+{: .alert .alert-success}
+#### Configure AWS IAM roles
+
+In order to provision the required AWS resources, each instance in your cluster requires the following IAM permissions:
+
+* DescribeInstances
+* DescribeInstanceTypes
+* DescribeNetworkInterfaces
+* DescribeSubnets
+* DescribeTags
+* CreateTags
+* AssignPrivateIpAddresses
+* UnassignPrivateIpAddresses
+* AttachNetworkInterface
+* CreateNetworkInterface
+* DeleteNetworkInterface
+* DetachNetworkInterface
+* ModifyNetworkInterfaceAttribute
+
+These permissions are the same as those required by the AWS VPC CNI (since both CNIs need to provision the same kinds
+of resources).
+
+#### Configure IP reservations for each dedicated AWS Subnet
+
+Since the first four IP addresses and the last IP address in an AWS subnet cannot be used, it is important to 
+prevent {{site.prodname}} from trying to use them.  For each AWS subnet that you plan to use, 
+ensure that you have an entry in an [`IPReservation` resource](../reference/resources/ipreservation) for its first
+four IP addresses and its final IP address.
+
+For example, if your chosen AWS Subnets are `100.64.0.0/22` and `100.64.4.0/22`, you could create the following
+`IPReservation` resource, which covers both AWS Subnets (if you're not familiar with CIDR notation, replacing the 
+`/22` of the origninal subnet with `/30` is a shorthand for "the first four IP addresses"):
+
+```yaml
+apiVersion: projectcalico.org/v3
+kind: IPReservation
+metadata:
+  name: aws-ip-reservations
+spec:
+  reservedCIDRs:
+  - 100.64.0.0/30
+  - 100.64.3.255
+  - 100.64.4.0/30
+  - 100.64.7.255
+```
+
+#### Configure IP pools backed by AWS Subnets
+
+IP pools are used to subdivide the AWS Subnets as follows:
+
+* One medium-sized IP pool reserved for {{site.prodname}} to use for the _primary_ IP addresses of its _secondary_ ENIs.
+  These pools must have:
+
+  * The `awsSubnetID` field to the ID of the relevant AWS Subnet.  This activates the AWS-backed IP feature for these pools.
+  * The `allowedUse` field set to `["HostSecondary"]` to reserve them for this purpose.
+  * The `blockSize` to 32.  This aligns {{site.prodname}} IPAM with the behaviour of the AWS fabric.
+
+* Small pools used for particular groups of egress gateways.  These must have:  
+
+  * The `awsSubnetID` field to the ID of the relevant AWS Subnet.  This activates the AWS-backed IP feature for these pools.
+  * The `allowedUse` field set to `["Workload"]` to tell {{site.prodname}} IPAM to use those pools for the egress gateway workloads.  
+  * The `vxlanMode` (or `ipipMode`) set to match your main workload IP pool.  On an AWS-backed pool, this setting controls how 
+    traffic from other pods is sent to the egress gateway.
+  * The `blockSize` to 32.  This aligns {{site.prodname}} IPAM with the behaviour of the AWS fabric.
+
+Continuing the example above, with AWS Subnets
+
+* `100.64.0.0/22` in, say, availability zone west-1 and id `subnet-000000000000000001`
+* `100.64.4.0/22` in, say, availability zone west-2 and id `subnet-000000000000000002`
+
+And, assuming that there are two clusters of egress gateways "red" and "blue" (which in turn serve namespaces "red" 
+and "blue"), one way to structure the IP pools is to have a "hosts" IP pool in each AWS Subnet and one IP pool for each
+group of egress gateways in each subnet.  Then, if a particular egress gateway from the egress gateway cluster is 
+scheduled to one AZ or the other, it will take an IP from the appropriate pool.
+
+For the "west-1" availability zone:
+
+* IP pool "hosts-west-1", CIDR `100.64.0.0/25` (the first 128 addresses in the "west-1" AWS Subnet).
+  * We'll reserve these addresses for hosts to use.
+  * `100.64.0.0/25` covers the addresses from `100.64.0.0` to `100.64.1.255` (but addresses `100.64.0.0` to `100.64.0.3` 
+    were reserved above).
+* IP pool "egress-red-west-1", CIDR `100.64.2.0/31` (the next 2 IPs from the "west-1" subnet).
+  * These addresses will be used for "red" egress gateways in the "west-1" AZ.
+* IP pool "egress-blue-west-1", CIDR `100.64.2.2/31` (the next 2 IPs from the "west-1" subnet).
+  * These addresses will be used for "blue" egress gateways in the "west-1" AZ. 
+
+For the "west-2" availability zone:
+  
+* IP pool "hosts-west-2", CIDR `100.64.4.0/25` (the first 128 addresses in the "west-2" AWS Subnet).
+  * `100.64.4.0/25` covers the addresses from `100.64.4.0` to `100.64.5.255` (but addresses `100.64.4.0` to `100.64.4.3`
+    were reserved above).
+* IP pool "egress-red-west-2", CIDR `100.64.6.0/31` (the next 2 IPs from the "west-2" subnet).
+  * These addresses will be used for "red" egress gateways in the "west-1" AZ.
+* IP pool "egress-blue-west-2", CIDR `100.64.6.2/31` (the next 2 IPs from the "west-2" subnet).
+  * These addresses will be used for "blue" egress gateways in the "west-1" AZ.
+
+Converting this to `IPPool` resources:
+
+```yaml
+apiVersion: projectcalico.org/v3
+kind: IPPool
+metadata:
+  name: hosts-west-1
+spec:
+  cidr: 100.64.0.0/25
+  allowedUses:
+  - HostSecondaryInterface
+  awsSubnetID: subnet-000000000000000001
+  blockSize: 32
+---
+apiVersion: projectcalico.org/v3
+kind: IPPool
+metadata:
+  name: egress-red-west-1
+spec:
+  cidr: 100.64.2.0/31
+  vxlanMode: CrossSubnet
+  allowedUses:
+  - Workload
+  awsSubnetID: subnet-000000000000000001
+  blockSize: 32
+  nodeSelector: "!all()"
+---
+apiVersion: projectcalico.org/v3
+kind: IPPool
+metadata:
+  name: egress-blue-west-1
+spec:
+  cidr: 100.64.2.2/31
+  vxlanMode: CrossSubnet
+  allowedUses:
+  - Workload
+  awsSubnetID: subnet-000000000000000001
+  blockSize: 32
+  nodeSelector: "!all()"
+---
+apiVersion: projectcalico.org/v3
+kind: IPPool
+metadata:
+  name: hosts-west-2
+spec:
+  cidr: 100.64.4.0/25
+  allowedUses:
+  - HostSecondaryInterface
+  awsSubnetID: subnet-000000000000000002
+  blockSize: 32
+---
+apiVersion: projectcalico.org/v3
+kind: IPPool
+metadata:
+  name: egress-red-west-2
+spec:
+  cidr: 100.64.6.0/31
+  vxlanMode: CrossSubnet
+  allowedUses:
+  - Workload
+  awsSubnetID: subnet-000000000000000002
+  blockSize: 32
+  nodeSelector: "!all()"
+---
+apiVersion: projectcalico.org/v3
+kind: IPPool
+metadata:
+  name: egress-blue-west-2
+spec:
+  cidr: 100.64.6.2/31
+  vxlanMode: CrossSubnet
+  allowedUses:
+  - Workload
+  awsSubnetID: subnet-000000000000000002
+  blockSize: 32
+  nodeSelector: "!all()"
+```
+
+#### Enable egress gateway support
+
+In the default **FelixConfiguration**, set the `egressIPSupport` field to `EnabledPerNamespace` or
+`EnabledPerNamespaceOrPerPod`, according to the level of support that you need in your cluster.  For
+support on a per-namespace basis only:
+
+```bash
+kubectl patch felixconfiguration.p default --type='merge' -p \
+    '{"spec":{"egressIPSupport":"EnabledPerNamespace"}}'
+```
+
+Or for support both per-namespace and per-pod:
+
+```bash
+kubectl patch felixconfiguration.p default --type='merge' -p \
+    '{"spec":{"egressIPSupport":"EnabledPerNamespaceOrPerPod"}}'
+```
+
+> **Note**:
+>
+> -  `egressIPSupport` must be the same on all cluster nodes, so you should only set it in the
+>    `default` FelixConfiguration resource.
+{: .alert .alert-info}
+
+#### Provision an egress IP pool
+
+Provision a small IP Pool with the range of source IPs that you want to use for a particular
+application when it connects outside of the cluster.  For example:
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: projectcalico.org/v3
+kind: IPPool
+metadata:
+  name: egress-ippool-1
+spec:
+  cidr: 10.10.10.0/31
+  blockSize: 31
+  nodeSelector: "!all()"
+EOF
+```
+
+> **Note**:
+>
+> -  `blockSize` must be specified when the prefix length of the whole `cidr` is more than
+>    the default `blockSize` of 26.
+>
+> -  `nodeSelector: "!all()"` is recommended so that this egress IP pool is not accidentally
+>    used for cluster pods in general.  Specifying this `nodeSelector` means that the IP pool
+>    is only used for pods that explicitly identify it in their `cni.projectcalico.org/ipv4pools`
+>    annotation.
+>
+> -  Set `ipipMode` or `vxlanMode` to `Always` if the pod network has [IPIP or VXLAN](vxlan-ipip) enabled.
+{: .alert .alert-info}
+
+#### Copy pull secret into egress gateway namespace
+
+Identify the pull secret that is needed for pulling {{site.prodname}} images, and copy this into the
+namespace where you plan to create your egress gateways.  It is typically named
+`tigera-pull-secret`, in the `calico-system` namespace, so the command to copy that to the `default`
+namespace would be:
+
+```bash
+kubectl get secret tigera-pull-secret --namespace=calico-system -o yaml | \
+   grep -v '^[[:space:]]*namespace:[[:space:]]*calico-system' | \
+   kubectl apply --namespace=default -f -
+```
+
+#### Deploy a group of egress gateways
+
+Use a Kubernetes Deployment to deploy a group of egress gateways, using the egress IP Pool.
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: egress-gateway
+  namespace: default
+  labels:
+    egress-code: red
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      egress-code: red
+  template:
+    metadata:
+      annotations:
+        cni.projectcalico.org/ipv4pools: "[\"10.10.10.0/31\"]"
+      labels:
+        egress-code: red
+    spec:
+      imagePullSecrets:
+      - name: tigera-pull-secret
+      nodeSelector:
+        kubernetes.io/os: linux
+      containers:
+      - name: egress-gateway
+        image: {{page.registry}}{% include component_image component="egress-gateway" %}
+        env:
+        - name: EGRESS_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        securityContext:
+          privileged: true
+      terminationGracePeriodSeconds: 0
+EOF
+```
+
+> **Note**:
+>
+> -  It is advisable to have more than one egress gateway per group, so that the egress IP function
+>    continues if one of the gateways crashes or needs to be restarted.  When there are multiple
+>    gateways in a group, outbound traffic from the applications using that group is load-balanced
+>    across the available gateways.  The number of `replicas` specified must be less than or equal
+>    to the number of free IP addresses in the IP Pool.
+>
+> -  In the `cni.projectcalico.org/ipv4pools` annotation, the IP Pool can be specified either
+>    by its name (e.g. `egress-ippool-1`) or by its CIDR (e.g. `10.10.10.0/31`).
+>
+> -  The labels are arbitrary.  You can choose whatever names and values are convenient for
+>    your cluster's Namespaces and Pods to refer to in their egress selectors.
+>
+> -  The image name and `EGRESS_POD_IP` configuration are required.  `tigera/egress-gateway` is the
+>    image that provides the egress gateway function, and `EGRESS_POD_IP` tells the runtime
+>    container what its pod IP is.
+>
+> -  The `securityContext` is required, so that the egress gateway can manipulate its own network
+>    namespace.
+{: .alert .alert-info}
+
+
+#### Configure a Namespace or Pod to use egress gateways
+
+In a {{site.prodname}} deployment, the Kubernetes Namespace and Pod resources honor annotations that
+tell that namespace or pod to use particular egress gateways.  These annotations are selectors, and
+their meaning is "the set of pods, anywhere in the cluster, that match those selectors".
+
+So, to configure that all of the pods in a namespace should use the egress gateways that are
+labelled with `egress-code: red`, you would annotate that namespace like this:
+
+```bash
+kubectl annotate ns <namespace> egress.projectcalico.org/selector='egress-code == "red"'
+```
+
+By default that selector can only match egress gateways in the same namespace.  To select gateways
+in a different namespace, specify a `namespaceSelector` annotation as well, like this:
+
+```bash
+kubectl annotate ns <namespace> egress.projectcalico.org/namespaceSelector='projectcalico.org/name == "default"'
+```
+
+Egress gateway annotations have the same [syntax and range of
+expressions]({{site.baseurl}}/reference/resources/networkpolicy#selector) as the selector fields in
+{{site.prodname}} [network policy]({{site.baseurl}}/reference/resources/networkpolicy#entityrule).
+
+To configure a specific Kubernetes Pod to use egress gateways, specify the same annotations when
+creating the pod.  For example:
+
+```bash
+kubectl apply -f - <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    egress.projectcalico.org/selector: egress-code == 'red'
+    egress.projectcalico.org/namespaceSelector: projectcalico.org/name == 'default'
+  name: my-client,
+  namespace: my-namespace,
+spec:
+  ...
+EOF
+```
+
+#### Optionally enable ECMP load balancing
+
+If you are provisioning multiple egress gateways for a given client pod, and you want
+traffic from that client to load balance across the available gateways, set the
+`fib_multipath_hash_policy`
+[sysctl](https://sysctl-explorer.net/net/ipv4/fib_multipath_hash_policy/) to allow that:
+
+```bash
+sudo sysctl -w net.ipv4.fib_multipath_hash_policy=1
+```
+
+You will need this on each node with clients that you want to load balance across multiple
+egress gateways.
+
+#### Verify the feature operation
+
+To verify the feature operation, cause the application pod to initiate a connection to a server
+outside the cluster, and observe -- for example using tcpdump -- the source IP of the connection
+packet as it reaches the server.
+
+> **Note**: In order for such a connection to complete, the server must know how to route back to
+> the egress gateway's IP.
+{: .alert .alert-info}
+
+By way of a concrete example, you could use netcat to run a test server outside the cluster; for
+example:
+
+```bash
+docker run --net=host --privileged subfuzion/netcat -v -l -k -p 8089
+```
+
+Then provision an egress IP Pool, and egress gateways, as above.
+
+Then deploy a pod, with egress annotations as above, and with any image that includes netcat, for
+example `laurenceman/alpine`.
+
+Now you can use `kubectl exec` to initiate an outbound connection from that pod:
+
+```bash
+kubectl exec <pod name> -n <pod namespace> -- nc <server IP> 8089 </dev/null
+```
+
+where `<server IP>` should be the IP address of the netcat server.
+
+Then, if you check the logs or output of the netcat server, you should see:
+
+```
+Connection from <source IP> <source port> received
+```
+
+with `<source IP>` being one of the IPs of the egress IP pool that you provisioned.
+
+#### Controlling the use of egress gateways
+
+If a cluster ascribes special meaning to traffic flowing through egress gateways, it will be
+important to control when cluster users can configure their pods and namespaces to use them, so that
+non-special pods cannot impersonate the special meaning.
+
+If namespaces in a cluster can only be provisioned by cluster admins, one option is to enable egress
+gateway function only on a per-namespace basis.  Then only cluster admins will be able to configure
+any egress gateway usage.
+
+Otherwise -- if namespace provisioning is open to users in general, or if it's desirable for egress
+gateway function to be enabled both per-namespace and per-pod -- a [Kubernetes admission
+controller](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/){:target="_blank"} will be
+needed.  This is a task for each deployment to implement for itself, but possible approaches include
+the following.
+
+1.  Decide whether a given Namespace or Pod is permitted to use egress annotations at all, based on
+    other details of the Namespace or Pod definition.
+
+1.  Evaluate egress annotation selectors to determine the egress gateways that they map to, and
+    decide whether that usage is acceptable.
+
+1.  Impose the cluster's own bespoke scheme for a Namespace or Pod to identify the egress gateways
+    that it wants to use, less general than {{site.prodname}}'s egress annotations.  Then the
+    admission controller would police those bespoke annotations (that that cluster's users could
+    place on Namespace or Pod resources) and either reject the operation in hand, or allow it
+    through after adding the corresponding {{site.prodname}} egress annotations.
+
+#### Policy enforcement for flows via an egress gateway
+
+For an outbound connection from a client pod, via an egress gateway, to a destination outside the
+cluster, any applicable {{site.prodname}} policy will in principle be enforced:
+
+1.  on egress from the client pod
+2.  on ingress to the egress gateway pod
+3.  on egress from the egress gateway pod.
+
+Since an egress gateway will never *originate* any traffic itself, a possible approach is not to
+configure any policy for the egress gateway.  Then the enforcement at points (2) and (3) is a no-op,
+and enforcement at point (1) is the same as for flows that are not via an egress gateway.
+
+On the other hand,
+
+-  if you apply a default-deny ingress policy to your egress gateways, you will need to configure
+   allow policies for the clients that you want to be able to use those gateways;
+
+-  if you apply a default-deny egress policy to your egress gateways, you will need to configure
+   allow policies for the destinations that those gateways should be able to forward to.
+
+Unfortunately it will not work to [specify external destinations by
+name]({{site.baseurl}}/security/domain-based-policy) here, because the gateway's node will not see
+the DNS protocol that maps a destination name to the underlying IP addresses (unless the gateway
+happens to be on the same node as the client).
+
+### Above and beyond
+
+Please see also:
+
+- The `egressIP...` fields of the [FelixConfiguration
+  resource]({{site.baseurl}}/reference/resources/felixconfig#spec).
