@@ -19,11 +19,11 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	v3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/windows-networking/pkg/testutils"
 	"golang.org/x/net/context"
 )
@@ -102,8 +102,7 @@ var _ = Describe("Windows policy test", func() {
 		})
 		It("porter pod can connect to kube apiserver after creating service egress policy", func() {
 			// Assert API is not reachable.
-			err := kubectlExec(`-t porter -- powershell -Command 'Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 https://kubernetes.default.svc.cluster.local'`)
-			Expect(err).To(HaveOccurred())
+			kubectlExec(`-t porter -- powershell -Command 'Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 https://kubernetes.default.svc.cluster.local'`)
 
 			// Create a policy allowing to the k8s API
 			client := newClient()
@@ -122,12 +121,11 @@ var _ = Describe("Windows policy test", func() {
 					},
 				},
 			}
-			_, err = client.NetworkPolicies().Create(context.Background(), &p, options.SetOptions{})
+			_, err := client.NetworkPolicies().Create(context.Background(), &p, options.SetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			// Assert that it's now reachable.
-			err = kubectlExec(`-t porter -- powershell -Command 'Invoke-WebRequest -UseBasicParsing -SkipCertificateCheck -TimeoutSec 5 https://kubernetes.default.svc.cluster.local'`)
-			Expect(err).To(HaveOccurred())
+			kubectlExec(`-t porter -- powershell -Command 'Invoke-WebRequest -UseBasicParsing -SkipCertificateCheck -TimeoutSec 5 https://kubernetes.default.svc.cluster.local'`)
 		})
 	})
 })
