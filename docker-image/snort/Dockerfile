@@ -26,6 +26,9 @@ RUN set -xe \
     && yum clean all
 
 COPY snort.conf /etc/snort/snort.conf
+COPY createSnortConfg.sh /createSnortConfg.sh
+
+RUN /createSnortConfg.sh /etc/snort/snort.conf
 
 ENTRYPOINT ["snort"]
 CMD ["--help"]
