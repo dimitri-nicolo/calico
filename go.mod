@@ -26,7 +26,7 @@ require (
 	github.com/rakelkar/gonetsh v0.0.0-20190930180311-e5c5ffe4bdf0
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.8.1
-	github.com/tigera/api v0.0.0-20211015224852-6fd66c20261e
+	github.com/tigera/api v0.0.0-20211018225355-a1c85143da79
 	github.com/vishvananda/netlink v1.1.1-0.20210703095558-21f2c55a7727
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
 	golang.org/x/net v0.0.0-20210520170846-37e1c6afe023
