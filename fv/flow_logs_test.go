@@ -744,14 +744,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		BeforeEach(func() {
 			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "2"
 			opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFILEENABLED"] = "true"
 
 			// Defaults for how we expect flow logs to be generated.
 			expectation.labels = false
 			expectation.policies = false
 			expectation.aggregationForAllowed = AggrByPodPrefix
 			expectation.aggregationForDenied = AggrBySourcePort
-
-			opts.EnableFlowLogsFile()
 		})
 
 		Context("with endpoint labels", func() {
@@ -864,8 +863,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 			expectation.policies = false
 			expectation.aggregationForAllowed = AggrByPodPrefix
 			expectation.aggregationForDenied = AggrBySourcePort
-			opts.EnableFlowLogsFile()
 
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFILEENABLED"] = "true"
 			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "2"
 			opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
 		})

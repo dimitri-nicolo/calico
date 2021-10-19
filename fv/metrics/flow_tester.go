@@ -261,3 +261,18 @@ func (t *FlowTester) CheckAllFlowsAccountedFor() error {
 	}
 	return errors.New(strings.Join(errs, "\n==============\n"))
 }
+
+func (t *FlowTester) IterFlows(flowLogsOutput string, cb func(collector.FlowLog) error) error {
+	for _, f := range t.readers {
+		flogs, err := f.ReadFlowLogs(flowLogsOutput)
+		if err != nil {
+			return err
+		}
+		for _, fl := range flogs {
+			if err := cb(fl); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}

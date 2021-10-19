@@ -111,3 +111,8 @@ type ProcessInfoCache interface {
 	Lookup(Tuple, TrafficDirection) (ProcessInfo, bool)
 	Update(Tuple, bool)
 }
+
+// EgressDomainCache interface used to perform reverse DNS queries.
+type EgressDomainCache interface {
+	GetWatchedDomainForIP(ip [16]byte) string
+}

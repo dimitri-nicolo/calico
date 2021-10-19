@@ -29,42 +29,58 @@ func init() {
 	prometheus.MustRegister(gaugeNetworkSetCacheLength)
 }
 
-// Networkset data is stored in the EndpointData object for easier type processing for flow logs.
-type NetworksetLookupsCache struct {
-	nsMutex           sync.RWMutex
-	networksetToCidrs map[model.Key]set.Set
-	ipTree            *IpTrie
+type networkSetData struct {
+	cidrs                set.Set
+	allowedEgressDomains set.Set
+	endpointData         *EndpointData
 }
 
-func NewNetworksetLookupsCache() *NetworksetLookupsCache {
-	nc := &NetworksetLookupsCache{
-		networksetToCidrs: map[model.Key]set.Set{},
-		nsMutex:           sync.RWMutex{},
-		ipTree:            NewIpTrie(),
+// Networkset data is stored in the EndpointData object for easier type processing for flow logs.
+type NetworkSetLookupsCache struct {
+	nsMutex                  sync.RWMutex
+	networkSets              map[model.Key]*networkSetData
+	ipTree                   *IpTrie
+	networksetToEgressDomain map[string]set.Set
+	egressDomainToNetworkset map[string]set.Set
+}
+
+func NewNetworkSetLookupsCache() *NetworkSetLookupsCache {
+	nc := &NetworkSetLookupsCache{
+		nsMutex: sync.RWMutex{},
+
+		// NetworkSet data.
+		networkSets: make(map[model.Key]*networkSetData),
+
+		// Reverse lookups by CIDR and egress domain.
+		ipTree:                   NewIpTrie(),
+		egressDomainToNetworkset: make(map[string]set.Set),
 	}
 
 	return nc
 }
 
-func (nc *NetworksetLookupsCache) RegisterWith(allUpdateDispatcher *dispatcher.Dispatcher) {
+func (nc *NetworkSetLookupsCache) RegisterWith(allUpdateDispatcher *dispatcher.Dispatcher) {
 	allUpdateDispatcher.Register(model.NetworkSetKey{}, nc.OnUpdate)
 }
 
 // OnUpdate is the callback method registered with the AllUpdatesDispatcher for
-// the model.NetworkSet type. This method updates the mapping between networksets
+// the model.NetworkSet type. This method updates the mapping between networkSets
 // and the corresponding CIDRs that they contain.
-func (nc *NetworksetLookupsCache) OnUpdate(nsUpdate api.Update) (_ bool) {
+func (nc *NetworkSetLookupsCache) OnUpdate(nsUpdate api.Update) (_ bool) {
 	switch k := nsUpdate.Key.(type) {
 	case model.NetworkSetKey:
 		if nsUpdate.Value == nil {
-			nc.removeNetworkset(k)
+			nc.removeNetworkSet(k)
 		} else {
 			networkset := nsUpdate.Value.(*model.NetworkSet)
-			ed := &EndpointData{
-				Key:        k,
-				Networkset: nsUpdate.Value,
-			}
-			nc.addOrUpdateNetworkset(k, ed, ip.CIDRsFromCalicoNets(networkset.Nets))
+			nc.addOrUpdateNetworkset(&networkSetData{
+				endpointData: &EndpointData{
+					Key:        k,
+					Networkset: nsUpdate.Value,
+				},
+				cidrs:                set.FromArray(ip.CIDRsFromCalicoNets(networkset.Nets)),
+				allowedEgressDomains: set.FromArray(networkset.AllowedEgressDomains),
+			})
 		}
 	default:
 		log.Infof("ignoring unexpected update: %v %#v",
@@ -77,146 +93,174 @@ func (nc *NetworksetLookupsCache) OnUpdate(nsUpdate api.Update) (_ bool) {
 
 // addOrUpdateNetworkset tracks networkset to CIDR mapping as well as the reverse
 // mapping from CIDR to networkset.
-func (nc *NetworksetLookupsCache) addOrUpdateNetworkset(key model.Key, ed *EndpointData, nets []ip.CIDR) {
+func (nc *NetworkSetLookupsCache) addOrUpdateNetworkset(data *networkSetData) {
 	// If the networkset exists, it was updated, then we might have to add or
-	// remove CIDRs.
-	// First up, get all current CIDRs.
-	// Note: We don't acquire a lock when reading from the mapping
-	// because the only writes are done via the calc_graph thread.
-	var cidrsToRemove set.Set
-	currentCIDRs, ok := nc.networksetToCidrs[key]
-	// Create a copy so any working changes do not affect the actual set.
-	if !ok {
-		cidrsToRemove = set.New()
-	} else {
-		cidrsToRemove = currentCIDRs.Copy()
-	}
-
-	// Collect all the CIDRs that correspond to this networkset and mark
-	// any CIDR that shouldn't be discarded.
-	newCIDRs := set.New()
-	for _, cidr := range nets {
-		// If this is an already existing CIDR, then remove it from the removal set
-		// which will be used later to delete CIDRs.
-		if cidrsToRemove.Contains(cidr) {
-			cidrsToRemove.Discard(cidr)
-		}
-		newCIDRs.Add(cidr)
-	}
-
+	// remove CIDRs and allowed egress domains.
 	nc.nsMutex.Lock()
 	defer nc.nsMutex.Unlock()
-	newCIDRs.Iter(func(item interface{}) error {
-		newCIDR := item.(ip.CIDR)
-		nc.updateCIDRToNetworksetMapping(newCIDR, ed)
-		return nil
-	})
-	cidrsToRemove.Iter(func(item interface{}) error {
-		cidr := item.(ip.CIDR)
-		nc.removeNetworksetCidrMapping(key, cidr)
-		return set.RemoveItem
-	})
-	if newCIDRs.Len() != 0 {
-		nc.networksetToCidrs[key] = newCIDRs
+
+	currentData, exists := nc.networkSets[data.endpointData.Key]
+	if currentData == nil {
+		currentData = &networkSetData{
+			cidrs:                set.New(),
+			allowedEgressDomains: set.New(),
+		}
+	}
+	nc.networkSets[data.endpointData.Key] = data
+
+	set.IterDifferences(data.cidrs, currentData.cidrs,
+		// In new, not current.  Add new entry to mappings.
+		func(item interface{}) error {
+			newCIDR := item.(ip.CIDR)
+			nc.ipTree.InsertKey(newCIDR, data.endpointData.Key)
+			return nil
+		},
+		// In current, not new.  Remove old entry from mappings.
+		func(item interface{}) error {
+			oldCIDR := item.(ip.CIDR)
+			nc.ipTree.DeleteKey(oldCIDR, data.endpointData.Key)
+			return nil
+		},
+	)
+	set.IterDifferences(data.allowedEgressDomains, currentData.allowedEgressDomains,
+		// In new, not current.  Add new entry to mappings.
+		func(item interface{}) error {
+			newDomain := item.(string)
+			nc.addDomainMapping(newDomain, data.endpointData.Key)
+			return nil
+		},
+		// In current, not new.  Remove old entry from mappings.
+		func(item interface{}) error {
+			oldDomain := item.(string)
+			nc.removeDomainMapping(oldDomain, data.endpointData.Key)
+			return nil
+		},
+	)
+	if !exists {
 		nc.reportNetworksetCacheMetrics()
 	}
-
-	// At this point, we can check if we need to update endpoint data
-	// for existing IP addresses.
-	ccidrs, ok := nc.networksetToCidrs[key]
-	if !ok {
-		return
-	}
-	ccidrs.Iter(func(item interface{}) error {
-		curCIDR := item.(ip.CIDR)
-		if newCIDRs.Contains(curCIDR) {
-			// Already updated above.
-			return nil
-		}
-		nc.updateCIDRToNetworksetMapping(curCIDR, ed)
-		return nil
-	})
 }
 
-// updateCIDRToNetworksetMapping creates or appends the EndpointData to a corresponding
-// ip address in the ipTree.
-// This method isn't safe to be used concurrently and the caller should acquire the
-// NetworksetLookupsCache.nsMutex before calling this method.
-func (nc *NetworksetLookupsCache) updateCIDRToNetworksetMapping(cidr ip.CIDR, ed *EndpointData) {
-	nc.ipTree.InsertNetworkset(cidr, ed)
-}
-
-// removeNetworkset removes the networkset from the NetworksetLookupscache.networksetToCidrs map
+// removeNetworkSet removes the networkset from the NetworksetLookupscache.networkSets map
 // and also removes all corresponding CIDR to networkset mappings as well.
-// This method should acquire (and release) the NetworksetLookupsCache.nsMutex before (and after)
+// This method should acquire (and release) the NetworkSetLookupsCache.nsMutex before (and after)
 // manipulating the maps.
-func (nc *NetworksetLookupsCache) removeNetworkset(key model.Key) {
+func (nc *NetworkSetLookupsCache) removeNetworkSet(key model.Key) {
 	nc.nsMutex.Lock()
 	defer nc.nsMutex.Unlock()
-	currentCIDRs, ok := nc.networksetToCidrs[key]
+	currentData, ok := nc.networkSets[key]
 	if !ok {
 		// We don't know about this networkset. Nothing to do.
 		return
 	}
-	currentCIDRs.Iter(func(item interface{}) error {
-		cidr := item.(ip.CIDR)
-		nc.removeNetworksetCidrMapping(key, cidr)
+	currentData.cidrs.Iter(func(item interface{}) error {
+		oldCIDR := item.(ip.CIDR)
+		nc.ipTree.DeleteKey(oldCIDR, key)
 		return nil
 	})
-	delete(nc.networksetToCidrs, key)
+	currentData.allowedEgressDomains.Iter(func(item interface{}) error {
+		oldDomain := item.(string)
+		nc.removeDomainMapping(oldDomain, key)
+		return nil
+	})
+	delete(nc.networkSets, key)
 	nc.reportNetworksetCacheMetrics()
 }
 
-func (nc *NetworksetLookupsCache) removeNetworksetCidrMapping(key model.Key, cidr ip.CIDR) {
+func (nc *NetworkSetLookupsCache) addDomainMapping(domain string, key model.Key) {
+	// Add the networkset key to the set specific to this domain, creating a new set if this is the first.
+	current := nc.egressDomainToNetworkset[domain]
+	if current == nil {
+		current = set.New()
+		nc.egressDomainToNetworkset[domain] = current
+	}
+	current.Add(key)
+}
 
-	// Remove existing CIDR and corresponding networkset mapping.
-	nc.ipTree.DeleteNetworkset(cidr, key)
-
-	// Remove the networkset to CIDR mapping.
-	existingCidrs, ok := nc.networksetToCidrs[key]
-	if !ok {
+func (nc *NetworkSetLookupsCache) removeDomainMapping(domain string, key model.Key) {
+	current := nc.egressDomainToNetworkset[domain]
+	if current == nil {
 		return
 	}
-	if existingCidrs.Len() == 1 {
-		// There is only a single cidr corresponding to this
-		// key so it is safe to remove this mapping.
-		delete(nc.networksetToCidrs, key)
-	} else {
-		existingCidrs.Discard(cidr)
-		nc.networksetToCidrs[key] = existingCidrs
+	// Remove the networkset key from the set specific to this domain, and remove the domain if no longer in any
+	// networkSets.
+	current.Discard(key)
+	if current.Len() == 0 {
+		delete(nc.egressDomainToNetworkset, domain)
 	}
-	nc.reportNetworksetCacheMetrics()
 }
 
-// GetNetworkset finds Longest Prefix Match CIDR from given IP ADDR and return last observed
+// GetNetworkSetFromIP finds Longest Prefix Match CIDR from given IP ADDR and return last observed
 // Networkset for that CIDR
-func (nc *NetworksetLookupsCache) GetNetworkset(addr [16]byte) (*EndpointData, bool) {
+func (nc *NetworkSetLookupsCache) GetNetworkSetFromIP(addr [16]byte) (ed *EndpointData, ok bool) {
 	nc.nsMutex.RLock()
 	defer nc.nsMutex.RUnlock()
 	// Find the first cidr that contains the ip address to use for the lookup.
 	ipAddr := ip.FromNetIP(net.IP(addr[:]))
-	return nc.ipTree.GetLongestPrefixCidr(ipAddr)
+	if key, _ := nc.ipTree.GetLongestPrefixCidr(ipAddr); key != nil {
+		if ns := nc.networkSets[key]; ns != nil {
+			// Found a NetworkSet, so set the return variables.
+			ed = ns.endpointData
+			ok = true
+		}
+	}
+	return
 }
 
-func (nc *NetworksetLookupsCache) DumpNetworksets() string {
+// GetNetworkSetFromEgressDomain returns an arbitrary NetworkSet that contains the suppled egress domain. This does not do
+// any pattern matching as it is assumed the domain will be in the format configured in either a networkset or a policy.
+func (nc *NetworkSetLookupsCache) GetNetworkSetFromEgressDomain(domain string) (ed *EndpointData, ok bool) {
+	nc.nsMutex.RLock()
+	defer nc.nsMutex.RUnlock()
+
+	keys := nc.egressDomainToNetworkset[domain]
+	if keys == nil {
+		return
+	}
+	keys.Iter(func(item interface{}) error {
+		key := item.(model.Key)
+
+		// If we locate the networkset (we should unless our data is corrupt) then update the return values and stop
+		// further iteration
+		if ns := nc.networkSets[key]; ns != nil {
+			ed, ok = ns.endpointData, true
+			return set.StopIteration
+		}
+		return nil
+	})
+
+	return
+}
+
+func (nc *NetworkSetLookupsCache) DumpNetworksets() string {
 	nc.nsMutex.RLock()
 	defer nc.nsMutex.RUnlock()
 	lines := []string{}
-	lines = nc.ipTree.DumpCIDRNetworksets()
+	lines = nc.ipTree.DumpCIDRKeys()
 	lines = append(lines, "-------")
-	for key, cidrs := range nc.networksetToCidrs {
+	for key, ns := range nc.networkSets {
 		cidrStr := []string{}
-		cidrs.Iter(func(item interface{}) error {
+		ns.cidrs.Iter(func(item interface{}) error {
 			cidr := item.(ip.CIDR)
 			cidrStr = append(cidrStr, cidr.String())
 			return nil
 		})
-		lines = append(lines, key.(model.NetworkSetKey).Name, ": ", strings.Join(cidrStr, ","))
+		domainStr := []string{}
+		ns.allowedEgressDomains.Iter(func(item interface{}) error {
+			domain := item.(string)
+			domainStr = append(domainStr, domain)
+			return nil
+		})
+		lines = append(lines,
+			key.(model.NetworkSetKey).Name,
+			"   cidrs: "+strings.Join(cidrStr, ","),
+			" domains: "+strings.Join(domainStr, ","),
+		)
 	}
 	return strings.Join(lines, "\n")
 }
 
-//reportNetworksetCacheMetrics reports networkset cache performance metrics to prometheus
-func (nc *NetworksetLookupsCache) reportNetworksetCacheMetrics() {
-	gaugeNetworkSetCacheLength.Set(float64(len(nc.networksetToCidrs)))
+// reportNetworksetCacheMetrics reports networkset cache performance metrics to prometheus
+func (nc *NetworkSetLookupsCache) reportNetworksetCacheMetrics() {
+	gaugeNetworkSetCacheLength.Set(float64(len(nc.networkSets)))
 }

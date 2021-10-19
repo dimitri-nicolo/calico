@@ -19,6 +19,7 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/felix/calc"
+	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/jitter"
 	logutil "github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/proto"
@@ -116,6 +117,7 @@ type collector struct {
 	packetInfoReader      PacketInfoReader
 	conntrackInfoReader   ConntrackInfoReader
 	processInfoCache      ProcessInfoCache
+	domainLookup          EgressDomainCache
 	luc                   *calc.LookupsCache
 	epStats               map[Tuple]*Data
 	ticker                jitter.JitterTicker
@@ -205,6 +207,10 @@ func (c *collector) SetProcessInfoCache(pic ProcessInfoCache) {
 	c.processInfoCache = pic
 }
 
+func (c *collector) SetDomainLookup(dlu EgressDomainCache) {
+	c.domainLookup = dlu
+}
+
 func (c *collector) startStatsCollectionAndReporting() {
 	var pktInfoC <-chan PacketInfo
 	var ctInfoC <-chan []ConntrackInfo
@@ -262,10 +268,17 @@ func (c *collector) getDataAndUpdateEndpoints(tuple Tuple, expired bool) *Data {
 		return data
 	}
 
-	srcEp, dstEp := c.lookupEndpoint(tuple.src), c.lookupEndpoint(tuple.dst)
+	// Get the source endpoint.
+	srcEp := c.lookupEndpoint(tuple.src, false)
+	srcEpIsNotLocal := srcEp == nil || !srcEp.IsLocal
+
+	// Get the destination endpoint. If the source is local then we can use egress domain lookups if required.
+	dstEp := c.lookupEndpoint(tuple.dst, !srcEpIsNotLocal)
+	dstEpIsNotLocal := dstEp == nil || !dstEp.IsLocal
+
 	if !okData {
 		// For new entries, check that at least one of the endpoints is local.
-		if (srcEp == nil || !srcEp.IsLocal) && (dstEp == nil || !dstEp.IsLocal) {
+		if srcEpIsNotLocal && dstEpIsNotLocal {
 			return nil
 		}
 
@@ -282,7 +295,7 @@ func (c *collector) getDataAndUpdateEndpoints(tuple Tuple, expired bool) *Data {
 		c.handleDataEndpointOrRulesChanged(data)
 
 		// For updated entries, check that at least one of the endpoints is still local. If not delete the entry.
-		if (srcEp == nil || !srcEp.IsLocal) && (dstEp == nil || !dstEp.IsLocal) {
+		if srcEpIsNotLocal && dstEpIsNotLocal {
 			c.deleteDataFromEpStats(data)
 			return nil
 		}
@@ -304,13 +317,28 @@ func endpointChanged(ep1, ep2 *calc.EndpointData) bool {
 	return ep1.Key != ep2.Key
 }
 
-func (c *collector) lookupEndpoint(ip [16]byte) *calc.EndpointData {
-	// Get the endpoint data for this entry, preferentially using a real endpoint over a NetworkSet.
+func (c *collector) lookupEndpoint(ip [16]byte, canCheckEgressDomains bool) *calc.EndpointData {
+	// Get the endpoint data for this entry.
 	if ep, ok := c.luc.GetEndpoint(ip); ok {
 		return ep
-	} else if c.config.EnableNetworkSets {
-		ep, _ = c.luc.GetNetworkset(ip)
-		return ep
+	}
+
+	// No matching endpoint. If NetworkSets are enabled for flows then check if the IP matches a NetworkSet and
+	// return that.
+	if c.config.EnableNetworkSets {
+		if ep, ok := c.luc.GetNetworkSet(ip); ok {
+			return ep
+		}
+
+		// NetworkSets endpoint types are enabled, but no NetworkSet matches the IP.  If canCheckEgressDomains is true
+		// then we can also check for egress domain and lookup NetworkSet from that.
+		if canCheckEgressDomains && c.domainLookup != nil {
+			if domain := c.domainLookup.GetWatchedDomainForIP(ip); domain != "" {
+				if ep, ok := c.luc.GetNetworkSetFromEgressDomain(domain); ok {
+					return ep
+				}
+			}
+		}
 	}
 	return nil
 }
@@ -476,9 +504,10 @@ func (c *collector) reportMetrics(data *Data, force bool) bool {
 	if !force {
 		// If not forcing then return if:
 		// - There may be a service to report
-		// - The verdict rules have not been found for the local endpoints.
+		// - The verdict rules have not been found for the local endpoints
+		// - The remote endpoint is not known (which could potentially resolve to a DNS name or NetworkSet).
 		// In this case data will be reported later during ticker processing.
-		if !foundService || !data.VerdictFound() {
+		if !foundService || !data.VerdictFound() || data.dstEp == nil {
 			log.Debug("Service not found - delay statistics reporting until normal flush processing")
 			return false
 		}
@@ -801,25 +830,20 @@ func extractTupleFromDataplaneStats(d *proto.DataplaneStats) (Tuple, error) {
 	}
 
 	// Use the standard go net library to parse the IP since this always returns IPs as 16 bytes.
-	srcIP := net.ParseIP(d.SrcIp)
-	if srcIP == nil {
+	srcIP, ok := ip.ParseIPAs16Byte(d.SrcIp)
+	if !ok {
 		reportDataplaneStatsUpdateErrorMetrics(1)
 		return Tuple{}, fmt.Errorf("bad source IP: %s", d.SrcIp)
 	}
-	dstIP := net.ParseIP(d.DstIp)
-	if dstIP == nil {
+	dstIP, ok := ip.ParseIPAs16Byte(d.DstIp)
+	if !ok {
 		reportDataplaneStatsUpdateErrorMetrics(1)
 		return Tuple{}, fmt.Errorf("bad destination IP: %s", d.DstIp)
 	}
 
-	// But invoke the To16() just to be sure.
-	var srcArray, dstArray [16]byte
-	copy(srcArray[:], srcIP.To16())
-	copy(dstArray[:], dstIP.To16())
-
 	// Locate the data for this connection, creating if not yet available (it's possible to get an update
 	// before nflogs or conntrack).
-	return MakeTuple(srcArray, dstArray, int(protocol), int(d.SrcPort), int(d.DstPort)), nil
+	return MakeTuple(srcIP, dstIP, int(protocol), int(d.SrcPort), int(d.DstPort)), nil
 }
 
 // reportDataplaneStatsUpdateErrorMetrics reports error statistics encoutered when updating Dataplane stats
@@ -879,7 +903,7 @@ func (c *collector) LogDNS(src, dst net.IP, dns *layers.DNS, latencyIfKnown *tim
 	serverEP, _ := c.luc.GetEndpoint(ipTo16Byte(src))
 	clientEP, _ := c.luc.GetEndpoint(ipTo16Byte(dst))
 	if serverEP == nil {
-		serverEP, _ = c.luc.GetNetworkset(ipTo16Byte(src))
+		serverEP, _ = c.luc.GetNetworkSet(ipTo16Byte(src))
 	}
 	logutil.Tracef(c.displayDebugTraceLogs, "Src %v -> Server %v", src, serverEP)
 	logutil.Tracef(c.displayDebugTraceLogs, "Dst %v -> Client %v", dst, clientEP)

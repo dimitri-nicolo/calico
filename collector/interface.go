@@ -21,4 +21,5 @@ type Collector interface {
 	SetPacketInfoReader(pir PacketInfoReader)
 	SetConntrackInfoReader(cir ConntrackInfoReader)
 	SetProcessInfoCache(pir ProcessInfoCache)
+	SetDomainLookup(dlu EgressDomainCache)
 }

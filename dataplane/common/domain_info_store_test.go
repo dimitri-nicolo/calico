@@ -11,14 +11,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/gopacket/layers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+
+	"github.com/google/gopacket/layers"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/testutils"
+
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
@@ -436,6 +439,30 @@ var _ = Describe("Domain Info Store", func() {
 
 			It("should get that IP for *.google.com", func() {
 				Expect(domainStore.GetDomainIPs("*.google.com")).To(Equal([]string{"1.2.3.5"}))
+			})
+
+			It("should handle reverse lookup when no IP was requested", func() {
+				ipb, _ := ip.ParseIPAs16Byte("1.2.3.5")
+				Expect(domainStore.GetWatchedDomainForIP(ipb)).To(Equal(""))
+			})
+
+			It("should handle reverse lookup when IP was requested as update.google.com", func() {
+				ipb, _ := ip.ParseIPAs16Byte("1.2.3.5")
+				Expect(domainStore.GetDomainIPs("update.google.com")).To(Equal([]string{"1.2.3.5"}))
+				Expect(domainStore.GetWatchedDomainForIP(ipb)).To(Equal("update.google.com"))
+			})
+
+			It("should handle reverse lookup when IP was requested as *.google.com", func() {
+				ipb, _ := ip.ParseIPAs16Byte("1.2.3.5")
+				Expect(domainStore.GetDomainIPs("*.google.com")).To(Equal([]string{"1.2.3.5"}))
+				Expect(domainStore.GetWatchedDomainForIP(ipb)).To(Equal("*.google.com"))
+			})
+
+			It("should handle reverse lookup when IP was requested as update.google.com and *.google.com", func() {
+				ipb, _ := ip.ParseIPAs16Byte("1.2.3.5")
+				Expect(domainStore.GetDomainIPs("*.google.com")).To(Equal([]string{"1.2.3.5"}))
+				Expect(domainStore.GetDomainIPs("update.google.com")).To(Equal([]string{"1.2.3.5"}))
+				Expect(domainStore.GetWatchedDomainForIP(ipb)).To(BeElementOf("update.google.com", "*.google.com"))
 			})
 		})
 	})

@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,19 +24,19 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
-//Node is represented by cidr as KEY and networkset endpoint data stored in edLists
+// Node is represented by cidr as KEY and v1 key data stored in keys.
 type IPTrieNode struct {
-	cidr    ip.CIDR
-	edLists []*EndpointData
+	cidr ip.CIDR
+	keys []model.Key
 }
 
-//Root of IpTree
+// Root of IpTree
 type IpTrie struct {
 	lpmCache      *patricia.Trie
 	existingCidrs set.Set
 }
 
-//NewIpTrie creates new Patricia trie and Initializes
+// NewIpTrie creates new Patricia trie and Initializes
 func NewIpTrie() *IpTrie {
 	return &IpTrie{
 		lpmCache:      patricia.NewTrie(),
@@ -44,14 +44,14 @@ func NewIpTrie() *IpTrie {
 	}
 }
 
-//newIPTrieNode Function creates new empty node, as place holder for Key and endpoint data
-func newIPTrieNode(cidr ip.CIDR, ed *EndpointData) *IPTrieNode {
-	return &IPTrieNode{cidr: cidr, edLists: []*EndpointData{ed}}
+// newIPTrieNode Function creates new empty node containing the CIDR and single key.
+func newIPTrieNode(cidr ip.CIDR, key model.Key) *IPTrieNode {
+	return &IPTrieNode{cidr: cidr, keys: []model.Key{key}}
 }
 
-//GetLongestPrefixCidr finds longest prefix match CIDR for the Given IP addr
-//and if successful return the last endpoint data
-func (t *IpTrie) GetLongestPrefixCidr(ipAddr ip.Addr) (*EndpointData, bool) {
+// GetLongestPrefixCidr finds longest prefix match CIDR for the Given IP and if successful return the last key
+// recorded.
+func (t *IpTrie) GetLongestPrefixCidr(ipAddr ip.Addr) (model.Key, bool) {
 	var longestPrefix patricia.Prefix
 	var longestItem patricia.Item
 	ptrie := t.lpmCache
@@ -68,26 +68,25 @@ func (t *IpTrie) GetLongestPrefixCidr(ipAddr ip.Addr) (*EndpointData, bool) {
 		return nil, false
 	}
 	node := longestItem.(*IPTrieNode)
-	return node.edLists[len(node.edLists)-1], true
+	return node.keys[len(node.keys)-1], true
 }
 
-//GetNetworksets return list of Endpoint data for the Given CIDR
-func (t *IpTrie) GetNetworksets(cidr ip.CIDR) ([]*EndpointData, bool) {
+// GetKeys return list of keys for the Given CIDR
+func (t *IpTrie) GetKeys(cidr ip.CIDR) ([]model.Key, bool) {
 	ptrie := t.lpmCache
 	cidrb := cidr.AsBinary()
 	val := ptrie.Get(patricia.Prefix(cidrb))
 
 	if val != nil {
 		node := val.(*IPTrieNode)
-		return node.edLists, true
+		return node.keys, true
 	}
 
 	return nil, false
 }
 
-//DeleteNetworkset walk through the trie, finds the key CIDR and delete corresponding
-//networkSet
-func (t *IpTrie) DeleteNetworkset(cidr ip.CIDR, key model.Key) {
+// DeleteKey walks through the trie, finds the key CIDR and delete corresponding key.
+func (t *IpTrie) DeleteKey(cidr ip.CIDR, key model.Key) {
 	ptrie := t.lpmCache
 	cidrb := cidr.AsBinary()
 
@@ -97,64 +96,63 @@ func (t *IpTrie) DeleteNetworkset(cidr ip.CIDR, key model.Key) {
 		return
 	}
 	node := val.(*IPTrieNode)
-	if len(node.edLists) == 1 {
+	if len(node.keys) == 1 {
 		t.existingCidrs.Discard(cidr)
 		ptrie.Delete(patricia.Prefix(cidrb))
 	} else {
 		ii := 0
-		for _, val := range node.edLists {
-			if val.Key != key {
-				node.edLists[ii] = val
+		for _, val := range node.keys {
+			if val != key {
+				node.keys[ii] = val
 				ii++
 			}
 		}
-		node.edLists = node.edLists[:ii]
+		node.keys = node.keys[:ii]
 	}
 }
 
-//InsertNetworkset Inserts the given CIDR in Trie and store networkset in List
-//Check if this CIDR already has a corresponding networkset.
-//If it has one, then append the networkset to it.
-//Else, create a new CIDR to networkset
-func (t *IpTrie) InsertNetworkset(cidr ip.CIDR, ed *EndpointData) {
+// InsertKey inserts the given CIDR in Trie and stores the key in List.
+// - Check if this CIDR already has a corresponding networkset.
+//   - if it has one, then append the key to it.
+//   - else, create a new CIDR to key.
+func (t *IpTrie) InsertKey(cidr ip.CIDR, key model.Key) {
 	ptrie := t.lpmCache
 	cidrb := cidr.AsBinary()
 
 	t.existingCidrs.Add(cidr)
 	val := ptrie.Get(patricia.Prefix(cidrb))
 	if val == nil {
-		newNode := newIPTrieNode(cidr, ed)
+		newNode := newIPTrieNode(cidr, key)
 		ptrie.Insert(patricia.Prefix(cidrb), newNode)
 	} else {
 		node := val.(*IPTrieNode)
 		isExistingNetset := false
-		for i, val := range node.edLists {
-			if ed.Key == val.Key {
-				node.edLists[i] = ed
+		for i, val := range node.keys {
+			if key == val {
+				node.keys[i] = key
 				isExistingNetset = true
 				break
 			}
 		}
 		if !isExistingNetset {
-			node.edLists = append(node.edLists, ed)
+			node.keys = append(node.keys, key)
 		}
 	}
 	return
 }
 
-//DumpCIDRNetworksets returns slices of string with Cidr and
-//corresponding networksetNames
-func (t *IpTrie) DumpCIDRNetworksets() []string {
+// DumpCIDRKeys returns slices of string with Cidr and corresponding key strings.
+func (t *IpTrie) DumpCIDRKeys() []string {
 	ec := t.existingCidrs
 	lines := []string{}
 	ec.Iter(func(item interface{}) error {
 		cidr := item.(ip.CIDR)
-		edNames := []string{}
-		eds, _ := t.GetNetworksets(cidr)
-		for _, ed := range eds {
-			edNames = append(edNames, ed.Key.(model.NetworkSetKey).Name)
+		keyStrings := []string{}
+		keys, _ := t.GetKeys(cidr)
+		for _, key := range keys {
+			keyStrings = append(keyStrings, key.String())
 		}
-		lines = append(lines, cidr.String()+": "+strings.Join(edNames, ","))
+		lines = append(lines, cidr.String()+": "+strings.Join(keyStrings, ","))
 
 		return nil
 	})
