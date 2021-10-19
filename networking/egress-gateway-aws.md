@@ -57,10 +57,11 @@ This how-to guide uses the following features:
 
 #### CIDR notation
 
-This article assumes that you are familiar with network masks and CIDR notation as introduced by 
-[RFC4632](https://datatracker.ietf.org/doc/html/rfc4632). Useful resources:
+This article assumes that you are familiar with network masks and CIDR notation.
 
-* [Wikipedia article on CIDR notation](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing#CIDR_notation)
+* CIDR notation is defined in [RFC4632](https://datatracker.ietf.org/doc/html/rfc4632). 
+* The [Wikipedia article on CIDR notation](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing#CIDR_notation)
+  provides a good reference.
 
 #### AWS-backed IP pools
 
@@ -202,7 +203,12 @@ an instance (for example when scaling up the cluster).
 #### Ensure Kubernetes VPC has free CIDR range
 
 For egress gateways to be useful in AWS, we want to assign them IP addresses from a VPC Subnet that is in the same AZ
-and that is reserved for {{site.prodname}}.  
+as their host.
+
+To avoid clashes between AWS IP allocations and {{site.prodname}} IP allocations, it is important that the range of 
+IP addresses assigned to {{site.prodname}} IP pools is not used by AWS for automatic allocations.  In this guide we 
+assume that you have created a dedicated VPC Subnet per Availability Zone (AZ) that is reserved for {{site.prodname}}
+and configured not to be used as the default Subnet for the AZ.
 
 If you are creating your cluster and VPC from scratch, plan to subdivide the VPC CIDR into (at least) two VPC Subnets 
 per AZ.  One VPC Subnet for the Kubernetes (and any other) hosts and one VPC Subnet for egress gateways. (The next 
@@ -342,7 +348,7 @@ Should show the new `projectcalico.org/aws-secondary-ipv4` capacity.
 
 IP pools are used to subdivide the VPC Subnets as follows:
 
-* One medium-sized IP pool reserved for {{site.prodname}} to use for the _primary_ IP addresses of its _secondary_ ENIs.
+* One medium-sized IP pool per-Subnet reserved for {{site.prodname}} to use for the _primary_ IP addresses of its _secondary_ ENIs.
   These pools must have:
 
   * The `awsSubnetID` field to the ID of the relevant VPC Subnet.  This activates the AWS-backed IP feature for these pools.
