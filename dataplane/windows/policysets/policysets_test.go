@@ -480,16 +480,14 @@ func TestIpPortRuleRendering(t *testing.T) {
 		},
 		{
 			Type: hns.ACL, Action: hns.Allow, Direction: hns.Out, RuleType: hns.Switch,
-			Priority:        1000,
+			Priority:        1001,
 			Protocol:        17,
 			Id:              "policy-basic-rule-1-1",
 			RemoteAddresses: "10.0.0.2",
 			RemotePorts:     "80",
 		},
 		// Default deny rule.
-		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.Out, RuleType: hns.Switch, Priority: 1001},
-		// Default host/pod rule.
-		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.Out, RuleType: hns.Host},
+		{Type: hns.ACL, Id: "DRE", Protocol: 256, Action: hns.Block, Direction: hns.Out, RuleType: hns.Switch, Priority: 1002},
 	}), "unexpected rules returned for IP+port policy")
 }
 
@@ -535,16 +533,14 @@ func TestIpPortRuleRenderingMultiPort(t *testing.T) {
 		},
 		{
 			Type: hns.ACL, Action: hns.Allow, Direction: hns.Out, RuleType: hns.Switch,
-			Priority:        1000,
+			Priority:        1001,
 			Protocol:        17,
 			Id:              "policy-basic-rule-1-1",
 			RemoteAddresses: "10.0.0.2",
 			RemotePorts:     "80",
 		},
 		// Default deny rule.
-		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.Out, RuleType: hns.Switch, Priority: 1001},
-		// Default host/pod rule.
-		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.Out, RuleType: hns.Host},
+		{Type: hns.ACL, Id: "DRE", Protocol: 256, Action: hns.Block, Direction: hns.Out, RuleType: hns.Switch, Priority: 1002},
 	}), "unexpected rules returned for IP+port policy")
 }
 
@@ -579,9 +575,7 @@ func TestIpPortRuleRenderingEmptyIPSet(t *testing.T) {
 	// Should only have the default rules.
 	Expect(ps.GetPolicySetRules([]string{"policy-basic"}, false)).To(Equal([]*hns.ACLPolicy{
 		// Default deny rule.
-		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.Out, RuleType: hns.Switch, Priority: 1001},
-		// Default host/pod rule.
-		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.Out, RuleType: hns.Host},
+		{Type: hns.ACL, Id: "DRE", Protocol: 256, Action: hns.Block, Direction: hns.Out, RuleType: hns.Switch, Priority: 1001},
 	}), "unexpected rules returned for IP+port policy")
 }
 
