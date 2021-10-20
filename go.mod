@@ -7,6 +7,9 @@ require (
 	github.com/buger/jsonparser v1.0.0
 	github.com/containernetworking/cni v0.8.0
 	github.com/containernetworking/plugins v0.8.5
+	github.com/go-openapi/jsonpointer v0.19.5 // indirect
+	github.com/go-openapi/jsonreference v0.19.5 // indirect
+	github.com/go-openapi/swag v0.19.14 // indirect
 	github.com/gofrs/flock v0.8.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
@@ -21,17 +24,17 @@ require (
 	github.com/nmrshll/go-cp v0.0.0-20180115193924-61436d3b7cfa
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.1
-	github.com/projectcalico/libcalico-go v1.7.2
-	github.com/prometheus/common v0.26.0
+	github.com/projectcalico/libcalico-go v1.7.2-0.20211015231900-c0af3f09c944
+	github.com/prometheus/common v0.10.0
 	github.com/rakelkar/gonetsh v0.0.0-20190930180311-e5c5ffe4bdf0
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.8.1
-	github.com/tigera/api v0.0.0-20211018225355-a1c85143da79
+	github.com/tigera/api v0.0.0-20211019171312-2dc19d1d38f8
 	github.com/vishvananda/netlink v1.1.1-0.20210703095558-21f2c55a7727
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
-	golang.org/x/net v0.0.0-20210520170846-37e1c6afe023
 	golang.org/x/sys v0.0.0-20210616094352-59db8d763f22
-	google.golang.org/grpc v1.38.0
+	golang.org/x/tools v0.1.2 // indirect
+	google.golang.org/grpc v1.27.1
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	k8s.io/api v0.22.0
 	k8s.io/apimachinery v0.22.0
@@ -41,12 +44,12 @@ require (
 
 replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211018200247-19e5cb0b08f4
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211019171316-efd66fec8e8e
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	google.golang.org/grpc => google.golang.org/grpc v1.27.1
 
-	k8s.io/api => k8s.io/api v0.21.0-rc.0
-	k8s.io/apimachinery => k8s.io/apimachinery v0.21.0-rc.0
-	k8s.io/client-go => k8s.io/client-go v0.21.0-rc.0
-
+	k8s.io/api => k8s.io/api v0.21.0
+	k8s.io/apimachinery => k8s.io/apimachinery v0.21.0
+	k8s.io/client-go => k8s.io/client-go v0.21.0
+	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
 )
