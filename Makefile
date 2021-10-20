@@ -317,17 +317,13 @@ run-kubernetes-master: stop-kubernetes-master remote-deps
 	# Create a namespace in the API for the tests to use.
 	-docker exec -ti st-apiserver-${KUBE_APISERVER_PORT} kubectl \
 		--server=https://127.0.0.1:${KUBE_APISERVER_PORT} \
-		apply -f /manifests/tests/st/manifests/mock-node.yaml
+		apply -f /code/tests/st/manifests/mock-node.yaml
 
 	# Apply Calico CRDs for tests that use KDD mode.
-	docker run \
-	    --net=host \
-	    --rm \
-		-v  $(CURDIR):/manifests \
-		gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION} kubectl \
-		--server=http://127.0.0.1:8080 \
-		apply -f /manifests/config/crd/
-	
+	-docker exec -ti st-apiserver-${KUBE_APISERVER_PORT} kubectl \
+		--server=https://127.0.0.1:${KUBE_APISERVER_PORT} \
+		apply -f /code/config/crd/
+
 ## Stop the local kubernetes master
 stop-kubernetes-master:
 	# Delete the cluster role binding.
