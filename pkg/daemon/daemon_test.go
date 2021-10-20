@@ -147,6 +147,7 @@ var _ = Describe("Daemon", func() {
 				Expect(datastore.bgpSyncerCalled).To(BeTrue())
 				Expect(datastore.felixSyncerCalled).To(BeTrue())
 				Expect(datastore.allocateTunnelIpSyncerCalled).To(BeTrue())
+				Expect(datastore.nodestatusSyncerCalled).To(BeTrue())
 				Expect(datastore.dpiSyncerCalled).To(BeTrue())
 			})
 
@@ -240,13 +241,10 @@ type mockDatastore struct {
 	allocateTunnelIpSyncerCalled bool
 	bgpSyncerCalled              bool
 	felixSyncerCalled            bool
+	nodestatusSyncerCalled       bool
 	dpiSyncerCalled              bool
 	initCalled                   int
 	failInit                     bool
-}
-
-func (b *mockDatastore) CalicoNodeStatus() clientv3.CalicoNodeStatusInterface {
-	panic("implement me")
 }
 
 func (b *mockDatastore) UISettingsGroups() clientv3.UISettingsGroupInterface {
@@ -279,6 +277,13 @@ func (b *mockDatastore) BGPSyncerByIface(callbacks bapi.SyncerCallbacks) bapi.Sy
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 	b.bgpSyncerCalled = true
+	return &dummySyncer{}
+}
+
+func (b *mockDatastore) NodeStatusSyncerByIface(callbacks bapi.SyncerCallbacks) bapi.Syncer {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+	b.nodestatusSyncerCalled = true
 	return &dummySyncer{}
 }
 
@@ -414,6 +419,11 @@ func (b *mockDatastore) DeepPacketInspections() clientv3.DeepPacketInspectionInt
 }
 
 func (b *mockDatastore) ManagedClusters() clientv3.ManagedClusterInterface {
+	panic("not implemented")
+}
+
+// CalicoNodeStatus returns an interface for managing the Calico node status resources.
+func (b *mockDatastore) CalicoNodeStatus() clientv3.CalicoNodeStatusInterface {
 	panic("not implemented")
 }
 
