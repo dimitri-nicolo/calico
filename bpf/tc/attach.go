@@ -206,9 +206,27 @@ func AttachTcpStatsProgram(ifaceName, fileName string, nsId uint16) error {
 	if err != nil {
 		return fmt.Errorf("failed to patch veth namespace ID: %v", err)
 	}
-	_, err = ExecTC("filter", "add", "dev", ifaceName, "ingress",
-		"bpf", "da", "obj", tempBinary,
-		"sec", "calico_tcp_stats")
+	obj, err := libbpf.OpenObject(tempBinary)
+	if err != nil {
+		return err
+	}
+	defer obj.Close()
+
+	baseDir := "/sys/fs/bpf/tc/globals"
+	for m, err := obj.FirstMap(); m != nil && err == nil; m, err = m.NextMap() {
+		pinPath := path.Join(baseDir, m.Name())
+		perr := m.SetPinPath(pinPath)
+		if perr != nil {
+			return fmt.Errorf("error pinning map %v errno %v", m.Name(), perr)
+		}
+	}
+
+	err = obj.Load()
+	if err != nil {
+		return fmt.Errorf("error loading program %v", err)
+	}
+
+	_, err = obj.AttachClassifier("calico_tcp_stats", ifaceName, string(HookIngress))
 	return err
 }
 

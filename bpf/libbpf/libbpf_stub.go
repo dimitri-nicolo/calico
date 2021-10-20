@@ -24,6 +24,9 @@ type Obj struct {
 type Map struct {
 }
 
+type Link struct {
+}
+
 func (m *Map) Name() string {
 	panic("LIBBPF syscall stub")
 }
@@ -56,6 +59,10 @@ func (o *Obj) AttachClassifier(secName, ifName, hook string) (int, error) {
 	panic("LIBBPF syscall stub")
 }
 
+func (o *Obj) AttachKprobe(progName, fn string) (*Link, error) {
+	panic("LIBBPF syscall stub")
+}
+
 func CreateQDisc(ifName string) error {
 	panic("LIBBPF syscall stub")
 }
@@ -69,5 +76,9 @@ func (o *Obj) UpdateJumpMap(mapName, progName string, mapIndex int) error {
 }
 
 func (o *Obj) Close() error {
+	panic("LIBBPF syscall stub")
+}
+
+func (l *Link) Close() error {
 	panic("LIBBPF syscall stub")
 }
