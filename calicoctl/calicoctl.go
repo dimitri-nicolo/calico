@@ -43,10 +43,10 @@ func main() {
     label                    Add or update labels of resources.
     convert                  Convert config files between different API versions.
     ipam                     IP address management.
+    node                     Calico node management.
     datastore                Calico datastore management.
     cluster                  Access cluster information.
     bgp                      Access BGP related information.
-    node                     Calico node management.
     captured-packets         Capture packet file command.
     version                  Display the version of this binary.
 

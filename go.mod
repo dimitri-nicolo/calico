@@ -1,6 +1,6 @@
 module github.com/projectcalico/calicoctl/v3
 
-go 1.15
+go 1.16
 
 require (
 	github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705 // indirect
@@ -22,22 +22,21 @@ require (
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/shirou/gopsutil v0.0.0-20190323131628-2cbc9195c892
 	github.com/sirupsen/logrus v1.7.0
-	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
-	github.com/tigera/api v0.0.0-20211011084451-556d977afc02
+	github.com/tigera/api v0.0.0-20211019144037-b4b510b7dbb9
 	github.com/tigera/licensing v1.0.1-0.20211005192307-3f8f1c7c54c6
-	github.com/vishvananda/netlink v0.0.0-20180501223456-f07d9d5231b9 // indirect
-	github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc // indirect
-	gopkg.in/square/go-jose.v2 v2.4.1
+	github.com/vishvananda/netlink v1.1.0 // indirect
+	gopkg.in/square/go-jose.v2 v2.2.3-0.20190111193340-cbf0fd6a984a
 	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637 // indirect
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/apiextensions-apiserver v0.21.0-rc.0
+	k8s.io/apiextensions-apiserver v0.21.0
 	k8s.io/apimachinery v0.21.0
 	k8s.io/client-go v0.21.0
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211011094247-43312d160f7c
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211019171316-efd66fec8e8e
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
+	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
 )
