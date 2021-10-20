@@ -94,7 +94,7 @@ func withConfigGetFreshApiserverServerAndClient(
 	options.ManagedClustersCACertPath = serverConfig.managedClustersCACertPath
 	options.ManagedClustersCAKeyPath = serverConfig.managedClustersCAKeyPath
 	options.ManagementClusterAddr = serverConfig.managementClusterAddr
-	//options.RecommendedOptions.SecureServing.BindAddress=
+	options.RecommendedOptions.CoreAPI.CoreAPIKubeconfigPath = "../certs/kubeconfig"
 
 	var err error
 	pcs, err := server.PrepareServer(options)

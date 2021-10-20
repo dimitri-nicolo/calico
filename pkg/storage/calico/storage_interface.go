@@ -47,6 +47,8 @@ func NewStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyFunc)
 		return NewGlobalReportTypeStorage(opts)
 	case "projectcalico.org/ippools":
 		return NewIPPoolStorage(opts)
+	case "projectcalico.org/ipreservations":
+		return NewIPReservationStorage(opts)
 	case "projectcalico.org/bgpconfigurations":
 		return NewBGPConfigurationStorage(opts)
 	case "projectcalico.org/bgppeers":
@@ -73,6 +75,8 @@ func NewStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyFunc)
 		return NewUISettingsGroupStorage(opts)
 	case "projectcalico.org/uisettings":
 		return NewUISettingsStorage(opts)
+	case "projectcalico.org/caliconodestatuses":
+		return NewCalicoNodeStatusStorage(opts)
 	default:
 		klog.Fatalf("Unable to create storage for resource %v", opts.RESTOptions.ResourcePrefix)
 		return registry.DryRunnableStorage{}, nil
