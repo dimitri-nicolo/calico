@@ -16,31 +16,31 @@ require (
 	github.com/projectcalico/felix v0.0.0-20210806101121-265c9d1f6397
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/projectcalico/typha v0.7.3-0.20210428181500-9e435d5fd964
-	github.com/prometheus/client_golang v1.10.0
+	github.com/prometheus/client_golang v1.11.0
 	github.com/satori/go.uuid v1.2.0
-	github.com/sirupsen/logrus v1.7.0
+	github.com/sirupsen/logrus v1.8.1
 	github.com/smartystreets/assertions v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
-	github.com/tigera/api master
-	github.com/tigera/licensing v1.0.1-0.20211005192307-3f8f1c7c54c6
+	github.com/tigera/api v0.0.0-20211019171312-2dc19d1d38f8
+	github.com/tigera/licensing v1.0.1-0.20211011145843-5b9d7479c171
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
-	k8s.io/api v0.21.0
-	k8s.io/apimachinery v0.21.0
-	k8s.io/apiserver v0.21.0
-	k8s.io/client-go v0.21.0
+	k8s.io/api v0.22.0
+	k8s.io/apimachinery v0.22.0
+	k8s.io/apiserver v0.22.0
+	k8s.io/client-go v0.22.0
 	k8s.io/klog v1.0.0
 	k8s.io/kubernetes v1.21.1-rc.0 // indirect
 	sigs.k8s.io/controller-runtime v0.9.0-alpha.1 // indirect
 )
 
 replace (
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private smc-merge-os
-	github.com/projectcalico/felix => github.com/tigera/felix-private smc-merge-os
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private master
-	github.com/projectcalico/typha => github.com/tigera/typha-private smc-merge-os
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20211020095138-bcd13a08625c
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20211020132653-408e2c8847d6
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211019171316-efd66fec8e8e
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211020125014-d95589a9a6c3
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 
 	k8s.io/api => k8s.io/api v0.21.0
