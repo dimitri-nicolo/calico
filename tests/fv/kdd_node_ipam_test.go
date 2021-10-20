@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
-	"strings"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -71,7 +69,7 @@ var _ = Describe("kube-controllers FV tests (KDD mode)", func() {
 		// Change ownership of the kubeconfig file  so it is accessible by all users in the container
 		err = kconfigfile.Chmod(os.ModePerm)
 		Expect(err).NotTo(HaveOccurred())
-		data := fmt.Sprintf(testutils.KubeconfigTemplate, apiserver.IP)
+		data := testutils.BuildKubeconfig(apiserver.IP)
 		_, err = kconfigfile.Write([]byte(data))
 		Expect(err).NotTo(HaveOccurred())
 
@@ -86,6 +84,10 @@ var _ = Describe("kube-controllers FV tests (KDD mode)", func() {
 			_, err := k8sClient.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
 			return err
 		}, 30*time.Second, 1*time.Second).Should(BeNil())
+		Consistently(func() error {
+			_, err := k8sClient.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
+			return err
+		}, 10*time.Second, 1*time.Second).Should(BeNil())
 
 		// Apply the necessary CRDs. There can somtimes be a delay between starting
 		// the API server and when CRDs are apply-able, so retry here.

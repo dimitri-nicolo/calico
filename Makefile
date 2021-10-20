@@ -1,5 +1,5 @@
 PACKAGE_NAME=github.com/projectcalico/kube-controllers
-GO_BUILD_VER?=v0.55
+GO_BUILD_VER?=v0.59
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID=$(SEMAPHORE_KUBE_CONTROLLERS_PRIVATE_PROJECT_ID)
@@ -48,6 +48,9 @@ $(LOCAL_BUILD_DEP):
 		-replace=github.com/projectcalico/typha=../typha
 endif
 
+# Add in local static-checks
+LOCAL_CHECKS=check-boring-ssl
+
 ###############################################################################
 # Download and include Makefile.common
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
@@ -71,7 +74,6 @@ KUBE_CONTROLLERS_VERSION?=$(shell git describe --tags --dirty --always --abbrev=
 MOCKERY_FILE_PATHS= \
 	pkg/elasticsearch/ClientBuilder \
 
-HYPERKUBE_IMAGE?=gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION)
 ETCD_IMAGE?=quay.io/coreos/etcd:$(ETCD_VERSION)-$(BUILDARCH)
 # If building on amd64 omit the arch in the container name.
 ifeq ($(BUILDARCH),amd64)
@@ -79,6 +81,13 @@ ifeq ($(BUILDARCH),amd64)
 endif
 
 SRC_FILES=cmd/kube-controllers/main.go $(shell find pkg -name '*.go')
+
+# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
+ifeq ($(ARCH), $(filter $(ARCH),amd64))
+CGO_ENABLED=1
+else
+CGO_ENABLED=0
+endif
 
 ###############################################################################
 
@@ -122,6 +131,7 @@ sub-build-%:
 
 bin/kube-controllers-linux-$(ARCH): $(LOCAL_BUILD_DEP) $(SRC_FILES)
 	$(DOCKER_RUN) \
+	  -e CGO_ENABLED=$(CGO_ENABLED) \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
 	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	  go build $(BUILD_TAGS) -v -o $@ -ldflags "-X main.VERSION=$(KUBE_CONTROLLERS_VERSION)" ./cmd/kube-controllers/'
@@ -134,6 +144,7 @@ bin/wrapper-$(ARCH):
 
 bin/check-status-linux-$(ARCH): $(LOCAL_BUILD_DEP) $(SRC_FILES)
 	$(DOCKER_RUN) \
+	  -e CGO_ENABLED=$(CGO_ENABLED) \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
 	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	  go build $(BUILD_TAGS)  -v -o $@ -ldflags "-X main.VERSION=$(KUBE_CONTROLLERS_VERSION)" ./cmd/check-status/'
@@ -177,6 +188,11 @@ remote-deps: mod-download
 check-copyright:
 	./check-copyrights.sh
 
+check-boring-ssl: bin/kube-controllers-linux-amd64
+	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
+		go tool nm bin/kube-controllers-linux-amd64 > bin/tags.txt && grep '_Cfunc__goboringcrypto_' bin/tags.txt 1> /dev/null
+	-rm -f bin/tags.txt
+
 ###############################################################################
 # Tests
 ###############################################################################
@@ -189,11 +205,12 @@ ut: $(LOCAL_BUILD_DEP)
 fv: remote-deps tests/fv/fv.test image
 	@echo Running Go FVs.
 	cd tests/fv && ETCD_IMAGE=$(ETCD_IMAGE) \
-		HYPERKUBE_IMAGE=$(HYPERKUBE_IMAGE) \
+		KUBE_IMAGE=$(CALICO_BUILD) \
 		CONTAINER_NAME=$(KUBE_CONTROLLERS_IMAGE):latest-$(ARCH) \
 		MIGRATION_CONTAINER_NAME=$(FLANNEL_MIGRATION_IMAGE):latest-$(ARCH) \
 		PRIVATE_KEY=`pwd`/private.key \
 		CRDS=${PWD}/tests/crds \
+		CERTS=${PWD}/tests/certs \
 		GO111MODULE=on \
 		./fv.test $(GINKGO_ARGS) -ginkgo.slowSpecThreshold 30
 
