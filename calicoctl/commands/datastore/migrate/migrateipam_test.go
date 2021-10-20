@@ -336,7 +336,7 @@ func (c *MockIPAMClient) CalicoNodeStatus() client.CalicoNodeStatusInterface {
 	return nil
 }
 
-func (c *MockIPAMClient) EnsureInitialized(ctx context.Context, calicoVersion, clusterType string) error {
+func (c *MockIPAMClient) EnsureInitialized(ctx context.Context, calicoVersion, cnxVersion, clusterType string) error {
 	// DO NOTHING
 	return nil
 }
