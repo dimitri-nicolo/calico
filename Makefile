@@ -103,8 +103,8 @@ Makefile.common.$(MAKE_BRANCH):
 include Makefile.common
 
 FV_ETCDIMAGE  ?=quay.io/coreos/etcd:$(ETCD_VERSION)-$(BUILDARCH)
-
-FV_TYPHAIMAGE ?=calico/typha:master-$(BUILDARCH)FV_K8SIMAGE=calico/go-build:$(GO_BUILD_VER)
+FV_K8SIMAGE=calico/go-build:$(GO_BUILD_VER)
+FV_TYPHAIMAGE ?=calico/typha:master-$(BUILDARCH)
 FV_FELIXIMAGE ?=$(FELIX_IMAGE)-test:latest-$(BUILDARCH)
 
 # If building on amd64 omit the arch in the container name.  Fixme!
