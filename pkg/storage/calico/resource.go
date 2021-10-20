@@ -126,6 +126,10 @@ func (rs *resourceStore) Create(ctx context.Context, key string, obj, out runtim
 	klog.Infof("Create called with key: %v for resource %v\n", key, rs.resourceName)
 	lcObj := rs.converter.convertToLibcalico(obj)
 
+	if rs.hasRestrictions == nil {
+		return fmt.Errorf("BUG: resourceStore is missing license restriction check function")
+	}
+
 	if rs.hasRestrictions(lcObj) {
 		return aapierrors.NewForbidden(
 			schema.GroupResource{Group: v3.GroupName, Resource: lcObj.GetObjectKind().GroupVersionKind().Kind},
@@ -437,6 +441,10 @@ func (rs *resourceStore) GuaranteedUpdate(
 			updatedRes.(resourceObject).GetObjectMeta().SetResourceVersion(strconv.FormatInt(curState.rev, 10))
 		}
 		libcalicoObj := rs.converter.convertToLibcalico(updatedRes)
+
+		if rs.hasRestrictions == nil {
+			return fmt.Errorf("BUG: resourceStore is missing license restriction check function")
+		}
 
 		if rs.hasRestrictions(libcalicoObj) {
 			return aapierrors.NewForbidden(

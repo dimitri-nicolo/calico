@@ -2,7 +2,7 @@ PACKAGE_NAME    ?= github.com/projectcalico/apiserver
 GO_BUILD_VER    ?= v0.59
 GOMOD_VENDOR    := false
 GIT_USE_SSH      = true
-LOCAL_CHECKS     = lint-cache-dir goimports check-copyright check-boring-ssl
+LOCAL_CHECKS     = lint-cache-dir goimports check-boring-ssl
 # Used by Makefile.common
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 # Used only when doing local build

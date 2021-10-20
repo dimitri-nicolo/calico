@@ -89,12 +89,11 @@ func withConfigGetFreshApiserverServerAndClient(
 	options.RecommendedOptions.SecureServing.BindPort = securePort
 	// Set this so that we avoid RecommendedOptions.CoreAPI's initialization from calling InClusterConfig()
 	// and uses our fv kubeconfig instead.
-	options.RecommendedOptions.CoreAPI.CoreAPIKubeconfigPath = "../test-apiserver-kubeconfig.conf"
+	options.RecommendedOptions.CoreAPI.CoreAPIKubeconfigPath = "../certs/kubeconfig"
 	options.EnableManagedClustersCreateAPI = serverConfig.enableManagedClusterCreateAPI
 	options.ManagedClustersCACertPath = serverConfig.managedClustersCACertPath
 	options.ManagedClustersCAKeyPath = serverConfig.managedClustersCAKeyPath
 	options.ManagementClusterAddr = serverConfig.managementClusterAddr
-	options.RecommendedOptions.CoreAPI.CoreAPIKubeconfigPath = "../certs/kubeconfig"
 
 	var err error
 	pcs, err := server.PrepareServer(options)

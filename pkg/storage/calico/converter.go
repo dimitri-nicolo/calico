@@ -12,8 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/storage"
 
-	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
@@ -116,12 +114,12 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		return aapi
 	case *v3.IPReservation:
 		lcg := libcalicoObject.(*v3.IPReservation)
-		aapi := &aapi.IPReservation{}
+		aapi := &v3.IPReservation{}
 		IPReservationConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
 	case *v3.BGPConfiguration:
 		lcg := libcalicoObject.(*v3.BGPConfiguration)
-		aapi := &aapi.BGPConfiguration{}
+		aapi := &v3.BGPConfiguration{}
 		BGPConfigurationConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
 	case *v3.BGPPeer:
@@ -178,14 +176,14 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		api := libcalicoObject.(*v3.UISettings)
 		aapi := &v3.UISettings{}
 		UISettingsConverter{}.convertToAAPI(api, aapi)
+		return aapi
 	case *v3.CalicoNodeStatus:
-		lcg := libcalicoObject.(*api.CalicoNodeStatus)
-		aapi := &aapi.CalicoNodeStatus{}
+		lcg := libcalicoObject.(*v3.CalicoNodeStatus)
+		aapi := &v3.CalicoNodeStatus{}
 		CalicoNodeStatusConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
 	default:
 		klog.Infof("Unrecognized libcalico object (type %v)", reflect.TypeOf(libcalicoObject))
 		return nil
 	}
-	return nil
 }

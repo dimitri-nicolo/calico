@@ -15,10 +15,11 @@ import (
 
 	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // NewIPReservationStorage creates a new libcalico-based storage.Interface implementation for IPReservations
@@ -50,6 +51,10 @@ func NewIPReservationStorage(opts Options) (registry.DryRunnableStorage, factory
 		olo := opts.(options.ListOptions)
 		return c.IPReservations().Watch(ctx, olo)
 	}
+	hasRestrictionsFn := func(obj resourceObject) bool {
+		return false
+	}
+
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
@@ -67,6 +72,7 @@ func NewIPReservationStorage(opts Options) (registry.DryRunnableStorage, factory
 		watch:             watchFn,
 		resourceName:      "IPReservation",
 		converter:         IPReservationConverter{},
+		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }

@@ -1359,7 +1359,7 @@ func TestIPReservationClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &v3.IPReservation{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testIPReservationClient(client, name); err != nil {
 				t.Fatal(err)
@@ -1419,26 +1419,6 @@ func testIPReservationClient(client calicoclient.Interface, name string) error {
 	}
 
 	return nil
-}
-
-// TestBGPConfigurationClient exercises the BGPConfiguration client.
-func TestBGPConfigurationClient(t *testing.T) {
-	const name = "test-bgpconfig"
-	rootTestFunc := func() func(t *testing.T) {
-		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &v3.GlobalThreatFeed{}
-			}, true)
-			defer shutdownServer()
-			if err := testGlobalThreatFeedClient(client, name); err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
-
-	if !t.Run(name, rootTestFunc()) {
-		t.Errorf("test-globalthreatfeed test failed")
-	}
 }
 
 func testGlobalThreatFeedClient(client calicoclient.Interface, name string) error {
@@ -3328,7 +3308,9 @@ func TestUISettingsGroupClient(t *testing.T) {
 }
 
 func testUISettingsGroupClient(client calicoclient.Interface, name string) error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	err := createEnterprise(client, ctx)
 	if err == nil {
 		return fmt.Errorf("Could not create a license")
@@ -3396,23 +3378,20 @@ func testUISettingsGroupClient(client calicoclient.Interface, name string) error
 	if nil != err {
 		return fmt.Errorf("Error on watch")
 	}
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for e := range wIface.ResultChan() {
-			fmt.Println("Watch object: ", e)
-			break
-		}
-	}()
 
 	err = uiSettingsGroupClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("uiSettingsGroup should be deleted (%s)", err)
 	}
 
-	wg.Wait()
-	return nil
+	select {
+	case e := <-wIface.ResultChan():
+		// Received the watch event.
+		fmt.Println("Watch object: ", e)
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // TestUISettingsClient exercises the UISettings client.
@@ -3436,7 +3415,9 @@ func TestUISettingsClient(t *testing.T) {
 }
 
 func testUISettingsClient(client calicoclient.Interface, name string) error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	err := createEnterprise(client, ctx)
 	if err == nil {
 		return fmt.Errorf("Could not create a license")
@@ -3519,23 +3500,20 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 	if nil != err {
 		return fmt.Errorf("Error on watch")
 	}
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for e := range wIface.ResultChan() {
-			fmt.Println("Watch object: ", e)
-			break
-		}
-	}()
 
 	err = uiSettingsClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("uiSettings should be deleted (%s)", err)
 	}
 
-	wg.Wait()
-	return nil
+	select {
+	case e := <-wIface.ResultChan():
+		// Received the watch event.
+		fmt.Println("Watch object: ", e)
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // TestCalicoNodeStatusClient exercises the CalicoNodeStatus client.
@@ -3545,7 +3523,7 @@ func TestCalicoNodeStatusClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &v3.CalicoNodeStatus{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testCalicoNodeStatusClient(client, name); err != nil {
 				t.Fatal(err)

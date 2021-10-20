@@ -3,13 +3,14 @@
 package caliconodestatus
 
 import (
-	"github.com/projectcalico/apiserver/pkg/registry/projectcalico/server"
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
+
+	"github.com/projectcalico/apiserver/pkg/registry/projectcalico/server"
 )
 
 type REST struct {

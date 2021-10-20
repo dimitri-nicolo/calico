@@ -12,10 +12,11 @@ import (
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
@@ -49,6 +50,10 @@ func NewCalicoNodeStatusStorage(opts Options) (registry.DryRunnableStorage, fact
 		olo := opts.(options.ListOptions)
 		return c.CalicoNodeStatus().Watch(ctx, olo)
 	}
+	hasRestrictionsFn := func(obj resourceObject) bool {
+		return false
+	}
+
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
@@ -66,6 +71,7 @@ func NewCalicoNodeStatusStorage(opts Options) (registry.DryRunnableStorage, fact
 		watch:             watchFn,
 		resourceName:      "CalicoNodeStatus",
 		converter:         CalicoNodeStatusConverter{},
+		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }
