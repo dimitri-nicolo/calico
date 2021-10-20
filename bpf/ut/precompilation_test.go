@@ -121,7 +121,8 @@ func TestPrecompiledBinariesAreLoadable(t *testing.T) {
 									Expect(err).NotTo(HaveOccurred())
 									opts, err := ap.AttachProgram()
 									Expect(err).NotTo(HaveOccurred())
-								Expect(opts).NotTo(Equal(nil))})
+									Expect(opts).NotTo(Equal(nil))
+								})
 							}
 						}
 					}
