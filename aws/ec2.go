@@ -26,12 +26,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/smithy-go"
+	"github.com/projectcalico/libcalico-go/lib/health"
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/wait"
-
-	"github.com/projectcalico/libcalico-go/lib/health"
 )
 
 const (

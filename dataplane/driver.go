@@ -35,6 +35,7 @@ import (
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/conntrack"
 	"github.com/projectcalico/felix/bpf/tc"
+	tcdefs "github.com/projectcalico/felix/bpf/tc/defs"
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/capture"
 	"github.com/projectcalico/felix/collector"
@@ -91,14 +92,14 @@ func StartDataplaneDriver(configParams *config.Config,
 		if configParams.BPFEnabled {
 			// In BPF mode, the BPF programs use mark bits that are not configurable.  Make sure that those
 			// bits are covered by our allowed mask.
-			if allowedMarkBits&tc.MarksMask != tc.MarksMask {
+			if allowedMarkBits&tcdefs.MarksMask != tcdefs.MarksMask {
 				log.WithFields(log.Fields{
 					"Name":            "felix-iptables",
 					"MarkMask":        allowedMarkBits,
-					"RequiredBPFBits": tc.MarksMask,
+					"RequiredBPFBits": tcdefs.MarksMask,
 				}).Panic("IptablesMarkMask doesn't cover bits that are used (unconditionally) by eBPF mode.")
 			}
-			allowedMarkBits ^= allowedMarkBits & tc.MarksMask
+			allowedMarkBits ^= allowedMarkBits & tcdefs.MarksMask
 			log.WithField("updatedBits", allowedMarkBits).Info(
 				"Removed BPF program bits from available mark bits.")
 		}
