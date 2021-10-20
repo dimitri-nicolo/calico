@@ -208,9 +208,6 @@ $(LIBBPF_PATH)/libbpf.a: go.mod
 	$(MAKE) mod-download
 	$(DOCKER_GO_BUILD) sh -c "make -j 16 -C bpf-gpl/include/libbpf/src BUILD_STATIC_ONLY=1"
 
-libbpf.a:
-	$(DOCKER_GO_BUILD) sh -c "make -j -C bpf-gpl/include/libbpf/src BUILD_STATIC_ONLY=1"
-
 ifeq ($(ARCH), amd64)
 CGO_ENABLED=1
 CGO_LDFLAGS="-L$(LIBBPF_PATH) -lbpf -lelf -lz"
@@ -223,7 +220,7 @@ endif
 DOCKER_GO_BUILD_CGO=$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e CGO_LDFLAGS=$(CGO_LDFLAGS) -e CGO_CFLAGS=$(CGO_CFLAGS) $(CALICO_BUILD)
 DOCKER_GO_BUILD_CGO_WINDOWS=$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD)
 
-bin/calico-felix-$(ARCH): libbpf.a $(LIBBPF_PATH)/libbpf.a $(SRC_FILES) $(LOCAL_BUILD_DEP)
+bin/calico-felix-$(ARCH): $(LIBBPF_PATH)/libbpf.a $(SRC_FILES) $(LOCAL_BUILD_DEP)
 	@echo Building felix for $(ARCH) on $(BUILDARCH)
 	mkdir -p bin
 	if [ "$(SEMAPHORE)" != "true" -o ! -e $@ ] ; then \
@@ -412,7 +409,7 @@ check-typha-pins:
 hooks_installed:=$(shell ./install-git-hooks)
 
 .PHONY: golangci-lint
-golangci-lint: $(GENERATED_FILES)
+golangci-lint: $(LIBBPF_PATH)/libbpf.a $(GENERATED_FILES)
 	$(DOCKER_GO_BUILD_CGO) golangci-lint run $(LINT_ARGS)
 
 ###############################################################################
