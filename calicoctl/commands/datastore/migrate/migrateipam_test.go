@@ -247,10 +247,6 @@ func (c *MockIPAMClient) PacketCaptures() client.PacketCaptureInterface {
 	return nil
 }
 
-func (c *MockIPAMClient) EnsureInitialized(ctx context.Context, calicoVersion, cnxVersion, clusterType string) error {
-	return nil
-}
-
 func (c *MockIPAMClient) Backend() bapi.Client {
 	return c.backend
 }
@@ -331,6 +327,16 @@ func (c *MockIPAMClient) ClusterInformation() client.ClusterInformationInterface
 }
 
 func (c *MockIPAMClient) KubeControllersConfiguration() client.KubeControllersConfigurationInterface {
+	// DO NOTHING
+	return nil
+}
+
+func (c *MockIPAMClient) CalicoNodeStatus() client.CalicoNodeStatusInterface {
+	// DO NOTHING
+	return nil
+}
+
+func (c *MockIPAMClient) EnsureInitialized(ctx context.Context, calicoVersion, clusterType string) error {
 	// DO NOTHING
 	return nil
 }
