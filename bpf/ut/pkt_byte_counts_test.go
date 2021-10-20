@@ -17,13 +17,12 @@ package ut_test
 import (
 	"testing"
 
-	"github.com/projectcalico/felix/bpf/tc"
-
 	"github.com/google/gopacket/layers"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/felix/bpf/conntrack"
 	"github.com/projectcalico/felix/bpf/routes"
+	tcdefs "github.com/projectcalico/felix/bpf/tc/defs"
 )
 
 func TestCountsPodPodXNode(t *testing.T) {
@@ -77,7 +76,7 @@ func TestCountsPodPodXNode(t *testing.T) {
 		Expect(e.B2A.Bytes).To(Equal(uint64(0)))
 
 		// Leaving node 1
-		skbMark = tc.MarkSeen // CALI_SKB_MARK_SEEN
+		skbMark = tcdefs.MarkSeen // CALI_SKB_MARK_SEEN
 
 		runBpfTest(t, "calico_to_host_ep", nil, func(bpfrun bpfProgRunFn) {
 			res, err := bpfrun(pktOut)
@@ -128,7 +127,7 @@ func TestCountsPodPodXNode(t *testing.T) {
 		Expect(e.B2A.Bytes).To(Equal(uint64(i * len(respPkt))))
 
 		// Response arriving at the workload
-		skbMark = tc.MarkSeen // CALI_SKB_MARK_SEEN
+		skbMark = tcdefs.MarkSeen // CALI_SKB_MARK_SEEN
 
 		runBpfTest(t, "calico_to_workload_ep", rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
 			res, err := bpfrun(pktOut)
@@ -210,7 +209,7 @@ func TestCountsPodPodSameNode(t *testing.T) {
 		Expect(e.B2A.Bytes).To(Equal(uint64(0)))
 
 		// Leaving node 1
-		skbMark = tc.MarkSeen // CALI_SKB_MARK_SEEN
+		skbMark = tcdefs.MarkSeen // CALI_SKB_MARK_SEEN
 
 		runBpfTest(t, "calico_to_workload_ep", rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
 			res, err := bpfrun(pktOut)
@@ -261,7 +260,7 @@ func TestCountsPodPodSameNode(t *testing.T) {
 		Expect(e.B2A.Bytes).To(Equal(uint64(i * len(respPkt))))
 
 		// Response arriving at the workload
-		skbMark = tc.MarkSeen // CALI_SKB_MARK_SEEN
+		skbMark = tcdefs.MarkSeen // CALI_SKB_MARK_SEEN
 
 		runBpfTest(t, "calico_to_workload_ep", rulesDefaultAllow, func(bpfrun bpfProgRunFn) {
 			res, err := bpfrun(pktOut)

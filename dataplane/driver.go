@@ -34,7 +34,6 @@ import (
 	"github.com/projectcalico/felix/aws"
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/conntrack"
-	"github.com/projectcalico/felix/bpf/tc"
 	tcdefs "github.com/projectcalico/felix/bpf/tc/defs"
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/capture"
@@ -133,7 +132,7 @@ func StartDataplaneDriver(configParams *config.Config,
 		// interop between the BPF C code and Felix golang code - but dynamically
 		// allocated in iptables mode.
 		if configParams.BPFEnabled {
-			markEgressIP = tc.MarkEgress
+			markEgressIP = tcdefs.MarkEgress
 		} else if configParams.EgressIPCheckEnabled() {
 			log.Info("Egress IP enabled, allocating a mark bit")
 			markEgressIP, _ = markBitsManager.NextSingleBitMark()
