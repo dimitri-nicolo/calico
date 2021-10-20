@@ -49,8 +49,11 @@ class TestCalicoctlConvert(TestBase):
 
     def setUp(self):
         super(TestCalicoctlConvert, self).setUp()
-        rc = calicoctl("create", data=valid_cnx_license_expires_september_02_2021)
-        rc.assert_no_error()
+        # Load valid license file from test-data, and then create it.
+        with open("/code/test-data/licenses/license.yaml") as f:
+          license = "".join(f.readlines())
+          rc = calicoctl("create", data=license)
+          rc.assert_no_error()
 
     def _test_convert_successful(self, filename, format="yaml"):
         """
