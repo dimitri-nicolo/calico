@@ -18,6 +18,11 @@ with each other, not the specific request details. {{site.prodname}} provides vi
 L7 logs are also key for detecting anomalous behaviors like attempts to
 access applications, restricted URLs, and scans for particular URLs.
 
+### Features
+
+This how-to guide uses the following {{site.prodname}} features:
+- **ApplicationLayer** resource
+
 ### Concepts
 
 #### About L7 logs
@@ -62,51 +67,30 @@ L7 logs are visible in the Manager UI, service graph, in the HTTP tab.
 
 #### Configure L7 logs
 
-**Step 1: Configure the L7 log collector**
+**Step 1: Configure ApplicationLayer CRD**
 
-In this step, you configure the L7 log collector to gather the L7 logs.
+In this step, you configure ApplicationLayer resource to gather the L7 logs.
 
-1. Download the manifest file for L7 log collector daemonset.
-   ```
-   curl {{ "/manifests/l7/daemonset/l7-collector-daemonset.yaml" | absolute_url }} -O
-   ```
+1. Create or update the [ApplicationLayer]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.ApplicationLayer)
+   resource named, `tigera-secure` to include a [logCollection section]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.LogCollection). Ensure that `collectLogs` fields is set to `Enabled`.
 
-1. In the “env” section of the `l7-collector` container in `l7-collector-daemonset.yaml`, set the
-   following environment variables to meet your needs:
+   Example:
 
-   | Environment Variable                | Default Value                         | Description |
-   | ----------------------------------- | ------------------------------------- | ----------- |
-   | `ENVOY_LOG_INTERVAL_SECONDS`        | 5 seconds                             | Interval in seconds for sending L7 log information for processing. |
-   | `ENVOY_LOG_REQUESTS_PER_INTERVAL`   | Unlimited (-1)                        | Maximum number of unique L7 logs that are sent during each interval. All other requests beyond this limit are tracked in the count of requests. To ignore the maximum limit, set this to any negative number (for example, -1). |
-   | `ENVOY_LOG_PATH`                    | `/tmp/envoy.log`                      | Path to envoy log files in the container. This should match `access_log` path in `envoy-config.yaml`|
-   | `FELIX_DIAL_TARGET`                 |                                       | Path of the socket for communication with Felix. |
-   | `LOG_LEVEL`                         | `Panic`                               | Logging level. There are seven levels: `Trace`, `Debug`, `Info`, `Warning`, `Error`, `Fatal` and `Panic`. |
-
-1. Download the Envoy config.
-   ```
-   curl {{ "/manifests/l7/daemonset/envoy-config.yaml" | absolute_url }} -O
+   ```yaml
+   apiVersion: operator.tigera.io/v1
+   kind: ApplicationLayer
+   metadata:
+     name: tigera-secure
+   spec:
+     logCollection:
+       collectLogs: Enabled
+       logIntervalSeconds: 5
+       logRequestsPerInterval: -1
    ```
 
-1. Create the Envoy config in `calico-system` namespace.
-   ```
-   kubectl create configmap envoy-config -n calico-system --from-file=envoy-config.yaml
-   ```
+   Apply the resource. This creates `l7-log-collector` daemonset in `calico-system` namespace. Ensure that the daemonset progresses  and `l7-collector` and `envoy-proxy` containers inside the daemonset are in a `Running` state.
 
-**Step 2: Enable L7 log collection**
-
-Apply the customized `l7-collector-daemonset.yaml` from Step 1 and ensure that `l7-collector` and `envoy-proxy` containers are in Running state. 
-
-   ```
-   kubectl apply -f l7-collector-daemonset.yaml
-   ```
-
-Enable L7 log collection daemonset mode in Felix by setting [Felix configuration]({{site.baseurl}}/reference/resources/felixconfig) variable `tproxyMode` to `Enabled` or by setting felix environment variable `FELIX_TPROXYMODE` to `Enabled`.
-
-   ```
-   kubectl patch felixconfiguration default --type='merge' -p '{"spec":{"tproxyMode":"Enabled"}}'
-   ```
-
-**Step 3: Select traffic for L7 log collection**
+**Step 2: Select traffic for L7 log collection**
 
 1. Annotate the services you wish to collect L7 logs as shown.
    ```
@@ -118,7 +102,7 @@ Enable L7 log collection daemonset mode in Felix by setting [Felix configuration
    kubectl annotate svc <service-name> -n <service-namespace> projectcalico.org/l7-logging-
    ```
 
-**Step 4: Test your configuration**
+**Step 3: Test your configuration**
 
 To test your installation, you must first know the appropriate path to access your cluster.
 The path can be either of the following:
