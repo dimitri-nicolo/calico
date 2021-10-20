@@ -22,6 +22,7 @@
 #include <linux/bpf.h>
 #include <bpf_helpers.h>   /* For bpf_xxx helper functions. */
 #include <bpf_endian.h>    /* For bpf_ntohX etc. */
+#include <stdbool.h>
 #include <stddef.h>
 #include <linux/ip.h>
 
@@ -45,15 +46,6 @@ struct bpf_map_def_extended {
 	__u32 unused2;
 #endif
 };
-#else
-struct bpf_map_def_extended {
-	__u32 type;
-	__u32 key_size;
-	__u32 value_size;
-	__u32 max_entries;
-	__u32 pinning_strategy;
-};
-#endif
 
 /* These constants must be kept in sync with the calculate-flags script. */
 
@@ -337,19 +329,6 @@ struct {										\
 	MAP_LOOKUP_FN(name, ver)							\
 	MAP_UPDATE_FN(name, ver)							\
 	MAP_DELETE_FN(name, ver)
-#else
-#define CALI_MAP(name, ver,  map_type, key_type, val_type, size, flags, pin)            \
-struct {                                                                                \
-        __uint(type, map_type);                                                         \
-        __type(key, key_type);                                                          \
-        __type(value, val_type);                                                        \
-        __uint(max_entries, size);                                                      \
-}map_symbol(name, ver) SEC(".maps");                                                    \
-        MAP_LOOKUP_FN(name, ver)                                                        \
-        MAP_UPDATE_FN(name, ver)                                                        \
-        MAP_DELETE_FN(name, ver)
-#endif
-
 
 #endif
 #define CALI_MAP_V1(name, map_type, key_type, val_type, size, flags, pin)		\
