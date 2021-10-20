@@ -75,7 +75,7 @@ replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211019171316-efd66fec8e8e
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211020123239-950b18e9f11f
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211020125014-d95589a9a6c3
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 
 	// The GRPC library seems to float to latest without this (not sure why!) and v1.30+ are incompatible with
