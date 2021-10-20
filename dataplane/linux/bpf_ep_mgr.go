@@ -33,22 +33,25 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
-	log "github.com/sirupsen/logrus"
-	"golang.org/x/sync/semaphore"
-	"golang.org/x/sys/unix"
-
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/polprog"
 	"github.com/projectcalico/felix/bpf/tc"
 	"github.com/projectcalico/felix/bpf/xdp"
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/idalloc"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/ratelimited"
+	"github.com/projectcalico/felix/rules"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/set"
+	"github.com/prometheus/client_golang/prometheus"
+	log "github.com/sirupsen/logrus"
+	"github.com/tigera/api/pkg/lib/numorstring"
+	"golang.org/x/sync/semaphore"
+	"golang.org/x/sys/unix"
 )
 
 const jumpMapCleanupInterval = 10 * time.Second

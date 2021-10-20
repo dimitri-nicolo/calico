@@ -86,7 +86,7 @@ func (ap AttachPoint) AttachProgram() (string, error) {
 	if ap.Type == EpTypeWorkload {
 		l, err := netlink.LinkByName(ap.Iface)
 		if err != nil {
-			return err
+			return "", err
 		}
 		ap.VethNS = uint16(l.Attrs().NetNsID)
 	}

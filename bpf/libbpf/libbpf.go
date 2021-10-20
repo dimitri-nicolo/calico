@@ -134,21 +134,32 @@ func (o *Obj) AttachClassifier(secName, ifName, hook string) (int, error) {
 	return int(progId), nil
 }
 
+type Link struct {
+	link *C.struct_bpf_link
+}
+
+func (l *Link) Close() error {
+	if l.link != nil {
+		err := C.bpf_link_destroy(l.link)
+		if err != 0 {
+			return fmt.Errorf("error destroying link: %v", err)
+		}
+		l.link = nil
+		return nil
+	}
+	return fmt.Errorf("link nil")
+}
+
 func (o *Obj) AttachKprobe(progName, fn string) (*Link, error) {
 	cProgName := C.CString(progName)
 	cFnName := C.CString(fn)
 	defer C.free(unsafe.Pointer(cProgName))
 	defer C.free(unsafe.Pointer(cFnName))
-	link := C.bpf_program_attach_kprobe(o.obj, cProgName, cFnName)
-	if link.link == nil {
-		msg := "error attaching kprobe"
-		if link.errno != 0 {
-			errno := syscall.Errno(-int64(link.errno))
-			msg = fmt.Sprintf("error attaching kprobe: %v", errno.Error())
-		}
-		return nil, fmt.Errorf(msg)
+	link, err := C.bpf_program_attach_kprobe(o.obj, cProgName, cFnName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to attach kprobe: %w", err)
 	}
-	return &Link{link: link.link}, nil
+	return &Link{link: link}, nil
 }
 
 func CreateQDisc(ifName string) error {
