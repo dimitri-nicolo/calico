@@ -592,5 +592,9 @@ func updateJumpMap(obj *libbpf.Obj, isHost bool) error {
 	if err != nil {
 		return fmt.Errorf("error updating icmp program %v", err)
 	}
+	err = obj.UpdateJumpMap("cali_jump", string(dropProgram), DropProgramIndex)
+	if err != nil {
+		return fmt.Errorf("error updating icmp program %v", err)
+	}
 	return nil
 }

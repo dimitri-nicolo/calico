@@ -1213,7 +1213,7 @@ deny:
 	return TC_ACT_SHOT;
 }
 
-__attribute__((section("1/3")))
+SEC("classifier/tc/skb_drop")
 int calico_tc_skb_drop(struct __sk_buff *skb)
 {
 	CALI_DEBUG("Entering calico_tc_skb_drop\n");
