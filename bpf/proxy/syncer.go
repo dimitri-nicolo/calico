@@ -91,7 +91,9 @@ func hasSvcKeyExtra(skey svcKey, t svcType) bool {
 }
 
 func isSvcKeyDerived(skey svcKey) bool {
-	return hasSvcKeyExtra(skey, svcTypeExternalIP) || hasSvcKeyExtra(skey, svcTypeNodePort) || hasSvcKeyExtra(skey, svcTypeLoadBalancer)
+	return hasSvcKeyExtra(skey, svcTypeExternalIP) ||
+		hasSvcKeyExtra(skey, svcTypeNodePort) ||
+		hasSvcKeyExtra(skey, svcTypeLoadBalancer)
 }
 
 type stickyFrontend struct {
@@ -356,7 +358,7 @@ func (s *Syncer) applySvc(skey svcKey, sinfo k8sp.ServicePort, eps []k8sp.Endpoi
 	} else {
 		id = s.newSvcID()
 	}
-	count, local, err := s.updateService(skey.sname, sinfo, id, eps)
+	count, local, err := s.updateService(skey, sinfo, id, eps)
 	if err != nil {
 		return err
 	}
@@ -367,8 +369,6 @@ func (s *Syncer) applySvc(skey svcKey, sinfo k8sp.ServicePort, eps []k8sp.Endpoi
 		localCount: local,
 		svc:        sinfo,
 	}
-
-	s.newEpsMap[skey.sname] = eps
 
 	if log.GetLevel() >= log.DebugLevel {
 		log.Debugf("applied a service %s update: sinfo=%+v", skey, s.newSvcMap[skey])
@@ -458,12 +458,16 @@ func (s *Syncer) expandNodePorts(
 			continue
 		}
 
-		nodeIP := rt.NextHop().(ip.V4Addr)
-		if log.GetLevel() >= log.DebugLevel {
-			log.Debugf("found rt %s for dest %s", nodeIP, ipv4)
-		}
+		flags := rt.Flags()
+		// Include only remote workloads.
+		if flags&routes.FlagWorkload != 0 && flags&routes.FlagLocal == 0 {
+			nodeIP := rt.NextHop().(ip.V4Addr)
 
-		ipToEp[nodeIP] = append(ipToEp[nodeIP], ep)
+			ipToEp[nodeIP] = append(ipToEp[nodeIP], ep)
+			if log.GetLevel() >= log.DebugLevel {
+				log.Debugf("found rt %s for remote dest %s", nodeIP, ipv4)
+			}
+		}
 	}
 	return ipToEp, miss
 }
@@ -542,7 +546,13 @@ func (s *Syncer) apply(state DPSyncerState) error {
 	for sname, sinfo := range state.SvcMap {
 		log.WithField("service", sname).Debug("Applying service")
 		skey := getSvcKey(sname, "")
-		eps := state.EpsMap[sname]
+
+		eps := make([]k8sp.Endpoint, 0, len(state.EpsMap[sname]))
+		for _, ep := range state.EpsMap[sname] {
+			if ep.IsReady() {
+				eps = append(eps, ep)
+			}
+		}
 
 		err := s.applySvc(skey, sinfo, eps)
 		if err != nil {
@@ -632,13 +642,17 @@ func (s *Syncer) Apply(state DPSyncerState) error {
 			return errors.WithMessage(err, "startup sync")
 		}
 		log.Infof("Loaded BPF map state from dataplane")
+		s.mapsLck.Lock()
 	} else {
 		// if we were not synced yet, the fixer cannot run yet
-		s.stopExpandNPFixup()
+		s.StopExpandNPFixup()
 
+		s.mapsLck.Lock()
 		s.prevSvcMap = s.newSvcMap
 		s.prevEpsMap = s.newEpsMap
 	}
+
+	defer s.mapsLck.Unlock()
 
 	// preallocate maps to track sticky services for cleanup
 	s.stickySvcs = make(map[nat.FrontEndAffinityKey]stickyFrontend)
@@ -649,9 +663,6 @@ func (s *Syncer) Apply(state DPSyncerState) error {
 		s.stickySvcs = nil
 		s.stickyEps = nil
 	}()
-
-	s.mapsLck.Lock()
-	defer s.mapsLck.Unlock()
 
 	if err := s.apply(state); err != nil {
 		// dont bother to cleanup affinity since we do not know in what state we
@@ -669,7 +680,7 @@ func (s *Syncer) Apply(state DPSyncerState) error {
 	return s.cleanupSticky()
 }
 
-func (s *Syncer) updateService(sname k8sp.ServicePortName, sinfo k8sp.ServicePort, id uint32, eps []k8sp.Endpoint) (int, int, error) {
+func (s *Syncer) updateService(skey svcKey, sinfo k8sp.ServicePort, id uint32, eps []k8sp.Endpoint) (int, int, error) {
 
 	cpEps := make([]k8sp.Endpoint, 0, len(eps))
 
@@ -711,7 +722,17 @@ func (s *Syncer) updateService(sname k8sp.ServicePortName, sinfo k8sp.ServicePor
 		return 0, 0, err
 	}
 
-	s.newEpsMap[sname] = cpEps
+	// svcTypeNodePortRemote is semi-primary service - it has a different set of
+	// backends for NAT (hence primary) but is also derived and would overwrite
+	// the primary service for connection cleaning.
+	//
+	// As a result we are a bit more conservative in which connections we break.
+	// Even if a backend is technically not reachable through the nodeport due
+	// to the Local vs. Cluster traffic policy, there is no harm if include also
+	// those backends and possible do not break connections that cannot happen.
+	if !hasSvcKeyExtra(skey, svcTypeNodePortRemote) {
+		s.newEpsMap[skey.sname] = cpEps
+	}
 
 	return cnt, local, nil
 }
@@ -1043,7 +1064,7 @@ func (s *Syncer) SetTriggerFn(f func()) {
 	s.triggerFn = f
 }
 
-func (s *Syncer) stopExpandNPFixup() {
+func (s *Syncer) StopExpandNPFixup() {
 	// If there was an error before we started ExpandNPFixup, there is nothing to stop
 	if s.expFixupStop != nil {
 		close(s.expFixupStop)

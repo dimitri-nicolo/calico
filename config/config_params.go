@@ -183,13 +183,15 @@ type Config struct {
 	BPFEnabled                         bool           `config:"bool;false"`
 	BPFDisableUnprivileged             bool           `config:"bool;true"`
 	BPFLogLevel                        string         `config:"oneof(off,info,debug);off;non-zero"`
-	BPFDataIfacePattern                *regexp.Regexp `config:"regexp;^((en|wl|ww|sl|ib)[opsx].*|(eth|wlan|wwan).*|tunl0$|vxlan.calico$|egress.calico$|wireguard.cali$)"`
+	BPFDataIfacePattern                *regexp.Regexp `config:"regexp;^((en|wl|ww|sl|ib)[opsx].*|(eth|wlan|wwan).*|tunl0$|vxlan.calico$|wireguard.cali$)"`
 	BPFConnectTimeLoadBalancingEnabled bool           `config:"bool;true"`
 	BPFExternalServiceMode             string         `config:"oneof(tunnel,dsr);tunnel;non-zero"`
 	BPFKubeProxyIptablesCleanupEnabled bool           `config:"bool;true"`
 	BPFKubeProxyMinSyncPeriod          time.Duration  `config:"seconds;1"`
 	BPFKubeProxyEndpointSlicesEnabled  bool           `config:"bool;false"`
 	BPFExtToServiceConnmark            int            `config:"int;0"`
+	BPFPSNATPorts                      numorstring.Port `config:"portrange;20000:29999"`
+
 	FlowLogsCollectProcessInfo         bool           `config:"bool;false"`
 	FlowLogsCollectTcpStats            bool           `config:"bool;true"`
 	FlowLogsCollectProcessPath         bool           `config:"bool;false"`

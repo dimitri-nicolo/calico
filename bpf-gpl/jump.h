@@ -37,7 +37,7 @@ struct bpf_map_def_extended __attribute__((section("maps"))) cali_jump = {
 	.key_size = 4,
 	.value_size = 4,
 	.max_entries = 8,
-#ifndef __BPFTOOL_LOADER__
+#if !defined(__BPFTOOL_LOADER__) && defined(__IPTOOL_LOADER__)
 	.map_id = 1,
 	.pinning_strategy = 1 /* object namespace */,
 #endif

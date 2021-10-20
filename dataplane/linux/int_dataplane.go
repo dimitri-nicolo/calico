@@ -27,10 +27,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
-
 	"github.com/projectcalico/felix/dataplane/linux/debugconsole"
 	"github.com/projectcalico/felix/k8sutils"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
@@ -39,8 +37,8 @@ import (
 	"golang.org/x/sys/unix"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	"k8s.io/client-go/kubernetes"
-
 	"github.com/projectcalico/felix/aws"
+	"github.com/tigera/api/pkg/lib/numorstring"
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/arp"
 	"github.com/projectcalico/felix/bpf/conntrack"
@@ -209,6 +207,7 @@ type Config struct {
 	BPFConnTimeLBEnabled               bool
 	BPFMapRepin                        bool
 	BPFNodePortDSREnabled              bool
+	BPFPSNATPorts                      numorstring.Port
 	KubeProxyMinSyncPeriod             time.Duration
 	KubeProxyEndpointSlicesEnabled     bool
 	FlowLogsCollectProcessInfo         bool
