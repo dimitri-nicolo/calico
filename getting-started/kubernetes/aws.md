@@ -1,6 +1,6 @@
 ---
-title: AWS using kOps
-description: Use Calico Enterprise with a self-managed Kubernetes cluster in Amazon Web Services (AWS) through kOps.
+title: Amazon Web Services (AWS) using kOps
+description: Use Calico Enterprise with a self-managed Kubernetes cluster in Amazon Web Services (AWS) using kOps.
 canonical_url: '/getting-started/kubernetes/aws'
 ---
 

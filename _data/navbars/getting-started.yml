@@ -5,6 +5,17 @@ section:
 - title: Install on clusters
   path: /getting-started/install-on-clusters/ 
   section:
+  - title: Kubernetes
+    path: /getting-started/kubernetes/
+    section:
+    - title: Quickstart
+      path: /getting-started/kubernetes/quickstart   
+    - title: Options for installing Calico Enterprise
+      path: /getting-started/options-install
+    - title: Standard
+      path: /getting-started/kubernetes/generic-install
+    - title: Helm
+      path: /getting-started/kubernetes/helm 
   - title: OpenShift
     path: /getting-started/openshift/
     section:
@@ -12,17 +23,6 @@ section:
       path: /getting-started/openshift/requirements
     - title: Installation
       path: /getting-started/openshift/installation
-  - title: Kubernetes
-    path: /getting-started/kubernetes/
-    section:
-    - title: Options for installing Calico Enterprise
-      path: /getting-started/options-install
-    - title: Standard
-      path: /getting-started/kubernetes/generic-install
-    - title: Mirantis Kubernetes Engine
-      path: /getting-started/kubernetes/docker-enterprise
-    - title: Helm
-      path: /getting-started/kubernetes/helm 
   - title: AKS 
     path: /getting-started/kubernetes/aks
   - title: AWS using kOps
@@ -31,17 +31,17 @@ section:
     path: /getting-started/kubernetes/eks
   - title: GKE
     path: /getting-started/kubernetes/gke
-  - title: Quickstart
-    path: /getting-started/kubernetes/quickstart 
-  - title: Rancher Kubernetes Engine
-    path: /getting-started/kubernetes/rancher  
+  - title: RKE
+    path: /getting-started/kubernetes/rancher 
+  - title: MKE
+    path: /getting-started/kubernetes/docker-enterprise   
   - title: Calico Enterprise for Windows
     path: /getting-started/windows-calico/
     section:
     - title: Limitations and known issues
       path: /getting-started/windows-calico/limitations
     - title: Quickstart
-      path: /getting-started/windows-calico/quickstart
+      path: /getting-started/windows-calico/quickstart      
     - title: Basic policy demo
       path: /getting-started/windows-calico/demo
     - title: Kubernetes

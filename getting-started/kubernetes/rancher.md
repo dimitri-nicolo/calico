@@ -1,6 +1,6 @@
 ---
-title: Install Calico Enterprise on a Rancher Kubernetes Engine cluster
-description: Install Calico Enterprise on a Rancher Kubernetes Engine cluster.
+title: Rancher Kubernetes Engine (RKE)
+description: Install Calico Enterprise on an RKE cluster.
 canonical_url: '/getting-started/kubernetes/rancher'
 ---
 
