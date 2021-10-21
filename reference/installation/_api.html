@@ -12,6 +12,8 @@ Resource Types:
 </li><li>
 <a href="#operator.tigera.io/v1.AmazonCloudIntegration">AmazonCloudIntegration</a>
 </li><li>
+<a href="#operator.tigera.io/v1.ApplicationLayer">ApplicationLayer</a>
+</li><li>
 <a href="#operator.tigera.io/v1.Authentication">Authentication</a>
 </li><li>
 <a href="#operator.tigera.io/v1.Compliance">Compliance</a>
@@ -272,6 +274,91 @@ to all ENIs in the VPC.</p>
 <em>
 <a href="#operator.tigera.io/v1.AmazonCloudIntegrationStatus">
 AmazonCloudIntegrationStatus
+</a>
+</em>
+</td>
+<td>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.tigera.io/v1.ApplicationLayer">ApplicationLayer
+</h3>
+<p>ApplicationLayer is the Schema for the applicationlayers API</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code><br>
+string</td>
+<td>
+<code>
+operator.tigera.io/v1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code><br>
+string
+</td>
+<td><code>ApplicationLayer</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code><br>
+<em>
+<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code><br>
+<em>
+<a href="#operator.tigera.io/v1.ApplicationLayerSpec">
+ApplicationLayerSpec
+</a>
+</em>
+</td>
+<td>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>logCollection</code><br>
+<em>
+<a href="#operator.tigera.io/v1.LogCollectionSpec">
+LogCollectionSpec
+</a>
+</em>
+</td>
+<td>
+<p>Specification for application layer (L7) log collection.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code><br>
+<em>
+<a href="#operator.tigera.io/v1.ApplicationLayerStatus">
+ApplicationLayerStatus
 </a>
 </em>
 </td>
@@ -1935,6 +2022,64 @@ to all ENIs in the VPC.</p>
 <a href="#operator.tigera.io/v1.AmazonCloudIntegration">AmazonCloudIntegration</a>)
 </p>
 <p>AmazonCloudIntegrationStatus defines the observed state of AmazonCloudIntegration</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>state</code><br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>State provides user-readable status.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.tigera.io/v1.ApplicationLayerSpec">ApplicationLayerSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.ApplicationLayer">ApplicationLayer</a>)
+</p>
+<p>ApplicationLayerSpec defines the desired state of ApplicationLayer</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>logCollection</code><br>
+<em>
+<a href="#operator.tigera.io/v1.LogCollectionSpec">
+LogCollectionSpec
+</a>
+</em>
+</td>
+<td>
+<p>Specification for application layer (L7) log collection.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.tigera.io/v1.ApplicationLayerStatus">ApplicationLayerStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.ApplicationLayer">ApplicationLayer</a>)
+</p>
+<p>ApplicationLayerStatus defines the observed state of ApplicationLayer</p>
 <table>
 <thead>
 <tr>
@@ -3639,6 +3784,71 @@ string
 </p>
 <p>LinuxDataplaneOption controls which dataplane is to be used on Linux nodes.</p>
 <p>One of: Iptables, BPF</p>
+<h3 id="operator.tigera.io/v1.LogCollectionSpec">LogCollectionSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.ApplicationLayerSpec">ApplicationLayerSpec</a>)
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>collectLogs</code><br>
+<em>
+<a href="#operator.tigera.io/v1.LogCollectionStatusType">
+LogCollectionStatusType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>This setting enables or disable log collection.
+Allowed values are Enabled or Disabled.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>logIntervalSeconds</code><br>
+<em>
+int64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Interval in seconds for sending L7 log information for processing.
+Default: 5 sec</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>logRequestsPerInterval</code><br>
+<em>
+int64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Maximum number of unique L7 logs that are sent LogIntervalSeconds.
+Adjust this to limit the number of L7 logs sent per LogIntervalSeconds
+to felix for further processing, use negative number to ignore limits.
+Default: -1</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="operator.tigera.io/v1.LogCollectionStatusType">LogCollectionStatusType
+(<code>string</code> alias)</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.LogCollectionSpec">LogCollectionSpec</a>)
+</p>
 <h3 id="operator.tigera.io/v1.LogCollectorSpec">LogCollectorSpec
 </h3>
 <p>
