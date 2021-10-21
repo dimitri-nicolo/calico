@@ -32,6 +32,11 @@ section:
     path: /networking/workloads-outside-cluster
 - title: Egress access controls
   path: /networking/egress-gateway
+  section:
+  - title: Egress gateways (on-prem)
+    path: /networking/egress-gateway-on-prem
+  - title: Egress gateways (AWS)
+    path: /networking/egress-gateway-aws
 - title: Customize IP address management
   path: /networking/ipam
   section:
