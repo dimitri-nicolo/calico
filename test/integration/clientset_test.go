@@ -1352,6 +1352,75 @@ func TestGlobalThreatFeedClient(t *testing.T) {
 	}
 }
 
+// TestIPReservationClient exercises the IPReservation client.
+func TestIPReservationClient(t *testing.T) {
+	const name = "test-ipreservation"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &v3.IPReservation{}
+			}, true)
+			defer shutdownServer()
+			if err := testIPReservationClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-ipreservation test failed")
+	}
+}
+
+func testIPReservationClient(client calicoclient.Interface, name string) error {
+	ipreservationClient := client.ProjectcalicoV3().IPReservations()
+	ipreservation := &v3.IPReservation{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: v3.IPReservationSpec{
+			ReservedCIDRs: []string{"192.168.0.0/16"},
+		},
+	}
+	ctx := context.Background()
+
+	// start from scratch
+	ipreservations, err := ipreservationClient.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing ipreservations (%s)", err)
+	}
+	if ipreservations.Items == nil {
+		return fmt.Errorf("items field should not be set to nil")
+	}
+
+	ipreservationServer, err := ipreservationClient.Create(ctx, ipreservation, metav1.CreateOptions{})
+	if nil != err {
+		return fmt.Errorf("error creating the ipreservation '%v' (%v)", ipreservation, err)
+	}
+	if name != ipreservationServer.Name {
+		return fmt.Errorf("didn't get the same ipreservation back from the server \n%+v\n%+v", ipreservation, ipreservationServer)
+	}
+
+	ipreservations, err = ipreservationClient.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing ipreservations (%s)", err)
+	}
+
+	ipreservationServer, err = ipreservationClient.Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting ipreservation %s (%s)", name, err)
+	}
+	if name != ipreservationServer.Name &&
+		ipreservation.ResourceVersion == ipreservationServer.ResourceVersion {
+		return fmt.Errorf("didn't get the same ipreservation back from the server \n%+v\n%+v", ipreservation, ipreservationServer)
+	}
+
+	err = ipreservationClient.Delete(ctx, name, metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("ipreservation should be deleted (%s)", err)
+	}
+
+	return nil
+}
+
 func testGlobalThreatFeedClient(client calicoclient.Interface, name string) error {
 	globalThreatFeedClient := client.ProjectcalicoV3().GlobalThreatFeeds()
 	globalThreatFeed := &v3.GlobalThreatFeed{
@@ -3239,7 +3308,9 @@ func TestUISettingsGroupClient(t *testing.T) {
 }
 
 func testUISettingsGroupClient(client calicoclient.Interface, name string) error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	err := createEnterprise(client, ctx)
 	if err == nil {
 		return fmt.Errorf("Could not create a license")
@@ -3307,23 +3378,20 @@ func testUISettingsGroupClient(client calicoclient.Interface, name string) error
 	if nil != err {
 		return fmt.Errorf("Error on watch")
 	}
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for e := range wIface.ResultChan() {
-			fmt.Println("Watch object: ", e)
-			break
-		}
-	}()
 
 	err = uiSettingsGroupClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("uiSettingsGroup should be deleted (%s)", err)
 	}
 
-	wg.Wait()
-	return nil
+	select {
+	case e := <-wIface.ResultChan():
+		// Received the watch event.
+		fmt.Println("Watch object: ", e)
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // TestUISettingsClient exercises the UISettings client.
@@ -3347,7 +3415,9 @@ func TestUISettingsClient(t *testing.T) {
 }
 
 func testUISettingsClient(client calicoclient.Interface, name string) error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	err := createEnterprise(client, ctx)
 	if err == nil {
 		return fmt.Errorf("Could not create a license")
@@ -3430,21 +3500,86 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 	if nil != err {
 		return fmt.Errorf("Error on watch")
 	}
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for e := range wIface.ResultChan() {
-			fmt.Println("Watch object: ", e)
-			break
-		}
-	}()
 
 	err = uiSettingsClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("uiSettings should be deleted (%s)", err)
 	}
 
-	wg.Wait()
+	select {
+	case e := <-wIface.ResultChan():
+		// Received the watch event.
+		fmt.Println("Watch object: ", e)
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// TestCalicoNodeStatusClient exercises the CalicoNodeStatus client.
+func TestCalicoNodeStatusClient(t *testing.T) {
+	const name = "test-caliconodestatus"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &v3.CalicoNodeStatus{}
+			}, true)
+			defer shutdownServer()
+			if err := testCalicoNodeStatusClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-caliconodestatus test failed")
+	}
+}
+
+func testCalicoNodeStatusClient(client calicoclient.Interface, name string) error {
+	seconds := uint32(11)
+	caliconodestatusClient := client.ProjectcalicoV3().CalicoNodeStatuses()
+	caliconodestatus := &v3.CalicoNodeStatus{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+
+		Spec: v3.CalicoNodeStatusSpec{
+			Node: "node1",
+			Classes: []v3.NodeStatusClassType{
+				v3.NodeStatusClassTypeAgent,
+				v3.NodeStatusClassTypeBGP,
+				v3.NodeStatusClassTypeRoutes,
+			},
+			UpdatePeriodSeconds: &seconds,
+		},
+	}
+	ctx := context.Background()
+
+	// start from scratch
+	caliconodestatuses, err := caliconodestatusClient.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing caliconodestatuses (%s)", err)
+	}
+	if caliconodestatuses.Items == nil {
+		return fmt.Errorf("items field should not be set to nil")
+	}
+
+	caliconodestatusNew, err := caliconodestatusClient.Create(ctx, caliconodestatus, metav1.CreateOptions{})
+	if nil != err {
+		return fmt.Errorf("error creating the object '%v' (%v)", caliconodestatus, err)
+	}
+	if name != caliconodestatusNew.Name {
+		return fmt.Errorf("didn't get the same object back from the server \n%+v\n%+v", caliconodestatus, caliconodestatusNew)
+	}
+
+	caliconodestatusNew, err = caliconodestatusClient.Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting object %s (%s)", name, err)
+	}
+
+	err = caliconodestatusClient.Delete(ctx, name, metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("object should be deleted (%s)", err)
+	}
+
 	return nil
 }

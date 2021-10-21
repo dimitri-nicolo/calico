@@ -112,6 +112,11 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		aapi := &v3.IPPool{}
 		IPPoolConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
+	case *v3.IPReservation:
+		lcg := libcalicoObject.(*v3.IPReservation)
+		aapi := &v3.IPReservation{}
+		IPReservationConverter{}.convertToAAPI(lcg, aapi)
+		return aapi
 	case *v3.BGPConfiguration:
 		lcg := libcalicoObject.(*v3.BGPConfiguration)
 		aapi := &v3.BGPConfiguration{}
@@ -171,6 +176,11 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		api := libcalicoObject.(*v3.UISettings)
 		aapi := &v3.UISettings{}
 		UISettingsConverter{}.convertToAAPI(api, aapi)
+		return aapi
+	case *v3.CalicoNodeStatus:
+		lcg := libcalicoObject.(*v3.CalicoNodeStatus)
+		aapi := &v3.CalicoNodeStatus{}
+		CalicoNodeStatusConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
 	default:
 		klog.Infof("Unrecognized libcalico object (type %v)", reflect.TypeOf(libcalicoObject))
