@@ -35,14 +35,9 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
+	"github.com/tigera/api/pkg/lib/numorstring"
 	"golang.org/x/sync/semaphore"
 	"golang.org/x/sys/unix"
-
-	"github.com/projectcalico/felix/logutils"
-
-	"github.com/projectcalico/libcalico-go/lib/set"
-
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
 
 	"github.com/projectcalico/felix/bpf"
 	"github.com/projectcalico/felix/bpf/polprog"
@@ -52,9 +47,12 @@ import (
 	"github.com/projectcalico/felix/idalloc"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/iptables"
+	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/ratelimited"
 	"github.com/projectcalico/felix/rules"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 const jumpMapCleanupInterval = 10 * time.Second
@@ -84,9 +82,8 @@ type attachPoint interface {
 	IfaceName() string
 	JumpMapFDMapKey() string
 	IsAttached() (bool, error)
-	AttachProgram() error
+	AttachProgram() (string, error)
 	DetachProgram() error
-	ProgramID() (string, error)
 	Log() *log.Entry
 	MustReattach() bool
 }
@@ -151,6 +148,7 @@ type bpfEndpointManager struct {
 	vxlanPort               uint16
 	dsrEnabled              bool
 	bpfExtToServiceConnmark int
+	psnatPorts              numorstring.Port
 	enableTcpStats          bool
 
 	ipSetMap bpf.Map
@@ -238,6 +236,7 @@ func newBPFEndpointManager(
 		vxlanPort:               uint16(config.VXLANPort),
 		dsrEnabled:              config.BPFNodePortDSREnabled,
 		bpfExtToServiceConnmark: config.BPFExtToServiceConnmark,
+		psnatPorts:              config.BPFPSNATPorts,
 		ipSetMap:                ipSetMap,
 		stateMap:                stateMap,
 		ruleRenderer:            iptablesRuleRenderer,
@@ -1033,8 +1032,8 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(policyDirection PolDirection
 	ap.DSR = m.dsrEnabled
 	ap.LogLevel = m.bpfLogLevel
 	ap.VXLANPort = m.vxlanPort
-	ap.PSNATStart = 20000
-	ap.PSNATEnd = 30000
+	ap.PSNATStart = m.psnatPorts.MinPort
+	ap.PSNATEnd = m.psnatPorts.MaxPort
 
 	return ap
 }
@@ -1470,12 +1469,7 @@ func (m *bpfEndpointManager) ensureProgramAttached(ap attachPoint) (bpf.MapFD, e
 	if jumpMapFD == 0 {
 		ap.Log().Info("Need to attach program")
 		// We don't have a program attached to this interface yet, attach one now.
-		err := ap.AttachProgram()
-		if err != nil {
-			return 0, err
-		}
-
-		progID, err := ap.ProgramID()
+		progID, err := ap.AttachProgram()
 		if err != nil {
 			return 0, err
 		}

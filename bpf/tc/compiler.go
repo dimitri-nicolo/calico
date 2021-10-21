@@ -48,6 +48,22 @@ const (
 	EpTypeWireguard EndpointType = "wireguard"
 )
 
+type ProgName string
+
+const (
+	policyProgram ProgName = "calico_tc_norm_pol_tail"
+	allowProgram  ProgName = "calico_tc_skb_accepted_entrypoint"
+	icmpProgram   ProgName = "calico_tc_skb_send_icmp_replies"
+	dropProgram   ProgName = "calico_tc_skb_drop"
+)
+
+const (
+	PolicyProgramIndex = iota
+	AllowProgramIndex
+	IcmpProgramIndex
+	DropProgramIndex
+)
+
 func SectionName(endpointType EndpointType, fromOrTo ToOrFromEp) string {
 	return fmt.Sprintf("calico_%s_%s_ep", fromOrTo, endpointType)
 }

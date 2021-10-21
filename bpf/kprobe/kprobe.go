@@ -116,6 +116,19 @@ func (k *bpfKprobe) installKprobe(typ string, fns []string) error {
 		return fmt.Errorf("error loading kprobe program %s :%w", filename, err)
 	}
 	k.objMap[typ] = obj
+	baseDir := "/sys/fs/bpf/tc/globals"
+	for m, err := obj.FirstMap(); m != nil && err == nil; m, err = m.NextMap() {
+		pinPath := path.Join(baseDir, m.Name())
+		perr := m.SetPinPath(pinPath)
+		if perr != nil {
+			return fmt.Errorf("error pinning map %v errno %v", m.Name(), perr)
+		}
+	}
+	err = obj.Load()
+	if err != nil {
+		return fmt.Errorf("error loading program %v", err)
+	}
+
 	for _, fn := range fns {
 		link, err := obj.AttachKprobe(fn, fn)
 		if err != nil {

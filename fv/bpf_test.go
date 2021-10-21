@@ -582,7 +582,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						Eventually(func() string {
 							out, _ := felixes[0].ExecOutput("tc", "filter", "show", "ingress", "dev", w[0].InterfaceName)
 							return out
-						}, "5s", "200ms").Should(ContainSubstring("calico_from_workload_ep"))
+						}, "5s", "200ms").Should(ContainSubstring("calico_from_wor"))
 
 						By("handling egress program removal")
 						felixes[0].Exec("tc", "filter", "del", "egress", "dev", w[0].InterfaceName)
@@ -595,7 +595,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						Eventually(func() string {
 							out, _ := felixes[0].ExecOutput("tc", "filter", "show", "egress", "dev", w[0].InterfaceName)
 							return out
-						}, "5s", "200ms").Should(ContainSubstring("calico_to_workload_ep"))
+						}, "5s", "200ms").Should(ContainSubstring("calico_to_wor"))
 						cc.CheckConnectivity()
 
 						By("Handling qdisc removal")
@@ -608,11 +608,11 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 						Eventually(func() string {
 							out, _ := felixes[0].ExecOutput("tc", "filter", "show", "ingress", "dev", w[0].InterfaceName)
 							return out
-						}, "5s", "200ms").Should(ContainSubstring("calico_from_workload_ep"))
+						}, "5s", "200ms").Should(ContainSubstring("calico_from_wor"))
 						Eventually(func() string {
 							out, _ := felixes[0].ExecOutput("tc", "filter", "show", "egress", "dev", w[0].InterfaceName)
 							return out
-						}, "5s", "200ms").Should(ContainSubstring("calico_to_workload_ep"))
+						}, "5s", "200ms").Should(ContainSubstring("calico_to_wor"))
 						cc.CheckConnectivity()
 						cc.ResetExpectations()
 
@@ -1685,12 +1685,17 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 									externalIP, srcIPRange)
 								k8sUpdateService(k8sClient, testSvcNamespace, testSvcName, testSvc, testSvcLB)
 							})
-							It("should have connectivity from workload 0 to service via external IP and not via nodeport", func() {
+							It("should have connectivity from workload 0 to service via external IP and via nodeport", func() {
 								node1IP := felixes[1].IP
-								cc.ExpectNone(w[0][1], TargetIP(node1IP), npPort)
-								cc.ExpectNone(w[1][0], TargetIP(node1IP), npPort)
-								cc.ExpectNone(w[1][1], TargetIP(node1IP), npPort)
 
+								// Note: the behaviour expected here changed around k8s v1.20.  Previously, the API
+								// server would allocate a new node port when we applied the load balancer update.
+								// Now, it merges the two so the service keeps its existing NodePort.
+								cc.ExpectSome(w[0][1], TargetIP(node1IP), npPort)
+								cc.ExpectSome(w[1][0], TargetIP(node1IP), npPort)
+								cc.ExpectSome(w[1][1], TargetIP(node1IP), npPort)
+
+								// Either way, we expect the load balancer to show up.
 								ip := testSvcLB.Spec.ExternalIPs
 								port := uint16(testSvcLB.Spec.Ports[0].Port)
 								cc.ExpectSome(w[1][0], TargetIP(ip[0]), port)
@@ -2118,15 +2123,63 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 
 					if localOnly {
 						It("should not have connectivity from all workloads via a nodeport to non-local workload 0", func() {
+							By("Checking connectivity")
+
 							node0IP := felixes[0].IP
 							node1IP := felixes[1].IP
-							// Via remote nodeport, should fail.
+
+							// Should work through the nodeport where the pods is
+							cc.ExpectSome(w[0][1], TargetIP(node0IP), npPort)
+							cc.ExpectSome(w[1][0], TargetIP(node0IP), npPort)
+							cc.ExpectSome(w[1][1], TargetIP(node0IP), npPort)
+
+							// Should not work through the nodeport where the pod isn't
 							cc.ExpectNone(w[0][1], TargetIP(node1IP), npPort)
 							cc.ExpectNone(w[1][0], TargetIP(node1IP), npPort)
 							cc.ExpectNone(w[1][1], TargetIP(node1IP), npPort)
-							// Include a check that goes via the local nodeport to make sure the dataplane has converged.
-							cc.ExpectSome(w[0][1], TargetIP(node0IP), npPort)
+
 							cc.CheckConnectivity()
+
+							// Enough to test for one protocol
+							if testIfTCP {
+								By("checking correct NAT entries for remote nodeports")
+
+								ipOK := []string{"255.255.255.255", "10.101.0.1", /* API server */
+									testSvc.Spec.ClusterIP,
+									felixes[0].IP, felixes[1].IP, felixes[2].IP}
+
+								if testOpts.tunnel == "ipip" {
+									ipOK = append(ipOK, felixes[0].ExpectedIPIPTunnelAddr,
+										felixes[1].ExpectedIPIPTunnelAddr, felixes[2].ExpectedIPIPTunnelAddr)
+								}
+								if testOpts.tunnel == "wireguard" {
+									ipOK = append(ipOK, felixes[0].ExpectedWireguardTunnelAddr,
+										felixes[1].ExpectedWireguardTunnelAddr, felixes[2].ExpectedWireguardTunnelAddr)
+								}
+
+								for _, felix := range felixes {
+									fe, _ := dumpNATMaps(felix)
+									for feKey := range fe {
+										Expect(feKey.Addr().String()).To(BeElementOf(ipOK))
+									}
+								}
+
+								feKey := nat.NewNATKey(net.ParseIP(felixes[0].IP), npPort, 6)
+
+								// RemoteNodeport on node 0
+								fe, _ := dumpNATMaps(felixes[0])
+								Expect(fe).To(HaveKey(feKey))
+								be := fe[feKey]
+								Expect(be.Count()).To(Equal(uint32(1)))
+								Expect(be.LocalCount()).To(Equal(uint32(1)))
+
+								// RemoteNodeport on node 1
+								fe, _ = dumpNATMaps(felixes[1])
+								Expect(fe).To(HaveKey(feKey))
+								be = fe[feKey]
+								Expect(be.Count()).To(Equal(uint32(1)))
+								Expect(be.LocalCount()).To(Equal(uint32(0)))
+							}
 						})
 					} else {
 						It("should have connectivity from all workloads via a nodeport to workload 0", func() {
@@ -3166,11 +3219,16 @@ func k8sUpdateService(k8sClient kubernetes.Interface, nameSpace, svcName string,
 	svc, err := k8sClient.CoreV1().
 		Services(nameSpace).
 		Get(context.Background(), svcName, metav1.GetOptions{})
+	log.WithField("origSvc", svc).Info("Read original service befor updating it")
 	newsvc.ObjectMeta.ResourceVersion = svc.ObjectMeta.ResourceVersion
 	_, err = k8sClient.CoreV1().Services(nameSpace).Update(context.Background(), newsvc, metav1.UpdateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 	Eventually(k8sGetEpsForServiceFunc(k8sClient, oldsvc), "10s").Should(HaveLen(1),
 		"Service endpoints didn't get created? Is controller-manager happy?")
+
+	updatedSvc, err := k8sClient.CoreV1().Services(nameSpace).Get(context.Background(), svcName, metav1.GetOptions{})
+	Expect(err).NotTo(HaveOccurred())
+	log.WithField("updatedSvc", updatedSvc).Info("Read back updated Service")
 }
 
 func k8sCreateLBServiceWithEndPoints(k8sClient kubernetes.Interface, name, clusterIP string, w *workload.Workload, port,

@@ -20,22 +20,12 @@
 
 #include "bpf.h"
 
-#ifndef __LIBBPF_LOADER__
-struct bpf_map_def_extended __attribute__((section("maps"))) cali_perf_evnt = {
-	.type = BPF_MAP_TYPE_PERF_EVENT_ARRAY,
-	.key_size = 4,
-	.value_size = 4,
-	.max_entries = 512,
-	CALI_MAP_TC_EXT_PIN(MAP_PIN_GLOBAL)
-};
-#else
-struct {
-	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-	__uint(max_entries, 512);
-	__type(key, __u32);
-	__type(value, __u32);
-} cali_perf_evnt SEC(".maps");
-#endif
+CALI_MAP_V1(cali_perf_evnt,
+		BPF_MAP_TYPE_PERF_EVENT_ARRAY,
+		__u32, __u32,
+		512,
+		0,
+		MAP_PIN_GLOBAL);
 
 /* We need the header to be 64bit of size so that any 64bit fields in the
  * message structures that embed this header are also aligned.

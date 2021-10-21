@@ -53,6 +53,7 @@
 #include "socket_lookup.h"
 #include "failsafe.h"
 #include "metadata.h"
+#include "bpf_helpers.h"
 
 /* calico_tc is the main function used in all of the tc programs.  It is specialised
  * for particular hook at build time based on the CALI_F build flags.
@@ -490,7 +491,7 @@ deny:
 	goto finalize;
 }
 
-__attribute__((section("1/1")))
+SEC("classifier/tc/accept")
 int calico_tc_skb_accepted_entrypoint(struct __sk_buff *skb)
 {
 	CALI_DEBUG("Entering calico_tc_skb_accepted_entrypoint\n");
@@ -1158,7 +1159,7 @@ deny:
 	}
 }
 
-__attribute__((section("1/2")))
+SEC("classifier/tc/icmp")
 int calico_tc_skb_send_icmp_replies(struct __sk_buff *skb)
 {
 	__u32 fib_flags = 0;
@@ -1212,7 +1213,7 @@ deny:
 	return TC_ACT_SHOT;
 }
 
-__attribute__((section("1/3")))
+SEC("classifier/tc/skb_drop")
 int calico_tc_skb_drop(struct __sk_buff *skb)
 {
 	CALI_DEBUG("Entering calico_tc_skb_drop\n");
@@ -1234,12 +1235,16 @@ drop:
 #define CALI_ENTRYPOINT_NAME calico_entrypoint
 #endif
 
+#define ENTRY_FUNC(x)				\
+	SEC("classifier/"XSTR(x))		\
+	int  x(struct __sk_buff *skb)		\
+	{					\
+		return calico_tc(skb);		\
+	}
+
 // Entrypoint with definable name.  It's useful to redefine the name for each entrypoint
 // because the name is exposed by bpftool et al.
-__attribute__((section(XSTR(CALI_ENTRYPOINT_NAME))))
-int tc_calico_entry(struct __sk_buff *skb)
-{
-	return calico_tc(skb);
-}
+
+ENTRY_FUNC(CALI_ENTRYPOINT_NAME)
 
 char ____license[] __attribute__((section("license"), used)) = "GPL";

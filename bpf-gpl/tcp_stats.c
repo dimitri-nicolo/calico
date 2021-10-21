@@ -19,8 +19,8 @@
 #include "tcp_stats_iptables.h"
 #include "socket_lookup.h"
 
-__attribute__((section("calico_tcp_stats")))
-int tc_calico_entry(struct __sk_buff *skb)
+SEC("classifier/tc/calico_tcp_stats")
+int calico_tcp_stats(struct __sk_buff *skb)
 {
 	struct cali_tc_ctx ctx = {
 		.skb = skb,

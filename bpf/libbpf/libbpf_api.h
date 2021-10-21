@@ -12,88 +12,112 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <libbpf.h>
+#include "libbpf.h"
 #include <linux/limits.h>
+#include <net/if.h>
+#include <bpf.h>
+#include <stdlib.h>
+#include <errno.h>
 
-#define MAX_ERRNO 4095
-bool IS_ERR(const void *ptr) {
-     if((long)ptr >= -MAX_ERRNO && (long)ptr < 0) {
-         return true;
-     }
-     return false;
+static void set_errno(int ret) {
+	errno = ret >= 0 ? ret : -ret;
 }
 
-long ERR_VAL(const void *ptr) {
-      return (long) ptr;
-}
-
-struct bpf_obj_wrapper {
+struct bpf_object* bpf_obj_open(char *filename) {
 	struct bpf_object *obj;
-	int errno;
-};
-
-struct bpf_link_wrapper {
-	struct bpf_link *link;
-	int errno;
-};
-
-struct bpf_obj_wrapper bpf_obj_open_load(char *filename) {
-	struct bpf_obj_wrapper obj;
-	obj.obj = bpf_object__open(filename);
-	obj.errno = 0;
-	struct bpf_map *map;
-	int err, len;
-	char buf[PATH_MAX];
-	char path[] = "/sys/fs/bpf/tc/globals/";
-
-	if (obj.obj == NULL) {
-		return obj;
+	obj = bpf_object__open(filename);
+	int err = libbpf_get_error(obj);
+	if (err) {
+		obj = NULL;
 	}
-	if (IS_ERR(obj.obj)) {
-		obj.errno = ERR_VAL(obj.obj);
-		obj.obj = NULL;
-		return obj;
-	}
-	bpf_object__for_each_map(map, obj.obj) {
-		len = snprintf(buf, PATH_MAX, "%s/%s", path, bpf_map__name(map));
-		if (len < 0) {
-			obj.obj = NULL;
-			return obj;
-		}
-		obj.errno = bpf_map__set_pin_path(map, buf);
-		if (obj.errno) {
-			obj.obj = NULL;
-			return obj;
-		}
-	}
-	obj.errno = bpf_object__load(obj.obj);
-
-	if (obj.errno) {
-		obj.obj = NULL;
-		return obj;
-	}
+	set_errno(err);
 	return obj;
 }
 
-struct bpf_link_wrapper bpf_program_attach_kprobe(struct bpf_object *obj, char *progName, char *fn) {
-	struct bpf_link_wrapper link;
-	link.link = NULL;
-	link.errno = 0;
+void bpf_obj_load(struct bpf_object *obj) {
+	set_errno(bpf_object__load(obj));
+}
+
+struct bpf_tc_opts bpf_tc_program_attach (struct bpf_object *obj, char *secName, int ifIndex, int isIngress) {
+
+	DECLARE_LIBBPF_OPTS(bpf_tc_hook, hook, .attach_point = BPF_TC_EGRESS);
+	DECLARE_LIBBPF_OPTS(bpf_tc_opts, attach);
+
+	if (isIngress) {
+		hook.attach_point = BPF_TC_INGRESS;
+	}
+
+	attach.prog_fd = bpf_program__fd(bpf_object__find_program_by_name(obj, secName));
+	if (attach.prog_fd < 0) {
+		errno = -attach.prog_fd;
+		return attach;
+	}
+	hook.ifindex = ifIndex;
+	set_errno(bpf_tc_attach(&hook, &attach));
+	return attach;
+}
+
+int bpf_tc_query_iface (int ifIndex, struct bpf_tc_opts opts, int isIngress) {
+
+	DECLARE_LIBBPF_OPTS(bpf_tc_hook, hook, .attach_point = BPF_TC_EGRESS);
+	if (isIngress) {
+		hook.attach_point = BPF_TC_INGRESS;
+	}
+	hook.ifindex = ifIndex;
+	opts.prog_fd = opts.prog_id = opts.flags = 0;
+	set_errno(bpf_tc_query(&hook, &opts));
+	return opts.prog_id;
+}
+
+void bpf_tc_create_qdisc (int ifIndex) {
+	DECLARE_LIBBPF_OPTS(bpf_tc_hook, hook, .attach_point = BPF_TC_INGRESS);
+	hook.ifindex = ifIndex;
+	set_errno(bpf_tc_hook_create(&hook));
+}
+
+void bpf_tc_remove_qdisc (int ifIndex) {
+        DECLARE_LIBBPF_OPTS(bpf_tc_hook, hook, .attach_point = BPF_TC_EGRESS | BPF_TC_INGRESS);
+        hook.ifindex = ifIndex;
+        set_errno(bpf_tc_hook_destroy(&hook));
+        return;
+}
+
+int bpf_tc_update_jump_map(struct bpf_object *obj, char* mapName, char *progName, int progIndex) {
+	struct bpf_program *prog_name = bpf_object__find_program_by_name(obj, progName);
+	if (prog_name == NULL) {
+		errno = ENOENT;
+		return -1;
+	}
+	int prog_fd = bpf_program__fd(prog_name);
+	if (prog_fd < 0) {
+		errno = -prog_fd;
+		return prog_fd;
+	}
+	int map_fd = bpf_object__find_map_fd_by_name(obj, mapName);
+	if (map_fd < 0) {
+		errno = -map_fd;
+		return map_fd;
+	}
+	return bpf_map_update_elem(map_fd, &progIndex, &prog_fd, 0);
+}
+
+struct bpf_link *bpf_program_attach_kprobe(struct bpf_object *obj, char *progName, char *fn) {
 	struct bpf_program *prog = bpf_object__find_program_by_name(obj, progName);
-	if (prog == NULL) {
-		return link;
+	int err = libbpf_get_error(prog);
+	if (err) {
+		set_errno(err);
+		return NULL;
 	}
-	link.link = bpf_program__attach_kprobe(prog, false, fn);
-	if (link.link == NULL) {
-		return link;
+
+	struct bpf_link *link = bpf_program__attach_kprobe(prog, false, fn);
+	err = libbpf_get_error(link);
+	if (err) {
+		link = NULL;
 	}
-	if (IS_ERR(link.link)) {
-		link.errno = ERR_VAL(link.link);
-	}
+	set_errno(err);
 	return link;
 }
 
 int bpf_link_destroy(struct bpf_link *link) {
 	return bpf_link__destroy(link);
 }
-

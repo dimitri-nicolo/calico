@@ -76,7 +76,7 @@ var _ = Describe("BPF Syncer", func() {
 			),
 		},
 		EpsMap: k8sp.EndpointsMap{
-			svcKey: []k8sp.Endpoint{&k8sp.BaseEndpointInfo{Endpoint: "10.1.0.1:5555"}},
+			svcKey: []k8sp.Endpoint{&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.1.0.1:5555"}},
 		},
 	}
 
@@ -128,8 +128,10 @@ var _ = Describe("BPF Syncer", func() {
 				v1.ProtocolTCP,
 			)
 			state.EpsMap[svcKey2] = []k8sp.Endpoint{
-				&k8sp.BaseEndpointInfo{Endpoint: "10.2.0.1:1111"},
-				&k8sp.BaseEndpointInfo{Endpoint: "10.2.0.1:2222"},
+				&k8sp.BaseEndpointInfo{Ready: false, Endpoint: "10.2.0.0:1111"},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.0.1:1111"},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.0.1:2222"},
+				&k8sp.BaseEndpointInfo{Ready: false, Endpoint: "10.2.0.3:1111"},
 			}
 
 			err := s.Apply(state)
@@ -162,9 +164,9 @@ var _ = Describe("BPF Syncer", func() {
 
 		By("creating conntrack entries for second-service", makestep(func() {
 			svc := state.SvcMap[svcKey2]
-			ep := state.EpsMap[svcKey2][0]
+			ep := state.EpsMap[svcKey2][1]
 			ctEntriesForSvc(ct, svc.Protocol(), svc.ClusterIP(), uint16(svc.Port()), ep, net.IPv4(5, 6, 7, 8), 123)
-			ep = state.EpsMap[svcKey2][1]
+			ep = state.EpsMap[svcKey2][2]
 			ctEntriesForSvc(ct, svc.Protocol(), svc.ClusterIP(), uint16(svc.Port()), ep, net.IPv4(5, 6, 7, 8), 321)
 		}))
 
@@ -208,7 +210,7 @@ var _ = Describe("BPF Syncer", func() {
 
 		By("deleting one second-service backend", makestep(func() {
 			state.EpsMap[svcKey2] = []k8sp.Endpoint{
-				&k8sp.BaseEndpointInfo{Endpoint: "10.2.0.1:2222"},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.0.1:2222"},
 			}
 
 			err := s.Apply(state)
@@ -252,7 +254,7 @@ var _ = Describe("BPF Syncer", func() {
 			}
 
 			state.EpsMap[nosvcKey] = []k8sp.Endpoint{
-				&k8sp.BaseEndpointInfo{Endpoint: "10.2.0.1:6666"},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.0.1:6666"},
 			}
 
 			err := s.Apply(state)
@@ -407,7 +409,7 @@ var _ = Describe("BPF Syncer", func() {
 				proxy.K8sSvcWithNodePort(3232),
 			)
 			state.EpsMap[svcKey3] = []k8sp.Endpoint{
-				&k8sp.BaseEndpointInfo{Endpoint: "10.3.0.1:3434"},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.3.0.1:3434"},
 			}
 
 			err := s.Apply(state)
@@ -441,7 +443,7 @@ var _ = Describe("BPF Syncer", func() {
 				proxy.K8sSvcWithNodePort(3232),
 			)
 			state.EpsMap[svcKey3] = []k8sp.Endpoint{
-				&k8sp.BaseEndpointInfo{Endpoint: "10.3.0.1:3434"},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.3.0.1:3434"},
 			}
 
 			err := s.Apply(state)
@@ -473,7 +475,7 @@ var _ = Describe("BPF Syncer", func() {
 				proxy.K8sSvcWithNodePort(1212),
 			)
 			state.EpsMap[svcKey3] = []k8sp.Endpoint{
-				&k8sp.BaseEndpointInfo{Endpoint: "10.3.0.1:3434"},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.3.0.1:3434"},
 			}
 
 			err := s.Apply(state)
@@ -541,7 +543,7 @@ var _ = Describe("BPF Syncer", func() {
 			Expect(eps.m).To(HaveLen(0))
 		}))
 
-		By("inserting only non-local eps for a NodePort - no route", makestep(func() {
+		By("inserting non-local eps for a NodePort - no route", makestep(func() {
 			// use the meta node IP for nodeports as well
 			s, _ = proxy.NewSyncer(append(nodeIPs, net.IPv4(255, 255, 255, 255)), feCache, beCache, aff, rt)
 			state.SvcMap[svcKey2] = proxy.NewK8sServicePort(
@@ -553,19 +555,25 @@ var _ = Describe("BPF Syncer", func() {
 			)
 
 			state.EpsMap[svcKey2] = []k8sp.Endpoint{
-				&k8sp.BaseEndpointInfo{Endpoint: "10.2.1.1:2222"},
-				&k8sp.BaseEndpointInfo{Endpoint: "10.2.3.1:2222"},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.1.1:2222"},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.2.1:2222", IsLocal: true},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.3.1:2222"},
 			}
 
 			err := s.Apply(state)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(svcs.m).To(HaveLen(3))
-			Expect(eps.m).To(HaveLen(2))
+			Expect(eps.m).To(HaveLen(3))
 			k := nat.NewNATKey(net.IPv4(10, 123, 0, 111), 4444, proxy.ProtoV1ToIntPanic(v1.ProtocolTCP))
 			Expect(svcs.m).NotTo(HaveKey(k))
 			k = nat.NewNATKey(net.IPv4(10, 123, 0, 113), 4444, proxy.ProtoV1ToIntPanic(v1.ProtocolTCP))
 			Expect(svcs.m).NotTo(HaveKey(k))
+
+			k = nat.NewNATKey(net.IPv4(192, 168, 0, 1), 4444, proxy.ProtoV1ToIntPanic(v1.ProtocolTCP))
+			Expect(svcs.m).To(HaveKey(k))
+			k = nat.NewNATKey(net.IPv4(10, 123, 0, 1), 4444, proxy.ProtoV1ToIntPanic(v1.ProtocolTCP))
+			Expect(svcs.m).To(HaveKey(k))
 		}))
 
 		By("adding a route should fix one missing expanded NP", makestep(func() {
@@ -588,9 +596,26 @@ var _ = Describe("BPF Syncer", func() {
 				defer svcs.Unlock()
 				return len(svcs.m)
 			}).Should(Equal(4))
+
+			Expect(eps.m).To(HaveLen(4))
+
 			k := nat.NewNATKey(net.IPv4(10, 123, 0, 111), 4444, proxy.ProtoV1ToIntPanic(v1.ProtocolTCP))
 			Expect(svcs.m).To(HaveKey(k))
-			Expect(eps.m).To(HaveLen(3))
+			remote := svcs.m[k]
+			Expect(remote.Count()).To(Equal(uint32(1)))
+			Expect(remote.LocalCount()).To(Equal(uint32(0)))
+
+			k = nat.NewNATKey(net.IPv4(10, 123, 0, 1), 4444, proxy.ProtoV1ToIntPanic(v1.ProtocolTCP))
+			Expect(svcs.m).To(HaveKey(k))
+			local := svcs.m[k]
+			Expect(local.Count()).To(Equal(uint32(1)))
+			Expect(local.LocalCount()).To(Equal(uint32(1)))
+
+			k = nat.NewNATKey(net.IPv4(10, 0, 0, 2), 2222, proxy.ProtoV1ToIntPanic(v1.ProtocolTCP))
+			Expect(svcs.m).To(HaveKey(k))
+			cluster := svcs.m[k]
+			Expect(cluster.Count()).To(Equal(uint32(3)))
+			Expect(cluster.LocalCount()).To(Equal(uint32(1)))
 		}))
 
 		By("adding an unrelated route does not change anyhing", makestep(func() {
@@ -628,7 +653,46 @@ var _ = Describe("BPF Syncer", func() {
 			Expect(svcs.m).To(HaveKey(k))
 			k = nat.NewNATKey(net.IPv4(10, 123, 0, 113), 4444, proxy.ProtoV1ToIntPanic(v1.ProtocolTCP))
 			Expect(svcs.m).To(HaveKey(k))
-			Expect(eps.m).To(HaveLen(4))
+			Expect(eps.m).To(HaveLen(5))
+		}))
+
+		By("checking frontend-backend mapping", makestep(func() {
+			s.StopExpandNPFixup()
+			s.ConntrackScanStart()
+			defer s.ConntrackScanEnd()
+
+			// Any backend is valid for the ClusterIP
+			Expect(s.ConntrackFrontendHasBackend(
+				net.IPv4(10, 0, 0, 2), 2222, net.IPv4(10, 2, 1, 1), 2222, 6)).To(BeTrue())
+			Expect(s.ConntrackFrontendHasBackend(
+				net.IPv4(10, 0, 0, 2), 2222, net.IPv4(10, 2, 2, 1), 2222, 6)).To(BeTrue())
+			Expect(s.ConntrackFrontendHasBackend(
+				net.IPv4(10, 0, 0, 2), 2222, net.IPv4(10, 2, 3, 1), 2222, 6)).To(BeTrue())
+
+			// Not all backends are reachable through the NodePort, but there is
+			// no harm in not cleaning connctions that cannot exist. Even if
+			// they existed, why would we break them?
+
+			Expect(s.ConntrackFrontendHasBackend(
+				net.IPv4(192, 168, 0, 1), 4444, net.IPv4(10, 2, 1, 1), 2222, 6)).To(BeTrue())
+			Expect(s.ConntrackFrontendHasBackend(
+				net.IPv4(192, 168, 0, 1), 4444, net.IPv4(10, 2, 2, 1), 2222, 6)).To(BeTrue())
+			Expect(s.ConntrackFrontendHasBackend(
+				net.IPv4(192, 168, 0, 1), 4444, net.IPv4(10, 2, 3, 1), 2222, 6)).To(BeTrue())
+
+			Expect(s.ConntrackFrontendHasBackend(
+				net.IPv4(10, 123, 0, 111), 4444, net.IPv4(10, 2, 1, 1), 2222, 6)).To(BeTrue())
+			Expect(s.ConntrackFrontendHasBackend(
+				net.IPv4(10, 123, 0, 111), 4444, net.IPv4(10, 2, 2, 1), 2222, 6)).To(BeTrue())
+			Expect(s.ConntrackFrontendHasBackend(
+				net.IPv4(10, 123, 0, 111), 4444, net.IPv4(10, 2, 3, 1), 2222, 6)).To(BeTrue())
+
+			Expect(s.ConntrackFrontendHasBackend(
+				net.IPv4(10, 123, 0, 113), 4444, net.IPv4(10, 2, 1, 1), 2222, 6)).To(BeTrue())
+			Expect(s.ConntrackFrontendHasBackend(
+				net.IPv4(10, 123, 0, 113), 4444, net.IPv4(10, 2, 2, 1), 2222, 6)).To(BeTrue())
+			Expect(s.ConntrackFrontendHasBackend(
+				net.IPv4(10, 123, 0, 113), 4444, net.IPv4(10, 2, 3, 1), 2222, 6)).To(BeTrue())
 		}))
 
 		By("inserting only non-local eps for a NodePort - multiple nodes & pods/node", makestep(func() {
@@ -643,10 +707,10 @@ var _ = Describe("BPF Syncer", func() {
 			)
 
 			state.EpsMap[svcKey2] = []k8sp.Endpoint{
-				&k8sp.BaseEndpointInfo{Endpoint: "10.2.1.1:2222"},
-				&k8sp.BaseEndpointInfo{Endpoint: "10.2.2.1:2222"},
-				&k8sp.BaseEndpointInfo{Endpoint: "10.2.2.2:2222"},
-				&k8sp.BaseEndpointInfo{Endpoint: "10.2.3.1:2222"},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.1.1:2222"},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.2.1:2222"},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.2.2:2222"},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.3.1:2222"},
 			}
 
 			_ = rt.Update(
@@ -729,10 +793,10 @@ var _ = Describe("BPF Syncer", func() {
 			)
 
 			state.EpsMap[svcKey2] = []k8sp.Endpoint{
-				&k8sp.BaseEndpointInfo{Endpoint: "10.2.0.1:2222"},
-				&k8sp.BaseEndpointInfo{Endpoint: "10.3.0.1:2222", IsLocal: true},
-				&k8sp.BaseEndpointInfo{Endpoint: "10.4.0.1:2222"},
-				&k8sp.BaseEndpointInfo{Endpoint: "10.5.0.1:2222", IsLocal: true},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.0.1:2222"},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.3.0.1:2222", IsLocal: true},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.4.0.1:2222"},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.5.0.1:2222", IsLocal: true},
 			}
 
 			err := s.Apply(state)
@@ -792,7 +856,7 @@ var _ = Describe("BPF Syncer", func() {
 			)
 
 			state.EpsMap[svcKey2] = []k8sp.Endpoint{
-				&k8sp.BaseEndpointInfo{Endpoint: "10.2.0.1:2222"},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.0.1:2222"},
 			}
 
 			err := s.Apply(state)
@@ -808,8 +872,8 @@ var _ = Describe("BPF Syncer", func() {
 
 		By("inserting another ep for service with affinity v1.ServiceAffinityClientIP", makestep(func() {
 			state.EpsMap[svcKey2] = []k8sp.Endpoint{
-				&k8sp.BaseEndpointInfo{Endpoint: "10.2.0.1:2222"},
-				&k8sp.BaseEndpointInfo{Endpoint: "10.3.0.1:3333"},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.2.0.1:2222"},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.3.0.1:3333"},
 			}
 
 			// add active affinity entry
@@ -849,7 +913,7 @@ var _ = Describe("BPF Syncer", func() {
 
 		By("deleting an ep for service with affinity v1.ServiceAffinityClientIP", makestep(func() {
 			state.EpsMap[svcKey2] = []k8sp.Endpoint{
-				&k8sp.BaseEndpointInfo{Endpoint: "10.3.0.1:3333"},
+				&k8sp.BaseEndpointInfo{Ready: true, Endpoint: "10.3.0.1:3333"},
 			}
 
 			err := aff.Update(

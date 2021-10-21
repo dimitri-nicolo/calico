@@ -64,14 +64,14 @@ func (ap *AttachPoint) Log() *log.Entry {
 	})
 }
 
-func (ap *AttachPoint) AttachProgram() error {
+func (ap *AttachPoint) AttachProgram() (string, error) {
 	preCompiledBinary := path.Join(bpf.ObjectDir, ap.FileName())
 	sectionName := ap.SectionName()
 
 	// Patch the binary so that its log prefix is like "eth0------X".
 	tempDir, err := ioutil.TempDir("", "calico-xdp")
 	if err != nil {
-		return fmt.Errorf("failed to create temporary directory: %w", err)
+		return "", fmt.Errorf("failed to create temporary directory: %w", err)
 	}
 	defer func() {
 		_ = os.RemoveAll(tempDir)
@@ -80,7 +80,7 @@ func (ap *AttachPoint) AttachProgram() error {
 	err = ap.patchBinary(preCompiledBinary, tempBinary)
 	if err != nil {
 		ap.Log().WithError(err).Error("Failed to patch binary")
-		return err
+		return "", err
 	}
 
 	// Note that there are a few considerations here.
@@ -139,9 +139,13 @@ func (ap *AttachPoint) AttachProgram() error {
 		}
 	}
 	if !attachmentSucceeded {
-		return fmt.Errorf("Couldn't attach XDP program %v section %v to iface %v; modes=%v errs=%v", tempBinary, sectionName, ap.Iface, ap.Modes, errs)
+		return "", fmt.Errorf("Couldn't attach XDP program %v section %v to iface %v; modes=%v errs=%v", tempBinary, sectionName, ap.Iface, ap.Modes, errs)
 	}
-	return nil
+	progID, err := ap.ProgramID()
+	if err != nil {
+		return "", fmt.Errorf("couldn't get the attached XDP program ID err=%v", err)
+	}
+	return progID, nil
 }
 
 func (ap AttachPoint) DetachProgram() error {

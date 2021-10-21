@@ -87,7 +87,7 @@ elif [[ "${filename}" =~ .*connect.* ]]; then
   ((flags |= CALI_CGROUP))
   args+=("-DCALI_DEBUG_ALLOW_ALL" "-D__BPFTOOL_LOADER__" "-DCALI_LOG_PFX=CALI")
 elif [[ "${filename}" =~ .*kprobe.* ]]; then
-  args+=("-DCALI_DEBUG_ALLOW_ALL" "-DCALI_LOG_PFX=CALI" "-D__LIBBPF_LOADER__" "-g")
+  args+=("-DCALI_DEBUG_ALLOW_ALL" "-DCALI_LOG_PFX=CALI" "-g")
 elif [[ "${filename}" =~ .*stats.* ]]; then
   args+=("-DCALI_DEBUG_ALLOW_ALL" "-DCALI_LOG_PFX=CALI")
 elif [[ "${filename}" =~ .*wep.* ]]; then
@@ -98,7 +98,7 @@ elif [[ "${filename}" =~ .*xdp.* ]]; then
   # XDP, so host endpoint.
   ((flags |= CALI_TC_HOST_EP))
   ((flags |= CALI_XDP_PROG))
-  args+=("-DCALI_NO_DEFAULT_POLICY_PROG" "-DCALI_LOG_PFX=CALICOLO")
+  args+=("-DCALI_NO_DEFAULT_POLICY_PROG" "-DCALI_LOG_PFX=CALICOLO" "-D__IPTOOL_LOADER__")
   ep_type="host"
 else
   echo "Can't recognise endpoint type"
