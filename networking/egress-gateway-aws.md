@@ -544,6 +544,11 @@ spec:
               fieldPath: status.podIP
         securityContext:
           privileged: true
+        resources:
+          requests:
+            projectcalico.org/aws-secondary-ipv4: 1
+          limits:
+            projectcalico.org/aws-secondary-ipv4: 1
       terminationGracePeriodSeconds: 0
 EOF
 ```
