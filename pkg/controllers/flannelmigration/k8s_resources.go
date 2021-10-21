@@ -408,7 +408,8 @@ func (n k8snode) deletePodsForNode(k8sClientset *kubernetes.Clientset, filter fu
 
 func isPodRunningAndReady(pod *v1.Pod) bool {
 	if pod == nil {
-		log.Fatalf("isPodRunningAndReady get a nil pointer")
+		log.Fatalf("isPodRunningAndReady received a nil pointer")
+		return false
 	}
 	if pod.Status.Phase != v1.PodRunning {
 		return false

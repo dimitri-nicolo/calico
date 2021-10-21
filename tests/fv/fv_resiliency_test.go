@@ -16,7 +16,6 @@ package fv_test
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"time"
@@ -72,7 +71,7 @@ var _ = Describe("[Resilience] PolicyController", func() {
 		// Change ownership of the kubeconfig file  so it is accessible by all users in the container
 		err = kfConfigFile.Chmod(os.ModePerm)
 		Expect(err).NotTo(HaveOccurred())
-		data := fmt.Sprintf(testutils.KubeconfigTemplate, apiserver.IP)
+		data := testutils.BuildKubeconfig(apiserver.IP)
 		_, err = kfConfigFile.Write([]byte(data))
 		Expect(err).NotTo(HaveOccurred())
 

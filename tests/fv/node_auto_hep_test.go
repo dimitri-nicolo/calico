@@ -16,7 +16,6 @@ package fv_test
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"time"
@@ -67,11 +66,10 @@ var _ = Describe("Auto Hostendpoint tests", func() {
 		var err error
 		kconfigFile, err = ioutil.TempFile("", "ginkgo-nodecontroller")
 		Expect(err).NotTo(HaveOccurred())
-		//defer os.Remove(kconfigFile.Name())
 		// Change ownership of the kubeconfig file  so it is accessible by all users in the container
 		err = kconfigFile.Chmod(os.ModePerm)
 		Expect(err).NotTo(HaveOccurred())
-		data := fmt.Sprintf(testutils.KubeconfigTemplate, apiserver.IP)
+		data := testutils.BuildKubeconfig(apiserver.IP)
 		_, err = kconfigFile.Write([]byte(data))
 		Expect(err).NotTo(HaveOccurred())
 
@@ -89,7 +87,7 @@ var _ = Describe("Auto Hostendpoint tests", func() {
 
 		// Run controller manager.  Empirically it can take around 10s until the
 		// controller manager is ready to create default service accounts, even
-		// when the hyperkube image has already been downloaded to run the API
+		// when the k8s image has already been downloaded to run the API
 		// server.  We use Eventually to allow for possible delay when doing
 		// initial pod creation below.
 		controllerManager = testutils.RunK8sControllerManager(apiserver.IP)

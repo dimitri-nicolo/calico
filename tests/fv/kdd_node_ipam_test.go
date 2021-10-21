@@ -23,14 +23,12 @@ import (
 	"strings"
 	"time"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/kube-controllers/tests/testutils"
@@ -71,7 +69,7 @@ var _ = Describe("kube-controllers FV tests (KDD mode)", func() {
 		// Change ownership of the kubeconfig file  so it is accessible by all users in the container
 		err = kconfigfile.Chmod(os.ModePerm)
 		Expect(err).NotTo(HaveOccurred())
-		data := fmt.Sprintf(testutils.KubeconfigTemplate, apiserver.IP)
+		data := testutils.BuildKubeconfig(apiserver.IP)
 		_, err = kconfigfile.Write([]byte(data))
 		Expect(err).NotTo(HaveOccurred())
 
@@ -86,6 +84,10 @@ var _ = Describe("kube-controllers FV tests (KDD mode)", func() {
 			_, err := k8sClient.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
 			return err
 		}, 30*time.Second, 1*time.Second).Should(BeNil())
+		Consistently(func() error {
+			_, err := k8sClient.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
+			return err
+		}, 10*time.Second, 1*time.Second).Should(BeNil())
 
 		// Apply the necessary CRDs. There can somtimes be a delay between starting
 		// the API server and when CRDs are apply-able, so retry here.
@@ -152,22 +154,30 @@ var _ = Describe("kube-controllers FV tests (KDD mode)", func() {
 
 		It("should fail health check if apiserver is not running", func() {
 			By("Waiting for an initial readiness report")
-			Eventually(func() string {
+			Eventually(func() error {
 				cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
 				stdoutStderr, _ := cmd.CombinedOutput()
-
-				return string(stdoutStderr)
-			}, 20*time.Second, 500*time.Millisecond).ShouldNot(ContainSubstring("initialized to false"))
+				status := strings.Trim(string(stdoutStderr), "\n ")
+				if status == "" {
+					return fmt.Errorf("No status contents yet")
+				}
+				if status != "Ready" {
+					return fmt.Errorf("Status is not Ready: status=%s", status)
+				}
+				return nil
+			}, 20*time.Second, 500*time.Millisecond).ShouldNot(HaveOccurred())
 
 			By("Stopping the apiserver")
 			apiserver.Stop()
 
+			// Should now fail to either verify the data store, or fail to reach the API server (since they are one and the
+			// same for KDD mode).
 			By("Waiting for the readiness to change")
 			Eventually(func() string {
 				cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
 				stdoutStderr, _ := cmd.CombinedOutput()
 				return string(stdoutStderr)
-			}, 21*time.Second, 500*time.Millisecond).Should(ContainSubstring("Error reaching apiserver"))
+			}, 20*time.Second, 500*time.Millisecond).Should(ContainSubstring("Error"))
 		})
 	})
 
