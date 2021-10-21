@@ -30,8 +30,13 @@ section:
     path: /networking/custom-bgp-config
   - title: Configure outgoing NAT
     path: /networking/workloads-outside-cluster
-- title: Egress access controls
+- title: Egress source IP control
   path: /networking/egress-gateway
+  section:
+  - title: Egress gateways (on-prem)
+    path: /networking/egress-gateway-on-prem
+  - title: Egress gateways (AWS)
+    path: /networking/egress-gateway-aws
 - title: Customize IP address management
   path: /networking/ipam
   section:
