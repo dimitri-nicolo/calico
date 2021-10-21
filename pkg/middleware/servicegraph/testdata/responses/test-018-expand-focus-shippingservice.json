@@ -299,195 +299,6 @@
       }
     },
     {
-      "id": "svcgp;svc/storefront/checkoutservice",
-      "parent_id": "namespace/storefront",
-      "type": "svcgp",
-      "namespace": "storefront",
-      "name": "checkoutservice",
-      "service_ports": [
-        {
-          "namespace": "storefront",
-          "name": "checkoutservice",
-          "protocol": "tcp",
-          "port_name": "grpc",
-          "port": 5050
-        }
-      ],
-      "stats_within": [
-        {
-          "dns": {
-            "mean_request_latency": 562604.1331877729,
-            "max_request_latency": 2277000,
-            "min_request_latency": 509132,
-            "latency_count": 458,
-            "response_codes": [
-              {
-                "code": "NOERROR",
-                "count": 458,
-                "mean_request_latency": 562604.1331877729,
-                "max_request_latency": 2277000,
-                "min_request_latency": 509132,
-                "latency_count": 458
-              }
-            ]
-          }
-        }
-      ],
-      "stats_ingress": [
-        {
-          "l7": {
-            "no_response": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 23
-            },
-            "response_code_1xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_2xx": {
-              "bytes_in": 3841,
-              "bytes_out": 5434,
-              "mean_duration": 96434782,
-              "min_duration": 96434782,
-              "max_duration": 249000000,
-              "count": 23
-            },
-            "response_code_3xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_4xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_5xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            }
-          }
-        }
-      ],
-      "stats_egress": [
-        {
-          "l3": {
-            "allowed": {
-              "packet_in": 2672,
-              "packet_out": 3194,
-              "bytes_in": 270008,
-              "bytes_out": 390990
-            },
-            "connections": {
-              "total_per_sample_interval": 794,
-              "started": 697,
-              "completed": 769
-            },
-            "tcp": {
-              "sum_total_retransmissions": 0,
-              "sum_lost_packets": 0,
-              "sum_unrecovered_to": 0,
-              "min_send_congestion_window": 10,
-              "min_mss": 1388,
-              "max_smooth_rtt": 20943,
-              "max_min_rtt": 319,
-              "mean_send_congestion_window": 10,
-              "mean_smooth_rtt": 3446.769230769231,
-              "mean_min_mss": 184.07692307692307,
-              "mean_mss": 1388,
-              "count": 13
-            }
-          },
-          "l7": {
-            "no_response": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 273
-            },
-            "response_code_1xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_2xx": {
-              "bytes_in": 17069,
-              "bytes_out": 13958,
-              "mean_duration": 1349764.509157509,
-              "min_duration": 0,
-              "max_duration": 45000000,
-              "count": 273
-            },
-            "response_code_3xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_4xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_5xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            }
-          },
-          "processes": {
-            "source": [
-              {
-                "name": "wrk:worker_1",
-                "min_num_names_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "max_num_ids_per_flow": 1
-              }
-            ]
-          }
-        }
-      ],
-      "expandable": true,
-      "follow_egress": true,
-      "selectors": {
-        "l3_flows": "(dest_name_aggr = \"checkoutservice-b55dd855c-*\" AND dest_namespace = \"storefront\" AND dest_port = 5050 AND dest_type = \"wep\" AND proto = \"tcp\") OR (proto = \"tcp\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\")",
-        "l7_flows": "(dest_name_aggr = \"checkoutservice-b55dd855c-*\" AND dest_namespace = \"storefront\") OR (src_name_aggr = \"checkoutservice-b55dd855c-*\" AND src_namespace = \"storefront\")",
-        "dns_logs": "(\"servers.name_aggr\" = \"checkoutservice-b55dd855c-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\")"
-      }
-    },
-    {
       "id": "svcgp;svc/storefront/frontend",
       "parent_id": "namespace/storefront",
       "type": "svcgp",
@@ -690,6 +501,195 @@
         "l3_flows": "(dest_name_aggr = \"frontend-7bbcdbbcbf-*\" AND dest_namespace = \"storefront\" AND dest_port = 8080 AND dest_type = \"wep\" AND proto = \"tcp\") OR (proto = \"tcp\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\")",
         "l7_flows": "(dest_name_aggr = \"frontend-7bbcdbbcbf-*\" AND dest_namespace = \"storefront\") OR (src_name_aggr = \"frontend-7bbcdbbcbf-*\" AND src_namespace = \"storefront\")",
         "dns_logs": "(\"servers.name_aggr\" = \"frontend-7bbcdbbcbf-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\")"
+      }
+    },
+    {
+      "id": "svcgp;svc/storefront/checkoutservice",
+      "parent_id": "namespace/storefront",
+      "type": "svcgp",
+      "namespace": "storefront",
+      "name": "checkoutservice",
+      "service_ports": [
+        {
+          "namespace": "storefront",
+          "name": "checkoutservice",
+          "protocol": "tcp",
+          "port_name": "grpc",
+          "port": 5050
+        }
+      ],
+      "stats_within": [
+        {
+          "dns": {
+            "mean_request_latency": 562604.1331877729,
+            "max_request_latency": 2277000,
+            "min_request_latency": 509132,
+            "latency_count": 458,
+            "response_codes": [
+              {
+                "code": "NOERROR",
+                "count": 458,
+                "mean_request_latency": 562604.1331877729,
+                "max_request_latency": 2277000,
+                "min_request_latency": 509132,
+                "latency_count": 458
+              }
+            ]
+          }
+        }
+      ],
+      "stats_ingress": [
+        {
+          "l7": {
+            "no_response": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 23
+            },
+            "response_code_1xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_2xx": {
+              "bytes_in": 3841,
+              "bytes_out": 5434,
+              "mean_duration": 96434782,
+              "min_duration": 96434782,
+              "max_duration": 249000000,
+              "count": 23
+            },
+            "response_code_3xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_4xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_5xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            }
+          }
+        }
+      ],
+      "stats_egress": [
+        {
+          "l3": {
+            "allowed": {
+              "packet_in": 2672,
+              "packet_out": 3194,
+              "bytes_in": 270008,
+              "bytes_out": 390990
+            },
+            "connections": {
+              "total_per_sample_interval": 794,
+              "started": 697,
+              "completed": 769
+            },
+            "tcp": {
+              "sum_total_retransmissions": 0,
+              "sum_lost_packets": 0,
+              "sum_unrecovered_to": 0,
+              "min_send_congestion_window": 10,
+              "min_mss": 1388,
+              "max_smooth_rtt": 20943,
+              "max_min_rtt": 319,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 3446.769230769231,
+              "mean_min_mss": 184.07692307692307,
+              "mean_mss": 1388,
+              "count": 13
+            }
+          },
+          "l7": {
+            "no_response": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 273
+            },
+            "response_code_1xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_2xx": {
+              "bytes_in": 17069,
+              "bytes_out": 13958,
+              "mean_duration": 1349764.509157509,
+              "min_duration": 0,
+              "max_duration": 45000000,
+              "count": 273
+            },
+            "response_code_3xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_4xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_5xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "name": "wrk:worker_1",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ]
+          }
+        }
+      ],
+      "expandable": true,
+      "follow_egress": true,
+      "selectors": {
+        "l3_flows": "(dest_name_aggr = \"checkoutservice-b55dd855c-*\" AND dest_namespace = \"storefront\" AND dest_port = 5050 AND dest_type = \"wep\" AND proto = \"tcp\") OR (proto = \"tcp\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\")",
+        "l7_flows": "(dest_name_aggr = \"checkoutservice-b55dd855c-*\" AND dest_namespace = \"storefront\") OR (src_name_aggr = \"checkoutservice-b55dd855c-*\" AND src_namespace = \"storefront\")",
+        "dns_logs": "(\"servers.name_aggr\" = \"checkoutservice-b55dd855c-*\" AND \"servers.namespace\" = \"storefront\") OR (client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\")"
       }
     },
     {
@@ -1058,6 +1058,19 @@
       "type": "rep",
       "namespace": "storefront",
       "name": "shippingservice-54fbf57657-*",
+      "aggregated_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "tcp",
+            "port_ranges": [
+              {
+                "min_port": 50051,
+                "max_port": 50051
+              }
+            ]
+          }
+        ]
+      },
       "stats_ingress": [
         {
           "l3": {
@@ -1219,40 +1232,255 @@
   "edges": [
     {
       "id": {
-        "source_node_id": "namespace/kube-system",
-        "dest_node_id": "net/pub"
+        "source_node_id": "svcgp;svc/storefront/checkoutservice",
+        "dest_node_id": "namespace/kube-system"
       },
       "stats": [
         {
           "l3": {
             "allowed": {
-              "packet_in": 137,
-              "packet_out": 137,
-              "bytes_in": 15895,
-              "bytes_out": 10637
+              "packet_in": 456,
+              "packet_out": 456,
+              "bytes_in": 75549,
+              "bytes_out": 40790
             },
             "connections": {
-              "total_per_sample_interval": 45,
-              "started": 33,
-              "completed": 37
+              "total_per_sample_interval": 548,
+              "started": 454,
+              "completed": 526
             }
-          },
-          "processes": {
-            "source": [
-              {
-                "name": "coredns",
-                "min_num_names_per_flow": 1,
-                "max_num_names_per_flow": 1,
-                "min_num_ids_per_flow": 1,
-                "max_num_ids_per_flow": 1
-              }
-            ]
           }
         }
       ],
       "selectors": {
-        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_namespace = \"kube-system\""
+        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND proto = \"tcp\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
+        "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND src_name_aggr = \"checkoutservice-b55dd855c-*\" AND src_namespace = \"storefront\"",
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\""
       },
+      "service_ports": [
+        {
+          "namespace": "kube-system",
+          "name": "kube-dns",
+          "protocol": "udp",
+          "port_name": "dns",
+          "port": 53
+        }
+      ],
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "udp",
+            "port_ranges": [
+              {
+                "min_port": 53,
+                "max_port": 53
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": {
+        "source_node_id": "svcgp;svc/storefront/checkoutservice",
+        "dest_node_id": "rep/storefront/shippingservice-54fbf57657-*"
+      },
+      "stats": [
+        {
+          "l7": {
+            "no_response": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 42
+            },
+            "response_code_1xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_2xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_3xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_4xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_5xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            }
+          }
+        }
+      ],
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\" AND dest_type = \"wep\" AND proto = \"tcp\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
+        "l7_flows": "dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"checkoutservice-b55dd855c-*\" AND src_namespace = \"storefront\"",
+        "dns_logs": "\"servers.name_aggr\" = \"shippingservice-54fbf57657-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\""
+      },
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "tcp",
+            "port_ranges": [
+              {
+                "min_port": 50051,
+                "max_port": 50051
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": {
+        "source_node_id": "svcgp;svc/storefront/frontend",
+        "dest_node_id": "svc/storefront/shippingservice"
+      },
+      "stats": [
+        {
+          "l7": {
+            "no_response": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_1xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_2xx": {
+              "bytes_in": 7081,
+              "bytes_out": 3187,
+              "mean_duration": 729281,
+              "min_duration": 729281,
+              "max_duration": 5000000,
+              "count": 181
+            },
+            "response_code_3xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_4xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_5xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            }
+          }
+        }
+      ],
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\" AND dest_type = \"wep\" AND proto = \"tcp\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
+        "l7_flows": "dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"frontend-7bbcdbbcbf-*\" AND src_namespace = \"storefront\"",
+        "dns_logs": "\"servers.name_aggr\" = \"shippingservice-54fbf57657-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\""
+      },
+      "service_ports": [
+        {
+          "namespace": "storefront",
+          "name": "shippingservice",
+          "protocol": "tcp",
+          "port_name": "grpc",
+          "port": 50051
+        }
+      ],
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "tcp",
+            "port_ranges": [
+              {
+                "min_port": 50051,
+                "max_port": 50051
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": {
+        "source_node_id": "rep/storefront/shippingservice-54fbf57657-*",
+        "dest_node_id": "namespace/kube-system"
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "packet_in": 12,
+              "packet_out": 12,
+              "bytes_in": 2122,
+              "bytes_out": 1050
+            },
+            "connections": {
+              "total_per_sample_interval": 12,
+              "started": 12,
+              "completed": 12
+            }
+          }
+        }
+      ],
+      "selectors": {
+        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_name_aggr = \"shippingservice-54fbf57657-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
+        "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND src_name_aggr = \"shippingservice-54fbf57657-*\" AND src_namespace = \"storefront\"",
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_name_aggr = \"shippingservice-54fbf57657-*\" AND client_namespace = \"storefront\""
+      },
+      "service_ports": [
+        {
+          "namespace": "kube-system",
+          "name": "kube-dns",
+          "protocol": "udp",
+          "port_name": "dns",
+          "port": 53
+        }
+      ],
       "endpoint_proto_ports": {
         "proto_ports": [
           {
@@ -1325,6 +1553,376 @@
               {
                 "min_port": 443,
                 "max_port": 443
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": {
+        "source_node_id": "svcgp;svc/storefront/frontend",
+        "dest_node_id": "svcgp;svc/storefront/checkoutservice"
+      },
+      "stats": [
+        {
+          "l7": {
+            "no_response": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 23
+            },
+            "response_code_1xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_2xx": {
+              "bytes_in": 3841,
+              "bytes_out": 5434,
+              "mean_duration": 96434782,
+              "min_duration": 96434782,
+              "max_duration": 249000000,
+              "count": 23
+            },
+            "response_code_3xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_4xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_5xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            }
+          }
+        }
+      ],
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"checkoutservice-b55dd855c-*\" AND dest_namespace = \"storefront\" AND dest_port = 5050 AND dest_type = \"wep\" AND proto = \"tcp\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
+        "l7_flows": "dest_name_aggr = \"checkoutservice-b55dd855c-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"frontend-7bbcdbbcbf-*\" AND src_namespace = \"storefront\"",
+        "dns_logs": "\"servers.name_aggr\" = \"checkoutservice-b55dd855c-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\""
+      },
+      "service_ports": [
+        {
+          "namespace": "storefront",
+          "name": "checkoutservice",
+          "protocol": "tcp",
+          "port_name": "grpc",
+          "port": 5050
+        }
+      ],
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "tcp",
+            "port_ranges": [
+              {
+                "min_port": 5050,
+                "max_port": 5050
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": {
+        "source_node_id": "svc/storefront/shippingservice",
+        "dest_node_id": "rep/storefront/shippingservice-54fbf57657-*"
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "packet_in": 348,
+              "packet_out": 440,
+              "bytes_in": 27828,
+              "bytes_out": 42277
+            },
+            "connections": {
+              "total_per_sample_interval": 46,
+              "started": 46,
+              "completed": 46
+            },
+            "tcp": {
+              "sum_total_retransmissions": 0,
+              "sum_lost_packets": 0,
+              "sum_unrecovered_to": 0,
+              "min_send_congestion_window": 10,
+              "min_mss": 1388,
+              "max_smooth_rtt": 7451,
+              "max_min_rtt": 319,
+              "mean_send_congestion_window": 10,
+              "mean_smooth_rtt": 2699.5,
+              "mean_min_mss": 189,
+              "mean_mss": 1388,
+              "count": 2
+            }
+          },
+          "l7": {
+            "no_response": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_1xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_2xx": {
+              "bytes_in": 17225,
+              "bytes_out": 5047,
+              "mean_duration": 1147169.286792453,
+              "min_duration": 0,
+              "max_duration": 45000000,
+              "count": 265
+            },
+            "response_code_3xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_4xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_5xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            }
+          }
+        }
+      ],
+      "selectors": {
+        "l3_flows": "((proto = \"tcp\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\") OR (proto = \"tcp\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\")) AND dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\" AND dest_type = \"wep\"",
+        "l7_flows": "((src_name_aggr = \"checkoutservice-b55dd855c-*\" AND src_namespace = \"storefront\") OR (src_name_aggr = \"frontend-7bbcdbbcbf-*\" AND src_namespace = \"storefront\")) AND dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\"",
+        "dns_logs": "\"servers.name_aggr\" = \"shippingservice-54fbf57657-*\" AND \"servers.namespace\" = \"storefront\" AND ((client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\") OR (client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\"))"
+      },
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "tcp",
+            "port_ranges": [
+              {
+                "min_port": 50051,
+                "max_port": 50051
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": {
+        "source_node_id": "svcgp;svc/storefront/frontend",
+        "dest_node_id": "rep/storefront/shippingservice-54fbf57657-*"
+      },
+      "stats": [
+        {
+          "l7": {
+            "no_response": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 181
+            },
+            "response_code_1xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_2xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_3xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_4xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            },
+            "response_code_5xx": {
+              "bytes_in": 0,
+              "bytes_out": 0,
+              "mean_duration": 0,
+              "min_duration": 0,
+              "max_duration": 0,
+              "count": 0
+            }
+          }
+        }
+      ],
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\" AND dest_type = \"wep\" AND proto = \"tcp\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
+        "l7_flows": "dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"frontend-7bbcdbbcbf-*\" AND src_namespace = \"storefront\"",
+        "dns_logs": "\"servers.name_aggr\" = \"shippingservice-54fbf57657-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\""
+      },
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "tcp",
+            "port_ranges": [
+              {
+                "min_port": 50051,
+                "max_port": 50051
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": {
+        "source_node_id": "namespace/kube-system",
+        "dest_node_id": "net/pub"
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "packet_in": 137,
+              "packet_out": 137,
+              "bytes_in": 15895,
+              "bytes_out": 10637
+            },
+            "connections": {
+              "total_per_sample_interval": 45,
+              "started": 33,
+              "completed": 37
+            }
+          },
+          "processes": {
+            "source": [
+              {
+                "name": "coredns",
+                "min_num_names_per_flow": 1,
+                "max_num_names_per_flow": 1,
+                "min_num_ids_per_flow": 1,
+                "max_num_ids_per_flow": 1
+              }
+            ]
+          }
+        }
+      ],
+      "selectors": {
+        "l3_flows": "dest_name_aggr = \"pub\" AND dest_namespace = \"-\" AND dest_type = \"net\" AND source_namespace = \"kube-system\""
+      },
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "udp",
+            "port_ranges": [
+              {
+                "min_port": 53,
+                "max_port": 53
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": {
+        "source_node_id": "svcgp;svc/storefront/frontend",
+        "dest_node_id": "namespace/kube-system"
+      },
+      "stats": [
+        {
+          "l3": {
+            "allowed": {
+              "packet_in": 196,
+              "packet_out": 196,
+              "bytes_in": 18682,
+              "bytes_out": 13930
+            },
+            "connections": {
+              "total_per_sample_interval": 203,
+              "started": 195,
+              "completed": 185
+            }
+          }
+        }
+      ],
+      "selectors": {
+        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND proto = \"tcp\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
+        "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND src_name_aggr = \"frontend-7bbcdbbcbf-*\" AND src_namespace = \"storefront\"",
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\""
+      },
+      "service_ports": [
+        {
+          "namespace": "kube-system",
+          "name": "kube-dns",
+          "protocol": "udp",
+          "port_name": "dns",
+          "port": 53
+        }
+      ],
+      "endpoint_proto_ports": {
+        "proto_ports": [
+          {
+            "protocol": "udp",
+            "port_ranges": [
+              {
+                "min_port": 53,
+                "max_port": 53
               }
             ]
           }
@@ -1475,513 +2073,6 @@
     },
     {
       "id": {
-        "source_node_id": "svc/storefront/shippingservice",
-        "dest_node_id": "rep/storefront/shippingservice-54fbf57657-*"
-      },
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "packet_in": 348,
-              "packet_out": 440,
-              "bytes_in": 27828,
-              "bytes_out": 42277
-            },
-            "connections": {
-              "total_per_sample_interval": 46,
-              "started": 46,
-              "completed": 46
-            },
-            "tcp": {
-              "sum_total_retransmissions": 0,
-              "sum_lost_packets": 0,
-              "sum_unrecovered_to": 0,
-              "min_send_congestion_window": 10,
-              "min_mss": 1388,
-              "max_smooth_rtt": 7451,
-              "max_min_rtt": 319,
-              "mean_send_congestion_window": 10,
-              "mean_smooth_rtt": 2699.5,
-              "mean_min_mss": 189,
-              "mean_mss": 1388,
-              "count": 2
-            }
-          },
-          "l7": {
-            "no_response": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_1xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_2xx": {
-              "bytes_in": 17225,
-              "bytes_out": 5047,
-              "mean_duration": 1147169.286792453,
-              "min_duration": 0,
-              "max_duration": 45000000,
-              "count": 265
-            },
-            "response_code_3xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_4xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_5xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            }
-          }
-        }
-      ],
-      "selectors": {
-        "l3_flows": "((proto = \"tcp\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\") OR (proto = \"tcp\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\")) AND dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\" AND dest_type = \"wep\"",
-        "l7_flows": "((src_name_aggr = \"checkoutservice-b55dd855c-*\" AND src_namespace = \"storefront\") OR (src_name_aggr = \"frontend-7bbcdbbcbf-*\" AND src_namespace = \"storefront\")) AND dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\"",
-        "dns_logs": "\"servers.name_aggr\" = \"shippingservice-54fbf57657-*\" AND \"servers.namespace\" = \"storefront\" AND ((client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\") OR (client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\"))"
-      },
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "protocol": "tcp",
-            "port_ranges": [
-              {
-                "min_port": 50051,
-                "max_port": 50051
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "id": {
-        "source_node_id": "svcgp;svc/storefront/checkoutservice",
-        "dest_node_id": "rep/storefront/shippingservice-54fbf57657-*"
-      },
-      "stats": [
-        {
-          "l7": {
-            "no_response": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 42
-            },
-            "response_code_1xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_2xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_3xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_4xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_5xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            }
-          }
-        }
-      ],
-      "selectors": {
-        "l3_flows": "dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\" AND dest_type = \"wep\" AND proto = \"tcp\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
-        "l7_flows": "dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"checkoutservice-b55dd855c-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.name_aggr\" = \"shippingservice-54fbf57657-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\""
-      },
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "protocol": "tcp",
-            "port_ranges": [
-              {
-                "min_port": 50051,
-                "max_port": 50051
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "id": {
-        "source_node_id": "svcgp;svc/storefront/frontend",
-        "dest_node_id": "namespace/kube-system"
-      },
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "packet_in": 196,
-              "packet_out": 196,
-              "bytes_in": 18682,
-              "bytes_out": 13930
-            },
-            "connections": {
-              "total_per_sample_interval": 203,
-              "started": 195,
-              "completed": 185
-            }
-          }
-        }
-      ],
-      "selectors": {
-        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND proto = \"tcp\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
-        "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND src_name_aggr = \"frontend-7bbcdbbcbf-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\""
-      },
-      "service_ports": [
-        {
-          "namespace": "kube-system",
-          "name": "kube-dns",
-          "protocol": "udp",
-          "port_name": "dns",
-          "port": 53
-        }
-      ],
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "protocol": "udp",
-            "port_ranges": [
-              {
-                "min_port": 53,
-                "max_port": 53
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "id": {
-        "source_node_id": "svcgp;svc/storefront/frontend",
-        "dest_node_id": "svc/storefront/shippingservice"
-      },
-      "stats": [
-        {
-          "l7": {
-            "no_response": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_1xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_2xx": {
-              "bytes_in": 7081,
-              "bytes_out": 3187,
-              "mean_duration": 729281,
-              "min_duration": 729281,
-              "max_duration": 5000000,
-              "count": 181
-            },
-            "response_code_3xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_4xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_5xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            }
-          }
-        }
-      ],
-      "selectors": {
-        "l3_flows": "dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\" AND dest_type = \"wep\" AND proto = \"tcp\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
-        "l7_flows": "dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"frontend-7bbcdbbcbf-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.name_aggr\" = \"shippingservice-54fbf57657-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\""
-      },
-      "service_ports": [
-        {
-          "namespace": "storefront",
-          "name": "shippingservice",
-          "protocol": "tcp",
-          "port_name": "grpc",
-          "port": 50051
-        }
-      ],
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "protocol": "tcp",
-            "port_ranges": [
-              {
-                "min_port": 50051,
-                "max_port": 50051
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "id": {
-        "source_node_id": "svcgp;svc/storefront/checkoutservice",
-        "dest_node_id": "namespace/kube-system"
-      },
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "packet_in": 456,
-              "packet_out": 456,
-              "bytes_in": 75549,
-              "bytes_out": 40790
-            },
-            "connections": {
-              "total_per_sample_interval": 548,
-              "started": 454,
-              "completed": 526
-            }
-          }
-        }
-      ],
-      "selectors": {
-        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND proto = \"tcp\" AND source_name_aggr = \"checkoutservice-b55dd855c-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
-        "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND src_name_aggr = \"checkoutservice-b55dd855c-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_name_aggr = \"checkoutservice-b55dd855c-*\" AND client_namespace = \"storefront\""
-      },
-      "service_ports": [
-        {
-          "namespace": "kube-system",
-          "name": "kube-dns",
-          "protocol": "udp",
-          "port_name": "dns",
-          "port": 53
-        }
-      ],
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "protocol": "udp",
-            "port_ranges": [
-              {
-                "min_port": 53,
-                "max_port": 53
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "id": {
-        "source_node_id": "svcgp;svc/storefront/frontend",
-        "dest_node_id": "svcgp;svc/storefront/checkoutservice"
-      },
-      "stats": [
-        {
-          "l7": {
-            "no_response": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 23
-            },
-            "response_code_1xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_2xx": {
-              "bytes_in": 3841,
-              "bytes_out": 5434,
-              "mean_duration": 96434782,
-              "min_duration": 96434782,
-              "max_duration": 249000000,
-              "count": 23
-            },
-            "response_code_3xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_4xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_5xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            }
-          }
-        }
-      ],
-      "selectors": {
-        "l3_flows": "dest_name_aggr = \"checkoutservice-b55dd855c-*\" AND dest_namespace = \"storefront\" AND dest_port = 5050 AND dest_type = \"wep\" AND proto = \"tcp\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
-        "l7_flows": "dest_name_aggr = \"checkoutservice-b55dd855c-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"frontend-7bbcdbbcbf-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.name_aggr\" = \"checkoutservice-b55dd855c-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\""
-      },
-      "service_ports": [
-        {
-          "namespace": "storefront",
-          "name": "checkoutservice",
-          "protocol": "tcp",
-          "port_name": "grpc",
-          "port": 5050
-        }
-      ],
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "protocol": "tcp",
-            "port_ranges": [
-              {
-                "min_port": 5050,
-                "max_port": 5050
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "id": {
-        "source_node_id": "rep/storefront/shippingservice-54fbf57657-*",
-        "dest_node_id": "namespace/kube-system"
-      },
-      "stats": [
-        {
-          "l3": {
-            "allowed": {
-              "packet_in": 12,
-              "packet_out": 12,
-              "bytes_in": 2122,
-              "bytes_out": 1050
-            },
-            "connections": {
-              "total_per_sample_interval": 12,
-              "started": 12,
-              "completed": 12
-            }
-          }
-        }
-      ],
-      "selectors": {
-        "l3_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND source_name_aggr = \"shippingservice-54fbf57657-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
-        "l7_flows": "(dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\") AND src_name_aggr = \"shippingservice-54fbf57657-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" AND client_name_aggr = \"shippingservice-54fbf57657-*\" AND client_namespace = \"storefront\""
-      },
-      "service_ports": [
-        {
-          "namespace": "kube-system",
-          "name": "kube-dns",
-          "protocol": "udp",
-          "port_name": "dns",
-          "port": 53
-        }
-      ],
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "protocol": "udp",
-            "port_ranges": [
-              {
-                "min_port": 53,
-                "max_port": 53
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "id": {
         "source_node_id": "svcgp;svc/storefront/checkoutservice",
         "dest_node_id": "svc/storefront/shippingservice"
       },
@@ -2080,84 +2171,6 @@
           "port": 50051
         }
       ],
-      "endpoint_proto_ports": {
-        "proto_ports": [
-          {
-            "protocol": "tcp",
-            "port_ranges": [
-              {
-                "min_port": 50051,
-                "max_port": 50051
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "id": {
-        "source_node_id": "svcgp;svc/storefront/frontend",
-        "dest_node_id": "rep/storefront/shippingservice-54fbf57657-*"
-      },
-      "stats": [
-        {
-          "l7": {
-            "no_response": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 181
-            },
-            "response_code_1xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_2xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_3xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_4xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            },
-            "response_code_5xx": {
-              "bytes_in": 0,
-              "bytes_out": 0,
-              "mean_duration": 0,
-              "min_duration": 0,
-              "max_duration": 0,
-              "count": 0
-            }
-          }
-        }
-      ],
-      "selectors": {
-        "l3_flows": "dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\" AND dest_type = \"wep\" AND proto = \"tcp\" AND source_name_aggr = \"frontend-7bbcdbbcbf-*\" AND source_namespace = \"storefront\" AND source_type = \"wep\"",
-        "l7_flows": "dest_name_aggr = \"shippingservice-54fbf57657-*\" AND dest_namespace = \"storefront\" AND src_name_aggr = \"frontend-7bbcdbbcbf-*\" AND src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.name_aggr\" = \"shippingservice-54fbf57657-*\" AND \"servers.namespace\" = \"storefront\" AND client_name_aggr = \"frontend-7bbcdbbcbf-*\" AND client_namespace = \"storefront\""
-      },
       "endpoint_proto_ports": {
         "proto_ports": [
           {
