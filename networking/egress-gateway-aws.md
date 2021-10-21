@@ -17,7 +17,7 @@ by external firewalls, appliances and services (even as the groups are scaled up
 change the source IP of the traffic to their own IP. The egress gateways used can be chosen at the pod or namespace 
 scope allowing for flexibility in how the cluster is seen from outside.
 
-In AWS, egress gateway source IP addresses are chosen from an IP pool backed by an [VPC Subnet](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Subnets.html)
+In AWS, egress gateway source IP addresses are chosen from an IP pool backed by a [VPC Subnet](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Subnets.html)
 using {{site.prodname}} IPAM.   {{site.prodname}} IPAM allows the IP addresses to be precisely controlled, this allows
 for static configuration of external appliances. Using an IP pool backed by a VPC Subnet allows {{site.prodname}} to 
 configure the AWS fabric to route traffic to and from the egress gateway using its own IP address.
@@ -170,7 +170,7 @@ is moved to another host.
 
 The number of ENIs that an instance can support and the number of secondary IPs that each ENI can support depends on 
 the instance type according to [this table](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#AvailableIpPerENI).
-Note: the table list the total number of network interfaces and IP addresses but the first interface on the host (the 
+Note: the table lists the total number of network interfaces and IP addresses but the first interface on the host (the 
 primary interface) and the first IP of each interface (its primary IP) cannot be used for egress gateways.
 
 The primary interface cannot be used for egress gateways because it belongs to the VPC Subnet that is
@@ -288,7 +288,7 @@ four IP addresses and its final IP address.
 
 For example, if your chosen VPC Subnets are `100.64.0.0/22` and `100.64.4.0/22`, you could create the following
 `IPReservation` resource, which covers both VPC Subnets (if you're not familiar with CIDR notation, replacing the 
-`/22` of the origninal subnet with `/30` is a shorthand for "the first four IP addresses"):
+`/22` of the original subnet with `/30` is a shorthand for "the first four IP addresses"):
 
 ```yaml
 apiVersion: projectcalico.org/v3
