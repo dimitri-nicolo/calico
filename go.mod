@@ -29,7 +29,7 @@ require (
 	github.com/robfig/cron v1.2.0
 	github.com/sirupsen/logrus v1.7.0
 	github.com/tchap/go-patricia/v2 v2.3.1
-	github.com/tigera/api v0.0.0-20211019144037-b4b510b7dbb9
+	github.com/tigera/api v0.0.0-20211019171312-2dc19d1d38f8
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
 	go.uber.org/zap v1.13.0 // indirect
