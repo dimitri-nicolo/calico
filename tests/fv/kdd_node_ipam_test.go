@@ -154,22 +154,30 @@ var _ = Describe("kube-controllers FV tests (KDD mode)", func() {
 
 		It("should fail health check if apiserver is not running", func() {
 			By("Waiting for an initial readiness report")
-			Eventually(func() string {
+			Eventually(func() error {
 				cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
 				stdoutStderr, _ := cmd.CombinedOutput()
-
-				return string(stdoutStderr)
-			}, 20*time.Second, 500*time.Millisecond).ShouldNot(ContainSubstring("initialized to false"))
+				status := strings.Trim(string(stdoutStderr), "\n ")
+				if status == "" {
+					return fmt.Errorf("No status contents yet")
+				}
+				if status != "Ready" {
+					return fmt.Errorf("Status is not Ready: status=%s", status)
+				}
+				return nil
+			}, 20*time.Second, 500*time.Millisecond).ShouldNot(HaveOccurred())
 
 			By("Stopping the apiserver")
 			apiserver.Stop()
 
+			// Should now fail to either verify the data store, or fail to reach the API server (since they are one and the
+			// same for KDD mode).
 			By("Waiting for the readiness to change")
 			Eventually(func() string {
 				cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
 				stdoutStderr, _ := cmd.CombinedOutput()
 				return string(stdoutStderr)
-			}, 21*time.Second, 500*time.Millisecond).Should(ContainSubstring("Error reaching apiserver"))
+			}, 20*time.Second, 500*time.Millisecond).Should(ContainSubstring("Error"))
 		})
 	})
 
