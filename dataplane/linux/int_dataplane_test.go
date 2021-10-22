@@ -58,6 +58,8 @@ func (_ *mockCollector) SetConntrackInfoReader(collector.ConntrackInfoReader) {}
 
 func (_ *mockCollector) SetProcessInfoCache(collector.ProcessInfoCache) {}
 
+func (_ *mockCollector) SetDomainLookup(dlu collector.EgressDomainCache) {}
+
 var _ = Describe("Constructor test", func() {
 	var configParams *config.Config
 	var dpConfig intdataplane.Config

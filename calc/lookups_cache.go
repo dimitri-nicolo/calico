@@ -21,7 +21,7 @@ import (
 type LookupsCache struct {
 	polCache *PolicyLookupsCache
 	epCache  *EndpointLookupsCache
-	nsCache  *NetworksetLookupsCache
+	nsCache  *NetworkSetLookupsCache
 	svcCache *ServiceLookupsCache
 }
 
@@ -29,7 +29,7 @@ func NewLookupsCache() *LookupsCache {
 	lc := &LookupsCache{
 		polCache: NewPolicyLookupsCache(),
 		epCache:  NewEndpointLookupsCache(),
-		nsCache:  NewNetworksetLookupsCache(),
+		nsCache:  NewNetworkSetLookupsCache(),
 		svcCache: NewServiceLookupsCache(),
 	}
 	return lc
@@ -68,10 +68,16 @@ func (lc *LookupsCache) GetNode(addr [16]byte) (string, bool) {
 	return lc.epCache.GetNode(addr)
 }
 
-// GetNetworkset returns the networkset information for an address.
+// GetNetworkSet returns the networkset information for an address.
 // It returns the first networkset it finds that contains the given address.
-func (lc *LookupsCache) GetNetworkset(addr [16]byte) (*EndpointData, bool) {
-	return lc.nsCache.GetNetworkset(addr)
+func (lc *LookupsCache) GetNetworkSet(addr [16]byte) (*EndpointData, bool) {
+	return lc.nsCache.GetNetworkSetFromIP(addr)
+}
+
+// GetNetworkSetFromEgressDomain returns the networkset information for an egress domain.
+// It returns the first networkset it finds that contains the given domain.
+func (lc *LookupsCache) GetNetworkSetFromEgressDomain(domain string) (*EndpointData, bool) {
+	return lc.nsCache.GetNetworkSetFromEgressDomain(domain)
 }
 
 // GetRuleIDFromNFLOGPrefix returns the RuleID associated with the supplied NFLOG prefix.

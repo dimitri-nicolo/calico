@@ -623,7 +623,24 @@ var netSet1WithBEqB = NetworkSet{
 		"b":   "b",
 	},
 }
-
+var netSet1WithEgressDomains = NetworkSet{
+	Nets: []net.IPNet{
+		mustParseNet("12.0.0.0/24"),
+		mustParseNet("12.0.0.0/24"), // A dupe, why not!
+		mustParseNet("12.1.0.0/24"),
+		mustParseNet("10.0.0.1/32"), // Overlaps with host endpoint.
+		mustParseNet("feed:beef::/32"),
+		mustParseNet("feed:beef:0::/32"), // Non-canonical dupe.
+	},
+	AllowedEgressDomains: []string{
+		"google.com",
+		"facebook.com",
+		"tigera.io",
+	},
+	Labels: map[string]string{
+		"a": "b",
+	},
+}
 var netSet2Key = NetworkSetKey{Name: "netset-2"}
 var netSet2 = NetworkSet{
 	Nets: []net.IPNet{
@@ -632,6 +649,20 @@ var netSet2 = NetworkSet{
 	},
 	Labels: map[string]string{
 		"a": "b",
+	},
+}
+var netSet2WithEgressDomains = NetworkSet{
+	Nets: []net.IPNet{
+		mustParseNet("12.0.0.0/24"), // Overlaps with netset-1
+		mustParseNet("13.1.0.0/24"),
+	},
+	Labels: map[string]string{
+		"a": "b",
+	},
+	AllowedEgressDomains: []string{
+		"google.com",
+		"facebook.com",
+		"projectcalico.org",
 	},
 }
 

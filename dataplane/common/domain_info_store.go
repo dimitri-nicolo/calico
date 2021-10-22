@@ -31,6 +31,7 @@ import (
 
 	"github.com/projectcalico/felix/collector"
 	fc "github.com/projectcalico/felix/config"
+	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
@@ -51,9 +52,16 @@ type nameData struct {
 	// Known values for this name.  Map keys are the actual values (i.e. IPs or lowercase CNAME names),
 	// and valueData is as above.
 	values map[string]*valueData
-	// Other names that we should notify a "change of information" for, and whose cached IP list
+	// Names that we should notify a "change of information" for, and whose cached IP list
 	// should be invalidated, when the info for _this_ name changes.
 	namesToNotify set.Set
+}
+
+type ipData struct {
+	// The set of nameData entries that directly contain the IP.  We don't need to work our way backwards through the
+	// chain because it is actually the namesToNotify that we are interested in which is propagated all the way
+	// along the CNAME->A chain.
+	nameDatas set.Set
 }
 
 type dnsExchangeKey struct {
@@ -80,8 +88,11 @@ type DomainInfoStore struct {
 
 	// Stores for the information that we glean from DNS responses.  Note: IPs are held here as
 	// strings, and also passed to the ipsets manager as strings.
-	mutex    sync.Mutex
+	mutex    sync.RWMutex
 	mappings map[string]*nameData
+
+	// Store for reverse DNS lookups.
+	reverse map[[16]byte]*ipData
 
 	// Wildcard domain names that consumers are interested in (i.e. have called GetDomainIPs
 	// for).
@@ -167,6 +178,7 @@ func newDomainInfoStoreWithShims(
 	s := &DomainInfoStore{
 		domainInfoChanges:    domainInfoChanges,
 		mappings:             make(map[string]*nameData),
+		reverse:              make(map[[16]byte]*ipData),
 		wildcards:            make(map[string]*regexp.Regexp),
 		resultsCache:         make(map[string][]string),
 		mappingExpiryChannel: make(chan *domainMappingExpired),
@@ -190,6 +202,11 @@ func newDomainInfoStoreWithShims(
 
 func (s *DomainInfoStore) Start() {
 	log.Info("Starting domain info store")
+
+	// If there is a flow collector, register ourselves as a domain lookup cache.
+	if s.collector != nil {
+		s.collector.SetDomainLookup(s)
+	}
 
 	// Use a buffered channel here with reasonable capacity, so that the nfnetlink capture
 	// thread can handle a burst of DNS response packets without becoming blocked by the reading
@@ -461,6 +478,9 @@ func (s *DomainInfoStore) processMappingExpiry(name, value string) {
 		if valueData := nameData.values[value]; (valueData != nil) && s.expiryTimePassed(valueData.expiryTime) {
 			log.Debugf("Mapping expiry for %v -> %v", name, value)
 			delete(nameData.values, value)
+			if !valueData.isName {
+				s.removeIPMapping(nameData, value)
+			}
 			s.gcTrigger = true
 			s.signalDomainInfoChange(name, "mapping expired")
 		} else if valueData != nil {
@@ -477,14 +497,53 @@ func (s *DomainInfoStore) expireAllMappings() {
 	log.Info("Expire all mappings")
 
 	// For each mapping...
-	for name := range s.mappings {
-		// ...discard all of its values.
-		s.mappings[name].values = make(map[string]*valueData)
+	for name, nameData := range s.mappings {
+		// ...discard all of its values, being careful to release any reverse IP mappings.
+		for value, valueData := range nameData.values {
+			if !valueData.isName {
+				s.removeIPMapping(nameData, value)
+			}
+		}
+		nameData.values = make(map[string]*valueData)
 		s.signalDomainInfoChange(name, "epoch change")
 	}
 
 	// Trigger a GC to reclaim the memory that we can.
 	s.gcTrigger = true
+}
+
+// Add a mapping between an IP and the nameData that directly contains the IP.
+func (s *DomainInfoStore) addIPMapping(nameData *nameData, ipStr string) {
+	ipBytes, ok := ip.ParseIPAs16Byte(ipStr)
+	if !ok {
+		return
+	}
+
+	ipd := s.reverse[ipBytes]
+	if ipd == nil {
+		ipd = &ipData{
+			nameDatas: set.New(),
+		}
+		s.reverse[ipBytes] = ipd
+	}
+	ipd.nameDatas.Add(nameData)
+}
+
+// Remove a mapping between an IP and the nameData that directly contained the IP.
+func (s *DomainInfoStore) removeIPMapping(nameData *nameData, ipStr string) {
+	ipBytes, ok := ip.ParseIPAs16Byte(ipStr)
+	if !ok {
+		return
+	}
+
+	if ipd := s.reverse[ipBytes]; ipd != nil {
+		ipd.nameDatas.Discard(nameData)
+		if ipd.nameDatas.Len() == 0 {
+			delete(s.reverse, ipBytes)
+		}
+	} else {
+		log.Warningf("IP mapping is not cached %v", ipBytes)
+	}
 }
 
 func (s *DomainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, section string) {
@@ -596,15 +655,20 @@ func (s *DomainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 			isName:     isName,
 		}
 
-		// If value is another name, for which we don't yet have any information, create a
-		// mapping entry for it so we can record that it is a descendant of the name in
-		// hand.  Then, when we get information for the descendant name, we can correctly
-		// signal changes for the name in hand and any of its ancestors.
-		if isName && s.mappings[value] == nil {
-			s.mappings[value] = &nameData{
-				values:        make(map[string]*valueData),
-				namesToNotify: set.New(),
+		if isName {
+			// Value is another name. If we don't yet have any information, create a
+			// mapping entry for it so we can record that it is a descendant of the name in
+			// hand.  Then, when we get information for the descendant name, we can correctly
+			// signal changes for the name in hand and any of its ancestors.
+			if s.mappings[value] == nil {
+				s.mappings[value] = &nameData{
+					values:        make(map[string]*valueData),
+					namesToNotify: set.New(),
+				}
 			}
+		} else {
+			// Value is an IP. Add to our IP mapping.
+			s.addIPMapping(s.mappings[name], value)
 		}
 
 		// Now signal that the available domain info for this name has changed.  It's
@@ -703,6 +767,35 @@ func (s *DomainInfoStore) GetDomainIPs(domain string) []string {
 	return ips
 }
 
+// GetWatchedDomainForIP returns an (arbitrary) watched domain associated with an IP. The "watch" refers to an explicit
+// request to GetDomainIPs.
+//
+// The signature of this method is somewhat specific to how the collector stores connection data and is used to
+// minimize allocations during connection processing.
+func (s *DomainInfoStore) GetWatchedDomainForIP(ip [16]byte) string {
+	// We only need the read lock to access this data.
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	var name string
+	if ipData := s.reverse[ip]; ipData != nil {
+		ipData.nameDatas.Iter(func(item interface{}) error {
+			// Just return the first domain name we find. This should cover the most general case where the user adds
+			// a single entry for a particular domain. Return the first "name to notify" that we find.
+			nd := item.(*nameData)
+			nd.namesToNotify.Iter(func(item2 interface{}) error {
+				// Just use the first "name to notify".
+				name = item2.(string)
+				return set.StopIteration
+			})
+			if name != "" {
+				return set.StopIteration
+			}
+			return nil
+		})
+	}
+	return name
+}
+
 func isWildcard(domain string) bool {
 	return strings.Contains(domain, "*")
 }
@@ -757,7 +850,7 @@ func (s *DomainInfoStore) collectGarbage() (numDeleted int) {
 			if len(nameData.values) > 0 {
 				namesToKeep.Add(name)
 			}
-			// A mapping X is also still useful it its name is the RHS of another
+			// A mapping X is also still useful if its name is the RHS of another
 			// mapping Y, even if we don't currently have any values for X, because
 			// there could be a GetDomainIPs(Y) call, and later a new value for X, and
 			// in that case we need to be able to signal that the information for Y has
@@ -772,7 +865,8 @@ func (s *DomainInfoStore) collectGarbage() (numDeleted int) {
 				}
 			}
 		}
-		// Delete the mappings that are now useless.
+		// Delete the mappings that are now useless.  Since this mapping contains no values, there can be no
+		// corresponding reverse mappings to tidy up.
 		for name := range s.mappings {
 			if !namesToKeep.Contains(name) {
 				log.WithField("name", name).Debug("Delete useless mapping")

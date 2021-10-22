@@ -97,7 +97,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log with staged policy
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(AggrNone))
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(AggrNone))
 		opts.ExtraEnvVars["FELIX_FLOWLOGSCOLLECTORDEBUGTRACE"] = "true"
-		opts.EnableFlowLogsFile("INCLUDESERVICE", "true")
+		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEENABLED"] = "true"
+		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDESERVICE"] = "true"
 
 		// Start felix instances.
 		felixes, client = infrastructure.StartNNodeTopology(2, opts, infra)

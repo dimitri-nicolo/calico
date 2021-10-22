@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"strings"
 	"sync"
 	"time"
 
@@ -80,23 +79,6 @@ func DefaultTopologyOptions() TopologyOptions {
 		IPIPEnabled:       true,
 		IPIPRoutesEnabled: true,
 		UseIPPools:        true,
-	}
-}
-
-func (opts TopologyOptions) EnableFlowLogsFile(settings ...string) {
-
-	// Enable CloudWatch logs.
-	opts.ExtraEnvVars["FELIX_FLOWLOGSFILEENABLED"] = "true"
-
-	// Set particular settings for the calling test.
-	param := ""
-	for _, arg := range settings {
-		if param == "" {
-			param = "FELIX_FLOWLOGSFILE" + strings.ToUpper(arg)
-		} else {
-			opts.ExtraEnvVars[param] = arg
-			param = ""
-		}
 	}
 }
 

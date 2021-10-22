@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 package calc_test
 
@@ -14,13 +14,13 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
-var _ = Describe("NetworksetLookupsCache tests", func() {
-	ec := NewNetworksetLookupsCache()
+var _ = Describe("NetworkSetLookupsCache IP tests", func() {
+	ec := NewNetworkSetLookupsCache()
 
 	DescribeTable(
 		"Check adding/deleting networkset modifies the cache",
 		func(key model.NetworkSetKey, netset *model.NetworkSet, ipAddr net.IP) {
-			c := "NeworkSet(" + key.Name + ")"
+			c := "NetworkSet(" + key.Name + ")"
 			update := api.Update{
 				KVPair: model.KVPair{
 					Key:   key,
@@ -31,7 +31,7 @@ var _ = Describe("NetworksetLookupsCache tests", func() {
 			var addrB [16]byte
 			copy(addrB[:], ipAddr.To16()[:16])
 			ec.OnUpdate(update)
-			ed, ok := ec.GetNetworkset(addrB)
+			ed, ok := ec.GetNetworkSetFromIP(addrB)
 			Expect(ok).To(BeTrue(), c)
 			Expect(ed.Key).To(Equal(key))
 
@@ -42,14 +42,14 @@ var _ = Describe("NetworksetLookupsCache tests", func() {
 				UpdateType: api.UpdateTypeKVDeleted,
 			}
 			ec.OnUpdate(update)
-			_, ok = ec.GetNetworkset(addrB)
+			_, ok = ec.GetNetworkSetFromIP(addrB)
 			Expect(ok).To(BeFalse(), c)
 		},
 		Entry("networkset with IPv4", netSet1Key, &netSet1, localWlEp1.IPv4Nets[0].IP),
 		Entry("networkset with IPv6", netSet1Key, &netSet1, mustParseNet("feed:beef::1/128").IP),
 	)
 
-	It("should process networksets with multiple CIDRs", func() {
+	It("should process networkSets with multiple CIDRs", func() {
 		By("adding a networkset with multiple CIDRs")
 		update := api.Update{
 			KVPair: model.KVPair{
@@ -64,11 +64,11 @@ var _ = Describe("NetworksetLookupsCache tests", func() {
 		ec.OnUpdate(update)
 
 		verifyIpToNetworkset := func(key model.Key, ipAddr net.IP, exists bool, labels map[string]string) {
-			name := "NeworkSet(" + key.(model.NetworkSetKey).Name + ")"
+			name := "NetworkSet(" + key.(model.NetworkSetKey).Name + ")"
 			var addrB [16]byte
 			copy(addrB[:], ipAddr.To16()[:16])
 
-			ed, ok := ec.GetNetworkset(addrB)
+			ed, ok := ec.GetNetworkSetFromIP(addrB)
 			if exists {
 				Expect(ok).To(BeTrue(), name+"\n"+ec.DumpNetworksets())
 				Expect(ed.Key).To(Equal(key), ec.DumpNetworksets())
@@ -188,10 +188,10 @@ var _ = Describe("NetworksetLookupsCache tests", func() {
 		}
 		ec.OnUpdate(update)
 		verifyIpInCidrUsingLpm := func(key model.Key, ipAddr net.IP, exists bool) {
-			name := "NeworkSet(" + key.(model.NetworkSetKey).Name + ")"
+			name := "NetworkSet(" + key.(model.NetworkSetKey).Name + ")"
 			var addrB [16]byte
 			copy(addrB[:], ipAddr.To16()[:16])
-			ed, ok := ec.GetNetworkset(addrB)
+			ed, ok := ec.GetNetworkSetFromIP(addrB)
 			if exists {
 				Expect(ok).To(BeTrue(), name+"\n"+ec.DumpNetworksets())
 				Expect(ed.Key).To(Equal(key))
@@ -204,4 +204,145 @@ var _ = Describe("NetworksetLookupsCache tests", func() {
 		verifyIpInCidrUsingLpm(netSet1Key, netset3Ip1a, true)
 		verifyIpInCidrUsingLpm(netSet3Key, netset3Ip1b, true)
 	})
+})
+
+var _ = Describe("NetworkSetLookupsCache Egress domain tests", func() {
+	ec := NewNetworkSetLookupsCache()
+
+	DescribeTable(
+		"Check adding/deleting networkset modifies the cache",
+		func(netset1, netset2 *model.NetworkSet, domain1, domain2 string, before1, before2, after1, after2 bool) {
+			update := api.Update{
+				KVPair: model.KVPair{
+					Key:   netSet1Key,
+					Value: netset1,
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			}
+			ec.OnUpdate(update)
+			ed, ok := ec.GetNetworkSetFromEgressDomain(domain1)
+			Expect(ok).To(Equal(before1))
+			if ok {
+				Expect(ed.Key).To(Equal(netSet1Key))
+			}
+			ed, ok = ec.GetNetworkSetFromEgressDomain(domain2)
+			Expect(ok).To(Equal(before2))
+			if ok {
+				Expect(ed.Key).To(Equal(netSet1Key))
+			}
+
+			update = api.Update{
+				KVPair: model.KVPair{
+					Key:   netSet1Key,
+					Value: netset2,
+				},
+				UpdateType: api.UpdateTypeKVUpdated,
+			}
+			ec.OnUpdate(update)
+			ed, ok = ec.GetNetworkSetFromEgressDomain(domain1)
+			Expect(ok).To(Equal(after1))
+			if ok {
+				Expect(ed.Key).To(Equal(netSet1Key))
+			}
+			ed, ok = ec.GetNetworkSetFromEgressDomain(domain2)
+			Expect(ok).To(Equal(after2))
+			if ok {
+				Expect(ed.Key).To(Equal(netSet1Key))
+			}
+
+			update = api.Update{
+				KVPair: model.KVPair{
+					Key: netSet1Key,
+				},
+				UpdateType: api.UpdateTypeKVDeleted,
+			}
+			ec.OnUpdate(update)
+			ed, ok = ec.GetNetworkSetFromEgressDomain(domain1)
+			Expect(ok).To(BeFalse())
+			ed, ok = ec.GetNetworkSetFromEgressDomain(domain2)
+			Expect(ok).To(BeFalse())
+		},
+		Entry("none -> tigera+google", &netSet1, &netSet1WithEgressDomains, "tigera.io", "google.com", false, false, true, true),
+		Entry("google -> none", &netSet2WithEgressDomains, &netSet1, "tigera.io", "google.com", false, true, false, false),
+		Entry("tigera+google -> google", &netSet1WithEgressDomains, &netSet2WithEgressDomains, "tigera.io", "google.com", true, true, false, true),
+	)
+
+	DescribeTable(
+		"Check adding/deleting multiple networksets with the same domains modifies the cache",
+		func(netset1, netset2 *model.NetworkSet, domain1, domain2, domain12 string) {
+			// Add networkset 1. Check domain1 and domain12 both return netset1.
+			update := api.Update{
+				KVPair: model.KVPair{
+					Key:   netSet1Key,
+					Value: netset1,
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			}
+			ec.OnUpdate(update)
+			ed, ok := ec.GetNetworkSetFromEgressDomain(domain1)
+			Expect(ok).To(BeTrue())
+			Expect(ed.Key).To(Equal(netSet1Key))
+			ed, ok = ec.GetNetworkSetFromEgressDomain(domain2)
+			Expect(ok).To(BeFalse())
+			ed, ok = ec.GetNetworkSetFromEgressDomain(domain12)
+			Expect(ok).To(BeTrue())
+			Expect(ed.Key).To(Equal(netSet1Key))
+
+			// Add networkset 2. Check domain1 still returns netset1, domain2 returns netset2 and domain12 returns
+			// either networkset.
+			update = api.Update{
+				KVPair: model.KVPair{
+					Key:   netSet2Key,
+					Value: netset2,
+				},
+				UpdateType: api.UpdateTypeKVNew,
+			}
+			ec.OnUpdate(update)
+			ed, ok = ec.GetNetworkSetFromEgressDomain(domain1)
+			Expect(ok).To(BeTrue())
+			Expect(ed.Key).To(Equal(netSet1Key))
+			ed, ok = ec.GetNetworkSetFromEgressDomain(domain2)
+			Expect(ok).To(BeTrue())
+			Expect(ed.Key).To(Equal(netSet2Key))
+			ed, ok = ec.GetNetworkSetFromEgressDomain(domain12)
+			Expect(ok).To(BeTrue())
+			Expect(ed.Key).To(BeElementOf(netSet1Key, netSet2Key))
+
+			// Delete networkset 1.  Check domain1 is not present and check domain2 and domain12 both return netset2.
+			update = api.Update{
+				KVPair: model.KVPair{
+					Key: netSet1Key,
+				},
+				UpdateType: api.UpdateTypeKVDeleted,
+			}
+			ec.OnUpdate(update)
+			ed, ok = ec.GetNetworkSetFromEgressDomain(domain1)
+			Expect(ok).To(BeFalse())
+			ed, ok = ec.GetNetworkSetFromEgressDomain(domain2)
+			Expect(ok).To(BeTrue())
+			Expect(ed.Key).To(Equal(netSet2Key))
+			ed, ok = ec.GetNetworkSetFromEgressDomain(domain12)
+			Expect(ok).To(BeTrue())
+			Expect(ed.Key).To(Equal(netSet2Key))
+
+			// Delete networkset 1.  There should be no domain name mappings now.
+			update = api.Update{
+				KVPair: model.KVPair{
+					Key: netSet2Key,
+				},
+				UpdateType: api.UpdateTypeKVDeleted,
+			}
+			ec.OnUpdate(update)
+			ed, ok = ec.GetNetworkSetFromEgressDomain(domain1)
+			Expect(ok).To(BeFalse())
+			ed, ok = ec.GetNetworkSetFromEgressDomain(domain2)
+			Expect(ok).To(BeFalse())
+			ed, ok = ec.GetNetworkSetFromEgressDomain(domain12)
+			Expect(ok).To(BeFalse())
+		},
+		Entry("tigera+google and projectcalico+google",
+			&netSet1WithEgressDomains, &netSet2WithEgressDomains,
+			"tigera.io", "projectcalico.org", "google.com",
+		),
+	)
 })

@@ -375,3 +375,12 @@ func IPNetsEqual(net1, net2 *net.IPNet) bool {
 	}
 	return CIDRFromIPNet(net1) == CIDRFromIPNet(net2)
 }
+
+func ParseIPAs16Byte(ip string) (ipb [16]byte, ok bool) {
+	ipn := net.ParseIP(ip)
+	if ipn != nil {
+		ok = true
+		copy(ipb[:], ipn.To16())
+	}
+	return
+}
