@@ -59,7 +59,7 @@ spec:
 | description | Human-readable description of the template. | string | yes |
 | summary | Template for the description field in generated events. See the summary section below for more details. `description` is used if this is omitted. | string | no |
 | severity | Severity of the alert for display in Manager. | int | yes | 1 - 100 |
-| dataSet | Which data set to execute the alert against. | string | yes | audit, dns, flows |
+| dataSet | Which data set to execute the alert against. | string | yes | audit, dns, flows, l7 |
 | period | How often the query is run. | duration | no | 1h 2m 3s | 5m |
 | lookback | How much data to gather at once. Must exceed audit log flush interval, `dnsLogsFlushInterval`, or `flowLogsFlushInterval` as appropriate. | duration | no | 1h 2m 3s | 10m |
 | query | Which data to include from the source data set. Written in a domain-specific query language. See the query section below. | string | no |
@@ -381,8 +381,37 @@ See [Flow logs] for description of fields.
 | original_source_ips | IP, CIDR
 | num_original_source_ips | int | positive
 
+#### L7 logs
+
+See [L7 logs] for description of fields.
+
+| Key | Type | Acceptable Values | Example |
+|---|---|---|---|
+| start_time | date
+| end_time | date
+| bytes_in | int | positive
+| bytes_out | int | positive
+| duration_mean | int | positive
+| duration_max | int | positive
+| count | int | positive
+| src_name_aggr | domain
+| src_namespace | domain
+| src_type | string | wep, hep, ns, net
+| dest_name_aggr | domain
+| dest_namespace | domain
+| dest_type | string | wep, hep, ns, net
+| dest_service_name | domain
+| dest_service_namespace | domain
+| dest_service_port | int
+| url | any
+| response_code | any
+| method | any
+| user_agent | any
+| type | any
+
 [Audit logs]: ../../visibility/elastic/ee-audit
 [audit.k8s.io group v1]: https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/apiserver/pkg/apis/audit/v1/types.go
 [DNS logs]: ../../visibility/elastic/dns
 [Flow logs]: /visibility/elastic/flow/datatypes
+[L7 logs]: /visibility/elastic/l7/datatypes
 [duration]: https://golang.org/pkg/time/#ParseDuration
