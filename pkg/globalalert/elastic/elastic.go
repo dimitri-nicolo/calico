@@ -37,6 +37,7 @@ const (
 	AuditIndexPattern        = "tigera_secure_ee_audit_*.%s.*"
 	FlowLogIndexPattern      = "tigera_secure_ee_flows.%s.*"
 	DNSLogIndexPattern       = "tigera_secure_ee_dns.%s.*"
+	L7LogIndexPattern       = "tigera_secure_ee_l7.%s.*"
 	CompositeAggregationName = "composite_aggs"
 )
 
@@ -116,6 +117,8 @@ func (e *service) buildIndexName(alert *v3.GlobalAlert) {
 		e.sourceIndexName = fmt.Sprintf(DNSLogIndexPattern, e.clusterName)
 	case v3.GlobalAlertDataSetFlows:
 		e.sourceIndexName = fmt.Sprintf(FlowLogIndexPattern, e.clusterName)
+	case v3.GlobalAlertDataSetL7:
+		e.sourceIndexName = fmt.Sprintf(L7LogIndexPattern, e.clusterName)
 	default:
 		log.Errorf("unknown dataset %s in GlobalAlert %s.", alert.Spec.DataSet, alert.Name)
 	}
@@ -220,6 +223,13 @@ func (e *service) convertAlertSpecQueryToEsQuery(alert *v3.GlobalAlert) (JsonObj
 			return nil, err
 		}
 		converter = NewFlowsConverter()
+	case v3.GlobalAlertDataSetL7:
+		err := query.Validate(q, query.IsValidL7LogsAtom)
+		if err != nil {
+			log.WithError(err).Errorf("failed to validate spec.query in %s", alert.Name)
+			return nil, err
+		}
+		converter = NewL7Converter()
 	default:
 		return nil, fmt.Errorf("unknown dataset: %s", alert.Spec.DataSet)
 	}
@@ -248,7 +258,7 @@ func (e *service) buildMetricAggregation(field string, metric string) JsonObject
 func (e *service) buildLookBackRange(alert *v3.GlobalAlert) (JsonObject, error) {
 	var timeField string
 	switch alert.Spec.DataSet {
-	case v3.GlobalAlertDataSetDNS, v3.GlobalAlertDataSetFlows:
+	case v3.GlobalAlertDataSetDNS, v3.GlobalAlertDataSetFlows, v3.GlobalAlertDataSetL7:
 		timeField = "start_time"
 	case v3.GlobalAlertDataSetAudit:
 		timeField = "requestReceivedTimestamp"
