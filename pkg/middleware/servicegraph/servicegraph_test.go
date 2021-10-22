@@ -268,7 +268,7 @@ var _ = Describe("Service graph data tests", func() {
 			// Track the last handled response data and the response filename. We use this to write out the expected
 			// file in the event of an error.  It makes dev cycles easier.
 			expectDataFilename = "testdata/responses/test-" + resp + ".json"
-			actualDataFilename = "testdata/responses/test-" + resp + ".json"
+			actualDataFilename = "testdata/responses/test-" + resp + ".actual.json"
 
 			// Parse the expected response.
 			content, err := ioutil.ReadFile(expectDataFilename)

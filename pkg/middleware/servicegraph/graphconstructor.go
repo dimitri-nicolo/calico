@@ -199,13 +199,20 @@ func (s *serviceGraphConstructionData) trackFlow(flow *TimeSeriesFlow) error {
 	srcGp, srcEpHierarchy, _ := s.trackNodes(flow.Edge.Source, nil, egress)
 	dstGp, dstEpHierarchy, servicePortDstHierarchy := s.trackNodes(flow.Edge.Dest, flow.Edge.ServicePort, ingress)
 
-	// Include any aggregated port proto info in the destination endpoint nodes.
-	if flow.AggregatedProtoPorts != nil {
-		for _, t := range dstEpHierarchy {
-			if IsEndpointType(t.graphNode.Type) {
-				t.graphNode.IncludeAggregatedProtoPorts(flow.AggregatedProtoPorts)
-			}
+	// Determine the aggregated ports for the destination. We'll add this to the destination node and use it in the
+	// edge data.
+	var aggProtoPort *v1.AggregatedProtoPorts
+	if flow.Edge.Dest.PortNum != 0 {
+		aggProtoPort = &v1.AggregatedProtoPorts{
+			ProtoPorts: []v1.AggregatedPorts{{
+				Protocol: flow.Edge.Dest.Protocol,
+				PortRanges: []v1.PortRange{{
+					MinPort: flow.Edge.Dest.PortNum, MaxPort: flow.Edge.Dest.PortNum,
+				}},
+			}},
 		}
+	} else {
+		aggProtoPort = flow.AggregatedProtoPorts
 	}
 
 	// If there are any service ports in this flow, include these in the nodes from the service and all its parents.
@@ -225,6 +232,16 @@ func (s *serviceGraphConstructionData) trackFlow(flow *TimeSeriesFlow) error {
 			// hierarchy and apply the service settings to the full hierarchy.
 			for _, t := range dstEpHierarchy {
 				t.graphNode.IncludeServicePort(*flow.Edge.ServicePort)
+			}
+		}
+	}
+
+	// Include the aggregated port proto info in the destination endpoint nodes. Apply to all endpoint type nodes in
+	// the hierarchy.
+	if aggProtoPort != nil {
+		for _, t := range dstEpHierarchy {
+			if IsEndpointType(t.graphNode.Type) {
+				t.graphNode.IncludeAggregatedProtoPorts(aggProtoPort)
 			}
 		}
 	}
@@ -262,22 +279,6 @@ func (s *serviceGraphConstructionData) trackFlow(flow *TimeSeriesFlow) error {
 	var servicePortDst *trackedNode
 	if servicePortDstHierarchy != nil {
 		servicePortDst = servicePortDstHierarchy[len(servicePortDstHierarchy)-1]
-	}
-
-	// For a graph edge we always aggregate the port and protocols together. Determine the set of aggregated flows for
-	// the flow.  A flow will either have a specific endpoint port and protocol or will be an aggregated set.
-	var aggProtoPort *v1.AggregatedProtoPorts
-	if flow.Edge.Dest.PortNum != 0 {
-		aggProtoPort = &v1.AggregatedProtoPorts{
-			ProtoPorts: []v1.AggregatedPorts{{
-				Protocol: flow.Edge.Dest.Protocol,
-				PortRanges: []v1.PortRange{{
-					MinPort: flow.Edge.Dest.PortNum, MaxPort: flow.Edge.Dest.PortNum,
-				}},
-			}},
-		}
-	} else {
-		aggProtoPort = flow.AggregatedProtoPorts
 	}
 
 	// Stitch together the source and dest nodes going via the service if present.
