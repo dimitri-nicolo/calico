@@ -16,10 +16,11 @@ package v1
 //
 // A nil value means the selector is not valid. An empty value indicate select all.
 type GraphSelectors struct {
-	L3Flows *string `json:"l3_flows,omitempty"`
-	L7Flows *string `json:"l7_flows,omitempty"`
-	DNSLogs *string `json:"dns_logs,omitempty"`
-	Alerts  *string `json:"alerts,omitempty"`
+	L3Flows       *string `json:"l3_flows,omitempty"`
+	L7Flows       *string `json:"l7_flows,omitempty"`
+	DNSLogs       *string `json:"dns_logs,omitempty"`
+	Alerts        *string `json:"alerts,omitempty"`
+	PacketCapture *string `json:"packet_capture,omitempty"`
 }
 
 type GraphSelectorOperator string

@@ -69,7 +69,8 @@
       "selectors": {
         "l3_flows": "dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\" OR source_namespace = \"kube-system\"",
         "l7_flows": "dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\" OR src_namespace = \"kube-system\"",
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" OR client_namespace = \"kube-system\""
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" OR client_namespace = \"kube-system\"",
+        "packet_capture": "all()"
       }
     },
     {
@@ -383,7 +384,8 @@
       "selectors": {
         "l3_flows": "dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\" OR source_namespace = \"tigera-elasticsearch\"",
         "l7_flows": "dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\" OR src_namespace = \"tigera-elasticsearch\"",
-        "dns_logs": "\"servers.namespace\" = \"tigera-elasticsearch\" OR client_namespace = \"tigera-elasticsearch\""
+        "dns_logs": "\"servers.namespace\" = \"tigera-elasticsearch\" OR client_namespace = \"tigera-elasticsearch\"",
+        "packet_capture": "all()"
       }
     },
     {
@@ -502,7 +504,8 @@
         "l3_flows": "dest_namespace = \"tigera-fluentd\" OR dest_service_namespace = \"tigera-fluentd\" OR source_namespace = \"tigera-fluentd\"",
         "l7_flows": "dest_namespace = \"tigera-fluentd\" OR dest_service_namespace = \"tigera-fluentd\" OR src_namespace = \"tigera-fluentd\"",
         "dns_logs": "\"servers.namespace\" = \"tigera-fluentd\" OR client_namespace = \"tigera-fluentd\"",
-        "alerts": "_id = \"fakeid\""
+        "alerts": "_id = \"fakeid\"",
+        "packet_capture": "all()"
       },
       "events": [
         {
@@ -639,7 +642,8 @@
       "selectors": {
         "l3_flows": "dest_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-manager\" OR source_namespace = \"tigera-manager\"",
         "l7_flows": "dest_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-manager\" OR src_namespace = \"tigera-manager\"",
-        "dns_logs": "\"servers.namespace\" = \"tigera-manager\" OR client_namespace = \"tigera-manager\""
+        "dns_logs": "\"servers.namespace\" = \"tigera-manager\" OR client_namespace = \"tigera-manager\"",
+        "packet_capture": "all()"
       }
     }
   ],

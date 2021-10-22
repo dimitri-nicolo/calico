@@ -69,7 +69,8 @@
       "selectors": {
         "l3_flows": "dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\" OR source_namespace = \"kube-system\"",
         "l7_flows": "dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\" OR src_namespace = \"kube-system\"",
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" OR client_namespace = \"kube-system\""
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" OR client_namespace = \"kube-system\"",
+        "packet_capture": "all()"
       }
     },
     {
@@ -499,7 +500,8 @@
       "selectors": {
         "l3_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR source_namespace = \"storefront\"",
         "l7_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.namespace\" = \"storefront\" OR client_namespace = \"storefront\""
+        "dns_logs": "\"servers.namespace\" = \"storefront\" OR client_namespace = \"storefront\"",
+        "packet_capture": "all()"
       }
     },
     {

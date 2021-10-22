@@ -13,6 +13,9 @@ import (
 //
 // See v1.GraphView for details on aggregation, and which nodes will be included in the graph.
 
+// K8SAllSelector is used for a namespace service graph node to select all endpoints within that namespace
+var K8SAllSelector = "all()"
+
 // GetServiceGraphResponse calculates the service graph from the flow data and parsed view ids.
 func GetServiceGraphResponse(sgd *ServiceGraphData, v *ParsedView) (*v1.ServiceGraphResponse, error) {
 
@@ -1086,6 +1089,11 @@ func (s *serviceGraphConstructionData) overlaySelectors() {
 	var viewEventsSelector *GraphSelectorConstructor
 	for _, node := range s.nodesMap {
 		node.graphNode.Selectors = node.selectors.ToNodeSelectors().ToGraphSelectors()
+
+		switch node.graphNode.Type {
+		case v1.GraphNodeTypeNamespace:
+			node.graphNode.Selectors.PacketCapture = &K8SAllSelector
+		}
 
 		// Alerts selection is handled slightly differently for the view - we just combine all of the selectors.
 		if node.selectors.Source.Alerts != nil {

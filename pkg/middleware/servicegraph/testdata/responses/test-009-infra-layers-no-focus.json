@@ -851,7 +851,8 @@
       "selectors": {
         "l3_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR source_namespace = \"storefront\"",
         "l7_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.namespace\" = \"storefront\" OR client_namespace = \"storefront\""
+        "dns_logs": "\"servers.namespace\" = \"storefront\" OR client_namespace = \"storefront\"",
+        "packet_capture": "all()"
       }
     },
     {

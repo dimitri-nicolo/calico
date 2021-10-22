@@ -131,7 +131,8 @@
       "selectors": {
         "l3_flows": "dest_namespace = \"tigera-prometheus\" OR dest_service_namespace = \"tigera-prometheus\" OR source_namespace = \"tigera-prometheus\"",
         "l7_flows": "dest_namespace = \"tigera-prometheus\" OR dest_service_namespace = \"tigera-prometheus\" OR src_namespace = \"tigera-prometheus\"",
-        "dns_logs": "\"servers.namespace\" = \"tigera-prometheus\" OR client_namespace = \"tigera-prometheus\""
+        "dns_logs": "\"servers.namespace\" = \"tigera-prometheus\" OR client_namespace = \"tigera-prometheus\"",
+        "packet_capture": "all()"
       }
     },
     {
@@ -219,7 +220,8 @@
       "selectors": {
         "l3_flows": "dest_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-manager\" OR source_namespace = \"tigera-manager\"",
         "l7_flows": "dest_namespace = \"tigera-manager\" OR dest_service_namespace = \"tigera-manager\" OR src_namespace = \"tigera-manager\"",
-        "dns_logs": "\"servers.namespace\" = \"tigera-manager\" OR client_namespace = \"tigera-manager\""
+        "dns_logs": "\"servers.namespace\" = \"tigera-manager\" OR client_namespace = \"tigera-manager\"",
+        "packet_capture": "all()"
       }
     },
     {
@@ -288,7 +290,8 @@
       "selectors": {
         "l3_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR source_namespace = \"default\"",
         "l7_flows": "dest_namespace = \"default\" OR dest_service_namespace = \"default\" OR src_namespace = \"default\"",
-        "dns_logs": "\"servers.namespace\" = \"default\" OR client_namespace = \"default\""
+        "dns_logs": "\"servers.namespace\" = \"default\" OR client_namespace = \"default\"",
+        "packet_capture": "all()"
       }
     },
     {
@@ -579,7 +582,8 @@
       "selectors": {
         "l3_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR source_namespace = \"storefront\"",
         "l7_flows": "dest_namespace = \"storefront\" OR dest_service_namespace = \"storefront\" OR src_namespace = \"storefront\"",
-        "dns_logs": "\"servers.namespace\" = \"storefront\" OR client_namespace = \"storefront\""
+        "dns_logs": "\"servers.namespace\" = \"storefront\" OR client_namespace = \"storefront\"",
+        "packet_capture": "all()"
       }
     },
     {
@@ -644,7 +648,8 @@
       "selectors": {
         "l3_flows": "dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\" OR source_namespace = \"kube-system\"",
         "l7_flows": "dest_namespace = \"kube-system\" OR dest_service_namespace = \"kube-system\" OR src_namespace = \"kube-system\"",
-        "dns_logs": "\"servers.namespace\" = \"kube-system\" OR client_namespace = \"kube-system\""
+        "dns_logs": "\"servers.namespace\" = \"kube-system\" OR client_namespace = \"kube-system\"",
+        "packet_capture": "all()"
       }
     },
     {
@@ -763,7 +768,8 @@
         "l3_flows": "dest_namespace = \"tigera-fluentd\" OR dest_service_namespace = \"tigera-fluentd\" OR source_namespace = \"tigera-fluentd\"",
         "l7_flows": "dest_namespace = \"tigera-fluentd\" OR dest_service_namespace = \"tigera-fluentd\" OR src_namespace = \"tigera-fluentd\"",
         "dns_logs": "\"servers.namespace\" = \"tigera-fluentd\" OR client_namespace = \"tigera-fluentd\"",
-        "alerts": "_id = \"fakeid\""
+        "alerts": "_id = \"fakeid\"",
+        "packet_capture": "all()"
       },
       "events": [
         {
@@ -1408,7 +1414,8 @@
       "selectors": {
         "l3_flows": "dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\" OR source_namespace = \"tigera-elasticsearch\"",
         "l7_flows": "dest_namespace = \"tigera-elasticsearch\" OR dest_service_namespace = \"tigera-elasticsearch\" OR src_namespace = \"tigera-elasticsearch\"",
-        "dns_logs": "\"servers.namespace\" = \"tigera-elasticsearch\" OR client_namespace = \"tigera-elasticsearch\""
+        "dns_logs": "\"servers.namespace\" = \"tigera-elasticsearch\" OR client_namespace = \"tigera-elasticsearch\"",
+        "packet_capture": "all()"
       }
     },
     {
@@ -1486,7 +1493,8 @@
       "selectors": {
         "l3_flows": "dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\" OR source_namespace = \"tigera-system\"",
         "l7_flows": "dest_namespace = \"tigera-system\" OR dest_service_namespace = \"tigera-system\" OR src_namespace = \"tigera-system\"",
-        "dns_logs": "\"servers.namespace\" = \"tigera-system\" OR client_namespace = \"tigera-system\""
+        "dns_logs": "\"servers.namespace\" = \"tigera-system\" OR client_namespace = \"tigera-system\"",
+        "packet_capture": "all()"
       }
     }
   ],

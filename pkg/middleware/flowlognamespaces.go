@@ -22,8 +22,9 @@ import (
 
 	"github.com/olivere/elastic/v7"
 
-	"github.com/projectcalico/libcalico-go/lib/set"
 	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
+
+	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 const (

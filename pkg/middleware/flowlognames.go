@@ -21,8 +21,9 @@ import (
 	"github.com/tigera/lma/pkg/rbac"
 	"github.com/tigera/lma/pkg/timeutils"
 
-	"github.com/projectcalico/libcalico-go/lib/set"
 	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
+
+	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 const (
