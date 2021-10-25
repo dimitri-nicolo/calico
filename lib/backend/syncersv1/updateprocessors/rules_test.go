@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -451,7 +451,7 @@ var _ = Describe("Test the Rules Conversion Functions", func() {
 		})
 	})
 
-	It("should parse a services match", func() {
+	It("should parse a destination rule services match", func() {
 		r := apiv3.Rule{
 			Action: apiv3.Allow,
 			Destination: apiv3.EntityRule{
@@ -472,6 +472,30 @@ var _ = Describe("Test the Rules Conversion Functions", func() {
 		By("copying the service names", func() {
 			Expect(rulev1.DstService).To(Equal("kube-dns"))
 			Expect(rulev1.DstServiceNamespace).To(Equal("kube-system"))
+		})
+	})
+
+	It("should parse a source rule services match", func() {
+		r := apiv3.Rule{
+			Action: apiv3.Allow,
+			Source: apiv3.EntityRule{
+				Services: &apiv3.ServiceMatch{
+					Name:      "kube-dns",
+					Namespace: "kube-system",
+				},
+			},
+		}
+
+		// Process the rule and get the corresponding v1 representation.
+		rulev1 := updateprocessors.RuleAPIV2ToBackend(r, "", false)
+
+		By("generating an empty destination selector", func() {
+			Expect(rulev1.DstSelector).To(Equal(""))
+		})
+
+		By("copying the service names", func() {
+			Expect(rulev1.SrcService).To(Equal("kube-dns"))
+			Expect(rulev1.SrcServiceNamespace).To(Equal("kube-system"))
 		})
 	})
 
