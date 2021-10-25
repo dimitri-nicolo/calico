@@ -27,8 +27,8 @@ import (
 	discovery "k8s.io/api/discovery/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/projectcalico/api/pkg/lib/numorstring"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
@@ -542,6 +542,15 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Service network policy test
 		cc.ExpectSome(w[1], w[0].Port(81))
 		cc.CheckConnectivity()
 
+		// Create a default-deny egress policy in the default tier.
+		defaultDenyPolicy := api.NewNetworkPolicy()
+		defaultDenyPolicy.Namespace = "default"
+		defaultDenyPolicy.Name = "default-deny"
+		thousand := 1000.0
+		defaultDenyPolicy.Spec.Tier = "default"
+		defaultDenyPolicy.Spec.Order = &thousand
+		defaultDenyPolicy.Spec.Selector = "all()"
+		defaultDenyPolicy.Spec.Types = []api.PolicyType{api.PolicyTypeEgress}
 		_, err := client.NetworkPolicies().Create(utils.Ctx, defaultDenyPolicy, utils.NoOptions)
 		Expect(err).NotTo(HaveOccurred())
 
