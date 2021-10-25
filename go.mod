@@ -4,6 +4,8 @@ go 1.16
 
 require (
 	github.com/go-openapi/spec v0.19.5
+	github.com/google/go-cmp v0.5.4 // indirect
+	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.1
 	github.com/pkg/errors v0.9.1
@@ -13,8 +15,9 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
 	github.com/tigera/api v0.0.0-20211019171312-2dc19d1d38f8
-	github.com/tigera/licensing v1.0.1-0.20211011145843-5b9d7479c171
+	github.com/tigera/licensing v1.0.1-0.20211025192148-766e4c019006
 	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
+	golang.org/x/sys v0.0.0-20210426230700-d19ff857e887 // indirect
 	k8s.io/api v0.22.0
 	k8s.io/apimachinery v0.22.0
 	k8s.io/apiserver v0.21.0
