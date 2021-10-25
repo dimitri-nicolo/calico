@@ -1,7 +1,7 @@
 # Copyright 2019-20 Tigera Inc. All rights reserved.
 
 PACKAGE_NAME    ?= github.com/tigera/packetcapture-api
-GO_BUILD_VER    ?= v0.55
+GO_BUILD_VER    ?= v0.59
 GIT_USE_SSH      = true
 LOCAL_CHECKS     = mod-download
 
