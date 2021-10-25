@@ -38,7 +38,7 @@ require (
 	github.com/onsi/gomega v1.10.4
 	github.com/pkg/errors v0.9.1
 	github.com/projectcalico/libcalico-go v1.7.2
-	github.com/projectcalico/pod2daemon v0.0.0-20211012221525-ebb83b8c009a
+	github.com/projectcalico/pod2daemon v0.0.0-20211020230039-cbd1482bd13b
 	github.com/projectcalico/typha v0.7.3-0.20210428181500-9e435d5fd964
 	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/client_model v0.2.0
@@ -74,8 +74,8 @@ require (
 replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211019171316-efd66fec8e8e
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211020125014-d95589a9a6c3
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211021152211-15deeb23cf76
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211025174401-cdd18e79b786
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 
 	// The GRPC library seems to float to latest without this (not sure why!) and v1.30+ are incompatible with
