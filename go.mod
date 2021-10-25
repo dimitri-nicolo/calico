@@ -9,6 +9,7 @@ require (
 	github.com/eapache/queue v0.0.0-20180227141424-093482f3f8ce // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-ole/go-ole v1.2.4 // indirect
+	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/huandu/xstrings v1.2.1 // indirect
 	github.com/influxdata/influxdb v0.0.0-20190102202943-dd481f35df2c // indirect
 	github.com/influxdata/platform v0.0.0-20190117200541-d500d3cf5589 // indirect
@@ -25,7 +26,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
 	github.com/tigera/api v0.0.0-20211019171312-2dc19d1d38f8
-	github.com/tigera/licensing v1.0.1-0.20211011145843-5b9d7479c171
+	github.com/tigera/licensing v1.0.1-0.20211025192148-766e4c019006
 	github.com/vishvananda/netlink v1.1.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.2.3-0.20190111193340-cbf0fd6a984a
 	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637 // indirect
