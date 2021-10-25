@@ -1,6 +1,6 @@
 module github.com/tigera/calicoq
 
-go 1.15
+go 1.16
 
 require (
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
@@ -14,16 +14,16 @@ require (
 	github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba
 	github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54
 	github.com/projectcalico/libcalico-go v1.7.3
-	github.com/sirupsen/logrus v1.7.0
-	github.com/tigera/api v0.0.0-20211011145306-c30ec4ee24ee
-	github.com/tigera/licensing v1.0.1-0.20211011145843-5b9d7479c171
+	github.com/sirupsen/logrus v1.8.1
+	github.com/tigera/api v0.0.0-20211019171312-2dc19d1d38f8
+	github.com/tigera/licensing v1.0.1-0.20211025192148-766e4c019006
 )
 
 replace (
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20211011145329-82f749b7ccc2
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211011151708-a224c236b8a9
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20211025203451-813cf065aeb7
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211021152211-15deeb23cf76
 	// Need to pin typha to get go mod updates for felix to go through.
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211011145315-b17e7acc34ae
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211025174401-cdd18e79b786
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.4.2-0.20190403091019-9b3cdde74fbe
 
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
@@ -42,6 +42,7 @@ replace (
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.21.0-rc.0
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.21.0-rc.0
 	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.21.0-rc.0
+	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
 	k8s.io/kube-proxy => k8s.io/kube-proxy v0.21.0-rc.0
 	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.21.0-rc.0
 	k8s.io/kubectl => k8s.io/kubectl v0.21.0-rc.0
