@@ -1,5 +1,5 @@
 PACKAGE_NAME?=github.com/projectcalico/typha
-GO_BUILD_VER?=v0.58
+GO_BUILD_VER=v0.59
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_TYPHA_PRIVATE_PROJECT_ID)
@@ -44,6 +44,16 @@ EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go-private:/go/src/github.com/proje
 $(LOCAL_BUILD_DEP):
 	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
 endif
+
+# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
+ifeq ($(ARCH), $(filter $(ARCH),amd64))
+CGO_ENABLED=1
+else
+CGO_ENABLED=0
+endif
+
+# Add in local static-checks
+LOCAL_CHECKS=check-boring-ssl
 
 include Makefile.common
 
@@ -104,11 +114,8 @@ bin/wrapper: bin/wrapper-$(ARCH)
 
 bin/calico-typha-$(ARCH): $(SRC_FILES) $(LOCAL_BUILD_DEP)
 	mkdir -p bin
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-		go build -v -i -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-typha" && \
-		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
-		-e "not a dynamic executable" || \
-		( echo "Error: bin/calico-typha was not statically linked"; false ) )'
+	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+		go build -v -i -o $@ -v $(LDFLAGS) $(PACKAGE_NAME)/cmd/calico-typha'
 
 bin/wrapper-$(ARCH): $(SRC_FILES) $(LOCAL_BUILD_DEP)
 	mkdir -p bin
@@ -166,6 +173,11 @@ sub-base-tag-images-%:
 ut combined.coverprofile: $(SRC_FILES)
 	@echo Running Go UTs.
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) ./utils/run-coverage'
+
+check-boring-ssl: bin/calico-typha-amd64
+	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
+		go tool nm bin/calico-typha-amd64 > bin/tags.txt && grep '_Cfunc__goboringcrypto_' bin/tags.txt 1> /dev/null
+	-rm -f bin/tags.txt
 
 ###############################################################################
 # CI/CD

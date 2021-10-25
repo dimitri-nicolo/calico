@@ -36,6 +36,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/bgpsyncer"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/dpisyncer"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
+	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/nodestatussyncer"
 	remotecluster "github.com/projectcalico/libcalico-go/lib/backend/syncersv1/remotecluster"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/tunnelipsyncer"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
@@ -390,6 +391,7 @@ func (t *TyphaDaemon) CreateServer() {
 	t.addSyncerPipeline(syncproto.SyncerTypeFelix, t.DatastoreClient.FelixSyncerByIface)
 	t.addSyncerPipeline(syncproto.SyncerTypeBGP, t.DatastoreClient.BGPSyncerByIface)
 	t.addSyncerPipeline(syncproto.SyncerTypeTunnelIPAllocation, t.DatastoreClient.TunnelIPAllocationSyncerByIface)
+	t.addSyncerPipeline(syncproto.SyncerTypeNodeStatus, t.DatastoreClient.NodeStatusSyncerByIface)
 	t.addSyncerPipeline(syncproto.SyncerTypeDPI, t.DatastoreClient.DPISyncerByIface)
 
 	// Create the server, which listens for connections from Felix.
@@ -491,6 +493,10 @@ func (s ClientV3Shim) TunnelIPAllocationSyncerByIface(callbacks bapi.SyncerCallb
 	return tunnelipsyncer.New(s.Backend(), callbacks, "")
 }
 
+func (s ClientV3Shim) NodeStatusSyncerByIface(callbacks bapi.SyncerCallbacks) bapi.Syncer {
+	return nodestatussyncer.New(s.Backend(), callbacks)
+}
+
 func (s ClientV3Shim) DPISyncerByIface(callbacks bapi.SyncerCallbacks) bapi.Syncer {
 	return dpisyncer.New(s.Backend(), callbacks)
 }
@@ -501,6 +507,7 @@ type DatastoreClient interface {
 	FelixSyncerByIface(callbacks bapi.SyncerCallbacks) bapi.Syncer
 	BGPSyncerByIface(callbacks bapi.SyncerCallbacks) bapi.Syncer
 	TunnelIPAllocationSyncerByIface(callbacks bapi.SyncerCallbacks) bapi.Syncer
+	NodeStatusSyncerByIface(callbacks bapi.SyncerCallbacks) bapi.Syncer
 	DPISyncerByIface(callbacks bapi.SyncerCallbacks) bapi.Syncer
 }
 
