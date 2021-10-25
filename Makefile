@@ -1,5 +1,5 @@
 PACKAGE_NAME?=github.com/projectcalico/node
-GO_BUILD_VER?=v0.57
+GO_BUILD_VER?=v0.58
 
 GIT_USE_SSH = true
 
@@ -14,7 +14,8 @@ RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
 EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
-LIBBPF_PATH=bin/third-party/libbpf/src
+LIBBPF_PATH=./bin/third-party/libbpf/src
+LIBBPF_DOCKER_PATH=/go/src/github.com/projectcalico/node/bin/third-party/libbpf/src
 
 # Build mounts for running in "local build" mode. This allows an easy build using local development code,
 # assuming that there is a local checkout of libcalico in the same directory as this repo.
@@ -42,7 +43,10 @@ EXCLUDEARCH?=s390x arm64 ppc64le
 # This gets embedded into node as the Calico version, the Enterprise release
 # is based off of. This should be updated everytime a new opensource Calico
 # release is merged into node-private.
-CALICO_VERSION=v3.20.0
+CALICO_VERSION=v3.21.0
+
+# Add in local static-checks
+LOCAL_CHECKS=check-boring-ssl
 
 ###############################################################################
 # Download and include Makefile.common
@@ -193,6 +197,7 @@ clean:
 	rm -rf filesystem/etc/calico/confd/conf.d filesystem/etc/calico/confd/config filesystem/etc/calico/confd/templates
 	rm -rf config/
 	rm -rf vendor
+	rm -rf bin
 	rm Makefile.common*
 	rm -rf bin
 	# Delete images that we built in this repo
@@ -227,6 +232,7 @@ remote-deps: mod-download
 	rm -rf config
 	rm -rf bin/bpf
 	mkdir -p bin/bpf
+	rm -rf bin/third-party
 	rm -rf filesystem/usr/lib/calico/bpf/
 	mkdir -p filesystem/usr/lib/calico/bpf/
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -ec ' \
@@ -247,7 +253,6 @@ remote-deps: mod-download
 
 $(LIBBPF_PATH)/libbpf.a: go.mod
 	$(MAKE) mod-download
-	rm -rf bin/third-party
 	mkdir -p bin/third-party
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -ec ' \
 		$(GIT_CONFIG_SSH) \
@@ -260,12 +265,14 @@ $(LIBBPF_PATH)/libbpf.a: go.mod
 ifeq ($(ARCH), $(filter $(ARCH),amd64 arm64))
 CGO_ENABLED=1
 CGO_LDFLAGS="-L$(LIBBPF_PATH) -lbpf -lelf -lz"
+CGO_CFLAGS="-I$(LIBBPF_DOCKER_PATH)"
 else
 CGO_ENABLED=0
 CGO_LDFLAGS=""
+CGO_CFLAGS=""
 endif
 
-DOCKER_GO_BUILD_CGO=$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e CGO_LDFLAGS=$(CGO_LDFLAGS) $(CALICO_BUILD)
+DOCKER_GO_BUILD_CGO=$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e CGO_LDFLAGS=$(CGO_LDFLAGS) -e CGO_CFLAGS=$(CGO_CFLAGS) $(CALICO_BUILD)
 DOCKER_GO_BUILD_CGO_WINDOWS=$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD)
 
 $(NODE_CONTAINER_BINARY): $(LIBBPF_PATH)/libbpf.a $(LOCAL_BUILD_DEP) $(SRC_FILES) go.mod
@@ -673,6 +680,11 @@ check-dirty: undo-go-sum
 # Check-dirty before `cd` because `foss-checks` can lead to go.sum update.
 # since `foss-checks` is defined in common Makefile, we do it just before `cd`.
 cd: check-dirty cd-common
+
+check-boring-ssl: $(NODE_CONTAINER_BIN_DIR)/calico-node-amd64
+	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
+		go tool nm $(NODE_CONTAINER_BIN_DIR)/calico-node-amd64 > $(NODE_CONTAINER_BIN_DIR)/tags.txt && grep '_Cfunc__goboringcrypto_' $(NODE_CONTAINER_BIN_DIR)/tags.txt 1> /dev/null
+	-rm -f $(NODE_CONTAINER_BIN_DIR)/tags.txt
 
 golangci-lint: $(GENERATED_FILES)
 	$(DOCKER_GO_BUILD_CGO) golangci-lint run $(LINT_ARGS)
