@@ -17,6 +17,14 @@ type MockClientInterface struct {
 	mock.Mock
 }
 
+func (_m *MockClientInterface) IPReservations() clientv3.IPReservationInterface {
+	panic("implement me")
+}
+
+func (_m *MockClientInterface) CalicoNodeStatus() clientv3.CalicoNodeStatusInterface {
+	panic("implement me")
+}
+
 func (_m *MockClientInterface) UISettingsGroups() clientv3.UISettingsGroupInterface {
     panic("implement me")
 }

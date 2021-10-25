@@ -1,7 +1,7 @@
 # Copyright 2021 Tigera Inc. All rights reserved.
 
 PACKAGE_NAME    ?= github.com/tigera/deep-packet-inspection
-GO_BUILD_VER    ?= v0.55
+GO_BUILD_VER    ?= v0.59
 GIT_USE_SSH      = true
 LOCAL_CHECKS     = mod-download
 
@@ -201,7 +201,10 @@ ifneq ($(BUILDARCH),amd64)
 	ETCD_IMAGE=$(ETCD_IMAGE)-$(ARCH)
 endif
 
-HYPERKUBE_IMAGE?=gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION)
+# Temporary until hyperkube comes out with a 1.22.1 image to match the KUBE_VERSION env variable
+TEMP_HYPERKUBE_VERSION=v1.18.4-rc.0
+
+HYPERKUBE_IMAGE?=gcr.io/google_containers/hyperkube-$(ARCH):$(TEMP_HYPERKUBE_VERSION)
 TEST_CONTAINER_FILES=$(shell find tests/ -type f ! -name '*.created' ! -name '*.pyc')
 
 # etcd is used by the FVs

@@ -1,6 +1,6 @@
 module github.com/tigera/deep-packet-inspection
 
-go 1.15
+go 1.16
 
 require (
 	github.com/containernetworking/cni v0.8.0 // indirect
@@ -11,17 +11,17 @@ require (
 	github.com/onsi/gomega v1.10.4
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/projectcalico/typha v0.7.3-0.20210524104642-ae095e9e80f3
-	github.com/sirupsen/logrus v1.7.0
+	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.6.1
-	github.com/tigera/api v0.0.0-20211008155011-6d6ef40a0564
+	github.com/tigera/api v0.0.0-20211019171312-2dc19d1d38f8
 	k8s.io/api v0.21.0
 	k8s.io/apimachinery v0.21.0
 	k8s.io/client-go v0.21.0
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211008161821-9234ab751daa
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211007225951-38f35470c543
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211021152211-15deeb23cf76
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211025174401-cdd18e79b786
 
 	// k8s apiserver upgrade
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
@@ -40,6 +40,7 @@ replace (
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.21.0-rc.0
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.21.0-rc.0
 	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.21.0-rc.0
+	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
 	k8s.io/kube-proxy => k8s.io/kube-proxy v0.21.0-rc.0
 	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.21.0-rc.0
 	k8s.io/kubectl => k8s.io/kubectl v0.21.0-rc.0
