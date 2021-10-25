@@ -1,6 +1,6 @@
 module github.com/tigera/ingress-collector
 
-go 1.15
+go 1.16
 
 require (
 	github.com/gogo/protobuf v1.3.2
@@ -19,5 +19,6 @@ replace (
 	// go bindings for the API. Upstream only includes the protobuf definitions, so we need to fork in order to
 	// supply the go code.
 	github.com/envoyproxy/data-plane-api => github.com/projectcalico/data-plane-api v0.0.0-20210121211707-a620ff3c8f7e
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211011151708-a224c236b8a9
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211021152211-15deeb23cf76
+	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
 )
