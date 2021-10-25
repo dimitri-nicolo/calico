@@ -1,12 +1,12 @@
 module github.com/tigera/honeypod-controller
 
-go 1.15
+go 1.16
 
 replace (
-	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20211008161859-f570f94f797e
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20211011145329-82f749b7ccc2
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211011151708-a224c236b8a9
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211011145315-b17e7acc34ae
+	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20211025193300-f061c1c272af
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20211025203451-813cf065aeb7
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211021152211-15deeb23cf76
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211025174401-cdd18e79b786
 
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.0-rc.0
@@ -24,6 +24,7 @@ replace (
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.21.0-rc.0
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.21.0-rc.0
 	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.21.0-rc.0
+	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
 	k8s.io/kube-proxy => k8s.io/kube-proxy v0.21.0-rc.0
 	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.21.0-rc.0
 	k8s.io/kubectl => k8s.io/kubectl v0.21.0-rc.0
@@ -38,8 +39,8 @@ require (
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.1
 	github.com/projectcalico/libcalico-go v1.7.3
-	github.com/sirupsen/logrus v1.7.0
-	github.com/tigera/licensing v1.0.1-0.20211011145843-5b9d7479c171
-	github.com/tigera/lma v0.0.0-20211008163146-95ce3d0443b6
+	github.com/sirupsen/logrus v1.8.1
+	github.com/tigera/licensing v1.0.1-0.20211025192148-766e4c019006
+	github.com/tigera/lma v0.0.0-20211015043140-a0dc4d21b473
 	k8s.io/client-go v11.0.0+incompatible // indirect
 )
