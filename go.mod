@@ -24,6 +24,7 @@ require (
 	github.com/google/gopacket v1.1.19
 	github.com/google/netstack v0.0.0-20191123085552-55fcc16cd0eb
 	github.com/google/uuid v1.2.0
+	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/ishidawataru/sctp v0.0.0-20191218070446-00ab2ac2db07
 	github.com/jehiah/go-strftime v0.0.0-20171201141054-1d33003b3869 // indirect
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
@@ -49,7 +50,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/tebeka/strftime v0.1.5 // indirect
 	github.com/tigera/api v0.0.0-20211019171312-2dc19d1d38f8
-	github.com/tigera/licensing v1.0.1-0.20211011145843-5b9d7479c171
+	github.com/tigera/licensing v1.0.1-0.20211025192148-766e4c019006
 	github.com/tigera/nfnetlink v0.0.0-20210819183736-75abca8ede69
 	github.com/tigera/windows-networking v0.0.0-20210505211919-0de3e1e53cff
 	github.com/vishvananda/netlink v1.1.1-0.20210703095558-21f2c55a7727
