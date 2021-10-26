@@ -1,21 +1,21 @@
 title: "Install and upgrade"
 path: /getting-started/
 order: 1
-section: 
+section:
 - title: Install on clusters
-  path: /getting-started/install-on-clusters/ 
+  path: /getting-started/install-on-clusters/
   section:
   - title: Kubernetes
     path: /getting-started/kubernetes/
     section:
     - title: Quickstart
-      path: /getting-started/kubernetes/quickstart   
+      path: /getting-started/kubernetes/quickstart
     - title: Options for installing Calico Enterprise
       path: /getting-started/options-install
     - title: Standard
       path: /getting-started/kubernetes/generic-install
     - title: Helm
-      path: /getting-started/kubernetes/helm 
+      path: /getting-started/kubernetes/helm
   - title: OpenShift
     path: /getting-started/openshift/
     section:
@@ -23,25 +23,27 @@ section:
       path: /getting-started/openshift/requirements
     - title: Installation
       path: /getting-started/openshift/installation
-  - title: AKS 
+  - title: AKS
     path: /getting-started/kubernetes/aks
   - title: AWS using kOps
-    path: /getting-started/kubernetes/aws  
-  - title: EKS 
+    path: /getting-started/kubernetes/aws
+  - title: EKS
     path: /getting-started/kubernetes/eks
   - title: GKE
     path: /getting-started/kubernetes/gke
   - title: RKE
-    path: /getting-started/kubernetes/rancher 
+    path: /getting-started/kubernetes/rancher
+  - title: TKG for AWS
+    path: /getting-started/kubernetes/tkg
   - title: MKE
-    path: /getting-started/kubernetes/docker-enterprise   
+    path: /getting-started/kubernetes/docker-enterprise
   - title: Calico Enterprise for Windows
     path: /getting-started/windows-calico/
     section:
     - title: Limitations and known issues
       path: /getting-started/windows-calico/limitations
     - title: Quickstart
-      path: /getting-started/windows-calico/quickstart      
+      path: /getting-started/windows-calico/quickstart
     - title: Basic policy demo
       path: /getting-started/windows-calico/demo
     - title: Kubernetes
@@ -78,7 +80,7 @@ section:
   - title: Get a license
     path: /getting-started/calico-enterprise
   - title: System requirements
-    path: /getting-started/kubernetes/requirements 
+    path: /getting-started/kubernetes/requirements
 - title: Install on non-cluster hosts
   path: /getting-started/bare-metal/
   section:
@@ -112,7 +114,7 @@ section:
     path: /maintenance/upgrading-calico-to-calico-enterprise
     section:
     - title: Kubernetes
-      path: /maintenance/upgrade-to-tsee  
+      path: /maintenance/upgrade-to-tsee
     - title: OpenShift
       path: /maintenance/upgrade-to-tsee-openshift
 - title: Install a patch release
