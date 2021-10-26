@@ -23,7 +23,7 @@ require (
 )
 
 replace (
-	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20211026000211-e862b7d5bf3e // indirect
+	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20211026000503-cb6438107893 // indirect
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211025223023-dcd11b3e3931 // indirect
 
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
