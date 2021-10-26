@@ -442,8 +442,8 @@ github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69
 github.com/tchap/go-patricia/v2 v2.3.1/go.mod h1:VZRHKAb53DLaG+nA9EaYYiaEx6YztwDlLElMsnSHD4k=
 github.com/tigera/api v0.0.0-20211019171312-2dc19d1d38f8 h1:jI3PDmr+40MlqDx7TmyPoPfoFq19/cy2Lqq3v9qKIaw=
 github.com/tigera/api v0.0.0-20211019171312-2dc19d1d38f8/go.mod h1:U7qqFcD+luefolr44wGe1PuCMxgKUplb6qStftrgrSQ=
-github.com/tigera/libcalico-go-private v1.7.2-0.20211025223023-dcd11b3e3931 h1:R67xqBIqn0WZYGy5RIHu+0n53rs/qouiTt/K55NDE/0=
-github.com/tigera/libcalico-go-private v1.7.2-0.20211025223023-dcd11b3e3931/go.mod h1:0yUpnb8EQveGHon/+vPywakcMUSmERh3HPdKbGrwCeo=
+github.com/tigera/libcalico-go-private v1.7.2-0.20211026001719-880f70a1a16d h1:/8ZT3II4NBt+qstGxX1A/Tqa933IQszDYqJ01rA1E9k=
+github.com/tigera/libcalico-go-private v1.7.2-0.20211026001719-880f70a1a16d/go.mod h1:0yUpnb8EQveGHon/+vPywakcMUSmERh3HPdKbGrwCeo=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/urfave/cli v1.20.0/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijbERA=
