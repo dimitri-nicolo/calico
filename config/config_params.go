@@ -367,6 +367,7 @@ type Config struct {
 	FlowLogsAggregationThresholdBytes     int    `config:"int;8192"`
 	FlowLogsFilePerFlowProcessLimit       int    `config:"int;2"`
 	FlowLogsFilePerFlowProcessArgsLimit   int    `config:"int;5"`
+	FlowLogsFileNatOutgoingPortLimit      int    `config:"int;3"`
 
 	DNSLogsFlushInterval       time.Duration `config:"seconds;300"`
 	DNSLogsFileEnabled         bool          `config:"bool;false"`
