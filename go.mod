@@ -25,7 +25,7 @@ require (
 	github.com/spf13/cobra v1.1.1
 	github.com/stretchr/testify v1.6.1
 	github.com/tigera/api v0.0.0-20211026170921-dc6d9aa2cf7c
-	github.com/tigera/lma v0.0.0-20211026002115-a77de5f61928
+	github.com/tigera/lma v0.0.0-20211026231657-e9a75e485644
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.4.0
