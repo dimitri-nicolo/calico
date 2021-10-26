@@ -16,14 +16,14 @@ require (
 	github.com/projectcalico/libcalico-go v1.7.2-0.20210830152008-fb26cc05dab0
 	github.com/prometheus/client_golang v1.11.0
 	github.com/sirupsen/logrus v1.8.1
-	github.com/tigera/api v0.0.0-20211019171312-2dc19d1d38f8
+	github.com/tigera/api v0.0.0-20211025235918-67c9d2e86873
 	k8s.io/api v0.21.0
 	k8s.io/apimachinery v0.21.0
 	k8s.io/client-go v0.21.0
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211025223023-dcd11b3e3931
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211026001719-880f70a1a16d
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	google.golang.org/grpc => google.golang.org/grpc v1.29.1
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
