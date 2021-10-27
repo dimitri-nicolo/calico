@@ -121,6 +121,18 @@ func (e *FlowEndpointData) IsCalicoManagedEndpoint() bool {
 	}
 }
 
+// IsLabelledEndpoint returns if the endpoint represents a labelled endpoint (i.e. one that can be matched with
+// selectors).
+func (e *FlowEndpointData) IsLabelledEndpoint() bool {
+	switch e.Type {
+	// HEPs, WEPs and NetworkSets are all labelled endpoint types that may be selected by calico selectors.
+	case EndpointTypeHep, EndpointTypeWep, EndpointTypeNs:
+		return true
+	default:
+		return false
+	}
+}
+
 // Implement the label Get method for use with the selector processing. This allows us to inject additional labels
 // without having to update the dictionary.
 func (e *FlowEndpointData) Get(labelName string) (value string, present bool) {
