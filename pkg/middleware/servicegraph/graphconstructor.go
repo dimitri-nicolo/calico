@@ -2,6 +2,10 @@
 package servicegraph
 
 import (
+	"fmt"
+	"sort"
+	"strings"
+
 	log "github.com/sirupsen/logrus"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
@@ -98,6 +102,20 @@ func (t *trackedNode) id() v1.GraphNodeID {
 		return ""
 	}
 	return t.graphNode.ID
+}
+
+func (t *trackedNode) services() []v1.NamespacedName {
+	var services []v1.NamespacedName
+	if t.graphNode.ServicePorts != nil {
+		var set = v1.NamespacedNames{}
+		for k := range t.graphNode.ServicePorts {
+			set[k.NamespacedName] = struct{}{}
+		}
+
+		return set.AsSortedSlice()
+	}
+
+	return services
 }
 
 // Track the source and dest nodes for each service node. We need to do this to generate the edge selectors for
@@ -1093,6 +1111,17 @@ func (s *serviceGraphConstructionData) overlaySelectors() {
 		switch node.graphNode.Type {
 		case v1.GraphNodeTypeNamespace:
 			node.graphNode.Selectors.PacketCapture = &K8SAllSelector
+		case v1.GraphNodeTypeService:
+			var svcName = v1.NamespacedName{Namespace: node.graphNode.Namespace, Name: node.graphNode.Name}
+			var selector = s.serviceSelector(s.sgd.ServiceLabels[svcName])
+			if len(selector) != 0 {
+				node.graphNode.Selectors.PacketCapture = &selector
+			}
+		case v1.GraphNodeTypeServiceGroup:
+			var svcgSelectors = s.serviceGroupSelectors(node.services())
+			if len(svcgSelectors) != 0 {
+				node.graphNode.Selectors.PacketCapture = &svcgSelectors
+			}
 		}
 
 		// Alerts selection is handled slightly differently for the view - we just combine all of the selectors.
@@ -1179,6 +1208,29 @@ func (s *serviceGraphConstructionData) overlaySelectors() {
 		// Handle alerts by simply having the full set of IDs in the view.
 		s.viewSelectors.Alerts = viewEventsSelector.SelectorString()
 	}
+}
+
+func (s *serviceGraphConstructionData) serviceGroupSelectors(services []v1.NamespacedName) string {
+	var selectors []string
+	for _, svc := range services {
+		var labelsSel = s.serviceSelector(s.sgd.ServiceLabels[svc])
+		if len(labelsSel) != 0 {
+			selectors = append(selectors, labelsSel)
+		}
+	}
+	sort.Strings(selectors)
+
+	return strings.Join(selectors, " || ")
+}
+
+func (s *serviceGraphConstructionData) serviceSelector(labels Labels) string {
+	var labelSelectors []string
+	for k, v := range labels {
+		labelSelectors = append(labelSelectors, fmt.Sprintf("(%s == \"%s\")", k, v))
+	}
+
+	sort.Strings(labelSelectors)
+	return strings.Join(labelSelectors, " && ")
 }
 
 func (s *serviceGraphConstructionData) getResponse() *v1.ServiceGraphResponse {

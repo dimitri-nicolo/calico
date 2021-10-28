@@ -45,6 +45,13 @@ func CreateMockBackendWithData(rbac RBACFilter, names NameHelper) *MockServiceGr
 	err = json.Unmarshal(content, &events)
 	Expect(err).NotTo(HaveOccurred())
 
+	var serviceLabels = make(map[v1.NamespacedName]Labels)
+	var genericLabels = make(map[string]string)
+	genericLabels["k8s-app"] = "AnyApp"
+	genericLabels["label"] = "any"
+	serviceLabels[v1.NamespacedName{Name: "emailservice", Namespace: "storefront"}] = genericLabels
+	serviceLabels[v1.NamespacedName{Name: "shippingservice", Namespace: "storefront"}] = genericLabels
+
 	// Create a mock backend.
 	return &MockServiceGraphBackend{
 		FlowConfig: FlowConfig{
@@ -52,12 +59,13 @@ func CreateMockBackendWithData(rbac RBACFilter, names NameHelper) *MockServiceGr
 			L7FlowFlushInterval: time.Minute * 5,
 			DNSLogFlushInterval: time.Minute * 5,
 		},
-		L3:         l3,
-		L7:         l7,
-		DNS:        dns,
-		Events:     events,
-		RBACFilter: rbac,
-		NameHelper: names,
+		L3:            l3,
+		L7:            l7,
+		DNS:           dns,
+		Events:        events,
+		RBACFilter:    rbac,
+		NameHelper:    names,
+		ServiceLabels: serviceLabels,
 	}
 }
 

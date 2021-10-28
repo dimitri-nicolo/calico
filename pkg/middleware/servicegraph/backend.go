@@ -5,9 +5,13 @@ import (
 	"context"
 	"sync"
 
+	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/lma/pkg/k8s"
 
+	log "github.com/sirupsen/logrus"
 	lmav1 "github.com/tigera/lma/pkg/apis/v1"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 )
@@ -24,17 +28,38 @@ type ServiceGraphBackend interface {
 	GetL7FlowData(cluster string, tr lmav1.TimeRange) ([]L7Flow, error)
 	GetDNSData(cluster string, tr lmav1.TimeRange) ([]DNSLog, error)
 	GetEvents(cluster string, tr lmav1.TimeRange) ([]Event, error)
+	GetServiceLabels(cluster string) (map[v1.NamespacedName]Labels, error)
 
 	// These methods access data for a specific user request and therefore need to include the users request context.
 	NewRBACFilter(ctx context.Context, rd *RequestData) (RBACFilter, error)
 	NewNameHelper(ctx context.Context, rd *RequestData) (NameHelper, error)
 }
 
+type Labels map[string]string
+
 type realServiceGraphBackend struct {
 	ctx              context.Context
 	authz            auth.RBACAuthorizer
 	elastic          lmaelastic.Client
 	clientSetFactory k8s.ClientSetFactory
+}
+
+func (r *realServiceGraphBackend) GetServiceLabels(cluster string) (map[v1.NamespacedName]Labels, error) {
+	cs, err := r.clientSetFactory.NewClientSetForApplication(cluster)
+	if err != nil {
+		return nil, err
+	}
+
+	var services = make(map[v1.NamespacedName]Labels)
+	svList, err := cs.CoreV1().Services("").List(r.ctx, metav1.ListOptions{})
+	if err != nil {
+		log.WithError(err).Errorf("Failed to list services")
+	}
+	for _, sv := range svList.Items {
+		services[v1.NamespacedName{Name: sv.Name, Namespace: sv.Namespace}] = sv.Spec.Selector
+	}
+
+	return services, nil
 }
 
 func (r *realServiceGraphBackend) GetFlowConfig(cluster string) (*FlowConfig, error) {
@@ -80,30 +105,40 @@ func (r *realServiceGraphBackend) NewNameHelper(ctx context.Context, rd *Request
 // ---- Mock backend for testing ----
 
 type MockServiceGraphBackend struct {
-	FlowConfig         FlowConfig
-	FlowConfigErr      error
-	L3                 []L3Flow
-	L3Err              error
-	L7                 []L7Flow
-	L7Err              error
-	DNS                []DNSLog
-	DNSErr             error
-	Events             []Event
-	EventsErr          error
-	RBACFilter         RBACFilter
-	RBACFilterErr      error
-	NameHelper         NameHelper
-	NameHelperErr      error
-	lock               sync.Mutex
-	numCallsFlowConfig int
-	numCallsL3         int
-	numCallsL7         int
-	numCallsDNS        int
-	numCallsEvents     int
-	numCallsRBACFilter int
-	numCallsNameHelper int
-	wgElastic          sync.WaitGroup
-	numBlockedElastic  int
+	FlowConfig               FlowConfig
+	FlowConfigErr            error
+	L3                       []L3Flow
+	L3Err                    error
+	L7                       []L7Flow
+	L7Err                    error
+	DNS                      []DNSLog
+	DNSErr                   error
+	Events                   []Event
+	EventsErr                error
+	RBACFilter               RBACFilter
+	RBACFilterErr            error
+	NameHelper               NameHelper
+	NameHelperErr            error
+	ServiceLabels            map[v1.NamespacedName]Labels
+	ServiceLabelsErr         error
+	lock                     sync.Mutex
+	numCallsFlowConfig       int
+	numCallsL3               int
+	numCallsL7               int
+	numCallsDNS              int
+	numCallsEvents           int
+	numCallsRBACFilter       int
+	numCallsNameHelper       int
+	numCallsGetServiceLabels int
+	wgElastic                sync.WaitGroup
+	numBlockedElastic        int
+}
+
+func (m *MockServiceGraphBackend) GetServiceLabels(cluster string) (map[v1.NamespacedName]Labels, error) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	m.numCallsGetServiceLabels++
+	return m.ServiceLabels, m.ServiceLabelsErr
 }
 
 func (m *MockServiceGraphBackend) waitElastic() {

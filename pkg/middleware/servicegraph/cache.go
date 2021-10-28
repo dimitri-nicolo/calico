@@ -78,6 +78,7 @@ type ServiceGraphData struct {
 	ServiceGroups         ServiceGroups
 	NameHelper            NameHelper
 	Events                []Event
+	ServiceLabels         map[v1.NamespacedName]Labels
 }
 
 type serviceGraphCache struct {
@@ -232,6 +233,8 @@ func (s *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd 
 			fd.Events = append(fd.Events, ev)
 		}
 	}
+
+	fd.ServiceLabels = cacheData.serviceLabels
 
 	return fd, nil
 }
@@ -471,7 +474,8 @@ func (s *serviceGraphCache) populateData(d *cacheData) {
 	var rawL7 []L7Flow
 	var rawDNS []DNSLog
 	var rawEvents []Event
-	var errL3, errL7, errDNS, errEvents error
+	var serviceLabels map[v1.NamespacedName]Labels
+	var errL3, errL7, errDNS, errEvents, errServiceLabels error
 
 	// Determine the flow config - we need this to process some of the flow data correctly.
 	flowConfig, err := s.backend.GetFlowConfig(d.cluster)
@@ -515,6 +519,11 @@ func (s *serviceGraphCache) populateData(d *cacheData) {
 		defer wg.Done()
 		rawEvents, errEvents = s.backend.GetEvents(d.cluster, tr)
 	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		serviceLabels, errServiceLabels = s.backend.GetServiceLabels(d.cluster)
+	}()
 	wg.Wait()
 	if errL3 != nil {
 		log.WithError(errL3).Error("failed to get l3 logs")
@@ -528,12 +537,16 @@ func (s *serviceGraphCache) populateData(d *cacheData) {
 	} else if errEvents != nil {
 		log.WithError(errEvents).Error("failed to get event logs")
 		d.err = errEvents
+	}  else if errServiceLabels != nil {
+		log.WithError(errServiceLabels).Error("failed to get service labels")
+		d.err = errServiceLabels
 	}
 
 	d.l3 = rawL3
 	d.l7 = rawL7
 	d.dns = rawDNS
 	d.events = rawEvents
+	d.serviceLabels = serviceLabels
 
 	if log.IsLevelEnabled(log.DebugLevel) {
 		log.Debug(" ========= Tracing output from raw queries ========= ")
@@ -548,6 +561,9 @@ func (s *serviceGraphCache) populateData(d *cacheData) {
 		}
 		if b, err := json.Marshal(d.events); err == nil {
 			log.Debugf("RawEvents: %s", b)
+		}
+		if b, err := json.Marshal(d.serviceLabels); err == nil {
+			log.Debugf("ServiceLabels: %s", b)
 		}
 		log.Debug(" ========= End of tracing ========= ")
 	}
@@ -589,10 +605,11 @@ type cacheData struct {
 	timeRange lmav1.TimeRange
 
 	// The L3, L7 and events data.
-	l3     []L3Flow
-	l7     []L7Flow
-	dns    []DNSLog
-	events []Event
+	l3            []L3Flow
+	l7            []L7Flow
+	dns           []DNSLog
+	events        []Event
+	serviceLabels map[v1.NamespacedName]Labels
 }
 
 func newCacheData(key cacheKey, accessed time.Time) *cacheData {
