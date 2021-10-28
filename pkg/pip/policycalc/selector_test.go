@@ -101,5 +101,28 @@ var _ = Describe("Selector handler tests", func() {
 		Expect(m3(nil, ed, nil, &epc)).To(Equal(MatchTypeUncertain))
 		Expect(epc.selectors[0]).To(Equal(MatchTypeTrue))
 		Expect(epc.selectors[1]).To(Equal(MatchTypeUncertain))
+
+		By("matching endpoint where labels are not supported")
+		ed = &api.FlowEndpointData{
+			Type:   api.EndpointTypeNet,
+			Labels: nil,
+		}
+		epc = endpointCache{selectors: sh.CreateSelectorCache()}
+
+		Expect(epc.selectors).To(HaveLen(2))
+		Expect(epc.selectors[0]).To(Equal(MatchTypeUnknown))
+		Expect(epc.selectors[1]).To(Equal(MatchTypeUnknown))
+
+		Expect(m1(nil, ed, nil, &epc)).To(Equal(MatchTypeFalse))
+		Expect(epc.selectors[0]).To(Equal(MatchTypeFalse))
+		Expect(epc.selectors[1]).To(Equal(MatchTypeUnknown))
+
+		Expect(m2(nil, ed, nil, &epc)).To(Equal(MatchTypeFalse))
+		Expect(epc.selectors[0]).To(Equal(MatchTypeFalse))
+		Expect(epc.selectors[1]).To(Equal(MatchTypeUnknown))
+
+		Expect(m3(nil, ed, nil, &epc)).To(Equal(MatchTypeFalse))
+		Expect(epc.selectors[0]).To(Equal(MatchTypeFalse))
+		Expect(epc.selectors[1]).To(Equal(MatchTypeFalse))
 	})
 })

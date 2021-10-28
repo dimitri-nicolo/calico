@@ -75,6 +75,12 @@ func (n *NamespaceHandler) GetNamespaceSelectorEndpointMatcher(selStr string) En
 
 	// Create a closure to perform the match.
 	matcher := func(_ *api.Flow, ep *api.FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
+		if !ep.IsLabelledEndpoint() {
+			// This is not a labelled endpoint and therefore does not match a rule using label selectors.
+			log.Debugf("Namespace selector does not match non-labelled endpoint types: %s", MatchTypeFalse)
+			return MatchTypeFalse
+		}
+
 		// If the Endpoint namespace is one of the matched selectors then this matches.
 		for i := range namespaces {
 			if namespaces[i] == ep.Namespace {
