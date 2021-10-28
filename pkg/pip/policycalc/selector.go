@@ -48,7 +48,10 @@ func (c *EndpointSelectorHandler) GetSelectorEndpointMatcher(selStr string) Endp
 	matcher := func(_ *api.Flow, ep *api.FlowEndpointData, _ *flowCache, epCache *endpointCache) MatchType {
 		val := epCache.selectors[cacheIdx]
 		if val == MatchTypeUnknown {
-			if isAll {
+			if !ep.IsLabelledEndpoint() {
+				// This is not a labelled endpoint and therefore does not match a rule using label selectors.
+				val = MatchTypeFalse
+			} else if isAll {
 				// This is an all() selector, so matches all endpoints - in this case it doesn't matter if we don't have
 				// the labels, match is true.
 				val = MatchTypeTrue
