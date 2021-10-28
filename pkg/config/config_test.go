@@ -16,22 +16,25 @@ package config_test
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
 	"os"
 	"time"
-
-	"github.com/projectcalico/kube-controllers/pkg/config/configfactory"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/kube-controllers/pkg/config"
+	"github.com/projectcalico/kube-controllers/pkg/config/configfactory"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
-
-	"github.com/projectcalico/kube-controllers/pkg/config"
 )
 
 var _ = Describe("Config", func() {
@@ -65,7 +68,6 @@ var _ = Describe("Config", func() {
 		os.Setenv("PROFILE_WORKERS", "3")
 		os.Setenv("POLICY_WORKERS", "4")
 		os.Setenv("SERVICE_WORKERS", "3")
-		os.Setenv("KUBECONFIG", "/home/user/.kube/config")
 		os.Setenv("DATASTORE_TYPE", "etcdv3")
 		os.Setenv("HEALTH_ENABLED", "false")
 		os.Setenv("COMPACTION_PERIOD", "33m")
@@ -82,16 +84,61 @@ var _ = Describe("Config", func() {
 		os.Setenv("SERVICE_WORKERS", "somestring")
 	}
 
-	Context("with unset env values", func() {
+	const kubeconfigTemplate = `apiVersion: v1
+kind: Config
+clusters:
+- name: test
+  cluster:
+    insecure-skip-tls-verify: true
+    server: https://%s:8080
+users:
+- name: calico
+contexts:
+- name: test-context
+  context:
+    cluster: test
+    user: calico
+current-context: test-context`
+
+	var (
+		kconfigFile *os.File
+		restCfg     *restclient.Config
+	)
+
+	createAndSetKubeConfig := func() {
+		// Write out a kubeconfig file
+		var err error
+		kconfigFile, err = ioutil.TempFile("", "ginkgo-nodecontroller")
+		Expect(err).NotTo(HaveOccurred())
+		data := fmt.Sprintf(kubeconfigTemplate, "127.0.0.1")
+		_, err = kconfigFile.Write([]byte(data))
+		Expect(err).NotTo(HaveOccurred())
+		err = os.Setenv("KUBECONFIG", kconfigFile.Name())
+		Expect(err).NotTo(HaveOccurred())
+		restCfg, err = clientcmd.BuildConfigFromFlags("", kconfigFile.Name())
+		Expect(err).ShouldNot(HaveOccurred())
+	}
+
+	deleteAndUnsetKubeConfig := func() {
+		os.Unsetenv("KUBECONFIG")
+		os.Remove(kconfigFile.Name())
+	}
+
+	Context("with unset env values except for kubeconfig", func() {
 		var cfg *config.Config
 
 		BeforeEach(func() {
 			// Unset environment variables
 			unsetEnv()
+			createAndSetKubeConfig()
 			// Parse config
 			cfg = new(config.Config)
 			err := cfg.Parse()
 			Expect(err).ToNot(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			deleteAndUnsetKubeConfig()
 		})
 
 		// Assert default values
@@ -101,7 +148,6 @@ var _ = Describe("Config", func() {
 			Expect(cfg.ProfileWorkers).To(Equal(1))
 			Expect(cfg.PolicyWorkers).To(Equal(1))
 			Expect(cfg.ServiceWorkers).To(Equal(1))
-			Expect(cfg.Kubeconfig).To(Equal(""))
 		})
 
 		Context("with default API values", func() {
@@ -134,6 +180,7 @@ var _ = Describe("Config", func() {
 					AutoHostEndpoints: false,
 					DeleteNodes:       true,
 					LeakGracePeriod:   &v1.Duration{Duration: 15 * time.Minute},
+					RESTConfig:        restCfg,
 				}))
 				Expect(rc.Policy).To(Equal(&config.GenericControllerConfig{
 					ReconcilerPeriod: time.Minute * 5,
@@ -232,6 +279,7 @@ var _ = Describe("Config", func() {
 					AutoHostEndpoints: true,
 					DeleteNodes:       true,
 					LeakGracePeriod:   &v1.Duration{Duration: 20 * time.Minute},
+					RESTConfig:        restCfg,
 				}))
 				Expect(rc.Policy).To(Equal(&config.GenericControllerConfig{
 					ReconcilerPeriod: time.Second * 30,
@@ -462,10 +510,11 @@ var _ = Describe("Config", func() {
 			err := os.Setenv("KUBE_CONTROLLERS_CONFIG_NAME", kubeControllersConfigName)
 			Expect(err).NotTo(HaveOccurred())
 
+			createAndSetKubeConfig()
+
 			// Parse config
 			cfg = new(config.Config)
 			err = cfg.Parse()
-
 			// Assert no error generated
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -473,6 +522,8 @@ var _ = Describe("Config", func() {
 		AfterEach(func() {
 			// Reset environment variables
 			unsetEnv()
+
+			deleteAndUnsetKubeConfig()
 		})
 
 		// Assert values
@@ -482,7 +533,7 @@ var _ = Describe("Config", func() {
 			Expect(cfg.ProfileWorkers).To(Equal(3))
 			Expect(cfg.PolicyWorkers).To(Equal(4))
 			Expect(cfg.ServiceWorkers).To(Equal(3))
-			Expect(cfg.Kubeconfig).To(Equal("/home/user/.kube/config"))
+			Expect(cfg.Kubeconfig).To(Equal(kconfigFile.Name()))
 			Expect(cfg.KubeControllersConfigName).To(Equal(kubeControllersConfigName))
 		})
 
@@ -516,6 +567,7 @@ var _ = Describe("Config", func() {
 					AutoHostEndpoints: true,
 					DeleteNodes:       true,
 					LeakGracePeriod:   &v1.Duration{Duration: 15 * time.Minute},
+					RESTConfig:        restCfg,
 				}))
 				Expect(rc.Policy).To(Equal(&config.GenericControllerConfig{
 					ReconcilerPeriod: time.Second * 105,
@@ -608,6 +660,7 @@ var _ = Describe("Config", func() {
 					SyncLabels:        false,
 					AutoHostEndpoints: true,
 					DeleteNodes:       true,
+					RESTConfig:        restCfg,
 				}))
 				Expect(rc.Policy).To(Equal(&config.GenericControllerConfig{
 					ReconcilerPeriod: time.Second * 105,
@@ -678,11 +731,13 @@ var _ = Describe("Config", func() {
 
 		BeforeEach(func() {
 			unsetEnv()
+			createAndSetKubeConfig()
 			err := os.Setenv("ENABLED_CONTROLLERS", "node,namespace,policy,serviceaccount,workloadendpoint")
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		AfterEach(func() {
+			deleteAndUnsetKubeConfig()
 			unsetEnv()
 		})
 

@@ -83,6 +83,8 @@ type NodeControllerConfig struct {
 	// The grace period used by the controller to determine if an IP address is leaked.
 	// Set to 0 to disable IP address garbage collection.
 	LeakGracePeriod *v1.Duration
+
+	RESTConfig *restclient.Config
 }
 
 type ElasticsearchCfgControllerCfg struct {
@@ -343,6 +345,12 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 			rc.Node.DeleteNodes = true
 			// This field doesn't have an equivalent in the status
 		}
+
+		restCfg, err := clientcmd.BuildConfigFromFlags("", envCfg.Kubeconfig)
+		if err != nil {
+			log.WithError(err).Fatal("failed to build kubernetes client config")
+		}
+		rc.Node.RESTConfig = restCfg
 	}
 
 	// Number of workers is not exposed on the API, so just use the envCfg for it

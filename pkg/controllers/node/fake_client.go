@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/stretchr/testify/mock"
+
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
@@ -33,6 +35,7 @@ func NewFakeCalicoClient() *FakeCalicoClient {
 
 // FakeCalicoClient is a fake client for use in the IPAM tests.
 type FakeCalicoClient struct {
+	mock.Mock
 	nodeClient clientv3.NodeInterface
 	ipamClient ipam.Interface
 }
@@ -110,9 +113,20 @@ func (f *FakeCalicoClient) PacketCaptures() clientv3.PacketCaptureInterface {
 	panic("not implemented") // TODO: Implement
 }
 
-// DeepPacketInspections returns an interface for managing the DPI resources.
+// DeepPacketInspections returns an testify mock interface for managing the DPI resources.
 func (f *FakeCalicoClient) DeepPacketInspections() clientv3.DeepPacketInspectionInterface {
-	panic("not implemented") // TODO: Implement
+	ret := f.Called()
+
+	var r0 clientv3.DeepPacketInspectionInterface
+	if rf, ok := ret.Get(0).(func() clientv3.DeepPacketInspectionInterface); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(clientv3.DeepPacketInspectionInterface)
+		}
+	}
+
+	return r0
 }
 
 func (f *FakeCalicoClient) Backend() bapi.Client {

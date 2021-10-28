@@ -18,6 +18,8 @@ import (
 	"context"
 	"time"
 
+	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+
 	log "github.com/sirupsen/logrus"
 	uruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -60,7 +62,8 @@ type NodeController struct {
 	dataFeed     *DataFeed
 
 	// Sub-controllers
-	ipamCtrl *ipamController
+	ipamCtrl               *ipamController
+	statusUpdateController *statusUpdateController
 }
 
 // NewNodeController Constructor for NodeController
@@ -95,6 +98,15 @@ func NewNodeController(ctx context.Context,
 		nodeDeletionFuncs = append(nodeDeletionFuncs, nodeDeletionController.OnKubernetesNodeDeleted)
 	}
 
+	calicoV3Client, err := tigeraapi.NewForConfig(cfg.RESTConfig)
+	if err != nil {
+		log.WithError(err).Fatal("failed to build calico v3 clientset")
+	}
+
+	nodeCacheFn := func() []string { return nodeInformer.GetIndexer().ListKeys() }
+	// Create a controller to remove node specific status from DeepPacketInspection
+	// resource when the node is deleted.
+	nc.statusUpdateController = NewStatusUpdateController(calicoClient, calicoV3Client, nodeCacheFn)
 	// Setup event handlers for nodes and pods learned through the
 	// respective informers.
 	nodeHandlers := cache.ResourceEventHandlerFuncs{
@@ -199,6 +211,7 @@ func (c *NodeController) Run(stopCh chan struct{}) {
 
 	// We're in-sync. Start the sub-controllers.
 	c.ipamCtrl.Start(stopCh)
+	c.statusUpdateController.Start(stopCh)
 
 	<-stopCh
 	log.Info("Stopping Node controller")
