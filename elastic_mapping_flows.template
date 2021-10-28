@@ -134,6 +134,9 @@
         "reporter": {
             "type": "keyword"
         },
+        "nat_outgoing_ports": {
+            "type": "integer"
+        },
         "num_flows": {
             "type": "long"
         },
