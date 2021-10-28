@@ -40,7 +40,7 @@ const (
 	resourceTiers                       = "tiers"
 	resourceUISettings                  = "uisettings"
 	resourceUISettingsGroups            = "uisettingsgroups"
-	resourceUISettingsGroupsData        = "uisettingsgroups/data"
+	resourceUISettingsGroupsData        = "data"
 	resourceNamespaces                  = "namespaces"
 	resourceNetworkPolicies             = "networkpolicies"
 	resourceGlobalNetworkPolicies       = "globalnetworkpolicies"
@@ -251,13 +251,13 @@ func (ar apiResource) isTieredPolicy() bool {
 // - for Calico tiered policies we use a special "tier.xxx" format to allow special case processing for fine grained
 //   access control at the tier level
 // - for uisettings resources, the RBAC is controlled by the uisettingsgroups/data sub resource.
-func (ar apiResource) rbacResource() string {
+func (ar apiResource) rbacResource() (resource string, subresource string) {
 	if ar.isTieredPolicy() {
-		return "tier." + ar.Resource
+		return "tier." + ar.Resource, ""
 	} else if ar.isUISettings() {
-		return resourceUISettingsGroupsData
+		return resourceUISettingsGroups, resourceUISettingsGroupsData
 	}
-	return ar.Resource
+	return ar.Resource, ""
 }
 
 // calculator implements the Calculator interface.
@@ -399,13 +399,26 @@ type userCalculator struct {
 }
 
 // getMatches returns the calculated matches for a specific resource and verb.
-func (u *userCalculator) getMatches(verb Verb, ar apiResource) []Match {
+func (u *userCalculator) getMatches(verb Verb, ar apiResource, subresource string) []Match {
 	var matches []Match
 	var match Match
+	resource, reqdSubresource := ar.rbacResource()
+
+	// User should not be requesting a subresource when a subresource is already used for the resource RBAC.
+	if subresource != "" && reqdSubresource != "" {
+		log.Debugf("Requested subresource and required subresource are both non-zero: %s and %s", subresource, reqdSubresource)
+		return nil
+	}
+	if reqdSubresource != "" {
+		// If the RBAC is determined by a required sub resource, then use that when querying the RBAC.
+		subresource = reqdSubresource
+	}
+
 	record := authorizer.AttributesRecord{
 		Verb:            string(verb),
 		APIGroup:        ar.APIGroup,
-		Resource:        ar.rbacResource(),
+		Resource:        resource,
+		Subresource:     subresource,
 		Name:            "",
 		ResourceRequest: true,
 	}
@@ -842,8 +855,19 @@ func (u *userCalculator) getNamespacedRules() map[string][]rbacv1.PolicyRule {
 // updatePermissions calculates the RBAC permissions for a specific resource type and set of verbs, and updates the
 // Permissions response struct.
 func (u *userCalculator) updatePermissions(rt ResourceType, verbs []Verb) {
-	u.permissions[rt] = make(map[Verb][]Match)
-	ar, ok := u.resources[rt]
+	// Remove the sub-resource if present.
+	parts := strings.SplitN(rt.Resource, "/", 2)
+	mainresource := ResourceType{
+		APIGroup: rt.APIGroup,
+		Resource: parts[0],
+	}
+	var subresource string
+	if len(parts) == 2 {
+		subresource = parts[1]
+	}
+
+	// Look up the APIResource info for the primary resource (i.e. not the subresource).
+	ar, ok := u.resources[mainresource]
 	if !ok && !u.resourcesUpdated {
 		// This is an unknown resource type, we permit an update of the resources at most once per request.
 		log.Debugf("Resource type %s not found, update cached resource types", rt)
@@ -852,11 +876,12 @@ func (u *userCalculator) updatePermissions(rt ResourceType, verbs []Verb) {
 		ar, ok = u.resources[rt]
 	}
 
+	u.permissions[rt] = make(map[Verb][]Match)
 	for _, verb := range verbs {
 		log.Debugf("Accumulating results for: %s %s", verb, rt)
 		if ok {
 			// The resource is registered so determine the matches from the RBAC config.
-			u.permissions[rt][verb] = u.getMatches(verb, ar)
+			u.permissions[rt][verb] = u.getMatches(verb, ar, subresource)
 		} else {
 			// The resource is not registered so do not add any matches for this resource/verb combination.
 			u.permissions[rt][verb] = nil

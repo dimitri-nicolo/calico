@@ -726,6 +726,42 @@ var _ = Describe("RBAC calculator tests", func() {
 		Expect(nps[VerbWatch]).To(Equal([]Match{{UISettingsGroup: "group1"}, {UISettingsGroup: "group2"}}))
 	})
 
+	It("has listable pods/status and gettable pods", func() {
+		mock.ClusterRoleBindings = []string{"list-podsstatus", "get-pods"}
+		mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
+			"list-podsstatus": {{
+				Verbs:     []string{"list"},
+				Resources: []string{"pods/status"},
+				APIGroups: []string{""},
+			}},
+			"get-pods": {{
+				Verbs:     []string{"get"},
+				Resources: []string{"pods"},
+				APIGroups: []string{""},
+			}},
+		}
+
+		// Check list/get access for pods and pods/status.
+		rpods := ResourceType{APIGroup: "", Resource: "pods"}
+		rpodstatus := ResourceType{APIGroup: "", Resource: "pods/status"}
+		res, err := calc.CalculatePermissions(myUser, []ResourceVerbs{{rpods, AllVerbs}, {rpodstatus, AllVerbs}})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(res).To(HaveKey(rpods))
+		Expect(res).To(HaveKey(rpodstatus))
+
+		pods := res[rpods]
+		Expect(pods).To(HaveKey(VerbGet))
+		Expect(pods).To(HaveKey(VerbList))
+		Expect(pods[VerbGet]).To(Equal([]Match{{}}))
+		Expect(pods[VerbList]).To(BeNil())
+
+		podstatus := res[rpodstatus]
+		Expect(podstatus).To(HaveKey(VerbGet))
+		Expect(podstatus).To(HaveKey(VerbList))
+		Expect(podstatus[VerbGet]).To(BeNil())
+		Expect(podstatus[VerbList]).To(Equal([]Match{{}}))
+	})
+
 	It("has listable/watchable networkpolicies in all Tiers, gettable only in tier2 and tier3", func() {
 		mock.ClusterRoleBindings = []string{"get-watch-np"}
 		mock.ClusterRoles = map[string][]rbac_v1.PolicyRule{
