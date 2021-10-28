@@ -25,8 +25,8 @@ require (
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.7.0
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
-	github.com/tigera/api v0.0.0-20211026170921-dc6d9aa2cf7c
-	github.com/tigera/licensing v1.0.1-0.20211026184521-75dd4b3a7137
+	github.com/tigera/api v0.0.0-20211028194523-b4ceddaee039
+	github.com/tigera/licensing v1.0.1-0.20211028223522-6b45a0a46366
 	github.com/vishvananda/netlink v1.1.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.2.3-0.20190111193340-cbf0fd6a984a
 	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637 // indirect
@@ -37,7 +37,7 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211026184131-9e4915b8bac2
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211028223111-11b10e01b33d
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
 )
