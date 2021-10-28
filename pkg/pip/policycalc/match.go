@@ -315,6 +315,17 @@ func (m *MatcherFactory) Domains(domains []string) EndpointMatcher {
 	}
 }
 
+// Service matcher
+func (m *MatcherFactory) ServiceSelector(match *v3.ServiceMatch) EndpointMatcher {
+	if match == nil || match.Name == "" || match.Namespace == ""{
+		return nil
+	}
+	return func(_ *api.Flow, ed *api.FlowEndpointData, _ *flowCache, _ *endpointCache) MatchType {
+		log.Debugf("Service matcher: %s (unknown)", MatchTypeUncertain)
+		return MatchTypeUncertain
+	}
+}
+
 // Selector Endpoint matcher
 func (m *MatcherFactory) Selector(sel string) EndpointMatcher {
 	if sel == "" {
