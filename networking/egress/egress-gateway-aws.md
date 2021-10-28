@@ -190,6 +190,7 @@ an instance (for example when scaling up the cluster).
 - [Configure AWS IAM roles for cluster nodes](#configure-aws-iam-roles-for-cluster-nodes)
 - [Configure IP reservations for each VPC Subnet](#configure-ip-reservations-for-each-vpc-subnet)
 - [Enable egress gateway support](#enable-egress-gateway-support)
+- [Enable policy sync API](#enable-policy-sync-api)
 - [Enable AWS-backed subnets](#enable-aws-backed-subnets)
 - [Configure IP pools backed by VPC Subnets](#configure-ip-pools-backed-by-vpc-subnets)
 - [Copy pull secret into egress gateway namespace](#copy-pull-secret-into-egress-gateway-namespace)
@@ -321,9 +322,19 @@ kubectl patch felixconfiguration default --type='merge' -p \
     '{"spec":{"egressIPSupport":"EnabledPerNamespaceOrPerPod"}}'
 ```
 
+#### Enable policy sync API
+
+Egress gateways require the policy sync API to be enabled on Felix. To do this cluster-wide, modify
+the `default` FelixConfiguration to set the field `policySyncPathPrefix` to `/var/run/nodeagent`:
+
+```bash
+kubectl patch felixconfiguration.p default --type='merge' -p \
+    '{"spec":{"policySyncPathPrefix":"/var/run/nodeagent"}}'
+```
+
 > **Note**:
 >
-> -  `egressIPSupport` must be the same on all cluster nodes, so you should only set it in the
+> -  `egressIPSupport` and `policySyncPathPrefix` must be the same on all cluster nodes, so you should only set them in the
 >    `default` FelixConfiguration resource.
 {: .alert .alert-info}
 
@@ -544,12 +555,19 @@ spec:
               fieldPath: status.podIP
         securityContext:
           privileged: true
+        volumeMounts:
+        - mountPath: /var/run
+          name: policysync
         resources:
           requests:
             projectcalico.org/aws-secondary-ipv4: 1
           limits:
             projectcalico.org/aws-secondary-ipv4: 1
       terminationGracePeriodSeconds: 0
+      volumes:
+      - flexVolume:
+          driver: nodeagent/uds
+        name: policysync
 EOF
 ```
 
@@ -614,6 +632,9 @@ EOF
 >
 > -  The `securityContext` is required, so that the egress gateway can manipulate its own network
 >    namespace.
+>
+> -  The `policysync` volume mount is required. This exposes the policy sync API to the pod,
+>    allowing it to program its own routing based off information from Felix.
 {: .alert .alert-info}
 
 

@@ -827,7 +827,8 @@ spec:
                 type: string
               policySyncPathPrefix:
                 description: 'PolicySyncPathPrefix is used to by Felix to communicate
-                  policy changes to external services, like Application layer policy.
+                  policy changes to external services, like Application layer policy,
+                  or Egress Gateways.
                   [Default: Empty]'
                 type: string
               prometheusGoMetricsEnabled:
