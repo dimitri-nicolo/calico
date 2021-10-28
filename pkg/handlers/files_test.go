@@ -152,6 +152,7 @@ var _ = Describe("FilesDownload", func() {
 		handler.ServeHTTP(recorder, req)
 
 		Expect(recorder.Code).To(Equal(http.StatusNoContent))
+		Expect(recorder.Body.String()).To(Equal(""))
 		Expect(recorder.Header().Get("Content-Type")).To(Equal(""))
 		Expect(recorder.Header().Get("Content-Disposition")).To(Equal(""))
 		Expect(recorder.Header().Get("Content-Length")).To(Equal(""))
@@ -270,7 +271,7 @@ var _ = Describe("FilesDownload", func() {
 		Expect(strings.Trim(recorder.Body.String(), "\n")).To(Equal("any error"))
 	})
 
-	It("Ignore tar output that gets written to stderr", func() {
+	It("Ignore tar output removing leading /' from member names", func() {
 		// Create a temp directory to store all the files needed for the test
 		var tempDir, err = ioutil.TempDir("/tmp", "test")
 		Expect(err).NotTo(HaveOccurred())
@@ -312,6 +313,45 @@ var _ = Describe("FilesDownload", func() {
 		_, err = io.Copy(archive, recorder.Body)
 		Expect(err).NotTo(HaveOccurred())
 		validateArchive(archive, files, []byte(loremLipsum))
+	})
+
+	It("Ignore tar output No such file or directory", func() {
+		// Create a temp directory to store all the files needed for the test
+		var tempDir, err = ioutil.TempDir("/tmp", "test")
+		Expect(err).NotTo(HaveOccurred())
+
+		// Create dummy files and add them to a tar archive
+		var tarFile = createTarArchive(tempDir, noFiles, []byte(loremLipsum))
+		defer os.RemoveAll(tempDir)
+
+		tarFileReader, err := os.Open(tarFile.Name())
+		Expect(err).NotTo(HaveOccurred())
+
+		var errorWriter bytes.Buffer
+		_, err = errorWriter.WriteString(
+			"tar: /var/log/calico/pcap/tigera-manager/test-delete: No such file or directory" +
+				"\ntar: error exit delayed from previous errors")
+		Expect(err).NotTo(HaveOccurred())
+
+		// Bootstrap the download
+		var mockCache = &cache.MockClientCache{}
+		var mockLocator = &capture.MockLocator{}
+		var mockFileRetrieval = &capture.MockFileCommands{}
+		mockLocator.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureOneNode, nil)
+		mockLocator.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockFileRetrieval.On("OpenTarReader", "cluster", point).Return(tarFileReader, &errorWriter, nil)
+		var download = handlers.NewFiles(mockCache, mockLocator, mockFileRetrieval)
+
+		// Bootstrap the http recorder
+		recorder := httptest.NewRecorder()
+		handler := http.HandlerFunc(download.Download)
+		handler.ServeHTTP(recorder, req)
+
+		Expect(recorder.Code).To(Equal(http.StatusNoContent))
+		Expect(recorder.Body.String()).To(Equal(""))
+		Expect(recorder.Header().Get("Content-Type")).To(Equal(""))
+		Expect(recorder.Header().Get("Content-Disposition")).To(Equal(""))
+		Expect(recorder.Header().Get("Content-Length")).To(Equal(""))
 	})
 
 	It("Fails to locate an entry pod", func() {
