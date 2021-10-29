@@ -659,18 +659,19 @@ func ipStringToMac(s string) net.HardwareAddr {
 func (m *egressIPManager) KeepVXLANDeviceInSync(mtu int, wait time.Duration) {
 	log.Info("egress ip VXLAN tunnel device thread started.")
 	for {
-		// src_valid_mark must be enabled for RPF to accurately check returning egress packets coming through egress.calico
-		err := writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/src_valid_mark", m.vxlanDevice), "1")
-		if err != nil {
-			log.WithError(err).Warnf("Failed to enable src_valid_mark system flag for device '%s", m.vxlanDevice)
-		}
-
-		err = m.configureVXLANDevice(mtu)
+		err := m.configureVXLANDevice(mtu)
 		if err != nil {
 			log.WithError(err).Warn("Failed to configure egress ip VXLAN tunnel device, retrying...")
 			time.Sleep(1 * time.Second)
 			continue
 		}
+
+		// src_valid_mark must be enabled for RPF to accurately check returning egress packets coming through egress.calico
+		err = writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/src_valid_mark", m.vxlanDevice), "1")
+		if err != nil {
+			log.WithError(err).Warnf("Failed to enable src_valid_mark system flag for device '%s", m.vxlanDevice)
+		}
+
 		log.Info("egress ip VXLAN tunnel device configured")
 		time.Sleep(wait)
 	}
