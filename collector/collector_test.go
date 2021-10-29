@@ -785,6 +785,7 @@ var _ = Describe("Conntrack Datasource", func() {
 	// var piReaderInfoSenderChan chan PacketInfo
 	var lm *calc.LookupsCache
 	var epMapDelete map[[16]byte]*calc.EndpointData
+	var epMapSwapLocal map[[16]byte]*calc.EndpointData
 	var nflogReader *NFLogReader
 	conf := &Config{
 		StatsDumpFilePath:            "/tmp/qwerty",
@@ -798,6 +799,11 @@ var _ = Describe("Conntrack Datasource", func() {
 		epMap := map[[16]byte]*calc.EndpointData{
 			localIp1:  localEd1,
 			localIp2:  localEd2,
+			remoteIp1: remoteEd1,
+		}
+		epMapSwapLocal = map[[16]byte]*calc.EndpointData{
+			localIp1:  localEd2,
+			localIp2:  localEd1,
 			remoteIp1: remoteEd1,
 		}
 		epMapDelete = map[[16]byte]*calc.EndpointData{
@@ -841,7 +847,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Bytes)))
 			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Bytes)))
 		})
-		It("should handle destination becoming non-local by removing entry on next update", func() {
+		It("should handle destination becoming non-local by removing entry on next conntrack update for reported flow", func() {
 			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 			// will call handlerInfo from c.Start() in BeforeEach
 			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
@@ -853,7 +859,150 @@ var _ = Describe("Conntrack Datasource", func() {
 			data.reported = true
 			lm.SetMockData(epMapDelete, nil, nil, nil)
 			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
+
+			// This is a reported flow, and is a conntrack update - this should not impact the stored data at all.
+			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+		})
+		It("should handle destination becoming non-local by removing entry on next conntrack update for unreported flow", func() {
+			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			// will call handlerInfo from c.Start() in BeforeEach
+			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
+
+			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+
+			// Data is not reported. Remove endpoints from mock data and send in CT entry again.
+			lm.SetMockData(epMapDelete, nil, nil, nil)
+			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
+
+			// This is an unreported flow, and is a conntrack update. We can update the endpoint, but we never downgrade
+			// to having no endpoint (since we handle the situation where endpoint is deleted before we gather all
+			// logs).
+			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+		})
+		It("should handle destination changing on next conntrack update for reported flow", func() {
+			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			// will call handlerInfo from c.Start() in BeforeEach
+			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
+
+			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+
+			// Flag the data as reported, swap local endpoints from mock data and send in CT entry again.
+			data := c.epStats[*t]
+			data.reported = true
+			oldSrc := data.srcEp
+			oldDest := data.dstEp
+
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
+			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
+
+			// This is a reported flow, and is a conntrack update - this should not impact the stored data at all since
+			// the endpoint should not be changing for a constant connection.
+			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+			Expect(data.srcEp).To(Equal(oldSrc))
+			Expect(data.dstEp).To(Equal(oldDest))
+		})
+		It("should handle destination changing on next conntrack update for unreported flow", func() {
+			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			// will call handlerInfo from c.Start() in BeforeEach
+			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
+
+			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+
+			// Data is not reported. swap local endpoints from mock data and send in packetinfo entry again.
+			data := c.epStats[*t]
+			oldSrc := data.srcEp
+			oldDest := data.dstEp
+
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
+			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(inCtEntry, 0)}
+
+			// This is an unreported flow, and is a conntrack update. We can update the endpoint.
+			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+			Expect(data.srcEp).To(Equal(oldSrc))
+			Expect(data.dstEp).NotTo(Equal(oldDest))
+		})
+		It("should handle destination becoming non-local by removing entry on next packetinfo update for reported flow", func() {
+			pktinfo := nflogReader.convertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
+			c.applyPacketInfo(pktinfo)
+			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+
+			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+
+			// Flag the data as reported, remove endpoints from mock data and send in packetinfo entry again.
+			data := c.epStats[*t]
+			data.reported = true
+			lm.SetMockData(epMapDelete, nil, nil, nil)
+			c.applyPacketInfo(pktinfo)
+
+			// This is a reported flow but we are going through packet processing still. It should be expired and
+			// removed.
 			Eventually(c.epStats, "500ms", "100ms").ShouldNot(HaveKey(*t))
+			Expect(data.reported).To(BeFalse())
+		})
+		It("should handle destination becoming non-local by removing entry on next packetinfo update for unreported flow", func() {
+			pktinfo := nflogReader.convertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
+			c.applyPacketInfo(pktinfo)
+			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+
+			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+
+			// Data is not reported. Remove endpoints from mock data and send in packetinfo entry again.
+			data := c.epStats[*t]
+			oldSrc := data.srcEp
+			oldDest := data.dstEp
+			lm.SetMockData(epMapDelete, nil, nil, nil)
+			c.applyPacketInfo(pktinfo)
+
+			// This is an unreported flow but we are going through packet processing still. However, since the endpoint
+			// data has been removed assume it has just been deleted and don't downgrade our endpoint data.
+			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+			Expect(data.reported).To(BeFalse())
+			Expect(data.srcEp).To(Equal(oldSrc))
+			Expect(data.dstEp).To(Equal(oldDest))
+		})
+		It("should handle destination changing on next packetinfo update for reported flow", func() {
+			pktinfo := nflogReader.convertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
+			c.applyPacketInfo(pktinfo)
+			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+
+			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+
+			// Flag the data as reported, swap local endpoints from mock data and send in packetinfo entry again.
+			data := c.epStats[*t]
+			data.reported = true
+			oldSrc := data.srcEp
+			oldDest := data.dstEp
+
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
+			c.applyPacketInfo(pktinfo)
+
+			// This is a reported flow but we are going through packet processing still. It should be expired and
+			// the endpoints updated.
+			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+			Expect(data.reported).To(BeFalse())
+			Expect(data.srcEp).To(Equal(oldSrc))
+			Expect(data.dstEp).NotTo(Equal(oldDest))
+		})
+		It("should handle destination changing on next packetinfo update for unreported flow", func() {
+			pktinfo := nflogReader.convertNflogPkt(rules.RuleDirIngress, ingressPktAllow)
+			c.applyPacketInfo(pktinfo)
+			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+
+			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+
+			// Data is not reported, swap local endpoints from mock data and send in CT entry again.
+			data := c.epStats[*t]
+			oldSrc := data.srcEp
+			oldDest := data.dstEp
+
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
+			c.applyPacketInfo(pktinfo)
+
+			// This is an unreported flow, and is a conntrack update. We can update the endpoint.
+			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+			Expect(data.reported).To(BeFalse())
+			Expect(data.srcEp).To(Equal(oldSrc))
+			Expect(data.dstEp).NotTo(Equal(oldDest))
 		})
 	})
 	Describe("Test local source", func() {
@@ -871,7 +1020,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(outCtEntry.OriginalCounters.Bytes)))
 			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(outCtEntry.ReplyCounters.Bytes)))
 		})
-		It("should handle source becoming non-local by removing entry on next update", func() {
+		It("should handle source becoming non-local by removing entry on next conntrack update for reported flow", func() {
 			t := NewTuple(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
 			// will call handlerInfo from c.Start() in BeforeEach
 			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntry, 0)}
@@ -883,7 +1032,150 @@ var _ = Describe("Conntrack Datasource", func() {
 			data.reported = true
 			lm.SetMockData(epMapDelete, nil, nil, nil)
 			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntry, 0)}
+
+			// This is a reported flow, and is a conntrack update - this should not impact the stored data at all.
+			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+		})
+		It("should handle source becoming non-local by removing entry on next conntrack update for unreported flow", func() {
+			t := NewTuple(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
+			// will call handlerInfo from c.Start() in BeforeEach
+			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntry, 0)}
+
+			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+
+			// Data is not reported. Remove endpoints from mock data and send in CT entry again.
+			lm.SetMockData(epMapDelete, nil, nil, nil)
+			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntry, 0)}
+
+			// This is an unreported flow, and is a conntrack update. We can update the endpoint, but we never downgrade
+			// to having no endpoint (since we handle the situation where endpoint is deleted before we gather all
+			// logs).
+			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+		})
+		It("should handle source changing on next conntrack update for reported flow", func() {
+			t := NewTuple(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
+			// will call handlerInfo from c.Start() in BeforeEach
+			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntry, 0)}
+
+			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+
+			// Flag the data as reported, swap local endpoints from mock data and send in CT entry again.
+			data := c.epStats[*t]
+			data.reported = true
+			oldSrc := data.srcEp
+			oldDest := data.dstEp
+
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
+			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntry, 0)}
+
+			// This is a reported flow, and is a conntrack update - this should not impact the stored data at all since
+			// the endpoint should not be changing for a constant connection.
+			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+			Expect(data.srcEp).To(Equal(oldSrc))
+			Expect(data.dstEp).To(Equal(oldDest))
+		})
+		It("should handle source changing on next conntrack update for unreported flow", func() {
+			t := NewTuple(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
+			// will call handlerInfo from c.Start() in BeforeEach
+			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntry, 0)}
+
+			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+
+			// Data is not reported. swap local endpoints from mock data and send in packetinfo entry again.
+			data := c.epStats[*t]
+			oldSrc := data.srcEp
+			oldDest := data.dstEp
+
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
+			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntry, 0)}
+
+			// This is an unreported flow, and is a conntrack update. We can update the endpoint.
+			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+			Expect(data.srcEp).NotTo(Equal(oldSrc))
+			Expect(data.dstEp).To(Equal(oldDest))
+		})
+		It("should handle source becoming non-local by removing entry on next packetinfo update for reported flow", func() {
+			pktinfo := nflogReader.convertNflogPkt(rules.RuleDirEgress, egressPktAllow)
+			c.applyPacketInfo(pktinfo)
+			t := NewTuple(localIp1, remoteIp1, proto_udp, srcPort, dstPort)
+
+			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+
+			// Flag the data as reported, remove endpoints from mock data and send in packetinfo entry again.
+			data := c.epStats[*t]
+			data.reported = true
+			lm.SetMockData(epMapDelete, nil, nil, nil)
+			c.applyPacketInfo(pktinfo)
+
+			// This is a reported flow but we are going through packet processing still. It should be expired and
+			// removed.
 			Eventually(c.epStats, "500ms", "100ms").ShouldNot(HaveKey(*t))
+			Expect(data.reported).To(BeFalse())
+		})
+		It("should handle source becoming non-local by removing entry on next packetinfo update for unreported flow", func() {
+			pktinfo := nflogReader.convertNflogPkt(rules.RuleDirEgress, egressPktAllow)
+			c.applyPacketInfo(pktinfo)
+			t := NewTuple(localIp1, remoteIp1, proto_udp, srcPort, dstPort)
+
+			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+
+			// Data is not reported. Remove endpoints from mock data and send in packetinfo entry again.
+			data := c.epStats[*t]
+			oldSrc := data.srcEp
+			oldDest := data.dstEp
+			lm.SetMockData(epMapDelete, nil, nil, nil)
+			c.applyPacketInfo(pktinfo)
+
+			// This is an unreported flow but we are going through packet processing still. However, since the endpoint
+			// data has been removed assume it has just been deleted and don't downgrade our endpoint data.
+			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+			Expect(data.reported).To(BeFalse())
+			Expect(data.srcEp).To(Equal(oldSrc))
+			Expect(data.dstEp).To(Equal(oldDest))
+		})
+		It("should handle source changing on next packetinfo update for reported flow", func() {
+			pktinfo := nflogReader.convertNflogPkt(rules.RuleDirEgress, egressPktAllow)
+			c.applyPacketInfo(pktinfo)
+			t := NewTuple(localIp1, remoteIp1, proto_udp, srcPort, dstPort)
+
+			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+
+			// Flag the data as reported, swap local endpoints from mock data and send in packetinfo entry again.
+			data := c.epStats[*t]
+			data.reported = true
+			oldSrc := data.srcEp
+			oldDest := data.dstEp
+
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
+			c.applyPacketInfo(pktinfo)
+
+			// This is a reported flow but we are going through packet processing still. It should be expired and
+			// the endpoints updated.
+			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+			Expect(data.reported).To(BeFalse())
+			Expect(data.srcEp).NotTo(Equal(oldSrc))
+			Expect(data.dstEp).To(Equal(oldDest))
+		})
+		It("should handle source changing on next packetinfo update for unreported flow", func() {
+			pktinfo := nflogReader.convertNflogPkt(rules.RuleDirEgress, egressPktAllow)
+			c.applyPacketInfo(pktinfo)
+			t := NewTuple(localIp1, remoteIp1, proto_udp, srcPort, dstPort)
+
+			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+
+			// Data is not reported, swap local endpoints from mock data and send in CT entry again.
+			data := c.epStats[*t]
+			oldSrc := data.srcEp
+			oldDest := data.dstEp
+
+			lm.SetMockData(epMapSwapLocal, nil, nil, nil)
+			c.applyPacketInfo(pktinfo)
+
+			// This is an unreported flow, and is a conntrack update. We can update the endpoint.
+			Consistently(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+			Expect(data.reported).To(BeFalse())
+			Expect(data.srcEp).NotTo(Equal(oldSrc))
+			Expect(data.dstEp).To(Equal(oldDest))
 		})
 	})
 	Describe("Test local source to local destination", func() {
@@ -1059,9 +1351,9 @@ var _ = Describe("Conntrack Datasource", func() {
 	})
 
 	Describe("Test data race", func() {
-		It("getDataAndUpdateEndpoints does not cause a data race contention  with deleteDataFromEpStats after deleteDataFromEpStats removes it from epstats", func() {
+		It("getDataAndUpdateEndpoints does not cause a data race contention with deleteDataFromEpStats after deleteDataFromEpStats removes it from epstats", func() {
 			existingTuple := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
-			testData := c.getDataAndUpdateEndpoints(*existingTuple, false)
+			testData := c.getDataAndUpdateEndpoints(*existingTuple, false, true)
 
 			newTuple := NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
 
@@ -1072,9 +1364,9 @@ var _ = Describe("Conntrack Datasource", func() {
 			})
 
 			// ok Get is a little after feedupdate because feedupdate has some preprocesssing
-			// before ti accesses flowstore
+			// before it accesses flowstore
 			time.AfterFunc(2*time.Second+10*time.Millisecond, func() {
-				resultantNewTupleData = c.getDataAndUpdateEndpoints(*newTuple, false)
+				resultantNewTupleData = c.getDataAndUpdateEndpoints(*newTuple, false, true)
 			})
 
 			time.Sleep(3 * time.Second)
