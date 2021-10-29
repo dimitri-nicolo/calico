@@ -648,9 +648,12 @@ func (cc *controllerControl) RunControllers() {
 		// status changes.
 		// Need to wrap the call to MonitorForever in a function to pass static-checks.
 		go func() {
-			err := cc.licenseMonitor.MonitorForever(context.Background())
-			if err != nil {
-				log.WithError(err).Warn("Error while continuously monitoring the license.")
+			for {
+				err := cc.licenseMonitor.MonitorForever(context.Background())
+				if err != nil {
+					log.WithError(err).Warn("Error while continuously monitoring the license.")
+				}
+				time.Sleep(time.Second)
 			}
 		}()
 	}
