@@ -261,7 +261,7 @@ func (c *collector) startStatsCollectionAndReporting() {
 //
 // This method also updates the endpoint data from the cache, so beware - it is not as lightweight as a
 // simple map lookup.
-func (c *collector) getDataAndUpdateEndpoints(tuple Tuple, expired bool) *Data {
+func (c *collector) getDataAndUpdateEndpoints(tuple Tuple, expired bool, packetinfo bool) *Data {
 	data, okData := c.epStats[tuple]
 	if expired {
 		// If the connection has expired then return the data as is. If there is no entry, that's fine too.
@@ -290,19 +290,42 @@ func (c *collector) getDataAndUpdateEndpoints(tuple Tuple, expired bool) *Data {
 		return data
 	}
 
-	if data.reported && (endpointChanged(data.srcEp, srcEp) || endpointChanged(data.dstEp, dstEp)) {
-		// The endpoint information has now changed. Handle the endpoint changes.
-		c.handleDataEndpointOrRulesChanged(data)
-
-		// For updated entries, check that at least one of the endpoints is still local. If not delete the entry.
-		if srcEpIsNotLocal && dstEpIsNotLocal {
-			c.deleteDataFromEpStats(data)
-			return nil
+	if data.reported {
+		// Data has been reported.  If the request has not come from a packet info update (e.g. nflog) then the
+		// endpoint data should be considered frozen since this is a pre-existing connection.
+		if !packetinfo {
+			return data
 		}
+
+		// If the endpoints have changed then we'll need to expire the current data and possibly delete the entry if
+		// if not longer represents local endpoints.
+		if endpointChanged(data.srcEp, srcEp) || endpointChanged(data.dstEp, dstEp) {
+			// The endpoint information has now changed. Handle the endpoint changes.
+			c.handleDataEndpointOrRulesChanged(data)
+
+			// For updated entries, check that at least one of the endpoints is still local. If not delete the entry.
+			if srcEpIsNotLocal && dstEpIsNotLocal {
+				c.deleteDataFromEpStats(data)
+				return nil
+			}
+		}
+
+		// Update the source and dest data. We do this even if the endpoints haven't changed because the labels on the
+		// endpoints may have changed and so our matches might be different.
+		data.srcEp, data.dstEp = srcEp, dstEp
+
+		return data
 	}
 
-	// Update endpoint info in data.
-	data.srcEp, data.dstEp = srcEp, dstEp
+	// Data has not been reported. Don't downgrade found endpoints (in case the endpoint is deleted prior to being
+	// reported).
+	if srcEp != nil {
+		data.srcEp = srcEp
+	}
+	if dstEp != nil {
+		data.dstEp = dstEp
+	}
+
 	return data
 }
 
@@ -310,8 +333,9 @@ func (c *collector) getDataAndUpdateEndpoints(tuple Tuple, expired bool) *Data {
 func endpointChanged(ep1, ep2 *calc.EndpointData) bool {
 	if ep1 == ep2 {
 		return false
-	}
-	if ep1 == nil || ep2 == nil {
+	} else if ep1 == nil {
+		return ep2 != nil
+	} else if ep2 == nil {
 		return true
 	}
 	return ep1.Key != ep2.Key
@@ -608,7 +632,7 @@ func (c *collector) handleCtInfo(ctInfo ConntrackInfo) {
 	// calico managed endpoints. A relevant conntrack entry requires at least one of the endpoints to be a local
 	// Calico managed endpoint.
 
-	if data := c.getDataAndUpdateEndpoints(ctInfo.Tuple, ctInfo.Expired); data != nil {
+	if data := c.getDataAndUpdateEndpoints(ctInfo.Tuple, ctInfo.Expired, false); data != nil {
 
 		if !data.isDNAT && ctInfo.IsDNAT {
 			originalTuple := ctInfo.PreDNATTuple
@@ -634,7 +658,7 @@ func (c *collector) applyPacketInfo(pktInfo PacketInfo) {
 
 	tuple := pktInfo.Tuple
 
-	if data = c.getDataAndUpdateEndpoints(tuple, false); data == nil {
+	if data = c.getDataAndUpdateEndpoints(tuple, false, true); data == nil {
 		// Data is nil, so the destination endpoint cannot be managed by local Calico.
 		return
 	}
@@ -740,7 +764,7 @@ func (c *collector) convertDataplaneStatsAndApplyUpdate(d *proto.DataplaneStats)
 
 	// Locate the data for this connection, creating if not yet available (it's possible to get an update
 	// from the dataplane before nflogs or conntrack).
-	data := c.getDataAndUpdateEndpoints(t, false)
+	data := c.getDataAndUpdateEndpoints(t, false, false)
 
 	var httpDataCount int
 	var isL7Data bool
