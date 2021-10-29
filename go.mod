@@ -49,8 +49,8 @@ require (
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.6.1
 	github.com/tebeka/strftime v0.1.5 // indirect
-	github.com/tigera/api v0.0.0-20211026170921-dc6d9aa2cf7c
-	github.com/tigera/licensing v1.0.1-0.20211026010040-cef010677161
+	github.com/tigera/api v0.0.0-20211028194523-b4ceddaee039
+	github.com/tigera/licensing v1.0.1-0.20211028223522-6b45a0a46366
 	github.com/tigera/nfnetlink v0.0.0-20210819183736-75abca8ede69
 	github.com/tigera/windows-networking v0.0.0-20210505211919-0de3e1e53cff
 	github.com/vishvananda/netlink v1.1.1-0.20210703095558-21f2c55a7727
@@ -75,8 +75,8 @@ require (
 replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211026005712-dcbb50694290
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211026012722-0d52752862e6
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211028223111-11b10e01b33d
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211028224705-64195140a910
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 
 	// The GRPC library seems to float to latest without this (not sure why!) and v1.30+ are incompatible with
