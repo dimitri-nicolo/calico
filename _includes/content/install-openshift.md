@@ -257,47 +257,11 @@ To access resources in a managed cluster from the {{site.prodname}} Manager with
 
 You have successfully installed a management cluster.
 
-#### Add a managed cluster to the management cluster
-
-Choose a name for your managed cluster and then add it to your **management cluster**. The following commands will
-create a manifest with the name of your managed cluster in your current directory.
-
-1. First, decide on the name for your managed cluster. Because you will eventually have several managed clusters, choose a name that can be easily recognized in a list of managed clusters. The name is also used in steps that follow.
-   ```bash
-   export MANAGED_CLUSTER=my-managed-cluster
-   ```
-
-1. Add a managed cluster and save the manifest containing a [ManagementClusterConnection]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.ManagementClusterConnection) and a Secret.
-   ```bash
-   oc -o jsonpath="{.spec.installationManifest}" > $MANAGED_CLUSTER.yaml create -f - <<EOF
-   apiVersion: projectcalico.org/v3
-   kind: ManagedCluster
-   metadata:
-     name: $MANAGED_CLUSTER
-   EOF
-   ```
-
-Verify that the `managementClusterAddr` in the manifest is correct.
-
-> **Tip**: Managed clusters can also be added from {{site.prodname}} Manager. From here you can see the connection status and switch to see data from other clusters by using the drop-down menu in the top right banner.
-{: .alert .alert-info}
-
 {% endif %}
 
 {% if include.clusterType == "managed" %}
-#### Create a managed cluster
-1. Apply the manifest that you modified in the step, **Add a managed cluster to the management cluster**.
-   ```bash
-   oc apply -f $MANAGED_CLUSTER.yaml
-   ```
-1. Monitor progress with the following command:
-   ```bash
-   watch oc get tigerastatus
-   ```
-   Wait until the `management-cluster-connection` and `tigera-compliance` show a status of `Available`.
-
-You have now successfully installed a managed cluster!
-
+{% assign kubectlCmd = "oc" %}
+{% include content/configure-managed-cluster.md%}
 
 #### Provide permissions to view the managed cluster
 

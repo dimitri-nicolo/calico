@@ -2,8 +2,10 @@ title: "Multi-cluster management"
 path: /multicluster/
 order: 5
 section:
-- title: Configure multi-cluster management
-  path: /multicluster/mcm/configure
+- title: Create a management cluster
+  path: /multicluster/mcm/create-a-management-cluster
+- title: Create a managed cluster
+  path: /multicluster/mcm/create-a-managed-cluster
 - title: Fine-tune multi-cluster management for production
   path: /multicluster/mcm/fine-tune-deployment
 - title: Change a cluster type
