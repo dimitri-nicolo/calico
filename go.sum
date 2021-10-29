@@ -742,15 +742,12 @@ github.com/tchap/go-patricia/v2 v2.3.1/go.mod h1:VZRHKAb53DLaG+nA9EaYYiaEx6YztwD
 github.com/tebeka/strftime v0.1.5/go.mod h1:29/OidkoWHdEKZqzyDLUyC+LmgDgdHo4WAFCDT7D/Ig=
 github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLYM/iQ8KXej1AwM=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
-github.com/tigera/api v0.0.0-20211025235918-67c9d2e86873/go.mod h1:U7qqFcD+luefolr44wGe1PuCMxgKUplb6qStftrgrSQ=
-github.com/tigera/api v0.0.0-20211026170921-dc6d9aa2cf7c/go.mod h1:U7qqFcD+luefolr44wGe1PuCMxgKUplb6qStftrgrSQ=
 github.com/tigera/api v0.0.0-20211028194523-b4ceddaee039 h1:HOtYCLF/WTST0CxX4Y0I0K6xys8fUPaC0ibtDRR8RpA=
 github.com/tigera/api v0.0.0-20211028194523-b4ceddaee039/go.mod h1:U7qqFcD+luefolr44wGe1PuCMxgKUplb6qStftrgrSQ=
-github.com/tigera/felix-private v0.0.0-20211029135845-425b3c58e353 h1:grEWPLHBkI4vawVxD2zay6bL1g88GX+obg7m4SqZK0Y=
-github.com/tigera/felix-private v0.0.0-20211029135845-425b3c58e353/go.mod h1:yMsKQ9S1RFtBqPeq23N4Nb6svYFisJBQ4prI4VysrYg=
+github.com/tigera/felix-private v0.0.0-20211029175021-ef8fc47f5516 h1:y7LONnXO6q4DgTQ53qbLoMq9E8tDKF7SgJEr/fBqQlA=
+github.com/tigera/felix-private v0.0.0-20211029175021-ef8fc47f5516/go.mod h1:HgkQZQwJXU6oMwCrgIWWwoqPX8KT3FDVHvAXuWp+4lQ=
 github.com/tigera/libcalico-go-private v1.7.2-0.20211028223111-11b10e01b33d h1:65YcvV9PP0COsE60WbyG+5ht4CWCubC19JzD9Xtx0cA=
 github.com/tigera/libcalico-go-private v1.7.2-0.20211028223111-11b10e01b33d/go.mod h1:2535xKV1W6TWEkrQIaORdSdL9FXUz4LXrgF4ddI0Yns=
-github.com/tigera/licensing v1.0.1-0.20211026010040-cef010677161/go.mod h1:UXFl7k/QKdPYVp7FgYYDnQxEOgl3BLjWytpZO8AvEAo=
 github.com/tigera/licensing v1.0.1-0.20211028223522-6b45a0a46366 h1:4sPKbQlcUj9fhupc5qp2w7dSPcP5nIEzvXcNb1ZnYCE=
 github.com/tigera/licensing v1.0.1-0.20211028223522-6b45a0a46366/go.mod h1:xwvHnwmr98msK+yFxQYintT1eyTc11fHVe+F5Qc3qq8=
 github.com/tigera/nfnetlink v0.0.0-20210819183736-75abca8ede69/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
