@@ -141,6 +141,7 @@ happens to be on the same node as the client).
 ### How to
 
 -  [Enable egress gateway support](#enable-egress-gateway-support)
+-  [Enable policy sync API](#enable-policy-sync-api)
 -  [Provision an egress IP pool](#provision-an-egress-ip-pool)
 -  [Copy pull secret into egress gateway namespace](#copy-pull-secret-into-egress-gateway-namespace)
 -  [Deploy a group of egress gateways](#deploy-a-group-of-egress-gateways)
@@ -166,12 +167,21 @@ kubectl patch felixconfiguration.p default --type='merge' -p \
     '{"spec":{"egressIPSupport":"EnabledPerNamespaceOrPerPod"}}'
 ```
 
+#### Enable policy sync API
+
+Egress gateways require the policy sync API to be enabled on Felix. To do this cluster-wide, modify
+the `default` FelixConfiguration to set the field `policySyncPathPrefix` to `/var/run/nodeagent`:
+
+```bash
+kubectl patch felixconfiguration.p default --type='merge' -p \
+    '{"spec":{"policySyncPathPrefix":"/var/run/nodeagent"}}'
+```
+
 > **Note**:
 >
-> -  `egressIPSupport` must be the same on all cluster nodes, so you should only set it in the
+> -  `egressIPSupport` and `policySyncPathPrefix` must be the same on all cluster nodes, so you should only set them in the
 >    `default` FelixConfiguration resource.
 {: .alert .alert-info}
-
 #### Provision an egress IP pool
 
 Provision a small IP Pool with the range of source IPs that you want to use for a particular
@@ -255,7 +265,14 @@ spec:
               fieldPath: status.podIP
         securityContext:
           privileged: true
+        volumeMounts:
+        - mountPath: /var/run
+          name: policysync
       terminationGracePeriodSeconds: 0
+      volumes:
+      - flexVolume:
+          driver: nodeagent/uds
+        name: policysync
 EOF
 ```
 
@@ -279,6 +296,9 @@ EOF
 >
 > -  The `securityContext` is required, so that the egress gateway can manipulate its own network
 >    namespace.
+>
+> -  The `policysync` volume mount is required. This exposes the policy sync API to the pod,
+>    allowing it to program its own routing based off information from Felix.
 {: .alert .alert-info}
 
 
