@@ -1,3 +1,11 @@
 /Makefile.common
 /Makefile.common.v*
 /.egress_gateway.created-amd64
+/.egress_gateway_testing.created-amd64
+.idea/
+vendor/
+.go-pkg-cache
+bin
+*.created-*
+report/
+release-notes-*
