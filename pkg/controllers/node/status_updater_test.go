@@ -9,8 +9,6 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
-	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
@@ -20,36 +18,47 @@ import (
 	"k8s.io/client-go/util/workqueue"
 )
 
+const (
+	dpiName = "dpiRes-name"
+	dpiNs   = "dpiRes-ns"
+)
+
+type mockDPIWatcher struct {
+}
+
+func (w *mockDPIWatcher) Run(stopCh chan struct{}) {}
+
+func (w *mockDPIWatcher) GetExistingResources() []interface{} {
+	return []interface{}{&v3.DeepPacketInspection{ObjectMeta: metav1.ObjectMeta{Name: dpiName, Namespace: dpiNs},
+		Status: v3.DeepPacketInspectionStatus{Nodes: []v3.DPINode{
+			{Node: "node-0", Active: v3.DPIActive{Success: true}},
+		}}}}
+}
+
 var _ = Describe("DPI status on node create or delete", func() {
-	dpiName := "dpiRes-name"
-	dpiNs := "dpiRes-ns"
+
 	var cli *FakeCalicoClient
 	var tigeraapiCLI tigeraapi.Interface
 	var mockDPIClient *MockDeepPacketInspectionInterface
 	var dpiRes *v3.DeepPacketInspection
 	var expectedUpdateStatusCallCounter, actualUpdateStatusCallCounter int
-	var mockDPICtrl *controller.MockController
 	var stopCh chan struct{}
 	var newCtrl func() *statusUpdateController
 	var nodeList []string
-
+	var mockWatcher Watcher
 	BeforeEach(func() {
 		cli = NewFakeCalicoClient()
 		stopCh = make(chan struct{})
 		nodeList = []string{}
-		fn := func() []string {
-			return nodeList
-		}
-		dpi := v3.NewDeepPacketInspection()
-		dpi.Name = dpiName
-		dpi.Namespace = dpiNs
+		fn := func() []string { return nodeList }
+		mockWatcher = &mockDPIWatcher{}
+
 		newCtrl = func() *statusUpdateController {
 			return &statusUpdateController{
 				rl:               workqueue.DefaultControllerRateLimiter(),
 				calicoClient:     cli,
 				calicoV3Client:   tigeraapiCLI,
-				dpiCache:         func() []*v3.DeepPacketInspection { return []*v3.DeepPacketInspection{dpi} },
-				dpiCtrl:          func() controller.Controller { return mockDPICtrl }(),
+				dpiWch:           mockWatcher,
 				nodeCacheFn:      fn,
 				reconcilerPeriod: 5 * time.Second,
 			}
@@ -63,15 +72,11 @@ var _ = Describe("DPI status on node create or delete", func() {
 				{Node: "node-0", Active: v3.DPIActive{Success: true}},
 			}}}
 
-		mockDPICtrl = &controller.MockController{}
-		mockDPICtrl.On("Run", mock.Anything).Return()
-
 		expectedUpdateStatusCallCounter = 0
 		actualUpdateStatusCallCounter = 0
 	})
 
 	AfterEach(func() {
-
 		close(stopCh)
 	})
 
