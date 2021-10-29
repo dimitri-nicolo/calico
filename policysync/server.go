@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,13 +29,12 @@ import (
 )
 
 const (
-	SockName       = "/policysync.sock"
 	OrchestratorId = "k8s"
 	EndpointId     = "eth0"
 )
 const OutputQueueLen = 100
 
-// Server implements the API that each policy-sync agent connects to in order to get policy information.
+// Server implements the API that each sync agent connects to in order to get information.
 // There is a single instance of the Server, it disambiguates connections from different clients by the
 // credentials present in the gRPC request.
 type Server struct {
@@ -62,8 +61,7 @@ func (s *Server) RegisterGrpc(g *grpc.Server) {
 }
 
 func (s *Server) Sync(syncRequest *proto.SyncRequest, stream proto.PolicySync_SyncServer) error {
-	log.Info("New policy sync connection")
-
+	log.Info("New sync connection")
 	// Extract the workload ID from the request.
 	cxt := stream.Context()
 	creds, ok := binder.CallerFromContext(cxt)
@@ -80,7 +78,7 @@ func (s *Server) Sync(syncRequest *proto.SyncRequest, stream proto.PolicySync_Sy
 		"workload": workloadID,
 		"joinID":   myJoinUID,
 	})
-	logCxt.Info("New policy sync connection identified")
+	logCxt.Info("New sync connection identified")
 
 	// Send a join request to the processor to ask it to start sending us updates.
 	updates := make(chan proto.ToDataplane, OutputQueueLen)
@@ -101,7 +99,7 @@ func (s *Server) Sync(syncRequest *proto.SyncRequest, stream proto.PolicySync_Sy
 
 	// Defer the cleanup of the join and the updates channel.
 	defer func() {
-		logCxt.Info("Shutting down policy sync connection")
+		logCxt.Info("Shutting down sync connection")
 		joinsCopy := s.JoinUpdates
 		leaveRequest := LeaveRequest{JoinMetadata: joinMeta}
 		// Since the processor closes the update channel, we need to keep draining the updates channel to avoid
@@ -123,13 +121,13 @@ func (s *Server) Sync(syncRequest *proto.SyncRequest, stream proto.PolicySync_Sy
 				joinsCopy = nil
 			}
 		}
-		logCxt.Info("Finished shutting down policy sync connection")
+		logCxt.Info("Finished shutting down sync connection")
 	}()
 
 	for update := range updates {
-		err := stream.Send(&update)
+		err := stream.SendMsg(&update)
 		if err != nil {
-			logCxt.WithError(err).Warn("Failed to send update to policy sync client")
+			logCxt.WithError(err).Warn("Failed to send update to sync client")
 			return err
 		}
 	}

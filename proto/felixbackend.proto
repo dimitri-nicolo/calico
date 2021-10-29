@@ -6,6 +6,7 @@ import "google/protobuf/timestamp.proto";
 service PolicySync {
   // On this API, only the following payloads will be sent:
   //  - InSync
+  //  - ConfigUpdate
   //  - IPSetUpdate
   //  - IPSetDeltaUpdate
   //  - IPSetRemove
@@ -23,7 +24,6 @@ service PolicySync {
   //  - RouteRemove
   //  - VXLANTunnelEndpointUpdate
   //  - VXLANTunnelEndpointRemove
-  //  - ConfigUpdate
   //  - PacketCaptureUpdate
   //  - PacketCaptureRemove
   //
@@ -46,6 +46,9 @@ message SyncRequest {
   // if supported by Felix. If enabled, the sync consumer may call the Report RPC method to stream
   // dataplane statistics to Felix.
   bool supportsDataplaneStats = 2;
+  // Determines which types of payloads will be sent to the client.
+  // Valid values are "per-pod-policies" or "l3-routes".
+  string subscriptionType = 3;
 }
 
 // Rationale for having explicit Remove messages rather than sending and update
@@ -744,7 +747,7 @@ message HTTPData {
   string request_method = 9;
   int32 count = 10;
   string domain = 11;
-  int32 duration_max=12;
+  int32 duration_max = 12;
   string type = 13;
 }
 

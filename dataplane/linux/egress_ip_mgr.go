@@ -3,6 +3,7 @@
 package intdataplane
 
 import (
+	"crypto/sha1"
 	"errors"
 	"fmt"
 	"net"
@@ -646,6 +647,7 @@ func (m *egressIPManager) GetRouteRules() []routeRules {
 	return nil
 }
 
+// ipStringToMac defines how an egress gateway pod's MAC is generated
 func ipStringToMac(s string) net.HardwareAddr {
 	ipAddr := ip.FromString(s).AsNetIP()
 	// Any MAC address that has the values 2, 3, 6, 7, A, B, E, or F
@@ -657,9 +659,15 @@ func ipStringToMac(s string) net.HardwareAddr {
 func (m *egressIPManager) KeepVXLANDeviceInSync(mtu int, wait time.Duration) {
 	log.Info("egress ip VXLAN tunnel device thread started.")
 	for {
-		err := m.configureVXLANDevice(mtu)
+		// src_valid_mark must be enabled for RPF to accurately check returning egress packets coming through egress.calico
+		err := writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/src_valid_mark", m.vxlanDevice), "1")
 		if err != nil {
-			log.WithError(err).Warn("Failed configure egress ip VXLAN tunnel device, retrying...")
+			log.WithError(err).Warnf("Failed to enable src_valid_mark system flag for device '%s", m.vxlanDevice)
+		}
+
+		err = m.configureVXLANDevice(mtu)
+		if err != nil {
+			log.WithError(err).Warn("Failed to configure egress ip VXLAN tunnel device, retrying...")
 			time.Sleep(1 * time.Second)
 			continue
 		}
@@ -699,10 +707,18 @@ func (m *egressIPManager) configureVXLANDevice(mtu int) error {
 		return err
 	}
 
-	// Egress ip vxlan device does not need to have tunnel address and mac
+	// Egress ip vxlan device does not need to have tunnel address.
+	// We generate a predictable MAC here that we can reproduce here https://github.com/tigera/egress-gateway/blob/18133f0b37119b3463cd5af75539e27fec69b16b/util/net/mac.go#L20
+	// in an identical manner.
+	mac, err := hardwareAddrForNode(m.dpConfig.Hostname)
+	if err != nil {
+		return err
+	}
+
 	vxlan := &netlink.Vxlan{
 		LinkAttrs: netlink.LinkAttrs{
-			Name: m.vxlanDevice,
+			Name:         m.vxlanDevice,
+			HardwareAddr: mac,
 		},
 		VxlanId:      m.vxlanID,
 		Port:         m.vxlanPort,
@@ -777,4 +793,19 @@ func (m *egressIPManager) configureVXLANDevice(mtu int) error {
 	m.vxlanDeviceLinkIndex = attrs.Index
 
 	return nil
+}
+
+// hardwareAddrForNode deterministically creates a unique hardware address from a hostname.
+// IMPORTANT: an egress gateway pod needs to perform an identical operation when programming its own L2 routes to this node,
+// as shown here https://github.com/tigera/egress-gateway/blob/18133f0b37119b3463cd5af75539e27fec69b16b/util/net/mac.go#L20 (change with caution).
+func hardwareAddrForNode(hostname string) (net.HardwareAddr, error) {
+	hasher := sha1.New()
+	_, err := hasher.Write([]byte(hostname))
+	if err != nil {
+		return nil, err
+	}
+	sha := hasher.Sum(nil)
+	hw := net.HardwareAddr(append([]byte("f"), sha[0:5]...))
+
+	return hw, nil
 }

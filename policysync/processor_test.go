@@ -51,6 +51,8 @@ var _ = Describe("Processor", func() {
 	var removeServiceAccount func(name, namespace string)
 	var updateNamespace func(name string)
 	var removeNamespace func(name string)
+	var updateRoute func(dst, dstNodeName, dstNodeIp string)
+	var removeRoute func(dst string)
 	var join func(sr proto.SyncRequest, w string, jid uint64) (chan proto.ToDataplane, policysync.JoinMetadata)
 	var leave func(jm policysync.JoinMetadata)
 
@@ -62,28 +64,38 @@ var _ = Describe("Processor", func() {
 		uut = policysync.NewProcessor(configParams, updates)
 
 		updateServiceAccount = func(name, namespace string) {
-			msg := &proto.ServiceAccountUpdate{
+			updates <- &proto.ServiceAccountUpdate{
 				Id: &proto.ServiceAccountID{Name: name, Namespace: namespace},
 			}
-			updates <- msg
 		}
 		removeServiceAccount = func(name, namespace string) {
-			msg := &proto.ServiceAccountRemove{
+			updates <- &proto.ServiceAccountRemove{
 				Id: &proto.ServiceAccountID{Name: name, Namespace: namespace},
 			}
-			updates <- msg
 		}
 		updateNamespace = func(name string) {
-			msg := &proto.NamespaceUpdate{
+			updates <- &proto.NamespaceUpdate{
 				Id: &proto.NamespaceID{Name: name},
 			}
-			updates <- msg
 		}
 		removeNamespace = func(name string) {
-			msg := &proto.NamespaceRemove{
+			updates <- &proto.NamespaceRemove{
 				Id: &proto.NamespaceID{Name: name},
 			}
-			updates <- msg
+		}
+		updateRoute = func(dst, dstNodeName, dstNodeIp string) {
+			updates <- &proto.RouteUpdate{
+				Type:        proto.RouteType_REMOTE_WORKLOAD,
+				IpPoolType:  proto.IPPoolType_NONE,
+				Dst:         dst,
+				DstNodeName: dstNodeName,
+				DstNodeIp:   dstNodeIp,
+			}
+		}
+		removeRoute = func(dst string) {
+			updates <- &proto.RouteRemove{
+				Dst: dst,
+			}
 		}
 		join = func(sr proto.SyncRequest, w string, jid uint64) (chan proto.ToDataplane, policysync.JoinMetadata) {
 			// Buffer outputs so that Processor won't block.
@@ -127,12 +139,12 @@ var _ = Describe("Processor", func() {
 					removeServiceAccount("removed", "removed")
 				})
 
-				Context("on new join", func() {
+				Context("on new policy sync join", func() {
 					var output chan proto.ToDataplane
 					var accounts [3]proto.ServiceAccountID
 
 					BeforeEach(func() {
-						output, _ = join(proto.SyncRequest{}, "test", 1)
+						output, _ = join(proto.SyncRequest{SubscriptionType: "pod-policies"}, "test", 1)
 						for i := 0; i < 3; i++ {
 							msg := <-output
 							accounts[i] = *msg.GetServiceAccountUpdate().Id
@@ -164,16 +176,38 @@ var _ = Describe("Processor", func() {
 						))
 					})
 				})
+
+				Context("on new route sync join", func() {
+					var output chan proto.ToDataplane
+
+					BeforeEach(func() {
+						output, _ = join(proto.SyncRequest{SubscriptionType: "l3-routes"}, "test", 1)
+					})
+
+					It("should get no updates", func() {
+						Expect(len(output)).To(BeZero())
+					})
+
+					It("should not pass updates", func() {
+						updateServiceAccount("t0", "t5")
+						Expect(len(output)).To(BeZero())
+					})
+
+					It("should not pass removes", func() {
+						removeServiceAccount("test_serviceaccount0", "test_namespace0")
+						Expect(len(output)).To(BeZero())
+					})
+				})
 			})
 
-			Context("with two joined endpoints", func() {
+			Context("with two joined policy sync endpoints", func() {
 				var output [2]chan proto.ToDataplane
 
 				BeforeEach(func() {
 					for i := 0; i < 2; i++ {
 						w := fmt.Sprintf("test%d", i)
 						d := testId(w)
-						output[i], _ = join(proto.SyncRequest{}, w, uint64(i))
+						output[i], _ = join(proto.SyncRequest{SubscriptionType: "pod-policies"}, w, uint64(i))
 
 						// Ensure the joins are completed by sending a workload endpoint for each.
 						updates <- &proto.WorkloadEndpointUpdate{
@@ -221,11 +255,14 @@ var _ = Describe("Processor", func() {
 				})
 			})
 
-			Context("with two joined endpoints each with different drop action override settings", func() {
+			Context("with two joined policy sync endpoints each with different drop action override settings", func() {
 				var output [2]chan proto.ToDataplane
 
 				BeforeEach(func() {
-					sr := [2]proto.SyncRequest{{SupportsDropActionOverride: true}, {}}
+					sr := [2]proto.SyncRequest{{
+						SupportsDropActionOverride: true,
+						SubscriptionType:           "pod-policies",
+					}, {}}
 
 					for i := 0; i < 2; i++ {
 						w := fmt.Sprintf("test%d", i)
@@ -283,12 +320,12 @@ var _ = Describe("Processor", func() {
 					removeNamespace("removed")
 				})
 
-				Context("on new join", func() {
+				Context("on new policy sync join", func() {
 					var output chan proto.ToDataplane
 					var accounts [3]proto.NamespaceID
 
 					BeforeEach(func() {
-						output, _ = join(proto.SyncRequest{}, "test", 1)
+						output, _ = join(proto.SyncRequest{SubscriptionType: "pod-policies"}, "test", 1)
 						for i := 0; i < 3; i++ {
 							msg := <-output
 							accounts[i] = *msg.GetNamespaceUpdate().Id
@@ -313,16 +350,38 @@ var _ = Describe("Processor", func() {
 						Expect(msg.GetNamespaceRemove().GetId()).To(Equal(&proto.NamespaceID{Name: "test_namespace0"}))
 					})
 				})
+
+				Context("on new route sync join", func() {
+					var output chan proto.ToDataplane
+
+					BeforeEach(func() {
+						output, _ = join(proto.SyncRequest{SubscriptionType: "l3-routes"}, "test", 1)
+					})
+
+					It("should get no updates", func() {
+						Expect(len(output)).To(BeZero())
+					})
+
+					It("should not pass updates", func() {
+						updateNamespace("t0")
+						Expect(len(output)).To(BeZero())
+					})
+
+					It("should not pass removes", func() {
+						removeNamespace("test_namespace0")
+						Expect(len(output)).To(BeZero())
+					})
+				})
 			})
 
-			Context("with two joined endpoints", func() {
+			Context("with two joined policy sync endpoints", func() {
 				var output [2]chan proto.ToDataplane
 
 				BeforeEach(func() {
 					for i := 0; i < 2; i++ {
 						w := fmt.Sprintf("test%d", i)
 						d := testId(w)
-						output[i], _ = join(proto.SyncRequest{}, w, uint64(i))
+						output[i], _ = join(proto.SyncRequest{SubscriptionType: "pod-policies"}, w, uint64(i))
 
 						// Ensure the joins are completed by sending a workload endpoint for each.
 						updates <- &proto.WorkloadEndpointUpdate{
@@ -366,7 +425,7 @@ var _ = Describe("Processor", func() {
 
 		Describe("IP Set updates", func() {
 
-			Context("with two joined endpoints, one with active profile", func() {
+			Context("with two joined policy sync endpoints, one with active profile", func() {
 				var refdOutput chan proto.ToDataplane
 				var unrefdOutput chan proto.ToDataplane
 				var refdId proto.WorkloadEndpointID
@@ -377,9 +436,9 @@ var _ = Describe("Processor", func() {
 
 				BeforeEach(func(done Done) {
 					refdId = testId("refd")
-					refdOutput, _ = join(proto.SyncRequest{}, "refd", 1)
+					refdOutput, _ = join(proto.SyncRequest{SubscriptionType: "pod-policies"}, "refd", 1)
 					unrefdId = testId("unrefd")
-					unrefdOutput, _ = join(proto.SyncRequest{}, "unrefd", 2)
+					unrefdOutput, _ = join(proto.SyncRequest{SubscriptionType: "pod-policies"}, "unrefd", 2)
 
 					// Ensure the joins are completed by sending a workload endpoint for each.
 					refUpd := &proto.WorkloadEndpointUpdate{
@@ -764,7 +823,7 @@ var _ = Describe("Processor", func() {
 					os.RemoveAll(socketDir)
 				})
 
-				Context("with joined, active endpoint", func() {
+				Context("with joined, active policy sync endpoint", func() {
 					var wepId proto.WorkloadEndpointID
 					var syncClient proto.PolicySyncClient
 					var clientConn *grpc.ClientConn
@@ -908,11 +967,38 @@ var _ = Describe("Processor", func() {
 					})
 				})
 			})
+
+			Context("on new route sync join", func() {
+				var output chan proto.ToDataplane
+
+				BeforeEach(func() {
+					output, _ = join(proto.SyncRequest{SubscriptionType: "l3-routes"}, "test", 1)
+				})
+
+				It("should get no updates", func() {
+					Expect(len(output)).To(BeZero())
+				})
+
+				It("should not pass updates", func() {
+					updates <- updateIpSet(IPSetName, 6)
+					Expect(len(output)).To(BeZero())
+				})
+
+				It("should not pass delta updates", func() {
+					updates <- deltaUpdateIpSet(IPSetName, 3, 2)
+					Expect(len(output)).To(BeZero())
+				})
+
+				It("should not pass removes", func() {
+					updates <- removeIpSet(IPSetName)
+					Expect(len(output)).To(BeZero())
+				})
+			})
 		})
 
 		Describe("Profile & Policy updates", func() {
 
-			Context("with two joined endpoints", func() {
+			Context("with two joined policy sync endpoints", func() {
 				var output [2]chan proto.ToDataplane
 				var wepID [2]proto.WorkloadEndpointID
 				var assertNoUpdate func(i int)
@@ -931,7 +1017,7 @@ var _ = Describe("Processor", func() {
 					for i := 0; i < 2; i++ {
 						w := fmt.Sprintf("test%d", i)
 						wepID[i] = testId(w)
-						output[i], _ = join(proto.SyncRequest{}, w, uint64(i))
+						output[i], _ = join(proto.SyncRequest{SubscriptionType: "pod-policies"}, w, uint64(i))
 
 						// Ensure the joins are completed by sending a workload endpoint for each.
 						assertNoUpdate(i)
@@ -1169,7 +1255,7 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should sync profile & wep when wep joins", func(done Done) {
-					output, _ := join(proto.SyncRequest{}, "test", 1)
+					output, _ := join(proto.SyncRequest{SubscriptionType: "pod-policies"}, "test", 1)
 
 					g := <-output
 					Expect(&g).To(HavePayload(proUpdate))
@@ -1181,7 +1267,7 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should resync profile & wep", func(done Done) {
-					output, jm := join(proto.SyncRequest{}, "test", 1)
+					output, jm := join(proto.SyncRequest{SubscriptionType: "pod-policies"}, "test", 1)
 					g := <-output
 					Expect(&g).To(HavePayload(proUpdate))
 					g = <-output
@@ -1190,7 +1276,7 @@ var _ = Describe("Processor", func() {
 					// Leave
 					leave(jm)
 
-					output, _ = join(proto.SyncRequest{}, "test", 2)
+					output, _ = join(proto.SyncRequest{SubscriptionType: "pod-policies"}, "test", 2)
 					g = <-output
 					Expect(&g).To(HavePayload(proUpdate))
 					g = <-output
@@ -1200,7 +1286,7 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should not resync removed profile", func(done Done) {
-					output, jm := join(proto.SyncRequest{}, "test", 1)
+					output, jm := join(proto.SyncRequest{SubscriptionType: "pod-policies"}, "test", 1)
 					g := <-output
 					Expect(&g).To(HavePayload(proUpdate))
 					g = <-output
@@ -1216,7 +1302,7 @@ var _ = Describe("Processor", func() {
 					}
 					updates <- wepUpd2
 
-					output, _ = join(proto.SyncRequest{}, "test", 2)
+					output, _ = join(proto.SyncRequest{SubscriptionType: "pod-policies"}, "test", 2)
 					g = <-output
 					Expect(&g).To(HavePayload(wepUpd2))
 
@@ -1249,7 +1335,7 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should sync policy & wep when wep joins", func(done Done) {
-					output, _ := join(proto.SyncRequest{}, "test", 1)
+					output, _ := join(proto.SyncRequest{SubscriptionType: "pod-policies"}, "test", 1)
 
 					g := <-output
 					Expect(&g).To(HavePayload(polUpd))
@@ -1261,7 +1347,7 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should resync policy & wep", func(done Done) {
-					output, jm := join(proto.SyncRequest{}, "test", 1)
+					output, jm := join(proto.SyncRequest{SubscriptionType: "pod-policies"}, "test", 1)
 					g := <-output
 					Expect(&g).To(HavePayload(polUpd))
 					g = <-output
@@ -1270,7 +1356,7 @@ var _ = Describe("Processor", func() {
 					// Leave
 					leave(jm)
 
-					output, _ = join(proto.SyncRequest{}, "test", 2)
+					output, _ = join(proto.SyncRequest{SubscriptionType: "pod-policies"}, "test", 2)
 					g = <-output
 					Expect(&g).To(HavePayload(polUpd))
 					g = <-output
@@ -1280,7 +1366,7 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should not resync removed policy", func(done Done) {
-					output, jm := join(proto.SyncRequest{}, "test", 1)
+					output, jm := join(proto.SyncRequest{SubscriptionType: "pod-policies"}, "test", 1)
 					g := <-output
 					Expect(&g).To(HavePayload(polUpd))
 					g = <-output
@@ -1295,11 +1381,260 @@ var _ = Describe("Processor", func() {
 					}
 					updates <- wepUpd2
 
-					output, _ = join(proto.SyncRequest{}, "test", 2)
+					output, _ = join(proto.SyncRequest{SubscriptionType: "pod-policies"}, "test", 2)
 					g = <-output
 					Expect(&g).To(HavePayload(wepUpd2))
 
 					close(done)
+				})
+			})
+
+			Context("on new route sync join", func() {
+				var output chan proto.ToDataplane
+				var wepId = testId("test")
+				var policyID = proto.PolicyID{Tier: TierName, Name: PolicyName}
+				var profileID = proto.ProfileID{Name: ProfileName}
+				var wepUpd *proto.WorkloadEndpointUpdate
+				var polUpd *proto.ActivePolicyUpdate
+				var proUpdate *proto.ActiveProfileUpdate
+
+				BeforeEach(func() {
+					polUpd = &proto.ActivePolicyUpdate{
+						Id: &policyID,
+					}
+					updates <- polUpd
+					wepUpd = &proto.WorkloadEndpointUpdate{
+						Id: &wepId,
+						Endpoint: &proto.WorkloadEndpoint{Tiers: []*proto.TierInfo{
+							{
+								Name:           TierName,
+								EgressPolicies: []string{PolicyName},
+							},
+						}},
+					}
+					updates <- wepUpd
+					proUpdate = &proto.ActiveProfileUpdate{
+						Id: &profileID,
+					}
+					updates <- proUpdate
+
+					output, _ = join(proto.SyncRequest{SubscriptionType: "l3-routes"}, "test", 1)
+				})
+
+				It("should get no updates", func() {
+					Expect(len(output)).To(BeZero())
+				})
+
+				It("should not pass updates", func() {
+					updates <- &proto.ActivePolicyUpdate{
+						Id: &proto.PolicyID{Tier: "new-tier", Name: "new-policy"},
+					}
+					Expect(len(output)).To(BeZero())
+				})
+
+				It("should not pass removes", func() {
+					updates <- &proto.ActivePolicyRemove{
+						Id: &proto.PolicyID{Tier: "new-tier", Name: "new-policy"},
+					}
+					Expect(len(output)).To(BeZero())
+				})
+			})
+		})
+
+		Describe("Route update/remove", func() {
+
+			Context("updates before any join", func() {
+
+				BeforeEach(func() {
+					// Add, delete, re-add
+					updateRoute("172.0.2.1/32", "node1", "172.0.1.1")
+					removeRoute("172.0.2.1/32")
+					updateRoute("172.0.2.1/32", "node1", "172.0.1.1")
+
+					// Some simple adds
+					updateRoute("172.0.2.2/32", "node2", "172.0.1.2")
+					updateRoute("172.0.2.3/32", "node3", "172.0.1.3")
+
+					// Add, delete
+					updateRoute("172.0.2.4/32", "node4", "172.0.1.4")
+					removeRoute("172.0.2.4/32")
+				})
+
+				Context("on new route sync join", func() {
+					var output chan proto.ToDataplane
+					var routes [3]proto.RouteUpdate
+
+					BeforeEach(func() {
+						output, _ = join(proto.SyncRequest{SubscriptionType: "l3-routes"}, "test", 1)
+						for i := 0; i < 3; i++ {
+							msg := <-output
+							routes[i] = *msg.GetRouteUpdate()
+						}
+					})
+
+					It("should get 3 updates", func() {
+						Expect(routes).To(ContainElement(proto.RouteUpdate{
+							Type:        proto.RouteType_REMOTE_WORKLOAD,
+							IpPoolType:  proto.IPPoolType_NONE,
+							Dst:         "172.0.2.1/32",
+							DstNodeName: "node1",
+							DstNodeIp:   "172.0.1.1",
+						}))
+						Expect(routes).To(ContainElement(proto.RouteUpdate{
+							Type:        proto.RouteType_REMOTE_WORKLOAD,
+							IpPoolType:  proto.IPPoolType_NONE,
+							Dst:         "172.0.2.2/32",
+							DstNodeName: "node2",
+							DstNodeIp:   "172.0.1.2",
+						}))
+						Expect(routes).To(ContainElement(proto.RouteUpdate{
+							Type:        proto.RouteType_REMOTE_WORKLOAD,
+							IpPoolType:  proto.IPPoolType_NONE,
+							Dst:         "172.0.2.3/32",
+							DstNodeName: "node3",
+							DstNodeIp:   "172.0.1.3",
+						}))
+					})
+
+					It("should pass updates", func() {
+						updateRoute("172.0.2.4/32", "node4", "172.0.1.4")
+						msg := <-output
+						Expect(msg.GetRouteUpdate()).To(Equal(&proto.RouteUpdate{
+							Type:        proto.RouteType_REMOTE_WORKLOAD,
+							IpPoolType:  proto.IPPoolType_NONE,
+							Dst:         "172.0.2.4/32",
+							DstNodeName: "node4",
+							DstNodeIp:   "172.0.1.4",
+						}))
+					})
+
+					It("should pass removes", func() {
+						removeRoute("172.0.2.4/32")
+						msg := <-output
+						Expect(msg.GetRouteRemove()).To(Equal(&proto.RouteRemove{Dst: "172.0.2.4/32"}))
+					})
+				})
+
+				Context("on new policy sync join", func() {
+					var output chan proto.ToDataplane
+
+					BeforeEach(func() {
+						output, _ = join(proto.SyncRequest{SubscriptionType: "pod-policies"}, "test", 1)
+					})
+
+					It("should get no updates", func() {
+						Expect(len(output)).To(BeZero())
+					})
+
+					It("should not pass updates", func() {
+						updateRoute("172.0.2.5/32", "node5", "172.0.1.5")
+						Expect(len(output)).To(BeZero())
+					})
+
+					It("should not pass removes", func() {
+						removeRoute("172.0.2.5/32")
+						Expect(len(output)).To(BeZero())
+					})
+				})
+			})
+
+			Context("with two joined policy sync endpoints", func() {
+				var output [2]chan proto.ToDataplane
+
+				BeforeEach(func() {
+					for i := 0; i < 2; i++ {
+						w := fmt.Sprintf("test%d", i)
+						d := testId(w)
+						output[i], _ = join(proto.SyncRequest{SubscriptionType: "pod-policies"}, w, uint64(i))
+
+						// Ensure the joins are completed by sending a workload endpoint for each.
+						updates <- &proto.WorkloadEndpointUpdate{
+							Id:       &d,
+							Endpoint: &proto.WorkloadEndpoint{},
+						}
+						<-output[i]
+					}
+				})
+
+				It("should forward updates to both endpoints", func() {
+					updateServiceAccount("t23", "t2")
+					Eventually(output[0]).Should(Receive(Equal(proto.ToDataplane{
+						Payload: &proto.ToDataplane_ServiceAccountUpdate{
+							ServiceAccountUpdate: &proto.ServiceAccountUpdate{
+								Id: &proto.ServiceAccountID{Name: "t23", Namespace: "t2"},
+							},
+						},
+					})))
+					Eventually(output[1]).Should(Receive(Equal(proto.ToDataplane{
+						Payload: &proto.ToDataplane_ServiceAccountUpdate{
+							ServiceAccountUpdate: &proto.ServiceAccountUpdate{
+								Id: &proto.ServiceAccountID{Name: "t23", Namespace: "t2"},
+							},
+						},
+					})))
+				})
+
+				It("should forward removes to both endpoints", func() {
+					removeServiceAccount("t23", "t2")
+					Eventually(output[0]).Should(Receive(Equal(proto.ToDataplane{
+						Payload: &proto.ToDataplane_ServiceAccountRemove{
+							ServiceAccountRemove: &proto.ServiceAccountRemove{
+								Id: &proto.ServiceAccountID{Name: "t23", Namespace: "t2"},
+							},
+						},
+					})))
+					Eventually(output[1]).Should(Receive(Equal(proto.ToDataplane{
+						Payload: &proto.ToDataplane_ServiceAccountRemove{
+							ServiceAccountRemove: &proto.ServiceAccountRemove{
+								Id: &proto.ServiceAccountID{Name: "t23", Namespace: "t2"},
+							},
+						},
+					})))
+				})
+			})
+
+			Context("with two joined policy sync endpoints each with different drop action override settings", func() {
+				var output [2]chan proto.ToDataplane
+
+				BeforeEach(func() {
+					sr := [2]proto.SyncRequest{{
+						SupportsDropActionOverride: true,
+						SubscriptionType:           "pod-policies",
+					}, {}}
+
+					for i := 0; i < 2; i++ {
+						w := fmt.Sprintf("test%d", i)
+						output[i], _ = join(sr[i], w, uint64(i))
+
+						// Ensure the joins are completed by sending service account updates.
+						updateServiceAccount("t23", "t2")
+					}
+				})
+
+				It("should forward a config update to endpoint 0 only, followed by SA updates to both endpoints", func() {
+					Eventually(output[0]).Should(Receive(Equal(proto.ToDataplane{
+						Payload: &proto.ToDataplane_ConfigUpdate{
+							&proto.ConfigUpdate{
+								Config: map[string]string{
+									"DropActionOverride": "LogAndDrop",
+								},
+							},
+						},
+					})))
+					Eventually(output[0]).Should(Receive(Equal(proto.ToDataplane{
+						Payload: &proto.ToDataplane_ServiceAccountUpdate{
+							&proto.ServiceAccountUpdate{
+								Id: &proto.ServiceAccountID{Name: "t23", Namespace: "t2"},
+							},
+						},
+					})))
+					Eventually(output[1]).Should(Receive(Equal(proto.ToDataplane{
+						Payload: &proto.ToDataplane_ServiceAccountUpdate{
+							&proto.ServiceAccountUpdate{
+								Id: &proto.ServiceAccountID{Name: "t23", Namespace: "t2"},
+							},
+						},
+					})))
 				})
 			})
 		})
@@ -1318,11 +1653,11 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should close old channel on new join", func(done Done) {
-					oldChan, _ := join(proto.SyncRequest{}, "test", 1)
+					oldChan, _ := join(proto.SyncRequest{SubscriptionType: "pod-policies"}, "test", 1)
 					g := <-oldChan
 					Expect(&g).To(HavePayload(wepUpd))
 
-					newChan, _ := join(proto.SyncRequest{}, "test", 2)
+					newChan, _ := join(proto.SyncRequest{SubscriptionType: "pod-policies"}, "test", 2)
 					g = <-newChan
 					Expect(&g).To(HavePayload(wepUpd))
 
@@ -1332,11 +1667,11 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should ignore stale leave requests", func(done Done) {
-					oldChan, oldMeta := join(proto.SyncRequest{}, "test", 1)
+					oldChan, oldMeta := join(proto.SyncRequest{SubscriptionType: "pod-policies"}, "test", 1)
 					g := <-oldChan
 					Expect(&g).To(HavePayload(wepUpd))
 
-					newChan, _ := join(proto.SyncRequest{}, "test", 2)
+					newChan, _ := join(proto.SyncRequest{SubscriptionType: "pod-policies"}, "test", 2)
 					g = <-newChan
 					Expect(&g).To(HavePayload(wepUpd))
 
@@ -1351,7 +1686,7 @@ var _ = Describe("Processor", func() {
 				})
 
 				It("should close active connection on clean leave", func(done Done) {
-					c, m := join(proto.SyncRequest{}, "test", 1)
+					c, m := join(proto.SyncRequest{SubscriptionType: "pod-policies"}, "test", 1)
 
 					g := <-c
 					Expect(&g).To(HavePayload(wepUpd))
@@ -1370,7 +1705,7 @@ var _ = Describe("Processor", func() {
 			})
 
 			It("should handle join & leave without WEP update", func() {
-				c, m := join(proto.SyncRequest{}, "test", 1)
+				c, m := join(proto.SyncRequest{SubscriptionType: "pod-policies"}, "test", 1)
 				leave(m)
 				Eventually(c).Should(BeClosed())
 			})
@@ -1380,7 +1715,7 @@ var _ = Describe("Processor", func() {
 			It("should send InSync on all open outputs", func(done Done) {
 				var c [2]chan proto.ToDataplane
 				for i := 0; i < 2; i++ {
-					c[i], _ = join(proto.SyncRequest{}, fmt.Sprintf("test%d", i), uint64(i))
+					c[i], _ = join(proto.SyncRequest{SubscriptionType: "pod-policies"}, fmt.Sprintf("test%d", i), uint64(i))
 				}
 				is := &proto.InSync{}
 				updates <- is

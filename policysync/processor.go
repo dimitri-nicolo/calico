@@ -15,8 +15,10 @@
 package policysync
 
 import (
+	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -41,13 +43,47 @@ type Processor struct {
 	serviceAccountByID map[proto.ServiceAccountID]*proto.ServiceAccountUpdate
 	namespaceByID      map[proto.NamespaceID]*proto.NamespaceUpdate
 	ipSetsByID         map[string]*ipSetInfo
+	routesByID         map[string]*proto.RouteUpdate
 	config             *config.Config
 	receivedInSync     bool
+}
+
+// SubscriptionType represents the set of updates a client is interested in receiving.
+type SubscriptionType uint8
+
+const (
+	// SubscriptionTypePerPodPolicies is used by per-pod dikastes to get policy updates for a particular pod.
+	SubscriptionTypePerPodPolicies SubscriptionType = iota
+	// SubscriptionTypeL3Routes is used by egress gateway pods to get L3 route updates for the cluster.
+	SubscriptionTypeL3Routes
+)
+
+func (s SubscriptionType) String() string {
+	switch s {
+	case SubscriptionTypePerPodPolicies:
+		return "per-pod-policies"
+	case SubscriptionTypeL3Routes:
+		return "l3-routes"
+	default:
+		return fmt.Sprintf("<unknown-subscription-type(%v)>", uint8(s))
+	}
+}
+
+func newSubscriptionType(s string) (SubscriptionType, error) {
+	switch strings.ToLower(s) {
+	case strings.ToLower(SubscriptionTypePerPodPolicies.String()):
+		return SubscriptionTypePerPodPolicies, nil
+	case strings.ToLower(SubscriptionTypeL3Routes.String()):
+		return SubscriptionTypeL3Routes, nil
+	default:
+		return 0, fmt.Errorf("unknown subscription type %s", s)
+	}
 }
 
 type EndpointInfo struct {
 	// The channel to send updates for this workload to.
 	output         chan<- proto.ToDataplane
+	subscription   SubscriptionType
 	syncRequest    proto.SyncRequest
 	currentJoinUID uint64
 	endpointUpd    *proto.WorkloadEndpointUpdate
@@ -70,7 +106,7 @@ type JoinRequest struct {
 	// The sync request that initiated the join. This contains details of the features supported by
 	// the consumer.
 	SyncRequest proto.SyncRequest
-	// C is the channel to send updates to the policy sync client.  Processor closes the channel when the
+	// C is the channel to send updates to the sync client. Processor closes the channel when the
 	// workload endpoint is removed, or when a new JoinRequest is received for the same endpoint.  If nil, indicates
 	// the client wants to stop receiving updates.
 	C chan<- proto.ToDataplane
@@ -92,6 +128,7 @@ func NewProcessor(config *config.Config, updates <-chan interface{}) *Processor 
 		serviceAccountByID: make(map[proto.ServiceAccountID]*proto.ServiceAccountUpdate),
 		namespaceByID:      make(map[proto.NamespaceID]*proto.NamespaceUpdate),
 		ipSetsByID:         make(map[string]*ipSetInfo),
+		routesByID:         make(map[string]*proto.RouteUpdate),
 		config:             config,
 	}
 }
@@ -137,6 +174,14 @@ func (p *Processor) handleJoin(joinReq JoinRequest) {
 		logCxt.Info("Join request with no previously active connection.")
 	}
 
+	var subType SubscriptionType
+	subType, err := newSubscriptionType(joinReq.SyncRequest.SubscriptionType)
+	if err != nil {
+		log.WithField("subscriptionType", joinReq.SyncRequest.SubscriptionType).
+			Debug("Unknown SubscriptionType, defaulting to SubscriptionTypePerPodPolicies")
+		subType = SubscriptionTypePerPodPolicies
+	}
+	ei.subscription = subType
 	ei.currentJoinUID = joinReq.JoinUID
 	ei.output = joinReq.C
 	ei.syncedPolicies = map[proto.PolicyID]bool{}
@@ -152,10 +197,13 @@ func (p *Processor) handleJoin(joinReq JoinRequest) {
 	p.sendServiceAccounts(ei)
 	p.sendNamespaces(ei)
 
+	p.sendRoutes(ei)
+
 	if p.receivedInSync {
 		log.WithField("channel", ei.output).Debug("Already in sync with the datastore, sending in-sync message to client")
-		ei.output <- proto.ToDataplane{
-			Payload: &proto.ToDataplane_InSync{InSync: &proto.InSync{}}}
+		ei.sendMsg(&proto.ToDataplane_InSync{
+			InSync: &proto.InSync{},
+		})
 	}
 	logCxt.Debug("Done with join")
 }
@@ -218,6 +266,10 @@ func (p *Processor) handleDataplane(update interface{}) {
 		p.handleIPSetDeltaUpdate(update)
 	case *proto.IPSetRemove:
 		p.handleIPSetRemove(update)
+	case *proto.RouteUpdate:
+		p.handleRouteUpdate(update)
+	case *proto.RouteRemove:
+		p.handleRouteRemove(update)
 	default:
 		log.WithFields(log.Fields{
 			"type": reflect.TypeOf(update),
@@ -233,8 +285,9 @@ func (p *Processor) handleInSync(update *proto.InSync) {
 	log.Info("Now in sync with the calculation graph")
 	p.receivedInSync = true
 	for _, ei := range p.updateableEndpoints() {
-		ei.output <- proto.ToDataplane{
-			Payload: &proto.ToDataplane_InSync{InSync: &proto.InSync{}}}
+		ei.sendMsg(&proto.ToDataplane_InSync{
+			InSync: &proto.InSync{},
+		})
 	}
 }
 
@@ -272,8 +325,9 @@ func (p *Processor) maybeSyncEndpoint(ei *EndpointInfo) {
 	doAdd()
 	p.syncAddedPolicies(ei)
 	p.syncAddedProfiles(ei)
-	ei.output <- proto.ToDataplane{
-		Payload: &proto.ToDataplane_WorkloadEndpointUpdate{WorkloadEndpointUpdate: ei.endpointUpd}}
+	ei.sendMsg(&proto.ToDataplane_WorkloadEndpointUpdate{
+		WorkloadEndpointUpdate: ei.endpointUpd,
+	})
 	p.syncRemovedPolicies(ei)
 	p.syncRemovedProfiles(ei)
 	doDel()
@@ -284,7 +338,9 @@ func (p *Processor) handleWorkloadEndpointRemove(update *proto.WorkloadEndpointR
 	ei := p.endpointsByID[*update.Id]
 	if ei.output != nil {
 		// Send update and close down.
-		ei.output <- proto.ToDataplane{Payload: &proto.ToDataplane_WorkloadEndpointRemove{WorkloadEndpointRemove: update}}
+		ei.sendMsg(&proto.ToDataplane_WorkloadEndpointRemove{
+			WorkloadEndpointRemove: update,
+		})
 		close(ei.output)
 	}
 	delete(p.endpointsByID, *update.Id)
@@ -301,7 +357,9 @@ func (p *Processor) handleActiveProfileUpdate(update *proto.ActiveProfileUpdate)
 			if other == pId {
 				doAdd, doDel := p.getIPSetsSync(ei)
 				doAdd()
-				ei.output <- proto.ToDataplane{Payload: &proto.ToDataplane_ActiveProfileUpdate{ActiveProfileUpdate: update}}
+				ei.sendMsg(&proto.ToDataplane_ActiveProfileUpdate{
+					ActiveProfileUpdate: update,
+				})
 				ei.syncedProfiles[pId] = true
 				doDel()
 				return true
@@ -334,7 +392,9 @@ func (p *Processor) handleActivePolicyUpdate(update *proto.ActivePolicyUpdate) {
 			if other == pId {
 				doAdd, doDel := p.getIPSetsSync(ei)
 				doAdd()
-				ei.output <- proto.ToDataplane{Payload: &proto.ToDataplane_ActivePolicyUpdate{ActivePolicyUpdate: update}}
+				ei.sendMsg(&proto.ToDataplane_ActivePolicyUpdate{
+					ActivePolicyUpdate: update,
+				})
 				ei.syncedPolicies[pId] = true
 				doDel()
 				return true
@@ -359,7 +419,9 @@ func (p *Processor) handleServiceAccountUpdate(update *proto.ServiceAccountUpdat
 	log.WithField("ServiceAccountID", id).Debug("Processing ServiceAccountUpdate")
 
 	for _, ei := range p.updateableEndpoints() {
-		ei.output <- proto.ToDataplane{Payload: &proto.ToDataplane_ServiceAccountUpdate{ServiceAccountUpdate: update}}
+		ei.sendMsg(&proto.ToDataplane_ServiceAccountUpdate{
+			ServiceAccountUpdate: update,
+		})
 	}
 	p.serviceAccountByID[id] = update
 }
@@ -369,7 +431,9 @@ func (p *Processor) handleServiceAccountRemove(update *proto.ServiceAccountRemov
 	log.WithField("ServiceAccountID", id).Debug("Processing ServiceAccountRemove")
 
 	for _, ei := range p.updateableEndpoints() {
-		ei.output <- proto.ToDataplane{Payload: &proto.ToDataplane_ServiceAccountRemove{ServiceAccountRemove: update}}
+		ei.sendMsg(&proto.ToDataplane_ServiceAccountRemove{
+			ServiceAccountRemove: update,
+		})
 	}
 	delete(p.serviceAccountByID, id)
 }
@@ -379,7 +443,9 @@ func (p *Processor) handleNamespaceUpdate(update *proto.NamespaceUpdate) {
 	log.WithField("NamespaceID", id).Debug("Processing NamespaceUpdate")
 
 	for _, ei := range p.updateableEndpoints() {
-		ei.output <- proto.ToDataplane{Payload: &proto.ToDataplane_NamespaceUpdate{NamespaceUpdate: update}}
+		ei.sendMsg(&proto.ToDataplane_NamespaceUpdate{
+			NamespaceUpdate: update,
+		})
 	}
 	p.namespaceByID[id] = update
 }
@@ -389,7 +455,9 @@ func (p *Processor) handleNamespaceRemove(update *proto.NamespaceRemove) {
 	log.WithField("NamespaceID", id).Debug("Processing NamespaceRemove")
 
 	for _, ei := range p.updateableEndpoints() {
-		ei.output <- proto.ToDataplane{Payload: &proto.ToDataplane_NamespaceRemove{NamespaceRemove: update}}
+		ei.sendMsg(&proto.ToDataplane_NamespaceRemove{
+			NamespaceRemove: update,
+		})
 	}
 	delete(p.namespaceByID, id)
 }
@@ -421,12 +489,13 @@ func (p *Processor) handleIPSetUpdate(update *proto.IPSetUpdate) {
 	s.replaceMembers(update)
 
 	// gRPC has limits on message size, so break up large update if necessary.
-	updates := splitIPSetUpdate(update)
+	updateMsg, deltaUpdateMsgs := splitIPSetUpdate(update)
 	for _, ei := range p.updateableEndpoints() {
 		if p.referencesIPSet(ei, id) {
 			ei.syncedIPSets[id] = true
-			for _, u := range updates {
-				ei.output <- u
+			ei.sendMsg(updateMsg)
+			for _, u := range deltaUpdateMsgs {
+				ei.sendMsg(u)
 			}
 		}
 	}
@@ -448,7 +517,7 @@ func (p *Processor) handleIPSetDeltaUpdate(update *proto.IPSetDeltaUpdate) {
 	for _, ei := range p.updateableEndpoints() {
 		if p.referencesIPSet(ei, id) {
 			for _, u := range updates {
-				ei.output <- u
+				ei.sendMsg(u)
 			}
 		}
 	}
@@ -463,16 +532,40 @@ func (p *Processor) handleIPSetRemove(update *proto.IPSetRemove) {
 	// as soon as the endpoint no longer has a reference to the IPSet.
 }
 
+func (p *Processor) handleRouteUpdate(update *proto.RouteUpdate) {
+	id := update.Dst
+	log.WithField("RouteID", id).Debug("Processing RouteUpdate")
+
+	for _, ei := range p.updateableEndpoints() {
+		ei.sendMsg(&proto.ToDataplane_RouteUpdate{
+			RouteUpdate: update,
+		})
+	}
+	p.routesByID[id] = update
+}
+
+func (p *Processor) handleRouteRemove(update *proto.RouteRemove) {
+	id := update.Dst
+	log.WithField("RouteID", id).Debug("Processing RouteRemove")
+
+	for _, ei := range p.updateableEndpoints() {
+		ei.sendMsg(&proto.ToDataplane_RouteRemove{
+			RouteRemove: update,
+		})
+	}
+	delete(p.routesByID, id)
+}
+
 func (p *Processor) syncAddedPolicies(ei *EndpointInfo) {
 	ei.iteratePolicies(func(pId proto.PolicyID) bool {
 		if !ei.syncedPolicies[pId] {
 			policy := p.policyByID[pId].p
-			ei.output <- proto.ToDataplane{Payload: &proto.ToDataplane_ActivePolicyUpdate{
+			ei.sendMsg(&proto.ToDataplane_ActivePolicyUpdate{
 				ActivePolicyUpdate: &proto.ActivePolicyUpdate{
 					Id:     &pId,
 					Policy: policy,
 				},
-			}}
+			})
 			ei.syncedPolicies[pId] = true
 		}
 		return false
@@ -501,9 +594,9 @@ func (p *Processor) syncRemovedPolicies(ei *EndpointInfo) {
 
 	// oldSyncedPolicies now contains only policies that are no longer needed by this endpoint.
 	for polID := range oldSyncedPolicies {
-		ei.output <- proto.ToDataplane{Payload: &proto.ToDataplane_ActivePolicyRemove{
+		ei.sendMsg(&proto.ToDataplane_ActivePolicyRemove{
 			ActivePolicyRemove: &proto.ActivePolicyRemove{Id: &polID},
-		}}
+		})
 	}
 }
 
@@ -511,12 +604,12 @@ func (p *Processor) syncAddedProfiles(ei *EndpointInfo) {
 	ei.iterateProfiles(func(pId proto.ProfileID) bool {
 		if !ei.syncedProfiles[pId] {
 			profile := p.profileByID[pId].p
-			ei.output <- proto.ToDataplane{Payload: &proto.ToDataplane_ActiveProfileUpdate{
+			ei.sendMsg(&proto.ToDataplane_ActiveProfileUpdate{
 				ActiveProfileUpdate: &proto.ActiveProfileUpdate{
 					Id:      &pId,
 					Profile: profile,
 				},
-			}}
+			})
 			ei.syncedProfiles[pId] = true
 		}
 		return false
@@ -542,9 +635,9 @@ func (p *Processor) syncRemovedProfiles(ei *EndpointInfo) {
 
 	// oldSyncedProfiles now contains only policies that are no longer needed by this endpoint.
 	for polID := range oldSyncedProfiles {
-		ei.output <- proto.ToDataplane{Payload: &proto.ToDataplane_ActiveProfileRemove{
+		ei.sendMsg(&proto.ToDataplane_ActiveProfileRemove{
 			ActiveProfileRemove: &proto.ActiveProfileRemove{Id: &polID},
-		}}
+		})
 	}
 }
 
@@ -563,18 +656,18 @@ func (p *Processor) maybeSendStartOfDayConfigUpdate(ei *EndpointInfo) {
 
 	if ei.syncRequest.SupportsDataplaneStats {
 		clog.Debug("Endpoint supports FlowLogs")
-		enabledForAllowed :=
-			(p.config.FlowLogsFileEnabled && p.config.FlowLogsFileEnabledForAllowed)
+		enabledForAllowed := p.config.FlowLogsFileEnabled && p.config.FlowLogsFileEnabledForAllowed
 		cu["DataplaneStatsEnabledForAllowed"] = strconv.FormatBool(enabledForAllowed)
 
-		enabledForDenied :=
-			(p.config.FlowLogsFileEnabled && p.config.FlowLogsFileEnabledForDenied)
+		enabledForDenied := p.config.FlowLogsFileEnabled && p.config.FlowLogsFileEnabledForDenied
 		cu["DataplaneStatsEnabledForDenied"] = strconv.FormatBool(enabledForDenied)
 	}
 
 	if len(cu) > 0 {
 		clog.Debug("Sending ConfigUpdate")
-		ei.output <- proto.ToDataplane{Payload: &proto.ToDataplane_ConfigUpdate{&proto.ConfigUpdate{cu}}}
+		ei.sendMsg(&proto.ToDataplane_ConfigUpdate{
+			ConfigUpdate: &proto.ConfigUpdate{Config: cu},
+		})
 	}
 }
 
@@ -585,7 +678,9 @@ func (p *Processor) sendServiceAccounts(ei *EndpointInfo) {
 			"serviceAccount": update.Id,
 			"endpoint":       ei.endpointUpd.GetEndpoint(),
 		}).Debug("sending ServiceAccountUpdate")
-		ei.output <- proto.ToDataplane{Payload: &proto.ToDataplane_ServiceAccountUpdate{ServiceAccountUpdate: update}}
+		ei.sendMsg(&proto.ToDataplane_ServiceAccountUpdate{
+			ServiceAccountUpdate: update,
+		})
 	}
 }
 
@@ -596,7 +691,19 @@ func (p *Processor) sendNamespaces(ei *EndpointInfo) {
 			"namespace": update.Id,
 			"endpoint":  ei.endpointUpd.GetEndpoint(),
 		}).Debug("sending NamespaceUpdate")
-		ei.output <- proto.ToDataplane{Payload: &proto.ToDataplane_NamespaceUpdate{NamespaceUpdate: update}}
+		ei.sendMsg(&proto.ToDataplane_NamespaceUpdate{
+			NamespaceUpdate: update,
+		})
+	}
+}
+
+// sendRoutes sends all known RouteUpdates to the endpoint
+func (p *Processor) sendRoutes(ei *EndpointInfo) {
+	for _, update := range p.routesByID {
+		log.WithFields(log.Fields{"routeUpdate": update}).Debug("sending RouteUpdate")
+		ei.sendMsg(&proto.ToDataplane_RouteUpdate{
+			RouteUpdate: update,
+		})
 	}
 }
 
@@ -685,14 +792,17 @@ func (p *Processor) getIPSetsSync(ei *EndpointInfo) (func(), func()) {
 
 func (p *Processor) sendIPSetUpdate(ei *EndpointInfo, id string) {
 	si := p.ipSetsByID[id]
-	updates := splitIPSetUpdate(si.getIPSetUpdate())
-	for _, u := range updates {
-		ei.output <- u
+	updateMsg, deltaUpdateMsgs := splitIPSetUpdate(si.getIPSetUpdate())
+	ei.sendMsg(updateMsg)
+	for _, u := range deltaUpdateMsgs {
+		ei.sendMsg(u)
 	}
 }
 
 func (p *Processor) sendIPSetRemove(ei *EndpointInfo, id string) {
-	ei.output <- proto.ToDataplane{Payload: &proto.ToDataplane_IpsetRemove{IpsetRemove: &proto.IPSetRemove{Id: id}}}
+	ei.sendMsg(&proto.ToDataplane_IpsetRemove{
+		IpsetRemove: &proto.IPSetRemove{Id: id},
+	})
 }
 
 // Perform the action on every policy on the Endpoint, breaking if the action returns true.
@@ -733,13 +843,13 @@ func (ei *EndpointInfo) iterateProfiles(action func(id proto.ProfileID) (stop bo
 }
 
 // splitIPSetUpdate splits updates that would not fit into a single gRPC message into several smaller ones.
-func splitIPSetUpdate(update *proto.IPSetUpdate) []proto.ToDataplane {
+func splitIPSetUpdate(update *proto.IPSetUpdate) (*proto.ToDataplane_IpsetUpdate, []*proto.ToDataplane_IpsetDeltaUpdate) {
 	mPerMsg := splitMembers(update.GetMembers())
 	numMsg := len(mPerMsg)
-	out := make([]proto.ToDataplane, numMsg)
+	deltaUpdateMsgs := make([]*proto.ToDataplane_IpsetDeltaUpdate, numMsg-1)
 
 	// First message is always IPSetUpdate, and always is included.
-	out[0].Payload = &proto.ToDataplane_IpsetUpdate{IpsetUpdate: &proto.IPSetUpdate{
+	updateMsg := &proto.ToDataplane_IpsetUpdate{IpsetUpdate: &proto.IPSetUpdate{
 		Id:      update.Id,
 		Type:    update.Type,
 		Members: mPerMsg[0],
@@ -747,25 +857,25 @@ func splitIPSetUpdate(update *proto.IPSetUpdate) []proto.ToDataplane {
 
 	// If there are additional messages, they are IPSetDeltaUpdates
 	for i := 1; i < numMsg; i++ {
-		out[i].Payload = &proto.ToDataplane_IpsetDeltaUpdate{IpsetDeltaUpdate: &proto.IPSetDeltaUpdate{
+		deltaUpdateMsgs[i-1] = &proto.ToDataplane_IpsetDeltaUpdate{IpsetDeltaUpdate: &proto.IPSetDeltaUpdate{
 			Id:           update.Id,
 			AddedMembers: mPerMsg[i],
 		}}
 	}
-	return out
+	return updateMsg, deltaUpdateMsgs
 }
 
 // splitIPSetDeltaUpdate splits updates that would not fit into a single gRPC message into smaller ones.
-func splitIPSetDeltaUpdate(update *proto.IPSetDeltaUpdate) []proto.ToDataplane {
+func splitIPSetDeltaUpdate(update *proto.IPSetDeltaUpdate) []*proto.ToDataplane_IpsetDeltaUpdate {
 	adds := splitMembers(update.GetAddedMembers())
 	dels := splitMembers(update.GetRemovedMembers())
 
-	var out []proto.ToDataplane
+	var out []*proto.ToDataplane_IpsetDeltaUpdate
 	for len(adds)+len(dels) > 0 {
-		msg := proto.ToDataplane{Payload: &proto.ToDataplane_IpsetDeltaUpdate{
-			IpsetDeltaUpdate: &proto.IPSetDeltaUpdate{Id: update.GetId()}}}
+		msg := &proto.ToDataplane_IpsetDeltaUpdate{
+			IpsetDeltaUpdate: &proto.IPSetDeltaUpdate{Id: update.GetId()}}
 		out = append(out, msg)
-		update := msg.GetIpsetDeltaUpdate()
+		update := msg.IpsetDeltaUpdate
 		if len(adds) > 0 {
 			update.AddedMembers = adds[0]
 			adds = adds[1:]
@@ -811,4 +921,58 @@ func splitMembers(members []string) [][]string {
 		remains = remains - numThis
 	}
 	return out
+}
+
+func (ei *EndpointInfo) sendMsg(payload interface{}) {
+	switch ei.subscription {
+	case SubscriptionTypePerPodPolicies:
+		switch payload := payload.(type) {
+		case *proto.ToDataplane_InSync:
+			ei.output <- proto.ToDataplane{Payload: payload}
+		case *proto.ToDataplane_ConfigUpdate:
+			ei.output <- proto.ToDataplane{Payload: payload}
+		case *proto.ToDataplane_WorkloadEndpointUpdate:
+			ei.output <- proto.ToDataplane{Payload: payload}
+		case *proto.ToDataplane_WorkloadEndpointRemove:
+			ei.output <- proto.ToDataplane{Payload: payload}
+		case *proto.ToDataplane_ActiveProfileUpdate:
+			ei.output <- proto.ToDataplane{Payload: payload}
+		case *proto.ToDataplane_ActiveProfileRemove:
+			ei.output <- proto.ToDataplane{Payload: payload}
+		case *proto.ToDataplane_ActivePolicyUpdate:
+			ei.output <- proto.ToDataplane{Payload: payload}
+		case *proto.ToDataplane_ActivePolicyRemove:
+			ei.output <- proto.ToDataplane{Payload: payload}
+		case *proto.ToDataplane_ServiceAccountUpdate:
+			ei.output <- proto.ToDataplane{Payload: payload}
+		case *proto.ToDataplane_ServiceAccountRemove:
+			ei.output <- proto.ToDataplane{Payload: payload}
+		case *proto.ToDataplane_NamespaceUpdate:
+			ei.output <- proto.ToDataplane{Payload: payload}
+		case *proto.ToDataplane_NamespaceRemove:
+			ei.output <- proto.ToDataplane{Payload: payload}
+		case *proto.ToDataplane_IpsetUpdate:
+			ei.output <- proto.ToDataplane{Payload: payload}
+		case *proto.ToDataplane_IpsetDeltaUpdate:
+			ei.output <- proto.ToDataplane{Payload: payload}
+		case *proto.ToDataplane_IpsetRemove:
+			ei.output <- proto.ToDataplane{Payload: payload}
+		}
+	case SubscriptionTypeL3Routes:
+		switch payload := payload.(type) {
+		case *proto.ToDataplane_InSync:
+			ei.output <- proto.ToDataplane{Payload: payload}
+		case *proto.ToDataplane_ConfigUpdate:
+			ei.output <- proto.ToDataplane{Payload: payload}
+		case *proto.ToDataplane_RouteUpdate:
+			ei.output <- proto.ToDataplane{Payload: payload}
+		case *proto.ToDataplane_RouteRemove:
+			ei.output <- proto.ToDataplane{Payload: payload}
+		}
+	default:
+		log.WithFields(log.Fields{
+			"subscriptionType": ei.subscription.String(),
+			"payloadType":      reflect.TypeOf(payload),
+		}).Warn("Unknown subscription type")
+	}
 }

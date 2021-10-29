@@ -1908,6 +1908,9 @@ func (d *InternalDataplane) setUpIptablesNormal() {
 			rs = append(rs, iptables.Rule{
 				Action: iptables.JumpAction{Target: rules.ChainManglePreroutingEgress},
 			})
+			rs = append(rs, iptables.Rule{
+				Action: iptables.JumpAction{Target: rules.ChainManglePreroutingEgressInbound},
+			})
 		}
 		rs = append(rs, iptables.Rule{
 			Action: iptables.JumpAction{Target: rules.ChainManglePrerouting},

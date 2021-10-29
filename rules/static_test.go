@@ -1414,6 +1414,20 @@ var _ = Describe("Static", func() {
 					},
 				},
 			}))
+			Expect(findChain(rr.StaticMangleTableChains(4), "cali-pre-egress-in")).To(Equal(&Chain{
+				Name: "cali-pre-egress-in",
+				Rules: []Rule{
+					{
+						Match: Match().
+							InInterface("egress.calico"),
+						Action: SetMaskedMarkAction{
+							Mark: 0x400,
+							Mask: 0x400,
+						},
+						Comment: []string{"Set mark for returning egress packet"},
+					},
+				},
+			}))
 		})
 
 		It("IPv4: Should return expected mangle POSTROUTING chain", func() {

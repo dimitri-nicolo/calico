@@ -668,6 +668,10 @@ func vxlanLinksIncompat(l1, l2 netlink.Link) string {
 		return fmt.Sprintf("vtep (external) IP: %v vs %v", v1.SrcAddr, v2.SrcAddr)
 	}
 
+	if v1.HardwareAddr.String() != v2.HardwareAddr.String() {
+		return fmt.Sprintf("vtep (external) MAC %v vs %v", v1.HardwareAddr, v2.HardwareAddr)
+	}
+
 	if len(v1.Group) > 0 && len(v2.Group) > 0 && !v1.Group.Equal(v2.Group) {
 		return fmt.Sprintf("group address: %v vs %v", v1.Group, v2.Group)
 	}

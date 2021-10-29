@@ -39,7 +39,7 @@ var _ = Describe("Server", func() {
 		uut = policysync.NewServer(joins, nil, policysync.NewUIDAllocator().NextUID)
 	})
 
-	Describe("Sync tests", func() {
+	Describe("Policy Sync tests", func() {
 
 		Context("after calling Sync and joining", func() {
 			var stream *testSyncStream
@@ -61,7 +61,7 @@ var _ = Describe("Server", func() {
 				close(done)
 			})
 
-			It("should stream messages", func(done Done) {
+			It("should stream policy messages", func(done Done) {
 				msgs := []proto.ToDataplane{
 					{Payload: &proto.ToDataplane_WorkloadEndpointUpdate{}},
 					{Payload: &proto.ToDataplane_InSync{}},
@@ -124,6 +124,44 @@ var _ = Describe("Server", func() {
 			})
 		})
 	})
+
+	Describe("Route Sync tests", func() {
+
+		Context("after calling Sync and joining", func() {
+			var stream *testSyncStream
+			var updates chan<- proto.ToDataplane
+			var output chan *proto.ToDataplane
+			syncDone := make(chan bool)
+
+			BeforeEach(func(done Done) {
+				output = make(chan *proto.ToDataplane)
+				stream = &testSyncStream{output: output}
+				go func() {
+					_ = uut.Sync(&proto.SyncRequest{SubscriptionType: "l3-routes"}, stream)
+					syncDone <- true
+				}()
+				j := <-joins
+				jr := j.(policysync.JoinRequest)
+				Expect(jr.EndpointID.GetWorkloadId()).To(Equal(WorkloadID))
+				updates = jr.C
+				close(done)
+			})
+
+			It("should stream route messages", func(done Done) {
+				msgs := []proto.ToDataplane{
+					{Payload: &proto.ToDataplane_RouteUpdate{}},
+					{Payload: &proto.ToDataplane_InSync{}},
+				}
+				for _, msg := range msgs {
+					updates <- msg
+					g := <-output
+					Expect(g).To(Equal(&msg))
+				}
+
+				close(done)
+			})
+		})
+	})
 })
 
 type testSyncStream struct {
@@ -131,12 +169,20 @@ type testSyncStream struct {
 	sendErr bool
 }
 
-func (s *testSyncStream) Send(m *proto.ToDataplane) error {
-	s.output <- m
+func (s *testSyncStream) SendMsg(m interface{}) error {
+	s.output <- m.(*proto.ToDataplane)
 	if s.sendErr {
 		return errors.New("test error")
 	}
 	return nil
+}
+
+func (*testSyncStream) RecvMsg(m interface{}) error {
+	panic("not implemented")
+}
+
+func (*testSyncStream) Send(m *proto.ToDataplane) error {
+	panic("not implemented")
 }
 
 func (*testSyncStream) SetHeader(metadata.MD) error {
@@ -153,14 +199,6 @@ func (*testSyncStream) SetTrailer(metadata.MD) {
 
 func (*testSyncStream) Context() context.Context {
 	return &testContext{}
-}
-
-func (*testSyncStream) SendMsg(m interface{}) error {
-	panic("not implemented")
-}
-
-func (*testSyncStream) RecvMsg(m interface{}) error {
-	panic("not implemented")
 }
 
 type testContext struct{}

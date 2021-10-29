@@ -1,3 +1,4 @@
+//go:build fvtests
 // +build fvtests
 
 // Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
@@ -48,6 +49,7 @@ import (
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
+	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 )
 
@@ -192,7 +194,7 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 
 			It("felix should create the workload socket", func() {
 				for _, p := range hostWlSocketPath {
-					Eventually(p).Should(BeAnExistingFile())
+					Eventually(p, "3s").Should(BeAnExistingFile())
 				}
 			})
 
@@ -224,7 +226,7 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 					for i := range w {
 						// Use the fact that anything we exec inside the Felix container runs as root to fix the
 						// permissions on the socket so the test process can connect.
-						Eventually(hostWlSocketPath[i]).Should(BeAnExistingFile())
+						Eventually(hostWlSocketPath[i], "3s").Should(BeAnExistingFile())
 						felix.Exec("chmod", "a+rw", containerWlSocketPath[i])
 						wlConn[i], wlClient[i] = createWorkloadConn(i)
 					}
@@ -676,6 +678,474 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 	})
 })
 
+var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API tests", []apiconfig.DatastoreType{apiconfig.Kubernetes, apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
+
+	var (
+		felixes           []*infrastructure.Felix
+		infra             infrastructure.DatastoreInfra
+		w                 [3]*workload.Workload
+		tempDirs          [3]string
+		hostMgmtCredsPath [3]string
+	)
+
+	BeforeEach(func() {
+		infra = getInfra()
+
+		// Configure felix to enable the policy sync API.
+		options := infrastructure.DefaultTopologyOptions()
+		options.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico"
+		options.ExtraEnvVars["FELIX_EGRESSIPSUPPORT"] = "EnabledPerNamespace"
+		// Note this is needed so that the FVs will get REMOTE_WORKLOAD RouteUpdates
+		// due to a quirk in how the FVs are setup and run.
+		options.ExtraEnvVars["FELIX_ROUTESOURCE"] = "WorkloadIPs"
+		// Create a temporary directory per Felix node to map into the container as /var/run/calico/routesync, which
+		// is where we tell Felix to put the route sync mounts and credentials.
+		for ii := range tempDirs {
+			t, err := ioutil.TempDir("", fmt.Sprintf("felixfv-%d", ii))
+			Expect(err).NotTo(HaveOccurred())
+			tempDirs[ii] = t
+			options.PerNodeOptions = append(options.PerNodeOptions, infrastructure.PerNodeOptions{
+				ExtraVolumes: map[string]string{
+					t: "/var/run/calico",
+				},
+			})
+			hostMgmtCredsPath[ii] = filepath.Join(t, binder.CredentialsSubdir)
+		}
+
+		// To enable debug logs, uncomment these lines; watch out for timeouts caused by the
+		// resulting slow down!
+		//options.ExtraEnvVars["FELIX_DebugDisableLogDropping"] = "true"
+		//options.FelixLogSeverity = "debug"
+		felixes, _ = infrastructure.StartNNodeTopology(3, options, infra)
+
+		// Create one workload per felix, using that profile.
+		for ii := range w {
+			iiStr := strconv.Itoa(ii)
+			wl := workload.Run(felixes[ii], "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
+			wl.WorkloadEndpoint.Spec.Endpoint = "eth0"
+			wl.WorkloadEndpoint.Spec.Orchestrator = "k8s"
+			wl.WorkloadEndpoint.Spec.Pod = "fv-pod-" + iiStr
+			wl.ConfigureInInfra(infra)
+			w[ii] = wl
+		}
+	})
+
+	AfterEach(func() {
+		for ii, wl := range w {
+			wl.Stop()
+			felixes[ii].Stop()
+		}
+
+		if CurrentGinkgoTestDescription().Failed {
+			infra.DumpErrorData()
+		}
+		infra.Stop()
+	})
+
+	AfterEach(func() {
+		for _, t := range tempDirs {
+			if t != "" {
+				err := os.RemoveAll(t)
+				Expect(err).NotTo(HaveOccurred(), "Failed to clean up temp dir: %s", t)
+			}
+		}
+	})
+
+	Context("with the binder", func() {
+
+		var (
+			hostWlSocketPath, containerWlSocketPath [3]string
+		)
+
+		dirNameForWorkload := func(wl *workload.Workload) string {
+			return filepath.Join(binder.MountSubdir, wl.WorkloadEndpoint.Spec.Pod)
+		}
+
+		createWorkloadDirectory := func(tempDir string, wl *workload.Workload) (string, string) {
+			dirName := dirNameForWorkload(wl)
+			hostWlDir := filepath.Join(tempDir, dirName)
+			os.MkdirAll(hostWlDir, 0777)
+			return hostWlDir, filepath.Join("/var/run/calico", dirName)
+		}
+
+		writeCredentialsToFile := func(tempDir string, credsPath string, credentials *binder.Credentials) error {
+			var attrs []byte
+			attrs, err := json.Marshal(credentials)
+			if err != nil {
+				return err
+			}
+
+			credentialFileName := credentials.Uid + binder.CredentialsExtension
+
+			credsFileTmp := filepath.Join(tempDir, credentialFileName)
+			err = ioutil.WriteFile(credsFileTmp, attrs, 0777)
+			if err != nil {
+				return err
+			}
+
+			// Lazy create the credential's directory
+			err = os.MkdirAll(credsPath, 0777)
+			if err != nil {
+				return err
+			}
+
+			// Move it to the right location now.
+			credsFile := filepath.Join(credsPath, credentialFileName)
+			return os.Rename(credsFileTmp, credsFile)
+		}
+
+		// Simulate the creation of credentials file for the workload.
+		// This is the responsibility of the flex volume driver.
+		sendCreate := func(tempDir string, credsPath string, wl *workload.Workload) (*binder.Credentials, error) {
+			credentials := &binder.Credentials{
+				Uid:       wl.WorkloadEndpoint.Spec.Pod,
+				Namespace: "fv",
+				Workload:  wl.WorkloadEndpoint.Spec.Pod,
+			}
+
+			err := writeCredentialsToFile(tempDir, credsPath, credentials)
+			if err != nil {
+				return nil, err
+			}
+
+			log.Info("Workload credentials written")
+			return credentials, err
+		}
+
+		Context("after creating a client for each workload", func() {
+			BeforeEach(func() {
+				for i, wl := range w {
+					t := tempDirs[i]
+					// Create the workload directory, this would normally be the responsibility of the
+					// flex volume driver.
+					hostWlDir, containerWlDir := createWorkloadDirectory(t, wl)
+					hostWlSocketPath[i] = filepath.Join(hostWlDir, binder.SocketFilename)
+					containerWlSocketPath[i] = filepath.Join(containerWlDir, binder.SocketFilename)
+
+					// Tell Felix about the new directory.
+					c := hostMgmtCredsPath[i]
+					_, err := sendCreate(t, c, wl)
+					Expect(err).NotTo(HaveOccurred())
+				}
+			})
+
+			It("felix should create the workload socket", func() {
+				for _, p := range hostWlSocketPath {
+					Eventually(p, "3s").Should(BeAnExistingFile())
+				}
+			})
+
+			Context("with open workload connections", func() {
+
+				// Then connect to it.
+				var (
+					wlConn   [3]*grpc.ClientConn
+					wlClient [3]proto.PolicySyncClient
+					cancel   context.CancelFunc
+					ctx      context.Context
+					err      error
+				)
+
+				createWorkloadConn := func(i int) (*grpc.ClientConn, proto.PolicySyncClient) {
+					var opts []grpc.DialOption
+					opts = append(opts, grpc.WithInsecure())
+					opts = append(opts, grpc.WithDialer(func(target string, timeout time.Duration) (net.Conn, error) {
+						return net.DialTimeout("unix", target, timeout)
+					}))
+					var conn *grpc.ClientConn
+					conn, err = grpc.Dial(hostWlSocketPath[i], opts...)
+					Expect(err).NotTo(HaveOccurred())
+					wlClient := proto.NewPolicySyncClient(conn)
+					return conn, wlClient
+				}
+
+				BeforeEach(func() {
+					ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
+
+					for i := range w {
+						// Use the fact that anything we exec inside the Felix container runs as root to fix the
+						// permissions on the socket so the test process can connect.
+						Eventually(hostWlSocketPath[i], "3s").Should(BeAnExistingFile())
+						felixes[i].Exec("chmod", "a+rw", containerWlSocketPath[i])
+						wlConn[i], wlClient[i] = createWorkloadConn(i)
+					}
+				})
+
+				AfterEach(func() {
+					if cancel != nil {
+						cancel()
+					}
+				})
+
+				Context("with mock clients syncing", func() {
+					var (
+						mockWlClient [3]*mockWorkloadClient
+					)
+
+					BeforeEach(func() {
+						for i := range w {
+							client := newMockWorkloadClient(fmt.Sprintf("workload-%d", i))
+							client.StartRouteSyncing(ctx, wlClient[i])
+							mockWlClient[i] = client
+						}
+					})
+
+					AfterEach(func() {
+						log.Info("AfterEach: cancelling main context")
+						cancel()
+						for _, c := range mockWlClient {
+							Eventually(c.Done).Should(BeClosed())
+						}
+					})
+
+					It("workload 0's client should receive correct updates", func() {
+						Eventually(mockWlClient[0].InSync).Should(BeTrue())
+						expectRouteUpdates(mockWlClient[0], calcRouteUpdates(0, felixes[:], w[:]))
+
+					})
+
+					It("workload 1's client should receive correct updates", func() {
+						Eventually(mockWlClient[1].InSync).Should(BeTrue())
+						expectRouteUpdates(mockWlClient[1], calcRouteUpdates(1, felixes[:], w[:]))
+					})
+
+					Context("after closing one client's gRPC connection", func() {
+						BeforeEach(func() {
+							// Sanity check that the connection is up before we close it.
+							Eventually(mockWlClient[2].InSync, "10s").Should(BeTrue())
+
+							// Close it and wait for the client to shut down.
+							wlConn[2].Close()
+							Eventually(mockWlClient[2].Done, "10s").Should(BeClosed())
+						})
+
+						doChurn := func(wlIndexes ...int) {
+							for i := 0; i < 20; i++ {
+								felixIdx := wlIndexes[i%len(wlIndexes)]
+								iStr := strconv.Itoa(i)
+								By(fmt.Sprintf("Churn %d; targetting workload %d", i, felixIdx))
+
+								wl := workload.Run(felixes[felixIdx], "wl-churn"+iStr, "default", "10.65.66.1"+iStr, "8055", "tcp")
+								wl.WorkloadEndpoint.Spec.Endpoint = "eth0"
+								wl.WorkloadEndpoint.Spec.Orchestrator = "k8s"
+								wl.WorkloadEndpoint.Spec.Pod = "fv-pod-churn" + iStr
+								wl.ConfigureInInfra(infra)
+
+								updates := make([]interface{}, 0)
+								updates = append(updates, proto.RouteUpdate{
+									Type:          proto.RouteType_LOCAL_WORKLOAD,
+									IpPoolType:    proto.IPPoolType_IPIP,
+									Dst:           ipToCIDR(wl.IP),
+									DstNodeName:   felixes[felixIdx].Hostname,
+									DstNodeIp:     felixes[felixIdx].IP,
+									LocalWorkload: true,
+								})
+
+								if felixIdx != 2 {
+									expectRouteUpdates(mockWlClient[felixIdx], updates)
+								}
+
+								wl.RemoveFromInfra(infra)
+								wl.Stop()
+
+								if felixIdx != 2 {
+									notExpectRouteUpdates(mockWlClient[felixIdx], updates)
+								}
+							}
+						}
+
+						It("churn affecting all endpoints should result in expected updates", func() {
+							// Send in some churn to ensure that we exhaust any buffers that might let
+							// one or two updates through.
+							doChurn(0, 1, 2)
+						})
+
+						It("churn affecting only active endpoints should result in expected updates", func() {
+							// Send in some churn to ensure that we exhaust any buffers that might let
+							// one or two updates through.
+							doChurn(0, 1)
+						})
+					})
+				})
+
+				createExtraSyncClient := func(ctx context.Context) proto.PolicySync_SyncClient {
+					syncClient, err := wlClient[0].Sync(ctx, &proto.SyncRequest{SubscriptionType: "l3-routes"})
+					Expect(err).NotTo(HaveOccurred())
+					// Get something from the first connection to make sure it's up.
+					_, err = syncClient.Recv()
+					Expect(err).NotTo(HaveOccurred())
+					return syncClient
+				}
+
+				expectFullSync := func(client *mockWorkloadClient) {
+					// The new client should take over, getting a full sync.
+					Eventually(client.InSync).Should(BeTrue())
+					expectRouteUpdates(client, calcRouteUpdates(0, felixes[:], w[:]))
+				}
+
+				expectSyncClientErr := func(syncClient proto.PolicySync_SyncClient) {
+					Eventually(func() error {
+						_, err := syncClient.Recv()
+						return err
+					}).Should(HaveOccurred())
+				}
+
+				It("a Sync stream should get closed if a second call to Sync() call is made", func() {
+					// Create first connection manually.
+					syncClient := createExtraSyncClient(ctx)
+
+					// Then create a new mock client.
+					client := newMockWorkloadClient("workload-0 second client")
+					client.StartRouteSyncing(ctx, wlClient[0])
+
+					// The new client should take over, getting a full sync.
+					expectFullSync(client)
+
+					// The old connection should get killed.
+					expectSyncClientErr(syncClient)
+
+					cancel()
+					Eventually(client.Done).Should(BeClosed())
+				})
+
+				It("a Sync stream should get closed if a new Sync call is made on a new gRPC socket", func() {
+					// Create first connection manually.
+					syncClient := createExtraSyncClient(ctx)
+
+					// Then create a new mock client with a new connection.
+					newWlConn, newWlClient := createWorkloadConn(0)
+					defer newWlConn.Close()
+					client := newMockWorkloadClient("workload-0 second client")
+					client.StartRouteSyncing(ctx, newWlClient)
+
+					// The new client should take over, getting a full sync.
+					expectFullSync(client)
+
+					// The old connection should get killed.
+					expectSyncClientErr(syncClient)
+
+					cancel()
+					Eventually(client.Done).Should(BeClosed())
+				})
+
+				It("after closing the socket, a new Sync call should get a full snapshot", func() {
+					client := newMockWorkloadClient("workload-0")
+					client.StartRouteSyncing(ctx, wlClient[0])
+
+					// Route updates should be sent over the API.
+					expectRouteUpdates(client, calcRouteUpdates(0, felixes[:], w[:]))
+
+					wlConn[0].Close()
+					Eventually(client.Done).Should(BeClosed())
+
+					// Then create a new mock client with a new connection.
+					newWlConn, newWlClient := createWorkloadConn(0)
+					defer newWlConn.Close()
+					client = newMockWorkloadClient("workload-0 second client")
+					client.StartRouteSyncing(ctx, newWlClient)
+
+					// The new client should take over, getting a full sync.
+					expectFullSync(client)
+
+					cancel()
+					Eventually(client.Done).Should(BeClosed())
+				})
+
+				It("after closing the Sync, a new Sync call should get a full snapshot", func() {
+					// Create and close first connection manually.
+					clientCtx, clientCancel := context.WithCancel(ctx)
+					syncClient := createExtraSyncClient(clientCtx)
+					_, err := syncClient.Recv()
+					Expect(err).NotTo(HaveOccurred())
+					clientCancel()
+
+					Eventually(func() error {
+						_, err = syncClient.Recv()
+						return err
+					}).Should(HaveOccurred())
+
+					// Then create a new mock client with a new connection.
+					newWlConn, newWlClient := createWorkloadConn(0)
+					defer newWlConn.Close()
+					client := newMockWorkloadClient("workload-0 second client")
+					client.StartRouteSyncing(ctx, newWlClient)
+
+					// The new client should take over, getting a full sync.
+					expectFullSync(client)
+
+					cancel()
+					Eventually(client.Done).Should(BeClosed())
+				})
+			})
+		})
+	})
+})
+
+func setToSlice(s set.Set) []proto.RouteUpdate {
+	r := make([]proto.RouteUpdate, s.Len())
+	s.Iter(func(item interface{}) error {
+		r = append(r, item.(proto.RouteUpdate))
+		return nil
+	})
+	return r
+}
+
+func ipToCIDR(ip string) string {
+	return fmt.Sprintf("%s/32", ip)
+}
+
+func calcRouteUpdates(localIndex int, felixes []*infrastructure.Felix, workloadsPerFelix []*workload.Workload) []interface{} {
+	updates := make([]interface{}, 0)
+	for i, f := range felixes {
+		var hostType proto.RouteType
+		if i == localIndex {
+			hostType = proto.RouteType_LOCAL_HOST
+		} else {
+			hostType = proto.RouteType_REMOTE_HOST
+		}
+
+		updates = append(updates, proto.RouteUpdate{
+			Type:        hostType,
+			IpPoolType:  proto.IPPoolType_NONE,
+			Dst:         ipToCIDR(f.IP),
+			DstNodeName: f.Hostname,
+			DstNodeIp:   f.IP,
+		})
+	}
+	for i, wl := range workloadsPerFelix {
+		f := felixes[i]
+		var workloadType proto.RouteType
+		var localWorkload bool
+		if i == localIndex {
+			workloadType = proto.RouteType_LOCAL_WORKLOAD
+			localWorkload = true
+		} else {
+			workloadType = proto.RouteType_REMOTE_WORKLOAD
+		}
+		updates = append(updates, proto.RouteUpdate{
+			Type:          workloadType,
+			IpPoolType:    proto.IPPoolType_IPIP,
+			Dst:           ipToCIDR(wl.IP),
+			DstNodeName:   f.Hostname,
+			DstNodeIp:     f.IP,
+			LocalWorkload: localWorkload,
+		})
+	}
+	return updates
+}
+
+func expectRouteUpdates(mockWlClient *mockWorkloadClient, updates []interface{}) {
+	Eventually(func() []proto.RouteUpdate {
+		return setToSlice(mockWlClient.ActiveRoutes())
+	}, "1s").Should(ContainElements(updates...))
+}
+
+func notExpectRouteUpdates(mockWlClient *mockWorkloadClient, updates []interface{}) {
+	Eventually(func() []proto.RouteUpdate {
+		return setToSlice(mockWlClient.ActiveRoutes())
+	}, "1s").Should(Not(ContainElements(updates...)))
+}
+
 func unixDialer(target string, timeout time.Duration) (net.Conn, error) {
 	return net.DialTimeout("unix", target, timeout)
 }
@@ -696,6 +1166,12 @@ func newMockWorkloadClient(name string) *mockWorkloadClient {
 
 func (c *mockWorkloadClient) StartSyncing(ctx context.Context, policySyncClient proto.PolicySyncClient) {
 	syncClient, err := policySyncClient.Sync(ctx, &proto.SyncRequest{})
+	Expect(err).NotTo(HaveOccurred())
+	go c.loopReadingFromAPI(ctx, syncClient)
+}
+
+func (c *mockWorkloadClient) StartRouteSyncing(ctx context.Context, policySyncClient proto.PolicySyncClient) {
+	syncClient, err := policySyncClient.Sync(ctx, &proto.SyncRequest{SubscriptionType: "l3-routes"})
 	Expect(err).NotTo(HaveOccurred())
 	go c.loopReadingFromAPI(ctx, syncClient)
 }

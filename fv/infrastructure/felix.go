@@ -230,6 +230,11 @@ func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {
 	for k, v := range options.ExtraVolumes {
 		volumes[k] = v
 	}
+	if id < len(options.PerNodeOptions) {
+		for k, v := range options.PerNodeOptions[id].ExtraVolumes {
+			volumes[k] = v
+		}
+	}
 	for k, v := range volumes {
 		args = append(args, "-v", fmt.Sprintf("%s:%s", k, v))
 	}

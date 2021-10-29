@@ -1163,6 +1163,22 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 				}},
 			})
 		}
+
+		chains = append(chains, &Chain{
+			Name: ChainManglePreroutingEgressInbound,
+			Rules: []Rule{
+				// mark returning egress traffic for RPF purposes
+				{
+					Match: Match().
+						InInterface("egress.calico"),
+					Action: SetMaskedMarkAction{
+						Mark: r.IptablesMarkEgress,
+						Mask: r.IptablesMarkEgress,
+					},
+					Comment: []string{"Set mark for returning egress packet"},
+				},
+			},
+		})
 	}
 
 	if r.TPROXYModeEnabled() {

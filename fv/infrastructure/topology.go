@@ -60,6 +60,11 @@ type TopologyOptions struct {
 	ExternalIPs               bool
 	UseIPPools                bool
 	NeedNodeIP                bool
+	PerNodeOptions            []PerNodeOptions
+}
+
+type PerNodeOptions struct {
+	ExtraVolumes map[string]string
 }
 
 func DefaultTopologyOptions() TopologyOptions {
@@ -79,6 +84,7 @@ func DefaultTopologyOptions() TopologyOptions {
 		IPIPEnabled:       true,
 		IPIPRoutesEnabled: true,
 		UseIPPools:        true,
+		PerNodeOptions:    []PerNodeOptions{},
 	}
 }
 
