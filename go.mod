@@ -25,7 +25,7 @@ require (
 	github.com/tigera/api v0.0.0-20211028194523-b4ceddaee039
 	github.com/tigera/licensing v1.0.1-0.20211028223522-6b45a0a46366
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
-	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
+	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 	k8s.io/api v0.22.0
 	k8s.io/apimachinery v0.22.0
@@ -38,7 +38,7 @@ require (
 
 replace (
 	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20211028231149-f768132f0e77
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20211029220957-b99e877bd0d6
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20211101093543-9196b88ab160
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211028223111-11b10e01b33d
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211028224705-64195140a910
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
