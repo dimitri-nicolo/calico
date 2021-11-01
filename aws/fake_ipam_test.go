@@ -5,8 +5,10 @@ package aws
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
+	calierrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -168,6 +170,14 @@ func (m *fakeIPAM) IPsByHandle(ctx context.Context, handleID string) ([]cnet.IP,
 			out = append(out, alloc.Addr.AsCalicoNetIP())
 		}
 	}
+
+	if len(out) == 0 {
+		return nil, calierrors.ErrorResourceDoesNotExist{
+			Err:        fmt.Errorf("something from k8s"),
+			Identifier: "id",
+		}
+	}
+
 	logrus.Infof("Fake IPAM IPsByHandle %q = %v", handleID, out)
 
 	return out, nil

@@ -1190,7 +1190,11 @@ func (m *SecondaryIfaceProvisioner) freeUnusedHostCalicoIPs(awsENIState *eniSnap
 	ctx, cancel := m.newContext()
 	defer cancel()
 	ourIPs, err := m.ipamClient.IPsByHandle(ctx, m.ipamHandle())
-	if err != nil && !errors.Is(err, calierrors.ErrorResourceDoesNotExist{}) {
+	if err != nil {
+		if _, ok := err.(calierrors.ErrorResourceDoesNotExist); ok {
+			logrus.Debug("No host IPs in IPAM.  Nothing to free.")
+			return nil
+		}
 		return fmt.Errorf("failed to look up our existing IPs: %w", err)
 	}
 
