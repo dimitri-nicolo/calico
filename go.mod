@@ -32,7 +32,7 @@ require (
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
 	github.com/lestrrat-go/strftime v1.0.3 // indirect
 	github.com/libp2p/go-reuseport v0.0.1
-	github.com/mdlayher/netlink v1.1.0
+	github.com/mdlayher/netlink v1.4.1
 	github.com/mipearson/rfw v0.0.0-20170619235010-6f0a6f3266ba
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/onsi/ginkgo v1.14.2
@@ -55,10 +55,10 @@ require (
 	github.com/tigera/windows-networking v0.0.0-20210505211919-0de3e1e53cff
 	github.com/vishvananda/netlink v1.1.1-0.20210703095558-21f2c55a7727
 	github.com/willf/bitset v1.1.11
-	golang.org/x/net v0.0.0-20210520170846-37e1c6afe023
+	golang.org/x/net v0.0.0-20210927181540-4e4d966f7476
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20210603081109-ebe580a85c40
-	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
+	golang.org/x/sys v0.0.0-20210927094055-39ccf1dd6fa6
+	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211027115401-c9b1ec1aa6d8
 	google.golang.org/grpc v1.27.1
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/tchap/go-patricia.v2 v2.3.0
