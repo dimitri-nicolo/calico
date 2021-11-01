@@ -11,10 +11,11 @@ import (
 	jose "gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 
-	yaml "github.com/projectcalico/go-yaml-wrapper"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/licensing/client"
 	cryptolicensing "github.com/tigera/licensing/crypto"
+
+	yaml "github.com/projectcalico/go-yaml-wrapper"
 )
 
 func e2eFlow() {

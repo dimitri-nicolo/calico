@@ -13,7 +13,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/jitter"
 
-	"github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	lclient "github.com/tigera/licensing/client"
 
 	log "github.com/sirupsen/logrus"
@@ -230,7 +230,7 @@ type mockBapiClient struct {
 	license     string
 	licenseTime time.Time
 	bapiClient
-	watchChan chan lapi.WatchEvent
+	watchChan  chan lapi.WatchEvent
 	terminated bool
 }
 

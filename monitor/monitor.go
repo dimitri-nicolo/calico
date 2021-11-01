@@ -6,18 +6,20 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	lclient "github.com/tigera/licensing/client"
+
 	lapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/jitter"
 	"github.com/projectcalico/libcalico-go/lib/set"
-	log "github.com/sirupsen/logrus"
-	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	lclient "github.com/tigera/licensing/client"
 )
 
 const (
 	defaultPollInterval = 10 * time.Minute
+	fastPollInterval    = 2 * time.Second
 )
 
 // LicenseMonitor is an interface which enables monitoring of license and feature enablement status.
@@ -121,16 +123,32 @@ func (l *licenseMonitor) MonitorForever(ctx context.Context) error {
 
 	licenseWatcher := l.createLicenseWatcher(ctx)
 
-	// TODO: use jitter package in libcalico-go once it has been ported to
-	// libcalico-go-private.
-	refreshTicker := l.newJitteredTicker(l.PollInterval, l.PollInterval/10)
-	defer refreshTicker.Stop()
+	// TODO: use jitter package in libcalico-go once it has been ported to libcalico-go-private.
+	// Define a fast and slow ticker. Use the slow ticker when we are also watching.  Use the fast ticker when our
+	// watch channel is not connected.
+	slowRefreshTicker := l.newJitteredTicker(l.PollInterval, l.PollInterval/10)
+	fastRefreshTicker := l.newJitteredTicker(fastPollInterval, fastPollInterval/10)
+	defer slowRefreshTicker.Stop()
+	defer fastRefreshTicker.Stop()
 
-	for ctx.Err() == nil{
+	for ctx.Err() == nil {
 		// We may have already loaded the license (if someone called RefreshLicense() before calling this method).
 		// Trigger any needed notification now and make sure the timer is scheduled.  We also hit this each time around
 		// the loop after any license refresh and transition so this call covers all the bases.
 		l.maybeNotifyLicenseStatusAndReschedule()
+
+		var watchChan <-chan lapi.WatchEvent
+		var refreshTicker *jitter.Ticker
+		if licenseWatcher != nil {
+			// We have a watcher, use the watcher results channel and the slow refresh.
+			watchChan = licenseWatcher.ResultChan()
+			refreshTicker = slowRefreshTicker
+		} else {
+			// We don't have a watcher, use the fast refesh so that we attempt to recreate the watcher. The watcher
+			// channel will be nil (which blocks forever on the select).
+			refreshTicker = fastRefreshTicker
+		}
+
 		select {
 		case <-ctx.Done():
 			log.Info("Context finished.")
@@ -139,13 +157,13 @@ func (l *licenseMonitor) MonitorForever(ctx context.Context) error {
 			_ = l.RefreshLicense(ctx)
 
 			// For as long as this loop runs, we want to make sure we are watching incoming events.
-			if licenseWatcher == nil  || licenseWatcher.HasTerminated() {
+			if licenseWatcher == nil || licenseWatcher.HasTerminated() {
 				licenseWatcher = l.createLicenseWatcher(ctx)
 			}
 
 		case <-l.licenseTransitionC:
 			log.Debug("License transition timer popped, checking license status...")
-		case licUpdate := <- licenseWatcher.ResultChan():
+		case licUpdate := <-watchChan:
 			log.Debug("License was just updated.")
 			if licUpdate.Error != nil {
 				log.Errorf("An error occurred for an incoming license watch event: %v", licUpdate.Error)
