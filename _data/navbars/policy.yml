@@ -55,7 +55,12 @@ section:
   path: /security/domain-based-policy
 - title: Policy for firewalls
   path: /security/policy-firewalls/
-  section: 
+  section:
+  - title: Panorama firewall integrations
+    path: /security/panorama-integration/
+    section:
+    - title: Panorama address groups integration
+      path: /security/panorama-integration/tigera-panorama-address-groups
   - title: Fortinet firewall integrations
     path: /security/fortinet-integration/
     section:
