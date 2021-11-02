@@ -140,5 +140,7 @@ This API makes use of tigera-packetcapture service account and requires the foll
 - [3.9 TOI](https://docs.google.com/presentation/d/1Q7IPAPweYBXuaqm7oOd-l5KsXnxp7ZBB6b0qLKL5XMc/edit?usp=sharing)
 - [Calicoctl captures-packets](https://docs.tigera.io/reference/calicoctl/captured-packets)
 - [Felix config parameters](https://docs.tigera.io/reference/resources/felixconfig)
-- [Change TLS certificates for packet capture api](https://docs.tigera.io/security/comms/packetcapture-tls)  
- 
+- [Change TLS certificates for packet capture api](https://docs.tigera.io/security/comms/packetcapture-tls)
+- [Service Graph Integration](https://docs.google.com/document/d/1YypDzDVPRaxIGKEpWuL_yl_ieyvNJV6iQRZMGva_rlI/edit?usp=sharing)
+- [UI integration - 3.10](https://docs.google.com/document/d/1ycESEfpNnHXM6BG5KdCPziXw4R7M74zwJGhFQYkd6OY/edit?usp=sharing)
+- [UI integration](https://docs.google.com/document/d/1Tjw5tZdgkvN71EkG6UpiGdwZGU-N4e_QQYfKoHpk8AA/edit?usp=sharing) 
