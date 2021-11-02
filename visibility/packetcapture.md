@@ -122,7 +122,7 @@ spec:
 ```
 
 In order to check the state of the capture, you can monitor to status of a `PacketCapture` for each node there are pods 
-scheduled and targeted by the selector to cycle between states: `Scheduled`, `Capturing` and `Finished`.
+scheduled and targeted by the selector to cycle between states: `Scheduled`, `WaitingForTraffic`, `Capturing` and `Finished`.
 
 More examples for scheduling to capture traffic are provided at [PacketCapture]({{site.baseurl}}/reference/resources/packetcapture) resource definition.
 
@@ -262,7 +262,7 @@ status:
 
 [Service Graph]({{site.baseurl}}/visibility/get-started-cem) lets you access captured traffic for your workload endpoints.
 
-By selecting a service graph vertex that corresponds to a namespace, you can schedule a capture job that selects all workload endpoints within that particular namespace.
+By selecting a service graph vertex that corresponds to a namespace, you can schedule a capture job that selects all workload endpoints within that particular namespace. Other vertex types supported are: service, service groups and replica sets.
 
 ![initiate-capture-job]({{site.baseurl}}/images/initiate-capture-job.png)
 
