@@ -237,7 +237,7 @@ func (m *bpfIPSets) GetMembers(setID string) (set.Set, error) {
 	panic("Not implemented")
 }
 
-func (m *bpfIPSets) ApplyUpdates() {
+func (m *bpfIPSets) ApplyUpdates(ipsetFilter func(ipSetName string) bool) map[string]set.Set {
 	var numAdds, numDels uint
 	startTime := time.Now()
 
@@ -370,6 +370,8 @@ func (m *bpfIPSets) ApplyUpdates() {
 	}
 
 	bpfIPSetsGauge.Set(float64(len(m.ipSets)))
+
+	return nil
 }
 
 // ApplyDeletions tries to delete any IP sets that are no longer needed.

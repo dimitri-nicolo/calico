@@ -25,10 +25,10 @@ type DebugConsole interface {
 
 type debugConsole struct {
 	connChan                 chan net.Conn
-	packetProcessorRestarter *nfqdnspolicy.PacketProcessorWithNfqueueRestarter
+	packetProcessorRestarter nfqdnspolicy.PacketProcessorWithNfqueueRestarter
 }
 
-func New(packetProcessorRestarter *nfqdnspolicy.PacketProcessorWithNfqueueRestarter) DebugConsole {
+func New(packetProcessorRestarter nfqdnspolicy.PacketProcessorWithNfqueueRestarter) DebugConsole {
 	if err := os.MkdirAll(SockAddrFolder, os.ModeDir); err != nil {
 		log.WithError(err).Fatal("failed to create socket path")
 	}

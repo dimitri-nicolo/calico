@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
 package mocktime
 
@@ -30,6 +30,10 @@ type MockTime struct {
 	currentTime   time.Time
 	autoIncrement time.Duration
 	timers        []*mockTimer
+}
+
+func (m *MockTime) NewTicker(d timeshim.Duration) timeshim.Ticker {
+	panic("implement me")
 }
 
 func (m *MockTime) NewTimer(d timeshim.Duration) timeshim.Timer {

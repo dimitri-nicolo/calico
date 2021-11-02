@@ -300,13 +300,21 @@ func (s *IPSets) GetMembers(setID string) (set.Set, error) {
 	return ipSetMemberSetToStringSet(realMembers), nil
 }
 
-func (s *IPSets) ApplyUpdates() {
+func (s *IPSets) ApplyUpdates(ipsetFilter func(ipSetName string) bool) map[string]set.Set {
+	if ipsetFilter == nil {
+		ipsetFilter = func(ipSetName string) bool {
+			return true
+		}
+	}
+
 	success := false
 	retryDelay := 1 * time.Millisecond
 	backOff := func() {
 		s.sleep(retryDelay)
 		retryDelay *= 2
 	}
+
+	updatedIPSets := make(map[string]set.Set)
 	for attempt := 0; attempt < 10; attempt++ {
 		if attempt > 0 {
 			s.logCxt.Info("Retrying after an ipsets update failure...")
@@ -337,7 +345,8 @@ func (s *IPSets) ApplyUpdates() {
 			s.tryTempIPSetDeletions()
 		}
 
-		if err := s.tryUpdates(); err != nil {
+		var err error
+		if err = s.tryUpdates(ipsetFilter, updatedIPSets); err != nil {
 			// While failed deletions don't cause immediate problems, update failures may mean that our iptables
 			// updates fail.  We need to do an immediate resync.
 			s.logCxt.WithError(err).Warning("Failed to update IP sets. Marking dataplane for resync.")
@@ -355,6 +364,8 @@ func (s *IPSets) ApplyUpdates() {
 		s.logCxt.Panic("Failed to update IP sets after multiple retries.")
 	}
 	gaugeNumTotalIpsets.Set(float64(s.existingIPSetNames.Len()))
+
+	return updatedIPSets
 }
 
 // tryResync attempts to bring our state into sync with the dataplane.  It scans the contents of the
@@ -632,13 +643,15 @@ func (s *IPSets) tryResync() (numProblems int, err error) {
 // tryUpdates attempts to create and/or update IP sets.  It attempts to do the updates as a single
 // 'ipset restore' session in order to minimise process forking overhead.  Note: unlike
 // 'iptables-restore', 'ipset restore' is not atomic, updates are applied individually.
-func (s *IPSets) tryUpdates() error {
+// This function returns a the set of IPs that the IP sets that were added to or replace with.
+func (s *IPSets) tryUpdates(ipsetFilter func(ipSetName string) bool, updatedIPSets map[string]set.Set) error {
 	needUpdates := false
 	if s.neededIPSetNames == nil {
 		needUpdates = s.dirtyIPSetIDs.Len() > 0
 	} else {
 		s.dirtyIPSetIDs.Iter(func(item interface{}) error {
-			if s.ipSetNeeded(item.(string)) {
+			setID := item.(string)
+			if s.ipSetNeeded(setID) {
 				needUpdates = true
 				return set.StopIteration
 			}
@@ -688,15 +701,28 @@ func (s *IPSets) tryUpdates() error {
 
 	// Ask each dirty IP set to write its updates to the stream.
 	var writeErr error
+
 	s.dirtyIPSetIDs.Iter(func(item interface{}) error {
-		if !s.ipSetNeeded(item.(string)) {
+		setID := item.(string)
+		if !s.ipSetNeeded(setID) {
 			return nil
 		}
+
+		var updatedMembers set.Set
+		if ipsetFilter(item.(string)) {
+			updatedMembers = updatedIPSets[item.(string)]
+			if updatedMembers == nil {
+				updatedMembers = set.New()
+				updatedIPSets[item.(string)] = updatedMembers
+			}
+		}
+
 		ipSet := s.ipSetIDToIPSet[item.(string)]
-		writeErr = s.writeUpdates(ipSet, stdin)
+		writeErr = s.writeUpdates(ipSet, stdin, updatedMembers)
 		if writeErr != nil {
 			return set.StopIteration
 		}
+
 		return nil
 	})
 	// Finish off the input, then flush and close the input, or the command won't terminate.
@@ -724,7 +750,8 @@ func (s *IPSets) tryUpdates() error {
 	// dataplane should be in sync.  If we bail out above, then the resync logic will kick in
 	// and figure out how much of our update succeeded.
 	s.dirtyIPSetIDs.Iter(func(item interface{}) error {
-		if !s.ipSetNeeded(item.(string)) {
+		setID := item.(string)
+		if !s.ipSetNeeded(setID) {
 			return nil
 		}
 		ipSet := s.ipSetIDToIPSet[item.(string)]
@@ -750,7 +777,7 @@ func (s *IPSets) tryUpdates() error {
 	return nil
 }
 
-func (s *IPSets) writeUpdates(ipSet *ipSet, w io.Writer) error {
+func (s *IPSets) writeUpdates(ipSet *ipSet, w io.Writer, updatedMembers set.Set) error {
 	logCxt := s.logCxt.WithField("setID", ipSet.SetID)
 	if ipSet.members != nil {
 		logCxt = logCxt.WithField("numMembersInDataplane", ipSet.members.Len())
@@ -776,19 +803,19 @@ func (s *IPSets) writeUpdates(ipSet *ipSet, w io.Writer) error {
 			return nil
 		}
 		logCxt.Debug("Calculating deltas to IP set")
-		return s.writeDeltas(ipSet, w, logCxt)
+		return s.writeDeltas(ipSet, w, logCxt, updatedMembers)
 	}
 	// In full-rewrite mode.
 	// - pendingReplace is non-nil
 	// - membersInDataplane nil
 	// - pendingAdds/Deletions empty.
 	logCxt.Info("Doing full IP set rewrite")
-	return s.writeFullRewrite(ipSet, w, logCxt)
+	return s.writeFullRewrite(ipSet, w, logCxt, updatedMembers)
 }
 
 // writeFullRewrite calculates the ipset restore input required to do a full, atomic, idempotent
 // rewrite of the IP set and writes it to the given io.Writer.
-func (s *IPSets) writeFullRewrite(ips *ipSet, out io.Writer, logCxt log.FieldLogger) (err error) {
+func (s *IPSets) writeFullRewrite(ips *ipSet, out io.Writer, logCxt log.FieldLogger, updatedMembers set.Set) (err error) {
 	// writeLine until an error occurs, writeLine writes a line to the output, after an error,
 	// it is a no-op.
 	writeLine := func(format string, a ...interface{}) {
@@ -838,6 +865,9 @@ func (s *IPSets) writeFullRewrite(ips *ipSet, out io.Writer, logCxt log.FieldLog
 	ips.pendingReplace.Iter(func(item interface{}) error {
 		member := item.(ipSetMember)
 		writeLine("add %s %s", tempSetName, member)
+		if updatedMembers != nil {
+			updatedMembers.Add(item)
+		}
 		return nil
 	})
 	// Atomically swap the temporary set into place.
@@ -866,7 +896,7 @@ func (s *IPSets) nextFreeTempIPSetName() string {
 
 // writeDeltas calculates the ipset restore input required to apply the pending adds/deletes to the
 // main IP set.
-func (s *IPSets) writeDeltas(ipSet *ipSet, out io.Writer, logCxt log.FieldLogger) (err error) {
+func (s *IPSets) writeDeltas(ipSet *ipSet, out io.Writer, logCxt log.FieldLogger, updatedMembers set.Set) (err error) {
 	mainSetName := ipSet.MainIPSetName
 	ipSet.pendingDeletions.Iter(func(item interface{}) error {
 		member := item.(ipSetMember)
@@ -889,6 +919,9 @@ func (s *IPSets) writeDeltas(ipSet *ipSet, out io.Writer, logCxt log.FieldLogger
 			return set.StopIteration
 		}
 		countNumIPSetLinesExecuted.Inc()
+		if updatedMembers != nil {
+			updatedMembers.Add(member)
+		}
 		return nil
 	})
 	return

@@ -33,7 +33,7 @@ type IPSetsDataplane interface {
 	GetTypeOf(setID string) (ipsets.IPSetType, error)
 	GetMembers(setID string) (set.Set, error)
 	QueueResync()
-	ApplyUpdates()
+	ApplyUpdates(ipsetFilter func(ipSetName string) bool) map[string]set.Set
 	ApplyDeletions()
 }
 

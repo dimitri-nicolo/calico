@@ -174,8 +174,8 @@ func (m *IPSets) GetMembers(setID string) (set.Set, error) {
 	panic("Not implemented")
 }
 
-func (m *IPSets) ApplyUpdates() {
-	return
+func (m *IPSets) ApplyUpdates(ipsetFilter func(name string) bool) map[string]set.Set {
+	return nil
 }
 
 func (m *IPSets) ApplyDeletions() {

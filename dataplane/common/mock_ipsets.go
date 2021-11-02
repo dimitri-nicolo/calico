@@ -91,8 +91,9 @@ func (s *MockIPSets) QueueResync() {
 	// Not implemented for UT.
 }
 
-func (s *MockIPSets) ApplyUpdates() {
+func (s *MockIPSets) ApplyUpdates(ipsetFilter func(ipSetName string) bool) map[string]set.Set {
 	// Not implemented for UT.
+	return nil
 }
 
 func (s *MockIPSets) ApplyDeletions() {

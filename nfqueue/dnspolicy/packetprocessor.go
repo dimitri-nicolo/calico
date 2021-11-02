@@ -3,18 +3,20 @@
 package dnspolicy
 
 import (
-	"crypto/sha1"
-	"fmt"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 
-	"github.com/projectcalico/felix/nfqueue"
-	"github.com/projectcalico/felix/nfqueue/timemanager"
-
-	cprometheus "github.com/projectcalico/libcalico-go/lib/prometheus"
-
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/felix/ip"
+	"github.com/projectcalico/felix/nfqueue"
+	"github.com/projectcalico/felix/timeshim"
+
+	"github.com/projectcalico/libcalico-go/lib/logutils"
+	cprometheus "github.com/projectcalico/libcalico-go/lib/prometheus"
+	"github.com/projectcalico/libcalico-go/lib/set"
 
 	"github.com/prometheus/client_golang/prometheus"
 
@@ -27,176 +29,96 @@ import (
 var (
 	prometheusNfqueueQueuedLatency = cprometheus.NewSummary(prometheus.SummaryOpts{
 		Name: "felix_dns_policy_nfqueue_monitor_queued_latency",
-		Help: "Summary for measuring how long a packet was nfqueued for",
+		Help: "Summary of the length of time packets where in the nfqueue queue",
 	})
 
 	prometheusPacketReleaseLatency = cprometheus.NewSummary(prometheus.SummaryOpts{
 		Name: "felix_dns_policy_nfqueue_monitor_release_latency",
-		Help: "Summary for measuring the latency of releasing packets.",
-	})
-
-	prometheusPacketDNRLatency = cprometheus.NewSummary(prometheus.SummaryOpts{
-		Name: "felix_dns_policy_nfqueue_monitor_drop_latency",
-		Help: "Summary for measuring the latency of repeating packets for the last time.",
+		Help: "Summary of the latency for releasing packets",
 	})
 
 	prometheusReleasePacketBatchSizeGauge = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "felix_dns_policy_nfqueue_monitor_release_packets_batch_size",
-		Help: "Gauge of the number of packets to release currently in memory.",
-	})
-
-	prometheusDropPacketBatchSizeGauge = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "felix_dns_policy_nfqueue_monitor_drop_packets_batch_size",
-		Help: "Gauge of the number of packets to drop currently in memory.",
+		Help: "Gauge of the number of packets to release currently in memory",
 	})
 
 	prometheusPacketsInCount = prometheus.NewCounter(prometheus.CounterOpts{
 		Name: "felix_dns_policy_nfqueue_monitor_packets_in",
-		Help: "Count of the number of packets that have come into the monitor",
+		Help: "Count of the number of packets seen",
 	})
 
-	prometheusPacketsFinalRepeatCount = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "felix_dns_policy_nfqueue_monitor_nf_dropped",
-		Help: "Count of the number of packets that have been nfrepeated for the last time",
+	prometheusPacketsReleaseCount = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "felix_dns_policy_nfqueue_monitor_packets_released",
+		Help: "Count of the number of packets that have been released",
 	})
 
-	prometheusPacketsNfRepeatedCount = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "felix_dns_policy_nfqueue_monitor_nf_repeated",
-		Help: "Count of the number of packets that have been nf_repeated",
+	prometheusDNRDroppedCount = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "felix_dns_policy_nfqueue_monitor_packets_dnr_dropped",
+		Help: "Count of the number of packets that have been dropped because the DNR mark was present",
 	})
 )
 
 func init() {
 	prometheus.MustRegister(prometheusPacketReleaseLatency)
-	prometheus.MustRegister(prometheusPacketDNRLatency)
 	prometheus.MustRegister(prometheusReleasePacketBatchSizeGauge)
-	prometheus.MustRegister(prometheusDropPacketBatchSizeGauge)
 	prometheus.MustRegister(prometheusPacketsInCount)
-	prometheus.MustRegister(prometheusPacketsFinalRepeatCount)
-	prometheus.MustRegister(prometheusPacketsNfRepeatedCount)
 	prometheus.MustRegister(prometheusNfqueueQueuedLatency)
+	prometheus.MustRegister(prometheusPacketsReleaseCount)
+	prometheus.MustRegister(prometheusDNRDroppedCount)
 }
 
 const (
-	defaultPacketDropTimeout = 1000 * time.Millisecond
-	// Max time is set to 15 seconds because the timemanager expires times after 10 seconds for a given 6 tuple. This
-	// is just to protect against the edge case where different packets have the same packet ids (as is the case with
-	// nping).
-	defaultMaximumPacketTimeout  = 15 * time.Second
-	defaultPacketReleaseTimeout  = 300 * time.Millisecond
+	// defaultPacketReleaseTimeout is the maximum length of time to hold a packet while waiting for an IP set update
+	// containing the destination IP of the packet.
+	defaultPacketReleaseTimeout  = 1000 * time.Millisecond
 	defaultReleaseTickerDuration = 50 * time.Millisecond
+	// defaultIPCacheDuration is the default maximum length of time to store ips in the cache before deleting them. This
+	// defaults to 1 second because that is the minimum TTL for an IP in a DNS response.
+	defaultIPCacheDuration = 1000 * time.Millisecond
 
 	failedToSetVerdictMessage = "failed to set the nfqueue verdict for the packet"
+
+	// The maximum number of items to subsequently read from a channel.
+	channelPeakLimit = 100
 )
 
-type PacketProcessorWithNfqueueRestarter struct {
-	nfqueueCreator func() (nfqueue.Nfqueue, error)
-	dnrMark        uint32
-	options        []Option
-	done           chan struct{}
-	closeOnce      sync.Once
-
-	// The current in use nfqueue instance, stored for testing and debugging purposes ONLY and is NOT thread safe to
-	// access or use.
-	debugKillNfqueueConnChan chan chan error
+type PacketProcessor interface {
+	Start()
+	Stop()
+	OnIPSetMemberUpdates(ips set.Set)
 }
 
-func NewPacketProcessorWithNfqueueRestarter(nfqueueCreator func() (nfqueue.Nfqueue, error), dnrMark uint32, options ...Option) *PacketProcessorWithNfqueueRestarter {
-	return &PacketProcessorWithNfqueueRestarter{
-		nfqueueCreator:           nfqueueCreator,
-		dnrMark:                  dnrMark,
-		options:                  options,
-		done:                     make(chan struct{}),
-		debugKillNfqueueConnChan: make(chan chan error),
-	}
-}
-
-// Start kicks off the internal loop to start the packet processor and open the nfqueue connection, and restart if
-// something should go wrong. If the loop fails to start (without being gracefully closed) then it panics.
-func (restarter *PacketProcessorWithNfqueueRestarter) Start() {
-	go func() {
-		if err := restarter.loop(); err != nil {
-			log.WithError(err).Panic("failed to start nfqueue dns policy packet processor")
-		}
-	}()
-}
-
-func (restarter *PacketProcessorWithNfqueueRestarter) loop() error {
-done:
-	for {
-		nf, err := restarter.nfqueueCreator()
-		if err != nil {
-			return err
-		}
-
-		processor := NewPacketProcessor(nf, restarter.dnrMark, restarter.options...)
-		processor.Start()
-
-	loop:
-		for {
-			select {
-			case <-nf.ShutdownNotificationChannel():
-				processor.Stop()
-				break loop
-			case <-restarter.done:
-				processor.Stop()
-				if err := nf.Close(); err != nil {
-					log.WithError(err).Warning("an error occurred while closing nfqueue.")
-				}
-				break done
-			case errChan, ok := <-restarter.debugKillNfqueueConnChan:
-				if ok {
-					errChan <- nf.DebugKillConnection()
-					close(errChan)
-				}
-			}
-		}
-
-		log.Info("recreating NFQUEUE connection...")
-	}
-
-	return nil
-}
-
-func (restarter *PacketProcessorWithNfqueueRestarter) Stop() {
-	restarter.closeOnce.Do(func() {
-		close(restarter.done)
-		close(restarter.debugKillNfqueueConnChan)
-	})
-}
-
-// DebugKillCurrentNfqueueConnection calls DebugKillConnection on the currently use nfqueue instance, destroying the
-// underlying connection. This is used for testing purposes only, and in general is not safe to use or even thread safe.
-// This was note made thread safe as we want to add as little debug code to interfere with the mainline production code.
-//
-// In general, DO NOT USE THIS FUNCTION.
-func (restarter *PacketProcessorWithNfqueueRestarter) DebugKillCurrentNfqueueConnection() error {
-	errChan := make(chan error)
-	restarter.debugKillNfqueueConnChan <- errChan
-
-	return <-errChan
-}
-
-// PacketProcessor listens for incoming nfqueue packets on a given channel and holds it until it receives a
-// signal.
-type PacketProcessor struct {
+// packetProcessor listens for incoming nfqueue packets on a given channel and holds it until it receives a signal to
+// release the packet. For more details on the inner workings, look at the comments for the loopProcessPackets
+// function.
+type packetProcessor struct {
 	nf nfqueue.Nfqueue
+
+	stopOnce sync.Once
 
 	dnrMark uint32
 
-	done chan struct{}
+	// Wait group that will wait for the loopProcessPackets function to return.
+	loopProcessPacketsWG sync.WaitGroup
 
-	packetDropTimeout     time.Duration
-	maximumPacketTimeout  time.Duration
+	// Various timeout durations
 	packetReleaseTimeout  time.Duration
 	releaseTickerDuration time.Duration
+	ipCacheDuration       time.Duration
 
-	packetReleaseChan      chan []nfqueuePacket
-	packetFinalReleaseChan chan []nfqueuePacket
+	// Channels used to communicate with the process loop
+	ipsetMemberUpdates       chan set.Set
+	packetReleaseChan        chan []nfqueuePacket
+	stopLoopPacketProcessing chan struct{}
 
-	previouslyQueuedMark uint32
+	// Arrays and maps used to store packets and IPs
+	dstIPToPacketMap map[string][]nfqueuePacket
+	packetsToRelease []nfqueuePacket
+	ipCache          map[string]time.Time
 
-	timeManager timemanager.TimeManager
+	time timeshim.Interface
+
+	rateLimitedErrLogger *logutils.RateLimitedLogger
 }
 
 // nfqueuePacket represents a packet pulled off the nfqueue that's being monitored. It contains a subset of the
@@ -205,8 +127,6 @@ type nfqueuePacket struct {
 	// packetID is the ID used to set a verdict for the packet.
 	packetID uint32
 
-	// id is the ID set by the client, and used to uniquely identify packets repeatedly queued.
-	id           uint16
 	queuedTime   time.Time
 	protocol     layers.IPProtocol
 	srcIP, dstIP net.IP
@@ -214,32 +134,30 @@ type nfqueuePacket struct {
 	dstPort      uint16
 }
 
-func (packet *nfqueuePacket) idHash() string {
-	h := sha1.New()
-	identifiers := []interface{}{packet.id, packet.protocol, packet.srcIP, packet.dstIP, packet.srcPort, packet.dstPort}
-	h.Write([]byte(fmt.Sprintf("%q", identifiers)))
-	return fmt.Sprintf("%x", h.Sum(nil))
-}
-
 // logLinePrefix returns a string with information about the packet that should be used as a prefix to log lines that
 // pertain to the packet.
 func (packet *nfqueuePacket) logLinePrefix() string {
-	return fmt.Sprintf("[packetID: %d, protocol: %d, srcIP: %s, dstIP: %s, srcPort: %d, dstPort: %d]",
-		packet.id, packet.protocol, packet.srcIP, packet.dstIP, packet.srcPort, packet.dstPort)
+	// Don't use Sprintf as this might be called many times.
+	return "[protocol: " + strconv.Itoa(int(packet.protocol)) + ", srcIP: " + string(packet.srcIP) + ", dstIP: " +
+		string(packet.dstIP) + ", srcPort: " + strconv.Itoa(int(packet.srcPort)) + ", dstPort: " +
+		strconv.Itoa(int(packet.dstPort)) + "] "
 }
 
-func NewPacketProcessor(nf nfqueue.Nfqueue, dnrMark uint32, options ...Option) *PacketProcessor {
-	processor := &PacketProcessor{
-		nf:                     nf,
-		dnrMark:                dnrMark,
-		done:                   make(chan struct{}),
-		packetDropTimeout:      defaultPacketDropTimeout,
-		maximumPacketTimeout:   defaultMaximumPacketTimeout,
-		packetReleaseTimeout:   defaultPacketReleaseTimeout,
-		releaseTickerDuration:  defaultReleaseTickerDuration,
-		packetReleaseChan:      make(chan []nfqueuePacket, 100),
-		packetFinalReleaseChan: make(chan []nfqueuePacket, 100),
-		timeManager:            timemanager.New(),
+func NewPacketProcessor(nf nfqueue.Nfqueue, dnrMark uint32, options ...Option) PacketProcessor {
+	processor := &packetProcessor{
+		nf:                       nf,
+		dnrMark:                  dnrMark,
+		packetReleaseTimeout:     defaultPacketReleaseTimeout,
+		releaseTickerDuration:    defaultReleaseTickerDuration,
+		ipCacheDuration:          defaultIPCacheDuration,
+		packetReleaseChan:        make(chan []nfqueuePacket, 100),
+		ipsetMemberUpdates:       make(chan set.Set, 100),
+		stopLoopPacketProcessing: make(chan struct{}),
+		packetsToRelease:         make([]nfqueuePacket, 0, 100),
+		ipCache:                  make(map[string]time.Time),
+		dstIPToPacketMap:         make(map[string][]nfqueuePacket),
+		time:                     timeshim.RealTime(),
+		rateLimitedErrLogger:     logutils.NewRateLimitedLogger(logutils.OptInterval(15 * time.Second)),
 	}
 
 	for _, option := range options {
@@ -249,201 +167,292 @@ func NewPacketProcessor(nf nfqueue.Nfqueue, dnrMark uint32, options ...Option) *
 	return processor
 }
 
-func (processor *PacketProcessor) Start() {
-	processor.timeManager.Start()
-
-	go processor.listenForIncomingPackets()
-
-	// We create separate release and drop loops so we don't block processing packets while we set the verdicts.
-	go processor.loopReleasingPackets()
-	go processor.loopFinalPacketRelease()
+func (processor *packetProcessor) Start() {
+	processor.loopProcessPacketsWG.Add(1)
+	go processor.loopProcessPackets()
+	go loopReleasePackets(processor.nf, processor.packetReleaseChan, processor.dnrMark, processor.time, processor.rateLimitedErrLogger)
 }
 
-func (processor *PacketProcessor) Stop() {
-	close(processor.done)
+func (processor *packetProcessor) Stop() {
+	processor.stopOnce.Do(func() {
+		close(processor.stopLoopPacketProcessing)
+
+		processor.loopProcessPacketsWG.Wait()
+
+		close(processor.packetReleaseChan)
+		close(processor.ipsetMemberUpdates)
+	})
 }
 
-func (processor *PacketProcessor) listenForIncomingPackets() {
-	// TODO rename this, since we have a packetsToDrop (why does this get called packets)
-	releasePackets := make([]nfqueuePacket, 0, 100)
-	finalReleasePackets := make([]nfqueuePacket, 0, 100)
+// loopProcessPackets receives and holds packets from the monitored NFQUEUE and "releases" them when:
+// - An update from the ipsetMemberUpdates channel arrives containing the destination IP of the packet
+// - The packet has been held for a maximum amount of time (specified by the packetReleaseTimeout field of the
+//   PacketProcessor)
+//
+// Releasing a packet entails removing it from the internal storage and setting a netfilter verdict. Setting a verdict
+// tells iptables to continue processing the packet. The verdicts the PacketProcessor will set are:
+// - NF_REPEAT with a DNR (do not repeat) mark bit if the packet is being "released"
+// - NF_DROP if a packet is received from NFQUEUE with the DNR mark bit set (in the case the iptables NFQUEUE rule does
+//   does not have a negative match against the DNR bit)
+//
+// The first case is the mainline case, where the packet is repeated through iptables because:
+// - The IP we've been waiting to be programmed to ipsets has been programmed (and we were notified of this through the
+//   ipsetMemberUpdates channel)
+// - The IP we've been waiting to be programmed has not been programmed within the time limit and we now want iptables
+//   to continue with the next processing steps for the packet (likely dropping the packet)
+//
+// The DNR mark bit ensures that any packet that has been NFQUEUE'd is not NFQUEUE'd again (this should be enforced
+// by a negative match against the DNR mark bit in the iptables rule that NFQUEUEs the packet). This means that in the
+// case that a packet is released because it times out it will not be re NFQUEUE'd, and will be evaluated by the
+// iptables rules following the NFQUEUE rule.
+func (processor *packetProcessor) loopProcessPackets() {
+	defer processor.loopProcessPacketsWG.Done()
 
-	ticker := time.NewTicker(processor.releaseTickerDuration)
+	releaseTicker := processor.time.NewTicker(processor.releaseTickerDuration)
+	defer releaseTicker.Stop()
 
-	defer ticker.Stop()
-	defer close(processor.packetReleaseChan)
-	defer close(processor.packetFinalReleaseChan)
-	defer processor.timeManager.Stop()
 done:
 	for {
 		select {
-		case <-processor.done:
+		case <-processor.stopLoopPacketProcessing:
 			break done
+		case memberUpdates := <-processor.ipsetMemberUpdates:
+			if memberUpdates == nil {
+				continue
+			}
+
+			ips := make([]string, 0, memberUpdates.Len())
+			memberUpdates.Iter(func(i interface{}) error {
+				ipAddr := i.(ip.Addr)
+				ips = append(ips, ipAddr.String())
+
+				processor.ipCache[ipAddr.String()] = processor.time.Now()
+
+				// Check if we have any packets held with this IP as it's destination, then add them to the list of
+				// packets to release and remove them from the current packet map.
+				if packets, exists := processor.dstIPToPacketMap[ipAddr.String()]; exists {
+					processor.packetsToRelease = append(processor.packetsToRelease, packets...)
+
+					delete(processor.dstIPToPacketMap, ipAddr.String())
+				}
+
+				return nil
+			})
+
+			log.WithField("ips", ips).Debug("Received ipset member update.")
 		case attr, ok := <-processor.nf.PacketAttributesChannel():
+			// If ok is not true then the underlying nf has been shutdown and there is nothing more that can be done in
+			// the packet processor. The owner of this packet processor should be monitoring the injected nf object for
+			// shutdowns, and subsequently call Stop() on this packet processor when it detects an nf shutdown.
 			if !ok {
-				log.Info("Received signal to exit packet monitoring loop.")
+				log.Info("Packet attribute channel closed, shutting down.")
 				break done
 			}
 
-			packet := nfqueuePacket{
-				packetID:   *attr.PacketID,
-				queuedTime: time.Now(),
-			}
+			// Process the first packet read off the channel.
+			processor.processPacket(attr)
 
-			prometheusReleasePacketBatchSizeGauge.Set(float64(len(releasePackets)))
-			prometheusDropPacketBatchSizeGauge.Set(float64(len(finalReleasePackets)))
-
-			rawPacket := gopacket.NewPacket(*attr.Payload, layers.LayerTypeIPv4, gopacket.Default)
-			if rawPacket.ErrorLayer() != nil {
-				rawPacket = gopacket.NewPacket(*attr.Payload, layers.LayerTypeIPv6, gopacket.Default)
-				if rawPacket.ErrorLayer() != nil {
-					log.Error(packet.logLinePrefix(), "dropping unknown packet type (neither ipv4 nor ipv6)")
-					finalReleasePackets = append(finalReleasePackets, packet)
-					continue
-				}
-			}
-
-			switch rawPacket.NetworkLayer().LayerType() {
-			case layers.LayerTypeIPv4:
-				ipv4 := rawPacket.Layer(layers.LayerTypeIPv4).(*layers.IPv4)
-
-				packet.id = ipv4.Id
-				packet.srcIP = ipv4.SrcIP
-				packet.dstIP = ipv4.DstIP
-			case layers.LayerTypeIPv6:
-				ipv6 := rawPacket.Layer(layers.LayerTypeIPv6).(*layers.IPv6)
-
-				packet.srcIP = ipv6.SrcIP
-				packet.dstIP = ipv6.DstIP
-			default:
-				log.Error(packet.logLinePrefix(), "dropping unknown packet type (neither ipv4 nor ipv6)")
-				finalReleasePackets = append(finalReleasePackets, packet)
-				continue
-			}
-
-			transportLayer := rawPacket.TransportLayer()
-			if transportLayer != nil {
-				switch rawPacket.TransportLayer().LayerType() {
-				case layers.LayerTypeTCP:
-					tcp := rawPacket.Layer(layers.LayerTypeTCP).(*layers.TCP)
-
-					packet.srcPort = uint16(tcp.SrcPort)
-					packet.dstPort = uint16(tcp.DstPort)
-					packet.protocol = layers.IPProtocolTCP
-				case layers.LayerTypeUDP:
-					udp := rawPacket.Layer(layers.LayerTypeUDP).(*layers.UDP)
-					packet.srcPort = uint16(udp.SrcPort)
-					packet.dstPort = uint16(udp.DstPort)
-					packet.protocol = layers.IPProtocolUDP
+		processPacketsMsgLoop:
+			// Now attempt to read more all the packets on the channel (up to a maximum limit) before breaking from this
+			// case.
+			for i := 0; i < channelPeakLimit; i++ {
+				select {
+				case attr := <-processor.nf.PacketAttributesChannel():
+					processor.processPacket(attr)
 				default:
-					log.Debug("Unknown transport layer type")
+					break processPacketsMsgLoop
+				}
+			}
+		case <-releaseTicker.Chan():
+			// On every tick we check if any packets currently held in the dstIPToPacketMap have been held for the
+			// maximum duration, and if they have then we add those packets to the packetsToRelease slice to release
+			// the packet.
+			newDstToPacketMap := map[string][]nfqueuePacket{}
+
+			for dstIP, packets := range processor.dstIPToPacketMap {
+				packetsToHold := make([]nfqueuePacket, 0, len(packets))
+				for _, packet := range packets {
+					if processor.time.Since(packet.queuedTime) >= processor.packetReleaseTimeout {
+						log.Debug(packet.logLinePrefix(), "Packet expired, adding to release list.")
+
+						processor.packetsToRelease = append(processor.packetsToRelease, packet)
+					} else {
+						packetsToHold = append(packetsToHold, packet)
+					}
 				}
 
-			} else {
-				log.Debug("No transport layer type")
-			}
-
-			// This case protects against a packet looping forever in case the nfqueue rule is missing the negative
-			// match against the dnr mark.
-			if attr.Mark != nil && *attr.Mark&processor.dnrMark != 0x0 {
-				log.Error(packet.logLinePrefix(), "dropping packet with do not repeat mark.")
-				repeatSetVerdictOnFail(3, func() error {
-					return processor.nf.SetVerdict(packet.packetID, gonfqueue.NfDrop)
-				}, packet.logLinePrefix(), failedToSetVerdictMessage)
-				continue
-			}
-
-			// If there is a timestamp on the packet attempt to gather some metrics about how long it took the first
-			// packet to get to this point.
-			if !processor.timeManager.Exists(packet.idHash()) && attr.Timestamp != nil {
-				prometheusNfqueueQueuedLatency.Observe(time.Since(*attr.Timestamp).Seconds())
-			}
-
-			timestamp := processor.timeManager.AddTime(packet.idHash())
-
-			// This case protects against a packet looping forever because something in iptables removed the dnr mark.
-			if time.Since(timestamp) >= processor.maximumPacketTimeout {
-				log.Error(packet.logLinePrefix(), "dropping packet that's exceeded the maximum packet timeout")
-				repeatSetVerdictOnFail(3, func() error {
-					return processor.nf.SetVerdict(packet.packetID, gonfqueue.NfDrop)
-				}, packet.logLinePrefix(), failedToSetVerdictMessage)
-				continue
-			}
-
-			// If the packets time in the system has exceed the maximum allowed time then drop the packet.
-			if time.Since(timestamp) >= processor.packetDropTimeout {
-				log.Debug(packet.logLinePrefix(), "Dropping packet that's exceeded the timeout.")
-
-				finalReleasePackets = append(finalReleasePackets, packet)
-				continue
-			}
-
-			prometheusPacketsInCount.Inc()
-
-			log.Debug(packet.logLinePrefix(), "Processing new packet.")
-			releasePackets = append(releasePackets, packet)
-		case <-ticker.C:
-			packetsToRelease := make([]nfqueuePacket, 0, len(releasePackets))
-			packetsToHold := make([]nfqueuePacket, 0, len(releasePackets))
-
-			for _, packet := range releasePackets {
-				if time.Since(packet.queuedTime) >= processor.packetReleaseTimeout {
-					packetsToRelease = append(packetsToRelease, packet)
-				} else {
-					packetsToHold = append(packetsToHold, packet)
+				if len(packetsToHold) > 0 {
+					newDstToPacketMap[dstIP] = packetsToHold
 				}
 			}
 
-			if len(packetsToRelease) > 0 {
-				processor.packetReleaseChan <- packetsToRelease
+			for cachedIP, cachedTime := range processor.ipCache {
+				if processor.time.Since(cachedTime) >= processor.ipCacheDuration {
+					delete(processor.ipCache, cachedIP)
+				}
 			}
 
-			if len(finalReleasePackets) > 0 {
-				processor.packetFinalReleaseChan <- finalReleasePackets
+			// If there's any packets to release then send them to the release loop via the packetReleaseChan.
+			if len(processor.packetsToRelease) > 0 {
+				processor.packetReleaseChan <- processor.packetsToRelease
 			}
 
-			releasePackets = packetsToHold
-			finalReleasePackets = make([]nfqueuePacket, 0, 500)
+			processor.dstIPToPacketMap = newDstToPacketMap
+			processor.packetsToRelease = make([]nfqueuePacket, 0, 500)
 		}
 	}
 }
 
-func (processor *PacketProcessor) loopReleasingPackets() {
-	for packets := range processor.packetReleaseChan {
+func (processor *packetProcessor) processPacket(attr gonfqueue.Attribute) {
+	packet := nfqueuePacket{
+		packetID:   *attr.PacketID,
+		queuedTime: processor.time.Now(),
+	}
+
+	prometheusReleasePacketBatchSizeGauge.Set(float64(len(processor.packetsToRelease)))
+
+	// This case protects against a packet looping forever in case the nfqueue rule is missing the negative match
+	// against the dnr mark.
+	if attr.Mark != nil && *attr.Mark&processor.dnrMark != 0x0 {
+		processor.rateLimitedErrLogger.Error(packet.logLinePrefix(), "dropping packet with do not repeat mark.")
+
+		repeatSetVerdictOnFail(3, func() error {
+			return processor.nf.SetVerdict(packet.packetID, gonfqueue.NfDrop)
+		}, processor.rateLimitedErrLogger, packet.logLinePrefix(), failedToSetVerdictMessage)
+
+		prometheusDNRDroppedCount.Inc()
+		return
+	}
+
+	rawPacket := gopacket.NewPacket(*attr.Payload, layers.LayerTypeIPv4, gopacket.Default)
+	if rawPacket.ErrorLayer() != nil {
+		rawPacket = gopacket.NewPacket(*attr.Payload, layers.LayerTypeIPv6, gopacket.Default)
+		if rawPacket.ErrorLayer() != nil {
+			processor.rateLimitedErrLogger.Error(packet.logLinePrefix(), "releasing unknown packet type (neither ipv4 nor ipv6)")
+			processor.packetsToRelease = append(processor.packetsToRelease, packet)
+			return
+		}
+	}
+
+	switch rawPacket.NetworkLayer().LayerType() {
+	case layers.LayerTypeIPv4:
+		ipv4 := rawPacket.Layer(layers.LayerTypeIPv4).(*layers.IPv4)
+
+		packet.srcIP = ipv4.SrcIP
+		packet.dstIP = ipv4.DstIP
+	case layers.LayerTypeIPv6:
+		ipv6 := rawPacket.Layer(layers.LayerTypeIPv6).(*layers.IPv6)
+
+		packet.srcIP = ipv6.SrcIP
+		packet.dstIP = ipv6.DstIP
+	default:
+		processor.rateLimitedErrLogger.Error(packet.logLinePrefix(), "releasing unknown packet type (neither ipv4 nor ipv6)")
+		processor.packetsToRelease = append(processor.packetsToRelease, packet)
+		return
+	}
+
+	transportLayer := rawPacket.TransportLayer()
+	// Attempt to the get transport layer but don't fail if an error occurs. We don't actually need to know
+	// any transport layer information, it's used for logging and stats.
+	if transportLayer != nil {
+		switch rawPacket.TransportLayer().LayerType() {
+		case layers.LayerTypeTCP:
+			tcp := rawPacket.Layer(layers.LayerTypeTCP).(*layers.TCP)
+
+			packet.srcPort = uint16(tcp.SrcPort)
+			packet.dstPort = uint16(tcp.DstPort)
+			packet.protocol = layers.IPProtocolTCP
+		case layers.LayerTypeUDP:
+			udp := rawPacket.Layer(layers.LayerTypeUDP).(*layers.UDP)
+			packet.srcPort = uint16(udp.SrcPort)
+			packet.dstPort = uint16(udp.DstPort)
+			packet.protocol = layers.IPProtocolUDP
+		default:
+			log.Debug(packet.logLinePrefix(), "Unknown transport layer type")
+		}
+	} else {
+		log.Debug(packet.logLinePrefix(), "No transport layer type")
+	}
+
+	prometheusPacketsInCount.Inc()
+
+	log.Debug(packet.logLinePrefix(), "Processing new packet.")
+
+	// If there is a timestamp on the packet attempt to gather some metrics about how long it took the first
+	// packet to get to this point.
+	if attr.Timestamp != nil {
+		prometheusNfqueueQueuedLatency.Observe(processor.time.Since(*attr.Timestamp).Seconds())
+	}
+
+	// If the destination IP is in the IP cache then we received the IP set member update just before the packet so we
+	// just release the packet immediately.
+	if _, exists := processor.ipCache[packet.dstIP.String()]; exists {
+		log.Debug(packet.logLinePrefix(), "Processing new packet.")
+		processor.packetsToRelease = append(processor.packetsToRelease, packet)
+		return
+	}
+
+	if _, exists := processor.dstIPToPacketMap[packet.dstIP.String()]; !exists {
+		processor.dstIPToPacketMap[packet.dstIP.String()] = []nfqueuePacket{}
+	}
+
+	processor.dstIPToPacketMap[packet.dstIP.String()] = append(processor.dstIPToPacketMap[packet.dstIP.String()], packet)
+}
+
+// OnIPSetMemberUpdates accepts a set of IPs which the packetProcessor uses to decide what, if any, packets should be
+// released from the packetProcessor. The set of IPs are sent to the processing loop in loopProcessPackets. For more
+// details on what happens with the IPs look at the comments for loopProcessPackets.
+//
+// Note that OnIPSetMemberUpdates must not be called after Stop() has been called on the packetProcessor. If this is
+// a problem, consider looking at the packetProcessorWithNfqueueRestarter or wrapping this implementation with your
+// own if that doesn't suite your needs.
+//
+// Note that the given set may be modified so it should not be used after calling this function
+func (processor *packetProcessor) OnIPSetMemberUpdates(newMemberUpdates set.Set) {
+	// This loop attempts to send newMemberUpdates over the ipsetMemberUpdates. If there is already a set on that
+	// channel, then we pop it off and add those set members to newMemberUpdates and try to send newMemberUpdates
+	// over the ipsetMemberUpdates on the next iteration. This technique stops us from blocking because the main
+	// processing loop is taking awhile to process what it has and is not reading what's on the channel.
+	for {
+		select {
+		case currentMemberUpdates := <-processor.ipsetMemberUpdates:
+			currentMemberUpdates.Iter(func(ip interface{}) error {
+				newMemberUpdates.Add(ip)
+				return nil
+			})
+		case processor.ipsetMemberUpdates <- newMemberUpdates:
+			return
+		}
+	}
+
+}
+
+// loopReleasePackets waits to receive batches of packets on the processor.packetReleaseChan and sets the nfqueue
+// verdict for those packets, "releasing" them from the PacketProcessor.
+//
+// Note that this is intentionally not a function of the PacketProcessor. This is because there are attributes in the
+// PacketProcessor that would not be safe for this function to access, as it should be run in it's own routine.
+func loopReleasePackets(nf nfqueue.Nfqueue, packetReleaseChan chan []nfqueuePacket, dnrMark uint32,
+	time timeshim.Interface, logger *logutils.RateLimitedLogger) {
+	for packets := range packetReleaseChan {
 		startTime := time.Now()
 		for _, packet := range packets {
-			log.Debug(packet.logLinePrefix(), "Releasing packet.")
+			logger.Debug(packet.logLinePrefix(), "Releasing packet.")
 
-			prometheusPacketsNfRepeatedCount.Inc()
+			prometheusPacketsReleaseCount.Inc()
 
 			repeatSetVerdictOnFail(3, func() error {
-				return processor.nf.SetVerdict(packet.packetID, gonfqueue.NfRepeat)
-			}, packet.logLinePrefix(), failedToSetVerdictMessage)
+				return nf.SetVerdictWithMark(packet.packetID, gonfqueue.NfRepeat, int(dnrMark))
+			}, logger, packet.logLinePrefix(), "failed to set verdict for packet")
 		}
 		prometheusPacketReleaseLatency.Observe(time.Since(startTime).Seconds())
-	}
-}
-
-func (processor *PacketProcessor) loopFinalPacketRelease() {
-	for packets := range processor.packetFinalReleaseChan {
-		startTime := time.Now()
-		for _, packet := range packets {
-			log.Debug(packet.logLinePrefix(), "Repeating packet for the last time.")
-
-			prometheusPacketsFinalRepeatCount.Inc()
-
-			repeatSetVerdictOnFail(3, func() error {
-				return processor.nf.SetVerdictWithMark(packet.packetID, gonfqueue.NfRepeat, int(processor.dnrMark))
-			}, packet.logLinePrefix(), "failed to set verdict for packet")
-		}
-		prometheusPacketDNRLatency.Observe(time.Since(startTime).Seconds())
 	}
 }
 
 // repeatSetVerdictOnFail repeats the given setVerdictFunc if it fails up to a maximum of numRepeats. If setting the
 // verdict fails all attempts the error is logged with the failureMessages and the prometheusNfqueueVerdictFailCounter
 // is incremented.
-func repeatSetVerdictOnFail(numRepeats int, setVerdictFunc func() error, failureMessages ...string) {
+func repeatSetVerdictOnFail(numRepeats int, setVerdictFunc func() error, logger *logutils.RateLimitedLogger, failureMessages ...string) {
 	var err error
 	for i := 0; i < numRepeats; i++ {
 		err = setVerdictFunc()
@@ -453,5 +462,5 @@ func repeatSetVerdictOnFail(numRepeats int, setVerdictFunc func() error, failure
 	}
 
 	nfqueue.PrometheusNfqueueVerdictFailCount.Inc()
-	log.WithError(err).Error(failureMessages)
+	logger.WithError(err).Error(failureMessages)
 }
