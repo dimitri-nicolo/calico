@@ -499,6 +499,30 @@ var _ = Describe("Test the Rules Conversion Functions", func() {
 		})
 	})
 
+	It("should parse a source rule services match", func() {
+		r := apiv3.Rule{
+			Action: apiv3.Allow,
+			Source: apiv3.EntityRule{
+				Services: &apiv3.ServiceMatch{
+					Name:      "kube-dns",
+					Namespace: "kube-system",
+				},
+			},
+		}
+
+		// Process the rule and get the corresponding v1 representation.
+		rulev1 := updateprocessors.RuleAPIV2ToBackend(r, "", false)
+
+		By("generating an empty destination selector", func() {
+			Expect(rulev1.DstSelector).To(Equal(""))
+		})
+
+		By("copying the service names", func() {
+			Expect(rulev1.SrcService).To(Equal("kube-dns"))
+			Expect(rulev1.SrcServiceNamespace).To(Equal("kube-system"))
+		})
+	})
+
 	It("should parse a serviceaccount match with selector and namespace", func() {
 		dste := fmt.Sprintf("(pcns.nskey == \"nsvalue\") && (((%skey == \"value2\") && (%s in {\"%s\"})) && (has(label1)))", conversion.ServiceAccountLabelPrefix, apiv3.LabelServiceAccount, "sa3")
 
