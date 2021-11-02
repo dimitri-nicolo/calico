@@ -231,17 +231,17 @@ func AttachTcpStatsProgram(ifaceName, fileName string, nsId uint16) error {
 	baseDir := "/sys/fs/bpf/tc/globals"
 	for m, err := obj.FirstMap(); m != nil && err == nil; m, err = m.NextMap() {
 		if m.IsMapInternal() {
-			perr := ConfigureVethNS(m, nsId)
-			if perr != nil {
-				return perr
+			err := ConfigureVethNS(m, nsId)
+			if err != nil {
+				return err
 			}
 			continue
 		}
 
 		pinPath := path.Join(baseDir, m.Name())
-		perr := m.SetPinPath(pinPath)
-		if perr != nil {
-			return fmt.Errorf("error pinning map %v errno %v", m.Name(), perr)
+		err := m.SetPinPath(pinPath)
+		if err != nil {
+			return fmt.Errorf("error pinning map %v errno %v", m.Name(), err)
 		}
 	}
 
