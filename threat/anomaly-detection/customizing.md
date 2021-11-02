@@ -93,28 +93,32 @@ The job reads the data in portions. This is the number of rows in each of this p
 
 #### bytes_out Job
 -   **AD_BytesOutModel_min_size_for_train** - Default: 1000. There should be enough data samples to train models.
-    The models trained only if the number of the data samples is bigger than this threshold.
+    The models are trained only if the number of the data samples is bigger than this threshold.
 
 #### bytes_in Job
 -   **AD_BytesInModel_min_size_for_train** - Default: 1000. There should be enough data samples to train models.
-    The models trained only if the number of the data samples is bigger than this threshold.
+    The models are trained only if the number of the data samples is bigger than this threshold.
 
 #### process_restarts Job
 - **AD_PROCESS_RESTARTS_SENSITIVITY** - Default: 2.5. 
+
     Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
 - **AD_PROCESS_RESTARTS_MIN_RESTARTS** - Default: 4. Increase this parameter if you want fewer alerts.
     Decrease it if you want more alerts.
 
 #### dns_latency Job
-- **AD_DNS_LATENCY_SENSITIVITY** - Default: 2.5. 
+- **AD_DNS_LATENCY_SENSITIVITY** - Default: 2.5.
+
     Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
 
 #### l7_latency Job
-- **AD_L7_LATENCY_SENSITIVITY** - Default: 2.5. 
+- **AD_L7_LATENCY_SENSITIVITY** - Default: 2.5.
+
     Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
 
 #### http_connection_spike Job
-- **AD_HTTP_CONNECTION_SPIKE_SENSITIVITY** - Default: 2.5. 
+- **AD_HTTP_CONNECTION_SPIKE_SENSITIVITY** - Default: 2.5.
+
     Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
 
 #### dga Job
