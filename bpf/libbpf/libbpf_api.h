@@ -18,6 +18,7 @@
 #include <bpf.h>
 #include <stdlib.h>
 #include <errno.h>
+#include "globals.h"
 
 static void set_errno(int ret) {
 	errno = ret >= 0 ? ret : -ret;
@@ -124,4 +125,25 @@ out:
 
 int bpf_link_destroy(struct bpf_link *link) {
 	return bpf_link__destroy(link);
+}
+
+void bpf_set_global_vars(struct bpf_map *map, uint hostIP, uint intfIP, uint ext_to_svc_mark, 
+				ushort tmtu, ushort vxlanPort, ushort psnat_start, ushort psnat_len,
+				ushort if_ns, u_char tcp_stats, u_char egress_gateway, u_char egress_client) {
+	struct cali_global_data data = {
+	    .host_ip = hostIP,
+	    .tunnel_mtu = tmtu,
+	    .vxlan_port = vxlanPort,
+	    .intf_ip = intfIP,
+	    .ext_to_svc_mark = ext_to_svc_mark,
+	    .psnat_start = psnat_start,
+	    .psnat_len = psnat_len,
+	    .if_ns = if_ns,
+	    .tcp_stats = tcp_stats,
+	    .egress_client = egress_client,
+	    .egress_gateway = egress_gateway,
+
+	};
+	set_errno(bpf_map__set_initial_value(map, (void*)(&data), sizeof(struct cali_global_data)));
+	return;
 }
