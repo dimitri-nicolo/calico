@@ -79,12 +79,10 @@ The job reads the data in portions. This is the number of rows in each of this p
 ### Variables of specific Anomaly Detection Jobs
 
 #### Note about AD_`job_name`_SENSITIVITY variables
-  This variable changes the **sensitivity** for the correspondent job.
-
-  Changing this variable you adjust sensitivity to detected suspicious values or combinations of values. 
+  Changing this variable adjusts the **sensitivity** to detect suspicious values or combinations of values. 
   Higher sensitivity means more suspicious values are treated as anomalies and vice versa.
-  Increase in this variable is resulted in more alerts.
-  This variable can be changed from 0.1 to 1000.
+  Increase in this variable results in more alerts.
+  Valid range: 0.1 to 1000.
 
 
 #### port_scan Job
