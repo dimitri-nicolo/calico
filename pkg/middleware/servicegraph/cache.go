@@ -78,7 +78,8 @@ type ServiceGraphData struct {
 	ServiceGroups         ServiceGroups
 	NameHelper            NameHelper
 	Events                []Event
-	ServiceLabels         map[v1.NamespacedName]Labels
+	ServiceLabels         map[v1.NamespacedName]LabelSelectors
+	ResourceLabels        map[v1.NamespacedName]LabelSelectors
 }
 
 type serviceGraphCache struct {
@@ -235,6 +236,7 @@ func (s *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd 
 	}
 
 	fd.ServiceLabels = cacheData.serviceLabels
+	fd.ResourceLabels = cacheData.resourceLabels
 
 	return fd, nil
 }
@@ -474,8 +476,13 @@ func (s *serviceGraphCache) populateData(d *cacheData) {
 	var rawL7 []L7Flow
 	var rawDNS []DNSLog
 	var rawEvents []Event
-	var serviceLabels map[v1.NamespacedName]Labels
-	var errL3, errL7, errDNS, errEvents, errServiceLabels error
+	var serviceLabels map[v1.NamespacedName]LabelSelectors
+	var replicaSetsLabels map[v1.NamespacedName]LabelSelectors
+	var statefulSetsLabels map[v1.NamespacedName]LabelSelectors
+	var daemonSetsLabels map[v1.NamespacedName]LabelSelectors
+	var podsLabels map[v1.NamespacedName]LabelSelectors
+	var errL3, errL7, errDNS, errEvents error
+	var errServiceLabels, errReplicaSetsLabels, errStatefulSetsLabels, errDaemonSetsLabels, errPodsLabels error
 
 	// Determine the flow config - we need this to process some of the flow data correctly.
 	flowConfig, err := s.backend.GetFlowConfig(d.cluster)
@@ -524,6 +531,26 @@ func (s *serviceGraphCache) populateData(d *cacheData) {
 		defer wg.Done()
 		serviceLabels, errServiceLabels = s.backend.GetServiceLabels(d.cluster)
 	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		replicaSetsLabels, errReplicaSetsLabels = s.backend.GetReplicaSetLabels(d.cluster)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		statefulSetsLabels, errStatefulSetsLabels = s.backend.GetStatefulSetLabels(d.cluster)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		daemonSetsLabels, errDaemonSetsLabels = s.backend.GetDaemonSetLabels(d.cluster)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		podsLabels, errPodsLabels = s.backend.GetPodsLabels(d.cluster)
+	}()
 	wg.Wait()
 	if errL3 != nil {
 		log.WithError(errL3).Error("failed to get l3 logs")
@@ -537,9 +564,21 @@ func (s *serviceGraphCache) populateData(d *cacheData) {
 	} else if errEvents != nil {
 		log.WithError(errEvents).Error("failed to get event logs")
 		d.err = errEvents
-	}  else if errServiceLabels != nil {
+	} else if errServiceLabels != nil {
 		log.WithError(errServiceLabels).Error("failed to get service labels")
 		d.err = errServiceLabels
+	} else if errReplicaSetsLabels != nil {
+		log.WithError(errReplicaSetsLabels).Error("failed to get replica sets labels")
+		d.err = errReplicaSetsLabels
+	} else if errStatefulSetsLabels != nil {
+		log.WithError(errStatefulSetsLabels).Error("failed to get stateful sets labels")
+		d.err = errStatefulSetsLabels
+	} else if errDaemonSetsLabels != nil {
+		log.WithError(errDaemonSetsLabels).Error("failed to get daemon sets labels")
+		d.err = errDaemonSetsLabels
+	} else if errPodsLabels != nil {
+		log.WithError(errPodsLabels).Error("failed to get pods labels")
+		d.err = errPodsLabels
 	}
 
 	d.l3 = rawL3
@@ -547,6 +586,10 @@ func (s *serviceGraphCache) populateData(d *cacheData) {
 	d.dns = rawDNS
 	d.events = rawEvents
 	d.serviceLabels = serviceLabels
+	d.resourceLabels = addValues(d.resourceLabels, replicaSetsLabels)
+	d.resourceLabels = addValues(d.resourceLabels, statefulSetsLabels)
+	d.resourceLabels = addValues(d.resourceLabels, daemonSetsLabels)
+	d.resourceLabels = addValues(d.resourceLabels, podsLabels)
 
 	if log.IsLevelEnabled(log.DebugLevel) {
 		log.Debug(" ========= Tracing output from raw queries ========= ")
@@ -562,13 +605,24 @@ func (s *serviceGraphCache) populateData(d *cacheData) {
 		if b, err := json.Marshal(d.events); err == nil {
 			log.Debugf("RawEvents: %s", b)
 		}
-		if b, err := json.Marshal(d.serviceLabels); err == nil {
-			log.Debugf("ServiceLabels: %s", b)
-		}
+		log.Debugf("ServiceLabels: %s", d.serviceLabels)
+		log.Debugf("ResourceLabels: %s", d.resourceLabels)
 		log.Debug(" ========= End of tracing ========= ")
 	}
 
 	log.Debugf("Updated data: %s", d.cacheKey)
+}
+
+func addValues(source map[v1.NamespacedName]LabelSelectors, newValues map[v1.NamespacedName]LabelSelectors) map[v1.NamespacedName]LabelSelectors {
+	if source == nil {
+		source = make(map[v1.NamespacedName]LabelSelectors)
+	}
+
+	for k, v := range newValues {
+		source[k] = v
+	}
+
+	return source
 }
 
 // cacheData contains data for a requested window.
@@ -605,11 +659,12 @@ type cacheData struct {
 	timeRange lmav1.TimeRange
 
 	// The L3, L7 and events data.
-	l3            []L3Flow
-	l7            []L7Flow
-	dns           []DNSLog
-	events        []Event
-	serviceLabels map[v1.NamespacedName]Labels
+	l3             []L3Flow
+	l7             []L7Flow
+	dns            []DNSLog
+	events         []Event
+	serviceLabels  map[v1.NamespacedName]LabelSelectors
+	resourceLabels map[v1.NamespacedName]LabelSelectors
 }
 
 func newCacheData(key cacheKey, accessed time.Time) *cacheData {

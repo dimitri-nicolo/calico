@@ -45,12 +45,19 @@ func CreateMockBackendWithData(rbac RBACFilter, names NameHelper) *MockServiceGr
 	err = json.Unmarshal(content, &events)
 	Expect(err).NotTo(HaveOccurred())
 
-	var serviceLabels = make(map[v1.NamespacedName]Labels)
-	var genericLabels = make(map[string]string)
-	genericLabels["k8s-app"] = "AnyApp"
-	genericLabels["label"] = "any"
-	serviceLabels[v1.NamespacedName{Name: "emailservice", Namespace: "storefront"}] = genericLabels
-	serviceLabels[v1.NamespacedName{Name: "shippingservice", Namespace: "storefront"}] = genericLabels
+	// Labels will be preloaded with value k8s-app = AnyApp and label = any
+	var labels = []string{"k8s-app == \"AnyApp\"", "label == \"any\""}
+
+	// Will add labels only for services emailservice and shipping service from storefront namespace
+	var serviceLabels = make(map[v1.NamespacedName]LabelSelectors)
+	serviceLabels[v1.NamespacedName{Name: "emailservice", Namespace: "storefront"}] = labels
+	serviceLabels[v1.NamespacedName{Name: "shippingservice", Namespace: "storefront"}] = labels
+
+	// Will add label expressions only for replicaset loadgenerator-795cbf498c from storefront namespace
+	var replicaSetLabels = make(map[v1.NamespacedName]LabelSelectors)
+	replicaSetLabels[v1.NamespacedName{Name: "loadgenerator-795cbf498c", Namespace: "storefront"}] = []string{
+		"k8s-app in {\"AnyAp\"}", "environment not in {\"prod\"}", "!has(critical)", "has(test)",
+	}
 
 	// Create a mock backend.
 	return &MockServiceGraphBackend{
@@ -59,13 +66,16 @@ func CreateMockBackendWithData(rbac RBACFilter, names NameHelper) *MockServiceGr
 			L7FlowFlushInterval: time.Minute * 5,
 			DNSLogFlushInterval: time.Minute * 5,
 		},
-		L3:            l3,
-		L7:            l7,
-		DNS:           dns,
-		Events:        events,
-		RBACFilter:    rbac,
-		NameHelper:    names,
-		ServiceLabels: serviceLabels,
+		L3:                l3,
+		L7:                l7,
+		DNS:               dns,
+		Events:            events,
+		RBACFilter:        rbac,
+		NameHelper:        names,
+		ServiceLabels:     serviceLabels,
+		ReplicaSetLabels:  replicaSetLabels,
+		StatefulSetLabels: make(map[v1.NamespacedName]LabelSelectors),
+		DaemonSetLabels:   make(map[v1.NamespacedName]LabelSelectors),
 	}
 }
 
