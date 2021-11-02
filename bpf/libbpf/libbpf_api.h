@@ -101,19 +101,23 @@ int bpf_tc_update_jump_map(struct bpf_object *obj, char* mapName, char *progName
 	return bpf_map_update_elem(map_fd, &progIndex, &prog_fd, 0);
 }
 
-struct bpf_link *bpf_program_attach_kprobe(struct bpf_object *obj, char *progName, char *fn) {
-	struct bpf_program *prog = bpf_object__find_program_by_name(obj, progName);
-	int err = libbpf_get_error(prog);
-	if (err) {
-		set_errno(err);
-		return NULL;
+struct bpf_link *bpf_program_attach_kprobe(struct bpf_object *obj, char *progName, char *fn)
+{
+	int err = 0;
+	struct bpf_link *link  = NULL;
+	struct bpf_program *prog;
+
+	if (!(prog = bpf_object__find_program_by_name(obj, progName))) {
+		err = ENOENT;
+		goto out;
 	}
 
-	struct bpf_link *link = bpf_program__attach_kprobe(prog, false, fn);
-	err = libbpf_get_error(link);
-	if (err) {
-		link = NULL;
+	if (!(link = bpf_program__attach_kprobe(prog, false, fn))) {
+		err = libbpf_get_error(link);
+		goto out;
 	}
+
+out:
 	set_errno(err);
 	return link;
 }
