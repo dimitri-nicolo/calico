@@ -1383,7 +1383,7 @@ func validateIPPoolSpec(structLevel validator.StructLevel) {
 	// Allowed use must be one of the enums.
 	for _, a := range pool.AllowedUses {
 		switch a {
-		case api.IPPoolAllowedUseWorkload, api.IPPoolAllowedUseTunnel:
+		case api.IPPoolAllowedUseWorkload, api.IPPoolAllowedUseTunnel, api.IPPoolAllowedUseHostSecondary:
 			continue
 		default:
 			structLevel.ReportError(reflect.ValueOf(pool.AllowedUses),

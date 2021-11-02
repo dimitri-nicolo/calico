@@ -487,7 +487,7 @@ var _ = Describe("Test the Rules Conversion Functions", func() {
 		}
 
 		// Process the rule and get the corresponding v1 representation.
-		rulev1 := updateprocessors.RuleAPIV2ToBackend(r, "")
+		rulev1 := updateprocessors.RuleAPIV2ToBackend(r, "", false)
 
 		By("generating an empty destination selector", func() {
 			Expect(rulev1.DstSelector).To(Equal(""))

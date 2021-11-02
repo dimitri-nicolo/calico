@@ -1243,6 +1243,7 @@ func init() {
 					AllowedUses: []api.IPPoolAllowedUse{
 						api.IPPoolAllowedUseWorkload,
 						api.IPPoolAllowedUseTunnel,
+						api.IPPoolAllowedUseHostSecondary,
 					},
 				},
 			}, true),
