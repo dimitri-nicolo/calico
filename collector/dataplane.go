@@ -50,13 +50,14 @@ func (c ConntrackCounters) String() string {
 
 // ConntrackInfo is information about a connection from the dataplane.
 type ConntrackInfo struct {
-	Tuple         Tuple
-	PreDNATTuple  Tuple
-	IsDNAT        bool
-	Expired       bool
-	Counters      ConntrackCounters
-	ReplyCounters ConntrackCounters
-	IsProxy       bool
+	Tuple           Tuple
+	PreDNATTuple    Tuple
+	NatOutgoingPort int
+	IsDNAT          bool
+	Expired         bool
+	Counters        ConntrackCounters
+	ReplyCounters   ConntrackCounters
+	IsProxy         bool
 }
 
 func (ct ConntrackInfo) String() string {

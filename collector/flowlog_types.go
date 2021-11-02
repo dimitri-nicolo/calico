@@ -174,13 +174,13 @@ type FlowSpec struct {
 	resetAggrData bool
 }
 
-func NewFlowSpec(mu *MetricUpdate, maxOriginalIPsSize int, includeProcess bool, processLimit, processArgsLimit int, displayDebugTraceLogs bool) *FlowSpec {
+func NewFlowSpec(mu *MetricUpdate, maxOriginalIPsSize int, includeProcess bool, processLimit, processArgsLimit int, displayDebugTraceLogs bool, natOutgoingPortLimit int) *FlowSpec {
 	// NewFlowStatsByProcess potentially needs to update fields in mu *MetricUpdate hence passing it by pointer
 	// TODO: reconsider/refactor the inner functions called in NewFlowStatsByProcess to avoid above scenario
 	return &FlowSpec{
 		FlowLabels:         NewFlowLabels(*mu),
 		FlowPolicies:       NewFlowPolicies(*mu),
-		FlowStatsByProcess: NewFlowStatsByProcess(mu, includeProcess, processLimit, processArgsLimit, displayDebugTraceLogs),
+		FlowStatsByProcess: NewFlowStatsByProcess(mu, includeProcess, processLimit, processArgsLimit, displayDebugTraceLogs, natOutgoingPortLimit),
 		flowExtrasRef:      NewFlowExtrasRef(*mu, maxOriginalIPsSize),
 	}
 }
@@ -245,8 +245,8 @@ func (f *FlowSpec) MergeWith(mu MetricUpdate, other *FlowSpec) {
 	if stats, ok := f.statsByProcessName[mu.processName]; ok {
 		if otherStats, ok := other.statsByProcessName[mu.processName]; ok {
 			for tuple, _ := range otherStats.flowsRefsActive {
-				stats.flowsRefsActive.Add(tuple)
-				stats.flowsRefs.Add(tuple)
+				stats.flowsRefsActive.AddWithValue(tuple, mu.natOutgoingPort)
+				stats.flowsRefs.AddWithValue(tuple, mu.natOutgoingPort)
 			}
 			stats.NumFlows = stats.flowsRefs.Len()
 			// TODO(doublek): Merge processIDs.
@@ -513,17 +513,17 @@ type FlowStats struct {
 
 func NewFlowStats(mu MetricUpdate) FlowStats {
 	flowsRefs := NewTupleSet()
-	flowsRefs.Add(mu.tuple)
+	flowsRefs.AddWithValue(mu.tuple, mu.natOutgoingPort)
 	flowsStartedRefs := NewTupleSet()
 	flowsCompletedRefs := NewTupleSet()
 	flowsRefsActive := NewTupleSet()
 
 	switch mu.updateType {
 	case UpdateTypeReport:
-		flowsStartedRefs.Add(mu.tuple)
-		flowsRefsActive.Add(mu.tuple)
+		flowsStartedRefs.AddWithValue(mu.tuple, mu.natOutgoingPort)
+		flowsRefsActive.AddWithValue(mu.tuple, mu.natOutgoingPort)
 	case UpdateTypeExpire:
-		flowsCompletedRefs.Add(mu.tuple)
+		flowsCompletedRefs.AddWithValue(mu.tuple, mu.natOutgoingPort)
 	}
 
 	pids := set.New()
@@ -650,14 +650,19 @@ func (f *FlowStats) aggregateFlowStats(mu MetricUpdate, displayDebugTraceLogs bo
 		f.resetProcessIDs = false
 	}
 	switch {
-	case mu.updateType == UpdateTypeReport && !f.flowsRefsActive.Contains(mu.tuple):
-		f.flowsStartedRefs.Add(mu.tuple)
-		f.flowsRefsActive.Add(mu.tuple)
+	case mu.updateType == UpdateTypeReport:
+		// Add / update the flowStartedRefs if we either haven't seen this tuple before OR the tuple is already in the
+		// flowStartRefs (we may have an updated value).
+		if !f.flowsRefsActive.Contains(mu.tuple) || f.flowsStartedRefs.Contains(mu.tuple) {
+			f.flowsStartedRefs.AddWithValue(mu.tuple, mu.natOutgoingPort)
+		}
+
+		f.flowsRefsActive.AddWithValue(mu.tuple, mu.natOutgoingPort)
 	case mu.updateType == UpdateTypeExpire:
-		f.flowsCompletedRefs.Add(mu.tuple)
+		f.flowsCompletedRefs.AddWithValue(mu.tuple, mu.natOutgoingPort)
 		f.flowsRefsActive.Discard(mu.tuple)
 	}
-	f.flowsRefs.Add(mu.tuple)
+	f.flowsRefs.AddWithValue(mu.tuple, mu.natOutgoingPort)
 	f.processIDs.Add(strconv.Itoa(mu.processID))
 	if mu.processArgs != "" {
 		f.processArgs.Add(mu.processArgs)
@@ -711,12 +716,15 @@ type FlowStatsByProcess struct {
 	includeProcess        bool
 	processLimit          int
 	processArgsLimit      int
+	natOutgoingPortLimit  int
 	// TODO(doublek): Track the most significant stats and show them as part
 	// of the flows that are included in the process limit. Current processNames
 	// only tracks insertion order.
 }
 
-func NewFlowStatsByProcess(mu *MetricUpdate, includeProcess bool, processLimit, processArgsLimit int, displayDebugTraceLogs bool) FlowStatsByProcess {
+func NewFlowStatsByProcess(mu *MetricUpdate, includeProcess bool, processLimit, processArgsLimit int,
+	displayDebugTraceLogs bool, natOutgoingPortLimit int) FlowStatsByProcess {
+
 	f := FlowStatsByProcess{
 		displayDebugTraceLogs: displayDebugTraceLogs,
 		statsByProcessName:    make(map[string]*FlowStats),
@@ -724,6 +732,7 @@ func NewFlowStatsByProcess(mu *MetricUpdate, includeProcess bool, processLimit, 
 		includeProcess:        includeProcess,
 		processLimit:          processLimit,
 		processArgsLimit:      processArgsLimit,
+		natOutgoingPortLimit:  natOutgoingPortLimit,
 	}
 	f.aggregateFlowStatsByProcess(mu)
 	return f
@@ -814,6 +823,7 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 				NumProcessArgs:       0,
 				FlowReportedStats:    stats.FlowReportedStats,
 				FlowReportedTCPStats: stats.FlowReportedTCPStats,
+				NatOutgoingPorts:     f.getNatOutGoingPortsFromStats(stats),
 			}
 			reportedStats = append(reportedStats, s)
 		} else {
@@ -831,7 +841,7 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 	appendAggregatedStats := false
 	aggregatedReportedStats := FlowReportedStats{}
 	aggregatedReportedTCPStats := FlowReportedTCPStats{}
-
+	var aggregatedNatOutgoingPorts []int
 	var next *list.Element
 	// Collect in insertion order, the first processLimit entries and then aggregate
 	// the remaining statistics in a single aggregated FlowProcessReportedStats entry.
@@ -844,6 +854,8 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 			f.processNames.Remove(e)
 			continue
 		}
+
+		natOutGoingPorts := f.getNatOutGoingPortsFromStats(stats)
 
 		// If we didn't receive any process data then the flow stats are
 		// aggregated under a "-" which is flowLogFieldNotIncluded. All these
@@ -859,6 +871,7 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 				NumProcessArgs:       0,
 				FlowReportedStats:    stats.FlowReportedStats,
 				FlowReportedTCPStats: stats.FlowReportedTCPStats,
+				NatOutgoingPorts:     natOutGoingPorts,
 			}
 			reportedStats = append(reportedStats, s)
 			// Continue processing in case there are other tuples that did collect
@@ -938,6 +951,15 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 			aggregatedReportedStats.Add(stats.FlowReportedStats)
 			appendAggregatedStats = true
 			aggregatedReportedTCPStats.Add(stats.FlowReportedTCPStats)
+
+			spaceInNatOutGoingPortArray := f.natOutgoingPortLimit - len(aggregatedNatOutgoingPorts)
+			if spaceInNatOutGoingPortArray > 0 {
+				numIncludedPorts := len(natOutGoingPorts)
+				if spaceInNatOutGoingPortArray < len(natOutGoingPorts) {
+					numIncludedPorts = spaceInNatOutGoingPortArray
+				}
+				aggregatedNatOutgoingPorts = append(aggregatedNatOutgoingPorts, natOutGoingPorts[0:numIncludedPorts]...)
+			}
 		} else {
 			s := FlowProcessReportedStats{
 				ProcessName:          name,
@@ -948,6 +970,7 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 				NumProcessArgs:       numProcessArgs,
 				FlowReportedStats:    stats.FlowReportedStats,
 				FlowReportedTCPStats: stats.FlowReportedTCPStats,
+				NatOutgoingPorts:     natOutGoingPorts,
 			}
 			reportedStats = append(reportedStats, s)
 		}
@@ -968,14 +991,44 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 	return reportedStats
 }
 
+func (f *FlowStatsByProcess) getNatOutGoingPortsFromStats(stats *FlowStats) []int {
+	var natOutGoingPorts []int
+
+	numNatOutgoingPorts := 0
+	for _, value := range stats.flowsRefsActive {
+		if numNatOutgoingPorts >= f.natOutgoingPortLimit {
+			break
+		}
+
+		if value != 0 {
+			natOutGoingPorts = append(natOutGoingPorts, value)
+			numNatOutgoingPorts++
+		}
+	}
+
+	for _, value := range stats.flowsCompletedRefs {
+		if numNatOutgoingPorts >= f.natOutgoingPortLimit {
+			break
+		}
+
+		if value != 0 {
+			natOutGoingPorts = append(natOutGoingPorts, value)
+			numNatOutgoingPorts++
+		}
+	}
+
+	return natOutGoingPorts
+}
+
 // FlowProcessReportedStats contains FlowReportedStats along with process information.
 type FlowProcessReportedStats struct {
-	ProcessName     string   `json:"processName"`
-	NumProcessNames int      `json:"numProcessNames"`
-	ProcessID       string   `json:"processID"`
-	NumProcessIDs   int      `json:"numProcessIDs"`
-	ProcessArgs     []string `json:"processArgs"`
-	NumProcessArgs  int      `json:"numProcessArgs"`
+	ProcessName      string   `json:"processName"`
+	NumProcessNames  int      `json:"numProcessNames"`
+	ProcessID        string   `json:"processID"`
+	NumProcessIDs    int      `json:"numProcessIDs"`
+	ProcessArgs      []string `json:"processArgs"`
+	NumProcessArgs   int      `json:"numProcessArgs"`
+	NatOutgoingPorts []int
 	FlowReportedStats
 	FlowReportedTCPStats
 }

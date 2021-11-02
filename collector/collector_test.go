@@ -41,27 +41,31 @@ const (
 )
 
 var (
-	localIp1Str  = "10.0.0.1"
-	localIp1     = ipStrTo16Byte(localIp1Str)
-	localIp2Str  = "10.0.0.2"
-	localIp2     = ipStrTo16Byte(localIp2Str)
-	remoteIp1Str = "20.0.0.1"
-	remoteIp1    = ipStrTo16Byte(remoteIp1Str)
-	remoteIp2Str = "20.0.0.2"
-	remoteIp2    = ipStrTo16Byte(remoteIp2Str)
-	localIp1DNAT = ipStrTo16Byte("192.168.0.1")
-	localIp2DNAT = ipStrTo16Byte("192.168.0.2")
-	publicIP1Str = "1.0.0.1"
-	publicIP2Str = "2.0.0.2"
-	netSetIp1Str = "8.8.8.8"
-	netSetIp1    = ipStrTo16Byte(netSetIp1Str)
+	localIp1Str     = "10.0.0.1"
+	localIp1        = ipStrTo16Byte(localIp1Str)
+	localNodeIp1Str = "192.168.180.1"
+	localNodeIp1    = ipStrTo16Byte(localNodeIp1Str)
+	localIp2Str     = "10.0.0.2"
+	localIp2        = ipStrTo16Byte(localIp2Str)
+	remoteIp1Str    = "20.0.0.1"
+	remoteIp1       = ipStrTo16Byte(remoteIp1Str)
+	remoteIp2Str    = "20.0.0.2"
+	remoteIp2       = ipStrTo16Byte(remoteIp2Str)
+	localIp1DNAT    = ipStrTo16Byte("192.168.0.1")
+	localIp2DNAT    = ipStrTo16Byte("192.168.0.2")
+	publicIP1Str    = "1.0.0.1"
+	publicIP2Str    = "2.0.0.2"
+	netSetIp1Str    = "8.8.8.8"
+	netSetIp1       = ipStrTo16Byte(netSetIp1Str)
 )
 
 var (
-	srcPort     = 54123
-	proxyPort   = 34754
-	dstPort     = 80
-	dstPortDNAT = 8080
+	srcPort        = 54123
+	serviceSrcPort = 456123
+	nodeSrcPort    = 890123
+	proxyPort      = 34754
+	dstPort        = 80
+	dstPortDNAT    = 8080
 )
 
 var (
@@ -708,6 +712,52 @@ var outCtEntry = nfnetlink.CtEntry{
 	ProtoInfo:        nfnetlink.CtProtoInfo{State: nfnl.TCP_CONNTRACK_ESTABLISHED},
 }
 
+var outCtEntryWithSNAT = nfnetlink.CtEntry{
+	OriginalTuple: nfnetlink.CtTuple{
+		Src:        localIp1,
+		Dst:        remoteIp1,
+		L3ProtoNum: ipv4,
+		ProtoNum:   proto_tcp,
+		L4Src:      nfnetlink.CtL4Src{Port: srcPort},
+		L4Dst:      nfnetlink.CtL4Dst{Port: dstPort},
+	},
+	ReplyTuple: nfnetlink.CtTuple{
+		Src:        remoteIp1,
+		Dst:        localNodeIp1,
+		L3ProtoNum: ipv4,
+		ProtoNum:   proto_tcp,
+		L4Src:      nfnetlink.CtL4Src{Port: dstPort},
+		L4Dst:      nfnetlink.CtL4Dst{Port: nodeSrcPort},
+	},
+	Status:           nfnl.IPS_SRC_NAT,
+	OriginalCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},
+	ReplyCounters:    nfnetlink.CtCounters{Packets: 2, Bytes: 250},
+	ProtoInfo:        nfnetlink.CtProtoInfo{State: nfnl.TCP_CONNTRACK_ESTABLISHED},
+}
+
+var outCtEntrySNATToServiceToSelf = nfnetlink.CtEntry{
+	OriginalTuple: nfnetlink.CtTuple{
+		Src:        localIp1,
+		Dst:        remoteIp1,
+		L3ProtoNum: ipv4,
+		ProtoNum:   proto_tcp,
+		L4Src:      nfnetlink.CtL4Src{Port: srcPort},
+		L4Dst:      nfnetlink.CtL4Dst{Port: serviceSrcPort},
+	},
+	ReplyTuple: nfnetlink.CtTuple{
+		Src:        localIp1,
+		Dst:        localNodeIp1,
+		L3ProtoNum: ipv4,
+		ProtoNum:   proto_tcp,
+		L4Src:      nfnetlink.CtL4Src{Port: srcPort2},
+		L4Dst:      nfnetlink.CtL4Dst{Port: srcPort},
+	},
+	Status:           nfnl.IPS_SRC_NAT | nfnl.IPS_DST_NAT,
+	OriginalCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},
+	ReplyCounters:    nfnetlink.CtCounters{Packets: 2, Bytes: 250},
+	ProtoInfo:        nfnetlink.CtProtoInfo{State: nfnl.TCP_CONNTRACK_ESTABLISHED},
+}
+
 var localCtEntry = nfnetlink.CtEntry{
 	OriginalTuple: nfnetlink.CtTuple{
 		Src:        localIp1,
@@ -1019,6 +1069,31 @@ var _ = Describe("Conntrack Datasource", func() {
 			Expect(data.ConntrackPacketsCounterReverse()).Should(Equal(*NewCounter(outCtEntry.ReplyCounters.Packets)))
 			Expect(data.ConntrackBytesCounter()).Should(Equal(*NewCounter(outCtEntry.OriginalCounters.Bytes)))
 			Expect(data.ConntrackBytesCounterReverse()).Should(Equal(*NewCounter(outCtEntry.ReplyCounters.Bytes)))
+
+			// Not SNAT'd so natOutgoingPort should not be set.
+			Expect(data.natOutgoingPort).Should(Equal(0))
+		})
+		It("should create a single entry with outbound direction for SNAT'd packet with nat outgoing port set", func() {
+			t := NewTuple(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
+
+			// will call handlerInfo from c.Start() in BeforeEach
+			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntryWithSNAT, 0)}
+
+			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+			data := c.epStats[*t]
+
+			Expect(data.natOutgoingPort).Should(Equal(nodeSrcPort))
+		})
+		It("should create a single entry with outbound direction for SNAT'd packet sent to self without nat outgoing port set", func() {
+			t := NewTuple(localIp1, localIp1, proto_tcp, srcPort, srcPort2)
+
+			// will call handlerInfo from c.Start() in BeforeEach
+			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntrySNATToServiceToSelf, 0)}
+
+			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+			data := c.epStats[*t]
+
+			Expect(data.natOutgoingPort).Should(Equal(0))
 		})
 		It("should handle source becoming non-local by removing entry on next conntrack update for reported flow", func() {
 			t := NewTuple(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)

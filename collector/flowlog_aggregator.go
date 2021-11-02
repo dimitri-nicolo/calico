@@ -33,6 +33,7 @@ type FlowLogAggregator interface {
 	ForAction(rules.RuleAction) FlowLogAggregator
 	PerFlowProcessLimit(limit int) FlowLogAggregator
 	PerFlowProcessArgsLimit(limit int) FlowLogAggregator
+	NatOutgoingPortLimit(limit int) FlowLogAggregator
 	FeedUpdate(*MetricUpdate) error
 	HasAggregationLevelChanged() bool
 	GetCurrentAggregationLevel() FlowAggregationKind
@@ -58,8 +59,9 @@ const MaxAggregationLevel = FlowNoDestPorts
 const MinAggregationLevel = FlowDefault
 
 const (
-	noRuleActionDefined  = 0
-	defaultMaxOrigIPSize = 50
+	noRuleActionDefined         = 0
+	defaultMaxOrigIPSize        = 50
+	defaultNatOutgoingPortLimit = 3
 )
 
 var (
@@ -95,6 +97,7 @@ type flowLogAggregator struct {
 	includeTcpStats         bool
 	perFlowProcessArgsLimit int
 	displayDebugTraceLogs   bool
+	natOutgoingPortLimit    int
 }
 
 type flowEntry struct {
@@ -140,6 +143,7 @@ func NewFlowLogAggregator() FlowLogAggregator {
 		flMutex:              sync.RWMutex{},
 		maxOriginalIPsSize:   defaultMaxOrigIPSize,
 		aggregationStartTime: time.Now(),
+		natOutgoingPortLimit: defaultNatOutgoingPortLimit,
 	}
 }
 
@@ -200,6 +204,11 @@ func (c *flowLogAggregator) PerFlowProcessArgsLimit(n int) FlowLogAggregator {
 	return c
 }
 
+func (c *flowLogAggregator) NatOutgoingPortLimit(n int) FlowLogAggregator {
+	c.natOutgoingPortLimit = n
+	return c
+}
+
 // FeedUpdate constructs and aggregates flow logs from MetricUpdates.
 func (fa *flowLogAggregator) FeedUpdate(mu *MetricUpdate) error {
 	defer fa.reportFlowLogStoreMetrics()
@@ -229,7 +238,8 @@ func (fa *flowLogAggregator) FeedUpdate(mu *MetricUpdate) error {
 
 	if !ok {
 		logutil.Tracef(fa.displayDebugTraceLogs, "flowMeta %+v not found, creating new flowspec for metric update %+v", flowMeta, *mu)
-		spec := NewFlowSpec(mu, fa.maxOriginalIPsSize, fa.includeProcess, fa.perFlowProcessLimit, fa.perFlowProcessArgsLimit, fa.displayDebugTraceLogs)
+		spec := NewFlowSpec(mu, fa.maxOriginalIPsSize, fa.includeProcess, fa.perFlowProcessLimit,
+			fa.perFlowProcessArgsLimit, fa.displayDebugTraceLogs, fa.natOutgoingPortLimit)
 
 		newEntry := &flowEntry{
 			spec:         spec,

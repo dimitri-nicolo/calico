@@ -408,6 +408,8 @@ type Data struct {
 	// Indicates if this connection is proxied or not
 	isProxied bool
 
+	natOutgoingPort int
+
 	// Connection related counters.
 	conntrackPktsCtr         Counter
 	conntrackPktsCtrReverse  Counter
@@ -800,10 +802,11 @@ func (d *Data) metricUpdateIngressConn(ut UpdateType) MetricUpdate {
 	}
 
 	metricUpdate := MetricUpdate{
-		updateType: ut,
-		tuple:      d.Tuple,
-		srcEp:      d.srcEp,
-		dstEp:      d.dstEp,
+		updateType:      ut,
+		tuple:           d.Tuple,
+		natOutgoingPort: d.natOutgoingPort,
+		srcEp:           d.srcEp,
+		dstEp:           d.dstEp,
 
 		dstService:   metricDstServiceInfo,
 		ruleIDs:      d.IngressRuleTrace.Path(),
@@ -844,13 +847,14 @@ func (d *Data) metricUpdateEgressConn(ut UpdateType) MetricUpdate {
 	}
 
 	metricUpdate := MetricUpdate{
-		updateType:   ut,
-		tuple:        d.Tuple,
-		srcEp:        d.srcEp,
-		dstEp:        d.dstEp,
-		dstService:   metricDstServiceInfo,
-		ruleIDs:      d.EgressRuleTrace.Path(),
-		isConnection: d.isConnection,
+		updateType:      ut,
+		tuple:           d.Tuple,
+		natOutgoingPort: d.natOutgoingPort,
+		srcEp:           d.srcEp,
+		dstEp:           d.dstEp,
+		dstService:      metricDstServiceInfo,
+		ruleIDs:         d.EgressRuleTrace.Path(),
+		isConnection:    d.isConnection,
 		inMetric: MetricValue{
 			deltaPackets: d.conntrackPktsCtrReverse.Delta(),
 			deltaBytes:   d.conntrackBytesCtrReverse.Delta(),
@@ -886,13 +890,14 @@ func (d *Data) metricUpdateIngressNoConn(ut UpdateType) MetricUpdate {
 	}
 
 	metricUpdate := MetricUpdate{
-		updateType:   ut,
-		tuple:        d.Tuple,
-		srcEp:        d.srcEp,
-		dstEp:        d.dstEp,
-		dstService:   metricDstServiceInfo,
-		ruleIDs:      d.IngressRuleTrace.Path(),
-		isConnection: d.isConnection,
+		updateType:      ut,
+		tuple:           d.Tuple,
+		natOutgoingPort: d.natOutgoingPort,
+		srcEp:           d.srcEp,
+		dstEp:           d.dstEp,
+		dstService:      metricDstServiceInfo,
+		ruleIDs:         d.IngressRuleTrace.Path(),
+		isConnection:    d.isConnection,
 
 		inMetric: MetricValue{
 			deltaPackets: d.IngressRuleTrace.pktsCtr.Delta(),
@@ -925,13 +930,14 @@ func (d *Data) metricUpdateEgressNoConn(ut UpdateType) MetricUpdate {
 	}
 
 	metricUpdate := MetricUpdate{
-		updateType:   ut,
-		tuple:        d.Tuple,
-		srcEp:        d.srcEp,
-		dstEp:        d.dstEp,
-		dstService:   metricDstServiceInfo,
-		ruleIDs:      d.EgressRuleTrace.Path(),
-		isConnection: d.isConnection,
+		updateType:      ut,
+		tuple:           d.Tuple,
+		natOutgoingPort: d.natOutgoingPort,
+		srcEp:           d.srcEp,
+		dstEp:           d.dstEp,
+		dstService:      metricDstServiceInfo,
+		ruleIDs:         d.EgressRuleTrace.Path(),
+		isConnection:    d.isConnection,
 
 		outMetric: MetricValue{
 			deltaPackets: d.EgressRuleTrace.pktsCtr.Delta(),
@@ -973,18 +979,19 @@ func (d *Data) metricUpdateOrigSourceIPs(ut UpdateType) MetricUpdate {
 	}
 
 	mu := MetricUpdate{
-		updateType:    ut,
-		tuple:         d.Tuple,
-		srcEp:         d.srcEp,
-		dstEp:         d.dstEp,
-		dstService:    metricDstServiceInfo,
-		origSourceIPs: d.origSourceIPs.Copy(),
-		ruleIDs:       d.IngressRuleTrace.Path(),
-		unknownRuleID: unknownRuleID,
-		isConnection:  d.isConnection,
-		processName:   d.DestProcessData().Name,
-		processID:     d.DestProcessData().Pid,
-		processArgs:   d.DestProcessData().Arguments,
+		updateType:      ut,
+		tuple:           d.Tuple,
+		natOutgoingPort: d.natOutgoingPort,
+		srcEp:           d.srcEp,
+		dstEp:           d.dstEp,
+		dstService:      metricDstServiceInfo,
+		origSourceIPs:   d.origSourceIPs.Copy(),
+		ruleIDs:         d.IngressRuleTrace.Path(),
+		unknownRuleID:   unknownRuleID,
+		isConnection:    d.isConnection,
+		processName:     d.DestProcessData().Name,
+		processID:       d.DestProcessData().Pid,
+		processArgs:     d.DestProcessData().Arguments,
 	}
 	if d.TcpStats.dirty {
 		mu.sendCongestionWnd = &d.TcpStats.sendCongestionWnd

@@ -62,12 +62,13 @@ var _ = Describe("FlowLog JSON serialization", func() {
 				NumOriginalSourceIPs: 1,
 			},
 			FlowProcessReportedStats: FlowProcessReportedStats{
-				ProcessName:     "*",
-				NumProcessNames: 2,
-				ProcessID:       "*",
-				NumProcessIDs:   2,
-				ProcessArgs:     argList,
-				NumProcessArgs:  2,
+				ProcessName:      "*",
+				NumProcessNames:  2,
+				ProcessID:        "*",
+				NumProcessIDs:    2,
+				ProcessArgs:      argList,
+				NumProcessArgs:   2,
+				NatOutgoingPorts: []int{8999},
 				FlowReportedStats: FlowReportedStats{
 					PacketsIn:             1,
 					PacketsOut:            2,
@@ -215,6 +216,7 @@ var _ = Describe("FlowLog JSON serialization", func() {
 			"NumProcessNames":      0,
 			"NumProcessIDs":        0,
 			"NumProcessArgs":       0,
+			"NatOutgoingPorts":     nil,
 		}
 		// Use reflection to loop over the fields and ensure they all have non
 		// zero values
@@ -330,6 +332,7 @@ var _ = Describe("FlowLog JSON serialization", func() {
 			"Policies":             nil,
 			"OrigSourceIPs":        nil,
 			"NumOrigSourceIPs":     nil,
+			"NatOutgoingPorts":     nil,
 		}
 		// Use reflection to loop over the fields and ensure they all have non
 		// zero values

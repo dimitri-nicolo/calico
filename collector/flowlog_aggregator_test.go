@@ -1657,4 +1657,111 @@ var _ = Describe("Flow log aggregator tests", func() {
 		})
 
 	})
+
+	Context("FlowLogAggregator post SNAT ports", func() {
+		It("doesn't overwrite the nat outgoing port with an empty value", func() {
+			muWithSNATPort1 := muWithSNATPort
+			muWithSNATPort2 := muWithSNATPort
+			muWithSNATPort2.natOutgoingPort = 0
+
+			aggregator := NewFlowLogAggregator().
+				ForAction(rules.RuleActionAllow).
+				AggregateOver(FlowSourcePort).
+				IncludePolicies(true).
+				IncludeProcess(true).
+				PerFlowProcessLimit(2).
+				PerFlowProcessArgsLimit(6)
+
+			Expect(aggregator.FeedUpdate(&muWithSNATPort1)).ShouldNot(HaveOccurred())
+			Expect(aggregator.FeedUpdate(&muWithSNATPort2)).ShouldNot(HaveOccurred())
+
+			flows := aggregator.GetAndCalibrate(FlowSourcePort)
+			Expect(len(flows)).ShouldNot(BeZero())
+			Expect(flows[0].NatOutgoingPorts).To(ConsistOf(muWithSNATPort1.natOutgoingPort))
+		})
+
+		It("overwrites an empty nat outgoing port with a non empty value", func() {
+			muWithSNATPort1 := muWithSNATPort
+			muWithSNATPort1.natOutgoingPort = 0
+			muWithSNATPort2 := muWithSNATPort
+
+			aggregator := NewFlowLogAggregator().
+				ForAction(rules.RuleActionAllow).
+				AggregateOver(FlowSourcePort).
+				IncludePolicies(true).
+				IncludeProcess(true).
+				PerFlowProcessLimit(2).
+				PerFlowProcessArgsLimit(6)
+
+			Expect(aggregator.FeedUpdate(&muWithSNATPort1)).ShouldNot(HaveOccurred())
+			Expect(aggregator.FeedUpdate(&muWithSNATPort2)).ShouldNot(HaveOccurred())
+
+			flows := aggregator.GetAndCalibrate(FlowSourcePort)
+			Expect(len(flows)).ShouldNot(BeZero())
+			Expect(flows[0].NatOutgoingPorts).To(ConsistOf(muWithSNATPort2.natOutgoingPort))
+		})
+
+		It("chooses SNAT'd ports for active connections over expired ones when the post SNAT port limit is too low", func() {
+			muWithSNATPort1 := muWithSNATPort
+			muWithSNATPort1.updateType = UpdateTypeExpire
+			muWithSNATPort2 := muWithSNATPort
+			muWithSNATPort2.tuple.l4Src = 54124
+			muWithSNATPort2.natOutgoingPort = 6788
+			muWithSNATPort3 := muWithSNATPort
+			muWithSNATPort3.tuple.l4Src = 54125
+			muWithSNATPort3.natOutgoingPort = 6787
+			muWithSNATPort4 := muWithSNATPort
+			muWithSNATPort4.tuple.l4Src = 54126
+			muWithSNATPort4.natOutgoingPort = 6786
+
+			aggregator := NewFlowLogAggregator().
+				ForAction(rules.RuleActionAllow).
+				AggregateOver(FlowSourcePort).
+				IncludePolicies(true).
+				IncludeProcess(true).
+				PerFlowProcessLimit(2).
+				PerFlowProcessArgsLimit(6)
+
+			Expect(aggregator.FeedUpdate(&muWithSNATPort1)).ShouldNot(HaveOccurred())
+			Expect(aggregator.FeedUpdate(&muWithSNATPort2)).ShouldNot(HaveOccurred())
+			Expect(aggregator.FeedUpdate(&muWithSNATPort3)).ShouldNot(HaveOccurred())
+			Expect(aggregator.FeedUpdate(&muWithSNATPort4)).ShouldNot(HaveOccurred())
+
+			flows := aggregator.GetAndCalibrate(FlowSourcePort)
+			Expect(len(flows)).ShouldNot(BeZero())
+			Expect(flows[0].NatOutgoingPorts).To(ConsistOf(6788, 6787, 6786))
+		})
+
+		It("includes expired connections if the post SNAT port limit is high enough", func() {
+			muWithSNATPort1 := muWithSNATPort
+			muWithSNATPort1.updateType = UpdateTypeExpire
+			muWithSNATPort2 := muWithSNATPort
+			muWithSNATPort2.tuple.l4Src = 54124
+			muWithSNATPort2.natOutgoingPort = 6788
+			muWithSNATPort3 := muWithSNATPort
+			muWithSNATPort3.tuple.l4Src = 54125
+			muWithSNATPort3.natOutgoingPort = 6787
+			muWithSNATPort4 := muWithSNATPort
+			muWithSNATPort4.tuple.l4Src = 54126
+			muWithSNATPort4.natOutgoingPort = 6786
+
+			aggregator := NewFlowLogAggregator().
+				ForAction(rules.RuleActionAllow).
+				AggregateOver(FlowSourcePort).
+				IncludePolicies(true).
+				IncludeProcess(true).
+				PerFlowProcessLimit(2).
+				PerFlowProcessArgsLimit(6).
+				NatOutgoingPortLimit(4)
+
+			Expect(aggregator.FeedUpdate(&muWithSNATPort1)).ShouldNot(HaveOccurred())
+			Expect(aggregator.FeedUpdate(&muWithSNATPort2)).ShouldNot(HaveOccurred())
+			Expect(aggregator.FeedUpdate(&muWithSNATPort3)).ShouldNot(HaveOccurred())
+			Expect(aggregator.FeedUpdate(&muWithSNATPort4)).ShouldNot(HaveOccurred())
+
+			flows := aggregator.GetAndCalibrate(FlowSourcePort)
+			Expect(len(flows)).ShouldNot(BeZero())
+			Expect(flows[0].NatOutgoingPorts).To(ConsistOf(6789, 6788, 6787, 6786))
+		})
+	})
 })

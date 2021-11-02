@@ -5,6 +5,7 @@
 package fv_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -15,6 +16,7 @@ import (
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/felix/bpf/conntrack"
+	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/fv/connectivity"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/metrics"
@@ -926,5 +928,82 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 			infra.DumpErrorData()
 		}
 		infra.Stop()
+	})
+})
+
+var _ = infrastructure.DatastoreDescribe("nat outgoing flow log tests", []apiconfig.DatastoreType{apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
+	var (
+		infra  infrastructure.DatastoreInfra
+		felix  *infrastructure.Felix
+		client client.Interface
+
+		workload1 *workload.Workload
+		workload2 *workload.Workload
+	)
+
+	BeforeEach(func() {
+		var err error
+
+		infra = getInfra()
+		opts := infrastructure.DefaultTopologyOptions()
+
+		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "2"
+		opts.ExtraEnvVars["FELIX_FLOWLOGSFILEENABLED"] = "true"
+
+		felix, client = infrastructure.StartSingleNodeTopology(opts, infra)
+
+		ctx := context.Background()
+
+		// Create an IPPool and assign an IP from that pool to workload1 so the packets are SNAT'd when a connection is
+		// made from workload1 to workload2
+		ippool := api.NewIPPool()
+		ippool.Name = "nat-pool"
+		ippool.Spec.CIDR = "10.244.255.0/24"
+		ippool.Spec.NATOutgoing = true
+		ippool, err = client.IPPools().Create(ctx, ippool, options.SetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		workload1 = workload.Run(felix, "w1", "default", "10.244.255.1", "8055", "tcp")
+		workload1.ConfigureInInfra(infra)
+
+		workload2 = workload.Run(felix, "w2", "default", "10.65.0.2", "8055", "tcp")
+		workload2.ConfigureInInfra(infra)
+	})
+
+	AfterEach(func() {
+		felix.Stop()
+		infra.Stop()
+	})
+
+	It("Should report the nat outgoing ports for an SNAT'd flow", func() {
+		cc := &connectivity.Checker{
+			Protocol:        "tcp",
+			RetriesDisabled: true,
+		}
+
+		cc.ExpectSome(workload1, workload2)
+		cc.CheckConnectivity()
+
+		var flows []collector.FlowLog
+		var err error
+		Eventually(func() error {
+			flows, err = felix.ReadFlowLogs("file")
+			return err
+		}, "20s", "1s").ShouldNot(HaveOccurred())
+
+		Expect(flows).ShouldNot(BeEmpty())
+
+		numExpectedFlows := 0
+		// Test that flows from workload1 to workload2 have nat_outgoing_ports set.
+		for _, flow := range flows {
+			if flow.SrcMeta.AggregatedName == workload1.Name &&
+				flow.DstMeta.AggregatedName == workload2.Name {
+				numExpectedFlows++
+				Expect(flow.NatOutgoingPorts).ShouldNot(BeEmpty())
+			}
+		}
+
+		// Ensure that there was at least one flow that went through the nat outgoing port test above.
+		Expect(numExpectedFlows).ShouldNot(BeZero())
 	})
 })

@@ -81,7 +81,7 @@ var _ = Describe("Flow log types tests", func() {
 		emptyList := []string{"-"}
 		It("stores the correct FlowStatsByProcess when storing process is enabled", func() {
 			By("Extracting the correct information")
-			fsp := NewFlowStatsByProcess(&muWithProcessName, true, 2, 5, false)
+			fsp := NewFlowStatsByProcess(&muWithProcessName, true, 2, 5, false, 3)
 			Expect(fsp.statsByProcessName).Should(HaveLen(1))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
 			expectedReportedStats := []FlowProcessReportedStats{
@@ -365,7 +365,7 @@ var _ = Describe("Flow log types tests", func() {
 
 		It("stores the correct FlowStatsByProcess with including process information is disabled", func() {
 			By("Extracting the correct information")
-			fsp := NewFlowStatsByProcess(&muWithEndpointMeta, false, 0, 5, false)
+			fsp := NewFlowStatsByProcess(&muWithEndpointMeta, false, 0, 5, false, 3)
 			Expect(fsp.statsByProcessName).Should(HaveLen(1))
 			Expect(fsp.statsByProcessName).Should(HaveKey("-"))
 			expectedReportedStats := []FlowProcessReportedStats{
@@ -486,7 +486,7 @@ var _ = Describe("Flow log types tests", func() {
 
 		It("limits the process name information when converting FlowStatsByProcess when process information collection is enabled", func() {
 			By("Extracting the correct information")
-			fsp := NewFlowStatsByProcess(&muWithProcessName, true, 2, 5, false)
+			fsp := NewFlowStatsByProcess(&muWithProcessName, true, 2, 5, false, 3)
 			Expect(fsp.statsByProcessName).Should(HaveLen(1))
 			Expect(fsp.statsByProcessName).Should(HaveKey("test-process"))
 			expectedReportedStats := []FlowProcessReportedStats{

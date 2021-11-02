@@ -4,6 +4,7 @@ package collector
 
 import (
 	"net"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -26,10 +27,11 @@ type FlowLogJSONOutput struct {
 	// Some empty values should be json marshalled as null and NOT with golang null values such as "" for
 	// a empty string
 	// Having such values as pointers ensures that json marshalling will render it as such.
-	SourceIP        *string `json:"source_ip"`
-	SourceName      string  `json:"source_name"`
-	SourceNameAggr  string  `json:"source_name_aggr"`
-	SourceNamespace string  `json:"source_namespace"`
+	SourceIP         *string `json:"source_ip"`
+	SourceName       string  `json:"source_name"`
+	SourceNameAggr   string  `json:"source_name_aggr"`
+	SourceNamespace  string  `json:"source_namespace"`
+	NatOutgoingPorts []int   `json:"nat_outgoing_ports"`
 	// TODO: make a breaking change on the elastic schema + re-index to change this field to source_port_num
 	SourcePortNum *int64                   `json:"source_port"` // aliased as source_port_num on ee_flows.template
 	SourceType    string                   `json:"source_type"`
@@ -126,6 +128,11 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 		out.SourceLabels = &FlowLogLabelsJSONOutput{
 			Labels: flattenLabels(l.SrcLabels),
 		}
+	}
+
+	if len(l.FlowProcessReportedStats.NatOutgoingPorts) > 0 {
+		sort.Ints(l.FlowProcessReportedStats.NatOutgoingPorts)
+		out.NatOutgoingPorts = l.FlowProcessReportedStats.NatOutgoingPorts
 	}
 
 	ip = net.IP(l.Tuple.dst[:16])
@@ -363,6 +370,6 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 		}
 	}
 	fl.FlowExtras.NumOriginalSourceIPs = int(o.NumOrigSourceIPs)
-
+	fl.NatOutgoingPorts = o.NatOutgoingPorts
 	return fl, nil
 }

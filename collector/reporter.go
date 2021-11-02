@@ -96,9 +96,9 @@ type MetricUpdate struct {
 	updateType UpdateType
 
 	// Tuple key
-	tuple Tuple
-
-	origSourceIPs *boundedSet
+	tuple           Tuple
+	natOutgoingPort int
+	origSourceIPs   *boundedSet
 
 	// Endpoint information.
 	srcEp      *calc.EndpointData
