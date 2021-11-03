@@ -79,7 +79,7 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 		// resulting slow down!
 		// options.ExtraEnvVars["FELIX_DebugDisableLogDropping"] = "true"
 		// options.FelixLogSeverity = "debug"
-		options.ExtraVolumes[tempDir] = "/var/run/calico"
+		options.ExtraVolumes[tempDir] = "/var/run/calico/policysync"
 		felix, etcd, calicoClient, infra = infrastructure.StartSingleNodeEtcdTopology(options)
 		infrastructure.CreateDefaultProfile(calicoClient, "default", map[string]string{"default": ""}, "default == ''")
 
@@ -130,7 +130,7 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 			dirName := dirNameForWorkload(wl)
 			hostWlDir := filepath.Join(tempDir, dirName)
 			os.MkdirAll(hostWlDir, 0777)
-			return hostWlDir, filepath.Join("/var/run/calico", dirName)
+			return hostWlDir, filepath.Join("/var/run/calico/policysync", dirName)
 		}
 
 		writeCredentialsToFile := func(credentials *binder.Credentials) error {
