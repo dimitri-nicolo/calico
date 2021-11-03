@@ -249,10 +249,9 @@ func Start(cfg *Config) error {
 		middleware.AuthenticateRequest(authenticator,
 			middleware.NewUserHandler(k8sClientSet, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer, cfg.ElasticLicenseType)))
 	sm.Handle("/kibana/login",
-		middleware.SetAuthorizationHeaderFromCookie(
-			middleware.AuthenticateRequest(authenticator,
-				middleware.NewKibanaLoginHandler(k8sCli, kibanaCli, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer,
-					middleware.ElasticsearchLicenseType(cfg.ElasticLicenseType)))))
+		middleware.AuthenticateRequest(authenticator,
+			middleware.NewKibanaLoginHandler(k8sCli, kibanaCli, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer,
+				middleware.ElasticsearchLicenseType(cfg.ElasticLicenseType))))
 	sm.Handle("/.kibana/_search",
 		middleware.KibanaIndexPattern(
 			middleware.AuthenticateRequest(authenticator,
