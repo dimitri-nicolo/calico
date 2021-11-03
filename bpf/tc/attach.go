@@ -20,6 +20,7 @@ package tc
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -103,7 +104,7 @@ func (ap AttachPoint) AttachProgram() (string, error) {
 	preCompiledBinary := path.Join(bpf.ObjectDir, filename)
 	tempBinary := path.Join(tempDir, filename)
 
-	err = ap.patchBinary(logCxt, preCompiledBinary, tempBinary)
+	err = ap.patchLogPrefix(logCxt, preCompiledBinary, tempBinary)
 	if err != nil {
 		logCxt.WithError(err).Error("Failed to patch binary")
 		return "", err
@@ -129,6 +130,16 @@ func (ap AttachPoint) AttachProgram() (string, error) {
 
 	baseDir := "/sys/fs/bpf/tc/"
 	for m, err := obj.FirstMap(); m != nil && err == nil; m, err = m.NextMap() {
+		// In case of global variables, libbpf creates an internal map <prog_name>.rodata
+		// The values are read only for the BPF programs, but can be set to a value from
+		// userspace before the program is loaded.
+		if m.IsMapInternal() {
+			perr := ap.ConfigureProgram(m)
+			if perr != nil {
+				return "", perr
+			}
+			continue
+		}
 		subDir := "globals"
 		if m.Type() == libbpf.MapTypeProgrArray && strings.Contains(m.Name(), "cali_jump") {
 			// Remove period in the interface name if any
@@ -194,21 +205,24 @@ func (ap AttachPoint) AttachProgram() (string, error) {
 	return strconv.Itoa(progId), nil
 }
 
+func (ap AttachPoint) patchLogPrefix(logCtx *log.Entry, ifile, ofile string) error {
+	b, err := bpf.BinaryFromFile(ifile)
+	if err != nil {
+		return fmt.Errorf("failed to read pre-compiled BPF binary: %w", err)
+	}
+
+	b.PatchLogPrefix(ap.Iface)
+
+	err = b.WriteToFile(ofile)
+	if err != nil {
+		return fmt.Errorf("failed to write pre-compiled BPF binary: %w", err)
+	}
+	return nil
+}
+
 func AttachTcpStatsProgram(ifaceName, fileName string, nsId uint16) error {
-	tempDir, err := ioutil.TempDir("", "calico-tc")
-	if err != nil {
-		return fmt.Errorf("failed to create temporary directory: %w", err)
-	}
-	defer func() {
-		_ = os.RemoveAll(tempDir)
-	}()
 	preCompiledBinary := path.Join(bpf.ObjectDir, fileName)
-	tempBinary := path.Join(tempDir, fileName)
-	err = patchVethNs(nsId, preCompiledBinary, tempBinary)
-	if err != nil {
-		return fmt.Errorf("failed to patch veth namespace ID: %v", err)
-	}
-	obj, err := libbpf.OpenObject(tempBinary)
+	obj, err := libbpf.OpenObject(preCompiledBinary)
 	if err != nil {
 		return err
 	}
@@ -216,10 +230,18 @@ func AttachTcpStatsProgram(ifaceName, fileName string, nsId uint16) error {
 
 	baseDir := "/sys/fs/bpf/tc/globals"
 	for m, err := obj.FirstMap(); m != nil && err == nil; m, err = m.NextMap() {
+		if m.IsMapInternal() {
+			err := ConfigureVethNS(m, nsId)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+
 		pinPath := path.Join(baseDir, m.Name())
-		perr := m.SetPinPath(pinPath)
-		if perr != nil {
-			return fmt.Errorf("error pinning map %v errno %v", m.Name(), perr)
+		err := m.SetPinPath(pinPath)
+		if err != nil {
+			return fmt.Errorf("error pinning map %v errno %v", m.Name(), err)
 		}
 	}
 
@@ -321,45 +343,6 @@ func patchVethNs(nsId uint16, ifile, ofile string) error {
 	}
 
 	b.PatchIfNS(nsId)
-	err = b.WriteToFile(ofile)
-	if err != nil {
-		return fmt.Errorf("failed to write pre-compiled BPF binary: %w", err)
-	}
-
-	return nil
-}
-
-func (ap AttachPoint) patchBinary(logCtx *log.Entry, ifile, ofile string) error {
-	b, err := bpf.BinaryFromFile(ifile)
-	if err != nil {
-		return fmt.Errorf("failed to read pre-compiled BPF binary: %w", err)
-	}
-
-	logCtx.WithField("ip", ap.HostIP).Debug("Patching in IP")
-	err = b.PatchIPv4(ap.HostIP)
-	if err != nil {
-		return fmt.Errorf("failed to patch IPv4 into BPF binary: %w", err)
-	}
-
-	b.PatchLogPrefix(ap.Iface)
-	b.PatchTunnelMTU(ap.TunnelMTU)
-	vxlanPort := ap.VXLANPort
-	if vxlanPort == 0 {
-		vxlanPort = 4789
-	}
-	b.PatchVXLANPort(vxlanPort)
-	b.PatchExtToServiceConnmark(uint32(ap.ExtToServiceConnmark))
-	b.PatchPSNATPorts(uint32(ap.PSNATStart), uint32(ap.PSNATEnd))
-	b.PatchIfNS(ap.VethNS)
-	b.PatchTcpStats(ap.EnableTCPStats)
-	b.PatchIsEgressGateway(ap.IsEgressGateway)
-	b.PatchIsEgressClient(ap.IsEgressClient)
-
-	err = b.PatchIntfAddr(ap.IntfIP)
-	if err != nil {
-		return fmt.Errorf("failed to patch interface IPv4 into BPF binary: %w", err)
-	}
-
 	err = b.WriteToFile(ofile)
 	if err != nil {
 		return fmt.Errorf("failed to write pre-compiled BPF binary: %w", err)
@@ -596,6 +579,28 @@ func (ap *AttachPoint) MustReattach() bool {
 	return ap.ForceReattach
 }
 
+func ConfigureVethNS(m *libbpf.Map, VethNS uint16) error {
+	return libbpf.SetGlobalVars(m, 0, 0, 0, 0, 0, 0, 0, VethNS, false, false, false)
+}
+
+func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
+	hostIP, err := convertIPToUint32(ap.HostIP)
+	if err != nil {
+		return err
+	}
+	vxlanPort := ap.VXLANPort
+	if vxlanPort == 0 {
+		vxlanPort = 4789
+	}
+
+	intfIP, err := convertIPToUint32(ap.IntfIP)
+	if err != nil {
+		return err
+	}
+	return libbpf.SetGlobalVars(m, hostIP, intfIP, ap.ExtToServiceConnmark, ap.TunnelMTU, vxlanPort,
+		ap.PSNATStart, ap.PSNATEnd, ap.VethNS, ap.EnableTCPStats, ap.IsEgressGateway, ap.IsEgressClient)
+}
+
 // nolint
 func updateJumpMap(obj *libbpf.Obj, isHost bool) error {
 	if !isHost {
@@ -617,4 +622,13 @@ func updateJumpMap(obj *libbpf.Obj, isHost bool) error {
 		return fmt.Errorf("error updating icmp program %v", err)
 	}
 	return nil
+}
+
+// nolint
+func convertIPToUint32(ip net.IP) (uint32, error) {
+	ipv4 := ip.To4()
+	if ipv4 == nil {
+		return 0, fmt.Errorf("ip addr nil")
+	}
+	return binary.LittleEndian.Uint32([]byte(ipv4)), nil
 }

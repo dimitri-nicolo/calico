@@ -15,25 +15,20 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-#include "events.h"
-#include "tcp_stats_iptables.h"
-#include "socket_lookup.h"
-#include "globals.h"
+#ifndef __CALI_GLOBALS_H__
+#define __CALI_GLOBALS_H__
 
-const volatile struct cali_global_data global_data;
-SEC("classifier/tc/calico_tcp_stats")
-int calico_tcp_stats(struct __sk_buff *skb)
-{
-	struct cali_tc_ctx ctx = {
-		.skb = skb,
-	};
-	if (!skb_refresh_validate_ptrs(&ctx, UDP_SIZE)) {
-		if ((ctx.ip_header->ihl == 5) && (ctx.ip_header->protocol == IPPROTO_TCP)) {
-			socket_lookup(&ctx);
-		}
-	}
-	
-	return TC_ACT_UNSPEC;
-}
-
-char ____license[] __attribute__((section("license"), used)) = "GPL";
+struct cali_global_data {
+	__be32 host_ip;
+	__be16 tunnel_mtu;
+	__be16 vxlan_port;
+	__be32 intf_ip;
+	__be32 ext_to_svc_mark;
+	__be16 psnat_start;
+	__be16 psnat_len;
+	__be16 if_ns;
+	__u8  tcp_stats;
+	__u8  egress_client;
+	__u8 egress_gateway;
+};
+#endif /* __CALI_GLOBALS_H__ */

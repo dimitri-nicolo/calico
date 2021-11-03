@@ -6,6 +6,8 @@ import (
 	"context"
 	"fmt"
 
+	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
+
 	"time"
 
 	. "github.com/onsi/gomega"
@@ -289,6 +291,8 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 
 		// Expect 2 calls to be invoked: one for get and one for update
 		Eventually(func() []string {
+			defer GinkgoRecover()
+
 			var methods []string
 			for _, call := range calicoClient.mock.Calls {
 				methods = append(methods, call.Method)
@@ -323,6 +327,8 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 
 		// Expect 3 calls to be invoked: 2 for get and one for update
 		Eventually(func() []string {
+			defer GinkgoRecover()
+
 			var methods []string
 			for _, call := range calicoClient.mock.Calls {
 				methods = append(methods, call.Method)
@@ -357,6 +363,8 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 
 		// Expect 4 calls to be invoked: 2 for get and 2 for update
 		Eventually(func() []string {
+			defer GinkgoRecover()
+
 			var methods []string
 			for _, call := range calicoClient.mock.Calls {
 				methods = append(methods, call.Method)
@@ -389,6 +397,8 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 
 		// Expect 2 calls to be invoked: one for get and one for update
 		Eventually(func() []string {
+			defer GinkgoRecover()
+
 			var methods []string
 			for _, call := range calicoClient.mock.Calls {
 				methods = append(methods, call.Method)
@@ -421,6 +431,8 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 
 		// Expect 2 calls to be invoked: one for get and one for update
 		Eventually(func() []string {
+			defer GinkgoRecover()
+
 			var methods []string
 			for _, call := range calicoClient.mock.Calls {
 				methods = append(methods, call.Method)
@@ -460,6 +472,8 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 
 		// Expect 6 calls to be invoked: 3 for get and 3 for update
 		Eventually(func() []string {
+			defer GinkgoRecover()
+
 			var methods []string
 			for _, call := range calicoClient.mock.Calls {
 				methods = append(methods, call.Method)
@@ -491,6 +505,8 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 
 		// Expect 2 calls to be invoked: one for get and one for update
 		Eventually(func() []string {
+			defer GinkgoRecover()
+
 			var methods []string
 			for _, call := range calicoClient.mock.Calls {
 				methods = append(methods, call.Method)
@@ -522,12 +538,44 @@ var _ = Describe("PacketCapture Capture Status Writer Tests", func() {
 
 		// Expect 2 calls to be invoked: one for get and one for update
 		Eventually(func() []string {
+			defer GinkgoRecover()
+
 			var methods []string
 			for _, call := range calicoClient.mock.Calls {
 				methods = append(methods, call.Method)
 			}
 			return methods
 		}).Should(ConsistOf([]string{"Get", "Update"}))
+	})
+
+	It("Does not retry to update a deleted resource", func(done Done) {
+		defer close(done)
+
+		var calicoClient = new(mockedCalicoClient)
+		var updatesFromDataPlane = make(chan *proto.PacketCaptureStatusUpdate)
+
+		// Mock CalicoClient for Get to return resource does not exist
+		calicoClient.mock.On("Get", mock.Anything, namespace, name,
+			options.GetOptions{}).Return(nil, cerrors.ErrorResourceDoesNotExist{})
+
+		// Start StatusWriter
+		var statusWriter = capture.NewStatusWriter(hostname, captureDir, calicoClient, updatesFromDataPlane, 1*time.Millisecond)
+		go statusWriter.Start()
+		defer statusWriter.Stop()
+
+		// Send an update from data plane
+		updatesFromDataPlane <- statusUpdate
+
+		// Expect 4 calls to be invoked: 2 for get and 2 for update
+		Eventually(func() []string {
+			defer GinkgoRecover()
+
+			var methods []string
+			for _, call := range calicoClient.mock.Calls {
+				methods = append(methods, call.Method)
+			}
+			return methods
+		}).Should(ConsistOf([]string{"Get"}))
 	})
 })
 
@@ -550,6 +598,9 @@ func (m *mockedCalicoClient) Delete(ctx context.Context, namespace, name string,
 
 func (m *mockedCalicoClient) Get(ctx context.Context, namespace, name string, opts options.GetOptions) (*api.PacketCapture, error) {
 	args := m.mock.Called(ctx, namespace, name, opts)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
 	return args.Get(0).(*api.PacketCapture), args.Error(1)
 }
 
