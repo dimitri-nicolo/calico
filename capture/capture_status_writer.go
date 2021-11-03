@@ -16,6 +16,7 @@ import (
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/felix/proto"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
+	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
 )
 
@@ -85,8 +86,11 @@ func (sw *StatusWriter) handleStatusUpdate() {
 			err := sw.reconcileStatusUpdate(update.Id.GetName(), update.Id.GetNamespace(), update.GetCaptureFiles(), convert(update.GetState()))
 			if err == nil {
 				delete(sw.pendingUpdates, id)
+			} else if _, ok := err.(cerrors.ErrorResourceDoesNotExist); ok {
+				// Drop pending updates for resources that no longer exist
+				delete(sw.pendingUpdates, id)
 			} else {
-				// Start the retry mechanism in case of of the status updates fails
+				// Start the retry mechanism in case the status updates fails
 				if ticker == nil {
 					// reconciling between a duration of a tick and two ticks seconds.
 					ticker = jitter.NewTicker(sw.tick, sw.tick)
