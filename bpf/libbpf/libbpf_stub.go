@@ -82,3 +82,12 @@ func (o *Obj) Close() error {
 func (l *Link) Close() error {
 	panic("LIBBPF syscall stub")
 }
+
+func (m *Map) IsMapInternal() bool {
+	panic("LIBBPF syscall stub")
+}
+
+func SetGlobalVars(m *Map, hostIP, intfIP, extToSvcMark uint32, tmtu, vxlanPort, psNatStart, psNatLen, vethNS uint16,
+	enableTcpStats, isEgressGatway, isEgressClient bool) error {
+	panic("LIBBPF syscall stub")
+}
