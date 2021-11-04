@@ -70,10 +70,6 @@ For example: `http_connection_spike,dga`
 In a multi-cluster deployment, the name of the cluster where the AD job should detect the anomalies.
 -   **ES_query_size** - Default: 10000.
 The job reads the data in portions. This is the number of rows in each of this portion.
--   **ES_scroll_time** - Default: "20s".
-This is the timeout for reading each data portion.
--   **ES_bucket_size_minutes** - Default: 5.
-The log rows are aggregated into the buckets. This is the size of these buckets. The bucket always starts at the averaged minute. For example, for the bucket size of 5 minutes, a bucket starts on the x0th or x5th minute.
 
 ### Variables of all Anomaly Detection Jobs
 -   **AD_train_interval_minutes** - Default: 1440, a full day. It is an interval between retraining the existing models, if models should be retrained.
@@ -82,98 +78,83 @@ The log rows are aggregated into the buckets. This is the size of these buckets.
 
 ### Variables of specific Anomaly Detection Jobs
 
+#### Note about AD_`job_name`_SENSITIVITY variables
+  Changing this variable adjusts the **sensitivity** to detect suspicious values or combinations of values. 
+  Higher sensitivity means more suspicious values are treated as anomalies and vice versa.
+  Increase in this variable results in more alerts.
+  Valid range: 0.1 to 1000.
+
+
 #### port_scan Job
--   **AD_port_scan_threshold** - Default: 500. It is a threshold for triggering an anomaly for the **port_scan** job. This is a number of unique destination ports called from the specific source_name_aggr in the same source_namespace, and the same bucket.
+-   **AD_port_scan_threshold** - Default: 500. It is a threshold for triggering an anomaly for the **port_scan** job. This is a number of unique destination ports called from the specific source_name_aggr in the same source_namespace, and the same time bucket.
 
 #### ip_sweep Job
--   **AD_ip_sweep_threshold** - Default: 32. It is a threshold for triggering an anomaly for the **ip_sweep** job. This is a number of unique destination IPs called from the specific source_name_aggr in the same source_namespace, and the same bucket.
+-   **AD_ip_sweep_threshold** - Default: 32. It is a threshold for triggering an anomaly for the **ip_sweep** job. This is a number of unique destination IPs called from the specific source_name_aggr in the same source_namespace, and the same time bucket.
 
 #### bytes_out Job
 -   **AD_BytesOutModel_min_size_for_train** - Default: 1000. There should be enough data samples to train models.
-    The models trained only if the number of the data samples is bigger than this threshold parameter.
--   **AD_BytesOutModel_SeasonalAD_c** - Default: 500. Increase this parameter if you want fewer alerts.
-    Decrease it if you want more alerts.
+    The models are trained only if the number of the data samples is bigger than this threshold.
 
 #### bytes_in Job
 -   **AD_BytesInModel_min_size_for_train** - Default: 1000. There should be enough data samples to train models.
-    The models trained only if the number of the data samples is bigger than this threshold parameter.
--   **AD_BytesInModel_SeasonalAD_c** - Default: 500. Increase this parameter if you want fewer alerts.
-    Decrease it if you want more alerts.
+    The models are trained only if the number of the data samples is bigger than this threshold.
 
 #### process_restarts Job
-Now the [IsolationForest model] from scikit-learn is used in this detector.
--   **AD_ProcessRestarts_IsolationForest_score_threshold** - Default: -0.78. Note: it is a negative value!
+- **AD_PROCESS_RESTARTS_SENSITIVITY** - Default: 2.5. 
+
     Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
--   **AD_ProcessRestarts_threshold** - Default: 4. Increase this parameter if you want fewer alerts.
+- **AD_PROCESS_RESTARTS_MIN_RESTARTS** - Default: 4. Increase this parameter if you want fewer alerts.
     Decrease it if you want more alerts.
 
 #### dns_latency Job
-Now the [IsolationForest model] from scikit-learn is used in this detector.
--   **AD_DnsLatency_IsolationForest_n_estimators** - Default: 100. The more data samples presented to train model, the more
-    estimators needed.
--   **AD_DnsLatency_IsolationForest_score_threshold** - Default: -0.836. It is a negative number!
-    Decrease this parameter if you want fewer alerts.
-    Increase it if you want more alerts.
+- **AD_DNS_LATENCY_SENSITIVITY** - Default: 2.5.
+
+    Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
 
 #### l7_latency Job
-Now the [IsolationForest model] from scikit-learn is used in this detector.
--   **AD_L7Latency_IsolationForest_n_estimators** - Default: 100. The more data samples presented to train model, the more
-    estimators needed.
--   **AD_L7Latency_IsolationForest_score_threshold** - Default: -0.836. It is a negative number!
-    Decrease this parameter if you want fewer alerts.
-    Increase it if you want more alerts.
+- **AD_L7_LATENCY_SENSITIVITY** - Default: 2.5.
+
+    Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
 
 #### http_connection_spike Job
-Now the [IsolationForest model] from scikit-learn is used in this detector.
--   **AD_HttpConnectionSpike_IsolationForest_n_estimators** - Default: 100. The more data samples presented to train
-    model, the more estimators needed.
--   **AD_HttpConnectionSpike_IsolationForest_score_threshold** - Default: -0.64. It is a negative number!
-    Decrease this parameter if you want fewer alerts.
-    Increase it if you want more alerts.
+- **AD_HTTP_CONNECTION_SPIKE_SENSITIVITY** - Default: 2.5.
+
+    Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
 
 #### dga Job
-Now the CatBoostClassifier model from the [CatBoost] package is used in this detector.
 -   **AD_DGA_SCORE_THRESHOLD** - Default: 0.5. It separates the DGA domain names from "good" domain names.
     Increase this parameter if you want fewer alerts.
     Decrease it if you want more alerts.
 
 #### generic_flows Job
-Now the [IsolationForest model] from scikit-learn is used in this detector.
+- **AD_GENERIC_FLOWS_SENSITIVITY** - Default: 2.5 
+ 
+    Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
 - **AD_GENERIC_FLOWS_FIELDS** - Default: "bytes_in,bytes_out,num_flows,num_flows_started,
     num_flows_completed,packets_in,packets_out,num_process_names,num_process_ids,num_original_source_ips" 
     
     It is a list of the `flow` log numeric fields separated by `,`.
     A separate model is trained for each field in this list.
-    Remove a field from this list if you don't want to detect anomalies for it.
-- **AD_GENERIC_FLOWS_ALERTS_PER_DAY** - Default: 2.5 
- 
-  Each model automatically tuned up to detect a desired number of alerts per day. It doesn't mean
-  the model detects exactly this number of anomalies. This parameter changes the model sensitivity.
+    Remove a field from this list if you don't want to detect anomalies for this field.
 
 #### generic_dns Job
-Now the [IsolationForest model] from scikit-learn is used in this detector.
+- **AD_GENERIC_DNS_SENSITIVITY** - Default: 2.5 
+ 
+    Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
 - **AD_GENERIC_DNS_FIELDS** - Default: "count,latency_count,latency_mean,latency_max"
     
     It is a list of the `DNS` log numeric fields separated by `,`.
     A separate model is trained for each field in this list.
-    Remove a field from this list if you don't want to detect anomalies for it.
-- **AD_GENERIC_DNS_ALERTS_PER_DAY** - Default: 2.5 
- 
-  Each model automatically tuned up to detect a desired number of alerts per day. It doesn't mean
-  the model detects exactly this number of anomalies. This parameter changes the model sensitivity.
+    Remove a field from this list if you don't want to detect anomalies for this field.
 
 #### generic_l7 Job
-Now the [IsolationForest model] from scikit-learn is used in this detector.
+- **AD_GENERIC_L7_SENSITIVITY** - Default: 2.5 
+ 
+    Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
 - **AD_GENERIC_L7_FIELDS** - Default: "duration_mean,duration_max,bytes_in,bytes_out,count"
     
     It is a list of the `L7` log numeric fields separated by `,`.
     A separate model is trained for each field in this list.
-    Remove a field from this list if you don't want to detect anomalies for it.
-- **AD_GENERIC_L7_ALERTS_PER_DAY** - Default: 2.5 
- 
-  Each model automatically tuned up to detect a desired number of alerts per day. It doesn't mean
-  the model detects exactly this number of anomalies. This parameter changes the model sensitivity.
+    Remove a field from this list if you don't want to detect anomalies for this field.
 
 [Multi-cluster management]: /multicluster/index
-[IsolationForest model]: https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.IsolationForest.html
-[CatBoost]: https://catboost.ai/docs
