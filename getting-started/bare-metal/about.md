@@ -37,7 +37,7 @@ If you are using the etcd3 database, you can also install {{site.prodname}} with
 
 **Required**
 
-- Non-cluster host meets [system requirements](./requirements) for {{site.prodname}}. If you want to use a package manager for installation, the non-cluster host must be a system derived from Ubuntu or RedHat.
+- Non-cluster host meets [system requirements](./requirements) for {{site.prodname}}.
 - Set up a datastore; if {{site.prodname}} is installed on a cluster, you already have a datastore
 - Install `kubectl` or [`calicoctl`]({{site.baseurl}}/getting-started/clis/calicoctl/). (`kubectl` works only with the Kubernetes datastore.)
 
@@ -51,5 +51,4 @@ Select an install method.
 | Install method                                               | Networking | Policy |
 | ------------------------------------------------------------ | ---------- | ------ |
 | [Docker container](./installation/container)                 | ✓          | ✓      |
-| [Binary install with package manager](./installation/binary-mgr) |            | ✓      |
 | [Binary install without package manager](./installation/binary) |            | ✓      |
