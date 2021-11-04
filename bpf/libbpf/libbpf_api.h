@@ -127,9 +127,19 @@ int bpf_link_destroy(struct bpf_link *link) {
 	return bpf_link__destroy(link);
 }
 
-void bpf_set_global_vars(struct bpf_map *map, uint hostIP, uint intfIP, uint ext_to_svc_mark, 
-				ushort tmtu, ushort vxlanPort, ushort psnat_start, ushort psnat_len,
-				ushort if_ns, u_char tcp_stats, u_char egress_gateway, u_char egress_client) {
+void bpf_tc_set_globals(struct bpf_map *map,
+			uint hostIP,
+			uint intfIP,
+			uint ext_to_svc_mark,
+			ushort tmtu,
+			ushort vxlanPort,
+			ushort psnat_start,
+			ushort psnat_len,
+			ushort if_ns,
+			u_char tcp_stats,
+			u_char egress_gateway,
+			u_char egress_client)
+{
 	struct cali_global_data data = {
 	    .host_ip = hostIP,
 	    .tunnel_mtu = tmtu,
@@ -146,4 +156,25 @@ void bpf_set_global_vars(struct bpf_map *map, uint hostIP, uint intfIP, uint ext
 	};
 	set_errno(bpf_map__set_initial_value(map, (void*)(&data), sizeof(struct cali_global_data)));
 	return;
+}
+
+struct bpf_link *bpf_program_attach_cgroup(struct bpf_object *obj, int cgroup_fd, char *name)
+{
+	int err = 0;
+	struct bpf_link *link = NULL;
+	struct bpf_program *prog;
+
+	if (!(prog = bpf_object__find_program_by_name(obj, name))) {
+		err = ENOENT;
+		goto out;
+	}
+
+	if (!(link = bpf_program__attach_cgroup(prog, cgroup_fd))) {
+		err = libbpf_get_error(link);
+		goto out;
+	}
+
+out:
+	set_errno(err);
+	return link;
 }
