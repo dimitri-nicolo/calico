@@ -247,6 +247,39 @@
         },
         "num_process_args": {
             "type": "long"
+        },
+        "tcp_lost_packets": {
+          "type": "long"
+        },
+        "tcp_max_min_rtt": {
+          "type": "long"
+        },
+        "tcp_max_smooth_rtt": {
+          "type": "long"
+        },
+        "tcp_mean_min_rtt": {
+          "type": "long"
+        },
+        "tcp_mean_mss": {
+          "type": "long"
+        },
+        "tcp_mean_send_congestion_window": {
+          "type": "long"
+        },
+        "tcp_mean_smooth_rtt": {
+          "type": "long"
+        },
+        "tcp_min_mss": {
+          "type": "long"
+        },
+        "tcp_min_send_congestion_window": {
+          "type": "long"
+        },
+        "tcp_total_retransmissions": {
+          "type": "long"
+        },
+        "tcp_unrecovered_to": {
+          "type": "long"
         }
     }
   }
