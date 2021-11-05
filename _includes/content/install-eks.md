@@ -366,29 +366,19 @@ To access resources in a managed cluster from the {{site.prodname}} Manager with
 
 You have successfully installed a management cluster.
 
-#### Add a managed cluster to the management cluster
+{% endif %}
 
-Choose a name for your managed cluster and then add it to your **management cluster**. The following commands will
-create a manifest with the name of your managed cluster in your current directory.
+{% if include.clusterType == "managed" %}
+{% include content/configure-managed-cluster.md %}
 
-1. First, decide on the name for your managed cluster. Because you will eventually have several managed clusters, choose a name that can be easily recognized in a list of managed clusters. The name is also used in steps that follow.
-   ```bash
-   export MANAGED_CLUSTER=my-managed-cluster
-   ```
+#### Provide permissions to view the managed cluster
 
-1. Add a managed cluster and save the manifest containing a [ManagementClusterConnection]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.ManagementClusterConnection) and a Secret.
-   ```bash
-   kubectl -o jsonpath="{.spec.installationManifest}" > $MANAGED_CLUSTER.yaml create -f - <<EOF
-   apiVersion: projectcalico.org/v3
-   kind: ManagedCluster
-   metadata:
-     name: $MANAGED_CLUSTER
-   EOF
-   ```
+To access resources belonging to a managed cluster from the {{site.prodname}} Manager UI, the service or user account used to log in must have appropriate permissions defined in the managed cluster.
 
-Verify that the `managementClusterAddr` in the manifest is correct.
+Let's define admin-level permissions for the service account (`mcm-user`) we created to log in to the Manager UI. Run the following command against your managed cluster.
 
-> **Tip**: Managed clusters can also be added from {{site.prodname}} Manager. From here you can see the connection status and switch to see data from other clusters by using the drop-down menu in the top right banner.
-{: .alert .alert-info}
+```bash
+kubectl create clusterrolebinding mcm-user-admin --serviceaccount=default:mcm-user --clusterrole=tigera-network-admin
+```
 
 {% endif %}
