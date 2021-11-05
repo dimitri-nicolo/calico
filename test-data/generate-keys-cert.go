@@ -4,12 +4,12 @@ import (
 	"log"
 	"time"
 
-	cryptolicensing "github.com/tigera/licensing/crypto"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-)
 
+	cryptolicensing "github.com/tigera/licensing/crypto"
+)
 
 // Verifying with a custom list of root certificates.
 
@@ -60,7 +60,6 @@ V/E7rDjAnTrgg0ZNO20/CgVSNmRgK9cjJPGA0hWAe6XquPal0FAJsfVqwQRIxXGd
 TxA0EwUL8NOBHWeVY3sraVHUusOFgMiBr/pdChToD4AJ0jX5a4DzsCRSyMRVz6Dq
 pdDGllpqsFfAEMF4hv4A5jhQLPk5Oz5azkoCJ0vcFCtj3nnh
 -----END CERTIFICATE-----`
-
 
 func main() {
 	//// Generate Pub/Priv key pair.
@@ -149,7 +148,7 @@ func main() {
 	}
 
 	opts := x509.VerifyOptions{
-		Roots:   roots,
+		Roots: roots,
 	}
 
 	if _, err := cert.Verify(opts); err != nil {

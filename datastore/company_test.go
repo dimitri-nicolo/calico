@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	testKey = "TestCompanyKey"
+	testKey  = "TestCompanyKey"
 	testName = "Test Company Name"
 )
 
@@ -46,4 +46,3 @@ func TestInsertGetDeleteCompany(t *testing.T) {
 		req.Nil(c, "company should not exist, but it does")
 	})
 }
-

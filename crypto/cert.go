@@ -5,13 +5,13 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
+	"io/ioutil"
+	"log"
 	"math/big"
 	"math/rand"
 	"os"
 	"time"
-	"io/ioutil"
-	"fmt"
-	"log"
 )
 
 const (
@@ -49,9 +49,9 @@ func Generatex509Cert(start, exp time.Time, priv *rsa.PrivateKey) ([]byte, error
 		KeyUsage:     x509.KeyUsageCertSign | x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 
 		BasicConstraintsValid: true,
-		IsCA:           true,
-		EmailAddresses: []string{CertEmailAddress},
-		DNSNames:       []string{CertTigeraDomain},
+		IsCA:                  true,
+		EmailAddresses:        []string{CertEmailAddress},
+		DNSNames:              []string{CertTigeraDomain},
 	}
 
 	return x509.CreateCertificate(RandomGen, &template, &template, &priv.PublicKey, priv)
@@ -69,18 +69,17 @@ func Generatex509CertChain(start, exp time.Time, root *x509.Certificate, priv *r
 		NotBefore: start,
 		NotAfter:  exp,
 
-	//	SubjectKeyId: []byte{1, 2, 3, 4},
-		KeyUsage:     x509.KeyUsageCertSign | x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		//	SubjectKeyId: []byte{1, 2, 3, 4},
+		KeyUsage: x509.KeyUsageCertSign | x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 
 		BasicConstraintsValid: true,
-		IsCA:           false,
-		EmailAddresses: []string{CertEmailAddress},
-		DNSNames:       []string{CertTigeraDomain},
+		IsCA:                  false,
+		EmailAddresses:        []string{CertEmailAddress},
+		DNSNames:              []string{CertTigeraDomain},
 	}
 
 	return x509.CreateCertificate(RandomGen, &template, root, &priv.PublicKey, priv)
 }
-
 
 func SaveCertToFile(derBytes []byte, filePath string) error {
 	certCerFile, err := os.Create(filePath)

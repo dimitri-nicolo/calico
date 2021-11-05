@@ -1,11 +1,11 @@
 package symmetric
 
 import (
-	"crypto/rand"
 	"crypto/aes"
 	"crypto/cipher"
-	"io"
+	"crypto/rand"
 	"fmt"
+	"io"
 )
 
 var (
@@ -15,7 +15,6 @@ var (
 	// RandomGen is a crypto pseudo-random generator.
 	RandomGen = rand.Reader
 )
-
 
 func EncryptMessage(plaintext []byte) ([]byte, error) {
 	c, err := aes.NewCipher(symKey)

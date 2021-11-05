@@ -6,8 +6,8 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"os"
 	"io/ioutil"
+	"os"
 )
 
 const (
@@ -80,11 +80,10 @@ func ParseRsaPrivateKeyFromPemStr(privPEM string) (*rsa.PrivateKey, error) {
 	return priv, nil
 }
 
-
-func ReadPrivateKeyFromFile(path string)(*rsa.PrivateKey, error){
+func ReadPrivateKeyFromFile(path string) (*rsa.PrivateKey, error) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("error reading private key file: %s",err)
+		return nil, fmt.Errorf("error reading private key file: %s", err)
 	}
 
 	return ParseRsaPrivateKeyFromPemStr(string(data))

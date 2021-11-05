@@ -13,8 +13,8 @@ import (
 
 var (
 	customerListFlag, allFlag *pflag.FlagSet
-	customerListName string
-	all = false
+	customerListName          string
+	all                       = false
 )
 
 func init() {
