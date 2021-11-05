@@ -83,6 +83,7 @@ imageNames:
   prometheus: tigera/prometheus
   elasticsearchOperator: tigera/elasticsearch-operator
   prometheusOperator: tigera/prometheus-operator
+  windows: tigera/calico-windows-upgrader
 
 # List of files to exclude. These files won't get included in the deployed site.
 exclude:
@@ -182,3 +183,4 @@ defaults:
         prometheus: tigera/prometheus
         elasticsearchOperator: tigera/elasticsearch-operator
         prometheusOperator: tigera/prometheus-operator
+        windows: tigera/calico-windows-upgrader
