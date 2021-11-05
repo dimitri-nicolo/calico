@@ -37,7 +37,7 @@ require (
 
 replace (
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211102141335-86ba0f7e2557
-	github.com/tigera/licensing => github.com/tigera/licensing v1.0.1-0.20211105031323-53a4593b843b
+	github.com/tigera/licensing => github.com/tigera/licensing v1.0.1-0.20211105031908-d59f5204df97
 
 	// k8s apiserver upgrade
 	k8s.io/api => k8s.io/api v0.21.0
@@ -68,4 +68,4 @@ replace (
 
 )
 
-replace github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20211101214309-ba6e8ef44536
+replace github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20211105034335-888aaae3a76e
