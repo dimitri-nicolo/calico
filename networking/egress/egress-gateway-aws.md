@@ -191,7 +191,7 @@ an instance (for example when scaling up the cluster).
 - [Configure IP reservations for each VPC Subnet](#configure-ip-reservations-for-each-vpc-subnet)
 - [Enable egress gateway support](#enable-egress-gateway-support)
 - [Enable policy sync API](#enable-policy-sync-api)
-- [Enable AWS-backed subnets](#enable-aws-backed-subnets)
+- [Enable AWS-backed IP pools](#enable-aws-backed-ip-pools)
 - [Configure IP pools backed by VPC Subnets](#configure-ip-pools-backed-by-vpc-subnets)
 - [Copy pull secret into egress gateway namespace](#copy-pull-secret-into-egress-gateway-namespace)
 - [Deploy a group of egress gateways](#deploy-a-group-of-egress-gateways)
@@ -338,7 +338,7 @@ kubectl patch felixconfiguration.p default --type='merge' -p \
 >    `default` FelixConfiguration resource.
 {: .alert .alert-info}
 
-#### Enable AWS-backed subnets
+#### Enable AWS-backed IP pools
 
 In the default **FelixConfiguration**, set the `awsSecondaryIPSupport` field to `Enabled`:
 
@@ -362,17 +362,22 @@ IP pools are used to subdivide the VPC Subnets as follows:
 * One medium-sized IP pool per-Subnet reserved for {{site.prodname}} to use for the _primary_ IP addresses of its _secondary_ ENIs.
   These pools must have:
 
-  * The `awsSubnetID` field to the ID of the relevant VPC Subnet.  This activates the AWS-backed IP feature for these pools.
-  * The `allowedUse` field set to `["HostSecondary"]` to reserve them for this purpose.
-  * The `blockSize` to 32.  This aligns {{site.prodname}} IPAM with the behaviour of the AWS fabric.
+  * `awsSubnetID` set to the ID of the relevant VPC Subnet.  This activates the AWS-backed IP feature for these pools.
+  * `allowedUse` set to `["HostSecondary"]` to reserve them for this purpose.
+  * `blockSize` set to 32.  This aligns {{site.prodname}} IPAM with the behaviour of the AWS fabric.
+  * `vxlanMode` and `ipipMode` set to `Never`.  (`Never` is the default if these fields are not specified.)
 
 * Small pools used for particular groups of egress gateways.  These must have:
 
-  * The `awsSubnetID` field to the ID of the relevant VPC Subnet.  This activates the AWS-backed IP feature for these pools.
-  * The `allowedUse` field set to `["Workload"]` to tell {{site.prodname}} IPAM to use those pools for the egress gateway workloads.
-  * The `vxlanMode` (or `ipipMode`) set to match your main workload IP pool.  On an AWS-backed pool, this setting controls how
-    traffic from other pods is sent to the egress gateway.
-  * The `blockSize` to 32.  This aligns {{site.prodname}} IPAM with the behaviour of the AWS fabric.
+  * `awsSubnetID` set to the ID of the relevant VPC Subnet.  This activates the AWS-backed IP feature for these pools.
+  * `allowedUse` set to `["Workload"]` to tell {{site.prodname}} IPAM to use those pools for the egress gateway workloads.
+  * `vxlanMode` and `ipipMode` set to `Never` in order to disable encapsulation for the egress gateway pods.  (`Never` is the default if these fields are not specified.)
+  * `blockSize` set to 32.  This aligns {{site.prodname}} IPAM with the behaviour of the AWS fabric.
+
+  It's also recommended to:
+
+  * Set `nodeSelector` to `"!all()"`.  This prevents {{site.prodname}} IPAM from using the pool automatically. It will
+    only be used for workloads that explicitly name it in the `cni.projectcalico.org/ipv4pools` annotation.
 
 Continuing the example above, with VPC Subnets
 
@@ -424,8 +429,7 @@ metadata:
   name: hosts-west-1
 spec:
   cidr: 100.64.0.0/25
-  allowedUses:
-  - HostSecondaryInterface
+  allowedUses: ["HostSecondaryInterface"]
   awsSubnetID: subnet-000000000000000001
   blockSize: 32
 ---
@@ -435,9 +439,7 @@ metadata:
   name: egress-red-west-1
 spec:
   cidr: 100.64.2.0/31
-  vxlanMode: CrossSubnet
-  allowedUses:
-  - Workload
+  allowedUses: ["Workload"]
   awsSubnetID: subnet-000000000000000001
   blockSize: 32
   nodeSelector: "!all()"
@@ -448,9 +450,7 @@ metadata:
   name: egress-blue-west-1
 spec:
   cidr: 100.64.2.2/31
-  vxlanMode: CrossSubnet
-  allowedUses:
-  - Workload
+  allowedUses: ["Workload"]
   awsSubnetID: subnet-000000000000000001
   blockSize: 32
   nodeSelector: "!all()"
@@ -461,8 +461,7 @@ metadata:
   name: hosts-west-2
 spec:
   cidr: 100.64.4.0/25
-  allowedUses:
-  - HostSecondaryInterface
+  allowedUses: ["HostSecondaryInterface"]
   awsSubnetID: subnet-000000000000000002
   blockSize: 32
 ---
@@ -472,9 +471,7 @@ metadata:
   name: egress-red-west-2
 spec:
   cidr: 100.64.6.0/31
-  vxlanMode: CrossSubnet
-  allowedUses:
-  - Workload
+  allowedUses: ["Workload"]
   awsSubnetID: subnet-000000000000000002
   blockSize: 32
   nodeSelector: "!all()"
@@ -485,9 +482,7 @@ metadata:
   name: egress-blue-west-2
 spec:
   cidr: 100.64.6.2/31
-  vxlanMode: CrossSubnet
-  allowedUses:
-  - Workload
+  allowedUses: ["Workload"]
   awsSubnetID: subnet-000000000000000002
   blockSize: 32
   nodeSelector: "!all()"
