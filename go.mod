@@ -15,7 +15,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
 	github.com/tigera/api v0.0.0-20211028194523-b4ceddaee039
-	github.com/tigera/licensing v1.0.1-0.20211105031323-53a4593b843b
+	github.com/tigera/licensing v1.0.1-0.20211105031908-d59f5204df97
 	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
 	golang.org/x/sys v0.0.0-20210426230700-d19ff857e887 // indirect
 	k8s.io/api v0.22.0
