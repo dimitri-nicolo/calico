@@ -5,6 +5,7 @@ package managedcluster
 import (
 	"context"
 	"fmt"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	es "github.com/tigera/intrusion-detection/controller/pkg/elastic"
@@ -92,10 +93,22 @@ func (r *managedClusterReconciler) startManagedClusterAlertController(name strin
 	}
 
 	alertController, alertHealthPingers := alert.NewGlobalAlertController(managedCLI, r.esCLI, name)
-	select {
-	case r.managedClusterAlertControllerCh <- alertHealthPingers:
-	default:
-		return fmt.Errorf("failed to add health Pinger for GlobalAlertController in cluster %s", name)
+
+	successSendingPinger := false
+	for maxRetries := 5; maxRetries > 0; maxRetries-- {
+		select {
+		case r.managedClusterAlertControllerCh <- alertHealthPingers:
+			successSendingPinger = true
+			break
+		default:
+			log.Infof("Failed to add health Pinger for GlobalAlertController in cluster %s, retries left %d", name, maxRetries)
+			time.Sleep(5 * time.Second)
+		}
+	}
+
+	if !successSendingPinger {
+		return fmt.Errorf("failed to add health Pinger for GlobalAlertController in cluster %s, after retries", name)
+		cancel()
 	}
 
 	r.alertNameToAlertControllerState[name] = alertControllerState{

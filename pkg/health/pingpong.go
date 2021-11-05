@@ -4,11 +4,15 @@ package health
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 )
 
-const PingChannelClosed = "ping_channel_closed"
+const (
+	PingChannelClosed = "ping_channel_closed"
+	PingChannelBusy   = "ping_channel_busy"
+)
 
 // PingPonger is responsible for sending a Ponger on a ping channel and listen for response on pong channel.
 // If PingPonger is closed, it sends an error on receiving a Ping.
@@ -33,7 +37,7 @@ type pingPonger struct {
 
 // Ping sends a Ponger on the ping channel and listen for response on pong channel.
 // If closePingPonger channel is closed, return error and close the ping channel.
-func (p pingPonger) Ping(ctx context.Context) error {
+func (p *pingPonger) Ping(ctx context.Context) error {
 	select {
 	case _, ok := <-p.closePingPonger:
 		if !ok {
@@ -44,7 +48,14 @@ func (p pingPonger) Ping(ctx context.Context) error {
 	}
 
 	ponger := newPonger()
-	p.pings <- ponger
+	select {
+	case p.pings <- ponger:
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return errors.NewInternalError(fmt.Errorf(PingChannelBusy))
+	}
+
 	// Wait for the pong or return an error if the context finishes before we receive one
 	select {
 	case <-ctx.Done():

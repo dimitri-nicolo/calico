@@ -4,7 +4,8 @@ package managedcluster
 
 import (
 	"context"
-	"net/http"
+	"strings"
+	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 
@@ -45,7 +46,7 @@ func NewManagedClusterController(calicoCLI calicoclient.Interface, esCLI *elasti
 		calicoCLI:                          calicoCLI,
 		createManagedCalicoCLI:             createManagedCalicoCLI,
 		managedAlertControllerHealthPinger: health.NewPingPonger(),
-		managedAlertControllerCh:           make(chan []health.Pinger),
+		managedAlertControllerCh:           make(chan []health.Pinger, 100),
 	}
 
 	// Create worker to watch ManagedCluster resource
@@ -95,10 +96,17 @@ func (m *managedClusterController) pingAllManagedAlertController(ctx context.Con
 			// that are shifted are part of already processed slice.
 			for i := len(pingers) - 1; i >= 0; i-- {
 				hp := pingers[i]
-				if err := hp.Ping(ctx); err != nil {
-					if statusError, isStatus := err.(*errors.StatusError); isStatus && statusError.Status().Code == http.StatusGone &&
-						statusError.Status().Message == health.PingChannelClosed {
+				// IDS uses default timeoutSeconds(1s) for livenessProbe. Use the same timeout on individual Pings.
+				chCtx, _ := context.WithTimeout(ctx, 1*time.Second)
+				if err := hp.Ping(chCtx); err != nil {
+					statusError, ok := err.(*errors.StatusError)
+					if ok && statusError.Status().Message == health.PingChannelClosed {
 						pingers = append(pingers[:i], pingers[i+1:]...)
+					} else if ok && strings.Contains(statusError.Status().Message, health.PingChannelBusy) {
+						if err := retryPingOnBusy(ctx, hp); err != nil {
+							pingSuccess = false
+							log.WithError(err).Error("received error on health ping")
+						}
 					} else {
 						pingSuccess = false
 						log.WithError(err).Error("received error on health ping")
@@ -114,4 +122,19 @@ func (m *managedClusterController) pingAllManagedAlertController(ctx context.Con
 			return
 		}
 	}
+}
+
+func retryPingOnBusy(ctx context.Context, hp health.Pinger) error {
+	var err error
+	for maxRetries := 5; maxRetries > 0; maxRetries-- {
+		chCtx, _ := context.WithTimeout(ctx, 1*time.Second)
+		if err = hp.Ping(chCtx); err == nil {
+			break
+		}
+		if statusError, ok := err.(*errors.StatusError); !ok || !strings.Contains(statusError.Status().Message, health.PingChannelBusy) {
+			break
+		}
+		time.Sleep(5 * time.Second)
+	}
+	return err
 }
