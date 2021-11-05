@@ -62,9 +62,9 @@ func main() {
 		}
 	}()
 	var auth = middleware.NewAuth(mustGetAuthenticator(cfg), cache)
-	var locator = capture.NewLocator(cache)
+	var k8sCommands = capture.NewK8sCommands(cache)
 	var fileCommands = capture.NewFileCommands(cache)
-	var files = handlers.NewFiles(cache, locator, fileCommands)
+	var files = handlers.NewFiles(cache, k8sCommands, fileCommands)
 
 	log.Infof("PacketCapture API listening for HTTPS requests at %s", addr)
 	// Define handlers

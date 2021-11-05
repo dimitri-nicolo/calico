@@ -6,14 +6,18 @@ import (
 	"archive/tar"
 	"archive/zip"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"mime"
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 
 	"github.com/tigera/packetcapture-api/pkg/cache"
 	"github.com/tigera/packetcapture-api/pkg/capture"
@@ -31,18 +35,18 @@ const ignoringTarError = "tar: removing leading '/' from member names"
 // the files as a zip archive.
 // For each node that contains packet capture files, it will launch a remote pod/exec command to delete all files.
 type Files struct {
-	capture.Locator
+	capture.K8sCommands
 	capture.FileCommands
 	cache.ClientCache
 	ignoreTarDeleteRegex *regexp.Regexp
 }
 
 // NewFiles creates a new Files structure
-func NewFiles(cache cache.ClientCache, locator capture.Locator, retrieval capture.FileCommands) *Files {
+func NewFiles(cache cache.ClientCache, k8sCommands capture.K8sCommands, retrieval capture.FileCommands) *Files {
 	ignoreTarDeleteRegex, _ := regexp.Compile("tar: (.)+: No such file or directory")
 
 	return &Files{
-		Locator:              locator,
+		K8sCommands:          k8sCommands,
 		FileCommands:         retrieval,
 		ClientCache:          cache,
 		ignoreTarDeleteRegex: ignoreTarDeleteRegex,
@@ -61,7 +65,7 @@ func (f *Files) Download(w http.ResponseWriter, r *http.Request) {
 	var captureName = middleware.CaptureNameFromContext(r.Context())
 	var clusterID = middleware.ClusterIDFromContext(r.Context())
 
-	packetCapture, err := f.Locator.GetPacketCapture(clusterID, captureName, namespace)
+	packetCapture, err := f.K8sCommands.GetPacketCapture(clusterID, captureName, namespace)
 	if err != nil {
 		log.WithError(err).Errorf("Failed to get packet capture %s/%s", namespace, captureName)
 		switch err.(type) {
@@ -84,7 +88,7 @@ func (f *Files) Download(w http.ResponseWriter, r *http.Request) {
 	var filesRead = 0
 	for _, file := range packetCapture.Status.Files {
 		log.Debugf("Copying files %v", file.FileNames)
-		ns, pod, err := f.Locator.GetEntryPod(clusterID, file.Node)
+		ns, pod, err := f.K8sCommands.GetEntryPod(clusterID, file.Node)
 		if err != nil {
 			log.WithError(err).Errorf("Failed locate entry pods for %s/%s", namespace, captureName)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -212,7 +216,7 @@ func (f *Files) Delete(w http.ResponseWriter, r *http.Request) {
 	var captureName = middleware.CaptureNameFromContext(r.Context())
 	var clusterID = middleware.ClusterIDFromContext(r.Context())
 
-	packetCapture, err := f.Locator.GetPacketCapture(clusterID, captureName, namespace)
+	packetCapture, err := f.K8sCommands.GetPacketCapture(clusterID, captureName, namespace)
 	if err != nil {
 		log.WithError(err).Errorf("Failed to get packet capture %s/%s", namespace, captureName)
 		switch err.(type) {
@@ -240,9 +244,10 @@ func (f *Files) Delete(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	var nodes = make(map[string]struct{})
 	for _, file := range packetCapture.Status.Files {
 		log.Debugf("Delete files %v", file)
-		ns, pod, err := f.Locator.GetEntryPod(clusterID, file.Node)
+		ns, pod, err := f.K8sCommands.GetEntryPod(clusterID, file.Node)
 		if err != nil {
 			log.WithError(err).Errorf("Failed locate entry pods for %s/%s", namespace, captureName)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -265,5 +270,52 @@ func (f *Files) Delete(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		nodes[file.Node] = struct{}{}
 	}
+
+	if len(nodes) != len(packetCapture.Status.Files) {
+		log.WithError(err).Error("Failed to delete files from all known nodes")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = f.K8sCommands.UpdatePacketCaptureStatusWithNoFiles(clusterID, captureName, namespace, nodes)
+	if err != nil {
+		switch err.(type) {
+		case cerrors.ErrorResourceUpdateConflict:
+			var ctx = context.Background()
+			var err = retryFor(ctx, 3, 500*time.Millisecond, 2*time.Second, func() error {
+				return f.K8sCommands.UpdatePacketCaptureStatusWithNoFiles(clusterID, captureName, namespace, nodes)
+			})
+			if err != nil {
+				log.WithError(err).Error("Failed to update status for packet capture")
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		default:
+			log.WithError(err).Error("Failed to update status for packet capture")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+func retryFor(ctx context.Context, numberOfRetries int, waitBetweenRetries, timeOut time.Duration, f func() error) error {
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, timeOut)
+	defer cancel()
+	var err error
+	for i := 0; i < numberOfRetries; i++ {
+		select {
+		case <-ctxWithTimeout.Done():
+			return ctxWithTimeout.Err()
+		case <-time.After(waitBetweenRetries):
+			err = f()
+			if err == nil {
+				return nil
+			}
+		}
+	}
+
+	return err
 }

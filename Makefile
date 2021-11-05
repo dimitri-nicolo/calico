@@ -136,7 +136,7 @@ clean:
 MOCKERY_FILE_PATHS= \
 	pkg/cache/ClientCache \
 	pkg/capture/FileCommands \
-	pkg/capture/Locator
+	pkg/capture/K8sCommands
 
 
 GINKGO_ARGS += -cover -timeout 20m
