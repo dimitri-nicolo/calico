@@ -4,6 +4,7 @@ package query
 
 import (
 	"fmt"
+	"go/token"
 	"strings"
 
 	"github.com/alecthomas/participle"
@@ -21,15 +22,24 @@ const (
 	OpAnd Operator = iota
 	OpOr
 	OpNot
+	OpIn
+	OpNotIn
 )
 
 var operatorMap = map[string]Operator{
-	"AND": OpAnd,
-	"&&":  OpAnd,
-	"OR":  OpOr,
-	"||":  OpOr,
-	"NOT": OpNot,
-	"!":   OpNot,
+	"AND":   OpAnd,
+	"and":   OpAnd,
+	"&&":    OpAnd,
+	"OR":    OpOr,
+	"or":    OpOr,
+	"||":    OpOr,
+	"NOT":   OpNot,
+	"not":   OpNot,
+	"!":     OpNot,
+	"IN":    OpIn,
+	"in":    OpIn,
+	"NOTIN": OpNotIn,
+	"notin": OpNotIn,
 }
 
 func (o *Operator) Capture(s []string) error {
@@ -91,17 +101,28 @@ type Atom struct {
 }
 
 type Value struct {
-	Atom     *Atom  `parser:"@@"`
-	Subquery *Query `parser:"| \"(\" @@ \")\""`
+	Atom     *Atom      `parser:"@@"`
+	Set      *SetOpTerm `parser:"| @@"`
+	Subquery *Query     `parser:"| \"(\" @@ \")\""`
+}
+
+type Member struct {
+	Value string `parser:"@(Ident | String)"`
 }
 
 type UnaryOpTerm struct {
-	Negator *Operator `parser:"@(\"NOT\" | \"!\")?"`
+	Negator *Operator `parser:"@(\"NOT\" | \"not\" | \"!\")?"`
 	Value   *Value    `parser:"@@"`
 }
 
+type SetOpTerm struct {
+	Key      string    `parser:"@(Ident | String)"`
+	Operator Operator  `parser:"@(\"IN\" | \"in\" | \"NOTIN\" | \"notin\")"`
+	Members  []*Member `parser:"\"{\" @@ ( \",\" @@ )* \"}\""`
+}
+
 type OpValue struct {
-	Operator Operator     `parser:"@(\"AND\" | \"&&\")"`
+	Operator Operator     `parser:"@(\"AND\" | \"and\" | \"&&\")"`
 	Value    *UnaryOpTerm `parser:"@@"`
 }
 
@@ -111,7 +132,7 @@ type Term struct {
 }
 
 type OpTerm struct {
-	Operator Operator `parser:"@(\"OR\" | \"||\")"`
+	Operator Operator `parser:"@(\"OR\" | \"or\" | \"||\")"`
 	Term     *Term    `parser:"@@"`
 }
 
@@ -130,6 +151,10 @@ func (o Operator) String() string {
 		return "OR"
 	case OpNot:
 		return "NOT"
+	case OpIn:
+		return "IN"
+	case OpNotIn:
+		return "NOTIN"
 	}
 	panic(fmt.Sprintf("unknown operator: %d", o))
 }
@@ -149,12 +174,11 @@ func (c Comparator) String() string {
 	case CmpGte:
 		return ">="
 	}
-	panic(fmt.Sprintf("unknown operator: %d", c))
+	panic(fmt.Sprintf("unknown comparator: %d", c))
 }
 
 func quoteIfNeeded(s string) string {
-	// requires golang 1.13
-	if !(IsKeyword(s) || IsIdentifier(s)) {
+	if !(token.IsKeyword(s) || token.IsIdentifier(s)) {
 		return fmt.Sprintf("%q", s)
 	}
 	return s
@@ -168,10 +192,17 @@ func (v Value) String() string {
 	if v.Atom != nil {
 		return v.Atom.String()
 	}
+	if v.Set != nil {
+		return v.Set.String()
+	}
 	if v.Subquery != nil {
 		return "(" + v.Subquery.String() + ")"
 	}
 	panic("empty value")
+}
+
+func (k Member) String() string {
+	return k.Value
 }
 
 func (v UnaryOpTerm) String() string {
@@ -179,6 +210,14 @@ func (v UnaryOpTerm) String() string {
 		return "NOT " + v.Value.String()
 	}
 	return v.Value.String()
+}
+
+func (t SetOpTerm) String() string {
+	out := []string{}
+	for _, k := range t.Members {
+		out = append(out, k.Value)
+	}
+	return fmt.Sprintf("%s %s {%s}", t.Key, t.Operator, strings.Join(out, ", "))
 }
 
 func (o OpValue) String() string {

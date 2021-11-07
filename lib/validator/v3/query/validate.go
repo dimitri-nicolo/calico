@@ -6,6 +6,11 @@ func (v Value) Atoms() []*Atom {
 	if v.Atom != nil {
 		return []*Atom{v.Atom}
 	}
+	if v.Set != nil {
+		// SetOpTerm doesn't contain Atoms but a set of ident|string.
+		// The validation is enforced by the participle lexer grammar.
+		return nil
+	}
 	if v.Subquery != nil {
 		return v.Subquery.Atoms()
 	}
