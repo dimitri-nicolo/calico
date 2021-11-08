@@ -66,7 +66,7 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 	)
 
 	BeforeEach(func() {
-		// Create a temporary directory to map into the container as /var/run/calico, which
+		// Create a temporary directory to map into the container as /var/run/calico/policysync, which
 		// is where we tell Felix to put the policy sync mounts and credentials.
 		var err error
 		tempDir, err = ioutil.TempDir("", "felixfv")
@@ -74,12 +74,12 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 
 		// Configure felix to enable the policy sync API.
 		options := infrastructure.DefaultTopologyOptions()
-		options.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico"
+		options.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
 		// To enable debug logs, uncomment these lines; watch out for timeouts caused by the
 		// resulting slow down!
 		// options.ExtraEnvVars["FELIX_DebugDisableLogDropping"] = "true"
 		// options.FelixLogSeverity = "debug"
-		options.ExtraVolumes[tempDir] = "/var/run/calico"
+		options.ExtraVolumes[tempDir] = "/var/run/calico/policysync"
 		felix, etcd, calicoClient, infra = infrastructure.StartSingleNodeEtcdTopology(options)
 		infrastructure.CreateDefaultProfile(calicoClient, "default", map[string]string{"default": ""}, "default == ''")
 
@@ -130,7 +130,7 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 			dirName := dirNameForWorkload(wl)
 			hostWlDir := filepath.Join(tempDir, dirName)
 			os.MkdirAll(hostWlDir, 0777)
-			return hostWlDir, filepath.Join("/var/run/calico", dirName)
+			return hostWlDir, filepath.Join("/var/run/calico/policysync", dirName)
 		}
 
 		writeCredentialsToFile := func(credentials *binder.Credentials) error {
@@ -693,12 +693,12 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 
 		// Configure felix to enable the policy sync API.
 		options := infrastructure.DefaultTopologyOptions()
-		options.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico"
+		options.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
 		options.ExtraEnvVars["FELIX_EGRESSIPSUPPORT"] = "EnabledPerNamespace"
 		// Note this is needed so that the FVs will get REMOTE_WORKLOAD RouteUpdates
 		// due to a quirk in how the FVs are setup and run.
 		options.ExtraEnvVars["FELIX_ROUTESOURCE"] = "WorkloadIPs"
-		// Create a temporary directory per Felix node to map into the container as /var/run/calico/routesync, which
+		// Create a temporary directory per Felix node to map into the container as /var/run/calico/policysync, which
 		// is where we tell Felix to put the route sync mounts and credentials.
 		for ii := range tempDirs {
 			t, err := ioutil.TempDir("", fmt.Sprintf("felixfv-%d", ii))
@@ -706,7 +706,7 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 			tempDirs[ii] = t
 			options.PerNodeOptions = append(options.PerNodeOptions, infrastructure.PerNodeOptions{
 				ExtraVolumes: map[string]string{
-					t: "/var/run/calico",
+					t: "/var/run/calico/policysync",
 				},
 			})
 			hostMgmtCredsPath[ii] = filepath.Join(t, binder.CredentialsSubdir)
@@ -765,7 +765,7 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 			dirName := dirNameForWorkload(wl)
 			hostWlDir := filepath.Join(tempDir, dirName)
 			os.MkdirAll(hostWlDir, 0777)
-			return hostWlDir, filepath.Join("/var/run/calico", dirName)
+			return hostWlDir, filepath.Join("/var/run/calico/policysync", dirName)
 		}
 
 		writeCredentialsToFile := func(tempDir string, credsPath string, credentials *binder.Credentials) error {
