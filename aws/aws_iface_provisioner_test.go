@@ -91,7 +91,9 @@ const (
 	ipPoolIDWest2Gateways = "pool-west-2-gateways"
 
 	// t3LargeCapacity Expected secondary IP capacity of a t3.large instance.
-	t3LargeCapacity = 22
+	t3LargeCapacityPerENI = 11
+	t3LargeNumSecondaryENIs = 2
+	t3LargeCapacity = t3LargeCapacityPerENI * t3LargeNumSecondaryENIs
 )
 
 var (
@@ -775,11 +777,44 @@ func TestSecondaryIfaceProvisioner_MultiENISingleShot(t *testing.T) {
 	Expect(response.SecondaryENIsByMAC).To(HaveLen(2), "Expected exactly two AWS ENIs.")
 
 	// IPs will be assigned randomly to the two ENIs so grab and compare the full list.
+	expectAllIPs(response, addrs)
+}
+
+func TestSecondaryIfaceProvisioner_TestAssignmentAfterFillingNode(t *testing.T) {
+	sip, _, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Blast in the maximum number of IPs in one shot.
+	ds, addrs := nWorkloadDatastore(t3LargeCapacity)
+	sip.OnDatastoreUpdate(ds)
+	var response *LocalAWSNetworkState
+	Eventually(sip.ResponseC()).Should(Receive(&response))
+	Expect(response.SecondaryENIsByMAC).To(HaveLen(2), "Expected exactly two AWS ENIs.")
+	expectAllIPs(response, addrs)
+
+	// Drop back down to 0 IPs.
+	ds, addrs = nWorkloadDatastore(0)
+	sip.OnDatastoreUpdate(ds)
+	Eventually(sip.ResponseC()).Should(Receive(&response))
+	// Still expect two ENIs.
+	Expect(response.SecondaryENIsByMAC).To(HaveLen(2), "Expected exactly two AWS ENIs.")
+	expectAllIPs(response, addrs)
+
+	// Jump back up to fill exactly one ENI.
+	ds, addrs = nWorkloadDatastore(t3LargeCapacityPerENI)
+	sip.OnDatastoreUpdate(ds)
+	Eventually(sip.ResponseC()).Should(Receive(&response))
+	// Still expect two ENIs.
+	Expect(response.SecondaryENIsByMAC).To(HaveLen(2), "Expected exactly two AWS ENIs.")
+	expectAllIPs(response, addrs)
+}
+
+func expectAllIPs(response *LocalAWSNetworkState, addrs []ip.Addr) {
 	firstIface := response.SecondaryENIsByMAC[firstAllocatedMAC.String()]
 	secondIface := response.SecondaryENIsByMAC[secondAllocatedMAC.String()]
 	allIPs := append([]ip.Addr{}, firstIface.SecondaryIPv4Addrs...)
 	allIPs = append(allIPs, secondIface.SecondaryIPv4Addrs...)
-	Expect(allIPs).To(ConsistOf(addrs))
+	ExpectWithOffset(1, allIPs).To(ConsistOf(addrs))
 }
 
 func nWorkloadDatastore(n int) (DatastoreState, []ip.Addr) {
