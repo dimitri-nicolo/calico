@@ -91,7 +91,9 @@ const (
 	ipPoolIDWest2Gateways = "pool-west-2-gateways"
 
 	// t3LargeCapacity Expected secondary IP capacity of a t3.large instance.
-	t3LargeCapacity = 22
+	t3LargeCapacityPerENI = 11
+	t3LargeNumSecondaryENIs = 2
+	t3LargeCapacity = t3LargeCapacityPerENI * t3LargeNumSecondaryENIs
 )
 
 var (
@@ -799,7 +801,7 @@ func TestSecondaryIfaceProvisioner_TestAssignmentAfterFillingNode(t *testing.T) 
 	expectAllIPs(response, addrs)
 
 	// Jump back up to fill exactly one ENI.
-	ds, addrs = nWorkloadDatastore(11)
+	ds, addrs = nWorkloadDatastore(t3LargeCapacityPerENI)
 	sip.OnDatastoreUpdate(ds)
 	Eventually(sip.ResponseC()).Should(Receive(&response))
 	// Still expect two ENIs.
