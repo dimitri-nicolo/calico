@@ -1,0 +1,6 @@
+{"index":{"_index":"tigera_secure_ee_events.test-cluster"}}
+{"alert":"sample-test","description":"test alert: sample-test","record":{"count":9,"source_name_aggr":"tigera-manager-6999478494-*","source_namespace":"tigera-manager"},"severity":100,"time":1637829814,"type":"alert"}
+{"index":{"_index":"tigera_secure_ee_events.test-cluster"}}
+{"alert":"sample-test","description":"test alert: sample-test","record":{"count":10,"source_name_aggr":"fluentd-node-*","source_namespace":"tigera-fluentd"},"severity":100,"time":1637860454,"type":"alert"}
+{"index":{"_index":"tigera_secure_ee_events.test-cluster"}}
+{"alert":"sample-test","description":"test alert: sample-test","record":{"count":5,"source_name_aggr":"prometheus-calico-node-prometheus-*","source_namespace":"tigera-prometheus"},"severity":100,"time":1637860454,"type":"alert"}

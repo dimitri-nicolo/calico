@@ -62,6 +62,9 @@ func (c converter) valueToElastic(v *query.Value) JsonObject {
 	if v.Atom != nil {
 		return c.atomToElastic(v.Atom)
 	}
+	if v.Set != nil {
+		return c.setOpTermToElastic(v.Set)
+	}
 	if v.Subquery != nil {
 		return c.Convert(v.Subquery)
 	}
@@ -77,6 +80,33 @@ func (c converter) unaryOpTermToElastic(v *query.UnaryOpTerm) JsonObject {
 		}
 	}
 	return c.valueToElastic(v.Value)
+}
+
+func (c converter) setOpTermToElastic(s *query.SetOpTerm) JsonObject {
+	terms := []JsonObject{}
+	for _, k := range s.Members {
+		terms = append(terms, JsonObject{
+			"wildcard": JsonObject{
+				s.Key: JsonObject{
+					"value": k.Value,
+				},
+			},
+		})
+	}
+
+	if s.Operator == query.OpNotIn {
+		return JsonObject{
+			"bool": JsonObject{
+				"must_not": terms,
+			},
+		}
+	}
+
+	return JsonObject{
+		"bool": JsonObject{
+			"should": terms,
+		},
+	}
 }
 
 func (c converter) opValueToElastic(o *query.OpValue) JsonObject {

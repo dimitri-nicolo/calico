@@ -1,0 +1,27 @@
+{
+  "hits": {
+    "hits": [],
+    "total": {
+      "value": 9,
+      "relation": "eq"
+    },
+    "max_score": null
+  },
+  "aggregations": {
+    "composite_aggs" : {
+      "after_key" : {
+        "source_name_aggr" : "tigera-manager-6b665bb867-*",
+        "source_namespace" : "tigera-manager"
+      },
+      "buckets" : [
+	{
+          "key" : {
+            "source_name_aggr" : "tigera-manager-6999478494-*",
+            "source_namespace" : "tigera-manager"
+          },
+          "doc_count" : 825
+        }
+      ]
+    }
+  }
+}

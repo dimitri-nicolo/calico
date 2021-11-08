@@ -1,0 +1,245 @@
+{
+  "hits": {
+    "total": {
+      "value": 1751,
+      "relation": "eq"
+    },
+    "hits": [
+	    {
+        "_index" : "tigera_secure_ee_flows.cluster.fluentd-20211122-000001",
+        "_type" : "_doc",
+        "_id" : "kPrKSX0BYTjC6QaGjsmp",
+        "_score" : 2.5538228,
+        "_source" : {
+          "start_time" : 1637620242,
+          "end_time" : 1637620546,
+          "source_ip" : null,
+          "source_name" : "-",
+          "source_name_aggr" : "tigera-manager-6b665bb867-*",
+          "source_namespace" : "tigera-manager",
+          "source_port" : null,
+          "source_type" : "wep",
+          "source_labels" : {
+            "labels" : [
+              "pod-template-hash=6b665bb867",
+              "k8s-app=tigera-manager"
+            ]
+          },
+          "dest_ip" : null,
+          "dest_name" : "-",
+          "dest_name_aggr" : "coredns-558bd4d5db-*",
+          "dest_namespace" : "kube-system",
+          "dest_port" : 53,
+          "dest_type" : "wep",
+          "dest_labels" : {
+            "labels" : [
+              "pod-template-hash=558bd4d5db",
+              "k8s-app=kube-dns"
+            ]
+          },
+          "dest_service_namespace" : "-",
+          "dest_service_name" : "-",
+          "dest_service_port" : "-",
+          "dest_service_port_num" : null,
+          "proto" : "udp",
+          "action" : "allow",
+          "reporter" : "dst",
+          "policies" : {
+            "all_policies" : [
+              "0|__PROFILE__|__PROFILE__.kns.kube-system|allow|0"
+            ]
+          },
+          "bytes_in" : 730,
+          "bytes_out" : 1279,
+          "num_flows" : 6,
+          "num_flows_started" : 6,
+          "num_flows_completed" : 6,
+          "packets_in" : 6,
+          "packets_out" : 6,
+          "http_requests_allowed_in" : 0,
+          "http_requests_denied_in" : 0,
+          "process_name" : "-",
+          "num_process_names" : 0,
+          "process_id" : "-",
+          "num_process_ids" : 0,
+          "process_args" : [
+            "-"
+          ],
+          "num_process_args" : 0,
+          "original_source_ips" : null,
+          "num_original_source_ips" : 0,
+          "tcp_mean_send_congestion_window" : 0,
+          "tcp_min_send_congestion_window" : 0,
+          "tcp_mean_smooth_rtt" : 0,
+          "tcp_max_smooth_rtt" : 0,
+          "tcp_mean_min_rtt" : 0,
+          "tcp_max_min_rtt" : 0,
+          "tcp_mean_mss" : 0,
+          "tcp_min_mss" : 0,
+          "tcp_total_retransmissions" : 0,
+          "tcp_lost_packets" : 0,
+          "tcp_unrecovered_to" : 0,
+          "host" : "jwhuang-bz-obee-kadm-infra-0",
+          "@timestamp" : 1637620546000
+        }
+      },
+      {
+        "_index" : "tigera_secure_ee_flows.cluster.fluentd-20211122-000001",
+        "_type" : "_doc",
+        "_id" : "pvrKSX0BYTjC6QaGjsmp",
+        "_score" : 2.5538228,
+        "_source" : {
+          "start_time" : 1637620242,
+          "end_time" : 1637620546,
+          "source_ip" : null,
+          "source_name" : "-",
+          "source_name_aggr" : "tigera-manager-6b665bb867-*",
+          "source_namespace" : "tigera-manager",
+          "source_port" : null,
+          "source_type" : "wep",
+          "source_labels" : {
+            "labels" : [
+              "k8s-app=tigera-manager",
+              "pod-template-hash=6b665bb867"
+            ]
+          },
+          "dest_ip" : null,
+          "dest_name" : "-",
+          "dest_name_aggr" : "coredns-558bd4d5db-*",
+          "dest_namespace" : "kube-system",
+          "dest_port" : 53,
+          "dest_type" : "wep",
+          "dest_labels" : {
+            "labels" : [
+              "pod-template-hash=558bd4d5db",
+              "k8s-app=kube-dns"
+            ]
+          },
+          "dest_service_namespace" : "kube-system",
+          "dest_service_name" : "kube-dns",
+          "dest_service_port" : "dns",
+          "dest_service_port_num" : 53,
+          "proto" : "udp",
+          "action" : "allow",
+          "reporter" : "dst",
+          "policies" : {
+            "all_policies" : [
+              "0|__PROFILE__|__PROFILE__.kns.kube-system|allow|0"
+            ]
+          },
+          "bytes_in" : 730,
+          "bytes_out" : 1279,
+          "num_flows" : 6,
+          "num_flows_started" : 6,
+          "num_flows_completed" : 6,
+          "packets_in" : 6,
+          "packets_out" : 6,
+          "http_requests_allowed_in" : 0,
+          "http_requests_denied_in" : 0,
+          "process_name" : "-",
+          "num_process_names" : 0,
+          "process_id" : "-",
+          "num_process_ids" : 0,
+          "process_args" : [
+            "-"
+          ],
+          "num_process_args" : 0,
+          "original_source_ips" : null,
+          "num_original_source_ips" : 0,
+          "tcp_mean_send_congestion_window" : 0,
+          "tcp_min_send_congestion_window" : 0,
+          "tcp_mean_smooth_rtt" : 0,
+          "tcp_max_smooth_rtt" : 0,
+          "tcp_mean_min_rtt" : 0,
+          "tcp_max_min_rtt" : 0,
+          "tcp_mean_mss" : 0,
+          "tcp_min_mss" : 0,
+          "tcp_total_retransmissions" : 0,
+          "tcp_lost_packets" : 0,
+          "tcp_unrecovered_to" : 0,
+          "host" : "jwhuang-bz-obee-kadm-infra-0",
+          "@timestamp" : 1637620546000
+        }
+      },
+      {
+        "_index" : "tigera_secure_ee_flows.cluster.fluentd-20211122-000001",
+        "_type" : "_doc",
+        "_id" : "RfrLSX0BYTjC6QaGW8uW",
+        "_score" : 2.5538228,
+        "_source" : {
+          "start_time" : 1637620295,
+          "end_time" : 1637620597,
+          "source_ip" : null,
+          "source_name" : "-",
+          "source_name_aggr" : "tigera-manager-6b665bb867-*",
+          "source_namespace" : "tigera-manager",
+          "source_port" : null,
+          "source_type" : "wep",
+          "source_labels" : {
+            "labels" : [
+              "k8s-app=tigera-manager",
+              "pod-template-hash=6b665bb867"
+            ]
+          },
+          "dest_ip" : null,
+          "dest_name" : "-",
+          "dest_name_aggr" : "tigera-secure-es-gateway-67c9896565-*",
+          "dest_namespace" : "tigera-elasticsearch",
+          "dest_port" : 5554,
+          "dest_type" : "wep",
+          "dest_labels" : {
+            "labels" : [
+              "k8s-app=tigera-secure-es-gateway",
+              "pod-template-hash=67c9896565"
+            ]
+          },
+          "dest_service_namespace" : "-",
+          "dest_service_name" : "-",
+          "dest_service_port" : "-",
+          "dest_service_port_num" : null,
+          "proto" : "tcp",
+          "action" : "allow",
+          "reporter" : "dst",
+          "policies" : {
+            "all_policies" : [
+              "0|__PROFILE__|__PROFILE__.kns.tigera-elasticsearch|allow|0",
+              "0|allow-tigera|tigera-elasticsearch/allow-tigera.es-gateway-access|allow|4"
+            ]
+          },
+          "bytes_in" : 4949,
+          "bytes_out" : 11094,
+          "num_flows" : 3,
+          "num_flows_started" : 3,
+          "num_flows_completed" : 3,
+          "packets_in" : 47,
+          "packets_out" : 47,
+          "http_requests_allowed_in" : 0,
+          "http_requests_denied_in" : 0,
+          "process_name" : "/es-gateway",
+          "num_process_names" : 1,
+          "process_id" : "22707",
+          "num_process_ids" : 1,
+          "process_args" : [
+            "-"
+          ],
+          "num_process_args" : 0,
+          "original_source_ips" : null,
+          "num_original_source_ips" : 0,
+          "tcp_mean_send_congestion_window" : 0,
+          "tcp_min_send_congestion_window" : 0,
+          "tcp_mean_smooth_rtt" : 0,
+          "tcp_max_smooth_rtt" : 0,
+          "tcp_mean_min_rtt" : 0,
+          "tcp_max_min_rtt" : 0,
+          "tcp_mean_mss" : 0,
+          "tcp_min_mss" : 0,
+          "tcp_total_retransmissions" : 0,
+          "tcp_lost_packets" : 0,
+          "tcp_unrecovered_to" : 0,
+          "host" : "jwhuang-bz-obee-kadm-node-1",
+          "@timestamp" : 1637620597000
+        }
+      }
+    ]
+  }
+}
