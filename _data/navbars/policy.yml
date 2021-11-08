@@ -7,7 +7,7 @@ section:
 - title: Tiered network policy
   path: /security/
   section:
-  - title: Create tiered policy
+  - title: Get started with tiered policy
     path: /security/tiered-policy
   - title: Create RBAC for tiered policy
     path: /security/rbac-tiered-policies
