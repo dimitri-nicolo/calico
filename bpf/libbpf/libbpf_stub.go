@@ -63,6 +63,10 @@ func (o *Obj) AttachKprobe(progName, fn string) (*Link, error) {
 	panic("LIBBPF syscall stub")
 }
 
+func (o *Obj) AttachCGroup(_, _ string) (*Link, error) {
+	panic("LIBBPF syscall stub")
+}
+
 func CreateQDisc(ifName string) error {
 	panic("LIBBPF syscall stub")
 }
@@ -87,7 +91,7 @@ func (m *Map) IsMapInternal() bool {
 	panic("LIBBPF syscall stub")
 }
 
-func SetGlobalVars(m *Map, hostIP, intfIP, extToSvcMark uint32, tmtu, vxlanPort, psNatStart, psNatLen, vethNS uint16,
+func TcSetGlobals(m *Map, hostIP, intfIP, extToSvcMark uint32, tmtu, vxlanPort, psNatStart, psNatLen, vethNS uint16,
 	enableTcpStats, isEgressGatway, isEgressClient bool) error {
 	panic("LIBBPF syscall stub")
 }

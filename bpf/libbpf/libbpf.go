@@ -18,6 +18,7 @@ package libbpf
 
 import (
 	"fmt"
+	"os"
 	"unsafe"
 
 	"github.com/projectcalico/felix/bpf"
@@ -101,7 +102,7 @@ func (o *Obj) FirstMap() (*Map, error) {
 }
 
 // NextMap returns the successive maps given the first map.
-// Returns nil if the map is nil, no error as this is the last map.
+// Returns nil, no error at the end of the list.
 func (m *Map) NextMap() (*Map, error) {
 	bpfMap, err := C.bpf_map__next(m.bpfMap, m.bpfObj)
 	if err != nil {
@@ -217,8 +218,39 @@ func (o *Obj) Close() error {
 	return fmt.Errorf("error: libbpf obj nil")
 }
 
-func SetGlobalVars(m *Map, hostIP, intfIP, extToSvcMark uint32, tmtu, vxlanPort, psNatStart, psNatLen, vethNS uint16,
-	enableTcpStats, isEgressGatway, isEgressClient bool) error {
+func (o *Obj) AttachCGroup(cgroup, progName string) (*Link, error) {
+	cProgName := C.CString(progName)
+	defer C.free(unsafe.Pointer(cProgName))
+
+	f, err := os.OpenFile(cgroup, os.O_RDONLY, 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to join cgroup %s: %w", cgroup, err)
+	}
+	defer f.Close()
+	fd := int(f.Fd())
+
+	link, err := C.bpf_program_attach_cgroup(o.obj, C.int(fd), cProgName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to attach %s to cgroup %s: %w", progName, cgroup, err)
+	}
+
+	return &Link{link: link}, nil
+}
+
+func TcSetGlobals(
+	m *Map,
+	hostIP uint32,
+	intfIP uint32,
+	extToSvcMark uint32,
+	tmtu uint16,
+	vxlanPort uint16,
+	psNatStart uint16,
+	psNatLen uint16,
+	vethNS uint16,
+	enableTcpStats bool,
+	isEgressGatway bool,
+	isEgressClient bool,
+) error {
 	var tcpStats, egw, egc C.uchar
 	if enableTcpStats {
 		tcpStats = 1
@@ -229,7 +261,20 @@ func SetGlobalVars(m *Map, hostIP, intfIP, extToSvcMark uint32, tmtu, vxlanPort,
 	if isEgressClient {
 		egc = 1
 	}
-	_, err := C.bpf_set_global_vars(m.bpfMap, C.uint(hostIP), C.uint(intfIP), C.uint(extToSvcMark),
-		C.ushort(tmtu), C.ushort(vxlanPort), C.ushort(psNatStart), C.ushort(psNatLen), C.ushort(vethNS), tcpStats, egw, egc)
+
+	_, err := C.bpf_tc_set_globals(m.bpfMap,
+		C.uint(hostIP),
+		C.uint(intfIP),
+		C.uint(extToSvcMark),
+		C.ushort(tmtu),
+		C.ushort(vxlanPort),
+		C.ushort(psNatStart),
+		C.ushort(psNatLen),
+		C.ushort(vethNS),
+		tcpStats,
+		egw,
+		egc,
+	)
+
 	return err
 }
