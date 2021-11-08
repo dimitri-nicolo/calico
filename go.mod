@@ -3,10 +3,10 @@ module github.com/tigera/honeypod-controller
 go 1.16
 
 replace (
-	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20211029031043-2818386f0bd3
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20211101191634-b25b811c7302
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211028223111-11b10e01b33d
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211028224705-64195140a910
+	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20211105034335-888aaae3a76e
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20211108181520-53847c4daacd
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211102141335-86ba0f7e2557
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211105162547-3fd786c03c6c
 
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.0-rc.0
@@ -40,8 +40,8 @@ require (
 	github.com/onsi/gomega v1.10.1
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/sirupsen/logrus v1.8.1
-	github.com/tigera/licensing v1.0.1-0.20211028223522-6b45a0a46366
-	github.com/tigera/lma v0.0.0-20211029031717-95dbc4e85ffe
+	github.com/tigera/licensing v1.0.1-0.20211105031908-d59f5204df97
+	github.com/tigera/lma v0.0.0-20211105035025-62200ecad14e
 	k8s.io/apiserver v0.22.0 // indirect
 	k8s.io/client-go v11.0.0+incompatible // indirect
 )
