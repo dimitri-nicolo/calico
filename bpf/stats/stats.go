@@ -21,6 +21,11 @@ import (
 )
 
 func AttachTcpStatsBpfProgram(ifaceName, logLevel string, nsID uint16) error {
+	err := tc.EnsureQdisc(ifaceName)
+	if err != nil {
+		return err
+	}
+
 	logLevel = strings.ToLower(logLevel)
 	if logLevel == "off" {
 		logLevel = "no_log"

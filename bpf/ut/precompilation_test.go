@@ -42,8 +42,6 @@ func TestTcpStatsBinaryIsLoadable(t *testing.T) {
 			RegisterTestingT(t)
 			vethName, veth := createVeth()
 			defer deleteLink(veth)
-			err = tc.EnsureQdisc(vethName)
-			Expect(err).NotTo(HaveOccurred())
 			err = stats.AttachTcpStatsBpfProgram(vethName, logLevel, 0)
 			Expect(err).NotTo(HaveOccurred())
 		})
