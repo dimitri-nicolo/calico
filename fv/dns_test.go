@@ -293,7 +293,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		// triggered by shutdown instead of by a periodic timer.
 		opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "3600"
 		opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = strings.Join(GetLocalNameservers(), ",")
-		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico"
+		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
 		opts.ExtraEnvVars["FELIX_DNSLOGSFILEDIRECTORY"] = "/dnsinfo"
 		opts.ExtraEnvVars["FELIX_DNSLOGSFLUSHINTERVAL"] = "1"
 		if enableLogs {
@@ -788,7 +788,7 @@ var _ = Describe("DNS Policy Improvements", func() {
 		dnsserver = dns.StartServer(dnsRecords)
 
 		opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = dnsserver.IP
-		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico"
+		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
 		opts.ExtraEnvVars["FELIX_DEBUGDNSRESPONSEDELAY"] = "200"
 		opts.ExtraEnvVars["FELIX_DebugConsoleEnabled"] = "true"
 		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
