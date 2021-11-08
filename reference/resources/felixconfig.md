@@ -113,6 +113,7 @@ spec:
 | flowLogsCollectTcpStats | When set to `true`, Felix will collect the TCP socket stats. | `true`, `false` | boolean | `true` |
 | flowLogsCollectProcessPath | When set to `true`, along with flowLogsCollectProcessInfo, each flow log will include the full path of the executable and the arguments with which the executable was invoked. | `true`, `false` | boolean | `false` |
 | flowLogsFilePerFlowProcessLimit | Specify the maximum number of flow log entries with distinct process information beyond which process information will be aggregated | int | int | `2` |
+| flowLogsFileNatOutgoingPortLimit | Specify the maximum number of distinct post SNAT ports that will appear in the flowLogs | int | int | `3` |
 | flowLogsFilePerFlowProcessArgsLimit | Specify the maximum number of unique arguments in the flowlogs beyond which process arguments will be aggregated | int | int | `5` |
 | statsDumpFilePath | Specify the position of the file used for dumping flow log statistics on Linux nodes. Note this is an internal setting that users shouldn't need to modify.| string | string | `/var/log/calico/stats/dump` |
 | routeTableRange                    | Calico programs additional Linux route tables for various purposes.  `RouteTableRange` specifies the indices of the route tables that Calico should use. |  | [RouteTableRange](#routetablerange) | `{Min: 1, Max: 250}` |
