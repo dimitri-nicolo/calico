@@ -1371,6 +1371,10 @@ func (m *SecondaryIfaceProvisioner) assignSecondaryIPsToENIs(resyncState *eniRes
 	remainingRoutes := filteredRoutes
 	var fatalErr error
 	for eniID, freeIPs := range resyncState.freeIPv4CapacityByENIID {
+		if len(remainingRoutes) == 0 {
+			// We're done.
+			break
+		}
 		if freeIPs == 0 {
 			continue
 		}
