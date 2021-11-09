@@ -1,0 +1,96 @@
+{
+  "index_patterns": [
+    "tigera_secure_ee_runtime*"
+  ],
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0
+  },
+  "mappings": {
+    "properties": {
+      "count": {
+        "type": "integer"
+      },
+      "type": {
+        "type": "keyword"
+      },
+      "start_time": {
+        "type": "date"
+      },
+      "end_time": {
+        "type": "date"
+      },
+      "notes": {
+        "type": "keyword"
+      },
+      "invocation": {
+        "type": "keyword"
+      },
+      "container_id": {
+        "type": "keyword"
+      },
+      "pod": {
+        "properties": {
+          "namespace": {
+            "type": "keyword"
+          },
+          "name": {
+            "type": "keyword"
+          },
+          "prefix": {
+            "type": "keyword"
+          },
+          "container_name": {
+            "type": "keyword"
+          }
+        }
+      },
+      "file": {
+        "properties": {
+          "path": {
+            "type": "keyword"
+          }
+        }
+      },
+      "process_start": {
+        "properties": {
+          "args": {
+            "type": "keyword"
+          },
+          "hashes": {
+            "properties": {
+              "md5": {
+                "type": "keyword"
+              },
+              "sha1": {
+                "type": "keyword"
+              },
+              "sha256": {
+                "type": "keyword"
+              }
+            }
+          }
+        }
+      },
+      "file_open": {
+        "properties": {
+          "for_read": {
+            "type": "boolean"
+          },
+          "for_write": {
+            "type": "boolean"
+          },
+          "may_create": {
+            "type": "boolean"
+          },
+          "full_flags": {
+            "type": "integer"
+          },
+          "create_mode": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  }
+}

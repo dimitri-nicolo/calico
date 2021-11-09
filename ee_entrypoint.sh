@@ -48,10 +48,10 @@ if [ "${MANAGED_K8S}" == "true" ]; then
 
   source ${ROOT_DIR}/bin/splunk-environment.sh
   source ${ROOT_DIR}/bin/splunk-config.sh
-  
+
   source ${ROOT_DIR}/bin/sumo-environment.sh
   source ${ROOT_DIR}/bin/sumo-config.sh
-  
+
   cat ${ROOT_DIR}/fluentd/etc/outputs/out-eks-audit-es.conf >> ${ROOT_DIR}/fluentd/etc/fluent.conf
   echo >> ${ROOT_DIR}/fluentd/etc/fluent.conf
 
@@ -81,6 +81,10 @@ sed -i 's|"number_of_replicas": *[0-9]\+|"number_of_replicas": '"$ELASTIC_BGP_IN
 sed -i 's|"number_of_shards": *[0-9]\+|"number_of_shards": '"$ELASTIC_L7_INDEX_SHARDS"'|g' ${ROOT_DIR}/fluentd/etc/elastic_mapping_l7.template
 sed -i 's|"number_of_replicas": *[0-9]\+|"number_of_replicas": '"$ELASTIC_L7_INDEX_REPLICAS"'|g' ${ROOT_DIR}/fluentd/etc/elastic_mapping_l7.template
 
+# Set the number of shards and replicas for index tigera_secure_ee_runtime
+sed -i 's|"number_of_shards": *[0-9]\+|"number_of_shards": '"$ELASTIC_RUNTIME_INDEX_SHARDS"'|g' ${ROOT_DIR}/fluentd/etc/elastic_mapping_runtime.template
+sed -i 's|"number_of_replicas": *[0-9]\+|"number_of_replicas": '"$ELASTIC_RUNTIME_INDEX_REPLICAS"'|g' ${ROOT_DIR}/fluentd/etc/elastic_mapping_runtime.template
+
 # Build the fluentd configuration file bit by bit, because order is important.
 # Add the sources.
 cat ${ROOT_DIR}/fluentd/etc/fluent_sources.conf >> ${ROOT_DIR}/fluentd/etc/fluent.conf
@@ -104,12 +108,18 @@ if [ "${FLUENTD_L7_FILTERS}" == "true" ]; then
   echo >> ${ROOT_DIR}/fluentd/etc/fluent.conf
 fi
 
+# Append additional filter blocks to the fluentd config if provided.
+if [ "${FLUENTD_RUNTIME_FILTERS}" == "true" ]; then
+  cat ${ROOT_DIR}/etc/fluentd/runtime-filters.conf >> ${ROOT_DIR}/fluentd/etc/fluent.conf
+  echo >> ${ROOT_DIR}/fluentd/etc/fluent.conf
+fi
+
 # Record transformations to add additional identifiers.
 cat ${ROOT_DIR}/fluentd/etc/fluent_transforms.conf >> ${ROOT_DIR}/fluentd/etc/fluent.conf
 echo >> ${ROOT_DIR}/fluentd/etc/fluent.conf
 
-# Exclude specific ES outputs based on ENV variable flags. Note, if ES output is disabled here for a log type, depending on whether 
-# another output destination is enabled, we may need to disable the output match directive for the log type completely (see later 
+# Exclude specific ES outputs based on ENV variable flags. Note, if ES output is disabled here for a log type, depending on whether
+# another output destination is enabled, we may need to disable the output match directive for the log type completely (see later
 # on in this script).
 if [ -z ${DISABLE_ES_FLOW_LOG} ] || [ "${DISABLE_ES_FLOW_LOG}" == "false" ]; then
   cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-flows.conf ${ROOT_DIR}/fluentd/etc/output_flows/out-es.conf
@@ -129,9 +139,12 @@ fi
 if [ -z ${DISABLE_ES_L7_LOG} ] || [ "${DISABLE_ES_L7_LOG}" == "false" ]; then
   cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-l7.conf ${ROOT_DIR}/fluentd/etc/output_l7/out-es.conf
 fi
+if [ -z ${DISABLE_ES_RUNTIME_LOG} ] || [ "${DISABLE_ES_RUNTIME_LOG}" == "false" ]; then
+  cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-runtime.conf ${ROOT_DIR}/fluentd/etc/output_runtime/out-es.conf
+fi
 # Check if we should strip out the secure settings from the configuration file.
 if [ -z ${FLUENTD_ES_SECURE} ] || [ "${FLUENTD_ES_SECURE}" == "false" ]; then
-  for x in flows dns tsee_audit kube_audit bgp l7; do
+  for x in flows dns tsee_audit kube_audit bgp l7 runtime; do
     remove_secure_es_conf $x
   done
 fi
@@ -143,6 +156,7 @@ if [ "${S3_STORAGE}" == "true" ]; then
   cp ${ROOT_DIR}/fluentd/etc/outputs/out-s3-kube-audit.conf ${ROOT_DIR}/fluentd/etc/output_kube_audit/out-s3.conf
   cp ${ROOT_DIR}/fluentd/etc/outputs/out-s3-compliance-reports.conf ${ROOT_DIR}/fluentd/etc/output_compliance_reports/out-s3.conf
   cp ${ROOT_DIR}/fluentd/etc/outputs/out-s3-l7.conf ${ROOT_DIR}/fluentd/etc/output_l7/out-s3.conf
+  cp ${ROOT_DIR}/fluentd/etc/outputs/out-s3-runtime.conf ${ROOT_DIR}/fluentd/etc/output_runtime/out-s3.conf
 fi
 
 source ${ROOT_DIR}/bin/syslog-environment.sh
@@ -186,10 +200,16 @@ if [ -z ${DISABLE_ES_AUDIT_KUBE_LOG} ] || [ "${DISABLE_ES_AUDIT_KUBE_LOG}" == "f
   echo >> ${ROOT_DIR}/fluentd/etc/fluent.conf
 fi
 
-# Include output destination for BGP logs when forwarding to ES is not disabled. Currently, BGP logs do not get forwarded to any other 
+# Include output destination for BGP logs when forwarding to ES is not disabled. Currently, BGP logs do not get forwarded to any other
 # destinations other than ES (may change in the future).
 if [ -z ${DISABLE_ES_BGP_LOG} ] || [ "${DISABLE_ES_BGP_LOG}" == "false" ]; then
   cat ${ROOT_DIR}/fluentd/etc/output_match/bgp.conf >> ${ROOT_DIR}/fluentd/etc/fluent.conf
+  echo >> ${ROOT_DIR}/fluentd/etc/fluent.conf
+fi
+
+# Include output destination for runtime security logs when (1) forwarding to ES is not disabled or (2) one of the other destinations for runtime security report logs is turned on.
+if [ -z ${DISABLE_ES_RUNTIME_LOG} ] || [ "${DISABLE_ES_RUNTIME_LOG}" == "false" ] || [ "${SYSLOG_RUNTIME_LOG}" == "true" ] || [ "${SPLUNK_RUNTIME_LOG}" == "true" ] || [ "${SUMO_RUNTIME_LOG}" == "true" ] || [ "${S3_STORAGE}" == "true" ]; then
+  cat ${ROOT_DIR}/fluentd/etc/output_match/runtime.conf >> ${ROOT_DIR}/fluentd/etc/fluent.conf
   echo >> ${ROOT_DIR}/fluentd/etc/fluent.conf
 fi
 
