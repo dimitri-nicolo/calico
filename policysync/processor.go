@@ -273,7 +273,7 @@ func (p *Processor) handleDataplane(update interface{}) {
 	default:
 		log.WithFields(log.Fields{
 			"type": reflect.TypeOf(update),
-		}).Warn("Unhandled update")
+		}).Debug("Unhandled update")
 	}
 }
 
