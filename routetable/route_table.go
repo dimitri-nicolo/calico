@@ -81,11 +81,12 @@ const (
 type TargetType string
 
 const (
-	TargetTypeLocal         TargetType = "local"
-	TargetTypeVXLAN         TargetType = "vxlan"
-	TargetTypeNoEncap       TargetType = "noencap"
-	TargetTypeOnLink        TargetType = "onlink"
-	TargetTypeGlobalUnicast TargetType = "unicast"
+	TargetTypeLocal            TargetType = "local"
+	TargetTypeVXLAN            TargetType = "vxlan"
+	TargetTypeNoEncap          TargetType = "noencap"
+	TargetTypeOnLink           TargetType = "onlink"
+	TargetTypeGlobalUnicast    TargetType = "global-unicast"
+	TargetTypeLinkLocalUnicast TargetType = "local-unicast"
 
 	// The following target types should be used with InterfaceNone.
 	TargetTypeBlackhole   TargetType = "blackhole"
@@ -147,6 +148,8 @@ func (t Target) RouteScope() netlink.Scope {
 	switch t.Type {
 	case TargetTypeLocal:
 		return netlink.SCOPE_HOST
+	case TargetTypeLinkLocalUnicast:
+		return netlink.SCOPE_LINK
 	case TargetTypeGlobalUnicast:
 		return netlink.SCOPE_UNIVERSE
 	case TargetTypeNoEncap:
