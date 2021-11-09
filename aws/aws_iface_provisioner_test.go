@@ -91,9 +91,9 @@ const (
 	ipPoolIDWest2Gateways = "pool-west-2-gateways"
 
 	// t3LargeCapacity Expected secondary IP capacity of a t3.large instance.
-	t3LargeCapacityPerENI = 11
+	t3LargeCapacityPerENI   = 11
 	t3LargeNumSecondaryENIs = 2
-	t3LargeCapacity = t3LargeCapacityPerENI * t3LargeNumSecondaryENIs
+	t3LargeCapacity         = t3LargeCapacityPerENI * t3LargeNumSecondaryENIs
 )
 
 var (

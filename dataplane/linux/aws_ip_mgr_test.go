@@ -42,6 +42,10 @@ var _ = Describe("awsIPManager tests", func() {
 		fourthMACStr    = "12:34:56:78:90:24"
 		fourthMAC       net.HardwareAddr
 
+		eth1PrimaryIP       = "100.64.0.5"
+		thirdLinkPrimaryIP  = "100.64.0.6"
+		fourthLinkPrimaryIP = "100.64.0.7"
+
 		egressGWIP    = "100.64.2.5"
 		egressGWCIDR  = "100.64.2.5/32"
 		egressGW2IP   = "100.64.2.6"
@@ -307,7 +311,7 @@ var _ = Describe("awsIPManager tests", func() {
 						secondaryMACStr: {
 							ID:              "eni-0001",
 							MAC:             secondaryMAC,
-							PrimaryIPv4Addr: ip.FromString("100.64.0.5"),
+							PrimaryIPv4Addr: ip.FromString(eth1PrimaryIP),
 							SecondaryIPv4Addrs: []ip.Addr{
 								ip.FromString(egressGWIP),
 							},
@@ -327,7 +331,7 @@ var _ = Describe("awsIPManager tests", func() {
 
 			expectSecondaryLinkAddr := func() {
 				// Only the primary IP gets added.
-				secondaryIfacePriIP, err := netlink.ParseAddr("100.64.0.5/16")
+				secondaryIfacePriIP, err := netlink.ParseAddr(eth1PrimaryIP + "/32")
 				secondaryIfacePriIP.Scope = int(netlink.SCOPE_LINK)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(secondaryLink.addrs).To(ConsistOf(*secondaryIfacePriIP))
@@ -338,8 +342,8 @@ var _ = Describe("awsIPManager tests", func() {
 				gwAddrAsCIDR := ip.MustParseCIDROrIP("100.64.0.1/32")
 				Expect(rt.Routes[ifaceName]).To(ConsistOf(
 					routetable.Target{
-						Type: routetable.TargetTypeGlobalUnicast,
-						CIDR: gwAddrAsCIDR,
+						Type: routetable.TargetTypeLinkLocalUnicast,
+						CIDR: ip.MustParseCIDROrIP("100.64.0.0/16"),
 					},
 					routetable.Target{
 						Type: routetable.TargetTypeGlobalUnicast,
@@ -365,10 +369,15 @@ var _ = Describe("awsIPManager tests", func() {
 				rtID, rt := fakes.FindRouteTable("eth1")
 				checkRouteTable(rt, "eth1")
 				// Rule for each egress gateway workload.
-				Expect(fakes.Rules.Rules).To(ConsistOf(routerule.
+				primaryIPRule := routerule.
+					NewRule(4, 105).
+					MatchSrcAddress(ip.MustParseCIDROrIP(eth1PrimaryIP).ToIPNet()).
+					GoToTable(rtID)
+				egRule := routerule.
 					NewRule(4, 105).
 					MatchSrcAddress(ip.MustParseCIDROrIP(egressGWIP).ToIPNet()).
-					GoToTable(rtID)))
+					GoToTable(rtID)
+				Expect(fakes.Rules.Rules).To(ConsistOf(primaryIPRule, egRule))
 			}
 
 			Context("With second egress gateway on second ENI", func() {
@@ -397,7 +406,7 @@ var _ = Describe("awsIPManager tests", func() {
 							secondaryMACStr: {
 								ID:              "eni-0001",
 								MAC:             secondaryMAC,
-								PrimaryIPv4Addr: ip.FromString("100.64.0.5"),
+								PrimaryIPv4Addr: ip.FromString(eth1PrimaryIP),
 								SecondaryIPv4Addrs: []ip.Addr{
 									ip.FromString(egressGWIP),
 								},
@@ -405,7 +414,7 @@ var _ = Describe("awsIPManager tests", func() {
 							thirdMACStr: {
 								ID:              "eni-0002",
 								MAC:             thirdMAC,
-								PrimaryIPv4Addr: ip.FromString("100.64.0.6"),
+								PrimaryIPv4Addr: ip.FromString(thirdLinkPrimaryIP),
 								SecondaryIPv4Addrs: []ip.Addr{
 									ip.FromString(egressGW2IP),
 								},
@@ -428,7 +437,7 @@ var _ = Describe("awsIPManager tests", func() {
 					}
 				})
 
-				expectLinksConfigured := func() {
+				expectLinksConfigured := func(eth2IP string) {
 					expectSecondaryLinkAddr()
 					Expect(fakes.RouteTables).To(HaveLen(2))
 
@@ -439,6 +448,14 @@ var _ = Describe("awsIPManager tests", func() {
 
 					// Rule for each egress gateway workload.
 					Expect(fakes.Rules.Rules).To(ConsistOf(
+						routerule.
+							NewRule(4, 105).
+							MatchSrcAddress(ip.MustParseCIDROrIP(eth1PrimaryIP).ToIPNet()).
+							GoToTable(rtID1),
+						routerule.
+							NewRule(4, 105).
+							MatchSrcAddress(ip.MustParseCIDROrIP(eth2IP).ToIPNet()).
+							GoToTable(rtID2),
 						routerule.
 							NewRule(4, 105).
 							MatchSrcAddress(ip.MustParseCIDROrIP(egressGWIP).ToIPNet()).
@@ -461,7 +478,7 @@ var _ = Describe("awsIPManager tests", func() {
 					Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 
 					// IP should be added.
-					expectLinksConfigured()
+					expectLinksConfigured(thirdLinkPrimaryIP)
 				})
 
 				It("flapping second interface should recycle routing table", func() {
@@ -469,7 +486,7 @@ var _ = Describe("awsIPManager tests", func() {
 					fakes.AddFakeLink(secondaryLink)
 					fakes.AddFakeLink(thirdLink)
 					Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
-					expectLinksConfigured()
+					expectLinksConfigured(thirdLinkPrimaryIP)
 
 					rtID1, rt1 := fakes.FindRouteTable("eth1")
 					rtID2, rt2 := fakes.FindRouteTable("eth2")
@@ -489,6 +506,10 @@ var _ = Describe("awsIPManager tests", func() {
 					Expect(fakes.Rules.Rules).To(ConsistOf(
 						routerule.
 							NewRule(4, 105).
+							MatchSrcAddress(ip.MustParseCIDROrIP(eth1PrimaryIP).ToIPNet()).
+							GoToTable(rtID1),
+						routerule.
+							NewRule(4, 105).
 							MatchSrcAddress(ip.MustParseCIDROrIP(egressGWIP).ToIPNet()).
 							GoToTable(rtID1),
 					))
@@ -500,7 +521,7 @@ var _ = Describe("awsIPManager tests", func() {
 							secondaryMACStr: {
 								ID:              "eni-0001",
 								MAC:             secondaryMAC,
-								PrimaryIPv4Addr: ip.FromString("100.64.0.5"),
+								PrimaryIPv4Addr: ip.FromString(eth1PrimaryIP),
 								SecondaryIPv4Addrs: []ip.Addr{
 									ip.FromString(egressGWIP),
 								},
@@ -508,7 +529,7 @@ var _ = Describe("awsIPManager tests", func() {
 							fourthMACStr: {
 								ID:              "eni-0003",
 								MAC:             fourthMAC,
-								PrimaryIPv4Addr: ip.FromString("100.64.0.7"),
+								PrimaryIPv4Addr: ip.FromString(fourthLinkPrimaryIP),
 								SecondaryIPv4Addrs: []ip.Addr{
 									ip.FromString(egressGW2IP),
 								},
@@ -527,7 +548,7 @@ var _ = Describe("awsIPManager tests", func() {
 					// Route table indexes get reused LIFO.
 					Expect(rtID2).To(Equal(rtID2B))
 
-					expectLinksConfigured()
+					expectLinksConfigured(fourthLinkPrimaryIP)
 				})
 			})
 
@@ -665,7 +686,7 @@ var _ = Describe("awsIPManager tests", func() {
 					Addrs: set.From(
 						"daed:beef::",
 						"1.2.3.4",
-						"100.64.0.5",
+						eth1PrimaryIP,
 					),
 				})
 
@@ -705,7 +726,7 @@ var _ = Describe("awsIPManager tests", func() {
 					Name: "eth1",
 					Addrs: set.From(
 						"daed:beef::",
-						"100.64.0.5",
+						eth1PrimaryIP,
 					),
 				})
 

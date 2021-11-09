@@ -80,7 +80,7 @@ type awsIfaceProvisioner interface {
 
 // awsRuleKey is a hashable struct containing the salient aspects of the routing rules that we need to program.
 type awsRuleKey struct {
-	addr           ip.Addr
+	srcAddr        ip.Addr
 	routingTableID int
 }
 
@@ -510,7 +510,11 @@ func (a *awsIPManager) configureNIC(iface netlink.Link, ifaceName string, primar
 	}
 
 	foundPrimaryIP := false
-	newAddr, err := a.nl.ParseAddr(primaryIPStr + "/" + fmt.Sprint(a.awsState.SubnetCIDR.Prefix()))
+
+	// Add the primary address as a /32 so that we don't automatically get routes for the subnet in the
+	// main routing table.  We need to add the subnet routes to a custom routing table so that they're only
+	// used for traffic that belongs on the secondary ENI.
+	newAddr, err := a.nl.ParseAddr(primaryIPStr + "/32")
 	if err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"name": ifaceName,
@@ -518,6 +522,8 @@ func (a *awsIPManager) configureNIC(iface netlink.Link, ifaceName string, primar
 		}).Error("Failed to parse address.")
 		return fmt.Errorf("failed to parse AWS primary IP of secondary ENI %q: %w", primaryIPStr, err)
 	}
+	// Set the primary address to link scope so the kernel will only pick it for communication on the same
+	// subnet.
 	newAddr.Scope = int(netlink.SCOPE_LINK)
 
 	var finalErr error
@@ -561,10 +567,22 @@ func (a *awsIPManager) configureNIC(iface netlink.Link, ifaceName string, primar
 
 // addIfaceActiveRules adds awsRuleKey values to activeRules according to the secondary IPs of the AWS ENI.
 func (a *awsIPManager) addIfaceActiveRules(activeRules set.Set, awsENI aws.Iface, routingTableID int) {
+	// Send traffic from the primary IP of the interface to the dedicated routing table.
+	// This is needed because:
+	// - We want the primary IP of the ENI to be able to reach remote IPs within the
+	//   subnet.
+	// - We avoid programming the subnet's route into the main routing table to avoid
+	//   routing traffic sourced from the primary ENI's IP over the secondary ENI.
+	// - Instead we program the subnet route into the dedicated routing table.
+	activeRules.Add(awsRuleKey{
+		srcAddr:        awsENI.PrimaryIPv4Addr,
+		routingTableID: routingTableID,
+	})
+
 	for _, privateIP := range awsENI.SecondaryIPv4Addrs {
 		logrus.WithFields(logrus.Fields{"addr": privateIP, "rtID": routingTableID}).Debug("Adding routing rule.")
 		activeRules.Add(awsRuleKey{
-			addr:           privateIP,
+			srcAddr:        privateIP,
 			routingTableID: routingTableID,
 		})
 	}
@@ -576,10 +594,13 @@ func (a *awsIPManager) programIfaceRoutes(rt routeTable, ifaceName string) {
 	// routed properly.
 	routes := []routetable.Target{
 		{
-			Type: routetable.TargetTypeGlobalUnicast,
-			CIDR: a.awsState.GatewayAddr.AsCIDR(),
+			// Make whole subnet reachable on the link.  This allows for host-to-remote pod traffic using
+			// the primary IP of the interface.
+			Type: routetable.TargetTypeLinkLocalUnicast,
+			CIDR: a.awsState.SubnetCIDR,
 		},
 		{
+			// With gateway via the gateway address.
 			Type: routetable.TargetTypeGlobalUnicast,
 			CIDR: ip.MustParseCIDROrIP("0.0.0.0/0"),
 			GW:   a.awsState.GatewayAddr,
@@ -646,7 +667,7 @@ func (a *awsIPManager) updateRouteRules(activeRuleKeys set.Set /* awsRulesKey */
 		}
 		rule := routerule.
 			NewRule(4, a.dpConfig.AWSSecondaryIPRoutingRulePriority).
-			MatchSrcAddress(k.addr.AsCIDR().ToIPNet()).
+			MatchSrcAddress(k.srcAddr.AsCIDR().ToIPNet()).
 			GoToTable(k.routingTableID)
 		a.routeRules.SetRule(rule)
 		a.routeRulesInDataplane[k] = rule

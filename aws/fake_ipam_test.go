@@ -8,9 +8,10 @@ import (
 	"fmt"
 	"sync"
 
-	calierrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	calierrors "github.com/projectcalico/libcalico-go/lib/errors"
 
 	"github.com/projectcalico/felix/testutils"
 
