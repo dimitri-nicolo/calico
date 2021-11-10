@@ -444,6 +444,12 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 		MaxCalicoSecondaryIPs: m.calculateMaxCalicoSecondaryIPs(awsSnapshot),
 	})
 
+	// Scan for ENIs that don't have their "delete on termination" flag set and fix up.
+	err = m.ensureCalicoENIsDelOnTerminate(awsSnapshot)
+	if err != nil {
+		return nil, err
+	}
+
 	// Scan for IPs that are present on our AWS ENIs but no longer required by Calico.
 	awsIPsToRelease := m.findUnusedAWSIPs(awsSnapshot)
 
@@ -1465,6 +1471,41 @@ func (m *SecondaryIfaceProvisioner) calculateMaxCalicoSecondaryIPs(snapshot *eni
 	maxCalicoENIs := caps.MaxNetworkInterfaces - len(snapshot.nonCalicoOwnedENIsByID)
 	maxCapacity := maxCalicoENIs * maxSecondaryIPsPerENI
 	return maxCapacity
+}
+
+func (m *SecondaryIfaceProvisioner) ensureCalicoENIsDelOnTerminate(snapshot *eniSnapshot) error {
+	ctx, cancel := m.newContext()
+	defer cancel()
+	ec2Client, err := m.ec2Client()
+	if err != nil {
+		return err
+	}
+
+	var finalErr error
+	for eniID, eni := range snapshot.calicoOwnedENIsByID {
+		if eni.Attachment == nil {
+			logrus.WithField("eniID", eniID).Warn("ENI has no attachment specified (but it should be attached ot this node).")
+			finalErr = fmt.Errorf("ENI %s has no attachment (but it should be attached to this node)", eniID)
+			continue // Try to deal with the other ENIs.
+		}
+		if eni.Attachment.DeleteOnTermination == nil || !*eni.Attachment.DeleteOnTermination {
+			logrus.WithField("eniID", eniID).Info(
+				"Calico secondary ENI doesn't have delete-on-termination flag enabled; enabling it...")
+			_, err = ec2Client.EC2Svc.ModifyNetworkInterfaceAttribute(ctx, &ec2.ModifyNetworkInterfaceAttributeInput{
+				NetworkInterfaceId: eni.NetworkInterfaceId,
+				Attachment: &ec2types.NetworkInterfaceAttachmentChanges{
+					AttachmentId:        eni.Attachment.AttachmentId,
+					DeleteOnTermination: boolPtr(true),
+				},
+			})
+			if err != nil {
+				logrus.WithError(err).Error("Failed to set interface delete-on-termination flag")
+				finalErr = fmt.Errorf("failed to set interface delete-on-termination flag: %w", err)
+				continue // Carry on and try the other interfaces before we give up.
+			}
+		}
+	}
+	return finalErr
 }
 
 func trimPrefixLen(cidr string) string {
