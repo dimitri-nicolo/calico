@@ -1484,7 +1484,7 @@ func (m *SecondaryIfaceProvisioner) ensureCalicoENIsDelOnTerminate(snapshot *eni
 	var finalErr error
 	for eniID, eni := range snapshot.calicoOwnedENIsByID {
 		if eni.Attachment == nil {
-			logrus.WithField("eniID", eniID).Warn("ENI has no attachment specified (but it should be attached ot this node).")
+			logrus.WithField("eniID", eniID).Warn("ENI has no attachment specified (but it should be attached to this node).")
 			finalErr = fmt.Errorf("ENI %s has no attachment (but it should be attached to this node)", eniID)
 			continue // Try to deal with the other ENIs.
 		}
