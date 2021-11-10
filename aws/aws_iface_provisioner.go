@@ -1340,6 +1340,19 @@ func (m *SecondaryIfaceProvisioner) createAWSENIs(awsENIState *eniSnapshot, resy
 			"networkCard":  safeReadInt32(attOut.NetworkCardIndex),
 		}).Info("Attached ENI.")
 
+		_, err = ec2Client.EC2Svc.ModifyNetworkInterfaceAttribute(ctx, &ec2.ModifyNetworkInterfaceAttributeInput{
+			NetworkInterfaceId: cno.NetworkInterface.NetworkInterfaceId,
+			Attachment: &ec2types.NetworkInterfaceAttachmentChanges{
+				AttachmentId:        attOut.AttachmentId,
+				DeleteOnTermination: boolPtr(true),
+			},
+		})
+		if err != nil {
+			logrus.WithError(err).Error("Failed to set interface delete-on-termination flag")
+			finalErr = fmt.Errorf("failed to set interface delete-on-termination flag: %w", err)
+			continue // Carry on and try the other interfaces before we give up.
+		}
+
 		// Calculate the free IPs from the output. Once we add an idempotency token, it'll be possible to have
 		// >1 IP in place already.
 		resyncState.freeIPv4CapacityByENIID[*cno.NetworkInterface.NetworkInterfaceId] =
