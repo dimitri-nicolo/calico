@@ -4,7 +4,7 @@ go 1.16
 
 replace (
 	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20211110183156-860e24e19e40
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20211109174117-5b16541568e0
+	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20211110210819-6c14c3f4c1cd
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211110181518-fed20985e955
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211105162547-3fd786c03c6c
 
