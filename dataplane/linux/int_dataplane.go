@@ -1016,7 +1016,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 		if config.BPFConnTimeLBEnabled {
 			// Activate the connect-time load balancer.
-			err = nat.InstallConnectTimeLoadBalancer(frontendMap, backendMap, routeMap, config.BPFCgroupV2, config.BPFLogLevel)
+			err = nat.InstallConnectTimeLoadBalancer(config.BPFCgroupV2, config.BPFLogLevel)
 			if err != nil {
 				log.WithError(err).Panic("BPFConnTimeLBEnabled but failed to attach connect-time load balancer, bailing out.")
 			}
