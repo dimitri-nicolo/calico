@@ -481,7 +481,9 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_Mainline(t *testing.T)
 	), "ENI should have same security groups as primary ENI")
 	Expect(eni.Status).To(Equal(types.NetworkInterfaceStatusAssociated), "Expected ENI to be attached.")
 	Expect(eni.Attachment).ToNot(BeNil(), "Expected ENI to be attached.")
-	Expect(*eni.Attachment.InstanceId).To(Equal(instanceID), "Expected ENI to be attached to correct isntance.")
+	Expect(*eni.Attachment.InstanceId).To(Equal(instanceID), "Expected ENI to be attached to correct instance.")
+	Expect(eni.Attachment.DeleteOnTermination).ToNot(BeNil(), "Expected DeleteOnTermination to be set.")
+	Expect(*eni.Attachment.DeleteOnTermination).To(BeTrue(), "Expected DeleteOnTermination to be true.")
 	Expect(eni.TagSet).To(ConsistOf([]types.Tag{
 		{
 			Key:   stringPtr("calico:instance"),
@@ -512,6 +514,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_ErrBackoff(t *testing.
 		"CreateNetworkInterface",
 		"AttachNetworkInterface",
 		"AssignPrivateIpAddresses",
+		"ModifyNetworkInterfaceAttribute",
 	} {
 		t.Run(callToFail, func(t *testing.T) {
 			sip, fake, tearDown := setupAndStart(t)

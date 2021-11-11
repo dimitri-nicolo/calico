@@ -7,6 +7,7 @@ import (
 	encoding_binary "encoding/binary"
 	"fmt"
 	"net"
+	"reflect"
 	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
@@ -113,8 +114,34 @@ func (f *fakeEC2) ModifyNetworkInterfaceAttribute(ctx context.Context, params *e
 	if len(optFns) > 0 {
 		panic("fakeEC2 doesn't understand opts")
 	}
+	if params.NetworkInterfaceId == nil {
+		panic("BUG: missing NetworkInterfaceId")
+	}
+	eni, ok := f.ENIsByID[*params.NetworkInterfaceId]
+	if !ok {
+		return nil, errNotFound("ModifyNetworkInterfaceAttribute", "InvalidNetworkInterfaceId.NotFound")
+	}
+	if params.SourceDestCheck != nil {
+		eni.SourceDestCheck = params.SourceDestCheck.Value
+	}
+	if params.Attachment != nil {
+		if params.Attachment.AttachmentId == nil ||
+			!reflect.DeepEqual(params.Attachment.AttachmentId, eni.Attachment.AttachmentId) {
+			return nil, errBadParam("ModifyNetworkInterfaceAttribute", "AttachmentID didn't match")
+		}
+		if params.Attachment.DeleteOnTermination == nil {
+			panic("BUG: expecting DeleteOnTermination flag")
+		}
+		eni.Attachment.DeleteOnTermination = params.Attachment.DeleteOnTermination
+		for _, instIface := range f.InstancesByID[*eni.Attachment.InstanceId].NetworkInterfaces {
+			if *instIface.NetworkInterfaceId == *eni.NetworkInterfaceId {
+				instIface.Attachment.DeleteOnTermination = params.Attachment.DeleteOnTermination
+			}
+		}
+	}
+	f.ENIsByID[*params.NetworkInterfaceId] = eni
 
-	panic("fakeEC2 doesn't support requested feature")
+	return &ec2.ModifyNetworkInterfaceAttributeOutput{}, nil
 }
 
 func (f *fakeEC2) DescribeSubnets(ctx context.Context, params *ec2.DescribeSubnetsInput, optFns ...func(*ec2.Options)) (*ec2.DescribeSubnetsOutput, error) {
@@ -368,7 +395,7 @@ func (f *fakeEC2) CreateNetworkInterface(ctx context.Context, params *ec2.Create
 		})
 	}
 
-	ENI := types.NetworkInterface{
+	eni := types.NetworkInterface{
 		NetworkInterfaceId: stringPtr(ENIID),
 		SubnetId:           params.SubnetId,
 		Description:        params.Description,
@@ -391,12 +418,12 @@ func (f *fakeEC2) CreateNetworkInterface(ctx context.Context, params *ec2.Create
 		TagSet:          tags,
 		VpcId:           stringPtr(testVPC),
 	}
-	f.ENIsByID[ENIID] = ENI
+	f.ENIsByID[ENIID] = eni
 
-	logrus.WithField("ENI", spew.Sdump(ENI)).Info("FakeEC2: Created ENI.")
+	logrus.WithField("ENI", spew.Sdump(eni)).Info("FakeEC2: Created ENI.")
 
 	return &ec2.CreateNetworkInterfaceOutput{
-		NetworkInterface: &ENI,
+		NetworkInterface: &eni,
 	}, nil
 }
 
