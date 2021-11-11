@@ -268,12 +268,23 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 		})
 
 		It("should allow felixes[0] => felixes[1] traffic if ingress and egress policies are in place", func() {
+			// Create a "security" tier.  We had a bug in Enterprise Felix that wrongly
+			// hardcoded the "default" tier name, and most of the tests in this file use
+			// "default" because of having originated in OSS.  This test is modified to
+			// use a non-default tier name, and also to do a policy update, so as to
+			// cover that bug scenario.
+			securityTier := api.NewTier()
+			securityTier.Name = "security"
+			_, err := client.Tiers().Create(utils.Ctx, securityTier, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+
 			// Create a policy selecting felix[0] that allows egress.
 			policy := api.NewGlobalNetworkPolicy()
-			policy.Name = "f0-egress"
+			policy.Name = "security.f0-egress"
+			policy.Spec.Tier = "security"
 			policy.Spec.Egress = []api.Rule{{Action: api.Allow}}
 			policy.Spec.Selector = fmt.Sprintf("hostname == '%s'", felixes[0].Hostname)
-			_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+			_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
 
 			// But no policy allowing ingress into felix[1].
@@ -298,10 +309,11 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 
 			// Now add a policy selecting felix[1] that allows ingress.
 			policy = api.NewGlobalNetworkPolicy()
-			policy.Name = "f1-ingress"
+			policy.Name = "security.f1-ingress"
+			policy.Spec.Tier = "security"
 			policy.Spec.Ingress = []api.Rule{{Action: api.Allow}}
 			policy.Spec.Selector = fmt.Sprintf("hostname == '%s'", felixes[1].Hostname)
-			_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+			policy, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Now felixes[0] can reach felixes[1].
@@ -323,6 +335,16 @@ func describeHostEndpointTests(getInfra infrastructure.InfraFactory, allInterfac
 			By("Allowing raw IP from felix[0] -> felix[1]")
 			cc253.Expect(connectivity.Some, felixes[0], rawIPHostW253[1])
 			cc253.CheckConnectivity()
+
+			// Change the f1-ingress policy to Deny.
+			policy.Spec.Ingress = []api.Rule{{Action: api.Deny}}
+			_, err = client.GlobalNetworkPolicies().Update(utils.Ctx, policy, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Now felixes[0] should NOT be able to reach felixes[1].
+			cc.ResetExpectations()
+			cc.ExpectNone(felixes[0], hostW[1])
+			cc.CheckConnectivity()
 		})
 
 		It("should allow raw IP with the right protocol only", func() {

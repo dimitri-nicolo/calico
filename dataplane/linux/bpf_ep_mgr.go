@@ -131,7 +131,7 @@ type bpfEndpointManager struct {
 	profiles       map[proto.ProfileID]*proto.Profile
 
 	// Indexes
-	policiesToWorkloads map[proto.PolicyID]set.Set  /*proto.WorkloadEndpointID*/
+	policiesToWorkloads map[string]set.Set          /*proto.WorkloadEndpointID*/
 	profilesToWorkloads map[proto.ProfileID]set.Set /*proto.WorkloadEndpointID*/
 
 	dirtyIfaceNames set.Set
@@ -222,7 +222,7 @@ func newBPFEndpointManager(
 		policies:                map[proto.PolicyID]*proto.Policy{},
 		profiles:                map[proto.ProfileID]*proto.Profile{},
 		nameToIface:             map[string]bpfInterface{},
-		policiesToWorkloads:     map[proto.PolicyID]set.Set{},
+		policiesToWorkloads:     map[string]set.Set{},
 		profilesToWorkloads:     map[proto.ProfileID]set.Set{},
 		dirtyIfaceNames:         set.New(),
 		bpfLogLevel:             config.BPFLogLevel,
@@ -468,7 +468,8 @@ func (m *bpfEndpointManager) onPolicyUpdate(msg *proto.ActivePolicyUpdate) {
 	polID := *msg.Id
 	log.WithField("id", polID).Debug("Policy update")
 	m.policies[polID] = msg.Policy
-	m.markEndpointsDirty(m.policiesToWorkloads[polID], "policy")
+	// Note, polID.Name includes the tier name as well as the policy name.
+	m.markEndpointsDirty(m.policiesToWorkloads[polID.Name], "policy")
 }
 
 // onPolicyRemove removes the policy from the cache and marks any endpoints using it dirty.
@@ -476,9 +477,10 @@ func (m *bpfEndpointManager) onPolicyUpdate(msg *proto.ActivePolicyUpdate) {
 func (m *bpfEndpointManager) onPolicyRemove(msg *proto.ActivePolicyRemove) {
 	polID := *msg.Id
 	log.WithField("id", polID).Debug("Policy removed")
-	m.markEndpointsDirty(m.policiesToWorkloads[polID], "policy")
+	// Note, polID.Name includes the tier name as well as the policy name.
+	m.markEndpointsDirty(m.policiesToWorkloads[polID.Name], "policy")
 	delete(m.policies, polID)
-	delete(m.policiesToWorkloads, polID)
+	delete(m.policiesToWorkloads, polID.Name)
 }
 
 // onProfileUpdate stores the profile in the cache and marks any endpoints that use it as dirty.
@@ -1235,14 +1237,10 @@ func (m *bpfEndpointManager) addWEPToIndexes(wlID proto.WorkloadEndpointID, wl *
 
 func (m *bpfEndpointManager) addPolicyToEPMappings(polNames []string, id interface{}) {
 	for _, pol := range polNames {
-		polID := proto.PolicyID{
-			Tier: "default",
-			Name: pol,
+		if m.policiesToWorkloads[pol] == nil {
+			m.policiesToWorkloads[pol] = set.New()
 		}
-		if m.policiesToWorkloads[polID] == nil {
-			m.policiesToWorkloads[polID] = set.New()
-		}
-		m.policiesToWorkloads[polID].Add(id)
+		m.policiesToWorkloads[pol].Add(id)
 	}
 }
 
@@ -1278,18 +1276,14 @@ func (m *bpfEndpointManager) removeWEPFromIndexes(wlID proto.WorkloadEndpointID,
 
 func (m *bpfEndpointManager) removePolicyToEPMappings(polNames []string, id interface{}) {
 	for _, pol := range polNames {
-		polID := proto.PolicyID{
-			Tier: "default",
-			Name: pol,
-		}
-		polSet := m.policiesToWorkloads[polID]
+		polSet := m.policiesToWorkloads[pol]
 		if polSet == nil {
 			continue
 		}
 		polSet.Discard(id)
 		if polSet.Len() == 0 {
 			// Defensive; we also clean up when the profile is removed.
-			delete(m.policiesToWorkloads, polID)
+			delete(m.policiesToWorkloads, pol)
 		}
 	}
 }
