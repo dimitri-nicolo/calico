@@ -2,6 +2,7 @@ package data
 
 import (
 	"context"
+	"net"
 	"testing"
 	"time"
 
@@ -28,7 +29,7 @@ func TestStoreWaitsTillInSync(test *testing.T) {
 	mockUpdates = append(mockUpdates, update1, update2, update3)
 
 	// instantiate the store and a mock observer to notify (observer registers itself with the store when constructed)
-	store = NewRouteStore(newMockUpdatesPipeline)
+	store = NewRouteStore(newMockUpdatesPipeline, net.ParseIP("10.10.10.0"))
 	observer := NewMockObserver(store)
 
 	ctx := context.Background()
@@ -77,7 +78,7 @@ func TestStoreResyncsAfterClosedConnection(test *testing.T) {
 	update2 := newRouteUpdate("10.0.0.1/0", "192.168.1.1", "foo.bar", proto.RouteType_REMOTE_WORKLOAD)
 
 	// instantiate the store and a mock observer to notify (observer registers itself with the store when constructed)
-	store = NewRouteStore(newMockUpdatesPipeline)
+	store = NewRouteStore(newMockUpdatesPipeline, net.ParseIP("10.10.10.0"))
 	observer := NewMockObserver(store)
 
 	ctx := context.Background()

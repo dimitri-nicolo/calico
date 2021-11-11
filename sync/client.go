@@ -81,7 +81,6 @@ func (c *Client) SyncForever(ctx context.Context) {
 					break
 				}
 
-				log.WithField("update", update).Debug("pulled update off socket")
 				c.updates <- update
 				c.healthy = true
 			}

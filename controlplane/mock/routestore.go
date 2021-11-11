@@ -9,11 +9,30 @@ import (
 )
 
 type Store struct {
-	RoutesByWorkloadCIDR map[string]*proto.RouteUpdate
+	WorkloadsByDst  map[string]*proto.RouteUpdate
+	TunnelsByNodeIP map[string]*proto.RouteUpdate
+	GatewayUpdate   *proto.RouteUpdate
 }
 
-func (s Store) Routes(readFn func(map[string]*proto.RouteUpdate)) {
-	readFn(s.RoutesByWorkloadCIDR)
+
+func (s Store) GatewayWorkload(readFn func(*proto.RouteUpdate)) {
+	readFn(s.GatewayUpdate)
+}
+
+func (s Store) WorkloadsByNodeName(readFn func(map[string][]proto.RouteUpdate)) {
+
+}
+
+func (s Store) Workloads(readFn func(map[string]*proto.RouteUpdate)) {
+	readFn(s.WorkloadsByDst)
+}
+
+func (s Store) Tunnels(readFn func(map[string]*proto.RouteUpdate)) {
+	readFn(s.TunnelsByNodeIP)
+}
+
+func (s Store) TunnelsByNodeName(readFn func(map[string][]proto.RouteUpdate)) {
+
 }
 
 func (s Store) Subscribe(o data.RouteObserver) {

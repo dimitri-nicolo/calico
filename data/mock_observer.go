@@ -19,7 +19,7 @@ func NewMockObserver(s RouteStore) *MockObserver {
 
 func (o *MockObserver) NotifyResync(s RouteStore) {
 	o.NumNotifications++
-	s.Routes(func(routes map[string]*proto.RouteUpdate) {
+	s.Workloads(func(routes map[string]*proto.RouteUpdate) {
 		o.RoutesSnapshot = routes
 	})
 }

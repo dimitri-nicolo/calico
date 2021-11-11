@@ -40,7 +40,7 @@ func TestProgramsKernel(test *testing.T) {
 		DstNodeIp:   "192.168.1.1",
 	}
 	store := mock.Store{
-		RoutesByWorkloadCIDR: routesByWorkloadCIDR,
+		WorkloadsByDst: routesByWorkloadCIDR,
 	}
 
 	log.Info("initialising mock netlink handle...")
@@ -72,8 +72,8 @@ func TestProgramsKernel(test *testing.T) {
 	nl.ResetDeltas()
 
 	// delete a route and add a new one
-	delete(store.RoutesByWorkloadCIDR, "10.0.1.0/24")
-	store.RoutesByWorkloadCIDR["10.0.2.0/24"] = &proto.RouteUpdate{
+	delete(store.WorkloadsByDst, "10.0.1.0/24")
+	store.WorkloadsByDst["10.0.2.0/24"] = &proto.RouteUpdate{
 		Type:        proto.RouteType_REMOTE_WORKLOAD,
 		IpPoolType:  proto.IPPoolType_NO_ENCAP,
 		Dst:         "10.0.2.0/24",
@@ -97,7 +97,7 @@ func TestProgramsKernel(test *testing.T) {
 	nl.ResetDeltas()
 	log.Info("making a change that should result in a route and neigh update...")
 	// change the node that the IP pool lives on
-	store.RoutesByWorkloadCIDR["10.0.2.0/24"].DstNodeIp = "192.168.1.2"
+	store.WorkloadsByDst["10.0.2.0/24"].DstNodeIp = "192.168.1.2"
 	// routemanager should update a stale neighs, and update the gateway of the 10.0.2.0/24 route
 	routeManager.NotifyResync(store)
 	time.Sleep(1 * time.Second)
@@ -125,7 +125,7 @@ func TestHandlesFailures(test *testing.T) {
 		DstNodeIp:   "192.168.1.1",
 	}
 	store := mock.Store{
-		RoutesByWorkloadCIDR: routesByWorkloadCIDR,
+		WorkloadsByDst: routesByWorkloadCIDR,
 	}
 
 	log.Info("initialising mock netlink handle...")
@@ -191,7 +191,7 @@ func TestHandlesTunnels(test *testing.T) {
 		DstNodeIp:   "192.168.1.1",
 	}
 	store := mock.Store{
-		RoutesByWorkloadCIDR: routesByWorkloadCIDR,
+		WorkloadsByDst: routesByWorkloadCIDR,
 	}
 
 	log.Info("initialising mock netlink handle...")

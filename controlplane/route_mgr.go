@@ -59,7 +59,7 @@ type RouteManager struct {
 	egressTunnelBridgeNeighsByKey map[string]netlink.Neigh
 
 	// Some host-ns device IPs (such as WireGuard tunnel IPs) can overlap with workload CIDRs.
-	// To avoid infinite VXLAN-encapping loops, we must program explicit exit routes for them
+	// To avoid infinite VXLAN-encapping loops (and martian packets), we must program explicit exit routes for them
 	exitRoutesByDstCIDR map[string]netlink.Route
 }
 
@@ -177,73 +177,157 @@ func (m *RouteManager) Start(ctx context.Context) {
 			return
 		// pull in the latest snapshot of the routeStore if it exists, to build netlink structs from its routes
 		case s = <-m.latestUpdate:
-			s.Routes(func(routeUpdatesByWorkloadDst map[string]*proto.RouteUpdate) {
-				routesByDstCIDR := make(map[string]netlink.Route)
-				exitRoutesByDstCIDR := make(map[string]netlink.Route)
-				arpNeighsByKey := make(map[string]netlink.Neigh)
-				fdbNeighsByHWAddr := make(map[string]netlink.Neigh) // we key this list by HWAddr as we never want mutltiple entries for the same node VTEP
 
-				log.Debugf("reading routes from routestore: %+v", routeUpdatesByWorkloadDst)
-				for _, ru := range routeUpdatesByWorkloadDst {
-					if protoutil.IsWireguardTunnel(ru) {
-						// if this update represents a host's tunnel, we need to override the FDB entry
-						// for that host with the tunnel IP. Also, since tunnel IP's can overlap with workload CIDR's,
-						// we need to program a route out of this machine on the dfault iface to avoid infinite loops
-						route, err := m.newRoute(ru, true)
-						if err != nil {
-							log.WithError(err).Warnf("could not parse route from RouteUpdate: %+v", ru)
-						} else {
-							exitRoutesByDstCIDR[route.Dst.String()] = route
-						}
+			// in order to maintain symmetrical traffic paths over all types of cluster encap,
+			// we must know what tunnel device IP's to target when sending back packets
+			var latestGatewayWorkloadUpdate *proto.RouteUpdate
+			s.GatewayWorkload(func(gatewayUpdate *proto.RouteUpdate) {
+				latestGatewayWorkloadUpdate = gatewayUpdate
+			})
+			gatewayEncapType := latestGatewayWorkloadUpdate.IpPoolType // will the gateway receive packets that have been sNAT'd by the node's tunnel?
+			gatewayNodeHasWireguard := false                           // wireguard tunnels will take precedence if nodes are peered - we search for this device next
 
-						fdbNeigh, err := m.newNeigh(ru, true, syscall.AF_BRIDGE)
-						if err != nil {
-							log.WithError(err).Warnf("could not parse neigh from RouteUpdate: %+v", ru)
-						} else {
-							fdbNeighsByHWAddr[fdbNeigh.HardwareAddr.String()] = fdbNeigh
-						}
+			var tunnelsByNodeName map[string][]proto.RouteUpdate
+			var workloadsByNodeName map[string][]proto.RouteUpdate
+			s.TunnelsByNodeName(func(t map[string][]proto.RouteUpdate) {
+				s.WorkloadsByNodeName(func(w map[string][]proto.RouteUpdate) {
+					tunnelsByNodeName = t
+					workloadsByNodeName = w
+				})
+			})
+			// first check if the egress gateway's node has a wireguard device - if not, we can ignore all wireguard tunnels on other hosts
+			gatewayNodeTunnels := tunnelsByNodeName[latestGatewayWorkloadUpdate.DstNodeName]
+			log.Debugf("searching gateway's host tunnels for wireguard devices: %+v", gatewayNodeTunnels)
+			for _, tunnel := range gatewayNodeTunnels {
+				if protoutil.IsWireguardTunnel(&tunnel) {
+					gatewayNodeHasWireguard = true
+					log.Debug("wireguard device found on gateway host")
+				}
+			}
 
-					} else {
-						// if this is a workload IP, prep a route that goes through the VXLAN device
-						route, err := m.newRoute(ru, false)
-						if err != nil {
-							log.WithError(err).Warnf("could not parse route from RouteUpdate: %+v", ru)
-						} else {
-							routesByDstCIDR[route.Dst.String()] = route
-						}
+			// find the correct tunnel to target for each node
+			activeTunnelsByNodeName := make(map[string]*proto.RouteUpdate)
+			for nodeName, tunnels := range tunnelsByNodeName {
+				// skip our local node
+				if nodeName == latestGatewayWorkloadUpdate.DstNodeName {
+					continue
+				}
 
-						// prep an L2 entry for the workload's host
-						neigh, err := m.newNeigh(ru, false, netlink.FAMILY_V4)
-						if err != nil {
-							log.WithError(err).Warnf("could not parse neighbor from RouteUpdate: %+v", ru)
-						} else {
-							arpNeighsByKey[netlinkutil.KeyForNeigh(neigh)] = neigh
-						}
+				nodeWorkloads, ok := workloadsByNodeName[nodeName]
+				// if there are no workloads for this node, skip it
+				if !ok || len(nodeWorkloads) == 0 {
+					log.Debugf("skipping tunnel checks for node '%s' due to no active workloads...")
+					continue
+				}
 
-						// add an FDB copy of this neigh if one hasn't already been added for this MAC (i.e. by a Remote Tunnel)
-						hwAddr := neigh.HardwareAddr.String()
-						if _, ok := fdbNeighsByHWAddr[hwAddr]; !ok {
-							fdbNeigh, err := m.newNeigh(ru, false, syscall.AF_BRIDGE)
-							if err != nil {
-								log.WithError(err).Warnf("could not parse bridge neighbor from RouteUpdate: %+v", ru)
+				var activeTunnel *proto.RouteUpdate
+
+				// guess which tunnel traffic will be arriving over
+				// wireguard tunnels take precedence over overlay tunnels - if both are enabled, wireguard is used
+				for _, tunnel := range tunnels {
+					// this is our best guess that wireguard will be used
+					if gatewayNodeHasWireguard && protoutil.IsWireguardTunnel(&tunnel) {
+						log.Debugf("found wireguard peer: %+v", tunnel)
+						activeTunnel = &tunnel
+						break // highest priority tunnel matched, no need to check any more
+					} else if gatewayEncapType == tunnel.IpPoolType {
+						// the remote host has an encap tunnel, and our workload has encap enabled.
+						// we must now check if our encap setting is cross-subnet, since a remote host
+						// in our subnet will not use encap in that case
+						if latestGatewayWorkloadUpdate.SameSubnet {
+							log.Debugf("egress-gateway ippool is in cross-subnet mode: %+v", latestGatewayWorkloadUpdate)
+							// we are in cross-subnet mode
+							// inconveniently, to determine if the remote host is in the same subnet,
+							// we must check a RouteUpdate for a workload on that node
+							var sameSubnet bool
+							if wls, ok := workloadsByNodeName[nodeName]; ok && len(wls) > 0 {
+								sameSubnet = wls[0].SameSubnet
+								log.Debugf("inferring node's subnet from workload: %+v", wls[0])
+							} else {
+								log.Debugf("no workloads behind tunnel. skipping...")
+								continue // there are no workloads on this node
 							}
+
+							// if it's in the same subnet, this tunnel won't be active; skip
+							if sameSubnet {
+								log.Debugf("skipping tunnel in same subnet...")
+								continue
+							}
+						}
+						activeTunnel = &tunnel
+					}
+				}
+				log.Debugf("added tunnel %+v", activeTunnel)
+				activeTunnelsByNodeName[nodeName] = activeTunnel
+			}
+
+			// now that we know what src-IP outbound egress packets will be coming in with,
+			// we can begin building routes back to the nodes via the same tunnels/IP's.
+			// we'll first create default routes and FDB entries for remote tunnels
+			fdbNeighsByHWAddr := make(map[string]netlink.Neigh)
+			exitRoutesByDstCIDR := make(map[string]netlink.Route)
+			for _, tunnel := range activeTunnelsByNodeName {
+				if tunnel != nil {
+					fdbNeigh, err := m.newNeigh(tunnel, true, syscall.AF_BRIDGE)
+					if err != nil {
+						log.WithError(err).Warnf("could not parse neigh from RouteUpdate: %+v", tunnel)
+					}
+					fdbNeighsByHWAddr[fdbNeigh.HardwareAddr.String()] = fdbNeigh
+
+					defaultRoute, err := m.newRoute(tunnel, true)
+					if err != nil {
+						log.WithError(err).Warnf("could not parse default route from RouteUpdate: %+v", tunnel)
+					}
+					exitRoutesByDstCIDR[tunnel.Dst] = defaultRoute
+				}
+			}
+
+			routesByDstCIDR := make(map[string]netlink.Route)
+			arpNeighsByKey := make(map[string]netlink.Neigh)
+			for _, workloads := range workloadsByNodeName {
+				for _, wl := range workloads {
+					// create an ARP entry for this workload's host (ARP entries dont need to know about tunnels)
+					arpNeigh, err := m.newNeigh(&wl, false, netlink.FAMILY_V4)
+					if err != nil {
+						log.WithError(err).Warnf("could not parse ARP neigh from RouteUpdate: %+v", wl)
+					} else {
+						arpNeighsByKey[netlinkutil.KeyForNeigh(arpNeigh)] = arpNeigh
+					}
+
+					// fill in default FDB neighs if a tunnel entry isnt already added
+					if _, ok := fdbNeighsByHWAddr[arpNeigh.HardwareAddr.String()]; !ok {
+						fdbNeigh, err := m.newNeigh(&wl, false, syscall.AF_BRIDGE)
+						if err != nil {
+							log.WithError(err).Warnf("could not parse FDB neigh from RouteUpdate: %+v", wl)
+						} else {
 							fdbNeighsByHWAddr[fdbNeigh.HardwareAddr.String()] = fdbNeigh
 						}
 					}
-				}
 
-				// convert the FDB hwAddr map to a keyed map (we need a better key than hw-addr for detecting stale node IP's in the FDB)
-				fdbNeighsByKey := make(map[string]netlink.Neigh)
-				for _, n := range fdbNeighsByHWAddr {
-					key := netlinkutil.KeyForNeigh(n)
-					fdbNeighsByKey[key] = n
+					// finally, create the route that will encap returning egress packets for this CIDR
+					encapRoute, err := m.newRoute(&wl, false)
+					if err != nil {
+						log.WithError(err).Warnf("could not parse encap route from RouteUpdate: %+v", wl)
+					} else {
+						routesByDstCIDR[wl.Dst] = encapRoute
+					}
 				}
+			}
 
-				m.exitRoutesByDstCIDR = exitRoutesByDstCIDR
-				m.egressTunnelWorkloadRoutesByDstCIDR = routesByDstCIDR
-				m.egressTunnelNeighsByKey = arpNeighsByKey
-				m.egressTunnelBridgeNeighsByKey = fdbNeighsByKey
-			})
+			// we originally keyed fdb neighs by hwaddr so that we would never have more than one entry per host
+			// but to match how the dataplane keys neighs, we must now convert the map
+			fdbNeighsByKey := make(map[string]netlink.Neigh)
+			for _, n := range fdbNeighsByHWAddr {
+				key := netlinkutil.KeyForNeigh(n)
+				fdbNeighsByKey[key] = n
+			}
+
+			// overwrite route manager state in prep for ensuring networking
+			m.exitRoutesByDstCIDR = exitRoutesByDstCIDR
+			m.egressTunnelWorkloadRoutesByDstCIDR = routesByDstCIDR
+			m.egressTunnelNeighsByKey = arpNeighsByKey
+			m.egressTunnelBridgeNeighsByKey = fdbNeighsByKey
+
 			inSync = m.ensureNetworking()
 
 		// if a retry timer has fired, attempt to ensure networking without a new update
@@ -281,9 +365,9 @@ func (m *RouteManager) NotifyResync(s data.RouteStore) {
 }
 
 // newRoute creates a new netlink.Route from a Felix RouteUpdate
-// isHostTunnel flags whether the target of the route is that of a host-ns device such as a wireguard interface,
-// or a non-host-ns device such as that of a workload
-func (m *RouteManager) newRoute(ru *proto.RouteUpdate, isHostTunnel bool) (route netlink.Route, err error) {
+// isExitRoute determines whether the resulting route should route packets
+// out of the machine, or through the encap device
+func (m *RouteManager) newRoute(ru *proto.RouteUpdate, isExitRoute bool) (route netlink.Route, err error) {
 	_, dst, err := net.ParseCIDR(ru.Dst)
 	if err != nil {
 		return route, err
@@ -294,7 +378,7 @@ func (m *RouteManager) newRoute(ru *proto.RouteUpdate, isHostTunnel bool) (route
 	route.Flags = int(netlink.FLAG_ONLINK)
 	route.Dst = dst
 
-	if !isHostTunnel {
+	if !isExitRoute {
 		// requests to pod IP's will be routed via their node IP's VTEP
 		nodeIP := net.ParseIP(ru.DstNodeIp)
 		if nodeIP == nil {
@@ -323,7 +407,7 @@ func (m *RouteManager) newNeigh(ru *proto.RouteUpdate, isHostTunnel bool, family
 
 	mac, err := m.macBuilder.GenerateMAC(ru.DstNodeName)
 	if err != nil {
-		return neigh, fmt.Errorf("could not parse MAC address for node IP %s: %w", ru.DstNodeIp, err)
+		return neigh, fmt.Errorf("could not parse MAC address for node '%s': %w", ru.DstNodeName, err)
 	}
 	neigh.HardwareAddr = mac
 

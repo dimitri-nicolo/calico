@@ -23,14 +23,16 @@ var (
 	USAGE_FMT string = `Egress Daemon - L2 and L3 management daemon for Tigera egress gateways.
 
 Usage:
-  %[1]s start [options]
+  %[1]s start <gateway-ip> [options]
   %[1]s (-h | --help)
   %[1]s --version
 	
 Options:
   --socket-path=<path>    Path to nodeagent-UDS over-which routing information is pulled [default: /var/run/nodeagent/socket]
   --log-severity=<trace|debug|info|warn|error|fatal>    Minimum reported log severity [default: info]
-  --vni=<vni>    The VNI of the VXLAN interface being programmed [default: 4097]`
+  --vni=<vni>    The VNI of the VXLAN interface being programmed [default: 4097]
+
+`
 )
 
 func main() {
@@ -39,35 +41,49 @@ func main() {
 		return
 	}
 
-	if logSeverity, ok := args["--log-severity"].(string); ok {
-		ls, err := log.ParseLevel(logSeverity)
+	// parse this gateway's IP from string
+	var ip net.IP
+	if argEgressPodIP, ok := args["<gateway-ip>"].(string); !ok {
+		exitWithErrorAndUsage(fmt.Errorf("invalid egress-gateway IP '%v'", args["<gateway-ip>"]))
+	} else {
+		ip = net.ParseIP(argEgressPodIP)
+		if ip == nil {
+			exitWithErrorAndUsage(fmt.Errorf("invalid egress-gateway IP '%v'", argEgressPodIP))
+		}
+	}
+
+	// parse log severity
+	if argLogSeverity, ok := args["--log-severity"].(string); !ok {
+		exitWithErrorAndUsage(fmt.Errorf("invalid log severity value %v", args["--log-severity"]))
+	} else {
+		ls, err := log.ParseLevel(argLogSeverity)
 		if err != nil {
-			docopt.DefaultParser.HelpHandler(err, fmt.Sprintf(USAGE_FMT, os.Args[0]))
+			exitWithErrorAndUsage(err)
 		}
 
 		log.SetLevel(ls)
 	}
 
 	var vni int
-	vnis, ok := args["--vni"].(string)
+	argVNI, ok := args["--vni"].(string)
 	if !ok {
-		log.Fatalf("invalid VNI value '%v'", args["--vni"])
+		exitWithErrorAndUsage(fmt.Errorf("invalid VNI value '%v'", args["--vni"]))
 	}
-	vni, err = strconv.Atoi(vnis)
+	vni, err = strconv.Atoi(argVNI)
 	if err != nil {
-		log.Fatalf("invalid VNI value '%v'", args["--vni"])
+		exitWithErrorAndUsage(fmt.Errorf("invalid VNI value '%s'", argVNI))
 	}
 
 	syncSocket, ok := args["--socket-path"].(string)
 	if !ok {
-		log.Fatalf("invalid socket path value '%v'", args["--socket-path"])
+		exitWithErrorAndUsage(fmt.Errorf("invalid socket path value '%v'", args["--socket-path"]))
 	}
 
-	log.Debugf("Starting %s with config: %v", os.Args[0], args)
+	log.Debugf("starting %s with config: %v", os.Args[0], args)
 
 	// source felix updates (over gRPC)
 	syncClient := sync.NewClient(syncSocket, getDialOptions())
-	datastore := data.NewRouteStore(syncClient.GetUpdatesPipeline)
+	datastore := data.NewRouteStore(syncClient.GetUpdatesPipeline, ip)
 
 	// register datastore observers
 	routeManager := controlplane.NewRouteManager(datastore, "vxlan0", vni)
@@ -95,4 +111,9 @@ func getDialOptions() []grpc.DialOption {
 			},
 		),
 	}
+}
+
+func exitWithErrorAndUsage(err error) {
+	fmt.Printf(USAGE_FMT, os.Args[0])
+	log.Fatal(err)
 }
