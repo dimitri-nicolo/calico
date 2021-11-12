@@ -34,9 +34,10 @@ This feature is:
 
 **OpenShift users**
 
-1. In the patch release archive, find the `ocp-manifests` folder.  This contains two folders `install-manifests` and
-`enterprise-resources`. Former contains all the manifests needed for minimal OCP cluster. The latter contains
-the {{site.prodname}} resources.
+1. In the patch release archive, find the `ocp-manifests` folder.  This contains three folders `install-manifests`,
+`enterprise-resources`, and `upgrade-manifests`. `install-manifests` contains all the manifests needed for minimal OCP cluster. 
+`enterprise-resources` contains the {{site.prodname}} resources. `upgrade-manifests` folder contains all the manifests needed for upgrading {{site.prodname}}. 
+
 1. Apply patches.
 
    Create the cluster using the following command.

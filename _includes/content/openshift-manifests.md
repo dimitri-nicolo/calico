@@ -1,5 +1,8 @@
 Download the {{site.prodname}} manifests for OpenShift and add them to the generated manifests directory:
 
+[comment]: # (openshift-manifests div id below is used by release-scripts/generate-ocp-manifests.py to generate ocp archive)
+
+{: #openshift-manifests }
 ```bash
 curl {{ "/manifests/ocp/crds/01-crd-apiserver.yaml" | absolute_url }} -o manifests/01-crd-apiserver.yaml
 curl {{ "/manifests/ocp/crds/01-crd-authentication.yaml" | absolute_url }} -o manifests/01-crd-authentication.yaml
