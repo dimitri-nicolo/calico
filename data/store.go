@@ -19,22 +19,16 @@ type RouteObserver interface {
 	NotifyResync(RouteStore)
 }
 
-// RouteStore encapsulates the inner datastore to protect from arbitraty reads/writes
+// RouteStore encapsulates data access with a Subscriber-based API
 type RouteStore interface {
-	// Workloads wraps the read function to allow for thread-safe access to workload RouteUpdates.
-	Workloads(readFn func(map[string]*proto.RouteUpdate))
-	// WorkloadsByNodeName wraps the Workloads function to allow for thread-safe access to workload RouteUpdates, sorted by node.
-	WorkloadsByNodeName(readFn func(map[string][]proto.RouteUpdate))
-	// Tunnels wraps the read function to allow for thread-safe access to host tunnel RouteUpdates.
-	Tunnels(readFn func(map[string]*proto.RouteUpdate))
-	// TunnelsByNodeName wraps the Tunnels function to allow for thread-safe access to host tunnel RouteUpdates sorted by node.
-	TunnelsByNodeName(readFn func(map[string][]proto.RouteUpdate))
-	// GatewayWorkload fetches the RouteUpdate describing the instance of the egress gateway workload itself (thread-safe)
-	GatewayWorkload(readFn func(*proto.RouteUpdate))
+	// Routes returns all data aggregated by the store, grouped by node where relevant
+	Routes() (
+		thisWorkload *proto.RouteUpdate,
+		workloadsByNodeName map[string][]proto.RouteUpdate,
+		tunnelsByNodeName map[string][]proto.RouteUpdate,
+	)
 	// Subscribe allows Observers to subscribe to store updates
 	Subscribe(RouteObserver)
-	// SyncForever begins a sync loop (blocks until context.Done)
-	SyncForever(context.Context)
 }
 
 // routeStore stores all information needed to program the Egress Gateway's return routes to workloads
@@ -66,7 +60,7 @@ type routeStore struct {
 }
 
 // NewRouteStore instantiates a new store for route updates
-func NewRouteStore(getUpdatesPipeline func() <-chan *proto.ToDataplane, egressPodIP net.IP) RouteStore {
+func NewRouteStore(getUpdatesPipeline func() <-chan *proto.ToDataplane, egressPodIP net.IP) *routeStore {
 	return &routeStore{
 		observers:                  make([]RouteObserver, 0),
 		RWMutex:                    sync.RWMutex{},
@@ -78,59 +72,36 @@ func NewRouteStore(getUpdatesPipeline func() <-chan *proto.ToDataplane, egressPo
 	}
 }
 
-// Workloads wraps the read function to allow for thread-safe access to workload RouteUpdates.
-func (s *routeStore) Workloads(readFn func(map[string]*proto.RouteUpdate)) {
+// Routes returns all data aggregated by the store, grouped by node where relevant
+func (s *routeStore) Routes() (
+	thisWorkload *proto.RouteUpdate,
+	workloadsByNodeName map[string][]proto.RouteUpdate,
+	tunnelsByNodeName map[string][]proto.RouteUpdate,
+) {
+	workloadsByNodeName = make(map[string][]proto.RouteUpdate)
+	tunnelsByNodeName = make(map[string][]proto.RouteUpdate)
 	s.read(func(s *routeStore) {
-		readFn(s.remoteWorkloadUpdatesByDst)
-	})
-}
-
-// WorkloadsByNodeName wraps the Workloads function to allow for thread-safe access to workload RouteUpdates, sorted by node.
-func (s *routeStore) WorkloadsByNodeName(readFn func(map[string][]proto.RouteUpdate)) {
-	s.Workloads(func(workloads map[string]*proto.RouteUpdate) {
-		workloadsByNodeName := make(map[string][]proto.RouteUpdate)
-
-		for _, workload := range workloads {
+		// group all remote workloads
+		for _, workload := range s.remoteWorkloadUpdatesByDst {
 			nodeName := workload.DstNodeName
 			if _, ok := workloadsByNodeName[nodeName]; !ok {
 				workloadsByNodeName[nodeName] = make([]proto.RouteUpdate, 0)
 			}
 			workloadsByNodeName[nodeName] = append(workloadsByNodeName[nodeName], *workload)
 		}
-		log.Debugf("constructed workload map sorted by node name: %+v", workloadsByNodeName)
-		readFn(workloadsByNodeName)
-	})
-}
 
-// Tunnels wraps the read function to allow for thread-safe access to host tunnel RouteUpdates.
-func (s *routeStore) Tunnels(readFn func(map[string]*proto.RouteUpdate)) {
-	s.read(func(s *routeStore) {
-		readFn(s.tunnelUpdatesByDst)
-	})
-}
-
-// TunnelsForHost provides thread-safe read access to host-ns tunnel RouteUpdates for the given node
-func (s *routeStore) TunnelsByNodeName(readFn func(map[string][]proto.RouteUpdate)) {
-	s.Tunnels(func(tunnels map[string]*proto.RouteUpdate) {
-		tunnelsByNodeName := make(map[string][]proto.RouteUpdate)
-
-		for _, tunnel := range tunnels {
+		// group all tunnels
+		for _, tunnel := range s.tunnelUpdatesByDst {
 			nodeName := tunnel.DstNodeName
 			if _, ok := tunnelsByNodeName[nodeName]; !ok {
 				tunnelsByNodeName[nodeName] = make([]proto.RouteUpdate, 0)
 			}
 			tunnelsByNodeName[nodeName] = append(tunnelsByNodeName[nodeName], *tunnel)
 		}
-		log.Debugf("constructed tunnels map sorted by node name: %+v", tunnelsByNodeName)
-		readFn(tunnelsByNodeName)
-	})
-}
 
-// GatewayWorkload fetches the RouteUpdate describing the instance of the egress gateway workload itself (thread-safe)
-func (s *routeStore) GatewayWorkload(readFn func(*proto.RouteUpdate)) {
-	s.read(func(s *routeStore) {
-		readFn(s.latestGatewayUpdate)
+		thisWorkload = s.latestGatewayUpdate
 	})
+	return thisWorkload, workloadsByNodeName, tunnelsByNodeName
 }
 
 // Subscribe allows datastore consumers to subscribe to store updates

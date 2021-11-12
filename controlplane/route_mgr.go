@@ -180,30 +180,18 @@ func (m *RouteManager) Start(ctx context.Context) {
 
 			// in order to maintain symmetrical traffic paths over all types of cluster encap,
 			// we must know what tunnel device IP's to target when sending back packets
-			var latestGatewayWorkloadUpdate *proto.RouteUpdate
-			s.GatewayWorkload(func(gatewayUpdate *proto.RouteUpdate) {
-				latestGatewayWorkloadUpdate = gatewayUpdate
-			})
-
-			if latestGatewayWorkloadUpdate == nil {
+			thisWorkload, workloadsByNodeName, tunnelsByNodeName := s.Routes()
+			if thisWorkload == nil {
 				log.Error("could not find RouteUpdate for this egress-gateway workload")
 				inSync = false
 				break
 			}
 
-			gatewayEncapType := latestGatewayWorkloadUpdate.IpPoolType // will the gateway receive packets that have been sNAT'd by the node's tunnel?
-			gatewayNodeHasWireguard := false                           // wireguard tunnels will take precedence if nodes are peered - we search for this device next
+			gatewayEncapType := thisWorkload.IpPoolType // will the gateway receive packets that have been sNAT'd by the node's tunnel?
+			gatewayNodeHasWireguard := false // wireguard tunnels will take precedence if nodes are peered - we search for this device next
 
-			var tunnelsByNodeName map[string][]proto.RouteUpdate
-			var workloadsByNodeName map[string][]proto.RouteUpdate
-			s.TunnelsByNodeName(func(t map[string][]proto.RouteUpdate) {
-				s.WorkloadsByNodeName(func(w map[string][]proto.RouteUpdate) {
-					tunnelsByNodeName = t
-					workloadsByNodeName = w
-				})
-			})
 			// first check if the egress gateway's node has a wireguard device - if not, we can ignore all wireguard tunnels on other hosts
-			gatewayNodeTunnels := tunnelsByNodeName[latestGatewayWorkloadUpdate.DstNodeName]
+			gatewayNodeTunnels := tunnelsByNodeName[thisWorkload.DstNodeName]
 			log.Debugf("searching gateway's host tunnels for wireguard devices: %+v", gatewayNodeTunnels)
 			for _, tunnel := range gatewayNodeTunnels {
 				if protoutil.IsWireguardTunnel(&tunnel) {
@@ -216,7 +204,7 @@ func (m *RouteManager) Start(ctx context.Context) {
 			activeTunnelsByNodeName := make(map[string]*proto.RouteUpdate)
 			for nodeName, tunnels := range tunnelsByNodeName {
 				// skip our local node
-				if nodeName == latestGatewayWorkloadUpdate.DstNodeName {
+				if nodeName == thisWorkload.DstNodeName {
 					continue
 				}
 
@@ -241,8 +229,8 @@ func (m *RouteManager) Start(ctx context.Context) {
 						// the remote host has an encap tunnel, and our workload has encap enabled.
 						// we must now check if our encap setting is cross-subnet, since a remote host
 						// in our subnet will not use encap in that case
-						if latestGatewayWorkloadUpdate.SameSubnet {
-							log.Debugf("egress-gateway ippool is in cross-subnet mode: %+v", latestGatewayWorkloadUpdate)
+						if thisWorkload.SameSubnet {
+							log.Debugf("egress-gateway ippool is in cross-subnet mode: %+v", thisWorkload)
 							// we are in cross-subnet mode
 							// inconveniently, to determine if the remote host is in the same subnet,
 							// we must check a RouteUpdate for a workload on that node

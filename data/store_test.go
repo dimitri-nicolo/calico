@@ -12,7 +12,7 @@ import (
 
 // TestStoreWaitsTillInSync ensures no store conumers are notified of updates until the first in-sync msg of a connection is received
 func TestStoreWaitsTillInSync(test *testing.T) {
-	var store RouteStore
+	var store *routeStore
 	RegisterTestingT(test)
 
 	// our "gRPC" pipeline that the store will pull it's data from
@@ -61,7 +61,7 @@ func TestStoreWaitsTillInSync(test *testing.T) {
 
 // TestStoreResyncsAfterClosedConnection ensures that when an updates channel is closed, the store fetches a new one, and resets its inSync status
 func TestStoreResyncsAfterClosedConnection(test *testing.T) {
-	var store RouteStore
+	var store *routeStore
 	RegisterTestingT(test)
 
 	// our "gRPC" pipeline that the store will pull it's data from
