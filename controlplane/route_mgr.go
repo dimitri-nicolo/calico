@@ -184,6 +184,13 @@ func (m *RouteManager) Start(ctx context.Context) {
 			s.GatewayWorkload(func(gatewayUpdate *proto.RouteUpdate) {
 				latestGatewayWorkloadUpdate = gatewayUpdate
 			})
+
+			if latestGatewayWorkloadUpdate == nil {
+				log.Error("could not find RouteUpdate for this egress-gateway workload")
+				inSync = false
+				break
+			}
+
 			gatewayEncapType := latestGatewayWorkloadUpdate.IpPoolType // will the gateway receive packets that have been sNAT'd by the node's tunnel?
 			gatewayNodeHasWireguard := false                           // wireguard tunnels will take precedence if nodes are peered - we search for this device next
 
@@ -216,7 +223,7 @@ func (m *RouteManager) Start(ctx context.Context) {
 				nodeWorkloads, ok := workloadsByNodeName[nodeName]
 				// if there are no workloads for this node, skip it
 				if !ok || len(nodeWorkloads) == 0 {
-					log.Debugf("skipping tunnel checks for node '%s' due to no active workloads...")
+					log.Debugf("skipping tunnel checks for node '%s' due to no active workloads...", nodeName)
 					continue
 				}
 

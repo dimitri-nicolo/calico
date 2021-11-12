@@ -39,8 +39,16 @@ func TestProgramsKernel(test *testing.T) {
 		DstNodeName: "example.foo",
 		DstNodeIp:   "192.168.1.1",
 	}
+	gatewayUpdate := proto.RouteUpdate{
+		Type: proto.RouteType_LOCAL_WORKLOAD,
+		IpPoolType: proto.IPPoolType_NO_ENCAP,
+		Dst: "10.0.2.0/31",
+		DstNodeName: "example.local",
+		DstNodeIp: "192.168.2.2",
+	}
 	store := mock.Store{
 		WorkloadsByDst: routesByWorkloadCIDR,
+		GatewayUpdate: &gatewayUpdate,
 	}
 
 	log.Info("initialising mock netlink handle...")
@@ -124,8 +132,16 @@ func TestHandlesFailures(test *testing.T) {
 		DstNodeName: "example.foo",
 		DstNodeIp:   "192.168.1.1",
 	}
+	gatewayUpdate := proto.RouteUpdate{
+		Type: proto.RouteType_LOCAL_WORKLOAD,
+		IpPoolType: proto.IPPoolType_NO_ENCAP,
+		Dst: "10.0.2.0/31",
+		DstNodeName: "example.local",
+		DstNodeIp: "192.168.2.2",
+	}
 	store := mock.Store{
 		WorkloadsByDst: routesByWorkloadCIDR,
+		GatewayUpdate: &gatewayUpdate,
 	}
 
 	log.Info("initialising mock netlink handle...")
@@ -172,6 +188,7 @@ func TestHandlesTunnels(test *testing.T) {
 
 	log.Info("creating mock route store...")
 	routesByWorkloadCIDR := make(map[string]*proto.RouteUpdate)
+	tunnelsByDst := make(map[string]*proto.RouteUpdate)
 	routesByWorkloadCIDR["10.0.1.0/24"] = &proto.RouteUpdate{
 		Type:        proto.RouteType_REMOTE_WORKLOAD,
 		IpPoolType:  proto.IPPoolType_NO_ENCAP,
@@ -179,8 +196,8 @@ func TestHandlesTunnels(test *testing.T) {
 		DstNodeName: "example.foo",
 		DstNodeIp:   "192.168.1.1",
 	}
-	// add in a wireguard-ish tunnel ipdate with an overlapping Dst CIDR
-	routesByWorkloadCIDR["10.0.1.23/32"] = &proto.RouteUpdate{
+	// add in a wireguard-ish tunnel update with an overlapping Dst CIDR
+	tunnelsByDst["10.0.1.23/32"] = &proto.RouteUpdate{
 		Type: proto.RouteType_REMOTE_TUNNEL,
 		TunnelType: &proto.TunnelType{
 			Wireguard: true,
@@ -190,8 +207,28 @@ func TestHandlesTunnels(test *testing.T) {
 		DstNodeName: "example.foo",
 		DstNodeIp:   "192.168.1.1",
 	}
+	// also add a wireguard tunnel on the "gateway's host" so it thinks the node's are peered
+	tunnelsByDst["10.0.3.1/32"] = &proto.RouteUpdate{
+		Type: proto.RouteType_LOCAL_TUNNEL,
+		TunnelType: &proto.TunnelType{
+			Wireguard: true,
+		},
+		IpPoolType:  proto.IPPoolType_IPIP,
+		Dst:         "10.0.3.1/32",
+		DstNodeName: "example.local",
+		DstNodeIp:   "192.168.2.2",
+	}
+	gatewayUpdate := proto.RouteUpdate{
+		Type: proto.RouteType_LOCAL_WORKLOAD,
+		IpPoolType: proto.IPPoolType_NO_ENCAP,
+		Dst: "10.0.2.0/31",
+		DstNodeName: "example.local",
+		DstNodeIp: "192.168.2.2",
+	}
 	store := mock.Store{
 		WorkloadsByDst: routesByWorkloadCIDR,
+		TunnelsByDst: tunnelsByDst,
+		GatewayUpdate: &gatewayUpdate,
 	}
 
 	log.Info("initialising mock netlink handle...")
@@ -217,7 +254,7 @@ func TestHandlesTunnels(test *testing.T) {
 	// allow the routeManager some time to program the 'kernel'. (nice to have: a subscription for route updates)
 	time.Sleep(1 * time.Second)
 	l3ExistsForRouteUpdate(test, nl, link, routesByWorkloadCIDR["10.0.1.0/24"])
-	exitRouteExistsForRouteUpdate(test, nl, defaultLink, defaultRoute.Gw.String(), routesByWorkloadCIDR["10.0.1.23/32"])
+	exitRouteExistsForRouteUpdate(test, nl, defaultLink, defaultRoute.Gw.String(), tunnelsByDst["10.0.1.23/32"])
 	l2ExistsForRouteUpdate(test, nl, link, routesByWorkloadCIDR["10.0.1.0/24"], "10.0.1.23")
 }
 
