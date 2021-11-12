@@ -37,29 +37,6 @@ func (s Store) Routes() (
 	return thisWorkload, workloadsByNodeName, tunnelsByNodeName
 }
 
-func (s Store) GatewayWorkload(readFn func(*proto.RouteUpdate)) {
-	readFn(s.GatewayUpdate)
-}
-
-func (s Store) WorkloadsByNodeName(readFn func(map[string][]proto.RouteUpdate)) {
-	workloadsByNodeName := make(map[string][]proto.RouteUpdate)
-
-	readFn(workloadsByNodeName)
-}
-
-func (s Store) Workloads(readFn func(map[string]*proto.RouteUpdate)) {
-	readFn(s.WorkloadsByDst)
-}
-
-func (s Store) Tunnels(readFn func(map[string]*proto.RouteUpdate)) {
-	readFn(s.TunnelsByDst)
-}
-
-func (s Store) TunnelsByNodeName(readFn func(map[string][]proto.RouteUpdate)) {
-	tunnelsByNodeName := make(map[string][]proto.RouteUpdate)
-
-	readFn(tunnelsByNodeName)
-}
 
 func (s Store) Subscribe(o data.RouteObserver) {
 	//chillin
