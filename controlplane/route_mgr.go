@@ -294,20 +294,9 @@ func calculateActiveTunnelsForNodes(
 				// in our subnet will not use encap in that case
 				if thisWorkload.SameSubnet {
 					log.Debugf("egress-gateway ippool is in cross-subnet mode: %+v", thisWorkload)
-					// we are in cross-subnet mode
-					// inconveniently, to determine if the remote host is in the same subnet,
-					// we must check a RouteUpdate for a workload on that node
-					var sameSubnet bool
-					if wls, ok := workloadsByNodeName[nodeName]; ok && len(wls) > 0 {
-						sameSubnet = wls[0].SameSubnet
-						log.Debugf("inferring node's subnet from workload: %+v", wls[0])
-					} else {
-						log.Debugf("no workloads behind tunnel. skipping...")
-						continue // there are no workloads on this node
-					}
-
+					// we are in cross-subnet mode, is this tunnel across a subnet?
 					// if it's in the same subnet, this tunnel won't be active; skip
-					if sameSubnet {
+					if tunnel.SameSubnet {
 						log.Debugf("skipping tunnel in same subnet...")
 						continue
 					}
