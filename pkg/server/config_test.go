@@ -1,18 +1,19 @@
 // Copyright (c) 2021 Tigera. All rights reserved.
-package config_test
+package server_test
 
 import (
 	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/tigera/prometheus-service/pkg/handler/config"
+
+	"github.com/tigera/prometheus-service/pkg/server"
 )
 
 var _ = Describe("Config test", func() {
 
 	It("should set default values on all Config fields if no env config is provided", func() {
-		config, err := config.NewConfigFromEnv()
+		config, err := server.NewConfigFromEnv()
 
 		Expect(err).To(BeNil())
 		Expect(config.ListenAddr).To(Equal(":9090"))
@@ -27,7 +28,7 @@ var _ = Describe("Config test", func() {
 		defer os.Unsetenv("LISTEN_ADDR")
 		defer os.Unsetenv("PROMETHEUS_ENDPOINT_URL")
 
-		config, err := config.NewConfigFromEnv()
+		config, err := server.NewConfigFromEnv()
 
 		Expect(err).To(BeNil())
 		Expect(config.ListenAddr).To(Equal("localhost:9090"))

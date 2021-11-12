@@ -10,7 +10,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/lma/pkg/auth"
-	"github.com/tigera/prometheus-service/pkg/handler/config"
 	health "github.com/tigera/prometheus-service/pkg/handler/health"
 	proxy "github.com/tigera/prometheus-service/pkg/handler/proxy"
 	"github.com/tigera/prometheus-service/pkg/middleware"
@@ -21,7 +20,7 @@ var (
 	wg     sync.WaitGroup
 )
 
-func Start(config *config.Config) {
+func Start(config *Config) {
 	sm := http.NewServeMux()
 
 	reverseProxy := getReverseProxy(config.PrometheusUrl)
@@ -44,18 +43,18 @@ func Start(config *config.Config) {
 			config.OIDCAuthUsernameClaim,
 			opts...)
 		if err != nil {
-			log.Panic("Unable to IdP authenticator", err)
+			log.Fatal("Unable to add an issuer to the authenticator", err)
 		}
 		options = append(options, auth.WithAuthenticator(config.OIDCAuthIssuer, dex))
 	}
 	authnAuthz, err := auth.NewAuthNAuthZ(options...)
 	if err != nil {
-		log.Panic("Unable to create authenticator", err)
+		log.Fatal("Unable to create authenticator", err)
 	}
 
 	proxyHandler, err := proxy.Proxy(reverseProxy, authnAuthz)
 	if err != nil {
-		log.Panic("Unable to create proxy handler", err)
+		log.Fatal("Unable to create proxy handler", err)
 	}
 
 	sm.Handle("/health", health.HealthCheck())

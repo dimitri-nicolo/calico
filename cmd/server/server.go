@@ -5,8 +5,6 @@ import (
 	"os"
 
 	"github.com/projectcalico/libcalico-go/lib/logutils"
-	config "github.com/tigera/prometheus-service/pkg/handler/config"
-
 	log "github.com/sirupsen/logrus"
 
 	server "github.com/tigera/prometheus-service/pkg/server"
@@ -19,7 +17,7 @@ const (
 func main() {
 	setLogger()
 
-	cfg, err := config.NewConfigFromEnv()
+	cfg, err := server.NewConfigFromEnv()
 
 	if err != nil {
 		log.WithError(err).Fatal("Configuration Error.")

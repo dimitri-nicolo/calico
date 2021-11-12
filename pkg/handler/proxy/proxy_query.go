@@ -28,12 +28,12 @@ var (
 	// The RBAC permissions that allow a user to perform an HTTP POST to Prometheus.
 	createResources = []*authzv1.ResourceAttributes{
 		{
-			Verb:     "get",
+			Verb:     "create",
 			Resource: "services/proxy",
 			Name:     "https:tigera-api:8080",
 		},
 		{
-			Verb:     "get",
+			Verb:     "create",
 			Resource: "services/proxy",
 			Name:     "calico-node-prometheus:9090",
 		},
@@ -79,7 +79,7 @@ func Proxy(proxy *httputil.ReverseProxy, authnAuthz auth.AuthNAuthZ) (http.Handl
 		}
 
 		if !authorized {
-			w.WriteHeader(401)
+			w.WriteHeader(403)
 			w.Write([]byte(fmt.Sprintf("user %v is not authorized to perform %v https:tigera-api:8080", usr, req.Method)))
 			return
 		}
