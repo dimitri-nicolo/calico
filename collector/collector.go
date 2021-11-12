@@ -446,6 +446,7 @@ func (c *collector) checkEpStats() {
 	// - check age and expire the entry if needed.
 	for _, data := range c.epStats {
 		if data.IsDirty() && (data.reported || data.RuleUpdatedAt() < minLastRuleUpdatedAt) {
+			c.checkPreDNATTuple(data)
 			c.reportMetrics(data, true)
 		}
 		if data.UpdatedAt() < minExpirationAt {
@@ -456,7 +457,7 @@ func (c *collector) checkEpStats() {
 }
 
 func (c *collector) LookupProcessInfoCacheAndUpdate(data *Data) {
-	t := data.PreDNATTuple()
+	t, _ := data.PreDNATTuple()
 	processInfo, ok := c.processInfoCache.Lookup(t, TrafficDirOutbound)
 
 	// In BPF dataplane, the existing connection tuples will be pre-DNAT and the new connections will
@@ -503,6 +504,35 @@ func (c *collector) LookupProcessInfoCacheAndUpdate(data *Data) {
 			logutil.Tracef(c.displayDebugTraceLogs,
 				"Setting tcp stats to %+v for tuple %+v", processInfo.TcpStatsData, processInfo.Tuple)
 		}
+	}
+}
+
+func (c *collector) checkPreDNATTuple(data *Data) {
+	preDNATTuple, err := data.PreDNATTuple()
+	if err != nil {
+		return
+	}
+	preDNATData, ok := c.epStats[preDNATTuple]
+	if !ok {
+		return
+	}
+	log.Debugf("Found data that resembles PreDNAT connection data->%+v, preDNATData->%+v", data, preDNATData)
+
+	// If we are tracking a denied connection attempt that has the same tuple as the
+	// pre-DNAT tuple of a similar allowed connection then make sure that we expire the
+	// tuple that looks like the pre-DNAT tuple. This guards us against a scenario where
+	// the first tracked tuple that looks like the preDNAT tuple of a long running connection
+	// never expires when TCP stats are enabled.
+	// We don't worry about a allowed connection becoming denied because we don't currently
+	// delete an already established connection.
+	// We only try to report a metric when
+	// - the tuple that looks like the pre DNAT tuple is not a connection i.e, we only received NFLOGs.
+	// - Both ingress and egress rule trace is not dirty. Otherwise we want to let the usual report metrics
+	//   go ahead first as this cleanup here is a last resort.
+	if !preDNATData.isConnection && !preDNATData.EgressRuleTrace.IsDirty() && !preDNATData.IngressRuleTrace.IsDirty() {
+		c.reportMetrics(preDNATData, true)
+		c.expireMetrics(preDNATData)
+		c.deleteDataFromEpStats(preDNATData)
 	}
 }
 
