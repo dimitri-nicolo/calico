@@ -9,6 +9,9 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/tigera/lma/pkg/auth"
+	"github.com/tigera/prometheus-service/pkg/handler/config"
+
 	health "github.com/tigera/prometheus-service/pkg/handler/health"
 	proxy "github.com/tigera/prometheus-service/pkg/handler/proxy"
 	"github.com/tigera/prometheus-service/pkg/middleware"
@@ -19,14 +22,46 @@ var (
 	wg     sync.WaitGroup
 )
 
-func Start(config *Config) {
+func Start(config *config.Config) {
 	sm := http.NewServeMux()
 
 	reverseProxy := getReverseProxy(config.PrometheusUrl)
 
+	options := []auth.AuthnAuthzOption{
+		auth.WithInClusterConfiguration(),
+	}
+
+	if config.DexEnabled {
+		log.Debug("Configuring Dex for authentication")
+		opts := []auth.DexOption{
+			auth.WithGroupsClaim(config.OIDCAuthGroupsClaim),
+			auth.WithJWKSURL(config.OIDCAuthJWKSURL),
+			auth.WithUsernamePrefix(config.OIDCAuthUsernamePrefix),
+			auth.WithGroupsPrefix(config.OIDCAuthGroupsPrefix),
+		}
+		dex, err := auth.NewDexAuthenticator(
+			config.OIDCAuthIssuer,
+			config.OIDCAuthClientID,
+			config.OIDCAuthUsernameClaim,
+			opts...)
+		if err != nil {
+			log.Panic("Unable to IdP authenticator", err)
+		}
+		options = append(options, auth.WithAuthenticator(config.OIDCAuthIssuer, dex))
+	}
+	authnAuthz, err := auth.NewAuthNAuthZ(options...)
+	if err != nil {
+		log.Panic("Unable to create authenticator", err)
+	}
+
+	proxyHandler, err := proxy.Proxy(reverseProxy, authnAuthz)
+	if err != nil {
+		log.Panic("Unable to create proxy handler", err)
+	}
+
 	sm.Handle("/health", health.HealthCheck())
 
-	sm.Handle("/", proxy.Proxy(reverseProxy))
+	sm.Handle("/", proxyHandler)
 
 	server = &http.Server{
 		Addr:    config.ListenAddr,
@@ -37,7 +72,7 @@ func Start(config *Config) {
 
 	go func() {
 		log.Infof("Starting server on %v", config.ListenAddr)
-		err := server.ListenAndServe()
+		err := server.ListenAndServeTLS(config.TLSCert, config.TLSKey)
 		if err != nil {
 			log.WithError(err).Error("Error when starting server.")
 		}
@@ -47,10 +82,12 @@ func Start(config *Config) {
 
 func getReverseProxy(target *url.URL) *httputil.ReverseProxy {
 	reverseProxy := httputil.NewSingleHostReverseProxy(target)
-	// applies the proemetheus target URL to the request
+	// applies the prometheus target URL to the request
 	reverseProxy.Director = func(req *http.Request) {
 		req.URL.Scheme = target.Scheme
 		req.URL.Host = target.Host
+		req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
+		req.Host = target.Host
 	}
 
 	return reverseProxy
