@@ -6,7 +6,7 @@ canonical_url: '/getting-started/kubernetes/kubernetes/tkg'
 
 ### Big picture
 
-Install {{site.prodname}} as the CNI for networking and/or network policy on Tanzu Kubernetes Grid for AWS.
+Install {{site.prodname}} as the CNI for networking and/or network policy on Tanzu Kubernetes Grid for AWS workload clusters.
 
 ### Concepts
 
@@ -16,12 +16,11 @@ Install {{site.prodname}} as the CNI for networking and/or network policy on Tan
 
 **Required**
 
-- A Tanzu Kubernetes Grid cluster with version 1.3 and later.
-
-- The cluster must be configured with network setting `CNI: none`. When your cluster is provisioned, the nodes will end up in a NotReady State until you install {{site.prodname}}.
+- A Tanzu Kubernetes Grid workload cluster with version 1.3 and later.
+- The workload cluster must be configured with network setting `CNI: none`. When your workload cluster is provisioned, the nodes will end up in a NotReady State until you install {{site.prodname}}.
   - For more information, read {% include open-new-window.html text='Tanzu networking' url='https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.4/vmware-tanzu-kubernetes-grid-14/GUID-tanzu-k8s-clusters-networking.html' %}
 and {% include open-new-window.html text='Tanzu configuration file reference' url='https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.4/vmware-tanzu-kubernetes-grid-14/GUID-tanzu-config-reference.html' %}.
-- The TKG cluster meets the [{{side.prodname}} requirements]({{site.baseurl}}/getting-started/kubernetes/requirements).
+- The TKG workload cluster meets the [{{side.prodname}} requirements]({{site.baseurl}}/getting-started/kubernetes/requirements).
 - The EC2 instances must be configured to belong to a separate SecurityGroup with ingress rules:
   - Calico (BGP) TCP 179
   - Calico (Typha) TCP 5473
