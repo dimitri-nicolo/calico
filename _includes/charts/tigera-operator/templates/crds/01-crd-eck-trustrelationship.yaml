@@ -4,6 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   labels:
     controller-tools.k8s.io: "1.0"
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.1
+    helm.sh/hook: "crd-install"
   name: trustrelationships.elasticsearch.k8s.elastic.co
 spec:
   # preserveUnknownFields - set to false to pickup udpate to v1/CRD structure 

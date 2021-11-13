@@ -3,6 +3,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.4
+    helm.sh/hook: "crd-install"
   name: prometheuses.monitoring.coreos.com
 spec:
   # preserveUnknownFields - set to false to pickup udpate to v1/CRD structure 
