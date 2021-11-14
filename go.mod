@@ -52,7 +52,7 @@ require (
 	github.com/tigera/api v0.0.0-20211028194523-b4ceddaee039
 	github.com/tigera/licensing v1.0.1-0.20211105031908-d59f5204df97
 	github.com/tigera/nfnetlink v0.0.0-20210819183736-75abca8ede69
-	github.com/tigera/windows-networking v0.0.0-20210505211919-0de3e1e53cff
+	github.com/tigera/windows-networking v0.0.0-20211112174220-6a90051af748
 	github.com/vishvananda/netlink v1.1.1-0.20210703095558-21f2c55a7727
 	github.com/willf/bitset v1.1.11
 	golang.org/x/net v0.0.0-20210927181540-4e4d966f7476

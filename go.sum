@@ -794,10 +794,10 @@ github.com/tigera/licensing v1.0.1-0.20211105031908-d59f5204df97 h1:XwdO3VwYK+wJ
 github.com/tigera/licensing v1.0.1-0.20211105031908-d59f5204df97/go.mod h1:3DCjnMA2kJ86ThUgAF1DASiWxSTuEA5YbBQz5MIleO4=
 github.com/tigera/nfnetlink v0.0.0-20210819183736-75abca8ede69 h1:trFbRbXqFW94EU6ssWyYbVXyA8R3dDV6RiMSz5Okyhs=
 github.com/tigera/nfnetlink v0.0.0-20210819183736-75abca8ede69/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
-github.com/tigera/typha-private v0.6.0-beta1.0.20211105162547-3fd786c03c6c h1:WAgP8zeW3tprTWVMcTpb5A3gP5FXgWWA50oP1rqTT6U=
-github.com/tigera/typha-private v0.6.0-beta1.0.20211105162547-3fd786c03c6c/go.mod h1:+45+TnEwL9cLH0QZbUuCjzVoKdlcTn1zeyY3AmvaYww=
-github.com/tigera/windows-networking v0.0.0-20210505211919-0de3e1e53cff h1:GGIQ223P8iC23xBHXzP1sAt5hM169hSDBGnxNTu4vkE=
-github.com/tigera/windows-networking v0.0.0-20210505211919-0de3e1e53cff/go.mod h1:zuycD4KqAFNMJC+Bv4fGqGMn7XsS/mZnttHGe96NLk0=
+github.com/tigera/typha-private v0.6.0-beta1.0.20211110183122-cd030e135216 h1:uXnEaE3KEUAH9EhR3XlM5NzjkIRQ29iNwb9YvDHuulY=
+github.com/tigera/typha-private v0.6.0-beta1.0.20211110183122-cd030e135216/go.mod h1:oKR6Jp9c4q5N1rY6APxvQKei2/AF28nMFvkJAZXrnuc=
+github.com/tigera/windows-networking v0.0.0-20211112174220-6a90051af748 h1:b40B44hR/C8mgIeQ+teQrzfamWc5ls5W9NYJuaUnXTI=
+github.com/tigera/windows-networking v0.0.0-20211112174220-6a90051af748/go.mod h1:zuycD4KqAFNMJC+Bv4fGqGMn7XsS/mZnttHGe96NLk0=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 h1:LnC5Kc/wtumK+WB441p7ynQJzVuNRJiqddSIE3IlSEQ=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
