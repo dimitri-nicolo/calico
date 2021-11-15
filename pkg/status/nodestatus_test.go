@@ -21,10 +21,10 @@ import (
 
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/nodestatussyncer"
 
-	apiv3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/node/pkg/lifecycle/utils"
 	populator "github.com/projectcalico/node/pkg/status/populators"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/ginkgo"
