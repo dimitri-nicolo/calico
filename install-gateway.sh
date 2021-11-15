@@ -46,4 +46,4 @@ echo 0 > /proc/sys/net/ipv4/conf/all/rp_filter
 echo 0 > /proc/sys/net/ipv4/conf/vxlan0/rp_filter
 
 echo Egress gateway starting...
-/egressd start --log-severity $DAEMON_LOG_SEVERITY --vni $EGRESS_VXLAN_VNI --socket-path $DAEMON_SOCKET_PATH
+/egressd start $EGRESS_POD_IP --log-severity $DAEMON_LOG_SEVERITY --vni $EGRESS_VXLAN_VNI --socket-path $DAEMON_SOCKET_PATH

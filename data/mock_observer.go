@@ -5,8 +5,10 @@ import (
 )
 
 type MockObserver struct {
-	RoutesSnapshot   map[string]*proto.RouteUpdate
-	NumNotifications int
+	ThisWorkloadSnapShot *proto.RouteUpdate
+	WorkloadsSnapshot    map[string][]proto.RouteUpdate
+	TunnelsSnapshot      map[string][]proto.RouteUpdate
+	NumNotifications     int
 }
 
 // NewMockObserver creates a new observer and registers it with the store
@@ -19,7 +21,5 @@ func NewMockObserver(s RouteStore) *MockObserver {
 
 func (o *MockObserver) NotifyResync(s RouteStore) {
 	o.NumNotifications++
-	s.Routes(func(routes map[string]*proto.RouteUpdate) {
-		o.RoutesSnapshot = routes
-	})
+	o.ThisWorkloadSnapShot, o.WorkloadsSnapshot, o.TunnelsSnapshot = s.Routes()
 }
