@@ -1,19 +1,6 @@
 // Project Calico BPF dataplane programs.
 // Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
-//
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 #ifndef __CALI_NAT_H__
 #define __CALI_NAT_H__
@@ -72,12 +59,14 @@ static CALI_BPF_INLINE int skb_nat_l4_csum_ipv4(struct __sk_buff *skb, size_t of
 	return ret;
 }
 
-static CALI_BPF_INLINE struct calico_nat_dest* calico_v4_nat_lookup2(__be32 ip_src,
+static CALI_BPF_INLINE struct calico_nat_dest* calico_v4_nat_lookup3(__be32 ip_src,
 								     __be32 ip_dst,
 								     __u8 ip_proto,
 								     __u16 dport,
 								     bool from_tun,
-								     nat_lookup_result *res)
+								     nat_lookup_result *res,
+								     bool affinity_always,
+								     bool affinity_tmr_update)
 {
 	struct calico_nat_v4_key nat_key = {
 		.prefixlen = NAT_PREFIX_LEN_WITH_SRC_MATCH_IN_BITS,
@@ -185,13 +174,21 @@ static CALI_BPF_INLINE struct calico_nat_dest* calico_v4_nat_lookup2(__be32 ip_s
 
 	now = bpf_ktime_get_ns();
 	affval = cali_v4_nat_aff_lookup_elem(&affkey);
-	if (affval && now - affval->ts <= nat_lv1_val->affinity_timeo * 1000000000ULL) {
-		CALI_DEBUG("NAT: using affinity backend %x:%d\n",
-				bpf_ntohl(affval->nat_dest.addr), affval->nat_dest.port);
+	if (affval) {
+		int timeo = (affinity_always ? 60 /* default udp not seen */ : nat_lv1_val->affinity_timeo);
+		if (now - affval->ts <= timeo  * 1000000000ULL) {
+			CALI_DEBUG("NAT: using affinity backend %x:%d\n",
+					bpf_ntohl(affval->nat_dest.addr), affval->nat_dest.port);
+			if (affinity_tmr_update) {
+				affval->ts = now;
+			}
 
-		return &affval->nat_dest;
+			return &affval->nat_dest;
+		}
+		CALI_DEBUG("NAT: affinity expired for %x:%d\n", bpf_ntohl(ip_dst), dport);
+	} else {
+		CALI_DEBUG("no previous affinity for %x:%d", bpf_ntohl(ip_dst), dport);
 	}
-	CALI_DEBUG("NAT: affinity invalid, new lookup for %x\n", bpf_ntohl(ip_dst));
 	/* To be k8s conformant, fall through to pick a random backend. */
 
 skip_affinity:
@@ -209,7 +206,7 @@ skip_affinity:
 
 	CALI_DEBUG("NAT: backend selected %x:%d\n", bpf_ntohl(nat_lv2_val->addr), nat_lv2_val->port);
 
-	if (nat_lv1_val->affinity_timeo != 0) {
+	if (nat_lv1_val->affinity_timeo != 0 || affinity_always) {
 		int err;
 		struct calico_nat_v4_affinity_val val = {
 			.ts = now,
@@ -229,7 +226,15 @@ skip_affinity:
 static CALI_BPF_INLINE struct calico_nat_dest* calico_v4_nat_lookup(__be32 ip_src, __be32 ip_dst,
 								    __u8 ip_proto, __u16 dport, nat_lookup_result *res)
 {
-	return calico_v4_nat_lookup2(ip_src, ip_dst, ip_proto, dport, false, res);
+	return calico_v4_nat_lookup3(ip_src, ip_dst, ip_proto, dport, false, res, false, false);
+}
+
+static CALI_BPF_INLINE struct calico_nat_dest* calico_v4_nat_lookup2(__be32 ip_src, __be32 ip_dst,
+								    __u8 ip_proto, __u16 dport,
+								    bool from_tun,
+								    nat_lookup_result *res)
+{
+	return calico_v4_nat_lookup3(ip_src, ip_dst, ip_proto, dport, from_tun, res, false, false);
 }
 
 static CALI_BPF_INLINE int vxlan_v4_encap(struct cali_tc_ctx *ctx,  __be32 ip_src, __be32 ip_dst)
