@@ -194,6 +194,12 @@ func init() {
 			Protocol: protoUDP,
 			Port:     1234,
 		}, false),
+		Entry("should accept EndpointPort with empty name but HostPort specified", libapiv3.WorkloadEndpointPort{
+			Name:     "",
+			Protocol: protoUDP,
+			Port:     1234,
+			HostPort: 2345,
+		}, true),
 		Entry("should reject EndpointPort with no protocol", libapiv3.WorkloadEndpointPort{
 			Name: "a-valid-port",
 			Port: 1234,
