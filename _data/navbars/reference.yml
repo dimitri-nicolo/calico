@@ -256,3 +256,5 @@ section:
   path: /reference/apidocs/
 - title: Frequently asked questions
   path: /reference/faq
+- title: Platform support policy
+  path: /reference/support-policy
