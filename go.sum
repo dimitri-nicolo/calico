@@ -833,6 +833,8 @@ github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLY
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tigera/api v0.0.0-20211028194523-b4ceddaee039 h1:HOtYCLF/WTST0CxX4Y0I0K6xys8fUPaC0ibtDRR8RpA=
 github.com/tigera/api v0.0.0-20211028194523-b4ceddaee039/go.mod h1:U7qqFcD+luefolr44wGe1PuCMxgKUplb6qStftrgrSQ=
+github.com/tigera/api v0.0.0-20211115213013-3b569d156e85 h1:7pvdZu8h6yxAFSvGYiFVzo+BDetHaV3RyFF8rGqeQeE=
+github.com/tigera/api v0.0.0-20211115213013-3b569d156e85/go.mod h1:U7qqFcD+luefolr44wGe1PuCMxgKUplb6qStftrgrSQ=
 github.com/tigera/cni-plugin-private v1.11.1-0.20211028231149-f768132f0e77 h1:q54TNpOudCFgp/fzfjaLF/QmznHd6psPPL+56Y+HXI8=
 github.com/tigera/cni-plugin-private v1.11.1-0.20211028231149-f768132f0e77/go.mod h1:SSvXFFwSREaieteL8Z0VGBXerv+EMphYUVR5JkN08RY=
 github.com/tigera/confd-private v1.0.1-0.20211028225718-7752be6c02e8 h1:dBBPgYiR7Jy1mInQlO3NUV6fBlGoUhYnZL+fFwLG70k=

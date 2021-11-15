@@ -16,7 +16,7 @@ require (
 	github.com/projectcalico/typha v0.7.3-0.20210730161404-dccc9fee3e51
 	github.com/prometheus/client_golang v1.11.0
 	github.com/sirupsen/logrus v1.8.1
-	github.com/tigera/api v0.0.0-20211028194523-b4ceddaee039
+	github.com/tigera/api v0.0.0-20211115213013-3b569d156e85
 	github.com/vishvananda/netlink v1.1.1-0.20210703095558-21f2c55a7727
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	gopkg.in/fsnotify/fsnotify.v1 v1.4.7
