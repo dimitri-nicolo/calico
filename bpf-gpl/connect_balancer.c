@@ -1,19 +1,6 @@
 // Project Calico BPF dataplane programs.
 // Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
-//
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 #include <linux/bpf.h>
 
@@ -31,8 +18,9 @@
 
 #include "sendrecv.h"
 
-static CALI_BPF_INLINE void do_nat_common(struct bpf_sock_addr *ctx, __u8 proto)
+static CALI_BPF_INLINE int do_nat_common(struct bpf_sock_addr *ctx, __u8 proto, bool connect)
 {
+	int err = 0;
 	/* We do not know what the source address is yet, we only know that it
 	 * is the localhost, so we might just use 0.0.0.0. That would not
 	 * conflict with traffic from elsewhere.
@@ -44,9 +32,14 @@ static CALI_BPF_INLINE void do_nat_common(struct bpf_sock_addr *ctx, __u8 proto)
 	nat_lookup_result res = NAT_LOOKUP_ALLOW;
 	__u16 dport_he = (__u16)(bpf_ntohl(ctx->user_port)>>16);
 	struct calico_nat_dest *nat_dest;
-	nat_dest = calico_v4_nat_lookup(0, ctx->user_ip4, proto, dport_he, &res);
+	nat_dest = calico_v4_nat_lookup3(0, ctx->user_ip4, proto, dport_he, false, &res,
+			proto == IPPROTO_UDP && !connect, /* enforce affinity UDP */
+		 	proto == IPPROTO_UDP && !connect /* update affinity timer */);
 	if (!nat_dest) {
 		CALI_INFO("NAT miss.\n");
+		if (res == NAT_NO_BACKEND) {
+			err = -1;
+		}
 		goto out;
 	}
 
@@ -97,12 +90,14 @@ static CALI_BPF_INLINE void do_nat_common(struct bpf_sock_addr *ctx, __u8 proto)
 	ctx->user_port = dport_be;
 
 out:
-	return;
+	return err;
 }
 
 SEC("cgroup/connect4")
 int calico_connect_v4(struct bpf_sock_addr *ctx)
 {
+	int ret = 1; /* OK value */
+
 	CALI_DEBUG("calico_connect_v4\n");
 
 	/* do not process anything non-TCP or non-UDP, but do not block it, will be
@@ -128,10 +123,12 @@ int calico_connect_v4(struct bpf_sock_addr *ctx)
 		goto out;
 	}
 
-	do_nat_common(ctx, ip_proto);
+	if (do_nat_common(ctx, ip_proto, true) != 0) {
+		ret = 0; /* ret != 1 generates an error in pre-connect */
+	}
 
 out:
-	return 1;
+	return ret;
 }
 
 SEC("cgroup/sendmsg4")
@@ -145,7 +142,7 @@ int calico_sendmsg_v4(struct bpf_sock_addr *ctx)
 		goto out;
 	}
 
-	do_nat_common(ctx, IPPROTO_UDP);
+	do_nat_common(ctx, IPPROTO_UDP, false);
 
 out:
 	return 1;

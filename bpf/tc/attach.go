@@ -94,7 +94,7 @@ func (ap AttachPoint) AlreadyAttached(object string) (string, bool) {
 		return "", false
 	}
 
-	isAttached, err := bpf.AlreadyAttachedProg(ap.IfaceName(), string(ap.Hook), object, progID)
+	isAttached, err := bpf.AlreadyAttachedProg(ap, object, progID)
 	if err != nil {
 		logCxt.WithError(err).Debugf("Failed to check if BPF program was already attached.")
 		return "", false
@@ -181,10 +181,11 @@ func (ap AttachPoint) AttachProgram() (string, error) {
 		}
 	}
 
-	// Check if the bpf object is already attached, and we should skip re-attaching it
+	// Check if the bpf object is already attached, and we should skip
+	// re-attaching it if the binary and its configuration are the same.
 	progID, isAttached := ap.AlreadyAttached(preCompiledBinary)
 	if isAttached {
-		logCxt.Debugf("Program already attached, skip reattaching %s", ap.FileName())
+		logCxt.Infof("Program already attached to TC, skip reattaching %s", ap.FileName())
 		return progID, nil
 	}
 	logCxt.Debugf("Continue with attaching BPF program %s", ap.FileName())
@@ -207,6 +208,7 @@ func (ap AttachPoint) AttachProgram() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	logCxt.Info("Program attached to TC.")
 
 	var progErrs []error
 	for _, p := range progsToClean {
@@ -238,9 +240,10 @@ func (ap AttachPoint) AttachProgram() (string, error) {
 	// If the process fails, the json file with the correct name and program details
 	// is not stored on disk, and during Felix restarts the same program will be reattached
 	// which leads to an unnecessary load time
-	if err = bpf.RememberAttachedProg(ap.IfaceName(), string(ap.Hook), preCompiledBinary, strconv.Itoa(progId)); err != nil {
+	if err = bpf.RememberAttachedProg(ap, preCompiledBinary, strconv.Itoa(progId)); err != nil {
 		logCxt.WithError(err).Error("Failed to record hash of BPF program on disk; ignoring.")
 	}
+
 	return strconv.Itoa(progId), nil
 }
 
@@ -646,7 +649,7 @@ func (ap *AttachPoint) JumpMapFDMapKey() string {
 	return "tc-" + string(ap.Hook)
 }
 
-func (ap *AttachPoint) IfaceName() string {
+func (ap AttachPoint) IfaceName() string {
 	return ap.Iface
 }
 
@@ -656,6 +659,14 @@ func (ap *AttachPoint) MustReattach() bool {
 
 func ConfigureVethNS(m *libbpf.Map, VethNS uint16) error {
 	return libbpf.TcSetGlobals(m, 0, 0, 0, 0, 0, 0, 0, VethNS, false, false, false)
+}
+
+func (ap AttachPoint) HookName() string {
+	return string(ap.Hook)
+}
+
+func (ap AttachPoint) Config() string {
+	return fmt.Sprintf("%+v", ap)
 }
 
 func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {

@@ -932,6 +932,52 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					cc.CheckConnectivity()
 				})
 
+				if (testOpts.protocol == "tcp" || (testOpts.protocol == "udp" && !testOpts.udpUnConnected)) &&
+					testOpts.connTimeEnabled && !testOpts.dsr {
+
+					It("should fail connect if there is no backed or a service", func() {
+						By("setting up a service without backends")
+
+						testSvc := k8sService("svc-no-backends", "10.101.0.111", w[0][0], 80, 1234, 0, testOpts.protocol)
+						testSvcNamespace := testSvc.ObjectMeta.Namespace
+						testSvc.Spec.Selector = map[string]string{"somelabel": "somevalue"}
+						_, err := k8sClient.CoreV1().Services(testSvcNamespace).Create(context.Background(),
+							testSvc, metav1.CreateOptions{})
+						Expect(err).NotTo(HaveOccurred())
+
+						ip := testSvc.Spec.ClusterIP
+						port := uint16(testSvc.Spec.Ports[0].Port)
+						natK := nat.NewNATKey(net.ParseIP(ip), port, numericProto)
+
+						Eventually(func() bool {
+							natmaps, _ := dumpNATmaps(felixes)
+							for _, m := range natmaps {
+								if _, ok := m[natK]; !ok {
+									return false
+								}
+							}
+							return true
+						}, "5s").Should(BeTrue(), "service NAT key didn't show up")
+
+						By("starting tcpdump")
+						tcpdump := w[0][0].AttachTCPDump()
+						tcpdump.SetLogEnabled(true)
+						pattern := fmt.Sprintf(`IP %s.\d+ > %s\.80: Flags \[S\]`, w[0][0].IP, testSvc.Spec.ClusterIP)
+						tcpdump.AddMatcher("no-backend", regexp.MustCompile(pattern))
+						tcpdump.Start()
+						defer tcpdump.Stop()
+
+						By("testing connectivity")
+
+						cc.Expect(None, w[0][0], TargetIP(testSvc.Spec.ClusterIP), ExpectWithPorts(80))
+						cc.CheckConnectivity()
+
+						// If connect never succeeded, no packets were sent and
+						// therefore we must see none.
+						Expect(tcpdump.MatchCount("no-backend")).To(Equal(0))
+					})
+				}
+
 				// Test doesn't use services so ignore the runs with those turned on.
 				if testOpts.protocol == "tcp" && !testOpts.connTimeEnabled && !testOpts.dsr {
 					It("should not be able to spoof TCP", func() {
@@ -2020,40 +2066,44 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 					})
 				})
 
-				Context("with test-service configured 10.101.0.10:80 -> w[*][0].IP:8055 and affinity", func() {
-					var (
-						testSvc          *v1.Service
-						testSvcNamespace string
-					)
+				Context("with test-service configured 10.101.0.10:80 -> w[*][0].IP:8055", func() {
+					testMultiBackends := func(setAffinity bool) {
+						var (
+							testSvc          *v1.Service
+							testSvcNamespace string
+						)
 
-					testSvcName := "test-service"
+						testSvcName := "test-service"
 
-					BeforeEach(func() {
-						testSvc = k8sService(testSvcName, "10.101.0.10", w[0][0], 80, 8055, 0, testOpts.protocol)
-						testSvcNamespace = testSvc.ObjectMeta.Namespace
-						// select all pods with port 8055
-						testSvc.Spec.Selector = map[string]string{"port": "8055"}
-						testSvc.Spec.SessionAffinity = "ClientIP"
-						_, err := k8sClient.CoreV1().Services(testSvcNamespace).Create(context.Background(), testSvc, metav1.CreateOptions{})
-						Expect(err).NotTo(HaveOccurred())
-						Eventually(k8sGetEpsForServiceFunc(k8sClient, testSvc), "10s").Should(HaveLen(1),
-							"Service endpoints didn't get created? Is controller-manager happy?")
-					})
+						BeforeEach(func() {
+							testSvc = k8sService(testSvcName, "10.101.0.10", w[0][0], 80, 8055, 0, testOpts.protocol)
+							testSvcNamespace = testSvc.ObjectMeta.Namespace
+							// select all pods with port 8055
+							testSvc.Spec.Selector = map[string]string{"port": "8055"}
+							if setAffinity {
+								testSvc.Spec.SessionAffinity = "ClientIP"
+							}
+							_, err := k8sClient.CoreV1().Services(testSvcNamespace).Create(context.Background(), testSvc, metav1.CreateOptions{})
+							Expect(err).NotTo(HaveOccurred())
+							Eventually(k8sGetEpsForServiceFunc(k8sClient, testSvc), "10s").Should(HaveLen(1),
+								"Service endpoints didn't get created? Is controller-manager happy?")
+						})
 
-					// FIXME we can only do the test with regular NAT as
-					// cgroup shares one random affinity map
-					if !testOpts.connTimeEnabled {
+						// Since the affinity map is shared by cgroup programs on
+						// all nodes, we must be careful to use only client(s) on a
+						// single node for the experiments.
 						It("should have connectivity from a workload to a service with multiple backends", func() {
 
 							ip := testSvc.Spec.ClusterIP
 							port := uint16(testSvc.Spec.Ports[0].Port)
 
-							cc.ExpectSome(w[1][1], TargetIP(ip), port)
-							cc.ExpectSome(w[1][1], TargetIP(ip), port)
-							cc.ExpectSome(w[1][1], TargetIP(ip), port)
+							// N.B. Client must be on felix-0 to be subject to ctlb!
+							cc.ExpectSome(w[0][1], TargetIP(ip), port)
+							cc.ExpectSome(w[0][1], TargetIP(ip), port)
+							cc.ExpectSome(w[0][1], TargetIP(ip), port)
 							cc.CheckConnectivity()
 
-							aff := dumpAffMap(felixes[1])
+							aff := dumpAffMap(felixes[0])
 							Expect(aff).To(HaveLen(1))
 
 							var mkey nat.AffinityKey
@@ -2070,21 +2120,91 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 								m := nat.AffinityMap(&bpf.MapContext{})
 								cmd, err := bpf.MapDeleteKeyCmd(m, mkey.AsBytes())
 								Expect(err).NotTo(HaveOccurred())
-								err = felixes[1].ExecMayFail(cmd...)
+								err = felixes[0].ExecMayFail(cmd...)
 								Expect(err).NotTo(HaveOccurred())
 
-								aff = dumpAffMap(felixes[1])
+								aff = dumpAffMap(felixes[0])
 								Expect(aff).To(HaveLen(0))
 
 								cc.CheckConnectivity()
 
-								aff := dumpAffMap(felixes[1])
+								aff := dumpAffMap(felixes[0])
 								Expect(aff).To(HaveLen(1))
 
 								return aff[mkey]
 							}, 60*time.Second, time.Second).ShouldNot(Equal(mVal))
 						})
 					}
+
+					Context("with affinity", func() {
+						testMultiBackends(true)
+					})
+
+					if testOpts.protocol == "udp" && testOpts.udpUnConnected && testOpts.connTimeEnabled {
+						// We enforce affinity for unconnected UDP
+						Context("without affinity", func() {
+							testMultiBackends(false)
+						})
+					}
+
+					It("should have connectivity after a backend is gone", func() {
+						var (
+							testSvc          *v1.Service
+							testSvcNamespace string
+						)
+
+						testSvcName := "test-service"
+
+						By("Setting up the service", func() {
+							testSvc = k8sService(testSvcName, "10.101.0.10", w[0][0], 80, 8055, 0, testOpts.protocol)
+							testSvcNamespace = testSvc.ObjectMeta.Namespace
+							// select all pods with port 8055
+							testSvc.Spec.Selector = map[string]string{"port": "8055"}
+							testSvc.Spec.SessionAffinity = "ClientIP"
+							_, err := k8sClient.CoreV1().Services(testSvcNamespace).Create(context.Background(), testSvc, metav1.CreateOptions{})
+							Expect(err).NotTo(HaveOccurred())
+							Eventually(k8sGetEpsForServiceFunc(k8sClient, testSvc), "10s").Should(HaveLen(1),
+								"Service endpoints didn't get created? Is controller-manager happy?")
+						})
+
+						By("make connection to a service and set affinity")
+						ip := testSvc.Spec.ClusterIP
+						port := uint16(testSvc.Spec.Ports[0].Port)
+
+						cc.ExpectSome(w[0][1], TargetIP(ip), port)
+						cc.CheckConnectivity()
+
+						By("checking that affinity was created")
+						aff := dumpAffMap(felixes[0])
+						Expect(aff).To(HaveLen(1))
+
+						// Stop the original backends so that they are not
+						// reachable with the set affinity.
+						w[0][0].Stop()
+						w[1][0].Stop()
+
+						By("changing the service backend to completely different ones")
+						testSvc8056 := k8sService(testSvcName, "10.101.0.10", w[1][1], 80, 8056, 0, testOpts.protocol)
+						testSvc8056.Spec.SessionAffinity = "ClientIP"
+						k8sUpdateService(k8sClient, testSvcNamespace, testSvcName, testSvc, testSvc8056)
+
+						By("checking the the affinity is cleaned up")
+						Eventually(func() int {
+							aff := dumpAffMap(felixes[0])
+							return len(aff)
+						}).Should(Equal(0))
+
+						By("making another connection to a new backend")
+						ip = testSvc.Spec.ClusterIP
+						port = uint16(testSvc.Spec.Ports[0].Port)
+
+						cc.ResetExpectations()
+						ip = testSvc8056.Spec.ClusterIP
+						port = uint16(testSvc8056.Spec.Ports[0].Port)
+
+						cc.ExpectSome(w[0][1], TargetIP(ip), port)
+						cc.CheckConnectivity()
+					})
 				})
 
 				npPort := uint16(30333)
