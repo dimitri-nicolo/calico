@@ -38,7 +38,6 @@ The following example is what a {{site.prodname}} GlobalNetworkSet looks like af
     "name": "pan.my.address.group",
     "annotations": {
         "firewall.tigera.io/device-groups": "shared",
-        "firewall.tigera.io/latest-update": "2021-11-03T08:26:40+0000",
         "firewall.tigera.io/name": "my.address.group",
         "firewall.tigera.io/object-type": "AddressGroup",
         "firewall.tigera.io/type": "Panorama"
@@ -63,8 +62,8 @@ The following example is what a {{site.prodname}} GlobalNetworkSet looks like af
 
 Where:
 
-1. You create a ConfigMap where you specify the Panorama hostname, address group tags, and a polling interval for checking Address Group updates.
-1. Each address group maps to a global network set in Kubernetes.
+- You create a ConfigMap where you specify the Panorama hostname, address group tags, and a polling interval for checking Address Group updates.
+- Each address group maps to a global network set in Kubernetes.
 
 >**Note**: GlobalNetworkSet.metadata.name will be prefixed with `pan.` and either be: 1) `<ADDRESS_GROUP_NAME>`, if it is a Kubernetes (RFC1123) compliant name, or 2) a mapping to a Kubernetes (RFC1123) compliant name, suffixed with a unique hash value.
 
