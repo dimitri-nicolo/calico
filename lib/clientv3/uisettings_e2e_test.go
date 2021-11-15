@@ -101,16 +101,16 @@ var _ = testutils.E2eDatastoreDescribe("UISettings tests", testutils.DatastoreAl
 	}
 	position1 := []apiv3.Position{
 		{
-			ID: "point1",
-			XPos:  10,
-			YPos:  100,
-			ZPos:  9,
+			ID:   "point1",
+			XPos: 10,
+			YPos: 100,
+			ZPos: 9,
 		},
 		{
-			ID: "point1",
-			XPos:  4,
-			YPos:  65,
-			ZPos:  87,
+			ID:   "point1",
+			XPos: 4,
+			YPos: 65,
+			ZPos: 87,
 		},
 	}
 	layers1 := []string{
