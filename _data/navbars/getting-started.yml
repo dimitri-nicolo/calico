@@ -84,17 +84,10 @@ section:
 - title: Install on non-cluster hosts
   path: /getting-started/bare-metal/
   section:
-  - title: About non-cluster hosts
+  - title: Install network policy only on non-cluster hosts
     path: /getting-started/bare-metal/about
   - title: System requirements
     path: /getting-started/bare-metal/requirements
-  - title: Installation
-    path: /getting-started/bare-metal/installation/
-    section:
-    - title: Container install
-      path: /getting-started/bare-metal/installation/container
-    - title: Binary install
-      path: /getting-started/bare-metal/installation/binary
 - title: Upgrade
   path: /maintenance/upgrading
   section:

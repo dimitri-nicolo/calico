@@ -1,24 +1,10 @@
 This section describes how to run `{{site.nodecontainer}}` as a Docker container.
 
-#### Step 1: (Optional) Configure access for the non-cluster-host
-In order to run Calico Node as a container, it will need a kubeconfig. You can skip this step if you already have a kubeconfig ready to use.
-
-{% include content/create-kubeconfig.md %}
-
-Run the following two commands to create a cluster role with read-only access and a corresponding cluster role binding.
-
-```bash
-kubectl apply -f {{ "/manifests/non-cluster-host-clusterrole.yaml" | absolute_url }}
-kubectl create clusterrolebinding $SA_NAME --serviceaccount=calico-system:$HOST_NAME --clusterrole=non-cluster-host-read-only
-```
-
-> **Note**: We include examples for systemd, but the commands can be
-> applied to other init daemons such as upstart.
-{: .alert .alert-info}
+{% include content/non-cluster-read-only-step.md %}
 
 #### Step 2: Create environment file
 
-{% include content/environment-file.md install="container" target="calico/node" %}
+{% include content/environment-file.md %}
 
 #### Step 3: Configure the init system
 
@@ -44,10 +30,6 @@ ExecStart=/usr/bin/docker run --net=host --privileged \
  -e AS=${CALICO_AS} \
  -e NO_DEFAULT_POOLS=${NO_DEFAULT_POOLS} \
  -e DATASTORE_TYPE=${DATASTORE_TYPE} \
- -e ETCD_ENDPOINTS=${ETCD_ENDPOINTS} \
- -e ETCD_CA_CERT_FILE=${ETCD_CA_CERT_FILE} \
- -e ETCD_CERT_FILE=${ETCD_CERT_FILE} \
- -e ETCD_KEY_FILE=${ETCD_KEY_FILE} \
  -e KUBECONFIG=${KUBECONFIG} \
  -v /var/log/calico:/var/log/calico \
  -v /var/lib/calico:/var/lib/calico \
