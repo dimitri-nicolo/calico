@@ -25,34 +25,38 @@ func Start(config *Config) {
 
 	reverseProxy := getReverseProxy(config.PrometheusUrl)
 
-	options := []auth.JWTAuthenticatorOption{
-		auth.WithInClusterConfiguration(),
-	}
-
-	if config.DexEnabled {
-		log.Debug("Configuring Dex for authentication")
-		opts := []auth.DexOption{
-			auth.WithGroupsClaim(config.OIDCAuthGroupsClaim),
-			auth.WithJWKSURL(config.OIDCAuthJWKSURL),
-			auth.WithUsernamePrefix(config.OIDCAuthUsernamePrefix),
-			auth.WithGroupsPrefix(config.OIDCAuthGroupsPrefix),
+	var authn auth.JWTAuthenticator
+	if config.AuthenticationEnabled {
+		options := []auth.JWTAuthenticatorOption{
+			auth.WithInClusterConfiguration(),
 		}
-		dex, err := auth.NewDexAuthenticator(
-			config.OIDCAuthIssuer,
-			config.OIDCAuthClientID,
-			config.OIDCAuthUsernameClaim,
-			opts...)
+
+		if config.DexEnabled {
+			log.Debug("Configuring Dex for authentication")
+			opts := []auth.DexOption{
+				auth.WithGroupsClaim(config.OIDCAuthGroupsClaim),
+				auth.WithJWKSURL(config.OIDCAuthJWKSURL),
+				auth.WithUsernamePrefix(config.OIDCAuthUsernamePrefix),
+				auth.WithGroupsPrefix(config.OIDCAuthGroupsPrefix),
+			}
+			dex, err := auth.NewDexAuthenticator(
+				config.OIDCAuthIssuer,
+				config.OIDCAuthClientID,
+				config.OIDCAuthUsernameClaim,
+				opts...)
+			if err != nil {
+				log.Fatal("Unable to add an issuer to the authenticator", err)
+			}
+			options = append(options, auth.WithAuthenticator(config.OIDCAuthIssuer, dex))
+		}
+		var err error
+		authn, err = auth.NewJWTAuthenticator(options...)
 		if err != nil {
-			log.Fatal("Unable to add an issuer to the authenticator", err)
+			log.Fatal("Unable to create authenticator", err)
 		}
-		options = append(options, auth.WithAuthenticator(config.OIDCAuthIssuer, dex))
-	}
-	authnAuthz, err := auth.NewJWTAuthenticator(options...)
-	if err != nil {
-		log.Fatal("Unable to create authenticator", err)
 	}
 
-	proxyHandler, err := proxy.Proxy(reverseProxy, authnAuthz)
+	proxyHandler, err := proxy.Proxy(reverseProxy, authn)
 	if err != nil {
 		log.Fatal("Unable to create proxy handler", err)
 	}
@@ -85,7 +89,6 @@ func getReverseProxy(target *url.URL) *httputil.ReverseProxy {
 		req.URL.Scheme = target.Scheme
 		req.URL.Host = target.Host
 		req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
-		req.Host = target.Host
 	}
 
 	return reverseProxy

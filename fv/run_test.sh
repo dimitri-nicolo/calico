@@ -18,7 +18,9 @@ function run_fvs()
 		-v ${PACKAGE_ROOT}/.go-pkg-cache:/home/user/.cache/go-build:rw \
 		-v ${PACKAGE_ROOT}:/${PACKAGE_NAME}:rw \
 		-v ${PACKAGE_ROOT}/report:/report:rw \
+		-v ${PACKAGE_ROOT}/fv/tls.crt:/tls/tls.crt:ro \
 		-e LOCAL_USER_ID=$(id -u) \
+		-e GODEBUG=x509ignoreCN=0 \
 		-w /${PACKAGE_NAME} \
 		${GO_BUILD_IMAGE} \
 		sh -c "ginkgo ./fv/" || (docker logs ${TEST_CONTAINER_NAME} && false)
@@ -34,8 +36,11 @@ function run_proxy()
 		--net=host \
 		--detach \
 		-v ${PACKAGE_ROOT}/test:/test:ro \
+		-v ${PACKAGE_ROOT}/fv/tls.crt:/tls/tls.crt:ro \
+		-v ${PACKAGE_ROOT}/fv/tls.key:/tls/tls.key:ro \
     -e LISTEN_ADDR="localhost:8090" \
 		-e LOG_LEVEL=debug \
+		-e AUTHENTICATION_ENABLED=false \
 		--name ${TEST_CONTAINER_NAME} \
 		${FV_PROMETHEUS_SERVICE_TEST_IMAGE}
 }

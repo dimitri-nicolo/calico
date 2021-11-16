@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/tigera/lma/pkg/auth"
 
 	authzv1 "k8s.io/api/authorization/v1"
@@ -42,11 +43,20 @@ var (
 
 // Proxy sends the received query to the forwarded host registered in ReverseProxy param
 func Proxy(proxy *httputil.ReverseProxy, authn auth.JWTAuthenticator) (http.HandlerFunc, error) {
+
 	return func(w http.ResponseWriter, req *http.Request) {
+		if authn == nil {
+			proxy.ServeHTTP(w, req)
+			return
+		}
+
 		usr, stat, err := authn.Authenticate(req)
 		if err != nil {
 			w.WriteHeader(stat)
-			w.Write([]byte(err.Error()))
+			_, err := w.Write([]byte(err.Error()))
+			if err != nil {
+				log.Info(err)
+			}
 			return
 		}
 
@@ -59,7 +69,10 @@ func Proxy(proxy *httputil.ReverseProxy, authn auth.JWTAuthenticator) (http.Hand
 		} else {
 			// At this time only HTTP GET/POST are allowed
 			w.WriteHeader(405)
-			w.Write([]byte("Method Not Allowed"))
+			_, err := w.Write([]byte("Method Not Allowed"))
+			if err != nil {
+				log.Info(err)
+			}
 			return
 		}
 
@@ -69,7 +82,10 @@ func Proxy(proxy *httputil.ReverseProxy, authn auth.JWTAuthenticator) (http.Hand
 			ok, err := authn.Authorize(usr, res, nil)
 			if err != nil {
 				w.WriteHeader(500)
-				w.Write([]byte(err.Error()))
+				_, err := w.Write([]byte(err.Error()))
+				if err != nil {
+					log.Info(err)
+				}
 				return
 			}
 			if ok {
@@ -80,7 +96,10 @@ func Proxy(proxy *httputil.ReverseProxy, authn auth.JWTAuthenticator) (http.Hand
 
 		if !authorized {
 			w.WriteHeader(403)
-			w.Write([]byte(fmt.Sprintf("user %v is not authorized to perform %v https:tigera-api:8080", usr, req.Method)))
+			_, err := w.Write([]byte(fmt.Sprintf("user %v is not authorized to perform %v https:tigera-api:8080", usr, req.Method)))
+			if err != nil {
+				log.Info(err)
+			}
 			return
 		}
 

@@ -17,6 +17,9 @@ type Config struct {
 	TLSCert string `envconfig:"TLS_CERT" default:"/tls/tls.crt"`
 	TLSKey  string `envconfig:"TLS_KEY" default:"/tls/tls.key"`
 
+	// Meant for fv only.
+	AuthenticationEnabled bool `default:"true" split_words:"true"`
+
 	// Dex settings
 	DexEnabled bool `default:"false" split_words:"true"`
 
