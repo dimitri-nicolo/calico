@@ -25,7 +25,7 @@ func Start(config *Config) {
 
 	reverseProxy := getReverseProxy(config.PrometheusUrl)
 
-	options := []auth.AuthnAuthzOption{
+	options := []auth.JWTAuthenticatorOption{
 		auth.WithInClusterConfiguration(),
 	}
 
@@ -47,7 +47,7 @@ func Start(config *Config) {
 		}
 		options = append(options, auth.WithAuthenticator(config.OIDCAuthIssuer, dex))
 	}
-	authnAuthz, err := auth.NewAuthNAuthZ(options...)
+	authnAuthz, err := auth.NewJWTAuthenticator(options...)
 	if err != nil {
 		log.Fatal("Unable to create authenticator", err)
 	}

@@ -41,9 +41,9 @@ var (
 )
 
 // Proxy sends the received query to the forwarded host registered in ReverseProxy param
-func Proxy(proxy *httputil.ReverseProxy, authnAuthz auth.AuthNAuthZ) (http.HandlerFunc, error) {
+func Proxy(proxy *httputil.ReverseProxy, authn auth.JWTAuthenticator) (http.HandlerFunc, error) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		usr, stat, err := authnAuthz.Authenticate(req)
+		usr, stat, err := authn.Authenticate(req)
 		if err != nil {
 			w.WriteHeader(stat)
 			w.Write([]byte(err.Error()))
@@ -66,7 +66,7 @@ func Proxy(proxy *httputil.ReverseProxy, authnAuthz auth.AuthNAuthZ) (http.Handl
 		authorized := false
 		// Check if either of the permissions are allowed, then the user is authorized.
 		for _, res := range resources {
-			ok, err := authnAuthz.Authorize(usr, res)
+			ok, err := authn.Authorize(usr, res, nil)
 			if err != nil {
 				w.WriteHeader(500)
 				w.Write([]byte(err.Error()))
