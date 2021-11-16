@@ -122,6 +122,12 @@ var _ = Describe("Windows DNS policy test", func() {
 
 			displayDNS()
 
+			// All the above code (with logging) takes time, could be more than DNS TTL so when we
+			// try to check DNS cache file, the DNS map could have been cleared.
+			// We should initiate the traffic again before checking DNS cache file.
+			curl("gobyexample.com")
+			curl("www.google.com")
+
 			checkCache := func() error {
 				// Get IPs from DNS cache file
 				dnsMap, err = fv.ReadDnsCacheFile()
@@ -148,7 +154,7 @@ var _ = Describe("Windows DNS policy test", func() {
 			}
 
 			// Make sure we see domain ips in DNS Cache file
-			Eventually(checkCache, "20s", "2s").Should(BeNil())
+			Eventually(checkCache, "30s", "1s").Should(BeNil())
 		})
 	})
 
