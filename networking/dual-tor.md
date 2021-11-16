@@ -166,7 +166,7 @@ including whether this is informed by TCP and UDP port numbers as well as source
 destination IP addresses, whether the decision is made per-packet, per-connection, or in
 some other way, and so on; and the details here have varied with Linux kernel version.
 For a clear account of the exact options and behaviors for different kernel versions,
-please see [this blog](https://cumulusnetworks.com/blog/celebrating-ecmp-part-two/){:target="_blank"}.
+please see [this blog](https://web.archive.org/web/20210204031636/https://cumulusnetworks.com/blog/celebrating-ecmp-part-two/){:target="_blank"}.
 
 #### BFD
 
