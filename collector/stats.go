@@ -3,6 +3,7 @@
 package collector
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -15,6 +16,8 @@ import (
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
+
+var ErrorIsNotDNAT = errors.New("Tuple is not a DNAT connection")
 
 type TrafficDirection int
 
@@ -481,12 +484,15 @@ func (d *Data) String() string {
 	return fmt.Sprintf(
 		"tuple={%v}, srcEp={%v} dstEp={%v}, dstSvc={%v}, connTrackCtr={packets=%v bytes=%v}, "+
 			"connTrackCtrReverse={packets=%v bytes=%v}, httpPkts={allowed=%v, denied=%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v}, "+
+			"expired=%v, reported=%v isDNAT=%v isConnection=%+v "+
 			"origSourceIPs={ips=%v totalCount=%v}, "+
 			"sourceProcessInfo{name=%s, args=%s, pid=%d}, destProcessInfo{name=%s, args=%s, pid=%d} "+
 			"TcpStats{sendCongestionwnd=%v, smoothRtt=%v, minRtt=%v, mss=%v, totalRetrans=%v, lostOut=%v, unrecoveredTO=%v}",
 		&(d.Tuple), srcName, dstName, dstSvcName, d.conntrackPktsCtr.Absolute(), d.conntrackBytesCtr.Absolute(),
 		d.conntrackPktsCtrReverse.Absolute(), d.conntrackBytesCtrReverse.Absolute(), d.httpReqAllowedCtr.Delta(),
-		d.httpReqDeniedCtr.Delta(), d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace, osi, osiTc,
+		d.httpReqDeniedCtr.Delta(), d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace,
+		d.expired, d.reported, d.isDNAT, d.isConnection,
+		osi, osiTc,
 		d.SourceProcessData().Name, d.SourceProcessData().Arguments, d.SourceProcessData().Pid, d.DestProcessData().Name,
 		d.DestProcessData().Arguments, d.DestProcessData().Pid, d.TcpStats.sendCongestionWnd, d.TcpStats.smoothRtt,
 		d.TcpStats.minRtt, d.TcpStats.mss, d.TcpStats.totalRetrans.Absolute(), d.TcpStats.lostOut.Absolute(), d.TcpStats.unRecoveredRTO.Absolute())
@@ -787,11 +793,11 @@ func (d *Data) SetDestProcessData(name, args string, pid int) bool {
 	return true
 }
 
-func (d *Data) PreDNATTuple() Tuple {
+func (d *Data) PreDNATTuple() (Tuple, error) {
 	if !d.isDNAT {
-		return d.Tuple
+		return d.Tuple, ErrorIsNotDNAT
 	}
-	return MakeTuple(d.Tuple.src, d.preDNATAddr, d.Tuple.proto, d.Tuple.l4Src, d.preDNATPort)
+	return MakeTuple(d.Tuple.src, d.preDNATAddr, d.Tuple.proto, d.Tuple.l4Src, d.preDNATPort), nil
 }
 
 // metricUpdateIngressConn creates a metric update for Inbound connection traffic

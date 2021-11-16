@@ -310,6 +310,20 @@ var (
 			Pid:  1234,
 		},
 	}
+
+	proc2 = ProcessInfo{
+		Tuple: Tuple{
+			src:   localIp1,
+			dst:   localIp1DNAT,
+			proto: proto_tcp,
+			l4Src: srcPort,
+			l4Dst: dstPortDNAT,
+		},
+		ProcessData: ProcessData{
+			Name: "test-process",
+			Pid:  1234,
+		},
+	}
 )
 
 // Nflog prefix test parameters
@@ -317,6 +331,7 @@ var (
 	defTierAllowIngressNFLOGPrefix   = [64]byte{'A', 'P', 'I', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
 	defTierAllowEgressNFLOGPrefix    = [64]byte{'A', 'P', 'E', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
 	defTierDenyIngressNFLOGPrefix    = [64]byte{'D', 'P', 'I', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '2'}
+	defTierDenyEgressNFLOGPrefix     = [64]byte{'D', 'P', 'E', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '2'}
 	defTierPolicy1AllowIngressRuleID = &calc.RuleID{
 		PolicyID: calc.PolicyID{
 			Tier:      "default",
@@ -349,6 +364,17 @@ var (
 		IndexStr:  "0",
 		Action:    rules.RuleActionDeny,
 		Direction: rules.RuleDirIngress,
+	}
+	defTierPolicy2DenyEgressRuleID = &calc.RuleID{
+		PolicyID: calc.PolicyID{
+			Tier:      "default",
+			Name:      "policy2",
+			Namespace: "",
+		},
+		Index:     0,
+		IndexStr:  "0",
+		Action:    rules.RuleActionDeny,
+		Direction: rules.RuleDirEgress,
 	}
 )
 
@@ -472,6 +498,56 @@ var localPktEgress = &nfnetlink.NflogPacketAggregate{
 	},
 }
 
+var localPktEgressDenyTuplePreDNAT = NewTuple(localIp1, localIp1DNAT, proto_tcp, srcPort, dstPortDNAT)
+
+var localPktEgressDeniedPreDNAT = &nfnetlink.NflogPacketAggregate{
+	Prefixes: []nfnetlink.NflogPrefix{
+		{
+			Prefix:  defTierDenyEgressNFLOGPrefix,
+			Len:     22,
+			Bytes:   100,
+			Packets: 1,
+		},
+	},
+	Tuple: nfnetlink.NflogPacketTuple{
+		Src:   localIp1,
+		Dst:   localIp1DNAT,
+		Proto: proto_tcp,
+		L4Src: nfnetlink.NflogL4Info{Port: srcPort},
+		L4Dst: nfnetlink.NflogL4Info{Port: dstPortDNAT},
+	},
+	IsDNAT: false,
+}
+
+var localPktEgressAllowTuple = NewTuple(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
+
+var localPktEgressAllowedPreDNAT = &nfnetlink.NflogPacketAggregate{
+	Prefixes: []nfnetlink.NflogPrefix{
+		{
+			Prefix:  defTierAllowEgressNFLOGPrefix,
+			Len:     22,
+			Bytes:   100,
+			Packets: 1,
+		},
+	},
+	Tuple: nfnetlink.NflogPacketTuple{
+		Src:   localIp1,
+		Dst:   remoteIp1,
+		Proto: proto_tcp,
+		L4Src: nfnetlink.NflogL4Info{Port: srcPort},
+		L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+	},
+	OriginalTuple: nfnetlink.CtTuple{
+		Src:        localIp1,
+		Dst:        localIp2DNAT,
+		L3ProtoNum: ipv4,
+		ProtoNum:   proto_tcp,
+		L4Src:      nfnetlink.CtL4Src{Port: srcPort},
+		L4Dst:      nfnetlink.CtL4Dst{Port: dstPortDNAT},
+	},
+	IsDNAT: true,
+}
+
 var _ = Describe("NFLOG Datasource", func() {
 	Describe("NFLOG Incoming Packets", func() {
 		// Inject info nflogChan
@@ -494,7 +570,7 @@ var _ = Describe("NFLOG Datasource", func() {
 			}
 			nflogMap := map[[64]byte]*calc.RuleID{}
 
-			for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
+			for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID, defTierPolicy2DenyEgressRuleID} {
 				nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 			}
 
@@ -829,6 +905,29 @@ var localCtEntryWithDNAT = nfnetlink.CtEntry{
 	ProtoInfo:        nfnetlink.CtProtoInfo{State: nfnl.TCP_CONNTRACK_ESTABLISHED},
 }
 
+var outCtEntryWithDNAT = nfnetlink.CtEntry{
+	OriginalTuple: nfnetlink.CtTuple{
+		Src:        localIp1,
+		Dst:        localIp1DNAT,
+		L3ProtoNum: ipv4,
+		ProtoNum:   proto_tcp,
+		L4Src:      nfnetlink.CtL4Src{Port: srcPort},
+		L4Dst:      nfnetlink.CtL4Dst{Port: dstPortDNAT},
+	},
+	ReplyTuple: nfnetlink.CtTuple{
+		Src:        remoteIp1,
+		Dst:        localIp1,
+		L3ProtoNum: ipv4,
+		ProtoNum:   proto_tcp,
+		L4Src:      nfnetlink.CtL4Src{Port: dstPort},
+		L4Dst:      nfnetlink.CtL4Dst{Port: srcPort},
+	},
+	Status:           nfnl.IPS_DST_NAT,
+	OriginalCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},
+	ReplyCounters:    nfnetlink.CtCounters{Packets: 2, Bytes: 250},
+	ProtoInfo:        nfnetlink.CtProtoInfo{State: nfnl.TCP_CONNTRACK_ESTABLISHED},
+}
+
 var _ = Describe("Conntrack Datasource", func() {
 	var c *collector
 	var ciReaderSenderChan chan []ConntrackInfo
@@ -864,7 +963,7 @@ var _ = Describe("Conntrack Datasource", func() {
 
 		nflogMap := map[[64]byte]*calc.RuleID{}
 
-		for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
+		for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID, defTierPolicy2DenyEgressRuleID} {
 			nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 		}
 
@@ -1724,7 +1823,7 @@ var _ = Describe("Reporting Metrics", func() {
 
 		nflogMap := map[[64]byte]*calc.RuleID{}
 
-		for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
+		for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID, defTierPolicy2DenyEgressRuleID} {
 			nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 		}
 
@@ -1869,29 +1968,114 @@ var _ = Describe("Reporting Metrics", func() {
 		})
 	})
 	Context("With process info enabled", func() {
+		var mpc mockProcessCache
+		var ciReaderSenderChan chan []ConntrackInfo
 		BeforeEach(func() {
-			c.SetProcessInfoCache(mockProcessCache{})
+			mpc = mockProcessCache{
+				inboundCache:  make(map[Tuple]ProcessInfo),
+				outboundCache: make(map[Tuple]ProcessInfo),
+			}
+			c.SetProcessInfoCache(mpc)
+			ciReaderSenderChan = make(chan []ConntrackInfo, 1)
+			c.SetConntrackInfoReader(dummyConntrackInfoReader{
+				MockSenderChannel: ciReaderSenderChan,
+			})
 			go c.Start()
 		})
-		Describe("Report Allowed Packets (ingress) with process info", func() {
-			BeforeEach(func() {
-				nflogReader.nfIngressC <- ingressPktAllow
-			})
-			Context("reporting tick", func() {
-				It("should receive metric", func() {
-					tmu := testMetricUpdate{
-						updateType:   UpdateTypeReport,
-						tuple:        *ingressPktAllowTuple,
-						srcEp:        remoteEd1,
-						dstEp:        localEd1,
-						ruleIDs:      []*calc.RuleID{defTierPolicy1AllowIngressRuleID},
-						isConnection: false,
-						processName:  "test-process",
-						processID:    1234,
-					}
-					Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
-				})
-			})
+		It("should report a metric update for allowed Packets (ingress) with process info", func() {
+			By("initializing the mock process cache with data")
+			mpc.inboundCache[*ingressPktAllowTuple] = proc1
+
+			By("Sending a NFLOG update")
+			nflogReader.nfIngressC <- ingressPktAllow
+
+			By("Receiving a metric update")
+			tmu := testMetricUpdate{
+				updateType:   UpdateTypeReport,
+				tuple:        *ingressPktAllowTuple,
+				srcEp:        remoteEd1,
+				dstEp:        localEd1,
+				ruleIDs:      []*calc.RuleID{defTierPolicy1AllowIngressRuleID},
+				isConnection: false,
+				processName:  "test-process",
+				processID:    1234,
+			}
+			Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
+		})
+		It("should handle a preDNAT like connection that is eventually allowed", func() {
+			By("initializing the mock process cache with data")
+			mpc.outboundCache[*localPktEgressDenyTuplePreDNAT] = proc2
+
+			By("Sending a NFLOG update with denied verdict")
+			nflogReader.nfEgressC <- localPktEgressDeniedPreDNAT
+
+			By("Checking epstats for pre DNAT denied tuple")
+			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*localPktEgressDenyTuplePreDNAT))
+
+			By("Receiving a metric update for pre-DNAT denied connection")
+			tmu := testMetricUpdate{
+				updateType:   UpdateTypeReport,
+				tuple:        *localPktEgressDenyTuplePreDNAT,
+				srcEp:        localEd1,
+				dstEp:        nil,
+				ruleIDs:      []*calc.RuleID{defTierPolicy2DenyEgressRuleID},
+				isConnection: false,
+				processName:  "test-process",
+				processID:    1234,
+			}
+			Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
+
+			t := NewTuple(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
+
+			By("Checking epstats for connection tuple")
+			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*localPktEgressDenyTuplePreDNAT))
+
+			By("Sending a NFLOG update with allowed verdict")
+			nflogReader.nfEgressC <- localPktEgressAllowedPreDNAT
+
+			// will call handlerInfo from c.Start() in BeforeEach
+			ciReaderSenderChan <- []ConntrackInfo{convertCtEntry(outCtEntryWithDNAT, 0)}
+
+			Eventually(c.epStats, "500ms", "100ms").Should(HaveKey(*t))
+
+			By("Receiving a expire metric update for pre DNAT denied connection")
+			tmu = testMetricUpdate{
+				updateType:   UpdateTypeExpire,
+				tuple:        *localPktEgressDenyTuplePreDNAT,
+				srcEp:        localEd1,
+				dstEp:        nil,
+				ruleIDs:      []*calc.RuleID{defTierPolicy2DenyEgressRuleID},
+				isConnection: false,
+				processName:  "test-process",
+				processID:    1234,
+			}
+			Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
+
+			By("Receiving a metric update for connection")
+			tmu = testMetricUpdate{
+				updateType:   UpdateTypeReport,
+				tuple:        *t,
+				srcEp:        localEd1,
+				dstEp:        remoteEd1,
+				ruleIDs:      []*calc.RuleID{defTierPolicy1AllowEgressRuleID},
+				isConnection: true,
+				processName:  "test-process",
+				processID:    1234,
+			}
+			Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
+
+			By("Receiving a expire metric update for connection")
+			tmu = testMetricUpdate{
+				updateType:   UpdateTypeExpire,
+				tuple:        *t,
+				srcEp:        localEd1,
+				dstEp:        remoteEd1,
+				ruleIDs:      []*calc.RuleID{defTierPolicy1AllowEgressRuleID},
+				isConnection: true,
+				processName:  "test-process",
+				processID:    1234,
+			}
+			Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
 		})
 	})
 	Context("Withtproxyenabled", func() {
@@ -2382,7 +2566,7 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 
 	nflogMap := map[[64]byte]*calc.RuleID{}
 
-	for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
+	for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID, defTierPolicy2DenyEgressRuleID} {
 		nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 	}
 
@@ -2415,7 +2599,7 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 	}
 
 	nflogMap := map[[64]byte]*calc.RuleID{}
-	for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
+	for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID, defTierPolicy2DenyEgressRuleID} {
 		nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 	}
 
@@ -2466,14 +2650,24 @@ func (d dummyConntrackInfoReader) ConntrackInfoChan() <-chan []ConntrackInfo {
 	return d.MockSenderChannel
 }
 
-type mockProcessCache struct{}
+type mockProcessCache struct {
+	inboundCache  map[Tuple]ProcessInfo
+	outboundCache map[Tuple]ProcessInfo
+}
 
 func (mockProcessCache) Start() error { return nil }
 func (mockProcessCache) Stop()        {}
-func (mockProcessCache) Lookup(tuple Tuple, dir TrafficDirection) (ProcessInfo, bool) {
+func (m mockProcessCache) Lookup(tuple Tuple, dir TrafficDirection) (ProcessInfo, bool) {
 	if dir == TrafficDirInbound {
-		return proc1, true
+		if pi, ok := m.inboundCache[tuple]; ok {
+			return pi, true
+		}
+	} else {
+		if pi, ok := m.outboundCache[tuple]; ok {
+			return pi, true
+		}
 	}
+
 	return ProcessInfo{}, false
 }
 func (mockProcessCache) Update(tuple Tuple, dirty bool) {}
