@@ -19,7 +19,7 @@ To leverage Address Groups, {{site.prodname}} provides an integration that dynam
 
 This how-to guide uses the following {{site.prodname}} features:
 
-- {{site.prodname}} **tigera-panorama-address-groups-controller**
+- {{site.prodname}} **tigera-panorama-controller**
 - {{site.prodname}} **GlobalNetworkSets**
 
 ### Concepts
@@ -62,7 +62,7 @@ The following example is what a {{site.prodname}} GlobalNetworkSet looks like af
 
 Where:
 
-- You create a ConfigMap where you specify the Panorama hostname, address group tags, and a polling interval for checking Address Group updates.
+- You create a ConfigMap where you specify the Panorama hostname, address group tags, and a device group for checking Address Group updates.
 - Each address group maps to a global network set in Kubernetes.
 
 >**Note**: GlobalNetworkSet.metadata.name will be prefixed with `pan.` and either be: 1) `<ADDRESS_GROUP_NAME>`, if it is a Kubernetes (RFC1123) compliant name, or 2) a mapping to a Kubernetes (RFC1123) compliant name, suffixed with a unique hash value.
@@ -96,13 +96,13 @@ The user must have read REST API access to addresses and address groups in the a
 1. Create a namespace for the tigera-firewall-controller.
 
     ```bash
-kubectl create namespace tigera-firewall-controller
+kubectl create namespace tigera-firewall-integration
     ```
 
 2. Create a ConfigMap and add your Panorama device information in the data section. For example:
 
     ```bash
-kubectl create configmap tigera-panorama-address-group -n tigera-firewall-integration --from-literal=tigera.firewall.host=__IPADDRESS_OF_PANORAMA__ --from-literal=tigera.firewall.panorama.tags="tag1, tag2, tag3" --from-literal=tigera.firewall.panorama.device-group="shared"
+kubectl create configmap tigera-panorama-controller-config -n tigera-firewall-integration --from-literal=tigera.firewall.host=__IPADDRESS_OF_PANORAMA__ --from-literal=tigera.firewall.panorama.tags="tag1, tag2, tag3" --from-literal=tigera.firewall.panorama.device-group="shared"
     ```
     Where:
    
@@ -118,12 +118,12 @@ kubectl create configmap tigera-panorama-address-group -n tigera-firewall-integr
 
 ### Install Panorama username and password as secrets
 
-Store each Panorama username and password as a secret in the `tigera-firewall-controller` namespace.
+Store each Panorama username and password as a secret in the `tigera-firewall-integration` namespace.
 
 For example, in the Secret for Panorama, store its username as a secret, with key `panorama.username` and password as a secret, with key as `panorama.password`.
 
 ```bash
-kubectl create secret tigera-panorama-controllers-secret-config --from-literal=panorama.username=__USERNAME_OF_PANORAMA__ --from-literal=panorama.password=__PASSWORD_OF_PANORAMA__
+kubectl create secret generic panorama-access -n tigera-firewall-integration --from-literal=panorama.username=__USERNAME_OF_PANORAMA__ --from-literal=panorama.password=__PASSWORD_OF_PANORAMA__
 ```
 
 #### Deploy the address groups controller in the Kubernetes cluster
@@ -175,9 +175,9 @@ The {{site.prodname}} controller relies on {% include open-new-window.html text=
 [ERROR][1] dynamic_address_groups_controller.go 378: "Failed to retrieve address groups from Panorama"
 ```
 
-**If a Address Group is deleted in Panorama, and is used in a global network set for a policy, what happens to the policy?**
+**If an Address Group is deleted in Panorama, and is used in a global network set for a policy, what happens to the policy?**
 
-The policy will work only until the next polling request to Panorama. The poll_interval is defined in the firewall-integration-address-groups ConfigMap (default: 10s). Once synchronized, the global network set will be deleted from the calico datastore; the policy will remain, but will not be enforced.
+The policy will work only until the next polling request to Panorama. The poll_interval may be defined in the tigera-panorama-controller-config ConfigMap (default: 10s). Once synchronized, the global network set will be deleted from the calico datastore; the policy will remain, but will not be enforced.
 
 ### Above and beyond
 
