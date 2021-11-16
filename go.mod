@@ -21,7 +21,7 @@ require (
 
 replace (
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211115234807-220cb047d20d
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211116000255-01b35d2f8b04
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211116012709-3658a916f664
 
 	// k8s apiserver upgrade
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
