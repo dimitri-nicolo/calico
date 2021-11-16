@@ -22,8 +22,8 @@ require (
 	github.com/smartystreets/assertions v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
-	github.com/tigera/api v0.0.0-20211110163836-434412eb4dd7
-	github.com/tigera/licensing v1.0.1-0.20211110181914-e4a6197a8e3d
+	github.com/tigera/api v0.0.0-20211115213013-3b569d156e85
+	github.com/tigera/licensing v1.0.1-0.20211115235151-8800f48d6acc
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
@@ -37,10 +37,10 @@ require (
 )
 
 replace (
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20211101215710-51227f209fa4
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20211116012652-b5a36176bc6f
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20211115183205-5d41e751c523
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211110181518-fed20985e955
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211105162547-3fd786c03c6c
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211115234807-220cb047d20d
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211116012709-3658a916f664
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 
 	k8s.io/api => k8s.io/api v0.21.0
