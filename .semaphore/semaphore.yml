@@ -89,7 +89,7 @@ blocks:
         - export REPORT_DIR=~/report
         - export LOGS_DIR=~/fv.log
         - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
-        - export CLUSTER_NAME=sem-${SEMAPHORE_PROJECT_NAME}-pr${SEMAPHORE_GIT_PR_NUMBER}-${BACKEND}-${SHORT_WORKFLOW_ID}
+        - export CLUSTER_NAME=sem-${SEMAPHORE_PROJECT_NAME}-pr${SEMAPHORE_GIT_PR_NUMBER}-${WINDOWS_VERSION}-${BACKEND}-${SHORT_WORKFLOW_ID}
         - export KEYPAIR_NAME=${CLUSTER_NAME}
         - echo CLUSTER_NAME=${CLUSTER_NAME}
         - sudo apt-get install putty-tools
@@ -116,28 +116,18 @@ blocks:
         value: win_ppk_key
       - name: K8S_VERSION
         value: 1.22.1
-      - name: WINDOWS_VERSION
-        value: "1903"
     jobs:
-      # TODO: Reinstate VXLAN job
-      # Temporarily disable VXLAN job
-      #- name: VXLAN - Windows FV
-      #  execution_time_limit:
-      #    minutes: 120
-      #  commands:
-      #    - ./.semaphore/run-win-fv
-      #  env_vars:
-      #    - name: BACKEND
-      #      value: vxlan
       - name: BGP - Windows FV
         execution_time_limit:
           minutes: 120
         commands:
           - ./.semaphore/run-win-fv
-        env_vars:
-          - name: BACKEND
-            value: bgp
-
+        matrix:
+          - env_var: WINDOWS_VERSION
+            values: ["2004", "20H2"]
+          - env_var: BACKEND
+            values: ["bgp"]
+           
 - name: FV Tests
   dependencies: ["Build"]
   task:

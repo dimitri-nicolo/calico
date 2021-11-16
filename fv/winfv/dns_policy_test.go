@@ -118,32 +118,43 @@ var _ = Describe("Windows DNS policy test", func() {
 
 			log.Printf("-----\nhttp www.google.com took %v seconds \n-----", t2.Sub(t1).Seconds())
 
-			// Normally it would take around 5 seconds for the first http command to go through.
-			// Add two seconds for execution and logging etc.
-			Expect(t2.Before(t1.Add(7 * time.Second))).To(BeTrue())
 			Expect(strings.Contains(getEndpointInfo(porterIP), "allow-domain")).To(BeTrue())
 
 			displayDNS()
-			// Sleep 15 seconds, 5 seconds more than DNS flush interval.
-			time.Sleep(15 * time.Second)
 
-			// Get IPs from DNS cache file
-			dnsMap, err = fv.ReadDnsCacheFile()
-			Expect(err).NotTo(HaveOccurred())
-			log.Printf("dns map %v", dnsMap)
+			// All the above code (with logging) takes time, could be more than DNS TTL so when we
+			// try to check DNS cache file, the DNS map could have been cleared.
+			// We should initiate the traffic again before checking DNS cache file.
+			curl("gobyexample.com")
+			curl("www.google.com")
 
-			googleIP := getDomainIPs("www.google.com")
-			log.Printf("google ip %s", googleIP)
+			checkCache := func() error {
+				// Get IPs from DNS cache file
+				dnsMap, err = fv.ReadDnsCacheFile()
+				if err != nil {
+					return err
+				}
+				if len(dnsMap) == 0 {
+					return fmt.Errorf("no DNS map yet")
+				}
+				log.Printf("dns map %v", dnsMap)
 
-			goexampleIPs := getDomainIPs("gobyexample.com")
-			log.Printf("gobyexample ip %v", goexampleIPs)
+				googleIP := getDomainIPs("www.google.com")
+				if len(googleIP) == 0 {
+					return fmt.Errorf("no google ip in DNS map")
+				}
+				log.Printf("google ip %s", googleIP)
 
-			// TODO: re-enable these assertions: https://tigera.atlassian.net/browse/CORE-7161
-			//Expect(len(googleIP)).NotTo(BeZero())
-			//Expect(len(goexampleIPs)).NotTo(BeZero())
-			// Sleep further 45s (totally more than 60 seconds) so DNS TTL (30s) plus Extra TTL (10s) expires.
-			//time.Sleep(45 * time.Second)
-			//Expect(strings.Contains(getEndpointInfo(porterIP), "allow-domain")).To(BeFalse())
+				goexampleIPs := getDomainIPs("gobyexample.com")
+				if len(goexampleIPs) == 0 {
+					return fmt.Errorf("no goexample ips in DNS map")
+				}
+				log.Printf("gobyexample ip %v", goexampleIPs)
+				return nil
+			}
+
+			// Make sure we see domain ips in DNS Cache file
+			Eventually(checkCache, "30s", "1s").Should(BeNil())
 		})
 	})
 
