@@ -764,8 +764,8 @@ github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhV
 github.com/tigera/api v0.0.0-20211028194523-b4ceddaee039/go.mod h1:U7qqFcD+luefolr44wGe1PuCMxgKUplb6qStftrgrSQ=
 github.com/tigera/api v0.0.0-20211115213013-3b569d156e85 h1:7pvdZu8h6yxAFSvGYiFVzo+BDetHaV3RyFF8rGqeQeE=
 github.com/tigera/api v0.0.0-20211115213013-3b569d156e85/go.mod h1:U7qqFcD+luefolr44wGe1PuCMxgKUplb6qStftrgrSQ=
-github.com/tigera/felix-private v0.0.0-20211116112526-da01a616b081 h1:CJ3e1blXvhyQZADqvphJb3KbCIeZCaGC7sjA58zdki4=
-github.com/tigera/felix-private v0.0.0-20211116112526-da01a616b081/go.mod h1:TF80jvyvw7n0si8IIexmJ9tbofQXt6CWPuK973VxJOM=
+github.com/tigera/felix-private v0.0.0-20211116201151-8fa78c06cc08 h1:DONVh6EQkBOF49BLwNetKVugV8z8MbxL3uGwEki4vo4=
+github.com/tigera/felix-private v0.0.0-20211116201151-8fa78c06cc08/go.mod h1:6psYFvdNZ8fEUWA0YeAJNRxvpxX3sjLsdxQ900V2Lz4=
 github.com/tigera/libcalico-go-private v1.7.2-0.20211115234807-220cb047d20d h1:bkYLlqmvRDKIj8pKdWMnAbwtyJeOjUp/adjxKS2ZhFc=
 github.com/tigera/libcalico-go-private v1.7.2-0.20211115234807-220cb047d20d/go.mod h1:9isFL1F+NkiCbtpOsfoAls2QNKctnKEFrwyuEq9KCfk=
 github.com/tigera/licensing v1.0.1-0.20211105031908-d59f5204df97/go.mod h1:3DCjnMA2kJ86ThUgAF1DASiWxSTuEA5YbBQz5MIleO4=
@@ -774,7 +774,7 @@ github.com/tigera/licensing v1.0.1-0.20211115235151-8800f48d6acc/go.mod h1:14naf
 github.com/tigera/nfnetlink v0.0.0-20210819183736-75abca8ede69/go.mod h1:97E0P2zzJLvZe3q1dddIl7dwX3BIYB2l3ioGAp+rC8g=
 github.com/tigera/typha-private v0.6.0-beta1.0.20211116012709-3658a916f664 h1:t/Jk6bokd2A34Q7mMVqfwuS431qiKQ0NkzD15rvGrSA=
 github.com/tigera/typha-private v0.6.0-beta1.0.20211116012709-3658a916f664/go.mod h1:+TNh2J/ATzGWY6EGdcUL6sWGblaheIa93Zsg5qQ1Aog=
-github.com/tigera/windows-networking v0.0.0-20210505211919-0de3e1e53cff/go.mod h1:zuycD4KqAFNMJC+Bv4fGqGMn7XsS/mZnttHGe96NLk0=
+github.com/tigera/windows-networking v0.0.0-20211112174220-6a90051af748/go.mod h1:zuycD4KqAFNMJC+Bv4fGqGMn7XsS/mZnttHGe96NLk0=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 h1:LnC5Kc/wtumK+WB441p7ynQJzVuNRJiqddSIE3IlSEQ=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
