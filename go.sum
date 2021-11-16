@@ -924,8 +924,8 @@ github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhV
 github.com/tigera/api v0.0.0-20211028194523-b4ceddaee039/go.mod h1:U7qqFcD+luefolr44wGe1PuCMxgKUplb6qStftrgrSQ=
 github.com/tigera/api v0.0.0-20211115213013-3b569d156e85 h1:7pvdZu8h6yxAFSvGYiFVzo+BDetHaV3RyFF8rGqeQeE=
 github.com/tigera/api v0.0.0-20211115213013-3b569d156e85/go.mod h1:U7qqFcD+luefolr44wGe1PuCMxgKUplb6qStftrgrSQ=
-github.com/tigera/felix-private v0.0.0-20211115183205-5d41e751c523 h1:IrGTnjnCMqnD1GMW+pXU1SDbQUQNau0yVfhf7PVS2jQ=
-github.com/tigera/felix-private v0.0.0-20211115183205-5d41e751c523/go.mod h1:TF80jvyvw7n0si8IIexmJ9tbofQXt6CWPuK973VxJOM=
+github.com/tigera/felix-private v0.0.0-20211116112526-da01a616b081 h1:CJ3e1blXvhyQZADqvphJb3KbCIeZCaGC7sjA58zdki4=
+github.com/tigera/felix-private v0.0.0-20211116112526-da01a616b081/go.mod h1:TF80jvyvw7n0si8IIexmJ9tbofQXt6CWPuK973VxJOM=
 github.com/tigera/libcalico-go-private v1.7.2-0.20211115234807-220cb047d20d h1:bkYLlqmvRDKIj8pKdWMnAbwtyJeOjUp/adjxKS2ZhFc=
 github.com/tigera/libcalico-go-private v1.7.2-0.20211115234807-220cb047d20d/go.mod h1:9isFL1F+NkiCbtpOsfoAls2QNKctnKEFrwyuEq9KCfk=
 github.com/tigera/licensing v1.0.1-0.20211105031908-d59f5204df97/go.mod h1:3DCjnMA2kJ86ThUgAF1DASiWxSTuEA5YbBQz5MIleO4=
