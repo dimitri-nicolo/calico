@@ -185,6 +185,7 @@ an instance (for example when scaling up the cluster).
 
 ### How to
 
+- [Configure IP autodetection](#configure-ip-autodetection)
 - [Ensure Kubernetes VPC has free CIDR range](#ensure-kubernetes-vpc-has-free-cidr-range)
 - [Create dedicated VPC Subnets](#create-dedicated-vpc-subnets)
 - [Configure AWS IAM roles for cluster nodes](#configure-aws-iam-roles-for-cluster-nodes)
@@ -200,6 +201,38 @@ an instance (for example when scaling up the cluster).
 - [Verify the feature operation](#verify-the-feature-operation)
 - [Controlling the use of egress gateways](#controlling-the-use-of-egress-gateways)
 - [Policy enforcement for flows via an egress gateway](#policy-enforcement-for-flows-via-an-egress-gateway)
+
+#### Configure IP autodetection
+
+Since this feature adds additional network interfaces to nodes, it is important to configure {{site.prodname}} to
+autodetect the correct primary interface to use for normal pod-to-pod traffic.  Otherwise, {{site.prodname}} may
+autodetect a newly-added secondary ENI as the main interface, causing an outage.
+
+For EKS clusters, the default IP autodetection method is `can-reach=8.8.8.8`, which will choose the interface 
+with a route to `8.8.8.8`; this is typically the interface with a default route, which will be the primary ENI.
+({{site.prodname}} ensures that the secondary ENIs do not have default routes in the main routing table.)
+
+For other AWS clusters, {{site.prodname}} defaults to `firstFound`, which is **not** suitable.
+
+To examine the autodetection method, check the operator's installation resource:
+```yaml
+$ kubectl get installations.operator.tigera.io -o yaml default
+apiVersion: operator.tigera.io/v1
+kind: Installation
+metadata:
+  ...
+  name: default
+  ...
+spec:
+  calicoNetwork:
+    ...
+    nodeAddressAutodetectionV4:
+      firstFound: true
+...
+```
+If `nodeAddressAutodetectionV4` is set to `firstFound: true` then you must change it to another method by editing the
+resource. The `canReach` and `cidrs` [options](../../reference/installation/api#operator.tigera.io/v1.NodeAddressAutodetection) are suitable.  If using the `cidrs` option, set the CIDRs list to include only the 
+CIDRs from which your primary ENI IPs are chosen (do not include the dedicated VPC subnets chosen below).
 
 #### Ensure Kubernetes VPC has free CIDR range
 
@@ -366,6 +399,7 @@ IP pools are used to subdivide the VPC Subnets as follows:
   * `allowedUse` set to `["HostSecondary"]` to reserve them for this purpose.
   * `blockSize` set to 32.  This aligns {{site.prodname}} IPAM with the behaviour of the AWS fabric.
   * `vxlanMode` and `ipipMode` set to `Never`.  (`Never` is the default if these fields are not specified.)
+  * `disableBGPExport` set to `true`.  This prevents routing conflicts if your cluster is using IPIP or BGP networking.
 
 * Small pools used for particular groups of egress gateways.  These must have:
 
@@ -373,6 +407,7 @@ IP pools are used to subdivide the VPC Subnets as follows:
   * `allowedUse` set to `["Workload"]` to tell {{site.prodname}} IPAM to use those pools for the egress gateway workloads.
   * `vxlanMode` and `ipipMode` set to `Never` in order to disable encapsulation for the egress gateway pods.  (`Never` is the default if these fields are not specified.)
   * `blockSize` set to 32.  This aligns {{site.prodname}} IPAM with the behaviour of the AWS fabric.
+  * `disableBGPExport` set to `true`.  This prevents routign conflicts if your cluster is using IPIP or BGP networking.
 
   It's also recommended to:
 
@@ -432,6 +467,7 @@ spec:
   allowedUses: ["HostSecondaryInterface"]
   awsSubnetID: subnet-000000000000000001
   blockSize: 32
+  disableBGPExport: true
 ---
 apiVersion: projectcalico.org/v3
 kind: IPPool
@@ -443,6 +479,7 @@ spec:
   awsSubnetID: subnet-000000000000000001
   blockSize: 32
   nodeSelector: "!all()"
+  disableBGPExport: true
 ---
 apiVersion: projectcalico.org/v3
 kind: IPPool
@@ -454,6 +491,7 @@ spec:
   awsSubnetID: subnet-000000000000000001
   blockSize: 32
   nodeSelector: "!all()"
+  disableBGPExport: true
 ---
 apiVersion: projectcalico.org/v3
 kind: IPPool
@@ -464,6 +502,7 @@ spec:
   allowedUses: ["HostSecondaryInterface"]
   awsSubnetID: subnet-000000000000000002
   blockSize: 32
+  disableBGPExport: true
 ---
 apiVersion: projectcalico.org/v3
 kind: IPPool
@@ -475,6 +514,7 @@ spec:
   awsSubnetID: subnet-000000000000000002
   blockSize: 32
   nodeSelector: "!all()"
+  disableBGPExport: true
 ---
 apiVersion: projectcalico.org/v3
 kind: IPPool
@@ -486,6 +526,7 @@ spec:
   awsSubnetID: subnet-000000000000000002
   blockSize: 32
   nodeSelector: "!all()"
+  disableBGPExport: true
 ```
 
 #### Copy pull secret into egress gateway namespace
@@ -787,3 +828,4 @@ Please see also:
 
 - The `egressIP...` and `aws...` fields of the [FelixConfiguration
   resource]({{site.baseurl}}/reference/resources/felixconfig#spec).
+- [Troubleshooting egress gateways](./troubleshoot).
