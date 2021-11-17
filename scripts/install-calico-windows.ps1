@@ -225,12 +225,12 @@ function EnableWinDsrForEKS()
     }
 
     # Update and restart kube-proxy if WinDSR is not enabled by default.
-    $Path = Get-WmiObject -Query 'select * from win32_service where name="kube-proxy"' | Select -ExpandProperty pathname
+    $Path = Get-CimInstance -Query 'select * from win32_service where name="kube-proxy"' | Select -ExpandProperty pathname
     if ($Path -like "*--enable-dsr=true*") {
         Write-Host "WinDsr is enabled by default."
     } else {
         $UpdatedPath = $Path + " --enable-dsr=true --feature-gates=WinDSR=true"
-        Get-WmiObject win32_service -filter 'Name="kube-proxy"' | Invoke-WmiMethod -Name Change -ArgumentList @($null,$null,$null,$null,$null,$UpdatedPath)
+        Get-CimInstance win32_service -filter 'Name="kube-proxy"' | Invoke-CimMethod -Name Change -ArgumentList @($null,$null,$null,$null,$null,$UpdatedPath)
         Restart-Service -name "kube-proxy"
         Write-Host "WinDsr has been enabled for kube-proxy."
     }
@@ -275,6 +275,30 @@ function SetConfigParameters {
     (Get-Content $RootDir\config.ps1).replace($OldString, $NewString) | Set-Content $RootDir\config.ps1 -Force
 }
 
+function SetAKSCalicoStaticRules {
+    $fileName  = [Io.path]::Combine("$RootDir", "static-rules.json")
+    echo '{
+    "Provider": "AKS",
+    "Rules": [
+        {
+            "Name": "EndpointPolicy",
+            "Rule": {
+                "Action": "Block",
+                "Direction": "Out",
+                "Id": "block-wireserver",
+                "Priority": 200,
+                "Protocol": 6,
+                "RemoteAddresses": "168.63.129.16/32",
+                "RemotePorts": "80",
+                "RuleType": "Switch",
+                "Type": "ACL"
+            }
+        }
+    ],
+    "version": "0.1.0"
+}' | Out-File -encoding ASCII -filepath $fileName
+}
+
 function StartCalico()
 {
     Write-Host "`nStart {{installName}}...`n"
@@ -290,15 +314,8 @@ $BaseDir="c:\k"
 $RootDir="c:\{{rootDir}}"
 $CalicoZip="c:\{{zipFileName}}"
 
-{%- if site.prodname != "Calico" %}
-if (!(Test-Path $CalicoZip))
-{
-throw "Cannot find {{installName}} zip file $CalicoZip."
-}
-{%- endif %}
-
+# Must load the helper modules before doing anything else.
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
 $helper = "$BaseDir\helper.psm1"
 $helperv2 = "$BaseDir\helper.v2.psm1"
 md $BaseDir -ErrorAction Ignore
@@ -313,25 +330,32 @@ if (!(Test-Path $helperv2))
 ipmo -force $helper
 ipmo -force $helperv2
 
+if (!(Test-Path $CalicoZip))
+{
+{%- if site.prodname == "Calico Enterprise" %}
+    throw "Cannot find {{installName}} zip file $CalicoZip."
+{%- else if site.prodname == "Calico" %}
+    Write-Host "$CalicoZip not found, downloading {{installName}} release..."
+    DownloadFile -Url $ReleaseBaseURL/$ReleaseFile -Destination c:\calico-windows.zip
+{%- else %}
+    throw "Invalid product name - did prodname in _config.yml change?"
+{%- endif %}
+}
+
 $platform=GetPlatformType
 
 if (-Not [string]::IsNullOrEmpty($KubeVersion) -and $platform -NE "eks") {
     PrepareKubernetes
 }
 
-{%- if site.prodname == "Calico" %}
-Write-Host "Download {{installName}} release..."
-DownloadFile -Url $ReleaseBaseURL/$ReleaseFile -Destination c:\{{zipFileName}}
-{%- endif %}
-
-if ((Get-Service | where Name -Like 'Calico*' | where Status -EQ Running) -NE $null) {
+if ((Get-Service -exclude 'CalicoUpgrade' | where Name -Like 'Calico*' | where Status -EQ Running) -NE $null) {
 Write-Host "Calico services are still running. In order to re-run the installation script, stop the CalicoNode and CalicoFelix services or uninstall them by running: $RootDir\uninstall-calico.ps1"
 Exit
 }
 
 Remove-Item $RootDir -Force  -Recurse -ErrorAction SilentlyContinue
 Write-Host "Unzip {{installName}} release..."
-Expand-Archive $CalicoZip c:\
+Expand-Archive -Force $CalicoZip c:\
 
 Write-Host "Setup {{installName}}..."
 SetConfigParameters -OldString '<your datastore type>' -NewString $Datastore
@@ -353,14 +377,17 @@ if ($platform -EQ "aks") {
     SetConfigParameters -OldString 'CALICO_NETWORKING_BACKEND="vxlan"' -NewString 'CALICO_NETWORKING_BACKEND="none"'
     SetConfigParameters -OldString 'KUBE_NETWORK = "Calico.*"' -NewString 'KUBE_NETWORK = "azure.*"'
 
-    $calicoNs = GetCalicoNamespace
-    GetCalicoKubeConfig -CalicoNamespace $calicoNs -SecretName 'calico-windows'
+    $calicoNs = "calico-system"
+    GetCalicoKubeConfig -CalicoNamespace $calicoNs
+
+    SetAKSCalicoStaticRules
 }
 if ($platform -EQ "eks") {
     EnableWinDsrForEKS
 
-    $awsNodeName = Invoke-RestMethod -uri http://169.254.169.254/latest/meta-data/local-hostname -ErrorAction Ignore
-    Write-Host "Setup {{installName}} for EKS, node name $awsNodeName ..."
+    $token = Invoke-RestMethod -Headers @{"X-aws-ec2-metadata-token-ttl-seconds" = "300"} -Method PUT -Uri http://169.254.169.254/latest/api/token -ErrorAction Ignore
+    $awsNodeName = Invoke-RestMethod -Headers @{"X-aws-ec2-metadata-token" = $token} -Method GET -Uri http://169.254.169.254/latest/meta-data/local-hostname -ErrorAction Ignore
+    Write-Host "Setup Calico for Windows for EKS, node name $awsNodeName ..."
     $Backend = "none"
     $awsNodeNameQuote = """$awsNodeName"""
     SetConfigParameters -OldString '$(hostname).ToLower()' -NewString "$awsNodeNameQuote"
@@ -371,8 +398,9 @@ if ($platform -EQ "eks") {
     GetCalicoKubeConfig -CalicoNamespace $calicoNs -KubeConfigPath C:\ProgramData\kubernetes\kubeconfig
 }
 if ($platform -EQ "ec2") {
-    $awsNodeName = Invoke-RestMethod -uri http://169.254.169.254/latest/meta-data/local-hostname -ErrorAction Ignore
-    Write-Host "Setup {{installName}} for AWS, node name $awsNodeName ..."
+    $token = Invoke-RestMethod -Headers @{"X-aws-ec2-metadata-token-ttl-seconds" = "300"} -Method PUT -Uri http://169.254.169.254/latest/api/token -ErrorAction Ignore
+    $awsNodeName = Invoke-RestMethod -Headers @{"X-aws-ec2-metadata-token" = $token} -Method GET -Uri http://169.254.169.254/latest/meta-data/local-hostname -ErrorAction Ignore
+    Write-Host "Setup Calico for Windows for AWS, node name $awsNodeName ..."
     $awsNodeNameQuote = """$awsNodeName"""
     SetConfigParameters -OldString '$(hostname).ToLower()' -NewString "$awsNodeNameQuote"
 

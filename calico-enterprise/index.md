@@ -28,7 +28,7 @@ sitemap: false
       <td style="text-align: center">✓</td>
     </tr>
     <tr>
-      <td>Advanced IP Address Management</td>
+      <td>Advanced IP address management</td>
       <td style="text-align: center">✓</td>
       <td style="text-align: center">✓</td>
     </tr>
@@ -71,7 +71,7 @@ sitemap: false
       <td style="text-align: center">✓</td>
     </tr>
     <tr>
-      <td>Microsegmentation across Host/VMs/Containers</td>
+      <td>Microsegmentation across host/VMs/containers</td>
       <td style="text-align: center">&nbsp;</td>
       <td style="text-align: center">✓</td>
     </tr>
@@ -81,7 +81,7 @@ sitemap: false
       <td style="text-align: center">✓</td>
     </tr>
     <tr>
-      <td>Compliance reporting & alertse</td>
+      <td>Compliance reporting & alerts</td>
       <td style="text-align: center">&nbsp;</td>
       <td style="text-align: center">✓</td>
     </tr>
@@ -91,7 +91,7 @@ sitemap: false
       <td style="text-align: center">✓</td>
     </tr>
     <tr>
-      <td>SIEM Integrations</td>
+      <td>SIEM integrations</td>
       <td style="text-align: center">&nbsp;</td>
       <td style="text-align: center">✓</td>
     </tr>
@@ -99,22 +99,22 @@ sitemap: false
       <th colspan="3">Observability</th>
     </tr>
     <tr>
-      <td>Dynamic Service Graph</td>
+      <td>Dynamic service graph</td>
       <td style="text-align: center">&nbsp;</td>
       <td style="text-align: center">✓</td>
     </tr>
     <tr>
-      <td>Application Layer Observability</td>
+      <td>Application Layer observability</td>
       <td style="text-align: center">&nbsp;</td>
       <td style="text-align: center">✓</td>
     </tr>
     <tr>
-      <td>Dynamic Packet Capture</td>
+      <td>Dynamic packet capture</td>
       <td style="text-align: center">&nbsp;</td>
       <td style="text-align: center">✓</td>
     </tr>
     <tr>
-      <td>DNS Dashboards</td>
+      <td>DNS dashboards</td>
       <td style="text-align: center">&nbsp;</td>
       <td style="text-align: center">✓</td>
     </tr>

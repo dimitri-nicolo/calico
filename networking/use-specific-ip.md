@@ -31,7 +31,7 @@ IP pools are ranges of IP addresses from which {{site.prodname}} assigns pod IPs
 
 ### Before you begin...
 
-You must be using the {{site.prodname}} IPAM.
+You must be using {{site.prodname}} IPAM.
 
 If you are not sure, ssh to one of your Kubernetes nodes and examine the CNI configuration.
 
@@ -47,7 +47,7 @@ Look for the entry:
           },
 </pre>
 
-If it is present, you are using the {{site.prodname}} IPAM. If the IPAM is set to something else, or the 10-calico.conflist file does not exist, you cannot use these features in your cluster.
+If it is present, you are using {{site.prodname}} IPAM. If the IPAM is set to something else, or the 10-calico.conflist file does not exist, you cannot use these features in your cluster.
 
 ### How to
 
@@ -72,7 +72,7 @@ tunnel address.  To prevent this, there are several options:
 * To reserve a whole IPPool for manual allocations, you can set its [node selector](../reference/resources/ippool) to `"!all()"`.  Since the `!all()`  
   cannot match any nodes, the IPPool will not be used for any automatic assignments.
 
-* To reserve part of a pool, you can create an [`IPReservation` resource](../reference/ipreservation). This allows for certain IPs to be reserved so
+* To reserve part of a pool, you can create an [`IPReservation` resource](../reference/resources/ipreservation). This allows for certain IPs to be reserved so
   that Calico IPAM will not use them automatically.  However, manual assignments (using the annotation) can still use 
   IPs that are "reserved".
 

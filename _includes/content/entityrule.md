@@ -18,7 +18,7 @@ Selectors can match [workload endpoints]({{ site.baseurl }}/reference/resources/
 | domains | Positive match on [domain names](#exact-and-wildcard-domain-names). | List of [exact or wildcard domain names](#exact-and-wildcard-domain-names) | list of strings |
 | notPorts | Negative match on the specified ports | | list of [ports](#ports) | |
 | serviceAccounts | Match endpoints running under service accounts. If a `namespaceSelector` is also defined, the set of service accounts this applies to is limited to the service accounts in the selected namespaces. | | [ServiceAccountMatch](#serviceaccountmatch) | |
-| services | Match the specified service(s). If specified, no other selection criteria can be set. Only valid on egress rule destinations. | | [ServiceMatch](#servicematch) | |
+| services | Match the specified service(s). If specified on egress rule destinations, no other selection criteria can be set. If specified on ingress rule sources, only positive or negative matches on ports can be specified. | | [ServiceMatch](#servicematch) | |
 
 > **NOTE**: You cannot mix IPv4 and IPv6 CIDRs in a single rule using `nets` or `notNets`. If you need to match both, create 2 rules.
 

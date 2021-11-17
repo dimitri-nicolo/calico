@@ -48,10 +48,6 @@ When load balancing service connections in Kubernetes, a port needs to talk to a
 
 With eBPF, you can avoid this packet translation by using an eBPF program that you’ve loaded into the kernel and load balancing at the source of the connection. All NAT overhead from service connections is removed because destination network address translation (DNAT) does not need to take place on the packet processing path.
 
-#### Observability
-
-Collecting statistics and deep-dive debugging of the kernel are two useful ways in which eBPF can be used for observability. eBPF programs can be attached to a number of different functions in the kernel, providing access to data that a function is processing while also allowing that data to be modified. For example, with eBPF, if a network connection is established, you can receive a call when the socket is created. Why is this important when you can already receive socket calls as events? The key here is that eBPF provides these calls within the context of the program that opened the socket, so you get information about which process opened it and what happened to the socket.
-
 ### The price of performance
 
 So is eBPF more efficient than standard Linux iptables? The short answer: it depends.
@@ -68,7 +64,7 @@ With eBPF, you get performance—but it comes at a cost. You need to find a bala
 
 Let’s look at some specific cases where it would make sense to use eBPF, and some where it would not.
 
-### ✘ When not to use eBPF
+#### ✘ When not to use eBPF
 
 #### ✘ Implementing application-layer policy
 
@@ -82,7 +78,7 @@ Similarly, service mesh relies on proxies like Envoy. A lot of thought has gone 
 
 Using eBPF to perform CPU intensive or packet-by-packet processing, such as decryption and re-encryption for encrypted flows, would not be efficient because you would need to build a structure and do a lookup for every packet, which is expensive.
 
-### ✔ When to use eBPF
+#### ✔ When to use eBPF
 
 #### ✔ XDP
 eBPF provides an efficient way to examine raw packet buffers as they enter the system, allowing you to make quick decisions about what to do with them.
@@ -90,14 +86,11 @@ eBPF provides an efficient way to examine raw packet buffers as they enter the s
 #### ✔ Connect-time load balancing
 With eBPF, you can load balance at the source using a program you’ve loaded into the kernel, instead of using a virtual IP. Since DNAT does not need to take place on the packet processing path, all NAT overhead from service connections is removed.
 
-#### ✔ Observability
-eBPF programs are an excellent way to add probes as sensors in the Linux kernel to get context-rich data. This is a huge benefit, as there is no need to make changes to the kernel to enable tracing and profiling. You can easily receive socket calls within the context of the program that opened the socket, or add programs to trace syscalls in the kernel. In our opinion, observability is the use case for which eBPF is most beneficial.
-
 ### Summary
 
 Is eBPF a replacement for iptables? Not exactly. It’s hard to imagine everything working as efficiently with eBPF as it does with iptables. For now, the two co-exist and it’s up to the user to weigh the price-performance tradeoff and decide which feature to use when, given their specific needs.
 
-Whether you use {{site.prodname}}’s eBPF data plane or not, our observability features work the same using eBPF technology. We believe the right solution is to leverage eBPF, along with existing mechanisms in the Linux kernel, to achieve your desired outcome. That’s why {{site.prodname}} offers support for multiple data planes, including standard Linux, Windows HNS, and Linux eBPF. Since we have established that both eBPF and iptables are useful, the only logical thing to do in our opinion is to support both. {{site.prodname}} gives you the choice so you can choose the best tool for the job.
+We believe the right solution is to leverage eBPF, along with existing mechanisms in the Linux kernel, to achieve your desired outcome. That’s why {{site.prodname}} offers support for multiple data planes, including standard Linux, Windows HNS, and Linux eBPF. Since we have established that both eBPF and iptables are useful, the only logical thing to do in our opinion is to support both. {{site.prodname}} gives you the choice so you can choose the best tool for the job.
 
 ### Above and beyond
 

@@ -122,6 +122,7 @@ defaults:
       show_read_time: true
       show_toc: true
       version: master
+      vppbranch: master  # The branch in vpp repo that these docs should point to for manifests, etc
       sitemap: true
       # The registry field should end in a trailing `/` to ensure images formed with
       # it have the proper slashes

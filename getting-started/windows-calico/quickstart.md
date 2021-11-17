@@ -110,7 +110,8 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
 
 1. Setup a {{site.prodname}} Kubernetes cluster with {% include open-new-window.html text='Windows nodes' url='https://docs.microsoft.com/en-us/virtualization/windowscontainers/kubernetes/getting-started-kubernetes-windows' %}.
 
-1. Ensure that BGP is disabled. You can do this by modifying the operator's installation resource:
+1. Ensure that BGP is disabled since you're using VXLAN.
+   If you installed Calico using operator, you can do this by:
 
    ```bash
    kubectl patch installation default --type=merge -p '{"spec": {"calicoNetwork": {"bgp": "Disabled"}}}'
@@ -135,9 +136,7 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
 1. Install {{site.prodnameWindows}} for your datastore using the default parameters or [customize installation parameters](#configure-installation-parameters).
    The PowerShell script downloads {% if site.prodnameWindows == "Calico Enterprise for Windows" %}the {{site.prodnameWindows}} release binary, {% endif %}Kubernetes binaries, Windows utilities files, configures {{site.prodnameWindows}}, and starts the Calico service.
 
-   You do not need to pass a parameter if the default value of the parameter is correct for your cluster.
-
-   **Kubernetes datastore**
+   **Kubernetes datastore (default)**
 
    ```powershell
    c:\install-calico-windows.ps1 -KubeVersion <your Kubernetes version (e.g. 1.18.6)> `
@@ -148,6 +147,8 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
    > **Note**: You do not need to pass a parameter if the default value of the parameter is correct for your cluster.
    {: .alert .alert-info}
 
+   > **Note**: If your Windows nodes have multiple network adapters, you can configure the one used for VXLAN by editing `VXLAN_ADAPTER` in `{{site.rootDirWindows}}\config.ps1`, then restarting {{site.prodnameWindows}}.
+   {: .alert .alert-info}
 
 1. Verify that the {{site.prodname}} services are running.
 
@@ -175,7 +176,7 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
   <label:Kubernetes BGP>
   <%
 
-1. Enable BGP service on Windows node. 
+1. Enable BGP service on Windows node (instead of VXLAN).
    Install the RemoteAccess service using the following Powershell commands:
    
    ```powershell
@@ -257,6 +258,63 @@ The following steps install a Kubernetes cluster on a single Windows node, with 
 
   <label:EKS>
   <%
+1. Enable Direct Server Return (DSR) in the kube-proxy add-on. DSR is required for network policy enforcement for service cluster IPs.
+
+   - Begin editing the kube-proxy configmap:
+
+     ```bash
+     kubectl edit cm -n kube-system kube-proxy-config
+     ```
+
+   - Add the following data under `data.config`:
+
+     ```
+     winkernel:
+       enableDSR: true
+     featureGates:
+       WinDSR: true
+     ```
+
+   - Save your changes to the kube-proxy-config configmap. An example config might look like:
+
+     ```
+     apiVersion: v1
+     kind: ConfigMap
+     data:
+       config: |-
+         apiVersion: kubeproxy.config.k8s.io/v1alpha1
+         winkernel:
+           enableDSR: true
+         featureGates:
+           WinDSR: true
+         bindAddress: 0.0.0.0
+         ...
+     ```
+
+   - Trigger a rolling restart of the kube-proxy daemonset and watch the rollout.
+
+     ```bash
+     kubectl -n kube-system rollout restart ds kube-proxy
+     kubectl -n kube-system rollout status daemonset/kube-proxy
+     ```
+
+     An example of a successful kube-proxy rollout:
+
+     ```
+     $ kubectl rollout restart ds kube-proxy -n kube-system
+     daemonset.apps/kube-proxy restarted
+     $ kubectl rollout status -n kube-system daemonset/kube-proxy
+     Waiting for daemon set "kube-proxy" rollout to finish: 0 out of 3 new pods have been updated...
+     Waiting for daemon set "kube-proxy" rollout to finish: 1 out of 3 new pods have been updated...
+     Waiting for daemon set "kube-proxy" rollout to finish: 1 out of 3 new pods have been updated...
+     Waiting for daemon set "kube-proxy" rollout to finish: 1 out of 3 new pods have been updated...
+     Waiting for daemon set "kube-proxy" rollout to finish: 1 out of 3 new pods have been updated...
+     Waiting for daemon set "kube-proxy" rollout to finish: 2 out of 3 new pods have been updated...
+     Waiting for daemon set "kube-proxy" rollout to finish: 2 out of 3 new pods have been updated...
+     Waiting for daemon set "kube-proxy" rollout to finish: 2 out of 3 new pods have been updated...
+     Waiting for daemon set "kube-proxy" rollout to finish: 2 of 3 updated pods are available...
+     daemon set "kube-proxy" successfully rolled out
+     ```
 
 1. Ensure that a Windows instance role has permissions to get `namespaces` and to get `secrets` in the calico-system namespace (or kube-system namespace if you are using a non operator-managed {{site.prodname}} installation.)
    One way to do this is by running the following comands to install the required permissions temporarily. Before running the commands, replace `<eks_node_name>` with the Kubernetes node name of the EKS Windows node, for example `ip-192-168-42-34.us-west-2.compute.internal`.

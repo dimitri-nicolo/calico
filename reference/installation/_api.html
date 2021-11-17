@@ -1004,6 +1004,20 @@ to obtain TLS certificates. This feature requires that you bring your own CSR si
 pods will be stuck during initialization.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>nonPrivileged</code><br>
+<em>
+<a href="#operator.tigera.io/v1.NonPrivilegedType">
+NonPrivilegedType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NonPrivileged configures Calico to be run in non-privileged containers as non-root users where possible.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -3596,6 +3610,20 @@ to obtain TLS certificates. This feature requires that you bring your own CSR si
 pods will be stuck during initialization.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>nonPrivileged</code><br>
+<em>
+<a href="#operator.tigera.io/v1.NonPrivilegedType">
+NonPrivilegedType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NonPrivileged configures Calico to be run in non-privileged containers as non-root users where possible.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.tigera.io/v1.InstallationStatus">InstallationStatus
@@ -4612,6 +4640,14 @@ Kubernetes core/v1.ResourceRequirements
 </tr>
 </tbody>
 </table>
+<h3 id="operator.tigera.io/v1.NonPrivilegedType">NonPrivilegedType
+(<code>string</code> alias)</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#operator.tigera.io/v1.InstallationSpec">InstallationSpec</a>)
+</p>
+<p>NonPrivilegedType specifies whether Calico runs as permissioned or not</p>
+<p>One of: Enabled, Disabled</p>
 <h3 id="operator.tigera.io/v1.OIDCType">OIDCType
 (<code>string</code> alias)</h3>
 <p>

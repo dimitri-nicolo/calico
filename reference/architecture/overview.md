@@ -34,6 +34,7 @@ Calico open-source components are the foundation of {{site.prodname}}. {{site.pr
 ### Calico open-source components
 
  - [API server](#api-server)
+ - [Felix](#felix)
  - [BIRD](#bird)
  - [calicoctl](#calicoctl)
  - [calico-node](#calico-node)
@@ -41,7 +42,6 @@ Calico open-source components are the foundation of {{site.prodname}}. {{site.pr
  - [CNI plugin](#cni-plugin)
  - [Datastore plugin](#datastore-plugin)
  - [Dikastes](#dikastes)
- - [Felix](#felix) 
  - [IPAM plugin](#ipam-plugin)
  - [Typha](#typha) 
 
@@ -248,4 +248,4 @@ Typha maintains a single datastore connection on behalf of all of its clients li
 
 #### kubectl
 
-**Main task**: The recommended command line interface for CRUD operations on {{site.prodname}} and Calico objects. {% include open-new-window.html text='kubectl' url='https://kubernetes.io/docs/reference/kubectl/overview/' %}. 
+**Main task**: The recommended command line interface for CRUD operations on {{site.prodname}} and Calico objects. {% include open-new-window.html text='kubectl' url='https://kubernetes.io/docs/reference/kubectl/overview/' %}.

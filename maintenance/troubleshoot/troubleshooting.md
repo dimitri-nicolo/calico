@@ -113,6 +113,8 @@ No IPv6 peers found.
 ```
 {: .no-select-button}
 
+Alternatively, you can create a [`CalicoNodeStatus` resource]({{site.baseurl}}/reference/resources/caliconodestatus) to get BGP session status for the node.
+
 If you do not see this, please check the following.
 
 - Make sure there is IP connectivity between your hosts.
@@ -135,7 +137,7 @@ varies by Linux distribution. The following steps work best on Ubuntu systems.
 
    ```
    [keyfile]
-   unmanaged-devices=interface-name:cali*;interface-name:tunl*;interface-name:vxlan.calico
+   unmanaged-devices=interface-name:cali*;interface-name:tunl*;interface-name:vxlan.calico;interface-name:wireguard.cali
    ```
 
 1. Restart NetworkManager.

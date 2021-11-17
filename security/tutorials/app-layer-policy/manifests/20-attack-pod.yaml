@@ -32,7 +32,7 @@ spec:
         kubernetes.io/os: linux
       containers:
       - name: attacker
-        image: tutum/curl
+        image: curlimages/curl
         command: ["/bin/sleep","infinity"]
         volumeMounts:
         - name: istio-certs

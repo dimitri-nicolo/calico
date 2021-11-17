@@ -30,9 +30,6 @@ The following platforms using only IPv4:
 
 All platforms listed above will encrypt pod-to-pod traffic. Additionally, when using AKS or EKS, host-to-host traffic will also be encrypted, including host-networked pods.
 
-> Note: WireGuard encryption is not currently compatible with egress gateway functionality.
-{: .alert .alert-info }
-
 **Required**
 
 - Operating system(s) of nodes running in the cluster must {% include open-new-window.html text='support WireGuard' url='https://www.wireguard.com/install/' %}
@@ -66,10 +63,28 @@ sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noa
 sudo curl -o /etc/yum.repos.d/jdoss-wireguard-epel-7.repo https://copr.fedorainfracloud.org/coprs/jdoss/wireguard/repo/epel-7/jdoss-wireguard-epel-7.repo
 sudo yum install wireguard-dkms wireguard-tools -y
    ```
+
+Additionally, you may optionally enable host-to-host encryption mode for WireGuard using the following command.
+
+```bash
+kubectl patch felixconfiguration default --type='merge' -p '{"spec": {"wireguardHostEncryptionEnabled": true}}'
+```
+
+> **Warning**: `wireguardHostEncryptionEnabled` is an experimental flag that extends WireGuard encryption to host-network IP addresses. It is currently only supported on managed clusters deployed on EKS and AKS, where WireGuard *cannot* be enabled on the cluster's control-plane node. Enabling this flag while WireGuard is enabled on the control-plane node can lead to a broken cluster, and neworking deadlock.
+{: .alert .alert-warning}
+   
 %>
 <label:AKS>
 <%
 AKS cluster nodes run Ubuntu with a kernel that has WireGuard installed already, so there is no manual installation required.
+
+However, you will need to enable host-to-host encryption mode for WireGuard using the following command:
+
+kubectl patch felixconfiguration default --type='merge' -p '{"spec": {"wireguardHostEncryptionEnabled": true}}'
+
+> **Warning**: `wireguardHostEncryptionEnabled` is an experimental flag that extends WireGuard encryption to host-network IP addresses. It is currently only supported on managed clusters deployed on EKS and AKS, where WireGuard *cannot* be enabled on the cluster's control-plane node. Enabling this flag while WireGuard is enabled on the control-plane node can lead to a broken cluster, and neworking deadlock.
+{: .alert .alert-warning}
+
 %>
 <label:OpenShift>
 <%
