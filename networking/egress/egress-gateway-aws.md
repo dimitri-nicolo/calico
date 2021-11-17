@@ -212,7 +212,7 @@ For EKS clusters, the default IP autodetection method is `can-reach=8.8.8.8`, wh
 with a route to `8.8.8.8`; this is typically the interface with a default route, which will be the primary ENI.
 ({{site.prodname}} ensures that the secondary ENIs do not have default routes in the main routing table.)
 
-For other AWS clusters, {{site.prodname}} defaults to `firstFound`, which is **not** suitable.
+For other AWS clusters, {{site.prodname}} may default to `firstFound`, which is **not** suitable.
 
 To examine the autodetection method, check the operator's installation resource:
 ```yaml
@@ -230,7 +230,7 @@ spec:
       firstFound: true
 ...
 ```
-If `nodeAddressAutodetectionV4` is set to `firstFound: true` then you must change it to another method by editing the
+If `nodeAddressAutodetectionV4` is set to `firstFound: true` or is not specified, then you must change it to another method by editing the
 resource. The `canReach` and `cidrs` [options](../../reference/installation/api#operator.tigera.io/v1.NodeAddressAutodetection) are suitable.  If using the `cidrs` option, set the CIDRs list to include only the 
 CIDRs from which your primary ENI IPs are chosen (do not include the dedicated VPC subnets chosen below).
 
