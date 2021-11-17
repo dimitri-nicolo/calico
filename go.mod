@@ -68,4 +68,4 @@ replace (
 
 )
 
-replace github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20211116000336-52edc2d83364
+replace github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20211117055131-659af04f8aea
