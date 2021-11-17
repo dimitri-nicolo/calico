@@ -35,7 +35,7 @@ blocks:
         - name: Test Cut Release
           commands:
             - make git-config CONFIRM=true
-            - make cut-release DRYRUN=true
+            - DRYRUN=true bash ./.semaphore/scripts/cut-release.sh
 
 promotions:
   - name: Test Publish Release Binaries

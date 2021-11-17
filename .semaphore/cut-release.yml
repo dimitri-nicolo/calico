@@ -35,7 +35,7 @@ blocks:
         - name: Cut Release
           commands:
             - make git-config CONFIRM=true
-            - make cut-release CONFIRM=true
+            - CONFIRM=true bash ./.semaphore/scripts/cut-release.sh
 
 promotions:
   - name: Publish Release Binaries
