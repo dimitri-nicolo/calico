@@ -531,7 +531,7 @@ spec:
   - name: cnx-pull-secret
   containers:
   - name: gateway
-    image: gcr.io/unique-caldron-775/cnx/tigera/egress-gateway:release-calient-v3.11 
+    image: gcr.io/unique-caldron-775/cnx/tigera/egress-gateway:master-amd64 
     env:
     - name: EGRESS_POD_IP
       valueFrom:
