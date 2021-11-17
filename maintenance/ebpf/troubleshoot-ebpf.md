@@ -113,7 +113,7 @@ The parts of the log are explained below:
 * `Final result=ALLOW (-1). Program execution time: 7366ns` is the message.  In this case, logging the final result of 
   the program.  Note that the timestamp is massively distorted by the time spent logging.
 
-### The `calico-bpf` tool
+## The `calico-bpf` tool
 
 Since BPF maps contain binary data, the {{site.prodname}} team wrote a tool to examine {{site.prodname}}'s BPF maps.
 The tool is embedded in the {{site.nodecontainer}} container image. To run the tool:
@@ -150,9 +150,9 @@ The tool is embedded in the {{site.nodecontainer}} container image. To run the t
     -h, --help            help for calico-bpf
     -t, --toggle          Help message for toggle
   ```
-  (Since the tool is embedded in the main `calico-node` binary the `--help` option is not available, but running 
+  (Since the tool is embedded in the main `calico-node` binary the `--help` option is not available, but running
   `calico-node -bpf help` does work.)
-  
+
   To dump the BPF conntrack table:
   ```
   $ kubectl exec -n calico-system calico-node-abcdef -- calico-node -bpf conntrack dump

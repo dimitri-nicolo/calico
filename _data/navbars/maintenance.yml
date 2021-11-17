@@ -102,15 +102,11 @@ section:
 - title: eBPF
   path: /maintenance/ebpf/
   section:
-  - title: About eBPF
-    path: /maintenance/ebpf/about-ebpf
   - title: eBPF use cases
-    path: /maintenance/ebpf/use-cases-ebpf  
-  - title: Install eBPF on a new cluster
-    path: /maintenance/ebpf/install
-  - title: Enable eBPF on an existing cluster
+    path: /maintenance/ebpf/use-cases-ebpf 
+  - title: Enable the eBPF dataplane
     path: /maintenance/ebpf/enabling-ebpf
-  - title: Create an EKS cluster for eBPF mode
+  - title: eBPF on EKS
     path: /maintenance/ebpf/ebpf-and-eks
   - title: Troubleshoot eBPF dataplane
     path: /maintenance/ebpf/troubleshoot-ebpf

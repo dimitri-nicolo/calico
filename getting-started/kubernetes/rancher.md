@@ -10,7 +10,7 @@ Install {{site.prodname}} as the required CNI for networking and/or network poli
 
 ### Concepts
 
-{{site.prodname}} supports the Calico CNI with Calico Enterprise network policy:
+{{site.prodname}} supports the Calico CNI with {{site.prodname}} network policy:
 
 The geeky details of what you get:
 {% include geek-details.html details='Policy:Calico,IPAM:Calico,CNI:Calico,Overlay:IPIP,Routing:BGP,Datastore:Kubernetes' %}

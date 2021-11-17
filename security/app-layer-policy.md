@@ -43,7 +43,7 @@ See [Enforce network policy using Istio tutorial]({{site.baseurl}}/security/tuto
 **Istio support**
 
 The following Istio versions have been verified to work with application layer policies:
-- [Istio 1.7.5](https://istio.io/v1.7/docs/setup/platform-setup/){:target="_blank"}
+- [Istio 1.7.4](https://istio.io/v1.7/docs/setup/platform-setup/){:target="_blank"}
 - [Istio v1.9.6](https://istio.io/v1.9/docs/setup/platform-setup/){:target="_blank"}
 - [Istio v1.10.2](https://istio.io/v1.10/docs/setup/platform-setup/){:target="_blank"}
 

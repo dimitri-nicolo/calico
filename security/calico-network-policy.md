@@ -212,7 +212,7 @@ spec:
     - action: Deny
       destination:
         nets:
-        - 1.2.3.4/24
+        - 1.2.3.0/24
 ```
 
 #### Apply network policies in specific order
