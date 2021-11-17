@@ -3,8 +3,6 @@ title: Packet capture
 description: Capture live traffic for debugging microservices and application interaction.
 canonical_url: /visibility/packetcapture
 ---
->**Note**: This feature is tech preview. Tech preview features may be subject to significant changes before they become GA.
-{: .alert .alert-info}
 
 ### Big picture
 
@@ -12,7 +10,7 @@ Capture live traffic inside a Kubernetes cluster, and export to visualization to
 
 ### Value 
 
-Packet capture is a valuable tool for debugging microservices and application interaction in day-to-day operations and incident response. But manually setting up packet capturing can be tedious. Calico Enterprise provides an easy way to capture packets using the widely-known "pcap" format, and export them to visualization tools like WireShark.
+Packet capture is a valuable tool for debugging microservices and application interaction in day-to-day operations and incident response. But manually setting up packet capturing can be tedious. {{site.prodname}} provides an easy way to capture packets using the widely-known "pcap" format, and export them to visualization tools like WireShark.
 
 ### Features
 
@@ -22,19 +20,21 @@ This how-to guide uses the following {{site.prodname}} features:
 
 ### Concepts
 
-Libpcap file format, also known as [pcap](https://wiki.wireshark.org/Development/LibpcapFileFormat), is the main file 
-format used for capturing traffic by network tools.
+Libpcap file format, also known as {% include open-new-window.html text='pcap' url='https://wiki.wireshark.org/Development/LibpcapFileFormat' %}, is the main file format used for capturing traffic by network tools.
 
 ### Before you begin
 
-**FAQ**
+**Supported**
 
-This feature is in a technical preview stage. PacketCapture does not support:
+- All platforms supported in this release
+- pcap file format for captured traffic
 
-- Storing traffic in pcapng traffic
-- Capturing traffic from a multi-nic setup
-- Capture traffic from Calico nodes running on Windows hosts
-- Capture traffic from installations using a CNI other than Calico
+**Not supported**
+
+- pcapng format for captured traffic
+- Capturing traffic from host networked pods or host endpoints
+- Capturing traffic from pods with multiple interfaces
+- Capturing traffic for pods running on Windows hosts
 
 ### How To
 
