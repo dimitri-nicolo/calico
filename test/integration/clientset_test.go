@@ -3423,11 +3423,18 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("Could not create a license")
 	}
 
+	groupName := "groupname-a"
+	name = groupName + "." + name
+
 	uiSettingsClient := client.ProjectcalicoV3().UISettings()
+	uiSettingsGroupClient := client.ProjectcalicoV3().UISettingsGroups()
 	uiSettings := &v3.UISettings{
-		ObjectMeta: metav1.ObjectMeta{Name: name},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            name,
+			OwnerReferences: []v1.OwnerReference{},
+		},
 		Spec: v3.UISettingsSpec{
-			Group:       "group-a",
+			Group:       groupName,
 			Description: "namespace 123",
 			View:        nil,
 			Layer: &v3.UIGraphLayer{
@@ -3442,9 +3449,20 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 			Dashboard: nil,
 		},
 	}
+	uiSettingsGroup := &v3.UISettingsGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: groupName},
+		Spec: v3.UISettingsGroupSpec{
+			Description: "my groupName",
+		},
+	}
 
-	// start from scratch
+	// start from scratch. Listing without specifying the groupName should fail.
 	uiSettingsList, err := uiSettingsClient.List(ctx, metav1.ListOptions{})
+	if err == nil {
+		return fmt.Errorf("expecting error when listing without groupName info")
+	}
+
+	uiSettingsList, err = uiSettingsClient.List(ctx, metav1.ListOptions{FieldSelector: "spec.group=" + groupName})
 	if err != nil {
 		return fmt.Errorf("error listing uiSettings (%s)", err)
 	}
@@ -3452,21 +3470,56 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("Items field should not be set to nil")
 	}
 	if len(uiSettingsList.Items) > 0 {
-		return fmt.Errorf("uiSettings should not exist on start, had %v uiSettings", len(uiSettingsList.Items))
+		return fmt.Errorf("uiSettingsGroup should not exist on start, had %v uiSettingsGroup", len(uiSettingsList.Items))
 	}
+
+	// Attempt to create UISettings without the groupName existing,
+	_, err = uiSettingsClient.Create(ctx, uiSettings, metav1.CreateOptions{})
+	if err == nil {
+		return fmt.Errorf("expected error creating the uiSettings without group")
+	}
+
+	// Create a UISettingsGroup.
+	uiSettingsGroupServer, err := uiSettingsGroupClient.Create(ctx, uiSettingsGroup, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("error creating the uiSettingsGroup '%v' (%v)", uiSettingsGroup, err)
+	}
+	defer func() {
+		uiSettingsGroupClient.Delete(ctx, groupName, metav1.DeleteOptions{})
+	}()
 
 	uiSettingsServer, err := uiSettingsClient.Create(ctx, uiSettings, metav1.CreateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error creating the uiSettings '%v' (%v)", uiSettings, err)
 	}
+	if len(uiSettingsServer.OwnerReferences) != 1 {
+		return fmt.Errorf("expecting OwnerReferences to contain a single entry after create '%v'", uiSettingsServer.OwnerReferences)
+	}
+	if uiSettingsServer.OwnerReferences[0].Kind != "UISettingsGroup" ||
+		uiSettingsServer.OwnerReferences[0].Name != groupName ||
+		uiSettingsServer.OwnerReferences[0].APIVersion != "projectcalico.org/v3" ||
+		uiSettingsServer.OwnerReferences[0].UID != uiSettingsGroupServer.UID {
+		return fmt.Errorf("expecting OwnerReferences be the owning group after create: '%v'", uiSettingsServer.OwnerReferences)
+	}
 
+	/// Try updating without the owner reference. This should fail.
 	updatedUISettings := uiSettingsServer.DeepCopy()
 	updatedUISettings.Labels = map[string]string{"foo": "bar"}
 	updatedUISettings.Spec.Description = "updated description"
+	updatedUISettings.OwnerReferences = nil
+	_, err = uiSettingsClient.Update(ctx, updatedUISettings, metav1.UpdateOptions{})
+	if err == nil {
+		return fmt.Errorf("expecting error updating UISettings without the owner reference (%v)", uiSettings)
+	}
+
+	// Set the owner references from the Get and try again.
+	updatedUISettings.OwnerReferences = uiSettingsServer.OwnerReferences
 	uiSettingsServer, err = uiSettingsClient.Update(ctx, updatedUISettings, metav1.UpdateOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("error in updating the uiSettings '%v' (%v)", uiSettings, err)
 	}
+	// The labels should also include a group label, added by the backend.
+	updatedUISettings.Labels["projectcalico.org/uisettingsgroup"] = groupName
 	if !reflect.DeepEqual(uiSettingsServer.Labels, updatedUISettings.Labels) {
 		return fmt.Errorf("didn't update label %#v", uiSettingsServer.Labels)
 
@@ -3475,9 +3528,24 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("didn't update spec %#v", uiSettingsServer.Spec)
 
 	}
+	if len(uiSettingsServer.OwnerReferences) != 1 {
+		return fmt.Errorf("expecting OwnerReferences to contain a single entry after update '%v'", uiSettingsServer.OwnerReferences)
+	}
+	if uiSettingsServer.OwnerReferences[0].Kind != "UISettingsGroup" ||
+		uiSettingsServer.OwnerReferences[0].Name != groupName ||
+		uiSettingsServer.OwnerReferences[0].APIVersion != "projectcalico.org/v3" ||
+		uiSettingsServer.OwnerReferences[0].UID != uiSettingsGroupServer.UID {
+		return fmt.Errorf("expecting OwnerReferences be the owning group after update: '%v'", uiSettingsServer.OwnerReferences)
+	}
 
-	// Should be listing the uiSettings.
+	// List should fail if not specifying the group.
 	uiSettingsList, err = uiSettingsClient.List(ctx, metav1.ListOptions{})
+	if err == nil {
+		return fmt.Errorf("expected error listing UISettingsGroup without specifying group")
+	}
+
+	// Should be listing the uiSettings by field selector.
+	uiSettingsList, err = uiSettingsClient.List(ctx, metav1.ListOptions{FieldSelector: "spec.group=" + groupName})
 	if err != nil {
 		return fmt.Errorf("error listing uiSettingss (%s)", err)
 	}
@@ -3494,16 +3562,21 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("didn't get the same uiSettings back from the server \n%+v\n%+v", uiSettings, uiSettingsServer)
 	}
 
-	// Watch Test:
-	opts := v1.ListOptions{Watch: true}
+	// Watch Test. We can try label selector for this one.
+	opts := v1.ListOptions{Watch: true, LabelSelector: "projectcalico.org/uisettingsgroup=" + groupName}
 	wIface, err := uiSettingsClient.Watch(ctx, opts)
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("Error on watch")
 	}
 
 	err = uiSettingsClient.Delete(ctx, name, metav1.DeleteOptions{})
-	if nil != err {
+	if err != nil {
 		return fmt.Errorf("uiSettings should be deleted (%s)", err)
+	}
+
+	err = uiSettingsGroupClient.Delete(ctx, groupName, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("uiSettingsGroup should be deleted (%s)", err)
 	}
 
 	select {

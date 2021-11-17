@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
 
@@ -76,5 +75,8 @@ func MatchUISettings(label labels.Selector, field fields.Selector) storage.Selec
 
 // UISettingsToSelectableFields returns a field set that represents the object.
 func UISettingsToSelectableFields(obj *calico.UISettings) fields.Set {
-	return generic.ObjectMetaFieldsSet(&obj.ObjectMeta, false)
+	return fields.Set{
+		"metadata.name": obj.Name,
+		"spec.group":    obj.Spec.Group,
+	}
 }

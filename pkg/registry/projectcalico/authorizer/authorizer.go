@@ -43,48 +43,15 @@ func (a *authorizer) AuthorizeTierOperation(
 		return nil
 	}
 
-	attrs, err := filters.GetAuthorizerAttributes(ctx)
+	attributes, err := filters.GetAuthorizerAttributes(ctx)
 	if err != nil {
 		klog.Errorf("Unable to extract authorizer attributes: %s", err)
 		return err
 	}
 
 	// Log the original authorizer attributes.
-	logAuthorizerAttributes(attrs)
+	logAuthorizerAttributes(attributes)
 
-	if !isTieredPolicy(attrs) {
-		// This is not a tiered policy resource request, so exit. RBAC control will be entirely
-		// handled by the default processing.
-		klog.V(4).Info("Operation is not for Calico tiered policy - defer to standard RBAC only")
-		return nil
-	}
-
-	// Perform tier authorization.
-	if err := a.authorizeTieredPolicy(attrs, policyName, tierName); err != nil {
-		klog.V(4).Infof("Operation on Calico tiered policy is forbidden: %v", err)
-		return err
-	}
-
-	return nil
-}
-
-// isTieredPolicy returns true if the attributes indicate this is a request for a tiered policy.
-func isTieredPolicy(attr k8sauth.Attributes) bool {
-	if !attr.IsResourceRequest() {
-		return false
-	}
-
-	switch attr.GetResource() {
-	case "networkpolicies", "globalnetworkpolicies", "stagednetworkpolicies", "stagedglobalnetworkpolicies":
-		return true
-	}
-
-	klog.V(4).Infof("Is not Calico policy type: %s", attr.GetResource())
-	return false
-}
-
-// authorizeTieredPolicy performs the multi-stage tier authorization for the policy request.
-func (a *authorizer) authorizeTieredPolicy(attributes k8sauth.Attributes, policyName, tierName string) error {
 	// We need to check whether the user is authorized to perform the action on the tier.<resourcetype>
 	// resource, with a resource name of either:
 	// - <tier>.*         (this is the wildcard syntax for any Calico policy within a tier)
@@ -182,13 +149,112 @@ func (a *authorizer) authorizeTieredPolicy(attributes k8sauth.Attributes, policy
 	}
 
 	// Request is forbidden.
-	reason := forbiddenMessage(attributes, tierName, decisionGetTier)
+	reason := forbiddenMessage(attributes, "tier", tierName, decisionGetTier)
+	klog.V(4).Infof("Operation on Calico tiered policy is forbidden: %v", reason)
 	return errors.NewForbidden(calico.Resource(attributes.GetResource()), policyName, fmt.Errorf(reason))
 }
 
-// forbiddenMessage crafts the appropriate tier-specific forbidden message. This is largely copied
-// from k8s.io/apiserver/pkg/endpoints/handlers/responsewriters/errors.go
-func forbiddenMessage(attributes k8sauth.Attributes, tierName string, decisionGetTier k8sauth.Decision) string {
+type UISettingsAuthorizer interface {
+	// AuthorizeUISettingsOperation checks whether the user is authorized to perform the operation. Returns a Forbidden
+	// error  if the operation is not authorized.
+	AuthorizeUISettingsOperation(ctx context.Context, uiSettings string, uiSettingsGroup string) error
+}
+
+// Returns a new UISettingsAuthorizer that uses the provided standard authorizer to perform the underlying
+// lookups.
+func NewUISettingsAuthorizer(a k8sauth.Authorizer) UISettingsAuthorizer {
+	return &authorizer{a}
+}
+
+// AuthorizeUISettingsOperation implements the UISettingsAuthorizer interface.
+func (a *authorizer) AuthorizeUISettingsOperation(
+	ctx context.Context,
+	uiSettings string,
+	uiSettingsGroup string,
+) error {
+	if a.Authorizer == nil {
+		klog.V(4).Info("No authorizer - allow operation")
+		return nil
+	}
+
+	attributes, err := filters.GetAuthorizerAttributes(ctx)
+	if err != nil {
+		klog.Errorf("Unable to extract authorizer attributes: %s", err)
+		return err
+	}
+
+	// Log the original authorizer attributes.
+	logAuthorizerAttributes(attributes)
+
+	// We need to check whether the user is authorized to perform the action on the uisettingsgroups/data
+	// subresource *and* has GET access for the UISettingsGroup.
+	// These requests can be performed in parallel.
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	// Query GET access for the UISettingsGroup.
+	var decisionGetUISettingsGroup k8sauth.Decision
+	go func() {
+		defer wg.Done()
+		attrs := k8sauth.AttributesRecord{
+			User:            attributes.GetUser(),
+			Verb:            "get",
+			Namespace:       "",
+			APIGroup:        attributes.GetAPIGroup(),
+			APIVersion:      attributes.GetAPIVersion(),
+			Resource:        "uisettingsgroups",
+			Subresource:     "",
+			Name:            uiSettingsGroup,
+			ResourceRequest: true,
+			Path:            "/apis/projectcalico.org/v3/uisettingsgroups/" + uiSettingsGroup,
+		}
+
+		klog.V(4).Infof("Checking authorization using UISettingsGroup resource type (user can get UISettingsGroup)")
+		logAuthorizerAttributes(attrs)
+		decisionGetUISettingsGroup, _, _ = a.Authorizer.Authorize(context.TODO(), attrs)
+	}()
+
+	// Query required access to the UISettingsed policy resource or UISettings wildcard resource.
+	var decisionUISettings k8sauth.Decision
+	go func() {
+		defer wg.Done()
+		attrs := k8sauth.AttributesRecord{
+			User:            attributes.GetUser(),
+			Verb:            attributes.GetVerb(),
+			Namespace:       "",
+			APIGroup:        attributes.GetAPIGroup(),
+			APIVersion:      attributes.GetAPIVersion(),
+			Resource:        "uisettingsgroups",
+			Subresource:     "data",
+			Name:            uiSettingsGroup,
+			ResourceRequest: true,
+			Path:            "/apis/projectcalico.org/v3/uisettingsgroups/" + uiSettingsGroup,
+		}
+
+		klog.V(4).Infof("Checking authorization using UISettings scoped resource type (policy name match)")
+		logAuthorizerAttributes(attrs)
+		decisionUISettings, _, _ = a.Authorizer.Authorize(context.TODO(), attrs)
+	}()
+
+	// Wait for the requests to complete.
+	wg.Wait()
+
+	// If the user has GET access to the UISettings and either the policy match or UISettings wildcard match are authorized
+	// then allow the request.
+	if decisionGetUISettingsGroup == k8sauth.DecisionAllow && decisionUISettings == k8sauth.DecisionAllow {
+		klog.Infof("Operation allowed")
+		return nil
+	}
+
+	// Request is forbidden.
+	reason := forbiddenMessage(attributes, "uisettingsgroup", uiSettingsGroup, decisionGetUISettingsGroup)
+	klog.V(4).Infof("Operation on UISettings %v is forbidden: %v", uiSettings, reason)
+	return errors.NewForbidden(calico.Resource(attributes.GetResource()), uiSettings, fmt.Errorf(reason))
+}
+
+// forbiddenMessage crafts the appropriate forbidden message for our special hierarchically owned resource types. This
+// is largely copied from k8s.io/apiserver/pkg/endpoints/handlers/responsewriters/errors.go
+func forbiddenMessage(attributes k8sauth.Attributes, ownerResource, ownerName string, decisionGetOwner k8sauth.Decision) string {
 	username := ""
 	if user := attributes.GetUser(); user != nil {
 		username = user.GetName()
@@ -204,14 +270,14 @@ func forbiddenMessage(attributes k8sauth.Attributes, tierName string, decisionGe
 
 	var msg string
 	if ns := attributes.GetNamespace(); len(ns) > 0 {
-		msg = fmt.Sprintf("User %q cannot %s %s in tier %q and namespace %q", username, attributes.GetVerb(), resource, tierName, ns)
+		msg = fmt.Sprintf("User %q cannot %s %s in %s %q and namespace %q", username, attributes.GetVerb(), resource, ownerResource, ownerName, ns)
 	} else {
-		msg = fmt.Sprintf("User %q cannot %s %s in tier %q", username, attributes.GetVerb(), resource, tierName)
+		msg = fmt.Sprintf("User %q cannot %s %s in %s %q", username, attributes.GetVerb(), resource, ownerResource, ownerName)
 	}
 
 	// If the user does not have get access to the tier, append additional text to the message.
-	if decisionGetTier != k8sauth.DecisionAllow {
-		msg += " (user cannot get tier)"
+	if decisionGetOwner != k8sauth.DecisionAllow {
+		msg += fmt.Sprintf(" (user cannot get %s)", ownerResource)
 	}
 	return msg
 }

@@ -77,7 +77,7 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, error) {
 		ObjectNameFunc: func(obj runtime.Object) (string, error) {
 			return obj.(*calico.UISettingsGroup).Name, nil
 		},
-		PredicateFunc:            MatchNetworkSet,
+		PredicateFunc:            MatchUISettingsGroup,
 		DefaultQualifiedResource: calico.Resource("uisettingsgroups"),
 
 		CreateStrategy:          strategy,
