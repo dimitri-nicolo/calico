@@ -17,7 +17,7 @@ Use the following checklist to troubleshoot, or to collect details before openin
 
 Egress gateway is disabled by default.  Have you enabled it in [Felix configuration]({{site.baseurl}}/reference/resources/felixconfig) by setting `egressIPSupport` to `EnabledPerNamespace` or `EnabledPerNamespaceOrPerPod`?
 
-#### Does your egress gateway routing go through a router?
+#### Does your egress gateway routing go through a router? (On-prem only.)
 
 As shown in the following diagram, from the gateway to the destination, the source IP is the egress IP.  On the return path, from the destination back to the gateway, the destination IP is the egress IP. If there are any routers between the gateway and the destination, they must all know how to route the egress IP back to the gateway. If they don’t, the attempted connection cannot be established.
 
@@ -50,7 +50,21 @@ on
 
 #### Check calico-node health
 
-Check that your calico-node pods are consistently running and ready, especially on the nodes hosting the client and gateway pods. Confirming healthy pods will rule out possible bugs. 
+Check that your calico-node pods are consistently running and ready, especially on the nodes hosting the client and 
+gateway pods. Confirming healthy pods will rule out possible issues.  If you find that `calico-node` is not ready,
+describing the pod should show which health check is failing:
+```bash
+kubectl describe pod ...
+```
+In AWS, issues such as permissions problems will report a problem with the `"aws-eni-addresses-in-sync"` health check.
+For more information on the problem, review the `calico-node` log.  For example, a permissions issue will result in a 
+log such as the following:
+```
+2021-11-16 13:11:59.292 [ERROR][26606] felix/aws_iface_provisioner.go 343: Failed to resync with AWS. Will retry after backoff. error=failed to create ENI: operation error EC2: CreateNetworkInterface, https response error StatusCode: 403, RequestID: 13dead98-7da0-4695-9be8-80cab4d5528e, api error UnauthorizedOperation: You are not authorized to perform this operation. Encoded authorization failure message: j4x3cFwZdJ...<snip>...ShGkw
+```
+If you see such a log, check the AWS IAM permissions assigned to the nodes in your cluster to ensure that the nodes
+have the [required permissions](./egress-gateway-aws#configure-aws-iam-roles-for-cluster-nodes).  It is also possible 
+to decode the "encoded authorization failure message" in the log by following {% include open-new-window.html text='this guide' url='https://aws.amazon.com/premiumsupport/knowledge-center/aws-backup-encoded-authorization-failure/' %}; this give more detail on the error.
 
 #### Check IP rule and routing setup on the client node
 
