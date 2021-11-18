@@ -13,6 +13,8 @@ import (
 	health "github.com/tigera/prometheus-service/pkg/handler/health"
 	proxy "github.com/tigera/prometheus-service/pkg/handler/proxy"
 	"github.com/tigera/prometheus-service/pkg/middleware"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 var (
@@ -25,12 +27,21 @@ func Start(config *Config) {
 
 	reverseProxy := getReverseProxy(config.PrometheusUrl)
 
-	var authn auth.JWTAuthenticator
+	var authn auth.JWTAuth
 	if config.AuthenticationEnabled {
-		options := []auth.JWTAuthenticatorOption{
-			auth.WithInClusterConfiguration(),
-		}
 
+		restConfig, err := rest.InClusterConfig()
+		if err != nil {
+			log.Fatal("Unable to create client config", err)
+		}
+		//restConfig.
+		k8sCli, err := kubernetes.NewForConfig(restConfig)
+		if err != nil {
+			log.Fatal("Unable to create kubernetes interface", err)
+		}
+		log.Warnf("config token %v", restConfig.BearerToken)
+
+		var options []auth.JWTAuthOption
 		if config.DexEnabled {
 			log.Debug("Configuring Dex for authentication")
 			opts := []auth.DexOption{
@@ -49,8 +60,7 @@ func Start(config *Config) {
 			}
 			options = append(options, auth.WithAuthenticator(config.OIDCAuthIssuer, dex))
 		}
-		var err error
-		authn, err = auth.NewJWTAuthenticator(options...)
+		authn, err = auth.NewJWTAuth(restConfig, k8sCli, options...)
 		if err != nil {
 			log.Fatal("Unable to create authenticator", err)
 		}

@@ -42,7 +42,7 @@ var (
 )
 
 // Proxy sends the received query to the forwarded host registered in ReverseProxy param
-func Proxy(proxy *httputil.ReverseProxy, authn auth.JWTAuthenticator) (http.HandlerFunc, error) {
+func Proxy(proxy *httputil.ReverseProxy, authn auth.JWTAuth) (http.HandlerFunc, error) {
 
 	return func(w http.ResponseWriter, req *http.Request) {
 		if authn == nil {
@@ -55,7 +55,7 @@ func Proxy(proxy *httputil.ReverseProxy, authn auth.JWTAuthenticator) (http.Hand
 			w.WriteHeader(stat)
 			_, err := w.Write([]byte(err.Error()))
 			if err != nil {
-				log.Info(err)
+				log.Errorf("Error when writing body to response: %v", err)
 			}
 			return
 		}
@@ -71,7 +71,7 @@ func Proxy(proxy *httputil.ReverseProxy, authn auth.JWTAuthenticator) (http.Hand
 			w.WriteHeader(405)
 			_, err := w.Write([]byte("Method Not Allowed"))
 			if err != nil {
-				log.Info(err)
+				log.Errorf("Error when writing body to response: %v", err)
 			}
 			return
 		}
@@ -84,7 +84,7 @@ func Proxy(proxy *httputil.ReverseProxy, authn auth.JWTAuthenticator) (http.Hand
 				w.WriteHeader(500)
 				_, err := w.Write([]byte(err.Error()))
 				if err != nil {
-					log.Info(err)
+					log.Errorf("Error when writing body to response: %v", err)
 				}
 				return
 			}
@@ -98,7 +98,7 @@ func Proxy(proxy *httputil.ReverseProxy, authn auth.JWTAuthenticator) (http.Hand
 			w.WriteHeader(403)
 			_, err := w.Write([]byte(fmt.Sprintf("user %v is not authorized to perform %v https:tigera-api:8080", usr, req.Method)))
 			if err != nil {
-				log.Info(err)
+				log.Errorf("Error when writing body to response: %v", err)
 			}
 			return
 		}

@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/rest"
 	k8stesting "k8s.io/client-go/testing"
 
 	handler "github.com/tigera/prometheus-service/pkg/handler/proxy"
@@ -29,7 +30,7 @@ var _ = Describe("Prometheus Proxy Query test", func() {
 	)
 
 	var (
-		authn      auth.JWTAuthenticator
+		authn      auth.JWTAuth
 		err        error
 		mAuth      *mockAuth
 		fakeK8sCli *fake.Clientset
@@ -41,7 +42,7 @@ var _ = Describe("Prometheus Proxy Query test", func() {
 	BeforeEach(func() {
 		mAuth = &mockAuth{}
 		fakeK8sCli = new(fake.Clientset)
-		authn, err = auth.NewJWTAuthenticator(auth.WithK8sConfiguration(fakeK8sCli), auth.WithAuthenticator(iss, mAuth))
+		authn, err = auth.NewJWTAuth(&rest.Config{BearerToken: jwt.ToString()}, fakeK8sCli, auth.WithAuthenticator(iss, mAuth))
 		Expect(err).NotTo(HaveOccurred())
 	})
 
