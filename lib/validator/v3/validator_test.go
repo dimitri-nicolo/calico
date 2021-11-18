@@ -3937,6 +3937,108 @@ func init() {
 			},
 			},
 		}, false),
+
+		// UISettingsGroup
+		Entry("UISettingsGroup: valid name", &api.UISettingsGroup{
+			ObjectMeta: v1.ObjectMeta{Name: "foo"},
+			Spec:       api.UISettingsGroupSpec{Description: "a"},
+		}, true),
+		Entry("UISettingsGroup: valid name with dash", &api.UISettingsGroup{
+			ObjectMeta: v1.ObjectMeta{Name: "fo-o"},
+			Spec:       api.UISettingsGroupSpec{Description: "a"},
+		}, true),
+		Entry("UISettingsGroup: disallow dot in name", &api.UISettingsGroup{
+			ObjectMeta: v1.ObjectMeta{Name: "fo.o"},
+			Spec:       api.UISettingsGroupSpec{Description: "a"},
+		}, false),
+		Entry("UISettingsGroup: allow valid name of 63 chars", &api.UISettingsGroup{
+			ObjectMeta: v1.ObjectMeta{Name: string(value63)},
+			Spec:       api.UISettingsGroupSpec{Description: "a"},
+		}, true),
+		Entry("UISettingsGroup: disallow a name of 64 chars", &api.UISettingsGroup{
+			ObjectMeta: v1.ObjectMeta{Name: string(value64)},
+			Spec:       api.UISettingsGroupSpec{Description: "a"},
+		}, false),
+		Entry("UISettingsGroup: disallow other chars", &api.UISettingsGroup{
+			ObjectMeta: v1.ObjectMeta{Name: "t~!s.h.i.ng"},
+			Spec:       api.UISettingsGroupSpec{Description: "a"},
+		}, false),
+
+		// UISettings
+		Entry("UISettings: disallow invalid name", &api.UISettings{
+			ObjectMeta: v1.ObjectMeta{Name: "thing"},
+			Spec: api.UISettingsSpec{
+				Group:       "th",
+				Description: "test",
+				Dashboard:   &api.UIDashboard{},
+			},
+		}, false),
+		Entry("UISettings: allow name with single dot", &api.UISettings{
+			ObjectMeta: v1.ObjectMeta{Name: "th.ing"},
+			Spec: api.UISettingsSpec{
+				Group:       "th",
+				Description: "test",
+				Dashboard:   &api.UIDashboard{},
+			},
+		}, true),
+		Entry("UISettings: disallow group name with dot", &api.UISettings{
+			ObjectMeta: v1.ObjectMeta{Name: "th.i.ng"},
+			Spec: api.UISettingsSpec{
+				Group:       "th.i",
+				Description: "test",
+				Dashboard:   &api.UIDashboard{},
+			},
+		}, false),
+		Entry("UISettings: disallow name with non matching prefix", &api.UISettings{
+			ObjectMeta: v1.ObjectMeta{Name: "th.ing"},
+			Spec: api.UISettingsSpec{
+				Group:       "thi",
+				Description: "test",
+				Dashboard:   &api.UIDashboard{},
+			},
+		}, false),
+		Entry("UISettings: allow valid name of 253 chars", &api.UISettings{
+			ObjectMeta: v1.ObjectMeta{Name: "ab." + string(longValue[:maxNameLength-3])},
+			Spec: api.UISettingsSpec{
+				Group:       "ab",
+				Description: "test",
+				Dashboard:   &api.UIDashboard{},
+			},
+		}, true),
+		Entry("UISettings: disallow a name of 254 chars", &api.UISettings{
+			ObjectMeta: v1.ObjectMeta{Name: "ab." + string(longValue[:maxNameLength-2])},
+			Spec: api.UISettingsSpec{
+				Group:       "ab",
+				Description: "test",
+				Dashboard:   &api.UIDashboard{},
+			},
+		}, false),
+		Entry("UISettings: disallow name with invalid character", &api.UISettings{
+			ObjectMeta: v1.ObjectMeta{Name: "t~!s.h.i.ng"},
+			Spec: api.UISettingsSpec{
+				Group:       "t",
+				Description: "test",
+				Dashboard:   &api.UIDashboard{},
+			},
+		}, false),
+		Entry("UISettings: disallow Dashboard+Layer", &api.UISettings{
+			ObjectMeta: v1.ObjectMeta{Name: "he.llo"},
+			Spec: api.UISettingsSpec{
+				Group:       "he",
+				Description: "test",
+				Layer:       &api.UIGraphLayer{},
+				Dashboard:   &api.UIDashboard{},
+			},
+		}, false),
+		Entry("UISettings: disallow Dashboard+View", &api.UISettings{
+			ObjectMeta: v1.ObjectMeta{Name: "he.llo"},
+			Spec: api.UISettingsSpec{
+				Group:       "he",
+				Description: "test",
+				Layer:       &api.UIGraphLayer{},
+				View:        &api.UIGraphView{},
+			},
+		}, false),
 	)
 
 	Describe("particular error string checking", func() {

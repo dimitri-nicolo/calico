@@ -74,9 +74,10 @@ var (
 	// more restrictive naming requirements.
 	nameRegex = regexp.MustCompile("^" + nameSubdomainFmt + "$")
 
-	// Tiers must have simple names with no dots, since they appear as sub-components of other
+	// Tiers and UISettingsGroups must have simple names with no dots, since they appear as sub-components of other
 	// names.
-	tierNameRegex = regexp.MustCompile("^" + nameLabelFmt + "$")
+	tierNameRegex            = regexp.MustCompile("^" + nameLabelFmt + "$")
+	uiSettingsGroupNameRegex = regexp.MustCompile("^" + nameLabelFmt + "$")
 
 	containerIDFmt   = "[a-zA-Z0-9]([-a-zA-Z0-9]*[a-zA-Z0-9])?"
 	containerIDRegex = regexp.MustCompile("^" + containerIDFmt + "$")
@@ -282,6 +283,8 @@ func init() {
 	registerFieldValidator("uiDescription", validateUIDescription)
 	registerFieldValidator("servicegraphId", validateServiceGraphId)
 	registerFieldValidator("servicegraphNodeType", validateServiceGraphNodeType)
+	registerFieldValidator("icon", validateIcon)
+	registerFieldValidator("color", validateColor)
 
 	// Register struct validators.
 	registerStructValidator(validate, validateProtocol, numorstring.Protocol{})
@@ -295,6 +298,7 @@ func init() {
 	registerStructValidator(validate, validateNodeSpec, libapi.NodeSpec{})
 	registerStructValidator(validate, validateObjectMeta, metav1.ObjectMeta{})
 	registerStructValidator(validate, validateTier, api.Tier{})
+	registerStructValidator(validate, validateUISettingsGroup, api.UISettingsGroup{})
 	registerStructValidator(validate, validateUISettings, api.UISettings{})
 	registerStructValidator(validate, validateHTTPRule, api.HTTPMatch{})
 	registerStructValidator(validate, validateFelixConfigSpec, api.FelixConfigurationSpec{})
@@ -1036,9 +1040,24 @@ func validateUIDescription(fl validator.FieldLevel) bool {
 func validateServiceGraphId(fl validator.FieldLevel) bool {
 	s := fl.Field().String()
 	log.Debugf("Validate Service Graph ID: %s", s)
-
 	// TODO(rlb): Move service graph API defs into API and then move ID management into libcalico-go. For now just
 	//            allow.
+	return true
+}
+
+func validateIcon(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate Service Graph Icon Type: %s", s)
+	// TODO(rlb): Decide what the UI team need and then we can implement - most likely just an SVG checker.
+	//            For now always allow.
+	return true
+}
+
+func validateColor(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate Service Graph Color Type: %s", s)
+	// TODO(rlb): Decide what the UI team need and then we can implement - probably any valid SVG color format.
+	//            For now always allow.
 	return true
 }
 
@@ -1720,8 +1739,65 @@ func validateTier(structLevel validator.StructLevel) {
 	validateObjectMetaLabels(structLevel, tier.Labels)
 }
 
+func validateUISettingsGroup(structLevel validator.StructLevel) {
+	group := structLevel.Current().Interface().(api.UISettingsGroup)
+
+	// Check the name is within the max length.
+	// UISettingsGroup names are dependent on the label max length since settings lookup by group in KDD requires the
+	// name to fit in a label.
+	if len(group.Name) > k8svalidation.DNS1123LabelMaxLength {
+		structLevel.ReportError(
+			reflect.ValueOf(group.Name),
+			"Metadata.Name",
+			"",
+			reason(fmt.Sprintf("name is too long by %d bytes", len(group.Name)-k8svalidation.DNS1123LabelMaxLength)),
+			"",
+		)
+	}
+
+	// UISettingsGroups must have simple (no dot) names, since they appear as sub-components of UISettings.
+	matched := uiSettingsGroupNameRegex.MatchString(group.Name)
+	if !matched {
+		structLevel.ReportError(
+			reflect.ValueOf(group.Name),
+			"Metadata.Name",
+			"",
+			reason("name must consist of lower case alphanumeric characters or '-' (regex: "+nameLabelFmt+")"),
+			"",
+		)
+	}
+
+	validateObjectMetaAnnotations(structLevel, group.Annotations)
+	validateObjectMetaLabels(structLevel, group.Labels)
+}
+
 func validateUISettings(structLevel validator.StructLevel) {
 	uisettings := structLevel.Current().Interface().(api.UISettings)
+
+	group := uisettings.Spec.Group
+
+	// Groups must have simple (no dot) names, since they appear as sub-components of the UISettings.
+	matched := uiSettingsGroupNameRegex.MatchString(group)
+	if !matched {
+		structLevel.ReportError(
+			reflect.ValueOf(group),
+			"Spec.Group",
+			"",
+			reason("name must only consist of lower case alphanumeric characters or '-' (regex: "+nameLabelFmt+")"),
+			"",
+		)
+	}
+
+	if !strings.HasPrefix(uisettings.Name, group+".") {
+		log.Infof("UISettings name %v is not prefixed by the UISettingsGroup name %v", uisettings.Name, group)
+		structLevel.ReportError(
+			reflect.ValueOf(group),
+			"Spec.Group",
+			"",
+			reason("UISettings name is not prefixed by the UISettings group name"),
+			"",
+		)
+	}
 
 	numSettings := 0
 	var settingsField string
