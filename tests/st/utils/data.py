@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2020 Tigera, Inc. All rights reserved.
+# Copyright (c) 2015-2021 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -1426,6 +1426,33 @@ workloadendpoint_name1_rev1 = {
     }
 }
 
+workloadendpoint_name2_rev1 = {
+    'apiVersion': API_VERSION,
+    'kind': 'WorkloadEndpoint',
+    'metadata': {
+        'labels': {
+            'projectcalico.org/namespace': 'namespace1',
+            'projectcalico.org/orchestrator': 'cni',
+            'type': 'database'
+        },
+        'name': 'node2-cni-container1234-eth0',
+        'namespace': 'namespace1',
+    },
+    'spec': {
+        'node': 'node2',
+        'orchestrator': 'cni',
+        'endpoint': 'eth0',
+        'containerID': 'container1234',
+        'ipNetworks': ['1.2.3.4/32'],
+        'interfaceName': 'cali1234',
+        'profiles': ['prof1', 'prof2'],
+    }
+}
+
+
+#
+# Packet captures
+#
 packetcapture_name1_rev1 = {
     'apiVersion': API_VERSION,
     'kind': 'PacketCapture',
@@ -1461,26 +1488,18 @@ packetcapture_name2_rev1 = {
         'selector': 'all()',
     }
 }
-workloadendpoint_name2_rev1 = {
+
+#
+# UISettingsGroup
+#
+uisettingsgroup_name1_rev1 = {
     'apiVersion': API_VERSION,
-    'kind': 'WorkloadEndpoint',
+    'kind': 'UISettingsGroup',
     'metadata': {
-        'labels': {
-            'projectcalico.org/namespace': 'namespace1',
-            'projectcalico.org/orchestrator': 'cni',
-            'type': 'database'
-        },
-        'name': 'node2-cni-container1234-eth0',
-        'namespace': 'namespace1',
+        'name': 'ui-group-1',
     },
     'spec': {
-        'node': 'node2',
-        'orchestrator': 'cni',
-        'endpoint': 'eth0',
-        'containerID': 'container1234',
-        'ipNetworks': ['1.2.3.4/32'],
-        'interfaceName': 'cali1234',
-        'profiles': ['prof1', 'prof2'],
+        'description': 'This is a UI Settings Group',
     }
 }
 

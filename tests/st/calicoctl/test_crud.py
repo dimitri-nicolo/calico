@@ -654,6 +654,7 @@ class TestCalicoctlCommands(TestBase):
         (bgppeer_name1_rev1_v4,),
         (node_name1_rev1,),
         (tier_name1_rev1,),
+        (uisettingsgroup_name1_rev1,),
     ])
 
     def test_non_namespaced(self, data):
