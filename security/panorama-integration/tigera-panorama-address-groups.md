@@ -32,32 +32,27 @@ To integrate your existing Address Groups, you just create a ConfigMap with Pano
 
 The following example is what a {{site.prodname}} GlobalNetworkSet looks like after mapping Address Group inputs. After you verify that you have a GlobalNetworkSet, that's all you need. You can start using {{site.prodname}}'s robust network policy!
 
-```json
-"kind": "GlobalNetworkSet",
-"metadata": {
-    "name": "pan.my.address.group",
-    "annotations": {
-        "firewall.tigera.io/device-groups": "shared",
-        "firewall.tigera.io/name": "my.address.group",
-        "firewall.tigera.io/object-type": "AddressGroup",
-        "firewall.tigera.io/type": "Panorama"
-    },
-    "labels": {
-        "firewall.tigera.io/tag1": "",
-        "firewall.tigera.io/tag2": "",
-    },
-}
-"spec": {
-    "allowedEgressDomains": [
-        "www.tigera.io",
-        "docs.projectcalico.org",
-        "kubernetes.io"
-    ],
-    "nets": [
-        "10.10.10.10/32",
-        "192.168.222.111/31"
-    ]
-}
+```yaml
+---
+kind: GlobalNetworkSet
+metadata:
+  name: pan.my.address.group
+  annotations:
+    firewall.tigera.io/device-groups: shared
+    firewall.tigera.io/name: my.address.group
+    firewall.tigera.io/object-type: AddressGroup
+    firewall.tigera.io/type: Panorama
+  labels:
+    firewall.tigera.io/tag1: ''
+    firewall.tigera.io/tag2: ''
+spec:
+  allowedEgressDomains:
+  - www.tigera.io
+  - docs.projectcalico.org
+  - kubernetes.io
+  nets:
+  - 10.10.10.10/32
+  - 192.168.222.111/31
 ```
 
 Where:
@@ -74,6 +69,9 @@ Where:
 
 **Supported version**
 - Panorama v10
+
+**Unsupported**
+- Panorama IP ranges, IP wildcards, and address groups that reference other address groups
 
 **Recommended**
 - Experience creating and administering Panorama address group objects
