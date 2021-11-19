@@ -33,7 +33,7 @@ section:
     path: /getting-started/kubernetes/gke
   - title: RKE
     path: /getting-started/kubernetes/rancher
-  - title: TKG for AWS
+  - title: TKG
     path: /getting-started/kubernetes/tkg
   - title: MKE
     path: /getting-started/kubernetes/docker-enterprise

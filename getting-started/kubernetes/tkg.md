@@ -1,33 +1,35 @@
 ---
-title: Tanzu Kubernetes Grid (TKG) for AWS
-description: Install Calico Enterprise on Tanzu Kubernetes Grid for AWS.
+title: Tanzu Kubernetes Grid (TKG) 
+description: Install Calico Enterprise on Tanzu Kubernetes Grid.
 canonical_url: '/getting-started/kubernetes/kubernetes/tkg'
 ---
 
 ### Big picture
 
-Install {{site.prodname}} as the CNI for networking and/or network policy on Tanzu Kubernetes Grid for AWS workload clusters.
-
-### Concepts
-
-{{site.prodname}} supports the Calico CNI with Calico Enterprise network policy.
+Install {{site.prodname}} as the CNI for networking and/or network policy on Tanzu Kubernetes Grid for workload clusters.
 
 ### Before you begin
 
-**Required**
+**Supported**
+- All supported platforms in this release except Windows
 
-- A Tanzu Kubernetes Grid workload cluster with version 1.3 and later.
-- The workload cluster must be configured with network setting `CNI: none`. When your workload cluster is provisioned, the nodes will end up in a NotReady State until you install {{site.prodname}}.
+**Unsupported**
+- ebpf
+
+**Required**
+- A Tanzu Kubernetes Grid workload cluster with version 1.3 and later
+- The workload cluster must be configured with `CNI: none`. When the workload cluster is bootstrapped, the nodes will end up in a `NotReady` state until {{site.prodname}} is installed.
   - For more information, read {% include open-new-window.html text='Tanzu networking' url='https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.4/vmware-tanzu-kubernetes-grid-14/GUID-tanzu-k8s-clusters-networking.html' %}
-and {% include open-new-window.html text='Tanzu configuration file reference' url='https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.4/vmware-tanzu-kubernetes-grid-14/GUID-tanzu-config-reference.html' %}.
-- The TKG workload cluster meets the [{{side.prodname}} requirements]({{site.baseurl}}/getting-started/kubernetes/requirements).
-- The EC2 instances must be configured to belong to a separate SecurityGroup with ingress rules:
+and {% include open-new-window.html text='Tanzu configuration file reference' url='https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/1.4/vmware-tanzu-kubernetes-grid-14/GUID-tanzu-config-reference.html' %}
+- The TKG workload cluster meets the [{{side.prodname}} requirements]({{site.baseurl}}/getting-started/kubernetes/requirements)
+- [License and pull secret to access Tigera private registry]({{site.baseurl}}/getting-started/calico-enterprise)
+
+**AWS requirements**
+- EC2 instances must be configured to belong to a separate SecurityGroup with ingress rules:
   - Calico (BGP) TCP 179
   - Calico (Typha) TCP 5473
-- [License and pull secret to access Tigera private registry]({{site.baseurl}}/getting-started/calico-enterprise).
 
 **Recommended**
-
 - [Options for installing {{site.prodname}}]({{site.baseurl}}/getting-started/options-install)
 - If you are installing {{site.prodname}} from a private registry, see [using a private registry]({{site.baseurl}}/getting-started/private-registry)
 
