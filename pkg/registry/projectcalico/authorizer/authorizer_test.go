@@ -20,7 +20,7 @@ type testAuth struct {
 func (t *testAuth) Authorize(ctx context.Context, a k8sauth.Attributes) (authorized k8sauth.Decision, reason string, err error) {
 	d, ok := t.lookup[a]
 	if !ok {
-		t.t.Fatalf("Unexpected authz attributes: %v", a)
+		t.t.Fatalf("Unexpected authz attributes: %v\n%v", a, t.lookup)
 	}
 	// The authorization code only uses the Decision, so we can return arbitrary reason and error responses.
 	return d, "", nil
@@ -45,6 +45,19 @@ var (
 		Name:            "test-tier",
 		ResourceRequest: true,
 		Path:            "/apis/projectcalico.org/v3/tiers/test-tier",
+	}
+
+	getUISettingsGroupAttr = k8sauth.AttributesRecord{
+		User:            testUser,
+		Verb:            "get",
+		Namespace:       "",
+		APIGroup:        "projectcalico.org",
+		APIVersion:      "v3",
+		Resource:        "uisettingsgroups",
+		Subresource:     "",
+		Name:            "my-group",
+		ResourceRequest: true,
+		Path:            "/apis/projectcalico.org/v3/uisettingsgroups/my-group",
 	}
 )
 
@@ -182,6 +195,56 @@ func createGnpError(verb string, cannotGetTier bool) string {
 		" globalnetworkpolicies.projectcalico.org in tier \"test-tier\""
 	if cannotGetTier {
 		msg += " (user cannot get tier)"
+	}
+	return msg
+}
+
+// createUISettingsAttr returns the expected attributes for a UISettings
+func createUISettingsAttr(verb string) k8sauth.Attributes {
+	ar := k8sauth.AttributesRecord{
+		User:            testUser,
+		Verb:            verb,
+		APIGroup:        "projectcalico.org",
+		APIVersion:      "v3",
+		Resource:        "uisettingsgroups",
+		Subresource:     "data",
+		Name:            "my-group",
+		ResourceRequest: true,
+		Path:            "/apis/projectcalico.org/v3/uisettingsgroups/my-group",
+	}
+	return ar
+}
+
+// createUISettingsContext returns the expected attributes for UISettings match.
+func createUISettingsContext(verb string) context.Context {
+	ctx := genericapirequest.NewContext()
+	ctx = genericapirequest.WithUser(ctx, testUser)
+	ri := &genericapirequest.RequestInfo{
+		IsResourceRequest: true,
+		Path:              "/apis/projectcalico.org/v3/uisettings/my-group.my-settings",
+		Verb:              verb,
+		APIGroup:          "projectcalico.org",
+		APIVersion:        "v3",
+		Resource:          "uisettings",
+		Name:              "my-group.my-settings",
+	}
+	if verb == "list" || verb == "create" {
+		ri.Name = ""
+		ri.Path = "/apis/projectcalico.org/v3/uisettings"
+	}
+	ctx = genericapirequest.WithRequestInfo(ctx, ri)
+	return ctx
+}
+
+func createUISettingsError(verb string, cannotGetGroup bool) string {
+	msg := "uisettings.projectcalico.org "
+	if verb != "list" {
+		msg += "\"my-group.my-settings\" "
+	}
+	msg += "is forbidden: User \"testuser\" cannot " + verb +
+		" uisettings.projectcalico.org in uisettingsgroup \"my-group\""
+	if cannotGetGroup {
+		msg += " (user cannot get uisettingsgroup)"
 	}
 	return msg
 }
@@ -442,44 +505,92 @@ func TestGlobalNetworkPolicyDenied(t *testing.T) {
 	}
 }
 
-func TestGlobalNetworkSet(t *testing.T) {
-	ctx := genericapirequest.NewContext()
-	ctx = genericapirequest.WithUser(ctx, testUser)
-	ctx = genericapirequest.WithRequestInfo(ctx, &genericapirequest.RequestInfo{
-		IsResourceRequest: true,
-		Path:              "/apis/projectcalico.org/globalnetworksets/test-gns",
-		Verb:              "get",
-		APIGroup:          "projectcalico.org",
-		APIVersion:        "v3",
-		Resource:          "globalnetworksets",
-		Name:              "test-gns",
-	})
-
-	// TierAuthorizer should allow any non-tiered policy request, with the assumption that
-	// standard authorization process will be triggered for the request.
-	if err := authorizer.NewTierAuthorizer(&testAuth{}).AuthorizeTierOperation(
-		ctx, "", "",
+func TestUISettings(t *testing.T) {
+	ta := &testAuth{t, map[k8sauth.Attributes]k8sauth.Decision{
+		getUISettingsGroupAttr:         k8sauth.DecisionAllow,
+		createUISettingsAttr("create"): k8sauth.DecisionAllow,
+		createUISettingsAttr("list"):   k8sauth.DecisionAllow,
+		createUISettingsAttr("get"):    k8sauth.DecisionAllow,
+	}}
+	if err := authorizer.NewUISettingsAuthorizer(ta).AuthorizeUISettingsOperation(
+		createUISettingsContext("create"), "my-group.my-settings", "my-group",
 	); err != nil {
-		t.Fatalf("Error returned getting GlobalNetworkSet: %v", err)
+		t.Fatalf("Error returned creating UISettings when group GET and named match permit the request: %v", err)
+	}
+
+	if err := authorizer.NewUISettingsAuthorizer(ta).AuthorizeUISettingsOperation(
+		createUISettingsContext("get"), "my-group.my-settings", "my-group",
+	); err != nil {
+		t.Fatalf("Error returned getting UISettings when group GET and named match permit the request: %v", err)
+	}
+
+	if err := authorizer.NewUISettingsAuthorizer(ta).AuthorizeUISettingsOperation(
+		createUISettingsContext("list"), "", "my-group",
+	); err != nil {
+		t.Fatalf("Error returned listing UISettings when group GET and named match permit the request: %v", err)
 	}
 }
 
-func TestNonResource(t *testing.T) {
-	ctx := genericapirequest.NewContext()
-	ctx = genericapirequest.WithUser(ctx, testUser)
-	ctx = genericapirequest.WithRequestInfo(ctx, &genericapirequest.RequestInfo{
-		IsResourceRequest: false,
-		Path:              "/apis/projectcalico.org",
-		Verb:              "get",
-		APIGroup:          "projectcalico.org",
-		APIVersion:        "v3",
-	})
+func TestUISettingsDeny(t *testing.T) {
+	ta := &testAuth{t, map[k8sauth.Attributes]k8sauth.Decision{
+		getUISettingsGroupAttr:         k8sauth.DecisionAllow,
+		createUISettingsAttr("create"): k8sauth.DecisionDeny,
+		createUISettingsAttr("list"):   k8sauth.DecisionDeny,
+		createUISettingsAttr("get"):    k8sauth.DecisionDeny,
+	}}
+	if err := authorizer.NewUISettingsAuthorizer(ta).AuthorizeUISettingsOperation(
+		createUISettingsContext("create"), "my-group.my-settings", "my-group",
+	); err == nil {
+		t.Fatalf("No error returned creating UISettings when not permitted")
+	} else if expected := createUISettingsError("create", false); err.Error() != expected {
+		t.Fatalf("Incorrect error message creating UISettings when not permitted: %v\nGot: %v", expected, err)
+	}
 
-	// TierAuthorizer should allow any non-resource request, with the assumption that
-	// standard authorization process will be triggered for the request.
-	if err := authorizer.NewTierAuthorizer(&testAuth{}).AuthorizeTierOperation(
-		ctx, "", "",
-	); err != nil {
-		t.Fatalf("Error returned getting non-resource type: %v", err)
+	if err := authorizer.NewUISettingsAuthorizer(ta).AuthorizeUISettingsOperation(
+		createUISettingsContext("get"), "my-group.my-settings", "my-group",
+	); err == nil {
+		t.Fatalf("No error returned getting UISettings when not permitted")
+	} else if expected := createUISettingsError("get", false); err.Error() != expected {
+		t.Fatalf("Incorrect error message getting UISettings when not permitted: %v\nGot: %v", expected, err)
+	}
+
+	if err := authorizer.NewUISettingsAuthorizer(ta).AuthorizeUISettingsOperation(
+		createUISettingsContext("list"), "", "my-group",
+	); err == nil {
+		t.Fatalf("No error returned listing UISettings when not permitted")
+	} else if expected := createUISettingsError("list", false); err.Error() != expected {
+		t.Fatalf("Incorrect error message listing UISettings when not permitted: %v\nGot: %v", expected, err)
+	}
+}
+
+func TestUISettingsNoUISettingsGroupGet(t *testing.T) {
+	ta := &testAuth{t, map[k8sauth.Attributes]k8sauth.Decision{
+		getUISettingsGroupAttr:         k8sauth.DecisionDeny,
+		createUISettingsAttr("create"): k8sauth.DecisionAllow,
+		createUISettingsAttr("list"):   k8sauth.DecisionAllow,
+		createUISettingsAttr("get"):    k8sauth.DecisionAllow,
+	}}
+	if err := authorizer.NewUISettingsAuthorizer(ta).AuthorizeUISettingsOperation(
+		createUISettingsContext("create"), "my-group.my-settings", "my-group",
+	); err == nil {
+		t.Fatalf("No error returned creating UISettings when group GET not permitted")
+	} else if expected := createUISettingsError("create", true); err.Error() != expected {
+		t.Fatalf("Incorrect error message creating UISettings when group GET not permitted: %v\nGot: %v", expected, err)
+	}
+
+	if err := authorizer.NewUISettingsAuthorizer(ta).AuthorizeUISettingsOperation(
+		createUISettingsContext("get"), "my-group.my-settings", "my-group",
+	); err == nil {
+		t.Fatalf("No error returned getting UISettings when group GET not permitted")
+	} else if expected := createUISettingsError("get", true); err.Error() != expected {
+		t.Fatalf("Incorrect error message getting UISettings when group GET not permitted: %v\nGot: %v", expected, err)
+	}
+
+	if err := authorizer.NewUISettingsAuthorizer(ta).AuthorizeUISettingsOperation(
+		createUISettingsContext("list"), "", "my-group",
+	); err == nil {
+		t.Fatalf("No error returned listing UISettings when group GET not permitted")
+	} else if expected := createUISettingsError("list", true); err.Error() != expected {
+		t.Fatalf("Incorrect error message listing UISettings when group GET not permitted: %v\nGot: %v", expected, err)
 	}
 }

@@ -61,12 +61,12 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	if !ok {
 		return nil, nil, fmt.Errorf("given object is not a UISettingsGroup")
 	}
-	return labels.Set(apiserver.ObjectMeta.Labels), NetworkSetToSelectableFields(apiserver), nil
+	return labels.Set(apiserver.ObjectMeta.Labels), UISettingsGroupToSelectableFields(apiserver), nil
 }
 
-// MatchNetworkSet is the filter used by the generic etcd backend to watch events
+// MatchUISettingsGroup is the filter used by the generic etcd backend to watch events
 // from etcd to clients of the apiserver only interested in specific labels/fields.
-func MatchNetworkSet(label labels.Selector, field fields.Selector) storage.SelectionPredicate {
+func MatchUISettingsGroup(label labels.Selector, field fields.Selector) storage.SelectionPredicate {
 	return storage.SelectionPredicate{
 		Label:    label,
 		Field:    field,
@@ -74,7 +74,7 @@ func MatchNetworkSet(label labels.Selector, field fields.Selector) storage.Selec
 	}
 }
 
-// NetworkSetToSelectableFields returns a field set that represents the object.
-func NetworkSetToSelectableFields(obj *calico.UISettingsGroup) fields.Set {
+// UISettingsGroupToSelectableFields returns a field set that represents the object.
+func UISettingsGroupToSelectableFields(obj *calico.UISettingsGroup) fields.Set {
 	return generic.ObjectMetaFieldsSet(&obj.ObjectMeta, false)
 }
