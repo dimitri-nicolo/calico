@@ -75,6 +75,7 @@ EXCLUDED_IMAGES = [
     'es-gateway',
     'deep-packet-inspection',
     'performance_hotspots',
+    'windows',
 
     # third party images
     'elasticsearch',

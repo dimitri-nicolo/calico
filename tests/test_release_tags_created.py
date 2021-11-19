@@ -58,6 +58,7 @@ MAPPED_COMPONENTS = {
     'tigera-api': 'api',
     'deep-packet-inspection': 'deep-packet-inspection',
     'performance_hotspots': 'performance_hotspots',
+    'windows': 'node-private',
 }
 
 SKIP_COMPONENTS = [
