@@ -23,7 +23,7 @@ require (
 
 replace (
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211118213557-aaab08536697
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211118215330-647c0d4cbcf1
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211119192541-6b523e956723
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	google.golang.org/grpc => google.golang.org/grpc v1.27.1
 
