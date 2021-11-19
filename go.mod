@@ -13,15 +13,15 @@ require (
 	github.com/projectcalico/typha v0.7.3-0.20210524104642-ae095e9e80f3
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.6.1
-	github.com/tigera/api v0.0.0-20211118004237-fc020b8219e8
+	github.com/tigera/api v0.0.0-20211119192830-60ae1a27d9ca
 	k8s.io/api v0.21.0
 	k8s.io/apimachinery v0.21.0
 	k8s.io/client-go v0.21.0
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211118213557-aaab08536697
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211118215330-647c0d4cbcf1
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211119192632-4e91026e5a7b
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211119192541-6b523e956723
 
 	// k8s apiserver upgrade
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
