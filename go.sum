@@ -489,8 +489,8 @@ github.com/tigera/api v0.0.0-20211119192830-60ae1a27d9ca h1:JKrTBVVHTUxU+Bvcae33
 github.com/tigera/api v0.0.0-20211119192830-60ae1a27d9ca/go.mod h1:U7qqFcD+luefolr44wGe1PuCMxgKUplb6qStftrgrSQ=
 github.com/tigera/libcalico-go-private v1.7.2-0.20211119192632-4e91026e5a7b h1:X9l45Go85V4h9M9K/m5M4CmQr8J/ft7X8JrJOmpfA1A=
 github.com/tigera/libcalico-go-private v1.7.2-0.20211119192632-4e91026e5a7b/go.mod h1:2qU7UCeMcXQQ0xfslAiVW1JEKUemXDAOJzIJABQvM8M=
-github.com/tigera/typha-private v0.6.0-beta1.0.20211119192541-6b523e956723 h1:Tr85vmzn08SvOxCkpaOyAn0dAex5U+/zW2TXp7cPa+I=
-github.com/tigera/typha-private v0.6.0-beta1.0.20211119192541-6b523e956723/go.mod h1:oV9pRq2fZAR59vWldiinIYNheSR+3ZICR2UDW1YOuEQ=
+github.com/tigera/typha-private v0.6.0-beta1.0.20211119195348-94cd571f25b8 h1:TmYANVWsRK3aSfzs91CX9kTI4nNk7nIpD37SlK7NSJs=
+github.com/tigera/typha-private v0.6.0-beta1.0.20211119195348-94cd571f25b8/go.mod h1:3VcFVIrI9qjJNyzv/ZmTwJpVNZKXQ+r/CmDeEiaxW1s=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 h1:LnC5Kc/wtumK+WB441p7ynQJzVuNRJiqddSIE3IlSEQ=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=

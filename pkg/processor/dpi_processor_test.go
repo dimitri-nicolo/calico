@@ -74,34 +74,23 @@ var _ = Describe("DPI processor", func() {
 	})
 
 	It("Restart snort if snort process fails", func() {
-		numberOfCallsToWait := 0
+		// Status is updated after initializing the processor, once after WEP is added, and once when process is closed.
+		mockDPIUpdater.On("UpdateStatus", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Times(3)
 
-		// Status is updated after initializing the processor, once after WEP is added, once when snort fails and once when the WEP is removed.
-		mockDPIUpdater.On("UpdateStatus", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Times(4)
+		// Status is updated with error once when snort fails.
+		mockDPIUpdater.On("UpdateStatusWithError", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Times(1)
 
 		p = processor.NewProcessor(ctx, dpiKey, "node0", snortExecFn, "", 0, "", mockDPIUpdater)
 		mockSnortExec.On("Start").Return(nil).Times(2)
 		mockSnortExec.On("Stop").Return(nil).Times(1)
 
 		// Return error on first call to wait (this will restart snort) and nil on second call
-		mockSnortExec.On("Wait").Return().Run(func(args mock.Arguments) {
-			for _, c := range mockSnortExec.ExpectedCalls {
-				if c.Method == "Wait" {
-					if numberOfCallsToWait == 1 {
-						c.ReturnArguments = mock.Arguments{errors.New("snort error")}
-					} else if numberOfCallsToWait == 2 {
-						c.ReturnArguments = mock.Arguments{nil}
-					}
-				}
-			}
-		}).Times(2)
+		mockSnortExec.On("Wait").Return(errors.New("snort error")).Times(1)
+		mockSnortExec.On("Wait").Return(nil).Times(1)
 
-		numberOfCallsToWait++
 		p.Add(ctx, wepKey, ifaceName)
-		numberOfCallsToWait++
 
 		p.Close()
-
 	})
 
 	It("Closes all snort process", func() {
