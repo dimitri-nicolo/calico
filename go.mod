@@ -15,15 +15,15 @@ require (
 	github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/sirupsen/logrus v1.8.1
-	github.com/tigera/api v0.0.0-20211115213013-3b569d156e85
-	github.com/tigera/licensing v1.0.1-0.20211115235151-8800f48d6acc
+	github.com/tigera/api v0.0.0-20211119192830-60ae1a27d9ca
+	github.com/tigera/licensing v1.0.1-0.20211119192623-89ca23024d80
 )
 
 replace (
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20211116222427-a854a08cd0bb
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211115234807-220cb047d20d
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211119192632-4e91026e5a7b
 	// Need to pin typha to get go mod updates for felix to go through.
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211116012709-3658a916f664
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211119192541-6b523e956723
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.4.2-0.20190403091019-9b3cdde74fbe
 
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
