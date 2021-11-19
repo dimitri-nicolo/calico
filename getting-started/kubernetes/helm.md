@@ -7,6 +7,9 @@ canonical_url: '/getting-started/kubernetes/helm'
 
 Install {{ site.prodname }} on a deployed Kubernetes cluster using Helm.
 
+>**Note**: Helm is no longer a supported install method when using Kubernetes 1.22
+{: .alert .alert-warning}
+
 ### Before you begin
 
 **Required**
