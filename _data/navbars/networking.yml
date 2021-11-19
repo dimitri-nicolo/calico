@@ -33,7 +33,7 @@ section:
 - title: Egress gateways
   path: /networking/egress/
   section: 
-  - title: Configure gress gateways, on-premises
+  - title: Configure egress gateways, on-premises
     path: /networking/egress/egress-gateway-on-prem
   - title: Configure egress gateways, AWS
     path: /networking/egress/egress-gateway-aws  
