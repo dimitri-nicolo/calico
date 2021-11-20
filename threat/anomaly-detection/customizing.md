@@ -83,7 +83,7 @@ The job reads the data in portions. This is the number of rows in each of this p
   Higher sensitivity means more suspicious values are treated as anomalies and vice versa.
   Increase in this variable results in more alerts.
   The default values can be different for different jobs.
-  Valid range: 1.0 to 100.0
+  Valid range: 0 to 100.0
 
 
 #### port_scan Job
