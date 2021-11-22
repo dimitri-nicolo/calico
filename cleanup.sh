@@ -4,27 +4,26 @@ set +e
 
 # Remove python and python dependencies
 
-PACKAGES="python3-libs platform-python python3-libcomps platform-python-setuptools platform-python-pip python3-rpm"
-PACKAGES+=" python3-unbound python3-dnf python3-hawkey python3-libdnf python3-gpg shared-mime-info"
-PACKAGES+=" crypto-policies-scripts unbound-libs dnf libdnf yum"
-
-# delete systemd and dependent packages
-PACKAGES+=" systemd-udev systemd-pam systemd dracut-squash dracut-network dracut dbus trousers-lib trousers kexec-tools"
-PACKAGES+=" dhcp-client libkcapi-hmaccalc libkcapi dhcp-client iputils device-mapper-libs device-mapper os-prober"
-PACKAGES+=" cryptsetup-libs kpartx grub2-tools grub2-tools-minimal grubby rpm-build-libs rpm-plugin-systemd-inhibit"
-
-PACKAGES+=" kmod bind-export-libs kmod-libs openldap libevent ima-evm-utils xz openssl openssl-pkcs11 libidn2 gnupg2 gnutls"
-PACKAGES+=" gnupg2 gpgme glib2 librepo elfutils-libs elfutils-debuginfod-client libsolv"
-PACKAGES+=" libmodulemd shadow-utils libsemanage zip unzip libsolv gettext-libs gettext libcroco nmap-ncat json-c cyrus-sasl-lib util-linux"
-PACKAGES+=" libpwquality kbd pam libnsl2 libtirpc iproute sqlite-libs elfutils-default-yama-scope tar file file-libs"
-PACKAGES+=" procps-ng libsmartcols dbus-libs dbus-tools dbus-daemon systemd-libs dhcp-libs libusbx libblkid libuuid libmount"
-PACKAGES+=" libfdisk binutils vim-minimal libyaml libseccomp tpm2-tss pciutils rdma-core libibverbs libpcap"
-PACKAGES+=" iptables-libs nmap-ncat"
-
-# remove packages vulnerable packages that rpm relies on last
-PACKAGES+=" squashfs-tools libtasn1 lz4-libs lua-libs elfutils-libelf expat libcomps libmetalink readline gawk gdbm"
-PACKAGES+=" p11-kit p11-kit-trust ca-certificates bzip2-libs ca-certificates libzstd krb5-libs openssl-libs"
-PACKAGES+=" libcurl-minimal libarchive libdb libdb-utils curl libxml2 libcomps rpm-libs rpm"
+PACKAGES="bind-export-libs binutils bzip2-libs ca-certificates ca-certificates
+crypto-policies-scripts cryptsetup-libs curl cyrus-sasl-lib dbus dbus-daemon
+dbus-libs dbus-tools device-mapper device-mapper-libs dhcp-client dhcp-client
+dhcp-libs dnf dracut dracut-network dracut-squash elfutils-debuginfod-client
+elfutils-default-yama-scope elfutils-libelf elfutils-libs expat file file-libs
+gawk gdbm gettext gettext-libs glib2 gnupg2 gnupg2 gnutls gpgme grub2-tools
+grub2-tools-minimal grubby ima-evm-utils iproute iptables-libs iputils json-c
+kbd kexec-tools kmod kmod-libs kpartx krb5-libs libarchive libblkid libbpf
+libcomps libcomps libcroco libcurl-minimal libdb libdb-utils libdnf libevent
+libfdisk libibverbs libidn2 libkcapi libkcapi-hmaccalc libmetalink libmodulemd
+libmount libnsl2 libpcap libpwquality librepo libseccomp libsemanage
+libsmartcols libsolv libsolv libtasn1 libtirpc libusbx libuuid libxml2 libyaml
+libzstd lua-libs lz4-libs nmap-ncat nmap-ncat openldap openssl openssl-libs
+openssl-pkcs11 os-prober p11-kit p11-kit-trust pam pciutils platform-python
+platform-python-pip platform-python-setuptools procps-ng python3-dnf python3-gpg
+python3-hawkey python3-libcomps python3-libdnf python3-libs python3-rpm
+python3-unbound rdma-core readline rpm rpm-build-libs rpm-libs
+rpm-plugin-systemd-inhibit shadow-utils shared-mime-info sqlite-libs
+squashfs-tools systemd systemd-libs systemd-pam systemd-udev tar tpm2-tss
+trousers trousers-lib unbound-libs unzip util-linux vim-minimal xz yum zip"
 
 echo "$PACKAGES"
 
