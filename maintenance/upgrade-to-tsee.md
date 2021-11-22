@@ -25,7 +25,6 @@ Please contact Tigera Support for assistance upgrading a cluster with an `etcdv3
 
 If your cluster already has {{site.prodname}} installed, follow the [Upgrading {{site.prodname}} from an earlier release guide]({{site.baseurl}}/maintenance/kubernetes-upgrade-tsee) instead.
 
-
 ## Upgrade Calico to {{site.prodname}}
 
 > **Note**: GKE and AKS upgrades from open source Calico are not currently supported.

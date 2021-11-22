@@ -23,6 +23,8 @@ If your cluster is on a version earlier than 3.0, contact Tigera support to upgr
 
 If your cluster has a Calico installation, contact Tigera support to upgrade.
 
+If your cluster is using the Egress Gateway feature, and you are upgrading from a pre-v3.11.0 release to release v3.11.0 or later, you will need to follow the instructions [here]({{site.baseurl}}/networking/egress/egress-gateway-on-prem) after upgrading.
+
 ### Prepare your cluster for the upgrade
 
 During the upgrade the controller that manages Elasticsearch is updated. Because of this, the {{site.prodname}} LogStorage

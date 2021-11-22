@@ -396,6 +396,15 @@ Connection from <source IP> <source port> received
 
 with `<source IP>` being one of the IPs of the egress IP pool that you provisioned.
 
+### Upgrading from a pre-v3.11.0 release
+
+Calico Enterprise v3.11.0 introduced some new configuration. If you are using the Egress Gateways feature, and are 
+upgrading from a pre-v3.11.0 release to v3.11.0 or later, you will need to perform the following two steps:
+
+- Enable policy sync API as described [here](#enable-policy-sync-api).
+- Update your Egress Gateway Deployments to match as described [here](#deploy-a-group-of-egress-gateways).
+The new elements required as of v3.11.0 are the volumeMounts and volumes sections.
+
 ### Above and beyond
 
 Please see also:
