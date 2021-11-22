@@ -473,6 +473,11 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
     versionsYml = <<~EOF
     imagePullSecrets: {}
 
+    # Set to true to use v1beta1 CRDs. This is necessary to work around
+    # a bug currently in upstream Helm v2.x where it fails to install v1 CRDs
+    # with the 'crd-install' hook.
+    useLegacyCRDs: false
+
     installation:
       kubernetesProvider: ""
 
