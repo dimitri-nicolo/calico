@@ -64,10 +64,6 @@ include Makefile.common
 ##############################################################################
 ELASTIC_VERSION ?= 7.3.2
 
-BUILD_IMAGE     ?= tigera/lma
-PUSH_IMAGES     ?= gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
-RELEASE_IMAGES  ?= quay.io/$(BUILD_IMAGE)
-
 TOP_SRC_DIRS     = pkg
 SRC_DIRS         = $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*.go \
                         -exec dirname {} \\; | sort | uniq")
