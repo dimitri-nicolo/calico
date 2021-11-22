@@ -32,9 +32,50 @@ def patch_ippool(name, vxlanMode=None, ipipMode=None):
               name, old_vxlanMode, vxlanMode, old_ipipMode, ipipMode)
 
 class _TestEgressIP(TestBase):
-
     def setUp(self):
         super(_TestEgressIP, self).setUp()
+
+    def env_ippool_setup(self, backend, wireguard):
+        if backend == "VXLAN":
+            modeVxlan = "Always"
+            modeIPIP = "Never"
+        elif backend == "IPIP":
+            modeVxlan = "Never"
+            modeIPIP = "Always"
+        elif backend == "NoOverlay":
+            modeVxlan = "Never"
+            modeIPIP = "Never"
+        else:
+            raise Exception('wrong backend type')
+
+        patch_ippool("default-ipv4-ippool",
+                    vxlanMode=modeVxlan,
+                    ipipMode=modeIPIP)
+
+        newEnv = {"FELIX_PolicySyncPathPrefix": "/var/run/nodeagent",
+                  "FELIX_EGRESSIPSUPPORT": "EnabledPerNamespaceOrPerPod",
+                  "FELIX_IPINIPENABLED": "false",
+                  "FELIX_VXLANENABLED": "false"}
+        if wireguard:
+            newEnv["FELIX_WireguardEnabled"] = "true"
+        self.update_ds_env("calico-node", "kube-system", newEnv)
+
+        # Create egress IP pool.
+        self.egress_cidr = "10.10.10.0/29"
+        calicoctl("""apply -f - << EOF
+apiVersion: projectcalico.org/v3
+kind: IPPool
+metadata:
+  name: egress-ippool-1
+spec:
+  cidr: %s
+  blockSize: 29
+  nodeSelector: '!all()'
+  vxlanMode: %s
+  ipipMode: %s
+EOF
+""" % (self.egress_cidr, modeVxlan, modeIPIP))
+        self.add_cleanup(lambda: calicoctl("delete ippool egress-ippool-1"))
 
     def tearDown(self):
         super(_TestEgressIP, self).tearDown()
@@ -490,7 +531,7 @@ spec:
   - name: cnx-pull-secret
   containers:
   - name: gateway
-    image: gcr.io/unique-caldron-775/cnx/tigera/egress-gateway:master-amd64
+    image: gcr.io/unique-caldron-775/cnx/tigera/egress-gateway:master-amd64 
     env:
     - name: EGRESS_POD_IP
       valueFrom:
@@ -499,8 +540,15 @@ spec:
     imagePullPolicy: Always
     securityContext:
       privileged: true
+    volumeMounts:
+        - mountPath: /var/run
+          name: policysync
   nodeName: %s
   terminationGracePeriodSeconds: 0
+  volumes:
+      - flexVolume:
+          driver: nodeagent/uds
+        name: policysync
 """ % (egress_cidr, color, name, ns, host))
         self.add_cleanup(gateway.delete)
         gateway.wait_ready()
@@ -574,91 +622,31 @@ class NetcatClientTCP(Pod):
         pass
 
 class TestEgressIPNoOverlay(_TestEgressIP):
-
     def setUp(self):
         super(_TestEgressIP, self).setUp()
-
-        # Enable non-overlay and egress IP.
-        patch_ippool("default-ipv4-ippool",
-                     vxlanMode="Never",
-                     ipipMode="Never")
-        newEnv = {"FELIX_EGRESSIPSUPPORT": "EnabledPerNamespaceOrPerPod",
-                  "FELIX_IPINIPENABLED": "false",
-                  "FELIX_VXLANENABLED": "false"}
-        self.update_ds_env("calico-node", "kube-system", newEnv)
-
-        # Create egress IP pool.
-        self.egress_cidr = "10.10.10.0/29"
-        calicoctl("""apply -f - << EOF
-apiVersion: projectcalico.org/v3
-kind: IPPool
-metadata:
-  name: egress-ippool-1
-spec:
-  cidr: %s
-  blockSize: 29
-  nodeSelector: '!all()'
-EOF
-""" % self.egress_cidr)
-        self.add_cleanup(lambda: calicoctl("delete ippool egress-ippool-1"))
+        self.env_ippool_setup(backend="NoOverlay", wireguard=False)
 
 class TestEgressIPWithIPIP(_TestEgressIP):
-
     def setUp(self):
         super(_TestEgressIP, self).setUp()
-
-        # Enable IP-IP and egress IP.
-        patch_ippool("default-ipv4-ippool",
-                     vxlanMode="Never",
-                     ipipMode="Always")
-        newEnv = {"FELIX_EGRESSIPSUPPORT": "EnabledPerNamespaceOrPerPod",
-                  "FELIX_IPINIPENABLED": "true",
-                  "FELIX_VXLANENABLED": "false"}
-        self.update_ds_env("calico-node", "kube-system", newEnv)
-
-        # Create egress IP pool.
-        self.egress_cidr = "10.10.10.0/29"
-        calicoctl("""apply -f - << EOF
-apiVersion: projectcalico.org/v3
-kind: IPPool
-metadata:
-  name: egress-ippool-1
-spec:
-  cidr: %s
-  blockSize: 29
-  nodeSelector: '!all()'
-  ipipMode: Always
-EOF
-""" % self.egress_cidr)
-        self.add_cleanup(lambda: calicoctl("delete ippool egress-ippool-1"))
-
+        self.env_ippool_setup(backend="IPIP", wireguard=False)
 
 class TestEgressIPWithVXLAN(_TestEgressIP):
-
     def setUp(self):
         super(_TestEgressIP, self).setUp()
+        self.env_ippool_setup(backend="VXLAN", wireguard=False)
 
-        # Enable VXLAN and egress IP.
-        patch_ippool("default-ipv4-ippool",
-                     vxlanMode="Always",
-                     ipipMode="Never")
-        newEnv = {"FELIX_EGRESSIPSUPPORT": "EnabledPerNamespaceOrPerPod",
-                  "FELIX_IPINIPENABLED": "false",
-                  "FELIX_VXLANENABLED": "true"}
-        self.update_ds_env("calico-node", "kube-system", newEnv)
+class TestEgressIPNoOverlayAndWireguard(TestEgressIPNoOverlay):
+    def setUp(self):
+        super(_TestEgressIP, self).setUp()
+        self.env_ippool_setup(backend="NoOverlay", wireguard=True)
 
-        # Create egress IP pool.
-        self.egress_cidr = "10.10.10.0/29"
-        calicoctl("""apply -f - << EOF
-apiVersion: projectcalico.org/v3
-kind: IPPool
-metadata:
-  name: egress-ippool-1
-spec:
-  cidr: %s
-  blockSize: 29
-  nodeSelector: '!all()'
-  vxlanMode: Always
-EOF
-""" % self.egress_cidr)
-        self.add_cleanup(lambda: calicoctl("delete ippool egress-ippool-1"))
+class TestEgressIPWithIPIPAndWireguard(TestEgressIPWithIPIP):
+    def setUp(self):
+        super(_TestEgressIP, self).setUp()
+        self.env_ippool_setup(backend="IPIP", wireguard=True)
+
+class TestEgressIPWithVXLANAndWireguard(_TestEgressIP):
+    def setUp(self):
+        super(_TestEgressIP, self).setUp()
+        self.env_ippool_setup(backend="VXLAN", wireguard=True)
