@@ -559,7 +559,7 @@ endif
 endif
 
 charts: chart/tigera-prometheus-operator chart/tigera-operator
-chart/tigera-operator: _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz
+chart/tigera-operator: _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz _includes/charts/tigera-operator/charts/tigera-prometheus-operator.tgz
 chart/%: _includes/charts/%/values.yaml
 	mkdir -p bin
 	helm package ./_includes/charts/$(@F) \
@@ -574,6 +574,17 @@ NON_OPERATOR_CHART_VERSION=v2.8.3-2
 _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz:
 	mkdir -p $(@D)
 	wget -O $@ https://s3.amazonaws.com/tigera-public/ee/charts/tigera-secure-ee-core-$(NON_OPERATOR_CHART_VERSION).tgz
+
+# Copy the prometheus-operator chart package as a sub-chart for tigera-operator for helm packaging.
+# After the changes in PR #3580, Tigera Operator doesn't depend on Prometheus/Alertmanager resources.
+# The symbolic link of tigera-prometheus-operator folder is also removed from the tigera-operator/charts
+# directory to keep the folder strucure clean. However, this causes a helm packaging issue that
+# prometheus-operator chart is not packaged as a sub-chart. Since we will always build the
+# prometheus-operator chart together with the tigera-operator chart, copying the prometheus-operator
+# chart package to the tigera-operator/charts directory fixes helm packaging.
+_includes/charts/tigera-operator/charts/tigera-prometheus-operator.tgz:
+	mkdir -p $(@D)
+	cp $$(pwd)/bin/tigera-prometheus-operator-$(chartVersion).tgz $@
 
  ## Create the vendor directory
 vendor: glide.yaml
