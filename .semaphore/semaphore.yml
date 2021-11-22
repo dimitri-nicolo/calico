@@ -46,6 +46,7 @@ blocks:
             minutes: 90
           commands:
             - make kibana-image
+            - make image # Test that the image builds correctly
             - docker save -o ${KIBANA_IMAGE_TAR_PATH} ${KIBANA_IMAGE_NAME}:${KIBANA_VERSION}
             - cache store ${KIBANA_IMAGE_CACHE_KEY} ${KIBANA_IMAGE_TAR_PATH}
 
