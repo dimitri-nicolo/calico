@@ -22,7 +22,7 @@ require (
 	github.com/smartystreets/assertions v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
-	github.com/tigera/api v0.0.0-20211119192830-60ae1a27d9ca
+	github.com/tigera/api v0.0.0-20211122222922-3f5da5bfedfa
 	github.com/tigera/licensing v1.0.1-0.20211120004504-559637866cdb
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
