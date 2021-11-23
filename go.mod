@@ -29,7 +29,7 @@ require (
 	github.com/rakelkar/gonetsh v0.0.0-20190930180311-e5c5ffe4bdf0
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.8.1
-	github.com/tigera/api v0.0.0-20211119192830-60ae1a27d9ca
+	github.com/tigera/api v0.0.0-20211122222922-3f5da5bfedfa
 	github.com/vishvananda/netlink v1.1.1-0.20210703095558-21f2c55a7727
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
 	golang.org/x/sys v0.0.0-20210616094352-59db8d763f22
@@ -44,7 +44,7 @@ require (
 
 replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211120004119-75d36335c381
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211123170722-7bb65436c8e2
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	google.golang.org/grpc => google.golang.org/grpc v1.27.1
 
