@@ -37,6 +37,9 @@ type config struct {
 	VoltronURL                string `required:"true" split_words:"true"`
 	PacketCaptureCABundlePath string `default:"/certs/packetcapture/tls.crt" split_words:"true"`
 	PacketCaptureEndpoint     string `default:"https://tigera-packetcapture.tigera-packetcapture.svc" split_words:"true"`
+	PrometheusCABundlePath    string `default:"/certs/prometheus/tls.crt" split_words:"true"`
+	PrometheusPath            string `default:"/api/v1/namespaces/tigera-prometheus/services/calico-node-prometheus:9090/proxy/" split_words:"true"`
+	PrometheusEndpoint        string `default:"https://prometheus-http-api.tigera-prometheus.svc:9090" split_words:"true"`
 
 	KeepAliveEnable   bool `default:"true" split_words:"true"`
 	KeepAliveInterval int  `default:"100" split_words:"true"`
@@ -136,6 +139,14 @@ func main() {
 			PathReplace:      []byte("/"),
 			TokenPath:        "/var/run/secrets/kubernetes.io/serviceaccount/token",
 			CABundlePath:     cfg.PacketCaptureCABundlePath,
+		},
+		{
+			Path:         cfg.PrometheusPath,
+			Dest:         cfg.PrometheusEndpoint,
+			PathRegexp:   []byte(fmt.Sprintf("^%v/?", cfg.PrometheusPath)),
+			PathReplace:  []byte("/"),
+			TokenPath:    "/var/run/secrets/kubernetes.io/serviceaccount/token",
+			CABundlePath: cfg.PrometheusCABundlePath,
 		},
 	})
 	if err != nil {

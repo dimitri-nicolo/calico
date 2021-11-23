@@ -134,6 +134,13 @@ func main() {
 			CABundlePath: cfg.PacketCaptureCABundlePath,
 		},
 		{
+			Path:         cfg.PrometheusPath,
+			Dest:         cfg.PrometheusEndpoint,
+			PathRegexp:   []byte(fmt.Sprintf("^%v/?", cfg.PrometheusPath)),
+			PathReplace:  []byte("/"),
+			CABundlePath: cfg.PrometheusCABundlePath,
+		},
+		{
 			Path:         cfg.KibanaBasePath,
 			Dest:         cfg.KibanaEndpoint,
 			CABundlePath: cfg.KibanaCABundlePath,
@@ -153,7 +160,6 @@ func main() {
 			AllowInsecureTLS: cfg.ComplianceInsecureTLS,
 		})
 	}
-
 	if cfg.OIDCAuthEnabled {
 		// If dex is enabled we need to add the CA Bundle, otherwise the default trusted certs from the image will
 		// suffice.
