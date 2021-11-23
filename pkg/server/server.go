@@ -39,7 +39,6 @@ func Start(config *Config) {
 		if err != nil {
 			log.Fatal("Unable to create kubernetes interface", err)
 		}
-		log.Warnf("config token %v", restConfig.BearerToken)
 
 		var options []auth.JWTAuthOption
 		if config.DexEnabled {
