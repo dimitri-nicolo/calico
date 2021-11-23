@@ -6,15 +6,25 @@ GIT_USE_SSH = true
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID=$(SEMAPHORE_NODE_PRIVATE_PROJECT_ID)
 
+WINDOWS_VERSIONS?=1809 2004 20H2 ltsc2022
+
 NODE_IMAGE            ?=tigera/cnx-node
 WINDOWS_UPGRADE_IMAGE ?=tigera/calico-windows-upgrade
+
+# If this is a windows release build the windows upgrade image.
+# ARCHES will contain the values in WINDOWS_VERSIONS, prefixed with "windows-".
+ifdef WINDOWS_RELEASE
+BUILD_IMAGES          ?=$(WINDOWS_UPGRADE_IMAGE)
+ARCHES                ?= $(patsubst %,windows-%,$(WINDOWS_VERSIONS))
+else
 BUILD_IMAGES          ?=$(NODE_IMAGE)
+endif
+
 DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
 RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
-WINDOWS_VERSIONS?=1809 2004 20H2 ltsc2022
 EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 LIBBPF_DOCKER_PATH=/go/src/github.com/projectcalico/node/bin/third-party/libbpf/src
 BPF_GPL_DOCKER_PATH=/go/src/github.com/projectcalico/node/bin/bpf/bpf-gpl
