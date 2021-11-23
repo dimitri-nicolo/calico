@@ -85,7 +85,7 @@ var _ = Describe("Test the StagedNetworkPolicy update processor", func() {
 			Value: &model.Policy{
 				Namespace:      ns1,
 				Selector:       "projectcalico.org/namespace == 'namespace1'",
-				ApplyOnForward: true,
+				ApplyOnForward: false,
 			},
 			Revision: "abcde",
 		}))
@@ -199,7 +199,7 @@ var _ = Describe("Test the StagedNetworkPolicy update processor", func() {
 					OutboundRules:  []model.Rule{v1erule},
 					Selector:       namespacedSelector,
 					Types:          []string{"ingress"},
-					ApplyOnForward: true,
+					ApplyOnForward: false,
 				},
 				Revision: "1234",
 			},
@@ -223,7 +223,7 @@ var _ = Describe("Test the StagedNetworkPolicy update processor", func() {
 			Value: &model.Policy{
 				Namespace:      "namespace3",
 				Selector:       "projectcalico.org/namespace == 'namespace3'",
-				ApplyOnForward: true,
+				ApplyOnForward: false,
 			},
 			Revision: "xyz",
 		}))
