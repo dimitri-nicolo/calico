@@ -82,7 +82,8 @@ The job reads the data in portions. This is the number of rows in each of this p
   Changing this variable adjusts the **sensitivity** to detect suspicious values or combinations of values. 
   Higher sensitivity means more suspicious values are treated as anomalies and vice versa.
   Increase in this variable results in more alerts.
-  Valid range: 0.1 to 1000.
+  The default values can be different for different jobs.
+  Valid range: 0 to 100.0
 
 
 #### port_scan Job
@@ -100,24 +101,24 @@ The job reads the data in portions. This is the number of rows in each of this p
     The models are trained only if the number of the data samples is bigger than this threshold.
 
 #### process_restarts Job
-- **AD_PROCESS_RESTARTS_SENSITIVITY** - Default: 2.5. 
+- **AD_PROCESS_RESTARTS_SENSITIVITY** - Default: 2 
 
     Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
 - **AD_PROCESS_RESTARTS_MIN_RESTARTS** - Default: 4. Increase this parameter if you want fewer alerts.
     Decrease it if you want more alerts.
 
 #### dns_latency Job
-- **AD_DNS_LATENCY_SENSITIVITY** - Default: 2.5.
+- **AD_DNS_LATENCY_SENSITIVITY** - Default: 15
 
     Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
 
 #### l7_latency Job
-- **AD_L7_LATENCY_SENSITIVITY** - Default: 2.5.
+- **AD_L7_LATENCY_SENSITIVITY** - Default: 7
 
     Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
 
 #### http_connection_spike Job
-- **AD_HTTP_CONNECTION_SPIKE_SENSITIVITY** - Default: 2.5.
+- **AD_HTTP_CONNECTION_SPIKE_SENSITIVITY** - Default: 20
 
     Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
 
@@ -127,7 +128,7 @@ The job reads the data in portions. This is the number of rows in each of this p
     Decrease it if you want more alerts.
 
 #### generic_flows Job
-- **AD_GENERIC_FLOWS_SENSITIVITY** - Default: 2.5 
+- **AD_GENERIC_FLOWS_SENSITIVITY** - Default: 1 
  
     Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
 - **AD_GENERIC_FLOWS_FIELDS** - Default: "bytes_in,bytes_out,num_flows,num_flows_started,
@@ -138,7 +139,7 @@ The job reads the data in portions. This is the number of rows in each of this p
     Remove a field from this list if you don't want to detect anomalies for this field.
 
 #### generic_dns Job
-- **AD_GENERIC_DNS_SENSITIVITY** - Default: 2.5 
+- **AD_GENERIC_DNS_SENSITIVITY** - Default: 2 
  
     Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
 - **AD_GENERIC_DNS_FIELDS** - Default: "count,latency_count,latency_mean,latency_max"
@@ -148,7 +149,7 @@ The job reads the data in portions. This is the number of rows in each of this p
     Remove a field from this list if you don't want to detect anomalies for this field.
 
 #### generic_l7 Job
-- **AD_GENERIC_L7_SENSITIVITY** - Default: 2.5 
+- **AD_GENERIC_L7_SENSITIVITY** - Default: 3 
  
     Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
 - **AD_GENERIC_L7_FIELDS** - Default: "duration_mean,duration_max,bytes_in,bytes_out,count"
