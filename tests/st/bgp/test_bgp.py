@@ -262,14 +262,14 @@ class TestDisableBGPExport(TestBase):
             nameHost2 = 'Mesh_' + host2.ip.replace('.', '_')
 
             # Verify that pool2 and pool3 are exported and pool1 is not
-            output = host1.execute("docker exec calico-node birdcl show route export %s" % nameHost2)
+            output = host1.execute("docker exec cnx-node birdcl show route export %s" % nameHost2)
             for block in ['192.168.2.0/26', '192.168.3.0/26']:
                 self.assertIn(block, output, "block '%s' should be present in 'birdcl show route export'")
             for block in ['192.168.1.0/26']:
                 self.assertNotIn(block, output, "block '%s' should not be present in 'birdcl show route export'")
 
             # Verify that pool1 is filtered from being exported and pool2 and pool3 are not
-            output = host1.execute("docker exec calico-node birdcl show route noexport %s" % nameHost2)
+            output = host1.execute("docker exec cnx-node birdcl show route noexport %s" % nameHost2)
             for block in ['192.168.1.0/26']:
                 self.assertIn(block, output, "block '%s' should be present in 'birdcl show route noexport'")
             for block in ['192.168.2.0/26', '192.168.3.0/26']:
