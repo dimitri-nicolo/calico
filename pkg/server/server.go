@@ -9,9 +9,12 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/tigera/lma/pkg/auth"
 	health "github.com/tigera/prometheus-service/pkg/handler/health"
 	proxy "github.com/tigera/prometheus-service/pkg/handler/proxy"
 	"github.com/tigera/prometheus-service/pkg/middleware"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 var (
@@ -24,9 +27,52 @@ func Start(config *Config) {
 
 	reverseProxy := getReverseProxy(config.PrometheusUrl)
 
+	var authn auth.JWTAuth
+	if config.AuthenticationEnabled {
+
+		restConfig, err := rest.InClusterConfig()
+		if err != nil {
+			log.Fatal("Unable to create client config", err)
+		}
+		//restConfig.
+		k8sCli, err := kubernetes.NewForConfig(restConfig)
+		if err != nil {
+			log.Fatal("Unable to create kubernetes interface", err)
+		}
+
+		var options []auth.JWTAuthOption
+		if config.DexEnabled {
+			log.Debug("Configuring Dex for authentication")
+			opts := []auth.DexOption{
+				auth.WithGroupsClaim(config.OIDCAuthGroupsClaim),
+				auth.WithJWKSURL(config.OIDCAuthJWKSURL),
+				auth.WithUsernamePrefix(config.OIDCAuthUsernamePrefix),
+				auth.WithGroupsPrefix(config.OIDCAuthGroupsPrefix),
+			}
+			dex, err := auth.NewDexAuthenticator(
+				config.OIDCAuthIssuer,
+				config.OIDCAuthClientID,
+				config.OIDCAuthUsernameClaim,
+				opts...)
+			if err != nil {
+				log.Fatal("Unable to add an issuer to the authenticator", err)
+			}
+			options = append(options, auth.WithAuthenticator(config.OIDCAuthIssuer, dex))
+		}
+		authn, err = auth.NewJWTAuth(restConfig, k8sCli, options...)
+		if err != nil {
+			log.Fatal("Unable to create authenticator", err)
+		}
+	}
+
+	proxyHandler, err := proxy.Proxy(reverseProxy, authn)
+	if err != nil {
+		log.Fatal("Unable to create proxy handler", err)
+	}
+
 	sm.Handle("/health", health.HealthCheck())
 
-	sm.Handle("/", proxy.Proxy(reverseProxy))
+	sm.Handle("/", proxyHandler)
 
 	server = &http.Server{
 		Addr:    config.ListenAddr,
@@ -37,7 +83,7 @@ func Start(config *Config) {
 
 	go func() {
 		log.Infof("Starting server on %v", config.ListenAddr)
-		err := server.ListenAndServe()
+		err := server.ListenAndServeTLS(config.TLSCert, config.TLSKey)
 		if err != nil {
 			log.WithError(err).Error("Error when starting server.")
 		}
@@ -47,10 +93,11 @@ func Start(config *Config) {
 
 func getReverseProxy(target *url.URL) *httputil.ReverseProxy {
 	reverseProxy := httputil.NewSingleHostReverseProxy(target)
-	// applies the proemetheus target URL to the request
+	// applies the prometheus target URL to the request
 	reverseProxy.Director = func(req *http.Request) {
 		req.URL.Scheme = target.Scheme
 		req.URL.Host = target.Host
+		req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
 	}
 
 	return reverseProxy

@@ -10,6 +10,9 @@ DEV_REGISTRIES           ?=gcr.io/unique-caldron-775/cnx
 RELEASE_REGISTRIES       ?= quay.io
 RELEASE_BRANCH_PREFIX    ?= release-calient
 DEV_TAG_SUFFIX           ?= calient-0.dev
+
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
+
 ##############################################################################
 # Download and include Makefile.common before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since

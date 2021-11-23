@@ -13,6 +13,24 @@ type Config struct {
 
 	PrometheusEndpoint string   `envconfig:"PROMETHEUS_ENDPOINT_URL" default:"http://localhost:9090"`
 	PrometheusUrl      *url.URL `envconfig:"-"`
+
+	TLSCert string `envconfig:"TLS_CERT" default:"/tls/tls.crt"`
+	TLSKey  string `envconfig:"TLS_KEY" default:"/tls/tls.key"`
+
+	// Meant for fv only.
+	AuthenticationEnabled bool `default:"true" split_words:"true"`
+
+	// Dex settings
+	DexEnabled bool `default:"false" split_words:"true"`
+
+	// OIDC Authentication settings.
+	OIDCAuthJWKSURL        string `default:"https://tigera-dex.tigera-dex.svc.cluster.local:5556/dex/keys" split_words:"true"`
+	OIDCAuthIssuer         string `default:"https://127.0.0.1:5556/dex" split_words:"true"`
+	OIDCAuthClientID       string `default:"tigera-manager" split_words:"true"`
+	OIDCAuthUsernameClaim  string `default:"email" split_words:"true"`
+	OIDCAuthUsernamePrefix string `split_words:"true"`
+	OIDCAuthGroupsClaim    string `default:"groups" split_words:"true"`
+	OIDCAuthGroupsPrefix   string `split_words:"true"`
 }
 
 func NewConfigFromEnv() (*Config, error) {

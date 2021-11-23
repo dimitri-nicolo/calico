@@ -4,7 +4,10 @@ package fv_test
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"io/ioutil"
 
 	"net/http"
 	"net/url"
@@ -19,16 +22,34 @@ import (
 
 var _ = Describe("Prometheus Proxy Test", func() {
 
-	const httpScheme = "http://"
-	const mockPrometheuServicesUrl = "127.0.0.1:9090"
-	const proxyServicesUrl = "127.0.0.1:8090"
+	const (
+		httpScheme               = "https://"
+		mockPrometheuServicesUrl = "localhost:9090"
+		proxyServicesUrl         = "localhost:8090"
 
-	const testPrometheusQuery = "sum(http_requests_total{method=\"GET\"} offset 5m)"
-	const testStep = "15s"
+		testPrometheusQuery = "sum(http_requests_total{method=\"GET\"} offset 5m)"
+		testStep            = "15s"
+
+		caCert = "/tls/tls.crt"
+	)
 
 	var mockPrometheusService *http.Server
-
+	var client *http.Client
 	BeforeEach(func() {
+		caCert, err := ioutil.ReadFile(caCert)
+		if err != nil {
+			log.Fatal(err)
+		}
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCert)
+		client = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					RootCAs: caCertPool,
+				},
+			},
+		}
+
 		// setup mock prometheus service
 		mockPrometheusServiceMux := http.NewServeMux()
 		mockPrometheusServiceMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -68,7 +89,7 @@ var _ = Describe("Prometheus Proxy Test", func() {
 		}
 	})
 
-	It("should proxy http requests to the promeheus service as it was received", func() {
+	It("should proxy http requests to the prometheus service as it was received", func() {
 		http_proxy_url, err := url.Parse(httpScheme + proxyServicesUrl)
 		Expect(err).NotTo(HaveOccurred())
 		http_proxy_url.Path = "/api/v1/query_range"
@@ -85,7 +106,7 @@ var _ = Describe("Prometheus Proxy Test", func() {
 		req_query.Add("end", end)
 		req_query.Add("step", testStep)
 
-		client := &http.Client{}
+		log.Infof("Making request to: %v", req.URL.String())
 		resp, err := client.Do(req)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(200))
