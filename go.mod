@@ -3,8 +3,6 @@ module github.com/tigera/prometheus-service
 go 1.15
 
 require (
-	// This is git hash for tag jose 1.1
-	github.com/SermoDigital/jose v0.9.2-0.20161205224733-f6df55f235c2
 	github.com/emicklei/go-restful v2.15.0+incompatible // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.19.6 // indirect
@@ -12,15 +10,13 @@ require (
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mailru/easyjson v0.7.7 // indirect
-	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0
-	github.com/projectcalico/apiserver v0.0.0-20210423155446-68f31180801c
+	github.com/projectcalico/apiserver v0.0.0-20210423155446-68f31180801c // indirect
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/prometheus/common v0.29.0 // indirect
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
-	github.com/tigera/api v0.0.0-20211122222922-3f5da5bfedfa
 	github.com/tigera/lma v0.0.0-20211123193726-8662cc81ed82
 	golang.org/x/net v0.0.0-20210614182718-04defd469f4e // indirect
 	golang.org/x/sys v0.0.0-20210616094352-59db8d763f22 // indirect
@@ -35,7 +31,7 @@ require (
 
 replace (
 	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20211101214309-ba6e8ef44536
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211102141335-86ba0f7e2557
+	github.com/projectcalico/libcalico-go => github.com/projectcalico/libcalico-go v1.7.2-0.20211112232635-2960718561b8
 
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.0-rc.0
