@@ -310,6 +310,7 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 		//   channel before sending in OnDatastoreUpdate.
 		// - We do our receives and sends in the same select block so that we never block a send op on a receive op
 		//   or vice versa.
+		thisIsARetry := false
 		select {
 		case <-ctx.Done():
 			logrus.Info("SecondaryIfaceManager stopping, context canceled.")
@@ -330,6 +331,7 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 			backoffC = nil
 			backoffTimer = nil
 			logrus.Warn("Retrying AWS resync after backoff.")
+			thisIsARetry = true
 			m.opRecorder.RecordOperation("aws-retry")
 		}
 
@@ -340,9 +342,11 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 			response, err = m.resync(ctx)
 			m.healthAgg.Report(healthNameAWSInSync, &health.HealthReport{Ready: err == nil})
 			if err != nil {
-				logrus.WithError(err).Error("Failed to resync with AWS. Will retry after backoff.")
+				logrus.WithError(err).Warning("Failed to resync with AWS. Will retry after backoff.")
 				backoffTimer = backoffMgr.Backoff()
 				backoffC = backoffTimer.C()
+			} else if thisIsARetry {
+				logrus.Info("Retry successful, now in sync with AWS.")
 			}
 			if response == nil {
 				responseC = nil
@@ -382,6 +386,7 @@ func (m *SecondaryIfaceProvisioner) OnDatastoreUpdate(snapshot DatastoreState) {
 }
 
 var errResyncNeeded = errors.New("resync needed")
+var errStaleRead = errors.New("AWS API returned stale data")
 
 func (m *SecondaryIfaceProvisioner) resync(ctx context.Context) (*LocalAWSNetworkState, error) {
 	var awsResyncErr error
@@ -409,7 +414,6 @@ func (m *SecondaryIfaceProvisioner) resync(ctx context.Context) (*LocalAWSNetwor
 			logrus.Debug("Restarting resync after modifying AWS state.")
 			continue
 		} else if awsResyncErr != nil {
-			logrus.WithError(awsResyncErr).Warn("Failed to resync AWS subnet state.")
 			m.cachedEC2Client = nil // Maybe something wrong with client?
 			break
 		}
@@ -514,7 +518,6 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 		logrus.Debug("No new AWS IPs to program")
 		return m.calculateResponse(awsSnapshot)
 	}
-	logrus.WithField("numNewRoutes", len(subnetCalicoRoutesNotInAWS)).Info("Need to program new AWS IPs")
 
 	if m.orphanENIResyncNeeded {
 		// Look for and attach any AWS interfaces that belong to this node but that are not already attached.
@@ -581,6 +584,30 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 	if errors.Is(err, errResyncNeeded) {
 		// This is the mainline after we assign an IP, avoid doing a full resync and just reload the snapshot.
 		awsSnapshot, _, err = m.loadAWSENIsState()
+
+		// The AWS API is eventually consistent, meaning that the updates we just made may not show up in the
+		// new snapshot.  Verify the snapshot before we accept it.  We've also seen AWS lose writes, for example,
+		// if we unassign an IP and then assign the same IP 30s later, the assign may get lost.
+		missingRoutes := m.findRoutesWithNoAWSAddr(awsSnapshot, localSubnetsByID)
+		missingRoutesOurSubnet := filterRoutesByAWSSubnet(missingRoutes, bestSubnetID)
+		unusedAWSIPs := m.findUnusedAWSIPs(awsSnapshot)
+		if len(missingRoutesOurSubnet) == 0 && unusedAWSIPs.Len() == 0 {
+			logrus.Debug("Read back good AWS state.")
+			err = nil
+		} else {
+			var missingIPs []string
+			for _, r := range missingRoutesOurSubnet {
+				missingIPs = append(missingIPs, r.Dst)
+			}
+			var extraIPs []string
+			unusedAWSIPs.Iter(func(item interface{}) error {
+				extraIPs = append(extraIPs, item.(ip.Addr).String())
+				return nil
+			})
+			logrus.WithFields(logrus.Fields{"missingIPs": missingIPs, "extraIPs": extraIPs}).Info(
+				"After updating AWS, AWS API returned stale data, triggering another resync to re-check the state.")
+			err = errStaleRead
+		}
 	}
 	if err != nil {
 		return nil, err
@@ -840,13 +867,19 @@ func (m *SecondaryIfaceProvisioner) loadAWSENIsState() (s *eniSnapshot, r *eniRe
 // findUnusedAWSIPs scans the AWS state for secondary IPs that are not assigned in Calico IPAM.
 func (m *SecondaryIfaceProvisioner) findUnusedAWSIPs(awsState *eniSnapshot) set.Set /* ip.Addr */ {
 	awsIPsToRelease := set.New()
+	summary := map[string][]string{}
 	for addr, eniID := range awsState.eniIDByIP {
 		if _, ok := m.ds.LocalAWSRoutesByDst[addr]; !ok {
-			logrus.WithFields(logrus.Fields{
-				"addr":  addr,
-				"nidID": eniID,
-			}).Info("AWS Secondary IP no longer needed")
 			awsIPsToRelease.Add(addr)
+			summary[eniID] = append(summary[eniID], addr.Addr().String())
+		}
+	}
+	if len(summary) > 0 && logrus.GetLevel() >= logrus.InfoLevel {
+		for eni, addrs := range summary {
+			logrus.WithFields(logrus.Fields{
+				"eniID": eni,
+				"addrs": strings.Join(addrs, ","),
+			}).Info("Found unneeded AWS secondary IPs.")
 		}
 	}
 	return awsIPsToRelease
@@ -896,6 +929,7 @@ func (m *SecondaryIfaceProvisioner) findENIsWithNoPool(awsENIState *eniSnapshot)
 // findRoutesWithNoAWSAddr Scans our local Calico workload routes for routes with no corresponding AWS IP.
 func (m *SecondaryIfaceProvisioner) findRoutesWithNoAWSAddr(awsENIState *eniSnapshot, localSubnetsByID map[string]ec2types.Subnet) []*proto.RouteUpdate {
 	var missingRoutes []*proto.RouteUpdate
+	var missingIPSummary []string
 	for addr, route := range m.ds.LocalAWSRoutesByDst {
 		if _, ok := localSubnetsByID[route.AwsSubnetId]; !ok {
 			logrus.WithFields(logrus.Fields{
@@ -920,11 +954,12 @@ func (m *SecondaryIfaceProvisioner) findRoutesWithNoAWSAddr(awsENIState *eniSnap
 			}).Debug("Local workload IP is already present on one of our AWS ENIs.")
 			continue
 		}
-		logrus.WithFields(logrus.Fields{
-			"addr":      addr,
-			"awsSubnet": route.AwsSubnetId,
-		}).Info("Local workload IP needs to be added to AWS ENI.")
 		missingRoutes = append(missingRoutes, route)
+		missingIPSummary = append(missingIPSummary, strings.TrimSuffix(route.Dst, "/32"))
+	}
+	if len(missingIPSummary) > 0 {
+		logrus.WithField("addrs", missingIPSummary).Info(
+			"Found local workload IPs that should be added to AWS ENI(s).")
 	}
 	return missingRoutes
 }
@@ -1423,7 +1458,10 @@ func (m *SecondaryIfaceProvisioner) assignSecondaryIPsToENIs(resyncState *eniRes
 			fatalErr = fmt.Errorf("failed to assign workload IPs to secondary ENI: %w", err)
 			continue // Carry on trying to assign more IPs.
 		}
-		logrus.WithFields(logrus.Fields{"eniID": eniID, "addrs": ipAddrs}).Info("Assigned IPs to secondary ENI.")
+		logrus.WithFields(logrus.Fields{
+			"eniID": eniID,
+			"addrs": strings.Join(ipAddrs, ","),
+		}).Info("Assigned IPs to secondary ENI.")
 	}
 
 	if len(remainingRoutes) > 0 {
