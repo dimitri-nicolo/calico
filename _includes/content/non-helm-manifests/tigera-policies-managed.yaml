@@ -163,7 +163,7 @@ spec:
 ---
 
 # This manifest creates a network policy to allow traffic to access the
-# Prometheus (TCP port 9090).
+# Prometheus (TCP port 9095).
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
@@ -180,7 +180,7 @@ spec:
   - action: Allow
     protocol: TCP
     destination:
-      ports: [9090]
+      ports: [9095]
   egress:
 {%- if include.containerOrchestrationPlatform == "openshift" %}
   - action: Allow
@@ -226,7 +226,7 @@ spec:
 ---
 
 # This manifest creates a network policy to allow traffic to access through tigera-prometheus-api.
-# Prometheus (TCP port 9090).
+# Prometheus (TCP port 9095).
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
@@ -244,7 +244,7 @@ spec:
   - action: Allow
     protocol: TCP
     destination:
-      ports: [9090]
+      ports: [9095]
   egress:
 {%- if include.containerOrchestrationPlatform == "openshift" %}
   - action: Allow
@@ -269,7 +269,7 @@ spec:
     protocol: TCP
     destination:
       selector: prometheus == "calico-node-prometheus"
-      ports: [9090]
+      ports: [9095]
 ---
 
 # This manifest creates a network policy to allow the prometheus-operator
@@ -461,6 +461,13 @@ spec:
         # By default, kubernetes api server listens on [12388, 6443, 443]. If Api server is customized to listen
         # on different port, Include the port number below. DockerEE uses port 12388 for kubernetes apiserver service.
         ports: [443, 6443, 12388]
+    - action: Allow
+      protocol: TCP
+      destination:
+        # This rule allows guardian to communicate with tigera-prometheus.
+        selector: prometheus == "calico-node-prometheus"
+        namespaceSelector: projectcalico.org/name == 'tigera-prometheus'
+        ports: [ 9095 ]
     # Pass to subsequent tiers for further enforcement
     - action: Pass
 

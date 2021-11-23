@@ -150,6 +150,12 @@ spec:
       selector: k8s-app == 'kube-dns'
       ports: [53]
 {%- endif %}
+  - action: Allow
+    protocol: TCP
+    destination:
+      selector: prometheus == "calico-node-prometheus"
+      namespaceSelector: projectcalico.org/name == 'tigera-prometheus'
+      ports: [9095]
 ---
 
 # Allow internal communication from compliance-benchmarker, compliance-controller, compliance-snapshotter, compliance-reporter
@@ -310,7 +316,7 @@ spec:
       selector: k8s-app == 'kube-dns'
       ports: [53]
 {%- endif %}
-  # This rule allows all kind of egress traffic from AlertManager. 
+  # This rule allows all kind of egress traffic from AlertManager.
   # recommended to customize egress flow, based on configuration.
   - action: Allow
     protocol: TCP
@@ -373,7 +379,7 @@ spec:
 ---
 
 # This manifest creates a network policy to allow traffic to access the
-# Prometheus (TCP port 9090).
+# Prometheus (TCP port 9095).
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
@@ -390,7 +396,7 @@ spec:
   - action: Allow
     protocol: TCP
     destination:
-      ports: [9090]
+      ports: [9095]
   egress:
 {%- if include.containerOrchestrationPlatform == "openshift" %}
   - action: Allow
@@ -433,6 +439,13 @@ spec:
       # Egress access to alertmanager
       selector: app == 'alertmanager' && alertmanager == 'calico-node-alertmanager'
       ports: [9093]
+  - action: Allow
+    protocol: TCP
+    destination:
+      # This egress rule allows to communicate with tigera-dex.
+      namespaceSelector: projectcalico.org/name == 'tigera-dex'
+      selector: k8s-app == 'tigera-dex'
+      ports: [5556]
 ---
 
 # This manifest creates a network policy to allow traffic to access through tigera-prometheus-api.
@@ -454,7 +467,7 @@ spec:
   - action: Allow
     protocol: TCP
     destination:
-      ports: [9090]
+      ports: [9095]
   egress:
 {%- if include.containerOrchestrationPlatform == "openshift" %}
   - action: Allow
@@ -479,7 +492,7 @@ spec:
     protocol: TCP
     destination:
       selector: prometheus == "calico-node-prometheus"
-      ports: [9090]
+      ports: [9095]
 ---
 
 # This manifest creates a network policy to allow the prometheus-operator
@@ -1093,6 +1106,13 @@ spec:
       source:
         selector: k8s-app == 'tigera-packetcapture'
         namespaceSelector: name == 'tigera-packetcapture'
+    - action: Allow
+      destination:
+        ports: [ 5556 ]
+      protocol: TCP
+      source:
+        selector: prometheus == 'calico-node-prometheus'
+        namespaceSelector: name == 'tigera-prometheus'
   egress:
 {%- if include.containerOrchestrationPlatform == "openshift" %}
     - action: Allow
