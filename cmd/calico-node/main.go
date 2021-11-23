@@ -40,7 +40,7 @@ import (
 	"github.com/projectcalico/node/pkg/lifecycle/startup"
 	"github.com/projectcalico/node/pkg/metrics"
 	"github.com/projectcalico/node/pkg/status"
-	"github.com/projectcalico/node/pkg/upgrade"
+	"github.com/projectcalico/node/pkg/winupgrade"
 )
 
 // Create a new flag set.
@@ -53,6 +53,7 @@ var runBPF = flagSet.Bool("bpf", false, "Run BPF debug tool")
 var runInit = flagSet.Bool("init", false, "Do privileged initialisation of a new node (mount file systems etc).")
 var runStartup = flagSet.Bool("startup", false, "Do non-privileged start-up routine.")
 var runWinUpgrade = flagSet.Bool("upgrade-windows", false, "Run Windows upgrade service.")
+var runShouldInstallWindowsUpgrade = flagSet.Bool("should-install-windows-upgrade", false, "Check if Windows upgrade service should be installed.")
 var runShutdown = flagSet.Bool("shutdown", false, "Do shutdown routine.")
 var monitorAddrs = flagSet.Bool("monitor-addresses", false, "Monitor change in node IP addresses")
 var runAllocateTunnelAddrs = flagSet.Bool("allocate-tunnel-addrs", false, "Configure tunnel addresses for this node")
@@ -151,7 +152,10 @@ func main() {
 		shutdown.Run()
 	} else if *runWinUpgrade {
 		logrus.SetFormatter(&logutils.Formatter{Component: "windows-upgrade"})
-		upgrade.Run()
+		winupgrade.Run()
+	} else if *runShouldInstallWindowsUpgrade {
+		logrus.SetFormatter(&logutils.Formatter{Component: "should-install-windows-upgrade"})
+		winupgrade.ShouldInstallUpgradeService()
 	} else if *monitorAddrs {
 		logrus.SetFormatter(&logutils.Formatter{Component: "monitor-addresses"})
 		startup.ConfigureLogging()

@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package upgrade
+package winupgrade
 
 import (
 	"bytes"
@@ -39,19 +39,25 @@ import (
 )
 
 const (
-	CalicoKubeConfigFile     = "calico-kube-config"
-	CalicoUpgradeDir         = "c:\\CalicoUpgrade"
-	CalicoBaseDir            = "c:\\CalicoWindows"
-	EnterpriseBaseDir        = "c:\\TigeraCalico"
-	CalicoUpgradeScriptLabel = "projectcalico.org/CalicoWindowsUpgradeScript"
-	CalicoVersionAnnotation  = "projectcalico.org/CalicoWindowsVersion"
+	CalicoKubeConfigFile    = "calico-kube-config"
+	CalicoUpgradeDir        = "c:\\CalicoUpgrade"
+	EnterpriseDir           = "TigeraCalico"
+	CalicoUpgradeLabel      = "projectcalico.org/windows-upgrade"
+	CalicoUpgradeInProgress = "in-progress"
+	CalicoVersionAnnotation = "projectcalico.org/version"
+	CalicoVariantAnnotation = "projectcalico.org/variant"
+	CalicoUpgradeScript     = "calico-upgrade.ps1"
 )
 
-func getVersionString() string {
+func getVariant() string {
 	if runningEnterprise() {
-		return "Enterprise-" + startup.CNXRELEASEVERSION
+		return "TigeraSecureEnterprise"
 	}
-	return "Calico-" + startup.CNXRELEASEVERSION
+	return "Calico"
+}
+
+func getVersion() string {
+	return startup.CNXRELEASEVERSION
 }
 
 // This file contains the upgrade processing for the calico/node.  This
@@ -60,11 +66,12 @@ func getVersionString() string {
 // - Uninstalling current Calico Windows (OSS or Enterprise) running on the node.
 // - Install new version of Calico Windows.
 func Run() {
-	version := getVersionString()
+	version := getVersion()
+	variant := getVariant()
 
 	// Determine the name for this node.
 	nodeName := utils.DetermineNodeName()
-	log.Infof("Starting Calico upgrade service on node: %s. Version: %s, baseDir: %s", nodeName, version, baseDir())
+	log.Infof("Starting Calico upgrade service on node: %s. Version: %s, Variant: %s, baseDir: %s", nodeName, version, variant, baseDir())
 
 	config, err := clientcmd.BuildConfigFromFlags("", kubeConfigFile())
 	if err != nil {
@@ -81,19 +88,7 @@ func Run() {
 		log.WithError(err).Fatal("Failed to interact with powershell")
 	}
 
-	// Configure node labels.
-	// Set Version annotation to indicate what is running on this node.
-	node := k8snode(nodeName)
-	err = node.addRemoveNodeAnnotations(clientSet,
-		map[string]string{CalicoVersionAnnotation: version},
-		[]string{})
-	if err != nil {
-		log.WithError(err).Fatal("Failed to configure node labels")
-	}
-	log.Infof("Service setting version annotation on node %s", version)
-
 	ctx, cancel := context.WithCancel(context.Background())
-
 	go loop(ctx, clientSet, nodeName)
 
 	// Trap cancellation on Windows. https://golang.org/pkg/os/signal/
@@ -112,29 +107,7 @@ func Run() {
 
 func loop(ctx context.Context, cs kubernetes.Interface, nodeName string) {
 	ticker := time.NewTicker(10 * time.Second)
-
-	getScript := func() (string, error) {
-		node, err := cs.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
-		if err != nil {
-			// Treat error as the label does not exist.
-			// Will retry by outer loop.
-			log.WithError(err).Error("Unable to get node resources")
-			return "", nil
-		}
-
-		fileName, ok := node.Labels[CalicoUpgradeScriptLabel]
-		if !ok {
-			return "", nil
-		}
-
-		script := filepath.Join(CalicoUpgradeDir, fileName)
-
-		if _, err := os.Stat(script); err == nil || os.IsExist(err) {
-			return script, nil
-		} else {
-			return script, err
-		}
-	}
+	upgradeScript := filepath.Join(CalicoUpgradeDir, CalicoUpgradeScript)
 
 	for {
 		select {
@@ -142,19 +115,22 @@ func loop(ctx context.Context, cs kubernetes.Interface, nodeName string) {
 			ticker.Stop()
 			return
 		case <-ticker.C:
-			script, err := getScript()
+			upgrade, err := upgradeTriggered(ctx, cs, nodeName)
 			if err != nil {
-				log.Info("Calico upgrade script is not available yet.")
-				// Use fast ticker
-				ticker.Stop()
-				ticker = time.NewTicker(3 * time.Second)
+				log.WithError(err).Error("Failed to check node upgrade status, will retry")
 				break
 			}
-			if len(script) == 0 {
-				// No upgrade script label yet, continue
-				log.Info("Node's upgrade script label does not exist yet")
+			// If upgrade not triggered yet just silently continue.
+			if !upgrade {
 				break
 			}
+
+			if !pathExists(upgradeScript) {
+				log.Info("Upgrade triggered but upgrade artifacts not ready yet, will retry")
+				break
+			}
+
+			log.Info("Calico upgrade process is starting")
 
 			// Before executing the script, verify host path volume mount.
 			err = verifyPodImageWithHostPathVolume(cs, nodeName, CalicoUpgradeDir)
@@ -169,7 +145,7 @@ func loop(ctx context.Context, cs kubernetes.Interface, nodeName string) {
 			}
 
 			time.Sleep(3 * time.Second)
-			err = execScript(script)
+			err = execScript(upgradeScript)
 			if err != nil {
 				log.WithError(err).Fatal("Failed to upgrade to new version")
 			}
@@ -185,6 +161,33 @@ func loop(ctx context.Context, cs kubernetes.Interface, nodeName string) {
 	}
 }
 
+func upgradeTriggered(ctx context.Context, cs kubernetes.Interface, nodeName string) (bool, error) {
+	node, err := cs.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
+	// Return error getting node info.
+	if err != nil {
+		return false, fmt.Errorf("Could not get node resource: %w", err)
+	}
+
+	upgradeStatus, ok := node.Labels[CalicoUpgradeLabel]
+	// Upgrade label doesn't exist yet.
+	if !ok {
+		return false, nil
+	}
+	if upgradeStatus != CalicoUpgradeInProgress {
+		return false, fmt.Errorf("Unexpected upgrade status label value: %v", upgradeStatus)
+	}
+
+	return true, nil
+}
+
+func pathExists(path string) bool {
+	if _, err := os.Stat(path); err != nil {
+		return false
+	}
+
+	return true
+}
+
 // Return the base directory for Calico upgrade service.
 func baseDir() string {
 	dir := filepath.Dir(os.Args[0])
@@ -193,7 +196,7 @@ func baseDir() string {
 
 // Return if the monitor service is running as part of Enterprise installation.
 func runningEnterprise() bool {
-	return baseDir() == EnterpriseBaseDir
+	return strings.Contains(baseDir(), EnterpriseDir)
 }
 
 // Return kubeconfig file path for Calico
@@ -204,7 +207,7 @@ func kubeConfigFile() string {
 func uninstall() error {
 	path := filepath.Join(baseDir(), "uninstall-calico.ps1")
 	log.Infof("Start uninstall script %s\n", path)
-	stdout, stderr, err := powershell(path)
+	stdout, stderr, err := powershell(path + " -ExceptUpgradeService $true")
 	fmt.Println(stdout, stderr)
 	if err != nil {
 		return err
@@ -292,13 +295,51 @@ func verifyImagesSharePathPrefix(first, second string) error {
 }
 
 func verifyPodImageWithHostPathVolume(cs kubernetes.Interface, nodeName string, hostPath string) error {
-	// Get pod list for all pods on this node.
-	list, err := cs.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{
-		FieldSelector: "spec.nodeName=" + nodeName,
-	})
+	// Get pod list for calico-system pods.
+	list, err := cs.CoreV1().Pods("calico-system").List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
+
+	// Find the calico-node pod.
+	var calicoPod v1.Pod
+	var found bool
+	for _, pod := range list.Items {
+		if strings.HasPrefix(pod.Name, "calico-node") && pod.Spec.ServiceAccountName == "calico-node" {
+			calicoPod = pod
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("could not find a calico-node pod")
+	}
+
+	// Ensure the pod is owned by the calico-node daemonset.
+	var ownedByCalicoDs bool
+	for _, ownerRef := range calicoPod.ObjectMeta.OwnerReferences {
+		if ownerRef.Kind == "DaemonSet" && ownerRef.Name == "calico-node" && *ownerRef.Controller {
+			ownedByCalicoDs = true
+		}
+	}
+	if !ownedByCalicoDs {
+		return fmt.Errorf("calico-node pod not owned by calico-node daemonset")
+	}
+
+	// Get the calico node nodeImage
+	var nodeImage string
+	for _, c := range calicoPod.Spec.Containers {
+		if c.Name == "calico-node" {
+			nodeImage = c.Image
+			break
+		}
+	}
+	if nodeImage == "" {
+		return fmt.Errorf("calico-node container image not found")
+	}
+
+	log.Infof("Found node container image is %v", nodeImage)
 
 	hasHostPathVolume := func(pod v1.Pod, hostPath string) bool {
 		for _, v := range pod.Spec.Volumes {
@@ -313,36 +354,37 @@ func verifyPodImageWithHostPathVolume(cs kubernetes.Interface, nodeName string, 
 		return false
 	}
 
-	// Get the calico node image
-	nodeDs := daemonset("calico-node")
-	nodeImage, err := nodeDs.getContainerImage(cs, "calico-system", "calico-node")
+	var podWithHostPath v1.Pod
+	count := 0
+	for _, pod := range list.Items {
+		// Only look at pods on this node.
+		if pod.Spec.NodeName != nodeName {
+			continue
+		}
+		if hasHostPathVolume(pod, hostPath) {
+			podWithHostPath = pod
+			count++
+		}
+	}
+
+	if count == 0 {
+		return fmt.Errorf("Failed to find pod with expected host path")
+	}
+
+	if count > 1 {
+		return fmt.Errorf("More than one pod has expected host path")
+	}
+
+	if len(podWithHostPath.Spec.Containers) != 1 {
+		return fmt.Errorf("Pod with hostpath volume has more than one container")
+	}
+	upgradeImage := podWithHostPath.Spec.Containers[0].Image
+	log.Infof("Found upgrade image: %v", upgradeImage)
+	err = verifyImagesSharePathPrefix(nodeImage, upgradeImage)
 	if err != nil {
 		return err
 	}
-	log.Infof("Found node container image is %v\n", nodeImage)
-
-	// Walk through pods
-	for _, pod := range list.Items {
-		if !hasHostPathVolume(pod, hostPath) {
-			continue
-		}
-
-		if len(pod.Spec.Containers) != 1 {
-			return fmt.Errorf("Pod with hostpath volume has more than one container")
-		}
-
-		upgradeImage := pod.Spec.Containers[0].Image
-		log.Infof("Found upgrade image: %v", upgradeImage)
-
-		err = verifyImagesSharePathPrefix(nodeImage, upgradeImage)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	}
-
-	return fmt.Errorf("Failed to find calico-windows-upgrade pod")
+	return nil
 }
 
 func powershell(args ...string) (string, string, error) {
