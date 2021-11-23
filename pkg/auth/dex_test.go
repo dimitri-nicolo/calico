@@ -2,16 +2,17 @@ package auth_test
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"github.com/stretchr/testify/mock"
+
 	"github.com/tigera/lma/pkg/auth"
+	"github.com/tigera/lma/pkg/auth/testing"
 
 	"github.com/projectcalico/apiserver/pkg/authentication"
 )
@@ -19,12 +20,13 @@ import (
 var _ = Describe("Test dex authenticator and options", func() {
 	const (
 		iss            = "https://127.0.0.1:9443/dex"
-		exp            = 9600964803 //Very far in the future
+		name           = "Gerrit"
 		email          = "rene@tigera.io"
 		usernamePrefix = "my-user:"
 		usernameClaim  = "email"
 		clientID       = "tigera-manager"
 		prefixedGroup  = "my-group:admins"
+		group          = "admins"
 		prefixedUser   = "my-user:rene@tigera.io"
 
 		badIss      = "https:/accounts.google.com"
@@ -34,6 +36,7 @@ var _ = Describe("Test dex authenticator and options", func() {
 
 	var dex authentication.Authenticator
 	var err error
+	var jwt *testing.FakeJWT
 	var keySet *testKeySet
 
 	BeforeEach(func() {
@@ -49,49 +52,49 @@ var _ = Describe("Test dex authenticator and options", func() {
 	})
 
 	It("should authenticate a valid dex user", func() {
-		hdr, payload := authHeader(iss, email, clientID, exp)
-		keySet.On("VerifySignature", mock.Anything, strings.TrimSpace(strings.TrimPrefix(hdr, "Bearer "))).Return(payload, nil)
-		usr, stat, err := dex.Authenticate(hdr)
+		jwt = testing.NewFakeJWT(iss, name).WithClaim(auth.ClaimNameEmail, email).WithClaim(auth.ClaimNameAud, clientID).WithClaim(auth.ClaimNameGroups, []string{group})
+		keySet.On("VerifySignature", mock.Anything, strings.TrimSpace(jwt.ToString())).Return([]byte(jwt.PayloadJSON), nil)
+		usr, stat, err := dex.Authenticate(jwt.BearerTokenHeader())
 		Expect(err).NotTo(HaveOccurred())
 		Expect(usr).NotTo(BeNil())
 		Expect(usr.GetName()).To(Equal(prefixedUser))
 		Expect(usr.GetGroups()[0]).To(Equal(prefixedGroup))
-		Expect(usr.GetExtra()["iss"]).To(Equal([]string{iss}))
-		Expect(usr.GetExtra()["sub"]).To(Equal([]string{"ChUxMDkxMzE"}))
+		Expect(usr.GetExtra()[auth.ClaimNameIss]).To(Equal([]string{iss}))
+		Expect(usr.GetExtra()[auth.ClaimNameSub]).To(Equal([]string{name}))
 		Expect(stat).To(Equal(200))
 	})
 
 	It("should reject an invalid issuer", func() {
-		hdr, payload := authHeader(badIss, email, clientID, exp)
-		keySet.On("VerifySignature", mock.Anything, strings.TrimSpace(strings.TrimPrefix(hdr, "Bearer "))).Return(payload, nil)
-		usr, stat, err := dex.Authenticate(hdr)
+		jwt = testing.NewFakeJWT(badIss, name).WithClaim(auth.ClaimNameEmail, email).WithClaim(auth.ClaimNameAud, clientID)
+		keySet.On("VerifySignature", mock.Anything, jwt.ToString()).Return([]byte(jwt.PayloadJSON), nil)
+		usr, stat, err := dex.Authenticate(jwt.BearerTokenHeader())
 		Expect(err).NotTo(BeNil())
 		Expect(usr).To(BeNil())
 		Expect(stat).To(Equal(421))
 	})
 
 	It("should reject an invalid clientID", func() {
-		hdr, payload := authHeader(iss, email, badClientID, exp)
-		keySet.On("VerifySignature", mock.Anything, strings.TrimSpace(strings.TrimPrefix(hdr, "Bearer "))).Return(payload, nil)
-		usr, stat, err := dex.Authenticate(hdr)
+		jwt = testing.NewFakeJWT(iss, name).WithClaim(auth.ClaimNameEmail, email).WithClaim(auth.ClaimNameAud, badClientID)
+		keySet.On("VerifySignature", mock.Anything, jwt.ToString()).Return([]byte(jwt.PayloadJSON), nil)
+		usr, stat, err := dex.Authenticate(jwt.BearerTokenHeader())
 		Expect(err).NotTo(BeNil())
 		Expect(usr).To(BeNil())
 		Expect(stat).To(Equal(401))
 	})
 
 	It("should reject an expired token", func() {
-		hdr, payload := authHeader(iss, email, clientID, badExp)
-		keySet.On("VerifySignature", mock.Anything, strings.TrimSpace(strings.TrimPrefix(hdr, "Bearer "))).Return(payload, nil)
-		usr, stat, err := dex.Authenticate(hdr)
+		jwt = testing.NewFakeJWT(iss, name).WithClaim(auth.ClaimNameEmail, email).WithClaim(auth.ClaimNameAud, clientID).WithClaim(auth.ClaimNameExp, badExp)
+		keySet.On("VerifySignature", mock.Anything, jwt.ToString()).Return([]byte(jwt.PayloadJSON), nil)
+		usr, stat, err := dex.Authenticate(jwt.BearerTokenHeader())
 		Expect(err).NotTo(BeNil())
 		Expect(usr).To(BeNil())
 		Expect(stat).To(Equal(401))
 	})
 
 	It("should reject an invalid signature", func() {
-		hdr, _ := authHeader(iss, email, clientID, exp)
-		keySet.On("VerifySignature", mock.Anything, strings.TrimSpace(strings.TrimPrefix(hdr, "Bearer "))).Return(nil, errors.New("sig error"))
-		usr, stat, err := dex.Authenticate(hdr)
+		jwt = testing.NewFakeJWT(iss, name).WithClaim(auth.ClaimNameEmail, email).WithClaim(auth.ClaimNameAud, clientID)
+		keySet.On("VerifySignature", mock.Anything, jwt.ToString()).Return(nil, errors.New("sig error"))
+		usr, stat, err := dex.Authenticate(jwt.BearerTokenHeader())
 		Expect(err).NotTo(BeNil())
 		Expect(usr).To(BeNil())
 		Expect(stat).To(Equal(401))
@@ -101,18 +104,19 @@ var _ = Describe("Test dex authenticator and options", func() {
 var _ = Describe("Test dex username prefixes", func() {
 	const (
 		iss      = "https://127.0.0.1:9443/dex"
-		exp      = 9600964803 //Very far in the future
 		email    = "rene@tigera.io"
+		name     = "Rene Dekker"
 		clientID = "tigera-manager"
 	)
 
-	hdr, payload := authHeader(iss, email, clientID, exp)
+	jwt := testing.NewFakeJWT(iss, name).WithClaim(auth.ClaimNameEmail, email).WithClaim(auth.ClaimNameAud, clientID)
+
 	var opts []auth.DexOption
 
 	BeforeEach(func() {
 
 		keySet := &testKeySet{}
-		keySet.On("VerifySignature", mock.Anything, strings.TrimSpace(strings.TrimPrefix(hdr, "Bearer "))).Return(payload, nil)
+		keySet.On("VerifySignature", mock.Anything, jwt.ToString()).Return([]byte(jwt.PayloadJSON), nil)
 		opts = []auth.DexOption{
 			auth.WithGroupsClaim("groups"),
 			auth.WithGroupsPrefix("my-groups"),
@@ -125,7 +129,7 @@ var _ = Describe("Test dex username prefixes", func() {
 		opts = append(opts, auth.WithUsernamePrefix(prefix))
 		dx, err := auth.NewDexAuthenticator(iss, clientID, "name", opts...)
 		Expect(err).NotTo(HaveOccurred())
-		usr, stat, err := dx.Authenticate(hdr)
+		usr, stat, err := dx.Authenticate(jwt.BearerTokenHeader())
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(usr).NotTo(BeNil())
@@ -138,7 +142,7 @@ var _ = Describe("Test dex username prefixes", func() {
 		opts = append(opts, auth.WithUsernamePrefix(prefix))
 		dx, err := auth.NewDexAuthenticator(iss, clientID, "name", opts...)
 		Expect(err).NotTo(HaveOccurred())
-		usr, stat, err := dx.Authenticate(hdr)
+		usr, stat, err := dx.Authenticate(jwt.BearerTokenHeader())
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(usr).NotTo(BeNil())
@@ -151,7 +155,7 @@ var _ = Describe("Test dex username prefixes", func() {
 		opts = append(opts, auth.WithUsernamePrefix(prefix))
 		dx, err := auth.NewDexAuthenticator(iss, clientID, "name", opts...)
 		Expect(err).NotTo(HaveOccurred())
-		usr, stat, err := dx.Authenticate(hdr)
+		usr, stat, err := dx.Authenticate(jwt.BearerTokenHeader())
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(usr).NotTo(BeNil())
@@ -164,7 +168,7 @@ var _ = Describe("Test dex username prefixes", func() {
 		opts = append(opts, auth.WithUsernamePrefix(prefix))
 		dx, err := auth.NewDexAuthenticator(iss, clientID, "email", opts...)
 		Expect(err).NotTo(HaveOccurred())
-		usr, stat, err := dx.Authenticate(hdr)
+		usr, stat, err := dx.Authenticate(jwt.BearerTokenHeader())
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(usr).NotTo(BeNil())
@@ -177,7 +181,7 @@ var _ = Describe("Test dex username prefixes", func() {
 		opts = append(opts, auth.WithUsernamePrefix(prefix))
 		dx, err := auth.NewDexAuthenticator(iss, clientID, "email", opts...)
 		Expect(err).NotTo(HaveOccurred())
-		usr, stat, err := dx.Authenticate(hdr)
+		usr, stat, err := dx.Authenticate(jwt.BearerTokenHeader())
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(usr).NotTo(BeNil())
@@ -190,7 +194,7 @@ var _ = Describe("Test dex username prefixes", func() {
 		opts = append(opts, auth.WithUsernamePrefix(prefix))
 		dx, err := auth.NewDexAuthenticator(iss, clientID, "email", opts...)
 		Expect(err).NotTo(HaveOccurred())
-		usr, stat, err := dx.Authenticate(hdr)
+		usr, stat, err := dx.Authenticate(jwt.BearerTokenHeader())
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(usr).NotTo(BeNil())
@@ -201,7 +205,7 @@ var _ = Describe("Test dex username prefixes", func() {
 	It("should prepend the right prefix to the username if no prefix option was specified", func() {
 		dx, err := auth.NewDexAuthenticator(iss, clientID, "name", opts...)
 		Expect(err).NotTo(HaveOccurred())
-		usr, stat, err := dx.Authenticate(hdr)
+		usr, stat, err := dx.Authenticate(jwt.BearerTokenHeader())
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(usr).NotTo(BeNil())
@@ -212,7 +216,7 @@ var _ = Describe("Test dex username prefixes", func() {
 	It("should prepend the right prefix to the username if no prefix option was specified (email claim)", func() {
 		dx, err := auth.NewDexAuthenticator(iss, clientID, "email", opts...)
 		Expect(err).NotTo(HaveOccurred())
-		usr, stat, err := dx.Authenticate(hdr)
+		usr, stat, err := dx.Authenticate(jwt.BearerTokenHeader())
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(usr).NotTo(BeNil())
@@ -234,26 +238,4 @@ func (t *testKeySet) VerifySignature(ctx context.Context, jwt string) ([]byte, e
 		return nil, err.(error)
 	}
 	return args.Get(0).([]byte), nil
-}
-
-func authHeader(issuer, email, clientID string, exp int) (string, []byte) {
-	hdrhdr := "eyJhbGciOiJSUzI1NiIsImtpZCI6Ijk3ODM2YzRiMjdmN2M3ZmVjMjk1MTk0NTFkNDc5MmUyNjQ4M2RmYWUifQ" // rs256 header
-	payload := map[string]interface{}{
-		"iss":            issuer,
-		"sub":            "ChUxMDkxMzE",
-		"aud":            clientID,
-		"exp":            exp, //Very far in the future
-		"iat":            1600878403,
-		"nonce":          "35e32c66028243f592cc3103c7c2dfb2",
-		"at_hash":        "jOq0F62t_NE9a3UXtNJkYg",
-		"email":          email,
-		"email_verified": true,
-		"groups": []string{
-			"admins",
-		},
-		"name": "Rene Dekker",
-	}
-	payloadJson, _ := json.Marshal(payload)
-	payloadStr := base64.RawURLEncoding.EncodeToString(payloadJson)
-	return fmt.Sprintf("Bearer %s.%s.%s", hdrhdr, payloadStr, "e30"), payloadJson
 }

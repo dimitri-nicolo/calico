@@ -3,6 +3,8 @@ module github.com/tigera/lma
 go 1.16
 
 require (
+	// This is git hash for tag jose 1.1
+	github.com/SermoDigital/jose v0.9.2-0.20161205224733-f6df55f235c2
 	github.com/coreos/go-oidc v2.1.0+incompatible
 	github.com/go-openapi/runtime v0.19.28
 	github.com/kelseyhightower/envconfig v1.4.0
