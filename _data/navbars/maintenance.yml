@@ -84,6 +84,8 @@ section:
   - title: Prometheus
     path: /maintenance/monitor/prometheus/
     section:
+    - title: Prometheus support
+      path: /maintenance/monitor/support
     - title: Configure Prometheus
       path: /maintenance/monitor/prometheus/prometheus
     - title: Configure Alertmanager
