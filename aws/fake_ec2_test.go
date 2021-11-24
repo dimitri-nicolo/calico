@@ -27,10 +27,13 @@ type fakeEC2 struct {
 
 	Errors testutils.ErrorProducer
 
+	IgnoreNextUnassignPrivateIpAddresses bool
+	IgnoreNextAssignPrivateIpAddresses   bool
+
 	InstancesByID map[string]types.Instance
 	ENIsByID      map[string]types.NetworkInterface
-	SubnetsByID   map[string]types.Subnet
 
+	SubnetsByID   map[string]types.Subnet
 	nextENINum    int
 	nextAttachNum int
 }
@@ -611,6 +614,14 @@ func (f *fakeEC2) AssignPrivateIpAddresses(ctx context.Context, params *ec2.Assi
 		}
 	}
 
+	if f.IgnoreNextAssignPrivateIpAddresses {
+		logrus.Warn("FakeEC2: ignoring AssignPrivateIpAddresses but returning success!")
+		f.IgnoreNextAssignPrivateIpAddresses = false
+		return &ec2.AssignPrivateIpAddressesOutput{
+			// Not currently used so not bothering to fill in
+		}, nil
+	}
+
 	for _, newAddr := range params.PrivateIpAddresses {
 		ENI.PrivateIpAddresses = append(ENI.PrivateIpAddresses, types.NetworkInterfacePrivateIpAddress{
 			Primary:          boolPtr(false),
@@ -667,6 +678,15 @@ func (f *fakeEC2) UnassignPrivateIpAddresses(ctx context.Context, params *ec2.Un
 	if !ok {
 		return nil, errNotFound("UnassignPrivateIpAddresses", "ENI.NotFound")
 	}
+
+	if f.IgnoreNextUnassignPrivateIpAddresses {
+		logrus.Warn("FakeEC2: ignoring UnassignPrivateIpAddresses but returning success!")
+		f.IgnoreNextUnassignPrivateIpAddresses = false
+		return &ec2.UnassignPrivateIpAddressesOutput{
+			// Not currently used so not bothering to fill in
+		}, nil
+	}
+
 	for _, newAddr := range params.PrivateIpAddresses {
 		var updatedAddrs []types.NetworkInterfacePrivateIpAddress
 		found := false

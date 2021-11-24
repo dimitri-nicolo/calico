@@ -606,7 +606,9 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 				return nil
 			})
 			logrus.WithFields(logrus.Fields{"missingIPs": missingIPs, "extraIPs": extraIPs}).Info(
-				"After updating AWS, AWS API returned stale data, triggering another resync to re-check the state.")
+				"After updating AWS, AWS API returned stale data, triggering another resync to " +
+					"re-check the state.")
+			// Dedicated error to trigger backoff as recommended by AWS docs.
 			err = errStaleRead
 		}
 	}

@@ -501,6 +501,51 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_Mainline(t *testing.T)
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseENIAfterWorkloadsDeleted)))
 }
 
+func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_AWSLostAssign(t *testing.T) {
+	sip, fake, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Simulate a silent failure to add an IP.  We've seen these in practice as a result of high churn; likely
+	// due to a race between a slow deletion and a second add of the same IP address.
+	fake.EC2.IgnoreNextAssignPrivateIpAddresses = true
+
+	// Send snapshot with single workload.
+	sip.OnDatastoreUpdate(singleWorkloadDatastore)
+
+	// Should fail to respond: the ignored assign should be detected and cause a backoff.
+	Consistently(sip.ResponseC()).ShouldNot(Receive())
+
+	// Advance time to trigger the backoff.
+	fake.expectSingleBackoffAndStep()
+
+	// Since this is a fresh system with only one ENI being allocated, everything is deterministic and we should
+	// always get the same result.
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+	Eventually(fake.CapacityC).Should(Receive(Equal(SecondaryIfaceCapacities{
+		MaxCalicoSecondaryIPs: t3LargeCapacity,
+	})))
+}
+
+func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_AWSLostUnassign(t *testing.T) {
+	sip, fake, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Simulate a silent failure to add an IP.  We've seen these in practice as a result of high churn; likely
+	// due to a race between a slow deletion and a second add of the same IP address.
+	fake.EC2.IgnoreNextUnassignPrivateIpAddresses = true
+
+	// Send snapshot with single workload.
+	sip.OnDatastoreUpdate(singleWorkloadDatastore)
+
+	// Since this is a fresh system with only one ENI being allocated, everything is deterministic and we should
+	// always get the same result.
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+
+	// Remove the workload again, IP should be released.
+	sip.OnDatastoreUpdate(noWorkloadDatastore)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseENIAfterWorkloadsDeleted)))
+}
+
 func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_ErrBackoff(t *testing.T) {
 	// Test that a range of different errors all result in a successful retry with backoff.
 	// The fakeEC2 methods are all instrumented with the ErrorProducer so that we can make them fail
