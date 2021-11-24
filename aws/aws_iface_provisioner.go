@@ -583,6 +583,7 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 	err = m.assignSecondaryIPsToENIs(resyncState, subnetCalicoRoutesNotInAWS)
 	if errors.Is(err, errResyncNeeded) {
 		// This is the mainline after we assign an IP, avoid doing a full resync and just reload the snapshot.
+		logrus.Debug("Rechecking AWS state after making updates...")
 		awsSnapshot, _, err = m.loadAWSENIsState()
 
 		// The AWS API is eventually consistent, meaning that the updates we just made may not show up in the
@@ -601,7 +602,7 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 			}
 			var extraIPs []string
 			unusedAWSIPs.Iter(func(item interface{}) error {
-				extraIPs = append(extraIPs, item.(ip.Addr).String())
+				extraIPs = append(extraIPs, item.(ip.CIDR).Addr().String())
 				return nil
 			})
 			logrus.WithFields(logrus.Fields{"missingIPs": missingIPs, "extraIPs": extraIPs}).Info(
@@ -865,7 +866,7 @@ func (m *SecondaryIfaceProvisioner) loadAWSENIsState() (s *eniSnapshot, r *eniRe
 }
 
 // findUnusedAWSIPs scans the AWS state for secondary IPs that are not assigned in Calico IPAM.
-func (m *SecondaryIfaceProvisioner) findUnusedAWSIPs(awsState *eniSnapshot) set.Set /* ip.Addr */ {
+func (m *SecondaryIfaceProvisioner) findUnusedAWSIPs(awsState *eniSnapshot) set.Set /* ip.CIDR */ {
 	awsIPsToRelease := set.New()
 	summary := map[string][]string{}
 	for addr, eniID := range awsState.eniIDByIP {

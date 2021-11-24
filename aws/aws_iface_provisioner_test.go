@@ -17,6 +17,7 @@ import (
 	"github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/transport/http"
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/clock"
 
 	"github.com/projectcalico/felix/ip"
@@ -199,7 +200,7 @@ var (
 				LocalWorkload: true,
 				AwsSubnetId:   subnetIDWest1Calico,
 			},
-			west2WlCIDR: {
+			wl1CIDRAlt: {
 				Dst:           wl1AddrAlt,
 				LocalWorkload: true,
 				AwsSubnetId:   subnetIDWest1CalicoAlt,
@@ -234,7 +235,7 @@ var (
 	}
 	singleWorkloadDatastoreAltPool = DatastoreState{
 		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
-			wl1CIDR: {
+			wl1CIDRAlt: {
 				Dst:           wl1AddrAlt,
 				LocalWorkload: true,
 				AwsSubnetId:   subnetIDWest1CalicoAlt,
@@ -871,6 +872,7 @@ func TestSecondaryIfaceProvisioner_WorkloadMixedSubnets(t *testing.T) {
 	Expect(allocs[0].Args.AWSSubnetIDs).To(ConsistOf(subnetIDWest1Calico))
 
 	// Then add a second workload on a different subnet, it should be ignored.
+	logrus.Info("Sending mixed-subnet datastore snapshot")
 	sip.OnDatastoreUpdate(mixedSubnetDatastore)
 
 	// Should act like remote subnet is not there.
@@ -879,6 +881,7 @@ func TestSecondaryIfaceProvisioner_WorkloadMixedSubnets(t *testing.T) {
 	// Now send a snapshot that doesn't include the first workload.  Now the "alternative" IP pool will be chosen as
 	// the "best" one and everything should swap over.
 	fake.IPAM.setFreeIPs(calicoHostIP1Alt) // Our mock IPAM is too dumb to handle node selectors.
+	logrus.Info("Sending single-subnet alt pool datastore snapshot")
 	sip.OnDatastoreUpdate(singleWorkloadDatastoreAltPool)
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseAltPoolSingleWorkload)))
 	Expect(fake.EC2.NumENIs()).To(BeNumerically("==", 2))
@@ -889,6 +892,7 @@ func TestSecondaryIfaceProvisioner_WorkloadMixedSubnets(t *testing.T) {
 	Expect(allocs[0].Args.AWSSubnetIDs).To(ConsistOf(subnetIDWest1CalicoAlt))
 
 	// Add the first workload back, now the "alternative" wins.
+	logrus.Info("Sending mixed-subnet datastore snapshot")
 	sip.OnDatastoreUpdate(mixedSubnetDatastore)
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseAltPoolSingleWorkload)))
 	Expect(fake.EC2.NumENIs()).To(BeNumerically("==", 2))
