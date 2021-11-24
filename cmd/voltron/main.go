@@ -160,6 +160,17 @@ func main() {
 			AllowInsecureTLS: cfg.ComplianceInsecureTLS,
 		})
 	}
+
+	if cfg.EnableImageAssurance && cfg.ImageAssuranceEndpoint != "" && cfg.ImageAssuranceCABundlePath != "" {
+		targetList = append(targetList, bootstrap.Target{
+			Path:         "/image-assurance/",
+			Dest:         cfg.ImageAssuranceEndpoint,
+			PathRegexp:   []byte("^/image-assurance/?"),
+			PathReplace:  []byte("/"),
+			CABundlePath: cfg.ImageAssuranceCABundlePath,
+		})
+	}
+
 	if cfg.OIDCAuthEnabled {
 		// If dex is enabled we need to add the CA Bundle, otherwise the default trusted certs from the image will
 		// suffice.

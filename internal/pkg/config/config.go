@@ -57,6 +57,9 @@ type Config struct {
 	KibanaCABundlePath           string `default:"/certs/kibana/tls.crt" split_words:"true"`
 	PacketCaptureCABundlePath    string `default:"/certs/packetcapture/tls.crt" split_words:"true"`
 	PacketCaptureEndpoint        string `default:"https://tigera-packetcapture.tigera-packetcapture.svc" split_words:"true"`
+	EnableImageAssurance         bool   `split_words:"true"`
+	ImageAssuranceCABundlePath   string `split_words:"true"`
+	ImageAssuranceEndpoint       string `split_words:"true"`
 	PrometheusCABundlePath       string `default:"/certs/prometheus/tls.crt" split_words:"true"`
 	PrometheusPath               string `default:"/api/v1/namespaces/tigera-prometheus/services/calico-node-prometheus:9090/proxy/" split_words:"true"`
 	PrometheusEndpoint           string `default:"https://prometheus-http-api.tigera-prometheus.svc:9090" split_words:"true"`

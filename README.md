@@ -82,6 +82,9 @@ VOLTRON_K8S_ENDPOINT | Environment | https://kubernetes.default
 VOLTRON_COMPLIANCE_ENDPOINT | Environment | https://compliance.calico-monitoring.svc.cluster.local
 VOLTRON_COMPLIANCE_BUNDLE_PATH | Environment | /certs/compliance/tls.crt
 VOLTRON_COMPLIANCE_INSECURE_TLS | Environment | false
+VOLTRON_ENABLE_IMAGE_ASSURANCE | Environment
+VOLTRON_IMAGE_ASSURANCE_ENDPOINT | Environment
+VOLTRON_IMAGE_ASSURANCE_CA_BUNDLE_PATH | Environment
 VOLTRON_ELASTIC_ENDPOINT | Environment | https://127.0.0.1:8443
 VOLTRON_NGINX_ENDPOINT | Environment | http://127.0.0.1:8080
 
