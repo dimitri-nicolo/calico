@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/transport/http"
@@ -74,7 +75,8 @@ const (
 	calicoHostIP1Alt = "100.64.3.5"
 
 	// Workload addresses in the main and alternate pools.
-	wl1Addr    = "100.64.1.64/32"
+	wl1IP      = "100.64.1.64"
+	wl1Addr    = wl1IP + "/32"
 	wl1AddrAlt = "100.64.3.64/32"
 	wl2Addr    = "100.64.1.65/32"
 
@@ -409,22 +411,22 @@ func TestSecondaryIfaceProvisioner_Liveness(t *testing.T) {
 	))
 
 	// Next report after 30s...
-	Eventually(fake.Clock.HasWaiters).Should(BeTrue())
+	Eventually(fake.BackoffClock.HasWaiters).Should(BeTrue())
 	fake.Health.clearReports()
-	fake.Clock.Step(29 * time.Second)
+	fake.BackoffClock.Step(29 * time.Second)
 	Consistently(fake.Health.getLastReports).ShouldNot(HaveKey(
 		healthNameAWSProvisioner,
 	))
-	fake.Clock.Step(2 * time.Second)
+	fake.BackoffClock.Step(2 * time.Second)
 	Eventually(fake.Health.getLastReports).Should(HaveKeyWithValue(
 		healthNameAWSProvisioner,
 		health.HealthReport{Live: true, Ready: true},
 	))
 
 	// Then every 30s.
-	Eventually(fake.Clock.HasWaiters).Should(BeTrue())
+	Eventually(fake.BackoffClock.HasWaiters).Should(BeTrue())
 	fake.Health.clearReports()
-	fake.Clock.Step(30 * time.Second)
+	fake.BackoffClock.Step(30 * time.Second)
 	Eventually(fake.Health.getLastReports).Should(HaveKeyWithValue(
 		healthNameAWSProvisioner,
 		health.HealthReport{Live: true, Ready: true},
@@ -546,6 +548,84 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_AWSLostUnassign(t *tes
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseENIAfterWorkloadsDeleted)))
 }
 
+func TestSecondaryIfaceProvisioner_AWSRecheck(t *testing.T) {
+	sip, fake, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Send snapshot with single workload.
+	sip.OnDatastoreUpdate(singleWorkloadDatastore)
+
+	// Since this is a fresh system with only one ENI being allocated, everything is deterministic and we should
+	// always get the same result.
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+
+	// After a success, there should be a recheck scheduled but no backoff.
+	Eventually(fake.RecheckClock.HasWaiters).Should(BeTrue(), "expected a pending recheck")
+	Eventually(fake.BackoffClock.HasWaiters).Should(BeFalse(), "expected no backoff scheduled")
+
+	// Initial backoff should be between 30s and 33s.
+	fake.RecheckClock.Step(29999 * time.Millisecond)
+	Consistently(sip.ResponseC()).ShouldNot(Receive())
+	Expect(fake.RecheckClock.HasWaiters()).Should(BeTrue(), "expected a pending recheck")
+	Expect(fake.BackoffClock.HasWaiters()).Should(BeFalse(), "expected no backoff scheduled")
+
+	fake.RecheckClock.Step(3002 * time.Millisecond)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+	Expect(fake.RecheckClock.HasWaiters()).Should(BeTrue(), "expected a pending recheck")
+	Expect(fake.BackoffClock.HasWaiters()).Should(BeFalse(), "expected no backoff scheduled")
+
+	// Next recheck should be 60-66s
+	fake.RecheckClock.Step(59999 * time.Millisecond)
+	Consistently(sip.ResponseC()).ShouldNot(Receive())
+	Expect(fake.RecheckClock.HasWaiters()).Should(BeTrue(), "expected a pending recheck")
+	Expect(fake.BackoffClock.HasWaiters()).Should(BeFalse(), "expected no backoff scheduled")
+
+	fake.RecheckClock.Step(6002 * time.Millisecond)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+	Expect(fake.RecheckClock.HasWaiters()).Should(BeTrue(), "expected a pending recheck")
+	Expect(fake.BackoffClock.HasWaiters()).Should(BeFalse(), "expected no backoff scheduled")
+}
+
+func TestSecondaryIfaceProvisioner_AWSRecheckDetectsProblem(t *testing.T) {
+	sip, fake, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Send snapshot with single workload.
+	sip.OnDatastoreUpdate(singleWorkloadDatastore)
+
+	// Since this is a fresh system with only one ENI being allocated, everything is deterministic and we should
+	// always get the same result.
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+
+	// After a success, there should be a recheck scheduled but no backoff.
+	Eventually(fake.RecheckClock.HasWaiters).Should(BeTrue(), "expected a pending recheck")
+	Eventually(fake.BackoffClock.HasWaiters).Should(BeFalse(), "expected no backoff scheduled")
+
+	// Simulate a problem: delete an IP address.
+	_, err := fake.EC2.UnassignPrivateIpAddresses(context.TODO(), &ec2.UnassignPrivateIpAddressesInput{
+		NetworkInterfaceId: stringPtr(firstAllocatedENIID),
+		PrivateIpAddresses: []string{wl1IP},
+	})
+	Expect(err).NotTo(HaveOccurred(), "Bug in test: failed to remove IP")
+
+	// Initial backoff should be between 30s and 33s.
+	fake.RecheckClock.Step(33002 * time.Millisecond)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+	Expect(fake.RecheckClock.HasWaiters()).Should(BeTrue(), "expected a pending recheck")
+	Expect(fake.BackoffClock.HasWaiters()).Should(BeFalse(), "expected no backoff scheduled")
+
+	// Should go back to the initial recheck period.
+	fake.RecheckClock.Step(29999 * time.Millisecond)
+	Consistently(sip.ResponseC()).ShouldNot(Receive())
+	Expect(fake.RecheckClock.HasWaiters()).Should(BeTrue(), "expected a pending recheck")
+	Expect(fake.BackoffClock.HasWaiters()).Should(BeFalse(), "expected no backoff scheduled")
+
+	fake.RecheckClock.Step(3002 * time.Millisecond)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+	Expect(fake.RecheckClock.HasWaiters()).Should(BeTrue(), "expected a pending recheck")
+	Expect(fake.BackoffClock.HasWaiters()).Should(BeFalse(), "expected no backoff scheduled")
+}
+
 func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_ErrBackoff(t *testing.T) {
 	// Test that a range of different errors all result in a successful retry with backoff.
 	// The fakeEC2 methods are all instrumented with the ErrorProducer so that we can make them fail
@@ -606,7 +686,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_ErrBackoffInterrupted(
 	Consistently(sip.ResponseC()).ShouldNot(Receive())
 
 	// Should be a timer waiting for backoff.
-	Eventually(fake.Clock.HasWaiters).Should(BeTrue())
+	Eventually(fake.BackoffClock.HasWaiters).Should(BeTrue())
 
 	// Send a datastore update, should trigger the backoff to be abandoned.
 	sip.OnDatastoreUpdate(singleWorkloadDatastore)
@@ -614,7 +694,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_ErrBackoffInterrupted(
 	// Since this is a fresh system with only one ENI being allocated, everything is deterministic and we should
 	// always get the same result.
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
-	Expect(fake.Clock.HasWaiters()).To(BeFalse())
+	Expect(fake.BackoffClock.HasWaiters()).To(BeFalse())
 }
 
 // TestSecondaryIfaceProvisioner_PoolChange Checks that changing the IP pools to use a different subnet causes the
@@ -972,10 +1052,10 @@ func TestSecondaryIfaceProvisioner_NoSecondaryIPsPossible(t *testing.T) {
 
 	// Try to add a workload.
 	sip.OnDatastoreUpdate(singleWorkloadDatastore)
-	Eventually(fake.Clock.HasWaiters).Should(BeTrue())
-	fake.Clock.Step(1200 * time.Millisecond)
+	Eventually(fake.BackoffClock.HasWaiters).Should(BeTrue())
+	fake.BackoffClock.Step(1200 * time.Millisecond)
 	Consistently(sip.ResponseC()).ShouldNot(Receive())
-	Eventually(fake.Clock.HasWaiters).Should(BeTrue()) // Should keep backing off
+	Eventually(fake.BackoffClock.HasWaiters).Should(BeTrue()) // Should keep backing off
 }
 
 func TestSecondaryIfaceProvisioner_IPAMCleanup(t *testing.T) {
@@ -1042,20 +1122,24 @@ func TestSecondaryIfaceProvisioner_IPAMAssignFailure(t *testing.T) {
 }
 
 type sipTestFakes struct {
-	IPAM      *fakeIPAM
-	EC2       *fakeEC2
-	Clock     *clock.FakeClock
-	Health    *fakeHealth
-	CapacityC chan SecondaryIfaceCapacities
+	IPAM         *fakeIPAM
+	EC2          *fakeEC2
+	BackoffClock *clock.FakeClock
+	RecheckClock *clock.FakeClock
+	Health       *fakeHealth
+	CapacityC    chan SecondaryIfaceCapacities
 }
 
 func (f sipTestFakes) expectSingleBackoffAndStep() {
 	// Initial backoff should be between 1000 and 1100 ms (due to jitter).
-	Eventually(f.Clock.HasWaiters).Should(BeTrue())
-	f.Clock.Step(999 * time.Millisecond)
-	Expect(f.Clock.HasWaiters()).To(BeTrue())
-	f.Clock.Step(102 * time.Millisecond)
-	Expect(f.Clock.HasWaiters()).To(BeFalse())
+	logrus.Info("Expecting single backoff and step...")
+	Eventually(f.BackoffClock.HasWaiters).Should(BeTrue(), "expected a backoff to be scheduled")
+	Expect(f.RecheckClock.HasWaiters()).Should(BeFalse(), "when backoff is scheduled, recheck should not be")
+	f.BackoffClock.Step(999 * time.Millisecond)
+	Expect(f.BackoffClock.HasWaiters()).To(BeTrue(), "expected a backoff to be scheduled after >999ms")
+	f.BackoffClock.Step(102 * time.Millisecond)
+	Eventually(f.RecheckClock.HasWaiters).Should(BeTrue(), "when backoff is not scheduled, recheck should be")
+	Expect(f.BackoffClock.HasWaiters()).To(BeFalse(), "expected backoff to be cleared")
 }
 
 func setup(t *testing.T, opts ...IfaceProvOpt) (*SecondaryIfaceProvisioner, *sipTestFakes) {
@@ -1066,7 +1150,8 @@ func setup(t *testing.T, opts ...IfaceProvOpt) (*SecondaryIfaceProvisioner, *sip
 	fakeIPAM := newFakeIPAM()
 	theTime, err := time.Parse("2006-01-02 15:04:05.000", "2021-09-15 16:00:00.000")
 	Expect(err).NotTo(HaveOccurred())
-	fakeClock := clock.NewFakeClock(theTime)
+	fakeBackoffClock := clock.NewFakeClock(theTime)
+	fakeRecheckClock := clock.NewFakeClock(theTime)
 	capacityC := make(chan SecondaryIfaceCapacities, 1)
 	ec2Client, fakeEC2 := newFakeEC2Client()
 
@@ -1114,7 +1199,7 @@ func setup(t *testing.T, opts ...IfaceProvOpt) (*SecondaryIfaceProvisioner, *sip
 	}
 
 	defaultOpts := []IfaceProvOpt{
-		OptClockOverride(fakeClock),
+		OptClockOverrides(fakeBackoffClock, fakeRecheckClock),
 		OptCapacityCallback(func(capacities SecondaryIfaceCapacities) {
 			// Drain any previous message.
 			select {
@@ -1142,11 +1227,12 @@ func setup(t *testing.T, opts ...IfaceProvOpt) (*SecondaryIfaceProvisioner, *sip
 	)
 
 	return sip, &sipTestFakes{
-		IPAM:      fakeIPAM,
-		EC2:       fakeEC2,
-		Clock:     fakeClock,
-		Health:    fakeHealth,
-		CapacityC: capacityC,
+		IPAM:         fakeIPAM,
+		EC2:          fakeEC2,
+		BackoffClock: fakeBackoffClock,
+		RecheckClock: fakeRecheckClock,
+		Health:       fakeHealth,
+		CapacityC:    capacityC,
 	}
 }
 
