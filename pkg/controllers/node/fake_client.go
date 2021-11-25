@@ -108,9 +108,20 @@ func (f *FakeCalicoClient) ManagedClusters() clientv3.ManagedClusterInterface {
 	panic("not implemented") // TODO: Implement
 }
 
-// PacketCaptures returns an interface for managing the packet capture resources.
+// PacketCaptures returns an testify mock interface for managing the packet capture resources.
 func (f *FakeCalicoClient) PacketCaptures() clientv3.PacketCaptureInterface {
-	panic("not implemented") // TODO: Implement
+	ret := f.Called()
+
+	var r0 clientv3.PacketCaptureInterface
+	if rf, ok := ret.Get(0).(func() clientv3.PacketCaptureInterface); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(clientv3.PacketCaptureInterface)
+		}
+	}
+
+	return r0
 }
 
 // DeepPacketInspections returns an testify mock interface for managing the DPI resources.
