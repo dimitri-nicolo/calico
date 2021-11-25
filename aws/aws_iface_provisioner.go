@@ -105,7 +105,7 @@ type SecondaryIfaceProvisioner struct {
 
 	healthAgg       healthAggregator
 	livenessEnabled bool
-	opRecorder      logutils.OpRecorder
+	opRecorder      *logutils.Summarizer
 	ipamClient      ipamInterface
 
 	// resyncNeeded is set to true if we need to do any kind of resync.
@@ -357,6 +357,8 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 			m.opRecorder.RecordOperation("aws-recheck")
 		}
 
+		startTime := time.Now()
+
 		// Either backoff has done its job or another update has come along and we're going to do an early
 		// retry.  Clear any pending backoff.
 		stopBackoffTimer()
@@ -387,6 +389,8 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 				responseC = m.responseC
 			}
 		}
+
+		m.opRecorder.EndOfIteration(time.Since(startTime))
 	}
 }
 

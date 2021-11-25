@@ -30,6 +30,7 @@ func NewResettableBackoff(clock clock.Clock, initialInterval time.Duration, maxI
 	return &ResettableBackoff{
 		clock:           clock,
 		initialInterval: initialInterval,
+		currentInterval: initialInterval,
 		maxInterval:     maxInterval,
 		jitter:          jitter,
 	}
