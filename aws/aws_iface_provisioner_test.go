@@ -434,7 +434,7 @@ func TestSecondaryIfaceProvisioner_Liveness(t *testing.T) {
 }
 
 func TestSecondaryIfaceProvisioner_AWSPoolsButNoWorkloadsMainline(t *testing.T) {
-	sip, _, tearDown := setupAndStart(t)
+	sip, fake, tearDown := setupAndStart(t)
 	defer tearDown()
 
 	sip.OnDatastoreUpdate(DatastoreState{
@@ -454,6 +454,21 @@ func TestSecondaryIfaceProvisioner_AWSPoolsButNoWorkloadsMainline(t *testing.T) 
 	Expect(err).NotTo(HaveOccurred())
 	Expect(rawSubnets).To(MatchJSON(fmt.Sprintf(`{"aws_subnet_ids": ["%s", "%s", "%s"]}`,
 		subnetIDWest1Calico, subnetIDWest1CalicoAlt, subnetIDWest1Default)))
+
+	// After a success, there should be a recheck scheduled but no backoff.
+	Eventually(fake.RecheckClock.HasWaiters).Should(BeTrue(), "expected a pending recheck")
+	Eventually(fake.BackoffClock.HasWaiters).Should(BeFalse(), "expected no backoff scheduled")
+
+	// Initial backoff should be between 30s and 33s.
+	fake.RecheckClock.Step(29999 * time.Millisecond)
+	Consistently(sip.ResponseC()).ShouldNot(Receive())
+	Expect(fake.RecheckClock.HasWaiters()).Should(BeTrue(), "expected a pending recheck")
+	Expect(fake.BackoffClock.HasWaiters()).Should(BeFalse(), "expected no backoff scheduled")
+
+	fake.RecheckClock.Step(3002 * time.Millisecond)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responsePoolsNoENIs)))
+	Expect(fake.RecheckClock.HasWaiters()).Should(BeTrue(), "expected a pending recheck")
+	Expect(fake.BackoffClock.HasWaiters()).Should(BeFalse(), "expected no backoff scheduled")
 }
 
 func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_Mainline(t *testing.T) {
@@ -548,7 +563,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_AWSLostUnassign(t *tes
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseENIAfterWorkloadsDeleted)))
 }
 
-func TestSecondaryIfaceProvisioner_AWSRecheck(t *testing.T) {
+func TestSecondaryIfaceProvisioner_AWSRecheckAfterAction(t *testing.T) {
 	sip, fake, tearDown := setupAndStart(t)
 	defer tearDown()
 
