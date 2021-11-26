@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 
 	validator "gopkg.in/go-playground/validator.v9"
@@ -60,10 +61,49 @@ func validateGlobalAlertLookback(structLevel validator.StructLevel) {
 	}
 }
 
+// substituteVariables finds variables in the query string and replace them with values from GlobalAlertSpec.Substitutions.
+func substituteVariables(s api.GlobalAlertSpec) (string, error) {
+	out := s.Query
+	variables, err := extractVariablesFromTemplate(out)
+	if err != nil {
+		return out, err
+	}
+
+	if len(variables) > 0 {
+		for _, variable := range variables {
+			sub, err := findSubstitutionByVariableName(s, variable)
+			if err != nil {
+				return out, err
+			}
+
+			// Translate Substitution.Values into the set notation.
+			patterns := []string{}
+			for _, v := range sub.Values {
+				if v != "" {
+					patterns = append(patterns, strconv.Quote(v))
+				}
+			}
+			if len(patterns) > 0 {
+				out = strings.Replace(out, fmt.Sprintf("${%s}", variable), "{"+strings.Join(patterns, ",")+"}", 1)
+			}
+		}
+	}
+	return out, nil
+}
+
+// validateGlobalAlertQuery substitutes all variables in the query string and validates it by the query parser.
 func validateGlobalAlertQuery(structLevel validator.StructLevel) {
 	s := getGlobalAlertSpec(structLevel)
 
-	if q, err := query.ParseQuery(s.Query); err != nil {
+	if qs, err := substituteVariables(s); err != nil {
+		structLevel.ReportError(
+			reflect.ValueOf(s.Query),
+			"Query",
+			"",
+			reason("invalid query: "+err.Error()),
+			"",
+		)
+	} else if q, err := query.ParseQuery(qs); err != nil {
 		structLevel.ReportError(
 			reflect.ValueOf(s.Query),
 			"Query",
@@ -118,7 +158,7 @@ func validateGlobalAlertDescriptionAndSummary(structLevel validator.StructLevel)
 }
 
 func validateGlobalAlertDescriptionOrSummaryContents(description, fieldName string, structLevel validator.StructLevel, s api.GlobalAlertSpec) {
-	if variables, err := extractVariablesFromDescriptionTemplate(description); err != nil {
+	if variables, err := extractVariablesFromTemplate(description); err != nil {
 		structLevel.ReportError(
 			reflect.ValueOf(s.DataSet),
 			fieldName,
@@ -217,7 +257,9 @@ func validateGlobalAlertMetric(structLevel validator.StructLevel) {
 	}
 }
 
-func extractVariablesFromDescriptionTemplate(s string) ([]string, error) {
+// extractVariablesFromTemplate extracts variables from a template string.
+// Variables are defined by starting with a dollar sign and enclosed by curly braces.
+func extractVariablesFromTemplate(s string) ([]string, error) {
 	var res []string
 	for s != "" {
 		start := strings.Index(s, "${")
@@ -233,4 +275,25 @@ func extractVariablesFromDescriptionTemplate(s string) ([]string, error) {
 		s = s[end+1:]
 	}
 	return res, nil
+}
+
+// findSubstitutionByVariableName finds the substitution from GlobalAlertSpec.Substitutions by the variable name.
+// Only one substitution will be returned. If no substitution or more than one substitution is found,
+// an error will be returned.
+func findSubstitutionByVariableName(s api.GlobalAlertSpec, variable string) (*api.GlobalAlertSubstitution, error) {
+	var substitution *api.GlobalAlertSubstitution
+	for _, sub := range s.Substitutions {
+		if strings.EqualFold(variable, sub.Name) {
+			if substitution != nil {
+				return nil, fmt.Errorf("found more than one substitution for variable %s", variable)
+			} else {
+				substitution = sub.DeepCopy()
+			}
+		}
+	}
+
+	if substitution != nil {
+		return substitution, nil
+	}
+	return nil, fmt.Errorf("substition not found for variable %s", variable)
 }

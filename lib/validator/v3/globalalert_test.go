@@ -13,9 +13,9 @@ import (
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
-var _ = DescribeTable("GlobalAlert extractVariablesFromDescriptionTemplate",
+var _ = DescribeTable("GlobalAlert extractVariablesFromTemplate",
 	func(s string, e []string, ok bool) {
-		a, err := extractVariablesFromDescriptionTemplate(s)
+		a, err := extractVariablesFromTemplate(s)
 		if ok {
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(a).Should(Equal(e))
@@ -416,6 +416,162 @@ var _ = DescribeTable("GlobalAlert Validator",
 				Severity:    100,
 				DataSet:     "flows",
 				Query:       "num_flows = test",
+			},
+		},
+		false,
+	),
+	Entry("query contains IN operator",
+		&api.GlobalAlert{
+			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+			Spec: api.GlobalAlertSpec{
+				Description: "test",
+				Severity:    100,
+				DataSet:     "flows",
+				Query:       `process_name IN {"python?", "*go"} AND num_flows = 1`,
+			},
+		},
+		true,
+	),
+	Entry("mismatch IN operator curly brackets",
+		&api.GlobalAlert{
+			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+			Spec: api.GlobalAlertSpec{
+				Description: "test",
+				Severity:    100,
+				DataSet:     "flows",
+				Query:       `process_name IN {"python?", "*go" AND num_flows = 1`,
+			},
+		},
+		false,
+	),
+	Entry("unquoted IN operator wildcard pattern",
+		&api.GlobalAlert{
+			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+			Spec: api.GlobalAlertSpec{
+				Description: "test",
+				Severity:    100,
+				DataSet:     "flows",
+				Query:       `process_name IN {python?, "*go"} AND num_flows = 1`,
+			},
+		},
+		false,
+	),
+	Entry("query contains IN operator and variables",
+		&api.GlobalAlert{
+			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+			Spec: api.GlobalAlertSpec{
+				Description: "test",
+				Severity:    100,
+				DataSet:     "flows",
+				Query:       `process_name IN ${procName} AND source_namespace IN ${srcNamespace} AND num_flows = 1`,
+				Substitutions: []api.GlobalAlertSubstitution{
+					{
+						Name:   "procName",
+						Values: []string{"python?", "*go"},
+					},
+					{
+						Name:   "srcnamespace",
+						Values: []string{"*ns1", "ns2?"},
+					},
+				},
+			},
+		},
+		true,
+	),
+	Entry("query contains IN operator and both embedded list and variables",
+		&api.GlobalAlert{
+			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+			Spec: api.GlobalAlertSpec{
+				Description: "test",
+				Severity:    100,
+				DataSet:     "flows",
+				Query:       `process_name IN ${procName} AND source_namespace IN {"ns1?", "*ns2"} AND num_flows = 1`,
+				Substitutions: []api.GlobalAlertSubstitution{
+					{
+						Name:   "procName",
+						Values: []string{"python?", "*go"},
+					},
+				},
+			},
+		},
+		true,
+	),
+	Entry("query contains IN operator and variables that reference to the same substitution",
+		&api.GlobalAlert{
+			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+			Spec: api.GlobalAlertSpec{
+				Description: "test",
+				Severity:    100,
+				DataSet:     "flows",
+				Query:       `process_name IN ${mySubstitution} AND source_namespace IN ${mySubstitution} AND num_flows = 1`,
+				Substitutions: []api.GlobalAlertSubstitution{
+					{
+						Name:   "mySubstitution",
+						Values: []string{"python?", "*go", "?ns1", "ns2*"},
+					},
+				},
+			},
+		},
+		true,
+	),
+	Entry("query contains IN operator and invalid variable name",
+		&api.GlobalAlert{
+			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+			Spec: api.GlobalAlertSpec{
+				Description: "test",
+				Severity:    100,
+				DataSet:     "flows",
+				Query:       `process_name IN ${non-existent-1} AND source_namespace IN ${non-existent-2} AND num_flows = 1`,
+				Substitutions: []api.GlobalAlertSubstitution{
+					{
+						Name:   "procName",
+						Values: []string{"python?", "*go"},
+					},
+					{
+						Name:   "srcNamespace",
+						Values: []string{"*ns1", "ns2?"},
+					},
+				},
+			},
+		},
+		false,
+	),
+	Entry("query contains IN operator and multiple variable reference",
+		&api.GlobalAlert{
+			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+			Spec: api.GlobalAlertSpec{
+				Description: "test",
+				Severity:    100,
+				DataSet:     "flows",
+				Query:       `process_name IN ${procName} AND num_flows = 1`,
+				Substitutions: []api.GlobalAlertSubstitution{
+					{
+						Name:   "procName",
+						Values: []string{"python?", "*go"},
+					},
+					{
+						Name:   "procname",
+						Values: []string{"?foo", "bar*"},
+					},
+				},
+			},
+		},
+		false,
+	),
+	Entry("query contains IN operator and empty variable reference",
+		&api.GlobalAlert{
+			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+			Spec: api.GlobalAlertSpec{
+				Description: "test",
+				Severity:    100,
+				DataSet:     "flows",
+				Query:       `process_name IN ${procName} AND num_flows = 1`,
+				Substitutions: []api.GlobalAlertSubstitution{
+					{
+						Name:   "procName",
+						Values: []string{"", ""},
+					},
+				},
 			},
 		},
 		false,
