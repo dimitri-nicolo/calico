@@ -14,8 +14,8 @@ require (
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
-	github.com/tigera/api v0.0.0-20211122222922-3f5da5bfedfa
-	github.com/tigera/licensing v1.0.1-0.20211123175947-bfcd3560194d
+	github.com/tigera/api v0.0.0-20211125220726-e8ff6939919d
+	github.com/tigera/licensing v1.0.1-0.20211126152210-b709a8c7c278
 	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
 	golang.org/x/sys v0.0.0-20210426230700-d19ff857e887 // indirect
 	k8s.io/api v0.22.0
@@ -29,7 +29,7 @@ require (
 )
 
 replace (
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211123175532-5ad12013d20d
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211126151825-2cc2008d4c6c
 
 	k8s.io/api => k8s.io/api v0.21.0
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.0
