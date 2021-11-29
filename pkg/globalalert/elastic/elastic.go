@@ -37,7 +37,7 @@ const (
 	AuditIndexPattern        = "tigera_secure_ee_audit_*.%s.*"
 	FlowLogIndexPattern      = "tigera_secure_ee_flows.%s.*"
 	DNSLogIndexPattern       = "tigera_secure_ee_dns.%s.*"
-	L7LogIndexPattern       = "tigera_secure_ee_l7.%s.*"
+	L7LogIndexPattern        = "tigera_secure_ee_l7.%s.*"
 	CompositeAggregationName = "composite_aggs"
 )
 
@@ -194,7 +194,7 @@ func (e *service) buildCompositeAggregation(alert *v3.GlobalAlert, aggs JsonObje
 
 // convertAlertSpecQueryToEsQuery converts GlobalAlert's spec.query to Elasticsearch query.
 func (e *service) convertAlertSpecQueryToEsQuery(alert *v3.GlobalAlert) (JsonObject, error) {
-	q, err := query.ParseQuery(alert.Spec.Query)
+	q, err := query.ParseQuery(e.substituteVariables(alert))
 	if err != nil {
 		log.WithError(err).Errorf("failed to parse spec.query in %s", alert.Name)
 		return nil, err
@@ -576,6 +576,36 @@ func (e *service) buildEventsIndexDoc(record JsonObject) JsonObject {
 	}
 }
 
+func (e *service) substituteVariables(alert *v3.GlobalAlert) string {
+	out := alert.Spec.Query
+	variables, err := extractVariablesFromTemplate(out)
+	if err != nil {
+		log.WithError(err).Warnf("failed to build IN template for alert %s due to invalid formatting of bracketed variables", alert.Name)
+		return out
+	}
+	if len(variables) > 0 {
+		for _, variable := range variables {
+			sub, err := findSubstitutionByVariableName(alert, variable)
+			if err != nil {
+				log.Warnf("failed to build IN template for alert %s due to wrong variable name %s", alert.Name, variable)
+				return out
+			}
+
+			// Translate Substitution.Values into the set notation.
+			patterns := []string{}
+			for _, v := range sub.Values {
+				if v != "" {
+					patterns = append(patterns, strconv.Quote(v))
+				}
+			}
+			if len(patterns) > 0 {
+				out = strings.Replace(out, fmt.Sprintf("${%s}", variable), "{"+strings.Join(patterns, ",")+"}", 1)
+			}
+		}
+	}
+	return out
+}
+
 // substituteDescriptionOrSummaryContents substitute bracketed variables in summary/description with it's value.
 // If there is an error in substitution log error and return the partly substituted value.
 func (e *service) substituteDescriptionOrSummaryContents(record JsonObject) string {
@@ -584,7 +614,7 @@ func (e *service) substituteDescriptionOrSummaryContents(record JsonObject) stri
 		description = e.globalAlert.Spec.Description
 	}
 
-	vars, err := extractVariablesFromDescriptionTemplate(description)
+	vars, err := extractVariablesFromTemplate(description)
 	if err != nil {
 		log.WithError(err).Warnf("failed to build summary or description for alert %s due to invalid formatting of bracketed variables", e.globalAlert.Name)
 	}
@@ -609,8 +639,8 @@ func (e *service) substituteDescriptionOrSummaryContents(record JsonObject) stri
 	return description
 }
 
-// extractVariablesFromDescriptionTemplate extracts and returns array of variables in the template string.
-func extractVariablesFromDescriptionTemplate(s string) ([]string, error) {
+// extractVariablesFromTemplate extracts and returns array of variables in the template string.
+func extractVariablesFromTemplate(s string) ([]string, error) {
 	var res []string
 	for s != "" {
 		start := strings.Index(s, "${")
@@ -626,6 +656,24 @@ func extractVariablesFromDescriptionTemplate(s string) ([]string, error) {
 		s = s[end+1:]
 	}
 	return res, nil
+}
+
+// findSubstitutionByVariableName finds the substitution from spec by variable name.
+func findSubstitutionByVariableName(alert *v3.GlobalAlert, variable string) (*v3.GlobalAlertSubstitution, error) {
+	var substitution *v3.GlobalAlertSubstitution
+	for _, sub := range alert.Spec.Substitutions {
+		if strings.EqualFold(variable, sub.Name) {
+			if substitution != nil {
+				return nil, fmt.Errorf("found more than one substitution for variable %s", variable)
+			} else {
+				substitution = sub.DeepCopy()
+			}
+		}
+	}
+	if substitution != nil {
+		return substitution, nil
+	}
+	return nil, fmt.Errorf("variable %s not found", variable)
 }
 
 // compare returns a boolean after comparing the given input.

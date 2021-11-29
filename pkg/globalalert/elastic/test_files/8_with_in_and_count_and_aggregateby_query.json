@@ -1,0 +1,59 @@
+{
+  "aggs": {
+    "composite_aggs": {
+      "composite": {
+        "size": 500,
+        "sources": [
+          {
+            "source_name_aggr": {
+              "terms": {
+                "field": "source_name_aggr"
+              }
+            }
+          },
+          {
+            "source_namespace": {
+              "terms": {
+                "field": "source_namespace"
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "query": {
+    "bool": {
+      "filter" : {
+        "range" : {
+          "start_time" : {
+            "format" : "strict_date_optional_time||epoch_millis",
+            "gte" : "1637860772117",
+            "lte" : "1637860787315"
+          }
+        }
+      },
+      "must": {
+        "bool": {
+          "should": [
+            {
+              "wildcard": {
+                "process_name": {
+                  "value": "*voltron"
+                }
+              }
+            },
+            {
+              "wildcard": {
+                "process_name": {
+                  "value": "?es-proxy"
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "size": 0
+}

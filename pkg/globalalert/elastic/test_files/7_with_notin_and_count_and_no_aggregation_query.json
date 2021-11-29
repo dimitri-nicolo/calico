@@ -1,0 +1,36 @@
+{
+  "query": {
+    "bool": {
+      "filter" : {
+        "range" : {
+          "start_time" : {
+            "format" : "strict_date_optional_time||epoch_millis",
+            "gte" : "1637869345551",
+            "lte" : "1637869496820"
+          }
+        }
+      },
+      "must": {
+        "bool": {
+          "must_not": [
+            {
+              "wildcard": {
+                "process_name": {
+                  "value": "*voltron"
+                }
+              }
+            },
+            {
+              "wildcard": {
+                "process_name": {
+                  "value": "?es-proxy"
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "size": 0
+}

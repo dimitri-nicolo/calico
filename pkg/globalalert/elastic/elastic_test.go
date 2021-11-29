@@ -255,6 +255,155 @@ var _ = Describe("GlobalAlert", func() {
 		})
 	})
 
+	Context("query with set", func() {
+		It("Operator IN with count and without aggregation", func() {
+			// Uses file with prefix 7_with_in_and_count_and_no_aggregation_* for testing this scenario
+			ga := &v3.GlobalAlert{
+				ObjectMeta: v1.ObjectMeta{
+					Name: alertName,
+				},
+				Spec: v3.GlobalAlertSpec{
+					Description: fmt.Sprintf("test alert: %s", alertName),
+					Severity:    100,
+					DataSet:     "flows",
+					Metric:      "count",
+					Threshold:   3,
+					Condition:   "gt",
+					Query:       `process_name IN {"*voltron", "?es-proxy"}`,
+				},
+			}
+
+			e, err := GetTestElasticService(ecli, "test-cluster", ga)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
+			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
+
+			e.globalAlert = ga
+			e.executeQuery()
+		})
+		It("Operator NOTIN with count and without aggregation", func() {
+			// Uses file with prefix 7_with_notin_and_count_and_no_aggregation_* for testing this scenario
+			ga := &v3.GlobalAlert{
+				ObjectMeta: v1.ObjectMeta{
+					Name: alertName,
+				},
+				Spec: v3.GlobalAlertSpec{
+					Description: fmt.Sprintf("test alert: %s", alertName),
+					Severity:    100,
+					DataSet:     "flows",
+					Metric:      "count",
+					Threshold:   3,
+					Condition:   "gt",
+					Query:       `process_name NOTIN {"*voltron", "?es-proxy"}`,
+				},
+			}
+
+			e, err := GetTestElasticService(ecli, "test-cluster", ga)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
+			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
+
+			e.globalAlert = ga
+			e.executeQuery()
+		})
+		It("Operator IN with count and with aggregation", func() {
+			// Uses file with prefix 8_with_in_and_count_and_aggregateby_* for testing this scenario
+			ga := &v3.GlobalAlert{
+				ObjectMeta: v1.ObjectMeta{
+					Name: alertName,
+				},
+				Spec: v3.GlobalAlertSpec{
+					Description: fmt.Sprintf("test alert: %s", alertName),
+					Severity:    100,
+					DataSet:     "flows",
+					Metric:      "count",
+					Condition:   "gt",
+					Threshold:   3,
+					Query:       `process_name IN {"*voltron", "?es-proxy"}`,
+					AggregateBy: []string{"source_namespace", "source_name_aggr"},
+				},
+			}
+
+			e, err := GetTestElasticService(ecli, "test-cluster", ga)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
+			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
+
+			e.globalAlert = ga
+			e.executeQuery()
+		})
+		It("Operator NOTIN with count and with aggregation", func() {
+			// Uses file with prefix 8_with_notin_and_count_and_aggregateby_* for testing this scenario
+			ga := &v3.GlobalAlert{
+				ObjectMeta: v1.ObjectMeta{
+					Name: alertName,
+				},
+				Spec: v3.GlobalAlertSpec{
+					Description: fmt.Sprintf("test alert: %s", alertName),
+					Severity:    100,
+					DataSet:     "flows",
+					Metric:      "count",
+					Condition:   "gt",
+					Threshold:   3,
+					Query:       `process_name NOTIN {"*voltron", "?es-proxy"}`,
+					AggregateBy: []string{"source_namespace", "source_name_aggr"},
+				},
+			}
+
+			e, err := GetTestElasticService(ecli, "test-cluster", ga)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
+			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
+
+			e.globalAlert = ga
+			e.executeQuery()
+		})
+		It("Operator IN without metric and without aggregation", func() {
+			// Uses file with prefix 9_with_in_without_metric_and_no_aggregation_* for testing this scenario
+			ga := &v3.GlobalAlert{
+				ObjectMeta: v1.ObjectMeta{
+					Name: alertName,
+				},
+				Spec: v3.GlobalAlertSpec{
+					Description: fmt.Sprintf("test alert: %s", alertName),
+					Severity:    100,
+					DataSet:     "flows",
+					Query:       `process_name IN {"*voltron", "?es-proxy"}`,
+				},
+			}
+
+			e, err := GetTestElasticService(ecli, "test-cluster", ga)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
+			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
+
+			e.globalAlert = ga
+			e.executeQuery()
+		})
+		It("Operator NOTIN without metric and without aggregation", func() {
+			// Uses file with prefix 9_with_notin_without_metric_and_no_aggregation_* for testing this scenario
+			ga := &v3.GlobalAlert{
+				ObjectMeta: v1.ObjectMeta{
+					Name: alertName,
+				},
+				Spec: v3.GlobalAlertSpec{
+					Description: fmt.Sprintf("test alert: %s", alertName),
+					Severity:    100,
+					DataSet:     "flows",
+					Query:       `process_name NOTIN {"*voltron", "?es-proxy"}`,
+				},
+			}
+
+			e, err := GetTestElasticService(ecli, "test-cluster", ga)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
+			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
+
+			e.globalAlert = ga
+			e.executeQuery()
+		})
+	})
+
 	Context("on error", func() {
 		It("should store only recent errors", func() {
 			var errs []v3.ErrorCondition
@@ -380,6 +529,42 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 					Request:    req,
 					Body:       mustOpen("test_files/6_without_metric_and_with_aggregateby_response.json"),
 				}, nil
+			case mustGetQueryAsString("test_files/7_with_in_and_count_and_no_aggregation_query.json"):
+				return &http.Response{
+					StatusCode: 200,
+					Request:    req,
+					Body:       mustOpen("test_files/7_with_in_and_count_and_no_aggregation_response.json"),
+				}, nil
+			case mustGetQueryAsString("test_files/7_with_notin_and_count_and_no_aggregation_query.json"):
+				return &http.Response{
+					StatusCode: 200,
+					Request:    req,
+					Body:       mustOpen("test_files/7_with_notin_and_count_and_no_aggregation_response.json"),
+				}, nil
+			case mustGetQueryAsString("test_files/8_with_in_and_count_and_aggregateby_query.json"):
+				return &http.Response{
+					StatusCode: 200,
+					Request:    req,
+					Body:       mustOpen("test_files/8_with_in_and_count_and_aggregateby_response.json"),
+				}, nil
+			case mustGetQueryAsString("test_files/8_with_notin_and_count_and_aggregateby_query.json"):
+				return &http.Response{
+					StatusCode: 200,
+					Request:    req,
+					Body:       mustOpen("test_files/8_with_notin_and_count_and_aggregateby_response.json"),
+				}, nil
+			case mustGetQueryAsString("test_files/9_with_in_without_metric_and_no_aggregation_query.json"):
+				return &http.Response{
+					StatusCode: 200,
+					Request:    req,
+					Body:       mustOpen("test_files/9_with_in_without_metric_and_no_aggregation_response.json"),
+				}, nil
+			case mustGetQueryAsString("test_files/9_with_notin_without_metric_and_no_aggregation_query.json"):
+				return &http.Response{
+					StatusCode: 200,
+					Request:    req,
+					Body:       mustOpen("test_files/9_with_notin_without_metric_and_no_aggregation_response.json"),
+				}, nil
 			default:
 				Fail(fmt.Sprintf("Unexpected/malformed Elasticsearch query :%s", reqBody))
 			}
@@ -465,8 +650,44 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 					Request:    req,
 					Body:       mustOpen("test_files/bulk_response.json"),
 				}, nil
+			case mustGetEventIndexDocAsString("test_files/7_with_in_and_count_and_no_aggregation_events_doc.json"):
+				return &http.Response{
+					StatusCode: 200,
+					Request:    req,
+					Body:       mustOpen("test_files/bulk_response.json"),
+				}, nil
+			case mustGetEventIndexDocAsString("test_files/7_with_notin_and_count_and_no_aggregation_events_doc.json"):
+				return &http.Response{
+					StatusCode: 200,
+					Request:    req,
+					Body:       mustOpen("test_files/bulk_response.json"),
+				}, nil
+			case mustGetEventIndexDocAsString("test_files/8_with_in_and_count_and_aggregatedby_events_doc.json"):
+				return &http.Response{
+					StatusCode: 200,
+					Request:    req,
+					Body:       mustOpen("test_files/bulk_response.json"),
+				}, nil
+			case mustGetEventIndexDocAsString("test_files/8_with_notin_and_count_and_aggregatedby_events_doc.json"):
+				return &http.Response{
+					StatusCode: 200,
+					Request:    req,
+					Body:       mustOpen("test_files/bulk_response.json"),
+				}, nil
+			case mustGetEventIndexDocAsString("test_files/9_with_in_without_metric_and_no_aggregation_events_doc.json"):
+				return &http.Response{
+					StatusCode: 200,
+					Request:    req,
+					Body:       mustOpen("test_files/bulk_response.json"),
+				}, nil
+			case mustGetEventIndexDocAsString("test_files/9_with_notin_without_metric_and_no_aggregation_events_doc.json"):
+				return &http.Response{
+					StatusCode: 200,
+					Request:    req,
+					Body:       mustOpen("test_files/bulk_response.json"),
+				}, nil
 			default:
-				Fail(fmt.Sprintf("Unexpected/malformed data sent to Elasticsearch  events index: %s", reqBody))
+				Fail(fmt.Sprintf("Unexpected/malformed data sent to Elasticsearch events index: %s", reqBody))
 			}
 		default:
 			Fail(fmt.Sprintf("Unexpected query URI :%s", req.URL.String()))
@@ -526,7 +747,6 @@ func alterRequestBodyForComparison(req []byte) []byte {
 	decoder := json.NewDecoder(reader)
 	err := decoder.Decode(&q)
 	Expect(err).ShouldNot(HaveOccurred())
-	q.Query.Bool.Filter = nil // To skip comparing time range
 	out, err := json.Marshal(q)
 	Expect(err).ShouldNot(HaveOccurred())
 	return out
@@ -556,7 +776,14 @@ func mustGetQueryAsString(name string) string {
 	var q elasticQuery
 	err = json.Unmarshal(b, &q)
 	Expect(err).ShouldNot(HaveOccurred())
-	q.Query.Bool.Filter = nil
+	// alter time range for comparison
+	Expect(q.Query.Bool.Filter).NotTo(BeNil())
+	q.Query.Bool.Filter["range"] = map[string]interface{}{
+		"start_time": map[string]string{
+			"gte": fmt.Sprintf("now-%ds", int64(DefaultLookback.Seconds())),
+			"lte": "now",
+		},
+	}
 	out, err := json.Marshal(q)
 	Expect(err).ShouldNot(HaveOccurred())
 	return string(out)
