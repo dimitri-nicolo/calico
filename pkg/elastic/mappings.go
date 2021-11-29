@@ -56,4 +56,66 @@ const (
 		}
 	}
 }`
+	EventsIndex   = "tigera_secure_ee_events"
+	eventsMapping = `{
+	"dynamic": false,
+	"properties": {
+        "time": {
+            "type": "date",
+            "format": "strict_date_optional_time||epoch_second"
+        },
+        "type": {
+            "type": "keyword"
+        },
+        "description": {
+            "type": "keyword"
+        },
+        "severity": {
+            "type": "long"
+        },
+        "origin": {
+            "type": "keyword"
+        },
+        "source_ip": {
+            "type": "ip",
+            "null_value": "0.0.0.0"
+        },
+        "source_port": {
+            "type": "long",
+            "null_value": "0"
+        },
+        "source_namespace": {
+            "type": "keyword"
+        },
+        "source_name": {
+            "type": "keyword"
+        },
+		"source_name_aggr": {
+            "type": "keyword"
+        },
+        "dest_ip": {
+            "type": "ip",
+            "null_value": "0.0.0.0"
+        },
+        "dest_port": {
+            "type": "long",
+            "null_value": "0"
+        },
+        "dest_namespace": {
+            "type": "keyword"
+        },
+        "dest_name": {
+            "type": "keyword"
+        },
+		"dest_name_aggr": {
+            "type": "keyword"
+        },
+        "host": {
+            "type": "keyword"
+        },
+        "record": {
+            "type": "object"
+        }
+    }
+}`
 )

@@ -1,3 +1,4 @@
+// Copyright (c) 2021 Tigera, Inc. All rights reserved.
 package elastic
 
 import (
@@ -5,46 +6,149 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"reflect"
 	"time"
 
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
-
-	auditv1 "k8s.io/apiserver/pkg/apis/audit"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	api "github.com/tigera/lma/pkg/api"
+	"github.com/tigera/lma/pkg/api"
 )
 
-const (
-	AuditLogIndex   = "tigera_secure_ee_audit_*"
-	DefaultPageSize = 100
-)
-
-func (c *client) GetAuditEvents(ctx context.Context, start, end *time.Time) <-chan *api.AuditEventResult {
-	return c.SearchAuditEvents(ctx, nil, start, end)
+func (c *client) EventsIndexExists() (bool, error) {
+	alias := c.ClusterAlias(EventsIndex)
+	return c.IndexExists(alias).Do(context.Background())
 }
 
-// Query for audit events in a paginated fashion
-func (c *client) SearchAuditEvents(ctx context.Context, filter *v3.AuditEventsSelection, start, end *time.Time) <-chan *api.AuditEventResult {
-	ch := make(chan *api.AuditEventResult, DefaultPageSize)
-	searchIndex := c.ClusterIndex(AuditLogIndex, "*")
+// CreateEventsIndex creates events index with mapping if it doesn't exist.
+// It marks the new index as write index for events index alias and marks the old index (prior to CEv3.12)
+// as read index for the alias.
+func (c *client) CreateEventsIndex() error {
+	ctx := context.Background()
+	alias := c.ClusterAlias(EventsIndex)
+	oldIndex := c.ClusterIndex(EventsIndex, "")
+
+	// The index pattern used in index template should only map to the new index created by CE >= v3.12, so
+	// pass the write index name to create index template.
+	eventsIndexTemplate, err := c.IndexTemplate(alias, EventsIndex, eventsMapping, false)
+	if err != nil {
+		log.WithError(err).Error("failed to build index template")
+		return err
+	}
+	if err := c.ensureIndexExistsWithRetry(EventsIndex, eventsIndexTemplate, false); err != nil {
+		return err
+	}
+
+	// If there is an old events index created by CE <v3.12, add it to the alias as read index.
+	exists, err := c.IndexExists(oldIndex).Do(ctx)
+	if err != nil {
+		log.WithError(err).Error("Failed to check if index exists")
+		return err
+	}
+	if exists {
+		_, err := c.Alias().Action(elastic.NewAliasAddAction(alias).Index(oldIndex).IsWriteIndex(false)).Do(ctx)
+		if err != nil {
+			log.WithError(err).Error("Failed to mark old events index as read index")
+			return err
+		}
+	}
+
+	return nil
+}
+
+// PutSecurityEventWithID adds the given data into events index for the given docID.
+// If docID is empty, Elasticsearch generates one.
+// This function can be used to send same events multiple time without creating duplicate
+// entries in Elasticsearch as long as the docID remains the same.
+func (c *client) PutSecurityEventWithID(ctx context.Context, data api.EventsData, docID string) (*elastic.IndexResponse, error) {
+	alias := c.ClusterAlias(EventsIndex)
+	return c.Index().Index(alias).Id(docID).BodyJson(data).Do(ctx)
+}
+
+// PutSecurityEvent adds the given data into events index.
+func (c *client) PutSecurityEvent(ctx context.Context, data api.EventsData) (*elastic.IndexResponse, error) {
+	alias := c.ClusterAlias(EventsIndex)
+	return c.Index().Index(alias).BodyJson(data).Do(ctx)
+}
+
+// BulkProcessorInitialize creates a bulk processor service and sets default flush size and BulkAfterFunc that
+// needs to be executed after bulk request is committed.
+func (c *client) BulkProcessorInitialize(ctx context.Context, afterFn elastic.BulkAfterFunc) error {
+	return c.bulkProcessorInit(ctx, afterFn, api.AutoBulkFlush)
+}
+
+// BulkProcessorInitialize creates a bulk processor service and sets given flush size and BulkAfterFunc that
+// needs to be executed after bulk request is committed.
+func (c *client) BulkProcessorInitializeWithFlush(ctx context.Context, afterFn elastic.BulkAfterFunc, bulkActions int) error {
+	return c.bulkProcessorInit(ctx, afterFn, bulkActions)
+}
+
+func (c *client) bulkProcessorInit(ctx context.Context, afterFn elastic.BulkAfterFunc, bulkActions int) error {
+	var err error
+	c.bulkProcessor, err = c.BulkProcessor().
+		BulkActions(bulkActions).
+		After(afterFn).
+		Do(ctx)
+	return err
+}
+
+// PutBulkSecurityEvent adds the given data to bulk processor service,
+// the data is flushed either automatically to Elasticsearch when the document count reaches BulkActions, or
+// when bulk processor service is closed.
+func (c *client) PutBulkSecurityEvent(data api.EventsData) error {
+	if c.bulkProcessor == nil {
+		return fmt.Errorf("BulkProcessor not initalized")
+	}
+	alias := c.ClusterAlias(EventsIndex)
+	r := elastic.NewBulkIndexRequest().Index(alias).Doc(data)
+	c.bulkProcessor.Add(r)
+	return nil
+}
+
+// BulkProcessorFlush is called to manually flush the pending requests in bulk processor service
+func (c *client) BulkProcessorFlush() error {
+	return c.bulkProcessor.Flush()
+}
+
+// BulkProcessorClose flushes the pending requests in bulk processor service and closes it.
+func (c *client) BulkProcessorClose() error {
+	if err := c.bulkProcessor.Flush(); err != nil {
+		return err
+	}
+	return c.bulkProcessor.Close()
+}
+
+// This is used by Honeypod + Alert forwader
+// if start/end is passed it will be used insted of EventsSearchFields.Time
+func (c *client) SearchSecurityEvents(ctx context.Context, start, end *time.Time, filterData []api.EventsSearchFields, allClusters bool) <-chan *api.EventResult {
+	resultChan := make(chan *api.EventResult, resultBucketSize)
+	var index string
+	if allClusters {
+		// When allClusters is true use wildcard to query all events index instead of alias to
+		// cover older managed clusters that do not use alias for events index.
+		index = api.EventIndexWildCardPattern
+	} else {
+		index = c.ClusterAlias(EventsIndex)
+	}
+	queries := constructEventLogsQuery(start, end, filterData)
 	go func() {
-		defer close(ch)
-		// Make search query with scroll
-		scroll := c.Scroll(searchIndex).
-			Query(constructAuditEventsQuery(filter, start, end)).
-			Sort("stageTimestamp", true).
-			Size(DefaultPageSize)
+		defer close(resultChan)
+		scroll := c.Scroll(index).
+			Size(DefaultAlertPageSize).
+			Query(queries).
+			Sort(api.EventTime, true)
+
+		// Issue the query to Elasticsearch and send results out through the resultsChan.
+		// We only terminate the search if when there are no more results to scroll through.
 		for {
-			res, err := scroll.Do(context.Background())
+			log.Debug("Issuing alerts search query")
+			res, err := scroll.Do(ctx)
 			if err == io.EOF {
 				break
 			}
 			if err != nil {
-				log.WithError(err).Warn("failed to search for audit events")
-				ch <- &api.AuditEventResult{Err: err}
+				log.WithError(err).Error("Failed to search alert logs")
+
+				resultChan <- &api.EventResult{Err: err}
 				return
 			}
 			if res == nil {
@@ -55,47 +159,41 @@ func (c *client) SearchAuditEvents(ctx context.Context, filter *v3.AuditEventsSe
 				err = fmt.Errorf("Search expected results.Hits.Hits > 0; got 0")
 			}
 			if err != nil {
-				log.WithError(err).Warn("Unexpected results from audit events search")
-				ch <- &api.AuditEventResult{Err: err}
+				log.WithError(err).Warn("Unexpected results from alert logs search")
+				resultChan <- &api.EventResult{Err: err}
 				return
 			}
 			log.WithField("latency (ms)", res.TookInMillis).Debug("query success")
 
-			// define function that pushes the search results into the channel.
+			// Pushes the search results into the channel.
 			for _, hit := range res.Hits.Hits {
-				ev := new(auditv1.Event)
-				if err := json.Unmarshal(hit.Source, ev); err != nil {
+				var a api.EventsData
+				if err := json.Unmarshal(hit.Source, &a); err != nil {
 					log.WithFields(log.Fields{"index": hit.Index, "id": hit.Id}).WithError(err).Warn("failed to unmarshal event json")
 					continue
 				}
-				ch <- &api.AuditEventResult{Event: ev}
+				resultChan <- &api.EventResult{EventsData: &a}
 			}
-		}
-
-		if err := scroll.Clear(context.Background()); err != nil {
-			log.WithError(err).Info("Failed to clear scroll context")
 		}
 	}()
 
-	return ch
+	return resultChan
 }
 
-func constructAuditEventsQuery(filter *v3.AuditEventsSelection, start, end *time.Time) elastic.Query {
-	// Limit query to include ResponseComplete stage only since that has that has the most information, and only
-	// to the configuration event verb types.
-	queries := []elastic.Query{
-		elastic.NewMatchQuery("stage", auditv1.StageResponseComplete),
-		auditConfigurationEventQuery(),
+func constructEventLogsQuery(start *time.Time, end *time.Time, filterData []api.EventsSearchFields) elastic.Query {
+	queries := []elastic.Query{}
+	for _, data := range filterData {
+		innerQ := []elastic.Query{}
+		v := reflect.ValueOf(data)
+		values := make([]interface{}, v.NumField())
+		for i := 0; i < v.NumField(); i++ {
+			innerQ = append(innerQ, elastic.NewMatchQuery(v.Field(i).String(), values[i]))
+		}
+		queries = append(queries, elastic.NewBoolQuery().Must(innerQ...))
 	}
 
-	// Query by filter if specified.
-	if filter != nil {
-		queries = append(queries, auditEventQueryFromAuditEventsSelection(filter))
-	}
-
-	// Query by from/to if specified.
 	if start != nil || end != nil {
-		rangeQuery := elastic.NewRangeQuery("stageTimestamp")
+		rangeQuery := elastic.NewRangeQuery(api.EventTime)
 		if start != nil {
 			rangeQuery = rangeQuery.From(*start)
 		}
@@ -104,44 +202,6 @@ func constructAuditEventsQuery(filter *v3.AuditEventsSelection, start, end *time
 		}
 		queries = append(queries, rangeQuery)
 	}
-	return elastic.NewBoolQuery().Must(queries...)
-}
 
-func auditConfigurationEventQuery() elastic.Query {
-	queries := []elastic.Query{}
-	for _, verb := range api.EventConfigurationVerbs {
-		queries = append(queries, elastic.NewMatchQuery("verb", verb))
-	}
-	return elastic.NewBoolQuery().Should(queries...)
-}
-
-func auditEventQueryFromAuditEventsSelection(filter *v3.AuditEventsSelection) elastic.Query {
-	if len(filter.Resources) == 0 {
-		return nil
-	}
-	queries := []elastic.Query{}
-	for _, res := range filter.Resources {
-		queries = append(queries, auditEventQueryFromAuditResource(res))
-	}
-	return elastic.NewBoolQuery().Should(queries...)
-}
-
-func auditEventQueryFromAuditResource(res v3.AuditResource) elastic.Query {
-	queries := []elastic.Query{}
-	if res.Resource != "" {
-		queries = append(queries, elastic.NewMatchQuery("objectRef.resource", res.Resource))
-	}
-	if res.APIGroup != "" {
-		queries = append(queries, elastic.NewMatchQuery("objectRef.apiGroup", res.APIGroup))
-	}
-	if res.APIVersion != "" {
-		queries = append(queries, elastic.NewMatchQuery("objectRef.apiVersion", res.APIVersion))
-	}
-	if res.Name != "" {
-		queries = append(queries, elastic.NewMatchQuery("objectRef.name", res.Name))
-	}
-	if res.Namespace != "" {
-		queries = append(queries, elastic.NewMatchQuery("objectRef.namespace", res.Namespace))
-	}
 	return elastic.NewBoolQuery().Must(queries...)
 }

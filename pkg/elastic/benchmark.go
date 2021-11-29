@@ -63,12 +63,12 @@ func (c *client) GetBenchmarks(cxt context.Context, id string) (*api.Benchmarks,
 // StoreBenchmarks stores the supplied benchmarks.
 func (c *client) StoreBenchmarks(ctx context.Context, b *api.Benchmarks) error {
 	index := c.ClusterAlias(BenchmarksIndex)
-	benchmarksTemplate, err := c.IndexTemplate(index, BenchmarksIndex, benchmarksMapping)
+	benchmarksTemplate, err := c.IndexTemplate(index, BenchmarksIndex, benchmarksMapping, true)
 	if err != nil {
 		log.WithError(err).Error("failed to build index template")
 		return err
 	}
-	if err := c.ensureIndexExistsWithRetry(BenchmarksIndex, benchmarksTemplate); err != nil {
+	if err := c.ensureIndexExistsWithRetry(BenchmarksIndex, benchmarksTemplate, true); err != nil {
 		return err
 	}
 	res, err := c.Index().

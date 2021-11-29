@@ -72,13 +72,13 @@ func (c *client) RetrieveArchivedReport(id string) (*api.ArchivedReportData, err
 // RetrieveArchivedReport implements the api.ReportStorer interface
 func (c *client) StoreArchivedReport(r *api.ArchivedReportData) error {
 	index := c.ClusterAlias(ReportsIndex)
-	reportsTemplate, err := c.IndexTemplate(index, ReportsIndex, reportsMapping)
+	reportsTemplate, err := c.IndexTemplate(index, ReportsIndex, reportsMapping, true)
 	if err != nil {
 		log.WithError(err).Error("failed to build index template")
 		return err
 	}
 
-	if err := c.ensureIndexExistsWithRetry(ReportsIndex, reportsTemplate); err != nil {
+	if err := c.ensureIndexExistsWithRetry(ReportsIndex, reportsTemplate, true); err != nil {
 		return err
 	}
 	res, err := c.Index().

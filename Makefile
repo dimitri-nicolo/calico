@@ -34,7 +34,7 @@ Makefile.common.$(MAKE_BRANCH):
 
 # Mocks auto generated testify mocks by mockery. Run `make gen-mocks` to regenerate the testify mocks.
 MOCKERY_FILE_PATHS= \
-	pkg/api/EventFetcher \
+	pkg/api/ReportEventFetcher \
 	pkg/api/ListDestination \
 	pkg/elastic/ClusterContextClientFactory \
 	pkg/elastic/FlowFilter \
@@ -62,7 +62,7 @@ EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 include Makefile.common
 
 ##############################################################################
-ELASTIC_VERSION ?= 7.3.2
+ELASTIC_VERSION ?= 7.11.2
 
 TOP_SRC_DIRS     = pkg
 SRC_DIRS         = $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*.go \

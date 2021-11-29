@@ -56,8 +56,9 @@ type Client interface {
 	api.ADLogReportHandler
 	api.ReportRetriever
 	api.ReportStorer
+	api.ReportEventFetcher
 	api.ListDestination
-	api.EventFetcher
+	api.EventHandler
 	ClusterIndex(string, string) string
 	ClusterAlias(string) string
 	IndexTemplateName(index string) string
@@ -73,6 +74,7 @@ type Client interface {
 // client implements the Client interface.
 type client struct {
 	*elastic.Client
+	bulkProcessor *elastic.BulkProcessor
 	indexSuffix   string
 	indexSettings IndexSettings
 }
@@ -150,7 +152,7 @@ func New(
 	for i := 0; i < retries; i++ {
 		log.Info("Connecting to elastic")
 		if c, err = elastic.NewClient(options...); err == nil {
-			return &client{c, indexSuffix, IndexSettings{strconv.Itoa(replicas), strconv.Itoa(shards), LifeCycle{}}}, nil
+			return &client{c, nil, indexSuffix, IndexSettings{strconv.Itoa(replicas), strconv.Itoa(shards), LifeCycle{}}}, nil
 		}
 		log.WithError(err).WithField("attempts", retries-i).Warning("Elastic connect failed, retrying")
 		time.Sleep(retryInterval)
@@ -159,13 +161,13 @@ func New(
 	return nil, err
 }
 
-func (c *client) ensureIndexExistsWithRetry(index string, template IndexTemplate) error {
+func (c *client) ensureIndexExistsWithRetry(index string, template IndexTemplate, lifecycleEnabled bool) error {
 	// If multiple threads attempt to create the index at the same time we can end up with errors during the creation
 	// which don't seem to match sensible error codes. Let's just add a retry mechanism and retry the creation a few
 	// times.
 	var err error
 	for i := 0; i < createIndexMaxRetries; i++ {
-		if err = c.ensureIndexExists(index, template); err == nil {
+		if err = c.ensureIndexExists(index, template, lifecycleEnabled); err == nil {
 			break
 		}
 		time.Sleep(createIndexRetryInterval)
@@ -178,11 +180,17 @@ func (c *client) ensureIndexExistsWithRetry(index string, template IndexTemplate
 	return err
 }
 
-func (c *client) ensureIndexExists(indexPrefix string, template IndexTemplate) error {
+func (c *client) ensureIndexExists(indexPrefix string, template IndexTemplate, lifecycleEnabled bool) error {
+	var aliasName, indexName string
 	ctx := context.Background()
-	aliasName := c.ClusterAlias(indexPrefix)
 	templateName := c.IndexTemplateName(indexPrefix)
 	clog := log.WithField("indexPrefix", indexPrefix)
+	aliasName = c.ClusterAlias(indexPrefix)
+	if lifecycleEnabled {
+		indexName = fmt.Sprintf("<%s%s-{now/s{yyyyMMdd}}-000000>", aliasName, applicationName)
+	} else {
+		indexName = c.ClusterIndex(indexPrefix, applicationName)
+	}
 
 	// If current template in Elasticsearch doesn't match with expected template or if there is no existing template,
 	// create/update the template. ILM performs rollover to create new index with updated mapping if there is an existing index.
@@ -225,7 +233,6 @@ func (c *client) ensureIndexExists(indexPrefix string, template IndexTemplate) e
 
 	// Create index.
 	clog.Info("index doesn't exist, creating...")
-	indexName := fmt.Sprintf("<%s%s-{now/s{yyyyMMdd}}-000000>", aliasName, applicationName)
 	aliasJson := "{\"" + aliasName + "\": { \"is_write_index\": true } }"
 	createIndex, err := c.
 		CreateIndex(indexName).
@@ -246,7 +253,7 @@ func (c *client) ensureIndexExists(indexPrefix string, template IndexTemplate) e
 	if !createIndex.Acknowledged {
 		clog.Warn("indexPrefix creation has not yet been acknowledged")
 	}
-	clog.Info("indexPrefix successfully created!")
+	clog.Infof("index %s successfully created!", indexName)
 	return nil
 }
 
@@ -267,9 +274,11 @@ func (c *client) ClusterIndex(index, postfix string) string {
 }
 
 // IndexTemplate populates and returns IndexTemplate object
-func (c *client) IndexTemplate(indexAlias, indexPrefix, mapping string) (IndexTemplate, error) {
+func (c *client) IndexTemplate(indexAlias, indexPrefix, mapping string, lifecycleEnabled bool) (IndexTemplate, error) {
 	var indexSettings map[string]interface{}
-	c.indexSettings.LifeCycle = LifeCycle{Name: fmt.Sprintf("%s_policy", indexPrefix), RolloverAlias: indexAlias}
+	if lifecycleEnabled {
+		c.indexSettings.LifeCycle = LifeCycle{Name: fmt.Sprintf("%s_policy", indexPrefix), RolloverAlias: indexAlias}
+	}
 
 	// Convert c.indexSettings into map[string]interface{} that can represent:
 	// "settings": {

@@ -64,6 +64,9 @@ func (h alertsIndexHelper) GetTimeField() string {
 	return "time"
 }
 
+// GetIndex returns generic name of events index that can be query from both older events index
+// `tigera_secure_ee_events.<cluster>` used prior to CEv3.12 and newer events index name
+// `tigera_secure_ee_events.<cluster>` used in CE >=v3.12
 func (h alertsIndexHelper) GetIndex(cluster string) string {
-	return fmt.Sprintf("%s.%s", esAlertsIndexPrefix, cluster)
+	return fmt.Sprintf("%s.%s*", esAlertsIndexPrefix, cluster)
 }

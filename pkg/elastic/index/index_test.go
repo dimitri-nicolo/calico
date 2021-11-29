@@ -9,7 +9,7 @@ import (
 
 var _ = Describe("Index construction tests", func() {
 	It("handles alerts", func() {
-		Expect(Alerts().GetIndex("foobar")).To(Equal("tigera_secure_ee_events.foobar"))
+		Expect(Alerts().GetIndex("foobar")).To(Equal("tigera_secure_ee_events.foobar*"))
 	})
 
 	It("handles dns logs", func() {
