@@ -71,7 +71,7 @@ Compliance reports provide the following high-level information:
 
 **Recommended**
 
-- [Configure audit logs for Kubernetes resources]({{site.baseurl}}/visibility/elastic/ee-audit)
+- [Configure audit logs for Kubernetes resources]({{site.baseurl}}/visibility/elastic/audit-overview)
 
     Although all {{site.prodname}} resources are configured for compliance reports, you must configure Kubernetes resources for audit logs through the Kubernetes API for a complete view of your resources. 
 

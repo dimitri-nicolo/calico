@@ -11,9 +11,10 @@ satisfy a condition.
 
 {{site.prodname}} supports alerts on the following data sets:
 
- * [Audit logs]
- * [DNS logs]
- * [Flow logs]
+ * [Audit logs]({{site.baseurl}}/visibility/elastic/audit-overview)
+ * [DNS logs]({{site.baseurl}}/visibility/elastic/dns)
+ * [Flow logs]({{site.baseurl}}/visibility/elastic/flow)
+ * [L7 logs]({{site.baseurl}}/visibility/elastic/l7)
 
 For `calicoctl` [commands]({{site.baseurl}}/reference/calicoctl/), the following case-insensitive aliases
 can be used to specify the resource type on the CLI:
@@ -68,11 +69,19 @@ spec:
 | metric | A metric to apply to aggregated results. `count` is the number of log entries matching the aggregation pattern. Others are applied only to numeric fields in the logs. | string | no | avg, max, min, sum, count |
 | condition | Compare the value of the metric to the threshold using this condition. | string | if metric defined | eq, not_eq, lt, lte, gt, gte |
 | threshold | A numeric value to compare the value of the metric against. | float | if metric defined |
+| substitutions | An optional list of values to replace variable names in query. | List of [GlobalAlertSubstitution](#globalalertsubstitution) | no |
+
+#### GlobalAlertSubstitution
+
+| Field | Description | Type | Required |
+|---|---|---|---|
+| name | The name of the global alert substitution. It will be referenced by the variable names in query. Duplicate names are not allowed in the substitutions list. | string | yes |
+| values | A list of values for this substitution. Wildcard operators asterisk (`*`) and question mark (`?`) are supported. | string array | yes |
 
 #### Status
 
 | Field | Description |
-|---|---|---|
+|---|---|
 | lastUpdate | When the alert was last modified on the backend. |
 | active | Whether the alert is active on the backend. |
 | healthy | Whether the alert is in an error state or not. |
@@ -88,12 +97,17 @@ identify flows with specific features, or to select (or omit) certain
 namespaces from consideration.
 
 The query language is composed of any number of selectors, combined
-with boolean expressions (AND, OR, and NOT) and bracketed
-subexpressions. These are translated by {{site.product}} to Elastic
-DSL queries that are executed on the backend.
+with boolean expressions (`AND`, `OR`, and `NOT`), set expressions
+(`IN` and `NOTIN`) and bracketed subexpressions. These are translated
+by {{site.prodname}} to Elastic DSL queries that are executed on the backend.
+
+Set expressions support wildcard operators asterisk (`*`) and question mark (`?`). 
+The asterisk sign matches zero or more characters and the question mark matches a single character.
+Set values can be embedded into the query string or reference the values
+in the global alert substitution list.
 
 A selector consists of a key, comparator, and value. Keys and values
-may be identifiers consisting of alphanumerics and underscores (\_)
+may be identifiers consisting of alphanumerics and underscores (`_`)
 with the first character being alphabetic or an underscore, or may be
 quoted strings. Values may also be integer or floating point numbers.
 Comparators may be `=` (equal), `!=` (not equal), `<` (less than),
@@ -108,8 +122,8 @@ Examples:
  * `query: "count > 0"`
  * `query: "\"servers.ip\" = \"127.0.0.1\""`
 
-Selectors may be combined using AND, OR, and NOT boolean expressions
-and bracketed subexpressions.
+Selectors may be combined using `AND`, `OR`, and `NOT` boolean expressions,
+`IN` and `NOTIN` set expressions, and bracketed subexpressions.
 
 Examples:
 
@@ -117,6 +131,8 @@ Examples:
  * `query: "client_namespace = ns1 OR client_namespace = ns2"`
  * `query: "count > 100 AND NOT (client_namespace = ns1 OR client_namespace = ns2)"`
  * `query: "(qtype = A OR qtype = AAAA) AND rcode != NoError"`
+ * `query: "process_name IN {\"proc1?\", \"*proc2\"} AND source_namespace = ns1`
+ * `query: "qname NOTIN ${domains}"`
 
 ### Aggregation
 
@@ -225,7 +241,7 @@ field.
 
 The interval between alerts, and the amount of data considered by the
 alert may be controlled using the `period` and `lookback` parameters
-respectively. These fields are formatted as [duration] strings.
+respectively. These fields are formatted as [duration](https://golang.org/pkg/time/#ParseDuration) strings.
 
  > A duration string is a possibly signed sequence of decimal numbers,
  > each with optional fraction and a unit suffix, such as "300ms",
@@ -287,131 +303,17 @@ spec:
 
 #### Audit logs
 
-See [audit.k8s.io group v1] for descriptions of fields.
-
-| Key | Type | Acceptable Values | Example |
-|---|---|---|---|
-| apiVersion | domain
-| auditID | string
-| kind | string
-| level | string | None, Metadata, Request, RequestResponse
-| name | domain
-| objectRef.apiGroup | string
-| objectRef.apiVersion | URL
-| objectRef.name | domain
-| objectRef.resource | string
-| objectRef.namespace | domain
-| requestReceivedTimestamp | date
-| requestURI | URL
-| responseObject.apiVersion | string | | projectcalico.org/v3
-| responseObject.kind | string
-| responseStatus.code | int | 100-599 | 200 404
-| sourceIPs | IP, CIDR | | 198.51.100.1 192.0.2.0/24 2001:db8::1:2:3:4 2001:db8:0:2:/64
-| stage | string | RequestReceived, ResponseStarted, ResponseComplete, Panic
-| stageTimestamp | date
-| timestamp | date
-| user.groups | string
-| user.username | string
-| verb | string | get, list, watch, create, update, patch, delete
+See [audit.k8s.io group v1](https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/apiserver/pkg/apis/audit/v1/types.go) for descriptions of fields.
 
 #### DNS logs
 
-See [DNS logs] for description of fields.
-
-| Key | Type | Acceptable Values | Example |
-|---|---|---|---|
-| start_time | date
-| end_time | date
-| count | int | positive
-| client_name | domain
-| client_name_aggr | domain
-| client_namespace | domain
-| client_labels.LABEL_NAME | string
-| client_ip | IP, CIDR
-| servers.name | domain
-| servers.name_aggr | domain
-| servers.namespace | domain
-| servers.labels.LABEL_NAME | string
-| servers.ip | IP, CIDR
-| qname | domain
-| qtype | dns type | A NS MD MF CNAME SOA MB MG MR NULL WKS PTR HINFO MINFO MX TXT AAAA SRV #0 - #65535
-| rclass | string
-| rcode | string
-| rrsets.name | domain
-| rrsets.type | dns type | see qtype
-| rrsets.class | string
-| rrsets.rdata | string
-| 127.0.0.1 | projectcalico.org
+See [DNS logs]({{site.baseurl}}/visibility/elastic/dns/dns-logs) for description of fields.
 
 #### Flow logs
 
-See [Flow logs] for description of fields.
+See [Flow logs]({{site.baseurl}}/visibility/elastic/flow/datatypes) for description of fields.
 
-| Key | Type | Acceptable Values | Example |
-|---|---|---|---|
-| start_time | date
-| end_time | date
-| action | string | allow, deny
-| bytes_in | int | positive
-| bytes_out | int | positive
-| dest_ip | IP, CIDR
-| dest_name | domain
-| dest_name_aggr | domain
-| dest_namespace | domain
-| dest_port | int | 0 - 65535
-| dest_type | string | wep, hep, ns, net
-| dest_labels.labels | string | LABEL_NAME=LABEL_VALUE | application=intrusion-detection-controller
-| reporter | string | src, dst
-| num_flows | int | positive
-| num_flows_completed | int | positive
-| num_flows_started | int | positive
-| http_requests_allowed_in | int | positive
-| http_requests_denied_in | int | positive
-| packets_in | int | positive
-| packets_out | int | positive
-| proto | string, int | icmp tcp udp ipip esp icmp6
-| policies.all_policies | string
-| source_ip | IP, CIDR
-| source_name | domain
-| source_name_aggr | domain
-| source_namespace | domain
-| source_port | int | 0 - 65535
-| source_type | string | wep, hep, ns, net
-| source_labels.labels | string | LABEL_NAME=LABEL_VALUE | application=intrusion-detection-controller
-| original_source_ips | IP, CIDR
-| num_original_source_ips | int | positive
 
 #### L7 logs
 
-See [L7 logs] for description of fields.
-
-| Key | Type | Acceptable Values | Example |
-|---|---|---|---|
-| start_time | date
-| end_time | date
-| bytes_in | int | positive
-| bytes_out | int | positive
-| duration_mean | int | positive
-| duration_max | int | positive
-| count | int | positive
-| src_name_aggr | domain
-| src_namespace | domain
-| src_type | string | wep, hep, ns, net
-| dest_name_aggr | domain
-| dest_namespace | domain
-| dest_type | string | wep, hep, ns, net
-| dest_service_name | domain
-| dest_service_namespace | domain
-| dest_service_port | int
-| url | any
-| response_code | any
-| method | any
-| user_agent | any
-| type | any
-
-[Audit logs]: ../../visibility/elastic/ee-audit
-[audit.k8s.io group v1]: https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/apiserver/pkg/apis/audit/v1/types.go
-[DNS logs]: ../../visibility/elastic/dns
-[Flow logs]: /visibility/elastic/flow/datatypes
-[L7 logs]: /visibility/elastic/l7/datatypes
-[duration]: https://golang.org/pkg/time/#ParseDuration
+See [L7 logs]({{site.baseurl}}/visibility/elastic/l7/datatypes) for description of fields.
