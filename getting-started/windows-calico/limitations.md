@@ -184,7 +184,8 @@ Because of the way the Windows dataplane handles rules, the following limitation
 
 {{site.prodname}} supports flow logs with these limitations:
 
-- No packet/bytes stats for denied traffic
+- No packet/bytes stats for denied traffics
+- Inaccurate `num_flows_started` and `num_flows_completed` stats with VXLAN networking 
 - No DNS stats
 - No Http stats
 - No RuleTrace for tiers
