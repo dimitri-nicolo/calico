@@ -27,9 +27,9 @@ require (
 	github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54
 	github.com/prometheus/client_golang v1.7.1
 	github.com/robfig/cron v1.2.0
-	github.com/sirupsen/logrus v1.7.0
+	github.com/sirupsen/logrus v1.8.1
 	github.com/tchap/go-patricia/v2 v2.3.1
-	github.com/tigera/api v0.0.0-20211125220726-e8ff6939919d
+	github.com/tigera/api v0.0.0-20211130232353-e7a188095a30
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
 	go.uber.org/zap v1.13.0 // indirect
@@ -43,16 +43,16 @@ require (
 
 	// validator.v9 must be at v9.30.2
 	gopkg.in/go-playground/validator.v9 v9.30.2
-	k8s.io/api v0.21.0
-	k8s.io/apimachinery v0.21.0
-	k8s.io/apiserver v0.21.0
-	k8s.io/client-go v0.21.0
-	k8s.io/code-generator v0.21.2
-	k8s.io/kube-openapi v0.0.0-20210421082810-95288971da7e
+	k8s.io/api v0.21.8-rc.0
+	k8s.io/apimachinery v0.21.8-rc.0
+	k8s.io/apiserver v0.21.8-rc.0
+	k8s.io/client-go v0.21.8-rc.0
+	k8s.io/code-generator v0.21.8-rc.0
+	k8s.io/kube-openapi v0.0.0-20211110012726-3cc51fd1e909
 	sigs.k8s.io/kind v0.11.1
 )
 
 replace (
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
-	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
+	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20211110012726-3cc51fd1e909
 )
