@@ -38,10 +38,12 @@ MOCKERY_FILE_PATHS= \
 	pkg/api/ListDestination \
 	pkg/elastic/ClusterContextClientFactory \
 	pkg/elastic/FlowFilter \
+	pkg/elastic/Client \
 	pkg/auth/RBACAuthorizer \
 	pkg/rbac/FlowHelper \
 	pkg/k8s/ClientSet \
-	pkg/k8s/ClientSetFactory
+	pkg/k8s/ClientSetFactory \
+	pkg/auth/JWTAuth
 
 # Note that mockery doesn't add the correct elasticsearch dependency, so if you uncomment this to regenerate the client
 # be sure to check that the elasticsearch dependency for the generated mock is correct

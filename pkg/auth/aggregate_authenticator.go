@@ -8,8 +8,7 @@ import (
 	"github.com/projectcalico/apiserver/pkg/authentication"
 )
 
-
-// Deprecated: Please use AuthnAuthz.
+// Deprecated: Please use JWTAuth.
 // aggregateAuthenticator will authenticate the provided authenticator args in order. If an authenticator returns an
 // HTTP 421 misdirected error code, it tries the next, until it it reaches an authenticator that can authenticate
 // the authorization header.
@@ -34,7 +33,7 @@ func (a *aggregateAuthenticator) Authenticate(token string) (k8suser.Info, int, 
 	return nil, 401, errors.New("no authenticator can authenticate user")
 }
 
-// Deprecated: Please use AuthnAuthz.
+// Deprecated: Please use JWTAuth.
 // NewAggregateAuthenticator will create an authenticator that combines multiple authenticators into one.
 func NewAggregateAuthenticator(authenticators ...authentication.Authenticator) authentication.Authenticator {
 	var auths []authentication.Authenticator

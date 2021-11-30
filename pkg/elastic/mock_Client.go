@@ -40,6 +40,62 @@ func (_m *MockClient) Backend() *elastic.Client {
 	return r0
 }
 
+// BulkProcessorClose provides a mock function with given fields:
+func (_m *MockClient) BulkProcessorClose() error {
+	ret := _m.Called()
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// BulkProcessorFlush provides a mock function with given fields:
+func (_m *MockClient) BulkProcessorFlush() error {
+	ret := _m.Called()
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// BulkProcessorInitialize provides a mock function with given fields: ctx, afterFn
+func (_m *MockClient) BulkProcessorInitialize(ctx context.Context, afterFn elastic.BulkAfterFunc) error {
+	ret := _m.Called(ctx, afterFn)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, elastic.BulkAfterFunc) error); ok {
+		r0 = rf(ctx, afterFn)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// BulkProcessorInitializeWithFlush provides a mock function with given fields: ctx, afterFn, bulkActions
+func (_m *MockClient) BulkProcessorInitializeWithFlush(ctx context.Context, afterFn elastic.BulkAfterFunc, bulkActions int) error {
+	ret := _m.Called(ctx, afterFn, bulkActions)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, elastic.BulkAfterFunc, int) error); ok {
+		r0 = rf(ctx, afterFn, bulkActions)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // ClusterAlias provides a mock function with given fields: _a0
 func (_m *MockClient) ClusterAlias(_a0 string) string {
 	ret := _m.Called(_a0)
@@ -68,6 +124,20 @@ func (_m *MockClient) ClusterIndex(_a0 string, _a1 string) string {
 	return r0
 }
 
+// CreateEventsIndex provides a mock function with given fields:
+func (_m *MockClient) CreateEventsIndex() error {
+	ret := _m.Called()
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // Do provides a mock function with given fields: ctx, s
 func (_m *MockClient) Do(ctx context.Context, s *elastic.SearchService) (*elastic.SearchResult, error) {
 	ret := _m.Called(ctx, s)
@@ -84,6 +154,27 @@ func (_m *MockClient) Do(ctx context.Context, s *elastic.SearchService) (*elasti
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *elastic.SearchService) error); ok {
 		r1 = rf(ctx, s)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// EventsIndexExists provides a mock function with given fields:
+func (_m *MockClient) EventsIndexExists() (bool, error) {
+	ret := _m.Called()
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func() bool); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -142,6 +233,66 @@ func (_m *MockClient) IndexTemplateName(index string) string {
 	}
 
 	return r0
+}
+
+// PutBulkSecurityEvent provides a mock function with given fields: data
+func (_m *MockClient) PutBulkSecurityEvent(data api.EventsData) error {
+	ret := _m.Called(data)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(api.EventsData) error); ok {
+		r0 = rf(data)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// PutSecurityEvent provides a mock function with given fields: ctx, data
+func (_m *MockClient) PutSecurityEvent(ctx context.Context, data api.EventsData) (*elastic.IndexResponse, error) {
+	ret := _m.Called(ctx, data)
+
+	var r0 *elastic.IndexResponse
+	if rf, ok := ret.Get(0).(func(context.Context, api.EventsData) *elastic.IndexResponse); ok {
+		r0 = rf(ctx, data)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*elastic.IndexResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, api.EventsData) error); ok {
+		r1 = rf(ctx, data)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// PutSecurityEventWithID provides a mock function with given fields: ctx, data, docId
+func (_m *MockClient) PutSecurityEventWithID(ctx context.Context, data api.EventsData, docId string) (*elastic.IndexResponse, error) {
+	ret := _m.Called(ctx, data, docId)
+
+	var r0 *elastic.IndexResponse
+	if rf, ok := ret.Get(0).(func(context.Context, api.EventsData, string) *elastic.IndexResponse); ok {
+		r0 = rf(ctx, data, docId)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*elastic.IndexResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, api.EventsData, string) error); ok {
+		r1 = rf(ctx, data, docId)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // RetrieveArchivedReport provides a mock function with given fields: id
@@ -397,6 +548,22 @@ func (_m *MockClient) SearchFlowLogs(ctx context.Context, namespaces []string, s
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(<-chan *api.FlowLogResult)
+		}
+	}
+
+	return r0
+}
+
+// SearchSecurityEvents provides a mock function with given fields: ctx, start, end, filterData, allClusters
+func (_m *MockClient) SearchSecurityEvents(ctx context.Context, start *time.Time, end *time.Time, filterData []api.EventsSearchFields, allClusters bool) <-chan *api.EventResult {
+	ret := _m.Called(ctx, start, end, filterData, allClusters)
+
+	var r0 <-chan *api.EventResult
+	if rf, ok := ret.Get(0).(func(context.Context, *time.Time, *time.Time, []api.EventsSearchFields, bool) <-chan *api.EventResult); ok {
+		r0 = rf(ctx, start, end, filterData, allClusters)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(<-chan *api.EventResult)
 		}
 	}
 
