@@ -97,12 +97,15 @@ type SecondaryIfaceProvisioner struct {
 	nodeName           string
 	awsSubnetsFilename string
 	timeout            time.Duration
-	clock              clock.Clock
-	newEC2Client       func(ctx context.Context) (*EC2Client, error)
+	// Separate Clock shims for the two timers so the UTs can monitor/trigger the timers separately.
+	backoffClock               clock.Clock
+	recheckClock               clock.Clock
+	recheckIntervalResetNeeded bool
+	newEC2Client               func(ctx context.Context) (*EC2Client, error)
 
 	healthAgg       healthAggregator
 	livenessEnabled bool
-	opRecorder      logutils.OpRecorder
+	opRecorder      *logutils.Summarizer
 	ipamClient      ipamInterface
 
 	// resyncNeeded is set to true if we need to do any kind of resync.
@@ -165,9 +168,10 @@ func OptCapacityCallback(cb func(SecondaryIfaceCapacities)) IfaceProvOpt {
 	}
 }
 
-func OptClockOverride(c clock.Clock) IfaceProvOpt {
+func OptClockOverrides(backoffClock, recheckClock clock.Clock) IfaceProvOpt {
 	return func(provisioner *SecondaryIfaceProvisioner) {
-		provisioner.clock = c
+		provisioner.backoffClock = backoffClock
+		provisioner.recheckClock = recheckClock
 	}
 }
 
@@ -217,7 +221,8 @@ func NewSecondaryIfaceProvisioner(
 
 		datastoreUpdateC: make(chan DatastoreState, 1),
 		responseC:        make(chan *LocalAWSNetworkState, 1),
-		clock:            clock.RealClock{},
+		backoffClock:     clock.RealClock{},
+		recheckClock:     clock.RealClock{},
 		capacityCallback: func(c SecondaryIfaceCapacities) {
 			logrus.WithField("cap", c).Debug("Capacity updated but no callback configured.")
 		},
@@ -297,9 +302,17 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 	}
 	defer stopBackoffTimer()
 
+	// Create a simple backoff manager that can be used to schedule checks of the AWS API at
+	// exponentially increasing intervals.  The k8s backoff machinery isn't quite suitable because
+	// it doesn't provide a way to reset (and it remembers recent failures).  We just want a
+	// way to queue up extra resyncs at 30s, 60s, 120s... after any given successful resync.
+	const defaultRecheckInterval = 30 * time.Second
+	const maxRecheckInterval = 30 * time.Minute
+	recheckBackoffMgr := NewResettableBackoff(m.recheckClock, defaultRecheckInterval, maxRecheckInterval, 0.1)
+
 	var livenessC <-chan time.Time
 	if m.livenessEnabled {
-		livenessTicker := m.clock.NewTicker(livenessReportInterval)
+		livenessTicker := m.backoffClock.NewTicker(livenessReportInterval)
 		livenessC = livenessTicker.C()
 	}
 
@@ -310,6 +323,8 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 		//   channel before sending in OnDatastoreUpdate.
 		// - We do our receives and sends in the same select block so that we never block a send op on a receive op
 		//   or vice versa.
+		thisIsARetry := false
+		recheckTimerFired := false
 		select {
 		case <-ctx.Done():
 			logrus.Info("SecondaryIfaceManager stopping, context canceled.")
@@ -325,24 +340,57 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 			continue // Don't want sending a response to trigger an early resync.
 		case <-livenessC:
 			m.healthAgg.Report(healthNameAWSProvisioner, &health.HealthReport{Ready: true, Live: true})
+			continue // Don't want liveness to trigger early resync.
 		case <-backoffC:
 			// Important: nil out the timer so that stopBackoffTimer() won't try to stop it again (and deadlock).
 			backoffC = nil
 			backoffTimer = nil
 			logrus.Warn("Retrying AWS resync after backoff.")
+			thisIsARetry = true
 			m.opRecorder.RecordOperation("aws-retry")
+		case <-recheckBackoffMgr.C():
+			// AWS sometimes returns stale data and sometimes loses writes.  Recheck at increasing intervals
+			// after a successful update.
+			logrus.Debug("Recheck timer fired, checking AWS state is still correct.")
+			m.resyncNeeded = true
+			recheckTimerFired = true
+			m.opRecorder.RecordOperation("aws-recheck")
 		}
 
+		startTime := time.Now()
+
+		// Either backoff has done its job or another update has come along.  Clear any pending backoff.
 		stopBackoffTimer()
 
 		if m.resyncNeeded {
+			// Only stop the recheck timer if we're actually doing a resync.
+			recheckBackoffMgr.Stop(recheckTimerFired)
+			recheckTimerFired = false
+
 			var err error
 			response, err = m.resync(ctx)
 			m.healthAgg.Report(healthNameAWSInSync, &health.HealthReport{Ready: err == nil})
 			if err != nil {
-				logrus.WithError(err).Error("Failed to resync with AWS. Will retry after backoff.")
+				logrus.WithError(err).Warning("Failed to resync with AWS. Will retry after backoff.")
 				backoffTimer = backoffMgr.Backoff()
 				backoffC = backoffTimer.C()
+				// We don't reschedule the recheck timer here since we've already got a retry backoff timer
+				// queued up but we do reset the interval for next time.
+				m.resetRecheckInterval("resync-failure")
+			} else {
+				// Success, we're now in sync.
+				if thisIsARetry {
+					logrus.Info("Retry successful, now in sync with AWS.")
+				}
+				// However, AWS can sometimes lose updates, schedule a recheck on an exponential backoff.
+				if m.recheckIntervalResetNeeded {
+					// We just made a change to the AWS dataplane (or hit an error), reset the time to the
+					// next recheck.
+					logrus.Debug("Resetting time to next AWS recheck.")
+					recheckBackoffMgr.ResetInterval()
+					m.recheckIntervalResetNeeded = false
+				}
+				recheckBackoffMgr.Reschedule(false /*we already reset the timer above*/)
 			}
 			if response == nil {
 				responseC = nil
@@ -350,6 +398,8 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 				responseC = m.responseC
 			}
 		}
+
+		m.opRecorder.EndOfIteration(time.Since(startTime))
 	}
 }
 
@@ -361,7 +411,7 @@ func (m *SecondaryIfaceProvisioner) newBackoffManager() wait.BackoffManager {
 		backoffFactor = 2.0
 		jitter        = 0.1
 	)
-	backoffMgr := wait.NewExponentialBackoffManager(initBackoff, maxBackoff, resetDuration, backoffFactor, jitter, m.clock)
+	backoffMgr := wait.NewExponentialBackoffManager(initBackoff, maxBackoff, resetDuration, backoffFactor, jitter, m.backoffClock)
 	return backoffMgr
 }
 
@@ -382,6 +432,7 @@ func (m *SecondaryIfaceProvisioner) OnDatastoreUpdate(snapshot DatastoreState) {
 }
 
 var errResyncNeeded = errors.New("resync needed")
+var errStaleRead = errors.New("AWS API returned stale data")
 
 func (m *SecondaryIfaceProvisioner) resync(ctx context.Context) (*LocalAWSNetworkState, error) {
 	var awsResyncErr error
@@ -409,7 +460,6 @@ func (m *SecondaryIfaceProvisioner) resync(ctx context.Context) (*LocalAWSNetwor
 			logrus.Debug("Restarting resync after modifying AWS state.")
 			continue
 		} else if awsResyncErr != nil {
-			logrus.WithError(awsResyncErr).Warn("Failed to resync AWS subnet state.")
 			m.cachedEC2Client = nil // Maybe something wrong with client?
 			break
 		}
@@ -514,7 +564,6 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 		logrus.Debug("No new AWS IPs to program")
 		return m.calculateResponse(awsSnapshot)
 	}
-	logrus.WithField("numNewRoutes", len(subnetCalicoRoutesNotInAWS)).Info("Need to program new AWS IPs")
 
 	if m.orphanENIResyncNeeded {
 		// Look for and attach any AWS interfaces that belong to this node but that are not already attached.
@@ -580,7 +629,37 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 	err = m.assignSecondaryIPsToENIs(resyncState, subnetCalicoRoutesNotInAWS)
 	if errors.Is(err, errResyncNeeded) {
 		// This is the mainline after we assign an IP, avoid doing a full resync and just reload the snapshot.
+		logrus.Debug("Rechecking AWS state after making updates...")
 		awsSnapshot, _, err = m.loadAWSENIsState()
+		if err != nil {
+			return nil, err
+		}
+
+		// The AWS API is eventually consistent, meaning that the updates we just made may not show up in the
+		// new snapshot.  Verify the snapshot before we accept it.  We've also seen AWS lose writes, for example,
+		// if we unassign an IP and then assign the same IP 30s later, the assign may get lost.
+		missingRoutes := m.findRoutesWithNoAWSAddr(awsSnapshot, localSubnetsByID)
+		missingRoutesOurSubnet := filterRoutesByAWSSubnet(missingRoutes, bestSubnetID)
+		unusedAWSIPs := m.findUnusedAWSIPs(awsSnapshot)
+		if len(missingRoutesOurSubnet) == 0 && unusedAWSIPs.Len() == 0 {
+			logrus.Debug("Read back good AWS state.")
+			err = nil
+		} else {
+			var missingIPs []string
+			for _, r := range missingRoutesOurSubnet {
+				missingIPs = append(missingIPs, r.Dst)
+			}
+			var extraIPs []string
+			unusedAWSIPs.Iter(func(item interface{}) error {
+				extraIPs = append(extraIPs, item.(ip.CIDR).Addr().String())
+				return nil
+			})
+			logrus.WithFields(logrus.Fields{"missingIPs": missingIPs, "extraIPs": extraIPs}).Info(
+				"After updating AWS, AWS API returned stale data, triggering another resync to " +
+					"re-check the state.")
+			// Dedicated error to trigger backoff as recommended by AWS docs.
+			err = errStaleRead
+		}
 	}
 	if err != nil {
 		return nil, err
@@ -838,15 +917,21 @@ func (m *SecondaryIfaceProvisioner) loadAWSENIsState() (s *eniSnapshot, r *eniRe
 }
 
 // findUnusedAWSIPs scans the AWS state for secondary IPs that are not assigned in Calico IPAM.
-func (m *SecondaryIfaceProvisioner) findUnusedAWSIPs(awsState *eniSnapshot) set.Set /* ip.Addr */ {
+func (m *SecondaryIfaceProvisioner) findUnusedAWSIPs(awsState *eniSnapshot) set.Set /* ip.CIDR */ {
 	awsIPsToRelease := set.New()
+	summary := map[string][]string{}
 	for addr, eniID := range awsState.eniIDByIP {
 		if _, ok := m.ds.LocalAWSRoutesByDst[addr]; !ok {
-			logrus.WithFields(logrus.Fields{
-				"addr":  addr,
-				"nidID": eniID,
-			}).Info("AWS Secondary IP no longer needed")
 			awsIPsToRelease.Add(addr)
+			summary[eniID] = append(summary[eniID], addr.Addr().String())
+		}
+	}
+	if len(summary) > 0 && logrus.GetLevel() >= logrus.InfoLevel {
+		for eni, addrs := range summary {
+			logrus.WithFields(logrus.Fields{
+				"eniID": eni,
+				"addrs": strings.Join(addrs, ","),
+			}).Info("Found unneeded AWS secondary IPs.")
 		}
 	}
 	return awsIPsToRelease
@@ -896,6 +981,7 @@ func (m *SecondaryIfaceProvisioner) findENIsWithNoPool(awsENIState *eniSnapshot)
 // findRoutesWithNoAWSAddr Scans our local Calico workload routes for routes with no corresponding AWS IP.
 func (m *SecondaryIfaceProvisioner) findRoutesWithNoAWSAddr(awsENIState *eniSnapshot, localSubnetsByID map[string]ec2types.Subnet) []*proto.RouteUpdate {
 	var missingRoutes []*proto.RouteUpdate
+	var missingIPSummary []string
 	for addr, route := range m.ds.LocalAWSRoutesByDst {
 		if _, ok := localSubnetsByID[route.AwsSubnetId]; !ok {
 			logrus.WithFields(logrus.Fields{
@@ -920,11 +1006,12 @@ func (m *SecondaryIfaceProvisioner) findRoutesWithNoAWSAddr(awsENIState *eniSnap
 			}).Debug("Local workload IP is already present on one of our AWS ENIs.")
 			continue
 		}
-		logrus.WithFields(logrus.Fields{
-			"addr":      addr,
-			"awsSubnet": route.AwsSubnetId,
-		}).Info("Local workload IP needs to be added to AWS ENI.")
 		missingRoutes = append(missingRoutes, route)
+		missingIPSummary = append(missingIPSummary, strings.TrimSuffix(route.Dst, "/32"))
+	}
+	if len(missingIPSummary) > 0 {
+		logrus.WithField("addrs", missingIPSummary).Info(
+			"Found local workload IPs that should be added to AWS ENI(s).")
 	}
 	return missingRoutes
 }
@@ -932,6 +1019,13 @@ func (m *SecondaryIfaceProvisioner) findRoutesWithNoAWSAddr(awsENIState *eniSnap
 // unassignAWSIPs unassigns (releases) the given IPs in the AWS fabric.  It updates the free IP counters
 // in the eniSnapshot (but it does not refresh the AWS ENI data itself).
 func (m *SecondaryIfaceProvisioner) unassignAWSIPs(awsIPsToRelease set.Set, awsENIState *eniSnapshot) error {
+	if awsIPsToRelease.Len() == 0 {
+		return nil
+	}
+
+	// About to change AWS state, queue up a recheck.
+	m.resetRecheckInterval("unassign-ips")
+
 	ctx, cancel := m.newContext()
 	defer cancel()
 	ec2Client, err := m.ec2Client()
@@ -973,9 +1067,9 @@ func (m *SecondaryIfaceProvisioner) releaseAWSENIs(enisToRelease set.Set, awsENI
 	if enisToRelease.Len() == 0 {
 		return nil
 	}
-
-	// About to release some ENIs, queue up a check of our IPAM handle.
+	// About to release some ENIs, queue up a check of our IPAM handle and a general AWS recheck.
 	m.hostIPAMResyncNeeded = true
+	m.resetRecheckInterval("release-eni")
 
 	ctx, cancel := m.newContext()
 	defer cancel()
@@ -1121,6 +1215,9 @@ func (m *SecondaryIfaceProvisioner) attachOrphanENIs(resyncState *eniResyncState
 	numLeakedENIs := 0
 	var lastLeakErr error
 	for _, eni := range dio.NetworkInterfaces {
+		// About to change AWS state, queue up a recheck.
+		m.resetRecheckInterval("attach-orphan-eni")
+
 		// Find next free device index.
 		devIdx := resyncState.FindFreeDeviceIdx()
 
@@ -1283,6 +1380,9 @@ func (m *SecondaryIfaceProvisioner) createAWSENIs(awsENIState *eniSnapshot, resy
 		return nil
 	}
 
+	// About to change AWS state, queue up a recheck.
+	m.resetRecheckInterval("create-eni")
+
 	ctx, cancel := m.newContext()
 	defer cancel()
 	ec2Client, err := m.ec2Client()
@@ -1379,6 +1479,9 @@ func (m *SecondaryIfaceProvisioner) assignSecondaryIPsToENIs(resyncState *eniRes
 		return nil
 	}
 
+	// About to change AWS state, queue up a recheck.
+	m.resetRecheckInterval("assign-ips")
+
 	ctx, cancel := m.newContext()
 	defer cancel()
 	ec2Client, err := m.ec2Client()
@@ -1423,7 +1526,10 @@ func (m *SecondaryIfaceProvisioner) assignSecondaryIPsToENIs(resyncState *eniRes
 			fatalErr = fmt.Errorf("failed to assign workload IPs to secondary ENI: %w", err)
 			continue // Carry on trying to assign more IPs.
 		}
-		logrus.WithFields(logrus.Fields{"eniID": eniID, "addrs": ipAddrs}).Info("Assigned IPs to secondary ENI.")
+		logrus.WithFields(logrus.Fields{
+			"eniID": eniID,
+			"addrs": strings.Join(ipAddrs, ","),
+		}).Info("Assigned IPs to secondary ENI.")
 	}
 
 	if len(remainingRoutes) > 0 {
@@ -1491,6 +1597,8 @@ func (m *SecondaryIfaceProvisioner) ensureCalicoENIsDelOnTerminate(snapshot *eni
 		if eni.Attachment.DeleteOnTermination == nil || !*eni.Attachment.DeleteOnTermination {
 			logrus.WithField("eniID", eniID).Info(
 				"Calico secondary ENI doesn't have delete-on-termination flag enabled; enabling it...")
+			// About to change AWS state, queue up a recheck.
+			m.resetRecheckInterval("set-eni-delete-on-term")
 			_, err = ec2Client.EC2Svc.ModifyNetworkInterfaceAttribute(ctx, &ec2.ModifyNetworkInterfaceAttributeInput{
 				NetworkInterfaceId: eni.NetworkInterfaceId,
 				Attachment: &ec2types.NetworkInterfaceAttachmentChanges{
@@ -1506,6 +1614,11 @@ func (m *SecondaryIfaceProvisioner) ensureCalicoENIsDelOnTerminate(snapshot *eni
 		}
 	}
 	return finalErr
+}
+
+func (m *SecondaryIfaceProvisioner) resetRecheckInterval(operation string) {
+	m.opRecorder.RecordOperation(operation)
+	m.recheckIntervalResetNeeded = true
 }
 
 func trimPrefixLen(cidr string) string {

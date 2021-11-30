@@ -383,6 +383,7 @@ func (a *awsIPManager) resyncWithDataplane() error {
 		return nil
 	}
 	logrus.Debug("Syncing dataplane secondary ENIs.")
+	a.opRecorder.RecordOperation("aws-dataplane-sync")
 
 	// Find all the local NICs and match them up with AWS ENIs.
 	ifaces, err := a.nl.LinkList()
@@ -484,6 +485,7 @@ func (a *awsIPManager) cleanUpPrimaryIPs(matchedNICs set.Set) {
 
 // configureNIC Brings the given NIC up and ensures it has the expected IP assigned.
 func (a *awsIPManager) configureNIC(iface netlink.Link, ifaceName string, primaryIPStr string) error {
+	a.opRecorder.RecordOperation("aws-configure-" + ifaceName)
 	if iface.Attrs().MTU != a.primaryIfaceMTU {
 		// Set the MTU on the link to match the MTU of the primary ENI.  This ensures that we don't flap the
 		// detected host MTU by bringing up the new NIC.

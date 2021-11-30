@@ -697,8 +697,8 @@ func (config *Config) resolve() (changed bool, err error) {
 			metadata := param.GetMetadata()
 			name := metadata.Name
 			if metadata.Local && !source.Local() {
-				log.Warningf("Ignoring local-only configuration for %v from %v",
-					name, source)
+				log.Warningf("Ignoring local-only configuration %v=%q from %v",
+					name, rawValue, source)
 				continue valueLoop
 			}
 

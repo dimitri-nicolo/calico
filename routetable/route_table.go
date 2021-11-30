@@ -543,7 +543,7 @@ func (r *RouteTable) closeNetlink() {
 
 func (r *RouteTable) Apply() error {
 	if r.reSync {
-		r.opReporter.RecordOperation(fmt.Sprint("resync-routes-v", r.ipVersion))
+		r.opReporter.RecordOperation(fmt.Sprintf("resync-routes-%d-v%d", r.tableIndex, r.ipVersion))
 
 		listStartTime := time.Now()
 
