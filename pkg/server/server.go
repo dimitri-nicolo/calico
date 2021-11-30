@@ -10,6 +10,8 @@ import (
 	"sync"
 
 	"github.com/tigera/es-proxy/pkg/middleware/aggregation"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -21,8 +23,6 @@ import (
 	lmaindex "github.com/tigera/lma/pkg/elastic/index"
 	"github.com/tigera/lma/pkg/k8s"
 	"github.com/tigera/lma/pkg/list"
-
-	"github.com/projectcalico/apiserver/pkg/authentication"
 
 	"github.com/tigera/es-proxy/pkg/handler"
 	"github.com/tigera/es-proxy/pkg/kibana"
@@ -75,28 +75,38 @@ func Start(cfg *Config) error {
 		IdleConnTimeout: cfg.ProxyIdleConnTimeout,
 	}
 	proxy := handler.NewProxy(pc)
-	authenticator, err := authentication.New()
+	var authn lmaauth.JWTAuth
+	restConfig, err := rest.InClusterConfig()
 	if err != nil {
-		log.WithError(err).Panic("Unable to create auth configuration")
+		log.Fatal("Unable to create client config", err)
+	}
+	k8sCli, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		log.Fatal("Unable to create kubernetes interface", err)
 	}
 
+	var options []lmaauth.JWTAuthOption
 	if cfg.OIDCAuthEnabled {
+		log.Debug("Configuring Dex for authentication")
 		opts := []lmaauth.DexOption{
 			lmaauth.WithGroupsClaim(cfg.OIDCAuthGroupsClaim),
 			lmaauth.WithJWKSURL(cfg.OIDCAuthJWKSURL),
 			lmaauth.WithUsernamePrefix(cfg.OIDCAuthUsernamePrefix),
 			lmaauth.WithGroupsPrefix(cfg.OIDCAuthGroupsPrefix),
 		}
-
 		dex, err := lmaauth.NewDexAuthenticator(
 			cfg.OIDCAuthIssuer,
 			cfg.OIDCAuthClientID,
 			cfg.OIDCAuthUsernameClaim,
 			opts...)
 		if err != nil {
-			log.WithError(err).Panic("Unable to create dex authenticator")
+			log.Fatal("Unable to add an issuer to the authenticator", err)
 		}
-		authenticator = lmaauth.NewAggregateAuthenticator(dex, authenticator)
+		options = append(options, lmaauth.WithAuthenticator(cfg.OIDCAuthIssuer, dex))
+	}
+	authn, err = lmaauth.NewJWTAuth(restConfig, k8sCli, options...)
+	if err != nil {
+		log.Fatal("Unable to create authenticator", err)
 	}
 
 	// Install pip mutator
@@ -124,15 +134,7 @@ func Start(cfg *Config) error {
 		return err
 	}
 
-	restConfig := datastore.MustGetConfig()
-
-	//TODO(rlb): I think we can remove this factory in favor of the user and cluster aware factory that can do user based
-	//  authorization review that performs multiple checks in a single request.
 	k8sClientFactory := datastore.NewClusterCtxK8sClientFactory(restConfig, cfg.VoltronCAPath, voltronServiceURL)
-	k8sCli, err := k8sClientFactory.ClientSetForCluster(datastore.DefaultCluster)
-	if err != nil {
-		panic(err)
-	}
 	authz := lmaauth.NewRBACAuthorizer(k8sCli)
 
 	// For handlers that use the newer AuthorizationReview to perform RBAC checks, the k8sClientSetFactory provide
@@ -153,7 +155,7 @@ func Start(cfg *Config) error {
 	// earliest opportunity.
 	sm.Handle("/serviceGraph",
 		middleware.ClusterRequestToResource(flowLogsResourceName,
-			middleware.AuthenticateRequest(authenticator,
+			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					servicegraph.NewServiceGraphHandler(
 						context.Background(),
@@ -170,17 +172,17 @@ func Start(cfg *Config) error {
 					)))))
 	sm.Handle("/flowLogs",
 		middleware.RequestToResource(
-			middleware.AuthenticateRequest(authenticator,
+			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					middleware.FlowLogsHandler(k8sClientFactory, esClient, p)))))
 	sm.Handle("/flowLogs/aggregation",
 		middleware.ClusterRequestToResource(flowLogsResourceName,
-			middleware.AuthenticateRequest(authenticator,
+			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					aggregation.NewAggregationHandler(esClient, k8sClientSetFactory, lmaindex.FlowLogs())))))
 	sm.Handle("/flowLogs/search",
 		middleware.ClusterRequestToResource(flowLogsResourceName,
-			middleware.AuthenticateRequest(authenticator,
+			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					middleware.SearchHandler(
 						lmaindex.FlowLogs(),
@@ -189,12 +191,12 @@ func Start(cfg *Config) error {
 					)))))
 	sm.Handle("/dnsLogs/aggregation",
 		middleware.ClusterRequestToResource(dnsLogsResourceName,
-			middleware.AuthenticateRequest(authenticator,
+			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					aggregation.NewAggregationHandler(esClient, k8sClientSetFactory, lmaindex.DnsLogs())))))
 	sm.Handle("/dnsLogs/search",
 		middleware.ClusterRequestToResource(dnsLogsResourceName,
-			middleware.AuthenticateRequest(authenticator,
+			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					middleware.SearchHandler(
 						lmaindex.DnsLogs(),
@@ -203,12 +205,12 @@ func Start(cfg *Config) error {
 					)))))
 	sm.Handle("/l7Logs/aggregation",
 		middleware.ClusterRequestToResource(l7ResourceName,
-			middleware.AuthenticateRequest(authenticator,
+			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					aggregation.NewAggregationHandler(esClient, k8sClientSetFactory, lmaindex.L7Logs())))))
 	sm.Handle("/l7Logs/search",
 		middleware.ClusterRequestToResource(l7ResourceName,
-			middleware.AuthenticateRequest(authenticator,
+			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					middleware.SearchHandler(
 						lmaindex.L7Logs(),
@@ -217,7 +219,7 @@ func Start(cfg *Config) error {
 					)))))
 	sm.Handle("/events/search",
 		middleware.ClusterRequestToResource(eventsResourceName,
-			middleware.AuthenticateRequest(authenticator,
+			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					middleware.SearchHandler(
 						lmaindex.Alerts(),
@@ -227,39 +229,39 @@ func Start(cfg *Config) error {
 	// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.
 	sm.Handle("/recommend",
 		middleware.RequestToResource(
-			middleware.AuthenticateRequest(authenticator,
+			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					middleware.PolicyRecommendationHandler(k8sClientFactory, k8sClientSet, esClient)))))
 	sm.Handle("/flowLogNamespaces",
 		middleware.RequestToResource(
-			middleware.AuthenticateRequest(authenticator,
+			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					middleware.FlowLogNamespaceHandler(k8sClientFactory, esClient)))))
 	sm.Handle("/flowLogNames",
 		middleware.RequestToResource(
-			middleware.AuthenticateRequest(authenticator,
+			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					middleware.FlowLogNamesHandler(k8sClientFactory, esClient)))))
 	sm.Handle("/flow",
 		middleware.RequestToResource(
-			middleware.AuthenticateRequest(authenticator,
+			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					middleware.NewFlowHandler(esClient, k8sClientFactory)))))
 	sm.Handle("/user",
-		middleware.AuthenticateRequest(authenticator,
+		middleware.AuthenticateRequest(authn,
 			middleware.NewUserHandler(k8sClientSet, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer, cfg.ElasticLicenseType)))
 	sm.Handle("/kibana/login",
-		middleware.AuthenticateRequest(authenticator,
-			middleware.NewKibanaLoginHandler(k8sCli, kibanaCli, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer,
+		middleware.AuthenticateRequest(authn,
+			middleware.NewKibanaLoginHandler(k8sClientSet, kibanaCli, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer,
 				middleware.ElasticsearchLicenseType(cfg.ElasticLicenseType))))
 	sm.Handle("/.kibana/_search",
 		middleware.KibanaIndexPattern(
-			middleware.AuthenticateRequest(authenticator,
+			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy)))))
 	sm.Handle("/",
 		middleware.RequestToResource(
-			middleware.AuthenticateRequest(authenticator,
+			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy)))))
 
