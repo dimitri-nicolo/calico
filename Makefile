@@ -275,8 +275,6 @@ run-k8s-apiserver: stop-k8s-apiserver run-etcd
 			--authorization-mode=RBAC \
 			--service-cluster-ip-range=10.101.0.0/16 \
 			--v=10 \
-			--token-auth-file=/test/token_auth.csv \
-			--basic-auth-file=/test/basic_auth.csv \
 			--anonymous-auth=true \
 			--logtostderr=true
 

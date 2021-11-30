@@ -3,21 +3,22 @@
 package fv_test
 
 import (
-	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 
 	"github.com/tigera/es-proxy/pkg/middleware"
-	fv "github.com/tigera/es-proxy/test"
 	"github.com/tigera/lma/pkg/auth"
+	"github.com/tigera/lma/pkg/auth/testing"
+	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/projectcalico/apiserver/pkg/authentication"
-
+	authnv1 "k8s.io/api/authentication/v1"
 	authzv1 "k8s.io/api/authorization/v1"
 	k8s "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/fake"
 	restclient "k8s.io/client-go/rest"
+	k8stesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/util/flowcontrol"
 
 	. "github.com/onsi/ginkgo"
@@ -41,13 +42,46 @@ func genPath(q string) string {
 	return fmt.Sprintf("/%s/_search", q)
 }
 
-var _ = Describe("Authenticate against K8s apiserver", func() {
-	var k8sClient k8s.Interface
-	var dhh *DummyHttpHandler
-	var rr *httptest.ResponseRecorder
-	var authorizer auth.RBACAuthorizer
-	var authenticator authentication.Authenticator
+func addTokenReviewsReactor(fakeK8sCli *fake.Clientset, authenticated bool, tokens []*testing.FakeJWT) {
+	tokenMap := map[string]*testing.FakeJWT{}
+	for _, tkn := range tokens {
+		tokenMap[tkn.ToString()] = tkn
+	}
+	fakeK8sCli.AddReactor("create", "tokenreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+		createAction, ok := action.(k8stesting.CreateAction)
+		Expect(ok).To(BeTrue())
+		review, ok := createAction.GetObject().(*authnv1.TokenReview)
+		Expect(ok).To(BeTrue())
 
+		token, ok := tokenMap[review.Spec.Token]
+		Expect(ok).To(BeTrue(), "Token unknown to token reviews reactor.")
+
+		Expect(review.Spec).To(Equal(authnv1.TokenReviewSpec{
+			Token: token.ToString(),
+		}))
+		return true, &authnv1.TokenReview{Status: authnv1.TokenReviewStatus{User: authnv1.UserInfo{Username: fmt.Sprintf("%v", token.PayloadMap[auth.ClaimNameName])}, Authenticated: authenticated}}, nil
+	})
+}
+
+var _ = Describe("Authenticate against K8s apiserver", func() {
+	var (
+		k8sClient     k8s.Interface
+		dhh           *DummyHttpHandler
+		rr            *httptest.ResponseRecorder
+		authorizer    auth.RBACAuthorizer
+		authenticator auth.JWTAuth
+
+		iss = auth.ServiceAccountIss
+
+		fakeK8sCli *fake.Clientset
+
+		tokenuserall           = testing.NewFakeJWT(iss, "tokenuserall")
+		tokenuserflowonly      = testing.NewFakeJWT(iss, "tokenuserflowonly")
+		tokenuserauditonly     = testing.NewFakeJWT(iss, "tokenuserauditonly")
+		tokenuserauditkubeonly = testing.NewFakeJWT(iss, "tokenuserauditkubeonly")
+		tokenusernone          = testing.NewFakeJWT(iss, "tokenuserauditkubeonly")
+		tokenusernru           = testing.NewFakeJWT(iss, "tokenusernru")
+	)
 	BeforeEach(func() {
 		restCfg := restclient.Config{}
 		restCfg.Host = "https://localhost:6443"
@@ -61,8 +95,14 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 
 		dhh = &DummyHttpHandler{serveCalled: false}
 		rr = httptest.NewRecorder()
-		authenticator = fv.NewAuthnClient()
+		fakeK8sCli = new(fake.Clientset)
+		var err error
+		authenticator, err = auth.NewJWTAuth(&restclient.Config{BearerToken: tokenuserall.ToString()}, fakeK8sCli)
+		Expect(err).NotTo(HaveOccurred())
 		authorizer = auth.NewRBACAuthorizer(k8sClient)
+
+		// Register all users.
+		addTokenReviewsReactor(fakeK8sCli, true, []*testing.FakeJWT{tokenuserall, tokenuserflowonly, tokenuserauditonly, tokenuserauditkubeonly, tokenusernone, tokenusernru})
 	})
 	AfterEach(func() {
 	})
@@ -75,32 +115,10 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 			uut := middleware.RequestToResource(
 				middleware.AuthenticateRequest(authenticator,
 					middleware.AuthorizeRequest(authorizer, dhh)))
-			req := &http.Request{Header: http.Header{"Authorization": []string{"Bearer deadbeef"}}}
+			req := &http.Request{Header: http.Header{"Authorization": []string{tokenuserall.BearerTokenHeader()}}}
 			uut.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusForbidden), "Token deadbeef authentication failed")
-			Expect(dhh.serveCalled).To(BeFalse())
-		})
-	})
-
-	It("Should cause StatusForbidden with valid basic but user doesn't have SelfSubject RBAC", func() {
-		By("authenticating the token", func() {
-			req := &http.Request{
-				Header: http.Header{
-					"Authorization": []string{
-						fmt.Sprintf("Basic %s",
-							base64.StdEncoding.EncodeToString([]byte("basicusernoselfaccess:basicpwnos")))},
-				},
-				URL: &url.URL{Path: tigeraFlowPath},
-			}
-
-			uut := middleware.RequestToResource(
-				middleware.AuthenticateRequest(authenticator,
-					middleware.AuthorizeRequest(authorizer, dhh)))
-			uut.ServeHTTP(rr, req)
-
-			Expect(rr.Code).To(Equal(http.StatusForbidden),
-				fmt.Sprintf("Status unexpected with msg: %s", rr.Body.String()))
 			Expect(dhh.serveCalled).To(BeFalse())
 		})
 	})
@@ -116,15 +134,6 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 				fmt.Sprintf("Message in response writer: %s", rr.Body.String()))
 			Expect(dhh.serveCalled).To(BeFalse())
 		},
-
-		Entry("Bad basic auth",
-			&http.Request{
-				Header: http.Header{
-					"Authorization": []string{fmt.Sprintf("Basic %s",
-						base64.StdEncoding.EncodeToString([]byte("basicuserall:badpw")))},
-				},
-				URL: &url.URL{Path: tigeraFlowPath},
-			}),
 		Entry("Bad bearer token",
 			&http.Request{
 				Header: http.Header{"Authorization": []string{"Bearer d00dbeef"}},
@@ -149,103 +158,48 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 
 		Entry("Allow all token access flow",
 			&http.Request{
-				Header: http.Header{"Authorization": []string{"Bearer deadbeef"}},
+				Header: http.Header{"Authorization": []string{tokenuserall.BearerTokenHeader()}},
 				URL:    &url.URL{Path: tigeraFlowPath},
 			}),
 		Entry("Allow all token access audit*",
 			&http.Request{
-				Header: http.Header{"Authorization": []string{"Bearer deadbeef"}},
+				Header: http.Header{"Authorization": []string{tokenuserall.BearerTokenHeader()}},
 				URL:    &url.URL{Path: genPath("tigera_secure_ee_audit_*.cluster.*")},
 			}),
 		Entry("Allow all token access audit_ee",
 			&http.Request{
-				Header: http.Header{"Authorization": []string{"Bearer deadbeef"}},
+				Header: http.Header{"Authorization": []string{tokenuserall.BearerTokenHeader()}},
 				URL:    &url.URL{Path: genPath("tigera_secure_ee_audit_ee.cluster.*")},
 			}),
 		Entry("Allow all token access audit_kube",
 			&http.Request{
-				Header: http.Header{"Authorization": []string{"Bearer deadbeef"}},
+				Header: http.Header{"Authorization": []string{tokenuserall.BearerTokenHeader()}},
 				URL:    &url.URL{Path: genPath("tigera_secure_ee_audit_kube.cluster.*")},
 			}),
 		Entry("Allow all token access events",
 			&http.Request{
-				Header: http.Header{"Authorization": []string{"Bearer deadbeef"}},
+				Header: http.Header{"Authorization": []string{tokenuserall.BearerTokenHeader()}},
 				URL:    &url.URL{Path: genPath("tigera_secure_ee_events*")},
 			}),
 		Entry("Flow token access flow",
 			&http.Request{
-				Header: http.Header{"Authorization": []string{"Bearer deadbeeff"}},
+				Header: http.Header{"Authorization": []string{tokenuserflowonly.BearerTokenHeader()}},
 				URL:    &url.URL{Path: tigeraFlowPath},
 			}),
 		Entry("All Audit token access audit*",
 			&http.Request{
-				Header: http.Header{"Authorization": []string{"Bearer deadbeefaa"}},
+				Header: http.Header{"Authorization": []string{tokenuserauditonly.BearerTokenHeader()}},
 				URL:    &url.URL{Path: genPath("tigera_secure_ee_audit_*.cluster.*")},
 			}),
 		Entry("All Audit token access audit_ee",
 			&http.Request{
-				Header: http.Header{"Authorization": []string{"Bearer deadbeefaa"}},
+				Header: http.Header{"Authorization": []string{tokenuserauditonly.BearerTokenHeader()}},
 				URL:    &url.URL{Path: genPath("tigera_secure_ee_audit_ee.cluster.*")},
 			}),
 		Entry("Audit kube token access audit_kube",
 			&http.Request{
-				Header: http.Header{"Authorization": []string{"Bearer deadbeefak"}},
+				Header: http.Header{"Authorization": []string{tokenuserauditkubeonly.BearerTokenHeader()}},
 				URL:    &url.URL{Path: genPath("tigera_secure_ee_audit_kube.cluster.*")},
-			}),
-
-		Entry("Allow all basic auth access flow",
-			&http.Request{
-				Header: http.Header{
-					"Authorization": []string{fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicuserall:basicpw")))}},
-				URL: &url.URL{Path: tigeraFlowPath},
-			}),
-		Entry("Allow all basic auth access audit*",
-			&http.Request{
-				Header: http.Header{
-					"Authorization": []string{fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicuserall:basicpw")))}},
-				URL: &url.URL{Path: genPath("tigera_secure_ee_audit_*.cluster.*")},
-			}),
-		Entry("Allow all basic auth access audit_ee",
-			&http.Request{
-				Header: http.Header{
-					"Authorization": []string{fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicuserall:basicpw")))}},
-				URL: &url.URL{Path: genPath("tigera_secure_ee_audit_ee.cluster.*")},
-			}),
-		Entry("Allow all basic auth access events",
-			&http.Request{
-				Header: http.Header{
-					"Authorization": []string{fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicuserall:basicpw")))}},
-				URL: &url.URL{Path: genPath("tigera_secure_ee_events*")},
-			}),
-		Entry("Flow basic auth access flow",
-			&http.Request{
-				Header: http.Header{
-					"Authorization": []string{fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicuserall:basicpw")))}},
-				URL: &url.URL{Path: tigeraFlowPath},
-			}),
-		Entry("All audit basic auth access audit*",
-			&http.Request{
-				Header: http.Header{
-					"Authorization": []string{fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicuserall:basicpw")))}},
-				URL: &url.URL{Path: genPath("tigera_secure_ee_audit_*.cluster.*")},
-			}),
-		Entry("All audit basic auth access audit_ee",
-			&http.Request{
-				Header: http.Header{
-					"Authorization": []string{fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicuserall:basicpw")))}},
-				URL: &url.URL{Path: genPath("tigera_secure_ee_audit_ee.cluster.*")},
-			}),
-		Entry("Audit kube basic auth access audit_kube",
-			&http.Request{
-				Header: http.Header{
-					"Authorization": []string{fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicuserall:basicpw")))}},
-				URL: &url.URL{Path: genPath("tigera_secure_ee_audit_kube.cluster.*")},
-			}),
-		Entry("Allow all basic auth with group binding can access flow",
-			&http.Request{
-				Header: http.Header{
-					"Authorization": []string{fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicuserallgrp:basicpwgrp")))}},
-				URL: &url.URL{Path: tigeraFlowPath},
 			}),
 	)
 
@@ -264,58 +218,18 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 
 		Entry("Token for user tokenuserauditonly try to access flows",
 			&http.Request{
-				Header: http.Header{"Authorization": []string{"Bearer deadbeefaa"}},
+				Header: http.Header{"Authorization": []string{tokenuserauditonly.BearerTokenHeader()}},
 				URL:    &url.URL{Path: tigeraFlowPath},
 			}),
 		Entry("Token with no access (user tokenusernone) try to access flows",
 			&http.Request{
-				Header: http.Header{"Authorization": []string{"Bearer deadbeef0"}},
+				Header: http.Header{"Authorization": []string{tokenusernone.BearerTokenHeader()}},
 				URL:    &url.URL{Path: tigeraFlowPath},
 			}),
 		Entry("Token with only audit_kube access try to access audit*",
 			&http.Request{
-				Header: http.Header{"Authorization": []string{"Bearer deadbeefak"}},
+				Header: http.Header{"Authorization": []string{tokenuserauditkubeonly.BearerTokenHeader()}},
 				URL:    &url.URL{Path: genPath("tigera_secure_ee_audit*")},
-			}),
-		Entry("Basic auth with user basicuserauditonly try to access flows",
-			&http.Request{
-				Header: http.Header{
-					"Authorization": []string{
-						fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicuserauditonly:basicpwaa"))),
-					}},
-				URL: &url.URL{Path: tigeraFlowPath},
-			}),
-		Entry("Basic auth with no access (user basicusernone) try to access flows",
-			&http.Request{
-				Header: http.Header{
-					"Authorization": []string{
-						fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicusernone:basicpw0"))),
-					}},
-				URL: &url.URL{Path: tigeraFlowPath},
-			}),
-		Entry("Basic auth with audit* access try to access flows",
-			&http.Request{
-				Header: http.Header{
-					"Authorization": []string{
-						fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicuserauditonly:basicpwaa"))),
-					}},
-				URL: &url.URL{Path: tigeraFlowPath},
-			}),
-		Entry("Basic auth with audit_kube access try to access audit*",
-			&http.Request{
-				Header: http.Header{
-					"Authorization": []string{
-						fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicuserauditkubeonly:basicpwak"))),
-					}},
-				URL: &url.URL{Path: genPath("tigera_secure_ee_audit*")},
-			}),
-		Entry("Basic auth with audit_kube access try to access audit_ee*",
-			&http.Request{
-				Header: http.Header{
-					"Authorization": []string{
-						fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicuserauditkubeonly:basicpwak"))),
-					}},
-				URL: &url.URL{Path: genPath("tigera_secure_ee_audit_ee*")},
 			}),
 	)
 
@@ -323,7 +237,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 		By("authorizing the request", func() {
 			uut := middleware.AuthenticateRequest(authenticator, middleware.AuthorizeRequest(authorizer, dhh))
 			req := &http.Request{
-				Header: http.Header{"Authorization": []string{"Bearer deadbeef"}},
+				Header: http.Header{"Authorization": []string{tokenuserall.BearerTokenHeader()}},
 				// The URL should not matter but include it anyway to ensure the
 				// KubernetesAuthnAuthz does not parse the path.
 				URL: &url.URL{Path: tigeraFlowPath},
@@ -351,29 +265,13 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 
 			Entry("Token for user tokenusernru try to access /path/to/something is allowed",
 				&http.Request{
-					Header: http.Header{"Authorization": []string{"Bearer deadbeefnru"}},
+					Header: http.Header{"Authorization": []string{tokenusernru.BearerTokenHeader()}},
 					URL:    &url.URL{Path: pathToSomething},
-				}, http.StatusOK, true),
-			Entry("Basic auth for user basicusernonresourceurl try to access /path/to/something is allowed",
-				&http.Request{
-					Header: http.Header{
-						"Authorization": []string{
-							fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicusernonresourceurl:basicpwnru"))),
-						}},
-					URL: &url.URL{Path: pathToSomething},
 				}, http.StatusOK, true),
 			Entry("Token for user tokenusernone try to access /path/to/something is forbidden",
 				&http.Request{
-					Header: http.Header{"Authorization": []string{"Bearer deadbeef0"}},
+					Header: http.Header{"Authorization": []string{tokenusernone.BearerTokenHeader()}},
 					URL:    &url.URL{Path: pathToSomething},
-				}, http.StatusForbidden, false),
-			Entry("Basic auth for user basicusernone try to accesss /path/to/something is forbidden",
-				&http.Request{
-					Header: http.Header{
-						"Authorization": []string{
-							fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("basicusernone:basicpw0"))),
-						}},
-					URL: &url.URL{Path: pathToSomething},
 				}, http.StatusForbidden, false),
 		)
 	})
