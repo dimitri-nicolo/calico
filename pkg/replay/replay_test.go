@@ -17,8 +17,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/apis/audit"
 
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/libcalico-go/lib/resources"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/tigera/compliance/pkg/replay"
 	"github.com/tigera/compliance/pkg/syncer"
@@ -51,13 +51,13 @@ var _ = Describe("Replay", func() {
 
 		baseTime            = time.Date(2019, 4, 3, 20, 01, 0, 0, time.UTC)
 		mockListDestination *api.MockListDestination
-		mockEventFetcher    *api.MockEventFetcher
+		mockEventFetcher    *api.MockReportEventFetcher
 		mockSyncerCallbacks *syncer.MockSyncerCallbacks
 	)
 
 	BeforeEach(func() {
 		mockListDestination = new(api.MockListDestination)
-		mockEventFetcher = new(api.MockEventFetcher)
+		mockEventFetcher = new(api.MockReportEventFetcher)
 		mockSyncerCallbacks = new(syncer.MockSyncerCallbacks)
 	})
 

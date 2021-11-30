@@ -9,9 +9,10 @@ import (
 
 	"github.com/bmizerany/pat"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apiserver/pkg/endpoints/request"
 
-	"github.com/projectcalico/apiserver/pkg/authentication"
 	"github.com/tigera/compliance/pkg/datastore"
+	"github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/lma/pkg/elastic"
 
 	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -19,7 +20,7 @@ import (
 
 // New creates a new server.
 func New(csFactory datastore.ClusterCtxK8sClientFactory, esFactory elastic.ClusterContextClientFactory,
-	authenticator authentication.Authenticator, addr string, key string, cert string) ServerControl {
+	authenticator auth.JWTAuth, addr string, key string, cert string) ServerControl {
 
 	s := &server{
 		key:       key,
@@ -49,14 +50,15 @@ func New(csFactory datastore.ClusterCtxK8sClientFactory, esFactory elastic.Clust
 	return s
 }
 
-func authenticateRequest(auth authentication.Authenticator, handlerFunc http.HandlerFunc) http.HandlerFunc {
+func authenticateRequest(auth auth.JWTAuth, handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		req, stat, err := authentication.AuthenticateRequest(auth, req)
+		usr, stat, err := auth.Authenticate(req)
 		if err != nil {
 			log.WithError(err).Debug("Kubernetes auth failure")
 			http.Error(w, err.Error(), stat)
 			return
 		}
+		req = req.WithContext(request.WithUser(req.Context(), usr))
 		handlerFunc.ServeHTTP(w, req)
 	}
 }

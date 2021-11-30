@@ -279,7 +279,7 @@ func resourceListForType(tm metav1.TypeMeta) *list.TimestampedResourceList {
 var _ = Describe("Replay namespace deletion", func() {
 	var (
 		mockListDestination *api.MockListDestination
-		mockEventFetcher    *api.MockEventFetcher
+		mockEventFetcher    *api.MockReportEventFetcher
 		mockSyncerCallbacks *syncer.MockSyncerCallbacks
 		replayer            syncer.Starter
 	)
@@ -287,7 +287,7 @@ var _ = Describe("Replay namespace deletion", func() {
 	BeforeEach(func() {
 		mockSyncerCallbacks = new(syncer.MockSyncerCallbacks)
 		mockListDestination = new(api.MockListDestination)
-		mockEventFetcher = new(api.MockEventFetcher)
+		mockEventFetcher = new(api.MockReportEventFetcher)
 		replayer = New(nowMinus24Hrs, now, mockListDestination, mockEventFetcher, mockSyncerCallbacks)
 	})
 

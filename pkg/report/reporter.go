@@ -10,9 +10,9 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/libcalico-go/lib/compliance"
 	"github.com/projectcalico/libcalico-go/lib/resources"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/tigera/compliance/pkg/archive"
 	"github.com/tigera/compliance/pkg/config"
@@ -52,7 +52,7 @@ func Run(
 	ctx context.Context, cfg *config.Config,
 	healthy func(),
 	lister api.ListDestination,
-	eventer api.EventFetcher,
+	eventer api.ReportEventFetcher,
 	auditer api.AuditLogReportHandler,
 	flowlogger api.FlowLogReportHandler,
 	archiver api.ReportStorer,

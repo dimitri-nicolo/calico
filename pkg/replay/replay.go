@@ -9,8 +9,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/libcalico-go/lib/resources"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/tigera/compliance/pkg/event"
 	"github.com/tigera/compliance/pkg/syncer"
@@ -21,11 +21,11 @@ type replayer struct {
 	resources  map[metav1.TypeMeta]map[apiv3.ResourceID]resources.Resource
 	start, end time.Time
 	lister     api.ListDestination
-	eventer    api.EventFetcher
+	eventer    api.ReportEventFetcher
 	cb         syncer.SyncerCallbacks
 }
 
-func New(start, end time.Time, lister api.ListDestination, eventer api.EventFetcher, callbacks syncer.SyncerCallbacks) syncer.Starter {
+func New(start, end time.Time, lister api.ListDestination, eventer api.ReportEventFetcher, callbacks syncer.SyncerCallbacks) syncer.Starter {
 	return &replayer{
 		make(map[metav1.TypeMeta]map[apiv3.ResourceID]resources.Resource),
 		start, end, lister, eventer, callbacks,

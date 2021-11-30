@@ -7,26 +7,21 @@ import (
 	"time"
 
 	authzv1 "k8s.io/api/authorization/v1"
-
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 
-	"github.com/projectcalico/apiserver/pkg/authentication"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
-
+	"github.com/tigera/compliance/pkg/datastore"
+	"github.com/tigera/compliance/pkg/server"
 	"github.com/tigera/lma/pkg/api"
 	lmaauth "github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/lma/pkg/elastic"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"github.com/stretchr/testify/mock"
-
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/tigera/compliance/pkg/datastore"
-	"github.com/tigera/compliance/pkg/server"
 )
 
 func newArchivedReportData(reportName, reportTypeName string) *api.ArchivedReportData {
@@ -96,7 +91,7 @@ var _ = Describe("List", func() {
 	var mockClientSetFactory *datastore.MockClusterCtxK8sClientFactory
 	var mockESFactory *elastic.MockClusterContextClientFactory
 
-	var mockAuthenticator *authentication.MockAuthenticator
+	var mockAuthenticator *lmaauth.MockJWTAuth
 	var mockRBACAuthorizer *lmaauth.MockRBACAuthorizer
 	var mockESClient *elastic.MockClient
 
@@ -104,7 +99,7 @@ var _ = Describe("List", func() {
 		mockClientSetFactory = new(datastore.MockClusterCtxK8sClientFactory)
 		mockESFactory = new(elastic.MockClusterContextClientFactory)
 
-		mockAuthenticator = new(authentication.MockAuthenticator)
+		mockAuthenticator = new(lmaauth.MockJWTAuth)
 		mockRBACAuthorizer = new(lmaauth.MockRBACAuthorizer)
 		mockESClient = new(elastic.MockClient)
 	})

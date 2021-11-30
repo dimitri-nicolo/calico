@@ -12,7 +12,6 @@ import (
 
 	"github.com/caimeo/iniflags"
 
-	"github.com/projectcalico/apiserver/pkg/authentication"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/compliance/pkg/server"
@@ -23,6 +22,8 @@ import (
 
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/klog"
 )
 
@@ -63,31 +64,43 @@ func main() {
 		os.Exit(1)
 	}
 
-	authenticator, err := authentication.New()
+	var authn auth.JWTAuth
+	restConfig, err := rest.InClusterConfig()
 	if err != nil {
-		log.WithError(err).Panic("Unable to create authenticator")
+		log.Fatal("Unable to create client config", err)
+	}
+	//restConfig.
+	k8sCli, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		log.Fatal("Unable to create kubernetes interface", err)
 	}
 
+	var options []auth.JWTAuthOption
 	if cfg.OIDCAuthEnabled {
+		log.Debug("Configuring Dex for authentication")
+		opts := []auth.DexOption{
+			auth.WithGroupsClaim(cfg.OIDCAuthGroupsClaim),
+			auth.WithJWKSURL(cfg.OIDCAuthJWKSURL),
+			auth.WithUsernamePrefix(cfg.OIDCAuthUsernamePrefix),
+			auth.WithGroupsPrefix(cfg.OIDCAuthGroupsPrefix),
+		}
 		dex, err := auth.NewDexAuthenticator(
 			cfg.OIDCAuthIssuer,
 			cfg.OIDCAuthClientID,
 			cfg.OIDCAuthUsernameClaim,
-			[]auth.DexOption{
-				auth.WithGroupsClaim(cfg.OIDCAuthGroupsClaim),
-				auth.WithJWKSURL(cfg.OIDCAuthJWKSURL),
-				auth.WithUsernamePrefix(cfg.OIDCAuthUsernamePrefix),
-				auth.WithGroupsPrefix(cfg.OIDCAuthGroupsPrefix),
-			}...)
-
+			opts...)
 		if err != nil {
-			log.WithError(err).Panic("Unable to create dex authenticator")
+			log.Fatal("Unable to add an issuer to the authenticator", err)
 		}
-		authenticator = auth.NewAggregateAuthenticator(dex, authenticator)
+		options = append(options, auth.WithAuthenticator(cfg.OIDCAuthIssuer, dex))
+	}
+	authn, err = auth.NewJWTAuth(restConfig, k8sCli, options...)
+	if err != nil {
+		log.Fatal("Unable to create authenticator", err)
 	}
 
 	esClientFactory := elastic.NewClusterContextClientFactory(elastic.MustLoadConfig())
-	s := server.New(k8sClientFactory, esClientFactory, authenticator, ":"+*apiPort, *keyPath, *certPath)
+	s := server.New(k8sClientFactory, esClientFactory, authn, ":"+*apiPort, *keyPath, *certPath)
 
 	s.Start()
 

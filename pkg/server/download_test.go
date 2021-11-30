@@ -8,7 +8,6 @@ import (
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 
-	"github.com/projectcalico/apiserver/pkg/authentication"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 
 	"github.com/tigera/compliance/pkg/datastore"
@@ -24,7 +23,7 @@ var _ = Describe("Download tests", func() {
 	var mockClientSetFactory *datastore.MockClusterCtxK8sClientFactory
 	var mockESFactory *elastic.MockClusterContextClientFactory
 
-	var mockAuthenticator *authentication.MockAuthenticator
+	var mockAuthenticator *lmaauth.MockJWTAuth
 	var mockRBACAuthorizer *lmaauth.MockRBACAuthorizer
 	var mockESClient *elastic.MockClient
 
@@ -32,7 +31,7 @@ var _ = Describe("Download tests", func() {
 		mockClientSetFactory = new(datastore.MockClusterCtxK8sClientFactory)
 		mockESFactory = new(elastic.MockClusterContextClientFactory)
 
-		mockAuthenticator = new(authentication.MockAuthenticator)
+		mockAuthenticator = new(lmaauth.MockJWTAuth)
 		mockRBACAuthorizer = new(lmaauth.MockRBACAuthorizer)
 		mockESClient = new(elastic.MockClient)
 

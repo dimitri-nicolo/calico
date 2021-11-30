@@ -13,14 +13,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/projectcalico/apiserver/pkg/authentication"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/compliance/pkg/server"
-
+	"github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/lma/pkg/elastic"
 )
 
@@ -30,7 +28,7 @@ import (
 // The Calico and Report stores are mocked out, and the responses controlled via the control parameters in the
 // tester struct.
 func startTester(mockClientSetFactory *datastore.MockClusterCtxK8sClientFactory, mockESFactory *elastic.MockClusterContextClientFactory,
-	authenticator authentication.Authenticator) *tester {
+	authenticator auth.JWTAuth) *tester {
 	// Create a new tester, defaulting permissions to allow lists.
 	t := &tester{}
 	// Choose an arbitrary port for the server to listen on.
