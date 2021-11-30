@@ -11,11 +11,6 @@ import (
 
 // ResettableBackoff manages a clock.Timer and its channel to implement a simple exponential backoff with
 // the ability to reset to the initial delay.  It uses k8s Clock interface to allow time to be shimmed.
-//
-// Important: users must call MarkAsDrained() whenever they read a value from the channel. The backoff tracks
-// whether the timer is active, but it relies on the user to notify it whenever the channel is drained.  The C()
-// method returns nil if the backoff is not active; this works well with select{} since a nil channel never
-// "fires" in a select block.
 type ResettableBackoff struct {
 	clock           clock.Clock
 	timer           clock.Timer
@@ -43,20 +38,25 @@ func (r *ResettableBackoff) C() <-chan time.Time {
 	return nil
 }
 
-func (r *ResettableBackoff) Reset() {
+// ResetInterval resets the interval that will be used for the next call to Reschedule().  Does not schedule or
+// reschedule the timer.
+func (r *ResettableBackoff) ResetInterval() {
 	r.currentInterval = r.initialInterval
 }
 
-func (r *ResettableBackoff) Reschedule() {
-	r.reschedule()
+// Reschedule stops the timer if it is active and reschedules it for the next interval.  After scheduling the
+// timer it doubles the interval.  The alreadyDrained parameter should be set to true if the caller has already
+// read from the channel since the last call to Reschedule() or Stop().
+func (r *ResettableBackoff) Reschedule(alreadyDrained bool) {
+	r.reschedule(alreadyDrained)
 	r.currentInterval *= 2
 	if r.currentInterval > r.maxInterval {
 		r.currentInterval = r.maxInterval
 	}
 }
 
-func (r *ResettableBackoff) reschedule() {
-	r.Stop()
+func (r *ResettableBackoff) reschedule(alreadyDrained bool) {
+	r.Stop(alreadyDrained)
 	jitteredInterval := wait.Jitter(r.currentInterval, r.jitter)
 	if r.timer == nil {
 		r.timer = r.clock.NewTimer(jitteredInterval)
@@ -67,16 +67,18 @@ func (r *ResettableBackoff) reschedule() {
 	return
 }
 
-func (r *ResettableBackoff) Stop() {
+// Stop stops the timer and drains its channel if required.  The alreadyDrained parameter should be set to true if
+// the caller has already read from the channel since the last call to Reschedule() or Stop().
+func (r *ResettableBackoff) Stop(alreadyDrained bool) {
 	if !r.active {
 		return
 	}
 	if !r.timer.Stop() {
-		<-r.timer.C()
+		// Note: I tried to avoid an explicit bool here by doing select{} with a default clause but there is a
+		// known issue in the Go runtime that makes that unsafe (https://github.com/golang/go/issues/37196).
+		if !alreadyDrained {
+			<-r.timer.C()
+		}
 	}
-	r.active = false
-}
-
-func (r *ResettableBackoff) MarkAsDrained() {
 	r.active = false
 }

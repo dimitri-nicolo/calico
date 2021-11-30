@@ -98,10 +98,10 @@ type SecondaryIfaceProvisioner struct {
 	awsSubnetsFilename string
 	timeout            time.Duration
 	// Separate Clock shims for the two timers so the UTs can monitor/trigger the timers separately.
-	backoffClock      clock.Clock
-	recheckClock      clock.Clock
-	recheckBackoffMgr *ResettableBackoff
-	newEC2Client      func(ctx context.Context) (*EC2Client, error)
+	backoffClock               clock.Clock
+	recheckClock               clock.Clock
+	recheckIntervalResetNeeded bool
+	newEC2Client               func(ctx context.Context) (*EC2Client, error)
 
 	healthAgg       healthAggregator
 	livenessEnabled bool
@@ -233,15 +233,6 @@ func NewSecondaryIfaceProvisioner(
 		o(sip)
 	}
 
-	// Create a simple backoff manager that can be used to schedule checks of the AWS API at
-	// exponentially increasing intervals.  The k8s backoff machinery isn't quite suitable because
-	// it doesn't provide a way to reset (and it remembers recent failures).  We just want a
-	// way to queue up extra resyncs at 30s, 60s, 120s... after any given successful resync.
-	const defaultRecheckInterval = 30 * time.Second
-	const maxRecheckInterval = 30 * time.Minute
-	sip.recheckBackoffMgr = NewResettableBackoff(
-		sip.recheckClock, defaultRecheckInterval, maxRecheckInterval, 0.1)
-
 	// Readiness flag used to indicate if we've got enough ENI capacity to handle all the local workloads
 	// that need it. No liveness, we reserve that for the main loop watchdog (set up below).
 	healthAgg.RegisterReporter(healthNameENICapacity, &health.HealthReport{Ready: true}, 0)
@@ -311,6 +302,14 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 	}
 	defer stopBackoffTimer()
 
+	// Create a simple backoff manager that can be used to schedule checks of the AWS API at
+	// exponentially increasing intervals.  The k8s backoff machinery isn't quite suitable because
+	// it doesn't provide a way to reset (and it remembers recent failures).  We just want a
+	// way to queue up extra resyncs at 30s, 60s, 120s... after any given successful resync.
+	const defaultRecheckInterval = 30 * time.Second
+	const maxRecheckInterval = 30 * time.Minute
+	recheckBackoffMgr := NewResettableBackoff(m.recheckClock, defaultRecheckInterval, maxRecheckInterval, 0.1)
+
 	var livenessC <-chan time.Time
 	if m.livenessEnabled {
 		livenessTicker := m.backoffClock.NewTicker(livenessReportInterval)
@@ -325,6 +324,7 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 		// - We do our receives and sends in the same select block so that we never block a send op on a receive op
 		//   or vice versa.
 		thisIsARetry := false
+		recheckTimerFired := false
 		select {
 		case <-ctx.Done():
 			logrus.Info("SecondaryIfaceManager stopping, context canceled.")
@@ -348,24 +348,24 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 			logrus.Warn("Retrying AWS resync after backoff.")
 			thisIsARetry = true
 			m.opRecorder.RecordOperation("aws-retry")
-		case <-m.recheckBackoffMgr.C():
+		case <-recheckBackoffMgr.C():
 			// AWS sometimes returns stale data and sometimes loses writes.  Recheck at increasing intervals
 			// after a successful update.
 			logrus.Debug("Recheck timer fired, checking AWS state is still correct.")
-			m.recheckBackoffMgr.MarkAsDrained() // Must call to avoid deadlock!
 			m.resyncNeeded = true
+			recheckTimerFired = true
 			m.opRecorder.RecordOperation("aws-recheck")
 		}
 
 		startTime := time.Now()
 
-		// Either backoff has done its job or another update has come along and we're going to do an early
-		// retry.  Clear any pending backoff.
+		// Either backoff has done its job or another update has come along.  Clear any pending backoff.
 		stopBackoffTimer()
 
 		if m.resyncNeeded {
 			// Only stop the recheck timer if we're actually doing a resync.
-			m.recheckBackoffMgr.Stop()
+			recheckBackoffMgr.Stop(recheckTimerFired)
+			recheckTimerFired = false
 
 			var err error
 			response, err = m.resync(ctx)
@@ -374,14 +374,23 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 				logrus.WithError(err).Warning("Failed to resync with AWS. Will retry after backoff.")
 				backoffTimer = backoffMgr.Backoff()
 				backoffC = backoffTimer.C()
-				m.recheckBackoffMgr.Reset()
+				// We don't reschedule the recheck timer here since we've already got a retry backoff timer
+				// queued up but we do reset the interval for next time.
+				m.resetRecheckInterval("resync-failure")
 			} else {
 				// Success, we're now in sync.
 				if thisIsARetry {
 					logrus.Info("Retry successful, now in sync with AWS.")
 				}
 				// However, AWS can sometimes lose updates, schedule a recheck on an exponential backoff.
-				m.recheckBackoffMgr.Reschedule()
+				if m.recheckIntervalResetNeeded {
+					// We just made a change to the AWS dataplane (or hit an error), reset the time to the
+					// next recheck.
+					logrus.Debug("Resetting time to next AWS recheck.")
+					recheckBackoffMgr.ResetInterval()
+					m.recheckIntervalResetNeeded = false
+				}
+				recheckBackoffMgr.Reschedule(false /*we already reset the timer above*/)
 			}
 			if response == nil {
 				responseC = nil
@@ -622,6 +631,9 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 		// This is the mainline after we assign an IP, avoid doing a full resync and just reload the snapshot.
 		logrus.Debug("Rechecking AWS state after making updates...")
 		awsSnapshot, _, err = m.loadAWSENIsState()
+		if err != nil {
+			return nil, err
+		}
 
 		// The AWS API is eventually consistent, meaning that the updates we just made may not show up in the
 		// new snapshot.  Verify the snapshot before we accept it.  We've also seen AWS lose writes, for example,
@@ -1012,7 +1024,7 @@ func (m *SecondaryIfaceProvisioner) unassignAWSIPs(awsIPsToRelease set.Set, awsE
 	}
 
 	// About to change AWS state, queue up a recheck.
-	m.recheckBackoffMgr.Reset()
+	m.resetRecheckInterval("unassign-ips")
 
 	ctx, cancel := m.newContext()
 	defer cancel()
@@ -1057,7 +1069,7 @@ func (m *SecondaryIfaceProvisioner) releaseAWSENIs(enisToRelease set.Set, awsENI
 	}
 	// About to release some ENIs, queue up a check of our IPAM handle and a general AWS recheck.
 	m.hostIPAMResyncNeeded = true
-	m.recheckBackoffMgr.Reset()
+	m.resetRecheckInterval("release-eni")
 
 	ctx, cancel := m.newContext()
 	defer cancel()
@@ -1204,7 +1216,7 @@ func (m *SecondaryIfaceProvisioner) attachOrphanENIs(resyncState *eniResyncState
 	var lastLeakErr error
 	for _, eni := range dio.NetworkInterfaces {
 		// About to change AWS state, queue up a recheck.
-		m.recheckBackoffMgr.Reset()
+		m.resetRecheckInterval("attach-orphan-eni")
 
 		// Find next free device index.
 		devIdx := resyncState.FindFreeDeviceIdx()
@@ -1369,7 +1381,7 @@ func (m *SecondaryIfaceProvisioner) createAWSENIs(awsENIState *eniSnapshot, resy
 	}
 
 	// About to change AWS state, queue up a recheck.
-	m.recheckBackoffMgr.Reset()
+	m.resetRecheckInterval("create-eni")
 
 	ctx, cancel := m.newContext()
 	defer cancel()
@@ -1468,7 +1480,7 @@ func (m *SecondaryIfaceProvisioner) assignSecondaryIPsToENIs(resyncState *eniRes
 	}
 
 	// About to change AWS state, queue up a recheck.
-	m.recheckBackoffMgr.Reset()
+	m.resetRecheckInterval("assign-ips")
 
 	ctx, cancel := m.newContext()
 	defer cancel()
@@ -1586,7 +1598,7 @@ func (m *SecondaryIfaceProvisioner) ensureCalicoENIsDelOnTerminate(snapshot *eni
 			logrus.WithField("eniID", eniID).Info(
 				"Calico secondary ENI doesn't have delete-on-termination flag enabled; enabling it...")
 			// About to change AWS state, queue up a recheck.
-			m.recheckBackoffMgr.Reset()
+			m.resetRecheckInterval("set-eni-delete-on-term")
 			_, err = ec2Client.EC2Svc.ModifyNetworkInterfaceAttribute(ctx, &ec2.ModifyNetworkInterfaceAttributeInput{
 				NetworkInterfaceId: eni.NetworkInterfaceId,
 				Attachment: &ec2types.NetworkInterfaceAttachmentChanges{
@@ -1602,6 +1614,11 @@ func (m *SecondaryIfaceProvisioner) ensureCalicoENIsDelOnTerminate(snapshot *eni
 		}
 	}
 	return finalErr
+}
+
+func (m *SecondaryIfaceProvisioner) resetRecheckInterval(operation string) {
+	m.opRecorder.RecordOperation(operation)
+	m.recheckIntervalResetNeeded = true
 }
 
 func trimPrefixLen(cidr string) string {

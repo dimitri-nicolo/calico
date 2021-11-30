@@ -547,7 +547,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_AWSLostUnassign(t *tes
 	sip, fake, tearDown := setupAndStart(t)
 	defer tearDown()
 
-	// Simulate a silent failure to add an IP.  We've seen these in practice as a result of high churn; likely
+	// Simulate a silent failure to remove an IP.  We've seen these in practice as a result of high churn; likely
 	// due to a race between a slow deletion and a second add of the same IP address.
 	fake.EC2.IgnoreNextUnassignPrivateIpAddresses = true
 
@@ -623,13 +623,13 @@ func TestSecondaryIfaceProvisioner_AWSRecheckDetectsProblem(t *testing.T) {
 	})
 	Expect(err).NotTo(HaveOccurred(), "Bug in test: failed to remove IP")
 
-	// Initial backoff should be between 30s and 33s.
+	// Initial recheck backoff should be between 30s and 33s.
 	fake.RecheckClock.Step(33002 * time.Millisecond)
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
 	Expect(fake.RecheckClock.HasWaiters()).Should(BeTrue(), "expected a pending recheck")
 	Expect(fake.BackoffClock.HasWaiters()).Should(BeFalse(), "expected no backoff scheduled")
 
-	// Should go back to the initial recheck period.
+	// Since the recheck found/fixed a problem, the recheck backoff should go back to 30s again.
 	fake.RecheckClock.Step(29999 * time.Millisecond)
 	Consistently(sip.ResponseC()).ShouldNot(Receive())
 	Expect(fake.RecheckClock.HasWaiters()).Should(BeTrue(), "expected a pending recheck")
