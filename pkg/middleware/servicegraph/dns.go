@@ -65,19 +65,16 @@ var (
 )
 
 // GetDNSClientData queries and returns the set of DNS logs.
-func GetDNSClientData(ctx context.Context, es lmaelastic.Client, cluster string, tr lmav1.TimeRange) ([]DNSLog, error) {
+func GetDNSClientData(ctx context.Context, es lmaelastic.Client, cluster string, tr lmav1.TimeRange) (logs []DNSLog, err error) {
 	// Track the total buckets queried and the response flows.
 	var totalBuckets int
-	var logs []DNSLog
 
 	// Trace stats at debug level.
-	if log.IsLevelEnabled(log.DebugLevel) {
-		start := time.Now()
-		log.Debug("GetDNSClientData called")
-		defer func() {
-			log.Debugf("GetDNSClientData took %s; buckets=%d; logs=%d", time.Since(start), totalBuckets, len(logs))
-		}()
-	}
+	start := time.Now()
+	log.Debug("GetDNSClientData called")
+	defer func() {
+		log.WithError(err).Infof("GetDNSClientData took %s; buckets=%d; logs=%d", time.Since(start), totalBuckets, len(logs))
+	}()
 
 	index := lmaindex.DnsLogs().GetIndex(elasticvariant.AddIndexInfix(cluster))
 	aggQueryL7 := &lmaelastic.CompositeAggregationQuery{
@@ -105,6 +102,9 @@ func GetDNSClientData(ctx context.Context, es lmaelastic.Client, cluster string,
 	var lastSource FlowEndpoint
 	for bucket := range rcvdDNSBuckets {
 		totalBuckets++
+		if totalBuckets % 10000 == 0 {
+			log.Infof("Enumerated %d DNS buckets", totalBuckets)
+		}
 		key := bucket.CompositeAggregationKey
 		code := key[dnsRcodeIdx].String()
 		source := FlowEndpoint{

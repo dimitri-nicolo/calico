@@ -145,7 +145,7 @@ func (s *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd 
 		log.WithError(errNameHelper).Error("Failed to load name mappings")
 		return nil, errNameHelper
 	} else if errCacheData != nil {
-		log.WithError(errNameHelper).Error("Failed to load raw graph data")
+		log.WithError(errCacheData).Error("Failed to load raw graph data")
 		return nil, errCacheData
 	}
 
@@ -242,10 +242,16 @@ func (s *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd 
 }
 
 // getRawDataForRequest returns the raw data used to fulfill a request.
-func (s *serviceGraphCache) getRawDataForRequest(ctx context.Context, rd *RequestData) (*cacheData, error) {
+func (s *serviceGraphCache) getRawDataForRequest(ctx context.Context, rd *RequestData) (cd *cacheData, err error) {
+	start := time.Now()
+	log.Debug("getRawDataForRequest called")
+	defer func() {
+		log.WithError(err).Infof("getRawDataForRequest took %s", time.Since(start))
+	}()
+
 	// Convert the time range to a set of windows that we would cache.
-	key, err := s.calculateKey(rd)
-	if err != nil {
+	key, kerr := s.calculateKey(rd)
+	if kerr != nil {
 		return nil, err
 	}
 	log.Debugf("Getting raw data for %s", key)
@@ -288,6 +294,7 @@ func (s *serviceGraphCache) getRawDataForRequest(ctx context.Context, rd *Reques
 			s.tidyCache()
 		}()
 	} else {
+		log.Infof("Responding to query using cached data")
 		s.touchData(data)
 	}
 
@@ -301,7 +308,7 @@ func (s *serviceGraphCache) getRawDataForRequest(ctx context.Context, rd *Reques
 	case <-data.pending:
 	}
 	if data.err != nil {
-		return nil, err
+		return nil, data.err
 	}
 
 	return data, nil
