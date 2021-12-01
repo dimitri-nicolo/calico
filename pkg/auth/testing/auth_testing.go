@@ -8,6 +8,10 @@ import (
 	"fmt"
 
 	"github.com/tigera/lma/pkg/auth"
+	authnv1 "k8s.io/api/authentication/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 )
 
 // The code in this file is meant to be used in (unit) tests that are related to authN.
@@ -75,7 +79,7 @@ func NewFakeServiceAccountJWT() *FakeJWT {
 		PayloadJSON:           string(payloadJSON),
 		PayloadMap:            payloadMap,
 		Payload:               payloadStr,
-		ServiceAccountPayload: payload,
+		ServiceAccountPayload: &payload,
 	}
 }
 
@@ -88,7 +92,7 @@ type FakeJWT struct {
 	Payload               string
 	PayloadMap            map[string]interface{}
 	PayloadJSON           string
-	ServiceAccountPayload ServiceAccountPayload
+	ServiceAccountPayload *ServiceAccountPayload
 	Signature             string
 }
 
@@ -102,6 +106,13 @@ func (f *FakeJWT) BearerTokenHeader() string {
 	return fmt.Sprintf("Bearer %s.%s.%s", f.Header, f.Payload, f.Signature)
 }
 
+func (f *FakeJWT) UserName() string {
+	if f.ServiceAccountPayload != nil {
+		return fmt.Sprintf("%s:%s", f.ServiceAccountPayload.KubernetesIoServiceaccountNamespace, f.ServiceAccountPayload.KubernetesIoServiceaccountServiceAccountName)
+	}
+	return fmt.Sprintf("%s", f.PayloadMap[auth.ClaimNameName])
+}
+
 // ServiceAccountPayload models a service account token as issued by Kubernetes.
 type ServiceAccountPayload struct {
 	Iss                                          string `json:"iss"`
@@ -110,4 +121,25 @@ type ServiceAccountPayload struct {
 	KubernetesIoServiceaccountServiceAccountName string `json:"kubernetes.io/serviceaccount/service-account.name"`
 	KubernetesIoServiceaccountServiceAccountUid  string `json:"kubernetes.io/serviceaccount/service-account.uid"`
 	Sub                                          string `json:"sub"`
+}
+
+func SetTokenReviewsReactor(fakeK8sCli *fake.Clientset, tokens ...*FakeJWT) {
+	tokenMap := map[string]*FakeJWT{}
+	for _, tkn := range tokens {
+		tokenMap[tkn.ToString()] = tkn
+	}
+	fakeK8sCli.AddReactor("create", "tokenreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+		createAction, ok := action.(k8stesting.CreateAction)
+		Expect(ok).To(BeTrue())
+		review, ok := createAction.GetObject().(*authnv1.TokenReview)
+		Expect(ok).To(BeTrue())
+
+		token, ok := tokenMap[review.Spec.Token]
+		Expect(ok).To(BeTrue(), "Token unknown to token reviews reactor.")
+
+		Expect(review.Spec).To(Equal(authnv1.TokenReviewSpec{
+			Token: token.ToString(),
+		}))
+		return true, &authnv1.TokenReview{Status: authnv1.TokenReviewStatus{User: authnv1.UserInfo{Username: fmt.Sprintf("%v", token.UserName())}, Authenticated: true}}, nil
+	})
 }
