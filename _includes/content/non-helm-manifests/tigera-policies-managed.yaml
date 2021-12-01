@@ -424,9 +424,8 @@ spec:
         ports:
           - 8080
       protocol: TCP
-      source:
-        namespaceSelector: projectcalico.org/name == 'tigera-dpi'
-        selector: k8s-app == 'tigera-dpi'
+      # DPI and honeypod-controller pods are on hostnetwork, it's hard to create specific network policies for it.
+      # If the node CIDRs are known they can be added to this rule to restrict access to just the nodes in the cluster.
   egress:
     - action: Allow
       protocol: TCP
