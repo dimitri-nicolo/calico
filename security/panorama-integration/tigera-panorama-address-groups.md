@@ -126,11 +126,17 @@ kubectl create secret generic panorama-access -n tigera-firewall-integration --f
 
 #### Deploy the address groups controller in the Kubernetes cluster
 
-Create the manifest.
+1. Install your pull secret.
 
-```bash
+    ```bash
+kubectl create secret generic tigera-pull-secret --from-file=.dockerconfigjson=<path/to/pull/secret> --type=kubernetes.io/dockerconfigjson -n tigera-firewall-integration
+    ```
+
+2. Create the manifest.
+
+    ```bash
 kubectl create -f {{ "/manifests/tigera-panorama-address-groups.yaml" | absolute_url }}
-```
+    ```
 
 ### Verify the integration
 
