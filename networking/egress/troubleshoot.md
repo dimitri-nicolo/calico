@@ -171,7 +171,7 @@ In normal usage of the AWS-backed IP pools feature, the {{site.noderunning}} Pod
 secondary ENIs used for networking AWS-backed IP pools.  It also marks its secondary ENIs for deletion on 
 instance termination to avoid leaking any ENIs when an instance is terminated.
 
-However, in certain highly unusual situations, such as the following:
+However, in certain highly unusual situations, such as the following sequence of events:
 
 * {{site.noderunning}} adds an ENI.
 * The AWS API call to mark the ENI for "delete on termination" fails.
