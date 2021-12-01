@@ -164,3 +164,44 @@ To check the egress gateway’s node, use iptables:
 iptables-save -c | grep -i MASQUERADE
 iptables-save -c | grep -i SNAT
 ```
+
+### Finding leaked AWS ENIs
+
+In normal usage of the AWS-backed IP pools feature, the {{site.noderunning}} Pod on each node will manage the
+secondary ENIs used for networking AWS-backed IP pools.  It also marks its secondary ENIs for deletion on 
+instance termination to avoid leaking any ENIs when an instance is terminated.
+
+However, in certain highly unusual situations, such as the following:
+
+* {{site.noderunning}} adds an ENI.
+* The AWS API call to mark the ENI for "delete on termination" fails.
+* The entire instance is deleted before the automatic retry of the above operation succeeds.
+
+Then, it would be possible for an ENI to be leaked.  {{site.prodname}} marks all the ENIs that it creates with tags
+to identify them as {{site.prodname}} secondary ENIs and the ID of the instance they _should_ belong to.
+To find potentially leaked ENIs, you can use the AWS command line tool as follows:
+
+```bash
+aws ec2 describe-network-interfaces --filters Name=status,Values=available Name=tag-key,Values=calico:use
+```
+
+Then, examine the "Tag set" of the returned network interface values to see if any of them belong to nodes that have
+been deleted:
+
+```
+"TagSet": [
+    {
+        "Key": "calico:use",
+        "Value": "secondary"
+    },
+    {
+        "Key": "calico:instance",
+        "Value": "i-00122bf604c6ab776"
+    }
+],
+```
+
+If the instance ID recorded in the "calico:instance" tag is for an instance that no longer exists then the ENI
+has been leaked; it is safe to delete the ENI.  If the instance ID belongs to an active instance then there
+is no need to delete the ENI, it should be cleaned up (or put into use) by the {{site.noderunning}} Pod running
+on that instance.
