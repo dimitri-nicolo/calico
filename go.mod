@@ -26,9 +26,9 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
 	github.com/tigera/api v0.0.0-20211130232353-e7a188095a30
-	github.com/tigera/licensing v1.0.1-0.20211201003436-e5d039b58cc4
+	github.com/tigera/licensing v1.0.1-0.20211201195049-609d85e58367
 	github.com/vishvananda/netlink v1.1.0 // indirect
-	gopkg.in/square/go-jose.v2 v2.2.3-0.20190111193340-cbf0fd6a984a
+	gopkg.in/square/go-jose.v2 v2.5.1
 	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/apiextensions-apiserver v0.21.0
