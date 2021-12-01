@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -128,6 +128,7 @@ func NewIPAMChecker(k8sClient kubernetes.Interface,
 		allocations:       map[string][]*Allocation{},
 		allocationsByNode: map[string][]*Allocation{},
 		allocationsByPod:  map[string][]*Allocation{},
+		activeNodes:       map[string]apiv3.Node{},
 
 		inUseIPs: map[string][]ownerRecord{},
 
@@ -148,6 +149,7 @@ type IPAMChecker struct {
 	allocationsByNode map[string][]*Allocation
 	allocationsByPod  map[string][]*Allocation
 	inUseIPs          map[string][]ownerRecord
+	activeNodes       map[string]apiv3.Node
 
 	clusterType         string
 	clusterInfoRevision string
@@ -236,6 +238,7 @@ func (c *IPAMChecker) checkIPAM(ctx context.Context) error {
 		}
 		numNodeIPs := 0
 		for _, n := range nodes.Items {
+			c.recordActiveNode(n)
 			ips, err := getNodeIPs(n)
 			if err != nil {
 				return err
@@ -297,6 +300,42 @@ func (c *IPAMChecker) checkIPAM(ctx context.Context) error {
 	}
 
 	numProblems := 0
+	{
+		fmt.Printf("Scanning for AWS secondary IPs and IPs with unknown types...\n")
+		numUnknowns := 0
+		for ip, allocs := range c.allocations {
+			for _, a := range allocs {
+				switch a.Type {
+				case model.IPAMBlockAttributeTypeAWSSecondary:
+					// Special case: nodes' AWS secondary IPs are only recorded in IPAM, not on the node object.
+					if node, ok := c.activeNodes[a.Node]; ok {
+						c.recordInUseIP(ip, node, fmt.Sprintf("NodeAWSSecondary(%s)", a.Node))
+					}
+				case model.IPAMBlockAttributeTypeIPIP,
+					model.IPAMBlockAttributeTypeVXLAN,
+					model.IPAMBlockAttributeTypeWireguard,
+					"" /* workloads */ :
+					// Should have been caught above
+				default:
+					if _, ok := c.inUseIPs[ip]; !ok {
+						// A type we don't know about that wasn't already handled above.  Have to assume it's in use.
+						if c.showProblemIPs {
+							fmt.Printf("  %s allocation has unknown type (%s) Assuming IP is still in use.\n", a.IP, a.Type)
+						}
+						c.recordInUseIP(ip, a.Block, fmt.Sprintf("UnknownType(%s)", a.Type))
+						numUnknowns++
+					}
+				}
+			}
+		}
+		if numUnknowns > 0 {
+			fmt.Printf("Warning: found %d IPs with unknown allocation types. Perhaps a new version of this tool is needed?\n", numUnknowns)
+			numProblems += numUnknowns
+		} else {
+			fmt.Print("Found 0 IPs with unknown allocation types.\n")
+		}
+	}
+
 	var allocatedButNotInUseIPs []string
 	{
 		fmt.Printf("Scanning for IPs that are allocated but not actually in use...\n")
@@ -486,6 +525,10 @@ func (c *IPAMChecker) recordInUseIP(ip string, referrer interface{}, friendlyNam
 		a.InUse = true
 		a.Owners = append(a.Owners, friendlyName)
 	}
+}
+
+func (c *IPAMChecker) recordActiveNode(node apiv3.Node) {
+	c.activeNodes[node.Name] = node
 }
 
 func getNodeIPs(n apiv3.Node) ([]string, error) {
