@@ -11,14 +11,11 @@ import (
 	"github.com/tigera/es-proxy/pkg/middleware"
 	"github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/lma/pkg/auth/testing"
-	"k8s.io/apimachinery/pkg/runtime"
 
-	authnv1 "k8s.io/api/authentication/v1"
 	authzv1 "k8s.io/api/authorization/v1"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	restclient "k8s.io/client-go/rest"
-	k8stesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/util/flowcontrol"
 
 	. "github.com/onsi/ginkgo"
@@ -40,27 +37,6 @@ var pathToSomething = "/path/to/something"
 
 func genPath(q string) string {
 	return fmt.Sprintf("/%s/_search", q)
-}
-
-func addTokenReviewsReactor(fakeK8sCli *fake.Clientset, authenticated bool, tokens []*testing.FakeJWT) {
-	tokenMap := map[string]*testing.FakeJWT{}
-	for _, tkn := range tokens {
-		tokenMap[tkn.ToString()] = tkn
-	}
-	fakeK8sCli.AddReactor("create", "tokenreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
-		createAction, ok := action.(k8stesting.CreateAction)
-		Expect(ok).To(BeTrue())
-		review, ok := createAction.GetObject().(*authnv1.TokenReview)
-		Expect(ok).To(BeTrue())
-
-		token, ok := tokenMap[review.Spec.Token]
-		Expect(ok).To(BeTrue(), "Token unknown to token reviews reactor.")
-
-		Expect(review.Spec).To(Equal(authnv1.TokenReviewSpec{
-			Token: token.ToString(),
-		}))
-		return true, &authnv1.TokenReview{Status: authnv1.TokenReviewStatus{User: authnv1.UserInfo{Username: fmt.Sprintf("%v", token.PayloadMap[auth.ClaimNameName])}, Authenticated: authenticated}}, nil
-	})
 }
 
 var _ = Describe("Authenticate against K8s apiserver", func() {
@@ -102,7 +78,7 @@ var _ = Describe("Authenticate against K8s apiserver", func() {
 		authorizer = auth.NewRBACAuthorizer(k8sClient)
 
 		// Register all users.
-		addTokenReviewsReactor(fakeK8sCli, true, []*testing.FakeJWT{tokenuserall, tokenuserflowonly, tokenuserauditonly, tokenuserauditkubeonly, tokenusernone, tokenusernru})
+		testing.SetTokenReviewsReactor(fakeK8sCli, tokenuserall, tokenuserflowonly, tokenuserauditonly, tokenuserauditkubeonly, tokenusernone, tokenusernru)
 	})
 	AfterEach(func() {
 	})
