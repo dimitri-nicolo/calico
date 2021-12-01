@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	. "github.com/onsi/gomega"
+
 	"github.com/tigera/lma/pkg/auth"
 	authnv1 "k8s.io/api/authentication/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -123,6 +125,8 @@ type ServiceAccountPayload struct {
 	Sub                                          string `json:"sub"`
 }
 
+// SetTokenReviewsReactor adds a reactor to your fake clientset. This helps you to add one or more authenticated users,
+// based on their FakeJWT.
 func SetTokenReviewsReactor(fakeK8sCli *fake.Clientset, tokens ...*FakeJWT) {
 	tokenMap := map[string]*FakeJWT{}
 	for _, tkn := range tokens {

@@ -6,16 +6,19 @@ import (
 	"fmt"
 	"net/http"
 
-	authzv1 "k8s.io/api/authorization/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	k8stesting "k8s.io/client-go/testing"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
 	"github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/lma/pkg/auth/testing"
+
 	authnv1 "k8s.io/api/authentication/v1"
+	authzv1 "k8s.io/api/authorization/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
+	k8stesting "k8s.io/client-go/testing"
 )
 
 var _ = Describe("Test dex username prefixes", func() {
