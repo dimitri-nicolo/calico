@@ -88,19 +88,16 @@ var (
 )
 
 // GetL7FlowData queries and returns the set of L7 flow data.
-func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr lmav1.TimeRange) ([]L7Flow, error) {
+func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr lmav1.TimeRange) (fs []L7Flow, err error) {
 	// Track the total buckets queried and the response flows.
 	var totalBuckets int
-	var fs []L7Flow
 
 	// Trace stats at debug level.
-	if log.IsLevelEnabled(log.DebugLevel) {
-		start := time.Now()
-		log.Debug("GetL7FlowData called")
-		defer func() {
-			log.Debugf("GetL7FlowData took %s; buckets=%d; flows=%d", time.Since(start), totalBuckets, len(fs))
-		}()
-	}
+	start := time.Now()
+	log.Debug("GetL7FlowData called")
+	defer func() {
+		log.WithError(err).Infof("GetL7FlowData took %s; buckets=%d; flows=%d", time.Since(start), totalBuckets, len(fs))
+	}()
 
 	index := lmaindex.L7Logs().GetIndex(elasticvariant.AddIndexInfix(cluster))
 	aggQueryL7 := &lmaelastic.CompositeAggregationQuery{
@@ -150,6 +147,9 @@ func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 	var lastSvc v1.ServicePort
 	for bucket := range rcvdL7Buckets {
 		totalBuckets++
+		if totalBuckets % 10000 == 0 {
+			log.Infof("Enumerated %d L7 buckets", totalBuckets)
+		}
 		key := bucket.CompositeAggregationKey
 		code := key[l7ResponseCodeIdx].String()
 		source := FlowEndpoint{

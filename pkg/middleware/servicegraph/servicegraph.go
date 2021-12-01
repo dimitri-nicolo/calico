@@ -110,7 +110,7 @@ func (s *serviceGraph) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	} else {
 		httputils.Encode(w, sg)
 
-		log.Infof("ServicePort graph request took %s; returning %d nodes and %d edges",
+		log.Infof("Service graph request took %s; returning %d nodes and %d edges",
 			time.Since(start), len(sg.Nodes), len(sg.Edges))
 	}
 }

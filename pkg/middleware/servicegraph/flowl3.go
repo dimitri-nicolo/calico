@@ -195,19 +195,15 @@ type L3FlowData struct {
 // - Port information is aggregated when an endpoint port is not part of a service - this prevents bloating a graph
 //   when an endpoint is subjected to a port scan.
 // - Stats for TCP and Processes are aggregated for each flow.
-func GetL3FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr lmav1.TimeRange, fc *FlowConfig) ([]L3Flow, error) {
+func GetL3FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr lmav1.TimeRange, fc *FlowConfig) (fs []L3Flow, err error) {
 	// Track the total buckets queried and the response flows.
 	var totalBuckets int
-	var fs []L3Flow
 
-	// Trace stats at debug level.
-	if log.IsLevelEnabled(log.DebugLevel) {
-		start := time.Now()
-		log.Debug("GetL3FlowData called")
-		defer func() {
-			log.Debugf("GetL3FlowData took %s; buckets=%d; flows=%d", time.Since(start), totalBuckets, len(fs))
-		}()
-	}
+	start := time.Now()
+	log.Debug("GetL3FlowData called")
+	defer func() {
+		log.WithError(err).Infof("GetL3FlowData took %s; buckets=%d; flows=%d", time.Since(start), totalBuckets, len(fs))
+	}()
 
 	index := lmaindex.FlowLogs().GetIndex(elasticvariant.AddIndexInfix(cluster))
 	aggQueryL3 := &lmaelastic.CompositeAggregationQuery{
@@ -228,6 +224,9 @@ func GetL3FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 	var dgd *destinationGroupData
 	for bucket := range rcvdL3Buckets {
 		totalBuckets++
+		if totalBuckets % 10000 == 0 {
+			log.Infof("Enumerated %d L3 buckets", totalBuckets)
+		}
 		key := bucket.CompositeAggregationKey
 		reporter := key[FlowReporterIdx].String()
 		action := key[FlowActionIdx].String()
@@ -595,7 +594,7 @@ func (s *sourceData) getFlows(source FlowEndpoint, destGp *FlowEndpoint) []L3Flo
 		if len(fs) == 0 {
 			log.Debug("Collated flows discarded")
 		} else {
-			log.Debug("Collated flows converted ")
+			log.Debug("Collated flows converted")
 			for _, f := range fs {
 				log.Debugf("- %s", f)
 			}
