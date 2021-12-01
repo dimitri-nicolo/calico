@@ -53,6 +53,7 @@ require (
 )
 
 replace (
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible => github.com/golang-jwt/jwt/v4 v4.1.0
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20211110012726-3cc51fd1e909
 )
