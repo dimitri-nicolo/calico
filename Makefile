@@ -1,5 +1,5 @@
 PACKAGE_NAME?=github.com/tigera/licensing
-GO_BUILD_VER?=v0.59
+GO_BUILD_VER?=v0.61
 
 GIT_USE_SSH = true
 
