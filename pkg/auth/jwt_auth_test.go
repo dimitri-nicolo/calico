@@ -3,10 +3,14 @@
 package auth_test
 
 import (
+	"fmt"
 	"net/http"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/tigera/lma/pkg/auth"
+	"github.com/tigera/lma/pkg/auth/testing"
 
 	authnv1 "k8s.io/api/authentication/v1"
 	authzv1 "k8s.io/api/authorization/v1"
@@ -15,9 +19,6 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 	k8stesting "k8s.io/client-go/testing"
-
-	"github.com/tigera/lma/pkg/auth"
-	"github.com/tigera/lma/pkg/auth/testing"
 )
 
 var _ = Describe("Test dex username prefixes", func() {
@@ -32,10 +33,10 @@ var _ = Describe("Test dex username prefixes", func() {
 	var fakeK8sCli *fake.Clientset
 
 	var (
-		jwtAuth          auth.JWTAuth
-		keySet           *testKeySet
-		jwt              = testing.NewFakeServiceAccountJWT()
-		impersonatingJWT = testing.NewFakeJWT(clusterIssuer, clientID)
+		jwtAuth           auth.JWTAuth
+		keySet            *testKeySet
+		serviceaccountJWT = testing.NewFakeServiceAccountJWT()
+		impersonatingJWT  = testing.NewFakeJWT(clusterIssuer, clientID)
 	)
 
 	BeforeEach(func() {
@@ -53,26 +54,15 @@ var _ = Describe("Test dex username prefixes", func() {
 	})
 
 	It("Should authenticate a service account token", func() {
-		addTokenReviewsReactor(fakeK8sCli, true, jwt.ToString())
+		testing.SetTokenReviewsReactor(fakeK8sCli, serviceaccountJWT)
 		hdrs := http.Header{}
-		hdrs.Set("Authorization", jwt.BearerTokenHeader())
+		hdrs.Set("Authorization", serviceaccountJWT.BearerTokenHeader())
 		req := &http.Request{Header: hdrs}
 
 		usr, stat, err := jwtAuth.Authenticate(req)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(stat).To(Equal(200))
-		Expect(usr.GetName()).To(Equal("default"))
-	})
-
-	It("Should reject an invalid service account token", func() {
-		addTokenReviewsReactor(fakeK8sCli, false, jwt.ToString())
-		hdrs := http.Header{}
-		hdrs.Set("Authorization", jwt.BearerTokenHeader())
-		req := &http.Request{Header: hdrs}
-
-		_, stat, err := jwtAuth.Authenticate(req)
-		Expect(err).To(HaveOccurred())
-		Expect(stat).To(Equal(401))
+		Expect(usr.GetName()).To(Equal("tigera-prometheus:default"))
 	})
 
 	It("Should refuse a missing jwtAuth header", func() {
@@ -84,9 +74,9 @@ var _ = Describe("Test dex username prefixes", func() {
 	})
 
 	It("Should authenticate and impersonate", func() {
-		addTokenReviewsReactor(fakeK8sCli, true, impersonatingJWT.ToString())
+		testing.SetTokenReviewsReactor(fakeK8sCli, impersonatingJWT)
 		addAccessReviewsReactor(fakeK8sCli, true, &user.DefaultInfo{
-			Name: jwt.ServiceAccountPayload.KubernetesIoServiceaccountServiceAccountName,
+			Name: fmt.Sprintf("%v", impersonatingJWT.PayloadMap[auth.ClaimNameName]),
 		})
 		hdrs := http.Header{}
 		hdrs.Set("Authorization", impersonatingJWT.BearerTokenHeader())
@@ -103,9 +93,9 @@ var _ = Describe("Test dex username prefixes", func() {
 	})
 
 	It("Should refuse service account that is not allowed to impersonate", func() {
-		addTokenReviewsReactor(fakeK8sCli, true, impersonatingJWT.ToString())
+		testing.SetTokenReviewsReactor(fakeK8sCli, impersonatingJWT)
 		addAccessReviewsReactor(fakeK8sCli, false, &user.DefaultInfo{
-			Name: jwt.ServiceAccountPayload.KubernetesIoServiceaccountServiceAccountName,
+			Name: fmt.Sprintf("%v", impersonatingJWT.PayloadMap[auth.ClaimNameName]),
 		})
 		hdrs := http.Header{}
 		hdrs.Set("Authorization", impersonatingJWT.BearerTokenHeader())
@@ -118,19 +108,6 @@ var _ = Describe("Test dex username prefixes", func() {
 		Expect(stat).To(Equal(401))
 	})
 })
-
-func addTokenReviewsReactor(fakeK8sCli *fake.Clientset, authenticated bool, token string) {
-	fakeK8sCli.AddReactor("create", "tokenreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
-		createAction, ok := action.(k8stesting.CreateAction)
-		Expect(ok).To(BeTrue())
-		review, ok := createAction.GetObject().(*authnv1.TokenReview)
-		Expect(ok).To(BeTrue())
-		Expect(review.Spec).To(Equal(authnv1.TokenReviewSpec{
-			Token: token,
-		}))
-		return true, &authnv1.TokenReview{Status: authnv1.TokenReviewStatus{User: authnv1.UserInfo{Username: "default"}, Authenticated: authenticated}}, nil
-	})
-}
 
 func addAccessReviewsReactor(fakeK8sCli *fake.Clientset, authorized bool, userInfo user.Info) {
 	fakeK8sCli.AddReactor("create", "subjectaccessreviews", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
