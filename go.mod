@@ -5,7 +5,7 @@ go 1.16
 replace (
 	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20211126153335-1e65a3ead8be
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20211130171808-7600fd7dc0d6
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211126151825-2cc2008d4c6c
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211130235555-4a6bb90f4aaf
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211126153408-393ca83c6411
 
 	k8s.io/api => k8s.io/api v0.21.0-rc.0
@@ -40,8 +40,8 @@ require (
 	github.com/onsi/gomega v1.10.1
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/sirupsen/logrus v1.8.1
-	github.com/tigera/licensing v1.0.1-0.20211126152210-b709a8c7c278
-	github.com/tigera/lma v0.0.0-20211130180308-000255ecdab2
+	github.com/tigera/licensing v1.0.1-0.20211201195049-609d85e58367
+	github.com/tigera/lma v0.0.0-20211201214446-9b22269b7bd6
 	k8s.io/apiserver v0.22.0 // indirect
 	k8s.io/client-go v11.0.0+incompatible // indirect
 )
