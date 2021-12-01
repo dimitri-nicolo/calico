@@ -15,7 +15,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
 	github.com/tigera/api v0.0.0-20211130232353-e7a188095a30
-	gopkg.in/square/go-jose.v2 v2.2.3-0.20190111193340-cbf0fd6a984a
+	gopkg.in/square/go-jose.v2 v2.5.1
 	gopkg.in/yaml.v2 v2.4.0
 )
 

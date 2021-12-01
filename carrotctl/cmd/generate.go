@@ -231,7 +231,7 @@ var GenerateLicenseCmd = &cobra.Command{
 	},
 }
 
-func parseExpiryDate(dateStr string) jwt.NumericDate {
+func parseExpiryDate(dateStr string) *jwt.NumericDate {
 	expSlice := strings.Split(dateStr, "/")
 	if len(expSlice) != 3 {
 		log.Fatal("[ERROR] expiration date must be in MM/DD/YYYY format")
