@@ -265,7 +265,7 @@ For basic users with view-only permissions, apply this role.
 
 Or use the groups flag to assign cluster role to a group of users.
   ```bash
-  kubectl create clusterrolebinding all-developers-tigera-ui-user --groups=<group> --clusterrole=tigera-ui-user
+  kubectl create clusterrolebinding all-developers-tigera-ui-user --group=<group> --clusterrole=tigera-ui-user
   ```
 
 #### (Optional) Allow {{site.prodname}} URIs in your IdP
