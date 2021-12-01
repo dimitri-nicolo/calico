@@ -12,7 +12,7 @@ require (
 	github.com/prometheus/client_golang v1.7.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/tigera/api v0.0.0-20211130232353-e7a188095a30
-	github.com/tigera/licensing v1.0.1-0.20211130235937-e15e6eff59e4
+	github.com/tigera/licensing v1.0.1-0.20211201195049-609d85e58367
 )
 
 replace k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
