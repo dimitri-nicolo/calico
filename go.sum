@@ -506,8 +506,8 @@ github.com/tigera/api v0.0.0-20211130232353-e7a188095a30 h1:aP0eSTGolYw1BTvrssJv
 github.com/tigera/api v0.0.0-20211130232353-e7a188095a30/go.mod h1:Z6rfooMhUK/BJekToMM7EwFHLuBWwbyu5cyTXQHUcbw=
 github.com/tigera/libcalico-go-private v1.7.2-0.20211130235555-4a6bb90f4aaf h1:9NqCz5qzHQVfhlmFU2+r8dki51+u3wCKr/bJ0SdemwE=
 github.com/tigera/libcalico-go-private v1.7.2-0.20211130235555-4a6bb90f4aaf/go.mod h1:XOGN1YpLLRzQwqhdpRQEDzsgBlTflWTr+RPKGibngbo=
-github.com/tigera/licensing v1.0.1-0.20211130235937-e15e6eff59e4 h1:HonfdxpP3jzdNhNDHnDMiZ+vwVz1kfdInn3tw/RgGSA=
-github.com/tigera/licensing v1.0.1-0.20211130235937-e15e6eff59e4/go.mod h1:uEmNzkg2kWgg561ajEIYbSB0bdnhq218SrD5gv8vOo8=
+github.com/tigera/licensing v1.0.1-0.20211201195049-609d85e58367 h1:lyjzGRzWnzEN+aKpNaBRj7tgeDJI8yudMnEVEU1vEV4=
+github.com/tigera/licensing v1.0.1-0.20211201195049-609d85e58367/go.mod h1:VZ4diAoNNHD2Q6mMcRj4K48M2rk7dgh5O+0RJv0iFsY=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 h1:LnC5Kc/wtumK+WB441p7ynQJzVuNRJiqddSIE3IlSEQ=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
@@ -837,8 +837,8 @@ gopkg.in/natefinch/lumberjack.v2 v2.0.0 h1:1Lc07Kr7qY4U2YPouBjpCLxpiyxIVoxqXgkXL
 gopkg.in/natefinch/lumberjack.v2 v2.0.0/go.mod h1:l0ndWWf7gzL7RNwBG7wST/UCcT4T24xpD6X8LsfU/+k=
 gopkg.in/resty.v1 v1.12.0/go.mod h1:mDo4pnntr5jdWRML875a/NmxYqAlA73dVijT2AXvQQo=
 gopkg.in/square/go-jose.v2 v2.2.2/go.mod h1:M9dMgbHiYLoDGQrXy7OpJDJWiKiU//h+vD76mk0e1AI=
-gopkg.in/square/go-jose.v2 v2.2.3-0.20190111193340-cbf0fd6a984a h1:29Ak7ijN3An8v7FpUJu+2xdws7KLGZ2RhiYtOXHmhYQ=
-gopkg.in/square/go-jose.v2 v2.2.3-0.20190111193340-cbf0fd6a984a/go.mod h1:M9dMgbHiYLoDGQrXy7OpJDJWiKiU//h+vD76mk0e1AI=
+gopkg.in/square/go-jose.v2 v2.5.1 h1:7odma5RETjNHWJnR32wx8t+Io4djHE1PqxCFx3iiZ2w=
+gopkg.in/square/go-jose.v2 v2.5.1/go.mod h1:M9dMgbHiYLoDGQrXy7OpJDJWiKiU//h+vD76mk0e1AI=
 gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 h1:uRGJdciOHaEIrze2W8Q3AKkepLTh2hOroT7a+7czfdQ=
 gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7/go.mod h1:dt/ZhP58zS4L8KSrWDmTeBkI65Dw0HsyUHuEVlX15mw=
 gopkg.in/yaml.v2 v2.0.0-20170812160011-eb3733d160e7/go.mod h1:JAlM8MvJe8wmxCU4Bli9HhUf9+ttbYbLASfIpnQbh74=
