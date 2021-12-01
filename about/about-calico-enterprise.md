@@ -91,7 +91,7 @@ Many applications have compliance requirements such as workload isolation, ensur
 - [Create tiered network policy]({{site.baseurl}}/security/tiered-policy)
 - [Compliance reports]({{site.baseurl}}/compliance/compliance-reports/)
 - [CIS benchmarks]({{site.baseurl}}/compliance/compliance-reports-cis)
-- [Audit logs]({{site.baseurl}}/visibility/elastic/ee-audit)
+- [Audit logs]({{site.baseurl}}/visibility/elastic/audit-overview)
 
 ### Extend firewalls to Kubernetes
 

@@ -88,9 +88,9 @@ spec:
   threshold: 0
 ```
 
-In the following example, we are monitoring priviledge access within your cluster and detect any modification to `globalnetworksets`
+In the following example, we are monitoring privilege access within your cluster and detect any modification to `globalnetworksets`.
 
-```
+```yaml
 apiVersion: projectcalico.org/v3
 kind: GlobalAlert
 metadata:
@@ -109,6 +109,42 @@ spec:
   threshold: 0
 ```
 
+In the following example, we generate alerts for processes in a small set.
+
+```yaml
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: example-process-set-embedded
+spec:
+  description: Generate alerts for all flows from processes in the set
+  summary: Generate alerts for all flows from processes in the set
+  severity: 100
+  dataSet: flows
+  query: process_name IN {"python?", "*checkoutservice"}
+```
+
+In the following example, we generate alerts for DNS lookups that are not in the allowed domain set.
+Since this set can be potentially large, we will use a variable in the query string and reference it from the `substitutions` list.
+
+```yaml
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: example-domain-set-variable
+spec:
+  description: Generate alerts for all DNS lookups not in the domain set
+  summary: Generate alerts for all DNS lookups not in the domain set with variable
+  severity: 100
+  dataSet: dns
+  query: qname NOTIN ${domains} 
+  substitutions:
+    - name: domains
+      values:
+        - "*cluster.local"
+        - "?.mydomain.com"
+```
+
 ### Templates
 
 {{site.prodname}} includes a set of Alert templates. These are used
@@ -119,7 +155,8 @@ for common tasks that can then be modified to suit your needs.
 
 - For all global alert and template options, see [GlobalAlert]({{site.baseurl}}/reference/resources/globalalert)
 - [Elasticsearch troubleshooting]({{site.baseurl}}/visibility/troubleshoot)
-- [flow logs]({{site.baseurl}}/visibility/elastic/flow)
-- [dns log]({{site.baseurl}}/visibility/elastic/dns)
-- [audit logs]({{site.baseurl}}/visibility/elastic/ee-audit)
+- [Audit logs]({{site.baseurl}}/visibility/elastic/audit-overview)
+- [DNS logs]({{site.baseurl}}/visibility/elastic/dns)
+- [Flow logs]({{site.baseurl}}/visibility/elastic/flow)
+- [L7 logs]({{site.baseurl}}/visibility/elastic/l7)
 - {% include open-new-window.html text='Exploits database' url='https://www.exploit-db.com/exploits/45925' %}
