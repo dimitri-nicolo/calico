@@ -40,6 +40,7 @@ type managedClusterESControllerReconciler struct {
 	cfgLic                   config.LicenseControllerCfg
 	esClientBuilder          elasticsearch.ClientBuilder
 	esClient                 elasticsearch.Client
+	restartChan              chan<- string
 }
 
 // Reconcile finds the ManagedCluster resource specified by the name and either adds, removes, or recreates the elasticsearch
@@ -123,7 +124,7 @@ func (c *managedClusterESControllerReconciler) addManagedClusterWatch(mc *v3.Man
 	}
 
 	esCredsController := elasticsearchconfiguration.New(mc.Name, string(mc.UID), managedK8sCLI, c.managementK8sCLI, c.esK8sCLI,
-		c.esClientBuilder, false, c.cfgEs)
+		c.esClientBuilder, false, c.cfgEs, c.restartChan)
 	licenseController := license.New(mc.Name, managedCalicoCLI, c.calicoCLI, c.cfgLic)
 
 	stop := make(chan struct{})

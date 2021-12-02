@@ -7,24 +7,32 @@ import (
 
 	"github.com/projectcalico/kube-controllers/pkg/controllers/worker"
 	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
+	"github.com/projectcalico/kube-controllers/pkg/resource"
 	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
 )
 
 func NewReconciler(
-	clusterName string,
-	ownerReference string,
 	esClientBuilder elasticsearch.ClientBuilder,
-	management bool,
 	managementK8sCLI kubernetes.Interface,
 	managedK8sCLI kubernetes.Interface,
-	esK8sCLI relasticsearch.RESTClient) worker.Reconciler {
-	return &reconciler{
-		clusterName:      clusterName,
-		ownerReference:   ownerReference,
-		management:       management,
-		managementK8sCLI: managementK8sCLI,
-		managedK8sCLI:    managedK8sCLI,
-		esK8sCLI:         esK8sCLI,
-		esClientBuilder:  esClientBuilder,
+	esK8sCLI relasticsearch.RESTClient,
+	restartChan chan string,
+	setOpts func(*reconciler),
+) worker.Reconciler {
+	r := &reconciler{
+		clusterName:                 "cluster",
+		ownerReference:              "",
+		management:                  true,
+		managementK8sCLI:            managementK8sCLI,
+		managementOperatorNamespace: resource.OperatorNamespace,
+		managedK8sCLI:               managedK8sCLI,
+		managedOperatorNamespace:    resource.OperatorNamespace,
+		esK8sCLI:                    esK8sCLI,
+		esClientBuilder:             esClientBuilder,
+		restartChan:                 restartChan,
 	}
+	if setOpts != nil {
+		setOpts(r)
+	}
+	return r
 }

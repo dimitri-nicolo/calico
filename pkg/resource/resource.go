@@ -18,6 +18,8 @@ const (
 	OIDCUsersConfigMapName       = "tigera-known-oidc-users"
 	OIDCUsersEsSecreteName       = "tigera-oidc-users-elasticsearch-credentials"
 	LicenseName                  = "default"
+	CalicoNamespaceName          = "calico-system"
+	ActiveOperatorConfigMapName  = "active-operator"
 )
 
 func CreateHashFromObject(obj interface{}) (string, error) {
