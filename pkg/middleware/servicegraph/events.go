@@ -89,16 +89,10 @@ type RawEventRecord struct {
 // view. If we have insufficient information in the event log to accurately pin the event to a service graph node then
 // we will not include it in the node. The unfiltered alerts table will still provide the user with the opportunity to
 // see all events.
-func GetEvents(ctx context.Context, es lmaelastic.Client, csAppCluster k8s.ClientSet, cluster string, tr lmav1.TimeRange) ([]Event, error) {
-	// Trace stats at debug level.
-	if log.IsLevelEnabled(log.DebugLevel) {
-		start := time.Now()
-		log.Debug("GetEvents called")
-		defer func() {
-			log.Debugf("GetEvents took %s", time.Since(start))
-		}()
-	}
-
+func GetEvents(
+	ctx context.Context, es lmaelastic.Client, csAppCluster k8s.ClientSet, cluster string, tr lmav1.TimeRange,
+	cfg *Config,
+) ([]Event, error) {
 	/* Reinstate when we have k8s events too
 	var tigeraEvents, kubernetesEvents []Event
 	var tigeraErr, kubernetesErr error
@@ -129,16 +123,28 @@ func GetEvents(ctx context.Context, es lmaelastic.Client, csAppCluster k8s.Clien
 	return append(tigeraEvents, kubernetesEvents...), nil
 	*/
 
-	return getTigeraEvents(ctx, es, cluster, tr)
+	return getTigeraEvents(ctx, es, cluster, tr, cfg)
 }
 
-func getTigeraEvents(ctx context.Context, es lmaelastic.Client, cluster string, tr lmav1.TimeRange) ([]Event, error) {
+func getTigeraEvents(
+	ctx context.Context, es lmaelastic.Client, cluster string, tr lmav1.TimeRange,
+	cfg *Config,
+) (results []Event, err error) {
+	// Trace progress.
+	progress := newElasticProgress("events", tr)
+	defer func() {
+		progress.Complete(err)
+	}()
+
 	// Issue the query to Elasticsearch and send results out through the results channel. We terminate the search if:
 	// - there are no more "buckets" returned by Elasticsearch or the equivalent no-or-empty "after_key" in the
 	//   aggregated search results,
 	// - we hit an error, or
 	// - the context indicates "done"
-	var results []Event
+	querySize := alertsQuerySize
+	if cfg.ServiceGraphCacheMaxBucketsPerQuery > 0 {
+		querySize = cfg.ServiceGraphCacheMaxBucketsPerQuery
+	}
 	query := lmaindex.Alerts().NewTimeRangeQuery(tr.From, tr.To)
 	index := lmaindex.Alerts().GetIndex(elasticvariant.AddIndexInfix(cluster))
 	var searchAfterKeys []interface{}
@@ -146,7 +152,7 @@ func getTigeraEvents(ctx context.Context, es lmaelastic.Client, cluster string, 
 		log.Debugf("Issuing search query, start after %#v", searchAfterKeys)
 
 		// Query the document index.
-		search := es.Backend().Search(index).Query(query).Size(alertsQuerySize).Sort("time", true)
+		search := es.Backend().Search(index).Query(query).Size(querySize).Sort("time", true)
 		if searchAfterKeys != nil {
 			search = search.SearchAfter(searchAfterKeys...)
 		}
@@ -162,19 +168,25 @@ func getTigeraEvents(ctx context.Context, es lmaelastic.Client, cluster string, 
 		// consumer - this is useful in propagating the timeout up the stack when we are doing server side
 		// aggregation.
 		if searchResults.TimedOut {
-			log.Errorf("Elastic query timed out: %s", index)
 			return nil, lmaelastic.TimedOutError(fmt.Sprintf("timed out querying %s", index))
 		}
 
 		// Loop through each of the items in the buckets and convert to a result bucket.
 		for _, item := range searchResults.Hits.Hits {
+			progress.IncRaw()
 			searchAfterKeys = item.Sort
 			if event := parseTigeraEvent(item.Id, item.Source); event != nil {
 				results = append(results, *event)
+				progress.IncAggregated()
+
+				// Track the number of aggregated logs. Bail if we hit the absolute maximum number of aggregated events.
+				if len(results) > cfg.ServiceGraphCacheMaxAggregatedRecords {
+					return results, DataTruncatedError
+				}
 			}
 		}
 
-		if len(searchResults.Hits.Hits) < alertsQuerySize {
+		if len(searchResults.Hits.Hits) < querySize {
 			log.Debugf("Completed processing %s, found %d events", index, len(results))
 			break
 		}

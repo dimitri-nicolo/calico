@@ -20,40 +20,40 @@ import (
 var _ ServiceGraphBackend = &realServiceGraphBackend{}
 
 type ServiceGraphBackend interface {
-	// The underlying requests for the following methods are handled in the background and use the application context
-	// which can be embedded in the backend instance, therefore these methods do not include context parameters in the
-	// signature.
-	GetFlowConfig(cluster string) (*FlowConfig, error)
-	GetL3FlowData(cluster string, tr lmav1.TimeRange, fc *FlowConfig) ([]L3Flow, error)
-	GetL7FlowData(cluster string, tr lmav1.TimeRange) ([]L7Flow, error)
-	GetDNSData(cluster string, tr lmav1.TimeRange) ([]DNSLog, error)
-	GetEvents(cluster string, tr lmav1.TimeRange) ([]Event, error)
-	GetServiceLabels(cluster string) (map[v1.NamespacedName]LabelSelectors, error)
-	GetReplicaSetLabels(cluster string) (map[v1.NamespacedName]LabelSelectors, error)
-	GetStatefulSetLabels(cluster string) (map[v1.NamespacedName]LabelSelectors, error)
-	GetDaemonSetLabels(cluster string) (map[v1.NamespacedName]LabelSelectors, error)
-	GetPodsLabels(cluster string) (map[v1.NamespacedName]LabelSelectors, error)
 
-	// These methods access data for a specific user request and therefore need to include the users request context.
+	// These methods access data for the cache and therefore use an application context rather than the user request
+	// context.
+	GetFlowConfig(ctx context.Context, cluster string) (*FlowConfig, error)
+	GetL3FlowData(ctx context.Context, cluster string, tr lmav1.TimeRange, fc *FlowConfig) ([]L3Flow, error)
+	GetL7FlowData(ctx context.Context, cluster string, tr lmav1.TimeRange) ([]L7Flow, error)
+	GetDNSData(ctx context.Context, cluster string, tr lmav1.TimeRange) ([]DNSLog, error)
+	GetEvents(ctx context.Context, cluster string, tr lmav1.TimeRange) ([]Event, error)
+	GetServiceLabels(ctx context.Context, cluster string) (map[v1.NamespacedName]LabelSelectors, error)
+	GetReplicaSetLabels(ctx context.Context, cluster string) (map[v1.NamespacedName]LabelSelectors, error)
+	GetStatefulSetLabels(ctx context.Context, cluster string) (map[v1.NamespacedName]LabelSelectors, error)
+	GetDaemonSetLabels(ctx context.Context, cluster string) (map[v1.NamespacedName]LabelSelectors, error)
+	GetPodsLabels(ctx context.Context, cluster string) (map[v1.NamespacedName]LabelSelectors, error)
+
+	// These methods access data for a specific user request and therefore use the users request context.
 	NewRBACFilter(ctx context.Context, rd *RequestData) (RBACFilter, error)
 	NewNameHelper(ctx context.Context, rd *RequestData) (NameHelper, error)
 }
 
 type realServiceGraphBackend struct {
-	ctx              context.Context
 	authz            auth.RBACAuthorizer
 	elastic          lmaelastic.Client
 	clientSetFactory k8s.ClientSetFactory
+	config           *Config
 }
 
-func (r *realServiceGraphBackend) GetPodsLabels(cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
+func (r *realServiceGraphBackend) GetPodsLabels(ctx context.Context, cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
 	cs, err := r.clientSetFactory.NewClientSetForApplication(cluster)
 	if err != nil {
 		return nil, err
 	}
 
 	var pods = make(map[v1.NamespacedName]LabelSelectors)
-	podsList, err := cs.CoreV1().Pods("").List(r.ctx, metav1.ListOptions{})
+	podsList, err := cs.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.WithError(err).Errorf("Failed to list pods")
 	}
@@ -67,14 +67,14 @@ func (r *realServiceGraphBackend) GetPodsLabels(cluster string) (map[v1.Namespac
 	return pods, nil
 }
 
-func (r *realServiceGraphBackend) GetStatefulSetLabels(cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
+func (r *realServiceGraphBackend) GetStatefulSetLabels(ctx context.Context, cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
 	cs, err := r.clientSetFactory.NewClientSetForApplication(cluster)
 	if err != nil {
 		return nil, err
 	}
 
 	var statefulSets = make(map[v1.NamespacedName]LabelSelectors)
-	stsList, err := cs.AppsV1().StatefulSets("").List(r.ctx, metav1.ListOptions{})
+	stsList, err := cs.AppsV1().StatefulSets("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.WithError(err).Errorf("Failed to list statefulSets")
 	}
@@ -86,14 +86,14 @@ func (r *realServiceGraphBackend) GetStatefulSetLabels(cluster string) (map[v1.N
 	return statefulSets, nil
 }
 
-func (r *realServiceGraphBackend) GetDaemonSetLabels(cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
+func (r *realServiceGraphBackend) GetDaemonSetLabels(ctx context.Context, cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
 	cs, err := r.clientSetFactory.NewClientSetForApplication(cluster)
 	if err != nil {
 		return nil, err
 	}
 
 	var daemonSets = make(map[v1.NamespacedName]LabelSelectors)
-	dsList, err := cs.AppsV1().DaemonSets("").List(r.ctx, metav1.ListOptions{})
+	dsList, err := cs.AppsV1().DaemonSets("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.WithError(err).Errorf("Failed to list daemonSets")
 	}
@@ -105,14 +105,14 @@ func (r *realServiceGraphBackend) GetDaemonSetLabels(cluster string) (map[v1.Nam
 	return daemonSets, nil
 }
 
-func (r *realServiceGraphBackend) GetReplicaSetLabels(cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
+func (r *realServiceGraphBackend) GetReplicaSetLabels(ctx context.Context, cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
 	cs, err := r.clientSetFactory.NewClientSetForApplication(cluster)
 	if err != nil {
 		return nil, err
 	}
 
 	var replicaSets = make(map[v1.NamespacedName]LabelSelectors)
-	rsList, err := cs.AppsV1().ReplicaSets("").List(r.ctx, metav1.ListOptions{})
+	rsList, err := cs.AppsV1().ReplicaSets("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.WithError(err).Errorf("Failed to list replicaSets")
 	}
@@ -124,14 +124,14 @@ func (r *realServiceGraphBackend) GetReplicaSetLabels(cluster string) (map[v1.Na
 	return replicaSets, nil
 }
 
-func (r *realServiceGraphBackend) GetServiceLabels(cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
+func (r *realServiceGraphBackend) GetServiceLabels(ctx context.Context, cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
 	cs, err := r.clientSetFactory.NewClientSetForApplication(cluster)
 	if err != nil {
 		return nil, err
 	}
 
 	var services = make(map[v1.NamespacedName]LabelSelectors)
-	svList, err := cs.CoreV1().Services("").List(r.ctx, metav1.ListOptions{})
+	svList, err := cs.CoreV1().Services("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		log.WithError(err).Errorf("Failed to list services")
 	}
@@ -143,32 +143,40 @@ func (r *realServiceGraphBackend) GetServiceLabels(cluster string) (map[v1.Names
 	return services, nil
 }
 
-func (r *realServiceGraphBackend) GetFlowConfig(cluster string) (*FlowConfig, error) {
+func (r *realServiceGraphBackend) GetFlowConfig(ctx context.Context, cluster string) (*FlowConfig, error) {
 	cs, err := r.clientSetFactory.NewClientSetForApplication(cluster)
 	if err != nil {
 		return nil, err
 	}
-	return GetFlowConfig(r.ctx, cs)
+	return GetFlowConfig(ctx, cs)
 }
 
-func (r *realServiceGraphBackend) GetL3FlowData(cluster string, tr lmav1.TimeRange, fc *FlowConfig) ([]L3Flow, error) {
-	return GetL3FlowData(r.ctx, r.elastic, cluster, tr, fc)
+func (r *realServiceGraphBackend) GetL3FlowData(
+	ctx context.Context, cluster string, tr lmav1.TimeRange, fc *FlowConfig,
+) ([]L3Flow, error) {
+	return GetL3FlowData(ctx, r.elastic, cluster, tr, fc, r.config)
 }
 
-func (r *realServiceGraphBackend) GetDNSData(cluster string, tr lmav1.TimeRange) ([]DNSLog, error) {
-	return GetDNSClientData(r.ctx, r.elastic, cluster, tr)
+func (r *realServiceGraphBackend) GetDNSData(
+	ctx context.Context, cluster string, tr lmav1.TimeRange,
+) ([]DNSLog, error) {
+	return GetDNSClientData(ctx, r.elastic, cluster, tr, r.config)
 }
 
-func (r *realServiceGraphBackend) GetL7FlowData(cluster string, tr lmav1.TimeRange) ([]L7Flow, error) {
-	return GetL7FlowData(r.ctx, r.elastic, cluster, tr)
+func (r *realServiceGraphBackend) GetL7FlowData(
+	ctx context.Context, cluster string, tr lmav1.TimeRange,
+) ([]L7Flow, error) {
+	return GetL7FlowData(ctx, r.elastic, cluster, tr, r.config)
 }
 
-func (r *realServiceGraphBackend) GetEvents(cluster string, tr lmav1.TimeRange) ([]Event, error) {
+func (r *realServiceGraphBackend) GetEvents(
+	ctx context.Context, cluster string, tr lmav1.TimeRange,
+) ([]Event, error) {
 	cs, err := r.clientSetFactory.NewClientSetForApplication(cluster)
 	if err != nil {
 		return nil, err
 	}
-	return GetEvents(r.ctx, r.elastic, cs, cluster, tr)
+	return GetEvents(ctx, r.elastic, cs, cluster, tr, r.config)
 }
 
 func (r *realServiceGraphBackend) NewRBACFilter(ctx context.Context, rd *RequestData) (RBACFilter, error) {
@@ -227,35 +235,35 @@ type MockServiceGraphBackend struct {
 	numBlockedElastic            int
 }
 
-func (m *MockServiceGraphBackend) GetServiceLabels(cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
+func (m *MockServiceGraphBackend) GetServiceLabels(ctx context.Context, cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.numCallsGetServiceLabels++
 	return m.ServiceLabels, m.ServiceLabelsErr
 }
 
-func (m *MockServiceGraphBackend) GetPodsLabels(cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
+func (m *MockServiceGraphBackend) GetPodsLabels(ctx context.Context, cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.numCallsGetPodsLabels++
 	return m.PodsLabels, m.PodsLabelsErr
 }
 
-func (m *MockServiceGraphBackend) GetReplicaSetLabels(cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
+func (m *MockServiceGraphBackend) GetReplicaSetLabels(ctx context.Context, cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.numCallsGetReplicaSetLabels++
 	return m.ReplicaSetLabels, m.ReplicaSetLabelsErr
 }
 
-func (m *MockServiceGraphBackend) GetStatefulSetLabels(cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
+func (m *MockServiceGraphBackend) GetStatefulSetLabels(ctx context.Context, cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.numCallsGetStatefulSetLabels++
 	return m.StatefulSetLabels, m.StatefulSetLabelsErr
 }
 
-func (m *MockServiceGraphBackend) GetDaemonSetLabels(cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
+func (m *MockServiceGraphBackend) GetDaemonSetLabels(ctx context.Context, cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.numCallsGetDaemonSetLabels++
@@ -272,7 +280,7 @@ func (m *MockServiceGraphBackend) waitElastic() {
 	m.lock.Unlock()
 }
 
-func (m *MockServiceGraphBackend) GetFlowConfig(cluster string) (*FlowConfig, error) {
+func (m *MockServiceGraphBackend) GetFlowConfig(ctx context.Context, cluster string) (*FlowConfig, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.numCallsFlowConfig++
@@ -282,48 +290,44 @@ func (m *MockServiceGraphBackend) GetFlowConfig(cluster string) (*FlowConfig, er
 	return &m.FlowConfig, nil
 }
 
-func (m *MockServiceGraphBackend) GetL3FlowData(cluster string, tr lmav1.TimeRange, fc *FlowConfig) ([]L3Flow, error) {
+func (m *MockServiceGraphBackend) GetL3FlowData(
+	ctx context.Context, cluster string, tr lmav1.TimeRange, fc *FlowConfig,
+) ([]L3Flow, error) {
 	m.waitElastic()
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.numCallsL3++
-	if m.L3Err != nil {
-		return nil, m.L3Err
-	}
-	return m.L3, nil
+	return m.L3, m.L3Err
 }
 
-func (m *MockServiceGraphBackend) GetL7FlowData(cluster string, tr lmav1.TimeRange) ([]L7Flow, error) {
+func (m *MockServiceGraphBackend) GetL7FlowData(
+	ctx context.Context, cluster string, tr lmav1.TimeRange,
+) ([]L7Flow, error) {
 	m.waitElastic()
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.numCallsL7++
-	if m.L7Err != nil {
-		return nil, m.L7Err
-	}
-	return m.L7, nil
+	return m.L7, m.L7Err
 }
 
-func (m *MockServiceGraphBackend) GetDNSData(cluster string, tr lmav1.TimeRange) ([]DNSLog, error) {
+func (m *MockServiceGraphBackend) GetDNSData(
+	ctx context.Context, cluster string, tr lmav1.TimeRange,
+) ([]DNSLog, error) {
 	m.waitElastic()
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.numCallsDNS++
-	if m.DNSErr != nil {
-		return nil, m.DNSErr
-	}
-	return m.DNS, nil
+	return m.DNS, m.DNSErr
 }
 
-func (m *MockServiceGraphBackend) GetEvents(cluster string, tr lmav1.TimeRange) ([]Event, error) {
+func (m *MockServiceGraphBackend) GetEvents(
+	ctx context.Context, cluster string, tr lmav1.TimeRange,
+) ([]Event, error) {
 	m.waitElastic()
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.numCallsEvents++
-	if m.EventsErr != nil {
-		return nil, m.EventsErr
-	}
-	return m.Events, nil
+	return m.Events, m.EventsErr
 }
 
 func (m *MockServiceGraphBackend) NewRBACFilter(ctx context.Context, rd *RequestData) (RBACFilter, error) {

@@ -33,6 +33,9 @@ type ServiceGraphResponse struct {
 	Nodes []GraphNode `json:"nodes"`
 	Edges []GraphEdge `json:"edges"`
 
+	// Whether the data is truncated (query window needs to be reduced).
+	Truncated bool `json:"truncated"`
+
 	// Selectors for the view.
 	Selectors GraphSelectors `json:"selectors"`
 }

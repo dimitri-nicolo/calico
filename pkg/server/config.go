@@ -76,11 +76,14 @@ type Config struct {
 	OIDCAuthGroupsPrefix   string `envconfig:"OIDC_AUTH_GROUPS_PREFIX"`
 
 	// Service graph settings.  See servicegraph.Config for details.
-	ServiceGraphCacheMaxEntries        int           `envconfig:"SERVICE_GRAPH_CACHE_MAX_ENTRIES" default:"10"`
-	ServiceGraphCachePolledEntryAgeOut time.Duration `envconfig:"SERVICE_GRAPH_CACHE_POLLED_ENTRY_AGE_OUT" default:"1h"`
-	ServiceGraphCachePollLoopInterval  time.Duration `envconfig:"SERVICE_GRAPH_CACHE_POLL_LOOP_INTERVAL" default:"2m"`
-	ServiceGraphCachePollQueryInterval time.Duration `envconfig:"SERVICE_GRAPH_CACHE_POLL_QUERY_INTERVAL" default:"2s"`
-	ServiceGraphCacheDataSettleTime    time.Duration `envconfig:"SERVICE_GRAPH_CACHE_DATA_SETTLE_TIME" default:"15m"`
+	ServiceGraphCacheMaxEntries           int           `envconfig:"SERVICE_GRAPH_CACHE_MAX_ENTRIES" default:"10"`
+	ServiceGraphCacheMaxBucketsPerQuery   int           `envconfig:"SERVICE_GRAPH_CACHE_MAX_BUCKETS_PER_QUERY" default:"1000"`
+	ServiceGraphCacheMaxAggregatedRecords int           `envconfig:"SERVICE_GRAPH_CACHE_MAX_AGGREGATED_RECORDS" default:"100000"`
+	ServiceGraphCachePolledEntryAgeOut    time.Duration `envconfig:"SERVICE_GRAPH_CACHE_POLLED_ENTRY_AGE_OUT" default:"1h"`
+	ServiceGraphCacheSlowQueryEntryAgeOut time.Duration `envconfig:"SERVICE_GRAPH_CACHE_SLOW_QUERY_ENTRY_AGE_OUT" default:"5m"`
+	ServiceGraphCachePollLoopInterval     time.Duration `envconfig:"SERVICE_GRAPH_CACHE_POLL_LOOP_INTERVAL" default:"2m"`
+	ServiceGraphCachePollQueryInterval    time.Duration `envconfig:"SERVICE_GRAPH_CACHE_POLL_QUERY_INTERVAL" default:"2s"`
+	ServiceGraphCacheDataSettleTime       time.Duration `envconfig:"SERVICE_GRAPH_CACHE_DATA_SETTLE_TIME" default:"15m"`
 }
 
 func NewConfigFromEnv() (*Config, error) {

@@ -1234,6 +1234,7 @@ func (s *serviceGraphConstructionData) getResponse() *v1.ServiceGraphResponse {
 		// Response should include the time range actually used to perform these queries.
 		TimeIntervals: s.sgd.TimeIntervals,
 		Selectors:     s.viewSelectors,
+		Truncated:     s.sgd.Truncated,
 	}
 	for _, node := range s.nodesMap {
 		sgr.Nodes = append(sgr.Nodes, node.graphNode)

@@ -4,7 +4,6 @@ package servicegraph
 import (
 	"context"
 	"strconv"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -88,15 +87,14 @@ var (
 )
 
 // GetL7FlowData queries and returns the set of L7 flow data.
-func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr lmav1.TimeRange) (fs []L7Flow, err error) {
-	// Track the total buckets queried and the response flows.
-	var totalBuckets int
-
-	// Trace stats at debug level.
-	start := time.Now()
-	log.Debug("GetL7FlowData called")
+func GetL7FlowData(
+	ctx context.Context, es lmaelastic.Client, cluster string, tr lmav1.TimeRange,
+	cfg *Config,
+) (fs []L7Flow, err error) {
+	// Trace progress.
+	progress := newElasticProgress("l7", tr)
 	defer func() {
-		log.WithError(err).Infof("GetL7FlowData took %s; buckets=%d; flows=%d", time.Since(start), totalBuckets, len(fs))
+		progress.Complete(err)
 	}()
 
 	index := lmaindex.L7Logs().GetIndex(elasticvariant.AddIndexInfix(cluster))
@@ -109,6 +107,7 @@ func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 		AggMinInfos:             l7AggregationMin,
 		AggMaxInfos:             l7AggregationMax,
 		AggMeanInfos:            l7AggregationMean,
+		MaxBucketsPerQuery:      cfg.ServiceGraphCacheMaxBucketsPerQuery,
 	}
 
 	addFlow := func(source, dest FlowEndpoint, svc v1.ServicePort, stats v1.GraphL7Stats) {
@@ -130,6 +129,7 @@ func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 				Stats: stats,
 			})
 		}
+		progress.IncAggregated()
 		if log.IsLevelEnabled(log.DebugLevel) {
 			if svc.Name != "" {
 				log.Debugf("- Adding L7 flow: %s -> %s -> %s (stats %#v)", source, svc, dest, stats)
@@ -139,6 +139,10 @@ func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 		}
 	}
 
+	// Perform the L7 composite aggregation query.
+	// Always ensure we cancel the query if we bail early.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	rcvdL7Buckets, rcvdL7Errors := es.SearchCompositeAggregations(ctx, aggQueryL7, nil)
 
 	var foundFlow bool
@@ -146,10 +150,7 @@ func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 	var lastSource, lastDest FlowEndpoint
 	var lastSvc v1.ServicePort
 	for bucket := range rcvdL7Buckets {
-		totalBuckets++
-		if totalBuckets%10000 == 0 {
-			log.Infof("Enumerated %d L7 buckets", totalBuckets)
-		}
+		progress.IncRaw()
 		key := bucket.CompositeAggregationKey
 		code := key[l7ResponseCodeIdx].String()
 		source := FlowEndpoint{
@@ -222,6 +223,11 @@ func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 		} else {
 			// Either not a number or not a valid response code.  Bucket in the no-response category.
 			l7Stats.NoResponse = l7Stats.NoResponse.Combine(l7PacketStats)
+		}
+
+		// Track the number of aggregated flows. Bail if we hit the absolute maximum number of aggregated flows.
+		if len(fs) > cfg.ServiceGraphCacheMaxAggregatedRecords {
+			return fs, DataTruncatedError
 		}
 	}
 	if foundFlow {
