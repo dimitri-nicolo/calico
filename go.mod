@@ -43,11 +43,11 @@ require (
 
 	// validator.v9 must be at v9.30.2
 	gopkg.in/go-playground/validator.v9 v9.30.2
-	k8s.io/api v0.21.8-rc.0
-	k8s.io/apimachinery v0.21.8-rc.0
-	k8s.io/apiserver v0.21.8-rc.0
-	k8s.io/client-go v0.21.8-rc.0
-	k8s.io/code-generator v0.21.8-rc.0
+	k8s.io/api v0.21.7
+	k8s.io/apimachinery v0.21.7
+	k8s.io/apiserver v0.21.7
+	k8s.io/client-go v0.21.7
+	k8s.io/code-generator v0.21.7
 	k8s.io/kube-openapi v0.0.0-20211110012726-3cc51fd1e909
 	sigs.k8s.io/kind v0.11.1
 )
