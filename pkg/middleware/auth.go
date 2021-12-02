@@ -5,22 +5,22 @@ import (
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apiserver/pkg/endpoints/request"
 
 	lmaauth "github.com/tigera/lma/pkg/auth"
-
-	"github.com/projectcalico/apiserver/pkg/authentication"
 )
 
 // AuthenticateRequest uses the given Authenticator to authenticate the request then passes the request to the next Handler
 // if the authentication was successful.
-func AuthenticateRequest(authn authentication.Authenticator, handlerFunc http.Handler) http.HandlerFunc {
+func AuthenticateRequest(authn lmaauth.JWTAuth, handlerFunc http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		req, stat, err := authentication.AuthenticateRequest(authn, req)
+		usr, stat, err := authn.Authenticate(req)
 		if err != nil {
-			log.WithError(err).Debug("Failed to authenticate request.")
+			log.WithError(err).Debug("Kubernetes auth failure")
 			http.Error(w, err.Error(), stat)
 			return
 		}
+		req = req.WithContext(request.WithUser(req.Context(), usr))
 		handlerFunc.ServeHTTP(w, req)
 	}
 }
