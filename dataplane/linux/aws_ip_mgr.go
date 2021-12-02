@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"reflect"
 	"regexp"
 	"strings"
 	"syscall"
@@ -40,6 +41,7 @@ type awsIPManager struct {
 	poolIDsBySubnetID         map[string]set.Set
 	localAWSRoutesByDst       map[ip.CIDR]*proto.RouteUpdate
 	localRouteDestsBySubnetID map[string]set.Set /*ip.CIDR*/
+	workloadEndpointsByID     map[proto.WorkloadEndpointID]awsEndpointInfo
 	awsResyncNeeded           bool
 
 	// ifaceProvisioner manages the AWS fabric resources.  It runs in the background to decouple AWS fabric updates
@@ -72,6 +74,11 @@ type awsIPManager struct {
 	nl            awsNetlinkIface
 	newRouteTable routeTableNewFn
 	newRouteRules routeRulesNewFn
+}
+
+type awsEndpointInfo struct {
+	IPv4Nets     []string
+	ElasticIPIDs []string
 }
 
 type awsIfaceProvisioner interface {
@@ -169,6 +176,10 @@ func (a *awsIPManager) OnUpdate(msg interface{}) {
 		a.onPoolUpdate(msg.Id, nil)
 	case *proto.RouteUpdate:
 		a.onRouteUpdate(ip.MustParseCIDROrIP(msg.Dst), msg)
+	case *proto.WorkloadEndpointUpdate:
+		a.onWorkloadEndpointUpdate(msg)
+	case *proto.WorkloadEndpointRemove:
+		a.onWorkloadEndpointRemoved(msg)
 	case *proto.RouteRemove:
 		a.onRouteUpdate(ip.MustParseCIDROrIP(msg.Dst), nil)
 	case *ifaceUpdate:
@@ -327,6 +338,46 @@ func (a *awsIPManager) onIfaceAddrsUpdate(msg *ifaceAddrsUpdate) {
 	}
 }
 
+func (a *awsIPManager) onWorkloadEndpointUpdate(msg *proto.WorkloadEndpointUpdate) {
+	oldEP := a.workloadEndpointsByID[*msg.Id]
+	newEP := awsEndpointInfo{
+		IPv4Nets:     msg.Endpoint.Ipv4Nets,
+		ElasticIPIDs: msg.Endpoint.AwsElasticIpIds,
+	}
+	a.workloadEndpointsByID[*msg.Id] = newEP
+	if reflect.DeepEqual(oldEP, newEP) {
+		return
+	}
+	if len(oldEP.ElasticIPIDs) == 0 && len(newEP.ElasticIPIDs) == 0 {
+		return
+	}
+	a.awsResyncNeeded = true
+}
+
+func (a *awsIPManager) onWorkloadEndpointRemoved(msg *proto.WorkloadEndpointRemove) {
+	oldEP, ok := a.workloadEndpointsByID[*msg.Id]
+	if !ok {
+		return
+	}
+	delete(a.workloadEndpointsByID, *msg.Id)
+	if len(oldEP.ElasticIPIDs) == 0 {
+		return
+	}
+	a.awsResyncNeeded = true // FIXME too broad, this might not be an AWS-backed pod.
+}
+
+func (a *awsIPManager) lookUpElasticIPIDs(k ip.CIDR) []string {
+	for _, wepInfo := range a.workloadEndpointsByID {
+		for _, cidrStr := range wepInfo.IPv4Nets {
+			cidr := ip.MustParseCIDROrIP(cidrStr)
+			if cidr == k {
+				return wepInfo.ElasticIPIDs // FIXME this just grabs the first found; might be more than one WEP.
+			}
+		}
+	}
+	return nil
+}
+
 func (a *awsIPManager) queueAWSResync(reason string) {
 	if a.awsResyncNeeded {
 		return
@@ -354,8 +405,9 @@ func (a *awsIPManager) CompleteDeferredWork() error {
 		}
 		for k, v := range a.localAWSRoutesByDst {
 			ds.LocalAWSAddrsByDst[k] = aws.AddrInfo{
-				AWSSubnetId: v.AwsSubnetId,
-				Dst:         v.Dst,
+				AWSSubnetId:  v.AwsSubnetId,
+				Dst:          v.Dst,
+				ElasticIPIDs: a.lookUpElasticIPIDs(k),
 			}
 		}
 		for k, v := range a.localRouteDestsBySubnetID {

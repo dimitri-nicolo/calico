@@ -138,8 +138,9 @@ type DatastoreState struct {
 }
 
 type AddrInfo struct {
-	AWSSubnetId string
-	Dst         string
+	AWSSubnetId  string
+	Dst          string
+	ElasticIPIDs []string
 }
 
 const (
