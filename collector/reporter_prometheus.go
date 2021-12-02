@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -42,7 +42,7 @@ type PrometheusReporter struct {
 	timeNowFn func() time.Duration
 }
 
-func NewPrometheusReporter(port int, retentionTime time.Duration, certFile, keyFile, caFile string) *PrometheusReporter {
+func NewPrometheusReporter(registry *prometheus.Registry, port int, retentionTime time.Duration, certFile, keyFile, caFile string) *PrometheusReporter {
 	// Set the ticker interval appropriately, we should be checking at least half of the rention time,
 	// or the hard-coded check interval (whichever is smaller).
 	tickerInterval := retentionTime / 2
@@ -50,7 +50,6 @@ func NewPrometheusReporter(port int, retentionTime time.Duration, certFile, keyF
 		tickerInterval = checkInterval
 	}
 
-	registry := prometheus.NewRegistry()
 	return &PrometheusReporter{
 		port:            port,
 		certFile:        certFile,

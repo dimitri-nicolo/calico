@@ -383,7 +383,7 @@ var _ = Describe("Prometheus Reporter verification", func() {
 	mt := &mockTime{}
 	BeforeEach(func() {
 		// Create a PrometheusReporter and start the reporter without starting the HTTP service.
-		pr = NewPrometheusReporter(0, retentionTime, "", "", "")
+		pr = NewPrometheusReporter(prometheus.NewRegistry(), 0, retentionTime, "", "", "")
 		pa = NewPolicyRulesAggregator(retentionTime, "testHost")
 		pr.timeNowFn = mt.getMockTime
 		pa.timeNowFn = mt.getMockTime

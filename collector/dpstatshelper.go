@@ -3,11 +3,13 @@
 package collector
 
 import (
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/rules"
+	"github.com/projectcalico/felix/wireguard"
 	"github.com/projectcalico/libcalico-go/lib/health"
 )
 
@@ -25,14 +27,22 @@ func New(
 	lookupsCache *calc.LookupsCache,
 	healthAggregator *health.HealthAggregator,
 ) Collector {
+	registry := prometheus.NewRegistry()
+
+	if configParams.WireguardEnabled {
+		registry.MustRegister(wireguard.MustNewWireguardMetrics())
+	}
 
 	rm := NewReporterManager(configParams.FlowLogsCollectorDebugTrace)
 	if configParams.PrometheusReporterEnabled {
-		pr := NewPrometheusReporter(configParams.PrometheusReporterPort,
+		pr := NewPrometheusReporter(
+			registry,
+			configParams.PrometheusReporterPort,
 			configParams.DeletedMetricsRetentionSecs,
 			configParams.PrometheusReporterCertFile,
 			configParams.PrometheusReporterKeyFile,
-			configParams.PrometheusReporterCAFile)
+			configParams.PrometheusReporterCAFile,
+		)
 		pr.AddAggregator(NewPolicyRulesAggregator(configParams.DeletedMetricsRetentionSecs, configParams.FelixHostname))
 		pr.AddAggregator(NewDeniedPacketsAggregator(configParams.DeletedMetricsRetentionSecs, configParams.FelixHostname))
 		rm.RegisterMetricsReporter(pr)
