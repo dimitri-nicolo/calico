@@ -18,6 +18,10 @@ import (
 	"github.com/containernetworking/cni/pkg/types/current"
 	cniSpecVersion "github.com/containernetworking/cni/pkg/version"
 	"github.com/gofrs/flock"
+	"github.com/prometheus/common/log"
+	"github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
 	"github.com/projectcalico/cni-plugin/pkg/types"
 	"github.com/projectcalico/cni-plugin/pkg/upgrade"
@@ -27,9 +31,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/ipam"
 	"github.com/projectcalico/libcalico-go/lib/logutils"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
-	"github.com/prometheus/common/log"
-	"github.com/sirupsen/logrus"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 func Main(version string) {

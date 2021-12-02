@@ -29,27 +29,27 @@ require (
 	github.com/rakelkar/gonetsh v0.0.0-20190930180311-e5c5ffe4bdf0
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.8.1
-	github.com/tigera/api v0.0.0-20211122222922-3f5da5bfedfa
+	github.com/tigera/api v0.0.0-20211202170222-d8128d06db71
 	github.com/vishvananda/netlink v1.1.1-0.20210703095558-21f2c55a7727
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20201125193152-8a03d2e9614b
 	golang.org/x/sys v0.0.0-20210616094352-59db8d763f22
 	golang.org/x/tools v0.1.2 // indirect
 	google.golang.org/grpc v1.27.1
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
-	k8s.io/api v0.22.0
-	k8s.io/apimachinery v0.22.0
-	k8s.io/client-go v0.22.0
-	k8s.io/utils v0.0.0-20210802155522-efc7438f0176
+	k8s.io/api v0.21.7
+	k8s.io/apimachinery v0.21.7
+	k8s.io/client-go v0.21.7
+	k8s.io/utils v0.0.0-20210521133846-da695404a2bc
 )
 
 replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211123170722-7bb65436c8e2
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211202183359-a69b8ac57bf8
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	google.golang.org/grpc => google.golang.org/grpc v1.27.1
 
-	k8s.io/api => k8s.io/api v0.21.0
-	k8s.io/apimachinery => k8s.io/apimachinery v0.21.0
-	k8s.io/client-go => k8s.io/client-go v0.21.0
-	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
+	k8s.io/api => k8s.io/api v0.21.7
+	k8s.io/apimachinery => k8s.io/apimachinery v0.21.7
+	k8s.io/client-go => k8s.io/client-go v0.21.7
+	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20211110012726-3cc51fd1e909
 )
