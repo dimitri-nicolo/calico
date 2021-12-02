@@ -13,7 +13,7 @@
 # limitations under the License.
 
 $rootDir = "c:\CalicoWindows"
-$installZipFile = "c:\calico-windows.zip"
+$installZipFile = "c:\tigera-calico-windows.zip"
 
 $date = Get-Date -UFormat "%Y-%m-%d"
 $logFile = "c:\calico-upgrade.$date.log"
