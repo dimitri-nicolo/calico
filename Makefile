@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/lma
-GO_BUILD_VER    ?= v0.59
+GO_BUILD_VER    ?= v0.63
 GIT_USE_SSH     := true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 APISERVER_REPO   = github.com/tigera/apiserver
