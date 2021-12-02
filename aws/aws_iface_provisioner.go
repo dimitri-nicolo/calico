@@ -23,7 +23,6 @@ import (
 
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/logutils"
-	"github.com/projectcalico/felix/proto"
 	calierrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/health"
 	"github.com/projectcalico/libcalico-go/lib/ipam"
@@ -133,9 +132,14 @@ type SecondaryIfaceProvisioner struct {
 }
 
 type DatastoreState struct {
-	LocalAWSRoutesByDst       map[ip.CIDR]*proto.RouteUpdate
+	LocalAWSAddrsByDst        map[ip.CIDR]AddrInfo
 	LocalRouteDestsBySubnetID map[string]set.Set /*ip.CIDR*/
 	PoolIDsBySubnetID         map[string]set.Set /*string*/
+}
+
+type AddrInfo struct {
+	AWSSubnetId string
+	Dst         string
 }
 
 const (
@@ -921,7 +925,7 @@ func (m *SecondaryIfaceProvisioner) findUnusedAWSIPs(awsState *eniSnapshot) set.
 	awsIPsToRelease := set.New()
 	summary := map[string][]string{}
 	for addr, eniID := range awsState.eniIDByIP {
-		if _, ok := m.ds.LocalAWSRoutesByDst[addr]; !ok {
+		if _, ok := m.ds.LocalAWSAddrsByDst[addr]; !ok {
 			awsIPsToRelease.Add(addr)
 			summary[eniID] = append(summary[eniID], addr.Addr().String())
 		}
@@ -979,14 +983,14 @@ func (m *SecondaryIfaceProvisioner) findENIsWithNoPool(awsENIState *eniSnapshot)
 }
 
 // findRoutesWithNoAWSAddr Scans our local Calico workload routes for routes with no corresponding AWS IP.
-func (m *SecondaryIfaceProvisioner) findRoutesWithNoAWSAddr(awsENIState *eniSnapshot, localSubnetsByID map[string]ec2types.Subnet) []*proto.RouteUpdate {
-	var missingRoutes []*proto.RouteUpdate
+func (m *SecondaryIfaceProvisioner) findRoutesWithNoAWSAddr(awsENIState *eniSnapshot, localSubnetsByID map[string]ec2types.Subnet) []AddrInfo {
+	var missingRoutes []AddrInfo
 	var missingIPSummary []string
-	for addr, route := range m.ds.LocalAWSRoutesByDst {
-		if _, ok := localSubnetsByID[route.AwsSubnetId]; !ok {
+	for addr, route := range m.ds.LocalAWSAddrsByDst {
+		if _, ok := localSubnetsByID[route.AWSSubnetId]; !ok {
 			logrus.WithFields(logrus.Fields{
 				"addr":           addr,
-				"requiredSubnet": route.AwsSubnetId,
+				"requiredSubnet": route.AWSSubnetId,
 			}).Warn("Local workload needs an IP from an AWS subnet that is not accessible from this " +
 				"availability zone. Unable to allocate an AWS IP for it.")
 			continue
@@ -1007,7 +1011,7 @@ func (m *SecondaryIfaceProvisioner) findRoutesWithNoAWSAddr(awsENIState *eniSnap
 			continue
 		}
 		missingRoutes = append(missingRoutes, route)
-		missingIPSummary = append(missingIPSummary, strings.TrimSuffix(route.Dst, "/32"))
+		missingIPSummary = append(missingIPSummary, addr.Addr().String())
 	}
 	if len(missingIPSummary) > 0 {
 		logrus.WithField("addrs", missingIPSummary).Info(
@@ -1136,8 +1140,8 @@ func (m *SecondaryIfaceProvisioner) calculateBestSubnet(awsENIState *eniSnapshot
 	for subnet, eniIDs := range awsENIState.eniIDsBySubnet {
 		subnetScores[subnet] += 10000 * len(eniIDs)
 	}
-	for _, r := range m.ds.LocalAWSRoutesByDst {
-		subnetScores[r.AwsSubnetId] += 1
+	for _, r := range m.ds.LocalAWSAddrsByDst {
+		subnetScores[r.AWSSubnetId] += 1
 	}
 	var bestSubnet string
 	var bestScore int
@@ -1167,10 +1171,10 @@ func (m *SecondaryIfaceProvisioner) subnetCIDRAndGW(subnet ec2types.Subnet) (ip.
 }
 
 // filterRoutesByAWSSubnet returns the subset of the given routes that belong to the given AWS subnet.
-func filterRoutesByAWSSubnet(missingRoutes []*proto.RouteUpdate, bestSubnet string) []*proto.RouteUpdate {
-	var filteredRoutes []*proto.RouteUpdate
+func filterRoutesByAWSSubnet(missingRoutes []AddrInfo, bestSubnet string) []AddrInfo {
+	var filteredRoutes []AddrInfo
 	for _, r := range missingRoutes {
-		if r.AwsSubnetId != bestSubnet {
+		if r.AWSSubnetId != bestSubnet {
 			logrus.WithFields(logrus.Fields{
 				"route":        r,
 				"activeSubnet": bestSubnet,
@@ -1474,7 +1478,7 @@ func (m *SecondaryIfaceProvisioner) createAWSENIs(awsENIState *eniSnapshot, resy
 	return finalErr
 }
 
-func (m *SecondaryIfaceProvisioner) assignSecondaryIPsToENIs(resyncState *eniResyncState, filteredRoutes []*proto.RouteUpdate) error {
+func (m *SecondaryIfaceProvisioner) assignSecondaryIPsToENIs(resyncState *eniResyncState, filteredRoutes []AddrInfo) error {
 	if len(filteredRoutes) == 0 {
 		return nil
 	}

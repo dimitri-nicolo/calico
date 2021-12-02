@@ -348,13 +348,15 @@ func (a *awsIPManager) CompleteDeferredWork() error {
 		// Datastore has been updated, send a new snapshot to the background thread.  It will configure the AWS
 		// fabric appropriately and then send us a SecondaryIfaceState.
 		ds := aws.DatastoreState{
-			LocalAWSRoutesByDst:       map[ip.CIDR]*proto.RouteUpdate{},
+			LocalAWSAddrsByDst:        map[ip.CIDR]aws.AddrInfo{},
 			LocalRouteDestsBySubnetID: map[string]set.Set{},
 			PoolIDsBySubnetID:         map[string]set.Set{},
 		}
 		for k, v := range a.localAWSRoutesByDst {
-			// Shallow copy is fine, we always get a fresh route update from the datastore.
-			ds.LocalAWSRoutesByDst[k] = v
+			ds.LocalAWSAddrsByDst[k] = aws.AddrInfo{
+				AWSSubnetId: v.AwsSubnetId,
+				Dst:         v.Dst,
+			}
 		}
 		for k, v := range a.localRouteDestsBySubnetID {
 			ds.LocalRouteDestsBySubnetID[k] = v.Copy()
