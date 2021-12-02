@@ -3296,6 +3296,21 @@ func schema_libcalico_go_lib_apis_v3_WorkloadEndpointSpec(ref common.ReferenceCa
 							},
 						},
 					},
+					"awsElasticIPIDs": {
+						SchemaProps: spec.SchemaProps{
+							Description: "For workloads from AWS-backed IP pools, a list of candidate elastic IPs to bind to the workload's private IP.  Felix will choose an available elastic IP from the list.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
 					"ipv4Gateway": {
 						SchemaProps: spec.SchemaProps{
 							Description: "IPv4Gateway is the gateway IPv4 address for traffic from the workload.",

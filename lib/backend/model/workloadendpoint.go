@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,10 +16,8 @@ package model
 
 import (
 	"fmt"
-
-	"regexp"
-
 	"reflect"
+	"regexp"
 
 	log "github.com/sirupsen/logrus"
 
@@ -159,6 +157,7 @@ type WorkloadEndpoint struct {
 	IPv6Nets         []net.IPNet       `json:"ipv6_nets"`
 	IPv4NAT          []IPNAT           `json:"ipv4_nat,omitempty"`
 	IPv6NAT          []IPNAT           `json:"ipv6_nat,omitempty"`
+	AWSElasticIPIDs  []string          `json:"aws_elastic_ip_ids,omitempty"`
 	Labels           map[string]string `json:"labels,omitempty"`
 	IPv4Gateway      *net.IP           `json:"ipv4_gateway,omitempty" validate:"omitempty,ipv4"`
 	IPv6Gateway      *net.IP           `json:"ipv6_gateway,omitempty" validate:"omitempty,ipv6"`
