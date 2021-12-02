@@ -33,6 +33,9 @@ import (
 
 	"github.com/kelseyhightower/confd/pkg/resource/template"
 
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
+
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
@@ -47,8 +50,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/set"
 	"github.com/projectcalico/typha/pkg/syncclientutils"
 	"github.com/projectcalico/typha/pkg/syncproto"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/api/pkg/lib/numorstring"
 )
 
 const globalLogging = "/calico/bgp/v1/global/loglevel"
