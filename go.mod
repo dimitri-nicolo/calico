@@ -18,8 +18,6 @@ require (
 	golang.org/x/net v0.0.0-20210520170846-37e1c6afe023
 	google.golang.org/genproto v0.0.0-20201110150050-8816d57aaa9a
 	google.golang.org/grpc v1.27.1
-	k8s.io/client-go v0.22.0 // indirect
-	k8s.io/utils v0.0.0-20210802155522-efc7438f0176 // indirect
 )
 
 replace (
@@ -28,6 +26,6 @@ replace (
 	// supply the go code.
 	github.com/envoyproxy/data-plane-api => github.com/projectcalico/data-plane-api v0.0.0-20210121211707-a620ff3c8f7e
 
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211130235555-4a6bb90f4aaf
+	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211202183359-a69b8ac57bf8
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 )
