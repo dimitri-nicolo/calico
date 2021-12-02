@@ -2,11 +2,12 @@
 package metrics_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/license-agent/pkg/metrics"
-	"time"
 )
 
 const validLicenseCertificate = `-----BEGIN CERTIFICATE-----

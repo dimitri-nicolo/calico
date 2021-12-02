@@ -9,12 +9,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	licenseClient "github.com/tigera/licensing/client"
+
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/security"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	licenseClient "github.com/tigera/licensing/client"
 )
 
 type LicenseStatus int

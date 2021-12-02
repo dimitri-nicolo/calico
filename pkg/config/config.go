@@ -2,9 +2,10 @@
 package config
 
 import (
+	"time"
+
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
-	"time"
 )
 
 type Config struct {

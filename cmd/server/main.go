@@ -7,10 +7,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/projectcalico/libcalico-go/lib/logutils"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/license-agent/pkg/config"
 	"github.com/tigera/license-agent/pkg/metrics"
+
+	"github.com/projectcalico/libcalico-go/lib/logutils"
 )
 
 // Below variables are filled out during the build process (using git describe output)
