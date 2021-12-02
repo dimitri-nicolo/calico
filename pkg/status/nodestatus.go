@@ -18,6 +18,9 @@ import (
 	"fmt"
 	"os"
 
+	log "github.com/sirupsen/logrus"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
@@ -29,8 +32,6 @@ import (
 	populator "github.com/projectcalico/node/pkg/status/populators"
 	"github.com/projectcalico/typha/pkg/syncclientutils"
 	"github.com/projectcalico/typha/pkg/syncproto"
-	log "github.com/sirupsen/logrus"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // This file contains the main processing and common logic for node status reporter.

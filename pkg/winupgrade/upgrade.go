@@ -26,6 +26,7 @@ import (
 	"time"
 
 	image "github.com/distribution/distribution/reference"
+
 	"github.com/projectcalico/node/pkg/lifecycle/startup"
 
 	v1 "k8s.io/api/core/v1"
