@@ -505,6 +505,12 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 		return nil, err
 	}
 
+	// Release any elastic IPs that should no longer be there.
+	err = m.releaseUnwantedElasticIPs(awsSnapshot)
+	if err != nil {
+		return nil, err
+	}
+
 	// Scan for IPs that are present on our AWS ENIs but no longer required by Calico.
 	awsIPsToRelease := m.findUnusedAWSIPs(awsSnapshot)
 
@@ -1624,6 +1630,54 @@ func (m *SecondaryIfaceProvisioner) ensureCalicoENIsDelOnTerminate(snapshot *eni
 func (m *SecondaryIfaceProvisioner) resetRecheckInterval(operation string) {
 	m.opRecorder.RecordOperation(operation)
 	m.recheckIntervalResetNeeded = true
+}
+
+func (m *SecondaryIfaceProvisioner) releaseUnwantedElasticIPs(snapshot *eniSnapshot) error {
+	ctx, cancel := m.newContext()
+	defer cancel()
+	ec2Client, err := m.ec2Client()
+	if err != nil {
+		return err
+	}
+
+	var finalErr error
+	for _, eni := range snapshot.calicoOwnedENIsByID {
+		for _, privIP := range eni.PrivateIpAddresses {
+			if privIP.Association != nil && privIP.Association.AllocationId != nil {
+				// May have associated elastic IP.
+				privIPCIDR := ip.MustParseCIDROrIP(*privIP.PrivateIpAddress)
+				eipID := *privIP.Association.AllocationId
+				wanted := false
+				logCtx := logrus.WithFields(logrus.Fields{
+					"id":          eipID,
+					"publicAddr":  safeReadString(privIP.Association.PublicIp),
+					"privateAddr": safeReadString(privIP.PrivateIpAddress),
+				})
+				for _, wantedEIP := range m.ds.LocalAWSAddrsByDst[privIPCIDR].ElasticIPIDs {
+					if wantedEIP == eipID {
+						// EIP is assigned to a private IP that should have it, all good.
+						logCtx.Debug("Elastic IP is associated with matching private IP.")
+						wanted = true
+						break
+					}
+				}
+				if !wanted {
+					// Elastic IP is assigned to an IP that it shouldn't be. free it.
+					logCtx.Info("Elastic IP should no longer map to this private IP. Disassociating the IP.")
+					m.resetRecheckInterval("disassociate-eip")
+					_, err := ec2Client.EC2Svc.DisassociateAddress(ctx, &ec2.DisassociateAddressInput{
+						AssociationId: privIP.Association.AssociationId,
+					})
+					if err != nil {
+						finalErr = err
+					} else if finalErr == nil {
+						finalErr = errResyncNeeded
+					}
+				}
+			}
+		}
+	}
+	return finalErr
 }
 
 func trimPrefixLen(cidr string) string {

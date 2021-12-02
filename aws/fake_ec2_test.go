@@ -741,6 +741,21 @@ func (f *fakeEC2) DeleteNetworkInterface(ctx context.Context, params *ec2.Delete
 	return &ec2.DeleteNetworkInterfaceOutput{ /* not used by caller */ }, nil
 }
 
+func (f *fakeEC2) AssociateAddress(ctx context.Context, params *ec2.AssociateAddressInput, optFns ...func(*ec2.Options)) (*ec2.AssociateAddressOutput, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (f *fakeEC2) DisassociateAddress(ctx context.Context, params *ec2.DisassociateAddressInput, optFns ...func(*ec2.Options)) (*ec2.DisassociateAddressOutput, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (f *fakeEC2) DescribeAddresses(ctx context.Context, params *ec2.DescribeAddressesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeAddressesOutput, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
 func (f *fakeEC2) NumENIs() int {
 	f.lock.Lock()
 	defer f.lock.Unlock()
