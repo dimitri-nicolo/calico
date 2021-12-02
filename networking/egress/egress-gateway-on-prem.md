@@ -16,14 +16,14 @@ firewall around the cluster, whose purpose includes policing external accesses f
 specifically that particular external destinations can only be accessed from authorised workloads
 within the cluster.
 
-{{site.prodname}}'s own policy (including [DNS policy](../security/domain-based-policy)) and
+{{site.prodname}}'s own policy (including [DNS policy]({{site.baseurl}}/security/domain-based-policy)) and
 per-node firewalls can ensure this, but deployments may like to deepen their defense by adding an
 external firewall as well.  If the external firewall is configured to allow outbound connections
 only from particular source IPs, and the intended cluster workloads can be configured so that their
 outbound traffic will have one of those source IPs, then the defense in depth objective is achieved.
 
-{{site.prodname}} allows specifying an [IP pool](legacy-firewalls) for each pod or namespace, and
-even a [specific IP](use-specific-ip) for a new pod, but this requires predicting how many pods
+{{site.prodname}} allows specifying an [IP pool]({{site.baseurl}}/reference/resources/ippool) for each pod or namespace, and
+even a [specific IP]({{site.baseurl}}/networking/use-specific-ip) for a new pod, but this requires predicting how many pods
 there will be representing a particular application, so that the IP pool can be correctly sized.
 When IPs are a precious resource, over-sizing the pool is wasteful; but under-sizing is also
 problematic, as then IPs will not be available within the desired range as the application is
@@ -33,7 +33,7 @@ Egress gateways provide an alternative approach.  Application pods and namespace
 with IPs from the default (and presumably plentiful) pool, but also configured so that their
 outbound traffic is directed through an egress gateway.  (Or, for resilience, through one of a small
 number of egress gateways.)  The egress gateways are set up to use a [specific IP
-pool](legacy-firewalls) and to perform an SNAT on the traffic passing through them.  Hence any
+pool]({{site.baseurl}}/networking/legacy-firewalls) and to perform an SNAT on the traffic passing through them.  Hence any
 number of application pods can have their outbound connections multiplexed through a fixed small
 number of egress gateways, and all of those outbound connections acquire a source IP from the egress
 gateway IP pool.
@@ -68,8 +68,7 @@ to that of the egress gateway pod, and the traffic is then forwarded on.
 
 When an outbound application flow leaves the cluster, its IP packets will have a source IP.
 Normally this is the pod IP of the pod that originated the flow, or the node IP of the node hosting
-that pod.  It will be the **node IP** if the pod IP came from an [IP
-pool]({{site.baseurl}}/reference/resources/ippool) with `natOutgoing: true`, and the **pod IP** if
+that pod.  It will be the **node IP** if the pod IP came from an [IP pool]({{site.baseurl}}/reference/resources/ippool) with `natOutgoing: true`, and the **pod IP** if
 not.  (Assuming no other CNI plugin has been configured to NAT outgoing traffic.)
 
 With an egress gateway involved that is all still true, except that now it's the egress gateway that
@@ -136,7 +135,7 @@ happens to be on the same node as the client).
 
 **Supported**
 
-- Kubernetes on-premises only; for AWS, see [this guide](./egress-gateway-aws).
+- Kubernetes on-premises only; for AWS, see [this guide]({{site.baseurl}}/networking/egress/egress-gateway-aws).
 
 ### How to
 
@@ -210,7 +209,7 @@ EOF
 >    is only used for pods that explicitly identify it in their `cni.projectcalico.org/ipv4pools`
 >    annotation.
 >
-> -  Set `ipipMode` or `vxlanMode` to `Always` if the pod network has [IPIP or VXLAN](vxlan-ipip) enabled.
+> -  Set `ipipMode` or `vxlanMode` to `Always` if the pod network has [IPIP or VXLAN]({{site.baseurl}}/networking/vxlan-ipip) enabled.
 {: .alert .alert-info}
 
 #### Copy pull secret into egress gateway namespace
@@ -409,5 +408,4 @@ The new elements required as of v3.11.0 are the volumeMounts and volumes section
 
 Please see also:
 
-- The `egressIP...` fields of the [FelixConfiguration
-  resource]({{site.baseurl}}/reference/resources/felixconfig#spec).
+- The `egressIP...` fields of the [FelixConfiguration resource]({{site.baseurl}}/reference/resources/felixconfig#spec).

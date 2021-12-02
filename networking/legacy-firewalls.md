@@ -1,6 +1,7 @@
 ---
 title: Restrict a pod to use an IP address in a specific range
 description: Restrict the IP address chosen for a pod to a specific range of IP addresses.
+canonical_url: /networking/legacy-firewalls
 ---
 
 ### Big picture

@@ -96,7 +96,7 @@ This example filters inbound internet traffic to the deployment with pods named,
   ```
 #### Add filters to ConfigMap file
 
-1. Create a `filters` directory with a file called `flow` with your desired filters. If you are also adding [dns filters]({{site.baseurl}}/visibility/elastic/filtering-dns), add the `dns` file to the directory.
+1. Create a `filters` directory with a file called `flow` with your desired filters. If you are also adding [dns filters]({{site.baseurl}}/visibility/elastic/dns/filtering-dns), add the `dns` file to the directory.
 
 1. Create the `fluentd-filters` ConfigMap in the `tigera-operator` namespace with the following command.
 

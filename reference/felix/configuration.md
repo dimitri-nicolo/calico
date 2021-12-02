@@ -38,7 +38,7 @@ The full list of parameters which can be set is as follows.
 | Configuration parameter           | Environment variable                    | Description  | Schema |
 | --------------------------------- | --------------------------------------- | -------------| ------ |
 | `AwsSrcDstCheck`                  | `FELIX_AWSSRCDSTCHECK`                  | Set the {% include open-new-window.html text='source-destination-check' url='https://docs.aws.amazon.com/vpc/latest/userguide/VPC_NAT_Instance.html#EIP_Disable_SrcDestCheck' %} when using AWS EC2 instances. Check [IAM role and profile configuration]({{ site.baseurl }}/reference/resources/felixconfig#aws-iam-rolepolicy-for-source-destination-check-configuration) for setting the necessary permission for this setting to work. [Default: `DoNothing`] | `DoNothing`, `Disable`, `Enable` |
-| `AWSSecondaryIPSupport`          | `FELIX_AWSSECONDARYIPSUPPORT`             | Controls whether Felix will create secondary AWS ENIs for AWS-backed IP pools.  This feature is documented in the [egress gateways on AWS guide](../../networking/egress-gateway-aws).  Should only be enabled on AWS. [Default: "Disabled"] | `Enabled`, `Disabled` |
+| `AWSSecondaryIPSupport`          | `FELIX_AWSSECONDARYIPSUPPORT`             | Controls whether Felix will create secondary AWS ENIs for AWS-backed IP pools.  This feature is documented in the [egress gateways on AWS guide](../../networking/egress/egress-gateway-aws).  Should only be enabled on AWS. [Default: "Disabled"] | `Enabled`, `Disabled` |
 | `AWSSecondaryIPRoutingRulePriority` | `FELIX_AWSSECONDARYIPROUTINGRULEPRIORITY` | Controls the priority of the policy-based routing rules used to implement AWS-backed IP addresses. Should only be changed to avoid conflicts if your nodes have additional policy based routing rules. [Default: 101] | int |
 | `AWSRequestTimeout`           | `FELIX_AWSREQUESTTIMEOUT`              Timeout used for communicating with the AWS API (seconds). [Default: "30"]| int |
 | `DatastoreType`                   | `FELIX_DATASTORETYPE`                   | The datastore that Felix should read endpoints and policy information from. [Default: `etcdv3`] | `etcdv3`, `kubernetes`|
@@ -143,11 +143,11 @@ eBPF dataplane mode uses the Linux Kernel's eBPF virtual machine to implement ne
 * Activate its embedded implementation of `kube-proxy` to implement Kubernetes service load balancing.
 * Disable support for IPv6.
 
-See [Enable the eBPF dataplane]({{ site.baseurl }}/maintenance/performance/ebpf/enabling-ebpf) for step-by step instructions to enable this feature.
+See [Enable the eBPF dataplane]({{ site.baseurl }}/maintenance/ebpf/enabling-ebpf) for step-by step instructions to enable this feature.
 
 | Configuration parameter / Environment variable                                        | Description | Schema | Default |
 | ------------------------------------------------------------------------------------- | ----------- | ------ |---------|
-| BPFEnabled                         / <br/> FELIX_BPFENABLED                           | Enable eBPF dataplane mode.  eBPF mode has a number of limitations, see [Enable the eBPF dataplane]({{ site.baseurl }}/maintenance/performance/ebpf/enabling-ebpf).  This is a tech preview feature and subject to change in future releases. | true, false |  false |
+| BPFEnabled                         / <br/> FELIX_BPFENABLED                           | Enable eBPF dataplane mode.  eBPF mode has a number of limitations, see [Enable the eBPF dataplane]({{ site.baseurl }}/maintenance/ebpf/enabling-ebpf).  This is a tech preview feature and subject to change in future releases. | true, false |  false |
 | BPFDisableUnprivileged             / <br/> FELIX_BPFDISABLEUNPRIVILEGED               | If true, Felix sets the kernel.unprivileged_bpf_disabled sysctl to disable unprivileged use of BPF.  This ensures that unprivileged users cannot access Calico's BPF maps and cannot insert their own BPF programs to interfere with the ones that {{site.prodname}} installs. | true, false |  true |
 | BPFLogLevel                        / <br/> FELIX_BPFLOGLEVEL                          | The log level used by the BPF programs.  The logs are emitted to the BPF trace pipe, accessible with the command `tc exec BPF debug`. | Off,Info,Debug | Off |
 | BPFDataIfacePattern                / <br/> FELIX_BPFDATAIFACEPATTERN                  | Controls which interfaces Felix should attach BPF programs to in order to catch traffic to/from the external network.  This needs to match the interfaces that Calico workload traffic flows over as well as any interfaces that handle incoming traffic to NodePorts and services from outside the cluster.  It should not match the workload interfaces (usually named cali...).. | regular expression | `^(en[opsx].*|eth.*|tunl0$|wireguard.cali$)` |
@@ -346,7 +346,7 @@ The following parameters fine tune packet capture rotation:
 | wireguardHostEncryptionEnabled     | **Experimental**: Adds host-namespace workload IP's to WireGuard's list of peers. Should **not** be enabled when WireGuard is enabled on a cluster's control-plane node, as networking deadlock can occur. | true, false | boolean | false |
 
 For more information on encrypting in-cluster traffic with WireGuard, refer to
-[Encrypt cluster pod traffic](../../security/encrypt-cluster-pod-traffic)
+[Encrypt cluster pod traffic]({{site.baseurl}}/compliance/encrypt-cluster-pod-traffic)
 
 ### Environment variables
 

@@ -1,7 +1,7 @@
 ---
 title: BGP metrics
 description: Monitor BGP peering and route exchange in your cluster and get alerts by defining rules and thresholds.
-canonical_url: /maintenance/monitor/bgp-metrics
+canonical_url: /maintenance/monitor/metrics/bgp-metrics
 ---
 
 ### Big picture

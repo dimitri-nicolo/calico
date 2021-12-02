@@ -313,7 +313,6 @@ See [DNS logs]({{site.baseurl}}/visibility/elastic/dns/dns-logs) for description
 
 See [Flow logs]({{site.baseurl}}/visibility/elastic/flow/datatypes) for description of fields.
 
-
 #### L7 logs
 
 See [L7 logs]({{site.baseurl}}/visibility/elastic/l7/datatypes) for description of fields.

@@ -6,7 +6,7 @@ canonical_url: '/getting-started/windows-calico/kubernetes/standard'
 
 ### Big picture
 
-Install {{site.prodnameWindows}} on Kubernetes clusters. The standard installation for {{site.prodnameWindows}} requires more time and expertise to configure. If you need to get started quickly, we recommend the [Quickstart]({{site.baseurl}}/windows-calico/quickstart)
+Install {{site.prodnameWindows}} on Kubernetes clusters. The standard installation for {{site.prodnameWindows}} requires more time and expertise to configure. If you need to get started quickly, we recommend the [Quickstart]({{site.baseurl}}/getting-started/windows-calico/quickstart)
 
 ### Value
 
@@ -16,7 +16,7 @@ Extend your Kubernetes deployment to Windows environments.
 
 **Required**
 
-- Linux and Windows nodes [meet requirements]({{site.baseurl}}/windows-calico/kubernetes/requirements)
+- Linux and Windows nodes [meet requirements]({{site.baseurl}}/getting-started/windows-calico/kubernetes/requirements)
 - You will need the {{site.prodnameWindows}} zip archive provided to you by your support representative.
 - If using {{site.prodname}} networking:
    - Copy the kubeconfig file (used by kubelet) to each Windows node to the file, `c:\k\config`.
@@ -198,7 +198,7 @@ adjust other kube-proxy parameters.
 
 **If using {{site.prodname}} VXLAN networking**
 
-1. Modify VXLAN as described in [Overlay Networking]({{site.baseurl}}/networking/vxlan-ipip#how-to) guide. Note the following:
+1. Modify VXLAN as described in [Overlay Networking]({{site.baseurl}}/networking/vxlan-ipip) guide. Note the following:
    - Windows can support only a single type of IP pool so it is important that you use only a single VXLAN IP pool in this mode.
    - Windows supports only VXLAN on port 4789 and VSID >=4096. {{site.prodname}}'s default (on Linux and Windows) is to use port 4789 and VSID 4096.
 
@@ -258,7 +258,7 @@ Start-Service RemoteAccess
    | $env:CNI_variables | Location of your Kubernetes installation. |
    | $env:K8S_SERVICE_CIDR | Your Kubernetes service cluster IP CIDR. |
    | $env:CALICO_DATASTORE_TYPE | {{site.prodname}} datastore you want to use. |
-   | $env:KUBECONFIG | Location of the kubeconfig file {{site.prodname}} should use to access the Kubernetes API server. To set up a secure kubeconfig with  the correct permissions for {{site.prodnameWindows}}, see [Create a kubeconfig]({{site.baseurl}}/windows-calico/kubeconfig) for {{site.prodnameWindows}}. |
+   | $env:KUBECONFIG | Location of the kubeconfig file {{site.prodname}} should use to access the Kubernetes API server. To set up a secure kubeconfig with  the correct permissions for {{site.prodnameWindows}}, see [Create a kubeconfig]({{site.baseurl}}/getting-started/windows-calico/kubeconfig) for {{site.prodnameWindows}}. |
    | $env:NODENAME | Hostname used by kubelet. The default uses the node's hostname. **Note**: If you are using the sample kubelet start-up script from the {{site.prodname}} package, kubelet is started with a hostname override that forces it to use this value. |
    |  | For AWS to work properly, kubelet should use the node's internal domain name for the AWS integration. |
    | | If using {{site.prodname}} BGP networking, the install script will generate a CNI NetConf file from the file cni.conf.template. Certain advanced  configuration can be accessed by modifying the template before install. **Note**: Prior to Kubernetes v1.13, Kubernetes lacked support for setting the correct  DNS configuration on each pod. To work around that limitation, the CNI configuration includes DNS settings that are applied to pods whenever the kubelet fails to pass DNS configuration to the CNI plugin. For v1.13 and above, the DNS configuration of the template is ignored in favour of correct per-pod values  learned from the kubelet. |
@@ -295,5 +295,5 @@ Start-Service RemoteAccess
 
 ### Next steps
 
-- [Create a kubeconfig]({{site.baseurl}}/windows-calico/kubeconfig)
-- [Review network policy limitations in Windows]({{site.baseurl}}/windows-calico/limitations)
+- [Create a kubeconfig]({{site.baseurl}}/getting-started/windows-calico/kubeconfig)
+- [Review network policy limitations in Windows]({{site.baseurl}}/getting-started/windows-calico/limitations)

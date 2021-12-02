@@ -1,7 +1,7 @@
 ---
 title: Tanzu Kubernetes Grid (TKG) 
 description: Install Calico Enterprise on Tanzu Kubernetes Grid.
-canonical_url: '/getting-started/kubernetes/kubernetes/tkg'
+canonical_url: '/getting-started/kubernetes/tkg'
 ---
 
 ### Big picture

@@ -76,7 +76,7 @@ addresses.
 
 {{site.prodname}} supports IP pools that are backed by the AWS fabric.  This feature was added in order
 to support egress gateways on the AWS fabric; the restrictions and requirements are currently documented as part of the 
-[egress gateways on AWS guide](../../networking/egress-gateway-aws).
+[egress gateways on AWS guide](../../networking/egress/egress-gateway-aws).
 
 #### IPIP
 

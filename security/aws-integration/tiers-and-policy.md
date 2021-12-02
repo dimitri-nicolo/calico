@@ -46,7 +46,7 @@ We recommend restricting access to integration tiers to ensure they are not modi
 **Best practices:**
  
 To avoid accidentally modifying the above tiers and associated network policies, do not allow admin and non-admin users to view and modify them. 
-  - Although you cannot hide specific tiers from non-admin users, you can use [RBAC for tiered policies]({{site.baseurl}}/security/rbac-tiered-policies), to display only a subset of tiers in the {{site.prodname}} UI. For help, see [displaying only the net-sec tier]({{site.baseurl}}/security/rbac-tiered-policies#user-can-view-only-a-specific-tier).
+  - Although you cannot hide specific tiers from non-admin users, you can use [RBAC for tiered policies]({{site.baseurl}}/security/rbac-tiered-policies), to display only a subset of tiers in the {{site.prodname}} UI. For help, see [displaying only the net-sec tier]({{site.baseurl}}/security/rbac-tiered-policies#user-can-only-view-a-specific-tier).
   - To display tiers and associated network policies, but disable write access to those tiers, see [RBAC example fine-grained permissions]({{site.baseurl}}/security/rbac-tiered-policies#fine-grained-rbac-for-policies-and-tiers).
 - Do not modify the following internal integration security groups, or reference them in any ingress or egress rules. 
   - `tigera-trust-host-enforcement`

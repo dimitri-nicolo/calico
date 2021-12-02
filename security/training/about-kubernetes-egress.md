@@ -17,7 +17,7 @@ In this guide you will learn:
 
 In this guide we are using the term Kubernetes egress to describe connections being made from pods to anything outside of the cluster.
 
-In contrast to ingress traffic, where Kubernetes has the [Ingress]({{site.baseurl}}/about/about-kubernetes-ingress)
+In contrast to ingress traffic, where Kubernetes has the [Ingress]({{site.baseurl}}/security/training/about-kubernetes-ingress)
 resource type to help manage the traffic, there is no Kubernetes Egress resource. Instead, how the egress traffic is
 handled at a networking level is determined by the Kubernetes network implementation / CNI plugin being used by the
 cluster. In addition, if a service mesh is being used, this can add egress behaviors on top of those the
@@ -32,17 +32,15 @@ mesh setup that best suits your needs:
 ### Restricting egress traffic
 
 It's a common security requirement and best practice to restrict outgoing connections from the cluster. This is normally
-achieved using [Network Policy]({{site.baseurl}}/about/about-network-policy) to define egress rules for each
-microservice, often in conjunction with a [default deny]({{site.baseurl}}/about/about-network-policy#default-deny)
+achieved using [Network Policy]({{site.baseurl}}/security/training/about-network-policy) to define egress rules for each
+microservice, often in conjunction with a [default deny]({{site.baseurl}}/security/training/about-network-policy#default-deny)
 policy that ensures outgoing connections are denied by default, until a policy is defined to explicitly allow specific
 traffic.
 
 One limitation when using Kubernetes Network Policy to restrict access to specific external resources, is that the external
 resources need to be specified as IP addresses (or IP address ranges) within the policy rules. If the IP addresses
 associated with an external resource change, then every policy that referenced those IP addresses needs to be updated with
-the new IP addresses. This limitation can be circumvented using {{site.prodname}} [Network
-Sets]({{site.baseurl}}/security/external-ips-policy), or [domain
-names]({{site.baseurl}}/security/calico-enterprise/egress-access-controls) in policy rules.
+the new IP addresses. This limitation can be circumvented using {{site.prodname}} [Use external IPs or networks rules in policy]({{site.baseurl}}/security/external-ips-policy), or [DNS policy]({{site.baseurl}}/security/domain-based-policy) in policy rules.
 
 In addition to using network policy, service meshes typically allow you to configure which external services each pod
 can access. In the case of Istio, {{site.prodname}} can be integrated to enforce network policy at the service mesh
@@ -107,4 +105,4 @@ deployments. In these scenarios, using egress gateways is likely to be a better 
 - [Use HTTP methods and paths in policy rules]({{site.baseurl}}/security/http-methods)
 - [Restrict a pod to use an IP address in a specific range]({{site.baseurl}}/networking/legacy-firewalls)
 - [Assign IP addresses based on topology]({{site.baseurl}}/networking/assign-ip-addresses-topology)
-- [Advanced egress access controls]({{site.baseurl}}/networking/egress-gateway)
+- [Egress gateways]({{site.baseurl}}/networking/egress/)

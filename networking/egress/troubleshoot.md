@@ -7,7 +7,6 @@ canonical_url: '/networking/egress/troubleshoot'
 - [Checklist of common problems](#checklist-of-common-problems)
 - [Connection to an egress gateway cannot be established](#connection-to-an-egress-gateway-cannot-be-established)
 - [Connection to an egress gateway is established, but destination is not getting correct IP](#connection-to-an-egress-gateway-is-established-but-destination-is-not-getting-correct-ip)
-- [Previous known issues](#previous-known-issues)
 
 ### Checklist of common problems
 

@@ -41,7 +41,7 @@ Although you can use any of the following policies to create default deny policy
 
 - [Enable default deny {{site.prodname}} global network policy, non-namespaced](#enable-default-deny-{{site.prodnamedash}}-global-network-policy-non-namespaced)
 - [Enable default deny {{site.prodname}} network policy, namespaced](#enable-default-deny-{{site.prodnamedash}}-network-policy-namespaced)
-- [Enable default deny Kubernetes policy, namespaced](#enable-default-deny-Kubernetes-policy-namespaced)
+- [Enable default deny Kubernetes policy, namespaced](#enable-default-deny-kubernetes-policy-namespaced)
 
 #### Enable default deny {{site.prodname}} global network policy, non-namespaced
 

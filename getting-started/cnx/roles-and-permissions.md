@@ -56,5 +56,5 @@ For RBAC details on any given feature, see the feature. For example:
 - [Staged policy RBAC]({{site.baseurl}}/security/staged-network-policies) 
 - [Policy recommendation RBAC]({{site.baseurl}}/security/generate-policy-recommendation)
 - [Elasticsearch logs RBAC]({{site.baseurl}}/visibility/elastic/rbac-elasticsearch) 
-- [Compliance reports RBAC]({{site.baseurl}}/compliance/compliance-reports/overview)
+- [Compliance reports RBAC]({{site.baseurl}}/compliance/overview)
 - [Multi-cluster management RBAC]({{site.baseurl}}/multicluster/mcm/create-a-management-cluster)

@@ -113,6 +113,10 @@ spec:
 
 {% include content/serviceaccountmatch.md %}
 
+#### ServiceMatch
+
+{% include content/servicematch.md %}
+
 ### Application layer policy
 
 Application layer policy is an optional feature of {{site.prodname}} and

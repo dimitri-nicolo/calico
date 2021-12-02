@@ -198,4 +198,4 @@ The above list of environments is obviously not exhaustive. Understanding the co
 - [Configure overlay networking]({{ site.baseurl }}/networking/vxlan-ipip)
 - [Advertise Kubernetes service IP addresses]({{ site.baseurl }}/networking/advertise-service-ips)
 - [Customize IP address management]({{ site.baseurl }}/networking/ipam)
-- [Interoperate with legacy firewalls using IP ranges]({{ site.baseurl }}/networking/legacy-firewalls)
+- [Restrict a pod to use an IP address in a specific range]({{site.baseurl}}/networking/legacy-firewalls)
