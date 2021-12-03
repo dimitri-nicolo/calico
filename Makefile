@@ -1,7 +1,7 @@
 # Copyright 2019-20 Tigera Inc. All rights reserved.
 
 PACKAGE_NAME   ?= github.com/tigera/voltron
-GO_BUILD_VER   ?= v0.55
+GO_BUILD_VER   ?= v0.63
 GIT_USE_SSH     = true
 LOCAL_CHECKS    = mod-download
 
@@ -52,6 +52,10 @@ include Makefile.common
 ##########################################################################################
 # Define some constants
 ##########################################################################################
+# Exclude deprecation warnings (SA1019), since failing on deprecation defeats the purpose
+# of deprecating.
+LINT_ARGS += --exclude SA1019
+
 BRANCH_NAME ?= $(PIN_BRANCH)
 
 # Some env vars that devs might find useful:
