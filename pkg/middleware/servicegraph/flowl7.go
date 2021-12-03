@@ -147,7 +147,7 @@ func GetL7FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 	var lastSvc v1.ServicePort
 	for bucket := range rcvdL7Buckets {
 		totalBuckets++
-		if totalBuckets % 10000 == 0 {
+		if totalBuckets%10000 == 0 {
 			log.Infof("Enumerated %d L7 buckets", totalBuckets)
 		}
 		key := bucket.CompositeAggregationKey

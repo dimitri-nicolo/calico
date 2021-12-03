@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/es-proxy
-GO_BUILD_VER    ?= v0.59
+GO_BUILD_VER    ?= v0.63
 GIT_USE_SSH      = true
 API_REPO         = github.com/tigera/api
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
