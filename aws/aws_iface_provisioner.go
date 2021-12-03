@@ -335,7 +335,7 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 			logrus.Info("SecondaryIfaceManager stopping, context canceled.")
 			return
 		case snapshot := <-m.datastoreUpdateC:
-			logrus.Debug("New datastore snapshot received")
+			logrus.WithField("update", snapshot).Info("New datastore snapshot received")
 			m.resyncNeeded = true
 			m.ds = snapshot
 		case responseC <- response:
