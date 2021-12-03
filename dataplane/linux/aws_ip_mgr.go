@@ -125,6 +125,7 @@ func NewAWSIPManager(
 		poolIDsBySubnetID:         map[string]set.Set{},
 		localAWSRoutesByDst:       map[ip.CIDR]*proto.RouteUpdate{},
 		localRouteDestsBySubnetID: map[string]set.Set{},
+		workloadEndpointsByID:     map[proto.WorkloadEndpointID]awsEndpointInfo{},
 
 		freeRouteTableIndexes:  routeTableIndexes,
 		routeTablesByIfaceName: map[string]routeTable{},
