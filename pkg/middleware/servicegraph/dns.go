@@ -102,7 +102,7 @@ func GetDNSClientData(ctx context.Context, es lmaelastic.Client, cluster string,
 	var lastSource FlowEndpoint
 	for bucket := range rcvdDNSBuckets {
 		totalBuckets++
-		if totalBuckets % 10000 == 0 {
+		if totalBuckets%10000 == 0 {
 			log.Infof("Enumerated %d DNS buckets", totalBuckets)
 		}
 		key := bucket.CompositeAggregationKey

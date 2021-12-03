@@ -224,7 +224,7 @@ func GetL3FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 	var dgd *destinationGroupData
 	for bucket := range rcvdL3Buckets {
 		totalBuckets++
-		if totalBuckets % 10000 == 0 {
+		if totalBuckets%10000 == 0 {
 			log.Infof("Enumerated %d L3 buckets", totalBuckets)
 		}
 		key := bucket.CompositeAggregationKey
