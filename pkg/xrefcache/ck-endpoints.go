@@ -18,11 +18,10 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
-	"github.com/projectcalico/libcalico-go/lib/set"
 	"github.com/projectcalico/libcalico-go/lib/resources"
+	"github.com/projectcalico/libcalico-go/lib/set"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/ips"

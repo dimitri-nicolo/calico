@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/libcalico-go/lib/resources"
 
 	"github.com/tigera/compliance/pkg/datastore"

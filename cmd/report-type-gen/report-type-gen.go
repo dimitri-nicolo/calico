@@ -23,8 +23,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	yaml "github.com/projectcalico/go-yaml-wrapper"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	yaml "github.com/projectcalico/go-yaml-wrapper"
 	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
 )
 
@@ -95,7 +96,7 @@ func runGenCmd(args []string) {
 			clog.WithError(err).Error("Failed to marshal resulting report type: skipping...")
 			return nil
 		}
-		jsonFullPath := path.Join(outDir, "json", path.Base(f) + ".json")
+		jsonFullPath := path.Join(outDir, "json", path.Base(f)+".json")
 		if err := ioutil.WriteFile(jsonFullPath, jsonContent, 0644); err != nil {
 			log.WithError(err).Error("Failed to write report type to file: skipping...")
 		}

@@ -6,8 +6,9 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/projectcalico/felix/labelindex"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/felix/labelindex"
 	"github.com/projectcalico/libcalico-go/lib/selector"
 )
 

@@ -17,8 +17,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/apis/audit"
 
-	"github.com/projectcalico/libcalico-go/lib/resources"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/libcalico-go/lib/resources"
 
 	"github.com/tigera/compliance/pkg/replay"
 	"github.com/tigera/compliance/pkg/syncer"
