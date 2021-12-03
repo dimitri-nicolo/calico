@@ -573,6 +573,10 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 	subnetCalicoRoutesNotInAWS := filterRoutesByAWSSubnet(allCalicoRoutesNotInAWS, bestSubnetID)
 	if len(subnetCalicoRoutesNotInAWS) == 0 {
 		logrus.Debug("No new AWS IPs to program")
+		err := m.checkAndAssociateElasticIPs(awsSnapshot)
+		if err != nil {
+			return nil, err
+		}
 		return m.calculateResponse(awsSnapshot)
 	}
 
@@ -675,6 +679,13 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 	if err != nil {
 		return nil, err
 	}
+
+	// If we get here, all the private IPs are in place.  Check whether any elastic IPs need to be associated.
+	err = m.checkAndAssociateElasticIPs(awsSnapshot)
+	if err != nil {
+		return nil, err
+	}
+
 	return m.calculateResponse(awsSnapshot)
 }
 
@@ -1678,6 +1689,99 @@ func (m *SecondaryIfaceProvisioner) releaseUnwantedElasticIPs(snapshot *eniSnaps
 		}
 	}
 	return finalErr
+}
+
+func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *eniSnapshot) error {
+	ctx, cancel := m.newContext()
+	defer cancel()
+	ec2Client, err := m.ec2Client()
+	if err != nil {
+		return err
+	}
+
+	// Figure out which IPs already have an elastic IP attached.
+	privIPToElasticIPID := map[ip.Addr]string{}
+	inUseElasticIPs := set.New()
+	for _, eni := range snapshot.calicoOwnedENIsByID {
+		for _, privIP := range eni.PrivateIpAddresses {
+			if privIP.Association != nil && privIP.Association.AllocationId != nil {
+				// May have associated elastic IP.
+				privIPAddr := ip.FromString(*privIP.PrivateIpAddress)
+				eipID := *privIP.Association.AllocationId
+				inUseElasticIPs.Add(eipID)
+				privIPToElasticIPID[privIPAddr] = eipID
+			}
+		}
+	}
+
+	// Collect all the elastic IP IDs that we _may_ want to attach.
+	eipIDToCandidatePrivIPs := map[string][]ip.Addr{}
+	for _, addrInfo := range m.ds.LocalAWSAddrsByDst {
+		privIPAddr := ip.MustParseCIDROrIP(addrInfo.Dst).Addr()
+		if _, ok := privIPToElasticIPID[privIPAddr]; ok {
+			continue // This private IP already has an elastic IP attached, skip it.
+		}
+		for _, eipID := range addrInfo.ElasticIPIDs {
+			if inUseElasticIPs.Contains(eipID) {
+				continue // Optimisation: we know this IP is attached, we've already seen it.
+			}
+			eipIDToCandidatePrivIPs[eipID] = append(eipIDToCandidatePrivIPs[eipID], privIPAddr)
+		}
+	}
+
+	// Query AWS to find out which elastic IPs are available.
+	candidateEIPIDsSlice := make([]string, len(eipIDToCandidatePrivIPs))
+	for eipID := range eipIDToCandidatePrivIPs {
+		candidateEIPIDsSlice = append(candidateEIPIDsSlice, eipID)
+		return nil
+	}
+	dao, err := ec2Client.EC2Svc.DescribeAddresses(ctx, &ec2.DescribeAddressesInput{
+		AllocationIds: candidateEIPIDsSlice,
+		// Would like to include a filter to return only unassociated addresses but there doesn't seem to be one.
+	})
+	if err != nil {
+		return fmt.Errorf("failed to list elastic IPs: %w", err)
+	}
+
+	donePrivIPs := set.New()
+	for _, eip := range dao.Addresses {
+		if eip.AssociationId != nil {
+			continue // Already assigned on another node.
+		}
+		// Got a free elastic IP, try to assign it to one of our private IPs.
+		for _, privIP := range eipIDToCandidatePrivIPs[*eip.AllocationId] {
+			if donePrivIPs.Contains(privIP) {
+				continue
+			}
+			eniID := snapshot.eniIDByIP[privIP.AsCIDR()]
+			if eniID == "" {
+				continue // We weren't able to assign this IP to an ENI?
+			}
+			logCtx := logrus.WithFields(logrus.Fields{
+				"eipID":     safeReadString(eip.AllocationId),
+				"eniID":     eniID,
+				"privateIP": privIP.String(),
+			})
+
+			// Found a free elastic IP and a private IP that can use it with no existing elastic IP.
+			// Try to associate the elastic IP with the private IP...
+			logCtx.Info("Associating elastic IP.")
+			m.resetRecheckInterval("associate-eip")
+			_, err := ec2Client.EC2Svc.AssociateAddress(ctx, &ec2.AssociateAddressInput{
+				AllocationId:       eip.AllocationId,
+				NetworkInterfaceId: stringPtr(eniID),
+				PrivateIpAddress:   stringPtr(privIP.String()),
+			})
+			if err != nil {
+				// TODO Handle expected errors cleanly (such as being already assigned elsewhere).
+				logCtx.WithError(err).Warn("Failed to associate elastic IP.  Will try another one if available.")
+				continue
+			}
+			donePrivIPs.Add(privIP)
+		}
+	}
+	// TODO: error handling; want to trigger backoff if and only if there's a chance of future success.
+	return nil
 }
 
 func trimPrefixLen(cidr string) string {
