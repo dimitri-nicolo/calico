@@ -75,7 +75,7 @@ require (
 replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211202144136-3e16fd2a1eff
+	github.com/projectcalico/libcalico-go => github.com/fasaxc/libcalico-go-private v1.7.2-0.20211203114103-460e7a875707
 	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211119195348-94cd571f25b8
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 

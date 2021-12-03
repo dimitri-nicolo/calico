@@ -224,6 +224,8 @@ github.com/evanphx/json-patch v4.9.0+incompatible h1:kLcOMZeuLAJvL2BPWLMIj5oaZQo
 github.com/evanphx/json-patch v4.9.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
 github.com/evanphx/json-patch/v5 v5.2.0/go.mod h1:G79N1coSVB93tBe7j6PhzjmR3/2VvlbKOFpnXhI9Bw4=
 github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d/go.mod h1:ZZMPRZwes7CROmyNKgQzC3XPs6L/G2EJLHddWejkmf4=
+github.com/fasaxc/libcalico-go-private v1.7.2-0.20211203114103-460e7a875707 h1:HrTN6idzLLldrnYiZAXSeeT1Ynr1R4ol28zM3k6PEy8=
+github.com/fasaxc/libcalico-go-private v1.7.2-0.20211203114103-460e7a875707/go.mod h1:XOGN1YpLLRzQwqhdpRQEDzsgBlTflWTr+RPKGibngbo=
 github.com/fastly/go-utils v0.0.0-20180712184237-d95a45783239 h1:Ghm4eQYC0nEPnSJdVkTrXpu9KtoVCSo1hg7mtI7G9KU=
 github.com/fastly/go-utils v0.0.0-20180712184237-d95a45783239/go.mod h1:Gdwt2ce0yfBxPvZrHkprdPPTTS3N5rwmLE8T22KBXlw=
 github.com/fatih/camelcase v1.0.0/go.mod h1:yN2Sb0lFhZJUdVvtELVWefmrXpuZESvPmqwoZc+/fpc=
@@ -789,8 +791,6 @@ github.com/tigera/api v0.0.0-20211130232353-e7a188095a30 h1:aP0eSTGolYw1BTvrssJv
 github.com/tigera/api v0.0.0-20211130232353-e7a188095a30/go.mod h1:Z6rfooMhUK/BJekToMM7EwFHLuBWwbyu5cyTXQHUcbw=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe h1:sBNn0tKc4rDkS7HgAGe5rj74h+wvk6NJLnIisqnG93A=
 github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe/go.mod h1:Wd1sE0aoYdyJKAiGvyZE5yd18puogE87x5wEmokbcyU=
-github.com/tigera/libcalico-go-private v1.7.2-0.20211202144136-3e16fd2a1eff h1:mnG3s/l36eQ5eXL2MovgBh+o5J5RiR5FQJ+1n7ZyfhE=
-github.com/tigera/libcalico-go-private v1.7.2-0.20211202144136-3e16fd2a1eff/go.mod h1:XOGN1YpLLRzQwqhdpRQEDzsgBlTflWTr+RPKGibngbo=
 github.com/tigera/licensing v1.0.1-0.20211120000321-4024ba82fe25 h1:JMlVVNX0vrQ4l+FKLyDWAGwN8dER3apiLmX0VHZe31I=
 github.com/tigera/licensing v1.0.1-0.20211120000321-4024ba82fe25/go.mod h1:PyJXsjnNtygJbNQJnIh+ewKvS3HvSsi3Q+OyNXdriok=
 github.com/tigera/nfnetlink v0.0.0-20210819183736-75abca8ede69 h1:trFbRbXqFW94EU6ssWyYbVXyA8R3dDV6RiMSz5Okyhs=

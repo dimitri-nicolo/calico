@@ -278,9 +278,10 @@ type Config struct {
 
 	LogFilePath string `config:"file;/var/log/calico/felix.log;die-on-fail"`
 
-	LogSeverityFile   string `config:"oneof(DEBUG,INFO,WARNING,ERROR,FATAL);INFO"`
-	LogSeverityScreen string `config:"oneof(DEBUG,INFO,WARNING,ERROR,FATAL);INFO"`
-	LogSeveritySys    string `config:"oneof(DEBUG,INFO,WARNING,ERROR,FATAL);INFO"`
+	LogSeverityFile   string         `config:"oneof(DEBUG,INFO,WARNING,ERROR,FATAL);INFO"`
+	LogSeverityScreen string         `config:"oneof(DEBUG,INFO,WARNING,ERROR,FATAL);INFO"`
+	LogSeveritySys    string         `config:"oneof(DEBUG,INFO,WARNING,ERROR,FATAL);INFO"`
+	LogDebugRegexp    *regexp.Regexp `config:"regexp;.*"`
 
 	VXLANEnabled        bool   `config:"bool;false"`
 	VXLANPort           int    `config:"int;4789"`
