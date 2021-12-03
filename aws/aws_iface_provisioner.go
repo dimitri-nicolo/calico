@@ -1738,12 +1738,15 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *eniSna
 			eipIDToCandidatePrivIPs[eipID] = append(eipIDToCandidatePrivIPs[eipID], privIPAddr)
 		}
 	}
+	if len(eipIDToCandidatePrivIPs) == 0 {
+		logrus.Debug("No new elastic IPs needed.")
+		return nil
+	}
 
 	// Query AWS to find out which elastic IPs are available.
-	candidateEIPIDsSlice := make([]string, len(eipIDToCandidatePrivIPs))
+	var candidateEIPIDsSlice []string
 	for eipID := range eipIDToCandidatePrivIPs {
 		candidateEIPIDsSlice = append(candidateEIPIDsSlice, eipID)
-		return nil
 	}
 	logrus.WithField("eipIDs", candidateEIPIDsSlice).Debug("Looking up elastic IPs in AWS API.")
 	dao, err := ec2Client.EC2Svc.DescribeAddresses(ctx, &ec2.DescribeAddressesInput{
