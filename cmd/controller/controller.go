@@ -10,17 +10,19 @@ import (
 	"strings"
 	"time"
 
-	clientv3 "github.com/projectcalico/libcalico-go/lib/clientv3"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/licensing/client/features"
 	"github.com/tigera/licensing/monitor"
 	"github.com/tigera/lma/pkg/api"
 	"github.com/tigera/lma/pkg/elastic"
 
-	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
+	clientv3 "github.com/projectcalico/libcalico-go/lib/clientv3"
+
 	hp "github.com/tigera/honeypod-controller/pkg/processor"
 	"github.com/tigera/honeypod-controller/pkg/snort"
 	lclient "github.com/tigera/licensing/client"
+
+	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 )
 
 func getNodeName() (string, error) {
