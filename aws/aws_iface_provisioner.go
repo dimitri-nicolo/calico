@@ -1700,14 +1700,19 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *eniSna
 	}
 
 	// Figure out which IPs already have an elastic IP attached.
+	logrus.Debug("Checking if we need to associate any elastic IPs.")
 	privIPToElasticIPID := map[ip.Addr]string{}
 	inUseElasticIPs := set.New()
-	for _, eni := range snapshot.calicoOwnedENIsByID {
+	for eniID, eni := range snapshot.calicoOwnedENIsByID {
 		for _, privIP := range eni.PrivateIpAddresses {
 			if privIP.Association != nil && privIP.Association.AllocationId != nil {
-				// May have associated elastic IP.
 				privIPAddr := ip.FromString(*privIP.PrivateIpAddress)
 				eipID := *privIP.Association.AllocationId
+				logrus.WithFields(logrus.Fields{
+					"eniID":  eniID,
+					"privIP": privIPAddr,
+					"eipID":  eipID,
+				}).Debug("Found existing elastic IP.")
 				inUseElasticIPs.Add(eipID)
 				privIPToElasticIPID[privIPAddr] = eipID
 			}
@@ -1719,12 +1724,17 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *eniSna
 	for _, addrInfo := range m.ds.LocalAWSAddrsByDst {
 		privIPAddr := ip.MustParseCIDROrIP(addrInfo.Dst).Addr()
 		if _, ok := privIPToElasticIPID[privIPAddr]; ok {
+			logrus.WithField("privAddr", privIPAddr).Debug("Private IP already has elastic IP.")
 			continue // This private IP already has an elastic IP attached, skip it.
 		}
 		for _, eipID := range addrInfo.ElasticIPIDs {
 			if inUseElasticIPs.Contains(eipID) {
 				continue // Optimisation: we know this IP is attached, we've already seen it.
 			}
+			logrus.WithFields(logrus.Fields{
+				"privIP": privIPAddr,
+				"eipID":  eipID,
+			}).Debug("Candidate private IP/elastic IP combination.")
 			eipIDToCandidatePrivIPs[eipID] = append(eipIDToCandidatePrivIPs[eipID], privIPAddr)
 		}
 	}
@@ -1735,6 +1745,7 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *eniSna
 		candidateEIPIDsSlice = append(candidateEIPIDsSlice, eipID)
 		return nil
 	}
+	logrus.WithField("eipIDs", candidateEIPIDsSlice).Debug("Looking up elastic IPs in AWS API.")
 	dao, err := ec2Client.EC2Svc.DescribeAddresses(ctx, &ec2.DescribeAddressesInput{
 		AllocationIds: candidateEIPIDsSlice,
 		// Would like to include a filter to return only unassociated addresses but there doesn't seem to be one.
@@ -1745,23 +1756,27 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *eniSna
 
 	donePrivIPs := set.New()
 	for _, eip := range dao.Addresses {
+		eipID := safeReadString(eip.AllocationId)
 		if eip.AssociationId != nil {
+			logrus.WithField("eipID", eipID).Debug("Elastic IP already in use.")
 			continue // Already assigned on another node.
 		}
 		// Got a free elastic IP, try to assign it to one of our private IPs.
 		for _, privIP := range eipIDToCandidatePrivIPs[*eip.AllocationId] {
+			logCtx := logrus.WithFields(logrus.Fields{
+				"privIP": privIP,
+				"eipID":  eipID,
+			})
 			if donePrivIPs.Contains(privIP) {
+				logCtx.Debug("Already assigned an exatic IP to this private IP.")
 				continue
 			}
 			eniID := snapshot.eniIDByIP[privIP.AsCIDR()]
 			if eniID == "" {
+				logCtx.Debug("Couldn't find ENI for private IP.")
 				continue // We weren't able to assign this IP to an ENI?
 			}
-			logCtx := logrus.WithFields(logrus.Fields{
-				"eipID":     safeReadString(eip.AllocationId),
-				"eniID":     eniID,
-				"privateIP": privIP.String(),
-			})
+			logCtx = logCtx.WithField("eniID", eniID)
 			// Found a free elastic IP and a private IP that can use it with no existing elastic IP.
 			// Try to associate the elastic IP with the private IP...
 			logCtx.Info("Associating elastic IP.")
