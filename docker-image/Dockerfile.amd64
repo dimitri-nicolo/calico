@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.1 as ubi
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.5 as ubi
 RUN microdnf update
 
 # Create Empty root filesystem on /rootfs, copy only required linux utils

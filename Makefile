@@ -1,7 +1,7 @@
 # Copyright 2019-20 Tigera Inc. All rights reserved.
 
 PACKAGE_NAME    ?= github.com/tigera/packetcapture-api
-GO_BUILD_VER    ?= v0.59
+GO_BUILD_VER    ?= v0.63
 GIT_USE_SSH      = true
 LOCAL_CHECKS     = mod-download
 
@@ -53,6 +53,10 @@ include Makefile.common
 ###############################################################################
 # Env vars related to building
 ###############################################################################
+# Exclude deprecation warnings (SA1019), since failing on deprecation defeats the purpose
+# of deprecating.
+LINT_ARGS += --exclude SA1019
+
 BUILD_VERSION         ?= $(shell git describe --tags --dirty --always 2>/dev/null)
 BUILD_BUILD_DATE      ?= $(shell date -u +'%FT%T%z')
 BUILD_GIT_DESCRIPTION ?= $(shell git describe --tags 2>/dev/null)
