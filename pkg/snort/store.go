@@ -55,7 +55,7 @@ func (s *Store) Apply(alerts []Alert, filters ...Filters) []Alert {
 	}
 
 	var filteredAlerts []Alert
-	for _, alert :=  range alerts {
+	for _, alert := range alerts {
 		for _, filter := range filters {
 			if filter(s, alert) {
 				filteredAlerts = append(filteredAlerts, alert)
@@ -79,7 +79,3 @@ func (s *Store) Update(alerts []Alert) {
 		}
 	}
 }
-
-
-
-
