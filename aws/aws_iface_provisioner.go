@@ -1762,7 +1762,6 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *eniSna
 				"eniID":     eniID,
 				"privateIP": privIP.String(),
 			})
-
 			// Found a free elastic IP and a private IP that can use it with no existing elastic IP.
 			// Try to associate the elastic IP with the private IP...
 			logCtx.Info("Associating elastic IP.")

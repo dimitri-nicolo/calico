@@ -340,19 +340,20 @@ func (a *awsIPManager) onIfaceAddrsUpdate(msg *ifaceAddrsUpdate) {
 }
 
 func (a *awsIPManager) onWorkloadEndpointUpdate(msg *proto.WorkloadEndpointUpdate) {
-	oldEP := a.workloadEndpointsByID[*msg.Id]
+	wepID := *msg.Id
+	oldEP := a.workloadEndpointsByID[wepID]
 	newEP := awsEndpointInfo{
 		IPv4Nets:     msg.Endpoint.Ipv4Nets,
 		ElasticIPIDs: msg.Endpoint.AwsElasticIpIds,
 	}
-	a.workloadEndpointsByID[*msg.Id] = newEP
+	a.workloadEndpointsByID[wepID] = newEP
 	if reflect.DeepEqual(oldEP, newEP) {
 		return
 	}
 	if len(oldEP.ElasticIPIDs) == 0 && len(newEP.ElasticIPIDs) == 0 {
 		return
 	}
-	a.awsResyncNeeded = true
+	a.queueAWSResync("workload update")
 }
 
 func (a *awsIPManager) onWorkloadEndpointRemoved(msg *proto.WorkloadEndpointRemove) {
@@ -364,7 +365,7 @@ func (a *awsIPManager) onWorkloadEndpointRemoved(msg *proto.WorkloadEndpointRemo
 	if len(oldEP.ElasticIPIDs) == 0 {
 		return
 	}
-	a.awsResyncNeeded = true // FIXME too broad, this might not be an AWS-backed pod.
+	a.queueAWSResync("workload removed")
 }
 
 func (a *awsIPManager) lookUpElasticIPIDs(k ip.CIDR) []string {
