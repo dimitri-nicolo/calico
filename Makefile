@@ -1,5 +1,5 @@
 PACKAGE_NAME ?= github.com/tigera/prometheus-service
-GO_BUILD_VER ?= v0.55
+GO_BUILD_VER ?= v0.63
 GIT_USE_SSH = true
 ORGANIZATION = tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_PROMETHEUS_SERVICE_PROJECT_ID)
@@ -12,6 +12,8 @@ RELEASE_BRANCH_PREFIX    ?= release-calient
 DEV_TAG_SUFFIX           ?= calient-0.dev
 
 EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
+
+APISERVER_REPO  = github.com/tigera/apiserver
 
 ##############################################################################
 # Download and include Makefile.common before anything else
@@ -158,7 +160,14 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
-update-pins: guard-ssh-forwarding-bug replace-libcalico-pin
+LMA_BRANCH?=$(PIN_BRANCH)
+LMA_REPO?=github.com/tigera/lma
+
+update-lma-pin:
+	$(call update_pin,$(LMA_REPO),$(LMA_REPO),$(LMA_BRANCH))
+
+
+update-pins: guard-ssh-forwarding-bug replace-libcalico-pin update-lma-pin replace-apiserver-pin
 
 ###############################################################################
 # Utils
