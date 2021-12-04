@@ -22,7 +22,6 @@ OPERATOR_MAPPED_IMAGES = {
     # non-tigera components
     'prometheus-operator': 'prometheusOperator',
     'prometheus-config-reloader': 'prometheusConfigReloader',
-    'configmap-reload': 'configmapReload',
 }
 
 EXCLUDED_IMAGES = [
