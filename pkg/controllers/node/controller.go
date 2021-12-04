@@ -107,6 +107,7 @@ func NewNodeController(ctx context.Context,
 	// Create a controller to remove node specific status from DeepPacketInspection
 	// resource when the node is deleted.
 	nc.statusUpdateController = NewStatusUpdateController(calicoClient, calicoV3Client, nodeCacheFn)
+	nodeDeletionFuncs = append(nodeDeletionFuncs, nc.statusUpdateController.OnKubernetesNodeDeleted)
 	// Setup event handlers for nodes and pods learned through the
 	// respective informers.
 	nodeHandlers := cache.ResourceEventHandlerFuncs{
