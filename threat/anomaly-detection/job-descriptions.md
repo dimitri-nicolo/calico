@@ -95,4 +95,11 @@ It detects the excessive values of the fields.
 This anomaly could indicate a denial of service attack, data exfiltrating, or other attacks.
 
 
+### L7 bytes anomaly 
+**Job ID**: `l7_bytes`
+
+The job looks for services that receive and/or send an anomalously high amount of data.  
+This could indicate a denial of service attack, data exfiltrating, or other attacks.
+
+
 [Domain Generation Algorithms (DGA)]: https://en.wikipedia.org/wiki/Domain_generation_algorithm
