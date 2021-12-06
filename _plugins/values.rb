@@ -359,10 +359,6 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
       image: #{versions["prometheus-config-reloader"].registry}/#{versions["prometheus-config-reloader"].image}
       tag: #{versions["prometheus-config-reloader"].version}
 
-    configmapReload:
-      image: #{versions["configmap-reload"].registry}/#{versions["configmap-reload"].image}
-      tag: #{versions["configmap-reload"].version}
-
     elasticsearchOperator:
       image: #{versions["elasticsearch-operator"].registry}/#{versions["elasticsearch-operator"].image}
       tag: #{versions["elasticsearch-operator"].version}
@@ -488,10 +484,6 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
     prometheusConfigReloader:
       image: #{versions["prometheus-config-reloader"].registry}/#{versions["prometheus-config-reloader"].image}
       tag: #{versions["prometheus-config-reloader"].version}
-
-    configmapReload:
-      image: #{versions["configmap-reload"].registry}/#{versions["configmap-reload"].image}
-      tag: #{versions["configmap-reload"].version}
 
     EOF
   else 

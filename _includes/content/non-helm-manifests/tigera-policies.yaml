@@ -289,7 +289,7 @@ metadata:
 spec:
   order: 1
   tier: allow-tigera
-  selector: app == 'alertmanager' && alertmanager == 'calico-node-alertmanager'
+  selector: app.kubernetes.io/name == 'alertmanager' && alertmanager == 'calico-node-alertmanager'
   types:
     - Ingress
     - Egress
@@ -297,7 +297,7 @@ spec:
   - action: Allow
     protocol: TCP
     destination:
-      ports: [9093]
+      ports: [9093,9094]
   egress:
 {%- if include.containerOrchestrationPlatform == "openshift" %}
   - action: Allow
@@ -333,7 +333,7 @@ metadata:
 spec:
   order: 1
   tier: allow-tigera
-  selector: app == 'alertmanager' && alertmanager == 'calico-node-alertmanager'
+  selector: app.kubernetes.io/name == 'alertmanager' && alertmanager == 'calico-node-alertmanager'
   types:
     - Ingress
     - Egress
@@ -388,7 +388,7 @@ metadata:
 spec:
   order: 1
   tier: allow-tigera
-  selector: app == 'prometheus' && prometheus == 'calico-node-prometheus'
+  selector: app.kubernetes.io/name == 'prometheus' && prometheus == 'calico-node-prometheus'
   types:
     - Ingress
     - Egress

@@ -14,11 +14,13 @@ rules:
   - monitoring.coreos.com
   resources:
   - alertmanagers
+  - alertmanagerconfigs
   - prometheuses
   - servicemonitors
   - prometheusrules
   - podmonitors
   - thanosrulers
+  - probes
   verbs:
   - "*"
 - apiGroups:
