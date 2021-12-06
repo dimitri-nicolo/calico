@@ -6,19 +6,14 @@ import (
 	"fmt"
 	"time"
 
-	"k8s.io/client-go/tools/cache"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/util/workqueue"
-	fake "sigs.k8s.io/controller-runtime/pkg/controller/controllertest"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const (
@@ -38,23 +33,22 @@ var (
 			{Node: "node-0", Directory: "/random-dir", FileNames: []string{"file-01"}}}}}
 )
 
-func getDPINodes(informer cache.SharedIndexInformer) []interface{} {
-	return []interface{}{&v3.DeepPacketInspection{ObjectMeta: metav1.ObjectMeta{Name: dpiName, Namespace: dpiNs},
+func getDPINodes() v3.DeepPacketInspection {
+	return v3.DeepPacketInspection{ObjectMeta: metav1.ObjectMeta{Name: dpiName, Namespace: dpiNs},
 		Status: v3.DeepPacketInspectionStatus{Nodes: []v3.DPINode{
 			{Node: "node-0", Active: v3.DPIActive{Success: true}},
-		}}}}
+		}}}
 }
 
-func getPCAPNodes(informer cache.SharedIndexInformer) []interface{} {
-	return []interface{}{&v3.PacketCapture{ObjectMeta: metav1.ObjectMeta{Namespace: pcapNs, Name: pcapName},
+func getPCAPNodes() v3.PacketCapture {
+	return v3.PacketCapture{ObjectMeta: metav1.ObjectMeta{Namespace: pcapNs, Name: pcapName},
 		Status: v3.PacketCaptureStatus{Files: []v3.PacketCaptureFile{
-			{Node: "node-0", Directory: "/random-dir", FileNames: []string{"file-01"}}}}}}
+			{Node: "node-0", Directory: "/random-dir", FileNames: []string{"file-01"}}}}}
 }
 
 var _ = Describe("DPI status on node create or delete", func() {
 
 	var cli *FakeCalicoClient
-	var tigeraapiCLI tigeraapi.Interface
 	var mockDPIClient *MockDeepPacketInspectionInterface
 	var mockPCAPClient *MockPacketCaptureInterface
 	var expectedDPIUpdateStatusCallCounter, actualDPIUpdateStatusCallCounter int
@@ -62,22 +56,15 @@ var _ = Describe("DPI status on node create or delete", func() {
 	var stopCh chan struct{}
 	var newCtrl func() *statusUpdateController
 	var nodeList []string
-	var dpiStatusUpd, pcapStatusUpd ResourceStatusUpdater
 	BeforeEach(func() {
 		cli = NewFakeCalicoClient()
 		stopCh = make(chan struct{})
 		nodeList = []string{}
-		fn := func() []string { return nodeList }
-		dpiStatusUpd = &dpiStatusUpdater{calicoClient: cli, getCachedNodesFn: getDPINodes, informer: &fake.FakeInformer{}}
-		pcapStatusUpd = &packetCaptureStatusUpdater{calicoClient: cli, getNodeFn: getPCAPNodes, informer: &fake.FakeInformer{}}
 		newCtrl = func() *statusUpdateController {
 			return &statusUpdateController{
-				rl:               workqueue.DefaultControllerRateLimiter(),
 				calicoClient:     cli,
-				calicoV3Client:   tigeraapiCLI,
-				statusUpdaters:   []ResourceStatusUpdater{dpiStatusUpd, pcapStatusUpd},
-				nodeCacheFn:      fn,
-				reconcilerPeriod: 5 * time.Second,
+				nodeCacheFn:      func() []string { return nodeList },
+				reconcilerPeriod: 30 * time.Second,
 			}
 		}
 
@@ -88,6 +75,17 @@ var _ = Describe("DPI status on node create or delete", func() {
 		mockPCAPClient = &MockPacketCaptureInterface{}
 		mockPCAPClient.AssertExpectations(GinkgoT())
 		cli.On("PacketCaptures").Return(mockPCAPClient)
+
+		mockDPIClient.On("List", mock.Anything, mock.Anything).Return(&v3.DeepPacketInspectionList{
+			TypeMeta: metav1.TypeMeta{},
+			ListMeta: metav1.ListMeta{},
+			Items:    []v3.DeepPacketInspection{getDPINodes()},
+		}, nil)
+		mockPCAPClient.On("List", mock.Anything, mock.Anything).Return(&v3.PacketCaptureList{
+			TypeMeta: metav1.TypeMeta{},
+			ListMeta: metav1.ListMeta{},
+			Items:    []v3.PacketCapture{getPCAPNodes()},
+		}, nil)
 
 		expectedDPIUpdateStatusCallCounter = 0
 		actualDPIUpdateStatusCallCounter = 0
@@ -102,6 +100,7 @@ var _ = Describe("DPI status on node create or delete", func() {
 	It("should update DPI & PCAP resource if there are no nodes cached", func() {
 		expectedDPIUpdateStatusCallCounter = 1
 		expectedPCAPUpdateStatusCallCounter = 1
+
 		mockDPIClient.On("UpdateStatus", mock.Anything, mock.Anything, mock.Anything).Return(dpiRes, nil).Run(
 			func(args mock.Arguments) {
 				actualDPIUpdateStatusCallCounter++
@@ -147,31 +146,15 @@ var _ = Describe("DPI status on node create or delete", func() {
 		Eventually(func() int { return actualPCAPUpdateStatusCallCounter }, 10*time.Second).Should(Equal(expectedPCAPUpdateStatusCallCounter))
 	})
 
-	It("should not update DPI or PCAP status for existing nodes", func() {
-		nodeList = []string{"node-0"}
-		expectedDPIUpdateStatusCallCounter = 0
-		expectedPCAPUpdateStatusCallCounter = 0
-		ctrl := newCtrl()
-		ctrl.Start(stopCh)
-		Eventually(func() int { return actualDPIUpdateStatusCallCounter }, 10*time.Second).Should(Equal(expectedDPIUpdateStatusCallCounter))
-		Eventually(func() int { return actualPCAPUpdateStatusCallCounter }, 10*time.Second).Should(Equal(expectedPCAPUpdateStatusCallCounter))
-	})
-
-	It("should not update DPI or PCAP status when node is not available in status", func() {
-		nodeList = []string{"node-0", "node-1"}
-		expectedDPIUpdateStatusCallCounter = 0
-		expectedPCAPUpdateStatusCallCounter = 0
-		ctrl := newCtrl()
-		ctrl.Start(stopCh)
-		// delete a node not in dpi and pcap status
-		nodeList = []string{"node-0"}
-		Eventually(func() int { return actualDPIUpdateStatusCallCounter }, 10*time.Second).Should(Equal(expectedDPIUpdateStatusCallCounter))
-		Eventually(func() int { return actualPCAPUpdateStatusCallCounter }, 10*time.Second).Should(Equal(expectedPCAPUpdateStatusCallCounter))
-	})
-
 	It("should retry status update on conflict", func() {
 		expectedDPIUpdateStatusCallCounter = 3
 		expectedPCAPUpdateStatusCallCounter = 3
+
+		mockDPIClient.On("Get", mock.Anything, dpiNs, dpiName, mock.Anything).
+			Return(func() *v3.DeepPacketInspection { op := getDPINodes(); return &op }(), nil).Times(2)
+		mockPCAPClient.On("Get", mock.Anything, pcapNs, pcapName, mock.Anything).
+			Return(func() *v3.PacketCapture { op := getPCAPNodes(); return &op }(), nil, nil).Times(2)
+
 		// UpdateStatus returns conflict during the first 2 tries
 		mockDPIClient.On("UpdateStatus", mock.Anything, mock.Anything, mock.Anything).
 			Return().Run(
@@ -211,9 +194,25 @@ var _ = Describe("DPI status on node create or delete", func() {
 					}
 				}
 			})
-		ctrl := newCtrl()
+
+		ctrl := &statusUpdateController{
+			calicoClient:     cli,
+			nodeCacheFn:      func() []string { return nodeList },
+			reconcilerPeriod: 5 * time.Second,
+		}
 		ctrl.Start(stopCh)
 		Eventually(func() int { return actualDPIUpdateStatusCallCounter }, 30*time.Second).Should(Equal(expectedDPIUpdateStatusCallCounter))
 		Eventually(func() int { return actualPCAPUpdateStatusCallCounter }, 30*time.Second).Should(Equal(expectedPCAPUpdateStatusCallCounter))
+	})
+
+	It("should not update DPI or PCAP status for existing nodes", func() {
+		nodeList = []string{"node-0"}
+
+		expectedDPIUpdateStatusCallCounter = 0
+		expectedPCAPUpdateStatusCallCounter = 0
+		ctrl := newCtrl()
+		ctrl.Start(stopCh)
+		Eventually(func() int { return actualDPIUpdateStatusCallCounter }, 10*time.Second).Should(Equal(expectedDPIUpdateStatusCallCounter))
+		Eventually(func() int { return actualPCAPUpdateStatusCallCounter }, 10*time.Second).Should(Equal(expectedPCAPUpdateStatusCallCounter))
 	})
 })

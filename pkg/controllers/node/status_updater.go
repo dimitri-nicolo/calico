@@ -6,37 +6,33 @@ import (
 	"context"
 	"time"
 
-	"github.com/projectcalico/libcalico-go/lib/options"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/util/retry"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/set"
-
-	"k8s.io/client-go/util/workqueue"
 )
 
 // NewStatusUpdateController creates a new controller responsible for cleaning the node
 // specific status field in resource when corresponding node is deleted.
-func NewStatusUpdateController(calicoClient client.Interface, calicoV3Client tigeraapi.Interface, nodeCache func() []string) *statusUpdateController {
+func NewStatusUpdateController(calicoClient client.Interface, nodeCache func() []string) *statusUpdateController {
 	return &statusUpdateController{
-		rl:               workqueue.DefaultControllerRateLimiter(),
 		calicoClient:     calicoClient,
-		calicoV3Client:   calicoV3Client,
 		nodeCacheFn:      nodeCache,
-		reconcilerPeriod: time.Hour * 12,
-		kickChan:         make(chan interface{}),
+		reconcilerPeriod: time.Minute * 30,
+		syncChan:         make(chan interface{}),
 	}
 }
 
 type statusUpdateController struct {
-	rl               workqueue.RateLimiter
 	calicoClient     client.Interface
-	calicoV3Client   tigeraapi.Interface
 	nodeCacheFn      func() []string
 	reconcilerPeriod time.Duration
-	kickChan         chan interface{}
+	syncChan         chan interface{}
 }
 
 func (c *statusUpdateController) Start(stop chan struct{}) {
@@ -45,21 +41,24 @@ func (c *statusUpdateController) Start(stop chan struct{}) {
 
 // acceptScheduledRequest cleans the deleted node's status in custom resource periodically.
 func (c *statusUpdateController) acceptScheduledRequest(stopCh <-chan struct{}) {
-	t := time.NewTicker(c.reconcilerPeriod)
-
 	cleanup := func() {
 		err := c.cleanupDPINodes()
 		if err != nil {
 			log.Errorf("An error occurred while cleaning DPI nodes: %v", err)
 		}
-		err = c.cleanupPacketCaptureNodes()
+		err = c.retryCleanupPacketCaptureNodes()
 		if err != nil {
 			log.Errorf("An error occurred while cleaning DPI nodes: %v", err)
 		}
 	}
+
+	// Perform cleanup once during start-up
+	cleanup()
+
+	t := time.NewTicker(c.reconcilerPeriod)
 	for {
 		select {
-		case <-c.kickChan:
+		case <-c.syncChan:
 			cleanup()
 		case <-t.C:
 			cleanup()
@@ -70,51 +69,81 @@ func (c *statusUpdateController) acceptScheduledRequest(stopCh <-chan struct{}) 
 }
 
 func (c *statusUpdateController) cleanupDPINodes() error {
-	possibleNodes := set.FromArray(c.nodeCacheFn())
+	ctx := context.Background()
 
-	dpiResources, err := c.calicoClient.DeepPacketInspections().List(context.Background(), options.ListOptions{})
-	if err != nil {
-		return err
-	}
-	for _, res := range dpiResources.Items {
+	cleanUp := func(res v3.DeepPacketInspection) error {
+		possibleNodes := set.FromArray(c.nodeCacheFn())
 		var newNodes []v3.DPINode
 		for _, node := range res.Status.Nodes {
 			if possibleNodes.Contains(node.Node) {
 				newNodes = append(newNodes, node)
 			}
 		}
-		res.Status.Nodes = newNodes
 		if len(newNodes) == len(res.Status.Nodes) {
 			return nil
 		}
-		_, err = c.calicoClient.DeepPacketInspections().UpdateStatus(context.Background(), &res, options.SetOptions{})
-		if err != nil {
+		res.Status.Nodes = newNodes
+		_, err := c.calicoClient.DeepPacketInspections().UpdateStatus(ctx, &res, options.SetOptions{})
+		return err
+	}
+
+	dpiResources, err := c.calicoClient.DeepPacketInspections().List(ctx, options.ListOptions{})
+	if err != nil {
+		return err
+	}
+	for _, res := range dpiResources.Items {
+		if err = cleanUp(res); err != nil {
+			if errors.IsConflict(err) {
+				err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+					// On conflict get the latest version of resource and update it.
+					latestRes, err := c.calicoClient.DeepPacketInspections().Get(ctx, res.Namespace, res.Name, options.GetOptions{})
+					if err != nil {
+						return err
+					}
+					return cleanUp(*latestRes)
+				})
+			}
 			return err
 		}
 	}
 	return nil
 }
 
-func (c *statusUpdateController) cleanupPacketCaptureNodes() error {
-	possibleNodes := set.FromArray(c.nodeCacheFn())
+func (c *statusUpdateController) retryCleanupPacketCaptureNodes() error {
+	ctx := context.Background()
 
-	pcapResources, err := c.calicoClient.PacketCaptures().List(context.Background(), options.ListOptions{})
-	if err != nil {
-		return err
-	}
-	for _, res := range pcapResources.Items {
+	cleanup := func(res v3.PacketCapture) error {
+		possibleNodes := set.FromArray(c.nodeCacheFn())
 		var newFiles []v3.PacketCaptureFile
 		for _, file := range res.Status.Files {
 			if possibleNodes.Contains(file.Node) {
 				newFiles = append(newFiles, file)
 			}
 		}
-		res.Status.Files = newFiles
 		if len(newFiles) == len(res.Status.Files) {
 			return nil
 		}
-		_, err = c.calicoClient.PacketCaptures().Update(context.Background(), &res, options.SetOptions{})
-		if err != nil {
+		res.Status.Files = newFiles
+		_, err := c.calicoClient.PacketCaptures().Update(ctx, &res, options.SetOptions{})
+		return err
+	}
+
+	pcapResources, err := c.calicoClient.PacketCaptures().List(ctx, options.ListOptions{})
+	if err != nil {
+		return err
+	}
+	for _, res := range pcapResources.Items {
+		if err = cleanup(res); err != nil {
+			if errors.IsConflict(err) {
+				err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+					// On conflict get the latest version of resource and update it
+					latestRes, err := c.calicoClient.PacketCaptures().Get(ctx, res.Namespace, res.Name, options.GetOptions{})
+					if err != nil {
+						return err
+					}
+					return cleanup(*latestRes)
+				})
+			}
 			return err
 		}
 	}
@@ -124,5 +153,5 @@ func (c *statusUpdateController) cleanupPacketCaptureNodes() error {
 func (c *statusUpdateController) OnKubernetesNodeDeleted() {
 	// When a Kubernetes node is deleted, trigger a sync.
 	log.Debug("Kubernetes node deletion event")
-	kick(c.kickChan)
+	kick(c.syncChan)
 }
