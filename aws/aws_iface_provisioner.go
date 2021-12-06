@@ -1771,7 +1771,6 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *eniSna
 				"eipID":  eipID,
 			})
 			if donePrivIPs.Contains(privIP) {
-				logCtx.Debug("Already assigned an exatic IP to this private IP.")
 				continue
 			}
 			eniID := snapshot.eniIDByIP[privIP.AsCIDR()]
