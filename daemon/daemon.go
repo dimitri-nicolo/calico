@@ -52,7 +52,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/health"
 	lclogutils "github.com/projectcalico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/libcalico-go/lib/options"
-	"github.com/projectcalico/libcalico-go/lib/security"
 	"github.com/projectcalico/libcalico-go/lib/set"
 	"github.com/projectcalico/pod2daemon/binder"
 	"github.com/projectcalico/typha/pkg/discovery"
@@ -717,40 +716,6 @@ configRetry:
 	// Now monitor the worker process and our worker threads and shut
 	// down the process gracefully if they fail.
 	monitorAndManageShutdown(failureReportChan, dpDriverCmd, stopSignalChans)
-}
-
-func servePrometheusMetrics(configParams *config.Config) {
-	for {
-		log.WithFields(log.Fields{
-			"host": configParams.PrometheusMetricsHost,
-			"port": configParams.PrometheusMetricsPort,
-		}).Info("Starting prometheus metrics endpoint")
-		if configParams.PrometheusGoMetricsEnabled && configParams.PrometheusProcessMetricsEnabled {
-			log.Info("Including Golang & Process metrics")
-		} else {
-			if !configParams.PrometheusGoMetricsEnabled {
-				log.Info("Discarding Golang metrics")
-				prometheus.Unregister(prometheus.NewGoCollector())
-			}
-			if !configParams.PrometheusProcessMetricsEnabled {
-				log.Info("Discarding process metrics")
-				prometheus.Unregister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
-			}
-		}
-
-		err := security.ServePrometheusMetrics(
-			prometheus.DefaultGatherer,
-			"",
-			configParams.PrometheusMetricsPort,
-			configParams.PrometheusMetricsCertFile,
-			configParams.PrometheusMetricsKeyFile,
-			configParams.PrometheusMetricsCAFile,
-		)
-
-		log.WithError(err).Error(
-			"Prometheus metrics endpoint failed, trying to restart it...")
-		time.Sleep(1 * time.Second)
-	}
 }
 
 func monitorAndManageShutdown(failureReportChan <-chan string, driverCmd *exec.Cmd, stopSignalChans []chan<- *sync.WaitGroup) {
