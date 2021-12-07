@@ -228,10 +228,10 @@ func (wc defaultWorkloadEndpointConverter) podToDefaultWorkloadEndpoint(pod *kap
 		}
 	}
 
-	var awsElasticIPIDs []string
-	if annotation, ok := pod.Annotations["cni.projectcalico.org/awsElasticIPIDs"]; ok {
+	var awsElasticIPs []string
+	if annotation, ok := pod.Annotations["cni.projectcalico.org/awsElasticIPs"]; ok {
 		// Parse Annotation data
-		err := json.Unmarshal([]byte(annotation), &awsElasticIPIDs)
+		err := json.Unmarshal([]byte(annotation), &awsElasticIPs)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse '%s' as JSON: %s", annotation, err)
 		}
@@ -295,7 +295,7 @@ func (wc defaultWorkloadEndpointConverter) podToDefaultWorkloadEndpoint(pod *kap
 		IPNetworks:         ipNets,
 		Ports:              endpointPorts,
 		IPNATs:             floatingIPs,
-		AWSElasticIPIDs:    awsElasticIPIDs,
+		AWSElasticIPs:      awsElasticIPs,
 		EgressGateway:      egressAnnotationsToV3Spec(pod.Annotations),
 		ServiceAccountName: pod.Spec.ServiceAccountName,
 	}

@@ -183,20 +183,20 @@ func ConvertWorkloadEndpointV3ToV1Value(val interface{}) (interface{}, error) {
 	}
 
 	v1value := &model.WorkloadEndpoint{
-		State:           "active",
-		Name:            v3res.Spec.InterfaceName,
-		Mac:             cmac,
-		ProfileIDs:      v3res.Spec.Profiles,
-		IPv4Nets:        ipv4Nets,
-		IPv6Nets:        ipv6Nets,
-		IPv4NAT:         ipv4NAT,
-		IPv6NAT:         ipv6NAT,
-		AWSElasticIPIDs: v3res.Spec.AWSElasticIPIDs,
-		Labels:          labels,
-		IPv4Gateway:     ipv4Gateway,
-		IPv6Gateway:     ipv6Gateway,
-		Ports:           ports,
-		GenerateName:    v3res.GenerateName,
+		State:         "active",
+		Name:          v3res.Spec.InterfaceName,
+		Mac:           cmac,
+		ProfileIDs:    v3res.Spec.Profiles,
+		IPv4Nets:      ipv4Nets,
+		IPv6Nets:      ipv6Nets,
+		IPv4NAT:       ipv4NAT,
+		IPv6NAT:       ipv6NAT,
+		AWSElasticIPs: v3res.Spec.AWSElasticIPs,
+		Labels:        labels,
+		IPv4Gateway:   ipv4Gateway,
+		IPv6Gateway:   ipv6Gateway,
+		Ports:         ports,
+		GenerateName:  v3res.GenerateName,
 	}
 	if v3res.Spec.EgressGateway != nil {
 		// Convert egress Selector and NamespaceSelector fields to a single selector

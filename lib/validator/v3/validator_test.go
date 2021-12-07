@@ -1063,6 +1063,16 @@ func init() {
 				InterfaceName: "cali0134",
 				ContainerID:   "abcde-j.g",
 			}, false),
+		Entry("should accept workload endpoint with an elastic IP",
+			libapiv3.WorkloadEndpointSpec{
+				InterfaceName: "cali012371237",
+				AWSElasticIPs: []string{"10.0.0.1"},
+			}, true),
+		Entry("should reject workload endpoint with a bad elastic IP",
+			libapiv3.WorkloadEndpointSpec{
+				InterfaceName: "cali012371237",
+				AWSElasticIPs: []string{"garbage"},
+			}, false),
 
 		// (API) HostEndpointSpec
 		Entry("should accept host endpoint with interface and node",

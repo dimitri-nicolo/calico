@@ -700,8 +700,8 @@ func (in *WorkloadEndpointSpec) DeepCopyInto(out *WorkloadEndpointSpec) {
 		*out = make([]IPNAT, len(*in))
 		copy(*out, *in)
 	}
-	if in.AWSElasticIPIDs != nil {
-		in, out := &in.AWSElasticIPIDs, &out.AWSElasticIPIDs
+	if in.AWSElasticIPs != nil {
+		in, out := &in.AWSElasticIPs, &out.AWSElasticIPs
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}

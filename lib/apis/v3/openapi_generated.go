@@ -3296,7 +3296,7 @@ func schema_libcalico_go_lib_apis_v3_WorkloadEndpointSpec(ref common.ReferenceCa
 							},
 						},
 					},
-					"awsElasticIPIDs": {
+					"awsElasticIPs": {
 						SchemaProps: spec.SchemaProps{
 							Description: "For workloads from AWS-backed IP pools, a list of candidate elastic IPs to bind to the workload's private IP.  Felix will choose an available elastic IP from the list.",
 							Type:        []string{"array"},

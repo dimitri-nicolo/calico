@@ -137,7 +137,6 @@ var (
 	awsSubnetRE        = regexp.MustCompile(`^subnet-[0-9a-f]{8,17}$`)
 	invalidAWSSubnetID = "AWS subnet ID is invalid; should be 'subnet-' followed by 8 or 17 lower-case hex digits"
 	ipv6AWSSubnet      = "IPv6 is not supported for AWS-backed IP pools"
-	awsElasticIPRE     = regexp.MustCompile(`^eipalloc-[0-9a-f]{8,17}$`)
 
 	globalSelectorEntRule = fmt.Sprintf("%v can only be used in an EntityRule namespaceSelector", globalSelector)
 	globalSelectorOnly    = fmt.Sprintf("%v cannot be combined with other selectors", globalSelector)
@@ -1223,14 +1222,6 @@ func validateWorkloadEndpointSpec(structLevel validator.StructLevel) {
 			structLevel.ReportError(reflect.ValueOf(w.IPNATs),
 				"IPNATs", "", reason("NAT is not in the endpoint networks"), "")
 		}
-	}
-
-	for _, id := range w.AWSElasticIPIDs {
-		if awsElasticIPRE.MatchString(id) {
-			continue
-		}
-		structLevel.ReportError(reflect.ValueOf(w.AWSElasticIPIDs),
-			"AWSElasticIPIDs", "", reason("AWSElasticIPIDs contains an invalid elastic IP ID"), "")
 	}
 }
 

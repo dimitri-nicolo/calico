@@ -67,7 +67,7 @@ type WorkloadEndpointSpec struct {
 	IPNATs []IPNAT `json:"ipNATs,omitempty" validate:"omitempty,dive"`
 	// For workloads from AWS-backed IP pools, a list of candidate elastic IPs to bind to the
 	// workload's private IP.  Felix will choose an available elastic IP from the list.
-	AWSElasticIPIDs []string `json:"awsElasticIPIDs,omitempty" validate:"omitempty,awseipid"`
+	AWSElasticIPs []string `json:"awsElasticIPs,omitempty" validate:"omitempty,dive,ipv4"`
 	// IPv4Gateway is the gateway IPv4 address for traffic from the workload.
 	IPv4Gateway string `json:"ipv4Gateway,omitempty" validate:"omitempty,ipv4"`
 	// IPv6Gateway is the gateway IPv6 address for traffic from the workload.
