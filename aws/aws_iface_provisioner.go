@@ -14,8 +14,10 @@ import (
 	"strings"
 	"time"
 
+	aws2 "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/smithy-go"
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/util/clock"
@@ -1721,6 +1723,7 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *eniSna
 
 	// Collect all the elastic IP IDs that we _may_ want to attach.
 	eipIDToCandidatePrivIPs := map[string][]ip.Addr{}
+	privIPsToDo := set.New() // ip.Addr
 	for _, addrInfo := range m.ds.LocalAWSAddrsByDst {
 		privIPAddr := ip.MustParseCIDROrIP(addrInfo.Dst).Addr()
 		if _, ok := privIPToElasticIPID[privIPAddr]; ok {
@@ -1728,6 +1731,7 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *eniSna
 			continue // This private IP already has an elastic IP attached, skip it.
 		}
 		for _, eipID := range addrInfo.ElasticIPIDs {
+			privIPsToDo.Add(privIPAddr)
 			if inUseElasticIPs.Contains(eipID) {
 				continue // Optimisation: we know this IP is attached, we've already seen it.
 			}
@@ -1742,62 +1746,102 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *eniSna
 		logrus.Debug("No new elastic IPs needed.")
 		return nil
 	}
-
-	// Query AWS to find out which elastic IPs are available.
 	var candidateEIPIDsSlice []string
 	for eipID := range eipIDToCandidatePrivIPs {
 		candidateEIPIDsSlice = append(candidateEIPIDsSlice, eipID)
 	}
-	logrus.WithField("eipIDs", candidateEIPIDsSlice).Debug("Looking up elastic IPs in AWS API.")
-	dao, err := ec2Client.EC2Svc.DescribeAddresses(ctx, &ec2.DescribeAddressesInput{
-		AllocationIds: candidateEIPIDsSlice,
-		// Would like to include a filter to return only unassociated addresses but there doesn't seem to be one.
-	})
-	if err != nil {
-		return fmt.Errorf("failed to list elastic IPs: %w", err)
-	}
 
-	donePrivIPs := set.New()
-	for _, eip := range dao.Addresses {
-		eipID := safeReadString(eip.AllocationId)
-		if eip.AssociationId != nil {
-			logrus.WithField("eipID", eipID).Debug("Elastic IP already in use.")
-			continue // Already assigned on another node.
+	failedPrivIPs := map[ip.Addr]error{}
+	const chunkSize = 200 // AWS filter limit is 200 filters per call.
+	for _, candidateEIPIDsChunk := range chunkStringSlice(candidateEIPIDsSlice, chunkSize) {
+		// Query AWS to find out which elastic IPs are available.
+		logrus.WithField("eipIDs", candidateEIPIDsChunk).Debug("Looking up elastic IPs in AWS API.")
+		dao, err := ec2Client.EC2Svc.DescribeAddresses(ctx, &ec2.DescribeAddressesInput{
+			// Important! Using a filter here rather than the AllocationIds field. If we were to specify an ID of a
+			// deleted Elastic IP in AllocationIds then the whole call would fail whereas a filter still returns
+			// the live elastic IPs.
+			Filters: []ec2types.Filter{
+				{
+					Name:   aws2.String("allocation-id"),
+					Values: candidateEIPIDsChunk,
+				},
+				// Would like to include a filter to return only unassociated addresses but there doesn't seem to be one.
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to list elastic IPs: %w", err)
 		}
-		// Got a free elastic IP, try to assign it to one of our private IPs.
-		for _, privIP := range eipIDToCandidatePrivIPs[*eip.AllocationId] {
-			logCtx := logrus.WithFields(logrus.Fields{
-				"privIP": privIP,
-				"eipID":  eipID,
-			})
-			if donePrivIPs.Contains(privIP) {
-				continue
+
+		for _, eip := range dao.Addresses {
+			eipID := safeReadString(eip.AllocationId)
+			if eip.AssociationId != nil {
+				logrus.WithField("eipID", eipID).Debug("Elastic IP already in use.")
+				continue // Already assigned on another node.
 			}
-			eniID := snapshot.eniIDByIP[privIP.AsCIDR()]
-			if eniID == "" {
-				logCtx.Debug("Couldn't find ENI for private IP.")
-				continue // We weren't able to assign this IP to an ENI?
+			// Got a free elastic IP, try to assign it to one of our private IPs.
+			for _, privIP := range eipIDToCandidatePrivIPs[*eip.AllocationId] {
+				logCtx := logrus.WithFields(logrus.Fields{
+					"privIP": privIP,
+					"eipID":  eipID,
+				})
+				if !privIPsToDo.Contains(privIP) {
+					continue
+				}
+				eniID := snapshot.eniIDByIP[privIP.AsCIDR()]
+				if eniID == "" {
+					logCtx.Debug("Couldn't find ENI for private IP.")
+					continue // We weren't able to assign this IP to an ENI?
+				}
+				logCtx = logCtx.WithField("eniID", eniID)
+				// Found a free elastic IP and a private IP that can use it with no existing elastic IP.
+				// Try to associate the elastic IP with the private IP...
+				logCtx.Info("Attempting to associate elastic IP with private IP.")
+				m.resetRecheckInterval("associate-eip")
+				_, err := ec2Client.EC2Svc.AssociateAddress(ctx, &ec2.AssociateAddressInput{
+					AllocationId:       eip.AllocationId,
+					NetworkInterfaceId: stringPtr(eniID),
+					PrivateIpAddress:   stringPtr(privIP.String()),
+					AllowReassociation: aws2.Bool(false), // true is the default but we don't want to steal.
+				})
+				if err != nil {
+					var smithyErr smithy.APIError
+					if errors.As(err, &smithyErr) && smithyErr.ErrorCode() == "Resource.AlreadyAssociated" {
+						// Someone else claimed the IP already.
+						logCtx.Info("IP was already claimed by someone else; will try another one if available.")
+					} else {
+						logCtx.WithError(err).Warning("Failed to associate elastic IP; will try another one if available.")
+						failedPrivIPs[privIP] = err // Record the error for now; we'll report if the retries fail.
+					}
+					continue
+				} else {
+					delete(failedPrivIPs, privIP)
+				}
+				privIPsToDo.Discard(privIP)
 			}
-			logCtx = logCtx.WithField("eniID", eniID)
-			// Found a free elastic IP and a private IP that can use it with no existing elastic IP.
-			// Try to associate the elastic IP with the private IP...
-			logCtx.Info("Associating elastic IP.")
-			m.resetRecheckInterval("associate-eip")
-			_, err := ec2Client.EC2Svc.AssociateAddress(ctx, &ec2.AssociateAddressInput{
-				AllocationId:       eip.AllocationId,
-				NetworkInterfaceId: stringPtr(eniID),
-				PrivateIpAddress:   stringPtr(privIP.String()),
-			})
-			if err != nil {
-				// TODO Handle expected errors cleanly (such as being already assigned elsewhere).
-				logCtx.WithError(err).Warn("Failed to associate elastic IP.  Will try another one if available.")
-				continue
-			}
-			donePrivIPs.Add(privIP)
 		}
 	}
-	// TODO: error handling; want to trigger backoff if and only if there's a chance of future success.
+	if len(failedPrivIPs) > 0 {
+		return fmt.Errorf("errors encountered while associating some elastic IPs: %v", failedPrivIPs)
+	}
+	if privIPsToDo.Len() > 0 {
+		logrus.WithField("privIPs", privIPsToDo).Warn(
+			"Unable to assign elastic IPs to some private IPs. Required Elastic IPs are in use elsewhere. " +
+				"This may resolve automatically when another node releases an Elastic IP that's no longer needed.")
+		// Not returning an error here; best to wait for the slow retry.
+	}
 	return nil
+}
+
+func chunkStringSlice(s []string, chunkSize int) (chunks [][]string) {
+	for len(s) > 0 {
+		if chunkSize >= len(s) {
+			chunks = append(chunks, s)
+			return
+		}
+		chunks = append(chunks, s[:chunkSize])
+		s = s[chunkSize:]
+	}
+	return
 }
 
 func trimPrefixLen(cidr string) string {
