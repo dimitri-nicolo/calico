@@ -140,9 +140,9 @@ type DatastoreState struct {
 }
 
 type AddrInfo struct {
-	AWSSubnetId  string
-	Dst          string
-	ElasticIPIDs []string
+	AWSSubnetId string
+	Dst         string
+	ElasticIPs  []ip.Addr
 }
 
 const (
@@ -1659,15 +1659,14 @@ func (m *SecondaryIfaceProvisioner) disassociateUnwantedElasticIPs(snapshot *eni
 			if privIP.Association != nil && privIP.Association.AllocationId != nil {
 				// May have associated elastic IP.
 				privIPCIDR := ip.MustParseCIDROrIP(*privIP.PrivateIpAddress)
-				eipID := *privIP.Association.AllocationId
+				eip := ip.FromString(*privIP.Association.PublicIp)
 				wanted := false
 				logCtx := logrus.WithFields(logrus.Fields{
-					"id":          eipID,
-					"publicAddr":  safeReadString(privIP.Association.PublicIp),
+					"publicAddr":  eip,
 					"privateAddr": safeReadString(privIP.PrivateIpAddress),
 				})
-				for _, wantedEIP := range m.ds.LocalAWSAddrsByDst[privIPCIDR].ElasticIPIDs {
-					if wantedEIP == eipID {
+				for _, wantedEIP := range m.ds.LocalAWSAddrsByDst[privIPCIDR].ElasticIPs {
+					if wantedEIP == eip {
 						// EIP is assigned to a private IP that should have it, all good.
 						logCtx.Debug("Elastic IP is associated with matching private IP.")
 						wanted = true
@@ -1709,20 +1708,22 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *eniSna
 		for _, privIP := range eni.PrivateIpAddresses {
 			if privIP.Association != nil && privIP.Association.AllocationId != nil {
 				privIPAddr := ip.FromString(*privIP.PrivateIpAddress)
+				publicIPAddr := ip.FromString(*privIP.Association.PublicIp)
 				eipID := *privIP.Association.AllocationId
 				logrus.WithFields(logrus.Fields{
-					"eniID":  eniID,
-					"privIP": privIPAddr,
-					"eipID":  eipID,
-				}).Debug("Found existing elastic IP.")
-				inUseElasticIPs.Add(eipID)
+					"eniID":    eniID,
+					"privIP":   privIPAddr,
+					"publicIP": publicIPAddr,
+					"eipID":    eipID,
+				}).Debug("Found existing elastic IP associated to this node.")
+				inUseElasticIPs.Add(publicIPAddr)
 				privIPToElasticIPID[privIPAddr] = eipID
 			}
 		}
 	}
 
 	// Collect all the elastic IP IDs that we _may_ want to attach.
-	eipIDToCandidatePrivIPs := map[string][]ip.Addr{}
+	eipToCandidatePrivIPs := map[ip.Addr][]ip.Addr{}
 	privIPsToDo := set.New() // ip.Addr
 	for _, addrInfo := range m.ds.LocalAWSAddrsByDst {
 		privIPAddr := ip.MustParseCIDROrIP(addrInfo.Dst).Addr()
@@ -1730,40 +1731,40 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *eniSna
 			logrus.WithField("privAddr", privIPAddr).Debug("Private IP already has elastic IP.")
 			continue // This private IP already has an elastic IP attached, skip it.
 		}
-		for _, eipID := range addrInfo.ElasticIPIDs {
+		for _, elasticIP := range addrInfo.ElasticIPs {
 			privIPsToDo.Add(privIPAddr)
-			if inUseElasticIPs.Contains(eipID) {
+			if inUseElasticIPs.Contains(elasticIP) {
 				continue // Optimisation: we know this IP is attached, we've already seen it.
 			}
 			logrus.WithFields(logrus.Fields{
-				"privIP": privIPAddr,
-				"eipID":  eipID,
+				"privIP":    privIPAddr,
+				"elasticIP": elasticIP,
 			}).Debug("Candidate private IP/elastic IP combination.")
-			eipIDToCandidatePrivIPs[eipID] = append(eipIDToCandidatePrivIPs[eipID], privIPAddr)
+			eipToCandidatePrivIPs[elasticIP] = append(eipToCandidatePrivIPs[elasticIP], privIPAddr)
 		}
 	}
-	if len(eipIDToCandidatePrivIPs) == 0 {
+	if len(eipToCandidatePrivIPs) == 0 {
 		logrus.Debug("No new elastic IPs needed.")
 		return nil
 	}
-	var candidateEIPIDsSlice []string
-	for eipID := range eipIDToCandidatePrivIPs {
-		candidateEIPIDsSlice = append(candidateEIPIDsSlice, eipID)
+	var candidateElasticIPs []string
+	for elasticIP := range eipToCandidatePrivIPs {
+		candidateElasticIPs = append(candidateElasticIPs, elasticIP.String())
 	}
 
 	failedPrivIPs := map[ip.Addr]error{}
 	const chunkSize = 200 // AWS filter limit is 200 filters per call.
-	for _, candidateEIPIDsChunk := range chunkStringSlice(candidateEIPIDsSlice, chunkSize) {
+	for _, candidateEIPsChunk := range chunkStringSlice(candidateElasticIPs, chunkSize) {
 		// Query AWS to find out which elastic IPs are available.
-		logrus.WithField("eipIDs", candidateEIPIDsChunk).Debug("Looking up elastic IPs in AWS API.")
+		logrus.WithField("eipIDs", candidateEIPsChunk).Debug("Looking up elastic IPs in AWS API.")
 		dao, err := ec2Client.EC2Svc.DescribeAddresses(ctx, &ec2.DescribeAddressesInput{
-			// Important! Using a filter here rather than the AllocationIds field. If we were to specify an ID of a
-			// deleted Elastic IP in AllocationIds then the whole call would fail whereas a filter still returns
-			// the live elastic IPs.
+			// Important to use a filter rather than the other fields in the DescribeAddressesInput because
+			// using the other fields to match EIPs results in errors if any one of the EIPs doesn't exist.
+			// We don't want a failure to get one EIP to mean that we can't look up the others.
 			Filters: []ec2types.Filter{
 				{
-					Name:   aws2.String("allocation-id"),
-					Values: candidateEIPIDsChunk,
+					Name:   aws2.String("public-ip"),
+					Values: candidateEIPsChunk,
 				},
 				// Would like to include a filter to return only unassociated addresses but there doesn't seem to be one.
 			},
@@ -1779,7 +1780,8 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *eniSna
 				continue // Already assigned on another node.
 			}
 			// Got a free elastic IP, try to assign it to one of our private IPs.
-			for _, privIP := range eipIDToCandidatePrivIPs[*eip.AllocationId] {
+			publicIP := ip.FromString(*eip.PublicIp)
+			for _, privIP := range eipToCandidatePrivIPs[publicIP] {
 				logCtx := logrus.WithFields(logrus.Fields{
 					"privIP": privIP,
 					"eipID":  eipID,

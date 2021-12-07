@@ -77,8 +77,8 @@ type awsIPManager struct {
 }
 
 type awsEndpointInfo struct {
-	IPv4Nets     []string
-	ElasticIPIDs []string
+	IPv4Nets   []string
+	ElasticIPs []ip.Addr
 }
 
 type awsIfaceProvisioner interface {
@@ -349,17 +349,24 @@ func (a *awsIPManager) onWorkloadEndpointUpdate(msg *proto.WorkloadEndpointUpdat
 	wepID := *msg.Id
 	oldEP := a.workloadEndpointsByID[wepID]
 	newEP := awsEndpointInfo{
-		IPv4Nets:     msg.Endpoint.Ipv4Nets,
-		ElasticIPIDs: msg.Endpoint.AwsElasticIpIds,
+		IPv4Nets:   msg.Endpoint.Ipv4Nets,
+		ElasticIPs: parseIPSlice(msg.Endpoint.AwsElasticIps),
 	}
 	a.workloadEndpointsByID[wepID] = newEP
 	if reflect.DeepEqual(oldEP, newEP) {
 		return
 	}
-	if len(oldEP.ElasticIPIDs) == 0 && len(newEP.ElasticIPIDs) == 0 {
+	if len(oldEP.ElasticIPs) == 0 && len(newEP.ElasticIPs) == 0 {
 		return
 	}
 	a.queueAWSResync("workload update")
+}
+
+func parseIPSlice(ips []string) (addrs []ip.Addr) {
+	for _, addr := range ips {
+		addrs = append(addrs, ip.FromString(addr))
+	}
+	return
 }
 
 func (a *awsIPManager) onWorkloadEndpointRemoved(msg *proto.WorkloadEndpointRemove) {
@@ -368,18 +375,18 @@ func (a *awsIPManager) onWorkloadEndpointRemoved(msg *proto.WorkloadEndpointRemo
 		return
 	}
 	delete(a.workloadEndpointsByID, *msg.Id)
-	if len(oldEP.ElasticIPIDs) == 0 {
+	if len(oldEP.ElasticIPs) == 0 {
 		return
 	}
 	a.queueAWSResync("workload removed")
 }
 
-func (a *awsIPManager) lookUpElasticIPIDs(k ip.CIDR) []string {
+func (a *awsIPManager) lookUpElasticIPs(privIP ip.CIDR) []ip.Addr {
 	for _, wepInfo := range a.workloadEndpointsByID {
 		for _, cidrStr := range wepInfo.IPv4Nets {
 			cidr := ip.MustParseCIDROrIP(cidrStr)
-			if cidr == k {
-				return wepInfo.ElasticIPIDs // FIXME this just grabs the first found; might be more than one WEP.
+			if cidr == privIP {
+				return wepInfo.ElasticIPs // FIXME this just grabs the first found; might be more than one WEP.
 			}
 		}
 	}
@@ -413,9 +420,9 @@ func (a *awsIPManager) CompleteDeferredWork() error {
 		}
 		for k, v := range a.localAWSRoutesByDst {
 			ds.LocalAWSAddrsByDst[k] = aws.AddrInfo{
-				AWSSubnetId:  v.AwsSubnetId,
-				Dst:          v.Dst,
-				ElasticIPIDs: a.lookUpElasticIPIDs(k),
+				AWSSubnetId: v.AwsSubnetId,
+				Dst:         v.Dst,
+				ElasticIPs:  a.lookUpElasticIPs(k),
 			}
 		}
 		for k, v := range a.localRouteDestsBySubnetID {

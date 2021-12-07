@@ -418,7 +418,7 @@ message WorkloadEndpoint {
   repeated NatInfo ipv6_nat = 9;
   string egress_ip_set_id = 100;
   bool is_egress_gateway = 101;
-  repeated string aws_elastic_ip_ids = 102;
+  repeated string aws_elastic_ips = 102;
 }
 
 message WorkloadEndpointRemove {
