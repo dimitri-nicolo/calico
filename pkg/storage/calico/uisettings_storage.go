@@ -38,14 +38,14 @@ func NewUISettingsStorage(opts Options) (registry.DryRunnableStorage, factory.De
 			res = res.DeepCopy()
 			falseVal := false
 			trueVal := false
-			res.OwnerReferences = append(res.OwnerReferences, metav1.OwnerReference{
+			res.OwnerReferences = []metav1.OwnerReference{{
 				APIVersion:         v3.GroupVersionCurrent,
 				Kind:               v3.KindUISettingsGroup,
 				Name:               gp.Name,
 				UID:                gp.UID,
 				Controller:         &trueVal,
 				BlockOwnerDeletion: &falseVal,
-			})
+			}}
 		}
 		return c.UISettings().Create(ctx, res, oso)
 	}
