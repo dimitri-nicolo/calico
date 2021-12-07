@@ -4,15 +4,16 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.6.1
+    controller-gen.kubebuilder.io/version: v0.6.2
     helm.sh/hook: "crd-install"
+  creationTimestamp: null
   labels:
     app.kubernetes.io/instance: 'elastic-operator'
     app.kubernetes.io/name: 'eck-operator-crds'
-    app.kubernetes.io/version: '1.7.1'
+    app.kubernetes.io/version: '1.8.0'
   name: elasticmapsservers.maps.k8s.elastic.co
 spec:
-  # preserveUnknownFields - set to false to pickup udpate to v1/CRD structure 
+  # preserveUnknownFields - set to false to pickup udpate to v1/CRD structure
   preserveUnknownFields: false
   group: maps.k8s.elastic.co
   names:
