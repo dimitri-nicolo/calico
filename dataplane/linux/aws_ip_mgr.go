@@ -364,7 +364,12 @@ func (a *awsIPManager) onWorkloadEndpointUpdate(msg *proto.WorkloadEndpointUpdat
 
 func parseIPSlice(ips []string) (addrs []ip.Addr) {
 	for _, addr := range ips {
-		addrs = append(addrs, ip.FromString(addr))
+		parsedAddr := ip.FromString(addr)
+		if parsedAddr == nil {
+			logrus.WithField("rawAddr", addr).Warn("Failed to parse elastic IP.")
+			continue
+		}
+		addrs = append(addrs, parsedAddr)
 	}
 	return
 }
