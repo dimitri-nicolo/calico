@@ -6,105 +6,152 @@ import (
 	"context"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/util/retry"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/set"
-
-	log "github.com/sirupsen/logrus"
-	"k8s.io/client-go/util/workqueue"
 )
 
 // NewStatusUpdateController creates a new controller responsible for cleaning the node
 // specific status field in resource when corresponding node is deleted.
-func NewStatusUpdateController(calicoClient client.Interface, calicoV3Client tigeraapi.Interface, nodeCache func() []string) *statusUpdateController {
-	dpiWch := NewDPIWatcher(calicoV3Client)
+func NewStatusUpdateController(calicoClient client.Interface, nodeCache func() []string) *statusUpdateController {
 	return &statusUpdateController{
-		rl:               workqueue.DefaultControllerRateLimiter(),
 		calicoClient:     calicoClient,
-		calicoV3Client:   calicoV3Client,
-		dpiWch:           dpiWch,
 		nodeCacheFn:      nodeCache,
-		reconcilerPeriod: time.Minute * 5,
+		reconcilerPeriod: time.Minute * 30,
+		syncChan:         make(chan interface{}),
 	}
 }
 
 type statusUpdateController struct {
-	rl               workqueue.RateLimiter
 	calicoClient     client.Interface
-	calicoV3Client   tigeraapi.Interface
-	dpiWch           Watcher
 	nodeCacheFn      func() []string
 	reconcilerPeriod time.Duration
+	syncChan         chan interface{}
 }
 
 func (c *statusUpdateController) Start(stop chan struct{}) {
-	go c.dpiWch.Run(stop)
 	go c.acceptScheduledRequest(stop)
 }
 
 // acceptScheduledRequest cleans the deleted node's status in custom resource periodically.
 func (c *statusUpdateController) acceptScheduledRequest(stopCh <-chan struct{}) {
+	cleanup := func() {
+		err := c.cleanupDPINodes()
+		if err != nil {
+			log.Errorf("An error occurred while cleaning DPI nodes: %v", err)
+		}
+		err = c.retryCleanupPacketCaptureNodes()
+		if err != nil {
+			log.Errorf("An error occurred while cleaning DPI nodes: %v", err)
+		}
+	}
+
+	// Perform cleanup once during start-up
+	cleanup()
+
 	t := time.NewTicker(c.reconcilerPeriod)
 	for {
 		select {
+		case <-c.syncChan:
+			cleanup()
 		case <-t.C:
-			c.cleanDeletedNodeStatus()
+			cleanup()
 		case <-stopCh:
 			return
 		}
 	}
 }
 
-// cleanDeletedNodeStatus gets the list of cached DeepPacketInspection resources, and removes the status related to nodes
-// no longer in the cached list of nodes.
-func (c *statusUpdateController) cleanDeletedNodeStatus() {
-	log.Debugf("Cleaning the deleted nodes status from DeepPacketInspection resources.")
-	dpiResources := c.dpiWch.GetExistingResources()
-	if len(dpiResources) == 0 {
-		// No dpi resource to cleanup
-		return
-	}
+func (c *statusUpdateController) cleanupDPINodes() error {
+	ctx := context.Background()
 
-	existingNodes := set.FromArray(c.nodeCacheFn())
-	for _, res := range dpiResources {
-		if dpi, ok := res.(*v3.DeepPacketInspection); ok {
-			if err := c.updateDPIStatus(context.Background(), dpi, existingNodes); err != nil {
-				log.WithFields(log.Fields{"deepPacketInspection": dpi.Name, "namespace": dpi.Namespace}).
-					WithError(err).Error("Failed to update status, will retry later.")
+	cleanUp := func(res v3.DeepPacketInspection) error {
+		possibleNodes := set.FromArray(c.nodeCacheFn())
+		var newNodes []v3.DPINode
+		for _, node := range res.Status.Nodes {
+			if possibleNodes.Contains(node.Node) {
+				newNodes = append(newNodes, node)
 			}
-		} else {
-			log.Errorf("Failed to get DeepPacketInspection resource from #%v", res)
 		}
-	}
-}
-
-// updateDPIStatus updates status of the DeepPacketInspection resource by removing fields
-// from status corresponding to the node not in cached node.
-func (c *statusUpdateController) updateDPIStatus(ctx context.Context, dpi *v3.DeepPacketInspection, existingNodes set.Set) error {
-	var err error
-	if len(dpi.Status.Nodes) == 0 {
-		return nil
-	}
-	if existingNodes.Len() == 0 {
-		dpi.Status.Nodes = nil
-		_, err = c.calicoClient.DeepPacketInspections().UpdateStatus(ctx, dpi, options.SetOptions{})
+		if len(newNodes) == len(res.Status.Nodes) {
+			return nil
+		}
+		res.Status.Nodes = newNodes
+		_, err := c.calicoClient.DeepPacketInspections().UpdateStatus(ctx, &res, options.SetOptions{})
 		return err
 	}
 
-	index := 0
-	for _, dpiNode := range dpi.Status.Nodes {
-		if existingNodes.Contains(dpiNode.Node) {
-			dpi.Status.Nodes[index] = dpiNode
-			index++
+	dpiResources, err := c.calicoClient.DeepPacketInspections().List(ctx, options.ListOptions{})
+	if err != nil {
+		return err
+	}
+	for _, res := range dpiResources.Items {
+		if err = cleanUp(res); err != nil {
+			if errors.IsConflict(err) {
+				err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+					// On conflict get the latest version of resource and update it.
+					latestRes, err := c.calicoClient.DeepPacketInspections().Get(ctx, res.Namespace, res.Name, options.GetOptions{})
+					if err != nil {
+						return err
+					}
+					return cleanUp(*latestRes)
+				})
+			}
+			return err
 		}
 	}
-	if index != len(dpi.Status.Nodes) {
-		dpi.Status.Nodes = dpi.Status.Nodes[:index]
-		_, err = c.calicoClient.DeepPacketInspections().UpdateStatus(ctx, dpi, options.SetOptions{})
+	return nil
+}
+
+func (c *statusUpdateController) retryCleanupPacketCaptureNodes() error {
+	ctx := context.Background()
+
+	cleanup := func(res v3.PacketCapture) error {
+		possibleNodes := set.FromArray(c.nodeCacheFn())
+		var newFiles []v3.PacketCaptureFile
+		for _, file := range res.Status.Files {
+			if possibleNodes.Contains(file.Node) {
+				newFiles = append(newFiles, file)
+			}
+		}
+		if len(newFiles) == len(res.Status.Files) {
+			return nil
+		}
+		res.Status.Files = newFiles
+		_, err := c.calicoClient.PacketCaptures().Update(ctx, &res, options.SetOptions{})
+		return err
 	}
 
-	return err
+	pcapResources, err := c.calicoClient.PacketCaptures().List(ctx, options.ListOptions{})
+	if err != nil {
+		return err
+	}
+	for _, res := range pcapResources.Items {
+		if err = cleanup(res); err != nil {
+			if errors.IsConflict(err) {
+				err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+					// On conflict get the latest version of resource and update it
+					latestRes, err := c.calicoClient.PacketCaptures().Get(ctx, res.Namespace, res.Name, options.GetOptions{})
+					if err != nil {
+						return err
+					}
+					return cleanup(*latestRes)
+				})
+			}
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *statusUpdateController) OnKubernetesNodeDeleted() {
+	// When a Kubernetes node is deleted, trigger a sync.
+	log.Debug("Kubernetes node deletion event")
+	kick(c.syncChan)
 }
