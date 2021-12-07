@@ -186,9 +186,9 @@ the appropriate information to the ingress controller logs.
    for more details).
 
    **NGINX Inc-maintained NGINX ingress controller**
-   Set the [log-format](https://github.com/nginxinc/kubernetes-ingress/blob/master/docs/configmap-and-annotations.md#logging){:target="_blank"}
+   Set the [log-format](https://docs.nginx.com/nginx-ingress-controller/configuration/global-configuration/configmap-resource#logging){:target="_blank"}
    variable in your ingress controller configuration configmap (see the
-   [NGINX Inc. ingress controller documentation](https://github.com/nginxinc/kubernetes-ingress/blob/master/docs/configmap-and-annotations.md){:target="_blank"}
+   [NGINX Inc. ingress controller documentation](https://docs.nginx.com/nginx-ingress-controller/configuration/){:target="_blank"}
    for more details).
 
    **OpenShift router**

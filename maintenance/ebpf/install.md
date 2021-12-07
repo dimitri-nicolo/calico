@@ -449,7 +449,7 @@ Then, should you want to start `kube-proxy` again, you can simply remove the nod
 
 **Recommended**
 
-- [Learn more about eBPF](../../maintenance/ebpf/about-ebpf)
+- [Learn more about eBPF]({{site.baseurl}}/maintenance/ebpf/use-cases-ebpf)
 
 **Recommended - Security**
 

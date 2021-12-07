@@ -171,10 +171,9 @@ metadata:
 ...
    ```
 
-
 ### Enable WireGuard statistics
 
-To access wireguard statistics, [prometheus stats](({{site.baseurl}}/reference/felix/prometheus)) should be turned on. A quick way to do this is to apply the following command and manifest:
+To access wireguard statistics, prometheus stats in [Felix configuration]({{site.baseurl}}/reference/resources/felixconfig) should be turned on. A quick way to do this is to apply the following command and manifest:
 
 
 1. Enable `nodeMetricsPort`:
@@ -185,7 +184,7 @@ To access wireguard statistics, [prometheus stats](({{site.baseurl}}/reference/f
 
 1. Apply Service, ServiceMonitor, NetworkPolicy manifests:
 
-  ```bash
+```bash
 cat <<EOF | kubectl apply -f -
 ---
 apiVersion: v1
@@ -267,7 +266,7 @@ spec:
       ports:
       - 9091
 EOF
-  ```
+```
 
 #### Disable WireGuard for an individual node
 

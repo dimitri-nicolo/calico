@@ -72,7 +72,7 @@ L7 logs are visible in the Manager UI, service graph, in the HTTP tab.
 In this step, you configure ApplicationLayer resource to gather the L7 logs.
 
 1. Create or update the [ApplicationLayer]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.ApplicationLayer)
-   resource named, `tigera-secure` to include a [logCollection section]({{site.baseurl}}/reference/installation/api#operator.tigera.io/v1.LogCollection). Ensure that `collectLogs` fields is set to `Enabled`.
+   resource named, `tigera-secure` to include a logCollection section of the file, `_api.html` [here]: ({{site.baseurl}}/reference/installation/). Ensure that `collectLogs` fields is set to `Enabled`.
 
    Example:
 

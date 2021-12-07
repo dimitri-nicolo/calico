@@ -43,7 +43,7 @@ Kubernetes Operations (kOps) is a cluster management tool that provisions cluste
 
 Select one of the following installation paths:
 
-- [Install Calico Enterprise networking and network policy](#calico-enterprise-networking-and-network-policy)
+- [Install Calico Enterprise networking and network policy](#install-calico-enterprise-networking-and-network-policy)
 - [Install Amazon VPC networking with Calico Enterprise network policy](#install-amazon-vpc-networking-with-calico-enterprise-network-policy)
 
 #### Install Calico Enterprise networking and network policy

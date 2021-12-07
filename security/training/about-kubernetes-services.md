@@ -42,7 +42,7 @@ backing the service may change over time.
 
 In a typical Kubernetes deployment, kube-proxy runs on every node and is responsible for intercepting connections to
 Cluster IP addresses and load balancing across the group of pods backing each service. As part of this process
-[DNAT]({{site.baseurl}}/about/about-networking#nat) is used to map the destination IP address from the Cluster IP to the
+[DNAT]({{site.baseurl}}/networking/training/about-networking) is used to map the destination IP address from the Cluster IP to the
 chosen backing pod. Response packets on the connection then have the NAT reverse on their way back to the pod that
 initiated the connection.
 
@@ -60,7 +60,7 @@ port reserved on each node in the cluster through which the service can be acces
 kube-proxy is responsible for intercepting connections to Node Ports and load balancing them across the pods backing
 each service.  
 
-As part of this process [NAT]({{site.baseurl}}/about/about-networking#nat) is used to map the destination IP address and
+As part of this process [NAT]({{site.baseurl}}/networking/training/about-networking#nat) is used to map the destination IP address and
 port from the node IP and Node Port, to the chosen backing pod and service port. In addition the source IP address is
 mapped from the client IP to the node IP, so that response packets on the connection flow back via the original node,
 where the NAT can be reversed. (It's the node which performed the NAT that has the connection tracking state needed to

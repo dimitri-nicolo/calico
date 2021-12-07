@@ -49,7 +49,7 @@ Learn about the {{site.prodname}} features that remove these blockers.
 
 
 **Documentation**
-- [Control outbound traffic through egress gateways]({{site.baseurl}}/networking/egress-gateway)
+- [Egress gateways]({{site.baseurl}}/networking/egress/)
 - [DNS policy]({{site.baseurl}}/security/domain-based-policy)
 - [AWS Security group integration]({{site.baseurl}}/security/aws-integration/)
 
@@ -70,7 +70,7 @@ Connectivity issues between microservices are difficult to troubleshoot. Trouble
 - [Flow logs in Kibana]({{site.baseurl}}/visibility/elastic/)
 - [Alerts]({{site.baseurl}}/visibility/alerts) 
 - [Packet capture]({{site.baseurl}}/visibility/packetcapture)
-- [DNS logs and dashboards]({{site.baseurl}}/visibility/elastic/dns)
+- [DNS logs and dashboards]({{site.baseurl}}/visibility/elastic/dns/dns-logs)
 
 
 ### Enterprise security controls
@@ -89,7 +89,7 @@ Many applications have compliance requirements such as workload isolation, ensur
 **Documentation**
 
 - [Create tiered network policy]({{site.baseurl}}/security/tiered-policy)
-- [Compliance reports]({{site.baseurl}}/compliance/compliance-reports/)
+- [Compliance reports]({{site.baseurl}}/compliance/overview)
 - [CIS benchmarks]({{site.baseurl}}/compliance/compliance-reports-cis)
 - [Audit logs]({{site.baseurl}}/visibility/elastic/audit-overview)
 
@@ -108,7 +108,7 @@ Most security teams are short-staffed and don’t have the capacity to take on n
 
 - [AWS security groups]({{site.baseurl}}/security/aws-integration/) 
 - [Extend Fortigate firewalls to Kubernetes]({{site.baseurl}}/security/fortinet-integration/overview)
-- [Egress gateways]({{site.baseurl}}/networking/egress-gateway)
+- [Egress gateways]({{site.baseurl}}/networking/egress/)
 
 ### Enable self service security policy
 

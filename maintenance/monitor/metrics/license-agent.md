@@ -1,7 +1,7 @@
 ---
 title: License metrics
 description: Monitor Calico Enterprise license metrics such as nodes used, nodes available, and days until license expires.
-canonical_url: /maintenance/monitor/license-agent
+canonical_url: /maintenance/monitor/metrics/license-agent
 ---
 
 ### Big picture
@@ -39,7 +39,7 @@ The **License Agent** is a containerized application that monitors the following
 
 ### How to
 
-- [Add license agent in your Kubernetes cluster](#add-license-agent-in-your-Kubernetes-cluster)
+- [Add license agent in your Kubernetes cluster](#add-license-agent-in-your-kubernetes-cluster)
 - [Create alerts using Prometheus metrics](#create-alerts-using-prometheus-metrics)
 
 #### Add license agent in your Kubernetes cluster
@@ -93,4 +93,4 @@ spec:
 ### Above and beyond
 
 - [LicenseKey resource]({{site.baseurl}}/reference/resources/licensekey)
-- [Configure Alertmanager]({{site.baseurl}}/maintenance/monitor/alertmanager)
+- [Configure Alertmanager]({{site.baseurl}}/maintenance/monitor/prometheus/alertmanager)

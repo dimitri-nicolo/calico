@@ -84,7 +84,7 @@ section:
 - title: Install on non-cluster hosts
   path: /getting-started/bare-metal/
   section:
-  - title: Install network policy only on non-cluster hosts
+  - title: Install network policy on non-cluster hosts
     path: /getting-started/bare-metal/about
   - title: System requirements
     path: /getting-started/bare-metal/requirements

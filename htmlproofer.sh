@@ -2,13 +2,14 @@
 # This file executes htmlproofer checks on the compiled html files in _site.
 
 # Version of htmlproofer to use.
-HP_VERSION=v0.2
+HP_IMAGE=klakegg/html-proofer
+HP_VERSION=3.19.2
 
 # Local directories to ignore when checking external links
 HP_IGNORE_LOCAL_DIRS="/_includes/"
 
 # URLs to ignore when checking external links.
-HP_IGNORE_URLS="/docs.openshift.org/,#,/github.com\/projectcalico\/calico\/releases\/download/,/v2.3/,/v2.4/,/v2.5/,/v2.6/,/eksctl.io/,/stackpoint.io/"
+HP_IGNORE_URLS="/docs.openshift.org/,/docs.openshift.com/,#,/github.com\/projectcalico\/calico\/releases\/download/,/v2.3/,/v2.4/,/v2.5/,/v2.6/,/eksctl.io/,/stackpoint.io/,/api.my-ocp-domain.com/,/docs.vmware.com/"
 
 # jekyll uid
 JEKYLL_UID=${JEKYLL_UID:=`id -u`}
@@ -17,11 +18,11 @@ JEKYLL_UID=${JEKYLL_UID:=`id -u`}
 # If it doesn't pass once in 10 tries, we count it as a failed check.
 echo "Running a hard URL check against recent releases"
 echo > allstderr.out
-for i in `seq 1 1`; do
+for i in `seq 1 10`; do
 	echo "htmlproofer attempt #${i}"
 
 	# This docker run command MUST NOT USE -ti, or the stderr redirect will fail and the script will ignore all errors.
-	docker run -e JEKYLL_UID=${JEKYLL_UID} --rm -v $(pwd)/_site:/_site/ quay.io/calico/htmlproofer:${HP_VERSION} /_site --file-ignore ${HP_IGNORE_LOCAL_DIRS} --assume-extension --check-html --empty-alt-ignore --url-ignore ${HP_IGNORE_URLS} --internal_domains "docs.tigera.io" 2>stderr.out
+	docker run -e JEKYLL_UID=${JEKYLL_UID} --rm -v $(pwd)/_site:/_site/ ${HP_IMAGE}:${HP_VERSION} /_site --file-ignore ${HP_IGNORE_LOCAL_DIRS} --assume-extension --check-html --empty-alt-ignore --url-ignore ${HP_IGNORE_URLS} --internal_domains "docs.tigera.io" 2>stderr.out
 
 	# Store the RC for future use.
 	rc=$?
@@ -47,7 +48,7 @@ done
 
 # Rerun htmlproofer across _all_ files, but ignore failure, allowing us to notice legacy docs issues without failing CI
 echo "Running a soft check across all files"
-docker run -e JEKYLL_UID=${JEKYLL_UID} --rm -v $(pwd)/_site:/_site/ quay.io/calico/htmlproofer:${HP_VERSION} /_site --assume-extension --check-html --empty-alt-ignore --url-ignore "#"
+docker run -e JEKYLL_UID=${JEKYLL_UID} --rm -v $(pwd)/_site:/_site/ ${HP_IMAGE}:${HP_VERSION} /_site --assume-extension --check-html --empty-alt-ignore --url-ignore "#"
 
 # Find all links that failed all ten times
 echo "Links that failed in each run"

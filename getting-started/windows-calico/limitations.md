@@ -204,5 +204,5 @@ Because of the way the Windows dataplane handles rules, the following limitation
 
 ### Next steps
 
-- [Quickstart]({{site.baseurl}}/windows-calico/quickstart)
-- [Standard install]({{site.baseurl}}/windows-calico/kubernetes/standard)
+- [Quickstart]({{site.baseurl}}/getting-started/windows-calico/quickstart)
+- [Standard install]({{site.baseurl}}/getting-started/windows-calico/kubernetes/standard)

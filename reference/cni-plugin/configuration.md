@@ -371,8 +371,7 @@ You can request a floating IP address for a pod through [Kubernetes annotations]
 
 Nodes will only assign workload addresses from IP pools which select them. By
 default, IP pools select all nodes, but this can be configured using the
-`nodeSelector` field. Check out the [IP pool resource
-document]({{site.baseurl}}/reference/resources/ippool)
+`nodeSelector` field. Check out the [IP pool resource document]({{site.baseurl}}/reference/resources/ippool)
 for more details.
 
 Example:

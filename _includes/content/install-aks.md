@@ -1,7 +1,7 @@
 > **Note**: The {{site.prodname}} network policy feature can only be enabled when the cluster is created. You can't enable {{site.prodname}} network policy on an existing AKS cluster.
 {: .alert .alert-info}
 
-First make sure you have a compatible AKS cluster, see [Create a compatible AKS cluster.]({{site.baseurl}}/getting-started/kubernetes/aks#create-a-compatible-aks-cluster)
+First make sure you have a compatible AKS cluster, see [Create a compatible AKS cluster.]({{site.baseurl}}/getting-started/kubernetes/aks)
 
 #### Install {{site.prodname}}
 

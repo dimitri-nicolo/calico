@@ -50,7 +50,7 @@ spec:
 | bgp    | BGP configuration for this node.  Omit if using {{site.prodname}} for policy only. | | [BGP](#bgp) |
 | ipv4VXLANTunnelAddr | IPv4 address of the VXLAN tunnel. This is system configured and should not be updated manually. | | string |
 | vxlanTunnelMACAddr | MAC address of the VXLAN tunnel. This is system configured and should not be updated manually. | | string |
-| orchRefs | Correlates this node to a node in another orchestrator. | | list of [OrchRefs](#OrchRef) |
+| orchRefs | Correlates this node to a node in another orchestrator. | | list of [OrchRefs](#orchref) |
 | wireguard | WireGuard configuration for this node. This is applicable only if WireGuard is enabled in [Felix Configuration]({{ site.baseurl }}/reference/resources/felixconfig). | | [WireGuard](#wireguard) |
 
 #### OrchRef

@@ -80,6 +80,6 @@ There are several other ways to leverage {{site.prodname}} IPAM including:
 - [Assign addresses based on topology]({{ site.baseurl }}/networking/assign-ip-addresses-topology)
 - [Use a specific address for a pod]({{ site.baseurl }}/networking/use-specific-ip)
 - [Migrate from one IP pool to another]({{ site.baseurl }}/networking/migrate-pools)
-- [Interoperate with legacy firewalls using IP ranges]({{ site.baseurl }}/networking/legacy-firewalls)
+- [Restrict a pod to use an IP address in a specific range]({{ site.baseurl }}/networking/legacy-firewalls)
 - [View IP address utilization]({{ site.baseurl }}/reference/calicoctl/ipam/show)
 - [Change IP address block size]({{ site.baseurl }}/reference/resources/ippool)

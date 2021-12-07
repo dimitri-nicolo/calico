@@ -1,7 +1,7 @@
 ---
 title: Prometheus support
 description: Prometheus support in Calico Enterprise.
-canonical_url: /maintenance/monitoring/support
+canonical_url: /maintenance/monitor/support
 ---
 
 Prometheus (including AlertManager) is an open-source toolkit for systems monitoring and alerting. Prometheus is the default monitoring tool for {{site.prodname}} component metrics and alerting.

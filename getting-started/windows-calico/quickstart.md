@@ -72,7 +72,7 @@ Kubernetes datastore (kdd)
 ### How to
 
 - [Configure strict affinity for clusters using {{site.prodname}} networking](#configure-strict-affinity-for-clusters-using-calico-enterprise-networking)
-- [Install {{site.prodnameWindows}}](#install-calico-enterprise-for-windows)
+- [Install {{site.prodnameWindows}} for Windows](#install-calico-enterprise-for-windows)
 - [Configure installation parameters](#configure-installation-parameters)
 
 #### Configure strict affinity for clusters using {{site.prodname}} networking
@@ -399,4 +399,4 @@ Congratulations! You now have a Kubernetes cluster with {{site.prodnameWindows}}
 
 ### Next steps
 
-You can now use the {{site.prodname}} Linux-based docs site for your documentation. Before you continue, review the [Limitations and known issues]({{site.baseurl}}/windows-calico/limitations) to understand the features (and sections of documentation) that do not apply to Windows.
+You can now use the {{site.prodname}} Linux-based docs site for your documentation. Before you continue, review the [Limitations and known issues]({{site.baseurl}}/getting-started/windows-calico/limitations) to understand the features (and sections of documentation) that do not apply to Windows.

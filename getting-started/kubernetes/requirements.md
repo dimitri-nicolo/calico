@@ -67,7 +67,7 @@ IP ranges in your network, including:
 ### Application layer policy requirements
 
 - {% include open-new-window.html text='MutatingAdmissionWebhook' url='https://kubernetes.io/docs/admin/admission-controllers/#mutatingadmissionwebhook' %} enabled
-- Istio {% include open-new-window.html text='v1.9' url='https://istio.io/about/notes/1.9/' %} or {% include open-new-window.html text='v1.10' url='https://archive.istio.io/v1.10/' %}
+- Istio {% include open-new-window.html text='v1.9' url='https://archive.istio.io/v1.9/' %} or {% include open-new-window.html text='v1.10' url='https://archive.istio.io/v1.10/' %}
 
 Note that Kubernetes version 1.16+ requires Istio version 1.2 or greater.
 Note that Istio version 1.9 requires Kubernetes version 1.17+.

@@ -42,7 +42,6 @@ All platforms supported in this release except Windows
 
 ### How to
 
-- [Install network policy on non-cluster hosts](#install-network-policy-on-non-cluster-hosts)
 - [Configure hosts to communicate with your Kubernetes cluster](#configure-hosts-to-communicate-with-your-kubernetes-cluster)
 
 {% tabs %}

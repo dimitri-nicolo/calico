@@ -1,7 +1,7 @@
 ---
 title: Configure egress gateways, AWS
 description: Configure specific application traffic to exit the cluster through an egress gateway with a native AWS IP address.
-canonical_url: '/networking/egress/egress-gateway/aws'
+canonical_url: '/networking/egress/egress-gateway-aws'
 ---
 
 ### Big picture
@@ -181,7 +181,7 @@ an instance (for example when scaling up the cluster).
 
 **Supported**
 
-- Kubernetes in AWS only; for on-prem, see [this guide](./egress-gateway).
+- Kubernetes in AWS only; for on-prem, see [this guide]({{site.baseurl}}/networking/egress/egress-gateway-on-prem)
 
 ### How to
 
@@ -231,7 +231,7 @@ spec:
 ...
 ```
 If `nodeAddressAutodetectionV4` is set to `firstFound: true` or is not specified, then you must change it to another method by editing the
-resource. The `canReach` and `cidrs` [options](../../reference/installation/api#operator.tigera.io/v1.NodeAddressAutodetection) are suitable.  If using the `cidrs` option, set the CIDRs list to include only the 
+resource. The NodeAddressAutodetection options, `canReach` and `cidrs` are suitable. See [Installation reference]({{site.baseurl}}/reference/installation/api).  If using the `cidrs` option, set the CIDRs list to include only the
 CIDRs from which your primary ENI IPs are chosen (do not include the dedicated VPC subnets chosen below).
 
 #### Ensure Kubernetes VPC has free CIDR range
@@ -317,7 +317,7 @@ of resources).
 
 Since the first four IP addresses and the last IP address in a VPC Subnet cannot be used, it is important to 
 prevent {{site.prodname}} from _trying_ to use them.  For each VPC Subnet that you plan to use, 
-ensure that you have an entry in an [`IPReservation` resource](../reference/resources/ipreservation) for its first
+ensure that you have an entry in an [IP reservation]({{site.baseurl}}/reference/resources/ipreservation) for its first
 four IP addresses and its final IP address.
 
 For example, if your chosen VPC Subnets are `100.64.0.0/22` and `100.64.4.0/22`, you could create the following
@@ -826,6 +826,5 @@ happens to be on the same node as the client).
 
 Please see also:
 
-- The `egressIP...` and `aws...` fields of the [FelixConfiguration
-  resource]({{site.baseurl}}/reference/resources/felixconfig#spec).
-- [Troubleshooting egress gateways](./troubleshoot).
+- The `egressIP...` and `aws...` fields of the [FelixConfiguration resource]({{site.baseurl}}/reference/resources/felixconfig#spec).
+- [Troubleshooting egress gateways]({{site.baseurl}}/networking/egress/troubleshoot).

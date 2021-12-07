@@ -98,7 +98,11 @@ Make sure you have an EKS cluster **without {{site.prodname}} installed** and:
    watch kubectl get tigerastatus
    ```
 {% endif %}
-Wait until the `apiserver` shows a status of `Available`, then proceed to [installing a license](#install-the-calico-enterprise-license).
+{% if include.clusterType != "managed" %}
+Wait until the `apiserver` shows a status of `Available`, then proceed to [install the {{site.prodname}} license](#install-the-calico-enterprise-license).
+{% else %}
+Wait until the `apiserver` shows a status of `Available`, then proceed to the next section.
+{% endif %}
 
 {% include /content/install-awscni-routetable-issue.md %}
 
@@ -236,7 +240,7 @@ Before you get started, make sure you have downloaded and configured the {% incl
    
 {% if include.clusterType == "standalone" or include.clusterType == "management" %}
 
-#### Install the Calico Enterprise license
+#### Install the {{site.prodname}} license
 
 In order to use {{site.prodname}}, you must install the license provided to you by Tigera.
 
@@ -254,42 +258,6 @@ When all components show a status of `Available`, proceed to the next section.
 
 {% endif %}
    
-{% if include.clusterType == "managed" %}
-#### Create a managed cluster
-1. Apply the manifest that you modified in the step, **Add a managed cluster to the management cluster**.
-   ```bash
-   kubectl apply -f $MANAGED_CLUSTER.yaml
-   ```
-1. Monitor progress with the following command:
-   ```bash
-   watch kubectl get tigerastatus
-   ```
-   Wait until the `management-cluster-connection` and `tigera-compliance` show a status of `Available`.
-
-1. Secure {{site.prodname}} on the managed cluster with network policy.
-
-   ```bash
-   kubectl create -f {{ "/manifests/tigera-policies-managed.yaml" | absolute_url }}
-   ```
-
-You have now successfully installed a managed cluster!
-
-
-#### Provide permissions to view the managed cluster
-
-To access resources belonging to a managed cluster from the {{site.prodname}} Manager UI, the service or user account used to log in must have appropriate permissions defined in the managed cluster.
-
-Let's define admin-level permissions for the service account (`mcm-user`) we created to log in to the Manager UI. Run the following command against your managed cluster.
-
-```bash
-kubectl create clusterrolebinding mcm-user-admin --serviceaccount=default:mcm-user --clusterrole=tigera-network-admin
-```
-
-If you now access the Manager UI, you should see your managed cluster as an option in the cluster selection drop-down (top right banner). It will have the same name you provided when adding the managed cluster in the UI. Once you select your managed cluster, you will be able to access all of the Manager UI features while connected to that cluster (e.g. Policies, Flow Visualizations, etc).
-
-{% endif %}
-
-
 {% if include.clusterType != "managed" %}
 
 #### Secure {{site.prodname}} with network policy
