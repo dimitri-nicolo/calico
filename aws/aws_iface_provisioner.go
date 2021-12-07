@@ -507,8 +507,8 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 		return nil, err
 	}
 
-	// Release any elastic IPs that should no longer be there.
-	err = m.releaseUnwantedElasticIPs(awsSnapshot)
+	// Disassociate any elastic IPs that should no longer be there to we free them up for later re-use.
+	err = m.disassociateUnwantedElasticIPs(awsSnapshot)
 	if err != nil {
 		return nil, err
 	}
@@ -1645,7 +1645,7 @@ func (m *SecondaryIfaceProvisioner) resetRecheckInterval(operation string) {
 	m.recheckIntervalResetNeeded = true
 }
 
-func (m *SecondaryIfaceProvisioner) releaseUnwantedElasticIPs(snapshot *eniSnapshot) error {
+func (m *SecondaryIfaceProvisioner) disassociateUnwantedElasticIPs(snapshot *eniSnapshot) error {
 	ctx, cancel := m.newContext()
 	defer cancel()
 	ec2Client, err := m.ec2Client()
