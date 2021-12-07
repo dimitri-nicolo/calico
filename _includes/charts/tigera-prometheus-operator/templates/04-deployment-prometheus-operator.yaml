@@ -24,7 +24,7 @@ spec:
         image: {{.Values.prometheusOperator.image}}:{{.Values.prometheusOperator.tag}}
         args:
           - --prometheus-config-reloader={{.Values.prometheusConfigReloader.image}}:{{.Values.prometheusConfigReloader.tag}}
-          - --config-reloader-memory=25Mi
+          - --config-reloader-memory-request=25Mi
           - --namespaces=tigera-prometheus
           - --cluster-domain=cluster.local
         resources:
