@@ -14,16 +14,15 @@ import (
 	"github.com/tigera/lma/pkg/api"
 )
 
-func (c *client) EventsIndexExists() (bool, error) {
+func (c *client) EventsIndexExists(ctx context.Context) (bool, error) {
 	alias := c.ClusterAlias(EventsIndex)
-	return c.IndexExists(alias).Do(context.Background())
+	return c.IndexExists(alias).Do(ctx)
 }
 
 // CreateEventsIndex creates events index with mapping if it doesn't exist.
 // It marks the new index as write index for events index alias and marks the old index (prior to CEv3.12)
 // as read index for the alias.
-func (c *client) CreateEventsIndex() error {
-	ctx := context.Background()
+func (c *client) CreateEventsIndex(ctx context.Context) error {
 	alias := c.ClusterAlias(EventsIndex)
 	oldIndex := c.ClusterIndex(EventsIndex, "")
 
@@ -172,7 +171,7 @@ func (c *client) SearchSecurityEvents(ctx context.Context, start, end *time.Time
 					log.WithFields(log.Fields{"index": hit.Index, "id": hit.Id}).WithError(err).Warn("failed to unmarshal event json")
 					continue
 				}
-				resultChan <- &api.EventResult{EventsData: &a}
+				resultChan <- &api.EventResult{EventsData: &a, ID: hit.Id}
 			}
 		}
 	}()

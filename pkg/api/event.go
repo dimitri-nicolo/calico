@@ -43,16 +43,17 @@ type EventsData struct {
 
 type EventResult struct {
 	*EventsData
+	ID  string
 	Err error
 }
 
 type EventHandler interface {
 	// EventsIndexExists checks if index exists, all components sending data to elasticsearch should
 	// check if Events index exists during startup.
-	EventsIndexExists() (bool, error)
+	EventsIndexExists(ctx context.Context) (bool, error)
 
 	// CreateEventsIndex is called by every component writing into events index if index doesn't exist.
-	CreateEventsIndex() error
+	CreateEventsIndex(ctx context.Context) error
 
 	PutSecurityEvent(ctx context.Context, data EventsData) (*elastic.IndexResponse, error)
 	PutSecurityEventWithID(ctx context.Context, data EventsData, docId string) (*elastic.IndexResponse, error)

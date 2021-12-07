@@ -63,7 +63,7 @@ var _ = Describe("Elasticsearch events index", func() {
 		})
 
 		It("creates events index with dynamic mapping turned off", func() {
-			err := elasticClientManagement.CreateEventsIndex()
+			err := elasticClientManagement.CreateEventsIndex(ctx)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			indexName := fmt.Sprintf("%s.%s.lma", EventsIndex, managementClusterName)
@@ -91,7 +91,7 @@ var _ = Describe("Elasticsearch events index", func() {
 			_, err := esClient.Index().Index(oldIndexName).BodyJson(map[string]interface{}{"description": "test old index"}).Do(ctx)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			err = elasticClientManagement.CreateEventsIndex()
+			err = elasticClientManagement.CreateEventsIndex(ctx)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			aliases, err := esClient.Aliases().Index(oldIndexName, newIndexName).Do(ctx)
@@ -108,10 +108,10 @@ var _ = Describe("Elasticsearch events index", func() {
 	Context("read and write data", func() {
 		BeforeEach(func() {
 			ctx = context.Background()
-			err := elasticClientManagement.CreateEventsIndex()
+			err := elasticClientManagement.CreateEventsIndex(ctx)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			err = elasticClientManaged.CreateEventsIndex()
+			err = elasticClientManaged.CreateEventsIndex(ctx)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			data.Time = time.Now().Unix()
