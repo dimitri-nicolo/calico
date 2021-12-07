@@ -83,7 +83,7 @@ The job reads the data in portions. This is the number of rows in each of this p
   Higher sensitivity means more suspicious values are treated as anomalies and vice versa.
   Increase in this variable results in more alerts.
   The default values can be different for different jobs.
-  Valid range: 0 to 100.0
+  Valid range: 0.0 to 100.0
 
 
 #### port_scan Job
@@ -139,7 +139,7 @@ The job reads the data in portions. This is the number of rows in each of this p
     Remove a field from this list if you don't want to detect anomalies for this field.
 
 #### generic_dns Job
-- **AD_GENERIC_DNS_SENSITIVITY** - Default: 2 
+- **AD_GENERIC_DNS_SENSITIVITY** - Default: 4
  
     Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
 - **AD_GENERIC_DNS_FIELDS** - Default: "count,latency_count,latency_mean,latency_max"
@@ -149,7 +149,7 @@ The job reads the data in portions. This is the number of rows in each of this p
     Remove a field from this list if you don't want to detect anomalies for this field.
 
 #### generic_l7 Job
-- **AD_GENERIC_L7_SENSITIVITY** - Default: 3 
+- **AD_GENERIC_L7_SENSITIVITY** - Default: 10
  
     Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
 - **AD_GENERIC_L7_FIELDS** - Default: "duration_mean,duration_max,bytes_in,bytes_out,count"
@@ -157,5 +157,10 @@ The job reads the data in portions. This is the number of rows in each of this p
     It is a list of the `L7` log numeric fields separated by `,`.
     A separate model is trained for each field in this list.
     Remove a field from this list if you don't want to detect anomalies for this field.
+
+#### l7_bytes Job
+- **AD_L7_BYTES_SENSITIVITY** - Default: 5
+ 
+    Decrease this parameter if you want fewer alerts. Increase it if you want more alerts.
 
 [Multi-cluster management]: /multicluster/index
