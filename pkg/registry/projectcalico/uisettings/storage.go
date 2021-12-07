@@ -144,9 +144,7 @@ func (r *REST) Update(ctx context.Context, name string, objInfo rest.UpdatedObje
 	updatedUpdateValidation := func(ctx context.Context, obj, old runtime.Object) error {
 		oldUISettings := old.(*calico.UISettings)
 		newUISettings := obj.(*calico.UISettings)
-		oldGroupRef := r.getOwnerReference(oldUISettings)
-		newGroupRef := r.getOwnerReference(newUISettings)
-		if !reflect.DeepEqual(oldGroupRef, newGroupRef) {
+		if !reflect.DeepEqual(oldUISettings.OwnerReferences, newUISettings.OwnerReferences) {
 			return fmt.Errorf("Not permitted to change UISettingsGroup owner reference")
 		}
 		oldGroup := oldUISettings.Spec.Group
@@ -195,13 +193,4 @@ func (r *REST) Watch(ctx context.Context, options *metainternalversion.ListOptio
 	}
 
 	return r.Store.Watch(ctx, options)
-}
-
-func (r *REST) getOwnerReference(obj *calico.UISettings) *metav1.OwnerReference {
-	for _, ref := range obj.OwnerReferences {
-		if ref.APIVersion == calico.GroupVersionCurrent && ref.Kind == calico.KindUISettingsGroup {
-			return &ref
-		}
-	}
-	return nil
 }
