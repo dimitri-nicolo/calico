@@ -191,6 +191,12 @@ func (a *awsIPManager) OnUpdate(msg interface{}) {
 }
 
 func (a *awsIPManager) OnSecondaryIfaceStateUpdate(msg *aws.LocalAWSNetworkState) {
+	if reflect.DeepEqual(msg, a.awsState) {
+		// The AWS provisioner resends the snapshot after each timed recheck; avoid a dataplane update
+		// in that case.
+		logrus.WithField("awsState", msg).Debug("Received AWS state update with no changes.")
+		return
+	}
 	logrus.WithField("awsState", msg).Debug("Received AWS state update.")
 	a.queueDataplaneResync("AWS fabric updated")
 	a.awsState = msg
