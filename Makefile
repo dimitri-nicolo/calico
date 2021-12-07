@@ -411,7 +411,7 @@ hooks_installed:=$(shell ./install-git-hooks)
 
 .PHONY: golangci-lint
 golangci-lint: $(LIBBPF_PATH)/libbpf.a $(GENERATED_FILES)
-	$(DOCKER_GO_BUILD_CGO) golangci-lint run $(LINT_ARGS)
+	$(DOCKER_GO_BUILD_CGO) golangci-lint run --timeout 3m $(LINT_ARGS)
 
 ###############################################################################
 # Unit Tests
