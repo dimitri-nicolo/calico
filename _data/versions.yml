@@ -148,7 +148,7 @@
     elasticsearch-operator:
       registry: quay.io
       image: tigera/eck-operator
-      version: 1.7.1
+      version: 1.8.0
     prometheus-operator:
       image: tigera/prometheus-operator
       version: v0.52.1
