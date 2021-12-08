@@ -365,6 +365,7 @@ func (a *awsIPManager) onWorkloadEndpointUpdate(msg *proto.WorkloadEndpointUpdat
 		logCtx.Debug("WEP has no elastic IPs, ignoring.")
 		return
 	}
+	logCtx.Debug("Workload endpoint with elastic IPs updated.")
 	a.queueAWSResync("workload update")
 }
 
