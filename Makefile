@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/es-gateway
-GO_BUILD_VER    ?= v0.55
+GO_BUILD_VER    ?= v0.63
 GIT_USE_SSH      = true
 
 LOCAL_CHECKS     = mod-download
@@ -16,6 +16,9 @@ RELEASE_REGISTRIES ?=quay.io
 
 RELEASE_BRANCH_PREFIX ?= release-calient
 DEV_TAG_SUFFIX        ?= calient-0.dev
+
+
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
 ###############################################################################
 # Download and include Makefile.common

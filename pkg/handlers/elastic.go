@@ -16,7 +16,7 @@ func ElasticModifyResponseFunc(collector metrics.Collector) func(res *http.Respo
 		if collector != nil && res.StatusCode >= http.StatusOK && res.StatusCode < http.StatusMultipleChoices {
 			ctx := req.Context()
 			clusterID := ctx.Value(middlewares.ClusterIDKey)
-			
+
 			if clusterID != nil && clusterID.(string) != "" {
 				if req.ContentLength > 0 {
 					if err := collector.CollectLogBytesWritten(clusterID.(string), float64(req.ContentLength)); err != nil {
