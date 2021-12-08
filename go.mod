@@ -11,5 +11,5 @@ require (
 	golang.org/x/net v0.0.0-20210520170846-37e1c6afe023
 	golang.org/x/sys v0.0.0-20211004093028-2c5d950f24ef
 	google.golang.org/grpc v1.40.0
-	k8s.io/apimachinery v0.22.2
+	k8s.io/apimachinery v0.21.7
 )
