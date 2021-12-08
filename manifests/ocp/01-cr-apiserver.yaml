@@ -2,4 +2,4 @@
 layout: null
 ---
 
-{% include content/ocp/01-cr-apiserver.yaml %}
+{% include content/ocp/01-cr-apiserver.yaml upgradeFromCalico=include.upgradeFromCalico %}

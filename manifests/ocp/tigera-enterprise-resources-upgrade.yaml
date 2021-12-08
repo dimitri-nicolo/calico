@@ -2,6 +2,6 @@
 layout: null
 ---
 
-{% include content/ocp/01-cr-apiserver.yaml %}
+{% include content/ocp/01-cr-apiserver.yaml upgradeFromCalico=true %}
 
 {% include content/ocp/tigera-enterprise-resources.yaml %}
