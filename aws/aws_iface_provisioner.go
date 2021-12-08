@@ -1646,6 +1646,7 @@ func (m *SecondaryIfaceProvisioner) resetRecheckInterval(operation string) {
 }
 
 func (m *SecondaryIfaceProvisioner) disassociateUnwantedElasticIPs(snapshot *eniSnapshot) error {
+	logrus.Debug("Scanning for unwanted elastic IPs...")
 	ctx, cancel := m.newContext()
 	defer cancel()
 	ec2Client, err := m.ec2Client()
