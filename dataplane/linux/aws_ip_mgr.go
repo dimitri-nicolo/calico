@@ -352,11 +352,17 @@ func (a *awsIPManager) onWorkloadEndpointUpdate(msg *proto.WorkloadEndpointUpdat
 		IPv4Nets:   msg.Endpoint.Ipv4Nets,
 		ElasticIPs: parseIPSlice(msg.Endpoint.AwsElasticIps),
 	}
+	logCtx := logrus.WithFields(logrus.Fields{
+		"id":    wepID,
+		"newEP": newEP,
+	})
 	a.workloadEndpointsByID[wepID] = newEP
 	if reflect.DeepEqual(oldEP, newEP) {
+		logCtx.Debug("No-op WEP update, ignoring.")
 		return
 	}
 	if len(oldEP.ElasticIPs) == 0 && len(newEP.ElasticIPs) == 0 {
+		logCtx.Debug("WEP has no elastic IPs, ignoring.")
 		return
 	}
 	a.queueAWSResync("workload update")
