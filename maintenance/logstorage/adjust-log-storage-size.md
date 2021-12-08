@@ -57,12 +57,14 @@ spec:
     replicas: 1
   nodes:
     count: 3
-    resourceRequirements:
-      limits:
-        cpu: 1000m
-        memory: 16Gi
-      requests:
-        cpu: 1000m
-        memory: 16Gi
-        storage: 200Gi
+  componentResources:
+    - componentName: ECKOperator
+      resourceRequirements:
+        limits:
+          cpu: 1000m
+          memory: 16Gi
+        requests:
+          cpu: 1000m
+          memory: 16Gi
+          storage: 200Gi
 ```
