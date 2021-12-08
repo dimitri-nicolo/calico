@@ -7,13 +7,14 @@ import (
 	"os"
 	"sync"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/felix/dispatcher"
 	"github.com/projectcalico/felix/labelindex"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
 	"github.com/projectcalico/libcalico-go/lib/selector"
-	log "github.com/sirupsen/logrus"
 )
 
 // Restructuring like this should also be useful for a permanently running webserver variant too.

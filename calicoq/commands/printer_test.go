@@ -5,9 +5,10 @@ package commands_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	log "github.com/sirupsen/logrus"
 	. "github.com/tigera/calicoq/calicoq/commands"
+
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
 func flagExpectedErrorLogs() {
