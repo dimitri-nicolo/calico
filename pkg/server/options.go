@@ -3,8 +3,9 @@ package server
 
 import (
 	"crypto/tls"
-	"github.com/tigera/es-gateway/pkg/metrics"
 	"io/ioutil"
+
+	"github.com/tigera/es-gateway/pkg/metrics"
 
 	"github.com/tigera/es-gateway/pkg/clients/elastic"
 	"github.com/tigera/es-gateway/pkg/clients/kibana"
