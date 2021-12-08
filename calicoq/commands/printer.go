@@ -8,10 +8,11 @@ import (
 	"strings"
 
 	// TODO (mattl): Check glide for these and if they need to be private
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/go-json/json"
 	"github.com/projectcalico/go-yaml-wrapper"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	log "github.com/sirupsen/logrus"
 )
 
 func printYAML(outputs []OutputList) error {

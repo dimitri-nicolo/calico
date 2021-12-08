@@ -9,12 +9,13 @@ import (
 	"sort"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/dispatcher"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
-	log "github.com/sirupsen/logrus"
 )
 
 // MATT: How to make includeRules actually work?
