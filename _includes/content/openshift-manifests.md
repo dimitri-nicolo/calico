@@ -12,7 +12,6 @@ curl {{ "/manifests/ocp/crds/01-crd-manager.yaml" | absolute_url }} -o manifests
 curl {{ "/manifests/ocp/crds/01-crd-eck-apmserver.yaml" | absolute_url }} -o manifests/01-crd-eck-apmserver.yaml
 curl {{ "/manifests/ocp/crds/01-crd-eck-elasticsearch.yaml" | absolute_url }} -o manifests/01-crd-eck-elasticsearch.yaml
 curl {{ "/manifests/ocp/crds/01-crd-eck-kibana.yaml" | absolute_url }} -o manifests/01-crd-eck-kibana.yaml
-curl {{ "/manifests/ocp/crds/01-crd-eck-trustrelationship.yaml" | absolute_url }} -o manifests/01-crd-eck-trustrelationship.yaml
 curl {{ "/manifests/ocp/crds/01-crd-eck-beat.yaml" | absolute_url }} -o manifests/01-crd-eck-beat.yaml
 curl {{ "/manifests/ocp/crds/01-crd-eck-enterprisesearch.yaml" | absolute_url }} -o manifests/01-crd-eck-enterprisesearch.yaml
 curl {{ "/manifests/ocp/crds/01-crd-eck-elasticmapsserver.yaml" | absolute_url }} -o manifests/01-crd-eck-elasticmapsserver.yaml
