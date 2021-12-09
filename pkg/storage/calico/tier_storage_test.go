@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -300,6 +302,7 @@ func TestTierGuaranteedUpdate(t *testing.T) {
 		expectInvalidObjErr: false,
 		expectNoUpdate:      false,
 	}, { // GuaranteedUpdate on non-existing key with ignoreNotFound=true
+		// This would update datastore revision.
 		key:                 "projectcalico.org/tiers/non-existing",
 		ignoreNotFound:      true,
 		precondition:        nil,
@@ -345,13 +348,18 @@ func TestTierGuaranteedUpdate(t *testing.T) {
 	}}
 
 	for i, tt := range tests {
+		klog.Infof("Start to run test on tt: %+v", tt)
 		out := &v3.Tier{}
 		selector := fmt.Sprintf("foo-%d", i)
 		if tt.expectNoUpdate {
 			selector = ""
 		}
 		version := storeObj.ResourceVersion
-		err := store.GuaranteedUpdate(ctx, tt.key, out, tt.ignoreNotFound, tt.precondition,
+		versionInt, err := strconv.Atoi(version)
+		if err != nil {
+			t.Errorf("#%d: failed to convert original version %s to int", i, version)
+		}
+		err = store.GuaranteedUpdate(ctx, tt.key, out, tt.ignoreNotFound, tt.precondition,
 			storage.SimpleUpdate(func(obj runtime.Object) (runtime.Object, error) {
 				if tt.expectNotFoundErr && tt.ignoreNotFound {
 					if tier := obj.(*v3.Tier); tier.GenerateName != "" {
@@ -359,6 +367,13 @@ func TestTierGuaranteedUpdate(t *testing.T) {
 					}
 				}
 				tier := *storeObj
+				// Set correct resource name, don't update "non-existing" to "foo"
+				if strings.Contains(tt.key, "non-existing") {
+					tier.Name = "non-existing"
+					// Clean resource version for non-existing object
+					tier.GetObjectMeta().SetResourceVersion("")
+
+				}
 				if !tt.expectNoUpdate {
 					tier.GenerateName = selector
 				}
@@ -387,7 +402,13 @@ func TestTierGuaranteedUpdate(t *testing.T) {
 		}
 		switch tt.expectNoUpdate {
 		case true:
-			if version != out.ResourceVersion {
+			outInt, err := strconv.Atoi(out.ResourceVersion)
+			if err != nil {
+				t.Errorf("#%d: failed to convert out resource version %s to int", i, out.ResourceVersion)
+			}
+			// After creation of a "non-existing" object by previous test, the resource version has increased by 1 for
+			// new updates.
+			if outInt != (versionInt + 1) {
 				t.Errorf("#%d: expect no version change, before=%s, after=%s", i, version, out.ResourceVersion)
 			}
 		case false:
