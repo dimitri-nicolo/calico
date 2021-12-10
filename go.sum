@@ -572,8 +572,8 @@ github.com/tigera/libcalico-go-private v1.7.2-0.20211203232041-873deb396265 h1:Y
 github.com/tigera/libcalico-go-private v1.7.2-0.20211203232041-873deb396265/go.mod h1:AMV3pHRew6jUuK8NuWjouSUx73EzANZEbdgS+kJ4kwk=
 github.com/tigera/licensing v1.0.1-0.20211203232432-ca834eb3a8aa h1:Eb+KMNq4WBN4D2SuMpTelKvhH9G67jAAE5VnQTCZ9ww=
 github.com/tigera/licensing v1.0.1-0.20211203232432-ca834eb3a8aa/go.mod h1:ydtPLrBdA2YOEVsLShFJFNsHCAlMm0m6xFBJDj0gJhM=
-github.com/tigera/lma v0.0.0-20211213220904-8d6cb7fce33c h1:px0v1zTVFLpEN6rw33T7KOdYVwiaRXScaBF6gJuv2hQ=
-github.com/tigera/lma v0.0.0-20211213220904-8d6cb7fce33c/go.mod h1:gqls4s8zjNxb2ylF+OHiAFFU+4aBx1rVgasvdRyXKo8=
+github.com/tigera/lma v0.0.0-20211214172527-8d29d9d30df6 h1:GY4ypnIr7gObcSXAxqKW5PqziM1ysKCHTZN3Dk0l5Kc=
+github.com/tigera/lma v0.0.0-20211214172527-8d29d9d30df6/go.mod h1:gqls4s8zjNxb2ylF+OHiAFFU+4aBx1rVgasvdRyXKo8=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 h1:LnC5Kc/wtumK+WB441p7ynQJzVuNRJiqddSIE3IlSEQ=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=

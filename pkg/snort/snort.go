@@ -3,6 +3,7 @@ package snort
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -12,6 +13,8 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/tigera/honeypod-controller/pkg/events"
 	hp "github.com/tigera/honeypod-controller/pkg/processor"
 	api "github.com/tigera/lma/pkg/api"
 )
@@ -58,9 +61,9 @@ func parseTime(timeStr dateSrcDst) (time.Time, error) {
 	return newTime, nil
 }
 
-func RunScanSnort(a *api.Alert, pcap string, outPath string) error {
+func RunScanSnort(e *api.EventsData, pcap string, outPath string) error {
 	//We setup the directory for the snort alert result to be stored in
-	output := fmt.Sprintf("%s/%s", outPath, *a.Record.DestNameAggr)
+	output := fmt.Sprintf("%s/%s", outPath, e.DestNameAggr)
 
 	log.Info("Running Snort Scan on: ", pcap)
 	err := os.MkdirAll(output, 0755)
@@ -76,17 +79,18 @@ func RunScanSnort(a *api.Alert, pcap string, outPath string) error {
 	// -r $pcap                  : pcap input file/directory
 	// -l $output                : alert output directory
 	cmd := exec.Command("snort", "-q", "-k", "none", "-y", "-c", "/etc/snort/snort.conf", "-r", pcap, "-l", output)
-	var out bytes.Buffer
-	cmd.Stdout = &out
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 	err = cmd.Run()
 	if err != nil {
-		log.WithError(err).Error("Error running Alert on pcap: ", output)
+		log.WithError(err).Errorf("failed to run alert on pcap: %s, error: %s", pcap, stderr.String())
 		return err
 	}
 	return nil
 }
 
-func ProcessSnort(a *api.Alert, p *hp.HoneyPodLogProcessor, outPath string, store *Store) error {
+func ProcessSnort(e *api.EventsData, p *hp.HoneyPodLogProcessor, outPath string, store *Store) error {
 	//We look at the directory in which the snort alerts is stored
 	snortAlertDirs, err := filepath.Glob(fmt.Sprintf("%s/*", outPath))
 	if err != nil {
@@ -113,7 +117,7 @@ func ProcessSnort(a *api.Alert, p *hp.HoneyPodLogProcessor, outPath string, stor
 		}
 		newest := store.Apply(alerts, Uniques, Newest)
 		store.Update(newest)
-		err = SendEvents(newest, p, a)
+		err = SendEvents(newest, p, e)
 		if err != nil {
 			log.WithError(err).Error("Error sending Alert alert")
 			continue
@@ -121,35 +125,58 @@ func ProcessSnort(a *api.Alert, p *hp.HoneyPodLogProcessor, outPath string, stor
 	}
 	return nil
 }
-func SendEvents(snortEvents []Alert, p *hp.HoneyPodLogProcessor, alert *api.Alert) error {
+func SendEvents(snortEvents []Alert, p *hp.HoneyPodLogProcessor, e *api.EventsData) error {
+	b, err := json.Marshal(e.Record)
+	if err != nil {
+		return fmt.Errorf("failed to marshal event.record")
+	}
+	record := &events.HoneypodAlertRecord{}
+	err = json.Unmarshal(b, record)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal event.record to honeypod alert record")
+	}
 
-	//Iterate list of Alert alerts and send them to Elasticsearch
+	host := ""
+	if record.HostKeyword != nil {
+		host = *record.HostKeyword
+	}
+
+	// Iterate list of snort alerts and send them to Elasticsearch
 	for _, event := range snortEvents {
-		description := fmt.Sprintf("[Alert] Signature Triggered on %s/%s", *alert.Record.DestNamespace, *alert.Record.DestNameAggr)
-		body := map[string]interface{}{
-			"severity":    100,
-			"description": description,
-			"alert":       "honeypod-controller.snort",
-			"type":        "alert",
-			"record": map[string]interface{}{
-				"snort": map[string]interface{}{
-					"Description": event.SigName,
-					"Category":    event.Category,
-					"Occurence":   event.DateSrcDst,
-					"Flags":       event.Flags,
-					"Other":       event.Other,
+		description := fmt.Sprintf("[Alert] Signature Triggered on %s/%s", e.DestNamespace, e.DestNameAggr)
+		he := events.HoneypodEvent{
+			EventsData: api.EventsData{
+				EventsSearchFields: api.EventsSearchFields{
+					Time:            time.Now().Unix(),
+					Type:            "honeypod",
+					Description:     description,
+					Host:            host,
+					Severity:        100,
+					Origin:          "honeypod-controller.snort",
+					DestNameAggr:    e.DestNameAggr,
+					DestNamespace:   e.DestNamespace,
+					SourceNameAggr:  e.SourceNameAggr,
+					SourceNamespace: e.SourceNamespace,
+				},
+				Record: events.HoneypodSnortEventRecord{
+					Snort: &events.Snort{
+						Description: event.SigName,
+						Category:    event.Category,
+						Occurrence:  string(event.DateSrcDst),
+						Flags:       event.Flags,
+						Other:       event.Other,
+					},
 				},
 			},
-			"time": time.Now().Unix(),
 		}
-		_, err := p.Client.Backend().Index().Index(hp.Index).Id("").BodyJson(body).Do(p.Ctx)
 
-		//If theres any issue sending the snort alert to ES, we log and exit
-		if err != nil {
-			log.WithError(err).Error("Error sending Alert alert")
+		if _, err := p.Client.PutSecurityEvent(p.Ctx, he.EventData()); err != nil {
+			// If theres any issue sending the snort alert to ES, we log and return error.
+			log.WithError(err).Errorf("Failed to put snort security event: %s", description)
 			return err
 		}
-		log.Infof("Alert: %v triggered Snort signature triggered: %v", alert.Alert, event.SigName)
+
+		log.Infof("Alert: %v Snort signature triggered: %v", e.Origin, event.SigName)
 	}
 	log.Infof("%v Snort events created and sent to Elastic", len(snortEvents))
 	return nil

@@ -3,26 +3,26 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
+
+	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
+	clientv3 "github.com/projectcalico/libcalico-go/lib/clientv3"
+
+	"github.com/tigera/honeypod-controller/pkg/events"
+	hp "github.com/tigera/honeypod-controller/pkg/processor"
+	"github.com/tigera/honeypod-controller/pkg/snort"
+	lclient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
 	"github.com/tigera/licensing/monitor"
 	"github.com/tigera/lma/pkg/api"
 	"github.com/tigera/lma/pkg/elastic"
-
-	clientv3 "github.com/projectcalico/libcalico-go/lib/clientv3"
-
-	hp "github.com/tigera/honeypod-controller/pkg/processor"
-	"github.com/tigera/honeypod-controller/pkg/snort"
-	lclient "github.com/tigera/licensing/client"
-
-	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 )
 
 func getNodeName() (string, error) {
@@ -35,9 +35,9 @@ func getNodeName() (string, error) {
 	return nodename, nil
 }
 
-func GetPcaps(a *api.Alert, path string) ([]string, error) {
+func GetPcaps(e *api.EventsData, path string) ([]string, error) {
 	var matches []string
-	s := fmt.Sprintf("%s/%s/%s/%s", path, *a.Record.DestNamespace, hp.PacketCapture, *a.Record.DestNameAggr)
+	s := fmt.Sprintf("%s/%s/%s/%s", path, e.DestNamespace, hp.PacketCapture, e.DestNameAggr)
 	//Check if packet capture directory is missing and look for pcaps that matches Alert's destination pod
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		log.WithError(err).Error("/pcap directory missing")
@@ -51,14 +51,23 @@ func GetPcaps(a *api.Alert, path string) ([]string, error) {
 	return matches, nil
 }
 
-func validateAlerts(res *api.AlertResult, node string) error {
-
-	if !strings.Contains(res.Alert.Alert, "honeypod.") {
+func validateAlerts(res *api.EventResult, node string) error {
+	eventsData := res.EventsData
+	if !strings.Contains(eventsData.Origin, "honeypod.") {
 		return fmt.Errorf("skipping non honeypod alert")
 	}
 
-	record := res.Alert.Record
-	if record.DestNameAggr == nil || record.DestNamespace == nil || record.SourceNameAggr == nil || record.SourceNamespace == nil || record.HostKeyword == nil {
+	b, err := json.Marshal(eventsData.Record)
+	if err != nil {
+		return fmt.Errorf("failed to marshal honeypod alert.record")
+	}
+	record := &events.HoneypodAlertRecord{}
+	err = json.Unmarshal(b, record)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal honeypod alert.record")
+	}
+
+	if eventsData.DestNameAggr == "" || eventsData.DestNamespace == "" || eventsData.SourceNameAggr == "" || eventsData.SourceNamespace == "" || record.HostKeyword == nil {
 		return fmt.Errorf("skipping invalid honeypod alert")
 	}
 
@@ -70,42 +79,43 @@ func validateAlerts(res *api.AlertResult, node string) error {
 }
 
 func loop(p *hp.HoneyPodLogProcessor, node string) error {
-	//We only look at the past 10min of alerts
+	// We only look at the past 10min of alerts
 	endTime := time.Now()
 	startTime := p.LastProcessingTime
 	log.Info("Querying Elasticsearch for new Alerts between:", startTime, endTime)
 
-	//We retrieve alerts from elastic and filter
-	filteredAlerts := make(map[string]*api.Alert)
-	for e := range p.LogHandler.SearchAlertLogs(p.Ctx, nil, &startTime, &endTime) {
-		if e.Err != nil {
-			log.WithError(e.Err).Error("Failed querying alert logs")
-			return e.Err
+	// We retrieve alerts from elastic and filter
+	filteredAlerts := make(map[string]*api.EventsData)
+
+	for eventResult := range p.Client.SearchSecurityEvents(p.Ctx, &startTime, &endTime, nil, false) {
+		if eventResult.Err != nil {
+			log.WithError(eventResult.Err).Error("Failed querying event logs")
+			return eventResult.Err
 		}
 
-		err := validateAlerts(e, node)
+		err := validateAlerts(eventResult, node)
 		if err != nil {
 			continue
 		}
 
-		//Store HoneyPod in buckets, using destination pod name aggregate
-		if filteredAlerts[*e.Alert.Record.DestNameAggr] == nil {
-			filteredAlerts[*e.Alert.Record.DestNameAggr] = e.Alert
+		// Store HoneyPod in buckets, using destination pod name aggregate
+		if filteredAlerts[eventResult.EventsData.DestNameAggr] == nil {
+			filteredAlerts[eventResult.EventsData.DestNameAggr] = eventResult.EventsData
 		}
 	}
 
 	var store = snort.NewStore(p.LastProcessingTime)
-	//Parallel processing of HoneyPod alerts
+	// Parallel processing of HoneyPod alerts
 	for _, alert := range filteredAlerts {
-		go func(alert *api.Alert) {
-			log.Infof("Processing Alert: %v", alert.Alert)
-			//Retrieve Pcap locations
+		go func(alert *api.EventsData) {
+			log.Infof("Processing Alert: %v", alert.Origin)
+			// Retrieve Pcap locations
 			pcapArray, err := GetPcaps(alert, hp.PcapPath)
 			if err != nil {
 				log.WithError(err).Error("Failed to retrieve pcaps")
 			}
-			log.Infof("Alert: %v, scanning: %v", alert.Alert, pcapArray)
-			//Run snort on each pcap and send new alerts to Elasticsearch
+			log.Infof("Alert: %v, scanning: %v", alert.Origin, pcapArray)
+			// Run snort on each pcap and send new alerts to Elasticsearch
 			for _, pcap := range pcapArray {
 				err := snort.RunScanSnort(alert, pcap, hp.SnortPath)
 				if err != nil {
@@ -116,7 +126,7 @@ func loop(p *hp.HoneyPodLogProcessor, node string) error {
 			if err != nil {
 				log.WithError(err).Error("Failed to process Snort on pcap")
 			}
-			log.Infof("Alert: %v scanning completed", alert.Alert)
+			log.Infof("Alert: %v scanning completed", alert.Origin)
 		}(alert)
 	}
 
@@ -131,23 +141,26 @@ type backendClientAccessor interface {
 }
 
 func main() {
-
-	//Get Default Elastic client config, then modify URL
+	// Get Default Elastic client config, then modify URL
 	log.Info("Honeypod controller started")
 	cfg := elastic.MustLoadConfig()
 
-	//Try to connect to Elasticsearch
+	// Try to connect to Elasticsearch
 	c, err := elastic.NewFromConfig(cfg)
 	if err != nil {
-		log.WithError(err).Panic("Failed to initiate ES client.")
+		log.WithError(err).Fatal("Failed to initiate ES client.")
 	}
-	//Set up context
+	// Set up context
 	ctx := context.Background()
 
-	//Check if required index exists
-	exists, err := c.Backend().IndexExists(hp.Index).Do(context.Background())
-	if err != nil || !exists {
-		log.WithError(err).Panic("Error unable to access Index: ", hp.Index)
+	// Check if required index exists
+	exists, err := c.EventsIndexExists(ctx)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to check event index existence.")
+	} else if !exists {
+		if err := c.CreateEventsIndex(ctx); err != nil {
+			log.WithError(err).Fatal("Failed to create event index.")
+		}
 	}
 
 	clientCalico, err := clientv3.NewFromEnv()
@@ -182,10 +195,10 @@ func main() {
 	}()
 
 	p := hp.NewHoneyPodLogProcessor(c, ctx)
-	//Retrieve controller's running NodeName
+	// Retrieve controller's running NodeName
 	node, err := getNodeName()
 	if err != nil {
-		log.WithError(err).Panic("Error getting NodeName")
+		log.WithError(err).Fatal("Error getting NodeName")
 	}
 
 	ticker := time.NewTicker(10 * time.Minute)
@@ -197,8 +210,8 @@ func main() {
 		select {
 		case <-ticker.C:
 			if hasLicense {
-				//Create HoneyPodLogProcessor and Es Writer
-				//Start controller loop
+				// Create HoneyPodLogProcessor and Es Writer
+				// Start controller loop
 				log.Info("Honeypod controller loop started")
 				err = loop(p, node)
 				if err != nil {
