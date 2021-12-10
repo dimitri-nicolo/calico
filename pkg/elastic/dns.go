@@ -35,7 +35,7 @@ func (c *client) SearchDNSLogs(ctx context.Context, filter *api.DNSLogsSelection
 		defer close(resultChan)
 
 		scroll := c.Scroll(dnsSearchIndex).
-			Size(DefaultAlertPageSize).
+			Size(DefaultDNSPageSize).
 			Query(queries).
 			Sort(api.DNSLogStartTime, true)
 

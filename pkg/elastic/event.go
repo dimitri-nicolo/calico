@@ -14,6 +14,10 @@ import (
 	"github.com/tigera/lma/pkg/api"
 )
 
+const (
+	DefaultEventPageSize = 100
+)
+
 func (c *client) EventsIndexExists(ctx context.Context) (bool, error) {
 	alias := c.ClusterAlias(EventsIndex)
 	return c.IndexExists(alias).Do(ctx)
@@ -153,7 +157,7 @@ func (c *client) SearchSecurityEvents(ctx context.Context, start, end *time.Time
 	go func() {
 		defer close(resultChan)
 		scroll := c.Scroll(index).
-			Size(DefaultAlertPageSize).
+			Size(DefaultEventPageSize).
 			Query(queries).
 			Sort(api.EventTime, true)
 
