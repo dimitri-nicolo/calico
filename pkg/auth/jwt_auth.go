@@ -69,8 +69,10 @@ type k8sAuthn struct {
 	authnCli authenticationv1.AuthenticationV1Interface
 }
 
-// Authenticate authenticates a request that contains a bearer token issued by k8s.
-func (k *k8sAuthn) Authenticate(token string) (userInfo user.Info, httpStatusCode int, err error) {
+// Authenticate expects an authorization header containing a bearer token and returns the authenticated user.
+func (k *k8sAuthn) Authenticate(authHeader string) (userInfo user.Info, httpStatusCode int, err error) {
+	// Strip the "Bearer " part of the token.
+	token := authHeader[7:]
 	tknReview, err := k.authnCli.TokenReviews().Create(
 		context.Background(),
 		&authnv1.TokenReview{
@@ -163,13 +165,10 @@ func (a *jwtAuth) Authenticate(req *http.Request) (user.Info, int, error) {
 	}
 
 	authHeader := req.Header.Get("Authorization")
-	// Strip the "Bearer " part of the token. We know this is possible, since it has been validated above.
-	token := authHeader[7:]
-
 	authn, ok := a.authenticators[issuer]
 	var userInfo user.Info
 	if ok {
-		usr, stat, err := authn.Authenticate(token)
+		usr, stat, err := authn.Authenticate(authHeader)
 		if err != nil {
 			return usr, stat, err
 		}
