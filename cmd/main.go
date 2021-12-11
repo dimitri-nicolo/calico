@@ -12,15 +12,16 @@ import (
 	lmak8s "github.com/tigera/lma/pkg/k8s"
 	cache2 "github.com/tigera/packetcapture-api/pkg/cache"
 	"github.com/tigera/packetcapture-api/pkg/capture"
-
-	"github.com/projectcalico/apiserver/pkg/authentication"
-
-	"github.com/kelseyhightower/envconfig"
-	log "github.com/sirupsen/logrus"
 	"github.com/tigera/packetcapture-api/pkg/config"
 	"github.com/tigera/packetcapture-api/pkg/handlers"
 	"github.com/tigera/packetcapture-api/pkg/middleware"
 	"github.com/tigera/packetcapture-api/pkg/version"
+
+	"k8s.io/client-go/kubernetes"
+
+	"github.com/kelseyhightower/envconfig"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -61,7 +62,8 @@ func main() {
 			log.WithError(err).Fatal("Cannot init client cache")
 		}
 	}()
-	var auth = middleware.NewAuth(mustGetAuthenticator(cfg), cache)
+	authn := mustGetAuthenticator(csFactory, cfg)
+	authz := middleware.NewAuthZ(cache)
 	var k8sCommands = capture.NewK8sCommands(cache)
 	var fileCommands = capture.NewFileCommands(cache)
 	var files = handlers.NewFiles(cache, k8sCommands, fileCommands)
@@ -70,38 +72,41 @@ func main() {
 	// Define handlers
 	http.Handle("/version", http.HandlerFunc(version.Handler))
 	http.Handle("/health", http.HandlerFunc(handlers.Health))
-	http.Handle("/download/", middleware.Parse(auth.Authenticate(auth.Authorize(files.Download))))
-	http.Handle("/files/", middleware.Parse(auth.Authenticate(auth.Authorize(files.Delete))))
+	http.Handle("/download/", middleware.Parse(middleware.AuthenticationHandler(authn, authz.Authorize(files.Download))))
+	http.Handle("/files/", middleware.AuthenticationHandler(authn, authz.Authorize(files.Delete)))
 
 	// Start server
 	log.Fatal(http.ListenAndServeTLS(addr, cfg.HTTPSCert, cfg.HTTPSKey, nil))
 }
 
-func mustGetAuthenticator(cfg *config.Config) authentication.Authenticator {
-	authenticator, err := authentication.New()
+func mustGetAuthenticator(cs lmak8s.ClientSetFactory, cfg *config.Config) lmaauth.JWTAuth {
+	restConfig := cs.NewRestConfigForApplication(lmak8s.DefaultCluster)
+
+	clientSet, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
-		log.WithError(err).Panic("Unable to create auth configuration")
+		log.WithError(err).Fatal("Failed to configure k8s client")
 	}
 
+	var options []lmaauth.JWTAuthOption
 	if cfg.DexEnabled {
-		log.Debug("Configuring Dex for authentication")
-		opts := []lmaauth.DexOption{
-			lmaauth.WithGroupsClaim(cfg.OIDCAuthGroupsClaim),
-			lmaauth.WithJWKSURL(cfg.OIDCAuthJWKSURL),
-			lmaauth.WithUsernamePrefix(cfg.OIDCAuthUsernamePrefix),
-			lmaauth.WithGroupsPrefix(cfg.OIDCAuthGroupsPrefix),
-		}
-
-		dex, err := lmaauth.NewDexAuthenticator(
+		oidcAuth, err := lmaauth.NewDexAuthenticator(
 			cfg.OIDCAuthIssuer,
 			cfg.OIDCAuthClientID,
 			cfg.OIDCAuthUsernameClaim,
-			opts...)
+			lmaauth.WithGroupsClaim(cfg.OIDCAuthGroupsClaim),
+			lmaauth.WithJWKSURL(cfg.OIDCAuthJWKSURL),
+			lmaauth.WithUsernamePrefix(cfg.OIDCAuthUsernamePrefix),
+			lmaauth.WithGroupsPrefix(cfg.OIDCAuthGroupsPrefix))
 		if err != nil {
 			log.WithError(err).Panic("Unable to create dex authenticator")
 		}
-		authenticator = lmaauth.NewAggregateAuthenticator(dex, authenticator)
+
+		options = append(options, lmaauth.WithAuthenticator(cfg.OIDCAuthIssuer, oidcAuth))
+	}
+	authn, err := lmaauth.NewJWTAuth(restConfig, clientSet, options...)
+	if err != nil {
+		log.WithError(err).Fatal("Unable to create authn configuration")
 	}
 
-	return authenticator
+	return authn
 }
