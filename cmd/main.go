@@ -9,6 +9,8 @@ import (
 	"os"
 	"time"
 
+	lma "github.com/tigera/lma/pkg/elastic"
+
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/dpisyncer"
 	"github.com/projectcalico/libcalico-go/lib/health"
@@ -78,11 +80,12 @@ func main() {
 		log.Fatal("NODENAME environment is not set")
 	}
 
-	esCfg := &config.Config{}
-	if err := envconfig.Process("", esCfg); err != nil {
-		log.Fatal(err)
+	lmaESClient, err := lma.NewFromConfig(lma.MustLoadConfig())
+	if err != nil {
+		log.WithError(err).Fatal("Could not connect to Elasticsearch")
 	}
-	esForwarder, err := elastic.NewESForwarder(esCfg, elastic.NewClient, elasticRetrySendInterval)
+
+	esForwarder, err := elastic.NewESForwarder(lmaESClient, elasticRetrySendInterval)
 	if err != nil {
 		log.Fatal(err)
 	}

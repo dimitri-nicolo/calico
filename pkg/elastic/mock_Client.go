@@ -14,11 +14,11 @@ type MockClient struct {
 }
 
 // Upsert provides a mock function with given fields: ctx, docID, doc
-func (_m *MockClient) Upsert(ctx context.Context, docID string, doc Doc) error {
+func (_m *MockClient) Upsert(ctx context.Context, docID string, doc SecurityEvent) error {
 	ret := _m.Called(ctx, docID, doc)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, Doc) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, SecurityEvent) error); ok {
 		r0 = rf(ctx, docID, doc)
 	} else {
 		r0 = ret.Error(0)

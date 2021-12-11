@@ -4,60 +4,26 @@ package elastic
 
 import (
 	"context"
-	"fmt"
 	"time"
 
-	"github.com/tigera/deep-packet-inspection/pkg/config"
+	lmaAPI "github.com/tigera/lma/pkg/api"
+	lma "github.com/tigera/lma/pkg/elastic"
+
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	EventIndexPattern = "tigera_secure_ee_events.%s"
-)
-
-type newClient func(esCLI *elastic.Client, elasticIndexSuffix string) Client
-
-type Client interface {
-	// Upsert adds/updates the document with given document ID to ElasticSearch.
-	// Using docID to index ensures there are no duplicate alerts for same document.
-	Upsert(ctx context.Context, docID string, doc Doc) error
-}
-
-// client is an implementation of Client interface.
-type client struct {
-	esCLI      *elastic.Client
-	eventIndex string
-}
-
-func NewClient(esCLI *elastic.Client, elasticIndexSuffix string) Client {
-	return &client{
-		esCLI:      esCLI,
-		eventIndex: fmt.Sprintf(EventIndexPattern, elasticIndexSuffix)}
-}
-
-// Upsert adds/updates the document with given document ID to ElasticSearch.
-func (es *client) Upsert(ctx context.Context, docID string, doc Doc) error {
-	log.Debugf("Sending document to es...")
-	_, err := es.esCLI.Index().Index(es.eventIndex).Id(docID).BodyJson(doc).Do(ctx)
-	return err
-}
-
 type ESForwarder interface {
 	Run(ctx context.Context)
 	// Forward adds the given event data into worker queue, items in the worker queue are sent to ElasticSearch.
-	Forward(item EventData)
+	Forward(item SecurityEvent)
 }
 
-func NewESForwarder(cfg *config.Config, esClient newClient, elasticRetrySendInterval time.Duration) (ESForwarder, error) {
-	c, err := NewElasticClient(cfg)
-	if err != nil {
-		return nil, err
-	}
+func NewESForwarder(lmaClient lma.Client, elasticRetrySendInterval time.Duration) (ESForwarder, error) {
 	fwd := &esForwarder{
-		esClient:                 esClient(c, cfg.ElasticIndexSuffix),
+		lmaESClient:              lmaClient,
 		elasticRetrySendInterval: elasticRetrySendInterval,
 		queue:                    workqueue.New(),
 	}
@@ -66,27 +32,14 @@ func NewESForwarder(cfg *config.Config, esClient newClient, elasticRetrySendInte
 
 // esForwarder is an implementation of ESForwarder interface.
 type esForwarder struct {
-	esClient                 Client
+	lmaESClient              lma.Client
 	elasticRetrySendInterval time.Duration
 	queue                    *workqueue.Type
 }
 
-type Doc struct {
-	Alert           string `json:"alert"`
-	Time            int64  `json:"time"`
-	Type            string `json:"type"`
-	Host            string `json:"host"`
-	SourceIP        string `json:"source_ip"`
-	SourcePort      string `json:"source_port"`
-	SourceName      string `json:"source_name"`
-	SourceNamespace string `json:"source_namespace"`
-	DestIP          string `json:"dest_ip"`
-	DestPort        string `json:"dest_port"`
-	DestName        string `json:"dest_name"`
-	DestNamespace   string `json:"dest_namespace"`
-	Description     string `json:"description"`
-	Severity        int    `json:"severity"`
-	Record          Record `json:"record"`
+type SecurityEvent struct {
+	lmaAPI.EventsData
+	DocID string
 }
 
 type Record struct {
@@ -95,9 +48,12 @@ type Record struct {
 	SnortAlert             string `json:"snort_alert"`
 }
 
-type EventData struct {
-	Doc Doc
-	ID  string
+func (e SecurityEvent) EventData() lmaAPI.EventsData {
+	return e.EventsData
+}
+
+func (e SecurityEvent) ID() string {
+	return e.DocID
 }
 
 func (s *esForwarder) Run(ctx context.Context) {
@@ -105,7 +61,7 @@ func (s *esForwarder) Run(ctx context.Context) {
 }
 
 // Forward adds the given event data into worker queue, items in the worker queue are sent to ElasticSearch.
-func (s *esForwarder) Forward(item EventData) {
+func (s *esForwarder) Forward(item SecurityEvent) {
 	log.Debugf("Adding item to queue %#v", item)
 	s.queue.Add(item)
 }
@@ -120,17 +76,21 @@ func (s *esForwarder) run(ctx context.Context) {
 			log.Error("Worker queue sending to ElasticSearch has shutdown.")
 			return
 		}
-		var err error
-		err = s.esClient.Upsert(ctx, item.(EventData).ID, item.(EventData).Doc)
-		for ; err != nil; err = s.esClient.Upsert(ctx, item.(EventData).ID, item.(EventData).Doc) {
-			if elastic.IsConnErr(err) || elastic.IsForbidden(err) || elastic.IsUnauthorized(err) {
-				log.WithError(err).Error("Failed to send document to ElasticSearch, will retry after interval.")
-				<-time.After(s.elasticRetrySendInterval)
-				continue
+		if event, ok := item.(SecurityEvent); ok {
+			_, err := s.lmaESClient.PutSecurityEventWithID(ctx, event.EventData(), event.DocID)
+			for ; err != nil; _, err = s.lmaESClient.PutSecurityEventWithID(ctx, event.EventData(), event.DocID) {
+				if elastic.IsConnErr(err) || elastic.IsForbidden(err) || elastic.IsUnauthorized(err) {
+					log.WithError(err).Error("Failed to send document to ElasticSearch, will retry after interval.")
+					<-time.After(s.elasticRetrySendInterval)
+					continue
+				}
+				log.WithError(err).Error("Failed to send document to ElasticSearch")
+				break
 			}
-			log.WithError(err).Error("Failed to send document to ElasticSearch")
-			break
+		} else {
+			log.Error("Failed to parse the security event in worker queue")
 		}
+
 		log.Debugf("Removing item from the worker queue after sending to ES %#v", item)
 		s.queue.Done(item)
 	}
