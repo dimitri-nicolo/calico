@@ -11,7 +11,6 @@ require (
 	github.com/olivere/elastic/v7 v7.0.22
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.1
-	github.com/projectcalico/apiserver v0.0.0-20210421215237-3cfbeeffa901
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.8.1
