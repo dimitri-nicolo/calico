@@ -36,12 +36,14 @@ replace (
 )
 
 require (
+	github.com/containernetworking/cni v0.8.0 // indirect
+	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.1
 	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/sirupsen/logrus v1.8.1
 	github.com/tigera/licensing v1.0.1-0.20211203232432-ca834eb3a8aa
-	github.com/tigera/lma v0.0.0-20211213202117-c7c2f6ed30e1
+	github.com/tigera/lma v0.0.0-20211213203413-2fe3552356ad
 	k8s.io/apiserver v0.27.1 // indirect
 	k8s.io/client-go v0.27.1 // indirect
 )
