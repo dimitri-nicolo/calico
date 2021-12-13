@@ -10,8 +10,11 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/tigera/lma/pkg/api"
 
 	cache3 "github.com/tigera/deep-packet-inspection/pkg/cache"
 	"github.com/tigera/deep-packet-inspection/pkg/config"
@@ -29,6 +32,8 @@ const (
 	fileName          = "alert_fast.txt"
 	tailRetryInterval = 30 * time.Second
 	timeLayout        = "06/01/02-15:04:05"
+	description       = "Encountered suspicious traffic matching snort rule for malicious activity"
+	eventType         = "deep_packet_inspection"
 )
 
 type EventGenerator interface {
@@ -132,8 +137,7 @@ func (r *eventGenerator) readRotatedFiles(wepKey model.WorkloadEndpointKey) {
 			}
 			lineStr := string(line[:])
 			if lineStr != "" {
-				id, doc := r.convertAlertToESDoc(lineStr)
-				r.esForwarder.Forward(elastic.EventData{Doc: doc, ID: id})
+				r.esForwarder.Forward(r.convertAlertToSecurityEvent(lineStr))
 			}
 		}
 	}
@@ -164,8 +168,7 @@ func (r *eventGenerator) tailFile(wepKey model.WorkloadEndpointKey) {
 		log.Infof("Started tailing files for %s and %s.", r.dpiKey, wepKey)
 		r.filePathToTail[fileRelativePath] = t
 		for line := range t.Lines {
-			id, doc := r.convertAlertToESDoc(line.Text)
-			r.esForwarder.Forward(elastic.EventData{Doc: doc, ID: id})
+			r.esForwarder.Forward(r.convertAlertToSecurityEvent(line.Text))
 		}
 
 		err = t.Wait()
@@ -200,20 +203,24 @@ func (r *eventGenerator) deleteFile(fileRelativePath, fileAbsolutePath string) {
 	}
 }
 
-// convertAlertToESDoc converts the alert created by snort into document that should be indexed into ElasticSearch.
+// convertAlertToSecurityEvent converts the alert created by snort into document that should be indexed into ElasticSearch.
 //
 // Sample Alert format:
 // <time> <packet action> [**] [<generator_id)>:<signature_id>:<signature_revision>] "specs" "<msg_defined_in_signature>" [**] [Priority: <signature_priority>] <appID> {Protocol} <src_ip:port> -> <dst_ip:port>
 // Sample Alert:
 // 21/08/30-17:19:37.337831 [**] [1:1000005:1] "msg:1_alert_fast" [**] [Priority: 0] {ICMP} 74.125.124.100 -> 10.28.0.13
 // Details about alert format is available in https://github.com/snort3/snort3/blob/35b6804f4506993029221450769a76e6281ae4ec/src/loggers/alert_fast.cc
-func (r *eventGenerator) convertAlertToESDoc(alertText string) (docID string, esDoc elastic.Doc) {
-	esDoc = elastic.Doc{
-		Host:        r.cfg.NodeName,
-		Type:        "alert",
-		Alert:       fmt.Sprintf("dpi.%s/%s", r.dpiKey.Namespace, r.dpiKey.Name),
-		Severity:    100,
-		Description: "Signature Triggered Alert",
+func (r *eventGenerator) convertAlertToSecurityEvent(alertText string) elastic.SecurityEvent {
+	event := elastic.SecurityEvent{
+		EventsData: api.EventsData{
+			EventsSearchFields: api.EventsSearchFields{
+				Host:        r.cfg.NodeName,
+				Type:        eventType,
+				Origin:      fmt.Sprintf("dpi.%s/%s", r.dpiKey.Namespace, r.dpiKey.Name),
+				Severity:    100,
+				Description: description,
+			},
+		},
 	}
 
 	s := strings.Split(alertText, " ")
@@ -225,7 +232,7 @@ func (r *eventGenerator) convertAlertToESDoc(alertText string) (docID string, es
 	} else {
 		index++
 		// Time format in ElasticSearch events index is epoch_second
-		esDoc.Time = tm.Unix()
+		event.Time = tm.Unix()
 	}
 
 	//skip through all optional fields till we get to signature information
@@ -238,49 +245,63 @@ func (r *eventGenerator) convertAlertToESDoc(alertText string) (docID string, es
 	// Extract snort signature information
 	sigInfo := strings.Split(s[index], ":")
 	if len(sigInfo) == 3 {
-		esDoc.Record = elastic.Record{
+		event.Record = elastic.Record{
 			SnortSignatureID:       sigInfo[1],
 			SnortSignatureRevision: strings.TrimSuffix(sigInfo[2], "]"),
 			SnortAlert:             alertText,
 		}
 	} else {
 		log.Errorf("Missing snort signature information in alert")
-		esDoc.Record = elastic.Record{
+		event.Record = elastic.Record{
 			SnortAlert: alertText,
 		}
 	}
 
+	var srcIP, srcPort, destIP, destPort string
 	if len(s) >= 3 && s[len(s)-2] == "->" {
 		src := s[len(s)-3]
-		esDoc.SourceIP, esDoc.SourcePort, err = net.SplitHostPort(src)
-		if err != nil {
+		if srcIP, srcPort, err = net.SplitHostPort(src); err != nil {
 			if strings.Contains(err.Error(), "missing port in address") {
-				esDoc.SourceIP = src
+				srcIP = src
 			} else {
 				log.WithError(err).Errorf("Failed to parse source IP %s from snort alert", src)
 			}
+		} else {
+			if intPort, err := strconv.ParseInt(srcPort, 10, 32); err != nil {
+				log.WithError(err).Errorf("Failed to parse source Port %s from snort alert", src)
+			} else {
+				event.SourcePort = &intPort
+			}
 		}
+		event.SourceIP = &srcIP
 
 		dst := s[len(s)-1]
-		esDoc.DestIP, esDoc.DestPort, err = net.SplitHostPort(dst)
-		if err != nil {
+		if destIP, destPort, err = net.SplitHostPort(dst); err != nil {
 			if strings.Contains(err.Error(), "missing port in address") {
-				esDoc.DestIP = dst
+				destIP = dst
 			} else {
 				log.WithError(err).Errorf("Failed to parse destination IP %s from snort alert", dst)
 			}
+		} else {
+			if intPort, err := strconv.ParseInt(destPort, 10, 32); err != nil {
+				log.WithError(err).Errorf("Failed to parse destination Port %s from snort alert", src)
+			} else {
+				event.DestPort = &intPort
+			}
 		}
+		event.DestIP = &destIP
+
 	} else {
 		log.WithError(err).Errorf("Failed to parse source and destination IP from snort alert: %s", alertText)
 	}
 
-	_, esDoc.SourceName, esDoc.SourceNamespace = r.wepCache.Get(esDoc.SourceIP)
-	_, esDoc.DestName, esDoc.DestNamespace = r.wepCache.Get(esDoc.DestIP)
+	_, event.SourceName, event.SourceNamespace = r.wepCache.Get(*event.SourceIP)
+	_, event.DestName, event.DestNamespace = r.wepCache.Get(*event.DestIP)
 
 	// Construct a unique document ID for the ElasticSearch document built.
 	// Use _ as a separator as it's allowed in URLs, but not in any of the components of this ID
-	docID = fmt.Sprintf("%s_%s_%d_%s_%s_%s_%s_%s", r.dpiKey.Namespace, r.dpiKey.Name, tm.UnixNano(),
-		esDoc.SourceIP, esDoc.SourcePort, esDoc.DestIP, esDoc.DestPort, esDoc.Host)
+	event.DocID = fmt.Sprintf("%s_%s_%d_%s_%s_%s_%s_%s", r.dpiKey.Namespace, r.dpiKey.Name, tm.UnixNano(),
+		srcIP, srcPort, destIP, destPort, event.Host)
 
-	return docID, esDoc
+	return event
 }

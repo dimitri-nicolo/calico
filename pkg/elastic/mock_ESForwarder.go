@@ -14,7 +14,7 @@ type MockESForwarder struct {
 }
 
 // Forward provides a mock function with given fields: item
-func (_m *MockESForwarder) Forward(item EventData) {
+func (_m *MockESForwarder) Forward(item SecurityEvent) {
 	_m.Called(item)
 }
 

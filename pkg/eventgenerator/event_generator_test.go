@@ -9,13 +9,15 @@ import (
 	"os"
 	"time"
 
+	"github.com/tigera/lma/pkg/api"
+	lma "github.com/tigera/lma/pkg/elastic"
+
 	cache2 "github.com/tigera/deep-packet-inspection/pkg/cache"
 	"github.com/tigera/deep-packet-inspection/pkg/config"
 	"github.com/tigera/deep-packet-inspection/pkg/dpiupdater"
 	"github.com/tigera/deep-packet-inspection/pkg/elastic"
 	"github.com/tigera/deep-packet-inspection/pkg/eventgenerator"
 
-	es "github.com/olivere/elastic/v7"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
@@ -49,17 +51,13 @@ var _ = Describe("File Parser", func() {
 	var cfg *config.Config
 	var ctx context.Context
 	var mockESForwarder *elastic.MockESForwarder
-	var mockESClient *elastic.MockClient
+	var mockESClient *lma.MockClient
 	var mockDPIUpdater *dpiupdater.MockDPIStatusUpdater
-
-	mockClientFn := func(esCLI *es.Client, elasticIndexSuffix string) elastic.Client {
-		return mockESClient
-	}
 
 	BeforeEach(func() {
 		mockDPIUpdater = &dpiupdater.MockDPIStatusUpdater{}
 		mockDPIUpdater.AssertExpectations(GinkgoT())
-		mockESClient = &elastic.MockClient{}
+		mockESClient = &lma.MockClient{}
 		mockESClient.AssertExpectations(GinkgoT())
 		ctx = context.Background()
 		mockESForwarder = &elastic.MockESForwarder{}
@@ -91,26 +89,30 @@ var _ = Describe("File Parser", func() {
 		// Copy and create an alert file
 		path := fmt.Sprintf("%s/%s/%s/%s", cfg.SnortAlertFileBasePath, dpiKey.Namespace, dpiKey.Name, podName)
 		copyAlertFile(path, orgFile, expectedFile)
-
-		esDoc := elastic.Doc{
-			Alert:           "dpi.dpi-ns/dpi-name",
-			Time:            1630343977,
-			Type:            "alert",
-			Host:            "",
-			SourceIP:        "74.125.124.100",
-			SourcePort:      "9090",
-			SourceName:      "",
-			SourceNamespace: "",
-			DestIP:          "10.28.0.13",
-			DestPort:        "",
-			DestName:        "podname",
-			DestNamespace:   "dpi-ns",
-			Description:     "Signature Triggered Alert",
-			Severity:        100,
-			Record:          elastic.Record{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100:9090 -> 10.28.0.13"},
+		srcIP := "74.125.124.100"
+		srcPort := int64(9090)
+		destIP := "10.28.0.13"
+		destPort := ""
+		event := elastic.SecurityEvent{
+			EventsData: api.EventsData{
+				EventsSearchFields: api.EventsSearchFields{
+					Time:          1630343977,
+					Type:          "deep_packet_inspection",
+					Description:   "Encountered suspicious traffic matching snort rule for malicious activity",
+					Severity:      100,
+					Origin:        "dpi.dpi-ns/dpi-name",
+					SourceIP:      &srcIP,
+					SourcePort:    &srcPort,
+					DestIP:        &destIP,
+					DestName:      podName,
+					DestNamespace: dpiNs,
+					Host:          cfg.NodeName,
+				},
+				Record: elastic.Record{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100:9090 -> 10.28.0.13"},
+			},
 		}
-		docID := fmt.Sprintf("%s_%s_1630343977337831000_%s_%s_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, esDoc.SourceIP, esDoc.SourcePort, esDoc.DestIP, esDoc.DestPort, esDoc.Host)
-		mockESForwarder.On("Forward", elastic.EventData{ID: docID, Doc: esDoc}).Return(nil).Times(1)
+		event.DocID = fmt.Sprintf("%s_%s_1630343977337831000_%s_%d_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, *event.SourceIP, srcPort, *event.DestIP, destPort, event.Host)
+		mockESForwarder.On("Forward", event).Return(nil).Times(1)
 
 		// GenerateEventsForWEP should parse file and call elastic service.
 		wepCache := cache2.NewWEPCache()
@@ -136,7 +138,7 @@ var _ = Describe("File Parser", func() {
 	})
 
 	It("should stop tailing alert file on reaching EOF if snort is no longer running", func() {
-		esForwarder, err := elastic.NewESForwarder(cfg, mockClientFn, elasticRetrySendInterval)
+		esForwarder, err := elastic.NewESForwarder(mockESClient, elasticRetrySendInterval)
 		esForwarder.Run(ctx)
 		Expect(err).ShouldNot(HaveOccurred())
 
@@ -148,12 +150,12 @@ var _ = Describe("File Parser", func() {
 
 		numberOfCallsToSend := 0
 		totalAlertsInFile := 14
-		mockESClient.On("Upsert", mock.Anything, mock.Anything, mock.Anything).Return().Run(
+		mockESClient.On("PutSecurityEventWithID", mock.Anything, mock.Anything, mock.Anything).Return().Run(
 			func(args mock.Arguments) {
 				numberOfCallsToSend++
 				for _, c := range mockESClient.ExpectedCalls {
-					if c.Method == "Upsert" {
-						c.ReturnArguments = mock.Arguments{nil}
+					if c.Method == "PutSecurityEventWithID" {
+						c.ReturnArguments = mock.Arguments{nil, nil}
 					}
 				}
 			}).Times(totalAlertsInFile)
@@ -180,25 +182,30 @@ var _ = Describe("File Parser", func() {
 		copyAlertFile(path, orgFile, expectedFile)
 		cfg.NodeName = "node0"
 
-		esDoc := elastic.Doc{
-			Alert:           "dpi.dpi-ns/dpi-name",
-			Time:            1630343977,
-			Type:            "alert",
-			Host:            cfg.NodeName,
-			SourceIP:        "74.125.124.100",
-			SourcePort:      "9090",
-			SourceName:      "",
-			SourceNamespace: "",
-			DestIP:          "10.28.0.13",
-			DestPort:        "",
-			DestName:        podName,
-			DestNamespace:   dpiNs,
-			Description:     "Signature Triggered Alert",
-			Severity:        100,
-			Record:          elastic.Record{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100:9090 -> 10.28.0.13"},
+		srcIP := "74.125.124.100"
+		srcPort := int64(9090)
+		destIP := "10.28.0.13"
+		destPort := ""
+		event := elastic.SecurityEvent{
+			EventsData: api.EventsData{
+				EventsSearchFields: api.EventsSearchFields{
+					Time:          1630343977,
+					Type:          "deep_packet_inspection",
+					Description:   "Encountered suspicious traffic matching snort rule for malicious activity",
+					Severity:      100,
+					Origin:        "dpi.dpi-ns/dpi-name",
+					SourceIP:      &srcIP,
+					SourcePort:    &srcPort,
+					DestIP:        &destIP,
+					DestName:      podName,
+					DestNamespace: dpiNs,
+					Host:          cfg.NodeName,
+				},
+				Record: elastic.Record{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100:9090 -> 10.28.0.13"},
+			},
 		}
-		docID := fmt.Sprintf("%s_%s_1630343977337831000_%s_%s_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, esDoc.SourceIP, esDoc.SourcePort, esDoc.DestIP, esDoc.DestPort, esDoc.Host)
-		mockESForwarder.On("Forward", elastic.EventData{Doc: esDoc, ID: docID}).Return(nil).Times(1)
+		event.DocID = fmt.Sprintf("%s_%s_1630343977337831000_%s_%d_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, *event.SourceIP, srcPort, *event.DestIP, destPort, event.Host)
+		mockESForwarder.On("Forward", event).Return(nil).Times(1)
 
 		wepCache := cache2.NewWEPCache()
 		r := eventgenerator.NewEventGenerator(cfg, mockESForwarder, mockDPIUpdater, dpiKey, wepCache)
@@ -231,39 +238,47 @@ var _ = Describe("File Parser", func() {
 		copyAlertFile(path, orgFile, expectedFile)
 		cfg.NodeName = "node0"
 
-		esDoc1 := elastic.Doc{
-			Alert:           "dpi.dpi-ns/dpi-name",
-			Time:            1630343977,
-			Type:            "alert",
-			Host:            cfg.NodeName,
-			SourceIP:        "74.125.124.100",
-			SourceName:      "",
-			SourceNamespace: "",
-			DestIP:          "10.28.0.13",
-			DestName:        podName,
-			DestNamespace:   dpiNs,
-			Description:     "Signature Triggered Alert",
-			Severity:        100,
-			Record:          elastic.Record{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100 -> 10.28.0.13"},
+		srcIP := "74.125.124.100"
+		srcPort := int64(9090)
+		destIP := "10.28.0.13"
+		destPort := ""
+		event1 := elastic.SecurityEvent{
+			EventsData: api.EventsData{
+				EventsSearchFields: api.EventsSearchFields{
+					Time:          1630343977,
+					Type:          "deep_packet_inspection",
+					Description:   "Encountered suspicious traffic matching snort rule for malicious activity",
+					Severity:      100,
+					Origin:        "dpi.dpi-ns/dpi-name",
+					SourceIP:      &srcIP,
+					SourcePort:    &srcPort,
+					DestIP:        &destIP,
+					DestName:      podName,
+					DestNamespace: dpiNs,
+					Host:          cfg.NodeName,
+				},
+				Record: elastic.Record{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100:9090 -> 10.28.0.13"},
+			},
 		}
-		docID1 := fmt.Sprintf("%s_%s_1630343977337831000_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, esDoc1.SourceIP, esDoc1.DestIP, esDoc1.Host)
+		event1.DocID = fmt.Sprintf("%s_%s_1630343977337831000_%s_%d_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, *event1.SourceIP, srcPort, *event1.DestIP, destPort, event1.Host)
 
-		esDoc2 := elastic.Doc{
-			Alert:           "dpi.dpi-ns/dpi-name",
-			Time:            1630343977,
-			Type:            "alert",
-			Host:            cfg.NodeName,
-			SourceIP:        "74.125.124.100",
-			SourceName:      "",
-			SourceNamespace: "",
-			DestIP:          "10.28.0.13",
-			DestName:        "",
-			DestNamespace:   "dpiNs",
-			Description:     "Signature Triggered Alert",
-			Severity:        100,
-			Record:          elastic.Record{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100 -> 10.28.0.13"},
+		event2 := elastic.SecurityEvent{
+			EventsData: api.EventsData{
+				EventsSearchFields: api.EventsSearchFields{
+					Time:          1630343977,
+					Type:          "deep_packet_inspection",
+					Description:   "Encountered suspicious traffic matching snort rule for malicious activity",
+					Severity:      100,
+					Origin:        "dpi.dpi-ns/dpi-name",
+					SourceIP:      &srcIP,
+					DestIP:        &destIP,
+					DestNamespace: dpiNs,
+					Host:          cfg.NodeName,
+				},
+				Record: elastic.Record{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100:9090 -> 10.28.0.13"},
+			},
 		}
-		docID2 := fmt.Sprintf("%s_%s_1630343977337831000_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, esDoc2.SourceIP, esDoc2.DestIP, esDoc2.Host)
+		event2.DocID = fmt.Sprintf("%s_%s_1630343977337831000_%s_%d_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, *event2.SourceIP, srcPort, *event2.DestIP, destPort, event2.Host)
 
 		numberOfCallsToSend := 0
 		mockESForwarder.On("Forward", mock.Anything).Run(
@@ -272,11 +287,9 @@ var _ = Describe("File Parser", func() {
 				for _, c := range mockESClient.ExpectedCalls {
 					if c.Method == "Forward" {
 						if numberOfCallsToSend <= 1 {
-							Expect(c.Arguments.Get(1)).Should(BeEquivalentTo(esDoc1))
-							Expect(c.Arguments.Get(2)).Should(BeEquivalentTo(docID1))
+							Expect(c.Arguments.Get(1)).Should(BeEquivalentTo(event1))
 						} else {
-							Expect(c.Arguments.Get(1)).Should(BeEquivalentTo(esDoc2))
-							Expect(c.Arguments.Get(2)).Should(BeEquivalentTo(docID2))
+							Expect(c.Arguments.Get(1)).Should(BeEquivalentTo(event2))
 						}
 					}
 				}
@@ -372,7 +385,7 @@ var _ = Describe("File Parser", func() {
 	})
 
 	It("should process all previous leftover files during startup", func() {
-		esForwarder, err := elastic.NewESForwarder(cfg, mockClientFn, elasticRetrySendInterval)
+		esForwarder, err := elastic.NewESForwarder(mockESClient, elasticRetrySendInterval)
 		esForwarder.Run(ctx)
 		Expect(err).ShouldNot(HaveOccurred())
 
@@ -385,7 +398,7 @@ var _ = Describe("File Parser", func() {
 		copyAlertFile(path1, "3_alert_fast.txt", "alert_fast.txt.1731063433")
 		copyAlertFile(path1, "4_alert_fast.txt", "alert_fast.txt.1831063433")
 
-		mockESClient.On("Upsert", mock.Anything, mock.Anything, mock.Anything).Return(nil).Times(20)
+		mockESClient.On("PutSecurityEventWithID", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil).Times(20)
 
 		wepCache := cache2.NewWEPCache()
 		r := eventgenerator.NewEventGenerator(cfg, esForwarder, mockDPIUpdater, dpiKey, wepCache)
