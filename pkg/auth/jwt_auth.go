@@ -11,8 +11,6 @@ import (
 
 	"github.com/SermoDigital/jose/jws"
 
-	"github.com/projectcalico/apiserver/pkg/authentication"
-
 	log "github.com/sirupsen/logrus"
 
 	authnv1 "k8s.io/api/authentication/v1"
@@ -54,12 +52,17 @@ const (
 //
 // Note: JWTAuth is for JWT bearer tokens and does not support basic auth or other tokens.
 type JWTAuth interface {
+	Authenticator
+
+	RBACAuthorizer
+}
+
+// Authenticator authenticates a user based on an authorization header, whether the user uses basic auth or token auth.
+type Authenticator interface {
 	// Authenticate checks if a request is authenticated. It accepts only JWT bearer tokens (RFC-6750, RFC-7519).
 	// If it has impersonation headers, it will also check if the authenticated user is authorized
 	// to impersonate. The resulting user info will be that of the impersonated user.
 	Authenticate(r *http.Request) (userInfo user.Info, httpStatusCode int, err error)
-
-	RBACAuthorizer
 }
 
 // JWTAuthOption can be provided to NewJWTAuth to configure the authenticator.
@@ -70,7 +73,17 @@ type k8sAuthn struct {
 }
 
 // Authenticate expects an authorization header containing a bearer token and returns the authenticated user.
-func (k *k8sAuthn) Authenticate(authHeader string) (userInfo user.Info, httpStatusCode int, err error) {
+func (k *k8sAuthn) Authenticate(r *http.Request) (userInfo user.Info, httpStatusCode int, err error) {
+	// This will return an error when:
+	// - No authorization header is present
+	// - No Bearer prefix is present in the authorization header
+	// - No JWT is present
+	_, err = jws.ParseJWTFromRequest(r)
+	if err != nil {
+		return nil, 401, jws.ErrNoTokenInRequest
+	}
+	authHeader := r.Header.Get("Authorization")
+
 	// Strip the "Bearer " part of the token.
 	token := authHeader[7:]
 	tknReview, err := k.authnCli.TokenReviews().Create(
@@ -93,17 +106,8 @@ func (k *k8sAuthn) Authenticate(authHeader string) (userInfo user.Info, httpStat
 	}, 200, nil
 }
 
-// AuthenticateRequest authenticates a request that contains a bearer token issued by k8s.
-func (k *k8sAuthn) AuthenticateRequest(req *http.Request) (userInfo user.Info, httpStatusCode int, err error) {
-	authHeader := req.Header.Get("Authorization")
-	if len(authHeader) < 8 {
-		return nil, 400, jws.ErrNoTokenInRequest
-	}
-	return k.Authenticate(authHeader[7:])
-}
-
 // WithAuthenticator adds an authenticator for a specific token issuer.
-func WithAuthenticator(issuer string, authenticator authentication.Authenticator) JWTAuthOption {
+func WithAuthenticator(issuer string, authenticator Authenticator) JWTAuthOption {
 	return func(a *jwtAuth) error {
 		a.authenticators[issuer] = authenticator
 		return nil
@@ -112,6 +116,10 @@ func WithAuthenticator(issuer string, authenticator authentication.Authenticator
 
 // NewJWTAuth creates an object adhering to the Auth interface. It can perform authN and authZ.
 func NewJWTAuth(restConfig *rest.Config, k8sCli kubernetes.Interface, options ...JWTAuthOption) (JWTAuth, error) {
+	// This will return an error when:
+	// - No authorization header is present
+	// - No Bearer prefix is present in the authorization header
+	// - No JWT is present
 	jwt, err := jws.ParseJWT([]byte(restConfig.BearerToken))
 	if err != nil {
 		return nil, err
@@ -126,7 +134,7 @@ func NewJWTAuth(restConfig *rest.Config, k8sCli kubernetes.Interface, options ..
 
 	authn := &k8sAuthn{k8sCli.AuthenticationV1()}
 	jAuth := &jwtAuth{
-		authenticators: map[string]authentication.Authenticator{
+		authenticators: map[string]Authenticator{
 			// This issuer is used for tokens from service account secrets.
 			ServiceAccountIss: authn,
 			// This user is used for tokens from impersonating users.
@@ -146,7 +154,7 @@ func NewJWTAuth(restConfig *rest.Config, k8sCli kubernetes.Interface, options ..
 }
 
 type jwtAuth struct {
-	authenticators map[string]authentication.Authenticator
+	authenticators map[string]Authenticator
 	RBACAuthorizer
 }
 
@@ -154,6 +162,10 @@ type jwtAuth struct {
 // If it has impersonation headers, it will also check if the authenticated user is authorized
 //to impersonate. The resulting user info will be that of the impersonated user.
 func (a *jwtAuth) Authenticate(req *http.Request) (user.Info, int, error) {
+	// This will return an error when:
+	// - No authorization header is present
+	// - No Bearer prefix is present in the authorization header
+	// - No JWT is present
 	jwt, err := jws.ParseJWTFromRequest(req)
 	if err != nil {
 		return nil, 401, jws.ErrNoTokenInRequest
@@ -164,11 +176,10 @@ func (a *jwtAuth) Authenticate(req *http.Request) (user.Info, int, error) {
 		return nil, 401, jws.ErrIsNotJWT
 	}
 
-	authHeader := req.Header.Get("Authorization")
 	authn, ok := a.authenticators[issuer]
 	var userInfo user.Info
 	if ok {
-		usr, stat, err := authn.Authenticate(authHeader)
+		usr, stat, err := authn.Authenticate(req)
 		if err != nil {
 			return usr, stat, err
 		}

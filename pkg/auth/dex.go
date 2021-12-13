@@ -2,18 +2,16 @@ package auth
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
+	"github.com/SermoDigital/jose/jws"
 	"github.com/coreos/go-oidc"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/square/go-jose.v2"
 	"k8s.io/apiserver/pkg/authentication/user"
-
-	"github.com/projectcalico/apiserver/pkg/authentication"
 )
 
 const (
@@ -44,7 +42,7 @@ type dexAuthenticator struct {
 type DexOption func(*dexAuthenticator) error
 
 // NewDexAuthenticator creates an authenticator that uses DexIdp to validate authorization headers.
-func NewDexAuthenticator(issuer, clientID, usernameClaim string, options ...DexOption) (authentication.Authenticator, error) {
+func NewDexAuthenticator(issuer, clientID, usernameClaim string, options ...DexOption) (Authenticator, error) {
 	if issuer == "" {
 		return nil, errors.New("issuer is a required field")
 	}
@@ -166,34 +164,22 @@ func WithGroupsPrefix(groupsPrefix string) DexOption {
 // Authenticate returns user info if the authHeader has a valid token issued by Dex.
 // Returns HTTP code 421 if the issuer is not Dex.
 // Returns an error if the auth header does not contain a valid credential.
-func (d *dexAuthenticator) Authenticate(authHeader string) (user.Info, int, error) {
-
-	// First we determine if the auth header is associated with this authenticator. Otherwise, return a 421.
-	if len(authHeader) == 0 {
-		return nil, 401, errors.New("authorization header is missing")
-	}
-
-	jwt := strings.TrimPrefix(authHeader, "Bearer ")
-	if len(jwt) == len(authHeader) {
-		return nil, 421, errors.New("not a dex header: header should start with 'Bearer '")
-	}
-	jwt = strings.TrimSpace(jwt)
-
-	if strings.Count(authHeader, ".") != 2 {
-		return nil, 421, errors.New("not a dex header: token should should adhere to the following format (JWT): <b64-hdr>.<b64-payload>.<b64-sig>")
-	}
-
-	payload := strings.Split(authHeader, ".")[1]
-	var tokenPayloadMap map[string]interface{}
-	payloadBytes, err := base64.RawURLEncoding.DecodeString(payload)
+func (d *dexAuthenticator) Authenticate(r *http.Request) (user.Info, int, error) {
+	// This will return an error when:
+	// - No authorization header is present
+	// - No Bearer prefix is present in the authorization header
+	// - No JWT is present
+	jwt, err := jws.ParseJWTFromRequest(r)
 	if err != nil {
-		return nil, 421, errors.New("not a dex header: JWT payload cannot be base64 decoded")
+		return nil, 401, jws.ErrNoTokenInRequest
 	}
+	authHeader := r.Header.Get("Authorization")
 
-	err = json.Unmarshal(payloadBytes, &tokenPayloadMap)
-	if err != nil {
-		return nil, 421, errors.New("not a dex header: JWT payload does not contain base64 encoded json")
-	}
+	// Strip the "Bearer " part of the token.
+	tkn := authHeader[7:]
+	tkn = strings.TrimSpace(tkn)
+
+	tokenPayloadMap := jwt.Claims()
 
 	iss := tokenPayloadMap["iss"].(string)
 	if iss != d.issuer {
@@ -201,12 +187,12 @@ func (d *dexAuthenticator) Authenticate(authHeader string) (user.Info, int, erro
 	}
 
 	// Now that we know the token was issued by dex, we can verify if it is (still) valid and extract the user.
-	_, err = jose.ParseSigned(jwt)
+	_, err = jose.ParseSigned(tkn)
 	if err != nil {
 		return nil, 401, errors.New("dex token has an invalid signature")
 	}
 
-	idTkn, err := d.verifier.Verify(context.Background(), jwt)
+	idTkn, err := d.verifier.Verify(context.Background(), tkn)
 	if err != nil {
 		return nil, 401, err
 	}

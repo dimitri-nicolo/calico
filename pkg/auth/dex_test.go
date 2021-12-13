@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -13,8 +14,6 @@ import (
 
 	"github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/lma/pkg/auth/testing"
-
-	"github.com/projectcalico/apiserver/pkg/authentication"
 )
 
 var _ = Describe("Test dex authenticator and options", func() {
@@ -34,10 +33,11 @@ var _ = Describe("Test dex authenticator and options", func() {
 		badClientID = "starbucks"
 	)
 
-	var dex authentication.Authenticator
+	var dex auth.Authenticator
 	var err error
 	var jwt *testing.FakeJWT
 	var keySet *testKeySet
+	var req *http.Request
 
 	BeforeEach(func() {
 		keySet = &testKeySet{}
@@ -49,12 +49,14 @@ var _ = Describe("Test dex authenticator and options", func() {
 		}
 		dex, err = auth.NewDexAuthenticator(iss, clientID, usernameClaim, opts...)
 		Expect(err).NotTo(HaveOccurred())
+		req = &http.Request{Header: http.Header{}}
 	})
 
 	It("should authenticate a valid dex user", func() {
 		jwt = testing.NewFakeJWT(iss, name).WithClaim(auth.ClaimNameEmail, email).WithClaim(auth.ClaimNameAud, clientID).WithClaim(auth.ClaimNameGroups, []string{group})
 		keySet.On("VerifySignature", mock.Anything, strings.TrimSpace(jwt.ToString())).Return([]byte(jwt.PayloadJSON), nil)
-		usr, stat, err := dex.Authenticate(jwt.BearerTokenHeader())
+		req.Header.Set("Authorization", jwt.BearerTokenHeader())
+		usr, stat, err := dex.Authenticate(req)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(usr).NotTo(BeNil())
 		Expect(usr.GetName()).To(Equal(prefixedUser))
@@ -67,7 +69,8 @@ var _ = Describe("Test dex authenticator and options", func() {
 	It("should reject an invalid issuer", func() {
 		jwt = testing.NewFakeJWT(badIss, name).WithClaim(auth.ClaimNameEmail, email).WithClaim(auth.ClaimNameAud, clientID)
 		keySet.On("VerifySignature", mock.Anything, jwt.ToString()).Return([]byte(jwt.PayloadJSON), nil)
-		usr, stat, err := dex.Authenticate(jwt.BearerTokenHeader())
+		req.Header.Set("Authorization", jwt.BearerTokenHeader())
+		usr, stat, err := dex.Authenticate(req)
 		Expect(err).NotTo(BeNil())
 		Expect(usr).To(BeNil())
 		Expect(stat).To(Equal(421))
@@ -76,7 +79,8 @@ var _ = Describe("Test dex authenticator and options", func() {
 	It("should reject an invalid clientID", func() {
 		jwt = testing.NewFakeJWT(iss, name).WithClaim(auth.ClaimNameEmail, email).WithClaim(auth.ClaimNameAud, badClientID)
 		keySet.On("VerifySignature", mock.Anything, jwt.ToString()).Return([]byte(jwt.PayloadJSON), nil)
-		usr, stat, err := dex.Authenticate(jwt.BearerTokenHeader())
+		req.Header.Set("Authorization", jwt.BearerTokenHeader())
+		usr, stat, err := dex.Authenticate(req)
 		Expect(err).NotTo(BeNil())
 		Expect(usr).To(BeNil())
 		Expect(stat).To(Equal(401))
@@ -85,7 +89,8 @@ var _ = Describe("Test dex authenticator and options", func() {
 	It("should reject an expired token", func() {
 		jwt = testing.NewFakeJWT(iss, name).WithClaim(auth.ClaimNameEmail, email).WithClaim(auth.ClaimNameAud, clientID).WithClaim(auth.ClaimNameExp, badExp)
 		keySet.On("VerifySignature", mock.Anything, jwt.ToString()).Return([]byte(jwt.PayloadJSON), nil)
-		usr, stat, err := dex.Authenticate(jwt.BearerTokenHeader())
+		req.Header.Set("Authorization", jwt.BearerTokenHeader())
+		usr, stat, err := dex.Authenticate(req)
 		Expect(err).NotTo(BeNil())
 		Expect(usr).To(BeNil())
 		Expect(stat).To(Equal(401))
@@ -94,7 +99,8 @@ var _ = Describe("Test dex authenticator and options", func() {
 	It("should reject an invalid signature", func() {
 		jwt = testing.NewFakeJWT(iss, name).WithClaim(auth.ClaimNameEmail, email).WithClaim(auth.ClaimNameAud, clientID)
 		keySet.On("VerifySignature", mock.Anything, jwt.ToString()).Return(nil, errors.New("sig error"))
-		usr, stat, err := dex.Authenticate(jwt.BearerTokenHeader())
+		req.Header.Set("Authorization", jwt.BearerTokenHeader())
+		usr, stat, err := dex.Authenticate(req)
 		Expect(err).NotTo(BeNil())
 		Expect(usr).To(BeNil())
 		Expect(stat).To(Equal(401))
@@ -112,6 +118,7 @@ var _ = Describe("Test dex username prefixes", func() {
 	jwt := testing.NewFakeJWT(iss, name).WithClaim(auth.ClaimNameEmail, email).WithClaim(auth.ClaimNameAud, clientID)
 
 	var opts []auth.DexOption
+	var req *http.Request
 
 	BeforeEach(func() {
 
@@ -122,6 +129,7 @@ var _ = Describe("Test dex username prefixes", func() {
 			auth.WithGroupsPrefix("my-groups"),
 			auth.WithKeySet(keySet),
 		}
+		req = &http.Request{Header: http.Header{}}
 	})
 
 	It("should prepend the prefix to the username", func() {
@@ -129,7 +137,8 @@ var _ = Describe("Test dex username prefixes", func() {
 		opts = append(opts, auth.WithUsernamePrefix(prefix))
 		dx, err := auth.NewDexAuthenticator(iss, clientID, "name", opts...)
 		Expect(err).NotTo(HaveOccurred())
-		usr, stat, err := dx.Authenticate(jwt.BearerTokenHeader())
+		req.Header.Set("Authorization", jwt.BearerTokenHeader())
+		usr, stat, err := dx.Authenticate(req)
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(usr).NotTo(BeNil())
@@ -142,7 +151,8 @@ var _ = Describe("Test dex username prefixes", func() {
 		opts = append(opts, auth.WithUsernamePrefix(prefix))
 		dx, err := auth.NewDexAuthenticator(iss, clientID, "name", opts...)
 		Expect(err).NotTo(HaveOccurred())
-		usr, stat, err := dx.Authenticate(jwt.BearerTokenHeader())
+		req.Header.Set("Authorization", jwt.BearerTokenHeader())
+		usr, stat, err := dx.Authenticate(req)
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(usr).NotTo(BeNil())
@@ -155,7 +165,8 @@ var _ = Describe("Test dex username prefixes", func() {
 		opts = append(opts, auth.WithUsernamePrefix(prefix))
 		dx, err := auth.NewDexAuthenticator(iss, clientID, "name", opts...)
 		Expect(err).NotTo(HaveOccurred())
-		usr, stat, err := dx.Authenticate(jwt.BearerTokenHeader())
+		req.Header.Set("Authorization", jwt.BearerTokenHeader())
+		usr, stat, err := dx.Authenticate(req)
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(usr).NotTo(BeNil())
@@ -168,7 +179,8 @@ var _ = Describe("Test dex username prefixes", func() {
 		opts = append(opts, auth.WithUsernamePrefix(prefix))
 		dx, err := auth.NewDexAuthenticator(iss, clientID, "email", opts...)
 		Expect(err).NotTo(HaveOccurred())
-		usr, stat, err := dx.Authenticate(jwt.BearerTokenHeader())
+		req.Header.Set("Authorization", jwt.BearerTokenHeader())
+		usr, stat, err := dx.Authenticate(req)
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(usr).NotTo(BeNil())
@@ -181,7 +193,8 @@ var _ = Describe("Test dex username prefixes", func() {
 		opts = append(opts, auth.WithUsernamePrefix(prefix))
 		dx, err := auth.NewDexAuthenticator(iss, clientID, "email", opts...)
 		Expect(err).NotTo(HaveOccurred())
-		usr, stat, err := dx.Authenticate(jwt.BearerTokenHeader())
+		req.Header.Set("Authorization", jwt.BearerTokenHeader())
+		usr, stat, err := dx.Authenticate(req)
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(usr).NotTo(BeNil())
@@ -194,7 +207,8 @@ var _ = Describe("Test dex username prefixes", func() {
 		opts = append(opts, auth.WithUsernamePrefix(prefix))
 		dx, err := auth.NewDexAuthenticator(iss, clientID, "email", opts...)
 		Expect(err).NotTo(HaveOccurred())
-		usr, stat, err := dx.Authenticate(jwt.BearerTokenHeader())
+		req.Header.Set("Authorization", jwt.BearerTokenHeader())
+		usr, stat, err := dx.Authenticate(req)
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(usr).NotTo(BeNil())
@@ -205,7 +219,8 @@ var _ = Describe("Test dex username prefixes", func() {
 	It("should prepend the right prefix to the username if no prefix option was specified", func() {
 		dx, err := auth.NewDexAuthenticator(iss, clientID, "name", opts...)
 		Expect(err).NotTo(HaveOccurred())
-		usr, stat, err := dx.Authenticate(jwt.BearerTokenHeader())
+		req.Header.Set("Authorization", jwt.BearerTokenHeader())
+		usr, stat, err := dx.Authenticate(req)
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(usr).NotTo(BeNil())
@@ -216,7 +231,8 @@ var _ = Describe("Test dex username prefixes", func() {
 	It("should prepend the right prefix to the username if no prefix option was specified (email claim)", func() {
 		dx, err := auth.NewDexAuthenticator(iss, clientID, "email", opts...)
 		Expect(err).NotTo(HaveOccurred())
-		usr, stat, err := dx.Authenticate(jwt.BearerTokenHeader())
+		req.Header.Set("Authorization", jwt.BearerTokenHeader())
+		usr, stat, err := dx.Authenticate(req)
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(usr).NotTo(BeNil())
