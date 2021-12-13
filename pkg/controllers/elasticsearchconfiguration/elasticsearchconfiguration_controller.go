@@ -82,7 +82,9 @@ func New(
 	esK8sCLI relasticsearch.RESTClient,
 	esClientBuilder elasticsearch.ClientBuilder,
 	management bool,
-	cfg config.ElasticsearchCfgControllerCfg) controller.Controller {
+	cfg config.ElasticsearchCfgControllerCfg,
+	restartChan chan<- string,
+) controller.Controller {
 	logCtx := log.WithField("cluster", clusterName)
 	r := &reconciler{
 		clusterName:      clusterName,
@@ -92,14 +94,29 @@ func New(
 		esK8sCLI:         esK8sCLI,
 		esClientBuilder:  esClientBuilder,
 		management:       management,
+		restartChan:      restartChan,
 	}
 
 	// The high requeue attempts is because it's unlikely we would receive an event after failure to re trigger a
 	// reconcile, meaning a temporary service disruption could lead to Elasticsearch credentials not being propagated.
 	w := worker.New(r, worker.WithMaxRequeueAttempts(20))
 
+	addWatchForActiveOperator(w, r.managedK8sCLI)
+
+	// We need to get the operator namespace because we need to watch secrets in that namespace.
+	// If we are unable to successfully read the namespace assume the default operator namespace.
+	// We also setup a watch for the ConfigMap with the namespace so if our assumption is wrong we
+	// will be triggered when it is available or updated and a Reconcile will trigger a restart so
+	// this controller can be restarted and pick up the correct namespace.
+	var err error
+	r.managedOperatorNamespace, err = fetchOperatorNamespace(r.managedK8sCLI)
+	if err != nil {
+		r.managedOperatorNamespace = defaultTigeraOperatorNamespace
+		logCtx.WithField("cluster", clusterName).WithField("message", err.Error()).Info("unable to fetch operator namespace, assuming active operator in tigera-operator namespace")
+	}
+
 	w.AddWatch(
-		cache.NewFilteredListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "secrets", resource.OperatorNamespace, func(options *metav1.ListOptions) {
+		cache.NewFilteredListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "secrets", r.managedOperatorNamespace, func(options *metav1.ListOptions) {
 			options.LabelSelector = ElasticsearchUserNameLabel
 		}),
 		&corev1.Secret{},
@@ -117,21 +134,21 @@ func New(
 	notifications := []worker.ResourceWatch{worker.ResourceWatchUpdate, worker.ResourceWatchDelete, worker.ResourceWatchAdd}
 
 	w.AddWatch(
-		cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "secrets", resource.OperatorNamespace,
+		cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "secrets", r.managedOperatorNamespace,
 			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ElasticsearchCertSecret))),
 		&corev1.Secret{},
 		notifications...,
 	)
 
 	w.AddWatch(
-		cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "secrets", resource.OperatorNamespace,
+		cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "secrets", r.managedOperatorNamespace,
 			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ESGatewayCertSecret))),
 		&corev1.Secret{},
 		notifications...,
 	)
 
 	w.AddWatch(
-		cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "configmaps", resource.OperatorNamespace,
+		cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "configmaps", r.managedOperatorNamespace,
 			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ElasticsearchConfigMapName))),
 		&corev1.ConfigMap{},
 		notifications...,
@@ -148,24 +165,36 @@ func New(
 	// This is a managed cluster and we need to watch some Elasticsearch secrets and config maps we know when to copy
 	// them over to the managed clusters.
 	if !management {
+		addWatchForActiveOperator(w, r.managementK8sCLI)
+		// We need to get the operator namespace because we need to watch secrets in that namespace.
+		// If we are unable to successfully read the namespace assume the default operator namespace.
+		// We also setup a watch for the ConfigMap with the namespace so if our assumption is wrong we
+		// will be triggered when it is available or updated and a Reconcile will trigger a restart so
+		// this controller can be restarted and pick up the correct namespace.
+		r.managementOperatorNamespace, err = fetchOperatorNamespace(r.managementK8sCLI)
+		if err != nil {
+			r.managementOperatorNamespace = defaultTigeraOperatorNamespace
+			logCtx.WithField("cluster", "management").WithField("message", err.Error()).Info("unable to fetch operator namespace, assuming active operator namespace is tigera-operator")
+		}
+
 		logCtx.Info("Watching for management cluster configuration changes.")
 
 		w.AddWatch(
-			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "configmaps", resource.OperatorNamespace,
+			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "configmaps", r.managementOperatorNamespace,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ElasticsearchConfigMapName))),
 			&corev1.ConfigMap{},
 			notifications...,
 		)
 
 		w.AddWatch(
-			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", resource.OperatorNamespace,
+			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", r.managementOperatorNamespace,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ElasticsearchCertSecret))),
 			&corev1.Secret{},
 			notifications...,
 		)
 
 		w.AddWatch(
-			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", resource.OperatorNamespace,
+			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", r.managementOperatorNamespace,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ESGatewayCertSecret))),
 			&corev1.Secret{},
 			notifications...,

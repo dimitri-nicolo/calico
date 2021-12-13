@@ -42,6 +42,7 @@ type managedClusterController struct {
 	managementK8sCLI    *kubernetes.Clientset
 	esk8sCLI            relasticsearch.RESTClient
 	esClientBuilder     elasticsearch.ClientBuilder
+	restartChan         chan<- string
 }
 
 func New(
@@ -50,7 +51,9 @@ func New(
 	calicok8sCLI *tigeraapi.Clientset,
 	esk8sCLI relasticsearch.RESTClient,
 	esClientBuilder elasticsearch.ClientBuilder,
-	cfg config.ManagedClusterControllerConfig) controller.Controller {
+	cfg config.ManagedClusterControllerConfig,
+	restartChan chan<- string,
+) controller.Controller {
 
 	return &managedClusterController{
 		createManagedk8sCLI: createManagedk8sCLI,
@@ -59,6 +62,7 @@ func New(
 		managementK8sCLI:    managementK8sCLI,
 		esClientBuilder:     esClientBuilder,
 		esk8sCLI:            esk8sCLI,
+		restartChan:         restartChan,
 	}
 }
 
@@ -113,6 +117,7 @@ func (c *managedClusterController) init(stop chan struct{}) (elasticsearch.Clien
 		cfgLic:                   c.cfg.LicenseConfig,
 		esClientBuilder:          c.esClientBuilder,
 		esClient:                 client,
+		restartChan:              c.restartChan,
 	}
 
 	// Watch the ManagedCluster resources for changes

@@ -39,14 +39,17 @@ type reconciler struct {
 	clusterName string
 	// ownerReference is used to store the "owner" of this reconciler. If the owner has changed that signals the user
 	// credential secrets should be rotated. It's valid to have an empty owner reference.
-	ownerReference   string
-	management       bool
-	managementK8sCLI kubernetes.Interface
-	managedK8sCLI    kubernetes.Interface
-	esK8sCLI         relasticsearch.RESTClient
-	esHash           string
-	esClientBuilder  elasticsearch.ClientBuilder
-	esCLI            elasticsearch.Client
+	ownerReference              string
+	management                  bool
+	managementK8sCLI            kubernetes.Interface
+	managementOperatorNamespace string
+	managedK8sCLI               kubernetes.Interface
+	managedOperatorNamespace    string
+	esK8sCLI                    relasticsearch.RESTClient
+	esHash                      string
+	esClientBuilder             elasticsearch.ClientBuilder
+	esCLI                       elasticsearch.Client
+	restartChan                 chan<- string
 }
 
 // Reconcile makes sure that the managed cluster this is running for has all the configuration needed for it's components
@@ -58,6 +61,10 @@ func (c *reconciler) Reconcile(name types.NamespacedName) error {
 		"key":     name,
 	})
 	reqLogger.Info("Reconciling Elasticsearch credentials")
+
+	if err := c.verifyOperatorNamespaces(reqLogger); err != nil {
+		return err
+	}
 
 	currentESHash, err := c.esK8sCLI.CalculateTigeraElasticsearchHash()
 	if err != nil {
@@ -105,11 +112,12 @@ func (c *reconciler) reconcileRoles() error {
 
 // reconcileCASecrets copies tigera-secure-es-gateway-http-certs-public from the management cluster to the managed cluster.
 func (c *reconciler) reconcileCASecrets() error {
-	secret, err := c.managementK8sCLI.CoreV1().Secrets(resource.OperatorNamespace).Get(context.Background(), resource.ESGatewayCertSecret, metav1.GetOptions{})
+	secret, err := c.managementK8sCLI.CoreV1().Secrets(c.managementOperatorNamespace).Get(context.Background(), resource.ESGatewayCertSecret, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
+	secret.ObjectMeta.Namespace = c.managedOperatorNamespace
 	if err := resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(secret)); err != nil {
 		return err
 	}
@@ -123,6 +131,33 @@ func (c *reconciler) reconcileCASecrets() error {
 	secret.ObjectMeta.Name = resource.KibanaCertSecret
 	if err := resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(secret)); err != nil {
 		return err
+	}
+	return nil
+}
+
+// verifyOperatorNamespaces makes sure that the active operator namespace has not changed in the
+// managed or management cluster. If the namespace has changed then send a message to the restartChan
+// so the kube-controller will restart so the new namespaces can be used.
+func (c *reconciler) verifyOperatorNamespaces(reqLogger *log.Entry) error {
+	m, err := fetchOperatorNamespace(c.managedK8sCLI)
+	if err != nil {
+		return fmt.Errorf("failed to fetch the operator namespace for the %s cluster: %w", c.clusterName, err)
+	}
+	if m != c.managedOperatorNamespace {
+		msg := fmt.Sprintf("The active operator namespace for the managed cluster %s has changed from %s to %s", c.clusterName, c.managedOperatorNamespace, m)
+		reqLogger.Info(msg)
+		c.restartChan <- msg
+	}
+	if !c.management {
+		m, err := fetchOperatorNamespace(c.managementK8sCLI)
+		if err != nil {
+			return fmt.Errorf("failed to fetch the operator namespace from the management cluster: %w", err)
+		}
+		if m != c.managementOperatorNamespace {
+			msg := fmt.Sprintf("The active operator namespace for the managed cluster %s has changed from %s to %s", c.clusterName, c.managedOperatorNamespace, m)
+			reqLogger.Info(msg)
+			c.restartChan <- msg
+		}
 	}
 	return nil
 }
@@ -155,7 +190,7 @@ func (c *reconciler) reconcileUsers(reqLogger *log.Entry) error {
 // reconcileVerificationSecrets ensures that the verification secrets that the Elasticsearch gateway uses exist and are
 // up to date.
 func (c *reconciler) reconcileVerificationSecrets(reqLogger *log.Entry) error {
-	publicSecretList, err := c.managedK8sCLI.CoreV1().Secrets(resource.OperatorNamespace).
+	publicSecretList, err := c.managedK8sCLI.CoreV1().Secrets(c.managedOperatorNamespace).
 		List(context.Background(), metav1.ListOptions{LabelSelector: ElasticsearchUserNameLabel})
 	if err != nil {
 		return err
@@ -306,7 +341,7 @@ func (c *reconciler) createUser(username esusers.ElasticsearchUserName, esUser e
 		ElasticsearchUserNameLabel: string(username),
 	}
 
-	return writeUserSecret(name, resource.OperatorNamespace, labels, c.managedK8sCLI, data)
+	return writeUserSecret(name, c.managedOperatorNamespace, labels, c.managedK8sCLI, data)
 }
 
 // missingOrStaleUsers returns 2 maps, the first containing private users and the second containing public users that are
@@ -314,7 +349,7 @@ func (c *reconciler) createUser(username esusers.ElasticsearchUserName, esUser e
 func (c *reconciler) missingOrStaleUsers() (map[esusers.ElasticsearchUserName]elasticsearch.User, map[esusers.ElasticsearchUserName]elasticsearch.User, error) {
 	privateEsUsers, publicEsUsers := esusers.ElasticsearchUsers(c.clusterName, c.management)
 
-	publicSecretsList, err := c.managedK8sCLI.CoreV1().Secrets(resource.OperatorNamespace).List(context.Background(), metav1.ListOptions{LabelSelector: ElasticsearchUserNameLabel})
+	publicSecretsList, err := c.managedK8sCLI.CoreV1().Secrets(c.managedOperatorNamespace).List(context.Background(), metav1.ListOptions{LabelSelector: ElasticsearchUserNameLabel})
 	if err != nil {
 		return nil, nil, err
 	}

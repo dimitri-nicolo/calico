@@ -538,7 +538,9 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 				esK8sREST,
 				esClientBuilder,
 				true,
-				*cfg.Controllers.ElasticsearchConfiguration),
+				*cfg.Controllers.ElasticsearchConfiguration,
+				cc.restartCntrlChan,
+			),
 		}
 	}
 	if cfg.Controllers.ManagedCluster != nil {
@@ -583,7 +585,9 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 				calicoV3Client,
 				esK8sREST,
 				esClientBuilder,
-				*cfg.Controllers.ManagedCluster),
+				*cfg.Controllers.ManagedCluster,
+				cc.restartCntrlChan,
+			),
 			licenseFeature: features.MultiClusterManagement,
 		}
 		cc.needLicenseMonitoring = true
