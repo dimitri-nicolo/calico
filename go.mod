@@ -30,11 +30,11 @@ require (
 replace (
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
-	github.com/kelseyhightower/confd => github.com/tigera/confd-private v1.0.1-0.20211202235039-98d91002fbd4
-	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20211202220640-cc3561820010
+	github.com/kelseyhightower/confd => github.com/tigera/confd-private v1.0.1-0.20211213193557-c8c6529f50bc
+	github.com/projectcalico/cni-plugin => github.com/tigera/cni-plugin-private v1.11.1-0.20211213194450-057130267453
 	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20211207125308-bd3de6cfc0e0
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211203232041-873deb396265
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211202200643-d13e06a0845c
+	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211213192330-2dda14d7d4cf
 
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	google.golang.org/grpc => google.golang.org/grpc v1.27.1
