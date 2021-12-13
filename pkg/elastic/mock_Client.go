@@ -124,13 +124,13 @@ func (_m *MockClient) ClusterIndex(_a0 string, _a1 string) string {
 	return r0
 }
 
-// CreateEventsIndex provides a mock function with given fields:
-func (_m *MockClient) CreateEventsIndex() error {
-	ret := _m.Called()
+// CreateEventsIndex provides a mock function with given fields: ctx
+func (_m *MockClient) CreateEventsIndex(ctx context.Context) error {
+	ret := _m.Called(ctx)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func() error); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = rf(ctx)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -161,20 +161,20 @@ func (_m *MockClient) Do(ctx context.Context, s *elastic.SearchService) (*elasti
 	return r0, r1
 }
 
-// EventsIndexExists provides a mock function with given fields:
-func (_m *MockClient) EventsIndexExists() (bool, error) {
-	ret := _m.Called()
+// EventsIndexExists provides a mock function with given fields: ctx
+func (_m *MockClient) EventsIndexExists(ctx context.Context) (bool, error) {
+	ret := _m.Called(ctx)
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func() bool); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(context.Context) bool); ok {
+		r0 = rf(ctx)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
 	} else {
 		r1 = ret.Error(1)
 	}

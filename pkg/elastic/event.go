@@ -60,13 +60,27 @@ func (c *client) CreateEventsIndex(ctx context.Context) error {
 // entries in Elasticsearch as long as the docID remains the same.
 func (c *client) PutSecurityEventWithID(ctx context.Context, data api.EventsData, docID string) (*elastic.IndexResponse, error) {
 	alias := c.ClusterAlias(EventsIndex)
-	return c.Index().Index(alias).Id(docID).BodyJson(data).Do(ctx)
+
+	// Marshall the api.EventsData to ignore empty values
+	b, err := json.Marshal(data)
+	if err != nil {
+		log.WithError(err).Error("failed to marshall")
+		return nil, err
+	}
+	return c.Index().Index(alias).Id(docID).BodyString(string(b)).Do(ctx)
 }
 
 // PutSecurityEvent adds the given data into events index.
 func (c *client) PutSecurityEvent(ctx context.Context, data api.EventsData) (*elastic.IndexResponse, error) {
 	alias := c.ClusterAlias(EventsIndex)
-	return c.Index().Index(alias).BodyJson(data).Do(ctx)
+
+	// Marshall the api.EventsData to ignore empty values
+	b, err := json.Marshal(data)
+	if err != nil {
+		log.WithError(err).Error("failed to marshall")
+		return nil, err
+	}
+	return c.Index().Index(alias).BodyString(string(b)).Do(ctx)
 }
 
 // BulkProcessorInitialize creates a bulk processor service and sets default flush size and BulkAfterFunc that
@@ -98,7 +112,14 @@ func (c *client) PutBulkSecurityEvent(data api.EventsData) error {
 		return fmt.Errorf("BulkProcessor not initalized")
 	}
 	alias := c.ClusterAlias(EventsIndex)
-	r := elastic.NewBulkIndexRequest().Index(alias).Doc(data)
+
+	// Marshall the api.EventsData to ignore empty values
+	b, err := json.Marshal(data)
+	if err != nil {
+		log.WithError(err).Error("failed to marshall")
+		return err
+	}
+	r := elastic.NewBulkIndexRequest().Index(alias).Doc(string(b))
 	c.bulkProcessor.Add(r)
 	return nil
 }

@@ -18,27 +18,27 @@ type EventBulkProcessor interface {
 }
 
 type EventsSearchFields struct {
-	Time            int64   `json:"time"`
-	Type            string  `json:"type"`
-	Description     string  `json:"description"`
-	Severity        int     `json:"severity"`
-	Origin          string  `json:"origin"`
-	SourceIP        *string `json:"source_ip"`
-	SourcePort      *int64  `json:"source_port"`
-	SourceNamespace string  `json:"source_namespace"`
-	SourceName      string  `json:"source_name"`
-	SourceNameAggr  string  `json:"source_name_aggr"`
-	DestIP          *string `json:"dest_ip"`
-	DestPort        *int64  `json:"dest_port"`
-	DestNamespace   string  `json:"dest_namespace"`
-	DestName        string  `json:"dest_name"`
-	DestNameAggr    string  `json:"dest_name_aggr"`
-	Host            string  `json:"host"`
+	Time            int64   `json:"time,omitempty"`
+	Type            string  `json:"type,omitempty"`
+	Description     string  `json:"description,omitempty"`
+	Severity        int     `json:"severity,omitempty"`
+	Origin          string  `json:"origin,omitempty"`
+	SourceIP        *string `json:"source_ip,omitempty"`
+	SourcePort      *int64  `json:"source_port,omitempty"`
+	SourceNamespace string  `json:"source_namespace,omitempty"`
+	SourceName      string  `json:"source_name,omitempty"`
+	SourceNameAggr  string  `json:"source_name_aggr,omitempty"`
+	DestIP          *string `json:"dest_ip,omitempty"`
+	DestPort        *int64  `json:"dest_port,omitempty"`
+	DestNamespace   string  `json:"dest_namespace,omitempty"`
+	DestName        string  `json:"dest_name,omitempty"`
+	DestNameAggr    string  `json:"dest_name_aggr,omitempty"`
+	Host            string  `json:"host,omitempty"`
 }
 
 type EventsData struct {
 	EventsSearchFields
-	Record interface{} `json:"record"`
+	Record interface{} `json:"record,omitempty"`
 }
 
 type EventResult struct {
