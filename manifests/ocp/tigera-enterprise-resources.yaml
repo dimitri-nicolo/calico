@@ -1,0 +1,5 @@
+---
+layout: null
+---
+
+{% include content/ocp/tigera-enterprise-resources.yaml %}

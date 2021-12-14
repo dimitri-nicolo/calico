@@ -1,0 +1,37 @@
+{{ if .Values.prometheusOperator }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calico-prometheus-operator
+  namespace: tigera-prometheus
+  labels:
+    operator: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      operator: prometheus
+  template:
+    metadata:
+      labels:
+        operator: prometheus
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+      serviceAccountName: calico-prometheus-operator
+      containers:
+      - name: calico-prometheus-operator
+        image: {{.Values.prometheusOperator.image}}:{{.Values.prometheusOperator.tag}}
+        args:
+          - --prometheus-config-reloader={{.Values.prometheusConfigReloader.image}}:{{.Values.prometheusConfigReloader.tag}}
+          - --config-reloader-memory-request=25Mi
+          - --namespaces=tigera-prometheus
+          - --cluster-domain=cluster.local
+        resources:
+          requests:
+            cpu: 100m
+            memory: 50Mi
+          limits:
+            cpu: 200m
+            memory: 100Mi
+{{ end }}

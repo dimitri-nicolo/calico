@@ -1,0 +1,11 @@
+FROM docker:18.09
+LABEL maintainer "Eric Hoffmann <eric@tigera.io>"
+
+RUN apk add --update python python-dev py2-pip py-setuptools openssl-dev curl jq && \
+        rm -rf /var/cache/apk/*
+
+COPY docs_test/requirements.txt /requirements.txt
+RUN pip install -r /requirements.txt
+
+# The container is used by mounting the code-under-test to /code
+WORKDIR /code/

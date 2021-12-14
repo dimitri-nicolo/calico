@@ -1,0 +1,10 @@
+{{- /*
+This file serves as an adapter so that CRDs exist in the place
+between OS and Private even though OS and Private are using different helm version
+and thus would normally store the CRDs in different locations.
+*/}}
+{{ if .Values.useLegacyCRDs }}
+{{ $.Files.Get "crds/v1beta1/operator.tigera.io_imagesets_crd.yaml" }}
+{{ else }}
+{{ $.Files.Get "crds/operator.tigera.io_imagesets_crd.yaml" }}
+{{ end }}
