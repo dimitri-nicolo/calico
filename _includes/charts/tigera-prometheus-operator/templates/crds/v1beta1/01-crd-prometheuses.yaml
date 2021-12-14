@@ -1999,10 +1999,6 @@ spec:
                         - containerPort
                         type: object
                       type: array
-                      x-kubernetes-list-map-keys:
-                      - containerPort
-                      - protocol
-                      x-kubernetes-list-type: map
                     readinessProbe:
                       description: 'Periodic probe of container service readiness.
                         Container will be removed from service endpoints if the probe
@@ -3284,10 +3280,6 @@ spec:
                         - containerPort
                         type: object
                       type: array
-                      x-kubernetes-list-map-keys:
-                      - containerPort
-                      - protocol
-                      x-kubernetes-list-type: map
                     readinessProbe:
                       description: 'Periodic probe of container service readiness.
                         Container will be removed from service endpoints if the probe
