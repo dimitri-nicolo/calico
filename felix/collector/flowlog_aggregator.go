@@ -11,9 +11,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
-	logutil "github.com/projectcalico/felix/logutils"
+	logutil "github.com/projectcalico/calico/felix/logutils"
 
-	"github.com/projectcalico/felix/rules"
+	"github.com/projectcalico/calico/felix/rules"
 )
 
 type FlowLogGetter interface {

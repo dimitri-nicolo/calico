@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/tigera/licensing/carrotctl/cmd"
+	"github.com/projectcalico/calico/licensing/carrotctl/cmd"
 )
 
 func main() {

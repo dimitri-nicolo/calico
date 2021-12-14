@@ -8,7 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/rules"
+	"github.com/projectcalico/calico/felix/rules"
 )
 
 // DNSAggregationKind determines how DNS logs are aggregated

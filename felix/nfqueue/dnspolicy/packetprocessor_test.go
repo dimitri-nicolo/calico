@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/felix/timeshim"
+	"github.com/projectcalico/calico/felix/timeshim"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -15,11 +15,11 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
-	"github.com/projectcalico/felix/ip"
-	"github.com/projectcalico/felix/nfqueue"
-	nfqdnspolicy "github.com/projectcalico/felix/nfqueue/dnspolicy"
+	"github.com/projectcalico/calico/felix/ip"
+	"github.com/projectcalico/calico/felix/nfqueue"
+	nfqdnspolicy "github.com/projectcalico/calico/felix/nfqueue/dnspolicy"
 
-	"github.com/projectcalico/libcalico-go/lib/set"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
 	gonfqueue "github.com/florianl/go-nfqueue"
 

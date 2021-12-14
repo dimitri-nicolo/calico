@@ -11,13 +11,13 @@ import (
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	calierrors "github.com/projectcalico/libcalico-go/lib/errors"
+	calierrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 
-	"github.com/projectcalico/felix/testutils"
+	"github.com/projectcalico/calico/felix/testutils"
 
-	"github.com/projectcalico/felix/ip"
-	"github.com/projectcalico/libcalico-go/lib/ipam"
-	cnet "github.com/projectcalico/libcalico-go/lib/net"
+	"github.com/projectcalico/calico/felix/ip"
+	"github.com/projectcalico/calico/libcalico-go/lib/ipam"
+	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
 type ipamAlloc struct {

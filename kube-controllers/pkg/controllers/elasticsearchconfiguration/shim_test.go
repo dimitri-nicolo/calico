@@ -5,10 +5,10 @@ package elasticsearchconfiguration
 import (
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/projectcalico/kube-controllers/pkg/controllers/worker"
-	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
-	"github.com/projectcalico/kube-controllers/pkg/resource"
-	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/worker"
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
+	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
+	relasticsearch "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
 )
 
 func NewReconciler(

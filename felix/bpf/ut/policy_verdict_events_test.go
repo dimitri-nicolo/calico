@@ -22,11 +22,11 @@ import (
 	"github.com/google/gopacket/layers"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/felix/bpf"
-	"github.com/projectcalico/felix/bpf/events"
-	"github.com/projectcalico/felix/bpf/polprog"
-	"github.com/projectcalico/felix/bpf/state"
-	"github.com/projectcalico/felix/proto"
+	"github.com/projectcalico/calico/felix/bpf"
+	"github.com/projectcalico/calico/felix/bpf/events"
+	"github.com/projectcalico/calico/felix/bpf/polprog"
+	"github.com/projectcalico/calico/felix/bpf/state"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 func TestPolicyVerdictEvents(t *testing.T) {

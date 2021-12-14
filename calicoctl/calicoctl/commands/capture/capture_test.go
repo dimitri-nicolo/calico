@@ -8,11 +8,11 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
-	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/capture"
+	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/capture"
 
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 
 	log "github.com/sirupsen/logrus"
 )

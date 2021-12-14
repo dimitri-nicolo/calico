@@ -6,7 +6,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 
-	"github.com/tigera/licensing/monitor"
+	"github.com/projectcalico/calico/licensing/monitor"
 
 	"k8s.io/apiserver/pkg/registry/generic"
 )

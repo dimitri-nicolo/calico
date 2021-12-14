@@ -7,15 +7,15 @@ import (
 
 	esv1 "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1"
 
-	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 
-	"github.com/projectcalico/kube-controllers/pkg/config"
+	"github.com/projectcalico/calico/kube-controllers/pkg/config"
 
-	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
+	relasticsearch "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
 
 	"k8s.io/apimachinery/pkg/fields"
 
-	"github.com/projectcalico/kube-controllers/pkg/controllers/worker"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/worker"
 
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -23,8 +23,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
-	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
-	"github.com/projectcalico/kube-controllers/pkg/resource"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/controller"
+	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 )
 
 const (

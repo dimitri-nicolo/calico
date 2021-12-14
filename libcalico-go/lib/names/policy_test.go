@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/libcalico-go/lib/names"
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
 )
 
 var _ = DescribeTable("Parse Tiered policy name",

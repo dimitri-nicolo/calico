@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/projectcalico/kube-controllers/pkg/controllers/worker"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/worker"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

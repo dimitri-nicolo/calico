@@ -7,17 +7,17 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/argutils"
-	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/capture"
-	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/clientmgr"
-	"github.com/projectcalico/libcalico-go/lib/options"
+	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/argutils"
+	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/capture"
+	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/clientmgr"
+	"github.com/projectcalico/calico/libcalico-go/lib/options"
 
-	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/common"
+	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/common"
 
 	"github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/constants"
+	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/constants"
 )
 
 const defaultCaptureDir = "/var/log/calico/pcap"

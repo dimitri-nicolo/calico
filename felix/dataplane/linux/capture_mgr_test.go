@@ -10,10 +10,10 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/projectcalico/felix/ifacemonitor"
-	"github.com/projectcalico/felix/proto"
+	"github.com/projectcalico/calico/felix/ifacemonitor"
+	"github.com/projectcalico/calico/felix/proto"
 
-	"github.com/projectcalico/felix/capture"
+	"github.com/projectcalico/calico/felix/capture"
 )
 
 // Mocked Captures

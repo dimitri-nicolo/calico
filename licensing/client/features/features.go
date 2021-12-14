@@ -3,7 +3,7 @@ package features
 import (
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 )
 
 const (

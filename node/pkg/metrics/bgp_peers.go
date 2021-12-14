@@ -9,7 +9,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/projectcalico/node/pkg/bgp"
+	"github.com/projectcalico/calico/node/pkg/bgp"
 )
 
 // Calico Enterprise BGP Metrics

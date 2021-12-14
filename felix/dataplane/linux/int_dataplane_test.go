@@ -19,22 +19,22 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/projectcalico/felix/capture"
+	"github.com/projectcalico/calico/felix/capture"
 
 	"github.com/google/gopacket/layers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/felix/collector"
-	"github.com/projectcalico/felix/config"
-	intdataplane "github.com/projectcalico/felix/dataplane/linux"
-	"github.com/projectcalico/felix/idalloc"
-	"github.com/projectcalico/felix/ifacemonitor"
-	"github.com/projectcalico/felix/ipsets"
-	"github.com/projectcalico/felix/proto"
-	"github.com/projectcalico/felix/rules"
-	"github.com/projectcalico/felix/wireguard"
-	"github.com/projectcalico/libcalico-go/lib/health"
+	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/config"
+	intdataplane "github.com/projectcalico/calico/felix/dataplane/linux"
+	"github.com/projectcalico/calico/felix/idalloc"
+	"github.com/projectcalico/calico/felix/ifacemonitor"
+	"github.com/projectcalico/calico/felix/ipsets"
+	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/rules"
+	"github.com/projectcalico/calico/felix/wireguard"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
 )
 
 type mockCollector struct{}

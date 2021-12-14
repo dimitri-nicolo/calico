@@ -22,8 +22,8 @@ import (
 
 	"github.com/tigera/api/pkg/lib/numorstring"
 
-	"github.com/projectcalico/felix/proto"
-	"github.com/projectcalico/libcalico-go/lib/net"
+	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
 const (

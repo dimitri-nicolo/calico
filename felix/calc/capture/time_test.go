@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/projectcalico/felix/calc/capture"
+	"github.com/projectcalico/calico/felix/calc/capture"
 )
 
 var _ = Describe("Time for PacketCapture", func() {

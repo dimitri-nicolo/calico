@@ -25,7 +25,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	calicoconversion "github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
+	calicoconversion "github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 
 	"github.com/robfig/cron"
 	log "github.com/sirupsen/logrus"
@@ -34,19 +34,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
-	"github.com/projectcalico/libcalico-go/lib/compliance"
+	"github.com/projectcalico/calico/libcalico-go/lib/compliance"
 
 	wireguard "golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
-	libapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 
-	"github.com/projectcalico/libcalico-go/lib/errors"
-	cnet "github.com/projectcalico/libcalico-go/lib/net"
-	"github.com/projectcalico/libcalico-go/lib/selector"
-	"github.com/projectcalico/libcalico-go/lib/set"
+	"github.com/projectcalico/calico/libcalico-go/lib/errors"
+	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
+	"github.com/projectcalico/calico/libcalico-go/lib/selector"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 var validate *validator.Validate

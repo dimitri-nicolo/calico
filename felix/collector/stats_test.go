@@ -8,9 +8,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/felix/calc"
-	. "github.com/projectcalico/felix/collector"
-	"github.com/projectcalico/felix/rules"
+	"github.com/projectcalico/calico/felix/calc"
+	. "github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/rules"
 )
 
 const testMaxBoundedSetSize = 5

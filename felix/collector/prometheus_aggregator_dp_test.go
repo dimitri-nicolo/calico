@@ -12,8 +12,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/projectcalico/felix/calc"
-	"github.com/projectcalico/felix/rules"
+	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/rules"
 )
 
 var (

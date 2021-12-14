@@ -8,18 +8,18 @@ import (
 
 	"k8s.io/utils/strings"
 
-	"github.com/projectcalico/felix/calc/capture"
+	"github.com/projectcalico/calico/felix/calc/capture"
 
 	log "github.com/sirupsen/logrus"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/felix/dispatcher"
-	"github.com/projectcalico/felix/labelindex"
-	"github.com/projectcalico/felix/multidict"
-	"github.com/projectcalico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	sel "github.com/projectcalico/libcalico-go/lib/selector"
+	"github.com/projectcalico/calico/felix/dispatcher"
+	"github.com/projectcalico/calico/felix/labelindex"
+	"github.com/projectcalico/calico/felix/multidict"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	sel "github.com/projectcalico/calico/libcalico-go/lib/selector"
 )
 
 // PacketCaptureCalculator will match local workload endpoints against a packet capture resource

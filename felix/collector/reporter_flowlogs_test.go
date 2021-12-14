@@ -13,7 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/projectcalico/libcalico-go/lib/health"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

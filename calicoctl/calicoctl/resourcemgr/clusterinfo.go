@@ -21,9 +21,9 @@ import (
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	client "github.com/projectcalico/libcalico-go/lib/clientv3"
-	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
-	"github.com/projectcalico/libcalico-go/lib/options"
+	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
 
 func init() {

@@ -7,7 +7,7 @@ package users
 import (
 	"regexp"
 
-	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 )
 
 type ElasticsearchUserName string

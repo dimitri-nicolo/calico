@@ -17,7 +17,7 @@ import (
 	fakek8s "k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
 
-	"github.com/projectcalico/felix/aws"
+	"github.com/projectcalico/calico/felix/aws"
 )
 
 const (

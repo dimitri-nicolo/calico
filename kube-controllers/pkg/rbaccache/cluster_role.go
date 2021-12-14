@@ -5,9 +5,9 @@ package rbaccache
 import (
 	rbacv1 "k8s.io/api/rbac/v1"
 
-	"github.com/projectcalico/kube-controllers/pkg/utils"
+	"github.com/projectcalico/calico/kube-controllers/pkg/utils"
 
-	"github.com/projectcalico/kube-controllers/pkg/strutil"
+	"github.com/projectcalico/calico/kube-controllers/pkg/strutil"
 )
 
 // ClusterRoleCache is an interface which caches ClusterRole information along with their bound ClusterRoleBindings.

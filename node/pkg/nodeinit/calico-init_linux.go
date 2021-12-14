@@ -26,7 +26,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/node/pkg/lifecycle/startup"
+	"github.com/projectcalico/calico/node/pkg/lifecycle/startup"
 )
 
 const bpfFSMountPoint = "/sys/fs/bpf"

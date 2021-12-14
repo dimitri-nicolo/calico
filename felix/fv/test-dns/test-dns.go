@@ -26,7 +26,7 @@ import (
 	"github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/fv/cgroup"
+	"github.com/projectcalico/calico/felix/fv/cgroup"
 )
 
 const usage = `test-dns: test connection to a host name, for Felix FV testing.

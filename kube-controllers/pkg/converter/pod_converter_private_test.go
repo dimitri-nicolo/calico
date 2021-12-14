@@ -20,8 +20,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/projectcalico/kube-controllers/pkg/converter"
-	k8sconversion "github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
+	"github.com/projectcalico/calico/kube-controllers/pkg/converter"
+	k8sconversion "github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 )
 
 // Private repo tests to keep the private tests from conflicting with changes

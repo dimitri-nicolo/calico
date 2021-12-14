@@ -9,8 +9,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/jitter"
-	"github.com/projectcalico/libcalico-go/lib/security"
+	"github.com/projectcalico/calico/felix/jitter"
+	"github.com/projectcalico/calico/libcalico-go/lib/security"
 )
 
 const checkInterval = 5 * time.Second

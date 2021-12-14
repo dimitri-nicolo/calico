@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/projectcalico/felix/proto"
+	"github.com/projectcalico/calico/felix/proto"
 
 	"k8s.io/utils/strings"
 

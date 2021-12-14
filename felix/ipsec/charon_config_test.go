@@ -8,7 +8,7 @@ import (
 	"os"
 	"path"
 
-	. "github.com/projectcalico/felix/ipsec"
+	. "github.com/projectcalico/calico/felix/ipsec"
 
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"

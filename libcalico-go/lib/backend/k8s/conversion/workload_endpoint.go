@@ -22,8 +22,8 @@ import (
 
 	kapiv1 "k8s.io/api/core/v1"
 
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	cnet "github.com/projectcalico/libcalico-go/lib/net"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
 // PodInterface contains the network configuration for a particular interface on a Pod.

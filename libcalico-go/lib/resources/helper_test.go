@@ -24,7 +24,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	. "github.com/projectcalico/libcalico-go/lib/resources"
+	. "github.com/projectcalico/calico/libcalico-go/lib/resources"
 )
 
 var _ = Describe("types", func() {

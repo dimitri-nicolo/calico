@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/tigera/nfnetlink/nfnl"
+	"github.com/projectcalico/calico/nfnetlink/nfnl"
 )
 
 var _ = Describe("Conntrack Entry DNAT", func() {

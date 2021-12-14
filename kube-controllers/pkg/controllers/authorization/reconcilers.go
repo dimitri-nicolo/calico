@@ -5,7 +5,7 @@ package authorization
 import (
 	"context"
 
-	"github.com/projectcalico/kube-controllers/pkg/resource"
+	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

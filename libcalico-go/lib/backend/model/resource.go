@@ -27,9 +27,9 @@ import (
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 
-	"github.com/projectcalico/libcalico-go/lib/namespace"
+	"github.com/projectcalico/calico/libcalico-go/lib/namespace"
 )
 
 // Name/type information about a single resource.

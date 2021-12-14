@@ -32,10 +32,10 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	"github.com/projectcalico/felix/config"
-	"github.com/projectcalico/felix/policysync"
-	"github.com/projectcalico/felix/proto"
-	"github.com/projectcalico/pod2daemon/binder"
+	"github.com/projectcalico/calico/felix/config"
+	"github.com/projectcalico/calico/felix/policysync"
+	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/pod2daemon/binder"
 )
 
 const IPSetName = "testset"

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/licensing/monitor"
+	"github.com/projectcalico/calico/licensing/monitor"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -25,13 +25,13 @@ import (
 	rbacv1listers "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/client-go/rest"
 
-	"github.com/projectcalico/apiserver/pkg/helpers"
-	"github.com/projectcalico/apiserver/pkg/rbac"
-	calicorest "github.com/projectcalico/apiserver/pkg/registry/projectcalico/rest"
-	"github.com/projectcalico/apiserver/pkg/storage/calico"
-	"github.com/projectcalico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
+	"github.com/projectcalico/calico/apiserver/pkg/helpers"
+	"github.com/projectcalico/calico/apiserver/pkg/rbac"
+	calicorest "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/rest"
+	"github.com/projectcalico/calico/apiserver/pkg/storage/calico"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/watchersyncer"
 )
 
 var (

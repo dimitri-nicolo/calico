@@ -6,15 +6,15 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/projectcalico/felix/multidict"
+	"github.com/projectcalico/calico/felix/multidict"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/capture"
+	"github.com/projectcalico/calico/felix/capture"
 
-	"github.com/projectcalico/felix/ifacemonitor"
-	"github.com/projectcalico/felix/proto"
-	"github.com/projectcalico/libcalico-go/lib/set"
+	"github.com/projectcalico/calico/felix/ifacemonitor"
+	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 type captureManager struct {

@@ -8,9 +8,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/pkg/proxy"
 
-	"github.com/projectcalico/felix/calc"
-	"github.com/projectcalico/felix/rules"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/rules"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
 const testMaxBoundedSetSize = 5

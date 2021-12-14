@@ -17,7 +17,7 @@
 package stats
 
 import (
-	"github.com/projectcalico/felix/bpf"
+	"github.com/projectcalico/calico/felix/bpf"
 )
 
 const keySize = 36

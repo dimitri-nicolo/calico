@@ -7,14 +7,14 @@ import (
 	"net"
 	"time"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	v3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 
-	"github.com/projectcalico/felix/config"
-	"github.com/projectcalico/felix/rules"
+	"github.com/projectcalico/calico/felix/config"
+	"github.com/projectcalico/calico/felix/rules"
 
-	. "github.com/projectcalico/felix/calc"
-	"github.com/projectcalico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	. "github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"

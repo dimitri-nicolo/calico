@@ -10,9 +10,9 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/felix/bpf/conntrack"
-	"github.com/projectcalico/felix/collector"
-	"github.com/projectcalico/felix/timeshim/mocktime"
+	"github.com/projectcalico/calico/felix/bpf/conntrack"
+	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/timeshim/mocktime"
 )
 
 var _ = Describe("BPF Conntrack InfoReader", func() {

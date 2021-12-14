@@ -30,12 +30,12 @@ import (
 
 	"github.com/tigera/api/pkg/lib/numorstring"
 
-	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	"github.com/projectcalico/libcalico-go/lib/names"
+	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
 
-	"github.com/projectcalico/felix/idalloc"
-	"github.com/projectcalico/felix/proto"
-	"github.com/projectcalico/typha/pkg/discovery"
+	"github.com/projectcalico/calico/felix/idalloc"
+	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/typha/pkg/discovery"
 )
 
 var (

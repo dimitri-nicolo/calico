@@ -10,7 +10,7 @@ import (
 
 	"github.com/tigera/windows-networking/pkg/testutils"
 
-	. "github.com/projectcalico/felix/fv/winfv"
+	. "github.com/projectcalico/calico/felix/fv/winfv"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

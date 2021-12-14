@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/felix/config"
+	"github.com/projectcalico/calico/felix/config"
 )
 
 var _ = Describe("L7 logs aggregation tests", func() {

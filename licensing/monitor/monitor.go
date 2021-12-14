@@ -8,13 +8,13 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	lclient "github.com/tigera/licensing/client"
+	lclient "github.com/projectcalico/calico/licensing/client"
 
-	lapi "github.com/projectcalico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
-	"github.com/projectcalico/libcalico-go/lib/jitter"
-	"github.com/projectcalico/libcalico-go/lib/set"
+	lapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/jitter"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 const (

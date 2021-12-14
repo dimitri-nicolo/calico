@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/projectcalico/libcalico-go/lib/apiconfig"
+	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

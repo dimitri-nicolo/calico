@@ -19,9 +19,9 @@ import (
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
-	"github.com/projectcalico/libcalico-go/lib/names"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/watchersyncer"
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
 )
 
 // NewStagedGlobalNetworkPolicyUpdateProcessor create a new SyncerUpdateProcessor to sync StagedGlobalNetworkPolicy data in v1 format for

@@ -18,7 +18,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/libcalico-go/lib/compliance"
+	"github.com/projectcalico/calico/libcalico-go/lib/compliance"
 )
 
 var _ = Describe("ReportTemplate Renderer", func() {

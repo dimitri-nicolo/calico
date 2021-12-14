@@ -4,7 +4,7 @@ package nfnetlink
 import (
 	"errors"
 
-	"github.com/tigera/nfnetlink/nfnl"
+	"github.com/projectcalico/calico/nfnetlink/nfnl"
 )
 
 const (

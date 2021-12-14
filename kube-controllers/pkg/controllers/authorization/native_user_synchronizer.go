@@ -16,10 +16,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	retryr "k8s.io/client-go/util/retry"
 
-	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
-	"github.com/projectcalico/kube-controllers/pkg/elasticsearch/userscache"
-	"github.com/projectcalico/kube-controllers/pkg/rbaccache"
-	"github.com/projectcalico/kube-controllers/pkg/resource"
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/userscache"
+	"github.com/projectcalico/calico/kube-controllers/pkg/rbaccache"
+	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 )
 
 // nativeUserSynchronizer is an implementation of k8sRBACSynchronizer interface, to keep Elasticsearch native users up-to-date.

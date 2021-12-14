@@ -19,7 +19,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/app-policy/proto"
+	"github.com/projectcalico/calico/app-policy/proto"
 )
 
 // DropActionOverride is an enumeration of the available values for the DropActionOverride

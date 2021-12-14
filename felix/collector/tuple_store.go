@@ -7,7 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/calc"
+	"github.com/projectcalico/calico/felix/calc"
 )
 
 type tupleKey struct {

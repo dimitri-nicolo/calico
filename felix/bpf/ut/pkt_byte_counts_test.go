@@ -20,9 +20,9 @@ import (
 	"github.com/google/gopacket/layers"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/felix/bpf/conntrack"
-	"github.com/projectcalico/felix/bpf/routes"
-	tcdefs "github.com/projectcalico/felix/bpf/tc/defs"
+	"github.com/projectcalico/calico/felix/bpf/conntrack"
+	"github.com/projectcalico/calico/felix/bpf/routes"
+	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
 )
 
 func TestCountsPodPodXNode(t *testing.T) {

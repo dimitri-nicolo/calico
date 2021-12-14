@@ -37,11 +37,11 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 
-	licFeatures "github.com/tigera/licensing/client/features"
+	licFeatures "github.com/projectcalico/calico/licensing/client/features"
 
-	"github.com/projectcalico/apiserver/pkg/apiserver"
-	"github.com/projectcalico/apiserver/pkg/registry/projectcalico/authenticationreview"
-	"github.com/projectcalico/apiserver/pkg/registry/projectcalico/authorizationreview"
+	"github.com/projectcalico/calico/apiserver/pkg/apiserver"
+	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authenticationreview"
+	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizationreview"
 
 	"github.com/tigera/api/pkg/lib/numorstring"
 

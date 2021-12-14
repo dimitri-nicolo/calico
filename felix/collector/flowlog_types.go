@@ -12,9 +12,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	logutil "github.com/projectcalico/felix/logutils"
+	logutil "github.com/projectcalico/calico/felix/logutils"
 
-	"github.com/projectcalico/libcalico-go/lib/set"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 const (

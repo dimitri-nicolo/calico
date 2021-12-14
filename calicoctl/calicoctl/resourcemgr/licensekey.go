@@ -20,12 +20,12 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	licClient "github.com/tigera/licensing/client"
+	licClient "github.com/projectcalico/calico/licensing/client"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	client "github.com/projectcalico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/libcalico-go/lib/options"
+	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
 
 func init() {

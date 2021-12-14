@@ -19,14 +19,14 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	lclient "github.com/tigera/licensing/client"
-	"github.com/tigera/licensing/client/features"
+	lclient "github.com/projectcalico/calico/licensing/client"
+	"github.com/projectcalico/calico/licensing/client/features"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
-	"github.com/projectcalico/felix/config"
-	"github.com/projectcalico/libcalico-go/lib/set"
+	"github.com/projectcalico/calico/felix/config"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 // Dummy license checker for the tests.

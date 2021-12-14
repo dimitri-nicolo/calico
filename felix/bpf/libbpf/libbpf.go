@@ -21,7 +21,7 @@ import (
 	"os"
 	"unsafe"
 
-	"github.com/projectcalico/felix/bpf"
+	"github.com/projectcalico/calico/felix/bpf"
 )
 
 // #include "libbpf_api.h"

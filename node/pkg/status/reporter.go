@@ -24,10 +24,10 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	client "github.com/projectcalico/libcalico-go/lib/clientv3"
-	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
-	"github.com/projectcalico/libcalico-go/lib/options"
-	populator "github.com/projectcalico/node/pkg/status/populators"
+	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/options"
+	populator "github.com/projectcalico/calico/node/pkg/status/populators"
 )
 
 // reporter contains all the data/method about reporting back node status based on a single node status resource.

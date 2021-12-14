@@ -8,7 +8,7 @@ import (
 	"encoding/pem"
 	"fmt"
 
-	cryptolicensing "github.com/tigera/licensing/crypto"
+	cryptolicensing "github.com/projectcalico/calico/licensing/crypto"
 )
 
 // Verifying with a custom list of root certificates.

@@ -10,11 +10,11 @@ import (
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/felix/calc"
-	"github.com/projectcalico/felix/dataplane/mock"
-	"github.com/projectcalico/felix/proto"
-	. "github.com/projectcalico/libcalico-go/lib/backend/model"
-	calinet "github.com/projectcalico/libcalico-go/lib/net"
+	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/dataplane/mock"
+	"github.com/projectcalico/calico/felix/proto"
+	. "github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	calinet "github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
 // Canned tiers/policies.

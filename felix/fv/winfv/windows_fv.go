@@ -13,7 +13,7 @@ import (
 
 	"github.com/tigera/windows-networking/pkg/testutils"
 
-	"github.com/projectcalico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector"
 
 	log "github.com/sirupsen/logrus"
 )

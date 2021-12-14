@@ -4,10 +4,10 @@ package intdataplane
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/dataplane/common"
-	"github.com/projectcalico/felix/ipsets"
-	"github.com/projectcalico/felix/proto"
-	"github.com/projectcalico/felix/rules"
+	"github.com/projectcalico/calico/felix/dataplane/common"
+	"github.com/projectcalico/calico/felix/ipsets"
+	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/rules"
 )
 
 // allHostsIpsetManager manages the all-hosts IP set, which is used by some rules in our static chains

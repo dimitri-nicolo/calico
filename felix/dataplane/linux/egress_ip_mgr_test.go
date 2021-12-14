@@ -10,13 +10,13 @@ import (
 
 	"github.com/golang-collections/collections/stack"
 
-	"github.com/projectcalico/felix/ip"
-	"github.com/projectcalico/felix/logutils"
-	"github.com/projectcalico/felix/proto"
-	"github.com/projectcalico/felix/routerule"
-	"github.com/projectcalico/felix/routetable"
-	"github.com/projectcalico/felix/rules"
-	"github.com/projectcalico/libcalico-go/lib/set"
+	"github.com/projectcalico/calico/felix/ip"
+	"github.com/projectcalico/calico/felix/logutils"
+	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/routerule"
+	"github.com/projectcalico/calico/felix/routetable"
+	"github.com/projectcalico/calico/felix/rules"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
 	"github.com/vishvananda/netlink"
 

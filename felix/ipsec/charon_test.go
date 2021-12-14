@@ -17,8 +17,8 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
-	. "github.com/projectcalico/felix/ipsec"
-	"github.com/projectcalico/felix/testutils"
+	. "github.com/projectcalico/calico/felix/ipsec"
+	"github.com/projectcalico/calico/felix/testutils"
 )
 
 const TestPSK = "top-secret"

@@ -4,7 +4,7 @@ package rules
 import (
 	"fmt"
 
-	"github.com/projectcalico/felix/hashutils"
+	"github.com/projectcalico/calico/felix/hashutils"
 )
 
 const (

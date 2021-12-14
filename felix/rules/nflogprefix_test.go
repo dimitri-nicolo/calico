@@ -15,7 +15,7 @@
 package rules_test
 
 import (
-	. "github.com/projectcalico/felix/rules"
+	. "github.com/projectcalico/calico/felix/rules"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"

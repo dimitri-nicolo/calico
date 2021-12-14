@@ -20,7 +20,7 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/app-policy/statscache"
+	"github.com/projectcalico/calico/app-policy/statscache"
 )
 
 var (

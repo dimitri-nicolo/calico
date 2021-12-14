@@ -11,10 +11,10 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
-	esusers "github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
-	"github.com/projectcalico/kube-controllers/pkg/resource"
-	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
+	esusers "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
+	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
+	relasticsearch "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
 
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"

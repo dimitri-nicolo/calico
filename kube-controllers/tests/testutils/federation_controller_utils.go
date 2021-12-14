@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/projectcalico/felix/fv/containers"
+	"github.com/projectcalico/calico/felix/fv/containers"
 )
 
 func RunFederationController(etcdIP string, localKubeconfig string, remoteKubeconfigs []string, isCalicoEtcdDatastore bool) *containers.Container {

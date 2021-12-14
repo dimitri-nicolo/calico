@@ -20,28 +20,28 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/libcalico-go/lib/set"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
-	"github.com/projectcalico/felix/config"
+	"github.com/projectcalico/calico/felix/config"
 
-	"github.com/projectcalico/felix/calc"
-	"github.com/projectcalico/felix/dataplane/windows/hcn"
+	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/dataplane/windows/hcn"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/dataplane/windows/hns"
-	"github.com/projectcalico/felix/dataplane/windows/vfp"
+	"github.com/projectcalico/calico/felix/dataplane/windows/hns"
+	"github.com/projectcalico/calico/felix/dataplane/windows/vfp"
 
-	"github.com/projectcalico/felix/collector"
-	"github.com/projectcalico/felix/dataplane/common"
-	"github.com/projectcalico/felix/dataplane/windows/ipsets"
-	"github.com/projectcalico/felix/dataplane/windows/policysets"
-	"github.com/projectcalico/felix/jitter"
-	"github.com/projectcalico/felix/proto"
-	"github.com/projectcalico/felix/throttle"
-	"github.com/projectcalico/libcalico-go/lib/health"
+	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/dataplane/common"
+	"github.com/projectcalico/calico/felix/dataplane/windows/ipsets"
+	"github.com/projectcalico/calico/felix/dataplane/windows/policysets"
+	"github.com/projectcalico/calico/felix/jitter"
+	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/throttle"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
 
-	felixconfig "github.com/projectcalico/felix/config"
+	felixconfig "github.com/projectcalico/calico/felix/config"
 )
 
 const (

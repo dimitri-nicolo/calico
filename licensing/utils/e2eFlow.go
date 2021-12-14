@@ -12,8 +12,8 @@ import (
 	"gopkg.in/square/go-jose.v2/jwt"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/licensing/client"
-	cryptolicensing "github.com/tigera/licensing/crypto"
+	"github.com/projectcalico/calico/licensing/client"
+	cryptolicensing "github.com/projectcalico/calico/licensing/crypto"
 
 	yaml "github.com/projectcalico/go-yaml-wrapper"
 )

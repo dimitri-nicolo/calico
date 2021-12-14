@@ -17,14 +17,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/projectcalico/kube-controllers/pkg/elasticsearch/userscache"
-	"github.com/projectcalico/kube-controllers/pkg/rbaccache"
-	"github.com/projectcalico/kube-controllers/pkg/resource"
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/userscache"
+	"github.com/projectcalico/calico/kube-controllers/pkg/rbaccache"
+	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 
-	esusers "github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
-	"github.com/projectcalico/kube-controllers/pkg/strutil"
+	esusers "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
+	"github.com/projectcalico/calico/kube-controllers/pkg/strutil"
 )
 
 func rulesToElasticsearchRoles(rules ...rbacv1.PolicyRule) []string {

@@ -20,7 +20,7 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/app-policy/proto"
+	"github.com/projectcalico/calico/app-policy/proto"
 )
 
 type reporter struct {

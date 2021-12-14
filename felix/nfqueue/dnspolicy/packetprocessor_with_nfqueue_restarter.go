@@ -7,9 +7,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/nfqueue"
+	"github.com/projectcalico/calico/felix/nfqueue"
 
-	"github.com/projectcalico/libcalico-go/lib/set"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 type PacketProcessorWithNfqueueRestarter interface {

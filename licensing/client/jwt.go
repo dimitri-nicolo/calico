@@ -7,7 +7,7 @@ import (
 	"gopkg.in/square/go-jose.v2/jwt"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	cryptolicensing "github.com/tigera/licensing/crypto"
+	cryptolicensing "github.com/projectcalico/calico/licensing/crypto"
 )
 
 var (

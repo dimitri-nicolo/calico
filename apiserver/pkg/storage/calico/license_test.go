@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/tigera/licensing/client"
+	"github.com/projectcalico/calico/licensing/client"
 )
 
 // LicenseMonitor is an interface which enables monitoring of license and feature enablement status.

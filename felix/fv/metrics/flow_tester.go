@@ -10,7 +10,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector"
 
 	. "github.com/onsi/gomega"
 )

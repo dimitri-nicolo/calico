@@ -9,7 +9,7 @@ import (
 
 	esv1 "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1"
 
-	"github.com/projectcalico/kube-controllers/pkg/resource"
+	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 )
 
 // CalculateTigeraElasticsearchHash calculates and returns a hash that can be used to determine if the tigera elasticsearch

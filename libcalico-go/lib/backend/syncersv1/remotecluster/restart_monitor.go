@@ -5,8 +5,8 @@ package remotecluster
 import (
 	"fmt"
 
-	"github.com/projectcalico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
 // RestartCallback is a function definition for passing to the RestartMonitor which

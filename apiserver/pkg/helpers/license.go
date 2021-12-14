@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	licFeatures "github.com/tigera/licensing/client/features"
+	licFeatures "github.com/projectcalico/calico/licensing/client/features"
 
 	libcalicoapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )

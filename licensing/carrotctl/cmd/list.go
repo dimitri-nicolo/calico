@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"github.com/tigera/licensing/datastore"
+	"github.com/projectcalico/calico/licensing/datastore"
 )
 
 var (

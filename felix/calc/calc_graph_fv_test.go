@@ -28,17 +28,17 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
-	lclient "github.com/tigera/licensing/client"
-	"github.com/tigera/licensing/client/features"
+	lclient "github.com/projectcalico/calico/licensing/client"
+	"github.com/projectcalico/calico/licensing/client/features"
 
-	"github.com/projectcalico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/libcalico-go/lib/health"
-	"github.com/projectcalico/libcalico-go/lib/set"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
-	. "github.com/projectcalico/felix/calc"
-	"github.com/projectcalico/felix/config"
-	"github.com/projectcalico/felix/dataplane/mock"
-	"github.com/projectcalico/felix/proto"
+	. "github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/config"
+	"github.com/projectcalico/calico/felix/dataplane/mock"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 // Each entry in baseTests contains a series of states to move through (defined in

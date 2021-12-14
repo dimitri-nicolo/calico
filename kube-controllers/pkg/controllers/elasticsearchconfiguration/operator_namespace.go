@@ -13,8 +13,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
-	"github.com/projectcalico/kube-controllers/pkg/controllers/worker"
-	"github.com/projectcalico/kube-controllers/pkg/resource"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/worker"
+	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 )
 
 const (

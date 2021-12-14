@@ -9,11 +9,11 @@ import (
 
 	"github.com/tigera/windows-networking/pkg/testutils"
 
-	"github.com/projectcalico/felix/fv/metrics"
+	"github.com/projectcalico/calico/felix/fv/metrics"
 
 	log "github.com/sirupsen/logrus"
 
-	. "github.com/projectcalico/felix/fv/winfv"
+	. "github.com/projectcalico/calico/felix/fv/winfv"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/gopacket/layers"
 
-	"github.com/projectcalico/felix/proto"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 type Collector interface {

@@ -8,7 +8,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
 
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -17,12 +17,12 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
-	"github.com/projectcalico/kube-controllers/pkg/config"
-	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
+	"github.com/projectcalico/calico/kube-controllers/pkg/config"
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 
-	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
-	"github.com/projectcalico/kube-controllers/pkg/controllers/worker"
-	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/controller"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/worker"
+	relasticsearch "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
 )
 
 // managedClusterController is responsible for controllers (from the elasticsearchconfiguration package) for every managed

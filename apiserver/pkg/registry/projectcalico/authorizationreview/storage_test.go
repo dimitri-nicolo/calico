@@ -13,9 +13,9 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 
-	"github.com/projectcalico/apiserver/pkg/rbac"
-	rbacmock "github.com/projectcalico/apiserver/pkg/rbac/mock"
-	. "github.com/projectcalico/apiserver/pkg/registry/projectcalico/authorizationreview"
+	"github.com/projectcalico/calico/apiserver/pkg/rbac"
+	rbacmock "github.com/projectcalico/calico/apiserver/pkg/rbac/mock"
+	. "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizationreview"
 )
 
 var _ = Describe("RBAC calculator tests", func() {

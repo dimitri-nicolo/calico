@@ -8,8 +8,8 @@ import (
 
 	"github.com/docopt/docopt-go"
 
-	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/bgp"
-	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/constants"
+	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/bgp"
+	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/constants"
 )
 
 // BGP contains switch for subcommands related to BGP peering.

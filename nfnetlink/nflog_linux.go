@@ -12,8 +12,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink/nl"
 
-	"github.com/tigera/nfnetlink/nfnl"
-	"github.com/tigera/nfnetlink/pkt"
+	"github.com/projectcalico/calico/nfnetlink/nfnl"
+	"github.com/projectcalico/calico/nfnetlink/pkt"
 	"golang.org/x/sys/unix"
 )
 

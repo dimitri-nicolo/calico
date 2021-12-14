@@ -24,14 +24,14 @@ import (
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/projectcalico/felix/calc"
-	"github.com/projectcalico/felix/collector"
-	"github.com/projectcalico/felix/config"
-	windataplane "github.com/projectcalico/felix/dataplane/windows"
-	"github.com/projectcalico/felix/dataplane/windows/hns"
-	"github.com/projectcalico/libcalico-go/lib/health"
-	"github.com/projectcalico/libcalico-go/lib/ipam"
-	"github.com/projectcalico/libcalico-go/lib/security"
+	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/config"
+	windataplane "github.com/projectcalico/calico/felix/dataplane/windows"
+	"github.com/projectcalico/calico/felix/dataplane/windows/hns"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
+	"github.com/projectcalico/calico/libcalico-go/lib/ipam"
+	"github.com/projectcalico/calico/libcalico-go/lib/security"
 )
 
 func StartDataplaneDriver(configParams *config.Config,

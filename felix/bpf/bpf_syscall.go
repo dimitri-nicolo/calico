@@ -28,8 +28,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/bpf/asm"
-	"github.com/projectcalico/felix/versionparse"
+	"github.com/projectcalico/calico/felix/bpf/asm"
+	"github.com/projectcalico/calico/felix/versionparse"
 
 	"golang.org/x/sys/unix"
 )

@@ -9,7 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/common"
+	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/common"
 )
 
 // CopyCommand is a kubectl command that will be executed to copy capture files from a pod

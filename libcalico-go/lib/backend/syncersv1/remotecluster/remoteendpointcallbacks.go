@@ -5,7 +5,7 @@ package remotecluster
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 )
 
 // The callbacks used by the remote endpoint watchers

@@ -15,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
-	"github.com/projectcalico/felix/aws"
+	"github.com/projectcalico/calico/felix/aws"
 )
 
 // CapacityUpdater manages a background goroutine that maintains the "projectcalico.org/aws-secondary-ipv4"

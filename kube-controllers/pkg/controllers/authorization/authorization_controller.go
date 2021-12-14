@@ -8,9 +8,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/projectcalico/kube-controllers/pkg/config"
+	"github.com/projectcalico/calico/kube-controllers/pkg/config"
 
-	"github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -19,10 +19,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
-	"github.com/projectcalico/kube-controllers/pkg/controllers/worker"
-	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
-	"github.com/projectcalico/kube-controllers/pkg/resource"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/controller"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/worker"
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
+	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 )
 
 // authorizationController synchronizes kubernetes RBAC authorization with Elasticsearch authorization. At a high level,

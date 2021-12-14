@@ -7,12 +7,12 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/projectcalico/felix/calc"
-	"github.com/projectcalico/felix/calc/capture"
+	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/calc/capture"
 
-	libapiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	"github.com/projectcalico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
 // Mocked callbacks for PacketCaptureCallbacks

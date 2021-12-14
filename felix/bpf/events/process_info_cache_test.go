@@ -9,8 +9,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/felix/bpf/events"
-	"github.com/projectcalico/felix/collector"
+	"github.com/projectcalico/calico/felix/bpf/events"
+	"github.com/projectcalico/calico/felix/collector"
 )
 
 var (

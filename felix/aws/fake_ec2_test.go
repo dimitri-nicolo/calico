@@ -15,7 +15,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/testutils"
+	"github.com/projectcalico/calico/felix/testutils"
 )
 
 const (

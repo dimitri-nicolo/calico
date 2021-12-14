@@ -8,7 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/node/pkg/bgp"
+	"github.com/projectcalico/calico/node/pkg/bgp"
 )
 
 // DefaultPrometheusPort is the default port value for the Prometheus metrics server

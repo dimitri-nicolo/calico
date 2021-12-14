@@ -16,7 +16,7 @@ import (
 	"github.com/google/gopacket/layers"
 	"golang.org/x/net/idna"
 
-	"github.com/projectcalico/felix/calc"
+	"github.com/projectcalico/calico/felix/calc"
 )
 
 type DNSUpdate struct {

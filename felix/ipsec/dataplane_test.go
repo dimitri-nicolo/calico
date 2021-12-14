@@ -10,11 +10,11 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 
-	"github.com/projectcalico/felix/ip"
-	"github.com/projectcalico/felix/testutils"
-	"github.com/projectcalico/libcalico-go/lib/set"
+	"github.com/projectcalico/calico/felix/ip"
+	"github.com/projectcalico/calico/felix/testutils"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
-	. "github.com/projectcalico/felix/ipsec"
+	. "github.com/projectcalico/calico/felix/ipsec"
 )
 
 var (

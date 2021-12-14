@@ -30,16 +30,16 @@ import (
 	"gopkg.in/square/go-jose.v2/jwt"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	licClient "github.com/tigera/licensing/client"
+	licClient "github.com/projectcalico/calico/licensing/client"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/calicoctl/v3/calicoctl/resourcemgr"
+	"github.com/projectcalico/calico/calicoctl/calicoctl/resourcemgr"
 	"github.com/projectcalico/go-json/json"
 	"github.com/projectcalico/go-yaml-wrapper"
-	client "github.com/projectcalico/libcalico-go/lib/clientv3"
-	calicoErrors "github.com/projectcalico/libcalico-go/lib/errors"
-	"github.com/projectcalico/libcalico-go/lib/options"
+	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	calicoErrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
 
 type ResourcePrinter interface {

@@ -21,9 +21,9 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/felix/bpf"
-	"github.com/projectcalico/felix/bpf/events"
-	"github.com/projectcalico/felix/bpf/kprobe"
+	"github.com/projectcalico/calico/felix/bpf"
+	"github.com/projectcalico/calico/felix/bpf/events"
+	"github.com/projectcalico/calico/felix/bpf/kprobe"
 )
 
 func TestKprobe(t *testing.T) {

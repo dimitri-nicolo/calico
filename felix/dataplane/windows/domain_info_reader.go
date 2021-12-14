@@ -5,10 +5,10 @@ package windataplane
 import (
 	log "github.com/sirupsen/logrus"
 
-	fc "github.com/projectcalico/felix/config"
-	"github.com/projectcalico/felix/dataplane/common"
+	fc "github.com/projectcalico/calico/felix/config"
+	"github.com/projectcalico/calico/felix/dataplane/common"
 
-	"github.com/projectcalico/felix/dataplane/windows/etw"
+	"github.com/projectcalico/calico/felix/dataplane/windows/etw"
 )
 
 const (

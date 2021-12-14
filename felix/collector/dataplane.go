@@ -5,8 +5,8 @@ package collector
 import (
 	"fmt"
 
-	"github.com/projectcalico/felix/calc"
-	"github.com/projectcalico/felix/rules"
+	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/rules"
 )
 
 // RuleHit records how many times a rule was hit and how many bytes passed

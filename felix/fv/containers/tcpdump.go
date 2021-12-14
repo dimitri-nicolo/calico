@@ -19,7 +19,7 @@ import (
 
 	"github.com/onsi/ginkgo"
 
-	"github.com/projectcalico/felix/fv/utils"
+	"github.com/projectcalico/calico/felix/fv/utils"
 )
 
 func AttachTCPDump(c *Container, iface string) *TCPDump {

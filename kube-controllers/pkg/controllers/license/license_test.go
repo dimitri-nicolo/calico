@@ -12,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/projectcalico/kube-controllers/pkg/controllers/license"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/license"
 )
 
 var _ = Describe("License Controller tests", func() {

@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
-	esusers "github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
+	esusers "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
 )
 
 var resourceNameToElasticsearchRole = map[string]string{

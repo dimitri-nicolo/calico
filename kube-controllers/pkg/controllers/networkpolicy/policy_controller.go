@@ -22,17 +22,17 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	rcache "github.com/projectcalico/kube-controllers/pkg/cache"
-	"github.com/projectcalico/kube-controllers/pkg/config"
-	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
+	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
+	"github.com/projectcalico/calico/kube-controllers/pkg/config"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/controller"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/kube-controllers/pkg/converter"
-	kdd "github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
-	client "github.com/projectcalico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/libcalico-go/lib/errors"
-	"github.com/projectcalico/libcalico-go/lib/options"
+	"github.com/projectcalico/calico/kube-controllers/pkg/converter"
+	kdd "github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
+	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/options"
 
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

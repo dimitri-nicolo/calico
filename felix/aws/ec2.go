@@ -31,7 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	"github.com/projectcalico/libcalico-go/lib/health"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
 )
 
 const (

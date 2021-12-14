@@ -9,8 +9,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
-	esusers "github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
+	esusers "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
 )
 
 var tenantID = os.Getenv("ELASTIC_INDEX_TENANT_ID")

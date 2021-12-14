@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	calcCapture "github.com/projectcalico/felix/calc/capture"
+	calcCapture "github.com/projectcalico/calico/felix/calc/capture"
 
-	"github.com/projectcalico/felix/proto"
+	"github.com/projectcalico/calico/felix/proto"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"

@@ -9,8 +9,8 @@ import (
 	"crypto/x509"
 	"fmt"
 
-	"github.com/tigera/licensing/client/features"
-	cryptolicensing "github.com/tigera/licensing/crypto"
+	"github.com/projectcalico/calico/licensing/client/features"
+	cryptolicensing "github.com/projectcalico/calico/licensing/crypto"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )

@@ -11,7 +11,7 @@ import (
 
 	"github.com/vishvananda/netlink/nl"
 
-	"github.com/tigera/nfnetlink/nfnl"
+	"github.com/projectcalico/calico/nfnetlink/nfnl"
 )
 
 type ConntrackEntryHandler func(cte CtEntry)

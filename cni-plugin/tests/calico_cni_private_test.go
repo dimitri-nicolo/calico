@@ -18,15 +18,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/projectcalico/cni-plugin/internal/pkg/testutils"
-	"github.com/projectcalico/cni-plugin/internal/pkg/utils"
-	"github.com/projectcalico/cni-plugin/pkg/types"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	k8sconversion "github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
-	client "github.com/projectcalico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/libcalico-go/lib/logutils"
-	"github.com/projectcalico/libcalico-go/lib/names"
-	"github.com/projectcalico/libcalico-go/lib/options"
+	"github.com/projectcalico/calico/cni-plugin/internal/pkg/testutils"
+	"github.com/projectcalico/calico/cni-plugin/internal/pkg/utils"
+	"github.com/projectcalico/calico/cni-plugin/pkg/types"
+	api "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	k8sconversion "github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
+	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
+	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
 
 // This file is to hold private only tests to try to reduce the possibility of

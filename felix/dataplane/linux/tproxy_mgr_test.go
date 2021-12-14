@@ -8,8 +8,8 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/ipsets"
-	"github.com/projectcalico/felix/proto"
+	"github.com/projectcalico/calico/felix/ipsets"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 var _ = Describe("TPROXYManager", func() {

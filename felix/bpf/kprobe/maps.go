@@ -17,7 +17,7 @@
 package kprobe
 
 import (
-	"github.com/projectcalico/felix/bpf"
+	"github.com/projectcalico/calico/felix/bpf"
 )
 
 const statsKeySize = 44

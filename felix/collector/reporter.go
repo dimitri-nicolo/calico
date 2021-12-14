@@ -11,8 +11,8 @@ import (
 
 	"k8s.io/kubernetes/pkg/proxy"
 
-	"github.com/projectcalico/felix/calc"
-	logutil "github.com/projectcalico/felix/logutils"
+	"github.com/projectcalico/calico/felix/calc"
+	logutil "github.com/projectcalico/calico/felix/logutils"
 )
 
 const (

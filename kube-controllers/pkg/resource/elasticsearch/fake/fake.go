@@ -14,7 +14,7 @@ import (
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/scheme"
 	restfake "k8s.io/client-go/rest/fake"
 
-	"github.com/projectcalico/kube-controllers/pkg/resource"
+	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 )
 
 type RESTClient struct {

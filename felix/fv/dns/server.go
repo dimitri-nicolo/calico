@@ -8,7 +8,7 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/felix/fv/containers"
+	"github.com/projectcalico/calico/felix/fv/containers"
 )
 
 func StartServer(records map[string][]RecordIP) *containers.Container {

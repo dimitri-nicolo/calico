@@ -9,9 +9,9 @@ import (
 
 	"github.com/willf/bitset"
 
-	"github.com/projectcalico/felix/dataplane/windows/hns"
-	"github.com/projectcalico/felix/dataplane/windows/policysets"
-	"github.com/projectcalico/felix/iputils"
+	"github.com/projectcalico/calico/felix/dataplane/windows/hns"
+	"github.com/projectcalico/calico/felix/dataplane/windows/policysets"
+	"github.com/projectcalico/calico/felix/iputils"
 
 	log "github.com/sirupsen/logrus"
 )

@@ -9,8 +9,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	. "github.com/projectcalico/calicoctl/v3/tests/fv/utils"
-	"github.com/projectcalico/libcalico-go/lib/logutils"
+	. "github.com/projectcalico/calico/calicoctl/tests/fv/utils"
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
 
 func init() {

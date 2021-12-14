@@ -8,8 +8,8 @@ import (
 
 	"github.com/docopt/docopt-go"
 
-	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/cluster"
-	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/constants"
+	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/cluster"
+	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/constants"
 )
 
 // Cluster includes any cluster-level subcommands.

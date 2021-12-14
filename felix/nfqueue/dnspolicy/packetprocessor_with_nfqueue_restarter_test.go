@@ -11,8 +11,8 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
-	"github.com/projectcalico/felix/nfqueue"
-	nfqdnspolicy "github.com/projectcalico/felix/nfqueue/dnspolicy"
+	"github.com/projectcalico/calico/felix/nfqueue"
+	nfqdnspolicy "github.com/projectcalico/calico/felix/nfqueue/dnspolicy"
 
 	gonfqueue "github.com/florianl/go-nfqueue"
 

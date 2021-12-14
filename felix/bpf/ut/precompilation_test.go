@@ -26,9 +26,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 
-	"github.com/projectcalico/felix/bpf"
-	"github.com/projectcalico/felix/bpf/stats"
-	"github.com/projectcalico/felix/bpf/tc"
+	"github.com/projectcalico/calico/felix/bpf"
+	"github.com/projectcalico/calico/felix/bpf/stats"
+	"github.com/projectcalico/calico/felix/bpf/tc"
 )
 
 func TestTcpStatsBinaryIsLoadable(t *testing.T) {

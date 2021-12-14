@@ -25,7 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/bpf/perf"
+	"github.com/projectcalico/calico/felix/bpf/perf"
 )
 
 const (

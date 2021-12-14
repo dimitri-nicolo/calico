@@ -17,7 +17,7 @@ package v1
 import (
 	"fmt"
 
-	"github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned"
+	"github.com/projectcalico/calico/libcalico-go/lib/apis/v1/unversioned"
 )
 
 // Tier contains the details of a security policy tier resource.  A tier contains a set of

@@ -11,9 +11,9 @@ import (
 	"github.com/gavv/monotime"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/jitter"
-	logutil "github.com/projectcalico/felix/logutils"
-	"github.com/projectcalico/libcalico-go/lib/health"
+	"github.com/projectcalico/calico/felix/jitter"
+	logutil "github.com/projectcalico/calico/felix/logutils"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
 )
 
 type LogDispatcher interface {

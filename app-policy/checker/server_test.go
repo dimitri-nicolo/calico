@@ -22,9 +22,9 @@ import (
 	. "github.com/onsi/gomega"
 	"google.golang.org/genproto/googleapis/rpc/status"
 
-	"github.com/projectcalico/app-policy/policystore"
-	"github.com/projectcalico/app-policy/proto"
-	"github.com/projectcalico/app-policy/statscache"
+	"github.com/projectcalico/calico/app-policy/policystore"
+	"github.com/projectcalico/calico/app-policy/proto"
+	"github.com/projectcalico/calico/app-policy/statscache"
 
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 )

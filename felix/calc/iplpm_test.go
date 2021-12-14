@@ -8,9 +8,9 @@ import (
 
 	"net"
 
-	. "github.com/projectcalico/felix/calc"
-	"github.com/projectcalico/felix/ip"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	. "github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/ip"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
 var _ = DescribeTable("Check Inserting CIDR and compare with network set names",

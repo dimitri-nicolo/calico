@@ -21,10 +21,10 @@ import (
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 
-	"github.com/projectcalico/felix/dataplane/windows/hns"
+	"github.com/projectcalico/calico/felix/dataplane/windows/hns"
 
-	"github.com/projectcalico/felix/config"
-	windataplane "github.com/projectcalico/felix/dataplane/windows"
+	"github.com/projectcalico/calico/felix/config"
+	windataplane "github.com/projectcalico/calico/felix/dataplane/windows"
 )
 
 var _ = Describe("Constructor test", func() {

@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/felix/proto"
+	"github.com/projectcalico/calico/felix/proto"
 
-	"github.com/projectcalico/felix/capture"
+	"github.com/projectcalico/calico/felix/capture"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"

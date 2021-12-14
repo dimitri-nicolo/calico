@@ -14,16 +14,16 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 
-	"github.com/projectcalico/felix/ifacemonitor"
+	"github.com/projectcalico/calico/felix/ifacemonitor"
 
-	"github.com/projectcalico/felix/aws"
+	"github.com/projectcalico/calico/felix/aws"
 
-	"github.com/projectcalico/felix/ip"
-	"github.com/projectcalico/felix/logutils"
-	"github.com/projectcalico/felix/proto"
-	"github.com/projectcalico/felix/routerule"
-	"github.com/projectcalico/felix/routetable"
-	"github.com/projectcalico/libcalico-go/lib/set"
+	"github.com/projectcalico/calico/felix/ip"
+	"github.com/projectcalico/calico/felix/logutils"
+	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/routerule"
+	"github.com/projectcalico/calico/felix/routetable"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 // awsIPManager tries to provision secondary ENIs and IP addresses in the AWS fabric for any local pods that are

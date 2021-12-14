@@ -9,7 +9,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/projectcalico/felix/k8sutils"
+	"github.com/projectcalico/calico/felix/k8sutils"
 
 	log "github.com/sirupsen/logrus"
 
@@ -19,11 +19,11 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 
-	"github.com/projectcalico/felix/dispatcher"
-	"github.com/projectcalico/felix/ip"
+	"github.com/projectcalico/calico/felix/dispatcher"
+	"github.com/projectcalico/calico/felix/ip"
 )
 
 const (

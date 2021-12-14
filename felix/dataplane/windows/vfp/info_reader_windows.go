@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/libcalico-go/lib/set"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
-	"github.com/projectcalico/felix/collector"
+	"github.com/projectcalico/calico/felix/collector"
 
 	"sigs.k8s.io/kind/pkg/errors"
 
@@ -17,9 +17,9 @@ import (
 	"github.com/tigera/windows-networking/pkg/etw"
 	"github.com/tigera/windows-networking/pkg/vfpctrl"
 
-	"github.com/projectcalico/felix/calc"
-	"github.com/projectcalico/felix/jitter"
-	"github.com/projectcalico/felix/rules"
+	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/jitter"
+	"github.com/projectcalico/calico/felix/rules"
 )
 
 const (

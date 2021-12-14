@@ -11,11 +11,11 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/projectcalico/kube-controllers/pkg/resource"
+	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 
 	esv1 "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1"
 
@@ -28,8 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 
-	esusers "github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
-	relasticsearchfake "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch/fake"
+	esusers "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
+	relasticsearchfake "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch/fake"
 )
 
 var cert = `-----BEGIN CERTIFICATE-----

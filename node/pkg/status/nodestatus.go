@@ -21,17 +21,17 @@ import (
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/nodestatussyncer"
-	client "github.com/projectcalico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/node/buildinfo"
-	"github.com/projectcalico/node/pkg/calicoclient"
-	"github.com/projectcalico/node/pkg/lifecycle/startup"
-	populator "github.com/projectcalico/node/pkg/status/populators"
-	"github.com/projectcalico/typha/pkg/syncclientutils"
-	"github.com/projectcalico/typha/pkg/syncproto"
+	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
+	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/nodestatussyncer"
+	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/calico/node/buildinfo"
+	"github.com/projectcalico/calico/node/pkg/calicoclient"
+	"github.com/projectcalico/calico/node/pkg/lifecycle/startup"
+	populator "github.com/projectcalico/calico/node/pkg/status/populators"
+	"github.com/projectcalico/calico/typha/pkg/syncclientutils"
+	"github.com/projectcalico/calico/typha/pkg/syncproto"
 )
 
 // This file contains the main processing and common logic for node status reporter.

@@ -8,7 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/bpf/events"
+	"github.com/projectcalico/calico/felix/bpf/events"
 )
 
 var (

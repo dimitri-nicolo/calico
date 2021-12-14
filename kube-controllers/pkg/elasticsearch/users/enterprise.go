@@ -7,7 +7,7 @@ package users
 import (
 	"fmt"
 
-	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 )
 
 func indexPattern(prefix, cluster, suffix string) string {

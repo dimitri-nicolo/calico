@@ -18,13 +18,13 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/felix/calc"
-	"github.com/projectcalico/felix/ip"
-	"github.com/projectcalico/felix/jitter"
-	logutil "github.com/projectcalico/felix/logutils"
-	"github.com/projectcalico/felix/proto"
-	"github.com/projectcalico/felix/rules"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/ip"
+	"github.com/projectcalico/calico/felix/jitter"
+	logutil "github.com/projectcalico/calico/felix/logutils"
+	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/rules"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 
 	kapiv1 "k8s.io/api/core/v1"
 )

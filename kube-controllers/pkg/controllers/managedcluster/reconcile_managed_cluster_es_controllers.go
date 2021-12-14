@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/projectcalico/kube-controllers/pkg/elasticsearch"
-	"github.com/projectcalico/kube-controllers/pkg/elasticsearch/users"
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
 
-	"github.com/projectcalico/kube-controllers/pkg/config"
+	"github.com/projectcalico/calico/kube-controllers/pkg/config"
 
-	relasticsearch "github.com/projectcalico/kube-controllers/pkg/resource/elasticsearch"
+	relasticsearch "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
 
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -22,8 +22,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/projectcalico/kube-controllers/pkg/controllers/elasticsearchconfiguration"
-	"github.com/projectcalico/kube-controllers/pkg/controllers/license"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/elasticsearchconfiguration"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/license"
 )
 
 type managedClusterESControllerReconciler struct {

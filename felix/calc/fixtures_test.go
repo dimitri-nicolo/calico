@@ -7,13 +7,13 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/projectcalico/felix/calc"
-	"github.com/projectcalico/felix/calc/capture"
+	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/calc/capture"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
 var Wep1Key = model.WorkloadEndpointKey{WorkloadID: "wep1"}

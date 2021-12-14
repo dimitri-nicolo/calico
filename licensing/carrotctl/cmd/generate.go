@@ -17,9 +17,9 @@ import (
 
 	"path/filepath"
 
-	"github.com/tigera/licensing/client"
-	"github.com/tigera/licensing/client/features"
-	"github.com/tigera/licensing/datastore"
+	"github.com/projectcalico/calico/licensing/client"
+	"github.com/projectcalico/calico/licensing/client/features"
+	"github.com/projectcalico/calico/licensing/datastore"
 )
 
 var (

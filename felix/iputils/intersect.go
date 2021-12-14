@@ -17,7 +17,7 @@ package iputils
 import (
 	"sort"
 
-	"github.com/projectcalico/felix/iptree"
+	"github.com/projectcalico/calico/felix/iptree"
 )
 
 func IntersectCIDRs(aStrs []string, bStrs []string) (out []string) {

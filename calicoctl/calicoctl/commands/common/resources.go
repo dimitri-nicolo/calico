@@ -24,18 +24,18 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	licClient "github.com/tigera/licensing/client"
+	licClient "github.com/projectcalico/calico/licensing/client"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/argutils"
-	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/clientmgr"
-	"github.com/projectcalico/calicoctl/v3/calicoctl/commands/file"
-	"github.com/projectcalico/calicoctl/v3/calicoctl/resourcemgr"
+	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/argutils"
+	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/clientmgr"
+	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/file"
+	"github.com/projectcalico/calico/calicoctl/calicoctl/resourcemgr"
 	"github.com/projectcalico/go-yaml-wrapper"
-	client "github.com/projectcalico/libcalico-go/lib/clientv3"
-	calicoErrors "github.com/projectcalico/libcalico-go/lib/errors"
-	"github.com/projectcalico/libcalico-go/lib/options"
+	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	calicoErrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
 
 type action int

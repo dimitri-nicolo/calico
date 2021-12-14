@@ -12,9 +12,9 @@ import (
 	"github.com/gavv/monotime"
 	"k8s.io/kubernetes/pkg/proxy"
 
-	"github.com/projectcalico/felix/calc"
-	"github.com/projectcalico/felix/rules"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/rules"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
 var ErrorIsNotDNAT = errors.New("Tuple is not a DNAT connection")

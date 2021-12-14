@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/projectcalico/felix/calc"
+	"github.com/projectcalico/calico/felix/calc"
 )
 
 // L7 Update represents the data that is sent to us straight from the envoy logs?

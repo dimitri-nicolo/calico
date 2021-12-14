@@ -4,8 +4,8 @@ package vfp
 import (
 	"time"
 
-	"github.com/projectcalico/felix/calc"
-	"github.com/projectcalico/felix/collector"
+	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/collector"
 )
 
 // InfoReader implements collector.PacketInfoReader and collector.ConntrackInfoReader.

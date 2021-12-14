@@ -11,12 +11,12 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/nfnetlink"
-	"github.com/tigera/nfnetlink/nfnl"
+	"github.com/projectcalico/calico/nfnetlink"
+	"github.com/projectcalico/calico/nfnetlink/nfnl"
 
-	"github.com/projectcalico/felix/calc"
-	"github.com/projectcalico/felix/jitter"
-	"github.com/projectcalico/felix/rules"
+	"github.com/projectcalico/calico/felix/calc"
+	"github.com/projectcalico/calico/felix/jitter"
+	"github.com/projectcalico/calico/felix/rules"
 )
 
 // NFLogReader consumes NFLog data and converts them to a format used by collector.

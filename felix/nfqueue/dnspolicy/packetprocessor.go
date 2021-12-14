@@ -10,13 +10,13 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/ip"
-	"github.com/projectcalico/felix/nfqueue"
-	"github.com/projectcalico/felix/timeshim"
+	"github.com/projectcalico/calico/felix/ip"
+	"github.com/projectcalico/calico/felix/nfqueue"
+	"github.com/projectcalico/calico/felix/timeshim"
 
-	"github.com/projectcalico/libcalico-go/lib/logutils"
-	cprometheus "github.com/projectcalico/libcalico-go/lib/prometheus"
-	"github.com/projectcalico/libcalico-go/lib/set"
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	cprometheus "github.com/projectcalico/calico/libcalico-go/lib/prometheus"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
 	"github.com/prometheus/client_golang/prometheus"
 

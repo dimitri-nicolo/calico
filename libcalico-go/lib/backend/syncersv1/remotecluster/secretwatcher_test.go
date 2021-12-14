@@ -29,7 +29,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	. "github.com/projectcalico/libcalico-go/lib/backend/syncersv1/remotecluster"
+	. "github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/remotecluster"
 )
 
 var (

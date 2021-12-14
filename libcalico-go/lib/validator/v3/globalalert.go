@@ -13,7 +13,7 @@ import (
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/libcalico-go/lib/validator/v3/query"
+	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 )
 
 func validateGlobalAlertSpec(structLevel validator.StructLevel) {

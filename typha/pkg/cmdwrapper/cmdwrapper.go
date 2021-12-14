@@ -23,8 +23,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/typha/pkg/config"
-	"github.com/projectcalico/typha/pkg/logutils"
+	"github.com/projectcalico/calico/typha/pkg/config"
+	"github.com/projectcalico/calico/typha/pkg/logutils"
 )
 
 const (

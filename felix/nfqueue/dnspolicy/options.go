@@ -5,7 +5,7 @@ package dnspolicy
 import (
 	"time"
 
-	"github.com/projectcalico/felix/timeshim"
+	"github.com/projectcalico/calico/felix/timeshim"
 )
 
 type Option func(packetProcessor *packetProcessor)

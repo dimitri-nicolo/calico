@@ -8,8 +8,8 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/projectcalico/felix/collector"
-	"github.com/projectcalico/felix/timeshim"
+	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/timeshim"
 )
 
 var (

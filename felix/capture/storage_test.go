@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/felix/capture"
+	"github.com/projectcalico/calico/felix/capture"
 )
 
 var _ = Describe("PacketCapture Storage Tests", func() {

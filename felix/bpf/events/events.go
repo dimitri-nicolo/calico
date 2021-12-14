@@ -12,9 +12,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/projectcalico/felix/bpf"
-	"github.com/projectcalico/felix/bpf/perf"
-	"github.com/projectcalico/felix/bpf/state"
+	"github.com/projectcalico/calico/felix/bpf"
+	"github.com/projectcalico/calico/felix/bpf/perf"
+	"github.com/projectcalico/calico/felix/bpf/state"
 )
 
 // Type defines the type of constants used for determining the type of an event.

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/licensing/client"
+	"github.com/projectcalico/calico/licensing/client"
 )
 
 type LicenseInfo struct {

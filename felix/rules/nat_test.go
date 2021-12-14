@@ -20,13 +20,13 @@ import (
 
 	"github.com/tigera/api/pkg/lib/numorstring"
 
-	. "github.com/projectcalico/felix/rules"
+	. "github.com/projectcalico/calico/felix/rules"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/felix/ipsets"
-	. "github.com/projectcalico/felix/iptables"
+	"github.com/projectcalico/calico/felix/ipsets"
+	. "github.com/projectcalico/calico/felix/iptables"
 )
 
 var _ = Describe("NAT", func() {

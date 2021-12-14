@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"regexp"
 
-	"github.com/projectcalico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 )
 
 var (

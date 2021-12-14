@@ -9,12 +9,12 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	lapi "github.com/projectcalico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/libcalico-go/lib/jitter"
+	lapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/jitter"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	lclient "github.com/tigera/licensing/client"
+	lclient "github.com/projectcalico/calico/licensing/client"
 
 	log "github.com/sirupsen/logrus"
 

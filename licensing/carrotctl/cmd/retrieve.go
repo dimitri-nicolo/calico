@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"github.com/tigera/licensing/client"
-	"github.com/tigera/licensing/datastore"
+	"github.com/projectcalico/calico/licensing/client"
+	"github.com/projectcalico/calico/licensing/datastore"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )

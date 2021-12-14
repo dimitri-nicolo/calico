@@ -8,7 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/fv/dns"
+	"github.com/projectcalico/calico/felix/fv/dns"
 
 	"github.com/docopt/docopt-go"
 

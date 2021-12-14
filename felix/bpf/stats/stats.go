@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/projectcalico/felix/bpf/tc"
+	"github.com/projectcalico/calico/felix/bpf/tc"
 )
 
 func AttachTcpStatsBpfProgram(ifaceName, logLevel string, nsID uint16) error {
