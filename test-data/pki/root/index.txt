@@ -1,0 +1,4 @@
+V	190326164328Z		2EAE1DB63D17988ACFA986FC08DEF2A1	root.crt	/C=US/O=Tigera Inc./L=San Francisco/ST=California/CN=Tigera Inc. Cert Authority
+V	190326164400Z		FF2C3DC4B4C95E8142243A2A71E54F20	intermediate.crt	/C=US/O=Tigera Inc./L=San Francisco/ST=California/CN=Tigera Inc. Lic signing - Internal
+V	230404183714Z		A974CEBBA597B5C759518381EB8EB05B	intermediate5yr.crt	/C=US/O=Tigera Inc./L=San Francisco/ST=California/CN=Tigera Inc. Lic signing - Internal CA 2
+V	180404183819Z		96AA8F5AD5C5958CBCE43B1232651D20	intermediate-expired.crt	/C=US/O=Tigera Inc./L=San Francisco/ST=California/CN=Tigera Inc. Lic signing - Internal CA expired
