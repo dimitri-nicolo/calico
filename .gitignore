@@ -1,0 +1,13 @@
+bin/
+tmp/
+.idea
+vendor
+.go-pkg-cache
+tests/logs/
+/report/*
+etc/calico/confd/config
+/*.ps1
+/dist/*.zip
+*.exe
+/tests/confd_kubeconfig
+Makefile.common*
