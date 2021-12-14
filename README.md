@@ -1,4 +1,4 @@
-# Calico Enterprise
+# Calico
 <img src="http://docs.projectcalico.org/images/felix.png" width="100" height="100">
 
 Calico is an open source networking and network security solution for containers, virtual machines, and bare-metal workloads.
