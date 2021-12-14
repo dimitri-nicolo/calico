@@ -1,4 +1,6 @@
-CALICO_DIR=$(shell git rev-parse --show-toplevel)
+include ../metadata.mk
+
+CALICO_DIR=$(shell git rev-parse --show-toplevel)/calico
 GIT_HASH=$(shell git rev-parse --short=9 HEAD)
 VERSIONS_FILE?=$(CALICO_DIR)/_data/versions.yml
 IMAGES_FILE?=
@@ -31,10 +33,10 @@ ifdef EXTRA_JEKYLL_CONFIG
 	CONFIG:=$(CONFIG),$(EXTRA_JEKYLL_CONFIG)
 endif
 
-GO_BUILD_VER?=v0.40
+include ../metadata.mk
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 LOCAL_USER_ID?=$(shell id -u $$USER)
-PACKAGE_NAME?=github.com/projectcalico/calico
+PACKAGE_NAME?=github.com/projectcalico/calico/calico
 
 # Determine whether there's a local yaml installed or use dockerized version.
 # Note in order to install local (faster) yaml: "go get github.com/mikefarah/yq.v2"
@@ -82,8 +84,8 @@ serve: bin/helm
 	# like to use a docker image that comes preloaded with all the github-pages plugins,
 	# its ok to override this variable.
 	docker run --rm -it \
-	  -v $$PWD/bin/helm:/usr/local/bin/helm:ro \
-	  -v $$PWD:/srv/jekyll \
+	  -v $(CURDIR)/bin/helm:/usr/local/bin/helm:ro \
+	  -v $(CURDIR):/srv/jekyll \
 	  -e JEKYLL_DOCKER_TAG="" \
 	  -e JEKYLL_UID=`id -u` \
 	  -p 4000:4000 \
@@ -94,8 +96,8 @@ _site build: bin/helm _includes/charts/tigera-operator/charts/tigera-secure-ee-c
 	docker run --rm -t -i \
 	-e JEKYLL_DOCKER_TAG="" \
 	-e JEKYLL_UID=`id -u` \
-	-v $$PWD/bin/helm:/usr/local/bin/helm:ro \
-	-v $$PWD:/srv/jekyll \
+	-v $(CURDIR)/bin/helm:/usr/local/bin/helm:ro \
+	-v $(CURDIR):/srv/jekyll \
 	-v $(VERSIONS_FILE):/srv/jekyll/_data/versions.yml $(BUILD_EXTRA_FLAG) \
 	jekyll/jekyll:$(JEKYLL_VERSION) /bin/sh -c 'bundle update; jekyll build --incremental $(CONFIG)'
 
@@ -103,130 +105,7 @@ _site build: bin/helm _includes/charts/tigera-operator/charts/tigera-secure-ee-c
 clean:
 	rm -rf _output _site .jekyll-metadata pinned_versions.yaml _includes/charts/*/values.yaml
 	rm -rf stderr.out filtered.out docs_test.created bin
-	rm -f _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz _includes/charts/tigera-operator/charts/tigera-prometheus-operator.tgz
-
-########################################################################################################################
-# Builds locally checked out code using local versions of libcalico, felix, and confd.
-#
-# Example commands:
-#
-#	# Make a build of your locally checked out code with custom registry.
-#	make dev-clean dev-image REGISTRY=caseydavenport
-#
-#	# Build a set of manifests using the produced images.
-#	make dev-manifests REGISTRY=caseydavenport
-#
-#	# Push the built images.
-#	make dev-push REGISTRY=caseydavenport
-#
-#	# Make a build using a specific tag, e.g. calico/node:mytag-amd64.
-#	make dev-clean dev-image TAG_COMMAND='echo mytag'
-#
-########################################################################################################################
-RELEASE_REPOS=felix typha kube-controllers calicoctl cni-plugin app-policy pod2daemon node
-RELEASE_BRANCH_REPOS=$(sort $(RELEASE_REPOS) libcalico-go confd)
-TAG_COMMAND=git describe --tags --dirty --always --long
-REGISTRY?=calico
-LOCAL_BUILD=true
-.PHONY: dev-image dev-test dev-clean
-## Build a local version of Calico based on the checked out codebase.
-dev-image: $(addsuffix -dev-image, $(filter-out calico felix, $(RELEASE_REPOS)))
-
-# Dynamically declare new make targets for all calico subprojects...
-$(addsuffix -dev-image,$(RELEASE_REPOS)): %-dev-image: ../%
-	echo "TARGET:"
-	echo $<
-	@cd $< && export TAG=$$($(TAG_COMMAND)); make image retag-build-images-with-registries \
-		ARCHES=amd64 \
-		BUILD_IMAGE=$(REGISTRY)/$* \
-		PUSH_IMAGES=$(REGISTRY)/$* \
-		LOCAL_BUILD=$(LOCAL_BUILD) \
-		IMAGETAG=$$TAG
-
-## Push locally built images.
-dev-push: $(addsuffix -dev-push, $(filter-out calico felix, $(RELEASE_REPOS)))
-$(addsuffix -dev-push,$(RELEASE_REPOS)): %-dev-push: ../%
-	@cd $< && export TAG=$$($(TAG_COMMAND)); make push \
-		BUILD_IMAGE=$(REGISTRY)/$* \
-		PUSH_IMAGES=$(REGISTRY)/$* \
-		LOCAL_BUILD=$(LOCAL_BUILD) \
-		IMAGETAG=$$TAG
-
-## Run all tests against currently checked out code. WARNING: This takes a LONG time.
-dev-test:  $(addsuffix -dev-test, $(filter-out calico, $(RELEASE_REPOS)))
-$(addsuffix -dev-test,$(RELEASE_REPOS)): %-dev-test: ../%
-	@cd $< && make test LOCAL_BUILD=$(LOCAL_BUILD)
-
-## Run `make clean` across all repos.
-dev-clean: $(addsuffix -dev-clean, $(filter-out calico felix, $(RELEASE_REPOS)))
-$(addsuffix -dev-clean,$(RELEASE_REPOS)): %-dev-clean: ../%
-	@cd $< && export TAG=$$($(TAG_COMMAND)); make clean \
-		BUILD_IMAGE=$(REGISTRY)/$* \
-		PUSH_IMAGES=$(REGISTRY)/$* \
-		LOCAL_BUILD=$(LOCAL_BUILD) \
-		IMAGETAG=$$TAG
-
-dev-manifests: dev-versions-yaml dev-images-file
-	@make bin/helm
-	@make clean _site \
-		VERSIONS_FILE="$$PWD/pinned_versions.yml" \
-		IMAGES_FILE="$$PWD/pinned_images.yml" \
-		DEV=true
-	@mkdir -p _output
-	@cp -r _site/manifests _output/dev-manifests
-
-# Builds an images file for help in building the docs manifests. We need this in order
-# to override the default images file with the desired registry and image names as
-# produced by the `dev-image` target.
-dev-images-file:
-	@echo "imageNames:" > pinned_images.yml
-	@echo "  node: $(REGISTRY)/node" >> pinned_images.yml
-	@echo "  calicoctl: $(REGISTRY)/calicoctl" >> pinned_images.yml
-	@echo "  typha: $(REGISTRY)/typha" >> pinned_images.yml
-	@echo "  cni: $(REGISTRY)/cni-plugin" >> pinned_images.yml
-	@echo "  kubeControllers: $(REGISTRY)/kube-controllers" >> pinned_images.yml
-	@echo "  calico-upgrade: $(REGISTRY)/upgrade" >> pinned_images.yml
-	@echo "  flannel: quay.io/coreos/flannel" >> pinned_images.yml
-	@echo "  dikastes: $(REGISTRY)/app-policy" >> pinned_images.yml
-	@echo "  pilot-webhook: $(REGISTRY)/pilot-webhook" >> pinned_images.yml
-	@echo "  flexvol: $(REGISTRY)/pod2daemon" >> pinned_images.yml
-
-
-# Builds a versions.yaml file that corresponds to the versions produced by the `dev-image` target.
-dev-versions-yaml:
-	@export TYPHA_VER=`cd ../typha && $(TAG_COMMAND)`-amd64; \
-	export CTL_VER=`cd ../calicoctl && $(TAG_COMMAND)`-amd64; \
-	export NODE_VER=`cd ../node && $(TAG_COMMAND)`-amd64; \
-	export CNI_VER=`cd ../cni-plugin && $(TAG_COMMAND)`-amd64; \
-	export KUBE_CONTROLLERS_VER=`cd ../kube-controllers && $(TAG_COMMAND)`-amd64; \
-	export APP_POLICY_VER=`cd ../app-policy && $(TAG_COMMAND)`-amd64; \
-	export POD2DAEMON_VER=`cd ../pod2daemon && $(TAG_COMMAND)`-amd64; \
-	/bin/echo -e \
-"- title: \"dev-build\"\\n"\
-"  note: \"Developer build\"\\n"\
-"  tigera-operator:\\n"\
-"   image: tigera/operator\\n"\
-"   registry: quay.io\\n"\
-"   version: master\\n"\
-"  components:\\n"\
-"     typha:\\n"\
-"      version: $$TYPHA_VER\\n"\
-"     calicoctl:\\n"\
-"      version:  $$CTL_VER\\n"\
-"     calico/node:\\n"\
-"      version:  $$NODE_VER\\n"\
-"     calico/cni:\\n"\
-"      version:  $$CNI_VER\\n"\
-"     calico/kube-controllers:\\n"\
-"      version: $$KUBE_CONTROLLERS_VER\\n"\
-"     networking-calico:\\n"\
-"      version: master\\n"\
-"     flannel:\\n"\
-"      version: v0.11.1\\n"\
-"     dikastes:\\n"\
-"      version: $$APP_POLICY_VER\\n"\
-"     flexvol:\\n"\
-"      version: $$POD2DAEMON_VER\\n" > pinned_versions.yml;
+	rm -f _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz
 
 ###############################################################################
 # CI / test targets
@@ -238,7 +117,7 @@ docs_test.created:
 .PHONY: test
 test: docs_test.created
 	docker run --rm \
-		-v $(PWD):/code \
+		-v $(CURDIR):/code \
 		-e RELEASE_STREAM=$(RELEASE_STREAM) \
 		-e QUAY_API_TOKEN=$(QUAY_API_TOKEN) \
 		-e GITHUB_API_TOKEN=$(GITHUB_ACCESS_TOKEN) \
@@ -258,7 +137,7 @@ htmlproofer: _site
 
 kubeval: _site
 	# Run kubeval to check master manifests are valid Kubernetes resources.
-	-docker run -v $$PWD:/calico --entrypoint /bin/sh garethr/kubeval:0.7.3 -c 'ok=true; for f in `find /calico/_site/master -name "*.yaml" |grep -v "\(patch-cnx-manager-configmap\|kube-controllers-patch\|config\|allow-istio-pilot\|30-policy\|cnx-policy\|crds-only\|istio-app-layer-policy\|patch-flow-logs\|upgrade-calico\|upgrade-calico-3.10\|-cf\).yaml"`; do echo Running kubeval on $$f; /kubeval $$f || ok=false; done; $$ok' 1>stderr.out 2>&1
+	-docker run -v $(CURDIR):/calico --entrypoint /bin/sh garethr/kubeval:0.7.3 -c 'ok=true; for f in `find /calico/_site/master -name "*.yaml" |grep -v "\(patch-cnx-manager-configmap\|kube-controllers-patch\|config\|allow-istio-pilot\|30-policy\|cnx-policy\|crds-only\|istio-app-layer-policy\|patch-flow-logs\|upgrade-calico\|upgrade-calico-3.10\|-cf\).yaml"`; do echo Running kubeval on $$f; /kubeval $$f || ok=false; done; $$ok' 1>stderr.out 2>&1
 
 	# Filter out error loading schema for non-standard resources.
 	-grep -v "Could not read schema from HTTP, response status is 404 Not Found" stderr.out > filtered.out
@@ -295,7 +174,7 @@ helm-tests: vendor bin/helm values.yaml
 HP_IGNORE_URLS="/docs.openshift.org/,/localhost/"
 
 check_external_links: _site
-	docker run -ti -e JEKYLL_UID=`id -u` --rm -v $(PWD)/_site:/_site/ quay.io/calico/htmlproofer:$(HP_VERSION) /_site --external_only --file-ignore $(HP_IGNORE_LOCAL_DIRS) --assume-extension --url-ignore $(HP_IGNORE_URLS) --internal_domains "docs.tigera.io"
+	docker run -ti -e JEKYLL_UID=`id -u` --rm -v $(CURDIR)/_site:/_site/ quay.io/calico/htmlproofer:$(HP_VERSION) /_site --external_only --file-ignore $(HP_IGNORE_LOCAL_DIRS) --assume-extension --url-ignore $(HP_IGNORE_URLS) --internal_domains "docs.tigera.io"
 
 strip_redirects:
 	find \( -name '*.md' -o -name '*.html' \) -exec sed -i'' '/redirect_from:/d' '{}' \;
@@ -443,7 +322,7 @@ endif
 	@echo "This file is auto-generated based on contribution records reported" >> AUTHORS.md
 	@echo "by GitHub for the core repositories within the projectcalico/ organization. It is ordered alphabetically." >> AUTHORS.md
 	@echo "" >> AUTHORS.md
-	@docker run -ti --rm -v $(PWD):/code -e GITHUB_TOKEN=$(GITHUB_TOKEN) python:3 \
+	@docker run -ti --rm -v $(CURDIR):/code -e GITHUB_TOKEN=$(GITHUB_TOKEN) python:3 \
 		bash -c 'pip install pygithub && /usr/local/bin/python /code/release-scripts/get-contributors.py >> /code/AUTHORS.md'
 
 # release-prereqs checks that the environment is configured properly to create a release.
@@ -536,7 +415,7 @@ bin/helm: _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz
 values.yaml: _includes/charts/tigera-prometheus-operator/values.yaml _includes/charts/tigera-operator/values.yaml
 _includes/charts/%/values.yaml: _plugins/values.rb _plugins/helm.rb _data/versions.yml
 	docker run --rm \
-	  -v $$PWD:/calico \
+	  -v $(CURDIR):/calico \
 	  -w /calico \
 	  ruby:2.5 ruby ./hack/gen_values_yml.rb --registry $(REGISTRY) --chart $* > $@
 
@@ -624,7 +503,7 @@ release-test-image:
 release-test: release-test-image
 	docker run --rm \
 	-v /var/run/docker.sock:/var/run/docker.sock \
-	-v $(PWD):/docs \
+	-v $(CURDIR):/docs \
 	-e RELEASE_STREAM=$(RELEASE_STREAM) \
 	$(DOCS_TEST_CONTAINER) sh -c \
 	"nosetests . -e "$(EXCLUDE_REGEX)" \

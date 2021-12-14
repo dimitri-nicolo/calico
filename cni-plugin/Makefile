@@ -1,57 +1,30 @@
-PACKAGE_NAME=github.com/projectcalico/cni-plugin
-GO_BUILD_VER=v0.63
+include ../metadata.mk
 
-GIT_USE_SSH = true
+PACKAGE_NAME = github.com/projectcalico/calico/cni-plugin
+
+# Add in local static-checks
+LOCAL_CHECKS=check-boring-ssl
+
+RELEASE_REGISTRIES    ?= quay.io
+RELEASE_BRANCH_PREFIX ?= release-calient
+DEV_TAG_SUFFIX        ?= calient-0.dev
 
 # This excludes deprecation checks. libcalico-go-private has deprecated VethNameForWorkload but libcalico-go has not, so
 # to the drift between public and private to a minimum we just disable the deprecation checks.
 LINT_ARGS = --max-issues-per-linter 0 --max-same-issues 0 --deadline 5m --exclude SA1019
 
-ORGANIZATION=tigera
-SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_CNI_PLUGIN_PRIVATE_PROJECT_ID)
-
-# Used so semaphore can trigger the update pin pipelines in projects that have this project as a dependency.
-SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_NODE_PRIVATE_PROJECT_ID) $(SEMAPHORE_KUBE_CONTROLLERS_PRIVATE_PROJECT_ID)
-
 CNI_PLUGIN_IMAGE      ?=tigera/cni
-BUILD_IMAGES          ?=$(CNI_PLUGIN_IMAGE)
 DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
-RELEASE_REGISTRIES    ?=quay.io
-RELEASE_BRANCH_PREFIX ?=release-calient
-DEV_TAG_SUFFIX        ?=calient-0.dev
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
+
+BUILD_IMAGES          ?=$(CNI_PLUGIN_IMAGE)
 
 ###############################################################################
-# Download and include Makefile.common
+# include ../lib.Makefile
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
 #   that variable is evaluated when we declare DOCKER_RUN and siblings.
 ###############################################################################
-MAKE_BRANCH?=$(GO_BUILD_VER)
-MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
-
-Makefile.common: Makefile.common.$(MAKE_BRANCH)
-	cp "$<" "$@"
-Makefile.common.$(MAKE_BRANCH):
-	# Clean up any files downloaded from other branches so they don't accumulate.
-	rm -f Makefile.common.*
-	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
-
-EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
-
-# Build mounts for running in "local build" mode. This allows an easy build using local development code,
-# assuming that there is a local checkout of libcalico in the same directory as this repo.
-ifdef LOCAL_BUILD
-PHONY: set-up-local-build
-LOCAL_BUILD_DEP:=set-up-local-build
-
-EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go:/go/src/github.com/projectcalico/libcalico-go:rw
-$(LOCAL_BUILD_DEP):
-	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
-endif
-
-# Add in local static-checks
-LOCAL_CHECKS=check-boring-ssl
-
-include Makefile.common
+include ../lib.Makefile
 
 ###############################################################################
 BIN=bin/$(ARCH)
@@ -94,20 +67,6 @@ clean:
 	# If the vendor directory exists then the build fails with golang 1.14, and this folder exists in semaphore v1 but it's
 	# empty
 	rm -rf vendor/
-	rm Makefile.common*
-
-###############################################################################
-# Updating pins
-###############################################################################
-LICENSING_BRANCH?=$(PIN_BRANCH)
-LICENSING_REPO?=github.com/tigera/licensing
-LIBCALICO_REPO=github.com/tigera/libcalico-go-private
-API_REPO=github.com/tigera/api
-
-update-licensing-pin:
-	$(call update_pin,github.com/tigera/licensing,$(LICENSING_REPO),$(LICENSING_BRANCH))
-
-update-pins: update-api-pin update-licensing-pin replace-libcalico-pin
 
 ###############################################################################
 # Building the binary
@@ -134,7 +93,7 @@ sub-build-%:
 	$(MAKE) build ARCH=$*
 	
 ## Build the Calico network plugin and ipam plugins
-$(BIN)/install binary: $(LOCAL_BUILD_DEP) $(SRC_FILES)
+$(BIN)/install binary: $(SRC_FILES)
 	-mkdir -p .go-pkg-cache
 	-mkdir -p $(BIN)
 	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) sh -c '\
@@ -142,7 +101,7 @@ $(BIN)/install binary: $(LOCAL_BUILD_DEP) $(SRC_FILES)
 		$(CHECK_BORINGSSL)'
 
 ## Build the Calico network plugin and ipam plugins for Windows
-$(BIN_WIN)/calico.exe $(BIN_WIN)/calico-ipam.exe: $(LOCAL_BUILD_DEP) $(SRC_FILES)
+$(BIN_WIN)/calico.exe $(BIN_WIN)/calico-ipam.exe: $(SRC_FILES)
 	$(DOCKER_RUN) \
 	-e GOOS=windows \
 	-e CGO_ENABLED=1 \
@@ -182,11 +141,6 @@ $(BIN)/flannel:
 	$(CURL) -L --retry 5 https://github.com/containernetworking/plugins/releases/download/v0.9.1/cni-plugins-linux-$(subst v7,,$(ARCH))-v0.9.1.tgz | tar -xz -C $(BIN) ./flannel
 
 ###############################################################################
-# Static checks
-###############################################################################
-hooks_installed:=$(shell ./install-git-hooks)
-
-###############################################################################
 # Unit Tests
 ###############################################################################
 ## Run the unit tests.
@@ -201,7 +155,7 @@ check-boring-ssl: $(BIN)/install
 $(BIN)/calico-ipam $(BIN)/calico: $(BIN)/install
 	cp "$<" "$@"
 
-ut-datastore: $(LOCAL_BUILD_DEP)
+ut-datastore:
 	# The tests need to run as root
 	docker run --rm -t --privileged --net=host \
 	$(EXTRA_DOCKER_ARGS) \
@@ -215,7 +169,7 @@ ut-datastore: $(LOCAL_BUILD_DEP)
 	-e DATASTORE_TYPE=$(DATASTORE_TYPE) \
 	-e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 \
 	-e KUBECONFIG=/home/user/certs/kubeconfig \
-	-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+	-v $(CURDIR)/../:/go/src/github.com/projectcalico/calico:rw \
 	-v $(CURDIR)/tests/certs:/home/user/certs \
 	$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 			cd  /go/src/$(PACKAGE_NAME) && \
@@ -247,7 +201,7 @@ test-cni-versions:
 config/crd: mod-download
 	mkdir -p config/crd
 	$(DOCKER_GO_BUILD) sh -c ' \
-		cp -r `go list -m -f "{{.Dir}}" github.com/projectcalico/libcalico-go`/config/crd/* config/crd; \
+		cp -r ../libcalico-go/config/crd/* config/crd; \
 		chmod +w config/crd/*'
 
 ## Kubernetes apiserver used for tests
@@ -280,7 +234,7 @@ run-k8s-apiserver: config/crd stop-k8s-apiserver run-etcd
 run-k8s-controller: stop-k8s-controller run-k8s-apiserver
 	docker run --detach --net=host \
 	  --name calico-k8s-controller \
-	  -v $(PWD)/tests/certs:/home/user/certs \
+	  -v $(CURDIR)/tests/certs:/home/user/certs \
 	  $(CALICO_BUILD) kube-controller-manager \
             --master=https://127.0.0.1:6443 \
             --kubeconfig=/home/user/certs/kube-controller-manager.kubeconfig \
@@ -319,7 +273,7 @@ stop-etcd:
 # to interact with docker.
 pkg/install/install.test: pkg/install/*.go
 	-mkdir -p .go-pkg-cache
-	$(DOCKER_RUN) \
+	docker run --rm \
 	-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 	-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
 	-v $(CURDIR)/.go-pkg-cache:/go/pkg/:rw \
@@ -338,25 +292,11 @@ test-install-cni: image pkg/install/install.test
 .PHONY: ci
 ci: clean mod-download build static-checks test-cni-versions image-all test-install-cni
 
-## Avoid unplanned go.sum updates
-.PHONY: undo-go-sum check-dirty
-undo-go-sum:
-	@echo "Undoing go.sum update..."
-	git checkout -- go.sum
-
-## Check if generated image is dirty
-check-dirty: undo-go-sum
-	@if (git describe --tags --dirty | grep -c dirty >/dev/null); then \
-	  echo "Generated image is dirty:"; \
-	  git status --porcelain; \
-	  false; \
-	fi
-
 ## Deploys images to registry
-cd: check-dirty image-all cd-common
+cd: image-all cd-common
 
 ## Build fv binary for Windows
-$(BIN_WIN)/win-fv.exe: $(LOCAL_BUILD_DEP) $(WINFV_SRCFILES)
+$(BIN_WIN)/win-fv.exe: $(WINFV_SRCFILES)
 	$(DOCKER_RUN) -e GOOS=windows $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./win_tests -c -o $(BIN_WIN)/win-fv.exe'
 
 ###############################################################################

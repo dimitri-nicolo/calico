@@ -1,50 +1,22 @@
-PACKAGE_NAME    ?= github.com/projectcalico/apiserver
-GO_BUILD_VER    ?= v0.63
-GOMOD_VENDOR    := false
-GIT_USE_SSH      = true
-LOCAL_CHECKS     = lint-cache-dir goimports check-boring-ssl
-# Used by Makefile.common
-LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
-# Used only when doing local build
-LOCAL_LIBCALICO  = /go/src/github.com/projectcalico/libcalico-go
+include ../metadata.mk
 
-ORGANIZATION=tigera
-SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_API_SERVER_PROJECT_ID)
+PACKAGE_NAME = github.com/projectcalico/calico/apiserver
+LOCAL_CHECKS     = lint-cache-dir goimports check-copyright check-boring-ssl
 
-# Used so semaphore can trigger the update pin pipelines in projects that have this project as a dependency.
-SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_LMA_PROJECT_ID)
+# Used so semaphore commits generated files when pins are updated
+EXTRA_FILES_TO_COMMIT=*_generated.go *_generated.*.go
 
-API_REPO=github.com/tigera/api
-
-API_SERVER_IMAGE      ?=tigera/cnx-apiserver
+API_SERVER_IMAGE      ?=calico/apiserver
 BUILD_IMAGES          ?=$(API_SERVER_IMAGE)
-DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
-RELEASE_REGISTRIES    ?=quay.io
-RELEASE_BRANCH_PREFIX ?=release-calient
-DEV_TAG_SUFFIX        ?=calient-0.dev
+DEV_REGISTRIES        ?=quay.io docker.io
+RELEASE_REGISTRIES    ?=$(DEV_REGISTRIES)
+RELEASE_BRANCH_PREFIX ?=release
+DEV_TAG_SUFFIX        ?=0.dev
 
-ifdef LOCAL_BUILD
-EXTRA_DOCKER_ARGS += -v $(CURDIR)/../libcalico-go:/go/src/github.com/projectcalico/libcalico-go:rw
-EXTRA_DOCKER_ARGS += -v $(CURDIR)/../licensing:/go/src/github.com/projectcalico/licensing:rw
-local_build:
-	go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
-	go mod edit -replace=github.com/tigera/licensing=../licensing
-else
-local_build:
-endif
-
-# Allow libcalico-go to be mapped into the build container.
-# Please note, this will change go.mod.
-ifdef LIBCALICOGO_PATH
-EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):$(LOCAL_LIBCALICO):ro
-endif
-
-EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 EXTRA_DOCKER_ARGS += -e GOLANGCI_LINT_CACHE=/lint-cache -v $(CURDIR)/.lint-cache:/lint-cache:rw \
 				 -v $(CURDIR)/hack/boilerplate:/go/src/k8s.io/kubernetes/hack/boilerplate:rw
 
 ###############################################################################
-K8S_VERSION = v1.16.3
 BINDIR ?= bin
 BUILD_DIR ?= build
 
@@ -82,21 +54,11 @@ RELEASE_LDFLAGS = -ldflags "$(VERSION_FLAGS) -w"
 KUBECONFIG_DIR? = /etc/kubernetes/admin.conf
 
 ##############################################################################
-# Download and include Makefile.common before anything else
+# Download and include ../lib.Makefile before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
 #   that variable is evaluated when we declare DOCKER_RUN and siblings.
 ##############################################################################
-MAKE_BRANCH?=$(GO_BUILD_VER)
-MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
-
-Makefile.common: Makefile.common.$(MAKE_BRANCH)
-	cp "$<" "$@"
-Makefile.common.$(MAKE_BRANCH):
-	# Clean up any files downloaded from other branches so they don't accumulate.
-	rm -f Makefile.common.*
-	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
-
-include Makefile.common
+include ../lib.Makefile
 
 # We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
 ifeq ($(ARCH), $(filter $(ARCH),amd64))
@@ -104,35 +66,6 @@ CGO_ENABLED=1
 else
 CGO_ENABLED=0
 endif
-
-###############################################################################
-# Managing the upstream library pins
-#
-# If you're updating the pins with a non-release branch checked out,
-# set PIN_BRANCH to the parent branch, e.g.:
-#
-#     PIN_BRANCH=release-v2.5 make update-pins
-#        - or -
-#     PIN_BRANCH=master make update-pins
-#
-###############################################################################
-
-## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
-guard-ssh-forwarding-bug:
-	@if [ "$(shell uname)" = "Darwin" ]; then \
-		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
-		echo "$(MAKECMDGOALS)"; \
-		exit 1; \
-	fi;
-
-LICENSING_REPO=github.com/tigera/licensing
-LICENSING_BRANCH=$(PIN_BRANCH)
-
-update-licensing-pin:
-	$(call update_pin,$(LICENSING_REPO),$(LICENSING_REPO),$(LICENSING_BRANCH))
-
-## Update dependency pins
-update-pins: guard-ssh-forwarding-bug update-api-pin replace-libcalico-pin update-licensing-pin
 
 ###############################################################################
 # Static checks
@@ -146,7 +79,7 @@ LINT_ARGS := --disable gosimple,govet,structcheck,errcheck,goimports,unused,inef
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: clean tigera/cnx-apiserver ut fv
+ci: clean static-checks calico/apiserver fv ut
 
 ## Deploys images to registry
 cd: image-all cd-common
@@ -179,7 +112,7 @@ endif
 ###############################################################################
 # Building the image
 ###############################################################################
-build: local_build image
+build: image
 
 CONTAINER_CREATED=.apiserver.created-$(ARCH)
 .PHONY: image $(API_SERVER_IMAGE)
@@ -196,14 +129,14 @@ ifeq ($(ARCH),amd64)
 endif
 	touch $@
 
-# Build the tigera/cnx-apiserver docker image.
-.PHONY: tigera/cnx-apiserver
-tigera/cnx-apiserver: $(BINDIR)/apiserver $(BINDIR)/filecheck
+# Build the calico/apiserver docker image.
+.PHONY: calico/apiserver
+calico/apiserver: $(BINDIR)/apiserver $(BINDIR)/filecheck
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp $(BINDIR)/apiserver docker-image/bin/
 	cp $(BINDIR)/filecheck docker-image/bin/
-	docker build --pull -t tigera/cnx-apiserver --file ./docker-image/Dockerfile.$(ARCH) docker-image
+	docker build --pull -t calico/apiserver --file ./docker-image/Dockerfile.$(ARCH) docker-image
 
 .PHONY: lint-cache-dir
 lint-cache-dir:
@@ -215,7 +148,6 @@ check-boring-ssl: $(BINDIR)/apiserver
 	-rm -f $(BINDIR)/tags.txt
 
 .PHONY: ut 
-
 ut: lint-cache-dir run-etcd
 	$(DOCKER_RUN) $(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) ETCD_ENDPOINTS="http://127.0.0.1:2379" DATASTORE_TYPE="etcdv3" go test $(UNIT_TEST_FLAGS) \
@@ -232,7 +164,7 @@ check-copyright:
 config/crd: mod-download
 	mkdir -p config/crd
 	$(DOCKER_GO_BUILD) sh -c ' \
-		cp -r `go list -m -f "{{.Dir}}" github.com/projectcalico/libcalico-go`/config/crd/* config/crd; \
+		cp -r ../libcalico-go/config/crd/* config/crd; \
 		chmod +w config/crd/*'
 
 ## Run etcd as a container (calico-etcd)
@@ -287,7 +219,7 @@ run-kubernetes-server: config/crd run-etcd stop-kubernetes-server
 	# And run the controller manager.
 	docker run --detach --net=host \
 	  --name st-controller-manager \
-	  -v $(PWD)/test/certs:/home/user/certs \
+	  -v $(CURDIR)/test/certs:/home/user/certs \
 	  $(CALICO_BUILD) kube-controller-manager \
             --master=https://127.0.0.1:6443 \
             --kubeconfig=/home/user/certs/kube-controller-manager.kubeconfig \
@@ -303,8 +235,8 @@ run-kubernetes-server: config/crd run-etcd stop-kubernetes-server
 	docker run \
 		--net=host \
 		--rm \
-		-v  $(CURDIR):/manifests \
-		-v $(PWD)/test/certs:/home/user/certs \
+		-v $(CURDIR):/manifests \
+		-v $(CURDIR)/test/certs:/home/user/certs \
 		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
 		--kubeconfig=/home/user/certs/kubeconfig \
 		apply -f /manifests/config/crd/
@@ -313,8 +245,8 @@ run-kubernetes-server: config/crd run-etcd stop-kubernetes-server
 	docker run \
 		--net=host \
 		--rm \
-		-v  $(CURDIR):/manifests \
-		-v $(PWD)/test/certs:/home/user/certs \
+		-v $(CURDIR):/manifests \
+		-v $(CURDIR)/test/certs:/home/user/certs \
 		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
 		--kubeconfig=/home/user/certs/kubeconfig \
 		apply -f /manifests/test/mock-node.yaml
@@ -324,8 +256,8 @@ run-kubernetes-server: config/crd run-etcd stop-kubernetes-server
 	docker run \
 		--net=host \
 		--rm \
-		-v  $(CURDIR):/manifests \
-		-v $(PWD)/test/certs:/home/user/certs \
+		-v $(CURDIR):/manifests \
+		-v $(CURDIR)/test/certs:/home/user/certs \
 		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
 		--kubeconfig=/home/user/certs/kubeconfig \
 		apply -f /manifests/test/namespaces.yaml
@@ -349,7 +281,7 @@ fv: fv-kdd
 .PHONY: fv-etcd
 fv-etcd: run-kubernetes-server hack-lib
 	$(DOCKER_RUN) \
-		-v $(PWD)/test/certs:/home/user/certs \
+		-v $(CURDIR)/test/certs:/home/user/certs \
 		-e KUBECONFIG=/home/user/certs/kubeconfig \
 		$(CALICO_BUILD) \
 		sh -c 'ETCD_ENDPOINTS="http://127.0.0.1:2379" DATASTORE_TYPE="etcdv3" test/integration.sh'
@@ -357,17 +289,17 @@ fv-etcd: run-kubernetes-server hack-lib
 .PHONY: fv-kdd
 fv-kdd: run-kubernetes-server hack-lib
 	$(DOCKER_RUN) \
-		-v $(PWD)/test/certs:/home/user/certs \
+		-v $(CURDIR)/test/certs:/home/user/certs \
 		-e KUBECONFIG=/home/user/certs/kubeconfig \
 		$(CALICO_BUILD) \
 		sh -c 'DATASTORE_TYPE="kubernetes" test/integration.sh'
 
 .PHONY: clean
 clean: clean-bin clean-build-image clean-hack-lib
-	rm -rf .lint-cache Makefile.common*
+	rm -rf .lint-cache
 
 clean-build-image:
-	docker rmi -f tigera/cnx-apiserver > /dev/null 2>&1 || true
+	docker rmi -f calico/apiserver > /dev/null 2>&1 || true
 
 clean-bin:
 	rm -rf $(BINDIR) \
@@ -375,6 +307,89 @@ clean-bin:
 
 clean-hack-lib:
 	rm -rf hack/lib/
+
+###############################################################################
+# Release
+###############################################################################
+PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
+
+## Tags and builds a release from start to finish.
+release: release-prereqs
+	$(MAKE) VERSION=$(VERSION) release-tag
+	$(MAKE) VERSION=$(VERSION) release-build
+	$(MAKE) VERSION=$(VERSION) release-verify
+
+	@echo ""
+	@echo "Release build complete. Next, push the produced images."
+	@echo ""
+	@echo "  make VERSION=$(VERSION) release-publish"
+	@echo ""
+
+## Produces a git tag for the release.
+release-tag: release-prereqs release-notes
+	git tag $(VERSION) -F release-notes-$(VERSION)
+	@echo ""
+	@echo "Now you can build the release:"
+	@echo ""
+	@echo "  make VERSION=$(VERSION) release-build"
+	@echo ""
+
+## Produces a clean build of release artifacts at the specified version.
+release-build: release-prereqs clean
+# Check that the correct code is checked out.
+ifneq ($(VERSION), $(GIT_VERSION))
+	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
+endif
+
+	$(MAKE) image RELEASE=true
+	$(MAKE) retag-build-images-with-registries IMAGETAG=$(VERSION) RELEASE=true
+	# Generate the `latest` images.
+	$(MAKE) retag-build-images-with-registries IMAGETAG=latest RELEASE=true
+
+## Verifies the release artifacts produces by `make release-build` are correct.
+release-verify: release-prereqs
+	# Check the reported version is correct for each release artifact.
+	if ! docker run calico/apiserver | grep 'Version:\s*$(VERSION)$$'; then \
+	  echo "Reported version:" `docker run calico/apiserver` "\nExpected version: $(VERSION)"; \
+	  false; \
+	else \
+	  echo "Version check passed\n"; \
+	fi
+
+## Generates release notes based on commits in this version.
+release-notes: release-prereqs
+	mkdir -p dist
+	echo "# Changelog" > release-notes-$(VERSION)
+	sh -c "git cherry -v $(PREVIOUS_RELEASE) | cut '-d ' -f 2- | sed 's/^/- /' >> release-notes-$(VERSION)"
+
+## Pushes a github release and release artifacts produced by `make release-build`.
+release-publish: release-prereqs
+	# Push the git tag.
+	git push origin $(VERSION)
+
+	# Push images.
+	$(MAKE) push-images-to-registries push-manifests IMAGETAG=$(VERSION) RELEASE=true CONFIRM=true
+
+	@echo "Finalize the GitHub release based on the pushed tag."
+	@echo ""
+	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
+	@echo ""
+	@echo "If this is the latest stable release, then run the following to push 'latest' images."
+	@echo ""
+	@echo "  make VERSION=$(VERSION) release-publish-latest"
+	@echo ""
+
+# WARNING: Only run this target if this release is the latest stable release. Do NOT
+# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
+## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
+release-publish-latest: release-prereqs
+	$(MAKE) push-images-to-registries push-manifests IMAGETAG=latest RELEASE=true CONFIRM=true
+
+# release-prereqs checks that the environment is configured properly to create a release.
+release-prereqs:
+ifndef VERSION
+	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
+endif
 
 ###############################################################################
 # Utils

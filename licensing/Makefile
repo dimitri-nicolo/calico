@@ -1,12 +1,6 @@
-PACKAGE_NAME?=github.com/tigera/licensing
-GO_BUILD_VER?=v0.63
+include ../metadata.mk
 
-GIT_USE_SSH = true
-
-ORGANIZATION=tigera
-SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_LICENSING_PROJECT_ID)
-
-SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_API_SERVER_PROJECT_ID) $(SEMAPHORE_LICENSE_AGENT_PROJECT_ID) $(SEMAPHORE_CALICOCTL_PRIVATE_PROJECT_ID) $(SEMAPHORE_INTRUSION_DETECTION_PROJECT_ID) $(SEMAPHORE_FELIX_PRIVATE_PROJECT_ID)
+PACKAGE_NAME?=github.com/projectcalico/calico/licensing
 
 CARROTCTL_IMAGE       ?=tigera/carrotctl
 BUILD_IMAGES          ?=$(CARROTCTL_IMAGE)
@@ -18,19 +12,9 @@ DEV_TAG_SUFFIX        ?=calient-0.dev
 EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
 ###############################################################################
-# Download and include Makefile.common before anything else
+# Include ../lib.Makefile before anything else
 ###############################################################################
-MAKE_BRANCH?=$(GO_BUILD_VER)
-MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
-
-Makefile.common: Makefile.common.$(MAKE_BRANCH)
-	cp "$<" "$@"
-Makefile.common.$(MAKE_BRANCH):
-	# Clean up any files downloaded from other branches so they don't accumulate.
-	rm -f Makefile.common.*
-	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
-
-include Makefile.common
+include ../lib.Makefile
 
 ###############################################################################
 
@@ -55,14 +39,6 @@ ifeq ($(ARCH),amd64)
 	docker rmi $(CARROTCTL_IMAGE):latest || true
 	docker rmi $(CARROTCTL_IMAGE):$(VERSION) || true
 endif
-
-###############################################################################
-# Updating pins
-###############################################################################
-API_REPO=github.com/tigera/api
-LIBCALICO_REPO=github.com/tigera/libcalico-go-private
-
-update-pins: update-api-pin replace-libcalico-pin
 
 ###############################################################################
 # Building the binary

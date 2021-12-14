@@ -1,56 +1,28 @@
-PACKAGE_NAME=github.com/projectcalico/calicoctl
-GO_BUILD_VER?=v0.63
+include ../metadata.mk
 
-ORGANIZATION=tigera
-SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_CALICOCTL_PRIVATE_PROJECT_ID)
-
-SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_TS_QUERYSERVER_PROJECT_ID)
-
-GIT_USE_SSH = true
+PACKAGE_NAME = github.com/projectcalico/calico/calicoctl
 
 KUBE_APISERVER_PORT?=6443
 KUBE_MOCK_NODE_MANIFEST?=mock-node.yaml
 KUBE_CLUSTERINFO_CRD_MANIFEST?=crd.projectcalico.org_clusterinformations.yaml
 
-EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
-
-# Build mounts for running in "local build" mode. This allows an easy build using local development code,
-# assuming that there is a local checkout of libcalico in the same directory as this repo.
-ifdef LOCAL_BUILD
-PHONY: set-up-local-build
-LOCAL_BUILD_DEP:=set-up-local-build
-
-EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go:/go/src/github.com/projectcalico/libcalico-go:rw
-$(LOCAL_BUILD_DEP):
-	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
-endif
-
-CALICOCTL_IMAGE       ?=tigera/calicoctl
+CALICOCTL_IMAGE       ?=calico/ctl
 BUILD_IMAGES          ?=$(CALICOCTL_IMAGE)
-DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
-RELEASE_REGISTRIES    ?=quay.io
-RELEASE_BRANCH_PREFIX ?=release-calient
-DEV_TAG_SUFFIX        ?=calient-0.dev
+DEV_REGISTRIES        ?=quay.io docker.io
+RELEASE_REGISTRIES    ?= $(DEV_REGISTRIES)
+RELEASE_BRANCH_PREFIX ?= release
+DEV_TAG_SUFFIX        ?= 0.dev
+
 
 # Remove any excluded architectures since for calicoctl we want to build everything.
 EXCLUDEARCH?=
 
 ###############################################################################
-# Download and include Makefile.common
+# Download and include ../lib.Makefile
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
 #   that variable is evaluated when we declare DOCKER_RUN and siblings.
 ###############################################################################
-MAKE_BRANCH?=$(GO_BUILD_VER)
-MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
-
-Makefile.common: Makefile.common.$(MAKE_BRANCH)
-	cp "$<" "$@"
-Makefile.common.$(MAKE_BRANCH):
-	# Clean up any files downloaded from other branches so they don't accumulate.
-	rm -f Makefile.common.*
-	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
-
-include Makefile.common
+include ../lib.Makefile
 
 ###############################################################################
 
@@ -62,33 +34,21 @@ TEST_CONTAINER_NAME ?= calico/test
 
 CALICOCTL_GIT_REVISION?=$(shell git rev-parse --short HEAD)
 
-LDFLAGS=-ldflags "-X $(PACKAGE_NAME)/v3/calicoctl/commands.VERSION=$(GIT_VERSION) \
-	-X $(PACKAGE_NAME)/v3/calicoctl/commands.GIT_REVISION=$(CALICOCTL_GIT_REVISION) \
-	-X $(PACKAGE_NAME)/v3/calicoctl/commands/common.VERSION=$(GIT_VERSION) -s -w"
+LDFLAGS=-ldflags "-X $(PACKAGE_NAME)/calicoctl/commands.VERSION=$(GIT_VERSION) \
+	-X $(PACKAGE_NAME)/calicoctl/commands.GIT_REVISION=$(CALICOCTL_GIT_REVISION) \
+	-X $(PACKAGE_NAME)/calicoctl/commands/common.VERSION=$(GIT_VERSION) -s -w"
 
 .PHONY: clean
 ## Clean enough that a new release build will be clean
 clean:
 	find . -name '*.created-$(ARCH)' -exec rm -f {} \;
-	rm -rf .go-pkg-cache bin build certs *.tar vendor Makefile.common* calicoctl/commands/report $(CALICO_VERSION_HELPER_DIR)/bin
+	rm -rf .go-pkg-cache bin build certs *.tar vendor calicoctl/commands/report $(CALICO_VERSION_HELPER_DIR)/bin
 	docker rmi $(CALICOCTL_IMAGE):latest-$(ARCH) || true
 	docker rmi $(CALICOCTL_IMAGE):$(VERSION)-$(ARCH) || true
 ifeq ($(ARCH),amd64)
 	docker rmi $(CALICOCTL_IMAGE):latest || true
 	docker rmi $(CALICOCTL_IMAGE):$(VERSION) || true
 endif
-
-###############################################################################
-# Updating pins
-###############################################################################
-LICENSING_BRANCH=$(PIN_BRANCH)
-LICENSING_REPO=github.com/tigera/licensing
-LIBCALICO_REPO=github.com/tigera/libcalico-go-private
-
-update-licensing-pin:
-	$(call update_pin,github.com/tigera/licensing,$(LICENSING_REPO),$(LICENSING_BRANCH))
-
-update-pins:  update-licensing-pin update-api-pin replace-libcalico-pin
 
 ###############################################################################
 # Building the binary
@@ -111,19 +71,16 @@ bin/calicoctl-linux-%: BUILDOS=linux
 # We reinvoke make here to re-evaluate BUILDOS and ARCH so the correct values
 # for multi-platform builds are used. When make is initially invoked, BUILDOS
 # and ARCH are defined with default values (Linux and amd64).
-bin/calicoctl-%: $(LOCAL_BUILD_DEP) $(SRC_FILES)
+bin/calicoctl-%: $(SRC_FILES)
 	$(MAKE) build-calicoctl BUILDOS=$(BUILDOS) ARCH=$(ARCH)
 build-calicoctl:
 	mkdir -p bin
-	$(DOCKER_RUN) $(EXTRA_DOCKER_ARGS) \
-	  -e CALICOCTL_GIT_REVISION=$(CALICOCTL_GIT_REVISION) \
-	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
-	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go build -v -o bin/calicoctl-$(BUILDOS)-$(ARCH) $(LDFLAGS) "./calicoctl/calicoctl.go"'
+	$(DOCKER_RUN) $(CALICO_BUILD) \
+	  go build -v -o bin/calicoctl-$(BUILDOS)-$(ARCH) $(LDFLAGS) "./calicoctl/calicoctl.go"
 
 # Overrides for the binaries that need different output names
 bin/calicoctl: bin/calicoctl-linux-amd64
 	cp $< $@
-
 bin/calicoctl-windows-amd64.exe: bin/calicoctl-windows-amd64
 	mv $< $@
 
@@ -136,7 +93,7 @@ gen-crds: remote-deps
 remote-deps: mod-download	
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -ec ' \
 		$(GIT_CONFIG_SSH) \
-		cp -r `go list -m -f "{{.Dir}}" github.com/projectcalico/libcalico-go`/config .; \
+		cp -r ../libcalico-go/config .; \
 		chmod -R +w config/'
 
 ###############################################################################
@@ -173,7 +130,7 @@ $(CALICO_VERSION_HELPER_BIN): $(CALICO_VERSION_HELPER_SRC)
 ###############################################################################
 .PHONY: ut
 ## Run the tests in a container. Useful for CI, Mac dev.
-ut: $(LOCAL_BUILD_DEP) bin/calicoctl-linux-amd64
+ut: bin/calicoctl-linux-amd64
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'cd /go/src/$(PACKAGE_NAME) && ginkgo -cover -r calicoctl/*'
 
 ###############################################################################
@@ -181,7 +138,7 @@ ut: $(LOCAL_BUILD_DEP) bin/calicoctl-linux-amd64
 ###############################################################################
 .PHONY: fv
 ## Run the tests in a container. Useful for CI, Mac dev.
-fv: $(LOCAL_BUILD_DEP) bin/calicoctl-linux-amd64 version-helper
+fv: bin/calicoctl-linux-amd64 version-helper
 	$(MAKE) run-etcd-host
 
 	# We start two API servers in order to test multiple kubeconfig support
@@ -192,7 +149,7 @@ fv: $(LOCAL_BUILD_DEP) bin/calicoctl-linux-amd64 version-helper
 	while ! docker exec st-apiserver-6443 kubectl --server=https://127.0.0.1:6443 create clusterrolebinding anonymous-admin --clusterrole=cluster-admin --user=system:anonymous; do sleep 2; done
 
 	# Run the tests
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) cd /go/src/$(PACKAGE_NAME) && go test ./tests/fv'
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'cd /go/src/$(PACKAGE_NAME) && go test ./tests/fv'
 	# Cleanup
 	$(MAKE) stop-etcd
 	$(MAKE) stop-kubernetes-master KUBE_APISERVER_PORT=6443
@@ -256,7 +213,7 @@ stop-etcd:
 	@-docker rm -f calico-etcd
 
 ## Run a local kubernetes master with API
-run-kubernetes-master: stop-kubernetes-master remote-deps
+run-kubernetes-master: stop-kubernetes-master
 	# Run a Kubernetes apiserver using Docker.
 	docker run --net=host --detach \
 		--name st-apiserver-${KUBE_APISERVER_PORT} \
@@ -287,7 +244,7 @@ run-kubernetes-master: stop-kubernetes-master remote-deps
 	# And run the controller manager.
 	docker run --detach --net=host \
 	  --name st-controller-manager-${KUBE_APISERVER_PORT} \
-	  -v $(PWD)/tests/certs:/home/user/certs \
+	  -v $(CURDIR)/tests/certs:/home/user/certs \
 	  $(CALICO_BUILD) kube-controller-manager \
 	    --master=https://127.0.0.1:${KUBE_APISERVER_PORT} \
             --kubeconfig=/home/user/certs/kube-controller-manager.kubeconfig \
@@ -313,13 +270,8 @@ run-kubernetes-master: stop-kubernetes-master remote-deps
 	# Create a namespace in the API for the tests to use.
 	-docker exec -ti st-apiserver-${KUBE_APISERVER_PORT} kubectl \
 		--server=https://127.0.0.1:${KUBE_APISERVER_PORT} \
-		apply -f /code/tests/st/manifests/mock-node.yaml
-
-	# Apply Calico CRDs for tests that use KDD mode.
-	-docker exec -ti st-apiserver-${KUBE_APISERVER_PORT} kubectl \
-		--server=https://127.0.0.1:${KUBE_APISERVER_PORT} \
-		apply -f /code/config/crd/
-
+		create namespace test
+	
 ## Stop the local kubernetes master
 stop-kubernetes-master:
 	# Delete the cluster role binding.
@@ -334,49 +286,117 @@ stop-kubernetes-master:
 .PHONY: ci
 ci: mod-download build-all static-checks test
 
-## Avoid unplanned go.sum updates
-.PHONY: undo-go-sum check-dirty
-undo-go-sum:
-	@echo "Undoing go.sum update..."
-	git checkout -- go.sum
-
-## Check if generated image is dirty
-check-dirty: undo-go-sum
-	@if (git describe --tags --dirty | grep -c dirty >/dev/null); then \
-	  echo "Generated image is dirty:"; \
-	  git status --porcelain; \
-	  false; \
-	fi
-
 ###############################################################################
 # CD
 ###############################################################################
 .PHONY: cd
 ## Deploys images to registry
-cd: check-dirty image-all cd-common
+cd: image-all cd-common
 
 ###############################################################################
 # Release
 ###############################################################################
+PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
 
-release-verify-version: var-require-all-VERSION
-ifdef CONFIRM
-	$(eval CURRENT_RELEASE_VERSION := $(git-release-tag-for-current-commit))
-	$(if $(CURRENT_RELEASE_VERSION),,echo Current commit has not been tagged with a release version && exit 1)
-	$(if $(filter $(VERSION),$(git-release-tag-for-current-commit)),,\
-		echo Current version $(CURRENT_RELEASE_VERSION) does not match given version $(VERSION) && exit 1)
+## Tags and builds a release from start to finish.
+release: release-prereqs
+	$(MAKE) VERSION=$(VERSION) release-tag
+	$(MAKE) VERSION=$(VERSION) release-build
+	$(MAKE) VERSION=$(VERSION) release-verify
+
+	@echo ""
+	@echo "Release build complete. Next, push the produced images."
+	@echo ""
+	@echo "  make VERSION=$(VERSION) release-publish"
+	@echo ""
+
+## Produces a git tag for the release.
+release-tag: release-prereqs release-notes
+	git tag $(VERSION) -F release-notes-$(VERSION)
+	@echo ""
+	@echo "Now you can build the release:"
+	@echo ""
+	@echo "  make VERSION=$(VERSION) release-build"
+	@echo ""
+
+## Produces a clean build of release artifacts at the specified version.
+release-build: release-prereqs clean
+# Check that the correct code is checked out.
+ifneq ($(VERSION), $(GIT_VERSION))
+	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
 endif
+	$(MAKE) build-all image-all RELEASE=true
+	$(MAKE) retag-build-images-with-registries IMAGETAG=$(VERSION) RELEASE=true
+	$(MAKE) retag-build-images-with-registries IMAGETAG=latest RELEASE=true
 
-## Builds and pushed binaries to the public s3 bucket.
-release-publish-binaries: var-require-one-of-CONFIRM-DRYRUN var-require-all-VERSION release-verify-version build-all
-ifdef CONFIRM
-	aws --profile helm s3 cp bin/calicoctl-linux-amd64 s3://tigera-public/ee/binaries/$(VERSION)/calicoctl --acl public-read
-	aws --profile helm s3 cp bin/calicoctl-darwin-amd64 s3://tigera-public/ee/binaries/$(VERSION)/calicoctl-darwin-amd64 --acl public-read
-	aws --profile helm s3 cp bin/calicoctl-windows-amd64.exe s3://tigera-public/ee/binaries/$(VERSION)/calicoctl-windows-amd64.exe --acl public-read
-else
-	@echo [DRYRUN] aws --profile helm s3 cp bin/calicoctl-linux-amd64 s3://tigera-public/ee/binaries/$(VERSION)/calicoctl --acl public-read
-	@echo [DRYRUN] aws --profile helm s3 cp bin/calicoctl-darwin-amd64 s3://tigera-public/ee/binaries/$(VERSION)/calicoctl-darwin-amd64 --acl public-read
-	@echo [DRYRUN] aws --profile helm s3 cp bin/calicoctl-windows-amd64.exe s3://tigera-public/ee/binaries/$(VERSION)/calicoctl-windows-amd64.exe --acl public-read
+	# Copy the amd64 variant to calicoctl - for now various downstream projects
+	# expect this naming convention. Until they can be swapped over, we still need to
+	# publish a binary called calicoctl.
+	$(MAKE) bin/calicoctl
+
+## Verifies the release artifacts produces by `make release-build` are correct.
+release-verify: release-prereqs
+	# Check the reported version is correct for each release artifact.
+	if ! docker run $(CALICOCTL_IMAGE):$(VERSION)-$(ARCH) version | grep 'Version:\s*$(VERSION)$$'; then \
+	  echo "Reported version:" `docker run $(CALICOCTL_IMAGE):$(VERSION)-$(ARCH) version` "\nExpected version: $(VERSION)"; \
+	  false; \
+	else \
+	  echo "Version check passed\n"; \
+	fi
+
+## Generates release notes based on commits in this version.
+release-notes: release-prereqs
+	mkdir -p dist
+	echo "# Changelog" > release-notes-$(VERSION)
+	sh -c "git cherry -v $(PREVIOUS_RELEASE) | cut '-d ' -f 2- | sed 's/^/- /' >> release-notes-$(VERSION)"
+
+## Pushes a github release and release artifacts produced by `make release-build`.
+release-publish: release-prereqs
+	# Push the git tag.
+	git push origin $(VERSION)
+
+	# Push images.
+	$(MAKE) push-images-to-registries push-manifests IMAGETAG=$(VERSION) RELEASE=true CONFIRM=true
+
+	# Push binaries to GitHub release.
+	# Requires ghr: https://github.com/tcnksm/ghr
+	# Requires GITHUB_TOKEN environment variable set.
+	ghr -u projectcalico -r calicoctl \
+		-b "Release notes can be found at https://docs.projectcalico.org" \
+		-n $(VERSION) \
+		$(VERSION) ./bin/
+
+	@echo "Confirm that the release was published at the following URL."
+	@echo ""
+	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
+	@echo ""
+	@echo "If this is the latest stable release, then run the following to push 'latest' images."
+	@echo ""
+	@echo "  make VERSION=$(VERSION) release-publish-latest"
+	@echo ""
+
+# WARNING: Only run this target if this release is the latest stable release. Do NOT
+# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
+## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
+release-publish-latest: release-prereqs
+	# Check latest versions match.
+	if ! docker run $(CALICOCTL_IMAGE):latest-$(ARCH) version | grep 'Version:\s*$(VERSION)$$'; then \
+	  echo "Reported version:" `docker run $(CALICOCTL_IMAGE):latest-$(ARCH) version` "\nExpected version: $(VERSION)"; \
+	  false; \
+	else \
+	  echo "Version check passed\n"; \
+	fi
+
+	$(MAKE) push-images-to-registries push-manifests IMAGETAG=latest RELEASE=true CONFIRM=true
+
+# release-prereqs checks that the environment is configured properly to create a release.
+release-prereqs:
+ifndef VERSION
+	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
 endif
-
-
+ifndef GITHUB_TOKEN
+	$(error GITHUB_TOKEN must be set for a release)
+endif
+ifeq (, $(shell which ghr))
+	$(error Unable to find `ghr` in PATH, run this: go get -u github.com/tcnksm/ghr)
+endif

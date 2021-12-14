@@ -1,49 +1,13 @@
-PACKAGE_NAME=github.com/kelseyhightower/confd
-GO_BUILD_VER=v0.63
+include ../metadata.mk
 
-ORGANIZATION=tigera
-SEMAPHORE_PROJECT_ID=$(SEMAPHORE_CONFD_PRIVATE_PROJECT_ID)
-
-GIT_USE_SSH = true
-
-# Used so semaphore can trigger the update pin pipelines in projects that have this project as a dependency.
-SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_NODE_PRIVATE_PROJECT_ID)
-
-RELEASE_BRANCH_PREFIX ?=release-calient
-DEV_TAG_SUFFIX        ?=calient-0.dev
+PACKAGE_NAME=github.com/projectcalico/calico/confd
 
 ###############################################################################
-# Download and include Makefile.common
+# Download and include ../lib.Makefile
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
 #   that variable is evaluated when we declare DOCKER_RUN and siblings.
 ###############################################################################
-MAKE_BRANCH?=$(GO_BUILD_VER)
-MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
-
-Makefile.common: Makefile.common.$(MAKE_BRANCH)
-	cp "$<" "$@"
-Makefile.common.$(MAKE_BRANCH):
-	# Clean up any files downloaded from other branches so they don't accumulate.
-	rm -f Makefile.common.*
-	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
-
-EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
-
-# Build mounts for running in "local build" mode. This allows an easy build using local development code,
-# assuming that there is a local checkout of libcalico in the same directory as this repo.
-ifdef LOCAL_BUILD
-PHONY: set-up-local-build
-LOCAL_BUILD_DEP:=set-up-local-build
-
-EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go-private:/go/src/github.com/projectcalico/libcalico-go:rw \
-	-v $(CURDIR)/../typha-private:/go/src/github.com/projectcalico/typha:rw
-
-$(LOCAL_BUILD_DEP):
-	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go \
-		-replace=github.com/projectcalico/typha=../typha
-endif
-
-include Makefile.common
+include ../lib.Makefile
 
 # Override K8S_VERSION
 K8S_VERSION=v1.17.0
@@ -52,14 +16,6 @@ K8S_VERSION=v1.17.0
 
 test: ut test-kdd test-etcd
 
-CALICOCTL_VER=master
-CALICOCTL_CONTAINER_NAME=gcr.io/unique-caldron-775/cnx/tigera/calicoctl:$(CALICOCTL_VER)-$(ARCH)
-BIRD_VER=v0.3.3-138-ge37e4770
-BIRD_CONTAINER_NAME=calico/bird:$(BIRD_VER)-$(ARCH)
-TYPHA_VER=master
-TYPHA_CONTAINER_NAME=gcr.io/unique-caldron-775/cnx/tigera/typha:$(TYPHA_VER)-$(ARCH)
-K8S_VERSION?=v1.16.3
-ETCD_VER?=v3.3.7
 LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
 
 LDFLAGS=-ldflags "-X $(PACKAGE_NAME)/pkg/buildinfo.GitVersion=$(GIT_DESCRIPTION)"
@@ -72,29 +28,20 @@ clean:
 	rm -rf vendor
 	rm -rf bin/*
 	rm -rf tests/logs
-	rm Makefile.common*
-
-###############################################################################
-# Updating pins
-###############################################################################
-LIBCALICO_REPO=github.com/tigera/libcalico-go-private
-TYPHA_REPO=github.com/tigera/typha-private
-
-update-pins: update-api-pin replace-libcalico-pin replace-typha-pin
 
 ###############################################################################
 # Building the binary
 ###############################################################################
-build: $(LOCAL_BUILD_DEP) bin/confd
+build: bin/confd
 build-all: $(addprefix sub-build-,$(VALIDARCHES))
 sub-build-%:
 	$(MAKE) build ARCH=$*
 
 bin/confd-$(ARCH): $(SRC_FILES)
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-		go build -v -i -o $@ $(LDFLAGS) "$(PACKAGE_NAME)" && \
-		( ldd bin/confd-$(ARCH) 2>&1 | grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
-		( echo "Error: bin/confd was not statically linked"; false ) )'
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go build -v -i -o $@ $(LDFLAGS) "$(PACKAGE_NAME)" && \
+		( ldd bin/confd-$(ARCH) 2>&1 | grep -q -e "Not a valid dynamic program" \
+			-e "not a dynamic executable" || \
+		     ( echo "Error: bin/confd was not statically linked"; false ) )'
 
 bin/confd: bin/confd-$(ARCH)
 ifeq ($(ARCH),amd64)
@@ -108,19 +55,6 @@ windows-packaging/tigera-confd.exe: $(SRC_FILES)
 		GOOS=windows go build -v -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)" && \
 		( ldd $@ 2>&1 | grep -q "Not a valid dynamic program" || \
 		( echo "Error: $@ was not statically linked"; false ) )'
-
-###############################################################################
-# Updating pins
-###############################################################################
-LICENSING_BRANCH?=$(PIN_BRANCH)
-LICENSING_REPO?=github.com/tigera/licensing
-TYPHA_BRANCH?=$(PIN_BRANCH)
-TYPHA_REPO?=github.com/tigera/typha-private
-
-update-licensing-pin:
-	$(call update_pin,github.com/tigera/licensing,$(LICENSING_REPO),$(LICENSING_BRANCH))
-
-update-pins: update-licensing-pin replace-typha-pin
 
 ###############################################################################
 # Unit Tests
@@ -139,7 +73,7 @@ test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl
 		-v $(CURDIR)/tests/:/tests/ \
 		-v $(CURDIR)/bin:/calico/bin/ \
 		-v $(CURDIR)/etc/calico:/etc/calico/ \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+		-v $(CURDIR)/../:/go/src/github.com/projectcalico/calico:rw \
 		-e GOPATH=/go \
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-e FELIX_TYPHAADDR=127.0.0.1:5473 \
@@ -173,7 +107,7 @@ test-etcd: bin/confd bin/etcdctl bin/bird bin/bird6 bin/calico-node bin/kubectl 
 		-v $(CURDIR)/tests/:/tests/ \
 		-v $(CURDIR)/bin:/calico/bin/ \
 		-v $(CURDIR)/etc/calico:/etc/calico/ \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+		-v $(CURDIR)/../:/go/src/github.com/projectcalico/calico:rw \
 		-e GOPATH=/go \
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
@@ -187,7 +121,7 @@ test-etcd: bin/confd bin/etcdctl bin/bird bin/bird6 bin/calico-node bin/kubectl 
 
 .PHONY: ut
 ## Run the fast set of unit tests in a container.
-ut: $(LOCAL_BUILD_DEP)
+ut:
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) cd /go/src/$(PACKAGE_NAME) && ginkgo -r .'
 
 ## Etcd is used by the kubernetes
@@ -241,8 +175,8 @@ bin/bird bin/bird6:
 	-docker rm -f calico-bird
 	# Latest BIRD binaries are stored in automated builds of calico/bird.
 	# To get them, we create (but don't start) a container from that image.
-	docker pull $(BIRD_CONTAINER_NAME)
-	docker create --name calico-bird $(BIRD_CONTAINER_NAME) /bin/sh
+	docker pull calico/bird:$(BIRD_VERSION)-$(ARCH)
+	docker create --name calico-bird calico/bird:$(BIRD_VERSION)-$(ARCH) /bin/sh
 	# Then we copy the files out of the container.  Since docker preserves
 	# mtimes on its copy, check the file really did appear, then touch it
 	# to make sure that downstream targets get rebuilt.
@@ -260,30 +194,12 @@ bin/etcdctl:
 	curl -sSf -L --retry 5  https://github.com/coreos/etcd/releases/download/$(ETCD_VERSION)/etcd-$(ETCD_VERSION)-linux-$(ARCH).tar.gz | tar -xz -C bin --strip-components=1 etcd-$(ETCD_VERSION)-linux-$(ARCH)/etcdctl
 
 bin/calicoctl:
-	-docker rm -f calico-ctl
-	# Latest calicoctl binaries are stored in automated builds of calico/ctl.
-	# To get them, we create (but don't start) a container from that image.
-	docker pull $(CALICOCTL_CONTAINER_NAME)
-	docker create --name calico-ctl $(CALICOCTL_CONTAINER_NAME)
-	# Then we copy the files out of the container.  Since docker preserves
-	# mtimes on its copy, check the file really did appear, then touch it
-	# to make sure that downstream targets get rebuilt.
-	docker cp calico-ctl:/calicoctl $@ && \
-	  test -e $@ && \
-	  touch $@
-	-docker rm -f calico-ctl
+	make -C ../calicoctl build 
+	cp ../calicoctl/bin/calicoctl-linux-$(ARCH) $@
 
 bin/typha:
-	-docker rm -f confd-typha
-	docker pull $(TYPHA_CONTAINER_NAME)
-	docker create --name confd-typha $(TYPHA_CONTAINER_NAME)
-	# Then we copy the files out of the container.  Since docker preserves
-	# mtimes on its copy, check the file really did appear, then touch it
-	# to make sure that downstream targets get rebuilt.
-	docker cp confd-typha:/code/calico-typha $@ && \
-	  test -e $@ && \
-	  touch $@
-	-docker rm -f confd-typha
+	make -C ../typha build
+	cp ../typha/bin/calico-typha-$(ARCH) $@
 
 fv st:
 	@echo "No FVs or STs available."
@@ -303,7 +219,6 @@ GIT_VERSION?=$(shell git describe --tags --dirty)
 ## Tags and builds a release from start to finish.
 release: release-prereqs
 	$(MAKE) VERSION=$(VERSION) release-tag
-	$(MAKE) VERSION=$(VERSION) release-windows-archive
 
 ## Produces a git tag for the release.
 release-tag: release-prereqs release-notes
@@ -325,9 +240,9 @@ release-publish: release-prereqs
 	# Push the git tag.
 	git push origin $(VERSION)
 
-	@echo "Confirm that the release was published at the following URL."
+	@echo "Finalize the GitHub release based on the pushed tag."
 	@echo ""
-	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
+	@echo "  https://github.com/projectcalico/calico/confd/releases/tag/$(VERSION)"
 	@echo ""
 
 # release-prereqs checks that the environment is configured properly to create a release.

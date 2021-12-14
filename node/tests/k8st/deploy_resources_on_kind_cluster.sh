@@ -28,8 +28,16 @@ function checkModule(){
 function load_image() {
     local node=$1
     docker cp ./cnx-node.tar ${node}:/cnx-node.tar
+    docker cp ./calicoctl.tar ${node}:/calicoctl.tar
+    docker cp ./calico-cni.tar ${node}:/calico-cni.tar
+    docker cp ./pod2daemon.tar ${node}:/pod2daemon.tar
+    docker cp ./kube-controllers.tar ${node}:/kube-controllers.tar
     docker exec -t ${node} ctr -n=k8s.io images import /cnx-node.tar
-    docker exec -t ${node} rm /cnx-node.tar
+    docker exec -t ${node} ctr -n=k8s.io images import /calicoctl.tar
+    docker exec -t ${node} ctr -n=k8s.io images import /calico-cni.tar
+    docker exec -t ${node} ctr -n=k8s.io images import /pod2daemon.tar
+    docker exec -t ${node} ctr -n=k8s.io images import /kube-controllers.tar
+    docker exec -t ${node} rm /cnx-node.tar /calicoctl.tar /calico-cni.tar /pod2daemon.tar /kube-controllers.tar
 }
 
 function update_calico_manifest() {
@@ -100,10 +108,8 @@ update_calico_manifest $TEST_DIR/infra/calico.yaml.tmp
 ${kubectl} apply -f $TEST_DIR/infra/calico.yaml.tmp
 rm $TEST_DIR/infra/calico.yaml.tmp
 
-# Install Calicoctl on master node, avoid network disruption during bgp configuration.
-cat ${TEST_DIR}/infra/calicoctl.yaml | \
-    sed 's,beta.kubernetes.io/os: linux,beta.kubernetes.io/os: linux\n  nodeName: kind-control-plane,' | \
-    ${kubectl} apply -f -
+# Install Calicoctl on master node.
+${kubectl} apply -f ${TEST_DIR}/infra/calicoctl.yaml
 
 echo
 echo "Wait Calico to be ready..."
