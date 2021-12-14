@@ -1,0 +1,34 @@
+title: "Threat defense"
+path: /threat/
+order: 6
+section:
+- title: Threat defense
+  path: /threat/
+- title: Anomaly detection
+  path: /threat/anomaly-detection/
+  section:
+  - title: Overview
+    path: /threat/anomaly-detection/overview
+  - title: Job descriptions
+    path: /threat/anomaly-detection/job-descriptions
+  - title: Configuration
+    path: /threat/anomaly-detection/customizing
+  - title: Monitoring
+    path: /threat/anomaly-detection/monitoring
+- title: Suspicious IPs
+  path: /threat/suspicious-ips
+- title: Suspicious domains
+  path: /threat/suspicious-domains
+- title: Suspicious external IPs
+  path: /threat/suspicious-external-ips
+- title: Anonymization attacks  
+  path: /threat/tor-vpn-feed-and-dashboard
+- title: Honeypods
+  path: /threat/honeypod/
+  section:
+  - title: Configure honeypods
+    path: /threat/honeypod/honeypods
+  - title: Monitor honeypods
+    path: /threat/honeypod/honeypod-controller
+- title: Deep packet inspection
+  path: /threat/deeppacketinspection

@@ -1,0 +1,18 @@
+# Configuration of Tigera Fortimanager Integration Controller
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: tigera-fortimanager-controller-configs
+  namespace: tigera-firewall-controller
+data:
+  tigera.firewall.fortimanager-policies: |
+    - name: prod-east1
+      ip: 1.2.4.1
+      username: api_user
+      adom: root
+      packagename: sacramento
+      tier: root
+      password:
+        secretKeyRef:
+          name: fortimgr-east1
+          key: pwd-fortimgr-east1

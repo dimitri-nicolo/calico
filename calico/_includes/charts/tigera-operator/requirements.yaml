@@ -1,0 +1,3 @@
+dependencies:
+- name: tigera-secure-ee-core
+  condition: includeCoreChart

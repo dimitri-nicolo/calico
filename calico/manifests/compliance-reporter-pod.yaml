@@ -1,0 +1,4 @@
+---
+layout: null
+---
+{% include content/non-helm-manifests/compliance-reporter-pod.yaml %}

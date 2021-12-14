@@ -1,0 +1,5 @@
+---
+layout: null
+---
+
+{% include_without_descriptions _includes/charts/tigera-operator/crds/calico/kdd/crd.projectcalico.org_deeppacketinspections.yaml  %}

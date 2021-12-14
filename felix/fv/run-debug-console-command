@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+
+# Note this requires that netcat-openbsd is installed.
+echo $@ | nc -U /var/run/calico/felix/debug
