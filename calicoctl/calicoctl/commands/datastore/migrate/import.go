@@ -32,12 +32,13 @@ import (
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	yaml "github.com/projectcalico/go-yaml-wrapper"
+
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/clientmgr"
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/common"
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/constants"
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/crds"
 	"github.com/projectcalico/calico/calicoctl/calicoctl/util"
-	yaml "github.com/projectcalico/go-yaml-wrapper"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"

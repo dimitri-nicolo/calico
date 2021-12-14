@@ -20,8 +20,9 @@ import (
 	"strings"
 
 	"github.com/docopt/docopt-go"
-	"github.com/projectcalico/calico/licensing/client"
 	"gopkg.in/yaml.v2"
+
+	"github.com/projectcalico/calico/licensing/client"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 

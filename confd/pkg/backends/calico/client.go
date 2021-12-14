@@ -26,10 +26,11 @@ import (
 	"strings"
 	"sync"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/confd/pkg/buildinfo"
 	"github.com/projectcalico/calico/confd/pkg/config"
 	logutils "github.com/projectcalico/calico/confd/pkg/log"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/confd/pkg/resource/template"
 

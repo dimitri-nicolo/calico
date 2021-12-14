@@ -34,9 +34,10 @@ import (
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	yaml "github.com/projectcalico/go-yaml-wrapper"
+
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/argutils"
 	yamlsep "github.com/projectcalico/calico/calicoctl/calicoctl/util/yaml"
-	yaml "github.com/projectcalico/go-yaml-wrapper"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 )

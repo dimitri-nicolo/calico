@@ -19,11 +19,12 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	lclient "github.com/projectcalico/calico/licensing/client"
-	"github.com/projectcalico/calico/licensing/client/features"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+
+	lclient "github.com/projectcalico/calico/licensing/client"
+	"github.com/projectcalico/calico/licensing/client/features"
 
 	"github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"

@@ -30,11 +30,12 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+
 	lclient "github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/monitor"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 

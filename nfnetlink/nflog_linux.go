@@ -12,9 +12,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink/nl"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/projectcalico/calico/nfnetlink/nfnl"
 	"github.com/projectcalico/calico/nfnetlink/pkt"
-	"golang.org/x/sys/unix"
 )
 
 const (

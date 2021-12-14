@@ -7,9 +7,10 @@ import (
 	"fmt"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"gopkg.in/square/go-jose.v2/jwt"
+
 	"github.com/projectcalico/calico/licensing/client"
 	cryptolicensing "github.com/projectcalico/calico/licensing/crypto"
-	"gopkg.in/square/go-jose.v2/jwt"
 )
 
 const IntermediateCert = `-----BEGIN CERTIFICATE-----

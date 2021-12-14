@@ -28,9 +28,10 @@ import (
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/rules"
 
+	"k8s.io/apimachinery/pkg/util/intstr"
+
 	"github.com/projectcalico/calico/nfnetlink"
 	"github.com/projectcalico/calico/nfnetlink/nfnl"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (

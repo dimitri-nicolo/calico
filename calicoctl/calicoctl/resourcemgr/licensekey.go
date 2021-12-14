@@ -20,6 +20,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+
 	licClient "github.com/projectcalico/calico/licensing/client"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"

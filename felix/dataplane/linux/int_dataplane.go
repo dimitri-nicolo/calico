@@ -32,11 +32,12 @@ import (
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/api/pkg/lib/numorstring"
-	"github.com/projectcalico/calico/nfnetlink"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/projectcalico/calico/nfnetlink"
 
 	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
 

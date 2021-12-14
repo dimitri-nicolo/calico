@@ -28,11 +28,12 @@ import (
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	"github.com/projectcalico/go-yaml-wrapper"
+
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/argutils"
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/clientmgr"
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/file"
 	"github.com/projectcalico/calico/calicoctl/calicoctl/resourcemgr"
-	"github.com/projectcalico/go-yaml-wrapper"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	calicoErrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"

@@ -11,6 +11,7 @@ import (
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/licensing/client/features"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"

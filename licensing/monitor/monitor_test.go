@@ -14,6 +14,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/jitter"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	lclient "github.com/projectcalico/calico/licensing/client"
 
 	log "github.com/sirupsen/logrus"

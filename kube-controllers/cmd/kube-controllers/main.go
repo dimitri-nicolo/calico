@@ -60,6 +60,7 @@ import (
 	relasticsearch "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
 
 	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+
 	lclient "github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/monitor"

@@ -7,10 +7,11 @@ import (
 
 	"golang.org/x/net/context"
 
-	features "github.com/projectcalico/calico/licensing/client/features"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
+
+	features "github.com/projectcalico/calico/licensing/client/features"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 

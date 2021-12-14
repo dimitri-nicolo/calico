@@ -7,6 +7,7 @@ import (
 	"time"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/licensing/monitor"
 
 	corev1 "k8s.io/api/core/v1"

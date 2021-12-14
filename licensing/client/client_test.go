@@ -10,9 +10,10 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	. "github.com/onsi/gomega"
 	uuid "github.com/satori/go.uuid"
+	"gopkg.in/square/go-jose.v2/jwt"
+
 	"github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
-	"gopkg.in/square/go-jose.v2/jwt"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
