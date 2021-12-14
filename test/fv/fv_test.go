@@ -16,11 +16,16 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-	"golang.org/x/net/http2"
-	"k8s.io/client-go/rest"
 
+	"github.com/pkg/errors"
+
+	"github.com/projectcalico/apiserver/pkg/authentication"
+
+	log "github.com/sirupsen/logrus"
+
+	"github.com/stretchr/testify/mock"
+
+	"github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/voltron/internal/pkg/client"
 	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/regex"
@@ -28,7 +33,10 @@ import (
 	"github.com/tigera/voltron/internal/pkg/test"
 	"github.com/tigera/voltron/internal/pkg/utils"
 
-	"github.com/projectcalico/apiserver/pkg/authentication"
+	"golang.org/x/net/http2"
+
+	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/client-go/rest"
 )
 
 var (
@@ -129,8 +137,8 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 	clusterID2 := "other-cluster"
 
 	k8sAPI := test.NewK8sSimpleFakeClient(nil, nil)
-	authenticator := authentication.NewFakeAuthenticator()
-	authenticator.AddValidApiResponse("Bearer jane", "jane", []string{"developers"})
+	authenticator := new(auth.MockJWTAuth)
+	authenticator.On("Authenticate", mock.Anything).Return(&user.DefaultInfo{Name: "jane", Groups: []string{"developers"}}, 0, nil)
 	watchSync := make(chan error)
 
 	// client to be used to interact with voltron (mimic UI)

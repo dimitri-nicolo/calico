@@ -15,13 +15,12 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
+	"github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
 	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/server"
 	"golang.org/x/net/http2"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
-
-	"github.com/projectcalico/apiserver/pkg/authentication"
 )
 
 func init() {
@@ -33,7 +32,7 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 	var (
 		k8sAPI bootstrap.K8sClient
 
-		authenticator      = authentication.NewFakeAuthenticator()
+		mockAuthenticator  *auth.MockJWTAuth
 		srv                *server.Server
 		externalCertFile   string
 		externalKeyFile    string
@@ -53,6 +52,8 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 			Interface:                k8sfake.NewSimpleClientset(),
 			ProjectcalicoV3Interface: fake.NewSimpleClientset().ProjectcalicoV3(),
 		}
+
+		mockAuthenticator = new(auth.MockJWTAuth)
 
 		By("Creating a default destination server that return 200 OK")
 		defaultServer := httptest.NewServer(
@@ -92,7 +93,7 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 		srv, err = server.New(
 			k8sAPI,
 			config,
-			authenticator,
+			mockAuthenticator,
 			opts...,
 		)
 		Expect(err).NotTo(HaveOccurred())

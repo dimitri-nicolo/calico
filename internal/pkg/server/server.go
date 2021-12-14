@@ -15,10 +15,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"k8s.io/client-go/rest"
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
 	"github.com/tigera/voltron/internal/pkg/proxy"
 	"github.com/tigera/voltron/internal/pkg/utils"
@@ -28,13 +28,14 @@ import (
 	"github.com/projectcalico/apiserver/pkg/authentication"
 
 	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/client-go/rest"
 )
 
 const (
 	// ClusterHeaderField represents the request header key used to determine
 	// which cluster to proxy for
 	ClusterHeaderField = "x-cluster-id"
-	// This cluster name is the management cluster. No tunnel is necessary for
+	// DefaultClusterID is the name of the management cluster. No tunnel is necessary for
 	// requests with this value in the ClusterHeaderField.
 	DefaultClusterID   = "cluster"
 	DefaultReadTimeout = 45 * time.Second
@@ -55,7 +56,7 @@ type Server struct {
 	k8s bootstrap.K8sClient
 	// When impersonating a user we use the tigera-manager sa bearer token from this config.
 	config        *rest.Config
-	authenticator authentication.Authenticator
+	authenticator auth.JWTAuth
 
 	defaultProxy          *proxy.Proxy
 	tunnelTargetWhitelist []regexp.Regexp
@@ -86,7 +87,7 @@ type Server struct {
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
 // or not if they set its user and return an error if it is nil
-func New(k8s bootstrap.K8sClient, config *rest.Config, authenticator authentication.Authenticator, opts ...Option) (*Server, error) {
+func New(k8s bootstrap.K8sClient, config *rest.Config, authenticator auth.JWTAuth, opts ...Option) (*Server, error) {
 	srv := &Server{
 		k8s:           k8s,
 		config:        config,
@@ -292,7 +293,7 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	usr, status, err := s.authenticator.Authenticate(r.Header.Get(authentication.AuthorizationHeader))
+	usr, status, err := s.authenticator.Authenticate(r)
 	if err != nil {
 		log.Errorf("Could not authenticate user from request: %s", err)
 		http.Error(w, err.Error(), status)

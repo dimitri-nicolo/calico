@@ -17,8 +17,6 @@ import (
 	"github.com/tigera/voltron/internal/pkg/bootstrap"
 	"github.com/tigera/voltron/internal/pkg/config"
 	"github.com/tigera/voltron/internal/pkg/server"
-
-	"github.com/projectcalico/apiserver/pkg/authentication"
 )
 
 func main() {
@@ -57,11 +55,6 @@ func main() {
 
 	config := bootstrap.NewRestConfig(cfg.K8sConfigPath)
 	k8s := bootstrap.NewK8sClientWithConfig(config)
-
-	authn, err := authentication.New()
-	if err != nil {
-		log.WithError(err).Fatalf("Failed to configure authenticator.")
-	}
 
 	if cfg.EnableMultiClusterManagement {
 		tunnelX509Cert, tunnelX509Key, err := utils.LoadX509Pair(cfg.TunnelCert, cfg.TunnelKey)
@@ -171,6 +164,7 @@ func main() {
 		})
 	}
 
+	var options []auth.JWTAuthOption
 	if cfg.OIDCAuthEnabled {
 		// If dex is enabled we need to add the CA Bundle, otherwise the default trusted certs from the image will
 		// suffice.
@@ -194,8 +188,11 @@ func main() {
 			log.WithError(err).Panic("Unable to create dex authenticator")
 		}
 
-		// Make an aggregated authenticator that can deal with tokens from different issuers.
-		authn = auth.NewAggregateAuthenticator(oidcAuth, authn)
+		options = append(options, auth.WithAuthenticator(cfg.OIDCAuthIssuer, oidcAuth))
+	}
+	authn, err := auth.NewJWTAuth(config, k8s, options...)
+	if err != nil {
+		log.Fatal("Unable to create authenticator", err)
 	}
 
 	targets, err := bootstrap.ProxyTargets(targetList)
