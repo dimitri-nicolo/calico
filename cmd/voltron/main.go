@@ -156,9 +156,9 @@ func main() {
 
 	if cfg.EnableImageAssurance && cfg.ImageAssuranceEndpoint != "" && cfg.ImageAssuranceCABundlePath != "" {
 		targetList = append(targetList, bootstrap.Target{
-			Path:         "/image-assurance/",
+			Path:         "/bast/",
 			Dest:         cfg.ImageAssuranceEndpoint,
-			PathRegexp:   []byte("^/image-assurance/?"),
+			PathRegexp:   []byte("^/bast/?"),
 			PathReplace:  []byte("/"),
 			CABundlePath: cfg.ImageAssuranceCABundlePath,
 		})
