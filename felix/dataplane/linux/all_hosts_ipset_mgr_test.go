@@ -1,0 +1,142 @@
+// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+
+package intdataplane
+
+import (
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	"github.com/projectcalico/calico/felix/dataplane/common"
+	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
+)
+
+var _ = Describe("allHostsIpsetManager IP set updates", func() {
+	var (
+		allHostsMgr *allHostsIpsetManager
+		ipSets      *common.MockIPSets
+	)
+
+	const (
+		externalCIDR = "11.0.0.1/32"
+	)
+
+	BeforeEach(func() {
+		ipSets = common.NewMockIPSets()
+		allHostsMgr = newAllHostsIpsetManager(ipSets, 1024, []string{externalCIDR})
+	})
+
+	It("should not create the IP set until first call to CompleteDeferredWork()", func() {
+		Expect(ipSets.AddOrReplaceCalled).To(BeFalse())
+		allHostsMgr.CompleteDeferredWork()
+		Expect(ipSets.AddOrReplaceCalled).To(BeTrue())
+	})
+
+	allHostsSet := func() set.Set {
+		Expect(ipSets.Members).To(HaveLen(1))
+		return ipSets.Members["all-hosts-net"]
+	}
+
+	Describe("after adding an IP for host1", func() {
+		BeforeEach(func() {
+			allHostsMgr.OnUpdate(&proto.HostMetadataUpdate{
+				Hostname: "host1",
+				Ipv4Addr: "10.0.0.1",
+			})
+			allHostsMgr.CompleteDeferredWork()
+		})
+
+		It("should add host1's IP to the IP set", func() {
+			Expect(allHostsSet()).To(Equal(set.From("10.0.0.1", externalCIDR)))
+		})
+
+		Describe("after adding an IP for host2", func() {
+			BeforeEach(func() {
+				allHostsMgr.OnUpdate(&proto.HostMetadataUpdate{
+					Hostname: "host2",
+					Ipv4Addr: "10.0.0.2",
+				})
+				allHostsMgr.CompleteDeferredWork()
+			})
+			It("should add the IP to the IP set", func() {
+				Expect(allHostsSet()).To(Equal(set.From("10.0.0.1", "10.0.0.2", externalCIDR)))
+			})
+		})
+
+		Describe("after adding a duplicate IP", func() {
+			BeforeEach(func() {
+				allHostsMgr.OnUpdate(&proto.HostMetadataUpdate{
+					Hostname: "host2",
+					Ipv4Addr: "10.0.0.1",
+				})
+				allHostsMgr.CompleteDeferredWork()
+			})
+			It("should tolerate the duplicate", func() {
+				Expect(allHostsSet()).To(Equal(set.From("10.0.0.1", externalCIDR)))
+			})
+
+			Describe("after removing a duplicate IP", func() {
+				BeforeEach(func() {
+					allHostsMgr.OnUpdate(&proto.HostMetadataRemove{
+						Hostname: "host2",
+					})
+					allHostsMgr.CompleteDeferredWork()
+				})
+				It("should keep the IP in the IP set", func() {
+					Expect(allHostsSet()).To(Equal(set.From("10.0.0.1", externalCIDR)))
+				})
+
+				Describe("after removing initial copy of IP", func() {
+					BeforeEach(func() {
+						allHostsMgr.OnUpdate(&proto.HostMetadataRemove{
+							Hostname: "host1",
+						})
+						allHostsMgr.CompleteDeferredWork()
+					})
+					It("should remove the IP", func() {
+						Expect(allHostsSet()).To(Equal(set.From(externalCIDR)))
+					})
+				})
+			})
+		})
+
+		Describe("after adding/removing a duplicate IP in one batch", func() {
+			BeforeEach(func() {
+				allHostsMgr.OnUpdate(&proto.HostMetadataUpdate{
+					Hostname: "host2",
+					Ipv4Addr: "10.0.0.1",
+				})
+				allHostsMgr.OnUpdate(&proto.HostMetadataRemove{
+					Hostname: "host2",
+				})
+				allHostsMgr.CompleteDeferredWork()
+			})
+			It("should keep the IP in the IP set", func() {
+				Expect(allHostsSet()).To(Equal(set.From("10.0.0.1", externalCIDR)))
+			})
+		})
+
+		Describe("after changing IP for host1", func() {
+			BeforeEach(func() {
+				allHostsMgr.OnUpdate(&proto.HostMetadataUpdate{
+					Hostname: "host1",
+					Ipv4Addr: "10.0.0.2",
+				})
+				allHostsMgr.CompleteDeferredWork()
+			})
+			It("should update the IP set", func() {
+				Expect(allHostsSet()).To(Equal(set.From("10.0.0.2", externalCIDR)))
+			})
+		})
+
+		Describe("after a no-op batch", func() {
+			BeforeEach(func() {
+				ipSets.AddOrReplaceCalled = false
+				allHostsMgr.CompleteDeferredWork()
+			})
+			It("shouldn't rewrite the IP set", func() {
+				Expect(ipSets.AddOrReplaceCalled).To(BeFalse())
+			})
+		})
+	})
+})
