@@ -19,7 +19,7 @@ function generateAndCollectConfig() {
   docker run -d --name generate-fluentd-config $ADDITIONAL_MOUNT --hostname config.generator --env-file $ENV_FILE tigera/fluentd:${IMAGETAG} >/dev/null
   sleep 2
 
-  docker logs generate-fluentd-config | sed -n '/<ROOT>/,/<\/ROOT>/p' | sed -e 's|^.*<ROOT>|<ROOT>|' > $OUT_FILE
+  docker logs generate-fluentd-config | sed -n '/<ROOT>/,/<\/ROOT>/p' | sed -e 's|^.*<ROOT>|<ROOT>|' | sed -e 's/ \+$//' > $OUT_FILE
   if [ $? -ne 0 ]; then echo "Grabbing config from fluentd container failed"; exit 1; fi
 
   docker stop generate-fluentd-config >/dev/null
