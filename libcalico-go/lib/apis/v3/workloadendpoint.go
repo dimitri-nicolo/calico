@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -65,6 +65,9 @@ type WorkloadEndpointSpec struct {
 	// to connect one of its own external IPs. Each internal IP must be associated with the same
 	// endpoint via the configured IPNetworks.
 	IPNATs []IPNAT `json:"ipNATs,omitempty" validate:"omitempty,dive"`
+	// For workloads from AWS-backed IP pools, a list of candidate elastic IPs to bind to the
+	// workload's private IP.  Felix will choose an available elastic IP from the list.
+	AWSElasticIPs []string `json:"awsElasticIPs,omitempty" validate:"omitempty,dive,ipv4"`
 	// IPv4Gateway is the gateway IPv4 address for traffic from the workload.
 	IPv4Gateway string `json:"ipv4Gateway,omitempty" validate:"omitempty,ipv4"`
 	// IPv6Gateway is the gateway IPv6 address for traffic from the workload.
