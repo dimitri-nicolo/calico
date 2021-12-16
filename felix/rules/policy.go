@@ -36,7 +36,7 @@ func (r *DefaultRuleRenderer) PolicyToIptablesChains(policyID *proto.PolicyID, p
 	inbound := iptables.Chain{
 		Name: PolicyChainName(PolicyInboundPfx, policyID),
 		// Note that the policy name includes the tier, so it does not need to be separately specified.
-		Rules: r.ProtoRulesToIptablesRules(policy.InboundRules, ipVersion, RuleOwnerTypePolicy, RuleDirIngress, policyID.Name, policy.Untracked, isStaged),
+		Rules: r.ProtoRulesToIptablesRules(policy.InboundRules, ipVersion, RuleOwnerTypePolicy, RuleDirIngress, policyID.Name, policy.Untracked, isStaged, fmt.Sprintf("Policy %s ingress", policyID.Name)),
 	}
 	if isStaged {
 		// If staged, append an extra no-match nflog rule. This will be reported by the collector as a end-of-tier
@@ -47,7 +47,7 @@ func (r *DefaultRuleRenderer) PolicyToIptablesChains(policyID *proto.PolicyID, p
 	outbound := iptables.Chain{
 		Name: PolicyChainName(PolicyOutboundPfx, policyID),
 		// Note that the policy name also includes the tier, so it does not need to be separately specified.
-		Rules: r.ProtoRulesToIptablesRules(policy.OutboundRules, ipVersion, RuleOwnerTypePolicy, RuleDirEgress, policyID.Name, policy.Untracked, isStaged),
+		Rules: r.ProtoRulesToIptablesRules(policy.OutboundRules, ipVersion, RuleOwnerTypePolicy, RuleDirEgress, policyID.Name, policy.Untracked, isStaged, fmt.Sprintf("Policy %s egress", policyID.Name)),
 	}
 	if isStaged {
 		// If staged, append an extra no-match nflog rule. This will be reported by the collector as a end-of-tier
@@ -61,11 +61,11 @@ func (r *DefaultRuleRenderer) PolicyToIptablesChains(policyID *proto.PolicyID, p
 func (r *DefaultRuleRenderer) ProfileToIptablesChains(profileID *proto.ProfileID, profile *proto.Profile, ipVersion uint8) (inbound, outbound *iptables.Chain) {
 	inbound = &iptables.Chain{
 		Name:  ProfileChainName(ProfileInboundPfx, profileID),
-		Rules: r.ProtoRulesToIptablesRules(profile.InboundRules, ipVersion, RuleOwnerTypeProfile, RuleDirIngress, profileID.Name, false, false),
+		Rules: r.ProtoRulesToIptablesRules(profile.InboundRules, ipVersion, RuleOwnerTypeProfile, RuleDirIngress, profileID.Name, false, false, fmt.Sprintf("Profile %s ingress", profileID.Name)),
 	}
 	outbound = &iptables.Chain{
 		Name:  ProfileChainName(ProfileOutboundPfx, profileID),
-		Rules: r.ProtoRulesToIptablesRules(profile.OutboundRules, ipVersion, RuleOwnerTypeProfile, RuleDirEgress, profileID.Name, false, false),
+		Rules: r.ProtoRulesToIptablesRules(profile.OutboundRules, ipVersion, RuleOwnerTypeProfile, RuleDirEgress, profileID.Name, false, false, fmt.Sprintf("Profile %s egress", profileID.Name)),
 	}
 	return
 }
