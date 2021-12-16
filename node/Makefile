@@ -445,9 +445,6 @@ run-k8s-apiserver: remote-deps stop-k8s-apiserver run-etcd
 stop-k8s-apiserver:
 	@-docker rm -f st-apiserver
 
-ut:
-	@echo "No UTs available"
-
 ###############################################################################
 # System tests
 ###############################################################################
