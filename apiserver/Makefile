@@ -238,7 +238,7 @@ run-kubernetes-server: config/crd run-etcd stop-kubernetes-server
 		--rm \
 		-v $(CURDIR):/manifests \
 		-v $(CURDIR)/test/certs:/home/user/certs \
-		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
+		lachlanevenson/k8s-kubectl:${KUBECTL_VERSION} \
 		--kubeconfig=/home/user/certs/kubeconfig \
 		apply -f /manifests/config/crd/
 
@@ -248,7 +248,7 @@ run-kubernetes-server: config/crd run-etcd stop-kubernetes-server
 		--rm \
 		-v $(CURDIR):/manifests \
 		-v $(CURDIR)/test/certs:/home/user/certs \
-		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
+		lachlanevenson/k8s-kubectl:${KUBECTL_VERSION} \
 		--kubeconfig=/home/user/certs/kubeconfig \
 		apply -f /manifests/test/mock-node.yaml
 
