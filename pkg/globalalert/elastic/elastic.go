@@ -12,6 +12,9 @@ import (
 	"strings"
 	"time"
 
+	lmaAPI "github.com/tigera/lma/pkg/api"
+	lma "github.com/tigera/lma/pkg/elastic"
+
 	"github.com/tigera/intrusion-detection/controller/pkg/maputil"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,7 +35,7 @@ const (
 	AutoBulkFlush            = 500
 	PaginationSize           = 500
 	MaxErrorsSize            = 10
-	AlertEventType           = "alert"
+	AlertEventType           = "global_alert"
 	EventIndexPattern        = "tigera_secure_ee_events.%s"
 	AuditIndexPattern        = "tigera_secure_ee_audit_*.%s.*"
 	FlowLogIndexPattern      = "tigera_secure_ee_flows.%s.*"
@@ -48,15 +51,11 @@ type Service interface {
 
 type service struct {
 	// esCLI is an Elasticsearch client.
-	esCLI *elastic.Client
-	// esBulkProcessor used for sending bulk Elasticsearch request.
-	esBulkProcessor *elastic.BulkProcessor
+	lmaESClient lma.Client
 	// clusterName is name of the cluster.
 	clusterName string
 	// sourceIndexName is name of the Elasticsearch index to query data from.
 	sourceIndexName string
-	// eventIndexName is name of the Elasticsearch events index to write documents do.
-	eventIndexName string
 	// query has the entire Elasticsearch query based on GlobalAlert fields.
 	query map[string]interface{}
 	// aggs has the composite aggregation query, this will be altered and reused during pagination with `after` key.
@@ -68,9 +67,9 @@ type service struct {
 }
 
 // NewService builds Elasticsearch query that will be used periodically to query Elasticsearch data.
-func NewService(esCLI *elastic.Client, clusterName string, alert *v3.GlobalAlert) (Service, error) {
+func NewService(lmaESClient lma.Client, clusterName string, alert *v3.GlobalAlert) (Service, error) {
 	e := &service{
-		esCLI:       esCLI,
+		lmaESClient: lmaESClient,
 		clusterName: clusterName,
 	}
 	e.buildIndexName(alert)
@@ -94,10 +93,7 @@ func NewService(esCLI *elastic.Client, clusterName string, alert *v3.GlobalAlert
 		}
 	}
 
-	e.esBulkProcessor, err = e.esCLI.BulkProcessor().
-		BulkActions(AutoBulkFlush).
-		After(AfterFn).
-		Do(context.Background())
+	err = lmaESClient.BulkProcessorInitialize(context.Background(), AfterFn)
 	if err != nil {
 		log.WithError(err).Errorf("failed to initialize Elasticsearch bulk processor for GlobalAlert %s", alert.Name)
 		return nil, err
@@ -108,8 +104,6 @@ func NewService(esCLI *elastic.Client, clusterName string, alert *v3.GlobalAlert
 
 // buildIndexName updates the events index name and name of the source index to query.
 func (e *service) buildIndexName(alert *v3.GlobalAlert) {
-	e.eventIndexName = fmt.Sprintf(EventIndexPattern, e.clusterName)
-
 	switch alert.Spec.DataSet {
 	case v3.GlobalAlertDataSetAudit:
 		e.sourceIndexName = fmt.Sprintf(AuditIndexPattern, e.clusterName)
@@ -285,7 +279,7 @@ func (e *service) buildLookBackRange(alert *v3.GlobalAlert) (JsonObject, error) 
 
 // DeleteElasticWatchers deletes all the service watchers related to the given cluster.
 func (e *service) DeleteElasticWatchers(ctx context.Context) {
-	res, err := e.esCLI.Search().Index(".watches").Do(ctx)
+	res, err := e.lmaESClient.Backend().Search().Index(".watches").Do(ctx)
 	if err != nil {
 		if eerr, ok := err.(*elastic.Error); ok && eerr.Status == http.StatusNotFound {
 			log.Infof("Elasticsearch watches index doesn't exist")
@@ -296,7 +290,7 @@ func (e *service) DeleteElasticWatchers(ctx context.Context) {
 	}
 	for _, hit := range res.Hits.Hits {
 		if strings.HasPrefix(hit.Id, fmt.Sprintf(WatchNamePrefixPattern, e.clusterName)) {
-			_, err := e.esCLI.XPackWatchDelete(hit.Id).Do(ctx)
+			_, err := e.lmaESClient.Backend().XPackWatchDelete(hit.Id).Do(ctx)
 			if err != nil {
 				log.WithError(err).Error("failed to delete Elasticsearch watcher")
 				return
@@ -352,7 +346,7 @@ func (e *service) executeCompositeQuery() {
 	var bucketCounter int
 
 	for bucketCounter = 0; bucketCounter < AggregationBucketSize; {
-		searchResult, err := e.esCLI.Search().Index(e.sourceIndexName).Source(query).Do(context.Background())
+		searchResult, err := e.lmaESClient.Backend().Search().Index(e.sourceIndexName).Source(query).Do(context.Background())
 		e.globalAlert.Status.LastExecuted = &metav1.Time{Time: time.Now()}
 		if err != nil {
 			log.WithError(err).Errorf("failed to execute Elasticsearch query for GlobalAlert %s", e.globalAlert.Name)
@@ -420,11 +414,14 @@ func (e *service) executeCompositeQuery() {
 				record[k] = v
 			}
 			doc := e.buildEventsIndexDoc(record)
-			r := elastic.NewBulkIndexRequest().Index(e.eventIndexName).Doc(doc)
-			e.esBulkProcessor.Add(r)
+			if err = e.lmaESClient.PutBulkSecurityEvent(doc); err != nil {
+				log.WithError(err).Errorf("failed to add event for GlobalAlert %s", e.globalAlert.Name)
+				continue
+			}
+
 			e.globalAlert.Status.LastEvent = &metav1.Time{Time: time.Now()}
 		}
-		e.bulkFlush()
+		e.lmaESClient.BulkProcessorFlush()
 		if afterKey == nil {
 			// we have processed all the buckets.
 			break
@@ -447,7 +444,7 @@ func (e *service) executeCompositeQuery() {
 // executeQueryWithScroll executes the Elasticsearch query using scroll and for each document in the search result adds a document into events index.
 // It sets and returns a GlobalAlert status with the last executed query time, last time an event was generated, health status and error conditions if unhealthy.
 func (e *service) executeQueryWithScroll() {
-	scroll := e.esCLI.Scroll(e.sourceIndexName).Body(e.query).Size(PaginationSize)
+	scroll := e.lmaESClient.Backend().Scroll(e.sourceIndexName).Body(e.query).Size(PaginationSize)
 	for {
 		results, err := scroll.Do(context.Background())
 		e.globalAlert.Status.LastExecuted = &metav1.Time{Time: time.Now()}
@@ -475,19 +472,18 @@ func (e *service) executeQueryWithScroll() {
 				return
 			}
 			doc := e.buildEventsIndexDoc(record)
-			r := elastic.NewBulkIndexRequest().Index(e.eventIndexName).Doc(doc)
-			e.esBulkProcessor.Add(r)
+			e.lmaESClient.PutBulkSecurityEvent(doc)
 			e.globalAlert.Status.LastEvent = &metav1.Time{Time: time.Now()}
 		}
 
-		e.bulkFlush()
+		e.lmaESClient.BulkProcessorFlush()
 	}
 }
 
 // executeQuery execute the Elasticsearch query, adds a document into events index is query result satisfies alert conditions.
 // It sets and returns a GlobalAlert status with the last executed query time, last time an event was generated, health status and error conditions if unhealthy.
 func (e *service) executeQuery() {
-	result, err := e.esCLI.Search().Index(e.sourceIndexName).Source(e.query).Do(context.Background())
+	result, err := e.lmaESClient.Backend().Search().Index(e.sourceIndexName).Source(e.query).Do(context.Background())
 	e.globalAlert.Status.LastExecuted = &metav1.Time{Time: time.Now()}
 
 	if err != nil {
@@ -497,7 +493,7 @@ func (e *service) executeQuery() {
 		return
 	}
 
-	var doc JsonObject
+	var doc lmaAPI.EventsData
 	switch e.globalAlert.Spec.Metric {
 	case v3.GlobalAlertMetricCount:
 		if compare(float64(result.Hits.TotalHits.Value), e.globalAlert.Spec.Threshold, e.globalAlert.Spec.Condition) {
@@ -526,13 +522,15 @@ func (e *service) executeQuery() {
 		}
 	}
 
-	if doc != nil {
-		r := elastic.NewBulkIndexRequest().Index(e.eventIndexName).Doc(doc)
-		e.esBulkProcessor.Add(r)
+	if doc.Type != "" {
+		if err := e.lmaESClient.PutBulkSecurityEvent(doc); err != nil {
+			log.WithError(err).Error("failed to add events to bulk processor")
+			return
+		}
 		e.globalAlert.Status.LastEvent = &metav1.Time{Time: time.Now()}
 		e.globalAlert.Status.Healthy = true
 		e.globalAlert.Status.ErrorConditions = nil
-		e.bulkFlush()
+		e.lmaESClient.BulkProcessorFlush()
 		return
 	}
 
@@ -549,31 +547,21 @@ func (e *service) executeQuery() {
 func (e *service) setErrorAndFlush(err v3.ErrorCondition) {
 	e.globalAlert.Status.Healthy = false
 	e.globalAlert.Status.ErrorConditions = appendError(e.globalAlert.Status.ErrorConditions, err)
-	e.bulkFlush()
-}
-
-// bulkFlush flushes any remaining data in the BulkProcessor, if there is error during flush update
-// the error condition in status before retuning.
-func (e *service) bulkFlush() {
-	if err := e.esBulkProcessor.Flush(); err != nil {
-		log.WithError(err).Errorf("failed to flush Elasticsearch BulkProcessor")
-		e.globalAlert.Status.Healthy = false
-		e.globalAlert.Status.ErrorConditions = appendError(e.globalAlert.Status.ErrorConditions, v3.ErrorCondition{Message: err.Error()})
-	}
+	e.lmaESClient.BulkProcessorFlush()
 }
 
 // buildEventsIndexDoc builds an object that can be sent to events index.
-func (e *service) buildEventsIndexDoc(record JsonObject) JsonObject {
+func (e *service) buildEventsIndexDoc(record JsonObject) lmaAPI.EventsData {
 	description := e.substituteDescriptionOrSummaryContents(record)
+	eventData := extractEventData(record)
 
-	return JsonObject{
-		"type":        AlertEventType,
-		"description": description,
-		"severity":    e.globalAlert.Spec.Severity,
-		"time":        time.Now().Unix(),
-		"record":      record,
-		"alert":       e.globalAlert.Name,
-	}
+	eventData.Time = time.Now().Unix()
+	eventData.Type = AlertEventType
+	eventData.Description = description
+	eventData.Severity = e.globalAlert.Spec.Severity
+	eventData.Origin = e.globalAlert.Name
+
+	return eventData
 }
 
 func (e *service) substituteVariables(alert *v3.GlobalAlert) string {
@@ -637,6 +625,54 @@ func (e *service) substituteDescriptionOrSummaryContents(record JsonObject) stri
 		}
 	}
 	return description
+}
+
+// extractEventData checks the given record object for keys that are defined in lmaAPI.EventsData,
+// for each key found, it assigns them to lmaAPI.EventsData and removes it from the record object.
+func extractEventData(record JsonObject) lmaAPI.EventsData {
+	var e lmaAPI.EventsData
+	if val, ok := record["source_ip"].(string); ok {
+		e.SourceIP = &val
+		delete(record, "source_ip")
+	}
+	if val, ok := record["source_port"].(int64); ok {
+		e.SourcePort = &val
+		delete(record, "source_port")
+	}
+	if val, ok := record["source_namespace"].(string); ok {
+		e.SourceNamespace = val
+		delete(record, "source_namespace")
+	}
+	if val, ok := record["source_name"].(string); ok {
+		e.SourceName = val
+		delete(record, "source_name")
+	}
+	if val, ok := record["source_name_aggr"].(string); ok {
+		e.SourceNameAggr = val
+		delete(record, "source_name_aggr")
+	}
+	if val, ok := record["dest_ip"].(string); ok {
+		e.DestIP = &val
+		delete(record, "dest_ip")
+	}
+	if val, ok := record["dest_port"].(int64); ok {
+		e.DestPort = &val
+		delete(record, "dest_port")
+	}
+	if val, ok := record["dest_namespace"].(string); ok {
+		e.DestNamespace = val
+		delete(record, "dest_namespace")
+	}
+	if val, ok := record["dest_name"].(string); ok {
+		e.DestName = val
+		delete(record, "dest_name")
+	}
+	if val, ok := record["dest_name_aggr"].(string); ok {
+		e.DestNameAggr = val
+		delete(record, "dest_name_aggr")
+	}
+	e.Record = record
+	return e
 }
 
 // extractVariablesFromTemplate extracts and returns array of variables in the template string.

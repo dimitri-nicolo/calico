@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"time"
 
+	lma "github.com/tigera/lma/pkg/elastic"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
@@ -15,7 +17,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/olivere/elastic/v7"
 	es "github.com/tigera/intrusion-detection/controller/pkg/globalalert/elastic"
 )
 
@@ -32,11 +33,11 @@ const (
 )
 
 // NewAlert sets and returns an Alert, builds Elasticsearch query that will be used periodically to query Elasticsearch data.
-func NewAlert(alert *v3.GlobalAlert, calicoCLI calicoclient.Interface, esCli *elastic.Client, clusterName string) (*Alert, error) {
+func NewAlert(alert *v3.GlobalAlert, calicoCLI calicoclient.Interface, lmaESClient lma.Client, clusterName string) (*Alert, error) {
 	alert.Status.Active = true
 	alert.Status.LastUpdate = &metav1.Time{Time: time.Now()}
 
-	es, err := es.NewService(esCli, clusterName, alert)
+	es, err := es.NewService(lmaESClient, clusterName, alert)
 	if err != nil {
 		return nil, err
 	}

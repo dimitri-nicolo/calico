@@ -5,17 +5,18 @@ package searcher
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"sync"
+	"time"
+
 	apisv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/errorcondition"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"net/http"
-	"sync"
-	"time"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
@@ -74,7 +75,7 @@ func (d *searcher) doSearch(ctx context.Context, feedCacher cacher.GlobalThreatF
 	}
 	var clean = true
 	for _, result := range results {
-		err := d.events.PutSecurityEvent(ctx, result)
+		err := d.events.PutSecurityEventWithID(ctx, result)
 		if err != nil {
 			clean = false
 			utils.AddErrorToFeedStatus(feedCacher, cacher.SearchFailed, err)

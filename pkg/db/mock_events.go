@@ -6,6 +6,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	lmaAPI "github.com/tigera/lma/pkg/api"
 )
 
 type MockEvents struct {
@@ -16,17 +18,17 @@ type MockEvents struct {
 	value         SecurityEventInterface
 }
 
-func (m *MockEvents) PutSecurityEvent(ctx context.Context, l SecurityEventInterface) error {
+func (m *MockEvents) PutSecurityEventWithID(ctx context.Context, l SecurityEventInterface) error {
 	if len(m.Events) == m.ErrorIndex && !m.ErrorReturned {
 		m.ErrorReturned = true
-		return errors.New("PutSecurityEvent error")
+		return errors.New("PutSecurityEventWithID error")
 	}
 	m.Events = append(m.Events, l)
 	return nil
 }
 
-func (m *MockEvents) GetSecurityEvents(ctx context.Context, start, end time.Time, allClusters bool) ([]SecurityEvent, error) {
-	return []SecurityEvent{}, nil
+func (m *MockEvents) GetSecurityEvents(ctx context.Context, start, end time.Time, allClusters bool) <-chan *lmaAPI.EventResult {
+	return nil
 }
 
 func (m *MockEvents) PutForwarderConfig(ctx context.Context, id string, f *ForwarderConfig) error {

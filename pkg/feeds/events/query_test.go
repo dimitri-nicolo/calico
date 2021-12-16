@@ -6,17 +6,22 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"testing"
+
 	oElastic "github.com/olivere/elastic/v7"
 	. "github.com/onsi/gomega"
 	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
-	"testing"
+	"github.com/tigera/lma/pkg/api"
 )
 
 func TestSuspiciousIP_Success(t *testing.T) {
 	g := NewGomegaWithT(t)
+
+	testFeed := &apiV3.GlobalThreatFeed{}
+	testFeed.Name = "test"
 
 	logs := []FlowLogJSONOutput{
 		{
@@ -54,36 +59,49 @@ func TestSuspiciousIP_Success(t *testing.T) {
 		Keys:       []db.QueryKey{db.QueryKeyFlowLogSourceIP, db.QueryKeyFlowLogDestIP, db.QueryKeyUnknown}}
 	q := &elastic.MockSetQuerier{Iterator: i}
 	uut := NewSuspiciousIP(q)
+
 	expected := []db.SecurityEventInterface{
 		SuspiciousIPSecurityEvent{
-			Description:   "suspicious IP 1.2.3.4 from list test connected to wep default/dest",
-			Type:          SuspiciousFlow,
-			Severity:      Severity,
-			SourceIP:      util.Sptr("1.2.3.4"),
-			SourceName:    "source",
-			DestIP:        util.Sptr("2.3.4.5"),
-			DestName:      "dest",
-			DestNamespace: "default",
-			Feeds:         []string{"test"},
+			EventsData: api.EventsData{
+				EventsSearchFields: api.EventsSearchFields{
+					Description:   "suspicious IP 1.2.3.4 from list test connected to wep default/dest",
+					Type:          SuspiciousFlow,
+					Severity:      Severity,
+					Origin:        testFeed.Name,
+					SourceIP:      util.Sptr("1.2.3.4"),
+					SourceName:    "source",
+					DestIP:        util.Sptr("2.3.4.5"),
+					DestName:      "dest",
+					DestNamespace: "default",
+				},
+				Record: SuspiciousIPEventRecord{
+					Feeds: []string{"test"},
+				},
+			},
 		},
 		SuspiciousIPSecurityEvent{
-			Description:     "wep default/source connected to suspicious IP 2.3.4.5 from list test",
-			Type:            SuspiciousFlow,
-			Severity:        Severity,
-			SourceIP:        util.Sptr("5.6.7.8"),
-			SourceName:      "source",
-			SourceNamespace: "default",
-			DestIP:          util.Sptr("2.3.4.5"),
-			DestName:        "dest",
-			Feeds:           []string{"test"},
+			EventsData: api.EventsData{
+				EventsSearchFields: api.EventsSearchFields{
+					Description:     "wep default/source connected to suspicious IP 2.3.4.5 from list test",
+					Type:            SuspiciousFlow,
+					Severity:        Severity,
+					Origin:          testFeed.Name,
+					SourceIP:        util.Sptr("5.6.7.8"),
+					SourceName:      "source",
+					SourceNamespace: "default",
+					DestIP:          util.Sptr("2.3.4.5"),
+					DestName:        "dest",
+				},
+				Record: SuspiciousIPEventRecord{
+					Feeds: []string{"test"},
+				},
+			},
 		},
 	}
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	testFeed := &apiV3.GlobalThreatFeed{}
-	testFeed.Name = "test"
 	results, _, _, err := uut.QuerySet(ctx, testFeed)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(results).To(Equal(expected))
@@ -206,8 +224,12 @@ func TestSuspiciousDomain_Success(t *testing.T) {
 	results, _, _, err := uut.QuerySet(ctx, testFeed)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(results).To(HaveLen(2))
-	g.Expect(results[0].(SuspiciousDomainSecurityEvent).SuspiciousDomains).To(Equal([]string{"xx.yy.zzz"}))
-	g.Expect(results[1].(SuspiciousDomainSecurityEvent).SuspiciousDomains).To(Equal([]string{"qq.rr.sss"}))
+	rec1, ok := results[0].GetEventsData().Record.(SuspiciousDomainEventRecord)
+	g.Expect(ok).Should(BeTrue())
+	rec2, ok := results[1].GetEventsData().Record.(SuspiciousDomainEventRecord)
+	g.Expect(ok).Should(BeTrue())
+	g.Expect(rec1.SuspiciousDomains).To(Equal([]string{"xx.yy.zzz"}))
+	g.Expect(rec2.SuspiciousDomains).To(Equal([]string{"qq.rr.sss"}))
 }
 
 func TestSuspiciousDomain_IterationFails(t *testing.T) {

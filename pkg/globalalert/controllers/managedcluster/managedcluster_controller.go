@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	lma "github.com/tigera/lma/pkg/elastic"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	"k8s.io/apimachinery/pkg/fields"
@@ -14,7 +16,6 @@ import (
 
 	es "github.com/tigera/intrusion-detection/controller/pkg/elastic"
 
-	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -27,7 +28,7 @@ import (
 
 // managedClusterController is responsible for watching ManagedCluster resource.
 type managedClusterController struct {
-	esCLI                              *elastic.Client
+	lmaESClient                        lma.Client
 	indexSettings                      es.IndexSettings
 	calicoCLI                          calicoclient.Interface
 	createManagedCalicoCLI             func(string) (calicoclient.Interface, error)
@@ -39,9 +40,9 @@ type managedClusterController struct {
 
 // NewManagedClusterController returns a managedClusterController and returns health.Pinger for resources it watches and also
 // returns another health.Pinger that monitors health of GlobalAlertController in each of the managed cluster.
-func NewManagedClusterController(calicoCLI calicoclient.Interface, esCLI *elastic.Client, indexSettings es.IndexSettings, createManagedCalicoCLI func(string) (calicoclient.Interface, error)) (controller.Controller, []health.Pinger) {
+func NewManagedClusterController(calicoCLI calicoclient.Interface, lmaESClient lma.Client, indexSettings es.IndexSettings, createManagedCalicoCLI func(string) (calicoclient.Interface, error)) (controller.Controller, []health.Pinger) {
 	m := &managedClusterController{
-		esCLI:                              esCLI,
+		lmaESClient:                        lmaESClient,
 		indexSettings:                      indexSettings,
 		calicoCLI:                          calicoCLI,
 		createManagedCalicoCLI:             createManagedCalicoCLI,
@@ -53,7 +54,7 @@ func NewManagedClusterController(calicoCLI calicoclient.Interface, esCLI *elasti
 	m.worker = worker.New(&managedClusterReconciler{
 		createManagedCalicoCLI:          m.createManagedCalicoCLI,
 		indexSettings:                   m.indexSettings,
-		esCLI:                           m.esCLI,
+		lmaESClient:                     m.lmaESClient,
 		managementCalicoCLI:             m.calicoCLI,
 		alertNameToAlertControllerState: map[string]alertControllerState{},
 		managedClusterAlertControllerCh: m.managedAlertControllerCh,

@@ -22,6 +22,8 @@ RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
+ELASTIC_VERSION ?= 7.11.2
+
 ifeq ($(TESLA),true)
 	RELEASE_REGISTRIES    = gcr.io/tigera-tesla
 	BUILD_TAGS            ?= -tags tesla
@@ -166,7 +168,9 @@ endif
 # Testing
 ##########################################################################
 .PHONY: ut
-ut:
+ut: run-elastic run-ut stop-elastic
+
+run-ut:
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) go test $(UNIT_TEST_FLAGS) \
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
@@ -191,6 +195,24 @@ clean-bin:
 # Mocks auto generated testify mocks by mockery. Run `make gen-mocks` to regenerate the testify mocks.
 MOCKERY_FILE_PATHS= \
     pkg/globalalert/elastic/Service \
+    pkg/forwarder/LogDispatcher \
+
+## Run elasticsearch as a container (tigera-elastic)
+run-elastic: stop-elastic
+	# Run ES on Docker.
+	docker run --detach \
+	--net=host \
+	--name=tigera-elastic \
+	-e "discovery.type=single-node" \
+	docker.elastic.co/elasticsearch/elasticsearch:$(ELASTIC_VERSION)
+
+	# Wait until ES is accepting requests.
+	@while ! docker exec tigera-elastic curl localhost:9200 2> /dev/null; do echo "Waiting for Elasticsearch to come up..."; sleep 2; done
+
+
+## Stop elasticsearch with name tigera-elastic
+stop-elastic:
+	-docker rm -f tigera-elastic
 
 ###############################################################################
 # CI/CD

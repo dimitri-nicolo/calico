@@ -6,11 +6,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"net/url"
 	url2 "net/url"
@@ -19,6 +17,9 @@ import (
 	"testing"
 	"text/template"
 	"time"
+
+	lma "github.com/tigera/lma/pkg/elastic"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
@@ -36,23 +37,6 @@ var (
 	oneMinuteAgo time.Time
 )
 
-func TestNewElastic_Fail(t *testing.T) {
-	t.Skip("The error condition cannot be made to occur")
-
-	g := NewGomegaWithT(t)
-
-	u, err := url2.Parse(baseURI)
-	g.Expect(err).ShouldNot(HaveOccurred())
-	client := &http.Client{
-		Transport: &testRoundTripper{
-			e: errors.New("test error"),
-		},
-	}
-
-	_, err = NewClient(client, u, "", "", false)
-	g.Expect(err).ShouldNot(BeNil())
-}
-
 func TestElastic_GetIPSet(t *testing.T) {
 	g := NewGomegaWithT(t)
 
@@ -62,9 +46,9 @@ func TestElastic_GetIPSet(t *testing.T) {
 		Transport: http.RoundTripper(&testRoundTripper{}),
 	}
 
-	ecli, err := NewClient(client, u, "", "", false)
+	lmaESCli, err := lma.New(client, u, "", "", "", 1, 0, false, 0, 0)
 	g.Expect(err).Should(BeNil())
-	e := NewService(ecli, u, DefaultIndexSettings())
+	e := NewService(lmaESCli, DefaultIndexSettings())
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -98,9 +82,9 @@ func TestElastic_GetIPSetModified(t *testing.T) {
 		Transport: http.RoundTripper(&testRoundTripper{}),
 	}
 
-	ecli, err := NewClient(client, u, "", "", false)
+	lmaESCli, err := lma.New(client, u, "", "", "", 1, 0, false, 0, 0)
 	g.Expect(err).Should(BeNil())
-	e := NewService(ecli, u, DefaultIndexSettings())
+	e := NewService(lmaESCli, DefaultIndexSettings())
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -138,9 +122,9 @@ func TestElastic_QueryIPSet(t *testing.T) {
 		Transport: http.RoundTripper(&testRoundTripper{}),
 	}
 
-	ecli, err := NewClient(client, u, "", "", false)
+	lmaESCli, err := lma.New(client, u, "", "", "", 1, 0, false, 0, 0)
 	g.Expect(err).Should(BeNil())
-	e := NewService(ecli, u, DefaultIndexSettings())
+	e := NewService(lmaESCli, DefaultIndexSettings())
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -175,9 +159,9 @@ func TestElastic_QueryIPSet_SameIPSet(t *testing.T) {
 		Transport: http.RoundTripper(&roundTripper),
 	}
 
-	ecli, err := NewClient(client, u, "", "", false)
+	lmaESCli, err := lma.New(client, u, "", "", "", 1, 0, false, 0, 0)
 	g.Expect(err).Should(BeNil())
-	e := NewService(ecli, u, DefaultIndexSettings())
+	e := NewService(lmaESCli, DefaultIndexSettings())
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -188,7 +172,7 @@ func TestElastic_QueryIPSet_SameIPSet(t *testing.T) {
 	toBeUpdated.Status.LastSuccessfulSearch = &metav1.Time{Time: oneMinuteAgo}
 
 	cachedIpSet, err := e.GetIPSet(ctx, "test1")
-	toBeUpdated.SetAnnotations(map[string]string{ db.IpSetHashKey: util.ComputeSha256Hash(cachedIpSet) })
+	toBeUpdated.SetAnnotations(map[string]string{db.IpSetHashKey: util.ComputeSha256Hash(cachedIpSet)})
 
 	roundTripper.params = make(map[string]interface{})
 	roundTripper.params["fromTimeStamp"] = oneMinuteAgo.Format(time.RFC3339Nano)
@@ -217,9 +201,9 @@ func TestElastic_QueryIPSet_Big(t *testing.T) {
 		Transport: http.RoundTripper(&testRoundTripper{}),
 	}
 
-	ecli, err := NewClient(client, u, "", "", false)
+	lmaESCli, err := lma.New(client, u, "", "", "", 1, 0, false, 0, 0)
 	g.Expect(err).Should(BeNil())
-	e := NewService(ecli, u, DefaultIndexSettings())
+	e := NewService(lmaESCli, DefaultIndexSettings())
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -248,9 +232,9 @@ func TestElastic_ListSets(t *testing.T) {
 		Transport: http.RoundTripper(rt),
 	}
 
-	ecli, err := NewClient(client, u, "", "", false)
+	lmaESCli, err := lma.New(client, u, "", "", "", 1, 0, false, 0, 0)
 	g.Expect(err).Should(BeNil())
-	e := NewService(ecli, u, DefaultIndexSettings())
+	e := NewService(lmaESCli, DefaultIndexSettings())
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -290,9 +274,9 @@ func TestElastic_Put_Set(t *testing.T) {
 		Transport: http.RoundTripper(rt),
 	}
 
-	ecli, err := NewClient(client, u, "", "", false)
+	lmaESCli, err := lma.New(client, u, "", "", "", 1, 0, false, 0, 0)
 	g.Expect(err).Should(BeNil())
-	e := NewService(ecli, u, DefaultIndexSettings())
+	e := NewService(lmaESCli, DefaultIndexSettings())
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
@@ -344,9 +328,9 @@ func TestElastic_Delete_Set(t *testing.T) {
 		Transport: http.RoundTripper(rt),
 	}
 
-	ecli, err := NewClient(client, u, "", "", false)
+	lmaESCli, err := lma.New(client, u, "", "", "", 1, 0, false, 0, 0)
 	g.Expect(err).Should(BeNil())
-	e := NewService(ecli, u, DefaultIndexSettings())
+	e := NewService(lmaESCli, DefaultIndexSettings())
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()

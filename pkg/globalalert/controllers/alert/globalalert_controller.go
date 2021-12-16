@@ -5,9 +5,10 @@ package alert
 import (
 	"context"
 
+	lma "github.com/tigera/lma/pkg/elastic"
+
 	"github.com/tigera/intrusion-detection/controller/pkg/health"
 
-	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/worker"
@@ -20,7 +21,7 @@ import (
 
 // globalAlertController is responsible for watching GlobalAlert resource in a cluster.
 type globalAlertController struct {
-	esCLI       *elastic.Client
+	lmaESClient lma.Client
 	calicoCLI   calicoclient.Interface
 	clusterName string
 	cancel      context.CancelFunc
@@ -29,9 +30,9 @@ type globalAlertController struct {
 
 // NewGlobalAlertController returns a globalAlertController and for each object it watches,
 // a health.Pinger object is created returned for health check.
-func NewGlobalAlertController(calicoCLI calicoclient.Interface, esCLI *elastic.Client, clusterName string) (controller.Controller, []health.Pinger) {
+func NewGlobalAlertController(calicoCLI calicoclient.Interface, lmaESClient lma.Client, clusterName string) (controller.Controller, []health.Pinger) {
 	c := &globalAlertController{
-		esCLI:       esCLI,
+		lmaESClient: lmaESClient,
 		calicoCLI:   calicoCLI,
 		clusterName: clusterName,
 	}
@@ -39,7 +40,7 @@ func NewGlobalAlertController(calicoCLI calicoclient.Interface, esCLI *elastic.C
 	// Create worker to watch GlobalAlert resource in the cluster
 	c.worker = worker.New(
 		&globalAlertReconciler{
-			esCLI:                 c.esCLI,
+			lmaESClient:           c.lmaESClient,
 			calicoCLI:             c.calicoCLI,
 			alertNameToAlertState: map[string]alertState{},
 			clusterName:           c.clusterName,

@@ -8,10 +8,11 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"reflect"
 	"strconv"
 	"sync"
 	"time"
+
+	lmaAPI "github.com/tigera/lma/pkg/api"
 
 	"github.com/avast/retry-go"
 	"github.com/sirupsen/logrus"
@@ -384,119 +385,93 @@ func (f *eventForwarder) retrieveAndForward(start, end time.Time, numAttempts ui
 	// ---------------------------------------------------------------------------------------------------
 	// 1. Attempt to query for security events
 	// ---------------------------------------------------------------------------------------------------
-	rawEvents := []db.SecurityEvent{}
+	doneCh := make(chan error, 2)
+	defer close(doneCh)
+	resultsCh := make(chan *lmaAPI.EventResult, 1000)
+	numEvents := 0
 	var err error
-	err = retry.Do(
-		func() error {
-			var err error
-			rawEvents, err = f.events.GetSecurityEvents(f.ctx, start, end, true)
-			return err
-		},
-		retry.Attempts(numAttempts),
-		retry.Delay(delay),
-		retry.OnRetry(
-			func(n uint, err error) {
-				l.WithError(err).WithFields(log.Fields{
-					"start": start,
-					"end":   end,
-				}).Infof("Retrying forwarder events.GetSecurityEvents(...)")
+	go func() {
+		defer close(resultsCh)
+		err = retry.Do(
+			func() error {
+				for e := range f.events.GetSecurityEvents(f.ctx, start, end, true) {
+					if e.Err != nil {
+						return e.Err
+					}
+					resultsCh <- e
+					numEvents++
+				}
+				return nil
 			},
-		),
-	)
-	if err != nil {
-		l.WithError(err).WithFields(log.Fields{
-			"start": start,
-			"end":   end,
-		}).Error("Failed events.GetSecurityEvents(...) after %d attempts", numAttempts)
-		return NewQueryError(err)
-	}
+			retry.Attempts(numAttempts),
+			retry.Delay(delay),
+			retry.OnRetry(
+				func(n uint, err error) {
+					l.WithError(err).WithFields(log.Fields{
+						"start": start,
+						"end":   end,
+					}).Infof("Retrying forwarder events.GetSecurityEvents(...)")
+				},
+			),
+		)
+		if err != nil {
+			l.WithError(err).WithFields(log.Fields{
+				"start": start,
+				"end":   end,
+			}).Error("Failed to get security event after retry ", numAttempts)
+			doneCh <- NewQueryError(err)
+		}
+		// We successfully retrieved events (if any) for the given time range
+		if numEvents > 0 {
+			l.WithFields(log.Fields{"start": start, "end": end}).Debugf("Successfully retrieved %d events", numEvents)
+		} else {
+			l.WithFields(log.Fields{"start": start, "end": end}).Debugf("Retrieved no events for this time range")
+		}
 
-	// We successfully retrieved events (if any) for the given time range
-	numEvents := len(rawEvents)
-	if numEvents > 0 {
-		l.WithFields(log.Fields{"start": start, "end": end}).Debugf("Succesfully retrieved %d events", numEvents)
-	} else {
-		l.WithFields(log.Fields{"start": start, "end": end}).Debugf("Retrieved no events for this time range")
-	}
+		doneCh <- nil
+	}()
 
 	// ---------------------------------------------------------------------------------------------------
 	// 2. Attempt to write all retrieved events to file
 	// ---------------------------------------------------------------------------------------------------
-	for i, rawEvent := range rawEvents {
-		var err error
+	go func() {
+		for e := range resultsCh {
+			err = retry.Do(
+				func() error {
+					sec, dec := math.Modf(float64(e.Time))
+					epoch := time.Unix(int64(sec), int64(dec*(1e9)))
 
-		l.WithFields(log.Fields{
-			"eventId": rawEvent.ID,
-			"event":   string(rawEvent.Data),
-		}).Debug("Attempting dispatcher.Dispatch(rawEvent) for event ...")
-
-		// Attempt to write current raw event to file
-		err = retry.Do(
-			func() error {
-				// Calling MarshalJSON should never return an error
-				b, _ := rawEvent.Data.MarshalJSON()
-
-				// We will unmarshall the raw data into a generic payload object
-				// in order to:
-				//   (1) Ensure any unwanted characters (like newlines or tags) are stripped out
-				//   (2) Extract the time field for each event to keep for record keeping
-				payload := map[string]interface{}{}
-				err := json.Unmarshal(b, &payload)
-				if err != nil {
-					return err
-				}
-				l.WithFields(log.Fields{
-					"payload": payload,
-				}).Debug("attempting dispatcher.Dispatch(rawEvent) for event ...")
-
-				if v, ok := payload["time"]; ok {
-					l.WithFields(log.Fields{
-						"time": v,
-					}).Debugf("found event time which is type %s", reflect.TypeOf(v))
-					if t, ok := (v.(float64)); ok {
-						sec, dec := math.Modf(t)
-						epoch := time.Unix(int64(sec), int64(dec*(1e9)))
-						l.WithFields(log.Fields{
-							"epoch":         epoch,
-							"convertedTime": t,
-						}).Debug("attempting to set LastSuccessfulEventTime for config ...")
-						f.config.LastSuccessfulEventTime = &epoch
+					b, err := json.Marshal(e.EventsData)
+					if err != nil {
+						return err
 					}
-				}
-				f.config.LastSuccessfulEventID = &rawEvent.ID
-
-				// Fix for issue with Global Alert events generated using Elastic watch jobs.
-				// They contain unwanted newline/tab characters. Fluentd rejects these logs
-				// when ingesting the data as JSON because it considers newlines invalid JSON.
-				// https://tigera.atlassian.net/browse/SAAS-1183
-				// A better solution will be to ensure the Elastic watch jobs do not inject
-				// the newlines/tabs.
-				transformed, err := json.Marshal(payload)
-				if err != nil {
-					return err
-				}
-
-				return f.dispatcher.Dispatch(transformed)
-			},
-			retry.Attempts(numAttempts),
-			retry.Delay(500*time.Millisecond),
-			retry.OnRetry(
-				func(n uint, err error) {
-					l.WithError(err).WithFields(log.Fields{
-						"eventId": rawEvent.ID,
-					}).Infof("Retrying forwarder dispatcher.Dispatch(rawEvent) on event %d of %d", i, numEvents)
+					if err = f.dispatcher.Dispatch(b); err != nil {
+						return err
+					}
+					f.config.LastSuccessfulEventTime = &epoch
+					f.config.LastSuccessfulEventID = &e.ID
+					return nil
 				},
-			),
-		)
-		// Encountering an error at this point means that we could not write to file for some reason
-		// after multiple attempts.
-		// Note: We could get fancier here and track exactly which events could not be written to file and
-		// retry those.
-		if err != nil {
-			l.Logger.WithError(err).WithFields(log.Fields{
-				"rawEvent": rawEvent,
-			}).Error("Forwader failed dispatcher.Dispatch(rawEvent) after %d attempts", numAttempts)
+				retry.Attempts(numAttempts),
+				retry.Delay(500*time.Millisecond),
+				retry.OnRetry(
+					func(n uint, err error) {
+						l.WithError(err).WithFields(log.Fields{
+							"eventId": e.ID,
+						}).Infof("Retrying forwarder dispatcher.Dispatch(rawEvent) on event ")
+					},
+				),
+			)
+			if err != nil {
+				l.Logger.WithError(err).Errorf("Forwader failed dispatcher.Dispatch(rawEvent) after %d attempts", numAttempts)
+			}
 		}
+		doneCh <- nil
+	}()
+
+	l.Debugf("Waiting for retrieval and forward to finish")
+	for i := 0; i < 2; i++ {
+		<-doneCh
 	}
 	return nil
 }

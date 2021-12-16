@@ -7,14 +7,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"io"
-	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	lmaAPI "github.com/tigera/lma/pkg/api"
+	lma "github.com/tigera/lma/pkg/elastic"
 
 	"github.com/araddon/dateparse"
 	"github.com/olivere/elastic/v7"
@@ -22,30 +23,23 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/runloop"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
 const (
-	IPSetIndexPattern         = ".tigera.ipset.%s"
-	DomainNameSetIndexPattern = ".tigera.domainnameset.%s"
-	FlowLogIndexPattern       = "tigera_secure_ee_flows.%s.*"
-	DNSLogIndexPattern        = "tigera_secure_ee_dns.%s.*"
-	EventIndexPattern         = "tigera_secure_ee_events.%s"
-	// EventIndexWildCardPattern is an alternate version of the events index pattern using a wildcard. This is for alert forwarding
-	// in a multi-cluster scenario, where we need to query across all cluster event indices.
-	EventIndexWildCardPattern   = "tigera_secure_ee_events.*"
+	IPSetIndexPattern           = ".tigera.ipset.%s"
+	DomainNameSetIndexPattern   = ".tigera.domainnameset.%s"
+	FlowLogIndexPattern         = "tigera_secure_ee_flows.%s.*"
+	DNSLogIndexPattern          = "tigera_secure_ee_dns.%s.*"
+	EventIndexPattern           = "tigera_secure_ee_events.%s.lma"
 	AuditIndexPattern           = "tigera_secure_ee_audit_*.%s.*"
 	ForwarderConfigIndexPattern = ".tigera.forwarderconfig.%s"
-	WatchIndex                  = ".watches"
 	WatchNamePrefixPattern      = "tigera_secure_ee_watch.%s."
 	QuerySize                   = 1000
 	AuditQuerySize              = 0
 	MaxClauseCount              = 1024
 	CreateIndexFailureDelay     = time.Second * 15
 	CreateIndexWaitTimeout      = time.Minute
-	PingTimeout                 = time.Second * 5
-	PingPeriod                  = time.Minute
 	Create                      = "create"
 	Delete                      = "delete"
 	DefaultReplicas             = 0
@@ -89,22 +83,21 @@ type domainNameSetDoc struct {
 }
 
 type Elastic struct {
+	lmaCLI                        lma.Client
 	c                             *elastic.Client
-	url                           *url.URL
 	ipSetMappingCreated           chan struct{}
 	domainNameSetMappingCreated   chan struct{}
 	eventMappingCreated           chan struct{}
 	forwarderConfigMappingCreated chan struct{}
-	elasticIsAlive                bool
 	cancel                        context.CancelFunc
 	once                          sync.Once
 	indexSettings                 IndexSettings
 }
 
-func NewService(esCLI *elastic.Client, url *url.URL, indexSettings IndexSettings) *Elastic {
+func NewService(lmaCLI lma.Client, indexSettings IndexSettings) *Elastic {
 	return &Elastic{
-		c:                             esCLI,
-		url:                           url,
+		lmaCLI:                        lmaCLI,
+		c:                             lmaCLI.Backend(),
 		ipSetMappingCreated:           make(chan struct{}),
 		domainNameSetMappingCreated:   make(chan struct{}),
 		eventMappingCreated:           make(chan struct{}),
@@ -133,14 +126,6 @@ func (e *Elastic) Run(ctx context.Context) {
 			}
 		}()
 
-		go func() {
-			if err := CreateOrUpdateIndex(ctx, e.c, e.indexSettings, EventIndex, EventMapping, e.eventMappingCreated); err != nil {
-				log.WithError(err).WithFields(log.Fields{
-					"index": EventIndex,
-				}).Error("Could not create index")
-			}
-		}()
-
 		// We create the index ForwarderConfigIndex regardless of whether the event forwarder is enabled or not (so that it's
 		// available when needed).
 		go func() {
@@ -151,26 +136,6 @@ func (e *Elastic) Run(ctx context.Context) {
 			}
 		}()
 
-		go func() {
-			if err := runloop.RunLoop(ctx, func() {
-				childCtx, cancel := context.WithTimeout(ctx, PingTimeout)
-				defer cancel()
-
-				_, code, err := e.c.Ping(e.url.String()).Do(childCtx)
-				switch {
-				case err != nil:
-					log.WithError(err).Warn("Elastic ping failed")
-					e.elasticIsAlive = false
-				case code < http.StatusOK || code >= http.StatusBadRequest:
-					log.WithField("code", code).Warn("Elastic ping failed")
-					e.elasticIsAlive = false
-				default:
-					e.elasticIsAlive = true
-				}
-			}, PingPeriod); err != nil {
-				log.WithError(err).Error("Elastic ping failed")
-			}
-		}()
 	})
 }
 
@@ -366,7 +331,7 @@ func (e *Elastic) QueryIPSet(ctx context.Context, feed *apiV3.GlobalThreatFeed) 
 	queryTerms := splitIPSetToInterface(ipset)
 
 	f := func(ipset, field string, terms []interface{}) *elastic.ScrollService {
-		filters := []elastic.Query { elastic.NewTermsQuery(field, terms...) }
+		filters := []elastic.Query{elastic.NewTermsQuery(field, terms...)}
 		if !fromTimestamp.IsZero() {
 			filters = append(filters, elastic.NewRangeQuery("@timestamp").Gt(fromTimestamp))
 		}
@@ -403,7 +368,7 @@ func (e *Elastic) QueryDomainNameSet(ctx context.Context, domainNameSet db.Domai
 
 	// QName scrollers
 	for _, t := range queryTerms {
-		filters := []elastic.Query { elastic.NewTermsQuery("qname", t...) }
+		filters := []elastic.Query{elastic.NewTermsQuery("qname", t...)}
 		if !fromTimestamp.IsZero() {
 			filters = append(filters, elastic.NewRangeQuery("@timestamp").Gt(fromTimestamp))
 		}
@@ -417,7 +382,7 @@ func (e *Elastic) QueryDomainNameSet(ctx context.Context, domainNameSet db.Domai
 
 	// RRSet.name scrollers
 	for _, t := range queryTerms {
-		filters := []elastic.Query { elastic.NewNestedQuery("rrsets", elastic.NewTermsQuery("rrsets.name", t...)) }
+		filters := []elastic.Query{elastic.NewNestedQuery("rrsets", elastic.NewTermsQuery("rrsets.name", t...))}
 		if !fromTimestamp.IsZero() {
 			filters = append(filters, elastic.NewRangeQuery("@timestamp").Gt(fromTimestamp))
 		}
@@ -431,7 +396,7 @@ func (e *Elastic) QueryDomainNameSet(ctx context.Context, domainNameSet db.Domai
 
 	// RRSet.rdata scrollers
 	for _, t := range queryTerms {
-		filters := []elastic.Query { elastic.NewNestedQuery("rrsets", elastic.NewTermsQuery("rrsets.rdata", t...)) }
+		filters := []elastic.Query{elastic.NewNestedQuery("rrsets", elastic.NewTermsQuery("rrsets.rdata", t...))}
 		if !fromTimestamp.IsZero() {
 			filters = append(filters, elastic.NewRangeQuery("@timestamp").Gt(fromTimestamp))
 		}
@@ -486,53 +451,15 @@ func (e *Elastic) deleteSet(ctx context.Context, m db.Meta, idx string) error {
 	return err
 }
 
-func (e *Elastic) PutSecurityEvent(ctx context.Context, f db.SecurityEventInterface) error {
-	// Wait for the SecurityEvent Mapping to be created
-	if err := util.WaitForChannel(ctx, e.eventMappingCreated, CreateIndexWaitTimeout); err != nil {
-		return err
-	}
-	_, err := e.c.Index().Index(EventIndex).Id(f.ID()).BodyJson(f).Do(ctx)
+func (e *Elastic) PutSecurityEventWithID(ctx context.Context, f db.SecurityEventInterface) error {
+	_, err := e.lmaCLI.PutSecurityEventWithID(ctx, f.GetEventsData(), f.GetID())
 	return err
 }
 
 // GetSecurityEvents retrieves a listing of security events from ES sorted in ascending order,
 // where each events time falls within the range given by start and end time.
-func (e *Elastic) GetSecurityEvents(ctx context.Context, start, end time.Time, allClusters bool) ([]db.SecurityEvent, error) {
-	l := log.WithFields(logrus.Fields{"func": "GetSecurityEvents"})
-
-	// Determine whether we're querying for events across all clusters (or just the current cluster)
-	index := EventIndex
-	if allClusters {
-		index = EventIndexWildCardPattern
-	}
-
-	searchResult, err := e.c.Search().
-		Index(index).
-		Query(elastic.NewRangeQuery("time").Gte(start).Lte(end)). // query for events within the specified time range
-		Sort("time", true).                                       // sort by "time" field, ascending order (oldest events first)
-		From(0).Size(10000).                                      // we want all events from the time range (avoid pagination)
-		Do(ctx)                                                   // execute
-
-	if err != nil {
-		return nil, err
-	}
-
-	l.Debugf("Query index %s took %d milliseconds", index, searchResult.TookInMillis)
-	l.Debugf("Found a total of %d security events", searchResult.TotalHits())
-
-	var events []db.SecurityEvent
-	if searchResult.Hits.TotalHits.Value > 0 {
-		// We are concerned mainly with getting the raw JSON of each event
-		for _, hit := range searchResult.Hits.Hits {
-			l.Debugf("Adding security event with id[%s]", hit.Id)
-			events = append(events, db.SecurityEvent{
-				Data: hit.Source,
-				ID:   hit.Id,
-			})
-		}
-	}
-
-	return events, nil
+func (e *Elastic) GetSecurityEvents(ctx context.Context, start, end time.Time, allClusters bool) <-chan *lmaAPI.EventResult {
+	return e.lmaCLI.SearchSecurityEvents(ctx, &start, &end, nil, allClusters)
 }
 
 // PutForwarderConfig saves the given ForwarderConfig object back to the datastore.

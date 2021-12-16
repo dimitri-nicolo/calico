@@ -14,14 +14,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/olivere/elastic/v7"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	esClient "github.com/tigera/intrusion-detection/controller/pkg/elastic"
+	lma "github.com/tigera/lma/pkg/elastic"
 )
 
 const (
@@ -34,8 +32,8 @@ var (
 )
 var _ = Describe("GlobalAlert", func() {
 	var (
-		ecli *elastic.Client
-		rt   *testRoundTripper
+		lmaESClient lma.Client
+		rt          *testRoundTripper
 	)
 	BeforeEach(func() {
 
@@ -47,7 +45,7 @@ var _ = Describe("GlobalAlert", func() {
 			Transport: http.RoundTripper(rt),
 		}
 
-		ecli, err = esClient.NewClient(client, u, "", "", false)
+		lmaESClient, err = lma.New(client, u, "", "", "test-cluster", 1, 0, true, 0, 0)
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
@@ -69,9 +67,8 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(ecli, "test-cluster", ga)
+			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
 			e.globalAlert = ga
@@ -98,9 +95,8 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(ecli, "test-cluster", a)
+			e, err := GetTestElasticService(lmaESClient, "test-cluster", a)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_dns.test-cluster.*"))
 
 			e.globalAlert = a
@@ -127,9 +123,8 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(ecli, "test-cluster", ga)
+			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
 			e.globalAlert = ga
@@ -159,9 +154,8 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(ecli, "test-cluster", ga)
+			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 			e.globalAlert = ga
 			e.executeCompositeQuery()
@@ -188,9 +182,8 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(ecli, "test-cluster", ga)
+			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
 			e.globalAlert = ga
@@ -215,9 +208,8 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(ecli, "test-cluster", ga)
+			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
 			// This makes 3 API calls and the expected request and response are validated in the rountripper
@@ -245,9 +237,8 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(ecli, "test-cluster", ga)
+			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
 			e.globalAlert = ga
@@ -273,9 +264,8 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(ecli, "test-cluster", ga)
+			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
 			e.globalAlert = ga
@@ -298,9 +288,8 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(ecli, "test-cluster", ga)
+			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
 			e.globalAlert = ga
@@ -324,9 +313,8 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(ecli, "test-cluster", ga)
+			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
 			e.globalAlert = ga
@@ -350,9 +338,8 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(ecli, "test-cluster", ga)
+			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
 			e.globalAlert = ga
@@ -372,9 +359,8 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(ecli, "test-cluster", ga)
+			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
 			e.globalAlert = ga
@@ -394,9 +380,8 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(ecli, "test-cluster", ga)
+			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(e.eventIndexName).Should(Equal("tigera_secure_ee_events.test-cluster"))
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
 			e.globalAlert = ga
@@ -418,9 +403,9 @@ var _ = Describe("GlobalAlert", func() {
 
 })
 
-func GetTestElasticService(esCLI *elastic.Client, clusterName string, alert *v3.GlobalAlert) (*service, error) {
+func GetTestElasticService(lmaESClient lma.Client, clusterName string, alert *v3.GlobalAlert) (*service, error) {
 	e := &service{
-		esCLI:       esCLI,
+		lmaESClient: lmaESClient,
 		clusterName: clusterName,
 	}
 	e.buildIndexName(alert)
@@ -430,15 +415,10 @@ func GetTestElasticService(esCLI *elastic.Client, clusterName string, alert *v3.
 		return nil, err
 	}
 
-	e.esBulkProcessor, err = e.esCLI.BulkProcessor().
-		BulkActions(AutoBulkFlush).
-		Do(context.Background())
-	if err != nil {
-		Expect(err).ShouldNot(HaveOccurred())
-		return nil, err
-	}
+	err = e.lmaESClient.BulkProcessorInitialize(context.Background(), nil)
+	Expect(err).ShouldNot(HaveOccurred())
 
-	return e, nil
+	return e, err
 }
 
 type elasticQuery struct {
@@ -469,6 +449,7 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 	if t.e != nil {
 		return nil, t.e
 	}
+
 	switch req.Method {
 	case "HEAD":
 		switch req.URL.String() {
@@ -662,13 +643,13 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 					Request:    req,
 					Body:       mustOpen("test_files/bulk_response.json"),
 				}, nil
-			case mustGetEventIndexDocAsString("test_files/8_with_in_and_count_and_aggregatedby_events_doc.json"):
+			case mustGetEventIndexDocAsString("test_files/8_with_in_and_count_and_aggregateby_events_doc.json"):
 				return &http.Response{
 					StatusCode: 200,
 					Request:    req,
 					Body:       mustOpen("test_files/bulk_response.json"),
 				}, nil
-			case mustGetEventIndexDocAsString("test_files/8_with_notin_and_count_and_aggregatedby_events_doc.json"):
+			case mustGetEventIndexDocAsString("test_files/8_with_notin_and_count_and_aggregateby_events_doc.json"):
 				return &http.Response{
 					StatusCode: 200,
 					Request:    req,
@@ -735,7 +716,6 @@ func alterBulkRequestBodyForComparison(reqBody []byte) []byte {
 	}
 	out, err := json.Marshal(actualBody)
 	Expect(err).ShouldNot(HaveOccurred())
-	fmt.Printf("\n bulk: %s", string(out))
 	return out
 }
 
@@ -791,17 +771,11 @@ func mustGetQueryAsString(name string) string {
 
 func mustGetEventIndexDocAsString(name string) string {
 	f, err := os.Open(name)
-	if err != nil {
-		Expect(err).ShouldNot(HaveOccurred())
-	}
+	Expect(err).ShouldNot(HaveOccurred())
 	b, err := ioutil.ReadAll(f)
-	if err != nil {
-		Expect(err).ShouldNot(HaveOccurred())
-	}
+	Expect(err).ShouldNot(HaveOccurred())
 	err = f.Close()
-	if err != nil {
-		Expect(err).ShouldNot(HaveOccurred())
-	}
+	Expect(err).ShouldNot(HaveOccurred())
 
 	var actualBody []interface{}
 	decoder := json.NewDecoder(strings.NewReader(string(b)))

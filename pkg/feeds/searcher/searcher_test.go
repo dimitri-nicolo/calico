@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/tigera/lma/pkg/api"
+
 	. "github.com/onsi/gomega"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
@@ -17,20 +19,26 @@ import (
 
 // TestDoIPSet tests the case where everything is working
 func TestDoIPSet(t *testing.T) {
-	expected := []events.SuspiciousIPSecurityEvent{
-		{
-			SourceIP:   util.Sptr("1.2.3.4"),
-			SourceName: "source",
-			DestIP:     util.Sptr("2.3.4.5"),
-			DestName:   "dest",
+	expected := []events.SuspiciousIPSecurityEvent{{
+		EventsData: api.EventsData{
+			EventsSearchFields: api.EventsSearchFields{
+				SourceIP:   util.Sptr("1.2.3.4"),
+				SourceName: "source",
+				DestIP:     util.Sptr("2.3.4.5"),
+				DestName:   "dest",
+			},
 		},
+	},
 		{
-			SourceIP:   util.Sptr("5.6.7.8"),
-			SourceName: "source",
-			DestIP:     util.Sptr("2.3.4.5"),
-			DestName:   "dest",
-		},
-	}
+			EventsData: api.EventsData{
+				EventsSearchFields: api.EventsSearchFields{
+					SourceIP:   util.Sptr("5.6.7.8"),
+					SourceName: "source",
+					DestIP:     util.Sptr("2.3.4.5"),
+					DestName:   "dest",
+				},
+			},
+		}}
 	runTest(t, true, expected, time.Now(), "", nil, -1)
 }
 
@@ -46,22 +54,29 @@ func TestDoIPSetSuspiciousIPFails(t *testing.T) {
 	runTest(t, false, expected, time.Time{}, "", errors.New("fail"), -1)
 }
 
-// TestDoIPSetEventsFails tests the case where the first call to events.PutSecurityEvent fails but the second does not
+// TestDoIPSetEventsFails tests the case where the first call to events.PutSecurityEventWithID fails but the second does not
 func TestDoIPSetEventsFails(t *testing.T) {
-	expected := []events.SuspiciousIPSecurityEvent{
-		{
-			SourceIP:   util.Sptr("1.2.3.4"),
-			SourceName: "source",
-			DestIP:     util.Sptr("2.3.4.5"),
-			DestName:   "dest",
+	expected := []events.SuspiciousIPSecurityEvent{{
+		EventsData: api.EventsData{
+			EventsSearchFields: api.EventsSearchFields{
+				SourceIP:   util.Sptr("1.2.3.4"),
+				SourceName: "source",
+				DestIP:     util.Sptr("2.3.4.5"),
+				DestName:   "dest",
+			},
 		},
+	},
 		{
-			SourceIP:   util.Sptr("5.6.7.8"),
-			SourceName: "source",
-			DestIP:     util.Sptr("2.3.4.5"),
-			DestName:   "dest",
-		},
-	}
+			EventsData: api.EventsData{
+				EventsSearchFields: api.EventsSearchFields{
+					SourceIP:   util.Sptr("5.6.7.8"),
+					SourceName: "source",
+					DestIP:     util.Sptr("2.3.4.5"),
+					DestName:   "dest",
+				},
+			},
+		}}
+
 	runTest(t, false, expected, time.Time{}, "", nil, 0)
 }
 
@@ -70,6 +85,7 @@ func runTest(t *testing.T, successful bool, expectedSecurityEvents []events.Susp
 	g := NewGomegaWithT(t)
 
 	f := util.NewGlobalThreatFeedFromName("mock")
+	var expectedEvents []api.EventsData
 	suspiciousIP := &db.MockSuspicious{
 		Error:                err,
 		LastSuccessfulSearch: lastSuccessfulSearch,
@@ -77,6 +93,7 @@ func runTest(t *testing.T, successful bool, expectedSecurityEvents []events.Susp
 	}
 	for _, e := range expectedSecurityEvents {
 		suspiciousIP.Events = append(suspiciousIP.Events, e)
+		expectedEvents = append(expectedEvents, e.GetEventsData())
 	}
 	eventsDB := &db.MockEvents{ErrorIndex: eventsErrorIdx, Events: []db.SecurityEventInterface{}}
 	uut := NewSearcher(f, 0, suspiciousIP, eventsDB).(*searcher)

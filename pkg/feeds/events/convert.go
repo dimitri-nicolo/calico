@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	lmaAPI "github.com/tigera/lma/pkg/api"
+
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
@@ -14,8 +16,8 @@ import (
 )
 
 const (
-	SuspiciousFlow     = "suspicious_flow"
-	SuspiciousDNSQuery = "suspicious_dns_query"
+	SuspiciousFlow     = "gtf_suspicious_flow"
+	SuspiciousDNSQuery = "gtf_suspicious_dns_query"
 	Severity           = 100
 )
 
@@ -31,24 +33,32 @@ func ConvertFlowLog(flowLog FlowLogJSONOutput, key db.QueryKey, hit *elastic.Sea
 	}
 
 	return SuspiciousIPSecurityEvent{
-		Time:             flowLog.StartTime,
-		Type:             SuspiciousFlow,
-		Description:      description,
-		Severity:         Severity,
-		FlowLogIndex:     hit.Index,
-		FlowLogID:        hit.Id,
-		Protocol:         flowLog.Proto,
-		SourceIP:         flowLog.SourceIP,
-		SourcePort:       flowLog.SourcePort,
-		SourceNamespace:  flowLog.SourceNamespace,
-		SourceName:       flowLog.SourceName,
-		DestIP:           flowLog.DestIP,
-		DestPort:         flowLog.DestPort,
-		DestNamespace:    flowLog.DestNamespace,
-		DestName:         flowLog.DestName,
-		FlowAction:       flowLog.Action,
-		Feeds:            append(feeds),
-		SuspiciousPrefix: nil,
+		EventsData: lmaAPI.EventsData{
+			EventsSearchFields: lmaAPI.EventsSearchFields{
+				Time:            flowLog.StartTime,
+				Type:            SuspiciousFlow,
+				Description:     description,
+				Severity:        Severity,
+				Origin:          feeds[0],
+				SourceIP:        flowLog.SourceIP,
+				SourcePort:      flowLog.SourcePort,
+				SourceNamespace: flowLog.SourceNamespace,
+				SourceName:      flowLog.SourceName,
+				SourceNameAggr:  flowLog.SourceNameAggr,
+				DestIP:          flowLog.DestIP,
+				DestPort:        flowLog.DestPort,
+				DestNamespace:   flowLog.DestNamespace,
+				DestName:        flowLog.DestName,
+				DestNameAggr:    flowLog.DestNameAggr,
+			},
+			Record: SuspiciousIPEventRecord{
+				FlowAction:       flowLog.Action,
+				FlowLogID:        hit.Id,
+				Protocol:         flowLog.Proto,
+				Feeds:            append(feeds),
+				SuspiciousPrefix: nil,
+			},
+		},
 	}
 }
 
@@ -121,16 +131,23 @@ func ConvertDNSLog(l DNSLog, key db.QueryKey, hit *elastic.SearchHit, domains ma
 	}
 
 	return SuspiciousDomainSecurityEvent{
-		Time:              l.StartTime.Unix(),
-		Type:              SuspiciousDNSQuery,
-		Description:       desc,
-		Severity:          Severity,
-		DNSLogIndex:       hit.Index,
-		DNSLogID:          hit.Id,
-		SourceIP:          l.ClientIP,
-		SourceNamespace:   l.ClientNamespace,
-		SourceName:        sname,
-		Feeds:             feeds,
-		SuspiciousDomains: sDomains,
+		EventsData: lmaAPI.EventsData{
+			EventsSearchFields: lmaAPI.EventsSearchFields{
+				Time:            l.StartTime.Unix(),
+				Type:            SuspiciousDNSQuery,
+				Description:     desc,
+				Severity:        Severity,
+				Origin:          feeds[0],
+				SourceIP:        l.ClientIP,
+				SourceNamespace: l.ClientNamespace,
+				SourceName:      sname,
+				SourceNameAggr:  l.ClientNameAggr,
+			},
+			Record: SuspiciousDomainEventRecord{
+				DNSLogID:          hit.Id,
+				Feeds:             feeds,
+				SuspiciousDomains: sDomains,
+			},
+		},
 	}
 }

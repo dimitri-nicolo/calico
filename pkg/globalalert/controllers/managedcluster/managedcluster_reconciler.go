@@ -7,14 +7,13 @@ import (
 	"fmt"
 	"time"
 
+	lma "github.com/tigera/lma/pkg/elastic"
+
 	log "github.com/sirupsen/logrus"
 	es "github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/alert"
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
 	"github.com/tigera/intrusion-detection/controller/pkg/health"
-	"github.com/tigera/intrusion-detection/controller/pkg/util"
-
-	"github.com/olivere/elastic/v7"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -28,7 +27,7 @@ import (
 // and adds the new controller to health.Pingers.
 // If managed cluster is updated or deleted close the corresponding GlobalAlertController this in turn cancels all the goroutines.
 type managedClusterReconciler struct {
-	esCLI                                     *elastic.Client
+	lmaESClient                               lma.Client
 	indexSettings                             es.IndexSettings
 	managementCalicoCLI                       calicoclient.Interface
 	createManagedCalicoCLI                    func(string) (calicoclient.Interface, error)
@@ -81,18 +80,22 @@ func (r *managedClusterReconciler) startManagedClusterAlertController(name strin
 		return err
 	}
 
-	ch := make(chan struct{})
 	name = getVariantSpecificClusterName(name)
-	if err := es.CreateOrUpdateIndex(ctx, r.esCLI, r.indexSettings, fmt.Sprintf(es.EventIndexPattern, name), es.EventMapping, ch); err != nil {
-		log.WithError(err).WithFields(log.Fields{
-			"index": fmt.Sprintf(es.EventIndexPattern, name),
-		}).Error("Could not create index")
+
+	// Create a managedCluster specific lma client
+	envCfg := lma.MustLoadConfig()
+	envCfg.ElasticIndexSuffix = fmt.Sprintf(es.EventIndexPattern, name)
+	lmaESClient, err := lma.NewFromConfig(envCfg)
+	if err != nil {
+		log.WithError(err).Errorf("failed to create Elastic client for managed cluster %s", name)
+		return err
 	}
-	if err := util.WaitForChannel(ctx, ch, es.CreateIndexWaitTimeout); err != nil {
+	if err := lmaESClient.CreateEventsIndex(ctx); err != nil {
+		log.WithError(err).Errorf("failed to create events index for managed cluster %s", name)
 		return err
 	}
 
-	alertController, alertHealthPingers := alert.NewGlobalAlertController(managedCLI, r.esCLI, name)
+	alertController, alertHealthPingers := alert.NewGlobalAlertController(managedCLI, lmaESClient, name)
 
 	successSendingPinger := false
 	for maxRetries := 5; maxRetries > 0; maxRetries-- {

@@ -3,28 +3,18 @@ module github.com/tigera/intrusion-detection/controller
 go 1.16
 
 require (
-	github.com/Microsoft/go-winio v0.4.15 // indirect
 	github.com/araddon/dateparse v0.0.0-20190223010137-262228af701e
 	github.com/avast/retry-go v2.2.0+incompatible
-	github.com/containerd/containerd v1.4.4 // indirect
-	github.com/containernetworking/cni v0.8.0 // indirect
-	github.com/docker/distribution v2.7.1+incompatible // indirect
-	github.com/docker/docker v20.10.2+incompatible
-	github.com/docker/go-connections v0.4.0
-	github.com/docker/go-units v0.4.0 // indirect
-	github.com/gorilla/mux v1.8.0 // indirect
-	github.com/morikuni/aec v1.0.0 // indirect
-	github.com/olivere/elastic/v7 v7.0.9-0.20191104165744-604114ea2c85
+	github.com/olivere/elastic/v7 v7.0.22
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.1
-	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/projectcalico/libcalico-go v1.7.2
 	github.com/simplereach/timeutils v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.6.1
 	github.com/tigera/api v0.0.0-20211202170222-d8128d06db71
-	github.com/tigera/licensing v1.0.1-0.20210629175442-f7d453f3e818
+	github.com/tigera/licensing v1.0.1-0.20211203232432-ca834eb3a8aa
+	github.com/tigera/lma v0.0.0-20211213220904-8d6cb7fce33c
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
@@ -36,7 +26,7 @@ require (
 )
 
 replace (
-	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20211202200625-2402c45cf93e
+	github.com/projectcalico/apiserver => github.com/tigera/apiserver v0.0.0-20211209181940-47c5f436a856 // indirect
 	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211203232041-873deb396265
 	github.com/tigera/licensing => github.com/tigera/licensing v1.0.1-0.20211203232432-ca834eb3a8aa
 

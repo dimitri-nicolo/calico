@@ -1,2 +1,2 @@
-{"index":{"_index":"tigera_secure_ee_events.test-cluster"}}
-{"alert":"sample-test","description":"test alert: sample-test","record":{"count":6,"source_name_aggr":"tigera-manager-6999478494-*","source_namespace":"tigera-manager"},"severity":100,"time":1637870950,"type":"alert"}
+{"index":{"_index":"tigera_secure_ee_events.test-cluster."}}
+{"description":"test alert: sample-test","origin":"sample-test","record":{"count":6},"severity":100,"source_name_aggr":"tigera-manager-6999478494-*","source_namespace":"tigera-manager","time":1637870950,"type":"global_alert"}

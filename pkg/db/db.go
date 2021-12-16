@@ -5,8 +5,10 @@ package db
 import (
 	"context"
 	"encoding/json"
-	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"time"
+
+	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	lmaAPI "github.com/tigera/lma/pkg/api"
 )
 
 type Meta struct {
@@ -35,12 +37,13 @@ type SuspiciousSet interface {
 }
 
 type SecurityEventInterface interface {
-	ID() string
+	GetEventsData() lmaAPI.EventsData
+	GetID() string
 }
 
 type Events interface {
-	PutSecurityEvent(context.Context, SecurityEventInterface) error
-	GetSecurityEvents(ctx context.Context, start, end time.Time, allClusters bool) ([]SecurityEvent, error)
+	PutSecurityEventWithID(context.Context, SecurityEventInterface) error
+	GetSecurityEvents(ctx context.Context, start, end time.Time, allClusters bool) <-chan *lmaAPI.EventResult
 	PutForwarderConfig(ctx context.Context, id string, f *ForwarderConfig) error
 	GetForwarderConfig(ctx context.Context, id string) (*ForwarderConfig, error)
 }

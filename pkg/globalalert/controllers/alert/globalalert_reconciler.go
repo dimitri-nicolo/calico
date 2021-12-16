@@ -5,9 +5,9 @@ package alert
 import (
 	"context"
 
-	log "github.com/sirupsen/logrus"
+	lma "github.com/tigera/lma/pkg/elastic"
 
-	"github.com/olivere/elastic/v7"
+	log "github.com/sirupsen/logrus"
 
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
@@ -21,7 +21,7 @@ import (
 // processes, transforms the Elasticsearch result and updates the Elasticsearch events index and GlobalAlert status.
 // If GlobalAlert resource is deleted or updated, cancel the current goroutine, and create a new one if resource is updated.
 type globalAlertReconciler struct {
-	esCLI                 *elastic.Client
+	lmaESClient           lma.Client
 	calicoCLI             calicoclient.Interface
 	alertNameToAlertState map[string]alertState
 	clusterName           string
@@ -55,7 +55,7 @@ func (r *globalAlertReconciler) Reconcile(namespacedName types.NamespacedName) e
 		return nil
 	}
 
-	alert, err := alert.NewAlert(obj, r.calicoCLI, r.esCLI, r.clusterName)
+	alert, err := alert.NewAlert(obj, r.calicoCLI, r.lmaESClient, r.clusterName)
 	if err != nil {
 		return err
 	}
