@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/clock"
 
 	"github.com/projectcalico/calico/felix/ip"
-	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/health"

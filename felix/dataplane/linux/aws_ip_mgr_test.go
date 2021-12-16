@@ -89,7 +89,7 @@ var _ = Describe("awsIPManager tests", func() {
 		Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 
 		Expect(fakes.DatastoreState).To(Equal(&aws.DatastoreState{
-			LocalAWSAddrsByDst:        map[ip.CIDR]*proto.RouteUpdate{},
+			LocalAWSAddrsByDst:        map[ip.CIDR]aws.AddrInfo{},
 			LocalRouteDestsBySubnetID: map[string]set.Set{},
 			PoolIDsBySubnetID:         map[string]set.Set{},
 		}))
@@ -109,7 +109,7 @@ var _ = Describe("awsIPManager tests", func() {
 		Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 
 		Expect(fakes.DatastoreState).To(Equal(&aws.DatastoreState{
-			LocalAWSAddrsByDst:        map[ip.CIDR]*proto.RouteUpdate{},
+			LocalAWSAddrsByDst:        map[ip.CIDR]aws.AddrInfo{},
 			LocalRouteDestsBySubnetID: map[string]set.Set{},
 			PoolIDsBySubnetID:         map[string]set.Set{},
 		}))
@@ -204,8 +204,11 @@ var _ = Describe("awsIPManager tests", func() {
 			// Should send the expected snapshot, ignoring non-AWS pools and workloads.
 			workloadCIDR := ip.MustParseCIDROrIP(workloadRoute.Dst)
 			Expect(fakes.DatastoreState).To(Equal(&aws.DatastoreState{
-				LocalAWSAddrsByDst: map[ip.CIDR]*proto.RouteUpdate{
-					workloadCIDR: workloadRoute,
+				LocalAWSAddrsByDst: map[ip.CIDR]aws.AddrInfo{
+					workloadCIDR: {
+						AWSSubnetId: workloadRoute.AwsSubnetId,
+						Dst:         workloadRoute.Dst,
+					},
 				},
 				LocalRouteDestsBySubnetID: map[string]set.Set{
 					"subnet-123456789012345657": set.From(workloadCIDR),
@@ -248,8 +251,11 @@ var _ = Describe("awsIPManager tests", func() {
 			// Should send the expected snapshot with updated subnets.
 			workloadCIDR := ip.MustParseCIDROrIP(workloadRoute.Dst)
 			Expect(fakes.DatastoreState).To(Equal(&aws.DatastoreState{
-				LocalAWSAddrsByDst: map[ip.CIDR]*proto.RouteUpdate{
-					workloadCIDR: workloadRoute,
+				LocalAWSAddrsByDst: map[ip.CIDR]aws.AddrInfo{
+					workloadCIDR: {
+						AWSSubnetId: workloadRoute.AwsSubnetId,
+						Dst:         workloadRoute.Dst,
+					},
 				},
 				LocalRouteDestsBySubnetID: map[string]set.Set{
 					"subnet-000002": set.From(workloadCIDR),
@@ -280,7 +286,7 @@ var _ = Describe("awsIPManager tests", func() {
 			// Should send the expected snapshot
 			Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 			Expect(fakes.DatastoreState).To(Equal(&aws.DatastoreState{
-				LocalAWSAddrsByDst:        map[ip.CIDR]*proto.RouteUpdate{},
+				LocalAWSAddrsByDst:        map[ip.CIDR]aws.AddrInfo{},
 				LocalRouteDestsBySubnetID: map[string]set.Set{},
 				PoolIDsBySubnetID: map[string]set.Set{
 					"subnet-123456789012345657": set.From("hosts-pool"),
@@ -295,7 +301,7 @@ var _ = Describe("awsIPManager tests", func() {
 			// Should send the expected snapshot
 			Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 			Expect(fakes.DatastoreState).To(Equal(&aws.DatastoreState{
-				LocalAWSAddrsByDst:        map[ip.CIDR]*proto.RouteUpdate{},
+				LocalAWSAddrsByDst:        map[ip.CIDR]aws.AddrInfo{},
 				LocalRouteDestsBySubnetID: map[string]set.Set{},
 				PoolIDsBySubnetID:         map[string]set.Set{},
 			}))
