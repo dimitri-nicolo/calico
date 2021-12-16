@@ -23,13 +23,13 @@ import (
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/klog"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	calicowatch "github.com/projectcalico/calico/libcalico-go/lib/watch"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type resourceObject interface {

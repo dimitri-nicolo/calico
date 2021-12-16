@@ -130,7 +130,13 @@ func ConfigureLogging(configParams *config.Config) {
 		}
 	}
 
-	hook := logutils.NewBackgroundHook(logutils.FilterLevels(mostVerboseLevel), logLevelSyslog, dests, counterDroppedLogs)
+	hook := logutils.NewBackgroundHook(
+		logutils.FilterLevels(mostVerboseLevel),
+		logLevelSyslog,
+		dests,
+		counterDroppedLogs,
+		logutils.WithDebugFileRegexp(configParams.LogDebugFilenameRegex),
+	)
 	hook.Start()
 	log.AddHook(hook)
 

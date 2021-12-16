@@ -59,7 +59,7 @@ clean:
 		docker-image/bin \
 		build \
 		report/*.xml \
-		release-notes-* \
+		release-notes-*
 	find . -name "*.coverprofile" -type f -delete
 	find . -name "coverage.xml" -type f -delete
 	find . -name ".coverage" -type f -delete
@@ -96,7 +96,7 @@ bin/typha-client-$(ARCH): $(SRC_FILES)
 	@echo Building typha client...
 	mkdir -p bin
 	$(DOCKER_RUN) $(CALICO_BUILD) \
-	    sh -c '$(GIT_CONFIG_SSH) GO111MODULE=on go build -v -i -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/typha-client" && \
+	    sh -c '$(GIT_CONFIG_SSH) go build -v -i -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/typha-client" && \
 		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
 		-e "not a dynamic executable" || \
 		( echo "Error: bin/typha-client was not statically linked"; false ) )'

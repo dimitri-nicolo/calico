@@ -20,15 +20,16 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
-
 	"github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/testutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
 	"io/ioutil"
 	"net"
 	"reflect"
+	"regexp"
+	"strings"
 	"time"
 
 	"os"
@@ -340,6 +341,9 @@ var _ = DescribeTable("Config parsing",
 	Entry("LogSeveritySys", "LogSeveritySys", "warning", "WARNING"),
 	Entry("LogSeveritySys", "LogSeveritySys", "error", "ERROR"),
 	Entry("LogSeveritySys", "LogSeveritySys", "fatal", "FATAL"),
+
+	Entry("LogDebugFilenameRegex", "LogDebugFilenameRegex", "", (*regexp.Regexp)(nil)),
+	Entry("LogDebugFilenameRegex", "LogDebugFilenameRegex", ".*", regexp.MustCompile(".*")),
 
 	Entry("IpInIpEnabled", "IpInIpEnabled", "true", true),
 	Entry("IpInIpEnabled", "IpInIpEnabled", "y", true),

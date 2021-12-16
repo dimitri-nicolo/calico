@@ -16,10 +16,41 @@ auto_cancel:
     when: "branch != 'master'"
 
 promotions:
+# Cleanup after ourselves if we are stopped-short.
 - name: Cleanup
   pipeline_file: cleanup.yml
   auto_promote:
     when: "result = 'stopped'"
+# Have separate promotions for publishing images so we can re-run
+# them individually if they fail, and so we can run them in parallel.
+- name: Push apiserver images
+  pipeline_file: push-images/apiserver.yml
+  auto_promote:
+    when: "branch !~ '.+'"
+- name: Push cni-plugin images
+  pipeline_file: push-images/cni-plugin.yml
+  auto_promote:
+    when: "branch !~ '.+'"
+- name: Push kube-controllers images
+  pipeline_file: push-images/kube-controllers.yml
+  auto_promote:
+    when: "branch !~ '.+'"
+- name: Push calicoctl images
+  pipeline_file: push-images/calicoctl.yml
+  auto_promote:
+    when: "branch !~ '.+'"
+- name: Push typha images
+  pipeline_file: push-images/typha.yml
+  auto_promote:
+    when: "branch !~ '.+'"
+- name: Push ALP images
+  pipeline_file: push-images/alp.yml
+  auto_promote:
+    when: "branch !~ '.+'"
+- name: Push calico/node images
+  pipeline_file: push-images/node.yml
+  auto_promote:
+    when: "branch !~ '.+'"
 
 global_job_config:
   secrets:
@@ -45,6 +76,8 @@ global_job_config:
 blocks:
 
 - name: "API"
+  run:
+    when: "change_in('/api/')"
   execution_time_limit:
     minutes: 30
   dependencies: []
@@ -128,6 +161,8 @@ blocks:
       - make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=false
 
 - name: "Felix: Build Windows binaries"
+  run:
+    when: "change_in('/felix/') or change_in('/typha/') or change_in('/api/') or change_in('/libcalico-go/')"
   dependencies: []
   task:
     jobs:
@@ -138,10 +173,18 @@ blocks:
       - make bin/calico-felix.exe fv/win-fv.exe
 
 - name: "Felix: Windows FV"
+  run:
+    when: "change_in('/felix/') or change_in('/typha/') or change_in('/api/') or change_in('/libcalico-go/')"
   dependencies: ["Felix: Build Windows binaries"]
   task:
+    secrets:
+    - name: banzai-secrets
+    - name: private-repo
     prologue:
       commands:
+      # Load the github access secrets.  First fix the permissions.
+      - chmod 0600 ~/.keys/*
+      - ssh-add ~/.keys/*
       # Prepare aws configuration.
       - pip install --upgrade --user awscli
       - export REPORT_DIR=~/report
@@ -182,7 +225,6 @@ blocks:
         values: ["2004", "20H2"]
       - env_var: BACKEND
         values: ["bgp"]
-
 
 - name: "Felix: FV Tests"
   run:
@@ -334,3 +376,19 @@ blocks:
     - name: "kube-controllers: tests"
       commands:
       - make ci
+
+- name: "Documentation"
+  run:
+    when: "change_in('/calico/')"
+  dependencies: []
+  task:
+    prologue:
+      commands:
+      - checkout
+      - cd calico
+    jobs:
+    - name: "htmlproofer, kubeval, and helm tests"
+      commands:
+      - make htmlproofer 
+      - make kubeval
+      - make helm-tests

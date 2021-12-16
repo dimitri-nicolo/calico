@@ -1,7 +1,6 @@
 include ../metadata.mk
 
 PACKAGE_NAME = github.com/projectcalico/calico/kube-controllers
-GIT_USE_SSH = true
 TESLA ?= false
 
 # Makefile configuration options
@@ -123,7 +122,9 @@ endif
 .PHONY: remote-deps
 remote-deps: mod-download
 	@mkdir -p tests/crds/
-	cp ../libcalico-go/config/crd/* tests/crds/; chmod +w tests/crds/*
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c ' \
+		cp ../libcalico-go/config/crd/* tests/crds/; \
+		chmod +w tests/crds/*'
 
 ###############################################################################
 # Static checks

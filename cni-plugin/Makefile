@@ -64,9 +64,6 @@ clean:
 	rm -f *.created
 	rm -f crds.yaml
 	rm -rf config/
-	# If the vendor directory exists then the build fails with golang 1.14, and this folder exists in semaphore v1 but it's
-	# empty
-	rm -rf vendor/
 
 ###############################################################################
 # Building the binary

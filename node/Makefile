@@ -183,7 +183,6 @@ clean: clean-windows-upgrade
 	rm -f $(WINDOWS_ARCHIVE_ROOT)/libs/hns/hns.psm1
 	rm -f $(WINDOWS_ARCHIVE_ROOT)/libs/hns/License.txt
 	rm -f $(WINDOWS_ARCHIVE_ROOT)/cni/*.exe
-	rm -rf vendor crds.yaml
 	rm -f $(WINDOWS_UPGRADE_INSTALL_FILE)
 	rm -f $(WINDOWS_UPGRADE_BUILD)/*.zip
 	rm -rf filesystem/included-source
@@ -231,6 +230,7 @@ remote-deps: remote-deps-copy-bpf
 	cp -r ../felix/bpf-apache bin/bpf
 	chmod -R +w bin/bpf
 	chmod +x bin/bpf/bpf-gpl/list-* bin/bpf/bpf-gpl/calculate-*
+
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -ec ' \
 		$(GIT_CONFIG_SSH) \
 		make -j 16 -C ./bin/bpf/bpf-apache/ all; \
@@ -411,7 +411,7 @@ run-k8s-apiserver: remote-deps stop-k8s-apiserver run-etcd
 	docker run \
 		--net=host --name st-apiserver \
 		-v $(CURDIR):/manifests \
-		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+		-v $(CURDIR)/../:/go/src/github.com/projectcalico/calico:rw \
 		--detach \
 		${HYPERKUBE_IMAGE} kube-apiserver \
 			--bind-address=0.0.0.0 \
@@ -670,7 +670,7 @@ golangci-lint: $(GENERATED_FILES)
 .PHONY: node-test-at
 # Run docker-image acceptance tests
 node-test-at: release-prereqs
-	docker run -v $(PWD)/tests/at/calico_node_goss.yaml:/tmp/goss.yaml \
+	docker run -v $(CURDIR)/tests/at/calico_node_goss.yaml:/tmp/goss.yaml \
 	  $(NODE_IMAGE):$(VERSION) /bin/sh -c ' \
 	   apk --no-cache add wget ca-certificates && \
 	   wget -q -O /tmp/goss https://github.com/aelsabbahy/goss/releases/download/v0.3.4/goss-linux-amd64 && \

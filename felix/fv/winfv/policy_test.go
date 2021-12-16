@@ -101,7 +101,7 @@ var _ = Describe("Windows policy test", func() {
 		It("porter pod cannot connect to google.com", func() {
 			kubectlExec(`-t porter -- powershell -Command 'Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 www.google.com'`)
 		})
-		It("porter pod can connect to kube apiserver after creating service egress policy", func() {
+		It("porter pod can connect to nginxB after creating service egress policy", func() {
 			// Assert nginx-b is not reachable.
 			kubectlExec(fmt.Sprintf(`-t porter -- powershell -Command 'Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 %v'`, nginxB))
 
@@ -124,6 +124,10 @@ var _ = Describe("Windows policy test", func() {
 			}
 			_, err := client.NetworkPolicies().Create(context.Background(), &p, options.SetOptions{})
 			Expect(err).NotTo(HaveOccurred())
+			defer func() {
+				_, err = client.NetworkPolicies().Delete(context.Background(), "demo", "allow-nginx-b", options.DeleteOptions{})
+				Expect(err).NotTo(HaveOccurred())
+			}()
 
 			// Assert that it's now reachable.
 			kubectlExec(fmt.Sprintf(`-t porter -- powershell -Command 'Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 %v'`, nginxB))

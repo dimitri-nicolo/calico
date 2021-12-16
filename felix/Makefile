@@ -58,8 +58,7 @@ WINDOWS_ARCHIVE := dist/tigera-felix-windows-$(VERSION).zip
 # All Felix go files.
 SRC_FILES:=$(shell find . $(foreach dir,$(NON_FELIX_DIRS) fv,-path ./$(dir) -prune -o) -type f -name '*.go' -print) $(GENERATED_FILES)
 FV_SRC_FILES:=$(shell find fv -type f -name '*.go' -print)
-EXTRA_DOCKER_ARGS += --init -v $(CURDIR)/../pod2daemon:/go/src/github.com/projectcalico/pod2daemon:rw
-EXTRA_DOCKER_ARGS += --init -e GOPRIVATE=github.com/tigera/*
+EXTRA_DOCKER_ARGS += --init 
 
 ###############################################################################
 # Include ../lib.Makefile
@@ -308,7 +307,6 @@ image-wgtool: fv/Dockerfile.wgtool.amd64
 ifeq ($(ARCH),amd64)
 	docker tag $(FELIX_IMAGE)-wgtool:latest-$(ARCH) $(FELIX_IMAGE)-wgtool:latest
 endif
-
 
 ## tag version number build images i.e.  tigera/felix:latest-amd64 -> tigera/felix:v1.1.1-amd64
 tag-base-images-all: $(addprefix sub-base-tag-images-,$(VALIDARCHES))
@@ -625,7 +623,6 @@ cover-report: combined.coverprofile
 
 bin/calico-felix.transfer-url: bin/calico-felix
 	$(DOCKER_GO_BUILD) sh -c 'curl --upload-file bin/calico-felix https://transfer.sh/calico-felix > $@'
-
 
 .PHONY: patch-script
 patch-script: bin/calico-felix.transfer-url

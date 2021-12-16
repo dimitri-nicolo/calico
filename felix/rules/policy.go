@@ -70,11 +70,17 @@ func (r *DefaultRuleRenderer) ProfileToIptablesChains(profileID *proto.ProfileID
 	return
 }
 
-func (r *DefaultRuleRenderer) ProtoRulesToIptablesRules(protoRules []*proto.Rule, ipVersion uint8, owner RuleOwnerType, dir RuleDir, name string, untracked, staged bool) []iptables.Rule {
+func (r *DefaultRuleRenderer) ProtoRulesToIptablesRules(protoRules []*proto.Rule, ipVersion uint8, chainComments ...string, owner RuleOwnerType, dir RuleDir, name string, untracked, staged bool) []iptables.Rule {
 	var rules []iptables.Rule
 	for ii, protoRule := range protoRules {
 		// TODO (Matt): Need rule hash when that's cleaned up.
 		rules = append(rules, r.ProtoRuleToIptablesRules(protoRule, ipVersion, owner, dir, ii, name, untracked, staged)...)
+	}
+	if len(chainComments) > 0 {
+		if len(rules) == 0 {
+			rules = append(rules, iptables.Rule{})
+		}
+		rules[0].Comment = append(rules[0].Comment, chainComments...)
 	}
 	return rules
 }

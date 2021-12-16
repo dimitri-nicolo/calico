@@ -3,19 +3,10 @@ include ../metadata.mk
 CALICO_DIR=$(shell git rev-parse --show-toplevel)/calico
 GIT_HASH=$(shell git rev-parse --short=9 HEAD)
 VERSIONS_FILE?=$(CALICO_DIR)/_data/versions.yml
-IMAGES_FILE?=
 JEKYLL_VERSION=4.0.0
 HP_VERSION=v0.2
 DEV?=false
 CONFIG=--config _config.yml
-BUILD_EXTRA_FLAG=
-ifeq ($(DEV),true)
-	CONFIG:=$(CONFIG),_config_dev.yml
-endif
-ifneq ($(IMAGES_FILE),)
-	CONFIG:=$(CONFIG),/config_images.yml
-	BUILD_EXTRA_FLAG+=-v $(IMAGES_FILE):/config_images.yml
-endif
 
 # Set DEV_NULL=true to enable the Null Converter which renders the docs site as markdown.
 # This is useful for comparing changes to templates & includes.
@@ -36,7 +27,7 @@ endif
 include ../metadata.mk
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 LOCAL_USER_ID?=$(shell id -u $$USER)
-PACKAGE_NAME?=github.com/projectcalico/calico/calico
+PACKAGE_NAME = github.com/projectcalico/calico/calico
 
 # Determine whether there's a local yaml installed or use dockerized version.
 # Note in order to install local (faster) yaml: "go get github.com/mikefarah/yq.v2"
@@ -65,6 +56,13 @@ POD2DAEMON_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].compone
 DIKASTES_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.calico/dikastes.version')
 FLANNEL_MIGRATION_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.calico/flannel-migration-controller.version')
 TYPHA_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.typha.version')
+
+###############################################################################
+# Include ../lib.Makefile
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
+###############################################################################
+include ../lib.Makefile
 
 ##############################################################################
 
@@ -98,7 +96,7 @@ _site build: bin/helm _includes/charts/tigera-operator/charts/tigera-secure-ee-c
 	-e JEKYLL_UID=`id -u` \
 	-v $(CURDIR)/bin/helm:/usr/local/bin/helm:ro \
 	-v $(CURDIR):/srv/jekyll \
-	-v $(VERSIONS_FILE):/srv/jekyll/_data/versions.yml $(BUILD_EXTRA_FLAG) \
+	-v $(VERSIONS_FILE):/srv/jekyll/_data/versions.yml \
 	jekyll/jekyll:$(JEKYLL_VERSION) /bin/sh -c 'bundle update; jekyll build --incremental $(CONFIG)'
 
 ## Clean enough that a new release build will be clean
@@ -155,7 +153,7 @@ kubeval: _site
 	! grep -C3 -P "invalid|\t\*" filtered.out
 	rm filtered.out
 
-helm-tests: vendor bin/helm values.yaml
+helm-tests: bin/helm values.yaml
 	mkdir -p .go-pkg-cache && \
 		docker run --rm \
 		--net=host \
@@ -164,7 +162,7 @@ helm-tests: vendor bin/helm values.yaml
 		-v $$(pwd)/bin/helm:/usr/local/bin/helm \
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) ginkgo -cover -r -skipPackage vendor ./helm-tests -chart-path=./_includes/$(RELEASE_STREAM)/charts/calico,./_includes/$(RELEASE_STREAM)/charts/tigera-secure-ee $(GINKGO_ARGS)
+		$(CALICO_BUILD) ginkgo -cover -r ./helm-tests -chart-path=./_includes/$(RELEASE_STREAM)/charts/calico,./_includes/$(RELEASE_STREAM)/charts/tigera-secure-ee $(GINKGO_ARGS)
 
 ###############################################################################
 # Docs automation
@@ -281,7 +279,7 @@ endef
 export RELEASE_BODY
 
 ## Pushes a github release and release artifacts produced by `make release-build`.
-release-publish: release-prereqs $(UPLOAD_DIR) helm-index
+release-publish: release-prereqs $(UPLOAD_DIR)
 	# Push the git tag.
 	git push origin $(CALICO_VER)
 
@@ -293,20 +291,17 @@ release-publish: release-prereqs $(UPLOAD_DIR) helm-index
 		-n $(CALICO_VER) \
 		$(CALICO_VER) $(RELEASE_DIR).tgz
 
+	$(MAKE) helm-index
 	@echo "Verify the GitHub release based on the pushed tag."
 	@echo ""
-	@echo "  https://github.com/projectcalico/calico/releases/tag/$(CALICO_VER)"
+	@echo "  https://github.com/projectcalico/calico/calico/releases/tag/$(CALICO_VER)"
 	@echo ""
 
-## Updates helm-index with the new release chart
-helm-index: release-prereqs
-	rm -rf  charts
-	mkdir -p charts/$(CALICO_VER)/
-	cp $(RELEASE_HELM_CHART) charts/$(CALICO_VER)/
-	wget https://calico-public.s3.amazonaws.com/charts/index.yaml -O charts/index.yaml.bak
-	cd charts/ && helm repo index . --merge index.yaml.bak --url https://github.com/projectcalico/calico/releases/download/
-	aws --profile helm s3 cp index.yaml s3://calico-public/charts/ --acl public-read
-	rm -rf charts
+## Kicks semaphore job which syncs github released helm charts with helm index file
+.PHONY: helm-index
+helm-index:
+	@echo "Triggering semaphore workflow to update helm index."
+	SEMAPHORE_PROJECT_ID=30f84ab3-1ea9-4fb0-8459-e877491f3dea SEMAPHORE_WORKFLOW_BRANCH=master SEMAPHORE_WORKFLOW_FILE=../releases/calico/helmindex/update_helm.yml $(MAKE) semaphore-run-workflow
 
 ## Generates release notes for the given version.
 .PHONY: release-notes
@@ -394,6 +389,46 @@ $(RELEASE_DIR_K8S_MANIFESTS):
 	    'mkdir -p $(RELEASE_DIR_K8S_MANIFESTS)/`dirname FILE`;\
 	    cp $(MANIFEST_SRC)/FILE $(RELEASE_DIR_K8S_MANIFESTS)/`dirname FILE`;'
 
+$(RELEASE_DIR_IMAGES)/calico-node.tar:
+	mkdir -p $(RELEASE_DIR_IMAGES)
+	docker pull calico/node:$(NODE_VER)
+	docker save --output $@ calico/node:$(NODE_VER)
+
+$(RELEASE_DIR_IMAGES)/calico-typha.tar:
+	mkdir -p $(RELEASE_DIR_IMAGES)
+	docker pull calico/typha:$(TYPHA_VER)
+	docker save --output $@ calico/typha:$(TYPHA_VER)
+
+$(RELEASE_DIR_IMAGES)/calico-cni.tar:
+	mkdir -p $(RELEASE_DIR_IMAGES)
+	docker pull calico/cni:$(CNI_VER)
+	docker save --output $@ calico/cni:$(CNI_VER)
+
+$(RELEASE_DIR_IMAGES)/calico-kube-controllers.tar:
+	mkdir -p $(RELEASE_DIR_IMAGES)
+	docker pull calico/kube-controllers:$(KUBE_CONTROLLERS_VER)
+	docker save --output $@ calico/kube-controllers:$(KUBE_CONTROLLERS_VER)
+
+$(RELEASE_DIR_IMAGES)/calico-pod2daemon-flexvol.tar:
+	mkdir -p $(RELEASE_DIR_IMAGES)
+	docker pull calico/pod2daemon-flexvol:$(POD2DAEMON_VER)
+	docker save --output $@ calico/pod2daemon-flexvol:$(POD2DAEMON_VER)
+
+$(RELEASE_DIR_IMAGES)/calico-dikastes.tar:
+	mkdir -p $(RELEASE_DIR_IMAGES)
+	docker pull calico/dikastes:$(DIKASTES_VER)
+	docker save --output $@ calico/dikastes:$(DIKASTES_VER)
+
+$(RELEASE_DIR_IMAGES)/calico-flannel-migration-controller.tar:
+	mkdir -p $(RELEASE_DIR_IMAGES)
+	docker pull calico/flannel-migration-controller:$(FLANNEL_MIGRATION_VER)
+	docker save --output $@ calico/flannel-migration-controller:$(FLANNEL_MIGRATION_VER)
+
+$(RELEASE_DIR_BIN)/%:
+	mkdir -p $(RELEASE_DIR_BIN)
+	wget https://github.com/projectcalico/calico/calicoctl/releases/download/$(CTL_VER)/$(@F) -O $@
+	chmod +x $@
+
 ###############################################################################
 # Utilities
 ###############################################################################
@@ -464,18 +499,6 @@ _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz:
 _includes/charts/tigera-operator/charts/tigera-prometheus-operator.tgz:
 	mkdir -p $(@D)
 	cp $$(pwd)/bin/tigera-prometheus-operator-$(chartVersion).tgz $@
-
- ## Create the vendor directory
-vendor: glide.yaml
-	# Ensure that the glide cache directory exists.
-	mkdir -p $(HOME)/.glide
-
-	docker run --rm -i \
-	  -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-	  -v $(HOME)/.glide:/home/user/.glide:rw \
-	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-	  -w /go/src/$(PACKAGE_NAME) \
-	  $(CALICO_BUILD) glide install -strip-vendor
 
 .PHONY: help
 ## Display this help text
