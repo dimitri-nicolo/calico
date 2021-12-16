@@ -114,7 +114,7 @@ type EventSequencer struct {
 	Callback EventHandler
 }
 
-//func (buf *EventSequencer) HasPendingUpdates() {
+// func (buf *EventSequencer) HasPendingUpdates() {
 //	return buf.pendingAddedIPSets.Len() > 0 ||
 //		buf.pendingRemovedIPSets.Len() > 0 ||
 //		buf.pendingAddedIPSetMembers.Len() > 0 ||
@@ -122,7 +122,7 @@ type EventSequencer struct {
 //		len(buf.pendingPolicyUpdates) > 0 ||
 //		buf.pendingPolicyDeletes.Len() > 0 ||
 //
-//}
+// }
 
 func NewEventSequencer(conf configInterface) *EventSequencer {
 	buf := &EventSequencer{
@@ -389,15 +389,16 @@ func ModelWorkloadEndpointToProto(ep *model.WorkloadEndpoint, tiers []*proto.Tie
 		mac = ep.Mac.String()
 	}
 	return &proto.WorkloadEndpoint{
-		State:      ep.State,
-		Name:       ep.Name,
-		Mac:        mac,
-		ProfileIds: ep.ProfileIDs,
-		Ipv4Nets:   netsToStrings(ep.IPv4Nets),
-		Ipv6Nets:   netsToStrings(ep.IPv6Nets),
-		Tiers:      tiers,
-		Ipv4Nat:    natsToProtoNatInfo(ep.IPv4NAT),
-		Ipv6Nat:    natsToProtoNatInfo(ep.IPv6NAT),
+		State:         ep.State,
+		Name:          ep.Name,
+		Mac:           mac,
+		ProfileIds:    ep.ProfileIDs,
+		Ipv4Nets:      netsToStrings(ep.IPv4Nets),
+		Ipv6Nets:      netsToStrings(ep.IPv6Nets),
+		Tiers:         tiers,
+		Ipv4Nat:       natsToProtoNatInfo(ep.IPv4NAT),
+		Ipv6Nat:       natsToProtoNatInfo(ep.IPv6NAT),
+		AwsElasticIps: ep.AWSElasticIPs,
 	}
 }
 

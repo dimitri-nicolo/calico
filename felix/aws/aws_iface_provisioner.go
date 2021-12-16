@@ -14,8 +14,10 @@ import (
 	"strings"
 	"time"
 
+	aws2 "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/smithy-go"
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/util/clock"
@@ -133,9 +135,15 @@ type SecondaryIfaceProvisioner struct {
 }
 
 type DatastoreState struct {
-	LocalAWSRoutesByDst       map[ip.CIDR]*proto.RouteUpdate
+	LocalAWSAddrsByDst        map[ip.CIDR]AddrInfo
 	LocalRouteDestsBySubnetID map[string]set.Set /*ip.CIDR*/
 	PoolIDsBySubnetID         map[string]set.Set /*string*/
+}
+
+type AddrInfo struct {
+	AWSSubnetId string
+	Dst         string
+	ElasticIPs  []ip.Addr
 }
 
 const (
@@ -330,7 +338,7 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 			logrus.Info("SecondaryIfaceManager stopping, context canceled.")
 			return
 		case snapshot := <-m.datastoreUpdateC:
-			logrus.Debug("New datastore snapshot received")
+			logrus.WithField("update", snapshot).Info("New datastore snapshot received")
 			m.resyncNeeded = true
 			m.ds = snapshot
 		case responseC <- response:
@@ -500,6 +508,12 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 		return nil, err
 	}
 
+	// Disassociate any elastic IPs that should no longer be there to we free them up for later re-use.
+	err = m.disassociateUnwantedElasticIPs(awsSnapshot)
+	if err != nil {
+		return nil, err
+	}
+
 	// Scan for IPs that are present on our AWS ENIs but no longer required by Calico.
 	awsIPsToRelease := m.findUnusedAWSIPs(awsSnapshot)
 
@@ -562,6 +576,10 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 	subnetCalicoRoutesNotInAWS := filterRoutesByAWSSubnet(allCalicoRoutesNotInAWS, bestSubnetID)
 	if len(subnetCalicoRoutesNotInAWS) == 0 {
 		logrus.Debug("No new AWS IPs to program")
+		err := m.checkAndAssociateElasticIPs(awsSnapshot)
+		if err != nil {
+			return nil, err
+		}
 		return m.calculateResponse(awsSnapshot)
 	}
 
@@ -664,6 +682,13 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 	if err != nil {
 		return nil, err
 	}
+
+	// If we get here, all the private IPs are in place.  Check whether any elastic IPs need to be associated.
+	err = m.checkAndAssociateElasticIPs(awsSnapshot)
+	if err != nil {
+		return nil, err
+	}
+
 	return m.calculateResponse(awsSnapshot)
 }
 
@@ -921,7 +946,7 @@ func (m *SecondaryIfaceProvisioner) findUnusedAWSIPs(awsState *eniSnapshot) set.
 	awsIPsToRelease := set.New()
 	summary := map[string][]string{}
 	for addr, eniID := range awsState.eniIDByIP {
-		if _, ok := m.ds.LocalAWSRoutesByDst[addr]; !ok {
+		if _, ok := m.ds.LocalAWSAddrsByDst[addr]; !ok {
 			awsIPsToRelease.Add(addr)
 			summary[eniID] = append(summary[eniID], addr.Addr().String())
 		}
@@ -979,14 +1004,14 @@ func (m *SecondaryIfaceProvisioner) findENIsWithNoPool(awsENIState *eniSnapshot)
 }
 
 // findRoutesWithNoAWSAddr Scans our local Calico workload routes for routes with no corresponding AWS IP.
-func (m *SecondaryIfaceProvisioner) findRoutesWithNoAWSAddr(awsENIState *eniSnapshot, localSubnetsByID map[string]ec2types.Subnet) []*proto.RouteUpdate {
-	var missingRoutes []*proto.RouteUpdate
+func (m *SecondaryIfaceProvisioner) findRoutesWithNoAWSAddr(awsENIState *eniSnapshot, localSubnetsByID map[string]ec2types.Subnet) []AddrInfo {
+	var missingRoutes []AddrInfo
 	var missingIPSummary []string
-	for addr, route := range m.ds.LocalAWSRoutesByDst {
-		if _, ok := localSubnetsByID[route.AwsSubnetId]; !ok {
+	for addr, route := range m.ds.LocalAWSAddrsByDst {
+		if _, ok := localSubnetsByID[route.AWSSubnetId]; !ok {
 			logrus.WithFields(logrus.Fields{
 				"addr":           addr,
-				"requiredSubnet": route.AwsSubnetId,
+				"requiredSubnet": route.AWSSubnetId,
 			}).Warn("Local workload needs an IP from an AWS subnet that is not accessible from this " +
 				"availability zone. Unable to allocate an AWS IP for it.")
 			continue
@@ -1007,7 +1032,7 @@ func (m *SecondaryIfaceProvisioner) findRoutesWithNoAWSAddr(awsENIState *eniSnap
 			continue
 		}
 		missingRoutes = append(missingRoutes, route)
-		missingIPSummary = append(missingIPSummary, strings.TrimSuffix(route.Dst, "/32"))
+		missingIPSummary = append(missingIPSummary, addr.Addr().String())
 	}
 	if len(missingIPSummary) > 0 {
 		logrus.WithField("addrs", missingIPSummary).Info(
@@ -1136,8 +1161,8 @@ func (m *SecondaryIfaceProvisioner) calculateBestSubnet(awsENIState *eniSnapshot
 	for subnet, eniIDs := range awsENIState.eniIDsBySubnet {
 		subnetScores[subnet] += 10000 * len(eniIDs)
 	}
-	for _, r := range m.ds.LocalAWSRoutesByDst {
-		subnetScores[r.AwsSubnetId] += 1
+	for _, r := range m.ds.LocalAWSAddrsByDst {
+		subnetScores[r.AWSSubnetId] += 1
 	}
 	var bestSubnet string
 	var bestScore int
@@ -1167,10 +1192,10 @@ func (m *SecondaryIfaceProvisioner) subnetCIDRAndGW(subnet ec2types.Subnet) (ip.
 }
 
 // filterRoutesByAWSSubnet returns the subset of the given routes that belong to the given AWS subnet.
-func filterRoutesByAWSSubnet(missingRoutes []*proto.RouteUpdate, bestSubnet string) []*proto.RouteUpdate {
-	var filteredRoutes []*proto.RouteUpdate
+func filterRoutesByAWSSubnet(missingRoutes []AddrInfo, bestSubnet string) []AddrInfo {
+	var filteredRoutes []AddrInfo
 	for _, r := range missingRoutes {
-		if r.AwsSubnetId != bestSubnet {
+		if r.AWSSubnetId != bestSubnet {
 			logrus.WithFields(logrus.Fields{
 				"route":        r,
 				"activeSubnet": bestSubnet,
@@ -1474,7 +1499,7 @@ func (m *SecondaryIfaceProvisioner) createAWSENIs(awsENIState *eniSnapshot, resy
 	return finalErr
 }
 
-func (m *SecondaryIfaceProvisioner) assignSecondaryIPsToENIs(resyncState *eniResyncState, filteredRoutes []*proto.RouteUpdate) error {
+func (m *SecondaryIfaceProvisioner) assignSecondaryIPsToENIs(resyncState *eniResyncState, filteredRoutes []AddrInfo) error {
 	if len(filteredRoutes) == 0 {
 		return nil
 	}
@@ -1619,6 +1644,208 @@ func (m *SecondaryIfaceProvisioner) ensureCalicoENIsDelOnTerminate(snapshot *eni
 func (m *SecondaryIfaceProvisioner) resetRecheckInterval(operation string) {
 	m.opRecorder.RecordOperation(operation)
 	m.recheckIntervalResetNeeded = true
+}
+
+func (m *SecondaryIfaceProvisioner) disassociateUnwantedElasticIPs(snapshot *eniSnapshot) error {
+	logrus.Debug("Scanning for unwanted elastic IPs...")
+	ctx, cancel := m.newContext()
+	defer cancel()
+	ec2Client, err := m.ec2Client()
+	if err != nil {
+		return err
+	}
+
+	var finalErr error
+	for _, eni := range snapshot.calicoOwnedENIsByID {
+		for _, privIP := range eni.PrivateIpAddresses {
+			if privIP.Association != nil && privIP.Association.AllocationId != nil {
+				// May have associated elastic IP.
+				privIPCIDR := ip.MustParseCIDROrIP(*privIP.PrivateIpAddress)
+				eip := ip.FromString(*privIP.Association.PublicIp)
+				wanted := false
+				logCtx := logrus.WithFields(logrus.Fields{
+					"publicAddr":  eip,
+					"privateAddr": safeReadString(privIP.PrivateIpAddress),
+				})
+				for _, wantedEIP := range m.ds.LocalAWSAddrsByDst[privIPCIDR].ElasticIPs {
+					if wantedEIP == eip {
+						// EIP is assigned to a private IP that should have it, all good.
+						logCtx.Debug("Elastic IP is associated with matching private IP.")
+						wanted = true
+						break
+					}
+				}
+				if !wanted {
+					// Elastic IP is assigned to an IP that it shouldn't be. free it.
+					logCtx.Info("Elastic IP should no longer map to this private IP. Disassociating the IP.")
+					m.resetRecheckInterval("disassociate-eip")
+					_, err := ec2Client.EC2Svc.DisassociateAddress(ctx, &ec2.DisassociateAddressInput{
+						AssociationId: privIP.Association.AssociationId,
+					})
+					if err != nil {
+						finalErr = err
+					} else if finalErr == nil {
+						finalErr = errResyncNeeded
+					}
+				}
+			}
+		}
+	}
+	return finalErr
+}
+
+func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *eniSnapshot) error {
+	ctx, cancel := m.newContext()
+	defer cancel()
+	ec2Client, err := m.ec2Client()
+	if err != nil {
+		return err
+	}
+
+	// Figure out which IPs already have an elastic IP attached.
+	logrus.Debug("Checking if we need to associate any elastic IPs.")
+	privIPToElasticIPID := map[ip.Addr]string{}
+	inUseElasticIPs := set.New()
+	for eniID, eni := range snapshot.calicoOwnedENIsByID {
+		for _, privIP := range eni.PrivateIpAddresses {
+			if privIP.Association != nil && privIP.Association.AllocationId != nil {
+				privIPAddr := ip.FromString(*privIP.PrivateIpAddress)
+				publicIPAddr := ip.FromString(*privIP.Association.PublicIp)
+				eipID := *privIP.Association.AllocationId
+				logrus.WithFields(logrus.Fields{
+					"eniID":    eniID,
+					"privIP":   privIPAddr,
+					"publicIP": publicIPAddr,
+					"eipID":    eipID,
+				}).Debug("Found existing elastic IP associated to this node.")
+				inUseElasticIPs.Add(publicIPAddr)
+				privIPToElasticIPID[privIPAddr] = eipID
+			}
+		}
+	}
+
+	// Collect all the elastic IP IDs that we _may_ want to attach.
+	eipToCandidatePrivIPs := map[ip.Addr][]ip.Addr{}
+	privIPsToDo := set.New() // ip.Addr
+	for _, addrInfo := range m.ds.LocalAWSAddrsByDst {
+		privIPAddr := ip.MustParseCIDROrIP(addrInfo.Dst).Addr()
+		if _, ok := privIPToElasticIPID[privIPAddr]; ok {
+			logrus.WithField("privAddr", privIPAddr).Debug("Private IP already has elastic IP.")
+			continue // This private IP already has an elastic IP attached, skip it.
+		}
+		for _, elasticIP := range addrInfo.ElasticIPs {
+			privIPsToDo.Add(privIPAddr)
+			if inUseElasticIPs.Contains(elasticIP) {
+				continue // Optimisation: we know this IP is attached, we've already seen it.
+			}
+			logrus.WithFields(logrus.Fields{
+				"privIP":    privIPAddr,
+				"elasticIP": elasticIP,
+			}).Debug("Candidate private IP/elastic IP combination.")
+			eipToCandidatePrivIPs[elasticIP] = append(eipToCandidatePrivIPs[elasticIP], privIPAddr)
+		}
+	}
+	if len(eipToCandidatePrivIPs) == 0 {
+		logrus.Debug("No new elastic IPs needed.")
+		return nil
+	}
+	var candidateElasticIPs []string
+	for elasticIP := range eipToCandidatePrivIPs {
+		candidateElasticIPs = append(candidateElasticIPs, elasticIP.String())
+	}
+
+	failedPrivIPs := map[ip.Addr]error{}
+	const chunkSize = 200 // AWS filter limit is 200 filters per call.
+	for _, candidateEIPsChunk := range chunkStringSlice(candidateElasticIPs, chunkSize) {
+		// Query AWS to find out which elastic IPs are available.
+		logrus.WithField("eipIDs", candidateEIPsChunk).Debug("Looking up elastic IPs in AWS API.")
+		dao, err := ec2Client.EC2Svc.DescribeAddresses(ctx, &ec2.DescribeAddressesInput{
+			// Important to use a filter rather than the other fields in the DescribeAddressesInput because
+			// using the other fields to match EIPs results in errors if any one of the EIPs doesn't exist.
+			// We don't want a failure to get one EIP to mean that we can't look up the others.
+			Filters: []ec2types.Filter{
+				{
+					Name:   aws2.String("public-ip"),
+					Values: candidateEIPsChunk,
+				},
+				// Would like to include a filter to return only unassociated addresses but there doesn't seem to be one.
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to list elastic IPs: %w", err)
+		}
+
+		for _, eip := range dao.Addresses {
+			eipID := safeReadString(eip.AllocationId)
+			if eip.AssociationId != nil {
+				logrus.WithField("eipID", eipID).Debug("Elastic IP already in use.")
+				continue // Already assigned on another node.
+			}
+			// Got a free elastic IP, try to assign it to one of our private IPs.
+			publicIP := ip.FromString(*eip.PublicIp)
+			for _, privIP := range eipToCandidatePrivIPs[publicIP] {
+				logCtx := logrus.WithFields(logrus.Fields{
+					"privIP": privIP,
+					"eipID":  eipID,
+				})
+				if !privIPsToDo.Contains(privIP) {
+					continue
+				}
+				eniID := snapshot.eniIDByIP[privIP.AsCIDR()]
+				if eniID == "" {
+					logCtx.Debug("Couldn't find ENI for private IP.")
+					continue // We weren't able to assign this IP to an ENI?
+				}
+				logCtx = logCtx.WithField("eniID", eniID)
+				// Found a free elastic IP and a private IP that can use it with no existing elastic IP.
+				// Try to associate the elastic IP with the private IP...
+				logCtx.Info("Attempting to associate elastic IP with private IP.")
+				m.resetRecheckInterval("associate-eip")
+				_, err := ec2Client.EC2Svc.AssociateAddress(ctx, &ec2.AssociateAddressInput{
+					AllocationId:       eip.AllocationId,
+					NetworkInterfaceId: stringPtr(eniID),
+					PrivateIpAddress:   stringPtr(privIP.String()),
+					AllowReassociation: aws2.Bool(false), // true is the default but we don't want to steal.
+				})
+				if err != nil {
+					var smithyErr smithy.APIError
+					if errors.As(err, &smithyErr) && smithyErr.ErrorCode() == "Resource.AlreadyAssociated" {
+						// Someone else claimed the IP already.
+						logCtx.Info("IP was already claimed by someone else; will try another one if available.")
+					} else {
+						logCtx.WithError(err).Warning("Failed to associate elastic IP; will try another one if available.")
+						failedPrivIPs[privIP] = err // Record the error for now; we'll report if the retries fail.
+					}
+					continue
+				} else {
+					delete(failedPrivIPs, privIP)
+				}
+				privIPsToDo.Discard(privIP)
+			}
+		}
+	}
+	if len(failedPrivIPs) > 0 {
+		return fmt.Errorf("errors encountered while associating some elastic IPs: %v", failedPrivIPs)
+	}
+	if privIPsToDo.Len() > 0 {
+		logrus.WithField("privIPs", privIPsToDo).Warn(
+			"Unable to assign elastic IPs to some private IPs. Required Elastic IPs are in use elsewhere. " +
+				"This may resolve automatically when another node releases an Elastic IP that's no longer needed.")
+		// Not returning an error here; best to wait for the slow retry.
+	}
+	return nil
+}
+
+func chunkStringSlice(s []string, chunkSize int) (chunks [][]string) {
+	for len(s) > 0 {
+		if chunkSize >= len(s) {
+			chunks = append(chunks, s)
+			return
+		}
+		chunks = append(chunks, s[:chunkSize])
+		s = s[chunkSize:]
+	}
+	return
 }
 
 func trimPrefixLen(cidr string) string {

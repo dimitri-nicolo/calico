@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"reflect"
 	"regexp"
 	"strings"
 	"syscall"
@@ -40,6 +41,7 @@ type awsIPManager struct {
 	poolIDsBySubnetID         map[string]set.Set
 	localAWSRoutesByDst       map[ip.CIDR]*proto.RouteUpdate
 	localRouteDestsBySubnetID map[string]set.Set /*ip.CIDR*/
+	workloadEndpointsByID     map[proto.WorkloadEndpointID]awsEndpointInfo
 	awsResyncNeeded           bool
 
 	// ifaceProvisioner manages the AWS fabric resources.  It runs in the background to decouple AWS fabric updates
@@ -72,6 +74,11 @@ type awsIPManager struct {
 	nl            awsNetlinkIface
 	newRouteTable routeTableNewFn
 	newRouteRules routeRulesNewFn
+}
+
+type awsEndpointInfo struct {
+	IPv4Nets   []string
+	ElasticIPs []ip.Addr
 }
 
 type awsIfaceProvisioner interface {
@@ -118,6 +125,7 @@ func NewAWSIPManager(
 		poolIDsBySubnetID:         map[string]set.Set{},
 		localAWSRoutesByDst:       map[ip.CIDR]*proto.RouteUpdate{},
 		localRouteDestsBySubnetID: map[string]set.Set{},
+		workloadEndpointsByID:     map[proto.WorkloadEndpointID]awsEndpointInfo{},
 
 		freeRouteTableIndexes:  routeTableIndexes,
 		routeTablesByIfaceName: map[string]routeTable{},
@@ -169,6 +177,10 @@ func (a *awsIPManager) OnUpdate(msg interface{}) {
 		a.onPoolUpdate(msg.Id, nil)
 	case *proto.RouteUpdate:
 		a.onRouteUpdate(ip.MustParseCIDROrIP(msg.Dst), msg)
+	case *proto.WorkloadEndpointUpdate:
+		a.onWorkloadEndpointUpdate(msg)
+	case *proto.WorkloadEndpointRemove:
+		a.onWorkloadEndpointRemoved(msg)
 	case *proto.RouteRemove:
 		a.onRouteUpdate(ip.MustParseCIDROrIP(msg.Dst), nil)
 	case *ifaceUpdate:
@@ -179,6 +191,12 @@ func (a *awsIPManager) OnUpdate(msg interface{}) {
 }
 
 func (a *awsIPManager) OnSecondaryIfaceStateUpdate(msg *aws.LocalAWSNetworkState) {
+	if reflect.DeepEqual(msg, a.awsState) {
+		// The AWS provisioner resends the snapshot after each timed recheck; avoid a dataplane update
+		// in that case.
+		logrus.WithField("awsState", msg).Debug("Received AWS state update with no changes.")
+		return
+	}
 	logrus.WithField("awsState", msg).Debug("Received AWS state update.")
 	a.queueDataplaneResync("AWS fabric updated")
 	a.awsState = msg
@@ -327,6 +345,66 @@ func (a *awsIPManager) onIfaceAddrsUpdate(msg *ifaceAddrsUpdate) {
 	}
 }
 
+func (a *awsIPManager) onWorkloadEndpointUpdate(msg *proto.WorkloadEndpointUpdate) {
+	wepID := *msg.Id
+	oldEP := a.workloadEndpointsByID[wepID]
+	newEP := awsEndpointInfo{
+		IPv4Nets:   msg.Endpoint.Ipv4Nets,
+		ElasticIPs: parseIPSlice(msg.Endpoint.AwsElasticIps),
+	}
+	logCtx := logrus.WithFields(logrus.Fields{
+		"id":    wepID,
+		"newEP": newEP,
+	})
+	a.workloadEndpointsByID[wepID] = newEP
+	if reflect.DeepEqual(oldEP, newEP) {
+		logCtx.Debug("No-op WEP update, ignoring.")
+		return
+	}
+	if len(oldEP.ElasticIPs) == 0 && len(newEP.ElasticIPs) == 0 {
+		logCtx.Debug("WEP has no elastic IPs, ignoring.")
+		return
+	}
+	logCtx.Debug("Workload endpoint with elastic IPs updated.")
+	a.queueAWSResync("workload update")
+}
+
+func parseIPSlice(ips []string) (addrs []ip.Addr) {
+	for _, addr := range ips {
+		parsedAddr := ip.FromString(addr)
+		if parsedAddr == nil {
+			logrus.WithField("rawAddr", addr).Warn("Failed to parse elastic IP.")
+			continue
+		}
+		addrs = append(addrs, parsedAddr)
+	}
+	return
+}
+
+func (a *awsIPManager) onWorkloadEndpointRemoved(msg *proto.WorkloadEndpointRemove) {
+	oldEP, ok := a.workloadEndpointsByID[*msg.Id]
+	if !ok {
+		return
+	}
+	delete(a.workloadEndpointsByID, *msg.Id)
+	if len(oldEP.ElasticIPs) == 0 {
+		return
+	}
+	a.queueAWSResync("workload removed")
+}
+
+func (a *awsIPManager) lookUpElasticIPs(privIP ip.CIDR) []ip.Addr {
+	for _, wepInfo := range a.workloadEndpointsByID {
+		for _, cidrStr := range wepInfo.IPv4Nets {
+			cidr := ip.MustParseCIDROrIP(cidrStr)
+			if cidr == privIP {
+				return wepInfo.ElasticIPs // FIXME this just grabs the first found; might be more than one WEP.
+			}
+		}
+	}
+	return nil
+}
+
 func (a *awsIPManager) queueAWSResync(reason string) {
 	if a.awsResyncNeeded {
 		return
@@ -348,13 +426,16 @@ func (a *awsIPManager) CompleteDeferredWork() error {
 		// Datastore has been updated, send a new snapshot to the background thread.  It will configure the AWS
 		// fabric appropriately and then send us a SecondaryIfaceState.
 		ds := aws.DatastoreState{
-			LocalAWSRoutesByDst:       map[ip.CIDR]*proto.RouteUpdate{},
+			LocalAWSAddrsByDst:        map[ip.CIDR]aws.AddrInfo{},
 			LocalRouteDestsBySubnetID: map[string]set.Set{},
 			PoolIDsBySubnetID:         map[string]set.Set{},
 		}
 		for k, v := range a.localAWSRoutesByDst {
-			// Shallow copy is fine, we always get a fresh route update from the datastore.
-			ds.LocalAWSRoutesByDst[k] = v
+			ds.LocalAWSAddrsByDst[k] = aws.AddrInfo{
+				AWSSubnetId: v.AwsSubnetId,
+				Dst:         v.Dst,
+				ElasticIPs:  a.lookUpElasticIPs(k),
+			}
 		}
 		for k, v := range a.localRouteDestsBySubnetID {
 			ds.LocalRouteDestsBySubnetID[k] = v.Copy()

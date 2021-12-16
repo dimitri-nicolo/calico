@@ -434,7 +434,8 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	hostIPPassthru.RegisterWith(allUpdDispatcher)
 
 	if conf.BPFEnabled || conf.VXLANEnabled || conf.WireguardEnabled ||
-		conf.EgressIPSupport == "EnabledPerNamespace" || conf.EgressIPSupport == "EnabledPerNamespaceOrPerPod" {
+		conf.EgressIPSupport == "EnabledPerNamespace" || conf.EgressIPSupport == "EnabledPerNamespaceOrPerPod" ||
+		conf.AWSSecondaryIPSupport != "Disabled" {
 		// Calculate simple node-ownership routes.
 		//        ...
 		//     Dispatcher (all updates)

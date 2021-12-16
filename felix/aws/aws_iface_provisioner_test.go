@@ -132,21 +132,20 @@ var (
 	// Canned datastore snapshots.
 
 	noWorkloadDatastore = DatastoreState{
-		LocalAWSRoutesByDst:       nil,
+		LocalAWSAddrsByDst:        nil,
 		LocalRouteDestsBySubnetID: nil,
 		PoolIDsBySubnetID:         defaultPools,
 	}
 	noWorkloadDatastoreAltPools = DatastoreState{
-		LocalAWSRoutesByDst:       nil,
+		LocalAWSAddrsByDst:        nil,
 		LocalRouteDestsBySubnetID: nil,
 		PoolIDsBySubnetID:         alternatePools,
 	}
 	singleWorkloadDatastore = DatastoreState{
-		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
+		LocalAWSAddrsByDst: map[ip.CIDR]AddrInfo{
 			wl1CIDR: {
-				Dst:           wl1Addr,
-				LocalWorkload: true,
-				AwsSubnetId:   subnetIDWest1Calico,
+				Dst:         wl1Addr,
+				AWSSubnetId: subnetIDWest1Calico,
 			},
 		},
 		LocalRouteDestsBySubnetID: map[string]set.Set{
@@ -155,16 +154,14 @@ var (
 		PoolIDsBySubnetID: defaultPools,
 	}
 	twoWorkloadsDatastore = DatastoreState{
-		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
+		LocalAWSAddrsByDst: map[ip.CIDR]AddrInfo{
 			wl1CIDR: {
-				Dst:           wl1Addr,
-				LocalWorkload: true,
-				AwsSubnetId:   subnetIDWest1Calico,
+				Dst:         wl1Addr,
+				AWSSubnetId: subnetIDWest1Calico,
 			},
 			wl2CIDR: {
-				Dst:           wl2Addr,
-				LocalWorkload: true,
-				AwsSubnetId:   subnetIDWest1Calico,
+				Dst:         wl2Addr,
+				AWSSubnetId: subnetIDWest1Calico,
 			},
 		},
 		LocalRouteDestsBySubnetID: map[string]set.Set{
@@ -175,16 +172,14 @@ var (
 	// workloadInWrongSubnetDatastore has one workload that's in the local subnet and one that is in
 	// a subnet that's not in our AZ.
 	workloadInWrongSubnetDatastore = DatastoreState{
-		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
+		LocalAWSAddrsByDst: map[ip.CIDR]AddrInfo{
 			wl1CIDR: {
-				Dst:           wl1Addr,
-				LocalWorkload: true,
-				AwsSubnetId:   subnetIDWest1Calico,
+				Dst:         wl1Addr,
+				AWSSubnetId: subnetIDWest1Calico,
 			},
 			west2WlCIDR: {
-				Dst:           west2WlIP,
-				LocalWorkload: true,
-				AwsSubnetId:   subnetIDWest2Calico,
+				Dst:         west2WlIP,
+				AWSSubnetId: subnetIDWest2Calico,
 			},
 		},
 		LocalRouteDestsBySubnetID: map[string]set.Set{
@@ -196,16 +191,14 @@ var (
 	// mixedSubnetDatastore has two workloads, each of which is in a different subnet, both of which are
 	// in our AZ.
 	mixedSubnetDatastore = DatastoreState{
-		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
+		LocalAWSAddrsByDst: map[ip.CIDR]AddrInfo{
 			wl1CIDR: {
-				Dst:           wl1Addr,
-				LocalWorkload: true,
-				AwsSubnetId:   subnetIDWest1Calico,
+				Dst:         wl1Addr,
+				AWSSubnetId: subnetIDWest1Calico,
 			},
 			wl1CIDRAlt: {
-				Dst:           wl1AddrAlt,
-				LocalWorkload: true,
-				AwsSubnetId:   subnetIDWest1CalicoAlt,
+				Dst:         wl1AddrAlt,
+				AWSSubnetId: subnetIDWest1CalicoAlt,
 			},
 		},
 		LocalRouteDestsBySubnetID: map[string]set.Set{
@@ -217,16 +210,14 @@ var (
 	// hostClashWorkloadDatastore has a clash between a workload IP and the host IP that will be assigned to
 	// the secondary ENI.
 	hostClashWorkloadDatastore = DatastoreState{
-		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
+		LocalAWSAddrsByDst: map[ip.CIDR]AddrInfo{
 			wl1CIDR: {
-				Dst:           wl1Addr,
-				LocalWorkload: true,
-				AwsSubnetId:   subnetIDWest1Calico,
+				Dst:         wl1Addr,
+				AWSSubnetId: subnetIDWest1Calico,
 			},
 			calicoHostCIDR1: {
-				Dst:           calicoHostCIDR1.String(),
-				LocalWorkload: true,
-				AwsSubnetId:   subnetIDWest1Calico,
+				Dst:         calicoHostCIDR1.String(),
+				AWSSubnetId: subnetIDWest1Calico,
 			},
 		},
 		LocalRouteDestsBySubnetID: map[string]set.Set{
@@ -236,11 +227,10 @@ var (
 		PoolIDsBySubnetID: defaultPools,
 	}
 	singleWorkloadDatastoreAltPool = DatastoreState{
-		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
+		LocalAWSAddrsByDst: map[ip.CIDR]AddrInfo{
 			wl1CIDRAlt: {
-				Dst:           wl1AddrAlt,
-				LocalWorkload: true,
-				AwsSubnetId:   subnetIDWest1CalicoAlt,
+				Dst:         wl1AddrAlt,
+				AWSSubnetId: subnetIDWest1CalicoAlt,
 			},
 		},
 		LocalRouteDestsBySubnetID: map[string]set.Set{
@@ -366,7 +356,7 @@ func TestSecondaryIfaceProvisioner_OnDatastoreUpdateShouldNotBlock(t *testing.T)
 		defer close(done)
 		for x := 0; x < 1000; x++ {
 			sip.OnDatastoreUpdate(DatastoreState{
-				LocalAWSRoutesByDst:       nil,
+				LocalAWSAddrsByDst:        nil,
 				LocalRouteDestsBySubnetID: nil,
 				PoolIDsBySubnetID:         nil,
 			})
@@ -382,7 +372,7 @@ func TestSecondaryIfaceProvisioner_NoPoolsOrWorkloadsStartOfDay(t *testing.T) {
 
 	// Send an empty snapshot.
 	sip.OnDatastoreUpdate(DatastoreState{
-		LocalAWSRoutesByDst:       nil,
+		LocalAWSAddrsByDst:        nil,
 		LocalRouteDestsBySubnetID: nil,
 		PoolIDsBySubnetID:         nil,
 	})
@@ -438,7 +428,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsButNoWorkloadsMainline(t *testing.T) 
 	defer tearDown()
 
 	sip.OnDatastoreUpdate(DatastoreState{
-		LocalAWSRoutesByDst:       nil,
+		LocalAWSAddrsByDst:        nil,
 		LocalRouteDestsBySubnetID: nil,
 		PoolIDsBySubnetID: map[string]set.Set{
 			subnetIDWest1Calico: set.FromArray([]string{ipPoolIDWest1Hosts, ipPoolIDWest1Gateways}),
@@ -963,7 +953,7 @@ func expectAllIPs(response *LocalAWSNetworkState, addrs []ip.Addr) {
 
 func nWorkloadDatastore(n int) (DatastoreState, []ip.Addr) {
 	ds := DatastoreState{
-		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{},
+		LocalAWSAddrsByDst: map[ip.CIDR]AddrInfo{},
 		LocalRouteDestsBySubnetID: map[string]set.Set{
 			subnetIDWest1Calico: set.New(),
 		},
@@ -974,10 +964,9 @@ func nWorkloadDatastore(n int) (DatastoreState, []ip.Addr) {
 	for i := 0; i < n; i++ {
 		addr := ip.V4Addr{100, 64, 1, byte(64 + i)}
 		addrs = append(addrs, addr)
-		ds.LocalAWSRoutesByDst[addr.AsCIDR()] = &proto.RouteUpdate{
-			Dst:           addr.AsCIDR().String(),
-			LocalWorkload: true,
-			AwsSubnetId:   subnetIDWest1Calico,
+		ds.LocalAWSAddrsByDst[addr.AsCIDR()] = AddrInfo{
+			Dst:         addr.AsCIDR().String(),
+			AWSSubnetId: subnetIDWest1Calico,
 		}
 		ds.LocalRouteDestsBySubnetID[subnetIDWest1Calico].Add(addr.AsCIDR())
 	}
