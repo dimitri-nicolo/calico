@@ -193,7 +193,7 @@ func parseLegacyURLPath(req *http.Request) (cluster, index, urlPath string, err 
 		// certain indices don't have date suffix and adding .* to the end will not match the index we need,
 		// as the . is considered mandatory.
 		if datelessIndexPattern.MatchString(idx) {
-			path = fmt.Sprintf("/%s.%s/_search", idx, cluster)
+			path = fmt.Sprintf("/%s.%s*/_search", idx, cluster)
 		} else {
 			path = fmt.Sprintf("/%s.%s.*/_search", idx, cluster)
 		}
