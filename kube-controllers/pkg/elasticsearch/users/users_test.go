@@ -129,7 +129,7 @@ var _ = Describe("ElasticseachUsers", func() {
 												".tigera.ipset.managed-cluster",
 												".tigera.domainnameset.managed-cluster",
 												".tigera.forwarderconfig.managed-cluster",
-												"tigera_secure_ee_events.managed-cluster",
+												"tigera_secure_ee_events.managed-cluster.",
 											},
 											Privileges: []string{"all"},
 										},
@@ -161,7 +161,7 @@ var _ = Describe("ElasticseachUsers", func() {
 										Privileges: []string{"read"},
 									},
 									{
-										Names:      []string{"tigera_secure_ee_events.managed-cluster"},
+										Names:      []string{"tigera_secure_ee_events.managed-cluster."},
 										Privileges: []string{"read", "write"},
 									},
 								},
@@ -188,7 +188,7 @@ var _ = Describe("ElasticseachUsers", func() {
 										Privileges: []string{"read"},
 									},
 									{
-										Names:      []string{"tigera_secure_ee_events.managed-cluster"},
+										Names:      []string{"tigera_secure_ee_events.managed-cluster."},
 										Privileges: []string{"read", "write"},
 									},
 								},
@@ -378,7 +378,7 @@ var _ = Describe("ElasticseachUsers", func() {
 								Cluster: []string{"manage_watcher", "manage"},
 								Indices: []elasticsearch.RoleIndex{
 									{
-										Names:      []string{"tigera_secure_ee_*.cluster.*", "tigera_secure_ee_events.cluster"},
+										Names:      []string{"tigera_secure_ee_*.cluster.*", "tigera_secure_ee_events.cluster."},
 										Privileges: []string{"read", "write"},
 									},
 								},
@@ -410,7 +410,7 @@ var _ = Describe("ElasticseachUsers", func() {
 										Privileges: []string{"read"},
 									},
 									{
-										Names:      []string{"tigera_secure_ee_events.cluster"},
+										Names:      []string{"tigera_secure_ee_events.cluster."},
 										Privileges: []string{"read", "write"},
 									},
 								},
@@ -437,7 +437,7 @@ var _ = Describe("ElasticseachUsers", func() {
 										Privileges: []string{"read"},
 									},
 									{
-										Names:      []string{"tigera_secure_ee_events.cluster"},
+										Names:      []string{"tigera_secure_ee_events.cluster."},
 										Privileges: []string{"read", "write"},
 									},
 								},
