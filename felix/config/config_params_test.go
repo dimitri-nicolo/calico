@@ -16,7 +16,6 @@ package config_test
 
 import (
 	"fmt"
-	"regexp"
 
 	v1 "k8s.io/api/core/v1"
 
@@ -27,13 +26,11 @@ import (
 
 	"io/ioutil"
 	"net"
+	"os"
 	"reflect"
 	"regexp"
 	"strings"
 	"time"
-
-	"os"
-	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
