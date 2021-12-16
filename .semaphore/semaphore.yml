@@ -222,7 +222,7 @@ blocks:
       - ./.semaphore/run-win-fv
       matrix:
       - env_var: WINDOWS_VERSION
-        values: ["2004", "20H2"]
+        values: ["20H2"]
       - env_var: BACKEND
         values: ["bgp"]
 
