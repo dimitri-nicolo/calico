@@ -51,7 +51,6 @@ type Client interface {
 	api.BenchmarksGetter
 	api.AuditLogReportHandler
 	api.FlowLogReportHandler
-	api.AlertLogReportHandler
 	api.DNSLogReportHandler
 	api.ADLogReportHandler
 	api.ReportRetriever

@@ -465,22 +465,6 @@ func (_m *MockClient) SearchADLogs(ctx context.Context, filter *api.ADLogsSelect
 	return r0
 }
 
-// SearchAlertLogs provides a mock function with given fields: ctx, filter, start, end
-func (_m *MockClient) SearchAlertLogs(ctx context.Context, filter *api.AlertLogsSelection, start *time.Time, end *time.Time) <-chan *api.AlertResult {
-	ret := _m.Called(ctx, filter, start, end)
-
-	var r0 <-chan *api.AlertResult
-	if rf, ok := ret.Get(0).(func(context.Context, *api.AlertLogsSelection, *time.Time, *time.Time) <-chan *api.AlertResult); ok {
-		r0 = rf(ctx, filter, start, end)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(<-chan *api.AlertResult)
-		}
-	}
-
-	return r0
-}
-
 // SearchAuditEvents provides a mock function with given fields: ctx, filter, start, end
 func (_m *MockClient) SearchAuditEvents(ctx context.Context, filter *v3.AuditEventsSelection, start *time.Time, end *time.Time) <-chan *api.AuditEventResult {
 	ret := _m.Called(ctx, filter, start, end)
