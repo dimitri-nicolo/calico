@@ -8,7 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	. "github.com/tigera/calicoq/calicoq/commands"
 
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
 func flagExpectedErrorLogs() {

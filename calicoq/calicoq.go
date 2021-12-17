@@ -11,10 +11,11 @@ import (
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/calicoq/calicoq/commands"
-	licClient "github.com/tigera/licensing/client"
 
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
+	licClient "github.com/projectcalico/calico/licensing/client"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 )
 
 const usage = `Calico query tool.

@@ -10,9 +10,9 @@ import (
 	// TODO (mattl): Check glide for these and if they need to be private
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/go-json/json"
 	"github.com/projectcalico/go-yaml-wrapper"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
 func printYAML(outputs []OutputList) error {

@@ -4,28 +4,23 @@ go 1.16
 
 require (
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
-	github.com/go-ini/ini v1.49.0 // indirect
 	github.com/go-playground/locales v0.13.0 // indirect
-	github.com/huandu/xstrings v1.2.0 // indirect
 	github.com/leodido/go-urn v1.2.0 // indirect
-	github.com/onsi/ginkgo v1.14.2
-	github.com/onsi/gomega v1.10.4
-	github.com/projectcalico/felix v3.8.9+incompatible
+	github.com/onsi/ginkgo v1.16.4
+	github.com/onsi/gomega v1.15.0
+	github.com/projectcalico/calico v3.21.1+incompatible
 	github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba
 	github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54
-	github.com/projectcalico/libcalico-go v1.7.3
 	github.com/sirupsen/logrus v1.8.1
 	github.com/tigera/api v0.0.0-20211202170222-d8128d06db71
-	github.com/tigera/licensing v1.0.1-0.20211203232432-ca834eb3a8aa
 )
 
 replace (
-	github.com/projectcalico/felix => github.com/tigera/felix-private v0.0.0-20211213204143-885ceed09394
-	github.com/projectcalico/libcalico-go => github.com/tigera/libcalico-go-private v1.7.2-0.20211203232041-873deb396265
-	// Need to pin typha to get go mod updates for felix to go through.
-	github.com/projectcalico/typha => github.com/tigera/typha-private v0.6.0-beta1.0.20211213192330-2dda14d7d4cf
+	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20211216162642-79b9e1c59dc8
 	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.4.2-0.20190403091019-9b3cdde74fbe
+	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20211216162642-79b9e1c59dc8
 
+	google.golang.org/grpc => google.golang.org/grpc v1.29.1
 	k8s.io/api => k8s.io/api v0.21.7
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.7
 	k8s.io/apimachinery => k8s.io/apimachinery v0.21.7
