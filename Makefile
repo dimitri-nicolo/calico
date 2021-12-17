@@ -36,7 +36,7 @@ EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 ##############################################################################
 HONEYPOD_CONTROLLER_IMAGE ?=tigera/honeypod-controller
 SNORT_IMAGE               ?=tigera/snort2
-SNORT_VERSION             ?=2.9.18.1
+SNORT_VERSION             ?=2.9.19
 BUILD_IMAGES              ?=$(HONEYPOD_CONTROLLER_IMAGE)
 ARCHES                    ?=amd64
 DEV_REGISTRIES            ?=gcr.io/unique-caldron-775/cnx
@@ -143,7 +143,7 @@ sub-image-%:
 
 $(SNORT_IMAGE): $(SNORT_IMAGE)-$(ARCH)
 $(SNORT_IMAGE)-$(ARCH):
-	op="$(shell docker manifest inspect $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT_VERSION)-$(ARCH))"; \
+	sh "docker manifest inspect $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT_VERSION)-$(ARCH)"; \
 	EXIT_CODE=$$?;\
 	if [ "$$EXIT_CODE" = 0 ]; then \
   		echo "Using existing snort image $(SNORT_IMAGE):$(SNORT_VERSION)-$(ARCH)"; \

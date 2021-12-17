@@ -6,7 +6,7 @@ FROM centos:8
 MAINTAINER garwood@tigera.io
 
 ARG SNORT_VERSION
-ENV SNORT_URL=https://www.snort.org/downloads/snort/snort-${SNORT_VERSION}-1.centos8.x86_64.rpm
+ENV SNORT_URL=https://www.snort.org/downloads/snort/snort-${SNORT_VERSION}-1.centos.x86_64.rpm
 ENV RULES_URL=https://www.snort.org/downloads/community/community-rules.tar.gz
 
 RUN set -xe \
