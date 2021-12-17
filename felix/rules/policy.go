@@ -31,29 +31,16 @@ import (
 // ruleRenderer defined in rules_defs.go.
 
 func (r *DefaultRuleRenderer) PolicyToIptablesChains(policyID *proto.PolicyID, policy *proto.Policy, ipVersion uint8) []*iptables.Chain {
-	// TODO (Matt): Refactor the functions in this file to remove duplicate code and pass through better.
 	isStaged := model.PolicyIsStaged(policyID.Name)
 	inbound := iptables.Chain{
 		Name: PolicyChainName(PolicyInboundPfx, policyID),
 		// Note that the policy name includes the tier, so it does not need to be separately specified.
 		Rules: r.ProtoRulesToIptablesRules(policy.InboundRules, ipVersion, RuleOwnerTypePolicy, RuleDirIngress, policyID.Name, policy.Untracked, isStaged, fmt.Sprintf("Policy %s ingress", policyID.Name)),
 	}
-	if isStaged {
-		// If staged, append an extra no-match nflog rule. This will be reported by the collector as a end-of-tier
-		// deny associated with this policy iff the end-if-tier pass is hit (i.e. there are no enforced policies that
-		// actually drop the packet already).
-		inbound.Rules = append(inbound.Rules, r.StagedPolicyNoMatchRule(RuleDirIngress, policyID.Name))
-	}
 	outbound := iptables.Chain{
 		Name: PolicyChainName(PolicyOutboundPfx, policyID),
 		// Note that the policy name also includes the tier, so it does not need to be separately specified.
 		Rules: r.ProtoRulesToIptablesRules(policy.OutboundRules, ipVersion, RuleOwnerTypePolicy, RuleDirEgress, policyID.Name, policy.Untracked, isStaged, fmt.Sprintf("Policy %s egress", policyID.Name)),
-	}
-	if isStaged {
-		// If staged, append an extra no-match nflog rule. This will be reported by the collector as a end-of-tier
-		// deny associated with this policy iff the end-if-tier pass is hit (i.e. there are no enforced policies that
-		// actually drop the packet already).
-		outbound.Rules = append(outbound.Rules, r.StagedPolicyNoMatchRule(RuleDirEgress, policyID.Name))
 	}
 	return []*iptables.Chain{&inbound, &outbound}
 }
@@ -76,6 +63,12 @@ func (r *DefaultRuleRenderer) ProtoRulesToIptablesRules(protoRules []*proto.Rule
 		// TODO (Matt): Need rule hash when that's cleaned up.
 		rules = append(rules, r.ProtoRuleToIptablesRules(protoRule, ipVersion, owner, dir, ii, name, untracked, staged)...)
 	}
+	if staged {
+		// If staged, append an extra no-match nflog rule. This will be reported by the collector as an end-of-tier
+		// deny associated with this policy iff the end-if-tier pass is hit (i.e. there are no enforced policies that
+		// actually drop the packet already).
+		rules = append(rules, r.StagedPolicyNoMatchRule(dir, name))
+	}
 	if len(chainComments) > 0 {
 		if len(rules) == 0 {
 			rules = append(rules, iptables.Rule{})
@@ -84,6 +77,7 @@ func (r *DefaultRuleRenderer) ProtoRulesToIptablesRules(protoRules []*proto.Rule
 	}
 	return rules
 }
+
 func filterNets(mixedCIDRs []string, ipVersion uint8) (filtered []string, filteredAll bool) {
 	if len(mixedCIDRs) == 0 {
 		return nil, false
@@ -683,8 +677,6 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 			rules = append(rules, iptables.Rule{
 				Action: iptables.ReturnAction{}})
 		}
-		//mark = r.IptablesMarkPass
-		//actions = append(actions, iptables.ReturnAction{})
 	case "log":
 		markDNSPolicyRule = false
 		// Handled above.

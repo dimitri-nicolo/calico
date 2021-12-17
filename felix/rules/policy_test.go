@@ -475,7 +475,10 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			inbound := chains[0].Rules
 			outbound := chains[1].Rules
 			Expect(inbound).To(HaveLen(numInboundRules))
-			Expect(outbound).To(HaveLen(0))
+			Expect(outbound).To(ConsistOf(
+				iptables.Rule{
+					Comment: []string{"Policy default.foo egress"},
+				}))
 			Expect(inbound[0].Match.Render()).To(Equal(expMatch))
 			Expect(inbound[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x800}))
 			Expect(inbound[1]).To(Equal(iptables.Rule{
@@ -533,7 +536,10 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				numOutboundRules = 5
 			}
 
-			Expect(inbound).To(HaveLen(0))
+			Expect(inbound).To(ConsistOf(
+				iptables.Rule{
+					Comment: []string{"Policy default.foo ingress"},
+				}))
 			Expect(outbound).To(HaveLen(numOutboundRules))
 			Expect(outbound[0].Match.Render()).To(Equal(expMatch))
 			Expect(outbound[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x800}))
@@ -608,6 +614,9 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 					Group:  2,
 					Prefix: "DPE|staged:default.foo",
 				},
+				Comment: []string{
+					"Policy staged:default.foo egress",
+				},
 			}))
 		},
 		ruleTestData...,
@@ -658,6 +667,9 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Action: iptables.NflogAction{
 					Group:  1,
 					Prefix: "DPI|staged:default.foo",
+				},
+				Comment: []string{
+					"Policy staged:default.foo ingress",
 				},
 			}))
 		},
@@ -1687,7 +1699,7 @@ var _ = Describe("rule metadata tests", func() {
 		)
 		Expect(chains).To(ConsistOf(
 			&iptables.Chain{
-				Name: "cali-pi-_ffOMcf6pikpiZ6hgKcW",
+				Name: "cali-pi-_FJ9yUkNpzshVDh2n7mg",
 				Rules: []iptables.Rule{
 					{
 						Match:  nil,
@@ -1697,13 +1709,22 @@ var _ = Describe("rule metadata tests", func() {
 						},
 					},
 					{
-						Match:  iptables.Match().MarkSingleBitSet(0x80),
-						Action: iptables.ReturnAction{},
+						Match: iptables.Match().MarkSingleBitSet(0x80),
+						Action: iptables.NflogAction{
+							Group:  1,
+							Prefix: "API0|long-policy-name-that-gets-hashed",
+						},
+						Comment: nil,
+					},
+					{
+						Match:   iptables.Match().MarkSingleBitSet(0x80),
+						Action:  iptables.ReturnAction{},
+						Comment: nil,
 					},
 				},
 			},
 			&iptables.Chain{
-				Name: "cali-po-_ffOMcf6pikpiZ6hgKcW",
+				Name: "cali-po-_FJ9yUkNpzshVDh2n7mg",
 				Rules: []iptables.Rule{
 					{
 						Comment: []string{
@@ -1737,8 +1758,17 @@ var _ = Describe("rule metadata tests", func() {
 						},
 					},
 					{
-						Match:  iptables.Match().MarkSingleBitSet(0x80),
-						Action: iptables.ReturnAction{},
+						Match: iptables.Match().MarkSingleBitSet(0x80),
+						Action: iptables.NflogAction{
+							Group:  1,
+							Prefix: "ARI0|long-policy-name-that-gets-hashed",
+						},
+						Comment: nil,
+					},
+					{
+						Match:   iptables.Match().MarkSingleBitSet(0x80),
+						Action:  iptables.ReturnAction{},
+						Comment: nil,
 					},
 				},
 			},
