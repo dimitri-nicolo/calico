@@ -46,7 +46,12 @@ const (
 )
 
 const (
-	numBaseFelixConfigs = 193
+	numBaseFelixConfigs = 97
+)
+
+// Separate const block to avoid conflicts when merging from OS.
+const (
+	numPrivateOnlyFelixConfigs = 97
 )
 
 var _ = Describe("Test the generic configuration update processor and the concrete implementations", func() {
@@ -71,7 +76,7 @@ var _ = Describe("Test the generic configuration update processor and the concre
 		Kind: apiv3.KindClusterInformation,
 		Name: "node.mynode",
 	}
-	numFelixConfigs := numBaseFelixConfigs
+	numFelixConfigs := numBaseFelixConfigs + numPrivateOnlyFelixConfigs
 	numClusterConfigs := 6
 	numNodeClusterConfigs := 5
 	felixMappedNames := map[string]interface{}{
