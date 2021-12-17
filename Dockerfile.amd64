@@ -1,0 +1,14 @@
+FROM docker.elastic.co/eck/eck-operator:1.8.0 as builder
+
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.5
+
+RUN microdnf update --setopt=tsflags=nodocs && microdnf clean all
+
+COPY --from=builder ./elastic-operator .
+COPY --from=builder /conf/eck.yaml /conf/eck.yaml
+COPY --from=builder /licenses/* /licenses/
+
+USER 1001
+
+ENTRYPOINT ["./elastic-operator"]
+CMD ["manager"]
