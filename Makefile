@@ -2,9 +2,6 @@ PACKAGE_NAME    ?= github.com/tigera/calicoq
 GO_BUILD_VER    ?= v0.63
 GOMOD_VENDOR     = false
 GIT_USE_SSH      = true
-LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
-FELIX_REPO       = github.com/tigera/felix-private
-TYPHA_REPO       = github.com/tigera/typha-private
 BINARY           = bin/calicoq
 
 ORGANIZATION=tigera
@@ -13,8 +10,8 @@ SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_CALICOQ_PROJECT_ID)
 EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
 # Allow local libcalico-go to be mapped into the build container.
-ifdef LIBCALICOGO_PATH
-EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
+ifdef CALICO_PATH
+EXTRA_DOCKER_ARGS += -v $(CALICO_PATH):/go/src/github.com/projectcalico/calico/:ro
 endif
 
 ##############################################################################
@@ -185,20 +182,12 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
-API_REPO=github.com/tigera/api
-LICENSING_REPO=github.com/tigera/licensing
-LICENSING_BRANCH=$(PIN_BRANCH)
-LOGRUS_REPO_ORIG=github.com/sirupsen/logrus
-LOGRUS_REPO=github.com/projectcalico/logrus
-LOGRUS_BRANCH=$(PIN_BRANCH)
+BRANCH=master
+update-calico-pin:
+	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(BRANCH))
+	$(call update_replace_pin,github.com/tigera/api,github.com/tigera/calico-private/api,$(BRANCH))
 
-update-licensing-pin:
-	$(call update_pin,$(LICENSING_REPO),$(LICENSING_REPO),$(LICENSING_BRANCH))
-
-replace-logrus-pin:
-	$(call update_replace_pin,$(LOGRUS_REPO_ORIG),$(LOGRUS_REPO),$(LOGRUS_BRANCH))
-
-update-pins: guard-ssh-forwarding-bug update-api-pin replace-libcalico-pin replace-typha-pin replace-felix-pin update-licensing-pin replace-logrus-pin
+update-pins: guard-ssh-forwarding-bug update-calico-pin
 
 ###############################################################################
 # See .golangci.yml for golangci-lint config

@@ -9,12 +9,12 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/dispatcher"
-	"github.com/projectcalico/felix/labelindex"
-	"github.com/projectcalico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
-	"github.com/projectcalico/libcalico-go/lib/selector"
+	"github.com/projectcalico/calico/felix/dispatcher"
+	"github.com/projectcalico/calico/felix/labelindex"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/felixsyncer"
+	"github.com/projectcalico/calico/libcalico-go/lib/selector"
 )
 
 // Restructuring like this should also be useful for a permanently running webserver variant too.
