@@ -881,16 +881,13 @@ var _ = Describe("DNS Policy Improvements", func() {
 			output, err := checkSingleShotDNSConnectivity(workload1, "foobar.com", dnsserver.IP)
 			Expect(err).ShouldNot(HaveOccurred(), output)
 
-			iptablesSaveOutput, err := felix.ExecCombinedOutput("iptables-save", "-c")
-			Expect(err).ShouldNot(HaveOccurred())
-
 			// Check that we hit the NFQUEUE rule at least once, to prove the packet was NF_REPEATED at least once before
 			// being accepted.
-			nfqueuedPacketsCount := getIptablesSavePacketCount(iptablesSaveOutput,
-				fmt.Sprintf("cali-fw-%s", workload1.InterfaceName), "Drop if no policies passed packet[^n]*NFQUEUE.*")
+			nfqueuedPacketsCount := getIptablesSavePacketCount(felix,
+				fmt.Sprintf("cali-fw-%s", workload1.InterfaceName), "Drop if no policies passed packet[^\n]*NFQUEUE.*")
 			Expect(nfqueuedPacketsCount).Should(BeNumerically(">", 0))
 
-			dnsPolicyRulePacketsAllowed := getIptablesSavePacketCount(iptablesSaveOutput, policyChainName, "rule-name=allow-foobar[^n]*cali40d")
+			dnsPolicyRulePacketsAllowed := getIptablesSavePacketCount(felix, policyChainName, "rule-name=allow-foobar[^\n]*cali40d")
 			Expect(dnsPolicyRulePacketsAllowed).Should(Equal(1))
 		})
 
@@ -912,16 +909,13 @@ var _ = Describe("DNS Policy Improvements", func() {
 					return err
 				}, "10s", "1s").ShouldNot(HaveOccurred(), output)
 
-				iptablesSaveOutput, err := felix.ExecCombinedOutput("iptables-save", "-c")
-				Expect(err).ShouldNot(HaveOccurred())
-
 				// Check that we hit the NFQUEUE rule at least once, to prove the packet was NF_REPEATED at least once before
 				// being accepted.
-				nfqueuedPacketsCount := getIptablesSavePacketCount(iptablesSaveOutput,
-					fmt.Sprintf("cali-fw-%s", workload1.InterfaceName), "Drop if no policies passed packet[^n]*NFQUEUE.*")
+				nfqueuedPacketsCount := getIptablesSavePacketCount(felix,
+					fmt.Sprintf("cali-fw-%s", workload1.InterfaceName), "Drop if no policies passed packet[^\n]*NFQUEUE.*")
 				Expect(nfqueuedPacketsCount).Should(BeNumerically(">", 0))
 
-				dnsPolicyRulePacketsAllowed := getIptablesSavePacketCount(iptablesSaveOutput, policyChainName, "rule-name=allow-foobar[^n]*cali40d")
+				dnsPolicyRulePacketsAllowed := getIptablesSavePacketCount(felix, policyChainName, "rule-name=allow-foobar[^\n]*cali40d")
 				Expect(dnsPolicyRulePacketsAllowed).Should(Equal(1))
 			})
 		})
@@ -954,14 +948,25 @@ func checkSingleShotDNSConnectivity(w *workload.Workload, domainName, dnsServerI
 // fails the test.
 //
 // The ruleIdentifier is a regex that targets the text in the rule AFTER the chain name.
-func getIptablesSavePacketCount(iptablesSaveOutput, chainName, ruleIdentifier string) int {
-	re := regexp.MustCompile(fmt.Sprintf(`\[(\d*):\d*\]\s-A %s[^\n]*%s.*`, chainName, ruleIdentifier))
-	matches := re.FindStringSubmatch(iptablesSaveOutput)
-	Expect(len(matches)).Should(BeNumerically(">", 0),
-		fmt.Sprintf("No rule found for chain \"%s\" and identifier \"%s\"", chainName, ruleIdentifier))
+func getIptablesSavePacketCount(felix *infrastructure.Felix, chainName, ruleIdentifier string) int {
+	var count int
+	regex := fmt.Sprintf(`\[(\d*):\d*\]\s-A %s[^\n]*%s.*`, chainName, ruleIdentifier)
 
-	count, err := strconv.Atoi(matches[1])
-	Expect(err).ShouldNot(HaveOccurred())
+	Eventually(func() error {
+		iptablesSaveOutput, err := felix.ExecCombinedOutput("iptables-save", "-c")
+		if err != nil {
+			return err
+		}
+
+		re := regexp.MustCompile(regex)
+		matches := re.FindStringSubmatch(iptablesSaveOutput)
+		if len(matches) < 1 {
+			return fmt.Errorf("no rule found for chain \"%s\" and identifier \"%s\"", chainName, ruleIdentifier)
+		}
+
+		count, err = strconv.Atoi(matches[1])
+		return err
+	}, "10s", "1s").ShouldNot(HaveOccurred())
 
 	return count
 }
