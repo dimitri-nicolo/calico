@@ -2,7 +2,7 @@ version: v1.0
 name: Publish calicoctl images
 agent:
   machine:
-    type: e1-standard-2
+    type: e1-standard-4
     os_image: ubuntu1804
 
 execution_time_limit:
@@ -27,7 +27,5 @@ blocks:
       - name: docker
       jobs:
       - name: "calicoctl"
-        execution_time_limit:
-          minutes: 20
         commands:
         - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C calicoctl image-all cd CONFIRM=true; fi

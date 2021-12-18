@@ -26,31 +26,31 @@ promotions:
 - name: Push apiserver images
   pipeline_file: push-images/apiserver.yml
   auto_promote:
-    when: "branch !~ '.+'"
+    when: "branch =~ 'master|release-.*'"
 - name: Push cni-plugin images
   pipeline_file: push-images/cni-plugin.yml
   auto_promote:
-    when: "branch !~ '.+'"
+    when: "branch =~ 'master|release-'"
 - name: Push kube-controllers images
   pipeline_file: push-images/kube-controllers.yml
   auto_promote:
-    when: "branch !~ '.+'"
+    when: "branch =~ 'master|release-'"
 - name: Push calicoctl images
   pipeline_file: push-images/calicoctl.yml
   auto_promote:
-    when: "branch !~ '.+'"
+    when: "branch =~ 'master|release-'"
 - name: Push typha images
   pipeline_file: push-images/typha.yml
   auto_promote:
-    when: "branch !~ '.+'"
+    when: "branch =~ 'master|release-'"
 - name: Push ALP images
   pipeline_file: push-images/alp.yml
   auto_promote:
-    when: "branch !~ '.+'"
+    when: "branch =~ 'master|release-'"
 - name: Push calico/node images
   pipeline_file: push-images/node.yml
   auto_promote:
-    when: "branch !~ '.+'"
+    when: "branch =~ 'master|release-'"
 
 global_job_config:
   secrets:
@@ -63,6 +63,10 @@ global_job_config:
     - chmod 0600 ~/.keys/*
     # Add the key to the ssh agent:
     - ssh-add ~/.keys/*
+    - checkout
+    # Semaphore is doing shallow clone on a commit without tags.
+    # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always)
+    - git fetch --unshallow
     # Semaphore mounts a copy-on-write FS as /var/lib/docker in order to provide a pre-loaded cache of
     # some images. However, the cache is not useful to us and the copy-on-write FS is a big problem given
     # how much we churn docker containers during the build.  Disable it.
@@ -77,14 +81,13 @@ blocks:
 
 - name: "API"
   run:
-    when: "change_in('/api/')"
+    when: "change_in(['/*', '/api/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   execution_time_limit:
     minutes: 30
   dependencies: []
   task:
     prologue:
       commands:
-      - checkout
       - cd api
     jobs:
     - name: "make build"
@@ -99,19 +102,18 @@ blocks:
 
 - name: "libcalico-go"
   run:
-    when: "change_in('/api/') or change_in('/libcalico-go/')"
+    when: "change_in(['/*', '/api/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: []
   task:
     jobs:
     - name: "libcalico-go: tests"
       commands:
-      - checkout
       - cd libcalico-go
       - make ci
 
 - name: "Typha"
   run:
-    when: "change_in('/api/') or change_in('/libcalico-go/') or change_in('/typha/')"
+    when: "change_in(['/*', '/api/', '/libcalico-go/', '/typha/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: []
   task:
     agent:
@@ -121,12 +123,10 @@ blocks:
     jobs:
     - name: "Typha: UT and FV tests"
       commands:
-      - checkout
       - cd typha
       - make ci EXCEPT=k8sfv-test
     - name: "Typha: felix k8s-st tests with updated typha image"
       commands:
-      - checkout
       - cd typha
       - make calico/typha
       - cd ../felix
@@ -134,7 +134,7 @@ blocks:
 
 - name: "Felix: Build"
   run:
-    when: "change_in('/felix/') or change_in('/typha/') or change_in('/api/') or change_in('/libcalico-go/')"
+    when: "change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: []
   task:
     agent:
@@ -146,7 +146,6 @@ blocks:
       execution_time_limit:
         minutes: 60
       commands:
-      - checkout
       - cd felix
       - cache restore go-pkg-cache
       - cache restore go-mod-cache
@@ -162,19 +161,18 @@ blocks:
 
 - name: "Felix: Build Windows binaries"
   run:
-    when: "change_in('/felix/') or change_in('/typha/') or change_in('/api/') or change_in('/libcalico-go/')"
+    when: "change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: []
   task:
     jobs:
     - name: "build Windows binaries"
       commands:
-      - checkout
       - cd felix
       - make bin/calico-felix.exe fv/win-fv.exe
 
 - name: "Felix: Windows FV"
   run:
-    when: "change_in('/felix/') or change_in('/typha/') or change_in('/api/') or change_in('/libcalico-go/')"
+    when: "change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Felix: Build Windows binaries"]
   task:
     secrets:
@@ -194,8 +192,7 @@ blocks:
       - export KEYPAIR_NAME=${CLUSTER_NAME}
       - echo CLUSTER_NAME=${CLUSTER_NAME}
       - sudo apt-get install putty-tools
-      - git clone git@github.com:tigera/process.git
-      - checkout
+      - git clone git@github.com:tigera/process.git ~/process
       - cd felix
       - make bin/calico-felix.exe fv/win-fv.exe
     epilogue:
@@ -228,12 +225,11 @@ blocks:
 
 - name: "Felix: FV Tests"
   run:
-    when: "change_in('/felix/') or change_in('/typha/') or change_in('/api/') or change_in('/libcalico-go/')"
+    when: "change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Felix: Build"]
   task:
     prologue:
       commands:
-      - checkout
       - cd felix
       - cache restore go-pkg-cache
       - cache restore go-mod-cache
@@ -261,12 +257,11 @@ blocks:
 
 - name: "Felix: BPF UT/FV tests on new kernel"
   run:
-    when: "change_in('/felix/') or change_in('/typha/') or change_in('/api/') or change_in('/libcalico-go/')"
+    when: "change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: []
   task:
     prologue:
       commands:
-      - checkout
       - cd felix
       - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
       - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
@@ -294,7 +289,7 @@ blocks:
 
 - name: "Felix: Static checks on e1-standard-8"
   run:
-    when: "change_in('/felix/') or change_in('/typha/') or change_in('/api/') or change_in('/libcalico-go/')"
+    when: "change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: []
   task:
     agent:
@@ -304,7 +299,6 @@ blocks:
         os_image: ubuntu1804
     prologue:
       commands:
-      - checkout
       - cd felix
       - cache restore go-pkg-cache
       - cache restore go-mod-cache
@@ -317,12 +311,11 @@ blocks:
 
 - name: "confd: tests"
   run:
-    when: "change_in('/confd/') or change_in('/libcalico-go') or change_in('/api/')"
+    when: "change_in(['/*', '/api/', '/libcalico-go/', '/confd/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: []
   task:
     prologue:
       commands:
-      - checkout
       - cd confd
     jobs:
     - name: "confd: CI"
@@ -333,7 +326,7 @@ blocks:
 
 - name: "Node: Tests"
   run:
-    when: "change_in('/node/') or change_in('/felix/') or change_in('/api/') or change_in('/libcalico-go/') or change_in('/confd/') or change_in('/bird/') or change_in('/pod2daemon/')"
+    when: "change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: []
   task:
     agent:
@@ -347,10 +340,6 @@ blocks:
     - name: test-customer-license
     prologue:
       commands:
-      - checkout
-      # Semaphore is doing shallow clone on a commit without tags.
-      # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always)
-      - git fetch --unshallow
       - cd node
     jobs:
     - name: "Node: CI"
@@ -362,29 +351,76 @@ blocks:
 
 - name: "kube-controllers: Tests"
   run:
-    when: "change_in('/kube-controllers/') or change_in('/api/') or change_in('/libcalico-go/')"
+    when: "change_in(['/*', '/api/', '/libcalico-go/', '/kube-controllers/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: []
   task:
     prologue:
       commands:
-      - checkout
-      # Semaphore is doing shallow clone on a commit without tags.
-      # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always)
-      - git fetch --unshallow
       - cd kube-controllers
     jobs:
     - name: "kube-controllers: tests"
       commands:
       - make ci
 
-- name: "Documentation"
+- name: "pod2daemon"
   run:
-    when: "change_in('/calico/')"
+    when: "change_in(['/*', '/pod2daemon/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: []
   task:
     prologue:
       commands:
-      - checkout
+      - cd pod2daemon
+    jobs:
+    - name: "pod2daemon tests"
+      commands:
+      - make ci
+
+- name: "app-policy"
+  run:
+    when: "change_in(['/*', '/app-policy/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: []
+  task:
+    prologue:
+      commands:
+      - cd app-policy
+    jobs:
+    - name: "app-policy tests"
+      commands:
+      - make ci
+
+- name: "calicoctl"
+  run:
+    when: "change_in(['/*', '/calicoctl/', '/libcalico-go/', '/api/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: []
+  task:
+    prologue:
+      commands:
+      - cd calicoctl
+    jobs:
+    - name: "calicoctl tests"
+      commands:
+      - make ci
+
+- name: "cni-plugin"
+  run:
+    when: "change_in(['/*', '/cni-plugin/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: []
+  task:
+    prologue:
+      commands:
+      - cd cni-plugin
+    jobs:
+    - name: "cni-plugin tests"
+      commands:
+      - make ci
+
+- name: "Documentation"
+  run:
+    when: "change_in(['/*', '/calico/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: []
+  task:
+    prologue:
+      commands:
       - cd calico
     jobs:
     - name: "htmlproofer, kubeval, and helm tests"
