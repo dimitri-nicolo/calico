@@ -5,12 +5,13 @@ package controller
 import (
 	"context"
 	"errors"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
-	"github.com/tigera/intrusion-detection/controller/pkg/spyutil"
 	"net/http"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
+	"github.com/tigera/intrusion-detection/controller/pkg/spyutil"
 
 	"github.com/olivere/elastic/v7"
 	. "github.com/onsi/gomega"
@@ -248,7 +249,9 @@ func TestController_Reconcile_FailToList(t *testing.T) {
 
 			tkr.reconcile(t, ctx)
 
-			g.Eventually(func() []v3.ErrorCondition { return feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status.ErrorConditions }).Should(HaveLen(1))
+			g.Eventually(func() []v3.ErrorCondition {
+				return feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status.ErrorConditions
+			}).Should(HaveLen(1))
 			g.Expect(failed).To(BeFalse())
 		})
 	}
@@ -296,7 +299,9 @@ func TestController_Add_FailToPut(t *testing.T) {
 
 			g.Eventually(countMethod(dbm, "Put"+tc.name)).
 				Should(Equal(2), "should retry put")
-			g.Eventually(func() []v3.ErrorCondition { return feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status.ErrorConditions }).Should(HaveLen(0), "should clear error on success")
+			g.Eventually(func() []v3.ErrorCondition {
+				return feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status.ErrorConditions
+			}).Should(HaveLen(0), "should clear error on success")
 		})
 	}
 }

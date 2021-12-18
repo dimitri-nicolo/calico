@@ -4,8 +4,9 @@ package events
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 	lmaAPI "github.com/tigera/lma/pkg/api"

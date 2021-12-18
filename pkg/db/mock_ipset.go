@@ -4,9 +4,10 @@ package db
 
 import (
 	"context"
-	"github.com/tigera/intrusion-detection/controller/pkg/spyutil"
 	"sync"
 	"time"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/spyutil"
 )
 
 type MockSets struct {

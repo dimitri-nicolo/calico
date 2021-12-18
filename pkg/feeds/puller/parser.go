@@ -12,8 +12,8 @@ import (
 	"strings"
 	"sync"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/yalp/jsonpath"
 )
 

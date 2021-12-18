@@ -4,11 +4,12 @@ package utils
 
 import (
 	"fmt"
+	"net/http"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/errorcondition"
 	apiErrors "k8s.io/apimachinery/pkg/api/errors"
-	"net/http"
 )
 
 // AddErrorToFeedStatus adds an error entry with type errType and body err to the error conditions of the

@@ -4,7 +4,6 @@ package puller
 
 import (
 	"context"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
 	"io"
 	"net"
 	"net/http"
@@ -13,8 +12,10 @@ import (
 	"sync"
 	"time"
 
-	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
+
 	log "github.com/sirupsen/logrus"
+	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	core "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/controller"

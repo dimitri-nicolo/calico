@@ -5,10 +5,11 @@ package controller
 import (
 	"context"
 	"fmt"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
-	feedutils "github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
 	"sync"
 	"time"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
+	feedutils "github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
 
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"

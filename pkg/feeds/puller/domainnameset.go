@@ -5,13 +5,14 @@ package puller
 import (
 	"context"
 	"errors"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
 	"io"
 	"net/http"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
 
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"golang.org/x/net/idna"
