@@ -41,7 +41,7 @@ func TestMultiCluster(t *testing.T) {
 	}, ":"))
 
 	// Setup the license
-	out := Calicoctl(true, "create", "-f", "/go/src/github.com/projectcalico/calicoctl/test-data/licenses/license.yaml", "--context", "main")
+	out := Calicoctl(true, "create", "-f", "/go/src/github.com/projectcalico/calico/calicoctl/test-data/licenses/license.yaml", "--context", "main")
 	Expect(out).To(ContainSubstring("Successfully"))
 
 	// Set Calico version in ClusterInformation for both contexts
