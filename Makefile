@@ -220,7 +220,7 @@ stop-elastic:
 .PHONY: ci cd
 
 ## run CI cycle - build, test, etc.
-ci: clean test images-all
+ci: clean check-fmt test images-all
 
 ## Deploy images to registry
 cd: images cd-common

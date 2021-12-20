@@ -4,6 +4,7 @@ package controller
 
 import (
 	"context"
+
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 )
 

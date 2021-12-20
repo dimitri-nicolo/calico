@@ -4,13 +4,14 @@ package cacher
 
 import (
 	"context"
-	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	clientV3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"sync"
+
+	log "github.com/sirupsen/logrus"
+	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	clientV3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	"k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type CacheRequestType int
@@ -90,14 +91,14 @@ func NewGlobalThreatFeedCache(feedName string, globalThreatFeedClient clientV3.G
 
 // Run starts another thread that infinitely listens to incoming cacheRequests and process those requests until a stop
 // signal is received
-func (c *globalThreatFeedCacher) Run(ctx context.Context)  {
+func (c *globalThreatFeedCacher) Run(ctx context.Context) {
 	c.once.Do(func() {
 		go c.startHandlingCacheRequests(ctx)
 	})
 }
 
 // Close sends a stop signal to the stop channel to terminate the infinite loop of receiving and processing incoming cacheRequests
-func (c *globalThreatFeedCacher) Close()  {
+func (c *globalThreatFeedCacher) Close() {
 	c.stop <- struct{}{}
 }
 

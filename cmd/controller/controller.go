@@ -11,13 +11,14 @@ import (
 	"strconv"
 	"syscall"
 
-	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
-	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	lclient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
 	"github.com/tigera/licensing/monitor"
 	lma "github.com/tigera/lma/pkg/elastic"
+
+	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
+	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/events"

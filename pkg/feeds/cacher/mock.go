@@ -4,6 +4,7 @@ package cacher
 
 import (
 	"context"
+
 	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 

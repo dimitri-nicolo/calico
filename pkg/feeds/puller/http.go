@@ -6,8 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/errorcondition"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
 	"io"
 	"net"
 	"net/http"
@@ -15,9 +13,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/errorcondition"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
+
 	retry "github.com/avast/retry-go"
-	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	log "github.com/sirupsen/logrus"
+	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	apiErrors "k8s.io/apimachinery/pkg/api/errors"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	core "k8s.io/client-go/kubernetes/typed/core/v1"

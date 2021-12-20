@@ -5,9 +5,10 @@ package globalnetworksets
 import (
 	"context"
 	"errors"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/errorcondition"
 	"testing"
 	"time"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/errorcondition"
 
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/watch"

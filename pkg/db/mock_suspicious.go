@@ -4,8 +4,9 @@ package db
 
 import (
 	"context"
-	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"time"
+
+	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 type MockSuspicious struct {
