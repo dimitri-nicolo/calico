@@ -1,17 +1,44 @@
-FROM docker.elastic.co/elasticsearch/elasticsearch:7.11.2
+FROM docker.elastic.co/elasticsearch/elasticsearch:7.16.2
 
-RUN yum -y update && yum -y upgrade && yum clean all
+RUN apt -y update && apt -y upgrade && apt clean all
 
 # add storage plugin
 RUN cd /bin/ && elasticsearch-plugin install --batch repository-gcs
 
 # save truststore
-RUN cp -R /etc/pki/ /holder
+RUN cp -R /etc/ssl/ /holder
 
 COPY cleanup.sh /
-RUN /cleanup.sh
+
+RUN apt purge -y curl \
+&& apt purge -y bzip2 \
+&& apt purge -y libgssapi-krb5-2 \
+&& apt purge -y libgssapi3-heimdal \
+&& apt purge -y libkrb5-26-heimdal \
+&& apt purge -y libgssapi-krb5-2 \
+&& apt purge -y libkrb5-3 \
+&& apt purge -y libkrb5support0  \
+&& apt purge -y libldap-common \
+&& apt purge -y p11-kit-modules  \
+&& apt purge -y libsqlite3-0 \
+&& apt purge -y unzip \
+&& apt purge -y vim-common \
+&& apt purge -y vim-tiny \
+&& apt purge -y zip  \
+&& apt purge -y libssl1.1  \
+&& apt purge -y openssl  \
+&& apt purge -y libnghttp2-14  \
+&& apt purge -y libncurses6 \
+&& apt purge -y xxd \
+&& apt-mark manual apt \
+&& apt purge -y --allow-remove-essential libblkid1 \
+&& apt purge -y --allow-remove-essential ncurses-bin \
+&& apt purge -y --allow-remove-essential ncurses-base \
+&& apt purge -y libncursesw6 \
+&& apt -y autoremove
+
 
 # restore truststore
-RUN cp -R /holder/* /etc/pki && rm -rf /holder
+RUN cp -R /holder /etc/ssl && rm -rf /holder
 
 COPY /bin/readiness-probe /
