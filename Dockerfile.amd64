@@ -8,8 +8,7 @@ RUN cd /bin/ && elasticsearch-plugin install --batch repository-gcs
 # save truststore
 RUN cp -R /etc/ssl/ /holder
 
-COPY cleanup.sh /
-
+# Remove unnecessary packages
 RUN apt purge -y curl \
 && apt purge -y bzip2 \
 && apt purge -y libgssapi-krb5-2 \
@@ -34,9 +33,11 @@ RUN apt purge -y curl \
 && apt purge -y --allow-remove-essential libblkid1 \
 && apt purge -y --allow-remove-essential ncurses-bin \
 && apt purge -y --allow-remove-essential ncurses-base \
+&& apt purge -y --allow-remove-essential libpcre3 \
+&& apt purge -y --allow-remove-essential libmount1 \
 && apt purge -y libncursesw6 \
+&& apt purge -y libsmartcols1 \
 && apt -y autoremove
-
 
 # restore truststore
 RUN cp -R /holder /etc/ssl && rm -rf /holder
