@@ -142,8 +142,8 @@ var (
 
 	mountCmd = &cobra.Command{
 		Use:   "mount",
-		Short: "Flex volume unmount command.",
-		Long:  "Flex volume unmount command.",
+		Short: "Flex volume mount command.",
+		Long:  "Flex volume mount command.",
 		RunE: func(c *cobra.Command, args []string) error {
 			if len(args) < 2 {
 				return fmt.Errorf("mount takes 2 args.")
@@ -307,7 +307,7 @@ func unmount(dir string) error {
 	if len(comps) < 6 {
 		sErr := fmt.Sprintf("Failure to notify nodeagent dir %v", dir)
 		logError("unmount", dir, sErr, syslogOnlyFalse)
-		return fmt.Errorf("invalid path to unount")
+		return fmt.Errorf("invalid path to unmount")
 	}
 
 	uid := comps[5]

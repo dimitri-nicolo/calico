@@ -16,6 +16,10 @@
 
 package libbpf
 
+import (
+	"time"
+)
+
 const MapTypeProgrArray = 3
 
 type Obj struct {
@@ -93,5 +97,9 @@ func (m *Map) IsMapInternal() bool {
 
 func TcSetGlobals(m *Map, hostIP, intfIP, extToSvcMark uint32, tmtu, vxlanPort, psNatStart, psNatLen, vethNS uint16,
 	enableTcpStats, isEgressGatway, isEgressClient bool) error {
+	panic("LIBBPF syscall stub")
+}
+
+func CTLBSetGlobals(_ *Map, _ time.Duration) error {
 	panic("LIBBPF syscall stub")
 }

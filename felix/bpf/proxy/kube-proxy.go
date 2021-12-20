@@ -20,6 +20,7 @@ import (
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/calico/felix/bpf/cachingmap"
@@ -29,6 +30,11 @@ import (
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/routes"
 )
+
+func init() {
+	// Alpha since 1.21 Beta since 1.22 default true - no harm in supporting it by default.
+	_ = utilfeature.DefaultMutableFeatureGate.Set("ServiceInternalTrafficPolicy=true")
+}
 
 // KubeProxy is a wrapper of Proxy that deals with higher level issue like
 // configuration, restarting etc.

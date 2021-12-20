@@ -24,12 +24,20 @@ import (
 
 func CalicoCRDs() ([]*v1.CustomResourceDefinition, error) {
 	var crds []*v1.CustomResourceDefinition
+
 	bgpconfig := v1.CustomResourceDefinition{}
 	err := yaml.Unmarshal([]byte(bgpconfigurations), &bgpconfig)
 	if err != nil {
 		return crds, err
 	}
 	crds = append(crds, &bgpconfig)
+
+	cns := v1.CustomResourceDefinition{}
+	err = yaml.Unmarshal([]byte(caliconodestatuses), &cns)
+	if err != nil {
+		return crds, err
+	}
+	crds = append(crds, &cns)
 
 	bgpPeer := v1.CustomResourceDefinition{}
 	err = yaml.Unmarshal([]byte(bgppeers), &bgpPeer)
@@ -135,13 +143,6 @@ func CalicoCRDs() ([]*v1.CustomResourceDefinition, error) {
 		return crds, err
 	}
 	crds = append(crds, &netset)
-
-	packetCaptures := v1.CustomResourceDefinition{}
-	err = yaml.Unmarshal([]byte(packetcaptures), &packetCaptures)
-	if err != nil {
-		return crds, err
-	}
-	crds = append(crds, &packetCaptures)
 
 	return crds, nil
 }

@@ -121,5 +121,7 @@ section:
   section:
   - title: Troubleshooting and diagnostics
     path: /maintenance/troubleshoot/troubleshooting
+  - title: Troubleshooting commands
+    path: /maintenance/troubleshoot/commands  
   - title: Component logs
     path: /maintenance/troubleshoot/component-logs
