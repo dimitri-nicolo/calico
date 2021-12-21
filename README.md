@@ -6,8 +6,8 @@ Elasticsearch has not fixed or has not back ported to the version of Elastcisear
 ## Upgrading Elasticsearch version
 
 When upgrading Elasticsearch versions you MUST take note of the following:
-* The packages installed in an Elasticsearch image may change in new versions, so the list of packages removed by the
-script `cleanup.sh` must be re evaluated on upgrade.
+* The packages installed in an Elasticsearch image may change in new versions, so the list of packages removed must be 
+* re-evaluated on upgrade. 
 * The readiness probe has been rewritten in golang and added to the pod (see `/readiness-probe`). You must make sure the 
 ECK library version in go.mod matches the ECK version this will be deployed with, and the readiness probe must be
 re evaluated with the new ECK version and must match the bash script readiness probe for that ECK version. For instance,
