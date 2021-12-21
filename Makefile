@@ -36,3 +36,15 @@ image:
 	$(MAKE) -C app-policy image IMAGETAG=$(GIT_VERSION) VALIDARCHES=$(ARCH)
 	$(MAKE) -C typha image IMAGETAG=$(GIT_VERSION) VALIDARCHES=$(ARCH)
 	$(MAKE) -C node image IMAGETAG=$(GIT_VERSION) VALIDARCHES=$(ARCH)
+
+# Merge OSS branch.
+# Expects the following arguments:
+# - REMOTE: Git remote to use for OSS.
+# - BRANCH: OSS branch to merge.
+merge-open:
+	git fetch $(REMOTE)
+	git branch -D $(USER)-merge-oss; git checkout -B $(USER)-merge-oss
+	git merge $(REMOTE)/$(BRANCH)
+	@echo "==========================================================="
+	@echo "Resolve any conflicts, push to private, and submit a PR"
+	@echo "==========================================================="
