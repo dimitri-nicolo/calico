@@ -13,7 +13,9 @@ import (
 var _ = Describe("Normalized IP address tests", func() {
 	It("normalize valid addresses", func() {
 		By("Removing leading zeros for IPv6")
-		Expect(ips.NormalizeIP("0:0::1234")).To(Equal("::1234"))
+		ip, err := ips.NormalizeIP("0:0::1234")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ip).To(Equal("::1234"))
 
 		By("Using consistent case")
 		upper, err := ips.NormalizeIP("::123A")
@@ -23,7 +25,7 @@ var _ = Describe("Normalized IP address tests", func() {
 		Expect(upper).To(Equal(lower))
 
 		By("Converting IPv4 in IPv6 back to IPv4")
-		ip, err := ips.NormalizeIP("::ffff:0102:0304")
+		ip, err = ips.NormalizeIP("::ffff:0102:0304")
 		Expect(err).ToNot(HaveOccurred())
 		Expect(ip).To(Equal("1.2.3.4"))
 
