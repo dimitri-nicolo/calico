@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/license-agent
-GO_BUILD_VER    ?= v0.63
+GO_BUILD_VER    ?= v0.65
 GIT_USE_SSH      = true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 LOCAL_CHECKS     = mod-download
@@ -33,8 +33,8 @@ Makefile.common.$(MAKE_BRANCH):
 
 EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 # Allow local libcalico-go to be mapped into the build container.
-ifdef LIBCALICOGO_PATH
-EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
+ifdef CALICO_PATH
+EXTRA_DOCKER_ARGS += -v $(CALICO_PATH):/go/src/github.com/projectcalico/calico/:ro
 endif
 # SSH_AUTH_DIR doesn't work with MacOS but we can optionally volume mount keys
 ifdef SSH_AUTH_DIR
@@ -168,6 +168,11 @@ cd: image-all cd-common
 ###############################################################################
 # Update pins
 ###############################################################################
+BRANCH=master
+update-calico-pin:
+	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(BRANCH))
+	$(call update_replace_pin,github.com/tigera/api,github.com/tigera/calico-private/api,$(BRANCH))
+
 # Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
 guard-ssh-forwarding-bug:
 	@if [ "$(shell uname)" = "Darwin" ]; then \
@@ -177,14 +182,9 @@ guard-ssh-forwarding-bug:
 	fi;
 
 API_REPO=github.com/tigera/api
-LICENSING_BRANCH?=$(PIN_BRANCH)
-LICENSING_REPO?=github.com/tigera/licensing
-
-update-licensing-pin:
-	$(call update_pin,github.com/tigera/licensing,$(LICENSING_REPO),$(LICENSING_BRANCH))
 
 ## Update dependency pins
-update-pins: guard-ssh-forwarding-bug update-api-pin update-licensing-pin replace-libcalico-pin
+update-pins: guard-ssh-forwarding-bug update-calico-pin
 
 ###############################################################################
 # Utilities
