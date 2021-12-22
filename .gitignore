@@ -5,3 +5,4 @@ bin/
 report/
 Makefile.common*
 .ingress-collector.created*
+.vscode/

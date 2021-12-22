@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/ingress-collector
-GO_BUILD_VER    ?= v0.63
+GO_BUILD_VER    ?= v0.65
 GIT_USE_SSH     := true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 
@@ -14,8 +14,8 @@ RELEASE_BRANCH_PREFIX   ?=release-calient
 DEV_TAG_SUFFIX          ?=calient-0.dev
 
 # Allow libcalico-go and the ssh auth sock to be mapped into the build container.
-ifdef LIBCALICOGO_PATH
-EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
+ifdef CALICO_PATH
+EXTRA_DOCKER_ARGS += -v $(CALICO_PATH):/go/src/github.com/projectcalico/calico/:ro
 endif
 
 EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
@@ -164,6 +164,10 @@ endif
 ###############################################################################
 # Managing the upstream library pins
 ###############################################################################
+BRANCH=master
+update-calico-pin:
+	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(BRANCH))
+	$(call update_replace_pin,github.com/tigera/api,github.com/tigera/calico-private/api,$(BRANCH))
 
 ## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
 guard-ssh-forwarding-bug:
@@ -174,7 +178,7 @@ guard-ssh-forwarding-bug:
 	fi;
 
 ## Update dependency pin
-update-pins: guard-ssh-forwarding-bug proto/felixbackend.pb.go replace-libcalico-pin
+update-pins: guard-ssh-forwarding-bug proto/felixbackend.pb.go update-calico-pin
 
 ###############################################################################
 ## Perform static checks
