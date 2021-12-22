@@ -52,7 +52,7 @@ kibana-image: kibana-bootstrap
 	bash -l -c '\
 		cd kibana && \
 		nvm install && nvm use && \
-		yarn build --docker --skip-docker-ubi --no-oss --release'
+		yarn build --docker-images --skip-docker-ubi --release'
 
 KIBANA_VERSION=$(shell jq -r '.version' kibana/package.json)
 
