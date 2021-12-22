@@ -11,12 +11,12 @@ import (
 
 	lma "github.com/tigera/lma/pkg/elastic"
 
-	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/dpisyncer"
-	"github.com/projectcalico/libcalico-go/lib/health"
-	"github.com/projectcalico/typha/pkg/buildinfo"
-	"github.com/projectcalico/typha/pkg/syncclientutils"
-	"github.com/projectcalico/typha/pkg/syncproto"
+	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/dpisyncer"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
+	"github.com/projectcalico/calico/typha/pkg/buildinfo"
+	"github.com/projectcalico/calico/typha/pkg/syncclientutils"
+	"github.com/projectcalico/calico/typha/pkg/syncproto"
 
 	"github.com/tigera/deep-packet-inspection/pkg/calicoclient"
 	"github.com/tigera/deep-packet-inspection/pkg/config"

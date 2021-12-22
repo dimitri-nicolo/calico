@@ -6,10 +6,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/dpisyncer"
-	"github.com/projectcalico/typha/pkg/buildinfo"
-	"github.com/projectcalico/typha/pkg/syncclientutils"
-	"github.com/projectcalico/typha/pkg/syncproto"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/dpisyncer"
+	"github.com/projectcalico/calico/typha/pkg/buildinfo"
+	"github.com/projectcalico/calico/typha/pkg/syncclientutils"
+	"github.com/projectcalico/calico/typha/pkg/syncproto"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -21,14 +21,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	calicolib "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	"github.com/projectcalico/libcalico-go/lib/backend"
-	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/libcalico-go/lib/backend/k8s"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/libcalico-go/lib/options"
+	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
+	calicolib "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend"
+	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
 
 var _ = Describe("Syncer", func() {

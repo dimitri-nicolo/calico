@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 
 	"github.com/tigera/deep-packet-inspection/pkg/dpiupdater"
 	"github.com/tigera/deep-packet-inspection/pkg/processor"

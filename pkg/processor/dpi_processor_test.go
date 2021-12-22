@@ -13,7 +13,7 @@ import (
 	"github.com/tigera/deep-packet-inspection/pkg/exec"
 	"github.com/tigera/deep-packet-inspection/pkg/processor"
 
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
 var _ = Describe("DPI processor", func() {
