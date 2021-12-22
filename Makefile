@@ -2,7 +2,7 @@
 # Copyright 2019-21 Tigera Inc. All rights reserved.
 ##############################################################################
 PACKAGE_NAME   ?= github.com/tigera/intrusion-detection/controller
-GO_BUILD_VER   ?= v0.63
+GO_BUILD_VER   ?= v0.65
 GIT_USE_SSH     = true
 
 ORGANIZATION=tigera
