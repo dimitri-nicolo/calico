@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM fluent/fluentd:v1.11.1-1.0
+FROM fluent/fluentd:v1.14.3-1.0
 MAINTAINER spike@tigera.io
 
 # Need to define root user explicitly (for remaining setup) and be numeric for k8s validation
 USER 0
 
 RUN apk add --update --virtual .build-deps \
-        build-base=0.5-r1 ruby-dev=2.5.8-r0 \
+        build-base=0.5-r2 ruby-dev=2.7.5-r0 \
  && gem install \
         elasticsearch-api:7.13.3 \
         elasticsearch-transport:7.13.3 \
@@ -33,10 +33,10 @@ RUN apk add --update --virtual .build-deps \
  && gem sources --clear-all \
  && apk del .build-deps \
  && rm -rf /var/cache/apk/* \
-           /home/fluent/.gem/ruby/2.3.0/cache/*.gem
-RUN apk add --no-cache curl=7.64.0-r5 jq=1.6-r0
+           /home/fluent/.gem/ruby/*/cache/*.gem
+RUN apk add --no-cache curl=7.79.1-r0 jq=1.6-r1
 RUN apk add --no-cache ca-certificates && update-ca-certificates
-RUN apk update && apk upgrade libcrypto1
+RUN apk update && apk upgrade libcrypto1.1
 
 ADD elastic_mapping_flows.template /fluentd/etc/elastic_mapping_flows.template
 ADD elastic_mapping_dns.template /fluentd/etc/elastic_mapping_dns.template
