@@ -14,9 +14,8 @@ kbd kexec-tools kmod kmod-libs kpartx krb5-libs libarchive libblkid libcomps
 libcroco libcurl-minimal libdb libdb-utils libdnf libevent libfdisk libibverbs
 libidn2 libkcapi libkcapi-hmaccalc libmetalink libmodulemd libmount libnsl2
 libpcap libpng libpwquality librepo libseccomp libsemanage libsmartcols libsolv
-libtasn1 libtirpc libusbx libuuid libyaml libzstd lua-libs lz4-libs
-nss-3.67.0-6.el8_4.i686 nss-3.67.0-6.el8_4.x86_64
-nss-softokn-3.67.0-6.el8_4.i686 nss-softokn-3.67.0-6.el8_4.x86_64 nss-sysinit
+libtasn1 libtirpc libusbx libuuid libyaml libzstd lua-libs lz4-libs nss-sysinit
+nss-3.67.0-7.el8_5.x86_64
 openldap openssl openssl-libs openssl-pkcs11 os-prober p11-kit p11-kit-trust pam
 pciutils platform-python platform-python-pip platform-python-setuptools
 procps-ng python3-dnf python3-gpg python3-hawkey python3-libcomps python3-libdnf
