@@ -33,7 +33,6 @@ RUN apt purge -y curl \
 && apt purge -y --allow-remove-essential libblkid1 \
 && apt purge -y --allow-remove-essential ncurses-bin \
 && apt purge -y --allow-remove-essential ncurses-base \
-&& apt purge -y --allow-remove-essential libpcre3 \
 && apt purge -y --allow-remove-essential libmount1 \
 && apt purge -y libncursesw6 \
 && apt purge -y libsmartcols1 \
