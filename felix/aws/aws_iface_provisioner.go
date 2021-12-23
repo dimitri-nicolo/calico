@@ -507,7 +507,7 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 		return nil, err
 	}
 
-	// Disassociate any elastic IPs that should no longer be there to we free them up for later re-use.
+	// Disassociate any elastic IPs that should no longer be there to free them up for later re-use.
 	err = m.disassociateUnwantedElasticIPs(awsSnapshot)
 	if err != nil {
 		return nil, err
