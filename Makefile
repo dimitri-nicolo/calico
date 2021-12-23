@@ -36,3 +36,28 @@ image:
 	$(MAKE) -C app-policy image IMAGETAG=$(GIT_VERSION) VALIDARCHES=$(ARCH)
 	$(MAKE) -C typha image IMAGETAG=$(GIT_VERSION) VALIDARCHES=$(ARCH)
 	$(MAKE) -C node image IMAGETAG=$(GIT_VERSION) VALIDARCHES=$(ARCH)
+
+# Merge OSS branch.
+# Expects the following arguments:
+# - OSS_REMOTE: Git remote to use for OSS.
+# - OSS_BRANCH: OSS branch to merge.
+OSS_REMOTE?=open-source
+PRIVATE_REMOTE?=origin
+OSS_BRANCH?=master
+PRIVATE_BRANCH?=master
+merge-open:
+	git fetch $(OSS_REMOTE)
+	git branch -D $(USER)-merge-oss; git checkout -B $(USER)-merge-oss
+	git merge $(OSS_REMOTE)/$(OSS_BRANCH)
+	@echo "==========================================================="
+	@echo "Resolve any conflicts, push to private, and submit a PR"
+	@echo "==========================================================="
+
+os-merge-status:
+	@git fetch $(OSS_REMOTE)
+	@echo "==============================================================================================================="
+	@echo "Showing unmerged commits from calico/$(OSS_BRANCH) that are not in calico-private/$(PRIVATE_BRANCH):"
+	@echo ""
+	@git --no-pager log --pretty='format:%C(auto)%h %aD: %an: %s' --no-merges $(PRIVATE_REMOTE)/$(PRIVATE_BRANCH)..$(OSS_REMOTE)/$(OSS_BRANCH)
+	@echo ""
+	@echo "==============================================================================================================="
