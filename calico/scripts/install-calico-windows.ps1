@@ -1,7 +1,4 @@
----
-layout: null
----
-# Copyright (c) 2020 Tigera, Inc. All rights reserved.
+# Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,19 +12,9 @@ layout: null
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{%- if site.prodname == "Calico" %}
-{%- assign installName = "Calico for Windows" %}
-{%- assign rootDir = "CalicoWindows" %}
-{%- assign zipFileName = "calico-windows.zip" %}
-{%- else %}
-{%- assign installName = "Tigera Calico for Windows" %}
-{%- assign rootDir = "TigeraCalico" %}
-{%- assign zipFileName = "tigera-calico-windows.zip" %}
-{%- endif %}
-
 <#
 .DESCRIPTION
-    This script installs and starts {{site.prodname}} services on a Windows node.
+    This script installs and starts Calico services on a Windows node.
 
     Note: EKS requires downloading kubectl.exe to c:\k before running this script: https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html
 #>
@@ -155,7 +142,7 @@ function GetBackendType()
     if ($Datastore -EQ "kubernetes") {
         $encap=c:\k\kubectl.exe --kubeconfig="$RootDir\calico-kube-config" get felixconfigurations.crd.projectcalico.org default -o jsonpath='{.spec.ipipEnabled}' -n $CalicoNamespace
         if ($encap -EQ "true") {
-            throw "{{site.prodname}} on Linux has IPIP enabled. IPIP is not supported on Windows nodes."
+            throw "Calico on Linux has IPIP enabled. IPIP is not supported on Windows nodes."
         }
 
         $encap=c:\k\kubectl.exe --kubeconfig="$RootDir\calico-kube-config" get felixconfigurations.crd.projectcalico.org default -o jsonpath='{.spec.vxlanEnabled}' -n $CalicoNamespace
@@ -301,18 +288,18 @@ function SetAKSCalicoStaticRules {
 
 function StartCalico()
 {
-    Write-Host "`nStart {{installName}}...`n"
+    Write-Host "`nStart Calico for Windows...`n"
 
     pushd
     cd $RootDir
     .\install-calico.ps1
     popd
-    Write-Host "`n{{installName}} Started`n"
+    Write-Host "`nCalico for Windows Started`n"
 }
 
 $BaseDir="c:\k"
-$RootDir="c:\{{rootDir}}"
-$CalicoZip="c:\{{zipFileName}}"
+$RootDir="c:\CalicoWindows"
+$CalicoZip="c:\calico-windows.zip"
 
 # Must load the helper modules before doing anything else.
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -332,14 +319,8 @@ ipmo -force $helperv2
 
 if (!(Test-Path $CalicoZip))
 {
-{%- if site.prodname == "Calico Enterprise" %}
-    throw "Cannot find {{installName}} zip file $CalicoZip."
-{%- else if site.prodname == "Calico" %}
-    Write-Host "$CalicoZip not found, downloading {{installName}} release..."
+    Write-Host "$CalicoZip not found, downloading Calico for Windows release..."
     DownloadFile -Url $ReleaseBaseURL/$ReleaseFile -Destination c:\calico-windows.zip
-{%- else %}
-    throw "Invalid product name - did prodname in _config.yml change?"
-{%- endif %}
 }
 
 $platform=GetPlatformType
@@ -354,7 +335,7 @@ Exit
 }
 
 Remove-Item $RootDir -Force  -Recurse -ErrorAction SilentlyContinue
-Write-Host "Unzip {{installName}} release..."
+Write-Host "Unzip Calico for Windows release..."
 Expand-Archive -Force $CalicoZip c:\
 
 Write-Host "Setup {{installName}}..."

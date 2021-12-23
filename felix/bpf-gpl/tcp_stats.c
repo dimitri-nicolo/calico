@@ -7,7 +7,7 @@
 #include "socket_lookup.h"
 #include "globals.h"
 
-const volatile struct cali_global_data global_data;
+const volatile struct cali_tc_globals __globals;
 SEC("classifier/tc/calico_tcp_stats")
 int calico_tcp_stats(struct __sk_buff *skb)
 {

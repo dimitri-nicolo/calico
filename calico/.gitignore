@@ -29,6 +29,7 @@ ee.tgz
 
 pinned_versions.yml
 pinned_images.yml
+Makefile.common*
 # Ignore the charts directory created by the Makefile where temporary files are placed
 /charts
 

@@ -8,6 +8,9 @@
   make bin/helm
   export PATH=$PATH:$(pwd)/bin
 
+  # LATEST_RELEASE is set in Netlify UI for environment-variables ONLY for docs.projectcalico.org and projectcalico.docs.tigera.io sites.
+  # Any branch deployed there will have the production ready build that gets deployed at root /
+
   if [ -z "$LATEST_RELEASE" ]; then
     jekyll build --config _config.yml,$(pwd)/netlify/_config_noindex.yml --baseurl /$RELEASE_VERSION --destination _site/$RELEASE_VERSION
     mv _site/$RELEASE_VERSION/404.html _site/404.html

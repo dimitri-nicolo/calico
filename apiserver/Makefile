@@ -58,6 +58,7 @@ KUBECONFIG_DIR? = /etc/kubernetes/admin.conf
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
 #   that variable is evaluated when we declare DOCKER_RUN and siblings.
 ##############################################################################
+
 include ../lib.Makefile
 
 # We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
@@ -237,7 +238,7 @@ run-kubernetes-server: config/crd run-etcd stop-kubernetes-server
 		--rm \
 		-v $(CURDIR):/manifests \
 		-v $(CURDIR)/test/certs:/home/user/certs \
-		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
+		lachlanevenson/k8s-kubectl:${KUBECTL_VERSION} \
 		--kubeconfig=/home/user/certs/kubeconfig \
 		apply -f /manifests/config/crd/
 
@@ -247,7 +248,7 @@ run-kubernetes-server: config/crd run-etcd stop-kubernetes-server
 		--rm \
 		-v $(CURDIR):/manifests \
 		-v $(CURDIR)/test/certs:/home/user/certs \
-		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
+		lachlanevenson/k8s-kubectl:${KUBECTL_VERSION} \
 		--kubeconfig=/home/user/certs/kubeconfig \
 		apply -f /manifests/test/mock-node.yaml
 
@@ -256,9 +257,9 @@ run-kubernetes-server: config/crd run-etcd stop-kubernetes-server
 	docker run \
 		--net=host \
 		--rm \
-		-v $(CURDIR):/manifests \
+		-v  $(CURDIR):/manifests \
 		-v $(CURDIR)/test/certs:/home/user/certs \
-		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
+		lachlanevenson/k8s-kubectl:${KUBECTL_VERSION} \
 		--kubeconfig=/home/user/certs/kubeconfig \
 		apply -f /manifests/test/namespaces.yaml
 
