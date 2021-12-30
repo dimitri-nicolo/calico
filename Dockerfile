@@ -12,14 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM fluent/fluentd:v1.14.3-1.0
+FROM ruby:2.7.5-alpine3.15
 MAINTAINER spike@tigera.io
 
 # Need to define root user explicitly (for remaining setup) and be numeric for k8s validation
 USER 0
 
-RUN apk add --update --virtual .build-deps \
-        build-base=0.5-r2 ruby-dev=2.7.5-r0 \
+RUN apk update \
+ && apk add --no-cache \
+        ca-certificates \
+        ruby ruby-irb ruby-etc ruby-webrick \
+        tini \
+ && apk add --no-cache --virtual .build-deps \
+        build-base linux-headers \
+        ruby-dev gnupg \
+ && echo 'gem: --no-document' >> /etc/gemrc \
+ && gem install oj -v 3.10.18 \
+ && gem install json -v 2.4.1 \
+ && gem install async-http -v 0.54.0 \
+ && gem install ext_monitor -v 0.1.2 \
+ && gem install fluentd -v 1.14.3 \
+ && gem install bigdecimal -v 1.4.4 \
+ && gem install resolv -v 0.2.1 \
  && gem install \
         elasticsearch-api:7.13.3 \
         elasticsearch-transport:7.13.3 \
@@ -33,10 +47,23 @@ RUN apk add --update --virtual .build-deps \
  && gem sources --clear-all \
  && apk del .build-deps \
  && rm -rf /var/cache/apk/* \
-           /home/fluent/.gem/ruby/*/cache/*.gem
-RUN apk add --no-cache curl=7.79.1-r0 jq=1.6-r1
+           /home/fluent/.gem/ruby/*/cache/*.gem \
+           /tmp/* /var/tmp/* \
+           /usr/lib/ruby/gems/*/cache/*.gem \
+           /usr/lib/ruby/gems/2.*/gems/fluentd-*/test
+
+RUN apk add --no-cache curl=7.80.0-r0 jq=1.6-r1
 RUN apk add --no-cache ca-certificates && update-ca-certificates
 RUN apk update && apk upgrade libcrypto1.1
+
+RUN addgroup -S fluent && adduser -S -G fluent fluent \
+    && mkdir -p /fluentd/log \
+    && mkdir -p /fluentd/etc /fluentd/plugins \
+    && chown -R fluent /fluentd && chgrp -R fluent /fluentd
+
+ENV LD_PRELOAD=""
+ENV RUBYLIB="/usr/lib/ruby/gems/3.0.0/gems/resolv-0.2.1/lib"
+ENV FLUENTD_CONF="fluent.conf"
 
 ADD elastic_mapping_flows.template /fluentd/etc/elastic_mapping_flows.template
 ADD elastic_mapping_dns.template /fluentd/etc/elastic_mapping_dns.template
@@ -50,7 +77,7 @@ COPY outputs /fluentd/etc/outputs
 COPY inputs /fluentd/etc/inputs
 COPY filters /fluentd/etc/filters
 
-# Compliance reports logs needs a regex pattern because there will be 
+# Compliance reports logs needs a regex pattern because there will be
 # multiple logs (one per report type), e.g. compliance.network-access.reports.log
 ENV COMPLIANCE_LOG_FILE=/var/log/calico/compliance/compliance.*.reports.log
 ENV FLOW_LOG_FILE=/var/log/calico/flowlogs/flows.log
