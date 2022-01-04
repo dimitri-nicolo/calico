@@ -17,6 +17,9 @@ PROTOC_VER=v0.1
 # Configuration for Semaphore integration.
 ORGANIZATION = tigera
 
+# The Semaphore calico-private ID, used when making calls to the Semaphore API.
+SEMAPHORE_PROJECT_ID=8a309869-f767-49dc-924f-fa927edbf657
+
 # Configure git to access repositories using SSH.
 GIT_USE_SSH = true
 

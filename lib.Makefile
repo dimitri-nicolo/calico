@@ -153,9 +153,9 @@ CALICO_BUILD    = $(GO_BUILD_IMAGE):$(GO_BUILD_VER)
 # Images used in build / test across multiple directories.
 PROTOC_CONTAINER=calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
 ETCD_IMAGE ?= quay.io/coreos/etcd:$(ETCD_VERSION)-$(ARCH)
-ifeq ($(ARCH),amd64)
-# *-amd64 tagged images for etcd are not available until v3.5.0
-ETCD_IMAGE ?= quay.io/coreos/etcd:$(ETCD_VERSION)
+ifeq ($(BUILDARCH),amd64)
+	# *-amd64 tagged images for etcd are not available until v3.5.0
+	ETCD_IMAGE = quay.io/coreos/etcd:$(ETCD_VERSION)
 endif
 
 ifeq ($(GIT_USE_SSH),true)

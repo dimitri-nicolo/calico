@@ -26,6 +26,7 @@ global_job_config:
       - docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
       - checkout
       - git fetch --unshallow || true
+      - cd node
 
 blocks:
   - name: 'Publish Release Binaries'
