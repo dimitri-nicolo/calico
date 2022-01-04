@@ -5,6 +5,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/stretchr/testify/mock"
@@ -371,7 +372,14 @@ func (f *fakeIPAMClient) ReleaseAffinity(ctx context.Context, cidr cnet.IPNet, h
 
 // ReleaseBlockAffinity releases the affinity of the exact block provided.
 func (f *fakeIPAMClient) ReleaseBlockAffinity(ctx context.Context, block *model.AllocationBlock, mustBeEmpty bool) error {
-	panic("not implemented") // TODO: Implement
+	f.Lock()
+	defer f.Unlock()
+
+	cidr := block.CIDR.String()
+	host := strings.TrimPrefix(*block.Affinity, "host:")
+	key := fmt.Sprintf("%s/%s", cidr, host)
+	f.affinitiesReleased[key] = true
+	return nil
 }
 
 // ReleaseHostAffinities releases affinity for all blocks that are affine
