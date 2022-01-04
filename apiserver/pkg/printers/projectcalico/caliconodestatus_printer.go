@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/kubernetes/pkg/printers"
 
-	calico "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
+	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 func CalicoNodeStatusAddHandlers(h printers.PrintHandler) {
