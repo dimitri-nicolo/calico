@@ -8,7 +8,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
 
 // Config contain environment based configuration for all compliance components. Although not all configuration is

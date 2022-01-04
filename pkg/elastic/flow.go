@@ -9,10 +9,9 @@ import (
 	elastic "github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/net"
+
 	"github.com/tigera/api/pkg/lib/numorstring"
-
-	"github.com/projectcalico/libcalico-go/lib/net"
-
 	"github.com/tigera/lma/pkg/api"
 )
 

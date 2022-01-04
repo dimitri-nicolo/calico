@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
+	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 
 	"github.com/tigera/lma/pkg/list"
 )
