@@ -1,0 +1,68 @@
+version: v1.0
+name: Cut Release
+
+execution_time_limit:
+  minutes: 30
+
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
+
+global_job_config:
+  secrets:
+    - name: marvin-github-ssh-private-key
+  prologue:
+    commands:
+      # Correct permissions since they are too open by default:
+      - chmod 0600 ~/.keys/*
+      # Add the key to the ssh agent:
+      - ssh-add ~/.keys/*
+      - checkout
+      - git fetch --unshallow || true
+
+blocks:
+  - name: 'Cut Release'
+    task:
+      jobs:
+        - name: Cut Release
+          env_vars:
+            - name: RELEASE_BRANCH_PREFIX
+              value: release-calient
+            - name: DEV_TAG_SUFFIX
+              value: calient-0.dev
+          commands:
+            - make git-config CONFIRM=true
+            - make cut-release CONFIRM=true
+
+promotions:
+  # Have separate promotions for cutting releases so we can re-run
+  # them individually if they fail, and so we can run them in parallel.
+  - name: Cut API Server Release
+    pipeline_file: ../apiserver/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Cut App Policy Release
+    pipeline_file: ../app-policy/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Cut Calicoctl Release
+    pipeline_file: ../calicoctl/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Cut CNI Plugin Release
+    pipeline_file: ../cni-plugin/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Cut Kube Controllers Release
+    pipeline_file: ../kube-controllers/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Cut Node Release
+    pipeline_file: ../node/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Cut Typha Release
+    pipeline_file: ../typha/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
