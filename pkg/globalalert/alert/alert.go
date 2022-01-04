@@ -7,17 +7,14 @@ import (
 	"reflect"
 	"time"
 
-	lma "github.com/tigera/lma/pkg/elastic"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-
+	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
-	log "github.com/sirupsen/logrus"
-
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	es "github.com/tigera/intrusion-detection/controller/pkg/globalalert/elastic"
+	lma "github.com/tigera/lma/pkg/elastic"
 )
 
 type Alert struct {

@@ -9,17 +9,15 @@ import (
 	"sync"
 	"time"
 
-	apisv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/errorcondition"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
+	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/errorcondition"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
 	"github.com/tigera/intrusion-detection/controller/pkg/runloop"
 )
 
@@ -115,7 +113,7 @@ func updateFeedAfterSuccessfulSearch(feedCacher cacher.GlobalThreatFeedCacher, s
 	toBeUpdated := getCachedFeedResponse.GlobalThreatFeed
 	for i := 1; i <= cacher.MaxUpdateRetry; i++ {
 		log.Debug(fmt.Sprintf("%d/%d attempt to update feed after successful search", i, cacher.MaxUpdateRetry))
-		if toBeUpdated.Spec.Content == apisv3.ThreatFeedContentDomainNameSet {
+		if toBeUpdated.Spec.Content == v3.ThreatFeedContentDomainNameSet {
 			updateAnnotation(toBeUpdated, db.DomainNameSetHashKey, setHash)
 		} else {
 			updateAnnotation(toBeUpdated, db.IpSetHashKey, setHash)

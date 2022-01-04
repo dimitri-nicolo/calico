@@ -12,7 +12,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
@@ -104,7 +104,7 @@ var _ = Describe("Event forwarder", func() {
 
 		eventFwdr := &eventForwarder{
 			id: "fwd-test",
-			logger: logrus.WithFields(logrus.Fields{
+			logger: log.WithFields(log.Fields{
 				"context": "eventforwarder",
 				"uid":     "fwd-test",
 			}),

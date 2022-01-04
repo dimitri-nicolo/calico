@@ -13,14 +13,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/araddon/dateparse"
+	"github.com/olivere/elastic/v7"
+	log "github.com/sirupsen/logrus"
+
 	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	lmaAPI "github.com/tigera/lma/pkg/api"
 	lma "github.com/tigera/lma/pkg/elastic"
-
-	"github.com/araddon/dateparse"
-	"github.com/olivere/elastic/v7"
-	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
@@ -464,7 +463,7 @@ func (e *Elastic) GetSecurityEvents(ctx context.Context, start, end time.Time, a
 
 // PutForwarderConfig saves the given ForwarderConfig object back to the datastore.
 func (e *Elastic) PutForwarderConfig(ctx context.Context, id string, f *db.ForwarderConfig) error {
-	l := log.WithFields(logrus.Fields{"func": "PutForwarderConfig"})
+	l := log.WithFields(log.Fields{"func": "PutForwarderConfig"})
 	// Wait for the SecurityEvent Mapping to be created
 	if err := util.WaitForChannel(ctx, e.forwarderConfigMappingCreated, CreateIndexWaitTimeout); err != nil {
 		return err
@@ -477,7 +476,7 @@ func (e *Elastic) PutForwarderConfig(ctx context.Context, id string, f *db.Forwa
 
 // GetForwarderConfig retrieves the forwarder config (which will be a singleton).
 func (e *Elastic) GetForwarderConfig(ctx context.Context, id string) (*db.ForwarderConfig, error) {
-	l := log.WithFields(logrus.Fields{"func": "GetForwarderConfig"})
+	l := log.WithFields(log.Fields{"func": "GetForwarderConfig"})
 	l.Debugf("Search for config with id[%s]", id)
 
 	searchResult, err := e.c.Search().

@@ -4,8 +4,6 @@
 PACKAGE_NAME   ?= github.com/tigera/intrusion-detection/controller
 GO_BUILD_VER   ?= v0.63
 GIT_USE_SSH     = true
-LIBCALICO_REPO  = github.com/tigera/libcalico-go-private
-API_REPO        = github.com/tigera/api
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_INTRUSION_DETECTION_PROJECT_ID)
@@ -236,16 +234,11 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
-APISERVER_REPO=github.com/tigera/apiserver
-APIMACHINERY_BRANCH=$(PIN_BRANCH)
-LICENSING_BRANCH=$(PIN_BRANCH)
-LICENSING_REPO=github.com/tigera/licensing
+update-pins: guard-ssh-forwarding-bug update-calico-pin
 
-replace-licensing-pin:
-	$(call update_replace_pin,$(LICENSING_REPO),$(LICENSING_REPO),$(LICENSING_BRANCH))
-
-update-pins: guard-ssh-forwarding-bug update-api-pin replace-libcalico-pin replace-apiserver-pin replace-licensing-pin
-
+update-calico-pin:
+	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(BRANCH))
+	$(call update_replace_pin,github.com/tigera/api,github.com/tigera/calico-private/api,$(BRANCH))
 
 ###############################################################################
 # Miscellaneous

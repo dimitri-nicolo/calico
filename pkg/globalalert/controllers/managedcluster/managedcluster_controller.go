@@ -7,23 +7,18 @@ import (
 	"strings"
 	"time"
 
-	lma "github.com/tigera/lma/pkg/elastic"
-
+	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
-
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/tools/cache"
 
-	es "github.com/tigera/intrusion-detection/controller/pkg/elastic"
-
-	log "github.com/sirupsen/logrus"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-
+	es "github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/worker"
 	"github.com/tigera/intrusion-detection/controller/pkg/health"
+	lma "github.com/tigera/lma/pkg/elastic"
 )
 
 // managedClusterController is responsible for watching ManagedCluster resource.

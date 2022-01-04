@@ -6,11 +6,12 @@ import (
 	"context"
 	"sync"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/intrusion-detection/controller/pkg/spyutil"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/intrusion-detection/controller/pkg/spyutil"
 )
 
 type MockGlobalNetworkSetInterface struct {

@@ -11,15 +11,13 @@ import (
 	"strconv"
 	"syscall"
 
+	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/klog/v2"
+
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-	lclient "github.com/tigera/licensing/client"
-	"github.com/tigera/licensing/client/features"
-	"github.com/tigera/licensing/monitor"
-	lma "github.com/tigera/lma/pkg/elastic"
-
-	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
-	client "github.com/projectcalico/libcalico-go/lib/clientv3"
-
 	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/events"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/rbac"
@@ -32,12 +30,13 @@ import (
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/managedcluster"
 	"github.com/tigera/intrusion-detection/controller/pkg/health"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
+	lma "github.com/tigera/lma/pkg/elastic"
 
-	log "github.com/sirupsen/logrus"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/klog/v2"
+	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	lclient "github.com/projectcalico/calico/licensing/client"
+	"github.com/projectcalico/calico/licensing/client/features"
+	"github.com/projectcalico/calico/licensing/monitor"
 )
 
 const (

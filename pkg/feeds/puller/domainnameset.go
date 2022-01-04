@@ -12,15 +12,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
-
-	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"golang.org/x/net/idna"
 	core "k8s.io/client-go/kubernetes/typed/core/v1"
 
+	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/intrusion-detection/controller/pkg/controller"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 

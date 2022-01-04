@@ -5,18 +5,16 @@ package alert
 import (
 	"context"
 
-	lma "github.com/tigera/lma/pkg/elastic"
-
-	"github.com/tigera/intrusion-detection/controller/pkg/health"
-
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
-	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/worker"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/tools/cache"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
+	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/worker"
+	"github.com/tigera/intrusion-detection/controller/pkg/health"
+	lma "github.com/tigera/lma/pkg/elastic"
 )
 
 // globalAlertController is responsible for watching GlobalAlert resource in a cluster.

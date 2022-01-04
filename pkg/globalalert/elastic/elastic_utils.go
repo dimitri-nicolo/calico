@@ -3,7 +3,7 @@
 package elastic
 
 import (
-	"github.com/projectcalico/libcalico-go/lib/validator/v3/query"
+	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 )
 
 type JsonObject map[string]interface{}

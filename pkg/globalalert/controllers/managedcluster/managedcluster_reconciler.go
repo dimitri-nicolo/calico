@@ -7,19 +7,18 @@ import (
 	"fmt"
 	"time"
 
-	lma "github.com/tigera/lma/pkg/elastic"
-
 	log "github.com/sirupsen/logrus"
-	es "github.com/tigera/intrusion-detection/controller/pkg/elastic"
-	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/alert"
-	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
-	"github.com/tigera/intrusion-detection/controller/pkg/health"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+	es "github.com/tigera/intrusion-detection/controller/pkg/elastic"
+	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/alert"
+	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
+	"github.com/tigera/intrusion-detection/controller/pkg/health"
+	lma "github.com/tigera/lma/pkg/elastic"
 )
 
 // managedClusterReconciler is responsible for starting and managing GlobalAlertController for every managed cluster.

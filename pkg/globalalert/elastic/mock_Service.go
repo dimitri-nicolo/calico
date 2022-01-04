@@ -6,6 +6,7 @@ import (
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
