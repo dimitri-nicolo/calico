@@ -643,6 +643,18 @@ var _ = DescribeTable("GlobalAlert Validator",
 		},
 		true,
 	),
+	Entry("vulnerability dataset with aggregation",
+		&api.GlobalAlert{
+			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+			Spec: api.GlobalAlertSpec{
+				Description: "test",
+				Severity:    100,
+				DataSet:     "vulnerability",
+				AggregateBy: []string{"foo", "bar"},
+			},
+		},
+		false,
+	),
 
 	Entry("no metric",
 		&api.GlobalAlert{
