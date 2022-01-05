@@ -115,6 +115,8 @@ require (
 	sigs.k8s.io/kind v0.11.1
 )
 
+require github.com/pkg/profile v1.2.1
+
 require (
 	cloud.google.com/go v0.93.3 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
@@ -271,7 +273,7 @@ replace (
 	k8s.io/apimachinery => k8s.io/apimachinery v0.21.8
 	k8s.io/apiserver => k8s.io/apiserver v0.21.8
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.21.8
-	k8s.io/client-go => github.com/fasaxc/client-go v0.21.8-fix-match-rev
+	k8s.io/client-go => github.com/projectcalico/k8s-client-go v0.21.9-0.20220104180519-6bd7ec39553f
 	k8s.io/cloud-provider => k8s.io/cloud-provider v0.21.8
 	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.21.8
 	k8s.io/code-generator => k8s.io/code-generator v0.21.8

@@ -24,14 +24,11 @@ COPY LICENSE /licenses
 RUN microdnf install shadow-utils
 RUN adduser -U --system --uid 999 kubecontrollergroup
 
-# Need to add status.json so the user group can own it
-RUN mkdir /status
-RUN touch /status/status.json
-RUN chown kubecontrollergroup:kubecontrollergroup /status/status.json
-RUN chmod 664 /status/status.json
-
-# Need to add the root user to our group so tests can run
-RUN usermod -a -G kubecontrollergroup root
+# Make sure the status and pprof files are owned by our user.
+RUN mkdir /status /profiles
+RUN touch /status/status.json && chown 999 /status/status.json
+RUN touch /profiles/mem.pprof && chown 999 /profiles/mem.pprof
+RUN touch /profiles/cpu.pprof && chown 999 /profiles/cpu.pprof
 
 FROM scratch
 ARG GIT_VERSION
@@ -44,6 +41,7 @@ LABEL name="Calico Kubernetes controllers" \
       maintainer="Casey Davenport <casey@tigera.io>"
 
 COPY --from=base /licenses /licenses
+COPY --from=base /profiles /profiles
 COPY --from=base /status /status
 
 COPY --from=base /usr/include /usr/include

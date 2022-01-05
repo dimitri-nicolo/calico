@@ -52,6 +52,8 @@ type RunConfig struct {
 	PrometheusPort         int
 
 	ShortLicensePolling bool
+
+	DebugProfilePort int32
 }
 
 type ControllersConfig struct {
@@ -327,6 +329,9 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 	// Merge prometheus information.
 	if apiCfg.PrometheusMetricsPort != nil {
 		rCfg.PrometheusPort = *apiCfg.PrometheusMetricsPort
+	}
+	if apiCfg.DebugProfilePort != nil {
+		rCfg.DebugProfilePort = *apiCfg.DebugProfilePort
 	}
 
 	// Don't bother looking at this unless the node controller is enabled.

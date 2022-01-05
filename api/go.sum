@@ -250,6 +250,8 @@ github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINE
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/pquerna/cachecontrol v0.0.0-20171018203845-0dec1b30a021/go.mod h1:prYjPmNq4d1NPVmpShWobRqXY3q7Vp+80DqgxxUrUIA=
+github.com/projectcalico/k8s-client-go v0.21.9-0.20220104180519-6bd7ec39553f h1:uaF0FyAe9Gvv7Zy93ex+lWdu6Tw6fokqjwer+Uj880A=
+github.com/projectcalico/k8s-client-go v0.21.9-0.20220104180519-6bd7ec39553f/go.mod h1:FcrKJITUrWtQSX3SCmqswlETK8AcVDTTA5PxDPxNtcg=
 github.com/prometheus/client_golang v0.9.1/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=
 github.com/prometheus/client_golang v1.0.0/go.mod h1:db9x61etRT2tGnBNRi70OPL5FsnadC4Ky3P0J6CfImo=
 github.com/prometheus/client_golang v1.7.1/go.mod h1:PY5Wy2awLA44sXw4AOSfFBetzPP4j5+D6mVACh+pe2M=
@@ -573,8 +575,6 @@ k8s.io/apimachinery v0.21.8 h1:crvdCfg/ueRHOPWReO+DukFvtGBoxyJdV61xkO6RhJU=
 k8s.io/apimachinery v0.21.8/go.mod h1:VdCLtKQwpSUQEWDaRsWR5ESDRqqhY2NeVzo9KCQ9uy0=
 k8s.io/apiserver v0.21.8 h1:JeBpbz0Hf4/zDCn8X6bZ5d2WOgIVHm84ImaA4SNfJzw=
 k8s.io/apiserver v0.21.8/go.mod h1:nnC0gG8nSTQW7Mig4ymKZBMSLzbNqmzPAXQyr1nYuOU=
-k8s.io/client-go v0.21.8 h1:okz2KT8eM2VrRRXQMqS205hulPOfGE112HdFFvwgy+E=
-k8s.io/client-go v0.21.8/go.mod h1:FcrKJITUrWtQSX3SCmqswlETK8AcVDTTA5PxDPxNtcg=
 k8s.io/component-base v0.21.8/go.mod h1:zOBji2NuEFdYJiko+26cR1TkzcyUdO1rxGbAxqorFFE=
 k8s.io/gengo v0.0.0-20200413195148-3a45101e95ac/go.mod h1:ezvh/TsK7cY6rbqRK0oQQ8IAqLxYwwyPxAX1Pzy0ii0=
 k8s.io/klog/v2 v2.0.0/go.mod h1:PBfzABfn139FHAV07az/IF9Wp1bkk3vpT2XSJ76fSDE=
