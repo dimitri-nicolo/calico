@@ -37,12 +37,13 @@ include ../metadata.mk
 ###############################################################################
 PACKAGE_NAME?=github.com/projectcalico/calico/felix
 
-FELIX_IMAGE        ?=tigera/felix
-BUILD_IMAGES       ?=$(FELIX_IMAGE)
-DEV_REGISTRIES     ?=gcr.io/unique-caldron-775/cnx
-RELEASE_REGISTRIES ?=quay.io
+FELIX_IMAGE           ?=tigera/felix
+BUILD_IMAGES          ?=$(FELIX_IMAGE)
+DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
+RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?= release-calient
 DEV_TAG_SUFFIX        ?= calient-0.dev
+
 LIBBPF_PATH=bpf-gpl/include/libbpf/src
 LIBBPF_CONTAINER_PATH=/go/src/github.com/projectcalico/calico/felix/$(LIBBPF_PATH)
 BPFGPL_PATH=/go/src/github.com/projectcalico/calico/felix/bpf-gpl
@@ -70,13 +71,13 @@ include ../lib.Makefile
 
 FV_ETCDIMAGE  ?=quay.io/coreos/etcd:$(ETCD_VERSION)-$(BUILDARCH)
 FV_K8SIMAGE=calico/go-build:$(GO_BUILD_VER)
-FV_TYPHAIMAGE ?=calico/typha:master-$(BUILDARCH)
+FV_TYPHAIMAGE ?=tigera/typha:master-$(BUILDARCH)
 FV_FELIXIMAGE ?=$(FELIX_IMAGE)-test:latest-$(BUILDARCH)
 
 # If building on amd64 omit the arch in the container name.  Fixme!
 ifeq ($(BUILDARCH),amd64)
 	FV_ETCDIMAGE=quay.io/coreos/etcd:$(ETCD_VERSION)
-	FV_TYPHAIMAGE=calico/typha:latest
+	FV_TYPHAIMAGE=tigera/typha:latest
 endif
 
 # Total number of batches to split the tests into.  In CI we set this to say 5 batches,

@@ -495,7 +495,7 @@ pod2daemon.tar:
 
 calicoctl.tar:
 	make -C ../calicoctl image
-	docker save --output $@ calico/ctl:latest-$(ARCH)
+	docker save --output $@ tigera/calicoctl:latest-$(ARCH)
 
 kube-controllers.tar:
 	make -C ../kube-controllers image
