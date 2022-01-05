@@ -20,7 +20,8 @@ FROM --platform=linux/arm64 registry.access.redhat.com/ubi8/ubi-minimal:8.5 as u
 COPY --from=qemu /usr/bin/qemu-aarch64-static /usr/bin/
 
 RUN mkdir /licenses
-COPY LICENSE /licenses
+# Enterprise version is not Apache licensed and doesn't have a LICENSE file
+#COPY LICENSE /licenses
 
 FROM scratch
 
