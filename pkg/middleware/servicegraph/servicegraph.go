@@ -37,10 +37,10 @@ func NewServiceGraphHandler(
 	cfg *Config,
 ) http.Handler {
 	return NewServiceGraphHandlerWithBackend(ctx, &realServiceGraphBackend{
-		ctx:              ctx,
 		authz:            authz,
 		elastic:          elasticClient,
 		clientSetFactory: clientSetFactory,
+		config:           cfg,
 	}, cfg)
 }
 

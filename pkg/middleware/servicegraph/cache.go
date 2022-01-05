@@ -45,11 +45,12 @@ func NewServiceGraphCache(
 	cfg *Config,
 ) ServiceGraphCache {
 	sgc := &serviceGraphCache{
-		cache:   make(map[cacheKey]*cacheData),
+		ctx:     ctx,
+		cache:   make(map[cacheKey]*cacheEntry),
 		backend: backend,
 		cfg:     cfg,
 	}
-	go sgc.backgroundCacheUpdateLoop(ctx)
+	go sgc.backgroundCacheUpdateLoop()
 	return sgc
 }
 
@@ -80,21 +81,25 @@ type ServiceGraphData struct {
 	Events                []Event
 	ServiceLabels         map[v1.NamespacedName]LabelSelectors
 	ResourceLabels        map[v1.NamespacedName]LabelSelectors
+	Truncated             bool
 }
 
 type serviceGraphCache struct {
+	// The process context.
+	ctx context.Context
+
 	// The service graph backend.
 	backend ServiceGraphBackend
 
 	// The service graph config
 	cfg *Config
 
-	// We cache a number of different sets of data. When memory usage is to high we'll age out the least used entries.
+	// We cache a number of different sets of data.
 	lock  sync.Mutex
-	cache map[cacheKey]*cacheData
+	cache map[cacheKey]*cacheEntry
 
 	// Cached data queue in the order of most recently accessed first.
-	queue cacheDataQueue
+	queue cacheEntryQueue
 }
 
 // GetCacheSize returns the current number of entries in the cache. Mostly for testing purposes.
@@ -155,6 +160,7 @@ func (s *serviceGraphCache) GetFilteredServiceGraphData(ctx context.Context, rd 
 		TimeIntervals: []lmav1.TimeRange{cacheData.timeRange},
 		ServiceGroups: NewServiceGroups(),
 		NameHelper:    nameHelper,
+		Truncated:     cacheData.truncated(),
 	}
 
 	// Filter the L3 flows based on RBAC. All other graph content is removed through graph pruning. Note that L3 logs
@@ -249,111 +255,163 @@ func (s *serviceGraphCache) getRawDataForRequest(ctx context.Context, rd *Reques
 		log.WithError(err).Infof("getRawDataForRequest took %s", time.Since(start))
 	}()
 
-	// Convert the time range to a set of windows that we would cache.
+	// Convert the time range to a key.
 	key, kerr := s.calculateKey(rd)
 	if kerr != nil {
 		return nil, err
 	}
-	log.Debugf("Getting raw data for %s", key)
+	logCxt := log.WithField("key", key)
+	logCxt.Debug("Getting raw entry")
 
 	// Lock to access the cache. Grab the current entry or create a new entry and kick off a query. This approach allows
-	// multiple concurrent accesses of the same data - but only one goroutine will create a new entry and kick off a
+	// multiple concurrent accesses of the same entry - but only one goroutine will create a new entry and kick off a
 	// query.
 	s.lock.Lock()
+	entry := s.getEntry(key)
 	var data *cacheData
 
-	if rd.ServiceGraphRequest.ForceRefresh {
-		// Requested a forced refresh. If there is already cached data that is not pending then delete that data.
-		if data = s.getData(key); data != nil {
-			select {
-			case <-data.pending:
-				// The cached data is not pending, so remove it - this will force a refresh.
-				s.removeData(data)
-			default:
-				// The cached data is still pending, so there is no need to force another refresh.
+	if entry == nil {
+		// There is no entry, so create a new one - this will kick off async population of the data.
+		logCxt.Debug("Creating new cache entry")
+		entry = s.newEntry(key)
+		data = entry.data
+	} else {
+		// There is an existing entry.
+		logCxt.Debug("Using existing cache entry")
+		data = entry.data
+
+		if rd.ServiceGraphRequest.ForceRefresh {
+			logCxt.Debug("Forced update requested")
+
+			// A forced refresh has been requested. If there is no update currently in progress then trigger one.
+			if entry.update == nil {
+				logCxt.Debug("Triggering fresh update")
+				s.updateEntry(entry)
 			}
+			data = entry.update
 		}
 	}
 
-	if data = s.getData(key); data == nil {
-		data = newCacheData(key, time.Now().UTC())
-		s.addData(data)
-
-		// Kick off the query on a go routine so we can unlock and unblock other go routines.
-		go func() {
-			s.populateData(data)
-
-			// If the entry needs discarding then remove it...
-			s.lock.Lock()
-			defer s.lock.Unlock()
-			if data.discard() {
-				s.removeData(data)
-			}
-
-			// and tidy the cache to maintain cache size and age out old entries.
-			s.tidyCache()
-		}()
-	} else {
-		log.Infof("Responding to query using cached data")
-		s.touchData(data)
-	}
+	// Increment the count of requests.
+	entry.requests++
 
 	// Release the lock.
 	s.lock.Unlock()
 
-	// Wait for the data to either be ready or to have errored.
+	// When we exit, decrement the requests count again and touch the entry to update access times. We need the lock to
+	// do this.
+	defer func() {
+		s.lock.Lock()
+		entry.requests--
+		s.touchEntry(entry)
+		s.lock.Unlock()
+	}()
+
 	select {
 	case <-ctx.Done():
+		logCxt.Debug("Request context cancelled before request was fulfilled")
+		if ctx.Err() == context.DeadlineExceeded {
+			// This was a timeout, so return an error indicating the query progress.
+			return nil, NewCacheTimeoutError(time.Since(data.created))
+		}
 		return nil, ctx.Err()
 	case <-data.pending:
 	}
-	if data.err != nil {
+
+	// We can still return truncated data provided we at least have L3 data.
+	if data.err != nil && (data.err != DataTruncatedError || len(data.l3) == 0) {
+		logCxt.Debug("Request fulfilled with error response")
 		return nil, data.err
 	}
 
+	logCxt.Debug("Request fulfilled successfully")
 	return data, nil
 }
 
-// getData returns the cached data for the specified key.
+// getEntry returns the cached data for the specified key.
 //
 // Lock is held by caller.
-func (s *serviceGraphCache) getData(k cacheKey) *cacheData {
+func (s *serviceGraphCache) getEntry(k cacheKey) *cacheEntry {
 	return s.cache[k]
 }
 
-// touchData updates the accessed time and moves the data to the front of the queue.
+// newEntry creates a new entry and kicks off the data population.
+func (s *serviceGraphCache) newEntry(key cacheKey) *cacheEntry {
+	// Create a new entry and add it to the queue.
+	ctx, cancel := context.WithCancel(s.ctx)
+	entry := &cacheEntry{
+		ctx:      ctx,
+		cancel:   cancel,
+		cacheKey: key,
+		accessed: time.Now().UTC(),
+	}
+	s.addEntry(entry)
+
+	// Kick off an update for this entry.
+	s.updateEntry(entry)
+
+	// For entry creation, the update and the main data are the same thing - so copy the update pointer across.
+	entry.data = entry.update
+
+	return entry
+}
+
+// touchEntry updates the accessed time and moves the data to the front of the queue.
 //
 // Lock is held by caller.
-func (s *serviceGraphCache) touchData(d *cacheData) {
+func (s *serviceGraphCache) touchEntry(d *cacheEntry) {
 	d.accessed = time.Now().UTC()
 	s.queue.add(d)
 }
 
-// removeData removes the data from the cache.
+// removeEntry removes the data from the cache.
 //
 // Lock is held by caller.
-func (s *serviceGraphCache) removeData(d *cacheData) {
+func (s *serviceGraphCache) removeEntry(d *cacheEntry) {
 	delete(s.cache, d.cacheKey)
 	s.queue.remove(d)
 }
 
-// addData adds the data to the cache.
+// addEntry adds the data to the cache.
 //
 // Lock is held by caller.
-func (s *serviceGraphCache) addData(d *cacheData) {
+func (s *serviceGraphCache) addEntry(d *cacheEntry) {
 	s.cache[d.cacheKey] = d
 	s.queue.add(d)
 }
 
-// replaceData replaces the data in the cache and ensures it maintains its position in the access queue.
+// updateEntry ensures an update is in progress for the entry. On return entry.update is non-nil.
 //
 // Lock is held by caller.
-func (s *serviceGraphCache) replaceData(d *cacheData) {
-	old := s.cache[d.cacheKey]
-	if old != nil {
-		s.cache[d.cacheKey] = d
-		s.queue.replace(old, d)
+func (s *serviceGraphCache) updateEntry(e *cacheEntry) {
+	if e.update != nil {
+		// An update is already in progress so nothing more to do here.
+		return
 	}
+	// Kick off the query on a go routine so we can unlock and unblock other go routines.
+	e.update = newCacheData(e.cacheKey)
+	go func() {
+		s.populateData(e, e.update)
+
+		// If the entry needs discarding then remove it...
+		s.lock.Lock()
+		defer s.lock.Unlock()
+
+		// Copy across the update to the main data for the entry.
+		if e.update.err == nil {
+			e.data = e.update
+		}
+		e.update = nil
+
+		// Discard the entry if it is errored and the error is not a truncated error.  We maintain truncation errors
+		// because we don't want the client to keep triggering this query.
+		if e.data.err != nil && e.data.err != DataTruncatedError {
+			s.removeEntry(e)
+		}
+
+		// and tidy the cache to maintain cache size and age out old entries.
+		s.tidyCache()
+	}()
 }
 
 // tidyCache is called after adding new entries to the cache, or during the update poll. It removes oldest entries from
@@ -362,30 +420,66 @@ func (s *serviceGraphCache) replaceData(d *cacheData) {
 //
 // Lock is held by caller.
 func (s *serviceGraphCache) tidyCache() {
-	// Access cutoff time.
-	cutoff := time.Now().UTC().Add(-s.cfg.ServiceGraphCachePolledEntryAgeOut)
+	// Aged out cutoff time for slow queries that have not compeleted based on last access.
+	cutoff := time.Now().UTC().Add(-s.cfg.ServiceGraphCacheSlowQueryEntryAgeOut)
 
-	// Remove all aged-out relative time entries - this avoid unnecessary polling of elastic.
-	data := s.queue.first
-	for data != nil {
-		next := data.next
-		if data.relative && data.accessed.Before(cutoff) {
-			log.Debugf("Removing aged out cache entry: %s", data.cacheKey)
-			s.removeData(data)
+	// Remove any entries that have excessively slow queries and are no longer required by any user.
+	entry := s.queue.first
+	for entry != nil {
+		next := entry.next
+
+		data := entry.data
+		select {
+		case <-data.pending:
+			// The data is already populated, so does not require the slow-query handling.
+		default:
+			// The data is still pending and may need the slow-query handling.
+			if entry.requests == 0 && entry.accessed.Before(cutoff) {
+				// There are no requests waiting for this data, it is not yet populated and it was last accessed before
+				// the slow-query cut-off time.  Cancel the query and then remove the data.
+				log.Infof("Removing aged out unpopulated cache entry and canceling query: %s", entry.cacheKey)
+				entry.cancel()
+				s.removeEntry(entry)
+			}
 		}
-		data = next
+
+		entry = next
 	}
 
-	// Remove oldest entries to maintain cache size.  It is fine if this removes entries that are still pending - any
-	// API call that is waiting for the data already has the data pointer and that data will be still be updated.
-	for len(s.cache) > s.cfg.ServiceGraphCacheMaxEntries {
-		log.Debugf("Removing cache entry to keep cache size maintained: %s", s.queue.last.cacheKey)
-		s.removeData(s.queue.last)
+	// Aged out cutoff time based on last access.
+	cutoff = time.Now().UTC().Add(-s.cfg.ServiceGraphCachePolledEntryAgeOut)
+
+	// Remove all aged-out relative time entries - this avoids unnecessary polling of elastic.
+	entry = s.queue.first
+	for entry != nil {
+		next := entry.next
+		if entry.relative && entry.accessed.Before(cutoff) {
+			log.Debugf("Removing aged out cache entry: %s", entry.cacheKey)
+			s.removeEntry(entry)
+		}
+		entry = next
+	}
+
+	// Remove oldest entries to maintain cache size, but don't remove entries that are actively being requested.
+	entry = s.queue.last
+	for entry != nil {
+		if len(s.cache) <= s.cfg.ServiceGraphCacheMaxEntries {
+			// Cache size is within limits, so exit.
+			break
+		}
+
+		// Remove oldest entries that are not actively being requested.
+		prev := entry.prev
+		if entry.requests == 0 {
+			log.Debugf("Removing cache entry to keep cache size maintained: %s", entry.cacheKey)
+			s.removeEntry(entry)
+		}
+		entry = prev
 	}
 }
 
 // backgroundCacheUpdateLoop loops until done, updating cache entries every tick.
-func (s *serviceGraphCache) backgroundCacheUpdateLoop(ctx context.Context) {
+func (s *serviceGraphCache) backgroundCacheUpdateLoop() {
 	loopTicker := jitter.NewTicker(s.cfg.ServiceGraphCachePollLoopInterval, s.cfg.ServiceGraphCachePollLoopInterval/10)
 	defer loopTicker.Stop()
 	queryTicker := jitter.NewTicker(s.cfg.ServiceGraphCachePollQueryInterval, s.cfg.ServiceGraphCachePollQueryInterval/10)
@@ -393,35 +487,42 @@ func (s *serviceGraphCache) backgroundCacheUpdateLoop(ctx context.Context) {
 
 	for {
 		select {
-		case <-ctx.Done():
+		case <-s.ctx.Done():
 			return
 		case <-loopTicker.C:
 			log.Debug("Starting cache update cycle")
 		}
 
-		// Grab the lock and construct the set of cache datas that need updating.
-		var datasToUpdate []*cacheData
+		// Grab the lock and construct the set of cache entries that need updating.
+		var entriesToUpdate []*cacheEntry
 		createdCutoff := time.Now().Add(-s.cfg.ServiceGraphCachePollLoopInterval / 2)
 		settleCutoff := time.Now().Add(-s.cfg.ServiceGraphCacheDataSettleTime)
 
 		// Start by tidying the cache and then loop through remaining cache entries to see which need updating.
 		s.lock.Lock()
 		s.tidyCache()
-		for data := s.queue.first; data != nil; data = data.next {
-			if data.needsUpdating(createdCutoff, settleCutoff) {
+		for entry := s.queue.last; entry != nil; entry = entry.prev {
+			if entry.needsUpdating(createdCutoff, settleCutoff) {
 				// This cache entry needs updating.
-				datasToUpdate = append(datasToUpdate, data)
+				entriesToUpdate = append(entriesToUpdate, entry)
 			}
 		}
 		s.lock.Unlock()
 
-		for _, data := range datasToUpdate {
-			log.Debugf("Checking cache entry: %s", data.cacheKey)
+		// Process the entries on a ticker to avoid a deluge of requests. Each request kicks off a background goroutine
+		// so that slow queries will not block this processing.
+		for _, entry := range entriesToUpdate {
+			log.Debugf("Checking cache entry: %s", entry.cacheKey)
 			select {
-			case <-ctx.Done():
+			case <-s.ctx.Done():
 				return
 			case <-queryTicker.C:
-				s.updateCachedData(data)
+				// Hold the lock while we kick off an update.
+				s.lock.Lock()
+				if entry.needsUpdating(createdCutoff, settleCutoff) {
+					s.updateEntry(entry)
+				}
+				s.lock.Unlock()
 			}
 		}
 
@@ -447,31 +548,9 @@ func (s *serviceGraphCache) calculateKey(rd *RequestData) (cacheKey, error) {
 	}, nil
 }
 
-// updateCachedData performs a new query for a cache entry and then replaces the existing entry with the update.
-func (s *serviceGraphCache) updateCachedData(dataOld *cacheData) {
-	log.Debugf("Updating cache entry: %s", dataOld.cacheKey)
-
-	dataNew := newCacheData(dataOld.cacheKey, dataOld.accessed)
-	s.populateData(dataNew)
-
-	// grab the lock while we update the cache.
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	if dataNew.discard() || (dataNew.err != nil && dataOld.err == nil) {
-		// The latest attempt to get data resulted in an error. There is a non-errored entry in the cache, so just keep
-		// that one.
-		log.Debugf("Error retrieving data, keep existing data: %s", dataOld.cacheKey)
-		return
-	}
-
-	// Replace the entry with the new one.
-	s.replaceData(dataNew)
-}
-
-// populateData performs the various queries to get raw log data and updates the cacheData.
-func (s *serviceGraphCache) populateData(d *cacheData) {
-	log.Debugf("Populating data from elastic and k8s queries: %s", d.cacheKey)
+// populateData performs the various queries to get raw log data and updates the cacheEntry.
+func (s *serviceGraphCache) populateData(e *cacheEntry, d *cacheData) {
+	log.Debugf("Populating data from elastic and k8s queries: %s", e.cacheKey)
 
 	// When this finishes, close the pending channel so threads waiting for this to populate can complete.
 	defer close(d.pending)
@@ -491,72 +570,59 @@ func (s *serviceGraphCache) populateData(d *cacheData) {
 	var errL3, errL7, errDNS, errEvents error
 	var errServiceLabels, errReplicaSetsLabels, errStatefulSetsLabels, errDaemonSetsLabels, errPodsLabels error
 
-	// Determine the flow config - we need this to process some of the flow data correctly.
-	flowConfig, err := s.backend.GetFlowConfig(d.cluster)
+	// Determine the flow config - we need this to process the flow data correctly.
+	flowConfig, err := s.backend.GetFlowConfig(e.ctx, e.cluster)
 	if err != nil {
 		log.WithError(err).Error("failed to get felix flow configuration")
 		d.err = err
 		return
 	}
 
-	// Construct a time range for this data.
-	var tr lmav1.TimeRange
-	if d.relative {
-		tr.From = d.created.Add(time.Duration(-d.start) * time.Second)
-		tr.To = d.created.Add(time.Duration(-d.end) * time.Second)
-	} else {
-		tr.From = time.Unix(d.start, 0)
-		tr.To = time.Unix(d.end, 0)
-	}
-
-	// Set the actual time range in the data.
-	d.timeRange = tr
-
 	// Run simultaneous queries to get the L3, L7 and events data.
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		rawL3, errL3 = s.backend.GetL3FlowData(d.cluster, tr, flowConfig)
+		rawL3, errL3 = s.backend.GetL3FlowData(e.ctx, e.cluster, d.timeRange, flowConfig)
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		rawL7, errL7 = s.backend.GetL7FlowData(d.cluster, tr)
+		rawL7, errL7 = s.backend.GetL7FlowData(e.ctx, e.cluster, d.timeRange)
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		rawDNS, errDNS = s.backend.GetDNSData(d.cluster, tr)
+		rawDNS, errDNS = s.backend.GetDNSData(e.ctx, e.cluster, d.timeRange)
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		rawEvents, errEvents = s.backend.GetEvents(d.cluster, tr)
+		rawEvents, errEvents = s.backend.GetEvents(e.ctx, e.cluster, d.timeRange)
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		serviceLabels, errServiceLabels = s.backend.GetServiceLabels(d.cluster)
+		serviceLabels, errServiceLabels = s.backend.GetServiceLabels(e.ctx, e.cluster)
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		replicaSetsLabels, errReplicaSetsLabels = s.backend.GetReplicaSetLabels(d.cluster)
+		replicaSetsLabels, errReplicaSetsLabels = s.backend.GetReplicaSetLabels(e.ctx, e.cluster)
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		statefulSetsLabels, errStatefulSetsLabels = s.backend.GetStatefulSetLabels(d.cluster)
+		statefulSetsLabels, errStatefulSetsLabels = s.backend.GetStatefulSetLabels(e.ctx, e.cluster)
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		daemonSetsLabels, errDaemonSetsLabels = s.backend.GetDaemonSetLabels(d.cluster)
+		daemonSetsLabels, errDaemonSetsLabels = s.backend.GetDaemonSetLabels(e.ctx, e.cluster)
 	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		podsLabels, errPodsLabels = s.backend.GetPodsLabels(d.cluster)
+		podsLabels, errPodsLabels = s.backend.GetPodsLabels(e.ctx, e.cluster)
 	}()
 	wg.Wait()
 	if errL3 != nil {
@@ -588,6 +654,7 @@ func (s *serviceGraphCache) populateData(d *cacheData) {
 		d.err = errPodsLabels
 	}
 
+	// Store results - even if an error was returned, some results may have still been returned as well.
 	d.l3 = rawL3
 	d.l7 = rawL7
 	d.dns = rawDNS
@@ -617,7 +684,7 @@ func (s *serviceGraphCache) populateData(d *cacheData) {
 		log.Debug(" ========= End of tracing ========= ")
 	}
 
-	log.Debugf("Updated data: %s", d.cacheKey)
+	log.Debugf("Updated data: %s", e.cacheKey)
 }
 
 func addValues(source map[v1.NamespacedName]LabelSelectors, newValues map[v1.NamespacedName]LabelSelectors) map[v1.NamespacedName]LabelSelectors {
@@ -632,40 +699,63 @@ func addValues(source map[v1.NamespacedName]LabelSelectors, newValues map[v1.Nam
 	return source
 }
 
-// cacheData contains data for a requested window.
-type cacheData struct {
+// cacheEntry contains entry for a requested window.
+type cacheEntry struct {
 	cacheKey
 
-	// Channel is closed once data has been fetched for the first time.
-	pending chan struct{}
+	// Context and cancel. The parent context is the main process context rather than the request context since the
+	// cache population is handled by the cache and not by the request. The request triggers the cache to populate.
+	// The cache needs to cancel long running requests that are no longer explicitly required by any clients.
+	ctx    context.Context
+	cancel context.CancelFunc
 
 	// ==== lock required for accessing the following data ====
 
 	// The previous and next most recently accessed entries. A nil entry indicates the end of the queue (see
-	// cacheDataQueue below).
-	prev *cacheData
-	next *cacheData
+	// cacheEntryQueue below).
+	prev *cacheEntry
+	next *cacheEntry
 
-	// The time this entry was last accessed. We use this to start removing relative time entries that have not been
-	// accessed for some amount of time so that we don't just keep querying for ever. Fixed time entries can remain in
-	// the cache until they are aged out through cache size and access order.
+	// Requests waiting for this data. Incremented upon request and decremented when the request is fulfilled.
+	requests int
+
+	// The time this entry was last accessed and is updated upon returning the response. This is used to mainain the
+	// cache entries based on time, in particular the tidyCache processing ages out the following:
+	// - relative time entries that have not been accessed for some amount of time arae removed so that we don't just
+	//   keep querying forever (*)
+	// - long-running queries that are no longer being requested by the client to avoid queries that the user has
+	//   effectively aborted.
+	//
+	// (*) Note that only relative time entries (e.g. now-1hr->now) are continuously updated in the background. Fixed
+	//     time entries (e.g. 1p->3:30p) are not updated indefinitely and therefore can remain in the cache until they
+	//     are removed due to cache size limits.
 	accessed time.Time
 
-	// ==== cached data:  This is read safe without any locks once the pending channel is closed ====
+	// Active data associated with this cache entry. This is always non-nil.
+	data *cacheData
+
+	// Pending update.  There can only be one pending update for each cache entry - this avoids the situation where we
+	// have a background update happening at the same time as a forced update request.
+	update *cacheData
+}
+
+// cacheData contains the queried data and is part of the cacheEntry.
+type cacheData struct {
+	// Channel is closed once data has been fetched.
+	pending chan struct{}
 
 	// The time this entry was created.
 	created time.Time
 
-	// Error obtained attempting to fetch the data. If a failure occurred the data may be re-queried in the background,
-	// this will result in a new cacheData entry that will replace this entry - the access position will remain the
-	// same though - so aging-out processing can still occur based on the user access of the data. Pre-loaded data
-	// is always added to the end of the queue.
+	// ==== cached data:  This is read safe without any locks once the pending channel is closed ====
+
+	// Error obtained attempting to fetch the data.
 	err error
 
 	// The time range for this data.
 	timeRange lmav1.TimeRange
 
-	// The L3, L7 and events data.
+	// The queried data.
 	l3             []L3Flow
 	l7             []L7Flow
 	dns            []DNSLog
@@ -674,55 +764,77 @@ type cacheData struct {
 	resourceLabels map[v1.NamespacedName]LabelSelectors
 }
 
-func newCacheData(key cacheKey, accessed time.Time) *cacheData {
+func (d *cacheData) truncated() bool {
+	return d.err == DataTruncatedError
+}
+
+func newCacheData(key cacheKey) *cacheData {
+	// Construct a time range for this data.
+	created := time.Now().UTC()
+	var tr lmav1.TimeRange
+	if key.relative {
+		tr.From = created.Add(time.Duration(-key.start) * time.Second)
+		tr.To = created.Add(time.Duration(-key.end) * time.Second)
+	} else {
+		tr.From = time.Unix(key.start, 0)
+		tr.To = time.Unix(key.end, 0)
+	}
+
 	return &cacheData{
-		cacheKey: key,
-		pending:  make(chan struct{}),
-		created:  time.Now().UTC(),
-		accessed: accessed,
+		pending:   make(chan struct{}),
+		created:   created,
+		timeRange: tr,
 	}
 }
 
-// discard returns true if this entry only contains errors and is therefore not worth caching.
-func (d *cacheData) discard() bool {
-	return d.err != nil && len(d.l3) == 0 && len(d.l7) == 0 && len(d.events) == 0
-}
-
 // needsUpdating returns true if this particular cache data should be updated.
-func (d *cacheData) needsUpdating(createdCutoff, settleCutoff time.Time) bool {
+//
+// Lock should be held by caller.
+func (e *cacheEntry) needsUpdating(createdCutoff, settleCutoff time.Time) bool {
+	if e.update != nil {
+		// An update is already in progress.
+		return false
+	}
+	if e.next == nil && e.prev == nil {
+		// Entry is no longer in queue which means it must have been discarded.
+		return false
+	}
+
+	// No update is in progess. If the original request is not pending then check if the creation time indicates we
+	// should update.
 	select {
-	case <-d.pending:
-		// Data is populated.
-		if d.err != nil {
+	case <-e.data.pending:
+		// Data is populated. Check creation time.
+		if e.data.err != nil {
 			// Failed to previously fetch the data and so does need updating.
 			return true
-		} else if createdCutoff.Before(d.created) {
+		} else if createdCutoff.Before(e.data.created) {
 			// This entry was created recently and so does not need updating.
 			return false
-		} else if d.relative {
+		} else if e.relative {
 			// This indicates a time relative to "now". This entry should be updated.
 			return true
-		} else if settleCutoff.Before(time.Unix(d.end, 0)) {
+		} else if settleCutoff.Before(time.Unix(e.end, 0)) {
 			// The entry is not relative to now and the end time of the entry is sufficiently recent we should do an
 			// update to allow for late arriving data.
 			return true
 		}
 		return false
 	default:
-		// Still pending an update, so does not need updating.
+		// Still pending the original request so does not need updating.
 		return false
 	}
 }
 
-// cacheDataQueue is a queue struct used for queueing cacheData for access order.
-type cacheDataQueue struct {
+// cacheEntryQueue is a queue struct used for queueing cacheEntry for access order.
+type cacheEntryQueue struct {
 	// Track the order these cached intervals are accessed.
-	first *cacheData
-	last  *cacheData
+	first *cacheEntry
+	last  *cacheEntry
 }
 
 // add adds the cached data to the front of the queue. This may be called with data already in the queue.
-func (q *cacheDataQueue) add(d *cacheData) {
+func (q *cacheEntryQueue) add(d *cacheEntry) {
 	if q.first == d {
 		// Already the most recently accessed entry.
 		return
@@ -741,7 +853,7 @@ func (q *cacheDataQueue) add(d *cacheData) {
 }
 
 // add removes the cached data from the queue. This may be called with data not in the queue.
-func (q *cacheDataQueue) remove(d *cacheData) {
+func (q *cacheEntryQueue) remove(d *cacheEntry) {
 	prev := d.prev
 	next := d.next
 
@@ -761,28 +873,7 @@ func (q *cacheDataQueue) remove(d *cacheData) {
 	d.next = nil
 }
 
-// replace replaces the old cached data with the new data maintaining the position in the queue. This may be called
-// with data not in the queue.
-func (q *cacheDataQueue) replace(dataOld, dataNew *cacheData) {
-	dataNew.prev = dataOld.prev
-	dataNew.next = dataOld.next
-
-	if dataNew.prev != nil {
-		dataNew.prev.next = dataNew
-	} else if q.first == dataOld {
-		q.first = dataNew
-	}
-	if dataNew.next != nil {
-		dataNew.next.prev = dataNew
-	} else if q.last == dataOld {
-		q.last = dataNew
-	}
-
-	dataOld.prev = nil
-	dataOld.next = nil
-}
-
-// cacheKey is a key for accessing cacheData. It is basically a time and window combination, allowing for times
+// cacheKey is a key for accessing cacheEntry. It is basically a time and window combination, allowing for times
 // relative to "now".   A time range "now-15m to now" will have the same key irrespective of the actual time (now).
 type cacheKey struct {
 	// Whether the time is absolute or relative to now.

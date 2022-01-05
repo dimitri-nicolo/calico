@@ -3,7 +3,6 @@ package servicegraph
 
 import (
 	"context"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -65,15 +64,14 @@ var (
 )
 
 // GetDNSClientData queries and returns the set of DNS logs.
-func GetDNSClientData(ctx context.Context, es lmaelastic.Client, cluster string, tr lmav1.TimeRange) (logs []DNSLog, err error) {
-	// Track the total buckets queried and the response flows.
-	var totalBuckets int
-
-	// Trace stats at debug level.
-	start := time.Now()
-	log.Debug("GetDNSClientData called")
+func GetDNSClientData(
+	ctx context.Context, es lmaelastic.Client, cluster string, tr lmav1.TimeRange,
+	cfg *Config,
+) (logs []DNSLog, err error) {
+	// Trace progress.
+	progress := newElasticProgress("dns", tr)
 	defer func() {
-		log.WithError(err).Infof("GetDNSClientData took %s; buckets=%d; logs=%d", time.Since(start), totalBuckets, len(logs))
+		progress.Complete(err)
 	}()
 
 	index := lmaindex.DnsLogs().GetIndex(elasticvariant.AddIndexInfix(cluster))
@@ -86,6 +84,7 @@ func GetDNSClientData(ctx context.Context, es lmaelastic.Client, cluster string,
 		AggMinInfos:             dnsAggregationMin,
 		AggMaxInfos:             dnsAggregationMax,
 		AggMeanInfos:            dnsAggregationMean,
+		MaxBucketsPerQuery:      cfg.ServiceGraphCacheMaxBucketsPerQuery,
 	}
 
 	addLog := func(source FlowEndpoint, stats *v1.GraphDNSStats) {
@@ -93,18 +92,20 @@ func GetDNSClientData(ctx context.Context, es lmaelastic.Client, cluster string,
 			Endpoint: source,
 			Stats:    *stats,
 		})
+		progress.IncAggregated()
 	}
 
+	// Perform the DNS composite aggregation query.
+	// Always ensure we cancel the query if we bail early.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	rcvdDNSBuckets, rcvdDNSErrors := es.SearchCompositeAggregations(ctx, aggQueryL7, nil)
 
 	var foundLog bool
 	var dnsStats *v1.GraphDNSStats
 	var lastSource FlowEndpoint
 	for bucket := range rcvdDNSBuckets {
-		totalBuckets++
-		if totalBuckets%10000 == 0 {
-			log.Infof("Enumerated %d DNS buckets", totalBuckets)
-		}
+		progress.IncRaw()
 		key := bucket.CompositeAggregationKey
 		code := key[dnsRcodeIdx].String()
 		source := FlowEndpoint{
@@ -141,6 +142,11 @@ func GetDNSClientData(ctx context.Context, es lmaelastic.Client, cluster string,
 
 		if log.IsLevelEnabled(log.DebugLevel) {
 			log.Debugf("Processing DNS Log: %s (code %s)", source, code)
+		}
+
+		// Track the number of aggregated logs. Bail if we hit the absolute maximum number of aggregated logs.
+		if len(logs) > cfg.ServiceGraphCacheMaxAggregatedRecords {
+			return logs, DataTruncatedError
 		}
 	}
 	if foundLog {

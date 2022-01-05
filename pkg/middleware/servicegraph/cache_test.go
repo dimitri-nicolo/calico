@@ -6,8 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"sync/atomic"
 	"time"
+
+	"github.com/tigera/lma/pkg/httputils"
 
 	lmav1 "github.com/tigera/lma/pkg/apis/v1"
 
@@ -16,6 +19,11 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/tigera/es-proxy/pkg/middleware/servicegraph"
+)
+
+const (
+	// For each request that accesses the backend, there will be 4 requests.
+	numQueriesPerReq = 4
 )
 
 func CreateMockBackendWithData(rbac RBACFilter, names NameHelper) *MockServiceGraphBackend {
@@ -110,6 +118,163 @@ var _ = Describe("Service graph cache tests", func() {
 		}
 	})
 
+	It("handles request timeout", func() {
+		By("Blocking the elastic calls")
+		// Block the backend.
+		backend.SetBlockElastic()
+		now1 := time.Now().UTC()
+		tr1 := &lmav1.TimeRange{
+			From: now1.Add(-15 * time.Minute),
+			To:   now1,
+			Now:  &now1,
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		By("Requesting data and waiting for the timeout")
+		var safeCount int32
+		var q1 *ServiceGraphData
+		var err1 error
+		atomic.AddInt32(&safeCount, 1)
+		go func() {
+			q1, err1 = cache.GetFilteredServiceGraphData(ctx, &RequestData{
+				HTTPRequest: nil,
+				ServiceGraphRequest: &v1.ServiceGraphRequest{
+					TimeRange: tr1,
+				},
+			})
+			atomic.AddInt32(&safeCount, -1)
+		}()
+		Eventually(func() int32 { return atomic.LoadInt32(&safeCount) }, "3s").Should(BeZero())
+		Expect(q1).To(BeNil())
+		Expect(err1).To(HaveOccurred())
+		Expect(err1).To(BeAssignableToTypeOf(&httputils.HttpStatusError{}))
+
+		herr := err1.(*httputils.HttpStatusError)
+		Expect(herr.Status).To(Equal(http.StatusGatewayTimeout))
+		msg := struct {
+			Duration time.Duration `json:"duration"`
+			Reason   string        `json:"reason"`
+		}{}
+		err := json.Unmarshal([]byte(herr.Msg), &msg)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(msg.Duration).To(BeNumerically(">=", 1*time.Second))
+		Expect(msg.Reason).To(Equal("background query is taking a long time"))
+	})
+
+	It("handles data truncation of L3 data", func() {
+		backend.L3Err = DataTruncatedError
+
+		now1 := time.Now().UTC()
+		tr1 := &lmav1.TimeRange{
+			From: now1.Add(-15 * time.Minute),
+			To:   now1,
+			Now:  &now1,
+		}
+
+		var safeCount int32
+		var q1 *ServiceGraphData
+		var err1 error
+		atomic.AddInt32(&safeCount, 1)
+		go func() {
+			q1, err1 = cache.GetFilteredServiceGraphData(context.Background(), &RequestData{
+				HTTPRequest: nil,
+				ServiceGraphRequest: &v1.ServiceGraphRequest{
+					TimeRange: tr1,
+				},
+			})
+			atomic.AddInt32(&safeCount, -1)
+		}()
+		Eventually(func() int32 { return atomic.LoadInt32(&safeCount) }, "3s").Should(BeZero())
+		Expect(err1).ToNot(HaveOccurred())
+		Expect(q1.Truncated).To(BeTrue())
+	})
+
+	It("handles data truncation of L7 data", func() {
+		backend.L7Err = DataTruncatedError
+
+		now1 := time.Now().UTC()
+		tr1 := &lmav1.TimeRange{
+			From: now1.Add(-15 * time.Minute),
+			To:   now1,
+			Now:  &now1,
+		}
+
+		var safeCount int32
+		var q1 *ServiceGraphData
+		var err1 error
+		atomic.AddInt32(&safeCount, 1)
+		go func() {
+			q1, err1 = cache.GetFilteredServiceGraphData(context.Background(), &RequestData{
+				HTTPRequest: nil,
+				ServiceGraphRequest: &v1.ServiceGraphRequest{
+					TimeRange: tr1,
+				},
+			})
+			atomic.AddInt32(&safeCount, -1)
+		}()
+		Eventually(func() int32 { return atomic.LoadInt32(&safeCount) }, "3s").Should(BeZero())
+		Expect(err1).ToNot(HaveOccurred())
+		Expect(q1.Truncated).To(BeTrue())
+	})
+
+	It("handles data truncation of DNS data", func() {
+		backend.DNSErr = DataTruncatedError
+
+		now1 := time.Now().UTC()
+		tr1 := &lmav1.TimeRange{
+			From: now1.Add(-15 * time.Minute),
+			To:   now1,
+			Now:  &now1,
+		}
+
+		var safeCount int32
+		var q1 *ServiceGraphData
+		var err1 error
+		atomic.AddInt32(&safeCount, 1)
+		go func() {
+			q1, err1 = cache.GetFilteredServiceGraphData(context.Background(), &RequestData{
+				HTTPRequest: nil,
+				ServiceGraphRequest: &v1.ServiceGraphRequest{
+					TimeRange: tr1,
+				},
+			})
+			atomic.AddInt32(&safeCount, -1)
+		}()
+		Eventually(func() int32 { return atomic.LoadInt32(&safeCount) }, "3s").Should(BeZero())
+		Expect(err1).ToNot(HaveOccurred())
+		Expect(q1.Truncated).To(BeTrue())
+	})
+
+	It("handles data truncation of Event data", func() {
+		backend.EventsErr = DataTruncatedError
+
+		now1 := time.Now().UTC()
+		tr1 := &lmav1.TimeRange{
+			From: now1.Add(-15 * time.Minute),
+			To:   now1,
+			Now:  &now1,
+		}
+
+		var safeCount int32
+		var q1 *ServiceGraphData
+		var err1 error
+		atomic.AddInt32(&safeCount, 1)
+		go func() {
+			q1, err1 = cache.GetFilteredServiceGraphData(context.Background(), &RequestData{
+				HTTPRequest: nil,
+				ServiceGraphRequest: &v1.ServiceGraphRequest{
+					TimeRange: tr1,
+				},
+			})
+			atomic.AddInt32(&safeCount, -1)
+		}()
+		Eventually(func() int32 { return atomic.LoadInt32(&safeCount) }, "3s").Should(BeZero())
+		Expect(err1).ToNot(HaveOccurred())
+		Expect(q1.Truncated).To(BeTrue())
+	})
+
 	It("handles concurrent requests, cache updates and expiration", func() {
 		By("Blocking the elastic calls")
 		// Block the backend.
@@ -170,9 +335,9 @@ var _ = Describe("Service graph cache tests", func() {
 		}()
 
 		By("Waiting for the correct number of block elastic calls")
-		// All requests should be blocked, a single request has 4 concurrent requests, and two out of three of the
-		// requests should result in actual queries.
-		Eventually(backend.GetNumBlocked).Should(Equal(8))
+		// All requests should be blocked, a single request has 'numQueriesPerReq' concurrent requests, and two out of
+		// three of the requests should result in actual queries.
+		Eventually(backend.GetNumBlocked).Should(Equal(2 * numQueriesPerReq))
 
 		// Unblock the backend, wait for blocked calls to drop to zero and all async calls to return.
 		By("Unblocking elastic and waiting for all three requests to complete.")
@@ -189,6 +354,9 @@ var _ = Describe("Service graph cache tests", func() {
 		// The time range for q1 and q2 should be identical (based on which one triggered the request).
 		Expect(q1.TimeIntervals).To(Equal(q2.TimeIntervals))
 		Expect(q1.TimeIntervals).NotTo(Equal(q3.TimeIntervals))
+
+		// Data should not be truncated.
+		Expect(q1.Truncated).To(BeFalse())
 
 		// The number of calls to get flow config, L3 data, L7 data, DNS logs and events should be 2.
 		Expect(backend.GetNumCallsFlowConfig()).To(Equal(2))

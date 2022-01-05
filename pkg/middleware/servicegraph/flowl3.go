@@ -4,7 +4,6 @@ package servicegraph
 import (
 	"context"
 	"fmt"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -195,14 +194,14 @@ type L3FlowData struct {
 // - Port information is aggregated when an endpoint port is not part of a service - this prevents bloating a graph
 //   when an endpoint is subjected to a port scan.
 // - Stats for TCP and Processes are aggregated for each flow.
-func GetL3FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr lmav1.TimeRange, fc *FlowConfig) (fs []L3Flow, err error) {
-	// Track the total buckets queried and the response flows.
-	var totalBuckets int
-
-	start := time.Now()
-	log.Debug("GetL3FlowData called")
+func GetL3FlowData(
+	ctx context.Context, es lmaelastic.Client, cluster string, tr lmav1.TimeRange,
+	fc *FlowConfig, cfg *Config,
+) (fs []L3Flow, err error) {
+	// Trace progress.
+	progress := newElasticProgress("l3", tr)
 	defer func() {
-		log.WithError(err).Infof("GetL3FlowData took %s; buckets=%d; flows=%d", time.Since(start), totalBuckets, len(fs))
+		progress.Complete(err)
 	}()
 
 	index := lmaindex.FlowLogs().GetIndex(elasticvariant.AddIndexInfix(cluster))
@@ -215,18 +214,25 @@ func GetL3FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 		AggMaxInfos:             flowAggregationMax,
 		AggMinInfos:             flowAggregationMin,
 		AggMeanInfos:            flowAggregationMean,
+		MaxBucketsPerQuery:      cfg.ServiceGraphCacheMaxBucketsPerQuery,
+	}
+
+	addFlows := func(dgd *destinationGroupData, lastDestGp *FlowEndpoint) {
+		fs = append(fs, dgd.getFlows(lastDestGp)...)
+		dgd = nil
+		progress.SetAggregated(len(fs))
 	}
 
 	// Perform the L3 composite aggregation query.
+	// Always ensure we cancel the query if we bail early.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	rcvdL3Buckets, rcvdL3Errors := es.SearchCompositeAggregations(ctx, aggQueryL3, nil)
 
 	var lastDestGp *FlowEndpoint
 	var dgd *destinationGroupData
 	for bucket := range rcvdL3Buckets {
-		totalBuckets++
-		if totalBuckets%10000 == 0 {
-			log.Infof("Enumerated %d L3 buckets", totalBuckets)
-		}
+		progress.IncRaw()
 		key := bucket.CompositeAggregationKey
 		reporter := key[FlowReporterIdx].String()
 		action := key[FlowActionIdx].String()
@@ -297,8 +303,7 @@ func GetL3FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 		// If the source and/or dest group have changed, and we were in the middle of reconciling multiple flows then
 		// calculate the final flows.
 		if dgd != nil && (destGp == nil || lastDestGp == nil || *destGp != *lastDestGp) {
-			fs = append(fs, dgd.getFlows(lastDestGp)...)
-			dgd = nil
+			addFlows(dgd, lastDestGp)
 		}
 
 		// Determine the process info if available in the logs.
@@ -334,12 +339,16 @@ func GetL3FlowData(ctx context.Context, es lmaelastic.Client, cluster string, tr
 
 		// Store the last dest group.
 		lastDestGp = destGp
+
+		// Track the number of aggregated flows. Bail if we hit the absolute maximum number of aggregated flows.
+		if len(fs) > cfg.ServiceGraphCacheMaxAggregatedRecords {
+			return fs, DataTruncatedError
+		}
 	}
 
 	// If we were reconciling multiple flows then calculate the final flows.
 	if dgd != nil {
-		fs = append(fs, dgd.getFlows(lastDestGp)...)
-		dgd = nil
+		addFlows(dgd, lastDestGp)
 	}
 
 	// Adjust some of the statistics based on the aggregation interval.
