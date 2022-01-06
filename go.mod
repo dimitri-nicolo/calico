@@ -64,6 +64,7 @@ require (
 	github.com/osrg/gobgp v0.0.0-20170802061517-bbd1d99396fe
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
+	github.com/pkg/profile v1.6.0
 	github.com/projectcalico/go-json v0.0.0-20161128004156-6219dc7339ba
 	github.com/projectcalico/go-yaml-wrapper v0.0.0-20191112210931-090425220c54
 	github.com/prometheus/client_golang v1.11.0
@@ -271,7 +272,7 @@ replace (
 	k8s.io/apimachinery => k8s.io/apimachinery v0.21.8
 	k8s.io/apiserver => k8s.io/apiserver v0.21.8
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.21.8
-	k8s.io/client-go => github.com/fasaxc/client-go v0.21.8-fix-match-rev
+	k8s.io/client-go => github.com/projectcalico/k8s-client-go v0.21.9-0.20220104180519-6bd7ec39553f
 	k8s.io/cloud-provider => k8s.io/cloud-provider v0.21.8
 	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.21.8
 	k8s.io/code-generator => k8s.io/code-generator v0.21.8
