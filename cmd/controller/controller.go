@@ -12,15 +12,15 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
-	clientv3 "github.com/projectcalico/libcalico-go/lib/clientv3"
+	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	clientv3 "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	lclient "github.com/projectcalico/calico/licensing/client"
+	"github.com/projectcalico/calico/licensing/client/features"
+	"github.com/projectcalico/calico/licensing/monitor"
 
 	"github.com/tigera/honeypod-controller/pkg/events"
 	hp "github.com/tigera/honeypod-controller/pkg/processor"
 	"github.com/tigera/honeypod-controller/pkg/snort"
-	lclient "github.com/tigera/licensing/client"
-	"github.com/tigera/licensing/client/features"
-	"github.com/tigera/licensing/monitor"
 	"github.com/tigera/lma/pkg/api"
 	"github.com/tigera/lma/pkg/elastic"
 )

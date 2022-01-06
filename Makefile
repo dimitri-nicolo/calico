@@ -1,11 +1,7 @@
 PACKAGE_NAME            ?= github.com/tigera/honeypod-controller
-GO_BUILD_VER            ?= v0.63
+GO_BUILD_VER            ?= v0.65
 GOMOD_VENDOR             = false
 GIT_USE_SSH              = true
-LIBCALICO_REPO           = github.com/tigera/libcalico-go-private
-FELIX_REPO               = github.com/tigera/felix-private
-TYPHA_REPO               = github.com/tigera/typha-private
-APISERVER_REPO           = github.com/tigera/apiserver
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_HONEYPOD_CONTROLLER_PROJECT_ID)
@@ -13,14 +9,14 @@ SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_HONEYPOD_CONTROLLER_PROJECT_ID)
 # Build mounts for running in "local build" mode. Developers will need to make sure they have the correct local version
 # otherwise the build will fail.
 PHONY:local_build
-# Allow libcalico-go and the ssh auth sock to be mapped into the build container.
-ifdef LIBCALICOGO_PATH
-EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/github.com/tigera/libcalico-go:ro
+# Allow calico-private and the ssh auth sock to be mapped into the build container.
+ifdef CALICO_PATH
+EXTRA_DOCKER_ARGS += -v $(CALICO_PATH):/github.com/tigera/calico-private:ro
 endif
 ifdef LOCAL_BUILD
-EXTRA_DOCKER_ARGS += -v $(CURDIR)/../libcalico-go:/go/src/github.com/tigera/libcalico-go:rw
+EXTRA_DOCKER_ARGS += -v $(CURDIR)/../calico-private:/go/src/github.com/tigera/calico-private:rw
 local_build:
-	go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
+	go mod edit -replace=github.com/projectcalico/calico=../calico-private
 else
 local_build:
 endif
@@ -44,9 +40,9 @@ RELEASE_REGISTRIES        ?=quay.io
 RELEASE_BRANCH_PREFIX     ?=release-calient
 DEV_TAG_SUFFIX            ?=calient-0.dev
 
-ELASTIC_VERSION			?= 7.11.2
-K8S_VERSION     		?= v1.11.3
-ETCD_VERSION			?= v3.3.7
+ELASTIC_VERSION			?= 7.16.2
+K8S_VERSION     		?= v1.18.6
+ETCD_VERSION			?= v3.5.1
 KUBE_BENCH_VERSION		?= b649588f46c54c84cd9c88510680b5a651f12d46
 
 # Figure out version information.  To support builds from release tarballs, we default to
@@ -112,7 +108,7 @@ sub-build-%:
 	$(MAKE) build ARCH=$*
 
 bin/controller: bin/controller-$(ARCH)
-	ln -f bin/controller-$(ARCH) bin/controller
+	ln -sf bin/controller-$(ARCH) bin/controller
 
 bin/controller-$(ARCH): $(SRC_FILES) local_build
 	@echo Building honeypod controller...
@@ -188,20 +184,16 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
+update-calico-pin:
+	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(BRANCH))
 
-API_REPO=github.com/tigera/api
 LMA_REPO=github.com/tigera/lma
 LMA_BRANCH=$(PIN_BRANCH)
-LICENSING_REPO=github.com/tigera/licensing
-LICENSING_BRANCH=$(PIN_BRANCH)
-
 update-lma-pin:
 	$(call update_pin,$(LMA_REPO),$(LMA_REPO),$(LMA_BRANCH))
-update-licensing-pin:
-	$(call update_pin,$(LICENSING_REPO),$(LICENSING_REPO),$(LICENSING_BRANCH))
 
-update-pins: guard-ssh-forwarding-bug update-api-pin replace-libcalico-pin replace-typha-pin replace-felix-pin update-lma-pin \
-			 update-licensing-pin replace-apiserver-pin
+update-pins: guard-ssh-forwarding-bug update-calico-pin update-lma-pin
+
 ###############################################################################
 
 ###############################################################################
