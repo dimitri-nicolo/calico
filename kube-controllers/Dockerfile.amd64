@@ -26,9 +26,13 @@ RUN adduser -U --system --uid 999 kubecontrollergroup
 
 # Make sure the status and pprof files are owned by our user.
 RUN mkdir /status /profiles
-RUN touch /status/status.json && chown 999 /status/status.json
-RUN touch /profiles/mem.pprof && chown 999 /profiles/mem.pprof
-RUN touch /profiles/cpu.pprof && chown 999 /profiles/cpu.pprof
+RUN touch /status/status.json && chown kubecontrollergroup:kubecontrollergroup /status/status.json
+RUN touch /profiles/mem.pprof && chown kubecontrollergroup:kubecontrollergroup /profiles/mem.pprof
+RUN touch /profiles/cpu.pprof && chown kubecontrollergroup:kubecontrollergroup /profiles/cpu.pprof
+RUN chmod 664 /status/status.json /profiles/mem.pprof /profiles/cpu.pprof
+
+# Need to add the root user to our group so tests can run
+RUN usermod -a -G kubecontrollergroup root
 
 FROM scratch
 ARG GIT_VERSION

@@ -50,10 +50,9 @@ type RunConfig struct {
 	EtcdV3CompactionPeriod time.Duration
 	HealthEnabled          bool
 	PrometheusPort         int
+	DebugProfilePort       int32
 
 	ShortLicensePolling bool
-
-	DebugProfilePort int32
 }
 
 type ControllersConfig struct {
