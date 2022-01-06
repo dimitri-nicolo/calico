@@ -23,11 +23,11 @@ blocks:
         # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always)
         - git fetch --unshallow
         - echo $DOCKER_TOKEN | docker login --username "$DOCKER_USER" --password-stdin
-        - echo $QUAY_TOKEN | docker login --username "$QUAY_USER" --password-stdin quay.io
+        - docker login --username casey@tigera.io -u _json_key -p "$(cat ~/secrets/secret.google-service-account-key.json)" https://gcr.io
         - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
       secrets:
-      - name: quay-robot-calico+semaphoreci
       - name: docker
+      - name: google-service-account-for-gcr
       jobs:
       - name: "kube-controllers"
         env_vars:

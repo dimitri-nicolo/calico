@@ -7,6 +7,9 @@ PACKAGE_NAME = github.com/projectcalico/calico/pod2daemon
 FLEXVOL_IMAGE  ?=pod2daemon-flexvol
 BUILD_IMAGES ?=$(FLEXVOL_IMAGE)
 
+RELEASE_BRANCH_PREFIX ?=release-calient
+DEV_TAG_SUFFIX        ?=calient-0.dev
+
 ###############################################################################
 # Download and include ../lib.Makefile before anything else
 ###############################################################################
