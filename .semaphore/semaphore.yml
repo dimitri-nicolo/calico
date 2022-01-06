@@ -128,9 +128,9 @@ blocks:
     - name: "Typha: felix k8s-st tests with updated typha image"
       commands:
       - cd typha
-      - make calico/typha
+      - make tigera/typha
       - cd ../felix
-      - JUST_A_MINUTE=true USE_TYPHA=true FV_TYPHAIMAGE=calico/typha:latest TYPHA_VERSION=latest make k8sfv-test
+      - JUST_A_MINUTE=true USE_TYPHA=true FV_TYPHAIMAGE=tigera/typha:latest TYPHA_VERSION=latest make k8sfv-test
     epilogue:
       always:
         commands:

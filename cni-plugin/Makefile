@@ -5,19 +5,16 @@ PACKAGE_NAME = github.com/projectcalico/calico/cni-plugin
 # Add in local static-checks
 LOCAL_CHECKS=check-boring-ssl
 
-RELEASE_REGISTRIES    ?= quay.io
-RELEASE_BRANCH_PREFIX ?= release-calient
-DEV_TAG_SUFFIX        ?= calient-0.dev
+CNI_PLUGIN_IMAGE      ?=tigera/cni
+BUILD_IMAGES          ?=$(CNI_PLUGIN_IMAGE)
+DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
+RELEASE_REGISTRIES    ?=quay.io
+RELEASE_BRANCH_PREFIX ?=release-calient
+DEV_TAG_SUFFIX        ?=calient-0.dev
 
 # This excludes deprecation checks. libcalico-go-private has deprecated VethNameForWorkload but libcalico-go has not, so
 # to the drift between public and private to a minimum we just disable the deprecation checks.
 LINT_ARGS = --max-issues-per-linter 0 --max-same-issues 0 --deadline 5m --exclude SA1019
-
-CNI_PLUGIN_IMAGE      ?=tigera/cni
-DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
-EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
-
-BUILD_IMAGES          ?=$(CNI_PLUGIN_IMAGE)
 
 ###############################################################################
 # include ../lib.Makefile
