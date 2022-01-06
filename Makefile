@@ -42,17 +42,15 @@ ifeq ($(ARCH),amd64)
 	docker tag $(ECK_OPERATOR_IMAGE):latest-$(ARCH) $(ECK_OPERATOR_IMAGE):latest
 endif
 
-# replace cloud-on-k8s/Dockerfile ubi-minimal version with $(UBI_VERSION)
-# replace cloud-on-k8s/Dockerfile golang version with $(GO_VERSION)
-# then create a builder image that forms the basis for the tigera/eck-operator image.
+
+# Replace cloud-on-k8s/Dockerfile ubi-minimal version with $(UBI_VERSION)
+# Replace cloud-on-k8s/Dockerfile golang version with $(GO_VERSION)
+# Create a builder image that forms the basis for the tigera/eck-operator image.
+# Checkout the Dockerfile to revert it to the original
 eck-builder-image:
 	git submodule update --init --recursive
-	bash -l -c "\
-		cd cloud-on-k8s && \
-		sed -i 's/ubi-minimal\:[[:digit:]].[[:digit:]]\+/ubi-minimal\:$(UBI_VERSION)/g' Dockerfile && \
-		sed -i 's/golang\:[[:digit:]].[[:digit:]]\+.[[:digit:]]/golang\:$(GO_VERSION)/g' Dockerfile && \
-		OPERATOR_IMAGE=tigera/eck-operator-builder:$(BUILDER_VERSION) make docker-build && \
-		git co Dockerfile"
+	$(DOCKER_GO_BUILD) bash -x prepare-create-eck-builder-image.sh
+	bash -x create-eck-builder-image.sh tigera/eck-operator-builder:$(BUILDER_VERSION) $(UBI_VERSION) $(GO_VERSION)
 
 compressed-image: image
 	$(MAKE) docker-compress IMAGE_NAME=$(ECK_OPERATOR_IMAGE):latest
