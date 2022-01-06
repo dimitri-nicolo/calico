@@ -32,6 +32,6 @@ blocks:
       - name: "apiserver"
         env_vars:
         - name: DEV_REGISTRIES
-          value: quay.io/calico docker.io/calico
+          value: gcr.io/unique-caldron-775/cnx/tigera
        commands:
         - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C apiserver image-all cd CONFIRM=true; fi

@@ -32,7 +32,7 @@ blocks:
       - name: "ALP"
         env_vars:
         - name: DEV_REGISTRIES
-          value: quay.io/calico docker.io/calico
+          value: gcr.io/unique-caldron-775/cnx/tigera
         commands:
         - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C pod2daemon image-all cd CONFIRM=true; fi
         - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C app-policy image-all cd CONFIRM=true; fi
