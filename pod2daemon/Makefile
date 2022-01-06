@@ -2,18 +2,11 @@ include ../metadata.mk
 
 PACKAGE_NAME = github.com/projectcalico/calico/pod2daemon
 
-RELEASE_REGISTRIES    ?= gcr.io/projectcalico-org eu.gcr.io/projectcalico-org asia.gcr.io/projectcalico-org us.gcr.io/projectcalico-org
-RELEASE_BRANCH_PREFIX ?= release
-DEV_TAG_SUFFIX        ?= 0.dev
-
-# If this is a release, also tag and push additional images.
-ifeq ($(RELEASE),true)
-FLEXVOL_IMAGE  ?=pod2daemon-flexvol
-DEV_REGISTRIES ?=quay.io/calico calico $(RELEASE_REGISTRIES)
-else
+DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
+RELEASE_REGISTRIES    ?=quay.io
+RELEASE_BRANCH_PREFIX ?=release-calient
+DEV_TAG_SUFFIX        ?=calient-0.dev
 FLEXVOL_IMAGE  ?=calico/pod2daemon-flexvol
-DEV_REGISTRIES ?=quay.io docker.io
-endif
 
 BUILD_IMAGES ?=$(FLEXVOL_IMAGE)
 
