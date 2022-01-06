@@ -321,7 +321,7 @@ sub-base-tag-images-%:
 # Static checks
 ###############################################################################
 # FIXME re-enable linting once we figure out why the linter barfs on this repo.
-LINT_ARGS = --disable gosimple,unused,staticcheck,govet,errcheck,structcheck,varcheck,deadcode,ineffassign
+LINT_ARGS = --disable gosimple,unused,staticcheck,govet,errcheck,structcheck,varcheck,deadcode,ineffassign --max-issues-per-linter 0 --max-same-issues 0 --timeout 8m
 
 # Always install the git hooks to prevent publishing closed source code to a non-private repo.
 hooks_installed:=$(shell ./install-git-hooks)
