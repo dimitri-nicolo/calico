@@ -37,12 +37,13 @@ include ../metadata.mk
 ###############################################################################
 PACKAGE_NAME?=github.com/projectcalico/calico/felix
 
-FELIX_IMAGE           ?=tigera/felix
-BUILD_IMAGES          ?=$(FELIX_IMAGE)
-DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
-RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?= release-calient
 DEV_TAG_SUFFIX        ?= calient-0.dev
+
+# Name of the images.
+# e.g., <registry>/<name>:<tag>
+FELIX_IMAGE    ?=felix
+BUILD_IMAGES   ?=$(FELIX_IMAGE)
 
 LIBBPF_PATH=bpf-gpl/include/libbpf/src
 LIBBPF_CONTAINER_PATH=/go/src/github.com/projectcalico/calico/felix/$(LIBBPF_PATH)
@@ -69,16 +70,10 @@ EXTRA_DOCKER_ARGS += --init
 ###############################################################################
 include ../lib.Makefile
 
-FV_ETCDIMAGE  ?=quay.io/coreos/etcd:$(ETCD_VERSION)-$(BUILDARCH)
+FV_ETCDIMAGE?=$(ETCD_IMAGE)
+FV_TYPHAIMAGE?=felix-test/typha:latest-$(BUILDARCH)
 FV_K8SIMAGE=calico/go-build:$(GO_BUILD_VER)
-FV_TYPHAIMAGE ?=tigera/typha:master-$(BUILDARCH)
 FV_FELIXIMAGE ?=$(FELIX_IMAGE)-test:latest-$(BUILDARCH)
-
-# If building on amd64 omit the arch in the container name.  Fixme!
-ifeq ($(BUILDARCH),amd64)
-	FV_ETCDIMAGE=quay.io/coreos/etcd:$(ETCD_VERSION)
-	FV_TYPHAIMAGE=tigera/typha:latest
-endif
 
 # Total number of batches to split the tests into.  In CI we set this to say 5 batches,
 # and run a single batch on each test VM.
@@ -289,9 +284,7 @@ $(FELIX_IMAGE)-$(ARCH): bin/calico-felix-$(ARCH) \
 	# Copy only the files we're explicitly expecting (in case we have left overs after switching branch).
 	cp $(ALL_BPF_PROGS) docker-image/bpf/bin
 	docker build --pull -t $(FELIX_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/Dockerfile.$(ARCH) docker-image;
-ifeq ($(ARCH),amd64)
-	docker tag $(FELIX_IMAGE):latest-$(ARCH) $(FELIX_IMAGE):latest
-endif
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 
 ifeq ($(FV_RACE_DETECTOR_ENABLED),true)
 FV_BINARY=calico-felix-race-amd64
@@ -301,15 +294,11 @@ endif
 
 image-test: image fv/Dockerfile.test.amd64 bin/pktgen bin/test-workload bin/test-connection bin/test-dns bin/tproxy bin/$(FV_BINARY) image-wgtool fv/infrastructure/crds
 	docker build -t $(FELIX_IMAGE)-test:latest-$(ARCH) --build-arg FV_BINARY=$(FV_BINARY) --file ./fv/Dockerfile.test.$(ARCH) bin;
-ifeq ($(ARCH),amd64)
-	docker tag $(FELIX_IMAGE)-test:latest-$(ARCH) $(FELIX_IMAGE)-test:latest
-endif
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(FELIX_IMAGE)-test
 
 image-wgtool: fv/Dockerfile.wgtool.amd64
 	docker build -t $(FELIX_IMAGE)-wgtool:latest-$(ARCH) --file ./fv/Dockerfile.wgtool.$(ARCH) fv;
-ifeq ($(ARCH),amd64)
-	docker tag $(FELIX_IMAGE)-wgtool:latest-$(ARCH) $(FELIX_IMAGE)-wgtool:latest
-endif
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(FELIX_IMAGE)-wgtool
 
 ## tag version number build images i.e.  tigera/felix:latest-amd64 -> tigera/felix:v1.1.1-amd64
 tag-base-images-all: $(addprefix sub-base-tag-images-,$(VALIDARCHES))
@@ -355,7 +344,7 @@ fv/infrastructure/crds:
 	cp -r ../libcalico-go/config/crd fv/infrastructure/crds; chmod +w fv/infrastructure/crds/
 
 build-typha:
-	make -C ../typha image
+	make -C ../typha image DEV_REGISTRIES=felix-test
 
 .PHONY: fv
 # runs all of the fv tests

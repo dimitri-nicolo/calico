@@ -116,6 +116,8 @@ require (
 	sigs.k8s.io/kind v0.11.1
 )
 
+require github.com/projectcalico/api v0.0.0-20211207142834-757e73ac95b9
+
 require (
 	cloud.google.com/go v0.93.3 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect

@@ -2,7 +2,7 @@ version: v1.0
 name: Publish typha images
 agent:
   machine:
-    type: e1-standard-2
+    type: e1-standard-4
     os_image: ubuntu1804
 
 execution_time_limit:
@@ -30,5 +30,8 @@ blocks:
       - name: docker
       jobs:
       - name: "typha"
+        env_vars:
+        - name: DEV_REGISTRIES
+          value: quay.io/calico docker.io/calico
         commands:
         - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C typha image-all cd CONFIRM=true; fi
