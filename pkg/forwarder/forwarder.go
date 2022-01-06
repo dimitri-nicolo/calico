@@ -15,7 +15,6 @@ import (
 	lmaAPI "github.com/tigera/lma/pkg/api"
 
 	"github.com/avast/retry-go"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
@@ -182,7 +181,7 @@ type eventForwarder struct {
 	id string
 
 	// Use a decorated logger so we have some extra metadata.
-	logger *logrus.Entry
+	logger *log.Entry
 
 	once   sync.Once
 	cancel context.CancelFunc
@@ -201,7 +200,7 @@ type eventForwarder struct {
 // NewEventForwarder sets up a new log forwarder instance and returns it.
 // Note: Log forwarder does not currently support concurrency of multiple instances.
 func NewEventForwarder(uid string, events db.Events) EventForwarder {
-	logrus.WithFields(logrus.Fields{
+	log.WithFields(log.Fields{
 		"exportLogsDirectory":     settings.exportLogsDirectory,
 		"exportLogsMaxFileSizeMB": settings.exportLogsMaxFileSizeMB,
 		"exportLogsMaxFiles":      settings.exportLogsMaxFiles,
@@ -219,7 +218,7 @@ func NewEventForwarder(uid string, events db.Events) EventForwarder {
 
 	return &eventForwarder{
 		id: uid,
-		logger: logrus.WithFields(logrus.Fields{
+		logger: log.WithFields(log.Fields{
 			"context": "eventforwarder",
 			"uid":     uid,
 			"logfile": fmt.Sprintf("%s/%s", settings.exportLogsDirectory, logDispatcherFilename),
@@ -248,7 +247,7 @@ func NewQueryError(err error) QueryError {
 
 // Run performs the log forwarding which includes querying for events from the data store and dispatching those events.
 func (f *eventForwarder) Run(ctx context.Context) {
-	l := f.logger.WithFields(logrus.Fields{"func": "Run"})
+	l := f.logger.WithFields(log.Fields{"func": "Run"})
 
 	f.once.Do(func() {
 		f.ctx, f.cancel = context.WithCancel(ctx)
@@ -380,7 +379,7 @@ func (f *eventForwarder) Close() {
 
 // retrieveAndForward handles the actual querying for events and forwarding to file.
 func (f *eventForwarder) retrieveAndForward(start, end time.Time, numAttempts uint, delay time.Duration) error {
-	l := f.logger.WithFields(logrus.Fields{"func": "retrieveAndForward"})
+	l := f.logger.WithFields(log.Fields{"func": "retrieveAndForward"})
 
 	// ---------------------------------------------------------------------------------------------------
 	// 1. Attempt to query for security events

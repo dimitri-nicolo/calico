@@ -5,7 +5,7 @@ package elastic
 import (
 	"strings"
 
-	"github.com/projectcalico/libcalico-go/lib/validator/v3/query"
+	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 )
 
 func NewDNSConverter() ElasticQueryConverter {

@@ -8,17 +8,15 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
-	log "github.com/sirupsen/logrus"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v3client "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-
 	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
 	feedutils "github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
 )

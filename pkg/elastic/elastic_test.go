@@ -18,15 +18,15 @@ import (
 	"text/template"
 	"time"
 
-	lma "github.com/tigera/lma/pkg/elastic"
+	"github.com/araddon/dateparse"
+	. "github.com/onsi/gomega"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
-
-	"github.com/araddon/dateparse"
-	. "github.com/onsi/gomega"
+	lma "github.com/tigera/lma/pkg/elastic"
 )
 
 const (

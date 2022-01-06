@@ -12,20 +12,16 @@ import (
 	"strings"
 	"time"
 
-	lmaAPI "github.com/tigera/lma/pkg/api"
-	lma "github.com/tigera/lma/pkg/elastic"
-
-	"github.com/tigera/intrusion-detection/controller/pkg/maputil"
-
+	"github.com/olivere/elastic/v7"
+	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	log "github.com/sirupsen/logrus"
-
-	"github.com/projectcalico/libcalico-go/lib/validator/v3/query"
-
-	"github.com/olivere/elastic/v7"
+	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/intrusion-detection/controller/pkg/maputil"
+	lmaAPI "github.com/tigera/lma/pkg/api"
+	lma "github.com/tigera/lma/pkg/elastic"
 )
 
 const (

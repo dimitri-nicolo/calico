@@ -8,13 +8,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
-	feedutils "github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
-
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/db"
+	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
+	feedutils "github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
 )
 
 type Controller interface {

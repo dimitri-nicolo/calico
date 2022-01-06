@@ -5,16 +5,14 @@ package alert
 import (
 	"context"
 
-	lma "github.com/tigera/lma/pkg/elastic"
-
 	log "github.com/sirupsen/logrus"
-
-	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-
-	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/alert"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/alert"
+	lma "github.com/tigera/lma/pkg/elastic"
 )
 
 // globalAlertReconciler creates a routine for each new GlobalAlert resource that queries Elasticsearch on interval,

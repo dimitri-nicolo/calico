@@ -6,11 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/util"
+	. "github.com/onsi/gomega"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	. "github.com/onsi/gomega"
+	"github.com/tigera/intrusion-detection/controller/pkg/util"
 )
 
 type entryHandlerInput struct {
