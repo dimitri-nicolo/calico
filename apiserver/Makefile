@@ -6,12 +6,12 @@ LOCAL_CHECKS     = lint-cache-dir goimports check-copyright check-boring-ssl
 # Used so semaphore commits generated files when pins are updated
 EXTRA_FILES_TO_COMMIT=*_generated.go *_generated.*.go
 
-API_SERVER_IMAGE      ?=calico/apiserver
+API_SERVER_IMAGE      ?=tigera/cnx-apiserver
 BUILD_IMAGES          ?=$(API_SERVER_IMAGE)
-DEV_REGISTRIES        ?=quay.io docker.io
-RELEASE_REGISTRIES    ?=$(DEV_REGISTRIES)
-RELEASE_BRANCH_PREFIX ?=release
-DEV_TAG_SUFFIX        ?=0.dev
+DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
+RELEASE_REGISTRIES    ?=quay.io
+RELEASE_BRANCH_PREFIX ?=release-calient
+DEV_TAG_SUFFIX        ?=calient-0.dev
 
 EXTRA_DOCKER_ARGS += -e GOLANGCI_LINT_CACHE=/lint-cache -v $(CURDIR)/.lint-cache:/lint-cache:rw \
 				 -v $(CURDIR)/hack/boilerplate:/go/src/k8s.io/kubernetes/hack/boilerplate:rw
@@ -80,7 +80,7 @@ LINT_ARGS := --disable gosimple,govet,structcheck,errcheck,goimports,unused,inef
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: clean static-checks calico/apiserver fv ut
+ci: clean static-checks $(API_SERVER_IMAGE) fv ut
 
 ## Deploys images to registry
 cd: image-all cd-common
@@ -122,22 +122,15 @@ image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
+# Build the tigera/apiserver docker image.
+.PHONY: $(API_SERVER_IMAGE)
 $(API_SERVER_IMAGE): $(CONTAINER_CREATED)
-$(CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) $(BINDIR)/apiserver
+$(CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) $(BINDIR)/apiserver $(BINDIR)/filecheck
 	docker build -t $(API_SERVER_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg GIT_VERSION=$(GIT_VERSION) -f docker-image/Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
 	docker tag $(API_SERVER_IMAGE):latest-$(ARCH) $(API_SERVER_IMAGE):latest
 endif
 	touch $@
-
-# Build the calico/apiserver docker image.
-.PHONY: calico/apiserver
-calico/apiserver: $(BINDIR)/apiserver $(BINDIR)/filecheck
-	rm -rf docker-image/bin
-	mkdir -p docker-image/bin
-	cp $(BINDIR)/apiserver docker-image/bin/
-	cp $(BINDIR)/filecheck docker-image/bin/
-	docker build --pull -t calico/apiserver --file ./docker-image/Dockerfile.$(ARCH) docker-image
 
 .PHONY: lint-cache-dir
 lint-cache-dir:
@@ -300,7 +293,7 @@ clean: clean-bin clean-build-image clean-hack-lib
 	rm -rf .lint-cache
 
 clean-build-image:
-	docker rmi -f calico/apiserver > /dev/null 2>&1 || true
+	docker rmi -f $(API_SERVER_IMAGE) > /dev/null 2>&1 || true
 
 clean-bin:
 	rm -rf $(BINDIR) \
@@ -346,51 +339,6 @@ endif
 	$(MAKE) retag-build-images-with-registries IMAGETAG=$(VERSION) RELEASE=true
 	# Generate the `latest` images.
 	$(MAKE) retag-build-images-with-registries IMAGETAG=latest RELEASE=true
-
-## Verifies the release artifacts produces by `make release-build` are correct.
-release-verify: release-prereqs
-	# Check the reported version is correct for each release artifact.
-	if ! docker run calico/apiserver | grep 'Version:\s*$(VERSION)$$'; then \
-	  echo "Reported version:" `docker run calico/apiserver` "\nExpected version: $(VERSION)"; \
-	  false; \
-	else \
-	  echo "Version check passed\n"; \
-	fi
-
-## Generates release notes based on commits in this version.
-release-notes: release-prereqs
-	mkdir -p dist
-	echo "# Changelog" > release-notes-$(VERSION)
-	sh -c "git cherry -v $(PREVIOUS_RELEASE) | cut '-d ' -f 2- | sed 's/^/- /' >> release-notes-$(VERSION)"
-
-## Pushes a github release and release artifacts produced by `make release-build`.
-release-publish: release-prereqs
-	# Push the git tag.
-	git push origin $(VERSION)
-
-	# Push images.
-	$(MAKE) push-images-to-registries push-manifests IMAGETAG=$(VERSION) RELEASE=true CONFIRM=true
-
-	@echo "Finalize the GitHub release based on the pushed tag."
-	@echo ""
-	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
-	@echo ""
-	@echo "If this is the latest stable release, then run the following to push 'latest' images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish-latest"
-	@echo ""
-
-# WARNING: Only run this target if this release is the latest stable release. Do NOT
-# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
-## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
-release-publish-latest: release-prereqs
-	$(MAKE) push-images-to-registries push-manifests IMAGETAG=latest RELEASE=true CONFIRM=true
-
-# release-prereqs checks that the environment is configured properly to create a release.
-release-prereqs:
-ifndef VERSION
-	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
-endif
 
 ###############################################################################
 # Utils
