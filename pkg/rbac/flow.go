@@ -2,15 +2,14 @@
 package rbac
 
 import (
-	"github.com/tigera/lma/pkg/api"
-	"github.com/tigera/lma/pkg/auth"
+	log "github.com/sirupsen/logrus"
+	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
-	authzv1 "k8s.io/api/authorization/v1"
-
-	"github.com/projectcalico/libcalico-go/lib/resources"
+	"github.com/tigera/lma/pkg/api"
+	"github.com/tigera/lma/pkg/auth"
 )
 
 var (

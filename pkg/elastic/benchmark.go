@@ -11,7 +11,7 @@ import (
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
-	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
+	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 
 	api "github.com/tigera/lma/pkg/api"
 )

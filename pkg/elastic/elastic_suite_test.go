@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/projectcalico/libcalico-go/lib/testutils"
+	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 
 	"github.com/olivere/elastic/v7"
 	. "github.com/onsi/ginkgo"
