@@ -11,7 +11,7 @@ KUBECTL_VERSION = v1.22.1
 
 # Version of various tools used in the build and tests.
 COREDNS_VERSION=1.5.2
-ETCD_VERSION=v3.5.0
+ETCD_VERSION=v3.3.7
 PROTOC_VER=v0.1
 
 # Configuration for Semaphore integration.
@@ -28,7 +28,7 @@ BIRD_VERSION=v0.3.3-184-g202a2186
 
 # DEV_REGISTRIES configures the container image registries which are built from this
 # repository.
-DEV_REGISTRIES = gcr.io/unique-caldron-775/cnx/tigera
+DEV_REGISTRIES = tigera
 
 # RELEASE_REGISTIRES configures the container images registries which are published to 
 # as part of an official release.

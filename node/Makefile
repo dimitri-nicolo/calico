@@ -480,7 +480,7 @@ calico-cni.tar:
 
 pod2daemon.tar:
 	make -C ../pod2daemon image
-	docker save --output $@ calico/pod2daemon-flexvol:latest-$(ARCH)
+	docker save --output $@ tigera/pod2daemon-flexvol:latest-$(ARCH)
 
 calicoctl.tar:
 	make -C ../calicoctl image

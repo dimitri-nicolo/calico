@@ -8930,7 +8930,7 @@ spec:
         # It can be deleted if this is a fresh installation, or if you have already
         # upgraded to use calico-ipam.
         - name: upgrade-ipam
-          image: docker.io/calico/cni:latest-amd64
+          image: docker.io/tigera/cni:latest-amd64
           command: ["/opt/cni/bin/calico-ipam", "-upgrade"]
           envFrom:
           - configMapRef:
@@ -8957,7 +8957,7 @@ spec:
         # This container installs the CNI binaries
         # and CNI network config file on each node.
         - name: install-cni
-          image: docker.io/calico/cni:latest-amd64
+          image: docker.io/tigera/cni:latest-amd64
           command: ["/opt/cni/bin/install"]
           envFrom:
           - configMapRef:
@@ -8998,7 +8998,7 @@ spec:
         # Adds a Flex Volume Driver that creates a per-pod Unix Domain Socket to allow Dikastes
         # to communicate with Felix over the Policy Sync API.
         - name: flexvol-driver
-          image: docker.io/calico/pod2daemon-flexvol:latest-amd64
+          image: docker.io/tigera/pod2daemon-flexvol:latest-amd64
           volumeMounts:
           - name: flexvol-driver-host
             mountPath: /host/driver
@@ -9009,7 +9009,7 @@ spec:
         # container programs network policy and routes on each
         # host.
         - name: calico-node
-          image: calico/node:latest-amd64
+          image: docker.io/library/cnx-node:latest-amd64
           envFrom:
           - configMapRef:
               # Allow KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT to be overridden for eBPF mode.
