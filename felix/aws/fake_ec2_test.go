@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/projectcalico/calico/felix/ip"
 	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/testutils"
@@ -33,16 +34,22 @@ type fakeEC2 struct {
 	InstancesByID map[string]types.Instance
 	ENIsByID      map[string]types.NetworkInterface
 
-	SubnetsByID   map[string]types.Subnet
-	nextENINum    int
-	nextAttachNum int
+	SubnetsByID    map[string]types.Subnet
+	nextENINum     int
+	nextAttachNum  int
+	nextAssocNum   int
+	ElasticIPsByID map[string]*types.Address
+
+	postDescribeAddressesActions []func()
+	alreadyAssocTriggered        bool
 }
 
 func newFakeEC2Client() (*EC2Client, *fakeEC2) {
 	mockEC2 := &fakeEC2{
-		InstancesByID: map[string]types.Instance{},
-		ENIsByID:      map[string]types.NetworkInterface{},
-		SubnetsByID:   map[string]types.Subnet{},
+		InstancesByID:  map[string]types.Instance{},
+		ENIsByID:       map[string]types.NetworkInterface{},
+		SubnetsByID:    map[string]types.Subnet{},
+		ElasticIPsByID: map[string]*types.Address{},
 
 		Errors: testutils.NewErrorProducer(testutils.WithErrFactory(func(queueName string) error {
 			return errBadParam(queueName, "ErrorFactory.Error")
@@ -57,9 +64,15 @@ func newFakeEC2Client() (*EC2Client, *fakeEC2) {
 	}, mockEC2
 }
 
-func (f *fakeEC2) nextAttachID() string {
+func (f *fakeEC2) nextENIAttachID() string {
 	id := fmt.Sprintf("attach-%017x", f.nextAttachNum)
 	f.nextAttachNum++
+	return id
+}
+
+func (f *fakeEC2) nextEIPAssocID() string {
+	id := fmt.Sprintf("eipassoc-%017x", f.nextAssocNum)
+	f.nextAssocNum++
 	return id
 }
 
@@ -69,6 +82,13 @@ func (f *fakeEC2) addSubnet(id string, az string, cidr string) {
 		VpcId:            stringPtr(testVPC),
 		SubnetId:         stringPtr(id),
 		CidrBlock:        stringPtr(cidr),
+	}
+}
+
+func (f *fakeEC2) addElasticIP(id string, addr ip.Addr) {
+	f.ElasticIPsByID[id] = &types.Address{
+		AllocationId: stringPtr(id),
+		PublicIp:     stringPtr(addr.String()),
 	}
 }
 
@@ -472,7 +492,7 @@ func (f *fakeEC2) AttachNetworkInterface(ctx context.Context, params *ec2.Attach
 	}
 
 	eni.Attachment = &types.NetworkInterfaceAttachment{
-		AttachmentId:        stringPtr(f.nextAttachID()),
+		AttachmentId:        stringPtr(f.nextENIAttachID()),
 		DeleteOnTermination: boolPtr(false),
 		DeviceIndex:         params.DeviceIndex,
 		InstanceId:          params.InstanceId,
@@ -742,18 +762,208 @@ func (f *fakeEC2) DeleteNetworkInterface(ctx context.Context, params *ec2.Delete
 }
 
 func (f *fakeEC2) AssociateAddress(ctx context.Context, params *ec2.AssociateAddressInput, optFns ...func(*ec2.Options)) (*ec2.AssociateAddressOutput, error) {
-	// TODO implement me
-	panic("implement me")
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	if err := f.Errors.NextErrorByCaller(); err != nil {
+		return nil, err
+	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	if len(optFns) > 0 {
+		panic("fakeEC2 doesn't understand opts")
+	}
+
+	// Check inputs are things we support.
+	if params.DryRun != nil {
+		panic("fakeEC2 doesn't support requested feature")
+	}
+	if params.AllocationId == nil {
+		panic("fakeEC2 requires AllocationId")
+	}
+	if params.PublicIp != nil {
+		panic("fakeEC2 doesn't support PublicIp")
+	}
+	if params.NetworkInterfaceId == nil {
+		panic("BUG: expecting NetworkInterfaceId to be set")
+	}
+	if params.PrivateIpAddress == nil {
+		panic("BUG: expecting PrivateIpAddress to be set")
+	}
+	if params.AllowReassociation == nil || *params.AllowReassociation != false {
+		panic("BUG: expecting AllowReassociation to be false")
+	}
+
+	// Look up the elastic IP.
+	eip, ok := f.ElasticIPsByID[*params.AllocationId]
+	if !ok {
+		return nil, errNotFound("AssociateAddress", "ElasticIP.NotFound" /* Made up */)
+	}
+	if eip.AssociationId != nil {
+		f.alreadyAssocTriggered = true
+		return nil, errBadParam("AssociateAddress", "Resource.AlreadyAssociated" /* Real/expected error code */)
+	}
+
+	// Look up the ENI.
+	eni, ok := f.ENIsByID[*params.NetworkInterfaceId]
+	if !ok {
+		return nil, errNotFound("AssociateAddress", "ENI.NotFound" /* Made up */)
+	}
+	found := false
+	for i, privIP := range eni.PrivateIpAddresses {
+		if *privIP.PrivateIpAddress == *params.PrivateIpAddress {
+			// Found the right IP.
+			found = true
+			if privIP.Association != nil {
+				return nil, errBadParam("AssociateAddress", "IP.AlreadyAssociated" /* made up */)
+			}
+			assocID := f.nextEIPAssocID()
+			privIP.Association = &types.NetworkInterfaceAssociation{
+				AllocationId:  eip.AllocationId,
+				AssociationId: &assocID,
+				PublicIp:      eip.PublicIp,
+			}
+			eni.PrivateIpAddresses[i] = privIP
+			f.ENIsByID[*params.NetworkInterfaceId] = eni
+			eip.AssociationId = &assocID
+			eip.PrivateIpAddress = privIP.PrivateIpAddress
+			eip.NetworkInterfaceId = eni.NetworkInterfaceId
+			break
+		}
+	}
+	if !found {
+		return nil, errNotFound("AssociateAddress", "PrivateIP.NotFound" /* Made up */)
+	}
+
+	return &ec2.AssociateAddressOutput{}, nil
 }
 
 func (f *fakeEC2) DisassociateAddress(ctx context.Context, params *ec2.DisassociateAddressInput, optFns ...func(*ec2.Options)) (*ec2.DisassociateAddressOutput, error) {
-	// TODO implement me
-	panic("implement me")
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	if err := f.Errors.NextErrorByCaller(); err != nil {
+		return nil, err
+	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	if len(optFns) > 0 {
+		panic("fakeEC2 doesn't understand opts")
+	}
+
+	// Check inputs are things we support.
+	if params.DryRun != nil {
+		panic("fakeEC2 doesn't support requested feature")
+	}
+	if params.AssociationId == nil {
+		panic("fakeEC2 requires AssociationId")
+	}
+	if params.PublicIp != nil {
+		panic("fakeEC2 doesn't support PublicIp")
+	}
+
+	// Look up the elastic IP.
+	var eip *types.Address
+	found := false
+	for _, eip = range f.ElasticIPsByID {
+		if eip.AssociationId != nil && *eip.AssociationId == *params.AssociationId {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, errNotFound("DisassociateAddress", "Resource.NotFound" /* Made up */)
+	}
+
+	// Look up the ENI.
+	eni, ok := f.ENIsByID[*eip.NetworkInterfaceId]
+	if !ok {
+		panic("BUG: EIP attached to non-existent ENI?")
+	}
+	found = false
+	for i, privIP := range eni.PrivateIpAddresses {
+		if *privIP.PrivateIpAddress == *eip.PrivateIpAddress {
+			// Found the right IP.
+			found = true
+			privIP.Association = nil
+			eni.PrivateIpAddresses[i] = privIP
+			f.ENIsByID[*eni.NetworkInterfaceId] = eni
+			break
+		}
+	}
+	if !found {
+		panic("BUG: EIP attached to non-existent private IP?")
+	}
+
+	eip.AssociationId = nil
+	eip.PrivateIpAddress = nil
+	eip.NetworkInterfaceId = nil
+
+	return &ec2.DisassociateAddressOutput{}, nil
 }
 
 func (f *fakeEC2) DescribeAddresses(ctx context.Context, params *ec2.DescribeAddressesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeAddressesOutput, error) {
-	// TODO implement me
-	panic("implement me")
+	f.lock.Lock()
+
+	defer func(fns []func()) {
+		for _, fn := range fns {
+			fn()
+		}
+	}(f.postDescribeAddressesActions)
+	f.postDescribeAddressesActions = nil
+
+	defer f.lock.Unlock()
+
+	if err := f.Errors.NextErrorByCaller(); err != nil {
+		return nil, err
+	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	if len(optFns) > 0 {
+		panic("fakeEC2 doesn't understand opts")
+	}
+
+	if params.DryRun != nil || params.PublicIps != nil || params.AllocationIds != nil {
+		panic("fakeEC2 doesn't support requested feature")
+	}
+
+	if len(params.Filters) > 200 {
+		panic("BUG: client shouldn't send >200 filters") // AWS hard limit.
+	}
+
+	var elasticIPs []types.Address
+	for _, eip := range f.ElasticIPsByID {
+		eip := eip
+		allFiltersMatch := true
+		for _, filter := range params.Filters {
+			filterMatches := false
+			switch *filter.Name {
+			case "public-ip":
+				for _, v := range filter.Values {
+					if *eip.PublicIp == v {
+						filterMatches = true
+					}
+				}
+			default:
+				panic("fakeEC2 doesn't understand filter " + *filter.Name)
+			}
+			allFiltersMatch = allFiltersMatch && filterMatches
+		}
+		if !allFiltersMatch {
+			continue
+		}
+
+		// ENI matches
+		elasticIPs = append(elasticIPs, *eip)
+	}
+
+	// DescribeNetworkInterfaces seems to return an empty list rather than a not-found error.
+	return &ec2.DescribeAddressesOutput{
+		Addresses: elasticIPs,
+	}, nil
 }
 
 func (f *fakeEC2) NumENIs() int {
@@ -768,4 +978,59 @@ func (f *fakeEC2) GetENI(eniid string) types.NetworkInterface {
 	defer f.lock.Unlock()
 
 	return f.ENIsByID[eniid]
+}
+
+func (f *fakeEC2) GetElasticIPByPrivateIP(privateIP string) string {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	privIPAsCIDR := ip.MustParseCIDROrIP(privateIP)
+	for _, eni := range f.ENIsByID {
+		for _, pia := range eni.PrivateIpAddresses {
+			if ip.MustParseCIDROrIP(safeReadString(pia.PrivateIpAddress)) == privIPAsCIDR {
+				if pia.Association == nil {
+					logrus.WithField("privIP", privateIP).Debug("Private IP has no associated public IP")
+					return ""
+				}
+				return *pia.Association.PublicIp
+			}
+		}
+	}
+	logrus.WithField("privIP", privateIP).Warn("Private IP not found")
+	return ""
+}
+
+func (f *fakeEC2) GetElasticIP(eipid string) types.Address {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	return *f.ElasticIPsByID[eipid]
+}
+
+func (f *fakeEC2) SetRemoteEIPAssociation(id string) {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	f.ElasticIPsByID[id].AssociationId = stringPtr(f.nextEIPAssocID())
+}
+
+func (f *fakeEC2) ClearRemoteEIPAssociation(id string) {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	f.ElasticIPsByID[id].AssociationId = nil
+}
+
+func (f *fakeEC2) AddPostDescribeAddressesAction(f2 func()) {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	f.postDescribeAddressesActions = append(f.postDescribeAddressesActions, f2)
+}
+
+func (f *fakeEC2) AlreadyAssociatedTrigerred() bool {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	return f.alreadyAssocTriggered
 }
