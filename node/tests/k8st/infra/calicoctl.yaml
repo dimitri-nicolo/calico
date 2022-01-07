@@ -29,7 +29,7 @@ spec:
   serviceAccountName: calicoctl
   containers:
   - name: calicoctl
-    image: docker.io/calico/ctl:latest-amd64
+    image: tigera/calicoctl:latest-amd64
     command:
       - /calicoctl
     args:

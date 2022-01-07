@@ -18,20 +18,15 @@ GIT_VERSION?=$(shell git describe --tags --dirty --always --abbrev=12)
 LOCAL_USER_ID:=$(shell id -u)
 MY_GID:=$(shell id -g)
 
-SRC_FILES=$(shell find . -name '*.go' |grep -v vendor)
+GENERATED_FILES=proto/felixbackend.pb.go proto/healthz.pb.go
+SRC_FILES=$(shell find . -name '*.go' |grep -v vendor) $(GENERATED_FILES)
 
-RELEASE_REGISTRIES ?=gcr.io/projectcalico-org eu.gcr.io/projectcalico-org asia.gcr.io/projectcalico-org us.gcr.io/projectcalico-org
-
-# If this is a release, also tag and push additional images.
-ifeq ($(RELEASE),true)
-DIKASTES_IMAGE ?=dikastes
-DEV_REGISTRIES ?=quay.io/calico calico $(RELEASE_REGISTRIES)
-else
-DIKASTES_IMAGE ?=calico/dikastes
-DEV_REGISTRIES ?=quay.io docker.io
-endif
-
-BUILD_IMAGES ?= $(DIKASTES_IMAGE)
+DIKASTES_IMAGE        ?=tigera/dikastes
+BUILD_IMAGES          ?= $(DIKASTES_IMAGE)
+DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
+RELEASE_REGISTRIES    ?=quay.io
+RELEASE_BRANCH_PREFIX ?= release-calient
+DEV_TAG_SUFFIX        ?= calient-0.dev
 
 GIT_USE_SSH?=true
 
@@ -61,7 +56,7 @@ test: ut
 .PHONY: clean
 ## Clean enough that a new release build will be clean
 clean:
-	rm -rf .go-pkg-cache report vendor bin
+	rm -rf .go-pkg-cache report vendor bin proto/*.pb.go
 	find . -name '*.created-$(ARCH)' -exec rm -f {} +
 	-docker rmi $(DIKASTES_IMAGE):latest-$(ARCH)
 	-docker rmi $(DIKASTES_IMAGE):$(VERSION)-$(ARCH)
@@ -73,6 +68,7 @@ endif
 ###############################################################################
 # Building the binary
 ###############################################################################
+
 .PHONY: build-all
 ## Build the binaries for all architectures and platforms
 build-all: $(addprefix bin/dikastes-,$(VALIDARCHES))
@@ -85,7 +81,7 @@ bin/dikastes-amd64: ARCH=amd64
 bin/dikastes-arm64: ARCH=arm64
 bin/dikastes-ppc64le: ARCH=ppc64le
 bin/dikastes-s390x: ARCH=s390x
-bin/dikastes-%: proto $(SRC_FILES)
+bin/dikastes-%: protobuf $(SRC_FILES)
 	mkdir -p bin
 	$(DOCKER_RUN_RO) \
 	  -e CGO_ENABLED=$(CGO_ENABLED) \
@@ -96,7 +92,7 @@ bin/healthz-amd64: ARCH=amd64
 bin/healthz-arm64: ARCH=arm64
 bin/healthz-ppc64le: ARCH=ppc64le
 bin/healthz-s390x: ARCH=s390x
-bin/healthz-%: proto $(SRC_FILES)
+bin/healthz-%: protobuf $(SRC_FILES)
 	mkdir -p bin || true
 	-mkdir -p .go-pkg-cache $(GOMOD_CACHE) || true
 	$(DOCKER_RUN_RO) \
@@ -114,21 +110,23 @@ bin/healthz-%: proto $(SRC_FILES)
 PROTOC_IMPORTS =  -I proto\
 		  -I ./
 
-proto: proto/felixbackend.pb.go proto/healthz.pb.go
+protobuf: proto/felixbackend.pb.go proto/healthz.pb.go
 
 proto/felixbackend.pb.go: proto/felixbackend.proto
-	$(DOCKER_RUN) -v $(CURDIR):/src:rw \
+	$(DOCKER_RUN) -v $(CURDIR):/src:rw --user $(LOCAL_USER_ID):$(LOCAL_USER_ID) \
 		      $(PROTOC_CONTAINER) \
 		      $(PROTOC_IMPORTS) \
 		      proto/*.proto \
 		      --gogofast_out=plugins=grpc:proto
+	$(MAKE) fix
 
 proto/healthz.pb.go: proto/healthz.proto
-	$(DOCKER_RUN) -v $(CURDIR):/src:rw \
+	$(DOCKER_RUN) -v $(CURDIR):/src:rw --user $(LOCAL_USER_ID):$(LOCAL_USER_ID) \
 		      $(PROTOC_CONTAINER) \
 		      $(PROTOC_IMPORTS) \
 		      proto/*.proto \
 		      --gogofast_out=plugins=grpc:proto
+	$(MAKE) fix
 
 
 # Building the image
@@ -153,7 +151,7 @@ endif
 ###############################################################################
 .PHONY: ut
 ## Run the tests in a container. Useful for CI, Mac dev
-ut: proto
+ut: protobuf
 	mkdir -p report
 	$(DOCKER_RUN) $(CALICO_BUILD) /bin/bash -c "go test -v $(GINKGO_ARGS) ./... | go-junit-report > ./report/tests.xml"
 
@@ -171,7 +169,9 @@ check-boring-ssl: bin/dikastes-amd64
 
 ## Check if generated files are out of date
 .PHONY: check-generated-files
-check-generated-files: proto
+check-generated-files:
+	$(MAKE) clean
+	$(MAKE) protobuf
 	if (git describe --tags --dirty | grep -c dirty >/dev/null); then \
 	  echo "Generated files are out of date."; \
 	  false; \
@@ -185,86 +185,3 @@ check-generated-files: proto
 .PHONY: cd
 ## Deploys images to registry
 cd: image-all cd-common
-
-###############################################################################
-# Release
-###############################################################################
-PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
-
-## Tags and builds a release from start to finish.
-release: release-prereqs
-	$(MAKE) VERSION=$(VERSION) release-tag
-	$(MAKE) VERSION=$(VERSION) release-build
-	$(MAKE) VERSION=$(VERSION) release-verify
-
-	@echo ""
-	@echo "Release build complete. Next, push the produced images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish"
-	@echo ""
-
-## Produces a git tag for the release.
-release-tag: release-prereqs release-notes
-	git tag $(VERSION) -F release-notes-$(VERSION)
-	@echo ""
-	@echo "Now you can build the release:"
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-build"
-	@echo ""
-
-## Produces a clean build of release artifacts at the specified version.
-release-build: release-prereqs clean
-# Check that the correct code is checked out.
-ifneq ($(VERSION), $(GIT_VERSION))
-	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
-endif
-
-	$(MAKE) image-all RELEASE=true
-	$(MAKE) retag-build-images-with-registries IMAGETAG=$(VERSION) RELEASE=true
-	# Generate the `latest` images.
-	$(MAKE) retag-build-images-with-registries IMAGETAG=latest RELEASE=true
-
-## Verifies the release artifacts produces by `make release-build` are correct.
-release-verify: release-prereqs
-	# Check the reported version is correct for each release artifact.
-	if ! docker run $(DIKASTES_IMAGE):$(VERSION)-$(ARCH) /dikastes --version | grep '^$(VERSION)$$'; then \
-	  echo "Reported version:" `docker run $(DIKASTES_IMAGE):$(VERSION)-$(ARCH) /dikastes --version` "\nExpected version: $(VERSION)"; \
-	  false; \
-	else \
-	  echo "Version check passed\n"; \
-	fi
-
-## Generates release notes based on commits in this version.
-release-notes: release-prereqs
-	mkdir -p dist
-	echo "# Changelog" > release-notes-$(VERSION)
-	sh -c "git cherry -v $(PREVIOUS_RELEASE) | cut '-d ' -f 2- | sed 's/^/- /' >> release-notes-$(VERSION)"
-
-## Pushes a github release and release artifacts produced by `make release-build`.
-release-publish: release-prereqs
-	# Push the git tag.
-	git push origin $(VERSION)
-
-	# Push images.
-	$(MAKE) push-images-to-registries push-manifests IMAGETAG=$(VERSION) RELEASE=true CONFIRM=true
-
-	@echo "Finalize the GitHub release based on the pushed tag."
-	@echo ""
-	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
-	@echo ""
-	@echo "If this is the latest stable release, then run the following to push 'latest' images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish-latest"
-	@echo ""
-
-# WARNING: Only run this target if this release is the latest stable release. Do NOT
-# run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
-## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
-release-publish-latest: release-prereqs
-	$(MAKE) push-images-to-registries push-manifests IMAGETAG=latest RELEASE=true CONFIRM=true
-
-# release-prereqs checks that the environment is configured properly to create a release.
-release-prereqs:
-ifndef VERSION
-	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
-endif

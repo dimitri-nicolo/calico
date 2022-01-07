@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 // Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.

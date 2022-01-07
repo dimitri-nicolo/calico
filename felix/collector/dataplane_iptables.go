@@ -1,5 +1,6 @@
 // Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
+//go:build linux
 // +build linux
 
 package collector
