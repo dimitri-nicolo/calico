@@ -26,6 +26,9 @@ RUN apk update \
  && apk add --no-cache --virtual .build-deps \
         build-base linux-headers \
         ruby-dev gnupg \
+ && apk add --no-cache curl=7.80.0-r0 jq=1.6-r1 \
+ && apk add --no-cache ca-certificates && update-ca-certificates \
+ && apk update && apk upgrade libcrypto1.1 \
  && echo 'gem: --no-document' >> /etc/gemrc \
  && gem install oj -v 3.10.18 \
  && gem install json -v 2.4.1 \
@@ -46,15 +49,12 @@ RUN apk update \
  && fluent-gem install fluent-plugin-remote_syslog:1.0.0 \
  && gem sources --clear-all \
  && apk del .build-deps \
+ && apk del ruby-bundler ruby-bundler-doc --force \
  && rm -rf /var/cache/apk/* \
            /home/fluent/.gem/ruby/*/cache/*.gem \
            /tmp/* /var/tmp/* \
            /usr/lib/ruby/gems/*/cache/*.gem \
            /usr/lib/ruby/gems/2.*/gems/fluentd-*/test
-
-RUN apk add --no-cache curl=7.80.0-r0 jq=1.6-r1
-RUN apk add --no-cache ca-certificates && update-ca-certificates
-RUN apk update && apk upgrade libcrypto1.1
 
 RUN addgroup -S fluent && adduser -S -G fluent fluent \
     && mkdir -p /fluentd/log \
