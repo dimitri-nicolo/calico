@@ -30,5 +30,8 @@ blocks:
       - name: google-service-account-for-gcr
       jobs:
       - name: "calicoctl"
+        env_vars:
+        - name: DEV_REGISTRIES
+          value: gcr.io/unique-caldron-775/cnx/tigera
         commands:
         - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C calicoctl image-all cd CONFIRM=true; fi

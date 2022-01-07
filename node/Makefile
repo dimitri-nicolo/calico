@@ -2,12 +2,14 @@ include ../metadata.mk
 
 PACKAGE_NAME = github.com/projectcalico/calico/node
 
-NODE_IMAGE            ?=tigera/cnx-node
-WINDOWS_UPGRADE_IMAGE ?=tigera/calico-windows-upgrade
-WINDOWS_VERSIONS      ?=1809 2004 20H2 ltsc2022
+# Name of the images.
+# e.g., <registry>/<name>:<tag>
+NODE_IMAGE            ?=cnx-node
+WINDOWS_UPGRADE_IMAGE ?=calico-windows-upgrade
 
 # If this is a windows release build the windows upgrade image.
 # ARCHES will contain the values in WINDOWS_VERSIONS, prefixed with "windows-".
+WINDOWS_VERSIONS      ?=1809 2004 20H2 ltsc2022
 ifdef WINDOWS_RELEASE
 BUILD_IMAGES          ?=$(WINDOWS_UPGRADE_IMAGE)
 ARCHES                ?= $(patsubst %,windows-%,$(WINDOWS_VERSIONS))
@@ -15,8 +17,6 @@ else
 BUILD_IMAGES          ?=$(NODE_IMAGE)
 endif
 
-DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
-RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
@@ -59,16 +59,8 @@ FELIX_GPL_SOURCE=filesystem/included-source/felix-ebpf-gpl.tar.gz
 INCLUDED_SOURCE=$(BIRD_SOURCE) $(FELIX_GPL_SOURCE)
 
 # Versions and locations of dependencies used in tests.
-CALICOCTL_VERSION       ?=master
-CNI_VERSION             ?=master
-TEST_CONTAINER_NAME_VER ?=latest
-CTL_CONTAINER_NAME      ?=$(CNX_REPOSITORY)/tigera/calicoctl:$(CALICOCTL_VERSION)-$(ARCH)
-TEST_CONTAINER_NAME     ?=calico/test:$(TEST_CONTAINER_NAME_VER)-$(ARCH)
-# If building on amd64 omit the arch in the container name.  Fixme!
-ETCD_IMAGE?=quay.io/coreos/etcd:$(ETCD_VERSION)
-ifneq ($(BUILDARCH),amd64)
-	ETCD_IMAGE=$(ETCD_IMAGE)-$(ARCH)
-endif
+TEST_CONTAINER_NAME_VER?=latest
+TEST_CONTAINER_NAME?=calico/test:$(TEST_CONTAINER_NAME_VER)-$(ARCH)
 
 # TODO: Update this to use newer version of Kubernetes.
 HYPERKUBE_IMAGE?=gcr.io/google_containers/hyperkube-$(ARCH):v1.17.0
@@ -306,14 +298,8 @@ clean-sub-image-%:
 
 $(NODE_IMAGE): $(NODE_CONTAINER_CREATED)
 $(NODE_CONTAINER_CREATED): register ./Dockerfile.$(ARCH) $(NODE_CONTAINER_FILES) $(NODE_CONTAINER_BINARY) $(INCLUDED_SOURCE) remote-deps
-	# Check versions of the binaries that we're going to use to build the image.
-	# Since the binaries are built for Linux, run them in a container to allow the
-	# make target to be run on different platforms (e.g. MacOS).
-	docker run --rm -v $(CURDIR)/dist/bin:/go/bin:rw $(CALICO_BUILD) /bin/sh -c "\
-	  echo; echo calico-node-$(ARCH) -v;	 /go/bin/calico-node-$(ARCH) -v; \
-	"
-## TARGET_PLATFORM fixes an issue where `FROM SCRATCH` in the Dockerfile share the same architecture as the host.
 	docker build --pull -t $(NODE_IMAGE):latest-$(ARCH) $(TARGET_PLATFORM) . --build-arg BIRD_IMAGE=$(BIRD_IMAGE) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg GIT_VERSION=$(GIT_VERSION) -f ./Dockerfile.$(ARCH)
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
 ##########################################################################################
@@ -398,11 +384,14 @@ $(BINDIR)/kubectl:
 # etcd is used by the STs
 .PHONY: run-etcd
 run-etcd:
+	# TODO: We shouldn't need to enable the v2 API, but some of our test code 
+	# still relies on it. 
 	@-docker rm -f calico-etcd
 	docker run --detach \
 	--net=host \
 	--name calico-etcd $(ETCD_IMAGE) \
 	etcd \
+	--enable-v2 \
 	--advertise-client-urls "http://$(LOCAL_IP_ENV):2379,http://127.0.0.1:2379" \
 	--listen-client-urls "http://0.0.0.0:2379"
 
@@ -491,7 +480,7 @@ calico-cni.tar:
 
 pod2daemon.tar:
 	make -C ../pod2daemon image
-	docker save --output $@ calico/pod2daemon-flexvol:latest-$(ARCH)
+	docker save --output $@ tigera/pod2daemon-flexvol:latest-$(ARCH)
 
 calicoctl.tar:
 	make -C ../calicoctl image
@@ -899,9 +888,6 @@ cd-windows-upgrade:
 ###############################################################################
 $(info "Build dependency versions")
 $(info $(shell printf "%-21s = %-10s\n" "BIRD_VERSION" $(BIRD_VERSION)))
-
-$(info "Test dependency versions")
-$(info $(shell printf "%-21s = %-10s\n" "CNI_VERSION" $(CNI_VERSION)))
 
 $(info "Calico git version")
 $(info $(shell printf "%-21s = %-10s\n" "GIT_VERSION" $(GIT_VERSION)))

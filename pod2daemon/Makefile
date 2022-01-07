@@ -2,13 +2,13 @@ include ../metadata.mk
 
 PACKAGE_NAME = github.com/projectcalico/calico/pod2daemon
 
-DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
-RELEASE_REGISTRIES    ?=quay.io
+# Name of the images.
+# e.g., <registry>/<name>:<tag>
+FLEXVOL_IMAGE  ?=pod2daemon-flexvol
+BUILD_IMAGES ?=$(FLEXVOL_IMAGE)
+
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
-FLEXVOL_IMAGE  ?=calico/pod2daemon-flexvol
-
-BUILD_IMAGES ?=$(FLEXVOL_IMAGE)
 
 ###############################################################################
 # Download and include ../lib.Makefile before anything else
@@ -72,9 +72,7 @@ sub-image-%:
 $(FLEXVOL_IMAGE): $(CONTAINER_CREATED)
 $(CONTAINER_CREATED): Dockerfile.$(ARCH) bin/flexvol-$(ARCH)
 	docker build -t $(FLEXVOL_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg GIT_VERSION=$(GIT_VERSION) -f Dockerfile.$(ARCH) .
-ifeq ($(ARCH),amd64)
-	docker tag $(FLEXVOL_IMAGE):latest-$(ARCH) $(FLEXVOL_IMAGE):latest
-endif
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
 ###############################################################################
