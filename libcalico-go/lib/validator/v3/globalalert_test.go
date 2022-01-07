@@ -303,6 +303,17 @@ var _ = DescribeTable("GlobalAlert Validator",
 		},
 		true,
 	),
+	Entry("dataset waf",
+		&api.GlobalAlert{
+			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+			Spec: api.GlobalAlertSpec{
+				Description: "test",
+				Severity:    100,
+				DataSet:     "waf",
+			},
+		},
+		true,
+	),
 	Entry("dataset invalid",
 		&api.GlobalAlert{
 			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},

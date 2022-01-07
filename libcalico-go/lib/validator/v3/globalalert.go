@@ -143,6 +143,16 @@ func validateGlobalAlertQuery(structLevel validator.StructLevel) {
 					"",
 				)
 			}
+		case api.GlobalAlertDataSetWAF:
+			if err := query.Validate(q, query.IsValidWAFAtom); err != nil {
+				structLevel.ReportError(
+					reflect.ValueOf(s.Query),
+					"Query",
+					"",
+					reason("invalid query: "+err.Error()),
+					"",
+				)
+			}
 		}
 	}
 }
