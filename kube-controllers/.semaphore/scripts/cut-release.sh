@@ -9,7 +9,7 @@ then
 fi
 
 echo "Cutting release for $EXPECTED_RELEASE_TAG."
-make cut-release
+make cut-release IMAGE_ONLY=true
 
 git checkout $EXPECTED_RELEASE_TAG
 
