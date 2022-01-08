@@ -93,7 +93,8 @@ func (m *managedClusterController) pingAllManagedAlertController(ctx context.Con
 			for i := len(pingers) - 1; i >= 0; i-- {
 				hp := pingers[i]
 				// IDS uses default timeoutSeconds(1s) for livenessProbe. Use the same timeout on individual Pings.
-				chCtx, _ := context.WithTimeout(ctx, 1*time.Second)
+				chCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+				defer cancel()
 				if err := hp.Ping(chCtx); err != nil {
 					statusError, ok := err.(*errors.StatusError)
 					if ok && statusError.Status().Message == health.PingChannelClosed {
@@ -123,7 +124,8 @@ func (m *managedClusterController) pingAllManagedAlertController(ctx context.Con
 func retryPingOnBusy(ctx context.Context, hp health.Pinger) error {
 	var err error
 	for maxRetries := 5; maxRetries > 0; maxRetries-- {
-		chCtx, _ := context.WithTimeout(ctx, 1*time.Second)
+		chCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+		defer cancel()
 		if err = hp.Ping(chCtx); err == nil {
 			break
 		}

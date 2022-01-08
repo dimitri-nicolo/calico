@@ -1,4 +1,4 @@
-// Copyright 2021 Tigera Inc. All rights reserved.
+// Copyright 2021-2022 Tigera Inc. All rights reserved.
 
 package managedcluster
 
@@ -26,13 +26,12 @@ import (
 // and adds the new controller to health.Pingers.
 // If managed cluster is updated or deleted close the corresponding GlobalAlertController this in turn cancels all the goroutines.
 type managedClusterReconciler struct {
-	lmaESClient                               lma.Client
-	indexSettings                             es.IndexSettings
-	managementCalicoCLI                       calicoclient.Interface
-	createManagedCalicoCLI                    func(string) (calicoclient.Interface, error)
-	alertNameToAlertControllerState           map[string]alertControllerState
-	managedClusterAlertControllerHealthPinger health.Pinger
-	managedClusterAlertControllerCh           chan []health.Pinger
+	lmaESClient                     lma.Client
+	indexSettings                   es.IndexSettings
+	managementCalicoCLI             calicoclient.Interface
+	createManagedCalicoCLI          func(string) (calicoclient.Interface, error)
+	alertNameToAlertControllerState map[string]alertControllerState
+	managedClusterAlertControllerCh chan []health.Pinger
 }
 
 // alertControllerState has the Controller and cancel function to stop the Controller.
@@ -76,44 +75,51 @@ func (r *managedClusterReconciler) startManagedClusterAlertController(name strin
 	managedCLI, err := r.createManagedCalicoCLI(name)
 	if err != nil {
 		log.WithError(err).Debug("Error creating client for managed cluster.")
+		cancel()
 		return err
 	}
 
-	name = getVariantSpecificClusterName(name)
+	clusterName := getVariantSpecificClusterName(name)
 
 	// Create a managedCluster specific lma client
 	envCfg := lma.MustLoadConfig()
-	envCfg.ElasticIndexSuffix = fmt.Sprintf(es.EventIndexPattern, name)
+	envCfg.ElasticIndexSuffix = clusterName
 	lmaESClient, err := lma.NewFromConfig(envCfg)
 	if err != nil {
-		log.WithError(err).Errorf("failed to create Elastic client for managed cluster %s", name)
+		log.WithError(err).Errorf("failed to create Elastic client for managed cluster %s", clusterName)
+		cancel()
 		return err
 	}
 	if err := lmaESClient.CreateEventsIndex(ctx); err != nil {
-		log.WithError(err).Errorf("failed to create events index for managed cluster %s", name)
+		log.WithError(err).Errorf("failed to create events index for managed cluster %s", clusterName)
+		cancel()
 		return err
 	}
 
-	alertController, alertHealthPingers := alert.NewGlobalAlertController(managedCLI, lmaESClient, name)
+	alertController, alertHealthPingers := alert.NewGlobalAlertController(managedCLI, lmaESClient, clusterName)
 
 	successSendingPinger := false
 	for maxRetries := 5; maxRetries > 0; maxRetries-- {
 		select {
 		case r.managedClusterAlertControllerCh <- alertHealthPingers:
 			successSendingPinger = true
-			break
 		default:
-			log.Infof("Failed to add health Pinger for GlobalAlertController in cluster %s, retries left %d", name, maxRetries)
+			log.Infof("Failed to add health Pinger for GlobalAlertController in cluster %s, retries left %d", clusterName, maxRetries)
 			time.Sleep(5 * time.Second)
+		}
+
+		if successSendingPinger {
+			break
 		}
 	}
 
 	if !successSendingPinger {
-		return fmt.Errorf("failed to add health Pinger for GlobalAlertController in cluster %s, after retries", name)
+		log.Errorf("failed to add health Pinger for GlobalAlertController in cluster %s, after retries", clusterName)
 		cancel()
+		return fmt.Errorf("failed to add health Pinger for GlobalAlertController in cluster %s, after retries", clusterName)
 	}
 
-	r.alertNameToAlertControllerState[name] = alertControllerState{
+	r.alertNameToAlertControllerState[clusterName] = alertControllerState{
 		alertController: alertController,
 		cancel:          cancel,
 	}
@@ -124,7 +130,7 @@ func (r *managedClusterReconciler) startManagedClusterAlertController(name strin
 
 // Close cancel all the internal goroutines.
 func (r *managedClusterReconciler) Close() {
-	for name, _ := range r.alertNameToAlertControllerState {
+	for name := range r.alertNameToAlertControllerState {
 		r.cancelAlertController(name)
 	}
 }
