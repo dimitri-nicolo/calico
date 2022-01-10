@@ -42,6 +42,7 @@ ADD elastic_mapping_dns.template /fluentd/etc/elastic_mapping_dns.template
 ADD elastic_mapping_audits.template /fluentd/etc/elastic_mapping_audits.template
 ADD elastic_mapping_bgp.template /fluentd/etc/elastic_mapping_bgp.template
 ADD elastic_mapping_l7.template /fluentd/etc/elastic_mapping_l7.template
+ADD elastic_mapping_runtime.template /fluentd/etc/elastic_mapping_runtime.template
 
 ENV FLOW_LOG_FILE=${ROOT_DIR}/TigeraCalico/flowlogs/flows.log
 ENV POS_DIR=${ROOT_DIR}/TigeraCalico/flowlogs
@@ -54,6 +55,7 @@ COPY fluent_transforms.conf.windows /fluentd/etc/fluent_transforms.conf
 ENV DISABLE_ES_DNS_LOG=true
 ENV DISABLE_ES_L7_LOG=true
 ENV DISABLE_ES_BGP_LOG=true
+ENV DISABLE_ES_RUNTIME_LOG=true
 
 COPY output_match /fluentd/etc/output_match
 COPY outputs /fluentd/etc/outputs
@@ -92,6 +94,8 @@ ENV ELASTIC_L7_INDEX_REPLICAS=0
 ENV ELASTIC_TEMPLATE_OVERWRITE=true
 ENV ELASTIC_BGP_INDEX_SHARDS=1
 ENV ELASTIC_BGP_INDEX_REPLICAS=0
+ENV ELASTIC_RUNTIME_INDEX_SHARDS=1
+ENV ELASTIC_RUNTIME_INDEX_REPLICAS=0
 
 ENV SYSLOG_PACKET_SIZE=1024
 
@@ -114,6 +118,7 @@ RUN powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_flows" \
  && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_bgp" \
  && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_ids_events" \
  && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_l7"
+ && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_runtime"
 
 EXPOSE 24284
 
