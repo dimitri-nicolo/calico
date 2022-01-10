@@ -447,7 +447,8 @@ blocks:
       commands:
       - make htmlproofer
       - make kubeval
-      - make helm-tests
+      # TODO(doublek): Enable helm-tests when Enterprise supports helm v3.
+      # - make helm-tests
 
 after_pipeline:
   task:
