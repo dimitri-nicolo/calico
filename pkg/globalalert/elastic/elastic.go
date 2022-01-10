@@ -434,7 +434,6 @@ func (e *service) executeCompositeQuery() {
 
 	e.globalAlert.Status.Healthy = true
 	e.globalAlert.Status.ErrorConditions = nil
-	return
 }
 
 // executeQueryWithScroll executes the Elasticsearch query using scroll and for each document in the search result adds a document into events index.
@@ -535,7 +534,6 @@ func (e *service) executeQuery() {
 	}
 	e.globalAlert.Status.Healthy = true
 	e.globalAlert.Status.ErrorConditions = nil
-	return
 }
 
 // setErrorAndFlush sets the Status.Healthy to false, appends the given error to the Status
@@ -608,13 +606,13 @@ func (e *service) substituteDescriptionOrSummaryContents(record JsonObject) stri
 		if value, ok := record[v]; !ok {
 			log.Warnf("failed to build summary or description for alert %s due to missing value for variable %s", e.globalAlert.Name, v)
 		} else {
-			switch value.(type) {
+			switch value := value.(type) {
 			case string:
-				description = strings.Replace(description, fmt.Sprintf("${%s}", v), value.(string), 1)
+				description = strings.Replace(description, fmt.Sprintf("${%s}", v), value, 1)
 			case int64:
-				description = strings.Replace(description, fmt.Sprintf("${%s}", v), strconv.FormatInt(value.(int64), 10), 1)
+				description = strings.Replace(description, fmt.Sprintf("${%s}", v), strconv.FormatInt(value, 10), 1)
 			case float64:
-				description = strings.Replace(description, fmt.Sprintf("${%s}", v), strconv.FormatFloat(value.(float64), 'f', 1, 64), 1)
+				description = strings.Replace(description, fmt.Sprintf("${%s}", v), strconv.FormatFloat(value, 'f', 1, 64), 1)
 			default:
 				log.Warnf("failed to build summary or description for alert %s due to unsupported value type for variable %s", e.globalAlert.Name, v)
 			}
@@ -624,49 +622,45 @@ func (e *service) substituteDescriptionOrSummaryContents(record JsonObject) stri
 }
 
 // extractEventData checks the given record object for keys that are defined in lmaAPI.EventsData,
-// for each key found, it assigns them to lmaAPI.EventsData and removes it from the record object.
+// for each key found, it assigns them to lmaAPI.EventsData.
 func extractEventData(record JsonObject) lmaAPI.EventsData {
 	var e lmaAPI.EventsData
 	if val, ok := record["source_ip"].(string); ok {
 		e.SourceIP = &val
-		delete(record, "source_ip")
 	}
-	if val, ok := record["source_port"].(int64); ok {
-		e.SourcePort = &val
-		delete(record, "source_port")
+	if val, ok := record["source_port"].(float64); ok {
+		v := int64(val)
+		e.SourcePort = &v
 	}
 	if val, ok := record["source_namespace"].(string); ok {
 		e.SourceNamespace = val
-		delete(record, "source_namespace")
 	}
 	if val, ok := record["source_name"].(string); ok {
 		e.SourceName = val
-		delete(record, "source_name")
 	}
 	if val, ok := record["source_name_aggr"].(string); ok {
 		e.SourceNameAggr = val
-		delete(record, "source_name_aggr")
 	}
 	if val, ok := record["dest_ip"].(string); ok {
 		e.DestIP = &val
-		delete(record, "dest_ip")
 	}
-	if val, ok := record["dest_port"].(int64); ok {
-		e.DestPort = &val
-		delete(record, "dest_port")
+	if val, ok := record["dest_port"].(float64); ok {
+		v := int64(val)
+		e.DestPort = &v
 	}
 	if val, ok := record["dest_namespace"].(string); ok {
 		e.DestNamespace = val
-		delete(record, "dest_namespace")
 	}
 	if val, ok := record["dest_name"].(string); ok {
 		e.DestName = val
-		delete(record, "dest_name")
 	}
 	if val, ok := record["dest_name_aggr"].(string); ok {
 		e.DestNameAggr = val
-		delete(record, "dest_name_aggr")
 	}
+	if val, ok := record["host"].(string); ok {
+		e.Host = val
+	}
+
 	e.Record = record
 	return e
 }

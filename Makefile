@@ -20,7 +20,7 @@ RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
-ELASTIC_VERSION ?= 7.11.2
+ELASTIC_VERSION ?= 7.16.2
 
 ifeq ($(TESLA),true)
 	RELEASE_REGISTRIES    = gcr.io/tigera-tesla
