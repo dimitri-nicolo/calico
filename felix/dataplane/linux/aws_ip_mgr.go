@@ -42,6 +42,7 @@ type awsIPManager struct {
 	localAWSRoutesByDst       map[ip.CIDR]*proto.RouteUpdate
 	localRouteDestsBySubnetID map[string]set.Set /*ip.CIDR*/
 	workloadEndpointsByID     map[proto.WorkloadEndpointID]awsEndpointInfo
+	workloadEndpointIDsByCIDR map[ip.CIDR]set.Set /*proto.WorkloadEndpointID; expect one but can have glitches*/
 	awsResyncNeeded           bool
 
 	// ifaceProvisioner manages the AWS fabric resources.  It runs in the background to decouple AWS fabric updates
@@ -77,7 +78,7 @@ type awsIPManager struct {
 }
 
 type awsEndpointInfo struct {
-	IPv4Nets   []string
+	IPv4Nets   []ip.CIDR
 	ElasticIPs []ip.Addr
 }
 
@@ -349,7 +350,7 @@ func (a *awsIPManager) onWorkloadEndpointUpdate(msg *proto.WorkloadEndpointUpdat
 	wepID := *msg.Id
 	oldEP := a.workloadEndpointsByID[wepID]
 	newEP := awsEndpointInfo{
-		IPv4Nets:   msg.Endpoint.Ipv4Nets,
+		IPv4Nets:   parseCIDRSlice(msg.Endpoint.Ipv4Nets),
 		ElasticIPs: parseIPSlice(msg.Endpoint.AwsElasticIps),
 	}
 	logCtx := logrus.WithFields(logrus.Fields{
@@ -365,6 +366,19 @@ func (a *awsIPManager) onWorkloadEndpointUpdate(msg *proto.WorkloadEndpointUpdat
 		logCtx.Debug("WEP has no elastic IPs, ignoring.")
 		return
 	}
+	for _, cidr := range oldEP.IPv4Nets {
+		a.workloadEndpointIDsByCIDR[cidr].Discard(wepID)
+		if a.workloadEndpointIDsByCIDR[cidr].Len() == 0 {
+			delete(a.workloadEndpointIDsByCIDR, cidr)
+		}
+	}
+	for _, cidr := range newEP.IPv4Nets {
+		if a.workloadEndpointIDsByCIDR[cidr] == nil {
+			a.workloadEndpointIDsByCIDR[cidr] = set.New()
+		}
+		a.workloadEndpointIDsByCIDR[cidr].Add(wepID)
+	}
+
 	logCtx.Debug("Workload endpoint with elastic IPs updated.")
 	a.queueAWSResync("workload update")
 }
@@ -373,6 +387,18 @@ func parseIPSlice(ips []string) (addrs []ip.Addr) {
 	for _, addr := range ips {
 		parsedAddr := ip.FromString(addr)
 		if parsedAddr == nil {
+			logrus.WithField("rawAddr", addr).Warn("Failed to parse elastic IP.")
+			continue
+		}
+		addrs = append(addrs, parsedAddr)
+	}
+	return
+}
+
+func parseCIDRSlice(cidrs []string) (addrs []ip.CIDR) {
+	for _, addr := range cidrs {
+		parsedAddr, err := ip.ParseCIDROrIP(addr)
+		if err != nil {
 			logrus.WithField("rawAddr", addr).Warn("Failed to parse elastic IP.")
 			continue
 		}
@@ -394,15 +420,39 @@ func (a *awsIPManager) onWorkloadEndpointRemoved(msg *proto.WorkloadEndpointRemo
 }
 
 func (a *awsIPManager) lookUpElasticIPs(privIP ip.CIDR) []ip.Addr {
-	for _, wepInfo := range a.workloadEndpointsByID {
-		for _, cidrStr := range wepInfo.IPv4Nets {
-			cidr := ip.MustParseCIDROrIP(cidrStr)
-			if cidr == privIP {
-				return wepInfo.ElasticIPs // FIXME this just grabs the first found; might be more than one WEP.
+	weps := a.workloadEndpointIDsByCIDR[privIP]
+	if weps == nil {
+		return nil
+	}
+
+	// It's possible that multiple local pods transiently share an IP address.  Deal with that by
+	// returning the intersection of their elastic IPs.  That way we only assign IPs that are valid for all
+	// pods sharing the IP.  In practice, we're very likely to have exactly one WEP here so we'll just get its
+	// elastic IPs.
+	var elasticIPs set.Set
+	weps.Iter(func(item interface{}) error {
+		wepID := item.(proto.WorkloadEndpointID)
+		wep := a.workloadEndpointsByID[wepID]
+		elasticIPsThisWEP := set.New()
+		for _, eip := range wep.ElasticIPs {
+			if elasticIPs == nil /* First WEP */ ||
+				elasticIPs.Contains(eip) /* Extra WEPs, do the intersection */ {
+				elasticIPsThisWEP.Add(eip)
 			}
 		}
-	}
-	return nil
+		elasticIPs = elasticIPsThisWEP
+		return nil
+	})
+
+	// Convert back to slice.
+	var elasticIPsSlice []ip.Addr
+	elasticIPs.Iter(func(item interface{}) error {
+		addr := item.(ip.Addr)
+		elasticIPsSlice = append(elasticIPsSlice, addr)
+		return nil
+	})
+
+	return elasticIPsSlice
 }
 
 func (a *awsIPManager) queueAWSResync(reason string) {
