@@ -153,6 +153,7 @@ kubeval: _site
 	! grep -C3 -P "invalid|\t\*" filtered.out
 	rm filtered.out
 
+# TODO(doublek): These Helm tests are not valid for Enterprise since helm v3 isn't supported yet.
 helm-tests: bin/helm values.yaml
 	$(DOCKER_RUN) \
 		-v $(CURDIR)/bin/helm3:/usr/local/bin/helm \
