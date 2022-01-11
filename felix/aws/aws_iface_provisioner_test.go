@@ -753,8 +753,9 @@ func TestSecondaryIfaceProvisioner_ElasticIP_Chunking(t *testing.T) {
 	// Send snapshot with single workload that should have elastic IP 1.
 	sip.OnDatastoreUpdate(datastoreState)
 
-	// Wait for processing to complete.
-	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+	// Wait for processing to complete.  Extra time here because we're sending in an inefficiently-large
+	// set of elastic IPs.
+	Eventually(sip.ResponseC(), "5s").Should(Receive(Equal(responseSingleWorkload)))
 	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(elasticIP1Str))
 }
 

@@ -427,8 +427,7 @@ func (a *awsIPManager) lookUpElasticIPs(privIP ip.CIDR) []ip.Addr {
 
 	// It's possible that multiple local pods transiently share an IP address.  Deal with that by
 	// returning the intersection of their elastic IPs.  That way we only assign IPs that are valid for all
-	// pods sharing the IP.  In practice, we're very likely to have exactly one WEP here so we'll just get its
-	// elastic IPs.
+	// pods sharing the IP.
 	var elasticIPs set.Set
 	weps.Iter(func(item interface{}) error {
 		wepID := item.(proto.WorkloadEndpointID)
