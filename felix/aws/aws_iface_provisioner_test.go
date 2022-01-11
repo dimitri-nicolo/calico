@@ -651,6 +651,38 @@ func TestSecondaryIfaceProvisioner_ElasticIP_Mainline(t *testing.T) {
 	Expect(eip.AssociationId).To(BeNil())
 }
 
+func TestSecondaryIfaceProvisioner_ElasticIP_LostUpdate(t *testing.T) {
+	sip, fake, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Send snapshot with single workload that should have elastic IP 1.
+	sip.OnDatastoreUpdate(singleWorkloadDatastoreElasticIP1)
+
+	// Since this is a fresh system with only one ENI being allocated, everything is deterministic and we should
+	// always get the same result.
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+	Eventually(fake.CapacityC).Should(Receive(Equal(SecondaryIfaceCapacities{
+		MaxCalicoSecondaryIPs: t3LargeCapacity,
+	})))
+	Eventually(fake.RecheckClock.HasWaiters).Should(BeTrue())
+
+	// Elastic IP should be assigned.
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(elasticIP1Str))
+
+	// But we artificially disassociate it to simulate AWS API losing the update.
+	eni := fake.EC2.GetElasticIP(elasticIP1ID)
+	_, err := fake.EC2.DisassociateAddress(context.TODO(), &ec2.DisassociateAddressInput{
+		AssociationId: eni.AssociationId,
+	})
+	Expect(err).NotTo(HaveOccurred())
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(""))
+
+	// Check that the slow retry puts it back.
+	fake.RecheckClock.Step(34 * time.Second)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(elasticIP1Str))
+}
+
 func TestSecondaryIfaceProvisioner_ElasticIP_Change(t *testing.T) {
 	sip, fake, tearDown := setupAndStart(t)
 	defer tearDown()
