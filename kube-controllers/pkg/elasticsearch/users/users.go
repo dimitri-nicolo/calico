@@ -176,7 +176,7 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 								Privileges: []string{"read"},
 							},
 							{
-								Names:      []string{indexPattern("tigera_secure_ee_events", clusterName, ".")},
+								Names:      []string{indexPattern("tigera_secure_ee_events", clusterName, ".*")},
 								Privileges: []string{"read", "write"},
 							},
 						},
@@ -205,7 +205,7 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 								Privileges: []string{"read"},
 							},
 							{
-								Names:      []string{indexPattern("tigera_secure_ee_events", clusterName, ".")},
+								Names:      []string{indexPattern("tigera_secure_ee_events", clusterName, ".*")},
 								Privileges: []string{"read", "write"},
 							},
 						},
@@ -293,7 +293,7 @@ func buildElasticsearchIntrusionDetectionUserRoleIndex(clusterName string, isMan
 			}}
 		readPrivileges = append(readPrivileges, datasetReadPrivileges...)
 	} else {
-		allPrivileges.Names = append(allPrivileges.Names, indexPattern("tigera_secure_ee_events", clusterName, "."))
+		allPrivileges.Names = append(allPrivileges.Names, indexPattern("tigera_secure_ee_events", clusterName, "*"))
 	}
 	return append(readPrivileges, allPrivileges)
 }
@@ -374,7 +374,7 @@ func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUser
 					Cluster: []string{"manage_watcher", "manage"},
 					Indices: []elasticsearch.RoleIndex{
 						{
-							Names:      []string{indexPattern("tigera_secure_ee_*", clusterName, ".*"), indexPattern("tigera_secure_ee_events", clusterName, ".")},
+							Names:      []string{indexPattern("tigera_secure_ee_*", clusterName, ".*"), indexPattern("tigera_secure_ee_events", clusterName, ".*")},
 							Privileges: []string{"read", "write"},
 						},
 					},
