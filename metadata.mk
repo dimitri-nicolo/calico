@@ -9,8 +9,16 @@ GO_BUILD_VER = v0.65
 K8S_VERSION     = v1.22.1
 KUBECTL_VERSION = v1.22.1
 
+# Version of various tools used in the build and tests.
+COREDNS_VERSION=1.5.2
+ETCD_VERSION=v3.3.7
+PROTOC_VER=v0.1
+
 # Configuration for Semaphore integration.
 ORGANIZATION = tigera
+
+# The Semaphore calico-private ID, used when making calls to the Semaphore API.
+SEMAPHORE_PROJECT_ID=8a309869-f767-49dc-924f-fa927edbf657
 
 # Configure git to access repositories using SSH.
 GIT_USE_SSH = true
@@ -21,12 +29,10 @@ EXTRA_DOCKER_ARGS += --init -e GOPRIVATE=github.com/tigera/*
 # The version of BIRD to use for calico/node builds and confd tests.
 BIRD_VERSION=v0.3.3-184-g202a2186
 
-# TODO: Update Makefiles to pull registry configuration from here.
-# DEV_REGISTRIES configures the container image registries which are published to as part of 
-# this branches CI/CD pipeline.
-#DEV_REGISTRIES = quay.io docker.io
+# DEV_REGISTRIES configures the container image registries which are built from this
+# repository.
+DEV_REGISTRIES ?= tigera
 
-# TODO: Update Makefiles to pull registry configuration from here.
 # RELEASE_REGISTIRES configures the container images registries which are published to 
 # as part of an official release.
-#RELEASE_REGISTRIES = $(DEV_REGISTRIES)
+RELEASE_REGISTRIES = quay.io/tigera

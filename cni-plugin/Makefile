@@ -5,16 +5,17 @@ PACKAGE_NAME = github.com/projectcalico/calico/cni-plugin
 # Add in local static-checks
 LOCAL_CHECKS=check-boring-ssl
 
-CNI_PLUGIN_IMAGE      ?=tigera/cni
-BUILD_IMAGES          ?=$(CNI_PLUGIN_IMAGE)
-DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
-RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
 # This excludes deprecation checks. libcalico-go-private has deprecated VethNameForWorkload but libcalico-go has not, so
 # to the drift between public and private to a minimum we just disable the deprecation checks.
 LINT_ARGS = --max-issues-per-linter 0 --max-same-issues 0 --deadline 5m --exclude SA1019
+
+# Name of the images.
+# e.g., <registry>/<name>:<tag>
+CNI_PLUGIN_IMAGE ?=cni
+BUILD_IMAGES   ?=$(CNI_PLUGIN_IMAGE)
 
 ###############################################################################
 # include ../lib.Makefile
@@ -39,12 +40,6 @@ CNI_VERSION=v1.0.0
 CNI_SPEC_VERSION?=0.3.1
 
 DEPLOY_CONTAINER_MARKER=cni_deploy_container-$(ARCH).created
-
-ETCD_CONTAINER ?= quay.io/coreos/etcd:$(ETCD_VERSION)-$(BUILDARCH)
-# If building on amd64 omit the arch in the container name.
-ifeq ($(BUILDARCH),amd64)
-	ETCD_CONTAINER=quay.io/coreos/etcd:$(ETCD_VERSION)
-endif
 
 # We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
 ifeq ($(ARCH), $(filter $(ARCH),amd64))
@@ -113,11 +108,8 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 $(DEPLOY_CONTAINER_MARKER): Dockerfile.$(ARCH) build fetch-cni-bins
-	GO111MODULE=on docker build -t $(CNI_PLUGIN_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg GIT_VERSION=$(GIT_VERSION) -f Dockerfile.$(ARCH) .
-ifeq ($(ARCH),amd64)
-	# Need amd64 builds tagged as :latest because Semaphore depends on that
-	docker tag $(CNI_PLUGIN_IMAGE):latest-$(ARCH) $(CNI_PLUGIN_IMAGE):latest
-endif
+	docker build -t $(CNI_PLUGIN_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg GIT_VERSION=$(GIT_VERSION) -f Dockerfile.$(ARCH) .
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
 .PHONY: fetch-cni-bins
@@ -251,7 +243,7 @@ stop-k8s-controller:
 run-etcd: stop-etcd
 	docker run --detach \
 	  -p 2379:2379 \
-	  --name calico-etcd $(ETCD_CONTAINER) \
+	  --name calico-etcd $(ETCD_IMAGE) \
 	  etcd \
 	  --advertise-client-urls "http://$(LOCAL_IP_ENV):2379,http://127.0.0.1:2379,http://$(LOCAL_IP_ENV):4001,http://127.0.0.1:4001" \
 	  --listen-client-urls "http://0.0.0.0:2379,http://0.0.0.0:4001"
@@ -273,7 +265,7 @@ pkg/install/install.test: pkg/install/*.go
 .PHONY: test-install-cni
 ## Test the install
 test-install-cni: image pkg/install/install.test
-	cd pkg/install && CONTAINER_NAME=$(CNI_PLUGIN_IMAGE) ./install.test
+	cd pkg/install && CONTAINER_NAME=$(CNI_PLUGIN_IMAGE):latest-$(ARCH) ./install.test
 
 ###############################################################################
 # CI/CD
