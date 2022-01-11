@@ -3,8 +3,7 @@ PACKAGE_NAME = github.com/projectcalico/calico
 include metadata.mk 
 include lib.Makefile
 
-
-DOCKER_RUN := mkdir -p ../.go-pkg-cache bin $(GOMOD_CACHE) && \
+DOCKER_RUN := mkdir -p ./.go-pkg-cache bin $(GOMOD_CACHE) && \
 	docker run --rm \
 		--net=host \
 		--init \
@@ -35,6 +34,7 @@ clean:
 	$(MAKE) -C node clean
 	$(MAKE) -C pod2daemon clean
 	$(MAKE) -C typha clean
+	$(MAKE) -C calico clean
 
 generate:
 	$(MAKE) -C api gen-files

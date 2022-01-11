@@ -47,8 +47,9 @@ test: ut
 .PHONY: clean
 ## Clean enough that a new release build will be clean
 clean:
+	# Clean .created files which indicate images / releases have been built.
+	find . -name '.*.created*' -type f -delete
 	rm -rf .go-pkg-cache report vendor bin proto/*.pb.go
-	find . -name '*.created-$(ARCH)' -exec rm -f {} +
 	-docker rmi $(DIKASTES_IMAGE):latest-$(ARCH)
 	-docker rmi $(DIKASTES_IMAGE):$(VERSION)-$(ARCH)
 ifeq ($(ARCH),amd64)
