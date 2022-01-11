@@ -8,6 +8,7 @@ import (
 	"net"
 	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -127,6 +128,7 @@ func NewAWSIPManager(
 		localAWSRoutesByDst:       map[ip.CIDR]*proto.RouteUpdate{},
 		localRouteDestsBySubnetID: map[string]set.Set{},
 		workloadEndpointsByID:     map[proto.WorkloadEndpointID]awsEndpointInfo{},
+		workloadEndpointIDsByCIDR: map[ip.CIDR]set.Set{},
 
 		freeRouteTableIndexes:  routeTableIndexes,
 		routeTablesByIfaceName: map[string]routeTable{},
@@ -348,7 +350,6 @@ func (a *awsIPManager) onIfaceAddrsUpdate(msg *ifaceAddrsUpdate) {
 
 func (a *awsIPManager) onWorkloadEndpointUpdate(msg *proto.WorkloadEndpointUpdate) {
 	wepID := *msg.Id
-	oldEP := a.workloadEndpointsByID[wepID]
 	newEP := awsEndpointInfo{
 		IPv4Nets:   parseCIDRSlice(msg.Endpoint.Ipv4Nets),
 		ElasticIPs: parseIPSlice(msg.Endpoint.AwsElasticIps),
@@ -357,30 +358,54 @@ func (a *awsIPManager) onWorkloadEndpointUpdate(msg *proto.WorkloadEndpointUpdat
 		"id":    wepID,
 		"newEP": newEP,
 	})
-	a.workloadEndpointsByID[wepID] = newEP
-	if reflect.DeepEqual(oldEP, newEP) {
+	changed := a.onWorkloadUpdateOrRemove(logCtx, wepID, &newEP)
+	if changed {
+		logCtx.Debug("Workload endpoint with elastic IPs updated.")
+		a.queueAWSResync("workload update")
+	}
+}
+
+func (a *awsIPManager) onWorkloadEndpointRemoved(msg *proto.WorkloadEndpointRemove) {
+	logCtx := logrus.WithField("id", *msg.Id)
+	changed := a.onWorkloadUpdateOrRemove(logCtx, *msg.Id, nil)
+	if changed {
+		logCtx.Debug("Workload endpoint with elastic IPs removed.")
+		a.queueAWSResync("workload removed")
+	}
+}
+
+func (a *awsIPManager) onWorkloadUpdateOrRemove(logCtx *logrus.Entry, wepID proto.WorkloadEndpointID, newEP *awsEndpointInfo) (changed bool) {
+	oldEP := a.workloadEndpointsByID[wepID]
+	if newEP == nil {
+		delete(a.workloadEndpointsByID, wepID)
+	} else {
+		a.workloadEndpointsByID[wepID] = *newEP
+	}
+	if reflect.DeepEqual(&oldEP, newEP) {
 		logCtx.Debug("No-op WEP update, ignoring.")
-		return
+		return false
 	}
 	if len(oldEP.ElasticIPs) == 0 && len(newEP.ElasticIPs) == 0 {
 		logCtx.Debug("WEP has no elastic IPs, ignoring.")
-		return
+		return false
 	}
-	for _, cidr := range oldEP.IPv4Nets {
-		a.workloadEndpointIDsByCIDR[cidr].Discard(wepID)
-		if a.workloadEndpointIDsByCIDR[cidr].Len() == 0 {
-			delete(a.workloadEndpointIDsByCIDR, cidr)
+	if len(oldEP.ElasticIPs) > 0 {
+		for _, cidr := range oldEP.IPv4Nets {
+			a.workloadEndpointIDsByCIDR[cidr].Discard(wepID)
+			if a.workloadEndpointIDsByCIDR[cidr].Len() == 0 {
+				delete(a.workloadEndpointIDsByCIDR, cidr)
+			}
 		}
 	}
-	for _, cidr := range newEP.IPv4Nets {
-		if a.workloadEndpointIDsByCIDR[cidr] == nil {
-			a.workloadEndpointIDsByCIDR[cidr] = set.New()
+	if newEP != nil && len(newEP.ElasticIPs) > 0 {
+		for _, cidr := range newEP.IPv4Nets {
+			if a.workloadEndpointIDsByCIDR[cidr] == nil {
+				a.workloadEndpointIDsByCIDR[cidr] = set.New()
+			}
+			a.workloadEndpointIDsByCIDR[cidr].Add(wepID)
 		}
-		a.workloadEndpointIDsByCIDR[cidr].Add(wepID)
 	}
-
-	logCtx.Debug("Workload endpoint with elastic IPs updated.")
-	a.queueAWSResync("workload update")
+	return true
 }
 
 func parseIPSlice(ips []string) (addrs []ip.Addr) {
@@ -407,18 +432,6 @@ func parseCIDRSlice(cidrs []string) (addrs []ip.CIDR) {
 	return
 }
 
-func (a *awsIPManager) onWorkloadEndpointRemoved(msg *proto.WorkloadEndpointRemove) {
-	oldEP, ok := a.workloadEndpointsByID[*msg.Id]
-	if !ok {
-		return
-	}
-	delete(a.workloadEndpointsByID, *msg.Id)
-	if len(oldEP.ElasticIPs) == 0 {
-		return
-	}
-	a.queueAWSResync("workload removed")
-}
-
 func (a *awsIPManager) lookUpElasticIPs(privIP ip.CIDR) []ip.Addr {
 	weps := a.workloadEndpointIDsByCIDR[privIP]
 	if weps == nil {
@@ -434,10 +447,15 @@ func (a *awsIPManager) lookUpElasticIPs(privIP ip.CIDR) []ip.Addr {
 		wep := a.workloadEndpointsByID[wepID]
 		elasticIPsThisWEP := set.New()
 		for _, eip := range wep.ElasticIPs {
-			if elasticIPs == nil /* First WEP */ ||
-				elasticIPs.Contains(eip) /* Extra WEPs, do the intersection */ {
-				elasticIPsThisWEP.Add(eip)
+			if elasticIPs != nil && !elasticIPs.Contains(eip) {
+				logrus.WithFields(logrus.Fields{
+					"elasticIP": eip.String(),
+					"endpoints": weps,
+				}).Warn("Multiple local endpoints share a private IP but have different Elastic IP " +
+					"configuration.  Ignoring Elastic IP.")
+				continue
 			}
+			elasticIPsThisWEP.Add(eip)
 		}
 		elasticIPs = elasticIPsThisWEP
 		return nil
@@ -449,6 +467,11 @@ func (a *awsIPManager) lookUpElasticIPs(privIP ip.CIDR) []ip.Addr {
 		addr := item.(ip.Addr)
 		elasticIPsSlice = append(elasticIPsSlice, addr)
 		return nil
+	})
+
+	// Sort for determinism in tests.
+	sort.Slice(elasticIPsSlice, func(i, j int) bool {
+		return elasticIPsSlice[i].AsBinary() < elasticIPsSlice[j].AsBinary()
 	})
 
 	return elasticIPsSlice

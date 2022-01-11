@@ -50,6 +50,17 @@ var _ = Describe("awsIPManager tests", func() {
 		egressGWCIDR  = "100.64.2.5/32"
 		egressGW2IP   = "100.64.2.6"
 		egressGW2CIDR = "100.64.2.6/32"
+
+		wep1ID = &proto.WorkloadEndpointID{
+			OrchestratorId: "k8s",
+			WorkloadId:     "wep1",
+			EndpointId:     "eth0",
+		}
+		wep2ID = &proto.WorkloadEndpointID{
+			OrchestratorId: "k8s",
+			WorkloadId:     "wep2",
+			EndpointId:     "eth0",
+		}
 	)
 
 	BeforeEach(func() {
@@ -186,6 +197,14 @@ var _ = Describe("awsIPManager tests", func() {
 				AwsSubnetId:   "subnet-123456789012345657",
 			}
 			m.OnUpdate(workloadRoute)
+			// Base case: no elastic IPs, shouldget ignored.
+			wepUpd := &proto.WorkloadEndpointUpdate{
+				Id: wep1ID,
+				Endpoint: &proto.WorkloadEndpoint{
+					Ipv4Nets: []string{egressGWCIDR},
+				},
+			}
+			m.OnUpdate(wepUpd)
 
 			// Local non-AWS workload (should be ignored).
 			nonAWSWorkloadRoute := &proto.RouteUpdate{
@@ -196,6 +215,14 @@ var _ = Describe("awsIPManager tests", func() {
 				LocalWorkload: true, // This means "really a workload, not just a local IPAM block"
 			}
 			m.OnUpdate(nonAWSWorkloadRoute)
+			// Non-AWS WEP update, should get ignored.
+			wepUpd = &proto.WorkloadEndpointUpdate{
+				Id: wep2ID,
+				Endpoint: &proto.WorkloadEndpoint{
+					Ipv4Nets: []string{"192.168.1.2/32"},
+				},
+			}
+			m.OnUpdate(wepUpd)
 
 			Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 		})
@@ -217,6 +244,132 @@ var _ = Describe("awsIPManager tests", func() {
 					"subnet-123456789012345657": set.From("hosts-pool", "workloads-pool"),
 				},
 			}))
+		})
+
+		Describe("with elastic IPs", func() {
+			const elasticIP1 = "44.0.0.1"
+			const elasticIP2 = "44.0.0.2"
+			const elasticIP3 = "44.0.0.3"
+
+			BeforeEach(func() {
+				wepUpd := &proto.WorkloadEndpointUpdate{
+					Id: wep1ID,
+					Endpoint: &proto.WorkloadEndpoint{
+						Ipv4Nets:      []string{egressGWCIDR},
+						AwsElasticIps: []string{elasticIP1},
+					},
+				}
+				m.OnUpdate(wepUpd)
+				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+			})
+
+			It("Should send expected state", func() {
+				workloadCIDR := ip.MustParseCIDROrIP(workloadRoute.Dst)
+				Expect(fakes.DatastoreState).To(Equal(&aws.DatastoreState{
+					LocalAWSAddrsByDst: map[ip.CIDR]aws.AddrInfo{
+						workloadCIDR: {
+							AWSSubnetId: workloadRoute.AwsSubnetId,
+							Dst:         workloadRoute.Dst,
+							ElasticIPs:  []ip.Addr{ip.FromString(elasticIP1)},
+						},
+					},
+					LocalRouteDestsBySubnetID: map[string]set.Set{
+						"subnet-123456789012345657": set.From(workloadCIDR),
+					},
+					PoolIDsBySubnetID: map[string]set.Set{
+						"subnet-123456789012345657": set.From("hosts-pool", "workloads-pool"),
+					},
+				}))
+			})
+
+			Describe("with conflicting workloads", func() {
+				BeforeEach(func() {
+					// Set up two workloads with the same private IP and overlapping elastic IPs.  This is
+					// a misconfiguration, but it can happen transiently during resyncs.
+					wepUpd := &proto.WorkloadEndpointUpdate{
+						Id: wep1ID,
+						Endpoint: &proto.WorkloadEndpoint{
+							Ipv4Nets:      []string{egressGWCIDR},
+							AwsElasticIps: []string{elasticIP1, elasticIP2},
+						},
+					}
+					m.OnUpdate(wepUpd)
+
+					wepUpd = &proto.WorkloadEndpointUpdate{
+						Id: wep2ID,
+						Endpoint: &proto.WorkloadEndpoint{
+							Ipv4Nets:      []string{egressGWCIDR},
+							AwsElasticIps: []string{elasticIP2, elasticIP3},
+						},
+					}
+					m.OnUpdate(wepUpd)
+					Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+				})
+
+				It("should send expected state", func() {
+					workloadCIDR := ip.MustParseCIDROrIP(workloadRoute.Dst)
+					Expect(fakes.DatastoreState).To(Equal(&aws.DatastoreState{
+						LocalAWSAddrsByDst: map[ip.CIDR]aws.AddrInfo{
+							workloadCIDR: {
+								AWSSubnetId: workloadRoute.AwsSubnetId,
+								Dst:         workloadRoute.Dst,
+								// Only the shared elastic IP is passed through.
+								ElasticIPs: []ip.Addr{ip.FromString(elasticIP2)},
+							},
+						},
+						LocalRouteDestsBySubnetID: map[string]set.Set{
+							"subnet-123456789012345657": set.From(workloadCIDR),
+						},
+						PoolIDsBySubnetID: map[string]set.Set{
+							"subnet-123456789012345657": set.From("hosts-pool", "workloads-pool"),
+						},
+					}))
+				})
+
+				It("should ignore duplicate updates", func() {
+					fakes.DatastoreUpdateCount = 0
+					wepUpd := &proto.WorkloadEndpointUpdate{
+						Id: wep1ID,
+						Endpoint: &proto.WorkloadEndpoint{
+							Ipv4Nets:      []string{egressGWCIDR},
+							AwsElasticIps: []string{elasticIP1, elasticIP2},
+						},
+					}
+					m.OnUpdate(wepUpd)
+
+					Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+					Expect(fakes.DatastoreUpdateCount).To(BeZero())
+				})
+
+				Describe("after cleaning up conflict", func() {
+					BeforeEach(func() {
+						m.OnUpdate(&proto.WorkloadEndpointRemove{
+							Id: wep2ID,
+						})
+						Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+					})
+
+					It("Should send expected state", func() {
+						workloadCIDR := ip.MustParseCIDROrIP(workloadRoute.Dst)
+						Expect(fakes.DatastoreState).To(Equal(&aws.DatastoreState{
+							LocalAWSAddrsByDst: map[ip.CIDR]aws.AddrInfo{
+								workloadCIDR: {
+									AWSSubnetId: workloadRoute.AwsSubnetId,
+									Dst:         workloadRoute.Dst,
+									// Only the shared elastic IP is passed through.
+									ElasticIPs: []ip.Addr{ip.FromString(elasticIP1), ip.FromString(elasticIP2)},
+								},
+							},
+							LocalRouteDestsBySubnetID: map[string]set.Set{
+								"subnet-123456789012345657": set.From(workloadCIDR),
+							},
+							PoolIDsBySubnetID: map[string]set.Set{
+								"subnet-123456789012345657": set.From("hosts-pool", "workloads-pool"),
+							},
+						}))
+					})
+				})
+			})
 		})
 
 		It("should handle a change of subnet", func() {
@@ -838,9 +991,10 @@ type awsIPMgrFakes struct {
 
 	Links []netlink.Link
 
-	RouteTables map[int]*fakeRouteTable
-	Rules       *fakeRouteRules
-	Errors      testutils.ErrorProducer
+	RouteTables          map[int]*fakeRouteTable
+	Rules                *fakeRouteRules
+	Errors               testutils.ErrorProducer
+	DatastoreUpdateCount int
 }
 
 func (f *awsIPMgrFakes) ParseAddr(s string) (*netlink.Addr, error) {
@@ -851,6 +1005,7 @@ func (f *awsIPMgrFakes) ParseAddr(s string) (*netlink.Addr, error) {
 }
 
 func (f *awsIPMgrFakes) OnDatastoreUpdate(ds aws.DatastoreState) {
+	f.DatastoreUpdateCount++
 	f.DatastoreState = &ds
 }
 
