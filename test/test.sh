@@ -5,7 +5,6 @@
 # below and then compare to previously captured configurations to ensure
 # only expected changes have happened.
 
-DEBUG="false"
 FAILED=0
 TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 mkdir -p $TEST_DIR/tmp
@@ -49,7 +48,7 @@ function checkConfiguration() {
   else
     echo " XXX configuration is not correct"
     FAILED=1
-    $DEBUG && diff $EXPECTED $UUT
+    diff $EXPECTED $UUT
   fi
 }
 
