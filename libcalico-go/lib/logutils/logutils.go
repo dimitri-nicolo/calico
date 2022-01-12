@@ -409,11 +409,10 @@ func NewBackgroundHook(
 	opts ...BackgroundHookOpt,
 ) *BackgroundHook {
 	bh := &BackgroundHook{
-		destinations:    destinations,
-		levels:          levels,
-		syslogLevel:     syslogLevel,
-		counter:         counter,
-		debugFileNameRE: regexp.MustCompile(`.*`),
+		destinations: destinations,
+		levels:       levels,
+		syslogLevel:  syslogLevel,
+		counter:      counter,
 	}
 	for _, opt := range opts {
 		opt(bh)
