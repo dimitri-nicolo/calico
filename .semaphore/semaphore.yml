@@ -235,7 +235,7 @@ blocks:
       - env_var: WINDOWS_VERSION
         values: ["20H2"]
       - env_var: BACKEND
-        values: ["vxlan"]
+        values: ["bgp", "vxlan"]
 
 - name: "Felix: FV Tests"
   run:

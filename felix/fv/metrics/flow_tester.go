@@ -230,8 +230,10 @@ func (t *FlowTester) CheckFlow(srcMeta, srcIP, dstMeta, dstIP, dstSvc string, nu
 			if meta == fl.FlowMeta {
 				// This flow log matches what
 				// we're looking for.
-				if count != numFlowsPerMeta {
-					errs = append(errs, fmt.Sprintf("Wrong flow count (%d != %d) for %v", count, numFlowsPerMeta, meta))
+				if !t.IgnoreStartCompleteCount {
+					if count != numFlowsPerMeta {
+						errs = append(errs, fmt.Sprintf("Wrong flow count (%d != %d) for %v", count, numFlowsPerMeta, meta))
+					}
 				}
 				matchingMetas += 1
 				// Record that we've ticked off this flow.

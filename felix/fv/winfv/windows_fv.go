@@ -18,6 +18,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type CalicoBackEnd string
+
+const (
+	CalicoBackendBGP   CalicoBackEnd = "bgp"
+	CalicoBackendVXLAN               = "vxlan"
+)
+
 type WinFV struct {
 	rootDir    string
 	flowLogDir string
@@ -27,6 +34,8 @@ type WinFV struct {
 
 	// The original content of config.ps1.
 	originalConfig string
+
+	backend CalicoBackEnd
 }
 
 func NewWinFV(rootDir, flowLogDir, dnsCacheFile string) (*WinFV, error) {
@@ -36,13 +45,35 @@ func NewWinFV(rootDir, flowLogDir, dnsCacheFile string) (*WinFV, error) {
 		return nil, err
 	}
 
+	var backend CalicoBackEnd
+	networkType := testutils.Powershell(`Get-HnsNetwork | Where name -EQ Calico | Select Type`)
+	log.Infof("Windows network type %s", networkType)
+	if strings.Contains(strings.ToLower(networkType), "l2bridge") {
+		backend = CalicoBackendBGP
+	} else if strings.Contains(strings.ToLower(networkType), "overlay") {
+		backend = CalicoBackendVXLAN
+	} else {
+		return nil, fmt.Errorf("Wrong Windows network type")
+	}
+
 	return &WinFV{
 		rootDir:        rootDir,
 		flowLogDir:     flowLogDir,
 		dnsCacheFile:   dnsCacheFile,
 		configFile:     configFile,
 		originalConfig: string(b),
+		backend:        backend,
 	}, nil
+}
+
+func (f *WinFV) GetBackendType() CalicoBackEnd {
+	return f.backend
+}
+
+func (f *WinFV) Restart() {
+	log.Infof("Restarting Felix...")
+	testutils.Powershell(filepath.Join(f.rootDir, "restart-felix.ps1"))
+	log.Infof("Felix Restarted.")
 }
 
 func (f *WinFV) RestartFelix() {
