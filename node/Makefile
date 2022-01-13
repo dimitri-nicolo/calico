@@ -174,7 +174,8 @@ BINDIR?=bin
 
 ## Clean enough that a new release build will be clean
 clean: clean-windows-upgrade
-	find . -name '*.created' -exec rm -f {} +
+	# Clean .created files which indicate images / releases have been built.
+	find . -name '.*.created*' -type f -delete
 	find . -name '*.pyc' -exec rm -f {} +
 	rm -rf .go-pkg-cache
 	rm -rf certs *.tar $(NODE_CONTAINER_BIN_DIR)
