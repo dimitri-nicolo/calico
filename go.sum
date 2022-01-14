@@ -1194,10 +1194,10 @@ github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhV
 github.com/tigera/api v0.0.0-20211119192830-60ae1a27d9ca/go.mod h1:U7qqFcD+luefolr44wGe1PuCMxgKUplb6qStftrgrSQ=
 github.com/tigera/api v0.0.0-20211202170222-d8128d06db71 h1:VGRufTlxIlpvZt2ZzhtRYTYWVDZzWiWFhxc3LKzDVlE=
 github.com/tigera/api v0.0.0-20211202170222-d8128d06db71/go.mod h1:FFE+MQo0Up7GGg3RagKRAwgdH7UqlXBFm+47BwmQLVQ=
-github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220113204947-4ace08948663 h1:OXwzGAS7x8Cxj4wCneu8PEHNaQ1cCLhWlcjTmttizvI=
-github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220113204947-4ace08948663/go.mod h1:yCZQIo0D8B81uKKSJPCy3BCTeEscvlwljITppQEy5qc=
-github.com/tigera/lma v0.0.0-20220106165817-0064103d9947 h1:NhG3cRYgaR9tO9VgOkOfnd6F6NsGsQQ8n3cT6yKddoo=
-github.com/tigera/lma v0.0.0-20220106165817-0064103d9947/go.mod h1:0r/zBi+QEqOGVQN9b4oKgmK1JIn5nhWU5/YHd5Xak9I=
+github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220114164810-979fc925a331 h1:tpcz9WB/+28Ivv58QaF+eYFD3blrtU+cfM05y3eTT1M=
+github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220114164810-979fc925a331/go.mod h1:yCZQIo0D8B81uKKSJPCy3BCTeEscvlwljITppQEy5qc=
+github.com/tigera/lma v0.0.0-20220114180745-11c1577ee102 h1:LoHx7JMekG5qKBgMfYn7KnB4+F3sqiJ+eQc0WWvtL5I=
+github.com/tigera/lma v0.0.0-20220114180745-11c1577ee102/go.mod h1:ylXOt7K7V1EXT/T2mcesUUxSC8VLIv9+eIWGKvJWyyg=
 github.com/tigera/windows-networking v0.0.0-20211112174220-6a90051af748/go.mod h1:zuycD4KqAFNMJC+Bv4fGqGMn7XsS/mZnttHGe96NLk0=
 github.com/tinylib/msgp v1.0.2/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
 github.com/tinylib/msgp v1.1.5/go.mod h1:eQsjooMTnV42mHu917E26IogZ2930nFyBQdofk10Udg=
