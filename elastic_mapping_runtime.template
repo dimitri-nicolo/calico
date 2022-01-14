@@ -102,31 +102,6 @@
             }
           }
         }
-      },
-      /* Additional details when type is “FileOpen”... */
-      "file_open": {
-        "properties": {
-	  /* File is being opened for reading. */
-          "for_read": {
-            "type": "boolean"
-          },
-	  /* File is being opened for writing. */
-          "for_write": {
-            "type": "boolean"
-          },
-	  /* May create a new file, if it doesn't already exist. */
-          "may_create": {
-            "type": "boolean"
-          },
-	  /* Full Linux bit flags value: O_APPEND, O_ASYNC etc. */
-          "full_flags": {
-            "type": "integer"
-          },
-	  /* File mode, as in chmod, if a new file is created. */
-          "create_mode": {
-            "type": "integer"
-          }
-        }
       }
     }
   }
