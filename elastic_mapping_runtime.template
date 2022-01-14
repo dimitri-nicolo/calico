@@ -38,12 +38,6 @@
       "invocation": {
         "type": "keyword"
       },
-      /* Container ID, if this event comes from a container; empty if not.  This is a string that
-       * depends on the container runtime in use.  For example, with Docker it is like
-       * “docker://12345abcc”. */
-      "container_id": {
-        "type": "keyword"
-      },
       /* Pod info, if the process ID can be correlated to a Kubernetes pod... */
       "pod": {
         "properties": {
