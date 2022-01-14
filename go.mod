@@ -7,11 +7,11 @@ require (
 	github.com/onsi/gomega v1.15.0
 	github.com/projectcalico/calico v3.21.2+incompatible
 	github.com/sirupsen/logrus v1.8.1
-	github.com/tigera/lma v0.0.0-20220106165817-0064103d9947
+	github.com/tigera/lma v0.0.0-20220114180745-11c1577ee102
 )
 
 replace (
-	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220113204947-4ace08948663
+	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220114164810-979fc925a331
 
 	google.golang.org/grpc => google.golang.org/grpc v1.29.1
 
