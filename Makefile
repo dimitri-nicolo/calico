@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/lma
-GO_BUILD_VER    ?= v0.63
+GO_BUILD_VER    ?= v0.65
 GIT_USE_SSH     := true
 LOCAL_CHECKS     = mod-download
 
@@ -61,7 +61,7 @@ EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 include Makefile.common
 
 ##############################################################################
-ELASTIC_VERSION ?= 7.11.2
+ELASTIC_VERSION ?= 7.16.2
 
 TOP_SRC_DIRS     = pkg
 SRC_DIRS         = $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*.go \
