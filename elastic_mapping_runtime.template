@@ -12,7 +12,7 @@
       "count": {
         "type": "integer"
       },
-      /* The type of event being reported.  For example, "ProcessStart". */
+      /* The type of event being reported; one of: "ProcessStart", "FileAccess". */
       "type": {
         "type": "keyword"
       },
