@@ -5,14 +5,12 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
 	"k8s.io/apiserver/pkg/endpoints/request"
 
-	"github.com/olivere/elastic/v7"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/tigera/lma/pkg/auth"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 	"github.com/tigera/lma/pkg/httputils"

@@ -7,7 +7,7 @@ import (
 
 	"github.com/tigera/es-proxy/pkg/math"
 
-	"github.com/projectcalico/libcalico-go/lib/set"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 // AggregatedProtoPorts holds info about an aggregated set of protocols and ports.

@@ -25,7 +25,7 @@ function create_index()
   if [ -f "/test/es-templates/$INDEX_NAME" ]; then
     TEMPLATE=$(cat "/test/es-templates/$INDEX_NAME")
     curl --insecure -f --retry ${RETRY_TIMES} -X PUT \
-      "${ELASTIC_SCHEME}://${ELASTIC_HOST}:9200/_template/${INDEX_NAME}*" ${EXTRA_CURL_ARGS} \
+      "${ELASTIC_SCHEME}://${ELASTIC_HOST}:9200/_template/${INDEX_NAME}.cluster" ${EXTRA_CURL_ARGS} \
       -H 'Content-Type: application/json' -d "$TEMPLATE"
   fi
 

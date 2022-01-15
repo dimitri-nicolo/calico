@@ -3,14 +3,12 @@ package policycalc
 import (
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/net"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
-
-	"github.com/projectcalico/libcalico-go/lib/net"
-
-	"github.com/tigera/lma/pkg/api"
-
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
+	"github.com/tigera/lma/pkg/api"
 )
 
 type MatchType byte

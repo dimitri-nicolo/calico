@@ -14,16 +14,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/projectcalico/libcalico-go/lib/resources"
-	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
-
 	compcfg "github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/replay"
 	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/compliance/pkg/xrefcache"
-
 	"github.com/tigera/es-proxy/pkg/pip/policycalc"
 )
 

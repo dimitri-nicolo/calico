@@ -3,11 +3,11 @@
 set -xe
 
 FV_ES_PROXY_TEST_IMAGE=${FV_ES_PROXY_TEST_IMAGE:-"tigera/es-proxy:latest"}
-FV_ELASTICSEARCH_IMAGE=${FV_ELASTICSEARCH_IMAGE:-"docker.elastic.co/elasticsearch/elasticsearch:7.3.0"}
+FV_ELASTICSEARCH_IMAGE=${FV_ELASTICSEARCH_IMAGE:-"docker.elastic.co/elasticsearch/elasticsearch:7.16.2"}
 FV_GINKGO_ARGS=${FV_GINKGO_ARGS:-""}
 PACKAGE_ROOT=${PACKAGE_ROOT:-$(pwd)/..}
 
-GO_BUILD_IMAGE=${GO_BUILD_IMAGE:-"calico/go-build:v0.21"}
+GO_BUILD_IMAGE=${GO_BUILD_IMAGE:-"calico/go-build:v0.65"}
 PROXY_LISTEN_HOST="127.0.0.1"
 PROXY_LISTEN_PORT="8000"
 ELASTIC_SCHEME=${ELASTIC_SCHEME:-"http"}
@@ -43,10 +43,10 @@ function run_elasticsearch()
 {
 	local ELASTIC_SCHEME=$1
 
-  echo "BOOTSTRAP_PASSWORD is: ${BOOTSTRAP_PASSWORD}"
-  ELASTICSEARCH_RUN_SECURITY_ARGS="-e xpack.security.enabled=true -e ELASTIC_PASSWORD=${BOOTSTRAP_PASSWORD}"
-  EXTRA_CURL_ARGS="-u elastic:${BOOTSTRAP_PASSWORD}"
-  ELASTICSEARCH_EXEC_SECURITY_ARGS="-e BOOTSTRAP_PASSWORD=${BOOTSTRAP_PASSWORD} -e ELASTIC_PASSWORD=${BOOTSTRAP_PASSWORD}"
+	echo "BOOTSTRAP_PASSWORD is: ${BOOTSTRAP_PASSWORD}"
+	ELASTICSEARCH_RUN_SECURITY_ARGS="-e xpack.security.enabled=true -e ELASTIC_PASSWORD=${BOOTSTRAP_PASSWORD}"
+	EXTRA_CURL_ARGS="-u elastic:${BOOTSTRAP_PASSWORD}"
+	ELASTICSEARCH_EXEC_SECURITY_ARGS="-e BOOTSTRAP_PASSWORD=${BOOTSTRAP_PASSWORD} -e ELASTIC_PASSWORD=${BOOTSTRAP_PASSWORD}"
 
 	docker rm -f ${ELASTICSEARCH_CONTAINER_NAME} || true
 
@@ -64,7 +64,7 @@ function run_elasticsearch()
 	until docker exec ${ELASTICSEARCH_CONTAINER_NAME} curl http://127.0.0.1:9200 ${EXTRA_CURL_ARGS} 2> /dev/null;
 	do
 		echo "Waiting for Elasticsearch to come up..."; \
-		sleep 1
+		sleep 3
 	done
 
 	docker exec ${ELASTICSEARCH_EXEC_SECURITY_ARGS} ${ELASTICSEARCH_CONTAINER_NAME} /test/setup_elasticsearch_index.sh

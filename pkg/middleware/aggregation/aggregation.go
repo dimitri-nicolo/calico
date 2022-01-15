@@ -10,22 +10,19 @@ import (
 	"time"
 
 	"github.com/olivere/elastic/v7"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
-
 	log "github.com/sirupsen/logrus"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
+
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
+	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 	lmaindex "github.com/tigera/lma/pkg/elastic/index"
 	"github.com/tigera/lma/pkg/httputils"
 	"github.com/tigera/lma/pkg/k8s"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-
-	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
 )
 
 // This file implements an aggregated data query handler. The primary use of this is for the UX when querying aggregated

@@ -9,7 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 
-	"github.com/projectcalico/libcalico-go/lib/set"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 // This file implements a service group organizer per-request cache. It effectively defines the concept of a service

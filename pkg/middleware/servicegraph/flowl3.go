@@ -7,14 +7,13 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/libcalico-go/lib/set"
-
-	lmav1 "github.com/tigera/lma/pkg/apis/v1"
-	lmaelastic "github.com/tigera/lma/pkg/elastic"
-	lmaindex "github.com/tigera/lma/pkg/elastic/index"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
+	lmav1 "github.com/tigera/lma/pkg/apis/v1"
+	lmaelastic "github.com/tigera/lma/pkg/elastic"
+	lmaindex "github.com/tigera/lma/pkg/elastic/index"
 )
 
 // This file provides the main interface into elasticsearch for service graph. It is used to load flows for a given

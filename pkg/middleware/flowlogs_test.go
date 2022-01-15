@@ -7,28 +7,23 @@ import (
 	"os"
 	"time"
 
-	"github.com/tigera/lma/pkg/api"
-
-	"github.com/stretchr/testify/mock"
-
-	"github.com/tigera/lma/pkg/list"
-
-	"github.com/projectcalico/libcalico-go/lib/errors"
-
-	"github.com/tigera/lma/pkg/rbac"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/stretchr/testify/mock"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/projectcalico/libcalico-go/lib/resources"
-
 	"github.com/tigera/es-proxy/pkg/pip"
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
+	"github.com/tigera/lma/pkg/api"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
+	"github.com/tigera/lma/pkg/list"
+	"github.com/tigera/lma/pkg/rbac"
 )
 
 const (

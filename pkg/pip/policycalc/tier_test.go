@@ -7,15 +7,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/net"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
-
-	"github.com/projectcalico/libcalico-go/lib/net"
-	"github.com/projectcalico/libcalico-go/lib/resources"
-
-	"github.com/tigera/lma/pkg/api"
-
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
+	"github.com/tigera/lma/pkg/api"
 )
 
 // This file contains most of the policy calculation tests, by explicitly testing each match criteria.

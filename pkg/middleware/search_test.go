@@ -13,19 +13,17 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/stretchr/testify/mock"
 
 	"github.com/olivere/elastic/v7"
+	"github.com/stretchr/testify/mock"
 
+	libcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 	lmav1 "github.com/tigera/lma/pkg/apis/v1"
 	lmaindex "github.com/tigera/lma/pkg/elastic/index"
 	"github.com/tigera/lma/pkg/httputils"
 	calicojson "github.com/tigera/lma/pkg/test/json"
 	"github.com/tigera/lma/pkg/test/thirdpartymock"
-
-	libcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 )
 
 const (

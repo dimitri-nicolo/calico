@@ -8,15 +8,13 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
-
-	"github.com/projectcalico/libcalico-go/lib/resources"
-
-	pelastic "github.com/tigera/lma/pkg/elastic"
-
 	"github.com/tigera/es-proxy/pkg/pip/config"
 	"github.com/tigera/es-proxy/pkg/pip/policycalc"
+	pelastic "github.com/tigera/lma/pkg/elastic"
 )
 
 var _ = Describe("Test handling of flow splitting", func() {
