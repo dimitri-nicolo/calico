@@ -5,10 +5,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/projectcalico/libcalico-go/lib/resources"
-
 	"github.com/tigera/compliance/pkg/datastore"
 )
 

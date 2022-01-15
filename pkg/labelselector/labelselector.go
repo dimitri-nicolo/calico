@@ -8,8 +8,8 @@ import (
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/felix/labelindex"
-	"github.com/projectcalico/libcalico-go/lib/selector"
+	"github.com/projectcalico/calico/felix/labelindex"
+	"github.com/projectcalico/calico/libcalico-go/lib/selector"
 )
 
 // This is just a wrapper around the Felix InheritIndex helper, but uses ResourceID selector and label identifiers and

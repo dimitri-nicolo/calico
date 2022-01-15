@@ -6,6 +6,11 @@ import (
 	"net/url"
 	"time"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	"github.com/stretchr/testify/mock"
+
 	authzv1 "k8s.io/api/authorization/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
@@ -17,11 +22,6 @@ import (
 	"github.com/tigera/lma/pkg/api"
 	lmaauth "github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/lma/pkg/elastic"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	"github.com/stretchr/testify/mock"
 )
 
 func newArchivedReportData(reportName, reportTypeName string) *api.ArchivedReportData {

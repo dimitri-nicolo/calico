@@ -49,10 +49,11 @@ import (
 	"k8s.io/client-go/tools/record"
 	ref "k8s.io/client-go/tools/reference"
 
-	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
-	"github.com/projectcalico/libcalico-go/lib/jitter"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/jitter"
+
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/compliance/pkg/hashutils"

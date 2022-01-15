@@ -1,7 +1,7 @@
 // Copyright (c) 2019 Tigera, Inc. All rights reserved.
 package internet
 
-import "github.com/projectcalico/libcalico-go/lib/net"
+import "github.com/projectcalico/calico/libcalico-go/lib/net"
 
 var (
 	private = []net.IPNet{

@@ -10,9 +10,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/libcalico-go/lib/health"
-
 	"k8s.io/klog"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
 
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/report"

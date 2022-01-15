@@ -4,11 +4,12 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset"
-	"github.com/tigera/lma/pkg/auth"
-
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset"
+
+	"github.com/tigera/lma/pkg/auth"
 )
 
 const (

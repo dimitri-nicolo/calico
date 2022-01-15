@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/projectcalico/libcalico-go/lib/resources"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
 	"github.com/tigera/lma/pkg/elastic"
 	"github.com/tigera/lma/pkg/list"

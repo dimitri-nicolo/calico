@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/projectcalico/libcalico-go/lib/resources"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/compliance/pkg/config"
