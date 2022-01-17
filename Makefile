@@ -1,4 +1,4 @@
-GO_BUILD_VER ?= v0.55
+GO_BUILD_VER ?= v0.65
 
 # Override shell if we're on Windows
 # https://stackoverflow.com/a/63840549
@@ -85,11 +85,23 @@ eks-log-forwarder-startup:
 
 build: eks-log-forwarder-startup
 
+###############################################################################
+# Build
+###############################################################################
+
+# Add --squash argument for CICD pipeline runs only to avoid setting "experimental",
+# for Docker processes on personal machine.
+# DOCKER_SQUASH is defaulted to be empty but can be set `DOCKER_SQUASH=--squash make image` 
+# to squash images locally.
+ifdef CI
+DOCKER_SQUASH=--squash
+endif
+
 $(FLUENTD_IMAGE):
 	$(MAKE) $(addprefix build-image-,$(VALIDARCHES)) IMAGE=$(FLUENTD_IMAGE) DOCKERFILE=$(DOCKERFILE)
 
 build-image-%:
-	docker build --pull -t $(IMAGE):latest-$* --file $(DOCKERFILE) .
+	docker build --pull $(DOCKER_SQUASH) -t $(IMAGE):latest-$* --file $(DOCKERFILE) .
 	$(if $(filter amd64,$*),\
 		docker tag $(IMAGE):latest-$* $(IMAGE):latest)
 
