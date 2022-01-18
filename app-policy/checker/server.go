@@ -15,8 +15,11 @@
 package checker
 
 import (
+	"strings"
+
 	"github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/app-policy/statscache"
+	"github.com/projectcalico/calico/app-policy/waf"
 
 	core_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -44,11 +47,21 @@ func NewServer(ctx context.Context, stores <-chan *policystore.PolicyStore, dpSt
 
 // Check applies the currently loaded policy to a network request and renders a policy decision.
 func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*authz.CheckResponse, error) {
+
+	// Helper variables used to reduce potential code smells.
+	reqMethod := req.GetAttributes().GetRequest().GetHttp().GetMethod()
+	reqPath := req.GetAttributes().GetRequest().GetHttp().GetPath()
+	reqProtocol := req.GetAttributes().GetRequest().GetHttp().GetProtocol()
+	reqSourceHost := req.GetAttributes().GetSource().GetAddress().GetSocketAddress().GetAddress()
+	reqSourcePort := req.GetAttributes().GetSource().GetAddress().GetSocketAddress().GetPortValue()
+	reqDestinationHost := req.GetAttributes().GetDestination().GetAddress().GetSocketAddress().GetAddress()
+	reqDestinationPort := req.GetAttributes().GetDestination().GetAddress().GetSocketAddress().GetPortValue()
+
 	log.WithFields(log.Fields{
 		"context":         ctx,
-		"Req.Method":      req.GetAttributes().GetRequest().GetHttp().GetMethod(),
-		"Req.Path":        req.GetAttributes().GetRequest().GetHttp().GetPath(),
-		"Req.Protocol":    req.GetAttributes().GetRequest().GetHttp().GetProtocol(),
+		"Req.Method":      reqMethod,
+		"Req.Path":        reqPath,
+		"Req.Protocol":    reqProtocol,
 		"Req.Source":      req.GetAttributes().GetSource(),
 		"Req.Destination": req.GetAttributes().GetDestination(),
 	}).Debug("Check start")
@@ -77,11 +90,19 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 		as.reportStats(ctx, &st, req)
 	}
 
+	// WAF ModSecurity Process Http Request.
+	detection := wafProcessHttpRequest(reqPath, reqMethod, reqProtocol, reqSourceHost, reqSourcePort, reqDestinationHost, reqDestinationPort)
+	if detection > 0 {
+		log.Errorf("WAF Process Http Request URL '%s' check FAILED!", reqPath)
+		resp.Status.Code = PERMISSION_DENIED
+		return &resp, nil
+	}
+
 	resp.Status = &st
 	log.WithFields(log.Fields{
-		"Req.Method":               req.GetAttributes().GetRequest().GetHttp().GetMethod(),
-		"Req.Path":                 req.GetAttributes().GetRequest().GetHttp().GetPath(),
-		"Req.Protocol":             req.GetAttributes().GetRequest().GetHttp().GetProtocol(),
+		"Req.Method":               reqMethod,
+		"Req.Path":                 reqPath,
+		"Req.Protocol":             reqProtocol,
 		"Req.Source":               req.GetAttributes().GetSource(),
 		"Req.Destination":          req.GetAttributes().GetDestination(),
 		"Response.Status":          resp.GetStatus(),
@@ -89,6 +110,48 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 		"Response.DynamicMetadata": resp.GetDynamicMetadata,
 	}).Debug("Check complete")
 	return &resp, nil
+}
+
+func wafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, clientPort uint32, serverHost string, serverPort uint32) int {
+
+	// Use this as the correlationID.
+	id := waf.GenerateModSecurityID()
+
+	httpProtocol, httpVersion := splitInput(inputProtocol, "/", "HTTP", "1.1")
+	detection := waf.ProcessHttpRequest(id, uri, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort)
+
+	// Log to Elasticsearch => Kibana.
+	if detection == 1 {
+		waf.Logger.WithFields(log.Fields{
+			"unique_id":   id,
+			"uri":         uri,
+			"method":      httpMethod,
+			"proto":       inputProtocol,
+			"source_ip":   clientHost,
+			"source_port": clientPort,
+			"dest_ip":     serverHost,
+			"dest_port":   serverPort,
+		}).Error("WAF check FAILED!")
+	}
+
+	return detection
+}
+
+func splitInput(input, delim, defaultLeft, defaultRight string) (actualLeft, actualRight string) {
+	splitN := strings.SplitN(input, delim, 2)
+	length := len(splitN)
+
+	actualLeft = defaultLeft
+	actualRight = defaultRight
+
+	if length == 1 && len(splitN[0]) > 0 {
+		actualLeft = splitN[0]
+	}
+	if length == 2 && len(splitN[1]) > 0 {
+		actualRight = splitN[1]
+	}
+
+	return actualLeft, actualRight
 }
 
 // reportStats creates a statistics for this request and reports it to the client.

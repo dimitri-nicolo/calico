@@ -22,6 +22,13 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/docopt/docopt-go"
+	authz_v2 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v2"
+	authz_v2alpha "github.com/envoyproxy/go-control-plane/envoy/service/auth/v2alpha"
+	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
+	log "github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
+
 	"github.com/projectcalico/calico/app-policy/checker"
 	"github.com/projectcalico/calico/app-policy/health"
 	"github.com/projectcalico/calico/app-policy/policystore"
@@ -29,13 +36,7 @@ import (
 	"github.com/projectcalico/calico/app-policy/statscache"
 	"github.com/projectcalico/calico/app-policy/syncher"
 	"github.com/projectcalico/calico/app-policy/uds"
-
-	"github.com/docopt/docopt-go"
-	authz_v2 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v2"
-	authz_v2alpha "github.com/envoyproxy/go-control-plane/envoy/service/auth/v2alpha"
-	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
-	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
+	"github.com/projectcalico/calico/app-policy/waf"
 )
 
 const usage = `Dikastes - the decider.
@@ -50,6 +51,7 @@ Options:
   -h --help              Show this screen.
   -l --listen <port>     Unix domain socket path [default: /var/run/dikastes/dikastes.sock]
   -d --dial <target>     Target to dial. [default: localhost:50051]
+  -r --rules <target>    Directory where WAF rules are stored. [default: /etc/waf/]
   --debug                Log at Debug level.`
 
 var VERSION string
@@ -59,6 +61,7 @@ const (
 )
 
 func main() {
+	log.Info("Dikastes launching with ALP, WAF etc. logger.")
 	arguments, err := docopt.ParseArgs(usage, nil, VERSION)
 	if err != nil {
 		println(usage)
@@ -77,6 +80,8 @@ func main() {
 func runServer(arguments map[string]interface{}) {
 	filePath := arguments["--listen"].(string)
 	dial := arguments["--dial"].(string)
+	rulesetDirectory := arguments["--rules"].(string)
+
 	_, err := os.Stat(filePath)
 	if !os.IsNotExist(err) {
 		// file exists, try to delete it.
@@ -100,6 +105,12 @@ func runServer(arguments map[string]interface{}) {
 	if err != nil {
 		log.Fatal("Unable to set write permission on socket.")
 	}
+
+	// Initialize WAF and load OWASP Core Rule Sets.
+	waf.InitializeModSecurity()
+	waf.DefineRulesSetDirectory(rulesetDirectory)
+	filenames := waf.ExtractRulesSetFilenames()
+	waf.LoadModSecurityCoreRuleSet(filenames)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -136,6 +147,10 @@ func runServer(arguments map[string]interface{}) {
 
 	// Block until a signal is received.
 	log.Infof("Got signal: %v", <-c)
+
+	// Cleanup WAF resources
+	waf.CleanupModSecurity()
+
 	gs.GracefulStop()
 }
 
