@@ -149,6 +149,17 @@ func (f *routeRulesFactory) NewRouteRules(
 	return rr
 }
 
+// ipSetMember stores an IPSet member's cidr and deletionTimestamp.
+// If the deletionTimestamp.IsZero() then the member is not terminating.
+// Otherwise it is in the process of terminating, and will be deleted at the given timestamp.
+type ipSetMember struct {
+	cidr              string
+	deletionTimestamp time.Time
+}
+
+// ipSetMemberMap maps a member's cidr to an ipSetMember
+type ipSetMemberMap map[string]ipSetMember
+
 type egressIPManager struct {
 	routerules routeRules
 
@@ -172,7 +183,7 @@ type egressIPManager struct {
 	// Just keep it and it could be reused by another EgressIPSet.
 	tableIndexToRouteTable map[int]routeTable
 
-	activeEgressIPSet       map[string]set.Set
+	activeEgressIPSet       map[string]ipSetMemberMap
 	egressIPSetToTableIndex map[string]int
 
 	activeWlEndpoints map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
@@ -269,7 +280,7 @@ func newEgressIPManagerWithShims(
 		tableIndexToRouteTable:  make(map[int]routeTable),
 		egressIPSetToTableIndex: make(map[string]int),
 		pendingWlEpUpdates:      make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
-		activeEgressIPSet:       make(map[string]set.Set),
+		activeEgressIPSet:       make(map[string]ipSetMemberMap),
 		activeWlEndpoints:       make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
 		vxlanDevice:             deviceName,
 		vxlanID:                 dpConfig.RulesConfig.EgressIPVXLANVNI,
@@ -319,7 +330,21 @@ func (m *egressIPManager) OnUpdate(msg interface{}) {
 
 func (m *egressIPManager) handleEgressIPSetUpdate(msg *proto.IPSetUpdate) {
 	log.Infof("Update whole EgressIP set: msg=%v", msg)
-	m.activeEgressIPSet[msg.Id] = set.FromArray(msg.Members)
+	members := make(map[string]ipSetMember)
+	for _, mStr := range msg.Members {
+		m, err := parseIpSetMember(mStr)
+		if err != nil {
+			log.Errorf("error parsing member: memberStr: %s, error: %v", mStr, err)
+		}
+		if !m.deletionTimestamp.IsZero() {
+			log.WithFields(log.Fields{
+				"cidr":              m.cidr,
+				"deletionTimestamp": m.deletionTimestamp,
+			}).Debug("egress gateway pod is terminating")
+		}
+		members[m.cidr] = m
+	}
+	m.activeEgressIPSet[msg.Id] = members
 }
 
 func (m *egressIPManager) handleEgressIPSetRemove(msg *proto.IPSetRemove) {
@@ -330,12 +355,34 @@ func (m *egressIPManager) handleEgressIPSetRemove(msg *proto.IPSetRemove) {
 func (m *egressIPManager) handleEgressIPSetDeltaUpdate(ipSetId string, membersRemoved []string, membersAdded []string) {
 	log.Infof("EgressIP set delta update: id=%v removed=%v added=%v", ipSetId, membersRemoved, membersAdded)
 
-	for _, member := range membersAdded {
-		m.activeEgressIPSet[ipSetId].Add(member)
+	members, exists := m.activeEgressIPSet[ipSetId]
+	if !exists {
+		members = make(map[string]ipSetMember)
+		m.activeEgressIPSet[ipSetId] = members
 	}
 
-	for _, member := range membersRemoved {
-		m.activeEgressIPSet[ipSetId].Discard(member)
+	// The member string contains cidr,deletionTimestamp, and so we could get the same cidr in membersAdded
+	// and in membersRemoved, with different timestamps. For this reason, process the removes before the adds.
+	for _, mStr := range membersRemoved {
+		m, err := parseIpSetMember(mStr)
+		if err != nil {
+			log.Errorf("error parsing member: memberStr: %s, error: %v", mStr, err)
+		}
+		delete(members, m.cidr)
+	}
+
+	for _, mStr := range membersAdded {
+		m, err := parseIpSetMember(mStr)
+		if err != nil {
+			log.Errorf("error parsing member: memberStr: %s, error: %v", mStr, err)
+		}
+		if !m.deletionTimestamp.IsZero() {
+			log.WithFields(log.Fields{
+				"cidr":              m.cidr,
+				"deletionTimestamp": m.deletionTimestamp,
+			}).Debug("egress gateway pod is terminating")
+		}
+		members[m.cidr] = m
 	}
 }
 
@@ -389,11 +436,10 @@ func sortIntSet(s set.Set) []int {
 func (m *egressIPManager) setL2Routes() {
 	ipStringSet := set.New()
 	for _, ips := range m.activeEgressIPSet {
-		ips.Iter(func(item interface{}) error {
-			ipString := strings.Split(item.(string), "/")[0]
+		for _, m := range ips {
+			ipString := strings.Split(m.cidr, "/")[0]
 			ipStringSet.Add(ipString)
-			return nil
-		})
+		}
 	}
 
 	// Sort ips to make L2 target update deterministic.
@@ -516,7 +562,7 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 	for _, id := range sorted {
 		logCxt := log.WithField("id", id)
 		currentIndex, ipsetToIndexExists := m.egressIPSetToTableIndex[id]
-		if ips, found := m.activeEgressIPSet[id]; !found {
+		if members, found := m.activeEgressIPSet[id]; !found {
 			// IP set is 'dirty' - i.e. we have recently received one or more proto
 			// messages for it - but missing from m.activeEgressIPSet, which means it's
 			// no longer wanted.  We should clean up the underlying route table.
@@ -571,6 +617,10 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 			rTable := m.tableIndexToRouteTable[currentIndex]
 
 			// Add L3 routes for EgressIPSet.
+			ips := set.New()
+			for _, m := range members {
+				ips.Add(m.cidr)
+			}
 			m.setL3Routes(rTable, ips)
 		}
 
@@ -649,10 +699,14 @@ func (m *egressIPManager) GetRouteRules() []routeRules {
 
 // ipStringToMac defines how an egress gateway pod's MAC is generated
 func ipStringToMac(s string) net.HardwareAddr {
-	ipAddr := ip.FromString(s).AsNetIP()
+	ipAddr := ip.FromString(s)
+	if ipAddr == nil {
+		log.Errorf("could not parse ip from string: %s", s)
+	}
+	netIP := ipAddr.AsNetIP()
 	// Any MAC address that has the values 2, 3, 6, 7, A, B, E, or F
 	// as the second most significant nibble are locally administered.
-	hw := net.HardwareAddr(append([]byte{0xa2, 0x2a}, ipAddr...))
+	hw := net.HardwareAddr(append([]byte{0xa2, 0x2a}, netIP...))
 	return hw
 }
 
@@ -817,4 +871,26 @@ func hardwareAddrForNode(hostname string) (net.HardwareAddr, error) {
 	hw := net.HardwareAddr(append([]byte("f"), sha[0:5]...))
 
 	return hw, nil
+}
+
+func parseIpSetMember(m string) (ipSetMember, error) {
+	var cidr string
+	deletionTimestamp := time.Time{}
+
+	a := strings.Split(m, ",")
+	if len(a) == 0 || len(a) > 2 {
+		return ipSetMember{}, fmt.Errorf("error parsing member str, expected \"cidr,deletionTimestamp\" but got: %s", m)
+	}
+
+	cidr = a[0]
+	if len(a) == 2 {
+		if err := deletionTimestamp.UnmarshalText([]byte(strings.ToUpper(a[1]))); err != nil {
+			log.WithField("memberStr", m).Warn("unable to parse deletion timestamp from member str, defaulting to zero value.")
+		}
+	}
+
+	return ipSetMember{
+		cidr:              cidr,
+		deletionTimestamp: deletionTimestamp,
+	}, nil
 }

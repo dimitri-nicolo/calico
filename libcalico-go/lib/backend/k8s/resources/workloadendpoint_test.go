@@ -811,6 +811,7 @@ var _ = Describe("WorkloadEndpointClient", func() {
 								apiv3.LabelNamespace:    "testNamespace",
 								apiv3.LabelOrchestrator: "k8s",
 							},
+							DeletionTimestamp: &now,
 						},
 						Spec: libapiv3.WorkloadEndpointSpec{
 							Orchestrator:  "k8s",
@@ -834,6 +835,7 @@ var _ = Describe("WorkloadEndpointClient", func() {
 								apiv3.LabelNamespace:    "testNamespace",
 								apiv3.LabelOrchestrator: "k8s",
 							},
+							DeletionTimestamp: &now,
 						},
 						Spec: libapiv3.WorkloadEndpointSpec{
 							Orchestrator:  "k8s",

@@ -249,6 +249,14 @@ var baseTests = []StateList{
 		hostEp1WithPolicyAndANetworkSet,
 	},
 
+	// test deletionTimestamp
+	{
+		endpointWithRemoteActiveEgressGateway,
+		endpointWithLocalActiveEgressGateway,
+		endpointWithRemoteTerminatingEgressGateway,
+		endpointWithLocalTerminatingEgressGateway,
+	},
+
 	// ALP policy count
 	{
 		withPolicy,

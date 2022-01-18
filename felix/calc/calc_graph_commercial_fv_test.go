@@ -4,6 +4,8 @@ package calc_test
 
 import (
 	"fmt"
+	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1092,6 +1094,8 @@ type tierInfo struct {
 
 // Egress IP.
 var (
+	zeroTime              = time.Time{}
+	nowTime               = time.Now()
 	egressSelector        = "egress-provider == 'true'"
 	egressSelectorSim     = "egress-provider in {'true', 'not-sure'}"
 	egressProfileSelector = "(projectcalico.org/namespace == 'egress') && (egress-provider == 'true')"
@@ -1162,7 +1166,7 @@ var (
 			EgressIPSetID: egressSelectorID(egressSelector),
 		},
 	).withIPSet(egressSelectorID(egressSelector), []string{
-		"137.0.0.1/32",
+		egressMemberStr("137.0.0.1/32", zeroTime),
 	},
 	).withName("endpointWithOwnEgressGateway")
 
@@ -1195,7 +1199,7 @@ var (
 			EgressIPSetID: egressSelectorID(egressSelector),
 		},
 	).withIPSet(egressSelectorID(egressSelector), []string{
-		"137.0.0.1/32",
+		egressMemberStr("137.0.0.1/32", zeroTime),
 	},
 	).withRoutes(
 		proto.RouteUpdate{
@@ -1251,7 +1255,7 @@ var (
 			EgressIPSetID: egressSelectorID(egressProfileSelector),
 		},
 	).withIPSet(egressSelectorID(egressProfileSelector), []string{
-		"137.0.0.1/32",
+		egressMemberStr("137.0.0.1/32", zeroTime),
 	},
 	).withActiveProfiles(
 		proto.ProfileID{Name: "egress"},
@@ -1299,7 +1303,7 @@ var (
 			EgressIPSetID: egressSelectorID(egressProfileSelector),
 		},
 	).withIPSet(egressSelectorID(egressProfileSelector), []string{
-		"137.0.0.1/32",
+		egressMemberStr("137.0.0.1/32", zeroTime),
 	},
 	).withActiveProfiles(
 		proto.ProfileID{Name: "egress"},
@@ -1415,7 +1419,7 @@ var (
 			IsEgressGateway: true,
 		},
 	).withIPSet(egressSelectorID(egressSelector), []string{
-		"137.0.0.1/32",
+		egressMemberStr("137.0.0.1/32", zeroTime),
 	},
 	).withRoutes(
 		proto.RouteUpdate{
@@ -1475,10 +1479,10 @@ var (
 			IsEgressGateway: true,
 		},
 	).withIPSet(egressSelectorID(egressSelector), []string{
-		"137.0.0.1/32",
+		egressMemberStr("137.0.0.1/32", zeroTime),
 	},
 	).withIPSet(egressSelectorID(egressSelectorSim), []string{
-		"137.0.0.1/32",
+		egressMemberStr("137.0.0.1/32", zeroTime),
 	},
 	).withRoutes(
 		proto.RouteUpdate{
@@ -1495,12 +1499,12 @@ var (
 			Value: gatewayEndpoint2,
 		},
 	).withIPSet(egressSelectorID(egressSelector), []string{
-		"137.0.0.1/32",
-		"137.0.0.2/32",
+		egressMemberStr("137.0.0.1/32", zeroTime),
+		egressMemberStr("137.0.0.2/32", zeroTime),
 	},
 	).withIPSet(egressSelectorID(egressSelectorSim), []string{
-		"137.0.0.1/32",
-		"137.0.0.2/32",
+		egressMemberStr("137.0.0.1/32", zeroTime),
+		egressMemberStr("137.0.0.2/32", zeroTime),
 	},
 	).withEndpoint(
 		"orch/gw2/ep1",
@@ -1524,4 +1528,171 @@ var (
 			LocalWorkload: true,
 		},
 	).withName("twoRemoteEpsSimilarEgressSelectorTwoLocalGateways")
+
+	activeGatewayEndpoint = &WorkloadEndpoint{
+		Name:     "gw1",
+		IPv4Nets: []calinet.IPNet{mustParseNet("137.0.0.1/32")},
+		Labels: map[string]string{
+			"egress-provider":             "true",
+			"projectcalico.org/namespace": "egress",
+		},
+	}
+
+	terminatingGatewayEndpoint = &WorkloadEndpoint{
+		Name:     "gw1",
+		IPv4Nets: []calinet.IPNet{mustParseNet("137.0.0.1/32")},
+		Labels: map[string]string{
+			"egress-provider":             "true",
+			"projectcalico.org/namespace": "egress",
+		},
+		DeletionTimestamp: nowTime,
+	}
+
+	endpointWithRemoteActiveEgressGateway = initialisedStore.withKVUpdates(
+		KVPair{
+			Key: endpointWithOwnEgressGatewayID,
+			Value: &WorkloadEndpoint{
+				Name:           "wep1o",
+				EgressSelector: egressSelector,
+			},
+		},
+		KVPair{
+			Key:   gatewayKey,
+			Value: activeGatewayEndpoint,
+		},
+	).withRemoteEndpoint(
+		&calc.EndpointData{
+			Key:      gatewayKey,
+			Endpoint: activeGatewayEndpoint,
+		},
+	).withEndpoint(
+		"orch/wep1o/ep1",
+		[]mock.TierInfo{},
+	).withEndpointEgressData(
+		"orch/wep1o/ep1",
+		calc.EndpointEgressData{
+			EgressIPSetID: egressSelectorID(egressSelector),
+		},
+	).withIPSet(egressSelectorID(egressSelector), []string{
+		egressMemberStr("137.0.0.1/32", zeroTime),
+	},
+	).withName("endpointWithRemoteActiveEgressGateway")
+
+	endpointWithRemoteTerminatingEgressGateway = initialisedStore.withKVUpdates(
+		KVPair{
+			Key: endpointWithOwnEgressGatewayID,
+			Value: &WorkloadEndpoint{
+				Name:           "wep1o",
+				EgressSelector: egressSelector,
+			},
+		},
+		KVPair{
+			Key:   gatewayKey,
+			Value: terminatingGatewayEndpoint,
+		},
+	).withRemoteEndpoint(
+		&calc.EndpointData{
+			Key:      gatewayKey,
+			Endpoint: terminatingGatewayEndpoint,
+		},
+	).withEndpoint(
+		"orch/wep1o/ep1",
+		[]mock.TierInfo{},
+	).withEndpointEgressData(
+		"orch/wep1o/ep1",
+		calc.EndpointEgressData{
+			EgressIPSetID: egressSelectorID(egressSelector),
+		},
+	).withIPSet(egressSelectorID(egressSelector), []string{
+		egressMemberStr("137.0.0.1/32", nowTime),
+	},
+	).withName("endpointWithRemoteTerminatingEgressGateway")
+
+	endpointWithLocalActiveEgressGateway = initialisedStore.withKVUpdates(
+		KVPair{
+			Key: endpointWithOwnEgressGatewayID,
+			Value: &WorkloadEndpoint{
+				Name:           "wep1o",
+				EgressSelector: egressSelector,
+			},
+		},
+		KVPair{
+			Key:   gatewayKeyLocal,
+			Value: activeGatewayEndpoint,
+		},
+	).withEndpoint(
+		"orch/gw1/ep1",
+		[]mock.TierInfo{},
+	).withEndpointEgressData(
+		"orch/gw1/ep1",
+		calc.EndpointEgressData{
+			IsEgressGateway: true,
+		},
+	).withEndpoint(
+		"orch/wep1o/ep1",
+		[]mock.TierInfo{},
+	).withEndpointEgressData(
+		"orch/wep1o/ep1",
+		calc.EndpointEgressData{
+			EgressIPSetID: egressSelectorID(egressSelector),
+		},
+	).withIPSet(egressSelectorID(egressSelector), []string{
+		egressMemberStr("137.0.0.1/32", zeroTime),
+	},
+	).withRoutes(
+		proto.RouteUpdate{
+			Type:          proto.RouteType_LOCAL_WORKLOAD,
+			Dst:           "137.0.0.1/32",
+			DstNodeName:   localHostname,
+			LocalWorkload: true,
+		},
+	).withName("endpointWithLocalActiveEgressGateway")
+
+	endpointWithLocalTerminatingEgressGateway = initialisedStore.withKVUpdates(
+		KVPair{
+			Key: endpointWithOwnEgressGatewayID,
+			Value: &WorkloadEndpoint{
+				Name:           "wep1o",
+				EgressSelector: egressSelector,
+			},
+		},
+		KVPair{
+			Key:   gatewayKeyLocal,
+			Value: terminatingGatewayEndpoint,
+		},
+	).withEndpoint(
+		"orch/gw1/ep1",
+		[]mock.TierInfo{},
+	).withEndpointEgressData(
+		"orch/gw1/ep1",
+		calc.EndpointEgressData{
+			IsEgressGateway: true,
+		},
+	).withEndpoint(
+		"orch/wep1o/ep1",
+		[]mock.TierInfo{},
+	).withEndpointEgressData(
+		"orch/wep1o/ep1",
+		calc.EndpointEgressData{
+			EgressIPSetID: egressSelectorID(egressSelector),
+		},
+	).withIPSet(egressSelectorID(egressSelector), []string{
+		egressMemberStr("137.0.0.1/32", nowTime),
+	},
+	).withRoutes(
+		proto.RouteUpdate{
+			Type:          proto.RouteType_LOCAL_WORKLOAD,
+			Dst:           "137.0.0.1/32",
+			DstNodeName:   localHostname,
+			LocalWorkload: true,
+		},
+	).withName("endpointWithLocalTerminatingEgressGateway")
 )
+
+func egressMemberStr(cidr string, deletionTimestamp time.Time) string {
+	bytes, err := deletionTimestamp.MarshalText()
+	if err != nil {
+		return cidr
+	}
+	return fmt.Sprintf("%s,%s", cidr, strings.ToLower(string(bytes)))
+}
