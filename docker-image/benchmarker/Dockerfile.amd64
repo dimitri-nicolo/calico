@@ -1,36 +1,18 @@
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.5 AS base
+# To update kube-bench version update the image tag and github.com/aquasecurity/kube-bench in go.mod
+# Image tag and go.mod should point to same version
+FROM aquasec/kube-bench:v0.6.5 as base
 
-COPY clean.sh /usr/local/bin/clean.sh
-RUN touch /in-the-container
+RUN apk update && apk add curl
 
-RUN microdnf update && microdnf install curl tar gzip
-
-# add GNU ps for -C, -o cmd, and --no-headers support. Required by kube-bench.
-RUN microdnf install procps
-
-# OpenSSL is used by OpenShift tests
-RUN microdnf install openssl
-
-WORKDIR /opt
-
-RUN curl -OL https://github.com/aquasecurity/kube-bench/releases/download/v0.0.33/kube-bench_0.0.33_linux_amd64.tar.gz 
-RUN tar -xf kube-bench_0.0.33_linux_amd64.tar.gz
-RUN mv kube-bench /bin
+RUN cp /usr/local/bin/kube-bench /bin/kube-bench
+RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+RUN chmod +x ./kubectl
+RUN mv ./kubectl /bin
 
 ADD bin/benchmarker-amd64 /bin/benchmarker
 
-SHELL ["/bin/bash", "-c"]
-RUN  /usr/local/bin/clean.sh "/bin/kube-bench" "/bin/benchmarker" "/bin/ps" "/bin/cp" "/bin/cat" "/bin/sed" "/bin/openssl" \
-"/bin/grep" 
+ENV PATH=/bin:$PATH
 
-FROM scratch
-SHELL ["/bin/sh", "-c"]
-WORKDIR /opt
-COPY cfg cfg
-COPY --from=base /bin /bin
-COPY --from=base /lib64 /lib64
-COPY --from=base /usr/lib64 /usr/lib64
-COPY --from=base /usr/bin /usr/bin
+WORKDIR /opt/kube-bench
 
-ENV PATH=/bin:/usr/local/bin:$PATH
 ENTRYPOINT ["benchmarker"]
