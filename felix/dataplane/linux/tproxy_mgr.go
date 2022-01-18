@@ -86,7 +86,6 @@ func newTProxyManager(
 
 	rr, err := routerule.New(
 		4,
-		1, // routing priority
 		set.From(idx4),
 		routerule.RulesMatchSrcFWMarkTable,
 		routerule.RulesMatchSrcFWMarkTable,
@@ -135,7 +134,6 @@ func newTProxyManager(
 
 		rr, err := routerule.New(
 			6,
-			1, // routing priority
 			set.From(idx6),
 			routerule.RulesMatchSrcFWMarkTable,
 			routerule.RulesMatchSrcFWMarkTable,
