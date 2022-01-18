@@ -50,7 +50,7 @@
             "type": "keyword"
           },
 	  /* Pod prefix aka GenerateName. */
-          "prefix": {
+          "name_aggr": {
             "type": "keyword"
           },
 	  /* The relevant container name, for the Linux process that generated this report, from the
