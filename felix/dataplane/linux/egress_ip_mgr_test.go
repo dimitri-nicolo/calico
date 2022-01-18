@@ -701,7 +701,6 @@ type mockRouteRulesFactory struct {
 
 func (f *mockRouteRulesFactory) NewRouteRules(
 	ipVersion int,
-	priority int,
 	tableIndexSet set.Set,
 	updateFunc, removeFunc routerule.RulesMatchFunc,
 	netlinkTimeout time.Duration,

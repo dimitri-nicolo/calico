@@ -106,7 +106,6 @@ func (f *routeTableFactory) NewRouteTable(interfacePrefixes []string,
 type routeRulesGenerator interface {
 	NewRouteRules(
 		ipVersion int,
-		priority int,
 		tableIndexSet set.Set,
 		updateFunc, removeFunc routerule.RulesMatchFunc,
 		netlinkTimeout time.Duration,
@@ -120,7 +119,6 @@ type routeRulesFactory struct {
 
 func (f *routeRulesFactory) NewRouteRules(
 	ipVersion int,
-	priority int,
 	tableIndexSet set.Set,
 	updateFunc, removeFunc routerule.RulesMatchFunc,
 	netlinkTimeout time.Duration,
@@ -130,7 +128,6 @@ func (f *routeRulesFactory) NewRouteRules(
 	f.count += 1
 	rr, err := routerule.New(
 		ipVersion,
-		priority,
 		tableIndexSet,
 		updateFunc,
 		removeFunc,
@@ -541,7 +538,6 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 		// will be processed before routerule's apply() been called.
 		m.routerules = m.rrGenerator.NewRouteRules(
 			4,
-			m.dpConfig.EgressIPRoutingRulePriority,
 			m.tableIndexSet,
 			routerule.RulesMatchSrcFWMarkTable,
 			routerule.RulesMatchSrcFWMark,
