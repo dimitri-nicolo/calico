@@ -24,13 +24,6 @@
       "end_time": {
         "type": "date"
       },
-      /* A free-form description of any issues with the preparation or completeness of this report,
-       * or an empty string if there were no such issues.  For example, if there was a problem with
-       * the process of inferring a host path from the in-container path, this would include a note
-       * like "Host path could not be provided". */
-      "notes": {
-        "type": "text"
-      },
       /* Human-friendly string characterizing the process invocation; typically a space-separated
        * concatenation of the executable name and args.  Please note this isn't intended to be
        * rigorous and unambiguous (e.g. when an arg itself contains spaces), but just to give a
