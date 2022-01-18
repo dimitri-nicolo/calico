@@ -164,6 +164,7 @@ run-etcd-tls: stop-etcd-tls
 		--cert-file=/root/etcd-certificates/server.crt \
 		--key-file=/root/etcd-certificates/server.key \
 		--client-cert-auth=true \
+		--enable-v2 \
 		--data-dir=/var/lib/etcd
 
 ## Stop etcd with name calico-etcd-tls
