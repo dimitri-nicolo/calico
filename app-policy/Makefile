@@ -31,8 +31,12 @@ include ../lib.Makefile
 # We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
 ifeq ($(ARCH), $(filter $(ARCH),amd64))
 CGO_ENABLED=1
+CGO_CFLAGS="-I/usr/local/modsecurity/include"
+CGO_LDFLAGS="-L/usr/local/modsecurity/lib/ -Wl,-rpath -Wl,/usr/local/modsecurity/lib/ -lmodsecurity"
 else
 CGO_ENABLED=0
+CGO_CFLAGS=""
+CGO_LDFLAGS=""
 endif
 
 # Shortcut targets
@@ -77,6 +81,8 @@ bin/dikastes-%: protobuf $(SRC_FILES)
 	mkdir -p bin
 	$(DOCKER_RUN_RO) \
 	  -e CGO_ENABLED=$(CGO_ENABLED) \
+	  -e CGO_CFLAGS=$(CGO_CFLAGS) \
+      -e CGO_LDFLAGS=$(CGO_LDFLAGS) \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
 	  $(CALICO_BUILD) go build $(BUILD_FLAGS) -ldflags "-X main.VERSION=$(GIT_VERSION) -w" -v -o bin/dikastes-$(ARCH) ./cmd/dikastes
 
