@@ -82,7 +82,7 @@ bin/dikastes-%: protobuf $(SRC_FILES)
 	$(DOCKER_RUN_RO) \
 	  -e CGO_ENABLED=$(CGO_ENABLED) \
 	  -e CGO_CFLAGS=$(CGO_CFLAGS) \
-      -e CGO_LDFLAGS=$(CGO_LDFLAGS) \
+	  -e CGO_LDFLAGS=$(CGO_LDFLAGS) \
 	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
 	  $(CALICO_BUILD) go build $(BUILD_FLAGS) -ldflags "-X main.VERSION=$(GIT_VERSION) -w" -v -o bin/dikastes-$(ARCH) ./cmd/dikastes
 
