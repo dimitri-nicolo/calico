@@ -11,11 +11,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apiserver/pkg/endpoints/request"
 
+	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/lma/pkg/elastic"
-
-	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // New creates a new server.

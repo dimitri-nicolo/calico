@@ -9,7 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/libcalico-go/lib/health"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
 
 	"github.com/tigera/compliance/pkg/benchmark"
 	"github.com/tigera/compliance/pkg/cis"

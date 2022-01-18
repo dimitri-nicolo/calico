@@ -12,8 +12,8 @@ import (
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/libcalico-go/lib/compliance"
-	"github.com/projectcalico/libcalico-go/lib/resources"
+	"github.com/projectcalico/calico/libcalico-go/lib/compliance"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
 	"github.com/tigera/compliance/pkg/archive"
 	"github.com/tigera/compliance/pkg/config"

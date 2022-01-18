@@ -4,19 +4,18 @@ package server_test
 import (
 	"net/http"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
+
 	"github.com/stretchr/testify/mock"
+
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
-
 	"github.com/tigera/compliance/pkg/datastore"
-
 	lmaauth "github.com/tigera/lma/pkg/auth"
 	"github.com/tigera/lma/pkg/elastic"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
 )
 
 var _ = Describe("Download tests", func() {

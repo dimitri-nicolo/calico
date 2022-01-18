@@ -4,8 +4,8 @@ package ips
 import (
 	"fmt"
 
-	"github.com/projectcalico/libcalico-go/lib/net"
-	"github.com/projectcalico/libcalico-go/lib/set"
+	"github.com/projectcalico/calico/libcalico-go/lib/net"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 // NormalizedIPSet converts the IP strings into a set of normalized Keys. If there is an error with any of the IPs

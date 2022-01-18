@@ -1,7 +1,7 @@
 // Copyright (c) 2019 Tigera, Inc. All rights reserved.
 package sethelper
 
-import "github.com/projectcalico/libcalico-go/lib/set"
+import "github.com/projectcalico/calico/libcalico-go/lib/set"
 
 // IterDifferences iterates through the set of items that are in A but not in B, and the set that are in B but not in A.
 func IterDifferences(a, b set.Set, aNotB, bNotA func(interface{}) error) {

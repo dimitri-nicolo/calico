@@ -10,18 +10,14 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/projectcalico/libcalico-go/lib/resources"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/flow"
 	"github.com/tigera/compliance/pkg/xrefcache"
-
 	api "github.com/tigera/lma/pkg/api"
 )
 
@@ -205,7 +201,7 @@ var _ = Describe("CIS report tests", func() {
 		numFailedTests := 5
 		cfg = &Config{
 			Config: *baseCfg,
-			Report: &v3.GlobalReport{
+			Report: &apiv3.GlobalReport{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "report",
 				},
@@ -220,7 +216,7 @@ var _ = Describe("CIS report tests", func() {
 					},
 				},
 			},
-			ReportType: &v3.GlobalReportType{
+			ReportType: &apiv3.GlobalReportType{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "report-type",
 				},

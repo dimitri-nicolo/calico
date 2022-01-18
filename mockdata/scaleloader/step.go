@@ -7,13 +7,13 @@ import (
 	"reflect"
 	"text/template"
 
-	json "github.com/projectcalico/go-json/json"
-	yaml "github.com/projectcalico/go-yaml-wrapper"
-
 	logrus "github.com/sirupsen/logrus"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/projectcalico/libcalico-go/lib/resources"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+	json "github.com/projectcalico/go-json/json"
+	yaml "github.com/projectcalico/go-yaml-wrapper"
 )
 
 type Play struct {

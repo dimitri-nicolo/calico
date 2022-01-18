@@ -4,16 +4,15 @@ package main
 import (
 	"context"
 	"flag"
-
-	log "github.com/sirupsen/logrus"
-
-	"github.com/projectcalico/libcalico-go/lib/health"
-
 	"os"
 	"os/signal"
 	"syscall"
 
 	"k8s.io/klog"
+
+	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
 
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/controller"

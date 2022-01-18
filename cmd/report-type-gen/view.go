@@ -10,11 +10,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/compliance"
 	yaml "github.com/projectcalico/go-yaml-wrapper"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/projectcalico/libcalico-go/lib/compliance"
 )
 
 var viewCmd = &cobra.Command{

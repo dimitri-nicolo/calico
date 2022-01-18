@@ -8,19 +8,17 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/libcalico-go/lib/errors"
-	"github.com/projectcalico/libcalico-go/lib/resources"
+	"github.com/stretchr/testify/mock"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/stretchr/testify/mock"
-
-	"github.com/tigera/lma/pkg/api"
-	lmalist "github.com/tigera/lma/pkg/list"
-
-	"github.com/tigera/compliance/pkg/list"
+	"github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
 	"github.com/tigera/compliance/pkg/config"
+	"github.com/tigera/compliance/pkg/list"
+	"github.com/tigera/lma/pkg/api"
+	lmalist "github.com/tigera/lma/pkg/list"
 )
 
 var (

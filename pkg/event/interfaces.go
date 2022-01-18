@@ -8,7 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 
-	"github.com/projectcalico/libcalico-go/lib/resources"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
 	api "github.com/tigera/lma/pkg/api"
 )

@@ -5,7 +5,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/libcalico-go/lib/resources"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 )
 
 //TODO(rlb): Compliance should have it's own view of supported types - not blindly use the full list from libcalico.

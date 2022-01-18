@@ -1,11 +1,7 @@
 PACKAGE_NAME            ?= github.com/tigera/compliance
-GO_BUILD_VER            ?= v0.63
+GO_BUILD_VER            ?= v0.65
 GOMOD_VENDOR             = false
 GIT_USE_SSH              = true
-LIBCALICO_REPO           = github.com/tigera/libcalico-go-private
-FELIX_REPO               = github.com/tigera/felix-private
-TYPHA_REPO               = github.com/tigera/typha-private
-APISERVER_REPO           =github.com/tigera/apiserver
 API_REPO                 =github.com/tigera/api
 
 ORGANIZATION=tigera
@@ -45,11 +41,9 @@ endif
 ifdef LOCAL_BUILD
 EXTRA_DOCKER_ARGS += -v $(CURDIR)/../libcalico-go:/go/src/github.com/tigera/libcalico-go:rw
 EXTRA_DOCKER_ARGS += -v $(CURDIR)/../lma:/go/src/github.com/tigera/lma:rw
-EXTRA_DOCKER_ARGS += -v $(CURDIR)/../apiserver:/go/src/github.com/tigera/apiserver:rw
 local_build:
 	go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
 	go mod edit -replace=github.com/tigera/lma=../lma
-	go mod edit -replace=github.com/projectcalico/apiserver=../apiserver
 else
 local_build:
 endif
@@ -64,7 +58,7 @@ ARCHES = amd64
 ##############################################################################
 # Define some constants
 ##############################################################################
-ELASTIC_VERSION			?= 7.3.2
+ELASTIC_VERSION			?= 7.16.2
 K8S_VERSION     		?= v1.11.3
 ETCD_VERSION			?= v3.3.7
 KUBE_BENCH_VERSION		?= b649588f46c54c84cd9c88510680b5a651f12d46
@@ -156,7 +150,7 @@ sub-build-%:
 	$(MAKE) build ARCH=$*
 
 bin/server: bin/server-$(ARCH)
-	ln -f bin/server-$(ARCH) bin/server
+	ln -sf bin/server-$(ARCH) bin/server
 
 bin/server-$(ARCH): $(SRC_FILES) local_build
 	@echo Building compliance-server...
@@ -168,7 +162,7 @@ bin/server-$(ARCH): $(SRC_FILES) local_build
 		( echo "Error: bin/server was not statically linked"; false ) )'
 
 bin/controller: bin/controller-$(ARCH)
-	ln -f bin/controller-$(ARCH) bin/controller
+	ln -sf bin/controller-$(ARCH) bin/controller
 
 bin/controller-$(ARCH): $(SRC_FILES) local_build
 	@echo Building compliance controller...
@@ -180,7 +174,7 @@ bin/controller-$(ARCH): $(SRC_FILES) local_build
 		( echo "Error: bin/controller was not statically linked"; false ) )'
 
 bin/snapshotter: bin/snapshotter-$(ARCH)
-	ln -f bin/snapshotter-$(ARCH) bin/snapshotter
+	ln -sf bin/snapshotter-$(ARCH) bin/snapshotter
 
 bin/snapshotter-$(ARCH): $(SRC_FILES) local_build
 	@echo Building compliance snapshotter...
@@ -192,7 +186,7 @@ bin/snapshotter-$(ARCH): $(SRC_FILES) local_build
 		( echo "Error: bin/snapshotter was not statically linked"; false ) )'
 
 bin/reporter: bin/reporter-$(ARCH)
-	ln -f bin/reporter-$(ARCH) bin/reporter
+	ln -sf bin/reporter-$(ARCH) bin/reporter
 
 bin/reporter-$(ARCH): $(SRC_FILES) local_build
 	@echo Building compliance reporter...
@@ -204,7 +198,7 @@ bin/reporter-$(ARCH): $(SRC_FILES) local_build
 		( echo "Error: bin/reporter was not statically linked"; false ) )'
 
 bin/report-type-gen: bin/report-type-gen-$(ARCH)
-	ln -f bin/report-type-gen-$(ARCH) bin/report-type-gen
+	ln -sf bin/report-type-gen-$(ARCH) bin/report-type-gen
 
 bin/report-type-gen-$(ARCH): $(SRC_FILES) local_build
 	@echo Building report type generator...
@@ -216,7 +210,7 @@ bin/report-type-gen-$(ARCH): $(SRC_FILES) local_build
 		( echo "Error: bin/report-type-gen was not statically linked"; false ) )'
 
 bin/scaleloader: bin/scaleloader-$(ARCH)
-	ln -f bin/scaleloader-$(ARCH) bin/scaleloader
+	ln -sf bin/scaleloader-$(ARCH) bin/scaleloader
 
 bin/scaleloader-$(ARCH): $(SRC_FILES) local_build
 	@echo Building scaleloader...
@@ -228,7 +222,7 @@ bin/scaleloader-$(ARCH): $(SRC_FILES) local_build
 		( echo "Error: bin/scaleloader was not statically linked"; false ) )'
 
 bin/benchmarker: bin/benchmarker-$(ARCH)
-	ln -f bin/benchmarker-$(ARCH) bin/benchmarker
+	ln -sf bin/benchmarker-$(ARCH) bin/benchmarker
 
 bin/benchmarker-$(ARCH): $(SRC_FILES) local_build
 	@echo Building benchmarker...
@@ -357,10 +351,15 @@ guard-ssh-forwarding-bug:
 LMA_REPO=github.com/tigera/lma
 LMA_BRANCH=$(PIN_BRANCH)
 
+update-calico-pin:
+	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(BRANCH))
+	$(call update_replace_pin,github.com/tigera/api,github.com/tigera/calico-private/api,$(BRANCH))
+
 update-lma-pin:
 	$(call update_pin,$(LMA_REPO),$(LMA_REPO),$(LMA_BRANCH))
 
-update-pins: guard-ssh-forwarding-bug update-api-pin replace-libcalico-pin replace-typha-pin replace-felix-pin replace-apiserver-pin update-lma-pin
+update-pins: guard-ssh-forwarding-bug update-calico-pin update-lma-pin
+
 ###############################################################################
 
 ###############################################################################
