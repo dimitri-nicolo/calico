@@ -317,24 +317,30 @@ ifeq ($(ARCH),amd64)
 endif
 
 # Build the tigera/compliance-benchmarker docker image, which contains only Compliance benchmarker.
-$(COMPLIANCE_BENCHMARKER_IMAGE): bin/benchmarker-$(ARCH) register
+$(COMPLIANCE_BENCHMARKER_IMAGE): check-kubebench-update bin/benchmarker-$(ARCH) register
 	rm -rf docker-image/benchmarker/bin
 	rm -rf tmp/kube-bench
 	rm -rf docker-image/benchmarker/clean.sh
 	mkdir -p docker-image/benchmarker/bin
-	cp docker-image/clean.sh docker-image/benchmarker/clean.sh
 	cp bin/benchmarker-$(ARCH) docker-image/benchmarker/bin/
-	git clone https://github.com/aquasecurity/kube-bench tmp/kube-bench/
-	cd tmp/kube-bench/ && git checkout $(KUBE_BENCH_VERSION)
-	awk '/proxy:/ { print; print "    optional: true"; next }1' tmp/kube-bench/cfg/config.yaml > tmp/kube-bench/cfg/config.yaml.new
-	mv tmp/kube-bench/cfg/config.yaml.new tmp/kube-bench/cfg/config.yaml
-	cp -r tmp/kube-bench/cfg docker-image/benchmarker
-	rm -rf tmp/kube-bench
 	docker build --pull -t $(COMPLIANCE_BENCHMARKER_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/benchmarker/Dockerfile.$(ARCH) docker-image/benchmarker
 ifeq ($(ARCH),amd64)
 	docker tag $(COMPLIANCE_BENCHMARKER_IMAGE):latest-$(ARCH) $(COMPLIANCE_BENCHMARKER_IMAGE):latest
 endif
 
+K8S_CLIENT_VERSION := $(shell grep -E 'k8s.io/apiserver' go.mod | awk '{print$$2;exit}')
+check-kubebench-update:
+	if [ $(findstring v0.22,$(K8S_CLIENT_VERSION)) = "v0.22" ]; then \
+		echo "No need for kubebench update"; \
+	else \
+		echo "************ \n"; \
+		echo "It looks like we have updated k8s client version.\n";\
+		echo "Please check if benchmarker needs to be updated with latest kube-bench version.\n"; \
+		echo "Instructions to update benchmarker can be found in README.md#Benchmarker \n"; \
+		echo "Once updated (or after verifying that it is not needed) update the check on K8S_CLIENT_VERSION and continue. \n"; \
+		echo "****** \n"; \
+        exit 1; \
+	fi;
 ###############################################################################
 # Updating pins
 ###############################################################################

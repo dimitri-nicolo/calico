@@ -3,12 +3,13 @@ module github.com/tigera/compliance
 go 1.16
 
 require (
-	github.com/aquasecurity/kube-bench v0.0.34
+	github.com/aquasecurity/kube-bench v0.6.5
+	github.com/aws/aws-sdk-go v1.42.22 // indirect
 	github.com/bmizerany/pat v0.0.0-20170815010413-6226ea591a40
 	github.com/caimeo/iniflags v0.0.0-20171110233946-ef4ae6c5cd79
-	github.com/coreos/go-semver v0.3.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
+	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	github.com/olivere/elastic/v7 v7.0.22
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.15.0
@@ -22,6 +23,9 @@ require (
 	github.com/tigera/api v0.0.0-20211202170222-d8128d06db71
 	github.com/tigera/lma v0.0.0-20220114180745-11c1577ee102
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
+	golang.org/x/crypto v0.0.0-20211209193657-4570a0811e8b // indirect
+	golang.org/x/sys v0.0.0-20211209171907-798191bca915 // indirect
+	gopkg.in/ini.v1 v1.66.2 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.22.5
