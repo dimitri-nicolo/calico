@@ -4,15 +4,15 @@ package query
 
 var (
 	wafKeys = map[string]Validator{
-		"timestamp":     DateValidator,
-		"owaspFile":     NullValidator,
-		"owaspHost":     NullValidator,
-		"owaspId":       PositiveIntValidator,
-		"owaspLine":     PositiveIntValidator,
-		"owaspSeverity": NullValidator,
-		"uniqueId":      NullValidator,
-		"uri":           NullValidator,
-		"envoyHost":     NullValidator,
+		"timestamp":      DateValidator,
+		"unique_id":      NullValidator,
+		"uri":            NullValidator,
+		"owasp_host":     IPValidator,
+		"owasp_file":     NullValidator,
+		"owasp_line":     PositiveIntValidator,
+		"owasp_id":       PositiveIntValidator,
+		"owasp_severity": PositiveIntValidator,
+		"node":           NullValidator,
 	}
 )
 
