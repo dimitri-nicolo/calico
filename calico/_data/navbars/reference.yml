@@ -6,6 +6,8 @@ section:
   path: /reference/api
 - title: Installation API
   path: /reference/installation/api
+- title: Anomaly detection
+  path: /reference/anomaly-detection/all-jobs-envars
 - title: CLIs
   path: /reference/clis/
   section:
