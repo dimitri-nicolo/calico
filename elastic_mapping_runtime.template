@@ -24,13 +24,6 @@
       "end_time": {
         "type": "date"
       },
-      /* Human-friendly string characterizing the process invocation; typically a space-separated
-       * concatenation of the executable name and args.  Please note this isn't intended to be
-       * rigorous and unambiguous (e.g. when an arg itself contains spaces), but just to give a
-       * useful hint, in most cases, of the process invocation. */
-      "invocation": {
-        "type": "text"
-      },
       /* Pod info, if the process ID can be correlated to a Kubernetes pod... */
       "pod": {
         "properties": {
