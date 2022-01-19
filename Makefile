@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/es-gateway
-GO_BUILD_VER    ?= v0.63
+GO_BUILD_VER    ?= v0.65
 GIT_USE_SSH      = true
 
 LOCAL_CHECKS     = mod-download
@@ -135,6 +135,11 @@ ut:
 ###############################################################################
 # Updating pins
 ###############################################################################
+BRANCH=master
+update-calico-pin:
+	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(BRANCH))
+	$(call update_replace_pin,github.com/tigera/api,github.com/tigera/calico-private/api,$(BRANCH))
+	
 # Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
 guard-ssh-forwarding-bug:
 	@if [ "$(shell uname)" = "Darwin" ]; then \
@@ -144,7 +149,7 @@ guard-ssh-forwarding-bug:
 	fi;
 
 ## Update dependency pins
-update-pins: guard-ssh-forwarding-bug
+update-pins: guard-ssh-forwarding-bug update-calico-pin
 
 ###############################################################################
 # CI/CD
