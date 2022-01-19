@@ -59,6 +59,8 @@ func NewManagedClusterController(calicoCLI calicoclient.Interface, lmaESClient l
 		cache.NewListWatchFromClient(m.calicoCLI.ProjectcalicoV3().RESTClient(), "managedclusters", "", fields.Everything()),
 		&v3.ManagedCluster{})
 
+	log.Info("creating a new managed cluster controller")
+
 	return m, []health.Pinger{pinger, m.managedAlertControllerHealthPinger}
 }
 
@@ -73,6 +75,7 @@ func (m *managedClusterController) Run(parentCtx context.Context) {
 
 // Close cancels the ManagedCluster worker context and removes health check for all the objects that worker watches.
 func (m *managedClusterController) Close() {
+	log.Infof("closing a managed cluster controller %+v", m)
 	m.worker.Close()
 	m.cancel()
 }
@@ -83,6 +86,7 @@ func (m *managedClusterController) Close() {
 // If Ping receives error related to ping channel closed, corresponding health.Pinger is removed from the list health.Pinger to Ping.
 func (m *managedClusterController) pingAllManagedAlertController(ctx context.Context) {
 	pingers := []health.Pinger{}
+	pingerMap := make(map[health.Pinger]struct{})
 	for {
 		select {
 		case pong := <-m.managedAlertControllerHealthPinger.ListenForPings():
@@ -96,9 +100,11 @@ func (m *managedClusterController) pingAllManagedAlertController(ctx context.Con
 				chCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
 				defer cancel()
 				if err := hp.Ping(chCtx); err != nil {
+					log.Warnf("error in pinging %+v", err)
 					statusError, ok := err.(*errors.StatusError)
 					if ok && statusError.Status().Message == health.PingChannelClosed {
 						pingers = append(pingers[:i], pingers[i+1:]...)
+						delete(pingerMap, hp)
 					} else if ok && strings.Contains(statusError.Status().Message, health.PingChannelBusy) {
 						if err := retryPingOnBusy(ctx, hp); err != nil {
 							pingSuccess = false
@@ -114,7 +120,13 @@ func (m *managedClusterController) pingAllManagedAlertController(ctx context.Con
 				pong.Pong()
 			}
 		case newPingers := <-m.managedAlertControllerCh:
-			pingers = append(pingers, newPingers...)
+			for _, pinger := range newPingers {
+				if _, ok := pingerMap[pinger]; !ok {
+					log.Infof("adding new pinger for managed alert controller %+v", pinger)
+					pingerMap[pinger] = struct{}{}
+					pingers = append(pingers, pinger)
+				}
+			}
 		case <-ctx.Done():
 			return
 		}

@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 )
 
@@ -41,6 +42,7 @@ func (p *pingPonger) Ping(ctx context.Context) error {
 	select {
 	case _, ok := <-p.closePingPonger:
 		if !ok {
+			log.Warnf("closing the pings channel for expired pingPonger %+v", p)
 			close(p.pings)
 			return errors.NewResourceExpired(PingChannelClosed)
 		}

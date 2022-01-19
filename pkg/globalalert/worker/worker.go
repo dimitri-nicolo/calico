@@ -80,6 +80,7 @@ func (w *worker) AddWatch(listWatcher cache.ListerWatcher, obj runtime.Object) h
 
 // Close in turn calls close on the reconciler to close all goroutines and make a call to close the Ping channel.
 func (w *worker) Close() {
+	log.Infof("closing worker %+v", w)
 	for _, watch := range w.watches {
 		watch.ponger.Close()
 	}
