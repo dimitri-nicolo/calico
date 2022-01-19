@@ -196,6 +196,11 @@ func newDomainInfoStoreWithShims(
 		// Capacity 1 here is to allow UT to test the use of this channel without
 		// needing goroutines.
 		resetC: make(chan struct{}, 1),
+		// Use a buffered channel here with reasonable capacity, so that the nfnetlink capture
+		// thread can handle a burst of DNS response packets without becoming blocked by the reading
+		// thread here.  Specifically we say 1000 because that what's we use for flow logs, so we
+		// know that works; even though we probably won't need so much capacity for the DNS case.
+		MsgChannel: make(chan DataWithTimestamp, 1000),
 	}
 	return s
 }
@@ -207,12 +212,6 @@ func (s *DomainInfoStore) Start() {
 	if s.collector != nil {
 		s.collector.SetDomainLookup(s)
 	}
-
-	// Use a buffered channel here with reasonable capacity, so that the nfnetlink capture
-	// thread can handle a burst of DNS response packets without becoming blocked by the reading
-	// thread here.  Specifically we say 1000 because that what's we use for flow logs, so we
-	// know that works; even though we probably won't need so much capacity for the DNS case.
-	s.MsgChannel = make(chan DataWithTimestamp, 1000)
 
 	// Ensure that the directory for the persistent file exists.
 	if err := os.MkdirAll(path.Dir(s.saveFile), 0755); err != nil {
