@@ -778,7 +778,7 @@ func (buf *EventSequencer) flushRemovedIPSets() {
 		buf.pendingRemovedIPSetMembers.DiscardKey(setID)
 		buf.pendingAddedIPSetMembers.DiscardKey(setID)
 		buf.pendingRemovedIPSets.Discard(item)
-		buf.sentIPSets.Discard(setID)
+		buf.sentIPSets.Discard(item)
 		return
 	})
 	log.Debugf("Done flushing IP set removes")
