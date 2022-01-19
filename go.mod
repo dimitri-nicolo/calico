@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/elastic/go-elasticsearch/v7 v7.3.0
+	github.com/googleapis/gnostic v0.5.5 // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/onsi/ginkgo v1.16.4
@@ -14,16 +15,14 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
+	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	k8s.io/api v0.22.5
 	k8s.io/apimachinery v0.22.5
 	k8s.io/client-go v0.22.5
-
-	github.com/googleapis/gnostic v0.5.5 // indirect
-	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 )
 
 replace (
-	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220113204947-4ace08948663
+	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220106010905-350eae0df5ac
 	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220106010905-350eae0df5ac
 
 	k8s.io/api => k8s.io/api v0.21.8
