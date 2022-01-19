@@ -117,19 +117,11 @@ $(DEPLOY_CONTAINER_MARKER): Dockerfile.$(ARCH) build fetch-cni-bins
 	touch $@
 
 .PHONY: fetch-cni-bins
-fetch-cni-bins: $(BIN)/flannel $(BIN)/loopback $(BIN)/host-local $(BIN)/portmap $(BIN)/tuning $(BIN)/bandwidth
+fetch-cni-bins: $(BIN)/loopback $(BIN)/host-local $(BIN)/portmap $(BIN)/tuning $(BIN)/bandwidth
 
 $(BIN)/loopback $(BIN)/host-local $(BIN)/portmap $(BIN)/tuning $(BIN)/bandwidth:
 	mkdir -p $(BIN)
 	$(CURL) -L --retry 5 $(CNI_ARTIFACTS_URL)/$(CNI_VERSION)/cni-plugins-linux-$(subst v7,,$(ARCH))-$(CNI_VERSION).tgz | tar -xz -C $(BIN) ./loopback ./host-local ./portmap ./tuning ./bandwidth
-
-$(BIN)/flannel:
-	# Flannel was removed from v1.0.0 CNI plugins, but doesn't yet have its own release.
-	# For now, just pull the older version of the binary hosted at containernetworking/plugins.
-	# Eventually, replace with a release from https://github.com/flannel-io/cni-plugin
-	# Flannel is not built as part of the forked containernetworking/plugins repo.
-	mkdir -p $(BIN)
-	$(CURL) -L --retry 5 https://github.com/containernetworking/plugins/releases/download/v0.9.1/cni-plugins-linux-$(subst v7,,$(ARCH))-v0.9.1.tgz | tar -xz -C $(BIN) ./flannel
 
 ###############################################################################
 # Unit Tests
