@@ -14,7 +14,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
 	github.com/tigera/api v0.0.0-20211202170222-d8128d06db71
-	github.com/tigera/compliance v0.0.0-20220118173936-37d80dd4de94
+	github.com/tigera/compliance v0.0.0-20220118201034-fa9ef8b0bc8a
 	github.com/tigera/lma v0.0.0-20220114180745-11c1577ee102
 	k8s.io/api v0.22.5
 	k8s.io/apimachinery v0.22.5
@@ -23,7 +23,7 @@ require (
 )
 
 replace (
-	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220117182628-77f56ff2c9e7
+	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220119201525-245d1ffa1dfd
 	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220117182628-77f56ff2c9e7
 
 	k8s.io/api => k8s.io/api v0.21.8
