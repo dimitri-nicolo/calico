@@ -53,6 +53,11 @@ RELEASE_REGISTRIES    ?= quay.io
 RELEASE_BRANCH_PREFIX ?= release-calient
 DEV_TAG_SUFFIX        ?= calient-0.dev
 
+# This variable is used to filter out values from DEV_REGISTRIES, with the
+# result assigned to MANIFEST_REGISTRIES.
+# Currently, go-build v0.65 sets this to empty but that results in an empty
+# MANIFEST_REGISTRIES so we set NONMANIFEST_REGISTRIES to a placeholder value for now.
+NONMANIFEST_REGISTRIES ?= non-manifest-registries-defined-here
 
 GCR_REPO?=gcr.io/unique-caldron-775/cnx
 REPO?=$(GCR_REPO)
