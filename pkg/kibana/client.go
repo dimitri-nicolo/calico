@@ -59,6 +59,8 @@ func (cli *client) Login(currentURL, username, password string) (*http.Response,
 	kibanaResponse, err := cli.httpCli.Do(r)
 	if err != nil {
 		return nil, err
+	} else if kibanaResponse.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("kibana login failed with error: %s", kibanaResponse.Status)
 	}
 
 	return kibanaResponse, nil

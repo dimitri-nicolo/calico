@@ -1,11 +1,6 @@
 PACKAGE_NAME    ?= github.com/tigera/es-proxy
-GO_BUILD_VER    ?= v0.63
+GO_BUILD_VER    ?= v0.65
 GIT_USE_SSH      = true
-API_REPO         = github.com/tigera/api
-LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
-APISERVER_REPO   = github.com/tigera/apiserver
-FELIX_REPO       = github.com/tigera/felix-private
-TYPHA_REPO       = github.com/tigera/typha-private
 LOCAL_CHECKS     = mod-download
 
 ORGANIZATION=tigera
@@ -26,13 +21,11 @@ EXTRA_DOCKER_ARGS += --tmpfs /home/user -v $(SSH_AUTH_DIR):/home/user/.ssh:ro
 endif
 
 ifdef LOCAL_BUILD
-EXTRA_DOCKER_ARGS += -v $(CURDIR)/../libcalico-go:/go/src/github.com/tigera/libcalico-go:rw
+EXTRA_DOCKER_ARGS += -v $(CURDIR)/../calico:/go/src/github.com/tigera/calico-private:rw
 EXTRA_DOCKER_ARGS += -v $(CURDIR)/../lma:/go/src/github.com/tigera/lma:rw
-EXTRA_DOCKER_ARGS += -v $(CURDIR)/../apiserver:/go/src/github.com/tigera/apiserver:rw
 local_build:
-	go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
+	go mod edit -replace=github.com/projectcalico/calico=../calico-private
 	go mod edit -replace=github.com/tigera/lma=../lma
-	go mod edit -replace=github.com/projectcalico/apiserver=../apiserver
 else
 local_build:
 endif
@@ -80,10 +73,10 @@ ETCD_IMAGE?=quay.io/coreos/etcd:$(ETCD_VERSION)
 K8S_VERSION?=v1.11.3
 HYPERKUBE_IMAGE?=gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION)
 
-ELASTICSEARCH_VERSION?=7.3.2
+ELASTICSEARCH_VERSION?=7.16.2
 ELASTICSEARCH_IMAGE?=docker.elastic.co/elasticsearch/elasticsearch:$(ELASTICSEARCH_VERSION)
 
-K8S_VERSION    = v1.11.0
+K8S_VERSION    = v1.11.3
 BINDIR        ?= bin
 BUILD_DIR     ?= build
 TOP_SRC_DIRS   = pkg
@@ -122,7 +115,7 @@ es-proxy: $(BINDIR)/es-proxy
 
 $(BINDIR)/es-proxy: $(BINDIR)/es-proxy-amd64
 	$(DOCKER_GO_BUILD) \
-		sh -c 'cd $(BINDIR) && ln -s -T es-proxy-$(ARCH) es-proxy'
+		sh -c 'cd $(BINDIR) && ln -sf es-proxy-$(ARCH) es-proxy'
 
 $(BINDIR)/es-proxy-$(ARCH): $(GO_FILES)
 ifndef RELEASE_BUILD
@@ -184,7 +177,7 @@ fv-no-setup:
 		       ./test/run_test.sh
 
 .PHONY: clean
-clean:
+clean: stop-k8s-apiserver stop-etcd stop-elasticsearch
 	-docker rmi -f $(ES_PROXY_IMAGE) > /dev/null 2>&1
 	-rm -rf $(BINDIR) .go-pkg-cache Makefile.common*
 
@@ -230,6 +223,10 @@ COMPLIANCE_REPO?=github.com/tigera/compliance
 LMA_BRANCH?=$(PIN_BRANCH)
 LMA_REPO?=github.com/tigera/lma
 
+update-calico-pin:
+	$(call update_replace_pin,github.com/projectcalico/api,github.com/tigera/calico-private/api,$(BRANCH))
+	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(BRANCH))
+
 update-compliance-pin:
 	$(call update_pin,$(COMPLIANCE_REPO),$(COMPLIANCE_REPO),$(COMPLIANCE_BRANCH))
 
@@ -237,7 +234,7 @@ update-lma-pin:
 	$(call update_pin,$(LMA_REPO),$(LMA_REPO),$(LMA_BRANCH))
 
 ## Update dependency pins
-update-pins: guard-ssh-forwarding-bug update-api-pin replace-libcalico-pin replace-typha-pin replace-felix-pin replace-apiserver-pin update-compliance-pin update-lma-pin
+update-pins: guard-ssh-forwarding-bug update-calico-pin update-compliance-pin update-lma-pin
 
 ###############################################################################
 # Utilities
@@ -284,7 +281,7 @@ run-k8s-apiserver: stop-k8s-apiserver run-etcd
 		--clusterrole=cluster-admin \
 		--user=system:anonymous; \
 		do echo "Trying to create ClusterRoleBinding"; \
-		sleep 1; \
+		sleep 3; \
 		done
 
 	test/setup_k8s_auth.sh
@@ -292,6 +289,10 @@ run-k8s-apiserver: stop-k8s-apiserver run-etcd
 # Stop Kubernetes apiserver
 stop-k8s-apiserver:
 	@-docker rm -f st-apiserver
+
+# Stop Elasticsearch
+stop-elasticsearch:
+	@-docker rm -f $$(docker ps -aq --filter ancestor=$(ELASTICSEARCH_IMAGE))
 
 ###############################################################################
 # Utils

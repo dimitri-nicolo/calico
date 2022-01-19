@@ -9,16 +9,14 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
+	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 
+	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 	"github.com/tigera/lma/pkg/auth"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 	"github.com/tigera/lma/pkg/httputils"
 	"github.com/tigera/lma/pkg/k8s"
-
-	"github.com/projectcalico/libcalico-go/lib/set"
-
-	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 )
 
 // This file implements the main HTTP handler factory for service graph. This is the main entry point for service

@@ -20,7 +20,7 @@ var _ = Describe("client", func() {
 			currentURL    = "https://localhost:9443/"
 			username      = "username"
 			password      = "password"
-			kibanaVersion = "7.10.1"
+			kibanaVersion = "7.16.2"
 		)
 
 		It("returns the Kibana response on a successful request", func() {

@@ -7,15 +7,13 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
-
-	"github.com/projectcalico/libcalico-go/lib/resources"
-
 	"github.com/tigera/compliance/pkg/config"
 	"github.com/tigera/compliance/pkg/syncer"
 	"github.com/tigera/compliance/pkg/xrefcache"
-
 	"github.com/tigera/es-proxy/pkg/pip"
 )
 

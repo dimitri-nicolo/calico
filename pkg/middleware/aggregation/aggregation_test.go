@@ -12,20 +12,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tigera/lma/pkg/httputils"
-
-	"github.com/olivere/elastic/v7"
-	lmaapi "github.com/tigera/lma/pkg/apis/v1"
-	lmaindex "github.com/tigera/lma/pkg/elastic/index"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	. "github.com/tigera/es-proxy/pkg/middleware/aggregation"
 
+	"github.com/olivere/elastic/v7"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
+	lmaapi "github.com/tigera/lma/pkg/apis/v1"
+	lmaindex "github.com/tigera/lma/pkg/elastic/index"
+	"github.com/tigera/lma/pkg/httputils"
 )
 
 // MockBackend implements a mock backend for test purposes.

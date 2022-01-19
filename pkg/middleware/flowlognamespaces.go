@@ -9,22 +9,20 @@ import (
 	"strings"
 	"time"
 
+	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
 	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
+
 	"github.com/tigera/compliance/pkg/datastore"
+	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
 	lmaauth "github.com/tigera/lma/pkg/auth"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 	lmaindex "github.com/tigera/lma/pkg/elastic/index"
 	"github.com/tigera/lma/pkg/rbac"
 	"github.com/tigera/lma/pkg/timeutils"
-
-	"github.com/olivere/elastic/v7"
-
-	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
-
-	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 const (

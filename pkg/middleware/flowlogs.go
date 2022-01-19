@@ -11,26 +11,23 @@ import (
 	"strings"
 	"time"
 
+	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
 
-	"github.com/olivere/elastic/v7"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/projectcalico/libcalico-go/lib/resources"
-
 	"github.com/tigera/compliance/pkg/datastore"
+	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
+	pippkg "github.com/tigera/es-proxy/pkg/pip"
 	lmaauth "github.com/tigera/lma/pkg/auth"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 	lmaindex "github.com/tigera/lma/pkg/elastic/index"
 	"github.com/tigera/lma/pkg/rbac"
 	"github.com/tigera/lma/pkg/timeutils"
-
-	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
-	pippkg "github.com/tigera/es-proxy/pkg/pip"
 )
 
 type FlowLogsParams struct {

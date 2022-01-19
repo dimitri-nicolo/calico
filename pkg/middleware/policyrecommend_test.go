@@ -10,26 +10,23 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"k8s.io/apiserver/pkg/authentication/user"
-	"k8s.io/apiserver/pkg/endpoints/request"
-
-	"github.com/stretchr/testify/mock"
-	lmaauth "github.com/tigera/lma/pkg/auth"
-
-	"github.com/tigera/compliance/pkg/datastore"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
+	"github.com/stretchr/testify/mock"
+	lmaauth "github.com/tigera/lma/pkg/auth"
+
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/apiserver/pkg/endpoints/request"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
-
+	"github.com/tigera/compliance/pkg/datastore"
 	"github.com/tigera/lma/pkg/api"
 	lmaerror "github.com/tigera/lma/pkg/api"
 	"github.com/tigera/lma/pkg/elastic"

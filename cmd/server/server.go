@@ -12,7 +12,7 @@ import (
 	certutil "k8s.io/client-go/util/cert"
 	"k8s.io/client-go/util/keyutil"
 
-	"github.com/projectcalico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 
 	"github.com/tigera/es-proxy/pkg/server"
 )

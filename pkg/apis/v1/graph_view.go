@@ -7,7 +7,7 @@ import (
 
 	"github.com/tigera/lma/pkg/httputils"
 
-	"github.com/projectcalico/libcalico-go/lib/selector"
+	"github.com/projectcalico/calico/libcalico-go/lib/selector"
 )
 
 // GraphView provides the configuration for what is included in the service graph response.

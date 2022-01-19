@@ -6,16 +6,15 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/tigera/lma/pkg/httputils"
+	log "github.com/sirupsen/logrus"
+
 	"k8s.io/apiserver/pkg/endpoints/request"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	log "github.com/sirupsen/logrus"
-
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 	esauth "github.com/tigera/es-proxy/pkg/auth"
 	lmaauth "github.com/tigera/lma/pkg/auth"
+	"github.com/tigera/lma/pkg/httputils"
 	"github.com/tigera/lma/pkg/k8s"
 )
 

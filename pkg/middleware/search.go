@@ -7,21 +7,19 @@ import (
 	"net/http"
 	"time"
 
-	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
-	"github.com/tigera/es-proxy/pkg/math"
-
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	lmaindex "github.com/tigera/lma/pkg/elastic/index"
-	"github.com/tigera/lma/pkg/httputils"
-
-	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
+	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
+	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
+	"github.com/tigera/es-proxy/pkg/math"
 	esSearch "github.com/tigera/es-proxy/pkg/search"
+	lmaindex "github.com/tigera/lma/pkg/elastic/index"
+	"github.com/tigera/lma/pkg/httputils"
 )
 
 const (

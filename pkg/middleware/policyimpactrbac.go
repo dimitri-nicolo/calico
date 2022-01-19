@@ -6,14 +6,13 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/projectcalico/libcalico-go/lib/resources"
-
-	lmaauth "github.com/tigera/lma/pkg/auth"
-
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	lmaauth "github.com/tigera/lma/pkg/auth"
 )
 
 func NewPolicyImpactRbacHelper(usr user.Info, authz lmaauth.RBACAuthorizer) PolicyImpactRbacHelper {

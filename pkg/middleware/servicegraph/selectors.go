@@ -6,9 +6,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/projectcalico/libcalico-go/lib/set"
-
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 )
