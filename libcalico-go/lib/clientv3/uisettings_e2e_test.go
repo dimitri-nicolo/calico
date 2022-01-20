@@ -25,34 +25,6 @@ var _ = testutils.E2eDatastoreDescribe("UISettings tests", testutils.DatastoreAl
 	name1 := "group1.uisettings-1"
 	name2 := "group2.uisettings-2"
 
-	focus1 := []apiv3.UIGraphNode{
-		{
-			ID:        "idf1",
-			Type:      "typef1",
-			Name:      "f1",
-			Namespace: "nsf1",
-		},
-		{
-			ID:        "idf2",
-			Type:      "typef2",
-			Name:      "f2",
-			Namespace: "nsf2",
-		},
-	}
-	expanded1 := []apiv3.UIGraphNode{
-		{
-			ID:        "idex1",
-			Type:      "typeex1",
-			Name:      "ex1",
-			Namespace: "nsex1",
-		},
-		{
-			ID:        "idex2",
-			Type:      "typeex2",
-			Name:      "ex2",
-			Namespace: "nsex2",
-		},
-	}
 	namedselector1 := []apiv3.NamedSelector{
 		{
 			Name:     "ns1",
@@ -63,38 +35,28 @@ var _ = testutils.E2eDatastoreDescribe("UISettings tests", testutils.DatastoreAl
 			Selector: "sel2 != '2'",
 		},
 	}
-	followedegress1 := []apiv3.UIGraphNode{
+	nodes := []apiv3.UIGraphNodeView{
 		{
-			ID:        "ideg1",
-			Type:      "typeeg1",
-			Name:      "eg1",
-			Namespace: "nseg1",
-		},
-		{
-			ID:        "ideg2",
-			Type:      "typeeg2",
-			Name:      "eg1",
-			Namespace: "nseg2",
-		},
-	}
-	followedingress1 := []apiv3.UIGraphNode{
-		{
-			ID:        "idin1",
-			Type:      "typein1",
-			Name:      "in1",
-			Namespace: "nsin1",
-		},
-		{
-			ID:        "idin2",
-			Type:      "typein2",
-			Name:      "in2",
-			Namespace: "nsin2",
-		},
-		{
-			ID:        "idin2",
-			Type:      "typein2",
-			Name:      "in3",
-			Namespace: "nsin2",
+			UIGraphNode: apiv3.UIGraphNode{
+				ID:        "ideg1",
+				Type:      "typeeg1",
+				Name:      "eg1",
+				Namespace: "nseg1",
+			},
+			InFocus:       true,
+			Expanded:      true,
+			FollowIngress: true,
+			FollowEgress:  true,
+			Deemphasize:   true,
+			Hide:          true,
+			HideUnrelated: true,
+		}, {
+			UIGraphNode: apiv3.UIGraphNode{
+				ID:        "ideg2",
+				Type:      "typeeg2",
+				Name:      "eg1",
+				Namespace: "nseg2",
+			},
 		},
 	}
 	position1 := []apiv3.Position{
@@ -116,17 +78,14 @@ var _ = testutils.E2eDatastoreDescribe("UISettings tests", testutils.DatastoreAl
 	}
 
 	uigraphview1 := &apiv3.UIGraphView{
-		Focus:                     focus1,
-		Expanded:                  expanded1,
 		ExpandPorts:               true,
 		FollowConnectionDirection: false,
 		SplitIngressEgress:        true,
 		HostAggregationSelectors:  namedselector1,
-		FollowedEgress:            followedegress1,
-		FollowedIngress:           followedingress1,
 		LayoutType:                "standard",
 		Positions:                 position1,
 		Layers:                    layers1,
+		Nodes:                     nodes,
 	}
 
 	uigraphlayer1 := &apiv3.UIGraphLayer{
