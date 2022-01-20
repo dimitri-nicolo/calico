@@ -1,0 +1,25 @@
+---
+layout: null
+---
+{% helm tigera-operator %}
+installation:
+  enabled: false
+  imagePullSecrets:
+    - name: tigera-pull-secret
+tigeraOperator:
+  namespace: tigera-operator-enterprise
+apiServer:
+  enabled: false
+intrusionDetection:
+  enabled: false
+logCollector:
+  enabled: false
+logStorage:
+  enabled: false
+manager:
+  enabled: false
+monitor:
+  enabled: false
+compliance:
+  enabled: false
+{% endhelm %}

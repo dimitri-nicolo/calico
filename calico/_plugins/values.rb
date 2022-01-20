@@ -446,6 +446,7 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
       image: #{versions.fetch("tigera-operator").image}
       version: #{versions.fetch("tigera-operator").version}
       registry: #{versions.fetch("tigera-operator").registry}
+      #{if forDocs then 'namespace: "tigera-operator"' end}
 
     calicoctl:
       enabled: false
