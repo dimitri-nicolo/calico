@@ -12,28 +12,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG GIT_VERSION=unknown
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest as build
-RUN mkdir -p /tmp/dikastes
-RUN chmod 0777 /tmp/dikastes
+FROM registry.access.redhat.com/ubi8/ubi:latest as build
 
-# Add in top-level license file
-RUN mkdir /licenses
+RUN dnf install --disableplugin=subscription-manager -y git gcc gcc-c++ make libtool libcurl-devel libxml2-devel pcre-devel && \
+      git clone https://github.com/spiderlabs/modsecurity modsecurity && \
+      cd modsecurity && git submodule init && git submodule update && ./build.sh &&  ./configure && make && make install
+
+
+FROM registry.access.redhat.com/ubi8/ubi-minimal:latest as artifact
 COPY LICENSE /licenses
 
-# Add in top-level ModSecurity library dependency.
-FROM ubuntu:20.04
-RUN apt-get -y update &&  \
-    apt-get -y upgrade && \
-    apt-get install --no-install-recommends -y libmodsecurity3
+RUN mkdir -p /tmp/dikastes && chmod 0777 /tmp/dikastes
 
+FROM scratch
+ARG GIT_VERSION=unknown
+
+LABEL name="Calico Dikastes" \
+      vendor="Project Calico" \
+      version=$GIT_VERSION
+
+COPY --from=build /usr/local/modsecurity/ /usr/local/modsecurity/
+COPY --chown=999 --from=artifact /tmp/dikastes /var/run/dikastes
+COPY --from=artifact /licenses /licenses
+COPY --from=artifact /lib64 /lib64
+COPY --from=artifact /lib /lib
 
 ADD bin/dikastes-amd64 /dikastes
 ADD bin/healthz-amd64 /healthz
 
-
-COPY --chown=999 --from=build /tmp/dikastes /var/run/dikastes
 USER 999
 ENTRYPOINT ["/dikastes"]
 CMD ["server"]
