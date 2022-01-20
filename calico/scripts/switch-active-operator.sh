@@ -14,6 +14,29 @@ if [ -z "${NEW_NAME}" ]; then
   exit 1
 fi
 
+# kubectl_retry retries <args>
+kubectl_retry() {
+  RETRIES=$1
+  OUTPUT_TMP=$(mktemp)
+  shift 1
+
+  for attempt in $(seq 1 ${RETRIES}); do
+    exit_code=0
+    kubectl $@ 1> ${OUTPUT_TMP}
+    exit_code=$?
+    if [[ "${exit_code}" == "0" || "${exit_code}" == "" ]]; then
+      cat ${OUTPUT_TMP}
+      break
+    elif [[ "${attempt}" == "${RETRIES}" ]]; then
+      echo [ERROR] Failed to kubectl $@
+      return ${exit_code}
+    else
+      echo [INFO] Failed kubectl command - will sleep and retry
+      sleep 5
+    fi
+  done
+}
+
 copy_resource_to_ns (){
   TYPE=$1
   NAME=$2
@@ -21,7 +44,7 @@ copy_resource_to_ns (){
 
   DATA=$(kubectl get $TYPE -n tigera-operator ${NAME} -o jsonpath="{.data}")
   OWNER_REF=$(kubectl get $TYPE -n tigera-operator ${NAME} -o jsonpath="{.metadata.ownerReferences}")
-  kubectl apply -f - <<EOF
+  kubectl_retry 10 apply -f - <<EOF
 {"apiVersion":"v1","kind":"$TYPE",
 "data":${DATA},
 "metadata":{"name":"${NAME}","namespace":"${NS}",
@@ -41,7 +64,7 @@ PATCH_FILE=$(mktemp)
 cat <<EOF > ${PATCH_FILE}
 {"data":{"active-namespace": "${NEW_NAME}"}}
 EOF
-kubectl patch configmap -n calico-system active-operator --type=merge --patch-file "${PATCH_FILE}"
+kubectl_retry 10 patch configmap -n calico-system active-operator --type=merge --patch-file "${PATCH_FILE}"
 
 # Restart the active operator
-kubectl rollout restart deployment -n ${NEW_NAME} tigera-operator
+kubectl_retry 10 rollout restart deployment -n ${NEW_NAME} tigera-operator
