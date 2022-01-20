@@ -14,14 +14,14 @@ GITHUB_API_TOKEN = tests.GITHUB_API_TOKEN
 MAPPED_COMPONENTS = {
     'cnx-manager': 'manager',
     'voltron': 'voltron',
-    'cnx-apiserver': 'apiserver',
+    'cnx-apiserver': 'calico-private',
     'cnx-queryserver': 'ts-queryserver',
-    'cnx-kube-controllers': 'kube-controllers-private',
+    'cnx-kube-controllers': 'calico-private',
     'calicoq': 'calicoq',
-    'typha': 'typha-private',
-    'calicoctl': 'calicoctl-private',
-    'cnx-node': 'node-private',
-    'dikastes': 'app-policy-private',
+    'typha': 'calico-private',
+    'calicoctl': 'calico-private',
+    'cnx-node': 'calico-private',
+    'dikastes': 'calico-private',
     'fluentd': 'fluentd-docker',
     'fluentd-windows': 'fluentd-docker',
     'es-proxy': 'es-proxy-image',
@@ -40,7 +40,7 @@ MAPPED_COMPONENTS = {
     'l7-collector': 'l7-collector',
     'envoy-init': 'l7-collector',
     'envoy': 'envoy-docker',
-    'tigera-cni': 'cni-plugin-private',
+    'tigera-cni': 'calico-private',
     'license-agent': 'license-agent',
     'firewall-integration': 'firewall-integration',
     'egress-gateway': 'egress-gateway',
@@ -56,7 +56,7 @@ MAPPED_COMPONENTS = {
     'libcalico-go-private': 'libcalico-go-private',
     'tigera-api': 'api',
     'deep-packet-inspection': 'deep-packet-inspection',
-    'windows': 'node-private',
+    'windows': 'calico-private',
 }
 
 SKIP_COMPONENTS = [
