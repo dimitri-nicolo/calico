@@ -5,6 +5,10 @@ PACKAGE_NAME = github.com/projectcalico/calico/node
 # Name of the images.
 # e.g., <registry>/<name>:<tag>
 NODE_IMAGE            ?=cnx-node
+# Name of the Enterprise windows upgrade image
+# The windows upgrade image names are:
+# - OS: calico/windows-upgrade
+# - EE: tigera/calico-windows-upgrade
 WINDOWS_UPGRADE_IMAGE ?=calico-windows-upgrade
 
 # If this is a windows release build the windows upgrade image.
