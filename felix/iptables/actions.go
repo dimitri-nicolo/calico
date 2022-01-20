@@ -149,6 +149,18 @@ func (n NfqueueAction) String() string {
 	return "Nfqueue"
 }
 
+type NfqueueWithBypassAction struct {
+	QueueNum int64
+}
+
+func (n NfqueueWithBypassAction) ToFragment(features *Features) string {
+	return fmt.Sprintf("--jump NFQUEUE --queue-num %d --queue-bypass", n.QueueNum)
+}
+
+func (n NfqueueWithBypassAction) String() string {
+	return "NfqueueWithBypass"
+}
+
 type NflogAction struct {
 	Group       uint16
 	Prefix      string

@@ -214,8 +214,6 @@ type Config struct {
 
 	DatastoreType string `config:"oneof(kubernetes,etcdv3);etcdv3;non-zero,die-on-fail,local"`
 
-	DNSPolicyNfqueueID int `config:"int;100;"`
-
 	FelixHostname string `config:"hostname;;local,non-zero"`
 	NodeIP        net.IP `config:"ipv4;;"`
 
@@ -380,16 +378,23 @@ type Config struct {
 	FlowLogsFilePerFlowProcessLimit       int    `config:"int;2"`
 	FlowLogsFilePerFlowProcessArgsLimit   int    `config:"int;5"`
 	FlowLogsFileNatOutgoingPortLimit      int    `config:"int;3"`
+	FlowLogsFileDomainsLimit              int    `config:"int;5"`
 
-	DNSLogsFlushInterval       time.Duration `config:"seconds;300"`
-	DNSLogsFileEnabled         bool          `config:"bool;false"`
-	DNSLogsFileDirectory       string        `config:"string;/var/log/calico/dnslogs"`
-	DNSLogsFileMaxFiles        int           `config:"int;5"`
-	DNSLogsFileMaxFileSizeMB   int           `config:"int;100"`
-	DNSLogsFileAggregationKind int           `config:"int(0:1);1"`
-	DNSLogsFileIncludeLabels   bool          `config:"bool;true"`
-	DNSLogsFilePerNodeLimit    int           `config:"int;0"`
-	DNSLogsLatency             bool          `config:"bool;true"`
+	DNSLogsFlushInterval             time.Duration `config:"seconds;300"`
+	DNSLogsFileEnabled               bool          `config:"bool;false"`
+	DNSLogsFileDirectory             string        `config:"string;/var/log/calico/dnslogs"`
+	DNSLogsFileMaxFiles              int           `config:"int;5"`
+	DNSLogsFileMaxFileSizeMB         int           `config:"int;100"`
+	DNSLogsFileAggregationKind       int           `config:"int(0:1);1"`
+	DNSLogsFileIncludeLabels         bool          `config:"bool;true"`
+	DNSLogsFilePerNodeLimit          int           `config:"int;0"`
+	DNSLogsLatency                   bool          `config:"bool;true"`
+	DNSPolicyMode                    string        `config:"oneof(NoDelay,DelayDeniedPacket,DelayDNSResponse);DelayDeniedPacket;non-zero"`
+	DNSPolicyNfqueueID               int           `config:"int;100"`
+	DNSPolicyNfqueueSize             int           `config:"int;100"`
+	DNSPacketsNfqueueID              int           `config:"int;101"`
+	DNSPacketsNfqueueSize            int           `config:"int;100"`
+	DNSPacketsNfqueueMaxHoldDuration time.Duration `config:"millis;3000"`
 
 	L7LogsFlushInterval                  time.Duration `config:"seconds;300"`
 	L7LogsFileEnabled                    bool          `config:"bool;true"`

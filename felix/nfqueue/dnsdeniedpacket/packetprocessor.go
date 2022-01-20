@@ -1,6 +1,6 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 
-package dnspolicy
+package dnsdeniedpacket
 
 import (
 	"net"
@@ -257,7 +257,11 @@ done:
 			// case.
 			for i := 0; i < channelPeakLimit; i++ {
 				select {
-				case attr := <-processor.nf.PacketAttributesChannel():
+				case attr, ok := <-processor.nf.PacketAttributesChannel():
+					if !ok {
+						log.Info("Packet attribute channel closed, shutting down.")
+						break done
+					}
 					processor.processPacket(attr)
 				default:
 					break processPacketsMsgLoop

@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 
 package nfqueue
 
@@ -11,6 +11,8 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/projectcalico/calico/felix/versionparse"
+
 	"github.com/mdlayher/netlink"
 
 	log "github.com/sirupsen/logrus"
@@ -18,6 +20,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	gonfqueue "github.com/florianl/go-nfqueue"
+)
+
+var (
+	v3Dot13Dot0 = versionparse.MustParseVersion("3.13.0")
 )
 
 const (
@@ -203,4 +209,27 @@ func (nf *nfQueue) DebugKillConnection() error {
 	fd := reflect.NewAt(current.Type(), unsafe.Pointer(current.UnsafeAddr())).Elem().Interface().(int)
 
 	return syscall.Close(fd)
+}
+
+func isAtLeastKernel(v *versionparse.Version) error {
+	versionReader, err := versionparse.GetKernelVersionReader()
+	if err != nil {
+		return fmt.Errorf("failed to get kernel version reader: %v", err)
+	}
+
+	kernelVersion, err := versionparse.GetKernelVersion(versionReader)
+	if err != nil {
+		return fmt.Errorf("failed to get kernel version: %v", err)
+	}
+
+	if kernelVersion.Compare(v) < 0 {
+		return fmt.Errorf("kernel is too old (have: %v but want at least: %v)", kernelVersion, v)
+	}
+
+	return nil
+}
+
+// SupportsNfQueueWithBypass returns true if the kernel version supports NFQUEUE with the queue-bypass option,
+func SupportsNfQueueWithBypass() error {
+	return isAtLeastKernel(v3Dot13Dot0)
 }

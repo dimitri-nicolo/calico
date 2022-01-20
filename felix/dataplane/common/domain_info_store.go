@@ -77,6 +77,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	log "github.com/sirupsen/logrus"
@@ -87,6 +89,35 @@ import (
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
+
+var (
+	prometheusInvalidPacketsInCount = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "felix_dns_invalid_packets_in",
+		Help: "Count of the number of invalid DNS request packets seen",
+	})
+
+	prometheusNonQueryPacketsInCount = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "felix_dns_non_query_packets_in",
+		Help: "Count of the number of non-query DNS packets seen",
+	})
+
+	prometheusReqPacketsInCount = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "felix_dns_req_packets_in",
+		Help: "Count of the number of DNS request packets seen",
+	})
+
+	prometheusRespPacketsInCount = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "felix_dns_resp_packets_in",
+		Help: "Count of the number of DNS response packets seen",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(prometheusInvalidPacketsInCount)
+	prometheus.MustRegister(prometheusNonQueryPacketsInCount)
+	prometheus.MustRegister(prometheusRespPacketsInCount)
+	prometheus.MustRegister(prometheusReqPacketsInCount)
+}
 
 // The data that we hold for each value in a name -> value mapping.  A value can be an IP, or
 // another name.  The values themselves are held as the keys of the nameData.values map.
@@ -466,16 +497,19 @@ func (s *DomainInfoStore) loopIteration(saveTimerC, gcTimerC <-chan time.Time) {
 		const udpPingPrefix = "UDP PING"
 		if len(dnsBytes) >= len(udpPingPrefix) && string(dnsBytes[:len(udpPingPrefix)]) == udpPingPrefix {
 			log.Debug("Ignoring UDP ping packet")
+			prometheusInvalidPacketsInCount.Inc()
 			return
 		}
 
 		err := dns.DecodeFromBytes(dnsBytes, gopacket.NilDecodeFeedback)
 		if err != nil {
 			log.WithError(err).Debug("Failed to decode DNS packet")
+			prometheusInvalidPacketsInCount.Inc()
 			return
 		}
 		if dns.OpCode != layers.DNSOpCodeQuery {
 			log.Debug("Ignoring non-Query DNS packet.")
+			prometheusNonQueryPacketsInCount.Inc()
 			return
 		}
 		latencyIfKnown := s.processForLatency(ipv4, dns, msg.Timestamp)
@@ -484,6 +518,7 @@ func (s *DomainInfoStore) loopIteration(saveTimerC, gcTimerC <-chan time.Time) {
 			if dns.QDCount == 0 || len(dns.Questions) == 0 {
 				// No questions; malformed packet?
 				log.Debug("Ignoring DNS packet with no questions; malformed packet?")
+				prometheusInvalidPacketsInCount.Inc()
 				return
 			}
 
@@ -495,6 +530,9 @@ func (s *DomainInfoStore) loopIteration(saveTimerC, gcTimerC <-chan time.Time) {
 				}
 			}
 			s.processDNSPacket(dns, msg.Callback)
+			prometheusRespPacketsInCount.Inc()
+		} else {
+			prometheusReqPacketsInCount.Inc()
 		}
 	case expiry := <-s.mappingExpiryChannel:
 		s.processMappingExpiry(expiry.name, expiry.value)

@@ -66,7 +66,7 @@ import (
 	"github.com/projectcalico/calico/felix/labelindex"
 	"github.com/projectcalico/calico/felix/logutils"
 	"github.com/projectcalico/calico/felix/nfqueue"
-	nfqdnspolicy "github.com/projectcalico/calico/felix/nfqueue/dnspolicy"
+	nfqdnspolicy "github.com/projectcalico/calico/felix/nfqueue/dnsdeniedpacket"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/routetable"
 	"github.com/projectcalico/calico/felix/rules"

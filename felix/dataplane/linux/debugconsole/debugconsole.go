@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	nfqdnspolicy "github.com/projectcalico/calico/felix/nfqueue/dnspolicy"
+	nfqdnspolicy "github.com/projectcalico/calico/felix/nfqueue/dnsdeniedpacket"
 
 	log "github.com/sirupsen/logrus"
 )

@@ -1,6 +1,6 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 
-package dnspolicy_test
+package dnsdeniedpacket_test
 
 import (
 	"net"
@@ -17,7 +17,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/nfqueue"
-	nfqdnspolicy "github.com/projectcalico/calico/felix/nfqueue/dnspolicy"
+	nfqdnspolicy "github.com/projectcalico/calico/felix/nfqueue/dnsdeniedpacket"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 

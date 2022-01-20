@@ -332,10 +332,6 @@ type FelixConfigurationSpec struct {
 	DebugSimulateCalcGraphHangAfter *metav1.Duration `json:"debugSimulateCalcGraphHangAfter,omitempty" configv1timescale:"seconds"`
 	DebugSimulateDataplaneHangAfter *metav1.Duration `json:"debugSimulateDataplaneHangAfter,omitempty" configv1timescale:"seconds"`
 
-	// DNSPolicyNfqueueID is the NFQUEUE ID to use for DNS Policy re-evaluation when the domains IP hasn't been programmed
-	// to ipsets yet. [Default: 100]
-	DNSPolicyNfqueueID *int `json:"dnsPolicyNfqueueID,omitempty" validate:"omitempty,gte=0,lte=65535"`
-
 	IptablesNATOutgoingInterfaceFilter string `json:"iptablesNATOutgoingInterfaceFilter,omitempty" validate:"omitempty,ifaceFilter"`
 
 	// SidecarAccelerationEnabled enables experimental sidecar acceleration [Default: false]
@@ -516,6 +512,10 @@ type FelixConfigurationSpec struct {
 	// FlowLogsFileNatOutgoingPortLimit is used to specify the maximum number of distinct post SNAT ports that will appear
 	// in the flowLogs. Default value is 3
 	FlowLogsFileNatOutgoingPortLimit *int `json:"flowLogsFileNatOutgoingPortLimit,omitempty" validate:"omitempty"`
+	// FlowLogsFileDomainsLimit is used to configure the number of (destination) domains to include in the flow log. The
+	// domains are only included at aggregation level 0 or 1.
+	// [Default: 5]
+	FlowLogsFileDomainsLimit *int `json:"flowLogsFileDomainsLimit,omitempty" validate:"omitempty"`
 
 	// WindowsFlowLogsFileDirectory sets the directory where flow logs files are stored on Windows nodes. [Default: "c:\\TigeraCalico\\flowlogs"].
 	WindowsFlowLogsFileDirectory string `json:"windowsFlowLogsFileDirectory,omitempty"`
@@ -585,6 +585,42 @@ type FelixConfigurationSpec struct {
 	// DNSLogsLatency indicates to include measurements of DNS request/response latency in each DNS log.
 	// [Default: true]
 	DNSLogsLatency *bool `json:"dnsLogsLatency,omitempty"`
+	// DNSPolicyMode specifies how DNS policy programming will be handled.
+	// - DelayDeniedPacket: Felix delays any denied packet that traversed a policy that included egress domain matches,
+	//                      but did not match. The packet is released after a fixed time, or after the destination IP
+	//                      address was programmed.
+	// - DelayDNSResponse:  Felix delays any DNS response until related IPSets are programmed. This introduces some
+	//                      latency to all DNS packets (even when no IPSet programming is required), but it ensures
+	//                      policy hit statistics are accurate. This is the recommended setting when you are making use
+	//                      of staged policies or policy rule hit statistics.
+	// - NoDelay:           Felix does not introduce any delay to the packets. DNS rules may not have been programmed by
+	//                      the time the first packet traverses the policy rules. Client applications need to handle
+	//                      reconnection attempts if initial connection attempts fail. This may be problematic for some
+	//                      applications or for very low DNS TTLs.
+	//
+	// On Windows, or when using the eBPF dataplane, this setting is ignored and "NoDelay" is always used.
+	//
+	// Possible values are DelayDeniedPacket, DelayDNSPacket, NoDelay. [Default: DelayDeniedPacket]
+	DNSPolicyMode string `json:"dnsPolicyMode,omitempty" validate:"omitempty"`
+	// DNSPolicyNfqueueID is the NFQUEUE ID to use for DNS Policy re-evaluation when the domains IP hasn't been programmed
+	// to ipsets yet. Used when DNSPolicyMode is DelayDeniedPacket. [Default: 100]
+	DNSPolicyNfqueueID *int `json:"dnsPolicyNfqueueID,omitempty" validate:"omitempty,gte=0,lte=65535"`
+	// DNSPolicyNfqueueID is the size of the NFQUEUE for DNS policy re-evaluation. This is the maximum number of denied
+	// packets that may be queued up pending re-evaluation.
+	// Used when DNSPolicyMode is DelayDeniedPacket. [Default: 100]
+	DNSPolicyNfqueueSize *int `json:"dnsPolicyNfqueueSize,omitempty" validate:"omitempty,gte=0,lte=65535"`
+	// DNSPacketsNfqueueID is the NFQUEUE ID to use for capturing DNS packets to ensure programming IPSets occurs before
+	// the response is released. Used when DNSPolicyMode is DelayDNSPacket. [Default: 101]
+	DNSPacketsNfqueueID *int `json:"dnsPacketsNfqueueID,omitempty" validate:"omitempty,gte=0,lte=65535"`
+	// DNSPacketsNfqueueSize is the size of the NFQUEUE for captured DNS packets. This is the maximum number of DNS
+	// packets that may be queued awaiting programming in the dataplane. Used when DNSPolicyMode is DelayDNSPacket.
+	// [Default: 100]
+	DNSPacketsNfqueueSize *int `json:"dnsPacketsNfqueueSize,omitempty" validate:"omitempty,gte=0,lte=65535"`
+
+	// DNSPacketsNfqueueMaxHoldDuration is the max length of time to hold on to a DNS response while waiting for the
+	// the dataplane to be programmed. Used when DNSPolicyMode is DelayDNSPacket.
+	// [Default: 3s]
+	DNSPacketsNfqueueMaxHoldDuration *metav1.Duration `json:"dnsPacketsNfqueueMaxHoldDuration,omitempty"`
 
 	// L7LogsFlushInterval configures the interval at which Felix exports L7 logs.
 	// [Default: 300s]
