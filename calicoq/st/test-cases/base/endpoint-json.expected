@@ -1,0 +1,20 @@
+endpoint default.frontend-5gs43 -o json
+
+[
+  {
+    "description": "Policies and profiles for endpoints matching \"default.frontend-5gs43\"",
+    "endpoints": [
+      {
+        "node": "rack1-host1",
+        "orchestrator": "k8s",
+        "workload": "default/frontend-5gs43",
+        "name": "eth0",
+        "profiles": [
+          {
+            "name": "profile1"
+          }
+        ]
+      }
+    ]
+  }
+]

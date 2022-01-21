@@ -1,0 +1,8 @@
+host rack1-host1
+
+Policies and profiles for each endpoint on host "rack1-host1":
+
+Workload endpoint k8s/default.frontend-5gs43/eth0
+  Policies:
+  Profiles:
+    Profile "profile1"

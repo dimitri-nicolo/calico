@@ -1,0 +1,161 @@
+#!/bin/bash
+
+cat <<EOF
+
+Running calicoq scale tests with ${CALICOQ=calicoq}
+
+EOF
+
+passed=0
+failed=0
+
+function summarise_test {
+    echo ------------------------------------------------------
+    echo ST TEST SUMMARY: $passed PASSED, $failed FAILED
+    echo ------------------------------------------------------
+    echo
+}
+
+function workload_endpoint {
+    cat <<EOF
+- apiVersion: projectcalico.org/v3
+  kind: WorkloadEndpoint
+  metadata:
+    name: host1-k8s-g1w2-eth0
+    namespace: group1
+    labels:
+      app: frontend
+      projectcalico.org/namespace: group1
+  spec:
+    interfaceName: cali0ef24ba
+    mac: ca:fe:1d:52:bb:e2
+    ipNetworks:
+    - 192.168.0.2/32
+    workload: g1w2
+    orchestrator: k8s
+    node: host1
+    pod: g1w2
+    endpoint: eth0
+EOF
+}
+
+function policy {
+    num=$1
+    cat <<EOF
+- apiVersion: projectcalico.org/v3
+  kind: NetworkPolicy
+  metadata:
+    name: p$num
+    namespace: group1
+  spec:
+    selector: projectcalico.org/namespace == 'group1'
+    order: 500
+    egress:
+    - action: Deny
+      destination:
+        selector: projectcalico.org/namespace == 'group1'
+    ingress:
+    - action: Allow
+      source:
+        selector: projectcalico.org/namespace == 'group2'
+
+EOF
+}
+
+function workload_with_n_policies {
+    n=$1
+    workload_endpoint
+    for num in `seq 1 $n`; do policy $num; done
+}
+
+# Get a calicoctl.
+cd scale-test
+if ! test -x calicoctl; then
+    wget https://github.com/projectcalico/calicoctl/releases/download/v2.0.0/calicoctl
+    chmod a+x calicoctl
+fi
+CALICOCTL=`pwd`/calicoctl
+
+TIMED_CALICOCTL_APPLY="/usr/bin/time -o timing-ctl.txt -f 'calicoctl took kernel-mode %Ss user-mode %Us' ${CALICOCTL} apply -f -"
+
+# Check there isn't already a calicoq-etcd container.
+docker rm -f calicoq-etcd 2>/dev/null
+
+# Run each test case in turn.
+for c in 001 002 003; do
+
+    echo ------------------------------------------------------
+    echo TEST: ${c}
+
+    # Establish settings for this test case.
+    ETCD_PORT=2379
+
+    # Run etcd.
+    docker run --detach --name calicoq-etcd \
+       quay.io/coreos/etcd \
+       etcd \
+       --advertise-client-urls "http://127.0.0.1:${ETCD_PORT}" \
+       --listen-client-urls "http://0.0.0.0:${ETCD_PORT}"
+    etcd_ip=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' calicoq-etcd)
+    export ETCD_ENDPOINTS=http://${etcd_ip}:${ETCD_PORT}
+    export DATASTORE_TYPE=etcdv3
+
+    case ${c} in
+
+	001 )
+	    echo "Configure a WorkloadEndpoint with 1000 policies applying to it"
+	    workload_with_n_policies 1000 | eval ${TIMED_CALICOCTL_APPLY}
+	    expect_policy_lines=2000
+	    ;;
+
+	002 )
+	    echo "Configure a WorkloadEndpoint with 5000 policies applying to it"
+	    workload_with_n_policies 5000 | eval ${TIMED_CALICOCTL_APPLY}
+	    expect_policy_lines=10000
+	    ;;
+
+	003 )
+	    echo "Configure a WorkloadEndpoint with 10000 policies applying to it"
+	    workload_with_n_policies 10000 | eval ${TIMED_CALICOCTL_APPLY}
+	    expect_policy_lines=20000
+	    ;;
+
+	* )
+	    echo Test case not implemented
+	    ;;
+
+    esac
+
+    # Run calicoq.
+    OUTPUT=output${c}.txt
+    /usr/bin/time -o timing-q.txt -f 'calicoq took kernel-mode %Ss user-mode %Us' ${CALICOQ} endpoint eth0 >$OUTPUT 2>&1
+    ok=true
+    policy_lines=`grep -c 'Policy "group1/p' $OUTPUT`
+    if [ $policy_lines != $expect_policy_lines ]; then
+	echo "ERROR: Unexpected Policy lines in calicoq output ($policy_lines != $expect_policy_lines)"
+	ok=false
+    fi
+    if $ok; then
+        echo TEST: ${c}: PASSED
+        let 'passed++'
+	rm $OUTPUT
+	cat timing-ctl.txt timing-q.txt
+    else
+        echo TEST: ${c}: FAILED
+        let 'failed++'
+    fi
+    rm timing-ctl.txt timing-q.txt
+
+    docker rm -f calicoq-etcd >/dev/null
+    rm -f calicoq.cfg
+
+    echo ------------------------------------------------------
+    echo
+
+    cd ..
+
+done
+
+summarise_test
+
+exit $failed
