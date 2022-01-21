@@ -1,7 +1,6 @@
 include ../metadata.mk
 
 CALICO_DIR=$(shell git rev-parse --show-toplevel)/calico
-GIT_HASH=$(shell git rev-parse --short=9 HEAD)
 VERSIONS_FILE?=$(CALICO_DIR)/_data/versions.yml
 JEKYLL_VERSION=4.0.0
 HP_VERSION=v0.2
@@ -47,15 +46,6 @@ DOCS_TEST_CONTAINER?=tigera/docs-test
 
 # Use := so that these V_ variables are computed only once per make run.
 CALICO_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].title')
-OPERATOR_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].tigera-operator.version')
-NODE_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.cnx-node.version')
-CTL_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.calicoctl.version')
-CNI_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.calico/cni.version')
-KUBE_CONTROLLERS_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.calico/kube-controllers.version')
-POD2DAEMON_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.flexvol.version')
-DIKASTES_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.calico/dikastes.version')
-FLANNEL_MIGRATION_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.calico/flannel-migration-controller.version')
-TYPHA_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.typha.version')
 
 ###############################################################################
 # Include ../lib.Makefile
@@ -65,7 +55,6 @@ TYPHA_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].components.t
 include ../lib.Makefile
 
 ##############################################################################
-
 # Always install the git hooks to prevent publishing closed source code to a non-private repo.
 hooks_installed:=$(shell ./install-git-hooks)
 
@@ -101,6 +90,8 @@ _site build: bin/helm _includes/charts/tigera-operator/charts/tigera-secure-ee-c
 
 ## Clean enough that a new release build will be clean
 clean:
+	# Clean .created files which indicate images / releases have been built.
+	find . -name '.*.created*' -type f -delete
 	rm -rf _output _site .jekyll-metadata pinned_versions.yaml _includes/charts/*/values.yaml
 	rm -rf stderr.out filtered.out docs_test.created bin
 	rm -f _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz
@@ -215,215 +206,6 @@ endif
 	-git apply --3way -p3 --directory=_plugins/$(VERSION) backport_helm_values.patch
 	# "error: unrecognized input" can be ignored if you didn't modify those directories.
 	# "error: patch failed" means you will need to manually patch certain directories.
-
-###############################################################################
-# Release targets
-###############################################################################
-
-## Tags and builds a release from start to finish.
-release: release-prereqs
-	$(MAKE) RELEASE_CHART=true release-tag
-	$(MAKE) RELEASE_CHART=true release-build
-	$(MAKE) RELEASE_CHART=true release-verify
-
-	@echo ""
-	@echo "Release build complete. Next, push the release."
-	@echo ""
-	@echo "  make release-publish"
-	@echo ""
-	@echo "Later push the archive at $(RELEASE_DIR).tgz for the release to S3 s3://tigera-public/ee/archives/ "
-	@echo ""
-
-## Produces a git tag for the release.
-release-tag: release-prereqs
-	git tag $(CALICO_VER)
-
-## Produces a clean build of release artifacts at the specified version.
-release-build: release-prereqs clean
-	# Create the release archive.
-	$(MAKE) release-archive
-
-## Verifies the release artifacts produces by `make release-build` are correct.
-release-verify: release-prereqs
-	@echo "TODO: Implement release tar verification"
-
-ifneq (,$(findstring $(RELEASE_STREAM),v3.5 v3.4 v3.3 v3.2 v3.1 v3.0 v2.6))
-    # Found: this is an older release.
-    REL_NOTES_PATH:=releases
-else
-    # Not found: this is a newer release.
-    REL_NOTES_PATH:=release-notes
-endif
-
-UPLOAD_DIR?=$(OUTPUT_DIR)/upload
-$(UPLOAD_DIR):
-	mkdir -p $(UPLOAD_DIR)
-
-# Define a multi-line string for the GitHub release body.
-# We need to export it as an env var to properly format it.
-# See here: https://stackoverflow.com/questions/649246/is-it-possible-to-create-a-multi-line-string-variable-in-a-makefile/5887751
-define RELEASE_BODY
-Release notes can be found at https://projectcalico.docs.tigera.io/archive/$(RELEASE_STREAM)/$(REL_NOTES_PATH)/
-
-Attached to this release are the following artifacts:
-
-- `release-v$(CALICO_VER).tgz`: docker images and kubernetes manifests.
-- `calico-windows-v$(CALICO_VER).zip`: Calico for Windows.
-- `tigera-operator-v$(CALICO_VER)-$(CHART_RELEASE).tgz`: Calico helm v3 chart.
-
-endef
-export RELEASE_BODY
-
-## Pushes a github release and release artifacts produced by `make release-build`.
-release-publish: release-prereqs $(UPLOAD_DIR)
-	# Push the git tag.
-	git push origin $(CALICO_VER)
-
-	# Push binaries to GitHub release.
-	# Requires ghr: https://github.com/tcnksm/ghr
-	# Requires GITHUB_TOKEN environment variable set.
-	ghr -u projectcalico -r calico \
-		-b "$$RELEASE_BODY" \
-		-n $(CALICO_VER) \
-		$(CALICO_VER) $(RELEASE_DIR).tgz
-
-	$(MAKE) helm-index
-	@echo "Verify the GitHub release based on the pushed tag."
-	@echo ""
-	@echo "  https://github.com/projectcalico/calico/calico/releases/tag/$(CALICO_VER)"
-	@echo ""
-
-## Kicks semaphore job which syncs github released helm charts with helm index file
-.PHONY: helm-index
-helm-index:
-	@echo "Triggering semaphore workflow to update helm index."
-	SEMAPHORE_PROJECT_ID=30f84ab3-1ea9-4fb0-8459-e877491f3dea SEMAPHORE_WORKFLOW_BRANCH=master SEMAPHORE_WORKFLOW_FILE=../releases/calico/helmindex/update_helm.yml $(MAKE) semaphore-run-workflow
-
-## Generates release notes for the given version.
-.PHONY: release-notes
-release-notes:
-	VERSION=$(CALICO_VER) GITHUB_TOKEN=$(GITHUB_TOKEN) python2 ./release-scripts/generate-release-notes.py
-
-update-authors:
-ifndef GITHUB_TOKEN
-	$(error GITHUB_TOKEN must be set)
-endif
-	@echo "# Calico authors" > AUTHORS.md
-	@echo "" >> AUTHORS.md
-	@echo "This file is auto-generated based on contribution records reported" >> AUTHORS.md
-	@echo "by GitHub for the core repositories within the projectcalico/ organization. It is ordered alphabetically." >> AUTHORS.md
-	@echo "" >> AUTHORS.md
-	@docker run -ti --rm -v $(CURDIR):/code -e GITHUB_TOKEN=$(GITHUB_TOKEN) python:3 \
-		bash -c 'pip install pygithub && /usr/local/bin/python /code/release-scripts/get-contributors.py >> /code/AUTHORS.md'
-
-# release-prereqs checks that the environment is configured properly to create a release.
-release-prereqs:
-	@if [ $(CALICO_VER) != $(NODE_VER) ]; then \
-		echo "Expected CALICO_VER $(CALICO_VER) to equal NODE_VER $(NODE_VER)"; \
-		exit 1; fi
-ifeq (, $(shell which ghr))
-	$(error Unable to find `ghr` in PATH, run this: go get -u github.com/tcnksm/ghr)
-endif
-
-OUTPUT_DIR?=_output
-RELEASE_DIR_NAME?=release-$(CALICO_VER)-$(OPERATOR_VER)
-RELEASE_DIR?=$(OUTPUT_DIR)/$(RELEASE_DIR_NAME)
-RELEASE_DIR_K8S_MANIFESTS?=$(RELEASE_DIR)/manifests
-IGNORED_MANIFESTS= 02-tigera-operator-no-resource-loading.yaml
-# Determine where the manifests live. For older versions we used
-# a different location, but we still need to package them up for patch
-# releases.
-DEFAULT_MANIFEST_SRC=./_site/manifests
-OLD_VERSIONS := v2.0 v2.1 v2.2 v2.3 v2.4
-ifneq ($(filter $(RELEASE_STREAM),$(OLD_VERSIONS)),)
-DEFAULT_MANIFEST_SRC=./_site/$(RELEASE_STREAM)/getting-started/kubernetes/installation
-endif
-MANIFEST_SRC?=$(DEFAULT_MANIFEST_SRC)
-
-## Creates archive of all the manifests
-release-archive: release-prereqs $(RELEASE_DIR).tgz
-
-$(RELEASE_DIR).tgz: $(RELEASE_DIR) $(RELEASE_DIR_K8S_MANIFESTS) $(RELEASE_DIR)/README.md
-	# create folder structure in manifest archive for ocp
-	RELEASE_DIR=$(RELEASE_DIR) python3 ./release-scripts/generate-ocp-manifests.py
-	# find ignored manifests in the archive and delete them
-	$(foreach var,$(IGNORED_MANIFESTS), find $(RELEASE_DIR) -name $(var) -delete;)
-
-	# converting the generated html file to markdown format for manifest archive.
-	$(HTML_CMD) -f html -t markdown_github-raw_html _site/getting-started/private-registry/private-registry-archive.html -o $(RELEASE_DIR)/private-registry.md
-	tar -czvf $(RELEASE_DIR).tgz -C $(OUTPUT_DIR) $(RELEASE_DIR_NAME)
-
-$(RELEASE_DIR)/README.md:
-	@echo "This directory contains an archive of all the manifests for release of Calico Enterprise $(CALICO_VER)" >> $@
-	@echo "Documentation for this release can be found at https://docs.tigera.io/$(RELEASE_STREAM)" >> $@
-	@echo "" >> $@
-	@echo "To install Calico Enterprise from this archive, please follow the docs at https://docs.tigera.io/$(RELEASE_STREAM)/maintenance/manifest-archive" >> $@
-	@echo "and use the appropriate manifest from the archive where ever you are prompted to download a manifest" >> $@
-	@echo "" >> $@
-	@echo "Example:" >> $@
-	@echo "" >> $@
-	@echo "From the docs for OpenShift installation, we have the following command" >> $@
-	@echo "" >> $@
-	@echo "curl https://docs.tigera.io/manifests/ocp/01-cr-installation.yaml -o manifests/01-cr-installation.yaml" >> $@
-	@echo "" >> $@
-	@echo "For this example, instead of download the manifest using curl, you need to navigate the archive (after extracting) " >> $@
-	@echo "and copy the relevant file at manifests/ocp/01-cr-installation.yaml and paste it into your local manifests folder " >> $@
-	@echo "" >> $@
-
-$(RELEASE_DIR):
-	mkdir -p $(RELEASE_DIR)
-
-$(RELEASE_DIR_K8S_MANIFESTS):
-	# Ensure that the docs site is generated
-	rm -rf ../_site
-	$(MAKE) _site
-
-	# Find all the hosted manifests and copy them into the release dir. Use xargs to mkdir the destination directory structure before copying them.
-	# -printf "%P\n" prints the file name and directory structure with the search dir stripped off
-	find $(MANIFEST_SRC) -name  '*.yaml' -printf "%P\n" | \
-	  xargs -I FILE sh -c \
-	    'mkdir -p $(RELEASE_DIR_K8S_MANIFESTS)/`dirname FILE`;\
-	    cp $(MANIFEST_SRC)/FILE $(RELEASE_DIR_K8S_MANIFESTS)/`dirname FILE`;'
-
-$(RELEASE_DIR_IMAGES)/calico-node.tar:
-	mkdir -p $(RELEASE_DIR_IMAGES)
-	docker pull calico/node:$(NODE_VER)
-	docker save --output $@ calico/node:$(NODE_VER)
-
-$(RELEASE_DIR_IMAGES)/calico-typha.tar:
-	mkdir -p $(RELEASE_DIR_IMAGES)
-	docker pull calico/typha:$(TYPHA_VER)
-	docker save --output $@ calico/typha:$(TYPHA_VER)
-
-$(RELEASE_DIR_IMAGES)/calico-cni.tar:
-	mkdir -p $(RELEASE_DIR_IMAGES)
-	docker pull calico/cni:$(CNI_VER)
-	docker save --output $@ calico/cni:$(CNI_VER)
-
-$(RELEASE_DIR_IMAGES)/calico-kube-controllers.tar:
-	mkdir -p $(RELEASE_DIR_IMAGES)
-	docker pull calico/kube-controllers:$(KUBE_CONTROLLERS_VER)
-	docker save --output $@ calico/kube-controllers:$(KUBE_CONTROLLERS_VER)
-
-$(RELEASE_DIR_IMAGES)/calico-pod2daemon-flexvol.tar:
-	mkdir -p $(RELEASE_DIR_IMAGES)
-	docker pull calico/pod2daemon-flexvol:$(POD2DAEMON_VER)
-	docker save --output $@ calico/pod2daemon-flexvol:$(POD2DAEMON_VER)
-
-$(RELEASE_DIR_IMAGES)/calico-dikastes.tar:
-	mkdir -p $(RELEASE_DIR_IMAGES)
-	docker pull calico/dikastes:$(DIKASTES_VER)
-	docker save --output $@ calico/dikastes:$(DIKASTES_VER)
-
-$(RELEASE_DIR_IMAGES)/calico-flannel-migration-controller.tar:
-	mkdir -p $(RELEASE_DIR_IMAGES)
-	docker pull calico/flannel-migration-controller:$(FLANNEL_MIGRATION_VER)
-	docker save --output $@ calico/flannel-migration-controller:$(FLANNEL_MIGRATION_VER)
-
-$(RELEASE_DIR_BIN)/%:
-	mkdir -p $(RELEASE_DIR_BIN)
-	wget https://github.com/projectcalico/calico/calicoctl/releases/download/$(CTL_VER)/$(@F) -O $@
-	chmod +x $@
 
 ###############################################################################
 # Utilities

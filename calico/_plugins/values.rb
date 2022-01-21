@@ -352,11 +352,11 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
       tag: #{versions["intrusion-detection-controller"].version}
 
     prometheusOperator:
-      image: #{versions["prometheus-operator"].registry}/#{versions["prometheus-operator"].image}
+      image: #{imageRegistry}#{versions["prometheus-operator"].image}
       tag: #{versions["prometheus-operator"].version}
 
     prometheusConfigReloader:
-      image: #{versions["prometheus-config-reloader"].registry}/#{versions["prometheus-config-reloader"].image}
+      image: #{imageRegistry}#{versions["prometheus-config-reloader"].image}
       tag: #{versions["prometheus-config-reloader"].version}
 
     elasticsearchOperator:
@@ -446,6 +446,7 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
       image: #{versions.fetch("tigera-operator").image}
       version: #{versions.fetch("tigera-operator").version}
       registry: #{versions.fetch("tigera-operator").registry}
+      #{if forDocs then 'namespace: "tigera-operator"' end}
 
     calicoctl:
       enabled: false
@@ -478,11 +479,11 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
       kubernetesProvider: ""
 
     prometheusOperator:
-      image: #{versions["prometheus-operator"].registry}/#{versions["prometheus-operator"].image}
+      image: #{imageRegistry}#{versions["prometheus-operator"].image}
       tag: #{versions["prometheus-operator"].version}
 
     prometheusConfigReloader:
-      image: #{versions["prometheus-config-reloader"].registry}/#{versions["prometheus-config-reloader"].image}
+      image: #{imageRegistry}#{versions["prometheus-config-reloader"].image}
       tag: #{versions["prometheus-config-reloader"].version}
 
     EOF

@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -182,21 +183,26 @@ func ConvertWorkloadEndpointV3ToV1Value(val interface{}) (interface{}, error) {
 		labels[apiv3.LabelServiceAccount] = v3res.Spec.ServiceAccountName
 	}
 
+	deletionTimestamp := time.Time{}
+	if v3res.DeletionTimestamp != nil {
+		deletionTimestamp = v3res.DeletionTimestamp.Time
+	}
 	v1value := &model.WorkloadEndpoint{
-		State:         "active",
-		Name:          v3res.Spec.InterfaceName,
-		Mac:           cmac,
-		ProfileIDs:    v3res.Spec.Profiles,
-		IPv4Nets:      ipv4Nets,
-		IPv6Nets:      ipv6Nets,
-		IPv4NAT:       ipv4NAT,
-		IPv6NAT:       ipv6NAT,
-		AWSElasticIPs: v3res.Spec.AWSElasticIPs,
-		Labels:        labels,
-		IPv4Gateway:   ipv4Gateway,
-		IPv6Gateway:   ipv6Gateway,
-		Ports:         ports,
-		GenerateName:  v3res.GenerateName,
+		State:             "active",
+		Name:              v3res.Spec.InterfaceName,
+		Mac:               cmac,
+		ProfileIDs:        v3res.Spec.Profiles,
+		IPv4Nets:          ipv4Nets,
+		IPv6Nets:          ipv6Nets,
+		IPv4NAT:           ipv4NAT,
+		IPv6NAT:           ipv6NAT,
+		AWSElasticIPs:     v3res.Spec.AWSElasticIPs,
+		Labels:            labels,
+		IPv4Gateway:       ipv4Gateway,
+		IPv6Gateway:       ipv6Gateway,
+		Ports:             ports,
+		GenerateName:      v3res.GenerateName,
+		DeletionTimestamp: deletionTimestamp,
 	}
 	if v3res.Spec.EgressGateway != nil {
 		// Convert egress Selector and NamespaceSelector fields to a single selector

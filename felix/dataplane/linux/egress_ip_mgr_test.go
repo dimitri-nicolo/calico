@@ -3,6 +3,7 @@
 package intdataplane
 
 import (
+	"fmt"
 	"net"
 	"time"
 
@@ -22,6 +23,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
+	"github.com/onsi/gomega/types"
 )
 
 var _ = Describe("EgressIPManager", func() {
@@ -92,8 +95,12 @@ var _ = Describe("EgressIPManager", func() {
 		Expect(manager.vxlanDeviceLinkIndex).To(Equal(6))
 	})
 
-	checkSetMember := func(id string, members []string) {
-		Expect(manager.activeEgressIPSet[id]).To(Equal(set.FromArray(members)))
+	checkSetMember := func(id string, members []ipSetMember) {
+		var matchers []types.GomegaMatcher
+		for _, m := range members {
+			matchers = append(matchers, ipSetMemberEquals(m))
+		}
+		Expect(manager.activeEgressIPSet[id]).To(ContainElements(matchers))
 	}
 
 	multiPath := func(ips []string) []routetable.NextHop {
@@ -110,9 +117,13 @@ var _ = Describe("EgressIPManager", func() {
 
 	Describe("with multiple ipsets and endpoints update", func() {
 		var ips0, ips1 []string
+		var zeroTime, now time.Time
 		BeforeEach(func() {
-			ips0 = []string{"10.0.0.1", "10.0.0.2"}
-			ips1 = []string{"10.0.1.1", "10.0.1.2"}
+			zeroTime = time.Time{}
+			now = time.Now()
+
+			ips0 = []string{formatEgressMemberStr("10.0.0.1", zeroTime), formatEgressMemberStr("10.0.0.2", now)}
+			ips1 = []string{formatEgressMemberStr("10.0.1.1", zeroTime), formatEgressMemberStr("10.0.1.2", zeroTime)}
 
 			manager.OnUpdate(&proto.IPSetUpdate{
 				Id:      "set0",
@@ -130,8 +141,26 @@ var _ = Describe("EgressIPManager", func() {
 				Type:    proto.IPSetUpdate_IP,
 			})
 
-			checkSetMember("set0", ips0)
-			checkSetMember("set1", ips1)
+			checkSetMember("set0", []ipSetMember{
+				{
+					cidr:              "10.0.0.1",
+					deletionTimestamp: zeroTime,
+				},
+				{
+					cidr:              "10.0.0.2",
+					deletionTimestamp: now,
+				},
+			})
+			checkSetMember("set1", []ipSetMember{
+				{
+					cidr:              "10.0.1.1",
+					deletionTimestamp: zeroTime,
+				},
+				{
+					cidr:              "10.0.1.2",
+					deletionTimestamp: zeroTime,
+				},
+			})
 			Expect(manager.activeEgressIPSet["nonEgressSet"]).To(BeNil())
 
 			err := manager.CompleteDeferredWork()
@@ -228,8 +257,8 @@ var _ = Describe("EgressIPManager", func() {
 		It("should support delta update", func() {
 			manager.OnUpdate(&proto.IPSetDeltaUpdate{
 				Id:             "set1",
-				AddedMembers:   []string{"10.0.3.0", "10.0.3.1"},
-				RemovedMembers: []string{"10.0.1.1"},
+				AddedMembers:   []string{formatEgressMemberStr("10.0.3.0", zeroTime), formatEgressMemberStr("10.0.3.1", zeroTime)},
+				RemovedMembers: []string{formatEgressMemberStr("10.0.1.1", zeroTime)},
 			})
 
 			err := manager.CompleteDeferredWork()
@@ -383,7 +412,7 @@ var _ = Describe("EgressIPManager", func() {
 			manager.OnUpdate(&proto.IPSetDeltaUpdate{
 				Id:             "set1",
 				AddedMembers:   []string{},
-				RemovedMembers: []string{"10.0.1.1", "10.0.1.2"},
+				RemovedMembers: []string{formatEgressMemberStr("10.0.1.1", zeroTime), formatEgressMemberStr("10.0.1.2", zeroTime)},
 			})
 
 			err := manager.CompleteDeferredWork()
@@ -484,7 +513,7 @@ var _ = Describe("EgressIPManager", func() {
 
 			manager.OnUpdate(&proto.IPSetUpdate{
 				Id:      "setx",
-				Members: []string{"10.0.10.1", "10.0.10.2"},
+				Members: []string{formatEgressMemberStr("10.0.10.1", now), formatEgressMemberStr("10.0.10.2", zeroTime)},
 				Type:    proto.IPSetUpdate_EGRESS_IP,
 			})
 			err := manager.CompleteDeferredWork()
@@ -528,6 +557,49 @@ var _ = Describe("EgressIPManager", func() {
 					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x0a, 0x02}),
 					GW:      ip.FromString("10.0.10.2"),
 					IP:      ip.FromString("10.0.10.2"),
+				},
+			})
+		})
+
+		It("should be tolerant of missing deletion timestamp", func() {
+			manager.OnUpdate(&proto.IPSetDeltaUpdate{
+				Id:             "set1",
+				AddedMembers:   []string{formatEgressMemberStr("10.0.3.0", now), "10.0.3.1"},
+				RemovedMembers: []string{"10.0.1.1"},
+			})
+
+			err := manager.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
+			rtFactory.Table(2).checkRoutes(routetable.InterfaceNone, []routetable.Target{{
+				Type:      routetable.TargetTypeVXLAN,
+				CIDR:      defaultCidr,
+				MultiPath: multiPath([]string{"10.0.1.2", "10.0.3.0", "10.0.3.1"}),
+			}})
+			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
+				{
+					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01}),
+					GW:      ip.FromString("10.0.0.1"),
+					IP:      ip.FromString("10.0.0.1"),
+				},
+				{
+					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02}),
+					GW:      ip.FromString("10.0.0.2"),
+					IP:      ip.FromString("10.0.0.2"),
+				},
+				{
+					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02}),
+					GW:      ip.FromString("10.0.1.2"),
+					IP:      ip.FromString("10.0.1.2"),
+				},
+				{
+					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x03, 0x00}),
+					GW:      ip.FromString("10.0.3.0"),
+					IP:      ip.FromString("10.0.3.0"),
+				},
+				{
+					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x03, 0x01}),
+					GW:      ip.FromString("10.0.3.1"),
+					IP:      ip.FromString("10.0.3.1"),
 				},
 			})
 		})
@@ -629,7 +701,6 @@ type mockRouteRulesFactory struct {
 
 func (f *mockRouteRulesFactory) NewRouteRules(
 	ipVersion int,
-	priority int,
 	tableIndexSet set.Set,
 	updateFunc, removeFunc routerule.RulesMatchFunc,
 	netlinkTimeout time.Duration,
@@ -646,4 +717,37 @@ func (f *mockRouteRulesFactory) NewRouteRules(
 
 func (f *mockRouteRulesFactory) Rules() *mockRouteRules {
 	return f.routeRules
+}
+
+func formatEgressMemberStr(cidr string, deletionTimestamp time.Time) string {
+	bytes, err := deletionTimestamp.MarshalText()
+	Expect(err).NotTo(HaveOccurred())
+	return fmt.Sprintf("%s,%s", cidr, string(bytes))
+}
+
+func ipSetMemberEquals(expected ipSetMember) types.GomegaMatcher {
+	return &ipSetMemberMatcher{expected: expected}
+}
+
+type ipSetMemberMatcher struct {
+	expected ipSetMember
+}
+
+func (m *ipSetMemberMatcher) Match(actual interface{}) (bool, error) {
+	member, ok := actual.(ipSetMember)
+	if !ok {
+		return false, fmt.Errorf("ipSetMemberMatcher must be passed an ipSetMember. Got\n%s", format.Object(actual, 1))
+	}
+
+	// Need to compare time.Time using Equal(), since having a nil loc and a UTC loc are equivalent.
+	return m.expected.cidr == member.cidr && m.expected.deletionTimestamp.Equal(member.deletionTimestamp), nil
+
+}
+
+func (m *ipSetMemberMatcher) FailureMessage(actual interface{}) string {
+	return fmt.Sprintf("Expected %v to match ipSetMember: %v", actual.(ipSetMember), m.expected)
+}
+
+func (m *ipSetMemberMatcher) NegatedFailureMessage(actual interface{}) string {
+	return fmt.Sprintf("Expected %v to not match ipSetMember: %v", actual.(ipSetMember), m.expected)
 }

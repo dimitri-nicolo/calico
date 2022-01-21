@@ -47,6 +47,8 @@ SRC_FILES:=$(shell find . $(foreach dir,$(NON_TYPHA_DIRS),-path ./$(dir) -prune 
 
 .PHONY: clean
 clean:
+	# Clean .created files which indicate images / releases have been built.
+	find . -name '.*.created*' -type f -delete
 	rm -rf .go-pkg-cache \
 		bin \
 		docker-image/bin \

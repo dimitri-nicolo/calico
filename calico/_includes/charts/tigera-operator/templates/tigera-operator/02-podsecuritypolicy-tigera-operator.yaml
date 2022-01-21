@@ -4,7 +4,7 @@
 apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
-  name: tigera-operator
+  name: {{ .Values.tigeraOperator.namespace | default "tigera-operator" }}
   annotations:
     seccomp.security.alpha.kubernetes.io/allowedProfileNames: '*'
 spec:

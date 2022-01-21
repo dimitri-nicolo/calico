@@ -27,7 +27,7 @@ endif
 # list of arches *not* to build when doing *-all
 #    until s390x works correctly
 EXCLUDEARCH ?= s390x
-VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
+VALIDARCHES ?= $(filter-out $(EXCLUDEARCH),$(ARCHES))
 
 # BUILDARCH is the host architecture
 # ARCH is the target architecture
@@ -112,8 +112,7 @@ filter-registry ?= $(if $(filter-out $(1),$(DOCKERHUB_REGISTRY)),$(1)/)
 DEV_REGISTRY ?= $(firstword $(DEV_REGISTRIES))
 
 # remove from the list to push to manifest any registries that do not support multi-arch
-NONMANIFEST_REGISTRIES      ?=
-MANIFEST_REGISTRIES         ?= $(DEV_REGISTRIES:$(NONMANIFEST_REGISTRIES)%=)
+MANIFEST_REGISTRIES         ?= $(DEV_REGISTRIES)
 
 PUSH_MANIFEST_IMAGES := $(foreach registry,$(MANIFEST_REGISTRIES),$(foreach image,$(BUILD_IMAGES),$(call filter-registry,$(registry))$(image)))
 
@@ -1095,6 +1094,12 @@ create-release-branch: var-require-one-of-CONFIRM-DRYRUN var-require-all-DEV_TAG
 	$(GIT) push $(GIT_REMOTE) $(RELEASE_BRANCH_PREFIX)-$(RELEASE_BRANCH_VERSION)
 	$(MAKE) dev-tag-next-release push-next-release-dev-tag\
  		BRANCH=$(call current-branch) NEXT_RELEASE_VERSION=$(NEXT_RELEASE_VERSION) DEV_TAG_SUFFIX=$(DEV_TAG_SUFFIX)
+
+# release-prereqs checks that the environment is configured properly to create a release.
+release-prereqs:
+ifndef VERSION
+	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
+endif
 
 ###############################################################################
 # Helpers

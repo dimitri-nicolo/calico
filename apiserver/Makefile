@@ -1,7 +1,7 @@
 include ../metadata.mk
 
 PACKAGE_NAME = github.com/projectcalico/calico/apiserver
-LOCAL_CHECKS     = lint-cache-dir goimports check-copyright check-boring-ssl
+LOCAL_CHECKS     = lint-cache-dir goimports check-boring-ssl
 
 # Used so semaphore commits generated files when pins are updated
 EXTRA_FILES_TO_COMMIT=*_generated.go *_generated.*.go
@@ -69,6 +69,13 @@ else
 CGO_ENABLED=0
 endif
 
+ifeq ($(ARCH),arm64)
+# Forces ARM64 build image to be used in a crosscompilation run.
+CALICO_BUILD:=$(CALICO_BUILD)-$(ARCH)
+# Prevents docker from tagging the output image incorrectly as amd64.
+TARGET_PLATFORM=--platform=linux/arm64/v8
+endif
+
 ###############################################################################
 # Static checks
 ###############################################################################
@@ -81,7 +88,7 @@ LINT_ARGS := --disable gosimple,govet,structcheck,errcheck,goimports,unused,inef
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: clean static-checks image fv ut
+ci: clean static-checks image-all fv ut
 
 ## Deploys images to registry
 cd: image-all cd-common
@@ -90,24 +97,22 @@ cd: image-all cd-common
 # Some will have dedicated targets to make it easier to type, for example
 # "apiserver" instead of "$(BINDIR)/apiserver".
 #########################################################################
-$(BINDIR)/apiserver: $(K8SAPISERVER_GO_FILES)
+$(BINDIR)/apiserver-$(ARCH): $(K8SAPISERVER_GO_FILES)
 ifndef RELEASE_BUILD
 	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
 else
 	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
 endif
-	@echo Building k8sapiserver...
-	mkdir -p bin
+	mkdir -p $(BINDIR)
 	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) go build -v -i -o $@ -v $(LDFLAGS) $(PACKAGE_NAME)/cmd/apiserver'
 
-$(BINDIR)/filecheck: $(K8SAPISERVER_GO_FILES)
+$(BINDIR)/filecheck-$(ARCH): $(K8SAPISERVER_GO_FILES)
 ifndef RELEASE_BUILD
 	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
 else
 	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
 endif
-	@echo Building filecheck...
 	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) go build -v -i -o $@ -v $(LDFLAGS) $(PACKAGE_NAME)/cmd/filecheck'
 
@@ -123,11 +128,9 @@ image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-# Build the tigera/apiserver docker image.
-.PHONY: $(API_SERVER_IMAGE)
-$(API_SERVER_IMAGE): $(CONTAINER_CREATED)
-$(CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) $(BINDIR)/apiserver $(BINDIR)/filecheck
-	docker build -t $(API_SERVER_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg GIT_VERSION=$(GIT_VERSION) -f docker-image/Dockerfile.$(ARCH) .
+$(API_SERVER_IMAGE): register $(CONTAINER_CREATED)
+$(CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) $(BINDIR)/apiserver-$(ARCH) $(BINDIR)/filecheck-$(ARCH)
+	docker build --no-cache --pull -t $(API_SERVER_IMAGE):latest-$(ARCH) $(TARGET_PLATFORM) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg GIT_VERSION=$(GIT_VERSION) -f docker-image/Dockerfile.$(ARCH) .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
@@ -135,9 +138,9 @@ $(CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) $(BINDIR)/apiserver $(BIND
 lint-cache-dir:
 	mkdir -p $(CURDIR)/.lint-cache
 
-check-boring-ssl: $(BINDIR)/apiserver
+check-boring-ssl: $(BINDIR)/apiserver-$(ARCH)
 	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
-		go tool nm $(BINDIR)/apiserver > $(BINDIR)/tags.txt && grep '_Cfunc__goboringcrypto_' $(BINDIR)/tags.txt 1> /dev/null
+		go tool nm $(BINDIR)/apiserver-$(ARCH) > $(BINDIR)/tags.txt && grep '_Cfunc__goboringcrypto_' $(BINDIR)/tags.txt 1> /dev/null
 	-rm -f $(BINDIR)/tags.txt
 
 .PHONY: ut 
@@ -289,6 +292,8 @@ fv-kdd: run-kubernetes-server hack-lib
 
 .PHONY: clean
 clean: clean-bin clean-hack-lib
+	# Clean .created files which indicate images / releases have been built.
+	find . -name '.*.created*' -type f -delete
 	rm -rf .lint-cache
 
 clean-bin:
@@ -301,40 +306,14 @@ clean-hack-lib:
 ###############################################################################
 # Release
 ###############################################################################
-PREVIOUS_RELEASE=$(shell git describe --tags --abbrev=0)
-
-## Tags and builds a release from start to finish.
-release: release-prereqs
-	$(MAKE) VERSION=$(VERSION) release-tag
-	$(MAKE) VERSION=$(VERSION) release-build
-	$(MAKE) VERSION=$(VERSION) release-verify
-
-	@echo ""
-	@echo "Release build complete. Next, push the produced images."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish"
-	@echo ""
-
-## Produces a git tag for the release.
-release-tag: release-prereqs release-notes
-	git tag $(VERSION) -F release-notes-$(VERSION)
-	@echo ""
-	@echo "Now you can build the release:"
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-build"
-	@echo ""
-
 ## Produces a clean build of release artifacts at the specified version.
-release-build: release-prereqs clean
-# Check that the correct code is checked out.
-ifneq ($(VERSION), $(GIT_VERSION))
-	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
-endif
-
-	$(MAKE) image RELEASE=true
+release-build: .release-$(VERSION).created 
+.release-$(VERSION).created:
+	$(MAKE) clean image-all RELEASE=true
 	$(MAKE) retag-build-images-with-registries IMAGETAG=$(VERSION) RELEASE=true
 	# Generate the `latest` images.
 	$(MAKE) retag-build-images-with-registries IMAGETAG=latest RELEASE=true
+	touch $@
 
 ###############################################################################
 # Utils

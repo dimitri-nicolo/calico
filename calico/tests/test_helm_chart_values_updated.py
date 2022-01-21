@@ -73,7 +73,6 @@ EXCLUDED_IMAGES = [
     'tigera-prometheus-service',
     'es-gateway',
     'deep-packet-inspection',
-    'performance_hotspots',
     'windows',
 
     # third party images

@@ -280,6 +280,7 @@ func (wc defaultWorkloadEndpointConverter) podToDefaultWorkloadEndpoint(pod *kap
 		Name:              wepName,
 		Namespace:         pod.Namespace,
 		CreationTimestamp: pod.CreationTimestamp,
+		DeletionTimestamp: pod.DeletionTimestamp,
 		UID:               pod.UID,
 		Labels:            labels,
 		GenerateName:      pod.GenerateName,

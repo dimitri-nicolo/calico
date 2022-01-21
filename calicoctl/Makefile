@@ -40,7 +40,8 @@ LDFLAGS=-ldflags "-X $(PACKAGE_NAME)/calicoctl/commands.VERSION=$(GIT_VERSION) \
 .PHONY: clean
 ## Clean enough that a new release build will be clean
 clean:
-	find . -name '*.created-$(ARCH)' -exec rm -f {} \;
+	# Clean .created files which indicate images / releases have been built.
+	find . -name '.*.created*' -type f -delete
 	rm -rf .go-pkg-cache bin build certs *.tar calicoctl/commands/report $(CALICO_VERSION_HELPER_DIR)/bin
 	docker rmi $(CALICOCTL_IMAGE):latest-$(ARCH) || true
 	docker rmi $(CALICOCTL_IMAGE):$(VERSION)-$(ARCH) || true

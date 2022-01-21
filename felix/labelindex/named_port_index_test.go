@@ -172,7 +172,10 @@ var _ = Describe("SelectorAndNamedPortIndex", func() {
 			Expect(set).To(HaveLen(1))
 			cidr, err := ip.CIDRFromString("192.168.4.10/32")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(set).To(HaveKey(IPSetMember{CIDR: cidr}))
+			Expect(set).To(HaveKey(IPSetMember{
+				CIDR:            cidr,
+				IsEgressGateway: true,
+			}))
 		})
 	})
 

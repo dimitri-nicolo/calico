@@ -923,7 +923,7 @@ func realRouteRuleNew(
 	handle func() (routerule.HandleIface, error),
 	recorder logutils.OpRecorder,
 ) (routeRules, error) {
-	return routerule.New(version, priority, indexSet, updateFunc, removeFunc, timeout, handle, recorder)
+	return routerule.New(version, indexSet, updateFunc, removeFunc, timeout, handle, recorder)
 }
 
 func realRouteTableNew(

@@ -49,7 +49,6 @@ MAPPED_COMPONENTS = {
     'honeypod-controller': 'honeypod-controller',
     'anomaly_detection_jobs': 'anomaly_detection_jobs',
     'elasticsearch-metrics': 'elasticsearch-metrics',
-    'performance_hotspots': 'performance_hotspots',
     'packetcapture-api': 'packetcapture-api',
     'tigera-prometheus-service': 'prometheus-service',
     'es-gateway': 'es-gateway',
@@ -57,7 +56,6 @@ MAPPED_COMPONENTS = {
     'libcalico-go-private': 'libcalico-go-private',
     'tigera-api': 'api',
     'deep-packet-inspection': 'deep-packet-inspection',
-    'performance_hotspots': 'performance_hotspots',
     'windows': 'node-private',
 }
 

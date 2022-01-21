@@ -164,6 +164,7 @@ run-etcd-tls: stop-etcd-tls
 		--cert-file=/root/etcd-certificates/server.crt \
 		--key-file=/root/etcd-certificates/server.key \
 		--client-cert-auth=true \
+		--enable-v2 \
 		--data-dir=/var/lib/etcd
 
 ## Stop etcd with name calico-etcd-tls
@@ -246,42 +247,3 @@ st:
 .PHONY: ci
 ## Run what CI runs
 ci: clean static-checks test
-
-###############################################################################
-# Release
-###############################################################################
-
-## Tags and builds a release from start to finish.
-release: release-prereqs
-	$(MAKE) VERSION=$(VERSION) release-tag
-
-	@echo ""
-	@echo "Release tagged. Next, push the tag."
-	@echo ""
-	@echo "  make VERSION=$(VERSION) release-publish"
-	@echo ""
-
-## Produces a git tag for the release.
-release-tag: release-prereqs release-notes
-	git tag $(VERSION) -F release-notes-$(VERSION)
-
-## Generates release notes.
-release-notes: release-prereqs
-	echo "This release is for build purposes only and this should not be referenced externally." > release-notes-$(VERSION)
-	echo "libcalico is not a stable interface." >> release-notes-$(VERSION)
-	echo "If you need an API you should use [projectcalico/api](https://github.com/projectcalico/calico/api)." >> release-notes-$(VERSION)
-
-## Pushes a github tag `make release-tag`.
-release-publish: release-prereqs
-	# Push the git tag.
-	git push origin $(VERSION)
-
-## Nothing specifically to do for this target, just including the target for consistency
-release-publish-latest:
-	@echo "Nothing to publish libcalico-go for latest"
-
-# release-prereqs checks that the environment is configured properly to create a release.
-release-prereqs:
-ifndef VERSION
-	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
-endif

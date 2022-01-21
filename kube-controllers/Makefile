@@ -53,6 +53,8 @@ endif
 
 ## Removes all build artifacts.
 clean:
+	# Clean .created files which indicate images / releases have been built.
+	find . -name '.*.created*' -type f -delete
 	rm -rf .go-pkg-cache bin image.created-$(ARCH) build report/*.xml release-notes-*
 	-docker rmi $(KUBE_CONTROLLERS_IMAGE)
 	-docker rmi $(KUBE_CONTROLLERS_IMAGE):latest-amd64
