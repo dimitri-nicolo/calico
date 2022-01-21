@@ -10,7 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/calicoq/calicoq/commands"
+	"github.com/projectcalico/calico/calicoq/calicoq/commands"
 
 	licClient "github.com/projectcalico/calico/licensing/client"
 
