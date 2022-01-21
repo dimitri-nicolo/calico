@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,28 +20,23 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
-
-	"github.com/projectcalico/calico/felix/config"
-
-	"github.com/projectcalico/calico/felix/calc"
-	"github.com/projectcalico/calico/felix/dataplane/windows/hcn"
-
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/felix/dataplane/windows/hns"
-	"github.com/projectcalico/calico/felix/dataplane/windows/vfp"
-
+	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/config"
+	felixconfig "github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/dataplane/common"
+	"github.com/projectcalico/calico/felix/dataplane/windows/hcn"
+	"github.com/projectcalico/calico/felix/dataplane/windows/hns"
 	"github.com/projectcalico/calico/felix/dataplane/windows/ipsets"
 	"github.com/projectcalico/calico/felix/dataplane/windows/policysets"
+	"github.com/projectcalico/calico/felix/dataplane/windows/vfp"
 	"github.com/projectcalico/calico/felix/jitter"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/throttle"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
-
-	felixconfig "github.com/projectcalico/calico/felix/config"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 const (
@@ -131,6 +126,8 @@ type WindowsDataplane struct {
 	// each IPSets manages a whole "plane" of IP sets, i.e. all the IPv4 sets, or all the IPv6
 	// IP sets.
 	ipSets []*ipsets.IPSets
+	// each ipSet manager merges calc graph IP set updates along with domain info.
+	ipSetsManagers []*common.IPSetsManager
 	// PolicySets manages all of the policies and profiles which have been communicated to the
 	// dataplane driver
 	policySets *policysets.PolicySets
@@ -161,6 +158,11 @@ type WindowsDataplane struct {
 	domainInfoReader  *domainInfoReader
 	domainInfoStore   *common.DomainInfoStore
 	domainInfoChanges chan *common.DomainInfoChanged
+
+	// The last domain info change message number processed. Used to notify the DomainInfoStore when the changes are
+	// programmed. A value of 0 indicates there are no domain info updates associated with the latest dataplane
+	// update.
+	lastDomainInfoChangedMessageNumber uint64
 }
 
 const (
@@ -241,7 +243,9 @@ func NewWinDataplaneDriver(hns hns.API, config Config, stopChan chan *sync.WaitG
 		})
 	dp.RegisterManager(dp.domainInfoStore)
 
-	dp.RegisterManager(common.NewIPSetsManager(ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore))
+	ipSetsV4Mgr := common.NewIPSetsManager(ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore)
+	dp.ipSetsManagers = append(dp.ipSetsManagers, ipSetsV4Mgr)
+	dp.RegisterManager(ipSetsV4Mgr)
 	dp.RegisterManager(newPolicyManager(dp.policySets))
 	dp.endpointMgr = newEndpointManager(hns, dp.policySets, epEventListeners)
 	dp.RegisterManager(dp.endpointMgr)
@@ -279,7 +283,7 @@ func (d *WindowsDataplane) Start() {
 
 	// Start DNS response capture.
 	d.domainInfoStore.Start()
-	d.domainInfoReader.Start(d.domainInfoStore.MsgChannel)
+	d.domainInfoReader.Start(d.domainInfoStore.MsgChannel())
 }
 
 // Called by someone to put a message into our channel so that the loop will pick it up
@@ -353,29 +357,19 @@ func (d *WindowsDataplane) loopUpdatingDataplane() {
 		case domainInfoChange := <-d.domainInfoChanges:
 			// Opportunistically read and coalesce other domain change signals that are
 			// already pending on this channel.
-			domainChangeSignals := []*common.DomainInfoChanged{domainInfoChange}
-			domainsChanged := set.From(domainInfoChange.Domain)
+			domainInfoChanges := []*common.DomainInfoChanged{domainInfoChange}
 		domainChangeLoop:
 			for {
 				select {
 				case domainInfoChange := <-d.domainInfoChanges:
-					if !domainsChanged.Contains(domainInfoChange.Domain) {
-						domainChangeSignals = append(domainChangeSignals, domainInfoChange)
-						domainsChanged.Add(domainInfoChange.Domain)
-					}
+					domainInfoChanges = append(domainInfoChanges, domainInfoChange)
 				default:
-					// Channel blocked so we've caught up.
+					// Channel blocked so we must be caught up.
 					break domainChangeLoop
 				}
 			}
-			for _, domainInfoChange = range domainChangeSignals {
-				for _, mgr := range d.allManagers {
-					if handler, ok := mgr.(common.DomainInfoChangeHandler); ok {
-						if handler.OnDomainInfoChange(domainInfoChange) {
-							d.dataplaneNeedsSync = true
-						}
-					}
-				}
+			if d.processDomainInfoChangeMessages(domainInfoChanges) {
+				d.dataplaneNeedsSync = true
 			}
 		case <-throttleC:
 			d.applyThrottle.Refill()
@@ -433,8 +427,45 @@ func (d *WindowsDataplane) loopUpdatingDataplane() {
 	}
 }
 
+func (d *WindowsDataplane) processDomainInfoChangeMessages(domainInfoChanges []*common.DomainInfoChanged) (needsSync bool) {
+	processed := set.New()
+	var lastDomainInfoChangedMessageNumber uint64
+	for _, domainInfoChange := range domainInfoChanges {
+		for _, changedName := range domainInfoChange.Domains {
+			if !processed.Contains(changedName) {
+				// We haven't processed this domain name so notify the IPSetManagers to make any updates to the IPSets,
+				// if required. We only do this once per name, so track whether the domain was impacted to reduce
+				// churn with other DomainInfoChanged messages that contain the same domains.
+				for _, mgr := range d.ipSetsManagers {
+					if mgr.OnDomainChange(changedName) {
+						needsSync = true
+					}
+				}
+				processed.Add(changedName)
+			}
+		}
+		// Track the message number that is being processed. These are monotonically increasing.  Once programmed we
+		// notify the DomainInfoStore.
+		lastDomainInfoChangedMessageNumber = domainInfoChange.MessageNumber
+	}
+
+	if !needsSync && d.lastDomainInfoChangedMessageNumber == 0 {
+		// The domain info change messages did not result in any dataplane updates and there were none pending from a
+		// previous iteration (which could happen if the dataplane is synchronizing - since updates will not be applied
+		// immediately). Since we notify the domain info store when the revision and all previous revisions have been
+		// programmed, we cannot notify the domain info store until the previous revisions are programmed.
+		d.domainInfoStore.DomainInfoChangesProcessedByDataplane(lastDomainInfoChangedMessageNumber)
+	} else {
+		// Changes need to be applied to the dataplane. The DomainInfoStore will be notifed when these changes are
+		// programmed - store the message number for the notification.
+		d.lastDomainInfoChangedMessageNumber = lastDomainInfoChangedMessageNumber
+	}
+
+	return
+}
+
 // Applies any pending changes to the dataplane by giving each of the managers a chance to
-// complete their deffered work. If the operation fails, then this will also set up a
+// complete their deferred work. If the operation fails, then this will also set up a
 // rescheduling kick so that the apply can be reattempted.
 func (d *WindowsDataplane) apply() {
 	// Unset the needs-sync flag, a rescheduling kick will reset it later if something failed
@@ -449,6 +480,12 @@ func (d *WindowsDataplane) apply() {
 			log.WithError(err).Warning("CompleteDeferredWork returned an error - scheduling a retry")
 			scheduleRetry = true
 		}
+	}
+
+	// Dataplane updates applied, notify the DomainInfoStore if it included any DNS updates.
+	if d.lastDomainInfoChangedMessageNumber > 0 {
+		d.domainInfoStore.DomainInfoChangesProcessedByDataplane(d.lastDomainInfoChangedMessageNumber)
+		d.lastDomainInfoChangedMessageNumber = 0
 	}
 
 	// Set up any needed rescheduling kick.

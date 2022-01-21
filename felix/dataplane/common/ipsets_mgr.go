@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -63,11 +63,6 @@ type IPSetsManager struct {
 type store interface {
 	// Get the IPs for a given domain name.
 	GetDomainIPs(domain string) []string
-}
-
-type DomainInfoChangeHandler interface {
-	// Handle a DomainInfoChanged message and report if the dataplane needs syncing.
-	OnDomainInfoChange(msg *DomainInfoChanged) (dataplaneSyncNeeded bool)
 }
 
 func NewIPSetsManager(ipsets_ IPSetsDataplane, maxIPSetSize int, domainInfoStore store) *IPSetsManager {
@@ -356,11 +351,11 @@ func (m *IPSetsManager) removeDomainIPSetTracking(ipSetId string) {
 }
 
 // This function may be called with a lowercase domain name when the original watch was uppercase.
-func (m *IPSetsManager) OnDomainInfoChange(msg *DomainInfoChanged) (dataplaneSyncNeeded bool) {
-	log.WithFields(log.Fields{"domain": msg.Domain, "reason": msg.Reason}).Debug("Domain info changed")
+func (m *IPSetsManager) OnDomainChange(domain string) (dataplaneSyncNeeded bool) {
+	log.WithFields(log.Fields{"domain": domain}).Debug("Domain info changed")
 
 	// Find the affected domain sets (note that the domain is always lowercased).
-	domainSetIds := m.domainSetIds[msg.Domain]
+	domainSetIds := m.domainSetIds[domain]
 	if domainSetIds != nil {
 		// This is a domain name of active interest, so report that a dataplane sync will be
 		// needed.
@@ -370,7 +365,7 @@ func (m *IPSetsManager) OnDomainInfoChange(msg *DomainInfoChanged) (dataplaneSyn
 		// domain name and adjust its overall IP set accordingly.
 		domainSetIds.Iter(func(item interface{}) error {
 			// Handle as a delta update where the same domain name is removed and then re-added.
-			m.handleDomainIPSetDeltaUpdateNoLog(item.(string), []string{msg.Domain}, []string{msg.Domain})
+			m.handleDomainIPSetDeltaUpdateNoLog(item.(string), []string{domain}, []string{domain})
 			return nil
 		})
 	}
