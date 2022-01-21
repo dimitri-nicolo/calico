@@ -17,7 +17,9 @@ FROM registry.access.redhat.com/ubi8/ubi:latest as build
 
 RUN dnf install --disableplugin=subscription-manager -y git gcc gcc-c++ make libtool libcurl-devel libxml2-devel pcre-devel && \
       git clone https://github.com/spiderlabs/modsecurity modsecurity && \
-      cd modsecurity && git submodule init && git submodule update && ./build.sh &&  ./configure && make && make install
+      cd modsecurity && git checkout ${MODSEC_VERSION:-v3.0.6} && \
+      git submodule init && git submodule update && \
+      ./build.sh && ./configure && make && make install
 
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal:latest as artifact
