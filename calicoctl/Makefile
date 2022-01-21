@@ -276,3 +276,27 @@ ci: mod-download build-all static-checks test
 .PHONY: cd
 ## Deploys images to registry
 cd: image-all cd-common
+
+###############################################################################
+# Release
+###############################################################################
+
+release-verify-version: var-require-all-VERSION
+ifdef CONFIRM
+	$(eval CURRENT_RELEASE_VERSION := $(git-release-tag-for-current-commit))
+	$(if $(CURRENT_RELEASE_VERSION),,echo Current commit has not been tagged with a release version && exit 1)
+	$(if $(filter $(VERSION),$(git-release-tag-for-current-commit)),,\
+		echo Current version $(CURRENT_RELEASE_VERSION) does not match given version $(VERSION) && exit 1)
+endif
+
+## Builds and pushed binaries to the public s3 bucket.
+release-publish-binaries: var-require-one-of-CONFIRM-DRYRUN var-require-all-VERSION release-verify-version build-all
+ifdef CONFIRM
+	aws --profile helm s3 cp bin/calicoctl-linux-amd64 s3://tigera-public/ee/binaries/$(VERSION)/calicoctl --acl public-read
+	aws --profile helm s3 cp bin/calicoctl-darwin-amd64 s3://tigera-public/ee/binaries/$(VERSION)/calicoctl-darwin-amd64 --acl public-read
+	aws --profile helm s3 cp bin/calicoctl-windows-amd64.exe s3://tigera-public/ee/binaries/$(VERSION)/calicoctl-windows-amd64.exe --acl public-read
+else
+	@echo [DRYRUN] aws --profile helm s3 cp bin/calicoctl-linux-amd64 s3://tigera-public/ee/binaries/$(VERSION)/calicoctl --acl public-read
+	@echo [DRYRUN] aws --profile helm s3 cp bin/calicoctl-darwin-amd64 s3://tigera-public/ee/binaries/$(VERSION)/calicoctl-darwin-amd64 --acl public-read
+	@echo [DRYRUN] aws --profile helm s3 cp bin/calicoctl-windows-amd64.exe s3://tigera-public/ee/binaries/$(VERSION)/calicoctl-windows-amd64.exe --acl public-read
+endif
