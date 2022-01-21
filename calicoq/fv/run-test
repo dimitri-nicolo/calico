@@ -43,7 +43,7 @@ function summarise_test {
 
 function apply_license {
     # Apply a license key for the test case.
-    ${CALICOCTL} apply -f `pwd`/fv/good-license.yaml
+    ${CALICOCTL} apply -f $TSEE_TEST_LICENSE
 }
 
 run_test 0 ${CALICOQ} -h

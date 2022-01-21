@@ -17,7 +17,6 @@ function summarise_test {
 }
 
 CALICOCTL=`pwd`/fv/calicoctl
-LICENSE=`pwd`/fv/good-license.yaml
 
 export ETCD_ENDPOINTS=http://127.0.0.1:2379
 export DATASTORE_TYPE=etcdv3
@@ -46,8 +45,7 @@ for c in `ls`; do
 
     # Run etcd.
     docker run --detach --name calicoq-etcd \
-       quay.io/coreos/etcd \
-       etcd \
+       ${ETCD_IMAGE} etcd \
        --advertise-client-urls "http://127.0.0.1:${ETCD_PORT}" \
        --listen-client-urls "http://0.0.0.0:${ETCD_PORT}"
     etcd_ip=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' calicoq-etcd)
@@ -55,7 +53,7 @@ for c in `ls`; do
     export DATASTORE_TYPE=etcdv3
 
     # Apply a working CNX license.
-    ${CALICOCTL} apply -f $LICENSE
+    ${CALICOCTL} apply -f $TSEE_TEST_LICENSE
 
     # Apply the resources for the test case.
     ${CALICOCTL} apply -f apply.yaml
@@ -115,8 +113,7 @@ ETCD_PORT=2379
 
 # Run etcd.
 docker run --detach --name calicoq-etcd \
-   quay.io/coreos/etcd \
-   etcd \
+   ${ETCD_IMAGE} etcd \
    --advertise-client-urls "http://127.0.0.1:${ETCD_PORT}" \
    --listen-client-urls "http://0.0.0.0:${ETCD_PORT}"
 etcd_ip=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' calicoq-etcd)
@@ -124,7 +121,7 @@ export ETCD_ENDPOINTS=http://${etcd_ip}:${ETCD_PORT}
 export DATASTORE_TYPE=etcdv3
 
 # Apply a working CNX license.
-${CALICOCTL} apply -f $LICENSE
+${CALICOCTL} apply -f $TSEE_TEST_LICENSE
 
 # Apply the resources for the test case. This includes some bad remote cluster configuration.
 ${CALICOCTL} apply -f apply.yaml

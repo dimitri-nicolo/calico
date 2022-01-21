@@ -2,8 +2,6 @@ include ../metadata.mk
 
 PACKAGE_NAME    ?= github.com/projectcalico/calico/calicoq
 
-BINARY           = bin/calicoq
-
 ##############################################################################
 # Define some constants
 ##############################################################################
@@ -21,7 +19,7 @@ VERSION_FLAGS=-X $(PACKAGE_NAME)/calicoq/commands.VERSION=$(GIT_VERSION) \
 BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 
-# Create an extended go-build image with docker binary installed for use with st-containerized target
+# Create an extended go-build image with docker binary installed for use with st target
 TOOLING_IMAGE?=calico/go-build-with-docker
 TOOLING_IMAGE_VERSION?=v0.24
 TOOLING_IMAGE_CREATED=.go-build-with-docker.created
@@ -33,9 +31,10 @@ TOOLING_IMAGE_CREATED=.go-build-with-docker.created
 ##############################################################################
 include ../lib.Makefile
 
-build: $(BINARY)
+# All calicoq Go source files.
+SRC_FILES:=$(shell find calicoq -type f -name '*.go' -print)
 
-# Build image for containerized testing
+# Build image for testing
 .PHONY: image $(BUILD_IMAGES)
 image: $(BUILD_IMAGES)
 
@@ -45,24 +44,19 @@ image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-$(CALICOQ_IMAGE): binary-containerized
+BINARY = bin/calicoq
+$(CALICOQ_IMAGE): $(BINARY)
 	docker build -t $(CALICOQ_IMAGE):latest-$(ARCH) --file Dockerfile .
 ifeq ($(ARCH),amd64)
 	docker tag $(CALICOQ_IMAGE):latest-$(ARCH) $(CALICOQ_IMAGE):latest
 endif
-# Clean up image from containerized testing
+# Clean up image from testing
 .PHONY: clean-image
 clean-image:
 	docker rmi -f $(shell docker images -a | grep $(CALICOQ_IMAGE) | awk '{print $$3}' | awk '!a[$$0]++')
 
-# All calicoq Go source files.
-CALICOQ_GO_FILES:=$(shell find calicoq -type f -name '*.go' -print)
-
-bin/calicoq:
-	$(MAKE) binary-containerized
-
-.PHONY: binary-containerized
-binary-containerized: $(CALICOQ_GO_FILES)
+build: $(BINARY)
+$(BINARY): $(SRC_FILES)
 ifndef RELEASE_BUILD
 	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
 else
@@ -77,9 +71,13 @@ endif
 ###############################################################################
 # CI/CD
 ###############################################################################
+# Location of a valid license to use in the tests. On semaphore, this is provided as part
+# of the build environment.
+TSEE_TEST_LICENSE?=${HOME}/secrets/new-test-customer-license.yaml
+
 .PHONY: ci
 ## Run what CI runs
-ci: clean static-checks fv-containerized ut-containerized st-containerized
+ci: clean static-checks fv ut st
 
 ## Deploys images to registry
 cd: image cd-common
@@ -88,78 +86,54 @@ $(TOOLING_IMAGE_CREATED): Dockerfile-testenv.amd64
 	docker build --cpuset-cpus 0 --pull -t $(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) -f Dockerfile-testenv.amd64 .
 	touch $@
 
-.PHONY: ut ut-containerized
+.PHONY: ut 
 ut:
-	ginkgo -cover -r --skipPackage calicoq/*
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo -cover -r --skipPackage calicoq/*'
 
-	@echo
-	@echo '+==============+'
-	@echo '| All coverage |'
-	@echo '+==============+'
-	@echo
-	@find ./calicoq/ -iname '*.coverprofile' | xargs -I _ go tool cover -func=_
-
-	@echo
-	@echo '+==================+'
-	@echo '| Missing coverage |'
-	@echo '+==================+'
-	@echo
-	@find ./calicoq/ -iname '*.coverprofile' | xargs -I _ go tool cover -func=_ | grep -v '100.0%'
-
-ut-containerized:
-	$(DOCKER_RUN) $(CALICO_BUILD) \
-		sh -c '$(GIT_CONFIG_SSH) make ut'
-
-.PHONY: fv fv-containerized
-fv: bin/calicoq
-	CALICOQ=`pwd`/$^ fv/run-test
-
-fv-containerized: image run-etcd
-	docker run --net=host --privileged \
-		--rm -t \
+.PHONY: fv 
+fv: image run-etcd
+	$(DOCKER_RUN) \
 		--entrypoint '/bin/sh' \
 		-v $(CURDIR):/code/$(PACKAGE_NAME) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v $(TSEE_TEST_LICENSE):$(TSEE_TEST_LICENSE) \
+		-e ETCD_IMAGE=$(ETCD_IMAGE) \
+		-e TSEE_TEST_LICENSE=$(TSEE_TEST_LICENSE) \
 		-w /code/$(PACKAGE_NAME) \
 		$(CALICO_BUILD) \
 		-c 'CALICOQ=`pwd`/$(BINARY) fv/run-test'
 
-.PHONY: st st-containerized
-st: bin/calicoq
-	KUBECONFIG=st/kubeconfig CALICOQ=`pwd`/$^ st/run-test
-
-st-containerized: image $(TOOLING_IMAGE_CREATED)
-	docker run --net=host --privileged \
-		--rm -t \
+.PHONY: st
+st: image $(TOOLING_IMAGE_CREATED)
+	$(DOCKER_RUN) \
 		--entrypoint '/bin/sh' \
 		-v $(CURDIR):/code/$(PACKAGE_NAME) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v $(TSEE_TEST_LICENSE):$(TSEE_TEST_LICENSE) \
 		-w /code/$(PACKAGE_NAME) \
 		-e KUBECONFIG=st/kubeconfig \
+		-e ETCD_IMAGE=$(ETCD_IMAGE) \
+		-e TSEE_TEST_LICENSE=$(TSEE_TEST_LICENSE) \
 		$(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) \
 		-c 'CALICOQ=`pwd`/$(BINARY) st/run-test'
 
-.PHONY: scale-test scale-test-containerized
-scale-test: bin/calicoq
-	CALICOQ=`pwd`/$^ scale-test/run-test
-
-scale-test-containerized: image
-	docker run --net=host --privileged \
-		--rm -t \
+.PHONY: scale-test
+scale-test: image
+	$(DOCKER_RUN) \
 		--entrypoint '/bin/sh' \
 		-v $(CURDIR):/code/$(PACKAGE_NAME) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-w /code/$(PACKAGE_NAME) \
+		-e ETCD_IMAGE=$(ETCD_IMAGE) \
 		$(CALICO_BUILD) \
 		-c 'CALICOQ=`pwd`/$(BINARY) scale-test/run-test'
-
 
 ## Run etcd as a container (calico-etcd)
 run-etcd: stop-etcd
 	docker run --detach \
 	--net=host \
 	--entrypoint=/usr/local/bin/etcd \
-	--name calico-etcd quay.io/coreos/etcd:v3.1.7 \
+	--name calico-etcd ${ETCD_IMAGE} \
 	--advertise-client-urls "http://$(LOCAL_IP_ENV):2379,http://127.0.0.1:2379,http://$(LOCAL_IP_ENV):4001,http://127.0.0.1:4001" \
 	--listen-client-urls "http://0.0.0.0:2379,http://0.0.0.0:4001"
 

@@ -1,12 +1,3 @@
-# calicoq 
+# calicoq
 
-## Directory structure
-
-* [calicoq](#calicoq) is everything except the `web` folder.
-
-## calicoq
-
-[Click here for master builds](https://wavetank.tigera.io/view/CNX%20%28master%29/job/cnx-st-build-calicoq-private-branches/job/master/)
-
-`master` tagged images are available at: `gcr.io/unique-caldron-775/cnx/tigera/calicoq:master`
-
+calicoq was first added to the monorepo as part of the Calico Enterprise v3.13 release cycle. For releases prior to v3.13, calicoq can be found at https://github.com/tigera/calicoq

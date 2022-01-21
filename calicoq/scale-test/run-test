@@ -92,8 +92,7 @@ for c in 001 002 003; do
 
     # Run etcd.
     docker run --detach --name calicoq-etcd \
-       quay.io/coreos/etcd \
-       etcd \
+       ${ETCD_IMAGE} etcd \
        --advertise-client-urls "http://127.0.0.1:${ETCD_PORT}" \
        --listen-client-urls "http://0.0.0.0:${ETCD_PORT}"
     etcd_ip=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' calicoq-etcd)

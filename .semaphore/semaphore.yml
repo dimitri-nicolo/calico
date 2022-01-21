@@ -454,6 +454,8 @@ blocks:
     when: "change_in(['/*', '/calicoq/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: []
   task:
+    secrets:
+    - name: test-customer-license
     prologue:
       commands:
       - cd cni-plugin
