@@ -1,0 +1,7 @@
+host somewhere_else -o json
+
+[
+  {
+    "description": "Policies and profiles for each endpoint on host \"somewhere_else\""
+  }
+]

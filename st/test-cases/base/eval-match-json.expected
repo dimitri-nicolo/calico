@@ -1,0 +1,15 @@
+eval app=="frontend" -o json
+
+[
+  {
+    "description": "Endpoints matching selector app==\"frontend\"",
+    "endpoints": [
+      {
+        "node": "rack1-host1",
+        "orchestrator": "k8s",
+        "workload": "default/frontend-5gs43",
+        "name": "eth0"
+      }
+    ]
+  }
+]

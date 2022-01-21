@@ -1,0 +1,39 @@
+endpoint host1 --hide-rule-matches
+
+Policies and profiles for endpoints matching "host1":
+
+Workload endpoint k8s/group1.g1w1/eth0
+  Policies:
+    Policy "group1/p1" (order 500; selector "(projectcalico.org/namespace == 'group1') && projectcalico.org/namespace == 'group1'")
+  Profiles:
+    Profile "group1"
+
+Workload endpoint k8s/group1.g1w2/eth0
+  Policies:
+    Policy "group1/p1" (order 500; selector "(projectcalico.org/namespace == 'group1') && projectcalico.org/namespace == 'group1'")
+  Profiles:
+    Profile "group1"
+
+Workload endpoint k8s/group1.g1w3/eth0
+  Policies:
+    Policy "group1/p1" (order 500; selector "(projectcalico.org/namespace == 'group1') && projectcalico.org/namespace == 'group1'")
+  Profiles:
+    Profile "group1"
+
+Workload endpoint k8s/group2.g2w1/eth0
+  Policies:
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" (order 400; selector "(projectcalico.org/namespace == 'group2') && projectcalico.org/namespace == 'group2'")
+  Profiles:
+    Profile "group2"
+
+Workload endpoint k8s/group2.g2w2/eth0
+  Policies:
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" (order 400; selector "(projectcalico.org/namespace == 'group2') && projectcalico.org/namespace == 'group2'")
+  Profiles:
+    Profile "group2"
+
+Workload endpoint k8s/group2.g2w3/eth0
+  Policies:
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" (order 400; selector "(projectcalico.org/namespace == 'group2') && projectcalico.org/namespace == 'group2'")
+  Profiles:
+    Profile "group2"
