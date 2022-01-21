@@ -51,9 +51,9 @@ blocks:
       - cd process/testing/winfv && NAME_PREFIX="${CLUSTER_NAME}" ./setup-fv.sh -q -u
       matrix:
         - env_var: WINDOWS_VERSION
-          values: ["2004", "20H2"]
+          values: ["1809", "20H2"]
         - env_var: BACKEND
-          values: ["bgp"]
+          values: ["bgp", "vxlan"]
       env_vars:
       - name: AWS_DEFAULT_REGION
         value: us-west-2

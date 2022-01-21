@@ -49,6 +49,9 @@ type FlowTester struct {
 	flowsCompleted []map[collector.FlowMeta]int
 	packets        []map[collector.FlowMeta]int
 	policies       []map[collector.FlowMeta][]string
+
+	// Windows VXLAN can't complete a flow in time.
+	IgnoreStartCompleteCount bool
 }
 
 // NewFlowTester creates a new FlowTester initialized for the supplied felix instances.
@@ -138,12 +141,14 @@ func (t *FlowTester) PopulateFromFlowLogs(flowLogsOutput string) error {
 			log.Infof("Policies: %v %v", pols, meta)
 		}
 
-		// For each distinct FlowMeta, the counts of flows started
-		// and completed should be the same.
-		for meta, count := range t.flowsCompleted[ii] {
-			if count != t.flowsStarted[ii][meta] {
-				return errors.New(fmt.Sprintf("Wrong started count (%d != %d) for %v",
-					t.flowsStarted[ii][meta], count, meta))
+		if !t.IgnoreStartCompleteCount {
+			// For each distinct FlowMeta, the counts of flows started
+			// and completed should be the same.
+			for meta, count := range t.flowsCompleted[ii] {
+				if count != t.flowsStarted[ii][meta] {
+					return errors.New(fmt.Sprintf("Wrong started count (%d != %d) for %v",
+						t.flowsStarted[ii][meta], count, meta))
+				}
 			}
 		}
 
@@ -225,8 +230,10 @@ func (t *FlowTester) CheckFlow(srcMeta, srcIP, dstMeta, dstIP, dstSvc string, nu
 			if meta == fl.FlowMeta {
 				// This flow log matches what
 				// we're looking for.
-				if count != numFlowsPerMeta {
-					errs = append(errs, fmt.Sprintf("Wrong flow count (%d != %d) for %v", count, numFlowsPerMeta, meta))
+				if !t.IgnoreStartCompleteCount {
+					if count != numFlowsPerMeta {
+						errs = append(errs, fmt.Sprintf("Wrong flow count (%d != %d) for %v", count, numFlowsPerMeta, meta))
+					}
 				}
 				matchingMetas += 1
 				// Record that we've ticked off this flow.
