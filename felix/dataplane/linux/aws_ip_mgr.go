@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -40,6 +42,8 @@ type awsIPManager struct {
 	poolIDsBySubnetID         map[string]set.Set
 	localAWSRoutesByDst       map[ip.CIDR]*proto.RouteUpdate
 	localRouteDestsBySubnetID map[string]set.Set /*ip.CIDR*/
+	workloadEndpointsByID     map[proto.WorkloadEndpointID]awsEndpointInfo
+	workloadEndpointIDsByCIDR map[ip.CIDR]set.Set /*proto.WorkloadEndpointID; expect one but can have glitches*/
 	awsResyncNeeded           bool
 
 	// ifaceProvisioner manages the AWS fabric resources.  It runs in the background to decouple AWS fabric updates
@@ -72,6 +76,11 @@ type awsIPManager struct {
 	nl            awsNetlinkIface
 	newRouteTable routeTableNewFn
 	newRouteRules routeRulesNewFn
+}
+
+type awsEndpointInfo struct {
+	IPv4Nets   []ip.CIDR
+	ElasticIPs []ip.Addr
 }
 
 type awsIfaceProvisioner interface {
@@ -118,6 +127,8 @@ func NewAWSIPManager(
 		poolIDsBySubnetID:         map[string]set.Set{},
 		localAWSRoutesByDst:       map[ip.CIDR]*proto.RouteUpdate{},
 		localRouteDestsBySubnetID: map[string]set.Set{},
+		workloadEndpointsByID:     map[proto.WorkloadEndpointID]awsEndpointInfo{},
+		workloadEndpointIDsByCIDR: map[ip.CIDR]set.Set{},
 
 		freeRouteTableIndexes:  routeTableIndexes,
 		routeTablesByIfaceName: map[string]routeTable{},
@@ -169,6 +180,10 @@ func (a *awsIPManager) OnUpdate(msg interface{}) {
 		a.onPoolUpdate(msg.Id, nil)
 	case *proto.RouteUpdate:
 		a.onRouteUpdate(ip.MustParseCIDROrIP(msg.Dst), msg)
+	case *proto.WorkloadEndpointUpdate:
+		a.onWorkloadEndpointUpdate(msg)
+	case *proto.WorkloadEndpointRemove:
+		a.onWorkloadEndpointRemoved(msg)
 	case *proto.RouteRemove:
 		a.onRouteUpdate(ip.MustParseCIDROrIP(msg.Dst), nil)
 	case *ifaceUpdate:
@@ -179,6 +194,12 @@ func (a *awsIPManager) OnUpdate(msg interface{}) {
 }
 
 func (a *awsIPManager) OnSecondaryIfaceStateUpdate(msg *aws.LocalAWSNetworkState) {
+	if reflect.DeepEqual(msg, a.awsState) {
+		// The AWS provisioner resends the snapshot after each timed recheck; avoid a dataplane update
+		// in that case.
+		logrus.WithField("awsState", msg).Debug("Received AWS state update with no changes.")
+		return
+	}
 	logrus.WithField("awsState", msg).Debug("Received AWS state update.")
 	a.queueDataplaneResync("AWS fabric updated")
 	a.awsState = msg
@@ -327,6 +348,135 @@ func (a *awsIPManager) onIfaceAddrsUpdate(msg *ifaceAddrsUpdate) {
 	}
 }
 
+func (a *awsIPManager) onWorkloadEndpointUpdate(msg *proto.WorkloadEndpointUpdate) {
+	wepID := *msg.Id
+	newEP := awsEndpointInfo{
+		IPv4Nets:   parseCIDRSlice(msg.Endpoint.Ipv4Nets),
+		ElasticIPs: parseIPSlice(msg.Endpoint.AwsElasticIps),
+	}
+	logCtx := logrus.WithFields(logrus.Fields{
+		"id":    wepID,
+		"newEP": newEP,
+	})
+	changed := a.onWorkloadUpdateOrRemove(logCtx, wepID, &newEP)
+	if changed {
+		logCtx.Debug("Workload endpoint with elastic IPs updated.")
+		a.queueAWSResync("workload update")
+	}
+}
+
+func (a *awsIPManager) onWorkloadEndpointRemoved(msg *proto.WorkloadEndpointRemove) {
+	logCtx := logrus.WithField("id", *msg.Id)
+	changed := a.onWorkloadUpdateOrRemove(logCtx, *msg.Id, nil)
+	if changed {
+		logCtx.Debug("Workload endpoint with elastic IPs removed.")
+		a.queueAWSResync("workload removed")
+	}
+}
+
+func (a *awsIPManager) onWorkloadUpdateOrRemove(logCtx *logrus.Entry, wepID proto.WorkloadEndpointID, newEP *awsEndpointInfo) (changed bool) {
+	oldEP := a.workloadEndpointsByID[wepID]
+	if newEP == nil {
+		delete(a.workloadEndpointsByID, wepID)
+	} else {
+		a.workloadEndpointsByID[wepID] = *newEP
+	}
+	if reflect.DeepEqual(&oldEP, newEP) {
+		logCtx.Debug("No-op WEP update, ignoring.")
+		return false
+	}
+	if len(oldEP.ElasticIPs) == 0 && len(newEP.ElasticIPs) == 0 {
+		logCtx.Debug("WEP has no elastic IPs, ignoring.")
+		return false
+	}
+	if len(oldEP.ElasticIPs) > 0 {
+		for _, cidr := range oldEP.IPv4Nets {
+			a.workloadEndpointIDsByCIDR[cidr].Discard(wepID)
+			if a.workloadEndpointIDsByCIDR[cidr].Len() == 0 {
+				delete(a.workloadEndpointIDsByCIDR, cidr)
+			}
+		}
+	}
+	if newEP != nil && len(newEP.ElasticIPs) > 0 {
+		for _, cidr := range newEP.IPv4Nets {
+			if a.workloadEndpointIDsByCIDR[cidr] == nil {
+				a.workloadEndpointIDsByCIDR[cidr] = set.New()
+			}
+			a.workloadEndpointIDsByCIDR[cidr].Add(wepID)
+		}
+	}
+	return true
+}
+
+func parseIPSlice(ips []string) (addrs []ip.Addr) {
+	for _, addr := range ips {
+		parsedAddr := ip.FromString(addr)
+		if parsedAddr == nil {
+			logrus.WithField("rawAddr", addr).Warn("Failed to parse elastic IP.")
+			continue
+		}
+		addrs = append(addrs, parsedAddr)
+	}
+	return
+}
+
+func parseCIDRSlice(cidrs []string) (addrs []ip.CIDR) {
+	for _, addr := range cidrs {
+		parsedAddr, err := ip.ParseCIDROrIP(addr)
+		if err != nil {
+			logrus.WithField("rawAddr", addr).Warn("Failed to parse elastic IP.")
+			continue
+		}
+		addrs = append(addrs, parsedAddr)
+	}
+	return
+}
+
+func (a *awsIPManager) lookUpElasticIPs(privIP ip.CIDR) []ip.Addr {
+	weps := a.workloadEndpointIDsByCIDR[privIP]
+	if weps == nil {
+		return nil
+	}
+
+	// It's possible that multiple local pods transiently share an IP address.  Deal with that by
+	// returning the intersection of their elastic IPs.  That way we only assign IPs that are valid for all
+	// pods sharing the IP.
+	var elasticIPs set.Set
+	weps.Iter(func(item interface{}) error {
+		wepID := item.(proto.WorkloadEndpointID)
+		wep := a.workloadEndpointsByID[wepID]
+		elasticIPsThisWEP := set.New()
+		for _, eip := range wep.ElasticIPs {
+			if elasticIPs != nil && !elasticIPs.Contains(eip) {
+				logrus.WithFields(logrus.Fields{
+					"elasticIP": eip.String(),
+					"endpoints": weps,
+				}).Warn("Multiple local endpoints share a private IP but have different Elastic IP " +
+					"configuration.  Ignoring Elastic IP.")
+				continue
+			}
+			elasticIPsThisWEP.Add(eip)
+		}
+		elasticIPs = elasticIPsThisWEP
+		return nil
+	})
+
+	// Convert back to slice.
+	var elasticIPsSlice []ip.Addr
+	elasticIPs.Iter(func(item interface{}) error {
+		addr := item.(ip.Addr)
+		elasticIPsSlice = append(elasticIPsSlice, addr)
+		return nil
+	})
+
+	// Sort for determinism in tests.
+	sort.Slice(elasticIPsSlice, func(i, j int) bool {
+		return elasticIPsSlice[i].AsBinary() < elasticIPsSlice[j].AsBinary()
+	})
+
+	return elasticIPsSlice
+}
+
 func (a *awsIPManager) queueAWSResync(reason string) {
 	if a.awsResyncNeeded {
 		return
@@ -348,13 +498,16 @@ func (a *awsIPManager) CompleteDeferredWork() error {
 		// Datastore has been updated, send a new snapshot to the background thread.  It will configure the AWS
 		// fabric appropriately and then send us a SecondaryIfaceState.
 		ds := aws.DatastoreState{
-			LocalAWSRoutesByDst:       map[ip.CIDR]*proto.RouteUpdate{},
+			LocalAWSAddrsByDst:        map[ip.CIDR]aws.AddrInfo{},
 			LocalRouteDestsBySubnetID: map[string]set.Set{},
 			PoolIDsBySubnetID:         map[string]set.Set{},
 		}
 		for k, v := range a.localAWSRoutesByDst {
-			// Shallow copy is fine, we always get a fresh route update from the datastore.
-			ds.LocalAWSRoutesByDst[k] = v
+			ds.LocalAWSAddrsByDst[k] = aws.AddrInfo{
+				AWSSubnetId: v.AwsSubnetId,
+				Dst:         v.Dst,
+				ElasticIPs:  a.lookUpElasticIPs(k),
+			}
 		}
 		for k, v := range a.localRouteDestsBySubnetID {
 			ds.LocalRouteDestsBySubnetID[k] = v.Copy()

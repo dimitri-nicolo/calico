@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -196,6 +196,7 @@ func ConvertWorkloadEndpointV3ToV1Value(val interface{}) (interface{}, error) {
 		IPv6Nets:          ipv6Nets,
 		IPv4NAT:           ipv4NAT,
 		IPv6NAT:           ipv6NAT,
+		AWSElasticIPs:     v3res.Spec.AWSElasticIPs,
 		Labels:            labels,
 		IPv4Gateway:       ipv4Gateway,
 		IPv6Gateway:       ipv6Gateway,

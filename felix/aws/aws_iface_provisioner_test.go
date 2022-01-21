@@ -9,6 +9,7 @@ import (
 	"net"
 	nethttp "net/http"
 	"os"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -22,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/clock"
 
 	"github.com/projectcalico/calico/felix/ip"
-	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
@@ -132,21 +132,59 @@ var (
 	// Canned datastore snapshots.
 
 	noWorkloadDatastore = DatastoreState{
-		LocalAWSRoutesByDst:       nil,
+		LocalAWSAddrsByDst:        nil,
 		LocalRouteDestsBySubnetID: nil,
 		PoolIDsBySubnetID:         defaultPools,
 	}
 	noWorkloadDatastoreAltPools = DatastoreState{
-		LocalAWSRoutesByDst:       nil,
+		LocalAWSAddrsByDst:        nil,
 		LocalRouteDestsBySubnetID: nil,
 		PoolIDsBySubnetID:         alternatePools,
 	}
 	singleWorkloadDatastore = DatastoreState{
-		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
+		LocalAWSAddrsByDst: map[ip.CIDR]AddrInfo{
 			wl1CIDR: {
-				Dst:           wl1Addr,
-				LocalWorkload: true,
-				AwsSubnetId:   subnetIDWest1Calico,
+				Dst:         wl1Addr,
+				AWSSubnetId: subnetIDWest1Calico,
+			},
+		},
+		LocalRouteDestsBySubnetID: map[string]set.Set{
+			subnetIDWest1Calico: set.FromArray([]ip.CIDR{wl1CIDR}),
+		},
+		PoolIDsBySubnetID: defaultPools,
+	}
+	elasticIP1Str                     = "44.0.0.1"
+	elasticIP1                        = ip.FromString(elasticIP1Str)
+	elasticIP1ID                      = "eipalloc-00000000000000001"
+	elasticIP2Str                     = "44.0.0.2"
+	elasticIP2                        = ip.FromString(elasticIP2Str)
+	elasticIP2ID                      = "eipalloc-00000000000000002"
+	elasticIP3Str                     = "44.0.0.3"
+	elasticIP3                        = ip.FromString(elasticIP3Str)
+	elasticIP3ID                      = "eipalloc-00000000000000003"
+	singleWorkloadDatastoreElasticIP1 = DatastoreState{
+		LocalAWSAddrsByDst: map[ip.CIDR]AddrInfo{
+			wl1CIDR: {
+				Dst:         wl1Addr,
+				AWSSubnetId: subnetIDWest1Calico,
+				ElasticIPs: []ip.Addr{
+					elasticIP1,
+				},
+			},
+		},
+		LocalRouteDestsBySubnetID: map[string]set.Set{
+			subnetIDWest1Calico: set.FromArray([]ip.CIDR{wl1CIDR}),
+		},
+		PoolIDsBySubnetID: defaultPools,
+	}
+	singleWorkloadDatastoreElasticIP2 = DatastoreState{
+		LocalAWSAddrsByDst: map[ip.CIDR]AddrInfo{
+			wl1CIDR: {
+				Dst:         wl1Addr,
+				AWSSubnetId: subnetIDWest1Calico,
+				ElasticIPs: []ip.Addr{
+					elasticIP2,
+				},
 			},
 		},
 		LocalRouteDestsBySubnetID: map[string]set.Set{
@@ -155,16 +193,81 @@ var (
 		PoolIDsBySubnetID: defaultPools,
 	}
 	twoWorkloadsDatastore = DatastoreState{
-		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
+		LocalAWSAddrsByDst: map[ip.CIDR]AddrInfo{
 			wl1CIDR: {
-				Dst:           wl1Addr,
-				LocalWorkload: true,
-				AwsSubnetId:   subnetIDWest1Calico,
+				Dst:         wl1Addr,
+				AWSSubnetId: subnetIDWest1Calico,
 			},
 			wl2CIDR: {
-				Dst:           wl2Addr,
-				LocalWorkload: true,
-				AwsSubnetId:   subnetIDWest1Calico,
+				Dst:         wl2Addr,
+				AWSSubnetId: subnetIDWest1Calico,
+			},
+		},
+		LocalRouteDestsBySubnetID: map[string]set.Set{
+			subnetIDWest1Calico: set.FromArray([]ip.CIDR{wl1CIDR, wl2CIDR}),
+		},
+		PoolIDsBySubnetID: defaultPools,
+	}
+	twoWorkloadsDatastoreElasticIP12 = DatastoreState{
+		LocalAWSAddrsByDst: map[ip.CIDR]AddrInfo{
+			wl1CIDR: {
+				Dst:         wl1Addr,
+				AWSSubnetId: subnetIDWest1Calico,
+				ElasticIPs: []ip.Addr{
+					elasticIP1,
+				},
+			},
+			wl2CIDR: {
+				Dst:         wl2Addr,
+				AWSSubnetId: subnetIDWest1Calico,
+				ElasticIPs: []ip.Addr{
+					elasticIP2,
+				},
+			},
+		},
+		LocalRouteDestsBySubnetID: map[string]set.Set{
+			subnetIDWest1Calico: set.FromArray([]ip.CIDR{wl1CIDR, wl2CIDR}),
+		},
+		PoolIDsBySubnetID: defaultPools,
+	}
+	twoWorkloadsDatastoreElasticIP11or2 = DatastoreState{
+		LocalAWSAddrsByDst: map[ip.CIDR]AddrInfo{
+			wl1CIDR: {
+				Dst:         wl1Addr,
+				AWSSubnetId: subnetIDWest1Calico,
+				ElasticIPs: []ip.Addr{
+					elasticIP1,
+				},
+			},
+			wl2CIDR: {
+				Dst:         wl2Addr,
+				AWSSubnetId: subnetIDWest1Calico,
+				ElasticIPs: []ip.Addr{
+					elasticIP1,
+					elasticIP2,
+				},
+			},
+		},
+		LocalRouteDestsBySubnetID: map[string]set.Set{
+			subnetIDWest1Calico: set.FromArray([]ip.CIDR{wl1CIDR, wl2CIDR}),
+		},
+		PoolIDsBySubnetID: defaultPools,
+	}
+	twoWorkloadsDatastoreElasticIP21 = DatastoreState{
+		LocalAWSAddrsByDst: map[ip.CIDR]AddrInfo{
+			wl1CIDR: {
+				Dst:         wl1Addr,
+				AWSSubnetId: subnetIDWest1Calico,
+				ElasticIPs: []ip.Addr{
+					elasticIP2,
+				},
+			},
+			wl2CIDR: {
+				Dst:         wl2Addr,
+				AWSSubnetId: subnetIDWest1Calico,
+				ElasticIPs: []ip.Addr{
+					elasticIP1,
+				},
 			},
 		},
 		LocalRouteDestsBySubnetID: map[string]set.Set{
@@ -175,16 +278,14 @@ var (
 	// workloadInWrongSubnetDatastore has one workload that's in the local subnet and one that is in
 	// a subnet that's not in our AZ.
 	workloadInWrongSubnetDatastore = DatastoreState{
-		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
+		LocalAWSAddrsByDst: map[ip.CIDR]AddrInfo{
 			wl1CIDR: {
-				Dst:           wl1Addr,
-				LocalWorkload: true,
-				AwsSubnetId:   subnetIDWest1Calico,
+				Dst:         wl1Addr,
+				AWSSubnetId: subnetIDWest1Calico,
 			},
 			west2WlCIDR: {
-				Dst:           west2WlIP,
-				LocalWorkload: true,
-				AwsSubnetId:   subnetIDWest2Calico,
+				Dst:         west2WlIP,
+				AWSSubnetId: subnetIDWest2Calico,
 			},
 		},
 		LocalRouteDestsBySubnetID: map[string]set.Set{
@@ -196,16 +297,14 @@ var (
 	// mixedSubnetDatastore has two workloads, each of which is in a different subnet, both of which are
 	// in our AZ.
 	mixedSubnetDatastore = DatastoreState{
-		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
+		LocalAWSAddrsByDst: map[ip.CIDR]AddrInfo{
 			wl1CIDR: {
-				Dst:           wl1Addr,
-				LocalWorkload: true,
-				AwsSubnetId:   subnetIDWest1Calico,
+				Dst:         wl1Addr,
+				AWSSubnetId: subnetIDWest1Calico,
 			},
 			wl1CIDRAlt: {
-				Dst:           wl1AddrAlt,
-				LocalWorkload: true,
-				AwsSubnetId:   subnetIDWest1CalicoAlt,
+				Dst:         wl1AddrAlt,
+				AWSSubnetId: subnetIDWest1CalicoAlt,
 			},
 		},
 		LocalRouteDestsBySubnetID: map[string]set.Set{
@@ -217,16 +316,14 @@ var (
 	// hostClashWorkloadDatastore has a clash between a workload IP and the host IP that will be assigned to
 	// the secondary ENI.
 	hostClashWorkloadDatastore = DatastoreState{
-		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
+		LocalAWSAddrsByDst: map[ip.CIDR]AddrInfo{
 			wl1CIDR: {
-				Dst:           wl1Addr,
-				LocalWorkload: true,
-				AwsSubnetId:   subnetIDWest1Calico,
+				Dst:         wl1Addr,
+				AWSSubnetId: subnetIDWest1Calico,
 			},
 			calicoHostCIDR1: {
-				Dst:           calicoHostCIDR1.String(),
-				LocalWorkload: true,
-				AwsSubnetId:   subnetIDWest1Calico,
+				Dst:         calicoHostCIDR1.String(),
+				AWSSubnetId: subnetIDWest1Calico,
 			},
 		},
 		LocalRouteDestsBySubnetID: map[string]set.Set{
@@ -236,11 +333,10 @@ var (
 		PoolIDsBySubnetID: defaultPools,
 	}
 	singleWorkloadDatastoreAltPool = DatastoreState{
-		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{
+		LocalAWSAddrsByDst: map[ip.CIDR]AddrInfo{
 			wl1CIDRAlt: {
-				Dst:           wl1AddrAlt,
-				LocalWorkload: true,
-				AwsSubnetId:   subnetIDWest1CalicoAlt,
+				Dst:         wl1AddrAlt,
+				AWSSubnetId: subnetIDWest1CalicoAlt,
 			},
 		},
 		LocalRouteDestsBySubnetID: map[string]set.Set{
@@ -366,7 +462,7 @@ func TestSecondaryIfaceProvisioner_OnDatastoreUpdateShouldNotBlock(t *testing.T)
 		defer close(done)
 		for x := 0; x < 1000; x++ {
 			sip.OnDatastoreUpdate(DatastoreState{
-				LocalAWSRoutesByDst:       nil,
+				LocalAWSAddrsByDst:        nil,
 				LocalRouteDestsBySubnetID: nil,
 				PoolIDsBySubnetID:         nil,
 			})
@@ -382,7 +478,7 @@ func TestSecondaryIfaceProvisioner_NoPoolsOrWorkloadsStartOfDay(t *testing.T) {
 
 	// Send an empty snapshot.
 	sip.OnDatastoreUpdate(DatastoreState{
-		LocalAWSRoutesByDst:       nil,
+		LocalAWSAddrsByDst:        nil,
 		LocalRouteDestsBySubnetID: nil,
 		PoolIDsBySubnetID:         nil,
 	})
@@ -438,7 +534,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsButNoWorkloadsMainline(t *testing.T) 
 	defer tearDown()
 
 	sip.OnDatastoreUpdate(DatastoreState{
-		LocalAWSRoutesByDst:       nil,
+		LocalAWSAddrsByDst:        nil,
 		LocalRouteDestsBySubnetID: nil,
 		PoolIDsBySubnetID: map[string]set.Set{
 			subnetIDWest1Calico: set.FromArray([]string{ipPoolIDWest1Hosts, ipPoolIDWest1Gateways}),
@@ -487,6 +583,15 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_Mainline(t *testing.T)
 
 	// Check the ENI looks right on the AWS side.
 	eni := fake.EC2.GetENI(firstAllocatedENIID)
+	checkSingleWorkloadMainlineENI(eni)
+	Expect(eni.PrivateIpAddresses[1].Association).To(BeNil()) // No elastic IP in this test.
+
+	// Remove the workload again, IP should be released.
+	sip.OnDatastoreUpdate(noWorkloadDatastore)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseENIAfterWorkloadsDeleted)))
+}
+
+func checkSingleWorkloadMainlineENI(eni types.NetworkInterface) {
 	Expect(eni.Groups).To(ConsistOf(
 		types.GroupIdentifier{
 			GroupId:   stringPtr("sg-01234567890123456"),
@@ -512,10 +617,268 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_Mainline(t *testing.T)
 			Value: stringPtr("secondary"),
 		},
 	}))
+}
+
+func TestSecondaryIfaceProvisioner_ElasticIP_Mainline(t *testing.T) {
+	sip, fake, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Send snapshot with single workload that should have elastic IP 1.
+	sip.OnDatastoreUpdate(singleWorkloadDatastoreElasticIP1)
+
+	// Since this is a fresh system with only one ENI being allocated, everything is deterministic and we should
+	// always get the same result.
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+	Eventually(fake.CapacityC).Should(Receive(Equal(SecondaryIfaceCapacities{
+		MaxCalicoSecondaryIPs: t3LargeCapacity,
+	})))
+
+	// Check the ENI looks right on the AWS side.
+	eni := fake.EC2.GetENI(firstAllocatedENIID)
+	checkSingleWorkloadMainlineENI(eni)
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(elasticIP1Str))
+
+	// Elastic IP should be assigned.
+	eip := fake.EC2.GetElasticIP(elasticIP1ID)
+	Expect(eip.AssociationId).NotTo(BeNil())
 
 	// Remove the workload again, IP should be released.
 	sip.OnDatastoreUpdate(noWorkloadDatastore)
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseENIAfterWorkloadsDeleted)))
+
+	// Elastic IP should be free.
+	eip = fake.EC2.GetElasticIP(elasticIP1ID)
+	Expect(eip.AssociationId).To(BeNil())
+}
+
+func TestSecondaryIfaceProvisioner_ElasticIP_LostUpdate(t *testing.T) {
+	sip, fake, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Send snapshot with single workload that should have elastic IP 1.
+	sip.OnDatastoreUpdate(singleWorkloadDatastoreElasticIP1)
+
+	// Since this is a fresh system with only one ENI being allocated, everything is deterministic and we should
+	// always get the same result.
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+	Eventually(fake.CapacityC).Should(Receive(Equal(SecondaryIfaceCapacities{
+		MaxCalicoSecondaryIPs: t3LargeCapacity,
+	})))
+	Eventually(fake.RecheckClock.HasWaiters).Should(BeTrue())
+
+	// Elastic IP should be assigned.
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(elasticIP1Str))
+
+	// But we artificially disassociate it to simulate AWS API losing the update.
+	eni := fake.EC2.GetElasticIP(elasticIP1ID)
+	_, err := fake.EC2.DisassociateAddress(context.TODO(), &ec2.DisassociateAddressInput{
+		AssociationId: eni.AssociationId,
+	})
+	Expect(err).NotTo(HaveOccurred())
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(""))
+
+	// Check that the slow retry puts it back.
+	fake.RecheckClock.Step(34 * time.Second)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(elasticIP1Str))
+}
+
+func TestSecondaryIfaceProvisioner_ElasticIP_Change(t *testing.T) {
+	sip, fake, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Send snapshot with single workload that should have elastic IP 1.
+	sip.OnDatastoreUpdate(singleWorkloadDatastoreElasticIP1)
+
+	// Wait for processing to complete.
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+	// Check the ENI looks right on the AWS side.
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(elasticIP1Str))
+
+	// Switch the desired elastic IP, old one should be released, new one assigned.
+	sip.OnDatastoreUpdate(singleWorkloadDatastoreElasticIP2)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(elasticIP2Str))
+	// Elastic IP 1 should be free.
+	eip := fake.EC2.GetElasticIP(elasticIP1ID)
+	Expect(eip.AssociationId).To(BeNil(), "elastic IP 1 still assigned after switch to IP 2")
+	// Elastic IP 2 should be assigned.
+	eip = fake.EC2.GetElasticIP(elasticIP2ID)
+	Expect(eip.AssociationId).ToNot(BeNil(), "elastic IP 2 not assigned after switch from IP 1")
+
+}
+
+func TestSecondaryIfaceProvisioner_ElasticIP_Shuffle(t *testing.T) {
+	sip, fake, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Send snapshot with single workload that should have elastic IP 1.
+	sip.OnDatastoreUpdate(singleWorkloadDatastoreElasticIP1)
+
+	// Wait for processing to complete.
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(elasticIP1Str))
+
+	// Add second workload that should get elastic IP 2...
+	sip.OnDatastoreUpdate(twoWorkloadsDatastoreElasticIP12)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseTwoWorkloads)))
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(elasticIP1Str))
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl2Addr)).To(Equal(elasticIP2Str))
+
+	// Switch the desired IPs for the two workloads.
+	sip.OnDatastoreUpdate(twoWorkloadsDatastoreElasticIP21)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseTwoWorkloads)))
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(elasticIP2Str))
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl2Addr)).To(Equal(elasticIP1Str))
+}
+
+func TestSecondaryIfaceProvisioner_ElasticIP_Shared(t *testing.T) {
+	sip, fake, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Send snapshot with single workload that should have elastic IP 1.
+	sip.OnDatastoreUpdate(singleWorkloadDatastoreElasticIP1)
+
+	// Wait for processing to complete.
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(elasticIP1Str))
+
+	// Add second workload that can use either elastic IP 1 or 2.  It should get IP 2 because
+	// IP 1 is already taken.
+	sip.OnDatastoreUpdate(twoWorkloadsDatastoreElasticIP11or2)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseTwoWorkloads)))
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(elasticIP1Str))
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl2Addr)).To(Equal(elasticIP2Str))
+
+	// Switch the desired IPs for the two workloads.
+	sip.OnDatastoreUpdate(twoWorkloadsDatastoreElasticIP21)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseTwoWorkloads)))
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(elasticIP2Str))
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl2Addr)).To(Equal(elasticIP1Str))
+}
+
+func TestSecondaryIfaceProvisioner_ElasticIP_Chunking(t *testing.T) {
+	sip, fake, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Make a snapshot with many elastic IPs.
+	var elasticIPs []ip.Addr
+	for i := uint32(0x0a000000); i <= 0x0a001000; i++ {
+		addr := ip.FromNetIP(ip.Int2NetIP(i))
+		elasticIPs = append(elasticIPs, addr)
+	}
+	elasticIPs = append(elasticIPs, elasticIP1)
+	datastoreState := DatastoreState{
+		LocalAWSAddrsByDst: map[ip.CIDR]AddrInfo{
+			wl1CIDR: {
+				Dst:         wl1Addr,
+				AWSSubnetId: subnetIDWest1Calico,
+				ElasticIPs:  elasticIPs,
+			},
+		},
+		LocalRouteDestsBySubnetID: map[string]set.Set{
+			subnetIDWest1Calico: set.FromArray([]ip.CIDR{wl1CIDR}),
+		},
+		PoolIDsBySubnetID: defaultPools,
+	}
+
+	// Send snapshot with single workload that should have elastic IP 1.
+	sip.OnDatastoreUpdate(datastoreState)
+
+	// Wait for processing to complete.  Extra time here because we're sending in an inefficiently-large
+	// set of elastic IPs.
+	Eventually(sip.ResponseC(), "5s").Should(Receive(Equal(responseSingleWorkload)))
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(elasticIP1Str))
+}
+
+func TestSecondaryIfaceProvisioner_ElasticIP_ShowsUpAfterWorkload(t *testing.T) {
+	sip, fake, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	eipAddr := ip.FromString("1.2.3.4")
+	datastoreState := DatastoreState{
+		LocalAWSAddrsByDst: map[ip.CIDR]AddrInfo{
+			wl1CIDR: {
+				Dst:         wl1Addr,
+				AWSSubnetId: subnetIDWest1Calico,
+				ElasticIPs: []ip.Addr{
+					eipAddr, // Non-existent EIP.
+				},
+			},
+		},
+		LocalRouteDestsBySubnetID: map[string]set.Set{
+			subnetIDWest1Calico: set.FromArray([]ip.CIDR{wl1CIDR}),
+		},
+		PoolIDsBySubnetID: defaultPools,
+	}
+
+	// Send snapshot with single workload that should have elastic IP 1.2.3.4 (which doesn't exist).
+	sip.OnDatastoreUpdate(datastoreState)
+
+	// Should get a response, we don't block other provisioning while waiting for the elastic IP.
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+
+	// Add the IP and trigger a slow retry.
+	Eventually(fake.RecheckClock.HasWaiters).Should(BeTrue())
+	fake.EC2.addElasticIP("eipalloc-00000000000001234", eipAddr)
+	fake.RecheckClock.Step(34 * time.Second) // 30s+jitter
+
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal("1.2.3.4"))
+}
+
+func TestSecondaryIfaceProvisioner_ElasticIP_AlreadyAssociatedElsewhere(t *testing.T) {
+	sip, fake, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Pretend the IP is associated elsewhere...
+	fake.EC2.SetRemoteEIPAssociation(elasticIP1ID)
+
+	// Send snapshot using the associated IP.
+	sip.OnDatastoreUpdate(singleWorkloadDatastoreElasticIP1)
+
+	// Should get a response, we don't block other provisioning while waiting for the elastic IP.
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+
+	// Shouldn't steal the address.
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(""))
+
+	// Release the IP and trigger a slow retry.
+	Eventually(fake.RecheckClock.HasWaiters).Should(BeTrue())
+	fake.EC2.ClearRemoteEIPAssociation(elasticIP1ID)
+	fake.RecheckClock.Step(34 * time.Second) // 30s+jitter
+
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(elasticIP1Str))
+}
+
+func TestSecondaryIfaceProvisioner_ElasticIP_AlreadyAssociatedRace(t *testing.T) {
+	sip, fake, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Pretend the IP is associated elsewhere...
+	fake.EC2.AddPostDescribeAddressesAction(func() {
+		fake.EC2.SetRemoteEIPAssociation(elasticIP1ID)
+	})
+
+	// Send snapshot using the associated IP.
+	sip.OnDatastoreUpdate(singleWorkloadDatastoreElasticIP1)
+
+	// Should get a response, we don't block other provisioning while waiting for the elastic IP.
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+
+	// Shouldn't steal the address.
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(""))
+	// Check we hit the correct error.
+	Expect(fake.EC2.AlreadyAssociatedTrigerred()).To(BeTrue())
+
+	// Release the IP and trigger a slow retry.
+	Eventually(fake.RecheckClock.HasWaiters).Should(BeTrue())
+	fake.EC2.ClearRemoteEIPAssociation(elasticIP1ID)
+	fake.RecheckClock.Step(34 * time.Second) // 30s+jitter
+
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(elasticIP1Str))
 }
 
 func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_AWSLostAssign(t *testing.T) {
@@ -656,6 +1019,9 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_ErrBackoff(t *testing.
 		"AttachNetworkInterface",
 		"AssignPrivateIpAddresses",
 		"ModifyNetworkInterfaceAttribute",
+		"DescribeAddresses",
+		"AssociateAddress",
+		"DisassociateAddress",
 	} {
 		t.Run(callToFail, func(t *testing.T) {
 			sip, fake, tearDown := setupAndStart(t)
@@ -665,7 +1031,15 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_ErrBackoff(t *testing.
 			// were consumed so any typo in the name would be caught.
 			fake.EC2.Errors.QueueError(callToFail)
 
-			sip.OnDatastoreUpdate(singleWorkloadDatastore)
+			sip.OnDatastoreUpdate(singleWorkloadDatastoreElasticIP1)
+
+			if callToFail == "DisassociateAddress" {
+				// DisassociateAddress won't be trigered on the first call...
+				Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+
+				// But this second datastore update, which removes the EIP, should do it...
+				sip.OnDatastoreUpdate(singleWorkloadDatastore)
+			}
 
 			// Should fail to respond.
 			Consistently(sip.ResponseC()).ShouldNot(Receive())
@@ -963,7 +1337,7 @@ func expectAllIPs(response *LocalAWSNetworkState, addrs []ip.Addr) {
 
 func nWorkloadDatastore(n int) (DatastoreState, []ip.Addr) {
 	ds := DatastoreState{
-		LocalAWSRoutesByDst: map[ip.CIDR]*proto.RouteUpdate{},
+		LocalAWSAddrsByDst: map[ip.CIDR]AddrInfo{},
 		LocalRouteDestsBySubnetID: map[string]set.Set{
 			subnetIDWest1Calico: set.New(),
 		},
@@ -974,10 +1348,9 @@ func nWorkloadDatastore(n int) (DatastoreState, []ip.Addr) {
 	for i := 0; i < n; i++ {
 		addr := ip.V4Addr{100, 64, 1, byte(64 + i)}
 		addrs = append(addrs, addr)
-		ds.LocalAWSRoutesByDst[addr.AsCIDR()] = &proto.RouteUpdate{
-			Dst:           addr.AsCIDR().String(),
-			LocalWorkload: true,
-			AwsSubnetId:   subnetIDWest1Calico,
+		ds.LocalAWSAddrsByDst[addr.AsCIDR()] = AddrInfo{
+			Dst:         addr.AsCIDR().String(),
+			AWSSubnetId: subnetIDWest1Calico,
 		}
 		ds.LocalRouteDestsBySubnetID[subnetIDWest1Calico].Add(addr.AsCIDR())
 	}
@@ -1136,6 +1509,39 @@ func TestSecondaryIfaceProvisioner_IPAMAssignFailure(t *testing.T) {
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
 }
 
+func TestChunkStringSlice(t *testing.T) {
+	RegisterTestingT(t)
+	Expect(chunkStringSlice(nil, 3)).To(BeEmpty())
+	for chunkSize := 1; chunkSize < 10; chunkSize++ {
+		for n := 1; n <= 10; n++ {
+			// Generate input of length n.
+			t.Log("Chunk size:", chunkSize, "n:", n)
+			var input []string
+			for i := 0; i < n; i++ {
+				input = append(input, strconv.Itoa(i))
+			}
+
+			// Chunk it up.
+			chunks := chunkStringSlice(input, chunkSize)
+
+			// Check that the chunks add up to the complete input.
+			var flattened []string
+			partialChunks := 0
+			for _, chunk := range chunks {
+				if len(chunk) != chunkSize {
+					partialChunks++
+				}
+				Expect(len(chunk)).To(BeNumerically(">", 0))
+				Expect(len(chunk)).To(BeNumerically("<=", chunkSize))
+				flattened = append(flattened, chunk...)
+			}
+			Expect(flattened).To(Equal(input), "chunks didn't add up input")
+			Expect(partialChunks).To(BeNumerically("<=", 1),
+				"at most one chunk should be less than the full size")
+		}
+	}
+}
+
 type sipTestFakes struct {
 	IPAM         *fakeIPAM
 	EC2          *fakeEC2
@@ -1183,6 +1589,11 @@ func setup(t *testing.T, opts ...IfaceProvOpt) (*SecondaryIfaceProvisioner, *sip
 	fakeEC2.addSubnet(subnetIDWest1Calico, azWest1, subnetWest1CIDRCalico)
 	fakeEC2.addSubnet(subnetIDWest1CalicoAlt, azWest1, subnetWest1CIDRCalicoAlt)
 	fakeEC2.addSubnet(subnetIDWest2Calico, azWest2, subnetWest2CIDRCalico)
+
+	// Add some pre-existing elastic IPs.
+	fakeEC2.addElasticIP(elasticIP1ID, elasticIP1)
+	fakeEC2.addElasticIP(elasticIP2ID, elasticIP2)
+	fakeEC2.addElasticIP(elasticIP3ID, elasticIP3)
 
 	fakeEC2.ENIsByID[primaryENIID] = types.NetworkInterface{
 		NetworkInterfaceId: stringPtr(primaryENIID),

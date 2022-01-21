@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2022 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,14 +16,11 @@ package model
 
 import (
 	"fmt"
+	"reflect"
+	"regexp"
 	"time"
 
-	"regexp"
-
-	"reflect"
-
 	log "github.com/sirupsen/logrus"
-
 	"github.com/tigera/api/pkg/lib/numorstring"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
@@ -160,6 +157,7 @@ type WorkloadEndpoint struct {
 	IPv6Nets          []net.IPNet       `json:"ipv6_nets"`
 	IPv4NAT           []IPNAT           `json:"ipv4_nat,omitempty"`
 	IPv6NAT           []IPNAT           `json:"ipv6_nat,omitempty"`
+	AWSElasticIPs     []string          `json:"aws_elastic_ips,omitempty"`
 	Labels            map[string]string `json:"labels,omitempty"`
 	IPv4Gateway       *net.IP           `json:"ipv4_gateway,omitempty" validate:"omitempty,ipv4"`
 	IPv6Gateway       *net.IP           `json:"ipv6_gateway,omitempty" validate:"omitempty,ipv6"`

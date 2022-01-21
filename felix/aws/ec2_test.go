@@ -147,6 +147,18 @@ func (c *mockClient) DescribeNetworkInterfaces(ctx context.Context, params *ec2.
 	panic("implement me")
 }
 
+func (c *mockClient) AssociateAddress(ctx context.Context, params *ec2.AssociateAddressInput, optFns ...func(*ec2.Options)) (*ec2.AssociateAddressOutput, error) {
+	panic("implement me")
+}
+
+func (c *mockClient) DisassociateAddress(ctx context.Context, params *ec2.DisassociateAddressInput, optFns ...func(*ec2.Options)) (*ec2.DisassociateAddressOutput, error) {
+	panic("implement me")
+}
+
+func (c *mockClient) DescribeAddresses(ctx context.Context, params *ec2.DescribeAddressesInput, optFns ...func(*ec2.Options)) (*ec2.DescribeAddressesOutput, error) {
+	panic("implement me")
+}
+
 var (
 	_ ec2API = (*mockClient)(nil) // Compile-time type assert.
 )

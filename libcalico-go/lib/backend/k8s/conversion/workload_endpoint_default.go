@@ -228,6 +228,15 @@ func (wc defaultWorkloadEndpointConverter) podToDefaultWorkloadEndpoint(pod *kap
 		}
 	}
 
+	var awsElasticIPs []string
+	if annotation, ok := pod.Annotations["cni.projectcalico.org/awsElasticIPs"]; ok {
+		// Parse Annotation data
+		err := json.Unmarshal([]byte(annotation), &awsElasticIPs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse '%s' as JSON: %s", annotation, err)
+		}
+	}
+
 	// Map any named ports through.
 	var endpointPorts []libapiv3.WorkloadEndpointPort
 	for _, container := range pod.Spec.Containers {
@@ -287,6 +296,7 @@ func (wc defaultWorkloadEndpointConverter) podToDefaultWorkloadEndpoint(pod *kap
 		IPNetworks:         ipNets,
 		Ports:              endpointPorts,
 		IPNATs:             floatingIPs,
+		AWSElasticIPs:      awsElasticIPs,
 		EgressGateway:      egressAnnotationsToV3Spec(pod.Annotations),
 		ServiceAccountName: pod.Spec.ServiceAccountName,
 	}
