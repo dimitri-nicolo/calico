@@ -197,7 +197,7 @@ var _ = Describe("awsIPManager tests", func() {
 				AwsSubnetId:   "subnet-123456789012345657",
 			}
 			m.OnUpdate(workloadRoute)
-			// Base case: no elastic IPs, shouldget ignored.
+			// Base case: no elastic IPs, should get ignored.
 			wepUpd := &proto.WorkloadEndpointUpdate{
 				Id: wep1ID,
 				Endpoint: &proto.WorkloadEndpoint{

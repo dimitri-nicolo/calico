@@ -1657,35 +1657,37 @@ func (m *SecondaryIfaceProvisioner) disassociateUnwantedElasticIPs(snapshot *eni
 	var finalErr error
 	for _, eni := range snapshot.calicoOwnedENIsByID {
 		for _, privIP := range eni.PrivateIpAddresses {
-			if privIP.Association != nil && privIP.Association.AllocationId != nil {
-				// May have associated elastic IP.
-				privIPCIDR := ip.MustParseCIDROrIP(*privIP.PrivateIpAddress)
-				eip := ip.FromString(*privIP.Association.PublicIp)
-				wanted := false
-				logCtx := logrus.WithFields(logrus.Fields{
-					"publicAddr":  eip,
-					"privateAddr": safeReadString(privIP.PrivateIpAddress),
-				})
-				for _, wantedEIP := range m.ds.LocalAWSAddrsByDst[privIPCIDR].ElasticIPs {
-					if wantedEIP == eip {
-						// EIP is assigned to a private IP that should have it, all good.
-						logCtx.Debug("Elastic IP is associated with matching private IP.")
-						wanted = true
-						break
-					}
+			if privIP.Association == nil || privIP.Association.AllocationId == nil || privIP.PrivateIpAddress == nil {
+				continue
+			}
+			// May have associated elastic IP.
+			privIPCIDR := ip.MustParseCIDROrIP(*privIP.PrivateIpAddress)
+			eip := ip.FromString(*privIP.Association.PublicIp)
+			wanted := false
+			logCtx := logrus.WithFields(logrus.Fields{
+				"publicAddr":  eip,
+				"privateAddr": *privIP.PrivateIpAddress,
+			})
+			for _, wantedEIP := range m.ds.LocalAWSAddrsByDst[privIPCIDR].ElasticIPs {
+				if wantedEIP == eip {
+					// EIP is assigned to a private IP that should have it, all good.
+					logCtx.Debug("Elastic IP is associated with matching private IP.")
+					wanted = true
+					break
 				}
-				if !wanted {
-					// Elastic IP is assigned to an IP that it shouldn't be. free it.
-					logCtx.Info("Elastic IP should no longer map to this private IP. Disassociating the IP.")
-					m.resetRecheckInterval("disassociate-eip")
-					_, err := ec2Client.EC2Svc.DisassociateAddress(ctx, &ec2.DisassociateAddressInput{
-						AssociationId: privIP.Association.AssociationId,
-					})
-					if err != nil {
-						finalErr = err
-					} else if finalErr == nil {
-						finalErr = errResyncNeeded
-					}
+			}
+			if !wanted {
+				// Elastic IP is assigned to an IP that it shouldn't be. free it.
+				logCtx.Info("Workload private IP is associated with an elastic IP that isn't one of its " +
+					"permitted elastic IPs.  Disassociating elastic IP.")
+				m.resetRecheckInterval("disassociate-eip")
+				_, err := ec2Client.EC2Svc.DisassociateAddress(ctx, &ec2.DisassociateAddressInput{
+					AssociationId: privIP.Association.AssociationId,
+				})
+				if err != nil {
+					finalErr = err
+				} else if finalErr == nil {
+					finalErr = errResyncNeeded
 				}
 			}
 		}
@@ -1744,7 +1746,7 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *eniSna
 			eipToCandidatePrivIPs[elasticIP] = append(eipToCandidatePrivIPs[elasticIP], privIPAddr)
 		}
 	}
-	if len(eipToCandidatePrivIPs) == 0 {
+	if privIPsToDo.Len() == 0 {
 		logrus.Debug("No new elastic IPs needed.")
 		return nil
 	}
@@ -1757,7 +1759,7 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *eniSna
 	const chunkSize = 200 // AWS filter limit is 200 filters per call.
 	for _, candidateEIPsChunk := range chunkStringSlice(candidateElasticIPs, chunkSize) {
 		// Query AWS to find out which elastic IPs are available.
-		logrus.WithField("eipIDs", candidateEIPsChunk).Debug("Looking up elastic IPs in AWS API.")
+		logrus.WithField("eips", candidateEIPsChunk).Debug("Looking up elastic IPs in AWS API.")
 		dao, err := ec2Client.EC2Svc.DescribeAddresses(ctx, &ec2.DescribeAddressesInput{
 			// Important to use a filter rather than the other fields in the DescribeAddressesInput because
 			// using the other fields to match EIPs results in errors if any one of the EIPs doesn't exist.
@@ -1792,8 +1794,8 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *eniSna
 				}
 				eniID := snapshot.eniIDByIP[privIP.AsCIDR()]
 				if eniID == "" {
-					logCtx.Debug("Couldn't find ENI for private IP.")
-					continue // We weren't able to assign this IP to an ENI?
+					logCtx.Warn("Couldn't find ENI for private IP, did we fail to add an ENI earlier?")
+					continue
 				}
 				logCtx = logCtx.WithField("eniID", eniID)
 				// Found a free elastic IP and a private IP that can use it with no existing elastic IP.
