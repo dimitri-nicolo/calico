@@ -1,41 +1,23 @@
-PACKAGE_NAME    ?= github.com/tigera/calicoq
-GO_BUILD_VER    ?= v0.63
-GOMOD_VENDOR     = false
-GIT_USE_SSH      = true
+include ../metadata.mk
+
+PACKAGE_NAME    ?= github.com/projectcalico/calico/calicoq
+
 BINARY           = bin/calicoq
-
-ORGANIZATION=tigera
-SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_CALICOQ_PROJECT_ID)
-
-EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
-
-# Allow local libcalico-go to be mapped into the build container.
-ifdef CALICO_PATH
-EXTRA_DOCKER_ARGS += -v $(CALICO_PATH):/go/src/github.com/projectcalico/calico/:ro
-endif
 
 ##############################################################################
 # Define some constants
 ##############################################################################
 CALICOQ_IMAGE         ?=tigera/calicoq
 BUILD_IMAGES          ?=$(CALICOQ_IMAGE)
-DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
-ARCHES                ?=amd64
-RELEASE_REGISTRIES    ?=quay.io
+
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
-BUILD_VER?=latest
+VERSION_FLAGS=-X $(PACKAGE_NAME)/calicoq/commands.VERSION=$(GIT_VERSION) \
+	-X $(PACKAGE_NAME)/calicoq/commands.BUILD_DATE=$(DATE) \
+	-X $(PACKAGE_NAME)/calicoq/commands.GIT_DESCRIPTION=$(GIT_DESCRIPTION) \
+	-X $(PACKAGE_NAME)/calicoq/commands.GIT_REVISION=$(GIT_VERSION)
 
-CALICOQ_VERSION?=$(shell git describe --tags --dirty --always)
-CALICOQ_BUILD_DATE?=$(shell date -u +'%FT%T%z')
-CALICOQ_GIT_DESCRIPTION?=$(shell git describe --tags)
-CALICOQ_GIT_REVISION?=$(shell git rev-parse --short HEAD)
-
-VERSION_FLAGS=-X $(PACKAGE_NAME)/calicoq/commands.VERSION=$(CALICOQ_VERSION) \
-	-X $(PACKAGE_NAME)/calicoq/commands.BUILD_DATE=$(CALICOQ_BUILD_DATE) \
-	-X $(PACKAGE_NAME)/calicoq/commands.GIT_DESCRIPTION=$(CALICOQ_GIT_DESCRIPTION) \
-	-X $(PACKAGE_NAME)/calicoq/commands.GIT_REVISION=$(CALICOQ_GIT_REVISION)
 BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 
@@ -45,23 +27,62 @@ TOOLING_IMAGE_VERSION?=v0.24
 TOOLING_IMAGE_CREATED=.go-build-with-docker.created
 
 ##############################################################################
-# Download and include Makefile.common before anything else
+# Include ../lib.Makefile before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
 #   that variable is evaluated when we declare DOCKER_RUN and siblings.
 ##############################################################################
-MAKE_BRANCH?=$(GO_BUILD_VER)
-MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
-
-Makefile.common: Makefile.common.$(MAKE_BRANCH)
-	cp "$<" "$@"
-Makefile.common.$(MAKE_BRANCH):
-	# Clean up any files downloaded from other branches so they don't accumulate.
-	rm -f Makefile.common.*
-	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
-
-include Makefile.common
+include ../lib.Makefile
 
 build: $(BINARY)
+
+# Build image for containerized testing
+.PHONY: image $(BUILD_IMAGES)
+image: $(BUILD_IMAGES)
+
+# Build the image for the target architecture
+.PHONY: image-all
+image-all: $(addprefix sub-image-,$(VALIDARCHES))
+sub-image-%:
+	$(MAKE) image ARCH=$*
+
+$(CALICOQ_IMAGE): binary-containerized
+	docker build -t $(CALICOQ_IMAGE):latest-$(ARCH) --file Dockerfile .
+ifeq ($(ARCH),amd64)
+	docker tag $(CALICOQ_IMAGE):latest-$(ARCH) $(CALICOQ_IMAGE):latest
+endif
+# Clean up image from containerized testing
+.PHONY: clean-image
+clean-image:
+	docker rmi -f $(shell docker images -a | grep $(CALICOQ_IMAGE) | awk '{print $$3}' | awk '!a[$$0]++')
+
+# All calicoq Go source files.
+CALICOQ_GO_FILES:=$(shell find calicoq -type f -name '*.go' -print)
+
+bin/calicoq:
+	$(MAKE) binary-containerized
+
+.PHONY: binary-containerized
+binary-containerized: $(CALICOQ_GO_FILES)
+ifndef RELEASE_BUILD
+	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
+else
+	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
+endif
+	mkdir -p .go-pkg-cache bin $(GOMOD_CACHE)
+
+	# Create the binary
+	$(DOCKER_RUN) $(CALICO_BUILD) \
+	   sh -c '$(GIT_CONFIG_SSH) go build -v $(LDFLAGS) -o "$(BINARY)" "./calicoq/calicoq.go"'
+
+###############################################################################
+# CI/CD
+###############################################################################
+.PHONY: ci
+## Run what CI runs
+ci: clean static-checks fv-containerized ut-containerized st-containerized
+
+## Deploys images to registry
+cd: image cd-common
 
 $(TOOLING_IMAGE_CREATED): Dockerfile-testenv.amd64
 	docker build --cpuset-cpus 0 --pull -t $(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) -f Dockerfile-testenv.amd64 .
@@ -132,76 +153,6 @@ scale-test-containerized: image
 		$(CALICO_BUILD) \
 		-c 'CALICOQ=`pwd`/$(BINARY) scale-test/run-test'
 
-# Build image for containerized testing
-.PHONY: image $(BUILD_IMAGES)
-image: $(BUILD_IMAGES)
-
-# Build the image for the target architecture
-.PHONY: image-all
-image-all: $(addprefix sub-image-,$(VALIDARCHES))
-sub-image-%:
-	$(MAKE) image ARCH=$*
-
-$(CALICOQ_IMAGE): binary-containerized
-	docker build -t $(CALICOQ_IMAGE):latest-$(ARCH) --file Dockerfile .
-ifeq ($(ARCH),amd64)
-	docker tag $(CALICOQ_IMAGE):latest-$(ARCH) $(CALICOQ_IMAGE):latest
-endif
-# Clean up image from containerized testing
-.PHONY: clean-image
-clean-image:
-	docker rmi -f $(shell docker images -a | grep $(CALICOQ_IMAGE) | awk '{print $$3}' | awk '!a[$$0]++')
-
-# All calicoq Go source files.
-CALICOQ_GO_FILES:=$(shell find calicoq -type f -name '*.go' -print)
-
-bin/calicoq:
-	$(MAKE) binary-containerized
-
-.PHONY: binary-containerized
-binary-containerized: $(CALICOQ_GO_FILES)
-ifndef RELEASE_BUILD
-	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
-else
-	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
-endif
-	mkdir -p .go-pkg-cache bin $(GOMOD_CACHE)
-
-	# Create the binary
-	$(DOCKER_RUN) $(CALICO_BUILD) \
-	   sh -c '$(GIT_CONFIG_SSH) go build -v $(LDFLAGS) -o "$(BINARY)" "./calicoq/calicoq.go"'
-
-###############################################################################
-# Updating pins
-###############################################################################
-# Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
-guard-ssh-forwarding-bug:
-	@if [ "$(shell uname)" = "Darwin" ]; then \
-		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
-		echo "$(MAKECMDGOALS)"; \
-		exit 1; \
-	fi;
-
-BRANCH=master
-update-calico-pin:
-	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(BRANCH))
-	$(call update_replace_pin,github.com/tigera/api,github.com/tigera/calico-private/api,$(BRANCH))
-
-update-pins: guard-ssh-forwarding-bug update-calico-pin
-
-###############################################################################
-# See .golangci.yml for golangci-lint config
-LINT_ARGS +=
-
-###############################################################################
-# CI/CD
-###############################################################################
-.PHONY: ci
-## Run what CI runs
-ci: clean static-checks fv-containerized ut-containerized st-containerized
-
-## Deploys images to registry
-cd: image cd-common
 
 ## Run etcd as a container (calico-etcd)
 run-etcd: stop-etcd
@@ -230,7 +181,6 @@ clean:
 ###############################################################################
 # Release
 ###############################################################################
-
 release-verify-version: var-require-all-VERSION
 ifdef CONFIRM
 	$(eval CURRENT_RELEASE_VERSION := $(git-release-tag-for-current-commit))
