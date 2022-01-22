@@ -273,7 +273,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 			Eventually(rulesProgrammed, "10s", "1s").Should(BeTrue(),
 				"Expected iptables rules to appear on the correct felix instances")
 		} else {
-			time.Sleep(3 * time.Second)
+			time.Sleep(10 * time.Second)
 		}
 
 		// Describe the connectivity that we now expect.
