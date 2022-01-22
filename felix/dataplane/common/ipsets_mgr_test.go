@@ -60,6 +60,8 @@ type mockDomainStore struct {
 	mappings map[string][]string
 }
 
+func (s *mockDomainStore) RegisterHandler(_ DomainInfoChangeHandler) {}
+
 func (s *mockDomainStore) GetDomainIPs(domain string) []string {
 	// The domainStore is case insensitive.
 	return s.mappings[strings.ToLower(domain)]

@@ -60,13 +60,19 @@ type IPSetsManager struct {
 	ignoredSetIds set.Set
 }
 
+type DomainInfoChangeHandler interface {
+	OnDomainChange(name string) (dataplaneSyncNeeded bool)
+}
+
 type store interface {
+	// Register this IPSets manager as a user of the DomainInfoStore.
+	RegisterHandler(DomainInfoChangeHandler)
 	// Get the IPs for a given domain name.
 	GetDomainIPs(domain string) []string
 }
 
 func NewIPSetsManager(ipsets_ IPSetsDataplane, maxIPSetSize int, domainInfoStore store) *IPSetsManager {
-	return &IPSetsManager{
+	ipsm := &IPSetsManager{
 		dataplanes:      []IPSetsDataplane{ipsets_},
 		maxSize:         maxIPSetSize,
 		domainInfoStore: domainInfoStore,
@@ -75,6 +81,8 @@ func NewIPSetsManager(ipsets_ IPSetsDataplane, maxIPSetSize int, domainInfoStore
 		domainSetIds:         make(map[string]set.Set),
 		ignoredSetIds:        set.New(),
 	}
+	domainInfoStore.RegisterHandler(ipsm)
+	return ipsm
 }
 
 func (m *IPSetsManager) AddDataplane(dp IPSetsDataplane) {

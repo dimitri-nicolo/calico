@@ -328,7 +328,6 @@ type InternalDataplane struct {
 	iptablesRawTables    []*iptables.Table
 	iptablesFilterTables []*iptables.Table
 	ipSets               []common.IPSetsDataplane
-	ipSetsManagers       []*common.IPSetsManager
 
 	ipipManager          *ipipManager
 	allHostsIpsetManager *allHostsIpsetManager
@@ -344,8 +343,7 @@ type InternalDataplane struct {
 
 	endpointStatusCombiner *endpointStatusCombiner
 
-	domainInfoStore   *common.DomainInfoStore
-	domainInfoChanges chan *common.DomainInfoChanged
+	domainInfoStore *common.DomainInfoStore
 
 	allManagers             []Manager
 	managersWithRouteTables []ManagerWithRouteTables
@@ -394,11 +392,6 @@ type InternalDataplane struct {
 
 	awsStateUpdC <-chan *aws.LocalAWSNetworkState
 	awsSubnetMgr *awsIPManager
-
-	// The last domain info change message number processed. Used to notify the DomainInfoStore when the changes are
-	// programmed. A value of 0 indicates there are no domain info updates associated with the latest dataplane
-	// update.
-	lastDomainInfoChangedMessageNumber uint64
 }
 
 const (
@@ -455,17 +448,16 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	dp := &InternalDataplane{
-		toDataplane:       make(chan interface{}, msgPeekLimit),
-		fromDataplane:     make(chan interface{}, 100),
-		ruleRenderer:      ruleRenderer,
-		ifaceMonitor:      ifacemonitor.New(config.IfaceMonitorConfig, config.FatalErrorRestartCallback),
-		ifaceUpdates:      make(chan *ifaceUpdate, 100),
-		ifaceAddrUpdates:  make(chan *ifaceAddrsUpdate, 100),
-		domainInfoChanges: make(chan *common.DomainInfoChanged, 100),
-		config:            config,
-		applyThrottle:     throttle.New(10),
-		loopSummarizer:    logutils.NewSummarizer("dataplane reconciliation loops"),
-		stopChan:          stopChan,
+		toDataplane:      make(chan interface{}, msgPeekLimit),
+		fromDataplane:    make(chan interface{}, 100),
+		ruleRenderer:     ruleRenderer,
+		ifaceMonitor:     ifacemonitor.New(config.IfaceMonitorConfig, config.FatalErrorRestartCallback),
+		ifaceUpdates:     make(chan *ifaceUpdate, 100),
+		ifaceAddrUpdates: make(chan *ifaceAddrsUpdate, 100),
+		config:           config,
+		applyThrottle:    throttle.New(10),
+		loopSummarizer:   logutils.NewSummarizer("dataplane reconciliation loops"),
+		stopChan:         stopChan,
 	}
 
 	if config.RulesConfig.IptablesMarkDNSPolicy != 0x0 && !config.DisableDNSPolicyPacketProcessor {
@@ -647,7 +639,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	dp.endpointStatusCombiner = newEndpointStatusCombiner(dp.fromDataplane, config.IPv6Enabled)
-	dp.domainInfoStore = common.NewDomainInfoStore(dp.domainInfoChanges, &common.DnsConfig{
+	dp.domainInfoStore = common.NewDomainInfoStore(&common.DnsConfig{
 		Collector:             config.Collector,
 		DNSCacheEpoch:         config.DNSCacheEpoch,
 		DNSCacheFile:          config.DNSCacheFile,
@@ -722,7 +714,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	ipsetsManager := common.NewIPSetsManager(ipSetsV4, config.MaxIPSetSize, dp.domainInfoStore)
-	dp.ipSetsManagers = append(dp.ipSetsManagers, ipsetsManager)
 	dp.RegisterManager(ipsetsManager)
 
 	if !config.BPFEnabled {
@@ -1187,9 +1178,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			unix.RT_TABLE_UNSPEC, dp.loopSummarizer)
 
 		if !config.BPFEnabled {
-			ipSetsV6Mgr := common.NewIPSetsManager(ipSetsV6, config.MaxIPSetSize, dp.domainInfoStore)
-			dp.ipSetsManagers = append(dp.ipSetsManagers, ipSetsV6Mgr)
-			dp.RegisterManager(ipSetsV6Mgr)
+			dp.RegisterManager(common.NewIPSetsManager(ipSetsV6, config.MaxIPSetSize, dp.domainInfoStore))
 			dp.RegisterManager(newHostIPManager(
 				config.RulesConfig.WorkloadIfacePrefixes,
 				rules.IPSetIDThisHostIPs,
@@ -2167,21 +2156,8 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			}
 			summaryAddrBatchSize.Observe(float64(batchSize))
 			d.dataplaneNeedsSync = true
-		case domainInfoChange := <-d.domainInfoChanges:
-			// Opportunistically read and coalesce other domain change signals that are
-			// already pending on this channel.
-			domainInfoChanges := []*common.DomainInfoChanged{domainInfoChange}
-		domainChangeLoop:
-			for {
-				select {
-				case domainInfoChange := <-d.domainInfoChanges:
-					domainInfoChanges = append(domainInfoChanges, domainInfoChange)
-				default:
-					// Channel blocked so we must be caught up.
-					break domainChangeLoop
-				}
-			}
-			if d.processDomainInfoChangeMessages(domainInfoChanges) {
+		case <-d.domainInfoStore.UpdatesReadyChannel():
+			if d.domainInfoStore.HandleUpdates() {
 				d.dataplaneNeedsSync = true
 			}
 		case msg := <-d.awsStateUpdC:
@@ -2536,64 +2512,14 @@ func (d *InternalDataplane) apply() {
 func (d *InternalDataplane) loopUpdatingDataplaneForDomainInfoUpdates(ipSetsStopCh chan struct{}) {
 	for {
 		select {
-		case domainInfoChange := <-d.domainInfoChanges:
-			// Opportunistically read and coalesce other domain change signals that are
-			// already pending on this channel.
-			domainInfoChanges := []*common.DomainInfoChanged{domainInfoChange}
-		domainChangeLoop:
-			for {
-				select {
-				case domainInfoChange := <-d.domainInfoChanges:
-					domainInfoChanges = append(domainInfoChanges, domainInfoChange)
-				default:
-					// Channel blocked so we must be caught up.
-					break domainChangeLoop
-				}
-			}
-			if d.processDomainInfoChangeMessages(domainInfoChanges) {
+		case <-d.domainInfoStore.UpdatesReadyChannel():
+			if d.domainInfoStore.HandleUpdates() {
 				d.applyIPSetsAndNotifyDomainInfoStore()
 			}
 		case <-ipSetsStopCh:
 			return
 		}
 	}
-}
-
-func (d *InternalDataplane) processDomainInfoChangeMessages(domainInfoChanges []*common.DomainInfoChanged) (needsSync bool) {
-	processed := set.New()
-	var lastDomainInfoChangedMessageNumber uint64
-	for _, domainInfoChange := range domainInfoChanges {
-		for _, changedName := range domainInfoChange.Domains {
-			if !processed.Contains(changedName) {
-				// We haven't processed this domain name so notify the IPSetManagers to make any updates to the IPSets,
-				// if required. We only do this once per name, so track whether the domain was impacted to reduce
-				// churn with other DomainInfoChanged messages that contain the same domains.
-				for _, mgr := range d.ipSetsManagers {
-					if mgr.OnDomainChange(changedName) {
-						needsSync = true
-					}
-				}
-				processed.Add(changedName)
-			}
-		}
-		// Track the message number that is being processed. These are monotonically increasing.  Once programmed we
-		// notify the DomainInfoStore.
-		lastDomainInfoChangedMessageNumber = domainInfoChange.MessageNumber
-	}
-
-	if !needsSync && d.lastDomainInfoChangedMessageNumber == 0 {
-		// The domain info change messages did not result in any dataplane updates and there were none pending from a
-		// previous iteration (which could happen if the dataplane is synchronizing - since updates will not be applied
-		// immediately). Since we notify the domain info store when the revision and all previous revisions have been
-		// programmed, we cannot notify the domain info store until the previous revisions are programmed.
-		d.domainInfoStore.DomainInfoChangesProcessedByDataplane(lastDomainInfoChangedMessageNumber)
-	} else {
-		// Changes need to be applied to the dataplane. The DomainInfoStore will be notifed when these changes are
-		// programmed - store the message number for the notification.
-		d.lastDomainInfoChangedMessageNumber = lastDomainInfoChangedMessageNumber
-	}
-
-	return
 }
 
 // applyIPSetsAndNotifyDomainInfoStore applies changes to the IPSetDataplanes and once complete invokes any
@@ -2605,6 +2531,9 @@ func (d *InternalDataplane) applyIPSetsAndNotifyDomainInfoStore() {
 		go func(ipSets common.IPSetsDataplane) {
 			defer ipSetsWG.Done()
 
+			// Apply the IPSet updates.  The filter is requesting that ApplyUpdates only returns the updates IP sets
+			// that contain egress domains. The filter does not change which IPSets are updated - all IPSets that have
+			// been modified will be updated.
 			updatedIPSets := ipSets.ApplyUpdates(func(ipSetName string) bool {
 				// Collect only Domain IP set updates so we don't overload the packet processor with irrelevant ips.
 				return ipSetName[0:2] == "d:"
@@ -2625,13 +2554,8 @@ func (d *InternalDataplane) applyIPSetsAndNotifyDomainInfoStore() {
 	}
 	ipSetsWG.Wait()
 
-	// IPSets applied.
-	// If the updates included some domain info changed messages then call back into the DomainInfoStore to notify
-	// changes are programmed.
-	if d.lastDomainInfoChangedMessageNumber > 0 {
-		d.domainInfoStore.DomainInfoChangesProcessedByDataplane(d.lastDomainInfoChangedMessageNumber)
-		d.lastDomainInfoChangedMessageNumber = 0
-	}
+	// Notify the domain info store that any updates applied to the handlers has now been applied.
+	d.domainInfoStore.UpdatesApplied()
 }
 
 func (d *InternalDataplane) applyXDPActions() error {

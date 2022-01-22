@@ -21,14 +21,21 @@ import (
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/testutils"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
+
+type mockDomainInfoChangeHandler struct {
+	dataplaneSyncNeeded bool
+	domainsChanged      []string
+}
+
+func (m *mockDomainInfoChangeHandler) OnDomainChange(name string) (dataplaneSyncNeeded bool) {
+	m.domainsChanged = append(m.domainsChanged, name)
+	return m.dataplaneSyncNeeded
+}
 
 var _ = Describe("Domain Info Store", func() {
 	var (
-		messageNumber       uint64
-		domainChannel       chan *DomainInfoChanged
+		handler             *mockDomainInfoChangeHandler
 		domainStore         *DomainInfoStore
 		mockDNSRecA1        = testutils.MakeA("a.com", "10.0.0.10")
 		mockDNSRecA2        = testutils.MakeA("b.com", "10.0.0.20")
@@ -102,15 +109,14 @@ var _ = Describe("Domain Info Store", func() {
 
 	// Assert that the domain store accepted and signaled the given record (and reason).
 	AssertDomainChanged := func(domainStore *DomainInfoStore, d string, r string) {
-		select {
-		case receivedInfo := <-domainChannel:
-			log.Infof("DomainInfoChanged:  %v %s expected %s", receivedInfo.Domains, receivedInfo.Reason, strings.ToLower(d))
-			Expect(receivedInfo).To(Equal(&DomainInfoChanged{Domains: []string{strings.ToLower(d)}, Reason: r, MessageNumber: messageNumber}))
-			messageNumber++
-		case <-time.After(1 * time.Second):
-			// Domain info change never sent.
-			Expect(false).To(Equal(true))
-		}
+		Expect(domainStore.UpdatesReadyChannel()).Should(Receive())
+		log.Info("Domain updates ready to handle")
+		domainStore.HandleUpdates()
+		// DomainInfoStore stores domains in lowercase.
+		Expect(handler.domainsChanged).To(ConsistOf(strings.ToLower(d)))
+
+		// Reset the domains changed ready for the next test.
+		handler.domainsChanged = nil
 	}
 
 	// Assert that the domain store registered the given record and then process its expiration.
@@ -132,11 +138,13 @@ var _ = Describe("Domain Info Store", func() {
 
 	// Create a new datastore.
 	domainStoreCreateEx := func(capacity int, config *DnsConfig) {
-		domainChannel = make(chan *DomainInfoChanged, capacity)
+		handler = &mockDomainInfoChangeHandler{
+			// For most tests assume the dataplane does need to be sync'd.
+			dataplaneSyncNeeded: true,
+		}
 		// For UT purposes, don't actually run any expiry timers, but arrange that mappings
 		// always appear to have expired when UT code calls processMappingExpiry.
 		domainStore = newDomainInfoStoreWithShims(
-			domainChannel,
 			config,
 			func(ttl time.Duration, _ func()) *time.Timer {
 				lastTTL = ttl
@@ -144,13 +152,11 @@ var _ = Describe("Domain Info Store", func() {
 			},
 			func(time.Time) bool { return true },
 		)
+		domainStore.RegisterHandler(handler)
 	}
 	domainStoreCreate := func() {
 		// Create domain info store with 100 capacity for changes channel.
 		domainStoreCreateEx(100, defaultConfig)
-
-		// Initialize the first expected message number.
-		messageNumber = 1
 	}
 
 	// Basic validation tests that add/expire one or two DNS records of A and AAAA type to the data store.
@@ -217,16 +223,16 @@ var _ = Describe("Domain Info Store", func() {
 	domainStoreTestCNAME := func(CNAMErecs []layers.DNSResourceRecord, aRec layers.DNSResourceRecord) {
 		Context("with a chain of CNAME records", func() {
 			BeforeEach(func() {
-				// The ordering of the signals sent back through domainInfoChanges is not deterministic, which prevents
-				// us from asserting their specific values. But we can still check that the correct number of signals
-				// are sent based on the length of the CNAME chain passed in.
+				// Check that we receive signals when there are updates ready.
 				domainStoreCreate()
 				for _, r := range CNAMErecs {
 					programDNSAnswer(domainStore, r)
-					Expect(domainChannel).Should(Receive())
+					Expect(domainStore.UpdatesReadyChannel()).Should(Receive())
+					domainStore.HandleUpdates()
 				}
 				programDNSAnswer(domainStore, aRec)
-				Expect(domainChannel).Should(Receive())
+				Expect(domainStore.UpdatesReadyChannel()).Should(Receive())
+				domainStore.HandleUpdates()
 			})
 			It("should result in a CNAME->A mapping", func() {
 				Expect(domainStore.GetDomainIPs(string(CNAMErecs[0].Name))).To(Equal([]string{aRec.IP.String()}))
@@ -242,28 +248,22 @@ var _ = Describe("Domain Info Store", func() {
 	domainStoreTestCNAME(mockDNSRecCNAME, mockDNSRecA1)
 	domainStoreTestCNAME(mockDNSRecCNAMEUnderscore, mockDNSRecA1)
 
-	expectChangesFor := func(domains ...string) uint64 {
-		var messageNumber uint64
-		domainsSignaled := set.New()
-	loop:
-		for {
-			select {
-			case signal := <-domainChannel:
-				log.Debugf("Got domain change signal for %v", signal.Domains)
-				domainsSignaled.AddAll(signal.Domains)
-				messageNumber = signal.MessageNumber
-			default:
-				break loop
-			}
-		}
+	handleUpdatesAndExpectChangesFor := func(domains ...string) {
+		// For a set of changes we should get a single update ready notification.
+		ExpectWithOffset(1, domainStore.UpdatesReadyChannel()).To(Receive())
+		ExpectWithOffset(1, domainStore.UpdatesReadyChannel()).NotTo(Receive())
+		log.Debug("Updates ready to handle")
+
+		// Handle the updates - this synchronously invokes the OnDomainChange callbacks.
+		domainStore.HandleUpdates()
+
 		// We shouldn't care if _more_ domains are signaled than we expect.  Just check that
 		// the expected ones _are_ signaled.
 		for _, domain := range domains {
-			ExpectWithOffset(1, domainsSignaled.Contains(domain)).To(BeTrue(),
+			ExpectWithOffset(1, handler.domainsChanged).To(ContainElement(domain),
 				fmt.Sprintf("Expected domain %v to be signalled but it wasn't", domain))
 		}
-
-		return messageNumber
+		handler.domainsChanged = nil
 	}
 
 	// Assert that the expected callbacks have been received. This resets the callback Ids.
@@ -278,8 +278,12 @@ var _ = Describe("Domain Info Store", func() {
 			copy(callbackIdsCopy, callbackIds)
 			return callbackIdsCopy
 		}
-		EventuallyWithOffset(1, getCallbackIds).Should(ConsistOf(expectedCallbackIds))
-		ConsistentlyWithOffset(1, getCallbackIds).Should(ConsistOf(expectedCallbackIds))
+		if len(expectedCallbackIds) == 0 {
+			ConsistentlyWithOffset(1, getCallbackIds).Should(HaveLen(0))
+		} else {
+			EventuallyWithOffset(1, getCallbackIds).Should(ConsistOf(expectedCallbackIds))
+			ConsistentlyWithOffset(1, getCallbackIds).Should(ConsistOf(expectedCallbackIds))
+		}
 
 		callbackIdsMutex.Lock()
 		defer callbackIdsMutex.Unlock()
@@ -290,7 +294,6 @@ var _ = Describe("Domain Info Store", func() {
 	Context("with monitor thread", func() {
 
 		var (
-			monotonicNums     bool
 			expectedSeen      bool
 			expectedDomainIPs []string
 			monitorMutex      sync.Mutex
@@ -298,23 +301,19 @@ var _ = Describe("Domain Info Store", func() {
 			monitorRunning    sync.WaitGroup
 		)
 
-		monitor := func(domain string, domainChannel chan *DomainInfoChanged) {
+		monitor := func(domain string) {
 			defer monitorRunning.Done()
-			monotonicNums = true
-			var lastNum uint64
 			for {
 			loop:
 				for {
 					select {
 					case <-killMonitor:
 						return
-					case signal := <-domainChannel:
-						log.Debugf("Got domain change signal for %v", signal.Domains)
-						if signal.MessageNumber <= lastNum {
-							monotonicNums = false
-						}
+					case <-domainStore.UpdatesReadyChannel():
+						log.Debug("Updates ready to handle")
+						domainStore.HandleUpdates()
 						monitorMutex.Lock()
-						for _, signalDomain := range signal.Domains {
+						for _, signalDomain := range handler.domainsChanged {
 							if signalDomain == domain {
 								expectedSeen = true
 								expectedDomainIPs = domainStore.GetDomainIPs(domain)
@@ -339,7 +338,6 @@ var _ = Describe("Domain Info Store", func() {
 				}
 				return result
 			}).Should(BeTrue())
-			Eventually(monotonicNums).Should(BeTrue())
 		}
 
 		BeforeEach(func() {
@@ -347,7 +345,7 @@ var _ = Describe("Domain Info Store", func() {
 			killMonitor = make(chan struct{})
 			domainStoreCreateEx(0, defaultConfig)
 			monitorRunning.Add(1)
-			go monitor("*.microsoft.com", domainChannel)
+			go monitor("*.microsoft.com")
 		})
 
 		AfterEach(func() {
@@ -380,15 +378,15 @@ var _ = Describe("Domain Info Store", func() {
 		programDNSAnswer(domainStore, testutils.MakeCNAME("a2.com", "b.com"))
 		programDNSAnswer(domainStore, testutils.MakeCNAME("b.com", "c.com"))
 		programDNSAnswer(domainStore, testutils.MakeA("c.com", "3.4.5.6"))
-		expectChangesFor("a1.com", "a2.com", "b.com", "c.com")
+		handleUpdatesAndExpectChangesFor("a1.com", "a2.com", "b.com", "c.com")
 		Expect(domainStore.GetDomainIPs("a1.com")).To(Equal([]string{"3.4.5.6"}))
 		Expect(domainStore.GetDomainIPs("a2.com")).To(Equal([]string{"3.4.5.6"}))
 		programDNSAnswer(domainStore, testutils.MakeA("c.com", "7.8.9.10"))
-		expectChangesFor("a1.com", "a2.com", "c.com")
+		handleUpdatesAndExpectChangesFor("a1.com", "a2.com", "c.com")
 		Expect(domainStore.GetDomainIPs("a1.com")).To(ConsistOf("3.4.5.6", "7.8.9.10"))
 		Expect(domainStore.GetDomainIPs("a2.com")).To(ConsistOf("3.4.5.6", "7.8.9.10"))
 		domainStore.processMappingExpiry("c.com", "3.4.5.6")
-		expectChangesFor("a1.com", "a2.com", "c.com")
+		handleUpdatesAndExpectChangesFor("a1.com", "a2.com", "c.com")
 		Expect(domainStore.GetDomainIPs("a1.com")).To(Equal([]string{"7.8.9.10"}))
 		Expect(domainStore.GetDomainIPs("a2.com")).To(Equal([]string{"7.8.9.10"}))
 		// No garbage yet, because c.com still has a value and is the RHS of other mappings.
@@ -493,7 +491,7 @@ var _ = Describe("Domain Info Store", func() {
 				})
 
 				It("should update *.google.com", func() {
-					expectChangesFor("*.google.com")
+					handleUpdatesAndExpectChangesFor("*.google.com")
 					Expect(domainStore.GetDomainIPs("*.google.com")).To(Equal([]string{"1.2.3.5"}))
 				})
 			})
@@ -593,51 +591,53 @@ var _ = Describe("Domain Info Store", func() {
 	// Test callbacks are invoked after dataplane programming is completed.
 	It("should handle DNS updates with callbacks", func() {
 		domainStoreCreate()
+
+		// Program answer.  Handle updates and expect domain updates. No callbacks should be invoked until updates
+		// are applied.
 		programDNSAnswer(domainStore, testutils.MakeCNAME("a1.com", "b.com"), "cb1")
-		msgNum1 := expectChangesFor("a1.com")
-		Expect(msgNum1).NotTo(BeZero())
+		handleUpdatesAndExpectChangesFor("a1.com")
+		expectCallbacks()
+		domainStore.UpdatesApplied()
+		expectCallbacks("cb1")
 
 		programDNSAnswer(domainStore, testutils.MakeCNAME("a2.com", "b.com"), "cb2")
-		msgNum2 := expectChangesFor("a2.com")
-		Expect(msgNum2).To(Equal(msgNum1 + 1))
+		handleUpdatesAndExpectChangesFor("a2.com")
 
+		// We are already waiting for the dataplane updates for the previous two messages to be applied. In the meantime
+		// send in more updates, the last is a repeat of the previous message.
 		programDNSAnswer(domainStore, testutils.MakeCNAME("b.com", "c.com"), "cb3")
-		msgNum3 := expectChangesFor("b.com")
-		Expect(msgNum3).To(Equal(msgNum2 + 1))
-
 		programDNSAnswer(domainStore, testutils.MakeA("c.com", "3.4.5.6"), "cb4")
-		msgNum4 := expectChangesFor("c.com")
-		Expect(msgNum4).To(Equal(msgNum3 + 1))
-
-		// Repeat a message that should not result in any changes, but that we have a callback associated with.
-		// This callback (cb5) should happen alongside callback cb2.
 		programDNSAnswer(domainStore, testutils.MakeCNAME("a2.com", "b.com"), "cb5")
-		Expect(domainChannel).ShouldNot(Receive())
-		Expect(msgNum2).To(Equal(msgNum1 + 1))
+
+		// Apply the dataplane changes. We should get the callbacks for cb2 and cb5 once the changes are applied.
+		expectCallbacks()
+		domainStore.UpdatesApplied()
+		expectCallbacks("cb2", "cb5")
+
+		// Handle the remaining changes and apply the updates, we should get remaining callbacks invoked.
+		handleUpdatesAndExpectChangesFor("b.com", "c.com")
+		domainStore.UpdatesApplied()
+		expectCallbacks("cb3", "cb4")
+		handler.dataplaneSyncNeeded = true
 
 		// Get IPs for domains a1.com and a2.com and then update c.com.
 		Expect(domainStore.GetDomainIPs("a1.com")).To(Equal([]string{"3.4.5.6"}))
 		Expect(domainStore.GetDomainIPs("a2.com")).To(Equal([]string{"3.4.5.6"}))
+
+		// Have the handler indicate that no dataplane updates are required.  In this case the callbacks should happen
+		// immediately without waiting for UpdatesApplied().
+		handler.dataplaneSyncNeeded = false
 		programDNSAnswer(domainStore, testutils.MakeA("c.com", "7.8.9.10"), "cb6")
-		msgNum5 := expectChangesFor("a1.com", "a2.com", "c.com")
-		Expect(msgNum5).To(Equal(msgNum4 + 1))
-
-		// Notify programming is complete for message 1.  We should get callback cb1 only.
-		domainStore.DomainInfoChangesProcessedByDataplane(msgNum1)
-		expectCallbacks("cb1")
-
-		// Notify programming is complete for message 2.  We should get callback cb2 and cb5 only.
-		domainStore.DomainInfoChangesProcessedByDataplane(msgNum2)
-		expectCallbacks("cb2", "cb5")
-
-		// Notify programming is complete for message 5.  We should get callback cb3, cb4 and cb6 only.
-		domainStore.DomainInfoChangesProcessedByDataplane(msgNum5)
-		expectCallbacks("cb3", "cb4", "cb6")
+		handleUpdatesAndExpectChangesFor("a1.com", "a2.com", "c.com")
+		expectCallbacks("cb6")
+		domainStore.UpdatesApplied()
+		expectCallbacks()
+		handler.dataplaneSyncNeeded = true
 
 		// Repeat a message that is already programmed. We should get no further changes and the callback should happen
 		// without any further dataplane involvement.
 		programDNSAnswer(domainStore, testutils.MakeCNAME("a2.com", "b.com"), "cb7")
-		Expect(domainChannel).ShouldNot(Receive())
+		Expect(domainStore.UpdatesReadyChannel()).ShouldNot(Receive())
 		expectCallbacks("cb7")
 	})
 })
