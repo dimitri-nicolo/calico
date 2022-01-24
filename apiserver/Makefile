@@ -294,6 +294,7 @@ fv-kdd: run-kubernetes-server hack-lib
 clean: clean-bin clean-hack-lib
 	# Clean .created files which indicate images / releases have been built.
 	find . -name '.*.created*' -type f -delete
+	find . -name '.*.published*' -type f -delete
 	rm -rf .lint-cache
 
 clean-bin:
