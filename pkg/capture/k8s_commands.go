@@ -10,7 +10,7 @@ import (
 	"github.com/tigera/packetcapture-api/pkg/cache"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
+	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )

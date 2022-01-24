@@ -17,12 +17,12 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
+	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 
 	"github.com/tigera/packetcapture-api/pkg/cache"
 	"github.com/tigera/packetcapture-api/pkg/capture"
 
-	"github.com/projectcalico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/packetcapture-api/pkg/middleware"
