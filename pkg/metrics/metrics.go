@@ -7,15 +7,18 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
+
 	log "github.com/sirupsen/logrus"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	licenseClient "github.com/tigera/licensing/client"
 
-	"github.com/projectcalico/libcalico-go/lib/clientv3"
-	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
-	"github.com/projectcalico/libcalico-go/lib/options"
-	"github.com/projectcalico/libcalico-go/lib/security"
+	licenseClient "github.com/projectcalico/calico/licensing/client"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/options"
+	"github.com/projectcalico/calico/libcalico-go/lib/security"
 )
 
 type LicenseStatus int
@@ -95,9 +98,9 @@ func init() {
 	prometheus.MustRegister(gaugeMaxNodes)
 	prometheus.MustRegister(gaugeValidLicense)
 	//Discard GolangMetrics
-	prometheus.Unregister(prometheus.NewGoCollector())
+	prometheus.Unregister(collectors.NewGoCollector())
 	//Discard process metrics
-	prometheus.Unregister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+	prometheus.Unregister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 }
 
 // servePrometheusMetrics starts a lightweight web server to serve prometheus metrics.

@@ -14,6 +14,7 @@ vendor
 go.mod.png
 .idea/
 report/
+.vscode/
 
 # common makefile
 Makefile.common*
