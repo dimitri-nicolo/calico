@@ -70,13 +70,13 @@ func ExtractRulesSetFilenames() []string {
 	count := 1
 	for _, item := range items {
 
-		// Ignore symbolically linked files!
+		// Ignore files starting with ".." that link to the parent directory.
 		filename := item.Name()
 		if strings.HasPrefix(filename, "..") {
 			continue
 		}
 
-		// Only load *.conf configuration files
+		// Only load *.conf configuration files.
 		if !strings.HasSuffix(filename, ".conf") {
 			continue
 		}
