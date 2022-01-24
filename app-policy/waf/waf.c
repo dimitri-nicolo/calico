@@ -42,11 +42,7 @@ void CModSecurityLoggingCallback( void *referenceAPI, const void *ruleMessage )
 // General public APIs.
 void InitializeModSecurity()
 {
-    ModSecurity *modsec = NULL;
-    RulesSet *rules = NULL;
-
     initializeModSecurityImpl();
-
 }
 static void initializeModSecurityImpl()
 {
