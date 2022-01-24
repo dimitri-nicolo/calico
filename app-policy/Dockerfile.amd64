@@ -35,7 +35,7 @@ LABEL name="Calico Dikastes" \
       version=$GIT_VERSION
 
 COPY --from=build /usr/local/modsecurity/ /usr/local/modsecurity/
-COPY --chown=999 --from=artifact /tmp/dikastes /var/run/dikastes
+COPY --chown=999 --from=artifact /tmp/dikastes /tmp/dikastes
 COPY --from=artifact /licenses /licenses
 COPY --from=artifact /lib64 /lib64
 COPY --from=artifact /lib /lib
