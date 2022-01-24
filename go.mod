@@ -13,7 +13,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tigera/api v0.0.0-20211211005256-a3f1397dfea5
 	github.com/tigera/compliance v0.0.0-20220120225137-a3dd2106996d
-	github.com/tigera/lma v0.0.0-20220114180745-11c1577ee102
+	github.com/tigera/lma v0.0.0-20220124214422-3b780f23484c
 	k8s.io/api v0.22.5
 	k8s.io/apimachinery v0.22.5
 	k8s.io/apiserver v0.22.5
@@ -130,7 +130,7 @@ require (
 )
 
 replace (
-	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220121224740-2fb172dbb01c
+	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220124102409-abe0b331bda7
 	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220121224740-2fb172dbb01c
 
 	k8s.io/api => k8s.io/api v0.21.8
