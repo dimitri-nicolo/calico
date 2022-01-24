@@ -1,5 +1,5 @@
 PACKAGE_NAME ?= github.com/tigera/prometheus-service
-GO_BUILD_VER ?= v0.63
+GO_BUILD_VER ?= v0.65
 GIT_USE_SSH = true
 ORGANIZATION = tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_PROMETHEUS_SERVICE_PROJECT_ID)
@@ -12,8 +12,6 @@ RELEASE_BRANCH_PREFIX    ?= release-calient
 DEV_TAG_SUFFIX           ?= calient-0.dev
 
 EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
-
-APISERVER_REPO  = github.com/tigera/apiserver
 
 ##############################################################################
 # Download and include Makefile.common before anything else
@@ -33,6 +31,7 @@ Makefile.common.$(MAKE_BRANCH):
 include Makefile.common
 
 build: prometheus-service
+
 BINDIR?=bin
 BUILD_DIR?=build
 TOP_SRC_DIRS=pkg
@@ -52,6 +51,14 @@ VERSION_FLAGS=-X $(PACKAGE_NAME)/pkg/handler.VERSION=$(PROMETHEUS_SERVICE_VERSIO
 	-X main.VERSION=$(PROMETHEUS_SERVICE_VERSION)
 BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
+
+###############################################################################
+# Updating pins
+###############################################################################
+BRANCH=master
+update-calico-pin:
+	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(BRANCH))
+	$(call update_replace_pin,github.com/tigera/api,github.com/tigera/calico-private/api,$(BRANCH))
 
 ###############################################################################
 # Build
@@ -167,7 +174,7 @@ update-lma-pin:
 	$(call update_pin,$(LMA_REPO),$(LMA_REPO),$(LMA_BRANCH))
 
 
-update-pins: guard-ssh-forwarding-bug replace-libcalico-pin update-lma-pin replace-apiserver-pin
+update-pins: guard-ssh-forwarding-bug update-calico-pin update-lma-pin
 
 ###############################################################################
 # Utils

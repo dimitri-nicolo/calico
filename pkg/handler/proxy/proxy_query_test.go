@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"net/http/httputil"
 	"net/url"
-	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -47,7 +46,10 @@ var _ = Describe("Prometheus Proxy Query test", func() {
 	})
 
 	It("passes the request to the Proxy", func() {
-		mAuth.On("Authenticate", strings.TrimSpace(jwt.ToString())).Return(userInfo, 200, nil)
+		req, _ := http.NewRequest("GET", "/test-endpoint", nil)
+		req.Header.Set("Authorization", jwt.BearerTokenHeader())
+
+		mAuth.On("Authenticate", req).Return(userInfo, 200, nil)
 		addAccessReviewsReactor(fakeK8sCli, true, userInfo)
 		var requestReceived *http.Request
 
@@ -59,8 +61,6 @@ var _ = Describe("Prometheus Proxy Query test", func() {
 		proxy, err := handler.Proxy(mockRevProxy, authn)
 		Expect(err).NotTo(HaveOccurred())
 		rr := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/test-endpoint", nil)
-		req.Header.Set("Authorization", jwt.BearerTokenHeader())
 		proxy.ServeHTTP(rr, req)
 
 		Expect(requestReceived).ToNot(BeNil())
@@ -86,7 +86,10 @@ var _ = Describe("Prometheus Proxy Query test", func() {
 	})
 
 	It("blocks unauthorized requests", func() {
-		mAuth.On("Authenticate", strings.TrimSpace(jwt.ToString())).Return(userInfo, 200, nil)
+		req, _ := http.NewRequest("GET", "/test-endpoint", nil)
+		req.Header.Set("Authorization", jwt.BearerTokenHeader())
+
+		mAuth.On("Authenticate", req).Return(userInfo, 200, nil)
 		addAccessReviewsReactor(fakeK8sCli, false, userInfo)
 		var requestReceived *http.Request
 
@@ -98,8 +101,6 @@ var _ = Describe("Prometheus Proxy Query test", func() {
 		proxy, err := handler.Proxy(mockRevProxy, authn)
 		Expect(err).NotTo(HaveOccurred())
 		rr := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/test-endpoint", nil)
-		req.Header.Set("Authorization", jwt.BearerTokenHeader())
 		proxy.ServeHTTP(rr, req)
 		Expect(rr.Code).To(Equal(403))
 		Expect(requestReceived).To(BeNil())
@@ -110,8 +111,8 @@ type mockAuth struct {
 	mock.Mock
 }
 
-func (m *mockAuth) Authenticate(token string) (user.Info, int, error) {
-	args := m.Called(token)
+func (m *mockAuth) Authenticate(r *http.Request) (user.Info, int, error) {
+	args := m.Called(r)
 	err := args.Get(2)
 	if err != nil {
 		return nil, args.Get(1).(int), err.(error)
