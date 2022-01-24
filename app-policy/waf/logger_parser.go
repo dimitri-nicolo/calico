@@ -37,7 +37,7 @@ const ParserHostname = "hostname"
 const ParserUri = "uri"
 const ParserUniqueId = "unique_id"
 
-func Parser(payload string) map[string]string {
+func ParseLog(payload string) map[string]string {
 
 	dictionary := make(map[string]string)
 	regex := regexp.MustCompile(`\[([^\[\]]*)]`)

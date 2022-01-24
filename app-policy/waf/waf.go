@@ -173,7 +173,7 @@ func sortFileNameDescend(files []os.FileInfo) {
 func GoModSecurityLoggingCallback(Cpayload *C.char) {
 
 	payload := C.GoString(Cpayload)
-	dictionary := Parser(payload)
+	dictionary := ParseLog(payload)
 
 	// Log to Elasticsearch => Kibana.
 	Logger.WithFields(log.Fields{
