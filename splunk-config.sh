@@ -19,7 +19,7 @@ if [[ "${SPLUNK_AUDIT_LOG}" == "true" || "${SPLUNK_AUDIT_TSEE_LOG}" == "true" ||
   elif [ "${SPLUNK_AUDIT_KUBE_LOG}" == "true" ]; then
     cp ${ROOT_DIR}/fluentd/etc/outputs/out-splunk-audit.conf ${ROOT_DIR}/fluentd/etc/output_kube_audit/out-splunk-audit.conf
   fi
-  
+
   # Optional Splunk flow log output
   if [ -z "${SPLUNK_FLOW_INDEX}" ]; then
     sed -i 's|index .*||g' ${ROOT_DIR}/fluentd/etc/outputs/out-splunk-flow.conf
@@ -33,7 +33,7 @@ if [[ "${SPLUNK_AUDIT_LOG}" == "true" || "${SPLUNK_AUDIT_TSEE_LOG}" == "true" ||
   if [ "${SPLUNK_FLOW_LOG}" == "true" ]; then
     cp ${ROOT_DIR}/fluentd/etc/outputs/out-splunk-flow.conf ${ROOT_DIR}/fluentd/etc/output_flows/out-splunk-flow.conf
   fi
-  
+
   # Optional Splunk dns log output
   if [ -z "${SPLUNK_DNS_INDEX}" ]; then
     sed -i 's|index .*||g' ${ROOT_DIR}/fluentd/etc/outputs/out-splunk-dns.conf
@@ -61,5 +61,18 @@ if [[ "${SPLUNK_AUDIT_LOG}" == "true" || "${SPLUNK_AUDIT_TSEE_LOG}" == "true" ||
   if [ "${SPLUNK_L7_LOG}" == "true" ]; then
     cp ${ROOT_DIR}/fluentd/etc/outputs/out-splunk-l7.conf ${ROOT_DIR}/fluentd/etc/output_l7/out-splunk-l7.conf
   fi
-fi
 
+  # Optional Splunk runtime security report log output
+  if [ -z "${SPLUNK_RUNTIME_INDEX}" ]; then
+    sed -i 's|index .*||g' ${ROOT_DIR}/fluentd/etc/outputs/out-splunk-runtime.conf
+  fi
+  if [ -z "${SPLUNK_RUNTIME_SOURCETYPE}" ]; then
+    sed -i 's|sourcetype .*||g' ${ROOT_DIR}/fluentd/etc/outputs/out-splunk-runtime.conf
+  fi
+  if [ -z "${SPLUNK_RUNTIME_SOURCE}" ]; then
+    sed -i 's|source .*||g' ${ROOT_DIR}/fluentd/etc/outputs/out-splunk-runtime.conf
+  fi
+  if [ "${SPLUNK_RUNTIME_LOG}" == "true" ]; then
+    cp ${ROOT_DIR}/fluentd/etc/outputs/out-splunk-runtime.conf ${ROOT_DIR}/fluentd/etc/output_runtime/out-splunk-runtime.conf
+  fi
+fi
