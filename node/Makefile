@@ -494,7 +494,7 @@ calico-node.tar: cnx-node.tar
 
 calico-apiserver.tar:
 	make -C ../apiserver image
-	docker save --output $@ tigera/apiserver:latest-$(ARCH)
+	docker save --output $@ tigera/cnx-apiserver:latest-$(ARCH)
 
 calico-cni.tar:
 	make -C ../cni-plugin image
