@@ -18,9 +18,9 @@ import (
 	"testing"
 )
 
-const testCoreRulesetDirectory = "rules/core-rules"
-const testCustomRulesetDirectory = "rules/custom-rules"
-const testDataRulesetDirectory = "rules/data-rules"
+const testCoreRulesetDirectory = "test_files/core-rules"
+const testCustomRulesetDirectory = "test_files/custom-rules"
+const testDataRulesetDirectory = "test_files/data-rules"
 
 func TestInitializeModSecurity(t *testing.T) {
 
@@ -31,7 +31,7 @@ func TestDefineRulesSetDirectory(t *testing.T) {
 
 	InitializeModSecurity()
 	DefineRulesSetDirectory(testCoreRulesetDirectory)
-	expect := "rules/core-rules/"
+	expect := "test_files/core-rules/"
 	actual := GetRulesDirectory()
 	if expect != actual {
 		t.Errorf("Expect: '%s' Actual: '%s'", expect, actual)
@@ -44,10 +44,10 @@ func TestExtractRulesSetFilenamesCore(t *testing.T) {
 	DefineRulesSetDirectory(testCoreRulesetDirectory)
 
 	expectFilenames := []string{
-		"rules/core-rules/modsecdefault.conf",
-		"rules/core-rules/crs-setup.conf",
-		"rules/core-rules/REQUEST-942-APPLICATION-ATTACK-SQLI.conf",
-		"rules/core-rules/REQUEST-901-INITIALIZATION.conf",
+		"test_files/core-rules/modsecdefault.conf",
+		"test_files/core-rules/crs-setup.conf",
+		"test_files/core-rules/REQUEST-942-APPLICATION-ATTACK-SQLI.conf",
+		"test_files/core-rules/REQUEST-901-INITIALIZATION.conf",
 	}
 	actualFilenames := ExtractRulesSetFilenames()
 
@@ -62,7 +62,7 @@ func TestExtractRulesSetFilenamesCoreOrdered(t *testing.T) {
 	InitializeModSecurity()
 	DefineRulesSetDirectory(testCoreRulesetDirectory)
 
-	expectFilename := "rules/core-rules/crs-setup.conf"
+	expectFilename := "test_files/core-rules/crs-setup.conf"
 
 	actualFilenames := ExtractRulesSetFilenames()
 	actualFilename := actualFilenames[1]
@@ -79,7 +79,7 @@ func TestExtractRulesSetFilenamesData(t *testing.T) {
 	DefineRulesSetDirectory(testDataRulesetDirectory)
 
 	expectFilenames := []string{
-		"rules/data-rules/REQUEST-913-SCANNER-DETECTION.conf",
+		"test_files/data-rules/REQUEST-913-SCANNER-DETECTION.conf",
 	}
 	actualFilenames := ExtractRulesSetFilenames()
 
@@ -93,9 +93,9 @@ func TestLoadModSecurityCoreRuleSetCore(t *testing.T) {
 
 	InitializeModSecurity()
 	filenames := []string{
-		"rules/core-rules/crs-setup.conf",
-		"rules/core-rules/modsecdefault.conf",
-		"rules/core-rules/REQUEST-942-APPLICATION-ATTACK-SQLI.conf",
+		"test_files/core-rules/crs-setup.conf",
+		"test_files/core-rules/modsecdefault.conf",
+		"test_files/core-rules/REQUEST-942-APPLICATION-ATTACK-SQLI.conf",
 	}
 
 	expect := len(filenames)
@@ -110,7 +110,7 @@ func TestLoadModSecurityCoreRuleSetDataFiles(t *testing.T) {
 
 	InitializeModSecurity()
 	filenames := []string{
-		"rules/data-rules/REQUEST-913-SCANNER-DETECTION.conf",
+		"test_files/data-rules/REQUEST-913-SCANNER-DETECTION.conf",
 	}
 
 	expect := len(filenames)
@@ -127,7 +127,7 @@ func TestLoadModSecurityCoreRuleSetDataDirectory(t *testing.T) {
 	DefineRulesSetDirectory(testDataRulesetDirectory)
 
 	expectFilenames := []string{
-		"rules/data-rules/REQUEST-913-SCANNER-DETECTION.conf",
+		"test_files/data-rules/REQUEST-913-SCANNER-DETECTION.conf",
 	}
 	expect := len(expectFilenames)
 
@@ -143,8 +143,8 @@ func TestLoadModSecurityCoreRuleSetErrorDirectory(t *testing.T) {
 
 	InitializeModSecurity()
 	filenames := []string{
-		"rules/error-rules/REQUEST-941-APPLICATION-ATTACK-XSS.conf",
-		"rules/error-rules/REQUEST-942-APPLICATION-ATTACK-SQLI.conf",
+		"test_files/error-rules/REQUEST-941-APPLICATION-ATTACK-XSS.conf",
+		"test_files/error-rules/REQUEST-942-APPLICATION-ATTACK-SQLI.conf",
 	}
 
 	expect := 0
