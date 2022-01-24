@@ -5,8 +5,8 @@ package calicoclient
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	client "github.com/projectcalico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
+	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 )
 
 // MustCreateClient loads the client config from environments and creates the

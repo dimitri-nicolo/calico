@@ -12,7 +12,7 @@ import (
 	"github.com/tigera/deep-packet-inspection/pkg/exec"
 	"github.com/tigera/deep-packet-inspection/pkg/weputils"
 
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
 const (

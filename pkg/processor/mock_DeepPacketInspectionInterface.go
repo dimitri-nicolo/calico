@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/libcalico-go/lib/options"
-	watch "github.com/projectcalico/libcalico-go/lib/watch"
+	"github.com/projectcalico/calico/libcalico-go/lib/options"
+	watch "github.com/projectcalico/calico/libcalico-go/lib/watch"
 )
 
 type MockDeepPacketInspectionInterface struct {

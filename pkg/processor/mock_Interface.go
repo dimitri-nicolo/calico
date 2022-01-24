@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
-	"github.com/projectcalico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/libcalico-go/lib/ipam"
+	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/calico/libcalico-go/lib/ipam"
 )
 
 // MockClientInterface is mock of clientv3.Interface
@@ -26,11 +26,11 @@ func (_m *MockClientInterface) CalicoNodeStatus() clientv3.CalicoNodeStatusInter
 }
 
 func (_m *MockClientInterface) UISettingsGroups() clientv3.UISettingsGroupInterface {
-    panic("implement me")
+	panic("implement me")
 }
 
 func (_m *MockClientInterface) UISettings() clientv3.UISettingsInterface {
-    panic("implement me")
+	panic("implement me")
 }
 
 func (_m *MockClientInterface) BGPConfigurations() clientv3.BGPConfigurationInterface {

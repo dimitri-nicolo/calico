@@ -8,8 +8,8 @@ import (
 
 	"github.com/tigera/deep-packet-inspection/pkg/cache"
 
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/libcalico-go/lib/selector"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/selector"
 )
 
 var _ = Describe("SelectorAndLabelCache", func() {

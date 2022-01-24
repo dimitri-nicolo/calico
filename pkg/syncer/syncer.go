@@ -10,8 +10,8 @@ import (
 
 	"github.com/tigera/deep-packet-inspection/pkg/dispatcher"
 
-	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
 // syncerCallbacks implements the bapi.SyncerCallbacks interface.

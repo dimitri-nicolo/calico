@@ -7,9 +7,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/libcalico-go/lib/selector"
-	"github.com/projectcalico/libcalico-go/lib/selector/parser"
-	"github.com/projectcalico/libcalico-go/lib/set"
+	"github.com/projectcalico/calico/libcalico-go/lib/selector"
+	"github.com/projectcalico/calico/libcalico-go/lib/selector/parser"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 // SelectorAndLabelCache caches Selector and Labels and keeps a mapping between them.

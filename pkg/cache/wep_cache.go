@@ -9,9 +9,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/deep-packet-inspection/pkg/weputils"
 
-	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/libcalico-go/lib/set"
+	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 type WEPCache interface {

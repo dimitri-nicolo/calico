@@ -22,9 +22,9 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 
-	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/libcalico-go/lib/net"
+	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
 var _ = Describe("File Parser", func() {

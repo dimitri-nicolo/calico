@@ -1,7 +1,7 @@
 # Copyright 2021 Tigera Inc. All rights reserved.
 
 PACKAGE_NAME    ?= github.com/tigera/deep-packet-inspection
-GO_BUILD_VER    ?= v0.59
+GO_BUILD_VER    ?= v0.65
 GIT_USE_SSH      = true
 LOCAL_CHECKS     = mod-download
 
@@ -22,11 +22,6 @@ DEV_REGISTRIES     				?=gcr.io/unique-caldron-775/cnx
 RELEASE_REGISTRIES 				?=quay.io
 RELEASE_BRANCH_PREFIX 			?= release-calient
 DEV_TAG_SUFFIX       		 	?= calient-0.dev
-
-# Used by Makefile.common
-LIBCALICO_REPO  = github.com/tigera/libcalico-go-private
-TYPHA_REPO      = github.com/tigera/typha-private
-API_REPO        = github.com/tigera/api
 
 # Mount Semaphore configuration files.
 ifdef ST_MODE
@@ -222,7 +217,7 @@ remote-deps: mod-download
 	# Recreate the directory so that we are sure to clean up any old files.
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -ec ' \
 		$(GIT_CONFIG_SSH) \
-		cp -r `go list -mod=mod -m -f "{{.Dir}}" github.com/projectcalico/libcalico-go`/config config; \
+		cp -r `go list -mod=mod -m -f "{{.Dir}}" github.com/projectcalico/calico`/libcalico-go/config config; \
 		chmod -R +w config/ '
 
 # Kubernetes apiserver used for tests
@@ -268,8 +263,21 @@ stop-k8s-apiserver:
 # Updating pins
 ###############################################################################
 ## Update dependency pins
+BRANCH=master
+update-calico-pin:
+	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(BRANCH))
+	$(call update_replace_pin,github.com/tigera/api,github.com/tigera/calico-private/api,$(BRANCH))
 
-update-pins: update-api-pin replace-libcalico-pin replace-typha-pin
+# Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
+guard-ssh-forwarding-bug:
+	@if [ "$(shell uname)" = "Darwin" ]; then \
+		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
+		echo "$(MAKECMDGOALS)"; \
+		exit 1; \
+	fi;
+
+
+update-pins: guard-ssh-forwarding-bug update-calico-pin
 
 ###############################################################################
 # CI/CD
