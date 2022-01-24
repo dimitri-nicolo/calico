@@ -1196,8 +1196,8 @@ github.com/tigera/api v0.0.0-20211202170222-d8128d06db71 h1:VGRufTlxIlpvZt2ZzhtR
 github.com/tigera/api v0.0.0-20211202170222-d8128d06db71/go.mod h1:FFE+MQo0Up7GGg3RagKRAwgdH7UqlXBFm+47BwmQLVQ=
 github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220124102409-abe0b331bda7 h1:H5ScuZkaOYqPQTx0xB6Q4g2EOEYr9AwK2atU1KXoEU8=
 github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220124102409-abe0b331bda7/go.mod h1:yCZQIo0D8B81uKKSJPCy3BCTeEscvlwljITppQEy5qc=
-github.com/tigera/lma v0.0.0-20220124212722-4363e51ae022 h1:b/OhfCt2nFTXuYH/NxHtcnFgGwQOo8xptEflm6Thghs=
-github.com/tigera/lma v0.0.0-20220124212722-4363e51ae022/go.mod h1:PrE/i45wCBYLD5h143iz+j9Sck6BuBEzE/ZEUiGta74=
+github.com/tigera/lma v0.0.0-20220124214422-3b780f23484c h1:1u2dKGRW9lTWO1ol0GFdQIfWRUNltpzHEIrD73nsyDU=
+github.com/tigera/lma v0.0.0-20220124214422-3b780f23484c/go.mod h1:ht2Y/oki+i8T9DIqWnWjl9h39KppvQuR0bceETYmsSs=
 github.com/tigera/windows-networking v0.0.0-20211112174220-6a90051af748/go.mod h1:zuycD4KqAFNMJC+Bv4fGqGMn7XsS/mZnttHGe96NLk0=
 github.com/tinylib/msgp v1.0.2/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
 github.com/tinylib/msgp v1.1.5/go.mod h1:eQsjooMTnV42mHu917E26IogZ2930nFyBQdofk10Udg=
