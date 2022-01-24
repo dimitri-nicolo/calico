@@ -1,4 +1,6 @@
 .idea/
+.vscode/
+
 *.swp
 .go-pkg-cache/
 *.exe
