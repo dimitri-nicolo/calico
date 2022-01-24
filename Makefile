@@ -12,9 +12,10 @@ MOCKERY_FILE_PATHS= \
 
 EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 # Allow local libcalico-go to be mapped into the build container.
-ifdef LIBCALICOGO_PATH
-EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
+ifdef CALICO_PATH
+EXTRA_DOCKER_ARGS += -v $(CALICO_PATH):/go/src/github.com/projectcalico/calico/:ro
 endif
+
 # SSH_AUTH_DIR doesn't work with MacOS but we can optionally volume mount keys
 ifdef SSH_AUTH_DIR
 EXTRA_DOCKER_ARGS += --tmpfs /home/user -v $(SSH_AUTH_DIR):/home/user/.ssh:ro

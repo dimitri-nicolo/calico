@@ -965,8 +965,9 @@ github.com/mipearson/rfw v0.0.0-20170619235010-6f0a6f3266ba/go.mod h1:cktvQyh8cO
 github.com/mistifyio/go-zfs v2.1.2-0.20190413222219-f784269be439+incompatible/go.mod h1:8AuVvqP/mXw1px98n46wfvcGfQ4ci2FwoAjKYxuo3Z4=
 github.com/mitchellh/cli v1.0.0/go.mod h1:hNIlj7HEI86fIcpObd7a0FcrxTWetlwJDGcceTlRvqc=
 github.com/mitchellh/cli v1.1.0/go.mod h1:xcISNoH86gajksDmfB23e/pu+B+GeFRMYmoHXxx3xhI=
-github.com/mitchellh/copystructure v1.0.0 h1:Laisrj+bAB6b/yJwB5Bt3ITZhGJdqmxquMKeZ+mmkFQ=
 github.com/mitchellh/copystructure v1.0.0/go.mod h1:SNtv71yrdKgLRyLFxmLdkAbkKEFWgYaq1OVrnRcwhnw=
+github.com/mitchellh/copystructure v1.1.1 h1:Bp6x9R1Wn16SIz3OfeDr0b7RnCG2OB66Y7PQyC/cvq4=
+github.com/mitchellh/copystructure v1.1.1/go.mod h1:EBArHfARyrSWO/+Wyr9zwEkc6XMFB9XyNgFNmRkZZU4=
 github.com/mitchellh/go-homedir v1.0.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrkLzIz1N1q0pr0=
 github.com/mitchellh/go-homedir v1.1.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrkLzIz1N1q0pr0=
 github.com/mitchellh/go-testing-interface v0.0.0-20171004221916-a61a99592b77/go.mod h1:kRemZodwjscx+RGhAo8eIhFbs2+BFgRtFPeD/KE+zxI=
@@ -981,8 +982,9 @@ github.com/mitchellh/mapstructure v1.3.2/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RR
 github.com/mitchellh/mapstructure v1.4.1/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/mitchellh/mapstructure v1.4.2/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/mitchellh/mapstructure v1.4.3/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
-github.com/mitchellh/reflectwalk v1.0.0 h1:9D+8oIskB4VJBN5SFlmc27fSlIBZaov1Wpk/IfikLNY=
 github.com/mitchellh/reflectwalk v1.0.0/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx0jmZXqmk4esnw=
+github.com/mitchellh/reflectwalk v1.0.1 h1:FVzMWA5RllMAKIdUSC8mdWo3XtwoecrH79BY70sEEpE=
+github.com/mitchellh/reflectwalk v1.0.1/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx0jmZXqmk4esnw=
 github.com/mna/pigeon v1.0.1-0.20180808201053-bb0192cfc2ae/go.mod h1:Iym28+kJVnC1hfQvv5MUtI6AiFFzvQjHcvI4RFTG/04=
 github.com/moby/ipvs v1.0.1/go.mod h1:2pngiyseZbIKXNv7hsKj3O9UEz30c53MT9005gt2hxQ=
 github.com/moby/spdystream v0.2.0/go.mod h1:f7i0iNDQJ059oMTcWxx8MA/zKFIuD/lY+0GqbN2Wy8c=
@@ -1286,10 +1288,10 @@ github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae/go.mod h1:quDq6Se
 github.com/testcontainers/testcontainer-go v0.0.0-20181115231424-8e868ca12c0f/go.mod h1:SrG3IY071gtmZJjGbKO+POJ57a/MMESerYNWt6ZRtKs=
 github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLYM/iQ8KXej1AwM=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
-github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220120220813-b1b3c09f5c81 h1:S8RzBhvFfFOmOjEDickw/QRmIS0gabvnyjPlvIlH1a4=
-github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220120220813-b1b3c09f5c81/go.mod h1:yCZQIo0D8B81uKKSJPCy3BCTeEscvlwljITppQEy5qc=
-github.com/tigera/calico-private/api v0.0.0-20220117182628-77f56ff2c9e7 h1:SiPoUjjgyLWRFVd+Fc74V1wiCyZLE6tJj6u3BeZhprs=
-github.com/tigera/calico-private/api v0.0.0-20220117182628-77f56ff2c9e7/go.mod h1:6qWfgULooruKiC8eoGgyRjOh0K+h/q8bc7AvdUysAUo=
+github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220121224740-2fb172dbb01c h1:+2IElBqs9CFNftxsCLXoDwgqIYpOoJdGJAmuryHH3Xo=
+github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220121224740-2fb172dbb01c/go.mod h1:yCZQIo0D8B81uKKSJPCy3BCTeEscvlwljITppQEy5qc=
+github.com/tigera/calico-private/api v0.0.0-20220121224740-2fb172dbb01c h1:f+RTQLPS7ejz1kuomDoJij3mrUTazC7tvaM0b2q9j3I=
+github.com/tigera/calico-private/api v0.0.0-20220121224740-2fb172dbb01c/go.mod h1:6qWfgULooruKiC8eoGgyRjOh0K+h/q8bc7AvdUysAUo=
 github.com/tigera/compliance v0.0.0-20220120225137-a3dd2106996d h1:JIiDh0oLp4ckCd8IXQkXgnpjaYku2WHPRfGbDvJX65M=
 github.com/tigera/compliance v0.0.0-20220120225137-a3dd2106996d/go.mod h1:t07eJLGjDbMgW8Lf2zYQICZsVi674Kx8O/JsTrpFfTg=
 github.com/tigera/lma v0.0.0-20220114180745-11c1577ee102 h1:LoHx7JMekG5qKBgMfYn7KnB4+F3sqiJ+eQc0WWvtL5I=
