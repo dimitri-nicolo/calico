@@ -13,12 +13,13 @@ import (
 
 	"google.golang.org/grpc"
 
-	"github.com/projectcalico/libcalico-go/lib/logutils"
 	"github.com/tigera/l7-collector/pkg/collector"
 	"github.com/tigera/l7-collector/pkg/config"
 	"github.com/tigera/l7-collector/pkg/felixclient"
 	"github.com/tigera/l7-collector/proto"
 	"github.com/tigera/l7-collector/uds"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
 
 const ListenerSocket = "policysync.sock"

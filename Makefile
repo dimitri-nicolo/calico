@@ -1,13 +1,11 @@
 PACKAGE_NAME    ?= github.com/tigera/l7-collector
-GO_BUILD_VER    ?= v0.55
+GO_BUILD_VER    ?= v0.65
 GIT_USE_SSH     := true
-LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_L7_COLLECTOR_PROJECT_ID)
 
 L7_COLLECTOR_IMAGE    ?=tigera/l7-collector
-ENVOY_INIT_IMAGE      ?=tigera/envoy-init
 BUILD_IMAGES          ?=$(L7_COLLECTOR_IMAGE) $(ENVOY_INIT_IMAGE)
 DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
 RELEASE_REGISTRIES    ?=quay.io
@@ -15,40 +13,13 @@ RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
 # Allow libcalico-go and the ssh auth sock to be mapped into the build container.
-ifdef LIBCALICOGO_PATH
-EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
+ifdef CALICO_PATH
+EXTRA_DOCKER_ARGS += -v $(CALICO_PATH):/go/src/github.com/projectcalico/calico/:ro
 endif
 
 EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
-##############################################################################
-PROTOC_VER ?= v0.1
-PROTOC_CONTAINER ?= calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
-
-# Get version from git - used for releases.
-ENVOY_COLLECTOR_GIT_VERSION ?= $(shell git describe --tags --dirty --always --abbrev=12)
-ENVOY_COLLECTOR_BUILD_DATE ?= $(shell date -u +'%FT%T%z')
-ENVOY_COLLECTOR_GIT_REVISION ?= $(shell git rev-parse --short HEAD)
-ENVOY_COLLECTOR_GIT_DESCRIPTION ?= $(shell git describe --tags --abbrev=12 || echo '<unknown>')
-
-ifeq ($(LOCAL_BUILD),true)
-ENVOY_COLLECTOR_GIT_VERSION = $(shell git describe --tags --dirty --always --abbrev=12)-dev-build
-endif
-
-VERSION_FLAGS=-X main.VERSION=$(ENVOY_COLLECTOR_GIT_VERSION) \
-	-X main.BUILD_DATE=$(ENVOY_COLLECTOR_BUILD_DATE) \
-	-X main.GIT_DESCRIPTION=$(ENVOY_COLLECTOR_GIT_DESCRIPTION) \
-	-X main.GIT_REVISION=$(ENVOY_COLLECTOR_GIT_REVISION)
-BUILD_LDFLAGS = -ldflags "$(VERSION_FLAGS)"
-RELEASE_LDFLAGS = -ldflags "$(VERSION_FLAGS) -s -w"
-
 SRC_FILES=$(shell find . -name '*.go' |grep -v vendor)
-
-ENVOY_API=deps/github.com/envoyproxy/data-plane-api
-EXT_AUTH=$(ENVOY_API)/envoy/service/auth/v2alpha/
-ADDRESS=$(ENVOY_API)/envoy/api/v2/core/address
-V2_BASE=$(ENVOY_API)/envoy/api/v2/core/base
-HTTP_STATUS=$(ENVOY_API)/envoy/type/http_status
 
 ##############################################################################
 # Download and include Makefile.common before anything else
@@ -66,6 +37,17 @@ Makefile.common.$(MAKE_BRANCH):
 	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
 
 include Makefile.common
+
+# Set version info from git.
+BUILD_DATE ?= $(shell date -u +'%FT%T%z')
+GIT_REVISION ?= $(shell git rev-parse --short HEAD)
+
+VERSION_FLAGS=-X main.VERSION=$(GIT_VERSION) \
+	-X main.BUILD_DATE=$(BUILD_DATE) \
+	-X main.GIT_DESCRIPTION=$(GIT_DESCRIPTION) \
+	-X main.GIT_REVISION=$(GIT_REVISION)
+BUILD_LDFLAGS = -ldflags "$(VERSION_FLAGS)"
+RELEASE_LDFLAGS = -ldflags "$(VERSION_FLAGS) -s -w"
 
 ############################################################################
 # Always install the git hooks to prevent publishing closed source code to a non-private repo.
@@ -98,7 +80,7 @@ bin/l7-collector-amd64: ARCH=amd64
 bin/l7-collector-arm64: ARCH=arm64
 bin/l7-collector-ppc64le: ARCH=ppc64le
 bin/l7-collector-s390x: ARCH=s390x
-bin/l7-collector-%: proto $(SRC_FILES)
+bin/l7-collector-%: protobuf $(SRC_FILES)
 ifndef VERSION
 	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
 else
@@ -108,71 +90,23 @@ endif
 		go build $(LDFLAGS) -v -o bin/l7-collector-$(ARCH) \
 	   	./cmd/l7-collector'
 
-# We use gogofast for protobuf compilation.  Regular gogo is incompatible with
-# gRPC, since gRPC uses golang/protobuf for marshalling/unmarshalling in that
-# case.  See https://github.com/gogo/protobuf/issues/386 for more details.
-# Note that we cannot seem to use gogofaster because of incompatibility with
-# Envoy's validation library.
-# When importing, we must use gogo versions of google/protobuf and
-# google/rpc (aka googleapis).
-PROTOC_IMPORTS =  -I $(ENVOY_API) \
-                  -I deps/github.com/gogo/protobuf/protobuf \
-                  -I deps/github.com/gogo/protobuf \
-                  -I deps/github.com/lyft/protoc-gen-validate\
-                  -I deps/github.com/gogo/googleapis\
-                  -I proto\
-                  -I ./
-# Also remap the output modules to gogo versions of google/protobuf and google/rpc
-PROTOC_MAPPINGS = Menvoy/api/v2/core/address.proto=github.com/envoyproxy/data-plane-api/envoy/api/v2/core,Menvoy/api/v2/core/base.proto=github.com/envoyproxy/data-plane-api/envoy/api/v2/core,Menvoy/type/http_status.proto=github.com/envoyproxy/data-plane-api/envoy/type,Mgogoproto/gogo.proto=github.com/gogo/protobuf/gogoproto,Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/struct.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types,Mgoogle/rpc/status.proto=github.com/gogo/googleapis/google/rpc
-
-### Not used ATM
-### This will be usable if we decide to use the latest protobuf dependencies.
-ENVOYPROXY_GIT_URI:=github.com/envoyproxy/data-plane-api
-PROTOC_GEN_VALIDATE_GIT_URI:=github.com/lyft/protoc-gen-validate
-GOOGLEAPIS_GIT_URI:=github.com/gogo/googleapis
-PROTOBUF_GIT_URI:=github.com/gogo/protobuf
-UDPA_GIT_URI:=github.com/cncf/udpa
-
-proto-download:
-	mkdir -p deps
-	-git clone https://$(ENVOYPROXY_GIT_URI).git deps/$(ENVOYPROXY_GIT_URI)
-	-git clone https://$(PROTOC_GEN_VALIDATE_GIT_URI).git deps/$(PROTOC_GEN_VALIDATE_GIT_URI)
-	-git clone https://$(GOOGLEAPIS_GIT_URI).git deps/$(GOOGLEAPIS_GIT_URI)
-	-git clone https://$(PROTOBUF_GIT_URI).git deps/$(PROTOBUF_GIT_URI)
-	-git clone https://$(UDPA_GIT_URI).git deps/$(UDPA_GIT_URI)
-###
-
-proto: $(EXT_AUTH)external_auth.pb.go $(ADDRESS).pb.go $(V2_BASE).pb.go $(HTTP_STATUS).pb.go $(EXT_AUTH)attribute_context.pb.go proto/felixbackend.pb.go
-
-$(EXT_AUTH)external_auth.pb.go $(EXT_AUTH)attribute_context.pb.go: $(EXT_AUTH)external_auth.proto $(EXT_AUTH)attribute_context.proto
-	$(DOCKER_RUN) -v $(CURDIR):/src:rw \
-	              $(PROTOC_CONTAINER) \
-	              $(PROTOC_IMPORTS) \
-	              $(EXT_AUTH)*.proto \
-	              --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
-
-$(ADDRESS).pb.go $(V2_BASE).pb.go: $(ADDRESS).proto $(V2_BASE).proto
-	$(DOCKER_RUN) -v $(CURDIR):/src:rw \
-	              $(PROTOC_CONTAINER) \
-	              $(PROTOC_IMPORTS) \
-	              $(ADDRESS).proto $(V2_BASE).proto \
-	              --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
-
-$(HTTP_STATUS).pb.go: $(HTTP_STATUS).proto
-	$(DOCKER_RUN) -v $(CURDIR):/src:rw \
-	              $(PROTOC_CONTAINER) \
-	              $(PROTOC_IMPORTS) \
-	              $(HTTP_STATUS).proto \
-	              --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):$(ENVOY_API)
-
-$(EXT_AUTH)external_auth.proto $(ADDRESS).proto $(V2_BASE).proto $(HTTP_STATUS).proto $(EXT_AUTH)attribute_context.proto:
-
-proto/felixbackend.pb.go: proto/felixbackend.proto
-	$(DOCKER_RUN) -v $(CURDIR):/src:rw \
-	              $(PROTOC_CONTAINER) \
-	              $(PROTOC_IMPORTS) \
-	              proto/*.proto \
-	              --gogofast_out=plugins=grpc,$(PROTOC_MAPPINGS):proto
+# Generate the protobuf bindings for go. The proto/felixbackend.pb.go file is included in SRC_FILES
+# In order to make use of complex structures like protobuf.google.timestamp, we need to link the
+# protobuf google types when generating go code from protobuf messages
+protobuf proto/felixbackend.pb.go: proto/felixbackend.proto
+	docker run --rm --user $(LOCAL_USER_ID):$(LOCAL_GROUP_ID) \
+		  -v $(CURDIR):/code -v $(CURDIR)/proto:/src:rw \
+		      $(PROTOC_CONTAINER) \
+		      --gogofaster_out=\
+	Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types,\
+	Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,\
+	Mgoogle/protobuf/struct.proto=github.com/gogo/protobuf/types,\
+	Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,\
+	Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types,\
+	plugins=grpc:. \
+	felixbackend.proto
+	# Make sure the generated code won't cause a static-checks failure.
+	$(MAKE) fix
 
 ###############################################################################
 # Building the image
@@ -201,6 +135,10 @@ endif
 ###############################################################################
 # Managing the upstream library pins
 ###############################################################################
+BRANCH=master
+update-calico-pin:
+	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(BRANCH))
+	$(call update_replace_pin,github.com/tigera/api,github.com/tigera/calico-private/api,$(BRANCH))
 
 ## Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
 guard-ssh-forwarding-bug:
@@ -211,7 +149,7 @@ guard-ssh-forwarding-bug:
 	fi;
 
 ## Update dependency pin
-update-pins: guard-ssh-forwarding-bug replace-libcalico-pin
+update-pins: guard-ssh-forwarding-bug update-calico-pin
 
 ###############################################################################
 ## Perform static checks
@@ -232,7 +170,7 @@ GINKGO_FOCUS?=.*
 
 .PHONY: ut
 ## Run the tests in a container. Useful for CI, Mac dev
-ut: proto bin/l7-collector-$(ARCH)
+ut: protobuf bin/l7-collector-$(ARCH)
 	mkdir -p report
 	$(DOCKER_RUN) \
 	    $(LOCAL_BUILD_MOUNTS) \
@@ -240,7 +178,7 @@ ut: proto bin/l7-collector-$(ARCH)
 	    ginkgo -r --skipPackage deps,fv -focus='$(GINKGO_FOCUS)' $(GINKGO_ARGS) $(WHAT)"
 
 .PHONY: fv
-fv: proto bin/l7-collector-$(ARCH)
+fv: protobuf bin/l7-collector-$(ARCH)
 	mkdir -p report
 	$(DOCKER_RUN) \
 	    $(LOCAL_BUILD_MOUNTS) \

@@ -7,3 +7,4 @@ Makefile.common*
 .envoy-collector*
 *.log
 .idea/
+.vscode/
