@@ -117,7 +117,7 @@ RUN powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_flows" \
  && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_compliance_reports" \
  && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_bgp" \
  && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_ids_events" \
- && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_l7"
+ && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_l7" \
  && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_runtime"
 
 EXPOSE 24284
