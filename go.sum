@@ -1200,8 +1200,8 @@ github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae/go.mod h1:quDq6Se
 github.com/testcontainers/testcontainer-go v0.0.0-20181115231424-8e868ca12c0f/go.mod h1:SrG3IY071gtmZJjGbKO+POJ57a/MMESerYNWt6ZRtKs=
 github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLYM/iQ8KXej1AwM=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
-github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220121180147-0389beeeb10d h1:QRgv2SKH3v8HnUwHtBFOhSQ3sHjJK8JXk7hqjHL6+oM=
-github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220121180147-0389beeeb10d/go.mod h1:yCZQIo0D8B81uKKSJPCy3BCTeEscvlwljITppQEy5qc=
+github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220124102409-abe0b331bda7 h1:H5ScuZkaOYqPQTx0xB6Q4g2EOEYr9AwK2atU1KXoEU8=
+github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220124102409-abe0b331bda7/go.mod h1:yCZQIo0D8B81uKKSJPCy3BCTeEscvlwljITppQEy5qc=
 github.com/tigera/calico-private/api v0.0.0-20220121180147-0389beeeb10d h1:4wHvmAEZOdA11KnS+bsTAyVH6DMcQ/C+M5BhB0vwHwU=
 github.com/tigera/calico-private/api v0.0.0-20220121180147-0389beeeb10d/go.mod h1:6qWfgULooruKiC8eoGgyRjOh0K+h/q8bc7AvdUysAUo=
 github.com/tigera/lma v0.0.0-20220114180745-11c1577ee102 h1:LoHx7JMekG5qKBgMfYn7KnB4+F3sqiJ+eQc0WWvtL5I=
