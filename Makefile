@@ -1,7 +1,7 @@
 # Copyright 2019-20 Tigera Inc. All rights reserved.
 
 PACKAGE_NAME   ?= github.com/tigera/voltron
-GO_BUILD_VER   ?= v0.63
+GO_BUILD_VER   ?= v0.65
 GIT_USE_SSH     = true
 LOCAL_CHECKS    = mod-download
 
@@ -20,10 +20,6 @@ DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
 RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
-
-# Used by Makefile.common
-LIBCALICO_REPO  = github.com/tigera/libcalico-go-private
-APISERVER_REPO  = github.com/tigera/apiserver
 
 # Mount Semaphore configuration files.
 ifdef ST_MODE
@@ -196,6 +192,11 @@ hooks_installed := $(shell ./install-git-hooks.sh)
 ###############################################################################
 # Updating pins
 ###############################################################################
+BRANCH=master
+update-calico-pin:
+	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(BRANCH))
+	$(call update_replace_pin,github.com/tigera/api,github.com/tigera/calico-private/api,$(BRANCH))
+
 # Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
 guard-ssh-forwarding-bug:
 	@if [ "$(shell uname)" = "Darwin" ]; then \
@@ -211,7 +212,7 @@ LMA_BRANCH=$(PIN_BRANCH)
 update-lma-pin:
 	$(call update_pin,$(LMA_REPO),$(LMA_REPO),$(LMA_BRANCH))
 
-update-pins: guard-ssh-forwarding-bug update-api-pin replace-libcalico-pin update-lma-pin replace-apiserver-pin
+update-pins: guard-ssh-forwarding-bug update-lma-pin update-calico-pin
 
 ##########################################################################################
 # CI/CD

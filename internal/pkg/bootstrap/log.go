@@ -7,7 +7,7 @@ package bootstrap
 import (
 	"os"
 
-	"github.com/projectcalico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 
 	log "github.com/sirupsen/logrus"
 )

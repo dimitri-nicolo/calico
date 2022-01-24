@@ -25,7 +25,7 @@ import (
 	"github.com/tigera/voltron/pkg/tunnel"
 	"github.com/tigera/voltron/pkg/tunnelmgr"
 
-	"github.com/projectcalico/apiserver/pkg/authentication"
+	"github.com/projectcalico/calico/apiserver/pkg/authentication"
 
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/rest"

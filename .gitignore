@@ -44,6 +44,7 @@ test/st-kind/test-resources/**
 
 # IDE workspace files
 .idea/
+.vscode/
 
 # common makefile
 Makefile.common*

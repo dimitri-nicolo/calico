@@ -20,7 +20,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/apiserver/pkg/authentication"
+	"github.com/projectcalico/calico/apiserver/pkg/authentication"
 
 	log "github.com/sirupsen/logrus"
 
