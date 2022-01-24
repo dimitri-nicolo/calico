@@ -2,7 +2,7 @@ ORGANIZATION=tigera
 PACKAGE_NAME?=github.com/tigera/egress-gateway
 SEMAPHORE_PROJECT_ID=$(SEMAPHORE_EGRESS_GATEWAY_PROJECT_ID)
 
-GO_BUILD_VER?=v0.63
+GO_BUILD_VER?=v0.65
 GIT_USE_SSH=true
 
 EGRESS_GATEWAY_IMAGE  ?=tigera/egress-gateway
@@ -13,7 +13,6 @@ RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
-LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 EXTRA_DOCKER_ARGS+=-e GOPRIVATE='github.com/tigera/*'
 
 ###############################################################################
