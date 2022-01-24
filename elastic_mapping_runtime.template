@@ -63,7 +63,10 @@
       /* Additional details when type is “ProcessStart”... */
       "process_start": {
         "properties": {
-	  /* Args that process was invoked with. (list of strings) */
+	  /* Args that process was invoked with.  This is a single string of space-separated args,
+	   * except that (1) a space preceded by a non-literal backslash (e.g. "\ ") indicates a
+	   * space that is part of an arg, as opposed to separating two args; (2) a pair of
+	   * backslashes ("\\") indicates a literal backslash.  */
           "args": {
             "type": "text"
           },
