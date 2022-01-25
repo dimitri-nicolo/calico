@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,28 +20,22 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
-
-	"github.com/projectcalico/calico/felix/config"
-
-	"github.com/projectcalico/calico/felix/calc"
-	"github.com/projectcalico/calico/felix/dataplane/windows/hcn"
-
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/felix/dataplane/windows/hns"
-	"github.com/projectcalico/calico/felix/dataplane/windows/vfp"
-
+	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/config"
+	felixconfig "github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/dataplane/common"
+	"github.com/projectcalico/calico/felix/dataplane/windows/hcn"
+	"github.com/projectcalico/calico/felix/dataplane/windows/hns"
 	"github.com/projectcalico/calico/felix/dataplane/windows/ipsets"
 	"github.com/projectcalico/calico/felix/dataplane/windows/policysets"
+	"github.com/projectcalico/calico/felix/dataplane/windows/vfp"
 	"github.com/projectcalico/calico/felix/jitter"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/throttle"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
-
-	felixconfig "github.com/projectcalico/calico/felix/config"
 )
 
 const (
@@ -158,9 +152,8 @@ type WindowsDataplane struct {
 	vfpInfoReader *vfp.InfoReader
 
 	// DNS policy components
-	domainInfoReader  *domainInfoReader
-	domainInfoStore   *common.DomainInfoStore
-	domainInfoChanges chan *common.DomainInfoChanged
+	domainInfoReader *domainInfoReader
+	domainInfoStore  *common.DomainInfoStore
 }
 
 const (
@@ -198,13 +191,12 @@ func NewWinDataplaneDriver(hns hns.API, config Config, stopChan chan *sync.WaitG
 	config.MaxIPSetSize = math.MaxInt64
 
 	dp := &WindowsDataplane{
-		toDataplane:       make(chan interface{}, msgPeekLimit),
-		fromDataplane:     make(chan interface{}, 100),
-		ifaceAddrUpdates:  make(chan []string, 1),
-		config:            config,
-		domainInfoChanges: make(chan *common.DomainInfoChanged, 100),
-		applyThrottle:     throttle.New(10),
-		stopChan:          stopChan,
+		toDataplane:      make(chan interface{}, msgPeekLimit),
+		fromDataplane:    make(chan interface{}, 100),
+		ifaceAddrUpdates: make(chan []string, 1),
+		config:           config,
+		applyThrottle:    throttle.New(10),
+		stopChan:         stopChan,
 	}
 
 	dp.applyThrottle.Refill() // Allow the first apply() immediately.
@@ -231,7 +223,7 @@ func NewWinDataplaneDriver(hns hns.API, config Config, stopChan chan *sync.WaitG
 	}
 
 	dp.domainInfoReader = NewDomainInfoReader(config.DNSTrustedServers, config.PktMonStartArgs)
-	dp.domainInfoStore = common.NewDomainInfoStore(dp.domainInfoChanges,
+	dp.domainInfoStore = common.NewDomainInfoStore(
 		&common.DnsConfig{
 			Collector:            config.Collector,
 			DNSCacheFile:         config.DNSCacheFile,
@@ -279,7 +271,7 @@ func (d *WindowsDataplane) Start() {
 
 	// Start DNS response capture.
 	d.domainInfoStore.Start()
-	d.domainInfoReader.Start(d.domainInfoStore.MsgChannel)
+	d.domainInfoReader.Start(d.domainInfoStore.MsgChannel())
 }
 
 // Called by someone to put a message into our channel so that the loop will pick it up
@@ -350,32 +342,9 @@ func (d *WindowsDataplane) loopUpdatingDataplane() {
 			d.dataplaneNeedsSync = true
 		case upd := <-d.ifaceAddrUpdates:
 			d.endpointMgr.OnHostAddrsUpdate(upd)
-		case domainInfoChange := <-d.domainInfoChanges:
-			// Opportunistically read and coalesce other domain change signals that are
-			// already pending on this channel.
-			domainChangeSignals := []*common.DomainInfoChanged{domainInfoChange}
-			domainsChanged := set.From(domainInfoChange.Domain)
-		domainChangeLoop:
-			for {
-				select {
-				case domainInfoChange := <-d.domainInfoChanges:
-					if !domainsChanged.Contains(domainInfoChange.Domain) {
-						domainChangeSignals = append(domainChangeSignals, domainInfoChange)
-						domainsChanged.Add(domainInfoChange.Domain)
-					}
-				default:
-					// Channel blocked so we've caught up.
-					break domainChangeLoop
-				}
-			}
-			for _, domainInfoChange = range domainChangeSignals {
-				for _, mgr := range d.allManagers {
-					if handler, ok := mgr.(common.DomainInfoChangeHandler); ok {
-						if handler.OnDomainInfoChange(domainInfoChange) {
-							d.dataplaneNeedsSync = true
-						}
-					}
-				}
+		case <-d.domainInfoStore.UpdatesReadyChannel():
+			if d.domainInfoStore.HandleUpdates() {
+				d.dataplaneNeedsSync = true
 			}
 		case <-throttleC:
 			d.applyThrottle.Refill()
@@ -434,7 +403,7 @@ func (d *WindowsDataplane) loopUpdatingDataplane() {
 }
 
 // Applies any pending changes to the dataplane by giving each of the managers a chance to
-// complete their deffered work. If the operation fails, then this will also set up a
+// complete their deferred work. If the operation fails, then this will also set up a
 // rescheduling kick so that the apply can be reattempted.
 func (d *WindowsDataplane) apply() {
 	// Unset the needs-sync flag, a rescheduling kick will reset it later if something failed
@@ -450,6 +419,9 @@ func (d *WindowsDataplane) apply() {
 			scheduleRetry = true
 		}
 	}
+
+	// Dataplane updates applied, notify the DomainInfoStore if it included any DNS updates.
+	d.domainInfoStore.UpdatesApplied()
 
 	// Set up any needed rescheduling kick.
 	if d.reschedC != nil {

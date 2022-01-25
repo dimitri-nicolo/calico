@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -59,6 +59,8 @@ var ipsetsMgrTestCases = []IPSetsMgrTestCase{
 type mockDomainStore struct {
 	mappings map[string][]string
 }
+
+func (s *mockDomainStore) RegisterHandler(_ DomainInfoChangeHandler) {}
 
 func (s *mockDomainStore) GetDomainIPs(domain string) []string {
 	// The domainStore is case insensitive.
@@ -204,11 +206,7 @@ var _ = Describe("IP Sets manager", func() {
 						domainStore.mappings = map[string][]string{
 							members[2]: domainStore.GetDomainIPs(members[2]),
 						}
-						syncNeeded := ipsetsMgr.OnDomainInfoChange(&DomainInfoChanged{
-							// The domain_info_store always returns lowercase domain names
-							Domain: strings.ToLower(members[1]),
-							Reason: "mapping expired",
-						})
+						syncNeeded := ipsetsMgr.OnDomainChange(strings.ToLower(members[1]))
 						Expect(syncNeeded).To(BeTrue())
 						err = ipsetsMgr.CompleteDeferredWork()
 						Expect(err).ToNot(HaveOccurred())

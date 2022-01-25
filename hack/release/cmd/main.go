@@ -3,8 +3,9 @@ package main
 import (
 	"flag"
 
-	"github.com/projectcalico/calico/hack/release/pkg/builder"
 	"github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/hack/release/pkg/builder"
 )
 
 var create, publish bool

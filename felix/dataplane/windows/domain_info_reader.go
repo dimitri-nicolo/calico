@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 
 package windataplane
 
@@ -23,7 +23,7 @@ type domainInfoReader struct {
 	msgChannel chan *etw.PktEvent
 
 	// Channel on which domainInfoStore receives captured DNS responses (beginning with the IP header).
-	storeMsgChannel chan common.DataWithTimestamp
+	storeMsgChannel chan<- common.DataWithTimestamp
 
 	// Trusted Servers for DNS packet.
 	trustedServers []etw.ServerPort
@@ -71,7 +71,7 @@ func NewDomainInfoReader(trustedServers []fc.ServerPort, pktMonStartArgs string)
 }
 
 // Start function starts the reader and connects it with domainInfoStore.
-func (r *domainInfoReader) Start(msgChan chan common.DataWithTimestamp) {
+func (r *domainInfoReader) Start(msgChan chan<- common.DataWithTimestamp) {
 	log.Info("Starting Windows domain info reader")
 
 	r.storeMsgChannel = msgChan

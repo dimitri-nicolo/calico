@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,6 +13,58 @@
 // limitations under the License.
 
 package common
+
+// Component interactions with the DomainInfoStore.
+//
+//  ┌─────────────────────────────────────────┐
+//  │                                         │
+//  │         DNS packet snooping             │
+//  │                               callbacks │
+//  └─┬┬──────────────────────────────────▲▲──┘
+// (1)││                               (9)││
+//    ││                                  ││
+//    ││                                  ││
+//    ││                                  ││
+//  ┌─▼▼──────────────────────────────────┴┴──┐  (5)    ┌───────────────┐      ┌──────────────┐
+//  │ MsgChan                     GetDomainIps│◄────────┤               │      │              │
+//  │                                         │◄────────┤               │ (6)  │              │
+//  │            DomainInfoStore              │         │ IPSetsManager ├─────►│    IPSets    │
+//  │                                         ├────────►│               │      │              │
+//  │            HandleUpdates UpdatesApplied ├────────►│OnDomainChange │      │ Apply        │
+//  └───────┬───────────▲─────────────▲───────┘  (4)    └───────────────┘      └──▲───────────┘
+//       (2)│        (3)│          (8)│                                        (7)│
+//          │           │             │                                           │
+//          │           │             └───────────────────────────────────────────┼────────┐
+//          │           │                                                         │        │
+//  ┌───────▼───────────┴─────────────────────────────────────────────────────────┴────────┴──┐
+//  │UpdatesReadyChan                                                                         │
+//  │                                   Dataplane loop                                        │
+//  │                                                                                         │
+//  └─────────────────────────────────────────────────────────────────────────────────────────┘
+//
+//  (1) Snooped packets are sent to the DomainInfoStore on the MsgChannel.
+//      DomainInfoStore parses message, updates cache, stores set of changed names
+//  (2) DomainInfoStore sends "update ready" tick to the dataplane.
+//  (3) Dataplane loop calls back into DomainInfoStore to handle the current set of updates.
+//  (4) During HandleUpdates(), the DomainInfoStore calls into the registered handlers (all IPSetsManagers) about each
+//      domain that has been impacted (via OnDomainChange).
+//  (5) and (6) During OnDomainChange(), the handler calls back into the DomainInfoStore for updated domain IPs and then
+//      programs IP set dataplanes.
+//  (7) Dataplane loop calls through to the IP set dataplanes to apply changes.
+//  (8) Dataplane loop calls UpdatesApplied on DomainInfoStore to notify that the last set of handled updates have now
+//      been applied to the IP set dataplanes.
+//  (9) DomainInfoStore invokes callbacks associated with the DNS messages that were just applied to the Ip set
+//      dataplanes.
+//
+// Notes:
+// - (1) and (2) are channel based communications. The UpdatesReadyChan has capacity 1, so potentially multiple
+//   DNS packets may be handled for only a single UpdatesReady tick.
+// - Steps (3)-(9) are all callback based
+// - In steps (3) - (6), if there are no changes required for the dataplane, the callbacks will be invoked immediately
+// - Callbacks (3) and (8) can occur from the main (long-lived) dataplane loop, or from the ephemeral loops that the
+//   dataplane starts up specifically for ipset updates while other updates (iptables) are happening. It is not
+//   possible for both sets of updates to be happening at the same time, and these two callbacks will never be invoked
+//   at the same time.
 
 import (
 	"bufio"
@@ -55,6 +107,8 @@ type nameData struct {
 	// Names that we should notify a "change of information" for, and whose cached IP list
 	// should be invalidated, when the info for _this_ name changes.
 	namesToNotify set.Set
+	// The revision sent to the dataplane associated with the creation or update of this nameData.
+	revision uint64
 }
 
 type ipData struct {
@@ -74,17 +128,23 @@ type DataWithTimestamp struct {
 	// We use 0 here to mean "invalid" or "unknown", as a 0 value would mean 1970,
 	// which will not occur in practice during Calico's active lifetime.
 	Timestamp uint64
+	// Optional callback for notification that the dataplane updates associated with this DNS data are programmed.
+	Callback func()
 }
 
 type DomainInfoStore struct {
+	// Handlers that we need update.
+	handlers []DomainInfoChangeHandler
+
 	// Channel that we write to when we want DNS response capture to stop.
 	stopChannel chan struct{}
 
 	// Channel on which we receive captured DNS responses (beginning with the IP header).
-	MsgChannel chan DataWithTimestamp
+	msgChannel chan DataWithTimestamp
 
-	// Channel that we write to when new information is available for a domain name.
-	domainInfoChanges chan *DomainInfoChanged
+	// Channel used to send trigger notifications to the dataplane that there are updates that can be applied to the
+	// DomainInfoChangeHandlers.
+	updatesReady chan struct{}
 
 	// Stores for the information that we glean from DNS responses.  Note: IPs are held here as
 	// strings, and also passed to the ipsets manager as strings.
@@ -132,14 +192,40 @@ type DomainInfoStore struct {
 	resetC   chan struct{}
 
 	dnsResponseDelay time.Duration
-}
 
-// Signal sent by the domain info store to the ipsets manager when the information for a given
-// domain name changes.  (i.e. when GetDomainIPs(domain) would return a different set of IP
-// addresses.)
-type DomainInfoChanged struct {
-	Domain string
-	Reason string
+	// --- Data for the current set of updates ---
+	// These are updates from new DNS packets that have not been handled by the dataplane.
+
+	// Monotonically increasing revision number used to determine what changes have and have not been applied
+	// to the dataplane. This number indicates the next revision to apply.
+	// Revisions between appliedRevision and currentRevision have been "handled" but not applied.
+	currentRevision uint64
+
+	// Set of callbacks for the current (not handled) updates.
+	callbacks []func()
+
+	// The collated set of domain name changes for the current (not handled) set of updates. These are always stored
+	// lowercase.
+	changedNames set.Set // string
+
+	// --- Data for the handled set of updates ---\
+	// These are updates that have been handled by the dataplane loop and programmed into the IP set dataplanes,
+	// but have not yet been applied to the dataplane.
+
+	// Set of callbacks for handled updates. These are callbacks for updates that have been handled but have not yet
+	// been applied to the IP set dataplanes.
+	handledCallbacks []func()
+
+	// Whether the dataplane needs a sync from the domain name updates that have been handled. This is only accessed
+	// from HandleUpdates() and UpdatesApplied() (which should not occur at the same time) - no lock is required for
+	// accessing this field.
+	needsDataplaneSync bool
+
+	// --- Data for the applied set of updates ---
+	// These are updates that are now programmed in the dataplane.
+
+	// The revision number that has been applied to the dataplane.
+	appliedRevision uint64
 }
 
 // Signal sent by timers' AfterFunc to the domain info store when a particular name -> IP or name ->
@@ -158,9 +244,8 @@ type DnsConfig struct {
 	DebugDNSResponseDelay time.Duration
 }
 
-func NewDomainInfoStore(domainInfoChanges chan *DomainInfoChanged, config *DnsConfig) *DomainInfoStore {
+func NewDomainInfoStore(config *DnsConfig) *DomainInfoStore {
 	return newDomainInfoStoreWithShims(
-		domainInfoChanges,
 		config,
 		time.AfterFunc,
 		func(expiryTime time.Time) bool {
@@ -169,14 +254,14 @@ func NewDomainInfoStore(domainInfoChanges chan *DomainInfoChanged, config *DnsCo
 }
 
 func newDomainInfoStoreWithShims(
-	domainInfoChanges chan *DomainInfoChanged,
 	config *DnsConfig,
 	makeExpiryTimer func(time.Duration, func()) *time.Timer,
 	expiryTimePassed func(time.Time) bool,
 ) *DomainInfoStore {
 	log.WithField("config", config).Info("Creating domain info store")
 	s := &DomainInfoStore{
-		domainInfoChanges:    domainInfoChanges,
+		// Updates ready channel has capacity 1 since only one notification is required at a time.
+		updatesReady:         make(chan struct{}, 1),
 		mappings:             make(map[string]*nameData),
 		reverse:              make(map[[16]byte]*ipData),
 		wildcards:            make(map[string]*regexp.Regexp),
@@ -200,9 +285,23 @@ func newDomainInfoStoreWithShims(
 		// thread can handle a burst of DNS response packets without becoming blocked by the reading
 		// thread here.  Specifically we say 1000 because that what's we use for flow logs, so we
 		// know that works; even though we probably won't need so much capacity for the DNS case.
-		MsgChannel: make(chan DataWithTimestamp, 1000),
+		msgChannel: make(chan DataWithTimestamp, 1000),
+
+		// Create an empty set of changed names.
+		changedNames: set.New(),
+
+		// Current update revision starts at 1.  0 is used to indicate no required updates.
+		currentRevision: 1,
 	}
 	return s
+}
+
+func (s *DomainInfoStore) MsgChannel() chan<- DataWithTimestamp {
+	return s.msgChannel
+}
+
+func (s *DomainInfoStore) UpdatesReadyChannel() <-chan struct{} {
+	return s.updatesReady
 }
 
 func (s *DomainInfoStore) Start() {
@@ -252,6 +351,79 @@ func (s *DomainInfoStore) OnUpdate(msg interface{}) {
 	}
 }
 
+// HandleUpdates is called after the dataplane is notified via the UpdatesReadyChannel that updates are ready to apply.
+// This calls through to the handlers to notify them of configuration changes. It is up to the dataplane, however,
+// to subsequently apply these changes and then call through to UpdatesApplied() to notify the DomainInfoStore that
+// changes associated with the pending domain updates are now applied to the dataplane.
+//
+// Note that during initial sync, HandleUpdates may be called multiple times before UpdatesApplied.
+func (s *DomainInfoStore) HandleUpdates() (needsDataplaneSync bool) {
+	// Move current data into the pending data.
+	s.mutex.Lock()
+	s.handledCallbacks = append(s.handledCallbacks, s.callbacks...)
+	s.callbacks = nil
+
+	// Increment the current revision, new entries will be added with this revision.
+	s.currentRevision++
+
+	changedNames := s.changedNames
+	s.changedNames = set.New()
+	s.mutex.Unlock()
+
+	// Call into the handlers while we are not holding the lock.  This is important because the handlers will call back
+	// into the DomainInfoStore to obtain domain->IP mapping info.
+	changedNames.Iter(func(item interface{}) error {
+		name := item.(string)
+		for ii := range s.handlers {
+			if s.handlers[ii].OnDomainChange(name) {
+				// Track in member data that the dataplane needs a sync. It is not sufficient to just use a local
+				// variable here since HandleUpdates may be called multiple times in a row before UpdatesApplied and
+				// changes pending from a previous HandleUpdates invocation may make a later invocation a no-op even
+				// though the dataplane changes still needs to be applied.
+				s.needsDataplaneSync = true
+			}
+		}
+		return nil
+	})
+
+	if !s.needsDataplaneSync {
+		// Dataplane does not need any updates, so just call through immediately to UpdatesApplied so that we don't wait
+		// unneccessarily for other updates to be applied before we invoke any callbacks.
+		s.UpdatesApplied()
+	}
+
+	return s.needsDataplaneSync
+}
+
+// UpdatesApplied is called by the dataplane when the updates associated after the last invocation of HandleUpdates have
+// been applied to the dataplane.
+func (s *DomainInfoStore) UpdatesApplied() {
+	// Dataplane updates have been applied. Invoke the pending callbacks and update the last applied revision number.
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	callbacks := s.handledCallbacks
+	s.handledCallbacks = nil
+	s.needsDataplaneSync = false
+
+	// We have applied everything that was handled, so the applied revision is up to but not including the current
+	// revision.
+	s.appliedRevision = s.currentRevision - 1
+
+	// Invoke the callbacks on another goroutine to unblock the main dataplane.
+	if len(callbacks) > 0 {
+		go func() {
+			for i := range callbacks {
+				callbacks[i]()
+			}
+		}()
+	}
+}
+
+func (s *DomainInfoStore) RegisterHandler(handler DomainInfoChangeHandler) {
+	s.handlers = append(s.handlers, handler)
+}
+
 func (s *DomainInfoStore) CompleteDeferredWork() error {
 	// Nothing to do, we don't defer any work.
 	return nil
@@ -265,7 +437,7 @@ func (s *DomainInfoStore) loop(saveTimerC, gcTimerC <-chan time.Time) {
 
 func (s *DomainInfoStore) loopIteration(saveTimerC, gcTimerC <-chan time.Time) {
 	select {
-	case msg := <-s.MsgChannel:
+	case msg := <-s.msgChannel:
 		// TODO: Test and fix handling of DNS over IPv6.  The `layers.LayerTypeIPv4`
 		// in the next line is clearly a v4 assumption, and some of the code inside
 		// `nfnetlink.SubscribeDNS` also looks v4-specific.
@@ -317,7 +489,7 @@ func (s *DomainInfoStore) loopIteration(saveTimerC, gcTimerC <-chan time.Time) {
 					log.Warning("Not logging non-IPv4 DNS packet")
 				}
 			}
-			s.processDNSPacket(dns)
+			s.processDNSPacket(dns, msg.Callback)
 		}
 	case expiry := <-s.mappingExpiryChannel:
 		s.processMappingExpiry(expiry.name, expiry.value)
@@ -332,6 +504,33 @@ func (s *DomainInfoStore) loopIteration(saveTimerC, gcTimerC <-chan time.Time) {
 	}
 }
 
+// maybeSignalUpdatesReady sends an update ready notification if required.
+func (s *DomainInfoStore) maybeSignalUpdatesReady(reason string) {
+	// Nothing to do if there are no changed names.
+	if s.changedNames.Len() == 0 {
+		log.Debug("No changed names")
+		return
+	}
+
+	// If we need to delay the response, do that now. This is just for testing purposes. Release the lock so we don't
+	// lock up the dataplane processing, but make sure we grab it again before sending the signal so that calling code
+	// can ensure the signal has been sent but not yet handled (because handling requires access to the lock).
+	if s.dnsResponseDelay != 0 {
+		log.Debugf("Delaying DNS response for domains %v name for %d millis", s.changedNames, s.dnsResponseDelay)
+		s.mutex.Unlock()
+		time.Sleep(s.dnsResponseDelay)
+		s.mutex.Lock()
+	}
+
+	// Signal updates are ready to process.
+	select {
+	case s.updatesReady <- struct{}{}:
+		log.WithField("reason", reason).Debug("Sent update ready notification")
+	default:
+		log.WithField("reason", reason).Debug("Update ready notification already pending, updates will be handled together")
+	}
+}
+
 type jsonMappingV1 struct {
 	LHS    string
 	RHS    string
@@ -340,9 +539,7 @@ type jsonMappingV1 struct {
 }
 
 func (s *DomainInfoStore) readMappings() error {
-	// This happens before the domain info store thread is started, so we don't need locking for
-	// concurrency reasons.  But we do need to lock the mutex because we'll be calling through
-	// to subroutines that assume it's locked and briefly unlock it.
+	// Lock while we populate the cache.
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -397,6 +594,7 @@ func (s *DomainInfoStore) readMappingsV1(scanner *bufio.Scanner) error {
 			log.Debugf("Ignore expired mapping %v", jsonMapping)
 		}
 	}
+	s.maybeSignalUpdatesReady("mapping loaded")
 	return scanner.Err()
 }
 
@@ -458,21 +656,59 @@ func (s *DomainInfoStore) SaveMappingsV1() error {
 	return nil
 }
 
-func (s *DomainInfoStore) processDNSPacket(dns *layers.DNS) {
+func (s *DomainInfoStore) processDNSPacket(dns *layers.DNS, callback func()) {
+	log.Debugf("DNS packet with %v answers %v additionals", len(dns.Answers), len(dns.Additionals))
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	log.Debugf("DNS packet with %v answers %v additionals", len(dns.Answers), len(dns.Additionals))
+
+	// Update our cache and collect any name updates that we need to signal. We also determine the max revision
+	// associated with these changes so that we can determine when to invoke the callbacks (if supplied).
+	var maxRevision uint64
 	for _, rec := range dns.Answers {
-		s.storeDNSRecordInfo(&rec, "answer")
+		if revision := s.storeDNSRecordInfo(&rec, "answer"); revision > maxRevision {
+			maxRevision = revision
+		}
 	}
 	for _, rec := range dns.Additionals {
-		s.storeDNSRecordInfo(&rec, "additional")
+		if msgNum := s.storeDNSRecordInfo(&rec, "additional"); msgNum > maxRevision {
+			maxRevision = msgNum
+		}
+	}
+
+	// Maybe signal an update is ready. Since we are holding the lock this is safe to do before the callback handling.
+	s.maybeSignalUpdatesReady("mapping added")
+
+	// If there is no callback supplied, just exit now.
+	if callback == nil {
+		return
+	}
+
+	// The DNS packet may have provided new information that is not yet programmed.  If so, add the callback to
+	// the set of callbacks associated with the message number. These callbacks will be invoked once the dataplane
+	// indicates the messages have been programmed. Otherwise, invoke the callback immediately.
+	//
+	// Since the message numbers are monotonic and the dataplane handles the messages in order, we use thresholds to
+	// determine which messages have been processed. Invoke the callback on a goroutine so that we are not
+	// holding the lock.
+	switch {
+	case maxRevision >= s.currentRevision:
+		// The packet contains changes that have not yet been handled, so add the callback to the active set.
+		s.callbacks = append(s.callbacks, callback)
+	case maxRevision <= s.appliedRevision:
+		// The packet only contains changes that are already programmed in the dataplane. Invoke the callback
+		// immediately.
+		go callback()
+	default:
+		// The packet has been handled, but not yet programmed, so add to the handled callbacks. This will be invoked
+		// on the next call to UpdatesApplied().
+		s.handledCallbacks = append(s.handledCallbacks, callback)
 	}
 }
 
 func (s *DomainInfoStore) processMappingExpiry(name, value string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+
 	if nameData := s.mappings[name]; nameData != nil {
 		if valueData := nameData.values[value]; (valueData != nil) && s.expiryTimePassed(valueData.expiryTime) {
 			log.Debugf("Mapping expiry for %v -> %v", name, value)
@@ -481,19 +717,21 @@ func (s *DomainInfoStore) processMappingExpiry(name, value string) {
 				s.removeIPMapping(nameData, value)
 			}
 			s.gcTrigger = true
-			s.signalDomainInfoChange(name, "mapping expired")
+			s.compileChangedNames(name)
 		} else if valueData != nil {
 			log.Debugf("Too early mapping expiry for %v -> %v", name, value)
 		} else {
 			log.Debugf("Mapping already gone for %v -> %v", name, value)
 		}
 	}
+
+	s.maybeSignalUpdatesReady("mapping expired")
 }
 
 func (s *DomainInfoStore) expireAllMappings() {
+	log.Info("Expire all mappings")
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	log.Info("Expire all mappings")
 
 	// For each mapping...
 	for name, nameData := range s.mappings {
@@ -504,11 +742,13 @@ func (s *DomainInfoStore) expireAllMappings() {
 			}
 		}
 		nameData.values = make(map[string]*valueData)
-		s.signalDomainInfoChange(name, "epoch change")
+		s.compileChangedNames(name)
 	}
 
 	// Trigger a GC to reclaim the memory that we can.
 	s.gcTrigger = true
+
+	s.maybeSignalUpdatesReady("epoch changed")
 }
 
 // Add a mapping between an IP and the nameData that directly contains the IP.
@@ -545,7 +785,7 @@ func (s *DomainInfoStore) removeIPMapping(nameData *nameData, ipStr string) {
 	}
 }
 
-func (s *DomainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, section string) {
+func (s *DomainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, section string) (revision uint64) {
 	if rec.Class != layers.DNSClassIN {
 		log.Debugf("Ignore DNS response with class %v", rec.Class)
 		return
@@ -568,7 +808,7 @@ func (s *DomainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, sect
 			rec.TTL,
 			section,
 		)
-		s.storeInfo(name, rec.IP.String(), time.Duration(rec.TTL)*time.Second, false)
+		revision = s.storeInfo(name, rec.IP.String(), time.Duration(rec.TTL)*time.Second, false)
 	case layers.DNSTypeAAAA:
 		log.Debugf("AAAA: %v -> %v with TTL %v (%v)",
 			name,
@@ -576,7 +816,7 @@ func (s *DomainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, sect
 			rec.TTL,
 			section,
 		)
-		s.storeInfo(name, rec.IP.String(), time.Duration(rec.TTL)*time.Second, false)
+		revision = s.storeInfo(name, rec.IP.String(), time.Duration(rec.TTL)*time.Second, false)
 	case layers.DNSTypeCNAME:
 		cname := strings.ToLower(string(rec.CNAME))
 		log.Debugf("CNAME: %v -> %v with TTL %v (%v)",
@@ -585,7 +825,7 @@ func (s *DomainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, sect
 			rec.TTL,
 			section,
 		)
-		s.storeInfo(name, cname, time.Duration(rec.TTL)*time.Second, true)
+		revision = s.storeInfo(name, cname, time.Duration(rec.TTL)*time.Second, true)
 	default:
 		log.Debugf("Ignore DNS response with type %v", rec.Type)
 	}
@@ -593,7 +833,7 @@ func (s *DomainInfoStore) storeDNSRecordInfo(rec *layers.DNSResourceRecord, sect
 	return
 }
 
-func (s *DomainInfoStore) storeInfo(name, value string, ttl time.Duration, isName bool) {
+func (s *DomainInfoStore) storeInfo(name, value string, ttl time.Duration, isName bool) (revision uint64) {
 	if value == "0.0.0.0" {
 		// DNS records sometimes contain 0.0.0.0, but it's not a real routable IP and we
 		// must avoid passing it on to ipsets, because ipsets complains with "ipset v6.38:
@@ -670,32 +910,13 @@ func (s *DomainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 			s.addIPMapping(s.mappings[name], value)
 		}
 
-		// Now signal that the available domain info for this name has changed.  It's
-		// important, in order to preserve the correctness of mapping entries knowing the
-		// names that they should notify for, to do this _after_ the previous block that
-		// creates a mapping entry for a CNAME value, because signalDomainInfoChange
-		// releases the mutex and so allows other goroutines to call GetDomainIPs for one of
-		// the domain names that is signaled as changed.
-		//
-		// With the ordering here:
-		// - the CNAME value mapping <entry> must exist before GetDomainIPs(<ancestor>) is
-		//   called
-		// - therefore, GetDomainIPs(<ancestor>) will update <entry>.namesToNotify so that
-		//   it includes <ancestor>
-		// - then, when further information is learned for <entry>, <ancestor> will be
-		//   signaled again.
-		//
-		// On the other hand, if we signaled before creating the CNAME value mapping
-		// <entry>, this would be possible:
-		// - GetDomainIPs(<ancestor>) is called (in response to the current signaling)
-		// - <entry> does not exist yet, so its namesToNotify is not updated
-		// - now this thread creates <entry>, with an empty set for namesToNotify
-		// - when further information is learned for <entry>, <ancestor> will not be
-		//   signaled, unless there has been a further intervening call to
-		//   GetDomainIPs(<ancestor>).  (And such a call would only happen if there was an
-		//   independent update to one of the mappings in the tree below <ancestor>, which
-		//   is unlikely.)
-		s.signalDomainInfoChange(name, "mapping added")
+		// Compile the set of changed names. The calling code will signal that the info has changed for
+		// the compiled set of names.
+		s.compileChangedNames(name)
+
+		// Set the revision for this entry.
+		s.mappings[name].revision = s.currentRevision
+		revision = s.currentRevision
 	} else {
 		newExpiryTime := time.Now().Add(ttl)
 		if newExpiryTime.After(existing.expiryTime) {
@@ -703,7 +924,12 @@ func (s *DomainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 			existing.timer = makeTimer()
 			existing.expiryTime = newExpiryTime
 		}
+
+		// Return the revision for this existing mapping.
+		revision = s.mappings[name].revision
 	}
+
+	return
 }
 
 func (s *DomainInfoStore) GetDomainIPs(domain string) []string {
@@ -807,32 +1033,17 @@ func wildcardToRegexpString(wildcard string) string {
 	return "^" + strings.Join(nonWildParts, ".*") + "$"
 }
 
-func (s *DomainInfoStore) signalDomainInfoChange(name, reason string) {
-	changedNames := set.From(name)
+func (s *DomainInfoStore) compileChangedNames(name string) {
+	s.changedNames.Add(name)
 	delete(s.resultsCache, name)
 	if nameData := s.mappings[name]; nameData != nil {
 		nameData.namesToNotify.Iter(func(item interface{}) error {
 			ancestor := item.(string)
-			changedNames.Add(ancestor)
+			s.changedNames.Add(ancestor)
 			delete(s.resultsCache, ancestor)
 			return nil
 		})
 	}
-	// Release the mutex to send change signals, so that we can't get a deadlock between this
-	// thread and the int_dataplane thread.
-	s.mutex.Unlock()
-	defer s.mutex.Lock()
-
-	if s.dnsResponseDelay != 0 {
-		log.Debugf("Delaying DNS response for domain %s name for %d millis", name, s.dnsResponseDelay)
-		time.Sleep(s.dnsResponseDelay)
-	}
-
-	changedNames.Iter(func(item interface{}) error {
-		log.Debugf("Signal domain change for %v -> %v", name, item.(string))
-		s.domainInfoChanges <- &DomainInfoChanged{Domain: item.(string), Reason: reason}
-		return nil
-	})
 }
 
 func (s *DomainInfoStore) collectGarbage() (numDeleted int) {
