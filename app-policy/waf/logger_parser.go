@@ -37,13 +37,11 @@ func ParseLog(payload string) map[string]string {
 	dictionary := make(map[string]string)
 	regex := regexp.MustCompile(`\[([^\[\]]*)]`)
 
-	submatchall := regex.FindAllString(payload, ParserMatchAll)
-	for _, element := range submatchall {
-		element = strings.Trim(element, "[")
-		element = strings.Trim(element, "]")
+	for _, groups := range regex.FindAllStringSubmatch(payload, ParserMatchAll) {
+		kv := groups[1]
 
 		// Record only entries in payload that conform to key / value.
-		splitN := strings.SplitAfterN(element, ParserDelim, NumElements)
+		splitN := strings.SplitN(kv, ParserDelim, NumElements)
 		if len(splitN) != NumElements {
 			continue
 		}
