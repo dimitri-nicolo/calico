@@ -74,25 +74,25 @@ func ExtractRulesSetFilenames() []string {
 
 		file := rulesetDirectory + filename
 		files = append(files, file)
-		log.Infof("WAF Found Rule[%d]('%s')", count, file)
+		log.Infof("WAF Found Rules File[%d]('%s')", count, file)
 		count++
 	}
 
-	log.Infof("WAF Total Core Rules Sets: %d", len(files))
+	log.Infof("WAF Total Core Rules Set files: %d", len(files))
 	return files
 }
 
 func LoadModSecurityCoreRuleSet(filenames []string) int {
 
 	size := len(filenames)
-	log.Infof("WAF Attempt load %d Core Rule Sets", size)
+	log.Infof("WAF Attempt load %d Core Rule Set files", size)
 
 	index := loadModSecurityCoreRuleSetImpl(filenames, size)
 	if index == size {
-		log.Infof("WAF Process load %d Core Rule Sets  SUCCESS", size)
+		log.Infof("WAF Process load %d Core Rule Set files  SUCCESS", size)
 	} else {
 		badFile := filenames[index]
-		log.Errorf("WAF Process load %d Core Rule Sets  FAILED!  Bad File: '%s'", size, badFile)
+		log.Errorf("WAF Process load %d Core Rule Set files  FAILED!  Bad File: '%s'", size, badFile)
 	}
 
 	return index
