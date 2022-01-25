@@ -180,6 +180,7 @@ BINDIR?=bin
 clean: clean-windows-upgrade
 	# Clean .created files which indicate images / releases have been built.
 	find . -name '.*.created*' -type f -delete
+	find . -name '.*.published*' -type f -delete
 	find . -name '*.pyc' -exec rm -f {} +
 	rm -rf .go-pkg-cache
 	rm -rf certs *.tar $(NODE_CONTAINER_BIN_DIR)
@@ -353,7 +354,7 @@ $(FELIX_GPL_SOURCE): ../go.mod
 ###############################################################################
 # FV Tests
 ###############################################################################
-K8ST_IMAGE_TARS=calico-node.tar cnx-node.tar calico-cni.tar pod2daemon.tar calicoctl.tar kube-controllers.tar
+K8ST_IMAGE_TARS=calico-node.tar calico-apiserver.tar cnx-node.tar calico-cni.tar pod2daemon.tar calicoctl.tar kube-controllers.tar
 
 ## Run the ginkgo FVs
 fv: run-k8s-apiserver
@@ -490,6 +491,10 @@ cnx-node.tar: $(NODE_CONTAINER_CREATED)
 
 calico-node.tar: cnx-node.tar
 	cp cnx-node.tar calico-node.tar
+
+calico-apiserver.tar:
+	make -C ../apiserver image
+	docker save --output $@ tigera/cnx-apiserver:latest-$(ARCH)
 
 calico-cni.tar:
 	make -C ../cni-plugin image
