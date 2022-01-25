@@ -46,12 +46,12 @@ type UIGraphView struct {
 	ExpandPorts bool `json:"expandPorts" validate:"omitempty"`
 
 	// Whether or not to automatically follow directly connected nodes.
-	FollowConnectionDirection bool `json:"followConnectionDirection" validate:"omitempty"`
+	FollowConnectionDirection bool `json:"followConnectionDirection,omitempty" validate:"omitempty"`
 
 	// Whether to split HostEndpoints, NetworkSets and Networks into separate ingress and egress nodes or to combine
 	// them. In a service-centric view, splitting these makes the graph clearer. This never splits pods which represent
 	// a true microservice which has ingress and egress connections.
-	SplitIngressEgress bool `json:"splitIngressEgress" validate:"omitempty"`
+	SplitIngressEgress bool `json:"splitIngressEgress,omitempty" validate:"omitempty"`
 
 	// The set of selectors used to aggregate hosts (Kubernetes nodes). Nodes are aggregated based on the supplied set
 	// of selectors. In the case of overlapping selectors, the order specified in the slice is the order checked and so
@@ -61,19 +61,19 @@ type UIGraphView struct {
 
 	// Layout type. Semi-arbitrary value used to specify the layout-type/algorithm. For example could specify
 	// different layout algorithms, or click-to-grid.  Mostly here for future use.
-	LayoutType string `json:"layoutType" validate:"omitempty"`
+	LayoutType string `json:"layoutType,omitempty" validate:"omitempty"`
 
 	// Positions of graph nodes.
-	Positions []Position `json:"positions" validate:"omitempty,dive"`
+	Positions []Position `json:"positions,omitempty" validate:"omitempty,dive"`
 
 	// The set of layer names that are active in this view.  Note that layers may be defined, but it is not necessary
 	// to have each layer "active". Corresponds directly to the name of the UISettings resource that contains a layer
 	// definition.
-	Layers []string `json:"layers" validate:"omitempty,dive,name"`
+	Layers []string `json:"layers,omitempty" validate:"omitempty,dive,name"`
 
 	// Graph node specific view data. This provides information about what is in focus, expanded, hidden,
 	// deemphasized etc. at a per-node level.
-	Nodes []UIGraphNodeView `json:"graphConfigurationByNode" validate:"omitempty,dive"`
+	Nodes []UIGraphNodeView `json:"nodes,omitempty" validate:"omitempty,dive"`
 }
 
 // UI screen position.
