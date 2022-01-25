@@ -110,7 +110,6 @@ clean:
 	       dist \
 	       build \
 	       fv/fv.test \
-	       $(GENERATED_FILES) \
 	       go/docs/calc.pdf \
 	       release-notes-* \
 	       fv/infrastructure/crds/ \
@@ -127,6 +126,13 @@ clean:
 	$(DOCKER_GO_BUILD) make -C $(LIBBPF_CONTAINER_PATH) clean
 	-docker rmi $(FELIX_IMAGE)-wgtool:latest-amd64
 	-docker rmi $(FELIX_IMAGE)-wgtool:latest
+
+.PHONY: clean-generated
+# Delete (checked-in) generated files.  Intentionally not part of the main clean target since these files are
+# checked in and deleting them makes the repo "dirty" as far as git is concerned.  It also breaks downstream
+# builds that import these files since they don't know to rebuild felix's generated files.
+clean-generated:
+	rm -rf $(GENERATED_FILES)
 
 ###############################################################################
 # Building the binary
