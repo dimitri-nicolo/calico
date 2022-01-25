@@ -251,6 +251,8 @@ DOCKER_RUN_RO := mkdir -p .go-pkg-cache bin $(GOMOD_CACHE) && \
 
 DOCKER_GO_BUILD := $(DOCKER_RUN) $(CALICO_BUILD)
 
+DOCKER_GO_BUILD_CGO=$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e CGO_LDFLAGS=$(CGO_LDFLAGS) $(CALICO_BUILD)
+
 ###############################################################################
 # Updating pins
 #   the repo importing this Makefile _must_ define the update-pins target
@@ -530,7 +532,7 @@ LINT_ARGS ?= --max-issues-per-linter 0 --max-same-issues 0 --timeout 8m
 
 .PHONY: golangci-lint
 golangci-lint: $(GENERATED_FILES)
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) golangci-lint run $(LINT_ARGS)'
+	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) golangci-lint run $(LINT_ARGS)'
 
 .PHONY: go-fmt goimports fix
 fix go-fmt goimports:
