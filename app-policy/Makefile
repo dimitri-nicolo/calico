@@ -149,7 +149,7 @@ $(CONTAINER_CREATED): Dockerfile.$(ARCH) bin/dikastes-$(ARCH) bin/healthz-$(ARCH
 ## Run the tests in a container. Useful for CI, Mac dev
 ut: protobuf
 	mkdir -p report
-	$(DOCKER_RUN) $(CALICO_BUILD) /bin/bash -c "go test -v $(GINKGO_ARGS) ./... | go-junit-report > ./report/tests.xml"
+	$(DOCKER_GO_BUILD_CGO) /bin/bash -c "go test -v $(GINKGO_ARGS) ./... | go-junit-report > ./report/tests.xml"
 
 ###############################################################################
 # CI
