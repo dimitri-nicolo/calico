@@ -6,6 +6,7 @@ ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_L7_COLLECTOR_PROJECT_ID)
 
 L7_COLLECTOR_IMAGE    ?=tigera/l7-collector
+ENVOY_INIT_IMAGE      ?=tigera/envoy-init
 BUILD_IMAGES          ?=$(L7_COLLECTOR_IMAGE) $(ENVOY_INIT_IMAGE)
 DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
 RELEASE_REGISTRIES    ?=quay.io
