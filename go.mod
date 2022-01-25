@@ -130,7 +130,7 @@ require (
 )
 
 replace (
-	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220124102409-abe0b331bda7
+	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220125184310-ee4c889e6d56
 	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220121224740-2fb172dbb01c
 
 	k8s.io/api => k8s.io/api v0.21.8
