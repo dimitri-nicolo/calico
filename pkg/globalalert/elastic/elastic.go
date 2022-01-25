@@ -1,4 +1,4 @@
-// Copyright 2021 Tigera Inc. All rights reserved.
+// Copyright 2021-2022 Tigera Inc. All rights reserved.
 
 package elastic
 
@@ -49,14 +49,16 @@ type Service interface {
 type service struct {
 	// esCLI is an Elasticsearch client.
 	lmaESClient lma.Client
+	// http client for making calls to the vulnerability api.
+	httpClient *http.Client
 	// clusterName is name of the cluster.
 	clusterName string
 	// sourceIndexName is name of the Elasticsearch index to query data from.
 	sourceIndexName string
 	// query has the entire Elasticsearch query based on GlobalAlert fields.
-	query map[string]interface{}
+	query JsonObject
 	// aggs has the composite aggregation query, this will be altered and reused during pagination with `after` key.
-	aggs map[string]interface{}
+	aggs JsonObject
 	// globalAlert has the copy of GlobalAlert, it is updated periodically when Elasticsearch is queried for alert.
 	globalAlert *v3.GlobalAlert
 	// bulkFlushErrored is true if flushing to Elasticsearch encounters an error, this is reset every time the Elasticsearch is queried.
@@ -66,12 +68,24 @@ type service struct {
 // NewService builds Elasticsearch query that will be used periodically to query Elasticsearch data.
 func NewService(lmaESClient lma.Client, clusterName string, alert *v3.GlobalAlert) (Service, error) {
 	e := &service{
-		lmaESClient: lmaESClient,
 		clusterName: clusterName,
+		lmaESClient: lmaESClient,
 	}
-	e.buildIndexName(alert)
 
-	err := e.buildEsQuery(alert)
+	// We query the base API for the vulnerability dataset and ES for others.
+	var err error
+	if alert.Spec.DataSet == v3.GlobalAlertDataSetVulnerability {
+		cfg, cfgErr := getImageAssuranceTLSConfig()
+		if cfgErr != nil {
+			return nil, cfgErr
+		}
+		e.httpClient = &http.Client{Transport: &http.Transport{TLSClientConfig: cfg}}
+		err = e.buildVulnerabilityQuery(alert)
+	} else {
+		e.buildIndexName(alert)
+		err = e.buildEsQuery(alert)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -97,6 +111,39 @@ func NewService(lmaESClient lma.Client, clusterName string, alert *v3.GlobalAler
 	}
 
 	return e, nil
+}
+
+// buildVulnerabilityQuery builds Vulnerability API query parameters from the fields in GlobalAlert spec.
+func (e *service) buildVulnerabilityQuery(alert *v3.GlobalAlert) error {
+	res, err := e.convertAlertSpecQueryToVulnerabilityQueryParameters(alert)
+	if err != nil {
+		return err
+	}
+	e.query = res
+
+	return nil
+}
+
+// convertAlertSpecQueryToVulnerabilityQueryParameters converts GlobalAlert's spec.query to Vulnerability API query parameters.
+func (e *service) convertAlertSpecQueryToVulnerabilityQueryParameters(alert *v3.GlobalAlert) (JsonObject, error) {
+	q, err := query.ParseQuery(e.substituteVariables((alert)))
+	if err != nil {
+		log.WithError(err).Errorf("failed to parse spec.query in %s", alert.Name)
+		return nil, err
+	}
+
+	err = query.Validate(q, query.IsValidVulnerabilityAtom)
+	if err != nil {
+		log.WithError(err).Errorf("failed to validate spec.query in %s", alert.Name)
+		return nil, err
+	}
+
+	res := JsonObject{}
+	for _, a := range q.Atoms() {
+		res[a.Key] = a.Value
+	}
+
+	return res, nil
 }
 
 // buildIndexName updates the events index name and name of the source index to query.
@@ -264,6 +311,8 @@ func (e *service) buildLookBackRange(alert *v3.GlobalAlert) (JsonObject, error) 
 		timeField = "@timestamp"
 	case v3.GlobalAlertDataSetAudit:
 		timeField = "requestReceivedTimestamp"
+	case v3.GlobalAlertDataSetVulnerability:
+		timeField = "start_date"
 	default:
 		return nil, fmt.Errorf("unknown dataset %s in GlobalAlert %s", alert.Spec.DataSet, alert.Name)
 	}
@@ -273,6 +322,14 @@ func (e *service) buildLookBackRange(alert *v3.GlobalAlert) (JsonObject, error) 
 		lookback = DefaultLookback
 	} else {
 		lookback = alert.Spec.Lookback.Duration
+	}
+
+	if alert.Spec.DataSet == v3.GlobalAlertDataSetVulnerability {
+		now := time.Now()
+		return JsonObject{
+			timeField:  now.Add(-lookback).Unix(),
+			"end_date": now.Unix(),
+		}, nil
 	}
 
 	return JsonObject{
@@ -319,12 +376,14 @@ func (e *service) ExecuteAlert(alert *v3.GlobalAlert) v3.GlobalAlertStatus {
 
 	e.globalAlert = alert
 	e.bulkFlushErrored = false
-	if e.globalAlert.Spec.AggregateBy != nil {
-		e.executeCompositeQuery()
+	if e.globalAlert.Spec.DataSet == v3.GlobalAlertDataSetVulnerability {
+		e.executeVulnerabilityQuery()
+	} else if e.globalAlert.Spec.AggregateBy != nil {
+		e.executeEsCompositeQuery()
 	} else if e.globalAlert.Spec.Metric == "" {
-		e.executeQueryWithScroll()
+		e.executeEsQueryWithScroll()
 	} else if e.globalAlert.Spec.Metric != "" {
-		e.executeQuery()
+		e.executeEsQuery()
 	} else {
 		log.Errorf("failed to query elasticsearch for GlobalAlert %s", e.globalAlert.Name)
 	}
@@ -332,12 +391,12 @@ func (e *service) ExecuteAlert(alert *v3.GlobalAlert) v3.GlobalAlertStatus {
 	return e.globalAlert.Status
 }
 
-// executeCompositeQuery executes the composite aggregation Elasticsearch query,
+// executeEsCompositeQuery executes the composite aggregation Elasticsearch query,
 // if resulting data has after_key set, query Elasticsearch again by setting the received after_key to get remaining aggregation buckets.
 // Maximum number of buckets retrieved is based on AggregationBucketSize, if there are more buckets left it logs warning.
 // For each bucket retrieved, verifies the values against the metrics in GlobalAlert and creates a document in events index if alert conditions are satisfied.
 // It sets and returns a GlobalAlert status with the last executed query time, last time an event was generated, health status and error conditions if unhealthy.
-func (e *service) executeCompositeQuery() {
+func (e *service) executeEsCompositeQuery() {
 	query, err := maputil.Copy(e.query)
 	if err != nil {
 		log.WithError(err).Errorf("failed to copy Elasticsearch query for GlobalAlert %s", e.globalAlert.Name)
@@ -448,9 +507,9 @@ func (e *service) executeCompositeQuery() {
 	e.globalAlert.Status.ErrorConditions = nil
 }
 
-// executeQueryWithScroll executes the Elasticsearch query using scroll and for each document in the search result adds a document into events index.
+// executeEsQueryWithScroll executes the Elasticsearch query using scroll and for each document in the search result adds a document into events index.
 // It sets and returns a GlobalAlert status with the last executed query time, last time an event was generated, health status and error conditions if unhealthy.
-func (e *service) executeQueryWithScroll() {
+func (e *service) executeEsQueryWithScroll() {
 	scroll := e.lmaESClient.Backend().Scroll(e.sourceIndexName).Body(e.query).Size(PaginationSize)
 	for {
 		results, err := scroll.Do(context.Background())
@@ -487,9 +546,9 @@ func (e *service) executeQueryWithScroll() {
 	}
 }
 
-// executeQuery execute the Elasticsearch query, adds a document into events index is query result satisfies alert conditions.
+// executeEsQuery execute the Elasticsearch query, adds a document into events index is query result satisfies alert conditions.
 // It sets and returns a GlobalAlert status with the last executed query time, last time an event was generated, health status and error conditions if unhealthy.
-func (e *service) executeQuery() {
+func (e *service) executeEsQuery() {
 	result, err := e.lmaESClient.Backend().Search().Index(e.sourceIndexName).Source(e.query).Do(context.Background())
 	e.globalAlert.Status.LastExecuted = &metav1.Time{Time: time.Now()}
 
@@ -535,12 +594,96 @@ func (e *service) executeQuery() {
 			return
 		}
 		e.globalAlert.Status.LastEvent = &metav1.Time{Time: time.Now()}
-		e.globalAlert.Status.Healthy = true
-		e.globalAlert.Status.ErrorConditions = nil
 		e.lmaESClient.BulkProcessorFlush()
+	}
+
+	if e.bulkFlushErrored {
+		return
+	}
+	e.globalAlert.Status.Healthy = true
+	e.globalAlert.Status.ErrorConditions = nil
+}
+
+func (e *service) executeVulnerabilityQuery() {
+	e.globalAlert.Status.LastExecuted = &metav1.Time{Time: time.Now()}
+
+	if lookBackRange, err := e.buildLookBackRange(e.globalAlert); err != nil {
+		return
+	} else {
+		for k, v := range lookBackRange {
+			e.query[k] = v
+		}
+	}
+
+	params := make(VulnerabilityQueryParameterMap)
+	for k, v := range e.query {
+		switch v := v.(type) {
+		case string:
+			params[k] = v
+		case int64:
+			params[k] = strconv.FormatInt(v, 10)
+		default:
+			log.Warnf("invalid image assurance query parameter type for %s=%v", k, v)
+		}
+	}
+
+	events, err := queryVulnerabilityDataset(e.httpClient, params)
+	if err != nil {
+		log.WithError(err).Error("failed to query image assurance API")
+		e.globalAlert.Status.Healthy = false
+		e.globalAlert.Status.ErrorConditions = appendError(e.globalAlert.Status.ErrorConditions, v3.ErrorCondition{Message: err.Error()})
 		return
 	}
 
+	switch e.globalAlert.Spec.Metric {
+	case v3.GlobalAlertMetricCount:
+		if compare(float64(len(events)), e.globalAlert.Spec.Threshold, e.globalAlert.Spec.Condition) {
+			doc := e.buildEventsIndexDoc(JsonObject{"count": len(events)})
+			if err := e.lmaESClient.PutBulkSecurityEvent(doc); err != nil {
+				log.WithError(err).Error("failed to add events to bulk processor")
+				e.globalAlert.Status.Healthy = false
+				e.globalAlert.Status.ErrorConditions = appendError(e.globalAlert.Status.ErrorConditions, v3.ErrorCondition{Message: err.Error()})
+				return
+			}
+		}
+	case v3.GlobalAlertMetricMax:
+		field := e.globalAlert.Spec.Field
+		for _, event := range events {
+			v, ok := event[field]
+			if !ok {
+				log.Warnf("field %s is not found in response; skipping", field)
+				continue
+			}
+
+			val, ok := v.(float64)
+			if !ok {
+				log.Warnf("failed to convert %s: %v to float64", field, v)
+				continue
+			}
+
+			if compare(val, e.globalAlert.Spec.Threshold, e.globalAlert.Spec.Condition) {
+				doc := e.buildEventsIndexDoc(event)
+				if err := e.lmaESClient.PutBulkSecurityEvent(doc); err != nil {
+					log.WithError(err).Error("failed to add events to bulk processor")
+					e.setErrorAndFlush(v3.ErrorCondition{Message: err.Error()})
+					return
+				}
+				e.globalAlert.Status.LastEvent = &metav1.Time{Time: time.Now()}
+			}
+		}
+	default:
+		for _, event := range events {
+			doc := e.buildEventsIndexDoc(event)
+			if err := e.lmaESClient.PutBulkSecurityEvent(doc); err != nil {
+				log.WithError(err).Error("failed to add events to bulk processor")
+				e.setErrorAndFlush(v3.ErrorCondition{Message: err.Error()})
+				return
+			}
+			e.globalAlert.Status.LastEvent = &metav1.Time{Time: time.Now()}
+		}
+	}
+
+	e.lmaESClient.BulkProcessorFlush()
 	if e.bulkFlushErrored {
 		return
 	}
@@ -570,6 +713,7 @@ func (e *service) buildEventsIndexDoc(record JsonObject) lmaAPI.EventsData {
 	return eventData
 }
 
+// substituteVariables finds variables in the query string and replace them with values from GlobalAlertSpec.Substitutions.
 func (e *service) substituteVariables(alert *v3.GlobalAlert) string {
 	out := alert.Spec.Query
 	variables, err := extractVariablesFromTemplate(out)
@@ -670,6 +814,9 @@ func extractEventData(record JsonObject) lmaAPI.EventsData {
 		e.DestNameAggr = val
 	}
 	if val, ok := record["host"].(string); ok {
+		e.Host = val
+	}
+	if val, ok := record["host.keyword"].(string); ok {
 		e.Host = val
 	}
 

@@ -96,7 +96,7 @@ build: $(BUILD_IMAGES)
 controller: $(BINDIR)/controller
 
 $(BINDIR)/controller: $(BINDIR)/controller-amd64
-	cd $(BINDIR) && (rm controller || ln -s -T controller-$(ARCH) controller)
+	cd $(BINDIR) && ln -sf controller-$(ARCH) controller
 
 $(BINDIR)/controller-$(ARCH): $(GO_FILES)
 ifndef RELEASE_BUILD
@@ -116,7 +116,7 @@ endif
 healthz: $(BINDIR)/healthz
 
 $(BINDIR)/healthz: $(BINDIR)/healthz-amd64
-	cd $(BINDIR) && (rm healthz || ln -s -T healthz-$(ARCH) healthz)
+	cd $(BINDIR) && ln -sf healthz-$(ARCH) healthz
 
 $(BINDIR)/healthz-$(ARCH): $(GO_FILES)
 ifndef RELEASE_BUILD
