@@ -9,6 +9,8 @@ import (
 const testCoreRulesetDirectory = "test_files/core-rules"
 const testCustomRulesetDirectory = "test_files/custom-rules"
 const testDataRulesetDirectory = "test_files/data-rules"
+const testErrorRulesetDirectory = "test_files/error-rules"
+const testInvalidRulesetDirectory = "test_files/invalid-rules"
 
 func TestInitializeModSecurity(t *testing.T) {
 
@@ -77,6 +79,21 @@ func TestExtractRulesSetFilenamesData(t *testing.T) {
 	}
 }
 
+func TestExtractRulesSetFilenamesInvalid(t *testing.T) {
+
+	InitializeModSecurity()
+	DefineRulesSetDirectory(testInvalidRulesetDirectory)
+
+	actualFilenames := ExtractRulesSetFilenames()
+
+	expect := 0
+	actual := len(actualFilenames)
+
+	if expect != actual {
+		t.Errorf("Expect: %d Actual: %d", expect, actual)
+	}
+}
+
 func TestLoadModSecurityCoreRuleSetCore(t *testing.T) {
 
 	InitializeModSecurity()
@@ -130,6 +147,8 @@ func TestLoadModSecurityCoreRuleSetDataDirectory(t *testing.T) {
 func TestLoadModSecurityCoreRuleSetErrorDirectory(t *testing.T) {
 
 	InitializeModSecurity()
+	DefineRulesSetDirectory(testErrorRulesetDirectory)
+
 	filenames := []string{
 		"test_files/error-rules/REQUEST-941-APPLICATION-ATTACK-XSS.conf",
 		"test_files/error-rules/REQUEST-942-APPLICATION-ATTACK-SQLI.conf",

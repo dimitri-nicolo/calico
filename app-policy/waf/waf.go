@@ -49,7 +49,10 @@ func ExtractRulesSetFilenames() []string {
 
 	// Read all core rule set file names from rules directory.
 	var files []string
-	items, _ := ioutil.ReadDir(rulesetDirectory)
+	items, err := ioutil.ReadDir(rulesetDirectory)
+	if err != nil {
+		log.Errorf("WAF Core Rules Set directory: '%s' does not exist!", rulesetDirectory)
+	}
 
 	// Sort files descending to ensure lower cased files like crs-setup.conf are loaded first.
 	// This is a requirement for Core Rules Set and REQUEST-901-INITIALIZATION.conf bootstrap.
