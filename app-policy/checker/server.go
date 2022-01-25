@@ -125,6 +125,10 @@ func wafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, cl
 	return detection
 }
 
+// splitInput: split input based on delimiter specified into 2x components [left and right].
+// if input cannot be split into 2x components based on delimiter then use default values specified.
+// input example: "HTTP/1.1"
+// output return: "HTTP and "1.1"
 func splitInput(input, delim, defaultLeft, defaultRight string) (actualLeft, actualRight string) {
 	splitN := strings.SplitN(input, delim, 2)
 	length := len(splitN)
