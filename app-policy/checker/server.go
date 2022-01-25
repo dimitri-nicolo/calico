@@ -81,7 +81,7 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 	// WAF ModSecurity Process Http Request.
 	detection := wafProcessHttpRequest(reqPath, reqMethod, reqProtocol, reqSourceHost, reqSourcePort, reqDestinationHost, reqDestinationPort)
 	if detection > 0 {
-		log.Errorf("WAF Process Http Request URL '%s' check FAILED!", reqPath)
+		log.Errorf("WAF Process Http Request URL '%s' WAF rules rejected HTTP request!", reqPath)
 		resp.Status.Code = PERMISSION_DENIED
 		return &resp, nil
 	}
