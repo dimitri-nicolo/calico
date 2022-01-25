@@ -218,7 +218,6 @@ func GetL3FlowData(
 
 	addFlows := func(dgd *destinationGroupData, lastDestGp *FlowEndpoint) {
 		fs = append(fs, dgd.getFlows(lastDestGp)...)
-		dgd = nil
 		progress.SetAggregated(len(fs))
 	}
 
@@ -303,6 +302,7 @@ func GetL3FlowData(
 		// calculate the final flows.
 		if dgd != nil && (destGp == nil || lastDestGp == nil || *destGp != *lastDestGp) {
 			addFlows(dgd, lastDestGp)
+			dgd = nil
 		}
 
 		// Determine the process info if available in the logs.
