@@ -7,7 +7,7 @@ require (
 	github.com/onsi/gomega v1.15.0
 	github.com/projectcalico/calico v3.21.2+incompatible
 	github.com/sirupsen/logrus v1.8.1
-	github.com/tigera/lma v0.0.0-20220114180745-11c1577ee102
+	github.com/tigera/lma v0.0.0-20220124214422-3b780f23484c
 )
 
 require (
@@ -50,6 +50,7 @@ require (
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/gnostic v0.5.4 // indirect
+	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/huandu/xstrings v1.2.0 // indirect
 	github.com/imdario/mergo v0.3.11 // indirect
@@ -118,8 +119,8 @@ require (
 )
 
 replace (
-	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220124102409-abe0b331bda7
-	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220124102409-abe0b331bda7
+	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220124232538-3c5d5af7865a
+	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220124232538-3c5d5af7865a
 
 	google.golang.org/grpc => google.golang.org/grpc v1.29.1
 
