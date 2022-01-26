@@ -24,6 +24,8 @@ var _ = testutils.E2eDatastoreDescribe("UISettings tests", testutils.DatastoreAl
 	ctx := context.Background()
 	name1 := "group1.uisettings-1"
 	name2 := "group2.uisettings-2"
+	TRUE := true
+	FALSE := false
 
 	namedselector1 := []apiv3.NamedSelector{
 		{
@@ -43,13 +45,13 @@ var _ = testutils.E2eDatastoreDescribe("UISettings tests", testutils.DatastoreAl
 				Name:      "eg1",
 				Namespace: "nseg1",
 			},
-			InFocus:       true,
-			Expanded:      true,
-			FollowIngress: true,
-			FollowEgress:  true,
-			Deemphasize:   true,
-			Hide:          true,
-			HideUnrelated: true,
+			InFocus:       &TRUE,
+			Expanded:      &TRUE,
+			FollowIngress: &TRUE,
+			FollowEgress:  &TRUE,
+			Deemphasize:   &TRUE,
+			Hide:          &TRUE,
+			HideUnrelated: &TRUE,
 		}, {
 			UIGraphNode: apiv3.UIGraphNode{
 				ID:        "ideg2",
@@ -78,9 +80,9 @@ var _ = testutils.E2eDatastoreDescribe("UISettings tests", testutils.DatastoreAl
 	}
 
 	uigraphview1 := &apiv3.UIGraphView{
-		ExpandPorts:               true,
-		FollowConnectionDirection: false,
-		SplitIngressEgress:        true,
+		ExpandPorts:               &TRUE,
+		FollowConnectionDirection: &FALSE,
+		SplitIngressEgress:        &TRUE,
 		HostAggregationSelectors:  namedselector1,
 		LayoutType:                "standard",
 		Positions:                 position1,
