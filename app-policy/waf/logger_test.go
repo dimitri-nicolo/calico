@@ -1,3 +1,5 @@
+// Copyright (c) 2018-2022 Tigera, Inc. All rights reserved.
+
 package waf_test
 
 import (
