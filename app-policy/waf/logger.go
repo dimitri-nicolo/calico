@@ -3,6 +3,7 @@
 package waf
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -25,7 +26,7 @@ func init() {
 
 	Logger = *logrus.New()
 	Logger.Level = logrus.WarnLevel
-	Logger.Formatter = newRateLimitedFormatter(
+	Logger.Formatter = NewRateLimitedFormatter(
 		&logrus.JSONFormatter{
 			TimestampFormat: time.RFC3339Nano,
 			FieldMap: logrus.FieldMap{
@@ -51,31 +52,33 @@ func init() {
 	Logger.SetOutput(os.Stdout)
 }
 
-func newRateLimitedFormatter(formatter logrus.Formatter, logCount int, timeUnit time.Duration) logrus.Formatter {
+func NewRateLimitedFormatter(formatter logrus.Formatter, logCount uint, timeUnit time.Duration) logrus.Formatter {
 	limiter := new(rateLimitedFormatter)
-	limiter.formatter = formatter
-	limiter.queueSize = make(chan bool, logCount)
+	limiter.queue = make(chan bool, logCount)
+	limiter.queueSize = logCount
 	limiter.queueTime = timeUnit
+	limiter.formatter = formatter
 	return limiter
 }
 
 type rateLimitedFormatter struct {
-	formatter logrus.Formatter
-	queueSize chan bool
+	queue     chan bool
+	queueSize uint
 	queueTime time.Duration
+	formatter logrus.Formatter
 }
 
 func (r *rateLimitedFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	select {
-	case r.queueSize <- true:
+	case r.queue <- true:
 		go func() {
 			<-time.NewTimer(r.queueTime).C
-			<-r.queueSize
+			<-r.queue
 		}()
 		return r.formatter.Format(entry)
 	default:
-		// exceeding set limits (# log entries / time period / per node)
-		// will drop log entries; this is to prevent Elasticsearch flooding by WAF
-		return nil, nil
+		// exceeding set limits (# log entries / time period / per node) will drop log entries
+		// this is to prevent WAF from flooding Elasticsearch
+		return nil, fmt.Errorf("reached log output limiting rate of %d per %s", r.queueSize, r.queueTime)
 	}
 }
