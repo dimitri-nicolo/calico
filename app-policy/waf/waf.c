@@ -13,18 +13,12 @@ RulesSet *rules = NULL;
 // Private helper function to initialize ModSecurity.
 static void initializeModSecurityImpl();
 
-// ModSecurity logging callback infrastructure APIs.
-void InvokeModSecurityLoggingCallback( ModSecurityLoggingCallbackFunctionPointer func, char *payload )
-{
-    // Invoke Golang callback with ModSecurity logging payload i.e. C => Go code invocation.
-    func( payload );
-}
 // Function prototype must match modsecurity.cc ModSecLogCb callback signature.
 void CModSecurityLoggingCallback( void *referenceAPI, const void *ruleMessage )
 {
     // Remove constness and coerce to char* to be compatible with Golang API.
     char *payload = (char *)ruleMessage;
-    InvokeModSecurityLoggingCallback( &GoModSecurityLoggingCallback, payload );
+    GoModSecurityLoggingCallback( payload );
 }
 
 // General public APIs.
