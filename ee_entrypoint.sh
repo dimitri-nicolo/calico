@@ -77,6 +77,10 @@ sed -i 's|"number_of_replicas": *[0-9]\+|"number_of_replicas": '"$ELASTIC_AUDIT_
 sed -i 's|"number_of_shards": *[0-9]\+|"number_of_shards": '"$ELASTIC_BGP_INDEX_SHARDS"'|g' ${ROOT_DIR}/fluentd/etc/elastic_mapping_bgp.template
 sed -i 's|"number_of_replicas": *[0-9]\+|"number_of_replicas": '"$ELASTIC_BGP_INDEX_REPLICAS"'|g' ${ROOT_DIR}/fluentd/etc/elastic_mapping_bgp.template
 
+# Set the number of shards and replicas for index tigera_secure_ee_waf
+sed -i 's|"number_of_shards": *[0-9]\+|"number_of_shards": '"$ELASTIC_WAF_INDEX_SHARDS"'|g' ${ROOT_DIR}/fluentd/etc/elastic_mapping_waf.template
+sed -i 's|"number_of_replicas": *[0-9]\+|"number_of_replicas": '"$ELASTIC_WAF_INDEX_REPLICAS"'|g' ${ROOT_DIR}/fluentd/etc/elastic_mapping_waf.template
+
 # Set the number of shards and replicas for index tigera_secure_ee_l7
 sed -i 's|"number_of_shards": *[0-9]\+|"number_of_shards": '"$ELASTIC_L7_INDEX_SHARDS"'|g' ${ROOT_DIR}/fluentd/etc/elastic_mapping_l7.template
 sed -i 's|"number_of_replicas": *[0-9]\+|"number_of_replicas": '"$ELASTIC_L7_INDEX_REPLICAS"'|g' ${ROOT_DIR}/fluentd/etc/elastic_mapping_l7.template
@@ -99,6 +103,12 @@ fi
 # Append additional filter blocks to the fluentd config if provided.
 if [ "${FLUENTD_DNS_FILTERS}" == "true" ]; then
   cat ${ROOT_DIR}/etc/fluentd/dns-filters.conf >> ${ROOT_DIR}/fluentd/etc/fluent.conf
+  echo >> ${ROOT_DIR}/fluentd/etc/fluent.conf
+fi
+
+# Append additional filter blocks to the fluentd config if provided.
+if [ "${FLUENTD_WAF_FILTERS}" == "true" ]; then
+  cat ${ROOT_DIR}/etc/fluentd/waf-filters.conf >> ${ROOT_DIR}/fluentd/etc/fluent.conf
   echo >> ${ROOT_DIR}/fluentd/etc/fluent.conf
 fi
 
@@ -142,9 +152,12 @@ fi
 if [ -z ${DISABLE_ES_RUNTIME_LOG} ] || [ "${DISABLE_ES_RUNTIME_LOG}" == "false" ]; then
   cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-runtime.conf ${ROOT_DIR}/fluentd/etc/output_runtime/out-es.conf
 fi
+if [ -z ${DISABLE_ES_WAF_LOG} ] || [ "${DISABLE_ES_WAF_LOG}" == "false" ]; then
+  cp ${ROOT_DIR}/fluentd/etc/outputs/out-es-waf.conf ${ROOT_DIR}/fluentd/etc/output_waf/out-es.conf
+fi
 # Check if we should strip out the secure settings from the configuration file.
 if [ -z ${FLUENTD_ES_SECURE} ] || [ "${FLUENTD_ES_SECURE}" == "false" ]; then
-  for x in flows dns tsee_audit kube_audit bgp l7 runtime; do
+  for x in flows dns tsee_audit kube_audit bgp l7 runtime waf; do
     remove_secure_es_conf $x
   done
 fi
@@ -179,6 +192,12 @@ fi
 # Include output destination for DNS logs when (1) forwarding to ES is not disabled or (2) one of the other destinations for DNS is turned on.
 if [ -z ${DISABLE_ES_DNS_LOG} ] || [ "${DISABLE_ES_DNS_LOG}" == "false" ] || [ "${SYSLOG_DNS_LOG}" == "true" ] || [ "${SPLUNK_DNS_LOG}" == "true" ] || [ "${SUMO_DNS_LOG}" == "true" ] || [ "${S3_STORAGE}" == "true" ]; then
   cat ${ROOT_DIR}/fluentd/etc/output_match/dns.conf >> ${ROOT_DIR}/fluentd/etc/fluent.conf
+  echo >> ${ROOT_DIR}/fluentd/etc/fluent.conf
+fi
+
+# Include output destination for WAF logs when (1) forwarding to ES is not disabled or (2) one of the other destinations for WAF is turned on.
+if [ -z ${DISABLE_ES_WAF_LOG} ] || [ "${DISABLE_ES_WAF_LOG}" == "false" ] || [ "${SYSLOG_WAF_LOG}" == "true" ] || [ "${SPLUNK_WAF_LOG}" == "true" ] || [ "${SUMO_WAF_LOG}" == "true" ] || [ "${S3_STORAGE}" == "true" ]; then
+  cat ${ROOT_DIR}/fluentd/etc/output_match/waf.conf >> ${ROOT_DIR}/fluentd/etc/fluent.conf
   echo >> ${ROOT_DIR}/fluentd/etc/fluent.conf
 fi
 
