@@ -54,6 +54,7 @@ const char* LoadModSecurityCoreRuleSet( char *file )
 
 int ProcessHttpRequest( char *id, char *uri, char *http_method, char *http_protocol, char *http_version, char *client_host, int client_port, char *server_host, int server_port )
 {
+    int detection = 0;
     if ( modsec == NULL )
     {
         initializeModSecurityImpl();
@@ -71,7 +72,15 @@ int ProcessHttpRequest( char *id, char *uri, char *http_method, char *http_proto
     intervention.url = NULL;
     intervention.log = NULL;
     intervention.disruptive = 0;
-    return msc_intervention( transaction, &intervention );
+
+    detection = msc_intervention( transaction, &intervention );
+    if ( transaction != NULL )
+    {
+        free( transaction );
+        transaction = NULL;
+    }
+
+    return detection;
 }
 
 void CleanupModSecurity()
