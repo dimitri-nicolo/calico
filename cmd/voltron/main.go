@@ -90,6 +90,17 @@ func main() {
 			kibanaURL.Hostname(): kibanaURL.Host, // Host includes the port, Hostname does not
 		}
 
+		if cfg.EnableImageAssurance && cfg.ImageAssuranceEndpoint != "" && cfg.ImageAssuranceCABundlePath != "" {
+			bastURL, err := url.Parse(cfg.ImageAssuranceEndpoint)
+			if err != nil {
+				log.WithError(err).Fatalf("failed to parse Bast API endpoint %s", cfg.KibanaEndpoint)
+			}
+
+			sniServiceMap[bastURL.Hostname()] = bastURL.Host
+		}
+
+		log.WithField("map", sniServiceMap).Info("SNI map")
+
 		opts = append(opts,
 			server.WithInternalCredFiles(cfg.InternalHTTPSCert, cfg.InternalHTTPSKey),
 			server.WithPublicAddr(cfg.PublicIP),
