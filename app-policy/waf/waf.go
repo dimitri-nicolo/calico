@@ -85,30 +85,45 @@ func ExtractRulesSetFilenames() []string {
 func LoadModSecurityCoreRuleSet(filenames []string) int {
 
 	size := len(filenames)
+	load := 0
+
 	log.Infof("WAF Attempt load %d Core Rule Set files", size)
-
-	index := loadModSecurityCoreRuleSetImpl(filenames, size)
-	if index == size {
-		log.Infof("WAF Process load %d Core Rule Set files  SUCCESS", size)
-	} else {
-		badFile := filenames[index]
-		log.Errorf("WAF Process load %d Core Rule Set files  FAILED!  Bad File: '%s'", size, badFile)
+	for _, filename := range filenames {
+		success := loadModSecurityCoreRuleSetImpl(filename)
+		if success {
+			load++
+		}
 	}
 
-	return index
+	log.Infof("WAF Process load %d Core Rule Set files  SUCCESS", load)
+	if size != load {
+		log.Infof("WAF Process load %d Core Rule Set files  FAILURE", size-load)
+	}
+
+	return load
 }
-func loadModSecurityCoreRuleSetImpl(filenames []string, size int) int {
+func loadModSecurityCoreRuleSetImpl(filename string) bool {
 
-	// Transfer core rule set file names to WAF wrapper code.
-	csize := C.int(size)
-	carray := C.makeCharArray(csize)
-	defer C.freeCharArray(carray, csize)
-	for index, filename := range filenames {
-		C.setArrayString(carray, C.CString(filename), C.int(index))
+	// Assume core rule set file loads OK.
+	success := true
+
+	Cfilename := C.CString(filename)
+	defer C.free(unsafe.Pointer(Cfilename))
+
+	// Attempt to load core rule set file;
+	// any error generated from ModSec will be returned directly.
+	Cpayload := C.LoadModSecurityCoreRuleSet(Cfilename)
+	if Cpayload != nil {
+		errStr := C.GoString(Cpayload)
+		C.free(unsafe.Pointer(Cpayload))
+
+		if len(errStr) > 0 {
+			log.Errorf("WAF Error attempt load file '%s' => '%v'", filename, errStr)
+			success = false
+		}
 	}
 
-	// Finally, load ModSecurity core rule set from WAF wrapper code.
-	return int(C.LoadModSecurityCoreRuleSet(carray, csize))
+	return success
 }
 
 func GenerateModSecurityID() string {

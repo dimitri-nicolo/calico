@@ -154,7 +154,7 @@ func TestLoadModSecurityCoreRuleSetErrorDirectory(t *testing.T) {
 		"test_files/error-rules/REQUEST-942-APPLICATION-ATTACK-SQLI.conf",
 	}
 
-	expect := 0
+	expect := 1
 	actual := LoadModSecurityCoreRuleSet(filenames)
 
 	if expect != actual {
