@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"k8s.io/apimachinery/pkg/api/errors"
+
 	"k8s.io/apimachinery/pkg/api/meta"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -104,12 +106,17 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, error) {
 }
 
 func (r *REST) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
-	groupName, err := util.GetUISettingsGroupNameFromSelector(options)
+	groupName, serr := util.GetUISettingsGroupNameFromSelector(options)
+
+	// Ignore selector errors for now - AuthorizeUISettingsOperation will check that the user is able to GET all
+	// settings for all groups. If not then return the selector error.
+	err := r.authorizer.AuthorizeUISettingsOperation(ctx, "", groupName)
 	if err != nil {
-		return nil, err
-	}
-	err = r.authorizer.AuthorizeUISettingsOperation(ctx, "", groupName)
-	if err != nil {
+		if errors.IsForbidden(err) && serr != nil {
+			// If not authorized and no group selector was specified, use the selector error message as this is the
+			// primary cause of the error.
+			return nil, serr
+		}
 		return nil, err
 	}
 
@@ -183,12 +190,17 @@ func (r *REST) Delete(ctx context.Context, name string, deleteValidation rest.Va
 }
 
 func (r *REST) Watch(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
-	groupName, err := util.GetUISettingsGroupNameFromSelector(options)
+	groupName, serr := util.GetUISettingsGroupNameFromSelector(options)
+
+	// Ignore selector errors for now - AuthorizeUISettingsOperation will check that the user is able to GET all
+	// settings for all groups. If not then return the selector error.
+	err := r.authorizer.AuthorizeUISettingsOperation(ctx, "", groupName)
 	if err != nil {
-		return nil, err
-	}
-	err = r.authorizer.AuthorizeUISettingsOperation(ctx, "", groupName)
-	if err != nil {
+		if errors.IsForbidden(err) && serr != nil {
+			// If not authorized and no group selector was specified, use the selector error message as this is the
+			// primary cause of the error.
+			return nil, serr
+		}
 		return nil, err
 	}
 

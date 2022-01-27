@@ -214,7 +214,7 @@ func (a *authorizer) AuthorizeUISettingsOperation(
 		decisionGetUISettingsGroup, _, _ = a.Authorizer.Authorize(context.TODO(), attrs)
 	}()
 
-	// Query required access to the UISettingsed policy resource or UISettings wildcard resource.
+	// Query required access to the UISettingsGroup data subresource.
 	var decisionUISettings k8sauth.Decision
 	go func() {
 		defer wg.Done()

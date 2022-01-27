@@ -100,7 +100,10 @@ func GetUISettingsGroupNameFromSelector(options *metainternalversion.ListOptions
 		}
 	}
 
-	return "", fmt.Errorf("Require UISettingsGroup to be specified")
+	// No group selector. Return "*" as the name - this will be used to check authorization. If authorized to allow
+	// a settings called "*" it is assumed it is authorized to access all settings. Strictly, a RBAC role could be
+	// set up matching on a name of "*" but I think this is a live with.
+	return "*", fmt.Errorf("Require UISettingsGroup to be specified")
 }
 
 // GetUISettingsGroupFromUISettingsName extracts the UISettingsGroup name from the UISettings name.
