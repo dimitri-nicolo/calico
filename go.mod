@@ -25,7 +25,7 @@ require (
 )
 
 replace (
-	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220107110730-0c545950d39d
+	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220127034148-7f0adea8bf42
 	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220107110730-0c545950d39d
 
 	google.golang.org/grpc => google.golang.org/grpc v1.29.1
