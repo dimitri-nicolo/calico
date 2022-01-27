@@ -79,11 +79,11 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 	}
 
 	// WAF ModSecurity Process Http Request.
-	detection := wafProcessHttpRequest(reqPath, reqMethod, reqProtocol, reqSourceHost, reqSourcePort, reqDestinationHost, reqDestinationPort)
-	if detection > 0 {
+	err := wafProcessHttpRequest(reqPath, reqMethod, reqProtocol, reqSourceHost, reqSourcePort, reqDestinationHost, reqDestinationPort)
+	if err != nil {
 		log.Errorf("WAF Process Http Request URL '%s' WAF rules rejected HTTP request!", reqPath)
 		resp.Status.Code = PERMISSION_DENIED
-		return &resp, nil
+		return &resp, err
 	}
 
 	resp.Status = &st
@@ -100,16 +100,16 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 	return &resp, nil
 }
 
-func wafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, clientPort uint32, serverHost string, serverPort uint32) int {
+func wafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, clientPort uint32, serverHost string, serverPort uint32) error {
 
 	// Use this as the correlationID.
 	id := waf.GenerateModSecurityID()
 
 	httpProtocol, httpVersion := splitInput(inputProtocol, "/", "HTTP", "1.1")
-	detection := waf.ProcessHttpRequest(id, uri, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort)
+	err := waf.ProcessHttpRequest(id, uri, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort)
 
 	// Log to Elasticsearch => Kibana.
-	if detection == 1 {
+	if err != nil {
 		waf.Logger.WithFields(log.Fields{
 			"unique_id":   id,
 			"uri":         uri,
@@ -122,7 +122,7 @@ func wafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, cl
 		}).Error("WAF check FAILED!")
 	}
 
-	return detection
+	return err
 }
 
 // splitInput: split input based on delimiter specified into 2x components [left and right].

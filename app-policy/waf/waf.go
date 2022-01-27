@@ -7,15 +7,15 @@ package waf
 // #include "waf.h"
 import "C"
 import (
+	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
 	"time"
 	"unsafe"
-
-	"github.com/google/uuid"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -130,7 +130,7 @@ func GenerateModSecurityID() string {
 	return uuid.New().String()
 }
 
-func ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion string, clientHost string, clientPort uint32, serverHost string, serverPort uint32) int {
+func ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion string, clientHost string, clientPort uint32, serverHost string, serverPort uint32) error {
 	prefix := getProcessHttpRequestPrefix(id)
 	log.Printf("%s URL '%s'", prefix, url)
 
@@ -156,7 +156,12 @@ func ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion string, c
 	elapsed := time.Since(start)
 
 	log.Infof("%s URL '%s' Detection=%d Time elapsed: %s", prefix, url, detection, elapsed)
-	return detection
+	if detection > 0 {
+		errMsg := fmt.Sprintf("%s URL '%s' Detection=%d", prefix, url, detection)
+		return errors.New(errMsg)
+	}
+
+	return nil
 }
 
 // GetRulesDirectory public helper function for testing.

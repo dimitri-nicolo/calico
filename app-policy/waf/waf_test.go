@@ -190,11 +190,9 @@ func TestProcessHttpRequest_ValidURL_OK(t *testing.T) {
 	serverHost := "http://localhost"
 	serverPort := uint32(80)
 
-	expect := 0
-	actual := ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort)
-
-	if expect != actual {
-		t.Errorf("Expect: %d Actual: %d", expect, actual)
+	err := ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort)
+	if err != nil {
+		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
 	}
 }
 
@@ -215,11 +213,9 @@ func TestProcessHttpRequest_InvalidURL_BlockDueToWarning(t *testing.T) {
 	serverHost := "http://localhost"
 	serverPort := uint32(80)
 
-	expect := 0
-	actual := ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort)
-
-	if expect != actual {
-		t.Errorf("Expect: %d Actual: %d", expect, actual)
+	err := ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort)
+	if err != nil {
+		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
 	}
 }
 
@@ -239,11 +235,9 @@ func TestProcessHttpRequest_InvalidURL_NoRulesLoad_OK(t *testing.T) {
 	serverHost := "http://localhost"
 	serverPort := uint32(80)
 
-	expect := 0
-	actual := ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort)
-
-	if expect != actual {
-		t.Errorf("Expect: %d Actual: %d", expect, actual)
+	err := ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort)
+	if err != nil {
+		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
 	}
 }
 
@@ -264,11 +258,9 @@ func TestProcessHttpRequest_InvalidURL_CustomRulesLoad_BadRequest(t *testing.T) 
 	serverHost := "http://localhost"
 	serverPort := uint32(80)
 
-	expect := 1
-	actual := ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort)
-
-	if expect != actual {
-		t.Errorf("Expect: %d Actual: %d", expect, actual)
+	err := ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort)
+	if err == nil {
+		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
 	}
 }
 
