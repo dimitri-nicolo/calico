@@ -168,10 +168,9 @@ cd: image-all cd-common
 ###############################################################################
 # Update pins
 ###############################################################################
-BRANCH=master
 update-calico-pin:
-	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(BRANCH))
-	$(call update_replace_pin,github.com/tigera/api,github.com/tigera/calico-private/api,$(BRANCH))
+	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(PIN_BRANCH))
+	$(call update_replace_submodule_pin,github.com/tigera/api,github.com/tigera/calico-private/api,$(PIN_BRANCH))
 
 # Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
 guard-ssh-forwarding-bug:
