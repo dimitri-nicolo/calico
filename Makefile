@@ -225,8 +225,8 @@ LMA_BRANCH?=$(PIN_BRANCH)
 LMA_REPO?=github.com/tigera/lma
 
 update-calico-pin:
-	$(call update_replace_pin,github.com/projectcalico/api,github.com/tigera/calico-private/api,$(BRANCH))
-	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(BRANCH))
+	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(PIN_BRANCH))
+	$(call update_replace_submodule_pin,github.com/tigera/api,github.com/tigera/calico-private/api,$(PIN_BRANCH))
 
 update-compliance-pin:
 	$(call update_pin,$(COMPLIANCE_REPO),$(COMPLIANCE_REPO),$(COMPLIANCE_BRANCH))
