@@ -1,6 +1,9 @@
 apiVersion: v1
 name: tigera-operator
 description: Installs the Tigera operator for Calico and Calico Enterprise
-
+home: https://docs.tigera.io/about/about-calico
+icon: https://projectcalico.docs.tigera.io/images/felix_icon.png
+sources:
+  - https://github.com/tigera/operator
 # version will be overridden at chart compilation time via args, but still must exist in chart.yaml
 version: v0.0

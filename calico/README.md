@@ -70,3 +70,4 @@ Calico is open source, with most code and documentation available under the Apac
 
 Calico Enterprise is a commercial product that builds on top of and around the Calico open source project to provide additional capabilities beyond the core Calico feature set. You can learn more [here](https://projectcalico.docs.tigera.io/calico-enterprise/). Calico Enterprise is available under commercial license from Tigera.
 
+Run `make serve` to run a documentation site served on localhost to preview changes.

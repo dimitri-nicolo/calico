@@ -2,9 +2,11 @@ package main
 
 import (
 	"flag"
+	"os"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/hack/release/pkg/builder"
-	"github.com/sirupsen/logrus"
 )
 
 var create, publish bool
@@ -37,6 +39,7 @@ func main() {
 		err := r.BuildRelease()
 		if err != nil {
 			logrus.WithError(err).Error("Failed to create Calico release")
+			os.Exit(1)
 		}
 		return
 	}
@@ -45,6 +48,7 @@ func main() {
 		err := r.PublishRelease()
 		if err != nil {
 			logrus.WithError(err).Error("Failed to publish Calico release")
+			os.Exit(1)
 		}
 		return
 	}

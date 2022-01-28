@@ -53,6 +53,7 @@ test: ut
 clean:
 	# Clean .created files which indicate images / releases have been built.
 	find . -name '.*.created*' -type f -delete
+	find . -name '.*.published*' -type f -delete
 	rm -rf .go-pkg-cache report vendor bin proto/*.pb.go
 	-docker rmi $(DIKASTES_IMAGE):latest-$(ARCH)
 	-docker rmi $(DIKASTES_IMAGE):$(VERSION)-$(ARCH)

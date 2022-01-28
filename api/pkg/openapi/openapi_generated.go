@@ -10531,7 +10531,6 @@ func schema_pkg_apis_projectcalico_v3_UIGraphView(ref common.ReferenceCallback) 
 					"expandPorts": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Whether ports are expanded. If false, port information is aggregated.",
-							Default:     false,
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -10539,7 +10538,6 @@ func schema_pkg_apis_projectcalico_v3_UIGraphView(ref common.ReferenceCallback) 
 					"followConnectionDirection": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Whether or not to automatically follow directly connected nodes.",
-							Default:     false,
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -10547,7 +10545,6 @@ func schema_pkg_apis_projectcalico_v3_UIGraphView(ref common.ReferenceCallback) 
 					"splitIngressEgress": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Whether to split HostEndpoints, NetworkSets and Networks into separate ingress and egress nodes or to combine them. In a service-centric view, splitting these makes the graph clearer. This never splits pods which represent a true microservice which has ingress and egress connections.",
-							Default:     false,
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -10569,7 +10566,6 @@ func schema_pkg_apis_projectcalico_v3_UIGraphView(ref common.ReferenceCallback) 
 					"layoutType": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Layout type. Semi-arbitrary value used to specify the layout-type/algorithm. For example could specify different layout algorithms, or click-to-grid.  Mostly here for future use.",
-							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -10603,7 +10599,7 @@ func schema_pkg_apis_projectcalico_v3_UIGraphView(ref common.ReferenceCallback) 
 							},
 						},
 					},
-					"graphConfigurationByNode": {
+					"nodes": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Graph node specific view data. This provides information about what is in focus, expanded, hidden, deemphasized etc. at a per-node level.",
 							Type:        []string{"array"},
@@ -10618,7 +10614,6 @@ func schema_pkg_apis_projectcalico_v3_UIGraphView(ref common.ReferenceCallback) 
 						},
 					},
 				},
-				Required: []string{"expandPorts", "followConnectionDirection", "splitIngressEgress", "layoutType", "positions", "layers", "graphConfigurationByNode"},
 			},
 		},
 		Dependencies: []string{

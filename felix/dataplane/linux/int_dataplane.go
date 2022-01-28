@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -343,8 +343,7 @@ type InternalDataplane struct {
 
 	endpointStatusCombiner *endpointStatusCombiner
 
-	domainInfoStore   *common.DomainInfoStore
-	domainInfoChanges chan *common.DomainInfoChanged
+	domainInfoStore *common.DomainInfoStore
 
 	allManagers             []Manager
 	managersWithRouteTables []ManagerWithRouteTables
@@ -449,17 +448,16 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	dp := &InternalDataplane{
-		toDataplane:       make(chan interface{}, msgPeekLimit),
-		fromDataplane:     make(chan interface{}, 100),
-		ruleRenderer:      ruleRenderer,
-		ifaceMonitor:      ifacemonitor.New(config.IfaceMonitorConfig, config.FatalErrorRestartCallback),
-		ifaceUpdates:      make(chan *ifaceUpdate, 100),
-		ifaceAddrUpdates:  make(chan *ifaceAddrsUpdate, 100),
-		domainInfoChanges: make(chan *common.DomainInfoChanged, 100),
-		config:            config,
-		applyThrottle:     throttle.New(10),
-		loopSummarizer:    logutils.NewSummarizer("dataplane reconciliation loops"),
-		stopChan:          stopChan,
+		toDataplane:      make(chan interface{}, msgPeekLimit),
+		fromDataplane:    make(chan interface{}, 100),
+		ruleRenderer:     ruleRenderer,
+		ifaceMonitor:     ifacemonitor.New(config.IfaceMonitorConfig, config.FatalErrorRestartCallback),
+		ifaceUpdates:     make(chan *ifaceUpdate, 100),
+		ifaceAddrUpdates: make(chan *ifaceAddrsUpdate, 100),
+		config:           config,
+		applyThrottle:    throttle.New(10),
+		loopSummarizer:   logutils.NewSummarizer("dataplane reconciliation loops"),
+		stopChan:         stopChan,
 	}
 
 	if config.RulesConfig.IptablesMarkDNSPolicy != 0x0 && !config.DisableDNSPolicyPacketProcessor {
@@ -641,7 +639,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	dp.endpointStatusCombiner = newEndpointStatusCombiner(dp.fromDataplane, config.IPv6Enabled)
-	dp.domainInfoStore = common.NewDomainInfoStore(dp.domainInfoChanges, &common.DnsConfig{
+	dp.domainInfoStore = common.NewDomainInfoStore(&common.DnsConfig{
 		Collector:             config.Collector,
 		DNSCacheEpoch:         config.DNSCacheEpoch,
 		DNSCacheFile:          config.DNSCacheFile,
@@ -782,7 +780,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 					// packet data begins after that.
 					timestampNS := binary.LittleEndian.Uint64(e.Data())
 					consumed := 8
-					dp.domainInfoStore.MsgChannel <- common.DataWithTimestamp{
+					dp.domainInfoStore.MsgChannel() <- common.DataWithTimestamp{
 						// We currently only capture DNS packets on workload interfaces, and the packet data
 						// on those interfaces always begins with an Ethernet header that we don't want.
 						// Therefore strip off that Ethernet header, which occupies the first 14 bytes.
@@ -1534,7 +1532,7 @@ func (d *InternalDataplane) Start() {
 		int(rules.NFLOGDomainGroup),
 		65535,
 		func(data []byte, timestamp uint64) {
-			d.domainInfoStore.MsgChannel <- common.DataWithTimestamp{
+			d.domainInfoStore.MsgChannel() <- common.DataWithTimestamp{
 				Data:      data,
 				Timestamp: timestamp,
 			}
@@ -2103,6 +2101,7 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 		}
 	}
 
+	// Track domain info callbacks used to notify when domain updates have been programmed.
 	for {
 		select {
 		case msg := <-d.toDataplane:
@@ -2157,32 +2156,9 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			}
 			summaryAddrBatchSize.Observe(float64(batchSize))
 			d.dataplaneNeedsSync = true
-		case domainInfoChange := <-d.domainInfoChanges:
-			// Opportunistically read and coalesce other domain change signals that are
-			// already pending on this channel.
-			domainChangeSignals := []*common.DomainInfoChanged{domainInfoChange}
-			domainsChanged := set.From(domainInfoChange.Domain)
-		domainChangeLoop:
-			for {
-				select {
-				case domainInfoChange := <-d.domainInfoChanges:
-					if !domainsChanged.Contains(domainInfoChange.Domain) {
-						domainChangeSignals = append(domainChangeSignals, domainInfoChange)
-						domainsChanged.Add(domainInfoChange.Domain)
-					}
-				default:
-					// Channel blocked so we've caught up.
-					break domainChangeLoop
-				}
-			}
-			for _, domainInfoChange = range domainChangeSignals {
-				for _, mgr := range d.allManagers {
-					if handler, ok := mgr.(common.DomainInfoChangeHandler); ok {
-						if handler.OnDomainInfoChange(domainInfoChange) {
-							d.dataplaneNeedsSync = true
-						}
-					}
-				}
+		case <-d.domainInfoStore.UpdatesReadyChannel():
+			if d.domainInfoStore.HandleUpdates() {
+				d.dataplaneNeedsSync = true
 			}
 		case msg := <-d.awsStateUpdC:
 			d.awsSubnetMgr.OnSecondaryIfaceStateUpdate(msg)
@@ -2412,29 +2388,11 @@ func (d *InternalDataplane) apply() {
 	// Next, create/update IP sets.  We defer deletions of IP sets until after we update
 	// iptables.
 	var ipSetsWG sync.WaitGroup
-	for _, ipSets := range d.ipSets {
-		ipSetsWG.Add(1)
-		go func(ipSets common.IPSetsDataplane) {
-			defer ipSetsWG.Done()
-
-			updatedIPSets := ipSets.ApplyUpdates(func(ipSetName string) bool {
-				// Collect only Domain IP set updates so we don't overload the packet processor with irrelevant ips.
-				return ipSetName[0:2] == "d:"
-			})
-
-			d.reportHealth()
-
-			if d.packetProcessor == nil || updatedIPSets == nil {
-				return
-			}
-
-			for _, ipSetMembers := range updatedIPSets {
-				if ipSetMembers.Len() == 0 {
-					d.packetProcessor.OnIPSetMemberUpdates(ipSetMembers)
-				}
-			}
-		}(ipSets)
-	}
+	ipSetsWG.Add(1)
+	go func() {
+		defer ipSetsWG.Done()
+		d.applyIPSetsAndNotifyDomainInfoStore()
+	}()
 
 	// Update the routing table in parallel with the other updates.  We'll wait for it to finish
 	// before we return.
@@ -2468,8 +2426,16 @@ func (d *InternalDataplane) apply() {
 		}(r)
 	}
 
-	// Wait for the IP sets update to finish.  We can't update iptables until it has.
+	// Wait for the IP sets update to finish.  We can't update iptables until it has.  Once updated, we can trigger
+	// a background goroutine to update IPSets from domain name info changes. This can take place while iptables is
+	// being updated.
 	ipSetsWG.Wait()
+	ipSetsStopCh := make(chan struct{})
+	ipSetsWG.Add(1)
+	go func() {
+		defer ipSetsWG.Done()
+		d.loopUpdatingDataplaneForDomainInfoUpdates(ipSetsStopCh)
+	}()
 
 	// Update iptables, this should sever any references to now-unused IP sets.
 	var reschedDelayMutex sync.Mutex
@@ -2490,6 +2456,10 @@ func (d *InternalDataplane) apply() {
 		}(t)
 	}
 	iptablesWG.Wait()
+
+	// Stop the background ipsets update and wait for it to complete.
+	close(ipSetsStopCh)
+	ipSetsWG.Wait()
 
 	// Now clean up any left-over IP sets.
 	for _, ipSets := range d.ipSets {
@@ -2535,6 +2505,57 @@ func (d *InternalDataplane) apply() {
 		}
 		d.reschedC = d.reschedTimer.C
 	}
+}
+
+// loopUpdatingDataplaneForDomainInfoUpdates loops while the main IPTables update is taking place. This keeps pulling
+// domain info updates and programs them into the IPSets.
+func (d *InternalDataplane) loopUpdatingDataplaneForDomainInfoUpdates(ipSetsStopCh chan struct{}) {
+	for {
+		select {
+		case <-d.domainInfoStore.UpdatesReadyChannel():
+			if d.domainInfoStore.HandleUpdates() {
+				d.applyIPSetsAndNotifyDomainInfoStore()
+			}
+		case <-ipSetsStopCh:
+			return
+		}
+	}
+}
+
+// applyIPSetsAndNotifyDomainInfoStore applies changes to the IPSetDataplanes and once complete invokes any
+// domainInfoCallbacks to indicate domain name policy updates are now programmed.
+func (d *InternalDataplane) applyIPSetsAndNotifyDomainInfoStore() {
+	var ipSetsWG sync.WaitGroup
+	for _, ipSets := range d.ipSets {
+		ipSetsWG.Add(1)
+		go func(ipSets common.IPSetsDataplane) {
+			defer ipSetsWG.Done()
+
+			// Apply the IPSet updates.  The filter is requesting that ApplyUpdates only returns the updates IP sets
+			// that contain egress domains. The filter does not change which IPSets are updated - all IPSets that have
+			// been modified will be updated.
+			updatedIPSets := ipSets.ApplyUpdates(func(ipSetName string) bool {
+				// Collect only Domain IP set updates so we don't overload the packet processor with irrelevant ips.
+				return ipSetName[0:2] == "d:"
+			})
+
+			d.reportHealth()
+
+			if d.packetProcessor == nil || updatedIPSets == nil {
+				return
+			}
+
+			for _, ipSetMembers := range updatedIPSets {
+				if ipSetMembers.Len() != 0 {
+					d.packetProcessor.OnIPSetMemberUpdates(ipSetMembers)
+				}
+			}
+		}(ipSets)
+	}
+	ipSetsWG.Wait()
+
+	// Notify the domain info store that any updates applied to the handlers has now been applied.
+	d.domainInfoStore.UpdatesApplied()
 }
 
 func (d *InternalDataplane) applyXDPActions() error {

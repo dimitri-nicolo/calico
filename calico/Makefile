@@ -93,6 +93,7 @@ _site build: bin/helm _includes/charts/tigera-operator/charts/tigera-secure-ee-c
 clean:
 	# Clean .created files which indicate images / releases have been built.
 	find . -name '.*.created*' -type f -delete
+	find . -name '.*.published*' -type f -delete
 	rm -rf _output _site .jekyll-metadata pinned_versions.yaml _includes/charts/*/values.yaml
 	rm -rf stderr.out filtered.out docs_test.created bin
 	rm -f _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz
