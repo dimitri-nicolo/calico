@@ -176,6 +176,10 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 								Privileges: []string{"read"},
 							},
 							{
+								Names:      []string{indexPattern("tigera_secure_ee_runtime", clusterName, ".*")},
+								Privileges: []string{"read"},
+							},
+							{
 								Names:      []string{indexPattern("tigera_secure_ee_events", clusterName, ".*")},
 								Privileges: []string{"read", "write"},
 							},
