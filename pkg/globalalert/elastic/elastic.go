@@ -37,6 +37,7 @@ const (
 	FlowLogIndexPattern      = "tigera_secure_ee_flows.%s.*"
 	DNSLogIndexPattern       = "tigera_secure_ee_dns.%s.*"
 	L7LogIndexPattern        = "tigera_secure_ee_l7.%s.*"
+	WAFLogIndexPattern       = "tigera_secure_ee_waf.%s.*"
 	CompositeAggregationName = "composite_aggs"
 )
 
@@ -109,6 +110,8 @@ func (e *service) buildIndexName(alert *v3.GlobalAlert) {
 		e.sourceIndexName = fmt.Sprintf(FlowLogIndexPattern, e.clusterName)
 	case v3.GlobalAlertDataSetL7:
 		e.sourceIndexName = fmt.Sprintf(L7LogIndexPattern, e.clusterName)
+	case v3.GlobalAlertDataSetWAF:
+		e.sourceIndexName = fmt.Sprintf(WAFLogIndexPattern, e.clusterName)
 	default:
 		log.Errorf("unknown dataset %s in GlobalAlert %s.", alert.Spec.DataSet, alert.Name)
 	}
@@ -220,6 +223,13 @@ func (e *service) convertAlertSpecQueryToEsQuery(alert *v3.GlobalAlert) (JsonObj
 			return nil, err
 		}
 		converter = NewL7Converter()
+	case v3.GlobalAlertDataSetWAF:
+		err := query.Validate(q, query.IsValidWAFAtom)
+		if err != nil {
+			log.WithError(err).Errorf("failed to validate spec.query in %s", alert.Name)
+			return nil, err
+		}
+		converter = NewWAFConverter()
 	default:
 		return nil, fmt.Errorf("unknown dataset: %s", alert.Spec.DataSet)
 	}
@@ -250,6 +260,8 @@ func (e *service) buildLookBackRange(alert *v3.GlobalAlert) (JsonObject, error) 
 	switch alert.Spec.DataSet {
 	case v3.GlobalAlertDataSetDNS, v3.GlobalAlertDataSetFlows, v3.GlobalAlertDataSetL7:
 		timeField = "start_time"
+	case v3.GlobalAlertDataSetWAF:
+		timeField = "@timestamp"
 	case v3.GlobalAlertDataSetAudit:
 		timeField = "requestReceivedTimestamp"
 	default:
