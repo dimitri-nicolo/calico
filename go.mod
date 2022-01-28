@@ -10,7 +10,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
 	github.com/tigera/api v0.0.0-20211202170222-d8128d06db71
-	github.com/tigera/lma v0.0.0-20220114180745-11c1577ee102
+	github.com/tigera/lma v0.0.0-20220127222521-9c7ce0837be0
 	k8s.io/api v0.22.5
 	k8s.io/apimachinery v0.22.5
 	k8s.io/apiserver v0.22.5
@@ -25,6 +25,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/coreos/go-oidc v2.1.0+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/elazarl/goproxy v0.0.0-20190711103511-473e67f1d7d2 // indirect
 	github.com/emicklei/go-restful v2.11.2-0.20200112161605-a7c079c43d51+incompatible // indirect
 	github.com/evanphx/json-patch v4.9.0+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
@@ -82,8 +83,8 @@ require (
 )
 
 replace (
-	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220120220813-b1b3c09f5c81
-	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220120220813-b1b3c09f5c81
+	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220128011536-ac90a919c343
+	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220128011536-ac90a919c343
 
 	k8s.io/api => k8s.io/api v0.21.7
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.7
