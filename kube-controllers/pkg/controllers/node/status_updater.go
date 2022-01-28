@@ -59,10 +59,13 @@ func (c *statusUpdateController) acceptScheduledRequest(stopCh <-chan struct{}) 
 	for {
 		select {
 		case <-c.syncChan:
+			log.Debug("Invoke cleanup on deletion event")
 			cleanup()
 		case <-t.C:
+			log.Debug("Invoke cleanup on ticker")
 			cleanup()
 		case <-stopCh:
+			log.Debug("Stopping controller")
 			return
 		}
 	}
