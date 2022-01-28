@@ -1,6 +1,7 @@
 ##############################################################################
 # Copyright 2019-21 Tigera Inc. All rights reserved.
 ##############################################################################
+
 PACKAGE_NAME   ?= github.com/tigera/intrusion-detection/controller
 GO_BUILD_VER   ?= v0.65
 GIT_USE_SSH     = true
@@ -234,11 +235,11 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
-update-pins: guard-ssh-forwarding-bug update-calico-pin
-
 update-calico-pin:
-	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(BRANCH))
-	$(call update_replace_pin,github.com/tigera/api,github.com/tigera/calico-private/api,$(BRANCH))
+	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(PIN_BRANCH))
+	$(call update_replace_submodule_pin,github.com/tigera/api,github.com/tigera/calico-private/api,$(PIN_BRANCH))
+
+update-pins: guard-ssh-forwarding-bug update-calico-pin
 
 ###############################################################################
 # Miscellaneous
