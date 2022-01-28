@@ -66,11 +66,13 @@ type rateLimitedFormatter struct {
 	queueSize uint
 	queueTime time.Duration
 	formatter logrus.Formatter
+	activated bool
 }
 
 func (r *rateLimitedFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	select {
 	case r.queue <- true:
+		r.activated = false
 		go func() {
 			<-time.NewTimer(r.queueTime).C
 			<-r.queue
@@ -79,6 +81,10 @@ func (r *rateLimitedFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	default:
 		// exceeding set limits (# log entries / time period / per node) will drop log entries
 		// this is to prevent WAF from flooding Elasticsearch
+		if r.activated {
+			return nil, nil
+		}
+		r.activated = true
 		return nil, fmt.Errorf("reached log output limiting rate of %d per %s", r.queueSize, r.queueTime)
 	}
 }
