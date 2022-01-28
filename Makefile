@@ -134,12 +134,7 @@ ut:
 
 ###############################################################################
 # Updating pins
-###############################################################################
-BRANCH=master
-update-calico-pin:
-	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(BRANCH))
-	$(call update_replace_pin,github.com/tigera/api,github.com/tigera/calico-private/api,$(BRANCH))
-	
+###############################################################################	
 # Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
 guard-ssh-forwarding-bug:
 	@if [ "$(shell uname)" = "Darwin" ]; then \
@@ -147,6 +142,9 @@ guard-ssh-forwarding-bug:
 		echo "$(MAKECMDGOALS)"; \
 		exit 1; \
 	fi;
+
+update-calico-pin:
+	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(PIN_BRANCH))
 
 ## Update dependency pins
 update-pins: guard-ssh-forwarding-bug update-calico-pin
