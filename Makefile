@@ -53,14 +53,6 @@ BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 
 ###############################################################################
-# Updating pins
-###############################################################################
-BRANCH=master
-update-calico-pin:
-	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(BRANCH))
-	$(call update_replace_pin,github.com/tigera/api,github.com/tigera/calico-private/api,$(BRANCH))
-
-###############################################################################
 # Build
 ###############################################################################
 # This section builds the output binaries.
@@ -167,15 +159,17 @@ guard-ssh-forwarding-bug:
 		exit 1; \
 	fi;
 
+update-calico-pin:
+	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(PIN_BRANCH))
+	$(call update_replace_submodule_pin,github.com/tigera/api,github.com/tigera/calico-private/api,$(PIN_BRANCH))
+
 LMA_BRANCH?=$(PIN_BRANCH)
 LMA_REPO?=github.com/tigera/lma
 
 update-lma-pin:
 	$(call update_pin,$(LMA_REPO),$(LMA_REPO),$(LMA_BRANCH))
 
-
 update-pins: guard-ssh-forwarding-bug update-calico-pin update-lma-pin
-
 ###############################################################################
 # Utils
 ###############################################################################
