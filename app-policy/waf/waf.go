@@ -9,13 +9,14 @@ import "C"
 import (
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
 	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
 	"time"
 	"unsafe"
+
+	"github.com/google/uuid"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -45,13 +46,12 @@ func DefineRulesSetDirectory(directory string) {
 	}
 }
 
-func ExtractRulesSetFilenames() []string {
-
+func ExtractRulesSetFilenames() ([]string, error) {
 	// Read all core rule set file names from rules directory.
 	var files []string
 	items, err := ioutil.ReadDir(rulesetDirectory)
 	if err != nil {
-		log.Errorf("WAF Core Rules Set directory: '%s' does not exist!", rulesetDirectory)
+		return nil, err
 	}
 
 	// Sort files descending to ensure lower cased files like crs-setup.conf are loaded first.
@@ -79,7 +79,7 @@ func ExtractRulesSetFilenames() []string {
 	}
 
 	log.Infof("WAF Total Core Rules Set files: %d", len(files))
-	return files
+	return files, nil
 }
 
 func LoadModSecurityCoreRuleSet(filenames []string) int {

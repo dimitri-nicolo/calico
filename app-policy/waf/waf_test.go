@@ -39,7 +39,7 @@ func TestExtractRulesSetFilenamesCore(t *testing.T) {
 		"test_files/core-rules/REQUEST-942-APPLICATION-ATTACK-SQLI.conf",
 		"test_files/core-rules/REQUEST-901-INITIALIZATION.conf",
 	}
-	actualFilenames := ExtractRulesSetFilenames()
+	actualFilenames, _ := ExtractRulesSetFilenames()
 
 	test := len(expectFilenames) == len(actualFilenames)
 	if !test {
@@ -54,7 +54,7 @@ func TestExtractRulesSetFilenamesCoreOrdered(t *testing.T) {
 
 	expectFilename := "test_files/core-rules/crs-setup.conf"
 
-	actualFilenames := ExtractRulesSetFilenames()
+	actualFilenames, _ := ExtractRulesSetFilenames()
 	actualFilename := actualFilenames[1]
 
 	test := actualFilename == expectFilename
@@ -71,7 +71,7 @@ func TestExtractRulesSetFilenamesData(t *testing.T) {
 	expectFilenames := []string{
 		"test_files/data-rules/REQUEST-913-SCANNER-DETECTION.conf",
 	}
-	actualFilenames := ExtractRulesSetFilenames()
+	actualFilenames, _ := ExtractRulesSetFilenames()
 
 	test := len(expectFilenames) == len(actualFilenames)
 	if !test {
@@ -84,13 +84,9 @@ func TestExtractRulesSetFilenamesInvalid(t *testing.T) {
 	InitializeModSecurity()
 	DefineRulesSetDirectory(testInvalidRulesetDirectory)
 
-	actualFilenames := ExtractRulesSetFilenames()
-
-	expect := 0
-	actual := len(actualFilenames)
-
-	if expect != actual {
-		t.Errorf("Expect: %d Actual: %d", expect, actual)
+	_, err := ExtractRulesSetFilenames()
+	if err == nil {
+		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
 	}
 }
 
@@ -136,7 +132,7 @@ func TestLoadModSecurityCoreRuleSetDataDirectory(t *testing.T) {
 	}
 	expect := len(expectFilenames)
 
-	actualFilenames := ExtractRulesSetFilenames()
+	actualFilenames, _ := ExtractRulesSetFilenames()
 	actual := LoadModSecurityCoreRuleSet(actualFilenames)
 
 	if expect != actual {
@@ -177,7 +173,7 @@ func TestProcessHttpRequest_ValidURL_OK(t *testing.T) {
 
 	InitializeModSecurity()
 	DefineRulesSetDirectory(testCoreRulesetDirectory)
-	filenames := ExtractRulesSetFilenames()
+	filenames, _ := ExtractRulesSetFilenames()
 	LoadModSecurityCoreRuleSet(filenames)
 
 	id := "7ce62288-d6dd-4be0-8b31-ae27876aeeea"
@@ -200,7 +196,7 @@ func TestProcessHttpRequest_InvalidURL_BlockDueToWarning(t *testing.T) {
 
 	InitializeModSecurity()
 	DefineRulesSetDirectory(testCoreRulesetDirectory)
-	filenames := ExtractRulesSetFilenames()
+	filenames, _ := ExtractRulesSetFilenames()
 	LoadModSecurityCoreRuleSet(filenames)
 
 	id := "7ce62288-d6dd-4be0-8b31-ae27876aeeea"
@@ -245,7 +241,7 @@ func TestProcessHttpRequest_InvalidURL_CustomRulesLoad_BadRequest(t *testing.T) 
 
 	InitializeModSecurity()
 	DefineRulesSetDirectory(testCustomRulesetDirectory)
-	filenames := ExtractRulesSetFilenames()
+	filenames, _ := ExtractRulesSetFilenames()
 	LoadModSecurityCoreRuleSet(filenames)
 
 	id := "7ce62288-d6dd-4be0-8b31-ae27876aeeea"
