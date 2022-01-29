@@ -1,0 +1,11 @@
+host rack1-host1 -o yaml
+
+- description: Policies and profiles for each endpoint on host "rack1-host1"
+  endpoints:
+  - name: eth0
+    node: rack1-host1
+    orchestrator: k8s
+    profiles:
+    - name: profile1
+    workload: default/frontend-5gs43
+

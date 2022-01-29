@@ -1,0 +1,83 @@
+#!/bin/bash
+
+cat <<EOF
+
+Running calicoq FV tests with ${CALICOQ=calicoq}
+
+EOF
+
+passed=0
+failed=0
+
+CALICOCTL=`pwd`/fv/calicoctl
+
+export ETCD_ENDPOINTS=http://127.0.0.1:2379
+export DATASTORE_TYPE=etcdv3
+
+function run_test {
+    expected_result=$1
+    shift
+    echo ------------------------------------------------------
+    echo TEST: "$@"
+    echo
+    eval "$@"
+    result=$?
+    echo
+    if test $result -eq $expected_result; then
+	echo TEST: PASSED
+	let 'passed++'
+    else
+	echo TEST: FAILED \($result\)
+	let 'failed++'
+    fi
+    echo ------------------------------------------------------
+    echo
+}
+
+function summarise_test {
+    echo ------------------------------------------------------
+    echo FV TEST SUMMARY: $passed PASSED, $failed FAILED
+    echo ------------------------------------------------------
+    echo
+}
+
+function apply_license {
+    # Apply a license key for the test case.
+    ${CALICOCTL} apply -f $TSEE_TEST_LICENSE
+}
+
+run_test 0 ${CALICOQ} -h
+
+run_test 0 ${CALICOQ} --help
+
+# Version check should work without applying license.
+run_test 0 ${CALICOQ} version
+
+# Try to use calicoq without applying a license.
+# This should fail.
+run_test 1 ${CALICOQ} eval "\"has(abs)\""
+
+apply_license
+
+# calicoq actions should pass after applying a license.
+run_test 0 ${CALICOQ} --debug eval "\"has(abs)\""
+
+run_test 0 ${CALICOQ} endpoint -h
+
+run_test 0 ${CALICOQ} host -h
+
+run_test 0 ${CALICOQ} policy -h
+
+run_test 0 ${CALICOQ} version -h
+
+run_test 1 ${CALICOQ}
+
+run_test 1 ${CALICOQ} non-existent-command
+
+run_test 0 ${CALICOQ} -d version
+
+run_test 0 ${CALICOQ} --debug version
+
+summarise_test
+
+exit $failed

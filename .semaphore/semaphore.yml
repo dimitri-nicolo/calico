@@ -449,6 +449,21 @@ blocks:
       commands:
       - make ci
 
+- name: 'calicoq'
+  run:
+    when: "change_in(['/*', '/calicoq/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: []
+  task:
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd cni-plugin
+    jobs:
+    - name: "make ci" 
+      commands:
+      - make ci
+
 - name: "Documentation"
   run:
     when: "branch =~ '.*' or change_in(['/*', '/calico/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"

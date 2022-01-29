@@ -1,0 +1,5 @@
+endpoint -d nonexistent
+
+Policies and profiles for endpoints matching "nonexistent":
+
+Plus 121 lines on stderr

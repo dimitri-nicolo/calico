@@ -1,0 +1,4 @@
+policy -rs abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ -c calicoq.cfg
+
+
+Plus 1 lines on stderr
