@@ -76,7 +76,7 @@ int ProcessHttpRequest( char *id, char *uri, char *http_method, char *http_proto
     detection = msc_intervention( transaction, &intervention );
     if ( transaction != NULL )
     {
-        free( transaction );
+        msc_transaction_cleanup( transaction );
         transaction = NULL;
     }
 
