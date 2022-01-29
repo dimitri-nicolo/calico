@@ -986,8 +986,8 @@ github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLY
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tigera/api v0.0.0-20211119192830-60ae1a27d9ca h1:JKrTBVVHTUxU+Bvcae33R0sJf98RVpMqpi67kyke2Us=
 github.com/tigera/api v0.0.0-20211119192830-60ae1a27d9ca/go.mod h1:U7qqFcD+luefolr44wGe1PuCMxgKUplb6qStftrgrSQ=
-github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220128011536-ac90a919c343 h1:ZXQIb75zREZaGQLHMXLal+qXrHkZSRZqMZWHZTWn3kY=
-github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220128011536-ac90a919c343/go.mod h1:bLX9yLs/LiUeEbH/d5f2jXw7gfJdLbPDDVVVeUZboqI=
+github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220129015347-c61d8d667939 h1:ZAb1mBR1wYqsDjA5UGrHKYgbECvLrTjFUkP0acRMYps=
+github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220129015347-c61d8d667939/go.mod h1:bLX9yLs/LiUeEbH/d5f2jXw7gfJdLbPDDVVVeUZboqI=
 github.com/tigera/windows-networking v0.0.0-20211112174220-6a90051af748/go.mod h1:zuycD4KqAFNMJC+Bv4fGqGMn7XsS/mZnttHGe96NLk0=
 github.com/tinylib/msgp v1.1.5/go.mod h1:eQsjooMTnV42mHu917E26IogZ2930nFyBQdofk10Udg=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
