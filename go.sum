@@ -1169,9 +1169,8 @@ github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220129015347-c61
 github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220129015347-c61d8d667939/go.mod h1:bLX9yLs/LiUeEbH/d5f2jXw7gfJdLbPDDVVVeUZboqI=
 github.com/tigera/calico-private/api v0.0.0-20220129015347-c61d8d667939 h1:K/xZmjTiSphYbKo3j9GjgrdPoFbAFGcdb2/e9s1SIvs=
 github.com/tigera/calico-private/api v0.0.0-20220129015347-c61d8d667939/go.mod h1:6qWfgULooruKiC8eoGgyRjOh0K+h/q8bc7AvdUysAUo=
-github.com/tigera/compliance v0.0.0-20220129015604-c4c12a05c852 h1:Vj0IsEJdoXMTwSjMoVbRaUm16oSiE9cTlbefFOBifPo=
-github.com/tigera/compliance v0.0.0-20220129015604-c4c12a05c852/go.mod h1:xnD0EG9c5ntlH4qzA8nEjllthFJxn6MGaDFT0PCHlLQ=
-github.com/tigera/lma v0.0.0-20220128235755-f805754889aa/go.mod h1:fbteK2Xr0aDAuE39SypeJHAwFD+8DXcdtt8Ma2yw6TA=
+github.com/tigera/compliance v0.0.0-20220129025546-96951ddc7baa h1:HX1YpaxnDPe1etzSVjAT8O928MWnHUNpZhcnfBmrVdw=
+github.com/tigera/compliance v0.0.0-20220129025546-96951ddc7baa/go.mod h1:0eKTUXFHE/8WquF16BpOWBE5xIYRHprISpQE4HobcrA=
 github.com/tigera/lma v0.0.0-20220129022349-bf9a629102fa h1:7/RRBW7xyhYSOzwZRepE2gBXbEW94230BSho+NwFZ9s=
 github.com/tigera/lma v0.0.0-20220129022349-bf9a629102fa/go.mod h1:yTgm/7P1XIibaPr8iSn5LQe5lpkm8ubiQ93jSuKWbbM=
 github.com/tigera/windows-networking v0.0.0-20211112174220-6a90051af748/go.mod h1:zuycD4KqAFNMJC+Bv4fGqGMn7XsS/mZnttHGe96NLk0=
