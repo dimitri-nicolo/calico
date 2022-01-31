@@ -99,11 +99,9 @@ func TestLoadModSecurityCoreRuleSetCore(t *testing.T) {
 		"test_files/core-rules/REQUEST-942-APPLICATION-ATTACK-SQLI.conf",
 	}
 
-	expect := len(filenames)
-	actual := LoadModSecurityCoreRuleSet(filenames)
-
-	if expect != actual {
-		t.Errorf("Expect: %d Actual: %d", expect, actual)
+	err := LoadModSecurityCoreRuleSet(filenames)
+	if err != nil {
+		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
 	}
 }
 
@@ -114,11 +112,9 @@ func TestLoadModSecurityCoreRuleSetDataFiles(t *testing.T) {
 		"test_files/data-rules/REQUEST-913-SCANNER-DETECTION.conf",
 	}
 
-	expect := len(filenames)
-	actual := LoadModSecurityCoreRuleSet(filenames)
-
-	if expect != actual {
-		t.Errorf("Expect: %d Actual: %d", expect, actual)
+	err := LoadModSecurityCoreRuleSet(filenames)
+	if err != nil {
+		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
 	}
 }
 
@@ -127,16 +123,10 @@ func TestLoadModSecurityCoreRuleSetDataDirectory(t *testing.T) {
 	InitializeModSecurity()
 	DefineRulesSetDirectory(testDataRulesetDirectory)
 
-	expectFilenames := []string{
-		"test_files/data-rules/REQUEST-913-SCANNER-DETECTION.conf",
-	}
-	expect := len(expectFilenames)
-
-	actualFilenames, _ := ExtractRulesSetFilenames()
-	actual := LoadModSecurityCoreRuleSet(actualFilenames)
-
-	if expect != actual {
-		t.Errorf("Expect: %d Actual: %d", expect, actual)
+	filenames, _ := ExtractRulesSetFilenames()
+	err := LoadModSecurityCoreRuleSet(filenames)
+	if err != nil {
+		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
 	}
 }
 
@@ -145,16 +135,19 @@ func TestLoadModSecurityCoreRuleSetErrorDirectory(t *testing.T) {
 	InitializeModSecurity()
 	DefineRulesSetDirectory(testErrorRulesetDirectory)
 
-	filenames := []string{
-		"test_files/error-rules/REQUEST-941-APPLICATION-ATTACK-XSS.conf",
-		"test_files/error-rules/REQUEST-942-APPLICATION-ATTACK-SQLI.conf",
+	//filenames := []string{
+	//	"test_files/error-rules/REQUEST-941-APPLICATION-ATTACK-XSS.conf",
+	//	"test_files/error-rules/REQUEST-942-APPLICATION-ATTACK-SQLI.conf",
+	//}
+
+	filenames, err2 := ExtractRulesSetFilenames()
+	if err2 != nil {
+		t.Errorf("Expect: error 'nil' Actual: '%v'", err2.Error())
 	}
 
-	expect := 1
-	actual := LoadModSecurityCoreRuleSet(filenames)
-
-	if expect != actual {
-		t.Errorf("Expect: %d Actual: %d", expect, actual)
+	err := LoadModSecurityCoreRuleSet(filenames)
+	if err == nil {
+		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
 	}
 }
 
@@ -174,7 +167,10 @@ func TestProcessHttpRequest_ValidURL_OK(t *testing.T) {
 	InitializeModSecurity()
 	DefineRulesSetDirectory(testCoreRulesetDirectory)
 	filenames, _ := ExtractRulesSetFilenames()
-	LoadModSecurityCoreRuleSet(filenames)
+	err := LoadModSecurityCoreRuleSet(filenames)
+	if err != nil {
+		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
+	}
 
 	id := "7ce62288-d6dd-4be0-8b31-ae27876aeeea"
 	url := "/foo.com"
@@ -186,7 +182,7 @@ func TestProcessHttpRequest_ValidURL_OK(t *testing.T) {
 	serverHost := "http://localhost"
 	serverPort := uint32(80)
 
-	err := ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort)
+	err = ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort)
 	if err != nil {
 		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
 	}
@@ -197,7 +193,10 @@ func TestProcessHttpRequest_InvalidURL_BlockDueToWarning(t *testing.T) {
 	InitializeModSecurity()
 	DefineRulesSetDirectory(testCoreRulesetDirectory)
 	filenames, _ := ExtractRulesSetFilenames()
-	LoadModSecurityCoreRuleSet(filenames)
+	err := LoadModSecurityCoreRuleSet(filenames)
+	if err != nil {
+		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
+	}
 
 	id := "7ce62288-d6dd-4be0-8b31-ae27876aeeea"
 	url := "/test/artists.php?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user"
@@ -209,7 +208,7 @@ func TestProcessHttpRequest_InvalidURL_BlockDueToWarning(t *testing.T) {
 	serverHost := "http://localhost"
 	serverPort := uint32(80)
 
-	err := ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort)
+	err = ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort)
 	if err != nil {
 		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
 	}
@@ -219,7 +218,10 @@ func TestProcessHttpRequest_InvalidURL_NoRulesLoad_OK(t *testing.T) {
 
 	InitializeModSecurity()
 	var filenames []string
-	LoadModSecurityCoreRuleSet(filenames)
+	err := LoadModSecurityCoreRuleSet(filenames)
+	if err != nil {
+		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
+	}
 
 	id := "7ce62288-d6dd-4be0-8b31-ae27876aeeea"
 	url := "/test/artists.php?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user"
@@ -231,7 +233,7 @@ func TestProcessHttpRequest_InvalidURL_NoRulesLoad_OK(t *testing.T) {
 	serverHost := "http://localhost"
 	serverPort := uint32(80)
 
-	err := ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort)
+	err = ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort)
 	if err != nil {
 		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
 	}
@@ -242,7 +244,10 @@ func TestProcessHttpRequest_InvalidURL_CustomRulesLoad_BadRequest(t *testing.T) 
 	InitializeModSecurity()
 	DefineRulesSetDirectory(testCustomRulesetDirectory)
 	filenames, _ := ExtractRulesSetFilenames()
-	LoadModSecurityCoreRuleSet(filenames)
+	err := LoadModSecurityCoreRuleSet(filenames)
+	if err != nil {
+		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
+	}
 
 	id := "7ce62288-d6dd-4be0-8b31-ae27876aeeea"
 	url := "/test/artists.php?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user"
@@ -254,7 +259,7 @@ func TestProcessHttpRequest_InvalidURL_CustomRulesLoad_BadRequest(t *testing.T) 
 	serverHost := "http://localhost"
 	serverPort := uint32(80)
 
-	err := ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort)
+	err = ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort)
 	if err == nil {
 		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
 	}

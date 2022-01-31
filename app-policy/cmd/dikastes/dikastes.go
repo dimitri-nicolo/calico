@@ -97,8 +97,14 @@ func runServer(arguments map[string]interface{}) {
 	// Initialize WAF and load OWASP Core Rule Sets.
 	waf.InitializeModSecurity()
 	waf.DefineRulesSetDirectory(rulesetDirectory)
-	filenames := waf.ExtractRulesSetFilenames()
-	waf.LoadModSecurityCoreRuleSet(filenames)
+	filenames, err := waf.ExtractRulesSetFilenames()
+	if err != nil {
+		log.Fatalf("WAF Core Rules Set directory: '%s' does not exist!", rulesetDirectory)
+	}
+	err = waf.LoadModSecurityCoreRuleSet(filenames)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
