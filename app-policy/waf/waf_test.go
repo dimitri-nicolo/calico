@@ -19,7 +19,6 @@ func TestInitializeModSecurity(t *testing.T) {
 
 func TestDefineRulesSetDirectory(t *testing.T) {
 
-	InitializeModSecurity()
 	DefineRulesSetDirectory(testCoreRulesetDirectory)
 	expect := "test_files/core-rules/"
 	actual := GetRulesDirectory()
@@ -30,7 +29,6 @@ func TestDefineRulesSetDirectory(t *testing.T) {
 
 func TestExtractRulesSetFilenamesCore(t *testing.T) {
 
-	InitializeModSecurity()
 	DefineRulesSetDirectory(testCoreRulesetDirectory)
 
 	expectFilenames := []string{
@@ -51,7 +49,6 @@ func TestExtractRulesSetFilenamesCore(t *testing.T) {
 
 func TestExtractRulesSetFilenamesCoreOrdered(t *testing.T) {
 
-	InitializeModSecurity()
 	DefineRulesSetDirectory(testCoreRulesetDirectory)
 
 	expectFilename := "test_files/core-rules/crs-setup.conf"
@@ -68,7 +65,6 @@ func TestExtractRulesSetFilenamesCoreOrdered(t *testing.T) {
 
 func TestExtractRulesSetFilenamesData(t *testing.T) {
 
-	InitializeModSecurity()
 	DefineRulesSetDirectory(testDataRulesetDirectory)
 
 	expectFilenames := []string{
@@ -86,7 +82,6 @@ func TestExtractRulesSetFilenamesData(t *testing.T) {
 
 func TestExtractRulesSetFilenamesInvalid(t *testing.T) {
 
-	InitializeModSecurity()
 	DefineRulesSetDirectory(testInvalidRulesetDirectory)
 
 	err := ExtractRulesSetFilenames()
