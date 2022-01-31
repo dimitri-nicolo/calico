@@ -94,16 +94,25 @@ func runServer(arguments map[string]interface{}) {
 		log.Fatal("Unable to set write permission on socket.")
 	}
 
-	// Initialize WAF and load OWASP Core Rule Sets.
-	waf.InitializeModSecurity()
-	waf.DefineRulesSetDirectory(rulesetDirectory)
-	filenames, err := waf.ExtractRulesSetFilenames()
+	// Check if WAF should be enabled first before proceeding...
+	err = waf.CheckRulesSetExists(rulesetDirectory)
 	if err != nil {
-		log.Fatalf("WAF Core Rules Set directory: '%s' does not exist!", rulesetDirectory)
+		log.Errorf("WAF Core Rules Set check: '%s'", err.Error())
 	}
-	err = waf.LoadModSecurityCoreRuleSet(filenames)
-	if err != nil {
-		log.Fatal(err)
+
+	if waf.IsEnabled() {
+		// Initialize WAF and load OWASP Core Rule Sets.
+		log.Info("WAF is enabled...")
+		waf.InitializeModSecurity()
+
+		filenames := waf.GetRulesSetFilenames()
+		err = waf.LoadModSecurityCoreRuleSet(filenames)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		// Otherwise simply log to the fact.
+		log.Info("WAF is NOT enabled!")
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

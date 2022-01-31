@@ -78,12 +78,14 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 		as.reportStats(ctx, &st, req)
 	}
 
-	// WAF ModSecurity Process Http Request.
-	err := wafProcessHttpRequest(reqPath, reqMethod, reqProtocol, reqSourceHost, reqSourcePort, reqDestinationHost, reqDestinationPort)
-	if err != nil {
-		log.Errorf("WAF Process Http Request URL '%s' WAF rules rejected HTTP request!", reqPath)
-		resp.Status.Code = PERMISSION_DENIED
-		return &resp, err
+	if waf.IsEnabled() {
+		// WAF ModSecurity Process Http Request.
+		err := wafProcessHttpRequest(reqPath, reqMethod, reqProtocol, reqSourceHost, reqSourcePort, reqDestinationHost, reqDestinationPort)
+		if err != nil {
+			log.Errorf("WAF Process Http Request URL '%s' WAF rules rejected HTTP request!", reqPath)
+			resp.Status.Code = PERMISSION_DENIED
+			return &resp, err
+		}
 	}
 
 	resp.Status = &st
