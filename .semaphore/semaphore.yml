@@ -389,6 +389,9 @@ blocks:
     when: "branch =~ '.*' or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: []
   task:
+    secrets:
+    # Since we create a local kind cluster, we need the test license.
+    - name: test-customer-license
     agent:
       machine:
         type: e1-standard-8

@@ -365,8 +365,7 @@ fv: run-k8s-apiserver
 	-v $(CERTS_PATH):/home/user/certs \
 	-e KUBECONFIG=/go/src/github.com/projectcalico/calico/cni-plugin/tests/certs/kubeconfig \
 	-e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 \
-	$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \ 
-	ginkgo -cover -r -skipPackage vendor pkg/lifecycle/startup pkg/allocateip $(GINKGO_ARGS)'
+	$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo -cover -r -skipPackage vendor pkg/lifecycle/startup pkg/allocateip $(GINKGO_ARGS)'
 
 ## Create a local kind dual stack cluster.
 KUBECONFIG?=kubeconfig.yaml
@@ -721,7 +720,7 @@ $(WINDOWS_ARCHIVE_ROOT)/libs/hns/License.txt:
 windows-packaging/nssm-$(WINDOWS_NSSM_VERSION).zip:
 	wget -O windows-packaging/nssm-$(WINDOWS_NSSM_VERSION).zip https://nssm.cc/release/nssm-$(WINDOWS_NSSM_VERSION).zip
 
-build-windows-archive: $(WINDOWS_ARCHIVE_FILES) windows-packaging/nssm-$(WINDOWS_NSSM_VERSION).zip check-dirty
+build-windows-archive: $(WINDOWS_ARCHIVE_FILES) windows-packaging/nssm-$(WINDOWS_NSSM_VERSION).zip
 	# To be as atomic as possible, we re-do work like unpacking NSSM here.
 	-rm -f "$(WINDOWS_ARCHIVE)"
 	-rm -rf $(WINDOWS_ARCHIVE_ROOT)/nssm-$(WINDOWS_NSSM_VERSION)

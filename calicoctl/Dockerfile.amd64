@@ -13,13 +13,6 @@
 # limitations under the License.
 
 # Enterprise version is not Apache licensed and doesn't have a LICENSE file
-# FROM registry.access.redhat.com/ubi8/ubi-minimal:8.5 as ubi
-ARG UBI_IMAGE
-
-FROM ${UBI_IMAGE} as ubi
-
-# RUN mkdir /licenses
-# COPY LICENSE /licenses
 
 FROM scratch
 
@@ -34,10 +27,6 @@ LABEL name="Calico CLI tool" \
       maintainer="maintainers@projectcalico.org"
 
 ADD bin/calicoctl-linux-amd64 /calicoctl
-
-# Enterprise version is not Apache licensed and doesn't have a LICENSE file
-#RUN mkdir /licenses
-#COPY LICENSE /licenses
 
 ENV CALICO_CTL_CONTAINER=TRUE
 ENV PATH=$PATH:/
