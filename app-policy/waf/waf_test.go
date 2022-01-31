@@ -9,12 +9,47 @@ import (
 const testCoreRulesetDirectory = "test_files/core-rules"
 const testCustomRulesetDirectory = "test_files/custom-rules"
 const testDataRulesetDirectory = "test_files/data-rules"
+const testEmptyRulesetDirectory = "test_files/empty-rules"
 const testErrorRulesetDirectory = "test_files/error-rules"
 const testInvalidRulesetDirectory = "test_files/invalid-rules"
 
-func TestInitializeModSecurity(t *testing.T) {
+func TestCheckRulesSetExists_OK(t *testing.T) {
 
-	InitializeModSecurity()
+	err := CheckRulesSetExists(testCoreRulesetDirectory)
+	if err != nil {
+		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
+	}
+
+	isEnabled := IsEnabled()
+	if !isEnabled {
+		t.Errorf("Expect: enabled 'true' Actual: '%v'", isEnabled)
+	}
+}
+
+func TestCheckRulesSetExists_InvaidDirectory(t *testing.T) {
+
+	err := CheckRulesSetExists(testInvalidRulesetDirectory)
+	if err == nil {
+		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
+	}
+
+	isEnabled := IsEnabled()
+	if isEnabled {
+		t.Errorf("Expect: enabled 'false' Actual: '%v'", isEnabled)
+	}
+}
+
+func TestCheckRulesSetExists_EmptyDirectory(t *testing.T) {
+
+	err := CheckRulesSetExists(testEmptyRulesetDirectory)
+	if err != nil {
+		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
+	}
+
+	isEnabled := IsEnabled()
+	if isEnabled {
+		t.Errorf("Expect: enabled 'false' Actual: '%v'", isEnabled)
+	}
 }
 
 func TestDefineRulesSetDirectory(t *testing.T) {
@@ -88,6 +123,11 @@ func TestExtractRulesSetFilenamesInvalid(t *testing.T) {
 	if err == nil {
 		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
 	}
+}
+
+func TestInitializeModSecurity(t *testing.T) {
+
+	InitializeModSecurity()
 }
 
 func TestLoadModSecurityCoreRuleSetCore(t *testing.T) {

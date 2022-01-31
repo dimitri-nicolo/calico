@@ -21,8 +21,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Assume WAF is not enabled by default.
-var wafIsEnabled = false
+// WAF enabled flag accessible outside package via waf.IsEnabled()
+var wafIsEnabled bool
 
 // Directory where the Core Rules Set are stored.
 var rulesetDirectory string
@@ -32,9 +32,28 @@ var filenames []string
 
 const defaultRulesetDirectory = "/etc/waf/"
 
-func InitializeModSecurity() {
-	log.Printf("WAF Initialize Mod Security.")
-	C.InitializeModSecurity()
+// CheckRulesSetExists
+// invoke this WAF function first passing in the Core Rule Set directory or /etc/waf/ as per default;
+// if this directory does not exist OR zero *.conf Core Rule Sets files exist then do not enable WAF.
+func CheckRulesSetExists(directory string) error {
+
+	// Assume WAF is not enabled by default.
+	wafIsEnabled = false
+
+	DefineRulesSetDirectory(directory)
+
+	err := CheckRulesSetDirectoryExists()
+	if os.IsNotExist(err) {
+		return err
+	}
+
+	err = ExtractRulesSetFilenames()
+	if err != nil {
+		return err
+	}
+
+	wafIsEnabled = len(filenames) > 0
+	return nil
 }
 
 func DefineRulesSetDirectory(directory string) {
@@ -50,6 +69,16 @@ func DefineRulesSetDirectory(directory string) {
 	if !strings.HasSuffix(rulesetDirectory, "/") {
 		rulesetDirectory = rulesetDirectory + "/"
 	}
+}
+
+func CheckRulesSetDirectoryExists() error {
+
+	_, err := os.Stat(rulesetDirectory)
+	if os.IsNotExist(err) {
+		return err
+	}
+
+	return nil
 }
 
 func ExtractRulesSetFilenames() error {
@@ -87,6 +116,11 @@ func ExtractRulesSetFilenames() error {
 
 	log.Infof("WAF Total Core Rules Set files: %d", len(filenames))
 	return nil
+}
+
+func InitializeModSecurity() {
+	log.Printf("WAF Initialize Mod Security.")
+	C.InitializeModSecurity()
 }
 
 func LoadModSecurityCoreRuleSet(filenames []string) error {
