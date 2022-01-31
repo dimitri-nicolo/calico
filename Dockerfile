@@ -88,6 +88,11 @@ ENV IDS_EVENT_LOG_FILE=/var/log/calico/ids/events.log
 ENV L7_LOG_FILE=/var/log/calico/l7logs/l7.log
 ENV EE_AUDIT_LOG_FILE=/var/log/calico/audit/tsee-audit.log
 
+#TLS Settings
+ENV TLS_KEY_PATH=/tls/tls.key
+ENV TLS_CRT_PATH=/tls/tls.crt
+ENV CA_CRT_PATH=/etc/pki/tls/certs/tigera-ca-bundle.crt
+
 ENV POS_DIR=/var/log/calico
 
 ENV ELASTIC_HOST=elasticsearch
