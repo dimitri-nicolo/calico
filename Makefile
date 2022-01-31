@@ -63,7 +63,7 @@ OSS_BRANCH?=master
 PRIVATE_BRANCH?=master
 merge-open:
 	git fetch $(OSS_REMOTE)
-	git branch -D $(USER)-merge-oss; git checkout -B $(USER)-merge-oss
+	git branch -D $(USER)-merge-oss; git checkout -B $(USER)-merge-oss-$(OSS_BRANCH)
 	git merge $(OSS_REMOTE)/$(OSS_BRANCH)
 	@echo "==========================================================="
 	@echo "Resolve any conflicts, push to private, and submit a PR"
