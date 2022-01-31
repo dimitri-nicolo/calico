@@ -21,8 +21,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Assume WAF is not enabled by default.
+var wafIsEnabled = false
+
 // Directory where the Core Rules Set are stored.
 var rulesetDirectory string
+
+// Slice of filenames read from Core Rules Set directory.
+var filenames []string
 
 const defaultRulesetDirectory = "/etc/waf/"
 
@@ -46,12 +52,12 @@ func DefineRulesSetDirectory(directory string) {
 	}
 }
 
-func ExtractRulesSetFilenames() ([]string, error) {
+func ExtractRulesSetFilenames() error {
+
 	// Read all core rule set file names from rules directory.
-	var files []string
 	items, err := ioutil.ReadDir(rulesetDirectory)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Sort files descending to ensure lower cased files like crs-setup.conf are loaded first.
@@ -59,6 +65,7 @@ func ExtractRulesSetFilenames() ([]string, error) {
 	sortFileNameDescend(items)
 
 	count := 1
+	filenames = nil
 	for _, item := range items {
 
 		// Ignore files starting with ".." that link to the parent directory.
@@ -73,13 +80,13 @@ func ExtractRulesSetFilenames() ([]string, error) {
 		}
 
 		file := rulesetDirectory + filename
-		files = append(files, file)
+		filenames = append(filenames, file)
 		log.Infof("WAF Found Rules File[%d]('%s')", count, file)
 		count++
 	}
 
-	log.Infof("WAF Total Core Rules Set files: %d", len(files))
-	return files, nil
+	log.Infof("WAF Total Core Rules Set files: %d", len(filenames))
+	return nil
 }
 
 func LoadModSecurityCoreRuleSet(filenames []string) error {
@@ -156,9 +163,19 @@ func ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion string, c
 	return nil
 }
 
+// IsEnabled helper function used by client calling code.
+func IsEnabled() bool {
+	return wafIsEnabled
+}
+
 // GetRulesDirectory public helper function for testing.
 func GetRulesDirectory() string {
 	return rulesetDirectory
+}
+
+// GetRulesSetFilenames helper function used for unit tests.
+func GetRulesSetFilenames() []string {
+	return filenames
 }
 
 func getProcessHttpRequestPrefix(id string) string {
