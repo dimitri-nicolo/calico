@@ -247,9 +247,6 @@ func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates 
 			case model.ProfileLabelsKey:
 				t.Name = clusterName + "/" + t.Name
 				updates[i].Key = t
-			case model.ProfileTagsKey:
-				t.Name = clusterName + "/" + t.Name
-				updates[i].Key = t
 			case model.ResourceKey:
 				if t.Kind == apiv3.KindProfile {
 					// Suppress the v3 Profile resource that the
@@ -279,9 +276,6 @@ func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates 
 				t.Name = clusterName + "/" + t.Name
 				updates[i].Key = t
 			case model.ProfileLabelsKey:
-				t.Name = clusterName + "/" + t.Name
-				updates[i].Key = t
-			case model.ProfileTagsKey:
 				t.Name = clusterName + "/" + t.Name
 				updates[i].Key = t
 			case model.ResourceKey:

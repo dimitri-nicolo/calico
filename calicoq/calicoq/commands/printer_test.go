@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
+
 	. "github.com/projectcalico/calico/calicoq/calicoq/commands"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"

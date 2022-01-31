@@ -59,8 +59,8 @@ require (
 	github.com/natefinch/atomic v0.0.0-20150920032501-a62ce929ffcc
 	github.com/nmrshll/go-cp v0.0.0-20180115193924-61436d3b7cfa
 	github.com/olekukonko/tablewriter v0.0.4
-	github.com/onsi/ginkgo v1.16.4
-	github.com/onsi/gomega v1.15.0
+	github.com/onsi/ginkgo v1.15.0
+	github.com/onsi/gomega v1.10.5
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/profile v1.6.0
@@ -324,8 +324,9 @@ replace (
 
 	// Version expected by k8s v1.21.8
 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1
+	github.com/onsi/ginkgo => github.com/onsi/ginkgo v1.14.1
+	github.com/onsi/gomega => github.com/onsi/gomega v1.10.1
 
-	github.com/sirupsen/logrus => github.com/projectcalico/logrus v1.0.4-calico
 	github.com/tigera/api => ./api
 	google.golang.org/grpc => google.golang.org/grpc v1.29.1
 	k8s.io/api => k8s.io/api v0.21.9
