@@ -376,16 +376,18 @@ func (a *awsIPManager) onWorkloadEndpointRemoved(msg *proto.WorkloadEndpointRemo
 
 func (a *awsIPManager) onWorkloadUpdateOrRemove(logCtx *logrus.Entry, wepID proto.WorkloadEndpointID, newEP *awsEndpointInfo) (changed bool) {
 	oldEP := a.workloadEndpointsByID[wepID]
+	var newEIPs []ip.Addr
 	if newEP == nil {
 		delete(a.workloadEndpointsByID, wepID)
 	} else {
 		a.workloadEndpointsByID[wepID] = *newEP
+		newEIPs = newEP.ElasticIPs
 	}
 	if reflect.DeepEqual(&oldEP, newEP) {
 		logCtx.Debug("No-op WEP update, ignoring.")
 		return false
 	}
-	if len(oldEP.ElasticIPs) == 0 && len(newEP.ElasticIPs) == 0 {
+	if len(oldEP.ElasticIPs) == 0 && len(newEIPs) == 0 {
 		logCtx.Debug("WEP has no elastic IPs, ignoring.")
 		return false
 	}
@@ -397,7 +399,7 @@ func (a *awsIPManager) onWorkloadUpdateOrRemove(logCtx *logrus.Entry, wepID prot
 			}
 		}
 	}
-	if newEP != nil && len(newEP.ElasticIPs) > 0 {
+	if len(newEIPs) > 0 {
 		for _, cidr := range newEP.IPv4Nets {
 			if a.workloadEndpointIDsByCIDR[cidr] == nil {
 				a.workloadEndpointIDsByCIDR[cidr] = set.New()
