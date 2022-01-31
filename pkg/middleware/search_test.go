@@ -37,6 +37,15 @@ const (
 		"to": "2021-04-19T14:25:30.169827009-07:00"
 	}
 }`
+	validRequestBodyNoCluster = `
+{
+  "page_size": 152,
+  "page_num": 1,
+	"time_range": {
+		"from": "2021-04-19T14:25:30.169821857-07:00",
+		"to": "2021-04-19T14:25:30.169827009-07:00"
+	}
+}`
 	validRequestBodyPageSizeGreaterThanLTE = `
 {
   "cluster": "c_val",
@@ -66,13 +75,6 @@ const (
 		"from": "2021-04-19T14:25:30.169821857-07:00",
 		"to": "2021-04-19T14:25:30.169827009-07:00"
 	}
-}`
-
-	invalidRequestBodyTimeRangeMissing = `
-{
-  "cluster": "c_val",
-  "page_size": 152,
-  "page_num": 1
 }`
 
 	invalidRequestBodyTimeRangeContainsInvalidTimeValue = `
@@ -106,13 +108,19 @@ var _ = Describe("SearchElasticHits", func() {
 		mockDoer *thirdpartymock.MockDoer
 	)
 
-	type SomeLog struct {
+	type Source struct {
 		Timestamp time.Time `json:"@timestamp"`
 		StartTime time.Time `json:"start_time"`
 		EndTime   time.Time `json:"end_time"`
 		Action    string    `json:"action"`
 		BytesIn   *uint64   `json:"bytes_in"`
 		BytesOut  *uint64   `json:"bytes_out"`
+	}
+
+	type SomeLog struct {
+		ID     string `json:"id"`
+		Index  string `json:"index"`
+		Source Source `json:"source"`
 	}
 
 	BeforeEach(func() {
@@ -168,20 +176,28 @@ var _ = Describe("SearchElasticHits", func() {
 		bytesOut2 := uint64(68547)
 		expectedJSONResponse := []*SomeLog{
 			{
-				Timestamp: t1,
-				StartTime: st1,
-				EndTime:   et1,
-				Action:    "action1",
-				BytesIn:   &bytesIn1,
-				BytesOut:  &bytesOut1,
+				ID:    "id1",
+				Index: "index1",
+				Source: Source{
+					Timestamp: t1,
+					StartTime: st1,
+					EndTime:   et1,
+					Action:    "action1",
+					BytesIn:   &bytesIn1,
+					BytesOut:  &bytesOut1,
+				},
 			},
 			{
-				Timestamp: t2,
-				StartTime: st2,
-				EndTime:   et2,
-				Action:    "action2",
-				BytesIn:   &bytesIn2,
-				BytesOut:  &bytesOut2,
+				ID:    "id2",
+				Index: "index2",
+				Source: Source{
+					Timestamp: t2,
+					StartTime: st2,
+					EndTime:   et2,
+					Action:    "action2",
+					BytesIn:   &bytesIn2,
+					BytesOut:  &bytesOut2,
+				},
 			},
 		}
 
@@ -341,12 +357,117 @@ var _ = Describe("SearchElasticHits", func() {
 				s, _ := hit.MarshalJSON()
 				umerr := json.Unmarshal(s, &someLog)
 				Expect(umerr).NotTo(HaveOccurred())
-				Expect(someLog.Timestamp).To(Equal(expectedJSONResponse[i].Timestamp))
-				Expect(someLog.StartTime).To(Equal(expectedJSONResponse[i].StartTime))
-				Expect(someLog.EndTime).To(Equal(expectedJSONResponse[i].EndTime))
-				Expect(someLog.Action).To(Equal(expectedJSONResponse[i].Action))
-				Expect(someLog.BytesIn).To(Equal(expectedJSONResponse[i].BytesIn))
-				Expect(someLog.BytesOut).To(Equal(expectedJSONResponse[i].BytesOut))
+				Expect(someLog.Source.Timestamp).To(Equal(expectedJSONResponse[i].Source.Timestamp))
+				Expect(someLog.Source.StartTime).To(Equal(expectedJSONResponse[i].Source.StartTime))
+				Expect(someLog.Source.EndTime).To(Equal(expectedJSONResponse[i].Source.EndTime))
+				Expect(someLog.Source.Action).To(Equal(expectedJSONResponse[i].Source.Action))
+				Expect(someLog.Source.BytesIn).To(Equal(expectedJSONResponse[i].Source.BytesIn))
+				Expect(someLog.Source.BytesOut).To(Equal(expectedJSONResponse[i].Source.BytesOut))
+			}
+		})
+
+		It("Should return a valid Elastic search response (search request with filter)", func() {
+			mockDoer = new(thirdpartymock.MockDoer)
+
+			client, err := elastic.NewClient(
+				elastic.SetHttpClient(mockDoer),
+				elastic.SetSniff(false),
+				elastic.SetHealthcheck(false),
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			exp := calicojson.Map{
+				"from": 0,
+				"query": calicojson.Map{
+					"bool": calicojson.Map{
+						"filter": []calicojson.Map{
+							{
+								"range": calicojson.Map{
+									"time": calicojson.Map{
+										"gte": "2022-01-24T00:00:00Z",
+										"lte": "2022-01-31T23:59:59Z",
+									},
+								},
+							},
+							{
+								"term": calicojson.Map{
+									"type": "global_alert",
+								},
+							},
+						},
+					},
+				},
+				"size": 100,
+				"sort": []calicojson.Map{
+					{
+						"time": calicojson.Map{
+							"order": "desc",
+						},
+					},
+				},
+			}
+
+			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
+				defer GinkgoRecover()
+				req := args.Get(0).(*http.Request)
+
+				body, err := ioutil.ReadAll(req.Body)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(req.Body.Close()).NotTo(HaveOccurred())
+
+				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+
+				requestJson := map[string]interface{}{}
+				Expect(json.Unmarshal(body, &requestJson)).NotTo(HaveOccurred())
+				Expect(calicojson.MustUnmarshalToStandardObject(body)).
+					To(Equal(calicojson.MustUnmarshalToStandardObject(exp)))
+			}).Return(&http.Response{
+				StatusCode: http.StatusOK,
+				Body: esSearchHitsResultToResponseBody(elastic.SearchResult{
+					TookInMillis: 123,
+					TimedOut:     false,
+					Hits: &elastic.SearchHits{
+						Hits:      esResponse,
+						TotalHits: &elastic.TotalHits{Value: 2},
+					},
+				}),
+			}, nil)
+
+			params := &v1.SearchRequest{
+				ClusterName: "cl_name_val",
+				PageSize:    100,
+				PageNum:     0,
+				Filter: []json.RawMessage{
+					json.RawMessage(`{"range":{"time":{"gte":"2022-01-24T00:00:00Z","lte":"2022-01-31T23:59:59Z"}}}`),
+					json.RawMessage(`{"term":{"type":"global_alert"}}`),
+				},
+				SortBy: []v1.SearchRequestSortBy{{
+					Field:      "time",
+					Descending: true,
+				}},
+			}
+
+			r, err := http.NewRequest(
+				http.MethodGet, "", bytes.NewReader([]byte(validRequestBody)))
+			Expect(err).NotTo(HaveOccurred())
+
+			results, err := search(lmaindex.Alerts(), params, userAuthReview, client, r)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results.NumPages).To(Equal(1))
+			Expect(results.TotalHits).To(Equal(2))
+			Expect(results.TimedOut).To(BeFalse())
+			Expect(results.Took.Milliseconds()).To(Equal(int64(123)))
+			var someLog *SomeLog
+			for i, hit := range results.Hits {
+				s, _ := hit.MarshalJSON()
+				umerr := json.Unmarshal(s, &someLog)
+				Expect(umerr).NotTo(HaveOccurred())
+				Expect(someLog.Source.Timestamp).To(Equal(expectedJSONResponse[i].Source.Timestamp))
+				Expect(someLog.Source.StartTime).To(Equal(expectedJSONResponse[i].Source.StartTime))
+				Expect(someLog.Source.EndTime).To(Equal(expectedJSONResponse[i].Source.EndTime))
+				Expect(someLog.Source.Action).To(Equal(expectedJSONResponse[i].Source.Action))
+				Expect(someLog.Source.BytesIn).To(Equal(expectedJSONResponse[i].Source.BytesIn))
+				Expect(someLog.Source.BytesOut).To(Equal(expectedJSONResponse[i].Source.BytesOut))
 			}
 		})
 
@@ -747,6 +868,18 @@ var _ = Describe("SearchElasticHits", func() {
 	})
 
 	Context("parseRequestBodyForParams response validation", func() {
+		It("Should parse x-cluster-id in the request header when cluster is missing in body", func() {
+			r, err := http.NewRequest(
+				http.MethodGet, "", bytes.NewReader([]byte(validRequestBodyNoCluster)))
+			Expect(err).NotTo(HaveOccurred())
+			r.Header.Add(clusterIdHeader, "cluster-id-in-header")
+
+			var w http.ResponseWriter
+			searchRequest, err := parseRequestBodyForParams(w, r)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(searchRequest.ClusterName).To(Equal("cluster-id-in-header"))
+		})
+
 		It("Should return a SearchError when http request not POST or GET", func() {
 			var w http.ResponseWriter
 			r, err := http.NewRequest(http.MethodPut, "", bytes.NewReader([]byte(validRequestBody)))
@@ -801,22 +934,6 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(se.Status).To(Equal(400))
 			Expect(se.Msg).To(Equal("error with field PageSize = '-1' (Reason: failed to validate Field: PageSize "+
 				"because of Tag: gte )"), se.Msg)
-		})
-
-		It("Should return an error when parsing an empty value for time_range", func() {
-			r, err := http.NewRequest(
-				http.MethodGet, "", bytes.NewReader([]byte(invalidRequestBodyTimeRangeMissing)))
-			Expect(err).NotTo(HaveOccurred())
-
-			var w http.ResponseWriter
-			_, err = parseRequestBodyForParams(w, r)
-			Expect(err).To(HaveOccurred())
-
-			var se *httputils.HttpStatusError
-			Expect(errors.As(err, &se)).To(BeTrue())
-			Expect(se.Status).To(Equal(400))
-			Expect(se.Msg).To(Equal("error with field TimeRange = '<nil>' (Reason: failed to validate "+
-				"Field: TimeRange because of Tag: required )"), se.Msg)
 		})
 
 		It("Should return an error when parsing an invalid value for time_range value", func() {
