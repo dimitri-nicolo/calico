@@ -860,7 +860,7 @@ run_individual_test() {
 
     # Populate Kubernetes API with data if it exists for this test.
     if [[ -f /tests/mock_data/calicoctl/${testdir}/kubectl-input.yaml ]]; then
-            KUBECONFIG=/tests/confd_kubeconfig kubectl apply -f /tests/mock_data/calicoctl/${testdir}/kubectl-input.yaml
+            KUBECONFIG=/home/user/certs/kubeconfig kubectl apply -f /tests/mock_data/calicoctl/${testdir}/kubectl-input.yaml
     fi
 
     # Check the confd templates are updated.
@@ -881,7 +881,7 @@ run_individual_test() {
     # limitations.
     echo "Preparing Calico data for next test"
     if [[ -f /tests/mock_data/calicoctl/${testdir}/kubectl-delete.yaml ]]; then
-            KUBECONFIG=/tests/confd_kubeconfig kubectl delete -f /tests/mock_data/calicoctl/${testdir}/kubectl-delete.yaml
+            KUBECONFIG=/home/user/certs/kubeconfig kubectl delete -f /tests/mock_data/calicoctl/${testdir}/kubectl-delete.yaml
     fi
 
     if [ -f /tests/mock_data/calicoctl/${testdir}/step2/delete.yaml ]; then
@@ -920,7 +920,7 @@ run_individual_test_oneshot() {
 
     # Populate Kubernetes API with data if it exists for this test.
     if [[ -f /tests/mock_data/calicoctl/${testdir}/kubectl-input.yaml ]]; then
-            kubectl apply -f /tests/mock_data/calicoctl/${testdir}/kubectl-input.yaml
+            KUBECONFIG=/home/user/certs/kubeconfig kubectl apply -f /tests/mock_data/calicoctl/${testdir}/kubectl-input.yaml
     fi
 
     # For KDD, run Typha.
@@ -946,7 +946,7 @@ run_individual_test_oneshot() {
     # limitations.
     echo "Preparing Calico data for next test"
     if [[ -f /tests/mock_data/calicoctl/${testdir}/kubectl-delete.yaml ]]; then
-            kubectl delete -f /tests/mock_data/calicoctl/${testdir}/kubectl-delete.yaml
+            KUBECONFIG=/home/user/certs/kubeconfig kubectl delete -f /tests/mock_data/calicoctl/${testdir}/kubectl-delete.yaml
     fi
     $CALICOCTL delete -f /tests/mock_data/calicoctl/${testdir}/delete.yaml
 }
@@ -972,6 +972,7 @@ run_edited_individual_test_oneshot() {
 start_typha() {
     echo "Starting Typha"
     TYPHA_DATASTORETYPE=kubernetes \
+        KUBECONFIG=/home/user/certs/kubeconfig \
         TYPHA_LOGSEVERITYSCREEN=debug \
         TYPHA_LOGSEVERITYSYS=none \
         TYPHA_LOGFILEPATH=none \

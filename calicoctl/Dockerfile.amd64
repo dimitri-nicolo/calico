@@ -14,6 +14,9 @@
 
 # Enterprise version is not Apache licensed and doesn't have a LICENSE file
 # FROM registry.access.redhat.com/ubi8/ubi-minimal:8.5 as ubi
+ARG UBI_IMAGE
+
+FROM ${UBI_IMAGE} as ubi
 
 # RUN mkdir /licenses
 # COPY LICENSE /licenses

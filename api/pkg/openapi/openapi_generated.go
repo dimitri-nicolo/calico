@@ -4980,6 +4980,12 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							Format:      "",
 						},
 					},
+					"wireguardKeepAlive": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WireguardKeepAlive controls Wireguard PersistentKeepalive option. Set 0 to disable. [Default: 0]",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
 					"captureDir": {
 						SchemaProps: spec.SchemaProps{
 							Description: "CaptureDir controls directory to store file capture. [Default: /var/log/calico/pcap]",
