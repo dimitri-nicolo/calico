@@ -1165,10 +1165,10 @@ github.com/tebeka/strftime v0.1.5/go.mod h1:29/OidkoWHdEKZqzyDLUyC+LmgDgdHo4WAFC
 github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae/go.mod h1:quDq6Se6jlGwiIKia/itDZxqC5rj6/8OdFyMMAwTxCs=
 github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLYM/iQ8KXej1AwM=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
-github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220129044900-6017265caaf7 h1:Jx6Is4HYVEdRcDcZRJ8U4I2nwtkEUihCy2PlUBp/q0g=
-github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220129044900-6017265caaf7/go.mod h1:bLX9yLs/LiUeEbH/d5f2jXw7gfJdLbPDDVVVeUZboqI=
-github.com/tigera/calico-private/api v0.0.0-20220129044900-6017265caaf7 h1:o/OfxshlBo63hTheeTfVcYvfyidy76NxyCn7PonT21o=
-github.com/tigera/calico-private/api v0.0.0-20220129044900-6017265caaf7/go.mod h1:6qWfgULooruKiC8eoGgyRjOh0K+h/q8bc7AvdUysAUo=
+github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220201021621-7fed6b65c0a3 h1:RmYDPOGjNse5bsOGfzfAQ5WeWvmAkVVFMLxdAFiHhJU=
+github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220201021621-7fed6b65c0a3/go.mod h1:bLX9yLs/LiUeEbH/d5f2jXw7gfJdLbPDDVVVeUZboqI=
+github.com/tigera/calico-private/api v0.0.0-20220201021621-7fed6b65c0a3 h1:WbhA/xycuvridNPOpUmgxSICwXSdaCWgojFT5Sx66YE=
+github.com/tigera/calico-private/api v0.0.0-20220201021621-7fed6b65c0a3/go.mod h1:6qWfgULooruKiC8eoGgyRjOh0K+h/q8bc7AvdUysAUo=
 github.com/tigera/compliance v0.0.0-20220131203046-b117aa1186b3 h1:aFxiLlHIfr7NlVzmAuxucyJ0eMs7NV3KsiX7DrCBDv0=
 github.com/tigera/compliance v0.0.0-20220131203046-b117aa1186b3/go.mod h1:kcr1AAYQpm4QoIWVVMQpF9+bTf48Qz8iNgX4QrtgSWg=
 github.com/tigera/lma v0.0.0-20220131180156-fe42a8637925 h1:NrTXKJI+fFGxM1vQdWkxvtPR0pggbPlPGiCFa6uGFrA=
