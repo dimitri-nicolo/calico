@@ -32,7 +32,7 @@ func TestLogRateLimiter(t *testing.T) {
 	for i := 0; i < 5; i++ { // generating 5 log entries:
 		entry := logrus.NewEntry(nil)
 		entry.Message = fmt.Sprintf("log entry [%d]", i)
-		rateLimitedFormatter.Format(entry)
+		_, _ = rateLimitedFormatter.Format(entry)
 	}
 
 	time.Sleep(300 * time.Millisecond) // 300ms pause
@@ -40,7 +40,7 @@ func TestLogRateLimiter(t *testing.T) {
 	for i := 5; i < 10; i++ { // and generating another 5 log entries (10 in total):
 		entry := logrus.NewEntry(nil)
 		entry.Message = fmt.Sprintf("log entry [%d]", i)
-		rateLimitedFormatter.Format(entry)
+		_, _ = rateLimitedFormatter.Format(entry)
 	}
 
 	expectedEntries := []string{
