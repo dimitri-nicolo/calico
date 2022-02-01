@@ -108,7 +108,7 @@ func runServer(arguments map[string]interface{}) {
 		filenames := waf.GetRulesSetFilenames()
 		err = waf.LoadModSecurityCoreRuleSet(filenames)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Failed to load WAF ruleset: %s", err.Error())
 		}
 	} else {
 		// Otherwise simply log to the fact.
