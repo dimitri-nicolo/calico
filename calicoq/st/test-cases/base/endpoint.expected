@@ -1,0 +1,8 @@
+endpoint default.frontend-5gs43
+
+Policies and profiles for endpoints matching "default.frontend-5gs43":
+
+Workload endpoint k8s/default.frontend-5gs43/eth0
+  Policies:
+  Profiles:
+    Profile "profile1"

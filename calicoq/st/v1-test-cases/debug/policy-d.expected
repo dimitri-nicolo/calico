@@ -1,0 +1,4 @@
+policy -d nonexistent
+
+
+Plus 7 lines on stderr

@@ -66,3 +66,7 @@ promotions:
     pipeline_file: ../typha/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Test Cut calicoq Release
+    pipeline_file: ../calicoq/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
