@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 
 package clientv3_test
 
@@ -31,8 +31,8 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 	name2 := "dpi-2"
 	namespace1 := "namespace-1"
 	namespace2 := "namespace-2"
-	spec1Empty := apiv3.DeepPacketInspectionSpec{}
-	spec2Empty := apiv3.DeepPacketInspectionSpec{}
+	spec1 := apiv3.DeepPacketInspectionSpec{}
+	spec2 := apiv3.DeepPacketInspectionSpec{Selector: "x != 'a'"}
 	DescribeTable("DeepPacketInspection e2e CRUD tests", func(name1, name2 string, spec1, spec2 apiv3.DeepPacketInspectionSpec) {
 		c, err := clientv3.New(config)
 		Expect(err).NotTo(HaveOccurred())
@@ -191,13 +191,13 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 		))
 
 		By("Setting Spec on resource")
-		spec2 = apiv3.DeepPacketInspectionSpec{Selector: "key=='v'"}
-		res.Spec = spec2
+		spec1_2 := apiv3.DeepPacketInspectionSpec{Selector: "key=='v'"}
+		res.Spec = spec1_2
 		log.Infof("Before update %#v", res)
 		res, outError = c.DeepPacketInspections().Update(ctx, res, options.SetOptions{})
 		log.Infof("After update %#v", res)
 		Expect(outError).ToNot(HaveOccurred())
-		Expect(res).To(MatchResource(apiv3.KindDeepPacketInspection, namespace1, name1, spec2))
+		Expect(res).To(MatchResource(apiv3.KindDeepPacketInspection, namespace1, name1, spec1_2))
 
 		if config.Spec.DatastoreType == apiconfig.Kubernetes {
 			By("Setting Status on resource")
@@ -234,7 +234,7 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 			status1.Nodes[0].Active.LastUpdated = nil
 			res.Status.Nodes[0].ErrorConditions[0].LastUpdated = nil
 			status1.Nodes[0].ErrorConditions[0].LastUpdated = nil
-			Expect(res).To(MatchResourceWithStatus(apiv3.KindDeepPacketInspection, namespace1, name1, spec2, status1))
+			Expect(res).To(MatchResourceWithStatus(apiv3.KindDeepPacketInspection, namespace1, name1, spec1_2, status1))
 
 			By("Getting resource and verifying status is present")
 			res, outError = c.DeepPacketInspections().Get(ctx, namespace1, name1, options.GetOptions{})
@@ -243,7 +243,7 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 			rescpy := res.DeepCopy()
 			rescpy.Status.Nodes[0].Active.LastUpdated = nil
 			rescpy.Status.Nodes[0].ErrorConditions[0].LastUpdated = nil
-			Expect(rescpy).To(MatchResourceWithStatus(apiv3.KindDeepPacketInspection, namespace1, name1, spec2, status1))
+			Expect(rescpy).To(MatchResourceWithStatus(apiv3.KindDeepPacketInspection, namespace1, name1, spec1_2, status1))
 
 			rv1_3 := res.ResourceVersion
 			By("Setting the same status again doesn't change the resource version")
@@ -260,7 +260,7 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 			res, outError = c.DeepPacketInspections().UpdateStatus(ctx, res, options.SetOptions{})
 			log.Infof("After update status %#v", res)
 			Expect(outError).ToNot(HaveOccurred())
-			Expect(res).To(MatchResource(apiv3.KindDeepPacketInspection, namespace1, name1, spec2))
+			Expect(res).To(MatchResource(apiv3.KindDeepPacketInspection, namespace1, name1, spec1_2))
 			Expect(res.ResourceVersion).To(Equal(rv1_3))
 
 			By("Updating status using update api is ignored")
@@ -271,7 +271,7 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 			res, outError = c.DeepPacketInspections().Update(ctx, res, options.SetOptions{})
 			log.Infof("After update status %#v", res)
 			Expect(outError).ToNot(HaveOccurred())
-			Expect(res).ToNot(MatchResourceWithStatus(apiv3.KindDeepPacketInspection, namespace1, name1, spec2, emptyStatus))
+			Expect(res).ToNot(MatchResourceWithStatus(apiv3.KindDeepPacketInspection, namespace1, name1, spec1_2, emptyStatus))
 
 		}
 
@@ -288,7 +288,7 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 		By("Deleting DeepPacketInspection (namespace1/name1) with the new resource version")
 		dres, outError := c.DeepPacketInspections().Delete(ctx, namespace1, name1, options.DeleteOptions{ResourceVersion: rv1_5})
 		Expect(outError).NotTo(HaveOccurred())
-		Expect(dres).To(MatchResource(apiv3.KindDeepPacketInspection, namespace1, name1, spec2))
+		Expect(dres).To(MatchResource(apiv3.KindDeepPacketInspection, namespace1, name1, spec1_2))
 
 		if config.Spec.DatastoreType != apiconfig.Kubernetes {
 			By("Updating DeepPacketInspection namespace2/name2 with a 2s TTL and waiting for the entry to be deleted")
@@ -319,10 +319,10 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 		}
 
 		if config.Spec.DatastoreType == apiconfig.Kubernetes {
-			By("Attempting to delete DeepPacketInspection (namespace2/name2) again")
+			By("Attempting to delete DeepPacketInspection (namespace2/name2)")
 			dres, outError = c.DeepPacketInspections().Delete(ctx, namespace2, name2, options.DeleteOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(dres).To(MatchResource(apiv3.KindDeepPacketInspection, namespace2, name2, spec1))
+			Expect(dres).To(MatchResource(apiv3.KindDeepPacketInspection, namespace2, name2, spec2))
 		}
 
 		By("Listing all DeepPacketInspections and expecting no items")
@@ -336,7 +336,7 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 		Expect(outError.Error()).To(ContainSubstring("resource does not exist: DeepPacketInspection(" + namespace2 + "/" + name2 + ") with error:"))
 
 	},
-		Entry("Two fully populated DeepPacketInspectionSpec", name1, name2, spec1Empty, spec2Empty))
+		Entry("Two fully populated DeepPacketInspectionSpec", name1, name2, spec1, spec2))
 
 	Describe("DeepPacketInspection watch functionality", func() {
 		It("should handle watch events for different resource versions and event types", func() {
@@ -358,7 +358,7 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 				ctx,
 				&apiv3.DeepPacketInspection{
 					ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1},
-					Spec:       spec1Empty,
+					Spec:       spec1,
 				},
 				options.SetOptions{},
 			)
@@ -369,7 +369,7 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 				ctx,
 				&apiv3.DeepPacketInspection{
 					ObjectMeta: metav1.ObjectMeta{Namespace: namespace2, Name: name2},
-					Spec:       spec2Empty,
+					Spec:       spec2,
 				},
 				options.SetOptions{},
 			)
@@ -408,7 +408,7 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 				ctx,
 				&apiv3.DeepPacketInspection{
 					ObjectMeta: outRes2.ObjectMeta,
-					Spec:       spec1Empty,
+					Spec:       spec1,
 				},
 				options.SetOptions{},
 			)
@@ -472,7 +472,7 @@ var _ = testutils.E2eDatastoreDescribe("DeepPacketInspection tests", testutils.D
 				ctx,
 				&apiv3.DeepPacketInspection{
 					ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1},
-					Spec:       spec1Empty,
+					Spec:       spec1,
 				},
 				options.SetOptions{},
 			)

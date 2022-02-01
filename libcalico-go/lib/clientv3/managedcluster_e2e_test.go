@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2022 Tigera, Inc. All rights reserved.
 
 package clientv3_test
 
@@ -162,12 +162,14 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 			Expect(outError.Error()).To(Equal("error with field Metadata.ResourceVersion = '' (field must be set for an Update request)"))
 
 			// ----------------------------------------------------------------------------------------------------
+			/* Disable test: specs are the same, so no update occurs for kdd backend and revisions will be the same.
 			By("Updating ManagedCluster name1 using the previous resource version")
 			res1.Spec = spec1
 			res1.ResourceVersion = rv1_1
 			_, outError = c.ManagedClusters().Update(ctx, res1, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
 			Expect(outError.Error()).To(Equal("update conflict: ManagedCluster(" + name1 + ")"))
+			*/
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Getting ManagedCluster (name1) with the original resource version and comparing the output against spec1")
@@ -352,10 +354,15 @@ var _ = testutils.E2eDatastoreDescribe("ManagedCluster tests", testutils.Datasto
 			defer testWatcher2.Stop()
 
 			By("Modifying res2")
+			// Note that the specs are empty, so let's modify a label instead.
+			m := outRes2.ObjectMeta.DeepCopy()
+			m.Labels = map[string]string{
+				"newlabel": "newvalue",
+			}
 			outRes3, err := c.ManagedClusters().Update(
 				ctx,
 				&apiv3.ManagedCluster{
-					ObjectMeta: outRes2.ObjectMeta,
+					ObjectMeta: *m,
 					Spec:       spec1,
 				},
 				options.SetOptions{},

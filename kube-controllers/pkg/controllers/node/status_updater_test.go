@@ -4,6 +4,7 @@ package node
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -56,15 +57,49 @@ var _ = Describe("DPI status on node create or delete", func() {
 	var stopCh chan struct{}
 	var newCtrl func() *statusUpdateController
 	var nodeList []string
+	var nodeCacheCount int
+	var dataLock sync.Mutex
+
+	setNodes := func(nodes ...string) {
+		dataLock.Lock()
+		defer dataLock.Unlock()
+		nodeList = nodes
+	}
+
+	getNodeCacheCount := func() int {
+		dataLock.Lock()
+		defer dataLock.Unlock()
+		return nodeCacheCount
+	}
+
+	getActualDPIUpdateStatusCallCounter := func() int {
+		dataLock.Lock()
+		defer dataLock.Unlock()
+		return actualDPIUpdateStatusCallCounter
+	}
+
+	getActualPCAPUpdateStatusCallCounter := func() int {
+		dataLock.Lock()
+		defer dataLock.Unlock()
+		return actualPCAPUpdateStatusCallCounter
+	}
+
 	BeforeEach(func() {
 		cli = NewFakeCalicoClient()
 		stopCh = make(chan struct{})
-		nodeList = []string{}
+		nodeList = nil
+		nodeCacheCount = 0
 		newCtrl = func() *statusUpdateController {
 			return &statusUpdateController{
-				calicoClient:     cli,
-				nodeCacheFn:      func() []string { return nodeList },
+				calicoClient: cli,
+				nodeCacheFn: func() []string {
+					dataLock.Lock()
+					defer dataLock.Unlock()
+					nodeCacheCount++
+					return nodeList
+				},
 				reconcilerPeriod: 30 * time.Second,
+				syncChan:         make(chan interface{}),
 			}
 		}
 
@@ -103,30 +138,37 @@ var _ = Describe("DPI status on node create or delete", func() {
 
 		mockDPIClient.On("UpdateStatus", mock.Anything, mock.Anything, mock.Anything).Return(dpiRes, nil).Run(
 			func(args mock.Arguments) {
+				dataLock.Lock()
+				defer dataLock.Unlock()
 				actualDPIUpdateStatusCallCounter++
 				dpiRes = args.Get(1).(*v3.DeepPacketInspection)
 				Expect(len(dpiRes.Status.Nodes)).Should(Equal(0))
 			})
 		mockPCAPClient.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(pcapRes, nil).Run(
 			func(args mock.Arguments) {
+				dataLock.Lock()
+				defer dataLock.Unlock()
 				actualPCAPUpdateStatusCallCounter++
 				pcapRes = args.Get(1).(*v3.PacketCapture)
 				Expect(len(pcapRes.Status.Files)).Should(Equal(0))
 			})
 		ctrl := newCtrl()
 		ctrl.Start(stopCh)
-		Eventually(func() int { return actualDPIUpdateStatusCallCounter }, 10*time.Second).Should(Equal(expectedDPIUpdateStatusCallCounter))
-		Eventually(func() int { return actualPCAPUpdateStatusCallCounter }, 10*time.Second).Should(Equal(expectedPCAPUpdateStatusCallCounter))
+		Eventually(getNodeCacheCount, 5*time.Second).Should(Equal(2))
+		Eventually(getActualDPIUpdateStatusCallCounter, 10*time.Second).Should(Equal(expectedDPIUpdateStatusCallCounter))
+		Eventually(getActualPCAPUpdateStatusCallCounter, 10*time.Second).Should(Equal(expectedPCAPUpdateStatusCallCounter))
 	})
 
-	It("should update DPI & PCAP resource status when an existing node is deleted", func() {
-		nodeList = []string{"node-0"}
+	It("should update DPI & PCAP resource status when an existing node is deleted via notification", func() {
+		setNodes("node-0")
 
 		expectedDPIUpdateStatusCallCounter = 1
 		expectedPCAPUpdateStatusCallCounter = 1
 		mockDPIClient.On("UpdateStatus", mock.Anything, mock.Anything, mock.Anything).
 			Return(dpiRes, nil).Run(
 			func(args mock.Arguments) {
+				dataLock.Lock()
+				defer dataLock.Unlock()
 				actualDPIUpdateStatusCallCounter++
 				dpiRes = args.Get(1).(*v3.DeepPacketInspection)
 				Expect(len(dpiRes.Status.Nodes)).Should(Equal(0))
@@ -134,6 +176,8 @@ var _ = Describe("DPI status on node create or delete", func() {
 		mockPCAPClient.On("Update", mock.Anything, mock.Anything, mock.Anything).
 			Return(pcapRes, nil).Run(
 			func(args mock.Arguments) {
+				dataLock.Lock()
+				defer dataLock.Unlock()
 				actualPCAPUpdateStatusCallCounter++
 				pcapRes = args.Get(1).(*v3.PacketCapture)
 				Expect(len(pcapRes.Status.Files)).Should(Equal(0))
@@ -141,9 +185,45 @@ var _ = Describe("DPI status on node create or delete", func() {
 
 		ctrl := newCtrl()
 		ctrl.Start(stopCh)
-		nodeList = []string{}
-		Eventually(func() int { return actualDPIUpdateStatusCallCounter }, 10*time.Second).Should(Equal(expectedDPIUpdateStatusCallCounter))
-		Eventually(func() int { return actualPCAPUpdateStatusCallCounter }, 10*time.Second).Should(Equal(expectedPCAPUpdateStatusCallCounter))
+		Eventually(getNodeCacheCount, 5*time.Second).Should(Equal(2))
+		setNodes()
+		ctrl.OnKubernetesNodeDeleted()
+		Eventually(getNodeCacheCount, 5*time.Second).Should(BeNumerically(">", 2))
+		Eventually(getActualDPIUpdateStatusCallCounter, 10*time.Second).Should(Equal(expectedDPIUpdateStatusCallCounter))
+		Eventually(getActualPCAPUpdateStatusCallCounter, 10*time.Second).Should(Equal(expectedPCAPUpdateStatusCallCounter))
+	})
+
+	It("should update DPI & PCAP resource status when an existing node is deleted via polling", func() {
+		setNodes("node-0")
+
+		expectedDPIUpdateStatusCallCounter = 1
+		expectedPCAPUpdateStatusCallCounter = 1
+		mockDPIClient.On("UpdateStatus", mock.Anything, mock.Anything, mock.Anything).
+			Return(dpiRes, nil).Run(
+			func(args mock.Arguments) {
+				dataLock.Lock()
+				defer dataLock.Unlock()
+				actualDPIUpdateStatusCallCounter++
+				dpiRes = args.Get(1).(*v3.DeepPacketInspection)
+				Expect(len(dpiRes.Status.Nodes)).Should(Equal(0))
+			})
+		mockPCAPClient.On("Update", mock.Anything, mock.Anything, mock.Anything).
+			Return(pcapRes, nil).Run(
+			func(args mock.Arguments) {
+				dataLock.Lock()
+				defer dataLock.Unlock()
+				actualPCAPUpdateStatusCallCounter++
+				pcapRes = args.Get(1).(*v3.PacketCapture)
+				Expect(len(pcapRes.Status.Files)).Should(Equal(0))
+			})
+
+		ctrl := newCtrl()
+		ctrl.reconcilerPeriod = 1 * time.Second
+		ctrl.Start(stopCh)
+		Eventually(getNodeCacheCount, 1*time.Second).Should(BeNumerically(">=", 2))
+		setNodes()
+		Eventually(getActualDPIUpdateStatusCallCounter, 10*time.Second).Should(Equal(expectedDPIUpdateStatusCallCounter))
+		Eventually(getActualPCAPUpdateStatusCallCounter, 10*time.Second).Should(Equal(expectedPCAPUpdateStatusCallCounter))
 	})
 
 	It("should retry status update on conflict", func() {
@@ -159,6 +239,8 @@ var _ = Describe("DPI status on node create or delete", func() {
 		mockDPIClient.On("UpdateStatus", mock.Anything, mock.Anything, mock.Anything).
 			Return().Run(
 			func(args mock.Arguments) {
+				dataLock.Lock()
+				defer dataLock.Unlock()
 				actualDPIUpdateStatusCallCounter++
 				actualDPIRes := args.Get(1).(*v3.DeepPacketInspection)
 				Expect(len(actualDPIRes.Status.Nodes)).Should(Equal(0))
@@ -178,6 +260,8 @@ var _ = Describe("DPI status on node create or delete", func() {
 		mockPCAPClient.On("Update", mock.Anything, mock.Anything, mock.Anything).
 			Return().Run(
 			func(args mock.Arguments) {
+				dataLock.Lock()
+				defer dataLock.Unlock()
 				actualPCAPUpdateStatusCallCounter++
 				actualPCAPRes := args.Get(1).(*v3.PacketCapture)
 				Expect(len(actualPCAPRes.Status.Files)).Should(Equal(0))
@@ -197,22 +281,22 @@ var _ = Describe("DPI status on node create or delete", func() {
 
 		ctrl := &statusUpdateController{
 			calicoClient:     cli,
-			nodeCacheFn:      func() []string { return nodeList },
+			nodeCacheFn:      func() []string { return []string{} },
 			reconcilerPeriod: 5 * time.Second,
 		}
 		ctrl.Start(stopCh)
-		Eventually(func() int { return actualDPIUpdateStatusCallCounter }, 30*time.Second).Should(Equal(expectedDPIUpdateStatusCallCounter))
-		Eventually(func() int { return actualPCAPUpdateStatusCallCounter }, 30*time.Second).Should(Equal(expectedPCAPUpdateStatusCallCounter))
+		Eventually(getActualDPIUpdateStatusCallCounter, 30*time.Second).Should(Equal(expectedDPIUpdateStatusCallCounter))
+		Eventually(getActualPCAPUpdateStatusCallCounter, 30*time.Second).Should(Equal(expectedPCAPUpdateStatusCallCounter))
 	})
 
 	It("should not update DPI or PCAP status for existing nodes", func() {
-		nodeList = []string{"node-0"}
+		setNodes("node-0")
 
 		expectedDPIUpdateStatusCallCounter = 0
 		expectedPCAPUpdateStatusCallCounter = 0
 		ctrl := newCtrl()
 		ctrl.Start(stopCh)
-		Eventually(func() int { return actualDPIUpdateStatusCallCounter }, 10*time.Second).Should(Equal(expectedDPIUpdateStatusCallCounter))
-		Eventually(func() int { return actualPCAPUpdateStatusCallCounter }, 10*time.Second).Should(Equal(expectedPCAPUpdateStatusCallCounter))
+		Eventually(getActualDPIUpdateStatusCallCounter, 10*time.Second).Should(Equal(expectedDPIUpdateStatusCallCounter))
+		Eventually(getActualPCAPUpdateStatusCallCounter, 10*time.Second).Should(Equal(expectedPCAPUpdateStatusCallCounter))
 	})
 })

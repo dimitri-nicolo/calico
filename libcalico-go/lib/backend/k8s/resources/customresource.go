@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019,2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2019,2021-2022 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,6 +38,8 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 )
+
+var uiSettingsType = reflect.TypeOf(apiv3.UISettings{})
 
 // customK8sResourceClient implements the K8sResourceClient interface and provides a generic
 // mechanism for a 1:1 mapping between a Calico Resource and an equivalent Kubernetes
@@ -229,7 +231,14 @@ func (c *customK8sResourceClient) Delete(ctx context.Context, k model.Key, revis
 
 	opts := &metav1.DeleteOptions{}
 	if uid != nil {
-		opts.Preconditions = &metav1.Preconditions{UID: uid}
+		if c.k8sResourceType == uiSettingsType {
+			// The UID of the underlying CRD for UISettings is reversed (see ReverseUID,
+			// ConvertK8sResourceToCalicoResource and ConvertCalicoResourceToK8sResource for details).
+			ruid := ReverseUID(*uid)
+			opts.Preconditions = &metav1.Preconditions{UID: &ruid}
+		} else {
+			opts.Preconditions = &metav1.Preconditions{UID: uid}
+		}
 	}
 
 	// Delete the resource using the name.
