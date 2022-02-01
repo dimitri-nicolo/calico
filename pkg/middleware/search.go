@@ -99,8 +99,15 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.Sear
 	}
 
 	// Set cluster name to default: "cluster", if empty.
-	if len(params.ClusterName) == 0 {
-		params.ClusterName = "cluster"
+	if params.ClusterName == "" {
+		clusterName := defaultClusterName
+		if r.Header != nil {
+			xClusterID := r.Header.Get(clusterIdHeader)
+			if xClusterID != "" {
+				clusterName = xClusterID
+			}
+		}
+		params.ClusterName = clusterName
 	}
 
 	// Check that we are not attempting to enumerate more than the maximum number of results.
@@ -153,10 +160,18 @@ func search(
 		}
 		esquery = esquery.Must(selector)
 	}
+	if len(params.Filter) > 0 {
+		for _, filter := range params.Filter {
+			q := elastic.NewRawStringQuery(string(filter))
+			esquery = esquery.Filter(q)
+		}
+	}
 
 	// Time range query.
-	timeRange := idxHelper.NewTimeRangeQuery(params.TimeRange.From, params.TimeRange.To)
-	esquery = esquery.Filter(timeRange)
+	if params.TimeRange != nil {
+		timeRange := idxHelper.NewTimeRangeQuery(params.TimeRange.From, params.TimeRange.To)
+		esquery = esquery.Filter(timeRange)
+	}
 
 	// Rbac query.
 	verbs, err := authReview.PerformReviewForElasticLogs(ctx, params.ClusterName)
@@ -203,10 +218,15 @@ func search(
 	}
 
 	cappedTotalHits := math.MinInt(int(result.TotalHits), maxNumResults)
+	numPages := 0
+	if params.PageSize > 0 {
+		numPages = ((cappedTotalHits - 1) / params.PageSize) + 1
+	}
+
 	return &v1.SearchResponse{
 		TimedOut:  result.TimedOut,
 		Took:      metav1.Duration{Duration: time.Millisecond * time.Duration(result.TookInMillis)},
-		NumPages:  ((cappedTotalHits - 1) / params.PageSize) + 1,
+		NumPages:  numPages,
 		TotalHits: int(result.TotalHits),
 		Hits:      result.RawHits,
 	}, nil

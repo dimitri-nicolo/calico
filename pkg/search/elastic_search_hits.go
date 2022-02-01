@@ -89,7 +89,15 @@ func Hits(ctx context.Context, query *Query, client *elastic.Client) (*ESResults
 		}
 		if result.Hits != nil && result.Hits.TotalHits.Value > 0 {
 			for _, hit := range result.Hits.Hits {
-				rawHits = append(rawHits, hit.Source)
+				rawHit, err := json.Marshal(map[string]interface{}{
+					"id":     hit.Id,
+					"index":  hit.Index,
+					"source": hit.Source,
+				})
+				if err != nil {
+					continue
+				}
+				rawHits = append(rawHits, rawHit)
 			}
 		} else {
 			// Log when no hits are returned.
