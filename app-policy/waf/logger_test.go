@@ -7,8 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/projectcalico/calico/app-policy/waf"
 	"github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/app-policy/waf"
 )
 
 type mockLogFormatter struct {
