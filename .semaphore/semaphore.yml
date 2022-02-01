@@ -458,7 +458,7 @@ blocks:
     - name: test-customer-license
     prologue:
       commands:
-      - cd cni-plugin
+      - cd calicoq
     jobs:
     - name: "make ci" 
       commands:
