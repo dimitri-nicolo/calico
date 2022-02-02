@@ -42,7 +42,7 @@ func TestCheckRulesSetExists_InvalidDirectory(t *testing.T) {
 func TestCheckRulesSetExists_EmptyDirectory(t *testing.T) {
 
 	err := CheckRulesSetExists(testEmptyRulesetDirectory)
-	if err != nil {
+	if err == nil {
 		t.Errorf("Expect: error 'nil' Actual: '%v'", err.Error())
 	}
 

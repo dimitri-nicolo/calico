@@ -115,6 +115,11 @@ func ExtractRulesSetFilenames() error {
 		count++
 	}
 
+	if len(filenames) == 0 {
+		errMsg := fmt.Sprintf("No WAF Core Rules Set found in '%s'", rulesetDirectory)
+		return errors.New(errMsg)
+	}
+
 	log.Infof("WAF Total Core Rules Set files: %d", len(filenames))
 	return nil
 }
