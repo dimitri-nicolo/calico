@@ -2374,6 +2374,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.WireguardPersistentKeepAlive != nil {
+		in, out := &in.WireguardPersistentKeepAlive, &out.WireguardPersistentKeepAlive
+		*out = new(metav1.Duration)
+		**out = **in
+	}
 	if in.CaptureDir != nil {
 		in, out := &in.CaptureDir, &out.CaptureDir
 		*out = new(string)

@@ -673,6 +673,8 @@ type FelixConfigurationSpec struct {
 	WireguardMTU *int `json:"wireguardMTU,omitempty"`
 	// WireguardHostEncryptionEnabled controls whether Wireguard host-to-host encryption is enabled. [Default: false]
 	WireguardHostEncryptionEnabled *bool `json:"wireguardHostEncryptionEnabled,omitempty"`
+	// WireguardKeepAlive controls Wireguard PersistentKeepalive option. Set 0 to disable. [Default: 0]
+	WireguardPersistentKeepAlive *metav1.Duration `json:"wireguardKeepAlive,omitempty"`
 
 	// +kubebuilder:validation:MinLength=1
 	// CaptureDir controls directory to store file capture. [Default: /var/log/calico/pcap]

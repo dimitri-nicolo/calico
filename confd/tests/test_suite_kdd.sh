@@ -24,7 +24,7 @@ export LOGPATH=/tests/logs/kdd
 
 # We are using kdd.  Set the datastore parms for calicoctl/confd/etcdctl
 export DATASTORE_TYPE=kubernetes
-echo KUBECONFIG is $KUBECONFIG
+export KUBECONFIG=/home/user/certs/kubeconfig
 
 # CRDs are pulled in from libcalico.
 CRDS=../libcalico-go/config/crd

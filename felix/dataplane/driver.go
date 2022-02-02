@@ -389,6 +389,7 @@ func StartDataplaneDriver(configParams *config.Config,
 				MTU:                 configParams.WireguardMTU,
 				RouteSource:         configParams.RouteSource,
 				EncryptHostTraffic:  configParams.WireguardHostEncryptionEnabled,
+				PersistentKeepAlive: configParams.WireguardPersistentKeepAlive,
 			},
 
 			IPIPMTU:                        configParams.IpInIpMtu,

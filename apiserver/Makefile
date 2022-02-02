@@ -130,7 +130,7 @@ sub-image-%:
 
 $(API_SERVER_IMAGE): register $(CONTAINER_CREATED)
 $(CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) $(BINDIR)/apiserver-$(ARCH) $(BINDIR)/filecheck-$(ARCH)
-	docker build --no-cache --pull -t $(API_SERVER_IMAGE):latest-$(ARCH) $(TARGET_PLATFORM) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg GIT_VERSION=$(GIT_VERSION) -f docker-image/Dockerfile.$(ARCH) .
+	docker build --no-cache --pull -t $(API_SERVER_IMAGE):latest-$(ARCH) $(TARGET_PLATFORM) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg UBI_IMAGE=$(UBI_IMAGE) --build-arg GIT_VERSION=$(GIT_VERSION) -f docker-image/Dockerfile.$(ARCH) .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
@@ -187,7 +187,7 @@ hack-lib:
 	curl -s --fail $(GITHUB_TEST_INTEGRATION_URI)/golang.sh -o hack/lib/golang.sh
 	curl -s --fail $(GITHUB_TEST_INTEGRATION_URI)/etcd.sh -o hack/lib/etcd.sh
 
-## Run a local kubernetes server with API via hyperkube
+## Run a local kubernetes server with API in a container.
 run-kubernetes-server: config/crd run-etcd stop-kubernetes-server
 	# Run a Kubernetes apiserver using Docker.
 	docker run --detach --net=host \

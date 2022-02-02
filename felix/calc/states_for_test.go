@@ -912,8 +912,7 @@ var localEpsWithPolicyUpdatedIPs = localEpsWithPolicy.withKVUpdates(
 // withProfile adds a profile to the initialised state.
 var withProfile = initialisedStore.withKVUpdates(
 	KVPair{Key: ProfileRulesKey{ProfileKey: ProfileKey{Name: "prof-1"}}, Value: &profileRules1},
-	KVPair{Key: ProfileTagsKey{ProfileKey: ProfileKey{Name: "prof-1"}}, Value: profileTags1},
-	KVPair{Key: ProfileLabelsKey{ProfileKey: ProfileKey{Name: "prof-1"}}, Value: profileLabels1},
+	KVPair{Key: ProfileLabelsKey{ProfileKey: ProfileKey{Name: "prof-1"}}, Value: profileLabels1Tag1},
 ).withName("profile")
 
 // localEpsWithProfile contains a pair of overlapping IP endpoints and a profile
@@ -1002,8 +1001,7 @@ var localEpsWithUpdatedProfileNegatedTags = localEpsWithUpdatedProfile.withKVUpd
 // tags as labels.  I.e. a tag of name foo should be equivalent to label foo=""
 var withProfileTagInherit = initialisedStore.withKVUpdates(
 	KVPair{Key: ProfileRulesKey{ProfileKey: ProfileKey{Name: "prof-1"}}, Value: &profileRulesWithTagInherit},
-	KVPair{Key: ProfileTagsKey{ProfileKey: ProfileKey{Name: "prof-1"}}, Value: profileTags1},
-	KVPair{Key: ProfileLabelsKey{ProfileKey: ProfileKey{Name: "prof-1"}}, Value: profileLabels1},
+	KVPair{Key: ProfileLabelsKey{ProfileKey: ProfileKey{Name: "prof-1"}}, Value: profileLabels1Tag1},
 ).withName("profile")
 
 var localEpsWithTagInheritProfile = withProfileTagInherit.withKVUpdates(
@@ -1035,7 +1033,6 @@ var localEpsWithTagInheritProfile = withProfileTagInherit.withKVUpdates(
 
 var withProfileTagOverriden = initialisedStore.withKVUpdates(
 	KVPair{Key: ProfileRulesKey{ProfileKey: ProfileKey{Name: "prof-1"}}, Value: &profileRulesWithTagInherit},
-	KVPair{Key: ProfileTagsKey{ProfileKey: ProfileKey{Name: "prof-1"}}, Value: profileTags1},
 	KVPair{Key: ProfileLabelsKey{ProfileKey: ProfileKey{Name: "prof-1"}}, Value: profileLabelsTag1},
 ).withName("profile")
 
