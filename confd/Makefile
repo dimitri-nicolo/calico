@@ -169,7 +169,7 @@ run-k8s-apiserver: stop-k8s-apiserver run-etcd tests/confd_kubeconfig
             --max-requests-inflight=0
 	# Wait until the apiserver is accepting requests.
 	docker cp tests/confd_kubeconfig calico-k8s-apiserver:/kubeconfig
-	while ! docker exec calico-k8s-apiserver kubectl --kubeconfig=/kubeconfig get nodes; do echo "Waiting for apiserver to come up..."; sleep 2; done
+	while ! docker exec calico-k8s-apiserver kubectl --kubeconfig=/home/user/certs/kubeconfig get nodes; do echo "Waiting for apiserver to come up..."; sleep 2; done
 
 ## Stop Kubernetes apiserver
 stop-k8s-apiserver:
