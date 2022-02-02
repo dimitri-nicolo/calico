@@ -39,7 +39,7 @@ Options:
   -h --help              Show this screen.
   -l --listen <port>     Unix domain socket path [default: /var/run/dikastes/dikastes.sock]
   -d --dial <target>     Target to dial. [default: localhost:50051]
-  -r --rules <target>    Directory where WAF rules are stored. [default: /etc/waf/]
+  -r --rules <target>    Directory where WAF rules are stored.
   --debug                Log at Debug level.`
 
 var VERSION string
@@ -68,7 +68,7 @@ func main() {
 func runServer(arguments map[string]interface{}) {
 	filePath := arguments["--listen"].(string)
 	dial := arguments["--dial"].(string)
-	rulesetDirectory := arguments["--rules"].(string)
+	rulesetArgument := arguments["--rules"]
 
 	_, err := os.Stat(filePath)
 	if !os.IsNotExist(err) {
@@ -95,9 +95,9 @@ func runServer(arguments map[string]interface{}) {
 	}
 
 	// Check if WAF should be enabled first before proceeding...
-	err = waf.CheckRulesSetExists(rulesetDirectory)
+	err = waf.CheckRulesSetExists(rulesetArgument)
 	if err != nil {
-		log.Errorf("WAF Core Rules Set check: '%s'", err.Error())
+		log.Fatalf("Failed WAF Core Rules Set check: '%s'", err.Error())
 	}
 
 	if waf.IsEnabled() {

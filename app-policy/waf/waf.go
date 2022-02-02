@@ -30,16 +30,21 @@ var rulesetDirectory string
 // Slice of filenames read from Core Rules Set directory.
 var filenames []string
 
-const defaultRulesetDirectory = "/etc/waf/"
-
 // CheckRulesSetExists
-// invoke this WAF function first passing in the Core Rule Set directory or /etc/waf/ as per default;
+// invoke this WAF function first checking if rules argument set and if so with destination directory.
 // if this directory does not exist OR zero *.conf Core Rule Sets files exist then do not enable WAF.
-func CheckRulesSetExists(directory string) error {
+func CheckRulesSetExists(rulesetArgument interface{}) error {
 
 	// Assume WAF is not enabled by default.
 	wafIsEnabled = false
 
+	// If rules argument is not set then user does not want WAF;
+	// simply return: WAF will continue to be disabled by default.
+	if rulesetArgument == nil {
+		return nil
+	}
+
+	directory := rulesetArgument.(string)
 	DefineRulesSetDirectory(directory)
 
 	err := CheckRulesSetDirectoryExists()
@@ -57,12 +62,8 @@ func CheckRulesSetExists(directory string) error {
 }
 
 func DefineRulesSetDirectory(directory string) {
-	rulesetDirectory = directory
 
-	// Defend against root access "/".
-	if len(rulesetDirectory) < 2 {
-		rulesetDirectory = defaultRulesetDirectory
-	}
+	rulesetDirectory = directory
 	log.Printf("WAF Core Rules Set directory: '%s'", rulesetDirectory)
 
 	// Ensure rules directory ends with trailing slash.
