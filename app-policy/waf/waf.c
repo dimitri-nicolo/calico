@@ -6,9 +6,20 @@
 #include "modsecurity/rules_set.h"
 #include "modsecurity/transaction.h"
 #include "modsecurity/intervention.h"
+#include <errno.h>
 
 ModSecurity *modsec = NULL;
 RulesSet *rules = NULL;
+
+// Helper return value codes.
+typedef enum tag_enum_msc_retval
+{
+	msc_retval_connection = -1,
+	msc_retval_uri = -2,
+	msc_retval_request_headers = -3,
+	msc_retval_request_body = -4,
+
+} enum_msc_retval;
 
 // Private helper function to initialize ModSecurity.
 static void initializeModSecurityImpl();
@@ -54,7 +65,7 @@ const char* LoadModSecurityCoreRuleSet( char *file )
 
 int ProcessHttpRequest( char *id, char *uri, char *http_method, char *http_protocol, char *http_version, char *client_host, int client_port, char *server_host, int server_port )
 {
-    int detection = 0;
+    int retVal = 0;
     if ( modsec == NULL )
     {
         initializeModSecurityImpl();
@@ -62,10 +73,34 @@ int ProcessHttpRequest( char *id, char *uri, char *http_method, char *http_proto
 
     Transaction *transaction = NULL;
     transaction = msc_new_transaction_with_id( modsec, rules, id, NULL );
-    msc_process_connection( transaction, client_host, client_port, server_host, server_port );
-    msc_process_uri( transaction, uri, http_protocol, http_version );
-    msc_process_request_headers( transaction );
-    msc_process_request_body( transaction );
+
+    retVal = msc_process_connection( transaction, client_host, client_port, server_host, server_port );
+    if ( !retVal )
+    {
+        retVal = msc_retval_connection;
+        goto out;
+    }
+
+    retVal = msc_process_uri( transaction, uri, http_protocol, http_version );
+    if ( !retVal )
+    {
+        retVal = msc_retval_uri;
+        goto out;
+    }
+
+    retVal = msc_process_request_headers( transaction );
+    if ( !retVal )
+    {
+        retVal = msc_retval_request_headers;
+        goto out;
+    }
+
+    retVal = msc_process_request_body( transaction );
+    if ( !retVal )
+    {
+        retVal = msc_retval_request_body;
+        goto out;
+    }
 
     ModSecurityIntervention intervention;
     intervention.status = 200;
@@ -73,14 +108,19 @@ int ProcessHttpRequest( char *id, char *uri, char *http_method, char *http_proto
     intervention.log = NULL;
     intervention.disruptive = 0;
 
-    detection = msc_intervention( transaction, &intervention );
+    retVal = msc_intervention( transaction, &intervention );
+
+out:
     if ( transaction != NULL )
     {
         msc_transaction_cleanup( transaction );
         transaction = NULL;
     }
 
-    return detection;
+    // Set errno for any potential ModSec return value failures to trigger Go err value to be returned upstream.
+    errno = ( retVal < 0 ) ? retVal : 0;
+
+    return retVal;
 }
 
 void CleanupModSecurity()

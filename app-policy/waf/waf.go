@@ -185,10 +185,17 @@ func ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion string, c
 	CserverPort := C.int(serverPort)
 
 	start := time.Now()
-	detection := int(C.ProcessHttpRequest(Cid, Curi, ChttpMethod, ChttpProtocol, ChttpVersion, CclientHost, CclientPort, CserverHost, CserverPort))
+	retVal, err := C.ProcessHttpRequest(Cid, Curi, ChttpMethod, ChttpProtocol, ChttpVersion, CclientHost, CclientPort, CserverHost, CserverPort)
 	elapsed := time.Since(start)
 
+	if err != nil {
+		errMsg := fmt.Sprintf("%s URL '%s' ModSecurity error '%v'", prefix, url, err.Error())
+		return errors.New(errMsg)
+	}
+
+	detection := int(retVal)
 	log.Infof("%s URL '%s' Detection=%d Time elapsed: %s", prefix, url, detection, elapsed)
+
 	if detection > 0 {
 		errMsg := fmt.Sprintf("%s URL '%s' Detection=%d", prefix, url, detection)
 		return errors.New(errMsg)

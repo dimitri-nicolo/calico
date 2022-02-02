@@ -26,7 +26,7 @@ func TestCheckRulesSetExists_OK(t *testing.T) {
 	}
 }
 
-func TestCheckRulesSetExists_InvaidDirectory(t *testing.T) {
+func TestCheckRulesSetExists_InvalidDirectory(t *testing.T) {
 
 	err := CheckRulesSetExists(testInvalidRulesetDirectory)
 	if err == nil {
