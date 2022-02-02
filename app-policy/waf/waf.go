@@ -33,22 +33,15 @@ var filenames []string
 // CheckRulesSetExists
 // invoke this WAF function first checking if rules argument set and if so with destination directory.
 // if this directory does not exist OR zero *.conf Core Rule Sets files exist then do not enable WAF.
-func CheckRulesSetExists(rulesetArgument interface{}) error {
+func CheckRulesSetExists(directory string) error {
 
 	// Assume WAF is not enabled by default.
 	wafIsEnabled = false
 
-	// If rules argument is not set then user does not want WAF;
-	// simply return: WAF will continue to be disabled by default.
-	if rulesetArgument == nil {
-		return nil
-	}
-
-	directory := rulesetArgument.(string)
 	DefineRulesSetDirectory(directory)
 
 	err := CheckRulesSetDirectoryExists()
-	if os.IsNotExist(err) {
+	if err != nil {
 		return err
 	}
 

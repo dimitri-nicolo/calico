@@ -95,9 +95,12 @@ func runServer(arguments map[string]interface{}) {
 	}
 
 	// Check if WAF should be enabled first before proceeding...
-	err = waf.CheckRulesSetExists(rulesetArgument)
-	if err != nil {
-		log.Fatalf("Failed WAF Core Rules Set check: '%s'", err.Error())
+	if rulesetArgument != nil {
+		rulesetDirectory := rulesetArgument.(string)
+		err = waf.CheckRulesSetExists(rulesetDirectory)
+		if err != nil {
+			log.Fatalf("Failed WAF Core Rules Set check: '%s'", err.Error())
+		}
 	}
 
 	if waf.IsEnabled() {
