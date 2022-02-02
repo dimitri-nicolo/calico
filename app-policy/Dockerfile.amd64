@@ -14,9 +14,10 @@
 
 ARG GIT_VERSION=unknown
 ARG UBI_IMAGE
+ARG UBI_IMAGE_FULL
 
 
-FROM registry.access.redhat.com/ubi8/ubi:latest as build
+FROM ${UBI_IMAGE_FULL} as build
 
 RUN dnf install -y https://www6.atomicorp.com/channels/atomic/centos/8/x86_64/RPMS/GeoIP-1.6.12-5.el8.x86_64.rpm https://www6.atomicorp.com/channels/atomic/centos/8/x86_64/RPMS/GeoIP-GeoLite-data-2018.06-3.el8.noarch.rpm https://www6.atomicorp.com/channels/atomic/centos/8/x86_64/RPMS/GeoIP-GeoLite-data-extra-2018.06-3.el8.noarch.rpm https://www6.atomicorp.com/channels/atomic/centos/8/x86_64/RPMS/GeoIP-devel-1.6.12-5.el8.x86_64.rpm
 
