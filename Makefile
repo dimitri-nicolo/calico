@@ -32,12 +32,10 @@ clean:
 	rm -rf bin \
 		   Makefile.common*
 
-build/$(JUST_WATCH_FILE_NAME).tar.gz:
-
 build:
 	git submodule update --init --recursive
 	mkdir -p bin
-	cd elasticsearch-exporter && make
+	$(DOCKER_GO_BUILD) bash -x  -c "cd elasticsearch-exporter && make common-build"
 	cp elasticsearch-exporter/elasticsearch_exporter bin/
 
 image: $(ELASTICSEARCH_METRICS_IMAGE)
