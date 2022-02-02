@@ -78,7 +78,6 @@ func (pcc *PacketCaptureCalculator) RegisterWith(localEndpointDispatcher, allUpd
 
 	// and profile labels and tags
 	allUpdDispatcher.Register(model.ProfileLabelsKey{}, pcc.OnUpdate)
-	allUpdDispatcher.Register(model.ProfileTagsKey{}, pcc.OnUpdate)
 	// and packet captures.
 	allUpdDispatcher.Register(model.ResourceKey{}, pcc.OnUpdate)
 }
@@ -89,9 +88,6 @@ func (pcc *PacketCaptureCalculator) OnUpdate(update api.Update) (_ bool) {
 		// updating index labels and matching selectors
 		pcc.labelIndex.OnUpdate(update)
 	case model.ProfileLabelsKey:
-		// updating index labels and matching selectors
-		pcc.labelIndex.OnUpdate(update)
-	case model.ProfileTagsKey:
 		// updating index labels and matching selectors
 		pcc.labelIndex.OnUpdate(update)
 	case model.ResourceKey:

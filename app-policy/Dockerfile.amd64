@@ -12,41 +12,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+ARG GIT_VERSION=unknown
+ARG UBI_IMAGE
 
-FROM registry.access.redhat.com/ubi8/ubi:latest as build
+FROM ${UBI_IMAGE} as ubi
 
-RUN dnf install -y https://www6.atomicorp.com/channels/atomic/centos/8/x86_64/RPMS/GeoIP-1.6.12-5.el8.x86_64.rpm https://www6.atomicorp.com/channels/atomic/centos/8/x86_64/RPMS/GeoIP-GeoLite-data-2018.06-3.el8.noarch.rpm https://www6.atomicorp.com/channels/atomic/centos/8/x86_64/RPMS/GeoIP-GeoLite-data-extra-2018.06-3.el8.noarch.rpm https://www6.atomicorp.com/channels/atomic/centos/8/x86_64/RPMS/GeoIP-devel-1.6.12-5.el8.x86_64.rpm
+RUN mkdir -p /tmp/dikastes
+RUN chmod 0777 /tmp/dikastes
 
-RUN dnf install --disableplugin=subscription-manager -y git gcc gcc-c++ make GeoIP-devel libtool libcurl-devel libxml2-devel pcre-devel && \
-      git clone https://github.com/spiderlabs/modsecurity modsecurity && \
-      cd modsecurity && git checkout ${MODSEC_VERSION:-v3.0.6} && \
-      git submodule init && git submodule update && \
-      ./build.sh && ./configure && make && make install
-
-
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest as artifact
+# Add in top-level license file
+RUN mkdir /licenses
 COPY LICENSE /licenses
 
-RUN mkdir -p /tmp/dikastes && chmod 0777 /tmp/dikastes
-
 FROM scratch
-ARG GIT_VERSION=unknown
 
-LABEL name="Calico Dikastes" \
-      vendor="Project Calico" \
-      version=$GIT_VERSION
-
-COPY --from=build /usr/local/modsecurity/ /usr/local/modsecurity/
-COPY --from=build /usr/lib64/libGeoIP.* /usr/lib64/
-
-COPY --chown=999 --from=artifact /tmp/dikastes /tmp/dikastes
-COPY --from=artifact /licenses /licenses
-COPY --from=artifact /lib64 /lib64
-COPY --from=artifact /lib /lib
-
+COPY --from=ubi /licenses /licenses
 ADD bin/dikastes-amd64 /dikastes
 ADD bin/healthz-amd64 /healthz
 
+# Include libraries from UBI for dynamic linking.
+COPY --from=ubi /lib64 /lib64
+COPY --from=ubi /lib /lib
+
+# Typical Linux systems start numbering human users at 1000, reserving 1-999
+# for services, so we pick 999 to be least likely to overlap.  It's not a big
+# deal if we happen to overlap, as it would take a container escape for
+# an attacker to use any privileges that happen to be assigned to this user.
+#
+# Precreate the /var/run/dikastes directory so that we don't need any elevated
+# permission to create the directory at runtime.
+COPY --chown=999 --from=ubi /tmp/dikastes /var/run/dikastes
 USER 999
 ENTRYPOINT ["/dikastes"]
 CMD ["server"]

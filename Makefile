@@ -53,6 +53,16 @@ image:
 	$(MAKE) -C typha image IMAGETAG=$(GIT_VERSION) VALIDARCHES=$(ARCH)
 	$(MAKE) -C node image IMAGETAG=$(GIT_VERSION) VALIDARCHES=$(ARCH)
 
+###############################################################################
+# Run local e2e smoke test against the checked-out code 
+# using a local kind cluster.
+###############################################################################
+E2E_FOCUS ?= "sig-network.*Conformance"
+e2e-test:
+	$(MAKE) -C e2e build
+	$(MAKE) -C node kind-k8st-setup
+	KUBECONFIG=./node/kubeconfig.yaml ./e2e/bin/e2e.test -ginkgo.focus=$(E2E_FOCUS)
+
 # Merge OSS branch.
 # Expects the following arguments:
 # - OSS_REMOTE: Git remote to use for OSS.
@@ -63,7 +73,7 @@ OSS_BRANCH?=master
 PRIVATE_BRANCH?=master
 merge-open:
 	git fetch $(OSS_REMOTE)
-	git branch -D $(USER)-merge-oss; git checkout -B $(USER)-merge-oss
+	git branch -D $(USER)-merge-oss; git checkout -B $(USER)-merge-oss-$(OSS_BRANCH)
 	git merge $(OSS_REMOTE)/$(OSS_BRANCH)
 	@echo "==========================================================="
 	@echo "Resolve any conflicts, push to private, and submit a PR"

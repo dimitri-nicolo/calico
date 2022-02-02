@@ -552,7 +552,7 @@ var profileRules1 = ProfileRules{
 		{SrcSelector: allSelector},
 	},
 	OutboundRules: []Rule{
-		{SrcTag: "tag-1"},
+		{SrcSelector: "has(tag-1)"},
 	},
 }
 
@@ -570,7 +570,7 @@ var profileRules1TagUpdate = ProfileRules{
 		{SrcSelector: bEpBSelector},
 	},
 	OutboundRules: []Rule{
-		{SrcTag: "tag-2"},
+		{SrcSelector: "has(tag-2)"},
 	},
 }
 
@@ -579,11 +579,14 @@ var profileRules1NegatedTagSelUpdate = ProfileRules{
 		{NotSrcSelector: bEpBSelector},
 	},
 	OutboundRules: []Rule{
-		{NotSrcTag: "tag-2"},
+		{NotSrcSelector: "has(tag-2)"},
 	},
 }
 
-var profileTags1 = []string{"tag-1"}
+var profileLabels1Tag1 = map[string]string{
+	"profile": "prof-1",
+	"tag-1":   "",
+}
 var profileLabels1 = map[string]string{
 	"profile": "prof-1",
 }

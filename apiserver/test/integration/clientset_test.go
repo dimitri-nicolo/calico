@@ -3456,15 +3456,22 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 		},
 	}
 
-	// start from scratch. Listing without specifying the groupName should fail.
+	// start from scratch. Listing without specifying the groupName should be fine since we have full access across
+	// all groups.
 	uiSettingsList, err := uiSettingsClient.List(ctx, metav1.ListOptions{})
-	if err == nil {
-		return fmt.Errorf("expecting error when listing without groupName info")
+	if err != nil {
+		return fmt.Errorf("error listing uiSettings with no group selector (%s)", err)
+	}
+	if uiSettingsList.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+	if len(uiSettingsList.Items) > 0 {
+		return fmt.Errorf("uiSettingsGroup should not exist on start, had %v uiSettingsGroup", len(uiSettingsList.Items))
 	}
 
 	uiSettingsList, err = uiSettingsClient.List(ctx, metav1.ListOptions{FieldSelector: "spec.group=" + groupName})
 	if err != nil {
-		return fmt.Errorf("error listing uiSettings (%s)", err)
+		return fmt.Errorf("error listing uiSettings with group selector (%s)", err)
 	}
 	if uiSettingsList.Items == nil {
 		return fmt.Errorf("Items field should not be set to nil")
@@ -3538,16 +3545,19 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("expecting OwnerReferences be the owning group after update: '%v'", uiSettingsServer.OwnerReferences)
 	}
 
-	// List should fail if not specifying the group.
+	// List should include everything if not specifying the group.
 	uiSettingsList, err = uiSettingsClient.List(ctx, metav1.ListOptions{})
-	if err == nil {
-		return fmt.Errorf("expected error listing UISettingsGroup without specifying group")
+	if err != nil {
+		return fmt.Errorf("error listing uiSettingss without group selector (%s)", err)
+	}
+	if len(uiSettingsList.Items) != 1 {
+		return fmt.Errorf("should have exactly one uiSettings, had %v uiSettingss", len(uiSettingsList.Items))
 	}
 
 	// Should be listing the uiSettings by field selector.
 	uiSettingsList, err = uiSettingsClient.List(ctx, metav1.ListOptions{FieldSelector: "spec.group=" + groupName})
 	if err != nil {
-		return fmt.Errorf("error listing uiSettingss (%s)", err)
+		return fmt.Errorf("error listing uiSettingss with group selector (%s)", err)
 	}
 	if len(uiSettingsList.Items) != 1 {
 		return fmt.Errorf("should have exactly one uiSettings, had %v uiSettingss", len(uiSettingsList.Items))

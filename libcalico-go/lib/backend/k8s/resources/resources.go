@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2020,2022 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,10 +16,14 @@ package resources
 
 import (
 	"encoding/json"
+	"strings"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
@@ -139,6 +143,7 @@ func ConvertCalicoResourceToK8sResource(resIn Resource) (Resource, error) {
 	romCopy.ResourceVersion = ""
 	romCopy.Labels = nil
 	romCopy.Annotations = nil
+	romCopy.UID = ""
 
 	// Marshal the data and store the json representation in the annotations.
 	metadataBytes, err := json.Marshal(romCopy)
@@ -159,7 +164,14 @@ func ConvertCalicoResourceToK8sResource(resIn Resource) (Resource, error) {
 	meta.Namespace = rom.GetNamespace()
 	meta.ResourceVersion = rom.GetResourceVersion()
 	meta.Labels = rom.GetLabels()
-	meta.UID = rom.GetUID()
+
+	// Reverse the UID for UISettings to ensure garbage collection works correctly.
+	switch resIn.(type) {
+	case *v3.UISettings:
+		meta.UID = ReverseUID(rom.GetUID())
+	default:
+		meta.UID = rom.GetUID()
+	}
 
 	resOut := resIn.DeepCopyObject().(Resource)
 	romOut := resOut.GetObjectMeta()
@@ -202,10 +214,40 @@ func ConvertK8sResourceToCalicoResource(res Resource) error {
 	meta.ResourceVersion = rom.GetResourceVersion()
 	meta.Labels = rom.GetLabels()
 	meta.Annotations = annotations
-	meta.UID = rom.GetUID()
+
+	// Reverse the UID for UISettings to ensure garbage collection works correctly.
+	switch res.(type) {
+	case *v3.UISettings:
+		meta.UID = ReverseUID(rom.GetUID())
+	default:
+		meta.UID = rom.GetUID()
+	}
 
 	// Overwrite the K8s metadata with the Calico metadata.
 	meta.DeepCopyInto(rom.(*metav1.ObjectMeta))
 
 	return nil
+}
+
+// ReverseUID reverses the segments of a UID to create another UID.
+//
+// We use this to map between the CRD and v3 resource types. It is not possible to use the same UID as this breaks
+// garbage collection of the v3 resource types. We need to be able to deterministically map between the v3 and CRD
+// UID and this seems like a reasonable approach. We could potentially store in the annotation (so both CRD and v3
+// have this annotation and we switch annotation w/ the metadata UID) - however that doesn't work for deletes where
+// the metadata is unavailable, but a UID may have been supplied to handle atomicity.
+func ReverseUID(uid types.UID) types.UID {
+	parts := strings.Split(string(uid), "-")
+	for ii := range parts {
+		parts[ii] = ReverseString(parts[ii])
+	}
+	return types.UID(strings.Join(parts, "-"))
+}
+
+func ReverseString(s string) string {
+	r := []rune(s)
+	for ii, jj := 0, len(r)-1; ii < len(r)/2; ii, jj = ii+1, jj-1 {
+		r[ii], r[jj] = r[jj], r[ii]
+	}
+	return string(r)
 }

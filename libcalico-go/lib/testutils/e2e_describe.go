@@ -29,7 +29,10 @@ const (
 	DatastoreEtcdV3 DatastoreType = 1 << iota
 	DatastoreK8s
 
+	/* etcdv3 backend is not supported in enterprise.
 	DatastoreAll = DatastoreEtcdV3 | DatastoreK8s
+	*/
+	DatastoreAll = DatastoreK8s
 
 	// Mounted in to the test container during test-setup.
 	kubeconfig = "/kubeconfig.yaml"

@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 
 package calico
 
@@ -37,13 +37,12 @@ func NewUISettingsStorage(opts Options) (registry.DryRunnableStorage, factory.De
 			// how these resources are garbage collected.
 			res = res.DeepCopy()
 			falseVal := false
-			trueVal := false
 			res.OwnerReferences = []metav1.OwnerReference{{
 				APIVersion:         v3.GroupVersionCurrent,
 				Kind:               v3.KindUISettingsGroup,
 				Name:               gp.Name,
 				UID:                gp.UID,
-				Controller:         &trueVal,
+				Controller:         &falseVal,
 				BlockOwnerDeletion: &falseVal,
 			}}
 		}
