@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 //go:build !windows
 // +build !windows
 
