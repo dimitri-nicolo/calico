@@ -3425,6 +3425,7 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 
 	groupName := "groupname-a"
 	name = groupName + "." + name
+	name2 := groupName + "." + name + ".2"
 
 	uiSettingsClient := client.ProjectcalicoV3().UISettings()
 	uiSettingsGroupClient := client.ProjectcalicoV3().UISettingsGroups()
@@ -3469,15 +3470,10 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("uiSettingsGroup should not exist on start, had %v uiSettingsGroup", len(uiSettingsList.Items))
 	}
 
+	// Listing with the group name will fail because the group does not exist.
 	uiSettingsList, err = uiSettingsClient.List(ctx, metav1.ListOptions{FieldSelector: "spec.group=" + groupName})
-	if err != nil {
-		return fmt.Errorf("error listing uiSettings with group selector (%s)", err)
-	}
-	if uiSettingsList.Items == nil {
-		return fmt.Errorf("Items field should not be set to nil")
-	}
-	if len(uiSettingsList.Items) > 0 {
-		return fmt.Errorf("uiSettingsGroup should not exist on start, had %v uiSettingsGroup", len(uiSettingsList.Items))
+	if err == nil {
+		return fmt.Errorf("expected error listing the uiSettings with group when group does not exist")
 	}
 
 	// Attempt to create UISettings without the groupName existing,
@@ -3499,6 +3495,9 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 	if err != nil {
 		return fmt.Errorf("error creating the uiSettings '%v' (%v)", uiSettings, err)
 	}
+	defer func() {
+		uiSettingsClient.Delete(ctx, name, metav1.DeleteOptions{})
+	}()
 	if len(uiSettingsServer.OwnerReferences) != 1 {
 		return fmt.Errorf("expecting OwnerReferences to contain a single entry after create '%v'", uiSettingsServer.OwnerReferences)
 	}
@@ -3507,6 +3506,9 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 		uiSettingsServer.OwnerReferences[0].APIVersion != "projectcalico.org/v3" ||
 		uiSettingsServer.OwnerReferences[0].UID != uiSettingsGroupServer.UID {
 		return fmt.Errorf("expecting OwnerReferences be the owning group after create: '%v'", uiSettingsServer.OwnerReferences)
+	}
+	if len(uiSettingsServer.Spec.User) != 0 {
+		return fmt.Errorf("expecting User field not to be filled in: %v", uiSettingsServer.Spec.User)
 	}
 
 	/// Try updating without the owner reference. This should fail.
@@ -3525,11 +3527,8 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 	if err != nil {
 		return fmt.Errorf("error in updating the uiSettings '%v' (%v)", uiSettings, err)
 	}
-	// The labels should also include a group label, added by the backend.
-	updatedUISettings.Labels["projectcalico.org/uisettingsgroup"] = groupName
 	if !reflect.DeepEqual(uiSettingsServer.Labels, updatedUISettings.Labels) {
 		return fmt.Errorf("didn't update label %#v", uiSettingsServer.Labels)
-
 	}
 	if !reflect.DeepEqual(uiSettingsServer.Spec, updatedUISettings.Spec) {
 		return fmt.Errorf("didn't update spec %#v", uiSettingsServer.Spec)
@@ -3572,21 +3571,57 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("didn't get the same uiSettings back from the server \n%+v\n%+v", uiSettings, uiSettingsServer)
 	}
 
-	// Watch Test. We can try label selector for this one.
-	opts := v1.ListOptions{Watch: true, LabelSelector: "projectcalico.org/uisettingsgroup=" + groupName}
+	// Modify the group to have the user filter.
+	uiSettingsGroupServer.Spec.FilterType = "User"
+	uiSettingsGroupServer, err = uiSettingsGroupClient.Update(ctx, uiSettingsGroupServer, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("error updating the uiSettingsGroup '%v' (%v)", uiSettingsGroup, err)
+	}
+
+	// Create a second group that should be tied to the user.
+	uiSettings.Name = name2
+	uiSettingsServer2, err := uiSettingsClient.Create(ctx, uiSettings, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("error creating the second uiSettings '%v' (%v)", uiSettings, err)
+	}
+	defer func() {
+		uiSettingsClient.Delete(ctx, name2, metav1.DeleteOptions{})
+	}()
+	if len(uiSettingsServer2.Spec.User) == 0 {
+		return fmt.Errorf("expecting User field to be filled in")
+	}
+
+	// List UISettings without group. This should return both settings.
+	uiSettingsList, err = uiSettingsClient.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing uiSettingss without group selector (%s)", err)
+	}
+	if len(uiSettingsList.Items) != 2 {
+		return fmt.Errorf("should have exactly two uiSettings, had %v uiSettingss", len(uiSettingsList.Items))
+	}
+
+	// List UISettings with field selector shouold limit to user specific settings now.
+	uiSettingsList, err = uiSettingsClient.List(ctx, metav1.ListOptions{FieldSelector: "spec.group=" + groupName})
+	if err != nil {
+		return fmt.Errorf("error listing uiSettingss with group selector (%s)", err)
+	}
+	if len(uiSettingsList.Items) != 1 {
+		return fmt.Errorf("should have exactly one uiSettings, had %v uiSettingss", len(uiSettingsList.Items))
+	}
+	if uiSettingsList.Items[0].Name != name2 {
+		return fmt.Errorf("should have received %v, instead received %v", name2, uiSettingsList.Items[0].Name)
+	}
+
+	// Watch Test. Deleting the second should work.
+	opts := v1.ListOptions{Watch: true, FieldSelector: "spec.group=" + groupName}
 	wIface, err := uiSettingsClient.Watch(ctx, opts)
 	if err != nil {
 		return fmt.Errorf("Error on watch")
 	}
 
-	err = uiSettingsClient.Delete(ctx, name, metav1.DeleteOptions{})
+	err = uiSettingsClient.Delete(ctx, name2, metav1.DeleteOptions{})
 	if err != nil {
 		return fmt.Errorf("uiSettings should be deleted (%s)", err)
-	}
-
-	err = uiSettingsGroupClient.Delete(ctx, groupName, metav1.DeleteOptions{})
-	if err != nil {
-		return fmt.Errorf("uiSettingsGroup should be deleted (%s)", err)
 	}
 
 	select {

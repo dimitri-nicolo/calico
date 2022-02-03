@@ -42,9 +42,6 @@ func (r UISettings) Create(
 		return nil, err
 	}
 
-	// Set UISettingsGroup label for lookup.
-	res.SetLabels(r.addUISettingsGroupLabel(res.GetObjectMeta().GetLabels(), res.Spec.Group))
-
 	out, err := r.client.resources.Create(ctx, opts, apiv3.KindUISettings, res)
 	if out != nil {
 		return out.(*apiv3.UISettings), err
@@ -61,9 +58,6 @@ func (r UISettings) Update(
 	if err := validator.Validate(res); err != nil {
 		return nil, err
 	}
-
-	// Set UISettingsGroup label for lookup.
-	res.SetLabels(r.addUISettingsGroupLabel(res.GetObjectMeta().GetLabels(), res.Spec.Group))
 
 	out, err := r.client.resources.Update(ctx, opts, apiv3.KindUISettings, res)
 	if out != nil {
@@ -114,13 +108,4 @@ func (r UISettings) Watch(
 	ctx context.Context, opts options.ListOptions,
 ) (watch.Interface, error) {
 	return r.client.resources.Watch(ctx, opts, apiv3.KindUISettings, nil)
-}
-
-func (r UISettings) addUISettingsGroupLabel(labels map[string]string, group string) map[string]string {
-	// Create the map if it is nil
-	if labels == nil {
-		labels = make(map[string]string)
-	}
-	labels["projectcalico.org/uisettingsgroup"] = group
-	return labels
 }

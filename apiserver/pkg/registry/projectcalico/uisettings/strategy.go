@@ -78,5 +78,6 @@ func UISettingsToSelectableFields(obj *calico.UISettings) fields.Set {
 	return fields.Set{
 		"metadata.name": obj.Name,
 		"spec.group":    obj.Spec.Group,
+		"spec.user":     obj.Spec.User,
 	}
 }
