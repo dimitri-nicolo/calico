@@ -5,8 +5,6 @@ package calico
 import (
 	"reflect"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"golang.org/x/net/context"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -28,24 +26,6 @@ func NewUISettingsStorage(opts Options) (registry.DryRunnableStorage, factory.De
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
 		res := obj.(*v3.UISettings)
-
-		// Check the UISettingsGroup exists. The registry will validate the field is specified.
-		if gp, err := c.UISettingsGroups().Get(ctx, res.Spec.Group, options.GetOptions{}); err != nil {
-			return nil, err
-		} else {
-			// Set the owner reference to only include the group. This is a private API and nothing should be changing
-			// how these resources are garbage collected.
-			res = res.DeepCopy()
-			falseVal := false
-			res.OwnerReferences = []metav1.OwnerReference{{
-				APIVersion:         v3.GroupVersionCurrent,
-				Kind:               v3.KindUISettingsGroup,
-				Name:               gp.Name,
-				UID:                gp.UID,
-				Controller:         &falseVal,
-				BlockOwnerDeletion: &falseVal,
-			}}
-		}
 		return c.UISettings().Create(ctx, res, oso)
 	}
 	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
