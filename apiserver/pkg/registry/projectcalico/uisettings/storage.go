@@ -8,8 +8,6 @@ import (
 	"reflect"
 
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apiserver/pkg/endpoints/filters"
-	"k8s.io/klog/v2"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
@@ -146,12 +144,8 @@ func (r *REST) Create(ctx context.Context, obj runtime.Object, val rest.Validate
 
 		// If the group is user-specific, set the user name of teh creator.
 		if gp.Spec.FilterType == v3.FilterTypeUser {
-			attributes, err := filters.GetAuthorizerAttributes(ctx)
-			if err != nil {
-				klog.Errorf("Unable to extract authorizer attributes: %s", err)
-				return nil, err
-			}
-			uiSettings.Spec.User = attributes.GetUser().GetName()
+			//  Get the user name from the context attributes.
+			uiSettings.Spec.User = r.user(ctx)
 		}
 	}
 
@@ -241,14 +235,7 @@ func (r *REST) List(ctx context.Context, opts *metainternalversion.ListOptions) 
 		if gp, err := r.client.UISettingsGroups().Get(ctx, groupName, options.GetOptions{}); err != nil {
 			return nil, err
 		} else if gp.Spec.FilterType == v3.FilterTypeUser {
-			//  Get the user name from the context attributes.
-			attributes, err := filters.GetAuthorizerAttributes(ctx)
-			if err != nil {
-				klog.Errorf("Unable to extract authorizer attributes: %s", err)
-				return nil, err
-			}
-
-			defaultUserSelector := fields.SelectorFromSet(map[string]string{"spec.user": attributes.GetUser().GetName()})
+			defaultUserSelector := fields.SelectorFromSet(map[string]string{"spec.user": r.user(ctx)})
 			opts.FieldSelector = fields.AndSelectors(opts.FieldSelector, defaultUserSelector)
 		}
 	}
@@ -280,17 +267,20 @@ func (r *REST) Watch(ctx context.Context, opts *metainternalversion.ListOptions)
 		if gp, err := r.client.UISettingsGroups().Get(ctx, groupName, options.GetOptions{}); err != nil {
 			return nil, err
 		} else if gp.Spec.FilterType == v3.FilterTypeUser {
-			//  Get the user name from the context attributes.
-			attributes, err := filters.GetAuthorizerAttributes(ctx)
-			if err != nil {
-				klog.Errorf("Unable to extract authorizer attributes: %s", err)
-				return nil, err
-			}
-
-			defaultUserSelector := fields.SelectorFromSet(map[string]string{"spec.user": attributes.GetUser().GetName()})
+			defaultUserSelector := fields.SelectorFromSet(map[string]string{"spec.user": r.user(ctx)})
 			opts.FieldSelector = fields.AndSelectors(opts.FieldSelector, defaultUserSelector)
 		}
 	}
 
 	return r.Store.Watch(ctx, opts)
+}
+
+// user extracts the user name from the context. If unknown it returns "<anonymous>" - this is primarily to get
+// our FVs working where requests are made without user information - this is not
+func (r *REST) user(ctx context.Context) string {
+	info, ok := genericapirequest.UserFrom(ctx)
+	if !ok {
+		return "<anonymous>"
+	}
+	return info.GetName()
 }
