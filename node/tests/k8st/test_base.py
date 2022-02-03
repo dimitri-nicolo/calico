@@ -305,10 +305,10 @@ class TestBase(TestCase):
         return kubectl("scale deployment %s -n %s --replicas %s" %
                        (deployment, ns, replicas)).strip()
 
-# Default is for K8ST tests to run only in the dual_stack rig by
-# default.  Individual test classes can override this.
-TestBase.vanilla = False
-TestBase.dual_stack = True
+# Default is for K8ST tests to run vanilla tests, and not to run
+# specialized tests (e.g., dual_dor).
+# Individual test classes can override this.
+TestBase.vanilla = True
 TestBase.dual_tor = False
 
 

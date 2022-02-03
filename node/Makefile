@@ -595,13 +595,6 @@ tests/k8st/reliable-nc/bin/reliable-nc: tests/k8st/reliable-nc/reliable-nc.go
 ## --nocapture --nologcapture" to K8ST_TO_RUN.  For example:
 ##
 ## make k8s-test K8ST_TO_RUN="tests/test_dns_policy.py -s --nocapture --nologcapture"
-##
-## K8ST_RIG can be "dual_stack" or "vanilla".  "dual_stack" means set
-## up for dual stack testing; it requires KIND changes that have not
-## yet been merged to master, and runs kube-proxy in IPVS mode.
-## "vanilla" means use vanilla upstream master KIND.
-K8ST_RIG?=dual_stack
-K8ST_TO_RUN?=-A $(K8ST_RIG)
 
 .PHONY: k8s-test
 k8s-test:
@@ -620,7 +613,6 @@ kind-k8st-run-test: calico_test.created $(KUBECONFIG)
 	    -v $(CURDIR)/$(KUBECONFIG):/root/.kube/config \
 	    -v $(CURDIR)/$(BINDIR)/kubectl:/bin/kubectl \
 	    -e ROUTER_IMAGE=$(BIRD_IMAGE) \
-	    -e K8ST_RIG=$(K8ST_RIG) \
 	    --privileged \
 	    --net host \
 	${TEST_CONTAINER_NAME} \
