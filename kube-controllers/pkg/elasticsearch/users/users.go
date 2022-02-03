@@ -22,6 +22,7 @@ const (
 	ElasticsearchUserNameComplianceServer      ElasticsearchUserName = "tigera-ee-compliance-server"
 	ElasticsearchUserNameIntrusionDetection    ElasticsearchUserName = "tigera-ee-intrusion-detection"
 	ElasticsearchUserNameADJob                 ElasticsearchUserName = "tigera-ee-ad-job"
+	ElasticsearchUserNameSasha                 ElasticsearchUserName = "tigera-ee-sasha"
 	ElasticsearchUserNamePerformanceHotspots   ElasticsearchUserName = "tigera-ee-performance-hotspots"
 	ElasticsearchUserNameInstaller             ElasticsearchUserName = "tigera-ee-installer"
 	ElasticsearchUserNameManager               ElasticsearchUserName = "tigera-ee-manager"
@@ -260,6 +261,23 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 	return privateUsers, publicUsers
 }
 
+func buildElasticsearchSashaUserRoleIndex(clusterName string, isManagement bool) []elasticsearch.RoleIndex {
+	clusterPattern := clusterName
+	if isManagement {
+		clusterPattern = "*"
+	}
+	return []elasticsearch.RoleIndex{
+		{
+			Names:      []string{indexPattern("tigera_secure_ee_runtime", clusterPattern, ".*")},
+			Privileges: []string{"read"},
+		},
+		{
+			Names:      []string{indexPattern("tigera_secure_ee_events", clusterPattern, ".*")},
+			Privileges: []string{"read", "write"},
+		},
+	}
+}
+
 func buildElasticsearchIntrusionDetectionUserRoleIndex(clusterName string, isManagement bool) []elasticsearch.RoleIndex {
 	allPrivileges := elasticsearch.RoleIndex{
 		Names: []string{
@@ -403,6 +421,18 @@ func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUser
 				},
 			}},
 		},
+		ElasticsearchUserNameSasha: {
+			Username: formatName(ElasticsearchUserNameSasha, clusterName, true, true),
+			Roles: []elasticsearch.Role{
+				{
+					Name: formatName(ElasticsearchUserNameSasha, clusterName, true, true),
+					Definition: &elasticsearch.RoleDefinition{
+						Cluster: []string{"monitor", "manage_index_templates"},
+						Indices: buildElasticsearchSashaUserRoleIndex(clusterName, true),
+					},
+				},
+			},
+		},
 	}
 	publicUsers := map[ElasticsearchUserName]elasticsearch.User{
 		ElasticsearchUserNameComplianceServer: {
@@ -422,6 +452,9 @@ func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUser
 		},
 		ElasticsearchUserNameElasticsearchMetrics: {
 			Username: formatName(ElasticsearchUserNameElasticsearchMetrics, clusterName, true, false),
+		},
+		ElasticsearchUserNameSasha: {
+			Username: formatName(ElasticsearchUserNameSasha, clusterName, true, false),
 		},
 	}
 	return privateUsers, publicUsers

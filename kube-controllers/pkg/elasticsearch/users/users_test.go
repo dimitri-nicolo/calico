@@ -425,6 +425,25 @@ var _ = Describe("ElasticseachUsers", func() {
 							},
 						}},
 					},
+					"tigera-ee-sasha": {
+						Username: "tigera-ee-sasha-secure",
+						Roles: []elasticsearch.Role{{
+							Name: "tigera-ee-sasha-secure",
+							Definition: &elasticsearch.RoleDefinition{
+								Cluster: []string{"monitor", "manage_index_templates"},
+								Indices: []elasticsearch.RoleIndex{
+									{
+										Names:      []string{"tigera_secure_ee_runtime.*.*"},
+										Privileges: []string{"read"},
+									},
+									{
+										Names:      []string{"tigera_secure_ee_events.*.*"},
+										Privileges: []string{"read", "write"},
+									},
+								},
+							},
+						}},
+					},
 					"tigera-ee-performance-hotspots": {
 						Username: "tigera-ee-performance-hotspots-secure",
 						Roles: []elasticsearch.Role{{
@@ -546,6 +565,9 @@ var _ = Describe("ElasticseachUsers", func() {
 					},
 					"tigera-ee-ad-job": {
 						Username: "tigera-ee-ad-job",
+					},
+					"tigera-ee-sasha": {
+						Username: "tigera-ee-sasha",
 					},
 					"tigera-ee-performance-hotspots": {
 						Username: "tigera-ee-performance-hotspots",
