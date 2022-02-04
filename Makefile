@@ -15,7 +15,7 @@ SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_DEEP_PACKET_INSPECTION_PROJECT_ID)
 #############################################
 DEEP_PACKET_INSPECTION_IMAGE			?=tigera/deep-packet-inspection
 SNORT_IMAGE      				?=tigera/snort3
-SNORT3_VERSION      				?=3.1.20.0
+SNORT3_VERSION      				?=3.1.21.0
 BUILD_IMAGES					?=$(DEEP_PACKET_INSPECTION_IMAGE)
 ARCHES             				?=amd64
 DEV_REGISTRIES     				?=gcr.io/unique-caldron-775/cnx
