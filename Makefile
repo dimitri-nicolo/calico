@@ -15,7 +15,7 @@ SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_DEEP_PACKET_INSPECTION_PROJECT_ID)
 #############################################
 DEEP_PACKET_INSPECTION_IMAGE			?=tigera/deep-packet-inspection
 SNORT_IMAGE      				?=tigera/snort3
-SNORT3_VERSION      				?=3.1.8.0
+SNORT3_VERSION      				?=3.1.20.0
 BUILD_IMAGES					?=$(DEEP_PACKET_INSPECTION_IMAGE)
 ARCHES             				?=amd64
 DEV_REGISTRIES     				?=gcr.io/unique-caldron-775/cnx
@@ -108,9 +108,7 @@ sub-image-%:
 image: $(BUILD_IMAGES)
 $(SNORT_IMAGE): $(SNORT_IMAGE)-$(ARCH)
 $(SNORT_IMAGE)-$(ARCH):
-	op="$(shell docker manifest inspect $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT3_VERSION)-$(ARCH))"; \
-	EXIT_CODE=$$?;\
-	if [ "$$EXIT_CODE" = 0 ]; then \
+	if docker manifest inspect $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT3_VERSION)-$(ARCH); then \
   		echo "Using existing snort image $(SNORT_IMAGE):$(SNORT3_VERSION)-$(ARCH)"; \
   		docker pull $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT3_VERSION)-$(ARCH) ;\
   		docker tag $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT3_VERSION)-$(ARCH) $(SNORT_IMAGE):$(SNORT3_VERSION)-$(ARCH) ;\
