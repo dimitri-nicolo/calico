@@ -1,22 +1,13 @@
 // Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package checker
 
 import (
+	"strings"
+
 	"github.com/projectcalico/calico/app-policy/policystore"
 	"github.com/projectcalico/calico/app-policy/statscache"
+	"github.com/projectcalico/calico/app-policy/waf"
 
 	core_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -44,11 +35,21 @@ func NewServer(ctx context.Context, stores <-chan *policystore.PolicyStore, dpSt
 
 // Check applies the currently loaded policy to a network request and renders a policy decision.
 func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*authz.CheckResponse, error) {
+
+	// Helper variables used to reduce potential code smells.
+	reqMethod := req.GetAttributes().GetRequest().GetHttp().GetMethod()
+	reqPath := req.GetAttributes().GetRequest().GetHttp().GetPath()
+	reqProtocol := req.GetAttributes().GetRequest().GetHttp().GetProtocol()
+	reqSourceHost := req.GetAttributes().GetSource().GetAddress().GetSocketAddress().GetAddress()
+	reqSourcePort := req.GetAttributes().GetSource().GetAddress().GetSocketAddress().GetPortValue()
+	reqDestinationHost := req.GetAttributes().GetDestination().GetAddress().GetSocketAddress().GetAddress()
+	reqDestinationPort := req.GetAttributes().GetDestination().GetAddress().GetSocketAddress().GetPortValue()
+
 	log.WithFields(log.Fields{
 		"context":         ctx,
-		"Req.Method":      req.GetAttributes().GetRequest().GetHttp().GetMethod(),
-		"Req.Path":        req.GetAttributes().GetRequest().GetHttp().GetPath(),
-		"Req.Protocol":    req.GetAttributes().GetRequest().GetHttp().GetProtocol(),
+		"Req.Method":      reqMethod,
+		"Req.Path":        reqPath,
+		"Req.Protocol":    reqProtocol,
 		"Req.Source":      req.GetAttributes().GetSource(),
 		"Req.Destination": req.GetAttributes().GetDestination(),
 	}).Debug("Check start")
@@ -77,11 +78,21 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 		as.reportStats(ctx, &st, req)
 	}
 
+	if waf.IsEnabled() {
+		// WAF ModSecurity Process Http Request.
+		err := wafProcessHttpRequest(reqPath, reqMethod, reqProtocol, reqSourceHost, reqSourcePort, reqDestinationHost, reqDestinationPort)
+		if err != nil {
+			log.Errorf("WAF Process Http Request URL '%s' WAF rules rejected HTTP request!", reqPath)
+			resp.Status.Code = PERMISSION_DENIED
+			return &resp, err
+		}
+	}
+
 	resp.Status = &st
 	log.WithFields(log.Fields{
-		"Req.Method":               req.GetAttributes().GetRequest().GetHttp().GetMethod(),
-		"Req.Path":                 req.GetAttributes().GetRequest().GetHttp().GetPath(),
-		"Req.Protocol":             req.GetAttributes().GetRequest().GetHttp().GetProtocol(),
+		"Req.Method":               reqMethod,
+		"Req.Path":                 reqPath,
+		"Req.Protocol":             reqProtocol,
 		"Req.Source":               req.GetAttributes().GetSource(),
 		"Req.Destination":          req.GetAttributes().GetDestination(),
 		"Response.Status":          resp.GetStatus(),
@@ -89,6 +100,52 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 		"Response.DynamicMetadata": resp.GetDynamicMetadata,
 	}).Debug("Check complete")
 	return &resp, nil
+}
+
+func wafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, clientPort uint32, serverHost string, serverPort uint32) error {
+
+	// Use this as the correlationID.
+	id := waf.GenerateModSecurityID()
+
+	httpProtocol, httpVersion := splitInput(inputProtocol, "/", "HTTP", "1.1")
+	err := waf.ProcessHttpRequest(id, uri, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort)
+
+	// Log to Elasticsearch => Kibana.
+	if err != nil {
+		waf.Logger.WithFields(log.Fields{
+			"unique_id":   id,
+			"uri":         uri,
+			"method":      httpMethod,
+			"proto":       inputProtocol,
+			"source_ip":   clientHost,
+			"source_port": clientPort,
+			"dest_ip":     serverHost,
+			"dest_port":   serverPort,
+		}).Error("WAF check FAILED!")
+	}
+
+	return err
+}
+
+// splitInput: split input based on delimiter specified into 2x components [left and right].
+// if input cannot be split into 2x components based on delimiter then use default values specified.
+// input example: "HTTP/1.1"
+// output return: "HTTP and "1.1"
+func splitInput(input, delim, defaultLeft, defaultRight string) (actualLeft, actualRight string) {
+	splitN := strings.SplitN(input, delim, 2)
+	length := len(splitN)
+
+	actualLeft = defaultLeft
+	actualRight = defaultRight
+
+	if length == 1 && len(splitN[0]) > 0 {
+		actualLeft = splitN[0]
+	}
+	if length == 2 && len(splitN[1]) > 0 {
+		actualRight = splitN[1]
+	}
+
+	return actualLeft, actualRight
 }
 
 // reportStats creates a statistics for this request and reports it to the client.

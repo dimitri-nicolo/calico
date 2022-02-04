@@ -1,17 +1,5 @@
 // Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package main
 
 import (
@@ -22,6 +10,13 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/docopt/docopt-go"
+	authz_v2 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v2"
+	authz_v2alpha "github.com/envoyproxy/go-control-plane/envoy/service/auth/v2alpha"
+	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
+	log "github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
+
 	"github.com/projectcalico/calico/app-policy/checker"
 	"github.com/projectcalico/calico/app-policy/health"
 	"github.com/projectcalico/calico/app-policy/policystore"
@@ -29,13 +24,7 @@ import (
 	"github.com/projectcalico/calico/app-policy/statscache"
 	"github.com/projectcalico/calico/app-policy/syncher"
 	"github.com/projectcalico/calico/app-policy/uds"
-
-	"github.com/docopt/docopt-go"
-	authz_v2 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v2"
-	authz_v2alpha "github.com/envoyproxy/go-control-plane/envoy/service/auth/v2alpha"
-	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
-	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
+	"github.com/projectcalico/calico/app-policy/waf"
 )
 
 const usage = `Dikastes - the decider.
@@ -50,6 +39,7 @@ Options:
   -h --help              Show this screen.
   -l --listen <port>     Unix domain socket path [default: /var/run/dikastes/dikastes.sock]
   -d --dial <target>     Target to dial. [default: localhost:50051]
+  -r --rules <target>    Directory where WAF rules are stored.
   --debug                Log at Debug level.`
 
 var VERSION string
@@ -59,6 +49,7 @@ const (
 )
 
 func main() {
+	log.Info("Dikastes launching with ALP, WAF etc. logger.")
 	arguments, err := docopt.ParseArgs(usage, nil, VERSION)
 	if err != nil {
 		println(usage)
@@ -77,6 +68,8 @@ func main() {
 func runServer(arguments map[string]interface{}) {
 	filePath := arguments["--listen"].(string)
 	dial := arguments["--dial"].(string)
+	rulesetArgument := arguments["--rules"]
+
 	_, err := os.Stat(filePath)
 	if !os.IsNotExist(err) {
 		// file exists, try to delete it.
@@ -99,6 +92,30 @@ func runServer(arguments map[string]interface{}) {
 	err = os.Chmod(filePath, 0777) // Anyone on system can connect.
 	if err != nil {
 		log.Fatal("Unable to set write permission on socket.")
+	}
+
+	// Check if WAF should be enabled first before proceeding...
+	if rulesetArgument != nil {
+		rulesetDirectory := rulesetArgument.(string)
+		err = waf.CheckRulesSetExists(rulesetDirectory)
+		if err != nil {
+			log.Fatalf("Failed WAF Core Rules Set check: '%s'", err.Error())
+		}
+	}
+
+	if waf.IsEnabled() {
+		// Initialize WAF and load OWASP Core Rule Sets.
+		log.Info("WAF is enabled...")
+		waf.InitializeModSecurity()
+
+		filenames := waf.GetRulesSetFilenames()
+		err = waf.LoadModSecurityCoreRuleSet(filenames)
+		if err != nil {
+			log.Fatalf("Failed to load WAF ruleset: %s", err.Error())
+		}
+	} else {
+		// Otherwise simply log to the fact.
+		log.Info("WAF is NOT enabled!")
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -136,6 +153,10 @@ func runServer(arguments map[string]interface{}) {
 
 	// Block until a signal is received.
 	log.Infof("Got signal: %v", <-c)
+
+	// Cleanup WAF resources
+	waf.CleanupModSecurity()
+
 	gs.GracefulStop()
 }
 
