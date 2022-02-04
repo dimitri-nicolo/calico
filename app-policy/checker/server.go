@@ -39,6 +39,7 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 	// Helper variables used to reduce potential code smells.
 	reqMethod := req.GetAttributes().GetRequest().GetHttp().GetMethod()
 	reqPath := req.GetAttributes().GetRequest().GetHttp().GetPath()
+	reqHost := req.GetAttributes().GetRequest().GetHttp().GetHost()
 	reqProtocol := req.GetAttributes().GetRequest().GetHttp().GetProtocol()
 	reqSourceHost := req.GetAttributes().GetSource().GetAddress().GetSocketAddress().GetAddress()
 	reqSourcePort := req.GetAttributes().GetSource().GetAddress().GetSocketAddress().GetPortValue()
@@ -80,7 +81,7 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 
 	if waf.IsEnabled() {
 		// WAF ModSecurity Process Http Request.
-		err := wafProcessHttpRequest(reqPath, reqMethod, reqProtocol, reqSourceHost, reqSourcePort, reqDestinationHost, reqDestinationPort)
+		err := wafProcessHttpRequest(reqPath, reqMethod, reqProtocol, reqSourceHost, reqSourcePort, reqDestinationHost, reqDestinationPort, reqHost)
 		if err != nil {
 			log.Errorf("WAF Process Http Request URL '%s' WAF rules rejected HTTP request!", reqPath)
 			resp.Status.Code = PERMISSION_DENIED
@@ -102,7 +103,7 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 	return &resp, nil
 }
 
-func wafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, clientPort uint32, serverHost string, serverPort uint32) error {
+func wafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, clientPort uint32, serverHost string, serverPort uint32, destinationHost string) error {
 
 	// Use this as the correlationID.
 	id := waf.GenerateModSecurityID()
@@ -113,14 +114,19 @@ func wafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, cl
 	// Log to Elasticsearch => Kibana.
 	if err != nil {
 		waf.Logger.WithFields(log.Fields{
-			"unique_id":   id,
-			"uri":         uri,
-			"method":      httpMethod,
-			"proto":       inputProtocol,
-			"source_ip":   clientHost,
-			"source_port": clientPort,
-			"dest_ip":     serverHost,
-			"dest_port":   serverPort,
+			"path":     uri,
+			"method":   httpMethod,
+			"protocol": inputProtocol,
+			"source": log.Fields{
+				"ip":       clientHost,
+				"port_num": clientPort,
+				"hostname": "",
+			},
+			"destination": log.Fields{
+				"ip":       serverHost,
+				"port_num": serverPort,
+				"hostname": destinationHost,
+			},
 		}).Error("WAF check FAILED!")
 	}
 
