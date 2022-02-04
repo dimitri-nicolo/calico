@@ -63,7 +63,7 @@ windows-packaging/tigera-confd.exe: $(SRC_FILES)
 # checking them.
 UPDATE_EXPECTED_DATA?=false
 
-# Location of the certs directory. 
+# Location of the certs directory.
 # TODO: Centralize this instead of just using cni-plugins certs. Right now each
 # directory has an exact copy of these files!
 CERTS_PATH=$(CURDIR)/../cni-plugin/tests/certs
@@ -86,7 +86,7 @@ test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl
 		-e FELIX_TYPHAREADTIMEOUT=50 \
 		-e UPDATE_EXPECTED_DATA=$(UPDATE_EXPECTED_DATA) \
 		-w /go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) /bin/bash -c '$(GIT_CONFIG_SSH) /tests/test_suite_kdd.sh || \
+		$(CALICO_BUILD) /bin/bash -c '/tests/test_suite_kdd.sh || \
 	{ \
 	    echo; \
 	    echo === confd single-shot log:; \
@@ -121,7 +121,7 @@ test-etcd: bin/confd bin/etcdctl bin/bird bin/bird6 bin/calico-node bin/kubectl 
 		-e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 \
 		-e ETCDCTL_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 \
 		-e KUBECONFIG=/tests/confd_kubeconfig \
-		$(CALICO_BUILD) /bin/bash -c '$(GIT_CONFIG_SSH) /tests/test_suite_etcd.sh'
+		$(CALICO_BUILD) /bin/bash -c '/tests/test_suite_etcd.sh'
 	-git clean -fx etc/calico/confd
 
 .PHONY: ut
@@ -202,7 +202,7 @@ bin/etcdctl:
 	curl -sSf -L --retry 5  https://github.com/coreos/etcd/releases/download/$(ETCD_VERSION)/etcd-$(ETCD_VERSION)-linux-$(ARCH).tar.gz | tar -xz -C bin --strip-components=1 etcd-$(ETCD_VERSION)-linux-$(ARCH)/etcdctl
 
 bin/calicoctl:
-	make -C ../calicoctl build 
+	make -C ../calicoctl build
 	cp ../calicoctl/bin/calicoctl-linux-$(ARCH) $@
 
 bin/typha:

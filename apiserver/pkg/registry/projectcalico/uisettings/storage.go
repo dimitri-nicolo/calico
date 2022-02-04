@@ -7,6 +7,11 @@ import (
 	"fmt"
 	"reflect"
 
+	"k8s.io/apimachinery/pkg/fields"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/calico/libcalico-go/lib/options"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -19,11 +24,12 @@ import (
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
 
-	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizer"
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/server"
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/util"
+	"github.com/projectcalico/calico/apiserver/pkg/storage/calico"
 )
 
 // rest implements a RESTStorage for API services against etcd
@@ -31,6 +37,7 @@ type REST struct {
 	*genericregistry.Store
 	authorizer authorizer.UISettingsAuthorizer
 	shortNames []string
+	client     clientv3.Interface
 }
 
 func (r *REST) ShortNames() []string {
@@ -43,17 +50,19 @@ func (r *REST) Categories() []string {
 
 // EmptyObject returns an empty instance
 func EmptyObject() runtime.Object {
-	return &calico.UISettings{}
+	return &v3.UISettings{}
 }
 
 // NewList returns a new shell of a binding list
 func NewList() runtime.Object {
-	return &calico.UISettingsList{}
+	return &v3.UISettingsList{}
 }
 
 // NewREST returns a RESTStorage object that will work against API services.
 func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, error) {
 	strategy := NewStrategy(scheme)
+
+	client := calico.CreateClientFromConfig()
 
 	prefix := "/" + opts.ResourcePrefix()
 	// We adapt the store's keyFunc so that we can use it with the StorageDecorator
@@ -73,8 +82,8 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, error) {
 		prefix,
 		keyFunc,
 		strategy,
-		func() runtime.Object { return &calico.UISettings{} },
-		func() runtime.Object { return &calico.UISettingsList{} },
+		func() runtime.Object { return &v3.UISettings{} },
+		func() runtime.Object { return &v3.UISettingsList{} },
 		GetAttrs,
 		nil,
 		nil,
@@ -83,15 +92,15 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, error) {
 		return nil, err
 	}
 	store := &genericregistry.Store{
-		NewFunc:     func() runtime.Object { return &calico.UISettings{} },
-		NewListFunc: func() runtime.Object { return &calico.UISettingsList{} },
+		NewFunc:     func() runtime.Object { return &v3.UISettings{} },
+		NewListFunc: func() runtime.Object { return &v3.UISettingsList{} },
 		KeyRootFunc: opts.KeyRootFunc(false),
 		KeyFunc:     opts.KeyFunc(false),
 		ObjectNameFunc: func(obj runtime.Object) (string, error) {
-			return obj.(*calico.UISettings).Name, nil
+			return obj.(*v3.UISettings).Name, nil
 		},
 		PredicateFunc:            MatchUISettings,
-		DefaultQualifiedResource: calico.Resource("uisettings"),
+		DefaultQualifiedResource: v3.Resource("uisettings"),
 
 		CreateStrategy:          strategy,
 		UpdateStrategy:          strategy,
@@ -102,37 +111,42 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) (*REST, error) {
 		DestroyFunc: dFunc,
 	}
 
-	return &REST{store, authorizer.NewUISettingsAuthorizer(opts.Authorizer), opts.ShortNames}, nil
-}
-
-func (r *REST) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
-	groupName, serr := util.GetUISettingsGroupNameFromSelector(options)
-
-	// Ignore selector errors for now - AuthorizeUISettingsOperation will check that the user is able to GET all
-	// settings for all groups. If not then return the selector error.
-	err := r.authorizer.AuthorizeUISettingsOperation(ctx, "", groupName)
-	if err != nil {
-		if errors.IsForbidden(err) && serr != nil {
-			// If not authorized and no group selector was specified, use the selector error message as this is the
-			// primary cause of the error.
-			return nil, serr
-		}
-		return nil, err
-	}
-
-	return r.Store.List(ctx, options)
+	return &REST{store, authorizer.NewUISettingsAuthorizer(opts.Authorizer), opts.ShortNames, client}, nil
 }
 
 func (r *REST) Create(ctx context.Context, obj runtime.Object, val rest.ValidateObjectFunc, createOpt *metav1.CreateOptions) (runtime.Object, error) {
-	uiSettings := obj.(*calico.UISettings)
+	uiSettings := obj.(*v3.UISettings)
 	group := uiSettings.Spec.Group
 	if group == "" {
 		return nil, fmt.Errorf("UISettings Spec.Group is not specified")
 	}
-
 	err := r.authorizer.AuthorizeUISettingsOperation(ctx, uiSettings.Name, group)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check the UISettingsGroup exists. The registry will validate the field is specified.
+	if gp, err := r.client.UISettingsGroups().Get(ctx, group, options.GetOptions{}); err != nil {
+		return nil, err
+	} else {
+		// Set the owner reference to only include the group. This is a private API and nothing should be changing
+		// how these resources are garbage collected.
+		uiSettings = uiSettings.DeepCopy()
+		falseVal := false
+		uiSettings.OwnerReferences = []metav1.OwnerReference{{
+			APIVersion:         v3.GroupVersionCurrent,
+			Kind:               v3.KindUISettingsGroup,
+			Name:               gp.Name,
+			UID:                gp.UID,
+			Controller:         &falseVal,
+			BlockOwnerDeletion: &falseVal,
+		}}
+
+		// If the group is user-specific, set the user name of teh creator.
+		if gp.Spec.FilterType == v3.FilterTypeUser {
+			//  Get the user name from the context attributes.
+			uiSettings.Spec.User = r.user(ctx)
+		}
 	}
 
 	return r.Store.Create(ctx, uiSettings, val, createOpt)
@@ -149,16 +163,24 @@ func (r *REST) Update(ctx context.Context, name string, objInfo rest.UpdatedObje
 	// Modify the update validation to check that the owner reference is not being updated to remove or change the
 	// group.
 	updatedUpdateValidation := func(ctx context.Context, obj, old runtime.Object) error {
-		oldUISettings := old.(*calico.UISettings)
-		newUISettings := obj.(*calico.UISettings)
+		oldUISettings := old.(*v3.UISettings)
+		newUISettings := obj.(*v3.UISettings)
 		if !reflect.DeepEqual(oldUISettings.OwnerReferences, newUISettings.OwnerReferences) {
 			return fmt.Errorf("Not permitted to change UISettingsGroup owner reference")
 		}
+
 		oldGroup := oldUISettings.Spec.Group
 		newGroup := newUISettings.Spec.Group
 		if oldGroup != newGroup {
 			return fmt.Errorf("Not permitted to change Spec.Group")
 		}
+
+		oldUser := oldUISettings.Spec.User
+		newUser := newUISettings.Spec.User
+		if oldUser != newUser {
+			return fmt.Errorf("Not permitted to change Spec.User")
+		}
+
 		return updateValidation(ctx, obj, old)
 	}
 
@@ -189,8 +211,8 @@ func (r *REST) Delete(ctx context.Context, name string, deleteValidation rest.Va
 	return r.Store.Delete(ctx, name, deleteValidation, options)
 }
 
-func (r *REST) Watch(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
-	groupName, serr := util.GetUISettingsGroupNameFromSelector(options)
+func (r *REST) List(ctx context.Context, opts *metainternalversion.ListOptions) (runtime.Object, error) {
+	groupName, serr := util.GetUISettingsGroupNameFromSelector(opts)
 
 	// Ignore selector errors for now - AuthorizeUISettingsOperation will check that the user is able to GET all
 	// settings for all groups. If not then return the selector error.
@@ -204,5 +226,61 @@ func (r *REST) Watch(ctx context.Context, options *metainternalversion.ListOptio
 		return nil, err
 	}
 
-	return r.Store.Watch(ctx, options)
+	if serr == nil {
+		// If a group was supplied then check the group configuration to see if the settings are user specific and if
+		// so, modify the filter to only include UISettings created by the requesting user.
+
+		// Grab the group settings and check if we require user specific settings. If so include the user field in the
+		// list query.
+		if gp, err := r.client.UISettingsGroups().Get(ctx, groupName, options.GetOptions{}); err != nil {
+			return nil, err
+		} else if gp.Spec.FilterType == v3.FilterTypeUser {
+			defaultUserSelector := fields.SelectorFromSet(map[string]string{"spec.user": r.user(ctx)})
+			opts.FieldSelector = fields.AndSelectors(opts.FieldSelector, defaultUserSelector)
+		}
+	}
+
+	return r.Store.List(ctx, opts)
+}
+
+func (r *REST) Watch(ctx context.Context, opts *metainternalversion.ListOptions) (watch.Interface, error) {
+	groupName, serr := util.GetUISettingsGroupNameFromSelector(opts)
+
+	// Ignore selector errors for now - AuthorizeUISettingsOperation will check that the user is able to GET all
+	// settings for all groups. If not then return the selector error.
+	err := r.authorizer.AuthorizeUISettingsOperation(ctx, "", groupName)
+	if err != nil {
+		if errors.IsForbidden(err) && serr != nil {
+			// If not authorized and no group selector was specified, use the selector error message as this is the
+			// primary cause of the error.
+			return nil, serr
+		}
+		return nil, err
+	}
+
+	if serr == nil {
+		// If a group was supplied then check the group configuration to see if the settings are user specific and if
+		// so, modify the filter to only include UISettings created by the requesting user.
+
+		// Grab the group settings and check if we require user specific settings. If so include the user field in the
+		// list query.
+		if gp, err := r.client.UISettingsGroups().Get(ctx, groupName, options.GetOptions{}); err != nil {
+			return nil, err
+		} else if gp.Spec.FilterType == v3.FilterTypeUser {
+			defaultUserSelector := fields.SelectorFromSet(map[string]string{"spec.user": r.user(ctx)})
+			opts.FieldSelector = fields.AndSelectors(opts.FieldSelector, defaultUserSelector)
+		}
+	}
+
+	return r.Store.Watch(ctx, opts)
+}
+
+// user extracts the user name from the context. If unknown it returns "<anonymous>" - this is primarily to get
+// our FVs working where requests are made without user information - this is not
+func (r *REST) user(ctx context.Context) string {
+	info, ok := genericapirequest.UserFrom(ctx)
+	if !ok {
+		return "<anonymous>"
+	}
+	return info.GetName()
 }

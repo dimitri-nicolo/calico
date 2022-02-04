@@ -125,10 +125,8 @@ var _ = Describe("Windows DNS policy test", func() {
 			// All the above code (with logging) takes time, could be more than DNS TTL so when we
 			// try to check DNS cache file, the DNS map could have been cleared.
 			// We should initiate the traffic again before checking DNS cache file.
-			curl("gobyexample.com")
-			curl("www.google.com")
 
-			checkCache := func() error {
+			checkCache := func(domain string) error {
 				// Get IPs from DNS cache file
 				dnsMap, err = fv.ReadDnsCacheFile()
 				if err != nil {
@@ -139,22 +137,27 @@ var _ = Describe("Windows DNS policy test", func() {
 				}
 				log.Printf("dns map %v", dnsMap)
 
-				googleIP := getDomainIPs("www.google.com")
-				if len(googleIP) == 0 {
-					return fmt.Errorf("no google ip in DNS map")
+				ips := getDomainIPs(domain)
+				if len(ips) == 0 {
+					return fmt.Errorf("no ip for %s in DNS map", domain)
 				}
-				log.Printf("google ip %s", googleIP)
-
-				goexampleIPs := getDomainIPs("gobyexample.com")
-				if len(goexampleIPs) == 0 {
-					return fmt.Errorf("no goexample ips in DNS map")
-				}
-				log.Printf("gobyexample ip %v", goexampleIPs)
+				log.Printf("domain ips %v", ips)
 				return nil
 			}
 
+			checkCacheFunc := func(domain string) func() error {
+				return func() error {
+					return checkCache(domain)
+				}
+			}
+
+			curl("gobyexample.com")
 			// Make sure we see domain ips in DNS Cache file
-			Eventually(checkCache, "30s", "1s").Should(BeNil())
+			Eventually(checkCacheFunc("gobyexample.com"), "30s", "1s").Should(BeNil())
+
+			curl("www.google.com")
+			// Make sure we see domain ips in DNS Cache file
+			Eventually(checkCacheFunc("www.google.com"), "30s", "1s").Should(BeNil())
 		})
 	})
 

@@ -84,23 +84,6 @@ func GetUISettingsGroupNameFromSelector(options *metainternalversion.ListOptions
 		}
 	}
 
-	if options.LabelSelector != nil {
-		requirements, _ := options.LabelSelector.Requirements()
-		for _, requirement := range requirements {
-			if requirement.Key() == "projectcalico.org/uisettingsgroup" {
-				if len(requirement.Values()) > 1 {
-					return "", fmt.Errorf("multi-valued selector not supported")
-				}
-				groupName, ok := requirement.Values().PopAny()
-				if ok && (requirement.Operator() == selection.Equals ||
-					requirement.Operator() == selection.DoubleEquals) {
-					return groupName, nil
-				}
-				return "", fmt.Errorf("Non equal selector operator not supported for label projectcalico.org/uisettingsgroup")
-			}
-		}
-	}
-
 	// No group selector. Return "*" as the name - this will be used to check authorization. If authorized to allow
 	// a settings called "*" it is assumed it is authorized to access all settings. Strictly, a RBAC role could be
 	// set up matching on a name of "*" but I think this is a live with.

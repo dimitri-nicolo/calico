@@ -223,6 +223,11 @@ var _ = Describe("awsIPManager tests", func() {
 				},
 			}
 			m.OnUpdate(wepUpd)
+			// Non-AWS WEP delete, should get ignored.
+			wepDel := &proto.WorkloadEndpointRemove{
+				Id: wep2ID,
+			}
+			m.OnUpdate(wepDel)
 
 			Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 		})
