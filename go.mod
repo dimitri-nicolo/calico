@@ -115,13 +115,13 @@ require (
 	k8s.io/klog/v2 v2.9.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20211110012726-3cc51fd1e909 // indirect
 	k8s.io/utils v0.0.0-20210819203725-bdf08cb9a70a // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
 replace (
-	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220129015347-c61d8d667939
-	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220129015347-c61d8d667939
+	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220203235644-3101a91eff27
+	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220203235644-3101a91eff27
 
 	google.golang.org/grpc => google.golang.org/grpc v1.29.1
 
