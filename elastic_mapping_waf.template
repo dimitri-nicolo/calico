@@ -11,7 +11,7 @@
       "@timestamp": {
         "type": "date"
       },
-      "source: {
+      "source": {
         /* source - Specifies originating pod of the request (before NAT). */
         "properties": {
           "ip": {
@@ -23,12 +23,12 @@
             "null_value": "0"
           },
           "hostname": {
-            type: "keyword",
-            null_value: ""
+            "type": "keyword",
+            "null_value": ""
           }
         }
       },
-      "destination: {
+      "destination": {
         /* destination - Specifies destination of the request. */
         "properties": {
           "ip": {
@@ -40,8 +40,8 @@
             "null_value": "0"
           },
           "hostname": {
-            type: "keyword",
-            null_value: ""
+            "type": "keyword",
+            "null_value": ""
           }
         }
       },
