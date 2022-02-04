@@ -234,17 +234,19 @@ func GoModSecurityLoggingCallback(Cpayload *C.char) {
 	payload := C.GoString(Cpayload)
 	dictionary := ParseLog(payload)
 
+	owasp_host := dictionary[ParserHostname]
+	owasp_file := dictionary[ParserFile]
+	owasp_line := dictionary[ParserLine]
+	owasp_id := dictionary[ParserId]
+	owasp_data := dictionary[ParserData]
+	owasp_severity := dictionary[ParserSeverity]
+	owasp_version := dictionary[ParserVersion]
+	rule_info := fmt.Sprintf("Host:'%s' File:'%s' Line:'%s' ID:'%s' Data:'%s' Severity:'%s' Version:'%s'", owasp_host, owasp_file, owasp_line, owasp_id, owasp_data, owasp_severity, owasp_version)
+
 	// Log to Elasticsearch => Kibana.
 	Logger.WithFields(log.Fields{
-		"unique_id":      dictionary[ParserUniqueId],
-		"uri":            dictionary[ParserUri],
-		"owasp_host":     dictionary[ParserHostname],
-		"owasp_file":     dictionary[ParserFile],
-		"owasp_line":     dictionary[ParserLine],
-		"owasp_id":       dictionary[ParserId],
-		"owasp_data":     dictionary[ParserData],
-		"owasp_severity": dictionary[ParserSeverity],
-		"owasp_version":  dictionary[ParserVersion],
+		"path":      dictionary[ParserUri],
+		"rule_info": rule_info,
 	}).Warn("WAF " + dictionary[ParserMsg])
 }
 
