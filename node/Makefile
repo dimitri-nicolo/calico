@@ -595,6 +595,10 @@ tests/k8st/reliable-nc/bin/reliable-nc: tests/k8st/reliable-nc/reliable-nc.go
 ## --nocapture --nologcapture" to K8ST_TO_RUN.  For example:
 ##
 ## make k8s-test K8ST_TO_RUN="tests/test_dns_policy.py -s --nocapture --nologcapture"
+##
+## By default, run tests tagged with "vanilla". This excludes dual tor tests from running
+## on a test environment which doesn't support dual tor.
+K8ST_TO_RUN ?= -A vanilla
 
 .PHONY: k8s-test
 k8s-test:
