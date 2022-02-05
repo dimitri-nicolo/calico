@@ -215,6 +215,10 @@ func buildMiddlewareChain(r *proxy.Route, h mid.HandlerMap, f http.Handler) http
 		chain = append(chain, h[mid.TypeSwap])
 	}
 
+	if r.RejectUnacceptableContentType {
+		chain = append(chain, h[mid.TypeContentType])
+	}
+
 	// Now apply the chain of middleware handlers on the given route handler f, starting with the last one.
 	finalHandler := f
 	for i := range chain {

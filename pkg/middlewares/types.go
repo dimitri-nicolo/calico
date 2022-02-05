@@ -6,20 +6,22 @@ import (
 	"github.com/tigera/es-gateway/pkg/cache"
 )
 
-type Type string
+type Type int
 
 const (
-	TypeLog  Type = "log"
-	TypeAuth Type = "auth"
-	TypeSwap Type = "swap"
+	TypeLog Type = iota
+	TypeAuth
+	TypeSwap
+	TypeContentType
 )
 
 type HandlerMap map[Type]mux.MiddlewareFunc
 
 func GetHandlerMap(cache cache.SecretsCache) HandlerMap {
 	return HandlerMap{
-		TypeLog:  logRequestHandler,
-		TypeAuth: NewAuthMiddleware(cache),
-		TypeSwap: NewSwapElasticCredMiddlware(cache),
+		TypeLog:         logRequestHandler,
+		TypeAuth:        NewAuthMiddleware(cache),
+		TypeSwap:        NewSwapElasticCredMiddlware(cache),
+		TypeContentType: RejectUnacceptableContentTypeHandler,
 	}
 }

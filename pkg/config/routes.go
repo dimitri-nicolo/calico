@@ -11,30 +11,34 @@ var (
 		// Routes for creating index log data.
 		// -------------------------------------------------------------------------------------------------
 		proxy.Route{
-			Name:        "es-create-new-doc-by-id",
-			Path:        "/{target}/_create/{id}",
-			HTTPMethods: []string{"PUT", "POST"},
-			RequireAuth: true,
+			Name:                          "es-create-new-doc-by-id",
+			Path:                          "/{target}/_create/{id}",
+			HTTPMethods:                   []string{"PUT", "POST"},
+			RequireAuth:                   true,
+			RejectUnacceptableContentType: true,
 		},
 		proxy.Route{
-			Name:        "es-create-new-doc-by-id",
-			Path:        "/{target}/_doc/{id}",
-			HTTPMethods: []string{"PUT", "POST"},
-			RequireAuth: true,
+			Name:                          "es-create-new-doc-by-id",
+			Path:                          "/{target}/_doc/{id}",
+			HTTPMethods:                   []string{"PUT", "POST"},
+			RequireAuth:                   true,
+			RejectUnacceptableContentType: true,
 		},
 		// Fluentd component uses the Elasticsearch bulk API by default to create log data.
 		// https://docs.fluentd.org/output/elasticsearch
 		proxy.Route{
-			Name:        "es-create-new-doc-bulk",
-			Path:        "/_bulk",
-			HTTPMethods: []string{"POST"},
-			RequireAuth: true,
+			Name:                          "es-create-new-doc-bulk",
+			Path:                          "/_bulk",
+			HTTPMethods:                   []string{"POST"},
+			RequireAuth:                   true,
+			RejectUnacceptableContentType: true,
 		},
 		proxy.Route{
-			Name:        "es-create-new-doc-bulk-by-index",
-			Path:        "/{target}/_bulk",
-			HTTPMethods: []string{"POST"},
-			RequireAuth: true,
+			Name:                          "es-create-new-doc-bulk-by-index",
+			Path:                          "/{target}/_bulk",
+			HTTPMethods:                   []string{"POST"},
+			RequireAuth:                   true,
+			RejectUnacceptableContentType: true,
 		},
 		// -------------------------------------------------------------------------------------------------
 	}

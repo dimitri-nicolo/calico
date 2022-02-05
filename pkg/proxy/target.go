@@ -20,6 +20,9 @@ type Route struct {
 	IsPathPrefix bool
 	// RequireAuth indicates whether this Route requires authentication.
 	RequireAuth bool
+	// RejectUnacceptableContentType mitigates CVE-2020-28491, which Elasticsearch is vulnerable to. We reject calls
+	// with content-type application/cbor or application/smile.
+	RejectUnacceptableContentType bool
 	// HTTPMethods specifies which HTTP method the Route should match with. If empty, then Route
 	// will match with any HTTP method.
 	HTTPMethods []string

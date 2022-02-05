@@ -60,11 +60,12 @@ func init() {
 	if len(cfg.ElasticCatchAllRoute) > 0 {
 		// Catch-all route should ...
 		elasticCatchAllRoute = &proxy.Route{
-			Name:         "es-catch-all",
-			Path:         cfg.ElasticCatchAllRoute,
-			IsPathPrefix: true,       // ... always be a prefix route.
-			HTTPMethods:  []string{}, // ... not filter on HTTP methods.
-			RequireAuth:  true,
+			Name:                          "es-catch-all",
+			Path:                          cfg.ElasticCatchAllRoute,
+			IsPathPrefix:                  true,       // ... always be a prefix route.
+			HTTPMethods:                   []string{}, // ... not filter on HTTP methods.
+			RequireAuth:                   true,
+			RejectUnacceptableContentType: true,
 		}
 	}
 
