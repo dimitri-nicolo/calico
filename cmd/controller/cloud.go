@@ -40,6 +40,11 @@ func ValidateEnvVars() {
 		log.Fatal("IMAGE_ASSURANCE_BAST_API_URL is not valid")
 	}
 
+	imageAssuranceCABundlePath := os.Getenv("IMAGE_ASSURANCE_CA_BUNDLE_PATH")
+	if imageAssuranceCABundlePath == "" {
+		log.Fatal("IMAGE_ASSURANCE_CA_BUNDLE_PATH can not be empty")
+	}
+
 	imageAssuranceOrgID := os.Getenv("IMAGE_ASSURANCE_ORGANIZATION_ID")
 	if _, err := uuid.Parse(imageAssuranceOrgID); err != nil {
 		log.Fatal("IMAGE_ASSURANCE_ORGANIZATION_ID must be a valid UUID")

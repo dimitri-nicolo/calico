@@ -456,6 +456,8 @@ var _ = Describe("GlobalAlert Elastic Test", func() {
 					DataSet:     "vulnerability",
 					Query:       `registry="quay.io" AND repository=node`,
 					Metric:      "count",
+					Condition:   "gt",
+					Threshold:   1.0,
 				},
 			}
 
@@ -480,7 +482,7 @@ var _ = Describe("GlobalAlert Elastic Test", func() {
 					Metric:      "max",
 					Condition:   "gt",
 					Field:       "max_cvss_score",
-					Threshold:   7.0,
+					Threshold:   6.6,
 				},
 			}
 
@@ -783,13 +785,13 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 					Request:    req,
 					Body:       mustOpen("test_files/bulk_response.json"),
 				}, nil
-			case mustGetEventIndexDocAsString("test_files/10_vulnerability_metric_count_events_doc.json"):
+			case mustGetEventIndexDocAsString("test_files/10_vulnerability_events_metric_count_events_doc.json"):
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/bulk_response.json"),
 				}, nil
-			case mustGetEventIndexDocAsString("test_files/10_vulnerability_metric_max_events_doc.json"):
+			case mustGetEventIndexDocAsString("test_files/10_vulnerability_events_metric_max_events_doc.json"):
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Request:    req,
