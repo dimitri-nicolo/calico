@@ -203,9 +203,11 @@ func (fp *policyCalculator) calculateBeforeAfterResponse(
 	// Initialize the per-flow cache.
 	cache := fp.newFlowCache(flow)
 
-	// If the flow is not impacted return the unmodified response.
+	// If the flow is not impacted return the unmodified response. Note that if ActionFlag is zero then this must be
+	// an inserted flow due to a change of source action from deny to allow - we will have to recalculate in this
+	// case even if the policy changes do not impact the ingress for the flow.
 	//TODO: Should probably still run this through PIP to verify that the processor agrees.
-	if !changeset.FlowSelectedByImpactedPolicies(flow, cache) {
+	if flow.ActionFlag != 0 && !changeset.FlowSelectedByImpactedPolicies(flow, cache) {
 		clog.Debug("Flow unaffected")
 		if isSrc || beforeSrcAction&api.ActionFlagAllow != 0 {
 			before = getUnchangedResponse(flow)
