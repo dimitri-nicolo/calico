@@ -21,12 +21,8 @@ func validateGlobalAlertSpec(structLevel validator.StructLevel) {
 	validateGlobalAlertLookback(structLevel)
 	validateGlobalAlertQuery(structLevel)
 	validateGlobalAlertDescriptionAndSummary(structLevel)
+	validateGlobalAlertAggregateBy(structLevel)
 	validateGlobalAlertMetric(structLevel)
-
-	/*
-		We intentionally do not validate field or aggregation names. Fields do need to be numeric for most of the
-		metrics and aggregation keys do need to exist for them to make sense.
-	*/
 }
 
 func getGlobalAlertSpec(structLevel validator.StructLevel) api.GlobalAlertSpec {
@@ -153,6 +149,16 @@ func validateGlobalAlertQuery(structLevel validator.StructLevel) {
 					"",
 				)
 			}
+		case api.GlobalAlertDataSetVulnerability:
+			if err := query.Validate(q, query.IsValidVulnerabilityAtom); err != nil {
+				structLevel.ReportError(
+					reflect.ValueOf(s.Query),
+					"Query",
+					"",
+					reason("invalid query: "+err.Error()),
+					"",
+				)
+			}
 		}
 	}
 }
@@ -208,6 +214,24 @@ func validateGlobalAlertDescriptionOrSummaryContents(description, fieldName stri
 					"",
 				)
 			}
+		}
+	}
+}
+
+func validateGlobalAlertAggregateBy(structLevel validator.StructLevel) {
+	// We intentionally do not validate field or aggregation names. Fields do need to be numeric for most of the
+	// metrics and aggregation keys do need to exist for them to make sense.
+	s := getGlobalAlertSpec(structLevel)
+
+	if s.DataSet == api.GlobalAlertDataSetVulnerability {
+		if len(s.AggregateBy) > 0 {
+			structLevel.ReportError(
+				reflect.ValueOf(s.AggregateBy),
+				"AggregateBy",
+				"",
+				reason("vulnerability dataset doesn't support aggregateBy field"),
+				"",
+			)
 		}
 	}
 }
