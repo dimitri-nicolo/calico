@@ -3,6 +3,7 @@ package elastic_test
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
@@ -115,7 +116,7 @@ var _ = Describe("Elasticsearch events index", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			data.Time = time.Now().Unix()
-			data.Type = "alert"
+			data.Type = "global_alert"
 			data.Description = "test es in management cluster"
 			data.SourceIP = sptr("1.2.3.4")
 		})
@@ -142,7 +143,7 @@ var _ = Describe("Elasticsearch events index", func() {
 			})
 
 			// wait for put to reflect
-			time.Sleep(5 * time.Second)
+			time.Sleep(3 * time.Second)
 
 			count := 0
 			for op := range elasticClientManagement.SearchSecurityEvents(ctx, nil, nil, nil, true) {
@@ -161,7 +162,7 @@ var _ = Describe("Elasticsearch events index", func() {
 				_, err = elasticClientManagement.PutSecurityEventWithID(ctx, data, "sample_id_test_542")
 				Expect(err).ShouldNot(HaveOccurred())
 				// wait for put to reflect
-				time.Sleep(5 * time.Second)
+				time.Sleep(3 * time.Second)
 
 				for op := range elasticClientManagement.SearchSecurityEvents(ctx, nil, nil, nil, true) {
 					compareEventData(op, data)
@@ -221,7 +222,7 @@ var _ = Describe("Elasticsearch events index", func() {
 			})
 		})
 
-		It("should not return error for missing docID while adding events", func() {
+		It("should not return error for missing ID while adding events", func() {
 			data.Origin = "03_test_lma"
 			By("inserting data into Elasticsearch", func() {
 
@@ -257,6 +258,85 @@ var _ = Describe("Elasticsearch events index", func() {
 			})
 		})
 
+		It("should dismiss events", func() {
+			// put some events into ES
+			for i := 0; i < 3; i++ {
+				id := fmt.Sprintf("lma_dismiss_test_id%d", i)
+				data.Origin = fmt.Sprintf("lma_dismiss_test_%d", i)
+				data.Record = map[string]string{"key": fmt.Sprintf("value%d", i)}
+				if i == 2 {
+					data.Dismissed = false
+				}
+				resp, err := elasticClientManaged.PutSecurityEventWithID(ctx, data, id)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.Id).To(Equal(id))
+			}
+
+			// dismiss the second event
+			id := "lma_dismiss_test_id1"
+			resp, err := elasticClientManaged.DismissSecurityEvent(ctx, id)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.Id).To(Equal(id))
+			Expect(resp.Result).To(Equal("updated"))
+
+			time.Sleep(3 * time.Second)
+
+			// validate events
+			count := 0
+			for e := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
+				Expect(e.ID).To(Equal(fmt.Sprintf("lma_dismiss_test_id%d", count)))
+				Expect(e.Origin).To(Equal(fmt.Sprintf("lma_dismiss_test_%d", count)))
+				Expect(e.Record).To(HaveKeyWithValue("key", fmt.Sprintf("value%d", count)))
+				switch count {
+				case 1:
+					Expect(e.Dismissed).To(BeTrue())
+				default:
+					Expect(e.Dismissed).To(BeFalse())
+				}
+				count++
+			}
+			Expect(count).To(Equal(3))
+		})
+
+		It("should delete events", func() {
+			// put some events into ES
+			for i := 0; i < 3; i++ {
+				id := fmt.Sprintf("lma_delete_test_id%d", i)
+				data.Origin = fmt.Sprintf("lma_delete_test_%d", i)
+				resp, err := elasticClientManaged.PutSecurityEventWithID(ctx, data, id)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.Id).To(Equal(id))
+			}
+
+			// delete the second event
+			id := "lma_delete_test_id1"
+			resp, err := elasticClientManaged.DeleteSecurityEvent(ctx, id)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp.Id).To(Equal(id))
+			Expect(resp.Result).To(Equal("deleted"))
+
+			time.Sleep(3 * time.Second)
+
+			// validate remaining events
+			remainingIDs := map[string]bool{
+				"lma_delete_test_id0": false,
+				"lma_delete_test_id2": false,
+			}
+
+			count := 0
+			for e := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
+				count++
+				_, ok := remainingIDs[e.ID]
+				Expect(ok).To(BeTrue())
+				remainingIDs[e.ID] = true
+			}
+
+			Expect(count).To(Equal(len(remainingIDs)))
+			for _, v := range remainingIDs {
+				Expect(v).To(BeTrue())
+			}
+		})
+
 		It("should send bulk events to Elasticsearch", func() {
 			bulkCommit := 0
 			afterFn := func(executionId int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
@@ -277,7 +357,7 @@ var _ = Describe("Elasticsearch events index", func() {
 
 			// wait for bulk to commit
 			Eventually(func() int { return bulkCommit }).Should(Equal(1))
-			time.Sleep(5 * time.Second)
+			time.Sleep(3 * time.Second)
 
 			eventCount := 0
 			for res := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
@@ -306,7 +386,7 @@ var _ = Describe("Elasticsearch events index", func() {
 			By("verifying requests are flushed after reaching the bulkaction count", func() {
 				// wait for bulk to commit
 				Eventually(func() int { return bulkCommit }).Should(Equal(4))
-				time.Sleep(5 * time.Second)
+				time.Sleep(3 * time.Second)
 
 				eventCount := 0
 				for res := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
@@ -322,7 +402,7 @@ var _ = Describe("Elasticsearch events index", func() {
 
 				// wait for bulk to commit
 				Eventually(func() int { return bulkCommit }).Should(Equal(5))
-				time.Sleep(5 * time.Second)
+				time.Sleep(3 * time.Second)
 
 				eventCount := 0
 				for res := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
@@ -331,6 +411,134 @@ var _ = Describe("Elasticsearch events index", func() {
 				}
 				Expect(eventCount).Should(BeNumerically("==", 22))
 			})
+		})
+
+		It("should dismiss bulk events", func() {
+			// put some events into ES
+			for i := 0; i < 10; i++ {
+				id := fmt.Sprintf("lma_bulk_dismiss_test_id%d", i)
+				data.Origin = fmt.Sprintf("lma_bulk_dismiss_test_%d", i)
+				data.Record = map[string]string{"key": fmt.Sprintf("value%d", i)}
+				resp, err := elasticClientManaged.PutSecurityEventWithID(ctx, data, id)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.Id).To(Equal(id))
+			}
+
+			toDismissEventIDs := map[string]bool{
+				"lma_bulk_dismiss_test_id1": false,
+				"lma_bulk_dismiss_test_id3": false,
+				"lma_bulk_dismiss_test_id5": false,
+				"lma_bulk_dismiss_test_id7": false,
+			}
+
+			// initialize bulk processor
+			bulkCommit := 0
+			afterFn := func(executionId int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
+				Expect(response.Errors).To(BeFalse())
+				Expect(err).NotTo(HaveOccurred())
+				for _, item := range response.Updated() {
+					_, ok := toDismissEventIDs[item.Id]
+					Expect(ok).To(BeTrue())
+					Expect(item.Result).To(Equal("updated"))
+					Expect(item.Status).To(Equal(http.StatusOK))
+				}
+				bulkCommit++
+			}
+			err := elasticClientManaged.BulkProcessorInitialize(ctx, afterFn)
+			Expect(err).NotTo(HaveOccurred())
+
+			// dismiss some events
+			for k := range toDismissEventIDs {
+				err := elasticClientManaged.DismissBulkSecurityEvent(k)
+				Expect(err).NotTo(HaveOccurred())
+			}
+			err = elasticClientManaged.BulkProcessorClose()
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func() int { return bulkCommit }).Should(Equal(1))
+			time.Sleep(3 * time.Second)
+
+			// validate events
+			count := 0
+			for e := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
+				if e.Dismissed {
+					_, ok := toDismissEventIDs[e.ID]
+					toDismissEventIDs[e.ID] = true
+					Expect(ok).To(BeTrue())
+				}
+				count++
+			}
+
+			Expect(count).To(Equal(10))
+			for _, v := range toDismissEventIDs {
+				Expect(v).To(BeTrue())
+			}
+		})
+
+		It("should delete bulk events", func() {
+			// put some events into ES
+			for i := 0; i < 10; i++ {
+				id := fmt.Sprintf("lma_bulk_delete_test_id%d", i)
+				data.Origin = fmt.Sprintf("lma_bulk_delete_test_%d", i)
+				resp, err := elasticClientManaged.PutSecurityEventWithID(ctx, data, id)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resp.Id).To(Equal(id))
+			}
+
+			toRemoveEventIDs := []string{
+				"lma_bulk_delete_test_id1",
+				"lma_bulk_delete_test_id3",
+				"lma_bulk_delete_test_id5",
+				"lma_bulk_delete_test_id7",
+			}
+
+			// initialize bulk processor
+			bulkCommit := 0
+			afterFn := func(executionId int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
+				Expect(response.Errors).To(BeFalse())
+				Expect(err).NotTo(HaveOccurred())
+				for i, item := range response.Deleted() {
+					Expect(item.Id).To(Equal(toRemoveEventIDs[i]))
+					Expect(item.Result).To(Equal("deleted"))
+					Expect(item.Status).To(Equal(http.StatusOK))
+				}
+				bulkCommit++
+			}
+			err := elasticClientManaged.BulkProcessorInitialize(ctx, afterFn)
+			Expect(err).NotTo(HaveOccurred())
+
+			// delete some events
+			for _, id := range toRemoveEventIDs {
+				err := elasticClientManaged.DeleteBulkSecurityEvent(id)
+				Expect(err).NotTo(HaveOccurred())
+			}
+			err = elasticClientManaged.BulkProcessorClose()
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func() int { return bulkCommit }).Should(Equal(1))
+			time.Sleep(3 * time.Second)
+
+			// validate remaining events
+			remainingIDs := map[string]bool{
+				"lma_bulk_delete_test_id0": false,
+				"lma_bulk_delete_test_id2": false,
+				"lma_bulk_delete_test_id4": false,
+				"lma_bulk_delete_test_id6": false,
+				"lma_bulk_delete_test_id8": false,
+				"lma_bulk_delete_test_id9": false,
+			}
+
+			count := 0
+			for e := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
+				count++
+				_, ok := remainingIDs[e.ID]
+				Expect(ok).To(BeTrue())
+				remainingIDs[e.ID] = true
+			}
+			Expect(count).To(Equal(len(remainingIDs)))
+			for _, v := range remainingIDs {
+				Expect(v).To(BeTrue())
+			}
 		})
 
 		It("should return paginated security events", func() {
@@ -353,7 +561,7 @@ var _ = Describe("Elasticsearch events index", func() {
 
 			// wait for bulk to commit
 			Eventually(func() int { return bulkCommit }).Should(Equal(1))
-			time.Sleep(5 * time.Second)
+			time.Sleep(3 * time.Second)
 
 			eventCount := 0
 			for res := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {

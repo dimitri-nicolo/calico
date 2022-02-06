@@ -18,6 +18,12 @@ const (
 	DefaultEventPageSize = 100
 )
 
+var eventDismissDoc map[string]bool
+
+func init() {
+	eventDismissDoc = map[string]bool{"dismissed": true}
+}
+
 func (c *client) EventsIndexExists(ctx context.Context) (bool, error) {
 	alias := c.ClusterAlias(EventsIndex)
 	return c.IndexExists(alias).Do(ctx)
@@ -58,11 +64,11 @@ func (c *client) CreateEventsIndex(ctx context.Context) error {
 	return nil
 }
 
-// PutSecurityEventWithID adds the given data into events index for the given docID.
-// If docID is empty, Elasticsearch generates one.
+// PutSecurityEventWithID adds the given data into events index for the given ID.
+// If ID is empty, Elasticsearch generates one.
 // This function can be used to send same events multiple time without creating duplicate
-// entries in Elasticsearch as long as the docID remains the same.
-func (c *client) PutSecurityEventWithID(ctx context.Context, data api.EventsData, docID string) (*elastic.IndexResponse, error) {
+// entries in Elasticsearch as long as the ID remains the same.
+func (c *client) PutSecurityEventWithID(ctx context.Context, data api.EventsData, id string) (*elastic.IndexResponse, error) {
 	alias := c.ClusterAlias(EventsIndex)
 
 	// Marshall the api.EventsData to ignore empty values
@@ -71,7 +77,7 @@ func (c *client) PutSecurityEventWithID(ctx context.Context, data api.EventsData
 		log.WithError(err).Error("failed to marshall")
 		return nil, err
 	}
-	return c.Index().Index(alias).Id(docID).BodyString(string(b)).Do(ctx)
+	return c.Index().Index(alias).Id(id).BodyString(string(b)).Do(ctx)
 }
 
 // PutSecurityEvent adds the given data into events index.
@@ -85,6 +91,18 @@ func (c *client) PutSecurityEvent(ctx context.Context, data api.EventsData) (*el
 		return nil, err
 	}
 	return c.Index().Index(alias).BodyString(string(b)).Do(ctx)
+}
+
+func (c *client) DismissSecurityEvent(ctx context.Context, id string) (*elastic.UpdateResponse, error) {
+	alias := c.ClusterAlias(EventsIndex)
+
+	return c.Update().Index(alias).Id(id).Doc(eventDismissDoc).Do(ctx)
+}
+
+func (c *client) DeleteSecurityEvent(ctx context.Context, id string) (*elastic.DeleteResponse, error) {
+	alias := c.ClusterAlias(EventsIndex)
+
+	return c.Delete().Index(alias).Id(id).Do(ctx)
 }
 
 // BulkProcessorInitialize creates a bulk processor service and sets default flush size and BulkAfterFunc that
@@ -124,6 +142,28 @@ func (c *client) PutBulkSecurityEvent(data api.EventsData) error {
 		return err
 	}
 	r := elastic.NewBulkIndexRequest().Index(alias).Doc(string(b))
+	c.bulkProcessor.Add(r)
+	return nil
+}
+
+func (c *client) DismissBulkSecurityEvent(id string) error {
+	if c.bulkProcessor == nil {
+		return fmt.Errorf("BulkProcessor not initialized")
+	}
+	alias := c.ClusterAlias(EventsIndex)
+
+	r := elastic.NewBulkUpdateRequest().Index(alias).Id(id).Doc(eventDismissDoc)
+	c.bulkProcessor.Add(r)
+	return nil
+}
+
+func (c *client) DeleteBulkSecurityEvent(id string) error {
+	if c.bulkProcessor == nil {
+		return fmt.Errorf("BulkProcessor not initalized")
+	}
+	alias := c.ClusterAlias(EventsIndex)
+
+	r := elastic.NewBulkDeleteRequest().Index(alias).Id(id)
 	c.bulkProcessor.Add(r)
 	return nil
 }
