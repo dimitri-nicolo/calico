@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 package middleware
 
 import (
@@ -100,14 +100,7 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.Sear
 
 	// Set cluster name to default: "cluster", if empty.
 	if params.ClusterName == "" {
-		clusterName := defaultClusterName
-		if r.Header != nil {
-			xClusterID := r.Header.Get(clusterIdHeader)
-			if xClusterID != "" {
-				clusterName = xClusterID
-			}
-		}
-		params.ClusterName = clusterName
+		params.ClusterName = MaybeParseClusterNameFromRequest(r)
 	}
 
 	// Check that we are not attempting to enumerate more than the maximum number of results.

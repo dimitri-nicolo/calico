@@ -16,12 +16,6 @@ import (
 )
 
 // Request properties to indicate the cluster used for proxying and RBAC.
-const (
-	clusterParam       = "cluster"
-	clusterIdHeader    = "x-cluster-id"
-	defaultClusterName = "cluster"
-)
-
 var legacyURLPath, extractIndexPrefixPattern, datelessIndexPattern *regexp.Regexp
 
 var queryResourceMap map[string]string
@@ -178,13 +172,7 @@ func parseLegacyURLPath(req *http.Request) (cluster, index, urlPath string, err 
 	idx := match[1]
 	index, _ = queryToResource(idx)
 
-	cluster = defaultClusterName
-	if req.Header != nil {
-		xclusterid := req.Header.Get(clusterIdHeader)
-		if xclusterid != "" {
-			cluster = xclusterid
-		}
-	}
+	cluster = MaybeParseClusterNameFromRequest(req)
 
 	// path would be a replacement for match[1]
 	// This lets us create the actual ES query that always includes the cluster name.

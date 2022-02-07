@@ -1,0 +1,6 @@
+{"update":{"_index":"tigera_secure_ee_events..","_id":"id1"}}
+{"doc":{"dismissed":true}}
+{"update":{"_index":"tigera_secure_ee_events..","_id":"id2"}}
+{"doc":{"dismissed":true}}
+{"update":{"_index":"tigera_secure_ee_events..","_id":"id3"}}
+{"doc":{"dismissed":true}}

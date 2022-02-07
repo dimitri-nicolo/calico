@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
 package server
 
 import (
@@ -18,6 +18,7 @@ import (
 	"github.com/tigera/es-proxy/pkg/kibana"
 	"github.com/tigera/es-proxy/pkg/middleware"
 	"github.com/tigera/es-proxy/pkg/middleware/aggregation"
+	"github.com/tigera/es-proxy/pkg/middleware/event"
 	"github.com/tigera/es-proxy/pkg/middleware/rawquery"
 	"github.com/tigera/es-proxy/pkg/middleware/servicegraph"
 	"github.com/tigera/es-proxy/pkg/pip"
@@ -183,6 +184,16 @@ func Start(cfg *Config) error {
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						esClient.Backend(),
 					)))))
+	sm.Handle("/events",
+		middleware.ClusterRequestToResource(eventsResourceName,
+			middleware.AuthenticateRequest(authn,
+				middleware.AuthorizeRequest(authz,
+					event.EventDeleteHandler(esClientFactory)))))
+	sm.Handle("/events/dismiss",
+		middleware.ClusterRequestToResource(eventsResourceName,
+			middleware.AuthenticateRequest(authn,
+				middleware.AuthorizeRequest(authz,
+					event.EventDismissHandler(esClientFactory)))))
 	sm.Handle("/events/search",
 		middleware.ClusterRequestToResource(eventsResourceName,
 			middleware.AuthenticateRequest(authn,
