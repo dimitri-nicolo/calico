@@ -28,21 +28,15 @@ Makefile.common.$(MAKE_BRANCH):
 
 include Makefile.common
 
-JUST_WATCH_VERSION=1.1.0
-JUST_WATCH_FILE_NAME=elasticsearch_exporter-$(JUST_WATCH_VERSION).linux-amd64
-JUST_WATCH_DOWNLOAD_URL=https://github.com/justwatchcom/elasticsearch_exporter/releases/download/v$(JUST_WATCH_VERSION)/$(JUST_WATCH_FILE_NAME).tar.gz
-
 clean:
-	rm -rf build \
+	rm -rf bin \
 		   Makefile.common*
 
-build/$(JUST_WATCH_FILE_NAME).tar.gz:
-	mkdir -p build bin
-	wget -O build/$(JUST_WATCH_FILE_NAME).tar.gz $(JUST_WATCH_DOWNLOAD_URL)
-	tar -xvf build/$(JUST_WATCH_FILE_NAME).tar.gz -C build
-	cp build/$(JUST_WATCH_FILE_NAME)/elasticsearch_exporter bin
-
-build: build/$(JUST_WATCH_FILE_NAME).tar.gz
+build:
+	git submodule update --init --recursive
+	mkdir -p bin
+	$(DOCKER_GO_BUILD) bash -x  -c "cd elasticsearch-exporter && make common-build"
+	cp elasticsearch-exporter/elasticsearch_exporter bin/
 
 image: $(ELASTICSEARCH_METRICS_IMAGE)
 $(ELASTICSEARCH_METRICS_IMAGE): $(ELASTICSEARCH_METRICS_IMAGE)-$(ARCH)
