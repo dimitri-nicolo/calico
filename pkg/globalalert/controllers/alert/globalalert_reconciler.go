@@ -69,7 +69,7 @@ func (r *globalAlertReconciler) Reconcile(namespacedName types.NamespacedName) e
 
 // Close cancel all the internal goroutines.
 func (r *globalAlertReconciler) Close() {
-	for name, _ := range r.alertNameToAlertState {
+	for name := range r.alertNameToAlertState {
 		r.cancelAlertRoutine(name)
 	}
 }

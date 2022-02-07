@@ -10,10 +10,12 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"strings"
 
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,13 +32,14 @@ const (
 var (
 	searchWithScrollCounter int
 )
-var _ = Describe("GlobalAlert", func() {
+var _ = Describe("GlobalAlert Elastic Test", func() {
 	var (
 		lmaESClient lma.Client
+		httpServer  *httptest.Server
 		rt          *testRoundTripper
 	)
-	BeforeEach(func() {
 
+	BeforeEach(func() {
 		// set es client
 		u, err := url.Parse(baseURI)
 		Expect(err).ShouldNot(HaveOccurred())
@@ -47,6 +50,26 @@ var _ = Describe("GlobalAlert", func() {
 
 		lmaESClient, err = lma.New(client, u, "", "", "test-cluster", 1, 0, true, 0, 0)
 		Expect(err).ShouldNot(HaveOccurred())
+
+		// for vulnerability dataset
+		f := mustOpen("test_files/10_vulnerability_events_from_image_assurance_api.json")
+		defer f.Close()
+		events, err := ioutil.ReadAll(f)
+		Expect(err).NotTo(HaveOccurred())
+		httpServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprint(w, string(events))
+		}))
+		Expect(httpServer).NotTo(BeNil())
+
+		os.Setenv("IMAGE_ASSURANCE_BAST_API_URL", httpServer.URL)
+		orgID, err := uuid.NewUUID()
+		Expect(err).NotTo(HaveOccurred())
+		os.Setenv("IMAGE_ASSURANCE_ORGANIZATION_ID", orgID.String())
+	})
+
+	AfterEach(func() {
+		os.Unsetenv("IMAGE_ASSURANCE_BAST_API_URL")
+		os.Unsetenv("IMAGE_ASSURANCE_ORGANIZATION_ID")
 	})
 
 	Context("with count as metric and without any aggregation", func() {
@@ -67,12 +90,12 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
+			e, err := getTestElasticService(lmaESClient, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
 			e.globalAlert = ga
-			e.executeQuery()
+			e.executeEsQuery()
 		})
 	})
 
@@ -95,12 +118,12 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(lmaESClient, "test-cluster", a)
+			e, err := getTestElasticService(lmaESClient, httpServer, "test-cluster", a)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_dns.test-cluster.*"))
 
 			e.globalAlert = a
-			e.executeQuery()
+			e.executeEsQuery()
 		})
 	})
 
@@ -123,17 +146,17 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
+			e, err := getTestElasticService(lmaESClient, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
 			e.globalAlert = ga
-			e.executeCompositeQuery()
+			e.executeEsCompositeQuery()
 			rt.reset()
 			// Successive query to elasticsearch should be same as first query
-			e.executeCompositeQuery()
+			e.executeEsCompositeQuery()
 			rt.reset()
-			e.executeCompositeQuery()
+			e.executeEsCompositeQuery()
 			rt.reset()
 		})
 		It("multiple aggregation-should query elasticsearch", func() {
@@ -154,11 +177,11 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
+			e, err := getTestElasticService(lmaESClient, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 			e.globalAlert = ga
-			e.executeCompositeQuery()
+			e.executeEsCompositeQuery()
 		})
 	})
 
@@ -182,12 +205,12 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
+			e, err := getTestElasticService(lmaESClient, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
 			e.globalAlert = ga
-			e.executeCompositeQuery()
+			e.executeEsCompositeQuery()
 		})
 	})
 
@@ -208,7 +231,7 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
+			e, err := getTestElasticService(lmaESClient, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
@@ -217,7 +240,7 @@ var _ = Describe("GlobalAlert", func() {
 			// resulting hits are transformed to docs that needs to go in events index, a /bulk request is made with transformed data
 			// IDS again calls /_search?scroll=5m&size=500 to get next batch of documents
 			e.globalAlert = ga
-			e.executeQueryWithScroll()
+			e.executeEsQueryWithScroll()
 		})
 	})
 
@@ -237,12 +260,12 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
+			e, err := getTestElasticService(lmaESClient, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
 			e.globalAlert = ga
-			e.executeCompositeQuery()
+			e.executeEsCompositeQuery()
 		})
 	})
 
@@ -264,12 +287,12 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
+			e, err := getTestElasticService(lmaESClient, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
 			e.globalAlert = ga
-			e.executeQuery()
+			e.executeEsQuery()
 		})
 		It("Operator NOTIN with count and without aggregation", func() {
 			// Uses file with prefix 7_with_notin_and_count_and_no_aggregation_* for testing this scenario
@@ -288,12 +311,12 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
+			e, err := getTestElasticService(lmaESClient, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
 			e.globalAlert = ga
-			e.executeQuery()
+			e.executeEsQuery()
 		})
 		It("Operator IN with count and with aggregation", func() {
 			// Uses file with prefix 8_with_in_and_count_and_aggregateby_* for testing this scenario
@@ -313,12 +336,12 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
+			e, err := getTestElasticService(lmaESClient, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
 			e.globalAlert = ga
-			e.executeQuery()
+			e.executeEsQuery()
 		})
 		It("Operator NOTIN with count and with aggregation", func() {
 			// Uses file with prefix 8_with_notin_and_count_and_aggregateby_* for testing this scenario
@@ -338,12 +361,12 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
+			e, err := getTestElasticService(lmaESClient, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
 			e.globalAlert = ga
-			e.executeQuery()
+			e.executeEsQuery()
 		})
 		It("Operator IN without metric and without aggregation", func() {
 			// Uses file with prefix 9_with_in_without_metric_and_no_aggregation_* for testing this scenario
@@ -359,12 +382,12 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
+			e, err := getTestElasticService(lmaESClient, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
 			e.globalAlert = ga
-			e.executeQuery()
+			e.executeEsQuery()
 		})
 		It("Operator NOTIN without metric and without aggregation", func() {
 			// Uses file with prefix 9_with_notin_without_metric_and_no_aggregation_* for testing this scenario
@@ -380,12 +403,94 @@ var _ = Describe("GlobalAlert", func() {
 				},
 			}
 
-			e, err := GetTestElasticService(lmaESClient, "test-cluster", ga)
+			e, err := getTestElasticService(lmaESClient, httpServer, "test-cluster", ga)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_flows.test-cluster.*"))
 
 			e.globalAlert = ga
-			e.executeQuery()
+			e.executeEsQuery()
+		})
+	})
+
+	Context("vulnerability dataset", func() {
+		It("should query image assurance api", func() {
+			// uses file 10_vulnerability_events_doc.json
+			ga := &v3.GlobalAlert{
+				ObjectMeta: v1.ObjectMeta{
+					Name: alertName,
+				},
+				Spec: v3.GlobalAlertSpec{
+					Description: fmt.Sprintf("test alert: %s", alertName),
+					Severity:    100,
+					DataSet:     "vulnerability",
+					Query:       `registry="quay.io" AND repository=node`,
+				},
+			}
+
+			e, err := getTestElasticService(lmaESClient, httpServer, "test-cluster", ga)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			Expect(e.httpClient).NotTo(BeNil())
+
+			Expect(len(e.query)).To(Equal(2))
+			val, ok := e.query["registry"]
+			Expect(ok).To(BeTrue())
+			Expect(val).To(Equal("quay.io"))
+			val, ok = e.query["repository"]
+			Expect(ok).To(BeTrue())
+			Expect(val).To(Equal("node"))
+
+			e.globalAlert = ga
+			e.executeVulnerabilityQuery()
+		})
+
+		It("should query image assurance api with metric count", func() {
+			// uses file 10_vulnerability_metric_count_events_doc.json
+			ga := &v3.GlobalAlert{
+				ObjectMeta: v1.ObjectMeta{
+					Name: alertName,
+				},
+				Spec: v3.GlobalAlertSpec{
+					Description: fmt.Sprintf("test alert: %s", alertName),
+					Severity:    100,
+					DataSet:     "vulnerability",
+					Query:       `registry="quay.io" AND repository=node`,
+					Metric:      "count",
+					Condition:   "gt",
+					Threshold:   1.0,
+				},
+			}
+
+			e, err := getTestElasticService(lmaESClient, httpServer, "test-cluster", ga)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			e.globalAlert = ga
+			e.executeVulnerabilityQuery()
+		})
+
+		It("should query image assurance api with metric max", func() {
+			// uses file 10_vulnerability_metric_max_events_doc.json
+			ga := &v3.GlobalAlert{
+				ObjectMeta: v1.ObjectMeta{
+					Name: alertName,
+				},
+				Spec: v3.GlobalAlertSpec{
+					Description: fmt.Sprintf("test alert: %s", alertName),
+					Severity:    100,
+					DataSet:     "vulnerability",
+					Query:       `registry="quay.io" AND repository=node`,
+					Metric:      "max",
+					Condition:   "gt",
+					Field:       "max_cvss_score",
+					Threshold:   6.6,
+				},
+			}
+
+			e, err := getTestElasticService(lmaESClient, httpServer, "test-cluster", ga)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			e.globalAlert = ga
+			e.executeVulnerabilityQuery()
 		})
 	})
 
@@ -403,14 +508,21 @@ var _ = Describe("GlobalAlert", func() {
 
 })
 
-func GetTestElasticService(lmaESClient lma.Client, clusterName string, alert *v3.GlobalAlert) (*service, error) {
+func getTestElasticService(lmaESClient lma.Client, httpServer *httptest.Server, clusterName string, alert *v3.GlobalAlert) (*service, error) {
 	e := &service{
 		lmaESClient: lmaESClient,
 		clusterName: clusterName,
 	}
-	e.buildIndexName(alert)
 
-	err := e.buildEsQuery(alert)
+	var err error
+	if alert.Spec.DataSet == v3.GlobalAlertDataSetVulnerability {
+		e.httpClient = httpServer.Client()
+		err = e.buildVulnerabilityQuery(alert)
+	} else {
+		e.buildIndexName(alert)
+		err = e.buildEsQuery(alert)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -455,7 +567,7 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 		switch req.URL.String() {
 		case baseURI:
 			return &http.Response{
-				StatusCode: 200,
+				StatusCode: http.StatusOK,
 				Request:    req,
 				Body:       ioutil.NopCloser(strings.NewReader("")),
 			}, nil
@@ -471,7 +583,7 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 			switch string(reqBody) {
 			case mustGetQueryAsString("test_files/1_with_count_and_no_aggregation_query.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/1_with_count_and_no_aggregation_response.json"),
 				}, nil
@@ -480,7 +592,7 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 				Expect(t.isStartOfAlertCycle).Should(BeTrue())
 				t.isStartOfAlertCycle = false
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/3_with_count_and_aggregateby_response.json"),
 				}, nil
@@ -488,61 +600,61 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 				// Second call made to elasticsearch should be with 3_with_count_and_aggregateby_query_after_key.json
 				Expect(t.isStartOfAlertCycle).Should(BeFalse())
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/3_with_count_and_aggregateby_response_after_key.json"),
 				}, nil
 			case mustGetQueryAsString("test_files/3_1_with_count_and_aggregateby_query.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/3_1_with_count_and_aggregateby_response.json"),
 				}, nil
 			case mustGetQueryAsString("test_files/4_with_max_and_aggregateby_query.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/4_with_max_and_aggregateby_response.json"),
 				}, nil
 			case mustGetQueryAsString("test_files/6_without_metric_and_with_aggregateby_query.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/6_without_metric_and_with_aggregateby_response.json"),
 				}, nil
 			case mustGetQueryAsString("test_files/7_with_in_and_count_and_no_aggregation_query.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/7_with_in_and_count_and_no_aggregation_response.json"),
 				}, nil
 			case mustGetQueryAsString("test_files/7_with_notin_and_count_and_no_aggregation_query.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/7_with_notin_and_count_and_no_aggregation_response.json"),
 				}, nil
 			case mustGetQueryAsString("test_files/8_with_in_and_count_and_aggregateby_query.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/8_with_in_and_count_and_aggregateby_response.json"),
 				}, nil
 			case mustGetQueryAsString("test_files/8_with_notin_and_count_and_aggregateby_query.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/8_with_notin_and_count_and_aggregateby_response.json"),
 				}, nil
 			case mustGetQueryAsString("test_files/9_with_in_without_metric_and_no_aggregation_query.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/9_with_in_without_metric_and_no_aggregation_response.json"),
 				}, nil
 			case mustGetQueryAsString("test_files/9_with_notin_without_metric_and_no_aggregation_query.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/9_with_notin_without_metric_and_no_aggregation_response.json"),
 				}, nil
@@ -553,7 +665,7 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 			switch string(reqBody) {
 			case mustGetQueryAsString("test_files/2_with_max_and_no_aggregateby_query.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/2_with_max_and_no_aggregateby_response.json"),
 				}, nil
@@ -564,7 +676,7 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 			if searchWithScrollCounter == 1 {
 				// return EOF
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body: ioutil.NopCloser(strings.NewReader(`{
 					"hits": {
@@ -579,7 +691,7 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 			case mustGetQueryAsString("test_files/5_with_no_metric_and_no_aggregation_query.json"):
 				searchWithScrollCounter++
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/5_with_no_metric_and_no_aggregation_response.json"),
 				}, nil
@@ -591,79 +703,97 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 			switch string(reqBody) {
 			case mustGetEventIndexDocAsString("test_files/1_with_count_and_no_aggregation_events_doc.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/bulk_response.json"),
 				}, nil
 			case mustGetEventIndexDocAsString("test_files/2_with_max_and_no_aggregateby_events_doc.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/bulk_response.json"),
 				}, nil
 			case mustGetEventIndexDocAsString("test_files/3_with_count_and_aggregateby_events_doc.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/bulk_response.json"),
 				}, nil
 			case mustGetEventIndexDocAsString("test_files/3_1_with_count_and_aggregateby_events_doc.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/bulk_response.json"),
 				}, nil
 			case mustGetEventIndexDocAsString("test_files/4_with_max_and_aggregateby_events_doc.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/bulk_response.json"),
 				}, nil
 			case mustGetEventIndexDocAsString("test_files/5_with_no_metric_and_no_aggregation_events_doc.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/bulk_response.json"),
 				}, nil
 			case mustGetEventIndexDocAsString("test_files/6_without_metric_and_with_aggregateby_events_doc.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/bulk_response.json"),
 				}, nil
 			case mustGetEventIndexDocAsString("test_files/7_with_in_and_count_and_no_aggregation_events_doc.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/bulk_response.json"),
 				}, nil
 			case mustGetEventIndexDocAsString("test_files/7_with_notin_and_count_and_no_aggregation_events_doc.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/bulk_response.json"),
 				}, nil
 			case mustGetEventIndexDocAsString("test_files/8_with_in_and_count_and_aggregateby_events_doc.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/bulk_response.json"),
 				}, nil
 			case mustGetEventIndexDocAsString("test_files/8_with_notin_and_count_and_aggregateby_events_doc.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/bulk_response.json"),
 				}, nil
 			case mustGetEventIndexDocAsString("test_files/9_with_in_without_metric_and_no_aggregation_events_doc.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/bulk_response.json"),
 				}, nil
 			case mustGetEventIndexDocAsString("test_files/9_with_notin_without_metric_and_no_aggregation_events_doc.json"):
 				return &http.Response{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
+					Request:    req,
+					Body:       mustOpen("test_files/bulk_response.json"),
+				}, nil
+			case mustGetEventIndexDocAsString("test_files/10_vulnerability_events_doc.json"):
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Request:    req,
+					Body:       mustOpen("test_files/bulk_response.json"),
+				}, nil
+			case mustGetEventIndexDocAsString("test_files/10_vulnerability_events_metric_count_events_doc.json"):
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Request:    req,
+					Body:       mustOpen("test_files/bulk_response.json"),
+				}, nil
+			case mustGetEventIndexDocAsString("test_files/10_vulnerability_events_metric_max_events_doc.json"):
+				return &http.Response{
+					StatusCode: http.StatusOK,
 					Request:    req,
 					Body:       mustOpen("test_files/bulk_response.json"),
 				}, nil

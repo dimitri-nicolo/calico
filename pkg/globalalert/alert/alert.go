@@ -17,17 +17,17 @@ import (
 	lma "github.com/tigera/lma/pkg/elastic"
 )
 
+const (
+	DefaultPeriod      = 5 * time.Minute
+	MinimumAlertPeriod = 5 * time.Second
+)
+
 type Alert struct {
 	alert       *v3.GlobalAlert
 	calicoCLI   calicoclient.Interface
 	es          es.Service
 	clusterName string
 }
-
-const (
-	DefaultPeriod      = 5 * time.Minute
-	MinimumAlertPeriod = 5 * time.Second
-)
 
 // NewAlert sets and returns an Alert, builds Elasticsearch query that will be used periodically to query Elasticsearch data.
 func NewAlert(alert *v3.GlobalAlert, calicoCLI calicoclient.Interface, lmaESClient lma.Client, clusterName string) (*Alert, error) {

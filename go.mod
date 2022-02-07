@@ -5,6 +5,7 @@ go 1.17
 require (
 	github.com/araddon/dateparse v0.0.0-20190223010137-262228af701e
 	github.com/avast/retry-go v2.2.0+incompatible
+	github.com/google/uuid v1.3.0
 	github.com/olivere/elastic/v7 v7.0.22
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.15.0
@@ -62,7 +63,6 @@ require (
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
-	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/gnostic v0.5.4 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/huandu/xstrings v1.2.0 // indirect
@@ -119,13 +119,13 @@ require (
 	k8s.io/apiserver v0.22.5 // indirect
 	k8s.io/kube-openapi v0.0.0-20211110012726-3cc51fd1e909 // indirect
 	k8s.io/utils v0.0.0-20210819203725-bdf08cb9a70a // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
 replace (
-	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220129015347-c61d8d667939
-	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220129015347-c61d8d667939
+	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220205003053-6dac6089ce28
+	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220205003053-6dac6089ce28
 
 	google.golang.org/grpc => google.golang.org/grpc v1.29.1
 
