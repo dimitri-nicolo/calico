@@ -4,15 +4,18 @@ package query
 
 var (
 	wafKeys = map[string]Validator{
-		"timestamp":      DateValidator,
-		"unique_id":      NullValidator,
-		"uri":            NullValidator,
-		"owasp_host":     IPValidator,
-		"owasp_file":     NullValidator,
-		"owasp_line":     PositiveIntValidator,
-		"owasp_id":       PositiveIntValidator,
-		"owasp_severity": PositiveIntValidator,
-		"node":           NullValidator,
+		"timestamp":            DateValidator,
+		"path":                 NullValidator,
+		"method":               NullValidator,
+		"protocol":             NullValidator,
+		"source.ip":            IPValidator,
+		"source.port_num":      IntRangeValidator(0, MaxTCPUDPPortNum),
+		"source.hostname":      DomainValidator,
+		"destination.ip":       IPValidator,
+		"destination.port_num": IntRangeValidator(0, MaxTCPUDPPortNum),
+		"destination.hostname": DomainValidator,
+		"rule_info":            NullValidator,
+		"node":                 NullValidator,
 	}
 )
 
