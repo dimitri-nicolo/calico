@@ -1,0 +1,91 @@
+{
+  "index_patterns": [
+    "tigera_secure_ee_runtime*"
+  ],
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0
+  },
+  "mappings": {
+    "properties": {
+      /* The number of individual events that were aggregated together to form this report. */
+      "count": {
+        "type": "integer"
+      },
+      /* The type of event being reported; one of: "ProcessStart", "FileAccess". */
+      "type": {
+        "type": "keyword"
+      },
+      /* The time of the earliest individual event that was aggregated into this report. */
+      "start_time": {
+        "type": "date"
+      },
+      /* The time of the last individual event that was aggregated into this report. */
+      "end_time": {
+        "type": "date"
+      },
+      /* Pod info, if the process ID can be correlated to a Kubernetes pod... */
+      "pod": {
+        "properties": {
+	  /* Pod namespace. */
+          "namespace": {
+            "type": "keyword"
+          },
+	  /* Pod name. */
+          "name": {
+            "type": "keyword"
+          },
+	  /* Pod prefix aka GenerateName. */
+          "name_aggr": {
+            "type": "keyword"
+          },
+	  /* The relevant container name, for the Linux process that generated this report, from the
+	   * pod's PodSpec. */
+          "container_name": {
+            "type": "keyword"
+          }
+        }
+      },
+      /* For events involving a file, information about that file... */
+      "file": {
+        "properties": {
+	  /* The file’s path in the mount namespace of the process that originated this event. */
+          "path": {
+            "type": "keyword"
+          },
+	  /* If the file is mapped into the host’s filesystem, the path of the file in the host
+	   * filesystem.  Otherwise empty. */
+          "host_path": {
+            "type": "keyword"
+          }
+        }
+      },
+      /* Additional details when type is “ProcessStart”... */
+      "process_start": {
+        "properties": {
+	  /* Args that process was invoked with.  This is a single string of space-separated args,
+	   * except that (1) a space preceded by a non-literal backslash (e.g. "\ ") indicates a
+	   * space that is part of an arg, as opposed to separating two args; (2) a pair of
+	   * backslashes ("\\") indicates a literal backslash.  */
+          "args": {
+            "type": "text"
+          },
+	  /* Hashes of the process executable... */
+          "hashes": {
+            "properties": {
+              "md5": {
+                "type": "keyword"
+              },
+              "sha1": {
+                "type": "keyword"
+              },
+              "sha256": {
+                "type": "keyword"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

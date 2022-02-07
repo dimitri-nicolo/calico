@@ -5,7 +5,6 @@
 # below and then compare to previously captured configurations to ensure
 # only expected changes have happened.
 
-DEBUG="false"
 FAILED=0
 TEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 mkdir -p $TEST_DIR/tmp
@@ -19,7 +18,7 @@ function generateAndCollectConfig() {
   docker run -d --name generate-fluentd-config $ADDITIONAL_MOUNT --hostname config.generator --env-file $ENV_FILE tigera/fluentd:${IMAGETAG} >/dev/null
   sleep 2
 
-  docker logs generate-fluentd-config | sed -n '/<ROOT>/,/<\/ROOT>/p' | sed -e 's|^.*<ROOT>|<ROOT>|' > $OUT_FILE
+  docker logs generate-fluentd-config | sed -n '/<ROOT>/,/<\/ROOT>/p' | sed -e 's|^.*<ROOT>|<ROOT>|' | sed -e 's/ \+$//' > $OUT_FILE
   if [ $? -ne 0 ]; then echo "Grabbing config from fluentd container failed"; exit 1; fi
 
   docker stop generate-fluentd-config >/dev/null
@@ -49,7 +48,7 @@ function checkConfiguration() {
   else
     echo " XXX configuration is not correct"
     FAILED=1
-    $DEBUG && diff $EXPECTED $UUT
+    diff $EXPECTED $UUT
   fi
 }
 
@@ -60,10 +59,14 @@ ELASTIC_INDEX_SUFFIX=test-cluster-name
 ELASTIC_FLOWS_INDEX_SHARDS=5
 ELASTIC_DNS_INDEX_SHARDS=5
 ELASTIC_L7_INDEX_SHARDS=5
+ELASTIC_RUNTIME_INDEX_SHARDS=5
+ELASTIC_WAF_INDEX_SHARDS=5
 FLUENTD_FLOW_FILTERS=# not a real filter
 FLOW_LOG_FILE=/var/log/calico/flowlogs/flows.log
 DNS_LOG_FILE=/var/log/calico/dnslogs/dns.log
 L7_LOG_FILE=/var/log/calico/l7logs/l7.log
+RUNTIME_LOG_FILE=/var/log/calico/runtime-security/report.log
+WAF_LOG_FILE=/var/log/calico/waf/waf.log
 ELASTIC_HOST=elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
 ELASTIC_PORT=9200
 EOM
@@ -114,6 +117,8 @@ SYSLOG_TLS_VARS_ALL_LOG_TYPES=$(cat <<EOM
 SYSLOG_FLOW_LOG=true
 SYSLOG_DNS_LOG=true
 SYSLOG_L7_LOG=true
+SYSLOG_RUNTIME_LOG=true
+SYSLOG_WAF_LOG=true
 SYSLOG_AUDIT_EE_LOG=true
 SYSLOG_AUDIT_KUBE_LOG=true
 SYSLOG_IDS_EVENT_LOG=true
@@ -159,6 +164,8 @@ $ES_SECURE_VARS
 DISABLE_ES_FLOW_LOG=true
 DISABLE_ES_DNS_LOG=true
 DISABLE_ES_L7_LOG=true
+DISABLE_ES_RUNTIME_LOG=true
+DISABLE_ES_WAF_LOG=true
 DISABLE_ES_AUDIT_EE_LOG=true
 DISABLE_ES_AUDIT_KUBE_LOG=true
 DISABLE_ES_BGP_LOG=true
@@ -186,6 +193,8 @@ $ES_SECURE_VARS
 DISABLE_ES_FLOW_LOG=true
 DISABLE_ES_DNS_LOG=true
 DISABLE_ES_L7_LOG=true
+DISABLE_ES_RUNTIME_LOG=true
+DISABLE_ES_WAF_LOG=true
 DISABLE_ES_AUDIT_EE_LOG=true
 DISABLE_ES_AUDIT_KUBE_LOG=true
 DISABLE_ES_BGP_LOG=true

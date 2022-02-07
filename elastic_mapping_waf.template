@@ -1,0 +1,69 @@
+{
+  "index_patterns": [
+    "tigera_secure_ee_waf*"
+  ],
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0
+  },
+  "mappings": {
+    "properties": {
+      "@timestamp": {
+        "type": "date"
+      },
+      "source": {
+        /* source - Specifies originating pod of the request (before NAT). */
+        "properties": {
+          "ip": {
+            "type": "ip",
+            "null_value": "0.0.0.0"
+          },
+          "port_num": {
+            "type": "long",
+            "null_value": "0"
+          },
+          "hostname": {
+            "type": "keyword",
+            "null_value": ""
+          }
+        }
+      },
+      "destination": {
+        /* destination - Specifies destination of the request. */
+        "properties": {
+          "ip": {
+            "type": "ip",
+            "null_value": "0.0.0.0"
+          },
+          "port_num": {
+            "type": "long",
+            "null_value": "0"
+          },
+          "hostname": {
+            "type": "keyword",
+            "null_value": ""
+          }
+        }
+      },
+      "path": {
+        "type": "keyword"
+      },
+      "method": {
+        "type": "keyword"
+      },
+      "protocol": {
+        "type": "keyword"
+      },
+      "msg": {
+        "type": "keyword"
+      },
+      "rule_info": {
+        /* rule_info - Information on the OWASP rule that was triggered. */
+        "type": "keyword"
+      },
+      "node": {
+        "type": "keyword"
+      }
+    }
+  }
+}

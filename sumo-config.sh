@@ -60,5 +60,32 @@ if [[ "${SUMO_AUDIT_LOG}" == "true" || "${SUMO_AUDIT_TSEE_LOG}" == "true" || "${
   if [ "${SUMO_L7_LOG}" == "true" ]; then
     cp ${ROOT_DIR}/fluentd/etc/outputs/out-sumologic-l7.conf ${ROOT_DIR}/fluentd/etc/output_l7/out-sumologic-l7.conf
   fi
-fi
 
+  # Optional SumoLogic WAF log output
+  if [ -z "${SUMO_WAF_SOURCE_CATEGORY}" ]; then
+    sed -i 's|source_category .*||g' ${ROOT_DIR}/fluentd/etc/outputs/out-sumologic-waf.conf
+  fi
+  if [ -z "${SUMO_WAF_SOURCE_NAME}" ]; then
+    sed -i 's|source_name .*||g' ${ROOT_DIR}/fluentd/etc/outputs/out-sumologic-waf.conf
+  fi
+  if [ -z "${SUMO_WAF_SOURCE_HOST}" ]; then
+    sed -i 's|source_host .*||g' ${ROOT_DIR}/fluentd/etc/outputs/out-sumologic-waf.conf
+  fi
+  if [ "${SUMO_WAF_LOG}" == "true" ]; then
+    cp ${ROOT_DIR}/fluentd/etc/outputs/out-sumologic-waf.conf ${ROOT_DIR}/fluentd/etc/output_waf/out-sumologic-waf.conf
+  fi
+
+  # Optional SumoLogic runtime-security report log output
+  if [ -z "${SUMO_RUNTIME_SOURCE_CATEGORY}" ]; then
+    sed -i 's|source_category .*||g' ${ROOT_DIR}/fluentd/etc/outputs/out-sumologic-runtime.conf
+  fi
+  if [ -z "${SUMO_RUNTIME_SOURCE_NAME}" ]; then
+    sed -i 's|source_name .*||g' ${ROOT_DIR}/fluentd/etc/outputs/out-sumologic-runtime.conf
+  fi
+  if [ -z "${SUMO_RUNTIME_SOURCE_HOST}" ]; then
+    sed -i 's|source_host .*||g' ${ROOT_DIR}/fluentd/etc/outputs/out-sumologic-runtime.conf
+  fi
+  if [ "${SUMO_RUNTIME_LOG}" == "true" ]; then
+    cp ${ROOT_DIR}/fluentd/etc/outputs/out-sumologic-runtime.conf ${ROOT_DIR}/fluentd/etc/output_runtime/out-sumologic-runtime.conf
+  fi
+fi
