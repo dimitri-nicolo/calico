@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018,2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@ package health
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/http"
@@ -34,6 +35,11 @@ import (
 var felixReadinessEp string
 var felixLivenessEp string
 var bgpMetricsReadinessEp string
+
+var (
+	reporterKeyFile  string
+	reporterCertFile string
+)
 
 func init() {
 	initFelix()
@@ -60,9 +66,18 @@ func initFelix() {
 }
 
 func initBGPMetrics() {
+	reporterCertFile = os.Getenv("FELIX_PROMETHEUSREPORTERCERTFILE")
+	reporterKeyFile = os.Getenv("FELIX_PROMETHEUSREPORTERKEYFILE")
+	var scheme string
+	if len(reporterCertFile) != 0 && len(reporterKeyFile) != 0 {
+		scheme = "https"
+	} else {
+		scheme = "http"
+	}
+
 	prometheusPort := os.Getenv("BGP_PROMETHEUSREPORTERPORT")
 	if prometheusPort == "" {
-		bgpMetricsReadinessEp = fmt.Sprintf("http://localhost:%d/metrics", metrics.DefaultPrometheusPort)
+		bgpMetricsReadinessEp = fmt.Sprintf("%s://localhost:%d/metrics", scheme, metrics.DefaultPrometheusPort)
 		return
 	}
 
@@ -70,7 +85,7 @@ func initBGPMetrics() {
 		log.Panicf("Failed to parse value for port %q", prometheusPort)
 	}
 
-	bgpMetricsReadinessEp = fmt.Sprintf("http://localhost:%s/metrics", prometheusPort)
+	bgpMetricsReadinessEp = fmt.Sprintf("%s://localhost:%s/metrics", scheme, prometheusPort)
 }
 
 // Run various health checks for Calico node, based on the given flag values
@@ -88,7 +103,7 @@ func Run(bird, bird6, felixReady, felixLive, birdLive, bird6Live, bgpMetricsRead
 
 	if felixLive {
 		g.Go(func() error {
-			if err := checkHealthEndpoint(ctx, felixLivenessEp, "liveness"); err != nil {
+			if err := checkHealthEndpoint(ctx, felixLivenessEp, "liveness", nil); err != nil {
 				return fmt.Errorf("calico/node is not ready: Felix is not live: %+v", err)
 			}
 			return nil
@@ -115,7 +130,7 @@ func Run(bird, bird6, felixReady, felixLive, birdLive, bird6Live, bgpMetricsRead
 
 	if felixReady {
 		g.Go(func() error {
-			if err := checkHealthEndpoint(ctx, felixReadinessEp, "readiness"); err != nil {
+			if err := checkHealthEndpoint(ctx, felixReadinessEp, "readiness", nil); err != nil {
 				return fmt.Errorf("calico/node is not ready: felix is not ready: %+v", err)
 			}
 			return nil
@@ -141,8 +156,21 @@ func Run(bird, bird6, felixReady, felixLive, birdLive, bird6Live, bgpMetricsRead
 	}
 
 	if bgpMetricsReady {
+		var tlsConfig *tls.Config
+		if len(reporterCertFile) != 0 && len(reporterKeyFile) != 0 {
+			pair, err := tls.LoadX509KeyPair(reporterCertFile, reporterKeyFile)
+			if err != nil {
+				log.WithError(err).Fatal("Unable to create tls configuration for bgp metrics health check")
+			}
+			tlsConfig = &tls.Config{
+				Certificates: []tls.Certificate{pair},
+				// We don't want to verify the cert during the health check, because this
+				// requires the certificate to include localhost as a DNS name.
+				InsecureSkipVerify: true,
+			}
+		}
 		g.Go(func() error {
-			if err := checkHealthEndpoint(ctx, bgpMetricsReadinessEp, "readiness"); err != nil {
+			if err := checkHealthEndpoint(ctx, bgpMetricsReadinessEp, "readiness", tlsConfig); err != nil {
 				return fmt.Errorf("calico/node is not ready: BGP metrics server is not ready: %+v", err)
 			}
 			return nil
@@ -244,8 +272,10 @@ func checkBIRDReady(ipVer bgp.Version, thresholdTime time.Duration) error {
 
 // checkHealthEndpoint determines if a component is ready or live by making an
 // HTTP request to the given endpoint.
-func checkHealthEndpoint(ctx context.Context, endpoint, probeType string) error {
-	c := &http.Client{}
+func checkHealthEndpoint(ctx context.Context, endpoint, probeType string, config *tls.Config) error {
+	c := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: config,
+	}}
 	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
 	req = req.WithContext(ctx)
 	if err != nil {
