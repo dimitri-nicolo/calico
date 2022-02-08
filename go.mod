@@ -5,7 +5,6 @@ go 1.17
 require (
 	github.com/araddon/dateparse v0.0.0-20190223010137-262228af701e
 	github.com/avast/retry-go v2.2.0+incompatible
-	github.com/google/uuid v1.3.0
 	github.com/olivere/elastic/v7 v7.0.22
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.15.0
@@ -23,6 +22,8 @@ require (
 	k8s.io/client-go v0.22.5
 	k8s.io/klog/v2 v2.9.0
 )
+
+require github.com/google/uuid v1.3.0
 
 require (
 	cloud.google.com/go v0.93.3 // indirect
@@ -124,8 +125,8 @@ require (
 )
 
 replace (
-	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220205003053-6dac6089ce28
-	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220205003053-6dac6089ce28
+	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220208160835-eda041559d03
+	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220208160835-eda041559d03
 
 	google.golang.org/grpc => google.golang.org/grpc v1.29.1
 
