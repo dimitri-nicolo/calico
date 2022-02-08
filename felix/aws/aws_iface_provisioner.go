@@ -400,6 +400,7 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 				recheckBackoffMgr.Reschedule(false /*we already reset the timer above*/)
 			}
 			if response == nil {
+				// We're not ready to respond, mask the response channel.
 				responseC = nil
 			} else {
 				responseC = m.responseC
@@ -1696,8 +1697,6 @@ func (m *SecondaryIfaceProvisioner) disassociateUnwantedElasticIPs(snapshot *eni
 }
 
 func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *eniSnapshot) error {
-	ctx, cancel := m.newContext()
-	defer cancel()
 	ec2Client, err := m.ec2Client()
 	if err != nil {
 		return err
@@ -1760,6 +1759,7 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *eniSna
 	for _, candidateEIPsChunk := range chunkStringSlice(candidateElasticIPs, chunkSize) {
 		// Query AWS to find out which elastic IPs are available.
 		logrus.WithField("eips", candidateEIPsChunk).Debug("Looking up elastic IPs in AWS API.")
+		ctx, cancel := m.newContext()
 		dao, err := ec2Client.EC2Svc.DescribeAddresses(ctx, &ec2.DescribeAddressesInput{
 			// Important to use a filter rather than the other fields in the DescribeAddressesInput because
 			// using the other fields to match EIPs results in errors if any one of the EIPs doesn't exist.
@@ -1772,6 +1772,7 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *eniSna
 				// Would like to include a filter to return only unassociated addresses but there doesn't seem to be one.
 			},
 		})
+		cancel()
 		if err != nil {
 			return fmt.Errorf("failed to list elastic IPs: %w", err)
 		}
@@ -1802,12 +1803,14 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *eniSna
 				// Try to associate the elastic IP with the private IP...
 				logCtx.Info("Attempting to associate elastic IP with private IP.")
 				m.resetRecheckInterval("associate-eip")
+				ctx, cancel := m.newContext()
 				_, err := ec2Client.EC2Svc.AssociateAddress(ctx, &ec2.AssociateAddressInput{
 					AllocationId:       eip.AllocationId,
 					NetworkInterfaceId: stringPtr(eniID),
 					PrivateIpAddress:   stringPtr(privIP.String()),
 					AllowReassociation: aws2.Bool(false), // true is the default but we don't want to steal.
 				})
+				cancel()
 				if err != nil {
 					var smithyErr smithy.APIError
 					if errors.As(err, &smithyErr) && smithyErr.ErrorCode() == "Resource.AlreadyAssociated" {
