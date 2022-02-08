@@ -113,3 +113,13 @@ func (r *IndexAllocator) GrabBlock(len int) (set.Set, error) {
 	}
 	return indices, nil
 }
+
+func (r *IndexAllocator) GrabAllRemainingIndices() set.Set {
+	remainingIndices := set.New()
+	idx, err := r.GrabIndex()
+	for err == nil {
+		remainingIndices.Add(idx)
+		idx, err = r.GrabIndex()
+	}
+	return remainingIndices
+}
