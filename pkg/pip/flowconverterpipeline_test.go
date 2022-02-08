@@ -34,6 +34,7 @@ type flowData struct {
 	Action      string
 	Source      epData
 	Destination epData
+	Policies    []string
 }
 
 // wepd creates an epData for a WEP.
@@ -136,9 +137,11 @@ var (
               "doc_count_error_upper_bound": 0,
               "sum_other_doc_count": 0,
               "buckets": [
-                {
-                  "key": "0|allow-cnx|calico-monitoring/allow-cnx.elasticsearch-access|allow",
+{{$first := true}}{{range $key, $value := .Policies }}{{if $first}}{{$first = false}}{{else}}                },
+{{end}}                {
+                  "key": "{{$key}}|{{$value}}",
                   "doc_count": 1
+{{end}}
                 }
               ]
             }
@@ -179,16 +182,22 @@ var (
     }
   }
 }`)
+
+	defaultPolicy = "allow-cnx|calico-monitoring/allow-cnx.elasticsearch-access|allow"
 )
 
 // flow generates an ES flow response used by the mock ES client.
-func flow(reporter, action, protocol string, source, dest epData) string {
+func flow(reporter, action, protocol string, source, dest epData, policies ...string) string {
+	if len(policies) == 0 {
+		policies = []string{defaultPolicy}
+	}
 	fd := flowData{
 		Reporter:    reporter,
 		Protocol:    protocol,
 		Action:      action,
 		Source:      source,
 		Destination: dest,
+		Policies:    policies,
 	}
 	var tpl bytes.Buffer
 	err := flowTemplate.Execute(&tpl, fd)
