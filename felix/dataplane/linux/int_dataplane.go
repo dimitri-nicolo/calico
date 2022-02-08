@@ -37,10 +37,6 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/projectcalico/calico/nfnetlink"
-
-	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
-
 	"github.com/projectcalico/calico/felix/aws"
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/arp"
@@ -55,6 +51,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/state"
 	"github.com/projectcalico/calico/felix/bpf/stats"
 	"github.com/projectcalico/calico/felix/bpf/tc"
+	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/capture"
 	"github.com/projectcalico/calico/felix/collector"
@@ -82,6 +79,7 @@ import (
 	lclogutils "github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	cprometheus "github.com/projectcalico/calico/libcalico-go/lib/prometheus"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
+	"github.com/projectcalico/calico/nfnetlink"
 )
 
 const (
@@ -570,7 +568,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	if config.RulesConfig.VXLANEnabled {
 		routeTableVXLAN := routetable.New([]string{"^vxlan.calico$"}, 4, true, config.NetlinkTimeout,
 			config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, true, unix.RT_TABLE_UNSPEC,
-			dp.loopSummarizer)
+			dp.loopSummarizer, routetable.WithLivenessCB(dp.reportHealth))
 
 		vxlanManager := newVXLANManager(
 			ipSetsV4,
@@ -1066,7 +1064,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	routeTableV4 := routetable.New(interfaceRegexes, 4, false, config.NetlinkTimeout,
 		config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes, unix.RT_TABLE_UNSPEC,
-		dp.loopSummarizer)
+		dp.loopSummarizer, routetable.WithLivenessCB(dp.reportHealth))
 
 	epManager := newEndpointManager(
 		rawTableV4,
@@ -1187,7 +1185,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		routeTableV6 := routetable.New(
 			interfaceRegexes, 6, false, config.NetlinkTimeout,
 			config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes,
-			unix.RT_TABLE_UNSPEC, dp.loopSummarizer)
+			unix.RT_TABLE_UNSPEC, dp.loopSummarizer, routetable.WithLivenessCB(dp.reportHealth))
 
 		if !config.BPFEnabled {
 			dp.RegisterManager(common.NewIPSetsManager(ipSetsV6, config.MaxIPSetSize, dp.domainInfoStore))
