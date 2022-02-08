@@ -151,6 +151,7 @@ func (r *RouteRules) SetRule(rule *Rule) {
 	}
 
 	if r.getActiveRule(rule, r.matchForUpdate) == nil {
+		rule.LogCxt().Debug("SetRule: rule not active, mark it for creation.")
 		r.activeRules.Add(rule)
 		r.inSync = false
 	}
@@ -164,6 +165,7 @@ func (r *RouteRules) RemoveRule(rule *Rule) {
 	}
 
 	if p := r.getActiveRule(rule, r.matchForRemove); p != nil {
+		rule.LogCxt().Debug("RemoveRule: rule active, mark it for removal.")
 		r.activeRules.Discard(p)
 		r.inSync = false
 	}
@@ -262,8 +264,12 @@ func (r *RouteRules) Apply() error {
 			dataplaneRule := FromNetlinkRule(&nlRule)
 			if activeRule := r.getActiveRule(dataplaneRule, r.matchForUpdate); activeRule != nil {
 				// rule exists both in activeRules and dataplaneRules.
+				activeRule.LogCxt().WithField("nlRule", nlRule).Debug(
+					"Rule from netlink is in our active set, no need to add it.")
 				toAdd.Discard(activeRule)
 			} else {
+				log.WithField("nlRule", nlRule).Debug(
+					"Rule from netlink not in our active set, remove it.")
 				toRemove.Add(dataplaneRule)
 			}
 		}

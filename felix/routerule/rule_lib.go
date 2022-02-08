@@ -114,11 +114,12 @@ func (r *Rule) Copy() *Rule {
 	return &Rule{nlRule: &nlRule}
 }
 
-// Functions to check if two rules has same matching condition (and table index to go to).
+// Functions to check if two rule match "enough" to be considered the same for update/removal.
 type RulesMatchFunc func(r, p *Rule) bool
 
 func RulesMatchPrioSrcTable(r, p *Rule) bool {
 	return (r.nlRule.Priority == p.nlRule.Priority) &&
+		(r.nlRule.Table == p.nlRule.Table) &&
 		(r.nlRule.Family == p.nlRule.Family) &&
 		(r.nlRule.Invert == p.nlRule.Invert) &&
 		ip.IPNetsEqual(r.nlRule.Src, p.nlRule.Src)
