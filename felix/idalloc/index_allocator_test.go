@@ -79,6 +79,22 @@ var _ = Describe("IndexAllocator", func() {
 			_, err = r.GrabIndex()
 			Expect(err).To(HaveOccurred())
 		})
+
+		It("GrabRemainingIndices works", func() {
+			By("allocating the first index")
+			idx, err := r.GrabIndex()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(idx).To(Equal(2))
+
+			By("grabbing all remaining indices")
+			remaining := r.GrabAllRemainingIndices()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(remaining.Len()).To(BeNumerically("==", 7))
+
+			By("allocating when no more indices are available")
+			_, err = r.GrabIndex()
+			Expect(err).To(HaveOccurred())
+		})
 	})
 
 	Context("allocator init with non-ideal ranges", func() {

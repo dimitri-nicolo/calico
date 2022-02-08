@@ -134,7 +134,9 @@ var _ = Describe("Constructor test", func() {
 				Directory: "/tmp",
 			},
 
-			RouteTableManager: idalloc.NewIndexAllocator(idalloc.IndexRange{Min: 1, Max: 255}),
+			RouteTableManager: idalloc.NewIndexAllocator(
+				[]idalloc.IndexRange{{Min: 1, Max: 255}},
+				[]idalloc.IndexRange{{Min: 253, Max: 255}}),
 
 			KubernetesProvider: kubernetesProvider,
 			RouteSource:        routeSource,
