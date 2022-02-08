@@ -176,6 +176,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.ReportTemplate":                        schema_pkg_apis_projectcalico_v3_ReportTemplate(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.ReportTypeSpec":                        schema_pkg_apis_projectcalico_v3_ReportTypeSpec(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.ResourceID":                            schema_pkg_apis_projectcalico_v3_ResourceID(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.RouteTableIDRange":                     schema_pkg_apis_projectcalico_v3_RouteTableIDRange(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.RouteTableRange":                       schema_pkg_apis_projectcalico_v3_RouteTableRange(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.Rule":                                  schema_pkg_apis_projectcalico_v3_Rule(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.RuleMetadata":                          schema_pkg_apis_projectcalico_v3_RuleMetadata(ref),
@@ -4904,9 +4905,23 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							Format:      "",
 						},
 					},
+					"routeTableRanges": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Calico programs additional Linux route tables for various purposes. RouteTableRanges specifies a set of table index ranges that Calico should use. Deprecates`RouteTableRange`, overrides `RouteTableRange`.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.RouteTableIDRange"),
+									},
+								},
+							},
+						},
+					},
 					"routeTableRange": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Calico programs additional Linux route tables for various purposes.  RouteTableRange specifies the indices of the route tables that Calico should use.",
+							Description: "Deprecated in favor of RouteTableRanges. Calico programs additional Linux route tables for various purposes. RouteTableRange specifies the indices of the route tables that Calico should use.",
 							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.RouteTableRange"),
 						},
 					},
@@ -5080,7 +5095,7 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 			},
 		},
 		Dependencies: []string{
-			"github.com/tigera/api/pkg/apis/projectcalico/v3.ProtoPort", "github.com/tigera/api/pkg/apis/projectcalico/v3.RouteTableRange", "github.com/tigera/api/pkg/lib/numorstring.Port", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.ProtoPort", "github.com/tigera/api/pkg/apis/projectcalico/v3.RouteTableIDRange", "github.com/tigera/api/pkg/apis/projectcalico/v3.RouteTableRange", "github.com/tigera/api/pkg/lib/numorstring.Port", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -9274,6 +9289,33 @@ func schema_pkg_apis_projectcalico_v3_ResourceID(ref common.ReferenceCallback) c
 						},
 					},
 				},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_RouteTableIDRange(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"min": {
+						SchemaProps: spec.SchemaProps{
+							Default: 0,
+							Type:    []string{"integer"},
+							Format:  "int32",
+						},
+					},
+					"max": {
+						SchemaProps: spec.SchemaProps{
+							Default: 0,
+							Type:    []string{"integer"},
+							Format:  "int32",
+						},
+					},
+				},
+				Required: []string{"min", "max"},
 			},
 		},
 	}
