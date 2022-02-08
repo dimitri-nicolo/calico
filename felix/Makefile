@@ -326,7 +326,7 @@ LINT_ARGS = --disable gosimple,unused,staticcheck,govet,errcheck,structcheck,var
 hooks_installed:=$(shell ./install-git-hooks)
 
 .PHONY: golangci-lint
-golangci-lint: $(LIBBPF_PATH)/libbpf.a $(GENERATED_FILES)
+golangci-lint: $(LIBBPF_A) $(GENERATED_FILES)
 	$(DOCKER_GO_BUILD_CGO) golangci-lint run $(LINT_ARGS)
 
 ###############################################################################
