@@ -220,10 +220,10 @@ func TestChanClosed(t *testing.T) {
 	h.CloseWatchChan()
 	Eventually(h.GetNumTimers).Should(Equal(2))
 	h.AdvanceTime(3 * time.Second) // trip the fast poller
+	Eventually(h.WatcherCreationCount).Should(Equal(2))
 	Eventually(h.HasActiveWatch).Should(BeTrue())
 	h.SetLicense("good", h.Now().Add(30*time.Minute))
 	Eventually(m.GetLicenseStatus).Should(Equal(lclient.Valid))
-	Expect(h.WatcherCreationCount()).To(Equal(2))
 	Expect(h.StopCount()).To(Equal(0))
 }
 
@@ -242,10 +242,10 @@ func TestChanError(t *testing.T) {
 	h.SendError()
 	Eventually(h.GetNumTimers).Should(Equal(2))
 	h.AdvanceTime(3 * time.Second) // trip the fast poller
+	Eventually(h.WatcherCreationCount).Should(Equal(2))
 	Eventually(h.HasActiveWatch).Should(BeTrue())
 	h.SetLicense("good", h.Now().Add(30*time.Minute))
 	Eventually(m.GetLicenseStatus).Should(Equal(lclient.Valid))
-	Expect(h.WatcherCreationCount()).To(Equal(2))
 	Expect(h.StopCount()).To(Equal(1))
 }
 
@@ -340,7 +340,11 @@ func (m *mockBapiClient) SetLicense(l string, licenseTime time.Time) {
 	}
 
 	m.lock.Unlock()
-	c <- event
+	select {
+	case c <- event:
+	case <-time.After(time.Second):
+		panic("timed out trying to send license update event")
+	}
 }
 
 func (m *mockBapiClient) SendError() {
@@ -357,7 +361,11 @@ func (m *mockBapiClient) SendError() {
 	}
 
 	m.lock.Unlock()
-	c <- event
+	select {
+	case c <- event:
+	case <-time.After(time.Second):
+		panic("timed out trying to send error event")
+	}
 }
 
 func (m *mockBapiClient) Watch(ctx context.Context, list model.ListInterface, revision string) (lapi.WatchInterface, error) {
@@ -548,8 +556,6 @@ func (t *mockTime) AdvanceTime(d time.Duration) int {
 		case firstTimer.C <- firstTimer.PopTime:
 			log.Debugf("Popped: %s", firstTimer.Info)
 			numPops++
-			// FIXME: give code under test time to run and schedule new timers.
-			time.Sleep(time.Millisecond)
 		case <-firstTimer.Stopped:
 			log.Debugf("Stopped: %s", firstTimer.Info)
 			continue
