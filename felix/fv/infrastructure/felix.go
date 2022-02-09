@@ -15,10 +15,7 @@
 package infrastructure
 
 import (
-	"bufio"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -28,7 +25,6 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/felix/collector"
 	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/felix/fv/tcpdump"
 	"github.com/projectcalico/calico/felix/fv/utils"
@@ -91,42 +87,6 @@ func (f *Felix) TriggerDelayedStart() {
 	}
 	f.Exec("touch", "/start-trigger")
 	f.startupDelayed = false
-}
-
-func (f *Felix) ReadFlowLogs(output string) ([]collector.FlowLog, error) {
-	switch output {
-	case "file":
-		return f.ReadFlowLogsFile()
-	default:
-		panic("unrecognized flow log output")
-	}
-}
-
-func (f *Felix) ReadFlowLogsFile() ([]collector.FlowLog, error) {
-	var flowLogs []collector.FlowLog
-	logDir := path.Join(cwLogDir, f.uniqueName)
-	log.WithField("dir", logDir).Info("Reading Flow Logs from file")
-	logFile, err := os.Open(path.Join(logDir, collector.FlowLogFilename))
-	if err != nil {
-		return flowLogs, err
-	}
-	defer logFile.Close()
-
-	s := bufio.NewScanner(logFile)
-	for s.Scan() {
-		var fljo collector.FlowLogJSONOutput
-		err = json.Unmarshal(s.Bytes(), &fljo)
-		if err != nil {
-			all, _ := ioutil.ReadFile(path.Join(logDir, collector.FlowLogFilename))
-			return flowLogs, fmt.Errorf("Error unmarshaling flow log: %v\nLog:\n%s\nFile:\n%s", err, string(s.Bytes()), string(all))
-		}
-		fl, err := fljo.ToFlowLog()
-		if err != nil {
-			return flowLogs, fmt.Errorf("Error converting to flow log: %v\nLog: %s", err, string(s.Bytes()))
-		}
-		flowLogs = append(flowLogs, fl)
-	}
-	return flowLogs, nil
 }
 
 func (f *Felix) RunDebugConsoleCommand(commandAndArgs ...string) (string, error) {
@@ -333,4 +293,8 @@ func (f *Felix) ProgramIptablesDNAT(serviceIP, targetIP, chain string) {
 		"--destination", serviceIP,
 		"-j", "DNAT", "--to-destination", targetIP,
 	)
+}
+
+func (f *Felix) FlowLogDir() string {
+	return path.Join(cwLogDir, f.uniqueName)
 }

@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/collector"
+	"github.com/projectcalico/calico/felix/fv/flowlogs"
 
 	. "github.com/onsi/gomega"
 )
@@ -28,7 +29,7 @@ const (
 )
 
 type FlowLogReader interface {
-	ReadFlowLogs(output string) ([]collector.FlowLog, error)
+	FlowLogDir() string
 }
 
 // The expected policies for the flow.
@@ -77,7 +78,7 @@ func (t *FlowTester) PopulateFromFlowLogs(flowLogsOutput string) error {
 		t.packets[ii] = make(map[collector.FlowMeta]int)
 		t.policies[ii] = make(map[collector.FlowMeta][]string)
 
-		cwlogs, err := f.ReadFlowLogs(flowLogsOutput)
+		cwlogs, err := flowlogs.ReadFlowLogs(f.FlowLogDir(), flowLogsOutput)
 		if err != nil {
 			return err
 		}
@@ -271,7 +272,7 @@ func (t *FlowTester) CheckAllFlowsAccountedFor() error {
 
 func (t *FlowTester) IterFlows(flowLogsOutput string, cb func(collector.FlowLog) error) error {
 	for _, f := range t.readers {
-		flogs, err := f.ReadFlowLogs(flowLogsOutput)
+		flogs, err := flowlogs.ReadFlowLogs(f.FlowLogDir(), flowLogsOutput)
 		if err != nil {
 			return err
 		}

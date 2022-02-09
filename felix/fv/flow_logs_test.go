@@ -19,6 +19,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
 	"github.com/projectcalico/calico/felix/collector"
 	"github.com/projectcalico/calico/felix/fv/connectivity"
+	"github.com/projectcalico/calico/felix/fv/flowlogs"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
 	"github.com/projectcalico/calico/felix/fv/metrics"
 	"github.com/projectcalico/calico/felix/fv/utils"
@@ -889,7 +890,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 				attempts := 0
 				for time.Now().Before(endTime) || attempts < 2 {
 					for _, f := range felixes {
-						_, err := f.ReadFlowLogsFile()
+						_, err := flowlogs.ReadFlowLogsFile(f.FlowLogDir())
 						Expect(err).To(BeAssignableToTypeOf(&os.PathError{}))
 					}
 					time.Sleep(1 * time.Second)
@@ -988,7 +989,7 @@ var _ = infrastructure.DatastoreDescribe("nat outgoing flow log tests", []apicon
 		var flows []collector.FlowLog
 		var err error
 		Eventually(func() error {
-			flows, err = felix.ReadFlowLogs("file")
+			flows, err = flowlogs.ReadFlowLogs(felix.FlowLogDir(), "file")
 			return err
 		}, "20s", "1s").ShouldNot(HaveOccurred())
 

@@ -35,6 +35,7 @@ import (
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 
 	"github.com/projectcalico/calico/felix/fv/containers"
+	"github.com/projectcalico/calico/felix/fv/flowlogs"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
 	"github.com/projectcalico/calico/felix/fv/metrics"
 	"github.com/projectcalico/calico/felix/fv/utils"
@@ -137,7 +138,7 @@ var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 work
 				"end-" + w[2].Name + "--" + w[0].Name + "--dst":   true,
 				"end-" + w[2].Name + "--" + w[0].Name + "--src":   true,
 			}
-			cwlogs, err := felix.ReadFlowLogsFile()
+			cwlogs, err := flowlogs.ReadFlowLogsFile(felix.FlowLogDir())
 			if err != nil {
 				return err
 			}
