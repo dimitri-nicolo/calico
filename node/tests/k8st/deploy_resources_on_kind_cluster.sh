@@ -25,26 +25,9 @@ function checkModule(){
   fi
 }
 
-function load_image() {
-    local node=$1
-    docker cp ./cnx-node.tar ${node}:/cnx-node.tar
-    docker cp ./calico-apiserver.tar ${node}:/calico-apiserver.tar
-    docker cp ./calicoctl.tar ${node}:/calicoctl.tar
-    docker cp ./calico-cni.tar ${node}:/calico-cni.tar
-    docker cp ./pod2daemon.tar ${node}:/pod2daemon.tar
-    docker cp ./kube-controllers.tar ${node}:/kube-controllers.tar
-    docker exec -t ${node} ctr -n=k8s.io images import /cnx-node.tar
-    docker exec -t ${node} ctr -n=k8s.io images import /calico-apiserver.tar
-    docker exec -t ${node} ctr -n=k8s.io images import /calicoctl.tar
-    docker exec -t ${node} ctr -n=k8s.io images import /calico-cni.tar
-    docker exec -t ${node} ctr -n=k8s.io images import /pod2daemon.tar
-    docker exec -t ${node} ctr -n=k8s.io images import /kube-controllers.tar
-    docker exec -t ${node} rm /cnx-node.tar /calicoctl.tar /calico-cni.tar /pod2daemon.tar /kube-controllers.tar /calico-apiserver.tar
-}
-
-function update_calico_manifest() {
+function enable_dual_stack() {
+    # Based on instructions in http://docs.projectcalico.org/master/networking/dual-stack.md
     local yaml=$1
-	# Based on instructions in http://docs.projectcalico.org/master/networking/dual-stack.md
 	# add assign_ipv4 and assign_ipv6 to CNI config
 	sed -i -e '/"type": "calico-ipam"/r /dev/stdin' "${yaml}" <<EOF
               "assign_ipv4": "true",
@@ -83,10 +66,7 @@ docker exec kind-worker3 ip -6 a a 2001:20::3/64 dev eth0
 echo
 
 echo "Load calico/node docker images onto each node"
-load_image kind-control-plane
-load_image kind-worker
-load_image kind-worker2
-load_image kind-worker3
+$TEST_DIR/load_images_on_kind_cluster.sh
 
 for image in calico/cni:master calico/pod2daemon-flexvol:master; do
     docker pull ${image}
@@ -106,7 +86,7 @@ ${kubectl} -n kube-system create secret generic cnx-pull-secret \
 
 echo "Install Calico and Calicoctl for dualstack"
 cp $TEST_DIR/infra/calico-kdd.yaml $TEST_DIR/infra/calico.yaml.tmp
-update_calico_manifest $TEST_DIR/infra/calico.yaml.tmp
+enable_dual_stack $TEST_DIR/infra/calico.yaml.tmp
 ${kubectl} apply -f $TEST_DIR/infra/calico.yaml.tmp
 rm $TEST_DIR/infra/calico.yaml.tmp
 
