@@ -484,6 +484,19 @@ blocks:
       commands:
       - make ci
 
+- name: "licensing"
+  run:
+    when: "branch =~ '.*' or change_in(['/*', '/licensing/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: []
+  task:
+    prologue:
+      commands:
+      - cd licensing
+    jobs:
+    - name: "Licensing tests"
+      commands:
+      - make ci
+
 - name: "Documentation"
   run:
     when: "branch =~ '.*' or change_in(['/*', '/calico/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
