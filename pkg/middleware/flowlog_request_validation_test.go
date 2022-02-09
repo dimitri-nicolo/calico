@@ -97,27 +97,27 @@ var _ = Describe("Test flowlog request validation functions", func() {
 			Expect(limit).To(BeNumerically("==", 3500))
 		})
 
-		It("should return an errParseRequest when a limit param of -1 is included in url", func() {
+		It("should return an ErrParseRequest when a limit param of -1 is included in url", func() {
 			req, err := newTestRequestWithParam(http.MethodGet, "limit", "-1")
 			Expect(err).NotTo(HaveOccurred())
 			limit, err := extractLimitParam(req.URL.Query())
-			Expect(err).To(BeEquivalentTo(errParseRequest))
+			Expect(err).To(BeEquivalentTo(ErrParseRequest))
 			Expect(limit).To(BeZero())
 		})
 
-		It("should return an errParseRequest when a limit param of max int32 + 1 is included in url", func() {
+		It("should return an ErrParseRequest when a limit param of max int32 + 1 is included in url", func() {
 			req, err := newTestRequestWithParam(http.MethodGet, "limit", "2147483648")
 			Expect(err).NotTo(HaveOccurred())
 			limit, err := extractLimitParam(req.URL.Query())
-			Expect(err).To(BeEquivalentTo(errParseRequest))
+			Expect(err).To(BeEquivalentTo(ErrParseRequest))
 			Expect(limit).To(BeZero())
 		})
 
-		It("should return an errParseRequest when a limit param of min int32 - 1 is included in url", func() {
+		It("should return an ErrParseRequest when a limit param of min int32 - 1 is included in url", func() {
 			req, err := newTestRequestWithParam(http.MethodGet, "limit", "-2147483648")
 			Expect(err).NotTo(HaveOccurred())
 			limit, err := extractLimitParam(req.URL.Query())
-			Expect(err).To(BeEquivalentTo(errParseRequest))
+			Expect(err).To(BeEquivalentTo(ErrParseRequest))
 			Expect(limit).To(BeZero())
 		})
 	})

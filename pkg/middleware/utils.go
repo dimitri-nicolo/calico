@@ -14,6 +14,11 @@ import (
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 )
 
+var (
+	ErrInvalidMethod = errors.New("Invalid http method")
+	ErrParseRequest  = errors.New("Error parsing request parameters")
+)
+
 func createAndReturnError(err error, errorStr string, code int, featureID lmaerror.FeatureID, w http.ResponseWriter) {
 	log.WithError(err).Info(errorStr)
 

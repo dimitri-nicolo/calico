@@ -212,13 +212,13 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 	var esClient lmaelastic.Client
 
 	Context("Test that the validateFlowLogNamespacesRequest function behaves as expected", func() {
-		It("should return an errInvalidMethod when passed a request with an http method other than GET", func() {
+		It("should return an ErrInvalidMethod when passed a request with an http method other than GET", func() {
 			By("Creating a request with a POST method")
 			req, err := newTestRequest(http.MethodPost)
 			Expect(err).NotTo(HaveOccurred())
 
 			params, err := validateFlowLogNamespacesRequest(req)
-			Expect(err).To(BeEquivalentTo(errInvalidMethod))
+			Expect(err).To(BeEquivalentTo(ErrInvalidMethod))
 			Expect(params).To(BeNil())
 
 			By("Creating a request with a DELETE method")
@@ -226,7 +226,7 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			params, err = validateFlowLogNamespacesRequest(req)
-			Expect(err).To(BeEquivalentTo(errInvalidMethod))
+			Expect(err).To(BeEquivalentTo(ErrInvalidMethod))
 			Expect(params).To(BeNil())
 		})
 
@@ -254,7 +254,7 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 			Expect(params.Limit).To(BeNumerically("==", 1000))
 		})
 
-		It("should return an errParseRequest when passed a request with a negative limit parameter", func() {
+		It("should return an ErrParseRequest when passed a request with a negative limit parameter", func() {
 			req, err := newTestRequest(http.MethodGet)
 			Expect(err).NotTo(HaveOccurred())
 			q := req.URL.Query()
@@ -262,11 +262,11 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 			req.URL.RawQuery = q.Encode()
 
 			params, err := validateFlowLogNamespacesRequest(req)
-			Expect(err).To(BeEquivalentTo(errParseRequest))
+			Expect(err).To(BeEquivalentTo(ErrParseRequest))
 			Expect(params).To(BeNil())
 		})
 
-		It("should return an errParseRequest when passed a request with a word as the limit parameter", func() {
+		It("should return an ErrParseRequest when passed a request with a word as the limit parameter", func() {
 			req, err := newTestRequest(http.MethodGet)
 			Expect(err).NotTo(HaveOccurred())
 			q := req.URL.Query()
@@ -274,11 +274,11 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 			req.URL.RawQuery = q.Encode()
 
 			params, err := validateFlowLogNamespacesRequest(req)
-			Expect(err).To(BeEquivalentTo(errParseRequest))
+			Expect(err).To(BeEquivalentTo(ErrParseRequest))
 			Expect(params).To(BeNil())
 		})
 
-		It("should return an errParseRequest when passed a request with a floating number as the limit parameter", func() {
+		It("should return an ErrParseRequest when passed a request with a floating number as the limit parameter", func() {
 			req, err := newTestRequest(http.MethodGet)
 			Expect(err).NotTo(HaveOccurred())
 			q := req.URL.Query()
@@ -286,11 +286,11 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 			req.URL.RawQuery = q.Encode()
 
 			params, err := validateFlowLogNamespacesRequest(req)
-			Expect(err).To(BeEquivalentTo(errParseRequest))
+			Expect(err).To(BeEquivalentTo(ErrParseRequest))
 			Expect(params).To(BeNil())
 		})
 
-		It("should return an errParseRequest when passed a request with a max int32 + 1 number as the limit parameter", func() {
+		It("should return an ErrParseRequest when passed a request with a max int32 + 1 number as the limit parameter", func() {
 			req, err := newTestRequest(http.MethodGet)
 			Expect(err).NotTo(HaveOccurred())
 			q := req.URL.Query()
@@ -298,11 +298,11 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 			req.URL.RawQuery = q.Encode()
 
 			params, err := validateFlowLogNamespacesRequest(req)
-			Expect(err).To(BeEquivalentTo(errParseRequest))
+			Expect(err).To(BeEquivalentTo(ErrParseRequest))
 			Expect(params).To(BeNil())
 		})
 
-		It("should return an errParseRequest when passed a request with a min int32 - 1 number as the limit parameter", func() {
+		It("should return an ErrParseRequest when passed a request with a min int32 - 1 number as the limit parameter", func() {
 			req, err := newTestRequest(http.MethodGet)
 			Expect(err).NotTo(HaveOccurred())
 			q := req.URL.Query()
@@ -310,11 +310,11 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 			req.URL.RawQuery = q.Encode()
 
 			params, err := validateFlowLogNamespacesRequest(req)
-			Expect(err).To(BeEquivalentTo(errParseRequest))
+			Expect(err).To(BeEquivalentTo(ErrParseRequest))
 			Expect(params).To(BeNil())
 		})
 
-		It("should return an errParseRequest when passed a request with an invalid unprotected param", func() {
+		It("should return an ErrParseRequest when passed a request with an invalid unprotected param", func() {
 			req, err := newTestRequest(http.MethodGet)
 			Expect(err).NotTo(HaveOccurred())
 			q := req.URL.Query()
@@ -322,11 +322,11 @@ var _ = Describe("Test /flowLogNamespaces endpoint functions", func() {
 			req.URL.RawQuery = q.Encode()
 
 			params, err := validateFlowLogNamespacesRequest(req)
-			Expect(err).To(BeEquivalentTo(errParseRequest))
+			Expect(err).To(BeEquivalentTo(ErrParseRequest))
 			Expect(params).To(BeNil())
 		})
 
-		It("should return an errParseRequest when passed a request with an invalid combination of actions and unprotected param", func() {
+		It("should return an ErrParseRequest when passed a request with an invalid combination of actions and unprotected param", func() {
 			req, err := newTestRequest(http.MethodGet)
 			Expect(err).NotTo(HaveOccurred())
 			q := req.URL.Query()

@@ -84,9 +84,9 @@ func FlowLogNamesHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, 
 		if err != nil {
 			log.WithError(err).Info("Error validating request")
 			switch err {
-			case errInvalidMethod:
+			case ErrInvalidMethod:
 				http.Error(w, err.Error(), http.StatusMethodNotAllowed)
-			case errParseRequest:
+			case ErrParseRequest:
 				http.Error(w, err.Error(), http.StatusBadRequest)
 			case errInvalidAction:
 				http.Error(w, err.Error(), http.StatusUnprocessableEntity)
@@ -130,14 +130,14 @@ func FlowLogNamesHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, 
 func validateFlowLogNamesRequest(req *http.Request) (*FlowLogNamesParams, error) {
 	// Validate http method
 	if req.Method != http.MethodGet {
-		return nil, errInvalidMethod
+		return nil, ErrInvalidMethod
 	}
 
 	// extract params from request
 	url := req.URL.Query()
 	limit, err := extractLimitParam(url)
 	if err != nil {
-		return nil, errParseRequest
+		return nil, ErrParseRequest
 	}
 	actions := lowerCaseParams(url["actions"])
 	cluster := strings.ToLower(url.Get("cluster"))
@@ -146,7 +146,7 @@ func validateFlowLogNamesRequest(req *http.Request) (*FlowLogNamesParams, error)
 	unprotected := false
 	if unprotectedValue := url.Get("unprotected"); unprotectedValue != "" {
 		if unprotected, err = strconv.ParseBool(unprotectedValue); err != nil {
-			return nil, errParseRequest
+			return nil, ErrParseRequest
 		}
 	}
 	startDateTimeString := url.Get("startDateTime")
@@ -157,17 +157,17 @@ func validateFlowLogNamesRequest(req *http.Request) (*FlowLogNamesParams, error)
 	_, startDateTimeESParm, err := timeutils.ParseTime(now, &startDateTimeString)
 	if err != nil {
 		log.WithError(err).Info("Error extracting start date time")
-		return nil, errParseRequest
+		return nil, ErrParseRequest
 	}
 	_, endDateTimeESParm, err := timeutils.ParseTime(now, &endDateTimeString)
 	if err != nil {
 		log.WithError(err).Info("Error extracting end date time")
-		return nil, errParseRequest
+		return nil, ErrParseRequest
 	}
 	strict := false
 	if strictValue := url.Get("strict"); strictValue != "" {
 		if strict, err = strconv.ParseBool(strictValue); err != nil {
-			return nil, errParseRequest
+			return nil, ErrParseRequest
 		}
 	}
 
@@ -175,13 +175,13 @@ func validateFlowLogNamesRequest(req *http.Request) (*FlowLogNamesParams, error)
 	srcLabels, err := getLabelSelectors(url["srcLabels"])
 	if err != nil {
 		log.WithError(err).Info("Error extracting srcLabels")
-		return nil, errParseRequest
+		return nil, ErrParseRequest
 	}
 	dstType := lowerCaseParams(url["dstType"])
 	dstLabels, err := getLabelSelectors(url["dstLabels"])
 	if err != nil {
 		log.WithError(err).Info("Error extracting dstLabels")
-		return nil, errParseRequest
+		return nil, ErrParseRequest
 	}
 
 	params := &FlowLogNamesParams{

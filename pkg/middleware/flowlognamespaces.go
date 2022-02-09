@@ -66,9 +66,9 @@ func FlowLogNamespaceHandler(k8sClientFactory datastore.ClusterCtxK8sClientFacto
 		if err != nil {
 			log.WithError(err).Info("Error validating request")
 			switch err {
-			case errInvalidMethod:
+			case ErrInvalidMethod:
 				http.Error(w, err.Error(), http.StatusMethodNotAllowed)
-			case errParseRequest:
+			case ErrParseRequest:
 				http.Error(w, err.Error(), http.StatusBadRequest)
 			case errInvalidAction:
 				http.Error(w, err.Error(), http.StatusUnprocessableEntity)
@@ -112,14 +112,14 @@ func FlowLogNamespaceHandler(k8sClientFactory datastore.ClusterCtxK8sClientFacto
 func validateFlowLogNamespacesRequest(req *http.Request) (*FlowLogNamespaceParams, error) {
 	// Validate http method
 	if req.Method != http.MethodGet {
-		return nil, errInvalidMethod
+		return nil, ErrInvalidMethod
 	}
 
 	// extract params from request
 	url := req.URL.Query()
 	limit, err := extractLimitParam(url)
 	if err != nil {
-		return nil, errParseRequest
+		return nil, ErrParseRequest
 	}
 	actions := lowerCaseParams(url["actions"])
 	cluster := strings.ToLower(url.Get("cluster"))
@@ -127,7 +127,7 @@ func validateFlowLogNamespacesRequest(req *http.Request) (*FlowLogNamespaceParam
 	unprotected := false
 	if unprotectedValue := url.Get("unprotected"); unprotectedValue != "" {
 		if unprotected, err = strconv.ParseBool(unprotectedValue); err != nil {
-			return nil, errParseRequest
+			return nil, ErrParseRequest
 		}
 	}
 
@@ -139,17 +139,17 @@ func validateFlowLogNamespacesRequest(req *http.Request) (*FlowLogNamespaceParam
 	_, startDateTimeESParm, err := timeutils.ParseTime(now, &startDateTimeString)
 	if err != nil {
 		log.WithError(err).Info("Error extracting start date time")
-		return nil, errParseRequest
+		return nil, ErrParseRequest
 	}
 	_, endDateTimeESParm, err := timeutils.ParseTime(now, &endDateTimeString)
 	if err != nil {
 		log.WithError(err).Info("Error extracting end date time")
-		return nil, errParseRequest
+		return nil, ErrParseRequest
 	}
 	strict := false
 	if strictValue := url.Get("strict"); strictValue != "" {
 		if strict, err = strconv.ParseBool(strictValue); err != nil {
-			return nil, errParseRequest
+			return nil, ErrParseRequest
 		}
 	}
 

@@ -41,13 +41,13 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 		name:   "default.calico-node-alertmanager-mesh",
 	}
 	Context("Test that the validateFlowLogNamesRequest function behaves as expected", func() {
-		It("should return an errInvalidMethod when passed a request with an http method other than GET", func() {
+		It("should return an ErrInvalidMethod when passed a request with an http method other than GET", func() {
 			By("Creating a request with a POST method")
 			req, err := newTestRequest(http.MethodPost)
 			Expect(err).NotTo(HaveOccurred())
 
 			params, err := validateFlowLogsRequest(req)
-			Expect(err).To(BeEquivalentTo(errInvalidMethod))
+			Expect(err).To(BeEquivalentTo(ErrInvalidMethod))
 			Expect(params).To(BeNil())
 
 			By("Creating a request with a DELETE method")
@@ -55,27 +55,27 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			params, err = validateFlowLogsRequest(req)
-			Expect(err).To(BeEquivalentTo(errInvalidMethod))
+			Expect(err).To(BeEquivalentTo(ErrInvalidMethod))
 			Expect(params).To(BeNil())
 		})
 
-		It("should return an errParseRequest when passed a request an invalid limit param", func() {
+		It("should return an ErrParseRequest when passed a request an invalid limit param", func() {
 			req, err := newTestRequestWithParam(http.MethodGet, "limit", "-2147483648")
 			Expect(err).NotTo(HaveOccurred())
 			params, err := validateFlowLogsRequest(req)
-			Expect(err).To(BeEquivalentTo(errParseRequest))
+			Expect(err).To(BeEquivalentTo(ErrParseRequest))
 			Expect(params).To(BeNil())
 		})
 
-		It("should return an errParseRequest when passed a request an invalid unprotected param", func() {
+		It("should return an ErrParseRequest when passed a request an invalid unprotected param", func() {
 			req, err := newTestRequestWithParam(http.MethodGet, "unprotected", "xvz")
 			Expect(err).NotTo(HaveOccurred())
 			params, err := validateFlowLogsRequest(req)
-			Expect(err).To(BeEquivalentTo(errParseRequest))
+			Expect(err).To(BeEquivalentTo(ErrParseRequest))
 			Expect(params).To(BeNil())
 		})
 
-		It("should return an errParseRequest when passed a request with an invalid combination of actions and unprotected param", func() {
+		It("should return an ErrParseRequest when passed a request with an invalid combination of actions and unprotected param", func() {
 			req, err := newTestRequest(http.MethodGet)
 			Expect(err).NotTo(HaveOccurred())
 			q := req.URL.Query()
@@ -89,27 +89,27 @@ var _ = Describe("Test /flowLogs endpoint functions", func() {
 			Expect(params).To(BeNil())
 		})
 
-		It("should return an errParseRequest when passed a request an invalid srcLabels param", func() {
+		It("should return an ErrParseRequest when passed a request an invalid srcLabels param", func() {
 			req, err := newTestRequestWithParams(http.MethodGet, "srcLabels", invalidSelectors)
 			Expect(err).NotTo(HaveOccurred())
 			params, err := validateFlowLogsRequest(req)
-			Expect(err).To(BeEquivalentTo(errParseRequest))
+			Expect(err).To(BeEquivalentTo(ErrParseRequest))
 			Expect(params).To(BeNil())
 		})
 
-		It("should return an errParseRequest when passed a request an invalid dstLabels param", func() {
+		It("should return an ErrParseRequest when passed a request an invalid dstLabels param", func() {
 			req, err := newTestRequestWithParams(http.MethodGet, "dstLabels", invalidSelectors)
 			Expect(err).NotTo(HaveOccurred())
 			params, err := validateFlowLogsRequest(req)
-			Expect(err).To(BeEquivalentTo(errParseRequest))
+			Expect(err).To(BeEquivalentTo(ErrParseRequest))
 			Expect(params).To(BeNil())
 		})
 
-		It("should return an errParseRequest when passed a request an badly formatted policyPreview param", func() {
+		It("should return an ErrParseRequest when passed a request an badly formatted policyPreview param", func() {
 			req, err := newTestRequestWithParam(http.MethodGet, "policyPreview", invalidPreview)
 			Expect(err).NotTo(HaveOccurred())
 			params, err := validateFlowLogsRequest(req)
-			Expect(err).To(BeEquivalentTo(errParseRequest))
+			Expect(err).To(BeEquivalentTo(ErrParseRequest))
 			Expect(params).To(BeNil())
 		})
 

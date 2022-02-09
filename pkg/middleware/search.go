@@ -61,12 +61,12 @@ func SearchHandler(
 func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.SearchRequest, error) {
 	// Validate http method.
 	if r.Method != http.MethodGet && r.Method != http.MethodPost {
-		log.WithError(errInvalidMethod).Info("Invalid http method.")
+		log.WithError(ErrInvalidMethod).Info("Invalid http method.")
 
 		return nil, &httputils.HttpStatusError{
 			Status: http.StatusMethodNotAllowed,
-			Msg:    errInvalidMethod.Error(),
-			Err:    errInvalidMethod,
+			Msg:    ErrInvalidMethod.Error(),
+			Err:    ErrInvalidMethod,
 		}
 	}
 

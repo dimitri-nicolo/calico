@@ -26,8 +26,6 @@ const (
 )
 
 var (
-	errInvalidMethod            = errors.New("Invalid http method")
-	errParseRequest             = errors.New("Error parsing request parameters")
 	errInvalidAction            = errors.New("Invalid action specified")
 	errInvalidFlowType          = errors.New("Invalid flow type specified")
 	errInvalidLabelSelector     = errors.New("Invalid label selector specified")
@@ -46,7 +44,7 @@ func extractLimitParam(url url.Values) (int32, error) {
 		parsedLimit, err := strconv.ParseInt(limitParam, 10, 32)
 		if err != nil || parsedLimit < 0 {
 			log.WithError(err).Info("Error parsing limit parameter")
-			return 0, errParseRequest
+			return 0, ErrParseRequest
 		}
 		limit = int32(parsedLimit)
 	}
