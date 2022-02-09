@@ -4,7 +4,7 @@ order: 6
 section:
 - title: Threat defense
   path: /threat/
-- title: Detect and alert on security anomalies
+- title: Detect and alert on anomalies
   path: /threat/security-anomalies
 - title: Suspicious IPs
   path: /threat/suspicious-ips

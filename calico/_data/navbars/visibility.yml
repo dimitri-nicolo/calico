@@ -58,5 +58,3 @@ section:
   path: /visibility/elastic/kube-audit
 - title: iptables logs
   path: /visibility/iptables
-- title: Detect and alert on performance anomalies
-  path: /visibility/performance-hotspots
