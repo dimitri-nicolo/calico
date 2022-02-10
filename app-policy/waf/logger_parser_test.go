@@ -74,6 +74,24 @@ func TestParser_MatchedOperatorRxWithParameterAgainstVariable(t *testing.T) {
 	assert(t, dictionary, ParserUniqueId, "7ce62288-d6dd-4be0-8b31-ae27876aeeea")
 }
 
+func TestParser_ParseMap_ReturnRuleInfo(t *testing.T) {
+
+	var dictionary = make(map[string]string)
+	dictionary[ParserHostname] = "http://localhost"
+	dictionary[ParserFile] = "test_files/custom-rules/custom-REQUEST-942-APPLICATION-ATTACK-SQLI.conf"
+	dictionary[ParserLine] = "45"
+	dictionary[ParserId] = "942100"
+	dictionary[ParserData] = ""
+	dictionary[ParserSeverity] = "0"
+	dictionary[ParserVersion] = "OWASP_CRS/3.3.2"
+
+	expect := "Host:'http://localhost' File:'test_files/custom-rules/custom-REQUEST-942-APPLICATION-ATTACK-SQLI.conf' Line:'45' ID:'942100' Data:'' Severity:'0' Version:'OWASP_CRS/3.3.2'"
+	actual := FormatMap(dictionary)
+	if expect != actual {
+		t.Errorf("Expect: '%s' Actual: '%s'", expect, actual)
+	}
+}
+
 func assert(t *testing.T, dictionary map[string]string, key, expectValue string) {
 	actualValue := dictionary[key]
 	if expectValue != actualValue {

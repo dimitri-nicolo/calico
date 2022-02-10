@@ -111,8 +111,14 @@ func wafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, cl
 	httpProtocol, httpVersion := splitInput(inputProtocol, "/", "HTTP", "1.1")
 	err := waf.ProcessHttpRequest(id, uri, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort)
 
+	// Collect OWASP log information:
+	owaspLogInfo := waf.GetAndClearOwaspLogs(id)
+
 	// Log to Elasticsearch => Kibana.
 	if err != nil {
+
+		// Flatten out potential multiple OWASP log entries into comma-separated string.
+		ruleInfo := strings.Join(owaspLogInfo, ", ")
 		waf.Logger.WithFields(log.Fields{
 			"path":     uri,
 			"method":   httpMethod,
@@ -127,7 +133,13 @@ func wafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, cl
 				"port_num": serverPort,
 				"hostname": destinationHost,
 			},
+			"rule_info": ruleInfo,
 		}).Error("WAF check FAILED!")
+	} else {
+		prefix := waf.GetProcessHttpRequestPrefix(id)
+		for _, owaspLog := range owaspLogInfo {
+			log.Warnf("%s URL '%s' OWASP Warning'%s'", prefix, uri, owaspLog)
+		}
 	}
 
 	return err

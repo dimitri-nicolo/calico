@@ -13,6 +13,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 	"unsafe"
 
@@ -30,6 +31,9 @@ var rulesetDirectory string
 // Slice of filenames read from Core Rules Set directory.
 var filenames []string
 
+var owaspLogInfo = map[string][]map[string]string{}
+var owaspLogMutex sync.Mutex
+
 // CheckRulesSetExists
 // invoke this WAF function first checking if rules argument set and if so with destination directory.
 // if this directory does not exist OR zero *.conf Core Rule Sets files exist then do not enable WAF.
@@ -39,7 +43,6 @@ func CheckRulesSetExists(directory string) error {
 	wafIsEnabled = false
 
 	DefineRulesSetDirectory(directory)
-
 	err := CheckRulesSetDirectoryExists()
 	if err != nil {
 		return err
@@ -163,7 +166,7 @@ func GenerateModSecurityID() string {
 }
 
 func ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion string, clientHost string, clientPort uint32, serverHost string, serverPort uint32) error {
-	prefix := getProcessHttpRequestPrefix(id)
+	prefix := GetProcessHttpRequestPrefix(id)
 	log.Printf("%s URL '%s'", prefix, url)
 
 	Cid := C.CString(id)
@@ -218,7 +221,7 @@ func GetRulesSetFilenames() []string {
 	return filenames
 }
 
-func getProcessHttpRequestPrefix(id string) string {
+func GetProcessHttpRequestPrefix(id string) string {
 	return fmt.Sprintf("WAF Process Http Request [%s]", id)
 }
 
@@ -233,21 +236,37 @@ func GoModSecurityLoggingCallback(Cpayload *C.char) {
 
 	payload := C.GoString(Cpayload)
 	dictionary := ParseLog(payload)
+	uniqueId := dictionary[ParserUniqueId]
 
-	owasp_host := dictionary[ParserHostname]
-	owasp_file := dictionary[ParserFile]
-	owasp_line := dictionary[ParserLine]
-	owasp_id := dictionary[ParserId]
-	owasp_data := dictionary[ParserData]
-	owasp_severity := dictionary[ParserSeverity]
-	owasp_version := dictionary[ParserVersion]
-	rule_info := fmt.Sprintf("Host:'%s' File:'%s' Line:'%s' ID:'%s' Data:'%s' Severity:'%s' Version:'%s'", owasp_host, owasp_file, owasp_line, owasp_id, owasp_data, owasp_severity, owasp_version)
+	// Ignore edge case in which log payload is missing the UniqueId;
+	// in theory log should always include UniqueId because we construct ModSec transaction with this UniqueId explicitly.
+	if len(uniqueId) == 0 {
+		return
+	}
 
-	// Log to Elasticsearch => Kibana.
-	Logger.WithFields(log.Fields{
-		"path":      dictionary[ParserUri],
-		"rule_info": rule_info,
-	}).Warn("WAF " + dictionary[ParserMsg])
+	owaspLogMutex.Lock()
+	defer owaspLogMutex.Unlock()
+
+	owaspLogInfo[uniqueId] = append(owaspLogInfo[uniqueId], dictionary)
+}
+
+func GetAndClearOwaspLogs(uniqueId string) []string {
+
+	owaspLogMutex.Lock()
+	owaspInfos := owaspLogInfo[uniqueId]
+	delete(owaspLogInfo, uniqueId)
+	owaspLogMutex.Unlock()
+
+	index := 1
+	var owaspLogEntries []string
+	for _, owaspDictionary := range owaspInfos {
+
+		owaspFlattenLog := FormatMap(owaspDictionary)
+		owaspLogEntries = append(owaspLogEntries, fmt.Sprintf("[%d] %s", index, owaspFlattenLog))
+		index++
+	}
+
+	return owaspLogEntries
 }
 
 func CleanupModSecurity() {
