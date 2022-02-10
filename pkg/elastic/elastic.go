@@ -121,8 +121,13 @@ func NewFromConfig(cfg *Config) (Client, error) {
 		h.Transport = &http.Transport{TLSClientConfig: &tls.Config{RootCAs: ca}}
 	}
 
+	indexSuffix := cfg.ElasticIndexSuffix
+	if cfg.ElasticIndexMidfix != "" {
+		indexSuffix = fmt.Sprintf("%s.%s", cfg.ElasticIndexMidfix, indexSuffix)
+	}
+
 	return New(
-		h, cfg.ParsedElasticURL, cfg.ElasticUser, cfg.ElasticPassword, cfg.ElasticIndexSuffix,
+		h, cfg.ParsedElasticURL, cfg.ElasticUser, cfg.ElasticPassword, indexSuffix,
 		cfg.ElasticConnRetries, cfg.ElasticConnRetryInterval, cfg.ParsedLogLevel == log.DebugLevel, cfg.ElasticReplicas,
 		cfg.ElasticShards)
 }
