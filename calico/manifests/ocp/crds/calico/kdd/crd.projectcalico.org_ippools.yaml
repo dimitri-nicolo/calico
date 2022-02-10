@@ -2,4 +2,4 @@
 layout: null
 ---
 
-{% include_without_descriptions _includes/charts/tigera-operator/crds/calico/kdd/crd.projectcalico.org_ippools.yaml %}
+{% include_without_descriptions _includes/charts/tigera-operator/crds/calico/crd.projectcalico.org_ippools.yaml %}

@@ -3,6 +3,4 @@ layout: null
 ---
 
 {% helm tigera-operator --execute-dir templates/crds %}
-# use the includeCoreChart flag to prevent the calico CRDs from being included
-includeCoreChart: true
 {% endhelm %}

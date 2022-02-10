@@ -24,7 +24,7 @@ cp ~/.docker/config.json docker_auth.json
 cp ~/$SEMAPHORE_GIT_DIR/felix/bin/calico-felix.exe .
 cp ~/$SEMAPHORE_GIT_DIR/felix/fv/win-fv.exe .
 
-cp -r ~/$SEMAPHORE_GIT_DIR/felix/fv/infrastructure/crds ./infra/ee/crd
+cp -r ~/$SEMAPHORE_GIT_DIR/libcalico-go/config/crd ./infra/ee/crd
 cp ~/secrets/license.yaml ./infra/ee/license.yaml
 
 # Prepare key for windows fv.

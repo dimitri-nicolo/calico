@@ -121,8 +121,6 @@ clean:
 	       build \
 	       fv/fv.test \
 	       go/docs/calc.pdf \
-	       release-notes-* \
-	       fv/infrastructure/crds/ \
 	       docs/*.pdf
 	find . -name "junit.xml" -type f -delete
 	find . -name "*.coverprofile" -type f -delete
@@ -312,7 +310,7 @@ else
 FV_BINARY=calico-felix-amd64
 endif
 
-image-test: image fv/Dockerfile.test.amd64 bin/pktgen bin/test-workload bin/test-connection bin/test-dns bin/tproxy bin/$(FV_BINARY) fv/infrastructure/crds
+image-test: image fv/Dockerfile.test.amd64 bin/pktgen bin/test-workload bin/test-connection bin/test-dns bin/tproxy bin/$(FV_BINARY)
 	docker buildx build $(TARGET_PLATFORM) -t $(FELIX_IMAGE)-test:latest-$(ARCH) --build-arg FV_BINARY=$(FV_BINARY) --file ./fv/Dockerfile.test.$(ARCH) bin --load;
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(FELIX_IMAGE)-test
 
@@ -348,10 +346,7 @@ fv/fv.test: $(LIBBPF_A) $(SRC_FILES) $(FV_SRC_FILES)
 	# outside a container and allow them to interact with docker.
 	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) go test $(BUILD_FLAGS) ./$(shell dirname $@) -c --tags fvtests -o $@'
 
-REMOTE_DEPS=fv/infrastructure/crds build-typha
-
-fv/infrastructure/crds:
-	cp -r ../libcalico-go/config/crd fv/infrastructure/crds; chmod +w fv/infrastructure/crds/
+REMOTE_DEPS=build-typha
 
 build-typha:
 	make -C ../typha image DEV_REGISTRIES=felix-test
