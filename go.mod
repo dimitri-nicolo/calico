@@ -75,8 +75,8 @@ replace (
 	// go bindings for the API. Upstream only includes the protobuf definitions, so we need to fork in order to
 	// supply the go code.
 	github.com/envoyproxy/data-plane-api => github.com/projectcalico/data-plane-api v0.0.0-20210121211707-a620ff3c8f7e
-	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220210210239-8f0047c270b4
-	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220210210239-8f0047c270b4
+	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220210215838-6cb1618dec85
+	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220210215838-6cb1618dec85
 
 	k8s.io/api => k8s.io/api v0.21.8
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.8
