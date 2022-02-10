@@ -62,7 +62,7 @@ require (
 )
 
 replace (
-	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220205003053-6dac6089ce28
+	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220210215838-6cb1618dec85
 
 	// k8s apiserver upgrade
 	k8s.io/api => k8s.io/api v0.21.8
