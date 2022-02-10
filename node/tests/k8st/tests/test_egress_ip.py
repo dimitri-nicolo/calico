@@ -556,10 +556,6 @@ spec:
         return gateway
 
 
-_TestEgressIP.vanilla = True
-_TestEgressIP.dual_stack = False
-
-
 class NetcatServerTCP(Container):
 
     def __init__(self, port):

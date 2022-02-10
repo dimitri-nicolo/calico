@@ -380,6 +380,9 @@ blocks:
     - name: "Node: k8s-test"
       commands:
       - make k8s-test
+    - name: "Node: dual-tor"
+      commands:
+      - make dual-tor-test
     epilogue:
       always:
         commands:

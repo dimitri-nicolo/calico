@@ -1,14 +1,21 @@
 #!/bin/bash
 
 # Load CNX node image from archive.
-podman load calico-early < /cnx-node.tar >&2
+podman load < /cnx-node.tar >&2
 
 # Run CNX node in early networking mode.
-podman run -d --privileged --net=host -v /calico-early:/calico-early -e CALICO_EARLY_NETWORKING=/calico-early/cfg.yaml --name calico-early calico-early >&2
+podman run -d --privileged --net=host -v /calico-early:/calico-early -e CALICO_EARLY_NETWORKING=/calico-early/cfg.yaml --name calico-early cnx-node >&2
 
+count=0
 while sleep 1; do
     if podman logs calico-early | grep "Early networking set up; now monitoring BIRD"; then
 	break
+    fi
+
+    let count++
+    if [ count -eq 3 ]; then
+	    >&2 echo "Error while waiting for BIRD. Tried 3 times."
+	    exit 1
     fi
 done >&2
 

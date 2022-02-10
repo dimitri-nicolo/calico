@@ -1,4 +1,5 @@
-FROM kindest/node:v1.20.2
+ARG K8S_VERSION
+FROM kindest/node:${K8S_VERSION}
 
 RUN apt-get update
 RUN apt-get install -y podman

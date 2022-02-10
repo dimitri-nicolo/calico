@@ -530,7 +530,7 @@ st-checks:
 	# running on the host.
 	iptables-save | grep -q 'calico-st-allow-etcd' || iptables $(IPT_ALLOW_ETCD)
 
-GCR_IO_PULL_SECRET?=${HOME}/.docker/config.json
+GCR_IO_PULL_SECRET?=${HOME}/secrets/docker_cfg.json
 TSEE_TEST_LICENSE?=${HOME}/secrets/new-test-customer-license.yaml
 
 .PHONY: dual-tor-test
@@ -546,7 +546,7 @@ dual-tor-setup: dual-tor-cleanup kubectl dist/calicoctl $(K8ST_IMAGE_TARS) calic
 	docker build -t calico-test/busybox-with-reliable-nc tests/k8st/reliable-nc
 	mkdir -p $(DUAL_TOR_DIR)/tmp
 	cp -a $(K8ST_IMAGE_TARS) $(DUAL_TOR_DIR)/tmp/
-	docker build -t calico/dual-tor-node $(DUAL_TOR_DIR)
+	docker build --build-arg K8S_VERSION=$(K8S_VERSION) -t calico/dual-tor-node $(DUAL_TOR_DIR)
 	rm -rf $(DUAL_TOR_DIR)/tmp
 	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) STEPS=setup \
 	ROUTER_IMAGE=$(BIRD_IMAGE) CALICOCTL=`pwd`/dist/calicoctl $(DUAL_TOR_DIR)/dualtor.sh
@@ -582,12 +582,9 @@ tests/k8st/reliable-nc/bin/reliable-nc: tests/k8st/reliable-nc/reliable-nc.go
 ##
 ## make k8s-test K8ST_TO_RUN="tests/test_dns_policy.py -s --nocapture --nologcapture"
 ##
-## K8ST_RIG can be "dual_stack" or "vanilla".  "dual_stack" means set
-## up for dual stack testing; it requires KIND changes that have not
-## yet been merged to master, and runs kube-proxy in IPVS mode.
-## "vanilla" means use vanilla upstream master KIND.
-K8ST_RIG?=dual_stack
-K8ST_TO_RUN?=-A $(K8ST_RIG)
+## By default, run tests tagged with "vanilla". This excludes dual tor tests from running
+## on a test environment which doesn't support dual tor.
+K8ST_TO_RUN ?= -A vanilla
 
 .PHONY: k8s-test
 k8s-test:
@@ -606,7 +603,6 @@ kind-k8st-run-test: calico_test.created $(KUBECONFIG)
 	    -v $(CURDIR)/$(KUBECONFIG):/root/.kube/config \
 	    -v $(CURDIR)/$(BINDIR)/kubectl:/bin/kubectl \
 	    -e ROUTER_IMAGE=$(BIRD_IMAGE) \
-	    -e K8ST_RIG=$(K8ST_RIG) \
 	    --privileged \
 	    --net host \
 	${TEST_CONTAINER_NAME} \
