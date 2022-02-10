@@ -80,13 +80,13 @@ require (
 	k8s.io/klog/v2 v2.9.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20211110012726-3cc51fd1e909 // indirect
 	k8s.io/utils v0.0.0-20210819203725-bdf08cb9a70a // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
 replace (
-	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220129044900-6017265caaf7
-	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220129044900-6017265caaf7
+	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220210021049-9a7d1d6d8fdf
+	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220210021049-9a7d1d6d8fdf
 
 	k8s.io/api => k8s.io/api v0.21.8
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.8
