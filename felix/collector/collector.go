@@ -553,17 +553,16 @@ func (c *collector) reportMetrics(data *Data, force bool) bool {
 				data.dstSvc, foundService = c.luc.GetNodePortService(data.Tuple.l4Dst, data.Tuple.proto)
 			}
 		}
-	}
-
-	if !force {
-		// If not forcing then return if:
-		// - There may be a service to report
-		// - The verdict rules have not been found for the local endpoints
-		// - The remote endpoint is not known (which could potentially resolve to a DNS name or NetworkSet).
-		// In this case data will be reported later during ticker processing.
-		if !foundService || !data.VerdictFound() || data.dstEp == nil {
-			log.Debug("Service not found - delay statistics reporting until normal flush processing")
-			return false
+		if !force {
+			// If not forcing then return if:
+			// - There may be a service to report
+			// - The verdict rules have not been found for the local endpoints
+			// - The remote endpoint is not known (which could potentially resolve to a DNS name or NetworkSet).
+			// In this case data will be reported later during ticker processing.
+			if !foundService || !data.VerdictFound() || data.dstEp == nil {
+				log.Debug("Service not found - delay statistics reporting until normal flush processing")
+				return false
+			}
 		}
 	}
 
