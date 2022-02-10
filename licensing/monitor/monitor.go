@@ -142,11 +142,13 @@ func (l *licenseMonitor) MonitorForever(ctx context.Context) error {
 		var refreshTicker *jitter.Ticker
 		if licenseWatcher != nil {
 			// We have a watcher, use the watcher results channel and the slow refresh.
+			log.Debug("Active watcher, enabling slow poll.")
 			watchChan = licenseWatcher.ResultChan()
 			refreshTicker = slowRefreshTicker
 		} else {
 			// We don't have a watcher, use the fast refesh so that we attempt to recreate the watcher. The watcher
 			// channel will be nil (which blocks forever on the select).
+			log.Debug("No active watcher, enabling fast poll.")
 			refreshTicker = fastRefreshTicker
 		}
 
@@ -164,11 +166,26 @@ func (l *licenseMonitor) MonitorForever(ctx context.Context) error {
 
 		case <-l.licenseTransitionC:
 			log.Debug("License transition timer popped, checking license status...")
-		case licUpdate := <-watchChan:
-			log.Debug("License was just updated.")
+		case licUpdate, ok := <-watchChan:
+			if !ok {
+				log.Debug("License watch channel closed. Recreating the watcher.")
+				// nil out the licenseWatcher, which will trigger a switch to the fast poll.  Since hitting this
+				// "case" means that we must be using hte slow poller, the fast poller should pop straight away
+				// unless we're tight looping.  If we're tight looping, the fast poller will throttle reconnection
+				// attempts. No need to call Stop() here, closed channel implies the watcher has stopped.
+				licenseWatcher = nil
+				continue
+			}
 			if licUpdate.Error != nil {
-				log.Errorf("An error occurred for an incoming license watch event: %v", licUpdate.Error)
-			} else if licUpdate.New != nil {
+				log.WithError(licUpdate.Error).Warn("License watch returned an error. Restarting the watch.")
+				// As above, rely on the fast poll to restart the watch in a throttled way.  We do need to stop the
+				// watcher after an error.
+				licenseWatcher.Stop()
+				licenseWatcher = nil
+				continue
+			}
+			if licUpdate.New != nil {
+				log.Debug("Received license update event.") // Not logging out the license here since it's sensitive.
 				_ = l.refreshLicense(licUpdate.New)
 			}
 		}
@@ -184,6 +201,7 @@ func (l *licenseMonitor) createLicenseWatcher(ctx context.Context) lapi.WatchInt
 		Namespace: ""}, "")
 	if err != nil {
 		log.Errorf("An error occurred while creating a license watcher: %v", err)
+		return nil
 	}
 	return licenseWatcher
 }
@@ -206,7 +224,8 @@ func (l *licenseMonitor) maybeNotifyLicenseStatus() {
 	}
 	newStatus := l.GetLicenseStatus()
 	if newStatus == l.lastNotifiedLicenseStatus {
-		log.Debug("Skipping license state notification, no change in state")
+		log.WithField("state", newStatus).Debug(
+			"Skipping license state notification, no change in state")
 		return
 	}
 	l.OnLicenseStatusChanged(newStatus)

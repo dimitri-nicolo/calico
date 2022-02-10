@@ -84,6 +84,10 @@ bin/carrotctl-windows-amd64.exe: bin/carrotctl-windows-amd64
 ut: $(SRC_FILES)
 	mkdir -p report
 	$(DOCKER_GO_BUILD) /bin/bash -c "$(GIT_CONFIG_SSH) go test -v ./... | go-junit-report > ./report/tests.xml"
+	cat ./report/tests.xml
+	@! grep '<failure' ./report/tests.xml
 
 fv st:
 	@echo "No FVs or STs available"
+
+ci: test

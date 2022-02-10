@@ -1,11 +1,10 @@
 package client_test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
-
-	"os"
 
 	"github.com/davecgh/go-spew/spew"
 	. "github.com/onsi/gomega"
@@ -245,7 +244,7 @@ var tokenToLicense = []struct {
 	claim       client.LicenseClaims
 	corrupt     bool
 }{
-	//{
+	// {
 	//	description: "fully populated uncorrupt claim",
 	//	license: api.LicenseKey{
 	//		ObjectMeta: v1.ObjectMeta{
@@ -270,8 +269,8 @@ var tokenToLicense = []struct {
 	//	},
 	//
 	//	corrupt: false,
-	//},
-	//{
+	// },
+	// {
 	//	description: "claim with the JWT header meddled with",
 	//	license: api.LicenseKey{
 	//		ObjectMeta: v1.ObjectMeta{
@@ -286,8 +285,8 @@ var tokenToLicense = []struct {
 	//	claim: client.LicenseClaims{},
 	//
 	//	corrupt: true,
-	//},
-	//{
+	// },
+	// {
 	//	description: "claim with the JWT payload meddled with",
 	//	license: api.LicenseKey{
 	//		ObjectMeta: v1.ObjectMeta{
@@ -302,8 +301,8 @@ var tokenToLicense = []struct {
 	//	claim: client.LicenseClaims{},
 	//
 	//	corrupt: true,
-	//},
-	//{
+	// },
+	// {
 	//	description: "claim with the JWT signed by some evil random private key",
 	//	license: api.LicenseKey{
 	//		ObjectMeta: v1.ObjectMeta{
@@ -318,8 +317,8 @@ var tokenToLicense = []struct {
 	//	claim: client.LicenseClaims{},
 	//
 	//	corrupt: true,
-	//},
-	//{
+	// },
+	// {
 	//	description: "claim with the JWT signed by tigera but certificate is swapped out with an evil certificate",
 	//	license: api.LicenseKey{
 	//		ObjectMeta: v1.ObjectMeta{
@@ -334,8 +333,8 @@ var tokenToLicense = []struct {
 	//	claim: client.LicenseClaims{},
 	//
 	//	corrupt: true,
-	//},
-	//{
+	// },
+	// {
 	//	description: "claim with the JWT signed by an evil private key but certificate is still the tigera original cert",
 	//	license: api.LicenseKey{
 	//		ObjectMeta: v1.ObjectMeta{
@@ -350,8 +349,8 @@ var tokenToLicense = []struct {
 	//	claim: client.LicenseClaims{},
 	//
 	//	corrupt: true,
-	//},
-	//{
+	// },
+	// {
 	//	// TODO (gunjan5): THIS TEST SHOULD FAIL ONCE WE ADD CERT CHAIN VALIDATION!!!!
 	//	description: "claim with the JWT signed by an evil private key with an evil cert",
 	//	license: api.LicenseKey{
@@ -377,7 +376,7 @@ var tokenToLicense = []struct {
 	//	},
 	//
 	//	corrupt: false,
-	//},
+	// },
 }
 
 func TestDecodeAndVerify(t *testing.T) {
@@ -385,8 +384,8 @@ func TestDecodeAndVerify(t *testing.T) {
 		t.Run(entry.description, func(t *testing.T) {
 			RegisterTestingT(t)
 
-			//lic, err := client.GenerateLicenseFromClaims(entry.claim, absPkeyPath, absCertPath)
-			//spew.Dump(lic)
+			// lic, err := client.GenerateLicenseFromClaims(entry.claim, absPkeyPath, absCertPath)
+			// spew.Dump(lic)
 
 			claims, err := client.Decode(entry.license)
 
@@ -416,7 +415,7 @@ func TestFeatureFlags(t *testing.T) {
 		Customer:    "MyFavCustomer99",
 		GracePeriod: 90,
 		Claims: jwt.Claims{
-			Expiry: jwt.NumericDate(time.Now().Add(72 * time.Hour).UTC().Unix()),
+			Expiry: jwt.NewNumericDate(time.Now().Add(72 * time.Hour).UTC()),
 			Issuer: "Gunjan's office number 5",
 		},
 	}
@@ -504,7 +503,7 @@ func TestLicenseStatus(t *testing.T) {
 		claims := client.LicenseClaims{
 			GracePeriod: 0,
 			Claims: jwt.Claims{
-				Expiry: jwt.NumericDate(time.Now().Add(72 * time.Hour).UTC().Unix()),
+				Expiry: jwt.NewNumericDate(time.Now().Add(72 * time.Hour).UTC()),
 			},
 		}
 
@@ -517,7 +516,7 @@ func TestLicenseStatus(t *testing.T) {
 		claims := client.LicenseClaims{
 			GracePeriod: 2,
 			Claims: jwt.Claims{
-				Expiry: jwt.NumericDate(time.Now().UTC().Unix()),
+				Expiry: jwt.NewNumericDate(time.Now().UTC()),
 			},
 		}
 
@@ -530,7 +529,7 @@ func TestLicenseStatus(t *testing.T) {
 		claims := client.LicenseClaims{
 			GracePeriod: 0,
 			Claims: jwt.Claims{
-				Expiry: jwt.NumericDate(time.Now().UTC().Unix()),
+				Expiry: jwt.NewNumericDate(time.Now().UTC()),
 			},
 		}
 
@@ -543,7 +542,7 @@ func TestLicenseStatus(t *testing.T) {
 		claims := client.LicenseClaims{
 			GracePeriod: 1,
 			Claims: jwt.Claims{
-				Expiry: jwt.NumericDate(time.Now().Add(-48 * time.Hour).UTC().Unix()),
+				Expiry: jwt.NewNumericDate(time.Now().Add(-48 * time.Hour).UTC()),
 			},
 		}
 

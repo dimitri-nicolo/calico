@@ -30,7 +30,7 @@ func e2eFlow() {
 		Features:    []string{"everything", "for", "you"},
 		GracePeriod: 90,
 		Claims: jwt.Claims{
-			NotBefore: jwt.NumericDate(time.Date(2019, 10, 10, 12, 0, 0, 0, time.UTC).Unix()),
+			NotBefore: jwt.NewNumericDate(time.Date(2019, 10, 10, 12, 0, 0, 0, time.UTC)),
 			Issuer:    "Gunjan's office number 5",
 		},
 	}

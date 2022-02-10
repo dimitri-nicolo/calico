@@ -2,12 +2,17 @@ package monitor
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"runtime"
 	"sort"
 	"sync"
 	"testing"
 	"time"
 
 	. "github.com/onsi/gomega"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 
 	lapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -21,6 +26,11 @@ import (
 
 	"gopkg.in/square/go-jose.v2/jwt"
 )
+
+func init() {
+	log.AddHook(logutils.ContextHook{})
+	log.SetLevel(log.DebugLevel)
+}
 
 func TestBasicFunction(t *testing.T) {
 	t.Run("With no datastore connection", func(t *testing.T) {
@@ -47,18 +57,22 @@ func TestMonitorLoop(t *testing.T) {
 	defer h.cancel()
 	go m.MonitorForever(h.ctx)
 
+	Eventually(h.HasActiveWatch).Should(BeTrue())
 	h.SetLicense("good", h.Now().Add(30*time.Minute))
+	// Wait for the timers to be set up.  Two pollers and one transition.
+	Eventually(h.GetNumTimers).Should(Equal(3))
 
-	// Wait for the timer to be set up.
-	Eventually(h.GetNumTimers).Should(Equal(1))
-
-	// We set PollInterval to 11m and the mock ignores the jitter so the timer should pop at 11m.
-	numPops := h.AdvanceTime(10 * time.Minute) // 10m
+	// Fast poller pops once at 2s but then blocks.
+	numPops := h.AdvanceTime(3 * time.Second) // 10m
+	Expect(numPops).To(Equal(1))
+	// Slow poller shouldn't pop until 11m
+	numPops = h.AdvanceTime(10 * time.Minute) // 10m
 	Expect(numPops).To(BeZero())
 	numPops = h.AdvanceTime(2 * time.Minute)
 	Expect(numPops).To(Equal(1)) // 12m
 	Eventually(h.GetSignalledLicenseStatus).Should(Equal(lclient.Valid))
-	Eventually(h.GetNumTimers).Should(Equal(2))
+
+	Eventually(h.GetNumTimers).Should(Equal(3))
 
 	numPops = h.AdvanceTime(11 * time.Minute) // 23m
 	Expect(numPops).To(Equal(1))
@@ -97,6 +111,8 @@ func TestRefreshLicense(t *testing.T) {
 		m, h := setUpMonitorAndMocks()
 		defer h.cancel()
 		go m.MonitorForever(h.ctx)
+
+		Eventually(h.HasActiveWatch).Should(BeTrue())
 		h.SetLicense("good", h.Now().Add(30*time.Minute))
 
 		m.RefreshLicense(h.ctx)
@@ -114,8 +130,8 @@ func TestRefreshLicense(t *testing.T) {
 
 		t.Log("After updating license with new features")
 		// Need to make some tweak to avoid "raw license hasn't changed" optimisation.
-		h.SetLicense("good2", h.Now().Add(30*time.Minute))
 		h.allowedFeatures = []string{"some", "new", "features"}
+		h.SetLicense("good2", h.Now().Add(30*time.Minute))
 		m.RefreshLicense(h.ctx)
 		Expect(h.OnFeaturesChangedCalled).To(BeTrue(), "expected new features to be signalled")
 
@@ -137,6 +153,7 @@ func TestRefreshLicense(t *testing.T) {
 		m, h := setUpMonitorAndMocks()
 		defer h.cancel()
 		go m.MonitorForever(h.ctx)
+		Eventually(h.HasActiveWatch).Should(BeTrue())
 		h.SetLicense("in-grace", h.Now().Add(-1*time.Minute))
 
 		m.RefreshLicense(h.ctx)
@@ -151,6 +168,7 @@ func TestRefreshLicense(t *testing.T) {
 		m, h := setUpMonitorAndMocks()
 		defer h.cancel()
 		go m.MonitorForever(h.ctx)
+		Eventually(h.HasActiveWatch).Should(BeTrue())
 		h.SetLicense("expired", h.Now().Add(-25*time.Hour))
 
 		m.RefreshLicense(h.ctx)
@@ -168,6 +186,7 @@ func TestWatch(t *testing.T) {
 	m.SetPollInterval(10 * time.Minute)
 	defer h.cancel()
 	go m.MonitorForever(h.ctx)
+	Eventually(h.HasActiveWatch).Should(BeTrue())
 
 	// Add slight delay to make sure the routine is running.
 	time.Sleep(50 * time.Millisecond)
@@ -186,9 +205,52 @@ func TestWatch(t *testing.T) {
 	Expect(m.GetLicenseStatus()).To(Equal(lclient.InGracePeriod))
 }
 
+func TestChanClosed(t *testing.T) {
+	RegisterTestingT(t)
+	m, h := setUpMonitorAndMocks()
+	m.SetPollInterval(10 * time.Minute)
+	defer h.cancel()
+	go m.MonitorForever(h.ctx)
+	Eventually(h.HasActiveWatch).Should(BeTrue())
+	Expect(h.WatcherCreationCount()).To(Equal(1))
+
+	h.SetLicense("expired", h.Now().Add(-25*time.Hour))
+	Eventually(m.GetLicenseStatus).Should(Equal(lclient.Expired))
+
+	h.CloseWatchChan()
+	Eventually(h.GetNumTimers).Should(Equal(2))
+	h.AdvanceTime(3 * time.Second) // trip the fast poller
+	Eventually(h.WatcherCreationCount).Should(Equal(2))
+	Eventually(h.HasActiveWatch).Should(BeTrue())
+	h.SetLicense("good", h.Now().Add(30*time.Minute))
+	Eventually(m.GetLicenseStatus).Should(Equal(lclient.Valid))
+	Expect(h.StopCount()).To(Equal(0))
+}
+
+func TestChanError(t *testing.T) {
+	RegisterTestingT(t)
+	m, h := setUpMonitorAndMocks()
+	m.SetPollInterval(10 * time.Minute)
+	defer h.cancel()
+	go m.MonitorForever(h.ctx)
+	Eventually(h.HasActiveWatch).Should(BeTrue())
+	Expect(h.WatcherCreationCount()).To(Equal(1))
+
+	h.SetLicense("expired", h.Now().Add(-25*time.Hour))
+	Eventually(m.GetLicenseStatus).Should(Equal(lclient.Expired))
+
+	h.SendError()
+	Eventually(h.GetNumTimers).Should(Equal(2))
+	h.AdvanceTime(3 * time.Second) // trip the fast poller
+	Eventually(h.WatcherCreationCount).Should(Equal(2))
+	Eventually(h.HasActiveWatch).Should(BeTrue())
+	h.SetLicense("good", h.Now().Add(30*time.Minute))
+	Eventually(m.GetLicenseStatus).Should(Equal(lclient.Valid))
+	Expect(h.StopCount()).To(Equal(1))
+}
+
 func setUpMonitorAndMocks() (*licenseMonitor, *harness) {
 	mockBapiClient := &mockBapiClient{}
-	mockBapiClient.watchChan = make(chan lapi.WatchEvent)
 	m := New(mockBapiClient).(*licenseMonitor)
 	mockTime := &mockTime{
 		now: time.Now(), // Start the time epoch now because we can't easily mock the license logic itself.
@@ -231,25 +293,38 @@ type mockBapiClient struct {
 	license     string
 	licenseTime time.Time
 	bapiClient
-	watchChan  chan lapi.WatchEvent
-	terminated bool
+	watchChan    chan lapi.WatchEvent
+	terminated   bool
+	watchActive  bool
+	watcherCount int
+	stopCount    int
 }
 
 func (m *mockBapiClient) Stop() {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
 	m.terminated = true
+	m.stopCount++
 }
 
 func (m *mockBapiClient) ResultChan() <-chan lapi.WatchEvent {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	m.watchActive = true
 	return m.watchChan
 }
 
 func (m *mockBapiClient) HasTerminated() bool {
+	m.lock.Lock()
+	defer m.lock.Unlock()
 	return m.terminated
 }
 
 func (m *mockBapiClient) SetLicense(l string, licenseTime time.Time) {
+	log.WithField("license", l).Info("Set license to")
 	m.lock.Lock()
-	defer m.lock.Unlock()
 
 	m.license = l
 	m.licenseTime = licenseTime
@@ -257,11 +332,77 @@ func (m *mockBapiClient) SetLicense(l string, licenseTime time.Time) {
 	event := lapi.WatchEvent{
 		New: &model.KVPair{Value: &v3.LicenseKey{Spec: v3.LicenseKeySpec{Token: m.license}}},
 	}
-	m.watchChan <- event
+
+	c := m.watchChan
+	if c == nil {
+		m.lock.Unlock()
+		panic("no active watch")
+	}
+
+	m.lock.Unlock()
+	select {
+	case c <- event:
+	case <-time.After(time.Second):
+		panic("timed out trying to send license update event")
+	}
+}
+
+func (m *mockBapiClient) SendError() {
+	m.lock.Lock()
+
+	event := lapi.WatchEvent{
+		Error: errors.New("bang!"),
+	}
+
+	c := m.watchChan
+	if c == nil {
+		m.lock.Unlock()
+		panic("no active watch")
+	}
+
+	m.lock.Unlock()
+	select {
+	case c <- event:
+	case <-time.After(time.Second):
+		panic("timed out trying to send error event")
+	}
 }
 
 func (m *mockBapiClient) Watch(ctx context.Context, list model.ListInterface, revision string) (lapi.WatchInterface, error) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	m.watcherCount++
+	m.watchChan = make(chan lapi.WatchEvent)
+	m.terminated = false
+
 	return m, nil
+}
+
+func (m *mockBapiClient) WatcherCreationCount() int {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	return m.watcherCount
+}
+
+func (m *mockBapiClient) StopCount() int {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	return m.stopCount
+}
+
+func (m *mockBapiClient) HasActiveWatch() bool {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	return m.watchActive
+}
+
+func (m *mockBapiClient) CloseWatchChan() {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	m.watchActive = false
+	close(m.watchChan)
 }
 
 func (m *mockBapiClient) Get(ctx context.Context, key model.Key, revision string) (*model.KVPair, error) {
@@ -314,6 +455,7 @@ type queueEntry struct {
 	Duration time.Duration
 	Stopped  chan struct{}
 	C        chan time.Time
+	Info     string
 }
 
 func (q *queueEntry) Stop() bool {
@@ -332,25 +474,39 @@ func (t *mockTime) Now() time.Time {
 }
 
 func (t *mockTime) NewTimer(d time.Duration) timer {
+	_, file, line, ok := runtime.Caller(1)
+	callerInfo := "<unknown>"
+	if ok {
+		callerInfo = fmt.Sprintf("%s:%d", file, line)
+	}
+
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	c := make(chan time.Time)
+	c := make(chan time.Time, 1)
 	timer := &time.Timer{C: c}
+	popTime := t.now.Add(d)
 	queueEntry := queueEntry{
-		PopTime: t.now.Add(d),
+		PopTime: popTime,
 		Timer:   timer,
 		C:       c,
 		Stopped: make(chan struct{}),
+		Info:    fmt.Sprintf("Timer: %v from %s", popTime, callerInfo),
 	}
 	t.timerQueue = append(t.timerQueue, &queueEntry)
 	return &queueEntry
 }
 
 func (t *mockTime) NewJitteredTicker(d time.Duration, jit time.Duration) *jitter.Ticker {
+	_, file, line, ok := runtime.Caller(1)
+	callerInfo := "<unknown>"
+	if ok {
+		callerInfo = fmt.Sprintf("%s:%d", file, line)
+	}
+
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	c := make(chan time.Time)
+	c := make(chan time.Time, 1)
 	timer := &jitter.Ticker{C: c}
 	queueEntry := queueEntry{
 		PopTime:  t.now.Add(d),
@@ -358,6 +514,7 @@ func (t *mockTime) NewJitteredTicker(d time.Duration, jit time.Duration) *jitter
 		Duration: d,
 		C:        c,
 		Stopped:  make(chan struct{}),
+		Info:     fmt.Sprintf("Ticker: every %v from %s", d, callerInfo),
 	}
 	t.timerQueue = append(t.timerQueue, &queueEntry)
 	return timer
@@ -365,10 +522,15 @@ func (t *mockTime) NewJitteredTicker(d time.Duration, jit time.Duration) *jitter
 
 func (t *mockTime) AdvanceTime(d time.Duration) int {
 	newTime := t.now.Add(d)
-	log.Info("Advancing time to ", newTime)
+	log.Infof("MOCK: Advancing by %v time to %v", d, newTime)
 	numPops := 0
 
+	sanity := 100000
 	for {
+		sanity--
+		if sanity == 0 {
+			panic("Popped too many times while advancing time")
+		}
 		t.lock.Lock()
 		if len(t.timerQueue) == 0 {
 			// No timers left...
@@ -376,6 +538,8 @@ func (t *mockTime) AdvanceTime(d time.Duration) int {
 			break
 		}
 		t.sortQueue()
+		t.discardStoppedTimers()
+
 		firstTimer := t.timerQueue[0]
 		if firstTimer.PopTime.After(newTime) {
 			// Timer is in the future so there's nothing to do.
@@ -390,9 +554,13 @@ func (t *mockTime) AdvanceTime(d time.Duration) int {
 		// one.
 		select {
 		case firstTimer.C <- firstTimer.PopTime:
+			log.Debugf("Popped: %s", firstTimer.Info)
 			numPops++
 		case <-firstTimer.Stopped:
+			log.Debugf("Stopped: %s", firstTimer.Info)
 			continue
+		default:
+			// Needed to support blocked tickers.
 		}
 
 		if firstTimer.Ticker != nil {
@@ -414,8 +582,23 @@ func (t *mockTime) sortQueue() {
 	})
 }
 
+func (t *mockTime) discardStoppedTimers() {
+	newTimers := t.timerQueue[:0]
+	for _, tmr := range t.timerQueue {
+		select {
+		case <-tmr.Stopped:
+			log.Debugf("Stopped: %s", tmr.Info)
+			continue
+		default:
+		}
+		newTimers = append(newTimers, tmr)
+	}
+	t.timerQueue = newTimers
+}
+
 func (t *mockTime) GetNumTimers() int {
 	t.lock.Lock()
 	defer t.lock.Unlock()
+	t.discardStoppedTimers()
 	return len(t.timerQueue)
 }
