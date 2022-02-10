@@ -18,7 +18,7 @@ require (
 	github.com/spf13/cobra v1.2.1
 	github.com/stretchr/testify v1.7.0
 	github.com/tigera/api v0.0.0-20211202170222-d8128d06db71
-	github.com/tigera/lma v0.0.0-20220131180156-fe42a8637925
+	github.com/tigera/lma v0.0.0-20220210025628-1a100d862ca9
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -146,13 +146,13 @@ require (
 	k8s.io/kube-openapi v0.0.0-20211110012726-3cc51fd1e909 // indirect
 	k8s.io/kubernetes v1.21.8 // indirect
 	k8s.io/utils v0.0.0-20210819203725-bdf08cb9a70a // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
 replace (
-	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220129044900-6017265caaf7
-	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220129044900-6017265caaf7
+	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220210021049-9a7d1d6d8fdf
+	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220210021049-9a7d1d6d8fdf
 
 	k8s.io/api => k8s.io/api v0.21.8
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.8
