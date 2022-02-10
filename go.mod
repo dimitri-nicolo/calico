@@ -101,18 +101,18 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	k8s.io/api v0.22.5 // indirect
 	k8s.io/apimachinery v0.22.5 // indirect
-	k8s.io/apiserver v0.21.8 // indirect
+	k8s.io/apiserver v0.21.9 // indirect
 	k8s.io/client-go v0.22.5 // indirect
 	k8s.io/klog/v2 v2.9.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20211110012726-3cc51fd1e909 // indirect
 	k8s.io/utils v0.0.0-20210819203725-bdf08cb9a70a // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
 replace (
-	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220129015347-c61d8d667939
-	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220129015347-c61d8d667939
+	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220210210239-8f0047c270b4
+	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220210210239-8f0047c270b4
 
 	google.golang.org/grpc => google.golang.org/grpc v1.29.1
 
