@@ -288,6 +288,7 @@ func init() {
 	// Register UI settings validators
 	registerFieldValidator("uiDescription", validateUIDescription)
 	registerFieldValidator("servicegraphId", validateServiceGraphId)
+	registerFieldValidator("serviceGraphNodeName", validateServiceGraphNodeName)
 	registerFieldValidator("servicegraphNodeType", validateServiceGraphNodeType)
 	registerFieldValidator("icon", validateIcon)
 	registerFieldValidator("color", validateColor)
@@ -1049,6 +1050,31 @@ func validateServiceGraphId(fl validator.FieldLevel) bool {
 	log.Debugf("Validate Service Graph ID: %s", s)
 	// TODO(rlb): Move service graph API defs into API and then move ID management into libcalico-go. For now just
 	//            allow.
+	return true
+}
+
+func validateServiceGraphNodeName(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate Service Graph Node Name: %s", s)
+
+	// Normal name format is ok.
+	if nameRegex.MatchString(s) {
+		return true
+	}
+
+	// Or special case value of "*"
+	if s == "*" {
+		return true
+	}
+
+	// Or a set of "/" separated names.
+	parts := strings.Split(s, "/")
+	for _, p := range parts {
+		if !nameRegex.MatchString(p) {
+			return false
+		}
+	}
+
 	return true
 }
 

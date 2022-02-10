@@ -4066,6 +4066,55 @@ func init() {
 				View:        &api.UIGraphView{},
 			},
 		}, false),
+		Entry("UIGraphNode: allow normal name", &api.UIGraphNode{
+			ID:   "namespace/name",
+			Type: "namespace",
+			Name: "name",
+		}, true),
+		Entry("UIGraphNode: allow name of *", &api.UIGraphNode{
+			ID:   "namespace/name",
+			Type: "namespace",
+			Name: "*",
+		}, true),
+		Entry("UIGraphNode: allow name with slashes", &api.UIGraphNode{
+			ID:   "namespace/name",
+			Type: "namespace",
+			Name: "name/name",
+		}, true),
+		Entry("UIGraphNode: disallow name with @", &api.UIGraphNode{
+			ID:   "namespace/name",
+			Type: "namespace",
+			Name: "na@e",
+		}, false),
+		Entry("UIGraphNode: disallow name with slashes and @", &api.UIGraphNode{
+			ID:   "namespace/name",
+			Type: "namespace",
+			Name: "name/na@e",
+		}, false),
+		Entry("UIGraphNode: allow namespace of *", &api.UIGraphNode{
+			ID:        "namespace/name",
+			Type:      "namespace",
+			Name:      "test",
+			Namespace: "*",
+		}, true),
+		Entry("UIGraphNode: allow namespace with slashes", &api.UIGraphNode{
+			ID:        "namespace/name",
+			Type:      "namespace",
+			Name:      "test",
+			Namespace: "name/name",
+		}, true),
+		Entry("UIGraphNode: disallow namespace with @", &api.UIGraphNode{
+			ID:        "namespace/name",
+			Type:      "namespace",
+			Name:      "test",
+			Namespace: "na@e",
+		}, false),
+		Entry("UIGraphNode: disallow namespace with slashes and @", &api.UIGraphNode{
+			ID:        "namespace/name",
+			Type:      "namespace",
+			Name:      "test",
+			Namespace: "name/na@e",
+		}, false),
 	)
 
 	Describe("particular error string checking", func() {
