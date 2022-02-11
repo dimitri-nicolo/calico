@@ -13,7 +13,7 @@ import (
 const (
 	Day               = 24 * time.Hour
 	DayAndHalf        = 36 * time.Hour
-	keepAliveInterval = 10 * time.Second
+	keepAliveInterval = 120 * time.Second
 )
 
 func Run(ctx context.Context, cfg *config.Config, executor api.BenchmarksExecutor, query api.BenchmarksQuery, store api.BenchmarksStore, healthy func(bool)) error {
