@@ -1744,7 +1744,20 @@ func (m *SecondaryIfaceProvisioner) disassociateUnwantedElasticIPs(snapshot *eni
 					AssociationId: privIP.Association.AssociationId,
 				})
 				if err != nil {
-					finalErr = err
+					var smithyErr smithy.APIError
+					if errors.As(err, &smithyErr) && smithyErr.ErrorCode() == "InvalidAssociationID.NotFound" {
+						// We've seen AWS get stuck for a minute or two, claiming that an EIP is associated in
+						// eni.PrivateIpAddresses but then saying it's not when we try to disassociate it.
+						// Avoid triggering a resync in that case since we may not make any progress.  Better to
+						// try the remainder of the operations we have queued up.
+						logrus.WithError(err).Warn("Tried to disassociate Elastic IP but AWS said it was " +
+							"already gone. Assuming EIP is gone.")
+						// Nil out the association so that checkAndAssociateElasticIPs() will _try_ to reuse that
+						// EIP if needed.
+						privIP.Association = nil
+					} else {
+						finalErr = err
+					}
 				} else if finalErr == nil {
 					finalErr = errResyncNeeded
 				}

@@ -19,6 +19,7 @@ type errorProducer struct {
 
 type ErrorProducer interface {
 	QueueError(queueName string)
+	QueueSpecificError(queueName string, err error)
 	QueueNErrors(queueName string, n int)
 	NextError(queueName string) error
 	ExpectAllErrorsConsumed()
@@ -48,7 +49,12 @@ func NewErrorProducer(opts ...ErrorProducerOpt) *errorProducer {
 
 // QueueError adds an error to the sequence of errors with the given name.
 func (e *errorProducer) QueueError(queueName string) {
-	e.queue[queueName] = append(e.queue[queueName], e.newErr(queueName))
+	e.QueueSpecificError(queueName, e.newErr(queueName))
+}
+
+// QueueSpecificError adds an error to the sequence of errors with the given name.
+func (e *errorProducer) QueueSpecificError(queueName string, err error) {
+	e.queue[queueName] = append(e.queue[queueName], err)
 }
 
 // QueueNErrors adds n errors to the sequence of errors with the given name.

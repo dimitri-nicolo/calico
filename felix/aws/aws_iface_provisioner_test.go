@@ -208,6 +208,25 @@ var (
 		},
 		PoolIDsBySubnetID: defaultPools,
 	}
+	twoWorkloadsDatastoreElasticIPNone2 = DatastoreState{
+		LocalAWSAddrsByDst: map[ip.CIDR]AddrInfo{
+			wl1CIDR: {
+				Dst:         wl1Addr,
+				AWSSubnetId: subnetIDWest1Calico,
+			},
+			wl2CIDR: {
+				Dst:         wl2Addr,
+				AWSSubnetId: subnetIDWest1Calico,
+				ElasticIPs: []ip.Addr{
+					elasticIP2,
+				},
+			},
+		},
+		LocalRouteDestsBySubnetID: map[string]set.Set{
+			subnetIDWest1Calico: set.FromArray([]ip.CIDR{wl1CIDR, wl2CIDR}),
+		},
+		PoolIDsBySubnetID: defaultPools,
+	}
 	twoWorkloadsDatastoreElasticIP12 = DatastoreState{
 		LocalAWSAddrsByDst: map[ip.CIDR]AddrInfo{
 			wl1CIDR: {
@@ -681,6 +700,56 @@ func TestSecondaryIfaceProvisioner_ElasticIP_LostUpdate(t *testing.T) {
 	fake.RecheckClock.Step(34 * time.Second)
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
 	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(elasticIP1Str))
+}
+
+func TestSecondaryIfaceProvisioner_ElasticIP_LostDisassociate(t *testing.T) {
+	sip, fake, tearDown := setupAndStart(t)
+	defer tearDown()
+
+	// Send snapshot with single workload that should have elastic IP 1.
+	sip.OnDatastoreUpdate(singleWorkloadDatastoreElasticIP1)
+
+	// Since this is a fresh system with only one ENI being allocated, everything is deterministic and we should
+	// always get the same result.
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+	Eventually(fake.CapacityC).Should(Receive(Equal(SecondaryIfaceCapacities{
+		MaxCalicoSecondaryIPs: t3LargeCapacity,
+	})))
+	Eventually(fake.RecheckClock.HasWaiters).Should(BeTrue())
+
+	// Elastic IP should be assigned.
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(elasticIP1Str))
+
+	// Pretend that the EIP was already disassociated by a previous execution of the loop but AWS returned stale
+	// data:
+	fake.EC2.Errors.QueueSpecificError("DisassociateAddress", &smithy.OperationError{
+		ServiceID:     "EC2",
+		OperationName: "DisassociateAddress",
+		Err: &http.ResponseError{
+			Response: &http.Response{
+				Response: &nethttp.Response{
+					StatusCode: 400,
+				},
+			},
+			Err: &smithy.GenericAPIError{
+				Code:    "InvalidAssociationID.NotFound",
+				Message: "The association ID 'xxx' does not exist",
+				Fault:   0,
+			},
+		},
+	})
+
+	// Send in an update that adds a second workload and removes the elastic IP from the first workload.
+	sip.OnDatastoreUpdate(twoWorkloadsDatastoreElasticIPNone2)
+	// The stuck elastic IP shouldn't prevent setting up the second workload.
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseTwoWorkloads)))
+	// We prevented the disassociation, so it should still be there.
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(elasticIP1Str))
+
+	// Check that the slow retry removes it.
+	fake.RecheckClock.Step(34 * time.Second)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseTwoWorkloads)))
+	Expect(fake.EC2.GetElasticIPByPrivateIP(wl1Addr)).To(Equal(""))
 }
 
 func TestSecondaryIfaceProvisioner_ElasticIP_Change(t *testing.T) {
