@@ -40,7 +40,7 @@ func main() {
 	// Create a health check aggregator and start the health check service.
 	h := health.NewHealthAggregator()
 	h.ServeHTTP(cfg.HealthEnabled, cfg.HealthHost, cfg.HealthPort)
-	h.RegisterReporter(healthReporterName, &health.HealthReport{Live: true}, cfg.HealthTimeout)
+	h.RegisterReporter(healthReporterName, &health.HealthReport{Live: true}, cfg.HealthTimeoutBenchMarker)
 
 	// Define a function that can be used to report health.
 	healthy := func(healthy bool) {

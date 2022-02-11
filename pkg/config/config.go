@@ -27,6 +27,8 @@ type Config struct {
 	HealthPort    int           `envconfig:"HEALTH_PORT" default:"9099"`
 	HealthHost    string        `envconfig:"HEALTH_HOST" default:"0.0.0.0"`
 	HealthTimeout time.Duration `envconfig:"HEALTH_TIMEOUT" default:"30s"`
+	// kube-bench might take longer than 30s (default) on some provisioners.
+	HealthTimeoutBenchMarker time.Duration `envconfig:"HEALTH_TIMEOUT_BENCHMARKER" default:"300s"`
 
 	// Snapshotter specific data.
 	SnapshotHour int `envconfig:"TIGERA_COMPLIANCE_SNAPSHOT_HOUR" default:"0"`

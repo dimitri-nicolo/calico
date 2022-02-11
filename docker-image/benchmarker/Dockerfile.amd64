@@ -1,6 +1,6 @@
 # To update kube-bench version update the image tag and github.com/aquasecurity/kube-bench in go.mod
 # Image tag and go.mod should point to same version
-FROM aquasec/kube-bench:v0.6.5 as base
+FROM aquasec/kube-bench:v0.6.6 as base
 
 RUN apk update && apk add curl
 
