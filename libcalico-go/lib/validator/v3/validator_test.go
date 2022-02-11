@@ -4118,6 +4118,11 @@ func init() {
 			Type: "namespace",
 			Name: "*",
 		}, true),
+		Entry("UIGraphNode: allow name of x;.-*", &api.UIGraphNode{
+			ID:   "namespace/name",
+			Type: "namespace",
+			Name: "x;.-*",
+		}, true),
 		Entry("UIGraphNode: allow name with slashes", &api.UIGraphNode{
 			ID:   "namespace/name",
 			Type: "namespace",
