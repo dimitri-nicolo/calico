@@ -2,7 +2,7 @@
 # Dockerfile for snort
 # Based on vimagick/snort
 
-FROM centos:8
+FROM quay.io/centos/centos:stream8 as centos
 MAINTAINER garwood@tigera.io
 
 ARG SNORT_VERSION
