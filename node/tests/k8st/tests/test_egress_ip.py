@@ -36,12 +36,21 @@ class _TestEgressIP(TestBase):
         super(_TestEgressIP, self).setUp()
 
     def env_ippool_setup(self, backend, wireguard):
+        self.disableDefaultDenyTest = False
+        newEnv = {"FELIX_PolicySyncPathPrefix": "/var/run/nodeagent",
+                  "FELIX_EGRESSIPSUPPORT": "EnabledPerNamespaceOrPerPod",
+                  "FELIX_IPINIPENABLED": "false",
+                  "FELIX_VXLANENABLED": "false",
+                  "FELIX_WireguardEnabled": "false"}
+
         if backend == "VXLAN":
             modeVxlan = "Always"
             modeIPIP = "Never"
+            newEnv["FELIX_VXLANENABLED"] = "true"
         elif backend == "IPIP":
             modeVxlan = "Never"
             modeIPIP = "Always"
+            newEnv["FELIX_IPINIPENABLED"] = "true"
         elif backend == "NoOverlay":
             modeVxlan = "Never"
             modeIPIP = "Never"
@@ -52,11 +61,8 @@ class _TestEgressIP(TestBase):
                     vxlanMode=modeVxlan,
                     ipipMode=modeIPIP)
 
-        newEnv = {"FELIX_PolicySyncPathPrefix": "/var/run/nodeagent",
-                  "FELIX_EGRESSIPSUPPORT": "EnabledPerNamespaceOrPerPod",
-                  "FELIX_IPINIPENABLED": "false",
-                  "FELIX_VXLANENABLED": "false"}
         if wireguard:
+            self.disableDefaultDenyTest = True
             newEnv["FELIX_WireguardEnabled"] = "true"
         self.update_ds_env("calico-node", "kube-system", newEnv)
 
@@ -370,6 +376,100 @@ EOF
             self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy deny-egress-to-gateway"))
             retry_until_success(client.cannot_connect, retries=3, wait_time=1, function_kwargs={"ip": server.ip, "port": server.port})
 
+    def test_egress_ip_with_default_deny_policy(self):
+
+        with DiagsCollector():
+            # Disable egress ippool encaps
+            patch_ippool("egress-ippool-1", "Never", "Never")
+
+            # creating egress gateway pods
+            gw_red = self.create_gateway_pod("kind-worker", "gw-red", self.egress_cidr)
+            gw_blue = self.create_gateway_pod("kind-worker2", "gw-blue",
+                    self.egress_cidr, color="blue")
+
+            # Create namespace for client pods with egress annotations on red gateway.
+            client_ns = "ns-client"
+            self.create_namespace(client_ns, annotations={
+                "egress.projectcalico.org/selector": "color == 'red'",
+                "egress.projectcalico.org/namespaceSelector": "all()",
+            })
+
+            # Create client with no annotations.
+            client_red = NetcatClientTCP(client_ns, "test-red", node="kind-worker")
+            self.add_cleanup(client_red.delete)
+            client_red.wait_ready()
+            client_blue = NetcatClientTCP(client_ns, "test-blue", node="kind-worker", annotations={
+                "egress.projectcalico.org/selector": "color == 'blue'",
+                "egress.projectcalico.org/namespaceSelector": "all()",
+            })
+            self.add_cleanup(client_blue.delete)
+            client_blue.wait_ready()
+
+            # Create external server.
+            server_port = 8089
+            server = NetcatServerTCP(server_port)
+            self.add_cleanup(server.kill)
+            server.wait_running()
+
+            # Give the server a route back to the egress IP.
+            self.server_add_route(server, gw_red)
+            self.server_add_route(server, gw_blue)
+
+            # Add default deny policy
+            calicoctl("""apply -f - << EOF
+apiVersion: projectcalico.org/v3
+kind: GlobalNetworkPolicy
+metadata:
+  name: default-deny-policy
+spec:
+  namespaceSelector: has(projectcalico.org/name) && projectcalico.org/name not in {"kube-system", "calico-system"}
+  types:
+  - Ingress
+  - Egress
+  egress:
+  - action: Allow
+    destination:
+      ports:
+      - 53
+      selector: k8s-app == "kube-dns"
+    protocol: UDP
+    source: {}
+EOF
+""")
+            self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy default-deny-policy"))
+            # check can not connect to the same node
+            retry_until_success(client_red.cannot_connect, retries=3, wait_time=1, function_kwargs={"ip": server.ip, "port": server.port})
+            # check can not connect to a different node
+            retry_until_success(client_blue.cannot_connect, retries=3, wait_time=1, function_kwargs={"ip": server.ip, "port": server.port})
+
+            if self.disableDefaultDenyTest:
+                return
+
+            # Add client server allow policy
+            calicoctl("""apply -f - << EOF
+apiVersion: projectcalico.org/v3
+kind: GlobalNetworkPolicy
+metadata:
+  name: allow-client-server
+spec:
+  types:
+  - Ingress
+  - Egress
+  egress:
+  - action: Allow
+    protocol: TCP
+    destination:
+      ports:
+      - %s
+    source: {}
+EOF
+""" % (server_port))
+            self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy allow-client-server"))
+            # check can connect to the same node
+            self.validate_egress_ip(client_red, server, gw_red.ip)
+            # check can connect to a different node
+            self.validate_egress_ip(client_blue, server, gw_blue.ip)
+
     def has_ip_rule(self, nodename, ip):
         # Validate egress ip rule exists for a client pod ip on a node.
         output = run("docker exec -t %s ip rule" % nodename)
@@ -561,16 +661,12 @@ class NetcatServerTCP(Container):
     def __init__(self, port):
         super(NetcatServerTCP, self).__init__("subfuzion/netcat", "-v -l -k -p %d" % port, "--privileged")
         self.port = port
-        self.get_count = 0
 
     def get_recent_client_ip(self):
-        ips = []
         for line in self.logs().split('\n'):
             m = re.match(r"Connection from ([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+) [0-9]+ received", line)
             if m:
-                ips.append(m.group(1))
-        ip = ips[self.get_count]
-        self.get_count += 1
+                ip = m.group(1)
         return ip
 
 class NetcatClientTCP(Pod):

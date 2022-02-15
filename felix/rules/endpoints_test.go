@@ -30,10 +30,11 @@ import (
 
 var _ = Describe("Endpoints", func() {
 	const (
-		ProtoUDP  = 17
-		ProtoIPIP = 4
-		VXLANPort = 4789
-		VXLANVNI  = 4096
+		ProtoUDP          = 17
+		ProtoIPIP         = 4
+		VXLANPort         = 4789
+		EgressIPVXLANPort = 4790
+		VXLANVNI          = 4096
 	)
 
 	for _, trueOrFalse := range []bool{true, false} {
@@ -57,6 +58,7 @@ var _ = Describe("Endpoints", func() {
 			KubeIPVSSupportEnabled:           kubeIPVSEnabled,
 			IptablesMangleAllowAction:        "RETURN",
 			VXLANPort:                        4789,
+			EgressIPVXLANPort:                4790,
 			VXLANVNI:                         4096,
 		}
 
@@ -80,6 +82,7 @@ var _ = Describe("Endpoints", func() {
 			DisableConntrackInvalid:          true,
 			IptablesFilterAllowAction:        "RETURN",
 			VXLANPort:                        4789,
+			EgressIPVXLANPort:                4790,
 			VXLANVNI:                         4096,
 		}
 
@@ -111,7 +114,8 @@ var _ = Describe("Endpoints", func() {
 					true,
 					nil,
 					nil,
-					NotAnEgressGateway)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
+					NotAnEgressGateway,
+					UndefinedIPVersion)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
 						Name: "cali-tw-cali1234",
 						Rules: []Rule{
@@ -168,6 +172,7 @@ var _ = Describe("Endpoints", func() {
 					nil,
 					nil,
 					NotAnEgressGateway,
+					UndefinedIPVersion,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
 						Name: "cali-tw-cali1234",
@@ -204,6 +209,7 @@ var _ = Describe("Endpoints", func() {
 					}},
 					[]string{"prof1", "prof2"},
 					NotAnEgressGateway,
+					UndefinedIPVersion,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
 						Name: "cali-tw-cali1234",
@@ -326,6 +332,7 @@ var _ = Describe("Endpoints", func() {
 					}},
 					[]string{"prof1", "prof2"},
 					NotAnEgressGateway,
+					UndefinedIPVersion,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
 						Name: "cali-tw-cali1234",
@@ -442,6 +449,7 @@ var _ = Describe("Endpoints", func() {
 					}},
 					[]string{"prof1", "prof2"},
 					NotAnEgressGateway,
+					UndefinedIPVersion,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
 						Name: "cali-tw-cali1234",
@@ -833,6 +841,7 @@ var _ = Describe("Endpoints", func() {
 					}},
 					[]string{"prof1", "prof2"},
 					IsAnEgressGateway,
+					4,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
 						Name: "cali-tw-cali1234",
@@ -843,6 +852,11 @@ var _ = Describe("Endpoints", func() {
 
 							{Action: ClearMarkAction{Mark: 0x88}},
 
+							{Match: Match().ProtocolNum(ProtoUDP).
+								SourceIPSet("cali40all-hosts-net").
+								DestPorts(uint16(EgressIPVXLANPort)),
+								Action:  AcceptAction{},
+								Comment: []string{"Accept VXLAN UDP traffic for egressgateways"}},
 							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
@@ -889,6 +903,11 @@ var _ = Describe("Endpoints", func() {
 								Action: AcceptAction{}},
 
 							{Action: ClearMarkAction{Mark: 0x88}},
+							{Match: Match().ProtocolNum(ProtoUDP).
+								DestIPSet("cali40all-hosts-net").
+								DestPorts(uint16(EgressIPVXLANPort)),
+								Action:  AcceptAction{},
+								Comment: []string{"Accept VXLAN UDP traffic for egressgateways"}},
 							dropVXLANRule,
 							dropIPIPRule,
 
@@ -955,6 +974,7 @@ var _ = Describe("Endpoints", func() {
 					nil,
 					nil,
 					NotAnEgressGateway,
+					UndefinedIPVersion,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
 						Name: "cali-tw-cali1234",
@@ -1054,6 +1074,7 @@ var _ = Describe("Endpoints", func() {
 						nil,
 						nil,
 						NotAnEgressGateway,
+						UndefinedIPVersion,
 					)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 						{
 							Name: "cali-tw-cali1234",
@@ -1114,6 +1135,7 @@ var _ = Describe("Endpoints", func() {
 						nil,
 						nil,
 						NotAnEgressGateway,
+						UndefinedIPVersion,
 					)
 					expected := trimSMChain(kubeIPVSEnabled, []*Chain{
 						{
@@ -1176,6 +1198,7 @@ var _ = Describe("Endpoints", func() {
 						nil,
 						nil,
 						NotAnEgressGateway,
+						UndefinedIPVersion,
 					)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 						{
 							Name: "cali-tw-cali1234",
