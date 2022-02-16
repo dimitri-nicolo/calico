@@ -18,11 +18,9 @@ const (
 	DefaultEventPageSize = 100
 )
 
-var eventDismissDoc map[string]bool
-
-func init() {
-	eventDismissDoc = map[string]bool{"dismissed": true}
-}
+var (
+	eventDismissDoc map[string]bool = map[string]bool{"dismissed": true}
+)
 
 func (c *client) EventsIndexExists(ctx context.Context) (bool, error) {
 	alias := c.ClusterAlias(EventsIndex)
