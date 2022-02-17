@@ -220,8 +220,8 @@ bin/calico-felix-race-$(ARCH): $(LIBBPF_A) $(SRC_FILES)
 	@echo Building felix with race detector enabled for $(ARCH) on $(BUILDARCH)
 	mkdir -p bin
 	if [ "$(SEMAPHORE)" != "true" -o ! -e $@ ] ; then \
-	  $(DOCKER_GO_BUILD_CGO) \
-	     sh -c 'go build -v -race -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-felix"'; \
+	  $(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
+	     go build -v -race -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-felix"'; \
 	fi
 
 # Generate the protobuf bindings for go. The proto/felixbackend.pb.go file is included in SRC_FILES
@@ -489,7 +489,7 @@ stop-grafana:
 
 bin/calico-bpf: $(SRC_FILES)
 	@echo Building calico-bpf...
-	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
+
 	    go build -v -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-bpf"'
 
 bin/pktgen: $(SRC_FILES) $(FV_SRC_FILES)
