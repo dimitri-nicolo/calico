@@ -490,7 +490,7 @@ stop-grafana:
 bin/calico-bpf: $(SRC_FILES)
 	@echo Building calico-bpf...
 	mkdir -p bin
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-bpf"'
 
 bin/pktgen: $(SRC_FILES) $(FV_SRC_FILES)
