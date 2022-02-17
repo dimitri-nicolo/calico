@@ -2,5 +2,5 @@
 
 set -e
 
-cd .git/hooks
+cd ../.git/hooks
 ln -sf ../../git-hooks/* ./
