@@ -4,32 +4,29 @@ package server
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
-	"io/ioutil"
 	"net/http"
 	"sync"
 
-	"github.com/tigera/es-proxy/pkg/middleware/aggregation"
+	log "github.com/sirupsen/logrus"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	log "github.com/sirupsen/logrus"
-
 	"github.com/tigera/compliance/pkg/datastore"
-	lmaauth "github.com/tigera/lma/pkg/auth"
-	celastic "github.com/tigera/lma/pkg/elastic"
-	lmaindex "github.com/tigera/lma/pkg/elastic/index"
-	"github.com/tigera/lma/pkg/k8s"
-	"github.com/tigera/lma/pkg/list"
-
 	"github.com/tigera/es-proxy/pkg/handler"
 	"github.com/tigera/es-proxy/pkg/kibana"
 	"github.com/tigera/es-proxy/pkg/middleware"
+	"github.com/tigera/es-proxy/pkg/middleware/aggregation"
+	"github.com/tigera/es-proxy/pkg/middleware/rawquery"
 	"github.com/tigera/es-proxy/pkg/middleware/servicegraph"
 	"github.com/tigera/es-proxy/pkg/pip"
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
+	lmaauth "github.com/tigera/lma/pkg/auth"
+	lmaelastic "github.com/tigera/lma/pkg/elastic"
+	lmaindex "github.com/tigera/lma/pkg/elastic/index"
+	"github.com/tigera/lma/pkg/k8s"
+	"github.com/tigera/lma/pkg/list"
 )
 
 var (
@@ -42,9 +39,7 @@ var (
 // indices or index patterns from here and these parameters are
 // only required in such cases.
 const (
-	shardsNotRequired   = 0
-	replicasNotRequired = 0
-	voltronServiceURL   = "https://localhost:9443"
+	voltronServiceURL = "https://localhost:9443"
 
 	dnsLogsResourceName  = "dns"
 	eventsResourceName   = "events"
@@ -55,26 +50,6 @@ const (
 func Start(cfg *Config) error {
 	sm := http.NewServeMux()
 
-	var rootCAs *x509.CertPool
-	if cfg.ElasticCAPath != "" {
-		rootCAs = addCertToCertPool(cfg.ElasticCAPath)
-	}
-	var tlsConfig *tls.Config
-	if rootCAs != nil {
-		tlsConfig = &tls.Config{
-			RootCAs:            rootCAs,
-			InsecureSkipVerify: cfg.ElasticInsecureSkipVerify,
-		}
-	}
-
-	pc := &handler.ProxyConfig{
-		TargetURL:       cfg.ElasticURL,
-		TLSConfig:       tlsConfig,
-		ConnectTimeout:  cfg.ProxyConnectTimeout,
-		KeepAlivePeriod: cfg.ProxyKeepAlivePeriod,
-		IdleConnTimeout: cfg.ProxyIdleConnTimeout,
-	}
-	proxy := handler.NewProxy(pc)
 	var authn lmaauth.JWTAuth
 	restConfig, err := rest.InClusterConfig()
 	if err != nil {
@@ -113,24 +88,12 @@ func Start(cfg *Config) error {
 	k8sClientSet := datastore.MustGetClientSet()
 	policyCalcConfig := pipcfg.MustLoadConfig()
 
-	// initialize the esclient for pip
-	h := &http.Client{}
-	if cfg.ElasticCAPath != "" {
-		h.Transport = &http.Transport{TLSClientConfig: &tls.Config{RootCAs: rootCAs}}
-	}
-
-	esClient, err := celastic.New(h,
-		cfg.ElasticURL,
-		cfg.ElasticUsername,
-		cfg.ElasticPassword,
-		cfg.ElasticIndexSuffix,
-		cfg.ElasticConnRetries,
-		cfg.ElasticConnRetryInterval,
-		cfg.ElasticEnableTrace,
-		replicasNotRequired,
-		shardsNotRequired,
-	)
+	// initialize Elastic client factory
+	envCfg := lmaelastic.MustLoadConfig()
+	esClientFactory := lmaelastic.NewClusterContextClientFactory(envCfg)
+	esClient, err := esClientFactory.ClientForCluster(cfg.ElasticIndexSuffix)
 	if err != nil {
+		log.WithError(err).Error("failed to create Elastic client from factory")
 		return err
 	}
 
@@ -261,12 +224,12 @@ func Start(cfg *Config) error {
 		middleware.KibanaIndexPattern(
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy)))))
+					rawquery.RawQueryHandler(esClient.Backend())))))
 	sm.Handle("/",
 		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					middleware.BasicAuthHeaderInjector(cfg.ElasticUsername, cfg.ElasticPassword, proxy)))))
+					rawquery.RawQueryHandler(esClient.Backend())))))
 
 	server = &http.Server{
 		Addr:    cfg.ListenAddr,
@@ -294,24 +257,6 @@ func Stop() {
 	if err := server.Shutdown(context.Background()); err != nil {
 		log.WithError(err).Error("Error when stopping server")
 	}
-}
-
-func addCertToCertPool(caPath string) *x509.CertPool {
-	caContent, err := ioutil.ReadFile(caPath)
-	if err != nil {
-		log.WithError(err).WithField("CA-Path", caPath).Fatal("Could not read CA file")
-	}
-
-	systemCertPool, err := x509.SystemCertPool()
-	if err != nil {
-		log.WithError(err).Fatal("Could not parse CA file")
-	}
-
-	ok := systemCertPool.AppendCertsFromPEM(caContent)
-	if !ok {
-		log.WithError(err).Fatal("Could not add CA to pool")
-	}
-	return systemCertPool
 }
 
 // clusterAwareLister implements the PIP ClusterAwareLister interface. It is simply a wrapper around the

@@ -131,9 +131,9 @@ func FlowLogsHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, esCl
 		if err != nil {
 			log.WithError(err).Info("Error validating flowLogs request")
 			switch err {
-			case errInvalidMethod:
+			case ErrInvalidMethod:
 				http.Error(w, err.Error(), http.StatusMethodNotAllowed)
-			case errParseRequest:
+			case ErrParseRequest:
 				http.Error(w, err.Error(), http.StatusBadRequest)
 			case errInvalidAction:
 				http.Error(w, err.Error(), http.StatusUnprocessableEntity)
@@ -192,7 +192,7 @@ func FlowLogsHandler(k8sClientFactory datastore.ClusterCtxK8sClientFactory, esCl
 func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 	// Validate http method
 	if req.Method != http.MethodGet {
-		return nil, errInvalidMethod
+		return nil, ErrInvalidMethod
 	}
 
 	// extract params from request
@@ -201,19 +201,19 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 	limit, err := extractLimitParam(url)
 	if err != nil {
 		log.WithError(err).Info("Error extracting limit")
-		return nil, errParseRequest
+		return nil, ErrParseRequest
 	}
 	srcType := lowerCaseParams(url["srcType"])
 	srcLabels, err := getLabelSelectors(url["srcLabels"])
 	if err != nil {
 		log.WithError(err).Info("Error extracting srcLabels")
-		return nil, errParseRequest
+		return nil, ErrParseRequest
 	}
 	dstType := lowerCaseParams(url["dstType"])
 	dstLabels, err := getLabelSelectors(url["dstLabels"])
 	if err != nil {
 		log.WithError(err).Info("Error extracting dstLabels")
-		return nil, errParseRequest
+		return nil, ErrParseRequest
 	}
 	startDateTimeString := url.Get("startDateTime")
 	endDateTimeString := url.Get("endDateTime")
@@ -223,18 +223,18 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 	policyPreviews, err := getPolicyPreviews(url["policyPreview"])
 	if err != nil {
 		log.WithError(err).Info("Error extracting policyPreview")
-		return nil, errParseRequest
+		return nil, ErrParseRequest
 	}
 	unprotected := false
 	if unprotectedValue := url.Get("unprotected"); unprotectedValue != "" {
 		if unprotected, err = strconv.ParseBool(unprotectedValue); err != nil {
-			return nil, errParseRequest
+			return nil, ErrParseRequest
 		}
 	}
 	impactedOnly := false
 	if impactedOnlyValue := url.Get("impactedOnly"); impactedOnlyValue != "" {
 		if impactedOnly, err = strconv.ParseBool(impactedOnlyValue); err != nil {
-			return nil, errParseRequest
+			return nil, ErrParseRequest
 		}
 	}
 
@@ -242,12 +242,12 @@ func validateFlowLogsRequest(req *http.Request) (*FlowLogsParams, error) {
 	startDateTime, startDateTimeESParm, err := timeutils.ParseTime(now, &startDateTimeString)
 	if err != nil {
 		log.WithError(err).Info("Error extracting start date time")
-		return nil, errParseRequest
+		return nil, ErrParseRequest
 	}
 	endDateTime, endDateTimeESParm, err := timeutils.ParseTime(now, &endDateTimeString)
 	if err != nil {
 		log.WithError(err).Info("Error extracting end date time")
-		return nil, errParseRequest
+		return nil, ErrParseRequest
 	}
 
 	params := &FlowLogsParams{
