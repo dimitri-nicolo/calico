@@ -355,7 +355,7 @@ var _ = Describe("Elasticsearch events index", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// wait for bulk to commit
-			Eventually(func() int { return bulkCommit }).Should(Equal(1))
+			Eventually(bulkCommit).Should(Equal(1))
 
 			Eventually(func() int {
 				eventCount := 0
@@ -385,7 +385,7 @@ var _ = Describe("Elasticsearch events index", func() {
 
 			By("verifying requests are flushed after reaching the bulkaction count", func() {
 				// wait for bulk to commit
-				Eventually(func() int { return bulkCommit }).Should(Equal(4))
+				Eventually(bulkCommit).Should(Equal(4))
 
 				Eventually(func() int {
 					eventCount := 0
@@ -402,7 +402,7 @@ var _ = Describe("Elasticsearch events index", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 
 				// wait for bulk to commit
-				Eventually(func() int { return bulkCommit }).Should(Equal(5))
+				Eventually(bulkCommit).Should(Equal(5))
 
 				Eventually(func() int {
 					eventCount := 0
@@ -457,7 +457,7 @@ var _ = Describe("Elasticsearch events index", func() {
 			err = elasticClientManaged.BulkProcessorClose()
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(func() int { return bulkCommit }).Should(Equal(1))
+			Eventually(bulkCommit).Should(Equal(1))
 
 			// validate events
 			Eventually(func() int {
@@ -518,7 +518,7 @@ var _ = Describe("Elasticsearch events index", func() {
 			err = elasticClientManaged.BulkProcessorClose()
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(func() int { return bulkCommit }).Should(Equal(1))
+			Eventually(bulkCommit).Should(Equal(1))
 
 			// validate remaining events
 			remainingIDs := map[string]bool{
@@ -565,7 +565,7 @@ var _ = Describe("Elasticsearch events index", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			// wait for bulk to commit
-			Eventually(func() int { return bulkCommit }).Should(Equal(1))
+			Eventually(bulkCommit).Should(Equal(1))
 
 			Eventually(func() int {
 				eventCount := 0
