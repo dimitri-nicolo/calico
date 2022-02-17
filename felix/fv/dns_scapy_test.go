@@ -182,7 +182,9 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	// Stop etcd and workloads, collecting some state if anything failed.
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			felix.Exec("calico-bpf", "ipsets", "dump")
+			if bpfEnabled {
+				felix.Exec("calico-bpf", "ipsets", "dump")
+			}
 			felix.Exec("ipset", "list")
 			felix.Exec("iptables-save", "-c")
 			felix.Exec("ip", "r")
@@ -202,15 +204,17 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	})
 
 	dnsServerSetup := func(scapy *containers.Container, trusted bool) {
-		// Establish conntrack state, in Felix, as though the workload just sent a DNS
-		// request to the specified scapy.
-		felix.Exec("conntrack", "-I", "-s", w[0].IP, "-d", scapy.IP, "-p", "UDP", "-t", "10", "--sport", "53", "--dport", "53")
-
-		// Same thing with calico-bpf.
-		key, val := makeBPFConntrackEntry(w[0].InterfaceIndex(), net.ParseIP(w[0].IP), net.ParseIP(scapy.IP), trusted)
-		felix.Exec("calico-bpf", "conntrack", "write",
-			base64.StdEncoding.EncodeToString(key[:]),
-			base64.StdEncoding.EncodeToString(val[:]))
+		if !bpfEnabled {
+			// Establish conntrack state, in Felix, as though the workload just sent a DNS
+			// request to the specified scapy.
+			felix.Exec("conntrack", "-I", "-s", w[0].IP, "-d", scapy.IP, "-p", "UDP", "-t", "10", "--sport", "53", "--dport", "53")
+		} else {
+			// Same thing with calico-bpf.
+			key, val := makeBPFConntrackEntry(w[0].InterfaceIndex(), net.ParseIP(w[0].IP), net.ParseIP(scapy.IP), trusted)
+			felix.Exec("calico-bpf", "conntrack", "write",
+				base64.StdEncoding.EncodeToString(key[:]),
+				base64.StdEncoding.EncodeToString(val[:]))
+		}
 
 		// Wait a second here to allow time for the conntrack state to be established.
 		time.Sleep(time.Second)
@@ -718,7 +722,9 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 	// Stop etcd and workloads, collecting some state if anything failed.
 	AfterEach(func() {
 		if CurrentGinkgoTestDescription().Failed {
-			felix.Exec("calico-bpf", "ipsets", "dump")
+			if bpfEnabled {
+				felix.Exec("calico-bpf", "ipsets", "dump")
+			}
 			felix.Exec("ipset", "list")
 			felix.Exec("iptables-save", "-c")
 			felix.Exec("ip", "r")
@@ -738,16 +744,18 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 	})
 
 	dnsServerSetup := func(scapy *containers.Container) {
-		// Establish conntrack state, in Felix, as though the workload just sent a DNS
-		// request to the specified scapy.  Note that for this group of tests, scapy shares
-		// Felix's namespace and so has the same IP as Felix.
-		felix.Exec("conntrack", "-I", "-s", w[0].IP, "-d", felix.IP, "-p", "UDP", "-t", "10", "--sport", "53", "--dport", "53")
-
-		// Same thing with calico-bpf.
-		key, val := makeBPFConntrackEntry(w[0].InterfaceIndex(), net.ParseIP(w[0].IP), net.ParseIP(felix.IP), true)
-		felix.Exec("calico-bpf", "conntrack", "write",
-			base64.StdEncoding.EncodeToString(key[:]),
-			base64.StdEncoding.EncodeToString(val[:]))
+		if !bpfEnabled {
+			// Establish conntrack state, in Felix, as though the workload just sent a DNS
+			// request to the specified scapy.  Note that for this group of tests, scapy shares
+			// Felix's namespace and so has the same IP as Felix.
+			felix.Exec("conntrack", "-I", "-s", w[0].IP, "-d", felix.IP, "-p", "UDP", "-t", "10", "--sport", "53", "--dport", "53")
+		} else {
+			// Same thing with calico-bpf.
+			key, val := makeBPFConntrackEntry(w[0].InterfaceIndex(), net.ParseIP(w[0].IP), net.ParseIP(felix.IP), true)
+			felix.Exec("calico-bpf", "conntrack", "write",
+				base64.StdEncoding.EncodeToString(key[:]),
+				base64.StdEncoding.EncodeToString(val[:]))
+		}
 
 		// Wait a second here to allow time for the conntrack state to be established.
 		time.Sleep(time.Second)
