@@ -40,8 +40,8 @@ type fakeIPAM struct {
 func newFakeIPAM() *fakeIPAM {
 	return &fakeIPAM{
 		freeIPs: []string{
-			calicoHostIP1,
-			calicoHostIP2,
+			calicoHostIP1Str,
+			calicoHostIP2Str,
 		},
 		Errors: testutils.NewErrorProducer(),
 	}

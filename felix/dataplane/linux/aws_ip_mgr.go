@@ -259,6 +259,13 @@ func (a *awsIPManager) onRouteUpdate(dst ip.CIDR, route *proto.RouteUpdate) {
 	if route != nil && route.AwsSubnetId == "" {
 		route = nil
 	}
+	if dst.Version() != 4 || dst.Prefix() != 32 {
+		// Don't think we get IPv6 routes from the calc graph but we're not ready for them.  All local workload
+		// routes are forced to be /32s by validation.
+		// FIXME IPv6
+		logrus.Debug("Ignoring non-IPv4 or non /32 route")
+		return
+	}
 
 	// Update the index from subnet ID to route dest.  We do this first so we can look up the
 	// old version of the route (if any).
@@ -500,12 +507,12 @@ func (a *awsIPManager) CompleteDeferredWork() error {
 		// Datastore has been updated, send a new snapshot to the background thread.  It will configure the AWS
 		// fabric appropriately and then send us a SecondaryIfaceState.
 		ds := aws.DatastoreState{
-			LocalAWSAddrsByDst:        map[ip.CIDR]aws.AddrInfo{},
+			LocalAWSAddrsByDst:        map[ip.Addr]aws.AddrInfo{},
 			LocalRouteDestsBySubnetID: map[string]set.Set{},
 			PoolIDsBySubnetID:         map[string]set.Set{},
 		}
 		for k, v := range a.localAWSRoutesByDst {
-			ds.LocalAWSAddrsByDst[k] = aws.AddrInfo{
+			ds.LocalAWSAddrsByDst[k.Addr()] = aws.AddrInfo{
 				AWSSubnetId: v.AwsSubnetId,
 				Dst:         v.Dst,
 				ElasticIPs:  a.lookUpElasticIPs(k),
