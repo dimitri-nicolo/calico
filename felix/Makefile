@@ -495,14 +495,14 @@ bin/calico-bpf: $(SRC_FILES)
 bin/pktgen: $(SRC_FILES) $(FV_SRC_FILES)
 	@echo Building pktgen...
 	mkdir -p bin
-	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -v -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/pktgen"'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+		go build -v -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/pktgen"'
 
 bin/tproxy: $(SRC_FILES) $(FV_SRC_FILES)
 	@echo Building tproxy...
 	mkdir -p bin
-	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -v -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/tproxy/cmd"'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+		go build -v -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/tproxy/cmd"'
 
 bin/iptables-locker: ../go.mod $(shell find iptables -type f -name '*.go' -print)
 	@echo Building iptables-locker...
