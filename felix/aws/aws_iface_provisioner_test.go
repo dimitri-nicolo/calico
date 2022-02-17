@@ -963,18 +963,25 @@ func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_AWSLostAssign(t *testi
 	// Send snapshot with single workload.
 	sip.OnDatastoreUpdate(singleWorkloadDatastore)
 
-	// Should fail to respond: the ignored assign should be detected and cause a backoff.
-	Consistently(sip.ResponseC()).ShouldNot(Receive())
-
-	// Advance time to trigger the backoff.
-	fake.expectSingleBackoffAndStep()
-
-	// Since this is a fresh system with only one ENI being allocated, everything is deterministic and we should
-	// always get the same result.
+	// Should respond, thinking the update went through.
 	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
-	Eventually(fake.CapacityC).Should(Receive(Equal(SecondaryIfaceCapacities{
-		MaxCalicoSecondaryIPs: t3LargeCapacity,
-	})))
+
+	// After a success, there should be a recheck scheduled but no backoff.
+	Eventually(fake.RecheckClock.HasWaiters).Should(BeTrue(), "expected a pending recheck")
+	Eventually(fake.BackoffClock.HasWaiters).Should(BeFalse(), "expected no backoff scheduled")
+
+	// Initial backoff should be between 30s and 33s.
+	logrus.Info("TEST: Stepping time...")
+	fake.RecheckClock.Step(29999 * time.Millisecond)
+	Consistently(sip.ResponseC()).ShouldNot(Receive())
+	Expect(fake.RecheckClock.HasWaiters()).Should(BeTrue(), "expected a pending recheck")
+	Expect(fake.BackoffClock.HasWaiters()).Should(BeFalse(), "expected no backoff scheduled")
+
+	logrus.Info("TEST: Stepping time...")
+	fake.RecheckClock.Step(3002 * time.Millisecond)
+	Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload)))
+	Expect(fake.RecheckClock.HasWaiters()).Should(BeTrue(), "expected a pending recheck")
+	Expect(fake.BackoffClock.HasWaiters()).Should(BeFalse(), "expected no backoff scheduled")
 }
 
 func TestSecondaryIfaceProvisioner_AWSPoolsSingleWorkload_AWSLostUnassign(t *testing.T) {
