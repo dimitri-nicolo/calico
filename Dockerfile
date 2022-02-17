@@ -28,7 +28,7 @@ RUN apk update \
         ruby-dev gnupg \
  && apk add --no-cache curl=7.80.0-r0 jq=1.6-r1 \
  && apk add --no-cache ca-certificates && update-ca-certificates \
- && apk update && apk upgrade libcrypto1.1 \
+ && apk update && apk upgrade libcrypto1.1 libgmpxx gmp gmp-dev \
  && echo 'gem: --no-document' >> /etc/gemrc \
  && gem install oj -v 3.10.18 \
  && gem install json -v 2.4.1 \
