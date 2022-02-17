@@ -1,6 +1,6 @@
 ---
 layout: null
 ---
-{% helm tigera-prometheus-operator --execute templates/crds/01-crd-prometheusrules.yaml %}
+{% helm tigera-prometheus-operator --execute crds/01-crd-prometheusrules.yaml %}
 # todo: fix bug where empty values doesn't render
 {% endhelm %}

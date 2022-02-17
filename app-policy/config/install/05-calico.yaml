@@ -334,7 +334,7 @@ spec:
 # Calico policy and networking mode.
 ---
 
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 description: Calico Felix Configuration
 kind: CustomResourceDefinition
 metadata:
@@ -350,7 +350,7 @@ spec:
 
 ---
 
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 description: Calico BGP Peers
 kind: CustomResourceDefinition
 metadata:
@@ -366,7 +366,7 @@ spec:
 
 ---
 
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 description: Calico BGP Configuration
 kind: CustomResourceDefinition
 metadata:
@@ -382,7 +382,7 @@ spec:
 
 ---
 
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 description: Calico IP Pools
 kind: CustomResourceDefinition
 metadata:
@@ -398,7 +398,7 @@ spec:
 
 ---
 
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 description: Calico HostEndpoints
 kind: CustomResourceDefinition
 metadata:
@@ -414,7 +414,7 @@ spec:
 
 ---
 
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 description: Calico Cluster Information
 kind: CustomResourceDefinition
 metadata:
@@ -430,7 +430,7 @@ spec:
 
 ---
 
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 description: Calico Global Network Policies
 kind: CustomResourceDefinition
 metadata:
@@ -446,7 +446,7 @@ spec:
 
 ---
 
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 description: Calico Global Network Sets
 kind: CustomResourceDefinition
 metadata:
@@ -462,7 +462,7 @@ spec:
 
 ---
 
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 description: Calico Network Policies
 kind: CustomResourceDefinition
 metadata:
