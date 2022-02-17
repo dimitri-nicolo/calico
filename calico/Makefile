@@ -65,14 +65,14 @@ install-git-hooks:
 	./install-git-hooks
 
 ## Serve a local view of your current site on port 4000
-serve: bin/helm3
+serve: bin/helm
 	# We have to override JEKYLL_DOCKER_TAG which is usually set to 'pages'.
 	# When set to 'pages', jekyll starts in safe mode which means it will not
 	# load any plugins. Since we're no longer running in github-pages, but would
 	# like to use a docker image that comes preloaded with all the github-pages plugins,
 	# its ok to override this variable.
 	docker run --rm -it \
-	  -v $(CURDIR)/bin/helm3:/usr/local/bin/helm3:ro \
+	  -v $(CURDIR)/bin/helm:/usr/local/bin/helm:ro \
 	  -v $(CURDIR):/srv/jekyll \
 	  -v $(CURDIR)/../libcalico-go:/srv/libcalico-go \
 	  -e JEKYLL_DOCKER_TAG="" \
@@ -81,12 +81,12 @@ serve: bin/helm3
 	  jekyll/jekyll:$(JEKYLL_VERSION) /bin/sh -c 'bundle update; jekyll serve --incremental $(CONFIG)'
 
 .PHONY: build
-_site build: bin/helm3
-	docker run --rm -it \
+_site build: bin/helm _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz
+	docker run --rm -t -i \
 	-e JEKYLL_DOCKER_TAG="" \
 	-e JEKYLL_UID=`id -u` \
-	-v $(CURDIR)/bin/helm3:/usr/local/bin/helm3:ro \
-	-v $(CURDIR):/srv/jekyll \
+	-v $(CURDIR)/bin/helm:/usr/local/bin/helm:ro \
+	-v $(CURDIR)/:/srv/jekyll \
 	-v $(CURDIR)/../libcalico-go:/srv/libcalico-go \
 	-v $(VERSIONS_FILE):/srv/jekyll/_data/versions.yml \
 	jekyll/jekyll:$(JEKYLL_VERSION) /bin/sh -c 'bundle update; jekyll build --incremental $(CONFIG)'
@@ -98,6 +98,7 @@ clean:
 	find . -name '.*.published*' -type f -delete
 	rm -rf _output _site .jekyll-metadata pinned_versions.yaml _includes/charts/*/values.yaml
 	rm -rf stderr.out filtered.out docs_test.created bin
+	rm -f _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz
 
 ###############################################################################
 # CI / test targets
@@ -148,7 +149,7 @@ kubeval: _site
 	rm filtered.out
 
 # TODO(doublek): These Helm tests are not valid for Enterprise since helm v3 isn't supported yet.
-helm-tests: bin/helm3 values.yaml
+helm-tests: bin/helm values.yaml
 	$(DOCKER_RUN) \
 		-v $(CURDIR)/bin/helm3:/usr/local/bin/helm \
 		$(CALICO_BUILD) \
@@ -213,15 +214,15 @@ endif
 ###############################################################################
 # Utilities
 ###############################################################################
-HELM3_RELEASE=helm-v3.3.1-linux-amd64.tar.gz 
-
-helm-deps: bin/helm3 bin/helm
-bin/helm3:
+HELM_RELEASE=helm-v2.17.0-linux-amd64.tar.gz
+# note: the tigera-secure-ee-core.tgz chart isn't a dependency of bin/helm, but
+# netlify calls 'make bin/helm' so we package it as part of that dependency here.
+bin/helm: _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz
 	mkdir -p bin
 	$(eval TMP := $(shell mktemp -d))
-	wget -q https://get.helm.sh/$(HELM3_RELEASE) -O $(TMP)/helm3.tar.gz
-	tar -zxvf $(TMP)/helm3.tar.gz -C $(TMP)
-	mv $(TMP)/linux-amd64/helm bin/helm3
+	wget https://get.helm.sh/$(HELM_RELEASE) -O $(TMP)/$(HELM_RELEASE)
+	tar -zxvf $(TMP)/$(HELM_RELEASE) -C $(TMP)
+	mv $(TMP)/linux-amd64/helm bin/helm
 
 ###############################################################################
 # Helm
@@ -253,14 +254,22 @@ appVersion:=$(CALICO_VER)-$(GIT_HASH)
 endif
 endif
 
-charts: bin/helm3 chart/tigera-prometheus-operator chart/tigera-operator
-chart/tigera-operator: _includes/charts/tigera-operator/charts/tigera-prometheus-operator.tgz
+charts: chart/tigera-prometheus-operator chart/tigera-operator
+chart/tigera-operator: _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz _includes/charts/tigera-operator/charts/tigera-prometheus-operator.tgz
 chart/%: _includes/charts/%/values.yaml
 	mkdir -p bin
-	bin/helm3 package ./_includes/charts/$(@F) \
+	helm package ./_includes/charts/$(@F) \
+	--save=false \
 	--destination ./bin/ \
 	--version $(chartVersion) \
 	--app-version $(appVersion)
+
+# the non-operator to operator helm chart packages the v2.8 non-operator chart as a dependency.
+# here we grab the public chart at build time.
+NON_OPERATOR_CHART_VERSION=v2.8.3-2
+_includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz:
+	mkdir -p $(@D)
+	wget -O $@ https://s3.amazonaws.com/tigera-public/ee/charts/tigera-secure-ee-core-$(NON_OPERATOR_CHART_VERSION).tgz
 
 # Copy the prometheus-operator chart package as a sub-chart for tigera-operator for helm packaging.
 # After the changes in PR #3580, Tigera Operator doesn't depend on Prometheus/Alertmanager resources.
