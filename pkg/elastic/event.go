@@ -62,10 +62,10 @@ func (c *client) CreateEventsIndex(ctx context.Context) error {
 	return nil
 }
 
-// PutSecurityEventWithID adds the given data into events index for the given ID.
-// If ID is empty, Elasticsearch generates one.
+// PutSecurityEventWithID adds the given data into events index for the given id.
+// If id is empty, Elasticsearch generates one.
 // This function can be used to send same events multiple time without creating duplicate
-// entries in Elasticsearch as long as the ID remains the same.
+// entries in Elasticsearch as long as the id remains the same.
 func (c *client) PutSecurityEventWithID(ctx context.Context, data api.EventsData, id string) (*elastic.IndexResponse, error) {
 	alias := c.ClusterAlias(EventsIndex)
 
@@ -91,12 +91,14 @@ func (c *client) PutSecurityEvent(ctx context.Context, data api.EventsData) (*el
 	return c.Index().Index(alias).BodyString(string(b)).Do(ctx)
 }
 
+// DismissSecurityEvent sets the dismissed field to true for an event by id.
 func (c *client) DismissSecurityEvent(ctx context.Context, id string) (*elastic.UpdateResponse, error) {
 	alias := c.ClusterAlias(EventsIndex)
 
 	return c.Update().Index(alias).Id(id).Doc(eventDismissDoc).Do(ctx)
 }
 
+// DeleteSecurityEvent deletes the event by id.
 func (c *client) DeleteSecurityEvent(ctx context.Context, id string) (*elastic.DeleteResponse, error) {
 	alias := c.ClusterAlias(EventsIndex)
 
@@ -144,6 +146,9 @@ func (c *client) PutBulkSecurityEvent(data api.EventsData) error {
 	return nil
 }
 
+// DismissBulkSecurityEvent adds the event dismissal request to bulk processor service,
+// the data is flushed either automatically to Elasticsearch when the document count reaches BulkActions, or
+// when bulk processor service is closed.
 func (c *client) DismissBulkSecurityEvent(id string) error {
 	if c.bulkProcessor == nil {
 		return fmt.Errorf("BulkProcessor not initialized")
@@ -155,6 +160,9 @@ func (c *client) DismissBulkSecurityEvent(id string) error {
 	return nil
 }
 
+// DeleteBulkSecurityEvent adds the event deleting request to bulk processor service,
+// the data is flushed either automatically to Elasticsearch when the document count reaches BulkActions, or
+// when bulk processor service is closed.
 func (c *client) DeleteBulkSecurityEvent(id string) error {
 	if c.bulkProcessor == nil {
 		return fmt.Errorf("BulkProcessor not initalized")
