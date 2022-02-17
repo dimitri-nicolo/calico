@@ -49,10 +49,11 @@ require (
 	go.elastic.co/apm/module/apmelasticsearch v1.8.0 // indirect
 	go.elastic.co/apm/module/apmhttp v1.8.0 // indirect
 	go.elastic.co/fastjson v1.0.0 // indirect
-	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37 // indirect
+	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
 	golang.org/x/net v0.0.0-20211216030914-fe4d6282115f // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45 // indirect
-	golang.org/x/sys v0.0.0-20210423082822-04245dca01da // indirect
+	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1 // indirect
+	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1 // indirect
 	golang.org/x/text v0.3.6 // indirect
 	golang.org/x/time v0.0.0-20190921001708-c4c64cad1fd0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.0.1 // indirect
