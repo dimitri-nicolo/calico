@@ -18,16 +18,26 @@ var (
 	searchURLPattern *regexp.Regexp = regexp.MustCompile(`^/(.*)/_search$`)
 )
 
+// RawQueryHandle validates raw Elastic requests sent from Manager.
+// It only accepts Elastic search requests in the following definition:
+//   1. HTTP method: POST.
+//   2. HTTP url: /<index>/_search.
+//
+// In Manager, the following pages are still sending raw Elastic search requests.
+//   1. Dashboard page: total alerts count <= Calico Enterprise v3.12.
+//   2. Alert List page: fetch security events <= Calico Enterprise v3.12.
+//   3. Alert List page: fetch Kibana index pattern for logs.
+//   4. Timeline page: fetch audit logs.
 func RawQueryHandler(client *elastic.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// parse raw elastic request
+		// parse raw elastic request.
 		index, body, err := parseQueryRequest(w, r)
 		if err != nil {
 			httputils.EncodeError(w, err)
 			return
 		}
 
-		// search
+		// proxy search request to elastic.
 		resp, err := client.Search().
 			Index(index).
 			Source(body).
@@ -42,9 +52,6 @@ func RawQueryHandler(client *elastic.Client) http.Handler {
 }
 
 func parseQueryRequest(w http.ResponseWriter, r *http.Request) (string, json.RawMessage, error) {
-	// allowed elastic search request:
-	// 1. http method: POST.
-	// 2. http url: /<index>/_search.
 	if r.Method != http.MethodPost {
 		log.WithError(middleware.ErrInvalidMethod).Errorf("Invalid http method %s for _search.", r.Method)
 		return "", nil, &httputils.HttpStatusError{
