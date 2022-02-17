@@ -9,7 +9,9 @@ section:
 - title: Kibana dashboards and logs
   path: /visibility/kibana  
 - title: Packet capture
-  path: /visibility/packetcapture  
+  path: /visibility/packetcapture 
+- title: Visualize traffic to and from a cluster
+  path: /visibility/visualize-traffic 
 - title: Calico Enterprise logs
   path: /visibility/elastic/
   section:
