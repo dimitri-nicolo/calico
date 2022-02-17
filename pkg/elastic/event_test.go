@@ -142,15 +142,14 @@ var _ = Describe("Elasticsearch events index", func() {
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
-			// wait for put to reflect
-			time.Sleep(3 * time.Second)
-
-			count := 0
-			for op := range elasticClientManagement.SearchSecurityEvents(ctx, nil, nil, nil, true) {
-				Expect(op.Origin).Should(BeElementOf([]string{"new_events_index", "old_events_index"}))
-				count++
-			}
-			Expect(count).Should(Equal(2))
+			Eventually(func() int {
+				count := 0
+				for op := range elasticClientManagement.SearchSecurityEvents(ctx, nil, nil, nil, true) {
+					Expect(op.Origin).Should(BeElementOf([]string{"new_events_index", "old_events_index"}))
+					count++
+				}
+				return count
+			}, 10*time.Second, 3*time.Second).Should(Equal(2))
 		})
 
 		It("writes only into new events index", func() {
@@ -162,7 +161,7 @@ var _ = Describe("Elasticsearch events index", func() {
 				_, err = elasticClientManagement.PutSecurityEventWithID(ctx, data, "sample_id_test_542")
 				Expect(err).ShouldNot(HaveOccurred())
 				// wait for put to reflect
-				time.Sleep(3 * time.Second)
+				time.Sleep(5 * time.Second)
 
 				for op := range elasticClientManagement.SearchSecurityEvents(ctx, nil, nil, nil, true) {
 					compareEventData(op, data)
@@ -279,23 +278,23 @@ var _ = Describe("Elasticsearch events index", func() {
 			Expect(resp.Id).To(Equal(id))
 			Expect(resp.Result).To(Equal("updated"))
 
-			time.Sleep(3 * time.Second)
-
 			// validate events
-			count := 0
-			for e := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
-				Expect(e.ID).To(Equal(fmt.Sprintf("lma_dismiss_test_id%d", count)))
-				Expect(e.Origin).To(Equal(fmt.Sprintf("lma_dismiss_test_%d", count)))
-				Expect(e.Record).To(HaveKeyWithValue("key", fmt.Sprintf("value%d", count)))
-				switch count {
-				case 1:
-					Expect(e.Dismissed).To(BeTrue())
-				default:
-					Expect(e.Dismissed).To(BeFalse())
+			Eventually(func() int {
+				count := 0
+				for e := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
+					Expect(e.ID).To(Equal(fmt.Sprintf("lma_dismiss_test_id%d", count)))
+					Expect(e.Origin).To(Equal(fmt.Sprintf("lma_dismiss_test_%d", count)))
+					Expect(e.Record).To(HaveKeyWithValue("key", fmt.Sprintf("value%d", count)))
+					switch count {
+					case 1:
+						Expect(e.Dismissed).To(BeTrue())
+					default:
+						Expect(e.Dismissed).To(BeFalse())
+					}
+					count++
 				}
-				count++
-			}
-			Expect(count).To(Equal(3))
+				return count
+			}, 10*time.Second, 3*time.Second).Should(Equal(3))
 		})
 
 		It("should delete events", func() {
@@ -315,23 +314,23 @@ var _ = Describe("Elasticsearch events index", func() {
 			Expect(resp.Id).To(Equal(id))
 			Expect(resp.Result).To(Equal("deleted"))
 
-			time.Sleep(3 * time.Second)
-
 			// validate remaining events
 			remainingIDs := map[string]bool{
 				"lma_delete_test_id0": false,
 				"lma_delete_test_id2": false,
 			}
 
-			count := 0
-			for e := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
-				count++
-				_, ok := remainingIDs[e.ID]
-				Expect(ok).To(BeTrue())
-				remainingIDs[e.ID] = true
-			}
+			Eventually(func() int {
+				count := 0
+				for e := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
+					count++
+					_, ok := remainingIDs[e.ID]
+					Expect(ok).To(BeTrue())
+					remainingIDs[e.ID] = true
+				}
+				return count
+			}, 10*time.Second, 3*time.Second).Should(Equal(len(remainingIDs)))
 
-			Expect(count).To(Equal(len(remainingIDs)))
 			for _, v := range remainingIDs {
 				Expect(v).To(BeTrue())
 			}
@@ -357,14 +356,15 @@ var _ = Describe("Elasticsearch events index", func() {
 
 			// wait for bulk to commit
 			Eventually(func() int { return bulkCommit }).Should(Equal(1))
-			time.Sleep(3 * time.Second)
 
-			eventCount := 0
-			for res := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
-				eventCount++
-				Expect(res.Err).ShouldNot(HaveOccurred())
-			}
-			Expect(eventCount).Should(BeNumerically("==", 22))
+			Eventually(func() int {
+				eventCount := 0
+				for res := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
+					eventCount++
+					Expect(res.Err).ShouldNot(HaveOccurred())
+				}
+				return eventCount
+			}, 10*time.Second, 3*time.Second).Should(Equal(22))
 		})
 
 		It("should send bulk events to Elasticsearch when bulkaction is set", func() {
@@ -386,14 +386,15 @@ var _ = Describe("Elasticsearch events index", func() {
 			By("verifying requests are flushed after reaching the bulkaction count", func() {
 				// wait for bulk to commit
 				Eventually(func() int { return bulkCommit }).Should(Equal(4))
-				time.Sleep(3 * time.Second)
 
-				eventCount := 0
-				for res := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
-					eventCount++
-					Expect(res.Err).ShouldNot(HaveOccurred())
-				}
-				Expect(eventCount).Should(BeNumerically("==", 20))
+				Eventually(func() int {
+					eventCount := 0
+					for res := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
+						eventCount++
+						Expect(res.Err).ShouldNot(HaveOccurred())
+					}
+					return eventCount
+				}, 10*time.Second, 3*time.Second).Should(Equal(20))
 			})
 
 			By("verifying that pending requests are flushed on closing bulk processor service", func() {
@@ -402,14 +403,15 @@ var _ = Describe("Elasticsearch events index", func() {
 
 				// wait for bulk to commit
 				Eventually(func() int { return bulkCommit }).Should(Equal(5))
-				time.Sleep(3 * time.Second)
 
-				eventCount := 0
-				for res := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
-					eventCount++
-					Expect(res.Err).ShouldNot(HaveOccurred())
-				}
-				Expect(eventCount).Should(BeNumerically("==", 22))
+				Eventually(func() int {
+					eventCount := 0
+					for res := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
+						eventCount++
+						Expect(res.Err).ShouldNot(HaveOccurred())
+					}
+					return eventCount
+				}, 10*time.Second, 3*time.Second).Should(Equal(22))
 			})
 		})
 
@@ -456,20 +458,21 @@ var _ = Describe("Elasticsearch events index", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() int { return bulkCommit }).Should(Equal(1))
-			time.Sleep(3 * time.Second)
 
 			// validate events
-			count := 0
-			for e := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
-				if e.Dismissed {
-					_, ok := toDismissEventIDs[e.ID]
-					toDismissEventIDs[e.ID] = true
-					Expect(ok).To(BeTrue())
+			Eventually(func() int {
+				count := 0
+				for e := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
+					if e.Dismissed {
+						_, ok := toDismissEventIDs[e.ID]
+						toDismissEventIDs[e.ID] = true
+						Expect(ok).To(BeTrue())
+					}
+					count++
 				}
-				count++
-			}
+				return count
+			}, 10*time.Second, 3*time.Second).Should(Equal(10))
 
-			Expect(count).To(Equal(10))
 			for _, v := range toDismissEventIDs {
 				Expect(v).To(BeTrue())
 			}
@@ -516,7 +519,6 @@ var _ = Describe("Elasticsearch events index", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(func() int { return bulkCommit }).Should(Equal(1))
-			time.Sleep(3 * time.Second)
 
 			// validate remaining events
 			remainingIDs := map[string]bool{
@@ -528,14 +530,17 @@ var _ = Describe("Elasticsearch events index", func() {
 				"lma_bulk_delete_test_id9": false,
 			}
 
-			count := 0
-			for e := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
-				count++
-				_, ok := remainingIDs[e.ID]
-				Expect(ok).To(BeTrue())
-				remainingIDs[e.ID] = true
-			}
-			Expect(count).To(Equal(len(remainingIDs)))
+			Eventually(func() int {
+				count := 0
+				for e := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
+					count++
+					_, ok := remainingIDs[e.ID]
+					Expect(ok).To(BeTrue())
+					remainingIDs[e.ID] = true
+				}
+				return count
+			}, 10*time.Second, 3*time.Second).Should(Equal(len(remainingIDs)))
+
 			for _, v := range remainingIDs {
 				Expect(v).To(BeTrue())
 			}
@@ -561,14 +566,15 @@ var _ = Describe("Elasticsearch events index", func() {
 
 			// wait for bulk to commit
 			Eventually(func() int { return bulkCommit }).Should(Equal(1))
-			time.Sleep(3 * time.Second)
 
-			eventCount := 0
-			for res := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
-				eventCount++
-				Expect(res.Err).ShouldNot(HaveOccurred())
-			}
-			Expect(eventCount).Should(BeNumerically("==", 220))
+			Eventually(func() int {
+				eventCount := 0
+				for res := range elasticClientManaged.SearchSecurityEvents(ctx, nil, nil, nil, false) {
+					eventCount++
+					Expect(res.Err).ShouldNot(HaveOccurred())
+				}
+				return eventCount
+			}, 10*time.Second, 3*time.Second).Should(Equal(220))
 		})
 	})
 
