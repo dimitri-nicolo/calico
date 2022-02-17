@@ -6,6 +6,8 @@ section:
   path: /visibility/get-started-cem
 - title: Alerts
   path: /visibility/alerts
+- title: Kibana dashboards and logs
+  path: /visibility/kibana  
 - title: Packet capture
   path: /visibility/packetcapture  
 - title: Calico Enterprise logs
