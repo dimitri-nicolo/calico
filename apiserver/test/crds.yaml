@@ -4,7 +4,7 @@ metadata:
 apiVersion: v1
 items:
 # CRDs for Calico v2.x clients
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: globalfelixconfigs.crd.projectcalico.org
@@ -16,7 +16,7 @@ items:
       kind: GlobalFelixConfig
       plural: globalfelixconfigs
       singular: globalfelixconfig
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: globalbgpconfigs.crd.projectcalico.org
@@ -29,7 +29,7 @@ items:
       plural: globalbgpconfigs
       singular: globalbgpconfig
 # CRDs for Calico v2.x and v3.x clients
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: ippools.crd.projectcalico.org
@@ -41,7 +41,7 @@ items:
       kind: IPPool
       plural: ippools
       singular: ippool
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: bgppeers.crd.projectcalico.org
@@ -53,7 +53,7 @@ items:
       kind: BGPPeer
       plural: bgppeers
       singular: bgppeer
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: globalnetworkpolicies.crd.projectcalico.org
@@ -65,7 +65,7 @@ items:
       kind: GlobalNetworkPolicy
       plural: globalnetworkpolicies
       singular: globalnetworkpolicy
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: stagedglobalnetworkpolicies.crd.projectcalico.org
@@ -77,7 +77,7 @@ items:
       kind: StagedGlobalNetworkPolicy
       plural: stagedglobalnetworkpolicies
       singular: stagedglobalnetworkpolicy
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: hostendpoints.crd.projectcalico.org
@@ -90,7 +90,7 @@ items:
       plural: hostendpoints
       singular: hostendpoint
 # CRDs for Calico v3.x clients
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: felixconfigurations.crd.projectcalico.org
@@ -102,7 +102,7 @@ items:
       kind: FelixConfiguration
       plural: felixconfigurations
       singular: felixconfiguration
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: bgpconfigurations.crd.projectcalico.org
@@ -114,7 +114,7 @@ items:
       kind: BGPConfiguration
       plural: bgpconfigurations
       singular: bgpconfiguration
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: clusterinformations.crd.projectcalico.org
@@ -126,7 +126,7 @@ items:
       kind: ClusterInformation
       plural: clusterinformations
       singular: clusterinformation
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: networkpolicies.crd.projectcalico.org
@@ -138,7 +138,7 @@ items:
       kind: NetworkPolicy
       plural: networkpolicies
       singular: networkpolicy
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: stagednetworkpolicies.crd.projectcalico.org
@@ -150,7 +150,7 @@ items:
       kind: StagedNetworkPolicy
       plural: stagednetworkpolicies
       singular: stagednetworkpolicy
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: stagedkubernetesnetworkpolicies.crd.projectcalico.org
@@ -162,7 +162,7 @@ items:
       kind: StagedKubernetesNetworkPolicy
       plural: stagedkubernetesnetworkpolicies
       singular: stagedkubernetesnetworkpolicy
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: tiers.crd.projectcalico.org
@@ -174,7 +174,7 @@ items:
       kind: Tier
       plural: tiers
       singular: tier
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: globalnetworksets.crd.projectcalico.org
@@ -186,7 +186,7 @@ items:
       kind: GlobalNetworkSet
       plural: globalnetworksets
       singular: globalnetworkset
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: networksets.crd.projectcalico.org
@@ -198,7 +198,7 @@ items:
       kind: NetworkSet
       plural: networksets
       singular: networkset
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: remoteclusterconfigurations.crd.projectcalico.org
@@ -210,7 +210,7 @@ items:
       kind: RemoteClusterConfiguration
       plural: remoteclusterconfigurations
       singular: remoteclusterconfiguration
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: ipamblocks.crd.projectcalico.org
@@ -222,7 +222,7 @@ items:
       kind: IPAMBlock
       plural: ipamblocks
       singular: ipamblock
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: blockaffinities.crd.projectcalico.org
@@ -234,7 +234,7 @@ items:
       kind: BlockAffinity
       plural: blockaffinities
       singular: blockaffinity
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: ipamhandles.crd.projectcalico.org
@@ -246,7 +246,7 @@ items:
       kind: IPAMHandle
       plural: ipamhandles
       singular: ipamhandle
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: ipamconfigs.crd.projectcalico.org
@@ -258,7 +258,7 @@ items:
       kind: IPAMConfig
       plural: ipamconfigs
       singular: ipamconfig
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: kubecontrollersconfigurations.crd.projectcalico.org
@@ -270,7 +270,7 @@ items:
       kind: KubeControllersConfiguration
       plural: kubecontrollersconfigurations
       singular: kubecontrollersconfiguration
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: licensekeys.crd.projectcalico.org
@@ -282,7 +282,7 @@ items:
       kind: LicenseKey
       plural: licensekeys
       singular: licensekey
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: globalalerts.crd.projectcalico.org
@@ -294,7 +294,7 @@ items:
       kind: GlobalAlert
       plural: globalalerts
       singular: globalalert
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: globalalerttemplates.crd.projectcalico.org
@@ -306,7 +306,7 @@ items:
       kind: GlobalAlertTemplate
       plural: globalalerttemplates
       singular: globalalerttemplate
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: globalthreatfeeds.crd.projectcalico.org
@@ -318,7 +318,7 @@ items:
       kind: GlobalThreatFeed
       plural: globalthreatfeeds
       singular: globalthreatfeed
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: globalreports.crd.projectcalico.org
@@ -330,7 +330,7 @@ items:
       kind: GlobalReport
       plural: globalreports
       singular: globalreport
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: globalreporttypes.crd.projectcalico.org
@@ -342,7 +342,7 @@ items:
       kind: GlobalReportType
       plural: globalreporttypes
       singular: globalreporttype
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: managedclusters.crd.projectcalico.org
@@ -354,7 +354,7 @@ items:
       kind: ManagedCluster
       plural: managedclusters
       singular: managedcluster
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: packetcaptures.crd.projectcalico.org
@@ -366,7 +366,7 @@ items:
       kind: PacketCapture
       plural: packetcaptures
       singular: packetcapture
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: deeppacketinspections.crd.projectcalico.org
@@ -378,7 +378,7 @@ items:
       kind: DeepPacketInspection
       plural: deeppacketinspections
       singular: deeppacketinspection
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: uisettingsgroup.crd.projectcalico.org
@@ -390,7 +390,7 @@ items:
       kind: UISettingsGroup
       plural: uisettingsgroups
       singular: uisettingsgroup
-- apiVersion: apiextensions.k8s.io/v1beta1
+- apiVersion: apiextensions.k8s.io/v1
   kind: CustomResourceDefinition
   metadata:
     name: uisettings.crd.projectcalico.org

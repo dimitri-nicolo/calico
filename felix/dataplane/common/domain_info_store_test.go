@@ -15,6 +15,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
+	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	log "github.com/sirupsen/logrus"
 
@@ -639,5 +640,35 @@ var _ = Describe("Domain Info Store", func() {
 		programDNSAnswer(domainStore, testutils.MakeCNAME("a2.com", "b.com"), "cb7")
 		Expect(domainStore.UpdatesReadyChannel()).ShouldNot(Receive())
 		expectCallbacks("cb7")
+	})
+
+	It("should not panic because of an IPv4 packet with no transport header", func() {
+		domainStoreCreate()
+
+		pkt := gopacket.NewSerializeBuffer()
+		err := gopacket.SerializeLayers(
+			pkt,
+			gopacket.SerializeOptions{ComputeChecksums: true},
+			&layers.IPv4{
+				Version:  4,
+				IHL:      5,
+				TTL:      64,
+				Flags:    layers.IPv4DontFragment,
+				SrcIP:    net.IPv4(172, 31, 11, 2),
+				DstIP:    net.IPv4(172, 31, 21, 5),
+				Protocol: layers.IPProtocolTCP,
+				Length:   5 * 4,
+			},
+		)
+		Expect(err).NotTo(HaveOccurred())
+
+		domainStore.MsgChannel() <- DataWithTimestamp{
+			Data: pkt.Bytes(),
+		}
+		saveTimerC := make(chan time.Time)
+		gcTimerC := make(chan time.Time)
+		Expect(func() {
+			domainStore.loopIteration(saveTimerC, gcTimerC)
+		}).NotTo(Panic())
 	})
 })

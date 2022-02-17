@@ -15,17 +15,6 @@ The following detectors are searching for [security anomalies]({{site.baseurl}}/
 >  **Valid range**: 0.0 to 100.0.
 {: .alert .alert-info}
 
-#### Inbound service bytes
-
-ID: `bytes_in`. Looks for services that receive an anomalously high amount of data. Specifically, the detector looks for services that are unusual with respect to their replica set, and replica sets that are unusual with respect to the rest of the cluster. May indicate a denial of service attack, data exfiltration, or other attacks.
-
-Environment variables: n/a
-
-#### Outbound service bytes
-
-ID: `bytes_out`. Looks for pods that send an anomalously high amount of data. Specifically, the detector looks for pods that are unusual with respect to their replica set, and replica sets that are unusual with respect to the rest of the cluster. May indicate a denial of service attack, data exfiltration, or other attacks.
-
-Environment variables: n/a
 
 #### Domain Generation Algorithms (DGA)
 

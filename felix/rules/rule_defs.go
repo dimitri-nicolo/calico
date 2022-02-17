@@ -267,6 +267,7 @@ type RuleRenderer interface {
 		tiers []*proto.TierInfo,
 		profileIDs []string,
 		isEgressGateway bool,
+		ipVersion uint8,
 	) []*iptables.Chain
 
 	WorkloadInterfaceAllowChains(endpoints map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint) []*iptables.Chain

@@ -638,6 +638,7 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 						workload.Tiers,
 						workload.ProfileIds,
 						workload.IsEgressGateway,
+						m.ipVersion,
 					)
 					m.filterTable.UpdateChains(chains)
 					m.activeWlIDToChains[id] = chains

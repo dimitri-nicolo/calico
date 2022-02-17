@@ -453,7 +453,12 @@ func (s *DomainInfoStore) loopIteration(saveTimerC, gcTimerC <-chan time.Time) {
 		// requires port 53.  Here we want to parse as DNS regardless of the port
 		// number.
 		dns := &layers.DNS{}
-		dnsBytes := packet.TransportLayer().LayerPayload()
+		transportLayer := packet.TransportLayer()
+		if transportLayer == nil {
+			log.Debug("Ignoring packet with no transport layer")
+			return
+		}
+		dnsBytes := transportLayer.LayerPayload()
 
 		// We've seen customers using tools that generate "ping" packets over UDP to test connectivity to
 		// their DNS servers. One such tool uses "UDP PING ..." as the UDP payload.  Ignore such packets

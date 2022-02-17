@@ -59,8 +59,8 @@ section:
   - title: Panorama firewall integrations
     path: /security/panorama-integration/
     section:
-    - title: Panorama address groups integration
-      path: /security/panorama-integration/tigera-panorama-address-groups
+    - title: Panorama policy integration
+      path: /security/panorama-integration/tigera-panorama-policy-integration
   - title: Fortinet firewall integrations
     path: /security/fortinet-integration/
     section:
