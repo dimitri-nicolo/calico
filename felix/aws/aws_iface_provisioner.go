@@ -375,7 +375,7 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 			recheckTimerFired = false
 
 			var err error
-			response, err = m.resync(ctx)
+			response, err = m.resync()
 			m.healthAgg.Report(healthNameAWSInSync, &health.HealthReport{Ready: err == nil})
 			if err != nil {
 				logrus.WithError(err).Warning("Failed to resync with AWS. Will retry after backoff.")
@@ -439,40 +439,9 @@ func (m *SecondaryIfaceProvisioner) OnDatastoreUpdate(snapshot DatastoreState) {
 	m.datastoreUpdateC <- snapshot
 }
 
-var errStaleRead = errors.New("AWS API returned stale data")
-
-func (m *SecondaryIfaceProvisioner) resync(ctx context.Context) (*LocalAWSNetworkState, error) {
-	var awsResyncErr error
+func (m *SecondaryIfaceProvisioner) resync() (*LocalAWSNetworkState, error) {
 	m.opRecorder.RecordOperation("aws-fabric-resync")
-	var response *LocalAWSNetworkState
 
-	// attemptResync() returns two types of error:
-	//
-	// - errResyncNeeded, which indicates that _we_ made a change to AWS state and need to restart the resync
-	//   to pick up the results of the change.
-	// - General AWS/IPAM/etc errors.
-	//
-	// We want to retry the first type immediately; they're part of our normal processing. The other type can
-	// mean that AWS is overloaded, or throttling us, so we bubble up the error and trigger backoff.
-	//
-	// attemptResync() should only return errResyncNeeded at most a handful of times so, if we see lots of those
-	// we also bubble up the error and start backing off.
-	for attempt := 0; attempt < 5; attempt++ {
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-		response, awsResyncErr = m.attemptResync()
-		if awsResyncErr != nil {
-			m.cachedEC2Client = nil // Maybe something wrong with client?
-			break
-		}
-		m.resyncNeeded = false
-		break
-	}
-	return response, awsResyncErr
-}
-
-func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, error) {
 	// Load the capabilities (number of ENIs, IPs etc.) of this node (if not already loaded).
 	if err := m.ensureNetworkCapabilitiesLoaded(); err != nil {
 		return nil, err
@@ -533,7 +502,7 @@ func (m *SecondaryIfaceProvisioner) attemptResync() (*LocalAWSNetworkState, erro
 	subnetCalicoRoutesNotInAWS := filterRoutesByAWSSubnet(allCalicoRoutesNotInAWS, bestSubnetID)
 	if len(subnetCalicoRoutesNotInAWS) > 0 {
 		// We have some Calico addresses with no corresponding AWS resources.  Try to provision the AWS resources.
-		awsState, err = m.provisionNewAWSIPs(awsState, localSubnetsByID, bestSubnetID, subnetCalicoRoutesNotInAWS)
+		err = m.provisionNewAWSIPs(awsState, localSubnetsByID, bestSubnetID, subnetCalicoRoutesNotInAWS)
 		if err != nil {
 			return nil, err
 		}
@@ -662,12 +631,12 @@ func (m *SecondaryIfaceProvisioner) provisionNewAWSIPs(
 	localSubnetsByID map[string]ec2types.Subnet,
 	bestSubnetID string,
 	addrsToAdd []AddrInfo,
-) (*awsState, error) {
+) error {
 	// Figure out if we need to add any new ENIs to the host.
 	logrus.WithField("numRoutes", addrsToAdd).Debug("Adding Calico IPs to AWS fabric")
 	numENIsNeeded, err := m.calculateNumNewENIsNeeded(awsState, bestSubnetID)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	numENIsToCreate := numENIsNeeded
@@ -690,14 +659,14 @@ func (m *SecondaryIfaceProvisioner) provisionNewAWSIPs(
 		if err != nil {
 			// Queue up a clean up of any IPs we may have leaked.
 			m.hostIPAMResyncNeeded = true
-			return nil, err
+			return err
 		}
 		logrus.WithField("addrs", v4addrs.IPs).Info("Allocated IPs; creating AWS ENIs...")
 		err = m.createAWSENIs(awsState, bestSubnetID, v4addrs.IPs)
 		if err != nil {
 			// Queue up a cleanup of any IPs we may have leaked.
 			m.hostIPAMResyncNeeded = true
-			return nil, err
+			return err
 		}
 	}
 
@@ -705,9 +674,9 @@ func (m *SecondaryIfaceProvisioner) provisionNewAWSIPs(
 	// to allocate enough IPs or ENIs above.)
 	err = m.assignSecondaryIPsToENIs(awsState, addrsToAdd)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return awsState, nil
+	return nil
 }
 
 // subnetsFileData contents of the aws-subnets file.  We write a JSON dict for extensibility.
