@@ -184,16 +184,11 @@ func Start(cfg *Config) error {
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						esClient.Backend(),
 					)))))
-	sm.Handle("/events",
+	sm.Handle("/events/bulk",
 		middleware.ClusterRequestToResource(eventsResourceName,
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					event.EventDeleteHandler(esClientFactory)))))
-	sm.Handle("/events/dismiss",
-		middleware.ClusterRequestToResource(eventsResourceName,
-			middleware.AuthenticateRequest(authn,
-				middleware.AuthorizeRequest(authz,
-					event.EventDismissHandler(esClientFactory)))))
+					event.EventHandler(esClientFactory)))))
 	sm.Handle("/events/search",
 		middleware.ClusterRequestToResource(eventsResourceName,
 			middleware.AuthenticateRequest(authn,

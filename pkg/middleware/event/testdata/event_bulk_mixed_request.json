@@ -1,0 +1,9 @@
+{"delete":{"_index":"tigera_secure_ee_events..","_id":"id1"}}
+{"delete":{"_index":"tigera_secure_ee_events..","_id":"id3"}}
+{"delete":{"_index":"tigera_secure_ee_events..","_id":"id5"}}
+{"update":{"_index":"tigera_secure_ee_events..","_id":"id2"}}
+{"doc":{"dismissed":true}}
+{"update":{"_index":"tigera_secure_ee_events..","_id":"id4"}}
+{"doc":{"dismissed":true}}
+{"update":{"_index":"tigera_secure_ee_events..","_id":"id6"}}
+{"doc":{"dismissed":true}}

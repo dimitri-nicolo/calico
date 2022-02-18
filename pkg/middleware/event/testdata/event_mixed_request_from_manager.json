@@ -1,0 +1,29 @@
+{
+  "cluster": "test-cluster-name",
+  "delete": {
+    "items": [
+      {
+        "id": "id1"
+      },
+      {
+        "id": "id3"
+      },
+      {
+        "id": "id5"
+      }
+    ]
+  },
+  "dismiss": {
+    "items": [
+      {
+        "id": "id2"
+      },
+      {
+        "id": "id4"
+      },
+      {
+        "id": "id6"
+      }
+    ]
+  }
+}

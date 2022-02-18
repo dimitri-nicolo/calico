@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
@@ -15,17 +16,22 @@ import (
 	"github.com/tigera/lma/pkg/httputils"
 )
 
-func EventDismissHandler(esClientFactory lmaelastic.ClusterContextClientFactory) http.Handler {
+const (
+	defaultTimeout = 60 * time.Second
+)
+
+func EventHandler(esClientFactory lmaelastic.ClusterContextClientFactory) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// parse http request body into bulk request.
-		params, err := parseDismissRequest(w, r)
+		params, err := parseEventRequest(w, r)
 		if err != nil {
 			httputils.EncodeError(w, err)
 			return
 		}
 
-		// dismiss
-		resp, err := dismiss(esClientFactory, params, r)
+		// perform elastic bulk actions.
+		// only delete and dismiss actions are supported for events.
+		resp, err := processEventRequest(r, esClientFactory, params)
 		if err != nil {
 			httputils.EncodeError(w, err)
 			return
@@ -34,10 +40,10 @@ func EventDismissHandler(esClientFactory lmaelastic.ClusterContextClientFactory)
 	})
 }
 
-func parseDismissRequest(w http.ResponseWriter, r *http.Request) (*v1.BulkRequest, error) {
+func parseEventRequest(w http.ResponseWriter, r *http.Request) (*v1.BulkRequest, error) {
 	// events handler
 	if r.Method != http.MethodPost {
-		log.WithError(middleware.ErrInvalidMethod).Infof("Invalid http method %s for /events.", r.Method)
+		log.WithError(middleware.ErrInvalidMethod).Infof("Invalid http method %s for /events/bulk.", r.Method)
 
 		return nil, &httputils.HttpStatusError{
 			Status: http.StatusMethodNotAllowed,
@@ -48,7 +54,6 @@ func parseDismissRequest(w http.ResponseWriter, r *http.Request) (*v1.BulkReques
 
 	// Decode the http request body into the struct.
 	var params v1.BulkRequest
-	params.DefaultParams()
 
 	if err := httputils.Decode(w, r, &params); err != nil {
 		var mr *httputils.HttpStatusError
@@ -56,7 +61,7 @@ func parseDismissRequest(w http.ResponseWriter, r *http.Request) (*v1.BulkReques
 			log.WithError(mr.Err).Info(mr.Msg)
 			return nil, mr
 		} else {
-			log.WithError(mr.Err).Info("Error validating event dismiss request.")
+			log.WithError(mr.Err).Info("Error validating event bulk requests.")
 			return nil, &httputils.HttpStatusError{
 				Status: http.StatusBadRequest,
 				Msg:    http.StatusText(http.StatusInternalServerError),
@@ -73,18 +78,18 @@ func parseDismissRequest(w http.ResponseWriter, r *http.Request) (*v1.BulkReques
 	return &params, nil
 }
 
-func dismiss(
+func processEventRequest(
+	r *http.Request,
 	esClientFactory lmaelastic.ClusterContextClientFactory,
 	params *v1.BulkRequest,
-	r *http.Request,
 ) (*v1.BulkResponse, error) {
-	// Create a context with timeout to ensure we don't block for too long.
-	ctx, cancelWithTimeout := context.WithTimeout(r.Context(), params.Timeout.Duration)
+	// create a context with timeout to ensure we don't block for too long.
+	ctx, cancelWithTimeout := context.WithTimeout(r.Context(), defaultTimeout)
 	defer cancelWithTimeout()
 
 	esClient, err := esClientFactory.ClientForCluster(params.ClusterName)
 	if err != nil {
-		log.WithError(err).Error("failed to create Elastic factory from factory")
+		log.WithError(err).Error("failed to create Elastic client from factory")
 		return nil, &httputils.HttpStatusError{
 			Status: http.StatusInternalServerError,
 			Msg:    err.Error(),
@@ -92,14 +97,28 @@ func dismiss(
 		}
 	}
 
+	resp, err := processBulkRequest(ctx, esClient, params)
+	if err != nil {
+		return nil, &httputils.HttpStatusError{
+			Status: http.StatusInternalServerError,
+			Msg:    err.Error(),
+			Err:    err,
+		}
+	}
+	return resp, nil
+}
+
+func processBulkRequest(ctx context.Context, esClient lmaelastic.Client, params *v1.BulkRequest) (*v1.BulkResponse, error) {
 	var resp v1.BulkResponse
 	afterFn := func(executionId int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
 		resp.Errors = response.Errors
 		resp.Took = response.Took
 
-		updatedItems := response.Updated()
-		resp.Items = make([]v1.BulkResponseItem, len(updatedItems))
-		for i, item := range updatedItems {
+		items := make([]*elastic.BulkResponseItem, 0)
+		items = append(items, response.Deleted()...)
+		items = append(items, response.Updated()...)
+		resp.Items = make([]v1.BulkResponseItem, len(items))
+		for i, item := range items {
 			resp.Items[i].Index = item.Index
 			resp.Items[i].ID = item.Id
 			resp.Items[i].Result = item.Result
@@ -114,26 +133,28 @@ func dismiss(
 	}
 
 	if err := esClient.BulkProcessorInitialize(ctx, afterFn); err != nil {
-		log.WithError(err).Error("failed to initialize bulk processor for event dismiss requests")
-		return nil, &httputils.HttpStatusError{
-			Status: http.StatusInternalServerError,
-			Msg:    err.Error(),
-			Err:    err,
+		log.WithError(err).Error("failed to initialize bulk processor for events")
+		return nil, err
+	}
+
+	if params.Delete != nil {
+		for _, item := range params.Delete.Items {
+			if err := esClient.DeleteBulkSecurityEvent(item.ID); err != nil {
+				log.WithError(err).Warnf("failed to add event delete request to bulk processor for event %s", item.ID)
+			}
+		}
+	}
+	if params.Dismiss != nil {
+		for _, item := range params.Dismiss.Items {
+			if err := esClient.DismissBulkSecurityEvent(item.ID); err != nil {
+				log.WithError(err).Warnf("failed to add event dismiss request to bulk processor for event %s", item.ID)
+			}
 		}
 	}
 
-	for _, item := range params.Items {
-		if err := esClient.DismissBulkSecurityEvent(item.ID); err != nil {
-			log.WithError(err).Warnf("failed to add event dismiss request to bulk processor for event id=%s", item.ID)
-		}
-	}
 	if err := esClient.BulkProcessorClose(); err != nil {
-		log.WithError(err).Error("failed to flush or close bulk processor for event dismiss requests")
-		return nil, &httputils.HttpStatusError{
-			Status: http.StatusInternalServerError,
-			Msg:    err.Error(),
-			Err:    err,
-		}
+		log.WithError(err).Error("failed to flush or close bulk processor for events")
+		return nil, err
 	}
 
 	return &resp, nil

@@ -1,24 +1,22 @@
 // Copyright (c) 2022 Tigera, Inc. All rights reserved.
 package v1
 
-import (
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
 // BulkRequest contains the parameters to perform Elastic bulk operations.
 type BulkRequest struct {
 	// ClusterName defines the name of the cluster.
 	ClusterName string `json:"cluster" validate:"omitempty"`
 
-	// Items defines an array of items to perform bulk operations.
-	Items []BulkRequestItem `json:"items" validate:"required"`
+	// Delete defines the delete action and its associated source data.
+	Delete *BulkRequestData `json:"delete" validate:"omitempty"`
 
-	// Timeout for the request. Defaults to 60s.
-	Timeout *v1.Duration `json:"timeout" validate:"omitempty"`
+	// Delete defines the dismiss action and its associated source data.
+	Dismiss *BulkRequestData `json:"dismiss" validate:"omitempty"`
 }
 
-func (params *BulkRequest) DefaultParams() {
-	params.Timeout = &v1.Duration{Duration: defaultRequestTimeout}
+// BulkRequestData contains the associated source data for each bulk operation.
+type BulkRequestData struct {
+	// Items defines an array of items to perform bulk operations.
+	Items []BulkRequestItem `json:"items" validate:"required"`
 }
 
 // BulkRequestItem contains the ID of each document to perform bulk operations.
