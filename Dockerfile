@@ -28,13 +28,13 @@ RUN apk update \
         ruby-dev gnupg \
  && apk add --no-cache curl=7.80.0-r0 jq=1.6-r1 \
  && apk add --no-cache ca-certificates && update-ca-certificates \
- && apk update && apk upgrade libcrypto1.1 libgmpxx gmp gmp-dev \
+ && apk update && apk upgrade libcrypto1.1 libgmpxx gmp gmp-dev build-base \
  && echo 'gem: --no-document' >> /etc/gemrc \
  && gem install oj -v 3.10.18 \
  && gem install json -v 2.4.1 \
  && gem install async-http -v 0.54.0 \
  && gem install ext_monitor -v 0.1.2 \
- && gem install fluentd -v 1.14.3 \
+ && gem install fluentd -v 1.14.5 \
  && gem install bigdecimal -v 1.4.4 \
  && gem install resolv -v 0.2.1 \
  && gem install \
@@ -46,15 +46,27 @@ RUN apk update \
         fluent-plugin-splunk-hec:1.1.2 fluent-plugin-sumologic_output:1.6.1 \
         fluent-plugin-cloudwatch-logs:0.8.0 \
         fluent-plugin-prometheus:2.0.0 \
+        cgi:0.3.1 \
+        rdoc:6.4.0 \
+        bundler:2.3.7 \
  && fluent-gem install fluent-plugin-remote_syslog:1.0.0 \
  && gem sources --clear-all \
  && apk del .build-deps \
- && apk del ruby-bundler ruby-bundler-doc --force \
+ && apk del ruby-bundler ruby-bundler-doc build-base --force \
  && rm -rf /var/cache/apk/* \
            /home/fluent/.gem/ruby/*/cache/*.gem \
            /tmp/* /var/tmp/* \
            /usr/lib/ruby/gems/*/cache/*.gem \
-           /usr/lib/ruby/gems/2.*/gems/fluentd-*/test
+           /usr/lib/ruby/gems/2.*/gems/fluentd-*/test \
+           /usr/local/lib/ruby/gems/2.7.0/gems/bundler-2.1.4 \
+           /usr/local/lib/ruby/2.7.0/bundler \
+           /usr/local/lib/ruby/gems/2.7.0/gems/rdoc-6.2.1.1 \
+           /usr/local/lib/ruby/2.7.0/rdoc \
+           /usr/local/lib/ruby/2.7.0/cgi \
+           /usr/local/lib/ruby/2.7.0/x86_64-linux-musl/cgi \
+           /usr/lib/ruby/3.0.0/x86_64-linux-musl/cgi \
+           /usr/lib/ruby/3.0.0/cgi
+
 
 RUN addgroup -S fluent && adduser -S -G fluent fluent \
     && mkdir -p /fluentd/log \
