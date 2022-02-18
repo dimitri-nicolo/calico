@@ -34,7 +34,7 @@ RUN apk update \
  && gem install json -v 2.4.1 \
  && gem install async-http -v 0.54.0 \
  && gem install ext_monitor -v 0.1.2 \
- && gem install fluentd -v 1.14.3 \
+ && gem install fluentd -v 1.14.5 \
  && gem install bigdecimal -v 1.4.4 \
  && gem install resolv -v 0.2.1 \
  && gem install \
@@ -57,7 +57,16 @@ RUN apk update \
            /home/fluent/.gem/ruby/*/cache/*.gem \
            /tmp/* /var/tmp/* \
            /usr/lib/ruby/gems/*/cache/*.gem \
-           /usr/lib/ruby/gems/2.*/gems/fluentd-*/test
+           /usr/lib/ruby/gems/2.*/gems/fluentd-*/test \
+           /usr/local/lib/ruby/gems/2.7.0/gems/bundler-2.1.4 \
+           /usr/local/lib/ruby/2.7.0/bundler \
+           /usr/local/lib/ruby/gems/2.7.0/gems/rdoc-6.2.1.1 \
+           /usr/local/lib/ruby/2.7.0/rdoc \
+           /usr/local/lib/ruby/2.7.0/cgi \
+           /usr/local/lib/ruby/2.7.0/x86_64-linux-musl/cgi \
+           /usr/lib/ruby/3.0.0/x86_64-linux-musl/cgi \
+           /usr/lib/ruby/3.0.0/cgi
+
 
 RUN addgroup -S fluent && adduser -S -G fluent fluent \
     && mkdir -p /fluentd/log \
