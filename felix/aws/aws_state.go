@@ -180,7 +180,7 @@ func awsNetworkInterfaceToENIState(eni ec2types.NetworkInterface) *eniState {
 
 		if att.NetworkCardIndex != nil && *att.NetworkCardIndex != 0 {
 			// Ignore ENIs that aren't on the primary network card.  We only support one network card for now.
-			rlAWSProblemLogger.Warn("Ignoring ENI on non-primary network card: %d.", *eni.Attachment.NetworkCardIndex)
+			rlAWSProblemLogger.Warnf("Ignoring ENI on non-primary network card: %d.", *eni.Attachment.NetworkCardIndex)
 			return nil
 		}
 
