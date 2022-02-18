@@ -134,14 +134,12 @@ var (
 	// Canned datastore snapshots.
 
 	noWorkloadDatastore = DatastoreState{
-		LocalAWSAddrsByDst:        nil,
-		LocalRouteDestsBySubnetID: nil,
-		PoolIDsBySubnetID:         defaultPools,
+		LocalAWSAddrsByDst: nil,
+		PoolIDsBySubnetID:  defaultPools,
 	}
 	noWorkloadDatastoreAltPools = DatastoreState{
-		LocalAWSAddrsByDst:        nil,
-		LocalRouteDestsBySubnetID: nil,
-		PoolIDsBySubnetID:         alternatePools,
+		LocalAWSAddrsByDst: nil,
+		PoolIDsBySubnetID:  alternatePools,
 	}
 	singleWorkloadDatastore = DatastoreState{
 		LocalAWSAddrsByDst: map[ip.Addr]AddrInfo{
@@ -149,9 +147,6 @@ var (
 				Dst:         wl1CIDRStr,
 				AWSSubnetId: subnetIDWest1Calico,
 			},
-		},
-		LocalRouteDestsBySubnetID: map[string]set.Set{
-			subnetIDWest1Calico: set.FromArray([]ip.Addr{wl1Addr}),
 		},
 		PoolIDsBySubnetID: defaultPools,
 	}
@@ -174,9 +169,6 @@ var (
 				},
 			},
 		},
-		LocalRouteDestsBySubnetID: map[string]set.Set{
-			subnetIDWest1Calico: set.FromArray([]ip.Addr{wl1Addr}),
-		},
 		PoolIDsBySubnetID: defaultPools,
 	}
 	singleWorkloadDatastoreElasticIP2 = DatastoreState{
@@ -188,9 +180,6 @@ var (
 					elasticIP2,
 				},
 			},
-		},
-		LocalRouteDestsBySubnetID: map[string]set.Set{
-			subnetIDWest1Calico: set.FromArray([]ip.Addr{wl1Addr}),
 		},
 		PoolIDsBySubnetID: defaultPools,
 	}
@@ -204,9 +193,6 @@ var (
 				Dst:         wl2CIDRStr,
 				AWSSubnetId: subnetIDWest1Calico,
 			},
-		},
-		LocalRouteDestsBySubnetID: map[string]set.Set{
-			subnetIDWest1Calico: set.FromArray([]ip.Addr{wl1Addr, wl2Addr}),
 		},
 		PoolIDsBySubnetID: defaultPools,
 	}
@@ -223,9 +209,6 @@ var (
 					elasticIP2,
 				},
 			},
-		},
-		LocalRouteDestsBySubnetID: map[string]set.Set{
-			subnetIDWest1Calico: set.FromArray([]ip.Addr{wl1Addr, wl2Addr}),
 		},
 		PoolIDsBySubnetID: defaultPools,
 	}
@@ -245,9 +228,6 @@ var (
 					elasticIP2,
 				},
 			},
-		},
-		LocalRouteDestsBySubnetID: map[string]set.Set{
-			subnetIDWest1Calico: set.FromArray([]ip.Addr{wl1Addr, wl2Addr}),
 		},
 		PoolIDsBySubnetID: defaultPools,
 	}
@@ -269,9 +249,6 @@ var (
 				},
 			},
 		},
-		LocalRouteDestsBySubnetID: map[string]set.Set{
-			subnetIDWest1Calico: set.FromArray([]ip.Addr{wl1Addr, wl2Addr}),
-		},
 		PoolIDsBySubnetID: defaultPools,
 	}
 	twoWorkloadsDatastoreElasticIP21 = DatastoreState{
@@ -291,9 +268,6 @@ var (
 				},
 			},
 		},
-		LocalRouteDestsBySubnetID: map[string]set.Set{
-			subnetIDWest1Calico: set.FromArray([]ip.Addr{wl1Addr, wl2Addr}),
-		},
 		PoolIDsBySubnetID: defaultPools,
 	}
 	// workloadInWrongSubnetDatastore has one workload that's in the local subnet and one that is in
@@ -308,10 +282,6 @@ var (
 				Dst:         west2WlIPStr,
 				AWSSubnetId: subnetIDWest2Calico,
 			},
-		},
-		LocalRouteDestsBySubnetID: map[string]set.Set{
-			subnetIDWest1Calico: set.FromArray([]ip.Addr{wl1Addr}),
-			subnetIDWest2Calico: set.FromArray([]ip.Addr{west2WlAddr}),
 		},
 		PoolIDsBySubnetID: defaultPools,
 	}
@@ -328,10 +298,6 @@ var (
 				AWSSubnetId: subnetIDWest1CalicoAlt,
 			},
 		},
-		LocalRouteDestsBySubnetID: map[string]set.Set{
-			subnetIDWest1Calico:    set.FromArray([]ip.Addr{wl1Addr}),
-			subnetIDWest1CalicoAlt: set.FromArray([]ip.Addr{wl1AltAddr}),
-		},
 		PoolIDsBySubnetID: mixedPools,
 	}
 	// hostClashWorkloadDatastore has a clash between a workload IP and the host IP that will be assigned to
@@ -347,10 +313,6 @@ var (
 				AWSSubnetId: subnetIDWest1Calico,
 			},
 		},
-		LocalRouteDestsBySubnetID: map[string]set.Set{
-			subnetIDWest1Calico: set.FromArray([]ip.Addr{wl1Addr}),
-			subnetIDWest2Calico: set.FromArray([]ip.Addr{west2WlAddr}),
-		},
 		PoolIDsBySubnetID: defaultPools,
 	}
 	singleWorkloadDatastoreAltPool = DatastoreState{
@@ -359,9 +321,6 @@ var (
 				Dst:         wl1AltCIDRStr,
 				AWSSubnetId: subnetIDWest1CalicoAlt,
 			},
-		},
-		LocalRouteDestsBySubnetID: map[string]set.Set{
-			subnetIDWest1CalicoAlt: set.FromArray([]ip.Addr{wl1AltAddr}),
 		},
 		PoolIDsBySubnetID: alternatePools,
 	}
@@ -483,9 +442,8 @@ func TestSecondaryIfaceProvisioner_OnDatastoreUpdateShouldNotBlock(t *testing.T)
 		defer close(done)
 		for x := 0; x < 1000; x++ {
 			sip.OnDatastoreUpdate(DatastoreState{
-				LocalAWSAddrsByDst:        nil,
-				LocalRouteDestsBySubnetID: nil,
-				PoolIDsBySubnetID:         nil,
+				LocalAWSAddrsByDst: nil,
+				PoolIDsBySubnetID:  nil,
 			})
 		}
 	}()
@@ -499,9 +457,8 @@ func TestSecondaryIfaceProvisioner_NoPoolsOrWorkloadsStartOfDay(t *testing.T) {
 
 	// Send an empty snapshot.
 	sip.OnDatastoreUpdate(DatastoreState{
-		LocalAWSAddrsByDst:        nil,
-		LocalRouteDestsBySubnetID: nil,
-		PoolIDsBySubnetID:         nil,
+		LocalAWSAddrsByDst: nil,
+		PoolIDsBySubnetID:  nil,
 	})
 
 	// Should get an empty response.
@@ -555,8 +512,7 @@ func TestSecondaryIfaceProvisioner_AWSPoolsButNoWorkloadsMainline(t *testing.T) 
 	defer tearDown()
 
 	sip.OnDatastoreUpdate(DatastoreState{
-		LocalAWSAddrsByDst:        nil,
-		LocalRouteDestsBySubnetID: nil,
+		LocalAWSAddrsByDst: nil,
 		PoolIDsBySubnetID: map[string]set.Set{
 			subnetIDWest1Calico: set.FromArray([]string{ipPoolIDWest1Hosts, ipPoolIDWest1Gateways}),
 			subnetIDWest2Calico: set.FromArray([]string{ipPoolIDWest2Hosts, ipPoolIDWest2Gateways}),
@@ -847,9 +803,6 @@ func TestSecondaryIfaceProvisioner_ElasticIP_Chunking(t *testing.T) {
 				ElasticIPs:  elasticIPs,
 			},
 		},
-		LocalRouteDestsBySubnetID: map[string]set.Set{
-			subnetIDWest1Calico: set.FromArray([]ip.Addr{wl1Addr}),
-		},
 		PoolIDsBySubnetID: defaultPools,
 	}
 
@@ -876,9 +829,6 @@ func TestSecondaryIfaceProvisioner_ElasticIP_ShowsUpAfterWorkload(t *testing.T) 
 					eipAddr, // Non-existent EIP.
 				},
 			},
-		},
-		LocalRouteDestsBySubnetID: map[string]set.Set{
-			subnetIDWest1Calico: set.FromArray([]ip.Addr{wl1Addr}),
 		},
 		PoolIDsBySubnetID: defaultPools,
 	}
@@ -1422,10 +1372,7 @@ func expectAllIPs(response *LocalAWSNetworkState, addrs []ip.Addr) {
 func nWorkloadDatastore(n int) (DatastoreState, []ip.Addr) {
 	ds := DatastoreState{
 		LocalAWSAddrsByDst: map[ip.Addr]AddrInfo{},
-		LocalRouteDestsBySubnetID: map[string]set.Set{
-			subnetIDWest1Calico: set.New(),
-		},
-		PoolIDsBySubnetID: defaultPools,
+		PoolIDsBySubnetID:  defaultPools,
 	}
 	var addrs []ip.Addr
 
@@ -1436,7 +1383,6 @@ func nWorkloadDatastore(n int) (DatastoreState, []ip.Addr) {
 			Dst:         addr.AsCIDR().String(),
 			AWSSubnetId: subnetIDWest1Calico,
 		}
-		ds.LocalRouteDestsBySubnetID[subnetIDWest1Calico].Add(addr.AsCIDR())
 	}
 	return ds, addrs
 }

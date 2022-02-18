@@ -507,9 +507,8 @@ func (a *awsIPManager) CompleteDeferredWork() error {
 		// Datastore has been updated, send a new snapshot to the background thread.  It will configure the AWS
 		// fabric appropriately and then send us a SecondaryIfaceState.
 		ds := aws.DatastoreState{
-			LocalAWSAddrsByDst:        map[ip.Addr]aws.AddrInfo{},
-			LocalRouteDestsBySubnetID: map[string]set.Set{},
-			PoolIDsBySubnetID:         map[string]set.Set{},
+			LocalAWSAddrsByDst: map[ip.Addr]aws.AddrInfo{},
+			PoolIDsBySubnetID:  map[string]set.Set{},
 		}
 		for k, v := range a.localAWSRoutesByDst {
 			ds.LocalAWSAddrsByDst[k.Addr()] = aws.AddrInfo{
@@ -517,9 +516,6 @@ func (a *awsIPManager) CompleteDeferredWork() error {
 				Dst:         v.Dst,
 				ElasticIPs:  a.lookUpElasticIPs(k),
 			}
-		}
-		for k, v := range a.localRouteDestsBySubnetID {
-			ds.LocalRouteDestsBySubnetID[k] = v.Copy()
 		}
 		for k, v := range a.poolIDsBySubnetID {
 			ds.PoolIDsBySubnetID[k] = v.Copy()

@@ -100,9 +100,8 @@ var _ = Describe("awsIPManager tests", func() {
 		Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 
 		Expect(fakes.DatastoreState).To(Equal(&aws.DatastoreState{
-			LocalAWSAddrsByDst:        map[ip.Addr]aws.AddrInfo{},
-			LocalRouteDestsBySubnetID: map[string]set.Set{},
-			PoolIDsBySubnetID:         map[string]set.Set{},
+			LocalAWSAddrsByDst: map[ip.Addr]aws.AddrInfo{},
+			PoolIDsBySubnetID:  map[string]set.Set{},
 		}))
 	})
 
@@ -120,9 +119,8 @@ var _ = Describe("awsIPManager tests", func() {
 		Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 
 		Expect(fakes.DatastoreState).To(Equal(&aws.DatastoreState{
-			LocalAWSAddrsByDst:        map[ip.Addr]aws.AddrInfo{},
-			LocalRouteDestsBySubnetID: map[string]set.Set{},
-			PoolIDsBySubnetID:         map[string]set.Set{},
+			LocalAWSAddrsByDst: map[ip.Addr]aws.AddrInfo{},
+			PoolIDsBySubnetID:  map[string]set.Set{},
 		}))
 
 		m.OnSecondaryIfaceStateUpdate(&aws.LocalAWSNetworkState{})
@@ -242,9 +240,6 @@ var _ = Describe("awsIPManager tests", func() {
 						Dst:         workloadRoute.Dst,
 					},
 				},
-				LocalRouteDestsBySubnetID: map[string]set.Set{
-					"subnet-123456789012345657": set.From(workloadCIDR),
-				},
 				PoolIDsBySubnetID: map[string]set.Set{
 					"subnet-123456789012345657": set.From("hosts-pool", "workloads-pool"),
 				},
@@ -277,9 +272,6 @@ var _ = Describe("awsIPManager tests", func() {
 							Dst:         workloadRoute.Dst,
 							ElasticIPs:  []ip.Addr{ip.FromString(elasticIP1)},
 						},
-					},
-					LocalRouteDestsBySubnetID: map[string]set.Set{
-						"subnet-123456789012345657": set.From(workloadCIDR),
 					},
 					PoolIDsBySubnetID: map[string]set.Set{
 						"subnet-123456789012345657": set.From("hosts-pool", "workloads-pool"),
@@ -322,9 +314,6 @@ var _ = Describe("awsIPManager tests", func() {
 								ElasticIPs: []ip.Addr{ip.FromString(elasticIP2)},
 							},
 						},
-						LocalRouteDestsBySubnetID: map[string]set.Set{
-							"subnet-123456789012345657": set.From(workloadCIDR),
-						},
 						PoolIDsBySubnetID: map[string]set.Set{
 							"subnet-123456789012345657": set.From("hosts-pool", "workloads-pool"),
 						},
@@ -364,9 +353,6 @@ var _ = Describe("awsIPManager tests", func() {
 									// Only the shared elastic IP is passed through.
 									ElasticIPs: []ip.Addr{ip.FromString(elasticIP1), ip.FromString(elasticIP2)},
 								},
-							},
-							LocalRouteDestsBySubnetID: map[string]set.Set{
-								"subnet-123456789012345657": set.From(workloadCIDR),
 							},
 							PoolIDsBySubnetID: map[string]set.Set{
 								"subnet-123456789012345657": set.From("hosts-pool", "workloads-pool"),
@@ -415,9 +401,6 @@ var _ = Describe("awsIPManager tests", func() {
 						Dst:         workloadRoute.Dst,
 					},
 				},
-				LocalRouteDestsBySubnetID: map[string]set.Set{
-					"subnet-000002": set.From(workloadCIDR),
-				},
 				PoolIDsBySubnetID: map[string]set.Set{
 					"subnet-123456789012345657": set.From("hosts-pool"),
 					"subnet-000002":             set.From("workloads-pool"),
@@ -444,8 +427,7 @@ var _ = Describe("awsIPManager tests", func() {
 			// Should send the expected snapshot
 			Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 			Expect(fakes.DatastoreState).To(Equal(&aws.DatastoreState{
-				LocalAWSAddrsByDst:        map[ip.Addr]aws.AddrInfo{},
-				LocalRouteDestsBySubnetID: map[string]set.Set{},
+				LocalAWSAddrsByDst: map[ip.Addr]aws.AddrInfo{},
 				PoolIDsBySubnetID: map[string]set.Set{
 					"subnet-123456789012345657": set.From("hosts-pool"),
 				},
@@ -459,9 +441,8 @@ var _ = Describe("awsIPManager tests", func() {
 			// Should send the expected snapshot
 			Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 			Expect(fakes.DatastoreState).To(Equal(&aws.DatastoreState{
-				LocalAWSAddrsByDst:        map[ip.Addr]aws.AddrInfo{},
-				LocalRouteDestsBySubnetID: map[string]set.Set{},
-				PoolIDsBySubnetID:         map[string]set.Set{},
+				LocalAWSAddrsByDst: map[ip.Addr]aws.AddrInfo{},
+				PoolIDsBySubnetID:  map[string]set.Set{},
 			}))
 		})
 

@@ -134,9 +134,8 @@ type SecondaryIfaceProvisioner struct {
 }
 
 type DatastoreState struct {
-	LocalAWSAddrsByDst        map[ip.Addr]AddrInfo
-	LocalRouteDestsBySubnetID map[string]set.Set /*ip.Addr*/
-	PoolIDsBySubnetID         map[string]set.Set /*string*/
+	LocalAWSAddrsByDst map[ip.Addr]AddrInfo
+	PoolIDsBySubnetID  map[string]set.Set /*string*/
 }
 
 type AddrInfo struct {
@@ -1255,7 +1254,12 @@ func (m *SecondaryIfaceProvisioner) freeUnusedHostCalicoIPs(awsState *awsState) 
 // calculateNumNewENIsNeeded does the maths to figure out how many ENIs we need to add given the number of
 // IPs we need and the spare capacity of existing ENIs.
 func (m *SecondaryIfaceProvisioner) calculateNumNewENIsNeeded(awsState *awsState, bestSubnetID string) (int, error) {
-	totalIPs := m.ds.LocalRouteDestsBySubnetID[bestSubnetID].Len()
+	var totalIPs int
+	for _, addr := range m.ds.LocalAWSAddrsByDst {
+		if addr.AWSSubnetId == bestSubnetID {
+			totalIPs++
+		}
+	}
 	if m.networkCapabilities.MaxIPv4PerInterface <= 1 {
 		logrus.Error("Instance type doesn't support secondary IPs")
 		return 0, fmt.Errorf("instance type doesn't support secondary IPs")
