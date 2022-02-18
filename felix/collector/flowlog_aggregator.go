@@ -3,7 +3,6 @@
 package collector
 
 import (
-	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -59,7 +58,6 @@ const MaxAggregationLevel = FlowNoDestPorts
 const MinAggregationLevel = FlowDefault
 
 const (
-	noRuleActionDefined         = 0
 	defaultMaxOrigIPSize        = 50
 	defaultNatOutgoingPortLimit = 3
 )
@@ -213,14 +211,15 @@ func (c *flowLogAggregator) NatOutgoingPortLimit(n int) FlowLogAggregator {
 func (fa *flowLogAggregator) FeedUpdate(mu *MetricUpdate) error {
 	defer fa.reportFlowLogStoreMetrics()
 
-	lastRuleID := mu.GetLastRuleID()
-	if lastRuleID == nil {
-		log.WithField("metric update", mu).Error("no last rule id present")
-		return fmt.Errorf("invalid metric update")
-	}
-	// Filter out any action that we aren't configured to handle.
-	if fa.handledAction != noRuleActionDefined && fa.handledAction != lastRuleID.Action {
-		logutil.Tracef(fa.displayDebugTraceLogs, "Update %v not handled", *mu)
+	// Filter out any action that we aren't configured to handle. Use the hasDenyRule flag rather than the actual
+	// verdict rule to determine if we treat this as a deny or an allow from an aggregation perspective. This allows
+	// staged denies to be aggregated at the aggregation-level-for-denied even when the final verdict is still allow.
+	switch {
+	case fa.handledAction == rules.RuleActionDeny && !mu.hasDenyRule:
+		logutil.Tracef(fa.displayDebugTraceLogs, "Update %v not handled for deny-aggregator - no deny rules found", *mu)
+		return nil
+	case fa.handledAction == rules.RuleActionAllow && mu.hasDenyRule:
+		logutil.Tracef(fa.displayDebugTraceLogs, "Update %v not handled for allow-aggregator - deny rules found", *mu)
 		return nil
 	}
 
