@@ -60,12 +60,16 @@ RUN apk update \
            /usr/lib/ruby/gems/2.*/gems/fluentd-*/test \
            /usr/local/lib/ruby/gems/2.7.0/gems/bundler-2.1.4 \
            /usr/local/lib/ruby/2.7.0/bundler \
+           /usr/local/lib/ruby/gems/2.7.0/specifications/default/bundler-2.1.4.gemspec \
            /usr/local/lib/ruby/gems/2.7.0/gems/rdoc-6.2.1.1 \
            /usr/local/lib/ruby/2.7.0/rdoc \
+           /usr/local/lib/ruby/gems/2.7.0/specifications/default/rdoc-6.2.1.1.gemspec \
            /usr/local/lib/ruby/2.7.0/cgi \
            /usr/local/lib/ruby/2.7.0/x86_64-linux-musl/cgi \
            /usr/lib/ruby/3.0.0/x86_64-linux-musl/cgi \
-           /usr/lib/ruby/3.0.0/cgi
+           /usr/lib/ruby/3.0.0/cgi \
+           /usr/local/lib/ruby/gems/2.7.0/specifications/default/cgi-0.1.0.1.gemspec
+
 
 
 RUN addgroup -S fluent && adduser -S -G fluent fluent \
