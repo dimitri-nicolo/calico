@@ -107,6 +107,7 @@ ut: report-dir run-elastic
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) go test $(UNIT_TEST_FLAGS) \
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
+	-docker rm -f tigera-elastic
 
 ## Run elasticsearch as a container (tigera-elastic)
 run-elastic: stop-elastic

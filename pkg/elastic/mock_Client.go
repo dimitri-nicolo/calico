@@ -138,6 +138,80 @@ func (_m *MockClient) CreateEventsIndex(ctx context.Context) error {
 	return r0
 }
 
+// DeleteBulkSecurityEvent provides a mock function with given fields: id
+func (_m *MockClient) DeleteBulkSecurityEvent(id string) error {
+	ret := _m.Called(id)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string) error); ok {
+		r0 = rf(id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DeleteSecurityEvent provides a mock function with given fields: ctx, id
+func (_m *MockClient) DeleteSecurityEvent(ctx context.Context, id string) (*elastic.DeleteResponse, error) {
+	ret := _m.Called(ctx, id)
+
+	var r0 *elastic.DeleteResponse
+	if rf, ok := ret.Get(0).(func(context.Context, string) *elastic.DeleteResponse); ok {
+		r0 = rf(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*elastic.DeleteResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DismissBulkSecurityEvent provides a mock function with given fields: id
+func (_m *MockClient) DismissBulkSecurityEvent(id string) error {
+	ret := _m.Called(id)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string) error); ok {
+		r0 = rf(id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DismissSecurityEvent provides a mock function with given fields: ctx, id
+func (_m *MockClient) DismissSecurityEvent(ctx context.Context, id string) (*elastic.UpdateResponse, error) {
+	ret := _m.Called(ctx, id)
+
+	var r0 *elastic.UpdateResponse
+	if rf, ok := ret.Get(0).(func(context.Context, string) *elastic.UpdateResponse); ok {
+		r0 = rf(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*elastic.UpdateResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Do provides a mock function with given fields: ctx, s
 func (_m *MockClient) Do(ctx context.Context, s *elastic.SearchService) (*elastic.SearchResult, error) {
 	ret := _m.Called(ctx, s)
@@ -272,13 +346,13 @@ func (_m *MockClient) PutSecurityEvent(ctx context.Context, data api.EventsData)
 	return r0, r1
 }
 
-// PutSecurityEventWithID provides a mock function with given fields: ctx, data, docId
-func (_m *MockClient) PutSecurityEventWithID(ctx context.Context, data api.EventsData, docId string) (*elastic.IndexResponse, error) {
-	ret := _m.Called(ctx, data, docId)
+// PutSecurityEventWithID provides a mock function with given fields: ctx, data, id
+func (_m *MockClient) PutSecurityEventWithID(ctx context.Context, data api.EventsData, id string) (*elastic.IndexResponse, error) {
+	ret := _m.Called(ctx, data, id)
 
 	var r0 *elastic.IndexResponse
 	if rf, ok := ret.Get(0).(func(context.Context, api.EventsData, string) *elastic.IndexResponse); ok {
-		r0 = rf(ctx, data, docId)
+		r0 = rf(ctx, data, id)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*elastic.IndexResponse)
@@ -287,7 +361,7 @@ func (_m *MockClient) PutSecurityEventWithID(ctx context.Context, data api.Event
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, api.EventsData, string) error); ok {
-		r1 = rf(ctx, data, docId)
+		r1 = rf(ctx, data, id)
 	} else {
 		r1 = ret.Error(1)
 	}

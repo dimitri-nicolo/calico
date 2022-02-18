@@ -38,7 +38,8 @@ type EventsSearchFields struct {
 
 type EventsData struct {
 	EventsSearchFields
-	Record interface{} `json:"record,omitempty"`
+	Dismissed bool        `json:"dismissed,omitempty"`
+	Record    interface{} `json:"record,omitempty"`
 }
 
 type EventResult struct {
@@ -56,8 +57,14 @@ type EventHandler interface {
 	CreateEventsIndex(ctx context.Context) error
 
 	PutSecurityEvent(ctx context.Context, data EventsData) (*elastic.IndexResponse, error)
-	PutSecurityEventWithID(ctx context.Context, data EventsData, docId string) (*elastic.IndexResponse, error)
+	PutSecurityEventWithID(ctx context.Context, data EventsData, id string) (*elastic.IndexResponse, error)
 	PutBulkSecurityEvent(data EventsData) error
+
+	DismissSecurityEvent(ctx context.Context, id string) (*elastic.UpdateResponse, error)
+	DismissBulkSecurityEvent(id string) error
+
+	DeleteSecurityEvent(ctx context.Context, id string) (*elastic.DeleteResponse, error)
+	DeleteBulkSecurityEvent(id string) error
 
 	SearchSecurityEvents(ctx context.Context, start, end *time.Time, filterData []EventsSearchFields, allClusters bool) <-chan *EventResult
 
