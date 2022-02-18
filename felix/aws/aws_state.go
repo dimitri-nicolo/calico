@@ -3,10 +3,14 @@
 package aws
 
 import (
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+
 	"github.com/projectcalico/calico/felix/ip"
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
-	"github.com/sirupsen/logrus"
 )
+
+var rlAWSProblemLogger = logutils.NewRateLimitedLogger()
 
 // awsState captures the current state of the AWS ENIs attached to this host, indexed in various ways.
 // We keep this up to date as we make changes to AWS state.
@@ -29,7 +33,7 @@ func (s *awsState) PrimaryENISecurityGroups() []string {
 	return s.primaryENI.SecurityGroupIDs
 }
 
-func (s *awsState) calculateUnusedENICapacity(netCaps *NetworkCapabilities) int {
+func (s *awsState) CalculateUnusedENICapacity(netCaps *NetworkCapabilities) int {
 	// For now, only supporting the first network card.
 	numPossibleENIs := netCaps.MaxENIsForCard(0)
 	numExistingENIs := len(s.inUseDeviceIndexes)
@@ -53,7 +57,8 @@ func (s *awsState) OnPrivateIPsAdded(eniID string, addrs []string) {
 	for _, addrStr := range addrs {
 		addr := ip.FromString(addrStr)
 		if addr == nil {
-			logrus.WithField("rawIP", addrStr).Error("BUG! Successfully added a bad IP to AWS?!")
+			rlAWSProblemLogger.WithField("rawIP", addrStr).Error(
+				"BUG! Successfully added a bad IP to AWS?!")
 			continue
 		}
 		eni.IPAddresses = append(eni.IPAddresses, &eniIPAddress{
@@ -69,7 +74,8 @@ func (s *awsState) OnPrivateIPsRemoved(eniID string, addrs []string) {
 	for _, addrStr := range addrs {
 		addr := ip.FromString(addrStr)
 		if addr == nil {
-			logrus.WithField("rawIP", addrStr).Error("BUG! Successfully removed a bad IP from AWS?!")
+			rlAWSProblemLogger.WithField("rawIP", addrStr).Error(
+				"BUG! Successfully removed a bad IP from AWS?!")
 			continue
 		}
 		removedIPs.Add(addr)
@@ -140,6 +146,100 @@ func (s *awsState) OnElasticIPAssociated(eniID string, privIP ip.Addr, assocID, 
 			break
 		}
 	}
+}
+
+// awsNetworkInterfaceToENIState converts an AWS NetworkInterface to our internal model, *eniState.
+// *eniState is essentially a trimmed down version of the AWS NetworkInterface, covering only the
+// fields that we care about.  To avoid lots of downstream nil checks, we map mandatory fields
+// of the NetworkInterface to non-pointers and do validation here to check that the values from AWS
+// really aren't null.
+//
+// For the nested eniAttachment and IPAddresses field, we only include valid versions from AWS.
+// so downstream code can assume that, if eniState.Attachment is non-nil then its ID is also filled in.
+// In practice, I think it's overwhelmingly likely that we never see AWS returning a NetworkInterface
+// with no ID or an attachment with no ID, so we're really just trying to avoid panics and simplify
+// downstream code without trying to "handle" those cases in any meaningful way.
+func awsNetworkInterfaceToENIState(eni ec2types.NetworkInterface) *eniState {
+	if eni.NetworkInterfaceId == nil || eni.SubnetId == nil || eni.MacAddress == nil {
+		// This feels like it'd be a bug in the AWS API.
+		rlAWSProblemLogger.WithField("eni", eni).Warn(
+			"AWS returned ENI with missing NetworkInterfaceId/SubnetId/MacAddress field.")
+		return nil
+	}
+	var ourENI eniState
+	ourENI.ID = *eni.NetworkInterfaceId
+	ourENI.SubnetID = *eni.SubnetId
+	ourENI.MACAddress = *eni.MacAddress
+
+	if eni.Attachment != nil && eni.Attachment.AttachmentId != nil {
+		att := eni.Attachment
+		if att.DeviceIndex == nil {
+			rlAWSProblemLogger.WithField("eni", eni).Warn("AWS returned ENI with missing required field in Attachment.")
+			return nil
+		}
+
+		if att.NetworkCardIndex != nil && *att.NetworkCardIndex != 0 {
+			// Ignore ENIs that aren't on the primary network card.  We only support one network card for now.
+			rlAWSProblemLogger.Warn("Ignoring ENI on non-primary network card: %d.", *eni.Attachment.NetworkCardIndex)
+			return nil
+		}
+
+		var ourAttachment eniAttachment
+		ourAttachment.ID = *att.AttachmentId
+		ourAttachment.DeviceIndex = *att.DeviceIndex
+
+		if att.DeleteOnTermination != nil {
+			ourAttachment.DeleteOnTermination = *att.DeleteOnTermination
+		}
+		ourENI.Attachment = &ourAttachment
+	}
+
+	for _, addr := range eni.PrivateIpAddresses {
+		if addr.PrivateIpAddress == nil {
+			continue
+		}
+		ipAddr := ip.FromString(*addr.PrivateIpAddress)
+		if ipAddr == nil {
+			rlAWSProblemLogger.WithField("rawIP", *addr.PrivateIpAddress).Warn(
+				"AWS Returned malformed Private IP, ignoring.")
+			continue
+		}
+
+		ourAddr := eniIPAddress{
+			PrivateIP: ipAddr,
+		}
+		if addr.Primary != nil {
+			ourAddr.Primary = *addr.Primary
+		}
+
+		if addr.Association != nil && addr.Association.AssociationId != nil {
+			if addr.Association.PublicIp == nil || addr.Association.AssociationId == nil {
+				rlAWSProblemLogger.WithField("association", addr.Association).Warn(
+					"AWS Returned malformed association, ignoring.")
+				continue
+			}
+			pubIP := ip.FromString(*addr.Association.PublicIp)
+			if pubIP == nil {
+				rlAWSProblemLogger.WithField("rawIP", *addr.Association.PublicIp).Warn(
+					"AWS Returned malformed Public IP, ignoring.")
+				continue
+			}
+			ourAddr.Association = &eniAssociation{
+				ID:           *addr.Association.AssociationId,
+				AllocationID: *addr.Association.AllocationId,
+				PublicIP:     pubIP,
+			}
+		}
+		ourENI.IPAddresses = append(ourENI.IPAddresses, &ourAddr)
+	}
+
+	for _, g := range eni.Groups {
+		if g.GroupId != nil {
+			ourENI.SecurityGroupIDs = append(ourENI.SecurityGroupIDs, *g.GroupId)
+		}
+	}
+
+	return &ourENI
 }
 
 type eniState struct {

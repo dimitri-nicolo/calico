@@ -647,7 +647,7 @@ func (m *SecondaryIfaceProvisioner) provisionNewAWSIPs(
 	numENIsToCreate := numENIsNeeded
 	if numENIsNeeded > 0 {
 		// Check if we _can_ create that many ENIs.
-		numENIsPossible := awsState.calculateUnusedENICapacity(m.networkCapabilities)
+		numENIsPossible := awsState.CalculateUnusedENICapacity(m.networkCapabilities)
 		haveENICapacity := numENIsToCreate <= numENIsPossible
 		m.healthAgg.Report(healthNameENICapacity, &health.HealthReport{Ready: haveENICapacity})
 		if !haveENICapacity {
@@ -817,7 +817,7 @@ func (m *SecondaryIfaceProvisioner) loadAWSENIsState() (s *awsState, err error) 
 	}
 
 	for _, awsENI := range myENIs {
-		eni := awsNetworkInterfaceToENIInfo(awsENI)
+		eni := awsNetworkInterfaceToENIState(awsENI)
 		if eni == nil {
 			continue
 		}
@@ -859,88 +859,6 @@ func (m *SecondaryIfaceProvisioner) loadAWSENIsState() (s *awsState, err error) 
 	}
 
 	return
-}
-
-func awsNetworkInterfaceToENIInfo(eni ec2types.NetworkInterface) *eniState {
-
-	if eni.NetworkInterfaceId == nil || eni.SubnetId == nil || eni.MacAddress == nil {
-		// This feels like it'd be a bug in the AWS API.
-		logrus.WithField("eni", eni).Debug("AWS returned ENI with missing required field.")
-		return nil
-	}
-	var ourENI eniState
-	ourENI.ID = *eni.NetworkInterfaceId
-	ourENI.SubnetID = *eni.SubnetId
-	ourENI.MACAddress = *eni.MacAddress
-
-	if eni.Attachment != nil && eni.Attachment.AttachmentId != nil {
-		att := eni.Attachment
-		if att.DeviceIndex == nil {
-			logrus.WithField("eni", eni).Debug("AWS returned ENI with missing required field in Attachment.")
-			return nil
-		}
-
-		if att.NetworkCardIndex != nil && *att.NetworkCardIndex != 0 {
-			// Ignore ENIs that aren't on the primary network card.  We only support one network card for now.
-			logrus.Debugf("Ignoring ENI on non-primary network card: %d.", *eni.Attachment.NetworkCardIndex)
-			return nil
-		}
-
-		var ourAttachment eniAttachment
-		ourAttachment.ID = *att.AttachmentId
-		ourAttachment.DeviceIndex = *att.DeviceIndex
-
-		if att.DeleteOnTermination != nil {
-			ourAttachment.DeleteOnTermination = *att.DeleteOnTermination
-		}
-		ourENI.Attachment = &ourAttachment
-	}
-
-	for _, addr := range eni.PrivateIpAddresses {
-		if addr.PrivateIpAddress == nil {
-			continue
-		}
-		ipAddr := ip.FromString(*addr.PrivateIpAddress)
-		if ipAddr == nil {
-			logrus.WithField("rawIP", *addr.PrivateIpAddress).Debug("AWS Returned malformed Private IP, ignoring.")
-			continue
-		}
-
-		ourAddr := eniIPAddress{
-			PrivateIP: ipAddr,
-		}
-		if addr.Primary != nil {
-			ourAddr.Primary = *addr.Primary
-		}
-
-		if addr.Association != nil && addr.Association.AssociationId != nil {
-			if addr.Association.PublicIp == nil || addr.Association.AssociationId == nil {
-				logrus.WithField("association", addr.Association).Debug(
-					"AWS Returned malformed association, ignoring.")
-				continue
-			}
-			pubIP := ip.FromString(*addr.Association.PublicIp)
-			if pubIP == nil {
-				logrus.WithField("rawIP", *addr.Association.PublicIp).Debug(
-					"AWS Returned malformed Public IP, ignoring.")
-				continue
-			}
-			ourAddr.Association = &eniAssociation{
-				ID:           *addr.Association.AssociationId,
-				AllocationID: *addr.Association.AllocationId,
-				PublicIP:     pubIP,
-			}
-		}
-		ourENI.IPAddresses = append(ourENI.IPAddresses, &ourAddr)
-	}
-
-	for _, g := range eni.Groups {
-		if g.GroupId != nil {
-			ourENI.SecurityGroupIDs = append(ourENI.SecurityGroupIDs, *g.GroupId)
-		}
-	}
-
-	return &ourENI
 }
 
 // findUnusedAWSIPs scans the AWS state for secondary IPs that are not assigned in Calico IPAM.
@@ -1280,7 +1198,7 @@ func (m *SecondaryIfaceProvisioner) attachOrphanENIs(awsState *awsState, bestSub
 			}
 			continue
 		}
-		ourENI := awsNetworkInterfaceToENIInfo(eni)
+		ourENI := awsNetworkInterfaceToENIState(eni)
 		ourENI.Attachment = &eniAttachment{
 			ID:          *attOut.AttachmentId,
 			DeviceIndex: devIdx,
@@ -1455,7 +1373,7 @@ func (m *SecondaryIfaceProvisioner) createAWSENIs(awsState *awsState, subnetID s
 			"attachmentID": safeReadString(attOut.AttachmentId),
 			"networkCard":  safeReadInt32(attOut.NetworkCardIndex),
 		}).Info("Attached ENI.")
-		ourENI := awsNetworkInterfaceToENIInfo(*cno.NetworkInterface)
+		ourENI := awsNetworkInterfaceToENIState(*cno.NetworkInterface)
 		ourENI.Attachment = &eniAttachment{
 			ID:          *attOut.AttachmentId,
 			DeviceIndex: devIdx,
