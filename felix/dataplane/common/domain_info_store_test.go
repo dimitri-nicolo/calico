@@ -671,4 +671,36 @@ var _ = Describe("Domain Info Store", func() {
 			domainStore.loopIteration(saveTimerC, gcTimerC)
 		}).NotTo(Panic())
 	})
+
+	It("should not panic because of an IPv6 packet", func() {
+		domainStoreCreate()
+
+		pkt := gopacket.NewSerializeBuffer()
+		err := gopacket.SerializeLayers(
+			pkt,
+			gopacket.SerializeOptions{FixLengths: true},
+			&layers.IPv6{
+				Version:    6,
+				HopLimit:   64,
+				NextHeader: layers.IPProtocolTCP,
+				SrcIP:      net.IP([]byte{254, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 172, 31, 11, 2}),
+				DstIP:      net.IP([]byte{254, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 172, 31, 21, 5}),
+			},
+			&layers.TCP{
+				SrcPort: 31024,
+				DstPort: 5060,
+			},
+			gopacket.Payload([]byte{1, 2, 3, 4}),
+		)
+		Expect(err).NotTo(HaveOccurred())
+
+		domainStore.MsgChannel() <- DataWithTimestamp{
+			Data: pkt.Bytes(),
+		}
+		saveTimerC := make(chan time.Time)
+		gcTimerC := make(chan time.Time)
+		Expect(func() {
+			domainStore.loopIteration(saveTimerC, gcTimerC)
+		}).NotTo(Panic())
+	})
 })
