@@ -3,6 +3,7 @@
 package common
 
 import (
+	"crypto/rand"
 	"fmt"
 	"net"
 	"reflect"
@@ -702,5 +703,24 @@ var _ = Describe("Domain Info Store", func() {
 		Expect(func() {
 			domainStore.loopIteration(saveTimerC, gcTimerC)
 		}).NotTo(Panic())
+	})
+
+	It("should not panic because of randomly generated packets", func() {
+		domainStoreCreate()
+
+		saveTimerC := make(chan time.Time)
+		gcTimerC := make(chan time.Time)
+		for i := 0; i < 10; i++ {
+			pkt := make([]byte, 78)
+			n, err := rand.Read(pkt)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(len(pkt)))
+			domainStore.MsgChannel() <- DataWithTimestamp{
+				Data: pkt,
+			}
+			Expect(func() {
+				domainStore.loopIteration(saveTimerC, gcTimerC)
+			}).NotTo(Panic())
+		}
 	})
 })
