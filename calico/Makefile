@@ -72,7 +72,7 @@ serve: bin/helm3
 	# like to use a docker image that comes preloaded with all the github-pages plugins,
 	# its ok to override this variable.
 	docker run --rm -it \
-	  -v $(CURDIR)/bin/helm3:/usr/local/bin/helm3:ro \
+	  -v $(CURDIR)/bin/helm3:/usr/local/bin/helm:ro \
 	  -v $(CURDIR):/srv/jekyll \
 	  -v $(CURDIR)/../libcalico-go:/srv/libcalico-go \
 	  -e JEKYLL_DOCKER_TAG="" \
@@ -85,7 +85,7 @@ _site build: bin/helm3
 	docker run --rm -it \
 	-e JEKYLL_DOCKER_TAG="" \
 	-e JEKYLL_UID=`id -u` \
-	-v $(CURDIR)/bin/helm3:/usr/local/bin/helm3:ro \
+	-v $(CURDIR)/bin/helm3:/usr/local/bin/helm:ro \
 	-v $(CURDIR):/srv/jekyll \
 	-v $(CURDIR)/../libcalico-go:/srv/libcalico-go \
 	-v $(VERSIONS_FILE):/srv/jekyll/_data/versions.yml \
@@ -215,7 +215,7 @@ endif
 ###############################################################################
 HELM3_RELEASE=helm-v3.3.1-linux-amd64.tar.gz 
 
-helm-deps: bin/helm3 bin/helm
+helm-deps: bin/helm3
 bin/helm3:
 	mkdir -p bin
 	$(eval TMP := $(shell mktemp -d))

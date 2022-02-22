@@ -454,11 +454,6 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
       tag: #{versions["calicoctl"].version}
       binPath: /bin
 
-    # Set to true to use v1beta1 CRDs. This is necessary to work around
-    # a bug currently in upstream Helm v2.x where it fails to install v1 CRDs
-    # with the 'crd-install' hook.
-    useLegacyCRDs: false
-
     techPreviewOptions:
       # set to name of desired apparmor policy for the calico-node container and
       # pod will be annotated with 'container.apparmor.security.beta.kubernetes.io/calico-node'
@@ -467,11 +462,6 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
   elsif chart == "tigera-prometheus-operator"
     versionsYml = <<~EOF
     imagePullSecrets: {}
-
-    # Set to true to use v1beta1 CRDs. This is necessary to work around
-    # a bug currently in upstream Helm v2.x where it fails to install v1 CRDs
-    # with the 'crd-install' hook.
-    useLegacyCRDs: false
 
     installation:
       kubernetesProvider: ""
