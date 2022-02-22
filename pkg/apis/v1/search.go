@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 package v1
 
 import (
@@ -39,16 +39,16 @@ type SearchRequest struct {
 	PageNum int `json:"page_num" validate:"gte=0"`
 
 	// Sort by field and direction.
-	SortBy []SearchRequestSortBy `json:"sort_by"`
+	SortBy []SearchRequestSortBy `json:"sort_by" validate:"omitempty"`
 
 	// Timeout for the request. Defaults to 60s.
-	Timeout v1.Duration `json:"timeout"`
+	Timeout *v1.Duration `json:"timeout" validate:"omitempty"`
 }
 
 // decodeRequestBody sets the search parameters to their default values.
 func (params *SearchRequest) DefaultParams() {
 	params.PageSize = defaultPageSize
-	params.Timeout.Duration = defaultRequestTimeout
+	params.Timeout = &v1.Duration{Duration: defaultRequestTimeout}
 }
 
 // SearchRequestSortBy encapsulates the sort-by parameters a search query will return results by.

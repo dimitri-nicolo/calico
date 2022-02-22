@@ -14,6 +14,12 @@ import (
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
 )
 
+const (
+	clusterParam       = "cluster"
+	clusterIdHeader    = "x-cluster-id"
+	defaultClusterName = "cluster"
+)
+
 var (
 	ErrInvalidMethod = errors.New("Invalid http method")
 	ErrParseRequest  = errors.New("Error parsing request parameters")
@@ -86,4 +92,15 @@ func NewMockSearchClient(results []interface{}) lmaelastic.Client {
 	}
 
 	return lmaelastic.NewMockClient(doFunc)
+}
+
+func MaybeParseClusterNameFromRequest(r *http.Request) string {
+	clusterName := defaultClusterName
+	if r != nil && r.Header != nil {
+		xClusterID := r.Header.Get(clusterIdHeader)
+		if xClusterID != "" {
+			clusterName = xClusterID
+		}
+	}
+	return clusterName
 }

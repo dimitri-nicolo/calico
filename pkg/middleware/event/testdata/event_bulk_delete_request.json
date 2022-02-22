@@ -1,0 +1,3 @@
+{"delete":{"_index":"tigera_secure_ee_events..","_id":"id1"}}
+{"delete":{"_index":"tigera_secure_ee_events..","_id":"id2"}}
+{"delete":{"_index":"tigera_secure_ee_events..","_id":"id3"}}

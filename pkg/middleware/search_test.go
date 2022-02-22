@@ -17,6 +17,8 @@ import (
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/mock"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	libcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 	lmav1 "github.com/tigera/lma/pkg/apis/v1"
@@ -32,49 +34,51 @@ const (
   "cluster": "c_val",
   "page_size": 152,
   "page_num": 1,
-	"time_range": {
-		"from": "2021-04-19T14:25:30.169821857-07:00",
-		"to": "2021-04-19T14:25:30.169827009-07:00"
-	}
+  "time_range": {
+    "from": "2021-04-19T14:25:30.169821857-07:00",
+    "to": "2021-04-19T14:25:30.169827009-07:00"
+  },
+  "timeout": "60s"
 }`
 	validRequestBodyNoCluster = `
 {
   "page_size": 152,
   "page_num": 1,
-	"time_range": {
-		"from": "2021-04-19T14:25:30.169821857-07:00",
-		"to": "2021-04-19T14:25:30.169827009-07:00"
-	}
+  "time_range": {
+    "from": "2021-04-19T14:25:30.169821857-07:00",
+    "to": "2021-04-19T14:25:30.169827009-07:00"
+  },
+  "timeout": "60s"
 }`
 	validRequestBodyPageSizeGreaterThanLTE = `
 {
   "cluster": "c_val",
   "page_size": 1001,
   "page_num": 1,
-	"time_range": {
-		"from": "2021-04-19T14:25:30.169821857-07:00",
-		"to": "2021-04-19T14:25:30.169827009-07:00"
-	}
+  "time_range": {
+    "from": "2021-04-19T14:25:30.169821857-07:00",
+    "to": "2021-04-19T14:25:30.169827009-07:00"
+  }
 }`
 	validRequestBodyPageSizeLessThanGTE = `
 {
   "cluster": "c_val",
   "page_size": -1,
   "page_num": 1,
-	"time_range": {
-		"from": "2021-04-19T14:25:30.169821857-07:00",
-		"to": "2021-04-19T14:25:30.169827009-07:00"
-	}
+  "time_range": {
+    "from": "2021-04-19T14:25:30.169821857-07:00",
+    "to": "2021-04-19T14:25:30.169827009-07:00"
+  }
 }`
 	invalidRequestBodyBadlyFormedStringValue = `
 {
   "cluster": c_val,
   "page_size": 152,
   "page_num": 1,
-	"time_range": {
-		"from": "2021-04-19T14:25:30.169821857-07:00",
-		"to": "2021-04-19T14:25:30.169827009-07:00"
-	}
+  "time_range": {
+    "from": "2021-04-19T14:25:30.169821857-07:00",
+    "to": "2021-04-19T14:25:30.169827009-07:00"
+  }
 }`
 
 	invalidRequestBodyTimeRangeContainsInvalidTimeValue = `
@@ -82,10 +86,10 @@ const (
   "cluster": "c_val",
   "page_size": 152,
   "page_num": 1,
-	"time_range": {
-		"from": 143435,
-		"to": "2021-04-19T14:25:30.169827009-07:00"
-	}
+  "time_range": {
+    "from": 143435,
+    "to": "2021-04-19T14:25:30.169827009-07:00"
+  }
 }`
 )
 
@@ -239,8 +243,6 @@ var _ = Describe("SearchElasticHits", func() {
 		}
 
 		It("Should return a valid Elastic search response", func() {
-			mockDoer = new(thirdpartymock.MockDoer)
-
 			client, err := elastic.NewClient(
 				elastic.SetHttpClient(mockDoer),
 				elastic.SetSniff(false),
@@ -340,6 +342,7 @@ var _ = Describe("SearchElasticHits", func() {
 					Field:      "test2",
 					Descending: false,
 				}},
+				Timeout: &metav1.Duration{Duration: 60 * time.Second},
 			}
 
 			r, err := http.NewRequest(
@@ -367,8 +370,6 @@ var _ = Describe("SearchElasticHits", func() {
 		})
 
 		It("Should return a valid Elastic search response (search request with filter)", func() {
-			mockDoer = new(thirdpartymock.MockDoer)
-
 			client, err := elastic.NewClient(
 				elastic.SetHttpClient(mockDoer),
 				elastic.SetSniff(false),
@@ -445,6 +446,7 @@ var _ = Describe("SearchElasticHits", func() {
 					Field:      "time",
 					Descending: true,
 				}},
+				Timeout: &metav1.Duration{Duration: 60 * time.Second},
 			}
 
 			r, err := http.NewRequest(
@@ -472,8 +474,6 @@ var _ = Describe("SearchElasticHits", func() {
 		})
 
 		It("Should return no hits when TotalHits are equal to zero", func() {
-			mockDoer = new(thirdpartymock.MockDoer)
-
 			client, err := elastic.NewClient(
 				elastic.SetHttpClient(mockDoer),
 				elastic.SetSniff(false),
@@ -554,6 +554,7 @@ var _ = Describe("SearchElasticHits", func() {
 					From: fromTime,
 					To:   toTime,
 				},
+				Timeout: &metav1.Duration{Duration: 60 * time.Second},
 			}
 
 			r, err := http.NewRequest(
@@ -571,8 +572,6 @@ var _ = Describe("SearchElasticHits", func() {
 		})
 
 		It("Should return no hits when ElasticSearch Hits are empty (nil)", func() {
-			mockDoer = new(thirdpartymock.MockDoer)
-
 			client, err := elastic.NewClient(
 				elastic.SetHttpClient(mockDoer),
 				elastic.SetSniff(false),
@@ -653,6 +652,7 @@ var _ = Describe("SearchElasticHits", func() {
 					From: fromTime,
 					To:   toTime,
 				},
+				Timeout: &metav1.Duration{Duration: 60 * time.Second},
 			}
 
 			r, err := http.NewRequest(
@@ -670,8 +670,6 @@ var _ = Describe("SearchElasticHits", func() {
 		})
 
 		It("Should return an error with data when ElasticSearch returns TimeOut==true", func() {
-			mockDoer = new(thirdpartymock.MockDoer)
-
 			client, err := elastic.NewClient(
 				elastic.SetHttpClient(mockDoer),
 				elastic.SetSniff(false),
@@ -752,6 +750,7 @@ var _ = Describe("SearchElasticHits", func() {
 					From: fromTime,
 					To:   toTime,
 				},
+				Timeout: &metav1.Duration{Duration: 60 * time.Second},
 			}
 
 			r, err := http.NewRequest(
@@ -768,8 +767,6 @@ var _ = Describe("SearchElasticHits", func() {
 		})
 
 		It("Should return an error when ElasticSearch returns an error", func() {
-			mockDoer = new(thirdpartymock.MockDoer)
-
 			client, err := elastic.NewClient(
 				elastic.SetHttpClient(mockDoer),
 				elastic.SetSniff(false),
@@ -850,6 +847,7 @@ var _ = Describe("SearchElasticHits", func() {
 					From: fromTime,
 					To:   toTime,
 				},
+				Timeout: &metav1.Duration{Duration: 60 * time.Second},
 			}
 
 			r, err := http.NewRequest(
@@ -949,7 +947,7 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(errors.As(err, &se)).To(BeTrue())
 			Expect(se.Status).To(Equal(400))
 			Expect(se.Msg).To(Equal("Request body contains an invalid value for the \"time_range\" "+
-				"field (at position 18)"), se.Msg)
+				"field (at position 20)"), se.Msg)
 		})
 	})
 })

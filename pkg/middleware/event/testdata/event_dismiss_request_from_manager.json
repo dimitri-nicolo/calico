@@ -1,0 +1,16 @@
+{
+  "cluster": "test-cluster-name",
+  "dismiss": {
+    "items": [
+      {
+        "id": "id1"
+      },
+      {
+        "id": "id2"
+      },
+      {
+        "id": "id3"
+      }
+    ]
+  }
+}
