@@ -106,7 +106,7 @@ var _ = Describe("Event middleware tests", func() {
 
 			Expect(rr.Code).To(Equal(http.StatusOK))
 
-			var resp v1.BulkResponse
+			var resp v1.BulkEventResponse
 			err = json.Unmarshal(rr.Body.Bytes(), &resp)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -175,7 +175,7 @@ var _ = Describe("Event middleware tests", func() {
 
 			Expect(rr.Code).To(Equal(http.StatusOK))
 
-			var resp v1.BulkResponse
+			var resp v1.BulkEventResponse
 			err = json.Unmarshal(rr.Body.Bytes(), &resp)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -244,7 +244,7 @@ var _ = Describe("Event middleware tests", func() {
 
 			Expect(rr.Code).To(Equal(http.StatusOK))
 
-			var resp v1.BulkResponse
+			var resp v1.BulkEventResponse
 			err = json.Unmarshal(rr.Body.Bytes(), &resp)
 			Expect(err).NotTo(HaveOccurred())
 

@@ -40,7 +40,7 @@ func EventHandler(esClientFactory lmaelastic.ClusterContextClientFactory) http.H
 	})
 }
 
-func parseEventRequest(w http.ResponseWriter, r *http.Request) (*v1.BulkRequest, error) {
+func parseEventRequest(w http.ResponseWriter, r *http.Request) (*v1.BulkEventRequest, error) {
 	// events handler
 	if r.Method != http.MethodPost {
 		log.WithError(middleware.ErrInvalidMethod).Infof("Invalid http method %s for /events/bulk.", r.Method)
@@ -53,7 +53,7 @@ func parseEventRequest(w http.ResponseWriter, r *http.Request) (*v1.BulkRequest,
 	}
 
 	// Decode the http request body into the struct.
-	var params v1.BulkRequest
+	var params v1.BulkEventRequest
 
 	if err := httputils.Decode(w, r, &params); err != nil {
 		var mr *httputils.HttpStatusError
@@ -81,8 +81,8 @@ func parseEventRequest(w http.ResponseWriter, r *http.Request) (*v1.BulkRequest,
 func processEventRequest(
 	r *http.Request,
 	esClientFactory lmaelastic.ClusterContextClientFactory,
-	params *v1.BulkRequest,
-) (*v1.BulkResponse, error) {
+	params *v1.BulkEventRequest,
+) (*v1.BulkEventResponse, error) {
 	// create a context with timeout to ensure we don't block for too long.
 	ctx, cancelWithTimeout := context.WithTimeout(r.Context(), defaultTimeout)
 	defer cancelWithTimeout()
@@ -97,7 +97,7 @@ func processEventRequest(
 		}
 	}
 
-	resp, err := processBulkRequest(ctx, esClient, params)
+	resp, err := processBulkEventRequest(ctx, esClient, params)
 	if err != nil {
 		return nil, &httputils.HttpStatusError{
 			Status: http.StatusInternalServerError,
@@ -108,8 +108,8 @@ func processEventRequest(
 	return resp, nil
 }
 
-func processBulkRequest(ctx context.Context, esClient lmaelastic.Client, params *v1.BulkRequest) (*v1.BulkResponse, error) {
-	var resp v1.BulkResponse
+func processBulkEventRequest(ctx context.Context, esClient lmaelastic.Client, params *v1.BulkEventRequest) (*v1.BulkEventResponse, error) {
+	var resp v1.BulkEventResponse
 	afterFn := func(executionId int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
 		resp.Errors = response.Errors
 		resp.Took = response.Took
@@ -117,14 +117,14 @@ func processBulkRequest(ctx context.Context, esClient lmaelastic.Client, params 
 		items := make([]*elastic.BulkResponseItem, 0)
 		items = append(items, response.Deleted()...)
 		items = append(items, response.Updated()...)
-		resp.Items = make([]v1.BulkResponseItem, len(items))
+		resp.Items = make([]v1.BulkEventResponseItem, len(items))
 		for i, item := range items {
 			resp.Items[i].Index = item.Index
 			resp.Items[i].ID = item.Id
 			resp.Items[i].Result = item.Result
 			resp.Items[i].Status = item.Status
 			if item.Error != nil {
-				resp.Items[i].Error = &v1.BulkErrorDetails{
+				resp.Items[i].Error = &v1.BulkEventErrorDetails{
 					Type:   item.Error.Type,
 					Reason: item.Error.Reason,
 				}
