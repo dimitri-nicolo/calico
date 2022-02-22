@@ -44,10 +44,35 @@ module Jekyll
       extra_args.gsub!(/--execute-dir (\S*)/) do |_|
         e = []
         Dir.foreach "_includes/charts/#{@chart}/#{$1}" do |file|
-            next if File.directory?("_includes/charts/#{@chart}/#{$1}/#{file}")
-            e << "--execute #{$1}/#{file}"
+          fpath = File.join($1, file)
+          next if File.directory?("_includes/charts/#{@chart}/#{fpath}")
+
+          # for helm v3, when templating crd files, you must specify them relative
+          # to the crd directory. so trim the 'crds' from the name.
+          # we don't need to worry about the helm v2 case because crds are stored in templates/
+          # and can't be --executed from the crds/ directory.
+          # if fpath.start_with? "template/crds" then
+          #   fpath = Pathname.new(fpath).relative_path_from(Pathname.new("template/crds"))
+          # end
+          if fpath.start_with? "crds" then
+            fpath = Pathname.new(fpath).relative_path_from(Pathname.new("crds"))
+          end
+
+
+            e << "--execute #{fpath}"
         end
         e.join(" ")
+      end
+
+      # substitute --execute with --show-only for helm v3 compatibility.
+      if @chart == "tigera-operator" or @chart == "tigera-prometheus-operator" then
+        extra_args.gsub!(/--execute (\S*)/) do |f|
+          # operator CRDs have moved to root
+          if $1.start_with? "crds/" then f.sub('--execute crds/', '--show-only ')
+          # all other requests need to use --show-only instead of --execute for helm v3
+          else f.sub('--execute', '--show-only')
+          end
+        end
       end
 
       @extra_args = extra_args
@@ -66,7 +91,6 @@ module Jekyll
       imageNames = context.registers[:site].config["imageNames"]
       versions = context.registers[:site].data["versions"]
 
-
       if context.registers[:site].data["versions"][0].has_key?("dockerRepo")
           imageRegistry = context.registers[:site].data["versions"][0]["dockerRepo"]
         unless imageRegistry.end_with? "/"
@@ -83,8 +107,9 @@ module Jekyll
       tv.close
 
       # Execute helm.
-      # Set the default etcd endpoint placeholder for rendering in the docs.
-      cmd = """helm template _includes/charts/#{@chart} \
+      # Set the default etcd endpoint placeholder for rendering in the docs.      
+      # with additional arguments for EE componenets
+      cmd =  """bin/helm3 template --include-crds _includes/charts/#{@chart} \
         -f #{tv.path} \
         -f #{t.path} \
         --set node.resources.requests.cpu='250m' \
@@ -98,9 +123,9 @@ module Jekyll
         --set kibana.service.nodePort=30601 \
         --set etcd.endpoints='http://<ETCD_IP>:<ETCD_PORT>'"""
 
-      if @chart == "calico" or @chart == "tigera-secure-ee"
-        # static rendered manifests for the 'tigera-secure-ee-core' (calico) and
-        # 'tigera-secure-ee' chart should configure components to use an imagePullSecret
+      if @chart == "calico" 
+        # static rendered manifests for the 'calico and 'tigera-secure-ee' 
+        # chart should configure components to use an imagePullSecret
         # named 'cnx-pull-secret'.
         cmd +=  " --set imagePullSecrets.cnx-pull-secret=''"
       end
