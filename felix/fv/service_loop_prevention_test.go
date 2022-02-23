@@ -203,10 +203,10 @@ var _ = infrastructure.DatastoreDescribe("service loop prevention; with 2 nodes"
 		// this can take a few seconds, even though Felix would handle the BGPConfiguration
 		// update on its own quickly and without restarting.)
 		for _, felix := range felixes {
-			Eventually(getCIDRBlockRules(felix, "iptables-save"), "4s", "0.5s").Should(ConsistOf(
+			Eventually(getCIDRBlockRules(felix, "iptables-save"), "8s", "0.5s").Should(ConsistOf(
 				MatchRegexp("-A cali-cidr-block -d 10\\.96\\.0\\.0/17 .* -j DROP"),
 			))
-			Eventually(getCIDRBlockRules(felix, "ip6tables-save"), "4s", "0.5s").Should(ConsistOf(
+			Eventually(getCIDRBlockRules(felix, "ip6tables-save"), "8s", "0.5s").Should(ConsistOf(
 				MatchRegexp("-A cali-cidr-block -d fd5f::/119 .* -j DROP"),
 			))
 		}
@@ -276,10 +276,10 @@ var _ = infrastructure.DatastoreDescribe("service loop prevention; with 2 nodes"
 		// Expect to see rules in cali-cidr-block chains with DROP and the updated CIDRs.
 		// (BGPConfiguration change is handled without needing a restart.)
 		for _, felix := range felixes {
-			Eventually(getCIDRBlockRules(felix, "iptables-save"), "4s", "0.5s").Should(ConsistOf(
+			Eventually(getCIDRBlockRules(felix, "iptables-save"), "8s", "0.5s").Should(ConsistOf(
 				MatchRegexp("-A cali-cidr-block -d 1\\.1\\.0\\.0/16 .* -j DROP"),
 			))
-			Eventually(getCIDRBlockRules(felix, "ip6tables-save"), "4s", "0.5s").Should(ConsistOf(
+			Eventually(getCIDRBlockRules(felix, "ip6tables-save"), "8s", "0.5s").Should(ConsistOf(
 				MatchRegexp("-A cali-cidr-block -d fd5e::/119 .* -j DROP"),
 			))
 		}
@@ -305,7 +305,7 @@ var _ = infrastructure.DatastoreDescribe("service loop prevention; with 2 nodes"
 		// this can take a few seconds, even though Felix would handle the BGPConfiguration
 		// update on its own quickly and without restarting.)
 		for _, felix := range felixes {
-			Eventually(getCIDRBlockRules(felix, "iptables-save"), "4s", "0.5s").Should(ConsistOf(
+			Eventually(getCIDRBlockRules(felix, "iptables-save"), "8s", "0.5s").Should(ConsistOf(
 				MatchRegexp("-A cali-cidr-block -d 10\\.96\\.0\\.0/17 .* -j DROP"),
 			))
 		}
@@ -350,7 +350,7 @@ var _ = infrastructure.DatastoreDescribe("service loop prevention; with 2 nodes"
 		// this can take a few seconds, even though Felix would handle the BGPConfiguration
 		// update on its own quickly and without restarting.)
 		for _, felix := range felixes {
-			Eventually(getCIDRBlockRules(felix, "iptables-save"), "4s", "0.5s").Should(ConsistOf(
+			Eventually(getCIDRBlockRules(felix, "iptables-save"), "8s", "0.5s").Should(ConsistOf(
 				MatchRegexp("-A cali-cidr-block -d 10\\.96\\.0\\.0/17 .* -j DROP"),
 			))
 		}
