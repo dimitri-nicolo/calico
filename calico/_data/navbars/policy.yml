@@ -12,7 +12,9 @@ section:
   - title: Create RBAC for tiered policy
     path: /security/rbac-tiered-policies
 - title: Get started with network sets
-  path: /security/networksets    
+  path: /security/networksets
+- title: Global default deny policy best practices
+  path: /security/default-deny      
 - title: Policy lifecycle and automation
   path: /security/policy-lifecycle/
   section: 
