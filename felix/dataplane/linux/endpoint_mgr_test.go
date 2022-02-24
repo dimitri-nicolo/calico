@@ -197,9 +197,10 @@ func chainsForIfaces(ipVersion uint8,
 	allowActions ...iptables.Action,
 ) []*iptables.Chain {
 	const (
-		ProtoUDP  = 17
-		ProtoIPIP = 4
-		VXLANPort = 4789
+		ProtoUDP          = 17
+		ProtoIPIP         = 4
+		VXLANPort         = 4789
+		EgressIPVXLANPort = 4790
 	)
 
 	log.WithFields(log.Fields{
@@ -340,6 +341,18 @@ func chainsForIfaces(ipVersion uint8,
 			Match:  iptables.Match(),
 			Action: iptables.ClearMarkAction{Mark: 136}, // 0x8 + 0x80 (IptablesMarkAccept + IptablesMarkDrop)
 		})
+
+		if egress && ipVersion == 4 && isEgressGateway {
+			outRules = append(outRules, iptables.Rule{
+				Match: iptables.Match().
+					ProtocolNum(ProtoUDP).
+					DestIPSet("cali40all-hosts-net").
+					DestPorts(uint16(EgressIPVXLANPort)),
+				Action:  iptables.AcceptAction{},
+				Comment: []string{"Accept VXLAN UDP traffic for egressgateways"},
+			})
+		}
+
 		if !host {
 			outRules = append(outRules, dropEncapRules...)
 		}
@@ -508,6 +521,17 @@ func chainsForIfaces(ipVersion uint8,
 			inRules = append(inRules, iptables.Rule{
 				Action:  iptables.ReturnAction{},
 				Comment: []string{"Return for accepted forward traffic"},
+			})
+		}
+
+		if ingress && ipVersion == 4 && isEgressGateway {
+			inRules = append(inRules, iptables.Rule{
+				Match: iptables.Match().
+					ProtocolNum(ProtoUDP).
+					SourceIPSet("cali40all-hosts-net").
+					DestPorts(uint16(EgressIPVXLANPort)),
+				Action:  iptables.AcceptAction{},
+				Comment: []string{"Accept VXLAN UDP traffic for egressgateways"},
 			})
 		}
 
@@ -825,6 +849,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				KubeIPVSSupportEnabled:           true,
 				WorkloadIfacePrefixes:            []string{"cali", "tap"},
 				VXLANPort:                        4789,
+				EgressIPVXLANPort:                4790,
 				VXLANVNI:                         4096,
 			}
 			eth0Addrs = set.New()

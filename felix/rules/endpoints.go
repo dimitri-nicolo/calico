@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ const (
 	IsAnEgressGateway     = true
 	alwaysAllowVXLANEncap = true
 	alwaysAllowIPIPEncap  = true
+	UndefinedIPVersion    = 0
 )
 
 func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
@@ -42,6 +43,7 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 	tiers []*proto.TierInfo,
 	profileIDs []string,
 	isEgressGateway bool,
+	ipVersion uint8,
 ) []*Chain {
 	allowVXLANEncapFromWorkloads := r.Config.AllowVXLANPacketsFromWorkloads
 	allowIPIPEncapFromWorkloads := r.Config.AllowIPIPPacketsFromWorkloads
@@ -65,6 +67,7 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 			alwaysAllowVXLANEncap,
 			alwaysAllowIPIPEncap,
 			isEgressGateway,
+			ipVersion,
 		),
 		// Chain for traffic _from_ the endpoint.
 		// Encap traffic is blocked by default from workload endpoints
@@ -86,6 +89,7 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 			allowVXLANEncapFromWorkloads,
 			allowIPIPEncapFromWorkloads,
 			isEgressGateway,
+			ipVersion,
 		),
 	)
 
@@ -131,6 +135,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			alwaysAllowVXLANEncap,
 			alwaysAllowIPIPEncap,
 			NotAnEgressGateway,
+			UndefinedIPVersion,
 		),
 		// Chain for input traffic _from_ the endpoint.
 		r.endpointIptablesChain(
@@ -150,6 +155,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			alwaysAllowVXLANEncap,
 			alwaysAllowIPIPEncap,
 			NotAnEgressGateway,
+			UndefinedIPVersion,
 		),
 		// Chain for forward traffic _to_ the endpoint.
 		r.endpointIptablesChain(
@@ -169,6 +175,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			alwaysAllowVXLANEncap,
 			alwaysAllowIPIPEncap,
 			NotAnEgressGateway,
+			UndefinedIPVersion,
 		),
 		// Chain for forward traffic _from_ the endpoint.
 		r.endpointIptablesChain(
@@ -188,6 +195,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			alwaysAllowVXLANEncap,
 			alwaysAllowIPIPEncap,
 			NotAnEgressGateway,
+			UndefinedIPVersion,
 		),
 	)
 
@@ -232,6 +240,7 @@ func (r *DefaultRuleRenderer) HostEndpointToMangleEgressChains(
 			alwaysAllowVXLANEncap,
 			alwaysAllowIPIPEncap,
 			NotAnEgressGateway,
+			UndefinedIPVersion,
 		),
 	}
 }
@@ -258,6 +267,7 @@ func (r *DefaultRuleRenderer) HostEndpointToRawEgressChain(
 		alwaysAllowVXLANEncap,
 		alwaysAllowIPIPEncap,
 		NotAnEgressGateway,
+		UndefinedIPVersion,
 	)
 }
 
@@ -287,6 +297,7 @@ func (r *DefaultRuleRenderer) HostEndpointToRawChains(
 			alwaysAllowVXLANEncap,
 			alwaysAllowIPIPEncap,
 			NotAnEgressGateway,
+			UndefinedIPVersion,
 		),
 	}
 }
@@ -316,6 +327,7 @@ func (r *DefaultRuleRenderer) HostEndpointToMangleIngressChains(
 			alwaysAllowVXLANEncap,
 			alwaysAllowIPIPEncap,
 			NotAnEgressGateway,
+			UndefinedIPVersion,
 		),
 	}
 }
@@ -368,6 +380,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 	allowVXLANEncap bool,
 	allowIPIPEncap bool,
 	isEgressGateway bool,
+	ipVersion uint8,
 ) *Chain {
 	rules := []Rule{}
 	chainName := EndpointChainName(endpointPrefix, name)
@@ -411,6 +424,28 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 			Mark: r.IptablesMarkAccept + r.IptablesMarkDrop,
 		},
 	})
+
+	// Accept the UDP VXLAN traffic for egressgateways
+	if !r.BPFEnabled && ipVersion == 4 && isEgressGateway {
+		match := Match().ProtocolNum(ProtoUDP)
+		if dir == RuleDirIngress {
+			match = match.SourceIPSet(r.IPSetConfigV4.
+				NameForMainIPSet(IPSetIDAllHostNets))
+		} else {
+			match = match.DestIPSet(r.IPSetConfigV4.
+				NameForMainIPSet(IPSetIDAllHostNets))
+		}
+		match = match.
+			DestPorts(
+				uint16(r.Config.EgressIPVXLANPort), // egress.calico
+			)
+
+		rules = append(rules, Rule{
+			Match:   match,
+			Action:  AcceptAction{},
+			Comment: []string{"Accept VXLAN UDP traffic for egressgateways"},
+		})
+	}
 
 	if !allowVXLANEncap {
 		// VXLAN encapped packets that originated in a pod should be dropped, as the encapsulation can be used to

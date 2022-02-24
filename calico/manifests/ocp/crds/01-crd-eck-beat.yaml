@@ -1,7 +1,7 @@
 ---
 layout: null
 ---
-{% helm tigera-operator --execute templates/crds/01-crd-eck-beat.yaml %}
+{% helm tigera-operator --execute crds/eck/01-crd-eck-beat.yaml %}
 installation:
   kubernetesProvider: openshift
 {% endhelm %}

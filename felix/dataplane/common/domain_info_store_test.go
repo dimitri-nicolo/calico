@@ -3,6 +3,7 @@
 package common
 
 import (
+	"crypto/rand"
 	"fmt"
 	"net"
 	"reflect"
@@ -15,6 +16,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
+	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	log "github.com/sirupsen/logrus"
 
@@ -639,5 +641,86 @@ var _ = Describe("Domain Info Store", func() {
 		programDNSAnswer(domainStore, testutils.MakeCNAME("a2.com", "b.com"), "cb7")
 		Expect(domainStore.UpdatesReadyChannel()).ShouldNot(Receive())
 		expectCallbacks("cb7")
+	})
+
+	It("should not panic because of an IPv4 packet with no transport header", func() {
+		domainStoreCreate()
+
+		pkt := gopacket.NewSerializeBuffer()
+		err := gopacket.SerializeLayers(
+			pkt,
+			gopacket.SerializeOptions{ComputeChecksums: true},
+			&layers.IPv4{
+				Version:  4,
+				IHL:      5,
+				TTL:      64,
+				Flags:    layers.IPv4DontFragment,
+				SrcIP:    net.IPv4(172, 31, 11, 2),
+				DstIP:    net.IPv4(172, 31, 21, 5),
+				Protocol: layers.IPProtocolTCP,
+				Length:   5 * 4,
+			},
+		)
+		Expect(err).NotTo(HaveOccurred())
+
+		domainStore.MsgChannel() <- DataWithTimestamp{
+			Data: pkt.Bytes(),
+		}
+		saveTimerC := make(chan time.Time)
+		gcTimerC := make(chan time.Time)
+		Expect(func() {
+			domainStore.loopIteration(saveTimerC, gcTimerC)
+		}).NotTo(Panic())
+	})
+
+	It("should not panic because of an IPv6 packet", func() {
+		domainStoreCreate()
+
+		pkt := gopacket.NewSerializeBuffer()
+		err := gopacket.SerializeLayers(
+			pkt,
+			gopacket.SerializeOptions{FixLengths: true},
+			&layers.IPv6{
+				Version:    6,
+				HopLimit:   64,
+				NextHeader: layers.IPProtocolTCP,
+				SrcIP:      net.IP([]byte{254, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 172, 31, 11, 2}),
+				DstIP:      net.IP([]byte{254, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 172, 31, 21, 5}),
+			},
+			&layers.TCP{
+				SrcPort: 31024,
+				DstPort: 5060,
+			},
+			gopacket.Payload([]byte{1, 2, 3, 4}),
+		)
+		Expect(err).NotTo(HaveOccurred())
+
+		domainStore.MsgChannel() <- DataWithTimestamp{
+			Data: pkt.Bytes(),
+		}
+		saveTimerC := make(chan time.Time)
+		gcTimerC := make(chan time.Time)
+		Expect(func() {
+			domainStore.loopIteration(saveTimerC, gcTimerC)
+		}).NotTo(Panic())
+	})
+
+	It("should not panic because of randomly generated packets", func() {
+		domainStoreCreate()
+
+		saveTimerC := make(chan time.Time)
+		gcTimerC := make(chan time.Time)
+		for i := 0; i < 10; i++ {
+			pkt := make([]byte, 78)
+			n, err := rand.Read(pkt)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(len(pkt)))
+			domainStore.MsgChannel() <- DataWithTimestamp{
+				Data: pkt,
+			}
+			Expect(func() {
+				domainStore.loopIteration(saveTimerC, gcTimerC)
+			}).NotTo(Panic())
+		}
 	})
 })
