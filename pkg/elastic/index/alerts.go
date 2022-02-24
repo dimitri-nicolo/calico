@@ -7,14 +7,13 @@ import (
 	"time"
 
 	"github.com/olivere/elastic/v7"
-	"github.com/tigera/lma/pkg/httputils"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	lmaelastic "github.com/tigera/lma/pkg/elastic"
+	"github.com/tigera/lma/pkg/httputils"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 )
-
-const esAlertsIndexPrefix = "tigera_secure_ee_events"
 
 // alertsIndexHelper implements the Helper interface for events.
 type alertsIndexHelper struct{}
@@ -24,8 +23,8 @@ func Alerts() Helper {
 	return alertsIndexHelper{}
 }
 
-// NewAuditLogsConverter returns a converter instance defined for alerts.
-func NewAuditLogsConverter() converter {
+// NewAlertsConverter returns a converter instance defined for alerts.
+func NewAlertsConverter() converter {
 	return converter{basicAtomToElastic}
 }
 
@@ -46,7 +45,7 @@ func (h alertsIndexHelper) NewSelectorQuery(selector string) (elastic.Query, err
 			Msg:    fmt.Sprintf("Invalid selector (%s) in request: %v", selector, err),
 		}
 	}
-	converter := NewAuditLogsConverter()
+	converter := NewAlertsConverter()
 	return JsonObjectElasticQuery(converter.Convert(q)), nil
 }
 
@@ -68,5 +67,5 @@ func (h alertsIndexHelper) GetTimeField() string {
 // `tigera_secure_ee_events.<cluster>` used prior to CEv3.12 and newer events index name
 // `tigera_secure_ee_events.<cluster>` used in CE >=v3.12
 func (h alertsIndexHelper) GetIndex(cluster string) string {
-	return fmt.Sprintf("%s.%s*", esAlertsIndexPrefix, cluster)
+	return fmt.Sprintf("%s.%s*", lmaelastic.EventsIndex, cluster)
 }

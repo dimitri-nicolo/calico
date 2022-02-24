@@ -44,7 +44,7 @@ var _ = Describe("Query Converter", func() {
 						{
 							"term": JsonObject{
 								"type": JsonObject{
-									"value": "tval1",
+									"value": "global_alert",
 								},
 							},
 						},
@@ -52,7 +52,7 @@ var _ = Describe("Query Converter", func() {
 				},
 			}
 
-			query := "alert=aval1 AND type=tval1"
+			query := "alert=aval1 AND type=global_alert"
 			esquery, err := Alerts().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
@@ -72,14 +72,14 @@ var _ = Describe("Query Converter", func() {
 						{
 							"term": JsonObject{
 								"type": JsonObject{
-									"value": "tval1",
+									"value": "global_alert",
 								},
 							},
 						},
 					},
 				},
 			}
-			query := "alert=aval1 OR type=tval1"
+			query := "alert=aval1 OR type=global_alert"
 			esquery, err := Alerts().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
@@ -102,7 +102,7 @@ var _ = Describe("Query Converter", func() {
 									{
 										"term": JsonObject{
 											"type": JsonObject{
-												"value": "tval1",
+												"value": "global_alert",
 											},
 										},
 									},
@@ -119,7 +119,7 @@ var _ = Describe("Query Converter", func() {
 					},
 				},
 			}
-			query := "(alert=aval1 OR type=tval1) AND _id=idval"
+			query := "(alert=aval1 OR type=global_alert) AND _id=idval"
 			esquery, err := Alerts().NewSelectorQuery(query)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(esquery.Source()).Should(BeEquivalentTo(result))
