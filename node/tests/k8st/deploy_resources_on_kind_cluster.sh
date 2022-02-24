@@ -51,9 +51,6 @@ EOF
 	# update FELIX_IPV6SUPPORT=true
 	sed -i '/FELIX_IPV6SUPPORT/!b;n;c\              value: "true"' "${yaml}"
 
-	# We don't want any IP-IP or VXLAN overlay.
-	sed -i 's/Always/Never/' "${yaml}"
-
     # update calico/node image
     sed -i 's,image: .*calico/node:.*,image: tigera/cnx-node:latest-amd64,' "${yaml}"
 }
@@ -111,16 +108,6 @@ echo
 # Once such tests are added, this will have to move into the test itself.
 ${kubectl} exec -i -n kube-system calicoctl -- /calicoctl --allow-version-mismatch apply -f - < ${TSEE_TEST_LICENSE}
 
-function test_connection() {
-    local svc="webserver-ipv$1"
-    output=$(${kubectl} exec client -- wget $svc -T 5 -O -)
-    echo $output
-    if [[ $output != *test-webserver* ]]; then
-	echo "connection to $svc service failed"
-	exit 1
-    fi
-}
-
 echo "Install MetalLB controller for allocating LoadBalancer IPs"
 ${kubectl} create ns metallb-system
 ${kubectl} apply -f $TEST_DIR/infra/metallb.yaml
@@ -129,6 +116,16 @@ ${kubectl} apply -f $TEST_DIR/infra/metallb-config.yaml
 # Create and monitor a test webserver service for dual stack.
 echo "Create test-webserver deployment..."
 ${kubectl} apply -f tests/k8st/infra/test-webserver.yaml
+
+echo "Wait for client and webserver pods to be ready..."
+while ! time ${kubectl} wait pod -l pod-name=client --for=condition=Ready --timeout=300s; do
+    sleep 5
+done
+while ! time ${kubectl} wait pod -l app=webserver --for=condition=Ready --timeout=300s; do
+    sleep 5
+done
+echo "client and webserver pods are running."
+echo
 
 echo "Deploy Calico apiserver"
 ${kubectl} create -f ${TEST_DIR}/infra/apiserver.yaml
@@ -139,25 +136,18 @@ ${kubectl} patch apiservice v3.projectcalico.org -p \
 time ${kubectl} wait pod -l k8s-app=calico-apiserver --for=condition=Ready -n calico-apiserver --timeout=30s
 echo "Calico apiserver is running."
 
-if dual_stack; then
-    # Create and monitor a test webserver service for dual stack.
-    echo "Create test-webserver deployment..."
-    ${kubectl} apply -f tests/k8st/infra/test-webserver.yaml
+${kubectl} get po --all-namespaces -o wide
+${kubectl} get svc
 
-    echo "Wait for client and webserver pods to be ready..."
-    while ! time ${kubectl} wait pod -l pod-name=client --for=condition=Ready --timeout=300s; do
-	sleep 5
-    done
-    while ! time ${kubectl} wait pod -l app=webserver --for=condition=Ready --timeout=300s; do
-	sleep 5
-    done
-    echo "client and webserver pods are running."
-    echo
-
-    ${kubectl} get po --all-namespaces -o wide
-    ${kubectl} get svc
-
-    # Run ipv4 ipv6 connection test
-    test_connection 4
-    test_connection 6
-fi
+function test_connection() {
+    local svc="webserver-ipv$1"
+    output=$(${kubectl} exec client -- wget $svc -T 5 -O -)
+    echo $output
+    if [[ $output != *test-webserver* ]]; then
+	echo "connection to $svc service failed"
+	exit 1
+    fi
+}
+# Run ipv4 ipv6 connection test
+test_connection 4
+test_connection 6
