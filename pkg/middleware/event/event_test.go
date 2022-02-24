@@ -3,12 +3,14 @@ package event
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,9 +18,15 @@ import (
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/mock"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
+	"github.com/tigera/compliance/pkg/datastore"
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 	"github.com/tigera/es-proxy/test/thirdpartymock"
 	lmaelastic "github.com/tigera/lma/pkg/elastic"
+	lmaindex "github.com/tigera/lma/pkg/elastic/index"
 )
 
 var (
@@ -29,6 +37,8 @@ var (
 	eventDismissRequest string
 	//go:embed testdata/event_mixed_request_from_manager.json
 	eventMixedRequest string
+	//go:embed testdata/event_search_request_from_manager.json
+	eventSearchRequestFromManager string
 
 	// requests from es-proxy to elastic
 	//go:embed testdata/event_bulk_delete_request.json
@@ -37,6 +47,12 @@ var (
 	eventBulkDismissRequest string
 	//go:embed testdata/event_bulk_mixed_request.json
 	eventBulkMixedRequest string
+	//go:embed testdata/event_search_request.json
+	eventSearchRequest string
+	//go:embed testdata/event_search_request_selector.json
+	eventSearchRequestSelector string
+	//go:embed testdata/event_search_request_selector_invalid.json
+	eventSearchRequestSelectorInvalid string
 
 	// responses from elastic to es-proxy
 	//go:embed testdata/event_bulk_delete_response.json
@@ -45,15 +61,19 @@ var (
 	eventBulkDismissResponse string
 	//go:embed testdata/event_bulk_mixed_response.json
 	eventBulkMixedResponse string
+	//go:embed testdata/event_search_response.json
+	eventSearchResponse string
 )
 
 var _ = Describe("Event middleware tests", func() {
 	var (
+		fakeClientSet datastore.ClientSet
 		mockDoer      *thirdpartymock.MockDoer
 		mockESFactory *lmaelastic.MockClusterContextClientFactory
 	)
 
 	BeforeEach(func() {
+		fakeClientSet = datastore.NewClientSet(nil, fake.NewSimpleClientset().ProjectcalicoV3())
 		mockDoer = new(thirdpartymock.MockDoer)
 		mockESFactory = new(lmaelastic.MockClusterContextClientFactory)
 	})
@@ -101,7 +121,7 @@ var _ = Describe("Event middleware tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			rr := httptest.NewRecorder()
-			handler := EventHandler(mockESFactory)
+			handler := EventBulkHandler(mockESFactory)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusOK))
@@ -170,7 +190,7 @@ var _ = Describe("Event middleware tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			rr := httptest.NewRecorder()
-			handler := EventHandler(mockESFactory)
+			handler := EventBulkHandler(mockESFactory)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusOK))
@@ -239,7 +259,7 @@ var _ = Describe("Event middleware tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			rr := httptest.NewRecorder()
-			handler := EventHandler(mockESFactory)
+			handler := EventBulkHandler(mockESFactory)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusOK))
@@ -295,7 +315,7 @@ var _ = Describe("Event middleware tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			rr := httptest.NewRecorder()
-			handler := EventHandler(mockESFactory)
+			handler := EventBulkHandler(mockESFactory)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusMethodNotAllowed))
@@ -306,7 +326,7 @@ var _ = Describe("Event middleware tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			rr := httptest.NewRecorder()
-			handler := EventHandler(mockESFactory)
+			handler := EventBulkHandler(mockESFactory)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusBadRequest))
@@ -319,10 +339,319 @@ var _ = Describe("Event middleware tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			rr := httptest.NewRecorder()
-			handler := EventHandler(mockESFactory)
+			handler := EventBulkHandler(mockESFactory)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusInternalServerError))
+		})
+	})
+
+	Context("Elasticsearch /events/search request and response validation", func() {
+		It("should inject alert exceptions in search request", func() {
+			// mock http client
+			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
+				defer GinkgoRecover()
+				req := args.Get(0).(*http.Request)
+
+				// Elastic _search request
+				Expect(req.Method).To(Equal(http.MethodPost))
+				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_events.cluster*/_search"))
+
+				body, err := ioutil.ReadAll(req.Body)
+				Expect(err).NotTo(HaveOccurred())
+				// Elastic search request json
+				Expect(body).To(Equal([]byte(eventSearchRequest)))
+
+				Expect(req.Body.Close()).NotTo(HaveOccurred())
+				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+			}).Return(&http.Response{
+				StatusCode: http.StatusOK,
+				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(eventSearchResponse))),
+			}, nil)
+
+			// create some alert exceptions
+			alertExceptions := []*v3.AlertException{
+				// no expiry
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "alert-exception-no-expiry",
+						CreationTimestamp: metav1.Now(),
+					},
+					Spec: v3.AlertExceptionSpec{
+						Description: "AlertException no expiry",
+						Selector:    "origin = origin1",
+					},
+				},
+				// not expired
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "alert-exception-not-expired",
+						CreationTimestamp: metav1.Now(),
+					},
+					Spec: v3.AlertExceptionSpec{
+						Description: "AlertException not expired",
+						Selector:    "origin = origin2",
+						Period:      &metav1.Duration{Duration: time.Hour},
+					},
+				},
+				// expired
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "alert-exception-expired",
+						CreationTimestamp: metav1.Time{Time: metav1.Now().Add(-2 * time.Hour)}, // make this one expire
+					},
+					Spec: v3.AlertExceptionSpec{
+						Description: "AlertException expired",
+						Selector:    "origin = origin3",
+						Period:      &metav1.Duration{Duration: time.Hour},
+					},
+				},
+			}
+			for _, alertException := range alertExceptions {
+				_, err := fakeClientSet.AlertExceptions().Create(context.Background(), alertException, metav1.CreateOptions{})
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+			// mock lma es client
+			client, err := elastic.NewClient(
+				elastic.SetHttpClient(mockDoer),
+				elastic.SetSniff(false),
+				elastic.SetHealthcheck(false),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			lmaClient := lmaelastic.NewWithClient(client)
+
+			// validate responses
+			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(eventSearchRequestFromManager)))
+			Expect(err).NotTo(HaveOccurred())
+
+			rr := httptest.NewRecorder()
+			handler := EventSearchHandler(lmaindex.Alerts(), fakeClientSet, lmaClient.Backend())
+			handler.ServeHTTP(rr, req)
+
+			Expect(rr.Code).To(Equal(http.StatusOK))
+
+			var resp v1.SearchResponse
+			err = json.Unmarshal(rr.Body.Bytes(), &resp)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(resp.Hits).To(HaveLen(2))
+			Expect(resp.NumPages).To(Equal(1))
+			Expect(resp.TimedOut).To(BeFalse())
+			Expect(resp.TotalHits).To(Equal(2))
+		})
+
+		It("should handle alert exceptions selector AND/OR conditions", func() {
+			// mock http client
+			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
+				defer GinkgoRecover()
+				req := args.Get(0).(*http.Request)
+
+				// Elastic _search request
+				Expect(req.Method).To(Equal(http.MethodPost))
+				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_events.cluster*/_search"))
+
+				body, err := ioutil.ReadAll(req.Body)
+				Expect(err).NotTo(HaveOccurred())
+				// Elastic search request json
+				Expect(body).To(Equal([]byte(eventSearchRequestSelector)))
+
+				Expect(req.Body.Close()).NotTo(HaveOccurred())
+				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+			}).Return(&http.Response{
+				StatusCode: http.StatusOK,
+				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(eventSearchResponse))),
+			}, nil)
+
+			// create some alert exceptions
+			alertExceptions := []*v3.AlertException{
+				// AND
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "alert-exception-and",
+						CreationTimestamp: metav1.Now(),
+					},
+					Spec: v3.AlertExceptionSpec{
+						Description: "AlertException all AND",
+						Selector:    "origin = origin1 AND type = global_alert",
+					},
+				},
+				// OR
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "alert-exception-or",
+						CreationTimestamp: metav1.Now(),
+					},
+					Spec: v3.AlertExceptionSpec{
+						Description: "AlertException OR",
+						Selector:    "origin = origin2 OR type = honeypod",
+					},
+				},
+				// mixed AND / OR
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "alert-exception-and-or",
+						CreationTimestamp: metav1.Now(),
+					},
+					Spec: v3.AlertExceptionSpec{
+						Description: "AlertException AND OR",
+						Selector:    "origin = origin3 AND type = alert OR source_namespace = ns3",
+					},
+				},
+			}
+			for _, alertException := range alertExceptions {
+				_, err := fakeClientSet.AlertExceptions().Create(context.Background(), alertException, metav1.CreateOptions{})
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+			// mock lma es client
+			client, err := elastic.NewClient(
+				elastic.SetHttpClient(mockDoer),
+				elastic.SetSniff(false),
+				elastic.SetHealthcheck(false),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			lmaClient := lmaelastic.NewWithClient(client)
+
+			// validate responses
+			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(eventSearchRequestFromManager)))
+			Expect(err).NotTo(HaveOccurred())
+
+			rr := httptest.NewRecorder()
+			handler := EventSearchHandler(lmaindex.Alerts(), fakeClientSet, lmaClient.Backend())
+			handler.ServeHTTP(rr, req)
+
+			Expect(rr.Code).To(Equal(http.StatusOK))
+
+			var resp v1.SearchResponse
+			err = json.Unmarshal(rr.Body.Bytes(), &resp)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(resp.Hits).To(HaveLen(2))
+			Expect(resp.NumPages).To(Equal(1))
+			Expect(resp.TimedOut).To(BeFalse())
+			Expect(resp.TotalHits).To(Equal(2))
+		})
+
+		It("should skip invalid alert exceptions selector", func() {
+			// mock http client
+			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
+				defer GinkgoRecover()
+				req := args.Get(0).(*http.Request)
+
+				// Elastic _search request
+				Expect(req.Method).To(Equal(http.MethodPost))
+				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_events.cluster*/_search"))
+
+				body, err := ioutil.ReadAll(req.Body)
+				Expect(err).NotTo(HaveOccurred())
+				// Elastic search request json
+				Expect(body).To(Equal([]byte(eventSearchRequestSelectorInvalid)))
+
+				Expect(req.Body.Close()).NotTo(HaveOccurred())
+				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+			}).Return(&http.Response{
+				StatusCode: http.StatusOK,
+				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(eventSearchResponse))),
+			}, nil)
+
+			// create some alert exceptions
+			alertExceptions := []*v3.AlertException{
+				// valid selector
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "alert-exception-valid-selector",
+						CreationTimestamp: metav1.Now(),
+					},
+					Spec: v3.AlertExceptionSpec{
+						Description: "AlertException valid selector",
+						Selector:    "origin = origin1",
+					},
+				},
+				// invalid selector
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "alert-exception-invalid-selector",
+						CreationTimestamp: metav1.Now(),
+					},
+					Spec: v3.AlertExceptionSpec{
+						Description: "AlertException invalid selector",
+						Selector:    "invalid selector",
+					},
+				},
+			}
+			for _, alertException := range alertExceptions {
+				_, err := fakeClientSet.AlertExceptions().Create(context.Background(), alertException, metav1.CreateOptions{})
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+			// mock lma es client
+			client, err := elastic.NewClient(
+				elastic.SetHttpClient(mockDoer),
+				elastic.SetSniff(false),
+				elastic.SetHealthcheck(false),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			lmaClient := lmaelastic.NewWithClient(client)
+
+			// validate responses
+			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(eventSearchRequestFromManager)))
+			Expect(err).NotTo(HaveOccurred())
+
+			rr := httptest.NewRecorder()
+			handler := EventSearchHandler(lmaindex.Alerts(), fakeClientSet, lmaClient.Backend())
+			handler.ServeHTTP(rr, req)
+
+			Expect(rr.Code).To(Equal(http.StatusOK))
+
+			var resp v1.SearchResponse
+			err = json.Unmarshal(rr.Body.Bytes(), &resp)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(resp.Hits).To(HaveLen(2))
+			Expect(resp.NumPages).To(Equal(1))
+			Expect(resp.TimedOut).To(BeFalse())
+			Expect(resp.TotalHits).To(Equal(2))
+		})
+
+		It("should return error when request is not GET or POST", func() {
+			// mock lma es client
+			client, err := elastic.NewClient(
+				elastic.SetHttpClient(mockDoer),
+				elastic.SetSniff(false),
+				elastic.SetHealthcheck(false),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			lmaClient := lmaelastic.NewWithClient(client)
+
+			req, err := http.NewRequest(http.MethodPatch, "", bytes.NewReader([]byte("any")))
+			Expect(err).NotTo(HaveOccurred())
+
+			rr := httptest.NewRecorder()
+			handler := EventSearchHandler(lmaindex.Alerts(), fakeClientSet, lmaClient.Backend())
+			handler.ServeHTTP(rr, req)
+
+			Expect(rr.Code).To(Equal(http.StatusMethodNotAllowed))
+		})
+
+		It("should return error when request body is not valid", func() {
+			// mock lma es client
+			client, err := elastic.NewClient(
+				elastic.SetHttpClient(mockDoer),
+				elastic.SetSniff(false),
+				elastic.SetHealthcheck(false),
+			)
+			Expect(err).NotTo(HaveOccurred())
+			lmaClient := lmaelastic.NewWithClient(client)
+
+			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte("invalid-json-body")))
+			Expect(err).NotTo(HaveOccurred())
+
+			rr := httptest.NewRecorder()
+			handler := EventSearchHandler(lmaindex.Alerts(), fakeClientSet, lmaClient.Backend())
+			handler.ServeHTTP(rr, req)
+
+			Expect(rr.Code).To(Equal(http.StatusBadRequest))
 		})
 	})
 })

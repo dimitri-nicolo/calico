@@ -1,9 +1,8 @@
-// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
-package middleware
+// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+package event
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"time"
 
@@ -12,39 +11,35 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
-
+	"github.com/tigera/compliance/pkg/datastore"
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
 	"github.com/tigera/es-proxy/pkg/math"
+	"github.com/tigera/es-proxy/pkg/middleware"
 	esSearch "github.com/tigera/es-proxy/pkg/search"
 	lmaindex "github.com/tigera/lma/pkg/elastic/index"
 	"github.com/tigera/lma/pkg/httputils"
 )
 
-const (
-	MaxSearchResults = 10000
-)
-
-// SearchHandler is a handler for the /search endpoint.
+// EventSearchHandler is a handler for the /events/search endpoint.
 //
 // Uses a request body (JSON.blob) to extract parameters to build an elasticsearch query,
 // executes it and returns the results.
-func SearchHandler(
+func EventSearchHandler(
 	idxHelper lmaindex.Helper,
-	authReview AuthorizationReview,
+	k8sClient datastore.ClientSet,
 	client *elastic.Client,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Parse request body onto search parameters. If an error occurs while decoding define an http
 		// error and return.
-		params, err := ParseRequestBodyForParams(w, r)
+		params, err := middleware.ParseRequestBodyForParams(w, r)
 		if err != nil {
 			httputils.EncodeError(w, err)
 			return
 		}
 		// Search.
-		response, err := search(idxHelper, params, authReview, client, r)
+		response, err := search(idxHelper, params, k8sClient, client, r)
 		if err != nil {
 			httputils.EncodeError(w, err)
 			return
@@ -54,83 +49,11 @@ func SearchHandler(
 	})
 }
 
-// ParseRequestBodyForParams extracts query parameters from the request body (JSON.blob) and
-// validates them.
-//
-// Will define an http.Error if an error occurs.
-func ParseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.SearchRequest, error) {
-	// Validate http method.
-	if r.Method != http.MethodGet && r.Method != http.MethodPost {
-		log.WithError(ErrInvalidMethod).Info("Invalid http method.")
-
-		return nil, &httputils.HttpStatusError{
-			Status: http.StatusMethodNotAllowed,
-			Msg:    ErrInvalidMethod.Error(),
-			Err:    ErrInvalidMethod,
-		}
-	}
-
-	var params v1.SearchRequest
-	params.DefaultParams()
-
-	// Decode the http request body into the struct.
-	if err := httputils.Decode(w, r, &params); err != nil {
-		var mr *httputils.HttpStatusError
-		if errors.As(err, &mr) {
-			log.WithError(mr.Err).Info(mr.Msg)
-			return nil, mr
-		} else {
-			log.WithError(mr.Err).Info("Error validating /search request.")
-			return nil, &httputils.HttpStatusError{
-				Status: http.StatusMethodNotAllowed,
-				Msg:    http.StatusText(http.StatusInternalServerError),
-				Err:    err,
-			}
-		}
-	}
-
-	// Validate parameters.
-	if err := validator.Validate(params); err != nil {
-		return nil, &httputils.HttpStatusError{
-			Status: http.StatusBadRequest,
-			Msg:    err.Error(),
-			Err:    err,
-		}
-	}
-
-	// Set cluster name to default: "cluster", if empty.
-	if params.ClusterName == "" {
-		params.ClusterName = MaybeParseClusterNameFromRequest(r)
-	}
-
-	// Check that we are not attempting to enumerate more than the maximum number of results.
-	if params.PageNum*params.PageSize > MaxSearchResults {
-		return nil, &httputils.HttpStatusError{
-			Status: http.StatusBadRequest,
-			Msg:    "page number overflow",
-			Err:    errors.New("page number / Page size combination is too large"),
-		}
-	}
-
-	// At the moment, we only support a single sort by field.
-	//TODO(rlb): Need to check the fields are valid for the index type. Maybe something else for the
-	// index helper.
-	if len(params.SortBy) > 1 {
-		return nil, &httputils.HttpStatusError{
-			Status: http.StatusBadRequest,
-			Msg:    "too many sort fields specified",
-			Err:    errors.New("too many sort fields specified"),
-		}
-	}
-
-	return &params, nil
-}
-
 // search returns the results of ES search.
 func search(
 	idxHelper lmaindex.Helper,
 	params *v1.SearchRequest,
-	authReview AuthorizationReview,
+	k8sClient datastore.ClientSet,
 	esClient *elastic.Client,
 	r *http.Request,
 ) (*v1.SearchResponse, error) {
@@ -166,16 +89,34 @@ func search(
 		esquery = esquery.Filter(timeRange)
 	}
 
-	// Rbac query.
-	verbs, err := authReview.PerformReviewForElasticLogs(ctx, params.ClusterName)
+	// Apply alert exceptions.
+	eventExceptionList, err := k8sClient.AlertExceptions().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, err
-	}
-	if rbac, err := idxHelper.NewRBACQuery(verbs); err != nil {
-		// NewRBACQuery returns an HttpStatusError.
-		return nil, err
-	} else if rbac != nil {
-		esquery = esquery.Filter(rbac)
+		log.WithError(err).Error("failed to list alert exceptions")
+	} else {
+		now := time.Now()
+		for _, alertException := range eventExceptionList.Items {
+			if alertException.Spec.Period != nil {
+				createTimestamp := alertException.GetCreationTimestamp()
+				if createTimestamp.Add(alertException.Spec.Period.Duration).Before(now) {
+					// skip expired alert exceptions
+					log.Debugf(`skipping expired alert exception="%s"`, alertException.GetName())
+					continue
+				}
+			}
+
+			alertException.Status.LastExecuted = &metav1.Time{Time: now}
+
+			q, err := idxHelper.NewSelectorQuery(alertException.Spec.Selector)
+			if err != nil {
+				// skip invalid alert exception selector
+				log.WithError(err).Errorf(`failed to create Elastic query from alert exception="%s" selector="%s"`,
+					alertException.GetName(), alertException.Spec.Selector)
+				continue
+			}
+
+			esquery = esquery.MustNot(q)
+		}
 	}
 
 	// Sorting.
@@ -210,7 +151,7 @@ func search(
 		}
 	}
 
-	cappedTotalHits := math.MinInt(int(result.TotalHits), MaxSearchResults)
+	cappedTotalHits := math.MinInt(int(result.TotalHits), middleware.MaxSearchResults)
 	numPages := 0
 	if params.PageSize > 0 {
 		numPages = ((cappedTotalHits - 1) / params.PageSize) + 1

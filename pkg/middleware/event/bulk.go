@@ -20,10 +20,11 @@ const (
 	defaultTimeout = 60 * time.Second
 )
 
-func EventHandler(esClientFactory lmaelastic.ClusterContextClientFactory) http.Handler {
+// EventBulkHandler handles event bulk requests for deleting and dimssing events.
+func EventBulkHandler(esClientFactory lmaelastic.ClusterContextClientFactory) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// parse http request body into bulk request.
-		params, err := parseEventRequest(w, r)
+		params, err := parseEventBulkRequest(w, r)
 		if err != nil {
 			httputils.EncodeError(w, err)
 			return
@@ -31,7 +32,7 @@ func EventHandler(esClientFactory lmaelastic.ClusterContextClientFactory) http.H
 
 		// perform elastic bulk actions.
 		// only delete and dismiss actions are supported for events.
-		resp, err := processEventRequest(r, esClientFactory, params)
+		resp, err := processEventBulkRequest(r, esClientFactory, params)
 		if err != nil {
 			httputils.EncodeError(w, err)
 			return
@@ -40,7 +41,8 @@ func EventHandler(esClientFactory lmaelastic.ClusterContextClientFactory) http.H
 	})
 }
 
-func parseEventRequest(w http.ResponseWriter, r *http.Request) (*v1.BulkEventRequest, error) {
+// parseEventBulkRequest extracts bulk parameters from the request body and validates them.
+func parseEventBulkRequest(w http.ResponseWriter, r *http.Request) (*v1.BulkEventRequest, error) {
 	// events handler
 	if r.Method != http.MethodPost {
 		log.WithError(middleware.ErrInvalidMethod).Infof("Invalid http method %s for /events/bulk.", r.Method)
@@ -78,7 +80,8 @@ func parseEventRequest(w http.ResponseWriter, r *http.Request) (*v1.BulkEventReq
 	return &params, nil
 }
 
-func processEventRequest(
+// processEventBulkRequest translates bulk parameters to Elastic bulk requests and return responses.
+func processEventBulkRequest(
 	r *http.Request,
 	esClientFactory lmaelastic.ClusterContextClientFactory,
 	params *v1.BulkEventRequest,
@@ -97,7 +100,7 @@ func processEventRequest(
 		}
 	}
 
-	resp, err := processBulkEventRequest(ctx, esClient, params)
+	resp, err := processBulkRequest(ctx, esClient, params)
 	if err != nil {
 		return nil, &httputils.HttpStatusError{
 			Status: http.StatusInternalServerError,
@@ -108,7 +111,7 @@ func processEventRequest(
 	return resp, nil
 }
 
-func processBulkEventRequest(ctx context.Context, esClient lmaelastic.Client, params *v1.BulkEventRequest) (*v1.BulkEventResponse, error) {
+func processBulkRequest(ctx context.Context, esClient lmaelastic.Client, params *v1.BulkEventRequest) (*v1.BulkEventResponse, error) {
 	var resp v1.BulkEventResponse
 	afterFn := func(executionId int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
 		resp.Errors = response.Errors

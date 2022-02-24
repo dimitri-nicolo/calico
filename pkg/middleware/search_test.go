@@ -865,7 +865,7 @@ var _ = Describe("SearchElasticHits", func() {
 		})
 	})
 
-	Context("parseRequestBodyForParams response validation", func() {
+	Context("ParseRequestBodyForParams response validation", func() {
 		It("Should parse x-cluster-id in the request header when cluster is missing in body", func() {
 			r, err := http.NewRequest(
 				http.MethodGet, "", bytes.NewReader([]byte(validRequestBodyNoCluster)))
@@ -873,7 +873,7 @@ var _ = Describe("SearchElasticHits", func() {
 			r.Header.Add(clusterIdHeader, "cluster-id-in-header")
 
 			var w http.ResponseWriter
-			searchRequest, err := parseRequestBodyForParams(w, r)
+			searchRequest, err := ParseRequestBodyForParams(w, r)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(searchRequest.ClusterName).To(Equal("cluster-id-in-header"))
 		})
@@ -883,7 +883,7 @@ var _ = Describe("SearchElasticHits", func() {
 			r, err := http.NewRequest(http.MethodPut, "", bytes.NewReader([]byte(validRequestBody)))
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = parseRequestBodyForParams(w, r)
+			_, err = ParseRequestBodyForParams(w, r)
 			Expect(err).To(HaveOccurred())
 			var se *httputils.HttpStatusError
 			Expect(errors.As(err, &se)).To(BeTrue())
@@ -895,7 +895,7 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			var w http.ResponseWriter
-			_, err = parseRequestBodyForParams(w, r)
+			_, err = ParseRequestBodyForParams(w, r)
 			Expect(err).To(HaveOccurred())
 
 			var mr *httputils.HttpStatusError
@@ -908,7 +908,7 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			var w http.ResponseWriter
-			_, err = parseRequestBodyForParams(w, r)
+			_, err = ParseRequestBodyForParams(w, r)
 			Expect(err).To(HaveOccurred())
 
 			var se *httputils.HttpStatusError
@@ -924,7 +924,7 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			var w http.ResponseWriter
-			_, err = parseRequestBodyForParams(w, r)
+			_, err = ParseRequestBodyForParams(w, r)
 			Expect(err).To(HaveOccurred())
 
 			var se *httputils.HttpStatusError
@@ -940,7 +940,7 @@ var _ = Describe("SearchElasticHits", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			var w http.ResponseWriter
-			_, err = parseRequestBodyForParams(w, r)
+			_, err = ParseRequestBodyForParams(w, r)
 			Expect(err).To(HaveOccurred())
 
 			var se *httputils.HttpStatusError

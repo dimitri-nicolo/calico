@@ -188,14 +188,14 @@ func Start(cfg *Config) error {
 		middleware.ClusterRequestToResource(eventsResourceName,
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					event.EventHandler(esClientFactory)))))
+					event.EventBulkHandler(esClientFactory)))))
 	sm.Handle("/events/search",
 		middleware.ClusterRequestToResource(eventsResourceName,
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					middleware.SearchHandler(
+					event.EventSearchHandler(
 						lmaindex.Alerts(),
-						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						k8sClientSet,
 						esClient.Backend(),
 					)))))
 	// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.
