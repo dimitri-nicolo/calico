@@ -247,6 +247,10 @@ type mockDatastore struct {
 	failInit                     bool
 }
 
+func (b *mockDatastore) AlertExceptions() clientv3.AlertExceptionInterface {
+	panic("implement me")
+}
+
 func (b *mockDatastore) UISettingsGroups() clientv3.UISettingsGroupInterface {
 	panic("implement me")
 }

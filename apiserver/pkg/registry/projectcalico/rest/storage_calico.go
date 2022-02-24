@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import (
 
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	calicoalertexception "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/alertexception"
 	calicobgpconfiguration "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/bgpconfiguration"
 	calicobgppeer "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/bgppeer"
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/caliconodestatus"
@@ -280,6 +281,29 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		calicostorage.Options{
 			RESTOptions:    licenseKeyRESTOptions,
+			LicenseMonitor: licenseMonitor,
+		},
+		p.StorageType,
+		authorizer,
+		[]string{},
+	)
+
+	gAlertExceptionRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("alertexceptions"))
+	if err != nil {
+		return nil, err
+	}
+	gAlertExceptionOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   gAlertExceptionRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicogalert.EmptyObject(),
+			ScopeStrategy: calicogalert.NewStrategy(scheme),
+			NewListFunc:   calicogalert.NewList,
+			GetAttrsFunc:  calicogalert.GetAttrs,
+			Trigger:       nil,
+		},
+		calicostorage.Options{
+			RESTOptions:    gAlertExceptionRESTOptions,
 			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
@@ -826,6 +850,14 @@ func (p RESTStorageProvider) NewV3Storage(
 
 	storage["licensekeys"] = licenseStorage
 	storage["licensekeys/status"] = licenseStatusStorage
+
+	alertExceptionStorage, alertExceptionStatusStorage, err := calicoalertexception.NewREST(scheme, *gAlertExceptionOpts)
+	if err != nil {
+		err = fmt.Errorf("unable to create REST storage for a resource due to %v, will die", err)
+		panic(err)
+	}
+	storage["alertexceptions"] = alertExceptionStorage
+	storage["alertexceptions/status"] = alertExceptionStatusStorage
 
 	globalAlertsStorage, globalAlertsStatusStorage, err := calicogalert.NewREST(scheme, *gAlertOpts)
 	if err != nil {

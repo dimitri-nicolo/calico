@@ -404,6 +404,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalAlert tests", testutils.DatastoreA
 				},
 				options.SetOptions{},
 			)
+			Expect(err).NotTo(HaveOccurred())
 
 			By("Starting a watcher not specifying a rev - expect the current snapshot")
 			w, err = c.GlobalAlerts().Watch(ctx, options.ListOptions{})

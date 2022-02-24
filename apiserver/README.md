@@ -184,17 +184,17 @@ e.g.:
 
 ## Adding resources to cnx-apiserver
 
-Add the new resource defintions to tigera/api and associated code in libcalico-go.  Ensure the
-code autogeneration is run (make gen-files) in both repositories.
+Add the new resource definitions to tigera/api and associated code in libcalico-go.  Ensure the
+code auto-generation is run (make gen-files) in both repositories.
 
 The overall approach is largely identical for both namespaced (e.g. network policy)
 as well as non-namespaced (e.g. globalnetworkset) resources:
 
-* Add the resource type defintions to tigera/api. This is
-  likely comprised of a List struct type and an individual resource type. For
+1. Add the resource type definitions to `tigera/api`. This is
+  likely comprised of a List `struct` type and an individual resource type. For
   example:
 
-  ```
+  ```go
   // +genclient:nonNamespaced
   // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -225,12 +225,12 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   Pay particular attention the `genclient` metadata - the above example is for
   a non-namespaced resource.
 
-* Add the k8s-facing resource types to `pkg/apis/projectcalico/v3/types.go`. This
+2. Add the k8s-facing resource types to `pkg/apis/projectcalico/v3/types.go`. This
   will be similar to the types above, except the metadata fields indicate how to
   pack/unpack json data. The contents will essentially use the Calico v3 resource
   type. For example:
 
-  ```
+  ```go
   // +genclient:nonNamespaced
   // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -259,20 +259,20 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
 
   ```
 
-* Once you have these type declarations, add the resource and resource list types
-  to `addKnownTypes()` in `pkg/apis/projectcalico/v3/register.go` and
-  `pkg/apis/projectcalico/register.go`. For example:
+3. Once you have these type declarations, add the resource and resource list types
+  to `api/pkg/apis/projectcalico/v3/register.go`. For example:
 
-  ```
+  ```go
   ...
   &LicenseKey{},
   &LicenseKeyList{},
+  ...
   ```
 
-* Register the field label conversion anonymous function in `addConversionFuncs()`
+4. Register the field label conversion anonymous function in `addConversionFuncs()`
   in `pkg/apis/projectcalico/v3/conversion.go`. For example:
 
-  ```
+  ```go
 	err = scheme.AddFieldLabelConversionFunc(schema.GroupVersionKind{"projectcalico.org", "v3", "LicenseKey"},
 		func(label, value string) (string, string, error) {
 			switch label {
@@ -288,7 +288,7 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
 	}
   ```
 
-* Add backend storage and associated strategies for your resource types. A simple
+5. Add backend storage and associated strategies for your resource types. A simple
   approach is to just copy the two files below into your own package (and
   associated directory), and then modify the types to point to your resource
   declarations from the first couple of steps. For example:
@@ -301,11 +301,11 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   * `pkg/registry/projectcalico/globalthreatfeed/storage.go`
   * `pkg/registry/projectcalico/globalthreatfeed/strategy.go`
 
-* Add a reference to your storage strategy created in the previous steps to
+6. Add a reference to your storage strategy created in the previous steps to
   `pkg/registry/projectcalico/rest/storage_calico.go`. This registers a callback
-  for RESTapi calls for your resource type. For example:
+  for REST API calls for your resource type. For example:
 
-  ```
+  ```go
   import (
     ...
     calicolicensekey "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/licensekey"
@@ -336,8 +336,10 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
 	)
 
   ```
+
   If your resource has a status subresource, also register RESTapi calls for your status subresource:
-  ```
+
+  ```go
     ...
     gThreatFeedStatusRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("globalthreatfeeds/status"))
     if err != nil {
@@ -359,7 +361,7 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   Update the storage map (also in `pkg/registry/projectcalico/rest/storage_calico.go`)
   for your resource key with the associated REST api type, for example:
 
-  ```
+  ```go
   ...
   storage["licensekeys"] = calicolicensekey.NewREST(scheme, *licenseKeysSetOpts)
   ...
@@ -367,7 +369,7 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
 
   If your resource has a status subresource:
 
-  ```
+  ```go
   ...
   globalThreatFeedsStorage, globalThreatFeedsStatusStorage := calicogthreatfeed.NewREST(scheme, *gThreatFeedOpts)
   storage["globalthreatfeeds"] = globalThreatFeedsStorage
@@ -375,7 +377,7 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   ...
   ```
 
-* Create a factory function to create a resource storage implementation. Use
+7. Create a factory function to create a resource storage implementation. Use
   `pkg/storage/calico/licenseKey_storage.go` as a model for your work - this is
   basically a copy/paste and then update the resource type declarations.
   
@@ -383,19 +385,19 @@ as well as non-namespaced (e.g. globalnetworkset) resources:
   `pkg/storage/calico/globalThreatFeedStatus_storage.go` as model to create 
   subresource storage implementation.
 
-* Define how the API is going to be used by defining its behaviour is `hasRestrictionsFn()`
+8. Define how the API is going to be used by defining its behaviour is `hasRestrictionsFn()`
 If an API is restricted by a license, you need to see if the feature is defined in the [licensing library](https://github.com/tigera/licensing/blob/master/client/features/features.go). A sample of implementing restrictions can be found at `pkg/storage/calico/globalReport_storage.go`
 
-```
+```go
 hasRestrictionsFn := func(obj resourceObject) bool {
     return !opts.LicenseMonitor.GetFeatureStatus(features.AlertManagement)
 }
 ```
 
-* Add your factory function to `NewStorage()` function in
+9. Add your factory function to `NewStorage()` function in
   `pkg/storage/calico/storage_interface.go`. For example:
 
-  ```
+  ```go
   func NewStorage(...) {
 
   ...
@@ -408,7 +410,7 @@ hasRestrictionsFn := func(obj resourceObject) bool {
   }
   ```
 
-* Register your conversion routines in `pkg/storage/calico/converter.go`. For example:
+10. Register your conversion routines in `pkg/storage/calico/converter.go`. For example:
 
   ```
     convertToAAPI() {
@@ -424,22 +426,13 @@ hasRestrictionsFn := func(obj resourceObject) bool {
 
   Remember to copy the Status member if your resource has one.
 
-* Lastly, add a clientset test for functional verification tests to
+11. Lastly, add a clientset test for functional verification tests to
   `test/integration/clientset_test.go`. Take a look at the `TestLicenseKeyClient()`
   and `testLicenseKeyClient()` functions as an example.
 
-* In order to regenerate the generated code, run:
-
-  ```
-  make .generate_files
-  ```
-
-  This updates (and creates) a large number of files, all of which need
-  to be part of your commit.
-
 * In order to rebuild the container image:
 
-  ```
+  ```bash
   make tigera/cnx-apiserver
 
   # In order to test:
@@ -463,7 +456,7 @@ hasRestrictionsFn := func(obj resourceObject) bool {
 
 * Verify you can view, modify, and create your resource via  `kubectl`, for example:
 
-```
+```bash
   kubectl get LicenseKeys
   kubectl delete licensekey default
   kubectl apply -f artifacts/calico/iwantcake5-license.yaml
@@ -472,7 +465,7 @@ hasRestrictionsFn := func(obj resourceObject) bool {
 * Run `make static-checks` before creating a PR to make sure that all the changes can be goimport-ed.
 
 * For an example pull request that contains all these changes (plus all the
-  generated files as well), see: https://github.com/tigera/calico-k8sapiserver/pull/97
+  generated files as well), see: https://github.com/tigera/calico-private/pull/4214
 
   For one with a status subresource, see:
   https://github.com/tigera/calico-k8sapiserver/pull/104 and

@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1030,6 +1030,165 @@ func getExpiredLicenseKey(name string) *v3.LicenseKey {
 	return expiredLicenseKey
 }
 
+// TestAlertExceptionClient exercises the AlertException client.
+func TestAlertExceptionClient(t *testing.T) {
+	const name = "test-alertexception"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &v3.AlertException{}
+			}, true)
+			defer shutdownServer()
+			if err := testAlertExceptionClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-alertexception test failed")
+	}
+}
+
+func testAlertExceptionClient(client calicoclient.Interface, name string) error {
+	alertExceptionClient := client.ProjectcalicoV3().AlertExceptions()
+	alertException := &v3.AlertException{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: calico.AlertExceptionSpec{
+			Description: "alert exception description",
+			Selector:    "origin=someorigin",
+		},
+		Status: calico.AlertExceptionStatus{
+			LastExecuted: &v1.Time{Time: time.Now()},
+		},
+	}
+	ctx := context.Background()
+
+	// start from scratch
+	alertExceptions, err := alertExceptionClient.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing alertException (%s)", err)
+	}
+	if alertExceptions.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+
+	alertExceptionServer, err := alertExceptionClient.Create(ctx, alertException, metav1.CreateOptions{})
+	if nil != err {
+		return fmt.Errorf("error creating the alertException '%v' (%v)", alertException, err)
+	}
+	if name != alertExceptionServer.Name {
+		return fmt.Errorf("didn't get the same alertException back from the server \n%+v\n%+v", alertException, alertExceptionServer)
+	}
+	if !reflect.DeepEqual(alertExceptionServer.Status, calico.AlertExceptionStatus{}) {
+		return fmt.Errorf("status was set on create to %#v", alertException.Status)
+	}
+
+	alertExceptions, err = alertExceptionClient.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing alertExceptions (%s)", err)
+	}
+	if len(alertExceptions.Items) != 1 {
+		return fmt.Errorf("expected 1 alertException got %d", len(alertExceptions.Items))
+	}
+
+	alertExceptionServer, err = alertExceptionClient.Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting alertException %s (%s)", name, err)
+	}
+	if name != alertExceptionServer.Name &&
+		alertException.ResourceVersion == alertExceptionServer.ResourceVersion {
+		return fmt.Errorf("didn't get the same alertException back from the server \n%+v\n%+v", alertException, alertExceptionServer)
+	}
+
+	alertExceptionUpdate := alertExceptionServer.DeepCopy()
+	alertExceptionUpdate.Spec.Description += "-updated"
+	alertExceptionUpdate.Status.LastExecuted = &v1.Time{Time: time.Now()}
+	alertExceptionServer, err = alertExceptionClient.Update(ctx, alertExceptionUpdate, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("error updating alertException %s (%s)", name, err)
+	}
+	if alertExceptionServer.Spec.Description != alertExceptionUpdate.Spec.Description {
+		return errors.New("didn't update spec.description")
+	}
+	if alertExceptionServer.Status.LastExecuted != nil {
+		return errors.New("status was updated by Update()")
+	}
+
+	alertExceptionUpdate = alertExceptionServer.DeepCopy()
+	alertExceptionUpdate.Status.LastExecuted = &v1.Time{Time: time.Now()}
+	alertExceptionUpdate.Labels = map[string]string{"foo": "bar"}
+	statusDescription := "status"
+	alertExceptionUpdate.Spec.Description = statusDescription
+	alertExceptionServer, err = alertExceptionClient.UpdateStatus(ctx, alertExceptionUpdate, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("error updating alertException %s (%s)", name, err)
+	}
+	if alertExceptionServer.Status.LastExecuted == nil {
+		return fmt.Errorf("didn't update status. %v != %v", alertExceptionUpdate.Status, alertExceptionServer.Status)
+	}
+	if _, ok := alertExceptionServer.Labels["foo"]; ok {
+		return fmt.Errorf("updatestatus updated labels")
+	}
+	if alertExceptionServer.Spec.Description == statusDescription {
+		return fmt.Errorf("updatestatus updated spec")
+	}
+
+	err = alertExceptionClient.Delete(ctx, name, metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("alertException should be deleted (%s)", err)
+	}
+
+	// Test watch
+	w, err := client.ProjectcalicoV3().AlertExceptions().Watch(ctx, v1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error watching AlertExceptions (%s)", err)
+	}
+	var events []watch.Event
+	done := sync.WaitGroup{}
+	done.Add(1)
+	timeout := time.After(500 * time.Millisecond)
+	var timeoutErr error
+	// watch for 2 events
+	go func() {
+		defer done.Done()
+		for i := 0; i < 2; i++ {
+			select {
+			case e := <-w.ResultChan():
+				events = append(events, e)
+			case <-timeout:
+				timeoutErr = fmt.Errorf("timed out wating for events")
+				return
+			}
+		}
+		return
+	}()
+
+	// Create two AlertExceptions
+	for i := 0; i < 2; i++ {
+		ae := &v3.AlertException{
+			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("ae%d", i)},
+			Spec: calico.AlertExceptionSpec{
+				Description: "test",
+				Selector:    "origin=someorigin",
+			},
+		}
+		_, err = alertExceptionClient.Create(ctx, ae, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("error creating the alertException '%v' (%v)", ae, err)
+		}
+	}
+	done.Wait()
+	if timeoutErr != nil {
+		return timeoutErr
+	}
+	if len(events) != 2 {
+		return fmt.Errorf("expected 2 watch events got %d", len(events))
+	}
+
+	return nil
+}
+
 // TestGlobalAlertClient exercises the GlobalAlert client.
 func TestGlobalAlertClient(t *testing.T) {
 	const name = "test-globalalert"
@@ -1713,35 +1872,35 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 			LastSuccessfulReportJobs: []calico.CompletedReportJob{
 				{
 					ReportJob: calico.ReportJob{
-						Start: metav1.Time{time.Now()},
-						End:   metav1.Time{time.Now()},
+						Start: metav1.Time{Time: time.Now()},
+						End:   metav1.Time{Time: time.Now()},
 						Job: &corev1.ObjectReference{
 							Kind:      "NetworkPolicy",
 							Name:      "fbar-srj",
 							Namespace: "fbar-ns-srj",
 						},
 					},
-					JobCompletionTime: &metav1.Time{time.Now()},
+					JobCompletionTime: &metav1.Time{Time: time.Now()},
 				},
 			},
 			LastFailedReportJobs: []calico.CompletedReportJob{
 				{
 					ReportJob: calico.ReportJob{
-						Start: metav1.Time{time.Now()},
-						End:   metav1.Time{time.Now()},
+						Start: metav1.Time{Time: time.Now()},
+						End:   metav1.Time{Time: time.Now()},
 						Job: &corev1.ObjectReference{
 							Kind:      "NetworkPolicy",
 							Name:      "fbar-frj",
 							Namespace: "fbar-ns-frj",
 						},
 					},
-					JobCompletionTime: &metav1.Time{time.Now()},
+					JobCompletionTime: &metav1.Time{Time: time.Now()},
 				},
 			},
 			ActiveReportJobs: []calico.ReportJob{
 				{
-					Start: metav1.Time{time.Now()},
-					End:   metav1.Time{time.Now()},
+					Start: metav1.Time{Time: time.Now()},
+					End:   metav1.Time{Time: time.Now()},
 					Job: &corev1.ObjectReference{
 						Kind:      "NetworkPolicy",
 						Name:      "fbar-arj",
@@ -1750,8 +1909,8 @@ func testGlobalReportClient(client calicoclient.Interface, name string) error {
 				},
 			},
 			LastScheduledReportJob: &calico.ReportJob{
-				Start: metav1.Time{time.Now()},
-				End:   metav1.Time{time.Now()},
+				Start: metav1.Time{Time: time.Now()},
+				End:   metav1.Time{Time: time.Now()},
 				Job: &corev1.ObjectReference{
 					Kind:      "NetworkPolicy",
 					Name:      "fbar-lsj",
