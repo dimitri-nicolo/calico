@@ -979,8 +979,7 @@ var _ = infrastructure.DatastoreDescribe("nat outgoing flow log tests", []apicon
 
 	It("Should report the nat outgoing ports for an SNAT'd flow", func() {
 		cc := &connectivity.Checker{
-			Protocol:        "tcp",
-			RetriesDisabled: true,
+			Protocol: "tcp",
 		}
 
 		cc.ExpectSome(workload1, workload2)
