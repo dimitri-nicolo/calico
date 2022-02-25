@@ -4,6 +4,7 @@ package aws
 
 import (
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
@@ -102,13 +103,16 @@ func (s *awsState) OnCalicoENIAttached(eni *eniState) {
 			s.eniIDByPrimaryIP[eniAddr.PrivateIP] = eni.ID
 		}
 	}
-	s.attachmentIDByENIID[eni.Attachment.ID] = eni.ID
+	s.attachmentIDByENIID[eni.ID] = eni.Attachment.ID
 	s.inUseDeviceIndexes[eni.Attachment.DeviceIndex] = true
 	s.freeIPv4CapacityByENIID[eni.ID] = s.capabilities.MaxIPv4PerInterface - len(eni.IPAddresses)
 }
 
 func (s *awsState) OnCalicoENIDetached(eniID string) {
-	eni := s.calicoOwnedENIsByID[eniID]
+	eni, ok := s.calicoOwnedENIsByID[eniID]
+	if !ok {
+		logrus.WithField("eniID", eniID).Warn("BUG: unknown ENI ID, ignoring.")
+	}
 	delete(s.calicoOwnedENIsByID, eniID)
 
 	newENIsBySubnet := s.eniIDsBySubnet[eni.SubnetID][:0]
@@ -126,7 +130,7 @@ func (s *awsState) OnCalicoENIDetached(eniID string) {
 			delete(s.eniIDByPrimaryIP, eniAddr.PrivateIP)
 		}
 	}
-	delete(s.attachmentIDByENIID, eni.Attachment.ID)
+	delete(s.attachmentIDByENIID, eni.ID)
 	delete(s.inUseDeviceIndexes, eni.Attachment.DeviceIndex)
 	delete(s.freeIPv4CapacityByENIID, eniID)
 }
