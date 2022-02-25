@@ -32,6 +32,8 @@ var _ = Describe("CNI config template tests", func() {
 		f = bytes.Replace(f, []byte("__VNI__"), []byte("0"), -1)
 		// __DNS_NAME_SERVERS__ is a placeholder for an array so we need to swap it for something valid.
 		f = bytes.Replace(f, []byte("__DNS_NAME_SERVERS__"), []byte("0"), -1)
+		// __DSR_SUPPORT__ is a placeholder for a boolean so we need to swap it for something valid.
+		f = bytes.Replace(f, []byte("__DSR_SUPPORT__"), []byte("0"), -1)
 
 		var data map[string]interface{}
 		err = json.Unmarshal(f, &data)

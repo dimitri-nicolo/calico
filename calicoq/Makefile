@@ -46,7 +46,7 @@ sub-image-%:
 
 BINARY = bin/calicoq
 $(CALICOQ_IMAGE): $(BINARY)
-	docker build -t $(CALICOQ_IMAGE):latest-$(ARCH) --file Dockerfile .
+	$(DOCKER_BUILD) -t $(CALICOQ_IMAGE):latest-$(ARCH) --file Dockerfile . --load
 ifeq ($(ARCH),amd64)
 	docker tag $(CALICOQ_IMAGE):latest-$(ARCH) $(CALICOQ_IMAGE):latest
 endif
@@ -83,7 +83,7 @@ ci: clean static-checks fv ut st
 cd: image cd-common
 
 $(TOOLING_IMAGE_CREATED): Dockerfile-testenv.amd64
-	docker build --cpuset-cpus 0 --pull -t $(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) -f Dockerfile-testenv.amd64 .
+	$(DOCKER_BUILD) --cpuset-cpus 0 -t $(TOOLING_IMAGE):$(TOOLING_IMAGE_VERSION) -f Dockerfile-testenv.amd64 . --load
 	touch $@
 
 .PHONY: ut 

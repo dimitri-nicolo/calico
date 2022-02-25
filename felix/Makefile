@@ -75,15 +75,13 @@ ifeq ($(ARCH),arm64)
 # Required for eBPF support in ARM64.
 # We need to force ARM64 build image to be used in a crosscompilation run.
 CALICO_BUILD:=$(CALICO_BUILD)-$(ARCH)
-# Prevents docker from tagging the output image incorrectly as amd64.
-TARGET_PLATFORM=--platform=linux/arm64/v8
 DOCKER_GO_BUILD:=$(DOCKER_RUN) $(CALICO_BUILD)
 endif
 
 FV_ETCDIMAGE?=$(ETCD_IMAGE)
 FV_TYPHAIMAGE?=felix-test/typha:latest-$(BUILDARCH)
 FV_K8SIMAGE=calico/go-build:$(GO_BUILD_VER)
-FV_FELIXIMAGE ?=$(FELIX_IMAGE)-test:latest-$(BUILDARCH)
+FV_FELIXIMAGE?=$(FELIX_IMAGE):latest-$(ARCH)
 
 # Total number of batches to split the tests into.  In CI we set this to say 5 batches,
 # and run a single batch on each test VM.
@@ -98,7 +96,6 @@ FV_NUM_BATCHES?=1
 # (with FV_NUM_BATCHES=1) to check that it's not a flake.
 FV_BATCHES_TO_RUN?=$(shell seq $(FV_NUM_BATCHES))
 FV_SLOW_SPEC_THRESH=90
-FV_RACE_DETECTOR_ENABLED?=false
 
 # Linker flags for building Felix.
 #
@@ -162,9 +159,12 @@ ifeq ($(ARCH), $(filter $(ARCH),amd64 arm64))
 CGO_ENABLED=1
 CGO_LDFLAGS="-L$(LIBBPF_CONTAINER_PATH)/$(ARCH) -lbpf -lelf -lz"
 CGO_CFLAGS="-I$(LIBBPF_CONTAINER_PATH) -I$(BPFGPL_CONTAINER_PATH)"
+FV_RACE_DETECTOR_ENABLED?=false
 else
 CGO_ENABLED=0
 CGO_LDFLAGS=""
+# Race detection requires CGO enabled.
+FV_RACE_DETECTOR_ENABLED?=false
 endif
 
 DOCKER_GO_BUILD_CGO=$(DOCKER_RUN) $(TARGET_PLATFORM) -e CGO_ENABLED=$(CGO_ENABLED) -e CGO_LDFLAGS=$(CGO_LDFLAGS) -e CGO_CFLAGS=$(CGO_CFLAGS) $(CALICO_BUILD)
@@ -220,8 +220,8 @@ bin/calico-felix-race-$(ARCH): $(LIBBPF_A) $(SRC_FILES)
 	@echo Building felix with race detector enabled for $(ARCH) on $(BUILDARCH)
 	mkdir -p bin
 	if [ "$(SEMAPHORE)" != "true" -o ! -e $@ ] ; then \
-	  $(DOCKER_GO_BUILD_CGO) \
-	     sh -c 'go build -v -race -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-felix"'; \
+	  $(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
+	     go build -v -race -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-felix"'; \
 	fi
 
 # Generate the protobuf bindings for go. The proto/felixbackend.pb.go file is included in SRC_FILES
@@ -276,6 +276,13 @@ bpf/asm/opcode_string.go: bpf/asm/asm.go
 # Build the calico/felix docker image, which contains only Felix.
 .PHONY: $(FELIX_IMAGE) $(FELIX_IMAGE)-$(ARCH)
 
+# Whether or not to use race-detector in the produced image.
+ifeq ($(FV_RACE_DETECTOR_ENABLED),true)
+FV_BINARY=bin/calico-felix-race-$(ARCH)
+else
+FV_BINARY=bin/calico-felix-$(ARCH)
+endif
+
 # by default, build the image for the target architecture
 .PHONY: image-all
 image-all: $(addprefix sub-image-,$(VALIDARCHES))
@@ -284,9 +291,14 @@ sub-image-%:
 
 image: $(FELIX_IMAGE)
 $(FELIX_IMAGE): $(FELIX_IMAGE)-$(ARCH)
-$(FELIX_IMAGE)-$(ARCH): bin/calico-felix-$(ARCH) \
+$(FELIX_IMAGE)-$(ARCH): $(FV_BINARY) \
                         bin/calico-bpf \
+			bin/pktgen \
+			bin/test-connection \
+			bin/test-workload \
                         build-bpf \
+			bin/test-dns \
+			bin/tproxy \
                         docker-image/calico-felix-wrapper \
                         docker-image/felix.cfg \
                         docker-image/Dockerfile* \
@@ -295,24 +307,19 @@ $(FELIX_IMAGE)-$(ARCH): bin/calico-felix-$(ARCH) \
 	# leftover files (say from a build on another branch) into the docker image.
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
-	cp bin/calico-felix-$(ARCH) docker-image/bin/
+	cp $(FV_BINARY) docker-image/bin/
+	cp bin/test-dns docker-image/bin/
+	cp bin/tproxy docker-image/bin/
 	cp bin/calico-bpf docker-image/bin/
+	cp bin/pktgen docker-image/bin/
+	cp bin/test-connection docker-image/bin/
+	cp bin/test-workload docker-image/bin/
 	rm -rf docker-image/bpf
 	mkdir -p docker-image/bpf/bin
 	# Copy only the files we're explicitly expecting (in case we have left overs after switching branch).
 	cp $(ALL_BPF_PROGS) docker-image/bpf/bin
-	docker buildx build $(TARGET_PLATFORM) --pull -t $(FELIX_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/Dockerfile.$(ARCH) docker-image --load;
+	$(DOCKER_BUILD) --build-arg FV_BINARY=$(FV_BINARY) -t $(FELIX_IMAGE):latest-$(ARCH) --file ./docker-image/Dockerfile.$(ARCH) docker-image --load;
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
-
-ifeq ($(FV_RACE_DETECTOR_ENABLED),true)
-FV_BINARY=calico-felix-race-amd64
-else
-FV_BINARY=calico-felix-amd64
-endif
-
-image-test: image fv/Dockerfile.test.amd64 bin/pktgen bin/test-workload bin/test-connection bin/test-dns bin/tproxy bin/$(FV_BINARY)
-	docker buildx build $(TARGET_PLATFORM) -t $(FELIX_IMAGE)-test:latest-$(ARCH) --build-arg FV_BINARY=$(FV_BINARY) --file ./fv/Dockerfile.test.$(ARCH) bin --load;
-	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(FELIX_IMAGE)-test
 
 ###############################################################################
 # Static checks
@@ -370,7 +377,7 @@ build-typha:
 # or It{} description string. For example, to only run dns_test.go, type:
 # 	GINKGO_FOCUS="DNS Policy" make fv
 #
-fv fv/latency.log fv/data-races.log: $(REMOTE_DEPS) image-test bin/iptables-locker bin/test-workload bin/test-connection bin/test-dns bin/calico-bpf fv/fv.test test-dns-server-container bin/run-debug-console-command
+fv fv/latency.log fv/data-races.log: $(REMOTE_DEPS) image bin/iptables-locker bin/test-workload bin/test-connection bin/test-dns bin/calico-bpf fv/fv.test test-dns-server-container bin/run-debug-console-command
 	rm -f fv/data-races.log fv/latency.log
 	docker build -t tigera-test/scapy fv/scapy
 	cd fv && \
@@ -431,7 +438,7 @@ K8SFV_GO_FILES:=$(shell find ./$(K8SFV_DIR) -name prometheus -prune -o -type f -
 # e.g.
 #       $(MAKE) k8sfv-test JUST_A_MINUTE=true USE_TYPHA=true
 #       $(MAKE) k8sfv-test JUST_A_MINUTE=true USE_TYPHA=false
-k8sfv-test: image-test k8sfv-test-existing-felix
+k8sfv-test: image k8sfv-test-existing-felix
 # Run k8sfv test with whatever is the existing 'tigera/felix:latest'
 # container image.  To use some existing Felix version other than
 # 'latest', do 'FELIX_VERSION=<...> make k8sfv-test-existing-felix'.
@@ -482,20 +489,21 @@ stop-grafana:
 
 bin/calico-bpf: $(SRC_FILES)
 	@echo Building calico-bpf...
+	mkdir -p bin
 	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-bpf"'
 
 bin/pktgen: $(SRC_FILES) $(FV_SRC_FILES)
 	@echo Building pktgen...
 	mkdir -p bin
-	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -v -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/pktgen"'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+		go build -v -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/pktgen"'
 
 bin/tproxy: $(SRC_FILES) $(FV_SRC_FILES)
 	@echo Building tproxy...
 	mkdir -p bin
-	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -v -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/tproxy/cmd"'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+		go build -v -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/tproxy/cmd"'
 
 bin/iptables-locker: ../go.mod $(shell find iptables -type f -name '*.go' -print)
 	@echo Building iptables-locker...
