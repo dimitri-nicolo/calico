@@ -120,13 +120,20 @@ func wafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, cl
 		// Flatten out potential multiple OWASP log entries into comma-separated string.
 		ruleInfo := strings.Join(owaspLogInfo, ", ")
 		waf.Logger.WithFields(log.Fields{
+			"source_ip":   clientHost,
+			"source_port": clientPort,
+			"source_name": "-",
+			"dest_ip":     serverHost,
+			"dest_port":   serverPort,
+			"dest_name":   destinationHost,
+
 			"path":     uri,
 			"method":   httpMethod,
 			"protocol": inputProtocol,
 			"source": log.Fields{
 				"ip":       clientHost,
 				"port_num": clientPort,
-				"hostname": "",
+				"hostname": "-",
 			},
 			"destination": log.Fields{
 				"ip":       serverHost,
