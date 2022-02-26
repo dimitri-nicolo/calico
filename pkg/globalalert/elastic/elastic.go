@@ -701,7 +701,7 @@ func (e *service) setErrorAndFlush(err v3.ErrorCondition) {
 
 // buildEventsIndexDoc builds an object that can be sent to events index.
 func (e *service) buildEventsIndexDoc(record JsonObject) lmaAPI.EventsData {
-	description := e.substituteDescriptionOrSummaryContents(record)
+	description := e.substituteDescriptionContents(record)
 	eventData := extractEventData(record)
 
 	eventData.Time = time.Now().Unix()
@@ -744,14 +744,10 @@ func (e *service) substituteVariables(alert *v3.GlobalAlert) string {
 	return out
 }
 
-// substituteDescriptionOrSummaryContents substitute bracketed variables in summary/description with it's value.
+// substituteDescriptionContents substitute bracketed variables in description with it's value.
 // If there is an error in substitution log error and return the partly substituted value.
-func (e *service) substituteDescriptionOrSummaryContents(record JsonObject) string {
-	description := e.globalAlert.Spec.Summary
-	if e.globalAlert.Spec.Summary == "" {
-		description = e.globalAlert.Spec.Description
-	}
-
+func (e *service) substituteDescriptionContents(record JsonObject) string {
+	description := e.globalAlert.Spec.Description
 	vars, err := extractVariablesFromTemplate(description)
 	if err != nil {
 		log.WithError(err).Warnf("failed to build summary or description for alert %s due to invalid formatting of bracketed variables", e.globalAlert.Name)
