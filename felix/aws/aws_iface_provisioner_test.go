@@ -20,6 +20,7 @@ import (
 	"github.com/aws/smithy-go/transport/http"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/util/clock"
 
 	"github.com/projectcalico/calico/felix/ip"
@@ -1676,6 +1677,7 @@ func setup(t *testing.T, opts ...IfaceProvOpt) (*SecondaryIfaceProvisioner, *sip
 
 	fakeHealth := NewFakeHealth()
 	sip := NewSecondaryIfaceProvisioner(
+		v3.AWSSecondaryIPEnabled,
 		nodeName,
 		fakeHealth,
 		fakeIPAM,

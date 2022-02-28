@@ -494,7 +494,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			DNSExtraTTL:          configParams.GetDNSExtraTTL(),
 			DNSLogsLatency:       configParams.DNSLogsLatency,
 
-			AWSSecondaryIPSupport:             configParams.AWSSecondaryIPSupport == "Enabled",
+			AWSSecondaryIPSupport:             configParams.AWSSecondaryIPSupport,
 			AWSRequestTimeout:                 configParams.AWSRequestTimeout,
 			AWSSecondaryIPRoutingRulePriority: configParams.AWSSecondaryIPRoutingRulePriority,
 

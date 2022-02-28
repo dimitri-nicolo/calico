@@ -95,6 +95,8 @@ var _ ipamInterface = ipam.Interface(nil)
 // To ensure that we can spot _our_ ENIs even if we fail to attach them, we label them with an "owned by
 // Calico" tag and a second tag that contains the instance ID of this node.
 type SecondaryIfaceProvisioner struct {
+	mode string
+
 	nodeName           string
 	awsSubnetsFilename string
 	timeout            time.Duration
@@ -207,12 +209,19 @@ type healthAggregator interface {
 }
 
 func NewSecondaryIfaceProvisioner(
+	mode string,
 	nodeName string,
 	healthAgg healthAggregator,
 	ipamClient ipamInterface,
 	options ...IfaceProvOpt,
 ) *SecondaryIfaceProvisioner {
+	if mode == v3.AWSSecondaryIPDisabled ||
+		(mode != v3.AWSSecondaryIPEnabled && mode != v3.AWSSecondaryIPEnabledENIPerWorkload) {
+		logrus.WithField("mode", mode).Panic("Unknown AWS secondary IP mode.")
+	}
 	sip := &SecondaryIfaceProvisioner{
+		mode: mode,
+
 		healthAgg:          healthAgg,
 		livenessEnabled:    true,
 		ipamClient:         ipamClient,

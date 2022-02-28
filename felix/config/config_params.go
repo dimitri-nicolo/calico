@@ -310,7 +310,7 @@ type Config struct {
 	AllowIPIPPacketsFromWorkloads  bool `config:"bool;false"`
 
 	AWSSrcDstCheck                    string        `config:"oneof(DoNothing,Enable,Disable);DoNothing;non-zero"`
-	AWSSecondaryIPSupport             string        `config:"oneof(Disabled,Enabled);Disabled"`
+	AWSSecondaryIPSupport             string        `config:"oneof(Disabled,Enabled,EnabledENIPerWorkload);Disabled"`
 	AWSSecondaryIPRoutingRulePriority int           `config:"int(0:4294967295);101"`
 	AWSRequestTimeout                 time.Duration `config:"seconds;30"`
 

@@ -60,6 +60,12 @@ const (
 	AWSSrcDstCheckOptionDisable                        = "Disable"
 )
 
+const (
+	AWSSecondaryIPEnabled               = "Enabled"
+	AWSSecondaryIPDisabled              = "Disabled"
+	AWSSecondaryIPEnabledENIPerWorkload = "EnabledENIPerWorkload"
+)
+
 // FelixConfigurationSpec contains the values of the Felix configuration.
 type FelixConfigurationSpec struct {
 	UseInternalDataplaneDriver *bool  `json:"useInternalDataplaneDriver,omitempty"`
@@ -723,7 +729,7 @@ type FelixConfigurationSpec struct {
 	AWSSrcDstCheck *AWSSrcDstCheckOption `json:"awsSrcDstCheck,omitempty" validate:"omitempty,oneof=DoNothing Enable Disable"`
 	// AWSSecondaryIPSupport controls whether Felix will try to provision AWS secondary ENIs and secondary IPs for
 	// workloads that have IPs from IP pools that are configured with an AWS subnet ID. [Default: Disabled]
-	AWSSecondaryIPSupport string `json:"awsSecondaryIPSupport,omitempty" validate:"omitempty,oneof=Enabled Disabled"`
+	AWSSecondaryIPSupport string `json:"awsSecondaryIPSupport,omitempty" validate:"omitempty,oneof=Enabled EnabledENIPerWorkload Disabled"`
 	// AWSSecondaryIPRoutingRulePriority controls the priority that Felix will use for routing rules when programming
 	// them for AWS Secondary IP support. [Default: 101]
 	AWSSecondaryIPRoutingRulePriority *int `json:"awsSecondaryIPRoutingRulePriority,omitempty" validate:"omitempty,gte=0,lte=4294967295"`
