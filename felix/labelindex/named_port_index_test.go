@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2022 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@ package labelindex_test
 
 import (
 	"github.com/projectcalico/calico/felix/ip"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	. "github.com/projectcalico/calico/felix/labelindex"
 
 	. "github.com/onsi/ginkgo"
@@ -105,8 +107,12 @@ var _ = Describe("SelectorAndNamedPortIndex", func() {
 		It("should inherit labels from profiles", func() {
 			uut.OnUpdate(api.Update{
 				KVPair: model.KVPair{
-					Key:   model.ProfileLabelsKey{ProfileKey: model.ProfileKey{Name: "doo"}},
-					Value: map[string]string{"superhero": "scooby"},
+					Key: model.ResourceKey{Kind: v3.KindProfile, Name: "doo"},
+					Value: &v3.Profile{
+						Spec: v3.ProfileSpec{
+							LabelsToApply: map[string]string{"superhero": "scooby"},
+						},
+					},
 				},
 			})
 			uut.OnUpdate(api.Update{
@@ -179,6 +185,45 @@ var _ = Describe("SelectorAndNamedPortIndex", func() {
 		})
 	})
 
+	Describe("HostEndpoint CIDRs", func() {
+		It("should update IP sets for labels with empty values", func() {
+			hep := &model.HostEndpoint{
+				Name:              "eth0",
+				ExpectedIPv4Addrs: []calinet.IP{calinet.MustParseIP("1.2.3.4")},
+				ExpectedIPv6Addrs: []calinet.IP{calinet.MustParseIP("aa:bb::cc:dd")},
+				Labels: map[string]string{
+					"label2": "",
+				},
+				ProfileIDs: []string{"profile1"},
+			}
+			hepKVP := model.KVPair{
+				Key:   model.HostEndpointKey{Hostname: "127.0.0.1", EndpointID: "hosta.eth0-a"},
+				Value: hep,
+			}
+			uut.OnUpdate(api.Update{KVPair: hepKVP})
+			s, err := selector.Parse("has(label2)")
+			Expect(err).ToNot(HaveOccurred())
+
+			// The new ipset should have 2 IPs.
+			uut.UpdateIPSet("heptest", s, ProtocolNone, "")
+			set, ok := recorder.ipsets["heptest"]
+			Expect(ok).To(BeTrue())
+			Expect(set).To(HaveLen(2))
+
+			// Update the hostendpoint labels so they are not matched by the
+			// selector.
+			hep.Labels = map[string]string{
+				"label1": "value1",
+			}
+			uut.OnUpdate(api.Update{KVPair: hepKVP})
+
+			// Expect the ipset to be empty (OnMemberRemoved will have been
+			// called twice.)
+			set, ok = recorder.ipsets["heptest"]
+			Expect(ok).To(BeFalse())
+			Expect(set).To(HaveLen(0))
+		})
+	})
 })
 
 type testRecorder struct {
