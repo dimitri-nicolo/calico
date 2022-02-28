@@ -15,6 +15,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/felixsyncer"
 	"github.com/projectcalico/calico/libcalico-go/lib/selector"
+	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 // Restructuring like this should also be useful for a permanently running webserver variant too.
@@ -83,7 +84,7 @@ func (cbs *EvalCmd) Start(endpointFilter dispatcher.UpdateHandler) {
 
 	cbs.dispatcher.Register(model.WorkloadEndpointKey{}, cbs.OnUpdate)
 	cbs.dispatcher.Register(model.HostEndpointKey{}, cbs.OnUpdate)
-	cbs.dispatcher.Register(model.ProfileLabelsKey{}, cbs.OnUpdate)
+	cbs.dispatcher.Register(model.ResourceKey{}, cbs.OnUpdate)
 	cbs.dispatcher.Register(model.RemoteClusterStatusKey{}, cbs.rcc.OnUpdate)
 
 	bclient, cfg := GetClient(cbs.configFile)
@@ -160,9 +161,11 @@ func (cbs *EvalCmd) OnUpdate(update api.Update) (filterOut bool) {
 	case model.HostEndpointKey:
 		v := update.Value.(*model.HostEndpoint)
 		cbs.index.UpdateLabels(update.Key, v.Labels, v.ProfileIDs)
-	case model.ProfileLabelsKey:
-		v := update.Value.(map[string]string)
-		cbs.index.UpdateParentLabels(k.Name, v)
+	case model.ResourceKey:
+		if k.Kind == v3.KindProfile {
+			v := update.Value.(*v3.Profile).Spec.LabelsToApply
+			cbs.index.UpdateParentLabels(k.Name, v)
+		}
 	default:
 		log.Errorf("Unexpected update type: %#v", update)
 		return true

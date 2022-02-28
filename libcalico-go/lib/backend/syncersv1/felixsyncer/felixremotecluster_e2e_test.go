@@ -481,15 +481,6 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 						},
 						UpdateType: api.UpdateTypeKVNew,
 					},
-					api.Update{
-						KVPair: model.KVPair{
-							Key: model.ProfileLabelsKey{
-								ProfileKey: model.ProfileKey{Name: "remote-cluster/profile-1"},
-							},
-							Value: pro.Spec.LabelsToApply,
-						},
-						UpdateType: api.UpdateTypeKVNew,
-					},
 				)
 				deleteEvents = append(deleteEvents,
 					api.Update{
@@ -503,15 +494,6 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 					}, api.Update{
 						KVPair: model.KVPair{
 							Key: model.ProfileRulesKey{
-								ProfileKey: model.ProfileKey{Name: "remote-cluster/profile-1"},
-							},
-							Value: nil,
-						},
-						UpdateType: api.UpdateTypeKVDeleted,
-					},
-					api.Update{
-						KVPair: model.KVPair{
-							Key: model.ProfileLabelsKey{
 								ProfileKey: model.ProfileKey{Name: "remote-cluster/profile-1"},
 							},
 							Value: nil,
