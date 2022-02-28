@@ -695,7 +695,7 @@ func (f *fakeEC2) UnassignPrivateIpAddresses(ctx context.Context, params *ec2.Un
 	}
 
 	// Find the ENI.
-	ENI, ok := f.ENIsByID[*params.NetworkInterfaceId]
+	eni, ok := f.ENIsByID[*params.NetworkInterfaceId]
 	if !ok {
 		return nil, errNotFound("UnassignPrivateIpAddresses", "ENI.NotFound")
 	}
@@ -711,8 +711,11 @@ func (f *fakeEC2) UnassignPrivateIpAddresses(ctx context.Context, params *ec2.Un
 	for _, newAddr := range params.PrivateIpAddresses {
 		var updatedAddrs []types.NetworkInterfacePrivateIpAddress
 		found := false
-		for _, addr := range ENI.PrivateIpAddresses {
+		for _, addr := range eni.PrivateIpAddresses {
 			if *addr.PrivateIpAddress == newAddr {
+				if addr.Primary != nil && *addr.Primary {
+					return nil, errBadParam("UnassignPrivateIpAddresses", "NetworkInterfaceId.Primary")
+				}
 				found = true
 				continue
 			}
@@ -721,10 +724,10 @@ func (f *fakeEC2) UnassignPrivateIpAddresses(ctx context.Context, params *ec2.Un
 		if !found {
 			return nil, errNotFound("UnassignPrivateIpAddresses", "Address.NotFound")
 		}
-		ENI.PrivateIpAddresses = updatedAddrs
+		eni.PrivateIpAddresses = updatedAddrs
 	}
 
-	f.ENIsByID[*params.NetworkInterfaceId] = ENI
+	f.ENIsByID[*params.NetworkInterfaceId] = eni
 
 	return &ec2.UnassignPrivateIpAddressesOutput{
 		// Not currently used so not bothering to fill in

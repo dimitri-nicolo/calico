@@ -22,12 +22,28 @@ type awsState struct {
 	calicoOwnedENIsByID    map[string]*eniState
 	nonCalicoOwnedENIsByID map[string]*eniState
 	eniIDsBySubnet         map[string][]string
-	eniIDByIP              map[ip.Addr]string
+	eniIDBySecondaryIP     map[ip.Addr]string
 	eniIDByPrimaryIP       map[ip.Addr]string
 	attachmentIDByENIID    map[string]string
 
 	inUseDeviceIndexes      map[int32]bool
 	freeIPv4CapacityByENIID map[string]int
+}
+
+func newAWSState(networkCapabilities *NetworkCapabilities) *awsState {
+	return &awsState{
+		capabilities: networkCapabilities,
+
+		calicoOwnedENIsByID:    map[string]*eniState{},
+		nonCalicoOwnedENIsByID: map[string]*eniState{},
+		eniIDsBySubnet:         map[string][]string{},
+		eniIDBySecondaryIP:     map[ip.Addr]string{},
+		eniIDByPrimaryIP:       map[ip.Addr]string{},
+		attachmentIDByENIID:    map[string]string{},
+
+		inUseDeviceIndexes:      map[int32]bool{},
+		freeIPv4CapacityByENIID: map[string]int{},
+	}
 }
 
 func (s *awsState) PrimaryENISecurityGroups() []string {
@@ -53,7 +69,7 @@ func (s *awsState) ClaimDeviceIdx(devIdx int32) {
 	s.inUseDeviceIndexes[devIdx] = true
 }
 
-func (s *awsState) OnPrivateIPsAdded(eniID string, addrs []string) {
+func (s *awsState) OnSecondaryIPsAdded(eniID string, addrs []string) {
 	eni := s.calicoOwnedENIsByID[eniID]
 	for _, addrStr := range addrs {
 		addr := ip.FromString(addrStr)
@@ -65,12 +81,12 @@ func (s *awsState) OnPrivateIPsAdded(eniID string, addrs []string) {
 		eni.IPAddresses = append(eni.IPAddresses, &eniIPAddress{
 			PrivateIP: addr,
 		})
-		s.eniIDByIP[addr] = eniID
+		s.eniIDBySecondaryIP[addr] = eniID
 	}
 	s.freeIPv4CapacityByENIID[eni.ID] = s.capabilities.MaxIPv4PerInterface - len(eni.IPAddresses)
 }
 
-func (s *awsState) OnPrivateIPsRemoved(eniID string, addrs []string) {
+func (s *awsState) OnSecondaryIPsRemoved(eniID string, addrs []string) {
 	removedIPs := set.New()
 	for _, addrStr := range addrs {
 		addr := ip.FromString(addrStr)
@@ -94,18 +110,32 @@ func (s *awsState) OnPrivateIPsRemoved(eniID string, addrs []string) {
 	s.freeIPv4CapacityByENIID[eni.ID] = s.capabilities.MaxIPv4PerInterface - len(eni.IPAddresses)
 }
 
-func (s *awsState) OnCalicoENIAttached(eni *eniState) {
+func (s *awsState) OnCalicoENIAttached(eni *eniState, rawNumAWSIPs int) {
+	logCtx := logrus.WithField("id", eni.ID)
+	logCtx.Debug("Adding Calico ENI to cached state")
 	s.calicoOwnedENIsByID[eni.ID] = eni
 	s.eniIDsBySubnet[eni.SubnetID] = append(s.eniIDsBySubnet[eni.SubnetID], eni.ID)
 	for _, eniAddr := range eni.IPAddresses {
-		s.eniIDByIP[eniAddr.PrivateIP] = eni.ID
 		if eniAddr.Primary {
+			logCtx.WithField("ip", eniAddr.PrivateIP).Debug("Found primary IP on Calico ENI")
 			s.eniIDByPrimaryIP[eniAddr.PrivateIP] = eni.ID
+		} else {
+			logCtx.WithField("ip", eniAddr.PrivateIP).Debug("Found secondary IP on Calico ENI")
+			s.eniIDBySecondaryIP[eniAddr.PrivateIP] = eni.ID
 		}
 	}
-	s.attachmentIDByENIID[eni.ID] = eni.Attachment.ID
-	s.inUseDeviceIndexes[eni.Attachment.DeviceIndex] = true
+	if eni.Attachment != nil {
+		logCtx.Warn("AWS returned ENI with no attachment (even though it should already be attached)")
+		s.attachmentIDByENIID[eni.ID] = eni.Attachment.ID
+		s.inUseDeviceIndexes[eni.Attachment.DeviceIndex] = true
+	}
 	s.freeIPv4CapacityByENIID[eni.ID] = s.capabilities.MaxIPv4PerInterface - len(eni.IPAddresses)
+	logCtx.WithField("availableIPs", s.freeIPv4CapacityByENIID[eni.ID]).Debug("Calculated available IPs")
+	if s.freeIPv4CapacityByENIID[eni.ID] < 0 {
+		logCtx.Errorf("ENI appears to have more IPs (%v) that it should (%v)", rawNumAWSIPs,
+			s.capabilities.MaxIPv4PerInterface)
+		s.freeIPv4CapacityByENIID[eni.ID] = 0
+	}
 }
 
 func (s *awsState) OnCalicoENIDetached(eniID string) {
@@ -125,9 +155,10 @@ func (s *awsState) OnCalicoENIDetached(eniID string) {
 	s.eniIDsBySubnet[eni.SubnetID] = newENIsBySubnet
 
 	for _, eniAddr := range eni.IPAddresses {
-		delete(s.eniIDByIP, eniAddr.PrivateIP)
 		if eniAddr.Primary {
 			delete(s.eniIDByPrimaryIP, eniAddr.PrivateIP)
+		} else {
+			delete(s.eniIDBySecondaryIP, eniAddr.PrivateIP)
 		}
 	}
 	delete(s.attachmentIDByENIID, eni.ID)
