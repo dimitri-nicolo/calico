@@ -165,12 +165,19 @@ func GenerateModSecurityID() string {
 	return uuid.New().String()
 }
 
-func ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion string, clientHost string, clientPort uint32, serverHost string, serverPort uint32) error {
+func ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion, clientHost string, clientPort uint32, serverHost string, serverPort uint32, reqHeaders map[string]string, reqBody string) error {
 	prefix := GetProcessHttpRequestPrefix(id)
-	log.Printf("%s URL '%s'", prefix, url)
+
+	message := fmt.Sprintf("%s URL '%v' Method '%s'", prefix, url, httpMethod)
+	if len(reqBody) > 0 {
+		message += fmt.Sprintf(" Body '%s'", reqBody)
+	}
+	log.Info(message)
 
 	Cid := C.CString(id)
 	defer C.free(unsafe.Pointer(Cid))
+
+	// Request info.
 	Curi := C.CString(url)
 	defer C.free(unsafe.Pointer(Curi))
 	ChttpMethod := C.CString(httpMethod)
@@ -179,6 +186,8 @@ func ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion string, c
 	defer C.free(unsafe.Pointer(ChttpProtocol))
 	ChttpVersion := C.CString(httpVersion)
 	defer C.free(unsafe.Pointer(ChttpVersion))
+
+	// Request connection.
 	CclientHost := C.CString(clientHost)
 	defer C.free(unsafe.Pointer(CclientHost))
 	CserverHost := C.CString(serverHost)
@@ -186,10 +195,45 @@ func ProcessHttpRequest(id, url, httpMethod, httpProtocol, httpVersion string, c
 	CclientPort := C.int(clientPort)
 	CserverPort := C.int(serverPort)
 
-	start := time.Now()
-	retVal, err := C.ProcessHttpRequest(Cid, Curi, ChttpMethod, ChttpProtocol, ChttpVersion, CclientHost, CclientPort, CserverHost, CserverPort)
-	elapsed := time.Since(start)
+	// Request headers.
+	reqHeaderSize := len(reqHeaders)
+	CreqHeaderSize := C.int(reqHeaderSize)
+	CreqHeaderKeys := C.makeCharArray(CreqHeaderSize)
+	defer C.freeCharArray(CreqHeaderKeys, CreqHeaderSize)
+	CreqHeaderVals := C.makeCharArray(CreqHeaderSize)
+	defer C.freeCharArray(CreqHeaderVals, CreqHeaderSize)
 
+	var index C.int
+	for k, v := range reqHeaders {
+		C.setArrayString(CreqHeaderKeys, C.CString(k), index)
+		C.setArrayString(CreqHeaderVals, C.CString(v), index)
+		index++
+	}
+
+	// Request body.
+	reqBodySize := len(reqBody)
+	CreqBodySize := C.int(reqBodySize)
+	CreqBodyText := C.CString(reqBody)
+	defer C.free(unsafe.Pointer(CreqBodyText))
+
+	start := time.Now()
+	retVal, err := C.ProcessHttpRequest(
+		Cid,
+		Curi,
+		ChttpMethod,
+		ChttpProtocol,
+		ChttpVersion,
+		CclientHost,
+		CclientPort,
+		CserverHost,
+		CserverPort,
+		CreqHeaderKeys,
+		CreqHeaderVals,
+		CreqHeaderSize,
+		CreqBodyText,
+		CreqBodySize)
+
+	elapsed := time.Since(start)
 	if err != nil {
 		errMsg := fmt.Sprintf("%s URL '%s' ModSecurity error '%v'", prefix, url, err.Error())
 		return errors.New(errMsg)

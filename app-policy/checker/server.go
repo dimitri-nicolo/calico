@@ -45,6 +45,8 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 	reqSourcePort := req.GetAttributes().GetSource().GetAddress().GetSocketAddress().GetPortValue()
 	reqDestinationHost := req.GetAttributes().GetDestination().GetAddress().GetSocketAddress().GetAddress()
 	reqDestinationPort := req.GetAttributes().GetDestination().GetAddress().GetSocketAddress().GetPortValue()
+	reqHeaders := req.GetAttributes().GetRequest().GetHttp().GetHeaders()
+	reqBody := req.GetAttributes().GetRequest().GetHttp().GetBody()
 
 	log.WithFields(log.Fields{
 		"context":         ctx,
@@ -81,7 +83,7 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 
 	if waf.IsEnabled() {
 		// WAF ModSecurity Process Http Request.
-		err := wafProcessHttpRequest(reqPath, reqMethod, reqProtocol, reqSourceHost, reqSourcePort, reqDestinationHost, reqDestinationPort, reqHost)
+		err := wafProcessHttpRequest(reqPath, reqMethod, reqProtocol, reqSourceHost, reqSourcePort, reqDestinationHost, reqDestinationPort, reqHost, reqHeaders, reqBody)
 		if err != nil {
 			log.Errorf("WAF Process Http Request URL '%s' WAF rules rejected HTTP request!", reqPath)
 			resp.Status.Code = PERMISSION_DENIED
@@ -103,13 +105,13 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 	return &resp, nil
 }
 
-func wafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, clientPort uint32, serverHost string, serverPort uint32, destinationHost string) error {
+func wafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, clientPort uint32, serverHost string, serverPort uint32, destinationHost string, reqHeaders map[string]string, reqBody string) error {
 
 	// Use this as the correlationID.
 	id := waf.GenerateModSecurityID()
 
 	httpProtocol, httpVersion := splitInput(inputProtocol, "/", "HTTP", "1.1")
-	err := waf.ProcessHttpRequest(id, uri, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort)
+	err := waf.ProcessHttpRequest(id, uri, httpMethod, httpProtocol, httpVersion, clientHost, clientPort, serverHost, serverPort, reqHeaders, reqBody)
 
 	// Collect OWASP log information:
 	owaspLogInfo := waf.GetAndClearOwaspLogs(id)
@@ -126,10 +128,9 @@ func wafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, cl
 			"dest_ip":     serverHost,
 			"dest_port":   serverPort,
 			"dest_name":   destinationHost,
-
-			"path":     uri,
-			"method":   httpMethod,
-			"protocol": inputProtocol,
+			"path":        uri,
+			"method":      httpMethod,
+			"protocol":    inputProtocol,
 			"source": log.Fields{
 				"ip":       clientHost,
 				"port_num": clientPort,
@@ -155,7 +156,7 @@ func wafProcessHttpRequest(uri, httpMethod, inputProtocol, clientHost string, cl
 // splitInput: split input based on delimiter specified into 2x components [left and right].
 // if input cannot be split into 2x components based on delimiter then use default values specified.
 // input example: "HTTP/1.1"
-// output return: "HTTP and "1.1"
+// output return: "HTTP" and "1.1"
 func splitInput(input, delim, defaultLeft, defaultRight string) (actualLeft, actualRight string) {
 	splitN := strings.SplitN(input, delim, 2)
 	length := len(splitN)

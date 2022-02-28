@@ -14,10 +14,13 @@ RulesSet *rules = NULL;
 // Helper return value codes.
 typedef enum tag_enum_msc_retval
 {
-	msc_retval_connection = -1,
-	msc_retval_uri = -2,
-	msc_retval_request_headers = -3,
-	msc_retval_request_body = -4,
+	msc_retval_process_connection = -1,
+	msc_retval_process_uri = -2,
+	msc_retval_add_request_header = -3,
+	msc_retval_process_request_headers = -4,
+	msc_retval_append_request_body = -5,
+	msc_retval_process_request_body = -6,
+	msc_retval_process_logging = -7,
 
 } enum_msc_retval;
 
@@ -63,9 +66,29 @@ const char* LoadModSecurityCoreRuleSet( char *file )
     return error_message;
 }
 
-int ProcessHttpRequest( char *id, char *uri, char *http_method, char *http_protocol, char *http_version, char *client_host, int client_port, char *server_host, int server_port )
+int ProcessHttpRequest(
+    char *id,
+    char *uri,
+    char *http_method,
+    char *http_protocol,
+    char *http_version,
+    char *client_host,
+    int client_port,
+    char *server_host,
+    int server_port,
+    char **reqHeaderKeys,
+    char **reqHeaderVals,
+    int reqHeaderSize,
+    char *reqBodyText,
+    int reqBodySize
+    )
 {
     int retVal = 0;
+
+    const char *reqHeaderKey = NULL;
+    const char *reqHeaderVal = NULL;
+    int index = 0;
+
     if ( modsec == NULL )
     {
         initializeModSecurityImpl();
@@ -74,34 +97,64 @@ int ProcessHttpRequest( char *id, char *uri, char *http_method, char *http_proto
     Transaction *transaction = NULL;
     transaction = msc_new_transaction_with_id( modsec, rules, id, NULL );
 
+    // Process connection and URI.
     retVal = msc_process_connection( transaction, client_host, client_port, server_host, server_port );
     if ( !retVal )
     {
-        retVal = msc_retval_connection;
+        retVal = msc_retval_process_connection;
         goto out;
     }
 
-    retVal = msc_process_uri( transaction, uri, http_protocol, http_version );
+    retVal = msc_process_uri( transaction, uri, http_method, http_version );
     if ( !retVal )
     {
-        retVal = msc_retval_uri;
+        retVal = msc_retval_process_uri;
         goto out;
     }
 
+    // Request headers.
+    for( index = 0; index < reqHeaderSize; index++ )
+    {
+        reqHeaderKey = reqHeaderKeys[ index ];
+        reqHeaderVal = reqHeaderVals[ index ];
+
+        retVal = msc_add_request_header( transaction, reqHeaderKey, reqHeaderVal );
+        if ( !retVal )
+        {
+            retVal = msc_retval_add_request_header;
+            goto out;
+        }
+    }
     retVal = msc_process_request_headers( transaction );
     if ( !retVal )
     {
-        retVal = msc_retval_request_headers;
+        retVal = msc_retval_process_request_headers;
         goto out;
     }
 
+    // Request body.
+    retVal = msc_append_request_body( transaction, reqBodyText, reqBodySize );
+    if ( !retVal )
+    {
+        retVal = msc_retval_append_request_body;
+        goto out;
+    }
     retVal = msc_process_request_body( transaction );
     if ( !retVal )
     {
-        retVal = msc_retval_request_body;
+        retVal = msc_retval_process_request_body;
         goto out;
     }
 
+    // Logging.
+    retVal = msc_process_logging( transaction );
+    if ( !retVal )
+    {
+        retVal = msc_retval_process_logging;
+        goto out;
+    }
+
+    // Detects Mod Security intervention.
     ModSecurityIntervention intervention;
     intervention.status = 200;
     intervention.url = NULL;
@@ -136,5 +189,25 @@ void CleanupModSecurity()
 
     rules = NULL;
     modsec = NULL;
+}
+
+// Helper functions to store all core rule set file names in memory.
+char **makeCharArray(int size)
+{
+    return calloc(sizeof(char*), size);
+}
+void freeCharArray(char **array, int size)
+{
+    int index;
+    for (index = 0; index < size; index++)
+    {
+        free(array[index]);
+    }
+
+    free(array);
+}
+void setArrayString(char **array, char *input, int index)
+{
+    array[index] = input;
 }
 

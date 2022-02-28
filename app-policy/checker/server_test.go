@@ -1,22 +1,12 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright (c) 2018-2022 Tigera, Inc. All rights reserved.
 
 package checker
 
 import (
 	"context"
 	"testing"
+
+	"github.com/projectcalico/calico/app-policy/waf"
 
 	authz "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	. "github.com/onsi/gomega"
@@ -247,4 +237,194 @@ func TestCheckStoreHTTPDenied(t *testing.T) {
 			HTTPRequestsDenied:  1,
 		},
 	})))
+}
+
+func TestWAFProcessHttpRequestHTTPGetAllowed(t *testing.T) {
+	RegisterTestingT(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	stores := make(chan *policystore.PolicyStore)
+	dpStats := make(chan statscache.DPStats, 10)
+	uut := NewServer(ctx, stores, dpStats)
+
+	store := policystore.NewPolicyStore()
+	store.Write(func(s *policystore.PolicyStore) {
+		s.Endpoint = &proto.WorkloadEndpoint{
+			ProfileIds: []string{"default"},
+		}
+		s.ProfileByID[proto.ProfileID{Name: "default"}] = &proto.Profile{
+			InboundRules: []*proto.Rule{{Action: "Allow"}},
+		}
+	})
+	stores <- store
+
+	req := &authz.CheckRequest{Attributes: &authz.AttributeContext{
+		Source: &authz.AttributeContext_Peer{
+			Address: &core.Address{
+				Address: &core.Address_SocketAddress{
+					SocketAddress: &core.SocketAddress{
+						Address:       "192.168.202.9",
+						PortSpecifier: &core.SocketAddress_PortValue{PortValue: 41938},
+					},
+				},
+			},
+		},
+		Destination: &authz.AttributeContext_Peer{
+			Address: &core.Address{
+				Address: &core.Address_SocketAddress{
+					SocketAddress: &core.SocketAddress{
+						Address:       "192.168.120.76",
+						PortSpecifier: &core.SocketAddress_PortValue{PortValue: 80},
+					},
+				},
+			},
+		},
+		Request: &authz.AttributeContext_Request{
+			Http: &authz.AttributeContext_HttpRequest{
+				Method:   "GET",
+				Path:     "/",
+				Host:     "echo-a",
+				Protocol: "HTTP/1.1",
+			},
+		},
+	}}
+
+	_ = waf.CheckRulesSetExists(waf.TestCoreRulesetDirectory)
+
+	waf.InitializeModSecurity()
+	filenames := waf.GetRulesSetFilenames()
+	_ = waf.LoadModSecurityCoreRuleSet(filenames)
+
+	resp, err := uut.Check(ctx, req)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(resp.GetStatus().GetCode()).To(Equal(OK))
+}
+
+func TestWAFProcessHttpRequestHTTPGetDeniedSQLInjection(t *testing.T) {
+	RegisterTestingT(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	stores := make(chan *policystore.PolicyStore)
+	dpStats := make(chan statscache.DPStats, 10)
+	uut := NewServer(ctx, stores, dpStats)
+
+	store := policystore.NewPolicyStore()
+	store.Write(func(s *policystore.PolicyStore) {
+		s.Endpoint = &proto.WorkloadEndpoint{
+			ProfileIds: []string{"default"},
+		}
+		s.ProfileByID[proto.ProfileID{Name: "default"}] = &proto.Profile{
+			InboundRules: []*proto.Rule{{Action: "Allow"}},
+		}
+	})
+	stores <- store
+
+	req := &authz.CheckRequest{Attributes: &authz.AttributeContext{
+		Source: &authz.AttributeContext_Peer{
+			Address: &core.Address{
+				Address: &core.Address_SocketAddress{
+					SocketAddress: &core.SocketAddress{
+						Address:       "192.168.202.9",
+						PortSpecifier: &core.SocketAddress_PortValue{PortValue: 41938},
+					},
+				},
+			},
+		},
+		Destination: &authz.AttributeContext_Peer{
+			Address: &core.Address{
+				Address: &core.Address_SocketAddress{
+					SocketAddress: &core.SocketAddress{
+						Address:       "192.168.120.76",
+						PortSpecifier: &core.SocketAddress_PortValue{PortValue: 80},
+					},
+				},
+			},
+		},
+		Request: &authz.AttributeContext_Request{
+			Http: &authz.AttributeContext_HttpRequest{
+				Method:   "GET",
+				Path:     "/test/artists.php?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user",
+				Host:     "echo-a",
+				Protocol: "HTTP/1.1",
+			},
+		},
+	}}
+
+	_ = waf.CheckRulesSetExists(waf.TestCoreRulesetDenyDirectory)
+
+	waf.InitializeModSecurity()
+	filenames := waf.GetRulesSetFilenames()
+	_ = waf.LoadModSecurityCoreRuleSet(filenames)
+
+	resp, err := uut.Check(ctx, req)
+	Expect(err).To(HaveOccurred())
+	Expect(resp.GetStatus().GetCode()).To(Equal(PERMISSION_DENIED))
+}
+
+func TestWAFProcessHttpRequestHTTPPostDeniedCrossSiteScript(t *testing.T) {
+	RegisterTestingT(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	stores := make(chan *policystore.PolicyStore)
+	dpStats := make(chan statscache.DPStats, 10)
+	uut := NewServer(ctx, stores, dpStats)
+
+	store := policystore.NewPolicyStore()
+	store.Write(func(s *policystore.PolicyStore) {
+		s.Endpoint = &proto.WorkloadEndpoint{
+			ProfileIds: []string{"default"},
+		}
+		s.ProfileByID[proto.ProfileID{Name: "default"}] = &proto.Profile{
+			InboundRules: []*proto.Rule{{Action: "Allow"}},
+		}
+	})
+	stores <- store
+
+	req := &authz.CheckRequest{Attributes: &authz.AttributeContext{
+		Source: &authz.AttributeContext_Peer{
+			Address: &core.Address{
+				Address: &core.Address_SocketAddress{
+					SocketAddress: &core.SocketAddress{
+						Address:       "192.168.202.9",
+						PortSpecifier: &core.SocketAddress_PortValue{PortValue: 41938},
+					},
+				},
+			},
+		},
+		Destination: &authz.AttributeContext_Peer{
+			Address: &core.Address{
+				Address: &core.Address_SocketAddress{
+					SocketAddress: &core.SocketAddress{
+						Address:       "192.168.120.76",
+						PortSpecifier: &core.SocketAddress_PortValue{PortValue: 80},
+					},
+				},
+			},
+		},
+		Request: &authz.AttributeContext_Request{
+			Http: &authz.AttributeContext_HttpRequest{
+				Method:   "POST",
+				Path:     "/",
+				Host:     "echo-a",
+				Protocol: "HTTP/1.1",
+				Body:     "<script>alert(1)</script>",
+				Headers: map[string]string{
+					"Content-Type": "application/x-www-form-urlencoded",
+				},
+			},
+		},
+	}}
+
+	_ = waf.CheckRulesSetExists(waf.TestCustomRulesetDirectory)
+
+	waf.InitializeModSecurity()
+	filenames := waf.GetRulesSetFilenames()
+	_ = waf.LoadModSecurityCoreRuleSet(filenames)
+
+	resp, err := uut.Check(ctx, req)
+	Expect(err).To(HaveOccurred())
+	Expect(resp.GetStatus().GetCode()).To(Equal(PERMISSION_DENIED))
 }

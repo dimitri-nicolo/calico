@@ -84,8 +84,9 @@ func TestParser_ParseMap_ReturnRuleInfo(t *testing.T) {
 	dictionary[ParserData] = ""
 	dictionary[ParserSeverity] = "0"
 	dictionary[ParserVersion] = "OWASP_CRS/3.3.2"
+	dictionary[ParserMsg] = "ModSecurity: Warning. detected SQLi using libinjection."
 
-	expect := "Host:'http://localhost' File:'test_files/custom-rules/custom-REQUEST-942-APPLICATION-ATTACK-SQLI.conf' Line:'45' ID:'942100' Data:'' Severity:'0' Version:'OWASP_CRS/3.3.2'"
+	expect := "Host:'http://localhost' File:'test_files/custom-rules/custom-REQUEST-942-APPLICATION-ATTACK-SQLI.conf' Line:'45' ID:'942100' Data:'' Severity:'0' Version:'OWASP_CRS/3.3.2' Message:'ModSecurity: Warning. detected SQLi using libinjection.'"
 	actual := FormatMap(dictionary)
 	if expect != actual {
 		t.Errorf("Expect: '%s' Actual: '%s'", expect, actual)

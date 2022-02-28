@@ -74,6 +74,7 @@ func FormatMap(dictionary map[string]string) string {
 	owaspData := dictionary[ParserData]
 	owaspSeverity := dictionary[ParserSeverity]
 	owaspVersion := dictionary[ParserVersion]
+	owaspMessage := dictionary[ParserMsg]
 
-	return fmt.Sprintf("Host:'%s' File:'%s' Line:'%s' ID:'%s' Data:'%s' Severity:'%s' Version:'%s'", owaspHost, owaspFile, owaspLine, owaspId, owaspData, owaspSeverity, owaspVersion)
+	return fmt.Sprintf("Host:'%s' File:'%s' Line:'%s' ID:'%s' Data:'%s' Severity:'%s' Version:'%s' Message:'%s'", owaspHost, owaspFile, owaspLine, owaspId, owaspData, owaspSeverity, owaspVersion, owaspMessage)
 }
