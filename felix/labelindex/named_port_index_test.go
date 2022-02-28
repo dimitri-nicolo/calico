@@ -15,8 +15,9 @@
 package labelindex_test
 
 import (
-	"github.com/projectcalico/calico/felix/ip"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/calico/felix/ip"
 
 	. "github.com/projectcalico/calico/felix/labelindex"
 
