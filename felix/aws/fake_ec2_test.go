@@ -812,6 +812,7 @@ func (f *fakeEC2) AssociateAddress(ctx context.Context, params *ec2.AssociateAdd
 		return nil, errNotFound("AssociateAddress", "ENI.NotFound" /* Made up */)
 	}
 	found := false
+	var assocID string
 	for i, privIP := range eni.PrivateIpAddresses {
 		if *privIP.PrivateIpAddress == *params.PrivateIpAddress {
 			// Found the right IP.
@@ -819,7 +820,7 @@ func (f *fakeEC2) AssociateAddress(ctx context.Context, params *ec2.AssociateAdd
 			if privIP.Association != nil {
 				return nil, errBadParam("AssociateAddress", "IP.AlreadyAssociated" /* made up */)
 			}
-			assocID := f.nextEIPAssocID()
+			assocID = f.nextEIPAssocID()
 			privIP.Association = &types.NetworkInterfaceAssociation{
 				AllocationId:  eip.AllocationId,
 				AssociationId: &assocID,
@@ -837,7 +838,9 @@ func (f *fakeEC2) AssociateAddress(ctx context.Context, params *ec2.AssociateAdd
 		return nil, errNotFound("AssociateAddress", "PrivateIP.NotFound" /* Made up */)
 	}
 
-	return &ec2.AssociateAddressOutput{}, nil
+	return &ec2.AssociateAddressOutput{
+		AssociationId: &assocID,
+	}, nil
 }
 
 func (f *fakeEC2) DisassociateAddress(ctx context.Context, params *ec2.DisassociateAddressInput, optFns ...func(*ec2.Options)) (*ec2.DisassociateAddressOutput, error) {
