@@ -17,7 +17,7 @@ package calc
 import (
 	"strings"
 
-	apiv3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/dispatcher"
 	"github.com/projectcalico/calico/felix/proto"
