@@ -17,10 +17,9 @@ import (
 var _ = Describe("client", func() {
 	Context("Login", func() {
 		var (
-			currentURL    = "https://localhost:9443/"
-			username      = "username"
-			password      = "password"
-			kibanaVersion = "7.16.2"
+			currentURL = "https://localhost:9443/"
+			username   = "username"
+			password   = "password"
 		)
 
 		It("returns the Kibana response on a successful request", func() {
@@ -45,7 +44,7 @@ var _ = Describe("client", func() {
 					},
 				}))
 
-				Expect(r.Header.Get("kbn-version")).Should(Equal(kibanaVersion))
+				Expect(r.Header.Get("kbn-xsrf")).Should(Equal("true"))
 
 				http.SetCookie(w, &http.Cookie{Name: "testcookie", Value: "testvalue"})
 
@@ -54,7 +53,7 @@ var _ = Describe("client", func() {
 
 			cli := NewClient(&http.Client{
 				Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}},
-			}, ts.URL, kibanaVersion)
+			}, ts.URL)
 
 			response, err := cli.Login(currentURL, username, password)
 
@@ -69,7 +68,7 @@ var _ = Describe("client", func() {
 		It("returns an error if the request failed with an error", func() {
 			cli := NewClient(&http.Client{
 				Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}},
-			}, "http://does-not-exist", kibanaVersion)
+			}, "http://does-not-exist")
 
 			_, err := cli.Login(currentURL, username, password)
 			Expect(err).Should(HaveOccurred())
