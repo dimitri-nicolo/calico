@@ -678,7 +678,6 @@ func (m *SecondaryIfaceProvisioner) provisionNewAWSIPs(
 			logrus.WithField("num", numENIsToCreate).Info("Allocating ENIs with workload IPs as primary IPs.")
 			for i, aInfo := range addrsToAdd {
 				if i >= numENIsToCreate {
-					// TODO log/readiness?
 					logrus.Warn("Failed to create ENIs for all Calico IPs.  Insufficient ENI IP capacity on " +
 						"this node.")
 					break
