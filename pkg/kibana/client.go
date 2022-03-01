@@ -19,15 +19,13 @@ type Client interface {
 // client is an implementation of the Client interface
 type client struct {
 	httpCli *http.Client
-	version string
 	baseURL string
 }
 
 // NewClient creates and returns the `client` implementation of the `Client` interface
-func NewClient(httpCli *http.Client, baseURL string, version string) Client {
+func NewClient(httpCli *http.Client, baseURL string) Client {
 	return &client{
 		httpCli: httpCli,
-		version: version,
 		baseURL: baseURL,
 	}
 }
@@ -54,7 +52,9 @@ func (cli *client) Login(currentURL, username, password string) (*http.Response,
 	}
 
 	r.Header.Set("Content-Type", "application/json")
-	r.Header.Set("kbn-version", cli.version)
+	// Docs detail that this header should be on all POST requests:
+	// https://www.elastic.co/guide/en/kibana/master/api.html
+	r.Header.Set("kbn-xsrf", "true")
 
 	kibanaResponse, err := cli.httpCli.Do(r)
 	if err != nil {

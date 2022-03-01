@@ -52,7 +52,6 @@ type Config struct {
 	ElasticConnRetryInterval time.Duration `envconfig:"ELASTIC_CONN_RETRY_INTERVAL" default:"500ms"`
 	ElasticEnableTrace       bool          `envconfig:"ELASTIC_ENABLE_TRACE" default:"false"`
 	ElasticLicenseType       string        `envconfig:"ELASTIC_LICENSE_TYPE"`
-	ElasticVersion           string        `envconfig:"ELASTIC_VERSION"`
 	ElasticKibanaEndpoint    string        `envconfig:"ELASTIC_KIBANA_ENDPOINT" default:"https://tigera-secure-kb-http.tigera-kibana.svc:5601"`
 
 	// Various proxy timeouts. Used when creating a http.Transport RoundTripper.

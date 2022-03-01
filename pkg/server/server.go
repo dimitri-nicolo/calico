@@ -110,7 +110,7 @@ func Start(cfg *Config) error {
 
 	kibanaCli := kibana.NewClient(&http.Client{
 		Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}},
-	}, cfg.ElasticKibanaEndpoint, cfg.ElasticVersion)
+	}, cfg.ElasticKibanaEndpoint)
 
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
 
