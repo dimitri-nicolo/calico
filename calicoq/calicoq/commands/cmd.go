@@ -9,7 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	v3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/dispatcher"
 	"github.com/projectcalico/calico/felix/labelindex"
@@ -163,8 +163,8 @@ func (cbs *EvalCmd) OnUpdate(update api.Update) (filterOut bool) {
 		v := update.Value.(*model.HostEndpoint)
 		cbs.index.UpdateLabels(update.Key, v.Labels, v.ProfileIDs)
 	case model.ResourceKey:
-		if k.Kind == v3.KindProfile {
-			v := update.Value.(*v3.Profile).Spec.LabelsToApply
+		if k.Kind == apiv3.KindProfile {
+			v := update.Value.(*apiv3.Profile).Spec.LabelsToApply
 			cbs.index.UpdateParentLabels(k.Name, v)
 		}
 	default:
