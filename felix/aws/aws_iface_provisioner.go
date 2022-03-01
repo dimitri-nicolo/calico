@@ -794,7 +794,8 @@ func (m *SecondaryIfaceProvisioner) ec2ENIToIface(awsENI *eniState) (*Iface, err
 	for _, pa := range awsENI.IPAddresses {
 		if pa.Primary {
 			primary = pa.PrivateIP
-		} else {
+		} else if m.mode == v3.AWSSecondaryIPEnabled {
+			// Only record secondary IPs if they're meaningful in this mode.
 			secondaryAddrs = append(secondaryAddrs, pa.PrivateIP)
 		}
 	}

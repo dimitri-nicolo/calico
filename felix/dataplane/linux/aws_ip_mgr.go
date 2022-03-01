@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/vishvananda/netlink"
 
 	"github.com/projectcalico/calico/felix/ifacemonitor"
@@ -661,67 +662,95 @@ func (a *awsIPManager) configureNIC(iface netlink.Link, ifaceName string, primar
 			return err
 		}
 	}
-
-	// Make sure the interface has its primary IP.  This is needed for ARP to work.
 	addrs, err := a.nl.AddrList(iface, netlink.FAMILY_V4)
 	if err != nil {
 		logrus.WithError(err).WithField("name", ifaceName).Error("Failed to query interface addrs.")
 		return err
 	}
 
-	foundPrimaryIP := false
-
-	// Add the primary address as a /32 so that we don't automatically get routes for the subnet in the
-	// main routing table.  We need to add the subnet routes to a custom routing table so that they're only
-	// used for traffic that belongs on the secondary ENI.
-	newAddr, err := a.nl.ParseAddr(primaryIPStr + "/32")
-	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"name": ifaceName,
-			"addr": primaryIPStr,
-		}).Error("Failed to parse address.")
-		return fmt.Errorf("failed to parse AWS primary IP of secondary ENI %q: %w", primaryIPStr, err)
-	}
-	// Set the primary address to link scope so the kernel will only pick it for communication on the same
-	// subnet.
-	newAddr.Scope = int(netlink.SCOPE_LINK)
-
 	var finalErr error
-	for _, addr := range addrs {
-		if addr.Equal(*newAddr) {
-			foundPrimaryIP = true
-			continue
-		}
-
-		// Unexpected address.
-		err := a.nl.AddrDel(iface, &addr)
+	if a.dpConfig.AWSSecondaryIPSupport == v3.AWSSecondaryIPEnabledENIPerWorkload {
+		// The primary IP of the interface belongs to a workload. Configure the host to respond to ARPs even
+		// though it doesn't own the IP.
+		logrus.Debug("In ENI-per-workload mode.  Adding proxy ARP entry to interface.")
+		err := netlink.NeighSet(&netlink.Neigh{
+			LinkIndex: iface.Attrs().Index,
+			Family:    netlink.FAMILY_V4,
+			Flags:     netlink.NTF_PROXY,
+			IP:        net.ParseIP(primaryIPStr),
+		})
 		if err != nil {
 			logrus.WithError(err).WithFields(logrus.Fields{
 				"name": ifaceName,
-				"addr": a,
-			}).Error("Failed to clean up old address.")
+				"addr": primaryIPStr,
+			}).Error("Failed to set a proxy ARP entry for workload IP.")
+		}
+		for _, addr := range addrs {
+			// Unexpected address.
+			err := a.nl.AddrDel(iface, &addr)
+			if err != nil {
+				logrus.WithError(err).WithFields(logrus.Fields{
+					"name": ifaceName,
+					"addr": a,
+				}).Error("Failed to clean up old address.")
+				finalErr = err
+			}
+		}
+	} else { // v3.AWSSecondaryIPEnabled: secondary IP per workload mode.
+		// Make sure the interface has its primary IP.  This is needed for ARP to work.
+		logrus.Debug("In secondary IP-per-workload mode.  Adding primary IP to interface.")
+		foundPrimaryIP := false
+
+		// Add the primary address as a /32 so that we don't automatically get routes for the subnet in the
+		// main routing table.  We need to add the subnet routes to a custom routing table so that they're only
+		// used for traffic that belongs on the secondary ENI.
+		newAddr, err := a.nl.ParseAddr(primaryIPStr + "/32")
+		if err != nil {
+			logrus.WithError(err).WithFields(logrus.Fields{
+				"name": ifaceName,
+				"addr": primaryIPStr,
+			}).Error("Failed to parse address.")
+			return fmt.Errorf("failed to parse AWS primary IP of secondary ENI %q: %w", primaryIPStr, err)
+		}
+		// Set the primary address to link scope so the kernel will only pick it for communication on the same
+		// subnet.
+		newAddr.Scope = int(netlink.SCOPE_LINK)
+
+		for _, addr := range addrs {
+			if addr.Equal(*newAddr) {
+				foundPrimaryIP = true
+				continue
+			}
+
+			// Unexpected address.
+			err := a.nl.AddrDel(iface, &addr)
+			if err != nil {
+				logrus.WithError(err).WithFields(logrus.Fields{
+					"name": ifaceName,
+					"addr": a,
+				}).Error("Failed to clean up old address.")
+				finalErr = err
+			}
+		}
+
+		if foundPrimaryIP {
+			return nil
+		}
+
+		err = a.nl.AddrAdd(iface, newAddr)
+		if err != nil {
+			logrus.WithError(err).WithFields(logrus.Fields{
+				"name": ifaceName,
+				"addr": newAddr,
+			}).Error("Failed to add new primary IP to secondary interface.")
 			finalErr = err
+		} else {
+			logrus.WithError(err).WithFields(logrus.Fields{
+				"name": ifaceName,
+				"addr": newAddr,
+			}).Info("Added primary address to secondary ENI.")
 		}
 	}
-
-	if foundPrimaryIP {
-		return nil
-	}
-
-	err = a.nl.AddrAdd(iface, newAddr)
-	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"name": ifaceName,
-			"addr": newAddr,
-		}).Error("Failed to add new primary IP to secondary interface.")
-		finalErr = err
-	} else {
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"name": ifaceName,
-			"addr": newAddr,
-		}).Info("Added primary address to secondary ENI.")
-	}
-
 	return finalErr
 }
 
