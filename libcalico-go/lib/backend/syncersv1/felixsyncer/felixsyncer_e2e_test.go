@@ -60,11 +60,24 @@ func calculateDefaultFelixSyncerEntries(cs kubernetes.Interface, dt apiconfig.Da
 	}
 
 	// Add 2 for the default-allow profile that is always there.
-	// However, no profile labels are in the list because the
-	// default-allow profile doesn't specify labels.
 	expectedProfile := resources.DefaultAllowProfile()
 	if remoteClusterPrefix == "" {
 		expected = append(expected, *expectedProfile)
+	} else {
+		expected = append(expected, model.KVPair{
+			Key: model.ResourceKey{
+				Kind: apiv3.KindProfile,
+				Name: remoteClusterPrefix + resources.DefaultAllowProfileName,
+			},
+			Value: &apiv3.Profile{
+				TypeMeta: metav1.TypeMeta{
+					Kind: apiv3.KindProfile,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: resources.DefaultAllowProfileName,
+				},
+			},
+		})
 	}
 	expected = append(expected, model.KVPair{
 		Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: remoteClusterPrefix + "projectcalico-default-allow"}},
@@ -82,6 +95,21 @@ func calculateDefaultFelixSyncerEntries(cs kubernetes.Interface, dt apiconfig.Da
 		expectedProfile = resources2.DefaultProfile()
 		if remoteClusterPrefix == "" {
 			expected = append(expected, *expectedProfile)
+		} else {
+			expected = append(expected, model.KVPair{
+				Key: model.ResourceKey{
+					Kind: apiv3.KindProfile,
+					Name: remoteClusterPrefix + "default",
+				},
+				Value: &apiv3.Profile{
+					TypeMeta: metav1.TypeMeta{
+						Kind: apiv3.KindProfile,
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "default",
+					},
+				},
+			})
 		}
 		expected = append(expected, model.KVPair{
 			Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: remoteClusterPrefix + "default"}},
@@ -160,8 +188,13 @@ func calculateDefaultFelixSyncerEntries(cs kubernetes.Interface, dt apiconfig.Da
 					Egress:  []apiv3.Rule{{Action: apiv3.Allow}},
 				},
 			}
+			if remoteClusterPrefix != "" {
+				// Rules are suppressed in federated remote Profile resources.
+				prof.Spec.Ingress = nil
+				prof.Spec.Egress = nil
+			}
 			expected = append(expected, model.KVPair{
-				Key:   model.ResourceKey{Kind: "Profile", Name: name},
+				Key:   model.ResourceKey{Kind: "Profile", Name: remoteClusterPrefix + name},
 				Value: &prof,
 			})
 
@@ -191,7 +224,7 @@ func calculateDefaultFelixSyncerEntries(cs kubernetes.Interface, dt apiconfig.Da
 					},
 				}
 				expected = append(expected, model.KVPair{
-					Key:   model.ResourceKey{Kind: "Profile", Name: name},
+					Key:   model.ResourceKey{Kind: "Profile", Name: remoteClusterPrefix + name},
 					Value: &prof,
 				})
 			}
