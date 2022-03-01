@@ -21,7 +21,7 @@ type awsState struct {
 	primaryENI             *eniState
 	calicoOwnedENIsByID    map[string]*eniState
 	nonCalicoOwnedENIsByID map[string]*eniState
-	eniIDsBySubnet         map[string][]string
+	calicoENIIDsBySubnet   map[string][]string
 	eniIDBySecondaryIP     map[ip.Addr]string
 	eniIDByPrimaryIP       map[ip.Addr]string
 	attachmentIDByENIID    map[string]string
@@ -36,7 +36,7 @@ func newAWSState(networkCapabilities *NetworkCapabilities) *awsState {
 
 		calicoOwnedENIsByID:    map[string]*eniState{},
 		nonCalicoOwnedENIsByID: map[string]*eniState{},
-		eniIDsBySubnet:         map[string][]string{},
+		calicoENIIDsBySubnet:   map[string][]string{},
 		eniIDBySecondaryIP:     map[ip.Addr]string{},
 		eniIDByPrimaryIP:       map[ip.Addr]string{},
 		attachmentIDByENIID:    map[string]string{},
@@ -117,7 +117,7 @@ func (s *awsState) OnCalicoENIAttached(eni *eniState) {
 	logCtx := logrus.WithField("id", eni.ID)
 	logCtx.Debug("Adding Calico ENI to cached state")
 	s.calicoOwnedENIsByID[eni.ID] = eni
-	s.eniIDsBySubnet[eni.SubnetID] = append(s.eniIDsBySubnet[eni.SubnetID], eni.ID)
+	s.calicoENIIDsBySubnet[eni.SubnetID] = append(s.calicoENIIDsBySubnet[eni.SubnetID], eni.ID)
 	for _, eniAddr := range eni.IPAddresses {
 		if eniAddr.Primary {
 			logCtx.WithField("ip", eniAddr.PrivateIP).Debug("Found primary IP on Calico ENI")
@@ -154,14 +154,14 @@ func (s *awsState) OnCalicoENIDetached(eniID string) {
 	}
 	delete(s.calicoOwnedENIsByID, eniID)
 
-	newENIsBySubnet := s.eniIDsBySubnet[eni.SubnetID][:0]
-	for _, sENIID := range s.eniIDsBySubnet[eni.SubnetID] {
+	newENIsBySubnet := s.calicoENIIDsBySubnet[eni.SubnetID][:0]
+	for _, sENIID := range s.calicoENIIDsBySubnet[eni.SubnetID] {
 		if sENIID == eniID {
 			continue
 		}
 		newENIsBySubnet = append(newENIsBySubnet, eni.SubnetID)
 	}
-	s.eniIDsBySubnet[eni.SubnetID] = newENIsBySubnet
+	s.calicoENIIDsBySubnet[eni.SubnetID] = newENIsBySubnet
 
 	for _, eniAddr := range eni.IPAddresses {
 		if eniAddr.Primary {
