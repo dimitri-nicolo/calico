@@ -474,19 +474,48 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 						UpdateType: api.UpdateTypeKVNew,
 					}, api.Update{
 						KVPair: model.KVPair{
+							Key: model.ResourceKey{
+								Kind: apiv3.KindProfile,
+								Name: "remote-cluster/projectcalico-default-allow",
+							},
+							Value: &apiv3.Profile{
+								TypeMeta: metav1.TypeMeta{
+									Kind: apiv3.KindProfile,
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "projectcalico-default-allow",
+								},
+							},
+						},
+						UpdateType: api.UpdateTypeKVNew,
+					}, api.Update{
+						KVPair: model.KVPair{
 							Key: model.ProfileRulesKey{
 								ProfileKey: model.ProfileKey{Name: "remote-cluster/profile-1"},
 							},
 							Value: &model.ProfileRules{},
 						},
 						UpdateType: api.UpdateTypeKVNew,
-					},
-					api.Update{
+					}, api.Update{
 						KVPair: model.KVPair{
-							Key: model.ProfileLabelsKey{
-								ProfileKey: model.ProfileKey{Name: "remote-cluster/profile-1"},
+							Key: model.ResourceKey{
+								Kind: apiv3.KindProfile,
+								Name: "remote-cluster/profile-1",
 							},
-							Value: pro.Spec.LabelsToApply,
+							Value: &apiv3.Profile{
+								TypeMeta: metav1.TypeMeta{
+									Kind: apiv3.KindProfile,
+								},
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "profile-1",
+								},
+								Spec: apiv3.ProfileSpec{
+									LabelsToApply: map[string]string{
+										"label1": "value1",
+										"label2": "value2",
+									},
+								},
+							},
 						},
 						UpdateType: api.UpdateTypeKVNew,
 					},
@@ -502,17 +531,26 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 						UpdateType: api.UpdateTypeKVDeleted,
 					}, api.Update{
 						KVPair: model.KVPair{
+							Key: model.ResourceKey{
+								Kind: apiv3.KindProfile,
+								Name: "remote-cluster/projectcalico-default-allow",
+							},
+							Value: nil,
+						},
+						UpdateType: api.UpdateTypeKVDeleted,
+					}, api.Update{
+						KVPair: model.KVPair{
 							Key: model.ProfileRulesKey{
 								ProfileKey: model.ProfileKey{Name: "remote-cluster/profile-1"},
 							},
 							Value: nil,
 						},
 						UpdateType: api.UpdateTypeKVDeleted,
-					},
-					api.Update{
+					}, api.Update{
 						KVPair: model.KVPair{
-							Key: model.ProfileLabelsKey{
-								ProfileKey: model.ProfileKey{Name: "remote-cluster/profile-1"},
+							Key: model.ResourceKey{
+								Kind: apiv3.KindProfile,
+								Name: "remote-cluster/profile-1",
 							},
 							Value: nil,
 						},

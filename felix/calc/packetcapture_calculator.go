@@ -76,9 +76,7 @@ func (pcc *PacketCaptureCalculator) RegisterWith(localEndpointDispatcher, allUpd
 	// It needs local workload endpoints
 	localEndpointDispatcher.Register(model.WorkloadEndpointKey{}, pcc.OnUpdate)
 
-	// and profile labels and tags
-	allUpdDispatcher.Register(model.ProfileLabelsKey{}, pcc.OnUpdate)
-	// and packet captures.
+	// and profiles and packet captures.
 	allUpdDispatcher.Register(model.ResourceKey{}, pcc.OnUpdate)
 }
 
@@ -87,11 +85,11 @@ func (pcc *PacketCaptureCalculator) OnUpdate(update api.Update) (_ bool) {
 	case model.WorkloadEndpointKey:
 		// updating index labels and matching selectors
 		pcc.labelIndex.OnUpdate(update)
-	case model.ProfileLabelsKey:
-		// updating index labels and matching selectors
-		pcc.labelIndex.OnUpdate(update)
 	case model.ResourceKey:
 		switch key.Kind {
+		case v3.KindProfile:
+			// updating index labels and matching selectors
+			pcc.labelIndex.OnUpdate(update)
 		case v3.KindPacketCapture:
 			if update.Value != nil {
 				old, found := pcc.allPacketCaptures[key]

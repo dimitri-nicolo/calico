@@ -583,18 +583,46 @@ var profileRules1NegatedTagSelUpdate = ProfileRules{
 	},
 }
 
-var profileLabels1Tag1 = map[string]string{
-	"profile": "prof-1",
-	"tag-1":   "",
+var profileLabels1Tag1 = &v3.Profile{
+	ObjectMeta: metav1.ObjectMeta{
+		Name: "prof-1",
+	},
+	Spec: v3.ProfileSpec{
+		LabelsToApply: map[string]string{
+			"profile": "prof-1",
+			"tag-1":   "",
+		},
+	},
 }
-var profileLabels1 = map[string]string{
-	"profile": "prof-1",
+var profileLabels1 = &v3.Profile{
+	ObjectMeta: metav1.ObjectMeta{
+		Name: "prof-1",
+	},
+	Spec: v3.ProfileSpec{
+		LabelsToApply: map[string]string{
+			"profile": "prof-1",
+		},
+	},
 }
-var profileLabels2 = map[string]string{
-	"profile": "prof-2",
+var profileLabels2 = &v3.Profile{
+	ObjectMeta: metav1.ObjectMeta{
+		Name: "prof-2",
+	},
+	Spec: v3.ProfileSpec{
+		LabelsToApply: map[string]string{
+			"profile": "prof-2",
+		},
+	},
 }
-var profileLabelsTag1 = map[string]string{
-	"tag-1": "foobar",
+var profileLabelsTag1 = &v3.Profile{
+	ObjectMeta: metav1.ObjectMeta{
+		Name: "prof-1",
+	},
+	Spec: v3.ProfileSpec{
+		LabelsToApply: map[string]string{
+			"tag-1": "foobar",
+		},
+	},
 }
 
 var tag1LabelID = ipSetIDForTag("tag-1")

@@ -99,7 +99,6 @@ func DescribeEndpointOrHost(configFile, endpointSubstring, hostname string, hide
 	disp.Register(model.HostEndpointKey{}, checkValid)
 	disp.Register(model.PolicyKey{}, checkValid)
 	disp.Register(model.TierKey{}, checkValid)
-	disp.Register(model.ProfileLabelsKey{}, checkValid)
 	disp.Register(model.ProfileRulesKey{}, checkValid)
 
 	if cbs.includeRules {
@@ -124,8 +123,7 @@ func DescribeEndpointOrHost(configFile, endpointSubstring, hostname string, hide
 	disp.Register(model.PolicyKey{}, arc.OnUpdate)
 	disp.Register(model.PolicyKey{}, cbs.policySorter.OnUpdate)
 	disp.Register(model.TierKey{}, cbs.policySorter.OnUpdate)
-	disp.Register(model.ProfileLabelsKey{}, arc.OnUpdate)
-	disp.Register(model.ProfileRulesKey{}, arc.OnUpdate)
+	disp.Register(model.ResourceKey{}, arc.OnUpdate)
 	disp.Register(model.RemoteClusterStatusKey{}, cbs.rcc.OnUpdate)
 
 	bclient, cfg := GetClient(configFile)
