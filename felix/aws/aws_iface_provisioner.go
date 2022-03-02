@@ -821,7 +821,7 @@ func (m *SecondaryIfaceProvisioner) loadAWSENIsState() (s *awsState, err error) 
 		}
 
 		// Found one of our managed interfaces; collect its IPs.
-		s.OnCalicoENIAttached(eni, len(awsENI.PrivateIpAddresses))
+		s.OnCalicoENIAttached(eni)
 	}
 
 	return
@@ -1169,7 +1169,7 @@ func (m *SecondaryIfaceProvisioner) attachOrphanENIs(awsState *awsState, bestSub
 			ID:          *attOut.AttachmentId,
 			DeviceIndex: devIdx,
 		}
-		awsState.OnCalicoENIAttached(ourENI, len(eni.PrivateIpAddresses))
+		awsState.OnCalicoENIAttached(ourENI)
 		awsState.ClaimDeviceIdx(devIdx) // Mark the device index as used.
 		logCtx.WithFields(logrus.Fields{
 			"attachmentID": safeReadString(attOut.AttachmentId),
@@ -1349,7 +1349,7 @@ func (m *SecondaryIfaceProvisioner) createAWSENIs(awsState *awsState, subnetID s
 			ID:          *attOut.AttachmentId,
 			DeviceIndex: devIdx,
 		}
-		awsState.OnCalicoENIAttached(ourENI, len(cno.NetworkInterface.PrivateIpAddresses))
+		awsState.OnCalicoENIAttached(ourENI)
 
 		ctx, cancel = m.newContext()
 		_, err = m.ec2Client.EC2Svc.ModifyNetworkInterfaceAttribute(ctx, &ec2.ModifyNetworkInterfaceAttributeInput{
