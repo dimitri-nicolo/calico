@@ -3,6 +3,8 @@
 package users_test
 
 import (
+	"log"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -402,23 +404,23 @@ var _ = Describe("ElasticseachUsers", func() {
 								Cluster: []string{"monitor", "manage_index_templates"},
 								Indices: []elasticsearch.RoleIndex{
 									{
-										Names:      []string{"tigera_secure_ee_flows.cluster.*"},
+										Names:      []string{"tigera_secure_ee_flows.*.*"},
 										Privileges: []string{"read"},
 									},
 									{
-										Names:      []string{"tigera_secure_ee_dns.cluster.*"},
+										Names:      []string{"tigera_secure_ee_dns.*.*"},
 										Privileges: []string{"read"},
 									},
 									{
-										Names:      []string{"tigera_secure_ee_l7.cluster.*"},
+										Names:      []string{"tigera_secure_ee_l7.*.*"},
 										Privileges: []string{"read"},
 									},
 									{
-										Names:      []string{"tigera_secure_ee_runtime.cluster.*"},
+										Names:      []string{"tigera_secure_ee_runtime.*.*"},
 										Privileges: []string{"read"},
 									},
 									{
-										Names:      []string{"tigera_secure_ee_events.cluster.*"},
+										Names:      []string{"tigera_secure_ee_events.*.*"},
 										Privileges: []string{"read", "write"},
 									},
 								},
@@ -606,6 +608,7 @@ func testElasticsearchUsers(privateUsers, publicUsers, expectedprivateUsers, exp
 		for _, expectedRole := range expectedUser.Roles {
 			for _, role := range esUser.Roles {
 				if expectedRole.Name == role.Name {
+					log.Printf("%s, %s", expectedRole.Name, role.Name)
 					Expect(expectedRole.Definition).Should(Equal(role.Definition))
 				}
 			}

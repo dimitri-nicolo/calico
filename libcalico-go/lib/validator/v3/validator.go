@@ -59,6 +59,9 @@ const (
 	routeTableMaxLinux uint32 = 0xffffffff
 
 	globalSelector = "global()"
+
+	operatorApiVersion     = "operator.tigera.io/v1"
+	intrusionDetectionKind = "IntrusionDetection"
 )
 
 const (
@@ -150,6 +153,8 @@ var (
 	FailureDetectionModeRegex = regexp.MustCompile("^(None|BFDIfDirectlyConnected)$")
 	RestartModeRegex          = regexp.MustCompile("^(GracefulRestart|LongLivedGracefulRestart)$")
 	BIRDGatewayModeRegex      = regexp.MustCompile("^(Recursive|DirectIfDirectlyConnected)$")
+
+	GlobalAlertTypeRegex = regexp.MustCompile("^(UserDefined|AnomalyDetection)$")
 
 	minAggregationKindValue    = 0
 	maxAggregationKindValue    = 2
@@ -265,6 +270,8 @@ func init() {
 	registerFieldValidator("wireguardPublicKey", validateWireguardPublicKey)
 	registerFieldValidator("IP:port", validateIPPort)
 
+	registerFieldValidator("globalAlertType", RegexValidator("GlobalAlertType", GlobalAlertTypeRegex))
+
 	// Register network validators (i.e. validating a correctly masked CIDR).  Also
 	// accepts an IP address without a mask (assumes a full mask).
 	registerFieldValidator("netv4", validateIPv4Network)
@@ -323,6 +330,7 @@ func init() {
 	registerStructValidator(validate, validateGlobalNetworkSet, api.GlobalNetworkSet{})
 	registerStructValidator(validate, validateNetworkSet, api.NetworkSet{})
 	registerStructValidator(validate, validatePull, api.Pull{})
+	registerStructValidator(validate, validateGlobalAlertTemplate, api.GlobalAlertTemplate{})
 	registerStructValidator(validate, validateGlobalAlertSpec, api.GlobalAlertSpec{})
 	registerStructValidator(validate, validateGlobalThreatFeedSpec, api.GlobalThreatFeed{})
 	registerStructValidator(validate, validateFeedFormat, api.ThreatFeedFormat{})
