@@ -1,17 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
+// Copyright (c) 2019, 2022 Tigera, Inc. All rights reserved.
 package helm_test
 
 import (
@@ -31,22 +18,57 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
-// HelmValues is a Go representation of of the values.yaml file for the Calico chart.
+// HelmValues is a Go representation of of the values.yaml file for the Tigera Operator chart.
 type HelmValues struct {
-	Datastore string        `yaml:"datastore"`
-	Typha     TyphaSettings `yaml:"typha"`
-	Etcd      EtcdSettings  `yaml:"etcd"`
+	TigeraOperator     InstallationSettings       `yaml:"installation"`
+	ImagePullSecrets   map[string]interface{}     `yaml:"imagePullSecrets"`
+	ApiServer          ApiServerSettings          `yaml:"apiServer"`
+	IntrusionDetection IntrusionDetectionSettings `yaml:"intrusionDetection"`
+	LogCollector       LogCollectorSettings       `yaml:"logCollector"`
+	LogStorage         LogStorageSettings         `yaml:"logStorage"`
+	Manager            ManagerSettings            `yaml:"manager"`
+	Monitor            MonitorSettings            `yaml:"monitor"`
+	Compliance         ComplianceSettings         `yaml:"compliance"`
 }
 
-type TyphaSettings struct {
+type ApiServerSettings struct {
 	Enabled bool `yaml:"enabled"`
 }
 
-type EtcdSettings struct {
-	Endpoints string `yaml:"endpoints"`
+type IntrusionDetectionSettings struct {
+	Enabled bool `yaml:"enabled"`
 }
 
-var chartPaths = *flag.String("chart-path", "../_includes/charts/calico", "comma separated list of paths to the charts")
+type LogCollectorSettings struct {
+	Enabled bool `yaml:"enabled"`
+}
+
+type InstallationSettings struct {
+	Enabled bool `yaml:"enabled"`
+}
+
+type LogStorageSettings struct {
+	Enabled bool          `yaml:"enabled"`
+	Nodes   NodesSettings `yaml:"nodes"`
+}
+
+type NodesSettings struct {
+	Count int `yaml:"count"`
+}
+
+type ManagerSettings struct {
+	Enabled bool `yaml:"enabled"`
+}
+
+type MonitorSettings struct {
+	Enabled bool `yaml:"enabled"`
+}
+
+type ComplianceSettings struct {
+	Enabled bool `yaml:"enabled"`
+}
+
+var chartPaths = *flag.String("chart-path", "../_includes/charts/tigera-operator", "comma separated list of paths to the charts")
 
 // TODO: Add call to kubeval to verify helm resources are valid
 func render(values HelmValues) (map[string]runtime.Object, error) {
