@@ -103,3 +103,7 @@ func TcSetGlobals(m *Map, hostIP, intfIP, extToSvcMark uint32, tmtu, vxlanPort, 
 func CTLBSetGlobals(_ *Map, _ time.Duration) error {
 	panic("LIBBPF syscall stub")
 }
+
+func (m *Map) SetMapSize(size uint32) error {
+	panic("LIBBPF syscall stub")
+}
