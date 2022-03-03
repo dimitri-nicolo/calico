@@ -4,6 +4,7 @@ import logging
 import re
 import json
 import subprocess
+from datetime import datetime
 from random import randint
 
 from tests.k8st.test_base import Container, Pod, TestBase
@@ -41,8 +42,7 @@ class _TestEgressIP(TestBase):
                   "FELIX_EGRESSIPSUPPORT": "EnabledPerNamespaceOrPerPod",
                   "FELIX_IPINIPENABLED": "false",
                   "FELIX_VXLANENABLED": "false",
-                  "FELIX_WireguardEnabled": "false"}
-
+                  "FELIX_WIREGUARDENABLED": "false"}
         if backend == "VXLAN":
             modeVxlan = "Always"
             modeIPIP = "Never"
@@ -63,7 +63,7 @@ class _TestEgressIP(TestBase):
 
         if wireguard:
             self.disableDefaultDenyTest = True
-            newEnv["FELIX_WireguardEnabled"] = "true"
+            newEnv["FELIX_WIREGUARDENABLED"] = "true"
         self.update_ds_env("calico-node", "kube-system", newEnv)
 
         # Create egress IP pool.
@@ -376,6 +376,35 @@ EOF
             self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy deny-egress-to-gateway"))
             retry_until_success(client.cannot_connect, retries=3, wait_time=1, function_kwargs={"ip": server.ip, "port": server.port})
 
+    def test_gateway_termination_annotations(self):
+
+        with DiagsCollector():
+            # Create egress gateways, with an IP from that pool.
+            termination_grace_period = 5
+            gw = self.create_gateway_pod("kind-worker", "gw", self.egress_cidr, "red", "default", termination_grace_period)
+            gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr, "red", "default", termination_grace_period)
+            gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr, "red", "default", termination_grace_period)
+
+            # Create client.
+            _log.info("ecmp create client")
+            client_ns = "default"
+            client = NetcatClientTCP(client_ns, "test1", annotations={
+                "egress.projectcalico.org/selector": "color == 'red'",
+                "egress.projectcalico.org/namespaceSelector": "all()",
+            })
+            self.add_cleanup(client.delete)
+            client.wait_ready()
+
+            # Delete gateway pod one by one and check correct annotations are applied to the client pod.
+            for pod in [gw, gw2, gw3]:
+                pod_ip = pod.ip
+                now = datetime.now()
+                _log.info("Removing gateway pod %s", pod.name)
+                self.delete(pod.name, "pod", pod.ns, "false")
+                self.check_egress_annotations(client, pod_ip, now, termination_grace_period)
+                self.confirm_deletion(pod.name, "pod", pod.ns)
+                self.cleanups.remove(pod.delete)
+
     def test_egress_ip_with_default_deny_policy(self):
 
         with DiagsCollector():
@@ -532,6 +561,13 @@ EOF
         _log.info("Client IPs: %r", client_ip)
         self.assertIn(client_ip, [expected_egress_ip])
 
+    def check_egress_annotations(self, client, egress_ip, now, termination_grace_period):
+        """
+        check the maintenance timestamp and cidr annotations were applied to the workload pod
+        """
+        _log.info("Client IP: %s", client.ip)
+        retry_until_success(client.has_egress_annotations, retries=3, wait_time=5, function_kwargs={"egress_ip": egress_ip, "now": now, "termination_grace_period": termination_grace_period})
+
     def setup_client_server_gateway(self, gateway_node):
         """
         Setup client , server and gateway pod and validate server sees gateway ip as source ip.
@@ -610,7 +646,7 @@ spec:
 
         return pod.ip, svc_ip, 8080, int(node_port)
 
-    def create_gateway_pod(self, host, name, egress_cidr, color="red", ns="default"):
+    def create_gateway_pod(self, host, name, egress_cidr, color="red", ns="default", termgraceperiod=0):
         """
         Create egress gateway pod, with an IP from that pool.
         """
@@ -644,12 +680,12 @@ spec:
         - mountPath: /var/run
           name: policysync
   nodeName: %s
-  terminationGracePeriodSeconds: 0
+  terminationGracePeriodSeconds: %d
   volumes:
       - flexVolume:
           driver: nodeagent/uds
         name: policysync
-""" % (egress_cidr, color, name, ns, host))
+""" % (egress_cidr, color, name, ns, host, termgraceperiod))
         self.add_cleanup(gateway.delete)
         gateway.wait_ready()
 
@@ -707,6 +743,21 @@ class NetcatClientTCP(Pod):
         else:
             raise Exception('received invalid command')
 
+    def has_egress_annotations(self, egress_ip, now, termination_grace_period):
+        error_margin = 3
+        annotations = self.annotations
+        gateway_ip = annotations["egress.projectcalico.org/gatewayMaintenanceGatewayIP"]
+        if gateway_ip != egress_ip:
+            raise Exception('egress.projectcalico.org/gatewayMaintenanceGatewayCIDR annotation expected to be: %s, but was: %s. Annotations were: %s' % (egress_ip, gateway_ip, annotations))
+        started_str = annotations["egress.projectcalico.org/gatewayMaintenanceStartedTimestamp"]
+        started = datetime.strptime(started_str, "%Y-%m-%dT%H:%M:%SZ")
+        if abs((started - now).total_seconds()) > error_margin:
+            raise Exception('egress.projectcalico.org/gatewayMaintenanceStartedTimestamp annotation expected to be: within %ds of %s, but was: %s. Annotations were: %s' % (error_margin, now, started_str, annotations))
+        finished_str = annotations["egress.projectcalico.org/gatewayMaintenanceFinishedTimestamp"]
+        finished = datetime.strptime(finished_str, "%Y-%m-%dT%H:%M:%SZ")
+        if abs((finished - started).total_seconds()) > (error_margin + termination_grace_period):
+            raise Exception('egress.projectcalico.org/gatewayMaintenanceFinishedTimestamp annotation expected to be: within %ds of %s, but was: %s. Annotations were: %s' % ((error_margin + termination_grace_period), started, finished_str, annotations))
+ 
     def get_last_output(self):
         return self.last_output
 

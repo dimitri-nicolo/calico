@@ -53,6 +53,27 @@ type WorkloadEndpointClient struct {
 	converter conversion.Converter
 }
 
+type patchModeKey struct{}
+type PatchMode string
+
+const (
+	PatchModeCNI           PatchMode = "patchCNI"
+	PatchModeEgressGateway PatchMode = "patchEgressGateway"
+	PatchModeUnspecified   PatchMode = "patchUnspecified"
+)
+
+func ContextWithPatchMode(ctx context.Context, mode PatchMode) context.Context {
+	return context.WithValue(ctx, patchModeKey{}, mode)
+}
+
+func PatchModeOf(ctx context.Context) PatchMode {
+	v := ctx.Value(patchModeKey{})
+	if v != nil {
+		return v.(PatchMode)
+	}
+	return PatchModeUnspecified
+}
+
 // Create is used to "create" default WorkloadEndpoints for Pods. In KDD mode, we need to store the IPs in annotations for
 // the default WorkloadEndpoint, and this function stores those IPs in a Pod annotation. Use CreateNonDefault if the WorkloadEndpoint
 // is not the default WorkloadEndpoint for the pod
@@ -65,7 +86,7 @@ func (c *WorkloadEndpointClient) Create(ctx context.Context, kvp *model.KVPair) 
 	// Note: it's a bit odd to do this in the Create, but the CNI plugin uses CreateOrUpdate().  Doing it
 	// here makes sure that, if the update fails: we retry here, and, we don't report success without
 	// making the patch.
-	return c.patchInAnnotations(ctx, kvp)
+	return c.patchInAnnotations(ctx, kvp, "Create")
 }
 
 // CreateNonDefault is used to "create" WorkloadEndpoints for a Pod that are not the default WorkloadEndpoint. This is a
@@ -84,7 +105,7 @@ func (c *WorkloadEndpointClient) Update(ctx context.Context, kvp *model.KVPair) 
 	// As a special case for the CNI plugin, try to patch the Pod with the IP that we've calculated.
 	// This works around a bug in kubelet that causes it to delay writing the Pod IP for a long time:
 	// https://github.com/kubernetes/kubernetes/issues/39113.
-	return c.patchInAnnotations(ctx, kvp)
+	return c.patchInAnnotations(ctx, kvp, "Update")
 }
 
 // UpdateNonDefault is used to "update" WorkloadEndpoints for a Pod that are not the default WorkloadEndpoint. This is a
@@ -109,32 +130,107 @@ func (c *WorkloadEndpointClient) Delete(ctx context.Context, key model.Key, revi
 //
 // We store the IP addresses in annotations because patching the PodStatus directly races with changes that
 // kubelet makes so kubelet can undo our changes.
-func (c *WorkloadEndpointClient) patchInAnnotations(ctx context.Context, kvp *model.KVPair) (*model.KVPair, error) {
+func (c *WorkloadEndpointClient) patchInAnnotations(ctx context.Context, kvp *model.KVPair, operation string) (*model.KVPair, error) {
+	var annotations map[string]string
+	var revision string
+	patchMode := PatchModeOf(ctx)
+	switch patchMode {
+	case PatchModeCNI:
+		annotations = c.calcCniAnnotations(kvp)
+		// Note: we drop the revision here because the CNI plugin can't handle a retry right now (and the kubelet
+		// ensures that only one CNI ADD for a given UID can be in progress).
+		revision = ""
+	case PatchModeEgressGateway:
+		annotations = c.calcEgressGatewayAnnotations(kvp)
+		revision = kvp.Revision
+	default:
+		log.Errorf("no WorkloadEndpoint patching will be performed, unrecognised PatchMode passed to patchInAnnotations: %s.", patchMode)
+		return nil, cerrors.ErrorOperationNotSupported{
+			Identifier: kvp.Key,
+			Operation:  operation,
+			Reason:     fmt.Sprintf("unsupported PatchMode: %s", patchMode),
+		}
+	}
+	return c.patchPodAnnotations(ctx, kvp.Key, revision, kvp.UID, annotations)
+}
+
+func (c *WorkloadEndpointClient) calcCniAnnotations(kvp *model.KVPair) map[string]string {
+	annotations := make(map[string]string)
 	wep := kvp.Value.(*libapiv3.WorkloadEndpoint)
 	ips := wep.Spec.IPNetworks
 	if len(ips) == 0 {
-		return kvp, nil
+		return annotations
+	}
+	log.Debugf("PATCHing pod with IPs: %v", ips)
+
+	// Write the IP addresses into annotations.  This generates an event more quickly than
+	// waiting for kubelet to update the PodStatus PodIP and PodIPs fields.
+	firstIP := ""
+	if len(ips) > 0 {
+		firstIP = ips[0]
+	}
+	annotations[conversion.AnnotationPodIP] = firstIP
+	annotations[conversion.AnnotationPodIPs] = strings.Join(ips, ",")
+
+	containerID := wep.Spec.ContainerID
+	if containerID != "" {
+		log.WithField("containerID", containerID).Debug("Container ID specified, including in patch")
+		annotations[conversion.AnnotationContainerID] = containerID
+	}
+	return annotations
+}
+
+func (c *WorkloadEndpointClient) calcEgressGatewayAnnotations(kvp *model.KVPair) map[string]string {
+	annotations := make(map[string]string)
+	wep := kvp.Value.(*libapiv3.WorkloadEndpoint)
+
+	var gatewayIP string
+	var started, finished *metav1.Time
+	egwStatus := wep.Status.EgressGateway
+	if egwStatus != nil {
+		log.Debugf("PATCHing pod with Egress Gateway status: %v", egwStatus)
+		gatewayIP = egwStatus.MaintenanceGatewayIP
+		started = egwStatus.MaintenanceStarted
+		finished = egwStatus.MaintenanceFinished
 	}
 
-	log.Debugf("PATCHing pod with IPs: %v", ips)
-	key := kvp.Key
+	if gatewayIP != "" {
+		annotations[conversion.AnnotationEgressGatewayMaintenanceGatewayIP] = gatewayIP
+	}
 
-	// Note: we drop the revision here because the CNI plugin can't handle a retry right now (and the kubelet
-	// ensures that only one CNI ADD for a given UID can be in progress).
-	return c.patchPodAnnotations(ctx, key, "", kvp.UID, wep.Spec.ContainerID, ips)
+	if started != nil && !started.IsZero() {
+		s, err := started.MarshalText()
+		if err != nil {
+			log.WithError(err).Errorf("unable to marshal time for %s annotation", conversion.AnnotationEgressGatewayMaintenanceStarted)
+		}
+		annotations[conversion.AnnotationEgressGatewayMaintenanceStarted] = string(s)
+	}
+
+	if finished != nil && !finished.IsZero() {
+		s, err := finished.MarshalText()
+		if err != nil {
+			log.WithError(err).Errorf("unable to marshal time for %s annotation", conversion.AnnotationEgressGatewayMaintenanceFinished)
+		}
+		annotations[conversion.AnnotationEgressGatewayMaintenanceFinished] = string(s)
+	}
+
+	return annotations
 }
 
 // patchOutAnnotations sets our pod IP annotations to empty strings; this is used to signal that the IP has been removed
 // from the pod at teardown.
 func (c *WorkloadEndpointClient) patchOutAnnotations(ctx context.Context, key model.Key, revision string, uid *types.UID) (*model.KVPair, error) {
-	// Passing "" for containerID means "don't touch".  Passing nil for IPs will result in all annotations being
-	// explicitly set to the empty string.  Setting the podIPs to empty string is used to signal that the CNI DEL
-	// has removed the IP from the Pod.  We leave the container ID in place to allow any repeat invocations of the
-	// CNI DEL to tell which instance of a Pod they are seeing.
-	return c.patchPodAnnotations(ctx, key, revision, uid, "", nil)
+	// Passing nil for annotations will result in all annotations being explicitly set to the empty string.
+	// Setting the podIPs to empty string is used to signal that the CNI DEL has removed the IP from the Pod.
+	// We leave the container ID in place to allow any repeat invocations of the CNI DEL to tell which instance of a Pod they are seeing.
+	annotations := map[string]string{
+		conversion.AnnotationPodIP:  "",
+		conversion.AnnotationPodIPs: "",
+	}
+	return c.patchPodAnnotations(ctx, key, revision, uid, annotations)
 }
 
-func (c *WorkloadEndpointClient) patchPodAnnotations(ctx context.Context, key model.Key, revision string, uid *types.UID, containerID string, ips []string) (*model.KVPair, error) {
+func (c *WorkloadEndpointClient) patchPodAnnotations(ctx context.Context, key model.Key, revision string, uid *types.UID, annotations map[string]string) (*model.KVPair, error) {
 	wepID, err := c.converter.ParseWorkloadEndpointName(key.(model.ResourceKey).Name)
 	if err != nil {
 		return nil, err
@@ -142,21 +238,7 @@ func (c *WorkloadEndpointClient) patchPodAnnotations(ctx context.Context, key mo
 	if wepID.Pod == "" {
 		return nil, cerrors.ErrorInsufficientIdentifiers{Name: key.(model.ResourceKey).Name}
 	}
-	// Write the IP addresses into annotations.  This generates an event more quickly than
-	// waiting for kubelet to update the PodStatus PodIP and PodIPs fields.
 	ns := key.(model.ResourceKey).Namespace
-	firstIP := ""
-	if len(ips) > 0 {
-		firstIP = ips[0]
-	}
-	annotations := map[string]string{
-		conversion.AnnotationPodIP:  firstIP,
-		conversion.AnnotationPodIPs: strings.Join(ips, ","),
-	}
-	if containerID != "" {
-		log.WithField("containerID", containerID).Debug("Container ID specified, including in patch")
-		annotations[conversion.AnnotationContainerID] = containerID
-	}
 	patch, err := calculateAnnotationPatch(revision, uid, annotations)
 	if err != nil {
 		log.WithError(err).Error("failed to calculate Pod patch.")
@@ -183,7 +265,9 @@ func calculateAnnotationPatch(revision string, uid *types.UID, annotations map[s
 	patch := map[string]interface{}{}
 	metadata := map[string]interface{}{}
 	patch["metadata"] = metadata
-	metadata["annotations"] = annotations
+	if len(annotations) > 0 {
+		metadata["annotations"] = annotations
+	}
 
 	if revision != "" {
 		// We have a revision.  Since the revision is immutable, if our patch revision doesn't match then the

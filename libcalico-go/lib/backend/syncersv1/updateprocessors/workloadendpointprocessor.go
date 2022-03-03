@@ -184,25 +184,28 @@ func ConvertWorkloadEndpointV3ToV1Value(val interface{}) (interface{}, error) {
 	}
 
 	deletionTimestamp := time.Time{}
+	var deletionGracePeriodSeconds int64
 	if v3res.DeletionTimestamp != nil {
 		deletionTimestamp = v3res.DeletionTimestamp.Time
+		deletionGracePeriodSeconds = *v3res.DeletionGracePeriodSeconds
 	}
 	v1value := &model.WorkloadEndpoint{
-		State:             "active",
-		Name:              v3res.Spec.InterfaceName,
-		Mac:               cmac,
-		ProfileIDs:        v3res.Spec.Profiles,
-		IPv4Nets:          ipv4Nets,
-		IPv6Nets:          ipv6Nets,
-		IPv4NAT:           ipv4NAT,
-		IPv6NAT:           ipv6NAT,
-		AWSElasticIPs:     v3res.Spec.AWSElasticIPs,
-		Labels:            labels,
-		IPv4Gateway:       ipv4Gateway,
-		IPv6Gateway:       ipv6Gateway,
-		Ports:             ports,
-		GenerateName:      v3res.GenerateName,
-		DeletionTimestamp: deletionTimestamp,
+		State:                      "active",
+		Name:                       v3res.Spec.InterfaceName,
+		Mac:                        cmac,
+		ProfileIDs:                 v3res.Spec.Profiles,
+		IPv4Nets:                   ipv4Nets,
+		IPv6Nets:                   ipv6Nets,
+		IPv4NAT:                    ipv4NAT,
+		IPv6NAT:                    ipv6NAT,
+		AWSElasticIPs:              v3res.Spec.AWSElasticIPs,
+		Labels:                     labels,
+		IPv4Gateway:                ipv4Gateway,
+		IPv6Gateway:                ipv6Gateway,
+		Ports:                      ports,
+		GenerateName:               v3res.GenerateName,
+		DeletionTimestamp:          deletionTimestamp,
+		DeletionGracePeriodSeconds: deletionGracePeriodSeconds,
 	}
 	if v3res.Spec.EgressGateway != nil {
 		// Convert egress Selector and NamespaceSelector fields to a single selector

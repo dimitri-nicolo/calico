@@ -201,12 +201,13 @@ class TestBase(TestCase):
         retry_until_success(kubectl, function_args=["get %s %s -n%s" %
                                                     (resource_type, name, ns)])
 
-    def delete_and_confirm(self, name, resource_type, ns="default"):
+    def delete(self, name, resource_type, ns="default", wait="true"):
         try:
-            kubectl("delete %s %s -n %s" % (resource_type, name, ns))
+            kubectl("delete %s %s -n %s --wait=%s" % (resource_type, name, ns, wait))
         except subprocess.CalledProcessError:
             pass
 
+    def confirm_deletion(self, name, resource_type, ns="default"):
         def is_it_gone_yet(res_name, res_type):
             try:
                 kubectl("get %s %s -n %s" % (res_type, res_name, ns),
@@ -217,6 +218,10 @@ class TestBase(TestCase):
                 pass
 
         retry_until_success(is_it_gone_yet, retries=10, wait_time=10, function_args=[name, resource_type])
+
+    def delete_and_confirm(self, name, resource_type, ns="default", wait="true"):
+        self.delete(name, resource_type, ns, wait)
+        self.confirm_deletion(name, resource_type, ns)
 
     class StillThere(Exception):
         pass
@@ -425,6 +430,11 @@ EOF
             self._nodename = run("kubectl get po %s -n %s -o json | jq '.spec.nodeName'" %
                                (self.name, self.ns)).strip().strip('"')
         return self._nodename
+
+    @property
+    def annotations(self):
+        return json.loads(run("kubectl get po %s -n %s -o json | jq '.metadata.annotations'" %
+                           (self.name, self.ns)).strip().strip('"'))
 
     def execute(self, cmd):
         return kubectl("exec %s -n %s -- %s" % (self.name, self.ns, cmd))

@@ -175,7 +175,6 @@ def retry_until_success(fun,
             # Successfully ran the function
             return result
 
-
 def function_name(f):
     """
     A function that returns the name of the provided function as a string.

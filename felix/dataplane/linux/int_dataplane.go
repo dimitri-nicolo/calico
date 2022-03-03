@@ -623,7 +623,18 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		} else if config.RulesConfig.IPIPEnabled {
 			mtu = config.IPIPMTU - VXLANHeaderSize
 		}
-		egressIpMgr := newEgressIPManager("egress.calico", config, dp.loopSummarizer)
+
+		egressStatusCallback := func(namespace, name, cidr string, maintenanceStarted, maintenanceFinished time.Time) error {
+			dp.fromDataplane <- &proto.EgressPodStatusUpdate{
+				Namespace:           namespace,
+				Name:                name,
+				Cidr:                cidr,
+				MaintenanceStarted:  proto.ConvertTime(maintenanceStarted),
+				MaintenanceFinished: proto.ConvertTime(maintenanceFinished),
+			}
+			return nil
+		}
+		egressIpMgr := newEgressIPManager("egress.calico", config, dp.loopSummarizer, egressStatusCallback)
 		go egressIpMgr.KeepVXLANDeviceInSync(mtu, 10*time.Second)
 		dp.RegisterManager(egressIpMgr)
 	} else {

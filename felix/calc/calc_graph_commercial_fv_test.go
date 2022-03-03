@@ -1096,6 +1096,7 @@ type tierInfo struct {
 var (
 	zeroTime              = time.Time{}
 	nowTime               = time.Now()
+	inSixtySecsTime       = nowTime.Add(time.Second * 60)
 	egressSelector        = "egress-provider == 'true'"
 	egressSelectorSim     = "egress-provider in {'true', 'not-sure'}"
 	egressProfileSelector = "(projectcalico.org/namespace == 'egress') && (egress-provider == 'true')"
@@ -1166,7 +1167,7 @@ var (
 			EgressIPSetID: egressSelectorID(egressSelector),
 		},
 	).withIPSet(egressSelectorID(egressSelector), []string{
-		egressMemberStr("137.0.0.1/32", zeroTime),
+		egressActiveMemberStr("137.0.0.1/32"),
 	},
 	).withName("endpointWithOwnEgressGateway")
 
@@ -1199,7 +1200,7 @@ var (
 			EgressIPSetID: egressSelectorID(egressSelector),
 		},
 	).withIPSet(egressSelectorID(egressSelector), []string{
-		egressMemberStr("137.0.0.1/32", zeroTime),
+		egressActiveMemberStr("137.0.0.1/32"),
 	},
 	).withRoutes(
 		proto.RouteUpdate{
@@ -1255,7 +1256,7 @@ var (
 			EgressIPSetID: egressSelectorID(egressProfileSelector),
 		},
 	).withIPSet(egressSelectorID(egressProfileSelector), []string{
-		egressMemberStr("137.0.0.1/32", zeroTime),
+		egressActiveMemberStr("137.0.0.1/32"),
 	},
 	).withActiveProfiles(
 		proto.ProfileID{Name: "egress"},
@@ -1303,7 +1304,7 @@ var (
 			EgressIPSetID: egressSelectorID(egressProfileSelector),
 		},
 	).withIPSet(egressSelectorID(egressProfileSelector), []string{
-		egressMemberStr("137.0.0.1/32", zeroTime),
+		egressActiveMemberStr("137.0.0.1/32"),
 	},
 	).withActiveProfiles(
 		proto.ProfileID{Name: "egress"},
@@ -1419,7 +1420,7 @@ var (
 			IsEgressGateway: true,
 		},
 	).withIPSet(egressSelectorID(egressSelector), []string{
-		egressMemberStr("137.0.0.1/32", zeroTime),
+		egressActiveMemberStr("137.0.0.1/32"),
 	},
 	).withRoutes(
 		proto.RouteUpdate{
@@ -1479,10 +1480,10 @@ var (
 			IsEgressGateway: true,
 		},
 	).withIPSet(egressSelectorID(egressSelector), []string{
-		egressMemberStr("137.0.0.1/32", zeroTime),
+		egressActiveMemberStr("137.0.0.1/32"),
 	},
 	).withIPSet(egressSelectorID(egressSelectorSim), []string{
-		egressMemberStr("137.0.0.1/32", zeroTime),
+		egressActiveMemberStr("137.0.0.1/32"),
 	},
 	).withRoutes(
 		proto.RouteUpdate{
@@ -1499,12 +1500,12 @@ var (
 			Value: gatewayEndpoint2,
 		},
 	).withIPSet(egressSelectorID(egressSelector), []string{
-		egressMemberStr("137.0.0.1/32", zeroTime),
-		egressMemberStr("137.0.0.2/32", zeroTime),
+		egressActiveMemberStr("137.0.0.1/32"),
+		egressActiveMemberStr("137.0.0.2/32"),
 	},
 	).withIPSet(egressSelectorID(egressSelectorSim), []string{
-		egressMemberStr("137.0.0.1/32", zeroTime),
-		egressMemberStr("137.0.0.2/32", zeroTime),
+		egressActiveMemberStr("137.0.0.1/32"),
+		egressActiveMemberStr("137.0.0.2/32"),
 	},
 	).withEndpoint(
 		"orch/gw2/ep1",
@@ -1545,7 +1546,8 @@ var (
 			"egress-provider":             "true",
 			"projectcalico.org/namespace": "egress",
 		},
-		DeletionTimestamp: nowTime,
+		DeletionTimestamp:          inSixtySecsTime,
+		DeletionGracePeriodSeconds: 60,
 	}
 
 	endpointWithRemoteActiveEgressGateway = initialisedStore.withKVUpdates(
@@ -1574,7 +1576,7 @@ var (
 			EgressIPSetID: egressSelectorID(egressSelector),
 		},
 	).withIPSet(egressSelectorID(egressSelector), []string{
-		egressMemberStr("137.0.0.1/32", zeroTime),
+		egressActiveMemberStr("137.0.0.1/32"),
 	},
 	).withName("endpointWithRemoteActiveEgressGateway")
 
@@ -1604,7 +1606,7 @@ var (
 			EgressIPSetID: egressSelectorID(egressSelector),
 		},
 	).withIPSet(egressSelectorID(egressSelector), []string{
-		egressMemberStr("137.0.0.1/32", nowTime),
+		egressTerminatingMemberStr("137.0.0.1/32", nowTime, inSixtySecsTime),
 	},
 	).withName("endpointWithRemoteTerminatingEgressGateway")
 
@@ -1637,7 +1639,7 @@ var (
 			EgressIPSetID: egressSelectorID(egressSelector),
 		},
 	).withIPSet(egressSelectorID(egressSelector), []string{
-		egressMemberStr("137.0.0.1/32", zeroTime),
+		egressActiveMemberStr("137.0.0.1/32"),
 	},
 	).withRoutes(
 		proto.RouteUpdate{
@@ -1677,7 +1679,7 @@ var (
 			EgressIPSetID: egressSelectorID(egressSelector),
 		},
 	).withIPSet(egressSelectorID(egressSelector), []string{
-		egressMemberStr("137.0.0.1/32", nowTime),
+		egressTerminatingMemberStr("137.0.0.1/32", nowTime, inSixtySecsTime),
 	},
 	).withRoutes(
 		proto.RouteUpdate{
@@ -1689,10 +1691,18 @@ var (
 	).withName("endpointWithLocalTerminatingEgressGateway")
 )
 
-func egressMemberStr(cidr string, deletionTimestamp time.Time) string {
-	bytes, err := deletionTimestamp.MarshalText()
+func egressActiveMemberStr(cidr string) string {
+	return egressTerminatingMemberStr(cidr, time.Time{}, time.Time{})
+}
+
+func egressTerminatingMemberStr(cidr string, start, finish time.Time) string {
+	startBytes, err := start.MarshalText()
 	if err != nil {
-		return cidr
+		panic(err)
 	}
-	return fmt.Sprintf("%s,%s", cidr, strings.ToLower(string(bytes)))
+	finishBytes, err := finish.MarshalText()
+	if err != nil {
+		panic(err)
+	}
+	return fmt.Sprintf("%s,%s,%s", cidr, strings.ToLower(string(startBytes)), strings.ToLower(string(finishBytes)))
 }

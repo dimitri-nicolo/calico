@@ -225,6 +225,7 @@ func init() {
 	registerFieldValidator("datastoreType", validateDatastoreType)
 	registerFieldValidator("name", validateName)
 	registerFieldValidator("wildname", ValidateWildName)
+	registerFieldValidator("timestamp", validateTimestamp)
 	registerFieldValidator("ipOrK8sService", validateIPOrK8sService)
 	registerFieldValidator("containerID", validateContainerID)
 	registerFieldValidator("selector", validateSelector)
@@ -460,6 +461,17 @@ func ValidateWildName(fl validator.FieldLevel) bool {
 		s = s[:p] + ".example." + s[p+3:]
 	}
 	return nameRegex.MatchString(s)
+}
+
+func validateTimestamp(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate timestamp: %s", s)
+	t := time.Time{}
+	if err := t.UnmarshalText([]byte(s)); err != nil {
+		log.Debugf("Invalid timestamp '%v': %v", s, err.Error())
+		return false
+	}
+	return true
 }
 
 const k8sServicePrefix = "k8s-service:"

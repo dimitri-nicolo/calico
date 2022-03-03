@@ -78,6 +78,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.BlockAffinity":            schema_libcalico_go_lib_apis_v3_BlockAffinity(ref),
 		"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.BlockAffinityList":        schema_libcalico_go_lib_apis_v3_BlockAffinityList(ref),
 		"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.BlockAffinitySpec":        schema_libcalico_go_lib_apis_v3_BlockAffinitySpec(ref),
+		"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.EgressGatewayStatus":      schema_libcalico_go_lib_apis_v3_EgressGatewayStatus(ref),
 		"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.IPAMBlock":                schema_libcalico_go_lib_apis_v3_IPAMBlock(ref),
 		"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.IPAMBlockList":            schema_libcalico_go_lib_apis_v3_IPAMBlockList(ref),
 		"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.IPAMBlockSpec":            schema_libcalico_go_lib_apis_v3_IPAMBlockSpec(ref),
@@ -100,6 +101,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.WorkloadEndpointList":     schema_libcalico_go_lib_apis_v3_WorkloadEndpointList(ref),
 		"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.WorkloadEndpointPort":     schema_libcalico_go_lib_apis_v3_WorkloadEndpointPort(ref),
 		"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.WorkloadEndpointSpec":     schema_libcalico_go_lib_apis_v3_WorkloadEndpointSpec(ref),
+		"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.WorkloadEndpointStatus":   schema_libcalico_go_lib_apis_v3_WorkloadEndpointStatus(ref),
 	}
 }
 
@@ -2275,6 +2277,39 @@ func schema_libcalico_go_lib_apis_v3_BlockAffinitySpec(ref common.ReferenceCallb
 	}
 }
 
+func schema_libcalico_go_lib_apis_v3_EgressGatewayStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"maintenanceGatewayIP": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaintenanceGatewayIP contains the IP address of the latest Egress Gateway pod used by this workload to be starting a manintenance window.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"maintenanceStarted": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaintenanceStarted contains a timestamp indicating when the latest Egress Gateway pod used by this workload is starting a manintenance window.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"maintenanceFinished": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaintenanceFinished contains a timestamp indicating when the latest Egress Gateway pod used by this workload is finishing a manintenance window.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
 func schema_libcalico_go_lib_apis_v3_IPAMBlock(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -3105,11 +3140,18 @@ func schema_libcalico_go_lib_apis_v3_WorkloadEndpoint(ref common.ReferenceCallba
 							Ref:         ref("github.com/projectcalico/calico/libcalico-go/lib/apis/v3.WorkloadEndpointSpec"),
 						},
 					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Status of the WorkloadEndpoint.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/projectcalico/calico/libcalico-go/lib/apis/v3.WorkloadEndpointStatus"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.WorkloadEndpointSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.WorkloadEndpointSpec", "github.com/projectcalico/calico/libcalico-go/lib/apis/v3.WorkloadEndpointStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -3216,7 +3258,7 @@ func schema_libcalico_go_lib_apis_v3_WorkloadEndpointSpec(ref common.ReferenceCa
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "WorkloadEndpointMetadata contains the specification for a WorkloadEndpoint resource.",
+				Description: "WorkloadEndpointSpec contains the specification for a WorkloadEndpoint resource.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"orchestrator": {
@@ -3380,5 +3422,26 @@ func schema_libcalico_go_lib_apis_v3_WorkloadEndpointSpec(ref common.ReferenceCa
 		},
 		Dependencies: []string{
 			"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.IPNAT", "github.com/projectcalico/calico/libcalico-go/lib/apis/v3.WorkloadEndpointPort", "github.com/tigera/api/pkg/apis/projectcalico/v3.EgressSpec"},
+	}
+}
+
+func schema_libcalico_go_lib_apis_v3_WorkloadEndpointStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "WorkloadEndpointStatus contains the status for a WorkloadEndpoint resource.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"egressGateway": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EgressGateway contains the status of Egress Gateways used by this WorkloadEndpoint.",
+							Ref:         ref("github.com/projectcalico/calico/libcalico-go/lib/apis/v3.EgressGatewayStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/projectcalico/calico/libcalico-go/lib/apis/v3.EgressGatewayStatus"},
 	}
 }

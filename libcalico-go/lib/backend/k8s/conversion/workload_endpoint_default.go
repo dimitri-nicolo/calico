@@ -277,13 +277,14 @@ func (wc defaultWorkloadEndpointConverter) podToDefaultWorkloadEndpoint(pod *kap
 	// Create the workload endpoint.
 	wep := libapiv3.NewWorkloadEndpoint()
 	wep.ObjectMeta = metav1.ObjectMeta{
-		Name:              wepName,
-		Namespace:         pod.Namespace,
-		CreationTimestamp: pod.CreationTimestamp,
-		DeletionTimestamp: pod.DeletionTimestamp,
-		UID:               pod.UID,
-		Labels:            labels,
-		GenerateName:      pod.GenerateName,
+		Name:                       wepName,
+		Namespace:                  pod.Namespace,
+		CreationTimestamp:          pod.CreationTimestamp,
+		DeletionTimestamp:          pod.DeletionTimestamp,
+		DeletionGracePeriodSeconds: pod.DeletionGracePeriodSeconds,
+		UID:                        pod.UID,
+		Labels:                     labels,
+		GenerateName:               pod.GenerateName,
 	}
 	wep.Spec = libapiv3.WorkloadEndpointSpec{
 		Orchestrator:       "k8s",
@@ -300,6 +301,9 @@ func (wc defaultWorkloadEndpointConverter) podToDefaultWorkloadEndpoint(pod *kap
 		EgressGateway:      egressAnnotationsToV3Spec(pod.Annotations),
 		ServiceAccountName: pod.Spec.ServiceAccountName,
 	}
+	wep.Status = libapiv3.WorkloadEndpointStatus{
+		EgressGateway: annotationsToEgressGatewaySpec(pod.Annotations),
+	}
 
 	// Embed the workload endpoint into a KVPair.
 	kvp := model.KVPair{
@@ -312,4 +316,38 @@ func (wc defaultWorkloadEndpointConverter) podToDefaultWorkloadEndpoint(pod *kap
 		Revision: pod.ResourceVersion,
 	}
 	return &kvp, nil
+}
+
+func timestampToV1Time(s string) (*metav1.Time, error) {
+	t := metav1.Time{}
+	if s == "" {
+		return &t, nil
+	}
+	err := t.UnmarshalText([]byte(s))
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+func annotationsToEgressGatewaySpec(annotations map[string]string) *libapiv3.EgressGatewayStatus {
+	startedAnnotation := annotations[AnnotationEgressGatewayMaintenanceStarted]
+	finishedAnnotation := annotations[AnnotationEgressGatewayMaintenanceFinished]
+	ipAnnotation := annotations[AnnotationEgressGatewayMaintenanceGatewayIP]
+	if startedAnnotation == "" || finishedAnnotation == "" || ipAnnotation == "" {
+		return nil
+	}
+	startTime, err := timestampToV1Time(startedAnnotation)
+	if err != nil {
+		log.WithError(err).Warnf("unable to parse %s annotation", AnnotationEgressGatewayMaintenanceStarted)
+	}
+	finishTime, err := timestampToV1Time(finishedAnnotation)
+	if err != nil {
+		log.WithError(err).Warnf("unable to parse %s annotation", AnnotationEgressGatewayMaintenanceFinished)
+	}
+	return &libapiv3.EgressGatewayStatus{
+		MaintenanceGatewayIP: ipAnnotation,
+		MaintenanceStarted:   startTime,
+		MaintenanceFinished:  finishTime,
+	}
 }

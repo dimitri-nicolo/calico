@@ -35,12 +35,13 @@ import (
 
 // endpointData holds the data that we need to know about a particular endpoint.
 type endpointData struct {
-	labels            map[string]string
-	nets              []ip.CIDR
-	ports             []model.EndpointPort
-	parents           []*npParentData
-	domains           []string
-	deletionTimestamp time.Time
+	labels                     map[string]string
+	nets                       []ip.CIDR
+	ports                      []model.EndpointPort
+	parents                    []*npParentData
+	domains                    []string
+	deletionTimestamp          time.Time
+	deletionGracePeriodSeconds int64
 
 	cachedMatchingIPSetIDs set.Set /* or, as an optimization, nil if there are none */
 }
@@ -126,13 +127,14 @@ const (
 )
 
 type IPSetMember struct {
-	CIDR              ip.CIDR
-	Protocol          IPSetPortProtocol
-	PortNumber        uint16
-	Domain            string
-	Family            int // Explicit IPv4 or IPv6 is we cannot tell otherwise - for instance for a port.
-	IsEgressGateway   bool
-	DeletionTimestamp time.Time
+	CIDR                       ip.CIDR
+	Protocol                   IPSetPortProtocol
+	PortNumber                 uint16
+	Domain                     string
+	Family                     int // Explicit IPv4 or IPv6 is we cannot tell otherwise - for instance for a port.
+	IsEgressGateway            bool
+	DeletionTimestamp          time.Time
+	DeletionGracePeriodSeconds int64
 }
 
 type ipSetData struct {
@@ -211,6 +213,10 @@ func (d *endpointData) Equals(other *endpointData) bool {
 	}
 
 	if !d.deletionTimestamp.Equal(other.deletionTimestamp) {
+		return false
+	}
+
+	if d.deletionGracePeriodSeconds != other.deletionGracePeriodSeconds {
 		return false
 	}
 
@@ -299,6 +305,7 @@ func (idx *SelectorAndNamedPortIndex) OnUpdate(update api.Update) (_ bool) {
 				profileIDs,
 				nil,
 				endpoint.DeletionTimestamp,
+				endpoint.DeletionGracePeriodSeconds,
 			)
 		} else {
 			log.Debugf("Deleting endpoint %v from NamedPortIndex", key)
@@ -318,6 +325,7 @@ func (idx *SelectorAndNamedPortIndex) OnUpdate(update api.Update) (_ bool) {
 				profileIDs,
 				nil,
 				time.Time{},
+				0,
 			)
 		} else {
 			log.Debugf("Deleting host endpoint %v from NamedPortIndex", key)
@@ -337,6 +345,7 @@ func (idx *SelectorAndNamedPortIndex) OnUpdate(update api.Update) (_ bool) {
 				profileIDs,
 				netSet.AllowedEgressDomains,
 				time.Time{},
+				0,
 			)
 		} else {
 			log.Debugf("Deleting network set %v from NamedPortIndex", key)
@@ -523,19 +532,21 @@ func (idx *SelectorAndNamedPortIndex) updateEndpointOrSet(
 	parentIDs []string,
 	domains []string,
 	deletionTimestamp time.Time,
+	deletionGracePeriodSeconds int64,
 ) {
 	var cidrsToLog interface{} = nets
 	if log.GetLevel() < log.DebugLevel && len(nets) > 20 {
 		cidrsToLog = fmt.Sprintf("<too many to log (%d)>", len(nets))
 	}
 	logCxt := log.WithFields(log.Fields{
-		"endpointOrSetID":   id,
-		"newLabels":         labels,
-		"CIDRs":             cidrsToLog,
-		"ports":             ports,
-		"parentIDs":         parentIDs,
-		"domains":           domains,
-		"deletionTimestamp": deletionTimestamp,
+		"endpointOrSetID":            id,
+		"newLabels":                  labels,
+		"CIDRs":                      cidrsToLog,
+		"ports":                      ports,
+		"parentIDs":                  parentIDs,
+		"domains":                    domains,
+		"deletionTimestamp":          deletionTimestamp,
+		"deletionGracePeriodSeconds": deletionGracePeriodSeconds,
 	})
 	logCxt.Debug("Updating endpoint/network set")
 
@@ -561,6 +572,7 @@ func (idx *SelectorAndNamedPortIndex) updateEndpointOrSet(
 		newEndpointData.domains = domains
 	}
 	newEndpointData.deletionTimestamp = deletionTimestamp
+	newEndpointData.deletionGracePeriodSeconds = deletionGracePeriodSeconds
 
 	// Get the old endpoint data so we can compare it.
 	oldEndpointData := idx.endpointDataByID[id]
@@ -744,18 +756,16 @@ func (idx *SelectorAndNamedPortIndex) calculateEndpointContribution(id interface
 		for _, namedPort := range portNumbers {
 			for _, addr := range d.nets {
 				contrib = append(contrib, IPSetMember{
-					CIDR:              addr,
-					Protocol:          ipSetData.namedPortProtocol,
-					PortNumber:        namedPort,
-					DeletionTimestamp: d.deletionTimestamp,
+					CIDR:       addr,
+					Protocol:   ipSetData.namedPortProtocol,
+					PortNumber: namedPort,
 				})
 			}
 		}
 	} else if ipSetData.isDomainSet {
 		for _, domain := range d.domains {
 			contrib = append(contrib, IPSetMember{
-				Domain:            strings.ToLower(domain),
-				DeletionTimestamp: d.deletionTimestamp,
+				Domain: strings.ToLower(domain),
 			})
 		}
 	} else {
@@ -766,17 +776,17 @@ func (idx *SelectorAndNamedPortIndex) calculateEndpointContribution(id interface
 				if ipSetData.isEgressSelector {
 					if addr.Version() == 4 {
 						contrib = append(contrib, IPSetMember{
-							CIDR:              addr,
-							IsEgressGateway:   true,
-							DeletionTimestamp: d.deletionTimestamp,
+							CIDR:                       addr,
+							IsEgressGateway:            true,
+							DeletionTimestamp:          d.deletionTimestamp,
+							DeletionGracePeriodSeconds: d.deletionGracePeriodSeconds,
 						})
 					} else {
 						// For egress IP, only IPv4 addresses are useful.
 					}
 				} else {
 					contrib = append(contrib, IPSetMember{
-						CIDR:              addr,
-						DeletionTimestamp: d.deletionTimestamp,
+						CIDR: addr,
 					})
 				}
 			}
