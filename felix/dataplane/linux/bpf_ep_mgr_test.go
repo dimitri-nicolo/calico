@@ -134,8 +134,6 @@ var _ = Describe("BPF Endpoint Manager", func() {
 		vxlanMTU             int
 		nodePortDSR          bool
 		bpfMapContext        *bpf.MapContext
-		ipSetsMap            bpf.Map
-		stateMap             bpf.Map
 		rrConfigNormal       rules.Config
 		ruleRenderer         rules.RuleRenderer
 		filterTableV4        iptablesTable
@@ -155,8 +153,8 @@ var _ = Describe("BPF Endpoint Manager", func() {
 		bpfMapContext = &bpf.MapContext{
 			RepinningEnabled: true,
 		}
-		ipSetsMap = bpfipsets.Map(bpfMapContext)
-		stateMap = state.Map(bpfMapContext)
+		bpfMapContext.IpsetsMap = bpfipsets.Map(bpfMapContext)
+		bpfMapContext.StateMap = state.Map(bpfMapContext)
 		rrConfigNormal = rules.Config{
 			IPIPEnabled:                      true,
 			IPIPTunnelAddress:                nil,
@@ -199,11 +197,10 @@ var _ = Describe("BPF Endpoint Manager", func() {
 				},
 				BPFExtToServiceConnmark: 0,
 			},
+			bpfMapContext,
 			fibLookupEnabled,
 			regexp.MustCompile(workloadIfaceRegex),
 			ipSetIDAllocator,
-			ipSetsMap,
-			stateMap,
 			ruleRenderer,
 			filterTableV4,
 			nil,

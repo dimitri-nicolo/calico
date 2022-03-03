@@ -151,8 +151,7 @@ type bpfEndpointManager struct {
 	psnatPorts              numorstring.Port
 	enableTcpStats          bool
 
-	ipSetMap bpf.Map
-	stateMap bpf.Map
+	bpfMapContext *bpf.MapContext
 
 	ruleRenderer        bpfAllowChainRenderer
 	iptablesFilterTable iptablesTable
@@ -189,11 +188,10 @@ type bpfAllowChainRenderer interface {
 
 func newBPFEndpointManager(
 	config *Config,
+	bpfMapContext *bpf.MapContext,
 	fibLookupEnabled bool,
 	workloadIfaceRegex *regexp.Regexp,
 	ipSetIDAlloc *idalloc.IDAllocator,
-	ipSetMap bpf.Map,
-	stateMap bpf.Map,
 	iptablesRuleRenderer bpfAllowChainRenderer,
 	iptablesFilterTable iptablesTable,
 	livenessCallback func(),
@@ -237,8 +235,7 @@ func newBPFEndpointManager(
 		dsrEnabled:              config.BPFNodePortDSREnabled,
 		bpfExtToServiceConnmark: config.BPFExtToServiceConnmark,
 		psnatPorts:              config.BPFPSNATPorts,
-		ipSetMap:                ipSetMap,
-		stateMap:                stateMap,
+		bpfMapContext:           bpfMapContext,
 		ruleRenderer:            iptablesRuleRenderer,
 		iptablesFilterTable:     iptablesFilterTable,
 		mapCleanupRunner: ratelimited.NewRunner(jumpMapCleanupInterval, func(ctx context.Context) {
@@ -1046,6 +1043,7 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(policyDirection PolDirection
 	ap.VXLANPort = m.vxlanPort
 	ap.PSNATStart = m.psnatPorts.MinPort
 	ap.PSNATEnd = m.psnatPorts.MaxPort
+	ap.MapSizes = m.bpfMapContext.MapSizes
 
 	return ap
 }
@@ -1563,7 +1561,7 @@ func (m *bpfEndpointManager) setEgressProgramming(ifaceName string, isEgressGate
 }
 
 func (m *bpfEndpointManager) updatePolicyProgram(jumpMapFD bpf.MapFD, rules polprog.Rules) error {
-	pg := polprog.NewBuilder(m.ipSetIDAlloc, m.ipSetMap.MapFD(), m.stateMap.MapFD(), jumpMapFD,
+	pg := polprog.NewBuilder(m.ipSetIDAlloc, m.bpfMapContext.IpsetsMap.MapFD(), m.bpfMapContext.StateMap.MapFD(), jumpMapFD,
 		polprog.WithActionDropOverride(m.actionOnDrop),
 	)
 	insns, err := pg.Instructions(rules)

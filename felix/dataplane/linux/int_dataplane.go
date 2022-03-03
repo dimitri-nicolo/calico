@@ -39,7 +39,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/aws"
 	"github.com/projectcalico/calico/felix/bpf"
-	"github.com/projectcalico/calico/felix/bpf/arp"
+	"github.com/projectcalico/calico/felix/bpf/bpfmap"
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
 	"github.com/projectcalico/calico/felix/bpf/events"
 	"github.com/projectcalico/calico/felix/bpf/failsafes"
@@ -47,8 +47,6 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/kprobe"
 	"github.com/projectcalico/calico/felix/bpf/nat"
 	bpfproxy "github.com/projectcalico/calico/felix/bpf/proxy"
-	"github.com/projectcalico/calico/felix/bpf/routes"
-	"github.com/projectcalico/calico/felix/bpf/state"
 	"github.com/projectcalico/calico/felix/bpf/stats"
 	"github.com/projectcalico/calico/felix/bpf/tc"
 	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
@@ -211,6 +209,12 @@ type Config struct {
 	BPFMapRepin                        bool
 	BPFNodePortDSREnabled              bool
 	BPFPSNATPorts                      numorstring.Port
+	BPFMapSizeRoute                    int
+	BPFMapSizeConntrack                int
+	BPFMapSizeNATFrontend              int
+	BPFMapSizeNATBackend               int
+	BPFMapSizeNATAffinity              int
+	BPFMapSizeIPSets                   int
 	KubeProxyMinSyncPeriod             time.Duration
 	KubeProxyEndpointSlicesEnabled     bool
 	FlowLogsCollectProcessInfo         bool
@@ -753,9 +757,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	for i, r := range config.RulesConfig.WorkloadIfacePrefixes {
 		interfaceRegexes[i] = "^" + r + ".*"
 	}
-	bpfMapContext := &bpf.MapContext{
-		RepinningEnabled: config.BPFMapRepin,
-	}
+	bpfMapContext := bpfmap.CreateBPFMapContext(config.BPFMapSizeIPSets, config.BPFMapSizeNATFrontend,
+		config.BPFMapSizeNATBackend, config.BPFMapSizeNATAffinity, config.BPFMapSizeRoute, config.BPFMapSizeConntrack, config.BPFMapRepin)
 
 	var (
 		bpfEvnt              events.Events
@@ -870,20 +873,16 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	if config.BPFEnabled {
 		log.Info("BPF enabled, starting BPF endpoint manager and map manager.")
+		bpfmap.CreateBPFMaps(bpfMapContext)
 		// Register map managers first since they create the maps that will be used by the endpoint manager.
 		// Important that we create the maps before we load a BPF program with TC since we make sure the map
 		// metadata name is set whereas TC doesn't set that field.
 		ipSetIDAllocator := idalloc.New()
 		ipSetIDAllocator.ReserveWellKnownID(bpfipsets.TrustedDNSServersName, bpfipsets.TrustedDNSServersID)
-		ipSetsMap := bpfipsets.Map(bpfMapContext)
-		err := ipSetsMap.EnsureExists()
-		if err != nil {
-			log.WithError(err).Panic("Failed to create ipsets BPF map.")
-		}
 		ipSetsV4 := bpfipsets.NewBPFIPSets(
 			ipSetsConfigV4,
 			ipSetIDAllocator,
-			ipSetsMap,
+			bpfMapContext.IpsetsMap,
 			dp.loopSummarizer,
 		)
 		dp.ipSets = append(dp.ipSets, ipSetsV4)
@@ -905,29 +904,12 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		// Forwarding into an IPIP tunnel fails silently because IPIP tunnels are L3 devices and support for
 		// L3 devices in BPF is not available yet.  Disable the FIB lookup in that case.
 		fibLookupEnabled := !config.RulesConfig.IPIPEnabled
-		stateMap := state.Map(bpfMapContext)
-		err = stateMap.EnsureExists()
-		if err != nil {
-			log.WithError(err).Panic("Failed to create state BPF map.")
-		}
-
-		arpMap := arp.Map(bpfMapContext)
-		err = arpMap.EnsureExists()
-		if err != nil {
-			log.WithError(err).Panic("Failed to create ARP BPF map.")
-		}
 
 		config.LookupsCache.EnableID64()
-
 		// The failsafe manager sets up the failsafe port map.  It's important that it is registered before the
 		// endpoint managers so that the map is brought up to date before they run for the first time.
-		failsafesMap := failsafes.Map(bpfMapContext)
-		err = failsafesMap.EnsureExists()
-		if err != nil {
-			log.WithError(err).Panic("Failed to create failsafe port BPF map.")
-		}
 		failsafeMgr := failsafes.NewManager(
-			failsafesMap,
+			bpfMapContext.FailsafesMap,
 			config.RulesConfig.FailsafeInboundHostPorts,
 			config.RulesConfig.FailsafeOutboundHostPorts,
 			dp.loopSummarizer,
@@ -937,11 +919,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		workloadIfaceRegex := regexp.MustCompile(strings.Join(interfaceRegexes, "|"))
 		bpfEndpointManager = newBPFEndpointManager(
 			&config,
+			bpfMapContext,
 			fibLookupEnabled,
 			workloadIfaceRegex,
 			ipSetIDAllocator,
-			ipSetsMap,
-			stateMap,
 			ruleRenderer,
 			filterTableV4,
 			dp.reportHealth,
@@ -952,48 +933,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		)
 		dp.RegisterManager(bpfEndpointManager)
 
-		// Pre-create the NAT maps so that later operations can assume access.
-		frontendMap := nat.FrontendMap(bpfMapContext)
-		err = frontendMap.EnsureExists()
-		if err != nil {
-			log.WithError(err).Panic("Failed to create NAT frontend BPF map.")
-		}
-		backendMap := nat.BackendMap(bpfMapContext)
-		err = backendMap.EnsureExists()
-		if err != nil {
-			log.WithError(err).Panic("Failed to create NAT backend BPF map.")
-		}
-		backendAffinityMap := nat.AffinityMap(bpfMapContext)
-		err = backendAffinityMap.EnsureExists()
-		if err != nil {
-			log.WithError(err).Panic("Failed to create NAT backend affinity BPF map.")
-		}
-
-		routeMap := routes.Map(bpfMapContext)
-		err = routeMap.EnsureExists()
-		if err != nil {
-			log.WithError(err).Panic("Failed to create routes BPF map.")
-		}
-
-		ctMap := conntrack.Map(bpfMapContext)
-		err = ctMap.EnsureExists()
-		if err != nil {
-			log.WithError(err).Panic("Failed to create conntrack BPF map.")
-		}
-
-		srMsgMap := nat.SendRecvMsgMap(bpfMapContext)
-		err = srMsgMap.EnsureExists()
-		if err != nil {
-			log.WithError(err).Panic("Failed to create send recv msg map.")
-		}
-
-		ctNatsMap := nat.AllNATsMsgMap(bpfMapContext)
-		err = ctNatsMap.EnsureExists()
-		if err != nil {
-			log.WithError(err).Panic("Failed to create ct nats map.")
-		}
-
-		conntrackScanner := conntrack.NewScanner(ctMap,
+		conntrackScanner := conntrack.NewScanner(bpfMapContext.CtMap,
 			conntrack.NewLivenessScanner(config.BPFConntrackTimeouts, config.BPFNodePortDSREnabled))
 
 		// Before we start, scan for all finished / timed out connections to
@@ -1018,10 +958,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			kp, err := bpfproxy.StartKubeProxy(
 				config.KubeClientSet,
 				config.Hostname,
-				frontendMap,
-				backendMap,
-				backendAffinityMap,
-				ctMap,
+				bpfMapContext,
 				bpfproxyOpts...,
 			)
 			if err != nil {
@@ -1037,7 +974,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		if config.BPFConnTimeLBEnabled {
 			// Activate the connect-time load balancer.
 			err = nat.InstallConnectTimeLoadBalancer(
-				config.BPFCgroupV2, config.BPFLogLevel, config.BPFConntrackTimeouts.UDPLastSeen)
+				config.BPFCgroupV2, config.BPFLogLevel, config.BPFConntrackTimeouts.UDPLastSeen, bpfMapContext)
 			if err != nil {
 				log.WithError(err).Panic("BPFConnTimeLBEnabled but failed to attach connect-time load balancer, bailing out.")
 			}

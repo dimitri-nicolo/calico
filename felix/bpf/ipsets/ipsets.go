@@ -241,11 +241,6 @@ func (m *bpfIPSets) ApplyUpdates(ipsetFilter func(ipSetName string) bool) map[st
 	var numAdds, numDels uint
 	startTime := time.Now()
 
-	err := m.bpfMap.EnsureExists()
-	if err != nil {
-		log.WithError(err).Panic("Failed to create IP set map")
-	}
-
 	debug := log.GetLevel() >= log.DebugLevel
 	if m.resyncScheduled {
 		log.Debug("Doing full resync of BPF IP sets map")
