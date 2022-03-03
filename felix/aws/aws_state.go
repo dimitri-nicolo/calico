@@ -127,9 +127,10 @@ func (s *awsState) OnCalicoENIAttached(eni *eniState) {
 		}
 	}
 	if eni.Attachment != nil {
-		logCtx.Warn("AWS returned ENI with no attachment (even though it should already be attached)")
 		s.attachmentIDByENIID[eni.ID] = eni.Attachment.ID
 		s.inUseDeviceIndexes[eni.Attachment.DeviceIndex] = true
+	} else {
+		logCtx.Warn("AWS returned ENI with no attachment (even though it should already be attached)")
 	}
 	s.refreshFreeIPCount(eni)
 }
