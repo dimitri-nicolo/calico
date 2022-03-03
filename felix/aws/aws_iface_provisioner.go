@@ -1033,21 +1033,31 @@ func (m *SecondaryIfaceProvisioner) releaseAWSENIs(enisToRelease set.Set, awsSta
 			// Not setting finalErr here since the following deletion might solve the problem.
 		}
 		awsState.OnCalicoENIDetached(eniID)
-		// Worth trying this even if detach fails.  Possible the failure was caused by it already
-		// being detached.
-		_, err = m.ec2Client.EC2Svc.DeleteNetworkInterface(ctx, &ec2.DeleteNetworkInterfaceInput{
-			NetworkInterfaceId: &eniID,
-		})
-		if err != nil {
-			logrus.WithError(err).WithFields(logrus.Fields{
-				"eniID":    eniID,
-				"attachID": attachID,
-			}).Error("Failed to delete unneeded ENI; triggering retry/backoff.")
-			finalErr = err // Trigger retry/backoff.
-			m.orphanENIResyncNeeded = true
+
+		for i := 0; i < 10; i++ {
+			// Worth trying this even if detach fails.  Possible the failure was caused by it already
+			// being detached.
+			_, err = m.ec2Client.EC2Svc.DeleteNetworkInterface(ctx, &ec2.DeleteNetworkInterfaceInput{
+				NetworkInterfaceId: &eniID,
+			})
+			if err != nil {
+				logrus.WithField("eniID", eniID).WithError(finalErr).Warn(
+					"Failed to delete unneeded ENI; retrying...")
+				finalErr = err // Trigger retry/backoff.
+				time.Sleep(5 * time.Second)
+			} else {
+				logrus.WithField("eniID", eniID).Info("Successfully deleted ENI.")
+				finalErr = nil
+				break
+			}
 		}
 		return nil
 	})
+
+	if finalErr != nil {
+		logrus.WithError(finalErr).Error("Failed to delete unneeded ENI; triggering backoff.")
+		m.orphanENIResyncNeeded = true
+	}
 	return finalErr
 }
 
