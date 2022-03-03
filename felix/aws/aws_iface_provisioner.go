@@ -1161,14 +1161,30 @@ func (m *SecondaryIfaceProvisioner) attachOrphanENIs(awsState *awsState, bestSub
 			"activeSubnet": bestSubnetID,
 			"eniSubnet":    subnetID,
 		})
-		if subnetID != bestSubnetID || int(devIdx) >= m.networkCapabilities.MaxENIsForCard(0) {
-			if subnetID != bestSubnetID {
-				logCtx.Info("Found unattached ENI belonging to this node but not from our active subnet. " +
-					"Deleting.")
+		delete := false
+		if subnetID != bestSubnetID {
+			logCtx.Info("Found unattached ENI belonging to this node but not from our active subnet. " +
+				"Deleting.")
+			delete = true
+		} else if int(devIdx) >= m.networkCapabilities.MaxENIsForCard(0) {
+			logCtx.Info("Found unattached ENI belonging to this node but node doesn't have enough " +
+				"capacity to attach it. Deleting.")
+			delete = true
+		} else if m.mode == v3.AWSSecondaryIPEnabledENIPerWorkload {
+			if eni.PrivateIpAddress == nil {
+				delete = true
 			} else {
-				logCtx.Info("Found unattached ENI belonging to this node but node doesn't have enough " +
-					"capacity to attach it. Deleting.")
+				var primaryIP ip.Addr
+				primaryIP = ip.FromIPOrCIDRString(*eni.PrivateIpAddress)
+				if _, ok := m.ds.LocalAWSAddrsByDst[primaryIP]; !ok {
+					logrus.WithField("eniID", eniID).Info(
+						"Found unattached Calico ENI that no longer matches a workload.  Remove.")
+					delete = true
+				}
 			}
+		}
+
+		if delete {
 			ctx, cancel := m.newContext()
 			_, err = m.ec2Client.EC2Svc.DeleteNetworkInterface(ctx, &ec2.DeleteNetworkInterfaceInput{
 				NetworkInterfaceId: eni.NetworkInterfaceId,
