@@ -380,7 +380,6 @@ func parseTigeraEvent(id string, item json.RawMessage) *Event {
 			event.Endpoints = append(event.Endpoints, eps...)
 		}
 	}
-
 	// Only return event IDs that we are able to correlate to a node.
 	if len(event.Endpoints) == 0 {
 		return nil
@@ -425,6 +424,8 @@ func getEventEndpointsFromFlowEndpoint(epType, epNamespace, epName, epNameAggr s
 		} else {
 			epTypes = []string{"wep", "ns"}
 		}
+	} else {
+		epTypes = append(epTypes, epType)
 	}
 
 	eps := make([]FlowEndpoint, len(epTypes))
