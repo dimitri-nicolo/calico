@@ -1322,6 +1322,14 @@ func TestSecondaryIfaceProvisioner_PoolChange(t *testing.T) {
 			// Delete the workload.  Should keep the ENI but remove the secondary IP.
 			sip.OnDatastoreUpdate(noWorkloadDatastoreAltPools)
 			Eventually(sip.ResponseC()).Should(Receive(Equal(responseAltPoolsAfterWorkloadsDeleted[mode])))
+
+			if mode == v3.AWSSecondaryIPEnabledENIPerWorkload {
+				// Every change of IP removes an ENI.
+				Eventually(fake.SleepClock.AccruedSleep).Should(Equal(20 * time.Second))
+			} else {
+				// Deleted ENIs once so should have 10s delay.
+				Eventually(fake.SleepClock.AccruedSleep).Should(Equal(10 * time.Second))
+			}
 		})
 	}
 }
@@ -1347,8 +1355,15 @@ func TestSecondaryIfaceProvisioner_PoolChangeWithFailure(t *testing.T) {
 					fake.IPAM.setFreeIPs(calicoHostIP1AltStr)
 					sip.OnDatastoreUpdate(singleWorkloadDatastoreAltPool)
 
-					// Advance time to trigger the backoff.
-					fake.expectSingleBackoffAndStep()
+					if callToFail == "DeleteNetworkInterface" {
+						// Deletes are retried inline...
+						// One 10s sleep between attach and delete then one 5s sleep between delete retries.
+						Eventually(fake.SleepClock.AccruedSleep).Should(Equal(15 * time.Second))
+					} else {
+						// Detach triggers a backoff.
+						// Advance time to trigger the backoff.
+						fake.expectSingleBackoffAndStep()
+					}
 
 					// After backoff, should get the expected result.
 					Eventually(sip.ResponseC()).Should(Receive(Equal(responseAltPoolSingleWorkload[mode])))
@@ -1859,6 +1874,7 @@ type sipTestFakes struct {
 	EC2          *fakeEC2
 	BackoffClock *clock.FakeClock
 	RecheckClock *clock.FakeClock
+	SleepClock   *fakeSleepClock
 	Health       *fakeHealth
 	CapacityC    chan SecondaryIfaceCapacities
 }
@@ -1887,6 +1903,7 @@ func setup(t *testing.T, mode string, opts ...IfaceProvOpt) (*SecondaryIfaceProv
 	fakeRecheckClock := clock.NewFakeClock(theTime)
 	capacityC := make(chan SecondaryIfaceCapacities, 1)
 	ec2Client, fakeEC2 := newFakeEC2Client()
+	fakeSleepClock := newFakeSleepClock()
 
 	fakeEC2.InstancesByID[instanceID] = types.Instance{
 		InstanceId:   stringPtr(instanceID),
@@ -1937,7 +1954,7 @@ func setup(t *testing.T, mode string, opts ...IfaceProvOpt) (*SecondaryIfaceProv
 	}
 
 	defaultOpts := []IfaceProvOpt{
-		OptClockOverrides(fakeBackoffClock, fakeRecheckClock),
+		OptClockOverrides(fakeBackoffClock, fakeRecheckClock, fakeSleepClock),
 		OptCapacityCallback(func(capacities SecondaryIfaceCapacities) {
 			// Drain any previous message.
 			select {
@@ -1970,9 +1987,31 @@ func setup(t *testing.T, mode string, opts ...IfaceProvOpt) (*SecondaryIfaceProv
 		EC2:          fakeEC2,
 		BackoffClock: fakeBackoffClock,
 		RecheckClock: fakeRecheckClock,
+		SleepClock:   fakeSleepClock,
 		Health:       fakeHealth,
 		CapacityC:    capacityC,
 	}
+}
+
+type fakeSleepClock struct {
+	lock         sync.Mutex
+	accruedSleep time.Duration
+}
+
+func (s *fakeSleepClock) Sleep(d time.Duration) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.accruedSleep += d
+}
+
+func (s *fakeSleepClock) AccruedSleep() time.Duration {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	return s.accruedSleep
+}
+
+func newFakeSleepClock() *fakeSleepClock {
+	return &fakeSleepClock{}
 }
 
 func cleanUpAWSSubnetsFile() {
