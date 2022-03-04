@@ -98,6 +98,7 @@ func (s *awsState) OnSecondaryIPsRemoved(eniID string, addrs []string) {
 			continue
 		}
 		removedIPs.Add(addr)
+		delete(s.eniIDBySecondaryIP, addr)
 	}
 
 	eni := s.calicoOwnedENIsByID[eniID]
