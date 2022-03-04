@@ -298,7 +298,16 @@ type eniState struct {
 	numFilteredIPs   int
 }
 
-func (s eniState) NumIPs() int {
+func (s *eniState) PrimaryIP() ip.Addr {
+	for _, ipInfo := range s.IPAddresses {
+		if ipInfo.Primary {
+			return ipInfo.PrivateIP
+		}
+	}
+	return nil
+}
+
+func (s *eniState) NumIPs() int {
 	return len(s.IPAddresses) + s.numFilteredIPs
 }
 

@@ -124,6 +124,8 @@ type SecondaryIfaceProvisioner struct {
 	networkCapabilities *NetworkCapabilities
 	awsGatewayAddr      ip.Addr
 	awsSubnetCIDR       ip.CIDR
+	// ourHostIPs contains the IPs that our host has assigned in IPAM for primary IPs.
+	ourHostIPs set.Set /* ip.Addr */
 
 	// datastoreUpdateC carries updates from Felix's main dataplane loop to our loop.
 	datastoreUpdateC chan DatastoreState
@@ -460,6 +462,11 @@ func (m *SecondaryIfaceProvisioner) resync() (*LocalAWSNetworkState, error) {
 		return nil, err
 	}
 
+	// Load any IPAM entries assigned to this host.
+	if err := m.ensureIPAMLoaded(); err != nil {
+		return nil, err
+	}
+
 	// Collect the current state of this instance and our ENIs according to AWS.
 	awsState, err := m.loadAWSENIsState()
 	if err != nil {
@@ -623,7 +630,7 @@ func (m *SecondaryIfaceProvisioner) checkFixOrReleaseExistingAWSResources(awsSta
 	// Release any AWS IPs that are no longer required.
 	err = m.unassignAWSIPs(awsIPsToRelease, awsState)
 	if err != nil {
-		return err // errResyncNeeded if there were any IPs released to trigger a refresh of AWS state.
+		return err
 	}
 
 	var enisToRelease set.Set
@@ -634,13 +641,16 @@ func (m *SecondaryIfaceProvisioner) checkFixOrReleaseExistingAWSResources(awsSta
 		// Scan for ENIs that are in a subnet that no longer matches an IP pool. We don't currently release
 		// ENIs just because they have no associated pods.  This helps to reduce AWS API churn as pods
 		// come and go: only the IP addresses need to be added/removed, not a whole ENI.
-		enisToRelease = m.findENIsWithNoPool(awsState)
+		enisToRelease, err = m.findENIsWithNoPoolOrIPAMEntry(awsState)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Release any AWS ENIs that are no longer needed.
 	err = m.releaseAWSENIs(enisToRelease, awsState)
 	if err != nil {
-		return err // errResyncNeeded if there were any ENIs released to trigger a refresh of AWS state.
+		return err
 	}
 	return nil
 }
@@ -907,22 +917,29 @@ func (m *SecondaryIfaceProvisioner) loadLocalAWSSubnets() (map[string]ec2types.S
 	return localSubnetsByID, nil
 }
 
-// findENIsWithNoPool scans the awsState for secondary AWS ENIs that were created by Calico but no longer
-// have an associated IP pool.
-func (m *SecondaryIfaceProvisioner) findENIsWithNoPool(awsState *awsState) set.Set /* string (IDs) */ {
+// findENIsWithNoPoolOrIPAMEntry scans the awsState for secondary AWS ENIs that were created by Calico but no longer
+// have an associated IP pool (or are missing their IPAM entry).
+func (m *SecondaryIfaceProvisioner) findENIsWithNoPoolOrIPAMEntry(awsState *awsState) (set.Set /* string (IDs) */, error) {
 	enisToRelease := set.New()
 	for eniID, eni := range awsState.calicoOwnedENIsByID {
-		if _, ok := m.ds.PoolIDsBySubnetID[eni.SubnetID]; ok {
-			continue
+		if _, ok := m.ds.PoolIDsBySubnetID[eni.SubnetID]; !ok {
+			// No longer have an IP pool for this ENI.
+			logrus.WithFields(logrus.Fields{
+				"eniID":  eniID,
+				"subnet": eni.SubnetID,
+			}).Info("AWS ENI belongs to subnet with no matching Calico IP pool, ENI should be released")
+			enisToRelease.Add(eniID)
 		}
-		// No longer have an IP pool for this ENI.
-		logrus.WithFields(logrus.Fields{
-			"eniID":  eniID,
-			"subnet": eni.SubnetID,
-		}).Info("AWS ENI belongs to subnet with no matching Calico IP pool, ENI should be released")
-		enisToRelease.Add(eniID)
+		primaryIP := eni.PrimaryIP()
+		if !m.ourHostIPs.Contains(primaryIP) {
+			logrus.WithFields(logrus.Fields{
+				"eniID":     eniID,
+				"primaryIP": primaryIP,
+			}).Info("AWS ENI primary IP does not have corresponding host IPAM entry, deleting the ENI.")
+			enisToRelease.Add(eniID)
+		}
 	}
-	return enisToRelease
+	return enisToRelease, nil
 }
 
 // findRoutesWithNoAWSAddr Scans our local Calico workload routes for routes with no corresponding AWS IP.
@@ -940,7 +957,6 @@ func (m *SecondaryIfaceProvisioner) findRoutesWithNoAWSAddr(awsState *awsState, 
 		}
 		if eniID, ok := awsState.eniIDByPrimaryIP[addr]; ok {
 			if m.mode != v3.AWSSecondaryIPEnabledENIPerWorkload {
-				// FIXME: what about going from per-pod to secondary IP mode?  Need to delete old ENIs.
 				logrus.WithFields(logrus.Fields{
 					"addr": addr,
 					"eni":  eniID,
@@ -1171,30 +1187,38 @@ func (m *SecondaryIfaceProvisioner) attachOrphanENIs(awsState *awsState, bestSub
 			"activeSubnet": bestSubnetID,
 			"eniSubnet":    subnetID,
 		})
-		delete := false
+		deleteENI := false
 		if subnetID != bestSubnetID {
 			logCtx.Info("Found unattached ENI belonging to this node but not from our active subnet. " +
 				"Deleting.")
-			delete = true
+			deleteENI = true
 		} else if int(devIdx) >= m.networkCapabilities.MaxENIsForCard(0) {
 			logCtx.Info("Found unattached ENI belonging to this node but node doesn't have enough " +
 				"capacity to attach it. Deleting.")
-			delete = true
+			deleteENI = true
+		} else if eni.PrivateIpAddress == nil {
+			logrus.WithField("eniID", eniID).Warn(
+				"Found unattached Calico ENI with no private IP?  Remove.")
+			deleteENI = true
+		} else if m.mode == v3.AWSSecondaryIPEnabled {
+			var primaryIP ip.Addr
+			primaryIP = ip.FromIPOrCIDRString(*eni.PrivateIpAddress)
+			if !m.ourHostIPs.Contains(primaryIP) {
+				logrus.WithField("eniID", eniID).Info(
+					"Found unattached Calico ENI with no corresponding IPAM entry.  Remove.")
+				deleteENI = true
+			}
 		} else if m.mode == v3.AWSSecondaryIPEnabledENIPerWorkload {
-			if eni.PrivateIpAddress == nil {
-				delete = true
-			} else {
-				var primaryIP ip.Addr
-				primaryIP = ip.FromIPOrCIDRString(*eni.PrivateIpAddress)
-				if _, ok := m.ds.LocalAWSAddrsByDst[primaryIP]; !ok {
-					logrus.WithField("eniID", eniID).Info(
-						"Found unattached Calico ENI that no longer matches a workload.  Remove.")
-					delete = true
-				}
+			var primaryIP ip.Addr
+			primaryIP = ip.FromIPOrCIDRString(*eni.PrivateIpAddress)
+			if _, ok := m.ds.LocalAWSAddrsByDst[primaryIP]; !ok {
+				logrus.WithField("eniID", eniID).Info(
+					"Found unattached Calico ENI that no longer matches a workload.  Remove.")
+				deleteENI = true
 			}
 		}
 
-		if delete {
+		if deleteENI {
 			ctx, cancel := m.newContext()
 			_, err = m.ec2Client.EC2Svc.DeleteNetworkInterface(ctx, &ec2.DeleteNetworkInterfaceInput{
 				NetworkInterfaceId: eni.NetworkInterfaceId,
@@ -1257,34 +1281,27 @@ func (m *SecondaryIfaceProvisioner) attachOrphanENIs(awsState *awsState, bestSub
 // freeUnusedHostCalicoIPs finds any IPs assign to this host for a secondary ENI that are not actually in use
 // and then frees those IPs.
 func (m *SecondaryIfaceProvisioner) freeUnusedHostCalicoIPs(awsState *awsState) error {
-	ctx, cancel := m.newContext()
-	defer cancel()
-	ourIPs, err := m.ipamClient.IPsByHandle(ctx, m.ipamHandle())
-	if err != nil {
-		if _, ok := err.(calierrors.ErrorResourceDoesNotExist); ok {
-			logrus.Debug("No host IPs in IPAM.  Nothing to free.")
+	var finalErr error
+	m.ourHostIPs.Iter(func(item interface{}) error {
+		addr := item.(ip.Addr)
+		if _, ok := awsState.eniIDByPrimaryIP[addr]; ok {
 			return nil
 		}
-		return fmt.Errorf("failed to look up our existing IPs: %w", err)
-	}
-
-	var finalErr error
-	for _, addr := range ourIPs {
-		cAddr := ip.FromNetIP(addr.IP)
-		if _, ok := awsState.eniIDByPrimaryIP[cAddr]; !ok {
-			// IP is not assigned to any of our local ENIs and, if we got this far, we've already attached
-			// any orphaned ENIs or deleted them.  Clean up the IP.
-			logrus.WithField("addr", addr).Info(
-				"Found IP assigned to this node in IPAM but not in use for an AWS ENI, freeing it.")
-			_, err := m.ipamClient.ReleaseIPs(ctx, []calinet.IP{addr})
-			if err != nil {
-				logrus.WithError(err).WithField("ip", addr).Error(
-					"Failed to free host IP that we no longer need.")
-				finalErr = err
-			}
+		// IP is not assigned to any of our local ENIs and, if we got this far, we've already attached
+		// any orphaned ENIs or deleted them.  Clean up the IP.
+		logrus.WithField("addr", addr).Info(
+			"Found IP assigned to this node in IPAM but not in use for an AWS ENI, freeing it.")
+		ctx, cancel := m.newContext()
+		_, err := m.ipamClient.ReleaseIPs(ctx, []calinet.IP{addr.AsCalicoNetIP()})
+		cancel()
+		if err != nil {
+			logrus.WithError(err).WithField("ip", addr).Error(
+				"Failed to free host IP that we no longer need.")
+			finalErr = err
+			return nil
 		}
-	}
-
+		return set.RemoveItem // Freed the IP so update the cache.
+	})
 	return finalErr
 }
 
@@ -1809,6 +1826,32 @@ func (m *SecondaryIfaceProvisioner) findENIsWithNoWorkload(state *awsState) set.
 		}
 	}
 	return enisIDsToRelease
+}
+
+func (m *SecondaryIfaceProvisioner) ensureIPAMLoaded() error {
+	if m.ourHostIPs != nil && !m.hostIPAMResyncNeeded {
+		return nil
+	}
+
+	hostIPs := set.New()
+
+	ctx, cancel := m.newContext()
+	defer cancel()
+	ourIPs, err := m.ipamClient.IPsByHandle(ctx, m.ipamHandle())
+	if err != nil {
+		if _, ok := err.(calierrors.ErrorResourceDoesNotExist); ok {
+			logrus.Debug("No host IPs in IPAM.")
+			m.ourHostIPs = hostIPs
+			return nil
+		} else {
+			return fmt.Errorf("failed to look up our existing IPs: %w", err)
+		}
+	}
+
+	for _, addr := range ourIPs {
+		hostIPs.Add(ip.FromCalicoIP(addr))
+	}
+	m.ourHostIPs = hostIPs
 }
 
 func chunkStringSlice(s []string, chunkSize int) (chunks [][]string) {
