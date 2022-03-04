@@ -17,6 +17,7 @@ package calc
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -638,17 +639,25 @@ func (buf *EventSequencer) flushAddedIPSets() {
 
 func memberToProto(member labelindex.IPSetMember) string {
 	if member.IsEgressGateway {
-		// The member strings for egress gateway need to contain the cidr and the deletion timestamp for each member,
-		// because the egress gateway manager needs to detect when an egress gateway pod is terminating.
-		if tsBytes, err := member.DeletionTimestamp.MarshalText(); err != nil {
-			log.WithFields(log.Fields{
-				"setType": proto.IPSetUpdate_EGRESS_IP,
-				"member":  member,
-			}).Warn("unable to marshal deletion timestamp to text, defaulting to empty str")
-			return fmt.Sprintf("%s,", member.CIDR.String())
-		} else {
-			return fmt.Sprintf("%s,%s", member.CIDR.String(), strings.ToLower(string(tsBytes)))
+		// The member strings for egress gateway need to contain the cidr, the maintenace started timestamp, and the
+		// maintenance finished timestamps for each member, because the egress gateway manager needs to detect when
+		// an egress gateway pod is terminating.
+		maintenanceFinished := member.DeletionTimestamp
+		maintenanceStarted := maintenanceFinished.Add(-time.Second * time.Duration(member.DeletionGracePeriodSeconds))
+
+		startBytes, err := maintenanceStarted.MarshalText()
+		if err != nil {
+			log.WithField("member", member).Warnf("unable to marshal timestamp to text, defaulting to empty str: %s", maintenanceStarted)
+			return fmt.Sprintf("%s,,", member.CIDR.String())
 		}
+
+		finishBytes, err := maintenanceFinished.MarshalText()
+		if err != nil {
+			log.WithField("member", member).Warnf("unable to marshal timestamp to text, defaulting to empty str: %s", maintenanceFinished)
+			return fmt.Sprintf("%s,,", member.CIDR.String())
+		}
+
+		return fmt.Sprintf("%s,%s,%s", member.CIDR.String(), strings.ToLower(string(startBytes)), strings.ToLower(string(finishBytes)))
 	}
 
 	switch member.Protocol {

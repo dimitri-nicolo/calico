@@ -52,9 +52,10 @@ type ProgResult struct {
 }
 
 type MapInfo struct {
-	Type      int
-	KeySize   int
-	ValueSize int
+	Type       int
+	KeySize    int
+	ValueSize  int
+	MaxEntries int
 }
 
 const (

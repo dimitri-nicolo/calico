@@ -60,11 +60,24 @@ func calculateDefaultFelixSyncerEntries(cs kubernetes.Interface, dt apiconfig.Da
 	}
 
 	// Add 2 for the default-allow profile that is always there.
-	// However, no profile labels are in the list because the
-	// default-allow profile doesn't specify labels.
 	expectedProfile := resources.DefaultAllowProfile()
 	if remoteClusterPrefix == "" {
 		expected = append(expected, *expectedProfile)
+	} else {
+		expected = append(expected, model.KVPair{
+			Key: model.ResourceKey{
+				Kind: apiv3.KindProfile,
+				Name: remoteClusterPrefix + resources.DefaultAllowProfileName,
+			},
+			Value: &apiv3.Profile{
+				TypeMeta: metav1.TypeMeta{
+					Kind: apiv3.KindProfile,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: resources.DefaultAllowProfileName,
+				},
+			},
+		})
 	}
 	expected = append(expected, model.KVPair{
 		Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: remoteClusterPrefix + "projectcalico-default-allow"}},
@@ -82,6 +95,21 @@ func calculateDefaultFelixSyncerEntries(cs kubernetes.Interface, dt apiconfig.Da
 		expectedProfile = resources2.DefaultProfile()
 		if remoteClusterPrefix == "" {
 			expected = append(expected, *expectedProfile)
+		} else {
+			expected = append(expected, model.KVPair{
+				Key: model.ResourceKey{
+					Kind: apiv3.KindProfile,
+					Name: remoteClusterPrefix + "default",
+				},
+				Value: &apiv3.Profile{
+					TypeMeta: metav1.TypeMeta{
+						Kind: apiv3.KindProfile,
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "default",
+					},
+				},
+			})
 		}
 		expected = append(expected, model.KVPair{
 			Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: remoteClusterPrefix + "default"}},
@@ -145,36 +173,30 @@ func calculateDefaultFelixSyncerEntries(cs kubernetes.Interface, dt apiconfig.Da
 				},
 			})
 
-			// Expect profile labels for each namespace as well. The labels should include the name
+			// And expect a v3 profile for each namespace. The labels should include the name
 			// of the namespace. As of Kubernetes v1.21, k8s also includes a label for the namespace name
 			// that will be inherited by the profile.
-			expected = append(expected, model.KVPair{
-				Key: model.ProfileLabelsKey{ProfileKey: model.ProfileKey{Name: remoteClusterPrefix + name}},
-				Value: map[string]string{
-					"pcns.projectcalico.org/name":      ns.Name,
-					"pcns.kubernetes.io/metadata.name": ns.Name,
-				},
-			})
-
-			// And expect a v3 profile for each namespace. These are not included for remote clusters.
-			if remoteClusterPrefix == "" {
-				prof := apiv3.Profile{
-					TypeMeta:   metav1.TypeMeta{Kind: "Profile", APIVersion: "projectcalico.org/v3"},
-					ObjectMeta: metav1.ObjectMeta{Name: name, UID: ns.UID, CreationTimestamp: ns.CreationTimestamp},
-					Spec: apiv3.ProfileSpec{
-						LabelsToApply: map[string]string{
-							"pcns.projectcalico.org/name":      ns.Name,
-							"pcns.kubernetes.io/metadata.name": ns.Name,
-						},
-						Ingress: []apiv3.Rule{{Action: apiv3.Allow}},
-						Egress:  []apiv3.Rule{{Action: apiv3.Allow}},
+			prof := apiv3.Profile{
+				TypeMeta:   metav1.TypeMeta{Kind: "Profile", APIVersion: "projectcalico.org/v3"},
+				ObjectMeta: metav1.ObjectMeta{Name: name, UID: ns.UID, CreationTimestamp: ns.CreationTimestamp},
+				Spec: apiv3.ProfileSpec{
+					LabelsToApply: map[string]string{
+						"pcns.projectcalico.org/name":      ns.Name,
+						"pcns.kubernetes.io/metadata.name": ns.Name,
 					},
-				}
-				expected = append(expected, model.KVPair{
-					Key:   model.ResourceKey{Kind: "Profile", Name: name},
-					Value: &prof,
-				})
+					Ingress: []apiv3.Rule{{Action: apiv3.Allow}},
+					Egress:  []apiv3.Rule{{Action: apiv3.Allow}},
+				},
 			}
+			if remoteClusterPrefix != "" {
+				// Rules are suppressed in federated remote Profile resources.
+				prof.Spec.Ingress = nil
+				prof.Spec.Egress = nil
+			}
+			expected = append(expected, model.KVPair{
+				Key:   model.ResourceKey{Kind: "Profile", Name: remoteClusterPrefix + name},
+				Value: &prof,
+			})
 
 			serviceAccounts, err := cs.CoreV1().ServiceAccounts(ns.Name).List(context.Background(), metav1.ListOptions{})
 			Expect(err).NotTo(HaveOccurred())
@@ -190,31 +212,21 @@ func calculateDefaultFelixSyncerEntries(cs kubernetes.Interface, dt apiconfig.Da
 					},
 				})
 
-				// Expect profile labels for each default serviceaccount as well. The labels should include the name
+				// We also expect one v3 Profile to be present for each ServiceAccount. The labels should include the name
 				// of the service account.
-				expected = append(expected, model.KVPair{
-					Key: model.ProfileLabelsKey{ProfileKey: model.ProfileKey{Name: remoteClusterPrefix + name}},
-					Value: map[string]string{
-						"pcsa.projectcalico.org/name": sa.Name,
-					},
-				})
-
-				//  We also expect one v3 Profile to be present for each ServiceAccount.
-				if remoteClusterPrefix == "" {
-					prof := apiv3.Profile{
-						TypeMeta:   metav1.TypeMeta{Kind: "Profile", APIVersion: "projectcalico.org/v3"},
-						ObjectMeta: metav1.ObjectMeta{Name: name, UID: sa.UID, CreationTimestamp: sa.CreationTimestamp},
-						Spec: apiv3.ProfileSpec{
-							LabelsToApply: map[string]string{
-								"pcsa.projectcalico.org/name": sa.Name,
-							},
+				prof := apiv3.Profile{
+					TypeMeta:   metav1.TypeMeta{Kind: "Profile", APIVersion: "projectcalico.org/v3"},
+					ObjectMeta: metav1.ObjectMeta{Name: name, UID: sa.UID, CreationTimestamp: sa.CreationTimestamp},
+					Spec: apiv3.ProfileSpec{
+						LabelsToApply: map[string]string{
+							"pcsa.projectcalico.org/name": sa.Name,
 						},
-					}
-					expected = append(expected, model.KVPair{
-						Key:   model.ResourceKey{Kind: "Profile", Name: name},
-						Value: &prof,
-					})
+					},
 				}
+				expected = append(expected, model.KVPair{
+					Key:   model.ResourceKey{Kind: "Profile", Name: remoteClusterPrefix + name},
+					Value: &prof,
+				})
 			}
 		}
 	}

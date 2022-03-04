@@ -3,6 +3,7 @@
 package intdataplane
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/golang-collections/collections/stack"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/logutils"
@@ -34,6 +36,7 @@ var _ = Describe("EgressIPManager", func() {
 	var mainTable *mockRouteTable
 	var rrFactory *mockRouteRulesFactory
 	var rtFactory *mockRouteTableFactory
+	var podStatusCallback *mockEgressPodStatusCallback
 
 	BeforeEach(func() {
 		rrFactory = &mockRouteRulesFactory{routeRules: nil}
@@ -63,6 +66,8 @@ var _ = Describe("EgressIPManager", func() {
 			FelixHostname:               "host0",
 		}
 
+		podStatusCallback = &mockEgressPodStatusCallback{state: []statusCallbackEntry{}}
+
 		manager = newEgressIPManagerWithShims(
 			mainTable,
 			rrFactory,
@@ -77,6 +82,7 @@ var _ = Describe("EgressIPManager", func() {
 			},
 			logutils.NewSummarizer("test loop"),
 			func(ifName string) error { return nil },
+			podStatusCallback.statusCallback,
 		)
 
 		err := manager.CompleteDeferredWork()
@@ -117,13 +123,16 @@ var _ = Describe("EgressIPManager", func() {
 
 	Describe("with multiple ipsets and endpoints update", func() {
 		var ips0, ips1 []string
-		var zeroTime, now time.Time
+		var zeroTime, nowTime, inThirtySecsTime, inSixtySecsTime, inNinetySecsTime time.Time
 		BeforeEach(func() {
 			zeroTime = time.Time{}
-			now = time.Now()
+			nowTime = time.Now()
+			inThirtySecsTime = nowTime.Add(time.Second * 30)
+			inSixtySecsTime = nowTime.Add(time.Second * 60)
+			inNinetySecsTime = nowTime.Add(time.Second * 90)
 
-			ips0 = []string{formatEgressMemberStr("10.0.0.1", zeroTime), formatEgressMemberStr("10.0.0.2", now)}
-			ips1 = []string{formatEgressMemberStr("10.0.1.1", zeroTime), formatEgressMemberStr("10.0.1.2", zeroTime)}
+			ips0 = []string{formatActiveEgressMemberStr("10.0.0.1"), formatActiveEgressMemberStr("10.0.0.2")}
+			ips1 = []string{formatActiveEgressMemberStr("10.0.1.1"), formatActiveEgressMemberStr("10.0.1.2")}
 
 			manager.OnUpdate(&proto.IPSetUpdate{
 				Id:      "set0",
@@ -143,22 +152,26 @@ var _ = Describe("EgressIPManager", func() {
 
 			checkSetMember("set0", []ipSetMember{
 				{
-					cidr:              "10.0.0.1",
-					deletionTimestamp: zeroTime,
+					cidr:                "10.0.0.1",
+					maintenanceStarted:  zeroTime,
+					maintenanceFinished: zeroTime,
 				},
 				{
-					cidr:              "10.0.0.2",
-					deletionTimestamp: now,
+					cidr:                "10.0.0.2",
+					maintenanceStarted:  zeroTime,
+					maintenanceFinished: zeroTime,
 				},
 			})
 			checkSetMember("set1", []ipSetMember{
 				{
-					cidr:              "10.0.1.1",
-					deletionTimestamp: zeroTime,
+					cidr:                "10.0.1.1",
+					maintenanceStarted:  zeroTime,
+					maintenanceFinished: zeroTime,
 				},
 				{
-					cidr:              "10.0.1.2",
-					deletionTimestamp: zeroTime,
+					cidr:                "10.0.1.2",
+					maintenanceStarted:  zeroTime,
+					maintenanceFinished: zeroTime,
 				},
 			})
 			Expect(manager.activeEgressIPSet["nonEgressSet"]).To(BeNil())
@@ -169,7 +182,7 @@ var _ = Describe("EgressIPManager", func() {
 			manager.OnUpdate(&proto.WorkloadEndpointUpdate{
 				Id: &proto.WorkloadEndpointID{
 					OrchestratorId: "k8s",
-					WorkloadId:     "pod-0",
+					WorkloadId:     "default/pod-0",
 					EndpointId:     "endpoint-id-0",
 				},
 				Endpoint: &proto.WorkloadEndpoint{
@@ -187,7 +200,7 @@ var _ = Describe("EgressIPManager", func() {
 			manager.OnUpdate(&proto.WorkloadEndpointUpdate{
 				Id: &proto.WorkloadEndpointID{
 					OrchestratorId: "k8s",
-					WorkloadId:     "pod-1",
+					WorkloadId:     "default/pod-1",
 					EndpointId:     "endpoint-id-1",
 				},
 				Endpoint: &proto.WorkloadEndpoint{
@@ -257,8 +270,8 @@ var _ = Describe("EgressIPManager", func() {
 		It("should support delta update", func() {
 			manager.OnUpdate(&proto.IPSetDeltaUpdate{
 				Id:             "set1",
-				AddedMembers:   []string{formatEgressMemberStr("10.0.3.0", zeroTime), formatEgressMemberStr("10.0.3.1", zeroTime)},
-				RemovedMembers: []string{formatEgressMemberStr("10.0.1.1", zeroTime)},
+				AddedMembers:   []string{formatActiveEgressMemberStr("10.0.3.0"), formatActiveEgressMemberStr("10.0.3.1")},
+				RemovedMembers: []string{formatActiveEgressMemberStr("10.0.1.1")},
 			})
 
 			err := manager.CompleteDeferredWork()
@@ -412,7 +425,7 @@ var _ = Describe("EgressIPManager", func() {
 			manager.OnUpdate(&proto.IPSetDeltaUpdate{
 				Id:             "set1",
 				AddedMembers:   []string{},
-				RemovedMembers: []string{formatEgressMemberStr("10.0.1.1", zeroTime), formatEgressMemberStr("10.0.1.2", zeroTime)},
+				RemovedMembers: []string{formatActiveEgressMemberStr("10.0.1.1"), formatActiveEgressMemberStr("10.0.1.2")},
 			})
 
 			err := manager.CompleteDeferredWork()
@@ -439,7 +452,7 @@ var _ = Describe("EgressIPManager", func() {
 			manager.OnUpdate(&proto.WorkloadEndpointUpdate{
 				Id: &proto.WorkloadEndpointID{
 					OrchestratorId: "k8s",
-					WorkloadId:     "pod-0",
+					WorkloadId:     "default/pod-0",
 					EndpointId:     "endpoint-id-0",
 				},
 				Endpoint: nil,
@@ -459,7 +472,7 @@ var _ = Describe("EgressIPManager", func() {
 			manager.OnUpdate(&proto.WorkloadEndpointUpdate{
 				Id: &proto.WorkloadEndpointID{
 					OrchestratorId: "k8s",
-					WorkloadId:     "pod-0",
+					WorkloadId:     "default/pod-0",
 					EndpointId:     "endpoint-id-0",
 				},
 				Endpoint: &proto.WorkloadEndpoint{
@@ -484,7 +497,7 @@ var _ = Describe("EgressIPManager", func() {
 		It("should wait for ipset update", func() {
 			id0 := proto.WorkloadEndpointID{
 				OrchestratorId: "k8s",
-				WorkloadId:     "pod-0",
+				WorkloadId:     "default/pod-0",
 				EndpointId:     "endpoint-id-0",
 			}
 
@@ -513,7 +526,7 @@ var _ = Describe("EgressIPManager", func() {
 
 			manager.OnUpdate(&proto.IPSetUpdate{
 				Id:      "setx",
-				Members: []string{formatEgressMemberStr("10.0.10.1", now), formatEgressMemberStr("10.0.10.2", zeroTime)},
+				Members: []string{formatActiveEgressMemberStr("10.0.10.1"), formatActiveEgressMemberStr("10.0.10.2")},
 				Type:    proto.IPSetUpdate_EGRESS_IP,
 			})
 			err := manager.CompleteDeferredWork()
@@ -561,10 +574,210 @@ var _ = Describe("EgressIPManager", func() {
 			})
 		})
 
-		It("should be tolerant of missing deletion timestamp", func() {
+		It("should support terminating egw pod", func() {
+			manager.OnUpdate(&proto.IPSetDeltaUpdate{
+				Id:             "set0",
+				AddedMembers:   []string{formatTerminatingEgressMemberStr("10.0.0.1", nowTime, inSixtySecsTime)},
+				RemovedMembers: []string{formatActiveEgressMemberStr("10.0.0.1")},
+			})
+
+			err := manager.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
+			rtFactory.Table(1).checkRoutes(routetable.InterfaceNone, []routetable.Target{{
+				Type:      routetable.TargetTypeVXLAN,
+				CIDR:      defaultCidr,
+				MultiPath: multiPath([]string{"10.0.0.1", "10.0.0.2"}),
+			}})
+			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
+				{
+					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x01}),
+					GW:      ip.FromString("10.0.0.1"),
+					IP:      ip.FromString("10.0.0.1"),
+				},
+				{
+					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x00, 0x02}),
+					GW:      ip.FromString("10.0.0.2"),
+					IP:      ip.FromString("10.0.0.2"),
+				},
+				{
+					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x01}),
+					GW:      ip.FromString("10.0.1.1"),
+					IP:      ip.FromString("10.0.1.1"),
+				},
+				{
+					VTEPMAC: net.HardwareAddr([]byte{0xa2, 0x2a, 0x0a, 0x00, 0x01, 0x02}),
+					GW:      ip.FromString("10.0.1.2"),
+					IP:      ip.FromString("10.0.1.2"),
+				},
+			})
+			podStatusCallback.checkState([]statusCallbackEntry{
+				{
+					namespace:           "default",
+					name:                "host0-k8s-pod--0-endpoint--id--0",
+					ip:                  "10.0.0.1",
+					maintenanceStarted:  nowTime,
+					maintenanceFinished: inSixtySecsTime,
+				},
+			})
+		})
+
+		It("should not notify when maintenance window is unchanged", func() {
+			manager.OnUpdate(&proto.IPSetDeltaUpdate{
+				Id:             "set0",
+				AddedMembers:   []string{formatTerminatingEgressMemberStr("10.0.0.1", nowTime, inSixtySecsTime)},
+				RemovedMembers: []string{formatActiveEgressMemberStr("10.0.0.1")},
+			})
+
+			err := manager.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
+			podStatusCallback.checkState([]statusCallbackEntry{
+				{
+					namespace:           "default",
+					name:                "host0-k8s-pod--0-endpoint--id--0",
+					ip:                  "10.0.0.1",
+					maintenanceStarted:  nowTime,
+					maintenanceFinished: inSixtySecsTime,
+				},
+			})
+
+			podStatusCallback.clearState()
+			err = manager.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
+			podStatusCallback.checkState([]statusCallbackEntry{})
+		})
+
+		It("should correctly calculate maintenance window for multiple terminating egw pods", func() {
+			manager.OnUpdate(&proto.IPSetDeltaUpdate{
+				Id: "set0",
+				AddedMembers: []string{
+					formatTerminatingEgressMemberStr("10.0.0.1", nowTime, inSixtySecsTime),
+					formatTerminatingEgressMemberStr("10.0.0.2", inThirtySecsTime, inNinetySecsTime),
+				},
+				RemovedMembers: []string{
+					formatActiveEgressMemberStr("10.0.0.1"),
+					formatActiveEgressMemberStr("10.0.0.2"),
+				},
+			})
+
+			err := manager.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
+			podStatusCallback.checkState([]statusCallbackEntry{
+				{
+					namespace:           "default",
+					name:                "host0-k8s-pod--0-endpoint--id--0",
+					ip:                  "10.0.0.2",
+					maintenanceStarted:  inThirtySecsTime,
+					maintenanceFinished: inNinetySecsTime,
+				},
+			})
+
+			podStatusCallback.clearState()
+			err = manager.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
+			podStatusCallback.checkState([]statusCallbackEntry{})
+		})
+
+		It("should correctly calculate maintenance window for multiple active and terminating egw pods", func() {
+			// egw 10.0.0.1 is terminating
+			manager.OnUpdate(&proto.IPSetDeltaUpdate{
+				Id: "set0",
+				AddedMembers: []string{
+					formatTerminatingEgressMemberStr("10.0.0.1", nowTime, inSixtySecsTime),
+				},
+				RemovedMembers: []string{
+					formatActiveEgressMemberStr("10.0.0.1"),
+				},
+			})
+			err := manager.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
+			podStatusCallback.checkState([]statusCallbackEntry{
+				{
+					namespace:           "default",
+					name:                "host0-k8s-pod--0-endpoint--id--0",
+					ip:                  "10.0.0.1",
+					maintenanceStarted:  nowTime,
+					maintenanceFinished: inSixtySecsTime,
+				},
+			})
+
+			// egw 10.0.0.3 is created to replace egw 10.0.0.1
+			manager.OnUpdate(&proto.IPSetDeltaUpdate{
+				Id: "set0",
+				AddedMembers: []string{
+					formatActiveEgressMemberStr("10.0.0.3"),
+				},
+			})
+			podStatusCallback.clearState()
+			err = manager.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
+			podStatusCallback.checkState([]statusCallbackEntry{})
+
+			// egw 10.0.0.2 is terminating
+			manager.OnUpdate(&proto.IPSetDeltaUpdate{
+				Id: "set0",
+				AddedMembers: []string{
+					formatTerminatingEgressMemberStr("10.0.0.2", inThirtySecsTime, inNinetySecsTime),
+				},
+				RemovedMembers: []string{
+					formatActiveEgressMemberStr("10.0.0.2"),
+				},
+			})
+			podStatusCallback.clearState()
+			err = manager.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
+			podStatusCallback.checkState([]statusCallbackEntry{
+				{
+					namespace:           "default",
+					name:                "host0-k8s-pod--0-endpoint--id--0",
+					ip:                  "10.0.0.2",
+					maintenanceStarted:  inThirtySecsTime,
+					maintenanceFinished: inNinetySecsTime,
+				},
+			})
+
+			// egw 10.0.0.4 is created to replace egw 10.0.0.2
+			manager.OnUpdate(&proto.IPSetDeltaUpdate{
+				Id: "set0",
+				AddedMembers: []string{
+					formatActiveEgressMemberStr("10.0.0.4"),
+				},
+			})
+			podStatusCallback.clearState()
+			err = manager.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
+			podStatusCallback.checkState([]statusCallbackEntry{})
+
+			// egw 10.0.0.1 has terminated
+			manager.OnUpdate(&proto.IPSetDeltaUpdate{
+				Id:           "set0",
+				AddedMembers: []string{},
+				RemovedMembers: []string{
+					formatActiveEgressMemberStr("10.0.0.1"),
+				},
+			})
+			podStatusCallback.clearState()
+			err = manager.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
+			podStatusCallback.checkState([]statusCallbackEntry{})
+
+			// egw 10.0.0.2 has terminated
+			manager.OnUpdate(&proto.IPSetDeltaUpdate{
+				Id:           "set0",
+				AddedMembers: []string{},
+				RemovedMembers: []string{
+					formatActiveEgressMemberStr("10.0.0.2"),
+				},
+			})
+			podStatusCallback.clearState()
+			err = manager.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
+			podStatusCallback.checkState([]statusCallbackEntry{})
+		})
+
+		It("should be tolerant of missing timestamp", func() {
 			manager.OnUpdate(&proto.IPSetDeltaUpdate{
 				Id:             "set1",
-				AddedMembers:   []string{formatEgressMemberStr("10.0.3.0", now), "10.0.3.1"},
+				AddedMembers:   []string{formatTerminatingEgressMemberStr("10.0.3.0", nowTime, inSixtySecsTime), "10.0.3.1"},
 				RemovedMembers: []string{"10.0.1.1"},
 			})
 
@@ -719,10 +932,16 @@ func (f *mockRouteRulesFactory) Rules() *mockRouteRules {
 	return f.routeRules
 }
 
-func formatEgressMemberStr(cidr string, deletionTimestamp time.Time) string {
-	bytes, err := deletionTimestamp.MarshalText()
+func formatActiveEgressMemberStr(cidr string) string {
+	return formatTerminatingEgressMemberStr(cidr, time.Time{}, time.Time{})
+}
+
+func formatTerminatingEgressMemberStr(cidr string, start, finish time.Time) string {
+	startBytes, err := start.MarshalText()
 	Expect(err).NotTo(HaveOccurred())
-	return fmt.Sprintf("%s,%s", cidr, string(bytes))
+	finishBytes, err := finish.MarshalText()
+	Expect(err).NotTo(HaveOccurred())
+	return fmt.Sprintf("%s,%s,%s", cidr, string(startBytes), string(finishBytes))
 }
 
 func ipSetMemberEquals(expected ipSetMember) types.GomegaMatcher {
@@ -738,9 +957,11 @@ func (m *ipSetMemberMatcher) Match(actual interface{}) (bool, error) {
 	if !ok {
 		return false, fmt.Errorf("ipSetMemberMatcher must be passed an ipSetMember. Got\n%s", format.Object(actual, 1))
 	}
-
 	// Need to compare time.Time using Equal(), since having a nil loc and a UTC loc are equivalent.
-	return m.expected.cidr == member.cidr && m.expected.deletionTimestamp.Equal(member.deletionTimestamp), nil
+	match := m.expected.cidr == member.cidr &&
+		m.expected.maintenanceStarted.Equal(member.maintenanceStarted) &&
+		m.expected.maintenanceFinished.Equal(member.maintenanceFinished)
+	return match, nil
 
 }
 
@@ -750,4 +971,85 @@ func (m *ipSetMemberMatcher) FailureMessage(actual interface{}) string {
 
 func (m *ipSetMemberMatcher) NegatedFailureMessage(actual interface{}) string {
 	return fmt.Sprintf("Expected %v to not match ipSetMember: %v", actual.(ipSetMember), m.expected)
+}
+
+type statusCallbackEntry struct {
+	namespace           string
+	name                string
+	ip                  string
+	maintenanceStarted  time.Time
+	maintenanceFinished time.Time
+}
+
+type mockEgressPodStatusCallback struct {
+	state []statusCallbackEntry
+	Fail  bool
+}
+
+var (
+	statusCallbackFail = errors.New("mock egress pod status callback failure")
+)
+
+func (t *mockEgressPodStatusCallback) statusCallback(namespace, name, ip string, maintenanceStarted, maintenanceFinished time.Time) error {
+	log.WithFields(log.Fields{
+		"namespace":           namespace,
+		"name":                name,
+		"ip":                  ip,
+		"maintenanceStarted":  maintenanceStarted,
+		"maintenanceFinished": maintenanceFinished,
+	}).Info("mockEgressPodStatusCallback")
+	if t.Fail {
+		return statusCallbackFail
+	}
+	t.state = append(t.state, statusCallbackEntry{
+		namespace:           namespace,
+		name:                name,
+		ip:                  ip,
+		maintenanceStarted:  maintenanceStarted,
+		maintenanceFinished: maintenanceFinished,
+	})
+	return nil
+}
+
+func (t *mockEgressPodStatusCallback) checkState(expected []statusCallbackEntry) {
+	var matchers []types.GomegaMatcher
+	for _, e := range expected {
+		matchers = append(matchers, statusCallbackEntryEquals(e))
+	}
+	Expect(t.state).To(ContainElements(matchers))
+}
+
+func (t *mockEgressPodStatusCallback) clearState() {
+	t.state = nil
+}
+
+func statusCallbackEntryEquals(expected statusCallbackEntry) types.GomegaMatcher {
+	return &statusCallbackEntryMatcher{expected: expected}
+}
+
+type statusCallbackEntryMatcher struct {
+	expected statusCallbackEntry
+}
+
+func (m *statusCallbackEntryMatcher) Match(actual interface{}) (bool, error) {
+	e, ok := actual.(statusCallbackEntry)
+	if !ok {
+		return false, fmt.Errorf("statusCallbackEntryMatcher must be passed a statusCallbackEntry. Got\n%s", format.Object(actual, 1))
+	}
+	// Need to compare time.Time using Equal(), since having a nil loc and a UTC loc are equivalent.
+	match := m.expected.namespace == e.namespace &&
+		m.expected.name == e.name &&
+		m.expected.ip == e.ip &&
+		m.expected.maintenanceStarted.Equal(e.maintenanceStarted) &&
+		m.expected.maintenanceFinished.Equal(e.maintenanceFinished)
+	return match, nil
+
+}
+
+func (m *statusCallbackEntryMatcher) FailureMessage(actual interface{}) string {
+	return fmt.Sprintf("Expected %v to match statusCallbackEntry: %v", actual.(statusCallbackEntry), m.expected)
+}
+
+func (m *statusCallbackEntryMatcher) NegatedFailureMessage(actual interface{}) string {
+	return fmt.Sprintf("Expected %v to not match statusCallbackEntry: %v", actual.(statusCallbackEntry), m.expected)
 }

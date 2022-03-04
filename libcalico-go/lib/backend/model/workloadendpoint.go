@@ -148,23 +148,24 @@ func (options WorkloadEndpointListOptions) KeyFromDefaultPath(path string) Key {
 }
 
 type WorkloadEndpoint struct {
-	State             string            `json:"state"`
-	Name              string            `json:"name"`
-	ActiveInstanceID  string            `json:"active_instance_id"`
-	Mac               *net.MAC          `json:"mac"`
-	ProfileIDs        []string          `json:"profile_ids"`
-	IPv4Nets          []net.IPNet       `json:"ipv4_nets"`
-	IPv6Nets          []net.IPNet       `json:"ipv6_nets"`
-	IPv4NAT           []IPNAT           `json:"ipv4_nat,omitempty"`
-	IPv6NAT           []IPNAT           `json:"ipv6_nat,omitempty"`
-	AWSElasticIPs     []string          `json:"aws_elastic_ips,omitempty"`
-	Labels            map[string]string `json:"labels,omitempty"`
-	IPv4Gateway       *net.IP           `json:"ipv4_gateway,omitempty" validate:"omitempty,ipv4"`
-	IPv6Gateway       *net.IP           `json:"ipv6_gateway,omitempty" validate:"omitempty,ipv6"`
-	Ports             []EndpointPort    `json:"ports,omitempty" validate:"dive"`
-	GenerateName      string            `json:"generate_name,omitempty"`
-	EgressSelector    string            `json:"egress_selector,omitempty"`
-	DeletionTimestamp time.Time         `json:"deletion_timestamp,omitempty"`
+	State                      string            `json:"state"`
+	Name                       string            `json:"name"`
+	ActiveInstanceID           string            `json:"active_instance_id"`
+	Mac                        *net.MAC          `json:"mac"`
+	ProfileIDs                 []string          `json:"profile_ids"`
+	IPv4Nets                   []net.IPNet       `json:"ipv4_nets"`
+	IPv6Nets                   []net.IPNet       `json:"ipv6_nets"`
+	IPv4NAT                    []IPNAT           `json:"ipv4_nat,omitempty"`
+	IPv6NAT                    []IPNAT           `json:"ipv6_nat,omitempty"`
+	AWSElasticIPs              []string          `json:"aws_elastic_ips,omitempty"`
+	Labels                     map[string]string `json:"labels,omitempty"`
+	IPv4Gateway                *net.IP           `json:"ipv4_gateway,omitempty" validate:"omitempty,ipv4"`
+	IPv6Gateway                *net.IP           `json:"ipv6_gateway,omitempty" validate:"omitempty,ipv6"`
+	Ports                      []EndpointPort    `json:"ports,omitempty" validate:"dive"`
+	GenerateName               string            `json:"generate_name,omitempty"`
+	EgressSelector             string            `json:"egress_selector,omitempty"`
+	DeletionTimestamp          time.Time         `json:"deletion_timestamp,omitempty"`
+	DeletionGracePeriodSeconds int64             `json:"deletion_grace_period_seconds,omitempty"`
 }
 
 type EndpointPort struct {

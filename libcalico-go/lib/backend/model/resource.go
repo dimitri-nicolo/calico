@@ -41,10 +41,11 @@ type resourceInfo struct {
 }
 
 var (
-	matchGlobalResource     = regexp.MustCompile("^/calico/resources/v3/projectcalico[.]org/([^/]+)/([^/]+)$")
-	matchNamespacedResource = regexp.MustCompile("^/calico/resources/v3/projectcalico[.]org/([^/]+)/([^/]+)/([^/]+)$")
-	resourceInfoByKindLower = make(map[string]resourceInfo)
-	resourceInfoByPlural    = make(map[string]resourceInfo)
+	matchGlobalResource          = regexp.MustCompile("^/calico/resources/v3/projectcalico[.]org/([^/]+)/([^/]+)$")
+	matchFederatedGlobalResource = regexp.MustCompile("^/calico/resources/v3/projectcalico[.]org/(profiles)/([^/]+/[^/]+)$")
+	matchNamespacedResource      = regexp.MustCompile("^/calico/resources/v3/projectcalico[.]org/([^/]+)/([^/]+)/([^/]+)$")
+	resourceInfoByKindLower      = make(map[string]resourceInfo)
+	resourceInfoByPlural         = make(map[string]resourceInfo)
 )
 
 func registerResourceInfo(kind string, plural string, typeOf reflect.Type) {

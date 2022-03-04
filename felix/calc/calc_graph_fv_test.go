@@ -249,7 +249,7 @@ var baseTests = []StateList{
 		hostEp1WithPolicyAndANetworkSet,
 	},
 
-	// test deletionTimestamp
+	// test egress gateway deletionTimestamp
 	{
 		endpointWithRemoteActiveEgressGateway,
 		endpointWithLocalActiveEgressGateway,

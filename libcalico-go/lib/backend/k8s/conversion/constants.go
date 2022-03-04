@@ -36,10 +36,13 @@ const (
 	// AnnotationPodIPs is the annotation set by the Amazon VPC CNI plugin.
 	AnnotationAWSPodIPs = "vpc.amazonaws.com/pod-ips"
 
-	AnnotationSecurityGroups          = "aws.tigera.io/security-groups"
-	AnnotationEgressSelector          = "egress.projectcalico.org/selector"
-	AnnotationEgressNamespaceSelector = "egress.projectcalico.org/namespaceSelector"
-	SecurityGroupLabelPrefix          = "sg.aws.tigera.io"
+	AnnotationSecurityGroups                    = "aws.tigera.io/security-groups"
+	AnnotationEgressSelector                    = "egress.projectcalico.org/selector"
+	AnnotationEgressNamespaceSelector           = "egress.projectcalico.org/namespaceSelector"
+	AnnotationEgressGatewayMaintenanceGatewayIP = "egress.projectcalico.org/gatewayMaintenanceGatewayIP"
+	AnnotationEgressGatewayMaintenanceStarted   = "egress.projectcalico.org/gatewayMaintenanceStartedTimestamp"
+	AnnotationEgressGatewayMaintenanceFinished  = "egress.projectcalico.org/gatewayMaintenanceFinishedTimestamp"
+	SecurityGroupLabelPrefix                    = "sg.aws.tigera.io"
 
 	// AnnotationContainerID stores the container ID of the pod.  This allows us to disambiguate different pods
 	// that have the same name and namespace.  For example, stateful set pod that is restarted.  May be missing

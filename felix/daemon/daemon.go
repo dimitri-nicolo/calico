@@ -28,6 +28,10 @@ import (
 	"syscall"
 	"time"
 
+	k8sresources "github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/resources"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
@@ -1012,6 +1016,10 @@ type DataplaneConnector struct {
 	firstStatusReportSent bool
 
 	wireguardStatUpdateFromDataplane chan *proto.WireguardStatusUpdate
+
+	egressPodStatusUpdatesFromDataplane chan *proto.EgressPodStatusUpdate
+
+	rateLimitedLogger *lclogutils.RateLimitedLogger
 }
 
 type Startable interface {
@@ -1028,18 +1036,20 @@ func newConnector(configParams *config.Config,
 	var captureStatusUpdates = make(chan *proto.PacketCaptureStatusUpdate, 100)
 
 	felixConn := &DataplaneConnector{
-		config:                           configParams,
-		configUpdChan:                    configUpdChan,
-		datastore:                        datastore,
-		datastorev3:                      datastorev3,
-		ToDataplane:                      make(chan interface{}),
-		StatusUpdatesFromDataplane:       make(chan interface{}),
-		InSync:                           make(chan bool, 1),
-		failureReportChan:                failureReportChan,
-		dataplane:                        dataplane,
-		wireguardStatUpdateFromDataplane: make(chan *proto.WireguardStatusUpdate, 1),
-		captureStatusUpdates:             captureStatusUpdates,
-		captureStatusWriter:              capture.NewStatusWriter(configParams.FelixHostname, configParams.CaptureDir, datastorev3.PacketCaptures(), captureStatusUpdates, 2*time.Second),
+		config:                              configParams,
+		configUpdChan:                       configUpdChan,
+		datastore:                           datastore,
+		datastorev3:                         datastorev3,
+		ToDataplane:                         make(chan interface{}),
+		StatusUpdatesFromDataplane:          make(chan interface{}),
+		InSync:                              make(chan bool, 1),
+		failureReportChan:                   failureReportChan,
+		dataplane:                           dataplane,
+		wireguardStatUpdateFromDataplane:    make(chan *proto.WireguardStatusUpdate, 1),
+		egressPodStatusUpdatesFromDataplane: make(chan *proto.EgressPodStatusUpdate, 100),
+		captureStatusUpdates:                captureStatusUpdates,
+		captureStatusWriter:                 capture.NewStatusWriter(configParams.FelixHostname, configParams.CaptureDir, datastorev3.PacketCaptures(), captureStatusUpdates, 2*time.Second),
+		rateLimitedLogger:                   lclogutils.NewRateLimitedLogger(lclogutils.OptInterval(15 * time.Second)),
 	}
 	return felixConn
 }
@@ -1082,6 +1092,8 @@ func (fc *DataplaneConnector) readMessagesFromDataplane() {
 			if fc.captureStatusWriter != nil {
 				fc.captureStatusUpdates <- msg
 			}
+		case *proto.EgressPodStatusUpdate:
+			fc.egressPodStatusUpdatesFromDataplane <- msg
 		default:
 			log.WithField("msg", msg).Warning("Unknown message from dataplane")
 		}
@@ -1207,6 +1219,126 @@ func (fc *DataplaneConnector) handleWireguardStatUpdateFromDataplane() {
 	}
 }
 
+func (fc *DataplaneConnector) reconcileEgressPodStatusUpdate(namespace, name, gatewayIP string, started, finished time.Time) error {
+	// In case of a recoverable failure (ErrorResourceUpdateConflict), retry update 3 times.
+	for iter := 0; iter < 3; iter++ {
+		// Read workload resource from datastore and compare it with the deletionTimestamp from dataplane.
+		getCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		workload, err := fc.datastorev3.WorkloadEndpoints().Get(getCtx, namespace, name, options.GetOptions{})
+		cancel()
+		if err != nil {
+			switch err.(type) {
+			case cerrors.ErrorResourceDoesNotExist:
+				// No workload endpoint found, so no need to update it.
+				log.WithField("workload", namespace+"/"+name).Debug("Ignoring egress gateway status update; workload doesn't exist.")
+				return nil
+			}
+			// return error here so we can retry in some time.
+			log.WithError(err).Error("failed to read workload endpoint resource")
+			return err
+		}
+
+		// Check if the maintenance details need to be updated.
+		if workload.Status.EgressGateway == nil {
+			startTime := metav1.NewTime(time.Time{})
+			finishTime := metav1.NewTime(time.Time{})
+			workload.Status.EgressGateway = &libapiv3.EgressGatewayStatus{
+				MaintenanceGatewayIP: "",
+				MaintenanceStarted:   &startTime,
+				MaintenanceFinished:  &finishTime,
+			}
+		}
+		currentGatewayIP := workload.Status.EgressGateway.MaintenanceGatewayIP
+		currentStart := workload.Status.EgressGateway.MaintenanceStarted.Time
+		currentFinish := workload.Status.EgressGateway.MaintenanceFinished.Time
+		if !currentStart.Equal(started) || !currentFinish.Equal(finished) || currentGatewayIP != gatewayIP {
+			workload.Status.EgressGateway.MaintenanceGatewayIP = gatewayIP
+			metaMaintenanceStarted := metav1.NewTime(started)
+			workload.Status.EgressGateway.MaintenanceStarted = &metaMaintenanceStarted
+			metaMaintenanceFinished := metav1.NewTime(finished)
+			workload.Status.EgressGateway.MaintenanceFinished = &metaMaintenanceFinished
+
+			updateCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			// Patch only Egress Gateway annotations
+			ctxPatchEgressGateway := k8sresources.ContextWithPatchMode(updateCtx, k8sresources.PatchModeEgressGateway)
+			_, err = fc.datastorev3.WorkloadEndpoints().Update(ctxPatchEgressGateway, workload, options.SetOptions{})
+			cancel()
+			if err != nil {
+				// check if failure is recoverable
+				switch err.(type) {
+				case cerrors.ErrorResourceUpdateConflict:
+					log.Debug("update conflict, retrying update")
+					continue
+				}
+				// retry in some time.
+				log.WithError(err).Info("failed updating workload endpoint resource")
+				return err
+			}
+			log.Debugf("updated workload endpoint maintenance timestamps from %s,%s to %s,%s for workload endpoint: %s/%s using egw pod: %s ",
+				currentStart,
+				currentFinish,
+				started,
+				finished,
+				namespace,
+				name,
+				gatewayIP,
+			)
+		}
+		break
+	}
+	return nil
+}
+
+func (fc *DataplaneConnector) handleEgressPodStatusUpdateFromDataplane() {
+	var update *proto.EgressPodStatusUpdate
+	updates := make(map[string]*proto.EgressPodStatusUpdate)
+	var ticker *jitter.Ticker
+	var retryC <-chan time.Time
+
+	for {
+		// Block until we either get an update or it's time to retry a failed update.
+		select {
+		case update = <-fc.egressPodStatusUpdatesFromDataplane:
+			log.Debugf("egress pod status update from dataplane driver: %v", update)
+			updates[update.Namespace+"/"+update.Name] = update
+		case <-retryC:
+			log.Debug("retrying failed Egress pod status update")
+		}
+		if ticker != nil {
+			ticker.Stop()
+		}
+
+		// Try and reconcile the current egress pod status data.
+		var err error
+		for _, current := range updates {
+			err = fc.reconcileEgressPodStatusUpdate(
+				current.Namespace,
+				current.Name,
+				current.Cidr,
+				proto.ConvertTimestamp(current.MaintenanceStarted),
+				proto.ConvertTimestamp(current.MaintenanceFinished))
+			if err == nil {
+				delete(updates, current.Namespace+"/"+current.Name)
+			} else {
+				// break on first error, so that we can retry shortly.
+				fc.rateLimitedLogger.
+					WithField("workload", current.Namespace+"/"+current.Name).
+					WithError(err).
+					Warn("failed to apply egress gateway maintenance annotations to workload.")
+				break
+			}
+		}
+		if err == nil {
+			retryC = nil
+			ticker = nil
+		} else {
+			// retry reconciling between 2-4 seconds.
+			ticker = jitter.NewTicker(2*time.Second, 2*time.Second)
+			retryC = ticker.C
+		}
+	}
+}
+
 var handledConfigChanges = set.From("CalicoVersion", "CNXVersion", "ClusterGUID", "ClusterType", "DNSCacheEpoch", "DNSExtraTTL", "WindowsDNSExtraTTL")
 
 func (fc *DataplaneConnector) sendMessagesToDataplaneDriver() {
@@ -1300,6 +1432,9 @@ func (fc *DataplaneConnector) Start() {
 
 	// Start a background thread to handle Wireguard update to Node.
 	go fc.handleWireguardStatUpdateFromDataplane()
+
+	// Start a background thread to handle Egress updates to pod termination status.
+	go fc.handleEgressPodStatusUpdateFromDataplane()
 }
 
 func discoverTyphaAddr(configParams *config.Config, k8sClientSet kubernetes.Interface) (string, error) {

@@ -9,6 +9,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/felix/dispatcher"
 	"github.com/projectcalico/calico/felix/labelindex"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
@@ -83,7 +85,7 @@ func (cbs *EvalCmd) Start(endpointFilter dispatcher.UpdateHandler) {
 
 	cbs.dispatcher.Register(model.WorkloadEndpointKey{}, cbs.OnUpdate)
 	cbs.dispatcher.Register(model.HostEndpointKey{}, cbs.OnUpdate)
-	cbs.dispatcher.Register(model.ProfileLabelsKey{}, cbs.OnUpdate)
+	cbs.dispatcher.Register(model.ResourceKey{}, cbs.OnUpdate)
 	cbs.dispatcher.Register(model.RemoteClusterStatusKey{}, cbs.rcc.OnUpdate)
 
 	bclient, cfg := GetClient(cbs.configFile)
@@ -160,9 +162,11 @@ func (cbs *EvalCmd) OnUpdate(update api.Update) (filterOut bool) {
 	case model.HostEndpointKey:
 		v := update.Value.(*model.HostEndpoint)
 		cbs.index.UpdateLabels(update.Key, v.Labels, v.ProfileIDs)
-	case model.ProfileLabelsKey:
-		v := update.Value.(map[string]string)
-		cbs.index.UpdateParentLabels(k.Name, v)
+	case model.ResourceKey:
+		if k.Kind == apiv3.KindProfile {
+			v := update.Value.(*apiv3.Profile).Spec.LabelsToApply
+			cbs.index.UpdateParentLabels(k.Name, v)
+		}
 	default:
 		log.Errorf("Unexpected update type: %#v", update)
 		return true

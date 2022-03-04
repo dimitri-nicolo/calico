@@ -144,15 +144,6 @@ func calculateDefaultFelixSyncerEntries(cs kubernetes.Interface, dt apiconfig.Da
 				},
 			})
 
-			// Expect profile labels for each namespace as well. The labels should include the name
-			// of the namespace.
-			expected = append(expected, model.KVPair{
-				Key: model.ProfileLabelsKey{ProfileKey: model.ProfileKey{Name: remoteClusterPrefix + name}},
-				Value: map[string]string{
-					"pcns.projectcalico.org/name": ns.Name,
-				},
-			})
-
 			// And expect a v3 profile for each namespace. These are not included for remote clusters.
 			if remoteClusterPrefix == "" {
 				prof := apiv3.Profile{
@@ -183,15 +174,6 @@ func calculateDefaultFelixSyncerEntries(cs kubernetes.Interface, dt apiconfig.Da
 					Value: &model.ProfileRules{
 						InboundRules:  nil,
 						OutboundRules: nil,
-					},
-				})
-
-				// Expect profile labels for each default serviceaccount as well. The labels should include the name
-				// of the service account.
-				expected = append(expected, model.KVPair{
-					Key: model.ProfileLabelsKey{ProfileKey: model.ProfileKey{Name: remoteClusterPrefix + name}},
-					Value: map[string]string{
-						"pcsa.projectcalico.org/name": sa.Name,
 					},
 				})
 

@@ -188,6 +188,8 @@ message FromDataplane {
 
     // PacketCaptureStatusUpdate is sent when a capture file is created/removed
     PacketCaptureStatusUpdate packet_capture_status_update = 10;
+
+    EgressPodStatusUpdate egress_pod_status_update = 11;
   }
 }
 
@@ -807,4 +809,12 @@ message PacketCaptureSpecification {
   string bpfFilter = 1;
   google.protobuf.Timestamp start_time = 2;
   google.protobuf.Timestamp end_time = 3;
+}
+
+message EgressPodStatusUpdate {
+  string name = 1;
+  string namespace = 2;
+  string cidr = 3;
+  google.protobuf.Timestamp maintenance_started = 4;
+  google.protobuf.Timestamp maintenance_finished = 5;
 }

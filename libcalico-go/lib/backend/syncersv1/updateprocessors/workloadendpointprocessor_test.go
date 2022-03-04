@@ -78,7 +78,8 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		netmac2, err := net.ParseMAC("01:23:45:67:89:ab")
 		Expect(err).NotTo(HaveOccurred())
 		mac2 := cnet.MAC{HardwareAddr: netmac2}
-		now := metav1.Now()
+		var sixty int64 = 60
+		inSixtySeconds := metav1.NewTime(time.Now().Add(time.Second * time.Duration(sixty)))
 		up := updateprocessors.NewWorkloadEndpointUpdateProcessor()
 
 		By("converting a WorkloadEndpoint with minimum configuration")
@@ -88,7 +89,6 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 			"projectcalico.org/namespace":    ns1,
 			"projectcalico.org/orchestrator": oid1,
 		}
-		res.CreationTimestamp = now
 		res.Spec.Node = hn1
 		res.Spec.Orchestrator = oid1
 		res.Spec.Workload = wid1
@@ -130,8 +130,8 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 			"projectcalico.org/namespace":    ns2,
 			"projectcalico.org/orchestrator": oid2,
 		}
-		res.CreationTimestamp = now
-		res.DeletionTimestamp = &now
+		res.DeletionTimestamp = &inSixtySeconds
+		res.DeletionGracePeriodSeconds = &sixty
 		res.Spec.Node = hn2
 		res.Spec.Orchestrator = oid2
 		res.Spec.Workload = wid2
@@ -197,8 +197,9 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 							Port:     uint16(8080),
 						},
 					},
-					EgressSelector:    "(pcns.black == \"white\") && (red == 'green')",
-					DeletionTimestamp: now.Time,
+					EgressSelector:             "(pcns.black == \"white\") && (red == 'green')",
+					DeletionTimestamp:          inSixtySeconds.Time,
+					DeletionGracePeriodSeconds: sixty,
 				},
 				Revision: "1234",
 			},

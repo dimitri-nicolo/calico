@@ -244,23 +244,19 @@ func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates 
 				updates[i].Value.(*model.ProfileRules).InboundRules = nil
 				updates[i].Value.(*model.ProfileRules).OutboundRules = nil
 				updates[i].Key = t
-			case model.ProfileLabelsKey:
-				t.Name = clusterName + "/" + t.Name
-				updates[i].Key = t
 			case model.ResourceKey:
-				if t.Kind == apiv3.KindProfile {
-					// Suppress the v3 Profile resource that the
-					// ProfileUpdateProcessor emits.  We only stream v3 Profile,
-					// in addition to the v1 Profile keys above, for its
-					// EgressGateway field, and there's no reason to federate
-					// that field between clusters.
-					continue
+				switch t.Kind {
+				case apiv3.KindProfile:
+					// v3 Profile resource is federated because it carries
+					// labels that may be inherited by endpoints.  This replaces
+					// federation of the legacy v1 ProfileLabels object.
+					t.Name = clusterName + "/" + t.Name
+					updates[i].Value.(*apiv3.Profile).Spec.Ingress = nil
+					updates[i].Value.(*apiv3.Profile).Spec.Egress = nil
+					updates[i].Key = t
+				default:
+					log.Panicf("Don't expect to federate other v3 resources (%v)", t)
 				}
-				// As and when we need to federate v3 resources, we'll need to
-				// decide whether and how to incorporate the remote cluster name.
-				// We may not be able to prefix similarly as for v1, because that
-				// could be confused with v3 namespacing.
-				log.Panic("No prefixing design yet for federated v3 resources")
 			}
 		} else if update.UpdateType == api.UpdateTypeKVDeleted {
 			switch t := update.Key.(type) {
@@ -275,15 +271,17 @@ func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates 
 			case model.ProfileRulesKey:
 				t.Name = clusterName + "/" + t.Name
 				updates[i].Key = t
-			case model.ProfileLabelsKey:
-				t.Name = clusterName + "/" + t.Name
-				updates[i].Key = t
 			case model.ResourceKey:
-				// See comments for model.ResourceKey just above.
-				if t.Kind == apiv3.KindProfile {
-					continue
+				switch t.Kind {
+				case apiv3.KindProfile:
+					// v3 Profile resource is federated because it carries
+					// labels that may be inherited by endpoints.  This replaces
+					// federation of the legacy v1 ProfileLabels object.
+					t.Name = clusterName + "/" + t.Name
+					updates[i].Key = t
+				default:
+					log.Panicf("Don't expect to federate other v3 resources (%v)", t)
 				}
-				log.Panic("No prefixing design yet for federated v3 resources")
 			}
 		}
 		propagatedUpdates = append(propagatedUpdates, updates[i])

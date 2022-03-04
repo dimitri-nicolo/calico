@@ -17,12 +17,18 @@ package clientv3_test
 import (
 	"time"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
+	k8sresources "github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/resources"
+	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"context"
+
+	v1 "k8s.io/api/core/v1"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
@@ -661,6 +667,101 @@ var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.Datas
 			wep.Spec.Pod = "abcdef"
 			_, err = c.WorkloadEndpoints().Update(ctx, wep, options.SetOptions{})
 			Expect(err).To(HaveOccurred())
+		})
+	})
+})
+
+// These tests are not run on etcd since the WEP resources are not patched there.
+var _ = testutils.E2eDatastoreDescribe("WorkloadEndpoint tests", testutils.DatastoreK8s, func(config apiconfig.CalicoAPIConfig) {
+	ctx := context.Background()
+
+	Describe("WorkloadEndpoint updated from multiple clients", func() {
+		now := metav1.NewTime(time.Now())
+		inOneMin := metav1.NewTime(time.Now().Add(time.Minute * time.Duration(1)))
+		inTwoMins := metav1.NewTime(time.Now().Add(time.Minute * time.Duration(2)))
+		inThreeMins := metav1.NewTime(time.Now().Add(time.Minute * time.Duration(3)))
+
+		It("should handle revision properly", func() {
+			c, err := clientv3.New(config)
+			Expect(err).NotTo(HaveOccurred())
+
+			be, err := backend.NewClient(config)
+			Expect(err).NotTo(HaveOccurred())
+			be.Clean()
+
+			By("Creating a workload endpoint via a pod")
+			_, clientset, err := k8s.CreateKubernetesClientset(&config.Spec)
+			zeroInt64 := int64(0)
+			_, err = clientset.CoreV1().Pods("default").Create(ctx, &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "test-pod",
+					Namespace:   "default",
+					Annotations: nil,
+				},
+				Spec: v1.PodSpec{
+					NodeName: "127.0.0.1",
+					Containers: []v1.Container{
+						{
+							Name:    "container1",
+							Image:   "busybox",
+							Command: []string{"sleep", "3600"},
+						},
+					},
+					TerminationGracePeriodSeconds: &zeroInt64,
+				},
+			}, metav1.CreateOptions{})
+			Expect(err).To(Not(HaveOccurred()))
+			wepName := "127.0.0.1-k8s-test--pod-eth0"
+
+			// fake what the CNI does
+			wepNoIP, err := c.WorkloadEndpoints().Get(ctx, "default", wepName, options.GetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			wepNoIP.Spec.IPNetworks = []string{"192.168.1.101/32"}
+			ctxCNI := k8sresources.ContextWithPatchMode(ctx, k8sresources.PatchModeCNI)
+			_, err = c.WorkloadEndpoints().Update(ctxCNI, wepNoIP, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			By("Reading the workload endpoint at Revision X")
+			wepRevX, err := c.WorkloadEndpoints().Get(ctx, "default", wepName, options.GetOptions{})
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Updating the workload endpoint with Egress status at Revision X")
+			wepWithEgressStatus := wepRevX.DeepCopy()
+			wepWithEgressStatus.Status.EgressGateway = &libapiv3.EgressGatewayStatus{
+				MaintenanceGatewayIP: "10.10.10.0",
+				MaintenanceStarted:   &now,
+				MaintenanceFinished:  &inOneMin,
+			}
+			ctxEgress := k8sresources.ContextWithPatchMode(ctx, k8sresources.PatchModeEgressGateway)
+			_, err = c.WorkloadEndpoints().Update(ctxEgress, wepWithEgressStatus, options.SetOptions{})
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Updating the workload endpoint with IP at Revision X")
+			wepWithNewIP := wepRevX.DeepCopy()
+			wepWithNewIP.Spec.IPNetworks = []string{"192.168.1.102/32"}
+			_, err = c.WorkloadEndpoints().Update(ctxCNI, wepWithNewIP, options.SetOptions{})
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Reading the workload endpoint and checking both writes succeeded at Revision Y")
+			wepUpdated, err := c.WorkloadEndpoints().Get(ctx, "default", wepName, options.GetOptions{})
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(wepUpdated.Spec.IPNetworks).To(Equal([]string{"192.168.1.102/32"}))
+			Expect(wepUpdated.Status.EgressGateway.MaintenanceGatewayIP).To(Equal("10.10.10.0"))
+			Expect(wepUpdated.Status.EgressGateway.MaintenanceStarted.Time).To(BeTemporally("==", now.Time))
+			Expect(wepUpdated.Status.EgressGateway.MaintenanceFinished.Time).To(BeTemporally("==", inOneMin.Time))
+
+			By("Updating the workload endpoint with Egress status at Revision X")
+			wepWithChangedEgressStatus := wepRevX.DeepCopy()
+			wepWithChangedEgressStatus.Status.EgressGateway = &libapiv3.EgressGatewayStatus{
+				MaintenanceGatewayIP: "10.10.10.1",
+				MaintenanceStarted:   &inTwoMins,
+				MaintenanceFinished:  &inThreeMins,
+			}
+			_, err = c.WorkloadEndpoints().Update(ctxEgress, wepWithChangedEgressStatus, options.SetOptions{})
+
+			// Should hit a resource update conflict.
+			_, ok := err.(cerrors.ErrorResourceUpdateConflict)
+			Expect(ok).To(BeTrue())
 		})
 	})
 })

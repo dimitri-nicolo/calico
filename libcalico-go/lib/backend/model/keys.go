@@ -252,6 +252,17 @@ func KeyFromDefaultPath(path string) Key {
 			Kind: ri.kind,
 			Name: unescapeName(m[2]),
 		}
+	} else if m := matchFederatedGlobalResource.FindStringSubmatch(path); m != nil {
+		ri := resourceInfoByPlural[unescapeName(m[1])]
+		if namespace.IsNamespaced(ri.kind) {
+			log.Warnf("(BUG) Path is a global resource, but resource is namespaced: %v", path)
+			return nil
+		}
+		log.Debugf("Path is a federated global resource: %v", path)
+		return ResourceKey{
+			Kind: ri.kind,
+			Name: unescapeName(m[2]),
+		}
 	} else if m := matchNamespacedResource.FindStringSubmatch(path); m != nil {
 		ri := resourceInfoByPlural[unescapeName(m[1])]
 		if !namespace.IsNamespaced(ri.kind) {
@@ -290,9 +301,6 @@ func KeyFromDefaultPath(path string) Key {
 		case "rules":
 			log.Debugf("Profile rules")
 			return ProfileRulesKey{ProfileKey: pk}
-		case "labels":
-			log.Debugf("Profile labels")
-			return ProfileLabelsKey{ProfileKey: pk}
 		}
 		return nil
 	} else if m := matchTier.FindStringSubmatch(path); m != nil {

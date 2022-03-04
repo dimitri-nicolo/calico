@@ -78,7 +78,7 @@ func versionedStr(ver int, str string) string {
 	return fmt.Sprintf("%s%d", str, ver)
 }
 
-func (mp *MapParameters) versionedName() string {
+func (mp *MapParameters) VersionedName() string {
 	return versionedStr(mp.Version, mp.Name)
 }
 
@@ -88,12 +88,28 @@ func (mp *MapParameters) versionedFilename() string {
 
 type MapContext struct {
 	RepinningEnabled bool
+	IpsetsMap        Map
+	StateMap         Map
+	ArpMap           Map
+	FailsafesMap     Map
+	FrontendMap      Map
+	BackendMap       Map
+	AffinityMap      Map
+	RouteMap         Map
+	CtMap            Map
+	SrMsgMap         Map
+	CtNatsMap        Map
+	MapSizes         map[string]uint32
 }
 
 func (c *MapContext) NewPinnedMap(params MapParameters) Map {
-	if len(params.versionedName()) >= unix.BPF_OBJ_NAME_LEN {
+	if len(params.VersionedName()) >= unix.BPF_OBJ_NAME_LEN {
 		logrus.WithField("name", params.Name).Panic("Bug: BPF map name too long")
 	}
+	if val, ok := c.MapSizes[params.VersionedName()]; ok {
+		params.MaxEntries = int(val)
+	}
+
 	m := &PinnedMap{
 		context:       c,
 		MapParameters: params,
@@ -112,7 +128,7 @@ type PinnedMap struct {
 }
 
 func (b *PinnedMap) GetName() string {
-	return b.versionedName()
+	return b.VersionedName()
 }
 
 func (b *PinnedMap) MapFD() MapFD {
@@ -138,6 +154,22 @@ func (b *PinnedMap) RepinningEnabled() bool {
 		return false
 	}
 	return b.context.RepinningEnabled
+}
+
+func ShowMapCmd(m Map) ([]string, error) {
+	if pm, ok := m.(*PinnedMap); ok {
+		return []string{
+			"bpftool",
+			"--json",
+			"--pretty",
+			"map",
+			"show",
+			"pinned",
+			pm.versionedFilename(),
+		}, nil
+	}
+
+	return nil, errors.Errorf("unrecognized map type %T", m)
 }
 
 // DumpMapCmd returns the command that can be used to dump a map or an error
@@ -298,7 +330,7 @@ func (b *PinnedMap) Open() error {
 		logrus.Debug("Map file didn't exist")
 		if b.context.RepinningEnabled {
 			logrus.WithField("name", b.Name).Info("Looking for map by name (to repin it)")
-			err = RepinMap(b.versionedName(), b.versionedFilename())
+			err = RepinMap(b.VersionedName(), b.versionedFilename())
 			if err != nil && !os.IsNotExist(err) {
 				return err
 			}
@@ -320,13 +352,63 @@ func (b *PinnedMap) Open() error {
 	return err
 }
 
+// nolint
+func (b *PinnedMap) migratePinnedMap(from, to string) error {
+	err := RepinMap(b.VersionedName(), to)
+	if err != nil {
+		return fmt.Errorf("error repinning %s to %s: %w", from, to, err)
+	}
+	err = os.Remove(from)
+	if err != nil {
+		return fmt.Errorf("error removing the pin %s", from)
+	}
+	return nil
+}
+
+func (b *PinnedMap) oldMapExists() bool {
+	_, err := os.Stat(b.Path() + "_old")
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+	}
+	return true
+}
+
 func (b *PinnedMap) EnsureExists() error {
+	oldMapPath := b.Path() + "_old"
 	if b.fdLoaded {
 		return nil
 	}
 
+	// In case felix restarts in the middle of migration, we might end up with
+	// old map. Repin the old map and let the map creation continue.
+	if b.oldMapExists() {
+		if _, err := os.Stat(b.Path()); err == nil {
+			os.Remove(b.Path())
+		}
+		err := b.migratePinnedMap(oldMapPath, b.Path())
+		if err != nil {
+			return fmt.Errorf("error repinning old map %s to %s, err=%w", oldMapPath, b.Path(), err)
+		}
+	}
+
 	if err := b.Open(); err == nil {
-		return nil
+		// Get the existing map info
+		mapInfo, err := GetMapInfo(b.fd)
+		if err != nil {
+			return fmt.Errorf("error getting map info of the pinned map %w", err)
+		}
+
+		if b.MaxEntries == mapInfo.MaxEntries {
+			return nil
+		}
+		// close the map fd to remove the map from the kernel
+		b.MapFD().Close()
+		err = b.migratePinnedMap(b.Path(), oldMapPath)
+		if err != nil {
+			return fmt.Errorf("error migrating the old map %w", err)
+		}
 	}
 
 	logrus.Debug("Map didn't exist, creating it")
@@ -335,14 +417,14 @@ func (b *PinnedMap) EnsureExists() error {
 		"key", fmt.Sprint(b.KeySize),
 		"value", fmt.Sprint(b.ValueSize),
 		"entries", fmt.Sprint(b.MaxEntries),
-		"name", b.versionedName(),
+		"name", b.VersionedName(),
 		"flags", fmt.Sprint(b.Flags),
 	)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		// In older kernels, map create returns EINVAL when we specify the
 		// "name" argument. Retry with empty map name.
-		logrus.WithField("name", b.versionedName()).Warn("Try recreating map with empty name ")
+		logrus.WithField("name", b.VersionedName()).Warn("Try recreating map with empty name ")
 		cmd = exec.Command("bpftool", "map", "create", b.versionedFilename(),
 			"type", b.Type,
 			"key", fmt.Sprint(b.KeySize),
@@ -360,6 +442,10 @@ func (b *PinnedMap) EnsureExists() error {
 	b.fd, err = GetMapFDByPin(b.versionedFilename())
 	if err == nil {
 		b.fdLoaded = true
+		// Delete the old pin if migration had happened and migration was successful.
+		if _, err := os.Stat(oldMapPath); err == nil {
+			os.Remove(b.Path() + "_old")
+		}
 		logrus.WithField("fd", b.fd).WithField("name", b.versionedFilename()).
 			Info("Loaded map file descriptor.")
 	}

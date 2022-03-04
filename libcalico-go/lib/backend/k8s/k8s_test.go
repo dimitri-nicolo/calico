@@ -21,6 +21,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/resources"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -467,7 +469,6 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 		By("Checking the correct entries are in our cache", func() {
 			expectedName := "kns.test-syncer-namespace-default-deny"
 			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileRulesKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeTrue())
-			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileLabelsKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeTrue())
 		})
 
 		By("Deleting the namespace", func() {
@@ -477,7 +478,6 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 		By("Checking the correct entries are no longer in our cache", func() {
 			expectedName := "kns.test-syncer-namespace-default-deny"
 			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileRulesKey{ProfileKey: model.ProfileKey{expectedName}}), slowCheck...).Should(BeFalse())
-			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileLabelsKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeFalse())
 		})
 	})
 
@@ -517,7 +517,6 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 		By("Checking the correct entries are in our cache", func() {
 			expectedName := "kns.test-syncer-namespace-no-default-deny"
 			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileRulesKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeTrue())
-			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileLabelsKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeTrue())
 		})
 
 		By("deleting a namespace", func() {
@@ -527,7 +526,6 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 		By("Checking the correct entries are in no longer in our cache", func() {
 			expectedName := "kns.test-syncer-namespace-no-default-deny"
 			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileRulesKey{ProfileKey: model.ProfileKey{expectedName}}), slowCheck...).Should(BeFalse())
-			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileLabelsKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeFalse())
 		})
 	})
 
@@ -1802,7 +1800,8 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 			wep, err := c.Get(ctx, model.ResourceKey{Name: wepName, Namespace: "default", Kind: libapiv3.KindWorkloadEndpoint}, "")
 			Expect(err).NotTo(HaveOccurred())
 			fmt.Printf("Updating Wep %+v\n", wep.Value.(*libapiv3.WorkloadEndpoint).Spec)
-			_, err = c.Update(ctx, wep)
+			ctxCNI := resources.ContextWithPatchMode(ctx, resources.PatchModeCNI)
+			_, err = c.Update(ctxCNI, wep)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -1938,7 +1937,8 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 					// Recreate the WEP (this puts the annotations back again).
 					wepKV.Revision = ""
 					wepKV.UID = nil
-					_, err = c.Create(ctx, wepKV)
+					ctxCNI := resources.ContextWithPatchMode(ctx, resources.PatchModeCNI)
+					_, err = c.Create(ctxCNI, wepKV)
 					Expect(err).NotTo(HaveOccurred())
 					return
 				}
@@ -2056,7 +2056,8 @@ var _ = testutils.E2eDatastoreDescribe("Test Syncer API for Kubernetes backend",
 			Expect(err).NotTo(HaveOccurred())
 			wep.Value.(*libapiv3.WorkloadEndpoint).Spec.IPNetworks = []string{"192.168.1.1"}
 			fmt.Printf("Updating Wep %+v\n", wep.Value.(*libapiv3.WorkloadEndpoint).Spec)
-			_, err = c.Update(ctx, wep)
+			ctxCNI := resources.ContextWithPatchMode(ctx, resources.PatchModeCNI)
+			_, err = c.Update(ctxCNI, wep)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Get the pod through the k8s API to check the annotation has appeared.

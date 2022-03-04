@@ -90,7 +90,8 @@ var _ = Describe("WorkloadEndpointClient", func() {
 					Value: wep,
 				}
 
-				_, err = wepClient.Create(context.Background(), kvp)
+				ctxCNI := resources.ContextWithPatchMode(context.Background(), resources.PatchModeCNI)
+				_, err = wepClient.Create(ctxCNI, kvp)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				pod, err := k8sClient.CoreV1().Pods("testNamespace").Get(ctx, "simplePod", metav1.GetOptions{})
@@ -140,7 +141,8 @@ var _ = Describe("WorkloadEndpointClient", func() {
 					Value: wep,
 				}
 
-				_, err = wepClient.Create(context.Background(), kvp)
+				ctxCNI := resources.ContextWithPatchMode(context.Background(), resources.PatchModeCNI)
+				_, err = wepClient.Create(ctxCNI, kvp)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				pod, err := k8sClient.CoreV1().Pods("testNamespace").Get(ctx, "simplePod", metav1.GetOptions{})
@@ -244,7 +246,8 @@ var _ = Describe("WorkloadEndpointClient", func() {
 					Value: wep,
 				}
 
-				_, err = wepClient.Update(context.Background(), kvp)
+				ctxCNI := resources.ContextWithPatchMode(context.Background(), resources.PatchModeCNI)
+				_, err = wepClient.Update(ctxCNI, kvp)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				pod, err := k8sClient.CoreV1().Pods("testNamespace").Get(ctx, "simplePod", metav1.GetOptions{})
@@ -294,7 +297,8 @@ var _ = Describe("WorkloadEndpointClient", func() {
 					Value: wep,
 				}
 
-				_, err = wepClient.Update(context.Background(), kvp)
+				ctxCNI := resources.ContextWithPatchMode(context.Background(), resources.PatchModeCNI)
+				_, err = wepClient.Update(ctxCNI, kvp)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				pod, err := k8sClient.CoreV1().Pods("testNamespace").Get(ctx, "simplePod", metav1.GetOptions{})
@@ -761,13 +765,15 @@ var _ = Describe("WorkloadEndpointClient", func() {
 		})
 		Context("Terminating Pods and normal Pod added", func() {
 			It("should ignore the IPs of a deleted pod with released IPs", func() {
-				now := metav1.Now()
+				var sixty int64 = 60
+				inSixtySeconds := metav1.NewTime(time.Now().Add(time.Second * time.Duration(sixty)))
 				testWatchWorkloadEndpoints([]*k8sapi.Pod{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:              "termPod",
-							Namespace:         "testNamespace",
-							DeletionTimestamp: &now,
+							Name:                       "termPod",
+							Namespace:                  "testNamespace",
+							DeletionTimestamp:          &inSixtySeconds,
+							DeletionGracePeriodSeconds: &sixty,
 							Annotations: map[string]string{
 								conversion.AnnotationPodIP:  "192.168.91.114",
 								conversion.AnnotationPodIPs: "192.168.91.114",
@@ -782,9 +788,10 @@ var _ = Describe("WorkloadEndpointClient", func() {
 					},
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:              "termPod2",
-							Namespace:         "testNamespace",
-							DeletionTimestamp: &now,
+							Name:                       "termPod2",
+							Namespace:                  "testNamespace",
+							DeletionTimestamp:          &inSixtySeconds,
+							DeletionGracePeriodSeconds: &sixty,
 							Annotations: map[string]string{
 								// Empty annotation signals that the CNI plugin has released the IP.
 								conversion.AnnotationPodIP:  "",
@@ -811,7 +818,8 @@ var _ = Describe("WorkloadEndpointClient", func() {
 								apiv3.LabelNamespace:    "testNamespace",
 								apiv3.LabelOrchestrator: "k8s",
 							},
-							DeletionTimestamp: &now,
+							DeletionTimestamp:          &inSixtySeconds,
+							DeletionGracePeriodSeconds: &sixty,
 						},
 						Spec: libapiv3.WorkloadEndpointSpec{
 							Orchestrator:  "k8s",
@@ -835,7 +843,8 @@ var _ = Describe("WorkloadEndpointClient", func() {
 								apiv3.LabelNamespace:    "testNamespace",
 								apiv3.LabelOrchestrator: "k8s",
 							},
-							DeletionTimestamp: &now,
+							DeletionTimestamp:          &inSixtySeconds,
+							DeletionGracePeriodSeconds: &sixty,
 						},
 						Spec: libapiv3.WorkloadEndpointSpec{
 							Orchestrator:  "k8s",

@@ -48,8 +48,18 @@ var WepWithProfileValue = &model.WorkloadEndpoint{
 	ProfileIDs: []string{"profile-dev"},
 }
 
-var ProfileDevKey = model.ProfileLabelsKey{ProfileKey: model.ProfileKey{Name: "profile-dev"}}
-var ProfileDevValue = map[string]string{"profile": "dev"}
+var ProfileDevKey = model.ResourceKey{Kind: v3.KindProfile, Name: "profile-dev"}
+var ProfileDevValue = &v3.Profile{
+	TypeMeta: metav1.TypeMeta{
+		Kind: v3.KindProfile,
+	},
+	ObjectMeta: metav1.ObjectMeta{
+		Name: "profile-dev",
+	},
+	Spec: v3.ProfileSpec{
+		LabelsToApply: map[string]string{"profile": "dev"},
+	},
+}
 
 var CaptureAllKey = model.ResourceKey{Name: "packet-capture-all", Namespace: "default", Kind: v3.KindPacketCapture}
 var CaptureSelectionKey = model.ResourceKey{Name: "packet-capture-selection", Namespace: "default", Kind: v3.KindPacketCapture}

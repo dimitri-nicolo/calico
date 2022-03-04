@@ -163,28 +163,7 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 					Name: formatName(ElasticsearchUserNameADJob, clusterName, management, true),
 					Definition: &elasticsearch.RoleDefinition{
 						Cluster: []string{"monitor", "manage_index_templates"},
-						Indices: []elasticsearch.RoleIndex{
-							{
-								Names:      []string{indexPattern("tigera_secure_ee_flows", clusterName, ".*")},
-								Privileges: []string{"read"},
-							},
-							{
-								Names:      []string{indexPattern("tigera_secure_ee_dns", clusterName, ".*")},
-								Privileges: []string{"read"},
-							},
-							{
-								Names:      []string{indexPattern("tigera_secure_ee_l7", clusterName, ".*")},
-								Privileges: []string{"read"},
-							},
-							{
-								Names:      []string{indexPattern("tigera_secure_ee_runtime", clusterName, ".*")},
-								Privileges: []string{"read"},
-							},
-							{
-								Names:      []string{indexPattern("tigera_secure_ee_events", clusterName, ".*")},
-								Privileges: []string{"read", "write"},
-							},
-						},
+						Indices: buildElasticsearchADJobUserRoleIndex(clusterName, management),
 					},
 				},
 			},
@@ -318,6 +297,39 @@ func buildElasticsearchIntrusionDetectionUserRoleIndex(clusterName string, isMan
 		allPrivileges.Names = append(allPrivileges.Names, indexPattern("tigera_secure_ee_events", clusterName, "*"))
 	}
 	return append(readPrivileges, allPrivileges)
+}
+
+// buildElasticsearchADJobUserRoleIndex creates the ES Indexes roles for AnomalyDetection Jobs Pods. The
+// management cluster will have acess to all tigera_secure_ee indices for all clusters since ADJobs
+// solely run on the management cluster,
+func buildElasticsearchADJobUserRoleIndex(clusterName string, isManagement bool) []elasticsearch.RoleIndex {
+	esADJobIndexPatternClusterName := clusterName
+	if isManagement {
+		esADJobIndexPatternClusterName = "*"
+	}
+
+	return []elasticsearch.RoleIndex{
+		{
+			Names:      []string{indexPattern("tigera_secure_ee_flows", esADJobIndexPatternClusterName, ".*")},
+			Privileges: []string{"read"},
+		},
+		{
+			Names:      []string{indexPattern("tigera_secure_ee_dns", esADJobIndexPatternClusterName, ".*")},
+			Privileges: []string{"read"},
+		},
+		{
+			Names:      []string{indexPattern("tigera_secure_ee_l7", esADJobIndexPatternClusterName, ".*")},
+			Privileges: []string{"read"},
+		},
+		{
+			Names:      []string{indexPattern("tigera_secure_ee_runtime", esADJobIndexPatternClusterName, ".*")},
+			Privileges: []string{"read"},
+		},
+		{
+			Names:      []string{indexPattern("tigera_secure_ee_events", esADJobIndexPatternClusterName, ".*")},
+			Privileges: []string{"read", "write"},
+		},
+	}
 }
 
 func buildManagedUserPattern() []*regexp.Regexp {

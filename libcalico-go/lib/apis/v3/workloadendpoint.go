@@ -37,9 +37,11 @@ type WorkloadEndpoint struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// Specification of the WorkloadEndpoint.
 	Spec WorkloadEndpointSpec `json:"spec,omitempty"`
+	// Status of the WorkloadEndpoint.
+	Status WorkloadEndpointStatus `json:"status,omitempty"`
 }
 
-// WorkloadEndpointMetadata contains the specification for a WorkloadEndpoint resource.
+// WorkloadEndpointSpec contains the specification for a WorkloadEndpoint resource.
 type WorkloadEndpointSpec struct {
 	// The name of the orchestrator.
 	Orchestrator string `json:"orchestrator,omitempty" validate:"omitempty,name"`
@@ -84,6 +86,24 @@ type WorkloadEndpointSpec struct {
 	Ports []WorkloadEndpointPort `json:"ports,omitempty" validate:"dive,omitempty"`
 	// Egress control.
 	EgressGateway *apiv3.EgressSpec `json:"egressGateway,omitempty" validate:"omitempty"`
+}
+
+// WorkloadEndpointStatus contains the status for a WorkloadEndpoint resource.
+type WorkloadEndpointStatus struct {
+	// EgressGateway contains the status of Egress Gateways used by this WorkloadEndpoint.
+	EgressGateway *EgressGatewayStatus `json:"egressGateway,omitempty" validate:"omitempty"`
+}
+
+type EgressGatewayStatus struct {
+	// MaintenanceGatewayIP contains the IP address of the latest Egress Gateway pod used by
+	// this workload to be starting a manintenance window.
+	MaintenanceGatewayIP string `json:"maintenanceGatewayIP,omitempty" validate:"omitempty,ipv4"`
+	// MaintenanceStarted contains a timestamp indicating when the latest Egress Gateway pod used by
+	// this workload is starting a manintenance window.
+	MaintenanceStarted *metav1.Time `json:"maintenanceStarted,omitempty" validate:"omitempty"`
+	// MaintenanceFinished contains a timestamp indicating when the latest Egress Gateway pod used by
+	// this workload is finishing a manintenance window.
+	MaintenanceFinished *metav1.Time `json:"maintenanceFinished,omitempty" validate:"omitempty"`
 }
 
 // WorkloadEndpointPort represents one endpoint's named or mapped port

@@ -14,6 +14,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
 	log "github.com/sirupsen/logrus"
@@ -146,12 +147,13 @@ func (f *routeRulesFactory) NewRouteRules(
 	return rr
 }
 
-// ipSetMember stores an IPSet member's cidr and deletionTimestamp.
-// If the deletionTimestamp.IsZero() then the member is not terminating.
-// Otherwise it is in the process of terminating, and will be deleted at the given timestamp.
+// ipSetMember stores an IPSet member's cidr and maintenance window.
+// If the maintenanceStarted.IsZero() or maintenanceFinished.IsZero() then the member is not terminating.
+// Otherwise it is in the process of terminating, and will be deleted at the given maintenanceFinished timestamp.
 type ipSetMember struct {
-	cidr              string
-	deletionTimestamp time.Time
+	cidr                string
+	maintenanceStarted  time.Time
+	maintenanceFinished time.Time
 }
 
 // ipSetMemberMap maps a member's cidr to an ipSetMember
@@ -185,6 +187,8 @@ type egressIPManager struct {
 
 	activeWlEndpoints map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
 
+	wlEndpointMaintenanceWindows map[proto.WorkloadEndpointID]ipSetMember
+
 	// Pending workload endpoints and egress ipset updates, we store these up as OnUpdate is called, then process them
 	// in CompleteDeferredWork.
 	pendingWlEpUpdates map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
@@ -209,12 +213,16 @@ type egressIPManager struct {
 	opRecorder logutils.OpRecorder
 
 	disableChecksumOffload func(ifName string) error
+
+	// Callback function used to notify of workload pods impacted by a terminating egress gateway pod
+	statusCallback func(namespace, name, cidr string, maintenanceStarted, maintenanceFinished time.Time) error
 }
 
 func newEgressIPManager(
 	deviceName string,
 	dpConfig Config,
 	opRecorder logutils.OpRecorder,
+	statusCallback func(namespace, name, cidr string, maintenanceStarted, maintenanceFinished time.Time) error,
 ) *egressIPManager {
 	nlHandle, err := netlink.NewHandle()
 	if err != nil {
@@ -252,6 +260,7 @@ func newEgressIPManager(
 		nlHandle,
 		opRecorder,
 		ethtool.EthtoolTXOff,
+		statusCallback,
 	)
 }
 
@@ -266,27 +275,30 @@ func newEgressIPManagerWithShims(
 	nlHandle netlinkHandle,
 	opRecorder logutils.OpRecorder,
 	disableChecksumOffload func(ifName string) error,
+	statusCallback func(namespace, name, cidr string, maintenanceStarted, maintenanceFinished time.Time) error,
 ) *egressIPManager {
 
 	return &egressIPManager{
-		l2Table:                 mainTable,
-		rrGenerator:             rrGenerator,
-		rtGenerator:             rtGenerator,
-		tableIndexSet:           tableIndexSet,
-		tableIndexStack:         tableIndexStack,
-		tableIndexToRouteTable:  make(map[int]routeTable),
-		egressIPSetToTableIndex: make(map[string]int),
-		pendingWlEpUpdates:      make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
-		activeEgressIPSet:       make(map[string]ipSetMemberMap),
-		activeWlEndpoints:       make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
-		vxlanDevice:             deviceName,
-		vxlanID:                 dpConfig.RulesConfig.EgressIPVXLANVNI,
-		vxlanPort:               dpConfig.RulesConfig.EgressIPVXLANPort,
-		dirtyEgressIPSet:        set.New(),
-		dpConfig:                dpConfig,
-		nlHandle:                nlHandle,
-		opRecorder:              opRecorder,
-		disableChecksumOffload:  disableChecksumOffload,
+		l2Table:                      mainTable,
+		rrGenerator:                  rrGenerator,
+		rtGenerator:                  rtGenerator,
+		tableIndexSet:                tableIndexSet,
+		tableIndexStack:              tableIndexStack,
+		tableIndexToRouteTable:       make(map[int]routeTable),
+		egressIPSetToTableIndex:      make(map[string]int),
+		pendingWlEpUpdates:           make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
+		activeEgressIPSet:            make(map[string]ipSetMemberMap),
+		activeWlEndpoints:            make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
+		wlEndpointMaintenanceWindows: make(map[proto.WorkloadEndpointID]ipSetMember),
+		vxlanDevice:                  deviceName,
+		vxlanID:                      dpConfig.RulesConfig.EgressIPVXLANVNI,
+		vxlanPort:                    dpConfig.RulesConfig.EgressIPVXLANPort,
+		dirtyEgressIPSet:             set.New(),
+		dpConfig:                     dpConfig,
+		nlHandle:                     nlHandle,
+		opRecorder:                   opRecorder,
+		disableChecksumOffload:       disableChecksumOffload,
+		statusCallback:               statusCallback,
 	}
 }
 
@@ -329,17 +341,11 @@ func (m *egressIPManager) handleEgressIPSetUpdate(msg *proto.IPSetUpdate) {
 	log.Infof("Update whole EgressIP set: msg=%v", msg)
 	members := make(map[string]ipSetMember)
 	for _, mStr := range msg.Members {
-		m, err := parseIpSetMember(mStr)
+		member, err := parseMember(mStr)
 		if err != nil {
-			log.Errorf("error parsing member: memberStr: %s, error: %v", mStr, err)
+			log.WithError(err).Errorf("error parsing details from memberStr: %s", mStr)
 		}
-		if !m.deletionTimestamp.IsZero() {
-			log.WithFields(log.Fields{
-				"cidr":              m.cidr,
-				"deletionTimestamp": m.deletionTimestamp,
-			}).Debug("egress gateway pod is terminating")
-		}
-		members[m.cidr] = m
+		members[member.cidr] = member
 	}
 	m.activeEgressIPSet[msg.Id] = members
 }
@@ -361,25 +367,19 @@ func (m *egressIPManager) handleEgressIPSetDeltaUpdate(ipSetId string, membersRe
 	// The member string contains cidr,deletionTimestamp, and so we could get the same cidr in membersAdded
 	// and in membersRemoved, with different timestamps. For this reason, process the removes before the adds.
 	for _, mStr := range membersRemoved {
-		m, err := parseIpSetMember(mStr)
+		member, err := parseMember(mStr)
 		if err != nil {
 			log.Errorf("error parsing member: memberStr: %s, error: %v", mStr, err)
 		}
-		delete(members, m.cidr)
+		delete(members, member.cidr)
 	}
 
 	for _, mStr := range membersAdded {
-		m, err := parseIpSetMember(mStr)
+		member, err := parseMember(mStr)
 		if err != nil {
 			log.Errorf("error parsing member: memberStr: %s, error: %v", mStr, err)
 		}
-		if !m.deletionTimestamp.IsZero() {
-			log.WithFields(log.Fields{
-				"cidr":              m.cidr,
-				"deletionTimestamp": m.deletionTimestamp,
-			}).Debug("egress gateway pod is terminating")
-		}
-		members[m.cidr] = m
+		members[member.cidr] = member
 	}
 }
 
@@ -403,6 +403,103 @@ func (m *egressIPManager) workloadToFullRules(workload *proto.WorkloadEndpoint, 
 		rules = append(rules, rule.MatchSrcAddress(cidr.ToIPNet()).MatchFWMark(m.dpConfig.RulesConfig.IptablesMarkEgress).GoToTable(tableIndex))
 	}
 	return rules
+}
+
+// Notifies all workloads of maintenance windows on egress gateway pods they're using by annotating the workload pods.
+func (m *egressIPManager) notifyWorkloadsOfEgressGatewayMaintenanceWindows() error {
+	//cleanup any orphaned maintenenance windows
+	for id := range m.wlEndpointMaintenanceWindows {
+		if _, exists := m.activeWlEndpoints[id]; !exists {
+			delete(m.wlEndpointMaintenanceWindows, id)
+		}
+	}
+
+	for id, wl := range m.activeWlEndpoints {
+		ipSetMembers, exists := m.activeEgressIPSet[wl.EgressIpSetId]
+		if !exists {
+			return fmt.Errorf("egress ip set not found for ip set id: %s", wl.EgressIpSetId)
+		}
+		namespace, name, err := parseNameAndNamespace(id.WorkloadId)
+		if err != nil {
+			return err
+		}
+		wepids := names.WorkloadEndpointIdentifiers{
+			Node:         m.dpConfig.FelixHostname,
+			Orchestrator: id.OrchestratorId,
+			Endpoint:     id.EndpointId,
+			Pod:          name,
+		}
+		wepName, err := wepids.CalculateWorkloadEndpointName(false)
+		if err != nil {
+			return err
+		}
+
+		// compare to old state
+		latestMember := latestTerminatingMember(ipSetMembers)
+		existingMember, exists := m.wlEndpointMaintenanceWindows[id]
+		m.wlEndpointMaintenanceWindows[id] = latestMember
+
+		if latestMember.cidr != "" &&
+			!latestMember.maintenanceStarted.IsZero() &&
+			!latestMember.maintenanceFinished.IsZero() &&
+			latestMember != existingMember {
+			log.WithFields(log.Fields{
+				"namespace":           namespace,
+				"name":                name,
+				"cidr":                latestMember.cidr,
+				"maintenanceStarted":  latestMember.maintenanceStarted,
+				"maintenanceFinished": latestMember.maintenanceFinished,
+			}).Debug("notifying wl pod of egw maintenance")
+			m.statusCallback(namespace, wepName, strings.TrimSuffix(latestMember.cidr, "/32"), latestMember.maintenanceStarted, latestMember.maintenanceFinished)
+		}
+	}
+	return nil
+}
+
+// Finds the latest maintenance window on the supplied egress gateway pods.
+func latestTerminatingMember(members ipSetMemberMap) ipSetMember {
+	member := ipSetMember{}
+	for _, m := range members {
+		if m.maintenanceFinished.After(member.maintenanceFinished) {
+			member = m
+		}
+	}
+	return member
+}
+
+func parseMember(memberStr string) (ipSetMember, error) {
+	var cidr string
+	maintenanceStarted := time.Time{}
+	maintenanceFinished := time.Time{}
+
+	a := strings.Split(memberStr, ",")
+	if len(a) == 0 || len(a) > 3 {
+		return ipSetMember{}, fmt.Errorf("error parsing member str, expected \"cidr,maintenanceStartedTimestamp,maintenanceFinishedTimestamp\" but got: %s", memberStr)
+	}
+
+	cidr = a[0]
+	if len(a) == 3 {
+		if err := maintenanceStarted.UnmarshalText([]byte(strings.ToUpper(a[1]))); err != nil {
+			log.WithField("memberStr", memberStr).Warn("unable to parse maintenance started timestamp from member str, defaulting to zero value.")
+		}
+		if err := maintenanceFinished.UnmarshalText([]byte(strings.ToUpper(a[2]))); err != nil {
+			log.WithField("memberStr", memberStr).Warn("unable to parse maintenance finished timestamp from member str, defaulting to zero value.")
+		}
+	}
+
+	return ipSetMember{
+		cidr:                cidr,
+		maintenanceStarted:  maintenanceStarted,
+		maintenanceFinished: maintenanceFinished,
+	}, nil
+}
+
+func parseNameAndNamespace(wlId string) (string, string, error) {
+	parts := strings.Split(wlId, "/")
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("could not parse name and namespace from workload id: %s", wlId)
+	}
+	return parts[0], parts[1], nil
 }
 
 func sortStringSet(s set.Set) []string {
@@ -674,6 +771,10 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 		}
 	}
 
+	if err := m.notifyWorkloadsOfEgressGatewayMaintenanceWindows(); err != nil {
+		log.WithError(err).Warn("unable to notify wl pods of egw maintenance, retry on next pass.")
+	}
+
 	return nil
 }
 
@@ -867,26 +968,4 @@ func hardwareAddrForNode(hostname string) (net.HardwareAddr, error) {
 	hw := net.HardwareAddr(append([]byte("f"), sha[0:5]...))
 
 	return hw, nil
-}
-
-func parseIpSetMember(m string) (ipSetMember, error) {
-	var cidr string
-	deletionTimestamp := time.Time{}
-
-	a := strings.Split(m, ",")
-	if len(a) == 0 || len(a) > 2 {
-		return ipSetMember{}, fmt.Errorf("error parsing member str, expected \"cidr,deletionTimestamp\" but got: %s", m)
-	}
-
-	cidr = a[0]
-	if len(a) == 2 {
-		if err := deletionTimestamp.UnmarshalText([]byte(strings.ToUpper(a[1]))); err != nil {
-			log.WithField("memberStr", m).Warn("unable to parse deletion timestamp from member str, defaulting to zero value.")
-		}
-	}
-
-	return ipSetMember{
-		cidr:              cidr,
-		deletionTimestamp: deletionTimestamp,
-	}, nil
 }

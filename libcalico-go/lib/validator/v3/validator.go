@@ -59,6 +59,9 @@ const (
 	routeTableMaxLinux uint32 = 0xffffffff
 
 	globalSelector = "global()"
+
+	operatorApiVersion     = "operator.tigera.io/v1"
+	intrusionDetectionKind = "IntrusionDetection"
 )
 
 const (
@@ -151,6 +154,8 @@ var (
 	RestartModeRegex          = regexp.MustCompile("^(GracefulRestart|LongLivedGracefulRestart)$")
 	BIRDGatewayModeRegex      = regexp.MustCompile("^(Recursive|DirectIfDirectlyConnected)$")
 
+	GlobalAlertTypeRegex = regexp.MustCompile("^(UserDefined|AnomalyDetection)$")
+
 	minAggregationKindValue    = 0
 	maxAggregationKindValue    = 2
 	minDNSAggregationKindValue = 0
@@ -220,6 +225,7 @@ func init() {
 	registerFieldValidator("datastoreType", validateDatastoreType)
 	registerFieldValidator("name", validateName)
 	registerFieldValidator("wildname", ValidateWildName)
+	registerFieldValidator("timestamp", validateTimestamp)
 	registerFieldValidator("ipOrK8sService", validateIPOrK8sService)
 	registerFieldValidator("containerID", validateContainerID)
 	registerFieldValidator("selector", validateSelector)
@@ -264,6 +270,8 @@ func init() {
 	registerFieldValidator("routeSource", validateRouteSource)
 	registerFieldValidator("wireguardPublicKey", validateWireguardPublicKey)
 	registerFieldValidator("IP:port", validateIPPort)
+
+	registerFieldValidator("globalAlertType", RegexValidator("GlobalAlertType", GlobalAlertTypeRegex))
 
 	// Register network validators (i.e. validating a correctly masked CIDR).  Also
 	// accepts an IP address without a mask (assumes a full mask).
@@ -323,6 +331,7 @@ func init() {
 	registerStructValidator(validate, validateGlobalNetworkSet, api.GlobalNetworkSet{})
 	registerStructValidator(validate, validateNetworkSet, api.NetworkSet{})
 	registerStructValidator(validate, validatePull, api.Pull{})
+	registerStructValidator(validate, validateGlobalAlertTemplate, api.GlobalAlertTemplate{})
 	registerStructValidator(validate, validateGlobalAlertSpec, api.GlobalAlertSpec{})
 	registerStructValidator(validate, validateGlobalThreatFeedSpec, api.GlobalThreatFeed{})
 	registerStructValidator(validate, validateFeedFormat, api.ThreatFeedFormat{})
@@ -452,6 +461,17 @@ func ValidateWildName(fl validator.FieldLevel) bool {
 		s = s[:p] + ".example." + s[p+3:]
 	}
 	return nameRegex.MatchString(s)
+}
+
+func validateTimestamp(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	log.Debugf("Validate timestamp: %s", s)
+	t := time.Time{}
+	if err := t.UnmarshalText([]byte(s)); err != nil {
+		log.Debugf("Invalid timestamp '%v': %v", s, err.Error())
+		return false
+	}
+	return true
 }
 
 const k8sServicePrefix = "k8s-service:"
@@ -2601,6 +2621,16 @@ func validateBGPConfigurationSpec(structLevel validator.StructLevel) {
 				}
 			}
 		}
+	}
+
+	// Check that node mesh password cannot be set if node to node mesh is disabled.
+	if spec.NodeMeshPassword != nil && spec.NodeToNodeMeshEnabled != nil && !*spec.NodeToNodeMeshEnabled {
+		structLevel.ReportError(reflect.ValueOf(spec), "Spec.NodeMeshPassword", "", reason("spec.NodeMeshPassword cannot be set if spec.NodeToNodeMesh is disabled"), "")
+	}
+
+	// Check that node mesh max restart time cannot be set if node to node mesh is disabled.
+	if spec.NodeMeshMaxRestartTime != nil && spec.NodeToNodeMeshEnabled != nil && !*spec.NodeToNodeMeshEnabled {
+		structLevel.ReportError(reflect.ValueOf(spec), "Spec.NodeMeshMaxRestartTime", "", reason("spec.NodeMeshMaxRestartTime cannot be set if spec.NodeToNodeMesh is disabled"), "")
 	}
 }
 

@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/resources"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	k8sapi "k8s.io/api/core/v1"
@@ -153,7 +155,8 @@ var _ = testutils.E2eDatastoreDescribe("DPI syncer tests", testutils.DatastoreK8
 					InterfaceName: "cali01234",
 				},
 			}
-			_, err = v3Client.WorkloadEndpoints().Create(ctx, wepObj, options.SetOptions{})
+			ctxCNI := resources.ContextWithPatchMode(ctx, resources.PatchModeCNI)
+			_, err = v3Client.WorkloadEndpoints().Create(ctxCNI, wepObj, options.SetOptions{})
 			Expect(err).ShouldNot(HaveOccurred())
 			expectedCacheSize += 1
 
