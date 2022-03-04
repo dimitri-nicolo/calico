@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ func NewFelixConfigUpdateProcessor() watchersyncer.SyncerUpdateProcessor {
 			"FailsafeOutboundHostPorts": protoPortSliceToString,
 			"DNSTrustedServers":         emptyStringSliceToNone,
 			"RouteTableRange":           routeTableRangeToString,
-			"RouteTableRanges":          routeTableRangesToString,
+			"RouteTableRanges":          routeTableRangeListToString,
 		},
 	)
 }
@@ -80,16 +80,20 @@ var emptyStringSliceToNone = func(value interface{}) interface{} {
 	return strings.Join(slice, ",")
 }
 
-var routeTableRangesToString = func(value interface{}) interface{} {
+// Converts multiple route table ranges to its string config representation.
+// e.g. RouteTableRanges{{Min: 0, Max: 250}, {Min: 255, Max: 3000}} => "0-250,255-3000"
+var routeTableRangeListToString = func(value interface{}) interface{} {
 	ranges := value.(apiv3.RouteTableRanges)
 	rangesStr := make([]string, 0)
 	for _, r := range ranges {
-		rangesStr = append(rangesStr, routeTableRangeToString(r).(string))
+		rangesStr = append(rangesStr, fmt.Sprintf("%d-%d", r.Min, r.Max))
 	}
 	return strings.Join(rangesStr, ",")
 }
 
+// Converts a route table range to its string config representation.
+// e.g. RouteTableRange{Min: 0, Max: 250} => "0-250"
 var routeTableRangeToString = func(value interface{}) interface{} {
-	r := value.(apiv3.RouteTableIDRange)
+	r := value.(apiv3.RouteTableRange)
 	return fmt.Sprintf("%d-%d", r.Min, r.Max)
 }
