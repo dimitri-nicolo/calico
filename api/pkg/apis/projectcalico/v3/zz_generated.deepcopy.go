@@ -9,9 +9,9 @@ package v3
 
 import (
 	numorstring "github.com/tigera/api/pkg/lib/numorstring"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	audit "k8s.io/apiserver/pkg/apis/audit"
 )
@@ -481,6 +481,16 @@ func (in *BGPConfigurationSpec) DeepCopyInto(out *BGPConfigurationSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.NodeMeshPassword != nil {
+		in, out := &in.NodeMeshPassword, &out.NodeMeshPassword
+		*out = new(BGPPassword)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.NodeMeshMaxRestartTime != nil {
+		in, out := &in.NodeMeshMaxRestartTime, &out.NodeMeshMaxRestartTime
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	return
 }
 
@@ -515,7 +525,7 @@ func (in *BGPPassword) DeepCopyInto(out *BGPPassword) {
 	*out = *in
 	if in.SecretKeyRef != nil {
 		in, out := &in.SecretKeyRef, &out.SecretKeyRef
-		*out = new(v1.SecretKeySelector)
+		*out = new(corev1.SecretKeySelector)
 		(*in).DeepCopyInto(*out)
 	}
 	return
@@ -608,7 +618,7 @@ func (in *BGPPeerSpec) DeepCopyInto(out *BGPPeerSpec) {
 	}
 	if in.MaxRestartTime != nil {
 		in, out := &in.MaxRestartTime, &out.MaxRestartTime
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	return
@@ -1615,7 +1625,7 @@ func (in *FederatedServicesControllerConfig) DeepCopyInto(out *FederatedServices
 	*out = *in
 	if in.ReconcilerPeriod != nil {
 		in, out := &in.ReconcilerPeriod, &out.ReconcilerPeriod
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	return
@@ -1706,37 +1716,37 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.RouteRefreshInterval != nil {
 		in, out := &in.RouteRefreshInterval, &out.RouteRefreshInterval
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.InterfaceRefreshInterval != nil {
 		in, out := &in.InterfaceRefreshInterval, &out.InterfaceRefreshInterval
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.IptablesRefreshInterval != nil {
 		in, out := &in.IptablesRefreshInterval, &out.IptablesRefreshInterval
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.IptablesPostWriteCheckInterval != nil {
 		in, out := &in.IptablesPostWriteCheckInterval, &out.IptablesPostWriteCheckInterval
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.IptablesLockTimeout != nil {
 		in, out := &in.IptablesLockTimeout, &out.IptablesLockTimeout
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.IptablesLockProbeInterval != nil {
 		in, out := &in.IptablesLockProbeInterval, &out.IptablesLockProbeInterval
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.IpsetsRefreshInterval != nil {
 		in, out := &in.IpsetsRefreshInterval, &out.IpsetsRefreshInterval
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.MaxIpsetSize != nil {
@@ -1751,12 +1761,12 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.XDPRefreshInterval != nil {
 		in, out := &in.XDPRefreshInterval, &out.XDPRefreshInterval
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.NetlinkTimeout != nil {
 		in, out := &in.NetlinkTimeout, &out.NetlinkTimeout
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.MetadataPort != nil {
@@ -1811,12 +1821,12 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.ReportingInterval != nil {
 		in, out := &in.ReportingInterval, &out.ReportingInterval
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.ReportingTTL != nil {
 		in, out := &in.ReportingTTL, &out.ReportingTTL
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.EndpointReportingEnabled != nil {
@@ -1826,7 +1836,7 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.EndpointReportingDelay != nil {
 		in, out := &in.EndpointReportingDelay, &out.EndpointReportingDelay
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.IptablesMarkMask != nil {
@@ -1918,12 +1928,12 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.UsageReportingInitialDelay != nil {
 		in, out := &in.UsageReportingInitialDelay, &out.UsageReportingInitialDelay
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.UsageReportingInterval != nil {
 		in, out := &in.UsageReportingInterval, &out.UsageReportingInterval
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.NATPortRange != nil {
@@ -1972,12 +1982,12 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.DebugSimulateCalcGraphHangAfter != nil {
 		in, out := &in.DebugSimulateCalcGraphHangAfter, &out.DebugSimulateCalcGraphHangAfter
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.DebugSimulateDataplaneHangAfter != nil {
 		in, out := &in.DebugSimulateDataplaneHangAfter, &out.DebugSimulateDataplaneHangAfter
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.DNSPolicyNfqueueID != nil {
@@ -2027,7 +2037,7 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.BPFKubeProxyMinSyncPeriod != nil {
 		in, out := &in.BPFKubeProxyMinSyncPeriod, &out.BPFKubeProxyMinSyncPeriod
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.BPFKubeProxyEndpointSlicesEnabled != nil {
@@ -2077,12 +2087,12 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.IPSecPolicyRefreshInterval != nil {
 		in, out := &in.IPSecPolicyRefreshInterval, &out.IPSecPolicyRefreshInterval
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.FlowLogsFlushInterval != nil {
 		in, out := &in.FlowLogsFlushInterval, &out.FlowLogsFlushInterval
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.FlowLogsEnableHostEndpoint != nil {
@@ -2207,7 +2217,7 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.WindowsDNSExtraTTL != nil {
 		in, out := &in.WindowsDNSExtraTTL, &out.WindowsDNSExtraTTL
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.DNSTrustedServers != nil {
@@ -2221,7 +2231,7 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.DNSCacheSaveInterval != nil {
 		in, out := &in.DNSCacheSaveInterval, &out.DNSCacheSaveInterval
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.DNSCacheEpoch != nil {
@@ -2231,12 +2241,12 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.DNSExtraTTL != nil {
 		in, out := &in.DNSExtraTTL, &out.DNSExtraTTL
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.DNSLogsFlushInterval != nil {
 		in, out := &in.DNSLogsFlushInterval, &out.DNSLogsFlushInterval
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.DNSLogsFileEnabled != nil {
@@ -2281,7 +2291,7 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.L7LogsFlushInterval != nil {
 		in, out := &in.L7LogsFlushInterval, &out.L7LogsFlushInterval
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.L7LogsFileEnabled != nil {
@@ -2415,7 +2425,7 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.WireguardPersistentKeepAlive != nil {
 		in, out := &in.WireguardPersistentKeepAlive, &out.WireguardPersistentKeepAlive
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.CaptureDir != nil {
@@ -2450,7 +2460,7 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.AWSRequestTimeout != nil {
 		in, out := &in.AWSRequestTimeout, &out.AWSRequestTimeout
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.TPROXYPort != nil {
@@ -2558,12 +2568,12 @@ func (in *GlobalAlertSpec) DeepCopyInto(out *GlobalAlertSpec) {
 	*out = *in
 	if in.Period != nil {
 		in, out := &in.Period, &out.Period
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.Lookback != nil {
 		in, out := &in.Lookback, &out.Lookback
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.AggregateBy != nil {
@@ -3177,12 +3187,12 @@ func (in *HTTPHeaderSource) DeepCopyInto(out *HTTPHeaderSource) {
 	*out = *in
 	if in.ConfigMapKeyRef != nil {
 		in, out := &in.ConfigMapKeyRef, &out.ConfigMapKeyRef
-		*out = new(v1.ConfigMapKeySelector)
+		*out = new(corev1.ConfigMapKeySelector)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.SecretKeyRef != nil {
 		in, out := &in.SecretKeyRef, &out.SecretKeyRef
-		*out = new(v1.SecretKeySelector)
+		*out = new(corev1.SecretKeySelector)
 		(*in).DeepCopyInto(*out)
 	}
 	return
@@ -3646,7 +3656,7 @@ func (in *KubeControllersConfigurationSpec) DeepCopyInto(out *KubeControllersCon
 	*out = *in
 	if in.EtcdV3CompactionPeriod != nil {
 		in, out := &in.EtcdV3CompactionPeriod, &out.EtcdV3CompactionPeriod
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.PrometheusMetricsPort != nil {
@@ -3952,7 +3962,7 @@ func (in *NamespaceControllerConfig) DeepCopyInto(out *NamespaceControllerConfig
 	*out = *in
 	if in.ReconcilerPeriod != nil {
 		in, out := &in.ReconcilerPeriod, &out.ReconcilerPeriod
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	return
@@ -4159,7 +4169,7 @@ func (in *NodeControllerConfig) DeepCopyInto(out *NodeControllerConfig) {
 	*out = *in
 	if in.ReconcilerPeriod != nil {
 		in, out := &in.ReconcilerPeriod, &out.ReconcilerPeriod
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.HostEndpoint != nil {
@@ -4169,7 +4179,7 @@ func (in *NodeControllerConfig) DeepCopyInto(out *NodeControllerConfig) {
 	}
 	if in.LeakGracePeriod != nil {
 		in, out := &in.LeakGracePeriod, &out.LeakGracePeriod
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	return
@@ -4357,7 +4367,7 @@ func (in *PolicyControllerConfig) DeepCopyInto(out *PolicyControllerConfig) {
 	*out = *in
 	if in.ReconcilerPeriod != nil {
 		in, out := &in.ReconcilerPeriod, &out.ReconcilerPeriod
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	return
@@ -4614,7 +4624,7 @@ func (in *RemoteClusterConfigurationSpec) DeepCopyInto(out *RemoteClusterConfigu
 	*out = *in
 	if in.ClusterAccessSecret != nil {
 		in, out := &in.ClusterAccessSecret, &out.ClusterAccessSecret
-		*out = new(v1.ObjectReference)
+		*out = new(corev1.ObjectReference)
 		**out = **in
 	}
 	out.EtcdConfig = in.EtcdConfig
@@ -4701,7 +4711,7 @@ func (in *ReportJob) DeepCopyInto(out *ReportJob) {
 	in.End.DeepCopyInto(&out.End)
 	if in.Job != nil {
 		in, out := &in.Job, &out.Job
-		*out = new(v1.ObjectReference)
+		*out = new(corev1.ObjectReference)
 		**out = **in
 	}
 	return
@@ -4990,7 +5000,7 @@ func (in *ServiceAccountControllerConfig) DeepCopyInto(out *ServiceAccountContro
 	*out = *in
 	if in.ReconcilerPeriod != nil {
 		in, out := &in.ReconcilerPeriod, &out.ReconcilerPeriod
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	return
@@ -5882,7 +5892,7 @@ func (in *WorkloadEndpointControllerConfig) DeepCopyInto(out *WorkloadEndpointCo
 	*out = *in
 	if in.ReconcilerPeriod != nil {
 		in, out := &in.ReconcilerPeriod, &out.ReconcilerPeriod
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	return
