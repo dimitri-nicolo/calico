@@ -22,12 +22,28 @@ type awsState struct {
 	calicoOwnedENIsByID    map[string]*eniState
 	nonCalicoOwnedENIsByID map[string]*eniState
 	eniIDsBySubnet         map[string][]string
-	eniIDByIP              map[ip.Addr]string
+	eniIDBySecondaryIP     map[ip.Addr]string
 	eniIDByPrimaryIP       map[ip.Addr]string
 	attachmentIDByENIID    map[string]string
 
 	inUseDeviceIndexes      map[int32]bool
 	freeIPv4CapacityByENIID map[string]int
+}
+
+func newAWSState(networkCapabilities *NetworkCapabilities) *awsState {
+	return &awsState{
+		capabilities: networkCapabilities,
+
+		calicoOwnedENIsByID:    map[string]*eniState{},
+		nonCalicoOwnedENIsByID: map[string]*eniState{},
+		eniIDsBySubnet:         map[string][]string{},
+		eniIDBySecondaryIP:     map[ip.Addr]string{},
+		eniIDByPrimaryIP:       map[ip.Addr]string{},
+		attachmentIDByENIID:    map[string]string{},
+
+		inUseDeviceIndexes:      map[int32]bool{},
+		freeIPv4CapacityByENIID: map[string]int{},
+	}
 }
 
 func (s *awsState) PrimaryENISecurityGroups() []string {
@@ -53,24 +69,26 @@ func (s *awsState) ClaimDeviceIdx(devIdx int32) {
 	s.inUseDeviceIndexes[devIdx] = true
 }
 
-func (s *awsState) OnPrivateIPsAdded(eniID string, addrs []string) {
+func (s *awsState) OnSecondaryIPsAdded(eniID string, addrs []string) {
 	eni := s.calicoOwnedENIsByID[eniID]
 	for _, addrStr := range addrs {
 		addr := ip.FromString(addrStr)
 		if addr == nil {
 			rlAWSProblemLogger.WithField("rawIP", addrStr).Error(
 				"BUG! Successfully added a bad IP to AWS?!")
+			// Defensive, record that an IP slot is filled anyway.  This will get refreshed on the next resync.
+			eni.numFilteredIPs++
 			continue
 		}
 		eni.IPAddresses = append(eni.IPAddresses, &eniIPAddress{
 			PrivateIP: addr,
 		})
-		s.eniIDByIP[addr] = eniID
+		s.eniIDBySecondaryIP[addr] = eniID
 	}
-	s.freeIPv4CapacityByENIID[eni.ID] = s.capabilities.MaxIPv4PerInterface - len(eni.IPAddresses)
+	s.refreshFreeIPCount(eni)
 }
 
-func (s *awsState) OnPrivateIPsRemoved(eniID string, addrs []string) {
+func (s *awsState) OnSecondaryIPsRemoved(eniID string, addrs []string) {
 	removedIPs := set.New()
 	for _, addrStr := range addrs {
 		addr := ip.FromString(addrStr)
@@ -80,6 +98,7 @@ func (s *awsState) OnPrivateIPsRemoved(eniID string, addrs []string) {
 			continue
 		}
 		removedIPs.Add(addr)
+		delete(s.eniIDBySecondaryIP, addr)
 	}
 
 	eni := s.calicoOwnedENIsByID[eniID]
@@ -91,21 +110,41 @@ func (s *awsState) OnPrivateIPsRemoved(eniID string, addrs []string) {
 		newIPs = append(newIPs, eniIP)
 	}
 	eni.IPAddresses = newIPs
-	s.freeIPv4CapacityByENIID[eni.ID] = s.capabilities.MaxIPv4PerInterface - len(eni.IPAddresses)
+	s.refreshFreeIPCount(eni)
 }
 
 func (s *awsState) OnCalicoENIAttached(eni *eniState) {
+	logCtx := logrus.WithField("id", eni.ID)
+	logCtx.Debug("Adding Calico ENI to cached state")
 	s.calicoOwnedENIsByID[eni.ID] = eni
 	s.eniIDsBySubnet[eni.SubnetID] = append(s.eniIDsBySubnet[eni.SubnetID], eni.ID)
 	for _, eniAddr := range eni.IPAddresses {
-		s.eniIDByIP[eniAddr.PrivateIP] = eni.ID
 		if eniAddr.Primary {
+			logCtx.WithField("ip", eniAddr.PrivateIP).Debug("Found primary IP on Calico ENI")
 			s.eniIDByPrimaryIP[eniAddr.PrivateIP] = eni.ID
+		} else {
+			logCtx.WithField("ip", eniAddr.PrivateIP).Debug("Found secondary IP on Calico ENI")
+			s.eniIDBySecondaryIP[eniAddr.PrivateIP] = eni.ID
 		}
 	}
-	s.attachmentIDByENIID[eni.ID] = eni.Attachment.ID
-	s.inUseDeviceIndexes[eni.Attachment.DeviceIndex] = true
-	s.freeIPv4CapacityByENIID[eni.ID] = s.capabilities.MaxIPv4PerInterface - len(eni.IPAddresses)
+	if eni.Attachment != nil {
+		s.attachmentIDByENIID[eni.ID] = eni.Attachment.ID
+		s.inUseDeviceIndexes[eni.Attachment.DeviceIndex] = true
+	} else {
+		logCtx.Warn("AWS returned ENI with no attachment (even though it should already be attached)")
+	}
+	s.refreshFreeIPCount(eni)
+}
+
+func (s *awsState) refreshFreeIPCount(eni *eniState) {
+	logCtx := logrus.WithField("id", eni.ID)
+	s.freeIPv4CapacityByENIID[eni.ID] = s.capabilities.MaxIPv4PerInterface - eni.NumIPs()
+	logCtx.WithField("availableIPs", s.freeIPv4CapacityByENIID[eni.ID]).Debug("Calculated available IPs")
+	if s.freeIPv4CapacityByENIID[eni.ID] < 0 {
+		logCtx.Errorf("ENI appears to have more IPs (%v) that it should (%v)", eni.NumIPs(),
+			s.capabilities.MaxIPv4PerInterface)
+		s.freeIPv4CapacityByENIID[eni.ID] = 0
+	}
 }
 
 func (s *awsState) OnCalicoENIDetached(eniID string) {
@@ -125,9 +164,10 @@ func (s *awsState) OnCalicoENIDetached(eniID string) {
 	s.eniIDsBySubnet[eni.SubnetID] = newENIsBySubnet
 
 	for _, eniAddr := range eni.IPAddresses {
-		delete(s.eniIDByIP, eniAddr.PrivateIP)
 		if eniAddr.Primary {
 			delete(s.eniIDByPrimaryIP, eniAddr.PrivateIP)
+		} else {
+			delete(s.eniIDBySecondaryIP, eniAddr.PrivateIP)
 		}
 	}
 	delete(s.attachmentIDByENIID, eni.ID)
@@ -236,6 +276,8 @@ func awsNetworkInterfaceToENIState(eni ec2types.NetworkInterface) *eniState {
 		}
 		ourENI.IPAddresses = append(ourENI.IPAddresses, &ourAddr)
 	}
+	// Defensive: record the number of IPs we filtered out.
+	ourENI.numFilteredIPs = len(eni.PrivateIpAddresses) - len(ourENI.IPAddresses)
 
 	for _, g := range eni.Groups {
 		if g.GroupId != nil {
@@ -253,6 +295,11 @@ type eniState struct {
 	IPAddresses      []*eniIPAddress
 	SecurityGroupIDs []string
 	Attachment       *eniAttachment
+	numFilteredIPs   int
+}
+
+func (s eniState) NumIPs() int {
+	return len(s.IPAddresses) + s.numFilteredIPs
 }
 
 type eniAttachment struct {
