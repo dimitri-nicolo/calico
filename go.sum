@@ -1079,10 +1079,10 @@ github.com/tebeka/strftime v0.1.5/go.mod h1:29/OidkoWHdEKZqzyDLUyC+LmgDgdHo4WAFC
 github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae/go.mod h1:quDq6Se6jlGwiIKia/itDZxqC5rj6/8OdFyMMAwTxCs=
 github.com/thecodeteam/goscaleio v0.1.0/go.mod h1:68sdkZAsK8bvEwBlbQnlLS+xU+hvLYM/iQ8KXej1AwM=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
-github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220225222658-aa2d6d079e27 h1:0AS5kB8C3qc0JUxOKP6jC6GIXxonSe8uhDMqtDKxQdE=
-github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220225222658-aa2d6d079e27/go.mod h1:tiRFUpD9DIIjYt2qkWuUbeyA9hcy8KV78vDl6OEhwjA=
-github.com/tigera/calico-private/api v0.0.0-20220225222658-aa2d6d079e27 h1:TNGdJYr+KMBZ5bBZKmM3oy0ilPJqeI2x0Y7FPWFaKxc=
-github.com/tigera/calico-private/api v0.0.0-20220225222658-aa2d6d079e27/go.mod h1:6qWfgULooruKiC8eoGgyRjOh0K+h/q8bc7AvdUysAUo=
+github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220305191636-f0b8c16c0a20 h1:oWtvKYy4SlqIHklw/wecVqUtfNw6wWIg7CwWtt4otXs=
+github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220305191636-f0b8c16c0a20/go.mod h1:tiRFUpD9DIIjYt2qkWuUbeyA9hcy8KV78vDl6OEhwjA=
+github.com/tigera/calico-private/api v0.0.0-20220305191636-f0b8c16c0a20 h1:31URGS2BgUgKaVqYweGDp9DCK++KxOU+hyPm5sgYF4M=
+github.com/tigera/calico-private/api v0.0.0-20220305191636-f0b8c16c0a20/go.mod h1:6qWfgULooruKiC8eoGgyRjOh0K+h/q8bc7AvdUysAUo=
 github.com/tigera/lma v0.0.0-20220218045600-c022a4ca0fc8 h1:hoK3qF25UAyRPZxcJq8wRIcPT5ivlZ4p9ntlfFgphsQ=
 github.com/tigera/lma v0.0.0-20220218045600-c022a4ca0fc8/go.mod h1:KwZd86jYy1rZKg+FHeyoFbHkV6LQhqyiaKAxOW/lylw=
 github.com/tigera/windows-networking v0.0.0-20211112174220-6a90051af748/go.mod h1:zuycD4KqAFNMJC+Bv4fGqGMn7XsS/mZnttHGe96NLk0=
