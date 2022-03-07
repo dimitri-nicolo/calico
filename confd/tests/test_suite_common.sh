@@ -773,6 +773,8 @@ execute_tests_daemon() {
     # Run the explicit peering tests.
     for i in $(seq 1 2); do
         run_individual_test 'explicit_peering/global'
+        run_individual_test 'explicit_peering/global-external'
+        run_individual_test 'explicit_peering/global-ipv6'
         run_individual_test 'explicit_peering/specific_node'
         run_edited_individual_test 'extensions/bgppeer/global' "# Test Value: {{(json (getv \"/global/peer_v4/10.192.0.3\")).extensions.testKey}}"
         run_edited_individual_test 'extensions/bgppeer/specific_node' "# Test Value: {{(json (getv \"/host/kube-master/peer_v4/10.192.0.3\")).extensions.testKey}}"
