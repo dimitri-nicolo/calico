@@ -821,6 +821,33 @@ func extractEventData(record JsonObject) lmaAPI.EventsData {
 	}
 
 	e.Record = record
+
+	// Allow for nested structures specifically for WAF logs.
+	if val, ok := record["source"].(map[string]interface{}); ok {
+		if nestedVal, ok := val["ip"].(string); ok {
+			e.SourceIP = &nestedVal
+		}
+		if nestedVal, ok := val["hostname"].(string); ok {
+			e.SourceName = nestedVal
+		}
+		if nestedVal, ok := val["port_num"].(float64); ok {
+			v := int64(nestedVal)
+			e.SourcePort = &v
+		}
+	}
+	if val, ok := record["destination"].(map[string]interface{}); ok {
+		if nestedVal, ok := val["ip"].(string); ok {
+			e.DestIP = &nestedVal
+		}
+		if nestedVal, ok := val["hostname"].(string); ok {
+			e.DestName = nestedVal
+		}
+		if nestedVal, ok := val["port_num"].(float64); ok {
+			v := int64(nestedVal)
+			e.DestPort = &v
+		}
+	}
+
 	return e
 }
 
