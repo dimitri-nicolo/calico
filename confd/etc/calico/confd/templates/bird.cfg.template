@@ -225,6 +225,9 @@ protocol bgp Global_{{$id}} from bgp_template {
   multihop;
 {{- end}}
   gateway {{$data.gateway_mode}};
+{{- if and ($data.calico_node) (gt $data.ip $node_ip)}}
+  passive on; # Peering is unidirectional, peer will connect to us.
+{{- end}}
 {{- if eq $data.restart_mode "LongLivedGracefulRestart"}}
   graceful restart time 0;
   long lived graceful restart yes;
