@@ -46,7 +46,7 @@ const (
 // ipamInterface is just the parts of the IPAM interface that we need.
 type ipamInterface interface {
 	AutoAssign(ctx context.Context, args ipam.AutoAssignArgs) (*ipam.IPAMAssignments, *ipam.IPAMAssignments, error)
-	ReleaseIPs(ctx context.Context, ips []calinet.IP) ([]calinet.IP, error)
+	ReleaseIPs(ctx context.Context, ips ...ipam.ReleaseOptions) ([]calinet.IP, error)
 	IPsByHandle(ctx context.Context, handleID string) ([]calinet.IP, error)
 }
 
@@ -1206,7 +1206,7 @@ func (m *SecondaryIfaceProvisioner) freeUnusedHostCalicoIPs(awsState *awsState) 
 			// any orphaned ENIs or deleted them.  Clean up the IP.
 			logrus.WithField("addr", addr).Info(
 				"Found IP assigned to this node in IPAM but not in use for an AWS ENI, freeing it.")
-			_, err := m.ipamClient.ReleaseIPs(ctx, []calinet.IP{addr})
+			_, err := m.ipamClient.ReleaseIPs(ctx, ipam.ReleaseOptions{Address: addr.IP.String()})
 			if err != nil {
 				logrus.WithError(err).WithField("ip", addr).Error(
 					"Failed to free host IP that we no longer need.")
