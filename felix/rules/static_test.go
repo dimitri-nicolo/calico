@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
 package rules_test
 
 import (
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	. "github.com/projectcalico/calico/felix/rules"
 
 	"fmt"
@@ -92,7 +94,9 @@ var _ = Describe("Static", func() {
 						{Net: "0.0.0.0/0", Protocol: "tcp", Port: 23},
 						{Net: "0.0.0.0/0", Protocol: "tcp", Port: 1023},
 					},
+					DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
 					DNSPolicyNfqueueID:               100,
+					DNSPacketsNfqueueID:              101,
 					IptablesMarkAccept:               0x10,
 					IptablesMarkPass:                 0x20,
 					IptablesMarkScratch0:             0x40,
@@ -529,6 +533,44 @@ var _ = Describe("Static", func() {
 					It("should return only the expected raw chains", func() {
 						Expect(len(rr.StaticRawTableChains(ipVersion))).To(Equal(5))
 					})
+					Describe("DNSMode is DNSPolicyModeDelayDNSResponse", func() {
+						BeforeEach(func() {
+							conf.DNSPolicyMode = apiv3.DNSPolicyModeDelayDNSResponse
+						})
+						It("should include the expected forward chain in the filter chains when DNSMode is DelayDNSResponse", func() {
+							// Only adding a single test for static rules in the DelayDNSResponse mode since the generation
+							// is common to the INPUT, OUTPUT and FORWARD chains.
+							Expect(findChain(rr.StaticFilterTableChains(ipVersion), "cali-FORWARD")).To(Equal(&Chain{
+								Name: "cali-FORWARD",
+								Rules: []Rule{
+									// DNS response capture and queue.
+									{Match: Match().OutInterface("cali+").Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
+										Action: NfqueueWithBypassAction{QueueNum: 101}},
+									// DNS request capture.
+									{Match: Match().InInterface("cali+").Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(53).ConntrackOrigDst(trustedServerIP),
+										Action: NflogAction{Group: 3, Prefix: "DNS", Size: 1024}},
+									// Incoming host endpoint chains.
+									{Action: ClearMarkAction{Mark: 0xe1}},
+									{Match: Match().MarkClear(0x10),
+										Action: JumpAction{Target: ChainDispatchFromHostEndPointForward}},
+									// Per-prefix workload jump rules.
+									{Match: Match().InInterface("cali+"),
+										Action: JumpAction{Target: ChainFromWorkloadDispatch}},
+									{Match: Match().OutInterface("cali+"),
+										Action: JumpAction{Target: ChainToWorkloadDispatch}},
+									// Outgoing host endpoint chains.
+									{Action: JumpAction{Target: ChainDispatchToHostEndpointForward}},
+									{Action: JumpAction{Target: ChainCIDRBlock}},
+									{
+										Match:   Match().MarkSingleBitSet(0x10),
+										Action:  AcceptAction{},
+										Comment: []string{"Policy explicitly accepted packet."},
+									},
+									{Action: SetMarkAction{Mark: 0x10}},
+								},
+							}))
+						})
+					})
 				})
 			}
 
@@ -664,7 +706,9 @@ var _ = Describe("Static", func() {
 					IPIPTunnelAddress:                net.ParseIP("10.0.0.1"),
 					IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 					IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+					DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
 					DNSPolicyNfqueueID:               100,
+					DNSPacketsNfqueueID:              101,
 					IptablesMarkAccept:               0x10,
 					IptablesMarkPass:                 0x20,
 					IptablesMarkScratch0:             0x40,
@@ -1062,7 +1106,9 @@ var _ = Describe("Static", func() {
 				WorkloadIfacePrefixes:            []string{"cali"},
 				IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 				IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
 				DNSPolicyNfqueueID:               100,
+				DNSPacketsNfqueueID:              101,
 				IptablesMarkAccept:               0x10,
 				IptablesMarkPass:                 0x20,
 				IptablesMarkScratch0:             0x40,
@@ -1162,7 +1208,9 @@ var _ = Describe("Static", func() {
 				WorkloadIfacePrefixes:            []string{"tap"},
 				IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 				IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
 				DNSPolicyNfqueueID:               100,
+				DNSPacketsNfqueueID:              101,
 				OpenStackSpecialCasesEnabled:     true,
 				OpenStackMetadataIP:              net.ParseIP("10.0.0.1"),
 				OpenStackMetadataPort:            1234,
@@ -1270,7 +1318,9 @@ var _ = Describe("Static", func() {
 				WorkloadIfacePrefixes:            []string{"tap"},
 				IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 				IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
 				DNSPolicyNfqueueID:               100,
+				DNSPacketsNfqueueID:              101,
 				OpenStackSpecialCasesEnabled:     true,
 				OpenStackMetadataIP:              net.ParseIP("10.0.0.1"),
 				OpenStackMetadataPort:            1234,
@@ -1346,7 +1396,9 @@ var _ = Describe("Static", func() {
 				WorkloadIfacePrefixes:            []string{"tap"},
 				IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 				IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
 				DNSPolicyNfqueueID:               100,
+				DNSPacketsNfqueueID:              101,
 				EgressIPEnabled:                  true,
 				IptablesMarkAccept:               0x10,
 				IptablesMarkPass:                 0x20,
@@ -1472,7 +1524,9 @@ var _ = Describe("Static", func() {
 				WorkloadIfacePrefixes:            []string{"cali"},
 				IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 				IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
 				DNSPolicyNfqueueID:               100,
+				DNSPacketsNfqueueID:              101,
 				IptablesMarkAccept:               0x10,
 				IptablesMarkPass:                 0x20,
 				IptablesMarkScratch0:             0x40,
@@ -1573,7 +1627,9 @@ var _ = Describe("Static", func() {
 				WorkloadIfacePrefixes:            []string{"cali"},
 				IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 				IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
 				DNSPolicyNfqueueID:               100,
+				DNSPacketsNfqueueID:              101,
 				IptablesMarkAccept:               0x10,
 				IptablesMarkPass:                 0x20,
 				IptablesMarkScratch0:             0x40,
@@ -1631,7 +1687,9 @@ var _ = Describe("Static", func() {
 	Describe("with drop override and multiple prefixes", func() {
 		BeforeEach(func() {
 			conf = Config{
+				DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
 				DNSPolicyNfqueueID:               100,
+				DNSPacketsNfqueueID:              101,
 				WorkloadIfacePrefixes:            []string{"cali", "tap"},
 				ActionOnDrop:                     "ACCEPT",
 				IptablesMarkAccept:               0x10,
@@ -1787,7 +1845,9 @@ var _ = Describe("DropRules", func() {
 	Describe("with LOGandDROP override", func() {
 		BeforeEach(func() {
 			conf = Config{
+				DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
 				DNSPolicyNfqueueID:               100,
+				DNSPacketsNfqueueID:              101,
 				WorkloadIfacePrefixes:            []string{"cali", "tap"},
 				ActionOnDrop:                     "LOGandDROP",
 				IptablesMarkAccept:               0x10,

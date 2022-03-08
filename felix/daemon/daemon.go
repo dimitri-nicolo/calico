@@ -403,19 +403,19 @@ configRetry:
 		}
 	}
 
-	// Correct the DNSPolicyMode based on dataplane and Kernel version. The delay packet modes are only available on
-	// the iptables dataplane.
+	// Fix the DNSPolicyMode based on dataplane and Kernel version. The delay packet modes are only available on
+	// the iptables dataplane, and the DelayDNSResponse mode is only available on higher kernel versions.
 	var overrideDNSPolicy string
 	if err := dp.SupportsNfQueue(); err != nil {
 		log.Info("Dataplane does not support NfQueue. Set DNSPolicyMode to NoDelay")
-		overrideDNSPolicy = "NoDelay"
+		overrideDNSPolicy = string(apiv3.DNSPolicyModeNoDelay)
 	} else if configParams.BPFEnabled {
 		log.Info("Dataplane is using eBPF which does not support NfQueue. Set DNSPolicyMode to NoDelay")
-		overrideDNSPolicy = "NoDelay"
-	} else if configParams.DNSPolicyMode == "DelayDNSResponse" {
+		overrideDNSPolicy = string(apiv3.DNSPolicyModeNoDelay)
+	} else if configParams.DNSPolicyMode == string(apiv3.DNSPolicyModeDelayDNSResponse) {
 		if err := dp.SupportsNfQueueWithBypass(); err != nil {
 			log.Info("Dataplane does not support NfQueue bypass option. Downgrade DNSPolicyMode to DelayDeniedPacket")
-			overrideDNSPolicy = "DelayDeniedPacket"
+			overrideDNSPolicy = string(apiv3.DNSPolicyModeDelayDeniedPacket)
 		}
 	}
 

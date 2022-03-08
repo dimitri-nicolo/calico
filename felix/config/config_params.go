@@ -380,6 +380,7 @@ type Config struct {
 	FlowLogsFileNatOutgoingPortLimit      int    `config:"int;3"`
 	FlowLogsFileDomainsLimit              int    `config:"int;5"`
 
+	DNSPolicyMode                    string        `config:"oneof(NoDelay,DelayDeniedPacket,DelayDNSResponse);DelayDeniedPacket;non-zero"`
 	DNSLogsFlushInterval             time.Duration `config:"seconds;300"`
 	DNSLogsFileEnabled               bool          `config:"bool;false"`
 	DNSLogsFileDirectory             string        `config:"string;/var/log/calico/dnslogs"`
@@ -389,7 +390,6 @@ type Config struct {
 	DNSLogsFileIncludeLabels         bool          `config:"bool;true"`
 	DNSLogsFilePerNodeLimit          int           `config:"int;0"`
 	DNSLogsLatency                   bool          `config:"bool;true"`
-	DNSPolicyMode                    string        `config:"oneof(NoDelay,DelayDeniedPacket,DelayDNSResponse);DelayDeniedPacket;non-zero"`
 	DNSPolicyNfqueueID               int           `config:"int;100"`
 	DNSPolicyNfqueueSize             int           `config:"int;100"`
 	DNSPacketsNfqueueID              int           `config:"int;101"`

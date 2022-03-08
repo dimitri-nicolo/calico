@@ -315,7 +315,9 @@ func StartDataplaneDriver(configParams *config.Config,
 				OpenStackMetadataIP:          net.ParseIP(configParams.MetadataAddr),
 				OpenStackMetadataPort:        uint16(configParams.MetadataPort),
 
-				DNSPolicyNfqueueID: int64(configParams.DNSPolicyNfqueueID),
+				DNSPolicyMode:       apiv3.DNSPolicyMode(configParams.DNSPolicyMode),
+				DNSPolicyNfqueueID:  int64(configParams.DNSPolicyNfqueueID),
+				DNSPacketsNfqueueID: int64(configParams.DNSPacketsNfqueueID),
 
 				IptablesMarkAccept:               markAccept,
 				IptablesMarkPass:                 markPass,

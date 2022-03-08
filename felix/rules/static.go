@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@ package rules
 import (
 	"fmt"
 	"strings"
+
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	log "github.com/sirupsen/logrus"
 
@@ -288,7 +290,7 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 	// DNS servers, so the DNS info is trustworthy even if the packet gets dropped later by
 	// policy.  Also, if we placed this after host endpoint policy processing, we might be too
 	// late because of the packet already having been accepted.
-	inputRules = append(inputRules, r.dnsSnoopingRules("", ipVersion)...)
+	inputRules = append(inputRules, r.dnsResponseSnoopingRules("", ipVersion)...)
 
 	// Similar rules to snoop DNS requests from a local Calico-networked client to a local
 	// host-networked DNS server.
@@ -686,7 +688,7 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*Chai
 	for _, prefix := range r.WorkloadIfacePrefixes {
 		log.WithField("ifacePrefix", prefix).Debug("Adding DNS snooping rules")
 		ifaceMatch := prefix + "+"
-		rules = append(rules, r.dnsSnoopingRules(ifaceMatch, ipVersion)...)
+		rules = append(rules, r.dnsResponseSnoopingRules(ifaceMatch, ipVersion)...)
 		rules = append(rules, r.dnsRequestSnoopingRules(ifaceMatch, ipVersion)...)
 	}
 
@@ -747,7 +749,7 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains(ipVersion uint8) []*Chai
 	}}
 }
 
-func (r *DefaultRuleRenderer) dnsSnoopingRules(ifaceMatch string, ipVersion uint8) (rules []Rule) {
+func (r *DefaultRuleRenderer) dnsResponseSnoopingRules(ifaceMatch string, ipVersion uint8) (rules []Rule) {
 	for _, server := range r.DNSTrustedServers {
 		if (ipVersion == 4) && strings.Contains(server.IP, ":") {
 			continue
@@ -763,20 +765,37 @@ func (r *DefaultRuleRenderer) dnsSnoopingRules(ifaceMatch string, ipVersion uint
 			// DNS response INPUT to host-networked client workload, so there is no outgoing interface.
 			baseMatch = Match()
 		}
-		rules = append(rules,
-			Rule{
-				Match: baseMatch.Protocol("udp").ConntrackState("ESTABLISHED").ConntrackOrigDstPort(server.Port).ConntrackOrigDst(server.IP),
-				Action: NflogAction{
-					Group:       NFLOGDomainGroup,
-					Prefix:      "DNS",
-					SizeEnabled: r.EnableNflogSize,
-					// Traditional DNS over UDP has a maximum size of 512 bytes,
-					// but we need to allow for headers as well (Ethernet, IP
-					// and UDP); 1024 will amply cover what we need.
-					Size: 1024,
+		if r.Config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDNSResponse && r.Config.DNSPacketsNfqueueID != 0 {
+			// We are delaying the DNS response by queueing the response packet.
+			rules = append(rules,
+				Rule{
+					Match: baseMatch.Protocol("udp").
+						ConntrackState("ESTABLISHED").
+						ConntrackOrigDstPort(server.Port).
+						ConntrackOrigDst(server.IP),
+					Action: NfqueueWithBypassAction{QueueNum: r.Config.DNSPacketsNfqueueID},
 				},
-			},
-		)
+			)
+		} else {
+			// We are not delaying the DNS response, so just add an NFLOG rule to snoop responses.
+			rules = append(rules,
+				Rule{
+					Match: baseMatch.Protocol("udp").
+						ConntrackState("ESTABLISHED").
+						ConntrackOrigDstPort(server.Port).
+						ConntrackOrigDst(server.IP),
+					Action: NflogAction{
+						Group:       NFLOGDomainGroup,
+						Prefix:      "DNS",
+						SizeEnabled: r.EnableNflogSize,
+						// Traditional DNS over UDP has a maximum size of 512 bytes,
+						// but we need to allow for headers as well (Ethernet, IP
+						// and UDP); 1024 will amply cover what we need.
+						Size: 1024,
+					},
+				},
+			)
+		}
 	}
 	return
 }
@@ -801,7 +820,10 @@ func (r *DefaultRuleRenderer) dnsRequestSnoopingRules(ifaceMatch string, ipVersi
 		}
 		rules = append(rules,
 			Rule{
-				Match: baseMatch.Protocol("udp").ConntrackState("NEW").ConntrackOrigDstPort(server.Port).ConntrackOrigDst(server.IP),
+				Match: baseMatch.Protocol("udp").
+					ConntrackState("NEW").
+					ConntrackOrigDstPort(server.Port).
+					ConntrackOrigDst(server.IP),
 				Action: NflogAction{
 					Group:       NFLOGDomainGroup,
 					Prefix:      "DNS",
@@ -887,7 +909,7 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *Chain {
 		// belongs to an IPVS connection and return at the end.
 		log.WithField("ifacePrefix", prefix).Debug("Adding workload match rules")
 		ifaceMatch := prefix + "+"
-		rules = append(rules, r.dnsSnoopingRules(ifaceMatch, ipVersion)...)
+		rules = append(rules, r.dnsResponseSnoopingRules(ifaceMatch, ipVersion)...)
 		rules = append(rules,
 			Rule{
 				// if packet goes to a workload endpoint. set return action properly.
@@ -1776,11 +1798,11 @@ func (r DefaultRuleRenderer) DropRules(matchCriteria MatchCriteria, comments ...
 	return rules
 }
 
-// NfqueueRule combines the matchCritera and comments given in the function parameters to the nfqueue rule calculated when
-// the DefaultRenderer was constructed.
-func (r DefaultRuleRenderer) NfqueueRule(matchCriteria MatchCriteria, comments ...string) *Rule {
-	if r.Config.IptablesMarkDNSPolicy != 0x0 && r.nfqueueRule != nil {
-		nfqueueRule := *r.nfqueueRule
+// NfqueueRuleDelayDeniedPacket combines the matchCritera and comments given in the function parameters to the delay-denied packet
+// nfqueue rule calculated when the DefaultRenderer was constructed.
+func (r DefaultRuleRenderer) NfqueueRuleDelayDeniedPacket(matchCriteria MatchCriteria, comments ...string) *Rule {
+	if r.nfqueueRuleDelayDeniedPacket != nil {
+		nfqueueRule := *r.nfqueueRuleDelayDeniedPacket
 
 		if matchCriteria != nil {
 			nfqueueRule.Match = Combine(nfqueueRule.Match, matchCriteria)

@@ -21,6 +21,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 
 	"github.com/projectcalico/calico/felix/config"
@@ -325,12 +326,12 @@ type RuleRenderer interface {
 type DefaultRuleRenderer struct {
 	Config
 
-	dropRules          []iptables.Rule
-	inputAcceptActions []iptables.Action
-	filterAllowAction  iptables.Action
-	mangleAllowAction  iptables.Action
-	blockCIDRAction    iptables.Action
-	nfqueueRule        *iptables.Rule
+	dropRules                    []iptables.Rule
+	inputAcceptActions           []iptables.Action
+	filterAllowAction            iptables.Action
+	mangleAllowAction            iptables.Action
+	blockCIDRAction              iptables.Action
+	nfqueueRuleDelayDeniedPacket *iptables.Rule
 }
 
 func (r *DefaultRuleRenderer) ipSetConfig(ipVersion uint8) *ipsets.IPVersionConfig {
@@ -350,7 +351,9 @@ type Config struct {
 
 	WorkloadIfacePrefixes []string
 
-	DNSPolicyNfqueueID int64
+	DNSPolicyMode       apiv3.DNSPolicyMode
+	DNSPolicyNfqueueID  int64
+	DNSPacketsNfqueueID int64
 
 	IptablesMarkAccept   uint32
 	IptablesMarkPass     uint32
@@ -504,7 +507,7 @@ func NewRenderer(config Config) RuleRenderer {
 	// First, what should we actually do when we'd normally drop a packet?  For
 	// sandbox mode, we support allowing the packet instead, or logging it.
 	var dropRules []iptables.Rule
-	var nfqueueRule *iptables.Rule
+	var nfqueueRuleDelayDeniedPacket *iptables.Rule
 	if strings.HasPrefix(config.ActionOnDrop, "LOG") {
 		log.Warn("Action on drop includes LOG.  All dropped packets will be logged.")
 		logPrefix := "calico-drop"
@@ -527,8 +530,8 @@ func NewRenderer(config Config) RuleRenderer {
 			Action: iptables.AcceptAction{},
 		})
 	} else {
-		if config.IptablesMarkDNSPolicy != 0x0 {
-			nfqueueRule = &iptables.Rule{
+		if config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDeniedPacket && config.IptablesMarkDNSPolicy != 0x0 {
+			nfqueueRuleDelayDeniedPacket = &iptables.Rule{
 				Match: iptables.Match().
 					MarkSingleBitSet(config.IptablesMarkDNSPolicy).
 					NotMarkMatchesWithMask(config.IptablesMarkSkipDNSPolicyNfqueue, config.IptablesMarkSkipDNSPolicyNfqueue),
@@ -590,13 +593,13 @@ func NewRenderer(config Config) RuleRenderer {
 	}
 
 	return &DefaultRuleRenderer{
-		Config:             config,
-		dropRules:          dropRules,
-		nfqueueRule:        nfqueueRule,
-		inputAcceptActions: inputAcceptActions,
-		filterAllowAction:  filterAllowAction,
-		mangleAllowAction:  mangleAllowAction,
-		blockCIDRAction:    blockCIDRAction,
+		Config:                       config,
+		dropRules:                    dropRules,
+		nfqueueRuleDelayDeniedPacket: nfqueueRuleDelayDeniedPacket,
+		inputAcceptActions:           inputAcceptActions,
+		filterAllowAction:            filterAllowAction,
+		mangleAllowAction:            mangleAllowAction,
+		blockCIDRAction:              blockCIDRAction,
 	}
 }
 

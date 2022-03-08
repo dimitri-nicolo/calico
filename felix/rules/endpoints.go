@@ -531,7 +531,10 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 
 			if chainType == chainTypeNormal || chainType == chainTypeForward {
 				if endOfTierDrop {
-					nfqueueRule := r.NfqueueRule(Match().MarkClear(r.IptablesMarkPass), "Drop if no policies passed packet")
+					nfqueueRule := r.NfqueueRuleDelayDeniedPacket(
+						Match().MarkClear(r.IptablesMarkPass),
+						"Drop if no policies passed packet",
+					)
 					if nfqueueRule != nil {
 						rules = append(rules, *nfqueueRule)
 					}
@@ -596,7 +599,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 				})
 		}
 
-		nfqueueRule := r.NfqueueRule(Match(), "Drop if no profiles matched")
+		nfqueueRule := r.NfqueueRuleDelayDeniedPacket(Match(), "Drop if no profiles matched")
 		if nfqueueRule != nil {
 			rules = append(rules, *nfqueueRule)
 		}

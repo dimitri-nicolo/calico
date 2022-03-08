@@ -66,6 +66,15 @@ const (
 	AWSSecondaryIPEnabledENIPerWorkload = "EnabledENIPerWorkload"
 )
 
+// +kubebuilder:validation:Enum=NoDelay;DelayDeniedPacket;DelayDNSResponse
+type DNSPolicyMode string
+
+const (
+	DNSPolicyModeNoDelay           DNSPolicyMode = "NoDelay"
+	DNSPolicyModeDelayDeniedPacket DNSPolicyMode = "DelayDeniedPacket"
+	DNSPolicyModeDelayDNSResponse  DNSPolicyMode = "DelayDNSResponse"
+)
+
 // FelixConfigurationSpec contains the values of the Felix configuration.
 type FelixConfigurationSpec struct {
 	UseInternalDataplaneDriver *bool  `json:"useInternalDataplaneDriver,omitempty"`
@@ -600,8 +609,8 @@ type FelixConfigurationSpec struct {
 	//
 	// On Windows, or when using the eBPF dataplane, this setting is ignored and "NoDelay" is always used.
 	//
-	// Possible values are DelayDeniedPacket, DelayDNSPacket, NoDelay. [Default: DelayDeniedPacket]
-	DNSPolicyMode string `json:"dnsPolicyMode,omitempty" validate:"omitempty"`
+	// [Default: DelayDeniedPacket]
+	DNSPolicyMode *DNSPolicyMode `json:"dnsPolicyMode,omitempty" validate:"omitempty,oneof=NoDelay DelayDeniedPacket DelayDNSResponse"`
 	// DNSPolicyNfqueueID is the NFQUEUE ID to use for DNS Policy re-evaluation when the domains IP hasn't been programmed
 	// to ipsets yet. Used when DNSPolicyMode is DelayDeniedPacket. [Default: 100]
 	DNSPolicyNfqueueID *int `json:"dnsPolicyNfqueueID,omitempty" validate:"omitempty,gte=0,lte=65535"`

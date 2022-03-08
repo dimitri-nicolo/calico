@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/iptables"
@@ -188,7 +190,9 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 		IPIPTunnelAddress:                nil,
 		IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 		IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+		DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
 		DNSPolicyNfqueueID:               100,
+		DNSPacketsNfqueueID:              101,
 		IptablesMarkEgress:               0x40,
 		IptablesMarkAccept:               0x80,
 		IptablesMarkPass:                 0x100,
@@ -1653,7 +1657,9 @@ var _ = Describe("rule metadata tests", func() {
 		IPIPTunnelAddress:                nil,
 		IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 		IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+		DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
 		DNSPolicyNfqueueID:               100,
+		DNSPacketsNfqueueID:              101,
 		IptablesMarkEgress:               0x40,
 		IptablesMarkAccept:               0x80,
 		IptablesMarkPass:                 0x100,
@@ -1793,6 +1799,7 @@ var _ = Describe("DNS policy rules", func() {
 		IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 		IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
 		DNSPolicyNfqueueID:               100,
+		DNSPacketsNfqueueID:              101,
 		IptablesMarkEgress:               0x40,
 		IptablesMarkAccept:               0x80,
 		IptablesMarkPass:                 0x100,
@@ -1805,51 +1812,60 @@ var _ = Describe("DNS policy rules", func() {
 		IptablesMarkEndpoint:             0xff000,
 	}
 
-	It("Renders the mark dns policy rule when DstDomainIpSetIds and DstIpSetIds are both set", func() {
-		pRule := proto.Rule{
-			DstIpSetIds:       []string{"ipsetid1"},
-			DstDomainIpSetIds: []string{"ipsetid2"},
-		}
+	DescribeTable("with DNSPolicyModes",
+		func(mode apiv3.DNSPolicyMode, expectDNSMark bool) {
+			pRule := proto.Rule{
+				DstIpSetIds:       []string{"ipsetid1"},
+				DstDomainIpSetIds: []string{"ipsetid2"},
+			}
 
-		renderer := NewRenderer(rrConfigNormal)
+			rrConfigNormal.DNSPolicyMode = mode
+			renderer := NewRenderer(rrConfigNormal)
 
-		iptableRules := renderer.ProtoRuleToIptablesRules(&pRule, 4,
-			RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false, false)
+			iptableRules := renderer.ProtoRuleToIptablesRules(&pRule, 4,
+				RuleOwnerTypePolicy, RuleDirIngress, 0, "default.foo", false, false)
 
-		expected := []iptables.Rule{
-			{
-				Action: iptables.SetMaskedMarkAction{Mask: 1536},
-			},
-			{
-				Match:  iptables.Match().DestIPSet("cali40ipsetid1"),
-				Action: iptables.SetMarkAction{Mark: 512},
-			},
-			{
-				Match:  iptables.Match().DestIPSet("cali40ipsetid2"),
-				Action: iptables.SetMarkAction{Mark: 512},
-			},
-			{
-				Match:  iptables.Match().MarkSingleBitSet(0x200),
-				Action: iptables.SetMarkAction{Mark: 128},
-			},
-			{
-				Match: iptables.Match().MarkSingleBitSet(0x80),
-				Action: iptables.NflogAction{
-					Group:       1,
-					Prefix:      "API0|default.foo",
-					SizeEnabled: false,
-					Size:        0,
+			expected := []iptables.Rule{
+				{
+					Action: iptables.SetMaskedMarkAction{Mask: 1536},
 				},
-			},
-			{
-				Match:  iptables.Match().MarkSingleBitSet(0x80),
-				Action: iptables.ReturnAction{},
-			},
-			{
-				Action: iptables.SetMarkAction{Mark: 0x00001},
-			},
-		}
+				{
+					Match:  iptables.Match().DestIPSet("cali40ipsetid1"),
+					Action: iptables.SetMarkAction{Mark: 512},
+				},
+				{
+					Match:  iptables.Match().DestIPSet("cali40ipsetid2"),
+					Action: iptables.SetMarkAction{Mark: 512},
+				},
+				{
+					Match:  iptables.Match().MarkSingleBitSet(0x200),
+					Action: iptables.SetMarkAction{Mark: 128},
+				},
+				{
+					Match: iptables.Match().MarkSingleBitSet(0x80),
+					Action: iptables.NflogAction{
+						Group:       1,
+						Prefix:      "API0|default.foo",
+						SizeEnabled: false,
+						Size:        0,
+					},
+				},
+				{
+					Match:  iptables.Match().MarkSingleBitSet(0x80),
+					Action: iptables.ReturnAction{},
+				},
+			}
 
-		Expect(iptableRules).Should(Equal(expected))
-	})
+			if expectDNSMark {
+				expected = append(expected, iptables.Rule{
+					Action: iptables.SetMarkAction{Mark: 0x00001},
+				})
+			}
+
+			Expect(iptableRules).Should(Equal(expected))
+		},
+		Entry(apiv3.DNSPolicyModeDelayDeniedPacket, apiv3.DNSPolicyModeDelayDeniedPacket, true),
+		Entry(apiv3.DNSPolicyModeNoDelay, apiv3.DNSPolicyModeNoDelay, false),
+		Entry(apiv3.DNSPolicyModeDelayDNSResponse, apiv3.DNSPolicyModeDelayDNSResponse, false),
+	)
 })
