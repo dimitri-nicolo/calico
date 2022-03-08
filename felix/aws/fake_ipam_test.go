@@ -117,7 +117,7 @@ func (m *fakeIPAM) AutoAssign(ctx context.Context, args ipam.AutoAssignArgs) (*i
 	return v4Allocs, nil, nil
 }
 
-func (m *fakeIPAM) ReleaseIPs(ctx context.Context, ips []cnet.IP) ([]cnet.IP, error) {
+func (m *fakeIPAM) ReleaseIPs(ctx context.Context, ips ...ipam.ReleaseOptions) ([]cnet.IP, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -132,8 +132,8 @@ func (m *fakeIPAM) ReleaseIPs(ctx context.Context, ips []cnet.IP) ([]cnet.IP, er
 	var out []cnet.IP
 	var newAllocs []ipamAlloc
 	for _, ipToRelease := range ips {
-		logrus.Infof("Fake IPAM releasing IP: %v", ipToRelease)
-		addrToRelease := ip.FromCalicoIP(ipToRelease)
+		logrus.Infof("Fake IPAM releasing IP: %v", ipToRelease.Address)
+		addrToRelease := ip.FromString(ipToRelease.Address)
 		for _, alloc := range m.allocations {
 			if alloc.Addr == addrToRelease {
 				out = append(out, addrToRelease.AsCalicoNetIP())
