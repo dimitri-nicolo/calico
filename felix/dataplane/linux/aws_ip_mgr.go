@@ -673,7 +673,7 @@ func (a *awsIPManager) configureNIC(iface netlink.Link, ifaceName string, primar
 		// The primary IP of the interface belongs to a workload. Configure the host to respond to ARPs even
 		// though it doesn't own the IP.
 		logrus.Debug("In ENI-per-workload mode.  Adding proxy ARP entry to interface.")
-		err := netlink.NeighSet(&netlink.Neigh{
+		err := a.nl.NeighSet(&netlink.Neigh{
 			LinkIndex: iface.Attrs().Index,
 			Family:    netlink.FAMILY_V4,
 			Flags:     netlink.NTF_PROXY,
@@ -684,6 +684,7 @@ func (a *awsIPManager) configureNIC(iface netlink.Link, ifaceName string, primar
 				"name": ifaceName,
 				"addr": primaryIPStr,
 			}).Error("Failed to set a proxy ARP entry for workload IP.")
+			finalErr = err
 		}
 		for _, addr := range addrs {
 			// Unexpected address.
@@ -945,6 +946,7 @@ type awsNetlinkIface interface {
 	AddrDel(iface netlink.Link, n *netlink.Addr) error
 	AddrAdd(iface netlink.Link, addr *netlink.Addr) error
 	ParseAddr(s string) (*netlink.Addr, error)
+	NeighSet(neigh *netlink.Neigh) error
 }
 
 func realRouteRuleNew(
@@ -1007,4 +1009,8 @@ func (a awsRealNetlink) LinkList() ([]netlink.Link, error) {
 
 func (a awsRealNetlink) NewHandle() (routerule.HandleIface, error) {
 	return netlink.NewHandle(syscall.NETLINK_ROUTE)
+}
+
+func (a awsRealNetlink) NeighSet(neigh *netlink.Neigh) error {
+	return netlink.NeighSet(neigh)
 }
