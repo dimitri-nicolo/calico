@@ -112,6 +112,13 @@ func OptSetVerdictFailureCounter(p prometheus.Counter) Option {
 	}
 }
 
+// OptPacketsSeenCounter sets prometheus counter for packets seen (valid or not).
+func OptPacketsSeenCounter(p prometheus.Counter) Option {
+	return func(c *nfQueueConnector) {
+		c.prometheusPacketsSeenCounter = p
+	}
+}
+
 // OptDNRDroppedCounter sets prometheus counter for packets dropped because they have the Do-Not-Repeast mark set.
 func OptDNRDroppedCounter(p prometheus.Counter) Option {
 	return func(c *nfQueueConnector) {

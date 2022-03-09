@@ -6,8 +6,8 @@ package nfqueue
 // The packets may be released by the consumer, or will otherwise be released after a configurable max hold-time.
 // Packets are released by setting a packet verdict, and for REPEAT verdict also setting a do-not-repeat mark.
 //
-// The consumer registers a handler function for handling queued packets. The packet contains a Release() method that
-// should be invoked to release the packet prior to the max hold time.
+// The consumer registers a handler interface for handling queued and released packets. The packet contains a Release()
+// method that should be invoked to release the packet at the earliest opportunity.
 //
 // The current implementation assumes all packets are released with the same verdict (except we do DROP packets that
 // either have no payload or have the do-not-repeat mark set which could cause a packet processing loop).
@@ -59,8 +59,21 @@ package nfqueue
 //  Packet encapsulates required packet attributes.
 //    .Release() -> This calls through to the owning nfQueueConnection to start release processing.
 
+// TODO(rlb): The processing in this single module combines ideas taken from
+//            - nfqueue.go
+//            - dnsdeniedpacket/packetprocessor.go
+//            - dnsdeniedpacket.packetprocesseor_with_nfqueue_restarter.
+//           Namely the nfqueue connection and reconnection processing, the packet release and the timed release. This
+//           is the processing required for the delay DNS response handling. It would be nice to update the
+//           dnsdeniedpacket processor to utilize this module as well as the two would benefit from common code paths
+//           but I've no desire to destabilize a baked in solution at this time.
+//
+// TODO(rlb): Given the queue size is fixed we could avoid a lot of allocations and deallocations by instantiating
+//           internal packet struct upfront and re-using them.
+
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -73,6 +86,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/netlinkshim"
 	"github.com/projectcalico/calico/felix/timeshim"
+	"github.com/projectcalico/calico/felix/versionparse"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
 
@@ -93,7 +107,7 @@ const (
 )
 
 // NewNfQueueConnector creates a new NfQueueConnector.
-func NewNfQueueConnector(queueID uint16, handler HandlerFunc, options ...Option) NfQueueConnector {
+func NewNfQueueConnector(queueID uint16, handler Handler, options ...Option) NfQueueConnector {
 	nfc := &nfQueueConnector{
 		queueID:               queueID,
 		handler:               handler,
@@ -105,10 +119,16 @@ func NewNfQueueConnector(queueID uint16, handler HandlerFunc, options ...Option)
 		nfqFactory:            netlinkshim.NewRealNfQueue,
 		time:                  timeshim.RealTime(),
 
-		// Both the disconnect and release channels have capacity 1. There should never be more than 1 message pending
-		// at any time.
-		disconnectChan: make(chan struct{}, 1),
-		releaseChan:    make(chan struct{}, 1),
+		// releaseChan is used to trigger the queue processing loop to release packets. It only needs to have
+		// capacity 1 because it's used as a trigger.
+		releaseChan: make(chan struct{}, 1),
+
+		// The disconnect channel used to trigger disconnection and reconnection. The connection reqeusting
+		// disconnection is sent so that the main queue processing loop will only trigger reconnection for the active
+		// connection.
+		disconnectChan: make(chan *nfQueueConnection, 1),
+
+		// debugBlockChan is used by tests to block the main queue processing loop.
 		debugBlockChan: make(chan struct{}, 1),
 
 		// Context logger and rate limited error logger.
@@ -156,9 +176,24 @@ type NfQueueConnector interface {
 	DebugBlockAndUnblock()
 }
 
-// HandlerFunc is implemented by the consumer of the NfQueue. Ideally, all packets sent to the handler function should
-// be released as soon as possible - however if not released the packet will be released after the max hold time.
-type HandlerFunc func(packet Packet)
+type ReleaseReason byte
+
+const (
+	ReleasedByConsumer = iota
+	ReleasedByTimeout
+	ReleasedByConnFailure
+)
+
+// Handler is an interface that needs to be be implemented by the consumer of the NfQueue. Ideally, all packets sent to
+// the handler should be released as soon as possible by invoking the Release() method on the packet. However, if not
+// released by the consumer the packet will be released after the max hold time.
+type Handler interface {
+	// OnPacket is called when a new packet it queued for processing.
+	OnPacket(packet Packet)
+
+	// OnRelease is called when a packet is implicitly released either by timeout or reconnection.
+	OnRelease(id uint32, reason ReleaseReason)
+}
 
 // Packet contains captured packet information.
 type Packet struct {
@@ -201,7 +236,7 @@ func (p Packet) String() string {
 // NfQueueConnnector interface used to provide some debug test facilities.
 type nfQueueConnector struct {
 	queueID               uint16
-	handler               HandlerFunc
+	handler               Handler
 	maxQueueLen           uint32
 	maxPacketLen          uint32
 	maxHoldTime           time.Duration
@@ -214,6 +249,7 @@ type nfQueueConnector struct {
 
 	// Prometheus metrics
 	prometheusPacketsHeldGauge               prometheus.Gauge
+	prometheusPacketsSeenCounter             prometheus.Counter
 	prometheusShutdownCounter                prometheus.Counter
 	prometheusSetVerdictFailureCounter       prometheus.Counter
 	prometheusDNRDroppedCounter              prometheus.Counter
@@ -235,7 +271,7 @@ type nfQueueConnector struct {
 
 	// Connection handling.
 	activeConnection *nfQueueConnection
-	disconnectChan   chan struct{}
+	disconnectChan   chan *nfQueueConnection
 	releaseChan      chan struct{}
 
 	// Debug processing to block connection and packet release processing.
@@ -350,13 +386,43 @@ func (nfc *nfQueueConnector) disconnect() {
 func (nfc *nfQueueConnector) processQueueEvents(ctx context.Context) {
 	for {
 		select {
-		case <-nfc.disconnectChan:
-			// Error received. Just return - this will trigger disconnect and reconnect.
-			return
+		case nfx := <-nfc.disconnectChan:
+			// Disconnection request.
+			//
+			// Just return to the connection loop. Only do this for the active connection. This protects against
+			// windows arising from the fact that disconnection may be triggered by the registered handler and by the
+			// verdict callbacks. At the moment we only perform disconnection from the callback
+			if nfx == nfc.activeConnection {
+				return
+			}
 		case <-nfc.releaseChan:
+			select {
+			case nfx := <-nfc.disconnectChan:
+				// Disconnection request - see comment above.
+				//
+				// Disconnection always take precedence because we have unregistered the queue at this point and all
+				// packets in the queue have been dropped. This isn't strictly necessary because setting the verdict
+				// doesn't fail in a bad way - in fact it passes which is a little misleading.
+				if nfx == nfc.activeConnection {
+					return
+				}
+			default:
+			}
 			// We have some packets to release.
 			nfc.activeConnection.release()
 		case <-nfc.holdTimeCheckTicker.Chan():
+			select {
+			case nfx := <-nfc.disconnectChan:
+				// Disconnection request - see comment above.
+				//
+				// Disconnection always take precedence because we have unregistered the queue at this point and all
+				// packets in the queue have been dropped. This isn't strictly necessary because setting the verdict
+				// doesn't fail in a bad way - in fact it passes which is a little misleading.
+				if nfx == nfc.activeConnection {
+					return
+				}
+			default:
+			}
 			// Release packets that have been held for the maximum duration.
 			nfc.activeConnection.releaseByAge()
 		case <-ctx.Done():
@@ -410,30 +476,50 @@ func (nfx *nfQueueConnection) disconnect() {
 		nfx.logger.WithError(err).Warning("Failed to close nfqueue socket")
 	}
 
-	// Remove all packets from the release and held lists. This isn't really necessary, but it reduces later processing
-	// when the handler releases the packet. It also improves garbage collection processing by reducing the number of
-	// unneccessary links.
+	// Remove all packets from the release and held lists and send OnRelease updates for each.
 	nfx.lock.Lock()
-	defer nfx.lock.Unlock()
+
+	// All packets held or pending release are being dropped.
+	packetsDropped := nfx.packetsHeld.length + nfx.packetsToRelease.length
+
+	// Copy across all the held and pending release to a local list so we can release the lock.
+	var dropped packetDataList
+	for data := nfx.packetsHeld.first; data != nil; data = nfx.packetsHeld.first {
+		nfx.packetsHeld.remove(data)
+		dropped.add(data)
+	}
+	for data := nfx.packetsToRelease.first; data != nil; data = nfx.packetsToRelease.first {
+		nfx.packetsToRelease.remove(data)
+		dropped.add(data)
+	}
+	nfx.lock.Unlock()
+
+	// Invoke the OnRelease handler. All of these packets are dropped due to connection failure.
+	for data := dropped.first; data != nil; data = dropped.first {
+		dropped.remove(data)
+		nfx.handler.OnRelease(data.packetID, ReleasedByConnFailure)
+	}
 
 	// The packets in the held and release queues will all be dropped. Update our stats if we are tracking this.
 	if nfx.prometheusConnectionClosedDroppedCounter != nil {
-		nfx.prometheusConnectionClosedDroppedCounter.Add(float64(nfx.packetsHeld.length + nfx.packetsToRelease.length))
+		nfx.prometheusConnectionClosedDroppedCounter.Add(float64(packetsDropped))
 	}
 	if nfx.prometheusPacketsHeldGauge != nil {
 		nfx.prometheusPacketsHeldGauge.Set(0)
 	}
-
-	for data := nfx.packetsHeld.first; data != nil; data = nfx.packetsHeld.first {
-		nfx.packetsHeld.remove(data)
-	}
-	for data := nfx.packetsToRelease.first; data != nil; data = nfx.packetsToRelease.first {
-		nfx.packetsToRelease.remove(data)
+	// Increment shutdown stats if tracking.
+	if nfx.prometheusShutdownCounter != nil {
+		nfx.prometheusShutdownCounter.Inc()
 	}
 }
 
 // packetHook is the packet handling hook registered with the underlying NFQueue netlink library.
 func (nfx *nfQueueConnection) packetHook(a gonfqueue.Attribute) int {
+	if nfx.prometheusPacketsSeenCounter != nil {
+		// If recording, increment the total number of packets seen.
+		nfx.prometheusPacketsSeenCounter.Inc()
+	}
+
 	if a.Mark != nil && *a.Mark&nfx.dnrMark != 0x0 {
 		nfx.rateLimitedErrLogger.Error(packetHasDoNotRepeatMarkMessage)
 		nfx.setVerdict(*a.PacketID, gonfqueue.NfDrop, failedToSetVerdictMessage)
@@ -492,7 +578,7 @@ func (nfx *nfQueueConnection) packetHook(a gonfqueue.Attribute) int {
 		},
 	}
 	nfx.logger.Debugf("Invoking handler for queued packet: %s", p)
-	nfx.handler(p)
+	nfx.handler.OnPacket(p)
 
 	return 0
 }
@@ -507,14 +593,9 @@ func (nfx *nfQueueConnection) errorHook(err error) int {
 		}
 	}
 
-	// Increment shutdown stats if tracking.
-	if nfx.prometheusShutdownCounter != nil {
-		nfx.prometheusShutdownCounter.Inc()
-	}
-
 	// Send a disconnect message, the main processing loop will handle the disconnection. Returning 1 here ensures no
 	// more messages will be processed for this connection.
-	nfx.disconnectChan <- struct{}{}
+	nfx.disconnectChan <- nfx
 	return 1
 }
 
@@ -572,6 +653,7 @@ func (nfx *nfQueueConnection) releaseByAge() {
 
 		// Packet has timed out.  Remove from the held list and add to the released list.
 		nfx.logger.Debugf("Packet %d has passed the max hold time", data.packetID)
+		data.reason = ReleasedByTimeout
 		nfx.packetsHeld.remove(data)
 		nfx.packetsToRelease.add(data)
 		numReleased++
@@ -677,6 +759,10 @@ func (nfx *nfQueueConnection) release() {
 				nfx.prometheusHoldTimeSummary.Observe(now.Sub(data.holdTime).Seconds())
 			}
 		}
+
+		for data := releaseBatch.first; data != nil; data = data.next {
+			nfx.handler.OnRelease(data.packetID, data.reason)
+		}
 	}
 
 	// Now do the individual releases. These may not be ordered - but probably still more efficient than sorting the
@@ -695,6 +781,8 @@ func (nfx *nfQueueConnection) release() {
 				now := nfx.time.Now()
 				nfx.prometheusHoldTimeSummary.Observe(now.Sub(data.holdTime).Seconds())
 			}
+
+			nfx.handler.OnRelease(data.packetID, data.reason)
 		}
 	}
 }
@@ -761,6 +849,9 @@ type packetData struct {
 	// The packet ID. Note that this packet ID is only valid in conjunction with its corresponding NfQueue connection
 	// since new connections start the IDs again from 1.
 	packetID uint32
+
+	// Release reason
+	reason ReleaseReason
 }
 
 // packetDataList is the list root for storing an ordered set of packetDatas.
@@ -806,4 +897,27 @@ func (l *packetDataList) remove(data *packetData) {
 
 	data.prev, data.next, data.list = nil, nil, nil
 	l.length--
+}
+
+func isAtLeastKernel(v *versionparse.Version) error {
+	versionReader, err := versionparse.GetKernelVersionReader()
+	if err != nil {
+		return fmt.Errorf("failed to get kernel version reader: %v", err)
+	}
+
+	kernelVersion, err := versionparse.GetKernelVersion(versionReader)
+	if err != nil {
+		return fmt.Errorf("failed to get kernel version: %v", err)
+	}
+
+	if kernelVersion.Compare(v) < 0 {
+		return fmt.Errorf("kernel is too old (have: %v but want at least: %v)", kernelVersion, v)
+	}
+
+	return nil
+}
+
+// SupportsNfQueueWithBypass returns true if the kernel version supports NFQUEUE with the queue-bypass option,
+func SupportsNfQueueWithBypass() error {
+	return isAtLeastKernel(v3Dot13Dot0)
 }

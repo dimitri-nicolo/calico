@@ -28,7 +28,6 @@ var (
 
 const (
 	nfMaxPacketLen = 0xFFFF
-	nfMaxQueueLen  = 0xFF
 	nfReadTimeout  = 100 * time.Millisecond
 	nfWriteTimeout = 200 * time.Millisecond
 )
@@ -56,10 +55,10 @@ func init() {
 	prometheus.MustRegister(PrometheusNfqueueVerdictFailCount)
 }
 
-func DefaultNfqueueCreator(queueID int) func() (Nfqueue, error) {
+func DefaultNfqueueCreator(queueID int, queueLen uint32) func() (Nfqueue, error) {
 	return func() (Nfqueue, error) {
 		log.Infof("Creating new NFQUEUE connection with queue id \"%d\" for dns policy packet processing.", queueID)
-		nf, err := NewNfqueue(queueID)
+		nf, err := NewNfqueue(queueID, queueLen)
 		if err != nil {
 			return nil, err
 		}
@@ -91,11 +90,11 @@ type Nfqueue interface {
 	Close() error
 }
 
-func NewNfqueue(queueID int) (Nfqueue, error) {
+func NewNfqueue(queueID int, queueLen uint32) (Nfqueue, error) {
 	defaultConfig := &gonfqueue.Config{
 		NfQueue:      uint16(queueID),
 		MaxPacketLen: nfMaxPacketLen,
-		MaxQueueLen:  nfMaxQueueLen,
+		MaxQueueLen:  queueLen,
 		Copymode:     gonfqueue.NfQnlCopyPacket,
 		ReadTimeout:  nfReadTimeout,
 		WriteTimeout: nfWriteTimeout,
@@ -209,27 +208,4 @@ func (nf *nfQueue) DebugKillConnection() error {
 	fd := reflect.NewAt(current.Type(), unsafe.Pointer(current.UnsafeAddr())).Elem().Interface().(int)
 
 	return syscall.Close(fd)
-}
-
-func isAtLeastKernel(v *versionparse.Version) error {
-	versionReader, err := versionparse.GetKernelVersionReader()
-	if err != nil {
-		return fmt.Errorf("failed to get kernel version reader: %v", err)
-	}
-
-	kernelVersion, err := versionparse.GetKernelVersion(versionReader)
-	if err != nil {
-		return fmt.Errorf("failed to get kernel version: %v", err)
-	}
-
-	if kernelVersion.Compare(v) < 0 {
-		return fmt.Errorf("kernel is too old (have: %v but want at least: %v)", kernelVersion, v)
-	}
-
-	return nil
-}
-
-// SupportsNfQueueWithBypass returns true if the kernel version supports NFQUEUE with the queue-bypass option,
-func SupportsNfQueueWithBypass() error {
-	return isAtLeastKernel(v3Dot13Dot0)
 }

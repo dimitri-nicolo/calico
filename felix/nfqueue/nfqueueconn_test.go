@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -42,13 +43,35 @@ func (t timeoutTemporaryError) Error() string {
 	return ""
 }
 
-// Handler used to consume the packets fro the NfQueue.
-type handler struct {
-	packets []nfqueue.Packet
+type releaseInfo struct {
+	id     uint32
+	reason nfqueue.ReleaseReason
 }
 
-func (h *handler) cb(p nfqueue.Packet) {
+// Handler used to consume the packets fro the NfQueue.
+type handler struct {
+	lock     sync.Mutex
+	packets  []nfqueue.Packet
+	released []releaseInfo
+}
+
+func (h *handler) OnPacket(p nfqueue.Packet) {
+	// Called synchronously from the mock nfqueue event, so no need to lock this for our tests.
 	h.packets = append(h.packets, p)
+}
+
+func (h *handler) OnRelease(id uint32, reason nfqueue.ReleaseReason) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+	h.released = append(h.released, releaseInfo{id, reason})
+}
+
+func (h *handler) getReleased() []releaseInfo {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+	r := make([]releaseInfo, len(h.released))
+	copy(r, h.released)
+	return r
 }
 
 // Prometheus counter, gauge and summary implementations.
@@ -60,19 +83,19 @@ type counter struct {
 
 func (c *counter) Inc() {
 	c.lock.Lock()
-	c.lock.Unlock()
+	defer c.lock.Unlock()
 	c.num++
 }
 
 func (c *counter) Add(n float64) {
 	c.lock.Lock()
-	c.lock.Unlock()
+	defer c.lock.Unlock()
 	c.num += int(n)
 }
 
 func (c *counter) get() int {
 	c.lock.Lock()
-	c.lock.Unlock()
+	defer c.lock.Unlock()
 	return c.num
 }
 
@@ -84,14 +107,14 @@ type gauge struct {
 
 func (g *gauge) Set(n float64) {
 	g.lock.Lock()
-	g.lock.Unlock()
+	defer g.lock.Unlock()
 	g.num = n
 }
 
 // get returns the value as an int since for our specific use case our gauges only record int values.
 func (g *gauge) get() int {
 	g.lock.Lock()
-	g.lock.Unlock()
+	defer g.lock.Unlock()
 	return int(g.num)
 }
 
@@ -113,7 +136,7 @@ var _ = Describe("NfQueueConnector processing", func() {
 	var mockTicker *timeshim.MockTicker
 	var factory *mocknetlink.NfQueueFactory
 	var held *gauge
-	var shutdown, verdictFailure, dnrDropped, payloadDropped, closedDropped, releasedAfterHoldTime, released *counter
+	var seen, shutdown, verdictFailure, dnrDropped, payloadDropped, closedDropped, releasedAfterHoldTime, released *counter
 	var inNfQueue, holdTime *summary
 	var ctx context.Context
 	var cancel func()
@@ -123,7 +146,7 @@ var _ = Describe("NfQueueConnector processing", func() {
 	BeforeEach(func() {
 		packetHandler = &handler{}
 
-		tickerChan = make(chan time.Time)
+		tickerChan = make(chan time.Time, 1)
 		mockTime = &timeshim.MockInterface{}
 		mockTicker = &timeshim.MockTicker{}
 		mockTicker.On("Chan").Return((<-chan time.Time)(tickerChan))
@@ -131,6 +154,7 @@ var _ = Describe("NfQueueConnector processing", func() {
 		mockTime.On("NewTicker", mock.Anything).Return(mockTicker)
 		factory = &mocknetlink.NfQueueFactory{}
 		held = &gauge{}
+		seen = &counter{}
 		shutdown = &counter{}
 		verdictFailure = &counter{}
 		dnrDropped = &counter{}
@@ -149,7 +173,9 @@ var _ = Describe("NfQueueConnector processing", func() {
 			nfqueue.OptFailOpen(),
 			nfqueue.OptTimeShim(mockTime),
 			nfqueue.OptNfQueueFactoryShim(factory.New),
-			nfqueue.OptPacketsHeldGauge(held), nfqueue.OptShutdownCounter(shutdown),
+			nfqueue.OptPacketsSeenCounter(seen),
+			nfqueue.OptPacketsHeldGauge(held),
+			nfqueue.OptShutdownCounter(shutdown),
 			nfqueue.OptSetVerdictFailureCounter(verdictFailure),
 			nfqueue.OptDNRDroppedCounter(dnrDropped),
 			nfqueue.OptNoPayloadDroppedCounter(payloadDropped),
@@ -168,7 +194,7 @@ var _ = Describe("NfQueueConnector processing", func() {
 	Context("verdict accept processing", func() {
 		BeforeEach(func() {
 			options = append(options, nfqueue.OptVerdictAccept())
-			nfc = nfqueue.NewNfQueueConnector(10, packetHandler.cb, options...)
+			nfc = nfqueue.NewNfQueueConnector(10, packetHandler, options...)
 		})
 
 		When("kicking off connection processing", func() {
@@ -305,6 +331,11 @@ var _ = Describe("NfQueueConnector processing", func() {
 					// Marks should not be set on either.
 					Expect(mocknfq.GetMark(1)).To(BeZero())
 					Expect(mocknfq.GetMark(2)).To(BeZero())
+
+					// Check release packet callback.
+					Eventually(packetHandler.getReleased).Should(Equal([]releaseInfo{
+						{2, nfqueue.ReleasedByConsumer}, {1, nfqueue.ReleasedByConsumer},
+					}))
 				})
 
 				It("sets uses batch verdict on packets released in order", func() {
@@ -328,6 +359,9 @@ var _ = Describe("NfQueueConnector processing", func() {
 						Payload: &payload,
 					})).To(Equal(0))
 					Expect(packetHandler.packets).To(HaveLen(4))
+
+					// Check the packets seen counter.
+					Expect(seen.num).To(Equal(4))
 
 					// Block the main event loop.
 					nfc.DebugBlockAndUnblock()
@@ -377,6 +411,13 @@ var _ = Describe("NfQueueConnector processing", func() {
 					Expect(mocknfq.GetBatchVerdict(5)).To(Equal(gonfqueue.NfAccept))
 					Expect(mocknfq.HasVerdict(3)).To(BeFalse())
 					Expect(mocknfq.HasBatchVerdict(3)).To(BeFalse())
+
+					// Check release packet callback. Batched packets get released first.
+					Eventually(packetHandler.getReleased).Should(Equal([]releaseInfo{
+						{2, nfqueue.ReleasedByConsumer}, {1, nfqueue.ReleasedByConsumer}, // batch
+						{4, nfqueue.ReleasedByConsumer},                                  // single
+						{3, nfqueue.ReleasedByConsumer}, {5, nfqueue.ReleasedByConsumer}, // batch
+					}))
 				})
 
 				It("updates stats when failing to set the verdict", func() {
@@ -447,6 +488,14 @@ var _ = Describe("NfQueueConnector processing", func() {
 					// Should receive a batch verdict for 5 with no more failures.
 					Consistently(verdictFailure.get).Should(Equal(2))
 					Eventually(func() bool { return mocknfq.HasBatchVerdict(5) }).Should(BeTrue())
+
+					// Check release packet callback. We still get the callbacks even if the SetVerdict call fails.
+					// Batch verdict happens first.
+					Eventually(packetHandler.getReleased).Should(Equal([]releaseInfo{
+						{2, nfqueue.ReleasedByConsumer}, {1, nfqueue.ReleasedByConsumer}, // batch
+						{4, nfqueue.ReleasedByConsumer},                                  // single
+						{3, nfqueue.ReleasedByConsumer}, {5, nfqueue.ReleasedByConsumer}, // batch
+					}))
 				})
 			})
 
@@ -489,8 +538,8 @@ var _ = Describe("NfQueueConnector processing", func() {
 					Eventually(func() bool { return mocknfq.HasBatchVerdict(2) }).Should(BeTrue())
 					Expect(mocknfq.GetBatchVerdict(2)).To(Equal(gonfqueue.NfAccept))
 
-					// Set time to the p2 expiration time and send in a hold check tick. Both p1 and p2 should be released.
-					// This should use batch release.
+					// Set time to the p2 expiration time and send in a hold check tick. Both p1 and p2 should be
+					// released. This should use batch release.
 					mockTime.On("Now", mock.Anything).Return(p3Expire).Twice()
 					tickerChan <- p3Expire
 
@@ -504,6 +553,12 @@ var _ = Describe("NfQueueConnector processing", func() {
 					Consistently(held.get).Should(Equal(0))
 					Consistently(releasedAfterHoldTime.get).Should(Equal(3))
 					Consistently(released.get).Should(Equal(0))
+
+					// Check release packet callback.
+					Eventually(packetHandler.getReleased).Should(Equal([]releaseInfo{
+						{1, nfqueue.ReleasedByTimeout}, {2, nfqueue.ReleasedByTimeout},
+						{3, nfqueue.ReleasedByTimeout},
+					}))
 				})
 			})
 		})
@@ -516,7 +571,7 @@ var _ = Describe("NfQueueConnector processing", func() {
 		BeforeEach(func() {
 			// Connect and wait for registration to complete.
 			options = append(options, nfqueue.OptVerdictRepeat(8))
-			nfc = nfqueue.NewNfQueueConnector(10, packetHandler.cb, options...)
+			nfc = nfqueue.NewNfQueueConnector(10, packetHandler, options...)
 			nfc.Connect(ctx)
 
 			Eventually(factory.NumOpenCalls).Should(Equal(1))
@@ -536,6 +591,7 @@ var _ = Describe("NfQueueConnector processing", func() {
 				Expect(mocknfq.Verdicts[1]).To(Equal(gonfqueue.NfDrop))
 				Expect(dnrDropped.num).To(Equal(1))
 				Expect(payloadDropped.num).To(Equal(0))
+				Expect(seen.num).To(Equal(1))
 				Expect(held.get()).To(Equal(0))
 			})
 
@@ -547,6 +603,7 @@ var _ = Describe("NfQueueConnector processing", func() {
 				Expect(mocknfq.Verdicts[1]).To(Equal(gonfqueue.NfDrop))
 				Expect(payloadDropped.num).To(Equal(1))
 				Expect(dnrDropped.num).To(Equal(0))
+				Expect(seen.num).To(Equal(1))
 				Expect(held.get()).To(Equal(0))
 			})
 
@@ -617,37 +674,70 @@ var _ = Describe("NfQueueConnector processing", func() {
 
 			It("does not set the verdict when releasing packets associated with a closed connection", func() {
 				payload := []byte("packet")
-				Expect(mocknfq.SendAttributes(gonfqueue.Attribute{
-					Payload: &payload,
-				})).To(Equal(0))
-				Expect(mocknfq.SendAttributes(gonfqueue.Attribute{
-					Payload: &payload,
-				})).To(Equal(0))
-				Expect(packetHandler.packets).To(HaveLen(2))
 
-				// Send an error to close the old connection.
-				Expect(mocknfq.SendError(errors.New("unrecoverable socket error"))).To(Equal(1))
-				Eventually(factory.NumOpenCalls).Should(Equal(2))
-				Consistently(factory.NumOpenCalls).Should(Equal(2))
-				Expect(shutdown.num).To(Equal(1))
-				Expect(mocknfq.Closed).To(BeTrue())
+				// This test sets connection failed events when a connection close event occurs - even if packets
+				// are pending release. We repeat this test a number of times to attempt to get code coverage up
+				// because the main queue loop can handle disconnection processing from one of three select cases.
+				for i := 1; i < 50; i++ {
+					By("Testing connection number " + strconv.Itoa(i))
 
-				// Get the new connection.
-				newMock := factory.MockNfQueue
+					// Drain the ticker channel in case it is full from the previous run. Empty the packet and release
+					// data from the previous run.
+					select {
+					case <-tickerChan:
+					default:
+					}
+					packetHandler.packets = nil
+					packetHandler.released = nil
 
-				// Disconnection will update the stats for any currently held packets. These should now be updated.
-				Expect(held.get()).To(Equal(0))
-				Expect(closedDropped.get()).To(Equal(2))
+					// Make sure we are connected.
+					Eventually(factory.NumOpenCalls).Should(Equal(i))
+					mocknfq = factory.MockNfQueue
+					Eventually(mocknfq.IsRegistered).Should(BeTrue())
 
-				// Release packets. First and second packets should have no verdict on either the new or old
-				// connections.
-				packetHandler.packets[0].Release()
-				packetHandler.packets[1].Release()
+					// Check verdicts from a previous connection have not leaked into the current connection.
+					Expect(mocknfq.HasVerdict(1)).To(BeFalse())
+					Expect(mocknfq.HasVerdict(2)).To(BeFalse())
 
-				Consistently(func() bool { return mocknfq.HasVerdict(1) }).Should(BeFalse())
-				Expect(mocknfq.HasVerdict(2)).To(BeFalse())
-				Expect(newMock.HasVerdict(1)).To(BeFalse())
-				Expect(newMock.HasVerdict(2)).To(BeFalse())
+					// Send some packets.
+					Expect(mocknfq.SendAttributes(gonfqueue.Attribute{
+						Payload: &payload,
+					})).To(Equal(0))
+					Expect(mocknfq.SendAttributes(gonfqueue.Attribute{
+						Payload: &payload,
+					})).To(Equal(0))
+					Expect(packetHandler.packets).To(HaveLen(2))
+
+					// Block the main thread. Release one of the packets, send a ticker event and send an error to
+					// close the connection. When we unblock the main thread we may trigger release processing, but it
+					// should attempt disconnection processing instead.
+					nfc.DebugBlockAndUnblock()
+					packetHandler.packets[0].Release()
+					Expect(mocknfq.SendError(errors.New("unrecoverable socket error"))).To(Equal(1))
+					tickerChan <- time.Now()
+					nfc.DebugBlockAndUnblock()
+
+					// Send an error to close the old connection.
+					Eventually(shutdown.get).Should(Equal(i))
+					Expect(mocknfq.Closed).To(BeTrue())
+					Expect(held.get()).To(Equal(0))
+					Expect(closedDropped.get()).To(Equal(2 * i))
+
+					// Release packets. First and second packets should have no verdict on either the new or old
+					// connections.
+					packetHandler.packets[0].Release()
+					packetHandler.packets[1].Release()
+
+					Consistently(func() bool { return mocknfq.HasVerdict(1) }).Should(BeFalse())
+					Expect(mocknfq.HasVerdict(2)).To(BeFalse())
+
+					// Check release packet callback. Despite us calling release on a packet, the verdict is not set and
+					// the packet is released due to conn closing. We do the callbacks for the held packets followed by
+					// the pending release.
+					Expect(packetHandler.released).To(Equal([]releaseInfo{
+						{2, nfqueue.ReleasedByConnFailure}, {1, nfqueue.ReleasedByConnFailure},
+					}))
+				}
 			})
 		})
 	})

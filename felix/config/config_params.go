@@ -391,7 +391,7 @@ type Config struct {
 	DNSLogsFilePerNodeLimit          int           `config:"int;0"`
 	DNSLogsLatency                   bool          `config:"bool;true"`
 	DNSPolicyNfqueueID               int           `config:"int;100"`
-	DNSPolicyNfqueueSize             int           `config:"int;100"`
+	DNSPolicyNfqueueSize             int           `config:"int;255"`
 	DNSPacketsNfqueueID              int           `config:"int;101"`
 	DNSPacketsNfqueueSize            int           `config:"int;100"`
 	DNSPacketsNfqueueMaxHoldDuration time.Duration `config:"millis;3000"`
