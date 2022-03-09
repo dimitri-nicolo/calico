@@ -42,6 +42,10 @@ type FakeCalicoClient struct {
 	ipamClient ipam.Interface
 }
 
+func (f *FakeCalicoClient) AlertExceptions() clientv3.AlertExceptionInterface {
+	panic("implement me")
+}
+
 func (f *FakeCalicoClient) UISettingsGroups() clientv3.UISettingsGroupInterface {
 	panic("implement me")
 }

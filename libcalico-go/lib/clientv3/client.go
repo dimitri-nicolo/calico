@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -193,6 +193,10 @@ func (c client) LicenseKey() LicenseKeyInterface {
 // RemoteClusterConfiguration returns an interface for managing remote cluster configuration resources.
 func (c client) RemoteClusterConfigurations() RemoteClusterConfigurationInterface {
 	return remoteClusterConfiguration{client: c}
+}
+
+func (c client) AlertExceptions() AlertExceptionInterface {
+	return alertExceptions{client: c}
 }
 
 func (c client) GlobalAlerts() GlobalAlertInterface {
