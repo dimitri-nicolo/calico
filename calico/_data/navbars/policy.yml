@@ -4,8 +4,10 @@ order: 3
 section:
 - title: Adopt zero trust network model for security
   path: /security/adopt-zero-trust
+- title: Policy best practices
+  path: /security/policy-best-practices  
 - title: Tiered network policy
-  path: /security/
+  path: /security/policy-tiers
   section:
   - title: Get started with tiered policy
     path: /security/tiered-policy
@@ -14,8 +16,8 @@ section:
 - title: Get started with network sets
   path: /security/networksets
 - title: Global default deny policy best practices
-  path: /security/default-deny      
-- title: Policy lifecycle and automation
+  path: /security/default-deny   
+- title: Policy life cycle and automation
   path: /security/policy-lifecycle/
   section: 
   - title: Staged policy
@@ -24,6 +26,8 @@ section:
     path: /security/policy-impact-preview
   - title: Policy recommendation
     path: /security/generate-policy-recommendation
+- title: Troubleshoot policies
+  path: /security/policy-troubleshooting    
 - title: Calico Enterprise network policy for beginners
   path: /security/beginners
   section:
