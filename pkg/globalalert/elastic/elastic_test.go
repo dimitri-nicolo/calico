@@ -506,6 +506,33 @@ var _ = Describe("GlobalAlert Elastic Test", func() {
 		})
 	})
 
+	Context("WAF without metric and without aggregateBy", func() {
+		It("WAF should query elasticsearch", func() {
+			// Uses file with prefix 11_waf_with_metric_but_no_aggregation* for testing this scenario
+			ga := &v3.GlobalAlert{
+				ObjectMeta: v1.ObjectMeta{
+					Name: alertName,
+				},
+				Spec: v3.GlobalAlertSpec{
+					Description: fmt.Sprintf("test alert: %s", alertName),
+					Severity:    100,
+					DataSet:     "waf",
+					Metric:      "count",
+					Threshold:   0,
+					Condition:   "gt",
+					Query:       "method=GET",
+				},
+			}
+
+			e, err := getTestElasticService(lmaESClient, httpServer, "test-cluster", ga)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(e.sourceIndexName).Should(Equal("tigera_secure_ee_waf.test-cluster.*"))
+
+			e.globalAlert = ga
+			e.executeEsQuery()
+		})
+	})
+
 })
 
 func getTestElasticService(lmaESClient lma.Client, httpServer *httptest.Server, clusterName string, alert *v3.GlobalAlert) (*service, error) {
@@ -698,6 +725,17 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 			default:
 				Fail(fmt.Sprintf("Unexpected/malformed Elasticsearch query :%s", reqBody))
 			}
+		case baseURI + "/tigera_secure_ee_waf.test-cluster.%2A/_search":
+			switch string(reqBody) {
+			case mustGetQueryWithStartTimeAsString("test_files/11_waf_with_metric_but_no_aggregation_kibana_query.json", "@timestamp"):
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Request:    req,
+					Body:       mustOpen("test_files/11_waf_with_metric_but_no_aggregation_kibana_response.json"),
+				}, nil
+			default:
+				Fail(fmt.Sprintf("Unexpected/malformed Elasticsearch query :%s", reqBody))
+			}
 		case baseURI + "/_bulk":
 			reqBody = alterBulkRequestBodyForComparison(originalReqBody)
 			switch string(reqBody) {
@@ -797,6 +835,12 @@ func (t *testRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 					Request:    req,
 					Body:       mustOpen("test_files/bulk_response.json"),
 				}, nil
+			case mustGetEventIndexDocAsString("test_files/11_waf_with_metric_but_no_aggregation_tigera_events_doc.json"):
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Request:    req,
+					Body:       mustOpen("test_files/bulk_response.json"),
+				}, nil
 			default:
 				Fail(fmt.Sprintf("Unexpected/malformed data sent to Elasticsearch events index: %s", reqBody))
 			}
@@ -871,6 +915,11 @@ func mustOpen(name string) io.ReadCloser {
 }
 
 func mustGetQueryAsString(name string) string {
+
+	return mustGetQueryWithStartTimeAsString(name, "start_time")
+}
+
+func mustGetQueryWithStartTimeAsString(name, startTime string) string {
 	f, err := os.Open(name)
 	if err != nil {
 		Expect(err).ShouldNot(HaveOccurred())
@@ -889,7 +938,7 @@ func mustGetQueryAsString(name string) string {
 	// alter time range for comparison
 	Expect(q.Query.Bool.Filter).NotTo(BeNil())
 	q.Query.Bool.Filter["range"] = map[string]interface{}{
-		"start_time": map[string]string{
+		startTime: map[string]string{
 			"gte": fmt.Sprintf("now-%ds", int64(DefaultLookback.Seconds())),
 			"lte": "now",
 		},
