@@ -1756,7 +1756,7 @@ func TestSecondaryIfaceProvisioner_IPAMCleanup(t *testing.T) {
 			_, _, err := fake.IPAM.AutoAssign(context.TODO(), sip.ipamAssignArgs(1, subnetIDWest1Calico))
 			Expect(err).NotTo(HaveOccurred())
 			// Check we allocated exactly what we expected.
-			addrs, err := fake.IPAM.IPsByHandle(context.TODO(), sip.ipamHandle())
+			addrs, err := fake.IPAM.IPsByHandle(context.TODO(), sip.hostPrimaryIPIPAMHandle())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(addrs).To(ConsistOf(cnet.MustParseIP(calicoHostIP1Str)))
 
@@ -1770,7 +1770,7 @@ func TestSecondaryIfaceProvisioner_IPAMCleanup(t *testing.T) {
 			}
 
 			// Check that the leaked IP was freed.
-			addrs, err = fake.IPAM.IPsByHandle(context.TODO(), sip.ipamHandle())
+			addrs, err = fake.IPAM.IPsByHandle(context.TODO(), sip.hostPrimaryIPIPAMHandle())
 			if mode == v3.AWSSecondaryIPEnabledENIPerWorkload {
 				Expect(err).To(HaveOccurred()) // Not found
 				Expect(addrs).To(BeEmpty())
@@ -1809,7 +1809,7 @@ func TestSecondaryIfaceProvisioner_IPAMCleanupFailure(t *testing.T) {
 					}
 
 					// Check that the leaked IP was freed.
-					addrs, err := fake.IPAM.IPsByHandle(context.TODO(), sip.ipamHandle())
+					addrs, err := fake.IPAM.IPsByHandle(context.TODO(), sip.hostPrimaryIPIPAMHandle())
 					if mode == v3.AWSSecondaryIPEnabledENIPerWorkload {
 						Expect(err).To(HaveOccurred()) // Not found
 						Expect(addrs).To(BeEmpty())

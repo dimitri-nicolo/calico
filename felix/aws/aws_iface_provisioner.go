@@ -117,9 +117,9 @@ type SecondaryIfaceProvisioner struct {
 	// orphanENIResyncNeeded is set to true if the next resync should also check for orphaned ENIs.  I.e. ones
 	// that this node previously created but which never got attached.  (For example, because felix restarted.)
 	orphanENIResyncNeeded bool
-	// hostIPAMResyncNeeded is set to true if the next resync should also check for IPs that are assigned to this
+	// hostIPAMLeakCheckNeeded is set to true if the next resync should also check for IPs that are assigned to this
 	// node but not in use for one of our ENIs.
-	hostIPAMResyncNeeded bool
+	hostIPAMLeakCheckNeeded bool
 
 	ec2Client           *EC2Client
 	networkCapabilities *NetworkCapabilities
@@ -223,8 +223,7 @@ func NewSecondaryIfaceProvisioner(
 	ipamClient ipamInterface,
 	options ...IfaceProvOpt,
 ) *SecondaryIfaceProvisioner {
-	if mode == v3.AWSSecondaryIPDisabled ||
-		(mode != v3.AWSSecondaryIPEnabled && mode != v3.AWSSecondaryIPEnabledENIPerWorkload) {
+	if mode != v3.AWSSecondaryIPEnabled && mode != v3.AWSSecondaryIPEnabledENIPerWorkload {
 		logrus.WithField("mode", mode).Panic("Unknown AWS secondary IP mode.")
 	}
 	sip := &SecondaryIfaceProvisioner{
@@ -239,8 +238,8 @@ func NewSecondaryIfaceProvisioner(
 		opRecorder:         logutils.NewSummarizer("AWS secondary IP reconciliation loop"),
 
 		// Do the extra scans on first run.
-		orphanENIResyncNeeded: true,
-		hostIPAMResyncNeeded:  true,
+		orphanENIResyncNeeded:   true,
+		hostIPAMLeakCheckNeeded: true,
 
 		datastoreUpdateC: make(chan DatastoreState, 1),
 		responseC:        make(chan *LocalAWSNetworkState, 1),
@@ -516,7 +515,7 @@ func (m *SecondaryIfaceProvisioner) resync() (*LocalAWSNetworkState, error) {
 		return nil, err
 	}
 	// Similarly, mop up any Calico IPAM resources we don't need. (Also start of day/after detecting problem.)
-	if err := m.maybeResyncIPAM(awsState); err != nil {
+	if err := m.maybeDoIPAMLeakCheck(awsState); err != nil {
 		return nil, err
 	}
 
@@ -607,8 +606,8 @@ func (m *SecondaryIfaceProvisioner) maybeResyncOrphanENIs(resyncState *awsState,
 	return nil
 }
 
-func (m *SecondaryIfaceProvisioner) maybeResyncIPAM(awsState *awsState) error {
-	if m.hostIPAMResyncNeeded {
+func (m *SecondaryIfaceProvisioner) maybeDoIPAMLeakCheck(awsState *awsState) error {
+	if m.hostIPAMLeakCheckNeeded {
 		// Now we've cleaned up any unneeded ENIs. Free any IPs that are assigned to us in IPAM but not in use for
 		// one of our ENIs.
 		err := m.freeUnusedHostCalicoIPs(awsState)
@@ -616,7 +615,7 @@ func (m *SecondaryIfaceProvisioner) maybeResyncIPAM(awsState *awsState) error {
 			return fmt.Errorf("failed to release unused secondary interface IP in Calico IPAM: %w", err)
 		}
 		// Won't need to do this again unless we hit an IPAM error.
-		m.hostIPAMResyncNeeded = false
+		m.hostIPAMLeakCheckNeeded = false
 	}
 	return nil
 }
@@ -708,7 +707,7 @@ func (m *SecondaryIfaceProvisioner) provisionNewAWSIPs(
 			v4addrs, err := m.allocateCalicoHostIPs(numENIsToCreate, bestSubnetID)
 			if err != nil {
 				// Queue up a clean up of any IPs we may have leaked.
-				m.hostIPAMResyncNeeded = true
+				m.hostIPAMLeakCheckNeeded = true
 				return err
 			}
 			eniPrimaryIPs = v4addrs.IPs
@@ -718,7 +717,7 @@ func (m *SecondaryIfaceProvisioner) provisionNewAWSIPs(
 		err = m.createAWSENIs(awsState, bestSubnetID, eniPrimaryIPs)
 		if err != nil {
 			// Queue up a cleanup of any IPs we may have leaked.
-			m.hostIPAMResyncNeeded = true
+			m.hostIPAMLeakCheckNeeded = true
 			return err
 		}
 	}
@@ -1038,7 +1037,7 @@ func (m *SecondaryIfaceProvisioner) releaseAWSENIs(enisToRelease set.Set, awsSta
 		return nil
 	}
 	// About to release some ENIs, queue up a check of our IPAM handle and a general AWS recheck.
-	m.hostIPAMResyncNeeded = true
+	m.hostIPAMLeakCheckNeeded = true
 	m.resetRecheckInterval("release-eni")
 
 	// Detach any ENIs that we want to delete.  They must be detached first.
@@ -1063,8 +1062,12 @@ func (m *SecondaryIfaceProvisioner) releaseAWSENIs(enisToRelease set.Set, awsSta
 		return nil
 	})
 
-	// It almost always takes at least 10s before we can delete an ENI.  I considered doing this in the background
-	// but AWS API request quota is pretty scarce so thought it best to retry single-threaded
+	// Initially, we just had a retry loop here.  However, it almost always takes at least 10s before we can delete
+	// an ENI so (only) retrying in a loop produces spammy warnings and consumes precious AWS API quota.  Better to
+	// sleep before the first attempt.  It'd be even better to queue this up in the background but it's not trivial
+	// to arrange.  We'd need to keep track of to-be-deleted ENIs and make sure that we don't try to reattach them
+	// as well as worrying about whether their device index can be used before the detach operation has fully
+	// finished.
 	m.sleepClock.Sleep(10 * time.Second)
 	m.reportMainLoopLive()
 
@@ -1395,7 +1398,7 @@ func (m *SecondaryIfaceProvisioner) allocateCalicoHostIPs(numENIsNeeded int, sub
 func (m *SecondaryIfaceProvisioner) ipamAssignArgs(numENIsNeeded int, subnetID string) ipam.AutoAssignArgs {
 	return ipam.AutoAssignArgs{
 		Num4:     numENIsNeeded,
-		HandleID: stringPtr(m.ipamHandle()),
+		HandleID: stringPtr(m.hostPrimaryIPIPAMHandle()),
 		Attrs: map[string]string{
 			ipam.AttributeType: ipam.AttributeTypeAWSSecondary,
 			ipam.AttributeNode: m.nodeName,
@@ -1502,7 +1505,7 @@ func (m *SecondaryIfaceProvisioner) createAWSENIs(awsState *awsState, subnetID s
 
 	if finalErr != nil {
 		logrus.Info("Some AWS ENI operations failed; queueing a scan for orphaned ENIs/IPAM resources.")
-		m.hostIPAMResyncNeeded = true
+		m.hostIPAMLeakCheckNeeded = true
 		m.orphanENIResyncNeeded = true
 	}
 
@@ -1574,7 +1577,7 @@ func (m *SecondaryIfaceProvisioner) assignSecondaryIPsToENIs(awsState *awsState,
 	return nil
 }
 
-func (m *SecondaryIfaceProvisioner) ipamHandle() string {
+func (m *SecondaryIfaceProvisioner) hostPrimaryIPIPAMHandle() string {
 	// Using the node name here for consistency with tunnel IPs.
 	return fmt.Sprintf("aws-secondary-ifaces-%s", m.nodeName)
 }
@@ -1810,7 +1813,7 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(awsState *awsSta
 				var eniID string
 				if m.mode == v3.AWSSecondaryIPEnabledENIPerWorkload {
 					// In ENI-per-workload mode, only look at the primary IPs.  If we see a secondary IP it must
-					// be stale data form AWS.
+					// be stale data from AWS.
 					eniID = awsState.eniIDByPrimaryIP[privIP]
 				} else {
 					// In secondary IP-per-workload mode, only look at the secondary IPs.  If we see a matching
@@ -1864,6 +1867,8 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(awsState *awsSta
 	return nil
 }
 
+// findENIsWithNoWorkload is used in ENI-per-workload mode to find ENIs that have a primary IP that doesn't match any
+// workloads.
 func (m *SecondaryIfaceProvisioner) findENIsWithNoWorkload(state *awsState) set.Set {
 	enisIDsToRelease := set.New()
 	for eniID, eni := range state.calicoOwnedENIsByID {
@@ -1881,7 +1886,7 @@ func (m *SecondaryIfaceProvisioner) findENIsWithNoWorkload(state *awsState) set.
 }
 
 func (m *SecondaryIfaceProvisioner) ensureIPAMLoaded() error {
-	if m.ourHostIPs != nil && !m.hostIPAMResyncNeeded {
+	if m.ourHostIPs != nil && !m.hostIPAMLeakCheckNeeded {
 		return nil
 	}
 
@@ -1891,7 +1896,7 @@ func (m *SecondaryIfaceProvisioner) ensureIPAMLoaded() error {
 	hostIPs := set.New()
 	ctx, cancel := m.newContext()
 	defer cancel()
-	ourIPs, err := m.ipamClient.IPsByHandle(ctx, m.ipamHandle())
+	ourIPs, err := m.ipamClient.IPsByHandle(ctx, m.hostPrimaryIPIPAMHandle())
 	if err != nil {
 		if _, ok := err.(calierrors.ErrorResourceDoesNotExist); ok {
 			logrus.Debug("No host IPs in IPAM.")
