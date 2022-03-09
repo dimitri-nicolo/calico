@@ -669,6 +669,34 @@ func (a *awsIPManager) configureNIC(iface netlink.Link, ifaceName string, primar
 	}
 
 	var finalErr error
+
+	// Remove any left-over proxy ARP entries that we previously added for ENI-per-workload mode.
+	neighs, err := a.nl.NeighList(iface.Attrs().Index, netlink.FAMILY_V4)
+	if err != nil {
+		logrus.WithError(err).Error("Failed to query netlink for proxy ARP entries.")
+		finalErr = err
+	}
+	primaryNetIP := net.ParseIP(primaryIPStr)
+	for _, n := range neighs {
+		if n.Flags&netlink.NTF_PROXY != 0 {
+			if a.dpConfig.AWSSecondaryIPSupport == v3.AWSSecondaryIPEnabledENIPerWorkload &&
+				n.IP.Equal(primaryNetIP) {
+				continue
+			}
+
+			logrus.WithFields(logrus.Fields{
+				"addr":  n.IP.String(),
+				"iface": iface.Attrs().Name,
+			}).Info("Found left-over proxy ARP entry; removing.")
+			err := a.nl.NeighDel(&n)
+			if err != nil {
+				logrus.WithError(err).WithField("entry", n).Warn(
+					"Failed to clean up unwanted proxy ARP entry.")
+				finalErr = err
+			}
+		}
+	}
+
 	if a.dpConfig.AWSSecondaryIPSupport == v3.AWSSecondaryIPEnabledENIPerWorkload {
 		// The primary IP of the interface belongs to a workload. Configure the host to respond to ARPs even
 		// though it doesn't own the IP.
@@ -677,7 +705,7 @@ func (a *awsIPManager) configureNIC(iface netlink.Link, ifaceName string, primar
 			LinkIndex: iface.Attrs().Index,
 			Family:    netlink.FAMILY_V4,
 			Flags:     netlink.NTF_PROXY,
-			IP:        net.ParseIP(primaryIPStr),
+			IP:        primaryNetIP,
 		})
 		if err != nil {
 			logrus.WithError(err).WithFields(logrus.Fields{
@@ -947,6 +975,8 @@ type awsNetlinkIface interface {
 	AddrAdd(iface netlink.Link, addr *netlink.Addr) error
 	ParseAddr(s string) (*netlink.Addr, error)
 	NeighSet(neigh *netlink.Neigh) error
+	NeighDel(neigh *netlink.Neigh) error
+	NeighList(linkIndex, family int) ([]netlink.Neigh, error)
 }
 
 func realRouteRuleNew(
@@ -1013,4 +1043,12 @@ func (a awsRealNetlink) NewHandle() (routerule.HandleIface, error) {
 
 func (a awsRealNetlink) NeighSet(neigh *netlink.Neigh) error {
 	return netlink.NeighSet(neigh)
+}
+
+func (a awsRealNetlink) NeighDel(neigh *netlink.Neigh) error {
+	return netlink.NeighDel(neigh)
+}
+
+func (a awsRealNetlink) NeighList(linkIndex, family int) ([]netlink.Neigh, error) {
+	return netlink.NeighList(linkIndex, family)
 }

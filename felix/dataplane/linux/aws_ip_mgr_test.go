@@ -3,6 +3,7 @@
 package intdataplane
 
 import (
+	"fmt"
 	"net"
 	"reflect"
 	"time"
@@ -523,6 +524,8 @@ func describeAWSIPMgrCommonTests(mode string) {
 							Flags:     netlink.NTF_PROXY,
 							IP:        net.ParseIP(egressGWIP),
 						}))
+					ifaceARPEntries := fakes.ifaceARPEntries(secondaryLink.Attrs().Index)
+					ExpectWithOffset(1, ifaceARPEntries).To(HaveLen(1), "Got unexpected extra ARP entries")
 				}
 
 				expectSecondaryLinkConfigured = func() {
@@ -648,6 +651,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 					errEntry("AddrAdd"),
 					errEntry("AddrDel"),
 					errEntry("ParseAddr"),
+					errEntry("NeighList"),
 				}
 			}
 			table.DescribeTable("with queued error",
@@ -660,9 +664,21 @@ func describeAWSIPMgrCommonTests(mode string) {
 					secondaryLink.addrs = append(secondaryLink.addrs, *extraNLAddr)
 					fakes.AddFakeLink(secondaryLink)
 
+					// Add a bonus proxy ARP entry so that NeighDel will be called.
+					fakes.Neighs[NeighKey{
+						Iface: secondaryLink.Attrs().Index,
+						IP:    "1.2.3.4",
+					}] = &netlink.Neigh{
+						LinkIndex: secondaryLink.Attrs().Index,
+						Family:    netlink.FAMILY_V4,
+						Flags:     netlink.NTF_PROXY,
+						IP:        net.ParseIP("1.2.3.4"),
+					}
+
 					// CompleteDeferredWork should fail once, then succeed.
 					Expect(m.CompleteDeferredWork()).To(HaveOccurred())
 					Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+					Expect(fakes.DeletedNeighs).To(ConsistOf("1.2.3.4"))
 
 					// IP should be added.
 					expectSecondaryLinkConfigured()
@@ -1145,6 +1161,7 @@ type awsIPMgrFakes struct {
 	Rules                *fakeRouteRules
 	Errors               testutils.ErrorProducer
 	DatastoreUpdateCount int
+	DeletedNeighs        []string
 }
 
 type NeighKey struct {
@@ -1234,6 +1251,36 @@ func (f *awsIPMgrFakes) NeighSet(neigh *netlink.Neigh) error {
 	return nil
 }
 
+func (f *awsIPMgrFakes) NeighDel(neigh *netlink.Neigh) error {
+	if err := f.Errors.NextErrorByCaller(); err != nil {
+		return err
+	}
+	nk := NeighKey{
+		Iface: neigh.LinkIndex,
+		IP:    neigh.IP.String(),
+	}
+	if _, ok := f.Neighs[nk]; !ok {
+		return fmt.Errorf("neigh not found")
+	}
+	delete(f.Neighs, nk)
+	f.DeletedNeighs = append(f.DeletedNeighs, neigh.IP.String())
+	return nil
+}
+
+func (f *awsIPMgrFakes) NeighList(linkIndex, family int) ([]netlink.Neigh, error) {
+	if err := f.Errors.NextErrorByCaller(); err != nil {
+		return nil, err
+	}
+	Expect(family).To(Equal(netlink.FAMILY_V4))
+	var neighs []netlink.Neigh
+	for nk, n := range f.Neighs {
+		if nk.Iface == linkIndex {
+			neighs = append(neighs, *n)
+		}
+	}
+	return neighs, nil
+}
+
 func (f *awsIPMgrFakes) NewRouteTable(
 	regexes []string,
 	version uint8,
@@ -1318,6 +1365,16 @@ func (f *awsIPMgrFakes) RemoveFakeLink(link *fakeLink) {
 		newLinks = append(newLinks, l)
 	}
 	f.Links = newLinks
+}
+
+func (f *awsIPMgrFakes) ifaceARPEntries(index int) []*netlink.Neigh {
+	var neighs []*netlink.Neigh
+	for k, v := range f.Neighs {
+		if k.Iface == index {
+			neighs = append(neighs, v)
+		}
+	}
+	return neighs
 }
 
 func newFakeLink() *fakeLink {
