@@ -40,7 +40,7 @@ include ../lib.Makefile
 MOCKERY_FILE_PATHS= \
 	pkg/elasticsearch/ClientBuilder \
 
-SRC_FILES=cmd/kube-controllers/main.go $(shell find pkg -name '*.go')
+SRC_FILES=cmd/kube-controllers/main.go $(shell find pkg -name '*.go') $(shell find ../libcalico-go -name '*.go')
 
 # We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
 ifeq ($(ARCH), $(filter $(ARCH),amd64))

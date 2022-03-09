@@ -116,7 +116,7 @@ var _ = Describe("kube-controllers FV tests", func() {
 		Eventually(func() *api.ClusterInformation {
 			info, _ = calicoClient.ClusterInformation().Get(context.Background(), "default", options.GetOptions{})
 			return info
-		}).ShouldNot(BeNil())
+		}, 10*time.Second).ShouldNot(BeNil())
 
 		Expect(info.Spec.ClusterGUID).To(MatchRegexp("^[a-f0-9]{32}$"))
 		Expect(info.Spec.ClusterType).To(Equal("k8s"))
@@ -558,7 +558,6 @@ var _ = Describe("kube-controllers FV tests", func() {
 			profile, err := calicoClient.Profiles().Get(context.Background(), profName, options.GetOptions{})
 			By("getting the profile", func() {
 				Expect(err).ShouldNot(HaveOccurred())
-
 			})
 
 			By("updating the profile to have no labels to apply", func() {
