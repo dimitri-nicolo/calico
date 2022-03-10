@@ -1,5 +1,5 @@
 // Project Calico BPF dataplane programs.
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2022 Tigera, Inc. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 #ifndef __CALI_BPF_H__
@@ -267,6 +267,8 @@ CALI_CONFIGURABLE_DEFINE(egress_gateway, 0x47455349) /* be 0x47455349 = ASCII(IS
 CALI_CONFIGURABLE_DEFINE(egress_client, 0x43455349) /* be 0x43455349 = ASCII(ISEC) */
 CALI_CONFIGURABLE_DEFINE(psnat_start, 0x53545250) /* be 0x53545250 = ACSII(PRTS) */
 CALI_CONFIGURABLE_DEFINE(psnat_len, 0x4c545250) /* be 0x4c545250 = ACSII(PRTL) */
+CALI_CONFIGURABLE_DEFINE(flags, 0x00000001)
+
 
 #define HOST_IP		CALI_CONFIGURABLE(host_ip)
 #define TUNNEL_MTU 	CALI_CONFIGURABLE(tunnel_mtu)
@@ -279,6 +281,7 @@ CALI_CONFIGURABLE_DEFINE(psnat_len, 0x4c545250) /* be 0x4c545250 = ACSII(PRTL) *
 #define EGRESS_CLIENT	CALI_CONFIGURABLE(egress_client)
 #define PSNAT_START	CALI_CONFIGURABLE(psnat_start)
 #define PSNAT_LEN	CALI_CONFIGURABLE(psnat_len)
+#define GLOBAL_FLAGS 	CALI_CONFIGURABLE(flags)
 
 #define MAP_PIN_GLOBAL	2
 

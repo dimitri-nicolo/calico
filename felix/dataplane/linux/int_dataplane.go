@@ -215,6 +215,7 @@ type Config struct {
 	BPFMapSizeNATBackend               int
 	BPFMapSizeNATAffinity              int
 	BPFMapSizeIPSets                   int
+	BPFIpv6Enabled                     bool
 	KubeProxyMinSyncPeriod             time.Duration
 	KubeProxyEndpointSlicesEnabled     bool
 	FlowLogsCollectProcessInfo         bool

@@ -1,7 +1,7 @@
 //go:build !windows
 // +build !windows
 
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -66,6 +66,7 @@ type AttachPoint struct {
 	ForceReattach        bool
 	PSNATStart           uint16
 	PSNATEnd             uint16
+	IPv6Enabled          bool
 	MapSizes             map[string]uint32
 }
 
@@ -204,7 +205,7 @@ func (ap AttachPoint) AttachProgram() (string, error) {
 		isHost = true
 	}
 
-	err = updateJumpMap(obj, isHost)
+	err = updateJumpMap(obj, isHost, ap.IPv6Enabled)
 	if err != nil {
 		return "", fmt.Errorf("error updating jump map %v", err)
 	}
@@ -663,7 +664,7 @@ func (ap *AttachPoint) MustReattach() bool {
 }
 
 func ConfigureVethNS(m *libbpf.Map, VethNS uint16) error {
-	return libbpf.TcSetGlobals(m, 0, 0, 0, 0, 0, 0, 0, VethNS, false, false, false)
+	return libbpf.TcSetGlobals(m, 0, 0, 0, 0, 0, 0, 0, VethNS, false, false, false, 0)
 }
 
 func (ap AttachPoint) HookName() string {
@@ -688,8 +689,14 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 	if err != nil {
 		return err
 	}
+
+	var flags uint32
+	if ap.IPv6Enabled {
+		flags |= libbpf.GlobalsIPv6Enabled
+	}
+
 	return libbpf.TcSetGlobals(m, hostIP, intfIP, ap.ExtToServiceConnmark, ap.TunnelMTU, vxlanPort,
-		ap.PSNATStart, ap.PSNATEnd, ap.VethNS, ap.EnableTCPStats, ap.IsEgressGateway, ap.IsEgressClient)
+		ap.PSNATStart, ap.PSNATEnd, ap.VethNS, ap.EnableTCPStats, ap.IsEgressGateway, ap.IsEgressClient, flags)
 }
 
 // nolint
@@ -701,25 +708,56 @@ func (ap *AttachPoint) setMapSize(m *libbpf.Map) error {
 }
 
 // nolint
-func updateJumpMap(obj *libbpf.Obj, isHost bool) error {
-	if !isHost {
-		err := obj.UpdateJumpMap("cali_jump", string(policyProgram), PolicyProgramIndex)
-		if err != nil {
-			return fmt.Errorf("error updating policy program %v", err)
+func updateJumpMap(obj *libbpf.Obj, isHost bool, ipv6Enabled bool) error {
+	ipVersions := set.New()
+	ipVersions.Add("IPv4")
+	if ipv6Enabled {
+		ipVersions.Add("IPv6")
+	}
+
+	ipVersions.Iter(func(ipFamily interface{}) error {
+		// Since in IPv4, we don't add prologue to the jump map, and hence the first
+		// program is policy, the base index should be set to -1 to properly offset the
+		// policy program (base+1) to the first entry in the jump map, i.e. 0. However,
+		// in IPv6, we add the prologue program to the jump map, and the first entry is 3.
+		base := -1
+		if ipFamily == "IPv6" {
+			base = 4
 		}
-	}
-	err := obj.UpdateJumpMap("cali_jump", string(allowProgram), AllowProgramIndex)
-	if err != nil {
-		return fmt.Errorf("error updating epilogue program %v", err)
-	}
-	err = obj.UpdateJumpMap("cali_jump", string(icmpProgram), IcmpProgramIndex)
-	if err != nil {
-		return fmt.Errorf("error updating icmp program %v", err)
-	}
-	err = obj.UpdateJumpMap("cali_jump", string(dropProgram), DropProgramIndex)
-	if err != nil {
-		return fmt.Errorf("error updating icmp program %v", err)
-	}
+
+		// Update prologue program, but only in IPv6. IPv4 prologue program is the start
+		// of execution, and we don't need to add it into the jump map
+		if ipFamily == "IPv6" {
+			err := obj.UpdateJumpMap("cali_jump", string(programNames[base]), base)
+			if err != nil {
+				return fmt.Errorf("error updating %v proglogue program: %v", ipFamily, err)
+			}
+		}
+		pIndex := base + 1
+		if !isHost {
+			err := obj.UpdateJumpMap("cali_jump", string(programNames[pIndex]), pIndex)
+			if err != nil {
+				return fmt.Errorf("error updating %v policy program: %v", ipFamily, err)
+			}
+		}
+		eIndex := base + 2
+		err := obj.UpdateJumpMap("cali_jump", string(programNames[eIndex]), eIndex)
+		if err != nil {
+			return fmt.Errorf("error updating %v epilogue program: %v", ipFamily, err)
+		}
+		iIndex := base + 3
+		err = obj.UpdateJumpMap("cali_jump", string(programNames[iIndex]), iIndex)
+		if err != nil {
+			return fmt.Errorf("error updating %v icmp program: %v", ipFamily, err)
+		}
+		dIndex := base + 4
+		err = obj.UpdateJumpMap("cali_jump", string(programNames[dIndex]), dIndex)
+		if err != nil {
+			return fmt.Errorf("error updating %v drop program: %v", ipFamily, err)
+		}
+		return nil
+	})
+
 	return nil
 }
 
