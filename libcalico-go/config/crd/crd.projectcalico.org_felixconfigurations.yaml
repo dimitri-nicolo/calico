@@ -344,8 +344,11 @@ spec:
                   attempts if initial connection attempts fail. This may be problematic
                   for some                      applications or for very low DNS TTLs.
                   \n On Windows, or when using the eBPF dataplane, this setting is
-                  ignored and \"NoDelay\" is always used. \n Possible values are DelayDeniedPacket,
-                  DelayDNSPacket, NoDelay. [Default: DelayDeniedPacket]"
+                  ignored and \"NoDelay\" is always used. \n [Default: DelayDeniedPacket]"
+                enum:
+                - NoDelay
+                - DelayDeniedPacket
+                - DelayDNSResponse
                 type: string
               dnsPolicyNfqueueID:
                 description: 'DNSPolicyNfqueueID is the NFQUEUE ID to use for DNS

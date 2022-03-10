@@ -76,6 +76,10 @@ func init() {
 
 const (
 	holdTimeCheckInterval = 50 * time.Millisecond
+
+	// The max size of DNS packet over UDP is 512 bytes, but set a max of 1024 to handle any additional
+	// encapsulation.
+	maxPacketSize = 1024
 )
 
 type PacketProcessor interface {
@@ -88,9 +92,7 @@ func New(
 ) PacketProcessor {
 	options := []nfqueue.Option{
 		nfqueue.OptMaxQueueLength(queueLength),
-		// The max size of DNS packet over UDP is 512 bytes, but set a max of 1024 to handle any additional
-		// encapsulation.
-		nfqueue.OptMaxPacketLength(1024),
+		nfqueue.OptMaxPacketLength(maxPacketSize),
 		nfqueue.OptMaxHoldTime(maxHoldDuration),
 		nfqueue.OptHoldTimeCheckInterval(holdTimeCheckInterval),
 		// Fail open ensures packets are accepted if the queue is full.

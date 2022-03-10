@@ -70,6 +70,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"path"
 	"regexp"
@@ -119,6 +120,11 @@ func init() {
 	prometheus.MustRegister(prometheusReqPacketsInCount)
 }
 
+const (
+	maxHoldDurationRequest  = 10 * time.Second
+	maxHoldDurationResponse = 1 * time.Second
+)
+
 // The data that we hold for each value in a name -> value mapping.  A value can be an IP, or
 // another name.  The values themselves are held as the keys of the nameData.values map.
 type valueData struct {
@@ -149,9 +155,28 @@ type ipData struct {
 	nameDatas set.Set
 }
 
+// dnsExchangeKey is a key used to identify a DNS request and related response.
 type dnsExchangeKey struct {
 	clientIP string
 	dnsID    uint16
+}
+
+// latencyData encapsulates one half of a DNS request or response. It is temporarily stored to determine latency
+// information before the DNS response is logged. Generally the request arrives first, but there are scenarios where
+// this may not always be true (e.g. DNSPolicyMode is DelayDNSResponse where requests and response come over different
+// channels).
+type latencyData struct {
+	// The time (in milliseconds) that this data was queued. Used to determine when to expire this entry.
+	queueTimestamp int64
+
+	// The timestamp on the packet. Used to determine the request/response latency.
+	packetTimestamp uint64
+
+	// The serverIP, client IP and DNS packet for a DNS response. If packet is nil then this entry corresponds to
+	// a request, otherwise it corresponds to a response.
+	packet   *layers.DNS
+	serverIP net.IP
+	clientIP net.IP
 }
 
 type DataWithTimestamp struct {
@@ -196,7 +221,7 @@ type DomainInfoStore struct {
 
 	// Channel for domain mapping expiry signals.
 	mappingExpiryChannel chan *domainMappingExpired
-	expiryTimePassed     func(time.Time) bool
+	nowFunc              func() time.Time
 
 	// Shim for starting and returning a timer that will call `onExpiry` after `ttl`.
 	makeExpiryTimer func(ttl time.Duration, onExpiry func()) *time.Timer
@@ -212,10 +237,14 @@ type DomainInfoStore struct {
 	// Activity logging.
 	collector collector.Collector
 
-	// Handling of DNS request/response timestamps, so that we can measure and report DNS
-	// latency.
-	measureLatency   bool
-	requestTimestamp map[dnsExchangeKey]uint64
+	// Handling of DNS request/response timestamps, so that we can measure and report DNS latency. Because requests and
+	// responses may be out-of-order (in some modes of operation they come through different channels) we may need to
+	// store either the request or the response.  The requests are persisted for up to 10s to find the matching
+	// response, but the responses are only persisted for up to 1s (since there is no network latency that we need to
+	// consider for this scenario).
+	measureLatency  bool
+	latencyData     map[dnsExchangeKey]latencyData
+	latencyInterval time.Duration
 
 	// Handling additional DNS mapping lifetime.
 	epoch    int
@@ -279,15 +308,14 @@ func NewDomainInfoStore(config *DnsConfig) *DomainInfoStore {
 	return newDomainInfoStoreWithShims(
 		config,
 		time.AfterFunc,
-		func(expiryTime time.Time) bool {
-			return expiryTime.Before(time.Now())
-		})
+		time.Now,
+	)
 }
 
 func newDomainInfoStoreWithShims(
 	config *DnsConfig,
 	makeExpiryTimer func(time.Duration, func()) *time.Timer,
-	expiryTimePassed func(time.Time) bool,
+	nowFunc func() time.Time,
 ) *DomainInfoStore {
 	log.WithField("config", config).Info("Creating domain info store")
 	s := &DomainInfoStore{
@@ -298,17 +326,19 @@ func newDomainInfoStoreWithShims(
 		wildcards:            make(map[string]*regexp.Regexp),
 		resultsCache:         make(map[string][]string),
 		mappingExpiryChannel: make(chan *domainMappingExpired),
-		expiryTimePassed:     expiryTimePassed,
+		nowFunc:              nowFunc,
 		makeExpiryTimer:      makeExpiryTimer,
 		saveFile:             config.DNSCacheFile,
 		saveInterval:         config.DNSCacheSaveInterval,
 		gcInterval:           13 * time.Second,
 		collector:            config.Collector,
-		measureLatency:       config.DNSLogsLatency,
-		requestTimestamp:     make(map[dnsExchangeKey]uint64),
-		epoch:                config.DNSCacheEpoch,
-		extraTTL:             config.DNSExtraTTL,
-		dnsResponseDelay:     config.DebugDNSResponseDelay,
+		// Only measure latency if we are collecting logs.
+		measureLatency:   config.DNSLogsLatency && config.Collector != nil,
+		latencyInterval:  100 * time.Millisecond,
+		latencyData:      make(map[dnsExchangeKey]latencyData),
+		epoch:            config.DNSCacheEpoch,
+		extraTTL:         config.DNSExtraTTL,
+		dnsResponseDelay: config.DebugDNSResponseDelay,
 		// Capacity 1 here is to allow UT to test the use of this channel without
 		// needing goroutines.
 		resetC: make(chan struct{}, 1),
@@ -357,8 +387,9 @@ func (s *DomainInfoStore) Start() {
 	// garbage collection.
 	saveTimerC := time.NewTicker(s.saveInterval).C
 	gcTimerC := time.NewTicker(s.gcInterval).C
+	latencyTimerC := time.NewTicker(s.latencyInterval).C
 
-	go s.loop(saveTimerC, gcTimerC)
+	go s.loop(saveTimerC, gcTimerC, latencyTimerC)
 }
 
 // Dynamically handle changes to DNSCacheEpoch and DNSExtraTTL.
@@ -460,13 +491,13 @@ func (s *DomainInfoStore) CompleteDeferredWork() error {
 	return nil
 }
 
-func (s *DomainInfoStore) loop(saveTimerC, gcTimerC <-chan time.Time) {
+func (s *DomainInfoStore) loop(saveTimerC, gcTimerC, latencyTimerC <-chan time.Time) {
 	for {
-		s.loopIteration(saveTimerC, gcTimerC)
+		s.loopIteration(saveTimerC, gcTimerC, latencyTimerC)
 	}
 }
 
-func (s *DomainInfoStore) loopIteration(saveTimerC, gcTimerC <-chan time.Time) {
+func (s *DomainInfoStore) loopIteration(saveTimerC, gcTimerC, latencyTimerC <-chan time.Time) {
 	select {
 	case msg := <-s.msgChannel:
 		// TODO: Test and fix handling of DNS over IPv6.  The `layers.LayerTypeIPv4`
@@ -512,8 +543,12 @@ func (s *DomainInfoStore) loopIteration(saveTimerC, gcTimerC <-chan time.Time) {
 			prometheusNonQueryPacketsInCount.Inc()
 			return
 		}
-		latencyIfKnown := s.processForLatency(ipv4, dns, msg.Timestamp)
-		if dns.QR == true {
+
+		if !dns.QR {
+			// It's a DNS request. Process the packet for logging purposes.
+			s.processDNSRequestPacketForLogging(ipv4, dns, msg.Timestamp)
+			prometheusReqPacketsInCount.Inc()
+		} else {
 			// It's a DNS response.
 			if dns.QDCount == 0 || len(dns.Questions) == 0 {
 				// No questions; malformed packet?
@@ -522,26 +557,21 @@ func (s *DomainInfoStore) loopIteration(saveTimerC, gcTimerC <-chan time.Time) {
 				return
 			}
 
-			if s.collector != nil {
-				if ipv4 != nil {
-					s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns, latencyIfKnown)
-				} else {
-					log.Warning("Not logging non-IPv4 DNS packet")
-				}
-			}
-			s.processDNSPacket(dns, msg.Callback)
+			// Process the packet for our DNS cache first and then process the packet for logging purposes.
+			s.processDNSResponsePacket(dns, msg.Callback)
+			s.processDNSResponsePacketForLogging(ipv4, dns, msg.Timestamp)
 			prometheusRespPacketsInCount.Inc()
-		} else {
-			prometheusReqPacketsInCount.Inc()
 		}
 	case expiry := <-s.mappingExpiryChannel:
-		s.processMappingExpiry(expiry.name, expiry.value)
+		s.processMappingExpiry(expiry.name, expiry.value, s.nowFunc())
 	case <-saveTimerC:
 		if err := s.SaveMappingsV1(); err != nil {
 			log.WithError(err).Warning("Failed to save mappings to file")
 		}
 	case <-gcTimerC:
 		_ = s.collectGarbage()
+	case t := <-latencyTimerC:
+		s.releaseUnpairedDataForLogging(t)
 	case <-s.resetC:
 		s.expireAllMappings()
 	}
@@ -699,7 +729,135 @@ func (s *DomainInfoStore) SaveMappingsV1() error {
 	return nil
 }
 
-func (s *DomainInfoStore) processDNSPacket(dns *layers.DNS, callback func()) {
+// processDNSRequestPacketForLogging processes a DNS request for logging.
+//
+// Requests are only used to determine request/response latency, so if not measuring latency this is a no-op. Under
+// certain conditions requests and responses may arrive out of order. This method handles both:
+// - If a response has not been received then the request is stored for a maximum of 10s while we wait for a response
+// - If a response has been received then the latency is calculated and the response packet is logged with latency.
+//
+// Response packets are processed in processDNSResponsePacketForLogging.
+// Requests that have been held for >10s are removed in releaseUnpairedDataForLogging.
+func (s *DomainInfoStore) processDNSRequestPacketForLogging(ipv4 *layers.IPv4, dns *layers.DNS, timestamp uint64) {
+	// We only use the request packet if we are measuring latency.
+	if !s.measureLatency {
+		return
+	}
+	if ipv4 == nil {
+		// DNS request IDs are not globally unique; we need the IP of the client to scope
+		// them.  So, when the packet in hand does not have an IPv4 header, we can't process
+		// it for latency.
+		return
+	}
+	if timestamp == 0 {
+		// No packetTimestamp on this packet.
+		log.Debugf("DNS-LATENCY: Missing packetTimestamp on DNS request with ID %v", dns.ID)
+		return
+	}
+
+	// From here on we know we have a packetTimestamp for the packet in hand.  It's a number of
+	// nanoseconds, measured from some arbitrary point in the past.  (Possibly not from the same
+	// base point as time.Time, so don't assume that.)
+	key := dnsExchangeKey{ipv4.SrcIP.String(), dns.ID}
+	if data, exists := s.latencyData[key]; !exists {
+		// There is no stored entry, so store the request.
+		log.Debugf("DNS-LATENCY: DNS request in hand with ID %v", key)
+		s.latencyData[key] = latencyData{
+			queueTimestamp:  s.nowFunc().UnixMilli(),
+			packetTimestamp: timestamp,
+		}
+	} else if data.packet == nil {
+		// We already have a request stored for this key. Update it. This is not expected, but we should protect
+		// as best we can against duplicate IDs.
+		log.Warnf("DNS-LATENCY: Already have outstanding DNS request with ID %v", key)
+		s.latencyData[key] = latencyData{
+			queueTimestamp:  s.nowFunc().UnixMilli(),
+			packetTimestamp: timestamp,
+		}
+	} else {
+		// We have received a request, and have a stored response (so they were out of order). Remove the record,
+		// calculate latency and log.
+		latency := time.Duration(data.packetTimestamp - timestamp)
+		log.Debugf("DNS-LATENCY: response before request: %v for ID %v", latency, key)
+		s.collector.LogDNS(ipv4.DstIP, ipv4.SrcIP, data.packet, &latency)
+		delete(s.latencyData, key)
+	}
+}
+
+// processDNSResponsePacketForLogging processes a DNS response for logging.
+//
+// If not measuring latency the packet is logged immediately. Otherwise, the response is correlated with a request to
+// determine latency.
+//
+// Under certain conditions requests and responses may arrive out of order. This method handles both:
+// - If a request has not been received then the response is stored for a maximum of 1s while we wait for a request.
+//   This should only occur rarely and for a short time because the dataplane will have processed the request first, but
+//   if request and response are processed by different queues then it is theoretically possible for them to arrive out
+//   of order.
+// - If a request has been received then the latency is calculated and the response packet is logged with latency.
+//
+// Request packets are processed in processDNSRequestPacketForLogging.
+// Requests that have been held for >1s are removed in releaseUnpairedDataForLogging.
+func (s *DomainInfoStore) processDNSResponsePacketForLogging(ipv4 *layers.IPv4, dns *layers.DNS, timestamp uint64) {
+	// We only need to do anything if we are logging.
+	if s.collector == nil {
+		return
+	}
+	if ipv4 == nil {
+		// DNS request IDs are not globally unique; we need the IP of the client to scope
+		// them.  So, when the packet in hand does not have an IPv4 header, we can't process
+		// it for latency.
+		return
+	}
+	if !s.measureLatency {
+		// Not measuring latency, , just log immediately since we are not gathering latency info.
+		s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns, nil)
+		return
+	}
+
+	if timestamp == 0 {
+		// No packetTimestamp on this packet, just log immediately since we cannot gather latency info.
+		log.Debugf("DNS-LATENCY: Missing packetTimestamp on DNS request with ID %v", dns.ID)
+		s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns, nil)
+		return
+	}
+
+	// From here on we know we have a packetTimestamp for the packet in hand.  It's a number of
+	// nanoseconds, measured from some arbitrary point in the past.  (Possibly not from the same
+	// base point as time.Time, so don't assume that.)
+	key := dnsExchangeKey{ipv4.DstIP.String(), dns.ID}
+	if data, exists := s.latencyData[key]; !exists {
+		// There is no stored entry, so store the response.
+		log.Debugf("DNS-LATENCY: DNS response in hand with ID %v", key)
+		s.latencyData[key] = latencyData{
+			queueTimestamp:  s.nowFunc().UnixMilli(),
+			packetTimestamp: timestamp,
+			serverIP:        ipv4.SrcIP,
+			clientIP:        ipv4.DstIP,
+			packet:          dns,
+		}
+	} else if data.packet == nil {
+		// We have received a response, and have a stored request. Remove the record, calculate latency and log.
+		latency := time.Duration(timestamp - data.packetTimestamp)
+		log.Debugf("DNS-LATENCY: response after request: %v for ID %v", latency, key)
+		s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns, &latency)
+		delete(s.latencyData, key)
+	} else {
+		// We have received a response and already have a stored response. Send a log for the previous response and
+		// update the entry.  This is not expected, but we should protect as best we can against identical IDs.
+		log.Warnf("DNS-LATENCY: Already have outstanding DNS request with ID %v", key)
+		s.collector.LogDNS(data.serverIP, data.clientIP, data.packet, nil)
+		s.latencyData[key] = latencyData{
+			queueTimestamp:  s.nowFunc().UnixMilli(),
+			packetTimestamp: timestamp,
+			serverIP:        ipv4.SrcIP,
+			clientIP:        ipv4.DstIP,
+			packet:          dns,
+		}
+	}
+}
+
+func (s *DomainInfoStore) processDNSResponsePacket(dns *layers.DNS, callback func()) {
 	log.Debugf("DNS packet with %v answers %v additionals", len(dns.Answers), len(dns.Additionals))
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -748,12 +906,12 @@ func (s *DomainInfoStore) processDNSPacket(dns *layers.DNS, callback func()) {
 	}
 }
 
-func (s *DomainInfoStore) processMappingExpiry(name, value string) {
+func (s *DomainInfoStore) processMappingExpiry(name, value string, now time.Time) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
 	if nameData := s.mappings[name]; nameData != nil {
-		if valueData := nameData.values[value]; (valueData != nil) && s.expiryTimePassed(valueData.expiryTime) {
+		if valueData := nameData.values[value]; (valueData != nil) && valueData.expiryTime.Before(now) {
 			log.Debugf("Mapping expiry for %v -> %v", name, value)
 			delete(nameData.values, value)
 			if !valueData.isName {
@@ -932,7 +1090,7 @@ func (s *DomainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 			}
 		}
 		s.mappings[name].values[value] = &valueData{
-			expiryTime: time.Now().Add(ttl),
+			expiryTime: s.nowFunc().Add(ttl),
 			timer:      makeTimer(),
 			isName:     isName,
 		}
@@ -961,7 +1119,7 @@ func (s *DomainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 		s.mappings[name].revision = s.currentRevision
 		revision = s.currentRevision
 	} else {
-		newExpiryTime := time.Now().Add(ttl)
+		newExpiryTime := s.nowFunc().Add(ttl)
 		if newExpiryTime.After(existing.expiryTime) {
 			// Update the expiry time of the existing mapping.
 			existing.timer = makeTimer()
@@ -1134,65 +1292,38 @@ func (s *DomainInfoStore) collectGarbage() (numDeleted int) {
 	return
 }
 
-func (s *DomainInfoStore) processForLatency(ipv4 *layers.IPv4, dns *layers.DNS, timestamp uint64) (latencyIfKnown *time.Duration) {
+// releaseUnpairedDataForLogging releases request/response data that has had no corresponding response/request. This
+// data is only cached for latency calculation for logging, and so if latency is not being measured then this is a
+// no-op.
+func (s *DomainInfoStore) releaseUnpairedDataForLogging(t time.Time) {
 	if !s.measureLatency {
+		// Only relevant if measuring latency.
 		return
 	}
 
-	if ipv4 == nil {
-		// DNS request IDs are not globally unique; we need the IP of the client to scope
-		// them.  So, when the packet in hand does not have an IPv4 header, we can't process
-		// it for latency.
-		return
-	}
+	// Calculate the timestamps for expiring requests and responses.
+	nowMillis := t.UnixMilli()
+	requestCutoff := nowMillis - int64(maxHoldDurationRequest/time.Millisecond)
+	responseCutoff := nowMillis - int64(maxHoldDurationResponse/time.Millisecond)
 
-	var key dnsExchangeKey
-
-	if timestamp == 0 {
-		// No timestamp on this packet.
-		msgType := "request"
-		if dns.QR {
-			msgType = "response"
-		}
-		log.Debugf("DNS-LATENCY: Missing timestamp on DNS %v with ID %v", msgType, dns.ID)
-		return
-	}
-
-	// From here on we know we have a timestamp for the packet in hand.  It's a number of
-	// nanoseconds, measured from some arbitrary point in the past.  (Possibly not from the same
-	// base point as time.Time, so don't assume that.)
-	if dns.QR == false {
-		// It's a request.
-		key.clientIP = ipv4.SrcIP.String()
-		key.dnsID = dns.ID
-		if _, exists := s.requestTimestamp[key]; exists {
-			log.Warnf("DNS-LATENCY: Already have outstanding DNS request with ID %v", key)
+	// Check for any request timestamps that are now more than 10 seconds old, and discard those.
+	// Check for any response timestamps that are now more than 1s old, and log and discard those.
+	for key, data := range s.latencyData {
+		if data.packet == nil {
+			// Request.
+			if data.queueTimestamp < requestCutoff {
+				log.Warnf("DNS-LATENCY: Missed DNS response for request with ID %v", key)
+				delete(s.latencyData, key)
+			}
 		} else {
-			log.Debugf("DNS-LATENCY: DNS request in hand with ID %v", key)
-			s.requestTimestamp[key] = timestamp
-		}
-	} else {
-		// It's a response.
-		key.clientIP = ipv4.DstIP.String()
-		key.dnsID = dns.ID
-		if requestTime, exists := s.requestTimestamp[key]; !exists {
-			log.Debugf("DNS-LATENCY: Missed DNS request for response with ID %v", key)
-		} else {
-			delete(s.requestTimestamp, key)
-			latency := timestamp - requestTime
-			log.Debugf("DNS-LATENCY: %v ns for ID %v", latency, key)
-			latencyAsDuration := time.Duration(latency)
-			latencyIfKnown = &latencyAsDuration
+			// Response. We still need to log this response, but have not latency data associated with it.
+			if data.queueTimestamp < responseCutoff {
+				log.Warnf("DNS-LATENCY: Missed DNS request for response with ID %v", key)
+				delete(s.latencyData, key)
+				s.collector.LogDNS(data.serverIP, data.clientIP, data.packet, nil)
+			}
 		}
 	}
 
-	// Check for any request timestamps that are now more than 10 seconds old, and discard those
-	// so that our map occupancy does not increase over time.
-	for key, requestTime := range s.requestTimestamp {
-		if time.Duration(timestamp-requestTime) > 10*time.Second {
-			log.Warnf("DNS-LATENCY: Missed DNS response for request with ID %v", key)
-			delete(s.requestTimestamp, key)
-		}
-	}
 	return
 }

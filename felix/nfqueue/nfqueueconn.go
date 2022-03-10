@@ -90,6 +90,11 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
 
+var (
+	// This is the minimum supported version of the kernel which supports nfqueue with bypass.
+	v3Dot13Dot0 = versionparse.MustParseVersion("3.13.0")
+)
+
 const (
 	nfDefaultMaxPacketLen      = 1024
 	nfDefaultMaxQueueLen       = 100
@@ -123,7 +128,7 @@ func NewNfQueueConnector(queueID uint16, handler Handler, options ...Option) NfQ
 		// capacity 1 because it's used as a trigger.
 		releaseChan: make(chan struct{}, 1),
 
-		// The disconnect channel used to trigger disconnection and reconnection. The connection reqeusting
+		// The disconnect channel used to trigger disconnection and reconnection. The connection requesting
 		// disconnection is sent so that the main queue processing loop will only trigger reconnection for the active
 		// connection.
 		disconnectChan: make(chan *nfQueueConnection, 1),
@@ -327,7 +332,7 @@ func (nfc *nfQueueConnector) connectionLoop(ctx context.Context) {
 				nfc.processQueueEvents(ctx)
 				nfc.disconnect()
 			} else {
-				// Not connecting to the uueue is a fatal problem.
+				// Not connecting to the queue is a fatal problem.
 				nfc.logger.WithError(err).Panic("unable to connect to the queue")
 			}
 		}

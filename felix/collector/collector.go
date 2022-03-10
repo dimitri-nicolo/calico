@@ -948,35 +948,35 @@ func (c *collector) SetDNSLogReporter(reporter DNSLogReporterInterface) {
 	c.dnsLogReporter = reporter
 }
 
-func (c *collector) LogDNS(src, dst net.IP, dns *layers.DNS, latencyIfKnown *time.Duration) {
+func (c *collector) LogDNS(server, client net.IP, dns *layers.DNS, latencyIfKnown *time.Duration) {
 	if c.dnsLogReporter == nil {
 		return
 	}
 	// DNS responses come through here, so the source IP is the DNS server and the dest IP is
 	// the client.
-	serverEP, _ := c.luc.GetEndpoint(ipTo16Byte(src))
-	clientEP, _ := c.luc.GetEndpoint(ipTo16Byte(dst))
+	serverEP, _ := c.luc.GetEndpoint(ipTo16Byte(server))
+	clientEP, _ := c.luc.GetEndpoint(ipTo16Byte(client))
 	if serverEP == nil {
-		serverEP, _ = c.luc.GetNetworkSet(ipTo16Byte(src))
+		serverEP, _ = c.luc.GetNetworkSet(ipTo16Byte(server))
 	}
-	logutil.Tracef(c.displayDebugTraceLogs, "Src %v -> Server %v", src, serverEP)
-	logutil.Tracef(c.displayDebugTraceLogs, "Dst %v -> Client %v", dst, clientEP)
+	logutil.Tracef(c.displayDebugTraceLogs, "Src %v -> Server %v", server, serverEP)
+	logutil.Tracef(c.displayDebugTraceLogs, "Dst %v -> Client %v", client, clientEP)
 	if latencyIfKnown != nil {
 		logutil.Tracef(c.displayDebugTraceLogs, "DNS-LATENCY: Log %v", *latencyIfKnown)
 	}
 	update := DNSUpdate{
-		ClientIP:       dst,
+		ClientIP:       client,
 		ClientEP:       clientEP,
-		ServerIP:       src,
+		ServerIP:       server,
 		ServerEP:       serverEP,
 		DNS:            dns,
 		LatencyIfKnown: latencyIfKnown,
 	}
 	if err := c.dnsLogReporter.Log(update); err != nil {
 		log.WithError(err).WithFields(log.Fields{
-			"src": src,
-			"dst": dst,
-			"dns": dns,
+			"server": server,
+			"client": client,
+			"dns":    dns,
 		}).Error("Failed to log DNS packet")
 	}
 }

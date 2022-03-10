@@ -2391,6 +2391,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.DNSPolicyMode != nil {
+		in, out := &in.DNSPolicyMode, &out.DNSPolicyMode
+		*out = new(DNSPolicyMode)
+		**out = **in
+	}
 	if in.DNSPolicyNfqueueID != nil {
 		in, out := &in.DNSPolicyNfqueueID, &out.DNSPolicyNfqueueID
 		*out = new(int)

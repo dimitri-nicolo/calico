@@ -1532,7 +1532,7 @@ func (d *InternalDataplane) Start() {
 		d.dnsDeniedPacketProcessor.Start()
 	}
 	if d.dnsResponsePacketProcessor != nil {
-		d.dnsDeniedPacketProcessor.Start()
+		d.dnsResponsePacketProcessor.Start()
 	}
 }
 
@@ -1541,7 +1541,7 @@ func (d *InternalDataplane) Stop() {
 		d.dnsDeniedPacketProcessor.Stop()
 	}
 	if d.dnsResponsePacketProcessor != nil {
-		d.dnsDeniedPacketProcessor.Stop()
+		d.dnsResponsePacketProcessor.Stop()
 	}
 }
 

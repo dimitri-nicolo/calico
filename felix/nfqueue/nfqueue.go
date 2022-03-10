@@ -11,8 +11,6 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/projectcalico/calico/felix/versionparse"
-
 	"github.com/mdlayher/netlink"
 
 	log "github.com/sirupsen/logrus"
@@ -20,10 +18,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	gonfqueue "github.com/florianl/go-nfqueue"
-)
-
-var (
-	v3Dot13Dot0 = versionparse.MustParseVersion("3.13.0")
 )
 
 const (
