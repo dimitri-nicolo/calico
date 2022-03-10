@@ -78,7 +78,7 @@ var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 		"useNodeResourceUpdates",
 		"internalOverrides",
 
-		// Temoporary field to implement and test IPv6 in BPF dataplane
+		// Temporary field to implement and test IPv6 in BPF dataplane
 		"BpfIpv6Support",
 	}
 	cpFieldNameToFC := map[string]string{
