@@ -262,6 +262,14 @@ chart/%: _includes/charts/%/values.yaml
 	--version $(chartVersion) \
 	--app-version $(appVersion)
 
+# Upload to Google tigera-helm-charts storage bucket.
+publish-charts:
+	bin/helm3 plugin install https://github.com/viglesiasce/helm-gcs.git
+	bin/helm3 repo add tigera gs://tigera-helm-charts
+	for chart in ./bin/*.tgz; do \
+		bin/helm3 gcs push $$chart gs://tigera-helm-charts; \
+	done
+
 # Copy the prometheus-operator chart package as a sub-chart for tigera-operator for helm packaging.
 # After the changes in PR #3580, Tigera Operator doesn't depend on Prometheus/Alertmanager resources.
 # The symbolic link of tigera-prometheus-operator folder is also removed from the tigera-operator/charts
