@@ -7,13 +7,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
-	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
-
-	"github.com/projectcalico/calico/kube-controllers/pkg/config"
-
-	relasticsearch "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
-
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
@@ -21,26 +14,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-
-	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/elasticsearchconfiguration"
-	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/license"
 )
 
-type managedClusterESControllerReconciler struct {
+type reconciler struct {
 	sync.Mutex
 	createManagedK8sCLI func(string) (kubernetes.Interface, *tigeraapi.Clientset, error)
 	managementK8sCLI    kubernetes.Interface
 	calicoCLI           tigeraapi.Interface
-	esK8sCLI            relasticsearch.RESTClient
 	// the only information we need about an elasticsearch cluster controller for a ManagedCluster is the channel to stop
 	// it. The exists of this channel can tell us if we have a controller for a ManagedCluster and the only action we would
 	// want to take on one is to stop it
 	managedClustersStopChans map[string]chan struct{}
-	cfgEs                    config.ElasticsearchCfgControllerCfg
-	cfgLic                   config.LicenseControllerCfg
-	esClientBuilder          elasticsearch.ClientBuilder
-	esClient                 elasticsearch.Client
 	restartChan              chan<- string
+
+	controllers []Controller
 }
 
 // Reconcile finds the ManagedCluster resource specified by the name and either adds, removes, or recreates the elasticsearch
@@ -49,7 +36,7 @@ type managedClusterESControllerReconciler struct {
 // doesn't exist or is no longer connected then the Elasticsearch configuration controller is stopped for that ManagedCluster,
 // if there is one running. In addition to reconciling Elasticsearch configuration changes, the controller will also reconcile
 // license changes in the managed cluster
-func (c *managedClusterESControllerReconciler) Reconcile(name types.NamespacedName) error {
+func (c *reconciler) Reconcile(name types.NamespacedName) error {
 	reqLogger := log.WithField("request", name)
 	reqLogger.Info("Reconciling ManagedClusters")
 
@@ -57,10 +44,9 @@ func (c *managedClusterESControllerReconciler) Reconcile(name types.NamespacedNa
 	if err != nil {
 		if errors.IsNotFound(err) {
 			reqLogger.Info("ManagedCluster not found")
-			// In case the ManagedCluster resource was delete remove the controller for that ManagedCluster
-			c.removeManagedClusterWatch(mc)
-			cleaner := users.NewEsCleaner(c.esClient)
-			cleaner.DeleteResidueUsers(name.Name)
+			for _, controller := range c.controllers {
+				controller.HandleManagedClusterRemoved(name.Name)
+			}
 			return nil
 		}
 		return err
@@ -89,7 +75,7 @@ func clusterConnected(managedCluster *v3.ManagedCluster) bool {
 	return false
 }
 
-func (c *managedClusterESControllerReconciler) startManagedClusterWatch(mc *v3.ManagedCluster) error {
+func (c *reconciler) startManagedClusterWatch(mc *v3.ManagedCluster) error {
 	managedK8sCLI, managedCalicoCLI, err := c.createManagedK8sCLI(mc.Name)
 	if err != nil {
 		return err
@@ -101,7 +87,7 @@ func (c *managedClusterESControllerReconciler) startManagedClusterWatch(mc *v3.M
 	return nil
 }
 
-func (c *managedClusterESControllerReconciler) removeManagedClusterWatch(mc *v3.ManagedCluster) {
+func (c *reconciler) removeManagedClusterWatch(mc *v3.ManagedCluster) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -112,7 +98,7 @@ func (c *managedClusterESControllerReconciler) removeManagedClusterWatch(mc *v3.
 	}
 }
 
-func (c *managedClusterESControllerReconciler) addManagedClusterWatch(mc *v3.ManagedCluster, managedK8sCLI kubernetes.Interface, managedCalicoCLI *tigeraapi.Clientset) {
+func (c *reconciler) addManagedClusterWatch(mc *v3.ManagedCluster, managedK8sCLI kubernetes.Interface, managedCalicoCLI *tigeraapi.Clientset) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -123,12 +109,11 @@ func (c *managedClusterESControllerReconciler) addManagedClusterWatch(mc *v3.Man
 		panic(fmt.Sprintf("a watch for managed cluster %s already exists", mc.Name))
 	}
 
-	esCredsController := elasticsearchconfiguration.New(mc.Name, string(mc.UID), managedK8sCLI, c.managementK8sCLI, c.esK8sCLI,
-		c.esClientBuilder, false, c.cfgEs, c.restartChan)
-	licenseController := license.New(mc.Name, managedCalicoCLI, c.calicoCLI, c.cfgLic)
-
 	stop := make(chan struct{})
-	go esCredsController.Run(stop)
-	go licenseController.Run(stop)
+	for _, controller := range c.controllers {
+		controller := controller.New(mc.Name, string(mc.UID), managedK8sCLI, c.managementK8sCLI, managedCalicoCLI, c.calicoCLI, false, c.restartChan)
+		go controller.Run(stop)
+	}
+
 	c.managedClustersStopChans[mc.Name] = stop
 }

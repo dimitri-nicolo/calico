@@ -599,10 +599,12 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 				},
 				k8sClientset,
 				calicoV3Client,
-				esK8sREST,
-				esClientBuilder,
 				*cfg.Controllers.ManagedCluster,
 				cc.restartCntrlChan,
+				[]managedcluster.Controller{
+					managedcluster.NewElasticsearchController(esK8sREST, esClientBuilder, cfg.Controllers.ManagedCluster.ElasticConfig),
+					managedcluster.NewLicensingController(cfg.Controllers.ManagedCluster.LicenseConfig),
+				},
 			),
 			licenseFeature: features.MultiClusterManagement,
 		}
