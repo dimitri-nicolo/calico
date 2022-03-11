@@ -107,7 +107,7 @@ type SecondaryIfaceProvisioner struct {
 	recheckIntervalResetNeeded bool
 	newEC2Client               func(ctx context.Context) (*EC2Client, error)
 
-	healthAgg       healthAggregator
+	healthAgg       HealthAggregator
 	livenessEnabled bool
 	opRecorder      *logutils.Summarizer
 	ipamClient      ipamInterface
@@ -211,7 +211,7 @@ func (c SecondaryIfaceCapacities) Equals(caps SecondaryIfaceCapacities) bool {
 	return c == caps
 }
 
-type healthAggregator interface {
+type HealthAggregator interface {
 	RegisterReporter(name string, reports *health.HealthReport, timeout time.Duration)
 	Report(name string, report *health.HealthReport)
 }
@@ -219,7 +219,7 @@ type healthAggregator interface {
 func NewSecondaryIfaceProvisioner(
 	mode string,
 	nodeName string,
-	healthAgg healthAggregator,
+	healthAgg HealthAggregator,
 	ipamClient ipamInterface,
 	options ...IfaceProvOpt,
 ) *SecondaryIfaceProvisioner {
@@ -256,21 +256,23 @@ func NewSecondaryIfaceProvisioner(
 		o(sip)
 	}
 
-	// Readiness flag used to indicate if we've got enough ENI capacity to handle all the local workloads
-	// that need it. No liveness, we reserve that for the main loop watchdog (set up below).
-	healthAgg.RegisterReporter(healthNameENICapacity, &health.HealthReport{Ready: true}, 0)
-	healthAgg.Report(healthNameENICapacity, &health.HealthReport{Ready: true})
-	// Similarly, readiness flag to report whether we succeeded in syncing with AWS.
-	healthAgg.RegisterReporter(healthNameAWSInSync, &health.HealthReport{Ready: true}, 0)
-	healthAgg.Report(healthNameAWSInSync, &health.HealthReport{Ready: true})
-	if sip.livenessEnabled {
-		// Health/liveness watchdog for our main loop.  We let this be disabled for ease of UT.
-		healthAgg.RegisterReporter(
-			healthNameAWSProvisioner,
-			&health.HealthReport{Ready: true, Live: true},
-			livenessTimeout,
-		)
-		healthAgg.Report(healthNameAWSProvisioner, &health.HealthReport{Ready: true, Live: true})
+	if healthAgg != nil {
+		// Readiness flag used to indicate if we've got enough ENI capacity to handle all the local workloads
+		// that need it. No liveness, we reserve that for the main loop watchdog (set up below).
+		healthAgg.RegisterReporter(healthNameENICapacity, &health.HealthReport{Ready: true}, 0)
+		healthAgg.Report(healthNameENICapacity, &health.HealthReport{Ready: true})
+		// Similarly, readiness flag to report whether we succeeded in syncing with AWS.
+		healthAgg.RegisterReporter(healthNameAWSInSync, &health.HealthReport{Ready: true}, 0)
+		healthAgg.Report(healthNameAWSInSync, &health.HealthReport{Ready: true})
+		if sip.livenessEnabled {
+			// Health/liveness watchdog for our main loop.  We let this be disabled for ease of UT.
+			healthAgg.RegisterReporter(
+				healthNameAWSProvisioner,
+				&health.HealthReport{Ready: true, Live: true},
+				livenessTimeout,
+			)
+			healthAgg.Report(healthNameAWSProvisioner, &health.HealthReport{Ready: true, Live: true})
+		}
 	}
 
 	return sip
@@ -392,7 +394,9 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 
 			var err error
 			response, err = m.resync()
-			m.healthAgg.Report(healthNameAWSInSync, &health.HealthReport{Ready: err == nil})
+			if m.healthAgg != nil {
+				m.healthAgg.Report(healthNameAWSInSync, &health.HealthReport{Ready: err == nil})
+			}
 			if err != nil {
 				logrus.WithError(err).Warning("Failed to resync with AWS. Will retry after backoff.")
 				backoffTimer = backoffMgr.Backoff()
@@ -680,7 +684,9 @@ func (m *SecondaryIfaceProvisioner) provisionNewAWSIPs(
 		// Check if we _can_ create that many ENIs.
 		numENIsPossible := awsState.CalculateUnusedENICapacity(m.networkCapabilities)
 		haveENICapacity := numENIsToCreate <= numENIsPossible
-		m.healthAgg.Report(healthNameENICapacity, &health.HealthReport{Ready: haveENICapacity})
+		if m.healthAgg != nil {
+			m.healthAgg.Report(healthNameENICapacity, &health.HealthReport{Ready: haveENICapacity})
+		}
 		if !haveENICapacity {
 			logrus.Warnf("Need %d more AWS secondary ENIs to support local workloads but only %d are "+
 				"available.  Some local workloads (typically egress gateways) will not have connectivity on "+
@@ -1112,7 +1118,9 @@ func (m *SecondaryIfaceProvisioner) reportMainLoopLive() {
 	if !m.livenessEnabled {
 		return
 	}
-	m.healthAgg.Report(healthNameAWSProvisioner, &health.HealthReport{Ready: true, Live: true})
+	if m.healthAgg != nil {
+		m.healthAgg.Report(healthNameAWSProvisioner, &health.HealthReport{Ready: true, Live: true})
+	}
 }
 
 // calculateBestSubnet Tries to calculate a single "best" AWS subnet for this host.  When we're configured correctly
