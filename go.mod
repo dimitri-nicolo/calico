@@ -7,7 +7,7 @@ require (
 	github.com/onsi/gomega v1.15.0
 	github.com/projectcalico/calico v3.21.2+incompatible
 	github.com/sirupsen/logrus v1.8.1
-	github.com/tigera/lma v0.0.0-20220311175334-bed9dd3a986b
+	github.com/tigera/lma v0.0.0-20220311181320-cd55152c3e86
 )
 
 require (
