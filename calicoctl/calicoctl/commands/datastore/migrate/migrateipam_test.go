@@ -183,6 +183,10 @@ func NewMockIPAMClient(bc bapi.Client) client.Interface {
 	}
 }
 
+func (c *MockIPAMClient) AlertExceptions() client.AlertExceptionInterface {
+	return nil
+}
+
 func (c *MockIPAMClient) UISettingsGroups() client.UISettingsGroupInterface {
 	return nil
 }

@@ -42,6 +42,10 @@ type FakeCalicoClient struct {
 	ipamClient ipam.Interface
 }
 
+func (f *FakeCalicoClient) AlertExceptions() clientv3.AlertExceptionInterface {
+	panic("implement me")
+}
+
 func (f *FakeCalicoClient) UISettingsGroups() clientv3.UISettingsGroupInterface {
 	panic("implement me")
 }
@@ -253,7 +257,6 @@ func (f *fakeNodeClient) Create(ctx context.Context, res *apiv3.Node, opts optio
 
 	if _, ok := f.nodes[res.Name]; ok {
 		return nil, cerrors.ErrorResourceAlreadyExists{Identifier: res.Name}
-
 	}
 	f.nodes[res.Name] = res
 	return res, nil
@@ -323,8 +326,14 @@ func (f *fakeIPAMClient) AutoAssign(ctx context.Context, args ipam.AutoAssignArg
 
 // ReleaseIPs releases any of the given IP addresses that are currently assigned,
 // so that they are available to be used in another assignment.
-func (f *fakeIPAMClient) ReleaseIPs(ctx context.Context, ips []cnet.IP) ([]cnet.IP, error) {
-	panic("not implemented") // TODO: Implement
+func (f *fakeIPAMClient) ReleaseIPs(ctx context.Context, opts ...ipam.ReleaseOptions) ([]cnet.IP, error) {
+	f.Lock()
+	defer f.Unlock()
+
+	for _, opt := range opts {
+		f.handlesReleased[opt.Handle] = true
+	}
+	return nil, nil
 }
 
 // GetAssignmentAttributes returns the attributes stored with the given IP address

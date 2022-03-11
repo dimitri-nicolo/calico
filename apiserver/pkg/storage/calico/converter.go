@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
 
 package calico
 
@@ -77,6 +77,11 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		aapiLicenseKey := &v3.LicenseKey{}
 		LicenseKeyConverter{}.convertToAAPI(lcgLicense, aapiLicenseKey)
 		return aapiLicenseKey
+	case *v3.AlertException:
+		lcg := libcalicoObject.(*v3.AlertException)
+		aapi := &v3.AlertException{}
+		AlertExceptionConverter{}.convertToAAPI(lcg, aapi)
+		return aapi
 	case *v3.GlobalAlert:
 		lcg := libcalicoObject.(*v3.GlobalAlert)
 		aapi := &v3.GlobalAlert{}

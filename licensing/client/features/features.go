@@ -1,3 +1,5 @@
+// Copyright (c) 2018-2022 Tigera, Inc. All rights reserved.
+
 package features
 
 import (
@@ -101,6 +103,8 @@ var OpenSourceAPIs = set{
 
 // EnterpriseAPIsToFeatureName maps calico enterprise APIs to feature names
 var EnterpriseAPIsToFeatureName = map[string]string{
+	api.NewAlertException().GetObjectKind().GroupVersionKind().String():                 AlertManagement,
+	api.NewAlertExceptionList().GetObjectKind().GroupVersionKind().String():             AlertManagement,
 	api.NewGlobalAlert().GetObjectKind().GroupVersionKind().String():                    AlertManagement,
 	api.NewGlobalAlertList().GetObjectKind().GroupVersionKind().String():                AlertManagement,
 	api.NewGlobalAlertTemplate().GetObjectKind().GroupVersionKind().String():            AlertManagement,
@@ -151,7 +155,10 @@ var CloudStarterAPIs = merge(CloudCommunityAPIs, set{api.NewTier().GetObjectKind
 var CloudProFeatures = merge(CloudStarterFeatures, set{FederatedServices: true, ExportLogs: true, AlertManagement: true, TopologicalGraph: true, KibanaDashboard: true, FileOutputL7Logs: true, PacketCapture: true})
 
 // CloudProAPIs maps cloud pro package APIs
-var CloudProAPIs = merge(CloudStarterAPIs, set{api.NewGlobalAlert().GetObjectKind().GroupVersionKind().String(): true,
+var CloudProAPIs = merge(CloudStarterAPIs, set{
+	api.NewAlertException().GetObjectKind().GroupVersionKind().String():                 true,
+	api.NewAlertExceptionList().GetObjectKind().GroupVersionKind().String():             true,
+	api.NewGlobalAlert().GetObjectKind().GroupVersionKind().String():                    true,
 	api.NewGlobalAlertList().GetObjectKind().GroupVersionKind().String():                true,
 	api.NewGlobalAlertTemplate().GetObjectKind().GroupVersionKind().String():            true,
 	api.NewGlobalAlertTemplateList().GetObjectKind().GroupVersionKind().String():        true,

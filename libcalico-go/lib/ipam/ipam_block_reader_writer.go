@@ -398,6 +398,8 @@ func (rw blockReaderWriter) listBlocks(ctx context.Context, revision string) (*m
 
 // updateBlock updates the given block.
 func (rw blockReaderWriter) updateBlock(ctx context.Context, b *model.KVPair) (*model.KVPair, error) {
+	// Every time we update a block, increment its sequence number.
+	b.Value.(*model.AllocationBlock).SequenceNumber++
 	return rw.client.Update(ctx, b)
 }
 
@@ -553,7 +555,7 @@ func randomBlockGenerator(ipPool v3.IPPool, hostName string) func() *cnet.IPNet 
 			return nil
 		}
 
-		ipnet := net.IPNet{ip.IP, blockMask}
+		ipnet := net.IPNet{IP: ip.IP, Mask: blockMask}
 
 		numDiff.Sub(numBlocks, i)
 
@@ -575,7 +577,7 @@ func randomBlockGenerator(ipPool v3.IPPool, hostName string) func() *cnet.IPNet 
 		numReturned.Add(numReturned, big.NewInt(1))
 
 		// Return the block from this pool that corresponds with the index.
-		return &cnet.IPNet{ipnet}
+		return &cnet.IPNet{IPNet: ipnet}
 	}
 }
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 
 package query
 
@@ -8,9 +8,32 @@ import (
 
 var (
 	EventsKeys = map[string]Validator{
-		"_id":   NullValidator,
-		"alert": NullValidator,
-		"type":  NullValidator,
+		"_id":              NullValidator,
+		"alert":            NullValidator,
+		"dest_ip":          IPValidator,
+		"dest_name":        DomainValidator,
+		"dest_name_aggr":   DomainValidator,
+		"dest_namespace":   DomainValidator,
+		"dest_port":        IntRangeValidator(0, MaxTCPUDPPortNum),
+		"host":             NullValidator,
+		"origin":           NullValidator,
+		"source_ip":        IPValidator,
+		"source_name":      DomainValidator,
+		"source_name_aggr": DomainValidator,
+		"source_namespace": DomainValidator,
+		"source_port":      IntRangeValidator(0, MaxTCPUDPPortNum),
+		// sync with manager ApiSecurityEventType if anything changes.
+		"type": SetValidator(
+			"alert",
+			"anomaly_detection_job",
+			"deep_packet_inspection",
+			"global_alert",
+			"gtf_suspicious_dns_query",
+			"gtf_suspicious_flow",
+			"honeypod",
+			"suspicious_dns_query",
+			"suspicious_flow",
+		),
 	}
 )
 

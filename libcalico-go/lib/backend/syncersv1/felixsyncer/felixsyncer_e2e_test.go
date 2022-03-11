@@ -451,7 +451,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 					Key:   model.WireguardKey{NodeName: "127.0.0.1"},
 					Value: &model.Wireguard{InterfaceIPv4Addr: &wip, PublicKey: "jlkVyQYooZYzI2wFfNhSZez5eWh44yfq1wKVjLvSXgY="},
 				})
-				//add one for the node resource
+				// add one for the node resource
 				expectedCacheSize += 6
 			}
 

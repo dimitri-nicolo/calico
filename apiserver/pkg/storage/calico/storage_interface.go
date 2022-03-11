@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
 
 package calico
 
@@ -31,6 +31,8 @@ func NewStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyFunc)
 		return NewNetworkSetStorage(opts)
 	case "projectcalico.org/licensekeys":
 		return NewLicenseKeyStorage(opts)
+	case "projectcalico.org/alertexceptions":
+		return NewAlertExceptionStorage(opts)
 	case "projectcalico.org/globalalerts":
 		return NewGlobalAlertStorage(opts)
 	case "projectcalico.org/globalalerttemplates":

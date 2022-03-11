@@ -94,7 +94,7 @@ func ExtractRulesSetFilenames() error {
 	filenames = nil
 	for _, item := range items {
 
-		// Ignore files starting with ".." that link to the parent directory.
+		// Ignore files that link to the parent directory.
 		filename := item.Name()
 		if strings.HasPrefix(filename, "..") {
 			continue

@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -70,6 +70,8 @@ type Interface interface {
 	RemoteClusterConfigurations() RemoteClusterConfigurationInterface
 	// LicenseKey returns an interface for managing the license key resource.
 	LicenseKey() LicenseKeyInterface
+	// AlertExceptions returns an interface for managing the alert exception resource.
+	AlertExceptions() AlertExceptionInterface
 	// GlobalAlerts returns an interface for managing the alert resources.
 	GlobalAlerts() GlobalAlertInterface
 	// GlobalAlertTemplates returns an interface for managing the alert template resources.

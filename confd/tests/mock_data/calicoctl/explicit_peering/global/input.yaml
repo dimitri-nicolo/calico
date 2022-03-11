@@ -27,7 +27,7 @@ apiVersion: projectcalico.org/v3
 metadata:
   name: bgppeer-2
 spec:
-  peerIP: 10.192.0.4:166
+  peerIP: 10.192.0.1:166
   asNumber: 64567
 
 ---
@@ -37,7 +37,7 @@ apiVersion: projectcalico.org/v3
 metadata:
   name: bgppeer-3
 spec:
-  peerIP: 10.192.0.4
+  peerIP: 10.192.0.1
   asNumber: 64567
 
 ---
@@ -68,7 +68,7 @@ metadata:
   name: kube-node-2
 spec:
   bgp:
-    ipv4Address: 10.192.0.4/16
+    ipv4Address: 10.192.0.1/16
 
 ---
 

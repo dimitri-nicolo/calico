@@ -19,8 +19,6 @@ spec:
       nodeSelector:
         kubernetes.io/os: linux
       serviceAccountName: calico-prometheus-operator
-      imagePullSecrets:
-        - name: tigera-pull-secret
       containers:
       - name: calico-prometheus-operator
         image: {{.Values.prometheusOperator.image}}:{{.Values.prometheusOperator.tag}}
