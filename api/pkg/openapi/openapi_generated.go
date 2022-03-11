@@ -629,7 +629,7 @@ func schema_pkg_apis_projectcalico_v3_AlertExceptionSpec(ref common.ReferenceCal
 					},
 					"period": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Period controls how long an alert exception will be active. It is optional and omitting Peroid will make the alert exception active forever.",
+							Description: "Period controls how long an alert exception will be active. It is optional and omitting Period will make the alert exception active forever.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
