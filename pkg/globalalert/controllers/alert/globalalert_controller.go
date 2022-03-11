@@ -7,45 +7,62 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
+	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/podtemplate"
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/worker"
 	"github.com/tigera/intrusion-detection/controller/pkg/health"
 	lma "github.com/tigera/lma/pkg/elastic"
+)
+
+const (
+	GlobalAlertResourceName = "globalalerts"
 )
 
 // globalAlertController is responsible for watching GlobalAlert resource in a cluster.
 type globalAlertController struct {
 	lmaESClient lma.Client
 	calicoCLI   calicoclient.Interface
+	k8sClient   kubernetes.Interface
 	clusterName string
+	namespace   string
 	cancel      context.CancelFunc
 	worker      worker.Worker
 }
 
 // NewGlobalAlertController returns a globalAlertController and for each object it watches,
 // a health.Pinger object is created returned for health check.
-func NewGlobalAlertController(calicoCLI calicoclient.Interface, lmaESClient lma.Client, clusterName string) (controller.Controller, []health.Pinger) {
+func NewGlobalAlertController(calicoCLI calicoclient.Interface, lmaESClient lma.Client, k8sClient kubernetes.Interface,
+	podTemplateQuery podtemplate.ADPodTemplateQuery, anomalyDetectionController controller.ADJobController,
+	clusterName string, namespace string) (controller.Controller, []health.Pinger) {
+
 	c := &globalAlertController{
 		lmaESClient: lmaESClient,
 		calicoCLI:   calicoCLI,
+		k8sClient:   k8sClient,
 		clusterName: clusterName,
+		namespace:   namespace,
 	}
 
 	// Create worker to watch GlobalAlert resource in the cluster
 	c.worker = worker.New(
 		&globalAlertReconciler{
-			lmaESClient:           c.lmaESClient,
-			calicoCLI:             c.calicoCLI,
-			alertNameToAlertState: map[string]alertState{},
-			clusterName:           c.clusterName,
+			lmaESClient:                c.lmaESClient,
+			calicoCLI:                  c.calicoCLI,
+			k8sClient:                  k8sClient,
+			podTemplateQuery:           podTemplateQuery,
+			anomalyDetectionController: anomalyDetectionController,
+			alertNameToAlertState:      map[string]alertState{},
+			clusterName:                c.clusterName,
+			namespace:                  namespace,
 		})
 
 	pinger := c.worker.AddWatch(
-		cache.NewListWatchFromClient(c.calicoCLI.ProjectcalicoV3().RESTClient(), "globalalerts", "", fields.Everything()),
+		cache.NewListWatchFromClient(c.calicoCLI.ProjectcalicoV3().RESTClient(), GlobalAlertResourceName, "", fields.Everything()),
 		&v3.GlobalAlert{})
 
 	return c, []health.Pinger{pinger}

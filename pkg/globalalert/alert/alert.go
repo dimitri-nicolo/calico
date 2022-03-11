@@ -7,30 +7,39 @@ import (
 	"reflect"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/util/retry"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+
+	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/util/retry"
+
+	ad "github.com/tigera/intrusion-detection/controller/pkg/globalalert/anomalydetection"
+	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
 	es "github.com/tigera/intrusion-detection/controller/pkg/globalalert/elastic"
+	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/podtemplate"
 	lma "github.com/tigera/lma/pkg/elastic"
 )
 
 const (
 	DefaultPeriod      = 5 * time.Minute
 	MinimumAlertPeriod = 5 * time.Second
+
+	GlobalAlertSpecTypeFieldName = "Type"
 )
 
 type Alert struct {
 	alert       *v3.GlobalAlert
 	calicoCLI   calicoclient.Interface
 	es          es.Service
+	adj         ad.Service
 	clusterName string
 }
 
 // NewAlert sets and returns an Alert, builds Elasticsearch query that will be used periodically to query Elasticsearch data.
-func NewAlert(alert *v3.GlobalAlert, calicoCLI calicoclient.Interface, lmaESClient lma.Client, clusterName string) (*Alert, error) {
+func NewAlert(alert *v3.GlobalAlert, calicoCLI calicoclient.Interface, lmaESClient lma.Client, k8sClient kubernetes.Interface,
+	podTemplateQuery podtemplate.ADPodTemplateQuery, anomalyDetectionController controller.ADJobController, clusterName string, namespace string) (*Alert, error) {
 	alert.Status.Active = true
 	alert.Status.LastUpdate = &metav1.Time{Time: time.Now()}
 
@@ -39,19 +48,65 @@ func NewAlert(alert *v3.GlobalAlert, calicoCLI calicoclient.Interface, lmaESClie
 		return nil, err
 	}
 
+	adj, err := ad.NewService(calicoCLI, k8sClient, podTemplateQuery, anomalyDetectionController, clusterName, namespace, alert)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Alert{
 		alert:       alert,
-		calicoCLI:   calicoCLI,
 		es:          es,
+		adj:         adj,
+		calicoCLI:   calicoCLI,
 		clusterName: clusterName,
 	}, nil
 }
 
-// Execute periodically queries the Elasticsearch, updates GlobalAlert status
+func (a *Alert) Execute(ctx context.Context) {
+	log.Debugf("Handling of type: %s.", a.alert.Spec.Type)
+
+	// extract by Reflect to handle GlobalAlert on managed clusters with CE version before Type field exists
+	globalAlertSpec := reflect.ValueOf(&a.alert.Spec).Elem()
+
+	globalAlertType, ok := globalAlertSpec.FieldByName(GlobalAlertSpecTypeFieldName).Interface().(v3.GlobalAlertType)
+
+	if !ok || globalAlertType != v3.GlobalAlertTypeAnomalyDetection {
+		a.ExecuteElasticQuery(ctx)
+	} else {
+		a.ExecuteAnomalyDetection(ctx)
+	}
+}
+
+// ExecuteAnomalyDetection starts the service for GlobalAlerts
+// specified for anomaly detection.  The scheduling of training
+// and anomaly detection of the jobs are done in the service itself.
+func (a *Alert) ExecuteAnomalyDetection(ctx context.Context) {
+	a.alert.Status = a.adj.Start(ctx)
+	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error { return a.updateStatus(ctx) }); err != nil {
+		log.WithError(err).Errorf("failed to update status GlobalAlert %s in cluster %s, maximum retries reached", a.alert.Name, a.clusterName)
+	}
+
+	for {
+		<-ctx.Done()
+		a.stopAnomalyDetectionService(ctx)
+		return
+	}
+}
+
+func (a *Alert) stopAnomalyDetectionService(ctx context.Context) {
+	a.alert.Status.Active = false
+	a.alert.Status = a.adj.Stop()
+
+	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error { return a.updateStatus(ctx) }); err != nil {
+		log.WithError(err).Errorf("failed to update status GlobalAlert %s in cluster %s, maximum retries reached", a.alert.Name, a.clusterName)
+	}
+}
+
+// ExecuteElasticQuery periodically queries the Elasticsearch, updates GlobalAlert status
 // and adds alerts to events index if alert conditions are met.
 // If parent context is cancelled, updates the GlobalAlert status and returns.
 // It also deletes any existing elastic watchers for the cluster.
-func (a *Alert) Execute(ctx context.Context) {
+func (a *Alert) ExecuteElasticQuery(ctx context.Context) {
 	a.es.DeleteElasticWatchers(ctx)
 	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error { return a.updateStatus(ctx) }); err != nil {
 		log.WithError(err).Errorf("failed to update status GlobalAlert %s in cluster %s, maximum retries reached", a.alert.Name, a.clusterName)
@@ -61,13 +116,16 @@ func (a *Alert) Execute(ctx context.Context) {
 		timer := time.NewTimer(a.getDurationUntilNextAlert())
 		select {
 		case <-timer.C:
+
 			a.alert.Status = a.es.ExecuteAlert(a.alert)
 			if err := retry.RetryOnConflict(retry.DefaultRetry, func() error { return a.updateStatus(ctx) }); err != nil {
 				log.WithError(err).Errorf("failed to update status GlobalAlert %s in cluster %s, maximum retries reached", a.alert.Name, a.clusterName)
 			}
+
 			timer.Stop()
 		case <-ctx.Done():
 			a.alert.Status.Active = false
+
 			if err := retry.RetryOnConflict(retry.DefaultRetry, func() error { return a.updateStatus(ctx) }); err != nil {
 				log.WithError(err).Errorf("failed to update status GlobalAlert %s in cluster %s, maximum retries reached", a.alert.Name, a.clusterName)
 			}

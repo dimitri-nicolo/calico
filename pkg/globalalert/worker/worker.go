@@ -127,6 +127,7 @@ func (w *worker) Run(stop <-chan struct{}) {
 	for _, watch := range w.watches {
 		_, ctrl := cache.NewIndexerInformer(watch.listWatcher, watch.obj, 0, w.resourceEventHandlerFuncs(),
 			cache.Indexers{})
+
 		go ctrl.Run(stop)
 
 		if !cache.WaitForNamedCacheSync(reflect.TypeOf(watch.obj).String(), stop, ctrl.HasSynced) {

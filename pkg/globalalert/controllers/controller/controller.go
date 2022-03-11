@@ -2,7 +2,9 @@
 
 package controller
 
-import "context"
+import (
+	"context"
+)
 
 type Controller interface {
 	// Run will set up workers and add watches to k8s resource we are interested in and starts the worker.
@@ -12,4 +14,10 @@ type Controller interface {
 
 	// Close cancel the context created by the Run function and all the internal goroutines.
 	Close()
+}
+
+type ADJobController interface {
+	Controller
+	AddToManagedJobs(resource interface{}) error
+	RemoveManagedJob(resourceName string)
 }

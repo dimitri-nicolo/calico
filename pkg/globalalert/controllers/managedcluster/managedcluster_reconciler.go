@@ -8,16 +8,21 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/api/errors"
+	es "github.com/tigera/intrusion-detection/controller/pkg/elastic"
+	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/alert"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
+	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/podtemplate"
+	"github.com/tigera/intrusion-detection/controller/pkg/health"
+
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-	es "github.com/tigera/intrusion-detection/controller/pkg/elastic"
-	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/alert"
-	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
-	"github.com/tigera/intrusion-detection/controller/pkg/health"
+
 	lma "github.com/tigera/lma/pkg/elastic"
 )
 
@@ -26,17 +31,26 @@ import (
 // and adds the new controller to health.Pingers.
 // If managed cluster is updated or deleted close the corresponding GlobalAlertController this in turn cancels all the goroutines.
 type managedClusterReconciler struct {
+	namespace                       string
 	lmaESClient                     lma.Client
+	k8sClient                       kubernetes.Interface
 	indexSettings                   es.IndexSettings
 	managementCalicoCLI             calicoclient.Interface
+	podTemplateQuery                podtemplate.ADPodTemplateQuery
 	createManagedCalicoCLI          func(string) (calicoclient.Interface, error)
 	alertNameToAlertControllerState map[string]alertControllerState
-	managedClusterAlertControllerCh chan []health.Pinger
+
+	anomalyDetectionController controller.ADJobController
+	anomalyTrainingController  controller.ADJobController
+
+	managedClusterAlertControllerHealthPinger health.Pinger
+	managedClusterAlertControllerCh           chan []health.Pinger
 }
 
 // alertControllerState has the Controller and cancel function to stop the Controller.
 type alertControllerState struct {
 	alertController controller.Controller
+	clusterName     string
 	cancel          context.CancelFunc
 }
 
@@ -45,14 +59,14 @@ type alertControllerState struct {
 // else it cancels the existing GlobalAlertController for that ManagedCluster.
 func (r *managedClusterReconciler) Reconcile(namespacedName types.NamespacedName) error {
 	mc, err := r.managementCalicoCLI.ProjectcalicoV3().ManagedClusters().Get(context.Background(), namespacedName.Name, metav1.GetOptions{})
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !k8serrors.IsNotFound(err) {
 		return err
 	}
 	if _, ok := r.alertNameToAlertControllerState[namespacedName.Name]; ok {
 		r.cancelAlertController(namespacedName.Name)
 	}
 
-	if errors.IsNotFound(err) {
+	if k8serrors.IsNotFound(err) {
 		// we are done closing the goroutine, noting more to do for deleted managed cluster
 		return nil
 	}
@@ -96,7 +110,18 @@ func (r *managedClusterReconciler) startManagedClusterAlertController(name strin
 		return err
 	}
 
-	alertController, alertHealthPingers := alert.NewGlobalAlertController(managedCLI, lmaESClient, clusterName)
+	// setup training AD cronjobs to run on the management cluster for the managed cluster
+	// also adds the cronjob to the AD training controller that will reconcile / maange it
+	err = r.anomalyTrainingController.AddToManagedJobs(clusterName)
+	if err != nil {
+		log.WithError(err).Debug("Error creating training cronjob for managed cluster %s.", clusterName)
+		return err
+	}
+
+	// create the GlobalAlertController for the managed cluster - this controller will monitor all GlobalAlert operations
+	// of the assigned managedcluster
+	alertController, alertHealthPingers := alert.NewGlobalAlertController(managedCLI, lmaESClient, r.k8sClient, r.podTemplateQuery,
+		r.anomalyDetectionController, clusterName, r.namespace)
 
 	successSendingPinger := false
 	for maxRetries := 5; maxRetries > 0; maxRetries-- {
@@ -121,6 +146,7 @@ func (r *managedClusterReconciler) startManagedClusterAlertController(name strin
 
 	r.alertNameToAlertControllerState[clusterName] = alertControllerState{
 		alertController: alertController,
+		clusterName:     clusterName,
 		cancel:          cancel,
 	}
 
@@ -139,6 +165,8 @@ func (r *managedClusterReconciler) Close() {
 func (r *managedClusterReconciler) cancelAlertController(name string) {
 	log.Debugf("Cancelling controller for cluster %s", name)
 	a := r.alertNameToAlertControllerState[name]
+
+	r.anomalyTrainingController.RemoveManagedJob(a.clusterName)
 	a.alertController.Close()
 	a.cancel()
 	delete(r.alertNameToAlertControllerState, name)

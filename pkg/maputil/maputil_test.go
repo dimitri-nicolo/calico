@@ -6,7 +6,7 @@ import (
 )
 
 var _ = Describe("maputil", func() {
-	Context("create a deep copy", func() {
+	Context("Copy - create a deep copy", func() {
 		It("should not reflect the changes made on copied map in source map", func() {
 			srcValue := "src_value"
 			cpValue := "cp_value"
@@ -35,6 +35,23 @@ var _ = Describe("maputil", func() {
 			Expect(cp["a"].(map[string]interface{})["b"]).Should(Equal(cpValue))
 			Expect(cp["c"]).Should(Equal(cpValue))
 			Expect(cp["d"].(map[string]interface{})["e"].(map[string]interface{})["f"]).Should(Equal(cpValue))
+		})
+	})
+
+	Context("CreateLabelValuePairStr", func() {
+		It("should create empty string givne empty map", func() {
+			result := CreateLabelValuePairStr(make(map[string]string))
+
+			Expect(result).To(Equal(""))
+		})
+
+		It("should key value pair string given non empty map", func() {
+			result := CreateLabelValuePairStr(map[string]string{
+				"key0": "val0",
+				"key1": "val1",
+			})
+
+			Expect(result).To(Equal("key0=val0,key1=val1"))
 		})
 	})
 })

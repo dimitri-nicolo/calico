@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -35,7 +36,9 @@ type managedClusterController struct {
 
 // NewManagedClusterController returns a managedClusterController and returns health.Pinger for resources it watches and also
 // returns another health.Pinger that monitors health of GlobalAlertController in each of the managed cluster.
-func NewManagedClusterController(calicoCLI calicoclient.Interface, lmaESClient lma.Client, indexSettings es.IndexSettings, createManagedCalicoCLI func(string) (calicoclient.Interface, error)) (controller.Controller, []health.Pinger) {
+func NewManagedClusterController(calicoCLI calicoclient.Interface, lmaESClient lma.Client, k8sClient kubernetes.Interface,
+	anomalyTrainingController controller.ADJobController, anomalyDetectionController controller.ADJobController,
+	indexSettings es.IndexSettings, namespace string, createManagedCalicoCLI func(string) (calicoclient.Interface, error)) (controller.Controller, []health.Pinger) {
 	m := &managedClusterController{
 		lmaESClient:                        lmaESClient,
 		indexSettings:                      indexSettings,
@@ -48,9 +51,13 @@ func NewManagedClusterController(calicoCLI calicoclient.Interface, lmaESClient l
 	// Create worker to watch ManagedCluster resource
 	m.worker = worker.New(&managedClusterReconciler{
 		createManagedCalicoCLI:          m.createManagedCalicoCLI,
+		namespace:                       namespace,
 		indexSettings:                   m.indexSettings,
 		lmaESClient:                     m.lmaESClient,
 		managementCalicoCLI:             m.calicoCLI,
+		k8sClient:                       k8sClient,
+		anomalyTrainingController:       anomalyDetectionController,
+		anomalyDetectionController:      anomalyDetectionController,
 		alertNameToAlertControllerState: map[string]alertControllerState{},
 		managedClusterAlertControllerCh: m.managedAlertControllerCh,
 	})

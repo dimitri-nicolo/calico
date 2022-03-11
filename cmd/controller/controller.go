@@ -28,6 +28,7 @@ import (
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/alert"
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/managedcluster"
+	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/podtemplate"
 	"github.com/tigera/intrusion-detection/controller/pkg/health"
 	"github.com/tigera/intrusion-detection/controller/pkg/util"
 	lma "github.com/tigera/lma/pkg/elastic"
@@ -37,11 +38,19 @@ import (
 	lclient "github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/monitor"
+
+	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/anomalydetection"
 )
 
 const (
-	DefaultConfigMapNamespace             = "tigera-intrusion-detection"
-	DefaultSecretsNamespace               = "tigera-intrusion-detection"
+	TigeraIntrusionDetectionNamespace = "tigera-intrusion-detection"
+	DefaultElasticScheme              = "https"
+	// through es-gateway
+	DefaultElasticHost                    = "tigera-secure-es-gateway-http.tigera-elasticsearch.svc.cluster.local"
+	DefaultElasticPort                    = "9200"
+	DefaultElasticUser                    = "elastic"
+	DefaultConfigMapNamespace             = TigeraIntrusionDetectionNamespace
+	DefaultSecretsNamespace               = TigeraIntrusionDetectionNamespace
 	DefaultMultiClusterForwardingEndpoint = "https://tigera-manager.tigera-manager.svc:9443"
 	DefaultMultiClusterForwardingCA       = "/manager-tls/cert"
 )
@@ -117,6 +126,10 @@ func main() {
 	e.Run(ctx)
 	defer e.Close()
 
+	if err != nil {
+		log.WithError(err).Panic("Could not create anomalydetection service")
+	}
+
 	clientCalico, err := client.NewFromEnv()
 	if err != nil {
 		log.WithError(err).Fatal("Failed to build calico client")
@@ -156,31 +169,57 @@ func main() {
 
 	s := feedsWatcher.NewWatcher(
 		k8sClient.CoreV1().ConfigMaps(configMapNamespace),
-		rbac.RestrictedSecretsClient{k8sClient.CoreV1().Secrets(secretsNamespace)},
+		rbac.RestrictedSecretsClient{
+			Client: k8sClient.CoreV1().Secrets(secretsNamespace),
+		},
 		calicoClient.ProjectcalicoV3().GlobalThreatFeeds(),
 		gns,
 		eip,
 		edn,
 		&http.Client{},
 		e, e, sIP, sDN, e)
+
 	valueEnableForwarding, err := strconv.ParseBool(os.Getenv("IDS_ENABLE_EVENT_FORWARDING"))
+
 	var enableForwarding = (err == nil && valueEnableForwarding)
 	var healthPingers health.Pingers
+
 	var enableFeeds = (os.Getenv("DISABLE_FEEDS") != "yes")
 	if enableFeeds {
 		healthPingers = append(healthPingers, s)
 	}
 
+	clusterName := getStrEnvOrDefault("CLUSTER_NAME", "cluster")
+
 	var managementAlertController, managedClusterController controller.Controller
 	var alertHealthPinger, managedClusterHealthPinger health.Pingers
+
+	// anomaly detection controllers
+	var anomalyTrainingController, anomalyDetectionController controller.ADJobController
+	var adJobsTrainingPinger, adJobDetectionHealthPinger health.Pingers
+
 	enableAlerts := os.Getenv("DISABLE_ALERTS") != "yes"
+
 	if enableAlerts {
-		managementAlertController, alertHealthPinger = alert.NewGlobalAlertController(calicoClient, lmaESClient, getStrEnvOrDefault("CLUSTER_NAME", "cluster"))
+		podtemplateQuery := podtemplate.NewPodTemplateQuery(k8sClient)
+
+		anomalyTrainingController, adJobsTrainingPinger = anomalydetection.NewADJobTrainingController(k8sClient,
+			calicoClient, podtemplateQuery, TigeraIntrusionDetectionNamespace, clusterName)
+		healthPingers = append(healthPingers, &adJobsTrainingPinger)
+
+		anomalyDetectionController, adJobDetectionHealthPinger = anomalydetection.NewADJobDetectionController(k8sClient,
+			calicoClient, TigeraIntrusionDetectionNamespace, clusterName)
+		healthPingers = append(healthPingers, &adJobDetectionHealthPinger)
+
+		managementAlertController, alertHealthPinger = alert.NewGlobalAlertController(calicoClient, lmaESClient, k8sClient, podtemplateQuery,
+			anomalyDetectionController, clusterName, TigeraIntrusionDetectionNamespace)
 		healthPingers = append(healthPingers, &alertHealthPinger)
 
 		multiClusterForwardingEndpoint := getStrEnvOrDefault("MULTI_CLUSTER_FORWARDING_ENDPOINT", DefaultMultiClusterForwardingEndpoint)
 		multiClusterForwardingCA := getStrEnvOrDefault("MULTI_CLUSTER_FORWARDING_CA", DefaultMultiClusterForwardingCA)
-		managedClusterController, managedClusterHealthPinger = managedcluster.NewManagedClusterController(calicoClient, lmaESClient, indexSettings,
+
+		managedClusterController, managedClusterHealthPinger = managedcluster.NewManagedClusterController(calicoClient, lmaESClient, k8sClient,
+			anomalyTrainingController, anomalyDetectionController, indexSettings, TigeraIntrusionDetectionNamespace,
 			util.ManagedClusterClient(config, multiClusterForwardingEndpoint, multiClusterForwardingCA))
 		healthPingers = append(healthPingers, &managedClusterHealthPinger)
 	}
@@ -208,6 +247,11 @@ func main() {
 			}
 
 			if enableAlerts {
+				anomalyTrainingController.Run(ctx)
+				defer anomalyTrainingController.Close()
+				anomalyDetectionController.Run(ctx)
+				defer anomalyDetectionController.Close()
+
 				managementAlertController.Run(ctx)
 				defer managementAlertController.Close()
 				managedClusterController.Run(ctx)
@@ -228,6 +272,9 @@ func main() {
 			}
 
 			if enableAlerts {
+				anomalyTrainingController.Close()
+				anomalyDetectionController.Close()
+
 				managedClusterController.Close()
 				managementAlertController.Close()
 			}
