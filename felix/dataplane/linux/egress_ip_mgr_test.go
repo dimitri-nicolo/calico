@@ -19,6 +19,7 @@ import (
 	"github.com/projectcalico/calico/felix/routerule"
 	"github.com/projectcalico/calico/felix/routetable"
 	"github.com/projectcalico/calico/felix/rules"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
 	"github.com/vishvananda/netlink"
@@ -37,6 +38,7 @@ var _ = Describe("EgressIPManager", func() {
 	var rrFactory *mockRouteRulesFactory
 	var rtFactory *mockRouteTableFactory
 	var podStatusCallback *mockEgressPodStatusCallback
+	var healthAgg *health.HealthAggregator
 
 	BeforeEach(func() {
 		rrFactory = &mockRouteRulesFactory{routeRules: nil}
@@ -67,6 +69,7 @@ var _ = Describe("EgressIPManager", func() {
 		}
 
 		podStatusCallback = &mockEgressPodStatusCallback{state: []statusCallbackEntry{}}
+		healthAgg = health.NewHealthAggregator()
 
 		manager = newEgressIPManagerWithShims(
 			mainTable,
@@ -83,10 +86,14 @@ var _ = Describe("EgressIPManager", func() {
 			logutils.NewSummarizer("test loop"),
 			func(ifName string) error { return nil },
 			podStatusCallback.statusCallback,
+			healthAgg,
 		)
+
+		Expect(healthAgg.Summary().Ready).To(BeFalse())
 
 		err := manager.CompleteDeferredWork()
 		Expect(err).ToNot(HaveOccurred())
+		Expect(healthAgg.Summary().Ready).To(BeTrue())
 
 		// No routerules should be created.
 		Expect(manager.routerules).To(BeNil())
@@ -348,7 +355,7 @@ var _ = Describe("EgressIPManager", func() {
 			rtFactory.Table(2).checkRoutes("egress.calico", nil)
 		})
 
-		It("should panic if run out of table index", func() {
+		It("should report unhealthy if run out of table index", func() {
 			manager.OnUpdate(&proto.IPSetUpdate{
 				Id:      "set3",
 				Members: ips1,
@@ -359,15 +366,27 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(manager.tableIndexStack.Len()).To(Equal(0))
 
-			manager.OnUpdate(&proto.IPSetUpdate{
+			breakingIPSet := proto.IPSetUpdate{
 				Id:      "set4",
 				Members: ips1,
 				Type:    proto.IPSetUpdate_EGRESS_IP,
-			})
+			}
+			manager.OnUpdate(&breakingIPSet)
 
-			Expect(func() {
-				_ = manager.CompleteDeferredWork()
-			}).To(Panic())
+			err = manager.CompleteDeferredWork()
+			Expect(err).NotTo(HaveOccurred()) // the manager will not report an error to the dataplane but should report unhealthy
+			Expect(healthAgg.Summary().Ready).To(BeFalse())
+			Expect(manager.dirtyEgressIPSet.Contains(&breakingIPSet))
+
+			// resolve the issue
+			resolvingUpdate := proto.IPSetRemove{
+				Id: "set4",
+			}
+			manager.OnUpdate(&resolvingUpdate)
+			err = manager.CompleteDeferredWork()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(healthAgg.Summary().Ready).To(BeTrue())
+			Expect(manager.dirtyEgressIPSet).NotTo(ContainElement(&breakingIPSet))
 		})
 
 		It("should use same table if endpoints has same egress ipset", func() {

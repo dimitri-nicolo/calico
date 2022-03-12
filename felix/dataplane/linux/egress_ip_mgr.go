@@ -9,11 +9,13 @@ import (
 	"net"
 	"sort"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	"golang.org/x/sys/unix"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
@@ -55,9 +57,19 @@ import (
 //
 // Egress IP manager ensures vxlan interface is configured according to the configuration.
 var (
-	TableIndexRunout = errors.New("no table index left")
-	defaultCidr, _   = ip.ParseCIDROrIP("0.0.0.0/0")
+	ErrInsufficientRouteTables  = errors.New("Ran out of egress ip route tables, increased routeTableRanges required")
+	ErrVxlanDeviceNotConfigured = errors.New("Egress VXLAN device not configured")
+	defaultCidr, _              = ip.ParseCIDROrIP("0.0.0.0/0")
 )
+
+const (
+	egressHealthName = "egress-networking-in-sync"
+)
+
+type healthAggregator interface {
+	RegisterReporter(name string, reports *health.HealthReport, timeout time.Duration)
+	Report(name string, report *health.HealthReport)
+}
 
 type routeRules interface {
 	SetRule(rule *routerule.Rule)
@@ -216,13 +228,22 @@ type egressIPManager struct {
 
 	// Callback function used to notify of workload pods impacted by a terminating egress gateway pod
 	statusCallback func(namespace, name, cidr string, maintenanceStarted, maintenanceFinished time.Time) error
+
+	healthAgg healthAggregator
+
+	// to rate-limit retries, track if the last kernel sync failed, and if our state has changed since then
+	lastUpdateFailed, unblockingUpdateOccurred bool
+
+	updateLock sync.Mutex // lock for any flags being used concurrently
 }
 
 func newEgressIPManager(
 	deviceName string,
+	rtTableIndices set.Set,
 	dpConfig Config,
 	opRecorder logutils.OpRecorder,
 	statusCallback func(namespace, name, cidr string, maintenanceStarted, maintenanceFinished time.Time) error,
+	healthAgg healthAggregator,
 ) *egressIPManager {
 	nlHandle, err := netlink.NewHandle()
 	if err != nil {
@@ -233,11 +254,8 @@ func newEgressIPManager(
 	tableIndexStack := stack.New()
 	// Prepare table index set to be passed to routerules.
 	tableIndexSet := set.New()
-	rtableIndices := dpConfig.RouteTableManager.GrabAllRemainingIndices()
-
 	// Sort indices to make route table allocation deterministic.
-	sorted := sortIntSet(rtableIndices)
-
+	sorted := sortIntSet(rtTableIndices)
 	for _, element := range sorted {
 		tableIndexStack.Push(element)
 		tableIndexSet.Add(element)
@@ -249,7 +267,7 @@ func newEgressIPManager(
 		dpConfig.DeviceRouteProtocol, true, unix.RT_TABLE_UNSPEC,
 		opRecorder)
 
-	return newEgressIPManagerWithShims(
+	mgr := newEgressIPManagerWithShims(
 		l2Table,
 		&routeRulesFactory{count: 0},
 		&routeTableFactory{count: 0},
@@ -261,7 +279,9 @@ func newEgressIPManager(
 		opRecorder,
 		ethtool.EthtoolTXOff,
 		statusCallback,
+		healthAgg,
 	)
+	return mgr
 }
 
 func newEgressIPManagerWithShims(
@@ -276,9 +296,10 @@ func newEgressIPManagerWithShims(
 	opRecorder logutils.OpRecorder,
 	disableChecksumOffload func(ifName string) error,
 	statusCallback func(namespace, name, cidr string, maintenanceStarted, maintenanceFinished time.Time) error,
+	healthAgg healthAggregator,
 ) *egressIPManager {
 
-	return &egressIPManager{
+	mgr := egressIPManager{
 		l2Table:                      mainTable,
 		rrGenerator:                  rrGenerator,
 		rtGenerator:                  rtGenerator,
@@ -299,7 +320,15 @@ func newEgressIPManagerWithShims(
 		opRecorder:                   opRecorder,
 		disableChecksumOffload:       disableChecksumOffload,
 		statusCallback:               statusCallback,
+		healthAgg:                    healthAgg,
 	}
+
+	if healthAgg != nil {
+		healthAgg.RegisterReporter(egressHealthName, &health.HealthReport{Ready: true}, 0)
+		healthAgg.Report(egressHealthName, &health.HealthReport{Ready: false})
+	}
+
+	return &mgr
 }
 
 func (m *egressIPManager) OnUpdate(msg interface{}) {
@@ -334,7 +363,14 @@ func (m *egressIPManager) OnUpdate(msg interface{}) {
 			log.WithField("msg", msg).Debug("Local host update")
 			m.NodeIP = net.ParseIP(msg.Ipv4Addr)
 		}
+	default:
+		return
 	}
+
+	// when an update we care about is seen (when the default switch case isn't hit), we track its occurrence
+	m.updateLock.Lock()
+	defer m.updateLock.Unlock()
+	m.unblockingUpdateOccurred = true
 }
 
 func (m *egressIPManager) handleEgressIPSetUpdate(msg *proto.IPSetUpdate) {
@@ -566,7 +602,7 @@ func (m *egressIPManager) setL3Routes(rTable routeTable, ips set.Set) {
 		ipString := strings.Split(element, "/")[0]
 		multipath = append(multipath, routetable.NextHop{
 			Gw:        ip.FromString(ipString),
-			LinkIndex: m.vxlanDeviceLinkIndex,
+			LinkIndex: m.vxlanDeviceLinkIndex, // we have already acquired a lock for this data further up the call stack
 		})
 	}
 
@@ -618,6 +654,39 @@ func (m *egressIPManager) setL3Routes(rTable routeTable, ips set.Set) {
 }
 
 func (m *egressIPManager) CompleteDeferredWork() error {
+	m.updateLock.Lock()
+	defer func() {
+		// reset flag after attempting to apply an unblocking update
+		m.unblockingUpdateOccurred = false
+		m.updateLock.Unlock()
+	}()
+
+	// Retry completing deferred work once.
+	// The VXLAN device may have come online, or
+	// a routetable may have been free'd following a starvation error
+	var err error
+	if !m.lastUpdateFailed || m.unblockingUpdateOccurred {
+		for i := 0; i < 2; i += 1 {
+			if err = m.completeDeferredWork(); err == nil {
+				m.lastUpdateFailed = false
+				break
+			}
+		}
+	}
+
+	// report health
+	if err != nil {
+		m.lastUpdateFailed = true
+		log.WithError(err).Warn("Failed to configure egress networking for one or more workloads")
+		m.healthAgg.Report(egressHealthName, &health.HealthReport{Ready: false})
+	} else {
+		m.healthAgg.Report(egressHealthName, &health.HealthReport{Ready: true})
+	}
+
+	return nil // we manage our own retries and health, so never report an error to the dp driver
+}
+
+func (m *egressIPManager) completeDeferredWork() error {
 	if m.dirtyEgressIPSet.Len() == 0 && len(m.pendingWlEpUpdates) == 0 {
 		log.Debug("No change since last application, nothing to do")
 		return nil
@@ -625,13 +694,13 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 
 	if m.vxlanDeviceLinkIndex == 0 {
 		// vxlan device not configured yet. Defer processing updates.
-		log.Debug("Wait for vxlan device for egress ip configured")
-		return nil
+		log.Debug("Wait for Egress-IP VXLAN device to be configured")
+		return ErrVxlanDeviceNotConfigured
 	}
 
 	if m.routerules == nil {
 		// Create routerules to manage routing rules.
-		// We create routerule inside CompleteDeferedWork to make sure datastore is in sync and all WEP/EgressIPSet updates
+		// We create routerule inside CompleteDeferredWork to make sure datastore is in sync and all WEP/EgressIPSet updates
 		// will be processed before routerule's apply() been called.
 		m.routerules = m.rrGenerator.NewRouteRules(
 			4,
@@ -652,6 +721,7 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 	sorted := sortStringSet(m.dirtyEgressIPSet)
 
 	// Work out egress ip set updates.
+	var lastErr error
 	for _, id := range sorted {
 		logCxt := log.WithField("id", id)
 		currentIndex, ipsetToIndexExists := m.egressIPSetToTableIndex[id]
@@ -684,8 +754,8 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 			if !ipsetToIndexExists {
 				// EgressIPSet been added. No table index yet.
 				if m.tableIndexStack.Len() == 0 {
-					// Run out of egress routing table. Panic.
-					log.Panic("Run out of egress ip route table")
+					lastErr = ErrInsufficientRouteTables
+					continue // cannot act on this ipset, keep in dirty state
 				}
 
 				index := m.tableIndexStack.Pop().(int)
@@ -727,6 +797,16 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 		logCxt := log.WithField("id", id)
 		oldWorkload := m.activeWlEndpoints[id]
 		if workload != nil && workload.EgressIpSetId != "" {
+
+			// if we ran out of tables when creating egress routing earlier,
+			// defer attempting to create rules for dependent workloads
+			if m.dirtyEgressIPSet.Contains(workload.EgressIpSetId) {
+				log.WithField(
+					"workload", workload,
+				).Debug("Skipping rule programming for pending workload until egress routing is ready.")
+				continue
+			}
+
 			logCxt.WithFields(log.Fields{
 				"workload":    workload,
 				"oldworkload": oldWorkload,
@@ -775,7 +855,7 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 		log.WithError(err).Warn("unable to notify wl pods of egw maintenance, retry on next pass.")
 	}
 
-	return nil
+	return lastErr
 }
 
 func (m *egressIPManager) GetRouteTableSyncers() []routeTableSyncer {
@@ -950,7 +1030,10 @@ func (m *egressIPManager) configureVXLANDevice(mtu int) error {
 	}
 
 	// Save link index
+	m.updateLock.Lock()
+	defer m.updateLock.Unlock()
 	m.vxlanDeviceLinkIndex = attrs.Index
+	m.unblockingUpdateOccurred = true
 
 	return nil
 }

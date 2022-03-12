@@ -622,6 +622,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		// the same value as MTU of egress.calico device.
 		mtu := config.VXLANMTU
 
+		// Allocate all remaining tables to the egress manager.
+		// This assumes no remaining modules need to reserve table indices.
+		egressTablesIndices := config.RouteTableManager.GrabAllRemainingIndices()
+
 		if config.RulesConfig.VXLANEnabled {
 			mtu = config.VXLANMTU - VXLANHeaderSize
 		} else if config.RulesConfig.IPIPEnabled {
@@ -638,7 +642,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			}
 			return nil
 		}
-		egressIpMgr := newEgressIPManager("egress.calico", config, dp.loopSummarizer, egressStatusCallback)
+		egressIpMgr := newEgressIPManager("egress.calico", egressTablesIndices, config, dp.loopSummarizer, egressStatusCallback, config.HealthAggregator)
 		go egressIpMgr.KeepVXLANDeviceInSync(mtu, 10*time.Second)
 		dp.RegisterManager(egressIpMgr)
 	} else {
