@@ -550,7 +550,7 @@ class DockerHost(object):
         Create a workload container inside this host container.
         """
         name = base_name + "_" + \
-            ''.join([random.choice(string.ascii_letters) for ii in range(6)])
+            ''.join([random.choice(string.ascii_letters) for ii in range(6)]).lower()
         workload = Workload(self, name, image=image, network=network,
                             ip=ip, labels=labels, namespace=namespace)
         self.workloads.add(workload)
