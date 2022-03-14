@@ -10,3 +10,9 @@ Disallow: /fonts/
 Disallow: /css/
 Disallow: /assets/
 Disallow: /archive/
+
+User-agent: Algolia Crawler
+Disallow:
+
+User-agent: *
+Disallow: /*
