@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2022 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,12 +19,13 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/projectcalico/calico/felix/capture"
-
 	"github.com/google/gopacket/layers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"k8s.io/client-go/kubernetes/fake"
 
+	"github.com/projectcalico/calico/felix/capture"
 	"github.com/projectcalico/calico/felix/collector"
 	"github.com/projectcalico/calico/felix/config"
 	intdataplane "github.com/projectcalico/calico/felix/dataplane/linux"
@@ -74,6 +75,7 @@ var _ = Describe("Constructor test", func() {
 		_, err := configParams.UpdateFrom(map[string]string{"InterfaceExclude": "/^kube.*/,/veth/,eth2"}, config.EnvironmentVariable)
 		Expect(err).NotTo(HaveOccurred())
 		dpConfig = intdataplane.Config{
+			KubeClientSet: fake.NewSimpleClientset(),
 			IfaceMonitorConfig: ifacemonitor.Config{
 				InterfaceExcludes: configParams.InterfaceExclude,
 				ResyncInterval:    configParams.RouteRefreshInterval,
@@ -143,6 +145,8 @@ var _ = Describe("Constructor test", func() {
 			Wireguard: wireguard.Config{
 				EncryptHostTraffic: wireguardEncryptHostTraffic,
 			},
+
+			AWSSecondaryIPSupport: v3.AWSSecondaryIPEnabled,
 		}
 	})
 

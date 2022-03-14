@@ -95,16 +95,19 @@ var _ ipamInterface = ipam.Interface(nil)
 // To ensure that we can spot _our_ ENIs even if we fail to attach them, we label them with an "owned by
 // Calico" tag and a second tag that contains the instance ID of this node.
 type SecondaryIfaceProvisioner struct {
+	mode string
+
 	nodeName           string
 	awsSubnetsFilename string
 	timeout            time.Duration
 	// Separate Clock shims for the two timers so the UTs can monitor/trigger the timers separately.
 	backoffClock               clock.Clock
 	recheckClock               clock.Clock
+	sleepClock                 sleepClock
 	recheckIntervalResetNeeded bool
 	newEC2Client               func(ctx context.Context) (*EC2Client, error)
 
-	healthAgg       healthAggregator
+	healthAgg       HealthAggregator
 	livenessEnabled bool
 	opRecorder      *logutils.Summarizer
 	ipamClient      ipamInterface
@@ -114,14 +117,16 @@ type SecondaryIfaceProvisioner struct {
 	// orphanENIResyncNeeded is set to true if the next resync should also check for orphaned ENIs.  I.e. ones
 	// that this node previously created but which never got attached.  (For example, because felix restarted.)
 	orphanENIResyncNeeded bool
-	// hostIPAMResyncNeeded is set to true if the next resync should also check for IPs that are assigned to this
+	// hostIPAMLeakCheckNeeded is set to true if the next resync should also check for IPs that are assigned to this
 	// node but not in use for one of our ENIs.
-	hostIPAMResyncNeeded bool
+	hostIPAMLeakCheckNeeded bool
 
 	ec2Client           *EC2Client
 	networkCapabilities *NetworkCapabilities
 	awsGatewayAddr      ip.Addr
 	awsSubnetCIDR       ip.CIDR
+	// ourHostIPs contains the IPs that our host has assigned in IPAM for primary IPs.
+	ourHostIPs set.Set /* ip.Addr */
 
 	// datastoreUpdateC carries updates from Felix's main dataplane loop to our loop.
 	datastoreUpdateC chan DatastoreState
@@ -131,6 +136,10 @@ type SecondaryIfaceProvisioner struct {
 	// ResponseC is our channel back to the main dataplane loop.
 	responseC        chan *LocalAWSNetworkState
 	capacityCallback func(SecondaryIfaceCapacities)
+}
+
+type sleepClock interface {
+	Sleep(duration time.Duration)
 }
 
 type DatastoreState struct {
@@ -174,10 +183,11 @@ func OptCapacityCallback(cb func(SecondaryIfaceCapacities)) IfaceProvOpt {
 	}
 }
 
-func OptClockOverrides(backoffClock, recheckClock clock.Clock) IfaceProvOpt {
+func OptClockOverrides(backoffClock, recheckClock clock.Clock, sleepClock sleepClock) IfaceProvOpt {
 	return func(provisioner *SecondaryIfaceProvisioner) {
 		provisioner.backoffClock = backoffClock
 		provisioner.recheckClock = recheckClock
+		provisioner.sleepClock = sleepClock
 	}
 }
 
@@ -201,18 +211,24 @@ func (c SecondaryIfaceCapacities) Equals(caps SecondaryIfaceCapacities) bool {
 	return c == caps
 }
 
-type healthAggregator interface {
+type HealthAggregator interface {
 	RegisterReporter(name string, reports *health.HealthReport, timeout time.Duration)
 	Report(name string, report *health.HealthReport)
 }
 
 func NewSecondaryIfaceProvisioner(
+	mode string,
 	nodeName string,
-	healthAgg healthAggregator,
+	healthAgg HealthAggregator,
 	ipamClient ipamInterface,
 	options ...IfaceProvOpt,
 ) *SecondaryIfaceProvisioner {
+	if mode != v3.AWSSecondaryIPEnabled && mode != v3.AWSSecondaryIPEnabledENIPerWorkload {
+		logrus.WithField("mode", mode).Panic("Unknown AWS secondary IP mode.")
+	}
 	sip := &SecondaryIfaceProvisioner{
+		mode: mode,
+
 		healthAgg:          healthAgg,
 		livenessEnabled:    true,
 		ipamClient:         ipamClient,
@@ -222,13 +238,14 @@ func NewSecondaryIfaceProvisioner(
 		opRecorder:         logutils.NewSummarizer("AWS secondary IP reconciliation loop"),
 
 		// Do the extra scans on first run.
-		orphanENIResyncNeeded: true,
-		hostIPAMResyncNeeded:  true,
+		orphanENIResyncNeeded:   true,
+		hostIPAMLeakCheckNeeded: true,
 
 		datastoreUpdateC: make(chan DatastoreState, 1),
 		responseC:        make(chan *LocalAWSNetworkState, 1),
 		backoffClock:     clock.RealClock{},
 		recheckClock:     clock.RealClock{},
+		sleepClock:       clock.RealClock{},
 		capacityCallback: func(c SecondaryIfaceCapacities) {
 			logrus.WithField("cap", c).Debug("Capacity updated but no callback configured.")
 		},
@@ -239,21 +256,23 @@ func NewSecondaryIfaceProvisioner(
 		o(sip)
 	}
 
-	// Readiness flag used to indicate if we've got enough ENI capacity to handle all the local workloads
-	// that need it. No liveness, we reserve that for the main loop watchdog (set up below).
-	healthAgg.RegisterReporter(healthNameENICapacity, &health.HealthReport{Ready: true}, 0)
-	healthAgg.Report(healthNameENICapacity, &health.HealthReport{Ready: true})
-	// Similarly, readiness flag to report whether we succeeded in syncing with AWS.
-	healthAgg.RegisterReporter(healthNameAWSInSync, &health.HealthReport{Ready: true}, 0)
-	healthAgg.Report(healthNameAWSInSync, &health.HealthReport{Ready: true})
-	if sip.livenessEnabled {
-		// Health/liveness watchdog for our main loop.  We let this be disabled for ease of UT.
-		healthAgg.RegisterReporter(
-			healthNameAWSProvisioner,
-			&health.HealthReport{Ready: true, Live: true},
-			livenessTimeout,
-		)
-		healthAgg.Report(healthNameAWSProvisioner, &health.HealthReport{Ready: true, Live: true})
+	if healthAgg != nil {
+		// Readiness flag used to indicate if we've got enough ENI capacity to handle all the local workloads
+		// that need it. No liveness, we reserve that for the main loop watchdog (set up below).
+		healthAgg.RegisterReporter(healthNameENICapacity, &health.HealthReport{Ready: true}, 0)
+		healthAgg.Report(healthNameENICapacity, &health.HealthReport{Ready: true})
+		// Similarly, readiness flag to report whether we succeeded in syncing with AWS.
+		healthAgg.RegisterReporter(healthNameAWSInSync, &health.HealthReport{Ready: true}, 0)
+		healthAgg.Report(healthNameAWSInSync, &health.HealthReport{Ready: true})
+		if sip.livenessEnabled {
+			// Health/liveness watchdog for our main loop.  We let this be disabled for ease of UT.
+			healthAgg.RegisterReporter(
+				healthNameAWSProvisioner,
+				&health.HealthReport{Ready: true, Live: true},
+				livenessTimeout,
+			)
+			healthAgg.Report(healthNameAWSProvisioner, &health.HealthReport{Ready: true, Live: true})
+		}
 	}
 
 	return sip
@@ -345,7 +364,7 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 			responseC = nil
 			continue // Don't want sending a response to trigger an early resync.
 		case <-livenessC:
-			m.healthAgg.Report(healthNameAWSProvisioner, &health.HealthReport{Ready: true, Live: true})
+			m.reportMainLoopLive()
 			continue // Don't want liveness to trigger early resync.
 		case <-backoffC:
 			// Important: nil out the timer so that stopBackoffTimer() won't try to stop it again (and deadlock).
@@ -375,7 +394,9 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 
 			var err error
 			response, err = m.resync()
-			m.healthAgg.Report(healthNameAWSInSync, &health.HealthReport{Ready: err == nil})
+			if m.healthAgg != nil {
+				m.healthAgg.Report(healthNameAWSInSync, &health.HealthReport{Ready: err == nil})
+			}
 			if err != nil {
 				logrus.WithError(err).Warning("Failed to resync with AWS. Will retry after backoff.")
 				backoffTimer = backoffMgr.Backoff()
@@ -451,6 +472,11 @@ func (m *SecondaryIfaceProvisioner) resync() (*LocalAWSNetworkState, error) {
 		return nil, err
 	}
 
+	// Load any IPAM entries assigned to this host.
+	if err := m.ensureIPAMLoaded(); err != nil {
+		return nil, err
+	}
+
 	// Collect the current state of this instance and our ENIs according to AWS.
 	awsState, err := m.loadAWSENIsState()
 	if err != nil {
@@ -458,8 +484,10 @@ func (m *SecondaryIfaceProvisioner) resync() (*LocalAWSNetworkState, error) {
 	}
 
 	// Let the kubernetes Node updater know our capacity.
+	numSecondaryIPs := m.calculateMaxCalicoSecondaryIPs(awsState)
+	logrus.WithField("numIPs", numSecondaryIPs).Debug("Sending calculated AWS capacity to callback.")
 	m.capacityCallback(SecondaryIfaceCapacities{
-		MaxCalicoSecondaryIPs: m.calculateMaxCalicoSecondaryIPs(awsState),
+		MaxCalicoSecondaryIPs: numSecondaryIPs,
 	})
 
 	// First phase of the resync, check the existing AWS resources and clean up any that we don't need any more.
@@ -491,7 +519,7 @@ func (m *SecondaryIfaceProvisioner) resync() (*LocalAWSNetworkState, error) {
 		return nil, err
 	}
 	// Similarly, mop up any Calico IPAM resources we don't need. (Also start of day/after detecting problem.)
-	if err := m.maybeResyncIPAM(awsState); err != nil {
+	if err := m.maybeDoIPAMLeakCheck(awsState); err != nil {
 		return nil, err
 	}
 
@@ -506,7 +534,7 @@ func (m *SecondaryIfaceProvisioner) resync() (*LocalAWSNetworkState, error) {
 	subnetCalicoRoutesNotInAWS := filterRoutesByAWSSubnet(allCalicoRoutesNotInAWS, bestSubnetID)
 	if len(subnetCalicoRoutesNotInAWS) > 0 {
 		// We have some Calico addresses with no corresponding AWS resources.  Try to provision the AWS resources.
-		err = m.provisionNewAWSIPs(awsState, localSubnetsByID, bestSubnetID, subnetCalicoRoutesNotInAWS)
+		err = m.provisionNewAWSIPs(awsState, bestSubnetID, subnetCalicoRoutesNotInAWS)
 		if err != nil {
 			return nil, err
 		}
@@ -582,8 +610,8 @@ func (m *SecondaryIfaceProvisioner) maybeResyncOrphanENIs(resyncState *awsState,
 	return nil
 }
 
-func (m *SecondaryIfaceProvisioner) maybeResyncIPAM(awsState *awsState) error {
-	if m.hostIPAMResyncNeeded {
+func (m *SecondaryIfaceProvisioner) maybeDoIPAMLeakCheck(awsState *awsState) error {
+	if m.hostIPAMLeakCheckNeeded {
 		// Now we've cleaned up any unneeded ENIs. Free any IPs that are assigned to us in IPAM but not in use for
 		// one of our ENIs.
 		err := m.freeUnusedHostCalicoIPs(awsState)
@@ -591,7 +619,7 @@ func (m *SecondaryIfaceProvisioner) maybeResyncIPAM(awsState *awsState) error {
 			return fmt.Errorf("failed to release unused secondary interface IP in Calico IPAM: %w", err)
 		}
 		// Won't need to do this again unless we hit an IPAM error.
-		m.hostIPAMResyncNeeded = false
+		m.hostIPAMLeakCheckNeeded = false
 	}
 	return nil
 }
@@ -614,25 +642,33 @@ func (m *SecondaryIfaceProvisioner) checkFixOrReleaseExistingAWSResources(awsSta
 	// Release any AWS IPs that are no longer required.
 	err = m.unassignAWSIPs(awsIPsToRelease, awsState)
 	if err != nil {
-		return err // errResyncNeeded if there were any IPs released to trigger a refresh of AWS state.
+		return err
 	}
 
-	// Scan for ENIs that are in a subnet that no longer matches an IP pool. We don't currently release
-	// ENIs just because they have no associated pods.  This helps to reduce AWS API churn as pods
-	// come and go: only the IP addresses need to be added/removed, not a whole ENI.
-	enisToRelease := m.findENIsWithNoPool(awsState)
+	var enisToRelease set.Set
+	if m.mode == v3.AWSSecondaryIPEnabledENIPerWorkload {
+		// Scan for ENIs with primary IPs that don't match a local workload.
+		enisToRelease = m.findENIsWithNoWorkload(awsState)
+	} else {
+		// Scan for ENIs that are in a subnet that no longer matches an IP pool. We don't currently release
+		// ENIs just because they have no associated pods.  This helps to reduce AWS API churn as pods
+		// come and go: only the IP addresses need to be added/removed, not a whole ENI.
+		enisToRelease, err = m.findENIsWithNoPoolOrIPAMEntry(awsState)
+		if err != nil {
+			return err
+		}
+	}
 
 	// Release any AWS ENIs that are no longer needed.
 	err = m.releaseAWSENIs(enisToRelease, awsState)
 	if err != nil {
-		return err // errResyncNeeded if there were any ENIs released to trigger a refresh of AWS state.
+		return err
 	}
 	return nil
 }
 
 func (m *SecondaryIfaceProvisioner) provisionNewAWSIPs(
 	awsState *awsState,
-	localSubnetsByID map[string]ec2types.Subnet,
 	bestSubnetID string,
 	addrsToAdd []AddrInfo,
 ) error {
@@ -648,7 +684,9 @@ func (m *SecondaryIfaceProvisioner) provisionNewAWSIPs(
 		// Check if we _can_ create that many ENIs.
 		numENIsPossible := awsState.CalculateUnusedENICapacity(m.networkCapabilities)
 		haveENICapacity := numENIsToCreate <= numENIsPossible
-		m.healthAgg.Report(healthNameENICapacity, &health.HealthReport{Ready: haveENICapacity})
+		if m.healthAgg != nil {
+			m.healthAgg.Report(healthNameENICapacity, &health.HealthReport{Ready: haveENICapacity})
+		}
 		if !haveENICapacity {
 			logrus.Warnf("Need %d more AWS secondary ENIs to support local workloads but only %d are "+
 				"available.  Some local workloads (typically egress gateways) will not have connectivity on "+
@@ -658,27 +696,46 @@ func (m *SecondaryIfaceProvisioner) provisionNewAWSIPs(
 	}
 
 	if numENIsToCreate > 0 {
-		logrus.WithField("num", numENIsToCreate).Info("Allocating IPs for new AWS ENIs.")
-		v4addrs, err := m.allocateCalicoHostIPs(numENIsToCreate, bestSubnetID)
-		if err != nil {
-			// Queue up a clean up of any IPs we may have leaked.
-			m.hostIPAMResyncNeeded = true
-			return err
+		var eniPrimaryIPs []calinet.IPNet
+
+		if m.mode == v3.AWSSecondaryIPEnabledENIPerWorkload {
+			logrus.WithField("num", numENIsToCreate).Info("Allocating ENIs with workload IPs as primary IPs.")
+			for i, aInfo := range addrsToAdd {
+				if i >= numENIsToCreate {
+					logrus.Warn("Failed to create ENIs for all Calico IPs.  Insufficient ENI IP capacity on " +
+						"this node.")
+					break
+				}
+				eniPrimaryIPs = append(eniPrimaryIPs, calinet.MustParseCIDR(aInfo.Dst))
+			}
+		} else {
+			logrus.WithField("num", numENIsToCreate).Info("Allocating IPs for new AWS ENIs.")
+			v4addrs, err := m.allocateCalicoHostIPs(numENIsToCreate, bestSubnetID)
+			if err != nil {
+				// Queue up a clean up of any IPs we may have leaked.
+				m.hostIPAMLeakCheckNeeded = true
+				return err
+			}
+			eniPrimaryIPs = v4addrs.IPs
+			logrus.WithField("addrs", eniPrimaryIPs).Info("Allocated IPs; creating AWS ENIs...")
 		}
-		logrus.WithField("addrs", v4addrs.IPs).Info("Allocated IPs; creating AWS ENIs...")
-		err = m.createAWSENIs(awsState, bestSubnetID, v4addrs.IPs)
+
+		err = m.createAWSENIs(awsState, bestSubnetID, eniPrimaryIPs)
 		if err != nil {
 			// Queue up a cleanup of any IPs we may have leaked.
-			m.hostIPAMResyncNeeded = true
+			m.hostIPAMLeakCheckNeeded = true
 			return err
 		}
 	}
 
-	// Tell AWS to assign the needed Calico IPs to the secondary ENIs as best we can.  (It's possible we weren't able
-	// to allocate enough IPs or ENIs above.)
-	err = m.assignSecondaryIPsToENIs(awsState, addrsToAdd)
-	if err != nil {
-		return err
+	if m.mode == v3.AWSSecondaryIPEnabled {
+		// Tell AWS to assign the needed Calico IPs to the secondary ENIs as best we can.  (It's possible we weren't
+		// able to allocate enough IPs or ENIs above.)
+		logrus.Debug("In secondary-ip-per-pod mode, adding secondary IPs.")
+		err = m.assignSecondaryIPsToENIs(awsState, addrsToAdd)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -761,7 +818,8 @@ func (m *SecondaryIfaceProvisioner) ec2ENIToIface(awsENI *eniState) (*Iface, err
 	for _, pa := range awsENI.IPAddresses {
 		if pa.Primary {
 			primary = pa.PrivateIP
-		} else {
+		} else if m.mode == v3.AWSSecondaryIPEnabled {
+			// Only record secondary IPs if they're meaningful in this mode.
 			secondaryAddrs = append(secondaryAddrs, pa.PrivateIP)
 		}
 	}
@@ -794,6 +852,8 @@ func (m *SecondaryIfaceProvisioner) getMyNetworkCapabilities() (*NetworkCapabili
 
 // loadAWSENIsState looks up all the ENIs attached to this host and creates an awsState to index them.
 func (m *SecondaryIfaceProvisioner) loadAWSENIsState() (s *awsState, err error) {
+	logrus.Debug("Loading AWS state.")
+
 	ctx, cancel := m.newContext()
 	defer cancel()
 	myENIs, err := m.ec2Client.GetMyEC2NetworkInterfaces(ctx)
@@ -832,7 +892,14 @@ func (m *SecondaryIfaceProvisioner) findUnusedAWSSecondaryIPs(awsState *awsState
 	awsIPsToRelease := set.New()
 	summary := map[string][]string{}
 	for addr, eniID := range awsState.eniIDBySecondaryIP {
-		if _, ok := m.ds.LocalAWSAddrsByDst[addr]; !ok {
+		release := false
+		if m.mode == v3.AWSSecondaryIPEnabledENIPerWorkload {
+			// ENI-per-workload mode, all secondary IPs should be removed.
+			release = true
+		} else if _, ok := m.ds.LocalAWSAddrsByDst[addr]; !ok {
+			release = true
+		}
+		if release {
 			awsIPsToRelease.Add(addr)
 			summary[eniID] = append(summary[eniID], addr.String())
 		}
@@ -842,7 +909,7 @@ func (m *SecondaryIfaceProvisioner) findUnusedAWSSecondaryIPs(awsState *awsState
 			logrus.WithFields(logrus.Fields{
 				"eniID": eni,
 				"addrs": strings.Join(addrs, ","),
-			}).Info("Found unneeded AWS secondary IPs.")
+			}).Info("Found unwanted AWS secondary IPs.")
 		}
 	}
 	return awsIPsToRelease
@@ -866,22 +933,29 @@ func (m *SecondaryIfaceProvisioner) loadLocalAWSSubnets() (map[string]ec2types.S
 	return localSubnetsByID, nil
 }
 
-// findENIsWithNoPool scans the awsState for secondary AWS ENIs that were created by Calico but no longer
-// have an associated IP pool.
-func (m *SecondaryIfaceProvisioner) findENIsWithNoPool(awsState *awsState) set.Set /* string (IDs) */ {
+// findENIsWithNoPoolOrIPAMEntry scans the awsState for secondary AWS ENIs that were created by Calico but no longer
+// have an associated IP pool (or are missing their IPAM entry).
+func (m *SecondaryIfaceProvisioner) findENIsWithNoPoolOrIPAMEntry(awsState *awsState) (set.Set /* string (IDs) */, error) {
 	enisToRelease := set.New()
 	for eniID, eni := range awsState.calicoOwnedENIsByID {
-		if _, ok := m.ds.PoolIDsBySubnetID[eni.SubnetID]; ok {
-			continue
+		if _, ok := m.ds.PoolIDsBySubnetID[eni.SubnetID]; !ok {
+			// No longer have an IP pool for this ENI.
+			logrus.WithFields(logrus.Fields{
+				"eniID":  eniID,
+				"subnet": eni.SubnetID,
+			}).Info("AWS ENI belongs to subnet with no matching Calico IP pool, ENI should be released")
+			enisToRelease.Add(eniID)
 		}
-		// No longer have an IP pool for this ENI.
-		logrus.WithFields(logrus.Fields{
-			"eniID":  eniID,
-			"subnet": eni.SubnetID,
-		}).Info("AWS ENI belongs to subnet with no matching Calico IP pool, ENI should be released")
-		enisToRelease.Add(eniID)
+		primaryIP := eni.PrimaryIP()
+		if !m.ourHostIPs.Contains(primaryIP) {
+			logrus.WithFields(logrus.Fields{
+				"eniID":     eniID,
+				"primaryIP": primaryIP,
+			}).Info("AWS ENI primary IP does not have corresponding host IPAM entry, deleting the ENI.")
+			enisToRelease.Add(eniID)
+		}
 	}
-	return enisToRelease
+	return enisToRelease, nil
 }
 
 // findRoutesWithNoAWSAddr Scans our local Calico workload routes for routes with no corresponding AWS IP.
@@ -898,11 +972,13 @@ func (m *SecondaryIfaceProvisioner) findRoutesWithNoAWSAddr(awsState *awsState, 
 			continue
 		}
 		if eniID, ok := awsState.eniIDByPrimaryIP[addr]; ok {
-			logrus.WithFields(logrus.Fields{
-				"addr": addr,
-				"eni":  eniID,
-			}).Warn("Local workload IP clashes with host's primary IP on one of its secondary interfaces. " +
-				"Workload will not be properly networked.")
+			if m.mode != v3.AWSSecondaryIPEnabledENIPerWorkload {
+				logrus.WithFields(logrus.Fields{
+					"addr": addr,
+					"eni":  eniID,
+				}).Warn("Local workload IP clashes with host's primary IP on one of its secondary interfaces. " +
+					"Workload will not be properly networked.")
+			}
 			continue
 		}
 		if eniID, ok := awsState.eniIDBySecondaryIP[addr]; ok {
@@ -967,11 +1043,10 @@ func (m *SecondaryIfaceProvisioner) releaseAWSENIs(enisToRelease set.Set, awsSta
 		return nil
 	}
 	// About to release some ENIs, queue up a check of our IPAM handle and a general AWS recheck.
-	m.hostIPAMResyncNeeded = true
+	m.hostIPAMLeakCheckNeeded = true
 	m.resetRecheckInterval("release-eni")
 
-	// Release any ENIs we no longer want.
-	var finalErr error
+	// Detach any ENIs that we want to delete.  They must be detached first.
 	enisToRelease.Iter(func(item interface{}) error {
 		ctx, cancel := m.newContext()
 		defer cancel()
@@ -989,22 +1064,63 @@ func (m *SecondaryIfaceProvisioner) releaseAWSENIs(enisToRelease set.Set, awsSta
 			// Not setting finalErr here since the following deletion might solve the problem.
 		}
 		awsState.OnCalicoENIDetached(eniID)
-		// Worth trying this even if detach fails.  Possible the failure was caused by it already
-		// being detached.
-		_, err = m.ec2Client.EC2Svc.DeleteNetworkInterface(ctx, &ec2.DeleteNetworkInterfaceInput{
-			NetworkInterfaceId: &eniID,
-		})
-		if err != nil {
-			logrus.WithError(err).WithFields(logrus.Fields{
-				"eniID":    eniID,
-				"attachID": attachID,
-			}).Error("Failed to delete unneeded ENI; triggering retry/backoff.")
-			finalErr = err // Trigger retry/backoff.
-			m.orphanENIResyncNeeded = true
-		}
+		m.reportMainLoopLive()
 		return nil
 	})
+
+	// Initially, we just had a retry loop here.  However, it almost always takes at least 10s before we can delete
+	// an ENI so (only) retrying in a loop produces spammy warnings and consumes precious AWS API quota.  Better to
+	// sleep before the first attempt.  It'd be even better to queue this up in the background but it's not trivial
+	// to arrange.  We'd need to keep track of to-be-deleted ENIs and make sure that we don't try to reattach them
+	// as well as worrying about whether their device index can be used before the detach operation has fully
+	// finished.
+	m.sleepClock.Sleep(10 * time.Second)
+	m.reportMainLoopLive()
+
+	var finalErr error
+	for i := 0; i < 5; i++ {
+		enisToRelease.Iter(func(item interface{}) error {
+			// Worth trying this even if detach fails.  Possible the failure was caused by it already
+			// being detached.
+			eniID := item.(string)
+			ctx, cancel := m.newContext()
+			defer cancel()
+			_, err := m.ec2Client.EC2Svc.DeleteNetworkInterface(ctx, &ec2.DeleteNetworkInterfaceInput{
+				NetworkInterfaceId: &eniID,
+			})
+			if err != nil {
+				logrus.WithField("eniID", eniID).WithError(err).Info(
+					"Failed to delete unneeded ENI; may retry...")
+				finalErr = err // Trigger retry/backoff unless we succeed on a retry.
+			} else {
+				logrus.WithField("eniID", eniID).Info("Successfully deleted ENI.")
+				return set.RemoveItem
+			}
+			return nil
+		})
+		if enisToRelease.Len() == 0 {
+			logrus.Info("Successfully deleted all unwanted ENIs.")
+			finalErr = nil
+			break
+		}
+		m.sleepClock.Sleep(5 * time.Second)
+	}
+
+	if finalErr != nil {
+		logrus.WithError(finalErr).Error("Failed to delete one or more unneeded ENIs even after retries; " +
+			"triggering backoff.")
+		m.orphanENIResyncNeeded = true
+	}
 	return finalErr
+}
+
+func (m *SecondaryIfaceProvisioner) reportMainLoopLive() {
+	if !m.livenessEnabled {
+		return
+	}
+	if m.healthAgg != nil {
+		m.healthAgg.Report(healthNameAWSProvisioner, &health.HealthReport{Ready: true, Live: true})
+	}
 }
 
 // calculateBestSubnet Tries to calculate a single "best" AWS subnet for this host.  When we're configured correctly
@@ -1028,7 +1144,7 @@ func (m *SecondaryIfaceProvisioner) calculateBestSubnet(awsState *awsState, loca
 		subnetScores[subnetID] += 1000000
 		return nil
 	})
-	for subnet, eniIDs := range awsState.eniIDsBySubnet {
+	for subnet, eniIDs := range awsState.calicoENIIDsBySubnet {
 		subnetScores[subnet] += 10000 * len(eniIDs)
 	}
 	for _, r := range m.ds.LocalAWSAddrsByDst {
@@ -1117,14 +1233,38 @@ func (m *SecondaryIfaceProvisioner) attachOrphanENIs(awsState *awsState, bestSub
 			"activeSubnet": bestSubnetID,
 			"eniSubnet":    subnetID,
 		})
-		if subnetID != bestSubnetID || int(devIdx) >= m.networkCapabilities.MaxENIsForCard(0) {
-			if subnetID != bestSubnetID {
-				logCtx.Info("Found unattached ENI belonging to this node but not from our active subnet. " +
-					"Deleting.")
-			} else {
-				logCtx.Info("Found unattached ENI belonging to this node but node doesn't have enough " +
-					"capacity to attach it. Deleting.")
+		deleteENI := false
+		if subnetID != bestSubnetID {
+			logCtx.Info("Found unattached ENI belonging to this node but not from our active subnet. " +
+				"Deleting.")
+			deleteENI = true
+		} else if int(devIdx) >= m.networkCapabilities.MaxENIsForCard(0) {
+			logCtx.Info("Found unattached ENI belonging to this node but node doesn't have enough " +
+				"capacity to attach it. Deleting.")
+			deleteENI = true
+		} else if eni.PrivateIpAddress == nil {
+			logrus.WithField("eniID", eniID).Warn(
+				"Found unattached Calico ENI with no private IP?  Remove.")
+			deleteENI = true
+		} else if m.mode == v3.AWSSecondaryIPEnabled {
+			var primaryIP ip.Addr
+			primaryIP = ip.FromIPOrCIDRString(*eni.PrivateIpAddress)
+			if !m.ourHostIPs.Contains(primaryIP) {
+				logrus.WithField("eniID", eniID).Info(
+					"Found unattached Calico ENI with no corresponding IPAM entry.  Remove.")
+				deleteENI = true
 			}
+		} else if m.mode == v3.AWSSecondaryIPEnabledENIPerWorkload {
+			var primaryIP ip.Addr
+			primaryIP = ip.FromIPOrCIDRString(*eni.PrivateIpAddress)
+			if _, ok := m.ds.LocalAWSAddrsByDst[primaryIP]; !ok {
+				logrus.WithField("eniID", eniID).Info(
+					"Found unattached Calico ENI that no longer matches a workload.  Remove.")
+				deleteENI = true
+			}
+		}
+
+		if deleteENI {
 			ctx, cancel := m.newContext()
 			_, err = m.ec2Client.EC2Svc.DeleteNetworkInterface(ctx, &ec2.DeleteNetworkInterfaceInput{
 				NetworkInterfaceId: eni.NetworkInterfaceId,
@@ -1187,34 +1327,27 @@ func (m *SecondaryIfaceProvisioner) attachOrphanENIs(awsState *awsState, bestSub
 // freeUnusedHostCalicoIPs finds any IPs assign to this host for a secondary ENI that are not actually in use
 // and then frees those IPs.
 func (m *SecondaryIfaceProvisioner) freeUnusedHostCalicoIPs(awsState *awsState) error {
-	ctx, cancel := m.newContext()
-	defer cancel()
-	ourIPs, err := m.ipamClient.IPsByHandle(ctx, m.ipamHandle())
-	if err != nil {
-		if _, ok := err.(calierrors.ErrorResourceDoesNotExist); ok {
-			logrus.Debug("No host IPs in IPAM.  Nothing to free.")
+	var finalErr error
+	m.ourHostIPs.Iter(func(item interface{}) error {
+		addr := item.(ip.Addr)
+		if _, ok := awsState.eniIDByPrimaryIP[addr]; ok {
 			return nil
 		}
-		return fmt.Errorf("failed to look up our existing IPs: %w", err)
-	}
-
-	var finalErr error
-	for _, addr := range ourIPs {
-		cAddr := ip.FromNetIP(addr.IP)
-		if _, ok := awsState.eniIDByPrimaryIP[cAddr]; !ok {
-			// IP is not assigned to any of our local ENIs and, if we got this far, we've already attached
-			// any orphaned ENIs or deleted them.  Clean up the IP.
-			logrus.WithField("addr", addr).Info(
-				"Found IP assigned to this node in IPAM but not in use for an AWS ENI, freeing it.")
-			_, err := m.ipamClient.ReleaseIPs(ctx, ipam.ReleaseOptions{Address: addr.IP.String()})
-			if err != nil {
-				logrus.WithError(err).WithField("ip", addr).Error(
-					"Failed to free host IP that we no longer need.")
-				finalErr = err
-			}
+		// IP is not assigned to any of our local ENIs and, if we got this far, we've already attached
+		// any orphaned ENIs or deleted them.  Clean up the IP.
+		logrus.WithField("addr", addr).Info(
+			"Found IP assigned to this node in IPAM but not in use for an AWS ENI, freeing it.")
+		ctx, cancel := m.newContext()
+		_, err := m.ipamClient.ReleaseIPs(ctx, ipam.ReleaseOptions{Address: addr.String()})
+		cancel()
+		if err != nil {
+			logrus.WithError(err).WithField("ip", addr).Error(
+				"Failed to free host IP that we no longer need.")
+			finalErr = err
+			return nil
 		}
-	}
-
+		return set.RemoveItem // Freed the IP so update the cache.
+	})
 	return finalErr
 }
 
@@ -1227,13 +1360,20 @@ func (m *SecondaryIfaceProvisioner) calculateNumNewENIsNeeded(awsState *awsState
 			totalIPs++
 		}
 	}
-	if m.networkCapabilities.MaxIPv4PerInterface <= 1 {
-		logrus.Error("Instance type doesn't support secondary IPs")
-		return 0, fmt.Errorf("instance type doesn't support secondary IPs")
+
+	var totalENIsNeeded int
+	if m.mode == v3.AWSSecondaryIPEnabledENIPerWorkload {
+		totalENIsNeeded = totalIPs
+	} else {
+		if m.networkCapabilities.MaxIPv4PerInterface <= 1 {
+			logrus.Error("Instance type doesn't support secondary IPs")
+			return 0, fmt.Errorf("instance type doesn't support secondary IPs")
+		}
+		secondaryIPsPerIface := m.networkCapabilities.MaxIPv4PerInterface - 1
+		totalENIsNeeded = (totalIPs + secondaryIPsPerIface - 1) / secondaryIPsPerIface
 	}
-	secondaryIPsPerIface := m.networkCapabilities.MaxIPv4PerInterface - 1
-	totalENIsNeeded := (totalIPs + secondaryIPsPerIface - 1) / secondaryIPsPerIface
-	enisAlreadyAllocated := len(awsState.eniIDsBySubnet[bestSubnetID])
+
+	enisAlreadyAllocated := len(awsState.calicoENIIDsBySubnet[bestSubnetID])
 	numENIsNeeded := totalENIsNeeded - enisAlreadyAllocated
 
 	return numENIsNeeded, nil
@@ -1256,6 +1396,9 @@ func (m *SecondaryIfaceProvisioner) allocateCalicoHostIPs(numENIsNeeded int, sub
 			"reasons":   v4addrs.Msgs, // Contains messages like "pool X is full"
 		}).Warn("Wasn't able to allocate enough ENI primary IPs. IP pool may be full.")
 	}
+	for _, addr := range v4addrs.IPs {
+		m.ourHostIPs.Add(ip.CIDRFromCalicoNet(addr).Addr())
+	}
 	return v4addrs, nil
 }
 
@@ -1263,7 +1406,7 @@ func (m *SecondaryIfaceProvisioner) allocateCalicoHostIPs(numENIsNeeded int, sub
 func (m *SecondaryIfaceProvisioner) ipamAssignArgs(numENIsNeeded int, subnetID string) ipam.AutoAssignArgs {
 	return ipam.AutoAssignArgs{
 		Num4:     numENIsNeeded,
-		HandleID: stringPtr(m.ipamHandle()),
+		HandleID: stringPtr(m.hostPrimaryIPIPAMHandle()),
 		Attrs: map[string]string{
 			ipam.AttributeType: ipam.AttributeTypeAWSSecondary,
 			ipam.AttributeNode: m.nodeName,
@@ -1370,7 +1513,7 @@ func (m *SecondaryIfaceProvisioner) createAWSENIs(awsState *awsState, subnetID s
 
 	if finalErr != nil {
 		logrus.Info("Some AWS ENI operations failed; queueing a scan for orphaned ENIs/IPAM resources.")
-		m.hostIPAMResyncNeeded = true
+		m.hostIPAMLeakCheckNeeded = true
 		m.orphanENIResyncNeeded = true
 	}
 
@@ -1442,7 +1585,7 @@ func (m *SecondaryIfaceProvisioner) assignSecondaryIPsToENIs(awsState *awsState,
 	return nil
 }
 
-func (m *SecondaryIfaceProvisioner) ipamHandle() string {
+func (m *SecondaryIfaceProvisioner) hostPrimaryIPIPAMHandle() string {
 	// Using the node name here for consistency with tunnel IPs.
 	return fmt.Sprintf("aws-secondary-ifaces-%s", m.nodeName)
 }
@@ -1456,6 +1599,7 @@ func (m *SecondaryIfaceProvisioner) ensureEC2Client() error {
 		return nil
 	}
 
+	logrus.Debug("Creating EC2 client.")
 	ctx, cancel := m.newContext() // Context only for creation of the client, it doesn't get stored.
 	defer cancel()
 	c, err := m.newEC2Client(ctx)
@@ -1468,8 +1612,11 @@ func (m *SecondaryIfaceProvisioner) ensureEC2Client() error {
 
 func (m *SecondaryIfaceProvisioner) calculateMaxCalicoSecondaryIPs(snapshot *awsState) int {
 	caps := m.networkCapabilities
-	maxSecondaryIPsPerENI := caps.MaxIPv4PerInterface - 1
 	maxCalicoENIs := caps.MaxNetworkInterfaces - len(snapshot.nonCalicoOwnedENIsByID)
+	if m.mode == v3.AWSSecondaryIPEnabledENIPerWorkload {
+		return maxCalicoENIs
+	}
+	maxSecondaryIPsPerENI := caps.MaxIPv4PerInterface - 1
 	maxCapacity := maxCalicoENIs * maxSecondaryIPsPerENI
 	return maxCapacity
 }
@@ -1536,10 +1683,17 @@ func (m *SecondaryIfaceProvisioner) disassociateUnwantedElasticIPs(snapshot *aws
 					break
 				}
 			}
-			if !wanted {
-				// Elastic IP is assigned to an IP that it shouldn't be. free it.
+			if (m.mode == v3.AWSSecondaryIPEnabledENIPerWorkload && !privIP.Primary) ||
+				(m.mode == v3.AWSSecondaryIPEnabled && privIP.Primary) {
+				logCtx.Info("Found elastic IP associated with wrong type of address for the AWS secondary " +
+					"IP mode. Disassociating elastic IP.")
+				wanted = false
+			} else if !wanted {
 				logCtx.Info("Workload private IP is associated with an elastic IP that isn't one of its " +
 					"permitted elastic IPs.  Disassociating elastic IP.")
+			}
+			if !wanted {
+				// Elastic IP is assigned to an IP that it shouldn't be. free it.
 				m.resetRecheckInterval("disassociate-eip")
 
 				ctx, cancel := m.newContext()
@@ -1571,12 +1725,12 @@ func (m *SecondaryIfaceProvisioner) disassociateUnwantedElasticIPs(snapshot *aws
 	return finalErr
 }
 
-func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *awsState) error {
+func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(awsState *awsState) error {
 	// Figure out which IPs already have an elastic IP attached.
 	logrus.Debug("Checking if we need to associate any elastic IPs.")
 	privIPToElasticIPID := map[ip.Addr]string{}
 	inUseElasticIPs := set.New()
-	for eniID, eni := range snapshot.calicoOwnedENIsByID {
+	for eniID, eni := range awsState.calicoOwnedENIsByID {
 		for _, privIP := range eni.IPAddresses {
 			if privIP.Association != nil {
 				privIPAddr := privIP.PrivateIP
@@ -1664,7 +1818,16 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *awsSta
 				if !privIPsToDo.Contains(privIP) {
 					continue
 				}
-				eniID := snapshot.eniIDBySecondaryIP[privIP]
+				var eniID string
+				if m.mode == v3.AWSSecondaryIPEnabledENIPerWorkload {
+					// In ENI-per-workload mode, only look at the primary IPs.  If we see a secondary IP it must
+					// be stale data from AWS.
+					eniID = awsState.eniIDByPrimaryIP[privIP]
+				} else {
+					// In secondary IP-per-workload mode, only look at the secondary IPs.  If we see a matching
+					// primary IP it must be stale data from AWS.
+					eniID = awsState.eniIDBySecondaryIP[privIP]
+				}
 				if eniID == "" {
 					logCtx.Warn("Couldn't find ENI for private IP, did we fail to add an ENI earlier?")
 					continue
@@ -1694,7 +1857,7 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *awsSta
 					continue
 				} else {
 					delete(failedPrivIPs, privIP)
-					snapshot.OnElasticIPAssociated(eniID, privIP, *aao.AssociationId, *eip.AllocationId, publicIP)
+					awsState.OnElasticIPAssociated(eniID, privIP, *aao.AssociationId, *eip.AllocationId, publicIP)
 				}
 				privIPsToDo.Discard(privIP)
 			}
@@ -1709,6 +1872,53 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(snapshot *awsSta
 				"This may resolve automatically when another node releases an Elastic IP that's no longer needed.")
 		// Not returning an error here; best to wait for the slow retry.
 	}
+	return nil
+}
+
+// findENIsWithNoWorkload is used in ENI-per-workload mode to find ENIs that have a primary IP that doesn't match any
+// workloads.
+func (m *SecondaryIfaceProvisioner) findENIsWithNoWorkload(state *awsState) set.Set {
+	enisIDsToRelease := set.New()
+	for eniID, eni := range state.calicoOwnedENIsByID {
+		for _, addr := range eni.IPAddresses {
+			if addr.Primary {
+				if _, ok := m.ds.LocalAWSAddrsByDst[addr.PrivateIP]; !ok {
+					logrus.WithField("eniID", eniID).Info(
+						"Found Calico ENI which no longer matches a workload.  Remove.")
+					enisIDsToRelease.Add(eniID)
+				}
+			}
+		}
+	}
+	return enisIDsToRelease
+}
+
+func (m *SecondaryIfaceProvisioner) ensureIPAMLoaded() error {
+	if m.ourHostIPs != nil && !m.hostIPAMLeakCheckNeeded {
+		return nil
+	}
+
+	logrus.Debug("Refreshing cache of host IPs from Calico IPAM.")
+	m.ourHostIPs = nil // Make sure we retry after a failure.
+
+	hostIPs := set.New()
+	ctx, cancel := m.newContext()
+	defer cancel()
+	ourIPs, err := m.ipamClient.IPsByHandle(ctx, m.hostPrimaryIPIPAMHandle())
+	if err != nil {
+		if _, ok := err.(calierrors.ErrorResourceDoesNotExist); ok {
+			logrus.Debug("No host IPs in IPAM.")
+			m.ourHostIPs = hostIPs
+			return nil
+		} else {
+			return fmt.Errorf("failed to look up our existing IPs: %w", err)
+		}
+	}
+
+	for _, addr := range ourIPs {
+		hostIPs.Add(ip.FromCalicoIP(addr))
+	}
+	m.ourHostIPs = hostIPs
 	return nil
 }
 

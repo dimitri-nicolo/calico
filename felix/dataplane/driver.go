@@ -478,8 +478,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			FlowLogsFileIncludeService:         configParams.FlowLogsFileIncludeService,
 			NfNetlinkBufSize:                   configParams.NfNetlinkBufSize,
 
-			IPAMClient:    ipamClient,
-			KubeClientSet: k8sClientSet,
+			IPAMClient: ipamClient,
 
 			FeatureDetectOverrides: configParams.FeatureDetectOverride,
 
@@ -494,7 +493,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			DNSExtraTTL:          configParams.GetDNSExtraTTL(),
 			DNSLogsLatency:       configParams.DNSLogsLatency,
 
-			AWSSecondaryIPSupport:             configParams.AWSSecondaryIPSupport == "Enabled",
+			AWSSecondaryIPSupport:             configParams.AWSSecondaryIPSupport,
 			AWSRequestTimeout:                 configParams.AWSRequestTimeout,
 			AWSSecondaryIPRoutingRulePriority: configParams.AWSSecondaryIPRoutingRulePriority,
 
@@ -508,6 +507,9 @@ func StartDataplaneDriver(configParams *config.Config,
 			LookupsCache:          lc,
 			DNSPolicyNfqueueID:    configParams.DNSPolicyNfqueueID,
 			DebugDNSResponseDelay: configParams.DebugDNSResponseDelay,
+		}
+		if k8sClientSet != nil {
+			dpConfig.KubeClientSet = k8sClientSet
 		}
 
 		if configParams.BPFExternalServiceMode == "dsr" {

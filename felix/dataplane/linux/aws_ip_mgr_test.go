@@ -3,6 +3,7 @@
 package intdataplane
 
 import (
+	"fmt"
 	"net"
 	"reflect"
 	"time"
@@ -10,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/vishvananda/netlink"
 
 	"github.com/projectcalico/calico/felix/testutils"
@@ -28,7 +30,15 @@ var (
 	awsRTIndexes          = []int{10, 11, 12, 13, 250, 251}
 	awsTestNetlinkTimeout = 23 * time.Second
 )
-var _ = Describe("awsIPManager tests", func() {
+
+var _ = Describe("awsIPManager tests mode=Enabled", func() {
+	describeAWSIPMgrCommonTests(v3.AWSSecondaryIPEnabled)
+})
+var _ = Describe("awsIPManager tests mode=ENIPerWorkload", func() {
+	describeAWSIPMgrCommonTests(v3.AWSSecondaryIPEnabledENIPerWorkload)
+})
+
+func describeAWSIPMgrCommonTests(mode string) {
 	var (
 		m               *awsIPManager
 		fakes           *awsIPMgrFakes
@@ -87,6 +97,7 @@ var _ = Describe("awsIPManager tests", func() {
 			Config{
 				AWSSecondaryIPRoutingRulePriority: 105,
 				NetlinkTimeout:                    awsTestNetlinkTimeout,
+				AWSSecondaryIPSupport:             mode,
 			},
 			opRecorder,
 			fakes,
@@ -448,40 +459,6 @@ var _ = Describe("awsIPManager tests", func() {
 
 		Context("after responding with expected AWS state", func() {
 			var secondaryLink *fakeLink
-			BeforeEach(func() {
-				// Pretend the background thread attached a new ENI.
-				m.OnSecondaryIfaceStateUpdate(&aws.LocalAWSNetworkState{
-					PrimaryENIMAC: primaryMACStr,
-					SecondaryENIsByMAC: map[string]aws.Iface{
-						secondaryMACStr: {
-							ID:              "eni-0001",
-							MAC:             secondaryMAC,
-							PrimaryIPv4Addr: ip.FromString(eth1PrimaryIP),
-							SecondaryIPv4Addrs: []ip.Addr{
-								ip.FromString(egressGWIP),
-							},
-						},
-					},
-					SubnetCIDR:  ip.MustParseCIDROrIP("100.64.0.0/16"),
-					GatewayAddr: ip.FromString("100.64.0.1"),
-				})
-
-				// Create a secondary interface ready to go but not actually in the dataplane yet.
-				secondaryLink = newFakeLink()
-				secondaryLink.attrs = netlink.LinkAttrs{
-					Name:         "eth1",
-					HardwareAddr: secondaryMAC,
-				}
-			})
-
-			expectSecondaryLinkAddr := func() {
-				// Only the primary IP gets added.
-				secondaryIfacePriIP, err := netlink.ParseAddr(eth1PrimaryIP + "/32")
-				secondaryIfacePriIP.Scope = int(netlink.SCOPE_LINK)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(secondaryLink.addrs).To(ConsistOf(*secondaryIfacePriIP))
-				Expect(secondaryLink.attrs.OperState).To(Equal(netlink.LinkOperState(netlink.OperUp)))
-			}
 
 			checkRouteTable := func(rt *fakeRouteTable, ifaceName string) {
 				gwAddrAsCIDR := ip.MustParseCIDROrIP("100.64.0.1/32")
@@ -508,42 +485,11 @@ var _ = Describe("awsIPManager tests", func() {
 				), "Expected 'throw' route for the non-AWS IP pools.")
 			}
 
-			expectSecondaryLinkConfigured := func() {
-				expectSecondaryLinkAddr()
-				Expect(fakes.RouteTables).To(HaveLen(1))
-				rtID, rt := fakes.FindRouteTable("eth1")
-				checkRouteTable(rt, "eth1")
-				// Rule for each egress gateway workload.
-				primaryIPRule := routerule.
-					NewRule(4, 105).
-					MatchSrcAddress(ip.MustParseCIDROrIP(eth1PrimaryIP).ToIPNet()).
-					GoToTable(rtID)
-				egRule := routerule.
-					NewRule(4, 105).
-					MatchSrcAddress(ip.MustParseCIDROrIP(egressGWIP).ToIPNet()).
-					GoToTable(rtID)
-				Expect(fakes.Rules.Rules).To(ConsistOf(primaryIPRule, egRule))
-			}
+			var expectSecondaryLinkAddr func()
+			var expectSecondaryLinkConfigured func()
 
-			Context("With second egress gateway on second ENI", func() {
-				var (
-					extraWorkloadRoute *proto.RouteUpdate
-					thirdLink          *fakeLink
-					fourthLink         *fakeLink
-				)
-
+			if mode == v3.AWSSecondaryIPEnabledENIPerWorkload {
 				BeforeEach(func() {
-					// Extra route.
-					extraWorkloadRoute = &proto.RouteUpdate{
-						Type:          proto.RouteType_LOCAL_WORKLOAD,
-						IpPoolType:    proto.IPPoolType_VXLAN,
-						Dst:           egressGW2CIDR,
-						NatOutgoing:   false,
-						LocalWorkload: true, // This means "really a workload, not just a local IPAM block"
-						AwsSubnetId:   "subnet-123456789012345657",
-					}
-					m.OnUpdate(extraWorkloadRoute)
-
 					// Pretend the background thread attached a new ENI.
 					m.OnSecondaryIfaceStateUpdate(&aws.LocalAWSNetworkState{
 						PrimaryENIMAC: primaryMACStr,
@@ -551,114 +497,51 @@ var _ = Describe("awsIPManager tests", func() {
 							secondaryMACStr: {
 								ID:              "eni-0001",
 								MAC:             secondaryMAC,
-								PrimaryIPv4Addr: ip.FromString(eth1PrimaryIP),
-								SecondaryIPv4Addrs: []ip.Addr{
-									ip.FromString(egressGWIP),
-								},
-							},
-							thirdMACStr: {
-								ID:              "eni-0002",
-								MAC:             thirdMAC,
-								PrimaryIPv4Addr: ip.FromString(thirdLinkPrimaryIP),
-								SecondaryIPv4Addrs: []ip.Addr{
-									ip.FromString(egressGW2IP),
-								},
+								PrimaryIPv4Addr: ip.FromString(egressGWIP),
 							},
 						},
 						SubnetCIDR:  ip.MustParseCIDROrIP("100.64.0.0/16"),
 						GatewayAddr: ip.FromString("100.64.0.1"),
 					})
 
-					// Get a third link ready to go.
-					thirdLink = newFakeLink()
-					thirdLink.attrs = netlink.LinkAttrs{
-						Name:         "eth2",
-						HardwareAddr: thirdMAC,
-					}
-					fourthLink = newFakeLink()
-					fourthLink.attrs = netlink.LinkAttrs{
-						Name:         "eth2",
-						HardwareAddr: fourthMAC,
+					// Create a secondary interface ready to go but not actually in the dataplane yet.
+					secondaryLink = newFakeLink()
+					secondaryLink.attrs = netlink.LinkAttrs{
+						Index:        123,
+						Name:         "eth1",
+						HardwareAddr: secondaryMAC,
 					}
 				})
 
-				expectLinksConfigured := func(eth2IP string) {
-					expectSecondaryLinkAddr()
-					Expect(fakes.RouteTables).To(HaveLen(2))
-
-					rtID1, rt1 := fakes.FindRouteTable("eth1")
-					checkRouteTable(rt1, "eth1")
-					rtID2, rt2 := fakes.FindRouteTable("eth2")
-					checkRouteTable(rt2, "eth2")
-
-					// Rule for each egress gateway workload.
-					Expect(fakes.Rules.Rules).To(ConsistOf(
-						routerule.
-							NewRule(4, 105).
-							MatchSrcAddress(ip.MustParseCIDROrIP(eth1PrimaryIP).ToIPNet()).
-							GoToTable(rtID1),
-						routerule.
-							NewRule(4, 105).
-							MatchSrcAddress(ip.MustParseCIDROrIP(eth2IP).ToIPNet()).
-							GoToTable(rtID2),
-						routerule.
-							NewRule(4, 105).
-							MatchSrcAddress(ip.MustParseCIDROrIP(egressGWIP).ToIPNet()).
-							GoToTable(rtID1),
-						routerule.
-							NewRule(4, 105).
-							MatchSrcAddress(ip.MustParseCIDROrIP(egressGW2IP).ToIPNet()).
-							GoToTable(rtID2),
-					))
-					Expect(rtID1).NotTo(Equal(rtID2))
-					Expect(m.GetRouteTableSyncers()).To(ConsistOf(rt1, rt2))
+				expectSecondaryLinkAddr = func() {
+					// No IPs get added directly.
+					Expect(secondaryLink.addrs).To(BeEmpty())
+					Expect(secondaryLink.attrs.OperState).To(Equal(netlink.LinkOperState(netlink.OperUp)))
+					Expect(fakes.Neighs[NeighKey{Iface: secondaryLink.Attrs().Index, IP: egressGWIP}]).To(Equal(
+						&netlink.Neigh{
+							LinkIndex: secondaryLink.Attrs().Index,
+							Family:    netlink.FAMILY_V4,
+							Flags:     netlink.NTF_PROXY,
+							IP:        net.ParseIP(egressGWIP),
+						}))
+					ifaceARPEntries := fakes.ifaceARPEntries(secondaryLink.Attrs().Index)
+					ExpectWithOffset(1, ifaceARPEntries).To(HaveLen(1), "Got unexpected extra ARP entries")
 				}
 
-				It("with the interfaces present, it should network the interface", func() {
-					// Add the links.
-					fakes.AddFakeLink(secondaryLink)
-					fakes.AddFakeLink(thirdLink)
-
-					// CompleteDeferredWork should configure the interfaces.
-					Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
-
-					// IP should be added.
-					expectLinksConfigured(thirdLinkPrimaryIP)
-				})
-
-				It("flapping second interface should recycle routing table", func() {
-					// Pre-flap, should work as normal.
-					fakes.AddFakeLink(secondaryLink)
-					fakes.AddFakeLink(thirdLink)
-					Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
-					expectLinksConfigured(thirdLinkPrimaryIP)
-
-					rtID1, rt1 := fakes.FindRouteTable("eth1")
-					rtID2, rt2 := fakes.FindRouteTable("eth2")
-
-					// Take the link away and signal the manager.
-					fakes.RemoveFakeLink(thirdLink)
-					m.OnUpdate(&ifaceUpdate{
-						Name:  "eth2",
-						Index: 123,
-						State: ifacemonitor.StateDown,
-					})
-					Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
-
-					// Still expect the route table to be returned (so that it can clean up).
-					Expect(m.GetRouteTableSyncers()).To(ConsistOf(rt1, rt2))
-					// But should only have one rule now.
-					Expect(fakes.Rules.Rules).To(ConsistOf(
-						routerule.
-							NewRule(4, 105).
-							MatchSrcAddress(ip.MustParseCIDROrIP(eth1PrimaryIP).ToIPNet()).
-							GoToTable(rtID1),
-						routerule.
-							NewRule(4, 105).
-							MatchSrcAddress(ip.MustParseCIDROrIP(egressGWIP).ToIPNet()).
-							GoToTable(rtID1),
-					))
-
+				expectSecondaryLinkConfigured = func() {
+					expectSecondaryLinkAddr()
+					Expect(fakes.RouteTables).To(HaveLen(1))
+					rtID, rt := fakes.FindRouteTable("eth1")
+					checkRouteTable(rt, "eth1")
+					// Rule for each egress gateway workload.
+					egRule := routerule.
+						NewRule(4, 105).
+						MatchSrcAddress(ip.MustParseCIDROrIP(egressGWIP).ToIPNet()).
+						GoToTable(rtID)
+					Expect(fakes.Rules.Rules).To(ConsistOf(egRule))
+				}
+			} else {
+				BeforeEach(func() {
 					// Pretend the background thread attached a new ENI.
 					m.OnSecondaryIfaceStateUpdate(&aws.LocalAWSNetworkState{
 						PrimaryENIMAC: primaryMACStr,
@@ -671,31 +554,45 @@ var _ = Describe("awsIPManager tests", func() {
 									ip.FromString(egressGWIP),
 								},
 							},
-							fourthMACStr: {
-								ID:              "eni-0003",
-								MAC:             fourthMAC,
-								PrimaryIPv4Addr: ip.FromString(fourthLinkPrimaryIP),
-								SecondaryIPv4Addrs: []ip.Addr{
-									ip.FromString(egressGW2IP),
-								},
-							},
 						},
 						SubnetCIDR:  ip.MustParseCIDROrIP("100.64.0.0/16"),
 						GatewayAddr: ip.FromString("100.64.0.1"),
 					})
-					fakes.AddFakeLink(fourthLink)
-					Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 
-					rtID2B, rt2B := fakes.FindRouteTable("eth2")
-					// New route table should replace the old one.
-					Expect(rt2).NotTo(BeIdenticalTo(rt2B))
-					Expect(m.GetRouteTableSyncers()).To(ConsistOf(rt1, rt2B))
-					// Route table indexes get reused LIFO.
-					Expect(rtID2).To(Equal(rtID2B))
-
-					expectLinksConfigured(fourthLinkPrimaryIP)
+					// Create a secondary interface ready to go but not actually in the dataplane yet.
+					secondaryLink = newFakeLink()
+					secondaryLink.attrs = netlink.LinkAttrs{
+						Name:         "eth1",
+						HardwareAddr: secondaryMAC,
+					}
 				})
-			})
+
+				expectSecondaryLinkAddr = func() {
+					// Only the primary IP gets added.
+					secondaryIfacePriIP, err := netlink.ParseAddr(eth1PrimaryIP + "/32")
+					secondaryIfacePriIP.Scope = int(netlink.SCOPE_LINK)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(secondaryLink.addrs).To(ConsistOf(*secondaryIfacePriIP))
+					Expect(secondaryLink.attrs.OperState).To(Equal(netlink.LinkOperState(netlink.OperUp)))
+				}
+
+				expectSecondaryLinkConfigured = func() {
+					expectSecondaryLinkAddr()
+					Expect(fakes.RouteTables).To(HaveLen(1))
+					rtID, rt := fakes.FindRouteTable("eth1")
+					checkRouteTable(rt, "eth1")
+					// Rule for each egress gateway workload.
+					primaryIPRule := routerule.
+						NewRule(4, 105).
+						MatchSrcAddress(ip.MustParseCIDROrIP(eth1PrimaryIP).ToIPNet()).
+						GoToTable(rtID)
+					egRule := routerule.
+						NewRule(4, 105).
+						MatchSrcAddress(ip.MustParseCIDROrIP(egressGWIP).ToIPNet()).
+						GoToTable(rtID)
+					Expect(fakes.Rules.Rules).To(ConsistOf(primaryIPRule, egRule))
+				}
+			}
 
 			It("with the interface present, it should network the interface", func() {
 				fakes.AddFakeLink(secondaryLink)
@@ -706,37 +603,6 @@ var _ = Describe("awsIPManager tests", func() {
 				// IP should be added.
 				expectSecondaryLinkConfigured()
 			})
-
-			errEntry := func(name string) table.TableEntry {
-				return table.Entry(name, name)
-			}
-			table.DescribeTable("with queued error",
-				func(name string) {
-					fakes.Errors.QueueError(name)
-
-					// Add a bonus address so that AddrDel will be called.
-					extraNLAddr, err := netlink.ParseAddr("1.2.3.4/32")
-					Expect(err).NotTo(HaveOccurred())
-					secondaryLink.addrs = append(secondaryLink.addrs, *extraNLAddr)
-					fakes.AddFakeLink(secondaryLink)
-
-					// CompleteDeferredWork should fail once, then succeed.
-					Expect(m.CompleteDeferredWork()).To(HaveOccurred())
-					Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
-
-					// IP should be added.
-					expectSecondaryLinkConfigured()
-
-					fakes.Errors.ExpectAllErrorsConsumed()
-				},
-				errEntry("LinkList"),
-				errEntry("LinkSetMTU"),
-				errEntry("LinkSetUp"),
-				errEntry("AddrList"),
-				errEntry("AddrAdd"),
-				errEntry("AddrDel"),
-				errEntry("ParseAddr"),
-			)
 
 			It("with the interface missing, it should handle the interface showing up.", func() {
 				// Should do nothing to start with.
@@ -762,6 +628,65 @@ var _ = Describe("awsIPManager tests", func() {
 				// IP should be added.
 				expectSecondaryLinkConfigured()
 			})
+
+			errEntry := func(name string) table.TableEntry {
+				return table.Entry(name, name)
+			}
+			var errEntries []table.TableEntry
+			if mode == v3.AWSSecondaryIPEnabledENIPerWorkload {
+				errEntries = []table.TableEntry{
+					errEntry("LinkList"),
+					errEntry("LinkSetMTU"),
+					errEntry("LinkSetUp"),
+					errEntry("AddrList"),
+					errEntry("AddrDel"),
+					errEntry("NeighSet"),
+				}
+			} else {
+				errEntries = []table.TableEntry{
+					errEntry("LinkList"),
+					errEntry("LinkSetMTU"),
+					errEntry("LinkSetUp"),
+					errEntry("AddrList"),
+					errEntry("AddrAdd"),
+					errEntry("AddrDel"),
+					errEntry("ParseAddr"),
+					errEntry("NeighList"),
+				}
+			}
+			table.DescribeTable("with queued error",
+				func(name string) {
+					fakes.Errors.QueueError(name)
+
+					// Add a bonus address so that AddrDel will be called.
+					extraNLAddr, err := netlink.ParseAddr("1.2.3.4/32")
+					Expect(err).NotTo(HaveOccurred())
+					secondaryLink.addrs = append(secondaryLink.addrs, *extraNLAddr)
+					fakes.AddFakeLink(secondaryLink)
+
+					// Add a bonus proxy ARP entry so that NeighDel will be called.
+					fakes.Neighs[NeighKey{
+						Iface: secondaryLink.Attrs().Index,
+						IP:    "1.2.3.4",
+					}] = &netlink.Neigh{
+						LinkIndex: secondaryLink.Attrs().Index,
+						Family:    netlink.FAMILY_V4,
+						Flags:     netlink.NTF_PROXY,
+						IP:        net.ParseIP("1.2.3.4"),
+					}
+
+					// CompleteDeferredWork should fail once, then succeed.
+					Expect(m.CompleteDeferredWork()).To(HaveOccurred())
+					Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+					Expect(fakes.DeletedNeighs).To(ConsistOf("1.2.3.4"))
+
+					// IP should be added.
+					expectSecondaryLinkConfigured()
+
+					fakes.Errors.ExpectAllErrorsConsumed()
+				},
+				errEntries...,
+			)
 
 			It("should handle an interface flap.", func() {
 				// Should do nothing to start with.
@@ -809,7 +734,7 @@ var _ = Describe("awsIPManager tests", func() {
 				Expect(m.dataplaneResyncNeeded).To(BeTrue())
 			})
 
-			It("should handle an interface IP added.", func() {
+			It("should handle an unexpected IP being added to an interface.", func() {
 				// Interface shows up.
 				fakes.AddFakeLink(secondaryLink)
 				m.OnUpdate(&ifaceUpdate{
@@ -836,48 +761,6 @@ var _ = Describe("awsIPManager tests", func() {
 				})
 
 				// CompleteDeferredWork should clean up the incorrect IP.
-				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
-				expectSecondaryLinkConfigured()
-			})
-
-			It("should handle an interface IP removed.", func() {
-				// Interface shows up.
-				fakes.AddFakeLink(secondaryLink)
-				m.OnUpdate(&ifaceUpdate{
-					Name:  "eth1",
-					Index: 123,
-					State: ifacemonitor.StateDown,
-				})
-
-				// CompleteDeferredWork should then configure the interface.
-				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
-				expectSecondaryLinkConfigured()
-
-				// IP deleted.
-				secondaryLink.addrs = nil
-				m.OnUpdate(&ifaceAddrsUpdate{
-					Name: "eth1",
-					Addrs: set.From(
-						"daed:beef::", // IPv6 ignored.
-					),
-				})
-
-				// CompleteDeferredWork should add the correct IP.
-				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
-				expectSecondaryLinkConfigured()
-
-				// Finally signal the correct state.
-				m.OnUpdate(&ifaceAddrsUpdate{
-					Name: "eth1",
-					Addrs: set.From(
-						"daed:beef::",
-						eth1PrimaryIP,
-					),
-				})
-
-				// Should spot it's correct and not schedule an update.
-				Expect(m.dataplaneResyncNeeded).To(BeFalse())
-
 				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 				expectSecondaryLinkConfigured()
 			})
@@ -960,27 +843,330 @@ var _ = Describe("awsIPManager tests", func() {
 				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 				expectSecondaryLinkConfigured()
 			})
+
+			Context("With second egress gateway on second ENI", func() {
+				var (
+					extraWorkloadRoute *proto.RouteUpdate
+					thirdLink          *fakeLink
+					fourthLink         *fakeLink
+				)
+
+				BeforeEach(func() {
+					// Extra route.
+					extraWorkloadRoute = &proto.RouteUpdate{
+						Type:          proto.RouteType_LOCAL_WORKLOAD,
+						IpPoolType:    proto.IPPoolType_VXLAN,
+						Dst:           egressGW2CIDR,
+						NatOutgoing:   false,
+						LocalWorkload: true, // This means "really a workload, not just a local IPAM block"
+						AwsSubnetId:   "subnet-123456789012345657",
+					}
+					m.OnUpdate(extraWorkloadRoute)
+
+					// Pretend the background thread attached a new ENI.
+					if mode == v3.AWSSecondaryIPEnabledENIPerWorkload {
+						m.OnSecondaryIfaceStateUpdate(&aws.LocalAWSNetworkState{
+							PrimaryENIMAC: primaryMACStr,
+							SecondaryENIsByMAC: map[string]aws.Iface{
+								secondaryMACStr: {
+									ID:              "eni-0001",
+									MAC:             secondaryMAC,
+									PrimaryIPv4Addr: ip.FromString(egressGWIP),
+								},
+								thirdMACStr: {
+									ID:              "eni-0002",
+									MAC:             thirdMAC,
+									PrimaryIPv4Addr: ip.FromString(egressGW2IP),
+								},
+							},
+							SubnetCIDR:  ip.MustParseCIDROrIP("100.64.0.0/16"),
+							GatewayAddr: ip.FromString("100.64.0.1"),
+						})
+					} else {
+						m.OnSecondaryIfaceStateUpdate(&aws.LocalAWSNetworkState{
+							PrimaryENIMAC: primaryMACStr,
+							SecondaryENIsByMAC: map[string]aws.Iface{
+								secondaryMACStr: {
+									ID:              "eni-0001",
+									MAC:             secondaryMAC,
+									PrimaryIPv4Addr: ip.FromString(eth1PrimaryIP),
+									SecondaryIPv4Addrs: []ip.Addr{
+										ip.FromString(egressGWIP),
+									},
+								},
+								thirdMACStr: {
+									ID:              "eni-0002",
+									MAC:             thirdMAC,
+									PrimaryIPv4Addr: ip.FromString(thirdLinkPrimaryIP),
+									SecondaryIPv4Addrs: []ip.Addr{
+										ip.FromString(egressGW2IP),
+									},
+								},
+							},
+							SubnetCIDR:  ip.MustParseCIDROrIP("100.64.0.0/16"),
+							GatewayAddr: ip.FromString("100.64.0.1"),
+						})
+					}
+
+					// Get a third link ready to go.
+					thirdLink = newFakeLink()
+					thirdLink.attrs = netlink.LinkAttrs{
+						Name:         "eth2",
+						HardwareAddr: thirdMAC,
+					}
+					fourthLink = newFakeLink()
+					fourthLink.attrs = netlink.LinkAttrs{
+						Name:         "eth2",
+						HardwareAddr: fourthMAC,
+					}
+				})
+
+				var expectLinksConfigured func(eth2PrimaryIP string)
+				if mode == v3.AWSSecondaryIPEnabledENIPerWorkload {
+					expectLinksConfigured = func(eth2PrimaryIP string) {
+						expectSecondaryLinkAddr()
+						Expect(fakes.RouteTables).To(HaveLen(2))
+
+						rtID1, rt1 := fakes.FindRouteTable("eth1")
+						checkRouteTable(rt1, "eth1")
+						rtID2, rt2 := fakes.FindRouteTable("eth2")
+						checkRouteTable(rt2, "eth2")
+
+						// Rule for each egress gateway workload.
+						Expect(fakes.Rules.Rules).To(ConsistOf(
+							routerule.
+								NewRule(4, 105).
+								MatchSrcAddress(ip.MustParseCIDROrIP(egressGWIP).ToIPNet()).
+								GoToTable(rtID1),
+							routerule.
+								NewRule(4, 105).
+								MatchSrcAddress(ip.MustParseCIDROrIP(egressGW2IP).ToIPNet()).
+								GoToTable(rtID2),
+						))
+						Expect(rtID1).NotTo(Equal(rtID2))
+						Expect(m.GetRouteTableSyncers()).To(ConsistOf(rt1, rt2))
+					}
+				} else {
+					expectLinksConfigured = func(eth2PrimaryIP string) {
+						expectSecondaryLinkAddr()
+						Expect(fakes.RouteTables).To(HaveLen(2))
+
+						rtID1, rt1 := fakes.FindRouteTable("eth1")
+						checkRouteTable(rt1, "eth1")
+						rtID2, rt2 := fakes.FindRouteTable("eth2")
+						checkRouteTable(rt2, "eth2")
+
+						// Rule for each egress gateway workload.
+						Expect(fakes.Rules.Rules).To(ConsistOf(
+							routerule.
+								NewRule(4, 105).
+								MatchSrcAddress(ip.MustParseCIDROrIP(eth1PrimaryIP).ToIPNet()).
+								GoToTable(rtID1),
+							routerule.
+								NewRule(4, 105).
+								MatchSrcAddress(ip.MustParseCIDROrIP(eth2PrimaryIP).ToIPNet()).
+								GoToTable(rtID2),
+							routerule.
+								NewRule(4, 105).
+								MatchSrcAddress(ip.MustParseCIDROrIP(egressGWIP).ToIPNet()).
+								GoToTable(rtID1),
+							routerule.
+								NewRule(4, 105).
+								MatchSrcAddress(ip.MustParseCIDROrIP(egressGW2IP).ToIPNet()).
+								GoToTable(rtID2),
+						))
+						Expect(rtID1).NotTo(Equal(rtID2))
+						Expect(m.GetRouteTableSyncers()).To(ConsistOf(rt1, rt2))
+					}
+				}
+
+				It("with the interfaces present, it should network the interface", func() {
+					// Add the links.
+					fakes.AddFakeLink(secondaryLink)
+					fakes.AddFakeLink(thirdLink)
+
+					// CompleteDeferredWork should configure the interfaces.
+					Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+
+					// IP should be added.
+					expectLinksConfigured(thirdLinkPrimaryIP /*Ignored in ENI-per-workload mode*/)
+				})
+
+				It("flapping second interface should recycle routing table", func() {
+					// Pre-flap, should work as normal.
+					fakes.AddFakeLink(secondaryLink)
+					fakes.AddFakeLink(thirdLink)
+					Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+					expectLinksConfigured(thirdLinkPrimaryIP /*Ignored in ENI-per-workload mode*/)
+
+					rtID1, rt1 := fakes.FindRouteTable("eth1")
+					rtID2, rt2 := fakes.FindRouteTable("eth2")
+
+					// Take the link away and signal the manager.
+					fakes.RemoveFakeLink(thirdLink)
+					m.OnUpdate(&ifaceUpdate{
+						Name:  "eth2",
+						Index: 123,
+						State: ifacemonitor.StateDown,
+					})
+					Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+
+					// Still expect the route table to be returned (so that it can clean up).
+					Expect(m.GetRouteTableSyncers()).To(ConsistOf(rt1, rt2))
+					if mode == v3.AWSSecondaryIPEnabledENIPerWorkload {
+						// But should only have one rule now.
+						Expect(fakes.Rules.Rules).To(ConsistOf(
+							routerule.
+								NewRule(4, 105).
+								MatchSrcAddress(ip.MustParseCIDROrIP(egressGWIP).ToIPNet()).
+								GoToTable(rtID1),
+						))
+					} else {
+						// But should only have one pair of rules now.
+						Expect(fakes.Rules.Rules).To(ConsistOf(
+							routerule.
+								NewRule(4, 105).
+								MatchSrcAddress(ip.MustParseCIDROrIP(eth1PrimaryIP).ToIPNet()).
+								GoToTable(rtID1),
+							routerule.
+								NewRule(4, 105).
+								MatchSrcAddress(ip.MustParseCIDROrIP(egressGWIP).ToIPNet()).
+								GoToTable(rtID1),
+						))
+					}
+
+					// Pretend the background thread attached a new ENI.
+					if mode == v3.AWSSecondaryIPEnabledENIPerWorkload {
+						m.OnSecondaryIfaceStateUpdate(&aws.LocalAWSNetworkState{
+							PrimaryENIMAC: primaryMACStr,
+							SecondaryENIsByMAC: map[string]aws.Iface{
+								secondaryMACStr: {
+									ID:              "eni-0001",
+									MAC:             secondaryMAC,
+									PrimaryIPv4Addr: ip.FromString(egressGWIP),
+								},
+								fourthMACStr: {
+									ID:              "eni-0003",
+									MAC:             fourthMAC,
+									PrimaryIPv4Addr: ip.FromString(egressGW2IP),
+								},
+							},
+							SubnetCIDR:  ip.MustParseCIDROrIP("100.64.0.0/16"),
+							GatewayAddr: ip.FromString("100.64.0.1"),
+						})
+					} else {
+						m.OnSecondaryIfaceStateUpdate(&aws.LocalAWSNetworkState{
+							PrimaryENIMAC: primaryMACStr,
+							SecondaryENIsByMAC: map[string]aws.Iface{
+								secondaryMACStr: {
+									ID:              "eni-0001",
+									MAC:             secondaryMAC,
+									PrimaryIPv4Addr: ip.FromString(eth1PrimaryIP),
+									SecondaryIPv4Addrs: []ip.Addr{
+										ip.FromString(egressGWIP),
+									},
+								},
+								fourthMACStr: {
+									ID:              "eni-0003",
+									MAC:             fourthMAC,
+									PrimaryIPv4Addr: ip.FromString(fourthLinkPrimaryIP),
+									SecondaryIPv4Addrs: []ip.Addr{
+										ip.FromString(egressGW2IP),
+									},
+								},
+							},
+							SubnetCIDR:  ip.MustParseCIDROrIP("100.64.0.0/16"),
+							GatewayAddr: ip.FromString("100.64.0.1"),
+						})
+					}
+					fakes.AddFakeLink(fourthLink)
+					Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+
+					rtID2B, rt2B := fakes.FindRouteTable("eth2")
+					// New route table should replace the old one.
+					Expect(rt2).NotTo(BeIdenticalTo(rt2B))
+					Expect(m.GetRouteTableSyncers()).To(ConsistOf(rt1, rt2B))
+					// Route table indexes get reused LIFO.
+					Expect(rtID2).To(Equal(rtID2B))
+
+					expectLinksConfigured(fourthLinkPrimaryIP /*Ignored in ENI-per-workload mode*/)
+				})
+			})
+
+			if mode == v3.AWSSecondaryIPEnabled {
+				// Some tests only apply to secondary-IP-per-workload mode...
+
+				It("should handle an interface IP removed.", func() {
+					// Interface shows up.
+					fakes.AddFakeLink(secondaryLink)
+					m.OnUpdate(&ifaceUpdate{
+						Name:  "eth1",
+						Index: 123,
+						State: ifacemonitor.StateDown,
+					})
+
+					// CompleteDeferredWork should then configure the interface.
+					Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+					expectSecondaryLinkConfigured()
+
+					// IP deleted.
+					secondaryLink.addrs = nil
+					m.OnUpdate(&ifaceAddrsUpdate{
+						Name: "eth1",
+						Addrs: set.From(
+							"daed:beef::", // IPv6 ignored.
+						),
+					})
+
+					// CompleteDeferredWork should add the correct IP.
+					Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+					expectSecondaryLinkConfigured()
+
+					// Finally signal the correct state.
+					m.OnUpdate(&ifaceAddrsUpdate{
+						Name: "eth1",
+						Addrs: set.From(
+							"daed:beef::",
+							eth1PrimaryIP,
+						),
+					})
+
+					// Should spot it's correct and not schedule an update.
+					Expect(m.dataplaneResyncNeeded).To(BeFalse())
+
+					Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
+					expectSecondaryLinkConfigured()
+				})
+			}
 		})
 	})
-})
+}
 
 func newAWSMgrFakes() *awsIPMgrFakes {
 	errorProd := testutils.NewErrorProducer()
 	return &awsIPMgrFakes{
 		RouteTables: map[int]*fakeRouteTable{},
 		Errors:      errorProd,
+		Neighs:      map[NeighKey]*netlink.Neigh{},
 	}
 }
 
 type awsIPMgrFakes struct {
 	DatastoreState *aws.DatastoreState
 
-	Links []netlink.Link
+	Links  []netlink.Link
+	Neighs map[NeighKey]*netlink.Neigh
 
 	RouteTables          map[int]*fakeRouteTable
 	Rules                *fakeRouteRules
 	Errors               testutils.ErrorProducer
 	DatastoreUpdateCount int
+	DeletedNeighs        []string
+}
+
+type NeighKey struct {
+	Iface int
+	IP    string
 }
 
 func (f *awsIPMgrFakes) ParseAddr(s string) (*netlink.Addr, error) {
@@ -1052,6 +1238,47 @@ func (f *awsIPMgrFakes) LinkList() ([]netlink.Link, error) {
 		return nil, err
 	}
 	return f.Links, nil
+}
+
+func (f *awsIPMgrFakes) NeighSet(neigh *netlink.Neigh) error {
+	if err := f.Errors.NextErrorByCaller(); err != nil {
+		return err
+	}
+	f.Neighs[NeighKey{
+		Iface: neigh.LinkIndex,
+		IP:    neigh.IP.String(),
+	}] = neigh
+	return nil
+}
+
+func (f *awsIPMgrFakes) NeighDel(neigh *netlink.Neigh) error {
+	if err := f.Errors.NextErrorByCaller(); err != nil {
+		return err
+	}
+	nk := NeighKey{
+		Iface: neigh.LinkIndex,
+		IP:    neigh.IP.String(),
+	}
+	if _, ok := f.Neighs[nk]; !ok {
+		return fmt.Errorf("neigh not found")
+	}
+	delete(f.Neighs, nk)
+	f.DeletedNeighs = append(f.DeletedNeighs, neigh.IP.String())
+	return nil
+}
+
+func (f *awsIPMgrFakes) NeighList(linkIndex, family int) ([]netlink.Neigh, error) {
+	if err := f.Errors.NextErrorByCaller(); err != nil {
+		return nil, err
+	}
+	Expect(family).To(Equal(netlink.FAMILY_V4))
+	var neighs []netlink.Neigh
+	for nk, n := range f.Neighs {
+		if nk.Iface == linkIndex {
+			neighs = append(neighs, *n)
+		}
+	}
+	return neighs, nil
 }
 
 func (f *awsIPMgrFakes) NewRouteTable(
@@ -1138,6 +1365,16 @@ func (f *awsIPMgrFakes) RemoveFakeLink(link *fakeLink) {
 		newLinks = append(newLinks, l)
 	}
 	f.Links = newLinks
+}
+
+func (f *awsIPMgrFakes) ifaceARPEntries(index int) []*netlink.Neigh {
+	var neighs []*netlink.Neigh
+	for k, v := range f.Neighs {
+		if k.Iface == index {
+			neighs = append(neighs, v)
+		}
+	}
+	return neighs
 }
 
 func newFakeLink() *fakeLink {

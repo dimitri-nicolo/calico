@@ -60,6 +60,12 @@ const (
 	AWSSrcDstCheckOptionDisable                        = "Disable"
 )
 
+const (
+	AWSSecondaryIPEnabled               = "Enabled"
+	AWSSecondaryIPDisabled              = "Disabled"
+	AWSSecondaryIPEnabledENIPerWorkload = "EnabledENIPerWorkload"
+)
+
 // FelixConfigurationSpec contains the values of the Felix configuration.
 type FelixConfigurationSpec struct {
 	UseInternalDataplaneDriver *bool  `json:"useInternalDataplaneDriver,omitempty"`
@@ -721,9 +727,14 @@ type FelixConfigurationSpec struct {
 	// Set source-destination-check on AWS EC2 instances. Accepted value must be one of "DoNothing", "Enable" or "Disable".
 	// [Default: DoNothing]
 	AWSSrcDstCheck *AWSSrcDstCheckOption `json:"awsSrcDstCheck,omitempty" validate:"omitempty,oneof=DoNothing Enable Disable"`
-	// AWSSecondaryIPSupport controls whether Felix will try to provision AWS secondary ENIs and secondary IPs for
-	// workloads that have IPs from IP pools that are configured with an AWS subnet ID. [Default: Disabled]
-	AWSSecondaryIPSupport string `json:"awsSecondaryIPSupport,omitempty" validate:"omitempty,oneof=Enabled Disabled"`
+	// AWSSecondaryIPSupport controls whether Felix will try to provision AWS secondary ENIs for
+	// workloads that have IPs from IP pools that are configured with an AWS subnet ID.  If the field is set to
+	// "EnabledENIPerWorkload" then each workload with an AWS-backed IP will be assigned its own secondary ENI.
+	// If set to "Enabled" then each workload with an AWS-backed IP pool will be allocated a secondary IP address
+	// on a secondary ENI; this mode requires additional IP pools to be provisioned for the host to claim IPs for
+	// the primary IP of the secondary ENIs. Accepted value must be one of "Enabled", "EnabledENIPerWorkload" or
+	// "Disabled". [Default: Disabled]
+	AWSSecondaryIPSupport string `json:"awsSecondaryIPSupport,omitempty" validate:"omitempty,oneof=Enabled EnabledENIPerWorkload Disabled"`
 	// AWSSecondaryIPRoutingRulePriority controls the priority that Felix will use for routing rules when programming
 	// them for AWS Secondary IP support. [Default: 101]
 	AWSSecondaryIPRoutingRulePriority *int `json:"awsSecondaryIPRoutingRulePriority,omitempty" validate:"omitempty,gte=0,lte=4294967295"`

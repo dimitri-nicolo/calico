@@ -5249,7 +5249,7 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					},
 					"awsSecondaryIPSupport": {
 						SchemaProps: spec.SchemaProps{
-							Description: "AWSSecondaryIPSupport controls whether Felix will try to provision AWS secondary ENIs and secondary IPs for workloads that have IPs from IP pools that are configured with an AWS subnet ID. [Default: Disabled]",
+							Description: "AWSSecondaryIPSupport controls whether Felix will try to provision AWS secondary ENIs for workloads that have IPs from IP pools that are configured with an AWS subnet ID.  If the field is set to \"EnabledENIPerWorkload\" then each workload with an AWS-backed IP will be assigned its own secondary ENI. If set to \"Enabled\" then each workload with an AWS-backed IP pool will be allocated a secondary IP address on a secondary ENI; this mode requires additional IP pools to be provisioned for the host to claim IPs for the primary IP of the secondary ENIs. Accepted value must be one of \"Enabled\", \"EnabledENIPerWorkload\" or \"Disabled\". [Default: Disabled]",
 							Type:        []string{"string"},
 							Format:      "",
 						},

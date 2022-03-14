@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/vishvananda/netlink"
 
 	"github.com/projectcalico/calico/felix/ifacemonitor"
@@ -661,67 +662,124 @@ func (a *awsIPManager) configureNIC(iface netlink.Link, ifaceName string, primar
 			return err
 		}
 	}
-
-	// Make sure the interface has its primary IP.  This is needed for ARP to work.
 	addrs, err := a.nl.AddrList(iface, netlink.FAMILY_V4)
 	if err != nil {
 		logrus.WithError(err).WithField("name", ifaceName).Error("Failed to query interface addrs.")
 		return err
 	}
 
-	foundPrimaryIP := false
-
-	// Add the primary address as a /32 so that we don't automatically get routes for the subnet in the
-	// main routing table.  We need to add the subnet routes to a custom routing table so that they're only
-	// used for traffic that belongs on the secondary ENI.
-	newAddr, err := a.nl.ParseAddr(primaryIPStr + "/32")
-	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"name": ifaceName,
-			"addr": primaryIPStr,
-		}).Error("Failed to parse address.")
-		return fmt.Errorf("failed to parse AWS primary IP of secondary ENI %q: %w", primaryIPStr, err)
-	}
-	// Set the primary address to link scope so the kernel will only pick it for communication on the same
-	// subnet.
-	newAddr.Scope = int(netlink.SCOPE_LINK)
-
 	var finalErr error
-	for _, addr := range addrs {
-		if addr.Equal(*newAddr) {
-			foundPrimaryIP = true
-			continue
-		}
 
-		// Unexpected address.
-		err := a.nl.AddrDel(iface, &addr)
+	// Remove any left-over proxy ARP entries that we previously added for ENI-per-workload mode.
+	neighs, err := a.nl.NeighList(iface.Attrs().Index, netlink.FAMILY_V4)
+	if err != nil {
+		logrus.WithError(err).Error("Failed to query netlink for proxy ARP entries.")
+		finalErr = err
+	}
+	primaryNetIP := net.ParseIP(primaryIPStr)
+	for _, n := range neighs {
+		if n.Flags&netlink.NTF_PROXY != 0 {
+			if a.dpConfig.AWSSecondaryIPSupport == v3.AWSSecondaryIPEnabledENIPerWorkload &&
+				n.IP.Equal(primaryNetIP) {
+				continue
+			}
+
+			logrus.WithFields(logrus.Fields{
+				"addr":  n.IP.String(),
+				"iface": iface.Attrs().Name,
+			}).Info("Found left-over proxy ARP entry; removing.")
+			err := a.nl.NeighDel(&n)
+			if err != nil {
+				logrus.WithError(err).WithField("entry", n).Warn(
+					"Failed to clean up unwanted proxy ARP entry.")
+				finalErr = err
+			}
+		}
+	}
+
+	if a.dpConfig.AWSSecondaryIPSupport == v3.AWSSecondaryIPEnabledENIPerWorkload {
+		// The primary IP of the interface belongs to a workload. Configure the host to respond to ARPs even
+		// though it doesn't own the IP.
+		logrus.Debug("In ENI-per-workload mode.  Adding proxy ARP entry to interface.")
+		err := a.nl.NeighSet(&netlink.Neigh{
+			LinkIndex: iface.Attrs().Index,
+			Family:    netlink.FAMILY_V4,
+			Flags:     netlink.NTF_PROXY,
+			IP:        primaryNetIP,
+		})
 		if err != nil {
 			logrus.WithError(err).WithFields(logrus.Fields{
 				"name": ifaceName,
-				"addr": a,
-			}).Error("Failed to clean up old address.")
+				"addr": primaryIPStr,
+			}).Error("Failed to set a proxy ARP entry for workload IP.")
 			finalErr = err
 		}
-	}
+		for _, addr := range addrs {
+			// Unexpected address.
+			err := a.nl.AddrDel(iface, &addr)
+			if err != nil {
+				logrus.WithError(err).WithFields(logrus.Fields{
+					"name": ifaceName,
+					"addr": a,
+				}).Error("Failed to clean up old address.")
+				finalErr = err
+			}
+		}
+	} else { // v3.AWSSecondaryIPEnabled: secondary IP per workload mode.
+		// Make sure the interface has its primary IP.  This is needed for ARP to work.
+		logrus.Debug("In secondary IP-per-workload mode.  Adding primary IP to interface.")
+		foundPrimaryIP := false
 
-	if foundPrimaryIP {
-		return nil
-	}
+		// Add the primary address as a /32 so that we don't automatically get routes for the subnet in the
+		// main routing table.  We need to add the subnet routes to a custom routing table so that they're only
+		// used for traffic that belongs on the secondary ENI.
+		newAddr, err := a.nl.ParseAddr(primaryIPStr + "/32")
+		if err != nil {
+			logrus.WithError(err).WithFields(logrus.Fields{
+				"name": ifaceName,
+				"addr": primaryIPStr,
+			}).Error("Failed to parse address.")
+			return fmt.Errorf("failed to parse AWS primary IP of secondary ENI %q: %w", primaryIPStr, err)
+		}
+		// Set the primary address to link scope so the kernel will only pick it for communication on the same
+		// subnet.
+		newAddr.Scope = int(netlink.SCOPE_LINK)
 
-	err = a.nl.AddrAdd(iface, newAddr)
-	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"name": ifaceName,
-			"addr": newAddr,
-		}).Error("Failed to add new primary IP to secondary interface.")
-		finalErr = err
-	} else {
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"name": ifaceName,
-			"addr": newAddr,
-		}).Info("Added primary address to secondary ENI.")
-	}
+		for _, addr := range addrs {
+			if addr.Equal(*newAddr) {
+				foundPrimaryIP = true
+				continue
+			}
 
+			// Unexpected address.
+			err := a.nl.AddrDel(iface, &addr)
+			if err != nil {
+				logrus.WithError(err).WithFields(logrus.Fields{
+					"name": ifaceName,
+					"addr": a,
+				}).Error("Failed to clean up old address.")
+				finalErr = err
+			}
+		}
+
+		if foundPrimaryIP {
+			return nil
+		}
+
+		err = a.nl.AddrAdd(iface, newAddr)
+		if err != nil {
+			logrus.WithError(err).WithFields(logrus.Fields{
+				"name": ifaceName,
+				"addr": newAddr,
+			}).Error("Failed to add new primary IP to secondary interface.")
+			finalErr = err
+		} else {
+			logrus.WithError(err).WithFields(logrus.Fields{
+				"name": ifaceName,
+				"addr": newAddr,
+			}).Info("Added primary address to secondary ENI.")
+		}
+	}
 	return finalErr
 }
 
@@ -916,6 +974,9 @@ type awsNetlinkIface interface {
 	AddrDel(iface netlink.Link, n *netlink.Addr) error
 	AddrAdd(iface netlink.Link, addr *netlink.Addr) error
 	ParseAddr(s string) (*netlink.Addr, error)
+	NeighSet(neigh *netlink.Neigh) error
+	NeighDel(neigh *netlink.Neigh) error
+	NeighList(linkIndex, family int) ([]netlink.Neigh, error)
 }
 
 func realRouteRuleNew(
@@ -978,4 +1039,16 @@ func (a awsRealNetlink) LinkList() ([]netlink.Link, error) {
 
 func (a awsRealNetlink) NewHandle() (routerule.HandleIface, error) {
 	return netlink.NewHandle(syscall.NETLINK_ROUTE)
+}
+
+func (a awsRealNetlink) NeighSet(neigh *netlink.Neigh) error {
+	return netlink.NeighSet(neigh)
+}
+
+func (a awsRealNetlink) NeighDel(neigh *netlink.Neigh) error {
+	return netlink.NeighDel(neigh)
+}
+
+func (a awsRealNetlink) NeighList(linkIndex, family int) ([]netlink.Neigh, error) {
+	return netlink.NeighList(linkIndex, family)
 }

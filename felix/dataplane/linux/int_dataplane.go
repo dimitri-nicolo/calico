@@ -249,7 +249,7 @@ type Config struct {
 	Collector collector.Collector
 
 	// AWS-specials.
-	AWSSecondaryIPSupport             bool
+	AWSSecondaryIPSupport             string
 	AWSRequestTimeout                 time.Duration
 	AWSSecondaryIPRoutingRulePriority int
 
@@ -267,7 +267,7 @@ type Config struct {
 	LookPathOverride func(file string) (string, error)
 
 	IPAMClient    ipam.Interface
-	KubeClientSet *kubernetes.Clientset
+	KubeClientSet kubernetes.Interface
 
 	FeatureDetectOverrides map[string]string
 
@@ -604,7 +604,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	var awsTableIndexes []int
-	if config.AWSSecondaryIPSupport {
+	if config.AWSSecondaryIPSupport != "Disabled" {
 		// Since the egress gateway machinery claims all remaining indexes below, claim enough for all possible
 		// AWS secondary NICs now.
 		for i := 0; i < aws.SecondaryInterfaceCap; i++ {
@@ -1073,12 +1073,17 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	captureManager := newCaptureManager(activeCaptures, config.RulesConfig.WorkloadIfacePrefixes)
 	dp.RegisterManager(captureManager)
 
-	if config.AWSSecondaryIPSupport {
+	if config.AWSSecondaryIPSupport != "Disabled" {
 		k8sCapacityUpdater := k8sutils.NewCapacityUpdater(config.FelixHostname, config.KubeClientSet.CoreV1())
 		k8sCapacityUpdater.Start(context.Background())
+		var ha aws.HealthAggregator
+		if config.HealthAggregator != nil {
+			ha = config.HealthAggregator
+		}
 		secondaryIfaceProv := aws.NewSecondaryIfaceProvisioner(
+			config.AWSSecondaryIPSupport,
 			config.FelixHostname,
-			config.HealthAggregator,
+			ha,
 			config.IPAMClient,
 			aws.OptTimeout(dp.config.AWSRequestTimeout),
 			aws.OptCapacityCallback(k8sCapacityUpdater.OnCapacityChange),
