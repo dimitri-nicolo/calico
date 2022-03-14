@@ -16,4 +16,7 @@
   <sitemap><loc>https://docs.tigera.io/v3.8/sitemap.xml</loc></sitemap>
   <sitemap><loc>https://docs.tigera.io/v3.9/sitemap.xml</loc></sitemap>
   <sitemap><loc>https://docs.tigera.io/v3.10/sitemap.xml</loc></sitemap>
+  <sitemap><loc>https://docs.tigera.io/v3.11/sitemap.xml</loc></sitemap>
+  <sitemap><loc>https://docs.tigera.io/v3.12/sitemap.xml</loc></sitemap>
+  <sitemap><loc>https://docs.tigera.io/v3.13/sitemap.xml</loc></sitemap>
 </sitemapindex>
