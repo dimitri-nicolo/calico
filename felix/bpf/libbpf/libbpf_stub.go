@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -95,8 +95,12 @@ func (m *Map) IsMapInternal() bool {
 	panic("LIBBPF syscall stub")
 }
 
+const (
+	GlobalsIPv6Enabled uint32 = 1
+)
+
 func TcSetGlobals(m *Map, hostIP, intfIP, extToSvcMark uint32, tmtu, vxlanPort, psNatStart, psNatLen, vethNS uint16,
-	enableTcpStats, isEgressGatway, isEgressClient bool) error {
+	enableTcpStats, isEgressGatway, isEgressClient bool, flags uint32) error {
 	panic("LIBBPF syscall stub")
 }
 

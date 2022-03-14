@@ -1,5 +1,5 @@
-// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
-
+// Copyright (c) 2020-2022 Tigera, Inc. All rights reserved.
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -243,7 +243,8 @@ type Config struct {
 	TyphaCN       string `config:"string;;local"`
 	TyphaURISAN   string `config:"string;;local"`
 
-	Ipv6Support bool `config:"bool;true"`
+	Ipv6Support    bool `config:"bool;true"`
+	BpfIpv6Support bool `config:"bool;false"`
 
 	IptablesBackend                    string            `config:"oneof(legacy,nft,auto);auto"`
 	RouteRefreshInterval               time.Duration     `config:"seconds;90"`

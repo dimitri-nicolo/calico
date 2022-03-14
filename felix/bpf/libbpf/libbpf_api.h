@@ -138,7 +138,8 @@ void bpf_tc_set_globals(struct bpf_map *map,
 			ushort if_ns,
 			u_char tcp_stats,
 			u_char egress_gateway,
-			u_char egress_client)
+			u_char egress_client,
+			uint flags)
 {
 	struct cali_tc_globals data = {
 	    .host_ip = host_ip,
@@ -152,7 +153,7 @@ void bpf_tc_set_globals(struct bpf_map *map,
 	    .tcp_stats = tcp_stats,
 	    .egress_client = egress_client,
 	    .egress_gateway = egress_gateway,
-
+		.flags = flags,
 	};
 
 	set_errno(bpf_map__set_initial_value(map, (void*)(&data), sizeof(data)));
