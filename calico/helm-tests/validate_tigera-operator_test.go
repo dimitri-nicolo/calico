@@ -8,7 +8,6 @@ import (
 
 // This file holds all of the functions for validating
 // expected values on the Tigera operator deployment.
-
 var _ = Describe("Tigera Operator Helm Chart", func() {
 	Context("With tigera operator on a kubernetes datastore", func() {
 		values := HelmValues{}
