@@ -10,8 +10,6 @@ import (
 	"net/url"
 	"os"
 	"regexp"
-
-	"github.com/google/uuid"
 )
 
 var (
@@ -32,12 +30,12 @@ func ValidateEnvVars() {
 		log.Fatal("ELASTIC_INDEX_TENANT_ID must consist of only alpha-numeric chars (lowercase) or '-' and be at max 63 chars")
 	}
 
-	imageAssuranceEndpoint := os.Getenv("IMAGE_ASSURANCE_BAST_API_URL")
+	imageAssuranceEndpoint := os.Getenv("IMAGE_ASSURANCE_ENDPOINT")
 	if imageAssuranceEndpoint == "" {
-		log.Fatal("IMAGE_ASSURANCE_BAST_API_URL can not be empty")
+		log.Fatal("IMAGE_ASSURANCE_ENDPOINT can not be empty")
 	}
 	if _, err := url.Parse(imageAssuranceEndpoint); err != nil {
-		log.Fatal("IMAGE_ASSURANCE_BAST_API_URL is not valid")
+		log.Fatal("IMAGE_ASSURANCE_ENDPOINT is not valid")
 	}
 
 	imageAssuranceCABundlePath := os.Getenv("IMAGE_ASSURANCE_CA_BUNDLE_PATH")
@@ -46,7 +44,7 @@ func ValidateEnvVars() {
 	}
 
 	imageAssuranceOrgID := os.Getenv("IMAGE_ASSURANCE_ORGANIZATION_ID")
-	if _, err := uuid.Parse(imageAssuranceOrgID); err != nil {
-		log.Fatal("IMAGE_ASSURANCE_ORGANIZATION_ID must be a valid UUID")
+	if imageAssuranceOrgID == "" {
+		log.Fatal("IMAGE_ASSURANCE_ORGANIZATION_ID can not be empty")
 	}
 }
