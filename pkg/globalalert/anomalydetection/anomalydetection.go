@@ -24,7 +24,7 @@ import (
 
 const (
 	GlobalAlertAnomalyDetectionDataSource = "logs"
-	ADDetectionJobTemplateName            = "tigera.io.adjob.detection"
+	ADDetectionJobTemplateName            = "tigera.io.detectors.detection"
 
 	DefaultDetectionLookback = 1000
 	DefaultTrainingPeriod    = 24 * time.Hour

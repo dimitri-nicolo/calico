@@ -196,7 +196,7 @@ func main() {
 
 	// anomaly detection controllers
 	var anomalyTrainingController, anomalyDetectionController controller.ADJobController
-	var adJobsTrainingPinger, adJobDetectionHealthPinger health.Pingers
+	var adJobsTrainingPinger health.Pingers
 
 	enableAlerts := os.Getenv("DISABLE_ALERTS") != "yes"
 
@@ -207,9 +207,9 @@ func main() {
 			calicoClient, podtemplateQuery, TigeraIntrusionDetectionNamespace, clusterName)
 		healthPingers = append(healthPingers, &adJobsTrainingPinger)
 
-		anomalyDetectionController, adJobDetectionHealthPinger = anomalydetection.NewADJobDetectionController(k8sClient,
+		// detection controller depends on GlobalAlert such removing the pinger as one might not be present at start
+		anomalyDetectionController = anomalydetection.NewADJobDetectionController(k8sClient,
 			calicoClient, TigeraIntrusionDetectionNamespace, clusterName)
-		healthPingers = append(healthPingers, &adJobDetectionHealthPinger)
 
 		managementAlertController, alertHealthPinger = alert.NewGlobalAlertController(calicoClient, lmaESClient, k8sClient, podtemplateQuery,
 			anomalyDetectionController, clusterName, TigeraIntrusionDetectionNamespace)
