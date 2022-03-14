@@ -1,0 +1,34 @@
+version: v1.0
+name: Publish Helm Charts
+execution_time_limit:
+  hours: 2
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
+
+global_job_config:
+  prologue:
+    commands:
+      - chmod 0600 ~/.keys/*
+      - ssh-add ~/.keys/*
+      - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/banzai-google-service-account.json
+      - gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
+      - checkout
+  secrets:
+    - name: marvin-github-ssh-private-key
+    - name: banzai-secrets
+
+blocks:
+  - name: "Build/Push helm charts"
+    skip:
+      # Only run on master or release branches, not PRs.
+      when: "(branch =~ 'master|release-.*') and (branch !~ '.+')" 
+    dependencies: []
+    task:
+      jobs:
+        - name: Build and push helm charts for branch
+          commands:
+            - cd calico
+            - make charts RELEASE_STREAM=$SEMAPHORE_GIT_BRANCH
+            - make publish-charts
