@@ -119,8 +119,8 @@ require (
 )
 
 replace (
-	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220311010111-b668034077e0
-	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220311010111-b668034077e0
+	github.com/projectcalico/calico => github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220312084447-67731b720137
+	github.com/tigera/api => github.com/tigera/calico-private/api v0.0.0-20220312084447-67731b720137
 
 	google.golang.org/grpc => google.golang.org/grpc v1.29.1
 
