@@ -135,7 +135,7 @@ var _ = Describe("GlobalAlert Elastic Test", func() {
 					Name: alertName,
 				},
 				Spec: v3.GlobalAlertSpec{
-					Summary:     "test alert summary ${source_namespace} ${count}",
+					Description: "test alert summary ${source_namespace} ${count}",
 					Severity:    100,
 					DataSet:     "flows",
 					Metric:      "count",
