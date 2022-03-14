@@ -4,7 +4,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: node-certs
-  namespace: tigera-operator
+  namespace: {{.Release.Namespace}}
 type: Opaque
 data:
   cert.crt: {{ required "must set certs.node.cert" .Values.certs.node.cert | b64enc }}

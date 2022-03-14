@@ -3,7 +3,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: tigera-apiserver-certs
-  namespace: tigera-operator
+  namespace: {{.Release.Namespace}}
 type: Opaque
 data:
   apiserver.crt: {{ required "must set apiServer.cert if apiServer.key is set" .Values.certs.apiServer.cert | b64enc }}
