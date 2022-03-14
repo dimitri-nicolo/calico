@@ -110,6 +110,7 @@ func (c *managedClusterController) Run(stop chan struct{}) {
 		managedClustersStopChans: make(map[string]chan struct{}),
 		restartChan:              c.restartChan,
 		calicoCLI:                c.calicoCLI,
+		controllers:              c.controllers,
 	}
 
 	// Watch the ManagedCluster resources for changes
