@@ -1,7 +1,7 @@
 //go:build fvtests
 // +build fvtests
 
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2022 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -492,7 +492,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		// Within 30s we should see the complete set of expected allow and deny
 		// flow logs.
 		Eventually(func() error {
-			flowTester := metrics.NewFlowTester(flowLogsReaders, expectation.labels, expectation.policies, 8055)
+			flowTester := metrics.NewFlowTesterDeprecated(flowLogsReaders, expectation.labels, expectation.policies, 8055)
 			err := flowTester.PopulateFromFlowLogs(flowLogsOutput)
 			if err != nil {
 				return err

@@ -1,7 +1,7 @@
 //go:build fvtests
 // +build fvtests
 
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2022 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -243,7 +243,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 		}
 
 		Eventually(func() error {
-			flowTester := metrics.NewFlowTester(flowLogsReaders, true, true, 0)
+			flowTester := metrics.NewFlowTesterDeprecated(flowLogsReaders, true, true, 0)
 
 			// Track all errors before failing.  All flows originating from our workload should be going to either
 			// the DNS server or the network sets.  If bound for the network sets then networkset1 should be denied and

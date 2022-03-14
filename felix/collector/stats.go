@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2022 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -181,7 +181,7 @@ func (t *RuleTrace) Path() []*calc.RuleID {
 
 func (t *RuleTrace) HasDenyRule() bool {
 	if t.rulesToReport != nil {
-		// The denu rules flag is calculated as part of the rule calculation.
+		// The deny rules flag is calculated as part of the rule calculation.
 		_ = t.Path()
 	}
 
