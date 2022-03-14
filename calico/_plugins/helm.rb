@@ -112,6 +112,7 @@ module Jekyll
       cmd =  """bin/helm3 template --include-crds _includes/charts/#{@chart} \
         -f #{tv.path} \
         -f #{t.path} \
+        -n tigera-operator \
         --set node.resources.requests.cpu='250m' \
         --set manager.service.type=NodePort \
         --set manager.service.nodePort=30003 \
