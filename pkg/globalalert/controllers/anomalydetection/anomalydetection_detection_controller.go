@@ -5,10 +5,13 @@ import (
 	"errors"
 
 	batchv1 "k8s.io/api/batch/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
 
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/worker"
+	"github.com/tigera/intrusion-detection/controller/pkg/maputil"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
@@ -58,6 +61,18 @@ func NewADJobDetectionController(k8sClient kubernetes.Interface, calicoCLI calic
 	}
 
 	adDetectionController.worker = worker.New(adJobReconciler)
+
+	detectionJobLabelByteStr := maputil.CreateLabelValuePairStr(DetectionJobLabels())
+
+	optionsModifier := func(options *metav1.ListOptions) {
+		options.LabelSelector = detectionJobLabelByteStr
+	}
+
+	adDetectionController.worker = worker.New(adJobReconciler)
+	adDetectionController.worker.AddWatch(
+		cache.NewFilteredListWatchFromClient(adDetectionController.k8sClient.BatchV1().RESTClient(), "cronjobs", namespace,
+			optionsModifier),
+		&batchv1.CronJob{})
 
 	return adDetectionController
 }

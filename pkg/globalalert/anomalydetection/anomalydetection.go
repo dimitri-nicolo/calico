@@ -168,7 +168,7 @@ func (s *service) createDetectionCycle(parentCtx context.Context, podTemplate v1
 		*metav1.NewControllerRef(s.globalAlert, GlobalAlertGroupVersionKind),
 	}
 
-	_, err = s.k8sClient.BatchV1().CronJobs(s.namespace).Create(parentCtx,
+	detectionCycleCronJob, err = s.k8sClient.BatchV1().CronJobs(s.namespace).Create(parentCtx,
 		detectionCycleCronJob, metav1.CreateOptions{})
 
 	if err != nil {
@@ -178,6 +178,11 @@ func (s *service) createDetectionCycle(parentCtx context.Context, podTemplate v1
 
 		return errorAlertStatus
 	}
+
+	// empty resource versioning and status before saving
+	detectionCycleCronJob.ResourceVersion = ""
+	detectionCycleCronJob.UID = ""
+	detectionCycleCronJob.Status = batchv1.CronJobStatus{}
 
 	err = s.manageCronJob(detectionCycleCronJob)
 	if err != nil {
