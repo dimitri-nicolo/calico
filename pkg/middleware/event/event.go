@@ -20,6 +20,7 @@ const (
 	defaultTimeout = 60 * time.Second
 )
 
+// EventHandler handles event bulk requests for deleting and dimssing events.
 func EventHandler(esClientFactory lmaelastic.ClusterContextClientFactory) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// parse http request body into bulk request.
@@ -40,6 +41,7 @@ func EventHandler(esClientFactory lmaelastic.ClusterContextClientFactory) http.H
 	})
 }
 
+// parseEventRequest extracts bulk parameters from the request body and validates them.
 func parseEventRequest(w http.ResponseWriter, r *http.Request) (*v1.BulkEventRequest, error) {
 	// events handler
 	if r.Method != http.MethodPost {
@@ -78,6 +80,7 @@ func parseEventRequest(w http.ResponseWriter, r *http.Request) (*v1.BulkEventReq
 	return &params, nil
 }
 
+// processEventRequest translates bulk parameters to Elastic bulk requests and return responses.
 func processEventRequest(
 	r *http.Request,
 	esClientFactory lmaelastic.ClusterContextClientFactory,

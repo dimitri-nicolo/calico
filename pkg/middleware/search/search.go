@@ -1,10 +1,11 @@
 // Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
-package middleware
+package search
 
 import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/olivere/elastic/v7"
@@ -14,10 +15,13 @@ import (
 
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 
+	"github.com/tigera/compliance/pkg/datastore"
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
 	"github.com/tigera/es-proxy/pkg/math"
+	"github.com/tigera/es-proxy/pkg/middleware"
 	esSearch "github.com/tigera/es-proxy/pkg/search"
+	lmaelastic "github.com/tigera/lma/pkg/elastic"
 	lmaindex "github.com/tigera/lma/pkg/elastic/index"
 	"github.com/tigera/lma/pkg/httputils"
 )
@@ -32,7 +36,8 @@ const (
 // executes it and returns the results.
 func SearchHandler(
 	idxHelper lmaindex.Helper,
-	authReview AuthorizationReview,
+	authReview middleware.AuthorizationReview,
+	k8sClient datastore.ClientSet,
 	client *elastic.Client,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -44,7 +49,7 @@ func SearchHandler(
 			return
 		}
 		// Search.
-		response, err := search(idxHelper, params, authReview, client, r)
+		response, err := search(idxHelper, params, authReview, k8sClient, client, r)
 		if err != nil {
 			httputils.EncodeError(w, err)
 			return
@@ -61,12 +66,12 @@ func SearchHandler(
 func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.SearchRequest, error) {
 	// Validate http method.
 	if r.Method != http.MethodGet && r.Method != http.MethodPost {
-		log.WithError(ErrInvalidMethod).Info("Invalid http method.")
+		log.WithError(middleware.ErrInvalidMethod).Info("Invalid http method.")
 
 		return nil, &httputils.HttpStatusError{
 			Status: http.StatusMethodNotAllowed,
-			Msg:    ErrInvalidMethod.Error(),
-			Err:    ErrInvalidMethod,
+			Msg:    middleware.ErrInvalidMethod.Error(),
+			Err:    middleware.ErrInvalidMethod,
 		}
 	}
 
@@ -100,7 +105,7 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.Sear
 
 	// Set cluster name to default: "cluster", if empty.
 	if params.ClusterName == "" {
-		params.ClusterName = MaybeParseClusterNameFromRequest(r)
+		params.ClusterName = middleware.MaybeParseClusterNameFromRequest(r)
 	}
 
 	// Check that we are not attempting to enumerate more than the maximum number of results.
@@ -130,7 +135,8 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.Sear
 func search(
 	idxHelper lmaindex.Helper,
 	params *v1.SearchRequest,
-	authReview AuthorizationReview,
+	authReview middleware.AuthorizationReview,
+	k8sClient datastore.ClientSet,
 	esClient *elastic.Client,
 	r *http.Request,
 ) (*v1.SearchResponse, error) {
@@ -176,6 +182,42 @@ func search(
 		return nil, err
 	} else if rbac != nil {
 		esquery = esquery.Filter(rbac)
+	}
+
+	// For security event search requests, we need to modify the Elastic query
+	// to exclude events which match exceptions created by users.
+	if strings.Contains(index, lmaelastic.EventsIndex) {
+		eventExceptionList, err := k8sClient.AlertExceptions().List(ctx, metav1.ListOptions{})
+		if err != nil {
+			log.WithError(err).Error("failed to list alert exceptions")
+			return nil, &httputils.HttpStatusError{
+				Status: http.StatusInternalServerError,
+				Msg:    err.Error(),
+				Err:    err,
+			}
+		}
+
+		now := time.Now()
+		for _, alertException := range eventExceptionList.Items {
+			if alertException.Spec.Period != nil {
+				createTimestamp := alertException.GetCreationTimestamp()
+				if createTimestamp.Add(alertException.Spec.Period.Duration).Before(now) {
+					// skip expired alert exceptions
+					log.Debugf(`skipping expired alert exception="%s"`, alertException.GetName())
+					continue
+				}
+			}
+
+			q, err := idxHelper.NewSelectorQuery(alertException.Spec.Selector)
+			if err != nil {
+				// skip invalid alert exception selector
+				log.WithError(err).Warnf(`ignoring alert exception="%s", failed to parse selector="%s"`,
+					alertException.GetName(), alertException.Spec.Selector)
+				continue
+			}
+
+			esquery = esquery.MustNot(q)
+		}
 	}
 
 	// Sorting.

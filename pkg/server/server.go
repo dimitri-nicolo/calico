@@ -20,6 +20,7 @@ import (
 	"github.com/tigera/es-proxy/pkg/middleware/aggregation"
 	"github.com/tigera/es-proxy/pkg/middleware/event"
 	"github.com/tigera/es-proxy/pkg/middleware/rawquery"
+	"github.com/tigera/es-proxy/pkg/middleware/search"
 	"github.com/tigera/es-proxy/pkg/middleware/servicegraph"
 	"github.com/tigera/es-proxy/pkg/pip"
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
@@ -151,9 +152,10 @@ func Start(cfg *Config) error {
 		middleware.ClusterRequestToResource(flowLogsResourceName,
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					middleware.SearchHandler(
+					search.SearchHandler(
 						lmaindex.FlowLogs(),
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						k8sClientSet,
 						esClient.Backend(),
 					)))))
 	sm.Handle("/dnsLogs/aggregation",
@@ -165,9 +167,10 @@ func Start(cfg *Config) error {
 		middleware.ClusterRequestToResource(dnsLogsResourceName,
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					middleware.SearchHandler(
+					search.SearchHandler(
 						lmaindex.DnsLogs(),
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						k8sClientSet,
 						esClient.Backend(),
 					)))))
 	sm.Handle("/l7Logs/aggregation",
@@ -179,9 +182,10 @@ func Start(cfg *Config) error {
 		middleware.ClusterRequestToResource(l7ResourceName,
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					middleware.SearchHandler(
+					search.SearchHandler(
 						lmaindex.L7Logs(),
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						k8sClientSet,
 						esClient.Backend(),
 					)))))
 	sm.Handle("/events/bulk",
@@ -193,9 +197,10 @@ func Start(cfg *Config) error {
 		middleware.ClusterRequestToResource(eventsResourceName,
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					middleware.SearchHandler(
+					search.SearchHandler(
 						lmaindex.Alerts(),
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						k8sClientSet,
 						esClient.Backend(),
 					)))))
 	// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.
