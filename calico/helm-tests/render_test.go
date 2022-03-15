@@ -68,7 +68,7 @@ type ComplianceSettings struct {
 	Enabled bool `yaml:"enabled"`
 }
 
-var chartPaths = *flag.String("chart-path", "../_includes/charts/tigera-operator", "comma separated list of paths to the charts")
+var chartPaths = *flag.String("chart-path", "../_includes/charts/tigera-prometheus-operator,../_includes/charts/tigera-operator", "comma separated list of paths to the charts")
 
 // TODO: Add call to kubeval to verify helm resources are valid
 func render(values HelmValues) (map[string]runtime.Object, error) {
