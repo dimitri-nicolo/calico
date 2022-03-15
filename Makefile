@@ -32,12 +32,20 @@ Makefile.common.$(MAKE_BRANCH):
 
 include Makefile.common
 
+# Add --squash argument for CICD pipeline runs only to avoid setting "experimental",
+# for Docker processes on personal machine.
+# DOCKER_SQUASH is defaulted to be empty but can be set `DOCKER_SQUASH=--squash make image` 
+# to squash images locally.
+ifdef CI
+DOCKER_SQUASH=--squash
+endif
+
 build:
 
 image: $(ECK_OPERATOR_IMAGE)
 $(ECK_OPERATOR_IMAGE): $(ECK_OPERATOR_IMAGE)-$(ARCH)
 $(ECK_OPERATOR_IMAGE)-$(ARCH): build eck-builder-image
-	docker build --build-arg BUILDER_VERSION=$(BUILDER_VERSION) -t $(ECK_OPERATOR_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
+	docker build --build-arg BUILDER_VERSION=$(BUILDER_VERSION) $(DOCKER_SQUASH) -t $(ECK_OPERATOR_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
 	docker tag $(ECK_OPERATOR_IMAGE):latest-$(ARCH) $(ECK_OPERATOR_IMAGE):latest
 endif
@@ -52,11 +60,8 @@ eck-builder-image:
 	$(DOCKER_GO_BUILD) bash -x prepare-create-eck-builder-image.sh
 	bash -x create-eck-builder-image.sh tigera/eck-operator-builder:$(BUILDER_VERSION) $(UBI_VERSION) $(GO_VERSION)
 
-compressed-image: image
-	$(MAKE) docker-compress IMAGE_NAME=$(ECK_OPERATOR_IMAGE):latest
-
 .PHONY: cd
-cd: compressed-image cd-common
+cd: image cd-common
 
 .PHONY: clean
 clean:
