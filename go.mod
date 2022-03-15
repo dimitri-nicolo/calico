@@ -13,7 +13,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tigera/api v0.0.0-20211211005256-a3f1397dfea5
 	github.com/tigera/compliance v0.0.0-20220314182314-3379c418a5f8
-	github.com/tigera/lma v0.0.0-20220314183926-7503a563fbf0
+	github.com/tigera/lma v0.0.0-20220315060613-a6cac2d7c50e
 	k8s.io/api v0.22.5
 	k8s.io/apimachinery v0.22.5
 	k8s.io/apiserver v0.22.5
