@@ -60,11 +60,8 @@ eck-builder-image:
 	$(DOCKER_GO_BUILD) bash -x prepare-create-eck-builder-image.sh
 	bash -x create-eck-builder-image.sh tigera/eck-operator-builder:$(BUILDER_VERSION) $(UBI_VERSION) $(GO_VERSION)
 
-compressed-image: image
-	$(MAKE) docker-compress IMAGE_NAME=$(ECK_OPERATOR_IMAGE):latest
-
 .PHONY: cd
-cd: compressed-image cd-common
+cd: image cd-common
 
 .PHONY: clean
 clean:
