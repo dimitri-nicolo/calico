@@ -119,6 +119,7 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	if conf.Policy.PolicyType == "k8s" {
 		pod, err = client.CoreV1().Pods(epIDs.Namespace).Get(context.Background(), epIDs.Pod, metav1.GetOptions{})
 		if err != nil {
+			logger.WithField("name", epIDs.Pod).WithField("ns", epIDs.Namespace).Warn("Failed to query pod")
 			return nil, err
 		}
 
