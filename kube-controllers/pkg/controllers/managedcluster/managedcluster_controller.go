@@ -8,8 +8,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
-
 	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
@@ -18,106 +16,105 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/config"
-	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
-
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/controller"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/worker"
-	relasticsearch "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
 )
 
-// managedClusterController is responsible for controllers (from the elasticsearchconfiguration package) for every managed
-// cluster it finds to managed the elasticsearch configuration for a cluster. This controller watches the ManagedCluster
-// resources and it runs a controller for each connected ManagedCluster it finds.
-//
-// This controller watches various other components in the management cluster, like elasticsearch, and recreates the watches
-// if those components have changed in a way that effects the Elasticsearch configuration for the managed clusters. For
-// instance, if Elasticsearch is completely recreated, we need to regenerate the users / roles, so recreating the Elasticsearch
-// configuration controllers for the managed clusters will kick off the Reconcile functions of those controllers which will
-// compare the Elasticsearch hash in the user secrets in the cluster to the hash of the new Elasticsearch cluster and recreate
-// the users and secrets if they differ (and they will if the Elasticsearch cluster has been recreated)
+// ControllerManager is an interface for managing controllers that run for managed clusters. This abstraction obscures
+// the implementation details of the underlying controller so that the managedClusterController does nothing but
+// watch for managed clusters and pass changes to the ControllerManagers configured. This interface allows for the
+// following:
+// - Running an initial startup function that runs once when the managedClusterController starts up (Initialize).
+// - Creating a controller for a new managed cluster (CreateController).
+// - Handle the removal of a managed cluster (HandleManagedClusterRemoved).
+type ControllerManager interface {
+	// Initialize is called once when the managedClusterController starts up, and is used for any work that the
+	// underlying controller needs done before it's run for the managed cluster.
+	Initialize(stop chan struct{}, clusters ...string)
+	// CreateController creates the controller this manager wraps, passing in the managed cluster information.
+	CreateController(clusterName, ownerReference string, managedK8sCLI,
+		managementK8sCLI kubernetes.Interface,
+		managedCalicoCLI, managementCalicoCLI tigeraapi.Interface,
+		restartChan chan<- string) controller.Controller
+	// HandleManagedClusterRemoved is called whenever a managed cluster is removed, and is used for any clean up work
+	// the underlying controller needs to do when a managed cluster is removed.
+	HandleManagedClusterRemoved(clusterName string)
+}
+
+// managedClusterController watches for the addition and removal of managed clusters (by watching the ManagedCluster
+// resource) and notifies the given ControllerManagers with that information.
 type managedClusterController struct {
-	createManagedk8sCLI func(string) (kubernetes.Interface, *tigeraapi.Clientset, error)
+	createManagedK8sCLI func(string) (kubernetes.Interface, *tigeraapi.Clientset, error)
 	calicoCLI           *tigeraapi.Clientset
 	cfg                 config.ManagedClusterControllerConfig
 	managementK8sCLI    *kubernetes.Clientset
-	esk8sCLI            relasticsearch.RESTClient
-	esClientBuilder     elasticsearch.ClientBuilder
 	restartChan         chan<- string
+	controllers         []ControllerManager
 }
 
 func New(
-	createManagedk8sCLI func(string) (kubernetes.Interface, *tigeraapi.Clientset, error),
+	createManagedK8sCLI func(string) (kubernetes.Interface, *tigeraapi.Clientset, error),
 	managementK8sCLI *kubernetes.Clientset,
 	calicok8sCLI *tigeraapi.Clientset,
-	esk8sCLI relasticsearch.RESTClient,
-	esClientBuilder elasticsearch.ClientBuilder,
 	cfg config.ManagedClusterControllerConfig,
 	restartChan chan<- string,
+	controllers []ControllerManager,
 ) controller.Controller {
 
 	return &managedClusterController{
-		createManagedk8sCLI: createManagedk8sCLI,
+		createManagedK8sCLI: createManagedK8sCLI,
 		calicoCLI:           calicok8sCLI,
 		cfg:                 cfg,
 		managementK8sCLI:    managementK8sCLI,
-		esClientBuilder:     esClientBuilder,
-		esk8sCLI:            esk8sCLI,
 		restartChan:         restartChan,
+		controllers:         controllers,
 	}
 }
 
 // fetchRegisteredManagedClustersNames returns the name for the managed cluster as set or an error
 // if the requests to k8s API failed
-func (c *managedClusterController) fetchRegisteredManagedClustersNames() (map[string]bool, error) {
-	managedClusters, err := c.calicoCLI.ProjectcalicoV3().ManagedClusters().List(context.Background(), metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	registeredClusters := make(map[string]bool)
-	for _, managedCluster := range managedClusters.Items {
-		registeredClusters[managedCluster.Name] = true
-	}
-	return registeredClusters, nil
-}
-
-// init will make sure that all the components are connected and functional before starting the workers
-// to run reconciliation. It will try to establish connection to ElasticSearch and will not move forward
-// until the connection is validated. It will create the workers (for managed and management clusters)
-// and add watches to the primary resources.
-func (c *managedClusterController) init(stop chan struct{}) (elasticsearch.Client, []worker.Worker) {
-
-	// We first try to connect to ES; The workers will not start until this step is completed
-	connectedToEs := false
+func (c *managedClusterController) fetchRegisteredManagedClustersNames(stop chan struct{}) []string {
+	success := false
 	waitTime := 5 * time.Second
-	var client elasticsearch.Client
-	var err error
 
-	for !connectedToEs {
+	var err error
+	var managedClusters *v3.ManagedClusterList
+	for !success {
 		select {
 		case <-stop:
-			return nil, nil
+			return nil
 		default:
-			if client, err = c.esClientBuilder.Build(); err != nil {
-				log.WithError(err).Error("Failed to connect to Elasticsearch")
+			if managedClusters, err = c.calicoCLI.ProjectcalicoV3().ManagedClusters().List(context.Background(), metav1.ListOptions{}); err != nil {
+				log.WithError(err).Error("Failed to clean up Elasticsearch users")
 				time.Sleep(waitTime)
 				continue
 			}
-			connectedToEs = true
+
+			success = true
 		}
 	}
 
-	// create the workers
-	mcReconciler := &managedClusterESControllerReconciler{
-		createManagedK8sCLI:      c.createManagedk8sCLI,
+	var registeredClusters []string
+	for _, managedCluster := range managedClusters.Items {
+		registeredClusters = append(registeredClusters, managedCluster.Name)
+	}
+
+	return registeredClusters
+}
+
+func (c *managedClusterController) Run(stop chan struct{}) {
+	clusterNames := c.fetchRegisteredManagedClustersNames(stop)
+	for _, controller := range c.controllers {
+		controller.Initialize(stop, clusterNames...)
+	}
+
+	mcReconciler := &reconciler{
+		createManagedK8sCLI:      c.createManagedK8sCLI,
 		managementK8sCLI:         c.managementK8sCLI,
-		calicoCLI:                c.calicoCLI,
-		esK8sCLI:                 c.esk8sCLI,
 		managedClustersStopChans: make(map[string]chan struct{}),
-		cfgEs:                    c.cfg.ElasticConfig,
-		cfgLic:                   c.cfg.LicenseConfig,
-		esClientBuilder:          c.esClientBuilder,
-		esClient:                 client,
 		restartChan:              c.restartChan,
+		calicoCLI:                c.calicoCLI,
+		controllers:              c.controllers,
 	}
 
 	// Watch the ManagedCluster resources for changes
@@ -127,56 +124,7 @@ func (c *managedClusterController) init(stop chan struct{}) (elasticsearch.Clien
 		&v3.ManagedCluster{},
 	)
 
-	return client, []worker.Worker{managedClusterWorker}
-}
-
-func (c *managedClusterController) Run(stop chan struct{}) {
-
-	// Establish connection to Es and create workers
-	esClient, workers := c.init(stop)
-
-	if esClient == nil || workers == nil {
-		return
-	}
-
-	// Delete users and roles for deleted managed clusters. This check is required to make sure the clean up is
-	// performed when kube-controllers are not running at the same time as deletion occurs
-	go func() {
-		success := false
-		waitTime := 5 * time.Second
-
-		for !success {
-			select {
-			case <-stop:
-				return
-			default:
-				if err := deleteUsersAtStarUp(c, esClient); err != nil {
-					log.WithError(err).Error("Failed to clean up Elasticsearch users")
-					time.Sleep(waitTime)
-					continue
-				}
-
-				success = true
-			}
-		}
-
-		log.Info("Successful ran Elasticsearch user clean up")
-	}()
-
-	for _, worker := range workers {
-		go worker.Run(c.cfg.NumberOfWorkers, stop)
-	}
+	go managedClusterWorker.Run(c.cfg.NumberOfWorkers, stop)
 
 	<-stop
-}
-
-func deleteUsersAtStarUp(c *managedClusterController, esClient elasticsearch.Client) error {
-	// Fetch registered managed clusters
-	registeredManagedClusters, err := c.fetchRegisteredManagedClustersNames()
-	if err != nil {
-		return err
-	}
-
-	cleaner := users.NewEsCleaner(esClient)
-	return cleaner.DeleteAllResidueUsers(registeredManagedClusters)
 }
