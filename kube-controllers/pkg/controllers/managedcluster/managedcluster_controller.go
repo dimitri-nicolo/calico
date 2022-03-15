@@ -20,32 +20,36 @@ import (
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/worker"
 )
 
-type Controller interface {
-	New(clusterName, ownerReference string, managedK8sCLI,
+// ControllerManager is an interface for managing controllers that run for managed clusters. This abstraction obscures
+// the implementation details of the underlying controller so that the managedClusterController does nothing but
+// watch for managed clusters and pass changes to the ControllerManagers configured. This interface allows for the
+// following:
+// - Running an initial startup function that runs once when the managedClusterController starts up (Initialize).
+// - Creating a controller for a new managed cluster (CreateController).
+// - Handle the removal of a managed cluster (HandleManagedClusterRemoved).
+type ControllerManager interface {
+	// Initialize is called once when the managedClusterController starts up, and is used for any work that the
+	// underlying controller needs done before it's run for the managed cluster.
+	Initialize(stop chan struct{}, clusters ...string)
+	// CreateController creates the controller this manager wraps, passing in the managed cluster information.
+	CreateController(clusterName, ownerReference string, managedK8sCLI,
 		managementK8sCLI kubernetes.Interface,
 		managedCalicoCLI, managementCalicoCLI tigeraapi.Interface,
-		management bool, restartChan chan<- string) controller.Controller
+		restartChan chan<- string) controller.Controller
+	// HandleManagedClusterRemoved is called whenever a managed cluster is removed, and is used for any clean up work
+	// the underlying controller needs to do when a managed cluster is removed.
 	HandleManagedClusterRemoved(clusterName string)
-	Initialize(stop chan struct{}, clusters ...string)
 }
 
-// managedClusterController is responsible for controllers (from the elasticsearchconfiguration package) for every managed
-// cluster it finds to managed the elasticsearch configuration for a cluster. This controller watches the ManagedCluster
-// resources and it runs a controller for each connected ManagedCluster it finds.
-//
-// This controller watches various other components in the management cluster, like elasticsearch, and recreates the watches
-// if those components have changed in a way that effects the Elasticsearch configuration for the managed clusters. For
-// instance, if Elasticsearch is completely recreated, we need to regenerate the users / roles, so recreating the Elasticsearch
-// configuration controllers for the managed clusters will kick off the Reconcile functions of those controllers which will
-// compare the Elasticsearch hash in the user secrets in the cluster to the hash of the new Elasticsearch cluster and recreate
-// the users and secrets if they differ (and they will if the Elasticsearch cluster has been recreated)
+// managedClusterController watches for the addition and removal of managed clusters (by watching the ManagedCluster
+// resource) and notifies the given ControllerManagers with that information.
 type managedClusterController struct {
 	createManagedK8sCLI func(string) (kubernetes.Interface, *tigeraapi.Clientset, error)
 	calicoCLI           *tigeraapi.Clientset
 	cfg                 config.ManagedClusterControllerConfig
 	managementK8sCLI    *kubernetes.Clientset
 	restartChan         chan<- string
-	controllers         []Controller
+	controllers         []ControllerManager
 }
 
 func New(
@@ -54,7 +58,7 @@ func New(
 	calicok8sCLI *tigeraapi.Clientset,
 	cfg config.ManagedClusterControllerConfig,
 	restartChan chan<- string,
-	controllers []Controller,
+	controllers []ControllerManager,
 ) controller.Controller {
 
 	return &managedClusterController{

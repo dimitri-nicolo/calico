@@ -3,7 +3,7 @@ package managedcluster
 import (
 	"time"
 
-	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/config"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/controller"
@@ -11,10 +11,14 @@ import (
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
 	relasticsearch "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
-	log "github.com/sirupsen/logrus"
+
+	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+
 	"k8s.io/client-go/kubernetes"
 )
 
+// Elasticsearch is a ControllerManager implementation responsible for managing elasticsearch resources for a manage
+// cluster.
 type Elasticsearch struct {
 	esK8sCLI        relasticsearch.RESTClient
 	esClientBuilder elasticsearch.ClientBuilder
@@ -26,7 +30,7 @@ func NewElasticsearchController(
 	esK8sCLI relasticsearch.RESTClient,
 	esClientBuilder elasticsearch.ClientBuilder,
 	cfg config.ElasticsearchCfgControllerCfg,
-) Controller {
+) ControllerManager {
 	return &Elasticsearch{
 		esK8sCLI:        esK8sCLI,
 		esClientBuilder: esClientBuilder,
@@ -34,22 +38,24 @@ func NewElasticsearchController(
 	}
 }
 
-func (e *Elasticsearch) New(
+func (e *Elasticsearch) CreateController(
 	clusterName, ownerReference string,
 	managedK8sCLI, managementK8sCLI kubernetes.Interface,
 	managedCalicoCLI, managementCalicoCLI tigeraapi.Interface,
-	management bool, restartChan chan<- string) controller.Controller {
+	restartChan chan<- string) controller.Controller {
 
 	return elasticsearchconfiguration.New(
 		clusterName, ownerReference, managedK8sCLI, managementK8sCLI, e.esK8sCLI,
-		e.esClientBuilder, management, e.cfg, restartChan)
+		e.esClientBuilder, false, e.cfg, restartChan)
 }
 
+// HandleManagedClusterRemoved cleans up the Elasticsearch users and roles for the managed cluster that was removed.
 func (e *Elasticsearch) HandleManagedClusterRemoved(clusterName string) {
 	cleaner := users.NewEsCleaner(e.esClient)
 	cleaner.DeleteResidueUsers(clusterName)
 }
 
+// Initialize cleans up any users and roles that exist in Elasticsearch for managed cluster that are not longer around.
 func (e *Elasticsearch) Initialize(stop chan struct{}, clusters ...string) {
 	connectedToEs := false
 	waitTime := 5 * time.Second
@@ -103,27 +109,4 @@ func (e *Elasticsearch) deleteUsersAtStarUp(clusterNames ...string) error {
 
 	cleaner := users.NewEsCleaner(e.esClient)
 	return cleaner.DeleteAllResidueUsers(clusterNameMap)
-}
-
-func (e *Elasticsearch) getClient(stop chan struct{}) elasticsearch.Client {
-	var client elasticsearch.Client
-	var err error
-
-	connectedToEs := false
-	waitTime := 5 * time.Second
-	for !connectedToEs {
-		select {
-		case <-stop:
-			return nil
-		default:
-			if client, err = e.esClientBuilder.Build(); err != nil {
-				log.WithError(err).Error("Failed to connect to Elasticsearch")
-				time.Sleep(waitTime)
-				continue
-			}
-			connectedToEs = true
-		}
-	}
-
-	return client
 }

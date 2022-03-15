@@ -21,21 +21,18 @@ type reconciler struct {
 	createManagedK8sCLI func(string) (kubernetes.Interface, *tigeraapi.Clientset, error)
 	managementK8sCLI    kubernetes.Interface
 	calicoCLI           tigeraapi.Interface
-	// the only information we need about an elasticsearch cluster controller for a ManagedCluster is the channel to stop
-	// it. The exists of this channel can tell us if we have a controller for a ManagedCluster and the only action we would
-	// want to take on one is to stop it
+	// The only information we need for a ManagedCluster is the channel to stop it. The exists of this channel can tell
+	// us if we have a controller for a ManagedCluster and the only action we would want to take on one is to stop it.
 	managedClustersStopChans map[string]chan struct{}
 	restartChan              chan<- string
 
-	controllers []Controller
+	controllers []ControllerManager
 }
 
-// Reconcile finds the ManagedCluster resource specified by the name and either adds, removes, or recreates the elasticsearch
-// configuration controller for that managed cluster. If the ManagedCluster that's being reconciled exists is connected
-// then the elasticsearch configuration controller for that managed cluster is added or recreated. If the ManagedCluster
-// doesn't exist or is no longer connected then the Elasticsearch configuration controller is stopped for that ManagedCluster,
-// if there is one running. In addition to reconciling Elasticsearch configuration changes, the controller will also reconcile
-// license changes in the managed cluster
+// Reconcile finds the ManagedCluster resource specified by the name and either passes the information to the underlying
+// ControllerManagers. If the ManagedCluster doesn't exist or is no longer connected then the ControllerManagers are
+// notified by calling HandleManagedClusterRemoved. If this a newly added ManagedCluster then the CreateController is
+// called on every controller manager and the return controller is run for the new managed cluster.
 func (c *reconciler) Reconcile(name types.NamespacedName) error {
 	reqLogger := log.WithField("request", name)
 	reqLogger.Info("Reconciling ManagedClusters")
@@ -111,7 +108,7 @@ func (c *reconciler) addManagedClusterWatch(mc *v3.ManagedCluster, managedK8sCLI
 
 	stop := make(chan struct{})
 	for _, controller := range c.controllers {
-		controller := controller.New(mc.Name, string(mc.UID), managedK8sCLI, c.managementK8sCLI, managedCalicoCLI, c.calicoCLI, false, c.restartChan)
+		controller := controller.CreateController(mc.Name, string(mc.UID), managedK8sCLI, c.managementK8sCLI, managedCalicoCLI, c.calicoCLI, c.restartChan)
 		go controller.Run(stop)
 	}
 

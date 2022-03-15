@@ -601,7 +601,7 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 				calicoV3Client,
 				*cfg.Controllers.ManagedCluster,
 				cc.restartCntrlChan,
-				[]managedcluster.Controller{
+				[]managedcluster.ControllerManager{
 					managedcluster.NewElasticsearchController(esK8sREST, esClientBuilder, cfg.Controllers.ManagedCluster.ElasticConfig),
 					managedcluster.NewLicensingController(cfg.Controllers.ManagedCluster.LicenseConfig),
 				},
