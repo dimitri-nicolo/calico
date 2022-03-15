@@ -11,6 +11,13 @@ RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
+# Add --squash argument for CICD pipeline runs only to avoid setting "experimental",
+# for Docker processes on personal machine.
+# set `DOCKER_BUILD=--squash make image` to squash images locally.
+ifdef CI
+DOCKER_BUILD+= --squash
+endif
+
 ###############################################################################
 # Download and include Makefile.common
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
@@ -37,16 +44,13 @@ build: bin/readiness-probe
 image: $(ELASTICSEARCH_IMAGE)
 $(ELASTICSEARCH_IMAGE): $(ELASTICSEARCH_IMAGE)-$(ARCH)
 $(ELASTICSEARCH_IMAGE)-$(ARCH): build
-	docker build --pull -t $(ELASTICSEARCH_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
+	docker build $(DOCKER_BUILD) --pull -t $(ELASTICSEARCH_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
 	docker tag $(ELASTICSEARCH_IMAGE):latest-$(ARCH) $(ELASTICSEARCH_IMAGE):latest
 endif
 
-compressed-image: image
-	$(MAKE) docker-compress IMAGE_NAME=$(ELASTICSEARCH_IMAGE):latest
-
 .PHONY: cd
-cd: compressed-image cd-common
+cd: image cd-common
 
 .PHONY: clean
 clean:
