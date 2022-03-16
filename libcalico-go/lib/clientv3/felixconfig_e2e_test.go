@@ -25,6 +25,7 @@ import (
 	"context"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend"
@@ -44,16 +45,20 @@ var _ = testutils.E2eDatastoreDescribe("FelixConfiguration tests", testutils.Dat
 	ptrInt1 := 1432
 	ptrInt2 := 6341
 	hostString := "localhost"
+	fipDisabled := v3.FloatingIPsDisabled
+	fipEnabled := v3.FloatingIPsEnabled
 	spec1 := apiv3.FelixConfigurationSpec{
 		UseInternalDataplaneDriver: &ptrTrue,
 		DataplaneDriver:            "test-dataplane-driver1",
 		MetadataPort:               &ptrInt1,
+		FloatingIPs:                &fipDisabled,
 	}
 	spec2 := apiv3.FelixConfigurationSpec{
 		UseInternalDataplaneDriver: &ptrFalse,
 		DataplaneDriver:            "test-dataplane-driver2",
 		HealthHost:                 &hostString,
 		HealthPort:                 &ptrInt2,
+		FloatingIPs:                &fipEnabled,
 	}
 
 	DescribeTable("FelixConfiguration e2e CRUD tests",

@@ -75,7 +75,8 @@ var _ = Describe("Constructor test", func() {
 		_, err := configParams.UpdateFrom(map[string]string{"InterfaceExclude": "/^kube.*/,/veth/,eth2"}, config.EnvironmentVariable)
 		Expect(err).NotTo(HaveOccurred())
 		dpConfig = intdataplane.Config{
-			KubeClientSet: fake.NewSimpleClientset(),
+			KubeClientSet:      fake.NewSimpleClientset(),
+			FloatingIPsEnabled: true,
 			IfaceMonitorConfig: ifacemonitor.Config{
 				InterfaceExcludes: configParams.InterfaceExclude,
 				ResyncInterval:    configParams.RouteRefreshInterval,

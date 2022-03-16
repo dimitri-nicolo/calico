@@ -179,6 +179,8 @@ type Config struct {
 	IptablesLockProbeInterval      time.Duration
 	XDPRefreshInterval             time.Duration
 
+	FloatingIPsEnabled bool
+
 	Wireguard wireguard.Config
 
 	NetlinkTimeout time.Duration
@@ -1065,10 +1067,12 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		bpfEndpointManager,
 		callbacks,
 		config.FlowLogsCollectTcpStats,
-		config.BPFLogLevel)
+		config.BPFLogLevel,
+		config.FloatingIPsEnabled,
+	)
 	dp.RegisterManager(epManager)
 	dp.endpointsSourceV4 = epManager
-	dp.RegisterManager(newFloatingIPManager(natTableV4, ruleRenderer, 4))
+	dp.RegisterManager(newFloatingIPManager(natTableV4, ruleRenderer, 4, config.FloatingIPsEnabled))
 	dp.RegisterManager(newMasqManager(ipSetsV4, natTableV4, ruleRenderer, config.MaxIPSetSize, 4))
 	if config.RulesConfig.IPIPEnabled {
 		// Create and maintain the IPIP tunnel device
@@ -1200,8 +1204,10 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			nil,
 			callbacks,
 			config.FlowLogsCollectTcpStats,
-			config.BPFLogLevel))
-		dp.RegisterManager(newFloatingIPManager(natTableV6, ruleRenderer, 6))
+			config.BPFLogLevel,
+			config.FloatingIPsEnabled,
+		))
+		dp.RegisterManager(newFloatingIPManager(natTableV6, ruleRenderer, 6, config.FloatingIPsEnabled))
 		dp.RegisterManager(newMasqManager(ipSetsV6, natTableV6, ruleRenderer, config.MaxIPSetSize, 6))
 		dp.RegisterManager(newServiceLoopManager(filterTableV6, ruleRenderer, 6))
 	}
