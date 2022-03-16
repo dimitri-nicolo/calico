@@ -92,6 +92,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 		enableLogs    bool
 		enableLatency bool
+		dnsMode       string
 	)
 
 	logAndReport := func(out string, err error) error {
@@ -171,6 +172,9 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
 		opts.ExtraEnvVars["FELIX_DNSLOGSFILEDIRECTORY"] = "/dnsinfo"
 		opts.ExtraEnvVars["FELIX_DNSLOGSFLUSHINTERVAL"] = "1"
+		if dnsMode != "" {
+			opts.ExtraEnvVars["FELIX_DNSPOLICYMODE"] = dnsMode
+		}
 		if enableLogs {
 			// Default for this is false.  Set "true" to enable.
 			opts.ExtraEnvVars["FELIX_DNSLOGSFILEENABLED"] = "true"
@@ -228,221 +232,295 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		infra.Stop()
 	})
 
-	for _, m := range []api.DNSPolicyMode{
-		api.DNSPolicyModeNoDelay,
-		api.DNSPolicyModeDelayDNSResponse,
-		api.DNSPolicyModeDelayDeniedPacket,
-	} {
-		mode := m
-		Describe("DNSPolicyMode is "+string(mode), func() {
+	Context("with save file in initially non-existent directory", func() {
+		BeforeEach(func() {
+			saveFile = "/a/b/c/d/e/dnsinfo.txt"
+			saveFileMappedOutsideContainer = false
+		})
 
-			Context("with save file in initially non-existent directory", func() {
-				BeforeEach(func() {
-					saveFile = "/a/b/c/d/e/dnsinfo.txt"
-					saveFileMappedOutsideContainer = false
-				})
+		It("can wget microsoft.com", func() {
+			canWgetMicrosoft()
+		})
+	})
 
-				It("can wget microsoft.com", func() {
-					canWgetMicrosoft()
-				})
-			})
+	Context("after wget microsoft.com", func() {
 
-			Context("after wget microsoft.com", func() {
+		JustBeforeEach(func() {
+			time.Sleep(time.Second)
+			canWgetMicrosoft()
+		})
 
-				JustBeforeEach(func() {
-					time.Sleep(time.Second)
-					canWgetMicrosoft()
-				})
+		It("should emit microsoft.com DNS log with latency", func() {
+			Eventually(getLastMicrosoftALog, "10s", "1s").Should(MatchRegexp(`"latency_count":[1-9]`))
+		})
 
-				It("should emit microsoft.com DNS log with latency", func() {
-					Eventually(getLastMicrosoftALog, "10s", "1s").Should(MatchRegexp(`"latency_count":[1-9]`))
-				})
+		Context("with a preceding DNS request that went unresponded", func() {
 
-				Context("with a preceding DNS request that went unresponded", func() {
+			if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
+				// Skip because the following test relies on a HostEndpoint.
+				return
+			}
 
-					if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
-						// Skip because the following test relies on a HostEndpoint.
-						return
-					}
+			JustBeforeEach(func() {
+				hep := api.NewHostEndpoint()
+				hep.Name = "felix-eth0"
+				hep.Labels = map[string]string{"host-endpoint": "yes"}
+				hep.Spec.Node = felix.Hostname
+				hep.Spec.InterfaceName = "eth0"
+				_, err := client.HostEndpoints().Create(utils.Ctx, hep, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
 
-					JustBeforeEach(func() {
-						hep := api.NewHostEndpoint()
-						hep.Name = "felix-eth0"
-						hep.Labels = map[string]string{"host-endpoint": "yes"}
-						hep.Spec.Node = felix.Hostname
-						hep.Spec.InterfaceName = "eth0"
-						_, err := client.HostEndpoints().Create(utils.Ctx, hep, utils.NoOptions)
-						Expect(err).NotTo(HaveOccurred())
+				udp := numorstring.ProtocolFromString("udp")
+				policy := api.NewGlobalNetworkPolicy()
+				policy.Name = "deny-dns"
+				policy.Spec.Selector = "host-endpoint == 'yes'"
+				policy.Spec.Egress = []api.Rule{
+					{
+						Action:   api.Deny,
+						Protocol: &udp,
+						Destination: api.EntityRule{
+							Ports: []numorstring.Port{numorstring.SinglePort(53)},
+						},
+					},
+					{
+						Action: api.Allow,
+					},
+				}
+				policy.Spec.ApplyOnForward = true
+				_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
 
-						udp := numorstring.ProtocolFromString("udp")
-						policy := api.NewGlobalNetworkPolicy()
-						policy.Name = "deny-dns"
-						policy.Spec.Selector = "host-endpoint == 'yes'"
-						policy.Spec.Egress = []api.Rule{
-							{
-								Action:   api.Deny,
-								Protocol: &udp,
-								Destination: api.EntityRule{
-									Ports: []numorstring.Port{numorstring.SinglePort(53)},
-								},
-							},
-							{
-								Action: api.Allow,
-							},
-						}
-						policy.Spec.ApplyOnForward = true
-						_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
-						Expect(err).NotTo(HaveOccurred())
+				// DNS should now fail, leaving at least one unresponded DNS
+				// request.
+				cannotWgetMicrosoft()
 
-						// DNS should now fail, leaving at least one unresponded DNS
-						// request.
-						cannotWgetMicrosoft()
+				// Delete the policy again.
+				_, err = client.GlobalNetworkPolicies().Delete(utils.Ctx, "deny-dns", options.DeleteOptions{})
+				Expect(err).NotTo(HaveOccurred())
 
-						// Delete the policy again.
-						_, err = client.GlobalNetworkPolicies().Delete(utils.Ctx, "deny-dns", options.DeleteOptions{})
-						Expect(err).NotTo(HaveOccurred())
+				// Delete the host endpoint again.
+				_, err = client.HostEndpoints().Delete(utils.Ctx, "felix-eth0", options.DeleteOptions{})
+				Expect(err).NotTo(HaveOccurred())
 
-						// Delete the host endpoint again.
-						_, err = client.HostEndpoints().Delete(utils.Ctx, "felix-eth0", options.DeleteOptions{})
-						Expect(err).NotTo(HaveOccurred())
+				// Wait 11 seconds so that the unresponded request timestamp is
+				// eligible for cleanup.
+				time.Sleep(11 * time.Second)
 
-						// Wait 11 seconds so that the unresponded request timestamp is
-						// eligible for cleanup.
-						time.Sleep(11 * time.Second)
-
-						// Now DNS and outbound connection should work.
-						canWgetMicrosoft()
-					})
-
-					It("should emit microsoft.com DNS log with latency", func() {
-						Eventually(getLastMicrosoftALog, "10s", "1s").Should(MatchRegexp(`"latency_count":[1-9]`))
-					})
-				})
-
-				Context("with DNS latency disabled", func() {
-					BeforeEach(func() {
-						enableLatency = false
-					})
-
-					It("should emit microsoft.com DNS log without latency", func() {
-						Eventually(getLastMicrosoftALog, "10s", "1s").Should(MatchRegexp(`"latency_count":0`))
-					})
-				})
-
-				Context("with DNS logs disabled", func() {
-					BeforeEach(func() {
-						enableLogs = false
-					})
-
-					It("should not emit DNS logs", func() {
-						Consistently(path.Join(dnsDir, "dns.log"), "5s", "1s").ShouldNot(BeARegularFile())
-					})
-				})
-			})
-
-			Context("after host wget microsoft.com", func() {
-
-				JustBeforeEach(func() {
-					time.Sleep(time.Second)
-					hostCanWgetMicrosoft()
-				})
-
-				It("should emit DNS logs", func() {
-					Eventually(getLastMicrosoftALog, "10s", "1s").ShouldNot(BeEmpty())
-				})
-
-				Context("with DNS logs disabled", func() {
-					BeforeEach(func() {
-						enableLogs = false
-					})
-
-					It("should not emit DNS logs", func() {
-						Consistently(path.Join(dnsDir, "dns.log"), "5s", "1s").ShouldNot(BeARegularFile())
-					})
-				})
-			})
-
-			It("can wget microsoft.com", func() {
+				// Now DNS and outbound connection should work.
 				canWgetMicrosoft()
 			})
 
-			It("host can wget microsoft.com", func() {
-				hostCanWgetMicrosoft()
+			It("should emit microsoft.com DNS log with latency", func() {
+				Eventually(getLastMicrosoftALog, "10s", "1s").Should(MatchRegexp(`"latency_count":[1-9]`))
+			})
+		})
+
+		Context("with DNS latency disabled", func() {
+			BeforeEach(func() {
+				enableLatency = false
 			})
 
-			Context("with default-deny egress policy", func() {
-				JustBeforeEach(func() {
-					policy := api.NewGlobalNetworkPolicy()
-					policy.Name = "default-deny-egress"
-					policy.Spec.Selector = "all()"
-					policy.Spec.Egress = []api.Rule{{
-						Action: api.Deny,
-					}}
-					_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
-					Expect(err).NotTo(HaveOccurred())
-				})
+			It("should emit microsoft.com DNS log without latency", func() {
+				Eventually(getLastMicrosoftALog, "10s", "1s").Should(MatchRegexp(`"latency_count":0`))
+			})
+		})
 
-				It("cannot wget microsoft.com", func() {
-					cannotWgetMicrosoft()
-				})
+		Context("with DNS logs disabled", func() {
+			BeforeEach(func() {
+				enableLogs = false
+			})
 
-				// There's no HostEndpoint yet, so the policy doesn't affect the host.
+			It("should not emit DNS logs", func() {
+				Consistently(path.Join(dnsDir, "dns.log"), "5s", "1s").ShouldNot(BeARegularFile())
+			})
+		})
+	})
+
+	Context("after host wget microsoft.com", func() {
+
+		JustBeforeEach(func() {
+			time.Sleep(time.Second)
+			hostCanWgetMicrosoft()
+		})
+
+		It("should emit DNS logs", func() {
+			Eventually(getLastMicrosoftALog, "10s", "1s").ShouldNot(BeEmpty())
+		})
+
+		Context("with DNS logs disabled", func() {
+			BeforeEach(func() {
+				enableLogs = false
+			})
+
+			It("should not emit DNS logs", func() {
+				Consistently(path.Join(dnsDir, "dns.log"), "5s", "1s").ShouldNot(BeARegularFile())
+			})
+		})
+	})
+
+	It("can wget microsoft.com", func() {
+		canWgetMicrosoft()
+	})
+
+	It("host can wget microsoft.com", func() {
+		hostCanWgetMicrosoft()
+	})
+
+	Context("with default-deny egress policy", func() {
+		JustBeforeEach(func() {
+			policy := api.NewGlobalNetworkPolicy()
+			policy.Name = "default-deny-egress"
+			policy.Spec.Selector = "all()"
+			policy.Spec.Egress = []api.Rule{{
+				Action: api.Deny,
+			}}
+			_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("cannot wget microsoft.com", func() {
+			cannotWgetMicrosoft()
+		})
+
+		// There's no HostEndpoint yet, so the policy doesn't affect the host.
+		It("host can wget microsoft.com", func() {
+			hostCanWgetMicrosoft()
+		})
+
+		configureGNPAllowToMicrosoft := func() {
+			policy := api.NewGlobalNetworkPolicy()
+			policy.Name = "allow-microsoft"
+			order := float64(20)
+			policy.Spec.Order = &order
+			policy.Spec.Selector = "all()"
+			udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
+			policy.Spec.Egress = []api.Rule{
+				{
+					Action:      api.Allow,
+					Destination: api.EntityRule{Domains: []string{"microsoft.com", "www.microsoft.com"}},
+				},
+				{
+					Action:   api.Allow,
+					Protocol: &udp,
+					Destination: api.EntityRule{
+						Ports: []numorstring.Port{numorstring.SinglePort(53)},
+					},
+				},
+			}
+			_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+		Context("with HostEndpoint", func() {
+
+			if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
+				// Skip because the following test relies on a HostEndpoint.
+				return
+			}
+
+			JustBeforeEach(func() {
+				hep := api.NewHostEndpoint()
+				hep.Name = "hep-1"
+				hep.Spec.Node = felix.Hostname
+				hep.Spec.InterfaceName = "eth0"
+				_, err := client.HostEndpoints().Create(utils.Ctx, hep, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("host cannot wget microsoft.com", func() {
+				hostCannotWgetMicrosoft()
+			})
+
+			Context("with domain-allow egress policy", func() {
+				JustBeforeEach(configureGNPAllowToMicrosoft)
+
 				It("host can wget microsoft.com", func() {
 					hostCanWgetMicrosoft()
 				})
+			})
+		})
 
-				configureGNPAllowToMicrosoft := func() {
-					policy := api.NewGlobalNetworkPolicy()
-					policy.Name = "allow-microsoft"
-					order := float64(20)
-					policy.Spec.Order = &order
-					policy.Spec.Selector = "all()"
-					udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
-					policy.Spec.Egress = []api.Rule{
-						{
-							Action:      api.Allow,
-							Destination: api.EntityRule{Domains: []string{"microsoft.com", "www.microsoft.com"}},
-						},
-						{
-							Action:   api.Allow,
-							Protocol: &udp,
-							Destination: api.EntityRule{
-								Ports: []numorstring.Port{numorstring.SinglePort(53)},
-							},
-						},
+		// For a smallish subset of tests try running using the different policy modes.
+		for _, m := range []api.DNSPolicyMode{
+			api.DNSPolicyModeNoDelay,
+			api.DNSPolicyModeDelayDNSResponse,
+			api.DNSPolicyModeDelayDeniedPacket,
+		} {
+			localMode := m
+			Context("with DNSPolicyMode explicity set to "+string(localMode), func() {
+
+				BeforeEach(func() {
+					dnsMode = string(localMode)
+				})
+
+				// Helper used to check iptables contains the correct entries based on DNSPolicyMode and eBPF.
+				checkIPTablesFunc := func(nfq100, nfq101 bool) func() error {
+					return func() error {
+						iptablesSaveOutput, err := felix.ExecCombinedOutput("iptables-save", "-c")
+						if err != nil {
+							return err
+						}
+
+						var foundReq, foundResp, found100, found101 bool
+						for _, line := range strings.Split(iptablesSaveOutput, "\n") {
+							if strings.Contains(line, "--nflog-group 3") {
+								if strings.Contains(line, "NEW") {
+									foundReq = true
+								}
+								if strings.Contains(line, "ESTABLISHED") {
+									foundResp = true
+								}
+							} else if strings.Contains(line, "--queue-num 100") {
+								found100 = true
+							} else if strings.Contains(line, "--queue-num 101") && strings.Contains(line, "ESTABLISHED") {
+								found101 = true
+							}
+						}
+
+						if !foundReq {
+							return fmt.Errorf("iptables does not contain the NFLOG DNS request snooping rule\n%s", iptablesSaveOutput)
+						}
+						if !nfq101 && !foundResp {
+							return fmt.Errorf("iptables does not contain the NFLOG DNS response snooping rule\n%s", iptablesSaveOutput)
+						}
+						if nfq100 && !found100 {
+							return fmt.Errorf("iptables does not contain the NFQUEUE id 100 rule\n%s", iptablesSaveOutput)
+						}
+						if nfq101 && !found101 {
+							return fmt.Errorf("iptables does not contain the NFQUEUE id 101 rule\n%s", iptablesSaveOutput)
+						}
+						if found100 && found101 {
+							return fmt.Errorf("iptables contains NFQUEUE id 100 and 101 rules\n%s", iptablesSaveOutput)
+						}
+
+						return nil
 					}
-					_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
-					Expect(err).NotTo(HaveOccurred())
 				}
 
-				Context("with HostEndpoint", func() {
-
-					if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
-						// Skip because the following test relies on a HostEndpoint.
-						return
-					}
-
-					JustBeforeEach(func() {
-						hep := api.NewHostEndpoint()
-						hep.Name = "hep-1"
-						hep.Spec.Node = felix.Hostname
-						hep.Spec.InterfaceName = "eth0"
-						_, err := client.HostEndpoints().Create(utils.Ctx, hep, utils.NoOptions)
-						Expect(err).NotTo(HaveOccurred())
+				if os.Getenv("FELIX_FV_ENABLE_BPF") != "true" && localMode == api.DNSPolicyModeNoDelay {
+					It("has ingress and egress NFLOG DNS snooping rules and no NFQueue rules", func() {
+						// Should be 6 snooping NFLOG rules (ingress/egress for forward,output,input).
+						// Should be no nfqueue rules.
+						Eventually(checkIPTablesFunc(false, false), "10s", "1s").ShouldNot(HaveOccurred())
 					})
+				}
 
-					It("host cannot wget microsoft.com", func() {
-						hostCannotWgetMicrosoft()
+				if os.Getenv("FELIX_FV_ENABLE_BPF") != "true" && localMode == api.DNSPolicyModeDelayDNSResponse {
+					It("has ingress NFLOG and egress NFQUEUE DNS snooping rules", func() {
+						// Should be 3 snooping NFLOG rules (egress for forward,output,input).
+						// Should be 3 snooping NFQUEUE 101 rules (ingress for forward,output,input).
+						// Should be no nfqueue 100 rules.
+						Eventually(checkIPTablesFunc(false, true), "10s", "1s").ShouldNot(HaveOccurred())
 					})
+				}
 
-					Context("with domain-allow egress policy", func() {
-						JustBeforeEach(configureGNPAllowToMicrosoft)
-
-						It("host can wget microsoft.com", func() {
-							hostCanWgetMicrosoft()
-						})
+				if os.Getenv("FELIX_FV_ENABLE_BPF") != "true" && localMode == api.DNSPolicyModeDelayDeniedPacket {
+					It("has ingress and egress NFLOG rules and NFQUEUEd deny packets", func() {
+						// Should be 6 snooping NFLOG rules (ingress/egress for forward,output,input).
+						// Should only be nfqueue 100 rules.
+						Eventually(checkIPTablesFunc(true, false), "10s", "1s").ShouldNot(HaveOccurred())
 					})
-				})
+				}
 
 				Context("with domain-allow egress policy", func() {
 					JustBeforeEach(configureGNPAllowToMicrosoft)
@@ -482,292 +560,292 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 						canWgetMicrosoft()
 					})
 				})
+			})
+		}
 
-				Context("with namespaced domain-allow egress policy in wrong namespace", func() {
-					JustBeforeEach(func() {
-						policy := api.NewNetworkPolicy()
-						policy.Name = "allow-microsoft"
-						policy.Namespace = "wibbly-woo"
-						order := float64(20)
-						policy.Spec.Order = &order
-						policy.Spec.Selector = "all()"
-						udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
-						policy.Spec.Egress = []api.Rule{
-							{
-								Action:      api.Allow,
-								Destination: api.EntityRule{Domains: []string{"microsoft.com", "www.microsoft.com"}},
-							},
-							{
-								Action:   api.Allow,
-								Protocol: &udp,
-								Destination: api.EntityRule{
-									Ports: []numorstring.Port{numorstring.SinglePort(53)},
-								},
-							},
-						}
-						_, err := client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
-						Expect(err).NotTo(HaveOccurred())
-					})
+		Context("with namespaced domain-allow egress policy in wrong namespace", func() {
+			JustBeforeEach(func() {
+				policy := api.NewNetworkPolicy()
+				policy.Name = "allow-microsoft"
+				policy.Namespace = "wibbly-woo"
+				order := float64(20)
+				policy.Spec.Order = &order
+				policy.Spec.Selector = "all()"
+				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
+				policy.Spec.Egress = []api.Rule{
+					{
+						Action:      api.Allow,
+						Destination: api.EntityRule{Domains: []string{"microsoft.com", "www.microsoft.com"}},
+					},
+					{
+						Action:   api.Allow,
+						Protocol: &udp,
+						Destination: api.EntityRule{
+							Ports: []numorstring.Port{numorstring.SinglePort(53)},
+						},
+					},
+				}
+				_, err := client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+			})
 
-					It("cannot wget microsoft.com", func() {
-						cannotWgetMicrosoft()
-					})
-				})
-
-				Context("with wildcard domain-allow egress policy", func() {
-					JustBeforeEach(func() {
-						policy := api.NewGlobalNetworkPolicy()
-						policy.Name = "allow-microsoft-wild"
-						order := float64(20)
-						policy.Spec.Order = &order
-						policy.Spec.Selector = "all()"
-						udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
-						policy.Spec.Egress = []api.Rule{
-							{
-								Action:      api.Allow,
-								Destination: api.EntityRule{Domains: []string{"microsoft.*", "*.microsoft.com"}},
-							},
-							{
-								Action:   api.Allow,
-								Protocol: &udp,
-								Destination: api.EntityRule{
-									Ports: []numorstring.Port{numorstring.SinglePort(53)},
-								},
-							},
-						}
-						_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
-						Expect(err).NotTo(HaveOccurred())
-					})
-
-					It("can wget microsoft.com", func() {
-						canWgetMicrosoft()
-					})
-				})
-
-				Context("with networkset with allowed egress domains", func() {
-					JustBeforeEach(func() {
-						gns := api.NewGlobalNetworkSet()
-						gns.Name = "allow-microsoft"
-						gns.Labels = map[string]string{"founder": "billg"}
-						gns.Spec.AllowedEgressDomains = []string{"microsoft.com", "www.microsoft.com"}
-						_, err := client.GlobalNetworkSets().Create(utils.Ctx, gns, utils.NoOptions)
-						Expect(err).NotTo(HaveOccurred())
-
-						policy := api.NewGlobalNetworkPolicy()
-						policy.Name = "allow-microsoft"
-						order := float64(20)
-						policy.Spec.Order = &order
-						policy.Spec.Selector = "all()"
-						udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
-						policy.Spec.Egress = []api.Rule{
-							{
-								Action: api.Allow,
-								Destination: api.EntityRule{
-									Selector: "founder == 'billg'",
-								},
-							},
-							{
-								Action:   api.Allow,
-								Protocol: &udp,
-								Destination: api.EntityRule{
-									Ports: []numorstring.Port{numorstring.SinglePort(53)},
-								},
-							},
-						}
-						_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
-						Expect(err).NotTo(HaveOccurred())
-					})
-
-					It("can wget microsoft.com", func() {
-						canWgetMicrosoft()
-					})
-
-					It("handles a domain set update", func() {
-						// Create another GNS with same labels as the previous one, so that
-						// the destination selector will now match this one as well, and so
-						// the domain set membership will change.
-						gns := api.NewGlobalNetworkSet()
-						gns.Name = "allow-microsoft-2"
-						gns.Labels = map[string]string{"founder": "billg"}
-						gns.Spec.AllowedEgressDomains = []string{"port25.microsoft.com"}
-						_, err := client.GlobalNetworkSets().Create(utils.Ctx, gns, utils.NoOptions)
-						Expect(err).NotTo(HaveOccurred())
-
-						time.Sleep(2 * time.Second)
-						canWgetMicrosoft()
-					})
-				})
-
-				Context("with networkset with allowed egress wildcard domains", func() {
-					JustBeforeEach(func() {
-						gns := api.NewGlobalNetworkSet()
-						gns.Name = "allow-microsoft"
-						gns.Labels = map[string]string{"founder": "billg"}
-						gns.Spec.AllowedEgressDomains = []string{"microsoft.*", "*.microsoft.com"}
-						_, err := client.GlobalNetworkSets().Create(utils.Ctx, gns, utils.NoOptions)
-						Expect(err).NotTo(HaveOccurred())
-
-						policy := api.NewGlobalNetworkPolicy()
-						policy.Name = "allow-microsoft"
-						order := float64(20)
-						policy.Spec.Order = &order
-						policy.Spec.Selector = "all()"
-						udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
-						policy.Spec.Egress = []api.Rule{
-							{
-								Action: api.Allow,
-								Destination: api.EntityRule{
-									Selector: "founder == 'billg'",
-								},
-							},
-							{
-								Action:   api.Allow,
-								Protocol: &udp,
-								Destination: api.EntityRule{
-									Ports: []numorstring.Port{numorstring.SinglePort(53)},
-								},
-							},
-						}
-						_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
-						Expect(err).NotTo(HaveOccurred())
-					})
-
-					It("can wget microsoft.com", func() {
-						canWgetMicrosoft()
-					})
-
-					It("handles a domain set update", func() {
-						// Create another GNS with same labels as the previous one, so that
-						// the destination selector will now match this one as well, and so
-						// the domain set membership will change.
-						gns := api.NewGlobalNetworkSet()
-						gns.Name = "allow-microsoft-2"
-						gns.Labels = map[string]string{"founder": "billg"}
-						gns.Spec.AllowedEgressDomains = []string{"port25.microsoft.com"}
-						_, err := client.GlobalNetworkSets().Create(utils.Ctx, gns, utils.NoOptions)
-						Expect(err).NotTo(HaveOccurred())
-
-						time.Sleep(2 * time.Second)
-						canWgetMicrosoft()
-					})
-				})
-
-				Context("with networkset with allowed egress domains", func() {
-					JustBeforeEach(func() {
-						ns := api.NewNetworkSet()
-						ns.Name = "allow-microsoft"
-						ns.Namespace = "fv"
-						ns.Labels = map[string]string{"founder": "billg"}
-						ns.Spec.AllowedEgressDomains = []string{"microsoft.com", "www.microsoft.com"}
-						_, err := client.NetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
-						Expect(err).NotTo(HaveOccurred())
-
-						policy := api.NewNetworkPolicy()
-						policy.Name = "allow-microsoft"
-						policy.Namespace = "fv"
-						order := float64(20)
-						policy.Spec.Order = &order
-						policy.Spec.Selector = "all()"
-						udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
-						policy.Spec.Egress = []api.Rule{
-							{
-								Action: api.Allow,
-								Destination: api.EntityRule{
-									Selector: "founder == 'billg'",
-								},
-							},
-							{
-								Action:   api.Allow,
-								Protocol: &udp,
-								Destination: api.EntityRule{
-									Ports: []numorstring.Port{numorstring.SinglePort(53)},
-								},
-							},
-						}
-						_, err = client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
-						Expect(err).NotTo(HaveOccurred())
-					})
-
-					It("can wget microsoft.com", func() {
-						canWgetMicrosoft()
-					})
-
-					It("handles a domain set update", func() {
-						// Create another NetworkSet with same labels as the previous one, so that
-						// the destination selector will now match this one as well, and so
-						// the domain set membership will change.
-						ns := api.NewNetworkSet()
-						ns.Name = "allow-microsoft-2"
-						ns.Namespace = "fv"
-						ns.Labels = map[string]string{"founder": "billg"}
-						ns.Spec.AllowedEgressDomains = []string{"port25.microsoft.com"}
-						_, err := client.NetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
-						Expect(err).NotTo(HaveOccurred())
-
-						time.Sleep(2 * time.Second)
-						canWgetMicrosoft()
-					})
-				})
-
-				Context("with networkset with allowed egress wildcard domains", func() {
-					JustBeforeEach(func() {
-						ns := api.NewNetworkSet()
-						ns.Name = "allow-microsoft"
-						ns.Namespace = "fv"
-						ns.Labels = map[string]string{"founder": "billg"}
-						ns.Spec.AllowedEgressDomains = []string{"microsoft.*", "*.microsoft.com"}
-						_, err := client.NetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
-						Expect(err).NotTo(HaveOccurred())
-
-						policy := api.NewNetworkPolicy()
-						policy.Name = "allow-microsoft"
-						policy.Namespace = "fv"
-						order := float64(20)
-						policy.Spec.Order = &order
-						policy.Spec.Selector = "all()"
-						udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
-						policy.Spec.Egress = []api.Rule{
-							{
-								Action: api.Allow,
-								Destination: api.EntityRule{
-									Selector: "founder == 'billg'",
-								},
-							},
-							{
-								Action:   api.Allow,
-								Protocol: &udp,
-								Destination: api.EntityRule{
-									Ports: []numorstring.Port{numorstring.SinglePort(53)},
-								},
-							},
-						}
-						_, err = client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
-						Expect(err).NotTo(HaveOccurred())
-					})
-
-					It("can wget microsoft.com", func() {
-						canWgetMicrosoft()
-					})
-
-					It("handles a domain set update", func() {
-						// Create another NetworkSet with same labels as the previous one, so that
-						// the destination selector will now match this one as well, and so
-						// the domain set membership will change.
-						ns := api.NewNetworkSet()
-						ns.Name = "allow-microsoft-2"
-						ns.Namespace = "fv"
-						ns.Labels = map[string]string{"founder": "billg"}
-						ns.Spec.AllowedEgressDomains = []string{"port25.microsoft.com"}
-						_, err := client.NetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
-						Expect(err).NotTo(HaveOccurred())
-
-						time.Sleep(2 * time.Second)
-						canWgetMicrosoft()
-					})
-				})
+			It("cannot wget microsoft.com", func() {
+				cannotWgetMicrosoft()
 			})
 		})
-	}
+
+		Context("with wildcard domain-allow egress policy", func() {
+			JustBeforeEach(func() {
+				policy := api.NewGlobalNetworkPolicy()
+				policy.Name = "allow-microsoft-wild"
+				order := float64(20)
+				policy.Spec.Order = &order
+				policy.Spec.Selector = "all()"
+				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
+				policy.Spec.Egress = []api.Rule{
+					{
+						Action:      api.Allow,
+						Destination: api.EntityRule{Domains: []string{"microsoft.*", "*.microsoft.com"}},
+					},
+					{
+						Action:   api.Allow,
+						Protocol: &udp,
+						Destination: api.EntityRule{
+							Ports: []numorstring.Port{numorstring.SinglePort(53)},
+						},
+					},
+				}
+				_, err := client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("can wget microsoft.com", func() {
+				canWgetMicrosoft()
+			})
+		})
+
+		Context("with networkset with allowed egress domains", func() {
+			JustBeforeEach(func() {
+				gns := api.NewGlobalNetworkSet()
+				gns.Name = "allow-microsoft"
+				gns.Labels = map[string]string{"founder": "billg"}
+				gns.Spec.AllowedEgressDomains = []string{"microsoft.com", "www.microsoft.com"}
+				_, err := client.GlobalNetworkSets().Create(utils.Ctx, gns, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+
+				policy := api.NewGlobalNetworkPolicy()
+				policy.Name = "allow-microsoft"
+				order := float64(20)
+				policy.Spec.Order = &order
+				policy.Spec.Selector = "all()"
+				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
+				policy.Spec.Egress = []api.Rule{
+					{
+						Action: api.Allow,
+						Destination: api.EntityRule{
+							Selector: "founder == 'billg'",
+						},
+					},
+					{
+						Action:   api.Allow,
+						Protocol: &udp,
+						Destination: api.EntityRule{
+							Ports: []numorstring.Port{numorstring.SinglePort(53)},
+						},
+					},
+				}
+				_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("can wget microsoft.com", func() {
+				canWgetMicrosoft()
+			})
+
+			It("handles a domain set update", func() {
+				// Create another GNS with same labels as the previous one, so that
+				// the destination selector will now match this one as well, and so
+				// the domain set membership will change.
+				gns := api.NewGlobalNetworkSet()
+				gns.Name = "allow-microsoft-2"
+				gns.Labels = map[string]string{"founder": "billg"}
+				gns.Spec.AllowedEgressDomains = []string{"port25.microsoft.com"}
+				_, err := client.GlobalNetworkSets().Create(utils.Ctx, gns, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+
+				time.Sleep(2 * time.Second)
+				canWgetMicrosoft()
+			})
+		})
+
+		Context("with networkset with allowed egress wildcard domains", func() {
+			JustBeforeEach(func() {
+				gns := api.NewGlobalNetworkSet()
+				gns.Name = "allow-microsoft"
+				gns.Labels = map[string]string{"founder": "billg"}
+				gns.Spec.AllowedEgressDomains = []string{"microsoft.*", "*.microsoft.com"}
+				_, err := client.GlobalNetworkSets().Create(utils.Ctx, gns, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+
+				policy := api.NewGlobalNetworkPolicy()
+				policy.Name = "allow-microsoft"
+				order := float64(20)
+				policy.Spec.Order = &order
+				policy.Spec.Selector = "all()"
+				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
+				policy.Spec.Egress = []api.Rule{
+					{
+						Action: api.Allow,
+						Destination: api.EntityRule{
+							Selector: "founder == 'billg'",
+						},
+					},
+					{
+						Action:   api.Allow,
+						Protocol: &udp,
+						Destination: api.EntityRule{
+							Ports: []numorstring.Port{numorstring.SinglePort(53)},
+						},
+					},
+				}
+				_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("can wget microsoft.com", func() {
+				canWgetMicrosoft()
+			})
+
+			It("handles a domain set update", func() {
+				// Create another GNS with same labels as the previous one, so that
+				// the destination selector will now match this one as well, and so
+				// the domain set membership will change.
+				gns := api.NewGlobalNetworkSet()
+				gns.Name = "allow-microsoft-2"
+				gns.Labels = map[string]string{"founder": "billg"}
+				gns.Spec.AllowedEgressDomains = []string{"port25.microsoft.com"}
+				_, err := client.GlobalNetworkSets().Create(utils.Ctx, gns, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+
+				time.Sleep(2 * time.Second)
+				canWgetMicrosoft()
+			})
+		})
+
+		Context("with networkset with allowed egress domains", func() {
+			JustBeforeEach(func() {
+				ns := api.NewNetworkSet()
+				ns.Name = "allow-microsoft"
+				ns.Namespace = "fv"
+				ns.Labels = map[string]string{"founder": "billg"}
+				ns.Spec.AllowedEgressDomains = []string{"microsoft.com", "www.microsoft.com"}
+				_, err := client.NetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+
+				policy := api.NewNetworkPolicy()
+				policy.Name = "allow-microsoft"
+				policy.Namespace = "fv"
+				order := float64(20)
+				policy.Spec.Order = &order
+				policy.Spec.Selector = "all()"
+				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
+				policy.Spec.Egress = []api.Rule{
+					{
+						Action: api.Allow,
+						Destination: api.EntityRule{
+							Selector: "founder == 'billg'",
+						},
+					},
+					{
+						Action:   api.Allow,
+						Protocol: &udp,
+						Destination: api.EntityRule{
+							Ports: []numorstring.Port{numorstring.SinglePort(53)},
+						},
+					},
+				}
+				_, err = client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("can wget microsoft.com", func() {
+				canWgetMicrosoft()
+			})
+
+			It("handles a domain set update", func() {
+				// Create another NetworkSet with same labels as the previous one, so that
+				// the destination selector will now match this one as well, and so
+				// the domain set membership will change.
+				ns := api.NewNetworkSet()
+				ns.Name = "allow-microsoft-2"
+				ns.Namespace = "fv"
+				ns.Labels = map[string]string{"founder": "billg"}
+				ns.Spec.AllowedEgressDomains = []string{"port25.microsoft.com"}
+				_, err := client.NetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+
+				time.Sleep(2 * time.Second)
+				canWgetMicrosoft()
+			})
+		})
+
+		Context("with networkset with allowed egress wildcard domains", func() {
+			JustBeforeEach(func() {
+				ns := api.NewNetworkSet()
+				ns.Name = "allow-microsoft"
+				ns.Namespace = "fv"
+				ns.Labels = map[string]string{"founder": "billg"}
+				ns.Spec.AllowedEgressDomains = []string{"microsoft.*", "*.microsoft.com"}
+				_, err := client.NetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+
+				policy := api.NewNetworkPolicy()
+				policy.Name = "allow-microsoft"
+				policy.Namespace = "fv"
+				order := float64(20)
+				policy.Spec.Order = &order
+				policy.Spec.Selector = "all()"
+				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
+				policy.Spec.Egress = []api.Rule{
+					{
+						Action: api.Allow,
+						Destination: api.EntityRule{
+							Selector: "founder == 'billg'",
+						},
+					},
+					{
+						Action:   api.Allow,
+						Protocol: &udp,
+						Destination: api.EntityRule{
+							Ports: []numorstring.Port{numorstring.SinglePort(53)},
+						},
+					},
+				}
+				_, err = client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("can wget microsoft.com", func() {
+				canWgetMicrosoft()
+			})
+
+			It("handles a domain set update", func() {
+				// Create another NetworkSet with same labels as the previous one, so that
+				// the destination selector will now match this one as well, and so
+				// the domain set membership will change.
+				ns := api.NewNetworkSet()
+				ns.Name = "allow-microsoft-2"
+				ns.Namespace = "fv"
+				ns.Labels = map[string]string{"founder": "billg"}
+				ns.Spec.AllowedEgressDomains = []string{"port25.microsoft.com"}
+				_, err := client.NetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
+				Expect(err).NotTo(HaveOccurred())
+
+				time.Sleep(2 * time.Second)
+				canWgetMicrosoft()
+			})
+		})
+	})
 })
 
 var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
