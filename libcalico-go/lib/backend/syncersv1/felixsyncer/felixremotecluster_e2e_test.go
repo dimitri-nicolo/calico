@@ -510,10 +510,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 									Name: "profile-1",
 								},
 								Spec: apiv3.ProfileSpec{
-									LabelsToApply: map[string]string{
-										"label1": "value1",
-										"label2": "value2",
-									},
+									LabelsToApply: pro.Spec.LabelsToApply,
 								},
 							},
 						},
