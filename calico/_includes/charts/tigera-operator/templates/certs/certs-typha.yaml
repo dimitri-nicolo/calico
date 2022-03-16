@@ -4,7 +4,7 @@ kind: ConfigMap
 apiVersion: v1
 metadata:
   name: typha-ca
-  namespace: tigera-operator
+  namespace: {{.Release.Namespace}}
 data:
   caBundle: |
 {{ required "must set certs.typha.caBundle" .Values.certs.typha.caBundle | indent 4}}
@@ -14,7 +14,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: typha-certs
-  namespace: tigera-operator
+  namespace: {{.Release.Namespace}}
 type: Opaque
 data:
   cert.crt: {{ required "must set certs.typha.cert" .Values.certs.typha.cert | b64enc }}

@@ -510,12 +510,18 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 									Name: "profile-1",
 								},
 								Spec: apiv3.ProfileSpec{
-									LabelsToApply: map[string]string{
-										"label1": "value1",
-										"label2": "value2",
-									},
+									LabelsToApply: pro.Spec.LabelsToApply,
 								},
 							},
+						},
+						UpdateType: api.UpdateTypeKVNew,
+					},
+					api.Update{
+						KVPair: model.KVPair{
+							Key: model.ProfileLabelsKey{
+								ProfileKey: model.ProfileKey{Name: "remote-cluster/profile-1"},
+							},
+							Value: pro.Spec.LabelsToApply,
 						},
 						UpdateType: api.UpdateTypeKVNew,
 					},
@@ -551,6 +557,15 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 							Key: model.ResourceKey{
 								Kind: apiv3.KindProfile,
 								Name: "remote-cluster/profile-1",
+							},
+							Value: nil,
+						},
+						UpdateType: api.UpdateTypeKVDeleted,
+					},
+					api.Update{
+						KVPair: model.KVPair{
+							Key: model.ProfileLabelsKey{
+								ProfileKey: model.ProfileKey{Name: "remote-cluster/profile-1"},
 							},
 							Value: nil,
 						},

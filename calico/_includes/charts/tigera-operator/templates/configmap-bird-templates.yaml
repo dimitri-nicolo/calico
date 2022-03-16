@@ -3,7 +3,7 @@ kind: ConfigMap
 apiVersion: v1
 metadata:
   name: bird-templates
-  namespace: tigera-operator
+  namespace: {{.Release.Namespace}}
 data:
 {{- range $key, $value := .Values.bgp }}
 {{ $key | indent 2 }}: |

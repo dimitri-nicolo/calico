@@ -3,7 +3,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: tigera-secure-elasticsearch-cert
-  namespace: tigera-operator
+  namespace: {{.Release.Namespace}}
 type: Opaque
 data:
   tls.crt: {{ required "must set elasticsearch.cert if elasticsearch.key is set" .Values.certs.elasticsearch.cert | b64enc }}

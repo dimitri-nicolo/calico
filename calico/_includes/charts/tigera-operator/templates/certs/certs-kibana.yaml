@@ -3,7 +3,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: tigera-secure-kibana-cert
-  namespace: tigera-operator
+  namespace: {{.Release.Namespace}}
 type: Opaque
 data:
   tls.crt: {{ required "must set kibana.cert if kibana.key is set" .Values.certs.kibana.cert | b64enc }}

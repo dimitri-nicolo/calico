@@ -3,7 +3,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: manager-tls
-  namespace: tigera-operator
+  namespace: {{.Release.Namespace}}
 type: Opaque
 data:
   cert: {{ required "must set manager.cert if manager.key is set" .Values.certs.manager.cert | b64enc }}
