@@ -84,6 +84,6 @@ os-merge-status:
 	@echo "==============================================================================================================="
 	@echo "Showing unmerged commits from calico/$(OSS_BRANCH) that are not in calico-private/$(PRIVATE_BRANCH):"
 	@echo ""
-	@git --no-pager log --pretty='format:%C(auto)%h %aD: %an: %s' --no-merges $(PRIVATE_REMOTE)/$(PRIVATE_BRANCH)..$(OSS_REMOTE)/$(OSS_BRANCH)
+	@git --no-pager log --pretty='format:%C(auto)%h %aD: %an: %s' --first-parent  $(PRIVATE_REMOTE)/$(PRIVATE_BRANCH)..$(OSS_REMOTE)/$(OSS_BRANCH)
 	@echo ""
 	@echo "==============================================================================================================="
