@@ -24,13 +24,11 @@ const (
 	nodeName = "test-node"
 )
 
-var (
-	nodeGVR = schema.GroupVersionResource{
-		Group:    "",
-		Version:  "v1",
-		Resource: "nodes",
-	}
-)
+var nodeGVR = schema.GroupVersionResource{
+	Group:    "",
+	Version:  "v1",
+	Resource: "nodes",
+}
 
 func TestCapacityUpdater_Mainline(t *testing.T) {
 	cu, fake, tearDown := setupAndStart(t)

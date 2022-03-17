@@ -25,11 +25,12 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	restclient "k8s.io/client-go/rest"
-	"k8s.io/klog"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
@@ -126,7 +127,7 @@ func withConfigGetFreshApiserverServerAndClient(
 		t.Fatal("can't make the client from the config", err)
 	}
 
-	var licenseClient = clientset.ProjectcalicoV3().LicenseKeys()
+	licenseClient := clientset.ProjectcalicoV3().LicenseKeys()
 	_ = licenseClient.Delete(context.Background(), "default", metav1.DeleteOptions{})
 
 	if serverConfig.applyTigeraLicense {
@@ -206,7 +207,6 @@ func waitForApiserverUp(serverURL string, stopCh <-chan struct{}) error {
 }
 
 func getLicenseKey(name, certificate, token string) *v3.LicenseKey {
-
 	licenseKey := &v3.LicenseKey{ObjectMeta: metav1.ObjectMeta{Name: name}}
 
 	licenseKey.Spec.Certificate = certificate

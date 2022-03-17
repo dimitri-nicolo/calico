@@ -970,10 +970,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			bpfproxy.WithMinSyncPeriod(config.KubeProxyMinSyncPeriod),
 		}
 
-		if config.KubeProxyEndpointSlicesEnabled {
-			bpfproxyOpts = append(bpfproxyOpts, bpfproxy.WithEndpointsSlices())
-		}
-
 		if config.BPFNodePortDSREnabled {
 			bpfproxyOpts = append(bpfproxyOpts, bpfproxy.WithDSREnabled())
 		}
@@ -2611,9 +2607,7 @@ func (d *InternalDataplane) reportHealth() {
 type dummyLock struct{}
 
 func (d dummyLock) Lock() {
-
 }
 
 func (d dummyLock) Unlock() {
-
 }

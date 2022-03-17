@@ -5,8 +5,8 @@ package aws
 import (
 	"time"
 
-	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/utils/clock"
 )
 
 // ResettableBackoff manages a clock.Timer and its channel to implement a simple exponential backoff with

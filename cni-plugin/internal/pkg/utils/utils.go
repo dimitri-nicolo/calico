@@ -30,10 +30,10 @@ import (
 
 	"github.com/containernetworking/cni/pkg/skel"
 	cnitypes "github.com/containernetworking/cni/pkg/types"
-	"github.com/containernetworking/cni/pkg/types/current"
+	cniv1 "github.com/containernetworking/cni/pkg/types/100"
 	"github.com/containernetworking/plugins/pkg/ipam"
 	"github.com/sirupsen/logrus"
-	lumberjack "gopkg.in/natefinch/lumberjack.v2"
+	"gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/projectcalico/calico/cni-plugin/internal/pkg/azure"
 	"github.com/projectcalico/calico/cni-plugin/pkg/types"
@@ -160,7 +160,7 @@ func CreateOrUpdate(ctx context.Context, client client.Interface, wep *api.Workl
 
 // AddIPAM calls through to the configured IPAM plugin.
 // It also contains IPAM plugin specific logic based on the configured plugin.
-func AddIPAM(conf types.NetConf, args *skel.CmdArgs, logger *logrus.Entry) (*current.Result, error) {
+func AddIPAM(conf types.NetConf, args *skel.CmdArgs, logger *logrus.Entry) (*cniv1.Result, error) {
 	// Check if we're configured to use the Azure IPAM plugin.
 	var an *azure.AzureNetwork
 	if conf.IPAM.Type == "azure-vnet-ipam" {
@@ -185,7 +185,7 @@ func AddIPAM(conf types.NetConf, args *skel.CmdArgs, logger *logrus.Entry) (*cur
 	logger.Debugf("IPAM plugin returned: %+v", ipamResult)
 
 	// Convert the IPAM result into the current version.
-	result, err := current.NewResultFromResult(ipamResult)
+	result, err := cniv1.NewResultFromResult(ipamResult)
 	if err != nil {
 		return nil, err
 	}
@@ -228,8 +228,10 @@ func AddIPAM(conf types.NetConf, args *skel.CmdArgs, logger *logrus.Entry) (*cur
 // and is the logical counterpart to AddIPAM.
 func DeleteIPAM(conf types.NetConf, args *skel.CmdArgs, logger *logrus.Entry) error {
 	logger.Info("Calico CNI releasing IP address")
-	logger.WithFields(logrus.Fields{"paths": os.Getenv("CNI_PATH"),
-		"type": conf.IPAM.Type}).Debug("Looking for IPAM plugin in paths")
+	logger.WithFields(logrus.Fields{
+		"paths": os.Getenv("CNI_PATH"),
+		"type":  conf.IPAM.Type,
+	}).Debug("Looking for IPAM plugin in paths")
 
 	var ae *azure.AzureEndpoint
 	if conf.IPAM.Type == "host-local" {
@@ -244,8 +246,10 @@ func DeleteIPAM(conf types.NetConf, args *skel.CmdArgs, logger *logrus.Entry) er
 			return err
 		}
 
-		logger.WithFields(logrus.Fields{"podCidrv4": dummyPodCidrv4,
-			"podCidrv6": dummyPodCidrv6}).Info("Using dummy podCidrs to release the IPs")
+		logger.WithFields(logrus.Fields{
+			"podCidrv4": dummyPodCidrv4,
+			"podCidrv6": dummyPodCidrv6,
+		}).Info("Using dummy podCidrs to release the IPs")
 		getDummyPodCIDR := func() (string, string, error) {
 			return dummyPodCidrv4, dummyPodCidrv6, nil
 		}
@@ -408,18 +412,18 @@ func UpdateHostLocalIPAMDataForWindows(subnet string, ipamData map[string]interf
 	if len(subnet) == 0 {
 		return nil
 	}
-	//Checks whether the ip is valid or not
+	// Checks whether the ip is valid or not
 	logrus.Info("Updating host-local IPAM configuration to reserve IPs for Windows bridge.")
 	ip, ipnet, err := net.ParseCIDR(subnet)
 	if err != nil {
 		return err
 	}
-	//process only if we have ipv4 subnet
-	//VXLAN networks on Windows do not support dual-stack https://kubernetes.io/docs/setup/production-environment/windows/intro-windows-in-kubernetes/#ipv6-networking
+	// process only if we have ipv4 subnet
+	// VXLAN networks on Windows do not support dual-stack https://kubernetes.io/docs/setup/production-environment/windows/intro-windows-in-kubernetes/#ipv6-networking
 	if ip.To4() != nil {
-		//get Expected start and end range for given CIDR
+		// get Expected start and end range for given CIDR
 		expStartRange, expEndRange := getIPRanges(ip, ipnet)
-		//validate ranges given in cni.conf
+		// validate ranges given in cni.conf
 		rangeStart, _ := ipamData["rangeStart"].(string)
 		startRange, err := validateRangeOrSetDefault(rangeStart, expStartRange, ipnet, true)
 		if err != nil {
@@ -438,7 +442,6 @@ func UpdateHostLocalIPAMDataForWindows(subnet string, ipamData map[string]interf
 }
 
 func getIPRanges(ip net.IP, ipnet *net.IPNet) (string, string) {
-
 	ip = ip.To4()
 	// Mask the address
 	ip.Mask(ipnet.Mask)
@@ -456,29 +459,28 @@ func getIPRanges(ip net.IP, ipnet *net.IPNet) (string, string) {
 }
 
 func validateStartRange(startRange net.IP, expStartRange net.IP) (net.IP, error) {
-	//check if we have ipv4 ip address
+	// check if we have ipv4 ip address
 	startRange = startRange.To4()
 	expStartRange = expStartRange.To4()
 	if startRange == nil || expStartRange == nil {
 		return nil, fmt.Errorf("Invalid ip address")
 	}
 	if bytes.Compare([]byte(startRange), []byte(expStartRange)) < 0 {
-		//if ip is not in given range,return default
+		// if ip is not in given range,return default
 		return expStartRange, nil
 	}
 	return startRange, nil
-
 }
 
 func validateEndRange(endRange net.IP, expEndRange net.IP) (net.IP, error) {
-	//check if we have ipv4 ip address
+	// check if we have ipv4 ip address
 	endRange = endRange.To4()
 	expEndRange = expEndRange.To4()
 	if endRange == nil || expEndRange == nil {
 		return nil, fmt.Errorf("Invalid ip address")
 	}
 	if bytes.Compare([]byte(endRange), []byte(expEndRange)) > 0 {
-		//if ip is not in given range,return default
+		// if ip is not in given range,return default
 		return expEndRange, nil
 	}
 	return endRange, nil
@@ -489,28 +491,27 @@ func validateRangeOrSetDefault(rangeData string, expRange string, ipnet *net.IPN
 	var parsedIP *cnet.IP
 	var expRangeIP *cnet.IP
 	var ip net.IP
-	//Parse IP and convert into 4 bytes address
+	// Parse IP and convert into 4 bytes address
 	if expRangeIP = cnet.ParseIP(expRange); expRangeIP == nil {
 		return "", fmt.Errorf("expRange contains invalid ip")
 	}
 	if len(rangeData) > 0 {
-		//Checks whether the ip is valid or not
+		// Checks whether the ip is valid or not
 		if parsedIP = cnet.ParseIP(rangeData); parsedIP == nil {
 			return "", fmt.Errorf("range contains invalid ip")
-		} else if ipnet.Contains(parsedIP.IP) { //Checks whether the ip belongs to subnet
+		} else if ipnet.Contains(parsedIP.IP) { // Checks whether the ip belongs to subnet
 			if isRangeStart {
-				//check if Startrange should be in expected limit
+				// check if Startrange should be in expected limit
 				ip, _ = validateStartRange(parsedIP.IP, expRangeIP.IP)
 			} else {
-				//check if Endrange exceeds expected limit
+				// check if Endrange exceeds expected limit
 				ip, _ = validateEndRange(parsedIP.IP, expRangeIP.IP)
 			}
 			return ip.String(), nil
 		}
 	}
-	//return default range
+	// return default range
 	return expRangeIP.IP.String(), nil
-
 }
 
 // ValidateNetworkName checks that the network name meets felix's expectations
@@ -564,26 +565,20 @@ func AddIgnoreUnknownArgs() error {
 
 // CreateResultFromEndpoint takes a WorkloadEndpoint, extracts IP information
 // and populates that into a CNI Result.
-func CreateResultFromEndpoint(wep *api.WorkloadEndpoint) (*current.Result, error) {
+func CreateResultFromEndpoint(wep *api.WorkloadEndpoint) (*cniv1.Result, error) {
 	if wep == nil {
 		return nil, fmt.Errorf("endpoint not found")
 	}
-	result := &current.Result{}
+	result := &cniv1.Result{}
 	for _, v := range wep.Spec.IPNetworks {
-		parsedIPConfig := current.IPConfig{}
+		parsedIPConfig := cniv1.IPConfig{}
 
-		ipAddr, ipNet, err := net.ParseCIDR(v)
+		_, ipNet, err := net.ParseCIDR(v)
 		if err != nil {
 			return nil, err
 		}
 
 		parsedIPConfig.Address = *ipNet
-
-		if ipAddr.To4() != nil {
-			parsedIPConfig.Version = "4"
-		} else {
-			parsedIPConfig.Version = "6"
-		}
 
 		result.IPs = append(result.IPs, &parsedIPConfig)
 	}
@@ -593,7 +588,7 @@ func CreateResultFromEndpoint(wep *api.WorkloadEndpoint) (*current.Result, error
 
 // PopulateEndpointNets takes a WorkloadEndpoint and a CNI Result, extracts IP address and mask
 // and populates that information into the WorkloadEndpoint.
-func PopulateEndpointNets(wep *api.WorkloadEndpoint, result *current.Result) error {
+func PopulateEndpointNets(wep *api.WorkloadEndpoint, result *cniv1.Result) error {
 	var copyIpNet net.IPNet
 	if len(result.IPs) == 0 {
 		return errors.New("IPAM plugin did not return any IP addresses")
@@ -601,7 +596,7 @@ func PopulateEndpointNets(wep *api.WorkloadEndpoint, result *current.Result) err
 
 	for _, ipNet := range result.IPs {
 		copyIpNet = net.IPNet{IP: ipNet.Address.IP, Mask: ipNet.Address.Mask}
-		if ipNet.Version == "4" {
+		if ipNet.Address.IP.To4() != nil {
 			copyIpNet.Mask = net.CIDRMask(32, 32)
 		} else {
 			copyIpNet.Mask = net.CIDRMask(128, 128)

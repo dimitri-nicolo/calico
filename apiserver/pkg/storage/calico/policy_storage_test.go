@@ -12,14 +12,14 @@ import (
 	"testing"
 	"time"
 
-	apitesting "k8s.io/apimachinery/pkg/api/apitesting"
+	"k8s.io/apimachinery/pkg/api/apitesting"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -631,8 +631,10 @@ func testSetup(t *testing.T) (context.Context, *resourceStore, *resourceStore) {
 	klog.Infof("Client: %v", c)
 	opts := Options{
 		RESTOptions: generic.RESTOptions{
-			StorageConfig: &storagebackend.Config{
-				Codec: codec,
+			StorageConfig: &storagebackend.ConfigForResource{
+				Config: storagebackend.Config{
+					Codec: codec,
+				},
 			},
 		},
 		LicenseMonitor: MockLicenseMonitorAllowAll{},

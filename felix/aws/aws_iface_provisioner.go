@@ -20,8 +20,8 @@ import (
 	"github.com/aws/smithy-go"
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/utils/clock"
 
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/logutils"
@@ -100,8 +100,9 @@ type SecondaryIfaceProvisioner struct {
 	nodeName           string
 	awsSubnetsFilename string
 	timeout            time.Duration
+
 	// Separate Clock shims for the two timers so the UTs can monitor/trigger the timers separately.
-	backoffClock               clock.Clock
+	backoffClock               clock.WithTicker
 	recheckClock               clock.Clock
 	sleepClock                 sleepClock
 	recheckIntervalResetNeeded bool
@@ -183,7 +184,7 @@ func OptCapacityCallback(cb func(SecondaryIfaceCapacities)) IfaceProvOpt {
 	}
 }
 
-func OptClockOverrides(backoffClock, recheckClock clock.Clock, sleepClock sleepClock) IfaceProvOpt {
+func OptClockOverrides(backoffClock clock.WithTicker, recheckClock clock.Clock, sleepClock sleepClock) IfaceProvOpt {
 	return func(provisioner *SecondaryIfaceProvisioner) {
 		provisioner.backoffClock = backoffClock
 		provisioner.recheckClock = recheckClock
@@ -1945,6 +1946,7 @@ func safeReadInt32(iptr *int32) string {
 	}
 	return fmt.Sprint(*iptr)
 }
+
 func safeReadString(sptr *string) string {
 	if sptr == nil {
 		return "<nil>"
@@ -1955,6 +1957,7 @@ func safeReadString(sptr *string) string {
 func boolPtr(b bool) *bool {
 	return &b
 }
+
 func int32Ptr(i int32) *int32 {
 	return &i
 }

@@ -26,10 +26,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
-	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/clock"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/aws"
@@ -240,7 +241,7 @@ func StartDataplaneDriver(configParams *config.Config,
 		failsafeInboundHostPorts := configParams.FailsafeInboundHostPorts
 		failsafeOutboundHostPorts := configParams.FailsafeOutboundHostPorts
 		if configParams.WireguardEnabled {
-			var found = false
+			found := false
 			for _, i := range failsafeInboundHostPorts {
 				if i.Port == uint16(configParams.WireguardListeningPort) && i.Protocol == "udp" {
 					log.WithFields(log.Fields{
@@ -464,7 +465,6 @@ func StartDataplaneDriver(configParams *config.Config,
 			BPFCgroupV2:                        configParams.DebugBPFCgroupV2,
 			BPFMapRepin:                        configParams.DebugBPFMapRepinEnabled,
 			KubeProxyMinSyncPeriod:             configParams.BPFKubeProxyMinSyncPeriod,
-			KubeProxyEndpointSlicesEnabled:     configParams.BPFKubeProxyEndpointSlicesEnabled,
 			BPFPSNATPorts:                      configParams.BPFPSNATPorts,
 			BPFMapSizeRoute:                    configParams.BPFMapSizeRoute,
 			BPFMapSizeNATFrontend:              configParams.BPFMapSizeNATFrontend,
@@ -575,11 +575,11 @@ func ServePrometheusMetrics(configParams *config.Config) {
 		} else {
 			if !configParams.PrometheusGoMetricsEnabled {
 				log.Info("Discarding Golang metrics")
-				prometheus.Unregister(prometheus.NewGoCollector())
+				prometheus.Unregister(collectors.NewGoCollector())
 			}
 			if !configParams.PrometheusProcessMetricsEnabled {
 				log.Info("Discarding process metrics")
-				prometheus.Unregister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+				prometheus.Unregister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 			}
 			if !configParams.PrometheusWireGuardMetricsEnabled || !configParams.WireguardEnabled {
 				log.Info("Discarding WireGuard metrics")

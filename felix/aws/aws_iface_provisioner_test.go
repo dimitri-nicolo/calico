@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/util/clock"
+	clock "k8s.io/utils/clock/testing"
 
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
@@ -101,12 +101,10 @@ const (
 	t3LargeNumSecondaryENIs = 2
 )
 
-var (
-	t3LargeCapacity = map[string]int{
-		v3.AWSSecondaryIPEnabled:               t3LargeCapacityPerENI * t3LargeNumSecondaryENIs,
-		v3.AWSSecondaryIPEnabledENIPerWorkload: t3LargeNumSecondaryENIs,
-	}
-)
+var t3LargeCapacity = map[string]int{
+	v3.AWSSecondaryIPEnabled:               t3LargeCapacityPerENI * t3LargeNumSecondaryENIs,
+	v3.AWSSecondaryIPEnabledENIPerWorkload: t3LargeNumSecondaryENIs,
+}
 
 var (
 	// Parsed CIDR versions of the various IPs.

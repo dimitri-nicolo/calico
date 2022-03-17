@@ -16,18 +16,17 @@ package etcdv3
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
-	"crypto/tls"
-
 	log "github.com/sirupsen/logrus"
-	"go.etcd.io/etcd/clientv3"
-	"go.etcd.io/etcd/pkg/srv"
-	"go.etcd.io/etcd/pkg/transport"
+	"go.etcd.io/etcd/client/pkg/v3/srv"
+	"go.etcd.io/etcd/client/pkg/v3/transport"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -225,7 +224,6 @@ func (c *etcdV3Client) Update(ctx context.Context, d *model.KVPair) (*model.KVPa
 	).Else(
 		clientv3.OpGet(key),
 	).Commit()
-
 	if err != nil {
 		logCxt.WithError(err).Warning("Update failed")
 		return nil, cerrors.ErrorDatastoreError{Err: err}
@@ -254,7 +252,7 @@ func (c *etcdV3Client) Update(ctx context.Context, d *model.KVPair) (*model.KVPa
 	return d, nil
 }
 
-//TODO Remove once we get rid of the v1 client.  Apply should no longer be supported
+// TODO Remove once we get rid of the v1 client.  Apply should no longer be supported
 // at least in it's current guise.  Apply will need to be handled further up the stack
 // by performing a Get/Create or Update to ensure we don't lose certain read-only Metadata.
 // It's possible that we will just perform that processing in the clients (e.g. calicoctl),
@@ -475,7 +473,7 @@ func calculateListKeyAndOptions(logCxt *log.Entry, l model.ListInterface) (strin
 // EnsureInitialized makes sure that the etcd data is initialized for use by
 // Calico.
 func (c *etcdV3Client) EnsureInitialized() error {
-	//TODO - still need to worry about ready flag.
+	// TODO - still need to worry about ready flag.
 	return nil
 }
 
@@ -485,7 +483,6 @@ func (c *etcdV3Client) Clean() error {
 	_, err := c.etcdClient.Txn(context.Background()).If().Then(
 		clientv3.OpDelete("/calico/", clientv3.WithPrefix()),
 	).Commit()
-
 	if err != nil {
 		return cerrors.ErrorDatastoreError{Err: err}
 	}

@@ -24,7 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	"github.com/containernetworking/cni/pkg/types/current"
+	cniv1 "github.com/containernetworking/cni/pkg/types/100"
 	"github.com/containernetworking/plugins/pkg/ns"
 	cnitestutils "github.com/containernetworking/plugins/pkg/testutils"
 	log "github.com/sirupsen/logrus"
@@ -185,6 +185,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 	})
 
 	cniVersion := os.Getenv("CNI_SPEC_VERSION")
+	Expect(cniVersion).NotTo(BeEmpty())
 	Context("using host-local IPAM", func() {
 		netconf := fmt.Sprintf(`
 			{
@@ -677,7 +678,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			{
 				// This scenario tests IPv4+IPv6 without specifying any routes.
 				description: "new-style with IPv4 and IPv6 ranges, no routes",
-				cniVersion:  "0.3.0",
+				cniVersion:  "0.3.1",
 				config: `
 					{
 					  "cniVersion": "%s",
@@ -723,7 +724,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			{
 				// This scenario tests IPv4+IPv6 without specifying any routes.
 				description: "new-style with IPv4 and IPv6 both using usePodCidr, no routes",
-				cniVersion:  "0.3.0",
+				cniVersion:  "0.3.1",
 				config: `
 					{
 					  "cniVersion": "%s",
@@ -773,7 +774,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				// This configuration is only supported for CNI version >= 0.3.0 since we assign multiple
 				// addresses per family.
 				description: "new-style with IPv4 and IPv6 ranges and routes",
-				cniVersion:  "0.3.0",
+				cniVersion:  "0.3.1",
 				config: `
 					{
 					  "cniVersion": "%s",
@@ -832,7 +833,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				// - we use multiple ranges, one of which is IPv6, the other uses the podCIDR
 				// - we add custom routes, but configure the plugin to also include our default routes.
 				description: "new-style with IPv4 and IPv6 ranges and routes and Calico default routes",
-				cniVersion:  "0.3.0",
+				cniVersion:  "0.3.1",
 				config: `
 					{
 					  "cniVersion": "%s",
@@ -1900,6 +1901,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				FeatureControl:       types.FeatureControl{IPAddrsNoIpam: true},
 			}
 			nc.IPAM.Type = "calico-ipam"
+			Expect(nc.CNIVersion).NotTo(BeEmpty())
 			ncb, err := json.Marshal(nc)
 			Expect(err).NotTo(HaveOccurred())
 			netconf = string(ncb)
@@ -2591,7 +2593,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		var workloadName, containerID, name string
 		var endpointSpec libapi.WorkloadEndpointSpec
 		var contNs ns.NetNS
-		var result *current.Result
+		var result *cniv1.Result
 
 		checkIPAMReservation := func() {
 			// IPAM reservation should still be in place.

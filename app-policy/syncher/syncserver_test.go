@@ -34,9 +34,11 @@ import (
 	"google.golang.org/grpc"
 )
 
-const addr1Ip = "3.4.6.8"
-const addr2Ip = "23.8.58.1"
-const addr3Ip = "2.2.2.2"
+const (
+	addr1Ip = "3.4.6.8"
+	addr2Ip = "23.8.58.1"
+	addr3Ip = "2.2.2.2"
+)
 
 var addr1 = &envoyapi.Address{
 	Address: &envoyapi.Address_SocketAddress{SocketAddress: &envoyapi.SocketAddress{
@@ -47,6 +49,7 @@ var addr1 = &envoyapi.Address{
 		},
 	}},
 }
+
 var addr2 = &envoyapi.Address{
 	Address: &envoyapi.Address_SocketAddress{SocketAddress: &envoyapi.SocketAddress{
 		Address:  addr2Ip,
@@ -56,6 +59,7 @@ var addr2 = &envoyapi.Address{
 		},
 	}},
 }
+
 var addr3 = &envoyapi.Address{
 	Address: &envoyapi.Address_SocketAddress{SocketAddress: &envoyapi.SocketAddress{
 		Address:  addr3Ip,
@@ -65,6 +69,7 @@ var addr3 = &envoyapi.Address{
 		},
 	}},
 }
+
 var profile1 = &proto.Profile{
 	InboundRules: []*proto.Rule{
 		{
@@ -73,6 +78,7 @@ var profile1 = &proto.Profile{
 		},
 	},
 }
+
 var profile2 = &proto.Profile{
 	OutboundRules: []*proto.Rule{
 		{
@@ -81,6 +87,7 @@ var profile2 = &proto.Profile{
 		},
 	},
 }
+
 var policy1 = &proto.Policy{
 	InboundRules: []*proto.Rule{
 		{
@@ -89,6 +96,7 @@ var policy1 = &proto.Policy{
 		},
 	},
 }
+
 var policy2 = &proto.Policy{
 	OutboundRules: []*proto.Rule{
 		{
@@ -97,14 +105,17 @@ var policy2 = &proto.Policy{
 		},
 	},
 }
+
 var endpoint1 = &proto.WorkloadEndpoint{
 	Name:       "wep",
 	ProfileIds: []string{"profile1", "profile2"},
 }
+
 var serviceAccount1 = &proto.ServiceAccountUpdate{
 	Id:     &proto.ServiceAccountID{Name: "serviceAccount1", Namespace: "test"},
 	Labels: map[string]string{"k1": "v1", "k2": "v2"},
 }
+
 var namespace1 = &proto.NamespaceUpdate{
 	Id:     &proto.NamespaceID{Name: "namespace1"},
 	Labels: map[string]string{"k1": "v1", "k2": "v2"},
@@ -173,7 +184,9 @@ func TestIPSetUpdateDispatch(t *testing.T) {
 			Members: []string{
 				addr1Ip,
 				addr2Ip,
-			}}}}
+			},
+		}},
+	}
 	Expect(func() { processUpdate(store, inSync, update) }).ToNot(Panic())
 }
 
@@ -579,7 +592,8 @@ func TestServiceAccountRemoveDispatch(t *testing.T) {
 	inSync := make(chan struct{})
 
 	remove := &proto.ToDataplane{Payload: &proto.ToDataplane_ServiceAccountRemove{
-		ServiceAccountRemove: &proto.ServiceAccountRemove{Id: serviceAccount1.Id}}}
+		ServiceAccountRemove: &proto.ServiceAccountRemove{Id: serviceAccount1.Id},
+	}}
 	Expect(func() { processUpdate(store, inSync, remove) }).ToNot(Panic())
 	Expect(store.ServiceAccountByID).To(Equal(map[proto.ServiceAccountID]*proto.ServiceAccountUpdate{}))
 }
@@ -617,7 +631,8 @@ func TestNamespaceRemoveDispatch(t *testing.T) {
 	inSync := make(chan struct{})
 
 	remove := &proto.ToDataplane{Payload: &proto.ToDataplane_NamespaceRemove{
-		NamespaceRemove: &proto.NamespaceRemove{Id: namespace1.Id}}}
+		NamespaceRemove: &proto.NamespaceRemove{Id: namespace1.Id},
+	}}
 	Expect(func() { processUpdate(store, inSync, remove) }).ToNot(Panic())
 	Expect(store.NamespaceByID).To(Equal(map[proto.NamespaceID]*proto.NamespaceUpdate{}))
 }
@@ -1169,50 +1184,50 @@ func newTestSyncServer() *testSyncServer {
 		cxt: cxt, cancel: cancel, updates: make(chan proto.ToDataplane), path: socketPath, gRPCServer: grpc.NewServer(),
 		reportSuccessful: true,
 	}
-	proto.RegisterPolicySyncServer(ss.gRPCServer, ss)
+	proto.RegisterPolicySyncServer(s.gRPCServer, ss)
 	return ss
 }
 
-func (ss *testSyncServer) Shutdown() {
-	ss.cancel()
-	ss.Stop()
+func (s *testSyncServer) Shutdown() {
+	s.cancel()
+	s.Stop()
 }
 
-func (ss *testSyncServer) Start() {
-	ss.listen()
+func (s *testSyncServer) Start() {
+	s.listen()
 }
 
-func (ss *testSyncServer) Stop() {
-	ss.cLock.Lock()
-	for _, c := range ss.cancelFns {
+func (s *testSyncServer) Stop() {
+	s.cLock.Lock()
+	for _, c := range s.cancelFns {
 		c()
 	}
-	ss.cancelFns = make([]func(), 0)
-	ss.cLock.Unlock()
+	s.cancelFns = make([]func(), 0)
+	s.cLock.Unlock()
 
-	err := os.Remove(ss.path)
+	err := os.Remove(s.path)
 	if err != nil && !os.IsNotExist(err) {
 		// A test may call Stop/Shutdown multiple times. It shouldn't fail if it does.
 		Expect(err).ToNot(HaveOccurred())
 	}
 }
 
-func (ss *testSyncServer) Restart() {
-	ss.Stop()
-	ss.Start()
+func (s *testSyncServer) Restart() {
+	s.Stop()
+	s.Start()
 }
 
-func (ss *testSyncServer) Sync(_ *proto.SyncRequest, stream proto.PolicySync_SyncServer) error {
-	ctx, cancel := context.WithCancel(ss.cxt)
-	ss.cLock.Lock()
-	ss.cancelFns = append(ss.cancelFns, cancel)
-	ss.cLock.Unlock()
+func (s *testSyncServer) Sync(_ *proto.SyncRequest, stream proto.PolicySync_SyncServer) error {
+	ctx, cancel := context.WithCancel(s.context)
+	s.cLock.Lock()
+	s.cancelFns = append(s.cancelFns, cancel)
+	s.cLock.Unlock()
 	var update proto.ToDataplane
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case update = <-ss.updates:
+		case update = <-s.updates:
 			err := stream.Send(&update)
 			if err != nil {
 				return err
@@ -1221,57 +1236,53 @@ func (ss *testSyncServer) Sync(_ *proto.SyncRequest, stream proto.PolicySync_Syn
 	}
 }
 
-func (ss *testSyncServer) Report(_ context.Context, d *proto.DataplaneStats) (*proto.ReportResult, error) {
-	ss.cLock.Lock()
-	defer ss.cLock.Unlock()
+func (s *testSyncServer) Report(_ context.Context, d *proto.DataplaneStats) (*proto.ReportResult, error) {
+	s.cLock.Lock()
+	defer s.cLock.Unlock()
 
-	if !ss.reportSuccessful {
+	if !s.reportSuccessful {
 		// Mimicking unsuccessful report, don't store the stats - exit returning unsuccessful.
 		return &proto.ReportResult{
 			Successful: false,
 		}, nil
 	}
 
-	// Store the stats and return success.
-	ss.dpStats = append(ss.dpStats, d)
+	// Store the stats and return succes.
+	s.dpStats = append(s.dpStats, d)
 	return &proto.ReportResult{
 		Successful: true,
 	}, nil
 }
 
-func (ss *testSyncServer) SendInSync() {
-	ss.updates <- proto.ToDataplane{Payload: &proto.ToDataplane_InSync{InSync: &proto.InSync{}}}
+func (s *testSyncServer) SendInSync() {
+	s.updates <- proto.ToDataplane{Payload: &proto.ToDataplane_InSync{InSync: &proto.InSync{}}}
 }
 
-func (ss *testSyncServer) GetTarget() string {
-	return ss.path
+func (s *testSyncServer) GetTarget() string {
+	return s.path
 }
 
-func (ss *testSyncServer) GetDataplaneStats() []*proto.DataplaneStats {
-	ss.cLock.Lock()
-	defer ss.cLock.Unlock()
-	s := make([]*proto.DataplaneStats, len(ss.dpStats))
-	copy(s, ss.dpStats)
+func (s *testSyncServer) GetDataplaneStats() []*proto.DataplaneStats {
+	s.cLock.Lock()
+	defer s.cLock.Unlock()
+	s := make([]*proto.DataplaneStats, len(s.dpStats))
+	copy(s, s.dpStats)
 	return s
 }
 
-func (ss *testSyncServer) SetReportSuccessful(ret bool) {
-	ss.cLock.Lock()
-	defer ss.cLock.Unlock()
-	ss.reportSuccessful = ret
+func (s *testSyncServer) SetReportSuccessful(ret bool) {
+	s.cLock.Lock()
+	defer s.cLock.Unlock()
+	s.reportSuccessful = ret
 }
 
-func (this *testSyncServer) listen() {
+func (s *testSyncServer) listen() {
 	var err error
-	var wg sync.WaitGroup
-	wg.Add(1)
 
-	this.listener = openListener(this.path)
+	s.listener = openListener(s.path)
 	go func() {
-		err = this.gRPCServer.Serve(this.listener)
-		wg.Done()
+		err = s.gRPCServer.Serve(s.listener)
 	}()
-	wg.Wait()
 	Expect(err).ToNot(HaveOccurred())
 }
 
