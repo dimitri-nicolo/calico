@@ -28,6 +28,10 @@ import (
 	"syscall"
 	"time"
 
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/calico/felix/nfqueue/dnsresponsepacket"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
@@ -66,7 +70,7 @@ import (
 	"github.com/projectcalico/calico/felix/labelindex"
 	"github.com/projectcalico/calico/felix/logutils"
 	"github.com/projectcalico/calico/felix/nfqueue"
-	nfqdnspolicy "github.com/projectcalico/calico/felix/nfqueue/dnspolicy"
+	nfqdnspolicy "github.com/projectcalico/calico/felix/nfqueue/dnsdeniedpacket"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/routetable"
 	"github.com/projectcalico/calico/felix/rules"
@@ -261,9 +265,14 @@ type Config struct {
 	DNSExtraTTL          time.Duration
 	DNSLogsLatency       bool
 
-	DNSPolicyNfqueueID              int
-	DebugDNSResponseDelay           time.Duration
-	DisableDNSPolicyPacketProcessor bool
+	DNSPolicyMode                    apiv3.DNSPolicyMode
+	DNSPolicyNfqueueID               int
+	DNSPolicyNfqueueSize             int
+	DNSPacketsNfqueueID              int
+	DNSPacketsNfqueueSize            int
+	DNSPacketsNfqueueMaxHoldDuration time.Duration
+	DebugDNSResponseDelay            time.Duration
+	DisableDNSPolicyPacketProcessor  bool
 
 	LookPathOverride func(file string) (string, error)
 
@@ -391,7 +400,8 @@ type InternalDataplane struct {
 
 	loopSummarizer *logutils.Summarizer
 
-	packetProcessor nfqdnspolicy.PacketProcessorWithNfqueueRestarter
+	dnsDeniedPacketProcessor   nfqdnspolicy.PacketProcessorWithNfqueueRestarter
+	dnsResponsePacketProcessor dnsresponsepacket.PacketProcessor
 
 	awsStateUpdC <-chan *aws.LocalAWSNetworkState
 	awsSubnetMgr *awsIPManager
@@ -461,16 +471,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		applyThrottle:    throttle.New(10),
 		loopSummarizer:   logutils.NewSummarizer("dataplane reconciliation loops"),
 		stopChan:         stopChan,
-	}
-
-	if config.RulesConfig.IptablesMarkDNSPolicy != 0x0 && !config.DisableDNSPolicyPacketProcessor {
-		packetProcessorRestarter := nfqdnspolicy.NewPacketProcessorWithNfqueueRestarter(
-			nfqueue.DefaultNfqueueCreator(config.DNSPolicyNfqueueID),
-			config.RulesConfig.IptablesMarkSkipDNSPolicyNfqueue)
-
-		packetProcessorRestarter.Start()
-
-		dp.packetProcessor = packetProcessorRestarter
 	}
 
 	dp.applyThrottle.Refill() // Allow the first apply() immediately.
@@ -667,6 +667,26 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		DebugDNSResponseDelay: config.DebugDNSResponseDelay,
 	})
 	dp.RegisterManager(dp.domainInfoStore)
+
+	if config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDeniedPacket &&
+		config.RulesConfig.IptablesMarkDNSPolicy != 0x0 &&
+		!config.DisableDNSPolicyPacketProcessor {
+		packetProcessorRestarter := nfqdnspolicy.NewPacketProcessorWithNfqueueRestarter(
+			nfqueue.DefaultNfqueueCreator(config.DNSPolicyNfqueueID, uint32(config.DNSPolicyNfqueueSize)),
+			config.RulesConfig.IptablesMarkSkipDNSPolicyNfqueue)
+		dp.dnsDeniedPacketProcessor = packetProcessorRestarter
+	}
+
+	if config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDNSResponse &&
+		config.RulesConfig.DNSPacketsNfqueueID != 0 {
+		packetProcessor := dnsresponsepacket.New(
+			uint16(config.DNSPacketsNfqueueID),
+			uint32(config.DNSPacketsNfqueueSize),
+			config.DNSPacketsNfqueueMaxHoldDuration,
+			dp.domainInfoStore,
+		)
+		dp.dnsResponsePacketProcessor = packetProcessor
+	}
 
 	callbacks := common.NewCallbacks()
 	dp.callbacks = callbacks
@@ -1284,8 +1304,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	}
 
-	if config.DebugConsoleEnabled && dp.packetProcessor != nil {
-		console := debugconsole.New(dp.packetProcessor)
+	if config.DebugConsoleEnabled && dp.dnsDeniedPacketProcessor != nil {
+		console := debugconsole.New(dp.dnsDeniedPacketProcessor)
 		console.Start()
 	}
 
@@ -1506,11 +1526,22 @@ func (d *InternalDataplane) Start() {
 			}
 		},
 		stopChannel)
+
+	// Start the packet processors if configured.
+	if d.dnsDeniedPacketProcessor != nil {
+		d.dnsDeniedPacketProcessor.Start()
+	}
+	if d.dnsResponsePacketProcessor != nil {
+		d.dnsResponsePacketProcessor.Start()
+	}
 }
 
 func (d *InternalDataplane) Stop() {
-	if d.packetProcessor != nil {
-		d.packetProcessor.Stop()
+	if d.dnsDeniedPacketProcessor != nil {
+		d.dnsDeniedPacketProcessor.Stop()
+	}
+	if d.dnsResponsePacketProcessor != nil {
+		d.dnsResponsePacketProcessor.Stop()
 	}
 }
 
@@ -2509,13 +2540,13 @@ func (d *InternalDataplane) applyIPSetsAndNotifyDomainInfoStore() {
 
 			d.reportHealth()
 
-			if d.packetProcessor == nil || updatedIPSets == nil {
+			if d.dnsDeniedPacketProcessor == nil || updatedIPSets == nil {
 				return
 			}
 
 			for _, ipSetMembers := range updatedIPSets {
 				if ipSetMembers.Len() != 0 {
-					d.packetProcessor.OnIPSetMemberUpdates(ipSetMembers)
+					d.dnsDeniedPacketProcessor.OnIPSetMemberUpdates(ipSetMembers)
 				}
 			}
 		}(ipSets)

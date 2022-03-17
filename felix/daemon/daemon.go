@@ -403,6 +403,30 @@ configRetry:
 		}
 	}
 
+	// Fix the DNSPolicyMode based on dataplane and Kernel version. The delay packet modes are only available on
+	// the iptables dataplane, and the DelayDNSResponse mode is only available on higher kernel versions.
+	var overrideDNSPolicy string
+	if err := dp.SupportsNfQueue(); err != nil {
+		log.Warning("Dataplane does not support NfQueue. Set DNSPolicyMode to NoDelay")
+		overrideDNSPolicy = string(apiv3.DNSPolicyModeNoDelay)
+	} else if configParams.BPFEnabled {
+		log.Warning("Dataplane is using eBPF which does not support NfQueue. Set DNSPolicyMode to NoDelay")
+		overrideDNSPolicy = string(apiv3.DNSPolicyModeNoDelay)
+	} else if configParams.DNSPolicyMode == string(apiv3.DNSPolicyModeDelayDNSResponse) {
+		if err := dp.SupportsNfQueueWithBypass(); err != nil {
+			log.Warning("Dataplane does not support NfQueue bypass option. Downgrade DNSPolicyMode to DelayDeniedPacket")
+			overrideDNSPolicy = string(apiv3.DNSPolicyModeDelayDeniedPacket)
+		}
+	}
+
+	// If we have a modified DNSPolicy then set it now.
+	if overrideDNSPolicy != "" && overrideDNSPolicy != configParams.DNSPolicyMode {
+		_, err := configParams.OverrideParam("DNSPolicyMode", overrideDNSPolicy)
+		if err != nil {
+			log.WithError(err).Panic("Bug: failed to override config parameter")
+		}
+	}
+
 	// We're now both live and ready.
 	healthAggregator.Report(healthName, &health.HealthReport{Live: true, Ready: true})
 

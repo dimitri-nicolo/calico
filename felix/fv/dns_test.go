@@ -1,7 +1,7 @@
 //go:build fvtests
 // +build fvtests
 
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
 
 package fv_test
 
@@ -92,14 +92,8 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 		enableLogs    bool
 		enableLatency bool
+		dnsMode       string
 	)
-
-	BeforeEach(func() {
-		saveFile = "/dnsinfo/dnsinfo.txt"
-		saveFileMappedOutsideContainer = true
-		enableLogs = true
-		enableLatency = true
-	})
 
 	logAndReport := func(out string, err error) error {
 		log.WithError(err).Infof("test-dns said:\n%v", out)
@@ -138,17 +132,6 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		Consistently(hostWgetMicrosoftErr, "4s", "1s").Should(HaveOccurred())
 	}
 
-	Context("with save file in initially non-existent directory", func() {
-		BeforeEach(func() {
-			saveFile = "/a/b/c/d/e/dnsinfo.txt"
-			saveFileMappedOutsideContainer = false
-		})
-
-		It("can wget microsoft.com", func() {
-			canWgetMicrosoft()
-		})
-	})
-
 	getLastMicrosoftALog := func() (lastLog string) {
 		dnsLogs, err := getDNSLogs(path.Join(dnsDir, "dns.log"))
 		if err != nil {
@@ -162,6 +145,103 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		}
 		return
 	}
+
+	BeforeEach(func() {
+		saveFile = "/dnsinfo/dnsinfo.txt"
+		saveFileMappedOutsideContainer = true
+		enableLogs = true
+		enableLatency = true
+	})
+
+	JustBeforeEach(func() {
+		opts := infrastructure.DefaultTopologyOptions()
+		var err error
+		dnsDir, err = ioutil.TempDir("", "dnsinfo")
+		Expect(err).NotTo(HaveOccurred())
+
+		nameservers := GetLocalNameservers()
+		dnsServerIP = nameservers[0]
+
+		opts.ExtraVolumes[dnsDir] = "/dnsinfo"
+		opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = saveFile
+		// For this test file, configure DNSCacheSaveInterval to be much longer than any
+		// test duration, so we can be sure that the writing of the dnsinfo.txt file is
+		// triggered by shutdown instead of by a periodic timer.
+		opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "3600"
+		opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = strings.Join(GetLocalNameservers(), ",")
+		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
+		opts.ExtraEnvVars["FELIX_DNSLOGSFILEDIRECTORY"] = "/dnsinfo"
+		opts.ExtraEnvVars["FELIX_DNSLOGSFLUSHINTERVAL"] = "1"
+		if dnsMode != "" {
+			opts.ExtraEnvVars["FELIX_DNSPOLICYMODE"] = dnsMode
+		}
+		if enableLogs {
+			// Default for this is false.  Set "true" to enable.
+			opts.ExtraEnvVars["FELIX_DNSLOGSFILEENABLED"] = "true"
+		}
+		if !enableLatency {
+			// Default for this is true.  Set "false" to disable.
+			opts.ExtraEnvVars["FELIX_DNSLOGSLATENCY"] = "false"
+		}
+		// This file tests that Felix writes out its DNS mappings file on shutdown, so we
+		// need to stop Felix gracefully.
+		opts.FelixStopGraceful = true
+		// Tests in this file require a node IP, so that Felix can attach a BPF program to
+		// host interfaces.
+		opts.NeedNodeIP = true
+		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
+		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
+
+		// Create a workload, using that profile.
+		for ii := range w {
+			iiStr := strconv.Itoa(ii)
+			w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
+			w[ii].Configure(client)
+		}
+
+		// Allow workloads to connect out to the Internet.
+		felix.Exec(
+			"iptables", "-w", "-t", "nat",
+			"-A", "POSTROUTING",
+			"-o", "eth0",
+			"-j", "MASQUERADE", "--random-fully",
+		)
+	})
+
+	// Stop etcd and workloads, collecting some state if anything failed.
+	AfterEach(func() {
+		if CurrentGinkgoTestDescription().Failed {
+			felix.Exec("calico-bpf", "ipsets", "dump", "--debug")
+			felix.Exec("ipset", "list")
+			felix.Exec("iptables-save", "-c")
+			felix.Exec("ip", "r")
+		}
+
+		for ii := range w {
+			w[ii].Stop()
+		}
+		felix.Stop()
+		if saveFileMappedOutsideContainer {
+			Eventually(path.Join(dnsDir, "dnsinfo.txt"), "10s", "1s").Should(BeARegularFile())
+		}
+
+		if CurrentGinkgoTestDescription().Failed {
+			etcd.Exec("etcdctl", "ls", "--recursive", "/")
+		}
+		etcd.Stop()
+		infra.Stop()
+	})
+
+	Context("with save file in initially non-existent directory", func() {
+		BeforeEach(func() {
+			saveFile = "/a/b/c/d/e/dnsinfo.txt"
+			saveFileMappedOutsideContainer = false
+		})
+
+		It("can wget microsoft.com", func() {
+			canWgetMicrosoft()
+		})
+	})
 
 	Context("after wget microsoft.com", func() {
 
@@ -278,82 +358,6 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		})
 	})
 
-	JustBeforeEach(func() {
-		opts := infrastructure.DefaultTopologyOptions()
-		var err error
-		dnsDir, err = ioutil.TempDir("", "dnsinfo")
-		Expect(err).NotTo(HaveOccurred())
-
-		nameservers := GetLocalNameservers()
-		dnsServerIP = nameservers[0]
-
-		opts.ExtraVolumes[dnsDir] = "/dnsinfo"
-		opts.ExtraEnvVars["FELIX_DNSCACHEFILE"] = saveFile
-		// For this test file, configure DNSCacheSaveInterval to be much longer than any
-		// test duration, so we can be sure that the writing of the dnsinfo.txt file is
-		// triggered by shutdown instead of by a periodic timer.
-		opts.ExtraEnvVars["FELIX_DNSCACHESAVEINTERVAL"] = "3600"
-		opts.ExtraEnvVars["FELIX_DNSTRUSTEDSERVERS"] = strings.Join(GetLocalNameservers(), ",")
-		opts.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
-		opts.ExtraEnvVars["FELIX_DNSLOGSFILEDIRECTORY"] = "/dnsinfo"
-		opts.ExtraEnvVars["FELIX_DNSLOGSFLUSHINTERVAL"] = "1"
-		if enableLogs {
-			// Default for this is false.  Set "true" to enable.
-			opts.ExtraEnvVars["FELIX_DNSLOGSFILEENABLED"] = "true"
-		}
-		if !enableLatency {
-			// Default for this is true.  Set "false" to disable.
-			opts.ExtraEnvVars["FELIX_DNSLOGSLATENCY"] = "false"
-		}
-		// This file tests that Felix writes out its DNS mappings file on shutdown, so we
-		// need to stop Felix gracefully.
-		opts.FelixStopGraceful = true
-		// Tests in this file require a node IP, so that Felix can attach a BPF program to
-		// host interfaces.
-		opts.NeedNodeIP = true
-		felix, etcd, client, infra = infrastructure.StartSingleNodeEtcdTopology(opts)
-		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
-
-		// Create a workload, using that profile.
-		for ii := range w {
-			iiStr := strconv.Itoa(ii)
-			w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
-			w[ii].Configure(client)
-		}
-
-		// Allow workloads to connect out to the Internet.
-		felix.Exec(
-			"iptables", "-w", "-t", "nat",
-			"-A", "POSTROUTING",
-			"-o", "eth0",
-			"-j", "MASQUERADE", "--random-fully",
-		)
-	})
-
-	// Stop etcd and workloads, collecting some state if anything failed.
-	AfterEach(func() {
-		if CurrentGinkgoTestDescription().Failed {
-			felix.Exec("calico-bpf", "ipsets", "dump", "--debug")
-			felix.Exec("ipset", "list")
-			felix.Exec("iptables-save", "-c")
-			felix.Exec("ip", "r")
-		}
-
-		for ii := range w {
-			w[ii].Stop()
-		}
-		felix.Stop()
-		if saveFileMappedOutsideContainer {
-			Eventually(path.Join(dnsDir, "dnsinfo.txt"), "10s", "1s").Should(BeARegularFile())
-		}
-
-		if CurrentGinkgoTestDescription().Failed {
-			etcd.Exec("etcdctl", "ls", "--recursive", "/")
-		}
-		etcd.Stop()
-		infra.Stop()
-	})
-
 	It("can wget microsoft.com", func() {
 		canWgetMicrosoft()
 	})
@@ -436,44 +440,128 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 			})
 		})
 
-		Context("with domain-allow egress policy", func() {
-			JustBeforeEach(configureGNPAllowToMicrosoft)
+		// For a smallish subset of tests try running using the different policy modes.
+		for _, m := range []api.DNSPolicyMode{
+			api.DNSPolicyModeNoDelay,
+			api.DNSPolicyModeDelayDNSResponse,
+			api.DNSPolicyModeDelayDeniedPacket,
+		} {
+			localMode := m
+			Context("with DNSPolicyMode explicity set to "+string(localMode), func() {
 
-			It("can wget microsoft.com", func() {
-				canWgetMicrosoft()
-			})
-		})
+				BeforeEach(func() {
+					dnsMode = string(localMode)
+				})
 
-		Context("with namespaced domain-allow egress policy", func() {
-			JustBeforeEach(func() {
-				policy := api.NewNetworkPolicy()
-				policy.Name = "allow-microsoft"
-				policy.Namespace = "fv"
-				order := float64(20)
-				policy.Spec.Order = &order
-				policy.Spec.Selector = "all()"
-				udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
-				policy.Spec.Egress = []api.Rule{
-					{
-						Action:      api.Allow,
-						Destination: api.EntityRule{Domains: []string{"microsoft.com", "www.microsoft.com"}},
-					},
-					{
-						Action:   api.Allow,
-						Protocol: &udp,
-						Destination: api.EntityRule{
-							Ports: []numorstring.Port{numorstring.SinglePort(53)},
-						},
-					},
+				// Helper used to check iptables contains the correct entries based on DNSPolicyMode and eBPF.
+				checkIPTablesFunc := func(nfq100, nfq101 bool) func() error {
+					return func() error {
+						iptablesSaveOutput, err := felix.ExecCombinedOutput("iptables-save", "-c")
+						if err != nil {
+							return err
+						}
+
+						var foundReq, foundResp, found100, found101 bool
+						for _, line := range strings.Split(iptablesSaveOutput, "\n") {
+							if strings.Contains(line, "--nflog-group 3") {
+								if strings.Contains(line, "NEW") {
+									foundReq = true
+								}
+								if strings.Contains(line, "ESTABLISHED") {
+									foundResp = true
+								}
+							} else if strings.Contains(line, "--queue-num 100") {
+								found100 = true
+							} else if strings.Contains(line, "--queue-num 101") && strings.Contains(line, "ESTABLISHED") {
+								found101 = true
+							}
+						}
+
+						if !foundReq {
+							return fmt.Errorf("iptables does not contain the NFLOG DNS request snooping rule\n%s", iptablesSaveOutput)
+						}
+						if !nfq101 && !foundResp {
+							return fmt.Errorf("iptables does not contain the NFLOG DNS response snooping rule\n%s", iptablesSaveOutput)
+						}
+						if nfq100 && !found100 {
+							return fmt.Errorf("iptables does not contain the NFQUEUE id 100 rule\n%s", iptablesSaveOutput)
+						}
+						if nfq101 && !found101 {
+							return fmt.Errorf("iptables does not contain the NFQUEUE id 101 rule\n%s", iptablesSaveOutput)
+						}
+						if found100 && found101 {
+							return fmt.Errorf("iptables contains NFQUEUE id 100 and 101 rules\n%s", iptablesSaveOutput)
+						}
+
+						return nil
+					}
 				}
-				_, err := client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
-				Expect(err).NotTo(HaveOccurred())
-			})
 
-			It("can wget microsoft.com", func() {
-				canWgetMicrosoft()
+				if os.Getenv("FELIX_FV_ENABLE_BPF") != "true" && localMode == api.DNSPolicyModeNoDelay {
+					It("has ingress and egress NFLOG DNS snooping rules and no NFQueue rules", func() {
+						// Should be 6 snooping NFLOG rules (ingress/egress for forward,output,input).
+						// Should be no nfqueue rules.
+						Eventually(checkIPTablesFunc(false, false), "10s", "1s").ShouldNot(HaveOccurred())
+					})
+				}
+
+				if os.Getenv("FELIX_FV_ENABLE_BPF") != "true" && localMode == api.DNSPolicyModeDelayDNSResponse {
+					It("has ingress NFLOG and egress NFQUEUE DNS snooping rules", func() {
+						// Should be 3 snooping NFLOG rules (egress for forward,output,input).
+						// Should be 3 snooping NFQUEUE 101 rules (ingress for forward,output,input).
+						// Should be no nfqueue 100 rules.
+						Eventually(checkIPTablesFunc(false, true), "10s", "1s").ShouldNot(HaveOccurred())
+					})
+				}
+
+				if os.Getenv("FELIX_FV_ENABLE_BPF") != "true" && localMode == api.DNSPolicyModeDelayDeniedPacket {
+					It("has ingress and egress NFLOG rules and NFQUEUEd deny packets", func() {
+						// Should be 6 snooping NFLOG rules (ingress/egress for forward,output,input).
+						// Should only be nfqueue 100 rules.
+						Eventually(checkIPTablesFunc(true, false), "10s", "1s").ShouldNot(HaveOccurred())
+					})
+				}
+
+				Context("with domain-allow egress policy", func() {
+					JustBeforeEach(configureGNPAllowToMicrosoft)
+
+					It("can wget microsoft.com", func() {
+						canWgetMicrosoft()
+					})
+				})
+
+				Context("with namespaced domain-allow egress policy", func() {
+					JustBeforeEach(func() {
+						policy := api.NewNetworkPolicy()
+						policy.Name = "allow-microsoft"
+						policy.Namespace = "fv"
+						order := float64(20)
+						policy.Spec.Order = &order
+						policy.Spec.Selector = "all()"
+						udp := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
+						policy.Spec.Egress = []api.Rule{
+							{
+								Action:      api.Allow,
+								Destination: api.EntityRule{Domains: []string{"microsoft.com", "www.microsoft.com"}},
+							},
+							{
+								Action:   api.Allow,
+								Protocol: &udp,
+								Destination: api.EntityRule{
+									Ports: []numorstring.Port{numorstring.SinglePort(53)},
+								},
+							},
+						}
+						_, err := client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					It("can wget microsoft.com", func() {
+						canWgetMicrosoft()
+					})
+				})
 			})
-		})
+		}
 
 		Context("with namespaced domain-allow egress policy in wrong namespace", func() {
 			JustBeforeEach(func() {
@@ -760,7 +848,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	})
 })
 
-var _ = Describe("DNS Policy Improvements", func() {
+var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 
 	var (
 		dnsserver *containers.Container

@@ -214,8 +214,6 @@ type Config struct {
 
 	DatastoreType string `config:"oneof(kubernetes,etcdv3);etcdv3;non-zero,die-on-fail,local"`
 
-	DNSPolicyNfqueueID int `config:"int;100;"`
-
 	FelixHostname string `config:"hostname;;local,non-zero"`
 	NodeIP        net.IP `config:"ipv4;;"`
 
@@ -380,7 +378,9 @@ type Config struct {
 	FlowLogsFilePerFlowProcessLimit       int    `config:"int;2"`
 	FlowLogsFilePerFlowProcessArgsLimit   int    `config:"int;5"`
 	FlowLogsFileNatOutgoingPortLimit      int    `config:"int;3"`
+	FlowLogsFileDomainsLimit              int    `config:"int;5"`
 
+	// Config for DNS logs.
 	DNSLogsFlushInterval       time.Duration `config:"seconds;300"`
 	DNSLogsFileEnabled         bool          `config:"bool;false"`
 	DNSLogsFileDirectory       string        `config:"string;/var/log/calico/dnslogs"`
@@ -390,6 +390,21 @@ type Config struct {
 	DNSLogsFileIncludeLabels   bool          `config:"bool;true"`
 	DNSLogsFilePerNodeLimit    int           `config:"int;0"`
 	DNSLogsLatency             bool          `config:"bool;true"`
+
+	// Config for DNS policy.
+	DNSPolicyMode                    string        `config:"oneof(NoDelay,DelayDeniedPacket,DelayDNSResponse);DelayDeniedPacket;non-zero"`
+	DNSPolicyNfqueueID               int           `config:"int;100"`
+	DNSPolicyNfqueueSize             int           `config:"int;255"`
+	DNSPacketsNfqueueID              int           `config:"int;101"`
+	DNSPacketsNfqueueSize            int           `config:"int;100"`
+	DNSPacketsNfqueueMaxHoldDuration time.Duration `config:"millis;3000"`
+
+	// Config for DNS cache.
+	DNSCacheFile         string        `config:"file;/var/run/calico/felix-dns-cache.txt"`
+	DNSCacheSaveInterval time.Duration `config:"seconds;60"`
+	DNSTrustedServers    []ServerPort  `config:"server-list;k8s-service:kube-dns"`
+	DNSCacheEpoch        int           `config:"int;0"`
+	DNSExtraTTL          time.Duration `config:"seconds;0"`
 
 	L7LogsFlushInterval                  time.Duration `config:"seconds;300"`
 	L7LogsFileEnabled                    bool          `config:"bool;true"`
@@ -486,13 +501,6 @@ type Config struct {
 	EgressIPVXLANPort           int    `config:"int;4790"`
 	EgressIPVXLANVNI            int    `config:"int;4097"`
 	EgressIPRoutingRulePriority int    `config:"int;100"`
-
-	// Config for DNS policy.
-	DNSCacheFile         string        `config:"file;/var/run/calico/felix-dns-cache.txt"`
-	DNSCacheSaveInterval time.Duration `config:"seconds;60"`
-	DNSTrustedServers    []ServerPort  `config:"server-list;k8s-service:kube-dns"`
-	DNSCacheEpoch        int           `config:"int;0"`
-	DNSExtraTTL          time.Duration `config:"seconds;0"`
 
 	// Config for packet capturing
 	CaptureDir             string `config:"string;/var/log/calico/pcap"`

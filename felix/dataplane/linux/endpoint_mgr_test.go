@@ -20,6 +20,8 @@ import (
 	"os"
 	"strings"
 
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/felix/ifacemonitor"
 
 	. "github.com/onsi/ginkgo"
@@ -834,7 +836,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 				IPIPTunnelAddress:                nil,
 				IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 				IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
 				DNSPolicyNfqueueID:               100,
+				DNSPacketsNfqueueID:              101,
 				IptablesMarkEgress:               0x4,
 				IptablesMarkAccept:               0x8,
 				IptablesMarkPass:                 0x10,

@@ -20,10 +20,33 @@ import (
 	"github.com/google/gopacket/layers"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/felix/collector"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/testutils"
+	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 )
+
+type dnsLog struct {
+	server  net.IP
+	client  net.IP
+	dns     *layers.DNS
+	latency *time.Duration
+}
+
+type mockCollector struct {
+	collector.Collector
+
+	dnsLogs []dnsLog
+}
+
+func (m *mockCollector) LogDNS(server, client net.IP, dns *layers.DNS, latency *time.Duration) {
+	m.dnsLogs = append(m.dnsLogs, dnsLog{server, client, dns, latency})
+}
+
+func (m *mockCollector) SetDomainLookup(dlu collector.EgressDomainCache) {
+	// no-op
+}
 
 type mockDomainInfoChangeHandler struct {
 	dataplaneSyncNeeded bool
@@ -70,6 +93,9 @@ var _ = Describe("Domain Info Store", func() {
 		// DomainInfoStore to notify when the dataplane is programmed.
 		callbackIdsMutex sync.Mutex
 		callbackIds      []string
+
+		current time.Time
+		expire  time.Time
 	)
 
 	BeforeEach(func() {
@@ -77,6 +103,9 @@ var _ = Describe("Domain Info Store", func() {
 		callbackIdsMutex.Lock()
 		defer callbackIdsMutex.Unlock()
 		callbackIds = nil
+
+		current = time.Now()
+		expire = current.Add(time.Minute)
 	})
 
 	// Program a DNS record as an "answer" type response.
@@ -91,7 +120,7 @@ var _ = Describe("Domain Info Store", func() {
 				callbackIds = append(callbackIds, callbackId[0])
 			}
 		}
-		domainStore.processDNSPacket(&layerDNS, cb)
+		domainStore.processDNSResponsePacket(&layerDNS, cb)
 	}
 
 	// Program a DNS record as an "additionals" type response.
@@ -106,7 +135,7 @@ var _ = Describe("Domain Info Store", func() {
 				callbackIds = append(callbackIds, callbackId[0])
 			}
 		}
-		domainStore.processDNSPacket(&layerDNS, cb)
+		domainStore.processDNSResponsePacket(&layerDNS, cb)
 	}
 
 	// Assert that the domain store accepted and signaled the given record (and reason).
@@ -127,7 +156,7 @@ var _ = Describe("Domain Info Store", func() {
 			Expect(domainStore.GetDomainIPs(string(dnsRec.Name))).To(Equal([]string{dnsRec.IP.String()}))
 		})
 		It("should expire and signal a domain change", func() {
-			domainStore.processMappingExpiry(strings.ToLower(string(dnsRec.Name)), dnsRec.IP.String())
+			domainStore.processMappingExpiry(strings.ToLower(string(dnsRec.Name)), dnsRec.IP.String(), expire)
 			AssertDomainChanged(domainStore, string(dnsRec.Name), "mapping expired")
 			Expect(domainStore.collectGarbage()).To(Equal(1))
 		})
@@ -140,20 +169,23 @@ var _ = Describe("Domain Info Store", func() {
 
 	// Create a new datastore.
 	domainStoreCreateEx := func(capacity int, config *DnsConfig) {
-		handler = &mockDomainInfoChangeHandler{
-			// For most tests assume the dataplane does need to be sync'd.
-			dataplaneSyncNeeded: true,
-		}
-		// For UT purposes, don't actually run any expiry timers, but arrange that mappings
-		// always appear to have expired when UT code calls processMappingExpiry.
+		// For UT purposes, don't actually run any expiry timers. We arrange that mappings
+		// always appear to have expired when UT code calls processMappingExpiry by using
+		// current time for all time.Now() calls and use expire time (after current) when
+		// calling in to processMappingExpiry.
 		domainStore = newDomainInfoStoreWithShims(
 			config,
 			func(ttl time.Duration, _ func()) *time.Timer {
 				lastTTL = ttl
 				return nil
 			},
-			func(time.Time) bool { return true },
+			func() time.Time { return current },
 		)
+
+		handler = &mockDomainInfoChangeHandler{
+			// For most tests assume the dataplane does need to be sync'd.
+			dataplaneSyncNeeded: true,
+		}
 		domainStore.RegisterHandler(handler)
 	}
 	domainStoreCreate := func() {
@@ -387,7 +419,7 @@ var _ = Describe("Domain Info Store", func() {
 		handleUpdatesAndExpectChangesFor("a1.com", "a2.com", "c.com")
 		Expect(domainStore.GetDomainIPs("a1.com")).To(ConsistOf("3.4.5.6", "7.8.9.10"))
 		Expect(domainStore.GetDomainIPs("a2.com")).To(ConsistOf("3.4.5.6", "7.8.9.10"))
-		domainStore.processMappingExpiry("c.com", "3.4.5.6")
+		domainStore.processMappingExpiry("c.com", "3.4.5.6", expire)
 		handleUpdatesAndExpectChangesFor("a1.com", "a2.com", "c.com")
 		Expect(domainStore.GetDomainIPs("a1.com")).To(Equal([]string{"7.8.9.10"}))
 		Expect(domainStore.GetDomainIPs("a2.com")).To(Equal([]string{"7.8.9.10"}))
@@ -474,6 +506,247 @@ var _ = Describe("Domain Info Store", func() {
 		Entry("update.*.tigera.io",
 			"update.*.tigera.io", "update.microsoft.com", false),
 	)
+
+	Context("collector tests", func() {
+		var (
+			collector         *mockCollector
+			clientIP          = cnet.MustParseIP("1.2.3.4").IP
+			serverIP          = cnet.MustParseIP("10.0.0.0").IP
+			ipv4LayerRequest1 = &layers.IPv4{
+				SrcIP: clientIP,
+				DstIP: serverIP,
+			}
+			ipv4LayerResponse1 = &layers.IPv4{
+				SrcIP: serverIP,
+				DstIP: clientIP,
+			}
+			dnsLayerRequest1 = &layers.DNS{
+				ID: 100,
+				QR: false,
+			}
+			dnsLayerResponse1 = &layers.DNS{
+				ID: 100,
+				QR: true,
+			}
+			timeNow     = time.Now()
+			time0       = uint64(timeNow.UnixNano())
+			time1       = uint64(timeNow.Add(1 * time.Second).UnixNano())
+			time2       = uint64(timeNow.Add(3 * time.Second).UnixNano())
+			timeDelta12 = time.Duration(time2 - time1)
+		)
+
+		Context("with no collector", func() {
+			BeforeEach(func() {
+				config := &DnsConfig{
+					DNSCacheFile:         "/dnsinfo",
+					DNSCacheSaveInterval: time.Minute,
+					DNSLogsLatency:       true,
+				}
+				domainStoreCreateEx(100, config)
+			})
+
+			It("handles request arriving before response and release tick", func() {
+				// None of the collector specific methods should do anything if there is no collector.
+				domainStore.processDNSRequestPacketForLogging(ipv4LayerRequest1, dnsLayerRequest1, time1)
+				Expect(domainStore.latencyData).To(HaveLen(0))
+
+				domainStore.processDNSResponsePacketForLogging(ipv4LayerResponse1, dnsLayerResponse1, time2)
+				Expect(domainStore.latencyData).To(HaveLen(0))
+
+				domainStore.releaseUnpairedDataForLogging(timeNow.Add(1 * time.Hour))
+			})
+		})
+
+		Context("with collector", func() {
+			BeforeEach(func() {
+				collector = &mockCollector{}
+				config := &DnsConfig{
+					DNSCacheFile:         "/dnsinfo",
+					DNSCacheSaveInterval: time.Minute,
+					Collector:            collector,
+					DNSLogsLatency:       true,
+				}
+				domainStoreCreateEx(100, config)
+			})
+
+			It("handles no ipv4 layer on request", func() {
+				domainStore.processDNSRequestPacketForLogging(nil, dnsLayerRequest1, time1)
+				Expect(domainStore.latencyData).To(HaveLen(0))
+				Expect(collector.dnsLogs).To(HaveLen(0))
+			})
+
+			It("handles no ipv4 layer on response", func() {
+				domainStore.processDNSResponsePacketForLogging(nil, dnsLayerResponse1, time1)
+				Expect(domainStore.latencyData).To(HaveLen(0))
+				Expect(collector.dnsLogs).To(HaveLen(0))
+			})
+
+			It("handles no timestamp on request", func() {
+				domainStore.processDNSRequestPacketForLogging(ipv4LayerRequest1, dnsLayerRequest1, 0)
+				Expect(domainStore.latencyData).To(HaveLen(0))
+				Expect(collector.dnsLogs).To(HaveLen(0))
+			})
+
+			It("handles no timestamp on response", func() {
+				domainStore.processDNSResponsePacketForLogging(ipv4LayerResponse1, dnsLayerResponse1, 0)
+				Expect(domainStore.latencyData).To(HaveLen(0))
+
+				// We should log immediately without any latency inforamtion
+				Expect(collector.dnsLogs).To(HaveLen(1))
+				Expect(collector.dnsLogs[0].latency).To(BeNil())
+			})
+
+			It("handles request arriving before response", func() {
+				domainStore.processDNSRequestPacketForLogging(ipv4LayerRequest1, dnsLayerRequest1, time1)
+				Expect(domainStore.latencyData).To(HaveLen(1))
+				Expect(collector.dnsLogs).To(HaveLen(0))
+
+				domainStore.processDNSResponsePacketForLogging(ipv4LayerResponse1, dnsLayerResponse1, time2)
+				Expect(domainStore.latencyData).To(HaveLen(0))
+				Expect(collector.dnsLogs).To(HaveLen(1))
+				Expect(collector.dnsLogs[0]).To(Equal(dnsLog{
+					server:  serverIP,
+					client:  clientIP,
+					dns:     dnsLayerResponse1,
+					latency: &timeDelta12,
+				}))
+			})
+
+			It("handles response arriving before request", func() {
+				domainStore.processDNSResponsePacketForLogging(ipv4LayerResponse1, dnsLayerResponse1, time2)
+				Expect(domainStore.latencyData).To(HaveLen(1))
+				Expect(collector.dnsLogs).To(HaveLen(0))
+
+				domainStore.processDNSRequestPacketForLogging(ipv4LayerRequest1, dnsLayerRequest1, time1)
+				Expect(domainStore.latencyData).To(HaveLen(0))
+				Expect(collector.dnsLogs).To(HaveLen(1))
+				Expect(collector.dnsLogs[0]).To(Equal(dnsLog{
+					server:  serverIP,
+					client:  clientIP,
+					dns:     dnsLayerResponse1,
+					latency: &timeDelta12,
+				}))
+			})
+
+			It("handles request, request, respose with the same ID", func() {
+				// Request packet at time 0.
+				domainStore.processDNSRequestPacketForLogging(ipv4LayerRequest1, dnsLayerRequest1, time0)
+				Expect(domainStore.latencyData).To(HaveLen(1))
+				Expect(collector.dnsLogs).To(HaveLen(0))
+
+				// Identical request packet at time 1. This should take precedence, the old one will be dropped, so
+				// latency will be timeDelta12.
+				domainStore.processDNSRequestPacketForLogging(ipv4LayerRequest1, dnsLayerRequest1, time1)
+				Expect(domainStore.latencyData).To(HaveLen(1))
+				Expect(collector.dnsLogs).To(HaveLen(0))
+
+				domainStore.processDNSResponsePacketForLogging(ipv4LayerResponse1, dnsLayerResponse1, time2)
+				Expect(domainStore.latencyData).To(HaveLen(0))
+				Expect(collector.dnsLogs).To(HaveLen(1))
+				Expect(collector.dnsLogs[0]).To(Equal(dnsLog{
+					server:  serverIP,
+					client:  clientIP,
+					dns:     dnsLayerResponse1,
+					latency: &timeDelta12,
+				}))
+			})
+
+			It("handles response, response, request with the same ID", func() {
+				// Request packet at time 0.
+				domainStore.processDNSResponsePacketForLogging(ipv4LayerResponse1, dnsLayerResponse1, time0)
+				Expect(domainStore.latencyData).To(HaveLen(1))
+				Expect(collector.dnsLogs).To(HaveLen(0))
+
+				// Identical response packet at time 2. This should take precedence, the old one will be logged without
+				// latency, and the new one will be logged with latency timeDelta12.
+				domainStore.processDNSResponsePacketForLogging(ipv4LayerResponse1, dnsLayerResponse1, time2)
+				Expect(domainStore.latencyData).To(HaveLen(1))
+				Expect(collector.dnsLogs).To(HaveLen(1))
+				Expect(collector.dnsLogs[0]).To(Equal(dnsLog{
+					server:  serverIP,
+					client:  clientIP,
+					dns:     dnsLayerResponse1,
+					latency: nil,
+				}))
+
+				domainStore.processDNSRequestPacketForLogging(ipv4LayerRequest1, dnsLayerRequest1, time1)
+				Expect(domainStore.latencyData).To(HaveLen(0))
+				Expect(collector.dnsLogs).To(HaveLen(2))
+				Expect(collector.dnsLogs[1]).To(Equal(dnsLog{
+					server:  serverIP,
+					client:  clientIP,
+					dns:     dnsLayerResponse1,
+					latency: &timeDelta12,
+				}))
+			})
+
+			It("handles expiration of an unmatched request", func() {
+				// Request packet at time 0.
+				domainStore.nowFunc = func() time.Time {
+					return timeNow
+				}
+				domainStore.processDNSRequestPacketForLogging(ipv4LayerRequest1, dnsLayerRequest1, time0)
+				Expect(domainStore.latencyData).To(HaveLen(1))
+				Expect(collector.dnsLogs).To(HaveLen(0))
+
+				// Ticker at time 0 + 1.1s. Should still be present.
+				domainStore.releaseUnpairedDataForLogging(timeNow.Add(1100 * time.Millisecond))
+				Expect(domainStore.latencyData).To(HaveLen(1))
+				Expect(collector.dnsLogs).To(HaveLen(0))
+
+				// Ticker at time 0 + 10.1s. Should be removed.
+				domainStore.releaseUnpairedDataForLogging(timeNow.Add(10100 * time.Millisecond))
+				Expect(domainStore.latencyData).To(HaveLen(0))
+				Expect(collector.dnsLogs).To(HaveLen(0))
+			})
+
+			It("handles expiration of an unmatched response", func() {
+				// Response packet at time 0.
+				domainStore.nowFunc = func() time.Time {
+					return timeNow
+				}
+				domainStore.processDNSResponsePacketForLogging(ipv4LayerResponse1, dnsLayerResponse1, time0)
+				Expect(domainStore.latencyData).To(HaveLen(1))
+				Expect(collector.dnsLogs).To(HaveLen(0))
+
+				// Ticker at time 0 + 1.1s. Should be removed and logged.
+				domainStore.releaseUnpairedDataForLogging(timeNow.Add(1100 * time.Millisecond))
+				Expect(domainStore.latencyData).To(HaveLen(0))
+				Expect(collector.dnsLogs).To(HaveLen(1))
+				Expect(collector.dnsLogs[0]).To(Equal(dnsLog{
+					server:  serverIP,
+					client:  clientIP,
+					dns:     dnsLayerResponse1,
+					latency: nil,
+				}))
+			})
+		})
+
+		Context("with collector, no latency", func() {
+			BeforeEach(func() {
+				collector = &mockCollector{}
+				config := &DnsConfig{
+					DNSCacheFile:         "/dnsinfo",
+					DNSCacheSaveInterval: time.Minute,
+					Collector:            collector,
+					DNSLogsLatency:       false,
+				}
+				domainStoreCreateEx(100, config)
+			})
+
+			It("immediately logs a response without latency", func() {
+				domainStore.processDNSResponsePacketForLogging(ipv4LayerResponse1, dnsLayerResponse1, time2)
+				Expect(domainStore.latencyData).To(HaveLen(0))
+				Expect(collector.dnsLogs).To(HaveLen(1))
+				Expect(collector.dnsLogs[0]).To(Equal(dnsLog{
+					server:  serverIP,
+					client:  clientIP,
+					dns:     dnsLayerResponse1,
+					latency: nil,
+				}))
+			})
+		})
+	})
 
 	Context("wildcard handling", func() {
 		BeforeEach(func() {
@@ -564,7 +837,7 @@ var _ = Describe("Domain Info Store", func() {
 			It("quickly removes the mapping", func() {
 				// Note, Eventually by default allows up to 1 second.
 				Eventually(func() []string {
-					domainStore.loopIteration(nil, nil)
+					domainStore.loopIteration(nil, nil, nil)
 					return domainStore.GetDomainIPs("update.google.com")
 				}).Should(BeEmpty())
 			})
@@ -668,8 +941,9 @@ var _ = Describe("Domain Info Store", func() {
 		}
 		saveTimerC := make(chan time.Time)
 		gcTimerC := make(chan time.Time)
+		latencyTimerC := make(chan time.Time)
 		Expect(func() {
-			domainStore.loopIteration(saveTimerC, gcTimerC)
+			domainStore.loopIteration(saveTimerC, gcTimerC, latencyTimerC)
 		}).NotTo(Panic())
 	})
 
@@ -700,8 +974,9 @@ var _ = Describe("Domain Info Store", func() {
 		}
 		saveTimerC := make(chan time.Time)
 		gcTimerC := make(chan time.Time)
+		latencyTimerC := make(chan time.Time)
 		Expect(func() {
-			domainStore.loopIteration(saveTimerC, gcTimerC)
+			domainStore.loopIteration(saveTimerC, gcTimerC, latencyTimerC)
 		}).NotTo(Panic())
 	})
 
@@ -710,6 +985,7 @@ var _ = Describe("Domain Info Store", func() {
 
 		saveTimerC := make(chan time.Time)
 		gcTimerC := make(chan time.Time)
+		latencyTimerC := make(chan time.Time)
 		for i := 0; i < 10; i++ {
 			pkt := make([]byte, 78)
 			n, err := rand.Read(pkt)
@@ -719,7 +995,7 @@ var _ = Describe("Domain Info Store", func() {
 				Data: pkt,
 			}
 			Expect(func() {
-				domainStore.loopIteration(saveTimerC, gcTimerC)
+				domainStore.loopIteration(saveTimerC, gcTimerC, latencyTimerC)
 			}).NotTo(Panic())
 		}
 	})

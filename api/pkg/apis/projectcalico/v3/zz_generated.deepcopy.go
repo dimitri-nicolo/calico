@@ -2092,11 +2092,6 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
-	if in.DNSPolicyNfqueueID != nil {
-		in, out := &in.DNSPolicyNfqueueID, &out.DNSPolicyNfqueueID
-		*out = new(int)
-		**out = **in
-	}
 	if in.SidecarAccelerationEnabled != nil {
 		in, out := &in.SidecarAccelerationEnabled, &out.SidecarAccelerationEnabled
 		*out = new(bool)
@@ -2317,6 +2312,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(int)
 		**out = **in
 	}
+	if in.FlowLogsFileDomainsLimit != nil {
+		in, out := &in.FlowLogsFileDomainsLimit, &out.FlowLogsFileDomainsLimit
+		*out = new(int)
+		**out = **in
+	}
 	if in.WindowsDNSExtraTTL != nil {
 		in, out := &in.WindowsDNSExtraTTL, &out.WindowsDNSExtraTTL
 		*out = new(v1.Duration)
@@ -2389,6 +2389,36 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	if in.DNSLogsLatency != nil {
 		in, out := &in.DNSLogsLatency, &out.DNSLogsLatency
 		*out = new(bool)
+		**out = **in
+	}
+	if in.DNSPolicyMode != nil {
+		in, out := &in.DNSPolicyMode, &out.DNSPolicyMode
+		*out = new(DNSPolicyMode)
+		**out = **in
+	}
+	if in.DNSPolicyNfqueueID != nil {
+		in, out := &in.DNSPolicyNfqueueID, &out.DNSPolicyNfqueueID
+		*out = new(int)
+		**out = **in
+	}
+	if in.DNSPolicyNfqueueSize != nil {
+		in, out := &in.DNSPolicyNfqueueSize, &out.DNSPolicyNfqueueSize
+		*out = new(int)
+		**out = **in
+	}
+	if in.DNSPacketsNfqueueID != nil {
+		in, out := &in.DNSPacketsNfqueueID, &out.DNSPacketsNfqueueID
+		*out = new(int)
+		**out = **in
+	}
+	if in.DNSPacketsNfqueueSize != nil {
+		in, out := &in.DNSPacketsNfqueueSize, &out.DNSPacketsNfqueueSize
+		*out = new(int)
+		**out = **in
+	}
+	if in.DNSPacketsNfqueueMaxHoldDuration != nil {
+		in, out := &in.DNSPacketsNfqueueMaxHoldDuration, &out.DNSPacketsNfqueueMaxHoldDuration
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	if in.L7LogsFlushInterval != nil {

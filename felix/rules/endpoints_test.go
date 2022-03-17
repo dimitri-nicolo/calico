@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/felix/ipsets"
 	. "github.com/projectcalico/calico/felix/iptables"
 	"github.com/projectcalico/calico/felix/proto"
@@ -44,7 +46,9 @@ var _ = Describe("Endpoints", func() {
 			IPIPTunnelAddress:                nil,
 			IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 			IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+			DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
 			DNSPolicyNfqueueID:               100,
+			DNSPacketsNfqueueID:              101,
 			IptablesMarkEgress:               0x4,
 			IptablesMarkAccept:               0x8,
 			IptablesMarkPass:                 0x10,
@@ -67,7 +71,9 @@ var _ = Describe("Endpoints", func() {
 			IPIPTunnelAddress:                nil,
 			IPSetConfigV4:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
 			IPSetConfigV6:                    ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+			DNSPolicyMode:                    apiv3.DNSPolicyModeDelayDeniedPacket,
 			DNSPolicyNfqueueID:               100,
+			DNSPacketsNfqueueID:              101,
 			IptablesMarkEgress:               0x4,
 			IptablesMarkAccept:               0x8,
 			IptablesMarkPass:                 0x10,
@@ -1250,6 +1256,129 @@ var _ = Describe("Endpoints", func() {
 				rrConfigNormalMangleReturn.AllowVXLANPacketsFromWorkloads = false
 			})
 		})
+
+		// Test the DNSPolicyMode options NoDelay and DelayDNSResponse. The NFQueue rule for the drop rule should not be
+		// added.
+		for _, dm := range []apiv3.DNSPolicyMode{apiv3.DNSPolicyModeNoDelay, apiv3.DNSPolicyModeDelayDNSResponse} {
+			dnsMode := dm
+			Context("with normal config and DNSMode set to NoDelay", func() {
+				BeforeEach(func() {
+					rrConfigNormalMangleReturn.DNSPolicyMode = dnsMode
+					renderer = NewRenderer(rrConfigNormalMangleReturn)
+					epMarkMapper = NewEndpointMarkMapper(rrConfigNormalMangleReturn.IptablesMarkEndpoint,
+						rrConfigNormalMangleReturn.IptablesMarkNonCaliEndpoint)
+				})
+
+				AfterEach(func() {
+					rrConfigNormalMangleReturn.DNSPolicyMode = apiv3.DNSPolicyModeDelayDeniedPacket
+				})
+
+				It("should render a fully-loaded workload endpoint - one staged policy, one enforced", func() {
+					Expect(renderer.WorkloadEndpointToIptablesChains(
+						"cali1234",
+						epMarkMapper,
+						true,
+						[]*proto.TierInfo{{
+							Name:            "default",
+							IngressPolicies: []string{"staged:ai", "bi"},
+							EgressPolicies:  []string{"ae", "staged:be"},
+						}},
+						[]string{"prof1", "prof2"},
+						NotAnEgressGateway,
+						UndefinedIPVersion,
+					)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
+						{
+							Name: "cali-tw-cali1234",
+							Rules: []Rule{
+								// conntrack rules.
+								{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
+									Action: AcceptAction{}},
+								{Match: Match().ConntrackState("INVALID"),
+									Action: DropAction{}},
+
+								{Action: ClearMarkAction{Mark: 0x88}},
+
+								{Comment: []string{"Start of tier default"},
+									Action: ClearMarkAction{Mark: 0x10}},
+								{Match: Match().MarkClear(0x10),
+									Action: JumpAction{Target: "cali-pi-default/staged:ai"}},
+								{Match: Match().MarkClear(0x10),
+									Action: JumpAction{Target: "cali-pi-default/bi"}},
+								{Match: Match().MarkSingleBitSet(0x8),
+									Action:  ReturnAction{},
+									Comment: []string{"Return if policy accepted"}},
+								{Match: Match().MarkClear(0x10),
+									Action: NflogAction{Group: 1, Prefix: "DPI|default"}},
+								{Match: Match().MarkClear(0x10),
+									Action:  DropAction{},
+									Comment: []string{"Drop if no policies passed packet"}},
+
+								{Action: JumpAction{Target: "cali-pri-prof1"}},
+								{Match: Match().MarkSingleBitSet(0x8),
+									Action:  ReturnAction{},
+									Comment: []string{"Return if profile accepted"}},
+								{Action: JumpAction{Target: "cali-pri-prof2"}},
+								{Match: Match().MarkSingleBitSet(0x8),
+									Action:  ReturnAction{},
+									Comment: []string{"Return if profile accepted"}},
+
+								{Action: NflogAction{Group: 1, Prefix: "DRI"}},
+								{Action: DropAction{},
+									Comment: []string{"Drop if no profiles matched"}},
+							},
+						},
+						{
+							Name: "cali-fw-cali1234",
+							Rules: []Rule{
+								// conntrack rules.
+								{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
+									Action: AcceptAction{}},
+								{Match: Match().ConntrackState("INVALID"),
+									Action: DropAction{}},
+
+								{Action: ClearMarkAction{Mark: 0x88}},
+								dropVXLANRule,
+								dropIPIPRule,
+
+								{Comment: []string{"Start of tier default"},
+									Action: ClearMarkAction{Mark: 0x10}},
+								{Match: Match().MarkClear(0x10),
+									Action: JumpAction{Target: "cali-po-default/ae"}},
+								{Match: Match().MarkSingleBitSet(0x8),
+									Action:  ReturnAction{},
+									Comment: []string{"Return if policy accepted"}},
+								{Match: Match().MarkClear(0x10),
+									Action: JumpAction{Target: "cali-po-default/staged:be"}},
+								{Match: Match().MarkClear(0x10),
+									Action: NflogAction{Group: 2, Prefix: "DPE|default"}},
+								{Match: Match().MarkClear(0x10),
+									Action:  DropAction{},
+									Comment: []string{"Drop if no policies passed packet"}},
+
+								{Action: JumpAction{Target: "cali-pro-prof1"}},
+								{Match: Match().MarkSingleBitSet(0x8),
+									Action:  ReturnAction{},
+									Comment: []string{"Return if profile accepted"}},
+								{Action: JumpAction{Target: "cali-pro-prof2"}},
+								{Match: Match().MarkSingleBitSet(0x8),
+									Action:  ReturnAction{},
+									Comment: []string{"Return if profile accepted"}},
+
+								{Action: NflogAction{Group: 2, Prefix: "DRE"}},
+								{Action: DropAction{},
+									Comment: []string{"Drop if no profiles matched"}},
+							},
+						},
+						{
+							Name: "cali-sm-cali1234",
+							Rules: []Rule{
+								{Action: SetMaskedMarkAction{Mark: 0xd400, Mask: 0xff00}},
+							},
+						},
+					})))
+				})
+			})
+		}
 	}
 })
 

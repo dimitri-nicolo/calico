@@ -24,12 +24,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/vishvananda/netlink"
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/prometheus/client_golang/prometheus"
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/aws"
 	"github.com/projectcalico/calico/felix/bpf"
@@ -47,6 +48,7 @@ import (
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/logutils"
 	"github.com/projectcalico/calico/felix/markbits"
+	"github.com/projectcalico/calico/felix/nfqueue"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/felix/wireguard"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
@@ -313,7 +315,9 @@ func StartDataplaneDriver(configParams *config.Config,
 				OpenStackMetadataIP:          net.ParseIP(configParams.MetadataAddr),
 				OpenStackMetadataPort:        uint16(configParams.MetadataPort),
 
-				DNSPolicyNfqueueID: int64(configParams.DNSPolicyNfqueueID),
+				DNSPolicyMode:       apiv3.DNSPolicyMode(configParams.DNSPolicyMode),
+				DNSPolicyNfqueueID:  int64(configParams.DNSPolicyNfqueueID),
+				DNSPacketsNfqueueID: int64(configParams.DNSPacketsNfqueueID),
 
 				IptablesMarkAccept:               markAccept,
 				IptablesMarkPass:                 markPass,
@@ -505,9 +509,15 @@ func StartDataplaneDriver(configParams *config.Config,
 				MaxFiles:        configParams.CaptureMaxFiles,
 			},
 
-			LookupsCache:          lc,
-			DNSPolicyNfqueueID:    configParams.DNSPolicyNfqueueID,
-			DebugDNSResponseDelay: configParams.DebugDNSResponseDelay,
+			LookupsCache: lc,
+
+			DNSPolicyMode:                    apiv3.DNSPolicyMode(configParams.DNSPolicyMode),
+			DNSPolicyNfqueueID:               configParams.DNSPolicyNfqueueID,
+			DNSPolicyNfqueueSize:             configParams.DNSPolicyNfqueueSize,
+			DNSPacketsNfqueueID:              configParams.DNSPacketsNfqueueID,
+			DNSPacketsNfqueueSize:            configParams.DNSPacketsNfqueueSize,
+			DNSPacketsNfqueueMaxHoldDuration: configParams.DNSPacketsNfqueueMaxHoldDuration,
+			DebugDNSResponseDelay:            configParams.DebugDNSResponseDelay,
 		}
 		if k8sClientSet != nil {
 			dpConfig.KubeClientSet = k8sClientSet
@@ -536,6 +546,14 @@ func StartDataplaneDriver(configParams *config.Config,
 		dpConn, cmd := extdataplane.StartExtDataplaneDriver(configParams.DataplaneDriver)
 		return dpConn, cmd, nil
 	}
+}
+
+func SupportsNfQueue() error {
+	return nil
+}
+
+func SupportsNfQueueWithBypass() error {
+	return nfqueue.SupportsNfQueueWithBypass()
 }
 
 func SupportsBPF() error {

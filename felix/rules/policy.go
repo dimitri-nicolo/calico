@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@ package rules
 import (
 	"fmt"
 	"strings"
+
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 
@@ -258,10 +260,7 @@ func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVers
 	}
 
 	// Figure out if this is a DNS policy rule before we potentially nil out DstDomainIpSetIds below.
-	isDNSPolicyRule := false
-	if len(ruleCopy.DstDomainIpSetIds) > 0 {
-		isDNSPolicyRule = true
-	}
+	isDNSPolicyRule := len(ruleCopy.DstDomainIpSetIds) > 0
 
 	// If there are selector-derived ipsets both for explicit IPs and for domain names, render a
 	// block for those.  Otherwise there's at most one ipset match needed, which will be included
@@ -582,10 +581,8 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 	var rules []iptables.Rule
 	var mark uint32
 
-	markDNSPolicyRule := isDNSPolicyRule
-	if staged {
-		markDNSPolicyRule = false
-	}
+	// For policy mode DelayDeniedPacket, mark the packet traversing a non-staged policy that contains DNS matches.
+	markDNSPolicyRule := isDNSPolicyRule && !staged && r.Config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDeniedPacket
 
 	if pRule.LogPrefix != "" || pRule.Action == "log" {
 		// This rule should log (and possibly do something else too).
@@ -654,7 +651,7 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 			mark = r.IptablesMarkDrop
 		}
 
-		nfqueueRule := r.NfqueueRule(nil)
+		nfqueueRule := r.NfqueueRuleDelayDeniedPacket(nil)
 		if !staged && nfqueueRule != nil {
 			rules = append(rules, *nfqueueRule)
 		}

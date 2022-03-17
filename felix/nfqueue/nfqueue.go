@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 
 package nfqueue
 
@@ -22,7 +22,6 @@ import (
 
 const (
 	nfMaxPacketLen = 0xFFFF
-	nfMaxQueueLen  = 0xFF
 	nfReadTimeout  = 100 * time.Millisecond
 	nfWriteTimeout = 200 * time.Millisecond
 )
@@ -50,10 +49,10 @@ func init() {
 	prometheus.MustRegister(PrometheusNfqueueVerdictFailCount)
 }
 
-func DefaultNfqueueCreator(queueID int) func() (Nfqueue, error) {
+func DefaultNfqueueCreator(queueID int, queueLen uint32) func() (Nfqueue, error) {
 	return func() (Nfqueue, error) {
 		log.Infof("Creating new NFQUEUE connection with queue id \"%d\" for dns policy packet processing.", queueID)
-		nf, err := NewNfqueue(queueID)
+		nf, err := NewNfqueue(queueID, queueLen)
 		if err != nil {
 			return nil, err
 		}
@@ -85,11 +84,11 @@ type Nfqueue interface {
 	Close() error
 }
 
-func NewNfqueue(queueID int) (Nfqueue, error) {
+func NewNfqueue(queueID int, queueLen uint32) (Nfqueue, error) {
 	defaultConfig := &gonfqueue.Config{
 		NfQueue:      uint16(queueID),
 		MaxPacketLen: nfMaxPacketLen,
-		MaxQueueLen:  nfMaxQueueLen,
+		MaxQueueLen:  queueLen,
 		Copymode:     gonfqueue.NfQnlCopyPacket,
 		ReadTimeout:  nfReadTimeout,
 		WriteTimeout: nfWriteTimeout,
