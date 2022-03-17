@@ -8,8 +8,6 @@ import (
 	"os"
 	"strings"
 
-	nfqdnspolicy "github.com/projectcalico/calico/felix/nfqueue/dnsdeniedpacket"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -23,12 +21,16 @@ type DebugConsole interface {
 	Start()
 }
 
-type debugConsole struct {
-	connChan                 chan net.Conn
-	packetProcessorRestarter nfqdnspolicy.PacketProcessorWithNfqueueRestarter
+type PacketProcessorDebugRestarter interface {
+	DebugKillCurrentNfqueueConnection() error
 }
 
-func New(packetProcessorRestarter nfqdnspolicy.PacketProcessorWithNfqueueRestarter) DebugConsole {
+type debugConsole struct {
+	connChan                 chan net.Conn
+	packetProcessorRestarter PacketProcessorDebugRestarter
+}
+
+func New(packetProcessorRestarter PacketProcessorDebugRestarter) DebugConsole {
 	if err := os.MkdirAll(SockAddrFolder, os.ModeDir); err != nil {
 		log.WithError(err).Fatal("failed to create socket path")
 	}

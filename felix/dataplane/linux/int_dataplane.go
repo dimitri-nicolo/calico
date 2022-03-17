@@ -30,8 +30,6 @@ import (
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/projectcalico/calico/felix/nfqueue/dnsresponsepacket"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
@@ -69,8 +67,8 @@ import (
 	"github.com/projectcalico/calico/felix/k8sutils"
 	"github.com/projectcalico/calico/felix/labelindex"
 	"github.com/projectcalico/calico/felix/logutils"
-	"github.com/projectcalico/calico/felix/nfqueue"
-	nfqdnspolicy "github.com/projectcalico/calico/felix/nfqueue/dnsdeniedpacket"
+	"github.com/projectcalico/calico/felix/nfqueue/dnsdeniedpacket"
+	"github.com/projectcalico/calico/felix/nfqueue/dnsresponsepacket"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/felix/routetable"
 	"github.com/projectcalico/calico/felix/rules"
@@ -402,7 +400,7 @@ type InternalDataplane struct {
 
 	loopSummarizer *logutils.Summarizer
 
-	dnsDeniedPacketProcessor   nfqdnspolicy.PacketProcessorWithNfqueueRestarter
+	dnsDeniedPacketProcessor   dnsdeniedpacket.PacketProcessor
 	dnsResponsePacketProcessor dnsresponsepacket.PacketProcessor
 
 	awsStateUpdC <-chan *aws.LocalAWSNetworkState
@@ -685,10 +683,12 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	if config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDeniedPacket &&
 		config.RulesConfig.IptablesMarkDNSPolicy != 0x0 &&
 		!config.DisableDNSPolicyPacketProcessor {
-		packetProcessorRestarter := nfqdnspolicy.NewPacketProcessorWithNfqueueRestarter(
-			nfqueue.DefaultNfqueueCreator(config.DNSPolicyNfqueueID, uint32(config.DNSPolicyNfqueueSize)),
-			config.RulesConfig.IptablesMarkSkipDNSPolicyNfqueue)
-		dp.dnsDeniedPacketProcessor = packetProcessorRestarter
+		packetProcessor := dnsdeniedpacket.New(
+			uint16(config.DNSPolicyNfqueueID),
+			uint32(config.DNSPolicyNfqueueSize),
+			config.RulesConfig.IptablesMarkSkipDNSPolicyNfqueue,
+		)
+		dp.dnsDeniedPacketProcessor = packetProcessor
 	}
 
 	if config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDNSResponse &&
@@ -1321,9 +1321,14 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	}
 
-	if config.DebugConsoleEnabled && dp.dnsDeniedPacketProcessor != nil {
-		console := debugconsole.New(dp.dnsDeniedPacketProcessor)
-		console.Start()
+	if config.DebugConsoleEnabled {
+		if dp.dnsDeniedPacketProcessor != nil {
+			console := debugconsole.New(dp.dnsDeniedPacketProcessor)
+			console.Start()
+		} else if dp.dnsResponsePacketProcessor != nil {
+			console := debugconsole.New(dp.dnsResponsePacketProcessor)
+			console.Start()
+		}
 	}
 
 	return dp
@@ -2551,21 +2556,18 @@ func (d *InternalDataplane) applyIPSetsAndNotifyDomainInfoStore() {
 			// Apply the IPSet updates.  The filter is requesting that ApplyUpdates only returns the updates IP sets
 			// that contain egress domains. The filter does not change which IPSets are updated - all IPSets that have
 			// been modified will be updated.
-			updatedIPSets := ipSets.ApplyUpdates(func(ipSetName string) bool {
+			programmedIPs := ipSets.ApplyUpdates(func(ipSetName string) bool {
 				// Collect only Domain IP set updates so we don't overload the packet processor with irrelevant ips.
 				return ipSetName[0:2] == "d:"
 			})
 
 			d.reportHealth()
 
-			if d.dnsDeniedPacketProcessor == nil || updatedIPSets == nil {
+			if d.dnsDeniedPacketProcessor == nil || programmedIPs == nil {
 				return
 			}
-
-			for _, ipSetMembers := range updatedIPSets {
-				if ipSetMembers.Len() != 0 {
-					d.dnsDeniedPacketProcessor.OnIPSetMemberUpdates(ipSetMembers)
-				}
+			if programmedIPs.Len() != 0 {
+				d.dnsDeniedPacketProcessor.OnIPSetMemberUpdates(programmedIPs)
 			}
 		}(ipSets)
 	}

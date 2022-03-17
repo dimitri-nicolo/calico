@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2022 Tigera, Inc. All rights reserved.
 
 package dnsdeniedpacket_test
 
@@ -18,6 +18,6 @@ func init() {
 
 func TestPolicysync(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../report/nfqueue_dnspolicy_suite.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "Nfqueue DNS Policy Test Suite", []Reporter{junitReporter})
+	junitReporter := reporters.NewJUnitReporter("../../report/dnsdeniedpacket.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "DNSDeniedPacket Test Suite", []Reporter{junitReporter})
 }

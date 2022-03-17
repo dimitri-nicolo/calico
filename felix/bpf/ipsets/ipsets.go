@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -237,7 +237,7 @@ func (m *bpfIPSets) GetMembers(setID string) (set.Set, error) {
 	panic("Not implemented")
 }
 
-func (m *bpfIPSets) ApplyUpdates(ipsetFilter func(ipSetName string) bool) map[string]set.Set {
+func (m *bpfIPSets) ApplyUpdates(_ func(ipSetName string) bool) set.Set {
 	var numAdds, numDels uint
 	startTime := time.Now()
 

@@ -94,6 +94,8 @@ const (
 	nfDefaultMaxHoldTime       = 2 * time.Second
 	nfHoldTimeCheckInterval    = 50 * time.Millisecond
 	nfSetVerdictRepeatAttempts = 3
+	nfReadTimeout              = 100 * time.Millisecond
+	nfWriteTimeout             = 200 * time.Millisecond
 )
 
 const (
@@ -189,7 +191,9 @@ type Handler interface {
 	// OnPacket is called when a new packet it queued for processing.
 	OnPacket(packet Packet)
 
-	// OnRelease is called when a packet is implicitly released either by timeout or reconnection.
+	// OnRelease is called when a packet is released either implicitly by timeout or reconnection, or explicitly
+	// by calling Release() on the packet. The NFQueueConnector will always match an OnPacket call with an OnRelease
+	// call.
 	OnRelease(id uint32, reason ReleaseReason)
 }
 
@@ -203,6 +207,9 @@ type Packet struct {
 
 	// Mark on the packet.
 	Mark *uint32
+
+	// HW protocol.
+	HwProtocol *uint16
 
 	// The packet payload (up to the requested number of bytes).
 	Payload []byte
@@ -567,10 +574,11 @@ func (nfx *nfQueueConnection) packetHook(a gonfqueue.Attribute) int {
 
 	// Invoke the handler for the packet.
 	p := Packet{
-		ID:        *a.PacketID,
-		Timestamp: a.Timestamp,
-		Mark:      a.Mark,
-		Payload:   *a.Payload,
+		ID:         *a.PacketID,
+		Timestamp:  a.Timestamp,
+		Mark:       a.Mark,
+		HwProtocol: a.HwProtocol,
+		Payload:    *a.Payload,
 		Release: func() {
 			nfx.prepareForRelease(data)
 		},
