@@ -52,10 +52,6 @@ var _ = Describe("Tigera Operator Helm Chart", func() {
 			Expect(resources["Deployment,tigera-operator,tigera-operator"]).NotTo(BeNil())
 		})
 
-		It("Creates the tigera-operator namespace", func() {
-			Expect(resources["Namespace,,tigera-operator"]).NotTo(BeNil())
-		})
-
 		It("Creates the tigera-operator pod security policy", func() {
 			Expect(resources["PodSecurityPolicy,,tigera-operator"]).NotTo(BeNil())
 		})
