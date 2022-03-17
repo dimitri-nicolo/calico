@@ -486,17 +486,17 @@ type FelixConfigurationSpec struct {
 	// FlowLogsFileAggregationKindForAllowed is used to choose the type of aggregation for flow log entries created for
 	// allowed connections. [Default: 2 - pod prefix name based aggregation].
 	// Accepted values are 0, 1 and 2.
-	// 0 - No aggregation
-	// 1 - Source port based aggregation
+	// 0 - No aggregation.
+	// 1 - Source port based aggregation.
 	// 2 - Pod prefix name based aggreagation.
 	FlowLogsFileAggregationKindForAllowed *int `json:"flowLogsFileAggregationKindForAllowed,omitempty" validate:"omitempty,flowLogAggregationKind"`
 	// FlowLogsFileAggregationKindForDenied is used to choose the type of aggregation for flow log entries created for
 	// denied connections. [Default: 1 - source port based aggregation].
 	// Accepted values are 0, 1 and 2.
-	// 0 - No aggregation
-	// 1 - Source port based aggregation
+	// 0 - No aggregation.
+	// 1 - Source port based aggregation.
 	// 2 - Pod prefix name based aggregation.
-	// 3 - No destination ports based aggregation
+	// 3 - No destination ports based aggregation.
 	FlowLogsFileAggregationKindForDenied *int `json:"flowLogsFileAggregationKindForDenied,omitempty" validate:"omitempty,flowLogAggregationKind"`
 	// FlowLogsFileEnabledForAllowed is used to enable/disable flow logs entries created for allowed connections. Default is true.
 	// This parameter only takes effect when FlowLogsFileReporterEnabled is set to true.
@@ -583,8 +583,8 @@ type FelixConfigurationSpec struct {
 	// DNSLogsFileAggregationKind is used to choose the type of aggregation for DNS log entries.
 	// [Default: 1 - client name prefix aggregation].
 	// Accepted values are 0 and 1.
-	// 0 - No aggregation
-	// 1 - Aggregate over clients with the same name prefix
+	// 0 - No aggregation.
+	// 1 - Aggregate over clients with the same name prefix.
 	DNSLogsFileAggregationKind *int `json:"dnsLogsFileAggregationKind,omitempty" validate:"omitempty,dnsAggregationKind"`
 	// Limit on the number of DNS logs that can be emitted within each flush interval.  When
 	// this limit has been reached, Felix counts the number of unloggable DNS responses within
@@ -595,17 +595,15 @@ type FelixConfigurationSpec struct {
 	// [Default: true]
 	DNSLogsLatency *bool `json:"dnsLogsLatency,omitempty"`
 	// DNSPolicyMode specifies how DNS policy programming will be handled.
-	// - DelayDeniedPacket: Felix delays any denied packet that traversed a policy that included egress domain matches,
-	//                      but did not match. The packet is released after a fixed time, or after the destination IP
-	//                      address was programmed.
-	// - DelayDNSResponse:  Felix delays any DNS response until related IPSets are programmed. This introduces some
-	//                      latency to all DNS packets (even when no IPSet programming is required), but it ensures
-	//                      policy hit statistics are accurate. This is the recommended setting when you are making use
-	//                      of staged policies or policy rule hit statistics.
-	// - NoDelay:           Felix does not introduce any delay to the packets. DNS rules may not have been programmed by
-	//                      the time the first packet traverses the policy rules. Client applications need to handle
-	//                      reconnection attempts if initial connection attempts fail. This may be problematic for some
-	//                      applications or for very low DNS TTLs.
+	// DelayDeniedPacket - Felix delays any denied packet that traversed a policy that included egress domain matches,
+	// but did not match. The packet is released after a fixed time, or after the destination IP address was programmed.
+	// DelayDNSResponse - Felix delays any DNS response until related IPSets are programmed. This introduces some
+	// latency to all DNS packets (even when no IPSet programming is required), but it ensures policy hit statistics
+	// are accurate. This is the recommended setting when you are making use of staged policies or policy rule hit
+	// statistics.
+	// NoDelay - Felix does not introduce any delay to the packets. DNS rules may not have been programmed by the time
+	// the first packet traverses the policy rules. Client applications need to handle reconnection attempts if initial
+	// connection attempts fail. This may be problematic for some applications or for very low DNS TTLs.
 	//
 	// On Windows, or when using the eBPF dataplane, this setting is ignored and "NoDelay" is always used.
 	//
@@ -619,15 +617,14 @@ type FelixConfigurationSpec struct {
 	// Used when DNSPolicyMode is DelayDeniedPacket. [Default: 100]
 	DNSPolicyNfqueueSize *int `json:"dnsPolicyNfqueueSize,omitempty" validate:"omitempty,gte=0,lte=65535"`
 	// DNSPacketsNfqueueID is the NFQUEUE ID to use for capturing DNS packets to ensure programming IPSets occurs before
-	// the response is released. Used when DNSPolicyMode is DelayDNSPacket. [Default: 101]
+	// the response is released. Used when DNSPolicyMode is DelayDNSResponse. [Default: 101]
 	DNSPacketsNfqueueID *int `json:"dnsPacketsNfqueueID,omitempty" validate:"omitempty,gte=0,lte=65535"`
 	// DNSPacketsNfqueueSize is the size of the NFQUEUE for captured DNS packets. This is the maximum number of DNS
-	// packets that may be queued awaiting programming in the dataplane. Used when DNSPolicyMode is DelayDNSPacket.
+	// packets that may be queued awaiting programming in the dataplane. Used when DNSPolicyMode is DelayDNSResponse.
 	// [Default: 100]
 	DNSPacketsNfqueueSize *int `json:"dnsPacketsNfqueueSize,omitempty" validate:"omitempty,gte=0,lte=65535"`
-
 	// DNSPacketsNfqueueMaxHoldDuration is the max length of time to hold on to a DNS response while waiting for the
-	// the dataplane to be programmed. Used when DNSPolicyMode is DelayDNSPacket.
+	// the dataplane to be programmed. Used when DNSPolicyMode is DelayDNSResponse.
 	// [Default: 3s]
 	DNSPacketsNfqueueMaxHoldDuration *metav1.Duration `json:"dnsPacketsNfqueueMaxHoldDuration,omitempty"`
 
