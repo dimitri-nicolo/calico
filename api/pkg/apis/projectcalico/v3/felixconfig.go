@@ -619,15 +619,14 @@ type FelixConfigurationSpec struct {
 	// Used when DNSPolicyMode is DelayDeniedPacket. [Default: 100]
 	DNSPolicyNfqueueSize *int `json:"dnsPolicyNfqueueSize,omitempty" validate:"omitempty,gte=0,lte=65535"`
 	// DNSPacketsNfqueueID is the NFQUEUE ID to use for capturing DNS packets to ensure programming IPSets occurs before
-	// the response is released. Used when DNSPolicyMode is DelayDNSPacket. [Default: 101]
+	// the response is released. Used when DNSPolicyMode is DelayDNSResponse. [Default: 101]
 	DNSPacketsNfqueueID *int `json:"dnsPacketsNfqueueID,omitempty" validate:"omitempty,gte=0,lte=65535"`
 	// DNSPacketsNfqueueSize is the size of the NFQUEUE for captured DNS packets. This is the maximum number of DNS
-	// packets that may be queued awaiting programming in the dataplane. Used when DNSPolicyMode is DelayDNSPacket.
+	// packets that may be queued awaiting programming in the dataplane. Used when DNSPolicyMode is DelayDNSResponse.
 	// [Default: 100]
 	DNSPacketsNfqueueSize *int `json:"dnsPacketsNfqueueSize,omitempty" validate:"omitempty,gte=0,lte=65535"`
-
 	// DNSPacketsNfqueueMaxHoldDuration is the max length of time to hold on to a DNS response while waiting for the
-	// the dataplane to be programmed. Used when DNSPolicyMode is DelayDNSPacket.
+	// the dataplane to be programmed. Used when DNSPolicyMode is DelayDNSResponse.
 	// [Default: 3s]
 	DNSPacketsNfqueueMaxHoldDuration *metav1.Duration `json:"dnsPacketsNfqueueMaxHoldDuration,omitempty"`
 

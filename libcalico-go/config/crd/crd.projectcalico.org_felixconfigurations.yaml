@@ -311,20 +311,20 @@ spec:
               dnsPacketsNfqueueID:
                 description: 'DNSPacketsNfqueueID is the NFQUEUE ID to use for capturing
                   DNS packets to ensure programming IPSets occurs before the response
-                  is released. Used when DNSPolicyMode is DelayDNSPacket. [Default:
+                  is released. Used when DNSPolicyMode is DelayDNSResponse. [Default:
                   101]'
                 type: integer
               dnsPacketsNfqueueMaxHoldDuration:
                 description: 'DNSPacketsNfqueueMaxHoldDuration is the max length of
                   time to hold on to a DNS response while waiting for the the dataplane
-                  to be programmed. Used when DNSPolicyMode is DelayDNSPacket. [Default:
+                  to be programmed. Used when DNSPolicyMode is DelayDNSResponse. [Default:
                   3s]'
                 type: string
               dnsPacketsNfqueueSize:
                 description: 'DNSPacketsNfqueueSize is the size of the NFQUEUE for
                   captured DNS packets. This is the maximum number of DNS packets
                   that may be queued awaiting programming in the dataplane. Used when
-                  DNSPolicyMode is DelayDNSPacket. [Default: 100]'
+                  DNSPolicyMode is DelayDNSResponse. [Default: 100]'
                 type: integer
               dnsPolicyMode:
                 description: "DNSPolicyMode specifies how DNS policy programming will

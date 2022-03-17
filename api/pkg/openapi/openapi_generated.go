@@ -5021,21 +5021,21 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					},
 					"dnsPacketsNfqueueID": {
 						SchemaProps: spec.SchemaProps{
-							Description: "DNSPacketsNfqueueID is the NFQUEUE ID to use for capturing DNS packets to ensure programming IPSets occurs before the response is released. Used when DNSPolicyMode is DelayDNSPacket. [Default: 101]",
+							Description: "DNSPacketsNfqueueID is the NFQUEUE ID to use for capturing DNS packets to ensure programming IPSets occurs before the response is released. Used when DNSPolicyMode is DelayDNSResponse. [Default: 101]",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
 					},
 					"dnsPacketsNfqueueSize": {
 						SchemaProps: spec.SchemaProps{
-							Description: "DNSPacketsNfqueueSize is the size of the NFQUEUE for captured DNS packets. This is the maximum number of DNS packets that may be queued awaiting programming in the dataplane. Used when DNSPolicyMode is DelayDNSPacket. [Default: 100]",
+							Description: "DNSPacketsNfqueueSize is the size of the NFQUEUE for captured DNS packets. This is the maximum number of DNS packets that may be queued awaiting programming in the dataplane. Used when DNSPolicyMode is DelayDNSResponse. [Default: 100]",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
 					},
 					"dnsPacketsNfqueueMaxHoldDuration": {
 						SchemaProps: spec.SchemaProps{
-							Description: "DNSPacketsNfqueueMaxHoldDuration is the max length of time to hold on to a DNS response while waiting for the the dataplane to be programmed. Used when DNSPolicyMode is DelayDNSPacket. [Default: 3s]",
+							Description: "DNSPacketsNfqueueMaxHoldDuration is the max length of time to hold on to a DNS response while waiting for the the dataplane to be programmed. Used when DNSPolicyMode is DelayDNSResponse. [Default: 3s]",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
