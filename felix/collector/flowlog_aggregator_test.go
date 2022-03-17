@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -78,6 +78,7 @@ var (
 		},
 
 		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
+		hasDenyRule:  false,
 		isConnection: false,
 		inMetric: MetricValue{
 			deltaPackets: 1,
@@ -479,6 +480,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 				dstEp: nil,
 
 				ruleIDs:      []*calc.RuleID{ingressRule1Allow},
+				hasDenyRule:  false,
 				isConnection: false,
 				inMetric: MetricValue{
 					deltaPackets: 1,

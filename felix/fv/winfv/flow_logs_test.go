@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2022 Tigera, Inc. All rights reserved.
 
 package winfv_test
 
@@ -82,7 +82,7 @@ var _ = Describe("Windows flow logs test", func() {
 		// Within 60s we should see the complete set of expected allow and deny
 		// flow logs.
 		Eventually(func() error {
-			flowTester := metrics.NewFlowTester(flowLogsReaders, expectation.labels, expectation.policies, 80)
+			flowTester := metrics.NewFlowTesterDeprecated(flowLogsReaders, expectation.labels, expectation.policies, 80)
 			if fv.GetBackendType() == CalicoBackendVXLAN {
 				// Windows VXLAN can't complete a flow in time.
 				flowTester.IgnoreStartCompleteCount = true

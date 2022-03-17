@@ -1,19 +1,14 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2022 Tigera, Inc. All rights reserved.
 package metrics
 
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"sort"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/projectcalico/calico/felix/collector"
 	"github.com/projectcalico/calico/felix/fv/flowlogs"
-
-	. "github.com/onsi/gomega"
 )
 
 type Aggregation int
@@ -25,7 +20,19 @@ const (
 )
 
 const (
-	NoService = "- - - 0"
+	// Source port values to use in the comparison. Use SourcePortIsIncluded if you expect the flow to include the
+	// source port. Otherwise, use SourcePortIsNotIncluded.
+	SourcePortIsIncluded    = -1
+	SourcePortIsNotIncluded = 0
+)
+
+var (
+	NoDestService = collector.FlowService{
+		Namespace: "-",
+		Name:      "-",
+		PortName:  "-",
+		PortNum:   0,
+	}
 )
 
 type FlowLogReader interface {
@@ -41,246 +48,239 @@ type ExpectedPolicy struct {
 
 // FlowTester is a helper utility to parse and check flows.
 type FlowTester struct {
-	destPort       int
-	destPortStr    string
-	expectLabels   bool
-	expectPolicies bool
-	readers        []FlowLogReader
-	flowsStarted   []map[collector.FlowMeta]int
-	flowsCompleted []map[collector.FlowMeta]int
-	packets        []map[collector.FlowMeta]int
-	policies       []map[collector.FlowMeta][]string
-
-	// Windows VXLAN can't complete a flow in time.
-	IgnoreStartCompleteCount bool
+	options FlowTesterOptions
+	flows   map[flowMeta]collector.FlowLog
+	errors  []string
 }
 
-// NewFlowTester creates a new FlowTester initialized for the supplied felix instances.
-func NewFlowTester(readers []FlowLogReader, expectLabels, expectPolicies bool, destPort int) *FlowTester {
+type FlowTesterOptions struct {
+	// Whether to expect labels or policies in the flow logs
+	ExpectLabels   bool
+	ExpectPolicies bool
+
+	// Whether to include labels or policies in the match criteria
+	MatchLabels   bool
+	MatchPolicies bool
+
+	// Set of include filters used to only include certain flows. Set of filters is ORed.
+	Includes []IncludeFilter
+
+	// What values to check.
+	CheckPackets         bool // Checks packets in/out
+	CheckBytes           bool // Checks bytes in/out
+	CheckNumFlowsStarted bool // Checks expected number of flows were started
+	CheckFlowsCompleted  bool // Checks the flows completed match the flows started
+}
+
+type flowMeta struct {
+	collector.FlowMeta
+	policies string
+	labels   string
+}
+
+type IncludeFilter func(collector.FlowLog) bool
+
+func IncludeByDestPort(port int) IncludeFilter {
+	return func(f collector.FlowLog) bool {
+		return f.FlowMeta.Tuple.GetDestPort() == port
+	}
+}
+
+// NewFlowTester creates a new FlowTesterDeprecated initialized for the supplied felix instances.
+func NewFlowTester(options FlowTesterOptions) *FlowTester {
 	return &FlowTester{
-		destPort:       destPort,
-		destPortStr:    fmt.Sprint(destPort),
-		expectLabels:   expectLabels,
-		expectPolicies: expectPolicies,
-		readers:        readers,
-		flowsStarted:   make([]map[collector.FlowMeta]int, len(readers)),
-		flowsCompleted: make([]map[collector.FlowMeta]int, len(readers)),
-		packets:        make([]map[collector.FlowMeta]int, len(readers)),
-		policies:       make([]map[collector.FlowMeta][]string, len(readers)),
+		options: options,
 	}
 }
 
-// PopulateFromFlowLogs initializes the flow tester from the flow logs.
-func (t *FlowTester) PopulateFromFlowLogs(flowLogsOutput string) error {
-	for ii, f := range t.readers {
-		t.flowsStarted[ii] = make(map[collector.FlowMeta]int)
-		t.flowsCompleted[ii] = make(map[collector.FlowMeta]int)
-		t.packets[ii] = make(map[collector.FlowMeta]int)
-		t.policies[ii] = make(map[collector.FlowMeta][]string)
+// PopulateFromFlowLogs populates the flow tester from the flow logs. The flow tester may be re-used.
+func (t *FlowTester) PopulateFromFlowLogs(reader FlowLogReader) error {
+	// Reset the tester.
+	t.reset()
 
-		cwlogs, err := flowlogs.ReadFlowLogs(f.FlowLogDir(), flowLogsOutput)
-		if err != nil {
-			return err
-		}
-
-		for _, fl := range cwlogs {
-			if fl.Tuple.GetDestPort() != t.destPort {
-				continue
-			}
-
-			// If endpoint Labels are expected, and
-			// aggregation permits this, check that they are
-			// there.
-			labelsExpected := t.expectLabels
-			if labelsExpected {
-				if fl.FlowLabels.SrcLabels == nil {
-					return errors.New(fmt.Sprintf("Missing src Labels in %v: Meta %v", fl.FlowLabels, fl.FlowMeta))
-				}
-				if fl.FlowLabels.DstLabels == nil {
-					return errors.New(fmt.Sprintf("Missing dst Labels in %v", fl.FlowLabels))
-				}
-			} else {
-				if fl.FlowLabels.SrcLabels != nil {
-					return errors.New(fmt.Sprintf("Unexpected src Labels in %v", fl.FlowLabels))
-				}
-				if fl.FlowLabels.DstLabels != nil {
-					return errors.New(fmt.Sprintf("Unexpected dst Labels in %v", fl.FlowLabels))
-				}
-			}
-
-			// Now discard Labels so that our expectation code
-			// below doesn't ever have to specify them.
-			fl.FlowLabels.SrcLabels = nil
-			fl.FlowLabels.DstLabels = nil
-
-			if t.expectPolicies {
-				if len(fl.FlowPolicies) == 0 {
-					return errors.New(fmt.Sprintf("Missing Policies in %v", fl.FlowMeta))
-				}
-				pols := []string{}
-				for p := range fl.FlowPolicies {
-					pols = append(pols, p)
-				}
-				t.policies[ii][fl.FlowMeta] = pols
-			} else if len(fl.FlowPolicies) != 0 {
-				return errors.New(fmt.Sprintf("Unexpected Policies %v in %v", fl.FlowPolicies, fl.FlowMeta))
-			}
-
-			// Accumulate flow and packet counts for this FlowMeta.
-			t.flowsStarted[ii][fl.FlowMeta] += fl.NumFlowsStarted
-			t.flowsCompleted[ii][fl.FlowMeta] += fl.NumFlowsCompleted
-			t.packets[ii][fl.FlowMeta] += fl.PacketsIn + fl.PacketsOut
-		}
-		for meta, count := range t.flowsStarted[ii] {
-			log.Infof("started: %d %v", count, meta)
-		}
-		for meta, count := range t.flowsCompleted[ii] {
-			log.Infof("completed: %d %v", count, meta)
-		}
-
-		for meta, pols := range t.policies[ii] {
-			log.Infof("Policies: %v %v", pols, meta)
-		}
-
-		if !t.IgnoreStartCompleteCount {
-			// For each distinct FlowMeta, the counts of flows started
-			// and completed should be the same.
-			for meta, count := range t.flowsCompleted[ii] {
-				if count != t.flowsStarted[ii][meta] {
-					return errors.New(fmt.Sprintf("Wrong started count (%d != %d) for %v",
-						t.flowsStarted[ii][meta], count, meta))
-				}
-			}
-		}
-
-		// Check that we have non-zero packets for each flow.
-		for meta, count := range t.packets[ii] {
-			if count == 0 {
-				return errors.New(fmt.Sprintf("No packets for %v", meta))
-			}
-		}
+	// Read flows from the logs.
+	cwlogs, err := flowlogs.ReadFlowLogs(reader.FlowLogDir(), "file")
+	if err != nil {
+		return err
 	}
 
-	return nil
-}
-
-// CheckFlow flow logs with the given src/dst metadata and IPs.
-// Specifically there should be numMatchingMetas distinct
-// FlowMetas that match those, and numFlowsPerMeta flows for each
-// distinct FlowMeta.  actions indicates the expected handling on
-// each host: "allow" or "deny"; or "" if the flow isn't
-// explicitly allowed or denied on that host (which means that
-// there won't be a flow log).
-func (t *FlowTester) CheckFlow(srcMeta, srcIP, dstMeta, dstIP, dstSvc string, numMatchingMetas, numFlowsPerMeta int, actionsPolicies []ExpectedPolicy) error {
-
-	var errs []string
-
-	// Validate input.
-	Expect(actionsPolicies).To(HaveLen(len(t.readers)), "ActionsPolicies should be specified for each felix instance monitored by the FlowTester")
-
-	// Host loop.
-	for ii, handling := range actionsPolicies {
-		// Skip if the handling for this host is "".
-		if handling.Action == "" && handling.Reporter == "" {
+	// Populate the flows.
+	for _, fl := range cwlogs {
+		include := false
+		for ii := range t.options.Includes {
+			if t.options.Includes[ii](fl) {
+				include = true
+				break
+			}
+		}
+		if !include {
 			continue
 		}
-		reporter := handling.Reporter
-		action := handling.Action
-		expectedPolicies := []string{}
-		expectedPoliciesStr := "-"
-		if t.expectPolicies {
-			expectedPolicies = handling.Policies
-			expectedPoliciesStr = "[" + strings.Join(expectedPolicies, ",") + "]"
-		}
 
-		// Build a FlowMeta with the metadata and IPs that we are looking for.
-		var template string
-		if dstIP != "" {
-			template = "1 2 " + srcMeta + " - " + dstMeta + " - " + srcIP + " " + dstIP + " 6 0 " + t.destPortStr + " 1 1 0 " + reporter + " 4 6 260 364 " + action + " " + expectedPoliciesStr + " - 0 " + dstSvc + " - 0 - 0 0 0 0 0 0 0 0 0 0 0 0"
+		// Check if labels or policies are expected.
+		labelsExpected := t.options.ExpectLabels
+		if labelsExpected {
+			if fl.FlowLabels.SrcLabels == nil {
+				return errors.New(fmt.Sprintf("Missing src Labels in %v: Meta %v", fl.FlowLabels, fl.FlowMeta))
+			}
+			if fl.FlowLabels.DstLabels == nil {
+				return errors.New(fmt.Sprintf("Missing dst Labels in %v", fl.FlowLabels))
+			}
 		} else {
-			template = "1 2 " + srcMeta + " - " + dstMeta + " - - - 6 0 " + t.destPortStr + " 1 1 0 " + reporter + " 4 6 260 364 " + action + " " + expectedPoliciesStr + " - 0 " + dstSvc + " - 0 - 0 0 0 0 0 0 0 0 0 0 0 0"
-		}
-		fl := &collector.FlowLog{}
-		err := fl.Deserialize(template)
-		Expect(err).ToNot(HaveOccurred())
-		log.WithField("template", template).WithField("meta", fl.FlowMeta).Info("Looking for")
-		if t.expectPolicies {
-			for meta, actualPolicies := range t.policies[ii] {
-				fl.FlowMeta.Tuple.SetSourcePort(meta.Tuple.GetSourcePort())
-				if meta != fl.FlowMeta {
-					continue
-				}
-
-				// Sort the policies - they should be identical.
-				sort.Strings(expectedPolicies)
-				sort.Strings(actualPolicies)
-
-				if !reflect.DeepEqual(expectedPolicies, actualPolicies) {
-					errs = append(errs, fmt.Sprintf("Expected Policies %v to be present in %v", expectedPolicies, actualPolicies))
-				}
-
-				// Record that we've ticked off this flow.
-				t.policies[ii][meta] = []string{}
+			if fl.FlowLabels.SrcLabels != nil {
+				return errors.New(fmt.Sprintf("Unexpected src Labels in %v", fl.FlowLabels))
 			}
-			fl.FlowMeta.Tuple.SetSourcePort(0)
-		}
-
-		matchingMetas := 0
-		for meta, count := range t.flowsCompleted[ii] {
-			fl.FlowMeta.Tuple.SetSourcePort(meta.Tuple.GetSourcePort())
-			if meta == fl.FlowMeta {
-				// This flow log matches what
-				// we're looking for.
-				if !t.IgnoreStartCompleteCount {
-					if count != numFlowsPerMeta {
-						errs = append(errs, fmt.Sprintf("Wrong flow count (%d != %d) for %v", count, numFlowsPerMeta, meta))
-					}
-				}
-				matchingMetas += 1
-				// Record that we've ticked off this flow.
-				t.flowsCompleted[ii][meta] = 0
+			if fl.FlowLabels.DstLabels != nil {
+				return errors.New(fmt.Sprintf("Unexpected dst Labels in %v", fl.FlowLabels))
 			}
 		}
-		fl.FlowMeta.Tuple.SetSourcePort(0)
-		if matchingMetas != numMatchingMetas {
-			errs = append(errs, fmt.Sprintf("Wrong log count (%d != %d) for %v", matchingMetas, numMatchingMetas, fl.FlowMeta))
+		if t.options.ExpectPolicies {
+			if len(fl.FlowPolicies) == 0 {
+				return errors.New(fmt.Sprintf("Missing Policies in %v", fl.FlowMeta))
+			}
+		} else if len(fl.FlowPolicies) != 0 {
+			return errors.New(fmt.Sprintf("Unexpected Policies %v in %v", fl.FlowPolicies, fl.FlowMeta))
 		}
+
+		// Never include source port as it is usually ephemeral and difficult to test for.  Instead if the source port
+		// is 0 then leave as 0 (since it is aggregated out), otherwise set to -1.
+		if fl.FlowMeta.Tuple.GetSourcePort() != SourcePortIsNotIncluded {
+			fl.FlowMeta.Tuple.SetSourcePort(SourcePortIsIncluded)
+		}
+
+		fm := t.flowMetaFromFlowLog(fl)
+		existing, ok := t.flows[fm]
+		if !ok {
+			t.flows[fm] = fl
+			continue
+		}
+
+		// Update the flow.
+		if fl.StartTime.Before(existing.StartTime) {
+			fl.EndTime = existing.EndTime
+		} else {
+			fl.StartTime = existing.StartTime
+		}
+		existing.EndTime = fl.EndTime
+		fl.FlowReportedStats.Add(existing.FlowReportedStats)
+		t.flows[fm] = fl
 	}
 
-	if len(errs) == 0 {
-		return nil
-	}
-	return errors.New(strings.Join(errs, "\n==============\n"))
-}
-
-func (t *FlowTester) CheckAllFlowsAccountedFor() error {
-	// Finally check that there are no remaining flow logs that we did not expect.
-	var errs []string
-	for ii := range t.readers {
-		for meta, count := range t.flowsCompleted[ii] {
-			if count != 0 {
-				errs = append(errs, fmt.Sprintf("Unexpected flow logs (%d) for %v", count, meta))
+	if t.options.CheckFlowsCompleted {
+		// For each distinct FlowMeta, the counts of flows started and completed should be the same.
+		for fm, fl := range t.flows {
+			if fl.FlowReportedStats.NumFlowsStarted != fl.FlowReportedStats.NumFlowsCompleted {
+				return errors.New(fmt.Sprintf("Flow started/completed counts do not match (%d != %d): %#v",
+					fl.FlowReportedStats.NumFlowsStarted, fl.FlowReportedStats.NumFlowsCompleted, fm))
 			}
 		}
 	}
 
-	if len(errs) == 0 {
-		return nil
+	// Check that we have non-zero packets for each flow.
+	for fm, fl := range t.flows {
+		if fl.FlowReportedStats.PacketsOut+fl.FlowReportedStats.PacketsIn == 0 {
+			return errors.New(fmt.Sprintf("Flow has no packets: %#v", fm))
+		}
 	}
-	return errors.New(strings.Join(errs, "\n==============\n"))
-}
 
-func (t *FlowTester) IterFlows(flowLogsOutput string, cb func(collector.FlowLog) error) error {
-	for _, f := range t.readers {
-		flogs, err := flowlogs.ReadFlowLogs(f.FlowLogDir(), flowLogsOutput)
-		if err != nil {
-			return err
-		}
-		for _, fl := range flogs {
-			if err := cb(fl); err != nil {
-				return err
-			}
-		}
-	}
 	return nil
+}
+
+// CheckFlow checks that the flow specified is in the logs.  Flows are identified by:
+// - FlowMeta
+// - (optionally) Policies
+// - (optionally) Labels
+//
+// And checks:
+// - FlowLogStatistics
+//
+// After CheckFlow has been called for all expected flows, call Finish to check that everything has
+// been explicitly checked.
+func (t *FlowTester) CheckFlow(fl collector.FlowLog) {
+	fm := t.flowMetaFromFlowLog(fl)
+	existing, ok := t.flows[fm]
+	if !ok {
+		t.errors = append(t.errors, fmt.Sprintf("Flow was not present in logs: %#v", fm))
+		return
+	}
+	delete(t.flows, fm)
+
+	var errs []string
+	if t.options.CheckBytes {
+		if fl.BytesIn != existing.BytesIn {
+			errs = append(errs, fmt.Sprintf("BytesIn actual != expected (%d != %d)", existing.BytesIn, fl.BytesIn))
+		}
+		if fl.BytesOut != existing.BytesOut {
+			errs = append(errs, fmt.Sprintf("BytesOut actual != expected (%d != %d)", existing.BytesOut, fl.BytesOut))
+		}
+	}
+
+	if t.options.CheckPackets {
+		if fl.PacketsIn != existing.PacketsIn {
+			errs = append(errs, fmt.Sprintf("PacketsIn actual != expected (%d != %d)", existing.PacketsIn, fl.PacketsIn))
+		}
+		if fl.PacketsOut != existing.PacketsOut {
+			errs = append(errs, fmt.Sprintf("PacketsOut actual != expected (%d != %d)", existing.PacketsOut, fl.PacketsOut))
+		}
+	}
+
+	if t.options.CheckNumFlowsStarted {
+		if fl.NumFlowsStarted != existing.NumFlowsStarted {
+			errs = append(errs, fmt.Sprintf("NumFlowsStarted actual != expected (%d != %d)", existing.NumFlowsStarted, fl.NumFlowsStarted))
+		}
+	}
+
+	if len(errs) != 0 {
+		t.errors = append(t.errors, fmt.Sprintf("Statistics incorrect: %#v\n- %s", fl, strings.Join(errs, "/n- ")))
+	}
+}
+
+// Finish is called after CheckFlow is called for every expected flow. This returns an error containing all found
+// deltas.
+func (t *FlowTester) Finish() error {
+	for _, fl := range t.flows {
+		t.errors = append(t.errors, fmt.Sprintf("Unchecked flow: %#v", fl))
+	}
+
+	if len(t.errors) == 0 {
+		return nil
+	}
+	return errors.New(strings.Join(t.errors, "\n==============\n"))
+}
+
+// Return a test-specific flowMeta from the flowLog.  We may include policies and labels in the metadata so that
+// flows with different labels or policies will be expicitly matched.
+func (t *FlowTester) flowMetaFromFlowLog(fl collector.FlowLog) flowMeta {
+	// If we are including the labels or policies in the match then include them in the meta. We need to convert the
+	// policies and labels to a single string to make it hashable.
+	fm := flowMeta{
+		FlowMeta: fl.FlowMeta,
+	}
+	if t.options.MatchLabels {
+		var srcLabels, dstLabels []string
+		for k, v := range fl.FlowLabels.SrcLabels {
+			srcLabels = append(srcLabels, k+"="+v)
+		}
+		for k, v := range fl.FlowLabels.DstLabels {
+			dstLabels = append(dstLabels, k+"="+v)
+		}
+		sort.Strings(srcLabels)
+		sort.Strings(dstLabels)
+		fm.labels = strings.Join(srcLabels, ";") + "|" + strings.Join(dstLabels, ";")
+	}
+	if t.options.MatchPolicies {
+		var policies []string
+		for p := range fl.FlowPolicies {
+			policies = append(policies, p)
+		}
+		sort.Strings(policies)
+		fm.policies = strings.Join(policies, ";")
+	}
+	return fm
+}
+
+// Reset accumulated test data.
+func (t *FlowTester) reset() {
+	t.flows = make(map[flowMeta]collector.FlowLog)
+	t.errors = nil
 }

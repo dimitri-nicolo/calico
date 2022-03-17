@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -110,6 +110,9 @@ type MetricUpdate struct {
 
 	// Rules identification
 	ruleIDs []*calc.RuleID
+
+	// Whether the rules IDs contains a deny rule.
+	hasDenyRule bool
 
 	// Sometimes we may need to send updates without having all the rules
 	// in place. This field will help aggregators determine if they need

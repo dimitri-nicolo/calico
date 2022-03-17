@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2022 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -62,13 +62,16 @@ const RuleTraceInitLen = 10
 
 // RuleTrace represents the list of rules (i.e, a Trace) that a packet hits.
 // The action of a RuleTrace object is the final action that is not a
-// next-Tier/pass action. A RuleTrace also contains a endpoint that the rule
-// trace applied to,
+// next-Tier/pass action.
 type RuleTrace struct {
 	path []*calc.RuleID
 
 	// The reported path. This is calculated and stored when metrics are reported.
 	rulesToReport []*calc.RuleID
+
+	// Whether there are any deny rules within this set of rule hits. This will either be the final enforced deny or
+	// a staged policy deny.
+	hasDenyRule bool
 
 	// Counters to store the packets and byte counts for the RuleTrace
 	pktsCtr  Counter
@@ -128,6 +131,7 @@ func (t *RuleTrace) Path() []*calc.RuleID {
 	// enforced policy match, or the end-of-tier action (in which case there will be a hit for each staged policy).
 	//
 	// We don't add end of tier passes since they are only used for internal bookkeeping.
+	t.hasDenyRule = false
 	for i := 0; i <= t.verdictIdx; i++ {
 		r := t.path[i]
 		if r == nil || r.IsEndOfTierPass() {
@@ -156,15 +160,32 @@ func (t *RuleTrace) Path() []*calc.RuleID {
 
 			// Add the report and then continue to the next entry in the path.
 			t.rulesToReport = append(t.rulesToReport, r)
+			if r.Action == rules.RuleActionDeny {
+				t.hasDenyRule = true
+			}
+
 			continue
 		}
 
 		// This is an enforced policy, so just add the rule. There should be no more rules this tier, so jump to the end
 		// of the tier (we might already be at that index, e.g. if we are processing the verdict).
 		t.rulesToReport = append(t.rulesToReport, r)
+		if r.Action == rules.RuleActionDeny {
+			t.hasDenyRule = true
+		}
+
 		i = endOfTierIndex()
 	}
 	return t.rulesToReport
+}
+
+func (t *RuleTrace) HasDenyRule() bool {
+	if t.rulesToReport != nil {
+		// The deny rules flag is calculated as part of the rule calculation.
+		_ = t.Path()
+	}
+
+	return t.hasDenyRule
 }
 
 func (t *RuleTrace) ToVerdictString() string {
@@ -813,10 +834,10 @@ func (d *Data) metricUpdateIngressConn(ut UpdateType) MetricUpdate {
 		natOutgoingPort: d.natOutgoingPort,
 		srcEp:           d.srcEp,
 		dstEp:           d.dstEp,
-
-		dstService:   metricDstServiceInfo,
-		ruleIDs:      d.IngressRuleTrace.Path(),
-		isConnection: d.isConnection,
+		dstService:      metricDstServiceInfo,
+		ruleIDs:         d.IngressRuleTrace.Path(),
+		hasDenyRule:     d.IngressRuleTrace.HasDenyRule(),
+		isConnection:    d.isConnection,
 		inMetric: MetricValue{
 			deltaPackets:             d.conntrackPktsCtr.Delta(),
 			deltaBytes:               d.conntrackBytesCtr.Delta(),
@@ -860,6 +881,7 @@ func (d *Data) metricUpdateEgressConn(ut UpdateType) MetricUpdate {
 		dstEp:           d.dstEp,
 		dstService:      metricDstServiceInfo,
 		ruleIDs:         d.EgressRuleTrace.Path(),
+		hasDenyRule:     d.EgressRuleTrace.HasDenyRule(),
 		isConnection:    d.isConnection,
 		inMetric: MetricValue{
 			deltaPackets: d.conntrackPktsCtrReverse.Delta(),
@@ -903,8 +925,8 @@ func (d *Data) metricUpdateIngressNoConn(ut UpdateType) MetricUpdate {
 		dstEp:           d.dstEp,
 		dstService:      metricDstServiceInfo,
 		ruleIDs:         d.IngressRuleTrace.Path(),
+		hasDenyRule:     d.IngressRuleTrace.HasDenyRule(),
 		isConnection:    d.isConnection,
-
 		inMetric: MetricValue{
 			deltaPackets: d.IngressRuleTrace.pktsCtr.Delta(),
 			deltaBytes:   d.IngressRuleTrace.bytesCtr.Delta(),
@@ -943,8 +965,8 @@ func (d *Data) metricUpdateEgressNoConn(ut UpdateType) MetricUpdate {
 		dstEp:           d.dstEp,
 		dstService:      metricDstServiceInfo,
 		ruleIDs:         d.EgressRuleTrace.Path(),
+		hasDenyRule:     d.EgressRuleTrace.HasDenyRule(),
 		isConnection:    d.isConnection,
-
 		outMetric: MetricValue{
 			deltaPackets: d.EgressRuleTrace.pktsCtr.Delta(),
 			deltaBytes:   d.EgressRuleTrace.bytesCtr.Delta(),
@@ -993,6 +1015,7 @@ func (d *Data) metricUpdateOrigSourceIPs(ut UpdateType) MetricUpdate {
 		dstService:      metricDstServiceInfo,
 		origSourceIPs:   d.origSourceIPs.Copy(),
 		ruleIDs:         d.IngressRuleTrace.Path(),
+		hasDenyRule:     d.IngressRuleTrace.HasDenyRule(),
 		unknownRuleID:   unknownRuleID,
 		isConnection:    d.isConnection,
 		processName:     d.DestProcessData().Name,

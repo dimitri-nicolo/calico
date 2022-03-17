@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -81,6 +81,7 @@ var (
 		updateType:   UpdateTypeReport,
 		tuple:        tuple1,
 		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
+		hasDenyRule:  false,
 		isConnection: false,
 		inMetric: MetricValue{
 			deltaPackets: 1,
@@ -94,6 +95,7 @@ var (
 		tuple:        tuple1,
 		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
 		isConnection: true,
+		hasDenyRule:  false,
 		inMetric: MetricValue{
 			deltaPackets: 2,
 			deltaBytes:   22,
@@ -107,6 +109,7 @@ var (
 		updateType:   UpdateTypeExpire,
 		tuple:        tuple1,
 		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
+		hasDenyRule:  false,
 		isConnection: true,
 		inMetric: MetricValue{
 			deltaPackets: 4,
@@ -121,6 +124,7 @@ var (
 		updateType:   UpdateTypeReport,
 		tuple:        tuple1,
 		ruleIDs:      []*calc.RuleID{egressRule2Deny},
+		hasDenyRule:  true,
 		isConnection: false,
 		inMetric: MetricValue{
 			deltaPackets: 2,
@@ -131,6 +135,7 @@ var (
 		updateType:   UpdateTypeExpire,
 		tuple:        tuple1,
 		ruleIDs:      []*calc.RuleID{egressRule2Deny},
+		hasDenyRule:  true,
 		isConnection: false,
 		inMetric: MetricValue{
 			deltaPackets: 0,
@@ -141,6 +146,7 @@ var (
 		updateType:   UpdateTypeReport,
 		tuple:        tuple2,
 		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
+		hasDenyRule:  false,
 		isConnection: true,
 		inMetric: MetricValue{
 			deltaPackets: 7,
@@ -151,6 +157,7 @@ var (
 		updateType:   UpdateTypeExpire,
 		tuple:        tuple2,
 		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
+		hasDenyRule:  false,
 		isConnection: true,
 		inMetric: MetricValue{
 			deltaPackets: 8,
@@ -161,6 +168,7 @@ var (
 		updateType:   UpdateTypeReport,
 		tuple:        tuple3,
 		ruleIDs:      []*calc.RuleID{egressRule2Deny},
+		hasDenyRule:  true,
 		isConnection: false,
 		inMetric: MetricValue{
 			deltaPackets: 2,
@@ -171,6 +179,7 @@ var (
 		updateType:   UpdateTypeExpire,
 		tuple:        tuple3,
 		ruleIDs:      []*calc.RuleID{egressRule2Deny},
+		hasDenyRule:  true,
 		isConnection: false,
 		inMetric: MetricValue{
 			deltaPackets: 0,
@@ -181,6 +190,7 @@ var (
 		updateType:   UpdateTypeReport,
 		tuple:        tuple1,
 		ruleIDs:      []*calc.RuleID{ingressRule3Pass, ingressRule1Allow},
+		hasDenyRule:  false,
 		isConnection: true,
 		inMetric: MetricValue{
 			deltaPackets: 2,
@@ -195,6 +205,7 @@ var (
 		updateType:   UpdateTypeExpire,
 		tuple:        tuple1,
 		ruleIDs:      []*calc.RuleID{ingressRule3Pass, ingressRule1Allow},
+		hasDenyRule:  false,
 		isConnection: true,
 		inMetric: MetricValue{
 			deltaPackets: 4,
@@ -209,6 +220,7 @@ var (
 		updateType:   UpdateTypeReport,
 		tuple:        tuple1,
 		ruleIDs:      []*calc.RuleID{egressRule3Pass, egressRule2Deny},
+		hasDenyRule:  true,
 		isConnection: false,
 		inMetric: MetricValue{
 			deltaPackets: 2,
@@ -219,6 +231,7 @@ var (
 		updateType:   UpdateTypeExpire,
 		tuple:        tuple1,
 		ruleIDs:      []*calc.RuleID{egressRule3Pass, egressRule2Deny},
+		hasDenyRule:  true,
 		isConnection: false,
 		inMetric: MetricValue{
 			deltaPackets: 0,
@@ -229,6 +242,7 @@ var (
 		updateType:   UpdateTypeReport,
 		tuple:        tuple1,
 		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
+		hasDenyRule:  false,
 		isConnection: true,
 		inMetric: MetricValue{
 			deltaPackets:             200,

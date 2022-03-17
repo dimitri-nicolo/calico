@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -47,6 +47,7 @@ var (
 		tuple:        tuple1,
 		isConnection: true,
 		ruleIDs:      []*calc.RuleID{ingressRulePolicy3Deny},
+		hasDenyRule:  true,
 		inMetric: MetricValue{
 			deltaPackets: 1,
 			deltaBytes:   1,
@@ -57,6 +58,7 @@ var (
 		tuple:        tuple2,
 		isConnection: true,
 		ruleIDs:      []*calc.RuleID{ingressRulePolicy3Deny},
+		hasDenyRule:  true,
 		inMetric: MetricValue{
 			deltaPackets: 1,
 			deltaBytes:   1,
@@ -67,6 +69,7 @@ var (
 		tuple:        tuple3,
 		isConnection: true,
 		ruleIDs:      []*calc.RuleID{ingressRulePolicy4Deny},
+		hasDenyRule:  true,
 		inMetric: MetricValue{
 			deltaPackets: 1,
 			deltaBytes:   1,
@@ -429,6 +432,7 @@ func BenchmarkCalicoDeniedPacketPolicyAggregateKey(b *testing.B) {
 		tuple:        tuple1,
 		isConnection: true,
 		ruleIDs:      []*calc.RuleID{rid},
+		hasDenyRule:  true,
 		inMetric: MetricValue{
 			deltaPackets: 1,
 			deltaBytes:   1,
