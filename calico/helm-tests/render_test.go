@@ -107,7 +107,7 @@ func render(values HelmValues) (map[string]runtime.Object, error) {
 	paths := strings.Split(chartPaths, ",")
 	for _, path := range paths {
 		log.Print(path)
-		cmd := exec.Command("helm", "template", "-f", f.Name())
+		cmd := exec.Command("helm", "template", "-f", f.Name(), "-n", "tigera-operator")
 		cmd.Args = append(cmd.Args, path)
 
 		cmd.Stdout = &stdout
