@@ -172,11 +172,11 @@ type latencyData struct {
 	// The timestamp on the packet. Used to determine the request/response latency.
 	packetTimestamp uint64
 
-	// The serverIP, client IP and DNS packet for a DNS response. If packet is nil then this entry corresponds to
-	// a request, otherwise it corresponds to a response.
-	packet   *layers.DNS
-	serverIP net.IP
-	clientIP net.IP
+	// The serverIP, client IP and DNS packet for a DNS response.
+	isResponse bool
+	packet     *layers.DNS
+	serverIP   net.IP
+	clientIP   net.IP
 }
 
 type DataWithTimestamp struct {
@@ -420,6 +420,8 @@ func (s *DomainInfoStore) OnUpdate(msg interface{}) {
 //
 // Note that during initial sync, HandleUpdates may be called multiple times before UpdatesApplied.
 func (s *DomainInfoStore) HandleUpdates() (needsDataplaneSync bool) {
+	log.Debug("HandeleUpdates called from dataplane")
+
 	// Move current data into the pending data.
 	s.mutex.Lock()
 	s.handledCallbacks = append(s.handledCallbacks, s.callbacks...)
@@ -451,10 +453,13 @@ func (s *DomainInfoStore) HandleUpdates() (needsDataplaneSync bool) {
 	if !s.needsDataplaneSync {
 		// Dataplane does not need any updates, so just call through immediately to UpdatesApplied so that we don't wait
 		// unneccessarily for other updates to be applied before we invoke any callbacks.
+		log.Debug("No dataplane syncs are required")
 		s.UpdatesApplied()
+		return false
 	}
 
-	return s.needsDataplaneSync
+	log.Debug("Dataplane syncs are required")
+	return true
 }
 
 // UpdatesApplied is called by the dataplane when the updates associated after the last invocation of HandleUpdates have
@@ -474,6 +479,7 @@ func (s *DomainInfoStore) UpdatesApplied() {
 
 	// Invoke the callbacks on another goroutine to unblock the main dataplane.
 	if len(callbacks) > 0 {
+		log.Debug("Invoking callbacks for DNS packets")
 		go func() {
 			for i := range callbacks {
 				callbacks[i]()
@@ -500,6 +506,14 @@ func (s *DomainInfoStore) loop(saveTimerC, gcTimerC, latencyTimerC <-chan time.T
 func (s *DomainInfoStore) loopIteration(saveTimerC, gcTimerC, latencyTimerC <-chan time.Time) {
 	select {
 	case msg := <-s.msgChannel:
+		releaseImmediately := true
+		defer func() {
+			if releaseImmediately && msg.Callback != nil {
+				log.Debug("Releasing packet immediately")
+				msg.Callback()
+			}
+		}()
+
 		// TODO: Test and fix handling of DNS over IPv6.  The `layers.LayerTypeIPv4`
 		// in the next line is clearly a v4 assumption, and some of the code inside
 		// `nfnetlink.SubscribeDNS` also looks v4-specific.
@@ -561,6 +575,10 @@ func (s *DomainInfoStore) loopIteration(saveTimerC, gcTimerC, latencyTimerC <-ch
 			s.processDNSResponsePacket(dns, msg.Callback)
 			s.processDNSResponsePacketForLogging(ipv4, dns, msg.Timestamp)
 			prometheusRespPacketsInCount.Inc()
+
+			// Do not release the response packet immediately (only relevant if there is a release callback). If there
+			// is a response callback the callback will be invoked once any associated IPSet updates have been applied.
+			releaseImmediately = false
 		}
 	case expiry := <-s.mappingExpiryChannel:
 		s.processMappingExpiry(expiry.name, expiry.value, s.nowFunc())
@@ -749,36 +767,42 @@ func (s *DomainInfoStore) processDNSRequestPacketForLogging(ipv4 *layers.IPv4, d
 		// it for latency.
 		return
 	}
+
 	if timestamp == 0 {
 		// No packetTimestamp on this packet.
 		log.Debugf("DNS-LATENCY: Missing packetTimestamp on DNS request with ID %v", dns.ID)
-		return
 	}
 
-	// From here on we know we have a packetTimestamp for the packet in hand.  It's a number of
-	// nanoseconds, measured from some arbitrary point in the past.  (Possibly not from the same
-	// base point as time.Time, so don't assume that.)
 	key := dnsExchangeKey{ipv4.SrcIP.String(), dns.ID}
 	if data, exists := s.latencyData[key]; !exists {
 		// There is no stored entry, so store the request.
-		log.Debugf("DNS-LATENCY: DNS request in hand with ID %v", key)
+		log.Debugf("DNS-LATENCY: Received DNS request with ID %v", key)
+		s.latencyData[key] = latencyData{
+			queueTimestamp:  s.nowFunc().UnixMilli(),
+			packetTimestamp: timestamp,
+		}
+	} else if !data.isResponse {
+		// We already have a request stored for this key. Update it. This is not expected, but we should protect
+		// as best we can against duplicate IDs.
+		log.Warnf("DNS-LATENCY: Received DNS request but already have DNS request with ID %v", key)
 		s.latencyData[key] = latencyData{
 			queueTimestamp:  s.nowFunc().UnixMilli(),
 			packetTimestamp: timestamp,
 		}
 	} else if data.packet == nil {
-		// We already have a request stored for this key. Update it. This is not expected, but we should protect
-		// as best we can against duplicate IDs.
-		log.Warnf("DNS-LATENCY: Already have outstanding DNS request with ID %v", key)
-		s.latencyData[key] = latencyData{
-			queueTimestamp:  s.nowFunc().UnixMilli(),
-			packetTimestamp: timestamp,
-		}
+		// Stored response packet is nil which means we've already logged it, so nothing more to do other than remove
+		// the cached entry.
+		log.Debugf("DNS-LATENCY: Received DNS request and already have logged response for ID %v", key)
+		delete(s.latencyData, key)
+	} else if timestamp == 0 {
+		log.Debugf("DNS-LATENCY: Received DNS request with no timestamp and already have response for ID %v", key)
+		s.collector.LogDNS(ipv4.DstIP, ipv4.SrcIP, data.packet, nil)
+		delete(s.latencyData, key)
 	} else {
 		// We have received a request, and have a stored response (so they were out of order). Remove the record,
 		// calculate latency and log.
 		latency := time.Duration(data.packetTimestamp - timestamp)
-		log.Debugf("DNS-LATENCY: response before request: %v for ID %v", latency, key)
+		log.Debugf("DNS-LATENCY: Received DNS request and already have response: Latency %v for ID %v", latency, key)
 		s.collector.LogDNS(ipv4.DstIP, ipv4.SrcIP, data.packet, &latency)
 		delete(s.latencyData, key)
 	}
@@ -815,45 +839,65 @@ func (s *DomainInfoStore) processDNSResponsePacketForLogging(ipv4 *layers.IPv4, 
 		return
 	}
 
+	// Calculate the key.
+	key := dnsExchangeKey{ipv4.DstIP.String(), dns.ID}
+
 	if timestamp == 0 {
 		// No packetTimestamp on this packet, just log immediately since we cannot gather latency info.
-		log.Debugf("DNS-LATENCY: Missing packetTimestamp on DNS request with ID %v", dns.ID)
+		log.Debugf("DNS-LATENCY: Missing timestamp on DNS response with ID %v", dns.ID)
 		s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns, nil)
-		return
+
+		// We may still want to temporarily process the response to match it up with a request so that we don't
+		// write out warning logs, but we no longer need the actual DNS packet.
+		dns = nil
 	}
 
 	// From here on we know we have a packetTimestamp for the packet in hand.  It's a number of
 	// nanoseconds, measured from some arbitrary point in the past.  (Possibly not from the same
 	// base point as time.Time, so don't assume that.)
-	key := dnsExchangeKey{ipv4.DstIP.String(), dns.ID}
 	if data, exists := s.latencyData[key]; !exists {
-		// There is no stored entry, so store the response.
-		log.Debugf("DNS-LATENCY: DNS response in hand with ID %v", key)
+		// There is no stored entry, so store the response. We can marry this up to a request that might be arriving
+		// shortly.
+		log.Debugf("DNS-LATENCY: Received DNS response with no request for ID %v", key)
 		s.latencyData[key] = latencyData{
 			queueTimestamp:  s.nowFunc().UnixMilli(),
 			packetTimestamp: timestamp,
+			isResponse:      true,
 			serverIP:        ipv4.SrcIP,
 			clientIP:        ipv4.DstIP,
 			packet:          dns,
 		}
-	} else if data.packet == nil {
-		// We have received a response, and have a stored request. Remove the record, calculate latency and log.
-		latency := time.Duration(timestamp - data.packetTimestamp)
-		log.Debugf("DNS-LATENCY: response after request: %v for ID %v", latency, key)
-		s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns, &latency)
+	} else if data.isResponse {
+		// We have received a response and already have a stored response. Send a log for the previous response
+		// (if we hadn't already sent it) and update the entry.  This is not expected, but we should protect as best we
+		// can against identical IDs.
+		log.Warnf("DNS-LATENCY: Received DNS response but already have DNS reponse with ID %v", key)
+		if data.packet != nil {
+			s.collector.LogDNS(data.serverIP, data.clientIP, data.packet, nil)
+		}
+		s.latencyData[key] = latencyData{
+			queueTimestamp:  s.nowFunc().UnixMilli(),
+			packetTimestamp: timestamp,
+			isResponse:      true,
+			serverIP:        ipv4.SrcIP,
+			clientIP:        ipv4.DstIP,
+			packet:          dns,
+		}
+	} else if dns == nil {
+		// We logged above and have received a request. Just delete the request.
+		log.Debugf("DNS-LATENCY: Received DNS response and have request (no latency) for ID %v", key)
+		delete(s.latencyData, key)
+	} else if data.packetTimestamp == 0 {
+		// Packet request had no timestamp, so log without latency and remove cached data.
+		log.Debugf("DNS-LATENCY: Received DNS response and have request with no tiestamp for ID %v", key)
+		s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns, nil)
 		delete(s.latencyData, key)
 	} else {
-		// We have received a response and already have a stored response. Send a log for the previous response and
-		// update the entry.  This is not expected, but we should protect as best we can against identical IDs.
-		log.Warnf("DNS-LATENCY: Already have outstanding DNS request with ID %v", key)
-		s.collector.LogDNS(data.serverIP, data.clientIP, data.packet, nil)
-		s.latencyData[key] = latencyData{
-			queueTimestamp:  s.nowFunc().UnixMilli(),
-			packetTimestamp: timestamp,
-			serverIP:        ipv4.SrcIP,
-			clientIP:        ipv4.DstIP,
-			packet:          dns,
-		}
+		// Packet request and response had timestamp so calculate the latency, log and remove the cached data.
+		latency := time.Duration(timestamp - data.packetTimestamp)
+		log.Debugf("DNS-LATENCY: Received DNS response and have request: latency %v for ID %v", latency, key)
+		s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns, &latency)
+		delete(s.latencyData, key)
 	}
 }
 
@@ -894,14 +938,17 @@ func (s *DomainInfoStore) processDNSResponsePacket(dns *layers.DNS, callback fun
 	switch {
 	case maxRevision >= s.currentRevision:
 		// The packet contains changes that have not yet been handled, so add the callback to the active set.
+		log.Debugf("Changes have not yet been handled: %d > %d", maxRevision, s.currentRevision)
 		s.callbacks = append(s.callbacks, callback)
 	case maxRevision <= s.appliedRevision:
 		// The packet only contains changes that are already programmed in the dataplane. Invoke the callback
 		// immediately.
+		log.Debugf("Changes have been applied or are not required: %d <= %d", maxRevision, s.currentRevision)
 		go callback()
 	default:
 		// The packet has been handled, but not yet programmed, so add to the handled callbacks. This will be invoked
 		// on the next call to UpdatesApplied().
+		log.Debugf("Changes have been handled but not applied: %d <= %d", maxRevision, s.currentRevision)
 		s.handledCallbacks = append(s.handledCallbacks, callback)
 	}
 }

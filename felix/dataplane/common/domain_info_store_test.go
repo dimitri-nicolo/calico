@@ -583,17 +583,37 @@ var _ = Describe("Domain Info Store", func() {
 
 			It("handles no timestamp on request", func() {
 				domainStore.processDNSRequestPacketForLogging(ipv4LayerRequest1, dnsLayerRequest1, 0)
-				Expect(domainStore.latencyData).To(HaveLen(0))
+
+				// We still store the request info even if the timestamp is unknown.
+				Expect(domainStore.latencyData).To(HaveLen(1))
 				Expect(collector.dnsLogs).To(HaveLen(0))
+
+				// Latency data will not be included when the response arrives.
+				domainStore.processDNSResponsePacketForLogging(ipv4LayerResponse1, dnsLayerResponse1, time2)
+				Expect(domainStore.latencyData).To(HaveLen(0))
+				Expect(collector.dnsLogs).To(HaveLen(1))
+				Expect(collector.dnsLogs[0]).To(Equal(dnsLog{
+					server:  serverIP,
+					client:  clientIP,
+					dns:     dnsLayerResponse1,
+					latency: nil,
+				}))
+
 			})
 
 			It("handles no timestamp on response", func() {
 				domainStore.processDNSResponsePacketForLogging(ipv4LayerResponse1, dnsLayerResponse1, 0)
-				Expect(domainStore.latencyData).To(HaveLen(0))
 
 				// We should log immediately without any latency inforamtion
 				Expect(collector.dnsLogs).To(HaveLen(1))
 				Expect(collector.dnsLogs[0].latency).To(BeNil())
+
+				// But we should still store the response for correlation with a late arriving request.
+				Expect(domainStore.latencyData).To(HaveLen(1))
+
+				domainStore.processDNSRequestPacketForLogging(ipv4LayerRequest1, dnsLayerRequest1, time1)
+				Expect(domainStore.latencyData).To(HaveLen(0))
+				Expect(collector.dnsLogs).To(HaveLen(1))
 			})
 
 			It("handles request arriving before response", func() {
@@ -628,6 +648,22 @@ var _ = Describe("Domain Info Store", func() {
 				}))
 			})
 
+			It("handles response arriving before request, request has no timestemp", func() {
+				domainStore.processDNSResponsePacketForLogging(ipv4LayerResponse1, dnsLayerResponse1, time2)
+				Expect(domainStore.latencyData).To(HaveLen(1))
+				Expect(collector.dnsLogs).To(HaveLen(0))
+
+				domainStore.processDNSRequestPacketForLogging(ipv4LayerRequest1, dnsLayerRequest1, 0)
+				Expect(domainStore.latencyData).To(HaveLen(0))
+				Expect(collector.dnsLogs).To(HaveLen(1))
+				Expect(collector.dnsLogs[0]).To(Equal(dnsLog{
+					server:  serverIP,
+					client:  clientIP,
+					dns:     dnsLayerResponse1,
+					latency: nil,
+				}))
+			})
+
 			It("handles request, request, respose with the same ID", func() {
 				// Request packet at time 0.
 				domainStore.processDNSRequestPacketForLogging(ipv4LayerRequest1, dnsLayerRequest1, time0)
@@ -648,6 +684,29 @@ var _ = Describe("Domain Info Store", func() {
 					client:  clientIP,
 					dns:     dnsLayerResponse1,
 					latency: &timeDelta12,
+				}))
+			})
+
+			It("handles request, request, respose with the same ID and no timestamp", func() {
+				// Request packet at time 0.
+				domainStore.processDNSRequestPacketForLogging(ipv4LayerRequest1, dnsLayerRequest1, 0)
+				Expect(domainStore.latencyData).To(HaveLen(1))
+				Expect(collector.dnsLogs).To(HaveLen(0))
+
+				// Identical request packet at time 1. This should take precedence, the old one will be dropped, so
+				// latency will be timeDelta12.
+				domainStore.processDNSRequestPacketForLogging(ipv4LayerRequest1, dnsLayerRequest1, 0)
+				Expect(domainStore.latencyData).To(HaveLen(1))
+				Expect(collector.dnsLogs).To(HaveLen(0))
+
+				domainStore.processDNSResponsePacketForLogging(ipv4LayerResponse1, dnsLayerResponse1, 0)
+				Expect(domainStore.latencyData).To(HaveLen(0))
+				Expect(collector.dnsLogs).To(HaveLen(1))
+				Expect(collector.dnsLogs[0]).To(Equal(dnsLog{
+					server:  serverIP,
+					client:  clientIP,
+					dns:     dnsLayerResponse1,
+					latency: nil,
 				}))
 			})
 
@@ -678,6 +737,35 @@ var _ = Describe("Domain Info Store", func() {
 					dns:     dnsLayerResponse1,
 					latency: &timeDelta12,
 				}))
+			})
+
+			It("handles response, response, request with the same ID and no timestamps", func() {
+				// Request packet at time 0.
+				domainStore.processDNSResponsePacketForLogging(ipv4LayerResponse1, dnsLayerResponse1, 0)
+				Expect(domainStore.latencyData).To(HaveLen(1))
+				Expect(collector.dnsLogs).To(HaveLen(1))
+				Expect(collector.dnsLogs[0]).To(Equal(dnsLog{
+					server:  serverIP,
+					client:  clientIP,
+					dns:     dnsLayerResponse1,
+					latency: nil,
+				}))
+
+				// Identical response packet at time 2. This should take precedence, the old one will be logged without
+				// latency, and the new one will be logged with latency timeDelta12.
+				domainStore.processDNSResponsePacketForLogging(ipv4LayerResponse1, dnsLayerResponse1, 0)
+				Expect(domainStore.latencyData).To(HaveLen(1))
+				Expect(collector.dnsLogs).To(HaveLen(2))
+				Expect(collector.dnsLogs[1]).To(Equal(dnsLog{
+					server:  serverIP,
+					client:  clientIP,
+					dns:     dnsLayerResponse1,
+					latency: nil,
+				}))
+
+				domainStore.processDNSRequestPacketForLogging(ipv4LayerRequest1, dnsLayerRequest1, 0)
+				Expect(domainStore.latencyData).To(HaveLen(0))
+				Expect(collector.dnsLogs).To(HaveLen(2))
 			})
 
 			It("handles expiration of an unmatched request", func() {
