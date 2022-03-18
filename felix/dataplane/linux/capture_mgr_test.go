@@ -576,6 +576,67 @@ var _ = Describe("PacketCapture Manager", func() {
 				err:           nil,
 			},
 		}, []output{}),
+		Entry("interface deleted stops a capture", [][]interface{}{
+			{
+				// wep update will be processed in a single batch
+				&proto.PacketCaptureUpdate{
+					Id: &proto.PacketCaptureID{
+						Name:      "packet-capture-1",
+						Namespace: "default",
+					},
+					Endpoint: &proto.WorkloadEndpointID{
+						WorkloadId: "default/sample-pod",
+					},
+					Specification: emptySpecification,
+				},
+			},
+			{
+				// interface update will be processed in a single batch
+				&ifaceUpdate{
+					Name:  "cali123",
+					State: ifacemonitor.StateUp,
+				},
+			},
+			{
+				// wep update will be processed in a single batch
+				&proto.WorkloadEndpointUpdate{
+					Id: &proto.WorkloadEndpointID{
+						WorkloadId: "default/sample-pod",
+					},
+					Endpoint: &proto.WorkloadEndpoint{
+						State: "up",
+						Name:  "cali123",
+					},
+				},
+			},
+			{
+				// interface update will be processed in a single batch
+				&ifaceUpdate{
+					Name:  "cali123",
+					State: ifacemonitor.StateNotPresent,
+				},
+			},
+		}, []output{
+			{
+				// Expect packet capture to start
+				key: capture.Key{
+					Namespace: "default", CaptureName: "packet-capture-1", WorkloadEndpointId: "default/sample-pod",
+				},
+				specification:          capture.Specification{DeviceName: "cali123"},
+				err:                    nil,
+				shouldCheckForContains: true,
+				wasPreviouslyAdded:     false,
+			},
+		}, []output{
+			{
+				// Expect packet capture to stop
+				key: capture.Key{
+					Namespace: "default", CaptureName: "packet-capture-1", WorkloadEndpointId: "default/sample-pod",
+				},
+				specification: capture.Specification{DeviceName: "cali123"},
+				err:           nil,
+			},
+		}, []output{}),
 		Entry("start after an interface went down", [][]interface{}{
 			{
 				// wep update will be processed in a single batch

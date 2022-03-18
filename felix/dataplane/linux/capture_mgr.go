@@ -182,7 +182,7 @@ func (c *captureManager) CompleteDeferredWork() error {
 						log.WithField("CAPTURE", value.(capture.Key).CaptureName).WithError(err).Error("Failed to start capture")
 					}
 				})
-			case ifacemonitor.StateDown:
+			default: /* StateDown or StateNotPresent */
 				c.interfaceToPacketCapture.Iter(ifaceName, func(value interface{}) {
 					// In case the capture was already stopped, nothing will happen
 					// In case an interface went down after
