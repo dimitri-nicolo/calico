@@ -1180,12 +1180,12 @@ func newTestSyncServer() *testSyncServer {
 	cxt, cancel := context.WithCancel(context.Background())
 	socketDir := makeTmpListenerDir()
 	socketPath := path.Join(socketDir, ListenerSocket)
-	ss := &testSyncServer{
+	s := &testSyncServer{
 		cxt: cxt, cancel: cancel, updates: make(chan proto.ToDataplane), path: socketPath, gRPCServer: grpc.NewServer(),
 		reportSuccessful: true,
 	}
-	proto.RegisterPolicySyncServer(s.gRPCServer, ss)
-	return ss
+	proto.RegisterPolicySyncServer(s.gRPCServer, s)
+	return s
 }
 
 func (s *testSyncServer) Shutdown() {
@@ -1218,7 +1218,7 @@ func (s *testSyncServer) Restart() {
 }
 
 func (s *testSyncServer) Sync(_ *proto.SyncRequest, stream proto.PolicySync_SyncServer) error {
-	ctx, cancel := context.WithCancel(s.context)
+	ctx, cancel := context.WithCancel(s.cxt)
 	s.cLock.Lock()
 	s.cancelFns = append(s.cancelFns, cancel)
 	s.cLock.Unlock()
@@ -1265,9 +1265,9 @@ func (s *testSyncServer) GetTarget() string {
 func (s *testSyncServer) GetDataplaneStats() []*proto.DataplaneStats {
 	s.cLock.Lock()
 	defer s.cLock.Unlock()
-	s := make([]*proto.DataplaneStats, len(s.dpStats))
-	copy(s, s.dpStats)
-	return s
+	stats := make([]*proto.DataplaneStats, len(s.dpStats))
+	copy(stats, s.dpStats)
+	return stats
 }
 
 func (s *testSyncServer) SetReportSuccessful(ret bool) {

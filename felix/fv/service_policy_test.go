@@ -580,12 +580,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Service network policy test
 		eps.Ports = []discovery.EndpointPort{
 			{Port: &eighty, Protocol: &tcp},
 		}
-		eps, err = kc.DiscoveryV1beta1().EndpointSlices("default").Create(utils.Ctx, eps, metav1.CreateOptions{})
+		eps, err = kc.DiscoveryV1().EndpointSlices("default").Create(utils.Ctx, eps, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		// Make sure we clean up after ourselves.
 		defer func() {
-			err = kc.DiscoveryV1beta1().EndpointSlices("default").Delete(utils.Ctx, eps.Name, metav1.DeleteOptions{})
+			err = kc.DiscoveryV1().EndpointSlices("default").Delete(utils.Ctx, eps.Name, metav1.DeleteOptions{})
 			Expect(err).NotTo(HaveOccurred())
 		}()
 

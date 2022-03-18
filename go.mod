@@ -331,8 +331,7 @@ replace (
 	// supply the go code.
 	github.com/envoyproxy/data-plane-api => github.com/projectcalico/data-plane-api v0.0.0-20210121211707-a620ff3c8f7e
 
-	// Version expected by k8s v1.21.8
-	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1
+	// Version expected by k8s v1.23.3
 	github.com/onsi/ginkgo => github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega => github.com/onsi/gomega v1.10.1
 	github.com/prometheus/common => github.com/prometheus/common v0.26.0

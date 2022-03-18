@@ -13,9 +13,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/clock"
 	fakek8s "k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
+	clock "k8s.io/utils/clock/testing"
 
 	"github.com/projectcalico/calico/felix/aws"
 )

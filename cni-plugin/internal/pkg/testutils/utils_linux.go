@@ -27,8 +27,6 @@ import (
 	"strings"
 	"syscall"
 
-	types020 "github.com/containernetworking/cni/pkg/types/020"
-
 	"github.com/containernetworking/cni/pkg/invoke"
 	"github.com/containernetworking/cni/pkg/types"
 	types020 "github.com/containernetworking/cni/pkg/types/020"

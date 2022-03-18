@@ -50,7 +50,7 @@ func (policyStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obj
 
 func (policyStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	return field.ErrorList{}
-	//return validation.ValidatePolicy(obj.(*calico.Policy))
+	// return validation.ValidatePolicy(obj.(*calico.Policy))
 }
 
 func (policyStrategy) AllowCreateOnUpdate() bool {

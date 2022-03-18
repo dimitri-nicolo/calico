@@ -20,7 +20,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 
@@ -108,7 +107,7 @@ func ServePrometheusMetrics(configParams *config.Config) {
 			}
 			if !configParams.PrometheusProcessMetricsEnabled {
 				log.Info("Discarding process metrics")
-				prometheus.Unregister(collectors.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+				prometheus.Unregister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 			}
 		}
 
