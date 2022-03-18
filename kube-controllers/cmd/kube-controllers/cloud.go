@@ -25,7 +25,7 @@ var (
 func ValidateEnvVars() {
 	// Including Tenant ID is optional for Cloud/Tesla. It should be enabled when using a multi-tenant setup.
 	tenantID := os.Getenv("ELASTIC_INDEX_TENANT_ID")
-	if !tenantIDSyntax.MatchString(tenantID) {
+	if tenantID != "" && !tenantIDSyntax.MatchString(tenantID) {
 		log.Fatal("ELASTIC_INDEX_TENANT_ID must consist of only alpha-numeric chars (lowercase) or '-' and be at max 63 chars")
 	}
 }
