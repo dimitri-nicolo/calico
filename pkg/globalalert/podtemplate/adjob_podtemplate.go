@@ -12,6 +12,8 @@ const (
 
 	ADJobTrainCycleArg  = "train"
 	ADJobDetectCycleArg = "detect"
+
+	ADEnabledJobsEnvVarKey = "AD_ENABLED_JOBS"
 )
 
 var (
@@ -28,7 +30,7 @@ var (
 // v1.PodTemplate for a training or detection AD cycle.
 func DecoratePodTemplateForADDetectorCycle(adJobPT *v1.PodTemplate, clusterName, cycle, detector, period string) error {
 
-	adJobContainerIndex := getContainerIndex(adJobPT.Template.Spec.Containers, ADJobsContainerName)
+	adJobContainerIndex := GetContainerIndex(adJobPT.Template.Spec.Containers, ADJobsContainerName)
 
 	if adJobContainerIndex == -1 {
 		return fmt.Errorf("unable to retrtieve container for %s", ADJobsContainerName)
@@ -52,7 +54,7 @@ func DecoratePodTemplateForADDetectorCycle(adJobPT *v1.PodTemplate, clusterName,
 		},
 	)
 
-	if detector != AllADJobsKeyword {
+	if len(detector) > 0 {
 		adJobPT.Template.Spec.Containers[adJobContainerIndex].Env = append(
 			adJobPT.Template.Spec.Containers[adJobContainerIndex].Env,
 			v1.EnvVar{
@@ -89,7 +91,7 @@ func DecoratePodTemplateForADDetectorCycle(adJobPT *v1.PodTemplate, clusterName,
 	return nil
 }
 
-func getContainerIndex(containers []v1.Container, name string) int {
+func GetContainerIndex(containers []v1.Container, name string) int {
 	for i, container := range containers {
 		if container.Name == name {
 			return i

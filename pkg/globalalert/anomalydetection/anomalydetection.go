@@ -5,9 +5,6 @@ import (
 	"errors"
 	"time"
 
-	batchv1 "k8s.io/api/batch/v1"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 
@@ -24,12 +21,9 @@ import (
 
 const (
 	GlobalAlertAnomalyDetectionDataSource = "logs"
-	ADDetectionJobTemplateName            = "tigera.io.detectors.detection"
 
 	DefaultDetectionLookback = 1000
 	DefaultTrainingPeriod    = 24 * time.Hour
-
-	ADDetectorDetection = "detect"
 
 	DefaultCronJobDetectionSchedule time.Duration = 15 * time.Minute
 
@@ -45,15 +39,15 @@ var (
 	// controllerKind refers to the GlobalAlert kind that the resources created / reconciled
 	// by ths controller will refer to
 	GlobalAlertGroupVersionKind = schema.GroupVersionKind{
-		Kind:    "GlobalAlert",
+		Kind:    v3.KindGlobalAlert,
 		Version: v3.VersionCurrent,
 		Group:   v3.Group,
 	}
 )
 
-// Service is the AnomalyDetection Service used to initialize and seize the aanomaly detection
+// ADService is the AnomalyDetection ADService used to initialize and seize the aanomaly detection
 // cycles set for the the received global alert
-type Service interface {
+type ADService interface {
 	// Start initializes the detection cycle for the ad job specified by the GlobalAlert param
 	Start(parentCtx context.Context) v3.GlobalAlertStatus
 
@@ -61,7 +55,7 @@ type Service interface {
 	Stop() v3.GlobalAlertStatus
 }
 
-type service struct {
+type adService struct {
 	clusterName string
 	namespace   string
 
@@ -72,23 +66,25 @@ type service struct {
 	k8sClient        kubernetes.Interface
 	podTemplateQuery podtemplate.ADPodTemplateQuery
 
-	detectionCronJobName     string
-	adJobDetectionController controller.ADJobController
+	adDetectionController controller.AnomalyDetectionController
+	adTrainingController  controller.AnomalyDetectionController
 }
 
 // NewService creates the Anomaly Detection service. Currently initialized per GlobalAlertController
 func NewService(calicoCLI calicoclient.Interface, k8sClient kubernetes.Interface,
-	podTemplateQuery podtemplate.ADPodTemplateQuery, anomalyDetectionController controller.ADJobController,
-	clusterName string, namespace string, globalAlert *v3.GlobalAlert) (Service, error) {
+	podTemplateQuery podtemplate.ADPodTemplateQuery, anomalyDetectionController controller.AnomalyDetectionController,
+	anomalyDetectionTrainingController controller.AnomalyDetectionController,
+	clusterName string, namespace string, globalAlert *v3.GlobalAlert) (ADService, error) {
 
-	s := &service{
-		clusterName:              clusterName,
-		namespace:                namespace,
-		calicoCLI:                calicoCLI,
-		k8sClient:                k8sClient,
-		podTemplateQuery:         podTemplateQuery,
-		adJobDetectionController: anomalyDetectionController,
-		globalAlert:              globalAlert,
+	s := &adService{
+		clusterName:           clusterName,
+		namespace:             namespace,
+		calicoCLI:             calicoCLI,
+		k8sClient:             k8sClient,
+		podTemplateQuery:      podTemplateQuery,
+		adDetectionController: anomalyDetectionController,
+		adTrainingController:  anomalyDetectionTrainingController,
+		globalAlert:           globalAlert,
 	}
 
 	return s, nil
@@ -107,35 +103,53 @@ func NewService(calicoCLI calicoclient.Interface, k8sClient kubernetes.Interface
 // Returns the GlobalAlertStatus sucessfully if the cronjob dor the detection cycle is successfully
 // initialized with all the pre-requisite steps.  Reports a GlobalAlertStatus with an error and exits
 // if any steps are found as unsuccessful
-func (s *service) Start(parentCtx context.Context) v3.GlobalAlertStatus {
+func (s *adService) Start(parentCtx context.Context) v3.GlobalAlertStatus {
 
-	log.Infof("Initialize Anomaly Detection Cycles for for %s", s.globalAlert.Name)
+	log.Infof("Initialize Anomaly Detection Cycles for %s", s.globalAlert.Name)
 
-	s.detectionCronJobName = s.clusterName + "-" + s.globalAlert.Name + "-" + ADDetectorDetection
-
-	adJobPT, err := s.podTemplateQuery.GetPodTemplate(parentCtx, s.namespace, ADDetectionJobTemplateName)
-
+	// sets the recurring detection cycle
+	err := s.manageDetectionGlobalAlert()
 	if err != nil {
-		log.WithError(err).Errorf("Omit starting Anomaly Detection service for %s, Error retrieving PodTemplate for AD Job", s.globalAlert.Name)
-		s.globalAlert.Status.Active = false
-		s.globalAlert.Status = reporting.GetGlobalAlertErrorStatus(err)
+		log.WithError(err).Errorf("failed to manage detection cycle for GlobalAlert %s", s.globalAlert.Name)
 
+		s.globalAlert.Status = reporting.GetGlobalAlertErrorStatus(err)
+		s.globalAlert.Status.Active = false
 		return s.globalAlert.Status
 	}
 
-	// sets the recurring detection cycle
-	s.globalAlert.Status = s.createDetectionCycle(parentCtx, *adJobPT, s.globalAlert.Spec.Period.Duration.String())
-
-	return s.globalAlert.Status
+	return reporting.GetGlobalAlertSuccessStatus()
 }
 
 // Stop seizes the detection cycle for the AD Job by deleting the CronJob and removing it from the
 // AnomalyDetectionJobController as to not be reconciled anymore
-func (s *service) Stop() v3.GlobalAlertStatus {
-	if s.adJobDetectionController != nil {
-		s.adJobDetectionController.RemoveManagedJob(s.detectionCronJobName)
-	} else {
-		log.Warningf("execute stop for an Anomaly Detection Detector: %s that has not been started", s.globalAlert.Name)
+func (s *adService) Stop() v3.GlobalAlertStatus {
+	if s.adDetectionController == nil || s.adTrainingController == nil {
+		log.Warningf("executed stop for an Anomaly Detection Detector: %s that has not been started", s.globalAlert.Name)
+	}
+
+	err := s.adDetectionController.RemoveDetector(adjcontroller.DetectionCycleRequest{
+		ClusterName: s.clusterName,
+		GlobalAlert: s.globalAlert,
+	})
+
+	if err != nil {
+		log.WithError(err).Errorf("failed to remove detection cycle for GlobalAlert %s", s.globalAlert.Name)
+
+		s.globalAlert.Status = reporting.GetGlobalAlertErrorStatus(err)
+		s.globalAlert.Status.Active = false
+		return s.globalAlert.Status
+	}
+
+	err = s.adTrainingController.RemoveDetector(adjcontroller.TrainingDetectorsRequest{
+		ClusterName: s.clusterName,
+		GlobalAlert: s.globalAlert,
+	})
+	if err != nil {
+		log.WithError(err).Errorf("failed to remove from training cycle for GlobalAlert %s", s.globalAlert.Name)
+
+		s.globalAlert.Status = reporting.GetGlobalAlertErrorStatus(err)
+		s.globalAlert.Status.Active = false
+		return s.globalAlert.Status
 	}
 
 	s.globalAlert.Status = reporting.GetGlobalAlertSuccessStatus()
@@ -144,68 +158,29 @@ func (s *service) Stop() v3.GlobalAlertStatus {
 	return s.globalAlert.Status
 }
 
-// createDetectionCycle cretes the CronJob from the podTemplate for the AD Job and adds it to AnomalyDetectionController
-func (s *service) createDetectionCycle(parentCtx context.Context, podTemplate v1.PodTemplate, period string) v3.GlobalAlertStatus {
-	log.Infof("Initializing the detection cycle for Anomaly Detection for %s", s.globalAlert.Name)
-
-	err := podtemplate.DecoratePodTemplateForADDetectorCycle(&podTemplate, s.clusterName, podtemplate.ADJobDetectCycleArg, s.globalAlert.Spec.Detector, period)
-	if err != nil {
-		errorAlertStatus := reporting.GetGlobalAlertErrorStatus(err)
-
-		return errorAlertStatus
-	}
-
-	detectionCycleSchedule := DefaultCronJobDetectionSchedule
-
-	detectionLabels := adjcontroller.DetectionJobLabels()
-	detectionLabels[ClusterKey] = s.clusterName
-
-	detectionCycleCronJob := podtemplate.CreateCronJobFromPodTemplate(s.detectionCronJobName, s.namespace,
-		detectionCycleSchedule, detectionLabels, podTemplate)
-
-	// attached detection cronjob to GlobalAlert so it will be garbage collected if GlobalAlert is deleted
-	detectionCycleCronJob.OwnerReferences = []metav1.OwnerReference{
-		*metav1.NewControllerRef(s.globalAlert, GlobalAlertGroupVersionKind),
-	}
-
-	detectionCycleCronJob, err = s.k8sClient.BatchV1().CronJobs(s.namespace).Create(parentCtx,
-		detectionCycleCronJob, metav1.CreateOptions{})
-
-	if err != nil {
-		log.WithError(err).Errorf("failed to initialize detection cycle for GlobalAlert %s", s.globalAlert.Name)
-
-		errorAlertStatus := reporting.GetGlobalAlertErrorStatus(err)
-
-		return errorAlertStatus
-	}
-
-	// empty resource versioning and status before saving
-	detectionCycleCronJob.ResourceVersion = ""
-	detectionCycleCronJob.UID = ""
-	detectionCycleCronJob.Status = batchv1.CronJobStatus{}
-
-	err = s.manageCronJob(detectionCycleCronJob)
-	if err != nil {
-		log.WithError(err).Errorf("failed to initialize detection cycle for GlobalAlert %s", s.globalAlert.Name)
-
-		errorAlertStatus := reporting.GetGlobalAlertErrorStatus(err)
-
-		return errorAlertStatus
-	}
-
-	return reporting.GetGlobalAlertSuccessStatus()
-}
-
 // manageCronJob adds the CronJob to be maanged by AnomalyDetectionController
-func (s *service) manageCronJob(detectionCronJob *batchv1.CronJob) error {
-	if s.adJobDetectionController == nil {
-		return errors.New("detection cycle controller not found")
+func (s *adService) manageDetectionGlobalAlert() error {
+	if s.adDetectionController == nil || s.adTrainingController == nil {
+		return errors.New("anomaly detection controllers cycle controller not found")
 	}
 
-	s.adJobDetectionController.AddToManagedJobs(adjcontroller.ManagedADDetectionJobsState{
-		CronJob:     detectionCronJob,
+	err := s.adDetectionController.AddDetector(adjcontroller.DetectionCycleRequest{
+		ClusterName: s.clusterName,
 		GlobalAlert: s.globalAlert,
 	})
+
+	if err != nil {
+		return err
+	}
+
+	err = s.adTrainingController.AddDetector(adjcontroller.TrainingDetectorsRequest{
+		ClusterName: s.clusterName,
+		GlobalAlert: s.globalAlert,
+	})
+
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

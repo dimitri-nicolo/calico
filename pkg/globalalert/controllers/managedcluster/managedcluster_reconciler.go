@@ -40,8 +40,8 @@ type managedClusterReconciler struct {
 	createManagedCalicoCLI          func(string) (calicoclient.Interface, error)
 	alertNameToAlertControllerState map[string]alertControllerState
 
-	anomalyDetectionController controller.ADJobController
-	anomalyTrainingController  controller.ADJobController
+	adDetectionController controller.AnomalyDetectionController
+	adTrainingController  controller.AnomalyDetectionController
 
 	managedClusterAlertControllerHealthPinger health.Pinger
 	managedClusterAlertControllerCh           chan []health.Pinger
@@ -112,7 +112,7 @@ func (r *managedClusterReconciler) startManagedClusterAlertController(name strin
 
 	// setup training AD cronjobs to run on the management cluster for the managed cluster
 	// also adds the cronjob to the AD training controller that will reconcile / maange it
-	err = r.anomalyTrainingController.AddToManagedJobs(clusterName)
+	err = r.adTrainingController.AddDetector(clusterName)
 	if err != nil {
 		log.WithError(err).Debug("Error creating training cronjob for managed cluster %s.", clusterName)
 		return err
@@ -120,8 +120,8 @@ func (r *managedClusterReconciler) startManagedClusterAlertController(name strin
 
 	// create the GlobalAlertController for the managed cluster - this controller will monitor all GlobalAlert operations
 	// of the assigned managedcluster
-	alertController, alertHealthPingers := alert.NewGlobalAlertController(managedCLI, lmaESClient, r.k8sClient, r.podTemplateQuery,
-		r.anomalyDetectionController, clusterName, r.namespace)
+	alertController, alertHealthPingers := alert.NewGlobalAlertController(managedCLI, lmaESClient, r.k8sClient,
+		r.podTemplateQuery, r.adDetectionController, r.adTrainingController, clusterName, r.namespace)
 
 	successSendingPinger := false
 	for maxRetries := 5; maxRetries > 0; maxRetries-- {
@@ -166,7 +166,7 @@ func (r *managedClusterReconciler) cancelAlertController(name string) {
 	log.Debugf("Cancelling controller for cluster %s", name)
 	a := r.alertNameToAlertControllerState[name]
 
-	r.anomalyTrainingController.RemoveManagedJob(a.clusterName)
+	r.adTrainingController.RemoveDetector(a.clusterName)
 	a.alertController.Close()
 	a.cancel()
 	delete(r.alertNameToAlertControllerState, name)

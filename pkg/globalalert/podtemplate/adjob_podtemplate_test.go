@@ -42,7 +42,7 @@ var _ = Describe("ADJob PodTemplate", func() {
 
 			err := DecoratePodTemplateForADDetectorCycle(&testPT, clusterName, cycle, job, testPeriod.String())
 			Expect(err).To(BeNil())
-			containerResultIndex := getContainerIndex(testPT.Template.Spec.Containers, ADJobsContainerName)
+			containerResultIndex := GetContainerIndex(testPT.Template.Spec.Containers, ADJobsContainerName)
 
 			Expect(testPT.Template.Spec.Containers[containerResultIndex].Env).To(ContainElements(
 				v1.EnvVar{
@@ -73,7 +73,7 @@ var _ = Describe("ADJob PodTemplate", func() {
 
 			err := DecoratePodTemplateForADDetectorCycle(&testPT, clusterName, cycle, job, testPeriod.String())
 			Expect(err).To(BeNil())
-			containerResultIndex := getContainerIndex(testPT.Template.Spec.Containers, ADJobsContainerName)
+			containerResultIndex := GetContainerIndex(testPT.Template.Spec.Containers, ADJobsContainerName)
 
 			Expect(testPT.Template.Spec.Containers[containerResultIndex].Env).To(ContainElements(
 				v1.EnvVar{

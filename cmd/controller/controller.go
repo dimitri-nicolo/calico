@@ -195,24 +195,23 @@ func main() {
 	var alertHealthPinger, managedClusterHealthPinger health.Pingers
 
 	// anomaly detection controllers
-	var anomalyTrainingController, anomalyDetectionController controller.ADJobController
-	var adJobsTrainingPinger health.Pingers
+	var anomalyTrainingController, anomalyDetectionController controller.AnomalyDetectionController
 
 	enableAlerts := os.Getenv("DISABLE_ALERTS") != "yes"
 
 	if enableAlerts {
 		podtemplateQuery := podtemplate.NewPodTemplateQuery(k8sClient)
 
-		anomalyTrainingController, adJobsTrainingPinger = anomalydetection.NewADJobTrainingController(k8sClient,
+		anomalyTrainingController = anomalydetection.NewADJobTrainingController(k8sClient,
 			calicoClient, podtemplateQuery, TigeraIntrusionDetectionNamespace, clusterName)
-		healthPingers = append(healthPingers, &adJobsTrainingPinger)
 
 		// detection controller depends on GlobalAlert such removing the pinger as one might not be present at start
-		anomalyDetectionController = anomalydetection.NewADJobDetectionController(k8sClient,
-			calicoClient, TigeraIntrusionDetectionNamespace, clusterName)
+		anomalyDetectionController = anomalydetection.NewADJobDetectionController(ctx, k8sClient,
+			calicoClient, podtemplateQuery, TigeraIntrusionDetectionNamespace, clusterName)
 
-		managementAlertController, alertHealthPinger = alert.NewGlobalAlertController(calicoClient, lmaESClient, k8sClient, podtemplateQuery,
-			anomalyDetectionController, clusterName, TigeraIntrusionDetectionNamespace)
+		managementAlertController, alertHealthPinger = alert.NewGlobalAlertController(calicoClient, lmaESClient, k8sClient,
+			podtemplateQuery, anomalyDetectionController, anomalyTrainingController, clusterName,
+			TigeraIntrusionDetectionNamespace)
 		healthPingers = append(healthPingers, &alertHealthPinger)
 
 		multiClusterForwardingEndpoint := getStrEnvOrDefault("MULTI_CLUSTER_FORWARDING_ENDPOINT", DefaultMultiClusterForwardingEndpoint)
@@ -252,10 +251,10 @@ func main() {
 				anomalyDetectionController.Run(ctx)
 				defer anomalyDetectionController.Close()
 
-				managementAlertController.Run(ctx)
-				defer managementAlertController.Close()
 				managedClusterController.Run(ctx)
 				defer managedClusterController.Close()
+				managementAlertController.Run(ctx)
+				defer managementAlertController.Close()
 			}
 
 			if enableForwarding {

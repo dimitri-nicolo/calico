@@ -33,13 +33,14 @@ type Alert struct {
 	alert       *v3.GlobalAlert
 	calicoCLI   calicoclient.Interface
 	es          es.Service
-	adj         ad.Service
+	adj         ad.ADService
 	clusterName string
 }
 
 // NewAlert sets and returns an Alert, builds Elasticsearch query that will be used periodically to query Elasticsearch data.
 func NewAlert(alert *v3.GlobalAlert, calicoCLI calicoclient.Interface, lmaESClient lma.Client, k8sClient kubernetes.Interface,
-	podTemplateQuery podtemplate.ADPodTemplateQuery, anomalyDetectionController controller.ADJobController, clusterName string, namespace string) (*Alert, error) {
+	podTemplateQuery podtemplate.ADPodTemplateQuery, adDetectionController controller.AnomalyDetectionController,
+	adTrainingController controller.AnomalyDetectionController, clusterName string, namespace string) (*Alert, error) {
 	alert.Status.Active = true
 	alert.Status.LastUpdate = &metav1.Time{Time: time.Now()}
 
@@ -48,7 +49,7 @@ func NewAlert(alert *v3.GlobalAlert, calicoCLI calicoclient.Interface, lmaESClie
 		return nil, err
 	}
 
-	adj, err := ad.NewService(calicoCLI, k8sClient, podTemplateQuery, anomalyDetectionController, clusterName, namespace, alert)
+	adj, err := ad.NewService(calicoCLI, k8sClient, podTemplateQuery, adDetectionController, adTrainingController, clusterName, namespace, alert)
 	if err != nil {
 		return nil, err
 	}

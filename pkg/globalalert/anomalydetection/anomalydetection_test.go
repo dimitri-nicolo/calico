@@ -17,9 +17,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	fakeK8s "k8s.io/client-go/kubernetes/fake"
 
-	idcontroller "github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
-
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
+	adjcontroller "github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/anomalydetection"
+	idscontroller "github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
 )
 
 const (
@@ -29,17 +29,18 @@ const (
 )
 
 var (
-	mockCalicoCLI                  calicoclient.Interface
-	mockK8sClient                  kubernetes.Interface
-	mockPodTemplateQuery           *podtemplate.MockPodTemplateQuery
-	mockAnomalyDetectionController *idcontroller.MockADJobController
-	ctx                            context.Context
-	cancel                         context.CancelFunc
+	mockCalicoCLI             calicoclient.Interface
+	mockK8sClient             kubernetes.Interface
+	mockPodTemplateQuery      *podtemplate.MockPodTemplateQuery
+	mockADDetectionController *idscontroller.MockAnomalyDetectionController
+	mockADTrainingController  *idscontroller.MockAnomalyDetectionController
+	ctx                       context.Context
+	cancel                    context.CancelFunc
 )
 
 var _ = Describe("AnomalyDetection Service", func() {
 
-	var adjService Service
+	var adjService ADService
 
 	now := time.Now()
 	lastExecutedTime := now.Add(-2 * time.Second)
@@ -87,15 +88,21 @@ var _ = Describe("AnomalyDetection Service", func() {
 		mockCalicoCLI = fake.NewSimpleClientset(defaultSampleGlobalAlert)
 		mockK8sClient = fakeK8s.NewSimpleClientset()
 		mockPodTemplateQuery = &podtemplate.MockPodTemplateQuery{}
-		mockAnomalyDetectionController = &idcontroller.MockADJobController{}
+		mockADDetectionController = &idscontroller.MockAnomalyDetectionController{}
+		mockADTrainingController = &idscontroller.MockAnomalyDetectionController{}
 
 		ctx, cancel = context.WithCancel(context.Background())
-		mockPodTemplateQuery.On("GetPodTemplate", ctx, namespace, ADDetectionJobTemplateName).Return(defaultPodTemplate, nil)
-		mockAnomalyDetectionController.On("RemoveManagedJob", mock.AnythingOfType("string")).Return(nil)
+		mockPodTemplateQuery.On("GetPodTemplate", ctx, namespace, adjcontroller.ADDetectionJobTemplateName).Return(defaultPodTemplate, nil)
+
+		mockADDetectionController.On("AddDetector", mock.AnythingOfType("anomalydetection.DetectionCycleRequest")).Return(nil)
+		mockADDetectionController.On("RemoveDetector", mock.AnythingOfType("anomalydetection.DetectionCycleRequest")).Return(nil)
+
+		mockADTrainingController.On("AddDetector", mock.AnythingOfType("anomalydetection.TrainingDetectorsRequest")).Return(nil)
+		mockADTrainingController.On("RemoveDetector", mock.AnythingOfType("anomalydetection.TrainingDetectorsRequest")).Return(nil)
 
 		var err error
-		adjService, err = NewService(mockCalicoCLI, mockK8sClient, mockPodTemplateQuery, mockAnomalyDetectionController,
-			clusterName, namespace, defaultSampleGlobalAlert)
+		adjService, err = NewService(mockCalicoCLI, mockK8sClient, mockPodTemplateQuery, mockADDetectionController,
+			mockADTrainingController, clusterName, namespace, defaultSampleGlobalAlert)
 
 		Expect(err).ShouldNot(HaveOccurred())
 	})
@@ -105,19 +112,80 @@ var _ = Describe("AnomalyDetection Service", func() {
 		adjService.Stop()
 	})
 
-	It("Start exits with error globalAlert status if podtemplatequery throws error", func() {
-		errMockeTemplateQuery := &podtemplate.MockPodTemplateQuery{}
-		errMockeTemplateQuery.On("GetPodTemplate", mock.Anything, mock.Anything, mock.Anything).Return(
-			nil, errors.New("unsuccessful attempt at retrieving adj podtemplate"),
+	It("Start exits with error globalAlert status if ADDetectionController throws error", func() {
+		errMockADDetectionController := &idscontroller.MockAnomalyDetectionController{}
+		errMockADDetectionController.On("AddDetector", mock.AnythingOfType("anomalydetection.DetectionCycleRequest")).Return(
+			errors.New("unsuccessful attempt at creating detection cycle"),
 		)
+		errMockADDetectionController.On("RemoveDetector", mock.AnythingOfType("anomalydetection.DetectionCycleRequest")).Return(nil)
 
 		var err error
-		adjService, err = NewService(mockCalicoCLI, mockK8sClient, errMockeTemplateQuery, mockAnomalyDetectionController,
-			clusterName, namespace, defaultSampleGlobalAlert)
+		adjService, err = NewService(mockCalicoCLI, mockK8sClient, mockPodTemplateQuery, errMockADDetectionController,
+			mockADTrainingController, clusterName, namespace, defaultSampleGlobalAlert)
 
 		Expect(err).ShouldNot(HaveOccurred())
 
 		result := adjService.Start(ctx)
+
+		Expect(len(result.ErrorConditions)).To(BeNumerically(">", 0))
+		Expect(result.Healthy).To(BeFalse())
+		Expect(result.Active).To(BeFalse())
+	})
+
+	It("Start exits with error globalAlert status if ADTrainingController throws error", func() {
+		errMockADTrainingController := &idscontroller.MockAnomalyDetectionController{}
+		errMockADTrainingController.On("AddDetector", mock.AnythingOfType("anomalydetection.TrainingDetectorsRequest")).Return(
+			errors.New("unsuccessful attempt at adding to training cycle"),
+		)
+		errMockADTrainingController.On("RemoveDetector", mock.AnythingOfType("anomalydetection.TrainingDetectorsRequest")).Return(nil)
+
+		var err error
+		adjService, err = NewService(mockCalicoCLI, mockK8sClient, mockPodTemplateQuery, mockADDetectionController,
+			errMockADTrainingController, clusterName, namespace, defaultSampleGlobalAlert)
+
+		Expect(err).ShouldNot(HaveOccurred())
+
+		result := adjService.Start(ctx)
+
+		Expect(len(result.ErrorConditions)).To(BeNumerically(">", 0))
+		Expect(result.Healthy).To(BeFalse())
+		Expect(result.Active).To(BeFalse())
+	})
+
+	It("Stop exits with error globalAlert status if ADDetectionController throws error", func() {
+		errMockADDetectionController := &idscontroller.MockAnomalyDetectionController{}
+		errMockADDetectionController.On("RemoveDetector", mock.AnythingOfType("anomalydetection.DetectionCycleRequest")).Return(
+			errors.New("unsuccessful attempt at deleting detection cycle"),
+		)
+		errMockADDetectionController.On("AddDetector", mock.AnythingOfType("anomalydetection.DetectionCycleRequest")).Return(nil)
+
+		var err error
+		adjService, err = NewService(mockCalicoCLI, mockK8sClient, mockPodTemplateQuery, errMockADDetectionController,
+			mockADTrainingController, clusterName, namespace, defaultSampleGlobalAlert)
+
+		Expect(err).ShouldNot(HaveOccurred())
+
+		result := adjService.Stop()
+
+		Expect(len(result.ErrorConditions)).To(BeNumerically(">", 0))
+		Expect(result.Healthy).To(BeFalse())
+		Expect(result.Active).To(BeFalse())
+	})
+
+	It("Stop exits with error globalAlert status if ADTrainingController throws error", func() {
+		errMockADTrainingController := &idscontroller.MockAnomalyDetectionController{}
+		errMockADTrainingController.On("RemoveDetector", mock.AnythingOfType("anomalydetection.TrainingDetectorsRequest")).Return(
+			errors.New("unsuccessful attempt at removing from training cycle"),
+		)
+		errMockADTrainingController.On("AddDetector", mock.AnythingOfType("anomalydetection.TrainingDetectorsRequest")).Return(nil)
+
+		var err error
+		adjService, err = NewService(mockCalicoCLI, mockK8sClient, mockPodTemplateQuery, mockADDetectionController,
+			errMockADTrainingController, clusterName, namespace, defaultSampleGlobalAlert)
+
+		Expect(err).ShouldNot(HaveOccurred())
+
+		result := adjService.Stop()
 
 		Expect(len(result.ErrorConditions)).To(BeNumerically(">", 0))
 		Expect(result.Healthy).To(BeFalse())

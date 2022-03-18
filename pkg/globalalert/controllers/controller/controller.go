@@ -16,8 +16,13 @@ type Controller interface {
 	Close()
 }
 
-type ADJobController interface {
+type AnomalyDetectionController interface {
 	Controller
-	AddToManagedJobs(resource interface{}) error
-	RemoveManagedJob(resourceName string)
+
+	// AddDetector adds to the list of detectors managed by the ADDetectorController
+	AddDetector(resource interface{}) error
+
+	// RemoveManagedJob removes from the list of jobs managed by the ADDetectorController.
+	// Usually called when a Done() signal is received from the parent context
+	RemoveDetector(resource interface{}) error
 }
