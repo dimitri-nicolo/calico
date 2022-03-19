@@ -48,7 +48,6 @@ import (
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/logutils"
 	"github.com/projectcalico/calico/felix/markbits"
-	"github.com/projectcalico/calico/felix/nfqueue"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/felix/wireguard"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
@@ -368,8 +367,6 @@ func StartDataplaneDriver(configParams *config.Config,
 
 				DisableConntrackInvalid: configParams.DisableConntrackInvalidCheck,
 
-				EnableNflogSize: configParams.EnableNflogSize,
-
 				NATPortRange:                       configParams.NATPortRange,
 				IptablesNATOutgoingInterfaceFilter: configParams.IptablesNATOutgoingInterfaceFilter,
 				DNSTrustedServers:                  configParams.DNSTrustedServers,
@@ -546,14 +543,6 @@ func StartDataplaneDriver(configParams *config.Config,
 		dpConn, cmd := extdataplane.StartExtDataplaneDriver(configParams.DataplaneDriver)
 		return dpConn, cmd, nil
 	}
-}
-
-func SupportsNfQueue() error {
-	return nil
-}
-
-func SupportsNfQueueWithBypass() error {
-	return nfqueue.SupportsNfQueueWithBypass()
 }
 
 func SupportsBPF() error {

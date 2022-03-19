@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,6 +43,8 @@ func TestFeatureDetection(t *testing.T) {
 				SNATFullyRandom:       true,
 				MASQFullyRandom:       true,
 				ChecksumOffloadBroken: true,
+				NFLogSize:             false,
+				NFQueueBypass:         true,
 			},
 		},
 		{
@@ -53,6 +55,8 @@ func TestFeatureDetection(t *testing.T) {
 				SNATFullyRandom:       true,
 				MASQFullyRandom:       false,
 				ChecksumOffloadBroken: true,
+				NFLogSize:             false,
+				NFQueueBypass:         true,
 			},
 		},
 		{
@@ -63,6 +67,8 @@ func TestFeatureDetection(t *testing.T) {
 				SNATFullyRandom:       false,
 				MASQFullyRandom:       false,
 				ChecksumOffloadBroken: true,
+				NFLogSize:             false,
+				NFQueueBypass:         true,
 			},
 		},
 		{
@@ -73,6 +79,8 @@ func TestFeatureDetection(t *testing.T) {
 				SNATFullyRandom:       false,
 				MASQFullyRandom:       false,
 				ChecksumOffloadBroken: true,
+				NFLogSize:             false,
+				NFQueueBypass:         true,
 			},
 		},
 		{
@@ -83,6 +91,20 @@ func TestFeatureDetection(t *testing.T) {
 				SNATFullyRandom:       false,
 				MASQFullyRandom:       false,
 				ChecksumOffloadBroken: true,
+				NFLogSize:             false,
+				NFQueueBypass:         true,
+			},
+		},
+		{
+			"garbage",
+			"Linux version 3.12.0",
+			Features{
+				RestoreSupportsLock:   false,
+				SNATFullyRandom:       false,
+				MASQFullyRandom:       false,
+				ChecksumOffloadBroken: true,
+				NFLogSize:             false,
+				NFQueueBypass:         false,
 			},
 		},
 		{
@@ -93,6 +115,8 @@ func TestFeatureDetection(t *testing.T) {
 				SNATFullyRandom:       false,
 				MASQFullyRandom:       false,
 				ChecksumOffloadBroken: true,
+				NFLogSize:             false,
+				NFQueueBypass:         false,
 			},
 		},
 		{
@@ -103,6 +127,8 @@ func TestFeatureDetection(t *testing.T) {
 				SNATFullyRandom:       false,
 				MASQFullyRandom:       false,
 				ChecksumOffloadBroken: true,
+				NFLogSize:             false,
+				NFQueueBypass:         true,
 			},
 		},
 		{
@@ -113,6 +139,20 @@ func TestFeatureDetection(t *testing.T) {
 				SNATFullyRandom:       false,
 				MASQFullyRandom:       false,
 				ChecksumOffloadBroken: true,
+				NFLogSize:             false,
+				NFQueueBypass:         false,
+			},
+		},
+		{
+			"iptables v1.8.4",
+			"Linux version 4.8.0",
+			Features{
+				RestoreSupportsLock:   true,
+				SNATFullyRandom:       true,
+				MASQFullyRandom:       true,
+				ChecksumOffloadBroken: true,
+				NFLogSize:             true,
+				NFQueueBypass:         true,
 			},
 		},
 		{
@@ -123,6 +163,8 @@ func TestFeatureDetection(t *testing.T) {
 				SNATFullyRandom:       true,
 				MASQFullyRandom:       true,
 				ChecksumOffloadBroken: false,
+				NFLogSize:             true,
+				NFQueueBypass:         true,
 			},
 		},
 	} {
@@ -168,6 +210,8 @@ func TestFeatureDetectionOverride(t *testing.T) {
 				SNATFullyRandom:       true,
 				MASQFullyRandom:       true,
 				ChecksumOffloadBroken: true,
+				NFLogSize:             false,
+				NFQueueBypass:         true,
 			},
 			map[string]string{},
 		},
@@ -179,6 +223,8 @@ func TestFeatureDetectionOverride(t *testing.T) {
 				SNATFullyRandom:       true,
 				MASQFullyRandom:       false,
 				ChecksumOffloadBroken: true,
+				NFLogSize:             false,
+				NFQueueBypass:         true,
 			},
 			map[string]string{
 				"RestoreSupportsLock": "true",
@@ -191,12 +237,17 @@ func TestFeatureDetectionOverride(t *testing.T) {
 				RestoreSupportsLock:   true,
 				SNATFullyRandom:       true,
 				MASQFullyRandom:       false,
-				ChecksumOffloadBroken: true,
+				ChecksumOffloadBroken: false,
+				NFLogSize:             true,
+				NFQueueBypass:         true,
 			},
 			map[string]string{
-				"RestoreSupportsLock": "true",
-				"SNATFullyRandom":     "true",
-				"MASQFullyRandom":     "false",
+				"RestoreSupportsLock":   "true",
+				"SNATFullyRandom":       "true",
+				"MASQFullyRandom":       "false",
+				"ChecksumOffloadBroken": "false",
+				"NFLogSize":             "true",
+				"NFQueueBypass":         "true",
 			},
 		},
 	} {

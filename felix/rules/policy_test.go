@@ -1844,10 +1844,9 @@ var _ = Describe("DNS policy rules", func() {
 				{
 					Match: iptables.Match().MarkSingleBitSet(0x80),
 					Action: iptables.NflogAction{
-						Group:       1,
-						Prefix:      "API0|default.foo",
-						SizeEnabled: false,
-						Size:        0,
+						Group:  1,
+						Prefix: "API0|default.foo",
+						Size:   0,
 					},
 				},
 				{

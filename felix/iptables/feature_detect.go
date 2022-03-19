@@ -43,8 +43,12 @@ var (
 	// Linux kernel versions:
 	// v3Dot10Dot0 is the oldest version we support at time of writing.
 	v3Dot10Dot0 = versionparse.MustParseVersion("3.10.0")
+	// v3Dot13Dot0 fixed the support for NFQueue bypass.
+	v3Dot13Dot0 = versionparse.MustParseVersion("3.13.0")
 	// v3Dot14Dot0 added the random-fully feature on the iptables interface.
 	v3Dot14Dot0 = versionparse.MustParseVersion("3.14.0")
+	// v4Dot8Dot0 adds support for NFLog size.
+	v4Dot8Dot0 = versionparse.MustParseVersion("4.8.0")
 	// v5Dot7Dot0 contains a fix for checksum offloading.
 	v5Dot7Dot0 = versionparse.MustParseVersion("5.7.0")
 )
@@ -61,6 +65,10 @@ type Features struct {
 	// ports. See https://github.com/projectcalico/calico/issues/3145.  On such kernels we disable checksum offload
 	// on our VXLAN device.
 	ChecksumOffloadBroken bool
+	// NFLogSize is true if --nflog-size is supported by the NFLOG action.
+	NFLogSize bool
+	// NFQueueBypass is true if --queue-bypass is supported by the NFQUEUE action.
+	NFQueueBypass bool
 }
 
 type FeatureDetector struct {
@@ -114,6 +122,8 @@ func (d *FeatureDetector) refreshFeaturesLockHeld() {
 		MASQFullyRandom:       iptV.Compare(v1Dot6Dot2) >= 0 && kerV.Compare(v3Dot14Dot0) >= 0,
 		RestoreSupportsLock:   iptV.Compare(v1Dot6Dot2) >= 0,
 		ChecksumOffloadBroken: kerV.Compare(v5Dot7Dot0) < 0,
+		NFLogSize:             kerV.Compare(v4Dot8Dot0) >= 0,
+		NFQueueBypass:         kerV.Compare(v3Dot13Dot0) >= 0,
 	}
 
 	for k, v := range d.featureOverride {
