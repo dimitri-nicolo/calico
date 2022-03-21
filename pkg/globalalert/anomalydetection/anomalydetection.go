@@ -25,8 +25,6 @@ const (
 	DefaultDetectionLookback = 1000
 	DefaultTrainingPeriod    = 24 * time.Hour
 
-	DefaultCronJobDetectionSchedule time.Duration = 15 * time.Minute
-
 	ADJobOwnerLabelValue = "intrusion-detection-controller"
 
 	MaxWaitTimeForTrainingJobs  = 5 * time.Minute

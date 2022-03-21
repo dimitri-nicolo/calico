@@ -38,29 +38,41 @@ type Alert struct {
 }
 
 // NewAlert sets and returns an Alert, builds Elasticsearch query that will be used periodically to query Elasticsearch data.
-func NewAlert(alert *v3.GlobalAlert, calicoCLI calicoclient.Interface, lmaESClient lma.Client, k8sClient kubernetes.Interface,
+func NewAlert(globalAlert *v3.GlobalAlert, calicoCLI calicoclient.Interface, lmaESClient lma.Client, k8sClient kubernetes.Interface,
 	podTemplateQuery podtemplate.ADPodTemplateQuery, adDetectionController controller.AnomalyDetectionController,
 	adTrainingController controller.AnomalyDetectionController, clusterName string, namespace string) (*Alert, error) {
-	alert.Status.Active = true
-	alert.Status.LastUpdate = &metav1.Time{Time: time.Now()}
+	globalAlert.Status.Active = true
+	globalAlert.Status.LastUpdate = &metav1.Time{Time: time.Now()}
 
-	es, err := es.NewService(lmaESClient, clusterName, alert)
-	if err != nil {
-		return nil, err
-	}
+	// extract by Reflect to handle GlobalAlert on managed clusters with CE version before Type field exists
+	globalAlertSpec := reflect.ValueOf(&globalAlert.Spec).Elem()
 
-	adj, err := ad.NewService(calicoCLI, k8sClient, podTemplateQuery, adDetectionController, adTrainingController, clusterName, namespace, alert)
-	if err != nil {
-		return nil, err
-	}
+	globalAlertType, ok := globalAlertSpec.FieldByName(GlobalAlertSpecTypeFieldName).Interface().(v3.GlobalAlertType)
 
-	return &Alert{
-		alert:       alert,
-		es:          es,
-		adj:         adj,
+	alert := &Alert{
+		alert:       globalAlert,
 		calicoCLI:   calicoCLI,
 		clusterName: clusterName,
-	}, nil
+	}
+
+	if !ok || globalAlertType != v3.GlobalAlertTypeAnomalyDetection {
+		elastic, err := es.NewService(lmaESClient, clusterName, globalAlert)
+		if err != nil {
+			return nil, err
+		}
+
+		alert.es = elastic
+
+	} else {
+		adj, err := ad.NewService(calicoCLI, k8sClient, podTemplateQuery, adDetectionController, adTrainingController, clusterName, namespace, globalAlert)
+		if err != nil {
+			return nil, err
+		}
+
+		alert.adj = adj
+	}
+
+	return alert, nil
 }
 
 func (a *Alert) Execute(ctx context.Context) {

@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"regexp"
 	"sort"
+	"strings"
 	"sync"
+	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
@@ -30,8 +33,28 @@ import (
 )
 
 const (
-	ADDetectionJobTemplateName = "tigera.io.detectors.detection"
-	ClusterKey                 = "cluster"
+	ADDetectionJobTemplateName      = "tigera.io.detectors.detection"
+	DefaultCronJobDetectionSchedule = 15 * time.Minute
+	maxCronJobNameLen               = 52
+
+	// Non RFC1123 compliant characters
+	nonRFCCompliantRegexDef            = `[^a-z0-9\.\-]+`
+	nameRFC1123LabelFmt                = "[a-z0-9]([-a-z0-9]*[a-z0-9])?"
+	nameRFC1123SubdomainFmt            = nameRFC1123LabelFmt + "(\\." + nameRFC1123LabelFmt + ")*"
+	nameContainsHashLikeSuffixRegexDef = `[-][a-z0-9]{5}$`
+
+	// Matching period and hyphen regex defs constants
+	charactersConvertedToPeriodRegex      = `[.-]*[.][.-]*`
+	charactersMatchingPrefixOrSuffixRegex = `^[.-]*|[.-]*$`
+
+	// Hash constants.
+	hashShortenedPrefix          = "-"
+	numHashChars                 = 5
+	rfcNonAlphaCharPeriod        = "."
+	rfcWildcard                  = "z"
+	acceptableRFCGlobalAlertName = maxCronJobNameLen - len(detectionCronJobSuffix) - numHashChars - 2
+
+	ClusterKey = "cluster"
 
 	detectionCronJobSuffix = "detection"
 )
@@ -373,19 +396,24 @@ func (r *adDetectionReconciler) createDetectionCycle(podTemplate *v1.PodTemplate
 
 	globalAlert := detectionResource.GlobalAlert
 
+	detectionSchedule := DefaultCronJobDetectionSchedule
+	if globalAlert.Spec.Period != nil {
+		detectionSchedule = globalAlert.Spec.Period.Duration
+	}
+
 	err := podtemplate.DecoratePodTemplateForADDetectorCycle(podTemplate, detectionResource.ClusterName,
-		podtemplate.ADJobDetectCycleArg, globalAlert.Spec.Detector, globalAlert.Spec.Period.String())
+		podtemplate.ADJobDetectCycleArg, globalAlert.Spec.Detector, detectionSchedule.String())
 
 	if err != nil {
 		return nil, err
 	}
 
-	detectionCronJobName := r.getDetectionCycleCronJobNameForGlobaAlert(detectionResource.ClusterName, globalAlert.Name)
+	detectionCronJobName := r.getDetectionCycleCronJobNameForGlobaAlert(globalAlert.Name)
 	detectionLabels := DetectionJobLabels()
 	detectionLabels[ClusterKey] = detectionResource.ClusterName
 
 	detectionCycleCronJob := podtemplate.CreateCronJobFromPodTemplate(detectionCronJobName, r.namespace,
-		globalAlert.Spec.Period.Duration, detectionLabels, *podTemplate)
+		detectionSchedule, detectionLabels, *podTemplate)
 
 	// attached detection cronjob to GlobalAlert so it will be garbage collected if GlobalAlert is deleted
 	detectionCycleCronJob.OwnerReferences = []metav1.OwnerReference{
@@ -403,8 +431,39 @@ func (r *adDetectionReconciler) createDetectionCycle(podTemplate *v1.PodTemplate
 	return detectionCycleCronJob, nil
 }
 
-func (r *adDetectionReconciler) getDetectionCycleCronJobNameForGlobaAlert(clusterName string, globaAlertName string) string {
-	return fmt.Sprintf("%s-%s-%s", clusterName, globaAlertName, detectionCronJobSuffix)
+// getDetectionCycleCronJobNameForGlobaAlert creates a shortned RFC1123 compliant name for the detection cronjob
+// based on the globalalert name
+func (r *adDetectionReconciler) getDetectionCycleCronJobNameForGlobaAlert(globaAlertName string) string {
+	// Convert all uppercase to lower case, in order to preserve as many characters as possible.
+	// Remove each non-RFC compliant character.
+	rfcGlobalAlertName := strings.ToLower(globaAlertName)
+
+	// Remove all characters that are not RFC1123.
+	regexInvalidChars := regexp.MustCompile(nonRFCCompliantRegexDef)
+	rfcGlobalAlertName = regexInvalidChars.ReplaceAllString(rfcGlobalAlertName, "")
+	// Replace '-.', '.-' or consecutive '.' with a single '.'.
+	regexPeriods := regexp.MustCompile(charactersConvertedToPeriodRegex)
+	rfcGlobalAlertName = regexPeriods.ReplaceAllString(rfcGlobalAlertName, rfcNonAlphaCharPeriod)
+	// Remove all '.' or '-' from the prefix and suffix of the name.
+	regexPrefixSuffix := regexp.MustCompile(charactersMatchingPrefixOrSuffixRegex)
+	rfcGlobalAlertName = regexPrefixSuffix.ReplaceAllString(rfcGlobalAlertName, "")
+
+	// If all characters have been removed, replace the empty string with a 'z'.
+	if len(rfcGlobalAlertName) == 0 {
+		rfcGlobalAlertName = rfcWildcard
+	}
+
+	if len(rfcGlobalAlertName) > acceptableRFCGlobalAlertName {
+		if rfcGlobalAlertName[acceptableRFCGlobalAlertName-1] == '.' {
+			// If the last character of the substring of rfcName is '.', remove it, to avoid introducing
+			// an invalid string of the form ".-" into the name.
+			rfcGlobalAlertName = rfcGlobalAlertName[:acceptableRFCGlobalAlertName-1]
+		} else {
+			rfcGlobalAlertName = rfcGlobalAlertName[:acceptableRFCGlobalAlertName]
+		}
+	}
+
+	return fmt.Sprintf("%s-%s-%s", rfcGlobalAlertName, detectionCronJobSuffix, util.ComputeSha256HashWithLimit(globaAlertName, numHashChars))
 }
 
 // removeDetector removes from the GlobalAlert from the detection state for the cluster and signals for the detection CronJob to be delete.
@@ -413,7 +472,7 @@ func (r *adDetectionReconciler) removeDetector(detectionState DetectionCycleRequ
 	r.detectionJobsMutex.Lock()
 	defer r.detectionJobsMutex.Unlock()
 
-	detectionStateKey := r.getDetectionCycleCronJobNameForGlobaAlert(detectionState.ClusterName, detectionState.GlobalAlert.Name)
+	detectionStateKey := r.getDetectionCycleCronJobNameForGlobaAlert(detectionState.GlobalAlert.Name)
 	r.removeDetectionCycleFromResourceCache(detectionStateKey)
 }
 
