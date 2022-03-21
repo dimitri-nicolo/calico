@@ -469,9 +469,9 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					// Allow 2s for Felix to see and process that policy.
 					time.Sleep(2 * time.Second)
 
-					// We use the etcd container as a target IP for the workload to ping, so
+					// We use the ping target container as a target IP for the workload to ping, so
 					// arrange for it to route back to the workload.
-					etcd.Exec("ip", "r", "add", w[0].IP, "via", felix.IP)
+					pingTarget.Exec("ip", "r", "add", w[0].IP, "via", felix.IP)
 
 					// Create a chain of DNS info that maps xyz.com to that IP.
 					dnsServerSetup(scapyTrusted, true)
@@ -526,9 +526,9 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					// Allow 2s for Felix to see and process that policy.
 					time.Sleep(2 * time.Second)
 
-					// We use the etcd container as a target IP for the workload to ping, so
+					// We use the ping target container as a target IP for the workload to ping, so
 					// arrange for it to route back to the workload.
-					etcd.Exec("ip", "r", "add", w[0].IP, "via", felix.IP)
+					pingTarget.Exec("ip", "r", "add", w[0].IP, "via", felix.IP)
 
 					// Create a chain of DNS info that maps xyz.com to that IP.
 					dnsServerSetup(scapyTrusted, true)
@@ -550,9 +550,9 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 			Context("with a chain of DNS info for xyz.com", func() {
 				BeforeEach(func() {
-					// We use the etcd container as a target IP for the workload to ping, so
+					// We use the ping target container as a target IP for the workload to ping, so
 					// arrange for it to route back to the workload.
-					etcd.Exec("ip", "r", "add", w[0].IP, "via", felix.IP)
+					pingTarget.Exec("ip", "r", "add", w[0].IP, "via", felix.IP)
 
 					// Create a chain of DNS info that maps xyz.com to that IP.
 					dnsServerSetup(scapyTrusted, true)
