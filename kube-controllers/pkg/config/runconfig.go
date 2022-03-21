@@ -108,6 +108,7 @@ type ManagedClusterControllerConfig struct {
 	MultiClusterForwardingCA       string
 	ElasticConfig                  ElasticsearchCfgControllerCfg
 	LicenseConfig                  LicenseControllerCfg
+	ImageAssuranceConfig           GenericControllerConfig
 }
 
 type RunConfigController struct {
@@ -393,6 +394,7 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 		rc.ManagedCluster.NumberOfWorkers = envCfg.ManagedClusterWorkers
 		rc.ManagedCluster.ElasticConfig.NumberOfWorkers = envCfg.ManagedClusterElasticsearchConfigurationWorkers
 		rc.ManagedCluster.LicenseConfig.NumberOfWorkers = envCfg.ManagedClusterLicenseConfigurationWorkers
+		rc.ManagedCluster.ImageAssuranceConfig.NumberOfWorkers = envCfg.ManagedClusterImageAssuranceConfigurationWorkers
 		rc.ManagedCluster.MultiClusterForwardingEndpoint = envCfg.MultiClusterForwardingEndpoint
 		rc.ManagedCluster.MultiClusterForwardingCA = envCfg.MultiClusterForwardingCA
 		restCfg, err := clientcmd.BuildConfigFromFlags("", envCfg.Kubeconfig)
