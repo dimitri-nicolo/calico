@@ -547,9 +547,8 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 					rules = append(rules, Rule{
 						Match: Match().MarkClear(r.IptablesMarkPass),
 						Action: NflogAction{
-							Group:       nflogGroup,
-							Prefix:      CalculateEndOfTierDropNFLOGPrefixStr(dir, tier.Name),
-							SizeEnabled: r.EnableNflogSize,
+							Group:  nflogGroup,
+							Prefix: CalculateEndOfTierDropNFLOGPrefixStr(dir, tier.Name),
 						},
 					})
 
@@ -561,9 +560,8 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 					rules = append(rules, Rule{
 						Match: Match().MarkClear(r.IptablesMarkPass),
 						Action: NflogAction{
-							Group:       nflogGroup,
-							Prefix:      CalculateEndOfTierPassNFLOGPrefixStr(dir, tier.Name),
-							SizeEnabled: r.EnableNflogSize,
+							Group:  nflogGroup,
+							Prefix: CalculateEndOfTierPassNFLOGPrefixStr(dir, tier.Name),
 						},
 					})
 				}
@@ -616,9 +614,8 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 		rules = append(rules, Rule{
 			Match: Match(),
 			Action: NflogAction{
-				Group:       nflogGroup,
-				Prefix:      CalculateNoMatchProfileNFLOGPrefixStr(dir),
-				SizeEnabled: r.EnableNflogSize,
+				Group:  nflogGroup,
+				Prefix: CalculateNoMatchProfileNFLOGPrefixStr(dir),
 			},
 		})
 

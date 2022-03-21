@@ -73,7 +73,6 @@ package nfqueue
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -86,13 +85,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/netlinkshim"
 	"github.com/projectcalico/calico/felix/timeshim"
-	"github.com/projectcalico/calico/felix/versionparse"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-)
-
-var (
-	// This is the minimum supported version of the kernel which supports nfqueue with bypass.
-	v3Dot13Dot0 = versionparse.MustParseVersion("3.13.0")
 )
 
 const (
@@ -898,27 +891,4 @@ func (l *packetDataList) remove(data *packetData) {
 
 	data.prev, data.next, data.list = nil, nil, nil
 	l.length--
-}
-
-func isAtLeastKernel(v *versionparse.Version) error {
-	versionReader, err := versionparse.GetKernelVersionReader()
-	if err != nil {
-		return fmt.Errorf("failed to get kernel version reader: %v", err)
-	}
-
-	kernelVersion, err := versionparse.GetKernelVersion(versionReader)
-	if err != nil {
-		return fmt.Errorf("failed to get kernel version: %v", err)
-	}
-
-	if kernelVersion.Compare(v) < 0 {
-		return fmt.Errorf("kernel is too old (have: %v but want at least: %v)", kernelVersion, v)
-	}
-
-	return nil
-}
-
-// SupportsNfQueueWithBypass returns true if the kernel version supports NFQUEUE with the queue-bypass option,
-func SupportsNfQueueWithBypass() error {
-	return isAtLeastKernel(v3Dot13Dot0)
 }

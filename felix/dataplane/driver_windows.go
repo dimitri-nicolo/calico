@@ -73,14 +73,6 @@ func StartDataplaneDriver(configParams *config.Config,
 	return winDP, nil, stopChan
 }
 
-func SupportsNfQueue() error {
-	return fmt.Errorf("NfQueue is not supported on Windows")
-}
-
-func SupportsNfQueueWithBypass() error {
-	return fmt.Errorf("NfQueue is not supported on Windows")
-}
-
 func SupportsBPF() error {
 	return fmt.Errorf("BPF dataplane is not supported on Windows")
 }

@@ -105,9 +105,8 @@ func (r *DefaultRuleRenderer) StagedPolicyNoMatchRule(dir RuleDir, name string) 
 	return iptables.Rule{
 		Match: iptables.Match(),
 		Action: iptables.NflogAction{
-			Group:       nflogGroup,
-			Prefix:      CalculateNoMatchPolicyNFLOGPrefixStr(dir, name),
-			SizeEnabled: r.EnableNflogSize,
+			Group:  nflogGroup,
+			Prefix: CalculateNoMatchPolicyNFLOGPrefixStr(dir, name),
 		},
 	}
 }
@@ -613,9 +612,8 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 		if !untracked {
 			rules = append(rules, iptables.Rule{
 				Action: iptables.NflogAction{
-					Group:       nflogGroup,
-					Prefix:      CalculateNFLOGPrefixStr(RuleActionAllow, owner, dir, idx, name),
-					SizeEnabled: r.EnableNflogSize,
+					Group:  nflogGroup,
+					Prefix: CalculateNFLOGPrefixStr(RuleActionAllow, owner, dir, idx, name),
 				},
 			})
 		}
@@ -635,9 +633,8 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 		if !untracked {
 			rules = append(rules, iptables.Rule{
 				Action: iptables.NflogAction{
-					Group:       nflogGroup,
-					Prefix:      CalculateNFLOGPrefixStr(RuleActionPass, owner, dir, idx, name),
-					SizeEnabled: r.EnableNflogSize,
+					Group:  nflogGroup,
+					Prefix: CalculateNFLOGPrefixStr(RuleActionPass, owner, dir, idx, name),
 				},
 			})
 		}
@@ -660,9 +657,8 @@ func (r *DefaultRuleRenderer) CombineMatchAndActionsForProtoRule(
 		if !untracked {
 			rules = append(rules, iptables.Rule{
 				Action: iptables.NflogAction{
-					Group:       nflogGroup,
-					Prefix:      CalculateNFLOGPrefixStr(RuleActionDeny, owner, dir, idx, name),
-					SizeEnabled: r.EnableNflogSize,
+					Group:  nflogGroup,
+					Prefix: CalculateNFLOGPrefixStr(RuleActionDeny, owner, dir, idx, name),
 				}})
 		}
 
