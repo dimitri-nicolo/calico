@@ -76,7 +76,6 @@ func getDNSLogs(logFile string) ([]string, error) {
 }
 
 var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
-
 	var (
 		etcd        *containers.Container
 		felix       *infrastructure.Felix
@@ -226,7 +225,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		}
 
 		if CurrentGinkgoTestDescription().Failed {
-			etcd.Exec("etcdctl", "ls", "--recursive", "/")
+			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
 		}
 		etcd.Stop()
 		infra.Stop()
@@ -244,7 +243,6 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	})
 
 	Context("after wget microsoft.com", func() {
-
 		JustBeforeEach(func() {
 			time.Sleep(time.Second)
 			canWgetMicrosoft()
@@ -255,7 +253,6 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		})
 
 		Context("with a preceding DNS request that went unresponded", func() {
-
 			if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
 				// Skip because the following test relies on a HostEndpoint.
 				return
@@ -337,7 +334,6 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	})
 
 	Context("after host wget microsoft.com", func() {
-
 		JustBeforeEach(func() {
 			time.Sleep(time.Second)
 			hostCanWgetMicrosoft()
@@ -412,7 +408,6 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		}
 
 		Context("with HostEndpoint", func() {
-
 			if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
 				// Skip because the following test relies on a HostEndpoint.
 				return
@@ -448,7 +443,6 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		} {
 			localMode := m
 			Context("with DNSPolicyMode explicity set to "+string(localMode), func() {
-
 				BeforeEach(func() {
 					dnsMode = string(localMode)
 				})
@@ -849,7 +843,6 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 })
 
 var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
-
 	var (
 		dnsserver *containers.Container
 		etcd      *containers.Container
@@ -951,7 +944,7 @@ var _ = Describe("DNS Policy Mode: DelayDeniedPacket", func() {
 		felix.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
-			etcd.Exec("etcdctl", "ls", "--recursive", "/")
+			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
 		}
 		etcd.Stop()
 		infra.Stop()
