@@ -9,6 +9,12 @@ import (
 	"log"
 	"os"
 	"regexp"
+
+	"github.com/projectcalico/calico/kube-controllers/pkg/config"
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
+	relastic "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
+
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/managedcluster"
 )
 
 var (
@@ -27,5 +33,13 @@ func ValidateEnvVars() {
 	tenantID := os.Getenv("ELASTIC_INDEX_TENANT_ID")
 	if tenantID != "" && !tenantIDSyntax.MatchString(tenantID) {
 		log.Fatal("ELASTIC_INDEX_TENANT_ID must consist of only alpha-numeric chars (lowercase) or '-' and be at max 63 chars")
+	}
+}
+
+func getCloudManagedClusterControllerManagers(esK8sREST relastic.RESTClient, esClientBuilder elasticsearch.ClientBuilder, cfg config.RunConfig) []managedcluster.ControllerManager {
+	return []managedcluster.ControllerManager{
+		managedcluster.NewElasticsearchController(esK8sREST, esClientBuilder, cfg.Controllers.ManagedCluster.ElasticConfig),
+		managedcluster.NewLicensingController(cfg.Controllers.ManagedCluster.LicenseConfig),
+		managedcluster.NewImageAssuranceController(cfg.Controllers.ManagedCluster.ImageAssuranceConfig),
 	}
 }
