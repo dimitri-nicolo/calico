@@ -1,4 +1,4 @@
-{{ if .Values.prometheusOperator }}
+{{- if .Values.prometheusOperator }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -19,6 +19,13 @@ spec:
       nodeSelector:
         kubernetes.io/os: linux
       serviceAccountName: calico-prometheus-operator
+      {{- if .Values.imagePullSecrets }}
+      {{- range $key, $value := .Values.imagePullSecrets }}
+      imagePullSecrets:
+        - name: {{ $key }}
+      {{- end }}
+      
+      {{- end }}
       containers:
       - name: calico-prometheus-operator
         image: {{.Values.prometheusOperator.image}}:{{.Values.prometheusOperator.tag}}
@@ -34,4 +41,6 @@ spec:
           limits:
             cpu: 200m
             memory: 100Mi
-{{ end }}
+
+{{- end }}
+
