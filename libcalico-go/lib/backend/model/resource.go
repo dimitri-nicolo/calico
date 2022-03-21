@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,11 +41,10 @@ type resourceInfo struct {
 }
 
 var (
-	matchGlobalResource          = regexp.MustCompile("^/calico/resources/v3/projectcalico[.]org/([^/]+)/([^/]+)$")
-	matchFederatedGlobalResource = regexp.MustCompile("^/calico/resources/v3/projectcalico[.]org/(profiles)/([^/]+/[^/]+)$")
-	matchNamespacedResource      = regexp.MustCompile("^/calico/resources/v3/projectcalico[.]org/([^/]+)/([^/]+)/([^/]+)$")
-	resourceInfoByKindLower      = make(map[string]resourceInfo)
-	resourceInfoByPlural         = make(map[string]resourceInfo)
+	matchGlobalResource     = regexp.MustCompile("^/calico/resources/v3/projectcalico[.]org/([^/]+)/([^/]+)$")
+	matchNamespacedResource = regexp.MustCompile("^/calico/resources/v3/projectcalico[.]org/([^/]+)/([^/]+)/([^/]+)$")
+	resourceInfoByKindLower = make(map[string]resourceInfo)
+	resourceInfoByPlural    = make(map[string]resourceInfo)
 )
 
 func registerResourceInfo(kind string, plural string, typeOf reflect.Type) {
@@ -265,9 +264,9 @@ func (key ResourceKey) defaultDeletePath() (string, error) {
 		return "", fmt.Errorf("couldn't convert key: %+v", key)
 	}
 	if namespace.IsNamespaced(key.Kind) {
-		return fmt.Sprintf("/calico/resources/v3/projectcalico.org/%s/%s/%s", ri.plural, key.Namespace, key.Name), nil
+		return fmt.Sprintf("/calico/resources/v3/projectcalico.org/%s/%s/%s", ri.plural, key.Namespace, escapeName(key.Name)), nil
 	}
-	return fmt.Sprintf("/calico/resources/v3/projectcalico.org/%s/%s", ri.plural, key.Name), nil
+	return fmt.Sprintf("/calico/resources/v3/projectcalico.org/%s/%s", ri.plural, escapeName(key.Name)), nil
 }
 
 func (key ResourceKey) defaultDeleteParentPaths() ([]string, error) {
@@ -324,7 +323,7 @@ func (options ResourceListOptions) KeyFromDefaultPath(path string) Key {
 		}
 		kindPlural := r[0][1]
 		namespace := r[0][2]
-		name := r[0][3]
+		name := unescapeName(r[0][3])
 		if len(options.Kind) == 0 {
 			panic("Kind must be specified in List option but is not")
 		}
@@ -355,7 +354,7 @@ func (options ResourceListOptions) KeyFromDefaultPath(path string) Key {
 		return nil
 	}
 	kindPlural := r[0][1]
-	name := r[0][2]
+	name := unescapeName(r[0][2])
 	if kindPlural != ri.plural {
 		log.Debugf("Didn't match kind %s != %s", kindPlural, ri.plural)
 		return nil
@@ -388,7 +387,7 @@ func (options ResourceListOptions) defaultPathRoot() string {
 	if options.Name == "" {
 		return k
 	}
-	return k + "/" + options.Name
+	return k + "/" + escapeName(options.Name)
 }
 
 func (options ResourceListOptions) String() string {
