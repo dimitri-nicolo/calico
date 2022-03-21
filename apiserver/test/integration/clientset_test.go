@@ -1726,7 +1726,7 @@ func TestHostEndpointClient(t *testing.T) {
 	const name = "test-hostendpoint"
 	client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 		return &v3.HostEndpoint{}
-	})
+	}, true)
 	defer shutdownServer()
 	defer deleteHostEndpointClient(client, name)
 	rootTestFunc := func() func(t *testing.T) {
