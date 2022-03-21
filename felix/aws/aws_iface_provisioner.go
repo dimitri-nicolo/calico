@@ -114,6 +114,8 @@ type SecondaryIfaceProvisioner struct {
 
 	// resyncNeeded is set to true if we need to do any kind of resync.
 	resyncNeeded bool
+	// elasticIPsHealthy tracks whether there were any problems syncing elastic IPs during the most recent resync.
+	elasticIPsHealthy bool
 	// orphanENIResyncNeeded is set to true if the next resync should also check for orphaned ENIs.  I.e. ones
 	// that this node previously created but which never got attached.  (For example, because felix restarted.)
 	orphanENIResyncNeeded bool
@@ -154,10 +156,11 @@ type AddrInfo struct {
 }
 
 const (
-	healthNameAWSProvisioner = "aws-eni-provisioner"
-	healthNameENICapacity    = "aws-eni-capacity"
-	healthNameAWSInSync      = "aws-eni-addresses-in-sync"
-	defaultTimeout           = 30 * time.Second
+	healthNameAWSProvisioner   = "aws-eni-provisioner"
+	healthNameENICapacity      = "aws-eni-capacity"
+	healthNameAWSInSync        = "aws-eni-addresses-in-sync"
+	healthNameElasticIPsInSync = "aws-elastic-ips-in-sync"
+	defaultTimeout             = 30 * time.Second
 
 	livenessReportInterval = 30 * time.Second
 	livenessTimeout        = 300 * time.Second
@@ -264,6 +267,9 @@ func NewSecondaryIfaceProvisioner(
 		// Similarly, readiness flag to report whether we succeeded in syncing with AWS.
 		healthAgg.RegisterReporter(healthNameAWSInSync, &health.HealthReport{Ready: true}, 0)
 		healthAgg.Report(healthNameAWSInSync, &health.HealthReport{Ready: true})
+		// Similarly, readiness flag to report whether we succeeded in syncing Elastic IPs.
+		healthAgg.RegisterReporter(healthNameElasticIPsInSync, &health.HealthReport{Ready: true}, 0)
+		healthAgg.Report(healthNameElasticIPsInSync, &health.HealthReport{Ready: true})
 		if sip.livenessEnabled {
 			// Health/liveness watchdog for our main loop.  We let this be disabled for ease of UT.
 			healthAgg.RegisterReporter(
@@ -393,9 +399,14 @@ func (m *SecondaryIfaceProvisioner) loopKeepingAWSInSync(ctx context.Context, do
 			recheckTimerFired = false
 
 			var err error
+			// Track elastic IP problems separately, so we can give a distinct health report.  resync() will set this
+			// to false if a problem occurs.
+			m.elasticIPsHealthy = true
 			response, err = m.resync()
 			if m.healthAgg != nil {
+				// Make sure we always report health on every loop...
 				m.healthAgg.Report(healthNameAWSInSync, &health.HealthReport{Ready: err == nil})
+				m.healthAgg.Report(healthNameElasticIPsInSync, &health.HealthReport{Ready: m.elasticIPsHealthy})
 			}
 			if err != nil {
 				logrus.WithError(err).Warning("Failed to resync with AWS. Will retry after backoff.")
@@ -1714,6 +1725,7 @@ func (m *SecondaryIfaceProvisioner) disassociateUnwantedElasticIPs(snapshot *aws
 						// EIP if needed.
 						privIP.Association = nil
 					} else {
+						m.elasticIPsHealthy = false
 						finalErr = err
 					}
 				} else {
@@ -1864,12 +1876,14 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(awsState *awsSta
 		}
 	}
 	if len(failedPrivIPs) > 0 {
+		m.elasticIPsHealthy = false
 		return fmt.Errorf("errors encountered while associating some elastic IPs: %v", failedPrivIPs)
 	}
 	if privIPsToDo.Len() > 0 {
 		logrus.WithField("privIPs", privIPsToDo).Warn(
 			"Unable to assign elastic IPs to some private IPs. Required Elastic IPs are in use elsewhere. " +
 				"This may resolve automatically when another node releases an Elastic IP that's no longer needed.")
+		m.elasticIPsHealthy = false
 		// Not returning an error here; best to wait for the slow retry.
 	}
 	return nil

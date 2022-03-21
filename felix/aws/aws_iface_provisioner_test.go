@@ -23,6 +23,8 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"k8s.io/apimachinery/pkg/util/clock"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
@@ -498,7 +500,8 @@ var modes = []string{v3.AWSSecondaryIPEnabled, v3.AWSSecondaryIPEnabledENIPerWor
 func TestSecondaryIfaceProvisioner_OnDatastoreUpdateShouldNotBlock(t *testing.T) {
 	for _, mode := range modes {
 		t.Run(mode, func(t *testing.T) {
-			sip, _ := setup(t, mode)
+			sip, _, tearDown := setup(t, mode)
+			defer tearDown()
 
 			// Hit on-update many times without starting the main loop, it should never block.
 			done := make(chan struct{})
@@ -951,6 +954,9 @@ func TestSecondaryIfaceProvisioner_ElasticIP_ShowsUpAfterWorkload(t *testing.T) 
 
 			// Should get a response, we don't block other provisioning while waiting for the elastic IP.
 			Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload[mode])))
+			Expect(fake.Health.getLastReport(healthNameElasticIPsInSync)).To(Equal(health.HealthReport{
+				Ready: false,
+			}))
 
 			// Add the IP and trigger a slow retry.
 			Eventually(fake.RecheckClock.HasWaiters).Should(BeTrue())
@@ -959,6 +965,9 @@ func TestSecondaryIfaceProvisioner_ElasticIP_ShowsUpAfterWorkload(t *testing.T) 
 
 			Eventually(sip.ResponseC()).Should(Receive(Equal(responseSingleWorkload[mode])))
 			Expect(fake.EC2.GetElasticIPByPrivateIP(wl1CIDRStr)).To(Equal("1.2.3.4"))
+			Expect(fake.Health.getLastReport(healthNameElasticIPsInSync)).To(Equal(health.HealthReport{
+				Ready: true,
+			}))
 		})
 	}
 }
@@ -1891,8 +1900,10 @@ func (f sipTestFakes) expectSingleBackoffAndStep() {
 	Expect(f.BackoffClock.HasWaiters()).To(BeFalse(), "expected backoff to be cleared")
 }
 
-func setup(t *testing.T, mode string, opts ...IfaceProvOpt) (*SecondaryIfaceProvisioner, *sipTestFakes) {
+func setup(t *testing.T, mode string, opts ...IfaceProvOpt) (*SecondaryIfaceProvisioner, *sipTestFakes, func()) {
 	RegisterTestingT(t)
+
+	cancelLogRedirect := logutils.RedirectLogrusToTestingT(t)
 
 	cleanUpAWSSubnetsFile()
 
@@ -1990,7 +2001,7 @@ func setup(t *testing.T, mode string, opts ...IfaceProvOpt) (*SecondaryIfaceProv
 		SleepClock:   fakeSleepClock,
 		Health:       fakeHealth,
 		CapacityC:    capacityC,
-	}
+	}, cancelLogRedirect
 }
 
 type fakeSleepClock struct {
@@ -2022,7 +2033,7 @@ func cleanUpAWSSubnetsFile() {
 }
 
 func setupAndStart(t *testing.T, mode string, opts ...IfaceProvOpt) (*SecondaryIfaceProvisioner, *sipTestFakes, func()) {
-	sip, fake := setup(t, mode, opts...)
+	sip, fake, tearDown := setup(t, mode, opts...)
 	ctx, cancel := context.WithCancel(context.Background())
 	doneC := sip.Start(ctx)
 	return sip, fake, func() {
@@ -2030,6 +2041,7 @@ func setupAndStart(t *testing.T, mode string, opts ...IfaceProvOpt) (*SecondaryI
 		cancel()
 		Eventually(doneC).Should(BeClosed())
 		fake.EC2.Errors.ExpectAllErrorsConsumed()
+		tearDown()
 	}
 }
 
@@ -2146,6 +2158,12 @@ func (f *fakeHealth) getLastReports() map[string]health.HealthReport {
 		cp[k] = v
 	}
 	return cp
+}
+
+func (f *fakeHealth) getLastReport(name string) health.HealthReport {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+	return f.lastReport[name]
 }
 
 func (f *fakeHealth) clearReports() {
