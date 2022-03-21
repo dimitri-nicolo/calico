@@ -23,8 +23,6 @@ require (
 	k8s.io/klog/v2 v2.9.0
 )
 
-require github.com/google/uuid v1.3.0
-
 require (
 	cloud.google.com/go v0.93.3 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
@@ -64,6 +62,7 @@ require (
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/gnostic v0.5.4 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/huandu/xstrings v1.2.0 // indirect

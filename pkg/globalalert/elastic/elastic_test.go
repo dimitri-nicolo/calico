@@ -15,7 +15,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,14 +60,12 @@ var _ = Describe("GlobalAlert Elastic Test", func() {
 		}))
 		Expect(httpServer).NotTo(BeNil())
 
-		os.Setenv("IMAGE_ASSURANCE_BAST_API_URL", httpServer.URL)
-		orgID, err := uuid.NewUUID()
-		Expect(err).NotTo(HaveOccurred())
-		os.Setenv("IMAGE_ASSURANCE_ORGANIZATION_ID", orgID.String())
+		os.Setenv("IMAGE_ASSURANCE_ENDPOINT", httpServer.URL)
+		os.Setenv("IMAGE_ASSURANCE_ORGANIZATION_ID", "image-assurance-org-id")
 	})
 
 	AfterEach(func() {
-		os.Unsetenv("IMAGE_ASSURANCE_BAST_API_URL")
+		os.Unsetenv("IMAGE_ASSURANCE_ENDPOINT")
 		os.Unsetenv("IMAGE_ASSURANCE_ORGANIZATION_ID")
 	})
 
