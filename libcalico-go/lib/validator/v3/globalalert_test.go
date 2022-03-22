@@ -46,13 +46,13 @@ var _ = DescribeTable("GlobalAlert Validator",
 		}
 	},
 
-	Entry("minimal valid",
+	Entry("minimal valid for UserDefined",
 		&api.GlobalAlert{
 			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
 			Spec: api.GlobalAlertSpec{
 				Description: "test",
 				Severity:    100,
-				DataSet:     "dns",
+				DataSet:     "flows",
 			},
 		},
 		true,
@@ -191,7 +191,6 @@ var _ = DescribeTable("GlobalAlert Validator",
 			Spec: api.GlobalAlertSpec{
 				Description: "test",
 				Severity:    0,
-				DataSet:     "dns",
 			},
 		},
 		false,

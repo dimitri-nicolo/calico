@@ -64,7 +64,7 @@ type GlobalAlertSpec struct {
 	Lookback *metav1.Duration `json:"lookback,omitempty" validate:"omitempty"`
 	// DataSet determines which dataset type the Query will use.
 	// Required and used only if Type is UserDefined.
-	DataSet string `json:"dataSet" validate:"omitempty,oneof=flows dns audit l7 waf vulnerability"`
+	DataSet string `json:"dataSet,omitempty" validate:"omitempty,oneof=flows dns audit l7 waf vulnerability"`
 	// Which data to include from the source data set. Written in a domain-specific query language. Only used if Type is UserDefined.
 	Query string `json:"query,omitempty" validate:"omitempty"`
 	// An optional list of fields to aggregate results.

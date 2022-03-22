@@ -5549,7 +5549,6 @@ func schema_pkg_apis_projectcalico_v3_GlobalAlertSpec(ref common.ReferenceCallba
 					"dataSet": {
 						SchemaProps: spec.SchemaProps{
 							Description: "DataSet determines which dataset type the Query will use. Required and used only if Type is UserDefined.",
-							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -5619,7 +5618,7 @@ func schema_pkg_apis_projectcalico_v3_GlobalAlertSpec(ref common.ReferenceCallba
 						},
 					},
 				},
-				Required: []string{"description", "severity", "dataSet"},
+				Required: []string{"description", "severity"},
 			},
 		},
 		Dependencies: []string{
