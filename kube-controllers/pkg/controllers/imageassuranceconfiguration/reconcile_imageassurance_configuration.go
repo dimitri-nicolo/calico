@@ -48,6 +48,11 @@ func (c *reconciler) Reconcile(name types.NamespacedName) error {
 		return err
 	}
 
+	if err := c.reconcileConfigMap(); err != nil {
+		reqLogger.Errorf("error reconciling admission controller config map %+v", err)
+		return err
+	}
+
 	if err := c.reconcileServiceAccount(); err != nil {
 		reqLogger.Errorf("error reconciling admission controller service account %+v", err)
 		return err
@@ -69,6 +74,25 @@ func (c *reconciler) Reconcile(name types.NamespacedName) error {
 	}
 
 	reqLogger.Info("Finished reconciling ImageAssurance credentials")
+
+	return nil
+}
+
+// reconcileConfigMap takes in tigera-image-assurance-config from management cluster and copy it over to the
+// managed cluster.
+func (c *reconciler) reconcileConfigMap() error {
+	configMap, err := c.managementK8sCLI.CoreV1().ConfigMaps(c.managementOperatorNamespace).Get(context.Background(),
+		resource.ImageAssuranceConfigMapName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	configMap.ObjectMeta.Namespace = c.managedImageAssuranceNamespace
+	configMap.ObjectMeta.Name = resource.ImageAssuranceConfigMapName
+
+	if err := resource.WriteConfigMapToK8s(c.managedK8sCLI, resource.CopyConfigMap(configMap)); err != nil {
+		return err
+	}
 
 	return nil
 }

@@ -69,6 +69,13 @@ func New(
 		&corev1.Secret{}, worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
 	)
 
+	w.AddWatch(
+		cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "configmaps", r.managedImageAssuranceNamespace,
+			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ImageAssuranceConfigMapName))),
+		&corev1.ConfigMap{},
+		worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
+	)
+
 	// This is for a managed cluster, in this we need to watch tigera-image-assurance-api-cert-pair to know when to copy
 	// its cert part over to the managed clusters, as well as the service accounts in the operator namespace.
 	if !management {
@@ -96,6 +103,13 @@ func New(
 		cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", r.managementOperatorNamespace,
 			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ImageAssuranceAPICertPairSecretName))),
 		&corev1.Secret{},
+		worker.ResourceWatchUpdate, worker.ResourceWatchDelete, worker.ResourceWatchAdd,
+	)
+
+	w.AddWatch(
+		cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "configmaps", r.managementOperatorNamespace,
+			fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ImageAssuranceConfigMapName))),
+		&corev1.ConfigMap{},
 		worker.ResourceWatchUpdate, worker.ResourceWatchDelete, worker.ResourceWatchAdd,
 	)
 
