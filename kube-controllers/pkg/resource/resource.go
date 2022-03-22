@@ -20,6 +20,7 @@ const (
 	LicenseName                                       = "default"
 	CalicoNamespaceName                               = "calico-system"
 	ActiveOperatorConfigMapName                       = "active-operator"
+	ImageAssuranceConfigMapName                       = "tigera-image-assurance-config"
 	ImageAssuranceAPICertPairSecretName               = "tigera-image-assurance-api-cert-pair"
 	ImageAssuranceAPICertSecretName                   = "tigera-image-assurance-api-cert"
 	ImageAssuranceNameSpaceName                       = "tigera-image-assurance"
