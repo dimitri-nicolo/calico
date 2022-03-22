@@ -312,7 +312,7 @@ func (a *awsIPManager) onRouteUpdate(dst ip.CIDR, route *proto.RouteUpdate) {
 func (a *awsIPManager) onIfaceUpdate(msg *ifaceUpdate) {
 	// Keep track of what interfaces we've seen so we can trigger a resync if we're waiting for a new
 	// ENI to show up.
-	if msg.State == "" {
+	if msg.State == ifacemonitor.StateNotPresent {
 		// Interface deleted.
 		delete(a.ifaceNameToIfaceIdx, msg.Name)
 	} else if a.ifaceNameToIfaceIdx[msg.Name] != msg.Index {

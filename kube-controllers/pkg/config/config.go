@@ -36,16 +36,17 @@ type Config struct {
 	LogLevel string `default:"info" split_words:"true"`
 
 	// Number of workers to run for each controller.
-	WorkloadEndpointWorkers                         int `default:"1" split_words:"true"`
-	ProfileWorkers                                  int `default:"1" split_words:"true"`
-	PolicyWorkers                                   int `default:"1" split_words:"true"`
-	ServiceWorkers                                  int `default:"1" split_words:"true"`
-	NodeWorkers                                     int `default:"1" split_words:"true"`
-	FederatedServicesWorkers                        int `default:"1" split_words:"true"`
-	AuthorizationWorkers                            int `default:"1" split_words:"true"`
-	ManagedClusterWorkers                           int `default:"1" split_words:"true"`
-	ManagedClusterElasticsearchConfigurationWorkers int `default:"1" split_words:"true"`
-	ManagedClusterLicenseConfigurationWorkers       int `default:"1" split_words:"true"`
+	WorkloadEndpointWorkers                          int `default:"1" split_words:"true"`
+	ProfileWorkers                                   int `default:"1" split_words:"true"`
+	PolicyWorkers                                    int `default:"1" split_words:"true"`
+	ServiceWorkers                                   int `default:"1" split_words:"true"`
+	NodeWorkers                                      int `default:"1" split_words:"true"`
+	FederatedServicesWorkers                         int `default:"1" split_words:"true"`
+	AuthorizationWorkers                             int `default:"1" split_words:"true"`
+	ManagedClusterWorkers                            int `default:"1" split_words:"true"`
+	ManagedClusterElasticsearchConfigurationWorkers  int `default:"1" split_words:"true"`
+	ManagedClusterLicenseConfigurationWorkers        int `default:"1" split_words:"true"`
+	ManagedClusterImageAssuranceConfigurationWorkers int `default:"1" split_words:"true"`
 
 	// Path to a kubeconfig file to use for accessing the k8s API.
 	Kubeconfig string `default:"" split_words:"false"`

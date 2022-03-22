@@ -8,7 +8,9 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -69,6 +71,46 @@ func WriteLicenseKeyToK8s(cli tigeraapi.Interface, licenseKey *v3.LicenseKey) er
 	} else {
 		licenseKey.ResourceVersion = license.ResourceVersion
 		if _, err := cli.ProjectcalicoV3().LicenseKeys().Update(ctx, licenseKey, metav1.UpdateOptions{}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// WriteServiceAccountToK8s Secret creates or updates the given corev1.ServiceAccount using the given kuberenetes.Clientset
+// depending on whether not the given ServiceAccount exists in the k8s cluster
+func WriteServiceAccountToK8s(cli kubernetes.Interface, serviceAccount *corev1.ServiceAccount) error {
+	ctx := context.Background()
+
+	if _, err := cli.CoreV1().ServiceAccounts(serviceAccount.Namespace).Get(ctx, serviceAccount.Name, metav1.GetOptions{}); err != nil {
+		if !errors.IsNotFound(err) {
+			return err
+		}
+		if _, err := cli.CoreV1().ServiceAccounts(serviceAccount.Namespace).Create(ctx, serviceAccount, metav1.CreateOptions{}); err != nil {
+			return err
+		}
+	} else {
+		if _, err := cli.CoreV1().ServiceAccounts(serviceAccount.Namespace).Update(ctx, serviceAccount, metav1.UpdateOptions{}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// WriteClusterRoleBindingToK8s creates or updates the given rbacv1.ClusterRoleBinding using the given kuberenetes.Clientset
+// depending on whether not the given ClusterRoleBinding exists in the k8s cluster
+func WriteClusterRoleBindingToK8s(cli kubernetes.Interface, crb *rbacv1.ClusterRoleBinding) error {
+	ctx := context.Background()
+
+	if _, err := cli.RbacV1().ClusterRoleBindings().Get(ctx, crb.Name, metav1.GetOptions{}); err != nil {
+		if !errors.IsNotFound(err) {
+			return err
+		}
+		if _, err := cli.RbacV1().ClusterRoleBindings().Create(ctx, crb, metav1.CreateOptions{}); err != nil {
+			return err
+		}
+	} else {
+		if _, err := cli.RbacV1().ClusterRoleBindings().Update(ctx, crb, metav1.UpdateOptions{}); err != nil {
 			return err
 		}
 	}

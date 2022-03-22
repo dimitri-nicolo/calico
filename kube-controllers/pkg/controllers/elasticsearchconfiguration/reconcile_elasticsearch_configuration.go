@@ -11,6 +11,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/utils"
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 	esusers "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
@@ -139,7 +140,7 @@ func (c *reconciler) reconcileCASecrets() error {
 // managed or management cluster. If the namespace has changed then send a message to the restartChan
 // so the kube-controller will restart so the new namespaces can be used.
 func (c *reconciler) verifyOperatorNamespaces(reqLogger *log.Entry) error {
-	m, err := fetchOperatorNamespace(c.managedK8sCLI)
+	m, err := utils.FetchOperatorNamespace(c.managedK8sCLI)
 	if err != nil {
 		return fmt.Errorf("failed to fetch the operator namespace for the %s cluster: %w", c.clusterName, err)
 	}
@@ -149,7 +150,7 @@ func (c *reconciler) verifyOperatorNamespaces(reqLogger *log.Entry) error {
 		c.restartChan <- msg
 	}
 	if !c.management {
-		m, err := fetchOperatorNamespace(c.managementK8sCLI)
+		m, err := utils.FetchOperatorNamespace(c.managementK8sCLI)
 		if err != nil {
 			return fmt.Errorf("failed to fetch the operator namespace from the management cluster: %w", err)
 		}

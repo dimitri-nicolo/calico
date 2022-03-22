@@ -136,7 +136,7 @@ type handler struct {
 func (h *handler) OnPacket(packet nfqueue.Packet) {
 	var timestamp uint64
 	if packet.Timestamp != nil {
-		timestamp = uint64(packet.Timestamp.Unix())
+		timestamp = uint64(packet.Timestamp.UnixNano())
 	}
 	h.domainInfoStore.MsgChannel() <- common.DataWithTimestamp{
 		Data:      packet.Payload,

@@ -30,5 +30,5 @@ blocks:
         - name: Build and push helm charts for branch
           commands:
             - cd calico
-            - make charts RELEASE_STREAM=$SEMAPHORE_GIT_BRANCH
+            - make charts
             - make publish-charts

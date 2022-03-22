@@ -962,13 +962,13 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 		return err
 	}
 	// Check for Maxiumum nodes
-	if lic.Status.MaxNodes != 500 {
+	if lic.Status.MaxNodes != 50 {
 		fmt.Printf("Valid License's Maxiumum Node doesn't match :%d\n", lic.Status.MaxNodes)
 		return fmt.Errorf("Incorrect Maximum Nodes in LicenseKey")
 	}
 
 	// Check for Certificate Expiry date
-	if lic.Status.Expiry.Time.String() != "2022-03-15 16:05:51 +0000 UTC" {
+	if lic.Status.Expiry.Time.String() != "2023-03-17 03:23:00 +0000 UTC" {
 		fmt.Printf("Valid License's Expiry date don't match with Certificate:%v\n", lic.Status.Expiry)
 		return fmt.Errorf("License Expiry date don't match")
 	}
@@ -978,7 +978,16 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("License Package Type does not match")
 	}
 
-	if !reflect.DeepEqual(lic.Status.Features, sortedKeys(licFeatures.CloudProFeatures)) {
+	// Extract out "cloud" and "pro" which isn't really the expected
+	// feature.
+	features := []string{}
+	for _, feat := range lic.Status.Features {
+		if feat == "cloud" || feat == "pro" {
+			continue
+		}
+		features = append(features, feat)
+	}
+	if !reflect.DeepEqual(features, sortedKeys(licFeatures.CloudProFeatures)) {
 		fmt.Printf("License's features do not match :%v with %v\n", lic.Status.Features, sortedKeys(licFeatures.CloudProFeatures))
 		return fmt.Errorf("License features do not match")
 	}

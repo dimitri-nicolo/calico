@@ -785,9 +785,8 @@ func (r *DefaultRuleRenderer) dnsResponseSnoopingRules(ifaceMatch string, ipVers
 						ConntrackOrigDstPort(server.Port).
 						ConntrackOrigDst(server.IP),
 					Action: NflogAction{
-						Group:       NFLOGDomainGroup,
-						Prefix:      "DNS",
-						SizeEnabled: r.EnableNflogSize,
+						Group:  NFLOGDomainGroup,
+						Prefix: "DNS",
 						// Traditional DNS over UDP has a maximum size of 512 bytes,
 						// but we need to allow for headers as well (Ethernet, IP
 						// and UDP); 1024 will amply cover what we need.
@@ -825,9 +824,8 @@ func (r *DefaultRuleRenderer) dnsRequestSnoopingRules(ifaceMatch string, ipVersi
 					ConntrackOrigDstPort(server.Port).
 					ConntrackOrigDst(server.IP),
 				Action: NflogAction{
-					Group:       NFLOGDomainGroup,
-					Prefix:      "DNS",
-					SizeEnabled: r.EnableNflogSize,
+					Group:  NFLOGDomainGroup,
+					Prefix: "DNS",
 					// Traditional DNS over UDP has a maximum size of 512 bytes,
 					// but we need to allow for headers as well (Ethernet, IP
 					// and UDP); 1024 will amply cover what we need.

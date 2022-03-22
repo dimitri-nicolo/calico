@@ -73,7 +73,6 @@ package nfqueue
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -86,13 +85,7 @@ import (
 
 	"github.com/projectcalico/calico/felix/netlinkshim"
 	"github.com/projectcalico/calico/felix/timeshim"
-	"github.com/projectcalico/calico/felix/versionparse"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-)
-
-var (
-	// This is the minimum supported version of the kernel which supports nfqueue with bypass.
-	v3Dot13Dot0 = versionparse.MustParseVersion("3.13.0")
 )
 
 const (
@@ -368,7 +361,7 @@ func (nfc *nfQueueConnector) connect(ctx context.Context) error {
 		// If we didn't attach the callbacks then close immediately.
 		nfc.logger.Warning("Failed to register callback functions with nfqueue socket")
 		if cerr := nfRaw.Close(); cerr != nil {
-			nfc.logger.WithError(err).Warning("Failed to close nfqueue socket")
+			nfc.logger.WithError(cerr).Warning("Failed to close nfqueue socket")
 		}
 		return err
 	}
@@ -550,7 +543,7 @@ func (nfx *nfQueueConnection) packetHook(a gonfqueue.Attribute) int {
 		holdTime: nfx.time.Now(),
 		packetID: *a.PacketID,
 	}
-	nfx.logger.Debugf("Packet %d at %s", data.packetID, data.holdTime)
+	nfx.logger.Debugf("Received packet %d at %s", data.packetID, data.holdTime)
 
 	// We need to add this packet to the held list. Also, store the current packet ID - this is used to
 	// determine whether we are able to do batch releases or not.
@@ -590,8 +583,6 @@ func (nfx *nfQueueConnection) packetHook(a gonfqueue.Attribute) int {
 
 // errorHook is the error handling hook registered with the underlying NFQueue netlink library.
 func (nfx *nfQueueConnection) errorHook(err error) int {
-	nfx.logger.WithError(err).Info("Handling error from NFQUEUE socket processing")
-
 	if opError, ok := err.(*netlink.OpError); ok {
 		if opError.Timeout() || opError.Temporary() {
 			return 0
@@ -600,6 +591,7 @@ func (nfx *nfQueueConnection) errorHook(err error) int {
 
 	// Send a disconnect message, the main processing loop will handle the disconnection. Returning 1 here ensures no
 	// more messages will be processed for this connection.
+	nfx.logger.WithError(err).Info("Handling error from NFQUEUE socket processing")
 	nfx.disconnectChan <- nfx
 	return 1
 }
@@ -612,12 +604,12 @@ func (nfx *nfQueueConnection) prepareForRelease(data *packetData) {
 	// Only need to do anything if the packet is still in the held link list.
 	if data.list != &nfx.packetsHeld {
 		nfx.lock.Unlock()
-		cxtLogger.Debug("Requesting release packet, but already released")
+		cxtLogger.Debug("Release packet request, but already released")
 		return
 	}
 
 	// Move over to the released list, we can release the lock straight after that.
-	cxtLogger.Debug("Requesting release packet")
+	cxtLogger.Debug("Release packet request")
 	nfx.packetsHeld.remove(data)
 	nfx.packetsToRelease.add(data)
 	nfx.lock.Unlock()
@@ -644,7 +636,6 @@ func (nfx *nfQueueConnection) prepareForRelease(data *packetData) {
 func (nfx *nfQueueConnection) releaseByAge() {
 	// Calculate the hold time threshold.
 	nt := nfx.time.Now().Add(-nfx.maxHoldTime)
-	nfx.logger.Debugf("Releasing packets held before %s", nt)
 
 	nfx.lock.Lock()
 	var numReleased float64
@@ -652,7 +643,6 @@ func (nfx *nfQueueConnection) releaseByAge() {
 		if nt.Before(data.holdTime) {
 			// Since the packet timeouts will be in the order the packets arrive, as soon as we hit a packet that has
 			// not timed-out we can stop enumeration.
-			nfx.logger.Debugf("Packet is not expired %s < %s", nt, data.holdTime)
 			break
 		}
 
@@ -684,7 +674,6 @@ func (nfx *nfQueueConnection) release() {
 	// Short-circuit the no-op case.
 	if nfx.packetsToRelease.length == 0 {
 		nfx.lock.Unlock()
-		nfx.logger.Debug("No packets to release")
 		return
 	}
 
@@ -902,27 +891,4 @@ func (l *packetDataList) remove(data *packetData) {
 
 	data.prev, data.next, data.list = nil, nil, nil
 	l.length--
-}
-
-func isAtLeastKernel(v *versionparse.Version) error {
-	versionReader, err := versionparse.GetKernelVersionReader()
-	if err != nil {
-		return fmt.Errorf("failed to get kernel version reader: %v", err)
-	}
-
-	kernelVersion, err := versionparse.GetKernelVersion(versionReader)
-	if err != nil {
-		return fmt.Errorf("failed to get kernel version: %v", err)
-	}
-
-	if kernelVersion.Compare(v) < 0 {
-		return fmt.Errorf("kernel is too old (have: %v but want at least: %v)", kernelVersion, v)
-	}
-
-	return nil
-}
-
-// SupportsNfQueueWithBypass returns true if the kernel version supports NFQUEUE with the queue-bypass option,
-func SupportsNfQueueWithBypass() error {
-	return isAtLeastKernel(v3Dot13Dot0)
 }

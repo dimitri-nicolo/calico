@@ -788,7 +788,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 				m.OnUpdate(&ifaceUpdate{
 					Name:  "eth1",
 					Index: 123,
-					State: ifacemonitor.StateUnknown,
+					State: ifacemonitor.StateNotPresent,
 				})
 				Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 

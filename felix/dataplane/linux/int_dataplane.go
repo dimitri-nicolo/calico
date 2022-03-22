@@ -428,6 +428,21 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 	}
 
+	// Get the feature detector and feature set upfront.
+	featureDetector := iptables.NewFeatureDetector(config.FeatureDetectOverrides)
+	iptablesFeatures := featureDetector.GetFeatures()
+
+	// Based on the feature set, fix the DNSPolicyMode based on dataplane and Kernel version. The delay packet modes
+	// are only available on the iptables dataplane, and the DelayDNSResponse mode is only available on higher kernel
+	// versions.
+	if config.BPFEnabled && config.DNSPolicyMode != apiv3.DNSPolicyModeNoDelay {
+		log.Warning("Dataplane is using eBPF which does not support NfQueue. Set DNSPolicyMode to NoDelay")
+		config.DNSPolicyMode = apiv3.DNSPolicyModeNoDelay
+	} else if config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDNSResponse && !iptablesFeatures.NFQueueBypass {
+		log.Warning("Dataplane does not support NfQueue bypass option. Downgrade DNSPolicyMode to DelayDeniedPacket")
+		config.DNSPolicyMode = apiv3.DNSPolicyModeDelayDeniedPacket
+	}
+
 	log.WithField("config", config).Info("Creating internal dataplane driver.")
 	ruleRenderer := config.RuleRendererOverride
 	if ruleRenderer == nil {
@@ -508,9 +523,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	} else {
 		iptablesNATOptions.ExtraCleanupRegexPattern += "|" + rules.HistoricInsertedNATRuleRegex
 	}
-
-	featureDetector := iptables.NewFeatureDetector(config.FeatureDetectOverrides)
-	iptablesFeatures := featureDetector.GetFeatures()
 
 	var iptablesLock sync.Locker
 	if iptablesFeatures.RestoreSupportsLock {
@@ -1561,16 +1573,17 @@ type ifaceUpdate struct {
 	Index int
 }
 
-// Check if current felix ipvs config is correct when felix gets an kube-ipvs0 interface update.
+// Check if current felix ipvs config is correct when felix gets a kube-ipvs0 interface update.
 // If KubeIPVSInterface is UP and felix ipvs support is disabled (kube-proxy switched from iptables to ipvs mode),
 // or if KubeIPVSInterface is DOWN and felix ipvs support is enabled (kube-proxy switched from ipvs to iptables mode),
 // restart felix to pick up correct ipvs support mode.
 func (d *InternalDataplane) checkIPVSConfigOnStateUpdate(state ifacemonitor.State) {
-	if (!d.config.RulesConfig.KubeIPVSSupportEnabled && state == ifacemonitor.StateUp) ||
-		(d.config.RulesConfig.KubeIPVSSupportEnabled && state == ifacemonitor.StateDown) {
+	ipvsIfacePresent := state != ifacemonitor.StateNotPresent
+	ipvsSupportEnabled := d.config.RulesConfig.KubeIPVSSupportEnabled
+	if ipvsSupportEnabled != ipvsIfacePresent {
 		log.WithFields(log.Fields{
 			"ipvsIfaceState": state,
-			"ipvsSupport":    d.config.RulesConfig.KubeIPVSSupportEnabled,
+			"ipvsSupport":    ipvsSupportEnabled,
 		}).Info("kube-proxy mode changed. Restart felix.")
 		d.config.ConfigChangedRestartCallback()
 	}
