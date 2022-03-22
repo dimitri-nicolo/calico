@@ -60,10 +60,6 @@ type backendClientAccessor interface {
 	Backend() bapi.Client
 }
 
-func init() {
-	ValidateEnvVars()
-}
-
 func main() {
 	var ver, debug bool
 	var healthzSockPort int

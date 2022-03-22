@@ -14,5 +14,9 @@ var tenantID = os.Getenv("ELASTIC_INDEX_TENANT_ID")
 
 // This is the Cloud/Tesla variant of this function. For multi-tenancy we need to scope all indices by tenantID.
 func getVariantSpecificClusterName(name string) string {
-	return fmt.Sprintf("%s.%s", tenantID, name)
+	if tenantID != "" {
+		return fmt.Sprintf("%s.%s", tenantID, name)
+	}
+
+	return name
 }
