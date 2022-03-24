@@ -262,9 +262,10 @@ chart/%: _includes/charts/%/values.yaml
 	--version $(chartVersion) \
 	--app-version $(appVersion)
 
+helm-install-gcs-plugin:
+	bin/helm3 plugin install https://github.com/viglesiasce/helm-gcs.git
 # Upload to Google tigera-helm-charts storage bucket.
 publish-charts:
-	bin/helm3 plugin install https://github.com/viglesiasce/helm-gcs.git
 	bin/helm3 repo add tigera gs://tigera-helm-charts
 	for chart in ./bin/*.tgz; do \
 		bin/helm3 gcs push $$chart gs://tigera-helm-charts; \

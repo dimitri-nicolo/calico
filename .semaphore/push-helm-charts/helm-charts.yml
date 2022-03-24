@@ -31,4 +31,5 @@ blocks:
           commands:
             - cd calico
             - make charts
+            - make helm-install-gcs-plugin
             - make publish-charts
