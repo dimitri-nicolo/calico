@@ -154,7 +154,7 @@ var (
 	RestartModeRegex          = regexp.MustCompile("^(GracefulRestart|LongLivedGracefulRestart)$")
 	BIRDGatewayModeRegex      = regexp.MustCompile("^(Recursive|DirectIfDirectlyConnected)$")
 
-	GlobalAlertTypeRegex = regexp.MustCompile("^(UserDefined|AnomalyDetection)$")
+	GlobalAlertTypeRegex = regexp.MustCompile("^(RuleBased|AnomalyDetection)$")
 
 	minAggregationKindValue    = 0
 	maxAggregationKindValue    = 2

@@ -46,7 +46,7 @@ var _ = DescribeTable("GlobalAlert Validator",
 		}
 	},
 
-	Entry("minimal valid for UserDefined",
+	Entry("minimal valid for RuleBased",
 		&api.GlobalAlert{
 			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
 			Spec: api.GlobalAlertSpec{
@@ -837,11 +837,11 @@ var _ = DescribeTable("GlobalAlert Validator",
 		},
 		false,
 	),
-	Entry("valid UserDefined template",
+	Entry("valid RuleBased template",
 		&api.GlobalAlert{
 			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
 			Spec: api.GlobalAlertSpec{
-				Type:        api.GlobalAlertTypeUserDefined,
+				Type:        api.GlobalAlertTypeRuleBased,
 				Summary:     "foo",
 				Description: "test",
 				Severity:    100,
@@ -850,7 +850,7 @@ var _ = DescribeTable("GlobalAlert Validator",
 		},
 		true,
 	),
-	Entry("valid AnomalyDetection template require Job field",
+	Entry("invalid AnomalyDetection template require Detector field",
 		&api.GlobalAlert{
 			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
 			Spec: api.GlobalAlertSpec{
@@ -862,12 +862,14 @@ var _ = DescribeTable("GlobalAlert Validator",
 		},
 		false,
 	),
-	Entry("invalid AnomalyDetection template with unaccepted Job field",
+	Entry("invalid AnomalyDetection template with unaccepted Detector field",
 		&api.GlobalAlert{
 			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
 			Spec: api.GlobalAlertSpec{
-				Type:        api.GlobalAlertTypeAnomalyDetection,
-				Detector:    "bad_job",
+				Type: api.GlobalAlertTypeAnomalyDetection,
+				Detector: &api.DetectorParams{
+					Name: "bad_adjob",
+				},
 				Summary:     "foo",
 				Description: "test",
 				Severity:    100,
@@ -879,8 +881,10 @@ var _ = DescribeTable("GlobalAlert Validator",
 		&api.GlobalAlert{
 			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
 			Spec: api.GlobalAlertSpec{
-				Type:        api.GlobalAlertTypeAnomalyDetection,
-				Detector:    "port_scan",
+				Type: api.GlobalAlertTypeAnomalyDetection,
+				Detector: &api.DetectorParams{
+					Name: "port_scan",
+				},
 				Summary:     "foo",
 				Description: "test",
 				Severity:    100,

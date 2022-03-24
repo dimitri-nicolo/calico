@@ -78,6 +78,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.DeepPacketInspectionList":              schema_pkg_apis_projectcalico_v3_DeepPacketInspectionList(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.DeepPacketInspectionSpec":              schema_pkg_apis_projectcalico_v3_DeepPacketInspectionSpec(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.DeepPacketInspectionStatus":            schema_pkg_apis_projectcalico_v3_DeepPacketInspectionStatus(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.DetectorParams":                        schema_pkg_apis_projectcalico_v3_DetectorParams(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.EgressSpec":                            schema_pkg_apis_projectcalico_v3_EgressSpec(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.EndpointPort":                          schema_pkg_apis_projectcalico_v3_EndpointPort(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.EndpointsReportEndpoint":               schema_pkg_apis_projectcalico_v3_EndpointsReportEndpoint(ref),
@@ -3141,6 +3142,27 @@ func schema_pkg_apis_projectcalico_v3_DeepPacketInspectionStatus(ref common.Refe
 	}
 }
 
+func schema_pkg_apis_projectcalico_v3_DetectorParams(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name specifies the AnomalyDetection Detector to run.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_projectcalico_v3_EgressSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -5499,7 +5521,7 @@ func schema_pkg_apis_projectcalico_v3_GlobalAlertSpec(ref common.ReferenceCallba
 				Properties: map[string]spec.Schema{
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Type will dictate how the fields of the GlobalAlert will be utilized. Each Type will have different usages and defaults for the fields. [Default: UserDefined]",
+							Description: "Type will dictate how the fields of the GlobalAlert will be utilized. Each Type will have different usages and defaults for the fields. [Default: RuleBased]",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -5519,13 +5541,6 @@ func schema_pkg_apis_projectcalico_v3_GlobalAlertSpec(ref common.ReferenceCallba
 							Format:      "",
 						},
 					},
-					"detector": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Detector specifies the AnomalyDetection Detector to run. Required and used only if Type is AnomalyDetection.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
 					"severity": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Severity of the alert for display in Manager.",
@@ -5536,33 +5551,33 @@ func schema_pkg_apis_projectcalico_v3_GlobalAlertSpec(ref common.ReferenceCallba
 					},
 					"period": {
 						SchemaProps: spec.SchemaProps{
-							Description: "If Type is UserDefined, it is how often the query defined will run. If Type is AnomalyDetection it is how often the detector will be run.",
+							Description: "If Type is RuleBased, it is how often the query defined will run. If Type is AnomalyDetection it is how often the detector will be run.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"lookback": {
 						SchemaProps: spec.SchemaProps{
-							Description: "How much data to gather at once. If Type is UserDefined, it must exceed audit log flush interval, dnsLogsFlushInterval, or flowLogsFlushInterval as appropriate.",
+							Description: "How much data to gather at once. If Type is RuleBased, it must exceed audit log flush interval, dnsLogsFlushInterval, or flowLogsFlushInterval as appropriate.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 					"dataSet": {
 						SchemaProps: spec.SchemaProps{
-							Description: "DataSet determines which dataset type the Query will use. Required and used only if Type is UserDefined.",
+							Description: "DataSet determines which dataset type the Query will use. Required and used only if Type is RuleBased.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"query": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Which data to include from the source data set. Written in a domain-specific query language. Only used if Type is UserDefined.",
+							Description: "Which data to include from the source data set. Written in a domain-specific query language. Only used if Type is RuleBased.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"aggregateBy": {
 						SchemaProps: spec.SchemaProps{
-							Description: "An optional list of fields to aggregate results. Only used if Type is UserDefined.",
+							Description: "An optional list of fields to aggregate results. Only used if Type is RuleBased.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -5577,35 +5592,35 @@ func schema_pkg_apis_projectcalico_v3_GlobalAlertSpec(ref common.ReferenceCallba
 					},
 					"field": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Which field to aggregate results by if using a metric other than count. Only used if Type is UserDefined.",
+							Description: "Which field to aggregate results by if using a metric other than count. Only used if Type is RuleBased.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"metric": {
 						SchemaProps: spec.SchemaProps{
-							Description: "A metric to apply to aggregated results. count is the number of log entries matching the aggregation pattern. Others are applied only to numeric fields in the logs. Only used if Type is UserDefined.",
+							Description: "A metric to apply to aggregated results. count is the number of log entries matching the aggregation pattern. Others are applied only to numeric fields in the logs. Only used if Type is RuleBased.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"condition": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Compare the value of the metric to the threshold using this condition. Only used if Type is UserDefined.",
+							Description: "Compare the value of the metric to the threshold using this condition. Only used if Type is RuleBased.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"threshold": {
 						SchemaProps: spec.SchemaProps{
-							Description: "A numeric value to compare the value of the metric against. Only used if Type is UserDefined.",
+							Description: "A numeric value to compare the value of the metric against. Only used if Type is RuleBased.",
 							Type:        []string{"number"},
 							Format:      "double",
 						},
 					},
 					"substitutions": {
 						SchemaProps: spec.SchemaProps{
-							Description: "An optional list of values to replace variable names in query. Only used if Type is UserDefined.",
+							Description: "An optional list of values to replace variable names in query. Only used if Type is RuleBased.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -5617,12 +5632,18 @@ func schema_pkg_apis_projectcalico_v3_GlobalAlertSpec(ref common.ReferenceCallba
 							},
 						},
 					},
+					"detector": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Parameters for configuring an AnomalyDetection run. Only used if Type is AnomalyDetection.",
+							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.DetectorParams"),
+						},
+					},
 				},
 				Required: []string{"description", "severity"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/tigera/api/pkg/apis/projectcalico/v3.GlobalAlertSubstitution", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.DetectorParams", "github.com/tigera/api/pkg/apis/projectcalico/v3.GlobalAlertSubstitution", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
