@@ -9,8 +9,6 @@ metadata:
   labels:
     name: tigera-operator
 
----
-
 {% helm tigera-operator %}
 installation:
   enabled: false
