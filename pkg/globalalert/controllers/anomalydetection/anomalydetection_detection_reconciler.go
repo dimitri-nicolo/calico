@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -36,23 +35,8 @@ const (
 	ADDetectionJobTemplateName      = "tigera.io.detectors.detection"
 	DefaultCronJobDetectionSchedule = 15 * time.Minute
 	maxCronJobNameLen               = 52
-
-	// Non RFC1123 compliant characters
-	nonRFCCompliantRegexDef            = `[^a-z0-9\.\-]+`
-	nameRFC1123LabelFmt                = "[a-z0-9]([-a-z0-9]*[a-z0-9])?"
-	nameRFC1123SubdomainFmt            = nameRFC1123LabelFmt + "(\\." + nameRFC1123LabelFmt + ")*"
-	nameContainsHashLikeSuffixRegexDef = `[-][a-z0-9]{5}$`
-
-	// Matching period and hyphen regex defs constants
-	charactersConvertedToPeriodRegex      = `[.-]*[.][.-]*`
-	charactersMatchingPrefixOrSuffixRegex = `^[.-]*|[.-]*$`
-
-	// Hash constants.
-	hashShortenedPrefix          = "-"
-	numHashChars                 = 5
-	rfcNonAlphaCharPeriod        = "."
-	rfcWildcard                  = "z"
-	acceptableRFCGlobalAlertName = maxCronJobNameLen - len(detectionCronJobSuffix) - numHashChars - 2
+	numHashChars                    = 5
+	acceptableRFCGlobalAlertName    = maxCronJobNameLen - len(detectionCronJobSuffix) - numHashChars - 2
 
 	ClusterKey = "cluster"
 
@@ -402,7 +386,7 @@ func (r *adDetectionReconciler) createDetectionCycle(podTemplate *v1.PodTemplate
 	}
 
 	err := podtemplate.DecoratePodTemplateForADDetectorCycle(podTemplate, detectionResource.ClusterName,
-		podtemplate.ADJobDetectCycleArg, globalAlert.Spec.Detector, detectionSchedule.String())
+		podtemplate.ADJobDetectCycleArg, globalAlert.Spec.Detector.Name, detectionSchedule.String())
 
 	if err != nil {
 		return nil, err
@@ -432,35 +416,15 @@ func (r *adDetectionReconciler) createDetectionCycle(podTemplate *v1.PodTemplate
 }
 
 // getDetectionCycleCronJobNameForGlobaAlert creates a shortned RFC1123 compliant name for the detection cronjob
-// based on the globalalert name
+// based on the globalalert name in the format <acceptable-global-detection-alert-name>-hash256(globalaertname, 5)
+// where the acceptable-global-detection-alert-name is a concatenated name of the received globalalert to fit the
+// max CronJob 52 char limit
 func (r *adDetectionReconciler) getDetectionCycleCronJobNameForGlobaAlert(globaAlertName string) string {
-	// Convert all uppercase to lower case, in order to preserve as many characters as possible.
-	// Remove each non-RFC compliant character.
+	// Convert all uppercase to lower case
 	rfcGlobalAlertName := strings.ToLower(globaAlertName)
 
-	// Remove all characters that are not RFC1123.
-	regexInvalidChars := regexp.MustCompile(nonRFCCompliantRegexDef)
-	rfcGlobalAlertName = regexInvalidChars.ReplaceAllString(rfcGlobalAlertName, "")
-	// Replace '-.', '.-' or consecutive '.' with a single '.'.
-	regexPeriods := regexp.MustCompile(charactersConvertedToPeriodRegex)
-	rfcGlobalAlertName = regexPeriods.ReplaceAllString(rfcGlobalAlertName, rfcNonAlphaCharPeriod)
-	// Remove all '.' or '-' from the prefix and suffix of the name.
-	regexPrefixSuffix := regexp.MustCompile(charactersMatchingPrefixOrSuffixRegex)
-	rfcGlobalAlertName = regexPrefixSuffix.ReplaceAllString(rfcGlobalAlertName, "")
-
-	// If all characters have been removed, replace the empty string with a 'z'.
-	if len(rfcGlobalAlertName) == 0 {
-		rfcGlobalAlertName = rfcWildcard
-	}
-
 	if len(rfcGlobalAlertName) > acceptableRFCGlobalAlertName {
-		if rfcGlobalAlertName[acceptableRFCGlobalAlertName-1] == '.' {
-			// If the last character of the substring of rfcName is '.', remove it, to avoid introducing
-			// an invalid string of the form ".-" into the name.
-			rfcGlobalAlertName = rfcGlobalAlertName[:acceptableRFCGlobalAlertName-1]
-		} else {
-			rfcGlobalAlertName = rfcGlobalAlertName[:acceptableRFCGlobalAlertName]
-		}
+		rfcGlobalAlertName = rfcGlobalAlertName[:acceptableRFCGlobalAlertName]
 	}
 
 	return fmt.Sprintf("%s-%s-%s", rfcGlobalAlertName, detectionCronJobSuffix, util.ComputeSha256HashWithLimit(globaAlertName, numHashChars))

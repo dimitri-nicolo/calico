@@ -30,16 +30,17 @@ const (
 )
 
 type Alert struct {
-	alert       *v3.GlobalAlert
-	calicoCLI   calicoclient.Interface
-	es          es.Service
-	adj         ad.ADService
-	clusterName string
+	alert                  *v3.GlobalAlert
+	calicoCLI              calicoclient.Interface
+	es                     es.Service
+	adj                    ad.ADService
+	clusterName            string
+	enableAnomalyDetection bool
 }
 
 // NewAlert sets and returns an Alert, builds Elasticsearch query that will be used periodically to query Elasticsearch data.
 func NewAlert(globalAlert *v3.GlobalAlert, calicoCLI calicoclient.Interface, lmaESClient lma.Client, k8sClient kubernetes.Interface,
-	podTemplateQuery podtemplate.ADPodTemplateQuery, adDetectionController controller.AnomalyDetectionController,
+	enableAnomalyDetection bool, podTemplateQuery podtemplate.ADPodTemplateQuery, adDetectionController controller.AnomalyDetectionController,
 	adTrainingController controller.AnomalyDetectionController, clusterName string, namespace string) (*Alert, error) {
 	globalAlert.Status.Active = true
 	globalAlert.Status.LastUpdate = &metav1.Time{Time: time.Now()}
@@ -50,9 +51,10 @@ func NewAlert(globalAlert *v3.GlobalAlert, calicoCLI calicoclient.Interface, lma
 	globalAlertType, ok := globalAlertSpec.FieldByName(GlobalAlertSpecTypeFieldName).Interface().(v3.GlobalAlertType)
 
 	alert := &Alert{
-		alert:       globalAlert,
-		calicoCLI:   calicoCLI,
-		clusterName: clusterName,
+		alert:                  globalAlert,
+		calicoCLI:              calicoCLI,
+		clusterName:            clusterName,
+		enableAnomalyDetection: enableAnomalyDetection,
 	}
 
 	if !ok || globalAlertType != v3.GlobalAlertTypeAnomalyDetection {
@@ -90,10 +92,14 @@ func (a *Alert) Execute(ctx context.Context) {
 	}
 }
 
-// ExecuteAnomalyDetection starts the service for GlobalAlerts
-// specified for anomaly detection.  The scheduling of training
-// and anomaly detection of the jobs are done in the service itself.
+// ExecuteAnomalyDetection starts the service for GlobalAlerts specified for anomaly detection if enableAnomalyDetection is True.
+// The scheduling of training and anomaly detection of the jobs are done in the service itself.
 func (a *Alert) ExecuteAnomalyDetection(ctx context.Context) {
+	if !a.enableAnomalyDetection {
+		log.Debugf("AnomalyDetection disabled, ignoring GlobalAlert %s", a.alert.Name)
+		return
+	}
+
 	a.alert.Status = a.adj.Start(ctx)
 	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error { return a.updateStatus(ctx) }); err != nil {
 		log.WithError(err).Errorf("failed to update status GlobalAlert %s in cluster %s, maximum retries reached", a.alert.Name, a.clusterName)

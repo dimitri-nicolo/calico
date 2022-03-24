@@ -45,6 +45,8 @@ type managedClusterReconciler struct {
 
 	managedClusterAlertControllerHealthPinger health.Pinger
 	managedClusterAlertControllerCh           chan []health.Pinger
+
+	enableAnomalyDetection bool
 }
 
 // alertControllerState has the Controller and cancel function to stop the Controller.
@@ -121,7 +123,7 @@ func (r *managedClusterReconciler) startManagedClusterAlertController(name strin
 	// create the GlobalAlertController for the managed cluster - this controller will monitor all GlobalAlert operations
 	// of the assigned managedcluster
 	alertController, alertHealthPingers := alert.NewGlobalAlertController(managedCLI, lmaESClient, r.k8sClient,
-		r.podTemplateQuery, r.adDetectionController, r.adTrainingController, clusterName, r.namespace)
+		r.enableAnomalyDetection, r.podTemplateQuery, r.adDetectionController, r.adTrainingController, clusterName, r.namespace)
 
 	successSendingPinger := false
 	for maxRetries := 5; maxRetries > 0; maxRetries-- {

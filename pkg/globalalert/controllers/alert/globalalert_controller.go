@@ -37,8 +37,8 @@ type globalAlertController struct {
 // NewGlobalAlertController returns a globalAlertController and for each object it watches,
 // a health.Pinger object is created returned for health check.
 func NewGlobalAlertController(calicoCLI calicoclient.Interface, lmaESClient lma.Client, k8sClient kubernetes.Interface,
-	podTemplateQuery podtemplate.ADPodTemplateQuery, adDetectionController controller.AnomalyDetectionController,
-	adTrainingController controller.AnomalyDetectionController,
+	enableAnomalyDetection bool, podTemplateQuery podtemplate.ADPodTemplateQuery,
+	adDetectionController controller.AnomalyDetectionController, adTrainingController controller.AnomalyDetectionController,
 	clusterName string, namespace string) (controller.Controller, []health.Pinger) {
 
 	c := &globalAlertController{
@@ -52,15 +52,16 @@ func NewGlobalAlertController(calicoCLI calicoclient.Interface, lmaESClient lma.
 	// Create worker to watch GlobalAlert resource in the cluster
 	c.worker = worker.New(
 		&globalAlertReconciler{
-			lmaESClient:           c.lmaESClient,
-			calicoCLI:             c.calicoCLI,
-			k8sClient:             k8sClient,
-			podTemplateQuery:      podTemplateQuery,
-			adDetectionController: adDetectionController,
-			adTrainingController:  adTrainingController,
-			alertNameToAlertState: map[string]alertState{},
-			clusterName:           c.clusterName,
-			namespace:             namespace,
+			lmaESClient:            c.lmaESClient,
+			calicoCLI:              c.calicoCLI,
+			k8sClient:              k8sClient,
+			podTemplateQuery:       podTemplateQuery,
+			adDetectionController:  adDetectionController,
+			adTrainingController:   adTrainingController,
+			alertNameToAlertState:  map[string]alertState{},
+			clusterName:            c.clusterName,
+			namespace:              namespace,
+			enableAnomalyDetection: enableAnomalyDetection,
 		})
 
 	pinger := c.worker.AddWatch(

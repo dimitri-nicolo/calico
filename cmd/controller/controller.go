@@ -190,23 +190,28 @@ func main() {
 	var managementAlertController, managedClusterController controller.Controller
 	var alertHealthPinger, managedClusterHealthPinger health.Pingers
 
+	enableAlerts := os.Getenv("DISABLE_ALERTS") != "yes"
+	enableAnomalyDetection := os.Getenv("DISABLE_ANOMALY_DETECTION") != "yes"
+
 	// anomaly detection controllers
+	var podtemplateQuery podtemplate.ADPodTemplateQuery
 	var anomalyTrainingController, anomalyDetectionController controller.AnomalyDetectionController
 
-	enableAlerts := os.Getenv("DISABLE_ALERTS") != "yes"
-
 	if enableAlerts {
-		podtemplateQuery := podtemplate.NewPodTemplateQuery(k8sClient)
 
-		anomalyTrainingController = anomalydetection.NewADJobTrainingController(k8sClient,
-			calicoClient, podtemplateQuery, TigeraIntrusionDetectionNamespace, clusterName)
+		if enableAnomalyDetection {
+			podtemplateQuery = podtemplate.NewPodTemplateQuery(k8sClient)
 
-		// detection controller depends on GlobalAlert such removing the pinger as one might not be present at start
-		anomalyDetectionController = anomalydetection.NewADJobDetectionController(ctx, k8sClient,
-			calicoClient, podtemplateQuery, TigeraIntrusionDetectionNamespace, clusterName)
+			anomalyTrainingController = anomalydetection.NewADJobTrainingController(k8sClient,
+				calicoClient, podtemplateQuery, TigeraIntrusionDetectionNamespace, clusterName)
+
+			// detection controller depends on GlobalAlert such removing the pinger as one might not be present at start
+			anomalyDetectionController = anomalydetection.NewADJobDetectionController(ctx, k8sClient,
+				calicoClient, podtemplateQuery, TigeraIntrusionDetectionNamespace, clusterName)
+		}
 
 		managementAlertController, alertHealthPinger = alert.NewGlobalAlertController(calicoClient, lmaESClient, k8sClient,
-			podtemplateQuery, anomalyDetectionController, anomalyTrainingController, clusterName,
+			enableAnomalyDetection, podtemplateQuery, anomalyDetectionController, anomalyTrainingController, clusterName,
 			TigeraIntrusionDetectionNamespace)
 		healthPingers = append(healthPingers, &alertHealthPinger)
 
@@ -214,7 +219,7 @@ func main() {
 		multiClusterForwardingCA := getStrEnvOrDefault("MULTI_CLUSTER_FORWARDING_CA", DefaultMultiClusterForwardingCA)
 
 		managedClusterController, managedClusterHealthPinger = managedcluster.NewManagedClusterController(calicoClient, lmaESClient, k8sClient,
-			anomalyTrainingController, anomalyDetectionController, indexSettings, TigeraIntrusionDetectionNamespace,
+			enableAnomalyDetection, anomalyTrainingController, anomalyDetectionController, indexSettings, TigeraIntrusionDetectionNamespace,
 			util.ManagedClusterClient(config, multiClusterForwardingEndpoint, multiClusterForwardingCA))
 		healthPingers = append(healthPingers, &managedClusterHealthPinger)
 	}
@@ -242,10 +247,12 @@ func main() {
 			}
 
 			if enableAlerts {
-				anomalyTrainingController.Run(ctx)
-				defer anomalyTrainingController.Close()
-				anomalyDetectionController.Run(ctx)
-				defer anomalyDetectionController.Close()
+				if enableAnomalyDetection {
+					anomalyTrainingController.Run(ctx)
+					defer anomalyTrainingController.Close()
+					anomalyDetectionController.Run(ctx)
+					defer anomalyDetectionController.Close()
+				}
 
 				managedClusterController.Run(ctx)
 				defer managedClusterController.Close()

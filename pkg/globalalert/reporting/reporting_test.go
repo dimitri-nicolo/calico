@@ -40,8 +40,10 @@ var _ = Describe("Reporting", func() {
 			Name: alertName,
 		},
 		Spec: v3.GlobalAlertSpec{
-			Type:        v3.GlobalAlertTypeAnomalyDetection,
-			Detector:    "port-scan",
+			Type: v3.GlobalAlertTypeAnomalyDetection,
+			Detector: &v3.DetectorParams{
+				Name: "port-scan",
+			},
 			Description: fmt.Sprintf("test anomalyDetection alert: %s", alertName),
 			Severity:    100,
 			Period:      &metav1.Duration{Duration: 5 * time.Second},

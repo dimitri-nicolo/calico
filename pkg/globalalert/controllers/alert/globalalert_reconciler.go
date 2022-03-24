@@ -24,15 +24,16 @@ import (
 // processes, transforms the Elasticsearch result and updates the Elasticsearch events index and GlobalAlert status.
 // If GlobalAlert resource is deleted or updated, cancel the current goroutine, and create a new one if resource is updated.
 type globalAlertReconciler struct {
-	lmaESClient           lma.Client
-	k8sClient             kubernetes.Interface
-	calicoCLI             calicoclient.Interface
-	podTemplateQuery      podtemplate.ADPodTemplateQuery
-	adDetectionController controller.AnomalyDetectionController
-	adTrainingController  controller.AnomalyDetectionController
-	alertNameToAlertState map[string]alertState
-	clusterName           string
-	namespace             string
+	lmaESClient            lma.Client
+	k8sClient              kubernetes.Interface
+	calicoCLI              calicoclient.Interface
+	podTemplateQuery       podtemplate.ADPodTemplateQuery
+	adDetectionController  controller.AnomalyDetectionController
+	adTrainingController   controller.AnomalyDetectionController
+	alertNameToAlertState  map[string]alertState
+	clusterName            string
+	namespace              string
+	enableAnomalyDetection bool
 }
 
 // alertState has the alert and cancel function to stop the alert routine.
@@ -65,8 +66,8 @@ func (r *globalAlertReconciler) Reconcile(namespacedName types.NamespacedName) e
 		return nil
 	}
 
-	alert, err := alert.NewAlert(obj, r.calicoCLI, r.lmaESClient, r.k8sClient, r.podTemplateQuery, r.adDetectionController,
-		r.adTrainingController, r.clusterName, r.namespace)
+	alert, err := alert.NewAlert(obj, r.calicoCLI, r.lmaESClient, r.k8sClient, r.enableAnomalyDetection, r.podTemplateQuery,
+		r.adDetectionController, r.adTrainingController, r.clusterName, r.namespace)
 	if err != nil {
 		return err
 	}
