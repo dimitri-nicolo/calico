@@ -44,6 +44,6 @@ blocks:
         commands:
         - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C kube-controllers image-all cd CONFIRM=true; fi
         # Run CD for the cloud build of kube-controllers.
-        - make clean
+        - make -C kube-controllers clean
         - export TESLA=true
         - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C kube-controllers image-all cd CONFIRM=true; fi
