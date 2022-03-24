@@ -23,3 +23,5 @@ section:
     path: /threat/honeypod/honeypod-controller
 - title: Deep packet inspection
   path: /threat/deeppacketinspection
+- title: Web Application Firewall (WAF)
+  path: /threat/web-application-firewall
