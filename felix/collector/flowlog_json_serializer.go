@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2022 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -51,6 +51,8 @@ type FlowLogJSONOutput struct {
 	// TODO: make a breaking change on the elastic schema + re-index to change this field to dest_service_port_name
 	DestServicePortName string `json:"dest_service_port"` // aliased as dest_service_port_name on ee_flows.template
 	DestServicePortNum  *int64 `json:"dest_service_port_num"`
+
+	DestDomains []string `json:"dest_domains"`
 
 	Proto string `json:"proto"`
 
@@ -168,6 +170,15 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 		out.DestServicePortNum = &destSvcPortNum
 	} else {
 		out.DestServicePortNum = nil
+	}
+	if len(l.FlowDestDomains.Domains) == 0 {
+		out.DestDomains = nil
+	} else {
+		domains := make([]string, 0, len(l.FlowDestDomains.Domains))
+		for pol := range l.FlowDestDomains.Domains {
+			domains = append(domains, pol)
+		}
+		out.DestDomains = domains
 	}
 
 	out.Proto = protoToString(l.Tuple.proto)
@@ -324,6 +335,15 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 		fl.DstLabels = nil
 	} else {
 		fl.DstLabels = unflattenLabels(o.DestLabels.Labels)
+	}
+
+	if len(o.DestDomains) == 0 {
+		fl.FlowDestDomains.Domains = nil
+	} else {
+		fl.FlowDestDomains.Domains = make(map[string]empty)
+		for _, domain := range o.DestDomains {
+			fl.FlowDestDomains.Domains[domain] = emptyValue
+		}
 	}
 
 	fl.Action = FlowLogAction(o.Action)
