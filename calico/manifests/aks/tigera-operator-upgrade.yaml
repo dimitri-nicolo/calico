@@ -1,13 +1,19 @@
 ---
 layout: null
 ---
-{% helm tigera-operator %}
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tigera-operator-enterprise
+  labels:
+    name: tigera-operator-enterprise
+
+{% helm tigera-operator --namespace tigera-operator-enterprise %}
 installation:
   enabled: false
   imagePullSecrets:
     - name: tigera-pull-secret
-tigeraOperator:
-  namespace: tigera-operator-enterprise
 apiServer:
   enabled: false
 intrusionDetection:

@@ -2,7 +2,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ .Values.tigeraOperator.namespace | default "tigera-operator" }}
+  name: {{.Release.Namespace}}
 rules:
   - apiGroups:
       - ""
@@ -90,7 +90,7 @@ rules:
   - apiGroups:
       - apps
     resourceNames:
-      - {{ .Values.tigeraOperator.namespace | default "tigera-operator" }}
+      - {{.Release.Namespace}}
     resources:
       - deployments/finalizers
     verbs:
@@ -285,7 +285,7 @@ rules:
     resources:
       - podsecuritypolicies
     resourceNames:
-      - {{ .Values.tigeraOperator.namespace | default "tigera-operator" }}
+      - {{.Release.Namespace}}
     verbs:
       - use
   - apiGroups:
