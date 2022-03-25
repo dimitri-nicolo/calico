@@ -23,33 +23,48 @@ const (
 var (
 	ADDetectorsGlobalAlertTemplateNameSet = func() map[string]bool {
 		return map[string]bool{
+			GlobalAlertDetectorTemplateNamePrefix + "dga":                   true,
+			GlobalAlertDetectorTemplateNamePrefix + "http-connection-spike": true,
+			GlobalAlertDetectorTemplateNamePrefix + "http-response-codes":   true,
+			GlobalAlertDetectorTemplateNamePrefix + "http-verbs":            true,
 			GlobalAlertDetectorTemplateNamePrefix + "ip-sweep":              true,
 			GlobalAlertDetectorTemplateNamePrefix + "port-scan":             true,
-			GlobalAlertDetectorTemplateNamePrefix + "bytes-in":              true,
-			GlobalAlertDetectorTemplateNamePrefix + "bytes-out":             true,
-			GlobalAlertDetectorTemplateNamePrefix + "process-restarts":      true,
+			GlobalAlertDetectorTemplateNamePrefix + "generic-dns":           true,
+			GlobalAlertDetectorTemplateNamePrefix + "time-series-dns":       true,
+			GlobalAlertDetectorTemplateNamePrefix + "generic-flows":         true,
+			GlobalAlertDetectorTemplateNamePrefix + "time-series-flows":     true,
+			GlobalAlertDetectorTemplateNamePrefix + "generic-l7":            true,
+			GlobalAlertDetectorTemplateNamePrefix + "time-series-l7":        true,
 			GlobalAlertDetectorTemplateNamePrefix + "dns-latency":           true,
+			GlobalAlertDetectorTemplateNamePrefix + "l7-bytes":              true,
 			GlobalAlertDetectorTemplateNamePrefix + "l7-latency":            true,
-			GlobalAlertDetectorTemplateNamePrefix + "http-connection-spike": true,
+			GlobalAlertDetectorTemplateNamePrefix + "process-restarts":      true,
 		}
 	}
 
 	ADDetectorsSet = func() map[string]bool {
 		return map[string]bool{
+			"dga":                   true,
+			"http_connection_spike": true,
+			"http_response_codes":   true,
+			"http_verbs":            true,
 			"ip_sweep":              true,
 			"port_scan":             true,
-			"bytes_in":              true,
-			"bytes_out":             true,
-			"process_restarts":      true,
+			"generic_dns":           true,
+			"time_series_dns":       true,
+			"generic_flows":         true,
+			"time_series_flows":     true,
+			"generic_l7":            true,
+			"time_series_l7":        true,
 			"dns_latency":           true,
+			"l7_bytes":              true,
 			"l7_latency":            true,
-			"http_connection_spike": true,
+			"process_restarts":      true,
 		}
 	}
 )
 
 func validateGlobalAlertSpec(structLevel validator.StructLevel) {
-	validateGlobalAlertJob(structLevel)
 	validateGlobalAlertPeriod(structLevel)
 	validateGlobalAlertLookback(structLevel)
 	validateGlobalAlertDataSet(structLevel)
@@ -57,21 +72,39 @@ func validateGlobalAlertSpec(structLevel validator.StructLevel) {
 	validateGlobalAlertDescriptionAndSummary(structLevel)
 	validateGlobalAlertAggregateBy(structLevel)
 	validateGlobalAlertMetric(structLevel)
+	validateGlobalAlertAnomalyDetectionSpecs(structLevel)
 }
 
 func getGlobalAlertSpec(structLevel validator.StructLevel) api.GlobalAlertSpec {
 	return structLevel.Current().Interface().(api.GlobalAlertSpec)
 }
 
-func validateGlobalAlertJob(structLevel validator.StructLevel) {
+func validateGlobalAlertAnomalyDetectionSpecs(structLevel validator.StructLevel) {
 	s := getGlobalAlertSpec(structLevel)
-	_, isValidJob := ADDetectorsSet()[s.Detector]
-	if s.Type == api.GlobalAlertTypeAnomalyDetection && !isValidJob {
+	if len(s.Type) != 0 && s.Type == api.GlobalAlertTypeAnomalyDetection {
+		if s.Detector == nil {
+			structLevel.ReportError(
+				reflect.ValueOf(s.Detector),
+				"Detector",
+				"",
+				reason(fmt.Sprintf("empty Detector Params for GlobalAlert of Type %s", api.GlobalAlertTypeAnomalyDetection)),
+				"",
+			)
+		} else {
+			validateGlobalAlertDetector(structLevel, *s.Detector)
+		}
+
+	}
+}
+
+func validateGlobalAlertDetector(structLevel validator.StructLevel, ad api.DetectorParams) {
+	_, isValidJob := ADDetectorsSet()[ad.Name]
+	if !isValidJob {
 		structLevel.ReportError(
-			reflect.ValueOf(s.Detector),
-			"Job",
+			reflect.ValueOf(ad.Name),
+			"Detector.Name",
 			"",
-			reason(fmt.Sprintf("unaccepted Job for GlobalAlert of Type %s", s.Type)),
+			reason(fmt.Sprintf("unaccepted Detector for GlobalAlert of Type %s", api.GlobalAlertTypeAnomalyDetection)),
 			"",
 		)
 	}
@@ -80,12 +113,12 @@ func validateGlobalAlertJob(structLevel validator.StructLevel) {
 func validateGlobalAlertDataSet(structLevel validator.StructLevel) {
 	s := getGlobalAlertSpec(structLevel)
 
-	if (len(s.Type) == 0 || s.Type == api.GlobalAlertTypeUserDefined) && len(s.DataSet) == 0 {
+	if (len(s.Type) == 0 || s.Type == api.GlobalAlertTypeRuleBased) && len(s.DataSet) == 0 {
 		structLevel.ReportError(
 			reflect.ValueOf(s.DataSet),
 			"DataSet",
 			"",
-			reason(fmt.Sprintf("empty DataSet for GlobalAlert of Type %s", api.GlobalAlertTypeUserDefined)),
+			reason(fmt.Sprintf("empty DataSet for GlobalAlert of Type %s", api.GlobalAlertTypeRuleBased)),
 			"",
 		)
 	}
