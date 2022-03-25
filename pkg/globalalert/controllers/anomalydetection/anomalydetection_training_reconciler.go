@@ -288,7 +288,7 @@ func (r *adJobTrainingReconciler) getTrainingCycleCronJobNameForCluster(clusterN
 func collectDetectorsFromGlobalAlerts(globalAlerts []*v3.GlobalAlert) string {
 	var detectorList []string
 	for _, ga := range globalAlerts {
-		detectorList = append(detectorList, ga.Spec.Detector)
+		detectorList = append(detectorList, ga.Spec.Detector.Name)
 	}
 
 	return strings.Join(detectorList, ",")

@@ -14,7 +14,7 @@ const (
 
 func CreateCronJobFromPodTemplate(name, namepsace string, schedule time.Duration, labels map[string]string, pt v1.PodTemplate) *batchv1.CronJob {
 
-	adjobTemplate := CreateJobFromPodTemplate(name, namepsace, &schedule, labels, pt)
+	adjobTemplate := CreateJobFromPodTemplate(name, namepsace, labels, pt)
 
 	cronSchedule := CronJobEveryEntryPrefix + " " + schedule.String()
 
@@ -36,7 +36,7 @@ func CreateCronJobFromPodTemplate(name, namepsace string, schedule time.Duration
 	return adCronJob
 }
 
-func CreateJobFromPodTemplate(name string, namespace string, schedule *time.Duration, labels map[string]string, pt v1.PodTemplate) *batchv1.Job {
+func CreateJobFromPodTemplate(name string, namespace string, labels map[string]string, pt v1.PodTemplate) *batchv1.Job {
 
 	// combine labels from podtemplate
 	jobLabels := labels
@@ -48,7 +48,7 @@ func CreateJobFromPodTemplate(name string, namespace string, schedule *time.Dura
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
 			Namespace:   namespace,
-			Labels:      pt.Template.Labels,
+			Labels:      jobLabels,
 			Annotations: pt.Template.Annotations,
 		},
 		Spec: pt.Template.Spec,
@@ -58,15 +58,11 @@ func CreateJobFromPodTemplate(name string, namespace string, schedule *time.Dura
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels:    jobLabels,
 		},
 		Spec: batchv1.JobSpec{
 			Template: template,
 		},
-	}
-
-	if schedule != nil {
-		deadlineSechduleSeconds := int64((*schedule / time.Second).Seconds())
-		job.Spec.ActiveDeadlineSeconds = &deadlineSechduleSeconds
 	}
 
 	return job

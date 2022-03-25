@@ -1,6 +1,8 @@
 package maputil
 
 import (
+	"strings"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -51,7 +53,8 @@ var _ = Describe("maputil", func() {
 				"key1": "val1",
 			})
 
-			Expect(result).To(Equal("key0=val0,key1=val1"))
+			Expect(strings.Contains(result, "key0=val0")).To(BeTrue())
+			Expect(strings.Contains(result, "key1=val1")).To(BeTrue())
 		})
 	})
 })

@@ -37,8 +37,9 @@ type managedClusterController struct {
 // NewManagedClusterController returns a managedClusterController and returns health.Pinger for resources it watches and also
 // returns another health.Pinger that monitors health of GlobalAlertController in each of the managed cluster.
 func NewManagedClusterController(calicoCLI calicoclient.Interface, lmaESClient lma.Client, k8sClient kubernetes.Interface,
-	anomalyTrainingController controller.AnomalyDetectionController, anomalyDetectionController controller.AnomalyDetectionController,
-	indexSettings es.IndexSettings, namespace string, createManagedCalicoCLI func(string) (calicoclient.Interface, error)) (controller.Controller, []health.Pinger) {
+	enableAnomalyDetection bool, anomalyTrainingController controller.AnomalyDetectionController,
+	anomalyDetectionController controller.AnomalyDetectionController, indexSettings es.IndexSettings, namespace string,
+	createManagedCalicoCLI func(string) (calicoclient.Interface, error)) (controller.Controller, []health.Pinger) {
 	m := &managedClusterController{
 		lmaESClient:                        lmaESClient,
 		indexSettings:                      indexSettings,
@@ -60,6 +61,7 @@ func NewManagedClusterController(calicoCLI calicoclient.Interface, lmaESClient l
 		adDetectionController:           anomalyDetectionController,
 		alertNameToAlertControllerState: map[string]alertControllerState{},
 		managedClusterAlertControllerCh: m.managedAlertControllerCh,
+		enableAnomalyDetection:          enableAnomalyDetection,
 	})
 
 	pinger := m.worker.AddWatch(

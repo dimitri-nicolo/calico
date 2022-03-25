@@ -52,6 +52,10 @@ func DecoratePodTemplateForADDetectorCycle(adJobPT *v1.PodTemplate, clusterName,
 			Name:  "CLUSTER_NAME",
 			Value: clusterName,
 		},
+		v1.EnvVar{
+			Name:  "AD_USE_INTERNAL_SCHEDULER",
+			Value: "False",
+		},
 	)
 
 	if len(detector) > 0 {

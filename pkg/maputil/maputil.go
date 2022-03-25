@@ -3,11 +3,9 @@
 package maputil
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-
-	"github.com/tigera/intrusion-detection/controller/pkg/util"
+	"strings"
 )
 
 // Copy returns a copy of the given map.
@@ -31,13 +29,11 @@ func CreateLabelValuePairStr(labelMap map[string]string) string {
 		return ""
 	}
 
-	labelMapBytes := new(bytes.Buffer)
-
+	var labels []string
 	for key, value := range labelMap {
-		fmt.Fprintf(labelMapBytes, "%s=%s,", key, value)
+		labelKeyValueStr := fmt.Sprintf("%s=%s", key, value)
+		labels = append(labels, labelKeyValueStr)
 	}
-	labelMaoByteStr := labelMapBytes.String()
-	labelMaoByteStr = util.TrimTrailingSuffix(labelMaoByteStr, ",")
 
-	return labelMaoByteStr
+	return strings.Join(labels, ",")
 }

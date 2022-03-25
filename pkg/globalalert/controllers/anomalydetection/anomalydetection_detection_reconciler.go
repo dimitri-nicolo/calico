@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 	"sync"
+	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
@@ -30,8 +32,13 @@ import (
 )
 
 const (
-	ADDetectionJobTemplateName = "tigera.io.detectors.detection"
-	ClusterKey                 = "cluster"
+	ADDetectionJobTemplateName      = "tigera.io.detectors.detection"
+	DefaultCronJobDetectionSchedule = 15 * time.Minute
+	maxCronJobNameLen               = 52
+	numHashChars                    = 5
+	acceptableRFCGlobalAlertName    = maxCronJobNameLen - len(detectionCronJobSuffix) - numHashChars - 2
+
+	ClusterKey = "cluster"
 
 	detectionCronJobSuffix = "detection"
 )
@@ -373,19 +380,24 @@ func (r *adDetectionReconciler) createDetectionCycle(podTemplate *v1.PodTemplate
 
 	globalAlert := detectionResource.GlobalAlert
 
+	detectionSchedule := DefaultCronJobDetectionSchedule
+	if globalAlert.Spec.Period != nil {
+		detectionSchedule = globalAlert.Spec.Period.Duration
+	}
+
 	err := podtemplate.DecoratePodTemplateForADDetectorCycle(podTemplate, detectionResource.ClusterName,
-		podtemplate.ADJobDetectCycleArg, globalAlert.Spec.Detector, globalAlert.Spec.Period.String())
+		podtemplate.ADJobDetectCycleArg, globalAlert.Spec.Detector.Name, detectionSchedule.String())
 
 	if err != nil {
 		return nil, err
 	}
 
-	detectionCronJobName := r.getDetectionCycleCronJobNameForGlobaAlert(detectionResource.ClusterName, globalAlert.Name)
+	detectionCronJobName := r.getDetectionCycleCronJobNameForGlobaAlert(globalAlert.Name)
 	detectionLabels := DetectionJobLabels()
 	detectionLabels[ClusterKey] = detectionResource.ClusterName
 
 	detectionCycleCronJob := podtemplate.CreateCronJobFromPodTemplate(detectionCronJobName, r.namespace,
-		globalAlert.Spec.Period.Duration, detectionLabels, *podTemplate)
+		detectionSchedule, detectionLabels, *podTemplate)
 
 	// attached detection cronjob to GlobalAlert so it will be garbage collected if GlobalAlert is deleted
 	detectionCycleCronJob.OwnerReferences = []metav1.OwnerReference{
@@ -403,8 +415,19 @@ func (r *adDetectionReconciler) createDetectionCycle(podTemplate *v1.PodTemplate
 	return detectionCycleCronJob, nil
 }
 
-func (r *adDetectionReconciler) getDetectionCycleCronJobNameForGlobaAlert(clusterName string, globaAlertName string) string {
-	return fmt.Sprintf("%s-%s-%s", clusterName, globaAlertName, detectionCronJobSuffix)
+// getDetectionCycleCronJobNameForGlobaAlert creates a shortned RFC1123 compliant name for the detection cronjob
+// based on the globalalert name in the format <acceptable-global-detection-alert-name>-hash256(globalaertname, 5)
+// where the acceptable-global-detection-alert-name is a concatenated name of the received globalalert to fit the
+// max CronJob 52 char limit
+func (r *adDetectionReconciler) getDetectionCycleCronJobNameForGlobaAlert(globaAlertName string) string {
+	// Convert all uppercase to lower case
+	rfcGlobalAlertName := strings.ToLower(globaAlertName)
+
+	if len(rfcGlobalAlertName) > acceptableRFCGlobalAlertName {
+		rfcGlobalAlertName = rfcGlobalAlertName[:acceptableRFCGlobalAlertName]
+	}
+
+	return fmt.Sprintf("%s-%s-%s", rfcGlobalAlertName, detectionCronJobSuffix, util.ComputeSha256HashWithLimit(globaAlertName, numHashChars))
 }
 
 // removeDetector removes from the GlobalAlert from the detection state for the cluster and signals for the detection CronJob to be delete.
@@ -413,7 +436,7 @@ func (r *adDetectionReconciler) removeDetector(detectionState DetectionCycleRequ
 	r.detectionJobsMutex.Lock()
 	defer r.detectionJobsMutex.Unlock()
 
-	detectionStateKey := r.getDetectionCycleCronJobNameForGlobaAlert(detectionState.ClusterName, detectionState.GlobalAlert.Name)
+	detectionStateKey := r.getDetectionCycleCronJobNameForGlobaAlert(detectionState.GlobalAlert.Name)
 	r.removeDetectionCycleFromResourceCache(detectionStateKey)
 }
 
