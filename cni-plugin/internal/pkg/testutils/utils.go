@@ -35,8 +35,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const K8S_TEST_NS = "test"
-const TEST_DEFAULT_NS = "default"
+const (
+	K8S_TEST_NS     = "test"
+	TEST_DEFAULT_NS = "default"
+)
 
 // Delete everything under /calico from etcd.
 func WipeDatastore() {
@@ -71,9 +73,6 @@ func WipeDatastore() {
 }
 
 func MustDeleteIPPool(c client.Interface, cidr string) {
-	log.SetLevel(log.DebugLevel)
-	log.SetOutput(os.Stderr)
-
 	name := strings.Replace(cidr, ".", "-", -1)
 	name = strings.Replace(name, ":", "-", -1)
 	name = strings.Replace(name, "/", "-", -1)

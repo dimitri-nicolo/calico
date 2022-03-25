@@ -19,12 +19,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/calico/cni-plugin/internal/pkg/testutils"
-	"github.com/projectcalico/calico/cni-plugin/internal/pkg/utils"
 	"github.com/projectcalico/calico/cni-plugin/pkg/types"
 	api "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	k8sconversion "github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
@@ -34,10 +32,6 @@ import (
 var _ = Describe("CalicoCni Private", func() {
 	// Create a random seed
 	rand.Seed(time.Now().UTC().UnixNano())
-	log.SetFormatter(&logutils.Formatter{})
-	log.AddHook(&logutils.ContextHook{})
-	log.SetOutput(GinkgoWriter)
-	log.SetLevel(log.DebugLevel)
 	hostname, _ := names.Hostname()
 	ctx := context.Background()
 	calicoClient, err := client.NewFromEnv()
@@ -73,14 +67,9 @@ var _ = Describe("CalicoCni Private", func() {
 	})
 
 	Describe("Run Calico CNI plugin in K8s mode", func() {
-		logConf := types.NetConf{
-			LogLevel: "info",
-		}
-		utils.ConfigureLogging(logConf)
 		cniVersion := os.Getenv("CNI_SPEC_VERSION")
 
 		Context("using host-local IPAM", func() {
-
 			netconf := fmt.Sprintf(`
 			{
 			  "cniVersion": "%s",
@@ -145,10 +134,6 @@ var _ = Describe("CalicoCni Private", func() {
 var _ = Describe("CalicoCNI Private Kubernetes CNI tests", func() {
 	// Create a random seed
 	rand.Seed(time.Now().UTC().UnixNano())
-	log.SetFormatter(&logutils.Formatter{})
-	log.AddHook(&logutils.ContextHook{})
-	log.SetOutput(GinkgoWriter)
-	log.SetLevel(log.InfoLevel)
 	hostname, _ := names.Hostname()
 	calicoClient, err := client.NewFromEnv()
 	if err != nil {
@@ -182,16 +167,12 @@ var _ = Describe("CalicoCNI Private Kubernetes CNI tests", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	logConf := types.NetConf{
-		LogLevel: "info",
-	}
-	utils.ConfigureLogging(logConf)
 	cniVersion := os.Getenv("CNI_SPEC_VERSION")
 
 	Context("with WindowsUseSingleNetwork: true", func() {
 		var nc types.NetConf
 		var netconf string
-		var pool1 = "50.60.0.0/24"
+		pool1 := "50.60.0.0/24"
 		var clientset *kubernetes.Clientset
 		BeforeEach(func() {
 			// Build the network config for this set of tests.
