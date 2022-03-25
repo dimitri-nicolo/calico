@@ -559,6 +559,10 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 			),
 		}
 	}
+
+	// Add controllers specific to the build, i.e. calico cloud.
+	addBuildSpecificControllers(&cfg, cc, k8sClientset)
+
 	if cfg.Controllers.ManagedCluster != nil {
 		// We only want these clients created if the managedcluster controller type is enabled
 		kubeconfig := cfg.Controllers.ManagedCluster.RESTConfig

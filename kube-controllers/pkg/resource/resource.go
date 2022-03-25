@@ -28,6 +28,10 @@ const (
 	ImageAssuranceAdmissionControllerRoleName         = "tigera-image-assurance-admission-controller"
 	ManagedIAAdmissionControllerResourceName          = "tigera-image-assurance-admission-controller-api-access"
 	ManagementIAAdmissionControllerResourceNameFormat = "tigera-image-assurance-%s-admission-controller-api-access"
+
+	ImageAssuranceIDSControllerClusterRoleName        = "tigera-image-assurance-intrusion-detection-controller"
+	ImageAssuranceIDSControllerServiceAccountName     = "tigera-image-assurance-intrusion-detection-controller-api-access"
+	ImageAssuranceIDSControllerClusterRoleBindingName = "tigera-image-assurance-intrusion-detection-controller-api-access"
 )
 
 func CreateHashFromObject(obj interface{}) (string, error) {

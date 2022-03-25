@@ -15,7 +15,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -25,13 +24,16 @@ type reconciler struct {
 	clusterName string
 	// ownerReference is used to store the "owner" of this reconciler. If the owner has changed that signals the user
 	// credential secrets should be rotated. It's valid to have an empty owner reference.
-	ownerReference                 string
-	management                     bool
-	managementK8sCLI               kubernetes.Interface
-	managementOperatorNamespace    string
-	managedK8sCLI                  kubernetes.Interface
-	managedImageAssuranceNamespace string
-	restartChan                    chan<- string
+	ownerReference              string
+	management                  bool
+	managementK8sCLI            kubernetes.Interface
+	managementOperatorNamespace string
+	managedK8sCLI               kubernetes.Interface
+	imageAssuranceNamespace     string
+	restartChan                 chan<- string
+
+	admissionControllerClusterRoleName string
+	intrusionDetectionClusterRoleName  string
 }
 
 // Reconcile makes sure that the managed cluster this is running for has all the configuration needed for it's components
@@ -48,12 +50,15 @@ func (c *reconciler) Reconcile(name types.NamespacedName) error {
 		return err
 	}
 
-	if err := c.reconcileConfigMap(); err != nil {
-		reqLogger.Errorf("error reconciling admission controller config map %+v", err)
-		return err
+	// The management cluster already has this config map where it needs it.
+	if !c.management {
+		if err := c.reconcileConfigMap(); err != nil {
+			reqLogger.Errorf("error reconciling admission controller config map %+v", err)
+			return err
+		}
 	}
 
-	if err := c.reconcileServiceAccount(); err != nil {
+	if err := c.reconcileServiceAccounts(); err != nil {
 		reqLogger.Errorf("error reconciling admission controller service account %+v", err)
 		return err
 	}
@@ -63,14 +68,18 @@ func (c *reconciler) Reconcile(name types.NamespacedName) error {
 		return err
 	}
 
-	if err := c.reconcileCASecrets(); err != nil {
-		reqLogger.Errorf("error reconciling CA secrets for image assurance %+v", err)
-		return err
-	}
+	// These items are for the admission controller (which are is not in the management cluster as of right now or
+	// the management cluster already has the item.
+	if !c.management {
+		if err := c.reconcileCASecrets(); err != nil {
+			reqLogger.Errorf("error reconciling CA secrets for image assurance %+v", err)
+			return err
+		}
 
-	if err := c.reconcileAdmissionControllerSecret(); err != nil {
-		reqLogger.Errorf("error reconciling admission controller secrets %+v", err)
-		return err
+		if err := c.reconcileAdmissionControllerSecret(); err != nil {
+			reqLogger.Errorf("error reconciling admission controller secrets %+v", err)
+			return err
+		}
 	}
 
 	reqLogger.Info("Finished reconciling ImageAssurance credentials")
@@ -87,7 +96,7 @@ func (c *reconciler) reconcileConfigMap() error {
 		return err
 	}
 
-	configMap.ObjectMeta.Namespace = c.managedImageAssuranceNamespace
+	configMap.ObjectMeta.Namespace = c.imageAssuranceNamespace
 	configMap.ObjectMeta.Name = resource.ImageAssuranceConfigMapName
 
 	if err := resource.WriteConfigMapToK8s(c.managedK8sCLI, resource.CopyConfigMap(configMap)); err != nil {
@@ -106,7 +115,7 @@ func (c *reconciler) reconcileCASecrets() error {
 		return err
 	}
 
-	secret.ObjectMeta.Namespace = c.managedImageAssuranceNamespace
+	secret.ObjectMeta.Namespace = c.imageAssuranceNamespace
 	secret.ObjectMeta.Name = resource.ImageAssuranceAPICertSecretName
 	secret.Data = map[string][]byte{
 		corev1.TLSCertKey: secret.Data[corev1.TLSCertKey],
@@ -144,21 +153,21 @@ func (c *reconciler) reconcileAdmissionControllerSecret() error {
 
 // reconcileServiceAccount ensures that service account exists for admission controller in management cluster. We don't
 // need to check for the existence of service account, we always write, if nothing has changed it's a no-op, else it's updated.
-func (c *reconciler) reconcileServiceAccount() error {
-	mgmtSa, err := c.managementK8sCLI.CoreV1().ServiceAccounts(c.managementOperatorNamespace).Get(context.Background(),
-		fmt.Sprintf(resource.ManagementIAAdmissionControllerResourceNameFormat, c.clusterName), metav1.GetOptions{})
-
-	if !errors.IsNotFound(err) {
-		return err
+func (c *reconciler) reconcileServiceAccounts() error {
+	// Admission controller only runs in the managed cluster.
+	if !c.management {
+		sa := c.admissionControllerServiceAccount()
+		if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, sa); err != nil {
+			return err
+		}
 	}
 
-	sa := c.admissionControllerServiceAccount()
-	// if service account exists in management cluster, then copy the name of the secret of Service account.
-	if mgmtSa != nil {
-		sa.Secrets = mgmtSa.Secrets
-	}
-	if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, sa); err != nil {
-		return err
+	// Intrusion detection controller only runs in the management cluster
+	if c.management {
+		sa := c.intrusionDetectionControllerServiceAccount()
+		if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, sa); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -167,29 +176,38 @@ func (c *reconciler) reconcileServiceAccount() error {
 // reconcileClusterRoleBinding ensures that cluster role binding exists for admission controller in management cluster. We don't
 // need to check for the cluster role binding here, we always write, if nothing has changed it's a no-op, else it's updated.
 func (c *reconciler) reconcileClusterRoleBinding() error {
-	crb := c.admissionControllerClusterRoleBinding()
-	if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, crb); err != nil {
-		return err
+	// Admission controller only runs in the managed cluster.
+	if !c.management {
+		crb := c.admissionControllerClusterRoleBinding()
+		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, crb); err != nil {
+			return err
+		}
 	}
 
+	// Intrusion detection controller only runs in the management cluster
+	if c.management {
+		crb := c.idsControllerClusterRoleBinding()
+		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, crb); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 // verifyOperatorNamespaces makes sure that the active operator namespace has not changed in the
-// managed or management cluster. If the namespace has changed then send a message to the restartChan
+// management cluster. If the namespace has changed then send a message to the restartChan
 // so the kube-controller will restart so the new namespaces can be used.
 func (c *reconciler) verifyOperatorNamespaces(reqLogger *log.Entry) error {
-	if !c.management {
-		m, err := utils.FetchOperatorNamespace(c.managementK8sCLI)
-		if err != nil {
-			return fmt.Errorf("failed to fetch the operator namespace from the management cluster: %w", err)
-		}
-		if m != c.managementOperatorNamespace {
-			msg := fmt.Sprintf("The active operator namespace for the managed cluster %s has changed from %s to %s", c.clusterName, c.managementOperatorNamespace, m)
-			reqLogger.Info(msg)
-			c.restartChan <- msg
-		}
+	m, err := utils.FetchOperatorNamespace(c.managementK8sCLI)
+	if err != nil {
+		return fmt.Errorf("failed to fetch the operator namespace from the management cluster: %w", err)
 	}
+	if m != c.managementOperatorNamespace {
+		msg := fmt.Sprintf("The active operator namespace for the managed cluster %s has changed from %s to %s", c.clusterName, c.managementOperatorNamespace, m)
+		reqLogger.Info(msg)
+		c.restartChan <- msg
+	}
+
 	return nil
 }
 
@@ -198,7 +216,7 @@ func (c *reconciler) managedAdmissionControllerSecret(mgmtSecret *corev1.Secret)
 		TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      resource.ManagedIAAdmissionControllerResourceName,
-			Namespace: c.managedImageAssuranceNamespace,
+			Namespace: c.imageAssuranceNamespace,
 		},
 		Data: mgmtSecret.Data,
 	}
@@ -215,6 +233,17 @@ func (c *reconciler) admissionControllerServiceAccount() *corev1.ServiceAccount 
 	}
 }
 
+// intrusionDetectionControllerServiceAccount returns a definition for service account
+func (c *reconciler) intrusionDetectionControllerServiceAccount() *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{Kind: rbacv1.ServiceAccountKind, APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      resource.ImageAssuranceIDSControllerServiceAccountName,
+			Namespace: c.managementOperatorNamespace,
+		},
+	}
+}
+
 // admissionControllerClusterRoleBinding returns a definition for cluster role binding
 func (c *reconciler) admissionControllerClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
@@ -226,12 +255,35 @@ func (c *reconciler) admissionControllerClusterRoleBinding() *rbacv1.ClusterRole
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     resource.ImageAssuranceAdmissionControllerRoleName,
+			Name:     c.admissionControllerClusterRoleName,
 		},
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:      rbacv1.ServiceAccountKind,
 				Name:      fmt.Sprintf(resource.ManagementIAAdmissionControllerResourceNameFormat, c.clusterName),
+				Namespace: c.managementOperatorNamespace,
+			},
+		},
+	}
+}
+
+// idsControllerClusterRoleBinding returns a definition for cluster role binding
+func (c *reconciler) idsControllerClusterRoleBinding() *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		TypeMeta: metav1.TypeMeta{Kind: "ClusterRoleBinding", APIVersion: "rbac.authorization.k8s.io/v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   resource.ImageAssuranceIDSControllerClusterRoleBindingName,
+			Labels: map[string]string{},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     c.intrusionDetectionClusterRoleName,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      resource.ImageAssuranceIDSControllerServiceAccountName,
 				Namespace: c.managementOperatorNamespace,
 			},
 		},

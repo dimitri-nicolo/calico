@@ -66,6 +66,7 @@ type ControllersConfig struct {
 	ElasticsearchConfiguration *ElasticsearchCfgControllerCfg
 	AuthorizationConfiguration *AuthorizationControllerCfg
 	ManagedCluster             *ManagedClusterControllerConfig
+	ImageAssurance             *ImageAssuranceConfig
 }
 
 type GenericControllerConfig struct {
@@ -108,7 +109,13 @@ type ManagedClusterControllerConfig struct {
 	MultiClusterForwardingCA       string
 	ElasticConfig                  ElasticsearchCfgControllerCfg
 	LicenseConfig                  LicenseControllerCfg
-	ImageAssuranceConfig           GenericControllerConfig
+	ImageAssuranceConfig           ImageAssuranceConfig
+}
+
+type ImageAssuranceConfig struct {
+	GenericControllerConfig
+	IntrusionDetectionControllerClusterRoleName string
+	AdmissionControllerClusterRoleName          string
 }
 
 type RunConfigController struct {
@@ -390,11 +397,18 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 		}
 		rc.ElasticsearchConfiguration.RESTConfig = restCfg
 	}
+	if rc.ImageAssurance != nil {
+		rc.ImageAssurance.NumberOfWorkers = envCfg.ImageAssuranceWorkers
+		rc.ImageAssurance.IntrusionDetectionControllerClusterRoleName = envCfg.ImageAssuranceIntrusionDetectionControllerClusterRoleName
+		rc.ImageAssurance.AdmissionControllerClusterRoleName = envCfg.ImageAssuranceAdmissionControllerClusterRoleName
+	}
 	if rc.ManagedCluster != nil {
 		rc.ManagedCluster.NumberOfWorkers = envCfg.ManagedClusterWorkers
 		rc.ManagedCluster.ElasticConfig.NumberOfWorkers = envCfg.ManagedClusterElasticsearchConfigurationWorkers
 		rc.ManagedCluster.LicenseConfig.NumberOfWorkers = envCfg.ManagedClusterLicenseConfigurationWorkers
 		rc.ManagedCluster.ImageAssuranceConfig.NumberOfWorkers = envCfg.ManagedClusterImageAssuranceConfigurationWorkers
+		rc.ManagedCluster.ImageAssuranceConfig.IntrusionDetectionControllerClusterRoleName = envCfg.ImageAssuranceIntrusionDetectionControllerClusterRoleName
+		rc.ManagedCluster.ImageAssuranceConfig.AdmissionControllerClusterRoleName = envCfg.ImageAssuranceAdmissionControllerClusterRoleName
 		rc.ManagedCluster.MultiClusterForwardingEndpoint = envCfg.MultiClusterForwardingEndpoint
 		rc.ManagedCluster.MultiClusterForwardingCA = envCfg.MultiClusterForwardingCA
 		restCfg, err := clientcmd.BuildConfigFromFlags("", envCfg.Kubeconfig)
@@ -622,6 +636,8 @@ func mergeEnabledControllers(envVars map[string]string, status *v3.KubeControlle
 			case "authorization":
 				rc.AuthorizationConfiguration = &AuthorizationControllerCfg{}
 				// authorization not supported on KubeControllersConfiguration yet
+			case "imageassurance":
+				rc.ImageAssurance = &ImageAssuranceConfig{}
 			default:
 				log.Fatalf("Invalid controller '%s' provided.", controllerType)
 			}

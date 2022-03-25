@@ -82,7 +82,7 @@ func WriteLicenseKeyToK8s(cli tigeraapi.Interface, licenseKey *v3.LicenseKey) er
 func WriteServiceAccountToK8s(cli kubernetes.Interface, serviceAccount *corev1.ServiceAccount) error {
 	ctx := context.Background()
 
-	if _, err := cli.CoreV1().ServiceAccounts(serviceAccount.Namespace).Get(ctx, serviceAccount.Name, metav1.GetOptions{}); err != nil {
+	if sa, err := cli.CoreV1().ServiceAccounts(serviceAccount.Namespace).Get(ctx, serviceAccount.Name, metav1.GetOptions{}); err != nil {
 		if !errors.IsNotFound(err) {
 			return err
 		}
@@ -90,6 +90,7 @@ func WriteServiceAccountToK8s(cli kubernetes.Interface, serviceAccount *corev1.S
 			return err
 		}
 	} else {
+		serviceAccount.Secrets = sa.Secrets
 		if _, err := cli.CoreV1().ServiceAccounts(serviceAccount.Namespace).Update(ctx, serviceAccount, metav1.UpdateOptions{}); err != nil {
 			return err
 		}
