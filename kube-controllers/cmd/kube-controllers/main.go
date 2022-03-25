@@ -20,13 +20,12 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
-
-	_ "net/http/pprof"
 
 	"github.com/pkg/profile"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -35,15 +34,15 @@ import (
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/elasticsearchconfiguration"
 
 	log "github.com/sirupsen/logrus"
-	"go.etcd.io/etcd/clientv3"
-	"go.etcd.io/etcd/pkg/srv"
-	"go.etcd.io/etcd/pkg/transport"
+	"go.etcd.io/etcd/client/pkg/v3/srv"
+	"go.etcd.io/etcd/client/pkg/v3/transport"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
@@ -109,9 +108,11 @@ func (ha *addHeaderRoundTripper) RoundTrip(r *http.Request) (*http.Response, err
 }
 
 // VERSION is filled out during the build process (using git describe output)
-var VERSION string
-var version bool
-var statusFile string
+var (
+	VERSION    string
+	version    bool
+	statusFile string
+)
 
 func init() {
 	// Add a flag to check the version.
@@ -349,7 +350,6 @@ func runHealthChecks(ctx context.Context, s *status.Status, k8sClientset *kubern
 
 // Starts an etcdv3 compaction goroutine with the given config.
 func startCompactor(ctx context.Context, interval time.Duration) {
-
 	if interval.Nanoseconds() == 0 {
 		log.Info("Disabling periodic etcdv3 compaction")
 		return
@@ -595,7 +595,6 @@ func (cc *controllerControl) InitControllers(ctx context.Context, cfg config.Run
 					}
 
 					return k8sCLI, calicoCLI, nil
-
 				},
 				k8sClientset,
 				calicoV3Client,

@@ -141,9 +141,9 @@ func makeBPFConntrackEntry(ifIndex int, aIP, bIP net.IP, trusted bool) (conntrac
 }
 
 var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
-
 	var (
 		scapyTrusted *containers.Container
+		pingTarget   *containers.Container
 		etcd         *containers.Container
 		felix        *infrastructure.Felix
 		client       client.Interface
@@ -180,8 +180,8 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 		}
 	}
 
-	workloadCanPingEtcd := func() error {
-		out, err := w[0].ExecOutput("ping", "-c", "1", "-W", "1", etcd.IP)
+	workloadCanPingTarget := func() error {
+		out, err := w[0].ExecOutput("ping", "-c", "1", "-W", "1", pingTarget.IP)
 		log.WithError(err).Infof("ping said:\n%v", out)
 		if err != nil {
 			log.Infof("stderr was:\n%v", string(err.(*exec.ExitError).Stderr))
@@ -204,6 +204,11 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 
 				// Start scapy first, so we can get its IP and configure Felix to trust it.
 				scapyTrusted = containers.Run("scapy",
+					containers.RunOpts{AutoRemove: true, WithStdinPipe: true},
+					"-i", "--privileged", "tigera-test/scapy")
+
+				// Run another instance of scapy as our ping target for the tests.
+				pingTarget = containers.Run("scapy",
 					containers.RunOpts{AutoRemove: true, WithStdinPipe: true},
 					"-i", "--privileged", "tigera-test/scapy")
 
@@ -243,7 +248,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				felix.Stop()
 
 				if CurrentGinkgoTestDescription().Failed {
-					etcd.Exec("etcdctl", "ls", "--recursive", "/")
+					etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
 				}
 				etcd.Stop()
 				infra.Stop()
@@ -464,16 +469,16 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					// Allow 2s for Felix to see and process that policy.
 					time.Sleep(2 * time.Second)
 
-					// We use the etcd container as a target IP for the workload to ping, so
+					// We use the ping target container as a target IP for the workload to ping, so
 					// arrange for it to route back to the workload.
-					etcd.Exec("ip", "r", "add", w[0].IP, "via", felix.IP)
+					pingTarget.Exec("ip", "r", "add", w[0].IP, "via", felix.IP)
 
 					// Create a chain of DNS info that maps xyz.com to that IP.
 					dnsServerSetup(scapyTrusted, true)
 					sendDNSResponses(scapyTrusted, []string{
 						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='xyz.com',qtype='CNAME'),an=(DNSRR(rrname='xyz.com',type='CNAME',ttl=60,rdata='bob.xyz.com')))",
 						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bob.xyz.com',qtype='CNAME'),an=(DNSRR(rrname='bob.xyz.com',type='CNAME',ttl=10,rdata='server-5.xyz.com')))",
-						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='server-5.xyz.com',qtype='A'),an=(DNSRR(rrname='server-5.xyz.com',type='A',ttl=60,rdata='" + etcd.IP + "')))",
+						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='server-5.xyz.com',qtype='A'),an=(DNSRR(rrname='server-5.xyz.com',type='A',ttl=60,rdata='" + pingTarget.IP + "')))",
 					})
 					scapyTrusted.Stdin.Close()
 				})
@@ -481,13 +486,13 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 				It("workload can ping etcd", func() {
 					// Allow 4 seconds for Felix to see the DNS responses and update ipsets.
 					time.Sleep(4 * time.Second)
+
 					// Ping should now go through.
-					Expect(workloadCanPingEtcd()).NotTo(HaveOccurred())
+					Expect(workloadCanPingTarget()).NotTo(HaveOccurred())
 				})
 			})
 
 			Context("with host endpoint and ApplyOnForward policy", func() {
-
 				if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
 					// Skip because BPF mode does not yet support HostEndpoints.
 					return
@@ -521,16 +526,16 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					// Allow 2s for Felix to see and process that policy.
 					time.Sleep(2 * time.Second)
 
-					// We use the etcd container as a target IP for the workload to ping, so
+					// We use the ping target container as a target IP for the workload to ping, so
 					// arrange for it to route back to the workload.
-					etcd.Exec("ip", "r", "add", w[0].IP, "via", felix.IP)
+					pingTarget.Exec("ip", "r", "add", w[0].IP, "via", felix.IP)
 
 					// Create a chain of DNS info that maps xyz.com to that IP.
 					dnsServerSetup(scapyTrusted, true)
 					sendDNSResponses(scapyTrusted, []string{
 						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='xyz.com',qtype='CNAME'),an=(DNSRR(rrname='xyz.com',type='CNAME',ttl=60,rdata='bob.xyz.com')))",
 						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bob.xyz.com',qtype='CNAME'),an=(DNSRR(rrname='bob.xyz.com',type='CNAME',ttl=10,rdata='server-5.xyz.com')))",
-						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='server-5.xyz.com',qtype='A'),an=(DNSRR(rrname='server-5.xyz.com',type='A',ttl=60,rdata='" + etcd.IP + "')))",
+						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='server-5.xyz.com',qtype='A'),an=(DNSRR(rrname='server-5.xyz.com',type='A',ttl=60,rdata='" + pingTarget.IP + "')))",
 					})
 					scapyTrusted.Stdin.Close()
 				})
@@ -539,28 +544,28 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					// Allow 4 seconds for Felix to see the DNS responses and update ipsets.
 					time.Sleep(4 * time.Second)
 					// Ping should now go through.
-					Expect(workloadCanPingEtcd()).NotTo(HaveOccurred())
+					Expect(workloadCanPingTarget()).NotTo(HaveOccurred())
 				})
 			})
 
 			Context("with a chain of DNS info for xyz.com", func() {
 				BeforeEach(func() {
-					// We use the etcd container as a target IP for the workload to ping, so
+					// We use the ping target container as a target IP for the workload to ping, so
 					// arrange for it to route back to the workload.
-					etcd.Exec("ip", "r", "add", w[0].IP, "via", felix.IP)
+					pingTarget.Exec("ip", "r", "add", w[0].IP, "via", felix.IP)
 
 					// Create a chain of DNS info that maps xyz.com to that IP.
 					dnsServerSetup(scapyTrusted, true)
 					sendDNSResponses(scapyTrusted, []string{
 						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='xyz.com',qtype='CNAME'),an=(DNSRR(rrname='xyz.com',type='CNAME',ttl=60,rdata='bob.xyz.com')))",
 						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='bob.xyz.com',qtype='CNAME'),an=(DNSRR(rrname='bob.xyz.com',type='CNAME',ttl=10,rdata='server-5.xyz.com')))",
-						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='server-5.xyz.com',qtype='A'),an=(DNSRR(rrname='server-5.xyz.com',type='A',ttl=60,rdata='" + etcd.IP + "')))",
+						"DNS(qr=1,qdcount=1,ancount=1,qd=DNSQR(qname='server-5.xyz.com',qtype='A'),an=(DNSRR(rrname='server-5.xyz.com',type='A',ttl=60,rdata='" + pingTarget.IP + "')))",
 					})
 					scapyTrusted.Stdin.Close()
 				})
 
 				It("workload can ping etcd, because there's no policy", func() {
-					Expect(workloadCanPingEtcd()).NotTo(HaveOccurred())
+					Expect(workloadCanPingTarget()).NotTo(HaveOccurred())
 				})
 
 				Context("with default-deny egress policy", func() {
@@ -576,7 +581,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					})
 
 					It("workload cannot ping etcd", func() {
-						Eventually(workloadCanPingEtcd, "10s", "2s").Should(HaveOccurred())
+						Eventually(workloadCanPingTarget, "10s", "2s").Should(HaveOccurred())
 					})
 
 					Context("with domain-allow egress policy", func() {
@@ -597,7 +602,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 						})
 
 						It("workload can ping etcd", func() {
-							Eventually(workloadCanPingEtcd, "5s", "1s").ShouldNot(HaveOccurred())
+							Eventually(workloadCanPingTarget, "5s", "1s").ShouldNot(HaveOccurred())
 						})
 
 						Context("with 11s sleep so that DNS info expires", func() {
@@ -606,7 +611,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 							})
 
 							It("workload cannot ping etcd", func() {
-								Eventually(workloadCanPingEtcd, "5s", "1s").Should(HaveOccurred())
+								Eventually(workloadCanPingTarget, "5s", "1s").Should(HaveOccurred())
 							})
 						})
 
@@ -620,7 +625,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 							})
 
 							It("workload can still ping etcd", func() {
-								Eventually(workloadCanPingEtcd, "5s", "1s").ShouldNot(HaveOccurred())
+								Eventually(workloadCanPingTarget, "5s", "1s").ShouldNot(HaveOccurred())
 							})
 						})
 					})
@@ -659,7 +664,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 							})
 
 							It("workload can still ping etcd", func() {
-								Eventually(workloadCanPingEtcd, "5s", "1s").ShouldNot(HaveOccurred())
+								Eventually(workloadCanPingTarget, "5s", "1s").ShouldNot(HaveOccurred())
 							})
 
 							Context("with 10s sleep so that DNS info expires", func() {
@@ -668,7 +673,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 								})
 
 								It("workload cannot ping etcd", func() {
-									Eventually(workloadCanPingEtcd, "5s", "1s").Should(HaveOccurred())
+									Eventually(workloadCanPingTarget, "5s", "1s").Should(HaveOccurred())
 								})
 							})
 						})
@@ -680,7 +685,6 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 })
 
 var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
-
 	var (
 		scapyTrusted *containers.Container
 		etcd         *containers.Container
@@ -747,7 +751,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 		felix.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
-			etcd.Exec("etcdctl", "ls", "--recursive", "/")
+			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
 		}
 		etcd.Stop()
 		infra.Stop()
@@ -806,7 +810,6 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 })
 
 var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
-
 	var (
 		etcd    *containers.Container
 		felixes []*infrastructure.Felix

@@ -66,12 +66,12 @@ func (a apiServerStrategy) PrepareForCreate(ctx context.Context, obj runtime.Obj
 	if licClaims.Validate() == licClient.Valid {
 		aapiLicenseKey.Status = libcalicoapi.LicenseKeyStatus{
 			Expiry:   metav1.Time{Time: licClaims.Expiry.Time()},
-			MaxNodes: *licClaims.Nodes, Package: helpers.ConvertToPackageType(*&licClaims.Features)}
+			MaxNodes: *licClaims.Nodes, Package: helpers.ConvertToPackageType(*&licClaims.Features),
+		}
 	}
 }
 
 func (apiServerStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
-
 	lcgLicenseKey := convertToLibcalico(obj)
 	licClaims, err := licClient.Decode(*lcgLicenseKey)
 	if err != nil {
@@ -99,6 +99,14 @@ func (apiServerStrategy) AllowCreateOnUpdate() bool {
 
 func (apiServerStrategy) AllowUnconditionalUpdate() bool {
 	return false
+}
+
+func (apiServerStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+	return []string{}
+}
+
+func (apiServerStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+	return []string{}
 }
 
 func (apiServerStrategy) Canonicalize(obj runtime.Object) {

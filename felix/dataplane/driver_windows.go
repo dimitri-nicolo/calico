@@ -20,12 +20,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
+
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/collector"
+
 	"github.com/projectcalico/calico/felix/config"
 	windataplane "github.com/projectcalico/calico/felix/dataplane/windows"
 	"github.com/projectcalico/calico/felix/dataplane/windows/hns"
@@ -92,11 +95,11 @@ func ServePrometheusMetrics(configParams *config.Config) {
 		} else {
 			if !configParams.PrometheusGoMetricsEnabled {
 				log.Info("Discarding Golang metrics")
-				prometheus.Unregister(prometheus.NewGoCollector())
+				prometheus.Unregister(collectors.NewGoCollector())
 			}
 			if !configParams.PrometheusProcessMetricsEnabled {
 				log.Info("Discarding process metrics")
-				prometheus.Unregister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+				prometheus.Unregister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 			}
 		}
 

@@ -24,7 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	"github.com/containernetworking/cni/pkg/types/current"
+	cniv1 "github.com/containernetworking/cni/pkg/types/100"
 	"github.com/containernetworking/plugins/pkg/ns"
 	cnitestutils "github.com/containernetworking/plugins/pkg/testutils"
 	log "github.com/sirupsen/logrus"
@@ -51,6 +51,18 @@ import (
 	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 )
+
+var counterByPrefix map[string]int
+
+// podName generates a new pod name for the given prefix. We use an incrementing counter
+// to ensure that a unique name is generated each time the function is called.
+func podName(prefix string) string {
+	if counterByPrefix == nil {
+		counterByPrefix = make(map[string]int)
+	}
+	counterByPrefix[prefix]++
+	return fmt.Sprintf("%s-%d", prefix, counterByPrefix[prefix])
+}
 
 func ensureNamespace(clientset *kubernetes.Clientset, name string) {
 	ns := &v1.Namespace{
@@ -166,14 +178,21 @@ var _ = Describe("Kubernetes CNI tests", func() {
 	Expect(err).NotTo(HaveOccurred())
 	k8sClient := getKubernetesClient()
 
+	// Name of the pod used within each test. A new name is generated
+	// in BeforeEach to ensure a unique pod name per-test.
+	var name string
+
 	BeforeEach(func() {
 		testutils.WipeDatastore()
 
 		// Create the node for these tests. The IPAM code requires a corresponding Calico node to exist.
-		name, err := names.Hostname()
+		nodeName, err := names.Hostname()
 		Expect(err).NotTo(HaveOccurred())
-		err = testutils.AddNode(calicoClient, k8sClient, name)
+		err = testutils.AddNode(calicoClient, k8sClient, nodeName)
 		Expect(err).NotTo(HaveOccurred())
+
+		// Generate a name to use for the test's pod.
+		name = podName("test-pod")
 	})
 
 	AfterEach(func() {
@@ -185,6 +204,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 	})
 
 	cniVersion := os.Getenv("CNI_SPEC_VERSION")
+	Expect(cniVersion).NotTo(BeEmpty())
 	Context("using host-local IPAM", func() {
 		netconf := fmt.Sprintf(`
 			{
@@ -211,7 +231,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			ensureNamespace(clientset, testutils.K8S_TEST_NS)
 
 			// Create a K8s pod w/o any special params
-			name := fmt.Sprintf("run%d", rand.Uint32())
 			ensurePodCreated(clientset, testutils.K8S_TEST_NS, &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{Name: name},
 				Spec: v1.PodSpec{
@@ -369,8 +388,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			It("it is added to the workload endpoint", func() {
 				clientset := getKubernetesClient()
 
-				name := fmt.Sprintf("run%d", rand.Uint32())
-
 				// Create a K8s pod w/o any special params
 				ensurePodCreated(clientset, testutils.K8S_TEST_NS, &v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{Name: name},
@@ -483,8 +500,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		Context("when the same hostVeth exists", func() {
 			It("successfully networks the namespace", func() {
 				clientset := getKubernetesClient()
-
-				name := fmt.Sprintf("run%d", rand.Uint32())
 
 				// Create a K8s pod w/o any special params
 				ensurePodCreated(clientset, testutils.K8S_TEST_NS, &v1.Pod{
@@ -677,7 +692,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			{
 				// This scenario tests IPv4+IPv6 without specifying any routes.
 				description: "new-style with IPv4 and IPv6 ranges, no routes",
-				cniVersion:  "0.3.0",
+				cniVersion:  "0.3.1",
 				config: `
 					{
 					  "cniVersion": "%s",
@@ -723,7 +738,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			{
 				// This scenario tests IPv4+IPv6 without specifying any routes.
 				description: "new-style with IPv4 and IPv6 both using usePodCidr, no routes",
-				cniVersion:  "0.3.0",
+				cniVersion:  "0.3.1",
 				config: `
 					{
 					  "cniVersion": "%s",
@@ -773,7 +788,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				// This configuration is only supported for CNI version >= 0.3.0 since we assign multiple
 				// addresses per family.
 				description: "new-style with IPv4 and IPv6 ranges and routes",
-				cniVersion:  "0.3.0",
+				cniVersion:  "0.3.1",
 				config: `
 					{
 					  "cniVersion": "%s",
@@ -832,7 +847,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				// - we use multiple ranges, one of which is IPv6, the other uses the podCIDR
 				// - we add custom routes, but configure the plugin to also include our default routes.
 				description: "new-style with IPv4 and IPv6 ranges and routes and Calico default routes",
-				cniVersion:  "0.3.0",
+				cniVersion:  "0.3.1",
 				config: `
 					{
 					  "cniVersion": "%s",
@@ -917,7 +932,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					defer ensureNodeDeleted(clientset, hostname)
 
 					By("Creating a pod with a specific IP address")
-					name := fmt.Sprintf("run%d", rand.Uint32())
 					ensurePodCreated(clientset, testutils.K8S_TEST_NS, &v1.Pod{
 						ObjectMeta: metav1.ObjectMeta{Name: name},
 						Spec: v1.PodSpec{
@@ -1029,7 +1043,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 					defer ensureNodeDeleted(clientset, hostname)
 
 					By("Creating a pod with a specific IP address")
-					name := fmt.Sprintf("run%d", rand.Uint32())
 					ensurePodCreated(clientset, testutils.K8S_TEST_NS, &v1.Pod{
 						ObjectMeta: metav1.ObjectMeta{Name: name},
 						Spec: v1.PodSpec{
@@ -1126,8 +1139,8 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		pool2 := "60.70.0.0/28"
 		numAddrsInPool := 16
 		var clientset *kubernetes.Clientset
-		var name string
 		var testNS string
+
 		BeforeEach(func() {
 			// Build the network config for this set of tests.
 			nc = types.NetConf{
@@ -1182,7 +1195,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Now create a K8s pod.
-			name = fmt.Sprintf("run%d", rand.Uint32())
 			ensurePodCreated(clientset, testNS, &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        name,
@@ -1222,7 +1234,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Now create a K8s pod.
-			name = fmt.Sprintf("run%d", rand.Uint32())
 			ensurePodCreated(clientset, testNS, &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        name,
@@ -1260,7 +1271,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Now create a K8s pod.
-			name = fmt.Sprintf("run%d", rand.Uint32())
 			ensurePodCreated(clientset, testNS, &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        name,
@@ -1317,7 +1327,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Now create a K8s pod.
-			name = fmt.Sprintf("run%d", rand.Uint32())
 			ensurePodCreated(clientset, testNS, &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        name,
@@ -1371,8 +1380,8 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		var ipPoolCIDR *net.IPNet
 		pool1 := "50.70.0.0/16"
 		var clientset *kubernetes.Clientset
-		var name string
 		var testNS string
+
 		BeforeEach(func() {
 			// Build the network config for this set of tests.
 			nc = types.NetConf{
@@ -1422,7 +1431,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Now create a K8s pod passing in an IP pool.
-			name = fmt.Sprintf("run%d", rand.Uint32())
 			ensurePodCreated(clientset, testNS, &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
@@ -1460,7 +1468,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		var pool1CIDR, pool2CIDR *net.IPNet
 		var pool2Name string
 		var clientset *kubernetes.Clientset
-		var name string
 		BeforeEach(func() {
 			// Build the network config for this set of tests.
 			nc = types.NetConf{
@@ -1505,7 +1512,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 		It("successfully assigns an IP address from the annotated IP Pool (by cidr)", func() {
 			// Create a K8s pod passing in an IP pool.
-			name = fmt.Sprintf("run%d", rand.Uint32())
 			ensurePodCreated(clientset, testutils.K8S_TEST_NS, &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
@@ -1535,7 +1541,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 		It("successfully assigns an IP address from the annotated IP Pool (by name)", func() {
 			// Create a K8s pod passing in an IP pool.
-			name = fmt.Sprintf("run%d", rand.Uint32())
 			ensurePodCreated(clientset, testutils.K8S_TEST_NS, &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
@@ -1573,7 +1578,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		var normalPoolCIDR, localAWSPoolCIDR *net.IPNet
 		var localAWSPoolName, remoteAWSPoolName string
 		var clientset *kubernetes.Clientset
-		var name string
 		BeforeEach(func() {
 			// Build the network config for this set of tests.
 			nc = types.NetConf{
@@ -1637,7 +1641,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		})
 
 		It("assigns an IP address from the normal IP pool by default", func() {
-			name = fmt.Sprintf("run%d", rand.Uint32())
 			pod := ensurePodCreated(clientset, testutils.K8S_TEST_NS, &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
@@ -1667,7 +1670,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		})
 
 		It("assigns an IP from the correct AWS pool if AWS resource request is made", func() {
-			name = fmt.Sprintf("run%d", rand.Uint32())
 			pod := ensurePodCreated(clientset, testutils.K8S_TEST_NS, &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
@@ -1706,7 +1708,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		})
 
 		It("fails if an AWS pool is required but the annotation specifies incompatible pools", func() {
-			name = fmt.Sprintf("run%d", rand.Uint32())
 			pod := ensurePodCreated(clientset, testutils.K8S_TEST_NS, &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
@@ -1742,7 +1743,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		})
 
 		It("fails if a normal pool is required but the annotation specifies incompatible pools", func() {
-			name = fmt.Sprintf("run%d", rand.Uint32())
 			pod := ensurePodCreated(clientset, testutils.K8S_TEST_NS, &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
@@ -1773,7 +1773,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 	Context("using floatingIPs annotation to assign a DNAT", func() {
 		var netconf types.NetConf
 		var clientset *kubernetes.Clientset
-		var name string
+
 		BeforeEach(func() {
 			netconf = types.NetConf{
 				CNIVersion:           cniVersion,
@@ -1801,7 +1801,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 			// Now create a K8s pod passing in a floating IP.
 			ensureNamespace(clientset, testutils.K8S_TEST_NS)
-			name = fmt.Sprintf("run%d", rand.Uint32())
 			ensurePodCreated(clientset, testutils.K8S_TEST_NS, &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
@@ -1880,7 +1879,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		var clientset *kubernetes.Clientset
 		var netconf string
 		var nc types.NetConf
-		var name string
 
 		BeforeEach(func() {
 			// Set up clients.
@@ -1900,6 +1898,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				FeatureControl:       types.FeatureControl{IPAddrsNoIpam: true},
 			}
 			nc.IPAM.Type = "calico-ipam"
+			Expect(nc.CNIVersion).NotTo(BeEmpty())
 			ncb, err := json.Marshal(nc)
 			Expect(err).NotTo(HaveOccurred())
 			netconf = string(ncb)
@@ -1914,7 +1913,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			assignIP := net.IPv4(10, 0, 0, 1).To4()
 
 			// Now create a K8s pod passing in an IP address.
-			name = fmt.Sprintf("run%d", rand.Uint32())
 			ensurePodCreated(clientset, testutils.K8S_TEST_NS, &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
@@ -2003,7 +2001,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			clientset := getKubernetesClient()
 
 			// Now create a K8s pod passing in an IP address.
-			name = fmt.Sprintf("run%d", rand.Uint32())
 			ensurePodCreated(clientset, testutils.K8S_TEST_NS, &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
@@ -2029,7 +2026,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 		It("should return an error if multiple addresses are requested using ipAddrsNoIpam", func() {
 			// Now create a K8s pod passing in more than one IPv4 address.
-			name = fmt.Sprintf("run%d", rand.Uint32())
 			ensurePodCreated(clientset, testutils.K8S_TEST_NS, &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
@@ -2100,7 +2096,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Now create a K8s pod passing in an IP address.
-			name := fmt.Sprintf("run%d", rand.Uint32())
 			ensurePodCreated(clientset, testutils.K8S_TEST_NS, &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
@@ -2229,7 +2224,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			ensureNamespace(clientset, testutils.K8S_TEST_NS)
 
 			// Now create a K8s pod (without any pod IP annotations).
-			name := fmt.Sprintf("run%d", rand.Uint32())
 			ensurePodCreated(clientset, testutils.K8S_TEST_NS, &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
@@ -2329,7 +2323,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		var cniContainerIDX string = "container-id-00x"
 		var cniContainerIDY string = "container-id-00y"
 		var ipPool string = "10.0.0.0/24"
-		var name string
 		var nc types.NetConf
 		var netconf string
 
@@ -2354,6 +2347,9 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 			netconf = string(ncb)
 
+			// Make sure the namespace exists.
+			ensureNamespace(clientset, testutils.K8S_TEST_NS)
+
 			// Create a new ipPool.
 			testutils.MustCreateNewIPPool(calicoClient, ipPool, false, false, true)
 
@@ -2361,7 +2357,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			ensureNamespace(clientset, testutils.K8S_TEST_NS)
 
 			// Now create a K8s pod.
-			name = fmt.Sprintf("pod-%d", rand.Uint32())
 			ensurePodCreated(clientset, testutils.K8S_TEST_NS,
 				&v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
@@ -2588,10 +2583,10 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		var nc types.NetConf
 		var netconf string
 		var clientset *kubernetes.Clientset
-		var workloadName, containerID, name string
+		var workloadName, containerID string
 		var endpointSpec libapi.WorkloadEndpointSpec
 		var contNs ns.NetNS
-		var result *current.Result
+		var result *cniv1.Result
 
 		checkIPAMReservation := func() {
 			// IPAM reservation should still be in place.
@@ -2630,7 +2625,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 			// Make sure the namespace exists.
 			ensureNamespace(clientset, testutils.K8S_TEST_NS)
-			name = fmt.Sprintf("run%d", rand.Uint32())
 			ensurePodCreated(clientset, testutils.K8S_TEST_NS,
 				&v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
@@ -2772,9 +2766,9 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 			ensureNamespace(clientset, testutils.K8S_TEST_NS)
 
-			// Now create a K8s pod.
-			name2 := fmt.Sprintf("pod-%d", rand.Uint32())
-			name := fmt.Sprintf("%s1", name2)
+			// Create two k8s pods - for this test we want to ensure that the names for the pods
+			// look alike to make sure we handle pods with very similar names.
+			name2 := fmt.Sprintf("%s-1", name)
 
 			ensurePodCreated(clientset, testutils.K8S_TEST_NS,
 				&v1.Pod{
@@ -2941,7 +2935,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		var nc types.NetConf
 		var netconf string
 		var clientset *kubernetes.Clientset
-		var name string
 		var pool string = "172.24.0.0/24"
 
 		BeforeEach(func() {
@@ -2977,8 +2970,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		})
 
 		It("should add a service account profile to the workload endpoint", func() {
-			name = fmt.Sprintf("run%d", rand.Uint32())
-
 			// Make sure the namespace exists.
 			ensureNamespace(clientset, testutils.K8S_TEST_NS)
 
@@ -3108,7 +3099,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 		var nc types.NetConf
 		var netconf string
 		var clientset *kubernetes.Clientset
-		var name string
 		var pool string = "172.24.0.0/24"
 
 		BeforeEach(func() {
@@ -3148,7 +3138,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			ensureNamespace(clientset, testutils.K8S_TEST_NS)
 
 			// Create a K8s pod with GenerateName
-			name = fmt.Sprintf("run%d", rand.Uint32())
 			generateName := "test-gen-name"
 			ensurePodCreated(clientset, testutils.K8S_TEST_NS, &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
@@ -3261,9 +3250,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 			clientset := getKubernetesClient()
 
-			// Now create a K8s pod.
-			name := fmt.Sprintf("pod-%d", rand.Uint32())
-
 			ensureNamespace(clientset, testutils.K8S_TEST_NS)
 			ensurePodCreated(clientset, testutils.K8S_TEST_NS,
 				&v1.Pod{
@@ -3330,9 +3316,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 
 			clientset := getKubernetesClient()
 
-			// Now create a K8s pod.
-			name := fmt.Sprintf("pod-%d", rand.Uint32())
-
 			ensureNamespace(clientset, testutils.K8S_TEST_NS)
 			ensurePodCreated(clientset, testutils.K8S_TEST_NS,
 				&v1.Pod{
@@ -3395,7 +3378,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			netconf := string(ncb)
 
 			hostname, _ := names.Hostname()
-			name := fmt.Sprintf("run%d", rand.Uint32())
 			pod := &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -3465,7 +3447,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				netconf := string(ncb)
 
 				hostname, _ := names.Hostname()
-				name := fmt.Sprintf("run%d", rand.Uint32())
 				pod := &v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      name,
@@ -3572,7 +3553,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			netconf := string(ncb)
 
 			hostname, _ := names.Hostname()
-			name := fmt.Sprintf("run%d", rand.Uint32())
 			pod := &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -3700,7 +3680,6 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				netconf := string(ncb)
 
 				hostname, _ := names.Hostname()
-				name := fmt.Sprintf("run%d", rand.Uint32())
 				pod := &v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      name,

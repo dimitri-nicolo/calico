@@ -43,7 +43,6 @@ import (
 )
 
 var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 workloads", func() {
-
 	var (
 		etcd   *containers.Container
 		felix  *infrastructure.Felix
@@ -72,7 +71,6 @@ var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 work
 	})
 
 	AfterEach(func() {
-
 		if CurrentGinkgoTestDescription().Failed {
 			felix.Exec("iptables-save", "-c")
 			felix.Exec("ip", "r")
@@ -84,7 +82,7 @@ var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 work
 		felix.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
-			etcd.Exec("etcdctl", "ls", "--recursive", "/")
+			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
 		}
 		etcd.Stop()
 		infra.Stop()
@@ -180,7 +178,6 @@ var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 work
 	})
 
 	Context("with ingress-only restriction for workload 0", func() {
-
 		BeforeEach(func() {
 			policy := api.NewNetworkPolicy()
 			policy.Namespace = "fv"
@@ -207,7 +204,6 @@ var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 work
 	})
 
 	Context("with egress-only restriction for workload 0", func() {
-
 		BeforeEach(func() {
 			policy := api.NewNetworkPolicy()
 			policy.Namespace = "fv"
@@ -234,7 +230,6 @@ var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 work
 	})
 
 	Context("with ingress rules and types [ingress,egress]", func() {
-
 		BeforeEach(func() {
 			policy := api.NewNetworkPolicy()
 			policy.Namespace = "fv"
@@ -315,7 +310,6 @@ var _ = Context("_INGRESS-EGRESS_ with initialized Felix, etcd datastore, 3 work
 })
 
 var _ = Context("_INGRESS-EGRESS_ (iptables-only) with initialized Felix, etcd datastore, 3 workloads", func() {
-
 	var (
 		etcd   *containers.Container
 		felix  *infrastructure.Felix
@@ -341,7 +335,6 @@ var _ = Context("_INGRESS-EGRESS_ (iptables-only) with initialized Felix, etcd d
 	})
 
 	AfterEach(func() {
-
 		if CurrentGinkgoTestDescription().Failed {
 			felix.Exec("iptables-save", "-c")
 			felix.Exec("ip", "r")
@@ -353,7 +346,7 @@ var _ = Context("_INGRESS-EGRESS_ (iptables-only) with initialized Felix, etcd d
 		felix.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
-			etcd.Exec("etcdctl", "ls", "--recursive", "/")
+			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
 		}
 		etcd.Stop()
 		infra.Stop()
@@ -387,7 +380,6 @@ var _ = Context("_INGRESS-EGRESS_ (iptables-only) with initialized Felix, etcd d
 	})
 
 	Context("with egress-only restriction for workload 0", func() {
-
 		BeforeEach(func() {
 			policy := api.NewNetworkPolicy()
 			policy.Namespace = "fv"
@@ -414,7 +406,6 @@ var _ = Context("_INGRESS-EGRESS_ (iptables-only) with initialized Felix, etcd d
 })
 
 var _ = Context("with Typha and Felix-Typha TLS", func() {
-
 	var (
 		etcd   *containers.Container
 		felix  *infrastructure.Felix
@@ -442,7 +433,6 @@ var _ = Context("with Typha and Felix-Typha TLS", func() {
 	})
 
 	AfterEach(func() {
-
 		if CurrentGinkgoTestDescription().Failed {
 			felix.Exec("iptables-save", "-c")
 			felix.Exec("ip", "r")
@@ -454,7 +444,7 @@ var _ = Context("with Typha and Felix-Typha TLS", func() {
 		felix.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
-			etcd.Exec("etcdctl", "ls", "--recursive", "/")
+			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
 		}
 		etcd.Stop()
 		infra.Stop()
@@ -469,7 +459,6 @@ var _ = Context("with Typha and Felix-Typha TLS", func() {
 	})
 
 	Context("with ingress-only restriction for workload 0", func() {
-
 		BeforeEach(func() {
 			policy := api.NewNetworkPolicy()
 			policy.Namespace = "fv"
@@ -497,7 +486,6 @@ var _ = Context("with Typha and Felix-Typha TLS", func() {
 })
 
 var _ = Context("with TLS-secured Prometheus ports", func() {
-
 	var (
 		etcd    *containers.Container
 		felix   *infrastructure.Felix
@@ -526,7 +514,6 @@ var _ = Context("with TLS-secured Prometheus ports", func() {
 	})
 
 	AfterEach(func() {
-
 		if CurrentGinkgoTestDescription().Failed {
 			felix.Exec("iptables-save", "-c")
 			felix.Exec("ip", "r")
@@ -538,7 +525,7 @@ var _ = Context("with TLS-secured Prometheus ports", func() {
 		felix.Stop()
 
 		if CurrentGinkgoTestDescription().Failed {
-			etcd.Exec("etcdctl", "ls", "--recursive", "/")
+			etcd.Exec("etcdctl", "get", "/", "--prefix", "--keys-only")
 		}
 		etcd.Stop()
 		infra.Stop()

@@ -5,7 +5,7 @@ package calico
 import (
 	"reflect"
 
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 

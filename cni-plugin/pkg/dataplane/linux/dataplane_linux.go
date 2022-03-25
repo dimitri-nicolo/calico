@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/containernetworking/cni/pkg/skel"
-	"github.com/containernetworking/cni/pkg/types/current"
+	cniv1 "github.com/containernetworking/cni/pkg/types/100"
 	"github.com/containernetworking/plugins/pkg/ip"
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/sirupsen/logrus"
@@ -47,7 +47,7 @@ func (d *linuxDataplane) DoNetworking(
 	ctx context.Context,
 	calicoClient calicoclient.Interface,
 	args *skel.CmdArgs,
-	result *current.Result,
+	result *cniv1.Result,
 	desiredVethName string,
 	routes []*net.IPNet,
 	endpoint *api.WorkloadEndpoint,
@@ -106,10 +106,10 @@ func (d *linuxDataplane) DoNetworking(
 
 		// Figure out whether we have IPv4 and/or IPv6 addresses.
 		for _, addr := range result.IPs {
-			if addr.Version == "4" {
+			if addr.Address.IP.To4() != nil {
 				hasIPv4 = true
 				addr.Address.Mask = net.CIDRMask(32, 32)
-			} else if addr.Version == "6" {
+			} else if addr.Address.IP.To16() != nil {
 				hasIPv6 = true
 				addr.Address.Mask = net.CIDRMask(128, 128)
 			}
@@ -169,7 +169,6 @@ func (d *linuxDataplane) DoNetworking(
 					Dst:       gwNet,
 				},
 			)
-
 			if err != nil {
 				return fmt.Errorf("failed to add route inside the container: %v", err)
 			}
@@ -317,7 +316,7 @@ func (d *linuxDataplane) DoNetworking(
 
 // setupSourceRouting creates an ip rule and route to send traffic originating from the IP's in addrs out the gateway
 // determined by gw over the interface determined by contVeth.
-func setupSourceRouting(tableID int, gw net.IP, contVeth netlink.Link, addrs []*current.IPConfig, version string) error {
+func setupSourceRouting(tableID int, gw net.IP, contVeth netlink.Link, addrs []*cniv1.IPConfig, version string) error {
 	// Add the default route to a new table for this gateway
 	err := netlink.RouteAdd(&netlink.Route{
 		LinkIndex: contVeth.Attrs().Index,
@@ -325,15 +324,14 @@ func setupSourceRouting(tableID int, gw net.IP, contVeth netlink.Link, addrs []*
 		Scope:     netlink.SCOPE_UNIVERSE,
 		Gw:        gw,
 	})
-
 	if err != nil {
 		return err
 	}
 
-	// Add a source based rule for each address of "version" (ipv4 or ipv6) to use the newly created table if a route has
+	// Add a source based rule for each address of "version" (4 or 6) to use the newly created table if a route has
 	// a source in this list
 	for _, addr := range addrs {
-		if addr.Version == version {
+		if addr.Address.IP.To4() != nil && version == "4" || addr.Address.IP.To4() == nil && version == "6" {
 			rule := netlink.NewRule()
 			rule.Table = tableID
 			rule.Src = &addr.Address
@@ -358,8 +356,7 @@ func disableDAD(contVethName string) error {
 }
 
 // SetupRoutes sets up the routes for the host side of the veth pair.
-func SetupRoutes(hostVeth netlink.Link, result *current.Result) error {
-
+func SetupRoutes(hostVeth netlink.Link, result *cniv1.Result) error {
 	// Go through all the IPs and add routes for each IP in the result.
 	for _, ipAddr := range result.IPs {
 		route := netlink.Route{

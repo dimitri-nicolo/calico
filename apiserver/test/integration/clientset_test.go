@@ -134,7 +134,6 @@ func TestNoName(t *testing.T) {
 	if !t.Run("no-name", rootTestFunc()) {
 		t.Errorf("NoName test failed")
 	}
-
 }
 
 func testNoName(client calicoclient.Interface) error {
@@ -167,7 +166,6 @@ func TestNetworkPolicyClient(t *testing.T) {
 	if !t.Run(name, rootTestFunc()) {
 		t.Errorf("test-networkpolicy test failed")
 	}
-
 }
 
 func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
@@ -319,8 +317,10 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 	ns := "default"
 	defaultTierPolicyName := "default" + "." + name
 	policyClient := client.ProjectcalicoV3().StagedNetworkPolicies(ns)
-	policy := &v3.StagedNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: defaultTierPolicyName},
-		Spec: calico.StagedNetworkPolicySpec{StagedAction: "Set", Selector: "foo == \"bar\""}}
+	policy := &v3.StagedNetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{Name: defaultTierPolicyName},
+		Spec:       calico.StagedNetworkPolicySpec{StagedAction: "Set", Selector: "foo == \"bar\""},
+	}
 	ctx := context.Background()
 
 	// start from scratch
@@ -520,7 +520,6 @@ func TestGlobalNetworkPolicyClient(t *testing.T) {
 	if !t.Run(name, rootTestFunc()) {
 		t.Errorf("test-globalnetworkpolicy test failed")
 	}
-
 }
 
 func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) error {
@@ -630,8 +629,10 @@ func TestStagedGlobalNetworkPolicyClient(t *testing.T) {
 func testStagedGlobalNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	stagedGlobalNetworkPolicyClient := client.ProjectcalicoV3().StagedGlobalNetworkPolicies()
 	defaultTierPolicyName := "default" + "." + name
-	stagedGlobalNetworkPolicy := &v3.StagedGlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: defaultTierPolicyName},
-		Spec: calico.StagedGlobalNetworkPolicySpec{StagedAction: "Set", Selector: "foo == \"bar\""}}
+	stagedGlobalNetworkPolicy := &v3.StagedGlobalNetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{Name: defaultTierPolicyName},
+		Spec:       calico.StagedGlobalNetworkPolicySpec{StagedAction: "Set", Selector: "foo == \"bar\""},
+	}
 	ctx := context.Background()
 
 	// start from scratch
@@ -926,13 +927,13 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 		fmt.Printf("Check for License Expiry date %v\n", err)
 		return err
 	}
-	//Check for Maxiumum nodes
+	// Check for Maxiumum nodes
 	if lic.Status.MaxNodes != 50 {
 		fmt.Printf("Valid License's Maxiumum Node doesn't match :%d\n", lic.Status.MaxNodes)
 		return fmt.Errorf("Incorrect Maximum Nodes in LicenseKey")
 	}
 
-	//Check for Certificate Expiry date
+	// Check for Certificate Expiry date
 	if lic.Status.Expiry.Time.String() != "2022-10-02 04:38:32 +0000 UTC" {
 		fmt.Printf("Valid License's Expiry date don't match with Certificate:%v\n", lic.Status.Expiry)
 		return fmt.Errorf("License Expiry date don't match")
@@ -960,13 +961,13 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 		fmt.Printf("Check for License Expiry date %v\n", err)
 		return err
 	}
-	//Check for Maxiumum nodes
+	// Check for Maxiumum nodes
 	if lic.Status.MaxNodes != 50 {
 		fmt.Printf("Valid License's Maxiumum Node doesn't match :%d\n", lic.Status.MaxNodes)
 		return fmt.Errorf("Incorrect Maximum Nodes in LicenseKey")
 	}
 
-	//Check for Certificate Expiry date
+	// Check for Certificate Expiry date
 	if lic.Status.Expiry.Time.String() != "2023-03-17 03:23:00 +0000 UTC" {
 		fmt.Printf("Valid License's Expiry date don't match with Certificate:%v\n", lic.Status.Expiry)
 		return fmt.Errorf("License Expiry date don't match")
@@ -1732,6 +1733,11 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 // TestHostEndpointClient exercises the HostEndpoint client.
 func TestHostEndpointClient(t *testing.T) {
 	const name = "test-hostendpoint"
+	client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+		return &v3.HostEndpoint{}
+	}, true)
+	defer shutdownServer()
+	defer deleteHostEndpointClient(client, name)
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
@@ -1757,6 +1763,13 @@ func createTestHostEndpoint(name string, ip string, node string) *v3.HostEndpoin
 	hostEndpoint.Spec.Node = node
 
 	return hostEndpoint
+}
+
+func deleteHostEndpointClient(client calicoclient.Interface, name string) error {
+	hostEndpointClient := client.ProjectcalicoV3().HostEndpoints()
+	ctx := context.Background()
+
+	return hostEndpointClient.Delete(ctx, name, v1.DeleteOptions{})
 }
 
 func testHostEndpointClient(client calicoclient.Interface, name string) error {
@@ -2490,7 +2503,6 @@ func TestRemoteClusterConfigurationClient(t *testing.T) {
 
 	if !t.Run(name, rootTestFunc()) {
 		t.Errorf("test-remoteclusterconfig test failed")
-
 	}
 }
 
@@ -3071,18 +3083,16 @@ func TestAuthenticationReviewsClient(t *testing.T) {
 }
 
 func testAuthenticationReviewsClient(client calicoclient.Interface) error {
-
 	ar := v3.AuthenticationReview{}
 	_, err := client.ProjectcalicoV3().AuthenticationReviews().Create(context.Background(), &ar, metav1.CreateOptions{})
-
 	if err != nil {
 		return err
 	}
 
-	var name = "name"
-	var groups = []string{name}
-	var extra = map[string][]string{name: groups}
-	var uid = "uid"
+	name := "name"
+	groups := []string{name}
+	extra := map[string][]string{name: groups}
+	uid := "uid"
 
 	ctx := request.NewContext()
 	ctx = request.WithUser(ctx, &user.DefaultInfo{
@@ -3094,7 +3104,6 @@ func testAuthenticationReviewsClient(client calicoclient.Interface) error {
 
 	auth := authenticationreview.NewREST()
 	obj, err := auth.Create(ctx, auth.New(), nil, nil)
-
 	if err != nil {
 		return err
 	}
@@ -3137,10 +3146,10 @@ func testAuthorizationReviewsClient(pcs *apiserver.ProjectCalicoServer, client c
 	}
 
 	// Create a user context.
-	var name = "name"
-	var groups = []string{name}
-	var extra = map[string][]string{name: groups}
-	var uid = "uid"
+	name := "name"
+	groups := []string{name}
+	extra := map[string][]string{name: groups}
+	uid := "uid"
 
 	ctx := request.NewContext()
 	ctx = request.WithUser(ctx, &user.DefaultInfo{
@@ -3192,7 +3201,6 @@ func testAuthorizationReviewsClient(pcs *apiserver.ProjectCalicoServer, client c
 	// The user will currently have no permissions, so the returned status should contain an entry for each resource
 	// type and verb combination, but contain no match entries for each.
 	obj, err := auth.Create(ctx, req, nil, nil)
-
 	if err != nil {
 		return fmt.Errorf("Failed to create AuthorizationReview: %v", err)
 	}
@@ -3204,16 +3212,18 @@ func testAuthorizationReviewsClient(pcs *apiserver.ProjectCalicoServer, client c
 	status := obj.(*v3.AuthorizationReview).Status
 
 	if err := checkAuthorizationReviewStatus(status, v3.AuthorizationReviewStatus{
-		AuthorizedResourceVerbs: []v3.AuthorizedResourceVerbs{{
-			APIGroup: "",
-			Resource: "namespaces",
-			Verbs:    []v3.AuthorizedResourceVerb{{Verb: "create"}, {Verb: "get"}},
-		}, {
-			APIGroup: "",
-			Resource: "pods",
-			Verbs:    []v3.AuthorizedResourceVerb{{Verb: "create"}, {Verb: "delete"}, {Verb: "patch"}},
+		AuthorizedResourceVerbs: []v3.AuthorizedResourceVerbs{
+			{
+				APIGroup: "",
+				Resource: "namespaces",
+				Verbs:    []v3.AuthorizedResourceVerb{{Verb: "create"}, {Verb: "get"}},
+			}, {
+				APIGroup: "",
+				Resource: "pods",
+				Verbs:    []v3.AuthorizedResourceVerb{{Verb: "create"}, {Verb: "delete"}, {Verb: "patch"}},
+			},
 		},
-		}}); err != nil {
+	}); err != nil {
 		return err
 	}
 
@@ -3405,11 +3415,9 @@ func testDeepPacketInspectionClient(client calicoclient.Interface, name string) 
 	}
 	if !reflect.DeepEqual(deepPacketInspectionServer.Labels, updatedDeepPacketInspection.Labels) {
 		return fmt.Errorf("didn't update label %#v", deepPacketInspectionServer.Labels)
-
 	}
 	if !reflect.DeepEqual(deepPacketInspectionServer.Spec, updatedDeepPacketInspection.Spec) {
 		return fmt.Errorf("didn't update spec %#v", deepPacketInspectionServer.Spec)
-
 	}
 
 	// Should be listing the deepPacketInspection.
@@ -3516,7 +3524,6 @@ func testUISettingsGroupClient(client calicoclient.Interface, name string) error
 	}
 	if !reflect.DeepEqual(uiSettingsGroupServer.Labels, updatedUISettingsGroup.Labels) {
 		return fmt.Errorf("didn't update label %#v", uiSettingsGroupServer.Labels)
-
 	}
 	if !reflect.DeepEqual(uiSettingsGroupServer.Spec, updatedUISettingsGroup.Spec) {
 		return fmt.Errorf("didn't update spec %#v", uiSettingsGroupServer.Spec)
@@ -3700,7 +3707,6 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 	}
 	if !reflect.DeepEqual(uiSettingsServer.Spec, updatedUISettings.Spec) {
 		return fmt.Errorf("didn't update spec %#v", uiSettingsServer.Spec)
-
 	}
 	if len(uiSettingsServer.OwnerReferences) != 1 {
 		return fmt.Errorf("expecting OwnerReferences to contain a single entry after update '%v'", uiSettingsServer.OwnerReferences)

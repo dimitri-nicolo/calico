@@ -23,7 +23,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	kapiv1 "k8s.io/api/core/v1"
-	discovery "k8s.io/api/discovery/v1beta1"
+	discovery "k8s.io/api/discovery/v1"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 

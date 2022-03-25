@@ -28,8 +28,8 @@ import (
 	"github.com/aws/smithy-go"
 	log "github.com/sirupsen/logrus"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/utils/clock"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 )

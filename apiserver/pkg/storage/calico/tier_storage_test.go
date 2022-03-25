@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/klog"
 
@@ -585,8 +586,14 @@ func testTierSetup(t *testing.T) (context.Context, *resourceStore) {
 
 	opts := Options{
 		RESTOptions: generic.RESTOptions{
-			StorageConfig: &storagebackend.Config{
-				Codec: codec,
+			StorageConfig: &storagebackend.ConfigForResource{
+				GroupResource: schema.GroupResource{
+					Group:    "projectcalico.org/v3",
+					Resource: "tiers",
+				},
+				Config: storagebackend.Config{
+					Codec: codec,
+				},
 			},
 		},
 		LicenseMonitor: MockLicenseMonitorAllowAll{},

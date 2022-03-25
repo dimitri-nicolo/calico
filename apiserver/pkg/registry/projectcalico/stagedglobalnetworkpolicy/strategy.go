@@ -52,7 +52,7 @@ func (policyStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obj
 
 func (policyStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	return field.ErrorList{}
-	//return validation.ValidatePolicy(obj.(*calico.Policy))
+	// return validation.ValidatePolicy(obj.(*calico.Policy))
 }
 
 func (policyStrategy) AllowCreateOnUpdate() bool {
@@ -61,6 +61,14 @@ func (policyStrategy) AllowCreateOnUpdate() bool {
 
 func (policyStrategy) AllowUnconditionalUpdate() bool {
 	return false
+}
+
+func (policyStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+	return []string{}
+}
+
+func (policyStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+	return []string{}
 }
 
 func (policyStrategy) Canonicalize(obj runtime.Object) {
