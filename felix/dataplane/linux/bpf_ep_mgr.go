@@ -40,6 +40,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/projectcalico/calico/felix/bpf"
+	"github.com/projectcalico/calico/felix/bpf/bpfmap"
 	"github.com/projectcalico/calico/felix/bpf/polprog"
 	"github.com/projectcalico/calico/felix/bpf/tc"
 	"github.com/projectcalico/calico/felix/bpf/xdp"
@@ -557,7 +558,8 @@ func (m *bpfEndpointManager) CompleteDeferredWork() error {
 		m.happyWEPsDirty = false
 	}
 	bpfHappyEndpointsGauge.Set(float64(len(m.happyWEPs)))
-
+	// Copy data from old map to the new map
+	bpfmap.MigrateDataFromOldMap(m.bpfMapContext)
 	return nil
 }
 

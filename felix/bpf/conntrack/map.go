@@ -414,14 +414,15 @@ func (e Value) IsForwardDSR() bool {
 }
 
 var MapParams = bpf.MapParameters{
-	Filename:   "/sys/fs/bpf/tc/globals/cali_v4_ct",
-	Type:       "hash",
-	KeySize:    KeySize,
-	ValueSize:  ValueSize,
-	MaxEntries: MaxEntries,
-	Name:       "cali_v4_ct",
-	Flags:      unix.BPF_F_NO_PREALLOC,
-	Version:    3,
+	Filename:     "/sys/fs/bpf/tc/globals/cali_v4_ct",
+	Type:         "hash",
+	KeySize:      KeySize,
+	ValueSize:    ValueSize,
+	MaxEntries:   MaxEntries,
+	Name:         "cali_v4_ct",
+	Flags:        unix.BPF_F_NO_PREALLOC,
+	Version:      3,
+	UpdatedByBPF: true,
 }
 
 func Map(mc *bpf.MapContext) bpf.Map {
