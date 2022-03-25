@@ -43,6 +43,7 @@ type Config struct {
 	NodeWorkers                                      int `default:"1" split_words:"true"`
 	FederatedServicesWorkers                         int `default:"1" split_words:"true"`
 	AuthorizationWorkers                             int `default:"1" split_words:"true"`
+	ImageAssuranceWorkers                            int `default:"1" split_words:"true"`
 	ManagedClusterWorkers                            int `default:"1" split_words:"true"`
 	ManagedClusterElasticsearchConfigurationWorkers  int `default:"1" split_words:"true"`
 	ManagedClusterLicenseConfigurationWorkers        int `default:"1" split_words:"true"`
@@ -73,6 +74,9 @@ type Config struct {
 	ElasticHost                       string `default:"" split_words:"true"`
 	ElasticPort                       string `default:"9200" split_words:"true"`
 	ElasticCA                         string `default:"" split_words:"true"`
+
+	ImageAssuranceIntrusionDetectionControllerClusterRoleName string `split_words:"true"`
+	ImageAssuranceAdmissionControllerClusterRoleName          string `split_words:"true"`
 
 	KubeControllersConfigName string `split_words:"true"`
 }

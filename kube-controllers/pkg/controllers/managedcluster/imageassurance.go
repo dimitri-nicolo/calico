@@ -15,7 +15,7 @@ import (
 )
 
 type ImageAssurance struct {
-	cfg config.GenericControllerConfig
+	cfg config.ImageAssuranceConfig
 }
 
 func (i *ImageAssurance) CreateController(clusterName, ownerReference string, managedK8sCLI, managementK8sCLI kubernetes.Interface,
@@ -29,6 +29,6 @@ func (i *ImageAssurance) HandleManagedClusterRemoved(clusterName string) {
 func (i *ImageAssurance) Initialize(stop chan struct{}, clusters ...string) {
 }
 
-func NewImageAssuranceController(cfg config.GenericControllerConfig) ControllerManager {
+func NewImageAssuranceController(cfg config.ImageAssuranceConfig) ControllerManager {
 	return &ImageAssurance{cfg: cfg}
 }
