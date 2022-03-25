@@ -4,7 +4,7 @@ metadata:
   name: {{.Release.Namespace}}
 subjects:
 - kind: ServiceAccount
-  name: {{.Release.Namespace}}
+  name: tigera-operator
   namespace: {{.Release.Namespace}}
 roleRef:
   kind: ClusterRole
