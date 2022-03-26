@@ -113,4 +113,5 @@ For a list of performance anomaly detectors that are enabled by default, see [An
 ### Above and beyond
 
 - [Anomaly detection reference]({{site.baseurl}}/reference/anomaly-detection/all-jobs-envars)
+- [Global Alert reference]({{site.baseurl}}/reference/resources/globalalert)
 - [Detect and alert on security anomalies]({{site.baseurl}}/threat/security-anomalies)
