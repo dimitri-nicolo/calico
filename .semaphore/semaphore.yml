@@ -34,7 +34,7 @@ blocks:
   - name: 'CI'
     dependencies: []
     execution_time_limit:
-      minutes: 20
+      minutes: 120
     task:
       jobs:
         - name: Run CI
@@ -44,7 +44,7 @@ blocks:
   - name: 'Push Images (non-PR builds only)'
     dependencies: ["CI"]
     execution_time_limit:
-      minutes: 20
+      minutes: 120
     skip:
       # Only run on branches, not PRs.
       when: "branch !~ '.+'"
