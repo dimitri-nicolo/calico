@@ -5,7 +5,7 @@ PACKAGE_NAME    ?= github.com/projectcalico/calico/calicoq
 ##############################################################################
 # Define some constants
 ##############################################################################
-CALICOQ_IMAGE         ?=tigera/calicoq
+CALICOQ_IMAGE         ?=calicoq
 BUILD_IMAGES          ?=$(CALICOQ_IMAGE)
 
 RELEASE_BRANCH_PREFIX ?=release-calient
