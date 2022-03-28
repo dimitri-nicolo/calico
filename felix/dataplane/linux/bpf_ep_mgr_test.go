@@ -27,6 +27,7 @@ import (
 	"github.com/projectcalico/calico/felix/logutils"
 
 	"github.com/projectcalico/calico/felix/bpf"
+	"github.com/projectcalico/calico/felix/bpf/conntrack"
 	bpfipsets "github.com/projectcalico/calico/felix/bpf/ipsets"
 	"github.com/projectcalico/calico/felix/bpf/polprog"
 	"github.com/projectcalico/calico/felix/bpf/state"
@@ -155,6 +156,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 		}
 		bpfMapContext.IpsetsMap = bpfipsets.Map(bpfMapContext)
 		bpfMapContext.StateMap = state.Map(bpfMapContext)
+		bpfMapContext.CtMap = conntrack.Map(bpfMapContext)
 		rrConfigNormal = rules.Config{
 			IPIPEnabled:                      true,
 			IPIPTunnelAddress:                nil,
