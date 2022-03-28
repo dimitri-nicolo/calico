@@ -23,7 +23,7 @@ spec:
           operator: Exists
         - effect: NoSchedule
           operator: Exists
-      serviceAccountName: tigera-operator
+      serviceAccountName: {{.Release.Namespace}}
       hostNetwork: true
       # This must be set when hostNetwork is true or else the cluster services won't resolve
       dnsPolicy: ClusterFirstWithHostNet

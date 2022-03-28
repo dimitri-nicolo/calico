@@ -90,7 +90,7 @@ rules:
   - apiGroups:
       - apps
     resourceNames:
-      - tigera-operator
+      - {{.Release.Namespace}}
     resources:
       - deployments/finalizers
     verbs:
