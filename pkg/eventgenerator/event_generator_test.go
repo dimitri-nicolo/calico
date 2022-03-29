@@ -95,20 +95,18 @@ var _ = Describe("File Parser", func() {
 		destPort := ""
 		event := elastic.SecurityEvent{
 			EventsData: api.EventsData{
-				EventsSearchFields: api.EventsSearchFields{
-					Time:          1630343977,
-					Type:          "deep_packet_inspection",
-					Description:   "Encountered suspicious traffic matching snort rule for malicious activity",
-					Severity:      100,
-					Origin:        "dpi.dpi-ns/dpi-name",
-					SourceIP:      &srcIP,
-					SourcePort:    &srcPort,
-					DestIP:        &destIP,
-					DestName:      podName,
-					DestNamespace: dpiNs,
-					Host:          cfg.NodeName,
-				},
-				Record: elastic.Record{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100:9090 -> 10.28.0.13"},
+				Time:          1630343977,
+				Type:          "deep_packet_inspection",
+				Description:   "Encountered suspicious traffic matching snort rule for malicious activity",
+				Severity:      100,
+				Origin:        "dpi.dpi-ns/dpi-name",
+				SourceIP:      &srcIP,
+				SourcePort:    &srcPort,
+				DestIP:        &destIP,
+				DestName:      podName,
+				DestNamespace: dpiNs,
+				Host:          cfg.NodeName,
+				Record:        elastic.Record{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100:9090 -> 10.28.0.13"},
 			},
 		}
 		event.DocID = fmt.Sprintf("%s_%s_1630343977337831000_%s_%d_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, *event.SourceIP, srcPort, *event.DestIP, destPort, event.Host)
@@ -188,20 +186,18 @@ var _ = Describe("File Parser", func() {
 		destPort := ""
 		event := elastic.SecurityEvent{
 			EventsData: api.EventsData{
-				EventsSearchFields: api.EventsSearchFields{
-					Time:          1630343977,
-					Type:          "deep_packet_inspection",
-					Description:   "Encountered suspicious traffic matching snort rule for malicious activity",
-					Severity:      100,
-					Origin:        "dpi.dpi-ns/dpi-name",
-					SourceIP:      &srcIP,
-					SourcePort:    &srcPort,
-					DestIP:        &destIP,
-					DestName:      podName,
-					DestNamespace: dpiNs,
-					Host:          cfg.NodeName,
-				},
-				Record: elastic.Record{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100:9090 -> 10.28.0.13"},
+				Time:          1630343977,
+				Type:          "deep_packet_inspection",
+				Description:   "Encountered suspicious traffic matching snort rule for malicious activity",
+				Severity:      100,
+				Origin:        "dpi.dpi-ns/dpi-name",
+				SourceIP:      &srcIP,
+				SourcePort:    &srcPort,
+				DestIP:        &destIP,
+				DestName:      podName,
+				DestNamespace: dpiNs,
+				Host:          cfg.NodeName,
+				Record:        elastic.Record{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100:9090 -> 10.28.0.13"},
 			},
 		}
 		event.DocID = fmt.Sprintf("%s_%s_1630343977337831000_%s_%d_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, *event.SourceIP, srcPort, *event.DestIP, destPort, event.Host)
@@ -244,38 +240,34 @@ var _ = Describe("File Parser", func() {
 		destPort := ""
 		event1 := elastic.SecurityEvent{
 			EventsData: api.EventsData{
-				EventsSearchFields: api.EventsSearchFields{
-					Time:          1630343977,
-					Type:          "deep_packet_inspection",
-					Description:   "Encountered suspicious traffic matching snort rule for malicious activity",
-					Severity:      100,
-					Origin:        "dpi.dpi-ns/dpi-name",
-					SourceIP:      &srcIP,
-					SourcePort:    &srcPort,
-					DestIP:        &destIP,
-					DestName:      podName,
-					DestNamespace: dpiNs,
-					Host:          cfg.NodeName,
-				},
-				Record: elastic.Record{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100:9090 -> 10.28.0.13"},
+				Time:          1630343977,
+				Type:          "deep_packet_inspection",
+				Description:   "Encountered suspicious traffic matching snort rule for malicious activity",
+				Severity:      100,
+				Origin:        "dpi.dpi-ns/dpi-name",
+				SourceIP:      &srcIP,
+				SourcePort:    &srcPort,
+				DestIP:        &destIP,
+				DestName:      podName,
+				DestNamespace: dpiNs,
+				Host:          cfg.NodeName,
+				Record:        elastic.Record{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100:9090 -> 10.28.0.13"},
 			},
 		}
 		event1.DocID = fmt.Sprintf("%s_%s_1630343977337831000_%s_%d_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, *event1.SourceIP, srcPort, *event1.DestIP, destPort, event1.Host)
 
 		event2 := elastic.SecurityEvent{
 			EventsData: api.EventsData{
-				EventsSearchFields: api.EventsSearchFields{
-					Time:          1630343977,
-					Type:          "deep_packet_inspection",
-					Description:   "Encountered suspicious traffic matching snort rule for malicious activity",
-					Severity:      100,
-					Origin:        "dpi.dpi-ns/dpi-name",
-					SourceIP:      &srcIP,
-					DestIP:        &destIP,
-					DestNamespace: dpiNs,
-					Host:          cfg.NodeName,
-				},
-				Record: elastic.Record{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100:9090 -> 10.28.0.13"},
+				Time:          1630343977,
+				Type:          "deep_packet_inspection",
+				Description:   "Encountered suspicious traffic matching snort rule for malicious activity",
+				Severity:      100,
+				Origin:        "dpi.dpi-ns/dpi-name",
+				SourceIP:      &srcIP,
+				DestIP:        &destIP,
+				DestNamespace: dpiNs,
+				Host:          cfg.NodeName,
+				Record:        elastic.Record{SnortSignatureID: "1000005", SnortSignatureRevision: "1", SnortAlert: "21/08/30-17:19:37.337831 [**] [1:1000005:1] \"msg:1_alert_fast\" [**] [Priority: 0] {ICMP} 74.125.124.100:9090 -> 10.28.0.13"},
 			},
 		}
 		event2.DocID = fmt.Sprintf("%s_%s_1630343977337831000_%s_%d_%s_%s_%s", dpiKey.Namespace, dpiKey.Name, *event2.SourceIP, srcPort, *event2.DestIP, destPort, event2.Host)

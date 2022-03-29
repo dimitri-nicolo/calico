@@ -213,13 +213,11 @@ func (r *eventGenerator) deleteFile(fileRelativePath, fileAbsolutePath string) {
 func (r *eventGenerator) convertAlertToSecurityEvent(alertText string) elastic.SecurityEvent {
 	event := elastic.SecurityEvent{
 		EventsData: api.EventsData{
-			EventsSearchFields: api.EventsSearchFields{
-				Host:        r.cfg.NodeName,
-				Type:        eventType,
-				Origin:      fmt.Sprintf("dpi.%s/%s", r.dpiKey.Namespace, r.dpiKey.Name),
-				Severity:    100,
-				Description: description,
-			},
+			Host:        r.cfg.NodeName,
+			Type:        eventType,
+			Origin:      fmt.Sprintf("dpi.%s/%s", r.dpiKey.Namespace, r.dpiKey.Name),
+			Severity:    100,
+			Description: description,
 		},
 	}
 
