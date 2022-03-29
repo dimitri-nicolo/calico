@@ -80,6 +80,17 @@ var (
 	// more restrictive naming requirements.
 	nameRegex = regexp.MustCompile("^" + nameSubdomainFmt + "$")
 
+	// Construct a regex for a graph node name. No point being too fussy about the format, but since these names are
+	// not configurable and are derived from Kubernetes resources, no point in being too permissive either. Need to
+	// support at least the following:
+	//   <name>
+	//   <name>/<name>(/<name>)...
+	//   *
+	//   <name>*
+	//   <name>.*
+	//   <name>-*
+	graphNodeNameRegex = regexp.MustCompile("^[-/;.*a-z0-9]+$")
+
 	// Tiers and UISettingsGroups must have simple names with no dots, since they appear as sub-components of other
 	// names.
 	tierNameRegex            = regexp.MustCompile("^" + nameLabelFmt + "$")
@@ -1079,24 +1090,7 @@ func validateServiceGraphNodeName(fl validator.FieldLevel) bool {
 	log.Debugf("Validate Service Graph Node Name: %s", s)
 
 	// Normal name format is ok.
-	if nameRegex.MatchString(s) {
-		return true
-	}
-
-	// Or special case value of "*"
-	if s == "*" {
-		return true
-	}
-
-	// Or a set of "/" separated names.
-	parts := strings.Split(s, "/")
-	for _, p := range parts {
-		if !nameRegex.MatchString(p) {
-			return false
-		}
-	}
-
-	return true
+	return graphNodeNameRegex.MatchString(s)
 }
 
 func validateIcon(fl validator.FieldLevel) bool {
