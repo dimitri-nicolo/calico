@@ -64,17 +64,15 @@ func TestSuspiciousIP_Success(t *testing.T) {
 	expected := []db.SecurityEventInterface{
 		SuspiciousIPSecurityEvent{
 			EventsData: api.EventsData{
-				EventsSearchFields: api.EventsSearchFields{
-					Description:   "suspicious IP 1.2.3.4 from list test connected to wep default/dest",
-					Type:          SuspiciousFlow,
-					Severity:      Severity,
-					Origin:        testFeed.Name,
-					SourceIP:      util.Sptr("1.2.3.4"),
-					SourceName:    "source",
-					DestIP:        util.Sptr("2.3.4.5"),
-					DestName:      "dest",
-					DestNamespace: "default",
-				},
+				Description:   "suspicious IP 1.2.3.4 from list test connected to wep default/dest",
+				Type:          SuspiciousFlow,
+				Severity:      Severity,
+				Origin:        testFeed.Name,
+				SourceIP:      util.Sptr("1.2.3.4"),
+				SourceName:    "source",
+				DestIP:        util.Sptr("2.3.4.5"),
+				DestName:      "dest",
+				DestNamespace: "default",
 				Record: SuspiciousIPEventRecord{
 					Feeds: []string{"test"},
 				},
@@ -82,17 +80,15 @@ func TestSuspiciousIP_Success(t *testing.T) {
 		},
 		SuspiciousIPSecurityEvent{
 			EventsData: api.EventsData{
-				EventsSearchFields: api.EventsSearchFields{
-					Description:     "wep default/source connected to suspicious IP 2.3.4.5 from list test",
-					Type:            SuspiciousFlow,
-					Severity:        Severity,
-					Origin:          testFeed.Name,
-					SourceIP:        util.Sptr("5.6.7.8"),
-					SourceName:      "source",
-					SourceNamespace: "default",
-					DestIP:          util.Sptr("2.3.4.5"),
-					DestName:        "dest",
-				},
+				Description:     "wep default/source connected to suspicious IP 2.3.4.5 from list test",
+				Type:            SuspiciousFlow,
+				Severity:        Severity,
+				Origin:          testFeed.Name,
+				SourceIP:        util.Sptr("5.6.7.8"),
+				SourceName:      "source",
+				SourceNamespace: "default",
+				DestIP:          util.Sptr("2.3.4.5"),
+				DestName:        "dest",
 				Record: SuspiciousIPEventRecord{
 					Feeds: []string{"test"},
 				},

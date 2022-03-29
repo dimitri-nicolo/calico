@@ -21,22 +21,18 @@ import (
 func TestDoIPSet(t *testing.T) {
 	expected := []events.SuspiciousIPSecurityEvent{{
 		EventsData: api.EventsData{
-			EventsSearchFields: api.EventsSearchFields{
-				SourceIP:   util.Sptr("1.2.3.4"),
-				SourceName: "source",
-				DestIP:     util.Sptr("2.3.4.5"),
-				DestName:   "dest",
-			},
+			SourceIP:   util.Sptr("1.2.3.4"),
+			SourceName: "source",
+			DestIP:     util.Sptr("2.3.4.5"),
+			DestName:   "dest",
 		},
 	},
 		{
 			EventsData: api.EventsData{
-				EventsSearchFields: api.EventsSearchFields{
-					SourceIP:   util.Sptr("5.6.7.8"),
-					SourceName: "source",
-					DestIP:     util.Sptr("2.3.4.5"),
-					DestName:   "dest",
-				},
+				SourceIP:   util.Sptr("5.6.7.8"),
+				SourceName: "source",
+				DestIP:     util.Sptr("2.3.4.5"),
+				DestName:   "dest",
 			},
 		}}
 	runTest(t, true, expected, time.Now(), "", nil, -1)
@@ -58,22 +54,18 @@ func TestDoIPSetSuspiciousIPFails(t *testing.T) {
 func TestDoIPSetEventsFails(t *testing.T) {
 	expected := []events.SuspiciousIPSecurityEvent{{
 		EventsData: api.EventsData{
-			EventsSearchFields: api.EventsSearchFields{
-				SourceIP:   util.Sptr("1.2.3.4"),
-				SourceName: "source",
-				DestIP:     util.Sptr("2.3.4.5"),
-				DestName:   "dest",
-			},
+			SourceIP:   util.Sptr("1.2.3.4"),
+			SourceName: "source",
+			DestIP:     util.Sptr("2.3.4.5"),
+			DestName:   "dest",
 		},
 	},
 		{
 			EventsData: api.EventsData{
-				EventsSearchFields: api.EventsSearchFields{
-					SourceIP:   util.Sptr("5.6.7.8"),
-					SourceName: "source",
-					DestIP:     util.Sptr("2.3.4.5"),
-					DestName:   "dest",
-				},
+				SourceIP:   util.Sptr("5.6.7.8"),
+				SourceName: "source",
+				DestIP:     util.Sptr("2.3.4.5"),
+				DestName:   "dest",
 			},
 		}}
 
