@@ -64,13 +64,13 @@ func (r *managedClusterReconciler) Reconcile(namespacedName types.NamespacedName
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return err
 	}
-	if _, ok := r.alertNameToAlertControllerState[namespacedName.Name]; ok {
-		r.cancelAlertController(namespacedName.Name)
-	}
-
 	if k8serrors.IsNotFound(err) {
 		// we are done closing the goroutine, noting more to do for deleted managed cluster
 		return nil
+	}
+
+	if _, ok := r.alertNameToAlertControllerState[namespacedName.Name]; ok {
+		r.cancelAlertController(namespacedName.Name)
 	}
 
 	if clusterConnected(mc) {
@@ -109,14 +109,6 @@ func (r *managedClusterReconciler) startManagedClusterAlertController(name strin
 	if err := lmaESClient.CreateEventsIndex(ctx); err != nil {
 		log.WithError(err).Errorf("failed to create events index for managed cluster %s", clusterName)
 		cancel()
-		return err
-	}
-
-	// setup training AD cronjobs to run on the management cluster for the managed cluster
-	// also adds the cronjob to the AD training controller that will reconcile / maange it
-	err = r.adTrainingController.AddDetector(clusterName)
-	if err != nil {
-		log.WithError(err).Debug("Error creating training cronjob for managed cluster %s.", clusterName)
 		return err
 	}
 
@@ -168,7 +160,6 @@ func (r *managedClusterReconciler) cancelAlertController(name string) {
 	log.Debugf("Cancelling controller for cluster %s", name)
 	a := r.alertNameToAlertControllerState[name]
 
-	r.adTrainingController.RemoveDetector(a.clusterName)
 	a.alertController.Close()
 	a.cancel()
 	delete(r.alertNameToAlertControllerState, name)

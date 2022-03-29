@@ -107,7 +107,7 @@ func (c *adJobDetectionController) Close() {
 func (c *adJobDetectionController) AddDetector(resource interface{}) error {
 	managedResource, ok := resource.(DetectionCycleRequest)
 	if !ok {
-		return errors.New("unexpected manageed type for an ADJob Detection resource")
+		return errors.New("unexpected managed type for an ADJob Detection resource")
 	}
 	err := c.adJobDetectionReconciler.addDetector(managedResource)
 

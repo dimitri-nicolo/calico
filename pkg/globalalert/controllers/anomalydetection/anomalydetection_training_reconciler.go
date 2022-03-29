@@ -109,7 +109,7 @@ func (r *adJobTrainingReconciler) reconcile() bool {
 	defer workqueue.Done(key)
 
 	if shutdown {
-		log.Infof("Shutting down detection reconciler")
+		log.Infof("Shutting down training reconciler")
 		return false
 	}
 
@@ -196,7 +196,7 @@ func (r *adJobTrainingReconciler) reconcile() bool {
 
 	// Handle Update
 	// At this point the Training CronJob for the GlobalAlert already exists update it with the CronJob contents
-	// stored by r.detectionADDetectorStates
+	// stored by r.trainingDetectorsPerCluster
 
 	// validate if the expected cronjob fields in the cache (disregarding the status) is equal to the one currently deployed
 	if util.CronJobDeepEqualsIgnoreStatus(*trainingCronJobStaterForCluster.CronJob, *deployedTrainingCronJob) {

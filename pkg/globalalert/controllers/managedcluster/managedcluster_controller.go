@@ -57,7 +57,7 @@ func NewManagedClusterController(calicoCLI calicoclient.Interface, lmaESClient l
 		lmaESClient:                     m.lmaESClient,
 		managementCalicoCLI:             m.calicoCLI,
 		k8sClient:                       k8sClient,
-		adTrainingController:            anomalyDetectionController,
+		adTrainingController:            anomalyTrainingController,
 		adDetectionController:           anomalyDetectionController,
 		alertNameToAlertControllerState: map[string]alertControllerState{},
 		managedClusterAlertControllerCh: m.managedAlertControllerCh,
