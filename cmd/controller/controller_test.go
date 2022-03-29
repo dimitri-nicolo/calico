@@ -65,12 +65,10 @@ var _ = Describe("Test Honeypod Controller Processor Test", func() {
 		hostKeyword := "my-host-keyword"
 		he := events.HoneypodEvent{
 			EventsData: api.EventsData{
-				EventsSearchFields: api.EventsSearchFields{
-					DestNameAggr:    "tigera-internal-3-6b97f5d974-*",
-					DestNamespace:   "tigera-internal",
-					SourceNameAggr:  "attacker-app-774579d456-*",
-					SourceNamespace: "default",
-				},
+				DestNameAggr:    "tigera-internal-3-6b97f5d974-*",
+				DestNamespace:   "tigera-internal",
+				SourceNameAggr:  "attacker-app-774579d456-*",
+				SourceNamespace: "default",
 				Record: events.HoneypodAlertRecord{
 					Count:       &count,
 					HostKeyword: &hostKeyword,
@@ -144,17 +142,15 @@ var _ = Describe("Test Honeypod Controller Processor Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 		hostKeyword := "garwood-bz-n990-kadm-infra-0"
 		alert := &api.EventsData{
-			EventsSearchFields: api.EventsSearchFields{
-				Description:     "[Honeypod] Fake debug service accessed by default/attacker-app-774579d456-* on port 8080",
-				DestNameAggr:    "tigera-internal-3-6b97f5d974-*",
-				DestNamespace:   "tigera-internal",
-				Origin:          "honeypod.fake.svc",
-				Severity:        100,
-				SourceNameAggr:  "attacker-app-774579d456-*",
-				SourceNamespace: "default",
-				Time:            t.Unix(),
-				Type:            "honeypod",
-			},
+			Description:     "[Honeypod] Fake debug service accessed by default/attacker-app-774579d456-* on port 8080",
+			DestNameAggr:    "tigera-internal-3-6b97f5d974-*",
+			DestNamespace:   "tigera-internal",
+			Origin:          "honeypod.fake.svc",
+			Severity:        100,
+			SourceNameAggr:  "attacker-app-774579d456-*",
+			SourceNamespace: "default",
+			Time:            t.Unix(),
+			Type:            "honeypod",
 			Record: events.HoneypodAlertRecord{
 				HostKeyword: &hostKeyword,
 			},

@@ -146,18 +146,16 @@ func SendEvents(snortEvents []Alert, p *hp.HoneyPodLogProcessor, e *api.EventsDa
 		description := fmt.Sprintf("[Alert] Signature Triggered on %s/%s", e.DestNamespace, e.DestNameAggr)
 		he := events.HoneypodEvent{
 			EventsData: api.EventsData{
-				EventsSearchFields: api.EventsSearchFields{
-					Time:            time.Now().Unix(),
-					Type:            "honeypod",
-					Description:     description,
-					Host:            host,
-					Severity:        100,
-					Origin:          "honeypod-controller.snort",
-					DestNameAggr:    e.DestNameAggr,
-					DestNamespace:   e.DestNamespace,
-					SourceNameAggr:  e.SourceNameAggr,
-					SourceNamespace: e.SourceNamespace,
-				},
+				Time:            time.Now().Unix(),
+				Type:            "honeypod",
+				Description:     description,
+				Host:            host,
+				Severity:        100,
+				Origin:          "honeypod-controller.snort",
+				DestNameAggr:    e.DestNameAggr,
+				DestNamespace:   e.DestNamespace,
+				SourceNameAggr:  e.SourceNameAggr,
+				SourceNamespace: e.SourceNamespace,
 				Record: events.HoneypodSnortEventRecord{
 					Snort: &events.Snort{
 						Description: event.SigName,
