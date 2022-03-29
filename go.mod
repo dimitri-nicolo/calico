@@ -13,7 +13,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
 	github.com/tigera/api v0.0.0-20211202170222-d8128d06db71
-	github.com/tigera/lma v0.0.0-20220106165817-0064103d9947
+	github.com/tigera/lma v0.0.0-20220329191957-52b8062d01f6
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	golang.org/x/net v0.0.0-20211216030914-fe4d6282115f
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0

@@ -64,17 +64,15 @@ var _ = Describe("Event forwarder", func() {
 		totalDocs = 1550
 		for i := 0; i < totalDocs; i++ {
 			_, err := lmaESCli.PutSecurityEvent(ctx, lmaAPI.EventsData{
-				EventsSearchFields: lmaAPI.EventsSearchFields{
-					Time:            time.Now().Unix(),
-					Type:            "global_alert",
-					Description:     "test event fwd",
-					Severity:        100,
-					Origin:          "event-fwd-resource",
-					SourceNamespace: "sample-fwd-ns",
-					DestNameAggr:    "sample-dest-*",
-					Host:            "node0",
-				},
-				Record: map[string]string{"key1": "value1", "key2": "value2"},
+				Time:            time.Now().Unix(),
+				Type:            "global_alert",
+				Description:     "test event fwd",
+				Severity:        100,
+				Origin:          "event-fwd-resource",
+				SourceNamespace: "sample-fwd-ns",
+				DestNameAggr:    "sample-dest-*",
+				Host:            "node0",
+				Record:          map[string]string{"key1": "value1", "key2": "value2"},
 			})
 			Expect(err).ShouldNot(HaveOccurred())
 		}
