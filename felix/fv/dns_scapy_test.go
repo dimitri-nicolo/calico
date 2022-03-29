@@ -242,6 +242,9 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					felix.Exec("conntrack", "-L")
 				}
 
+				pingTarget.Stop()
+				scapyTrusted.Stop()
+
 				for ii := range w {
 					w[ii].Stop()
 				}
