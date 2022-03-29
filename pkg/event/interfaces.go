@@ -81,6 +81,14 @@ func ExtractResourceFromAuditEvent(event *auditv1.Event) (resources.Resource, er
 	}
 
 	if event.ResponseObject == nil {
+		// The response object is missing from the audit log. If this is a subresource then we can ignore this as
+		// the subresource contains information that is not required for the compliance reports to be generated,
+		// although it may under some circumstances provide more accurate results, so if we have it we'll use it.
+		if event.ObjectRef.Subresource != "" {
+			// We can skip sub-resources since we don't generally collect the audit logs for these.
+			clog.Debugf("Skipping event for subresource %s with no ResponseObject", event.ObjectRef.Subresource)
+			return nil, nil
+		}
 		logEventError(event, "responseObject is missing from audit log - audit policy must be incorrect")
 		return nil, errors.New("responseObject is missing from audit log - audit policy must be incorrect")
 	}
