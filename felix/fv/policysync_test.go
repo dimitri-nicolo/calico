@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package fv
+package fv_test
 
 import (
 	"context"
@@ -713,8 +713,8 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 
 		// To enable debug logs, uncomment these lines; watch out for timeouts caused by the
 		// resulting slow down!
-		//options.ExtraEnvVars["FELIX_DebugDisableLogDropping"] = "true"
-		//options.FelixLogSeverity = "debug"
+		// options.ExtraEnvVars["FELIX_DebugDisableLogDropping"] = "true"
+		// options.FelixLogSeverity = "debug"
 		felixes, _ = infrastructure.StartNNodeTopology(3, options, infra)
 
 		// Create one workload per felix, using that profile.

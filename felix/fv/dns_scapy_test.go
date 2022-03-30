@@ -45,8 +45,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
-var bpfEnabled = (os.Getenv("FELIX_FV_ENABLE_BPF") == "true")
-
 var dnsDir string
 
 type mapping struct {
