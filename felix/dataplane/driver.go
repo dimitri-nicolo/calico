@@ -21,6 +21,7 @@ import (
 	"net"
 	"os/exec"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 
@@ -32,6 +33,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/aws"
 	"github.com/projectcalico/calico/felix/bpf"
@@ -286,7 +288,8 @@ func StartDataplaneDriver(configParams *config.Config,
 		}
 
 		dpConfig := intdataplane.Config{
-			Hostname: configParams.FelixHostname,
+			Hostname:           configParams.FelixHostname,
+			FloatingIPsEnabled: strings.EqualFold(configParams.FloatingIPs, string(v3.FloatingIPsEnabled)),
 			IfaceMonitorConfig: ifacemonitor.Config{
 				InterfaceExcludes: configParams.InterfaceExclude,
 				ResyncInterval:    configParams.InterfaceRefreshInterval,
