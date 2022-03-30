@@ -11,22 +11,33 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/util/retry"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
-// UpdateGlobalAlertStatus gets the latest GlobalAlert and updates its status.
-func UpdateGlobalAlertStatus(globalAlert *v3.GlobalAlert, clusterName string, calicoCLI calicoclient.Interface, ctx context.Context) error {
-	log.Debugf("Updating status of GlobalAlert %s in cluster %s", globalAlert.Name, clusterName)
-	alert, err := calicoCLI.ProjectcalicoV3().GlobalAlerts().Get(ctx, globalAlert.Name, metav1.GetOptions{})
-	if err != nil {
-		log.WithError(err).Errorf("could not get GlobalAlert %s in cluster %s", globalAlert.Name, clusterName)
+// UpdateGlobalAlertStatusWithRetryOnConflict
+func UpdateGlobalAlertStatusWithRetryOnConflict(globalAlert *v3.GlobalAlert, clusterName string, calicoCLI calicoclient.Interface, ctx context.Context) error {
+
+	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error { return updateGlobalAlertStatus(globalAlert, clusterName, calicoCLI, ctx) }); err != nil {
+		log.WithError(err).Errorf("failed to update status GlobalAlert %s in cluster %s, maximum retries reached", globalAlert.Name, clusterName)
 		return err
 	}
-	globalAlert.Status = alert.Status
-	_, err = calicoCLI.ProjectcalicoV3().GlobalAlerts().UpdateStatus(ctx, alert, metav1.UpdateOptions{})
+
+	return nil
+}
+
+// UpdateGlobalAlertStatus gets the latest GlobalAlert and updates its status.
+func updateGlobalAlertStatus(globalAlert *v3.GlobalAlert, clusterName string, calicoCLI calicoclient.Interface, ctx context.Context) error {
+	log.Debugf("Updating status of GlobalAlert %s in cluster %s", globalAlert.Name, clusterName)
+	retrievedAlert, err := calicoCLI.ProjectcalicoV3().GlobalAlerts().Get(ctx, globalAlert.Name, metav1.GetOptions{})
 	if err != nil {
-		log.WithError(err).Errorf("could not update status of GlobalAlert %s in cluster %s", globalAlert.Name, clusterName)
+		return err
+	}
+
+	retrievedAlert.Status = globalAlert.Status
+	_, err = calicoCLI.ProjectcalicoV3().GlobalAlerts().UpdateStatus(ctx, retrievedAlert, metav1.UpdateOptions{})
+	if err != nil {
 		return err
 	}
 	return nil
@@ -36,7 +47,6 @@ func UpdateGlobalAlertStatus(globalAlert *v3.GlobalAlert, clusterName string, ca
 // GlobalAlertStatus based on the event received, error GlobalAlertStatus is returned if no events are recevied before
 // waitTime expires
 func WatchAndReportJobStatus(jobWatcher watch.Interface, jobName string, waitTime time.Duration) (v3.GlobalAlertStatus, error) {
-
 	var done <-chan time.Time // signal for when timer us up
 
 	for {

@@ -56,7 +56,7 @@ type trainingCycleStatePerCluster struct {
 	GlobalAlerts []*v3.GlobalAlert
 }
 
-// listDetectionCronJobs called by r.trainingCycleStatePerCluster (rcache.ResourceCache) to poll the current
+// listTrainingCronJobs called by r.trainingCycleStatePerCluster (rcache.ResourceCache) to poll the current
 // deployed Cronjobs relating to the DetectionCycleState controlled by the Detection Controller
 func (r *adJobTrainingReconciler) listTrainingCronJobs() (map[string]interface{}, error) {
 	detectionCronJobs := make(map[string]interface{})

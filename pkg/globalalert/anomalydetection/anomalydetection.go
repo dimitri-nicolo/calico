@@ -1,7 +1,6 @@
 package anomalydetection
 
 import (
-	"context"
 	"errors"
 	"time"
 
@@ -47,7 +46,7 @@ var (
 // cycles set for the the received global alert
 type ADService interface {
 	// Start initializes the detection cycle for the ad job specified by the GlobalAlert param
-	Start(parentCtx context.Context) v3.GlobalAlertStatus
+	Start() v3.GlobalAlertStatus
 
 	// Stop terminates the detection cycle for the AD Job specified by the GlobalAlert
 	Stop() v3.GlobalAlertStatus
@@ -101,8 +100,7 @@ func NewService(calicoCLI calicoclient.Interface, k8sClient kubernetes.Interface
 // Returns the GlobalAlertStatus sucessfully if the cronjob dor the detection cycle is successfully
 // initialized with all the pre-requisite steps.  Reports a GlobalAlertStatus with an error and exits
 // if any steps are found as unsuccessful
-func (s *adService) Start(parentCtx context.Context) v3.GlobalAlertStatus {
-
+func (s *adService) Start() v3.GlobalAlertStatus {
 	log.Infof("Initialize Anomaly Detection Cycles for %s", s.globalAlert.Name)
 
 	// sets the recurring detection cycle
@@ -165,6 +163,7 @@ func (s *adService) manageDetectionGlobalAlert() error {
 	err := s.adDetectionController.AddDetector(adjcontroller.DetectionCycleRequest{
 		ClusterName: s.clusterName,
 		GlobalAlert: s.globalAlert,
+		CalicoCLI:   s.calicoCLI,
 	})
 
 	if err != nil {

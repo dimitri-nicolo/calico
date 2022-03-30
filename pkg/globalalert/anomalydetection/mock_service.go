@@ -2,8 +2,6 @@
 package anomalydetection
 
 import (
-	context "context"
-
 	mock "github.com/stretchr/testify/mock"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
@@ -13,13 +11,13 @@ type MockService struct {
 	mock.Mock
 }
 
-// Start provides a mock function with given fields: parentCtx, alert
-func (_m *MockService) Start(parentCtx context.Context) v3.GlobalAlertStatus {
-	ret := _m.Called(parentCtx)
+// Start provides a mock function with given fields: alert
+func (_m *MockService) Start() v3.GlobalAlertStatus {
+	ret := _m.Called()
 
 	var r0 v3.GlobalAlertStatus
-	if rf, ok := ret.Get(0).(func(context.Context) v3.GlobalAlertStatus); ok {
-		r0 = rf(parentCtx)
+	if rf, ok := ret.Get(0).(func() v3.GlobalAlertStatus); ok {
+		r0 = rf()
 	} else {
 		r0 = ret.Get(0).(v3.GlobalAlertStatus)
 	}

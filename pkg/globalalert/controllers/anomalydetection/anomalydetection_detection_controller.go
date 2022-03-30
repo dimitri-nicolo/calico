@@ -45,6 +45,7 @@ type adJobDetectionController struct {
 type DetectionCycleRequest struct {
 	ClusterName string
 	GlobalAlert *v3.GlobalAlert
+	CalicoCLI   calicoclient.Interface
 }
 
 // NewADJobDetectionController creates a controller that manages and reconciles the Detection Cronjobs that are created

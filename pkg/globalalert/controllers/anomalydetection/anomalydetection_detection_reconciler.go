@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/util/retry"
 
 	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
 
@@ -72,6 +71,7 @@ type detectionCycleState struct {
 	ClusterName string
 	CronJob     *batchv1.CronJob
 	GlobalAlert *v3.GlobalAlert
+	CalicoCLI   calicoclient.Interface
 }
 
 // listDetectionCronJobs called by r.detectionCycleResourceCache (rcache.ResourceCache) to poll the current
@@ -159,12 +159,12 @@ func (r *adDetectionReconciler) reconcile() bool {
 			// reconciler's detection state map
 			log.Infof("Deleting detection cronJob job for %s", detectionCronJobNameKey)
 
+			// update status before deletion with Active == false
 			err := util.DeleteCronJobWithRetry(r.managementClusterCtx, r.k8sClient, r.namespace,
 				detectionCronJobNameKey)
 
 			if err != nil && !errors.IsNotFound(err) { // do not report error if it's not found as it is already deleted
 				log.WithError(err).Errorf("Unable to delete stored detection CronJob %s", detectionCronJobNameKey)
-				r.reportErrorStatus(detectionJobState.GlobalAlert, detectionJobState.ClusterName, detectionCronJobNameSpacedName, err)
 			}
 
 			delete(r.detectionADDetectorStates, detectionCronJobNameKey)
@@ -182,11 +182,11 @@ func (r *adDetectionReconciler) reconcile() bool {
 		return true
 	}
 
-	foundDetectionJob, err := r.k8sClient.BatchV1().CronJobs(detectionJobState.CronJob.Namespace).Get(
+	k8sStoredDetectionCronJob, err := r.k8sClient.BatchV1().CronJobs(detectionJobState.CronJob.Namespace).Get(
 		r.managementClusterCtx, detectionJobState.CronJob.Name, metav1.GetOptions{})
 
 	if err != nil && !errors.IsNotFound(err) {
-		r.reportErrorStatus(detectionJobState.GlobalAlert, detectionJobState.ClusterName, detectionCronJobNameSpacedName, err)
+		r.reportErrorStatus(detectionJobState, detectionCronJobNameSpacedName, err)
 	}
 
 	// Handle Create
@@ -202,7 +202,7 @@ func (r *adDetectionReconciler) reconcile() bool {
 
 		// update GlobalAlertStats with events for newly created CronJob
 		if err != nil {
-			r.reportErrorStatus(detectionJobState.GlobalAlert, detectionJobState.ClusterName, detectionCronJobNameSpacedName, err)
+			r.reportErrorStatus(detectionJobState, detectionCronJobNameSpacedName, err)
 			return true
 		}
 
@@ -211,14 +211,8 @@ func (r *adDetectionReconciler) reconcile() bool {
 
 		detectionJobState.GlobalAlert.Status = reporting.GetGlobalAlertSuccessStatus()
 
-		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			return reporting.UpdateGlobalAlertStatus(detectionJobState.GlobalAlert, detectionJobState.ClusterName, r.calicoCLI,
-				r.managementClusterCtx)
-		}); err != nil && !errors.IsNotFound(err) {
-			log.WithError(err).Errorf("failed to update status GlobalAlert %s in cluster %s, maximum retries reached",
-				detectionJobState.GlobalAlert.Name, detectionJobState.ClusterName)
-			return true
-		}
+		reporting.UpdateGlobalAlertStatusWithRetryOnConflict(detectionJobState.GlobalAlert, detectionJobState.ClusterName,
+			detectionJobState.CalicoCLI, r.managementClusterCtx)
 
 		return true
 	}
@@ -227,7 +221,7 @@ func (r *adDetectionReconciler) reconcile() bool {
 	// At this point the Detection CronJob for the GlobalAlert already exists update it with the CronJob contents
 	// stored by r.detectionADDetectorStates
 	// validate if the expected cronjob fields in the cache (disregarding the status) is equal to the one currently deployed
-	if util.CronJobDeepEqualsIgnoreStatus(*detectionJobState.CronJob, *foundDetectionJob) {
+	if util.CronJobDeepEqualsIgnoreStatus(*detectionJobState.CronJob, *k8sStoredDetectionCronJob) {
 		log.Debugf("Ignoring resource specific updates to %s", detectionCronJobNameKey)
 		return true
 	}
@@ -237,7 +231,7 @@ func (r *adDetectionReconciler) reconcile() bool {
 		&detectionCronJobToReconcile, metav1.UpdateOptions{})
 	// update GlobalAlertStats with events for newly created CronJob
 	if err != nil {
-		r.reportErrorStatus(detectionJobState.GlobalAlert, detectionJobState.ClusterName, detectionCronJobNameSpacedName, err)
+		r.reportErrorStatus(detectionJobState, detectionCronJobNameSpacedName, err)
 		return true
 	}
 
@@ -247,20 +241,15 @@ func (r *adDetectionReconciler) reconcile() bool {
 	// Handle GlobalAlert Success Reporting
 	// report attached GlobalAlert status of reconcialiation loop
 	detectionJobState.GlobalAlert.Status = reporting.GetGlobalAlertSuccessStatus()
-	if len(foundDetectionJob.Status.Active) > 0 {
+	if len(k8sStoredDetectionCronJob.Status.Active) > 0 {
 		detectionJobState.GlobalAlert.Status = r.getLatestJobStatusOfCronJob(r.managementClusterCtx,
-			foundDetectionJob)
+			k8sStoredDetectionCronJob)
 	}
-	detectionJobState.GlobalAlert.Status.LastExecuted = foundDetectionJob.Status.LastSuccessfulTime
-	detectionJobState.GlobalAlert.Status.LastEvent = foundDetectionJob.Status.LastScheduleTime
+	detectionJobState.GlobalAlert.Status.LastExecuted = k8sStoredDetectionCronJob.Status.LastSuccessfulTime
+	detectionJobState.GlobalAlert.Status.LastEvent = k8sStoredDetectionCronJob.Status.LastScheduleTime
 
-	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		return reporting.UpdateGlobalAlertStatus(detectionJobState.GlobalAlert, detectionJobState.ClusterName, r.calicoCLI,
-			r.managementClusterCtx)
-	}); err != nil {
-		log.WithError(err).Errorf("failed to update status GlobalAlert %s, maximum retries reached",
-			detectionJobState.GlobalAlert.Name)
-	}
+	reporting.UpdateGlobalAlertStatusWithRetryOnConflict(detectionJobState.GlobalAlert, detectionJobState.ClusterName,
+		detectionJobState.CalicoCLI, r.managementClusterCtx)
 
 	return true
 }
@@ -317,24 +306,20 @@ func (r *adDetectionReconciler) getLatestJobStatusOfCronJob(ctx context.Context,
 }
 
 // reportErrorStatus sets the status of alert with the error param
-func (r *adDetectionReconciler) reportErrorStatus(alert *v3.GlobalAlert, clusterName string, namespacedName types.NamespacedName, err error) {
-	if alert == nil {
+func (r *adDetectionReconciler) reportErrorStatus(alertState detectionCycleState,
+	namespacedName types.NamespacedName, err error) {
+	if alertState.GlobalAlert == nil || alertState.CalicoCLI == nil {
 		return
 	}
-
 	log.WithError(err).Errorf("failed to reconcile detection cycle for %s", namespacedName.Name)
 
 	formattedError := fmt.Errorf("unhealthy CronJob %s, with error: %s", namespacedName.Name, err.Error())
 	globalAlertErrorStatus := reporting.GetGlobalAlertErrorStatus(formattedError)
 
-	alert.Status = globalAlertErrorStatus
+	alertState.GlobalAlert.Status = globalAlertErrorStatus
 
-	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		return reporting.UpdateGlobalAlertStatus(alert, clusterName, r.calicoCLI, r.managementClusterCtx)
-	}); err != nil {
-		log.WithError(err).Errorf("failed to update status GlobalAlert %s in cluster %s, maximum retries reached",
-			namespacedName.Name, clusterName)
-	}
+	reporting.UpdateGlobalAlertStatusWithRetryOnConflict(alertState.GlobalAlert, alertState.ClusterName,
+		alertState.CalicoCLI, r.managementClusterCtx)
 }
 
 // Close cancels the ADJobController worker context and removes for all resources/objects that worker watches.
@@ -371,6 +356,7 @@ func (r *adDetectionReconciler) addDetector(detectionResource DetectionCycleRequ
 		ClusterName: detectionResource.ClusterName,
 		GlobalAlert: detectionResource.GlobalAlert,
 		CronJob:     detectionResourceCronJob,
+		CalicoCLI:   detectionResource.CalicoCLI,
 	}
 	r.detectionCycleResourceCache.Set(detectionResourceCronJob.Name, *detectionResourceCronJob)
 	return nil

@@ -127,7 +127,7 @@ var _ = Describe("AnomalyDetection Service", func() {
 
 		Expect(err).ShouldNot(HaveOccurred())
 
-		result := adjService.Start(ctx)
+		result := adjService.Start()
 
 		Expect(len(result.ErrorConditions)).To(BeNumerically(">", 0))
 		Expect(result.Healthy).To(BeFalse())
@@ -147,7 +147,7 @@ var _ = Describe("AnomalyDetection Service", func() {
 
 		Expect(err).ShouldNot(HaveOccurred())
 
-		result := adjService.Start(ctx)
+		result := adjService.Start()
 
 		Expect(len(result.ErrorConditions)).To(BeNumerically(">", 0))
 		Expect(result.Healthy).To(BeFalse())

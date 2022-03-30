@@ -13,12 +13,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/util/retry"
 
 	ad "github.com/tigera/intrusion-detection/controller/pkg/globalalert/anomalydetection"
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
 	es "github.com/tigera/intrusion-detection/controller/pkg/globalalert/elastic"
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/podtemplate"
+	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/reporting"
 	lma "github.com/tigera/lma/pkg/elastic"
 )
 
@@ -100,10 +100,8 @@ func (a *Alert) ExecuteAnomalyDetection(ctx context.Context) {
 		return
 	}
 
-	a.alert.Status = a.adj.Start(ctx)
-	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error { return a.updateStatus(ctx) }); err != nil {
-		log.WithError(err).Errorf("failed to update status GlobalAlert %s in cluster %s, maximum retries reached", a.alert.Name, a.clusterName)
-	}
+	a.alert.Status = a.adj.Start()
+	reporting.UpdateGlobalAlertStatusWithRetryOnConflict(a.alert, a.clusterName, a.calicoCLI, ctx)
 
 	for {
 		<-ctx.Done()
@@ -115,10 +113,6 @@ func (a *Alert) ExecuteAnomalyDetection(ctx context.Context) {
 func (a *Alert) stopAnomalyDetectionService(ctx context.Context) {
 	a.alert.Status.Active = false
 	a.alert.Status = a.adj.Stop()
-
-	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error { return a.updateStatus(ctx) }); err != nil {
-		log.WithError(err).Errorf("failed to update status GlobalAlert %s in cluster %s, maximum retries reached", a.alert.Name, a.clusterName)
-	}
 }
 
 // ExecuteElasticQuery periodically queries the Elasticsearch, updates GlobalAlert status
@@ -127,27 +121,18 @@ func (a *Alert) stopAnomalyDetectionService(ctx context.Context) {
 // It also deletes any existing elastic watchers for the cluster.
 func (a *Alert) ExecuteElasticQuery(ctx context.Context) {
 	a.es.DeleteElasticWatchers(ctx)
-	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error { return a.updateStatus(ctx) }); err != nil {
-		log.WithError(err).Errorf("failed to update status GlobalAlert %s in cluster %s, maximum retries reached", a.alert.Name, a.clusterName)
-	}
+	reporting.UpdateGlobalAlertStatusWithRetryOnConflict(a.alert, a.clusterName, a.calicoCLI, ctx)
 
 	for {
 		timer := time.NewTimer(a.getDurationUntilNextAlert())
 		select {
 		case <-timer.C:
-
 			a.alert.Status = a.es.ExecuteAlert(a.alert)
-			if err := retry.RetryOnConflict(retry.DefaultRetry, func() error { return a.updateStatus(ctx) }); err != nil {
-				log.WithError(err).Errorf("failed to update status GlobalAlert %s in cluster %s, maximum retries reached", a.alert.Name, a.clusterName)
-			}
-
+			reporting.UpdateGlobalAlertStatusWithRetryOnConflict(a.alert, a.clusterName, a.calicoCLI, ctx)
 			timer.Stop()
 		case <-ctx.Done():
 			a.alert.Status.Active = false
-
-			if err := retry.RetryOnConflict(retry.DefaultRetry, func() error { return a.updateStatus(ctx) }); err != nil {
-				log.WithError(err).Errorf("failed to update status GlobalAlert %s in cluster %s, maximum retries reached", a.alert.Name, a.clusterName)
-			}
+			reporting.UpdateGlobalAlertStatusWithRetryOnConflict(a.alert, a.clusterName, a.calicoCLI, ctx)
 			timer.Stop()
 			return
 		}
@@ -179,23 +164,6 @@ func (a *Alert) getDurationUntilNextAlert() time.Duration {
 		return timeUntilNextRun
 	}
 	return alertPeriod
-}
-
-// updateStatus gets the latest GlobalAlert and updates its status.
-func (a *Alert) updateStatus(ctx context.Context) error {
-	log.Debugf("Updating status of GlobalAlert %s in cluster %s", a.alert.Name, a.clusterName)
-	alert, err := a.calicoCLI.ProjectcalicoV3().GlobalAlerts().Get(ctx, a.alert.Name, metav1.GetOptions{})
-	if err != nil {
-		log.WithError(err).Errorf("could not get GlobalAlert %s in cluster %s", a.alert.Name, a.clusterName)
-		return err
-	}
-	alert.Status = a.alert.Status
-	_, err = a.calicoCLI.ProjectcalicoV3().GlobalAlerts().UpdateStatus(ctx, alert, metav1.UpdateOptions{})
-	if err != nil {
-		log.WithError(err).Errorf("could not update status of GlobalAlert %s in cluster %s", a.alert.Name, a.clusterName)
-		return err
-	}
-	return nil
 }
 
 // EqualAlertSpec does reflect.DeepEqual on give spec and cached alert spec.

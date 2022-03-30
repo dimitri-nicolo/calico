@@ -67,24 +67,20 @@ var _ = Describe("Reporting", func() {
 		It("retrieves currently deployed GlobalAlertStatus", func() {
 			testGlobalAlert := defaultSampleGlobalAlert
 			prevExecTime := now.Add(-10 * time.Second)
-
-			prevStatus := v3.GlobalAlertStatus{
+			statusToUpdate := v3.GlobalAlertStatus{
 				LastUpdate:   &metav1.Time{Time: prevExecTime},
 				Active:       true,
 				Healthy:      false,
 				LastExecuted: &metav1.Time{Time: prevExecTime},
 			}
-			testGlobalAlert.Status = prevStatus
+			testGlobalAlert.Status = statusToUpdate
 
-			err := UpdateGlobalAlertStatus(&testGlobalAlert, clusterName, mockCalicoCLI, ctx)
-
+			err := UpdateGlobalAlertStatusWithRetryOnConflict(&testGlobalAlert, clusterName, mockCalicoCLI, ctx)
 			Expect(err).To(BeNil())
-			Expect(testGlobalAlert.Status).To(Equal(defaultSampleGlobalAlert.Status))
 
 			updatedAlert, err := mockCalicoCLI.ProjectcalicoV3().GlobalAlerts().Get(ctx, testGlobalAlert.Name, metav1.GetOptions{})
 			Expect(err).To(BeNil())
-
-			Expect(updatedAlert.Status).To(Equal(defaultSampleGlobalAlert.Status))
+			Expect(updatedAlert.Status).To(Equal(statusToUpdate))
 		})
 	})
 

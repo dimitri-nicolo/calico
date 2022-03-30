@@ -9,8 +9,6 @@ import (
 )
 
 const (
-	elasticGatewayHost           = "tigera-elasticsearch.tigera-secure-es-gateway-http.svc"
-	elasticPort                  = 9200
 	ElasticsearchADJobUserSecret = "tigera-ee-ad-job-elasticsearch-access"
 )
 
