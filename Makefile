@@ -11,7 +11,7 @@ RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
-GO_VERSION  ?=1.17.5
+GO_VERSION  ?=1.17.8
 UBI_VERSION ?=8.5
 BUILDER_VERSION ?=v0.0.1
 
