@@ -208,12 +208,14 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 						continue
 					}
 					f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
+						"-w",
 						"-p", "tcp",
 						"-d", fmt.Sprintf("10.66.%d.1", j),
 						"-m", "tcp", "--dport", "8080",
 						"-j", "DNAT", "--to-destination",
 						felixes[j].IP+":8055")
 					f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
+						"-w",
 						"-p", "tcp",
 						"-d", fmt.Sprintf("10.66.%d.2", j),
 						"-m", "tcp", "--dport", "8080",
