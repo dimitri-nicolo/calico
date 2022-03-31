@@ -188,7 +188,7 @@ func main() {
 	clusterName := getStrEnvOrDefault("CLUSTER_NAME", "cluster")
 
 	var managementAlertController, managedClusterController controller.Controller
-	var alertHealthPinger, managedClusterHealthPinger health.Pingers
+	var alertHealthPinger health.Pingers
 
 	enableAlerts := os.Getenv("DISABLE_ALERTS") != "yes"
 	enableAnomalyDetection := os.Getenv("DISABLE_ANOMALY_DETECTION") != "yes"
@@ -218,10 +218,9 @@ func main() {
 		multiClusterForwardingEndpoint := getStrEnvOrDefault("MULTI_CLUSTER_FORWARDING_ENDPOINT", DefaultMultiClusterForwardingEndpoint)
 		multiClusterForwardingCA := getStrEnvOrDefault("MULTI_CLUSTER_FORWARDING_CA", DefaultMultiClusterForwardingCA)
 
-		managedClusterController, managedClusterHealthPinger = managedcluster.NewManagedClusterController(calicoClient, lmaESClient, k8sClient,
+		managedClusterController = managedcluster.NewManagedClusterController(calicoClient, lmaESClient, k8sClient,
 			enableAnomalyDetection, anomalyTrainingController, anomalyDetectionController, indexSettings, TigeraIntrusionDetectionNamespace,
 			util.ManagedClusterClient(config, multiClusterForwardingEndpoint, multiClusterForwardingCA))
-		healthPingers = append(healthPingers, &managedClusterHealthPinger)
 	}
 
 	f := forwarder.NewEventForwarder("eventforwarder-1", e)
