@@ -53,27 +53,6 @@ type WorkloadEndpointClient struct {
 	converter conversion.Converter
 }
 
-type patchModeKey struct{}
-type PatchMode string
-
-const (
-	PatchModeCNI           PatchMode = "patchCNI"
-	PatchModeEgressGateway PatchMode = "patchEgressGateway"
-	PatchModeUnspecified   PatchMode = "patchUnspecified"
-)
-
-func ContextWithPatchMode(ctx context.Context, mode PatchMode) context.Context {
-	return context.WithValue(ctx, patchModeKey{}, mode)
-}
-
-func PatchModeOf(ctx context.Context) PatchMode {
-	v := ctx.Value(patchModeKey{})
-	if v != nil {
-		return v.(PatchMode)
-	}
-	return PatchModeUnspecified
-}
-
 // Create is used to "create" default WorkloadEndpoints for Pods. In KDD mode, we need to store the IPs in annotations for
 // the default WorkloadEndpoint, and this function stores those IPs in a Pod annotation. Use CreateNonDefault if the WorkloadEndpoint
 // is not the default WorkloadEndpoint for the pod
@@ -136,7 +115,7 @@ func (c *WorkloadEndpointClient) patchInAnnotations(ctx context.Context, kvp *mo
 	patchMode := PatchModeOf(ctx)
 	switch patchMode {
 	case PatchModeCNI:
-		annotations = c.calcCniAnnotations(kvp)
+		annotations = c.calcCNIAnnotations(kvp)
 		// Note: we drop the revision here because the CNI plugin can't handle a retry right now (and the kubelet
 		// ensures that only one CNI ADD for a given UID can be in progress).
 		revision = ""
@@ -154,7 +133,7 @@ func (c *WorkloadEndpointClient) patchInAnnotations(ctx context.Context, kvp *mo
 	return c.patchPodAnnotations(ctx, kvp.Key, revision, kvp.UID, annotations)
 }
 
-func (c *WorkloadEndpointClient) calcCniAnnotations(kvp *model.KVPair) map[string]string {
+func (c *WorkloadEndpointClient) calcCNIAnnotations(kvp *model.KVPair) map[string]string {
 	annotations := make(map[string]string)
 	wep := kvp.Value.(*libapiv3.WorkloadEndpoint)
 	ips := wep.Spec.IPNetworks
