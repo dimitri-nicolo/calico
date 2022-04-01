@@ -10,10 +10,7 @@ TEST_DIR=./tests/k8st
 : ${TSEE_TEST_LICENSE:=/home/semaphore/secrets/new-test-customer-license.yaml}
 
 # kubectl binary.
-: ${kubectl:=./bin/kubectl}
-
-# kind binary.
-: ${KIND:=./bin/kind}
+: ${kubectl:=../hack/test/kind/kubectl}
 
 function checkModule(){
   MODULE="$1"

@@ -12,7 +12,7 @@ To deploy, bring up k8s version v1.8+, preferably v1.9.
 docker image (`make tigera/cnx-apiserver`) has been built.
 ```
 1. kubeadm reset; rm -rf /var/etcd
-2. KUBE_HYPERKUBE_IMAGE=gcr.io/google_containers/hyperkube-amd64:v1.7.0 kubeadm init --config kubeadm.yaml
+2. kubeadm init --config kubeadm.yaml
    Make sure to setup proxy-client certs. Refer artifacts/misc/kubeadm.yaml
    Example: proxy-client-cert-file: "/etc/kubernetes/pki/front-proxy-client.crt"
             proxy-client-key-file: "/etc/kubernetes/pki/front-proxy-client.key"
@@ -40,7 +40,7 @@ docker image (`make tigera/cnx-apiserver`) has been built.
 ## Sample installation steps with kubeadm with Calico in KDD mode
 ```
 1. kubeadm reset; rm -rf /var/etcd
-2. KUBE_HYPERKUBE_IMAGE=gcr.io/google_containers/hyperkube-amd64:v1.7.0 kubeadm init --config kubeadm.yaml
+2. kubeadm init --config kubeadm.yaml
    Make sure to setup proxy-client certs. Refer artifacts/misc/kubeadm.yaml
    Example: proxy-client-cert-file: "/etc/kubernetes/pki/front-proxy-client.crt"
             proxy-client-key-file: "/etc/kubernetes/pki/front-proxy-client.key"
