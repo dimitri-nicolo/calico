@@ -53,27 +53,6 @@ type WorkloadEndpointClient struct {
 	converter conversion.Converter
 }
 
-type patchModeKey struct{}
-type PatchMode string
-
-const (
-	PatchModeCNI           PatchMode = "patchCNI"
-	PatchModeEgressGateway PatchMode = "patchEgressGateway"
-	PatchModeUnspecified   PatchMode = "patchUnspecified"
-)
-
-func ContextWithPatchMode(ctx context.Context, mode PatchMode) context.Context {
-	return context.WithValue(ctx, patchModeKey{}, mode)
-}
-
-func PatchModeOf(ctx context.Context) PatchMode {
-	v := ctx.Value(patchModeKey{})
-	if v != nil {
-		return v.(PatchMode)
-	}
-	return PatchModeUnspecified
-}
-
 // Create is used to "create" default WorkloadEndpoints for Pods. In KDD mode, we need to store the IPs in annotations for
 // the default WorkloadEndpoint, and this function stores those IPs in a Pod annotation. Use CreateNonDefault if the WorkloadEndpoint
 // is not the default WorkloadEndpoint for the pod

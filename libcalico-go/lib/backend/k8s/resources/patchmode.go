@@ -22,15 +22,18 @@ type patchModeKey struct{}
 type PatchMode string
 
 const (
-	PatchModeCNI         PatchMode = "patchModeCNI"
-	PatchModeUnspecified PatchMode = "patchModeUnspecified"
+	PatchModeCNI           PatchMode = "patchCNI"
+	PatchModeEgressGateway PatchMode = "patchEgressGateway"
+	PatchModeUnspecified   PatchMode = "patchUnspecified"
 )
 
 func ContextWithPatchMode(ctx context.Context, mode PatchMode) context.Context {
-	if mode == PatchModeCNI {
+	switch mode {
+	case PatchModeCNI, PatchModeEgressGateway, PatchModeUnspecified:
 		return context.WithValue(ctx, patchModeKey{}, mode)
+	default:
+		return ctx
 	}
-	return ctx
 }
 
 func PatchModeOf(ctx context.Context) PatchMode {
