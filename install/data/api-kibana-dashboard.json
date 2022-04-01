@@ -244,5 +244,12 @@
     "migrationVersion": {
       "index-pattern": "7.6.0"
     }
+  },
+  {
+    "type": "index-pattern",
+    "attributes": {
+      "title": "tigera_secure_ee_runtime*",
+      "timeFieldName": "start_time"
+    }
   }
 ]
