@@ -34,7 +34,7 @@ WINFV_SRCFILES=$(shell find win_tests -name '*.go')
 CURL=curl -C - -sSf
 
 # Use forked CNI plugin URL and corresponding tagged artifacts.
-CNI_VERSION=v1.0.0-calico
+CNI_VERSION=v1.0.0-calico+go-1.17.8
 CNI_ARTIFACTS_URL=https://github.com/projectcalico/containernetworking-plugins/releases/download
 
 # By default set the CNI_SPEC_VERSION to 0.3.1 for tests.
