@@ -136,7 +136,7 @@ func (c *WorkloadEndpointClient) patchInAnnotations(ctx context.Context, kvp *mo
 	patchMode := PatchModeOf(ctx)
 	switch patchMode {
 	case PatchModeCNI:
-		annotations = c.calcCniAnnotations(kvp)
+		annotations = c.calcCNIAnnotations(kvp)
 		// Note: we drop the revision here because the CNI plugin can't handle a retry right now (and the kubelet
 		// ensures that only one CNI ADD for a given UID can be in progress).
 		revision = ""
@@ -154,7 +154,7 @@ func (c *WorkloadEndpointClient) patchInAnnotations(ctx context.Context, kvp *mo
 	return c.patchPodAnnotations(ctx, kvp.Key, revision, kvp.UID, annotations)
 }
 
-func (c *WorkloadEndpointClient) calcCniAnnotations(kvp *model.KVPair) map[string]string {
+func (c *WorkloadEndpointClient) calcCNIAnnotations(kvp *model.KVPair) map[string]string {
 	annotations := make(map[string]string)
 	wep := kvp.Value.(*libapiv3.WorkloadEndpoint)
 	ips := wep.Spec.IPNetworks
