@@ -1,7 +1,7 @@
 include ../metadata.mk
 
 CALICO_DIR=$(shell git rev-parse --show-toplevel)/calico
-GIT_HASH=$(shell git rev-parse --short=10 HEAD)
+GIT_HASH=$(shell git rev-parse --short=11 HEAD)
 VERSIONS_FILE?=$(CALICO_DIR)/_data/versions.yml
 JEKYLL_VERSION=4.0.0
 HP_VERSION=v0.2
