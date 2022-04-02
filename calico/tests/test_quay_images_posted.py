@@ -50,8 +50,9 @@ def test_release_tag_present(name, component):
 
     def check_image(name, image_name, expected_ver):
         req_url = '{base_url}/repository/{image_name}/tag'.format(
-            base_url=QUAY_API_URL, image_name=image_name, tag=expected_ver)
-        res = requests.get(req_url, headers=headers)
+            base_url=QUAY_API_URL, image_name=image_name)
+        params = {'specificTag': expected_ver}
+        res = requests.get(req_url, headers=headers, params=params)
         assert res.status_code == 200
         tags = res.json()['tags']
         found = False
