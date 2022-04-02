@@ -247,8 +247,7 @@ _includes/charts/%/values.yaml: _plugins/values.rb _plugins/helm.rb _data/versio
 # The following chunk of conditionals sets the Version of the helm chart.
 # Note that helm requires strict semantic versioning, so we use v0.0 to represent 'master'.
 ifdef CHART_RELEASE
-# the presence of CHART_RELEASE indicates we're trying to cut an official chart release.
-chartVersion:=$(CALICO_VER)-$(CHART_RELEASE)
+chartVersion:=$(CALICO_VER)
 appVersion:=$(CALICO_VER)
 else
 # otherwise, it's a nightly build.
@@ -270,6 +269,12 @@ chart/%: _includes/charts/%/values.yaml
 	--destination ./bin/ \
 	--version $(chartVersion) \
 	--app-version $(appVersion)
+
+chart-release: charts
+ifndef CHART_RELEASE
+	$(error CHART_RELEASE is undefined)
+endif
+	mv ./bin/tigera-operator-$(CALICO_VER).tgz ./bin/tigera-operator-$(CALICO_VER)-$(CHART_RELEASE).tgz
 
 helm-install-gcs-plugin:
 	bin/helm3 plugin install https://github.com/viglesiasce/helm-gcs.git
