@@ -375,7 +375,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 		activeEgressCalc.RegisterWith(localEndpointDispatcher, allUpdDispatcher)
 		activeEgressCalc.OnIPSetActive = ruleScanner.OnIPSetActive
 		activeEgressCalc.OnIPSetInactive = ruleScanner.OnIPSetInactive
-		activeEgressCalc.OnEgressIPSetIDUpdate = polResolver.OnEgressIPSetIDUpdate
+		activeEgressCalc.OnEndpointEgressDataUpdate = polResolver.OnEndpointEgressDataUpdate
 
 		// Create and hook up the egress selector pool.
 		egressSelectorPool := NewEgressSelectorPool(conf.EgressIPSupport)

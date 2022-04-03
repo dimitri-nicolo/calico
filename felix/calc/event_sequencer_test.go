@@ -370,7 +370,7 @@ var _ = Describe("OnEndpointTierUpdate with egress IP set ID", func() {
 		uut.OnEndpointTierUpdate(
 			model.WorkloadEndpointKey{WorkloadID: "we1"},
 			&model.WorkloadEndpoint{Name: "we1"},
-			calc.EndpointEgressData{EgressIPSetID: "e:abcdef"},
+			calc.EndpointEgressData{EgressIPSetID: "e:abcdef", MaxNextHops: 3},
 			nil,
 		)
 		uut.Flush()
@@ -379,12 +379,13 @@ var _ = Describe("OnEndpointTierUpdate with egress IP set ID", func() {
 				WorkloadId: "we1",
 			},
 			Endpoint: &proto.WorkloadEndpoint{
-				Name:          "we1",
-				EgressIpSetId: "e:abcdef",
-				Ipv4Nets:      []string{},
-				Ipv6Nets:      []string{},
-				Ipv4Nat:       []*proto.NatInfo{},
-				Ipv6Nat:       []*proto.NatInfo{},
+				Name:              "we1",
+				EgressIpSetId:     "e:abcdef",
+				EgressMaxNextHops: 3,
+				Ipv4Nets:          []string{},
+				Ipv6Nets:          []string{},
+				Ipv4Nat:           []*proto.NatInfo{},
+				Ipv6Nat:           []*proto.NatInfo{},
 			},
 		}}))
 

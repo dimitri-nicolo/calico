@@ -50,6 +50,9 @@ type EndpointEgressData struct {
 
 	// Whether this endpoint _is_ an egress gateway.
 	IsEgressGateway bool
+
+	// The number of egress gateway pods this workload should use.
+	MaxNextHops int
 }
 
 // EventSequencer buffers and coalesces updates from the calculation graph then flushes them
@@ -395,16 +398,17 @@ func ModelWorkloadEndpointToProto(ep *model.WorkloadEndpoint, tiers []*proto.Tie
 		mac = ep.Mac.String()
 	}
 	return &proto.WorkloadEndpoint{
-		State:         ep.State,
-		Name:          ep.Name,
-		Mac:           mac,
-		ProfileIds:    ep.ProfileIDs,
-		Ipv4Nets:      netsToStrings(ep.IPv4Nets),
-		Ipv6Nets:      netsToStrings(ep.IPv6Nets),
-		Tiers:         tiers,
-		Ipv4Nat:       natsToProtoNatInfo(ep.IPv4NAT),
-		Ipv6Nat:       natsToProtoNatInfo(ep.IPv6NAT),
-		AwsElasticIps: ep.AWSElasticIPs,
+		State:             ep.State,
+		Name:              ep.Name,
+		Mac:               mac,
+		ProfileIds:        ep.ProfileIDs,
+		Ipv4Nets:          netsToStrings(ep.IPv4Nets),
+		Ipv6Nets:          netsToStrings(ep.IPv6Nets),
+		Tiers:             tiers,
+		Ipv4Nat:           natsToProtoNatInfo(ep.IPv4NAT),
+		Ipv6Nat:           natsToProtoNatInfo(ep.IPv6NAT),
+		AwsElasticIps:     ep.AWSElasticIPs,
+		EgressMaxNextHops: int32(ep.EgressMaxNextHops),
 	}
 }
 
@@ -453,10 +457,12 @@ func (buf *EventSequencer) flushEndpointTierUpdates() {
 			protoEp := ModelWorkloadEndpointToProto(wlep, tiers)
 			protoEp.EgressIpSetId = buf.pendingEndpointEgressUpdates[key].EgressIPSetID
 			protoEp.IsEgressGateway = buf.pendingEndpointEgressUpdates[key].IsEgressGateway
+			protoEp.EgressMaxNextHops = int32(buf.pendingEndpointEgressUpdates[key].MaxNextHops)
 			if protoEp.IsEgressGateway {
 				// To break gatewaying loops, we do not allow a workload to route
 				// via egress gateways if it is _itself_ an egress gateway.
 				protoEp.EgressIpSetId = ""
+				protoEp.EgressMaxNextHops = 0
 			}
 			buf.Callback(&proto.WorkloadEndpointUpdate{
 				Id: &proto.WorkloadEndpointID{

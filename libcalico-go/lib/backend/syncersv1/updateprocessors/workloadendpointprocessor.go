@@ -211,6 +211,7 @@ func ConvertWorkloadEndpointV3ToV1Value(val interface{}) (interface{}, error) {
 		// Convert egress Selector and NamespaceSelector fields to a single selector
 		// expression in the same way we do for namespaced policy EntityRule selectors.
 		v1value.EgressSelector = GetEgressGatewaySelector(v3res.Spec.EgressGateway, v3res.Namespace)
+		v1value.EgressMaxNextHops = v3res.Spec.EgressGateway.MaxNextHops
 	}
 
 	return v1value, nil

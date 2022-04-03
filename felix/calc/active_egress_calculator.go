@@ -33,23 +33,35 @@ type ActiveEgressCalculator struct {
 	// Active local endpoints.
 	endpoints map[model.WorkloadEndpointKey]*epData
 
-	// Known profile egress selectors.
-	profiles map[string]string
+	// Known profile egress data.
+	profiles map[string]epEgressSourceData
 
 	// Callbacks.
-	OnIPSetActive         func(ipSet *IPSetData)
-	OnIPSetInactive       func(ipSet *IPSetData)
-	OnEgressIPSetIDUpdate func(key model.WorkloadEndpointKey, egressIPSetID string)
+	OnIPSetActive              func(ipSet *IPSetData)
+	OnIPSetInactive            func(ipSet *IPSetData)
+	OnEndpointEgressDataUpdate func(key model.WorkloadEndpointKey, egressData epEgressData)
+}
+
+// Combines the egress selector and maxNextHops.
+type epEgressSourceData struct {
+	selector    string
+	maxNextHops int
+}
+
+// Combines the egress ip set id and max next hops.
+type epEgressData struct {
+	ipSetID     string
+	maxNextHops int
 }
 
 // Information that we track for each active local endpoint.
 type epData struct {
-	// The egress selector, if any, configured directly on this endpoint.
-	localSelector string
+	// The egress data, if any, configured directly on this endpoint.
+	localEpEgressData epEgressSourceData
 
-	// The egress selector that this endpoint is now using - which could come from one of its
+	// The egress data that this endpoint is now using - which could come from one of its
 	// profiles.
-	activeSelector string
+	activeEpEgressData epEgressSourceData
 
 	// This endpoint's profile IDs.
 	profileIDs []string
@@ -69,7 +81,7 @@ func NewActiveEgressCalculator(supportLevel string) *ActiveEgressCalculator {
 		supportLevel: supportLevel,
 		selectors:    map[string]*esData{},
 		endpoints:    map[model.WorkloadEndpointKey]*epData{},
-		profiles:     map[string]string{},
+		profiles:     map[string]epEgressSourceData{},
 	}
 	return aec
 }
@@ -89,10 +101,13 @@ func (aec *ActiveEgressCalculator) OnUpdate(update api.Update) (_ bool) {
 			endpoint := update.Value.(*model.WorkloadEndpoint)
 			if aec.supportLevel == "EnabledPerNamespaceOrPerPod" {
 				// Endpoint-level selectors are supported.
-				aec.updateEndpoint(key, endpoint.ProfileIDs, endpoint.EgressSelector)
+				aec.updateEndpoint(key, endpoint.ProfileIDs, epEgressSourceData{
+					selector:    endpoint.EgressSelector,
+					maxNextHops: endpoint.EgressMaxNextHops,
+				})
 			} else {
 				// Endpoint-level selectors are not supported.
-				aec.updateEndpoint(key, endpoint.ProfileIDs, "")
+				aec.updateEndpoint(key, endpoint.ProfileIDs, epEgressSourceData{})
 			}
 
 		} else {
@@ -123,27 +138,30 @@ func (aec *ActiveEgressCalculator) OnUpdate(update api.Update) (_ bool) {
 
 func (aec *ActiveEgressCalculator) updateProfile(profileID string, egress *v3.EgressSpec) {
 	// Find the existing selector for this profile.
-	oldSelector := aec.profiles[profileID]
+	oldEpEgressData := aec.profiles[profileID]
 
 	// Calculate the new selector
-	newSelector := ""
+	newEpEgressData := epEgressSourceData{}
 	if egress != nil {
 		// Convert egress Selector and NamespaceSelector fields to a single selector
 		// expression in the same way we do for namespaced policy EntityRule selectors.
-		newSelector = updateprocessors.GetEgressGatewaySelector(
-			egress,
-			strings.TrimPrefix(profileID, conversion.NamespaceProfileNamePrefix),
-		)
+		newEpEgressData = epEgressSourceData{
+			selector: updateprocessors.GetEgressGatewaySelector(
+				egress,
+				strings.TrimPrefix(profileID, conversion.NamespaceProfileNamePrefix),
+			),
+			maxNextHops: egress.MaxNextHops,
+		}
 	}
 
 	// If the selector hasn't changed, no need to scan the endpoints.
-	if newSelector == oldSelector {
+	if newEpEgressData == oldEpEgressData {
 		return
 	}
 
 	// Update profile selector map.
-	if newSelector != "" {
-		aec.profiles[profileID] = newSelector
+	if newEpEgressData.selector != "" {
+		aec.profiles[profileID] = newEpEgressData
 	} else {
 		delete(aec.profiles, profileID)
 	}
@@ -154,11 +172,11 @@ func (aec *ActiveEgressCalculator) updateProfile(profileID string, egress *v3.Eg
 	// should be rare and we are only scanning through local endpoints, which scales only with
 	// single node capacity, not with overall cluster size.
 	for key, epData := range aec.endpoints {
-		if epData.localSelector != "" {
+		if epData.localEpEgressData.selector != "" {
 			// Endpoint specifies its own egress selector, so profiles aren't relevant.
 			continue
 		}
-		if epData.activeSelector == "" && newSelector == "" {
+		if epData.activeEpEgressData.selector == "" && newEpEgressData.selector == "" {
 			// Endpoint has no egress selector, and this profile isn't providing one, so
 			// can't possibly change the endpoint's situation.
 			continue
@@ -166,36 +184,39 @@ func (aec *ActiveEgressCalculator) updateProfile(profileID string, egress *v3.Eg
 
 		// Spin through endpoint's profiles to find the first one, if any, that provides an
 		// egress selector.
-		oldEpSelector := epData.activeSelector
-		epData.activeSelector = ""
+		oldEpEgressData := epData.activeEpEgressData
+		epData.activeEpEgressData = epEgressSourceData{}
 		for _, profileID := range epData.profileIDs {
-			if aec.profiles[profileID] != "" {
-				epData.activeSelector = aec.profiles[profileID]
+			if aec.profiles[profileID].selector != "" {
+				epData.activeEpEgressData = aec.profiles[profileID]
 				break
 			}
 		}
 
-		// Push selector change to IP set member index and policy resolver.
-		aec.updateEndpointSelector(key, oldEpSelector, epData.activeSelector)
+		// Push egress data change to IP set member index and policy resolver.
+		aec.updateEndpointEgressData(key, oldEpEgressData, epData.activeEpEgressData)
 	}
 }
 
-func (aec *ActiveEgressCalculator) updateEndpointSelector(key model.WorkloadEndpointKey, old, new string) {
+func (aec *ActiveEgressCalculator) updateEndpointEgressData(key model.WorkloadEndpointKey, old, new epEgressSourceData) {
 	if new == old {
 		return
 	}
 
 	// Decref the old one and incref the new one.
-	aec.decRefSelector(old)
-	aec.incRefSelector(new)
+	aec.decRefSelector(old.selector)
+	aec.incRefSelector(new.selector)
 	egressIPSetID := ""
-	if new != "" {
-		egressIPSetID = aec.selectors[new].ipSet.UniqueID()
+	if new.selector != "" {
+		egressIPSetID = aec.selectors[new.selector].ipSet.UniqueID()
 	}
-	aec.OnEgressIPSetIDUpdate(key, egressIPSetID)
+	aec.OnEndpointEgressDataUpdate(key, epEgressData{
+		ipSetID:     egressIPSetID,
+		maxNextHops: new.maxNextHops,
+	})
 }
 
-func (aec *ActiveEgressCalculator) updateEndpoint(key model.WorkloadEndpointKey, profileIDs []string, endpointSelector string) {
+func (aec *ActiveEgressCalculator) updateEndpoint(key model.WorkloadEndpointKey, profileIDs []string, egressData epEgressSourceData) {
 	// Find or create the data for this endpoint.
 	ep, exists := aec.endpoints[key]
 	if !exists {
@@ -204,15 +225,15 @@ func (aec *ActiveEgressCalculator) updateEndpoint(key model.WorkloadEndpointKey,
 	}
 
 	// Note the existing active selector, which may be about to be overwritten.
-	oldSelector := ep.activeSelector
+	oldEpEgressData := ep.activeEpEgressData
 
 	// Inherit an egress selector from the profiles, if the endpoint itself doesn't have one.
-	ep.localSelector = endpointSelector
-	ep.activeSelector = endpointSelector
-	if ep.activeSelector == "" {
+	ep.localEpEgressData = egressData
+	ep.activeEpEgressData = egressData
+	if ep.activeEpEgressData.selector == "" {
 		for _, id := range profileIDs {
-			if aec.profiles[id] != "" {
-				ep.activeSelector = aec.profiles[id]
+			if aec.profiles[id].selector != "" {
+				ep.activeEpEgressData = aec.profiles[id]
 				break
 			}
 		}
@@ -220,7 +241,7 @@ func (aec *ActiveEgressCalculator) updateEndpoint(key model.WorkloadEndpointKey,
 	ep.profileIDs = profileIDs
 
 	// Push selector change to IP set member index and policy resolver.
-	aec.updateEndpointSelector(key, oldSelector, ep.activeSelector)
+	aec.updateEndpointEgressData(key, oldEpEgressData, ep.activeEpEgressData)
 }
 
 func (aec *ActiveEgressCalculator) deleteEndpoint(key model.WorkloadEndpointKey) {
@@ -232,12 +253,12 @@ func (aec *ActiveEgressCalculator) deleteEndpoint(key model.WorkloadEndpointKey)
 	delete(aec.endpoints, key)
 
 	// Decref this endpoint's selector.
-	aec.decRefSelector(ep.activeSelector)
+	aec.decRefSelector(ep.activeEpEgressData.selector)
 
-	if ep.activeSelector != "" {
+	if ep.activeEpEgressData.selector != "" {
 		// Ensure downstream components clear any egress IP set ID data for this endpoint
 		// key.
-		aec.OnEgressIPSetIDUpdate(key, "")
+		aec.OnEndpointEgressDataUpdate(key, epEgressData{})
 	}
 }
 

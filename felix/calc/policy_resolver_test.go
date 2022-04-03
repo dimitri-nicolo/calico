@@ -42,8 +42,8 @@ var _ = Describe("PolicyResolver", func() {
 		// Expect OnEndpointTierUpdate with no egress ID.
 		cbs.ExpectEndpointTierUpdate(we1Key, "")
 
-		By("OnEgressIPSetIDUpdate for that endpoint")
-		uut.OnEgressIPSetIDUpdate(we1Key, "e:abcdef")
+		By("OnEndpointEgressDataUpdate for that endpoint")
+		uut.OnEndpointEgressDataUpdate(we1Key, epEgressData{ipSetID: "e:abcdef"})
 
 		// Expect OnEndpointTierUpdate with that egress IP set ID.
 		cbs.ExpectEndpointTierUpdate(we1Key, "e:abcdef")
@@ -60,8 +60,8 @@ var _ = Describe("PolicyResolver", func() {
 		})
 		cbs.ExpectEndpointTierUpdate(we1Key, "e:abcdef")
 
-		By("OnEgressIPSetIDUpdate for that endpoint with no egress IP set")
-		uut.OnEgressIPSetIDUpdate(we1Key, "")
+		By("OnEndpointEgressDataUpdate for that endpoint with no egress IP set")
+		uut.OnEndpointEgressDataUpdate(we1Key, epEgressData{})
 		cbs.ExpectEndpointTierUpdate(we1Key, "")
 	})
 })

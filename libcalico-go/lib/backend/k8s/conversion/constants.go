@@ -39,6 +39,7 @@ const (
 	AnnotationSecurityGroups                    = "aws.tigera.io/security-groups"
 	AnnotationEgressSelector                    = "egress.projectcalico.org/selector"
 	AnnotationEgressNamespaceSelector           = "egress.projectcalico.org/namespaceSelector"
+	AnnotationEgressMaxNextHops                 = "egress.projectcalico.org/maxNextHops"
 	AnnotationEgressGatewayMaintenanceGatewayIP = "egress.projectcalico.org/gatewayMaintenanceGatewayIP"
 	AnnotationEgressGatewayMaintenanceStarted   = "egress.projectcalico.org/gatewayMaintenanceStartedTimestamp"
 	AnnotationEgressGatewayMaintenanceFinished  = "egress.projectcalico.org/gatewayMaintenanceFinishedTimestamp"

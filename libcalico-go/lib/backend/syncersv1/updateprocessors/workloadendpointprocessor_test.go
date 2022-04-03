@@ -165,6 +165,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		res.Spec.EgressGateway = &apiv3.EgressSpec{
 			NamespaceSelector: "black == 'white'",
 			Selector:          "red == 'green'",
+			MaxNextHops:       1,
 		}
 
 		kvps, err = up.Process(&model.KVPair{
@@ -198,6 +199,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 						},
 					},
 					EgressSelector:             "(pcns.black == \"white\") && (red == 'green')",
+					EgressMaxNextHops:          1,
 					DeletionTimestamp:          inSixtySeconds.Time,
 					DeletionGracePeriodSeconds: sixty,
 				},

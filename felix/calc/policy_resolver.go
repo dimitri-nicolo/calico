@@ -54,7 +54,7 @@ type PolicyResolver struct {
 	endpointIDToPolicyIDs multidict.IfaceToIface
 	sortedTierData        []*tierInfo
 	endpoints             map[model.Key]interface{}
-	egressIPSetIDs        map[model.WorkloadEndpointKey]string
+	endpointEgressData    map[model.WorkloadEndpointKey]epEgressData
 	endpointGatewayUsage  map[model.WorkloadEndpointKey]int
 	dirtyEndpoints        set.Set
 	sortRequired          bool
@@ -72,7 +72,7 @@ func NewPolicyResolver() *PolicyResolver {
 		policyIDToEndpointIDs: multidict.NewIfaceToIface(),
 		endpointIDToPolicyIDs: multidict.NewIfaceToIface(),
 		endpoints:             make(map[model.Key]interface{}),
-		egressIPSetIDs:        make(map[model.WorkloadEndpointKey]string),
+		endpointEgressData:    make(map[model.WorkloadEndpointKey]epEgressData),
 		endpointGatewayUsage:  make(map[model.WorkloadEndpointKey]int),
 		dirtyEndpoints:        set.New(),
 		policySorter:          NewPolicySorter(),
@@ -101,7 +101,7 @@ func (pr *PolicyResolver) OnUpdate(update api.Update) (filterOut bool) {
 		} else {
 			delete(pr.endpoints, key)
 			if wlKey, ok := key.(model.WorkloadEndpointKey); ok {
-				delete(pr.egressIPSetIDs, wlKey)
+				delete(pr.endpointEgressData, wlKey)
 			}
 		}
 		pr.dirtyEndpoints.Add(key)
@@ -239,8 +239,9 @@ func (pr *PolicyResolver) sendEndpointUpdate(endpointID interface{}) error {
 
 	egressData := EndpointEgressData{}
 	if key, ok := endpointID.(model.WorkloadEndpointKey); ok {
-		egressData.EgressIPSetID = pr.egressIPSetIDs[key]
-		egressData.IsEgressGateway = (pr.endpointGatewayUsage[key] > 0)
+		egressData.EgressIPSetID = pr.endpointEgressData[key].ipSetID
+		egressData.MaxNextHops = pr.endpointEgressData[key].maxNextHops
+		egressData.IsEgressGateway = pr.endpointGatewayUsage[key] > 0
 	}
 
 	log.Debugf("Endpoint tier update: %v -> %v", endpointID, applicableTiers)
@@ -251,11 +252,11 @@ func (pr *PolicyResolver) sendEndpointUpdate(endpointID interface{}) error {
 	return nil
 }
 
-func (pr *PolicyResolver) OnEgressIPSetIDUpdate(key model.WorkloadEndpointKey, egressIPSetID string) {
-	if egressIPSetID != "" {
-		pr.egressIPSetIDs[key] = egressIPSetID
+func (pr *PolicyResolver) OnEndpointEgressDataUpdate(key model.WorkloadEndpointKey, egressData epEgressData) {
+	if egressData.ipSetID != "" {
+		pr.endpointEgressData[key] = egressData
 	} else {
-		delete(pr.egressIPSetIDs, key)
+		delete(pr.endpointEgressData, key)
 	}
 	pr.dirtyEndpoints.Add(key)
 	pr.maybeFlush()

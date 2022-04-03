@@ -38,7 +38,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		cbs = &testCallbacks{}
 		aec.OnIPSetActive = cbs.OnIPSetActive
 		aec.OnIPSetInactive = cbs.OnIPSetInactive
-		aec.OnEgressIPSetIDUpdate = cbs.OnEgressIPSetIDUpdate
+		aec.OnEndpointEgressDataUpdate = cbs.OnEndpointEgressDataUpdate
 	})
 
 	It("generates expected callbacks for a single WorkloadEndpoint", func() {
@@ -54,7 +54,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 
 		// Expect IPSetActive and EgressIPSetIDUpdate.
 		ipSetID1 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, ipSetID1)
+		cbs.ExpectEgressUpdate(we1Key, epEgressData{ipSetID: ipSetID1})
 		cbs.ExpectNoMoreCallbacks()
 
 		By("changing WorkloadEndpoint's egress selector")
@@ -71,7 +71,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 
 		// Expect IPSetActive and EgressIPSetIDUpdate with new ID.
 		ipSetID2 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, ipSetID2)
+		cbs.ExpectEgressUpdate(we1Key, epEgressData{ipSetID: ipSetID2})
 		cbs.ExpectNoMoreCallbacks()
 		Expect(ipSetID2).NotTo(Equal(ipSetID1))
 
@@ -86,7 +86,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 
 		// Expect IPSetInactive for old selector.
 		cbs.ExpectInactive(ipSetID2)
-		cbs.ExpectEgressUpdate(we1Key, "")
+		cbs.ExpectEgressUpdate(we1Key, epEgressData{})
 		cbs.ExpectNoMoreCallbacks()
 	})
 
@@ -110,8 +110,8 @@ var _ = Describe("ActiveEgressCalculator", func() {
 
 		// Expect 1 IPSetActive and 2 EgressIPSetIDUpdates.
 		ipSetID := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, ipSetID)
-		cbs.ExpectEgressUpdate(we2Key, ipSetID)
+		cbs.ExpectEgressUpdate(we1Key, epEgressData{ipSetID: ipSetID})
+		cbs.ExpectEgressUpdate(we2Key, epEgressData{ipSetID: ipSetID})
 		cbs.ExpectNoMoreCallbacks()
 
 		By("deleting WorkloadEndpoint #1")
@@ -124,7 +124,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect EgressUpdate for that endpoint.
-		cbs.ExpectEgressUpdate(we1Key, "")
+		cbs.ExpectEgressUpdate(we1Key, epEgressData{})
 		cbs.ExpectNoMoreCallbacks()
 
 		By("deleting WorkloadEndpoint #2")
@@ -137,7 +137,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		// Expect IPSetInactive for old selector.
-		cbs.ExpectEgressUpdate(we2Key, "")
+		cbs.ExpectEgressUpdate(we2Key, epEgressData{})
 		cbs.ExpectInactive(ipSetID)
 		cbs.ExpectNoMoreCallbacks()
 	})
@@ -175,7 +175,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 
 		// Expect IPSetActive and EgressIPSetIDUpdate.
 		ipSetID1 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, ipSetID1)
+		cbs.ExpectEgressUpdate(we1Key, epEgressData{ipSetID: ipSetID1})
 		cbs.ExpectNoMoreCallbacks()
 
 		By("updating Profile with different selector")
@@ -198,7 +198,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 
 		// Expect IPSetActive and EgressIPSetIDUpdate with new ID.
 		ipSetID2 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, ipSetID2)
+		cbs.ExpectEgressUpdate(we1Key, epEgressData{ipSetID: ipSetID2})
 		cbs.ExpectNoMoreCallbacks()
 		Expect(ipSetID2).NotTo(Equal(ipSetID1))
 
@@ -220,7 +220,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 
 		// Expect IPSetActive and EgressIPSetIDUpdate for new WE selector.
 		ipSetID3 := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, ipSetID3)
+		cbs.ExpectEgressUpdate(we1Key, epEgressData{ipSetID: ipSetID3})
 		cbs.ExpectNoMoreCallbacks()
 		Expect(ipSetID3).NotTo(Equal(ipSetID1))
 		Expect(ipSetID3).NotTo(Equal(ipSetID2))
@@ -242,7 +242,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 
 		// Expect IPSetActive and EgressIPSetIDUpdate for new (profile) selector.
 		Expect(cbs.ExpectActive()).To(Equal(ipSetID2))
-		cbs.ExpectEgressUpdate(we1Key, ipSetID2)
+		cbs.ExpectEgressUpdate(we1Key, epEgressData{ipSetID: ipSetID2})
 		cbs.ExpectNoMoreCallbacks()
 
 		By("updating Profile with no egress selector")
@@ -260,7 +260,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		cbs.ExpectInactive(ipSetID2)
 
 		// Expect EgressIPSetIDUpdate with IP set ID "".
-		cbs.ExpectEgressUpdate(we1Key, "")
+		cbs.ExpectEgressUpdate(we1Key, epEgressData{})
 		cbs.ExpectNoMoreCallbacks()
 
 		By("deleting the WorkloadEndpoint")
@@ -323,7 +323,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		ipSetA := cbs.ExpectActive()
 		for i := 0; i < 5; i++ {
 			name := fmt.Sprintf("we%v-a", i)
-			cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: name}, ipSetA)
+			cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: name}, epEgressData{ipSetID: ipSetA})
 		}
 		cbs.ExpectNoMoreCallbacks()
 
@@ -347,7 +347,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		ipSetAPrime := cbs.ExpectActive()
 		for i := 0; i < 5; i++ {
 			name := fmt.Sprintf("we%v-a", i)
-			cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: name}, ipSetAPrime)
+			cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: name}, epEgressData{ipSetID: ipSetAPrime})
 		}
 		cbs.ExpectNoMoreCallbacks()
 
@@ -370,7 +370,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		ipSetB := cbs.ExpectActive()
 		for i := 0; i < 5; i++ {
 			name := fmt.Sprintf("we%v-b", i)
-			cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: name}, ipSetB)
+			cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: name}, epEgressData{ipSetID: ipSetB})
 		}
 		cbs.ExpectNoMoreCallbacks()
 
@@ -387,7 +387,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		cbs.ExpectInactive(ipSetAPrime)
 		for i := 0; i < 5; i++ {
 			name := fmt.Sprintf("we%v-a", i)
-			cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: name}, "")
+			cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: name}, epEgressData{})
 		}
 		cbs.ExpectNoMoreCallbacks()
 
@@ -461,7 +461,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 			UpdateType: api.UpdateTypeKVNew,
 		})
 		ipSetID := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: "we1"}, ipSetID)
+		cbs.ExpectEgressUpdate(model.WorkloadEndpointKey{WorkloadID: "we1"}, epEgressData{ipSetID: ipSetID})
 		cbs.ExpectNoMoreCallbacks()
 
 		By("updating profile with same selector")
@@ -499,7 +499,7 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		})
 
 		ipSetWE := cbs.ExpectActive()
-		cbs.ExpectEgressUpdate(we1Key, ipSetWE)
+		cbs.ExpectEgressUpdate(we1Key, epEgressData{ipSetID: ipSetWE})
 		cbs.ExpectNoMoreCallbacks()
 
 		By("adding Profile with egress selector")
@@ -574,7 +574,7 @@ type testCallbacks struct {
 	activeCalls      []*IPSetData
 	inactiveCalls    []*IPSetData
 	egressUpdateKeys []model.WorkloadEndpointKey
-	egressUpdateIDs  []string
+	egressDatas      []epEgressData
 }
 
 func (tc *testCallbacks) OnIPSetActive(ipSet *IPSetData) {
@@ -585,9 +585,9 @@ func (tc *testCallbacks) OnIPSetInactive(ipSet *IPSetData) {
 	tc.inactiveCalls = append(tc.inactiveCalls, ipSet)
 }
 
-func (tc *testCallbacks) OnEgressIPSetIDUpdate(key model.WorkloadEndpointKey, egressIPSetID string) {
+func (tc *testCallbacks) OnEndpointEgressDataUpdate(key model.WorkloadEndpointKey, egressData epEgressData) {
 	tc.egressUpdateKeys = append(tc.egressUpdateKeys, key)
-	tc.egressUpdateIDs = append(tc.egressUpdateIDs, egressIPSetID)
+	tc.egressDatas = append(tc.egressDatas, egressData)
 }
 
 func (tc *testCallbacks) ExpectActive() string {
@@ -606,24 +606,24 @@ func (tc *testCallbacks) ExpectInactive(id string) {
 	tc.inactiveCalls = tc.inactiveCalls[1:]
 }
 
-func (tc *testCallbacks) ExpectEgressUpdate(key model.WorkloadEndpointKey, id string) {
-	ExpectWithOffset(1, tc.egressUpdateKeys).To(ContainElement(key), "Expected OnEgressIPSetIDUpdate call")
+func (tc *testCallbacks) ExpectEgressUpdate(key model.WorkloadEndpointKey, egressData epEgressData) {
+	ExpectWithOffset(1, tc.egressUpdateKeys).To(ContainElement(key), "Expected OnEndpointEgressDataUpdate call")
 	keyPos := -1
 	for i, uk := range tc.egressUpdateKeys {
 		if uk == key {
-			ExpectWithOffset(1, tc.egressUpdateIDs[i]).To(Equal(id))
+			ExpectWithOffset(1, tc.egressDatas[i]).To(Equal(egressData))
 			keyPos = i
 			break
 		}
 	}
 	Expect(keyPos).NotTo(Equal(-1))
 	tc.egressUpdateKeys = append(tc.egressUpdateKeys[:keyPos], tc.egressUpdateKeys[keyPos+1:]...)
-	tc.egressUpdateIDs = append(tc.egressUpdateIDs[:keyPos], tc.egressUpdateIDs[keyPos+1:]...)
+	tc.egressDatas = append(tc.egressDatas[:keyPos], tc.egressDatas[keyPos+1:]...)
 }
 
 func (tc *testCallbacks) ExpectNoMoreCallbacks() {
 	ExpectWithOffset(1, len(tc.activeCalls)).To(BeZero(), "Expected no more OnIPSetActive calls")
 	ExpectWithOffset(1, len(tc.inactiveCalls)).To(BeZero(), "Expected no more OnIPSetInactive calls")
-	ExpectWithOffset(1, len(tc.egressUpdateKeys)).To(BeZero(), "Expected no more OnEgressIPSetIDUpdate calls")
-	ExpectWithOffset(1, len(tc.egressUpdateIDs)).To(BeZero(), "Expected no more OnEgressIPSetIDUpdate calls")
+	ExpectWithOffset(1, len(tc.egressUpdateKeys)).To(BeZero(), "Expected no more OnEndpointEgressDataUpdate calls")
+	ExpectWithOffset(1, len(tc.egressDatas)).To(BeZero(), "Expected no more OnEndpointEgressDataUpdate calls")
 }

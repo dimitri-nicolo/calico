@@ -16,7 +16,9 @@ package conversion
 
 import (
 	"fmt"
+	"math"
 	"sort"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -99,11 +101,30 @@ func egressAnnotationsToV3Spec(annotations map[string]string) *apiv3.EgressSpec 
 			return nil
 		}
 	}
-	if egressSelector == "" && egressNamespaceSelector == "" {
-		// Neither annotation specified, so no egress spec.
+	var egressMaxNextHops int
+	egressMaxNextHopsStr := annotations[AnnotationEgressMaxNextHops]
+	if egressMaxNextHopsStr != "" {
+		n, err := strconv.Atoi(egressMaxNextHopsStr)
+		if err != nil {
+			log.WithError(err).Errorf("Invalid number of next hops in %v annotation: %v", AnnotationEgressMaxNextHops, err)
+			return nil
+		}
+		if n < 0 {
+			log.WithError(err).Errorf("Invalid number of next hops in %v annotation: must be 0 or greater", AnnotationEgressMaxNextHops)
+			return nil
+		}
+		// egressMaxNextHops will be converted to an int32 in protobuf, so limit the range here to be a valid int32.
+		if n > math.MaxInt32 {
+			log.WithError(err).Errorf("Invalid number of next hops in %v annotation: must be %d or less", AnnotationEgressMaxNextHops, math.MaxInt32)
+			return nil
+		}
+		egressMaxNextHops = n
+	}
+	if egressSelector == "" && egressNamespaceSelector == "" && egressMaxNextHopsStr == "" {
+		// No egress annotations specified, so no egress spec.
 		return nil
 	}
-	return &apiv3.EgressSpec{Selector: egressSelector, NamespaceSelector: egressNamespaceSelector}
+	return &apiv3.EgressSpec{Selector: egressSelector, NamespaceSelector: egressNamespaceSelector, MaxNextHops: egressMaxNextHops}
 }
 
 // NamespaceToProfile converts a Namespace to a Calico Profile.  The Profile stores

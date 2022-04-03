@@ -257,6 +257,16 @@ var baseTests = []StateList{
 		endpointWithLocalTerminatingEgressGateway,
 	},
 
+	// test egress gateway maxNextHops
+	{
+		endpointWithPodSelectorZeroMaxNextHops,
+		endpointWithPodSelectorThreeMaxNextHops,
+	},
+	{
+		endpointWithPodSelectorZeroMaxNextHops,
+		endpointWithNamespaceSelectorThreeMaxNextHops,
+	},
+
 	// ALP policy count
 	{
 		withPolicy,
