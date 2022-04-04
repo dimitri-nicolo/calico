@@ -128,19 +128,6 @@ scale-test: image
 		$(CALICO_BUILD) \
 		-c 'CALICOQ=`pwd`/$(BINARY) scale-test/run-test'
 
-## Run etcd as a container (calico-etcd)
-run-etcd: stop-etcd
-	docker run --detach \
-	--net=host \
-	--entrypoint=/usr/local/bin/etcd \
-	--name calico-etcd ${ETCD_IMAGE} \
-	--advertise-client-urls "http://$(LOCAL_IP_ENV):2379,http://127.0.0.1:2379,http://$(LOCAL_IP_ENV):4001,http://127.0.0.1:4001" \
-	--listen-client-urls "http://0.0.0.0:2379,http://0.0.0.0:4001"
-
-## Stop the etcd container (calico-etcd)
-stop-etcd:
-	-docker rm -f calico-etcd
-
 .PHONY: clean
 clean:
 	-rm -f *.created

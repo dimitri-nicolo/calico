@@ -3,17 +3,11 @@
 # test directory.
 TEST_DIR=./tests/k8st
 
-# gcr.io pull secrect credential file.
-: ${GCR_IO_PULL_SECRET:=./docker_auth.json}
-
 # Path to Enteprise product license
 : ${TSEE_TEST_LICENSE:=/home/semaphore/secrets/new-test-customer-license.yaml}
 
 # kubectl binary.
-: ${kubectl:=./bin/kubectl}
-
-# kind binary.
-: ${KIND:=./bin/kind}
+: ${kubectl:=../hack/test/kind/kubectl}
 
 function checkModule(){
   MODULE="$1"

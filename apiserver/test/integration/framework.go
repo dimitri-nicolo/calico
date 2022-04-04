@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"os"
 	"sort"
 	"testing"
 	"time"
@@ -90,7 +91,8 @@ func withConfigGetFreshApiserverServerAndClient(
 	options.RecommendedOptions.SecureServing.BindPort = securePort
 	// Set this so that we avoid RecommendedOptions.CoreAPI's initialization from calling InClusterConfig()
 	// and uses our fv kubeconfig instead.
-	options.RecommendedOptions.CoreAPI.CoreAPIKubeconfigPath = "../certs/kubeconfig"
+	options.RecommendedOptions.CoreAPI.CoreAPIKubeconfigPath = os.Getenv("KUBECONFIG")
+
 	options.EnableManagedClustersCreateAPI = serverConfig.enableManagedClusterCreateAPI
 	options.ManagedClustersCACertPath = serverConfig.managedClustersCACertPath
 	options.ManagedClustersCAKeyPath = serverConfig.managedClustersCAKeyPath
@@ -108,7 +110,6 @@ func withConfigGetFreshApiserverServerAndClient(
 		err := server.RunServer(options, pcs)
 		if err != nil {
 			close(serverFailed)
-			t.Fatalf("Error running the server: %v", err)
 		}
 	}()
 
