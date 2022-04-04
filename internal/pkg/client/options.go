@@ -103,3 +103,11 @@ func WithConnectionRetryInterval(connRetryInterval time.Duration) Option {
 		return nil
 	}
 }
+
+// WithTunnelDialTimeout sets the timeout for the dialer when the client establishes a connection.
+func WithTunnelDialTimeout(tunnelDialTimeout time.Duration) Option {
+	return func(c *Client) error {
+		c.tunnelDialTimeout = tunnelDialTimeout
+		return nil
+	}
+}

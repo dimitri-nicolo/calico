@@ -97,7 +97,7 @@ func (m *manager) SetTunnel(t *tunnel.Tunnel) error {
 		return ErrManagerClosed
 	}
 
-	return state.InterfaceToError(state.Send(m.setTunnel, t))
+	return state.InterfaceToError(state.SendWithTimeout(m.setTunnel, t, t.DialTimeout))
 }
 
 // startStateLoop starts the loop to accept requests over the channels used to synchronously access the manager's state.
@@ -349,7 +349,10 @@ func (m *manager) Open() (net.Conn, error) {
 	if m.isClosed() {
 		return nil, ErrManagerClosed
 	}
-	return state.InterfaceToConnOrError(state.Send(m.openConnection, nil))
+	if m.dialer == nil {
+		return state.InterfaceToConnOrError(state.Send(m.openConnection, nil))
+	}
+	return state.InterfaceToConnOrError(state.SendWithTimeout(m.openConnection, nil, m.dialer.Timeout()))
 }
 
 // OpenTLS opens a tls connection over the tunnel
@@ -357,7 +360,10 @@ func (m *manager) OpenTLS(cfg *tls.Config) (net.Conn, error) {
 	if m.isClosed() {
 		return nil, ErrManagerClosed
 	}
-	return state.InterfaceToConnOrError(state.Send(m.openConnection, cfg))
+	if m.dialer == nil {
+		return state.InterfaceToConnOrError(state.Send(m.openConnection, cfg))
+	}
+	return state.InterfaceToConnOrError(state.SendWithTimeout(m.openConnection, cfg, m.dialer.Timeout()))
 }
 
 // Listener retrieves a listener listening on the tunnel for connections
@@ -365,7 +371,10 @@ func (m *manager) Listener() (net.Listener, error) {
 	if m.isClosed() {
 		return nil, ErrManagerClosed
 	}
-	return state.InterfaceToListenerOrError(state.Send(m.addListener, nil))
+	if m.dialer == nil {
+		return state.InterfaceToListenerOrError(state.Send(m.addListener, nil))
+	}
+	return state.InterfaceToListenerOrError(state.SendWithTimeout(m.addListener, nil, m.dialer.Timeout()))
 }
 
 // ListenForErrors allows the user to register a channel to listen to errors on
@@ -376,7 +385,10 @@ func (m *manager) ListenForErrors() chan error {
 		close(errChan)
 		return errChan
 	}
-	return state.InterfaceToErrorChan(state.Send(m.addErrorListener, nil))
+	if m.dialer == nil {
+		return state.InterfaceToErrorChan(state.Send(m.addErrorListener, nil))
+	}
+	return state.InterfaceToErrorChan(state.SendWithTimeout(m.addErrorListener, nil, m.dialer.Timeout()))
 }
 
 // CloseTunnel closes the managers tunnel. If a dialer is set (i.e. NewManagerWithDialer was used to create the Manager)

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/yamux"
+	"github.com/tigera/voltron/pkg/state"
 
 	"github.com/tigera/voltron/pkg/tunnel"
 	"github.com/tigera/voltron/pkg/tunnelmgr"
@@ -61,6 +62,25 @@ var _ = Describe("Manager", func() {
 				response, err := cli.Get("http://localhost")
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(readResponseBody(response)).To(Equal("Response"))
+			})
+
+			It("adheres to the timeout and fails to setup when it is too low", func() {
+				cliConn, srvConn := net.Pipe()
+				srv := getServerFromConnection(srvConn, "Response")
+				defer srv.Close()
+
+				tun, err := tunnel.NewClientTunnel(cliConn,
+					tunnel.WithKeepAliveSettings(true, 100*time.Second),
+					// Set a very low timeout.
+					tunnel.WithDialTimeout(1*time.Nanosecond))
+				Expect(err).ShouldNot(HaveOccurred())
+
+				m := tunnelmgr.NewManager()
+				defer m.Close()
+				// When the timeout  is only 1 ns, the context times out.
+				Expect(m.SetTunnel(tun)).To(HaveOccurred())
+				errStruct := state.ErrChannelWriteTimeout{}
+				Expect(m.SetTunnel(tun).Error()).To(Equal(errStruct.Error()))
 			})
 
 			It("opens multiple connections over the single tunnel", func() {
@@ -230,6 +250,7 @@ var _ = Describe("Manager", func() {
 
 					mockDialer := new(tunnel.MockDialer)
 					mockDialer.On("Dial").Return(tun, nil)
+					mockDialer.On("Timeout").Return(5 * time.Second)
 
 					m := tunnelmgr.NewManagerWithDialer(mockDialer)
 					defer m.Close()
@@ -258,6 +279,7 @@ var _ = Describe("Manager", func() {
 
 							mockDialer := new(tunnel.MockDialer)
 							mockDialer.On("Dial").Return(tun, nil).WaitUntil(waitChan)
+							mockDialer.On("Timeout").Return(5 * time.Second)
 
 							m := tunnelmgr.NewManagerWithDialer(mockDialer)
 							defer m.Close()

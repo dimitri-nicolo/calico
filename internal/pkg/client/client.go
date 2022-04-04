@@ -37,6 +37,7 @@ type Client struct {
 	tunnelDialer  tunnel.Dialer
 
 	tunnelDialRetryAttempts int
+	tunnelDialTimeout       time.Duration
 	tunnelDialRetryInterval time.Duration
 
 	connRetryAttempts int
@@ -53,6 +54,7 @@ func New(addr string, opts ...Option) (*Client, error) {
 
 		tunnelDialRetryAttempts: 5,
 		tunnelDialRetryInterval: 2 * time.Second,
+		tunnelDialTimeout:       60 * time.Second,
 
 		connRetryAttempts: 5,
 		connRetryInterval: 2 * time.Second,
@@ -93,6 +95,7 @@ func New(addr string, opts ...Option) (*Client, error) {
 						RootCAs:      tunnelRootCAs,
 						ServerName:   "voltron",
 					},
+					client.tunnelDialTimeout,
 					tunnel.WithKeepAliveSettings(tunnelKeepAlive, tunnelKeepAliveInterval),
 				)
 			}
@@ -101,6 +104,7 @@ func New(addr string, opts ...Option) (*Client, error) {
 			dialerFunc,
 			client.tunnelDialRetryAttempts,
 			client.tunnelDialRetryInterval,
+			client.tunnelDialTimeout,
 		)
 	}
 

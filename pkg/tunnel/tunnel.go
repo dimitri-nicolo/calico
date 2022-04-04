@@ -64,21 +64,28 @@ func DialInRoutineWithTimeout(dialer Dialer, resultsChan chan interface{}, timeo
 // Dialer is an interface that supports dialing to create a *Tunnel
 type Dialer interface {
 	Dial() (*Tunnel, error)
+	Timeout() time.Duration
 }
 
 type dialer struct {
 	dialerFun     DialerFunc
 	retryAttempts int
 	retryInterval time.Duration
+	timeout       time.Duration
 }
 
 // NewDialer creates a new Dialer.
-func NewDialer(dialerFunc DialerFunc, retryAttempts int, retryInterval time.Duration) Dialer {
+func NewDialer(dialerFunc DialerFunc, retryAttempts int, retryInterval time.Duration, timeout time.Duration) Dialer {
 	return &dialer{
 		dialerFun:     dialerFunc,
 		retryAttempts: retryAttempts,
 		retryInterval: retryInterval,
+		timeout:       timeout,
 	}
+}
+
+func (d *dialer) Timeout() time.Duration {
+	return d.timeout
 }
 
 func (d *dialer) Dial() (*Tunnel, error) {
@@ -111,6 +118,7 @@ type Tunnel struct {
 
 	keepAliveEnable   bool
 	keepAliveInterval time.Duration
+	DialTimeout       time.Duration
 }
 
 func newTunnel(stream io.ReadWriteCloser, isServer bool, opts ...Option) (*Tunnel, error) {
@@ -121,6 +129,7 @@ func newTunnel(stream io.ReadWriteCloser, isServer bool, opts ...Option) (*Tunne
 		keepAliveEnable: true,
 
 		keepAliveInterval: 100 * time.Millisecond,
+		DialTimeout:       60 * time.Second,
 	}
 
 	var mux *yamux.Session
@@ -338,17 +347,17 @@ func Dial(target string, opts ...Option) (*Tunnel, error) {
 }
 
 // DialTLS creates a TLS connection based on the config, must not be nil.
-func DialTLS(target string, config *tls.Config, opts ...Option) (*Tunnel, error) {
+func DialTLS(target string, config *tls.Config, timeout time.Duration, opts ...Option) (*Tunnel, error) {
 	if config == nil {
 		return nil, errors.Errorf("nil config")
 	}
 
-	log.Debugf("Starting TLS dial to %s", target)
+	log.Debugf("Starting TLS dial to %s with a timeout of %v", target, timeout)
 
 	// We need to explicitly set the timeout as it seems it's possible for this to hang indefinitely if we
 	// don't.
 	dialer := &net.Dialer{
-		Timeout: 2 * time.Second,
+		Timeout: timeout,
 	}
 
 	c, err := tls.DialWithDialer(dialer, "tcp", target, config)
@@ -357,7 +366,7 @@ func DialTLS(target string, config *tls.Config, opts ...Option) (*Tunnel, error)
 		return nil, errors.Errorf("tcp.tls.Dial failed: %s", err)
 	}
 
-	return NewClientTunnel(c, opts...)
+	return NewClientTunnel(c, append(opts, WithDialTimeout(timeout))...)
 }
 
 // We don't want to / need to expose that we're using the yamux library

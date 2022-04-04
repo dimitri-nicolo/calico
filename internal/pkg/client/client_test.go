@@ -108,7 +108,7 @@ var _ = Describe("Client", func() {
 			cli, err := client.New("http://test.com",
 				client.WithTunnelDialer(tunnel.NewDialer(func() (*tunnel.Tunnel, error) {
 					return tunnel.NewClientTunnel(cliConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
-				}, 1, 0)),
+				}, 1, 0, 5*time.Second)),
 				client.WithProxyTargets([]proxy.Target{{Path: "/test", Dest: url, Token: "some-token"}}),
 			)
 
@@ -142,7 +142,7 @@ var _ = Describe("Client", func() {
 			cli, err := client.New("http://test.com",
 				client.WithTunnelDialer(tunnel.NewDialer(func() (*tunnel.Tunnel, error) {
 					return tunnel.NewClientTunnel(cliConn, tunnel.WithKeepAliveSettings(true, 100*time.Second))
-				}, 1, 0)),
+				}, 1, 0, 5*time.Second)),
 			)
 			Expect(err).ShouldNot(HaveOccurred())
 

@@ -47,12 +47,13 @@ type config struct {
 
 	K8sEndpoint string `default:"https://kubernetes.default" split_words:"true"`
 
-	TunnelDialRetryAttempts         int           `default:"20" split_words:"true"`
-	TunnelDialRetryInterval         time.Duration `default:"5s" split_words:"true"`
-	TunnelDialRecreateOnTunnelClose bool          `default:"true" split_words:"true"`
+	TunnelDialRetryAttempts int           `default:"20" split_words:"true"`
+	TunnelDialRetryInterval time.Duration `default:"5s" split_words:"true"`
+	TunnelDialTimeout       time.Duration `default:"60s" split_words:"true"`
 
-	ConnectionRetryAttempts int           `default:"25" split_words:"true"`
-	ConnectionRetryInterval time.Duration `default:"5s" split_words:"true"`
+	TunnelDialRecreateOnTunnelClose bool          `default:"true" split_words:"true"`
+	ConnectionRetryAttempts         int           `default:"25" split_words:"true"`
+	ConnectionRetryInterval         time.Duration `default:"5s" split_words:"true"`
 
 	Listen     bool   `default:"true"`
 	ListenHost string `default:"" split_words:"true"`
@@ -160,6 +161,7 @@ func main() {
 		client.WithTunnelCreds(pemCert, pemKey, ca),
 		client.WithTunnelDialRetryAttempts(cfg.TunnelDialRetryAttempts),
 		client.WithTunnelDialRetryInterval(cfg.TunnelDialRetryInterval),
+		client.WithTunnelDialTimeout(cfg.TunnelDialTimeout),
 		client.WithConnectionRetryAttempts(cfg.ConnectionRetryAttempts),
 		client.WithConnectionRetryInterval(cfg.ConnectionRetryInterval),
 	)

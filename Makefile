@@ -239,3 +239,11 @@ run-voltron:
 
 run-guardian:
 	GUARDIAN_VOLTRON_URL=127.0.0.1:5555 go run cmd/guardian/main.go
+
+##########################################################################################
+# MOCKING
+##########################################################################################
+
+# Mocks auto generated testify mocks by mockery. Run `make gen-mocks` to regenerate the testify mocks.
+MOCKERY_FILE_PATHS=\
+	pkg/tunnel/Dialer

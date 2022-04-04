@@ -15,3 +15,11 @@ func WithKeepAliveSettings(enable bool, intervalDuration time.Duration) Option {
 		return nil
 	}
 }
+
+// WithDialTimeout sets the dial timeout for the tunnel.
+func WithDialTimeout(dialTimeout time.Duration) Option {
+	return func(t *Tunnel) error {
+		t.DialTimeout = dialTimeout
+		return nil
+	}
+}
