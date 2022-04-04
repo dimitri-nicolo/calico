@@ -484,7 +484,7 @@ k8s-test:
 
 .PHONY: kind-k8st-setup
 kind-k8st-setup: $(K8ST_IMAGE_TARS) kind-cluster-create
-	KUBECONFIG=$(KIND_KUBECONFIG) ./tests/k8st/deploy_resources_on_kind_cluster.sh
+	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) KUBECONFIG=$(KIND_KUBECONFIG) ./tests/k8st/deploy_resources_on_kind_cluster.sh
 
 .PHONY: kind-k8st-run-test
 kind-k8st-run-test: calico_test.created $(KIND_KUBECONFIG)

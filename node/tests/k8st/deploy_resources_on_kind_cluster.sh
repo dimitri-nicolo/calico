@@ -3,9 +3,6 @@
 # test directory.
 TEST_DIR=./tests/k8st
 
-# gcr.io pull secrect credential file.
-: ${GCR_IO_PULL_SECRET:=./docker_auth.json}
-
 # Path to Enteprise product license
 : ${TSEE_TEST_LICENSE:=/home/semaphore/secrets/new-test-customer-license.yaml}
 
