@@ -64,3 +64,6 @@ bpf/report/
 # for the bpf programs
 *.ll
 *.d
+
+# produced as part of openstack packaging build
+debian/files
