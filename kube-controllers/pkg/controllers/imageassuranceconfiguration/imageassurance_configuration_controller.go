@@ -73,6 +73,14 @@ func New(
 	// namespace in the management cluster or it is for the admission controller which is not currently used in
 	// the admission controller.
 	if !r.management {
+		// The managed cluster might not be set up for image assurance so we watch the namespace so we're notified
+		// when it becomes available.
+		w.AddWatch(
+			cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "namespaces", "",
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", r.imageAssuranceNamespace))),
+			&corev1.Namespace{}, worker.ResourceWatchAdd, worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
+		)
+
 		// In managed cluster we need to watch tigera-image-assurance-api-cert (which contains CA cert for image
 		// assurance api) for updates and deletes.
 		w.AddWatch(
