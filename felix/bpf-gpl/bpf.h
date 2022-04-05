@@ -255,7 +255,6 @@ static CALI_BPF_INLINE __be32 cali_configurable_##name()					\
 
 #endif /* loader */
 
-
 CALI_CONFIGURABLE_DEFINE(host_ip, 0x54534f48) /* be 0x54534f48 = ASCII(HOST) */
 CALI_CONFIGURABLE_DEFINE(tunnel_mtu, 0x55544d54) /* be 0x55544d54 = ASCII(TMTU) */
 CALI_CONFIGURABLE_DEFINE(if_ns, 0x534e4649) /* be 0x534a4649 = ASCII(IFNS) */
@@ -282,6 +281,11 @@ CALI_CONFIGURABLE_DEFINE(flags, 0x00000001)
 #define PSNAT_START	CALI_CONFIGURABLE(psnat_start)
 #define PSNAT_LEN	CALI_CONFIGURABLE(psnat_len)
 #define GLOBAL_FLAGS 	CALI_CONFIGURABLE(flags)
+
+#ifdef UNITTEST
+CALI_CONFIGURABLE_DEFINE(__skb_mark, 0x4d424b53) /* be 0x4d424b53 = ASCII(SKBM) */
+#define SKB_MARK	CALI_CONFIGURABLE(__skb_mark)
+#endif
 
 #define MAP_PIN_GLOBAL	2
 
