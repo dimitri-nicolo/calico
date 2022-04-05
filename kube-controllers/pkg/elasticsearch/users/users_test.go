@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
 
 package users_test
 
@@ -492,10 +492,16 @@ var _ = Describe("ElasticseachUsers", func() {
 							Name: "tigera-ee-manager-secure",
 							Definition: &elasticsearch.RoleDefinition{
 								Cluster: []string{"monitor"},
-								Indices: []elasticsearch.RoleIndex{{
-									Names:      []string{"tigera_secure_ee_*.*.*", "tigera_secure_ee_events.*", ".kibana"},
-									Privileges: []string{"read"},
-								}},
+								Indices: []elasticsearch.RoleIndex{
+									{
+										Names:      []string{"tigera_secure_ee_*.*.*", ".kibana"},
+										Privileges: []string{"read"},
+									},
+									{
+										Names:      []string{"tigera_secure_ee_events.*"},
+										Privileges: []string{"read", "write"},
+									},
+								},
 							},
 						}},
 					},

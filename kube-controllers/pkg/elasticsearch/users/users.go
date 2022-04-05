@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
 
 // package users contains the current elasticsearch users that can be used in a k8s cluster
 
@@ -365,11 +365,17 @@ func managementOnlyElasticsearchUsers(clusterName string) (map[ElasticsearchUser
 				Name: formatName(ElasticsearchUserNameManager, clusterName, true, true),
 				Definition: &elasticsearch.RoleDefinition{
 					Cluster: []string{"monitor"},
-					Indices: []elasticsearch.RoleIndex{{
+					Indices: []elasticsearch.RoleIndex{
 						// Let the manager query elasticsearch for all clusters for multicluster management.
-						Names:      []string{indexPattern("tigera_secure_ee_*", "*", ".*"), indexPattern("tigera_secure_ee_events", "*", ""), ".kibana"},
-						Privileges: []string{"read"},
-					}},
+						{
+							Names:      []string{indexPattern("tigera_secure_ee_*", "*", ".*"), ".kibana"},
+							Privileges: []string{"read"},
+						},
+						{
+							Names:      []string{indexPattern("tigera_secure_ee_events", "*", "")},
+							Privileges: []string{"read", "write"},
+						},
+					},
 				},
 			}},
 		},
