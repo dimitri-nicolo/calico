@@ -87,8 +87,10 @@ func (as *authServer) Check(ctx context.Context, req *authz.CheckRequest) (*auth
 		if err != nil {
 			log.Errorf("WAF Process Http Request URL '%s' WAF rules rejected HTTP request!", reqPath)
 			resp.Status.Code = PERMISSION_DENIED
-			return &resp, err
+		} else {
+			resp.Status.Code = OK
 		}
+		return &resp, err
 	}
 
 	resp.Status = &st
