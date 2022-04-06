@@ -165,7 +165,7 @@ var _ = Describe("kube-controllers FV tests (KDD mode)", func() {
 				cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
 				stdoutStderr, _ := cmd.CombinedOutput()
 				return string(stdoutStderr)
-			}, 20*time.Second, 500*time.Millisecond).Should(ContainSubstring("Error"))
+			}, 60*time.Second, 1*time.Second).Should(ContainSubstring("Error"))
 		})
 	})
 
