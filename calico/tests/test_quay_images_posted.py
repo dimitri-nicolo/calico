@@ -49,11 +49,18 @@ def test_release_tag_present(name, component):
     assert QUAY_API_TOKEN != 'fake-token', '[ERROR] need a real QUAY_API_TOKEN env value'
 
     def check_image(name, image_name, expected_ver):
-        print '[INFO] checking quay image posted for {0} with {1} tag'.format(name, expected_ver)
-        req_url = '{base_url}/repository/{image_name}/tag/{tag}/images'.format(
-            base_url=QUAY_API_URL, image_name=image_name, tag=expected_ver)
-        res = requests.get(req_url, headers=headers)
+        req_url = '{base_url}/repository/{image_name}/tag'.format(
+            base_url=QUAY_API_URL, image_name=image_name)
+        params = {'specificTag': expected_ver}
+        res = requests.get(req_url, headers=headers, params=params)
         assert res.status_code == 200
+        tags = res.json()['tags']
+        found = False
+        for tag in tags:
+            if tag['name'] == expected_ver:
+                found = True
+                break
+        assert found == True
 
     image_name = component.get('image')
     expected_ver = component.get('version')

@@ -3,7 +3,7 @@ import os
 # global vars
 RELEASE_STREAM = os.environ.get('RELEASE_STREAM') or 'master'
 DOCS_URL = os.environ.get('DOCS_URL') or 'https://docs.tigera.io'
-GIT_HASH = os.environ.get('GIT_HASH') or os.popen('git rev-parse --short=9 HEAD').read().strip()
+GIT_HASH = os.environ.get('GIT_HASH') or os.popen('git rev-parse --short=10 HEAD').read().strip()
 
 GITHUB_API_URL = 'https://api.github.com'
 GITHUB_API_TOKEN = os.environ.get('GITHUB_API_TOKEN') or os.environ.get('GITHUB_ACCESS_TOKEN', 'fake-token')
