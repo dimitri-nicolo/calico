@@ -1,0 +1,595 @@
+version: v1.0
+name: Calico
+
+execution_time_limit:
+  hours: 4
+
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
+
+auto_cancel:
+  running:
+    when: "branch != 'master'"
+  queued:
+    when: "branch != 'master'"
+
+promotions:
+# Cleanup after ourselves if we are stopped-short.
+- name: Cleanup
+  pipeline_file: cleanup.yml
+  auto_promote:
+    when: "result = 'stopped'"
+# Have separate promotions for publishing images so we can re-run
+# them individually if they fail, and so we can run them in parallel.
+- name: Push apiserver images
+  pipeline_file: push-images/apiserver.yml
+  auto_promote:
+    when: "branch =~ 'master|release-.*'"
+- name: Push cni-plugin images
+  pipeline_file: push-images/cni-plugin.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
+- name: Push kube-controllers images
+  pipeline_file: push-images/kube-controllers.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
+- name: Push calicoctl images
+  pipeline_file: push-images/calicoctl.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
+- name: Push calicoq images
+  pipeline_file: push-images/calicoq.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
+- name: Push typha images
+  pipeline_file: push-images/typha.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
+- name: Push ALP images
+  pipeline_file: push-images/alp.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
+- name: Push calico/node images
+  pipeline_file: push-images/node.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
+# Have a separate promotion for publishing Helm charts.
+- name: Publish Helm Charts
+  pipeline_file: push-helm-charts/helm-charts.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
+
+global_job_config:
+  secrets:
+  - name: docker-hub
+  - name: banzai-secrets
+  - name: private-repo
+  prologue:
+    commands:
+    # Correct permissions since they are too open by default:
+    - chmod 0600 ~/.keys/*
+    # Add the key to the ssh agent:
+    - ssh-add ~/.keys/*
+    - checkout
+    # Semaphore is doing shallow clone on a commit without tags.
+    # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always)
+    - git fetch --unshallow
+    # Semaphore mounts a copy-on-write FS as /var/lib/docker in order to provide a pre-loaded cache of
+    # some images. However, the cache is not useful to us and the copy-on-write FS is a big problem given
+    # how much we churn docker containers during the build.  Disable it.
+    - sudo systemctl stop docker
+    - sudo umount /var/lib/docker && sudo killall qemu-nbd || true
+    - sudo systemctl start docker
+    # Free up space on the build machine.
+    - sudo rm -rf ~/.kiex ~/.phpbrew ~/.rbenv ~/.nvm ~/.kerl ~/.sbt ~/.npm /usr/lib/jvm /opt/firefox* /opt/apache-maven* /opt/scala /usr/local/golang
+    - echo $DOCKERHUB_PASSWORD | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+    # Disable initramfs update to save space on the Semaphore VM (and we don't need it because we're not going to reboot).
+    - sudo apt-get install -y -u crudini
+    - sudo crudini --set /etc/initramfs-tools/update-initramfs.conf '' update_initramfs no
+    - cat /etc/initramfs-tools/update-initramfs.conf
+
+blocks:
+
+- name: "API"
+  run:
+    when: "branch =~ '.*' or change_in(['/*', '/api/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  execution_time_limit:
+    minutes: 30
+  dependencies: []
+  task:
+    prologue:
+      commands:
+      - cd api
+    jobs:
+    - name: "make build / ci / static-checks"
+      commands:
+      - make build
+      - make ci
+      - make static-checks
+
+- name: "apiserver"
+  run:
+    when: "true or change_in(['/*', '/api/', '/apiserver/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  execution_time_limit:
+    minutes: 30
+  dependencies: []
+  task:
+    agent:
+      machine:
+        type: e1-standard-4
+        os_image: ubuntu1804
+    prologue:
+      commands:
+      - cd apiserver
+    jobs:
+    - name: "make ci"
+      commands:
+      - make ci
+
+- name: "libcalico-go"
+  run:
+    when: "true or change_in(['/*', '/api/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: []
+  task:
+    jobs:
+    - name: "libcalico-go: tests"
+      commands:
+      - cd libcalico-go
+      - make ci
+
+- name: "Typha"
+  run:
+    when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/typha/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: []
+  task:
+    agent:
+      machine:
+        type: e1-standard-4
+        os_image: ubuntu1804
+    jobs:
+    - name: "Typha: UT and FV tests"
+      commands:
+      - cd typha
+      - make ci EXCEPT=k8sfv-test
+    epilogue:
+      always:
+        commands:
+        - |
+          for f in /home/semaphore/calico/typha/report/*; do
+            NAME=$(basename $f)
+            test-results compile --name typha-$NAME $f $NAME.json || true
+          done
+          for f in /home/semaphore/calico/typha/pkg/report/*; do
+            NAME=$(basename $f)
+            test-results compile --name typha-$NAME $f $NAME.json || true
+          done
+          test-results combine *.xml.json report.json || true
+          artifact push job report.json -d test-results/junit.json || true
+          artifact push workflow report.json -d test-results/${SEMAPHORE_PIPELINE_ID}/${SEMAPHORE_JOB_ID}.json || true
+        - test-results publish /home/semaphore/calico/felix/report/k8sfv_suite.xml --name "typha-k8sfv" || true
+
+- name: "Felix: Build"
+  run:
+    when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: []
+  task:
+    agent:
+      machine:
+        type: e1-standard-4
+        os_image: ubuntu1804
+    prologue:
+      commands:
+      - cd felix
+      - cache restore go-pkg-cache
+      - cache restore go-mod-cache
+    jobs:
+    - name: Build and run UT, k8sfv
+      execution_time_limit:
+        minutes: 60
+      commands:
+      - make static-checks
+      - make image fv/fv.test bin/test-workload bin/test-connection bin/test-dns bin/calico-felix bin/calico-felix.exe
+      - 'cache store bin-${SEMAPHORE_GIT_SHA} bin'
+      - cache store go-pkg-cache .go-pkg-cache
+      - 'cache store go-mod-cache ${HOME}/go/pkg/mod/cache'
+      - docker save -o /tmp/tigera-felix.tar tigera/felix:latest-amd64
+      - 'cache store felix-image-${SEMAPHORE_GIT_SHA} /tmp/tigera-felix.tar'
+      - make ut
+      - make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=true
+      - make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=false
+
+- name: "Felix: Build Windows binaries"
+  run:
+    when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: []
+  task:
+    jobs:
+    - name: "build Windows binaries"
+      commands:
+      - cd felix
+      - make bin/calico-felix.exe fv/win-fv.exe
+
+- name: "Felix: Windows FV"
+  run:
+    when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Felix: Build Windows binaries"]
+  task:
+    secrets:
+    - name: banzai-secrets
+    - name: private-repo
+    prologue:
+      commands:
+      # Load the github access secrets.  First fix the permissions.
+      - chmod 0600 ~/.keys/*
+      - ssh-add ~/.keys/*
+      # Prepare aws configuration.
+      - pip install --upgrade --user awscli
+      - export REPORT_DIR=~/report
+      - export LOGS_DIR=~/fv.log
+      - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
+      - export CLUSTER_NAME=sem-${SEMAPHORE_PROJECT_NAME}-pr${SEMAPHORE_GIT_PR_NUMBER}-${WINDOWS_VERSION}-${BACKEND}-${SHORT_WORKFLOW_ID}
+      - export KEYPAIR_NAME=${CLUSTER_NAME}
+      - echo CLUSTER_NAME=${CLUSTER_NAME}
+      - sudo apt-get install -y putty-tools
+      - git clone git@github.com:tigera/process.git ~/process
+      - cd felix
+      - make bin/calico-felix.exe fv/win-fv.exe
+    epilogue:
+      always:
+        commands:
+        - artifact push job ${REPORT_DIR} --destination semaphore/test-results --expire-in ${SEMAPHORE_ARTIFACT_EXPIRY} || true
+        - artifact push job ${LOGS_DIR} --destination semaphore/logs --expire-in ${SEMAPHORE_ARTIFACT_EXPIRY} || true
+        - aws ec2 delete-key-pair --key-name ${KEYPAIR_NAME} || true
+        - cd ~/process/testing/winfv && NAME_PREFIX="${CLUSTER_NAME}" ./setup-fv.sh -q -u
+    env_vars:
+    - name: SEMAPHORE_ARTIFACT_EXPIRY
+      value: 2w
+    - name: MASTER_CONNECT_KEY_PUB
+      value: master_ssh_key.pub
+    - name: MASTER_CONNECT_KEY
+      value: master_ssh_key
+    - name: WIN_PPK_KEY
+      value: win_ppk_key
+    - name: K8S_VERSION
+      value: 1.22.1
+    jobs:
+    - name: Windows FV
+      commands:
+      - ./.semaphore/run-win-fv
+      matrix:
+      - env_var: WINDOWS_VERSION
+        values: ["20H2"]
+      - env_var: BACKEND
+        values: ["bgp", "vxlan"]
+
+- name: "Felix: FV Tests"
+  run:
+    when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Felix: Build"]
+  task:
+    prologue:
+      commands:
+      - cd felix
+      - cache restore go-pkg-cache
+      - cache restore go-mod-cache
+      - 'cache restore bin-${SEMAPHORE_GIT_SHA}'
+      - 'cache restore felix-image-${SEMAPHORE_GIT_SHA}'
+      - docker load -i /tmp/tigera-felix.tar
+      - rm /tmp/tigera-felix.tar
+      - touch bin/*
+      # Pre-loading the IPIP module prevents a flake where the first felix to use IPIP loads the module and
+      # routing in that first felix container chooses different source IPs than the tests are expecting.
+      - sudo modprobe ipip
+    jobs:
+    - name: FV Test matrix
+      execution_time_limit:
+        minutes: 120
+      commands:
+      - make check-wireguard
+      - make fv FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}" FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT}
+      parallelism: 3
+    epilogue:
+      always:
+        commands:
+        - ./.semaphore/collect-artifacts
+        - ./.semaphore/publish-artifacts
+        - test-results publish /home/semaphore/calico/felix/report/fv_suite.xml --name "felix-fv-${SEMAPHORE_JOB_INDEX}" || true
+
+- name: "Felix: BPF UT/FV tests on new kernel"
+  run:
+    when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: []
+  task:
+    prologue:
+      commands:
+      - cd felix
+      - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/secret.google-service-account-key.json
+      - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
+      - export ZONE=europe-west3-c
+      - export VM_PREFIX=sem-${SEMAPHORE_PROJECT_NAME}-${SHORT_WORKFLOW_ID}-
+      - echo VM_PREFIX=${VM_PREFIX}
+      - export REPO_NAME=$(basename $(pwd))
+      - export NUM_FV_BATCHES=8
+      - mkdir artifacts
+      - ./.semaphore/create-test-vms ${VM_PREFIX}
+    jobs:
+    - name: UT/FV tests on new kernel
+      execution_time_limit:
+        minutes: 120
+      commands:
+      - ./.semaphore/run-tests-on-vms ${VM_PREFIX}
+    epilogue:
+      always:
+        commands:
+        - ./.semaphore/collect-artifacts-from-vms ${VM_PREFIX}
+        - ./.semaphore/publish-artifacts
+        - ./.semaphore/clean-up-vms ${VM_PREFIX}
+    secrets:
+    - name: google-service-account-for-gce
+
+- name: "confd: tests"
+  run:
+    when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/confd/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: []
+  task:
+    prologue:
+      commands:
+      - cd confd
+    jobs:
+    - name: "confd: CI"
+      execution_time_limit:
+        minutes: 60
+      commands:
+        - make ci
+
+- name: "Node: Tests"
+  run:
+    when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: []
+  task:
+    agent:
+      machine:
+        type: e1-standard-8
+        os_image: ubuntu1804
+    secrets:
+    # Mount a secret for pulling images from GCR, and a license for the k8s FVs
+    - name: tigera-dev-ci-pull-credentials
+    - name: google-service-account-for-gcr
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd node
+    jobs:
+    - name: "Node: CI"
+      commands:
+      - make ci
+    - name: "Node: k8s-test"
+      commands:
+      - make k8s-test
+    - name: "Node: dual-tor"
+      commands:
+      - make dual-tor-test
+    epilogue:
+      always:
+        commands:
+        - test-results publish ./report/nosetests.xml --name "node-ci" || true
+        - test-results publish ./report/k8s-tests.xml --name "node-k8s-test" || true
+
+- name: "Node: build all architectures"
+  run:
+    when: "change_in(['/felix/', '/confd/', '/node/'])"
+  dependencies: []
+  task:
+    agent:
+      machine:
+        type: e1-standard-4
+        os_image: ubuntu1804
+    prologue:
+      commands:
+      - cd node
+    jobs:
+    - name: "Build Windows archive"
+      commands:
+      - make build-windows-archive
+
+- name: "e2e tests"
+  run:
+    when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: []
+  task:
+    secrets:
+    # Since we create a local kind cluster, we need the test license.
+    - name: test-customer-license
+    agent:
+      machine:
+        type: e1-standard-8
+        os_image: ubuntu1804
+    jobs:
+    - name: "sig-network conformance"
+      env_vars:
+      - name: E2E_FOCUS
+        value: "sig-network.*Conformance"
+      commands:
+      - make e2e-test
+
+- name: "kube-controllers: Tests"
+  run:
+    when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/kube-controllers/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: []
+  task:
+    prologue:
+      commands:
+      - cd kube-controllers
+    jobs:
+    - name: "kube-controllers: tests"
+      commands:
+      - make ci
+
+- name: "pod2daemon"
+  run:
+    when: "true or change_in(['/*', '/pod2daemon/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: []
+  task:
+    prologue:
+      commands:
+      - cd pod2daemon
+    jobs:
+    - name: "pod2daemon tests"
+      commands:
+      - make ci
+
+- name: "app-policy"
+  run:
+    when: "true or change_in(['/*', '/app-policy/', '/felix/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: []
+  task:
+    prologue:
+      commands:
+      - cd app-policy
+    jobs:
+    - name: "app-policy tests"
+      commands:
+      - make ci
+
+- name: "calicoctl"
+  run:
+    when: "true or change_in(['/*', '/calicoctl/', '/libcalico-go/', '/api/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: []
+  task:
+    prologue:
+      commands:
+      - cd calicoctl
+    jobs:
+    - name: "calicoctl tests"
+      commands:
+      - make ci
+
+- name: "cni-plugin: Windows"
+  run:
+    when: "true or change_in(['/*', '/cni-plugin/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: []
+  task:
+    secrets:
+    - name: banzai-secrets
+    - name: private-repo
+    prologue:
+      commands:
+      # Load the github access secrets.  First fix the permissions.
+      - chmod 0600 ~/.keys/*
+      - ssh-add ~/.keys/*
+      # Prepare aws configuration.
+      - pip install --upgrade --user awscli
+      - export REPORT_DIR=~/report
+      - export LOGS_DIR=~/fv.log
+      - export SHORT_WORKFLOW_ID=$(echo ${SEMAPHORE_WORKFLOW_ID} | sha256sum | cut -c -8)
+      - export CLUSTER_NAME=sem-${SEMAPHORE_PROJECT_NAME}-pr${SEMAPHORE_GIT_PR_NUMBER}-${CONTAINER_RUNTIME}-${SHORT_WORKFLOW_ID}
+      - export KEYPAIR_NAME=${CLUSTER_NAME}
+      - echo CLUSTER_NAME=${CLUSTER_NAME}
+      - sudo apt-get install -y putty-tools
+      - git clone git@github.com:tigera/process.git ~/process
+      - cd cni-plugin
+      - make bin/windows/calico.exe && make bin/windows/calico-ipam.exe && make bin/windows/win-fv.exe
+    epilogue:
+      always:
+        commands:
+        - artifact push job ${REPORT_DIR} --destination semaphore/test-results --expire-in ${SEMAPHORE_ARTIFACT_EXPIRY} || true
+        - artifact push job ${LOGS_DIR} --destination semaphore/logs --expire-in ${SEMAPHORE_ARTIFACT_EXPIRY} || true
+        - aws ec2 delete-key-pair --key-name ${KEYPAIR_NAME} || true
+        - cd ~/process/testing/winfv && NAME_PREFIX="${CLUSTER_NAME}" ./setup-fv.sh -q -u
+    env_vars:
+    - name: SEMAPHORE_ARTIFACT_EXPIRY
+      value: 2w
+    - name: AWS_DEFAULT_REGION
+      value: us-west-2
+    - name: MASTER_CONNECT_KEY_PUB
+      value: master_ssh_key.pub
+    - name: MASTER_CONNECT_KEY
+      value: master_ssh_key
+    - name: WIN_PPK_KEY
+      value: win_ppk_key
+    - name: K8S_VERSION
+      value: 1.22.6
+    jobs:
+    - name: Docker - Windows FV
+      execution_time_limit:
+        minutes: 60
+      commands:
+      - ./.semaphore/run-win-fv.sh
+      env_vars:
+      - name: CONTAINER_RUNTIME
+        value: docker
+    - name: Containerd - Windows FV
+      execution_time_limit:
+        minutes: 60
+      commands:
+      - ./.semaphore/run-win-fv.sh
+      env_vars:
+      - name: CONTAINER_RUNTIME
+        value: containerd
+      - name: CONTAINERD_VERSION
+        value: 1.4.12
+
+- name: "cni-plugin"
+  run:
+    when: "true or change_in(['/*', '/cni-plugin/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: []
+  task:
+    prologue:
+      commands:
+      - cd cni-plugin
+    jobs:
+    - name: "cni-plugin tests"
+      commands:
+      - make ci
+
+- name: 'calicoq'
+  run:
+    when: "change_in(['/*', '/calicoq/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: []
+  task:
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd calicoq
+    jobs:
+    - name: "make ci" 
+      commands:
+      - make ci
+
+- name: "licensing"
+  run:
+    when: "true or change_in(['/*', '/licensing/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: []
+  task:
+    prologue:
+      commands:
+      - cd licensing
+    jobs:
+    - name: "Licensing tests"
+      commands:
+      - make ci
+
+- name: "Documentation"
+  run:
+    when: "true or change_in(['/*', '/calico/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: []
+  task:
+    prologue:
+      commands:
+      - cd calico
+    jobs:
+    - name: "htmlproofer, kubeval, and helm tests"
+      commands:
+      - make htmlproofer
+      - make kubeval
+      - make helm-tests
+
+after_pipeline:
+  task:
+    jobs:
+    - name: Reports
+      commands:
+        - test-results gen-pipeline-report --force
