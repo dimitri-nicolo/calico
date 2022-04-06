@@ -54,7 +54,7 @@ bytes sent, latencies, and counters.
 in the connections to an authorization service in the morning, then a big data transmission when 
 the database starts a backup operation.
 
-For a list of performance anomaly detectors that are enabled by default, see [Anomaly detection reference]({{site.baseurl}}/reference/anomaly-detection/all-jobs-envars#performance-anomaly-detectors).
+For a list of performance anomaly detectors that are enabled by default, see [Anomaly detection reference]({{site.baseurl}}/reference/anomaly-detection/all-detectors#performance-anomaly-detectors).
 
 ### FAQ
 
@@ -86,7 +86,6 @@ For a list of performance anomaly detectors that are enabled by default, see [An
 - [Install anomaly detection](#install-anomaly-detection)
 - [Monitor anomalies and alerts](#monitor-anomalies-and-alerts)
 - [Disable anomaly detectors](#disable-anomaly-detectors)
-- [Troubleshooting](#troubleshooting)
 
 #### Install anomaly detection
 
@@ -100,18 +99,8 @@ For a list of performance anomaly detectors that are enabled by default, see [An
 
 {% include /content/anomaly-detection/disable.md %}
 
-#### Troubleshooting
-
-**Issue:** I am getting too many alerts. What can I do?
-
-**Solution:** The default values for anomaly detectors are configured for a reasonable amount of alerts. However, you can change values using [anomaly detection environment variables]({{site.baseurl}}/reference/anomaly-detection/all-jobs-envars). 
-
-**Issue:** The Elasticsearch consumption is very high. How do I decrease it?
-
-**Solution:** Decrease the maximum number of log records used for training using the [**AD_max_docs** variable]({{site.baseurl}}/reference/anomaly-detection/all-jobs-envars). Note that the more Elasticsearch log data is used in training of the model, the more accurate the anomaly detection. However, the more data the anomaly detection reads, the more costly it becomes in terms of data retention.
-
 ### Above and beyond
 
-- [Anomaly detection reference]({{site.baseurl}}/reference/anomaly-detection/all-jobs-envars)
+- [Anomaly detection reference]({{site.baseurl}}/reference/anomaly-detection/all-detectors)
 - [Global Alert reference]({{site.baseurl}}/reference/resources/globalalert)
 - [Detect and alert on security anomalies]({{site.baseurl}}/threat/security-anomalies)

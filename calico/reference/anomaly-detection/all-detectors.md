@@ -1,10 +1,10 @@
 ---
 title: Anomaly detection 
 description: Anomaly detectors and descriptions.
-canonical_url: /reference/anomaly-detection/all-jobs-envars
+canonical_url: /reference/anomaly-detection/all-detectors
 ---
 
-This topic lists {{site.prodname}} anomaly detectors and their environment variables.
+This topic lists {{site.prodname}} anomaly detectors and their descriptions.
 
 ### Security anomaly detectors 
 
@@ -42,11 +42,6 @@ May indicate an attacker has gained control of a pod and is gathering reconnaiss
 ### Performance anomaly detectors 
 
 The following detectors are searching for performance anomalies. These detectors search primarily for performance anomalies like the slowness of processes or excessive resource consumption. Performance anomalies may be the result of malicious activity, but usually just the result of increased activity of legitimate applications.
-
->**Note**: All sensitivity environment variables (noted by`_SENSITIVITY`), change the **sensitivity** of the detector. 
-> The higher the sensitivity, the more suspicious values are treated as anomalies. 
->  **Valid range**: 0.0 to 100.0.
-{: .alert .alert-info}
 
 #### Excessive value anomaly in DNS log
 
