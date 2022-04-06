@@ -25,6 +25,7 @@ const (
 	ImageAssuranceAPICertSecretName                   = "tigera-image-assurance-api-cert"
 	ImageAssuranceNameSpaceName                       = "tigera-image-assurance"
 	AdmissionControllerResourceName                   = "admission-controller-api-access"
+	ImageAssuranceAdmissionControllerDeploymentName   = "tigera-image-assurance-admission-controller"
 	ImageAssuranceAdmissionControllerRoleName         = "tigera-image-assurance-admission-controller"
 	ManagedIAAdmissionControllerResourceName          = "tigera-image-assurance-admission-controller-api-access"
 	ManagementIAAdmissionControllerResourceNameFormat = "tigera-image-assurance-%s-admission-controller-api-access"
