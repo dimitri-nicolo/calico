@@ -92,12 +92,21 @@ global_job_config:
 
 blocks:
 
+- name: "Prerequisites"
+  dependencies: []
+  task:
+    jobs:
+    - name: "Prerequisites"
+      commands:
+        - make gen-semaphore-yaml
+        - make check-dirty
+
 - name: "API"
   run:
     when: "branch =~ '.*' or change_in(['/*', '/api/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   execution_time_limit:
     minutes: 30
-  dependencies: []
+  dependencies: ["Prerequisites"]
   task:
     prologue:
       commands:
@@ -114,7 +123,7 @@ blocks:
     when: "true or change_in(['/*', '/api/', '/apiserver/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   execution_time_limit:
     minutes: 30
-  dependencies: []
+  dependencies: ["Prerequisites"]
   task:
     agent:
       machine:
@@ -131,7 +140,7 @@ blocks:
 - name: "libcalico-go"
   run:
     when: "true or change_in(['/*', '/api/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: []
+  dependencies: ["Prerequisites"]
   task:
     jobs:
     - name: "libcalico-go: tests"
@@ -142,7 +151,7 @@ blocks:
 - name: "Typha"
   run:
     when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/typha/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: []
+  dependencies: ["Prerequisites"]
   task:
     agent:
       machine:
@@ -173,7 +182,7 @@ blocks:
 - name: "Felix: Build"
   run:
     when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: []
+  dependencies: ["Prerequisites"]
   task:
     agent:
       machine:
@@ -203,7 +212,7 @@ blocks:
 - name: "Felix: Build Windows binaries"
   run:
     when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: []
+  dependencies: ["Prerequisites"]
   task:
     jobs:
     - name: "build Windows binaries"
@@ -214,7 +223,7 @@ blocks:
 - name: "Felix: Windows FV"
   run:
     when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: ["Felix: Build Windows binaries"]
+  dependencies: ["Prerequisites", "Felix: Build Windows binaries"]
   task:
     secrets:
     - name: banzai-secrets
@@ -267,7 +276,7 @@ blocks:
 - name: "Felix: FV Tests"
   run:
     when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: ["Felix: Build"]
+  dependencies: ["Prerequisites", "Felix: Build"]
   task:
     prologue:
       commands:
@@ -300,7 +309,7 @@ blocks:
 - name: "Felix: BPF UT/FV tests on new kernel"
   run:
     when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: []
+  dependencies: ["Prerequisites"]
   task:
     prologue:
       commands:
@@ -332,7 +341,7 @@ blocks:
 - name: "confd: tests"
   run:
     when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/confd/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: []
+  dependencies: ["Prerequisites"]
   task:
     prologue:
       commands:
@@ -347,7 +356,7 @@ blocks:
 - name: "Node: Tests"
   run:
     when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: []
+  dependencies: ["Prerequisites"]
   task:
     agent:
       machine:
@@ -380,7 +389,7 @@ blocks:
 - name: "Node: build all architectures"
   run:
     when: "change_in(['/felix/', '/confd/', '/node/'])"
-  dependencies: []
+  dependencies: ["Prerequisites"]
   task:
     agent:
       machine:
@@ -397,7 +406,7 @@ blocks:
 - name: "e2e tests"
   run:
     when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: []
+  dependencies: ["Prerequisites"]
   task:
     secrets:
     # Since we create a local kind cluster, we need the test license.
@@ -417,7 +426,7 @@ blocks:
 - name: "kube-controllers: Tests"
   run:
     when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/kube-controllers/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: []
+  dependencies: ["Prerequisites"]
   task:
     prologue:
       commands:
@@ -430,7 +439,7 @@ blocks:
 - name: "pod2daemon"
   run:
     when: "true or change_in(['/*', '/pod2daemon/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: []
+  dependencies: ["Prerequisites"]
   task:
     prologue:
       commands:
@@ -443,7 +452,7 @@ blocks:
 - name: "app-policy"
   run:
     when: "true or change_in(['/*', '/app-policy/', '/felix/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: []
+  dependencies: ["Prerequisites"]
   task:
     prologue:
       commands:
@@ -456,7 +465,7 @@ blocks:
 - name: "calicoctl"
   run:
     when: "true or change_in(['/*', '/calicoctl/', '/libcalico-go/', '/api/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: []
+  dependencies: ["Prerequisites"]
   task:
     prologue:
       commands:
@@ -469,7 +478,7 @@ blocks:
 - name: "cni-plugin: Windows"
   run:
     when: "true or change_in(['/*', '/cni-plugin/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: []
+  dependencies: ["Prerequisites"]
   task:
     secrets:
     - name: banzai-secrets
@@ -534,7 +543,7 @@ blocks:
 - name: "cni-plugin"
   run:
     when: "true or change_in(['/*', '/cni-plugin/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: []
+  dependencies: ["Prerequisites"]
   task:
     prologue:
       commands:
@@ -547,7 +556,7 @@ blocks:
 - name: 'calicoq'
   run:
     when: "change_in(['/*', '/calicoq/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: []
+  dependencies: ["Prerequisites"]
   task:
     secrets:
     - name: test-customer-license
@@ -555,14 +564,14 @@ blocks:
       commands:
       - cd calicoq
     jobs:
-    - name: "make ci" 
+    - name: "make ci"
       commands:
       - make ci
 
 - name: "licensing"
   run:
     when: "true or change_in(['/*', '/licensing/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: []
+  dependencies: ["Prerequisites"]
   task:
     prologue:
       commands:
@@ -575,7 +584,7 @@ blocks:
 - name: "Documentation"
   run:
     when: "true or change_in(['/*', '/calico/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: []
+  dependencies: ["Prerequisites"]
   task:
     prologue:
       commands:
