@@ -87,3 +87,10 @@ os-merge-status:
 	@git --no-pager log --pretty='format:%C(auto)%h %aD: %an: %s' --first-parent  $(PRIVATE_REMOTE)/$(PRIVATE_BRANCH)..$(OSS_REMOTE)/$(OSS_BRANCH)
 	@echo ""
 	@echo "==============================================================================================================="
+
+gen-semaphore-yaml:
+	cd .semaphore && ./generate-semaphore-yaml.sh
+
+check-dirty:
+	@if [ "$$(git --no-pager diff --stat)" != "" ]; then \
+	echo "The following files are dirty"; git --no-pager diff --stat; exit 1; fi
