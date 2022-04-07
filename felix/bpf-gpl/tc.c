@@ -1264,10 +1264,10 @@ deny:
 	return TC_ACT_SHOT;
 }
 
-SEC("classifier/tc/skb_drop")
+SEC("classifier/tc/drop")
 int calico_tc_skb_drop(struct __sk_buff *skb)
 {
-	CALI_DEBUG("Entering calico_tc_skb_drop\n");
+	CALI_DEBUG("Entering calico_tc_skb_drop - DENY\n");
 
 	struct cali_tc_state *state = state_get();
 	if (!state) {
