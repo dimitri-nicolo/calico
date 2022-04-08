@@ -131,8 +131,15 @@ spec:
   - action: Allow
     protocol: TCP
     destination:
-      # This policy allows Firewall controller to communicate with external Fortigate firewall.
+      # This policy allows Firewall controller to communicate via IPv4 with external Fortigate firewall.
       nets: ["0.0.0.0/0"]
+      ports:
+      - 443
+  - action: Allow
+    protocol: TCP
+    destination:
+      # This policy allows Firewall controller to communicate via IPv4 with external Fortigate firewall.
+      nets: ["::/0"]
       ports:
       - 443
   - action: Allow
