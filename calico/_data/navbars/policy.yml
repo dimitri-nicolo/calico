@@ -7,7 +7,7 @@ section:
 - title: Policy best practices
   path: /security/policy-best-practices  
 - title: Tiered network policy
-  path: /security/policy-tiers
+  path: /security/policy-tiers/
   section:
   - title: Get started with tiered policy
     path: /security/tiered-policy
