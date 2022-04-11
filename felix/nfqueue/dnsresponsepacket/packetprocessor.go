@@ -85,6 +85,7 @@ const (
 type PacketProcessor interface {
 	Start()
 	Stop()
+	DebugKillCurrentNfqueueConnection() error
 }
 
 func New(
@@ -127,6 +128,10 @@ func (p *packetProcessor) Start() {
 
 func (p *packetProcessor) Stop() {
 	p.cancel()
+}
+
+func (p *packetProcessor) DebugKillCurrentNfqueueConnection() error {
+	return p.nfc.DebugKillConnection()
 }
 
 type handler struct {

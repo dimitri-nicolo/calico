@@ -78,6 +78,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/google/gopacket"
@@ -189,6 +191,14 @@ type DataWithTimestamp struct {
 }
 
 type DomainInfoStore struct {
+	// Rate limited logging when there are mismatched requests or responses. There is a known circumstance where
+	// requests are not properly captured. If two requests are made with the same source port (which happens with some
+	// regularity with certain DNS clients) and the first response comes in before the second request, then the second
+	// request is marked as ctstate ESTABLISHED and is not captured.  Ideally we would capture ctstate RELATED, but
+	// there is no conntrack module for dns and so it is not currently possible to hook into the RELATED state.
+	rateLimitedNoRequestLogger  *logutils.RateLimitedLogger
+	rateLimitedNoResponseLogger *logutils.RateLimitedLogger
+
 	// Handlers that we need update.
 	handlers []DomainInfoChangeHandler
 
@@ -319,6 +329,9 @@ func newDomainInfoStoreWithShims(
 ) *DomainInfoStore {
 	log.WithField("config", config).Info("Creating domain info store")
 	s := &DomainInfoStore{
+		rateLimitedNoRequestLogger:  logutils.NewRateLimitedLogger(logutils.OptInterval(2 * time.Minute)),
+		rateLimitedNoResponseLogger: logutils.NewRateLimitedLogger(logutils.OptInterval(2 * time.Minute)),
+
 		// Updates ready channel has capacity 1 since only one notification is required at a time.
 		updatesReady:         make(chan struct{}, 1),
 		mappings:             make(map[string]*nameData),
@@ -420,7 +433,7 @@ func (s *DomainInfoStore) OnUpdate(msg interface{}) {
 //
 // Note that during initial sync, HandleUpdates may be called multiple times before UpdatesApplied.
 func (s *DomainInfoStore) HandleUpdates() (needsDataplaneSync bool) {
-	log.Debug("HandeleUpdates called from dataplane")
+	log.Debug("HandleUpdates called from dataplane")
 
 	// Move current data into the pending data.
 	s.mutex.Lock()
@@ -466,6 +479,7 @@ func (s *DomainInfoStore) HandleUpdates() (needsDataplaneSync bool) {
 // been applied to the dataplane.
 func (s *DomainInfoStore) UpdatesApplied() {
 	// Dataplane updates have been applied. Invoke the pending callbacks and update the last applied revision number.
+	log.Debug("Dataplane updates have been applied")
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -1359,13 +1373,13 @@ func (s *DomainInfoStore) releaseUnpairedDataForLogging(t time.Time) {
 		if data.packet == nil {
 			// Request.
 			if data.queueTimestamp < requestCutoff {
-				log.Warnf("DNS-LATENCY: Missed DNS response for request with ID %v", key)
+				s.rateLimitedNoResponseLogger.Warnf("DNS-LATENCY: Missed DNS response for request with ID %v", key)
 				delete(s.latencyData, key)
 			}
 		} else {
 			// Response. We still need to log this response, but have not latency data associated with it.
 			if data.queueTimestamp < responseCutoff {
-				log.Warnf("DNS-LATENCY: Missed DNS request for response with ID %v", key)
+				s.rateLimitedNoRequestLogger.Warnf("DNS-LATENCY: Missed DNS request for response with ID %v", key)
 				delete(s.latencyData, key)
 				s.collector.LogDNS(data.serverIP, data.clientIP, data.packet, nil)
 			}
