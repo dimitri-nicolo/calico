@@ -13,7 +13,7 @@ import (
 
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 
-	api "github.com/tigera/lma/pkg/api"
+	api "github.com/projectcalico/calico/lma/pkg/api"
 )
 
 func (c *client) GetBenchmarks(cxt context.Context, id string) (*api.Benchmarks, error) {

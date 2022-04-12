@@ -17,9 +17,9 @@ import (
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/mock"
 
-	pelastic "github.com/tigera/lma/pkg/elastic"
-	calicojson "github.com/tigera/lma/pkg/test/json"
-	"github.com/tigera/lma/pkg/test/thirdpartymock"
+	pelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	calicojson "github.com/projectcalico/calico/lma/pkg/test/json"
+	"github.com/projectcalico/calico/lma/pkg/test/thirdpartymock"
 )
 
 var (

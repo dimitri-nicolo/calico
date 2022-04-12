@@ -10,8 +10,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/tigera/lma/pkg/api"
-	. "github.com/tigera/lma/pkg/elastic"
+	"github.com/projectcalico/calico/lma/pkg/api"
+	. "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 var _ = Describe("Benchmark elastic tests", func() {

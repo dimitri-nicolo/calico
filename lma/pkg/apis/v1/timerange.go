@@ -9,8 +9,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/lma/pkg/httputils"
-	"github.com/tigera/lma/pkg/timeutils"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
+	"github.com/projectcalico/calico/lma/pkg/timeutils"
 )
 
 type TimeRange struct {

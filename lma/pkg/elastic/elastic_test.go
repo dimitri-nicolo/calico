@@ -13,9 +13,9 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/lma/pkg/api"
-	. "github.com/tigera/lma/pkg/elastic"
-	"github.com/tigera/lma/pkg/list"
+	"github.com/projectcalico/calico/lma/pkg/api"
+	. "github.com/projectcalico/calico/lma/pkg/elastic"
+	"github.com/projectcalico/calico/lma/pkg/list"
 )
 
 // NewNetworkPolicyList creates a new (zeroed) NetworkPolicyList struct with the TypeMetadata initialised to the current

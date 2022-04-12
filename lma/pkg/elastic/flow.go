@@ -12,7 +12,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 
 	"github.com/tigera/api/pkg/lib/numorstring"
-	"github.com/tigera/lma/pkg/api"
+	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 const (

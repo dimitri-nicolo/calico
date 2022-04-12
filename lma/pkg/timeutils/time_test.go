@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/tigera/lma/pkg/timeutils"
+	"github.com/projectcalico/calico/lma/pkg/timeutils"
 )
 
 var _ = Describe("Time parsing works", func() {

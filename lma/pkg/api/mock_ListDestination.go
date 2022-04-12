@@ -4,7 +4,7 @@ package api
 
 import (
 	mock "github.com/stretchr/testify/mock"
-	list "github.com/tigera/lma/pkg/list"
+	list "github.com/projectcalico/calico/lma/pkg/list"
 
 	time "time"
 

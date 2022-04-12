@@ -9,8 +9,8 @@ import (
 	"github.com/olivere/elastic/v7"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	lmaelastic "github.com/tigera/lma/pkg/elastic"
-	"github.com/tigera/lma/pkg/httputils"
+	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 )

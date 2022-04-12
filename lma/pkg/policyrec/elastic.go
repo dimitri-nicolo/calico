@@ -8,8 +8,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	elastic "github.com/olivere/elastic/v7"
-	"github.com/tigera/lma/pkg/api"
-	pelastic "github.com/tigera/lma/pkg/elastic"
+	"github.com/projectcalico/calico/lma/pkg/api"
+	pelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 const defaultTier = "default"

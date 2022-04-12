@@ -14,8 +14,8 @@ import (
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/tigera/lma/pkg/api"
-	. "github.com/tigera/lma/pkg/elastic"
+	"github.com/projectcalico/calico/lma/pkg/api"
+	. "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 var _ = Describe("Compliance elasticsearch report list tests", func() {

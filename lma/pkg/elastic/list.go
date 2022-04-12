@@ -13,7 +13,7 @@ import (
 
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 
-	"github.com/tigera/lma/pkg/list"
+	"github.com/projectcalico/calico/lma/pkg/list"
 )
 
 func (c *client) RetrieveList(kind metav1.TypeMeta, from, to *time.Time, ascending bool) (*list.TimestampedResourceList, error) {

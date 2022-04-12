@@ -13,7 +13,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/lma/pkg/httputils"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
 const esDnsLogsIndexPrefix = "tigera_secure_ee_dns"

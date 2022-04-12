@@ -9,7 +9,7 @@ import (
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 
-	"github.com/tigera/lma/pkg/policyrec"
+	"github.com/projectcalico/calico/lma/pkg/policyrec"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"

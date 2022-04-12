@@ -12,7 +12,7 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	"github.com/tigera/lma/pkg/k8s"
+	"github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 // PerformAuthorizationReview performs an authorization review.

@@ -12,8 +12,8 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
-	"github.com/tigera/lma/pkg/auth"
-	"github.com/tigera/lma/pkg/auth/testing"
+	"github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/lma/pkg/auth/testing"
 )
 
 var _ = Describe("Test dex authenticator and options", func() {

@@ -2,7 +2,7 @@
 package policyrec
 
 import (
-	"github.com/tigera/lma/pkg/api"
+	"github.com/projectcalico/calico/lma/pkg/api"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )

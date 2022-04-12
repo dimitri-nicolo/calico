@@ -6,9 +6,9 @@ import (
 	context "context"
 
 	"github.com/olivere/elastic/v7"
-	api "github.com/tigera/lma/pkg/api"
+	api "github.com/projectcalico/calico/lma/pkg/api"
 
-	list "github.com/tigera/lma/pkg/list"
+	list "github.com/projectcalico/calico/lma/pkg/list"
 
 	mock "github.com/stretchr/testify/mock"
 

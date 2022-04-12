@@ -8,10 +8,10 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
-	"github.com/tigera/lma/pkg/api"
-	"github.com/tigera/lma/pkg/rbac"
+	"github.com/projectcalico/calico/lma/pkg/api"
+	"github.com/projectcalico/calico/lma/pkg/rbac"
 
-	"github.com/tigera/lma/pkg/elastic"
+	"github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 var _ = Describe("FlowFilter", func() {

@@ -11,7 +11,7 @@ import (
 
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/lma/pkg/api"
+	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 const (

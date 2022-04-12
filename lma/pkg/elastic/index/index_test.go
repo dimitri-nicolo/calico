@@ -4,7 +4,7 @@ package index_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/tigera/lma/pkg/elastic/index"
+	. "github.com/projectcalico/calico/lma/pkg/elastic/index"
 )
 
 var _ = Describe("Index construction tests", func() {

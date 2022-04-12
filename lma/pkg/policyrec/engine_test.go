@@ -12,8 +12,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/lma/pkg/api"
-	"github.com/tigera/lma/pkg/policyrec"
+	"github.com/projectcalico/calico/lma/pkg/api"
+	"github.com/projectcalico/calico/lma/pkg/policyrec"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )

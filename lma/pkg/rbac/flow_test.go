@@ -7,9 +7,9 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/stretchr/testify/mock"
-	"github.com/tigera/lma/pkg/api"
-	"github.com/tigera/lma/pkg/auth"
-	"github.com/tigera/lma/pkg/rbac"
+	"github.com/projectcalico/calico/lma/pkg/api"
+	"github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/lma/pkg/rbac"
 
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"

@@ -4,8 +4,8 @@ package elastic
 import (
 	"sort"
 
-	"github.com/tigera/lma/pkg/api"
-	"github.com/tigera/lma/pkg/rbac"
+	"github.com/projectcalico/calico/lma/pkg/api"
+	"github.com/projectcalico/calico/lma/pkg/rbac"
 )
 
 // FlowFilter interface is used by the composite aggregation flow enuemeration to perform additional filtering and

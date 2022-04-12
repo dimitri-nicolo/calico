@@ -7,11 +7,11 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/tigera/lma/pkg/elastic/index"
+	. "github.com/projectcalico/calico/lma/pkg/elastic/index"
 
 	"github.com/olivere/elastic/v7"
 
-	"github.com/tigera/lma/pkg/httputils"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )

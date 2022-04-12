@@ -7,7 +7,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/tigera/lma/pkg/apis/v1"
+	. "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 var _ = Describe("Unmarshaling works correctly", func() {

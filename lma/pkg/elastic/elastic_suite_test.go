@@ -10,7 +10,7 @@ import (
 	"github.com/olivere/elastic/v7"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/tigera/lma/pkg/elastic"
+	. "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 func TestElastic(t *testing.T) {

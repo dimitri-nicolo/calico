@@ -8,8 +8,8 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
-	"github.com/tigera/lma/pkg/api"
-	"github.com/tigera/lma/pkg/auth"
+	"github.com/projectcalico/calico/lma/pkg/api"
+	"github.com/projectcalico/calico/lma/pkg/auth"
 )
 
 var (

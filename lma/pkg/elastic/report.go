@@ -12,7 +12,7 @@ import (
 
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 
-	"github.com/tigera/lma/pkg/api"
+	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 var (

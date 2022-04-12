@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	elastic "github.com/olivere/elastic/v7"
-	"github.com/tigera/lma/pkg/policyrec"
+	"github.com/projectcalico/calico/lma/pkg/policyrec"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
