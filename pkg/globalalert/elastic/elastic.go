@@ -777,6 +777,8 @@ func (e *service) substituteDescriptionContents(record JsonObject) string {
 // for each key found, it assigns them to lmaAPI.EventsData.
 func extractEventData(record JsonObject) lmaAPI.EventsData {
 	var e lmaAPI.EventsData
+
+	// translate common log fields to event top-level fields.
 	if val, ok := record["source_ip"].(string); ok {
 		e.SourceIP = &val
 	}
@@ -812,11 +814,38 @@ func extractEventData(record JsonObject) lmaAPI.EventsData {
 	if val, ok := record["host"].(string); ok {
 		e.Host = val
 	}
-	if val, ok := record["host.keyword"].(string); ok {
-		e.Host = val
+
+	// translate DNS log fields to event top-level fields.
+	if val, ok := record["client_ip"].(string); ok {
+		e.SourceIP = &val
+	}
+	if val, ok := record["client_name"].(string); ok {
+		e.SourceName = val
+	}
+	if val, ok := record["client_name_aggr"].(string); ok {
+		e.SourceNameAggr = val
+	}
+	if val, ok := record["client_namespace"].(string); ok {
+		e.SourceNamespace = val
 	}
 
-	e.Record = record
+	// translate Audit log fields to event top-level fields.
+	if val, ok := record["objectRef"].(map[string]interface{}); ok {
+		if nestedVal, ok := val["name"].(string); ok {
+			e.SourceName = nestedVal
+		}
+		if nestedVal, ok := val["namespace"].(string); ok {
+			e.SourceNamespace = nestedVal
+		}
+	}
+	if ips, ok := record["sourceIPs"].([]interface{}); ok && len(ips) > 0 {
+		for _, ip := range ips {
+			if val, ok := ip.(string); ok {
+				e.SourceIP = &val
+				break
+			}
+		}
+	}
 
 	// Allow for nested structures specifically for WAF logs.
 	if val, ok := record["source"].(map[string]interface{}); ok {
@@ -844,6 +873,12 @@ func extractEventData(record JsonObject) lmaAPI.EventsData {
 		}
 	}
 
+	// for events generated from honeypods in tigera-internal namespace (not the honeypod-controller).
+	if val, ok := record["host.keyword"].(string); ok {
+		e.Host = val
+	}
+
+	e.Record = record
 	return e
 }
 
