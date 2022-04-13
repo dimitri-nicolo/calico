@@ -11,8 +11,6 @@ import (
 
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
 	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/podtemplate"
-	"github.com/tigera/intrusion-detection/controller/pkg/health"
-
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -40,9 +38,6 @@ type managedClusterReconciler struct {
 
 	adDetectionController controller.AnomalyDetectionController
 	adTrainingController  controller.AnomalyDetectionController
-
-	managedClusterAlertControllerHealthPinger health.Pinger
-	managedClusterAlertControllerCh           chan []health.Pinger
 
 	enableAnomalyDetection bool
 }

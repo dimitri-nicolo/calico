@@ -6,6 +6,9 @@ import (
 	"context"
 
 	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/client-go/tools/cache"
 
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	es "github.com/tigera/intrusion-detection/controller/pkg/elastic"
@@ -35,11 +38,10 @@ func NewManagedClusterController(calicoCLI calicoclient.Interface, lmaESClient l
 	anomalyDetectionController controller.AnomalyDetectionController, indexSettings es.IndexSettings, namespace string,
 	createManagedCalicoCLI func(string) (calicoclient.Interface, error)) controller.Controller {
 	m := &managedClusterController{
-		lmaESClient:              lmaESClient,
-		indexSettings:            indexSettings,
-		calicoCLI:                calicoCLI,
-		createManagedCalicoCLI:   createManagedCalicoCLI,
-		managedAlertControllerCh: make(chan []health.Pinger, 100),
+		lmaESClient:            lmaESClient,
+		indexSettings:          indexSettings,
+		calicoCLI:              calicoCLI,
+		createManagedCalicoCLI: createManagedCalicoCLI,
 	}
 
 	// Create worker to watch ManagedCluster resource
@@ -53,9 +55,12 @@ func NewManagedClusterController(calicoCLI calicoclient.Interface, lmaESClient l
 		adTrainingController:            anomalyTrainingController,
 		adDetectionController:           anomalyDetectionController,
 		alertNameToAlertControllerState: map[string]alertControllerState{},
-		managedClusterAlertControllerCh: m.managedAlertControllerCh,
 		enableAnomalyDetection:          enableAnomalyDetection,
 	})
+
+	m.worker.AddWatch(
+		cache.NewListWatchFromClient(m.calicoCLI.ProjectcalicoV3().RESTClient(), "managedclusters", "", fields.Everything()),
+		&v3.ManagedCluster{})
 
 	log.Info("creating a new managed cluster controller")
 
