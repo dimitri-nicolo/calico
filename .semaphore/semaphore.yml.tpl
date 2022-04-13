@@ -581,6 +581,19 @@ blocks:
       commands:
       - make ci
 
+- name: "lma"
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/lma/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    prologue:
+      commands:
+      - cd lma
+    jobs:
+    - name: "lma tests"
+      commands:
+      - make ci
+
 - name: "Documentation"
   run:
     when: "${FORCE_RUN} or change_in(['/*', '/calico/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"

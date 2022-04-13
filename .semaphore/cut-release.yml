@@ -70,3 +70,7 @@ promotions:
     pipeline_file: ../calicoq/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Cut LMA Release
+    pipeline_file: ../lma/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
