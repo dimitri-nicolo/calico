@@ -18,6 +18,7 @@ global_job_config:
       - ssh-add ~/.keys/*
       - checkout
       - git fetch --unshallow || true
+      - cd lma
 
 blocks:
   - name: 'Cut Release'

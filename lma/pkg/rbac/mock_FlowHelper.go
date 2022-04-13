@@ -4,6 +4,7 @@ package rbac
 
 import (
 	mock "github.com/stretchr/testify/mock"
+
 	api "github.com/projectcalico/calico/lma/pkg/api"
 )
 

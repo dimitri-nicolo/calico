@@ -3,9 +3,6 @@ include ../metadata.mk
 PACKAGE_NAME    ?= github.com/projectcalico/calico/lma
 LOCAL_CHECKS     = mod-download
 
-# Used so semaphore can trigger the update pin pipelines in projects that have this project as a dependency.
-SEMAPHORE_AUTO_PIN_UPDATE_PROJECT_IDS=$(SEMAPHORE_HONEYPOD_CONTROLLER_PROJECT_ID) $(SEMAPHORE_VOLTRON_PROJECT_ID) $(SEMAPHORE_PACKETCAPTURE_API_PROJECT_ID) $(SEMAPHORE_COMPLIANCE_PROJECT_ID)
-
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 

@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/lma/pkg/api"
 )
 

@@ -12,6 +12,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 
 	"github.com/tigera/api/pkg/lib/numorstring"
+
 	"github.com/projectcalico/calico/lma/pkg/api"
 )
 

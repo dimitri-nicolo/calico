@@ -6,6 +6,7 @@ import (
 	context "context"
 
 	"github.com/olivere/elastic/v7"
+
 	api "github.com/projectcalico/calico/lma/pkg/api"
 
 	list "github.com/projectcalico/calico/lma/pkg/list"

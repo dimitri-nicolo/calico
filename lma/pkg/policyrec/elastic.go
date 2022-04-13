@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	elastic "github.com/olivere/elastic/v7"
+
 	"github.com/projectcalico/calico/lma/pkg/api"
 	pelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
