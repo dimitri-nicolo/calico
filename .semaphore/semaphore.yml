@@ -584,6 +584,21 @@ blocks:
       commands:
       - make ci
 
+- name: 'es-gateway'
+  run:
+    when: "false or change_in(['/*', '/es-gateway/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd es-gateway
+    jobs:
+    - name: "es-gateway tests"
+      commands:
+      - make ci
+
 - name: "Documentation"
   run:
     when: "false or change_in(['/*', '/calico/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"

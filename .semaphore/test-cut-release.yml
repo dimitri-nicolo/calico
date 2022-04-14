@@ -70,3 +70,7 @@ promotions:
     pipeline_file: ../calicoq/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Test ES Gateway Release
+    pipeline_file: ../es-gateway/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
