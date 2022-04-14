@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -2433,6 +2434,7 @@ var _ = Describe("EndpointManager IPv4", endpointManagerTests(4))
 var _ = Describe("EndpointManager IPv6", endpointManagerTests(6))
 
 type testProcSys struct {
+	lock           sync.Mutex
 	state          map[string]string
 	pathsThatExist map[string]bool
 	Fail           bool
@@ -2441,6 +2443,8 @@ type testProcSys struct {
 var procSysFail = errors.New("mock proc sys failure")
 
 func (t *testProcSys) write(path, value string) error {
+	t.lock.Lock()
+	defer t.lock.Unlock()
 	log.WithFields(log.Fields{
 		"path":  path,
 		"value": value,
@@ -2453,6 +2457,8 @@ func (t *testProcSys) write(path, value string) error {
 }
 
 func (t *testProcSys) stat(path string) (os.FileInfo, error) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
 	exists := t.pathsThatExist[path]
 	if exists {
 		return nil, nil
@@ -2462,6 +2468,8 @@ func (t *testProcSys) stat(path string) (os.FileInfo, error) {
 }
 
 func (t *testProcSys) checkState(expected map[string]string) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
 	Expect(t.state).To(Equal(expected))
 }
 
