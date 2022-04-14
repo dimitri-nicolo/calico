@@ -1,45 +1,24 @@
-PACKAGE_NAME    ?= github.com/tigera/es-gateway
-GO_BUILD_VER    ?= v0.65
-GIT_USE_SSH      = true
+include ../metadata.mk
 
+PACKAGE_NAME    ?= github.com/projectcalico/calico/es-gateway
 LOCAL_CHECKS     = mod-download
-
-GO_FILES       = $(shell sh -c "find pkg cmd -name \\*.go")
-
-ORGANIZATION=tigera
-SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_ES_GATEWAY_PROJECT_ID)
-
-ES_GATEWAY_IMAGE   ?=tigera/es-gateway
-BUILD_IMAGES       ?=$(ES_GATEWAY_IMAGE)
-DEV_REGISTRIES     ?=gcr.io/unique-caldron-775/cnx
-RELEASE_REGISTRIES ?=quay.io
 
 RELEASE_BRANCH_PREFIX ?= release-calient
 DEV_TAG_SUFFIX        ?= calient-0.dev
 
-
-EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
-
 ###############################################################################
-# Download and include Makefile.common
+# Include ../lib.Makefile before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
 #   that variable is evaluated when we declare DOCKER_RUN and siblings.
 ###############################################################################
-MAKE_BRANCH?=$(GO_BUILD_VER)
-MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
-
-Makefile.common: Makefile.common.$(MAKE_BRANCH)
-	cp "$<" "$@"
-Makefile.common.$(MAKE_BRANCH):
-	# Clean up any files downloaded from other branches so they don't accumulate.
-	rm -f Makefile.common.*
-	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
-
-include Makefile.common
+include ../lib.Makefile
 
 ###############################################################################
 # Env vars related to building
 ###############################################################################
+SRC_FILES       = $(shell find pkg cmd -name '*.go')
+ES_GATEWAY_IMAGE   ?=tigera/es-gateway
+
 BUILD_VERSION         ?= $(shell git describe --tags --dirty --always 2>/dev/null)
 BUILD_BUILD_DATE      ?= $(shell date -u +'%FT%T%z')
 BUILD_GIT_DESCRIPTION ?= $(shell git describe --tags 2>/dev/null)
@@ -66,9 +45,9 @@ es-gateway: bin/es-gateway
 
 bin/es-gateway: bin/es-gateway-amd64
 	$(DOCKER_GO_BUILD) \
-		sh -c 'cd bin && ln -s -T es-gateway-$(ARCH) es-gateway'
+		sh -c 'cd bin && ln -sf es-gateway-$(ARCH) es-gateway'
 
-bin/es-gateway-$(ARCH): $(GO_FILES)
+bin/es-gateway-$(ARCH): $(SRC_FILES)
 ifndef RELEASE_BUILD
 	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
 else
@@ -108,12 +87,10 @@ endif
 
 .PHONY: clean
 clean:
-	rm -rf .go-pkg-cache \
-		bin \
+	rm -rf bin \
 		docker-image/bin \
 		report/*.xml \
 		release-notes-* \
-		vendor \
 		Makefile.common*
 	docker rmi -f $(ES_GATEWAY_IMAGE) > /dev/null 2>&1
 
@@ -131,23 +108,6 @@ GINKGO = ginkgo $(GINKGO_ARGS)
 ## Run only Unit Tests.
 ut:
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod download && $(GINKGO) pkg/*'
-
-###############################################################################
-# Updating pins
-###############################################################################	
-# Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
-guard-ssh-forwarding-bug:
-	@if [ "$(shell uname)" = "Darwin" ]; then \
-		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
-		echo "$(MAKECMDGOALS)"; \
-		exit 1; \
-	fi;
-
-update-calico-pin:
-	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(PIN_BRANCH))
-
-## Update dependency pins
-update-pins: guard-ssh-forwarding-bug update-calico-pin
 
 ###############################################################################
 # CI/CD
