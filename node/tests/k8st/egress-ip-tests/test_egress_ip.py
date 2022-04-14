@@ -1,9 +1,10 @@
-# Copyright (c) 2020 Tigera, Inc. All rights reserved.
+# Copyright (c) 2020-2022 Tigera, Inc. All rights reserved.
 
 import logging
 import re
 import json
 import subprocess
+import time
 from datetime import datetime
 from random import randint
 
@@ -82,6 +83,9 @@ spec:
 EOF
 """ % (self.egress_cidr, modeVxlan, modeIPIP))
         self.add_cleanup(lambda: calicoctl("delete ippool egress-ippool-1"))
+
+        # After restarting felixes, wait for 20s to ensure Felix is past its route-cleanup grace period.
+        time.sleep(20)
 
     def tearDown(self):
         super(_TestEgressIP, self).tearDown()
@@ -690,6 +694,9 @@ spec:
         gateway.wait_ready()
 
         return gateway
+
+_TestEgressIP.vanilla = False
+_TestEgressIP.egress_ip = True
 
 
 class NetcatServerTCP(Container):

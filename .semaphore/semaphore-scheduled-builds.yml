@@ -380,6 +380,9 @@ blocks:
     - name: "Node: dual-tor"
       commands:
       - make dual-tor-test
+    - name: "Node: egress-ip"
+      commands:
+      - make egress-ip-test
     epilogue:
       always:
         commands:

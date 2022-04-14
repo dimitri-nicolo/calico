@@ -311,10 +311,11 @@ class TestBase(TestCase):
                        (deployment, ns, replicas)).strip()
 
 # Default is for K8ST tests to run vanilla tests, and not to run
-# specialized tests (e.g., dual_dor).
+# specialized tests (e.g., dual_dor, egress_ip).
 # Individual test classes can override this.
 TestBase.vanilla = True
 TestBase.dual_tor = False
+TestBase.egress_ip = False
 
 
 class Container(object):

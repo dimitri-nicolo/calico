@@ -473,8 +473,13 @@ tests/k8st/reliable-nc/bin/reliable-nc: tests/k8st/reliable-nc/reliable-nc.go
 ## make k8s-test K8ST_TO_RUN="tests/test_dns_policy.py -s --nocapture --nologcapture"
 ##
 ## By default, run tests tagged with "vanilla". This excludes dual tor tests from running
-## on a test environment which doesn't support dual tor.
+## on a test environment which doesn't support dual tor, and excludes egress IP tests which
+## reconfigure the cluster configuration.
 K8ST_TO_RUN ?= -A vanilla
+
+.PHONY: egress-ip-test
+egress-ip-test:
+	$(MAKE) k8s-test K8ST_TO_RUN="-A egress_ip"
 
 .PHONY: k8s-test
 k8s-test:
