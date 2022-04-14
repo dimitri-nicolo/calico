@@ -541,7 +541,7 @@ blocks:
       - name: CONTAINER_RUNTIME
         value: containerd
       - name: CONTAINERD_VERSION
-        value: 1.4.12
+        value: 1.6.0
 
 - name: "cni-plugin"
   run:
