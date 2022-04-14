@@ -19,7 +19,7 @@ BUILD_IMAGES ?=$(KUBE_CONTROLLERS_IMAGE) $(FLANNEL_MIGRATION_IMAGE)
 endif
 
 ifeq ($(TESLA),true)
-	RELEASE_REGISTRIES    = gcr.io/tigera-tesla
+	RELEASE_REGISTRIES    = gcr.io/tigera-tesla/tigera
 	BUILD_TAGS            ?= -tags tesla
 	RELEASE_BRANCH_PREFIX = release-tesla
 	DEV_TAG_SUFFIX        = tesla-0.dev
