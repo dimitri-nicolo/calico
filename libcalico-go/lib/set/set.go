@@ -15,7 +15,9 @@
 package set
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"reflect"
 
 	log "github.com/sirupsen/logrus"
@@ -33,6 +35,7 @@ type Set interface {
 	Copy() Set
 	Equals(Set) bool
 	ContainsAll(Set) bool
+	fmt.Stringer
 }
 
 type empty struct{}
@@ -65,6 +68,23 @@ func Empty() Set {
 }
 
 type mapSet map[interface{}]empty
+
+func (set mapSet) String() string {
+	var buf bytes.Buffer
+	_, _ = buf.WriteString("set.mapSet{")
+	first := true
+	set.Iter(func(item interface{}) error {
+		if !first {
+			buf.WriteString(",")
+		} else {
+			first = false
+		}
+		_, _ = fmt.Fprint(&buf, item)
+		return nil
+	})
+	_, _ = buf.WriteString("}")
+	return buf.String()
+}
 
 func (set mapSet) Len() int {
 	return len(set)
