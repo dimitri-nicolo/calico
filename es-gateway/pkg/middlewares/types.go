@@ -3,6 +3,7 @@ package middlewares
 
 import (
 	"github.com/gorilla/mux"
+
 	"github.com/projectcalico/calico/es-gateway/pkg/cache"
 )
 

@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/es-gateway/pkg/metrics"
 	"github.com/projectcalico/calico/es-gateway/pkg/middlewares"
 )

@@ -55,6 +55,10 @@ promotions:
   pipeline_file: push-images/node.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push es-gateway images
+  pipeline_file: push-images/es-gateway.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 # Have a separate promotion for publishing Helm charts.
 - name: Publish Helm Charts
   pipeline_file: push-helm-charts/helm-charts.yml

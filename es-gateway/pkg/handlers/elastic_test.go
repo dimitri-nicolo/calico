@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
+
 	"github.com/projectcalico/calico/es-gateway/pkg/handlers"
 
 	"github.com/projectcalico/calico/es-gateway/pkg/metrics"

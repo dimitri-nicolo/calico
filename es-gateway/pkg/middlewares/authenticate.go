@@ -9,8 +9,9 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/projectcalico/calico/es-gateway/pkg/cache"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/projectcalico/calico/es-gateway/pkg/cache"
 
 	"github.com/pkg/errors"
 )

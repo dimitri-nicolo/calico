@@ -1,5 +1,3 @@
-[![Build Status](https://tigera.semaphoreci.com/badges/es-gateway.svg?key=3c01c819-532b-4ccc-8305-5dd45c10bf93)](https://tigera.semaphoreci.com/projects/es-gateway)
-
 # es-gateway
 Component for gate-keeping all requests to Elasticsearch & Kibana.
 
