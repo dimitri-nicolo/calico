@@ -123,7 +123,6 @@ func (m *mockDataplane) setAndReturn(vari **polprog.Rules, key string) func() *p
 }
 
 var _ = Describe("BPF Endpoint Manager", func() {
-
 	var (
 		bpfEpMgr             *bpfEndpointManager
 		dp                   *mockDataplane
@@ -479,10 +478,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 
 				It("clears host endpoint for eth0", func() {
 					Expect(bpfEpMgr.hostIfaceToEpMap).To(BeEmpty())
-					Expect(bpfEpMgr.policiesToWorkloads[proto.PolicyID{
-						Tier: "default",
-						Name: "mypolicy",
-					}]).NotTo(HaveKey("eth0"))
+					Expect(bpfEpMgr.policiesToWorkloads["default.mypolicy"]).NotTo(HaveKey("eth0"))
 				})
 			})
 		})
