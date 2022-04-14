@@ -42,8 +42,7 @@ import (
 )
 
 const (
-	cleanupGracePeriod = 10 * time.Second
-	maxConnFailures    = 3
+	maxConnFailures = 3
 )
 
 var (
@@ -1026,7 +1025,7 @@ func (r *RouteTable) fullResyncRoutesForLink(logCxt *log.Entry, ifaceName string
 		// before learning about the endpoint, we give each interface a grace period after we first
 		// see it before we remove routes that we're not expecting.  Check whether the grace period
 		// applies to this interface.
-		ifaceInGracePeriod := r.time.Since(r.ifaceNameToFirstSeen[ifaceName]) < cleanupGracePeriod
+		ifaceInGracePeriod := r.time.Since(r.ifaceNameToFirstSeen[ifaceName]) < r.routeCleanupGracePeriod
 		if ifaceInGracePeriod && !routeExpected && !r.vxlan {
 			// Don't remove unexpected routes from interfaces created recently. VXLAN routes don't have a grace period.
 			logCxt.Info("Syncing routes: found unexpected route; ignoring due to grace period.")
