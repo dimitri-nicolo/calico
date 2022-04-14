@@ -12,8 +12,8 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/es-gateway/pkg/middlewares"
-	"github.com/tigera/es-gateway/pkg/proxy"
+	"github.com/projectcalico/calico/es-gateway/pkg/middlewares"
+	"github.com/projectcalico/calico/es-gateway/pkg/proxy"
 )
 
 // GetProxyHandler generates an HTTP proxy handler based on the given Target.

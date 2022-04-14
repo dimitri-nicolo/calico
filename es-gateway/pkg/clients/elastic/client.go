@@ -10,7 +10,7 @@ import (
 
 	es7 "github.com/elastic/go-elasticsearch/v7"
 
-	httpCommon "github.com/tigera/es-gateway/pkg/clients/internal/http"
+	httpCommon "github.com/projectcalico/calico/es-gateway/pkg/clients/internal/http"
 )
 
 // client is a wrapper for the ES client.

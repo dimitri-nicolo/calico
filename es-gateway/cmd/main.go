@@ -6,18 +6,18 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/tigera/es-gateway/pkg/metrics"
+	"github.com/projectcalico/calico/es-gateway/pkg/metrics"
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/es-gateway/pkg/clients/elastic"
-	"github.com/tigera/es-gateway/pkg/clients/kibana"
-	"github.com/tigera/es-gateway/pkg/clients/kubernetes"
-	"github.com/tigera/es-gateway/pkg/config"
-	"github.com/tigera/es-gateway/pkg/proxy"
-	"github.com/tigera/es-gateway/pkg/server"
-	"github.com/tigera/es-gateway/pkg/version"
+	"github.com/projectcalico/calico/es-gateway/pkg/clients/elastic"
+	"github.com/projectcalico/calico/es-gateway/pkg/clients/kibana"
+	"github.com/projectcalico/calico/es-gateway/pkg/clients/kubernetes"
+	"github.com/projectcalico/calico/es-gateway/pkg/config"
+	"github.com/projectcalico/calico/es-gateway/pkg/proxy"
+	"github.com/projectcalico/calico/es-gateway/pkg/server"
+	"github.com/projectcalico/calico/es-gateway/pkg/version"
 )
 
 var (

@@ -1,7 +1,7 @@
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
 package config
 
-import "github.com/tigera/es-gateway/pkg/proxy"
+import "github.com/projectcalico/calico/es-gateway/pkg/proxy"
 
 var (
 	// ElasticsearchRoutes stores a listing of Routes that should be configured for the Elasticsearch Target.

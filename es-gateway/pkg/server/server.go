@@ -11,15 +11,15 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/es-gateway/pkg/cache"
-	"github.com/tigera/es-gateway/pkg/clients/elastic"
-	"github.com/tigera/es-gateway/pkg/clients/kibana"
-	"github.com/tigera/es-gateway/pkg/clients/kubernetes"
-	"github.com/tigera/es-gateway/pkg/handlers"
-	"github.com/tigera/es-gateway/pkg/handlers/health"
-	"github.com/tigera/es-gateway/pkg/metrics"
-	mid "github.com/tigera/es-gateway/pkg/middlewares"
-	"github.com/tigera/es-gateway/pkg/proxy"
+	"github.com/projectcalico/calico/es-gateway/pkg/cache"
+	"github.com/projectcalico/calico/es-gateway/pkg/clients/elastic"
+	"github.com/projectcalico/calico/es-gateway/pkg/clients/kibana"
+	"github.com/projectcalico/calico/es-gateway/pkg/clients/kubernetes"
+	"github.com/projectcalico/calico/es-gateway/pkg/handlers"
+	"github.com/projectcalico/calico/es-gateway/pkg/handlers/health"
+	"github.com/projectcalico/calico/es-gateway/pkg/metrics"
+	mid "github.com/projectcalico/calico/es-gateway/pkg/middlewares"
+	"github.com/projectcalico/calico/es-gateway/pkg/proxy"
 )
 
 const (

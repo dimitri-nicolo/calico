@@ -12,7 +12,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/watch"
 
-	"github.com/tigera/es-gateway/pkg/clients/kubernetes"
+	"github.com/projectcalico/calico/es-gateway/pkg/clients/kubernetes"
 )
 
 const (

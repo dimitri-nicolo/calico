@@ -9,10 +9,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
-	"github.com/tigera/es-gateway/pkg/handlers"
+	"github.com/projectcalico/calico/es-gateway/pkg/handlers"
 
-	"github.com/tigera/es-gateway/pkg/metrics"
-	"github.com/tigera/es-gateway/pkg/middlewares"
+	"github.com/projectcalico/calico/es-gateway/pkg/metrics"
+	"github.com/projectcalico/calico/es-gateway/pkg/middlewares"
 )
 
 type collectorMocker struct {

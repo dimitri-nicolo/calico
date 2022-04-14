@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/es-gateway/pkg/metrics"
-	"github.com/tigera/es-gateway/pkg/middlewares"
+	"github.com/projectcalico/calico/es-gateway/pkg/metrics"
+	"github.com/projectcalico/calico/es-gateway/pkg/middlewares"
 )
 
 func ElasticModifyResponseFunc(collector metrics.Collector) func(res *http.Response) error {

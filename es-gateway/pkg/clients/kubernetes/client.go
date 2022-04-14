@@ -16,7 +16,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	httpCommon "github.com/tigera/es-gateway/pkg/clients/internal/http"
+	httpCommon "github.com/projectcalico/calico/es-gateway/pkg/clients/internal/http"
 )
 
 // client is a wrapper for the K8s client.

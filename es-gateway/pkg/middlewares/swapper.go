@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/es-gateway/pkg/cache"
+	"github.com/projectcalico/calico/es-gateway/pkg/cache"
 )
 
 const (

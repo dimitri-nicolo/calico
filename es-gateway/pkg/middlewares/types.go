@@ -3,7 +3,7 @@ package middlewares
 
 import (
 	"github.com/gorilla/mux"
-	"github.com/tigera/es-gateway/pkg/cache"
+	"github.com/projectcalico/calico/es-gateway/pkg/cache"
 )
 
 type Type int

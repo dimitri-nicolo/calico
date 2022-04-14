@@ -5,12 +5,12 @@ import (
 	"crypto/tls"
 	"io/ioutil"
 
-	"github.com/tigera/es-gateway/pkg/metrics"
+	"github.com/projectcalico/calico/es-gateway/pkg/metrics"
 
-	"github.com/tigera/es-gateway/pkg/clients/elastic"
-	"github.com/tigera/es-gateway/pkg/clients/kibana"
-	"github.com/tigera/es-gateway/pkg/clients/kubernetes"
-	"github.com/tigera/es-gateway/pkg/proxy"
+	"github.com/projectcalico/calico/es-gateway/pkg/clients/elastic"
+	"github.com/projectcalico/calico/es-gateway/pkg/clients/kibana"
+	"github.com/projectcalico/calico/es-gateway/pkg/clients/kubernetes"
+	"github.com/projectcalico/calico/es-gateway/pkg/proxy"
 )
 
 // Option is a common format for New() options

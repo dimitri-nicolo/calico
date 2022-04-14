@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	"github.com/tigera/es-gateway/pkg/cache"
+	"github.com/projectcalico/calico/es-gateway/pkg/cache"
 
 	v1 "k8s.io/api/core/v1"
 )
