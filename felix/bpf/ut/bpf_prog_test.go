@@ -950,6 +950,7 @@ func (pkt *Packet) handleL4() error {
 	case *layers.UDP:
 		pkt.udp = v
 		pkt.length += 8
+		v.Length = uint16(pkt.length)
 		pkt.l4Protocol = layers.IPProtocolUDP
 		pkt.layers = append(pkt.layers, pkt.udp)
 	case *layers.TCP:
