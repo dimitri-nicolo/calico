@@ -147,7 +147,6 @@ var _ = Describe("FlowLog Reporter verification", func() {
 			cr.AddAggregator(ca, []string{"testFlowLog"})
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
-
 		})
 
 		It("reports the given metric update in form of a flowLog", func() {
@@ -207,10 +206,8 @@ var _ = Describe("FlowLog Reporter verification", func() {
 			expectedFP = extractFlowPolicies(muNoConn1Rule2DenyExpire)
 			expectFlowLogsInEventStream(newExpectedFlowLog(tuple3, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionDeny, FlowLogReporterSrc,
 				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, noService, nil, nil, expectedFP, expectedFlowExtras, noProcessInfo, noTcpStatsInfo))
-
 		})
 		It("aggregates metric updates for the duration of aggregation when reporting to flow logs", func() {
-
 			By("reporting the same MetricUpdate twice and expiring it immediately")
 			cr.Report(muConn1Rule1AllowUpdate)
 			cr.Report(muConn1Rule1AllowUpdate)
@@ -250,7 +247,6 @@ var _ = Describe("FlowLog Reporter verification", func() {
 		})
 
 		It("aggregates metric updates from multiple tuples", func() {
-
 			By("report different connections")
 			cr.Report(muConn1Rule1AllowUpdate)
 			cr.Report(muConn2Rule1AllowUpdate)
@@ -294,7 +290,6 @@ var _ = Describe("FlowLog Reporter verification", func() {
 					expectedPacketsIn1, expectedPacketsOut1, expectedBytesIn1, expectedBytesOut1, pvtMeta, pubMeta, noService, nil, nil, expectedFP1, expectedFlowExtras1, noProcessInfo, noTcpStatsInfo),
 				newExpectedFlowLog(tuple2, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
 					expectedPacketsIn2, expectedPacketsOut2, expectedBytesIn2, expectedBytesOut2, pvtMeta, pubMeta, noService, nil, nil, expectedFP2, expectedFlowExtras2, noProcessInfo, noTcpStatsInfo))
-
 		})
 		It("Doesn't process flows from Hostendoint to Hostendpoint", func() {
 			By("Reporting a update with host endpoint to host endpoint")
@@ -375,7 +370,6 @@ var _ = Describe("Flowlog Reporter health verification", func() {
 
 	mt := &mockTime{}
 	Context("Test with no errors", func() {
-
 		BeforeEach(func() {
 			dispatcherMap := map[string]LogDispatcher{}
 			dispatcher = &testFlowLogDispatcher{}
@@ -388,7 +382,8 @@ var _ = Describe("Flowlog Reporter health verification", func() {
 		It("verify health reporting.", func() {
 			By("checking the Readiness flag in health aggregator")
 			expectedReport := health.HealthReport{Live: true, Ready: true}
-			Eventually(func() health.HealthReport { return *hr.Summary() }, 15, 1).Should(Equal(expectedReport))
+			Eventually(func() bool { return *&hr.Summary().Live }, 15, 1).Should(Equal(expectedReport.Live))
+			Eventually(func() bool { return *&hr.Summary().Ready }, 15, 1).Should(Equal(expectedReport.Ready))
 		})
 	})
 	Context("Test with dispatcher that fails to initialize", func() {
@@ -404,7 +399,8 @@ var _ = Describe("Flowlog Reporter health verification", func() {
 		It("verify health reporting.", func() {
 			By("checking the Readiness flag in health aggregator")
 			expectedReport := health.HealthReport{Live: true, Ready: false}
-			Eventually(func() health.HealthReport { return *hr.Summary() }, 15, 1).Should(Equal(expectedReport))
+			Eventually(func() bool { return *&hr.Summary().Live }, 15, 1).Should(Equal(expectedReport.Live))
+			Eventually(func() bool { return *&hr.Summary().Ready }, 15, 1).Should(Equal(expectedReport.Ready))
 		})
 	})
 })
@@ -534,7 +530,7 @@ func (m *dispatcherMock) Initialize() error {
 func (m *dispatcherMock) Dispatch(logSlice interface{}) error {
 	m.iteration++
 	log.Infof("Mocked dispatcher was called %d times ", m.iteration)
-	var logs = logSlice.([]*FlowLog)
+	logs := logSlice.([]*FlowLog)
 	log.Infof("Dispatching num=%d of logs", len(logs))
 	if m.iteration <= m.maxIteration {
 		m.collector <- logs
@@ -574,40 +570,40 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 	Context("Simulate flow logs being stalled in the pipeline", func() {
 		It("increments with 1 level 2 times and decrements to the initial level", func() {
 			// mock log offset to mark that the log pipeline is stalled for two iterations and then rectifies
-			var mockLogOffset = &logOffsetMock{}
+			mockLogOffset := &logOffsetMock{}
 			mockLogOffset.On("Read").Return(Offsets{})
 			mockLogOffset.On("IsBehind").Return(true).Times(2)
 			mockLogOffset.On("IsBehind").Return(false)
 			mockLogOffset.On("GetIncreaseFactor").Return(1)
 
 			// mock ticker
-			var ticker = &mockTicker{}
+			ticker := &mockTicker{}
 			ticker.tick = make(chan time.Time)
 			ticker.stop = make(chan bool)
 			defer ticker.Stop()
 
 			// mock log dispatcher
-			var cd = &dispatcherMock{}
+			cd := &dispatcherMock{}
 			cd.maxIteration = 4
 			defer cd.Close()
-			var ds = map[string]LogDispatcher{"mock": cd}
+			ds := map[string]LogDispatcher{"mock": cd}
 
 			// add a flow log aggregator  to a reporter with a mocked log offset
-			var cr = newFlowLogsReporterTest(ds, nil, false, ticker, mockLogOffset)
-			var ca = NewFlowLogAggregator()
+			cr := newFlowLogsReporterTest(ds, nil, false, ticker, mockLogOffset)
+			ca := NewFlowLogAggregator()
 			cr.AddAggregator(ca, []string{"mock"})
 
 			By("Starting the log reporter")
 			cr.Start()
 
-			var expectedLevel = 0
+			expectedLevel := 0
 			// Feed reporter with log with two iterations
-			var i = 0
+			i := 0
 			for ; i < 2; i++ {
 				By(fmt.Sprintf("Feeding metric updates to the reporter as batch %d", i+1))
 				cr.Report(muNoConn1Rule1AllowUpdate)
 				ticker.invokeTick(time.Now())
-				var logs = <-cd.collector
+				logs := <-cd.collector
 				Expect(len(logs)).To(Equal(1))
 				Expect(int(ca.GetCurrentAggregationLevel())).To(Equal(expectedLevel + 1))
 				expectedLevel++
@@ -618,47 +614,47 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 				By(fmt.Sprintf("Feeding metric updates to the reporter as batch %d", i+1))
 				cr.Report(muNoConn1Rule1AllowUpdate)
 				ticker.invokeTick(time.Now())
-				var logs = <-cd.collector
+				logs := <-cd.collector
 				Expect(len(logs)).To(Equal(1))
 				Expect(ca.GetCurrentAggregationLevel()).To(Equal(FlowDefault))
 			}
 		})
 
 		It("keeps the same aggregation level if the pipeline is not stalled", func() {
-			var mockLogOffset = &logOffsetMock{}
+			mockLogOffset := &logOffsetMock{}
 			mockLogOffset.On("Read").Return(Offsets{})
 			mockLogOffset.On("IsBehind").Return(false)
 			mockLogOffset.On("GetIncreaseFactor").Return(1)
 
 			// mock ticker
-			var ticker = &mockTicker{}
+			ticker := &mockTicker{}
 			ticker.tick = make(chan time.Time)
 			ticker.stop = make(chan bool)
 			defer ticker.Stop()
 
 			// mock log dispatcher
-			var cd = &dispatcherMock{}
+			cd := &dispatcherMock{}
 			cd.maxIteration = 4
 			defer cd.Close()
-			var ds = map[string]LogDispatcher{"mock": cd}
+			ds := map[string]LogDispatcher{"mock": cd}
 
 			// add a flow log aggregator  to a reporter with a mocked log offset
-			var cr = newFlowLogsReporterTest(ds, nil, false, ticker, mockLogOffset)
-			var ca = NewFlowLogAggregator()
+			cr := newFlowLogsReporterTest(ds, nil, false, ticker, mockLogOffset)
+			ca := NewFlowLogAggregator()
 			ca.AggregateOver(FlowPrefixName)
 			cr.AddAggregator(ca, []string{"mock"})
 
 			By("Starting the log reporter")
 			cr.Start()
 
-			var expectedLevel = 0
+			expectedLevel := 0
 			// Feed reporter with log with four iterations
 
 			for i := 0; i < 4; i++ {
 				By(fmt.Sprintf("Feeding metric updates to the reporter as batch %d", i+1))
 				cr.Report(muNoConn1Rule1AllowUpdate)
 				ticker.invokeTick(time.Now())
-				var logs = <-cd.collector
+				logs := <-cd.collector
 				Expect(len(logs)).To(Equal(1))
 				Expect(ca.GetCurrentAggregationLevel()).To(Equal(FlowPrefixName))
 				expectedLevel++
@@ -716,26 +712,26 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 		})*/
 
 		It("increases only to the max level", func() {
-			var mockLogOffset = &logOffsetMock{}
+			mockLogOffset := &logOffsetMock{}
 			mockLogOffset.On("Read").Return(Offsets{})
 			mockLogOffset.On("IsBehind").Return(true)
 			mockLogOffset.On("GetIncreaseFactor").Return(1)
 
 			// mock ticker
-			var ticker = &mockTicker{}
+			ticker := &mockTicker{}
 			ticker.tick = make(chan time.Time)
 			ticker.stop = make(chan bool)
 			defer ticker.Stop()
 
 			// mock log dispatcher
-			var cd = &dispatcherMock{}
+			cd := &dispatcherMock{}
 			cd.maxIteration = 5
 			defer cd.Close()
-			var ds = map[string]LogDispatcher{"mock": cd}
+			ds := map[string]LogDispatcher{"mock": cd}
 
 			// add a flow log aggregator  to a reporter with a mocked log offset
-			var cr = newFlowLogsReporterTest(ds, nil, false, ticker, mockLogOffset)
-			var ca = NewFlowLogAggregator()
+			cr := newFlowLogsReporterTest(ds, nil, false, ticker, mockLogOffset)
+			ca := NewFlowLogAggregator()
 			ca.AggregateOver(FlowPrefixName)
 			cr.AddAggregator(ca, []string{"mock"})
 
@@ -748,13 +744,12 @@ var _ = Describe("FlowLogsReporter should adjust aggregation levels", func() {
 				By(fmt.Sprintf("Feeding metric updates to the reporter as batch %d", i+1))
 				cr.Report(muNoConn1Rule1AllowUpdate)
 				ticker.invokeTick(time.Now())
-				var logs = <-cd.collector
+				logs := <-cd.collector
 				Expect(len(logs)).To(Equal(1))
 			}
 
 			Expect(ca.GetCurrentAggregationLevel()).To(Equal(MaxAggregationLevel))
 		})
-
 	})
 })
 
