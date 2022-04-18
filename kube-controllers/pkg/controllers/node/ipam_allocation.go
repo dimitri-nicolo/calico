@@ -73,6 +73,7 @@ type allocation struct {
 	handle         string
 	attrs          map[string]string
 	sequenceNumber uint64
+	block          string
 
 	// The Kubernetes node name hosting this allocation.
 	knode string
@@ -163,6 +164,10 @@ func (a *allocation) markValid() {
 
 func (a *allocation) isConfirmedLeak() bool {
 	return a.confirmedLeak
+}
+
+func (a *allocation) isCandidateLeak() bool {
+	return a.leakedAt != nil && !a.confirmedLeak
 }
 
 func (a *allocation) isPodIP() bool {
