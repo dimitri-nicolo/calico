@@ -3,8 +3,8 @@ package node
 import (
 	"net"
 
-	v3 "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
 	log "github.com/sirupsen/logrus"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 )
