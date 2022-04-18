@@ -259,8 +259,8 @@ ALL_BPF_PROGS=$(BPF_GPL_O_FILES) $(BPF_APACHE_O_FILES)
 .PHONY: build-bpf clean-bpf
 build-bpf:
 	$(MAKE) register ARCH=$(ARCH)
-	$(DOCKER_GO_BUILD) sh -c "make -j -C bpf-apache all && \
-	                          make -j -C bpf-gpl all ut-objs ARCH=$(ARCH)"
+	$(DOCKER_GO_BUILD) sh -c "make -j 16 -C bpf-apache all && \
+	                          make -j 16 -C bpf-gpl all ut-objs ARCH=$(ARCH)"
 
 clean-bpf:
 	rm -f bpf-gpl/*.d bpf-apache/*.d
