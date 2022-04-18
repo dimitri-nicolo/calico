@@ -12,22 +12,6 @@ Learn how to configure the calicoctl CLI tool for your Kubernetes cluster.
 
 The `calicoctl` CLI tool provides helpful administrative commands for interacting with a {{site.prodname}} cluster.
 
-### Concepts
-
-#### calicoctl vs kubectl
-
-In previous releases, calicoctl has been required to manage Calico API resources in the `projectcalico.org/v3` API group. The calicoctl CLI tool provides important validation and defaulting on these APIs. 
-
-In newer releases, the Calico API server performs that defaulting and validation server-side, exposing the same API semantics without a dependency on calicoctl. For this reason, we recommend 
-[installing the Calico API server]({{site.baseurl}}/maintenance/install-apiserver) and using `kubectl` instead of `calicoctl` for most operations.
-
-calicoctl is still required for the following subcommands:
-
-- [calicoctl node]({{site.baseurl}}/reference/calicoctl/node)
-- [calicoctl ipam]({{site.baseurl}}/reference/calicoctl/ipam)
-- [calicoctl convert]({{site.baseurl}}/reference/calicoctl/convert)
-- [calicoctl version]({{site.baseurl}}/reference/calicoctl/version)
-
 #### Default configuration
 
 By default, calicoctl will attempt to read from the Kubernetes API using the default kubeconfig located at `$(HOME)/.kube/config`.
