@@ -2,9 +2,6 @@ include ../metadata.mk
 
 PACKAGE_NAME    ?= github.com/projectcalico/calico/lma
 
-RELEASE_BRANCH_PREFIX ?=release-calient
-DEV_TAG_SUFFIX        ?=calient-0.dev
-
 ##############################################################################
 # Include ../lib.Makefile before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
