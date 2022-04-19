@@ -222,8 +222,6 @@ section:
       path: /reference/typha/overview
     - title: Configuration
       path: /reference/typha/configuration
-  - title: Dikastes for service mesh
-    path: /reference/dikastes/configuration
 - title: Configuration on public clouds
   path: /reference/public-cloud/
   section:

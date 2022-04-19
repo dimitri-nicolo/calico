@@ -60,9 +60,7 @@ func newClient() clientv3.Interface {
 // - "allow-nginx": egress policy that allows the porter pod to reach the nginx pods on TCP port 80
 // - "allow-client": ingress policy that allows the client pods to reach the porter pods on TCP port 80
 var _ = Describe("Windows policy test", func() {
-	var (
-		porter, client, clientB, nginx, nginxB string
-	)
+	var porter, client, clientB, nginx, nginxB string
 
 	BeforeEach(func() {
 		Skip("lmm(temporarily skip failing policy tests)")

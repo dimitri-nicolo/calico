@@ -2,8 +2,6 @@ title: "Network policy"
 path: /policy/
 order: 3
 section:
-- title: Adopt zero trust network model for security
-  path: /security/adopt-zero-trust
 - title: Policy best practices
   path: /security/policy-best-practices  
 - title: Tiered network policy
@@ -100,15 +98,6 @@ section:
     path: /security/tutorials/protect-hosts
   - title: Apply policy to host forwarded traffic
     path: /security/host-forwarded-traffic
-- title: Policy for Istio
-  path: /security/istio
-  section:
-  - title: Enforce network policy for Istio
-    path: /security/app-layer-policy
-  - title: Use HTTP methods and paths in policy rules
-    path: /security/http-methods
-  - title: Enforce network policy using Istio tutorial
-    path: /security/tutorials/app-layer-policy/enforce-policy-istio
 - title: Policy for extreme traffic
   path: /security/extreme-traffic
   section:

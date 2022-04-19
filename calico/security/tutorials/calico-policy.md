@@ -67,7 +67,7 @@ It returns the HTML of the google.com home page.
 
 ### 2. Lock down all traffic
 
-We will begin by using a default deny [Global Calico Network Policy]({{ site.baseurl }}/reference/resources/globalnetworkpolicy) (which you can only do using Calico) that will help us adopt best practices in using a [zero trust network model]({{ site.baseurl }}/security/adopt-zero-trust) to secure our workloads. Note that Global Calico Network Policies are not namespaced and effect all pods that match the policy selector. In contrast, Kubernetes Network Policies are namespaced, so you would need to create a default deny policy per namespace to achieve the same effect. Note that to simplify this tutorial we exclude pods in the kube-system namespace, so we don't have to consider the policies required to keep Kubernetes itself running smoothly when we apply our default deny.
+We will begin by using a default deny [Global Calico Network Policy]({{ site.baseurl }}/reference/resources/globalnetworkpolicy) (which you can only do using Calico) that will help us adopt best practices in using a zero trust network model to secure our workloads. Note that Global Calico Network Policies are not namespaced and effect all pods that match the policy selector. In contrast, Kubernetes Network Policies are namespaced, so you would need to create a default deny policy per namespace to achieve the same effect. Note that to simplify this tutorial we exclude pods in the kube-system namespace, so we don't have to consider the policies required to keep Kubernetes itself running smoothly when we apply our default deny.
 
 ```bash
 kubectl create -f - <<EOF
