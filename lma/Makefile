@@ -1,7 +1,6 @@
 include ../metadata.mk
 
 PACKAGE_NAME    ?= github.com/projectcalico/calico/lma
-LOCAL_CHECKS     = mod-download
 
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
@@ -34,8 +33,6 @@ MOCKERY_FILE_PATHS= \
 #	pkg/elastic/Client
 
 ##############################################################################
-ELASTIC_VERSION ?= 7.16.2
-
 TOP_SRC_DIRS     = pkg
 TEST_DIRS       ?= $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*_test.go \
                         -exec dirname {} \\; | sort | uniq")
@@ -57,23 +54,6 @@ ut: report-dir run-elastic
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 	-docker rm -f tigera-elastic
 
-## Run elasticsearch as a container (tigera-elastic)
-run-elastic: stop-elastic
-	# Run ES on Docker.
-	docker run --detach \
-	--net=host \
-	--name=tigera-elastic \
-	-e "discovery.type=single-node" \
-	docker.elastic.co/elasticsearch/elasticsearch:$(ELASTIC_VERSION)
-
-	# Wait until ES is accepting requests.
-	@while ! docker exec tigera-elastic curl localhost:9200 2> /dev/null; do echo "Waiting for Elasticsearch to come up..."; sleep 2; done
-
-
-## Stop elasticsearch with name tigera-elastic
-stop-elastic:
-	-docker rm -f tigera-elastic
-
 ###############################################################################
 # CI
 ###############################################################################
@@ -82,12 +62,3 @@ stop-elastic:
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ci: static-checks ut
-
-###############################################################################
-# Utils
-###############################################################################
-# this is not a linked target, available for convenience.
-.PHONY: tidy
-## 'tidy' go modules.
-tidy:
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod tidy'
