@@ -4,13 +4,23 @@ description: Sample configuration files for kdd.
 canonical_url: '/maintenance/clis/calicoctl/configure/kdd'
 ---
 
-## Default configuration
+### Big picture
+
+Learn how to configure the calicoctl CLI tool for your Kubernetes cluster.
+
+### Value
+
+The `calicoctl` CLI tool provides helpful administrative commands for interacting with a {{site.prodname}} cluster.
+
+#### Default configuration
 
 By default, calicoctl will attempt to read from the Kubernetes API using the default kubeconfig located at `$(HOME)/.kube/config`.
 
 If the default kubeconfig does not exist, or you would like to specify alternative API access information, you can do so using the following configuration options.
 
-## Complete list of Kubernetes API connection configuration
+### How to
+
+#### Complete list of Kubernetes API connection configuration
 
 | Configuration file option | Environment variable | Description                                                                                               | Schema
 | --------------------------|----------------------| ----------------------------------------------------------------------------------------------------------|
@@ -28,9 +38,6 @@ If the default kubeconfig does not exist, or you would like to specify alternati
 > This is useful if the non-prefixed names clash with existing environment
 > variables defined on your system.
 {: .alert .alert-info}
-
-
-## Examples
 
 #### Kubernetes command line
 
@@ -74,7 +81,7 @@ calicoctl get --context main workloadendpoints
 calicoctl get --context auxy workloadendpoints
 ```
 
-### Checking the configuration
+#### Checking the configuration
 
 Here is a simple command to check that the installation and configuration is
 correct.
