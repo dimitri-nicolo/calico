@@ -1,0 +1,338 @@
+{
+  "aggregations": {
+    "flog_buckets": {
+      "buckets": [
+        {
+          "dest_labels": {
+            "by_kvpair": {
+              "buckets": [
+                {
+                  "doc_count": 3,
+                  "key": "apiserver=true"
+                },
+                {
+                  "doc_count": 3,
+                  "key": "k8s-app=cnx-apiserver"
+                },
+                {
+                  "doc_count": 3,
+                  "key": "pod-template-hash=65954bfd46"
+                }
+              ],
+              "doc_count_error_upper_bound": 0,
+              "sum_other_doc_count": 0
+            },
+            "doc_count": 3
+          },
+          "doc_count": 3,
+          "key": {
+            "flow_impacted": true,
+            "action": "allow",
+            "dest_name": "cnx-apiserver-65954bfd46-*",
+            "dest_namespace": "kube-system",
+            "dest_type": "wep",
+            "reporter": "src",
+            "source_name": "cnx-apiclient-65954bfd46-*",
+            "source_namespace": "compliance",
+            "source_type": "wep"
+          },
+          "policies": {
+            "by_tiered_policy": {
+              "buckets": [
+                {
+                  "doc_count": 3,
+                  "key": "0|allow-cnx|kube-system/allow-cnx.cnx-apiserver-access|allow|0"
+                }
+              ],
+              "doc_count_error_upper_bound": 0,
+              "sum_other_doc_count": 0
+            },
+            "doc_count": 3
+          },
+          "source_labels": {
+            "by_kvpair": {
+              "buckets": [],
+              "doc_count_error_upper_bound": 0,
+              "sum_other_doc_count": 0
+            },
+            "doc_count": 3
+          },
+          "sum_bytes_in": {
+            "value": 10000
+          },
+          "sum_bytes_out": {
+            "value": 10000
+          },
+          "sum_http_requests_allowed_in": {
+            "value": 100
+          },
+          "sum_http_requests_denied_in": {
+            "value": 100
+          },
+          "sum_num_flows_completed": {
+            "value": 100
+          },
+          "sum_num_flows_started": {
+            "value": 100
+          },
+          "sum_packets_in": {
+            "value": 100
+          },
+          "sum_packets_out": {
+            "value": 100
+          }
+        },
+        {
+          "dest_labels": {
+            "by_kvpair": {
+              "buckets": [
+                {
+                  "doc_count": 3,
+                  "key": "apiserver=true"
+                },
+                {
+                  "doc_count": 3,
+                  "key": "k8s-app=cnx-apiserver"
+                },
+                {
+                  "doc_count": 3,
+                  "key": "pod-template-hash=65954bfd46"
+                }
+              ],
+              "doc_count_error_upper_bound": 0,
+              "sum_other_doc_count": 0
+            },
+            "doc_count": 3
+          },
+          "doc_count": 3,
+          "key": {
+            "flow_impacted": true,
+            "action": "allow",
+            "dest_name": "cnx-apiserver-65954bfd46-*",
+            "dest_namespace": "kube-system",
+            "dest_type": "wep",
+            "reporter": "dst",
+            "source_name": "cnx-apiclient-65954bfd46-*",
+            "source_namespace": "compliance",
+            "source_type": "wep",
+            "source_action": "unknown"
+          },
+          "policies": {
+            "by_tiered_policy": {
+              "buckets": [
+                {
+                  "doc_count": 3,
+                  "key": "0|compliance|compliance/compiliane.allow|allow|0"
+                }
+              ],
+              "doc_count_error_upper_bound": 0,
+              "sum_other_doc_count": 0
+            },
+            "doc_count": 3
+          },
+          "source_labels": {
+            "by_kvpair": {
+              "buckets": [],
+              "doc_count_error_upper_bound": 0,
+              "sum_other_doc_count": 0
+            },
+            "doc_count": 3
+          },
+          "sum_bytes_in": {
+            "value": 5000
+          },
+          "sum_bytes_out": {
+            "value": 5000
+          },
+          "sum_http_requests_allowed_in": {
+            "value": 50
+          },
+          "sum_http_requests_denied_in": {
+            "value": 50
+          },
+          "sum_num_flows_completed": {
+            "value": 50
+          },
+          "sum_num_flows_started": {
+            "value": 50
+          },
+          "sum_packets_in": {
+            "value": 50
+          },
+          "sum_packets_out": {
+            "value": 50
+          }
+        },
+        {
+          "dest_labels": {
+            "by_kvpair": {
+              "buckets": [
+                {
+                  "doc_count": 3,
+                  "key": "apiserver=true"
+                },
+                {
+                  "doc_count": 3,
+                  "key": "k8s-app=cnx-apiserver"
+                },
+                {
+                  "doc_count": 3,
+                  "key": "pod-template-hash=65954bfd46"
+                }
+              ],
+              "doc_count_error_upper_bound": 0,
+              "sum_other_doc_count": 0
+            },
+            "doc_count": 3
+          },
+          "doc_count": 3,
+          "key": {
+            "flow_impacted": true,
+            "action": "deny",
+            "dest_name": "cnx-apiserver-65954bfd46-*",
+            "dest_namespace": "kube-system",
+            "dest_type": "wep",
+            "reporter": "dst",
+            "source_name": "cnx-apiclient-65954bfd46-*",
+            "source_namespace": "compliance",
+            "source_type": "wep",
+            "source_action": "allow"
+          },
+          "policies": {
+            "by_tiered_policy": {
+              "buckets": [
+                {
+                  "doc_count": 3,
+                  "key": "0|compliance|compliance/compiliane.deny|deny|-1"
+                }
+              ],
+              "doc_count_error_upper_bound": 0,
+              "sum_other_doc_count": 0
+            },
+            "doc_count": 3
+          },
+          "source_labels": {
+            "by_kvpair": {
+              "buckets": [],
+              "doc_count_error_upper_bound": 0,
+              "sum_other_doc_count": 0
+            },
+            "doc_count": 3
+          },
+          "sum_bytes_in": {
+            "value": 5000
+          },
+          "sum_bytes_out": {
+            "value": 5000
+          },
+          "sum_http_requests_allowed_in": {
+            "value": 50
+          },
+          "sum_http_requests_denied_in": {
+            "value": 50
+          },
+          "sum_num_flows_completed": {
+            "value": 50
+          },
+          "sum_num_flows_started": {
+            "value": 50
+          },
+          "sum_packets_in": {
+            "value": 50
+          },
+          "sum_packets_out": {
+            "value": 50
+          }
+        }
+      ]
+    }
+  },
+  "timed_out": false,
+  "took": 18,
+  "aggregations_preview": {
+    "flog_buckets": {
+      "buckets": [
+        {
+          "dest_labels": {
+            "by_kvpair": {
+              "buckets": [
+                {
+                  "doc_count": 3,
+                  "key": "apiserver=true"
+                },
+                {
+                  "doc_count": 3,
+                  "key": "k8s-app=cnx-apiserver"
+                },
+                {
+                  "doc_count": 3,
+                  "key": "pod-template-hash=65954bfd46"
+                }
+              ],
+              "doc_count_error_upper_bound": 0,
+              "sum_other_doc_count": 0
+            },
+            "doc_count": 3
+          },
+          "doc_count": 3,
+          "key": {
+            "flow_impacted": true,
+            "action": "allow",
+            "dest_name": "cnx-apiserver-65954bfd46-*",
+            "dest_namespace": "kube-system",
+            "dest_type": "wep",
+            "reporter": "src",
+            "source_name": "cnx-apiclient-65954bfd46-*",
+            "source_namespace": "compliance",
+            "source_type": "wep"
+          },
+          "policies": {
+            "by_tiered_policy": {
+              "buckets": [
+                {
+                  "doc_count": 3,
+                  "key": "0|allow-cnx|kube-system/allow-cnx.cnx-apiserver-access|allow|0"
+                }
+              ],
+              "doc_count_error_upper_bound": 0,
+              "sum_other_doc_count": 0
+            },
+            "doc_count": 3
+          },
+          "source_labels": {
+            "by_kvpair": {
+              "buckets": [],
+              "doc_count_error_upper_bound": 0,
+              "sum_other_doc_count": 0
+            },
+            "doc_count": 3
+          },
+          "sum_bytes_in": {
+            "value": 6000
+          },
+          "sum_bytes_out": {
+            "value": 6000
+          },
+          "sum_http_requests_allowed_in": {
+            "value": 60
+          },
+          "sum_http_requests_denied_in": {
+            "value": 60
+          },
+          "sum_num_flows_completed": {
+            "value": 60
+          },
+          "sum_num_flows_started": {
+            "value": 60
+          },
+          "sum_packets_in": {
+            "value": 60
+          },
+          "sum_packets_out": {
+            "value": 60
+          }
+        },
+      ]
+    }
+  }
+}
