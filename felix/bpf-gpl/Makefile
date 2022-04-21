@@ -114,6 +114,10 @@ bin/tcp_%stats.o: tcp_%stats.ll | bin
 	$(LINK)
 bin/syscall_%kprobe.o: syscall_%kprobe.ll | bin
 	$(LINK)
+bin/connect_time_%v4_co-re.o: connect_time_%v4.ll | bin
+	$(LINK)
+bin/connect_time_%v6_co-re.o: connect_time_%v6.ll | bin
+	$(LINK)
 ut/%.o: ut/%.ll
 	$(LINK)
 

@@ -1273,3 +1273,26 @@ help:
 	@echo "CALICO_BUILD:		$(CALICO_BUILD)"
 	@echo "-----------------------------------------------------------"
 
+###############################################################################
+# Common functions for launching a local Elastic instance.
+###############################################################################
+ELASTIC_VERSION ?= 7.16.2
+
+## Run elasticsearch as a container (tigera-elastic)
+.PHONY: run-elastic
+run-elastic: stop-elastic
+	# Run ES on Docker.
+	docker run --detach \
+	--net=host \
+	--name=tigera-elastic \
+	-e "discovery.type=single-node" \
+	docker.elastic.co/elasticsearch/elasticsearch:$(ELASTIC_VERSION)
+
+	# Wait until ES is accepting requests.
+	@while ! docker exec tigera-elastic curl localhost:9200 2> /dev/null; do echo "Waiting for Elasticsearch to come up..."; sleep 2; done
+
+## Stop elasticsearch with name tigera-elastic
+.PHONY: stop-elastic
+stop-elastic:
+	-docker rm -f tigera-elastic
+
