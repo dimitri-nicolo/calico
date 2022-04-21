@@ -1,0 +1,8 @@
+{"index":{"_index":"tigera_secure_ee_events.test-cluster."}}
+{"description":"test alert: sample-test","origin":"sample-test","record":{"source_name_aggr":"alertmanager-calico-node-alertmanager-*"},"severity":100,"source_name_aggr":"alertmanager-calico-node-alertmanager-*","time":1615857005,"type":"global_alert"}
+{"index":{"_index":"tigera_secure_ee_events.test-cluster."}}
+{"description":"test alert: sample-test","origin":"sample-test","record":{"source_name_aggr":"calico-prometheus-operator-7dd764bcfd-*"},"severity":100,"source_name_aggr":"calico-prometheus-operator-7dd764bcfd-*","time":1615857005,"type":"global_alert"}
+{"index":{"_index":"tigera_secure_ee_events.test-cluster."}}
+{"description":"test alert: sample-test","origin":"sample-test","record":{"source_name_aggr":"compliance-benchmarker-*"},"severity":100,"source_name_aggr":"compliance-benchmarker-*","time":1615857005,"type":"global_alert"}
+{"index":{"_index":"tigera_secure_ee_events.test-cluster."}}
+{"description":"test alert: sample-test","origin":"sample-test","record":{"source_name_aggr":"compliance-controller-57df86b7d-*"},"severity":100,"source_name_aggr":"compliance-controller-57df86b7d-*","time":1615857005,"type":"global_alert"}

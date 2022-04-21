@@ -1,0 +1,198 @@
+[
+  {
+    "start_time": 1570193570,
+    "end_time": 1570193881,
+    "source_ip": "1.2.3.4",
+    "source_name": "-",
+    "source_name_aggr": "compliance-benchmarker-*",
+    "source_namespace": "calico-monitoring",
+    "source_port": null,
+    "source_type": "wep",
+    "source_labels": {
+      "labels": [
+        "k8s-app=compliance-benchmarker",
+        "pod-template-generation=1",
+        "controller-revision-hash=796794dfb7"
+      ]
+    },
+    "dest_ip": null,
+    "dest_name": "-",
+    "dest_name_aggr": "pvt",
+    "dest_namespace": "-",
+    "dest_port": 6443,
+    "dest_type": "net",
+    "dest_labels": {
+      "labels": []
+    },
+    "proto": "tcp",
+    "action": "allow",
+    "reporter": "src",
+    "policies": {
+      "all_policies": [
+        "0|__PROFILE__|__PROFILE__.kns.calico-monitoring|allow"
+      ]
+    },
+    "bytes_in": 24494,
+    "bytes_out": 9300,
+    "num_flows": 1,
+    "num_flows_started": 0,
+    "num_flows_completed": 0,
+    "packets_in": 124,
+    "packets_out": 124,
+    "http_requests_allowed_in": 0,
+    "http_requests_denied_in": 0,
+    "original_source_ips": null,
+    "num_original_source_ips": 0,
+    "host": "tigera-fluentd-node-6czxj"
+  },
+  {
+    "start_time": 1570193570,
+    "end_time": 1570193881,
+    "source_ip": null,
+    "source_name": "-",
+    "source_name_aggr": "pvt",
+    "source_namespace": "-",
+    "source_port": null,
+    "source_type": "net",
+    "source_labels": {
+      "labels": []
+    },
+    "dest_ip": null,
+    "dest_name": "-",
+    "dest_name_aggr": "pvt",
+    "dest_namespace": "-",
+    "dest_port": 5601,
+    "dest_type": "net",
+    "dest_labels": {
+      "labels": []
+    },
+    "proto": "tcp",
+    "action": "allow",
+    "reporter": "dst",
+    "policies": {
+      "all_policies": []
+    },
+    "bytes_in": 0,
+    "bytes_out": 0,
+    "num_flows": 1,
+    "num_flows_started": 0,
+    "num_flows_completed": 1,
+    "packets_in": 0,
+    "packets_out": 0,
+    "http_requests_allowed_in": 0,
+    "http_requests_denied_in": 0,
+    "original_source_ips": null,
+    "num_original_source_ips": 0,
+    "host": "tigera-fluentd-node-6czxj"
+  },
+  {
+    "start_time": 1570193570,
+    "end_time": 1570193881,
+    "source_ip": null,
+    "source_name": "-",
+    "source_name_aggr": "tigera-fluentd-node-*",
+    "source_namespace": "calico-monitoring",
+    "source_port": null,
+    "source_type": "wep",
+    "source_labels": {
+      "labels": [
+        "pod-template-generation=1",
+        "controller-revision-hash=59dfd5df54",
+        "k8s-app=tigera-fluentd-node"
+      ]
+    },
+    "dest_ip": null,
+    "dest_name": "-",
+    "dest_name_aggr": "tigera-elasticsearch-es-z27mgl5tvk",
+    "dest_namespace": "calico-monitoring",
+    "dest_port": 9200,
+    "dest_type": "wep",
+    "dest_labels": {
+      "labels": [
+        "elasticsearch.k8s.elastic.co/node-ingest=true",
+        "elasticsearch.k8s.elastic.co/node-ml=true",
+        "common.k8s.elastic.co/template-hash=101097498",
+        "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch",
+        "elasticsearch.k8s.elastic.co/node-data=true",
+        "elasticsearch.k8s.elastic.co/node-master=true",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
+        "common.k8s.elastic.co/type=elasticsearch"
+      ]
+    },
+    "proto": "tcp",
+    "action": "allow",
+    "reporter": "src",
+    "policies": {
+      "all_policies": [
+        "0|__PROFILE__|__PROFILE__.kns.calico-monitoring|allow"
+      ]
+    },
+    "bytes_in": 255336,
+    "bytes_out": 866815,
+    "num_flows": 55,
+    "num_flows_started": 55,
+    "num_flows_completed": 55,
+    "packets_in": 445,
+    "packets_out": 708,
+    "http_requests_allowed_in": 0,
+    "http_requests_denied_in": 0,
+    "original_source_ips": null,
+    "num_original_source_ips": 0,
+    "host": "tigera-fluentd-node-6czxj"
+  },
+  {
+    "start_time": 1570193570,
+    "end_time": 1570193881,
+    "source_ip": null,
+    "source_name": "-",
+    "source_name_aggr": "compliance-benchmarker-*",
+    "source_namespace": "calico-monitoring",
+    "source_port": null,
+    "source_type": "wep",
+    "source_labels": {
+      "labels": [
+        "k8s-app=compliance-benchmarker",
+        "pod-template-generation=1",
+        "controller-revision-hash=796794dfb7"
+      ]
+    },
+    "dest_ip": null,
+    "dest_name": "-",
+    "dest_name_aggr": "tigera-elasticsearch-es-z27mgl5tvk",
+    "dest_namespace": "calico-monitoring",
+    "dest_port": 9200,
+    "dest_type": "wep",
+    "dest_labels": {
+      "labels": [
+        "elasticsearch.k8s.elastic.co/node-data=true",
+        "elasticsearch.k8s.elastic.co/node-master=true",
+        "common.k8s.elastic.co/type=elasticsearch",
+        "elasticsearch.k8s.elastic.co/node-ingest=true",
+        "elasticsearch.k8s.elastic.co/version=7.6.2",
+        "elasticsearch.k8s.elastic.co/node-ml=true",
+        "common.k8s.elastic.co/template-hash=101097498",
+        "elasticsearch.k8s.elastic.co/cluster-name=tigera-elasticsearch"
+      ]
+    },
+    "proto": "tcp",
+    "action": "allow",
+    "reporter": "src",
+    "policies": {
+      "all_policies": [
+        "0|__PROFILE__|__PROFILE__.kns.calico-monitoring|allow"
+      ]
+    },
+    "bytes_in": 1620,
+    "bytes_out": 2755,
+    "num_flows": 1,
+    "num_flows_started": 0,
+    "num_flows_completed": 0,
+    "packets_in": 20,
+    "packets_out": 25,
+    "http_requests_allowed_in": 0,
+    "http_requests_denied_in": 0,
+    "original_source_ips": null,
+    "num_original_source_ips": 0,
+    "host": "tigera-fluentd-node-6czxj"
+  }
+]
