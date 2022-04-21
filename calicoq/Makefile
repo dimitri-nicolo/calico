@@ -16,9 +16,6 @@ VERSION_FLAGS=-X $(PACKAGE_NAME)/calicoq/commands.VERSION=$(GIT_VERSION) \
 	-X $(PACKAGE_NAME)/calicoq/commands.GIT_DESCRIPTION=$(GIT_DESCRIPTION) \
 	-X $(PACKAGE_NAME)/calicoq/commands.GIT_REVISION=$(GIT_VERSION)
 
-BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
-RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
-
 # Create an extended go-build image with docker binary installed for use with st target
 TOOLING_IMAGE?=calico/go-build-with-docker
 TOOLING_IMAGE_VERSION?=v0.24
@@ -57,16 +54,11 @@ clean-image:
 
 build: $(BINARY)
 $(BINARY): $(SRC_FILES)
-ifndef RELEASE_BUILD
-	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
-else
-	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
-endif
 	mkdir -p .go-pkg-cache bin $(GOMOD_CACHE)
 
 	# Create the binary
 	$(DOCKER_RUN) $(CALICO_BUILD) \
-	   sh -c '$(GIT_CONFIG_SSH) go build -v $(LDFLAGS) -o "$(BINARY)" "./calicoq/calicoq.go"'
+	   sh -c '$(GIT_CONFIG_SSH) go build -v -ldflags "$(VERSION_FLAGS)" -o "$(BINARY)" "./calicoq/calicoq.go"'
 
 ###############################################################################
 # CI/CD

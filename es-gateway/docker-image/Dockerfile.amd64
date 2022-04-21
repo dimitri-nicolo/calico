@@ -1,0 +1,8 @@
+FROM scratch
+
+ADD bin/es-gateway-amd64 /es-gateway
+
+USER 1001
+
+# Now define the command-line call to start your application
+ENTRYPOINT ["/es-gateway"]
