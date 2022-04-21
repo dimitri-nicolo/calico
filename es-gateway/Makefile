@@ -1,7 +1,6 @@
 include ../metadata.mk
 
 PACKAGE_NAME    ?= github.com/projectcalico/calico/es-gateway
-LOCAL_CHECKS     = mod-download
 
 RELEASE_BRANCH_PREFIX ?= release-calient
 DEV_TAG_SUFFIX        ?= calient-0.dev
@@ -16,83 +15,53 @@ include ../lib.Makefile
 ###############################################################################
 # Env vars related to building
 ###############################################################################
-SRC_FILES       = $(shell find pkg cmd -name '*.go')
-ES_GATEWAY_IMAGE   ?=tigera/es-gateway
-
-BUILD_VERSION         ?= $(shell git describe --tags --dirty --always 2>/dev/null)
-BUILD_BUILD_DATE      ?= $(shell date -u +'%FT%T%z')
-BUILD_GIT_DESCRIPTION ?= $(shell git describe --tags 2>/dev/null)
-BUILD_GIT_REVISION    ?= $(shell git rev-parse --short HEAD)
+SRC_FILES        = $(shell find pkg cmd -name '*.go') $(shell find ../libcalico-go/lib/logutils -name '*.go')
+ES_GATEWAY_IMAGE ?=es-gateway
+BUILD_IMAGES     ?=$(ES_GATEWAY_IMAGE)
 
 # We use -X to insert the version information into the placeholder variables
 # in the version package.
-VERSION_FLAGS   = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(BUILD_VERSION) \
-                  -X $(PACKAGE_NAME)/pkg/version.BuildDate=$(BUILD_BUILD_DATE) \
-                  -X $(PACKAGE_NAME)/pkg/version.GitDescription=$(BUILD_GIT_DESCRIPTION) \
-                  -X $(PACKAGE_NAME)/pkg/version.GitRevision=$(BUILD_GIT_REVISION)
-
-BUILD_LDFLAGS   = -ldflags "$(VERSION_FLAGS)"
-RELEASE_LDFLAGS = -ldflags "$(VERSION_FLAGS) -s -w"
+VERSION_FLAGS   = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
+                  -X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
+                  -X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
+                  -X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT)
 
 ###############################################################################
 # BUILD BINARY
 ###############################################################################
 # This section builds the output binaries.
-build: es-gateway
+build: bin/es-gateway-$(ARCH)
 
-.PHONY: es-gateway bin/es-gateway bin/es-gateway-$(ARCH)
-es-gateway: bin/es-gateway
-
-bin/es-gateway: bin/es-gateway-amd64
-	$(DOCKER_GO_BUILD) \
-		sh -c 'cd bin && ln -sf es-gateway-$(ARCH) es-gateway'
-
+.PHONY: bin/es-gateway-$(ARCH)
 bin/es-gateway-$(ARCH): $(SRC_FILES)
-ifndef RELEASE_BUILD
-	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
-else
-	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
-endif
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v $(LDFLAGS) cmd/$*/*.go && \
+			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/$*/*.go && \
 				( ldd $@ 2>&1 | \
 					grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
 				( echo "Error: $@ was not statically linked"; false ) )'
 
 ###############################################################################
-# BUILD IMAGE
+# Building the image
 ###############################################################################
-# Build the docker image.
-.PHONY: $(ES_GATEWAY_IMAGE) $(ES_GATEWAY_IMAGE)-$(ARCH)
+.PHONY: image $(ES_GATEWAY_IMAGE) $(ES_GATEWAY_IMAGE)-$(ARCH)
 
-# by default, build the image for the target architecture
 .PHONY: image-all
 image-all: $(addprefix sub-image-,$(ARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-.PHONY: image $(ES_GATEWAY_IMAGE)
 image: $(ES_GATEWAY_IMAGE)
 $(ES_GATEWAY_IMAGE): $(ES_GATEWAY_IMAGE)-$(ARCH)
 $(ES_GATEWAY_IMAGE)-$(ARCH): bin/es-gateway-$(ARCH)
-	rm -rf docker-image/bin
-	mkdir -p docker-image/bin
-	cp bin/es-gateway-$(ARCH) docker-image/bin/
-	docker build --pull -t $(ES_GATEWAY_IMAGE):latest-$(ARCH) --file ./docker-image/Dockerfile.$(ARCH) docker-image
-ifeq ($(ARCH),amd64)
-	docker tag $(ES_GATEWAY_IMAGE):latest-$(ARCH) $(ES_GATEWAY_IMAGE):latest
-endif
+	$(DOCKER_BUILD) -t $(ES_GATEWAY_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) . --load
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 
 .PHONY: clean
 clean:
-	rm -rf bin \
-		docker-image/bin \
-		report/*.xml \
-		release-notes-* \
-		Makefile.common*
-	docker rmi -f $(ES_GATEWAY_IMAGE) > /dev/null 2>&1
+	rm -rf bin
+	-docker rmi -f $$(docker images $(ES_GATEWAY_IMAGE) -a -q)
 
 ###############################################################################
 # Testing

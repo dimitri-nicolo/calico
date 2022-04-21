@@ -590,7 +590,7 @@ blocks:
 
 - name: 'es-gateway'
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/es-gateway/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "${FORCE_RUN} or change_in(['/*', '/es-gateway/', '/libcalico-go/lib/logutils/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
   task:
     secrets:

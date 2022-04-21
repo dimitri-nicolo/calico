@@ -26,7 +26,7 @@ CARROTCTL_GIT_REVISION?=$(shell git rev-parse --short HEAD)
 CARROTCTL_BUILD_DATE?=$(shell date -u +'%FT%T%z')
 LDFLAGS=-ldflags "-X $(PACKAGE_NAME)/carrotctl/cmd.VERSION=$(CARROTCTL_VERSION) \
 	-X $(PACKAGE_NAME)/carrotctl/cmd.BUILD_DATE=$(CARROTCTL_BUILD_DATE) \
-	-X $(PACKAGE_NAME)/carrotctl/cmd.GIT_REVISION=$(CARROTCTL_GIT_REVISION) -s -w"
+	-X $(PACKAGE_NAME)/carrotctl/cmd.GIT_REVISION=$(CARROTCTL_GIT_REVISION)"
 
 .PHONY: clean
 ## Clean enough that a new release build will be clean
