@@ -71,13 +71,6 @@ type healthAggregator interface {
 	Report(name string, report *health.HealthReport)
 }
 
-type routeRules interface {
-	SetRule(rule *routerule.Rule)
-	RemoveRule(rule *routerule.Rule)
-	QueueResync()
-	Apply() error
-}
-
 type routeTableGenerator interface {
 	NewRouteTable(interfacePrefixes []string,
 		ipVersion uint8,
@@ -149,7 +142,6 @@ func (f *routeRulesFactory) NewRouteRules(
 			return netlink.NewHandle(syscall.NETLINK_ROUTE)
 		},
 		opRecorder)
-
 	if err != nil {
 		// table index has been checked by config.
 		// This should not happen.
@@ -443,7 +435,7 @@ func (m *egressIPManager) workloadToFullRules(workload *proto.WorkloadEndpoint, 
 
 // Notifies all workloads of maintenance windows on egress gateway pods they're using by annotating the workload pods.
 func (m *egressIPManager) notifyWorkloadsOfEgressGatewayMaintenanceWindows() error {
-	//cleanup any orphaned maintenenance windows
+	// cleanup any orphaned maintenenance windows
 	for id := range m.wlEndpointMaintenanceWindows {
 		if _, exists := m.activeWlEndpoints[id]; !exists {
 			delete(m.wlEndpointMaintenanceWindows, id)

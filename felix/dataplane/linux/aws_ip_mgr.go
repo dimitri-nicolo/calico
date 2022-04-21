@@ -939,9 +939,11 @@ func (a *awsIPManager) GetRouteRules() []routeRules {
 	return []routeRules{a.routeRules}
 }
 
-var _ Manager = (*awsIPManager)(nil)
-var _ ManagerWithRouteRules = (*awsIPManager)(nil)
-var _ ManagerWithRouteTables = (*awsIPManager)(nil)
+var (
+	_ Manager                = (*awsIPManager)(nil)
+	_ ManagerWithRouteRules  = (*awsIPManager)(nil)
+	_ ManagerWithRouteTables = (*awsIPManager)(nil)
+)
 
 type routeRulesNewFn func(
 	ipVersion int,
