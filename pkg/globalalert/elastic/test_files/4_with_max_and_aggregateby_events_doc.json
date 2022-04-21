@@ -1,0 +1,6 @@
+{"index":{"_index":"tigera_secure_ee_events.test-cluster."}}
+{"description":"test alert description tigera-prometheus/alertmanager-calico-node-alertmanager-* 929.0","origin":"sample-test","record":{"max":929.0,"source_name_aggr":"alertmanager-calico-node-alertmanager-*","source_namespace":"tigera-prometheus"},"severity":100,"source_name_aggr":"alertmanager-calico-node-alertmanager-*","source_namespace":"tigera-prometheus","time":1615857005,"type":"global_alert"}
+{"index":{"_index":"tigera_secure_ee_events.test-cluster."}}
+{"description":"test alert description tigera-compliance/compliance-benchmarker-* 115.0","origin":"sample-test","record":{"max":115.0,"source_name_aggr":"compliance-benchmarker-*","source_namespace":"tigera-compliance"},"severity":100,"source_name_aggr":"compliance-benchmarker-*","source_namespace":"tigera-compliance","time":1615857005,"type":"global_alert"}
+{"index":{"_index":"tigera_secure_ee_events.test-cluster."}}
+{"description":"test alert description tigera-compliance/compliance-controller-57df86b7d-* 183.0","origin":"sample-test","record":{"max": 183.0,"source_name_aggr":"compliance-controller-57df86b7d-*","source_namespace":"tigera-compliance"},"severity":100,"source_name_aggr":"compliance-controller-57df86b7d-*","source_namespace":"tigera-compliance","time":1615857005,"type":"global_alert"}
