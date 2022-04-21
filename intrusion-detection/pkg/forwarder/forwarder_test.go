@@ -15,10 +15,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
-	lmaAPI "github.com/tigera/lma/pkg/api"
-	lma "github.com/tigera/lma/pkg/elastic"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/db"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/elastic"
+	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
+	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 var _ = Describe("Event forwarder", func() {

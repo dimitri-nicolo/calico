@@ -14,12 +14,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	ad "github.com/tigera/intrusion-detection/controller/pkg/globalalert/anomalydetection"
-	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
-	es "github.com/tigera/intrusion-detection/controller/pkg/globalalert/elastic"
-	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/podtemplate"
-	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/reporting"
-	lma "github.com/tigera/lma/pkg/elastic"
+	ad "github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/anomalydetection"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/controllers/controller"
+	es "github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/elastic"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/podtemplate"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/reporting"
+	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 const (

@@ -7,7 +7,7 @@ import (
 	"errors"
 	"time"
 
-	lmaAPI "github.com/tigera/lma/pkg/api"
+	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
 )
 
 type MockEvents struct {

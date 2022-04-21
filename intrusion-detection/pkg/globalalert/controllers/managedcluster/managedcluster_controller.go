@@ -11,11 +11,11 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-	es "github.com/tigera/intrusion-detection/controller/pkg/elastic"
-	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
-	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/worker"
-	"github.com/tigera/intrusion-detection/controller/pkg/health"
-	lma "github.com/tigera/lma/pkg/elastic"
+	es "github.com/projectcalico/calico/intrusion-detection/controller/pkg/elastic"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/controllers/controller"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/worker"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/health"
+	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 
 	"k8s.io/client-go/kubernetes"
 )

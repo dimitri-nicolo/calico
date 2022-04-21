@@ -8,11 +8,11 @@ import (
 
 	"github.com/olivere/elastic/v7"
 	. "github.com/onsi/gomega"
-	idsElastic "github.com/tigera/intrusion-detection/controller/pkg/elastic"
-	"github.com/tigera/lma/pkg/api"
+	idsElastic "github.com/projectcalico/calico/intrusion-detection/controller/pkg/elastic"
+	"github.com/projectcalico/calico/lma/pkg/api"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/util"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/db"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/util"
 )
 
 func TestConvertFlowLogSourceIP(t *testing.T) {

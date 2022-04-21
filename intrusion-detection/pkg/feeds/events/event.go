@@ -8,8 +8,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/util"
-	lmaAPI "github.com/tigera/lma/pkg/api"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/util"
+	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
 )
 
 type SuspiciousIPSecurityEvent struct {

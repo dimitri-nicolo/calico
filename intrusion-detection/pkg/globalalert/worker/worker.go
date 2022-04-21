@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/health"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/health"
 
 	log "github.com/sirupsen/logrus"
 

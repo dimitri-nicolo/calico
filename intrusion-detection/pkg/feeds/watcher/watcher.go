@@ -18,14 +18,14 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v32 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-	"github.com/tigera/intrusion-detection/controller/pkg/controller"
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/puller"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/searcher"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
-	"github.com/tigera/intrusion-detection/controller/pkg/health"
-	"github.com/tigera/intrusion-detection/controller/pkg/util"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/controller"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/db"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/cacher"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/puller"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/searcher"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/health"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/util"
 )
 
 const DefaultResyncPeriod = 0

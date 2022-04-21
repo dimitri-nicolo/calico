@@ -19,9 +19,9 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/intrusion-detection/controller/pkg/maputil"
-	lmaAPI "github.com/tigera/lma/pkg/api"
-	lma "github.com/tigera/lma/pkg/elastic"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/maputil"
+	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
+	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 const (

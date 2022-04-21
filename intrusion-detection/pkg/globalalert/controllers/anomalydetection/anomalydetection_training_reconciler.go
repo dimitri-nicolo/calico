@@ -18,9 +18,9 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/podtemplate"
-	"github.com/tigera/intrusion-detection/controller/pkg/maputil"
-	"github.com/tigera/intrusion-detection/controller/pkg/util"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/podtemplate"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/maputil"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/util"
 
 	log "github.com/sirupsen/logrus"
 )

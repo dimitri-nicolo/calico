@@ -6,7 +6,7 @@ import (
 	"context"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/cacher"
 )
 
 type SyncFailFunction func(error)

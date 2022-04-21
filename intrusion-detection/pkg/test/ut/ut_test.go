@@ -15,11 +15,11 @@ import (
 	. "github.com/onsi/gomega"
 
 	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
-	idsElastic "github.com/tigera/intrusion-detection/controller/pkg/elastic"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/events"
-	lma "github.com/tigera/lma/pkg/elastic"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/db"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/elastic"
+	idsElastic "github.com/projectcalico/calico/intrusion-detection/controller/pkg/elastic"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/events"
+	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 var _ = Describe("Elasticsearch UT", func() {

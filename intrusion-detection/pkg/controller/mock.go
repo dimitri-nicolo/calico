@@ -5,7 +5,7 @@ package controller
 import (
 	"context"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/db"
 )
 
 type mockSetsData struct {

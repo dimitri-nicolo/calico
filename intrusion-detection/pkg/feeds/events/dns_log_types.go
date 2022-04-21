@@ -3,7 +3,7 @@
 package events
 
 import (
-	"github.com/tigera/intrusion-detection/controller/pkg/elastic"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/elastic"
 )
 
 // Based on github.com/tigera/felix-private/collector/dns_log_types.go

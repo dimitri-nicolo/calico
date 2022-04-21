@@ -14,11 +14,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/errorcondition"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
-	"github.com/tigera/intrusion-detection/controller/pkg/runloop"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/db"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/cacher"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/errorcondition"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/utils"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/runloop"
 )
 
 type Searcher interface {

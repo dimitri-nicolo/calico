@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/health"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/health"
 )
 
 func main() {

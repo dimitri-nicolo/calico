@@ -17,8 +17,8 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v3client "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
-	feedutils "github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/cacher"
+	feedutils "github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/utils"
 )
 
 const DefaultClientRetries = 5

@@ -12,11 +12,11 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
-	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/podtemplate"
-	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/worker"
-	"github.com/tigera/intrusion-detection/controller/pkg/health"
-	lma "github.com/tigera/lma/pkg/elastic"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/controllers/controller"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/podtemplate"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/worker"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/health"
+	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 const (

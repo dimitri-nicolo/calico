@@ -12,8 +12,8 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
-	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/podtemplate"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/controllers/controller"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/podtemplate"
 	batchv1 "k8s.io/api/batch/v1"
 
 	"k8s.io/client-go/kubernetes"

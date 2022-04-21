@@ -10,8 +10,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 
-	adj "github.com/tigera/intrusion-detection/controller/pkg/globalalert/anomalydetection"
-	es "github.com/tigera/intrusion-detection/controller/pkg/globalalert/elastic"
+	adj "github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/anomalydetection"
+	es "github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/elastic"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"

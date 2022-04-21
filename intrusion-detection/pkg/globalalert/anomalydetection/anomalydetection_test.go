@@ -11,15 +11,15 @@ import (
 	"github.com/stretchr/testify/mock"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/podtemplate"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/podtemplate"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	fakeK8s "k8s.io/client-go/kubernetes/fake"
 
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
-	adjcontroller "github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/anomalydetection"
-	idscontroller "github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
+	adjcontroller "github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/controllers/anomalydetection"
+	idscontroller "github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/controllers/controller"
 )
 
 const (

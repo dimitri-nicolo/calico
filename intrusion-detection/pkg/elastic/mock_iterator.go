@@ -8,7 +8,7 @@ import (
 	"github.com/olivere/elastic/v7"
 
 	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/db"
 )
 
 type MockSetQuerier struct {

@@ -20,10 +20,10 @@ import (
 	core "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/cacher"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/errorcondition"
-	"github.com/tigera/intrusion-detection/controller/pkg/feeds/utils"
-	"github.com/tigera/intrusion-detection/controller/pkg/runloop"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/cacher"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/errorcondition"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/utils"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/runloop"
 )
 
 const (

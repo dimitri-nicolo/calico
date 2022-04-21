@@ -8,7 +8,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/tigera/intrusion-detection/controller/pkg/db"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/db"
 
 	"github.com/olivere/elastic/v7"
 	. "github.com/onsi/gomega"

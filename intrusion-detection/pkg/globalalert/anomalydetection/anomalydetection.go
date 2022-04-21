@@ -10,10 +10,10 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
-	adjcontroller "github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/anomalydetection"
-	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/controllers/controller"
-	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/podtemplate"
-	"github.com/tigera/intrusion-detection/controller/pkg/globalalert/reporting"
+	adjcontroller "github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/controllers/anomalydetection"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/controllers/controller"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/podtemplate"
+	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/reporting"
 
 	log "github.com/sirupsen/logrus"
 )
