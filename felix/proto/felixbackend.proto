@@ -427,6 +427,7 @@ message WorkloadEndpoint {
   bool is_egress_gateway = 101;
   repeated string aws_elastic_ips = 102;
   int32 egress_max_next_hops = 103;
+  repeated string allow_spoofed_source_prefixes = 10;
 }
 
 message WorkloadEndpointRemove {

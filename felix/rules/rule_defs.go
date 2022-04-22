@@ -103,6 +103,8 @@ const (
 
 	ChainSetWireguardIncomingMark = ChainNamePrefix + "wireguard-incoming-mark"
 
+	ChainRpfSkip = ChainNamePrefix + "rpf-skip"
+
 	WorkloadToEndpointPfx   = ChainNamePrefix + "tw-"
 	WorkloadPfxSpecialAllow = "ALLOW"
 	WorkloadFromEndpointPfx = ChainNamePrefix + "fw-"

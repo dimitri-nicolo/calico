@@ -162,6 +162,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 				Port:     uint16(8080),
 			},
 		}
+		res.Spec.AllowSpoofedSourcePrefixes = []string{"8.8.8.8/32"}
 		res.Spec.EgressGateway = &apiv3.EgressSpec{
 			NamespaceSelector: "black == 'white'",
 			Selector:          "red == 'green'",
@@ -198,6 +199,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 							Port:     uint16(8080),
 						},
 					},
+					AllowSpoofedSourcePrefixes: []cnet.IPNet{cnet.MustParseCIDR("8.8.8.8/32")},
 					EgressSelector:             "(pcns.black == \"white\") && (red == 'green')",
 					EgressMaxNextHops:          1,
 					DeletionTimestamp:          inSixtySeconds.Time,
