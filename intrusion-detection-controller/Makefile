@@ -30,7 +30,7 @@ include ../lib.Makefile
 ###############################################################################
 BINDIR        ?= bin
 SRC_FILES      = $(shell find pkg cmd -name '*.go') $(shell find ../libcalico-go/lib -name '*.go') $(shell find ../lma/pkg -name '*.go')
-TEST_DIRS     ?= $(shell find pkg -name '*_test.go' -exec dirname {} \\; | sort | uniq)
+TEST_DIRS     ?= $(shell find pkg -name '*_test.go' -exec dirname {} \; | sort | uniq)
 ifdef UNIT_TESTS
 UNIT_TEST_FLAGS= -run $(UNIT_TESTS) -v
 endif
@@ -70,15 +70,15 @@ images-all: $(addprefix sub-images-,$(ARCHES))
 sub-images-%:
 	$(MAKE) images ARCH=$*
 
-images: $(BUILD_IMAGES)
+images: $(IDS_CONTROLLER_IMAGE)-$(ARCH) $(JOB_INSTALLER_IMAGE)-$(ARCH)
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 
-$(IDS_CONTROLLER_IMAGE): $(IDS_CONTROLLER_IMAGE)-$(ARCH)
-$(IDS_CONTROLLER_IMAGE)-$(ARCH): $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH)
+.PHONY: $(IDS_CONTROLLER_IMAGE)-$(ARCH)
+$(IDS_CONTROLLER_IMAGE)-$(ARCH): $(BINDIR)/controller-$(ARCH)
 	$(DOCKER_BUILD) -t $(IDS_CONTROLLER_IMAGE):latest-$(ARCH) -f docker-image/controller/Dockerfile.$(ARCH) . --load
 
-$(JOB_INSTALLER_IMAGE): $(JOB_INSTALLER_IMAGE)-$(ARCH)
-$(JOB_INSTALLER_IMAGE)-$(ARCH):
+.PHONY: $(JOB_INSTALLER_IMAGE)-$(ARCH)
+$(JOB_INSTALLER_IMAGE)-$(ARCH): $(BINDIR)/healthz-$(ARCH)
 	# Run from the "install" sub-directory so that docker has access to all the python bits.
 	$(DOCKER_BUILD) -t $(JOB_INSTALLER_IMAGE):latest-$(ARCH) -f docker-image/install/Dockerfile.$(ARCH) install --load
 

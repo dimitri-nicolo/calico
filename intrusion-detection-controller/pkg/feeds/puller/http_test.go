@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -218,8 +219,12 @@ func TestQueryHTTPError(t *testing.T) {
 	eip := elastic.NewMockElasticIPSetController()
 	puller := NewIPSetHTTPPuller(&testGlobalThreatFeed, &db.MockSets{}, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, client, gns, eip).(*httpPuller)
 
+	var wg sync.WaitGroup
+	wg.Add(1)
+
 	attempts := uint(5)
 	go func() {
+		defer wg.Done()
 		err := puller.query(ctx, feedCacher, attempts, 0)
 		g.Expect(err).Should(HaveOccurred())
 	}()
@@ -227,6 +232,7 @@ func TestQueryHTTPError(t *testing.T) {
 	gn := util.GlobalNetworkSetNameFromThreatFeed(testGlobalThreatFeed.Name)
 	g.Consistently(gns.Local).ShouldNot(HaveKey(gn))
 	g.Consistently(eip.Sets).ShouldNot(HaveKey(testGlobalThreatFeed.Name))
+	wg.Wait()
 	g.Expect(rt.Count).Should(Equal(attempts), "Retried max times")
 
 	status := feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status
@@ -294,8 +300,12 @@ func TestQueryHTTPStatus500(t *testing.T) {
 	eip := elastic.NewMockElasticIPSetController()
 	puller := NewIPSetHTTPPuller(&testGlobalThreatFeed, &db.MockSets{}, &MockConfigMap{ConfigMapData: configMapData}, &MockSecrets{SecretsData: secretsData}, client, gns, eip).(*httpPuller)
 
+	var wg sync.WaitGroup
+	wg.Add(1)
+
 	attempts := uint(5)
 	go func() {
+		defer wg.Done()
 		err := puller.query(ctx, feedCacher, attempts, 0)
 		g.Expect(err).Should(HaveOccurred())
 	}()
@@ -303,6 +313,7 @@ func TestQueryHTTPStatus500(t *testing.T) {
 	gn := util.GlobalNetworkSetNameFromThreatFeed(testGlobalThreatFeed.Name)
 	g.Consistently(gns.Local).ShouldNot(HaveKey(gn))
 	g.Consistently(eip.Sets).ShouldNot(HaveKey(testGlobalThreatFeed.Name))
+	wg.Wait()
 	g.Expect(rt.Count).Should(Equal(attempts))
 
 	status := feedCacher.GetGlobalThreatFeed().GlobalThreatFeed.Status
