@@ -50,7 +50,7 @@ var _ = Describe("Constructor test", func() {
 			HealthAggregator: nil,
 
 			Hostname:     configParams.FelixHostname,
-			VXLANEnabled: configParams.VXLANEnabled,
+			VXLANEnabled: configParams.Encapsulation.VXLANEnabled,
 			VXLANID:      configParams.VXLANVNI,
 			VXLANPort:    configParams.VXLANPort,
 

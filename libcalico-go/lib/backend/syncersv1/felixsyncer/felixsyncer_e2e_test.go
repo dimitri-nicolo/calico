@@ -509,9 +509,8 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 				options.SetOptions{},
 			)
 			Expect(err).NotTo(HaveOccurred())
-			// The pool will add as single entry ( +1 ), plus will also create the default
-			// Felix config with two config options: IPIP enabled, FloatingIPs disabled.
-			expectedCacheSize += 3
+			// The pool will add as single entry ( +1 )
+			expectedCacheSize += 1
 
 			syncTester.ExpectData(model.KVPair{
 				Key: model.IPPoolKey{CIDR: net.MustParseCIDR("192.124.0.0/21")},
@@ -524,14 +523,6 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 					Disabled:      false,
 				},
 				Revision: pool.ResourceVersion,
-			})
-			syncTester.ExpectData(model.KVPair{
-				Key:   model.GlobalConfigKey{Name: "IpInIpEnabled"},
-				Value: "true",
-			})
-			syncTester.ExpectData(model.KVPair{
-				Key:   model.GlobalConfigKey{Name: "FloatingIPs"},
-				Value: "Disabled",
 			})
 			syncTester.ExpectCacheSize(expectedCacheSize)
 
