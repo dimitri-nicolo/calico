@@ -11,11 +11,12 @@ import (
 	oElastic "github.com/olivere/elastic/v7"
 	. "github.com/onsi/gomega"
 
-	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/db"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/elastic"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/util"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/elastic"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 	"github.com/projectcalico/calico/lma/pkg/api"
+
+	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 func TestSuspiciousIP_Success(t *testing.T) {

@@ -7,10 +7,11 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/puller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/puller"
 )
 
 func TestRestrictedSecretsClient(t *testing.T) {

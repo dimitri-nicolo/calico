@@ -13,11 +13,12 @@ import (
 	"github.com/olivere/elastic/v7"
 	. "github.com/onsi/gomega"
 
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/spyutil"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/controller"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/db"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/cacher"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/spyutil"
 )
 
 // In order to run these tests against different kinds of controllers, which are

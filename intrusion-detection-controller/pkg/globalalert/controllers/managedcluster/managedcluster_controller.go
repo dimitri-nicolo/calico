@@ -6,18 +6,19 @@ import (
 	"context"
 
 	log "github.com/sirupsen/logrus"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
-	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-	es "github.com/projectcalico/calico/intrusion-detection/controller/pkg/elastic"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/controllers/controller"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/worker"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/health"
+	es "github.com/projectcalico/calico/intrusion-detection-controller/pkg/elastic"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/worker"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/health"
 	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 
-	"k8s.io/client-go/kubernetes"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
 
 // managedClusterController is responsible for watching ManagedCluster resource.

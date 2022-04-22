@@ -12,13 +12,12 @@ import (
 	"sync"
 	"time"
 
-	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
-
 	"github.com/avast/retry-go"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/db"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/runloop"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/runloop"
+	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
 )
 
 const (

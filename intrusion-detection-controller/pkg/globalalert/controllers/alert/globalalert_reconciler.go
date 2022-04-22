@@ -7,17 +7,17 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/alert"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/controllers/controller"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/podtemplate"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/alert"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
 	lma "github.com/projectcalico/calico/lma/pkg/elastic"
+
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
 
 // globalAlertReconciler creates a routine for each new GlobalAlert resource that queries Elasticsearch on interval,

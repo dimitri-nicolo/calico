@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/spyutil"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/spyutil"
 )
 
 type MockSets struct {

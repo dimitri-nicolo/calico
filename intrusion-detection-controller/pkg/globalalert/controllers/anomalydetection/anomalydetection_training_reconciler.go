@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 
+	log "github.com/sirupsen/logrus"
+
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -14,15 +16,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/maputil"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/podtemplate"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/maputil"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/util"
-
-	log "github.com/sirupsen/logrus"
 )
 
 var (

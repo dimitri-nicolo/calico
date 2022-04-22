@@ -17,12 +17,12 @@ import (
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
-	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
 	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/db"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/util"
+	apiV3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const (

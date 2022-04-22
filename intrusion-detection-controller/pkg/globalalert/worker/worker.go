@@ -11,8 +11,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/health"
-
 	log "github.com/sirupsen/logrus"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -21,6 +19,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/health"
 )
 
 const (

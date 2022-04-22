@@ -8,15 +8,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/errorcondition"
-
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/watch"
 
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/calico"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/cacher"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/spyutil"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/util"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/calico"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/errorcondition"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/spyutil"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 )
 
 func TestNewController(t *testing.T) {

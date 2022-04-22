@@ -5,11 +5,9 @@ package elastic
 import (
 	"context"
 
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/cacher"
-
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/controller"
-
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/db"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
 )
 
 type dnSetData struct {

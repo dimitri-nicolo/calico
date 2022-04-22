@@ -10,22 +10,24 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
 
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/puller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/searcher"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/globalnetworksets"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/health"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v32 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/controller"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/db"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/cacher"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/puller"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/searcher"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/health"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/util"
 )
 
 const DefaultResyncPeriod = 0

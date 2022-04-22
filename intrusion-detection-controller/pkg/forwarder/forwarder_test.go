@@ -12,11 +12,12 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/db"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/elastic"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/elastic"
 	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
 	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 )

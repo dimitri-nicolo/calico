@@ -7,19 +7,20 @@ import (
 	"reflect"
 	"time"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-
 	log "github.com/sirupsen/logrus"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	ad "github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/anomalydetection"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/controllers/controller"
-	es "github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/elastic"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/podtemplate"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/reporting"
+	ad "github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/anomalydetection"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
+	es "github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/elastic"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/reporting"
 	lma "github.com/projectcalico/calico/lma/pkg/elastic"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
 
 const (

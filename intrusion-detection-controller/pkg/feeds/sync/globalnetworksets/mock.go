@@ -6,8 +6,9 @@ import (
 	"context"
 	"sync"
 
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/cacher"
 )
 
 type MockGlobalNetworkSetController struct {

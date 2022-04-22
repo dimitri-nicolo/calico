@@ -15,12 +15,13 @@ import (
 	v12 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/elastic"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/globalnetworksets"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/db"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/cacher"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/sync/elastic"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/util"
 )
 
 var (

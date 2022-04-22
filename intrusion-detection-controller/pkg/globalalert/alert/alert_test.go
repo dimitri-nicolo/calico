@@ -8,11 +8,13 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"github.com/stretchr/testify/mock"
 
-	adj "github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/anomalydetection"
-	es "github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/elastic"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	adj "github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/anomalydetection"
+	es "github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/elastic"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"

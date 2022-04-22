@@ -15,12 +15,13 @@ import (
 	"golang.org/x/net/idna"
 	core "k8s.io/client-go/kubernetes/typed/core/v1"
 
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/controller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/utils"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
+
 	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/controller"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/db"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/cacher"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/utils"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/util"
 )
 
 var (

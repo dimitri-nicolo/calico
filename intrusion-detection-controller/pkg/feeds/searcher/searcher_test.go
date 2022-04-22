@@ -8,13 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/projectcalico/calico/lma/pkg/api"
-
 	. "github.com/onsi/gomega"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/db"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/cacher"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/events"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/util"
+
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/events"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
+	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 // TestDoIPSet tests the case where everything is working

@@ -6,18 +6,17 @@ import (
 	"reflect"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
 	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
-
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/controllers/controller"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/podtemplate"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (

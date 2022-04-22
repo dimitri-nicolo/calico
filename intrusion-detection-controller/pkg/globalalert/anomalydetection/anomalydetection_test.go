@@ -8,18 +8,21 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"github.com/stretchr/testify/mock"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/podtemplate"
+
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	fakeK8s "k8s.io/client-go/kubernetes/fake"
 
+	adjcontroller "github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/anomalydetection"
+	idscontroller "github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
-	adjcontroller "github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/controllers/anomalydetection"
-	idscontroller "github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/controllers/controller"
 )
 
 const (

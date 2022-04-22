@@ -15,10 +15,11 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
+	feedutils "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/utils"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v3client "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/cacher"
-	feedutils "github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/utils"
 )
 
 const DefaultClientRetries = 5

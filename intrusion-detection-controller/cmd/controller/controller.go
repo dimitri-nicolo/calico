@@ -17,29 +17,29 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
-	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/elastic"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/events"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/rbac"
-	syncElastic "github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/sync/elastic"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
-	feedsWatcher "github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/watcher"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/forwarder"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/controllers/alert"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/controllers/controller"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/controllers/managedcluster"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/podtemplate"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/health"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/util"
-	lma "github.com/projectcalico/calico/lma/pkg/elastic"
-
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/elastic"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/events"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/rbac"
+	syncElastic "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/elastic"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/globalnetworksets"
+	feedsWatcher "github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/watcher"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/forwarder"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/alert"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/anomalydetection"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/managedcluster"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/health"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/version"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	lclient "github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/monitor"
+	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/controllers/anomalydetection"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
 
 const (
@@ -72,7 +72,7 @@ func main() {
 	flag.Parse()
 
 	if ver {
-		Version()
+		version.Version()
 		return
 	}
 

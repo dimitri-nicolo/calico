@@ -7,9 +7,11 @@ import (
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/cacher"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/errorcondition"
+
 	apiErrors "k8s.io/apimachinery/pkg/api/errors"
+
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/errorcondition"
 )
 
 // AddErrorToFeedStatus adds an error entry with type errType and body err to the error conditions of the

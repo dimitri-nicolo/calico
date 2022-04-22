@@ -6,9 +6,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/cacher"
-
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/db"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
 )
 
 type MockElasticIPSetController struct {

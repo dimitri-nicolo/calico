@@ -8,7 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/util"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
 )
 

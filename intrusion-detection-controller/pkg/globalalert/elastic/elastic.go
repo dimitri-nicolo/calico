@@ -14,14 +14,15 @@ import (
 
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/maputil"
 	"github.com/projectcalico/calico/libcalico-go/lib/validator/v3/query"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/maputil"
 	lmaAPI "github.com/projectcalico/calico/lma/pkg/api"
 	lma "github.com/projectcalico/calico/lma/pkg/elastic"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const (

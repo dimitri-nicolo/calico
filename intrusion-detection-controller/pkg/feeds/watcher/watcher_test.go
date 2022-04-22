@@ -10,16 +10,18 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/calico"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/db"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/cacher"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/elastic"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/feeds/sync/globalnetworksets"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/calico"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/db"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/cacher"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/sync/elastic"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/feeds/sync/globalnetworksets"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/util"
 )
 
 var testClient = &http.Client{Transport: &util.MockRoundTripper{Error: errors.New("mock error")}}

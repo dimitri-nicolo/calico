@@ -6,20 +6,20 @@ import (
 	"context"
 
 	log "github.com/sirupsen/logrus"
-	es "github.com/projectcalico/calico/intrusion-detection/controller/pkg/elastic"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/controllers/alert"
 
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/controllers/controller"
-	"github.com/projectcalico/calico/intrusion-detection/controller/pkg/globalalert/podtemplate"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 
+	es "github.com/projectcalico/calico/intrusion-detection-controller/pkg/elastic"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/alert"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/podtemplate"
+	lma "github.com/projectcalico/calico/lma/pkg/elastic"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-
-	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 // managedClusterReconciler is responsible for starting and managing GlobalAlertController for every managed cluster.
