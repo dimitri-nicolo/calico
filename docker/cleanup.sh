@@ -116,7 +116,7 @@ readline
 rpm
 rpm-build-libs
 rpm-libs
-rpm-plugin-systemd-inhibit-4.14.3-22.el8.x86_64
+rpm-plugin-systemd-inhibit
 shadow-utils
 systemd
 systemd-libs
