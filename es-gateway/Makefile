@@ -34,7 +34,6 @@ build: bin/es-gateway-$(ARCH)
 
 .PHONY: bin/es-gateway-$(ARCH)
 bin/es-gateway-$(ARCH): $(SRC_FILES)
-	mkdir -p bin
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
 			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/$*/*.go && \
@@ -61,7 +60,7 @@ $(ES_GATEWAY_IMAGE)-$(ARCH): bin/es-gateway-$(ARCH)
 .PHONY: clean
 clean:
 	rm -rf bin
-	-docker rmi -f $$(docker images $(ES_GATEWAY_IMAGE) -a -q)
+	-docker image rm -f $$(docker images $(ES_GATEWAY_IMAGE) -a -q)
 
 ###############################################################################
 # Testing

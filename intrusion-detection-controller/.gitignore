@@ -1,12 +1,2 @@
-.*.swp
 /test/config.json
 /install/intrusion-detection-job-installer
-.idea/
-bin
-.go-build-cache
-.go-pkg-cache
-docker-image/controller/bin
-cmd/controller/controller
-vendor
-Makefile.common*
-.vscode
