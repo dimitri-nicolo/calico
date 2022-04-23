@@ -59,6 +59,10 @@ promotions:
   pipeline_file: push-images/es-gateway.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push intrusion-detection-controller images
+  pipeline_file: push-images/intrusion-detection-controller.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 # Have a separate promotion for publishing Helm charts.
 - name: Publish Helm Charts
   pipeline_file: push-helm-charts/helm-charts.yml
@@ -616,6 +620,21 @@ blocks:
       commands:
       - make ci
 
+- name: 'intrusion-detection-controller'
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/intrusion-detection-controller/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd intrusion-detection-controller
+    jobs:
+    - name: "intrusion-detection-controller tests"
+      commands:
+      - make ci
+ 
 - name: "Documentation"
   run:
     when: "${FORCE_RUN} or change_in(['/*', '/calico/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
