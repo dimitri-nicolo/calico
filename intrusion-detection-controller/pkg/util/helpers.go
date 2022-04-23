@@ -4,7 +4,6 @@ package util
 
 import (
 	"fmt"
-	"strings"
 )
 
 func Sptr(s string) *string {
@@ -47,11 +46,4 @@ func BoolPtr(b bool) *bool {
 func UintPtr(i uint) *uint {
 	iCopy := i
 	return &iCopy
-}
-
-func TrimTrailingSuffix(s, suffix string) string {
-	if strings.HasSuffix(s, suffix) {
-		s = s[:len(s)-len(suffix)]
-	}
-	return s
 }

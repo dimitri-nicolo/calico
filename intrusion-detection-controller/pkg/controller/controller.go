@@ -252,5 +252,4 @@ func (c *controller) purgeObject(ctx context.Context, m db.Meta) {
 		return
 	}
 	log.WithFields(fields).Info("GC'd elastic Sets")
-	return
 }

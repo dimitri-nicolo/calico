@@ -53,7 +53,8 @@ var _ = Describe("Event forwarder", func() {
 			panic("could not create unit under test: " + err.Error())
 		}
 
-		lmaESCli.Backend().DeleteIndex("tigera_secure_ee_events*").Do(ctx)
+		_, err = lmaESCli.Backend().DeleteIndex("tigera_secure_ee_events*").Do(ctx)
+		Expect(err).NotTo(HaveOccurred())
 
 		err = lmaESCli.CreateEventsIndex(ctx)
 		Expect(err).ShouldNot(HaveOccurred())
@@ -86,7 +87,8 @@ var _ = Describe("Event forwarder", func() {
 	})
 
 	AfterEach(func() {
-		lmaESCli.Backend().DeleteIndex("tigera_secure_ee_events*").Do(ctx)
+		_, err := lmaESCli.Backend().DeleteIndex("tigera_secure_ee_events*").Do(ctx)
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("should read from events index and dispatches them", func() {

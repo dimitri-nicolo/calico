@@ -102,7 +102,9 @@ func (a *Alert) ExecuteAnomalyDetection(ctx context.Context) {
 	}
 
 	a.alert.Status = a.adj.Start()
-	reporting.UpdateGlobalAlertStatusWithRetryOnConflict(a.alert, a.clusterName, a.calicoCLI, ctx)
+	if err := reporting.UpdateGlobalAlertStatusWithRetryOnConflict(a.alert, a.clusterName, a.calicoCLI, ctx); err != nil {
+		log.WithError(err).Warnf(`failed to update globalalert "%s" status when executing anomaly detection`, a.alert.Name)
+	}
 
 	for {
 		<-ctx.Done()
@@ -122,18 +124,24 @@ func (a *Alert) stopAnomalyDetectionService(ctx context.Context) {
 // It also deletes any existing elastic watchers for the cluster.
 func (a *Alert) ExecuteElasticQuery(ctx context.Context) {
 	a.es.DeleteElasticWatchers(ctx)
-	reporting.UpdateGlobalAlertStatusWithRetryOnConflict(a.alert, a.clusterName, a.calicoCLI, ctx)
+	if err := reporting.UpdateGlobalAlertStatusWithRetryOnConflict(a.alert, a.clusterName, a.calicoCLI, ctx); err != nil {
+		log.WithError(err).Warnf(`failed to update globalalert "%s" status when executing elastic query`, a.alert.Name)
+	}
 
 	for {
 		timer := time.NewTimer(a.getDurationUntilNextAlert())
 		select {
 		case <-timer.C:
 			a.alert.Status = a.es.ExecuteAlert(a.alert)
-			reporting.UpdateGlobalAlertStatusWithRetryOnConflict(a.alert, a.clusterName, a.calicoCLI, ctx)
+			if err := reporting.UpdateGlobalAlertStatusWithRetryOnConflict(a.alert, a.clusterName, a.calicoCLI, ctx); err != nil {
+				log.WithError(err).Warnf(`failed to update globalalert "%s" status when executing elastic query`, a.alert.Name)
+			}
 			timer.Stop()
 		case <-ctx.Done():
 			a.alert.Status.Active = false
-			reporting.UpdateGlobalAlertStatusWithRetryOnConflict(a.alert, a.clusterName, a.calicoCLI, ctx)
+			if err := reporting.UpdateGlobalAlertStatusWithRetryOnConflict(a.alert, a.clusterName, a.calicoCLI, ctx); err != nil {
+				log.WithError(err).Warnf(`failed to update globalalert "%s" status when executing elastic query`, a.alert.Name)
+			}
 			timer.Stop()
 			return
 		}

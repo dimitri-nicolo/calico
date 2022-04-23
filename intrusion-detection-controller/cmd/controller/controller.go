@@ -44,11 +44,7 @@ import (
 
 const (
 	TigeraIntrusionDetectionNamespace = "tigera-intrusion-detection"
-	DefaultElasticScheme              = "https"
-	// through es-gateway
-	DefaultElasticHost                    = "tigera-secure-es-gateway-http.tigera-elasticsearch.svc.cluster.local"
-	DefaultElasticPort                    = "9200"
-	DefaultElasticUser                    = "elastic"
+
 	DefaultConfigMapNamespace             = TigeraIntrusionDetectionNamespace
 	DefaultSecretsNamespace               = TigeraIntrusionDetectionNamespace
 	DefaultMultiClusterForwardingEndpoint = "https://tigera-manager.tigera-manager.svc:9443"

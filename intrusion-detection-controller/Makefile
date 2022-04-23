@@ -110,7 +110,7 @@ MOCKERY_FILE_PATHS= \
 .PHONY: ci cd
 
 ## run CI cycle - build, test, etc.
-ci: clean check-fmt test images-all
+ci: clean static-checks ut
 
 ## Deploy images to registry
 cd: images cd-common

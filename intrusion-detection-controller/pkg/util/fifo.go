@@ -24,7 +24,10 @@ func NewPingableFifo() (*cache.DeltaFIFO, cache.Store) {
 	// KeyLister, that way resync operations will result in the correct set
 	// of update/delete deltas.  The FIFO's key function does need to account
 	// for ping objects, since we will put them on the queue as updates.
-	fifo := cache.NewDeltaFIFO(PingableKeyFunc, clientState)
+	fifo := cache.NewDeltaFIFOWithOptions(cache.DeltaFIFOOptions{
+		KeyFunction:  PingableKeyFunc,
+		KnownObjects: clientState,
+	})
 	return fifo, clientState
 }
 

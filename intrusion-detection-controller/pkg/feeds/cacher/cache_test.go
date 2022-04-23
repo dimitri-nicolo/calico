@@ -145,7 +145,7 @@ func TestGlobalThreatFeedCache_UpdateCachedGlobalThreatFeedStatus(t *testing.T) 
 		g.Expect(cachedFeed.Status.ErrorConditions).Should(BeEmpty())
 		cachedFeed.Status.LastSuccessfulSearch = &metav1.Time{Time: now}
 		cachedFeed.Status.LastSuccessfulSync = &metav1.Time{Time: now}
-		cachedFeed.Status.ErrorConditions = append(errorConditions)
+		cachedFeed.Status.ErrorConditions = errorConditions
 		feedCacher.UpdateGlobalThreatFeedStatus(cachedFeed)
 	}()
 
@@ -192,7 +192,7 @@ func TestGlobalThreatFeedCache_UpdateCachedGlobalThreatFeedStatusConcurrently(t 
 		g.Expect(cachedFeed.Status.ErrorConditions).Should(BeEmpty())
 		cachedFeed.Status.LastSuccessfulSearch = &metav1.Time{Time: oneMinuteAgo}
 		cachedFeed.Status.LastSuccessfulSync = &metav1.Time{Time: oneMinuteAgo}
-		cachedFeed.Status.ErrorConditions = append(errorConditions)
+		cachedFeed.Status.ErrorConditions = errorConditions
 		feedCacher.UpdateGlobalThreatFeedStatus(cachedFeed)
 	}()
 

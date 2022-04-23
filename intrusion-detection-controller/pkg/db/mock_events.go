@@ -15,7 +15,6 @@ type MockEvents struct {
 	ErrorIndex    int
 	ErrorReturned bool
 	Events        []SecurityEventInterface
-	value         SecurityEventInterface
 }
 
 func (m *MockEvents) PutSecurityEventWithID(ctx context.Context, l SecurityEventInterface) error {

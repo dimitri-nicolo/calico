@@ -52,7 +52,7 @@ func ConvertFlowLog(flowLog FlowLogJSONOutput, key db.QueryKey, hit *elastic.Sea
 				FlowAction:       flowLog.Action,
 				FlowLogID:        hit.Id,
 				Protocol:         flowLog.Proto,
-				Feeds:            append(feeds),
+				Feeds:            feeds,
 				SuspiciousPrefix: nil,
 			},
 		},

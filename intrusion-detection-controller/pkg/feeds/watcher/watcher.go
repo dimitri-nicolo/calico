@@ -46,7 +46,6 @@ type watcher struct {
 	configMapClient        v1.ConfigMapInterface
 	secretsClient          v1.SecretInterface
 	globalThreatFeedClient v32.GlobalThreatFeedInterface
-	globalNetworkSetClient v32.GlobalNetworkSetInterface
 	gnsController          globalnetworksets.Controller
 	ipsController          controller.Controller
 	dnsController          controller.Controller
@@ -176,7 +175,6 @@ func (s *watcher) Run(ctx context.Context) {
 		}()
 
 	})
-	return
 }
 
 func (s *watcher) processQueue(obj interface{}) error {
@@ -418,7 +416,6 @@ func (s *watcher) setFeedWatcher(name string, fw *feedWatcher) {
 	s.feedWatchersMutex.Lock()
 	defer s.feedWatchersMutex.Unlock()
 	s.feedWatchers[name] = fw
-	return
 }
 
 func (s *watcher) deleteFeedWatcher(name string) {

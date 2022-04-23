@@ -1199,7 +1199,7 @@ func TestWatcher_restartPuller_NoPullHTTP(t *testing.T) {
 	f.Spec.Pull.HTTP = nil
 
 	w.restartPuller(ctx, f)
-	fw, ok = w.getFeedWatcher(f.Name)
+	fw, _ = w.getFeedWatcher(f.Name)
 	g.Expect(fw.puller).Should(BeNil())
 }
 

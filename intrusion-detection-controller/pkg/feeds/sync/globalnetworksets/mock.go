@@ -52,7 +52,6 @@ func (c *MockGlobalNetworkSetController) NoGC(s *v3.GlobalNetworkSet) {
 }
 
 func (c *MockGlobalNetworkSetController) Run(ctx context.Context) {
-	return
 }
 
 func (c *MockGlobalNetworkSetController) Local() map[string]*v3.GlobalNetworkSet {

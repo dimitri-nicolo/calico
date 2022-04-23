@@ -77,7 +77,6 @@ func runTest(t *testing.T, successful bool, expectedSecurityEvents []events.Susp
 	g := NewGomegaWithT(t)
 
 	f := util.NewGlobalThreatFeedFromName("mock")
-	var expectedEvents []api.EventsData
 	suspiciousIP := &db.MockSuspicious{
 		Error:                err,
 		LastSuccessfulSearch: lastSuccessfulSearch,
@@ -85,7 +84,6 @@ func runTest(t *testing.T, successful bool, expectedSecurityEvents []events.Susp
 	}
 	for _, e := range expectedSecurityEvents {
 		suspiciousIP.Events = append(suspiciousIP.Events, e)
-		expectedEvents = append(expectedEvents, e.GetEventsData())
 	}
 	eventsDB := &db.MockEvents{ErrorIndex: eventsErrorIdx, Events: []db.SecurityEventInterface{}}
 	uut := NewSearcher(f, 0, suspiciousIP, eventsDB).(*searcher)

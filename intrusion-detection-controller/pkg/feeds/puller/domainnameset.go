@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"golang.org/x/net/idna"
@@ -31,7 +30,6 @@ var (
 )
 
 type dnSetContent struct {
-	lock   sync.RWMutex
 	parser parser
 }
 

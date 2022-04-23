@@ -119,8 +119,6 @@ func (h *httpPuller) Run(ctx context.Context, feedCacher cacher.GlobalThreatFeed
 		}()
 
 	})
-
-	return
 }
 
 func (h *httpPuller) Close() {
@@ -135,10 +133,9 @@ func (h *httpPuller) setFeedURIAndHeader(ctx context.Context, f *calico.GlobalTh
 
 	headers := http.Header{}
 	for _, header := range f.Spec.Pull.HTTP.Headers {
-		ok := true
 		value := header.Value
 		if value == "" && header.ValueFrom != nil {
-			ok = false
+			ok := false
 			switch {
 			case header.ValueFrom.ConfigMapKeyRef != nil:
 				configMap, err := h.configMapClient.Get(ctx, header.ValueFrom.ConfigMapKeyRef.Name, meta.GetOptions{})
@@ -198,7 +195,7 @@ func (h *httpPuller) getStartupDelay(ctx context.Context) time.Duration {
 	if err != nil {
 		return 0
 	}
-	since := time.Now().Sub(lastModified)
+	since := time.Since(lastModified)
 	if since < h.period {
 		return h.period - since
 	}
@@ -273,9 +270,9 @@ func (h *httpPuller) query(ctx context.Context, feedCacher cacher.GlobalThreatFe
 		retry.Delay(delay),
 		retry.RetryIf(
 			func(err error) bool {
-				switch err.(type) {
+				switch err := err.(type) {
 				case net.Error:
-					return err.(net.Error).Temporary()
+					return err.Temporary()
 				default:
 					return false
 				}

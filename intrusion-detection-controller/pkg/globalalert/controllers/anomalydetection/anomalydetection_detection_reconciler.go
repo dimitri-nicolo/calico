@@ -210,8 +210,10 @@ func (r *adDetectionReconciler) reconcile() bool {
 
 		detectionJobState.GlobalAlert.Status = reporting.GetGlobalAlertSuccessStatus()
 
-		reporting.UpdateGlobalAlertStatusWithRetryOnConflict(detectionJobState.GlobalAlert, detectionJobState.ClusterName,
-			detectionJobState.CalicoCLI, r.managementClusterCtx)
+		if err := reporting.UpdateGlobalAlertStatusWithRetryOnConflict(detectionJobState.GlobalAlert, detectionJobState.ClusterName,
+			detectionJobState.CalicoCLI, r.managementClusterCtx); err != nil {
+			log.WithError(err).Warnf("failed to update globalalert status for %s", detectionJobState.GlobalAlert.Name)
+		}
 
 		return true
 	}
@@ -247,8 +249,10 @@ func (r *adDetectionReconciler) reconcile() bool {
 	detectionJobState.GlobalAlert.Status.LastExecuted = k8sStoredDetectionCronJob.Status.LastSuccessfulTime
 	detectionJobState.GlobalAlert.Status.LastEvent = k8sStoredDetectionCronJob.Status.LastScheduleTime
 
-	reporting.UpdateGlobalAlertStatusWithRetryOnConflict(detectionJobState.GlobalAlert, detectionJobState.ClusterName,
-		detectionJobState.CalicoCLI, r.managementClusterCtx)
+	if err := reporting.UpdateGlobalAlertStatusWithRetryOnConflict(detectionJobState.GlobalAlert, detectionJobState.ClusterName,
+		detectionJobState.CalicoCLI, r.managementClusterCtx); err != nil {
+		log.WithError(err).Warnf("failed to update globalalert status for %s", detectionJobState.GlobalAlert.Name)
+	}
 
 	return true
 }
@@ -317,8 +321,10 @@ func (r *adDetectionReconciler) reportErrorStatus(alertState detectionCycleState
 
 	alertState.GlobalAlert.Status = globalAlertErrorStatus
 
-	reporting.UpdateGlobalAlertStatusWithRetryOnConflict(alertState.GlobalAlert, alertState.ClusterName,
-		alertState.CalicoCLI, r.managementClusterCtx)
+	if err := reporting.UpdateGlobalAlertStatusWithRetryOnConflict(alertState.GlobalAlert, alertState.ClusterName,
+		alertState.CalicoCLI, r.managementClusterCtx); err != nil {
+		log.WithError(err).Warnf("failed to update globalalert status for %s", namespacedName.Name)
+	}
 }
 
 // Close cancels the ADJobController worker context and removes for all resources/objects that worker watches.

@@ -153,7 +153,7 @@ func (e *Elastic) ListDomainNameSets(ctx context.Context) ([]db.Meta, error) {
 func (e *Elastic) listSets(ctx context.Context, idx string) ([]db.Meta, error) {
 	q := elastic.NewMatchAllQuery()
 	scroller := e.c.Scroll(idx).FetchSource(false).Query(q)
-	defer scroller.Clear(ctx)
+	defer scroller.Clear(ctx) // nolint: errcheck
 
 	var ids []db.Meta
 	for {
@@ -294,11 +294,11 @@ func (e *Elastic) getSetModified(ctx context.Context, name, idx string) (time.Ti
 		// missing created_at field
 		return time.Time{}, nil
 	}
-	switch createdAt.(type) {
+	switch createdAt := createdAt.(type) {
 	case string:
-		return dateparse.ParseIn(createdAt.(string), time.UTC)
+		return dateparse.ParseIn(createdAt, time.UTC)
 	default:
-		return time.Time{}, fmt.Errorf("Unexpected type for %#v", createdAt)
+		return time.Time{}, fmt.Errorf("unexpected type for %#v", createdAt)
 	}
 }
 
@@ -493,15 +493,13 @@ func (e *Elastic) GetForwarderConfig(ctx context.Context, id string) (*db.Forwar
 	l.Debugf("Found a total of %d forwarder config", searchResult.TotalHits())
 
 	if searchResult.Hits.TotalHits.Value > 0 {
-		for _, hit := range searchResult.Hits.Hits {
-			l.Debugf("Selecting forwarder config with id[%s]", hit.Id)
-			var config db.ForwarderConfig
-			err := json.Unmarshal(hit.Source, &config)
-			if err != nil {
-				return nil, err
-			}
-			return &config, nil
+		hit := searchResult.Hits.Hits[0]
+		l.Debugf("Selecting forwarder config with id[%s]", hit.Id)
+		var config db.ForwarderConfig
+		if err := json.Unmarshal(hit.Source, &config); err != nil {
+			return nil, err
 		}
+		return &config, nil
 	}
 
 	return nil, nil

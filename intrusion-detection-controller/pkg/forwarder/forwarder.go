@@ -263,7 +263,7 @@ func (f *eventForwarder) Run(ctx context.Context) {
 		var lastSuccessfulEndTime *time.Time
 		// Iterate forever, waiting for settings.pollingInterval seconds between iterations. On each iteration retrieve events
 		// and export to logs using dispatcher.
-		go runloop.RunLoop(
+		go runloop.RunLoop( // nolint: errcheck
 			f.ctx,
 			func() {
 				var start, end time.Time
@@ -358,10 +358,6 @@ func (f *eventForwarder) Run(ctx context.Context) {
 						l.Info("Failed to save forwarder config to datastore, even after retries")
 					} else {
 						l.Info("Successfully saved forwarder config to datastore")
-					}
-				} else {
-					if _, ok := err.(QueryError); ok {
-						// Do nothing ... we need to execute this time range again
 					}
 				}
 			},

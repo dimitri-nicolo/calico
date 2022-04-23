@@ -9,7 +9,9 @@ import (
 
 func ComputeSha256Hash(obj interface{}) string {
 	encoder := sha256.New()
-	encoder.Write([]byte(fmt.Sprintf("%v", obj)))
+	if _, err := encoder.Write([]byte(fmt.Sprintf("%v", obj))); err != nil {
+		return ""
+	}
 	return fmt.Sprintf("%x", encoder.Sum(nil))
 }
 

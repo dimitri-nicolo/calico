@@ -64,7 +64,7 @@ func TestErrorCondition_ClearNonExistentError(t *testing.T) {
 	errorConditions = append(errorConditions,
 		v3.ErrorCondition{Type: "testErrType-1", Message: "testErrMessage-1"},
 		v3.ErrorCondition{Type: "testErrType-2", Message: "testErrMessage-2"})
-	globalThreatFeed.Status.ErrorConditions = append(errorConditions)
+	globalThreatFeed.Status.ErrorConditions = errorConditions
 
 	g.Expect(len(globalThreatFeed.Status.ErrorConditions)).Should(Equal(2))
 

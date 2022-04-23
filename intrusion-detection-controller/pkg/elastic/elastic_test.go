@@ -10,7 +10,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	url2 "net/url"
 	"os"
 	"strings"
@@ -70,7 +69,7 @@ func TestElastic_GetIPSet(t *testing.T) {
 	_, err = e.GetIPSet(ctx, "test5")
 	g.Expect(err).Should(HaveOccurred(), "Invalid ips element type")
 
-	ipSet, err = e.GetIPSet(ctx, "unknown")
+	_, err = e.GetIPSet(ctx, "unknown")
 	g.Expect(err).Should(HaveOccurred(), "Elastic error")
 }
 
@@ -173,6 +172,7 @@ func TestElastic_QueryIPSet_SameIPSet(t *testing.T) {
 	toBeUpdated.Status.LastSuccessfulSearch = &metav1.Time{Time: oneMinuteAgo}
 
 	cachedIpSet, err := e.GetIPSet(ctx, "test1")
+	g.Expect(err).NotTo(HaveOccurred())
 	toBeUpdated.SetAnnotations(map[string]string{db.IpSetHashKey: util.ComputeSha256Hash(cachedIpSet)})
 
 	roundTripper.params = make(map[string]interface{})
@@ -346,7 +346,6 @@ func TestElastic_Delete_Set(t *testing.T) {
 }
 
 type testRoundTripper struct {
-	u            *url.URL
 	e            error
 	listRespFile string
 	listStatus   int

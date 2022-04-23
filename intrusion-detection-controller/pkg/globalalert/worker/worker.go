@@ -131,7 +131,7 @@ func (w *worker) Run(stop <-chan struct{}) {
 		go ctrl.Run(stop)
 
 		if !cache.WaitForNamedCacheSync(reflect.TypeOf(watch.obj).String(), stop, ctrl.HasSynced) {
-			log.Error("Failed to sync resource %T", watch.obj)
+			log.Errorf("Failed to sync resource %T", watch.obj)
 			return
 		}
 

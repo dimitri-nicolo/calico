@@ -66,10 +66,8 @@ func FeedNeedsRestart(a, b *v3.GlobalThreatFeed) bool {
 }
 
 func ParseFeedDuration(f *v3.GlobalThreatFeed) time.Duration {
-	period := v3.DefaultPullPeriod
 	if f.Spec.Pull.Period != "" {
-		var err error
-		period, err = time.ParseDuration(f.Spec.Pull.Period)
+		period, err := time.ParseDuration(f.Spec.Pull.Period)
 		if err == nil {
 			return period
 		}

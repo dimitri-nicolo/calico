@@ -101,8 +101,5 @@ func (m *MockGlobalNetworkSetInterface) Calls() []spyutil.Call {
 	var out []spyutil.Call
 	m.m.Lock()
 	defer m.m.Unlock()
-	for _, c := range m.calls {
-		out = append(out, c)
-	}
-	return out
+	return append(out, m.calls...)
 }

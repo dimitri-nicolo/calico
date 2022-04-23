@@ -14,7 +14,6 @@ import (
 	es "github.com/projectcalico/calico/intrusion-detection-controller/pkg/elastic"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/controllers/controller"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/globalalert/worker"
-	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/health"
 	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -23,13 +22,12 @@ import (
 
 // managedClusterController is responsible for watching ManagedCluster resource.
 type managedClusterController struct {
-	lmaESClient              lma.Client
-	indexSettings            es.IndexSettings
-	calicoCLI                calicoclient.Interface
-	createManagedCalicoCLI   func(string) (calicoclient.Interface, error)
-	cancel                   context.CancelFunc
-	worker                   worker.Worker
-	managedAlertControllerCh chan []health.Pinger
+	lmaESClient            lma.Client
+	indexSettings          es.IndexSettings
+	calicoCLI              calicoclient.Interface
+	createManagedCalicoCLI func(string) (calicoclient.Interface, error)
+	cancel                 context.CancelFunc
+	worker                 worker.Worker
 }
 
 // NewManagedClusterController returns a managedClusterController and returns health.Pinger for resources it watches and also

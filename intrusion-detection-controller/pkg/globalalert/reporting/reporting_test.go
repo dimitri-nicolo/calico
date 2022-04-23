@@ -21,8 +21,6 @@ const (
 	alertName   = "sample-test"
 	clusterName = "ut-cluster"
 	namespace   = "ut-namespace"
-
-	mockAdjServiceUrl = "adj-service-url"
 )
 
 var (

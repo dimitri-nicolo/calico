@@ -24,12 +24,10 @@ const (
 	DefaultADDetectorTrainingPeriod = 24 * time.Hour
 
 	defaultCronJobTrainingSchedule time.Duration = 24 * time.Hour
-	defaultTrainingLookback                      = 1000
 
 	trainingCronJobSuffix = "training"
 
-	ADJobOwnerLabelValue       = "intrusion-detection-controller"
-	maxWaitTimeForTrainingJobs = 5 * time.Minute
+	ADJobOwnerLabelValue = "intrusion-detection-controller"
 )
 
 var (
@@ -128,7 +126,9 @@ func (c *adJobTrainingController) RemoveDetector(resource interface{}) error {
 		return errors.New("unexpected type for an ADJob Training resource")
 	}
 
-	c.adTrainingReconciler.removeTrainingCycles(trainingDetectorStateForCluster)
+	if err := c.adTrainingReconciler.removeTrainingCycles(trainingDetectorStateForCluster); err != nil {
+		return err
+	}
 
 	return nil
 }

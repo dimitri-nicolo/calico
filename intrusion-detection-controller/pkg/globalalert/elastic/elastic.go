@@ -484,7 +484,8 @@ func (e *service) executeEsCompositeQuery() {
 			doc := e.buildEventsIndexDoc(record)
 			if err = e.lmaESClient.PutBulkSecurityEvent(doc); err != nil {
 				log.WithError(err).Errorf("failed to add event for GlobalAlert %s", e.globalAlert.Name)
-				continue
+				e.setErrorAndFlush(v3.ErrorCondition{Message: err.Error()})
+				return
 			}
 
 			e.globalAlert.Status.LastEvent = &metav1.Time{Time: time.Now()}
@@ -539,7 +540,11 @@ func (e *service) executeEsQueryWithScroll() {
 				return
 			}
 			doc := e.buildEventsIndexDoc(record)
-			e.lmaESClient.PutBulkSecurityEvent(doc)
+			if err = e.lmaESClient.PutBulkSecurityEvent(doc); err != nil {
+				log.WithError(err).Errorf("failed to add event for GlobalAlert %s", e.globalAlert.Name)
+				e.setErrorAndFlush(v3.ErrorCondition{Message: err.Error()})
+				return
+			}
 			e.globalAlert.Status.LastEvent = &metav1.Time{Time: time.Now()}
 		}
 

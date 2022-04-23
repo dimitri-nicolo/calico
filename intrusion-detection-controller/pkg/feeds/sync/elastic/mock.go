@@ -51,11 +51,9 @@ func (c *MockElasticIPSetController) NoGC(ctx context.Context, name string) {
 }
 
 func (c *MockElasticIPSetController) StartReconciliation(ctx context.Context) {
-	return
 }
 
 func (c *MockElasticIPSetController) Run(ctx context.Context) {
-	return
 }
 
 func (c *MockElasticIPSetController) NotGCable() map[string]struct{} {
@@ -119,11 +117,9 @@ func (c *MockDomainNameSetsController) NoGC(ctx context.Context, name string) {
 }
 
 func (c *MockDomainNameSetsController) StartReconciliation(ctx context.Context) {
-	return
 }
 
 func (c *MockDomainNameSetsController) Run(ctx context.Context) {
-	return
 }
 
 func (c *MockDomainNameSetsController) NotGCable() map[string]struct{} {

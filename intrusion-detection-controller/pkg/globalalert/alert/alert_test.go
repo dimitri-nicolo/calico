@@ -145,7 +145,7 @@ var _ = Describe("GlobalAlert", func() {
 				for _, c := range mockElasticSvc.ExpectedCalls {
 					if c.Method == "ExecuteAlert" {
 						wg.Done()
-						diff := time.Now().Sub(now)
+						diff := time.Since(now)
 						if firstOnIntervalCall {
 							firstOnIntervalCall = false
 							Expect(diff.Seconds()).To(BeNumerically("<", 6))

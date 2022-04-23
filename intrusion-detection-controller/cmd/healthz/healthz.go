@@ -39,5 +39,4 @@ func main() {
 		_, _ = fmt.Fprintf(os.Stderr, "healthz endpoint returned status %d\n", r.StatusCode)
 		os.Exit(3)
 	}
-	return
 }

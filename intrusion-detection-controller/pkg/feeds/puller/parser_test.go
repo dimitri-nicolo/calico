@@ -36,7 +36,7 @@ func TestGetParserForFormat(t *testing.T) {
 		}
 	}
 
-	t.Run("json", f(v3.ThreatFeedFormat{JSON: &v3.ThreatFeedFormatJSON{"$"}},
+	t.Run("json", f(v3.ThreatFeedFormat{JSON: &v3.ThreatFeedFormatJSON{Path: "$"}},
 		`["a", "b"]`, []entryHandlerInput{{1, "a"}, {2, "b"}}))
 	t.Run("csv", f(v3.ThreatFeedFormat{CSV: &v3.ThreatFeedFormatCSV{FieldNum: util.UintPtr(0)}},
 		"a,b\nc,d", []entryHandlerInput{{1, "a"}, {2, "c"}}))
