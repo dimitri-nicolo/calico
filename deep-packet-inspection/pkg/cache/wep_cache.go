@@ -7,7 +7,7 @@ import (
 	"reflect"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/deep-packet-inspection/pkg/weputils"
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/weputils"
 
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"

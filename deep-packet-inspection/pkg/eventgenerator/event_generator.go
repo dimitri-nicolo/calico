@@ -14,13 +14,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tigera/lma/pkg/api"
+	"github.com/projectcalico/calico/lma/pkg/api"
 
-	cache3 "github.com/tigera/deep-packet-inspection/pkg/cache"
-	"github.com/tigera/deep-packet-inspection/pkg/config"
-	"github.com/tigera/deep-packet-inspection/pkg/dpiupdater"
-	"github.com/tigera/deep-packet-inspection/pkg/elastic"
-	"github.com/tigera/deep-packet-inspection/pkg/fileutils"
+	cache3 "github.com/projectcalico/calico/deep-packet-inspection/pkg/cache"
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/config"
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/dpiupdater"
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/elastic"
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/fileutils"
 
 	"github.com/hpcloud/tail"
 	log "github.com/sirupsen/logrus"

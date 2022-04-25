@@ -9,14 +9,14 @@ import (
 	"os"
 	"time"
 
-	"github.com/tigera/lma/pkg/api"
-	lma "github.com/tigera/lma/pkg/elastic"
+	"github.com/projectcalico/calico/lma/pkg/api"
+	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 
-	cache2 "github.com/tigera/deep-packet-inspection/pkg/cache"
-	"github.com/tigera/deep-packet-inspection/pkg/config"
-	"github.com/tigera/deep-packet-inspection/pkg/dpiupdater"
-	"github.com/tigera/deep-packet-inspection/pkg/elastic"
-	"github.com/tigera/deep-packet-inspection/pkg/eventgenerator"
+	cache2 "github.com/projectcalico/calico/deep-packet-inspection/pkg/cache"
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/config"
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/dpiupdater"
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/elastic"
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/eventgenerator"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

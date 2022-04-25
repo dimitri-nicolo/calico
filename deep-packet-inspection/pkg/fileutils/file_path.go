@@ -5,7 +5,7 @@ package fileutils
 import (
 	"fmt"
 
-	"github.com/tigera/deep-packet-inspection/pkg/weputils"
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/weputils"
 
 	log "github.com/sirupsen/logrus"
 

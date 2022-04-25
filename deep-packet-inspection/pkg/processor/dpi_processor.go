@@ -8,9 +8,9 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/deep-packet-inspection/pkg/dpiupdater"
-	"github.com/tigera/deep-packet-inspection/pkg/exec"
-	"github.com/tigera/deep-packet-inspection/pkg/weputils"
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/dpiupdater"
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/exec"
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/weputils"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )

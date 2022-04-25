@@ -15,8 +15,8 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 
-	"github.com/tigera/deep-packet-inspection/pkg/dpiupdater"
-	"github.com/tigera/deep-packet-inspection/pkg/processor"
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/dpiupdater"
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/processor"
 )
 
 var _ = Describe("DPI status updater", func() {

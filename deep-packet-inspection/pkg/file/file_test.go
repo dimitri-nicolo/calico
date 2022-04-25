@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/tigera/deep-packet-inspection/pkg/file"
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/file"
 )
 
 var _ = Describe("File", func() {

@@ -10,7 +10,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/tigera/deep-packet-inspection/pkg/fileutils"
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/fileutils"
 
 	log "github.com/sirupsen/logrus"
 

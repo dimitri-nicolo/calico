@@ -5,7 +5,7 @@ package cache_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/tigera/deep-packet-inspection/pkg/cache"
+	"github.com/projectcalico/calico/deep-packet-inspection/pkg/cache"
 
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
