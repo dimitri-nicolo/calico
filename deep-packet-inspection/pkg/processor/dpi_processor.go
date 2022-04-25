@@ -8,10 +8,10 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/dpiupdater"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/exec"
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/weputils"
-
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 

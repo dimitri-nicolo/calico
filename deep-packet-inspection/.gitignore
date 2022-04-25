@@ -13,20 +13,11 @@
 *.out
 
 # Dependency directories (remove the comment below to include it)
-vendor/
 report/
 bin
-.go-pkg-cache
 
 # Ignore IDE files
-.vscode/
 */__debug_bin
-.idea/
-
-# Ignore Go build files
-Makefile.common*
-
-release-notes-*
 
 # Ignore CRDs copied for fv
 config/

@@ -7,13 +7,14 @@ import (
 	"net/http"
 	"time"
 
-	lma "github.com/projectcalico/calico/lma/pkg/elastic"
-
-	es "github.com/olivere/elastic/v7"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	es "github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/mock"
+
 	"github.com/projectcalico/calico/deep-packet-inspection/pkg/elastic"
+	lma "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 var _ = Describe("Elastic Search Forwarder", func() {

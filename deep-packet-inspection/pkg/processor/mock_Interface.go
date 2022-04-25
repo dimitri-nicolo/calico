@@ -17,20 +17,8 @@ type MockClientInterface struct {
 	mock.Mock
 }
 
-func (_m *MockClientInterface) IPReservations() clientv3.IPReservationInterface {
-	panic("implement me")
-}
-
-func (_m *MockClientInterface) CalicoNodeStatus() clientv3.CalicoNodeStatusInterface {
-	panic("implement me")
-}
-
-func (_m *MockClientInterface) UISettingsGroups() clientv3.UISettingsGroupInterface {
-	panic("implement me")
-}
-
-func (_m *MockClientInterface) UISettings() clientv3.UISettingsInterface {
-	panic("implement me")
+func (_m *MockClientInterface) AlertExceptions() clientv3.AlertExceptionInterface {
+	return nil
 }
 
 func (_m *MockClientInterface) BGPConfigurations() clientv3.BGPConfigurationInterface {
@@ -39,6 +27,10 @@ func (_m *MockClientInterface) BGPConfigurations() clientv3.BGPConfigurationInte
 
 func (_m *MockClientInterface) BGPPeers() clientv3.BGPPeerInterface {
 	return nil
+}
+
+func (_m *MockClientInterface) CalicoNodeStatus() clientv3.CalicoNodeStatusInterface {
+	panic("implement me")
 }
 
 func (_m *MockClientInterface) ClusterInformation() clientv3.ClusterInformationInterface {
@@ -108,6 +100,10 @@ func (_m *MockClientInterface) IPPools() clientv3.IPPoolInterface {
 	return nil
 }
 
+func (_m *MockClientInterface) IPReservations() clientv3.IPReservationInterface {
+	panic("implement me")
+}
+
 func (_m *MockClientInterface) KubeControllersConfiguration() clientv3.KubeControllersConfigurationInterface {
 	return nil
 }
@@ -159,6 +155,14 @@ func (_m *MockClientInterface) StagedNetworkPolicies() clientv3.StagedNetworkPol
 
 func (_m *MockClientInterface) Tiers() clientv3.TierInterface {
 	return nil
+}
+
+func (_m *MockClientInterface) UISettingsGroups() clientv3.UISettingsGroupInterface {
+	panic("implement me")
+}
+
+func (_m *MockClientInterface) UISettings() clientv3.UISettingsInterface {
+	panic("implement me")
 }
 
 func (_m *MockClientInterface) WorkloadEndpoints() clientv3.WorkloadEndpointInterface {
