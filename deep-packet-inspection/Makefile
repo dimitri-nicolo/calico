@@ -7,9 +7,6 @@ PACKAGE_NAME    ?= github.com/projectcalico/calico/deep-packet-inspection
 # Env vars related to packaging and releasing
 #############################################
 DEEP_PACKET_INSPECTION_IMAGE	?=deep-packet-inspection
-SNORT_IMAGE      		?=snort3
-SNORT3_VERSION  		?=3.1.21.0
-SNORT_DEV_REGISTRY 		?=gcr.io/unique-caldron-775/cnx/tigera
 BUILD_IMAGES			?=$(DEEP_PACKET_INSPECTION_IMAGE)
 
 ###############################################################################
@@ -58,29 +55,13 @@ image-all: $(addprefix sub-image-,$(ARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-.PHONY: image $(SNORT_IMAGE)-$(ARCH) $(DEEP_PACKET_INSPECTION_IMAGE)-$(ARCH)
+.PHONY: image $(DEEP_PACKET_INSPECTION_IMAGE) $(DEEP_PACKET_INSPECTION_IMAGE)-$(ARCH)
 image: $(BUILD_IMAGES)
 
-$(SNORT_IMAGE)-$(ARCH):
-	if docker manifest inspect $(SNORT_DEV_REGISTRY)/$(SNORT_IMAGE):$(SNORT3_VERSION)-$(ARCH); then \
-  		echo "Using existing snort image $(SNORT_IMAGE):$(SNORT3_VERSION)-$(ARCH)"; \
-  		docker pull $(SNORT_DEV_REGISTRY)/$(SNORT_IMAGE):$(SNORT3_VERSION)-$(ARCH); \
-  		docker tag $(SNORT_DEV_REGISTRY)/$(SNORT_IMAGE):$(SNORT3_VERSION)-$(ARCH) $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT3_VERSION)-$(ARCH); \
-  	else \
-  	  	echo "Snort image  $(SNORT_IMAGE):$(SNORT3_VERSION)-$(ARCH) doesn't exist in $(SNORT_DEV_REGISTRY), building it"; \
-  	  	$(DOCKER_BUILD) --build-arg SNORT3_VERSION=$(SNORT3_VERSION) -t $(DEV_REGISTRIES)/$(SNORT_IMAGE):$(SNORT3_VERSION)-$(ARCH) -f docker-image/Dockerfile.snort.$(ARCH) docker-image --load; \
-  	fi
-
-$(DEEP_PACKET_INSPECTION_IMAGE): $(SNORT_IMAGE)-$(ARCH) $(DEEP_PACKET_INSPECTION_IMAGE)-$(ARCH)
+$(DEEP_PACKET_INSPECTION_IMAGE): $(DEEP_PACKET_INSPECTION_IMAGE)-$(ARCH)
 $(DEEP_PACKET_INSPECTION_IMAGE)-$(ARCH): bin/deep-packet-inspection-$(ARCH)
-	# can't use $(DOCKER_BUILD) from lib.Makefile due to the --pull flag.
-	# it will load metadata for docker.io/tigera/snort3 which causes an internal error.
-	docker buildx build --build-arg SNORT3_VERSION=$(SNORT3_VERSION) -t $(DEEP_PACKET_INSPECTION_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) . --load
+	$(DOCKER_BUILD) -t $(DEEP_PACKET_INSPECTION_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) . --load
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
-
-.PHONY: push-snort-image
-push-snort-image:
-	docker push $(SNORT_DEV_REGISTRY)/$(SNORT_IMAGE):$(SNORT3_VERSION)-$(ARCH)
 
 .PHONY: clean
 clean:
@@ -89,7 +70,6 @@ clean:
 		config/
 	find . -name '*.coverprofile' -type f -delete
 	-docker image rm -f $$(docker images $(DEEP_PACKET_INSPECTION_IMAGE) -a -q)
-	-docker image rm -f $$(docker images $(SNORT_IMAGE) -a -q)
 
 ###############################################################################
 # Testing
