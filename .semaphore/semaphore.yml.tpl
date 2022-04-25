@@ -601,6 +601,21 @@ blocks:
       commands:
       - make ci
 
+- name: 'deep-packet-inspection'
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/deep-packet-inspection/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd deep-packet-inspection
+    jobs:
+    - name: "deep-packet-inspection tests"
+      commands:
+      - make ci
+
 - name: 'es-gateway'
   run:
     when: "${FORCE_RUN} or change_in(['/*', '/es-gateway/', '/libcalico-go/lib/logutils/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
