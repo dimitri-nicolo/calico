@@ -1,6 +1,6 @@
 ARG SNORT3_VERSION
 
-FROM tigera/snort3:${SNORT3_VERSION} as snort
+FROM tigera/snort3:${SNORT3_VERSION}-amd64 as snort
 
 # Install snort 3 rule
 RUN mkdir -p /usr/local/etc/rules \
