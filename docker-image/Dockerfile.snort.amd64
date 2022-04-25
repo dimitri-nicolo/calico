@@ -1,0 +1,76 @@
+FROM ubuntu:20.04 AS snort
+
+ARG SNORT3_VERSION
+
+ENV DAQ_VERSION=3.0.6
+ENV GPERFTOOLS_VERSION=2.9.1
+ENV OPEN_APPID_VERSION=23020
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update -y \
+    && apt-get upgrade -y
+
+RUN apt-get install -y \
+    autoconf \
+    build-essential \
+    cmake \
+    flex \
+    libcmocka-dev \
+    libdumbnet-dev \
+    libhwloc-dev \
+    libluajit-5.1-dev \
+    liblzma-dev \
+    libnetfilter-queue-dev \
+    libpcap-dev \
+    libpcre3-dev \
+    libssl-dev \
+    pkgconf \
+    uuid-dev \
+    wget \
+    zlib1g-dev
+
+RUN mkdir snort-source-files
+WORKDIR snort-source-files
+
+# Install snort DAQ (Data Acquisition library)
+RUN wget https://github.com/snort3/libdaq/archive/refs/tags/v${DAQ_VERSION}.tar.gz -O libdaq-${DAQ_VERSION}.tar.gz \
+    && tar xzf libdaq-${DAQ_VERSION}.tar.gz \
+    && cd libdaq-${DAQ_VERSION}/ \
+    && ./bootstrap \
+    && ./configure --enable-shared --disable-static \
+    && make -j4 \
+    && make install
+
+# Install google's thread-caching malloc
+RUN wget https://github.com/gperftools/gperftools/releases/download/gperftools-${GPERFTOOLS_VERSION}/gperftools-${GPERFTOOLS_VERSION}.tar.gz \
+    && tar xzf gperftools-${GPERFTOOLS_VERSION}.tar.gz \
+    && cd gperftools-${GPERFTOOLS_VERSION}/ \
+    && ./configure --enable-shared --disable-static \
+    && make -j4 \
+    && make install
+
+# Build and Install Snort 3
+RUN wget https://github.com/snort3/snort3/archive/refs/tags/${SNORT3_VERSION}.tar.gz -O snort3-${SNORT3_VERSION}.tar.gz \
+    && tar xzf snort3-${SNORT3_VERSION}.tar.gz \
+    && cd snort3-${SNORT3_VERSION}/ \
+    && ./configure_cmake.sh --build-type=Release --enable-tcmalloc --prefix=/usr/local \
+    && cd build \
+    && make -j4 \
+    && make install \
+    && ldconfig
+
+RUN snort -V
+
+# Installing Snort OpenAppID
+RUN wget https://snort.org/downloads/openappid/${OPEN_APPID_VERSION} -O OpenAppId-${OPEN_APPID_VERSION}.tgz \
+    && tar -xzvf OpenAppId-${OPEN_APPID_VERSION}.tgz \
+    && cp -R odp /usr/local/lib/
+
+WORKDIR /
+
+# Create Snorts Log directory and dry-run the snort config to check for errors
+RUN mkdir /var/log/snort \
+    && snort -c /usr/local/etc/snort/snort.lua -T
+
+RUN mkdir /var/log/snort-alerts
