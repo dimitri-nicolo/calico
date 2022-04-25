@@ -1,0 +1,70 @@
+ARG SNORT3_VERSION
+
+FROM tigera/snort3:${SNORT3_VERSION} as snort
+
+# Install snort 3 rule
+RUN mkdir -p /usr/local/etc/rules \
+    && wget https://www.snort.org/downloads/community/snort3-community-rules.tar.gz \
+    && tar xzf snort3-community-rules.tar.gz -C /usr/local/etc/rules/
+
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.5 as ubi
+RUN microdnf update
+
+# Create Empty root filesystem on /rootfs, copy only required linux utils
+# and supporting files.This filesystem act as placeholder for
+# all files required in container.
+
+WORKDIR /rootfs
+
+RUN mkdir -p etc/ssl/certs && \
+    cp /etc/ssl/certs/* etc/ssl/certs
+
+ADD bin/deep-packet-inspection-amd64 /deep-packet-inspection
+
+FROM scratch
+
+COPY --from=ubi /rootfs /
+# Add dpi binary to the image
+COPY --from=ubi /deep-packet-inspection /deep-packet-inspection
+
+# Copy Snort and related files over
+COPY --from=snort /usr/local/bin/snort /usr/local/bin/snort
+COPY --from=snort /usr/local/lib/libdaq.so.3 /usr/lib/libdaq.so.3
+COPY --from=snort /usr/local/lib/libtcmalloc.so.4 /usr/lib/libtcmalloc.so.4
+
+COPY --from=snort /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/libc.so.6
+COPY --from=snort /lib/x86_64-linux-gnu/libcrypto.so.1.1 /lib/x86_64-linux-gnu/libcrypto.so.1.1
+COPY --from=snort /lib/x86_64-linux-gnu/libdl.so.2 /lib/x86_64-linux-gnu/libdl.so.2
+COPY --from=snort /lib/x86_64-linux-gnu/libdumbnet.so.1 /lib/x86_64-linux-gnu/libdumbnet.so.1
+COPY --from=snort /lib/x86_64-linux-gnu/libgcc_s.so.1 /lib/x86_64-linux-gnu/libgcc_s.so.1
+COPY --from=snort /lib/x86_64-linux-gnu/libhwloc.so.15 /lib/x86_64-linux-gnu/libhwloc.so.15
+COPY --from=snort /lib/x86_64-linux-gnu/libltdl.so.7 /lib/x86_64-linux-gnu/libltdl.so.7
+COPY --from=snort /lib/x86_64-linux-gnu/libluajit-5.1.so.2 /lib/x86_64-linux-gnu/libluajit-5.1.so.2
+COPY --from=snort /lib/x86_64-linux-gnu/liblzma.so.5 /lib/x86_64-linux-gnu/liblzma.so.5
+COPY --from=snort /lib/x86_64-linux-gnu/libm.so.6 /lib/x86_64-linux-gnu/libm.so.6
+COPY --from=snort /lib/x86_64-linux-gnu/libpcap.so.0.8 /lib/x86_64-linux-gnu/libpcap.so.0.8
+COPY --from=snort /lib/x86_64-linux-gnu/libpcre.so.3 /lib/x86_64-linux-gnu/libpcre.so.3
+COPY --from=snort /lib/x86_64-linux-gnu/libpthread.so.0 /lib/x86_64-linux-gnu/libpthread.so.0
+COPY --from=snort /lib/x86_64-linux-gnu/libstdc++.so.6 /lib/x86_64-linux-gnu/libstdc++.so.6
+COPY --from=snort /lib/x86_64-linux-gnu/libudev.so.1 /lib/x86_64-linux-gnu/libudev.so.1
+COPY --from=snort /lib/x86_64-linux-gnu/libuuid.so.1 /lib/x86_64-linux-gnu/libuuid.so.1
+COPY --from=snort /lib/x86_64-linux-gnu/libz.so.1 /lib/x86_64-linux-gnu/libz.so.1
+COPY --from=snort /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
+
+COPY --from=snort /usr/local/etc/rules /usr/local/etc/rules
+COPY --from=snort /usr/local/etc/snort /usr/local/etc/snort
+
+# Copy log location
+COPY --from=snort /var/log/snort/ /var/log/snort/
+COPY --from=snort /var/log/snort-alerts /var/log/snort-alerts
+
+# For debugging
+#COPY --from=snort /bin/ /bin
+#COPY --from=snort /sbin/ /sbin
+#COPY --from=snort /usr/bin/ /usr/bin
+#COPY --from=snort /etc/alternatives /etc/alternatives
+
+WORKDIR /
+
+# Command-line call to start the application
+ENTRYPOINT ["/deep-packet-inspection"]
