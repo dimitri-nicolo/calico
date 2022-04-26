@@ -7,6 +7,8 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/tigera/lma/pkg/timeutils"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
 
@@ -113,21 +115,23 @@ func LoadConfig() (*Config, error) {
 
 	// If the start/end times are specified, parse them now.
 	if config.ReportStart != "" {
-		config.ParsedReportStart, err = time.Parse(time.RFC3339, config.ReportStart)
+		pt, _, err := timeutils.ParseTime(now, &config.ReportStart)
 		if err != nil {
 			return nil, fmt.Errorf("report start-time specified in environment variable TIGERA_COMPLIANCE_REPORT_START_TIME is not RFC3339 formatted: %s",
 				config.ReportStart,
 			)
 		}
+		config.ParsedReportStart = *pt
 	}
 
 	if config.ReportEnd != "" {
-		config.ParsedReportEnd, err = time.Parse(time.RFC3339, config.ReportEnd)
+		pt, _, err := timeutils.ParseTime(now, &config.ReportEnd)
 		if err != nil {
 			return nil, fmt.Errorf("report end-time specified in environment variable TIGERA_COMPLIANCE_REPORT_END_TIME is not RFC3339 formatted: %s",
 				config.ReportEnd,
 			)
 		}
+		config.ParsedReportEnd = *pt
 	}
 
 	if config.ParsedReportEnd.Before(config.ParsedReportStart) {
