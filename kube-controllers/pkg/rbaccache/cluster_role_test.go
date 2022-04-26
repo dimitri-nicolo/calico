@@ -168,7 +168,7 @@ var _ = Describe("ClusterRoleCache", func() {
 				RoleRef:  rbacv1.RoleRef{Name: "test-cluster-role-2"},
 			})).Should(BeTrue())
 
-			Expect(roleCache.ClusterRoleSubjects("test-cluster-role-1", rbacv1.ServiceAccountKind)).Should(Equal([]rbacv1.Subject{}))
+			Expect(roleCache.ClusterRoleSubjects("test-cluster-role-1", rbacv1.ServiceAccountKind)).Should(Equal([]rbacv1.Subject(nil)))
 			Expect(roleCache.ClusterRoleSubjects("test-cluster-role-2", rbacv1.UserKind)).Should(Equal([]rbacv1.Subject{subject2}))
 			Expect(roleCache.ClusterRoleNameForBinding("test-cluster-role-binding-1")).Should(Equal(""))
 			Expect(roleCache.ClusterRoleNameForBinding("test-cluster-role-binding-2")).Should(Equal("test-cluster-role-2"))
@@ -230,7 +230,40 @@ var _ = Describe("ClusterRoleCache", func() {
 			Expect(roleCache.SubjectNamesForBinding("test-cluster-role-binding")).Should(BeEquivalentTo(emptyStrArray))
 			Expect(roleCache.ClusterRoleNamesForSubjectName("test-service-account")).Should(BeEquivalentTo(emptyStrArray))
 			Expect(roleCache.ClusterRoleNamesForSubjectName("test-user")).Should(BeEquivalentTo(emptyStrArray))
+		})
 
+		It("Handles removing the cluster role before the cluster role binding", func() {
+			subject1 := rbacv1.Subject{
+				Kind: rbacv1.ServiceAccountKind,
+				Name: "test-service-account",
+			}
+
+			roleCache := NewClusterRoleCache([]string{}, []string{})
+			Expect(roleCache.AddClusterRoleBinding(&rbacv1.ClusterRoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-cluster-role-binding",
+				},
+				Subjects: []rbacv1.Subject{subject1},
+				RoleRef:  rbacv1.RoleRef{Name: "test-cluster-role"},
+			})).Should(BeTrue())
+			Expect(roleCache.AddClusterRole(&rbacv1.ClusterRole{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-cluster-role",
+				},
+				Rules: []rbacv1.PolicyRule{{
+					APIGroups:     []string{"lma.tigera.io"},
+					ResourceNames: []string{"kibana_login", "elasticsearch_superuser", "flows", "audit*", "audit_ee", "audit_kube", "events", "dns", "l7"},
+					Resources:     []string{"*"},
+				}},
+			})).Should(BeTrue())
+
+			Expect(roleCache.RemoveClusterRole("test-cluster-role")).Should(BeTrue())
+
+			// Test that the subjects are still mapped to the cluster role even if it doesn't exist. This is important
+			// because we map the cluster role binding subjects to cluster role in case it exists again.
+			Expect(roleCache.ClusterRoleSubjects("test-cluster-role", rbacv1.ServiceAccountKind)).Should(HaveLen(1))
+			Expect(roleCache.RemoveClusterRoleBinding("test-cluster-role-binding")).Should(BeTrue())
+			Expect(roleCache.ClusterRoleSubjects("test-cluster-role", rbacv1.ServiceAccountKind)).Should(HaveLen(0))
 		})
 
 		It("Returns false when the ClusterRoleBinding isn't in the cache", func() {
