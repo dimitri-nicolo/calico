@@ -106,8 +106,11 @@ ut:
 ###############################################################################
 ## Run the ginkgo FVs
 fv: run-k8s-apiserver
-	 $(DOCKER_RUN) -e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-		ginkgo -r --focus="$(GINKGO_FOCUS)" $(GINKGO_ARGS)'
+	 $(DOCKER_RUN) \
+	 	-e KUBECONFIG=/home/user/certs/kubeconfig \
+		-v $(CERTS_PATH):/home/user/certs \
+	 	-e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 $(CALICO_BUILD) \
+		 sh -c '$(GIT_CONFIG_SSH) ginkgo -r --focus="$(GINKGO_FOCUS)" $(GINKGO_ARGS)'
 
 ###############################################################################
 # CI/CD
@@ -120,4 +123,4 @@ fv: run-k8s-apiserver
 ci: clean static-checks ut fv
 
 ## Deploys images to registry
-cd: image-all push-snort-image cd-common
+cd: image-all cd-common

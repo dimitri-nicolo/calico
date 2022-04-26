@@ -5,6 +5,7 @@ package syncer_test
 import (
 	"context"
 	"fmt"
+	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -21,6 +22,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
+	k8sresources "github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/resources"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/dpisyncer"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
@@ -36,7 +38,6 @@ var _ = Describe("Syncer", func() {
 
 	var ctx context.Context
 	var nodename = "127.0.0.1"
-	var k8sAPIEndpoint = "http://localhost:8080"
 	var healthCh = make(chan bool)
 	var cfg apiconfig.CalicoAPIConfig
 	var calicoClient clientv3.Interface
@@ -52,7 +53,7 @@ var _ = Describe("Syncer", func() {
 			Spec: apiconfig.CalicoAPIConfigSpec{
 				DatastoreType: apiconfig.Kubernetes,
 				KubeConfig: apiconfig.KubeConfig{
-					K8sAPIEndpoint: k8sAPIEndpoint,
+					Kubeconfig: os.Getenv("KUBECONFIG"),
 				},
 			},
 		}
@@ -75,6 +76,14 @@ var _ = Describe("Syncer", func() {
 		}
 		_, err = k8sClientset.CoreV1().Namespaces().Create(ctx, &ns, metav1.CreateOptions{})
 		Expect(err).ShouldNot(HaveOccurred())
+
+		sa := k8sapi.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "default",
+			},
+		}
+		_, err = k8sClientset.CoreV1().ServiceAccounts(namespace).Create(ctx, &sa, metav1.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
 
 		_, err = k8sClientset.CoreV1().Pods(namespace).Create(ctx, &k8sapi.Pod{
 			ObjectMeta: metav1.ObjectMeta{Name: "pod1"},
@@ -135,7 +144,8 @@ var _ = Describe("Syncer", func() {
 		}()
 
 		By("creating WEP before starting syncerCallbacks")
-		_, err := calicoClient.WorkloadEndpoints().Create(ctx1, &calicolib.WorkloadEndpoint{
+		ctxPatchCNI := k8sresources.ContextWithPatchMode(ctx1, k8sresources.PatchModeCNI)
+		_, err := calicoClient.WorkloadEndpoints().Create(ctxPatchCNI, &calicolib.WorkloadEndpoint{
 			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: fmt.Sprintf("%s-k8s-pod1-eth0", nodename)},
 			Spec: calicolib.WorkloadEndpointSpec{
 				Orchestrator:  "k8s",
@@ -165,6 +175,7 @@ var _ = Describe("Syncer", func() {
 		expectedCallsToOnUpdate := 8
 		mockDispatcher.On("Dispatch", ctx1, mock.Anything).Return().Run(
 			func(args mock.Arguments) {
+				defer GinkgoRecover()
 				numberOfCallsToOnUpdate++
 				for _, c := range mockDispatcher.ExpectedCalls {
 					if c.Method == "Dispatch" {
@@ -242,7 +253,7 @@ var _ = Describe("Syncer", func() {
 		Eventually(func() int { return numberOfCallsToOnUpdate }).Should(Equal(1))
 
 		By("creating WEP and checking updates are received by dispatcher")
-		_, err = calicoClient.WorkloadEndpoints().Create(ctx1, &calicolib.WorkloadEndpoint{
+		_, err = calicoClient.WorkloadEndpoints().Create(ctxPatchCNI, &calicolib.WorkloadEndpoint{
 			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: fmt.Sprintf("%s-k8s-pod2-eth0", nodename)},
 			Spec: calicolib.WorkloadEndpointSpec{
 				Orchestrator:  "k8s",
@@ -272,7 +283,7 @@ var _ = Describe("Syncer", func() {
 
 		By("creating WEP for non-local node and checking updates are not sent to syncerCallbacks")
 		tempNode := "tempnode"
-		_, err = calicoClient.WorkloadEndpoints().Create(ctx1, &calicolib.WorkloadEndpoint{
+		_, err = calicoClient.WorkloadEndpoints().Create(ctxPatchCNI, &calicolib.WorkloadEndpoint{
 			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: fmt.Sprintf("%s-k8s-pod1-eth0", tempNode)},
 			Spec: calicolib.WorkloadEndpointSpec{
 				Orchestrator:  "k8s",
