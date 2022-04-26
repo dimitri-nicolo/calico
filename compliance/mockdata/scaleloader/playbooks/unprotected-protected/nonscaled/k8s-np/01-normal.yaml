@@ -1,0 +1,15 @@
+action: update
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: protect-ingress
+  namespace: "{{.Namespace}}"
+spec:
+  podSelector:
+    matchLabels:
+      "{{.Namespace}}-protected": 'ingress'
+  ingress:
+    - from:
+      - podSelector:
+          matchLabels:
+            a-label: "non-existent"

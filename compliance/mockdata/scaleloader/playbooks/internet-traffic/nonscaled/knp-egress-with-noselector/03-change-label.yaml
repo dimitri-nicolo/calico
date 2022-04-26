@@ -1,0 +1,14 @@
+action: update
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: egress-with-noselector
+  namespace: "{{.Namespace}}"
+  labels:
+    churn-k8s: "blue-fish"
+spec:
+  podSelector:
+    matchLabels:
+      egress-with-noselector: 'yes'
+  egress:
+    - {}

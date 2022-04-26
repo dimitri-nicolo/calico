@@ -1,0 +1,15 @@
+action: init
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: ingress-from-any-ns
+  namespace: "{{.Namespace}}"
+  labels:
+    churn-k8s: "one-fish"
+spec:
+  podSelector:
+    matchLabels:
+      ingress-from-any-ns: 'yes'
+  ingress:
+    - from:
+      - namespaceSelector: {}

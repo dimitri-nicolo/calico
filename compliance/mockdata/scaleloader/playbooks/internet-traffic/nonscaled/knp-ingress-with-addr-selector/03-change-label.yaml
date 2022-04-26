@@ -1,0 +1,16 @@
+action: update
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: ingress-with-address-selector
+  namespace: "{{.Namespace}}"
+  labels:
+    churn-k8s: "blue-fish"
+spec:
+  podSelector:
+    matchLabels:
+      ingress-with-address-selector: 'yes'
+  ingress:
+    - from:
+      - ipBlock:
+          cidr: "8.8.8.8/32"

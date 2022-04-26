@@ -1,0 +1,17 @@
+apiVersion: projectcalico.org/v3
+kind: GlobalReportType
+metadata:
+  name: policy-audit
+  labels:
+    global-report-type: policy-audit
+spec:
+  uiSummaryTemplate:
+    name: ui-summary.json
+  downloadTemplates:
+    - name: summary.csv
+    - name: events.json
+    - name: events.yaml
+  auditEventsSelection:
+    resources:
+      - resource: 'globalnetworkpolicies'
+      - resource: 'networkpolicies'

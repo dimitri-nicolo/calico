@@ -1,0 +1,34 @@
+action: init
+kind: GlobalNetworkPolicy
+apiVersion: projectcalico.org/v3
+metadata:
+  name: demo-gnp
+  labels:
+    gnplabela: "gnp label a"
+spec:
+  selector: 'kind == "gnp"'
+  ingress:
+    - action: Allow
+      source:
+        nets:
+          - 192.168.0.3/32
+          - 192.168.0.7/32
+        selector: 'ingress == "gnp-select"'
+        namespaceselector: 'ingress == "{{.Namespace}}"'
+        serviceAccounts:
+          names:
+            - ingress-sa-in-gnp
+          selector: 'ingress == "sa-in-gnp"'
+
+  egress:
+    - action: Allow
+      destination:
+        nets:
+          - 192.168.0.4/32
+          - 192.168.0.8/32
+        selector: 'egress == "gnp-select"'
+        namespaceselector: 'egress == "gnp-ns-select"'
+        serviceAccounts:
+          names:
+            - egress-sa-in-gnp
+          selector: 'egress == "sa-in-gnp"'

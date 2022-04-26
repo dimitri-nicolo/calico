@@ -1,0 +1,15 @@
+apiVersion: projectcalico.org/v3
+kind: GlobalReportType
+metadata:
+  name: cis-benchmark
+  labels:
+    global-report-type: cis-benchmark
+spec:
+  includeCISBenchmarkData: true
+  uiSummaryTemplate:
+    name: ui-summary.json
+  downloadTemplates:
+    - name: all-tests.csv
+    - name: failed-tests.csv
+    - name: node-summary.csv
+    - name: total-summary.csv

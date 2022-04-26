@@ -1,0 +1,12 @@
+action: update
+kind: "Pod"
+apiVersion: v1
+metadata:
+  name: "egress-to-any-{{.ScaleId}}"
+  namespace: "{{.Namespace}}"
+  labels:
+    egress-to-any: "yes"
+    just: "some churn 2"
+spec:
+  serviceAccountName: demosa
+  nodeName: anode

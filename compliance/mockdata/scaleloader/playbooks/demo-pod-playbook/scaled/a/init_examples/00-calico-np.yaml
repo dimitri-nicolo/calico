@@ -1,0 +1,33 @@
+action: init
+kind: NetworkPolicy
+apiVersion: projectcalico.org/v3
+metadata:
+  name: demo-calico-np
+  namespace: "{{.Namespace}}"
+spec:
+  selector: 'kind == "calico-np"'
+  ingress:
+    - action: Allow
+      source:
+        nets:
+          - 192.168.0.1/32
+          - 192.168.0.5/32
+        selector: 'ingress == "calico-np-select"'
+        namespaceselector: 'ingress == "{{.Namespace}}"'
+        serviceAccounts:
+          names:
+            - ingress-sa-in-calico-np
+          selector: 'ingress == "sa-in-calico-np"'
+
+  egress:
+    - action: Allow
+      destination:
+        nets:
+          - 192.168.0.2/32
+          - 192.168.0.6/32
+        selector: 'egress == "calico-np-select"'
+        namespaceselector: 'egress == "{{.Namespace}}"'
+        serviceAccounts:
+          names:
+            - egress-sa-in-calico-np
+          selector: 'egress == "sa-in-calico-np"'

@@ -1,0 +1,17 @@
+action: update
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: demo-c-k8s-np
+  namespace: "{{.Namespace}}"
+  labels:
+    labela: "just for churn"
+spec:
+  podSelector:
+    matchLabels:
+      protected: 'yes'
+  ingress:
+    - from:
+      - podSelector:
+          matchLabels:
+            source: 'non-existant'

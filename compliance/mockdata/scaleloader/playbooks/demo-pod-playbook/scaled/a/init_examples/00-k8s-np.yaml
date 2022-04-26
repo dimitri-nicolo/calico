@@ -1,0 +1,48 @@
+action: init
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: demo-k8s-np
+  namespace: "{{.Namespace}}"
+spec:
+  podSelector:
+    matchLabels:
+      k8snp: 'podselector-labelmatch'
+    matchExpressions:
+      - key: podselectorthekey
+        operator: In
+        Values:
+          - "avalue"
+          - "bvalue"
+  ingress:
+    - from:
+      - podSelector:
+          matchLabels:
+            k8snp: 'ingress-labelmatch'
+        namespaceSeleector:
+          matchExpressions:
+            - key: ingressthekey
+              operator: In
+              values:
+                - "{{.Namespace}}"
+                - "bvalue"
+        ipBlock:
+          cidr: "192.168.3.1/24"
+          except:
+            - "192.168.3.2/32"
+  egress:
+    - to:
+      - podSelector:
+          matchLabels:
+            k8snp: 'egress-labelmatch'
+        namespaceSeleector:
+          matchExpressions:
+            - key: egressthekey
+              operator: In
+              values:
+                - "avalue"
+                - "bvalue"
+        ipBlock:
+          cidr: "192.168.4.1/24"
+          except:
+            - "192.168.4.2/32"

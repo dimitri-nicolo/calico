@@ -1,0 +1,48 @@
+{
+  "type": "panel",
+  "heading": "Network Policy Configuration Changes",
+  "widgets": [
+    {
+      "type": "radialbarchart",
+      "heading": "Network Policies",
+      "summary": {
+        "label": "Total",
+        "total": "@@@{{ .AuditSummary.NumTotal }}@@@"
+      },
+      "data": [
+        {
+          "label": "Created",
+          "value": "@@@{{ .AuditSummary.NumCreate }}@@@"
+        }
+      ]
+    },
+    {
+      "type": "radialbarchart",
+      "heading": "Network Policies",
+      "summary": {
+        "label": "Total",
+        "total": "@@@{{ .AuditSummary.NumTotal }}@@@"
+      },
+      "data": [
+        {
+          "label": "Modified",
+          "value": "@@@{{ .AuditSummary.NumModify }}@@@"
+        }
+      ]
+    },
+    {
+      "type": "radialbarchart",
+      "heading": "Network Policies",
+      "summary": {
+        "label": "Total",
+        "total": "@@@{{ .AuditSummary.NumTotal }}@@@"
+      },
+      "data": [
+        {
+          "label": "Deleted",
+          "value": "@@@{{ .AuditSummary.NumDelete }}@@@"
+        }
+      ]
+    }
+  ]
+}

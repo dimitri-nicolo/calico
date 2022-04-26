@@ -1,0 +1,11 @@
+action: delete
+kind: "Pod"
+apiVersion: v1
+metadata:
+  name: "ingress-from-any-{{.ScaleId}}"
+  namespace: "{{.Namespace}}"
+  labels:
+    ingress-from-any: "yes"
+spec:
+  serviceAccountName: demosa
+  nodeName: anode

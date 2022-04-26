@@ -1,0 +1,12 @@
+action: update
+kind: "Pod"
+apiVersion: v1
+metadata:
+  name: "ingress-from-pub-with-net-set-{{.ScaleId}}"
+  namespace: "{{.Namespace}}"
+  labels:
+    "{{.Namespace}}-ingress-with-net-set": "yes"
+    just: "some churn 2"
+spec:
+  serviceAccountName: demosa
+  nodeName: anode

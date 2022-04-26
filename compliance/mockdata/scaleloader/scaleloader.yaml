@@ -1,0 +1,83 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: scaleloader-config
+  namespace: calico-monitoring
+data:
+  scenario.yaml: |-
+    # The default start is current time minus duration
+    # start: 2019-03-01T06:00:00
+    # The default duration is 24 hours
+    # duration: 12h
+    playbooks:
+      - name: simple-pod
+        playbookscale: 1
+        playscale: 2
+        churnrate: 3
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: compliance-scaleloader
+  namespace: calico-monitoring
+  labels:
+    k8s-app:  compliance-scaleloader
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: scaleloader
+        image: gcr.io/unique-caldron-775/cnx/tigera/compliance-scaleloader:master
+        imagePullPolicy: Always
+        env:
+        - name: ELASTIC_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: tigera-es-config
+              key: tigera.elasticsearch.host
+        - name: ELASTIC_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: tigera-es-config
+              key: tigera.elasticsearch.port
+        - name: ELASTIC_INDEX_SUFFIX
+          valueFrom:
+            configMapKeyRef:
+              name: tigera-es-config
+              key: tigera.elasticsearch.cluster-name
+        - name: ELASTIC_SSL_VERIFY
+          value: "false"
+        - name: RUN_SCENARIO
+          value: "true"
+    
+        volumeMounts:
+          - name: sl-config
+            mountPath: /playbooks/scenario.yaml
+            subPath: scenario.yaml
+      volumes:
+        - name: sl-config
+          configMap:
+            name: scaleloader-config
+---
+# We need a policy so the scaleloader can access Elasticsearch
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-cnx.elasticsearch-access-loader
+  namespace: calico-monitoring
+spec:
+  order: 1
+  tier: allow-cnx
+  selector: name == 'es-client-tigera-elasticsearch'
+  types:
+  - Ingress
+  ingress:
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: job-name == 'compliance-scaleloader'
+    destination:
+      ports: [9200]
+

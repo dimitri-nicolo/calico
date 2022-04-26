@@ -1,0 +1,8 @@
+nodeName,testIndex,testDescription,status,scored,remediation
+{{ range $i, $node := .CISBenchmark -}}
+{{- range $j, $section := $node.Results -}}
+{{- range $k, $result := $section.Results -}}
+{{- $node.NodeName }},{{ $result.TestNumber }},{{ $result.TestDesc }},{{ $result.Status }},{{ $result.Scored }},"{{ $result.TestInfo }}"
+{{ end }}
+{{- end }}
+{{- end }}

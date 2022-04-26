@@ -1,0 +1,62 @@
+{
+  "type": "panel",
+  "heading": "Inscope vs Protected",
+  "widgets": [
+    {
+      "type": "radialbarchart",
+      "heading": "Endpoints",
+      "summary": {
+        "label": "Total",
+        "total": "@@@{{ .EndpointsSummary.NumTotal }}@@@"
+      },
+      "data": [
+        {
+          "label": "Protected ingress",
+          "value": "@@@{{ .EndpointsSummary.NumIngressProtected }}@@@"
+        }
+      ]
+    },
+    {
+      "type": "radialbarchart",
+      "heading": "Namespaces",
+      "summary": {
+        "label": "Total",
+        "total": "@@@{{ .NamespacesSummary.NumTotal }}@@@"
+      },
+      "data": [
+        {
+          "label": "Protected ingress",
+          "value": "@@@{{ .NamespacesSummary.NumIngressProtected }}@@@"
+        }
+      ]
+    },
+    {
+      "type": "radialbarchart",
+      "heading": "Endpoints",
+      "summary": {
+        "label": "Total",
+        "total": "@@@{{ .EndpointsSummary.NumTotal }}@@@"
+      },
+      "data": [
+        {
+          "label": "Protected egress",
+          "value": "@@@{{ .EndpointsSummary.NumEgressProtected }}@@@"
+        }
+      ]
+    },
+    {
+      "type": "radialbarchart",
+      "heading": "Namespaces",
+      "summary": {
+        "label": "Total",
+        "total": "@@@{{ .NamespacesSummary.NumTotal }}@@@"
+      },
+      "data": [
+        {
+          "label": "Protected egress",
+          "value": "@@@{{ .NamespacesSummary.NumEgressProtected }}@@@"
+        }
+      ]
+    }
+  ]
+}

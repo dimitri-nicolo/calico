@@ -1,0 +1,16 @@
+action: update
+kind: GlobalNetworkPolicy
+apiVersion: projectcalico.org/v3
+metadata:
+  name: "protect-egress-ns-{{.Namespace}}"
+  labels:
+    churn-gnp: "leslie"
+spec:
+  selector: '{{.Namespace}}-protected == "egress"'
+  egress:
+    - action: Allow
+      destination:
+        nets:
+          - 192.168.250.0/24
+  types:
+    - Egress

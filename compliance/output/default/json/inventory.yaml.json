@@ -1,0 +1,36 @@
+{
+ "kind": "GlobalReportType",
+ "apiVersion": "projectcalico.org/v3",
+ "metadata": {
+  "name": "inventory",
+  "creationTimestamp": null,
+  "labels": {
+   "global-report-type": "inventory"
+  }
+ },
+ "spec": {
+  "uiSummaryTemplate": {
+   "name": "ui-summary.json",
+   "template": "{\"heading\":\"Inscope vs Protected\",\"type\":\"panel\",\"widgets\":[{\"data\":[{\"label\":\"Protected ingress\",\"value\":{{ .EndpointsSummary.NumIngressProtected }}}],\"heading\":\"Endpoints\",\"summary\":{\"label\":\"Total\",\"total\":{{ .EndpointsSummary.NumTotal }}},\"type\":\"radialbarchart\"},{\"data\":[{\"label\":\"Protected ingress\",\"value\":{{ .NamespacesSummary.NumIngressProtected }}}],\"heading\":\"Namespaces\",\"summary\":{\"label\":\"Total\",\"total\":{{ .NamespacesSummary.NumTotal }}},\"type\":\"radialbarchart\"},{\"data\":[{\"label\":\"Protected egress\",\"value\":{{ .EndpointsSummary.NumEgressProtected }}}],\"heading\":\"Endpoints\",\"summary\":{\"label\":\"Total\",\"total\":{{ .EndpointsSummary.NumTotal }}},\"type\":\"radialbarchart\"},{\"data\":[{\"label\":\"Protected egress\",\"value\":{{ .NamespacesSummary.NumEgressProtected }}}],\"heading\":\"Namespaces\",\"summary\":{\"label\":\"Total\",\"total\":{{ .NamespacesSummary.NumTotal }}},\"type\":\"radialbarchart\"}]}"
+  },
+  "downloadTemplates": [
+   {
+    "name": "summary.csv",
+    "template": "{{ $c := csv }}\n{{- $c := $c.AddColumn \"startTime\"                     \"{{ dateRfc3339 .StartTime }}\" }}\n{{- $c := $c.AddColumn \"endTime\"                       \"{{ dateRfc3339 .EndTime }}\" }}\n{{- $c := $c.AddColumn \"endpointSelector\"              \"{{ if .ReportSpec.Endpoints }}{{ .ReportSpec.Endpoints.Selector }}{{ end }}\" }}\n{{- $c := $c.AddColumn \"namespaceNames\"                \"{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.Namespaces }}{{ join \\\";\\\" .ReportSpec.Endpoints.Namespaces.Names }}{{ end }}{{ end }}\" }}\n{{- $c := $c.AddColumn \"namespaceSelector\"             \"{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.Namespaces }}{{ .ReportSpec.Endpoints.Namespaces.Selector }}{{ end }}{{ end }}\" }}\n{{- $c := $c.AddColumn \"serviceAccountNames\"           \"{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.ServiceAccounts }}{{ join \\\";\\\" .ReportSpec.Endpoints.ServiceAccounts.Names }}{{ end }}{{ end }}\" }}\n{{- $c := $c.AddColumn \"serviceAccountSelectors\"       \"{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.ServiceAccounts }}{{ .ReportSpec.Endpoints.ServiceAccounts.Selector }}{{ end }}{{ end }}\" }}\n{{- $c := $c.AddColumn \"endpointsNumInScope\"           \"{{ .EndpointsSummary.NumTotal }}\" }}\n{{- $c := $c.AddColumn \"endpointsNumIngressProtected\"  \"{{ .EndpointsSummary.NumIngressProtected }}\" }}\n{{- $c := $c.AddColumn \"endpointsNumEgressProtected\"   \"{{ .EndpointsSummary.NumEgressProtected }}\" }}\n{{- $c := $c.AddColumn \"namespacesNumInScope\"          \"{{ .NamespacesSummary.NumTotal }}\" }}\n{{- $c := $c.AddColumn \"namespacesNumIngressProtected\" \"{{ .NamespacesSummary.NumIngressProtected }}\" }}\n{{- $c := $c.AddColumn \"namespacesNumEgressProtected\"  \"{{ .NamespacesSummary.NumEgressProtected }}\" }}\n{{- $c := $c.AddColumn \"serviceAccountsNumInScope\"     \"{{ .EndpointsSummary.NumServiceAccounts }}\" }}\n{{- $c.Render . }}"
+   },
+   {
+    "name": "endpoints.csv",
+    "template": "{{ $c := csv }}\n{{- $c := $c.AddColumn \"endpoint\"         \"{{ .Endpoint }}\" }}\n{{- $c := $c.AddColumn \"ingressProtected\" \"{{ .IngressProtected }}\" }}\n{{- $c := $c.AddColumn \"egressProtected\"  \"{{ .EgressProtected }}\" }}\n{{- $c := $c.AddColumn \"envoyEnabled\"     \"{{ .EnvoyEnabled }}\" }}\n{{- $c := $c.AddColumn \"appliedPolicies\"  \"{{ join \\\";\\\" .AppliedPolicies }}\" }}\n{{- $c := $c.AddColumn \"services\"         \"{{ join \\\";\\\" .Services }}\" }}\n{{- $c.Render .Endpoints }}"
+   },
+   {
+    "name": "namespaces.csv",
+    "template": "{{ $c := csv }}\n{{- $c := $c.AddColumn \"namespace\"        \"{{ .Namespace }}\" }}\n{{- $c := $c.AddColumn \"ingressProtected\" \"{{ .IngressProtected }}\" }}\n{{- $c := $c.AddColumn \"egressProtected\"  \"{{ .EgressProtected }}\" }}\n{{- $c := $c.AddColumn \"envoyEnabled\"     \"{{ .EnvoyEnabled }}\" }}\n{{- $c.Render .Namespaces }}"
+   },
+   {
+    "name": "services.csv",
+    "template": "{{ $c := csv }}\n{{- $c := $c.AddColumn \"service\"          \"{{ .Service }}\" }}\n{{- $c := $c.AddColumn \"ingressProtected\" \"{{ .IngressProtected }}\" }}\n{{- $c := $c.AddColumn \"envoyEnabled\"     \"{{ .EnvoyEnabled }}\" }}\n{{- $c.Render .Services }}"
+   }
+  ],
+  "includeEndpointData": true
+ }
+}

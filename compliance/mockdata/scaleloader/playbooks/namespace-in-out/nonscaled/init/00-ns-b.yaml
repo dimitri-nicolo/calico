@@ -1,0 +1,9 @@
+action: init
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: "b-{{.Namespace}}"
+  namespace: "b-{{.Namespace}}"
+  labels:
+    nsb-label: "{{.Namespace}}"
+spec: {}

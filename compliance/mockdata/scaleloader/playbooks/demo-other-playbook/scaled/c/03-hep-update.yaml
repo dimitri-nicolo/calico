@@ -1,0 +1,10 @@
+action: update
+kind: HostEndpoint
+apiVersion: projectcalico.org/v3
+metadata:
+  name: demo-hep-{{.ScaleId}}
+  labels:
+    heplabela: "hep label a"
+spec:
+  expectedIPs:
+    - "172.0.0.2/32"
