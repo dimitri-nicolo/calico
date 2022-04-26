@@ -1,0 +1,10 @@
+action: init
+kind: HostEndpoint
+apiVersion: projectcalico.org/v3
+metadata:
+  name: "{{.Namespace}}-ingress-from-nsb-hep"
+  labels:
+    "{{.Namespace}}-ingress-from-nsb": "yes"
+spec:
+  expectedIPs:
+    - "172.0.0.2/32"

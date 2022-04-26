@@ -1,0 +1,20 @@
+action: init
+kind: GlobalNetworkPolicy
+apiVersion: projectcalico.org/v3
+metadata:
+  name: "no-ingress-or-egress-ns-{{.Namespace}}"
+  labels:
+    churn-gnp: "leslie"
+spec:
+  selector: '{{.Namespace}}-no-ingress-or-egress == "yes"'
+  ingress:
+    - action: Allow
+      source:
+        selector: non-existent == 'endpoint'
+  egress:
+    - action: Allow
+      destination:
+        selector: non-existent == 'endpoint'
+  types:
+    - Ingress
+    - Egress

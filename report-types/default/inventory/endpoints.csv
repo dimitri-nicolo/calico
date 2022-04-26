@@ -1,0 +1,8 @@
+{{ $c := csv }}
+{{- $c := $c.AddColumn "endpoint"         "{{ .Endpoint }}" }}
+{{- $c := $c.AddColumn "ingressProtected" "{{ .IngressProtected }}" }}
+{{- $c := $c.AddColumn "egressProtected"  "{{ .EgressProtected }}" }}
+{{- $c := $c.AddColumn "envoyEnabled"     "{{ .EnvoyEnabled }}" }}
+{{- $c := $c.AddColumn "appliedPolicies"  "{{ join \";\" .AppliedPolicies }}" }}
+{{- $c := $c.AddColumn "services"         "{{ join \";\" .Services }}" }}
+{{- $c.Render .Endpoints }}

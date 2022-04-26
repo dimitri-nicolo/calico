@@ -1,0 +1,4 @@
+node,version,status,testsPassing,testsFailing,testsUnknown,testsTotal
+{{ range $_, $node := .CISBenchmark }}
+{{- $node.NodeName }},{{ $node.KubernetesVersion }},{{ $node.Summary.Status }},{{ $node.Summary.TotalPass }},{{ $node.Summary.TotalFail }},{{ $node.Summary.TotalInfo }},{{ $node.Summary.Total }}
+{{ end }}

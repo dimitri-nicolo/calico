@@ -1,0 +1,13 @@
+action: update 
+kind: GlobalNetworkSet
+apiVersion: projectcalico.org/v3
+metadata:
+  name: demo-gns
+  labels:
+    gnslabela: "{{.Namespace}} doesn't make sense but just testing"
+    "templatedNS{{.Namespace}}": "Templated label? {{.Namespace}}"
+    "gnslabelb": "just another label"
+spec:
+  nets:
+    - "192.168.1.1/31"
+    - "192.168.1.64/31"

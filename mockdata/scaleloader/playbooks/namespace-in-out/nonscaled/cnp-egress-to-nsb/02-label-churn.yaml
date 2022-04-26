@@ -1,0 +1,16 @@
+action: update
+kind: NetworkPolicy
+apiVersion: projectcalico.org/v3
+metadata:
+  name: egress-to-nsb
+  namespace: "{{.Namespace}}"
+  labels:
+    churner: "oh yeahhhh"
+spec:
+  selector: egress-to-nsb == 'yes'
+  egress:
+    - action: Allow
+      destination:
+        namespaceSelector: 'nsb-label == "{{.Namespace}}"'
+  types:
+    - Egress

@@ -1,0 +1,11 @@
+action: delete
+kind: "Pod"
+apiVersion: v1
+metadata:
+  name: "egress-to-pub-with-net-set-{{.ScaleId}}"
+  namespace: "{{.Namespace}}"
+  labels:
+    "{{.Namespace}}-egress-with-net-set": "yes"
+spec:
+  serviceAccountName: demosa
+  nodeName: anode

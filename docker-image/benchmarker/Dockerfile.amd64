@@ -1,0 +1,18 @@
+# To update kube-bench version update the image tag and github.com/aquasecurity/kube-bench in go.mod
+# Image tag and go.mod should point to same version
+FROM gcr.io/unique-caldron-775/cnx/tigera/kube-bench:v0.6.6_go-1.17.8 as base
+
+RUN apk update && apk add curl
+
+RUN cp /usr/local/bin/kube-bench /bin/kube-bench
+RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+RUN chmod +x ./kubectl
+RUN mv ./kubectl /bin
+
+ADD bin/benchmarker-amd64 /bin/benchmarker
+
+ENV PATH=/bin:$PATH
+
+WORKDIR /opt/kube-bench
+
+ENTRYPOINT ["benchmarker"]

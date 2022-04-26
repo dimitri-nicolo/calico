@@ -1,0 +1,15 @@
+action: update
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: egress-to-any-ns
+  namespace: "{{.Namespace}}"
+spec:
+  podSelector:
+    matchLabels:
+      egress-to-any-ns: 'yes'
+  egress:
+    - to:
+      - namespaceSelector:
+          matchLabels:
+            nsb-label: "{{.Namespace}}"

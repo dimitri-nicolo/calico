@@ -1,0 +1,11 @@
+action: delete
+kind: "Pod"
+apiVersion: v1
+metadata:
+  name: "egress-to-any-{{.ScaleId}}"
+  namespace: "{{.Namespace}}"
+  labels:
+    egress-to-any: "yes"
+spec:
+  serviceAccountName: demosa
+  nodeName: anode

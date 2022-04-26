@@ -1,0 +1,9 @@
+action: init
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: demoserviceaccount
+  #namespace: demonamespace
+  labels:
+    salabela: "sa label a"
+spec: {}

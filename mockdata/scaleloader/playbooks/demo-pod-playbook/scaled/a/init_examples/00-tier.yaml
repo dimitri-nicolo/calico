@@ -1,0 +1,9 @@
+action: init
+kind: Tier
+apiVersion: projectcalico.org/v3
+metadata:
+  name: demo-tier
+  namespace: "{{.Namespace}}"
+  labels:
+    tierlabela: "tier label a"
+spec: {}

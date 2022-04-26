@@ -1,0 +1,13 @@
+action: update
+kind: GlobalNetworkPolicy
+apiVersion: projectcalico.org/v3
+metadata:
+  name: "egress-with-net-set-ns-{{.Namespace}}"
+spec:
+  selector: '{{.Namespace}}-egress-with-net-set == "yes"'
+  egress:
+    - action: Allow
+      source:
+        selector: gnslabel == "{{.Namespace}}"
+  types:
+    - Egress

@@ -1,0 +1,20 @@
+action: update
+kind: GlobalNetworkPolicy
+apiVersion: projectcalico.org/v3
+metadata:
+  name: "no-ingress-or-egress-ns-{{.Namespace}}"
+  labels:
+    churn-gnp: "knope"
+spec:
+  selector: '{{.Namespace}}-no-ingress-or-egress == "yes"'
+  ingress:
+    - action: Allow
+      source:
+        selector: label == "non-existent"
+  egress:
+    - action: Allow
+      destination:
+        selector: label == "non-existent"
+  types:
+    - Ingress
+    - Egress

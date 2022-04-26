@@ -1,0 +1,19 @@
+action: init
+kind: NetworkPolicy
+apiVersion: projectcalico.org/v3
+metadata:
+  name: protect-all
+  namespace: "{{.Namespace}}"
+spec:
+  selector: protected == 'yes'
+  ingress:
+    - action: Allow
+      source:
+        selector: 'ingress == "non-existent"'
+  egress:
+    - action: Allow
+      destination:
+        selector: 'egress == "non-existent"'
+  types:
+    - Ingress
+    - Egress

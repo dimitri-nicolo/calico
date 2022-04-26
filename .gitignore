@@ -1,0 +1,48 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Build and IDE artifacts
+.*.swp
+.idea/
+.vscode/
+.go-build-cache
+.go-pkg-cache
+bin
+vendor
+*.coverprofile
+
+cmd/controller/controller
+cmd/reporter/reporter
+cmd/server/server
+cmd/snapshotter/snapshotter
+cmd/mockdata-exporter/mockdata-exporter
+docker-image/scaleloader/playbooks
+docker-image/scaleloader/bin
+docker-image/scaleloader/scenarios
+docker-image/benchmarker/cfg/
+
+tmp/kube-bench
+
+cmd/server/apiserver.local.config/
+.settings
+
+cscope.*
+
+# vim
+*.sw*
+out
+
+*.rlb.sh
+
+# common Makefile
+Makefile.common*

@@ -1,0 +1,11 @@
+action: init
+kind: GlobalNetworkSet
+apiVersion: projectcalico.org/v3
+metadata:
+  name: "{{.Namespace}}-pub-address-set"
+  labels:
+    gnslabel: "{{.Namespace}}"
+spec:
+  nets:
+    - "208.67.222.222/32"
+    - "208.67.220.220/32"

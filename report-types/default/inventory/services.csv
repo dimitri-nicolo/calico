@@ -1,0 +1,5 @@
+{{ $c := csv }}
+{{- $c := $c.AddColumn "service"          "{{ .Service }}" }}
+{{- $c := $c.AddColumn "ingressProtected" "{{ .IngressProtected }}" }}
+{{- $c := $c.AddColumn "envoyEnabled"     "{{ .EnvoyEnabled }}" }}
+{{- $c.Render .Services }}
