@@ -15,17 +15,14 @@ import (
 	"strings"
 	"time"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
-
-	"github.com/projectcalico/calico/packetcapture-api/pkg/cache"
-	"github.com/projectcalico/calico/packetcapture-api/pkg/capture"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
-
-	log "github.com/sirupsen/logrus"
+	"github.com/projectcalico/calico/packetcapture-api/pkg/cache"
+	"github.com/projectcalico/calico/packetcapture-api/pkg/capture"
 	"github.com/projectcalico/calico/packetcapture-api/pkg/middleware"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const ignoringTarError = "tar: removing leading '/' from member names"
@@ -283,7 +280,7 @@ func (f *Files) Delete(w http.ResponseWriter, r *http.Request) {
 	err = f.K8sCommands.UpdatePacketCaptureStatusWithNoFiles(clusterID, captureName, namespace, nodes)
 	if err != nil {
 		switch err.(type) {
-		case cerrors.ErrorResourceUpdateConflict:
+		case errors.ErrorResourceUpdateConflict:
 			var ctx = context.Background()
 			var err = retryFor(ctx, 3, 500*time.Millisecond, 2*time.Second, func() error {
 				return f.K8sCommands.UpdatePacketCaptureStatusWithNoFiles(clusterID, captureName, namespace, nodes)

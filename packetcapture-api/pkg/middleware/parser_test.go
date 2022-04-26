@@ -3,16 +3,15 @@
 package middleware_test
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
-
-	"net/http"
-	"net/http/httptest"
-
 	"github.com/projectcalico/calico/packetcapture-api/pkg/middleware"
 )
 
