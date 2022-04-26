@@ -70,6 +70,7 @@ import (
 	"github.com/projectcalico/calico/felix/nfqueue/dnsdeniedpacket"
 	"github.com/projectcalico/calico/felix/nfqueue/dnsresponsepacket"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/felix/routerule"
 	"github.com/projectcalico/calico/felix/routetable"
 	"github.com/projectcalico/calico/felix/rules"
 	"github.com/projectcalico/calico/felix/throttle"
@@ -1496,6 +1497,21 @@ type ManagerWithRouteRules interface {
 	GetRouteRules() []routeRules
 }
 
+// routeTableSyncer is the interface used to manage data-sync of route table managers. This includes notification of
+// interface state changes, hooks to queue a full resync and apply routing updates.
+type routeTableSyncer interface {
+	OnIfaceStateChanged(string, ifacemonitor.State)
+	QueueResync()
+	Apply() error
+}
+
+type routeRules interface {
+	SetRule(rule *routerule.Rule)
+	RemoveRule(rule *routerule.Rule)
+	QueueResync()
+	Apply() error
+}
+
 func (d *InternalDataplane) routeTableSyncers() []routeTableSyncer {
 	var rts []routeTableSyncer
 	for _, mrts := range d.managersWithRouteTables {
@@ -1517,13 +1533,15 @@ func (d *InternalDataplane) routeRules() []routeRules {
 func (d *InternalDataplane) RegisterManager(mgr Manager) {
 	tableMgr, ok := mgr.(ManagerWithRouteTables)
 	if ok {
+		// Used to log the whole manager out here but if we do that then we cause races if the manager has
+		// other threads or locks.
 		log.WithField("manager", reflect.TypeOf(mgr).Name()).Debug("registering ManagerWithRouteTables")
 		d.managersWithRouteTables = append(d.managersWithRouteTables, tableMgr)
 	}
 
 	rulesMgr, ok := mgr.(ManagerWithRouteRules)
 	if ok {
-		log.WithField("manager", reflect.TypeOf(mgr).Name()).Debug("registering ManagerWithRouteRules")
+		log.WithField("manager", mgr).Debug("registering ManagerWithRouteRules")
 		d.managersWithRouteRules = append(d.managersWithRouteRules, rulesMgr)
 	}
 	d.allManagers = append(d.allManagers, mgr)

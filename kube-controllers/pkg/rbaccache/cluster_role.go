@@ -62,7 +62,7 @@ func NewClusterRoleCache(subjectsToCache []string, apiGroupRulesToCache []string
 	return &clusterRoleCache{
 		subjectsToCache:       subjectsToCache,
 		apiGroupRulesToCache:  apiGroupRulesToCache,
-		entryCache:            make(map[string]*clusterRoleCacheEntry),
+		roleEntryCache:        make(map[string]*clusterRoleCacheEntry),
 		bindingToRoleCache:    make(map[string]string),
 		bindingToSubjectNames: make(map[string][]string),
 		subjectNameToBindings: make(map[string][]string),
@@ -72,7 +72,7 @@ func NewClusterRoleCache(subjectsToCache []string, apiGroupRulesToCache []string
 type clusterRoleCache struct {
 	subjectsToCache       []string
 	apiGroupRulesToCache  []string
-	entryCache            map[string]*clusterRoleCacheEntry
+	roleEntryCache        map[string]*clusterRoleCacheEntry
 	bindingToRoleCache    map[string]string
 	bindingToSubjectNames map[string][]string
 	subjectNameToBindings map[string][]string
@@ -82,11 +82,11 @@ func (cache *clusterRoleCache) getOrCreateCacheEntry(roleName string) *clusterRo
 	var cacheEntry *clusterRoleCacheEntry
 	var exist bool
 
-	if cacheEntry, exist = cache.entryCache[roleName]; !exist {
+	if cacheEntry, exist = cache.roleEntryCache[roleName]; !exist {
 		cacheEntry = new(clusterRoleCacheEntry)
 		cacheEntry.subjects = make(map[string]map[string][]rbacv1.Subject)
 
-		cache.entryCache[roleName] = cacheEntry
+		cache.roleEntryCache[roleName] = cacheEntry
 	}
 
 	return cacheEntry
@@ -111,6 +111,7 @@ func (cache *clusterRoleCache) AddClusterRole(clusterRole *rbacv1.ClusterRole) b
 
 	if len(rules) > 0 {
 		cacheEntry := cache.getOrCreateCacheEntry(clusterRole.Name)
+		cacheEntry.exists = true
 		cacheEntry.rules = rules
 	}
 
@@ -118,8 +119,17 @@ func (cache *clusterRoleCache) AddClusterRole(clusterRole *rbacv1.ClusterRole) b
 }
 
 func (cache *clusterRoleCache) RemoveClusterRole(clusterRoleName string) bool {
-	if _, exists := cache.entryCache[clusterRoleName]; exists {
-		delete(cache.entryCache, clusterRoleName)
+	if _, exists := cache.roleEntryCache[clusterRoleName]; exists {
+		// If there's still subjects (i.e. role bindings) don't remove the cluster role from the cache, otherwise
+		// we 1. lose the role binding cache if the cluster role is re added and 2. cause panics in some of the
+		// cluster role binding handling code.
+		if len(cache.roleEntryCache[clusterRoleName].subjects) == 0 {
+			delete(cache.roleEntryCache, clusterRoleName)
+		} else {
+			cache.roleEntryCache[clusterRoleName].exists = false
+			cache.roleEntryCache[clusterRoleName].rules = nil
+		}
+
 		return true
 	}
 
@@ -153,7 +163,7 @@ func (cache *clusterRoleCache) AddClusterRoleBinding(clusterRoleBinding *rbacv1.
 
 func (cache *clusterRoleCache) RemoveClusterRoleBinding(clusterRoleBindingName string) bool {
 	if role, exists := cache.bindingToRoleCache[clusterRoleBindingName]; exists {
-		delete(cache.entryCache[role].subjects, clusterRoleBindingName)
+		delete(cache.roleEntryCache[role].subjects, clusterRoleBindingName)
 		delete(cache.bindingToRoleCache, clusterRoleBindingName)
 
 		rbacSubjectNamesForBinding := cache.bindingToSubjectNames[clusterRoleBindingName]
@@ -166,6 +176,12 @@ func (cache *clusterRoleCache) RemoveClusterRoleBinding(clusterRoleBindingName s
 				delete(cache.subjectNameToBindings, subjectName)
 			}
 		}
+
+		// Remove the cluster role entry if there are no more cluster role bindings referencing a role that doesn't
+		// exist in k8s.
+		if len(cache.roleEntryCache[role].subjects) == 0 && !cache.roleEntryCache[role].exists {
+			delete(cache.roleEntryCache, role)
+		}
 		return true
 	}
 
@@ -173,22 +189,21 @@ func (cache *clusterRoleCache) RemoveClusterRoleBinding(clusterRoleBindingName s
 }
 
 func (cache *clusterRoleCache) ClusterRoleSubjects(clusterRoleName string, subjectName string) []rbacv1.Subject {
-	if entryCache, exists := cache.entryCache[clusterRoleName]; exists {
-		var subjects []rbacv1.Subject
-		for _, subjectMap := range entryCache.subjects {
+	var subjects []rbacv1.Subject
+	if roleEntryCache, exists := cache.roleEntryCache[clusterRoleName]; exists {
+		for _, subjectMap := range roleEntryCache.subjects {
 			if _, exists := subjectMap[subjectName]; exists {
 				subjects = append(subjects, subjectMap[subjectName]...)
 			}
 		}
-		return subjects
 	}
 
-	return []rbacv1.Subject{}
+	return subjects
 }
 
 func (cache *clusterRoleCache) ClusterRoleRules(clusterRoleName string) []rbacv1.PolicyRule {
-	if entryCache, exists := cache.entryCache[clusterRoleName]; exists {
-		return entryCache.rules
+	if roleEntryCache, exists := cache.roleEntryCache[clusterRoleName]; exists {
+		return roleEntryCache.rules
 	}
 
 	return []rbacv1.PolicyRule{}
@@ -201,7 +216,7 @@ func (cache *clusterRoleCache) ClusterRoleRules(clusterRoleName string) []rbacv1
 // is a ClusterRoleBinding for a ClusterRole in k8s doesn't mean the cache will store it.
 func (cache *clusterRoleCache) ClusterRoleNamesWithBindings() []string {
 	var rolesWithBindings []string
-	for name, role := range cache.entryCache {
+	for name, role := range cache.roleEntryCache {
 		// if any entry has rules, that means the ClusterRole is in the cache, and if it has subjects it means it has
 		// an appropriate ClusterRoleBinding
 		if len(role.subjects) > 0 && len(role.rules) > 0 {
@@ -234,7 +249,7 @@ func (cache *clusterRoleCache) ClusterRoleNamesForSubjectName(rbacSubjectName st
 // by the change in this ClusterRole.
 func (cache *clusterRoleCache) ClusterRoleBindingsForClusterRole(clusterRoleName string) []string {
 	var bindings []string
-	entry := cache.entryCache[clusterRoleName]
+	entry := cache.roleEntryCache[clusterRoleName]
 	// if any entry has rules, that means the ClusterRole is in the cache, and if it has subjects it means it has
 	// an appropriate ClusterRoleBinding
 	if entry != nil && len(entry.subjects) > 0 && len(entry.rules) > 0 {
@@ -253,4 +268,7 @@ func (cache *clusterRoleCache) SubjectNamesForBinding(clusterRoleBindingName str
 type clusterRoleCacheEntry struct {
 	subjects map[string]map[string][]rbacv1.Subject
 	rules    []rbacv1.PolicyRule
+	// exists represents whether this cluster role exists or not in k8s or was created because a cluster role binding
+	// is for a role that doesn't exist.
+	exists bool
 }

@@ -7,6 +7,7 @@ package worker
 // resources you want to watch for and what to do when they're updated
 
 import (
+	"reflect"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -141,7 +142,9 @@ func (w *worker) Run(workerCount int, stop chan struct{}) {
 			cache.Indexers{})
 
 		go ctrl.Run(stop)
-		for !ctrl.HasSynced() {
+		if !cache.WaitForNamedCacheSync(reflect.TypeOf(watch.obj).String(), stop, ctrl.HasSynced) {
+			log.Infof("Failed to sync resource %T, received signal for controller to shut down.", watch.obj)
+			return
 		}
 	}
 
