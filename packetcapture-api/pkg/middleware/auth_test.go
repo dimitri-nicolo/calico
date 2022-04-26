@@ -8,16 +8,16 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	lmaauth "github.com/tigera/lma/pkg/auth"
-	"github.com/tigera/lma/pkg/auth/testing"
-	lmak8s "github.com/tigera/lma/pkg/k8s"
-	"github.com/tigera/packetcapture-api/pkg/cache"
+	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/lma/pkg/auth/testing"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
+	"github.com/projectcalico/calico/packetcapture-api/pkg/cache"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
-	"github.com/tigera/packetcapture-api/pkg/middleware"
+	"github.com/projectcalico/calico/packetcapture-api/pkg/middleware"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apimachinery/pkg/runtime"

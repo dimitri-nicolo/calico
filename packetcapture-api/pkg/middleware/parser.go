@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	lmak8s "github.com/tigera/lma/pkg/k8s"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 
 	log "github.com/sirupsen/logrus"
 )

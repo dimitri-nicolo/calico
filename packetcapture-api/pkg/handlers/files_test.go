@@ -23,10 +23,10 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
-	"github.com/tigera/packetcapture-api/pkg/cache"
-	"github.com/tigera/packetcapture-api/pkg/capture"
-	"github.com/tigera/packetcapture-api/pkg/handlers"
-	"github.com/tigera/packetcapture-api/pkg/middleware"
+	"github.com/projectcalico/calico/packetcapture-api/pkg/cache"
+	"github.com/projectcalico/calico/packetcapture-api/pkg/capture"
+	"github.com/projectcalico/calico/packetcapture-api/pkg/handlers"
+	"github.com/projectcalico/calico/packetcapture-api/pkg/middleware"
 )
 
 const loremLipsum = "Lorem Lipsum"

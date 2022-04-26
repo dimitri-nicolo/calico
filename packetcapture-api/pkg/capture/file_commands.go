@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/tigera/packetcapture-api/pkg/cache"
+	"github.com/projectcalico/calico/packetcapture-api/pkg/cache"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"

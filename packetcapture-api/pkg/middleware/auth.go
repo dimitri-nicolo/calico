@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/tigera/lma/pkg/auth"
-	"github.com/tigera/packetcapture-api/pkg/cache"
+	"github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/packetcapture-api/pkg/cache"
 
 	log "github.com/sirupsen/logrus"
 	authzv1 "k8s.io/api/authorization/v1"

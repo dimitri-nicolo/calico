@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/packetcapture-api/pkg/cache"
+	"github.com/projectcalico/calico/packetcapture-api/pkg/cache"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"

@@ -13,9 +13,9 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
-	lmaauth "github.com/tigera/lma/pkg/auth"
+	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 
-	lmak8s "github.com/tigera/lma/pkg/k8s"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 
 	"k8s.io/client-go/rest"
 

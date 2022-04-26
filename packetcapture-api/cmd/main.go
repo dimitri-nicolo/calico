@@ -8,14 +8,14 @@ import (
 	"net/http"
 	"os"
 
-	lmaauth "github.com/tigera/lma/pkg/auth"
-	lmak8s "github.com/tigera/lma/pkg/k8s"
-	cache2 "github.com/tigera/packetcapture-api/pkg/cache"
-	"github.com/tigera/packetcapture-api/pkg/capture"
-	"github.com/tigera/packetcapture-api/pkg/config"
-	"github.com/tigera/packetcapture-api/pkg/handlers"
-	"github.com/tigera/packetcapture-api/pkg/middleware"
-	"github.com/tigera/packetcapture-api/pkg/version"
+	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
+	cache2 "github.com/projectcalico/calico/packetcapture-api/pkg/cache"
+	"github.com/projectcalico/calico/packetcapture-api/pkg/capture"
+	"github.com/projectcalico/calico/packetcapture-api/pkg/config"
+	"github.com/projectcalico/calico/packetcapture-api/pkg/handlers"
+	"github.com/projectcalico/calico/packetcapture-api/pkg/middleware"
+	"github.com/projectcalico/calico/packetcapture-api/pkg/version"
 
 	"k8s.io/client-go/kubernetes"
 

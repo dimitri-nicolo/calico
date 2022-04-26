@@ -3,8 +3,8 @@
 package cache
 
 import (
-	auth "github.com/tigera/lma/pkg/auth"
-	k8s "github.com/tigera/lma/pkg/k8s"
+	auth "github.com/projectcalico/calico/lma/pkg/auth"
+	k8s "github.com/projectcalico/calico/lma/pkg/k8s"
 
 	mock "github.com/stretchr/testify/mock"
 

@@ -4,7 +4,7 @@ package handlers_test
 
 import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/packetcapture-api/pkg/capture"
+	"github.com/projectcalico/calico/packetcapture-api/pkg/capture"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

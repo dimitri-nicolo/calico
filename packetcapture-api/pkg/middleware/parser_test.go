@@ -8,12 +8,12 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	lmak8s "github.com/tigera/lma/pkg/k8s"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/tigera/packetcapture-api/pkg/middleware"
+	"github.com/projectcalico/calico/packetcapture-api/pkg/middleware"
 )
 
 var _ = Describe("Parser", func() {
