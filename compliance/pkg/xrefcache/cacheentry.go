@@ -3,7 +3,7 @@ package xrefcache
 
 import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/compliance/pkg/syncer"
+	"github.com/projectcalico/calico/compliance/pkg/syncer"
 )
 
 // cacheEntryCommon should be embedded in each concrete CacheEntry type to provide the various internal handling methods

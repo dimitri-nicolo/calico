@@ -13,7 +13,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/compliance/pkg/syncer"
+	"github.com/projectcalico/calico/compliance/pkg/syncer"
 )
 
 var (

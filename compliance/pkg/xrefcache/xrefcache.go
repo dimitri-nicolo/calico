@@ -9,11 +9,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/compliance/pkg/config"
-	"github.com/tigera/compliance/pkg/dispatcher"
-	"github.com/tigera/compliance/pkg/keyselector"
-	"github.com/tigera/compliance/pkg/labelselector"
-	"github.com/tigera/compliance/pkg/syncer"
+	"github.com/projectcalico/calico/compliance/pkg/config"
+	"github.com/projectcalico/calico/compliance/pkg/dispatcher"
+	"github.com/projectcalico/calico/compliance/pkg/keyselector"
+	"github.com/projectcalico/calico/compliance/pkg/labelselector"
+	"github.com/projectcalico/calico/compliance/pkg/syncer"
 )
 
 // NewXrefCache creates a new cross-referenced XrefCache.

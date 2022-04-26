@@ -9,7 +9,7 @@ import (
 
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
-	"github.com/tigera/lma/pkg/auth"
+	"github.com/projectcalico/calico/lma/pkg/auth"
 )
 
 const (

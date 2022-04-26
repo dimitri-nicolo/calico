@@ -13,8 +13,8 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
-	"github.com/tigera/lma/pkg/elastic"
-	"github.com/tigera/lma/pkg/list"
+	"github.com/projectcalico/calico/lma/pkg/elastic"
+	"github.com/projectcalico/calico/lma/pkg/list"
 )
 
 //yaml "gopkg.in/yaml.v2"

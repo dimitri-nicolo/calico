@@ -23,9 +23,9 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
-	"github.com/tigera/compliance/pkg/config"
-	"github.com/tigera/compliance/pkg/ips"
-	"github.com/tigera/compliance/pkg/syncer"
+	"github.com/projectcalico/calico/compliance/pkg/config"
+	"github.com/projectcalico/calico/compliance/pkg/ips"
+	"github.com/projectcalico/calico/compliance/pkg/syncer"
 )
 
 const (

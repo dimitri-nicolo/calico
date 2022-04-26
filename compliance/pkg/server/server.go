@@ -12,9 +12,9 @@ import (
 	"k8s.io/apiserver/pkg/endpoints/request"
 
 	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/compliance/pkg/datastore"
-	"github.com/tigera/lma/pkg/auth"
-	"github.com/tigera/lma/pkg/elastic"
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	"github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 // New creates a new server.

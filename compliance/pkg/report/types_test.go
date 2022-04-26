@@ -9,7 +9,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	api "github.com/tigera/lma/pkg/api"
+	api "github.com/projectcalico/calico/lma/pkg/api"
 )
 
 var _ = Describe("ArchivedReportData.UID", func() {

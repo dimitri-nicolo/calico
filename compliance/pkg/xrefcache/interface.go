@@ -7,8 +7,8 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/compliance/pkg/dispatcher"
-	"github.com/tigera/compliance/pkg/syncer"
+	"github.com/projectcalico/calico/compliance/pkg/dispatcher"
+	"github.com/projectcalico/calico/compliance/pkg/syncer"
 )
 
 // Callback for notification that a particular resource type is in-scope. The x-ref cache will guarantee that this

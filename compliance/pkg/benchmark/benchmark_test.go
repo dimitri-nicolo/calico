@@ -7,10 +7,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	. "github.com/tigera/compliance/pkg/benchmark"
-	"github.com/tigera/compliance/pkg/benchmark/mock"
-	"github.com/tigera/compliance/pkg/config"
-	"github.com/tigera/lma/pkg/api"
+	. "github.com/projectcalico/calico/compliance/pkg/benchmark"
+	"github.com/projectcalico/calico/compliance/pkg/benchmark/mock"
+	"github.com/projectcalico/calico/compliance/pkg/config"
+	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 var _ = Describe("Benchmark", func() {

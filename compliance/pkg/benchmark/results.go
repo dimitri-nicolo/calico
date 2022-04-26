@@ -3,7 +3,7 @@ package benchmark
 
 import (
 	"github.com/aquasecurity/kube-bench/check"
-	"github.com/tigera/lma/pkg/api"
+	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 // TestsFromKubeBenchControls transforms the kube-bench results into the compliance benchmark structure.

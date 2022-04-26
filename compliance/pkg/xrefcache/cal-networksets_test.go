@@ -5,9 +5,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	. "github.com/tigera/compliance/internal/testutils"
-	"github.com/tigera/compliance/pkg/syncer"
-	"github.com/tigera/compliance/pkg/xrefcache"
+	. "github.com/projectcalico/calico/compliance/internal/testutils"
+	"github.com/projectcalico/calico/compliance/pkg/syncer"
+	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
 )
 
 var _ = Describe("Basic CRUD of network sets with no other resources present", func() {

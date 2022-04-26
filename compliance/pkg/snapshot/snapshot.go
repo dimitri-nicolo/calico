@@ -14,9 +14,9 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
-	"github.com/tigera/compliance/pkg/config"
-	"github.com/tigera/compliance/pkg/list"
-	api "github.com/tigera/lma/pkg/api"
+	"github.com/projectcalico/calico/compliance/pkg/config"
+	"github.com/projectcalico/calico/compliance/pkg/list"
+	api "github.com/projectcalico/calico/lma/pkg/api"
 )
 
 const (

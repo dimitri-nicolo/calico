@@ -3,7 +3,7 @@
 package hashutils_test
 
 import (
-	. "github.com/tigera/compliance/pkg/hashutils"
+	. "github.com/projectcalico/calico/compliance/pkg/hashutils"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

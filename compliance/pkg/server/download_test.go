@@ -13,9 +13,9 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
-	"github.com/tigera/compliance/pkg/datastore"
-	lmaauth "github.com/tigera/lma/pkg/auth"
-	"github.com/tigera/lma/pkg/elastic"
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 var _ = Describe("Download tests", func() {

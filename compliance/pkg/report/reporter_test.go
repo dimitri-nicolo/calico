@@ -19,12 +19,12 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	. "github.com/tigera/compliance/internal/testutils"
-	"github.com/tigera/compliance/pkg/config"
-	"github.com/tigera/compliance/pkg/flow"
-	"github.com/tigera/compliance/pkg/syncer"
-	"github.com/tigera/compliance/pkg/xrefcache"
-	api "github.com/tigera/lma/pkg/api"
+	. "github.com/projectcalico/calico/compliance/internal/testutils"
+	"github.com/projectcalico/calico/compliance/pkg/config"
+	"github.com/projectcalico/calico/compliance/pkg/flow"
+	"github.com/projectcalico/calico/compliance/pkg/syncer"
+	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
+	api "github.com/projectcalico/calico/lma/pkg/api"
 )
 
 // Fake replayer

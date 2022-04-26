@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/compliance/pkg/version"
+	"github.com/projectcalico/calico/compliance/pkg/version"
 )
 
 // handleVersion implements the version endpoint which returns JSON encapsulated version info.

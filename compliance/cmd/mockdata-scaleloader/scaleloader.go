@@ -10,8 +10,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/compliance/mockdata/scaleloader"
-	"github.com/tigera/lma/pkg/elastic"
+	"github.com/projectcalico/calico/compliance/mockdata/scaleloader"
+	"github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 type Scenario struct {

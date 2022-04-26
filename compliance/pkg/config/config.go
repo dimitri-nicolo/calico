@@ -7,7 +7,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/lma/pkg/timeutils"
+	"github.com/projectcalico/calico/lma/pkg/timeutils"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )

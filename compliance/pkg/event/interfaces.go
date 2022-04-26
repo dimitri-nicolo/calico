@@ -10,7 +10,7 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
-	api "github.com/tigera/lma/pkg/api"
+	api "github.com/projectcalico/calico/lma/pkg/api"
 )
 
 // ExtractResourceFromAuditEvent determines the resource kind located within an audit event

@@ -8,9 +8,9 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	. "github.com/tigera/compliance/internal/testutils"
-	"github.com/tigera/compliance/pkg/syncer"
-	"github.com/tigera/compliance/pkg/xrefcache"
+	. "github.com/projectcalico/calico/compliance/internal/testutils"
+	"github.com/projectcalico/calico/compliance/pkg/syncer"
+	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
 )
 
 var _ = Describe("Pods cache verification", func() {

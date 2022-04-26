@@ -13,11 +13,11 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/compliance/pkg/config"
-	"github.com/tigera/compliance/pkg/datastore"
-	"github.com/tigera/compliance/pkg/snapshot"
-	"github.com/tigera/compliance/pkg/version"
-	"github.com/tigera/lma/pkg/elastic"
+	"github.com/projectcalico/calico/compliance/pkg/config"
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	"github.com/projectcalico/calico/compliance/pkg/snapshot"
+	"github.com/projectcalico/calico/compliance/pkg/version"
+	"github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 const (

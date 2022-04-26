@@ -4,7 +4,7 @@ package list
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	lmaL "github.com/tigera/lma/pkg/list"
+	lmaL "github.com/projectcalico/calico/lma/pkg/list"
 )
 
 // Source is the interface used for listing the current configured resources from source.

@@ -13,10 +13,10 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
-	. "github.com/tigera/compliance/internal/testutils"
-	"github.com/tigera/compliance/pkg/config"
-	"github.com/tigera/compliance/pkg/syncer"
-	"github.com/tigera/compliance/pkg/xrefcache"
+	. "github.com/projectcalico/calico/compliance/internal/testutils"
+	"github.com/projectcalico/calico/compliance/pkg/config"
+	"github.com/projectcalico/calico/compliance/pkg/syncer"
+	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
 )
 
 var _ = Describe("xref cache", func() {

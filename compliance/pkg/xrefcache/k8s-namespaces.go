@@ -12,7 +12,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
-	"github.com/tigera/compliance/pkg/syncer"
+	"github.com/projectcalico/calico/compliance/pkg/syncer"
 )
 
 var (

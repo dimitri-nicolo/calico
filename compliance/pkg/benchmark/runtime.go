@@ -6,8 +6,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/compliance/pkg/config"
-	api "github.com/tigera/lma/pkg/api"
+	"github.com/projectcalico/calico/compliance/pkg/config"
+	api "github.com/projectcalico/calico/lma/pkg/api"
 )
 
 const (

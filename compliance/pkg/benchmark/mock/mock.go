@@ -6,7 +6,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	api "github.com/tigera/lma/pkg/api"
+	api "github.com/projectcalico/calico/lma/pkg/api"
 )
 
 type DB struct {

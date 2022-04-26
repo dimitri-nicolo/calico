@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	api "github.com/tigera/lma/pkg/api"
+	api "github.com/projectcalico/calico/lma/pkg/api"
 )
 
 // Container type to hold the EndpointsReportFlow and/or an error.

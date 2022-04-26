@@ -6,8 +6,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/compliance/mockdata/replayer"
-	"github.com/tigera/lma/pkg/elastic"
+	"github.com/projectcalico/calico/compliance/mockdata/replayer"
+	"github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 const (

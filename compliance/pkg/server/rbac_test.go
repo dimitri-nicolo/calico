@@ -12,7 +12,7 @@ import (
 
 	"k8s.io/apiserver/pkg/endpoints/request"
 
-	auth2 "github.com/tigera/lma/pkg/auth"
+	auth2 "github.com/projectcalico/calico/lma/pkg/auth"
 
 	k8suser "k8s.io/apiserver/pkg/authentication/user"
 	k8s "k8s.io/client-go/kubernetes"
@@ -23,7 +23,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
-	"github.com/tigera/compliance/pkg/server"
+	"github.com/projectcalico/calico/compliance/pkg/server"
 )
 
 const (

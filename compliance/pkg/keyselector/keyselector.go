@@ -9,7 +9,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
-	"github.com/tigera/compliance/pkg/sethelper"
+	"github.com/projectcalico/calico/compliance/pkg/sethelper"
 )
 
 // This file implements a key selector. This acts as a bridge between the resources that are configured with one or more

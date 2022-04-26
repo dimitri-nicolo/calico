@@ -7,7 +7,7 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 
-	"github.com/tigera/compliance/pkg/internet"
+	"github.com/projectcalico/calico/compliance/pkg/internet"
 )
 
 var (

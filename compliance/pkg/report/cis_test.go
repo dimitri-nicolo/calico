@@ -15,10 +15,10 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/compliance/pkg/config"
-	"github.com/tigera/compliance/pkg/flow"
-	"github.com/tigera/compliance/pkg/xrefcache"
-	api "github.com/tigera/lma/pkg/api"
+	"github.com/projectcalico/calico/compliance/pkg/config"
+	"github.com/projectcalico/calico/compliance/pkg/flow"
+	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
+	api "github.com/projectcalico/calico/lma/pkg/api"
 )
 
 var (

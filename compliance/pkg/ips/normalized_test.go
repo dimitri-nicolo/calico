@@ -7,7 +7,7 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
-	"github.com/tigera/compliance/pkg/ips"
+	"github.com/projectcalico/calico/compliance/pkg/ips"
 )
 
 var _ = Describe("Normalized IP address tests", func() {

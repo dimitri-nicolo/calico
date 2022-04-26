@@ -4,8 +4,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/tigera/compliance/mockdata/replayer"
-	. "github.com/tigera/compliance/pkg/event"
+	"github.com/projectcalico/calico/compliance/mockdata/replayer"
+	. "github.com/projectcalico/calico/compliance/pkg/event"
 )
 
 var _ = Describe("Event", func() {

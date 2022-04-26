@@ -1,7 +1,7 @@
 // Copyright (c) 2019 Tigera, Inc. All rights reserved.
 package xrefcache
 
-import "github.com/tigera/compliance/pkg/syncer"
+import "github.com/projectcalico/calico/compliance/pkg/syncer"
 
 // The set of events that may be registered for. Each event type is only valid for a sub-set of resources.
 //

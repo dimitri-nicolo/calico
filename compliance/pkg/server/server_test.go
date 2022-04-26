@@ -16,10 +16,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/tigera/compliance/pkg/datastore"
-	"github.com/tigera/compliance/pkg/server"
-	"github.com/tigera/lma/pkg/auth"
-	"github.com/tigera/lma/pkg/elastic"
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	"github.com/projectcalico/calico/compliance/pkg/server"
+	"github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 // startTester starts and returns a server tester. This can be used to issue summary and report queries and to

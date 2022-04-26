@@ -10,7 +10,7 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
-	lmaL "github.com/tigera/lma/pkg/list"
+	lmaL "github.com/projectcalico/calico/lma/pkg/list"
 )
 
 func (cs *clientSet) RetrieveList(kind metav1.TypeMeta) (*lmaL.TimestampedResourceList, error) {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	lmaauth "github.com/tigera/lma/pkg/auth"
+	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/endpoints/request"

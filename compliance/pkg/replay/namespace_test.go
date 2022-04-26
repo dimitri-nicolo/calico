@@ -19,10 +19,10 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	. "github.com/tigera/compliance/pkg/replay"
-	"github.com/tigera/compliance/pkg/syncer"
-	"github.com/tigera/lma/pkg/api"
-	"github.com/tigera/lma/pkg/list"
+	. "github.com/projectcalico/calico/compliance/pkg/replay"
+	"github.com/projectcalico/calico/compliance/pkg/syncer"
+	"github.com/projectcalico/calico/lma/pkg/api"
+	"github.com/projectcalico/calico/lma/pkg/list"
 )
 
 var (

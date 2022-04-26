@@ -12,13 +12,13 @@ import (
 
 	"github.com/caimeo/iniflags"
 
-	"github.com/tigera/compliance/pkg/config"
-	"github.com/tigera/compliance/pkg/datastore"
-	"github.com/tigera/compliance/pkg/server"
-	"github.com/tigera/compliance/pkg/tls"
-	"github.com/tigera/compliance/pkg/version"
-	"github.com/tigera/lma/pkg/auth"
-	"github.com/tigera/lma/pkg/elastic"
+	"github.com/projectcalico/calico/compliance/pkg/config"
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	"github.com/projectcalico/calico/compliance/pkg/server"
+	"github.com/projectcalico/calico/compliance/pkg/tls"
+	"github.com/projectcalico/calico/compliance/pkg/version"
+	"github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/lma/pkg/elastic"
 
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 

@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/tigera/compliance/pkg/xrefcache"
+	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
 )
 
 var (

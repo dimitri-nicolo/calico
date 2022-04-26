@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tigera/compliance/pkg/datastore"
-	"github.com/tigera/lma/pkg/api"
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	"github.com/projectcalico/calico/lma/pkg/api"
 
 	log "github.com/sirupsen/logrus"
 )

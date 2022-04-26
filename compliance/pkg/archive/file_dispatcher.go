@@ -11,7 +11,7 @@ import (
 
 	"gopkg.in/natefinch/lumberjack.v2"
 
-	api "github.com/tigera/lma/pkg/api"
+	api "github.com/projectcalico/calico/lma/pkg/api"
 
 	log "github.com/sirupsen/logrus"
 )

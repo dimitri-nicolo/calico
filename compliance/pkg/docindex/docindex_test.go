@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/tigera/compliance/pkg/docindex"
+	"github.com/projectcalico/calico/compliance/pkg/docindex"
 )
 
 var _ = Describe("Document index tests", func() {

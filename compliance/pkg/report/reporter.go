@@ -15,14 +15,14 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/compliance"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
-	"github.com/tigera/compliance/pkg/archive"
-	"github.com/tigera/compliance/pkg/config"
-	"github.com/tigera/compliance/pkg/event"
-	"github.com/tigera/compliance/pkg/flow"
-	"github.com/tigera/compliance/pkg/replay"
-	"github.com/tigera/compliance/pkg/syncer"
-	"github.com/tigera/compliance/pkg/xrefcache"
-	api "github.com/tigera/lma/pkg/api"
+	"github.com/projectcalico/calico/compliance/pkg/archive"
+	"github.com/projectcalico/calico/compliance/pkg/config"
+	"github.com/projectcalico/calico/compliance/pkg/event"
+	"github.com/projectcalico/calico/compliance/pkg/flow"
+	"github.com/projectcalico/calico/compliance/pkg/replay"
+	"github.com/projectcalico/calico/compliance/pkg/syncer"
+	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
+	api "github.com/projectcalico/calico/lma/pkg/api"
 )
 
 const (

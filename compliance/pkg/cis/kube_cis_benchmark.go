@@ -11,8 +11,8 @@ import (
 
 	"github.com/aquasecurity/kube-bench/check"
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/compliance/pkg/benchmark"
-	"github.com/tigera/lma/pkg/api"
+	"github.com/projectcalico/calico/compliance/pkg/benchmark"
+	"github.com/projectcalico/calico/lma/pkg/api"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

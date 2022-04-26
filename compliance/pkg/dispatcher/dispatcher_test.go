@@ -12,8 +12,8 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
-	"github.com/tigera/compliance/pkg/dispatcher"
-	"github.com/tigera/compliance/pkg/syncer"
+	"github.com/projectcalico/calico/compliance/pkg/dispatcher"
+	"github.com/projectcalico/calico/compliance/pkg/syncer"
 )
 
 var (

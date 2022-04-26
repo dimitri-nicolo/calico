@@ -7,7 +7,7 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
-	"github.com/tigera/compliance/pkg/sethelper"
+	"github.com/projectcalico/calico/compliance/pkg/sethelper"
 )
 
 var _ = Describe("Add sets", func() {

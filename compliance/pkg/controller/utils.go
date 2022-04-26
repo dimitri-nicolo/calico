@@ -32,8 +32,8 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/compliance/pkg/config"
-	"github.com/tigera/compliance/pkg/datastore"
+	"github.com/projectcalico/calico/compliance/pkg/config"
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
 )
 
 // Utilities for dealing with Jobs and GlobalReports and time.

@@ -4,7 +4,7 @@ package list
 
 import (
 	mock "github.com/stretchr/testify/mock"
-	"github.com/tigera/lma/pkg/list"
+	"github.com/projectcalico/calico/lma/pkg/list"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

@@ -15,7 +15,7 @@
 package main
 
 import (
-	"github.com/tigera/compliance/pkg/config"
+	"github.com/projectcalico/calico/compliance/pkg/config"
 )
 
 func main() {

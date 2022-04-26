@@ -8,8 +8,8 @@ import (
 	"github.com/sirupsen/logrus"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/compliance/pkg/docindex"
-	api "github.com/tigera/lma/pkg/api"
+	"github.com/projectcalico/calico/compliance/pkg/docindex"
+	api "github.com/projectcalico/calico/lma/pkg/api"
 )
 
 const (

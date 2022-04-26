@@ -15,10 +15,10 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
-	"github.com/tigera/compliance/pkg/config"
-	"github.com/tigera/compliance/pkg/list"
-	"github.com/tigera/lma/pkg/api"
-	lmalist "github.com/tigera/lma/pkg/list"
+	"github.com/projectcalico/calico/compliance/pkg/config"
+	"github.com/projectcalico/calico/compliance/pkg/list"
+	"github.com/projectcalico/calico/lma/pkg/api"
+	lmalist "github.com/projectcalico/calico/lma/pkg/list"
 )
 
 var (

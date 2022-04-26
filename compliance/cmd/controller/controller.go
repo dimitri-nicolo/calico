@@ -14,11 +14,11 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 
-	"github.com/tigera/compliance/pkg/config"
-	"github.com/tigera/compliance/pkg/controller"
-	"github.com/tigera/compliance/pkg/datastore"
-	"github.com/tigera/compliance/pkg/version"
-	"github.com/tigera/lma/pkg/elastic"
+	"github.com/projectcalico/calico/compliance/pkg/config"
+	"github.com/projectcalico/calico/compliance/pkg/controller"
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	"github.com/projectcalico/calico/compliance/pkg/version"
+	"github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 const (

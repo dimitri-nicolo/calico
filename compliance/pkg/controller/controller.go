@@ -54,10 +54,10 @@ import (
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/jitter"
 
-	"github.com/tigera/compliance/pkg/config"
-	"github.com/tigera/compliance/pkg/datastore"
-	"github.com/tigera/compliance/pkg/hashutils"
-	"github.com/tigera/lma/pkg/api"
+	"github.com/projectcalico/calico/compliance/pkg/config"
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	"github.com/projectcalico/calico/compliance/pkg/hashutils"
+	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 // Utilities for dealing with Jobs and Reports and time.

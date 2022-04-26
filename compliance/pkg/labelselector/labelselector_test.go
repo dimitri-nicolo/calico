@@ -11,7 +11,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/compliance/pkg/labelselector"
+	"github.com/projectcalico/calico/compliance/pkg/labelselector"
 )
 
 var (
