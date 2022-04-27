@@ -98,6 +98,8 @@ clean:
 	find . -name '.*.published*' -type f -delete
 	rm -rf _output _site .jekyll-metadata pinned_versions.yaml _includes/charts/*/values.yaml
 	rm -rf stderr.out filtered.out docs_test.created bin
+	rm -f _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz
+	rm -f _includes/charts/tigera-operator/charts/tigera-prometheus-operator.tgz
 
 ###############################################################################
 # CI / test targets
