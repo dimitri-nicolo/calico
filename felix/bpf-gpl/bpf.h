@@ -10,6 +10,7 @@
 #include <bpf_helpers.h>   /* For bpf_xxx helper functions. */
 #include <bpf_endian.h>    /* For bpf_ntohX etc. */
 #include <stdbool.h>
+#include <bpf_core_read.h>
 #include <stddef.h>
 #include <linux/ip.h>
 #include "globals.h"
