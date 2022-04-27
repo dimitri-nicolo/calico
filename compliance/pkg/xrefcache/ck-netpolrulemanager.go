@@ -3,10 +3,10 @@ package xrefcache
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 )
 
 // This file implements a NetworkPolicyRuleSelectorManager. This acts as a bridge between the real policy resources

@@ -4,6 +4,7 @@ package datastore
 
 import (
 	mock "github.com/stretchr/testify/mock"
+
 	auth "github.com/projectcalico/calico/lma/pkg/auth"
 
 	rest "k8s.io/client-go/rest"

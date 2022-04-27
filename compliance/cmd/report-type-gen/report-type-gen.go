@@ -23,8 +23,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 	yaml "github.com/projectcalico/go-yaml-wrapper"
+
+	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )

@@ -30,6 +30,7 @@ import (
 	"k8s.io/client-go/tools/record"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	"github.com/projectcalico/calico/lma/pkg/api"
 )

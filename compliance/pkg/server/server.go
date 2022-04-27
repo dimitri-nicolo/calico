@@ -9,9 +9,11 @@ import (
 
 	"github.com/bmizerany/pat"
 	log "github.com/sirupsen/logrus"
+
 	"k8s.io/apiserver/pkg/endpoints/request"
 
 	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/elastic"

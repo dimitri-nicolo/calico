@@ -13,13 +13,13 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	"github.com/projectcalico/calico/libcalico-go/lib/compliance"
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
+	"github.com/projectcalico/calico/lma/pkg/api"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/projectcalico/calico/compliance/pkg/datastore"
-	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 // handleDownloadReports sends one or multiple (via zip) reports to the client

@@ -10,8 +10,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/compliance"
 	yaml "github.com/projectcalico/go-yaml-wrapper"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/compliance"
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )

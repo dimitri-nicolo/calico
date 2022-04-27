@@ -16,14 +16,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	. "github.com/projectcalico/calico/compliance/internal/testutils"
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/flow"
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
 	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	api "github.com/projectcalico/calico/lma/pkg/api"
 )
 

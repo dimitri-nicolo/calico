@@ -1,8 +1,9 @@
 package scaleloader
 
 import (
-	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	yaml "github.com/projectcalico/go-yaml-wrapper"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 )
 
 var (

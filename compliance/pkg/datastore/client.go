@@ -12,6 +12,7 @@ import (
 
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+
 	"github.com/projectcalico/calico/compliance/pkg/list"
 )
 

@@ -5,10 +5,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 )
 
 var _ = Describe("list typemeta", func() {

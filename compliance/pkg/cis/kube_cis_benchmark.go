@@ -11,9 +11,11 @@ import (
 
 	"github.com/aquasecurity/kube-bench/check"
 	log "github.com/sirupsen/logrus"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/projectcalico/calico/compliance/pkg/benchmark"
 	"github.com/projectcalico/calico/lma/pkg/api"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Benchmarker implements benchmark.Executor

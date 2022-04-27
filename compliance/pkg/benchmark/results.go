@@ -3,6 +3,7 @@ package benchmark
 
 import (
 	"github.com/aquasecurity/kube-bench/check"
+
 	"github.com/projectcalico/calico/lma/pkg/api"
 )
 

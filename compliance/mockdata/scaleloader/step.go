@@ -11,9 +11,10 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	json "github.com/projectcalico/go-json/json"
 	yaml "github.com/projectcalico/go-yaml-wrapper"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 )
 
 type Play struct {
