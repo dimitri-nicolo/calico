@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 package index_test
 
 import (
@@ -10,7 +10,7 @@ import (
 
 var _ = Describe("Index construction tests", func() {
 	It("handles alerts", func() {
-		Expect(Alerts().GetIndex("foobar")).To(Equal("tigera_secure_ee_events.foobar*"))
+		Expect(Alerts().GetIndex("foobar")).To(Equal("tigera_secure_ee_events.foobar."))
 	})
 
 	It("handles dns logs", func() {
