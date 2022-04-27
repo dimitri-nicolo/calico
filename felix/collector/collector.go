@@ -973,11 +973,13 @@ func (c *collector) LogDNS(server, client net.IP, dns *layers.DNS, latencyIfKnow
 		LatencyIfKnown: latencyIfKnown,
 	}
 	if err := c.dnsLogReporter.Log(update); err != nil {
-		log.WithError(err).WithFields(log.Fields{
-			"server": server,
-			"client": client,
-			"dns":    dns,
-		}).Error("Failed to log DNS packet")
+		if !strings.Contains(err.Error(), "No questions in DNS packet") {
+			log.WithError(err).WithFields(log.Fields{
+				"server": server,
+				"client": client,
+				"dns":    dns,
+			}).Error("Failed to log DNS packet")
+		}
 	}
 }
 
