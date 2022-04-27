@@ -199,6 +199,7 @@ type Config struct {
 	BPFMapSizeRoute                    int              `config:"int;262144;non-zero"`
 	BPFMapSizeConntrack                int              `config:"int;512000;non-zero"`
 	BPFMapSizeIPSets                   int              `config:"int;1048576;non-zero"`
+	BPFHostConntrackBypass             bool             `config:"bool;true"`
 
 	FlowLogsCollectProcessInfo  bool `config:"bool;false"`
 	FlowLogsCollectTcpStats     bool `config:"bool;true"`
