@@ -70,6 +70,10 @@ promotions:
     pipeline_file: ../calicoq/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Cut Compliance Release
+    pipeline_file: ../compliance/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Cut ES Gateway Release
     pipeline_file: ../es-gateway/.semaphore/cut-release.yml
     auto_promote:

@@ -55,6 +55,10 @@ promotions:
   pipeline_file: push-images/node.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push compliance images
+  pipeline_file: push-images/compliance.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 - name: Push es-gateway images
   pipeline_file: push-images/es-gateway.yml
   auto_promote:
@@ -598,6 +602,21 @@ blocks:
       - cd lma
     jobs:
     - name: "lma tests"
+      commands:
+      - make ci
+
+- name: 'compliance'
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/compliance/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd compliance
+    jobs:
+    - name: "compliance tests"
       commands:
       - make ci
 
