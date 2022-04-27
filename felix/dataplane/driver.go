@@ -334,13 +334,14 @@ func StartDataplaneDriver(configParams *config.Config,
 				IptablesMarkDNSPolicy:            markDNSPolicy,
 				IptablesMarkSkipDNSPolicyNfqueue: markSkipDNSPolicyNfqueue,
 
-				VXLANEnabled: configParams.VXLANEnabled,
+				VXLANEnabled: configParams.Encapsulation.VXLANEnabled,
 				VXLANPort:    configParams.VXLANPort,
 				VXLANVNI:     configParams.VXLANVNI,
 
-				IPIPEnabled:        configParams.IpInIpEnabled,
-				IPIPTunnelAddress:  configParams.IpInIpTunnelAddr,
-				VXLANTunnelAddress: configParams.IPv4VXLANTunnelAddr,
+				IPIPEnabled:            configParams.Encapsulation.IPIPEnabled,
+				FelixConfigIPIPEnabled: configParams.IpInIpEnabled,
+				IPIPTunnelAddress:      configParams.IpInIpTunnelAddr,
+				VXLANTunnelAddress:     configParams.IPv4VXLANTunnelAddr,
 
 				IPSecEnabled: configParams.IPSecEnabled(),
 

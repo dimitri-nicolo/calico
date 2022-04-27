@@ -447,6 +447,12 @@ var baseTests = []StateList{
 		deleteClusterIPL7Annotation,
 		deleteExternalIPL7Annotation,
 	},
+
+	{
+		encapWithIPIPPool,
+		encapWithVXLANPool,
+		encapWithIPIPAndVXLANPool,
+	},
 }
 
 var logOnce sync.Once
@@ -577,7 +583,6 @@ func describeAsyncTests(baseTests []StateList, l license) {
 					// Create the calculation graph.
 					conf := config.New()
 					conf.FelixHostname = localHostname
-					conf.VXLANEnabled = true
 					conf.BPFEnabled = true
 					conf.IPSecMode = "PSK"
 					conf.IPSecPSKFile = "/proc/1/cmdline"
@@ -587,6 +592,7 @@ func describeAsyncTests(baseTests []StateList, l license) {
 					conf.SetUseNodeResourceUpdates(test.UsesNodeResources())
 					conf.RouteSource = test.RouteSource()
 					outputChan := make(chan interface{})
+					conf.Encapsulation = config.Encapsulation{VXLANEnabled: true}
 					lookupsCache := NewLookupsCache()
 					asyncGraph := NewAsyncCalcGraph(conf, l, []chan<- interface{}{outputChan}, nil, lookupsCache)
 					// And a validation filter, with a channel between it
@@ -721,6 +727,9 @@ func expectCorrectDataplaneState(mockDataplane *mock.MockDataplane, state State)
 	Expect(stringify(mockDataplane.ActivePacketCaptureUpdates())).To(Equal(stringify(state.ExpectedCaptureUpdates)),
 		"Active packet captured were incorrect after moving to state: %v",
 		state.Name)
+	Expect(mockDataplane.Encapsulation()).To(Equal(state.ExpectedEncapsulation),
+		"Encapsulation incorrect after moving to state: %v",
+		state.Name)
 }
 
 func stringify(routes set.Set) []string {
@@ -769,7 +778,6 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 	BeforeEach(func() {
 		conf := config.New()
 		conf.FelixHostname = localHostname
-		conf.VXLANEnabled = true
 		conf.BPFEnabled = true
 		conf.SetUseNodeResourceUpdates(expandedTest.UsesNodeResources())
 		conf.RouteSource = expandedTest.RouteSource()
@@ -778,6 +786,7 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 		lookupsCache = NewLookupsCache()
 		eventBuf = NewEventSequencer(mockDataplane)
 		eventBuf.Callback = mockDataplane.OnEvent
+		conf.Encapsulation = config.Encapsulation{VXLANEnabled: true}
 		calcGraph = NewCalculationGraph(eventBuf, lookupsCache, conf, tierSupportEnabled)
 		calcGraph.EnableIPSec(eventBuf)
 		l7Resolver = NewL7FrontEndResolver(eventBuf, conf)
@@ -890,6 +899,7 @@ var _ = Describe("calc graph with health state", func() {
 		outputChan := make(chan interface{})
 		healthAggregator := health.NewHealthAggregator()
 		lookupsCache := NewLookupsCache()
+		conf.Encapsulation = config.Encapsulation{VXLANEnabled: true}
 		asyncGraph := NewAsyncCalcGraph(conf, licenseTiersEnabled{}, []chan<- interface{}{outputChan}, healthAggregator, lookupsCache)
 		Expect(asyncGraph).NotTo(BeNil())
 	})
