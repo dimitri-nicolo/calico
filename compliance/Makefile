@@ -27,17 +27,12 @@ COMPLIANCE_BENCHMARKER_IMAGE =compliance-benchmarker
 
 # NOTE COMPLIANCE_SCALELOADER_IMAGE isn't included as it's a special case that shouldn't be pushed to quay when
 # releasing images. Pushing this image to gcr is handled explicitly in the cd target.
-BUILD_IMAGES ?=$(COMPLIANCE_SERVER_IMAGE)\
- 	$(COMPLIANCE_CONTROLLER_IMAGE)\
- 	$(COMPLIANCE_SNAPSHOTTER_IMAGE)\
-	$(COMPLIANCE_REPORTER_IMAGE)\
+BUILD_IMAGES ?=$(COMPLIANCE_SERVER_IMAGE) \
+ 	$(COMPLIANCE_CONTROLLER_IMAGE) \
+ 	$(COMPLIANCE_SNAPSHOTTER_IMAGE) \
+	$(COMPLIANCE_REPORTER_IMAGE) \
 	$(COMPLIANCE_BENCHMARKER_IMAGE)
 
-
-# remove from the list to push to manifest any registries that do not support multi-arch
-# EXCLUDE_MANIFEST_REGISTRIES defined in Makefile.comm
-PUSH_MANIFEST_IMAGE_PREFIXES=$(PUSH_IMAGE_PREFIXES:$(EXCLUDE_MANIFEST_REGISTRIES)%=)
-PUSH_NONMANIFEST_IMAGE_PREFIXES=$(filter-out $(PUSH_MANIFEST_IMAGE_PREFIXES),$(PUSH_IMAGE_PREFIXES))
 
 # Linker flags for building Compliance Server.
 #
@@ -54,7 +49,7 @@ VERSION_FLAGS = -X $(PACKAGE_NAME)/pkg/version.VERSION=$(GIT_VERSION) \
 
 NON_SRC_DIRS = test
 # All Compliance Server go files.
-SRC_FILES:=$(shell find . $(foreach dir,$(NON_SRC_DIRS),-path ./$(dir) -prune -o) -type f -name '*.go' -print)
+SRC_FILES:=$(shell find . $(foreach dir,$(NON_SRC_DIRS),-path $(dir) -prune -o) -type f -name '*.go') $(shell find ../libcalico-go/lib -name '*.go') $(shell find ../lma/pkg -name '*.go')
 
 .PHONY: clean
 clean:
@@ -69,8 +64,13 @@ clean:
 ###############################################################################
 # Building the binary
 ###############################################################################
-build: bin/benchmarker-$(ARCH) bin/controller-$(ARCH) bin/reporter-$(ARCH) bin/report-type-gen-$(ARCH) \
-	bin/scaleloader-$(ARCH) bin/server-$(ARCH) bin/snapshotter-$(ARCH) 
+build: bin/benchmarker-$(ARCH) \
+	bin/controller-$(ARCH) \
+	bin/report-type-gen-$(ARCH) \
+	bin/reporter-$(ARCH) \
+	bin/scaleloader-$(ARCH) \
+	bin/server-$(ARCH) \
+	bin/snapshotter-$(ARCH) 
 
 build-all: $(addprefix sub-build-,$(VALIDARCHES))
 sub-build-%:
@@ -138,11 +138,11 @@ bin/benchmarker-$(ARCH): $(SRC_FILES)
 
 .PHONY: gen-files
 ## Force rebuild of the report generator tool and the default report manifests
-gen-files: bin/report-type-gen
-	rm -rf ./output/default
-	mkdir -p ./output/default/manifests
-	mkdir -p ./output/default/json
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c './bin/report-type-gen generate'
+gen-files: bin/report-type-gen-$(ARCH)
+	rm -rf output/default
+	mkdir -p output/default/manifests
+	mkdir -p output/default/json
+	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'bin/report-type-gen-$(ARCH) generate'
 
 ###############################################################################
 # Building the images
@@ -209,7 +209,7 @@ check-kubebench-update:
 .PHONY: ut
 ut combined.coverprofile: run-elastic
 	@echo Running Go UTs.
-	$(DOCKER_RUN) -e ELASTIC_HOST=localhost $(CALICO_BUILD) ./utils/run-coverage sh -c '$(GIT_CONFIG_SSH)'
+	$(DOCKER_RUN) -e ELASTIC_HOST=localhost $(CALICO_BUILD) utils/run-coverage sh -c '$(GIT_CONFIG_SSH)'
 
 ###############################################################################
 # CI/CD
@@ -217,20 +217,12 @@ ut combined.coverprofile: run-elastic
 
 .PHONY: cd ci version
 
-## checks that we can get the version
-version: images
-	docker run --rm $(COMPLIANCE_SERVER_IMAGE):latest-$(ARCH) --version
-	docker run --rm $(COMPLIANCE_CONTROLLER_IMAGE):latest-$(ARCH) --version
-	docker run --rm $(COMPLIANCE_SNAPSHOTTER_IMAGE):latest-$(ARCH) --version
-	docker run --rm $(COMPLIANCE_REPORTER_IMAGE):latest-$(ARCH) --version
-	docker run --rm $(COMPLIANCE_BENCHMARKER_IMAGE):latest-$(ARCH) --version
-
 ## Builds the code and runs all tests.
-ci: version static-checks ut
+ci: static-checks ut
 
 ## Deploys images to registry
 cd: images-all cd-common
-#push the scale loader separately because we don't release it and therefore don't want it as part of the build images list.
+# push the scale loader separately because we don't release it and therefore don't want it as part of the build images list.
 	$(MAKE) retag-build-images-with-registries push-images-to-registries push-manifests BUILD_IMAGES=$(COMPLIANCE_SCALELOADER_IMAGE) IMAGETAG=$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
 
 ###############################################################################
