@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	lmav1 "github.com/tigera/lma/pkg/apis/v1"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 const (

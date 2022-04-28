@@ -10,9 +10,10 @@ import (
 	"k8s.io/apiserver/pkg/endpoints/request"
 
 	libcalv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	lmaauth "github.com/tigera/lma/pkg/auth"
-	"github.com/tigera/lma/pkg/httputils"
-	lmak8s "github.com/tigera/lma/pkg/k8s"
+
+	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 type AuthorizationReview interface {

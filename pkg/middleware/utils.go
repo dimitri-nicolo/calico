@@ -10,8 +10,8 @@ import (
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
-	lmaerror "github.com/tigera/lma/pkg/api"
-	lmaelastic "github.com/tigera/lma/pkg/elastic"
+	lmaerror "github.com/projectcalico/calico/lma/pkg/api"
+	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 const (

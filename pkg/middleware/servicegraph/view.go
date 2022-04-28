@@ -4,7 +4,7 @@ package servicegraph
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/lma/pkg/httputils"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 )

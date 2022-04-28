@@ -22,11 +22,10 @@ EXTRA_DOCKER_ARGS += --tmpfs /home/user -v $(SSH_AUTH_DIR):/home/user/.ssh:ro
 endif
 
 ifdef LOCAL_BUILD
-EXTRA_DOCKER_ARGS += -v $(CURDIR)/../calico:/go/src/github.com/tigera/calico-private:rw
-EXTRA_DOCKER_ARGS += -v $(CURDIR)/../lma:/go/src/github.com/tigera/lma:rw
+EXTRA_DOCKER_ARGS += -v $(CURDIR)/../calico-private:/go/src/github.com/tigera/calico-private:rw
 local_build:
 	go mod edit -replace=github.com/projectcalico/calico=../calico-private
-	go mod edit -replace=github.com/tigera/lma=../lma
+	go mod edit -replace=github.com/tigera/api=../calico-private/api
 else
 local_build:
 endif
@@ -221,8 +220,6 @@ guard-ssh-forwarding-bug:
 
 COMPLIANCE_BRANCH?=$(PIN_BRANCH)
 COMPLIANCE_REPO?=github.com/tigera/compliance
-LMA_BRANCH?=$(PIN_BRANCH)
-LMA_REPO?=github.com/tigera/lma
 
 update-calico-pin:
 	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(PIN_BRANCH))
@@ -231,11 +228,8 @@ update-calico-pin:
 update-compliance-pin:
 	$(call update_pin,$(COMPLIANCE_REPO),$(COMPLIANCE_REPO),$(COMPLIANCE_BRANCH))
 
-update-lma-pin:
-	$(call update_pin,$(LMA_REPO),$(LMA_REPO),$(LMA_BRANCH))
-
 ## Update dependency pins
-update-pins: guard-ssh-forwarding-bug update-calico-pin update-compliance-pin update-lma-pin
+update-pins: guard-ssh-forwarding-bug update-calico-pin update-compliance-pin
 
 ###############################################################################
 # Utilities

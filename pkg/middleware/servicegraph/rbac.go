@@ -13,9 +13,10 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 	esauth "github.com/tigera/es-proxy/pkg/auth"
-	lmaauth "github.com/tigera/lma/pkg/auth"
-	"github.com/tigera/lma/pkg/httputils"
-	"github.com/tigera/lma/pkg/k8s"
+
+	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
+	"github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 // This file implements an RBAC flow filter. It parses the AuthorizedResourceVerbs returned by a authorization

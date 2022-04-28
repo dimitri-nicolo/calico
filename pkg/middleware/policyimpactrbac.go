@@ -12,7 +12,8 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	lmaauth "github.com/tigera/lma/pkg/auth"
+
+	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 )
 
 func NewPolicyImpactRbacHelper(usr user.Info, authz lmaauth.RBACAuthorizer) PolicyImpactRbacHelper {

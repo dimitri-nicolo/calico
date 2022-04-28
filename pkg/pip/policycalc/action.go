@@ -1,7 +1,7 @@
 package policycalc
 
 import (
-	"github.com/tigera/lma/pkg/api"
+	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 // For pip we extend the action flags so that we can track multiple actions at once.

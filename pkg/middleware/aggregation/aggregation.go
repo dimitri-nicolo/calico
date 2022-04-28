@@ -19,10 +19,11 @@ import (
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
-	lmaelastic "github.com/tigera/lma/pkg/elastic"
-	lmaindex "github.com/tigera/lma/pkg/elastic/index"
-	"github.com/tigera/lma/pkg/httputils"
-	"github.com/tigera/lma/pkg/k8s"
+
+	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
+	"github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 // This file implements an aggregated data query handler. The primary use of this is for the UX when querying aggregated

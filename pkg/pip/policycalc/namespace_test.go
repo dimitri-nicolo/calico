@@ -10,7 +10,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/lma/pkg/api"
+
+	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 var _ = Describe("Namespace handler tests", func() {

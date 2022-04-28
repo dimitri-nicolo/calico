@@ -13,7 +13,8 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/jitter"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	lmav1 "github.com/tigera/lma/pkg/apis/v1"
+
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 // This file provides a cache-backed interface for service graph data.

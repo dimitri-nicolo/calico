@@ -4,16 +4,17 @@ import (
 	"context"
 	"time"
 
-	"github.com/tigera/lma/pkg/api"
+	"github.com/projectcalico/calico/lma/pkg/api"
 
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/tigera/lma/pkg/list"
+	"github.com/projectcalico/calico/lma/pkg/list"
 
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
-	pelastic "github.com/tigera/lma/pkg/elastic"
+
+	pelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 // New returns a new PIP instance.

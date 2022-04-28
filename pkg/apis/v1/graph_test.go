@@ -10,8 +10,9 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/tigera/es-proxy/pkg/apis/v1"
 
-	lmav1 "github.com/tigera/lma/pkg/apis/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 var (

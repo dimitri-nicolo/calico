@@ -5,8 +5,9 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	lmaelastic "github.com/tigera/lma/pkg/elastic"
-	"github.com/tigera/lma/pkg/rbac"
+
+	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	"github.com/projectcalico/calico/lma/pkg/rbac"
 )
 
 const (

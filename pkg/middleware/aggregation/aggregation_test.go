@@ -21,9 +21,10 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	lmaapi "github.com/tigera/lma/pkg/apis/v1"
-	lmaindex "github.com/tigera/lma/pkg/elastic/index"
-	"github.com/tigera/lma/pkg/httputils"
+
+	lmaapi "github.com/projectcalico/calico/lma/pkg/apis/v1"
+	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
 // MockBackend implements a mock backend for test purposes.

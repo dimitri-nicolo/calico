@@ -4,7 +4,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/tigera/lma/pkg/api"
+	"github.com/projectcalico/calico/lma/pkg/api"
 
 	"github.com/tigera/es-proxy/pkg/pip/policycalc"
 )

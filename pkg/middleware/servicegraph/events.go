@@ -13,10 +13,10 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	lmav1 "github.com/tigera/lma/pkg/apis/v1"
-	lmaelastic "github.com/tigera/lma/pkg/elastic"
-	lmaindex "github.com/tigera/lma/pkg/elastic/index"
-	"github.com/tigera/lma/pkg/k8s"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
+	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
+	"github.com/projectcalico/calico/lma/pkg/k8s"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"

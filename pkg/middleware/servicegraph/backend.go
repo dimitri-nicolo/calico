@@ -8,12 +8,13 @@ import (
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/tigera/lma/pkg/auth"
-	"github.com/tigera/lma/pkg/k8s"
+	"github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/lma/pkg/k8s"
 
 	log "github.com/sirupsen/logrus"
-	lmav1 "github.com/tigera/lma/pkg/apis/v1"
-	lmaelastic "github.com/tigera/lma/pkg/elastic"
+
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
+	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 // Sanity check the realServiceGraphBackend satisfies the ServiceGraphBackend interface.

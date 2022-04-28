@@ -25,9 +25,10 @@ import (
 	"github.com/tigera/compliance/pkg/datastore"
 	calicojson "github.com/tigera/es-proxy/test/json"
 	"github.com/tigera/es-proxy/test/thirdpartymock"
-	"github.com/tigera/lma/pkg/api"
-	lmaauth "github.com/tigera/lma/pkg/auth"
-	celastic "github.com/tigera/lma/pkg/elastic"
+
+	"github.com/projectcalico/calico/lma/pkg/api"
+	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
+	celastic "github.com/projectcalico/calico/lma/pkg/elastic"
 
 	"github.com/olivere/elastic/v7"
 )

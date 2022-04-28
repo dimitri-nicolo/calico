@@ -6,7 +6,8 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/lma/pkg/api"
+
+	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 // CompiledPolicy contains the compiled policy matchers for either ingress _or_ egress policy rules.

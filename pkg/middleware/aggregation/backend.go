@@ -11,10 +11,11 @@ import (
 	"k8s.io/apiserver/pkg/endpoints/request"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/lma/pkg/auth"
-	lmaelastic "github.com/tigera/lma/pkg/elastic"
-	"github.com/tigera/lma/pkg/httputils"
-	"github.com/tigera/lma/pkg/k8s"
+
+	"github.com/projectcalico/calico/lma/pkg/auth"
+	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
+	"github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 // Sanity check the realAggregationBackend satisfies the ServiceGraphBackend interface.

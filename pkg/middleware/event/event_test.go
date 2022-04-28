@@ -18,7 +18,8 @@ import (
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 	"github.com/tigera/es-proxy/test/thirdpartymock"
-	lmaelastic "github.com/tigera/lma/pkg/elastic"
+
+	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 var (

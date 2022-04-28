@@ -11,8 +11,9 @@ import (
 	esauth "github.com/tigera/es-proxy/pkg/auth"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/lma/pkg/auth"
-	"github.com/tigera/lma/pkg/httputils"
+
+	"github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
 // Request properties to indicate the cluster used for proxying and RBAC.

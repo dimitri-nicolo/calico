@@ -9,7 +9,7 @@ import (
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/tigera/lma/pkg/k8s"
+	"github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 type FlowConfig struct {

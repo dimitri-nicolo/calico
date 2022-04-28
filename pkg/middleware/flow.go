@@ -16,11 +16,12 @@ import (
 
 	"github.com/tigera/compliance/pkg/datastore"
 	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
-	"github.com/tigera/lma/pkg/api"
-	celastic "github.com/tigera/lma/pkg/elastic"
-	lmaindex "github.com/tigera/lma/pkg/elastic/index"
-	"github.com/tigera/lma/pkg/rbac"
-	"github.com/tigera/lma/pkg/timeutils"
+
+	"github.com/projectcalico/calico/lma/pkg/api"
+	celastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
+	"github.com/projectcalico/calico/lma/pkg/rbac"
+	"github.com/projectcalico/calico/lma/pkg/timeutils"
 )
 
 const (

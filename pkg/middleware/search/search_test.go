@@ -26,12 +26,13 @@ import (
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	"github.com/tigera/compliance/pkg/datastore"
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	lmav1 "github.com/tigera/lma/pkg/apis/v1"
-	lmaelastic "github.com/tigera/lma/pkg/elastic"
-	lmaindex "github.com/tigera/lma/pkg/elastic/index"
-	"github.com/tigera/lma/pkg/httputils"
-	calicojson "github.com/tigera/lma/pkg/test/json"
-	"github.com/tigera/lma/pkg/test/thirdpartymock"
+
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
+	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
+	calicojson "github.com/projectcalico/calico/lma/pkg/test/json"
+	"github.com/projectcalico/calico/lma/pkg/test/thirdpartymock"
 )
 
 var (

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/tigera/lma/pkg/httputils"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
 var (

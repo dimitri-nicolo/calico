@@ -9,8 +9,9 @@ import (
 	"net/url"
 
 	"github.com/tigera/es-proxy/pkg/middleware"
-	"github.com/tigera/lma/pkg/auth"
-	"github.com/tigera/lma/pkg/auth/testing"
+
+	"github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/lma/pkg/auth/testing"
 
 	authzv1 "k8s.io/api/authorization/v1"
 	k8s "k8s.io/client-go/kubernetes"
