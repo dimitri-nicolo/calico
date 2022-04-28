@@ -1,4 +1,16 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package resources
 
@@ -10,10 +22,11 @@ import (
 	kapiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -27,12 +40,14 @@ import (
 
 func NewServiceClient(c *kubernetes.Clientset) K8sResourceClient {
 	return &serviceClient{
+		Converter: conversion.NewConverter(),
 		clientSet: c,
 	}
 }
 
 // Implements the api.Client interface for Kubernetes Service.
 type serviceClient struct {
+	conversion.Converter
 	clientSet *kubernetes.Clientset
 }
 
@@ -59,7 +74,7 @@ func (c *serviceClient) DeleteKVP(ctx context.Context, kvp *model.KVPair) (*mode
 }
 
 // Delete is not supported.
-func (c *serviceClient) Delete(ctx context.Context, key model.Key, revision string, uid *types.UID) (*model.KVPair, error) {
+func (c *serviceClient) Delete(ctx context.Context, key model.Key, revision string, _ *types.UID) (*model.KVPair, error) {
 	log.Warn("Operation Delete is not supported on Kubernetes Service type")
 	return nil, cerrors.ErrorOperationNotSupported{
 		Identifier: key,
@@ -73,7 +88,7 @@ func (c *serviceClient) Get(ctx context.Context, key model.Key, revision string)
 	if err != nil {
 		return nil, K8sErrorToCalico(err, key)
 	}
-	return c.convertToKVPair(service), nil
+	return c.ServiceToKVP(service)
 }
 
 func (c *serviceClient) List(ctx context.Context, list model.ListInterface, revision string) (*model.KVPairList, error) {
@@ -84,7 +99,7 @@ func (c *serviceClient) List(ctx context.Context, list model.ListInterface, revi
 	if rl.Name != "" {
 		// The service is already fully qualified, so perform a Get instead.
 		// If the entry does not exist then we just return an empty list.
-		kvp, err := c.Get(ctx, model.ResourceKey{Name: rl.Name, Namespace: rl.Namespace, Kind: apiv3.KindK8sService}, revision)
+		kvp, err := c.Get(ctx, model.ResourceKey{Name: rl.Name, Namespace: rl.Namespace, Kind: model.KindKubernetesService}, revision)
 		if err != nil {
 			if _, ok := err.(cerrors.ErrorResourceDoesNotExist); !ok {
 				return nil, err
@@ -103,19 +118,20 @@ func (c *serviceClient) List(ctx context.Context, list model.ListInterface, revi
 	}
 
 	// Listing all services.
-	serviceList, err := c.clientSet.CoreV1().Services(rl.Namespace).List(ctx, metav1.ListOptions{ResourceVersion: revision})
-	if err != nil {
-		return nil, K8sErrorToCalico(err, list)
+	listFunc := func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
+		return c.clientSet.CoreV1().Services(rl.Namespace).List(ctx, opts)
+	}
+	convertFunc := func(r Resource) ([]*model.KVPair, error) {
+		kvp, err := c.ServiceToKVP(r.(*kapiv1.Service))
+		if err != nil {
+			return nil, err
+		}
+		return []*model.KVPair{kvp}, nil
 	}
 
-	for i := range serviceList.Items {
-		kvps = append(kvps, c.convertToKVPair(&serviceList.Items[i]))
-	}
-
-	return &model.KVPairList{
-		KVPairs:  kvps,
-		Revision: serviceList.ResourceVersion,
-	}, nil
+	// For each object returned from the API server, add it to a KVPairList.
+	logContext := log.WithField("Resource", "Service")
+	return pagedList(ctx, logContext, revision, list, convertFunc, listFunc)
 }
 
 func (c *serviceClient) EnsureInitialized() error {
@@ -140,20 +156,7 @@ func (c *serviceClient) Watch(ctx context.Context, list model.ListInterface, rev
 		return nil, K8sErrorToCalico(err, list)
 	}
 	converter := func(r Resource) (*model.KVPair, error) {
-		return c.convertToKVPair(r.(*kapiv1.Service)), nil
+		return c.ServiceToKVP(r.(*kapiv1.Service))
 	}
 	return newK8sWatcherConverter(ctx, "Kubernetes Service", converter, k8sWatch), nil
-}
-
-// The kubernetes resource is passed directly through as the value.
-func (c *serviceClient) convertToKVPair(service *kapiv1.Service) *model.KVPair {
-	return &model.KVPair{
-		Key: model.ResourceKey{
-			Name:      service.Name,
-			Namespace: service.Namespace,
-			Kind:      apiv3.KindK8sService,
-		},
-		Value:    service,
-		Revision: service.ResourceVersion,
-	}
 }

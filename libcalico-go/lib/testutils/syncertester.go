@@ -589,7 +589,7 @@ func isExternallyControlled(key model.Key) bool {
 		return true
 	case model.ResourceKey:
 		switch key.(model.ResourceKey).Kind {
-		case libapiv3.KindNode, model.KindKubernetesEndpointSlice, v3.KindK8sService, v3.KindK8sEndpoints:
+		case libapiv3.KindNode, model.KindKubernetesEndpointSlice, model.KindKubernetesService, v3.KindK8sEndpoints:
 			return true
 		}
 	}

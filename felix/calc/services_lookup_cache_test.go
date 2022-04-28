@@ -6,8 +6,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/pkg/proxy"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 
@@ -47,7 +45,7 @@ var _ = Describe("ServiceLookupsCache tests", func() {
 		sc = NewServiceLookupsCache()
 
 		By("adding a node and a service")
-		key1 = model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"}
+		key1 = model.ResourceKey{Kind: model.KindKubernetesService, Name: "service1", Namespace: "ns1"}
 		spec1 = kapiv1.ServiceSpec{
 			ClusterIP: clusterIPStr,
 			ExternalIPs: []string{
@@ -105,7 +103,7 @@ var _ = Describe("ServiceLookupsCache tests", func() {
 		By("updating a service to have multiple matching service ports")
 		sc.OnResourceUpdate(api.Update{
 			KVPair: model.KVPair{
-				Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
+				Key: model.ResourceKey{Kind: model.KindKubernetesService, Name: "service1", Namespace: "ns1"},
 				Value: &kapiv1.Service{
 					Spec: kapiv1.ServiceSpec{
 						ClusterIP: clusterIPStr,
@@ -145,7 +143,7 @@ var _ = Describe("ServiceLookupsCache tests", func() {
 		By("updating a service to have multiple matching service node ports")
 		sc.OnResourceUpdate(api.Update{
 			KVPair: model.KVPair{
-				Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
+				Key: model.ResourceKey{Kind: model.KindKubernetesService, Name: "service1", Namespace: "ns1"},
 				Value: &kapiv1.Service{
 					Spec: kapiv1.ServiceSpec{
 						ClusterIP: clusterIPStr,

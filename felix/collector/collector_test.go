@@ -282,7 +282,7 @@ var (
 	svcKey1 = model.ResourceKey{
 		Name:      "test-svc",
 		Namespace: "test-namespace",
-		Kind:      v3.KindK8sService,
+		Kind:      model.KindKubernetesService,
 	}
 	svc1 = kapiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{Name: "test-svc", Namespace: "test-namespace"},

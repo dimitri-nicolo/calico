@@ -16,8 +16,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/jitter"
@@ -1068,7 +1066,7 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 
 		// Verify that the service name and namespace are valid
 		serviceSpec, isValidService := c.luc.GetServiceSpecFromResourceKey(model.ResourceKey{
-			Kind:      v3.KindK8sService,
+			Kind:      model.KindKubernetesService,
 			Name:      svcName,
 			Namespace: svcNamespace,
 		})

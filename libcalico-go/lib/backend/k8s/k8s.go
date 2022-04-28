@@ -307,6 +307,12 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		apiv3.KindDeepPacketInspection,
 		resources.NewDeepPacketInspectionClient(cs, crdClientV1),
 	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
+		model.KindKubernetesService,
+		resources.NewServiceClient(cs),
+	)
 
 	if !ca.K8sUsePodCIDR {
 		// Using Calico IPAM - use CRDs to back IPAM resources.
@@ -459,12 +465,6 @@ func NewK8sResourceWrapperClient(cs *kubernetes.Clientset) api.Client {
 		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv3.KindK8sEndpoints,
 		resources.NewEndpointsClient(cs),
-	)
-	kubeClient.registerResourceClient(
-		reflect.TypeOf(model.ResourceKey{}),
-		reflect.TypeOf(model.ResourceListOptions{}),
-		apiv3.KindK8sService,
-		resources.NewServiceClient(cs),
 	)
 
 	return kubeClient
