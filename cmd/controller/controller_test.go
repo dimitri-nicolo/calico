@@ -15,8 +15,9 @@ import (
 	"github.com/tigera/honeypod-controller/pkg/events"
 	hp "github.com/tigera/honeypod-controller/pkg/processor"
 	"github.com/tigera/honeypod-controller/pkg/snort"
-	"github.com/tigera/lma/pkg/api"
-	"github.com/tigera/lma/pkg/elastic"
+
+	"github.com/projectcalico/calico/lma/pkg/api"
+	"github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 var _ = Describe("Test Honeypod Controller Processor Test", func() {

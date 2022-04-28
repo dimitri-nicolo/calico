@@ -5,7 +5,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/tigera/lma/pkg/elastic"
+	"github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 const (

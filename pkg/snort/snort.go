@@ -16,7 +16,8 @@ import (
 
 	"github.com/tigera/honeypod-controller/pkg/events"
 	hp "github.com/tigera/honeypod-controller/pkg/processor"
-	api "github.com/tigera/lma/pkg/api"
+
+	api "github.com/projectcalico/calico/lma/pkg/api"
 )
 
 type dateSrcDst string

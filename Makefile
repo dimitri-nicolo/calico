@@ -9,14 +9,11 @@ SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_HONEYPOD_CONTROLLER_PROJECT_ID)
 # Build mounts for running in "local build" mode. Developers will need to make sure they have the correct local version
 # otherwise the build will fail.
 PHONY:local_build
-# Allow calico-private and the ssh auth sock to be mapped into the build container.
-ifdef CALICO_PATH
-EXTRA_DOCKER_ARGS += -v $(CALICO_PATH):/github.com/tigera/calico-private:ro
-endif
 ifdef LOCAL_BUILD
 EXTRA_DOCKER_ARGS += -v $(CURDIR)/../calico-private:/go/src/github.com/tigera/calico-private:rw
 local_build:
 	go mod edit -replace=github.com/projectcalico/calico=../calico-private
+	go mod edit -replace=github.com/tigera/api=../calico-private/api
 else
 local_build:
 endif
@@ -187,12 +184,7 @@ update-calico-pin:
 	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(PIN_BRANCH))
 	$(call update_replace_submodule_pin,github.com/tigera/api,github.com/tigera/calico-private/api,$(PIN_BRANCH))
 
-LMA_REPO=github.com/tigera/lma
-LMA_BRANCH=$(PIN_BRANCH)
-update-lma-pin:
-	$(call update_pin,$(LMA_REPO),$(LMA_REPO),$(LMA_BRANCH))
-
-update-pins: guard-ssh-forwarding-bug update-calico-pin update-lma-pin
+update-pins: guard-ssh-forwarding-bug update-calico-pin
 
 ###############################################################################
 
