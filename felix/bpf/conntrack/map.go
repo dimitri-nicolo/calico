@@ -170,14 +170,14 @@ const (
 	TypeNATForward
 	TypeNATReverse
 
-	FlagNATOut    uint16 = (1 << 0)
-	FlagNATFwdDsr uint16 = (1 << 1)
-	FlagNATNPFwd  uint16 = (1 << 2)
-	FlagSkipFIB   uint16 = (1 << 3)
-	FlagReserved4 uint16 = (1 << 4)
-	FlagReserved5 uint16 = (1 << 5)
-	FlagExtLocal  uint16 = (1 << 6)
-	FlagViaNATIf  uint16 = (1 << 7)
+	FlagNATOut        uint16 = (1 << 0)
+	FlagNATFwdDsr     uint16 = (1 << 1)
+	FlagNATNPFwd      uint16 = (1 << 2)
+	FlagSkipFIB       uint16 = (1 << 3)
+	FlagTrustDNS      uint16 = (1 << 4)
+	FlagTrustWorkload uint16 = (1 << 5)
+	FlagExtLocal      uint16 = (1 << 6)
+	FlagViaNATIf      uint16 = (1 << 7)
 )
 
 func (e Value) ReverseNATKey() Key {
