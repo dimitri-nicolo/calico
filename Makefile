@@ -20,6 +20,15 @@ ifdef CI
 DOCKER_BUILD+= --squash
 endif
 
+# Set GTM_INTEGRATION explicitly so that in case the defaults change, we will still not
+# accidentally enable the integration
+GTM_INTEGRATION?=disabled
+
+ifeq ($(TESLA),true)
+GTM_INTEGRATION=enabled
+IMAGETAG_PREFIX?=tesla
+endif
+
 ###############################################################################
 # Download and include Makefile.common
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
