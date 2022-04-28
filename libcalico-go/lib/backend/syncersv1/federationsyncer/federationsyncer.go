@@ -39,7 +39,7 @@ func New(calicoClient api.Client, k8sClientset *kubernetes.Clientset, callbacks 
 	}
 	resourceTypes := []watchersyncer.ResourceType{
 		{
-			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindK8sService},
+			ListInterface:   model.ResourceListOptions{Kind: model.KindKubernetesService},
 			UpdateProcessor: nil,         // No need to process the updates so pass nil
 			ClientID:        k8sClientID, // This is backed by the kubernetes wrapped client
 		},
@@ -70,7 +70,7 @@ type federationRemoteClusterProcessor struct{}
 func (_ federationRemoteClusterProcessor) CreateResourceTypes() []watchersyncer.ResourceType {
 	return []watchersyncer.ResourceType{
 		{
-			ListInterface:         model.ResourceListOptions{Kind: apiv3.KindK8sService},
+			ListInterface:         model.ResourceListOptions{Kind: model.KindKubernetesService},
 			UpdateProcessor:       nil,  // No need to process the updates so pass nil
 			SendDeletesOnConnFail: true, // If the connection fails, treat as if the services are not there.
 		},

@@ -34,7 +34,6 @@ func IsNamespaced(kind string) bool {
 		apiv3.KindNetworkPolicy,
 		apiv3.KindStagedNetworkPolicy,
 		apiv3.KindStagedKubernetesNetworkPolicy,
-		apiv3.KindK8sService,
 		apiv3.KindK8sEndpoints,
 		apiv3.KindNetworkSet,
 		apiv3.KindPacketCapture,

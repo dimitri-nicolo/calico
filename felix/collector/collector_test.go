@@ -17,8 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/pkg/proxy"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 
@@ -1573,7 +1571,7 @@ var _ = Describe("Conntrack Datasource", func() {
 
 			By("creating a matching service for the pre-DNAT cluster IP and port")
 			lm.SetMockData(nil, nil, nil, map[model.ResourceKey]*kapiv1.Service{
-				{Kind: v3.KindK8sService, Name: "svc", Namespace: "default"}: {Spec: kapiv1.ServiceSpec{
+				{Kind: model.KindKubernetesService, Name: "svc", Namespace: "default"}: {Spec: kapiv1.ServiceSpec{
 					Ports: []kapiv1.ServicePort{{
 						Name:     "test",
 						Protocol: kapiv1.ProtocolTCP,
@@ -1605,7 +1603,7 @@ var _ = Describe("Conntrack Datasource", func() {
 
 			By("creating a matching service for the pre-DNAT cluster IP and port")
 			lm.SetMockData(nil, nil, nil, map[model.ResourceKey]*kapiv1.Service{
-				{Kind: v3.KindK8sService, Name: "svc", Namespace: "default"}: {Spec: kapiv1.ServiceSpec{
+				{Kind: model.KindKubernetesService, Name: "svc", Namespace: "default"}: {Spec: kapiv1.ServiceSpec{
 					Ports: []kapiv1.ServicePort{{
 						Name:     "test",
 						Protocol: kapiv1.ProtocolTCP,
