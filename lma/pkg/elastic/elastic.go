@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
@@ -186,11 +187,11 @@ func (c *client) ensureIndexExistsWithRetry(index string, template IndexTemplate
 }
 
 func (c *client) ensureIndexExists(indexPrefix string, template IndexTemplate, lifecycleEnabled bool) error {
-	var aliasName, indexName string
 	ctx := context.Background()
 	templateName := c.IndexTemplateName(indexPrefix)
 	clog := log.WithField("indexPrefix", indexPrefix)
-	aliasName = c.ClusterAlias(indexPrefix)
+	aliasName := c.ClusterAlias(indexPrefix)
+	var indexName string
 	if lifecycleEnabled {
 		indexName = fmt.Sprintf("<%s%s-{now/s{yyyyMMdd}}-000000>", aliasName, applicationName)
 	} else {
@@ -215,7 +216,7 @@ func (c *client) ensureIndexExists(indexPrefix string, template IndexTemplate, l
 	if currentTemplate == nil ||
 		!reflect.DeepEqual(currentTemplate[templateName].Settings, template.Settings) ||
 		!reflect.DeepEqual(currentTemplate[templateName].Mappings, template.Mappings) {
-		clog.Debug("creating or updating index template")
+		clog.Info("creating or updating index template")
 		_, err := c.IndexPutTemplate(templateName).BodyJson(template).Do(ctx)
 		if err != nil {
 			clog.WithError(err).Warn("failed to update index template")
@@ -233,6 +234,16 @@ func (c *client) ensureIndexExists(indexPrefix string, template IndexTemplate, l
 	// Return if index exists
 	if exists {
 		clog.Info("indexPrefix already exists")
+
+		// Update mappings in the index template won't be reflected on the existing index.
+		// For indices that have lifecycle enabled, we leave old logs as they were,
+		// and write the code to reinterpret them. If lifecycle isn't enabled, events index
+		// only atm, we need to update the mappings for existing index manually.
+		if !lifecycleEnabled {
+			if err := c.MaybeUpdateIndexMapping(indexName, template.Mappings); err != nil {
+				return err
+			}
+		}
 		return nil
 	}
 
@@ -288,14 +299,14 @@ func (c *client) IndexTemplate(indexAlias, indexPrefix, mapping string, lifecycl
 	// Convert c.indexSettings into map[string]interface{} that can represent:
 	// "settings": {
 	//   "index": {
-	//   "number_of_shards": "<shards>",
-	//   "number_of_replicas": "<replicas>"
-	//   "lifecycle": {
-	//      "name": "<policy name>",
-	//      "rollover_alias": "<index alias>"
-	//    }
+	//     "number_of_shards": "<shards>",
+	//     "number_of_replicas": "<replicas>"
+	//     "lifecycle": {
+	//        "name": "<policy name>",
+	//        "rollover_alias": "<index alias>"
+	//     }
 	//   }
-	//  }
+	// }
 	s, err := json.Marshal(map[string]interface{}{
 		"index": c.indexSettings,
 	})
@@ -317,6 +328,52 @@ func (c *client) IndexTemplate(indexAlias, indexPrefix, mapping string, lifecycl
 		Settings:      indexSettings,
 		Mappings:      indexMappings,
 	}, nil
+}
+
+type IndexMapping struct {
+	Mappings map[string]interface{} `json:"mappings" validate:"required"`
+}
+
+func (c *client) MaybeUpdateIndexMapping(index string, expectedMapping map[string]interface{}) error {
+	ctx := context.Background()
+
+	if resp, err := c.GetMapping().Index(index).Do(ctx); err != nil {
+		log.WithError(err).Errorf("failed to get index mapping for %s", index)
+		return err
+	} else {
+		// GetMapping() response example:
+		// {
+		//   "tigera_secure_ee_events.cluster.lma" : {
+		//     "mappings" : {
+		//       "dynamic" : "false",
+		//       "properties" : {
+		//         "description" : {
+		//           "type" : "keyword"
+		//          },
+		//        ...
+		v, ok := resp[index]
+		if !ok {
+			log.Warnf("invalid get mapping response for %s (key=%s not found). index mapping update will be skipped", index, index)
+			return nil
+		}
+
+		var currentMapping IndexMapping
+		if err := mapstructure.Decode(v, &currentMapping); err != nil {
+			log.Warnf("invalid get mapping response for %s (failed to decode), index mapping update will be skipped", index)
+			return nil
+		}
+
+		if !reflect.DeepEqual(expectedMapping, currentMapping.Mappings) {
+			if _, err := c.PutMapping().Index(index).BodyJson(expectedMapping).Do(ctx); err != nil {
+				log.WithError(err).Errorf("failed to update index mapping for %s", index)
+				return err
+			}
+			log.Infof("successfully updated index mapping for %s", index)
+		} else {
+			log.Infof("index mapping for %s is up to date", index)
+		}
+	}
+	return nil
 }
 
 func (c *client) Backend() *elastic.Client {
