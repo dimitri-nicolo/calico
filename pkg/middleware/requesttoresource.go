@@ -17,7 +17,7 @@ import (
 )
 
 // Request properties to indicate the cluster used for proxying and RBAC.
-var legacyURLPath, extractIndexPrefixPattern, datelessIndexPattern *regexp.Regexp
+var legacyURLPath, extractIndexPrefixPattern *regexp.Regexp
 
 var queryResourceMap map[string]string
 
@@ -26,7 +26,6 @@ func init() {
 	legacyURLPath = regexp.MustCompile(`^.*/tigera_secure_ee_.*/_search$`)
 	// This regexp extracts the index prefix from a legacy query URL path (up to first '.').
 	extractIndexPrefixPattern = regexp.MustCompile(`/(tigera_secure_ee_[_a-z0-9*]*)(?:\..*)?/_search`)
-	datelessIndexPattern = regexp.MustCompile(`^tigera_secure_ee_events\*?$`)
 
 	// This map is used for looking up the resource from an index pattern (either in Kibana or an ES query).
 	// The keys should be the full value searched for, up to the first '.'.
@@ -181,11 +180,7 @@ func parseLegacyURLPath(req *http.Request) (cluster, index, urlPath string, err 
 	if strings.Contains(match[0], "*") {
 		// certain indices don't have date suffix and adding .* to the end will not match the index we need,
 		// as the . is considered mandatory.
-		if datelessIndexPattern.MatchString(idx) {
-			path = fmt.Sprintf("/%s.%s*/_search", idx, cluster)
-		} else {
-			path = fmt.Sprintf("/%s.%s.*/_search", idx, cluster)
-		}
+		path = fmt.Sprintf("/%s.%s.*/_search", idx, cluster)
 	} else {
 		path = fmt.Sprintf("/%s.%s/_search", idx, cluster)
 	}
