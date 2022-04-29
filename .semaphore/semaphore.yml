@@ -79,11 +79,6 @@ blocks:
           commands:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true; fi
-          env_vars:
-            # Set this explicitly so that in case the defaults change, we will still not
-            # accidentally enable the integration
-            - name: GTM_INTEGRATION
-              value: disabled
         - name: Run CD (Tesla)
           execution_time_limit:
             minutes: 30
@@ -91,7 +86,5 @@ blocks:
             - export BRANCH_NAME=$SEMAPHORE_GIT_BRANCH
             - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make cd CONFIRM=true; fi
           env_vars:
-            - name: IMAGETAG_PREFIX
-              value: tesla
-            - name: GTM_INTEGRATION
-              value: enabled
+            - name: TESLA
+              value: 'true'
