@@ -6,7 +6,7 @@ import (
 
 	elastic "github.com/olivere/elastic/v7"
 
-	pelastic "github.com/tigera/lma/pkg/elastic"
+	pelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 
 	"github.com/tigera/es-proxy/pkg/pip/policycalc"
 )

@@ -11,7 +11,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/es-proxy/pkg/middleware"
-	"github.com/tigera/lma/pkg/httputils"
+
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
 var (

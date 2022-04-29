@@ -1,7 +1,7 @@
 package policycalc
 
 import (
-	"github.com/tigera/lma/pkg/api"
+	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 // flowCache contains cached data when calculating the before/after impact of the policies on a flow.

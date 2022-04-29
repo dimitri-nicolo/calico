@@ -10,10 +10,11 @@ import (
 
 	"github.com/tigera/compliance/pkg/datastore"
 	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
-	lmaerror "github.com/tigera/lma/pkg/api"
-	lmaindex "github.com/tigera/lma/pkg/elastic/index"
-	"github.com/tigera/lma/pkg/policyrec"
-	"github.com/tigera/lma/pkg/rbac"
+
+	lmaerror "github.com/projectcalico/calico/lma/pkg/api"
+	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
+	"github.com/projectcalico/calico/lma/pkg/policyrec"
+	"github.com/projectcalico/calico/lma/pkg/rbac"
 
 	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
 )

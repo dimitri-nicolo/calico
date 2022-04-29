@@ -4,7 +4,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/lma/pkg/api"
+
+	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 // CompiledRule is created from an API v3 Rule and has pre-calculated matcher functions to speed up computation.

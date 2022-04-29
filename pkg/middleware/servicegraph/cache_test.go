@@ -10,9 +10,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/tigera/lma/pkg/httputils"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 
-	lmav1 "github.com/tigera/lma/pkg/apis/v1"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 

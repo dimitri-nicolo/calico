@@ -13,10 +13,11 @@ import (
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	"github.com/tigera/lma/pkg/auth"
-	lmaelastic "github.com/tigera/lma/pkg/elastic"
-	"github.com/tigera/lma/pkg/httputils"
-	"github.com/tigera/lma/pkg/k8s"
+
+	"github.com/projectcalico/calico/lma/pkg/auth"
+	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
+	"github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 // This file implements the main HTTP handler factory for service graph. This is the main entry point for service

@@ -14,7 +14,8 @@ import (
 	"github.com/tigera/compliance/pkg/syncer"
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
 	"github.com/tigera/es-proxy/pkg/pip/policycalc"
-	"github.com/tigera/lma/pkg/api"
+
+	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 var (

@@ -11,7 +11,8 @@ import (
 	esauth "github.com/tigera/es-proxy/pkg/auth"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/lma/pkg/auth"
+
+	"github.com/projectcalico/calico/lma/pkg/auth"
 )
 
 // The handler returned by this will add a ResourceAttribute to the context

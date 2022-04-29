@@ -5,7 +5,7 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/selector"
 
-	"github.com/tigera/lma/pkg/api"
+	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 // NewEndpointSelectorHandler creates a new EndpointSelectorHandler used for enumerating Endpoint selectors and

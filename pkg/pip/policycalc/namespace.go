@@ -10,7 +10,8 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/selector"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/lma/pkg/api"
+
+	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 // NewNamespaceHandler creates a new NamespaceHandler.

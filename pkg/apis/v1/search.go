@@ -7,7 +7,7 @@ import (
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	lmav1 "github.com/tigera/lma/pkg/apis/v1"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 const (

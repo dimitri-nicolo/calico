@@ -21,9 +21,10 @@ import (
 	"github.com/tigera/es-proxy/pkg/math"
 	"github.com/tigera/es-proxy/pkg/middleware"
 	esSearch "github.com/tigera/es-proxy/pkg/search"
-	lmaelastic "github.com/tigera/lma/pkg/elastic"
-	lmaindex "github.com/tigera/lma/pkg/elastic/index"
-	"github.com/tigera/lma/pkg/httputils"
+
+	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
 const (

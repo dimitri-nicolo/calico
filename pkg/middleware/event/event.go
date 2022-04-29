@@ -12,8 +12,9 @@ import (
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 	"github.com/tigera/es-proxy/pkg/middleware"
-	lmaelastic "github.com/tigera/lma/pkg/elastic"
-	"github.com/tigera/lma/pkg/httputils"
+
+	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
 const (

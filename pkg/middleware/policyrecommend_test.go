@@ -15,7 +15,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/stretchr/testify/mock"
-	lmaauth "github.com/tigera/lma/pkg/auth"
+
+	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,10 +28,11 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 	"github.com/tigera/compliance/pkg/datastore"
-	"github.com/tigera/lma/pkg/api"
-	lmaerror "github.com/tigera/lma/pkg/api"
-	"github.com/tigera/lma/pkg/elastic"
-	"github.com/tigera/lma/pkg/policyrec"
+
+	"github.com/projectcalico/calico/lma/pkg/api"
+	lmaerror "github.com/projectcalico/calico/lma/pkg/api"
+	"github.com/projectcalico/calico/lma/pkg/elastic"
+	"github.com/projectcalico/calico/lma/pkg/policyrec"
 )
 
 const recommendURLPath = "/recommend"

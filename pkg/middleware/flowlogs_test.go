@@ -20,10 +20,11 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/es-proxy/pkg/pip"
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
-	"github.com/tigera/lma/pkg/api"
-	lmaelastic "github.com/tigera/lma/pkg/elastic"
-	"github.com/tigera/lma/pkg/list"
-	"github.com/tigera/lma/pkg/rbac"
+
+	"github.com/projectcalico/calico/lma/pkg/api"
+	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	"github.com/projectcalico/calico/lma/pkg/list"
+	"github.com/projectcalico/calico/lma/pkg/rbac"
 )
 
 const (

@@ -17,7 +17,8 @@ import (
 	"github.com/tigera/api/pkg/lib/numorstring"
 	"github.com/tigera/es-proxy/pkg/pip/config"
 	"github.com/tigera/es-proxy/pkg/pip/policycalc"
-	pelastic "github.com/tigera/lma/pkg/elastic"
+
+	pelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 var (

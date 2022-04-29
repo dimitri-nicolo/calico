@@ -7,9 +7,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	lmav1 "github.com/tigera/lma/pkg/apis/v1"
-	lmaelastic "github.com/tigera/lma/pkg/elastic"
-	lmaindex "github.com/tigera/lma/pkg/elastic/index"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
+	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 
 	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
 	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"

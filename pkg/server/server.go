@@ -24,11 +24,12 @@ import (
 	"github.com/tigera/es-proxy/pkg/middleware/servicegraph"
 	"github.com/tigera/es-proxy/pkg/pip"
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
-	lmaauth "github.com/tigera/lma/pkg/auth"
-	lmaelastic "github.com/tigera/lma/pkg/elastic"
-	lmaindex "github.com/tigera/lma/pkg/elastic/index"
-	"github.com/tigera/lma/pkg/k8s"
-	"github.com/tigera/lma/pkg/list"
+
+	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
+	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
+	"github.com/projectcalico/calico/lma/pkg/k8s"
+	"github.com/projectcalico/calico/lma/pkg/list"
 )
 
 var (

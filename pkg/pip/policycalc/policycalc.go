@@ -13,7 +13,8 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
-	"github.com/tigera/lma/pkg/api"
+
+	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 // ------

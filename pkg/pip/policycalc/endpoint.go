@@ -11,7 +11,8 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
 	"github.com/tigera/compliance/pkg/syncer"
-	"github.com/tigera/lma/pkg/api"
+
+	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 // New creates a new EndpointCache.
