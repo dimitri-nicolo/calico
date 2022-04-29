@@ -205,13 +205,8 @@ guard-ssh-forwarding-bug:
 	fi;
 
 API_REPO = github.com/tigera/api
-LMA_REPO=github.com/tigera/lma
-LMA_BRANCH=$(PIN_BRANCH)
 
-update-lma-pin:
-	$(call update_pin,$(LMA_REPO),$(LMA_REPO),$(LMA_BRANCH))
-
-update-pins: guard-ssh-forwarding-bug update-lma-pin update-calico-pin
+update-pins: guard-ssh-forwarding-bug update-calico-pin
 
 ##########################################################################################
 # CI/CD
