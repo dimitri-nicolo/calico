@@ -115,6 +115,19 @@ build-image-%:
 
 image: build $(FLUENTD_IMAGE)
 
+###############################################################################
+# Build FIPS compliant image
+###############################################################################
+UBI_VERSION        ?= ubi8
+RUBY_MAJOR_VERSION ?= 2.7
+RUBY_FULL_VERSION  ?= 2.7.5
+
+build-fips-image: eks-log-forwarder-startup
+	docker build -f Dockerfile.fips -t  "$(PUSH_IMAGE_BASE)/$(FLUENTD_IMAGE)-fips:latest-amd64" \
+  		--build-arg UBI_VERSION=$(UBI_VERSION) \
+  		--build-arg RUBY_MAJOR_VERSION=$(RUBY_MAJOR_VERSION) \
+  		--build-arg RUBY_FULL_VERSION=$(RUBY_FULL_VERSION) .
+
 clean-image: require-all-IMAGETAG
 	-docker rmi $(FLUENT_IMAGE):latest-$(ARCH) $(FLUENT_IMAGE):latest
 

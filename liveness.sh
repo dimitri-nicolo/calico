@@ -5,4 +5,4 @@ set -e -o pipefail
 source ${ROOT_DIR}/bin/splunk-environment.sh
 source ${ROOT_DIR}/bin/sumo-environment.sh
 
-curl -s http://localhost:24220/api/plugins.json | jq >/tmp/liveness_probe.json
+curl -s http://localhost:24220/api/plugins.json | jq . > /tmp/liveness_probe.json
