@@ -2,7 +2,7 @@
 package events
 
 import (
-	"github.com/tigera/lma/pkg/api"
+	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 type HoneypodEventInterface interface {
