@@ -7,7 +7,8 @@ import (
 	"net/http/httputil"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/lma/pkg/auth"
+
+	"github.com/projectcalico/calico/lma/pkg/auth"
 
 	authzv1 "k8s.io/api/authorization/v1"
 )
