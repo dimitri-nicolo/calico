@@ -23,9 +23,7 @@ const (
 	k8sClientID    = "ks"
 )
 
-var (
-	emptyDatastoreConfig = apiconfig.NewCalicoAPIConfig()
-)
+var emptyDatastoreConfig = apiconfig.NewCalicoAPIConfig()
 
 // New creates a new federation syncer. This particular syncer requires both Calico datastore access and Kubernetes
 

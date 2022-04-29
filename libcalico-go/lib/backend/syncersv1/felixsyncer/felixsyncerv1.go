@@ -36,7 +36,6 @@ const (
 
 // New creates a new Felix v1 Syncer.
 func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks api.SyncerCallbacks, includeServices bool, isLeader bool) api.Syncer {
-
 	// Always include the Calico client.
 	clients := map[string]api.Client{
 		calicoClientID: calicoClient,
@@ -158,8 +157,10 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 				ListInterface: model.ResourceListOptions{Kind: model.KindKubernetesEndpointSlice},
 				ClientID:      calicoClientID, // This is backed by the calico client
 			})
+
 			additionalTypes = append(additionalTypes, watchersyncer.ResourceType{
 				ListInterface: model.ResourceListOptions{Kind: model.KindKubernetesService},
+				ClientID:      calicoClientID, // This is backed by the calico client
 			})
 		}
 

@@ -33,9 +33,8 @@ import (
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 )
 
-// This client is a direct mapping through to the kubernetes service API. It is used by the k8s-resource wrapper
-// client (instantiated using k8s.NewK8sResourceWrapperClient) and provides read-only access to the kubernetes
-// resources. This allows a syncer to return the kubernetes resources that are included in this client,
+// This client is a direct mapping through to the kubernetes service API.
+// This allows a syncer to return the kubernetes resources that are included in this client,
 // These resource types are only accessible through the backend client API.
 
 func NewServiceClient(c *kubernetes.Clientset) K8sResourceClient {

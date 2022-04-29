@@ -160,6 +160,12 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 	kubeClient.registerResourceClient(
 		reflect.TypeOf(model.ResourceKey{}),
 		reflect.TypeOf(model.ResourceListOptions{}),
+		model.KindKubernetesService,
+		resources.NewServiceClient(cs),
+	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv3.KindNetworkSet,
 		resources.NewNetworkSetClient(cs, crdClientV1),
 	)
@@ -372,7 +378,7 @@ func fillLoadingRulesFromKubeConfigSpec(loadingRules *clientcmd.ClientConfigLoad
 func CreateKubernetesClientset(ca *apiconfig.CalicoAPIConfigSpec) (*rest.Config, *kubernetes.Clientset, error) {
 	// Use the kubernetes client code to load the kubeconfig file and combine it with the overrides.
 	configOverrides := &clientcmd.ConfigOverrides{}
-	var overridesMap = []struct {
+	overridesMap := []struct {
 		variable *string
 		value    string
 	}{
@@ -446,7 +452,6 @@ func CreateKubernetesClientset(ca *apiconfig.CalicoAPIConfigSpec) (*rest.Config,
 // This is a separate client from the main Calico KubeClient because this is also used for etcd-backed Calico
 // in a Kubernetes deployment and is therefore a leaner client in that scenario.
 func NewK8sResourceWrapperClient(cs *kubernetes.Clientset) api.Client {
-
 	kubeClient := &KubeClient{
 		ClientSet:             cs,
 		clientsByResourceKind: make(map[string]resources.K8sResourceClient),
@@ -460,6 +465,10 @@ func NewK8sResourceWrapperClient(cs *kubernetes.Clientset) api.Client {
 		apiv3.KindK8sEndpoints,
 		resources.NewEndpointsClient(cs),
 	)
+
+	// This client is registered on both the main Calico client, as well as the K8s resource wrapper client.
+	// This is because in etcd mode, we still need to monitor services on remote clusters. In KDD mode,
+	// we use the Calico client directly (because remote clusters and this client don't exist in OSS Calico).
 	kubeClient.registerResourceClient(
 		reflect.TypeOf(model.ResourceKey{}),
 		reflect.TypeOf(model.ResourceListOptions{}),
@@ -920,7 +929,7 @@ func (c *KubeClient) getReadyStatus(ctx context.Context, k model.ReadyFlagKey, r
 }
 
 func (c *KubeClient) listHostConfig(ctx context.Context, l model.HostConfigListOptions, revision string) (*model.KVPairList, error) {
-	var kvps = []*model.KVPair{}
+	kvps := []*model.KVPair{}
 
 	// Short circuit if they aren't asking for information we can provide.
 	if l.Name != "" && l.Name != "IpInIpTunnelAddr" {
