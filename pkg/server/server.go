@@ -9,12 +9,13 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/lma/pkg/auth"
 	health "github.com/tigera/prometheus-service/pkg/handler/health"
 	proxy "github.com/tigera/prometheus-service/pkg/handler/proxy"
 	"github.com/tigera/prometheus-service/pkg/middleware"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	"github.com/projectcalico/calico/lma/pkg/auth"
 )
 
 var (
