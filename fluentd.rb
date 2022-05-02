@@ -20,14 +20,24 @@ require 'fluent/supervisor'
 require 'fluent/log'
 require 'fluent/env'
 require 'fluent/version'
+
+#########################################################################################
+# This file is exactly the same as the original fluentd.rb, except for this code block  #
+#                             - START TIGERA CUSTOM CODE -                              #
+#########################################################################################
 require 'openssl'
 
+# Make OpenSSL run in FIPS mode, disabling certain cryptographic functions.
 OpenSSL.fips_mode = true
 puts('OpenSSL::OPENSSL_FIPS (FIPS Capable): %s' % OpenSSL::OPENSSL_FIPS)
 puts('OpenSSL::OPENSSL_LIBRARY_VERSION: %s' % OpenSSL::OPENSSL_LIBRARY_VERSION)
 puts('OpenSSL::OPENSSL_VERSION_NUMBER (base16): %s' % OpenSSL::OPENSSL_VERSION_NUMBER)
 puts('OpenSSL::VERSION (gem version): %s' % OpenSSL::VERSION)
 puts('OpenSSL.fips_mode: %s' % OpenSSL.fips_mode)
+
+#########################################################################################
+#                             - END TIGERA CUSTOM CODE -                                #
+#########################################################################################
 
 $fluentdargv = Marshal.load(Marshal.dump(ARGV))
 
