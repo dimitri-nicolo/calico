@@ -94,7 +94,22 @@
                 "properties": {
                         "labels": {"type": "keyword"}
                 }
-	},
+        },
+        "dest_domains": {
+                /*
+                   dest_domains - The set of top-level egress domains (i.e. a domain at the start of a CNAME chain)
+                   associated with the destination IP address.
+
+                   The local DNS cache (within felix) is used to find any top-level domains that were queried on the
+                   node which resolve to the destination IP. The inclusion of any domain is not a guarantee that this
+                   flow is directly associated with a lookup for the domain since the process originating this flow
+                   could be connecting directly to the IP, could be connecting to a domain further down the CNAME chain,
+                   or there could be multiple queried top-level domains resolving to the same IP.
+                   
+                   This is an array of keywords.
+                */
+                "type": "keyword"
+        },
         "destination" : {
             "properties" : {
                 "bytes" : {
