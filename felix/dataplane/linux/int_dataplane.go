@@ -1578,6 +1578,10 @@ type ManagerWithRouteRules interface {
 	GetRouteRules() []routeRules
 }
 
+type routeTableReader interface {
+	ReadRoutesFromKernel(ifaceName string) ([]routetable.Target, error)
+}
+
 // routeTableSyncer is the interface used to manage data-sync of route table managers. This includes notification of
 // interface state changes, hooks to queue a full resync and apply routing updates.
 type routeTableSyncer interface {
@@ -1587,8 +1591,10 @@ type routeTableSyncer interface {
 }
 
 type routeRules interface {
+	GetAllActiveRules() []*routerule.Rule
 	SetRule(rule *routerule.Rule)
 	RemoveRule(rule *routerule.Rule)
+	InitFromKernel()
 	QueueResync()
 	Apply() error
 }

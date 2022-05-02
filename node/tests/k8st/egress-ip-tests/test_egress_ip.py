@@ -166,7 +166,7 @@ EOF
                 self.delete_and_confirm(pod.name, "pod", pod.ns)
                 self.cleanups.remove(pod.delete)
                 gw_ips.remove(pod.ip)
-                self.check_ecmp_routes(client, servers, gw_ips)
+                self.check_ecmp_routes(client, servers, gw_ips, allowed_untaken_count=1)
 
             # No Gateway pods in the cluster.
             # Validate all egress ip related ARP and FDB entries been removed.
@@ -384,7 +384,7 @@ EOF
 
         with DiagsCollector():
             # Create egress gateways, with an IP from that pool.
-            termination_grace_period = 5
+            termination_grace_period = 10
             gw = self.create_gateway_pod("kind-worker", "gw", self.egress_cidr, "red", "default", termination_grace_period)
             gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr, "red", "default", termination_grace_period)
             gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr, "red", "default", termination_grace_period)
@@ -398,6 +398,13 @@ EOF
             })
             self.add_cleanup(client.delete)
             client.wait_ready()
+
+            retry_until_success(self.has_ip_route_and_table, retries=3, wait_time=3,
+                                function_kwargs={
+                                    "nodename": client.nodename,
+                                    "client_ip": client.ip,
+                                    "gateway_ips": [gw.ip, gw2.ip, gw3.ip]
+                                })
 
             # Delete gateway pod one by one and check correct annotations are applied to the client pod.
             for pod in [gw, gw2, gw3]:
@@ -509,6 +516,44 @@ EOF
         if output.find(ip) == -1:
             raise Exception('ip rule does not exist for client pod ip %s, log %s' % (ip, output))
 
+    def has_ip_route_and_table(self, nodename, client_ip, gateway_ips):
+        node_rules_and_tables = self.read_client_hops_for_node(nodename)
+        if client_ip in node_rules_and_tables:
+            rule_and_table = node_rules_and_tables[client_ip]
+            table = rule_and_table["table"]
+            hops = rule_and_table["hops"]
+            _log.info("found rule with ip: %s, pointing to table: %s, with hops: [%s], was looking for hops: [%s]", client_ip, table, hops, gateway_ips)
+            assert set(hops) == set(gateway_ips)
+        else:
+            stop_for_debug()
+            raise Exception("rule and table not found for client with ip %s and hops %s" % (client_ip, gateway_ips))
+
+    def read_client_hops_for_node(self, nodename):
+        # Read client hops for a node
+        rule_dict = {}
+        output = run("docker exec -t %s ip rule" % nodename)
+        for l in output.splitlines():
+            if (l.find("fwmark") != -1) and (l.find("from all fwmark") == -1):
+                # read routing rule, i.e. "100:    from 192.168.162.159 fwmark 0x80000/0x80000 lookup 250"
+                _log.info("read_client_hops_for_node: %s", l)
+                src = re.search(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', l).group()
+                table = re.search(r'(\d+)\D*$', l).group(1)
+                table_output = run("docker exec -t %s ip route show table %s" % (nodename, table))
+                _log.info("read_client_hops_for_node: src %s to table %s [%s]", src, table, table_output)
+
+                # read route table content
+                hops = []
+                for l in table_output.splitlines():
+                    if l.find("egress.calico") != -1:
+                        # "nexthop via 10.10.10.0 dev egress.calico weight 1 onlink"
+                        # or
+                        # "default via 10.10.10.0 dev egress.calico onlink"
+                        _log.info("read_client_hops_for_node: %s", l)
+                        hop = re.search(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', l).group()
+                        hops.append(hop)
+                rule_dict[src] = {"table": table, "hops": hops}
+        return rule_dict
+
     def check_ecmp_routes(self, client, servers, gw_ips, allowed_untaken_count=0):
         """
         Validate that client went though every ECMP route when
@@ -537,6 +582,10 @@ EOF
                 run("docker exec -t %s ip rule" % client.nodename)
                 run("docker exec -t %s ip route show table 250" % client.nodename)
                 run("docker exec -t %s ip route show table 249" % client.nodename)
+                run("docker exec -t %s ip route show table 248" % client.nodename)
+                run("docker exec -t %s ip route show table 247" % client.nodename)
+                run("docker exec -t %s ip route show table 246" % client.nodename)
+                run("docker exec -t %s ip route show table 245" % client.nodename)
                 _log.info("stop for debug ecmp route %s  Client IPs: %r", gw_ips, client_ip)
                 stop_for_debug()
             assert client_ip in gw_ips, \
