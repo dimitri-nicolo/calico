@@ -21,6 +21,7 @@ import (
 	"net"
 	"os/exec"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -289,7 +290,7 @@ func StartDataplaneDriver(configParams *config.Config,
 
 		dpConfig := intdataplane.Config{
 			Hostname:           configParams.FelixHostname,
-			FloatingIPsEnabled: strings.EqualFold(configParams.FloatingIPs, string(v3.FloatingIPsEnabled)),
+			FloatingIPsEnabled: strings.EqualFold(configParams.FloatingIPs, string(apiv3.FloatingIPsEnabled)),
 			IfaceMonitorConfig: ifacemonitor.Config{
 				InterfaceExcludes: configParams.InterfaceExclude,
 				ResyncInterval:    configParams.InterfaceRefreshInterval,
