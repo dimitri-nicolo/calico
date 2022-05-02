@@ -4683,6 +4683,13 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							Format:      "int32",
 						},
 					},
+					"bpfEnforceRPF": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BPFEnforceRPF enforce strict RPF on all interfaces with BPF programs regardless of what is the per-interfaces or global setting. Possible values are Disabled or Strict. [Default: Strict]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"syslogReporterNetwork": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},

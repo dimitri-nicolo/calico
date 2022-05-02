@@ -114,6 +114,8 @@ const (
 	HostToEndpointForwardPfx   = ChainNamePrefix + "thfw-"
 	HostFromEndpointForwardPfx = ChainNamePrefix + "fhfw-"
 
+	RPFChain = ChainNamePrefix + "rpf"
+
 	RuleHashPrefix = "cali:"
 
 	// NFLOGPrefixMaxLength is NFLOG max prefix length which is 64 characters.
@@ -258,7 +260,7 @@ type RuleRenderer interface {
 	StaticNATTableChains(ipVersion uint8) []*iptables.Chain
 	StaticNATPostroutingChains(ipVersion uint8) []*iptables.Chain
 	StaticRawTableChains(ipVersion uint8) []*iptables.Chain
-	StaticBPFModeRawChains(ipVersion uint8, tcBypassMark uint32, disableConntrack bool) []*iptables.Chain
+	StaticBPFModeRawChains(ipVersion uint8, wgEncryptHost, disableConntrack, enforceRPF bool) []*iptables.Chain
 	StaticMangleTableChains(ipVersion uint8) []*iptables.Chain
 
 	WorkloadDispatchChains(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint) []*iptables.Chain
