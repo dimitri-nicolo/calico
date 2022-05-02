@@ -169,6 +169,7 @@ type Config struct {
 	IPSetsRefreshInterval          time.Duration
 	RouteRefreshInterval           time.Duration
 	DeviceRouteSourceAddress       net.IP
+	DeviceRouteSourceAddressIPv6   net.IP
 	DeviceRouteProtocol            netlink.RouteProtocol
 	RemoveExternalRoutes           bool
 	IptablesRefreshInterval        time.Duration
@@ -1189,7 +1190,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 		routeTableV6 := routetable.New(
 			interfaceRegexes, 6, false, config.NetlinkTimeout,
-			config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes,
+			config.DeviceRouteSourceAddressIPv6, config.DeviceRouteProtocol, config.RemoveExternalRoutes,
 			unix.RT_TABLE_UNSPEC, dp.loopSummarizer, routetable.WithLivenessCB(dp.reportHealth))
 
 		if !config.BPFEnabled {
