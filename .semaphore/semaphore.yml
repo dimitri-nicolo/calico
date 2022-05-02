@@ -395,7 +395,7 @@ blocks:
 
 - name: "Node: build all architectures"
   run:
-    when: "branch =~ '.*' or change_in(['/felix/', '/confd/', '/node/'])"
+    when: "change_in(['/felix/', '/confd/', '/node/'])"
   dependencies: ["Prerequisites"]
   task:
     agent:
@@ -562,7 +562,7 @@ blocks:
 
 - name: 'calicoq'
   run:
-    when: "branch =~ '.*' or change_in(['/networking-calico/'])"
+    when: "change_in(['/*', '/calicoq/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
   task:
     secrets:
