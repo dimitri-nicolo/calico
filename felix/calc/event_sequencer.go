@@ -101,6 +101,8 @@ type EventSequencer struct {
 	pendingGlobalBGPConfig       *proto.GlobalBGPConfigUpdate
 	pendingPacketCaptureUpdates  map[string]*proto.PacketCaptureUpdate
 	pendingPacketCaptureRemovals map[string]*proto.PacketCaptureRemove
+	pendingServiceUpdates        map[serviceID]*proto.ServiceUpdate
+	pendingServiceDeletes        set.Set
 
 	// Sets to record what we've sent downstream. Updated whenever we flush.
 	sentIPSets          set.Set
@@ -115,8 +117,14 @@ type EventSequencer struct {
 	sentVTEPs           set.Set
 	sentWireguard       set.Set
 	sentPacketCapture   set.Set
+	sentServices        set.Set
 
 	Callback EventHandler
+}
+
+type serviceID struct {
+	Name      string
+	Namespace string
 }
 
 // func (buf *EventSequencer) HasPendingUpdates() {
@@ -167,6 +175,8 @@ func NewEventSequencer(conf configInterface) *EventSequencer {
 		pendingWireguardDeletes:      set.New(),
 		pendingPacketCaptureUpdates:  map[string]*proto.PacketCaptureUpdate{},
 		pendingPacketCaptureRemovals: map[string]*proto.PacketCaptureRemove{},
+		pendingServiceUpdates:        map[serviceID]*proto.ServiceUpdate{},
+		pendingServiceDeletes:        set.New(),
 
 		// Sets to record what we've sent downstream. Updated whenever we flush.
 		sentIPSets:          set.New(),
@@ -181,6 +191,7 @@ func NewEventSequencer(conf configInterface) *EventSequencer {
 		sentVTEPs:           set.New(),
 		sentWireguard:       set.New(),
 		sentPacketCapture:   set.New(),
+		sentServices:        set.New(),
 	}
 	return buf
 }
@@ -802,6 +813,8 @@ func (buf *EventSequencer) Flush() {
 		buf.Callback(buf.pendingGlobalBGPConfig)
 		buf.pendingGlobalBGPConfig = nil
 	}
+
+	buf.flushServices()
 }
 
 func (buf *EventSequencer) flushRemovedIPSets() {
@@ -1193,6 +1206,61 @@ func (buf *EventSequencer) flushPacketCaptureRemovals() {
 		buf.sentPacketCapture.Discard(key)
 		delete(buf.pendingPacketCaptureRemovals, key)
 	}
+}
+
+func (buf *EventSequencer) OnServiceUpdate(update *proto.ServiceUpdate) {
+	log.WithFields(log.Fields{
+		"name":      update.Name,
+		"namespace": update.Namespace,
+	}).Debug("Service update")
+	id := serviceID{
+		Name:      update.Name,
+		Namespace: update.Namespace,
+	}
+	buf.pendingServiceDeletes.Discard(id)
+	buf.pendingServiceUpdates[id] = update
+}
+
+func (buf *EventSequencer) OnServiceRemove(update *proto.ServiceRemove) {
+	log.WithFields(log.Fields{
+		"name":      update.Name,
+		"namespace": update.Namespace,
+	}).Debug("Service delete")
+	id := serviceID{
+		Name:      update.Name,
+		Namespace: update.Namespace,
+	}
+	delete(buf.pendingServiceUpdates, id)
+	if buf.sentServices.Contains(id) {
+		buf.pendingServiceDeletes.Add(id)
+	}
+}
+
+func (buf *EventSequencer) flushServices() {
+	// Order doesn't matter, but send removes first to reduce max occupancy
+	buf.pendingServiceDeletes.Iter(func(item interface{}) error {
+		id := item.(serviceID)
+		msg := &proto.ServiceRemove{
+			Name:      id.Name,
+			Namespace: id.Namespace,
+		}
+		buf.Callback(&msg)
+		buf.sentServices.Discard(id)
+		return nil
+	})
+	buf.pendingServiceDeletes.Clear()
+	for _, msg := range buf.pendingServiceUpdates {
+		buf.Callback(msg)
+		id := &proto.ServiceRemove{
+			Name:      msg.Name,
+			Namespace: msg.Namespace,
+		}
+		// We safely dereferenced the Id in OnServiceUpdate before adding it to the pending updates map, so
+		// it is safe to do so here.
+		buf.sentServices.Add(id)
+	}
+	buf.pendingServiceUpdates = make(map[serviceID]*proto.ServiceUpdate)
+	log.Debug("Done flushing Services")
 }
 
 func cidrToIPPoolID(cidr ip.CIDR) string {

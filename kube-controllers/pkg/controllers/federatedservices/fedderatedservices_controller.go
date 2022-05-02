@@ -472,7 +472,7 @@ func (c *federatedServicesController) OnUpdates(updates []bapi.Update) {
 				})
 			}
 
-		case apiv3.KindK8sService:
+		case model.KindKubernetesService:
 			clog.Debug("Processing Service")
 			switch u.UpdateType {
 			case bapi.UpdateTypeKVDeleted:

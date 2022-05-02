@@ -1013,7 +1013,7 @@ var localIPAMBlockWithBorrows = AllocationBlock{
 }
 
 var svcWithOutL7Annotation = KVPair{
-	Key: ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
+	Key: ResourceKey{Kind: model.KindKubernetesService, Name: "service1", Namespace: "ns1"},
 	Value: &kapiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{Name: "service2"},
 		Spec: kapiv1.ServiceSpec{
@@ -1034,7 +1034,7 @@ var svcWithOutL7Annotation = KVPair{
 }
 
 var svcWithL7Annotation = KVPair{
-	Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service2", Namespace: "ns2"},
+	Key: model.ResourceKey{Kind: model.KindKubernetesService, Name: "service2", Namespace: "ns2"},
 	Value: &kapiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{Name: "service2", Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
 		Spec: kapiv1.ServiceSpec{
@@ -1052,7 +1052,7 @@ var svcWithL7Annotation = KVPair{
 }
 
 var externalSvcWithL7Annotation = KVPair{
-	Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service3", Namespace: "ns2"},
+	Key: model.ResourceKey{Kind: model.KindKubernetesService, Name: "service3", Namespace: "ns2"},
 	Value: &kapiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{Name: "service3", Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
 		Spec: kapiv1.ServiceSpec{
@@ -1073,12 +1073,12 @@ var externalSvcWithL7Annotation = KVPair{
 }
 
 var deleteSvcWithL7Annotation = KVPair{
-	Key:   model.ResourceKey{Kind: v3.KindK8sService, Name: "service2", Namespace: "ns2"},
+	Key:   model.ResourceKey{Kind: model.KindKubernetesService, Name: "service2", Namespace: "ns2"},
 	Value: nil,
 }
 
 var deleteExternalSvcWithL7Annotation = KVPair{
-	Key:   model.ResourceKey{Kind: v3.KindK8sService, Name: "service3", Namespace: "ns2"},
+	Key:   model.ResourceKey{Kind: model.KindKubernetesService, Name: "service3", Namespace: "ns2"},
 	Value: nil,
 }
 

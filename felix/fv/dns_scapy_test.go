@@ -130,7 +130,7 @@ func makeBPFConntrackEntry(ifIndex int, aIP, bIP net.IP, trusted bool) (conntrac
 	// instead simulate the conntrack state that the request would create.  That means creating
 	// a conntrack with the 16 flag, if the DNS server is trusted, and without that flag if the
 	// DNS server is not trusted.
-	flags := uint8(0)
+	flags := uint16(0)
 	if trusted {
 		flags = conntrack.FlagTrustDNS
 	}

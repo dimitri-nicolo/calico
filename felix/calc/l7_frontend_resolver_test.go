@@ -11,8 +11,6 @@ import (
 
 	"github.com/projectcalico/calico/felix/config"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/labelindex"
@@ -124,7 +122,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 		Entry("Service update without L7 annotation should result in no updates",
 			[]api.Update{{
 				KVPair: model.KVPair{
-					Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
+					Key: model.ResourceKey{Kind: model.KindKubernetesService, Name: "service1", Namespace: "ns1"},
 					Value: &kapiv1.Service{
 						Spec: kapiv1.ServiceSpec{
 							ClusterIP: "10.0.0.0",
@@ -151,7 +149,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 		Entry("Config with TPROXYMode EnabledDebug should update without annotation",
 			[]api.Update{{
 				KVPair: model.KVPair{
-					Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
+					Key: model.ResourceKey{Kind: model.KindKubernetesService, Name: "service1", Namespace: "ns1"},
 					Value: &kapiv1.Service{
 						Spec: kapiv1.ServiceSpec{
 							ClusterIP: "10.0.0.0",
@@ -202,7 +200,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 		Entry("Service with L7 annotation (Cluster Ip, Node Port)",
 			[]api.Update{{
 				KVPair: model.KVPair{
-					Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
+					Key: model.ResourceKey{Kind: model.KindKubernetesService, Name: "service1", Namespace: "ns1"},
 					Value: &kapiv1.Service{
 						ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
 						Spec: kapiv1.ServiceSpec{
@@ -253,7 +251,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 		Entry("Service with L7 annotation other than TCP protocol should result in no updates",
 			[]api.Update{{
 				KVPair: model.KVPair{
-					Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
+					Key: model.ResourceKey{Kind: model.KindKubernetesService, Name: "service1", Namespace: "ns1"},
 					Value: &kapiv1.Service{
 						ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
 						Spec: kapiv1.ServiceSpec{
@@ -282,7 +280,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 		Entry("delete update for nodeport with L7 annotation should remove the nodeport only ",
 			[]api.Update{{
 				KVPair: model.KVPair{
-					Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
+					Key: model.ResourceKey{Kind: model.KindKubernetesService, Name: "service1", Namespace: "ns1"},
 					Value: &kapiv1.Service{
 						ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
 						Spec: kapiv1.ServiceSpec{
@@ -305,7 +303,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 				UpdateType: api.UpdateTypeKVNew,
 			}, {
 				KVPair: model.KVPair{
-					Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
+					Key: model.ResourceKey{Kind: model.KindKubernetesService, Name: "service1", Namespace: "ns1"},
 					Value: &kapiv1.Service{
 						ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
 						Spec: kapiv1.ServiceSpec{
@@ -362,7 +360,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 		Entry("delete update for service with L7 annotation should remove endpoints from ipset ",
 			[]api.Update{{
 				KVPair: model.KVPair{
-					Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
+					Key: model.ResourceKey{Kind: model.KindKubernetesService, Name: "service1", Namespace: "ns1"},
 					Value: &kapiv1.Service{
 						ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
 						Spec: kapiv1.ServiceSpec{
@@ -385,7 +383,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 				UpdateType: api.UpdateTypeKVNew,
 			}, {
 				KVPair: model.KVPair{
-					Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
+					Key: model.ResourceKey{Kind: model.KindKubernetesService, Name: "service1", Namespace: "ns1"},
 				},
 				UpdateType: api.UpdateTypeKVDeleted,
 			}},
@@ -440,7 +438,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 		Entry("update for L7 annotated service without L7 annotation anymore should remove them from ipset",
 			[]api.Update{{
 				KVPair: model.KVPair{
-					Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
+					Key: model.ResourceKey{Kind: model.KindKubernetesService, Name: "service1", Namespace: "ns1"},
 					Value: &kapiv1.Service{
 						ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
 						Spec: kapiv1.ServiceSpec{
@@ -463,7 +461,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 				UpdateType: api.UpdateTypeKVNew,
 			}, {
 				KVPair: model.KVPair{
-					Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
+					Key: model.ResourceKey{Kind: model.KindKubernetesService, Name: "service1", Namespace: "ns1"},
 					Value: &kapiv1.Service{
 						ObjectMeta: metav1.ObjectMeta{},
 					},
@@ -521,7 +519,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 		Entry("Service with L7 annotation with IPV6",
 			[]api.Update{{
 				KVPair: model.KVPair{
-					Key: model.ResourceKey{Kind: v3.KindK8sService, Name: "service1", Namespace: "ns1"},
+					Key: model.ResourceKey{Kind: model.KindKubernetesService, Name: "service1", Namespace: "ns1"},
 					Value: &kapiv1.Service{
 						ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
 						Spec: kapiv1.ServiceSpec{
