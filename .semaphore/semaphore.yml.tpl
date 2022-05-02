@@ -107,7 +107,7 @@ blocks:
 
 - name: "API"
   run:
-    when: "branch =~ '.*' or change_in(['/*', '/api/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "${FORCE_RUN} or change_in(['/*', '/api/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   execution_time_limit:
     minutes: 30
   dependencies: ["Prerequisites"]
