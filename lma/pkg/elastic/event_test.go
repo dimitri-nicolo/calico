@@ -7,7 +7,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/olivere/elastic/v7"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -128,28 +127,27 @@ var _ = Describe("Elasticsearch events index", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// in Calico Enterprise v3.14 a "dismissed" field is added to both old and new events indices
-			var currentMapping IndexMapping
 			resp, err := esClient.GetMapping().Index(oldIndexName).Do(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp).To(HaveKey(oldIndexName))
-			v := resp[oldIndexName]
-			err = mapstructure.Decode(v, &currentMapping)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(currentMapping.Mappings).To(HaveKey("properties"))
-			properties := currentMapping.Mappings["properties"]
-			p := properties.(map[string]interface{})
-			Expect(p).To(HaveKey("dismissed"))
+			v, ok := resp[oldIndexName].(map[string]interface{})
+			Expect(ok).To(BeTrue())
+			mappings, ok := v["mappings"].(map[string]interface{})
+			Expect(ok).To(BeTrue())
+			properties, ok := mappings["properties"].(map[string]interface{})
+			Expect(ok).To(BeTrue())
+			Expect(properties).To(HaveKey("dismissed"))
 
 			resp, err = esClient.GetMapping().Index(newIndexName).Do(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp).To(HaveKey(newIndexName))
-			v = resp[newIndexName]
-			err = mapstructure.Decode(v, &currentMapping)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(currentMapping.Mappings).To(HaveKey("properties"))
-			properties = currentMapping.Mappings["properties"]
-			p = properties.(map[string]interface{})
-			Expect(p).To(HaveKey("dismissed"))
+			v, ok = resp[newIndexName].(map[string]interface{})
+			Expect(ok).To(BeTrue())
+			mappings, ok = v["mappings"].(map[string]interface{})
+			Expect(ok).To(BeTrue())
+			properties, ok = mappings["properties"].(map[string]interface{})
+			Expect(ok).To(BeTrue())
+			Expect(properties).To(HaveKey("dismissed"))
 		})
 	})
 

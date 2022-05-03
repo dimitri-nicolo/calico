@@ -16,7 +16,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
 
@@ -330,10 +329,6 @@ func (c *client) IndexTemplate(indexAlias, indexPrefix, mapping string, lifecycl
 	}, nil
 }
 
-type IndexMapping struct {
-	Mappings map[string]interface{} `json:"mappings" validate:"required"`
-}
-
 func (c *client) MaybeUpdateIndexMapping(index string, expectedMapping map[string]interface{}) error {
 	ctx := context.Background()
 
@@ -351,19 +346,19 @@ func (c *client) MaybeUpdateIndexMapping(index string, expectedMapping map[strin
 		//           "type" : "keyword"
 		//          },
 		//        ...
-		v, ok := resp[index]
+		v, ok := resp[index].(map[string]interface{})
 		if !ok {
-			log.Warnf("invalid get mapping response for %s (key=%s not found). index mapping update will be skipped", index, index)
+			log.Warnf("failed find key=%s from %s index mapping response. index mapping update will be skipped", index, index)
 			return nil
 		}
 
-		var currentMapping IndexMapping
-		if err := mapstructure.Decode(v, &currentMapping); err != nil {
-			log.Warnf("invalid get mapping response for %s (failed to decode), index mapping update will be skipped", index)
+		mapping, ok := v["mappings"].(map[string]interface{})
+		if !ok {
+			log.Warnf("failed find key=mappings from %s index mapping response. index mapping update will be skipped", index)
 			return nil
 		}
 
-		if !reflect.DeepEqual(expectedMapping, currentMapping.Mappings) {
+		if !reflect.DeepEqual(expectedMapping, mapping) {
 			if _, err := c.PutMapping().Index(index).BodyJson(expectedMapping).Do(ctx); err != nil {
 				log.WithError(err).Errorf("failed to update index mapping for %s", index)
 				return err
