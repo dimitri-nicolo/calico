@@ -28,6 +28,7 @@ type FlowLogAggregator interface {
 	IncludeProcess(bool) FlowLogAggregator
 	IncludeTcpStats(bool) FlowLogAggregator
 	MaxOriginalIPsSize(int) FlowLogAggregator
+	MaxDomains(int) FlowLogAggregator
 	AggregateOver(FlowAggregationKind) FlowLogAggregator
 	ForAction(rules.RuleAction) FlowLogAggregator
 	PerFlowProcessLimit(limit int) FlowLogAggregator
@@ -60,6 +61,7 @@ const MinAggregationLevel = FlowDefault
 const (
 	defaultMaxOrigIPSize        = 50
 	defaultNatOutgoingPortLimit = 3
+	defaultMaxDomains           = 5
 )
 
 var (
@@ -89,6 +91,7 @@ type flowLogAggregator struct {
 	includeService          bool
 	includeProcess          bool
 	maxOriginalIPsSize      int
+	maxDomains              int
 	aggregationStartTime    time.Time
 	handledAction           rules.RuleAction
 	perFlowProcessLimit     int
@@ -140,6 +143,7 @@ func NewFlowLogAggregator() FlowLogAggregator {
 		flowStore:            make(map[FlowMeta]*flowEntry),
 		flMutex:              sync.RWMutex{},
 		maxOriginalIPsSize:   defaultMaxOrigIPSize,
+		maxDomains:           defaultMaxDomains,
 		aggregationStartTime: time.Now(),
 		natOutgoingPortLimit: defaultNatOutgoingPortLimit,
 	}
@@ -184,6 +188,11 @@ func (c *flowLogAggregator) IncludeProcess(b bool) FlowLogAggregator {
 
 func (c *flowLogAggregator) MaxOriginalIPsSize(s int) FlowLogAggregator {
 	c.maxOriginalIPsSize = s
+	return c
+}
+
+func (c *flowLogAggregator) MaxDomains(s int) FlowLogAggregator {
+	c.maxDomains = s
 	return c
 }
 
@@ -237,7 +246,7 @@ func (fa *flowLogAggregator) FeedUpdate(mu *MetricUpdate) error {
 
 	if !ok {
 		logutil.Tracef(fa.displayDebugTraceLogs, "flowMeta %+v not found, creating new flowspec for metric update %+v", flowMeta, *mu)
-		spec := NewFlowSpec(mu, fa.maxOriginalIPsSize, fa.includeProcess, fa.perFlowProcessLimit,
+		spec := NewFlowSpec(mu, fa.maxOriginalIPsSize, fa.maxDomains, fa.includeProcess, fa.perFlowProcessLimit,
 			fa.perFlowProcessArgsLimit, fa.displayDebugTraceLogs, fa.natOutgoingPortLimit)
 
 		newEntry := &flowEntry{
@@ -266,7 +275,7 @@ func (fa *flowLogAggregator) FeedUpdate(mu *MetricUpdate) error {
 	return nil
 }
 
-// GetAndCalibrate returns all aggregated flow logs, as a list of string pointers, since the last time a GetAndCalibrate
+// GetAndCalibrate returns all aggregated flow logs, as a list of pointers, since the last time a GetAndCalibrate
 // was called. Calling GetAndCalibrate will also clear the stored flow logs once the flow logs are returned.
 // Clearing the stored flow logs may imply resetting the statistics for a flow log identified using
 // its FlowMeta or flushing out the entry of FlowMeta altogether. If no active flow count are recorded

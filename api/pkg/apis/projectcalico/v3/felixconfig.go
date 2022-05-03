@@ -541,8 +541,8 @@ type FelixConfigurationSpec struct {
 	// FlowLogsFileNatOutgoingPortLimit is used to specify the maximum number of distinct post SNAT ports that will appear
 	// in the flowLogs. Default value is 3
 	FlowLogsFileNatOutgoingPortLimit *int `json:"flowLogsFileNatOutgoingPortLimit,omitempty" validate:"omitempty"`
-	// FlowLogsFileDomainsLimit is used to configure the number of (destination) domains to include in the flow log. The
-	// domains are only included at aggregation level 0 or 1.
+	// FlowLogsFileDomainsLimit is used to configure the number of (destination) domains to include in the flow log.
+	// These are not included for workload or host endpoint destinations.
 	// [Default: 5]
 	FlowLogsFileDomainsLimit *int `json:"flowLogsFileDomainsLimit,omitempty" validate:"omitempty"`
 

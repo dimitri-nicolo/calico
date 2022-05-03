@@ -4905,7 +4905,7 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					},
 					"flowLogsFileDomainsLimit": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FlowLogsFileDomainsLimit is used to configure the number of (destination) domains to include in the flow log. The domains are only included at aggregation level 0 or 1. [Default: 5]",
+							Description: "FlowLogsFileDomainsLimit is used to configure the number of (destination) domains to include in the flow log. These are not included for workload or host endpoint destinations. [Default: 5]",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},

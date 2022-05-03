@@ -231,6 +231,7 @@ type Config struct {
 	FlowLogsCollectTcpStats            bool
 	FlowLogsCollectProcessPath         bool
 	FlowLogsFileIncludeService         bool
+	FlowLogsFileDomainsLimit           int
 	NfNetlinkBufSize                   int
 
 	SidecarAccelerationEnabled bool
@@ -683,6 +684,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		DNSExtraTTL:           config.DNSExtraTTL,
 		DNSLogsLatency:        config.DNSLogsLatency,
 		DebugDNSResponseDelay: config.DebugDNSResponseDelay,
+		MaxTopLevelDomains:    config.FlowLogsFileDomainsLimit,
 	})
 	dp.RegisterManager(dp.domainInfoStore)
 
