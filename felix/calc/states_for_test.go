@@ -1192,10 +1192,10 @@ var vxlanWithWEPIPs = empty.withKVUpdates(
 	KVPair{Key: remoteHost2VXLANTunnelConfigKey, Value: remoteHost2VXLANTunnelIP},
 ).withName("VXLAN using WorkloadIPs").withVTEPs(
 	proto.VXLANTunnelEndpointUpdate{
-		Node:             remoteHostname2,
-		MacV4:            "66:40:18:59:1f:16",
-		Ipv4Addr:         remoteHost2VXLANTunnelIP,
-		ParentDeviceIpv4: remoteHost2IP.String(),
+		Node:           remoteHostname2,
+		Mac:            "66:40:18:59:1f:16",
+		Ipv4Addr:       remoteHost2VXLANTunnelIP,
+		ParentDeviceIp: remoteHost2IP.String(),
 	},
 ).withRoutes(
 	routeUpdateIPPoolVXLAN,
@@ -1236,16 +1236,16 @@ var vxlanWithWEPIPsAndWEPDuplicate = vxlanWithWEPIPsAndWEP.withKVUpdates(
 	KVPair{Key: remoteWlEpKey1, Value: &remoteWlEp1New},
 ).withName("VXLAN using WorkloadIPs and overlapping WEPs").withVTEPs(
 	proto.VXLANTunnelEndpointUpdate{
-		Node:             remoteHostname2,
-		MacV4:            "66:40:18:59:1f:16",
-		Ipv4Addr:         remoteHost2VXLANTunnelIP,
-		ParentDeviceIpv4: remoteHost2IP.String(),
+		Node:           remoteHostname2,
+		Mac:            "66:40:18:59:1f:16",
+		Ipv4Addr:       remoteHost2VXLANTunnelIP,
+		ParentDeviceIp: remoteHost2IP.String(),
 	},
 	proto.VXLANTunnelEndpointUpdate{
-		Node:             remoteHostname,
-		MacV4:            "66:3e:ca:a4:db:65",
-		Ipv4Addr:         remoteHostVXLANTunnelIP,
-		ParentDeviceIpv4: remoteHostIP.String(),
+		Node:           remoteHostname,
+		Mac:            "66:3e:ca:a4:db:65",
+		Ipv4Addr:       remoteHostVXLANTunnelIP,
+		ParentDeviceIp: remoteHostIP.String(),
 	},
 ).withRoutes(
 	routeUpdateIPPoolVXLAN,
@@ -1279,10 +1279,10 @@ var vxlanWithBlock = empty.withKVUpdates(
 ).withName("VXLAN").withVTEPs(
 	// VTEP for the remote node.
 	proto.VXLANTunnelEndpointUpdate{
-		Node:             remoteHostname,
-		MacV4:            "66:3e:ca:a4:db:65",
-		Ipv4Addr:         remoteHostVXLANTunnelIP,
-		ParentDeviceIpv4: remoteHostIP.String(),
+		Node:           remoteHostname,
+		Mac:            "66:3e:ca:a4:db:65",
+		Ipv4Addr:       remoteHostVXLANTunnelIP,
+		ParentDeviceIp: remoteHostIP.String(),
 	},
 ).withExpectedEncapsulation(
 	proto.Encapsulation{IpipEnabled: false, VxlanEnabled: true},
@@ -1357,10 +1357,10 @@ var vxlanWithMAC = vxlanWithBlock.withKVUpdates(
 ).withName("VXLAN MAC").withVTEPs(
 	// VTEP for the remote node.
 	proto.VXLANTunnelEndpointUpdate{
-		Node:             remoteHostname,
-		MacV4:            remoteHostVXLANTunnelMAC,
-		Ipv4Addr:         remoteHostVXLANTunnelIP,
-		ParentDeviceIpv4: remoteHostIP.String(),
+		Node:           remoteHostname,
+		Mac:            remoteHostVXLANTunnelMAC,
+		Ipv4Addr:       remoteHostVXLANTunnelIP,
+		ParentDeviceIp: remoteHostIP.String(),
 	},
 )
 
@@ -1373,16 +1373,16 @@ var vxlanWithBlockAndBorrows = vxlanWithBlock.withKVUpdates(
 	KVPair{Key: remoteHost2VXLANTunnelConfigKey, Value: remoteHost2VXLANTunnelIP},
 ).withName("VXLAN borrow").withVTEPs(
 	proto.VXLANTunnelEndpointUpdate{
-		Node:             remoteHostname,
-		MacV4:            "66:3e:ca:a4:db:65",
-		Ipv4Addr:         remoteHostVXLANTunnelIP,
-		ParentDeviceIpv4: remoteHostIP.String(),
+		Node:           remoteHostname,
+		Mac:            "66:3e:ca:a4:db:65",
+		Ipv4Addr:       remoteHostVXLANTunnelIP,
+		ParentDeviceIp: remoteHostIP.String(),
 	},
 	proto.VXLANTunnelEndpointUpdate{
-		Node:             remoteHostname2,
-		MacV4:            "66:40:18:59:1f:16",
-		Ipv4Addr:         remoteHost2VXLANTunnelIP,
-		ParentDeviceIpv4: remoteHost2IP.String(),
+		Node:           remoteHostname2,
+		Mac:            "66:40:18:59:1f:16",
+		Ipv4Addr:       remoteHost2VXLANTunnelIP,
+		ParentDeviceIp: remoteHost2IP.String(),
 	},
 ).withRoutes(
 	routeUpdateIPPoolVXLAN,
@@ -1413,10 +1413,10 @@ var vxlanWithBlockAndDifferentTunnelIP = vxlanWithBlock.withKVUpdates(
 ).withName("VXLAN different tunnel IP").withVTEPs(
 	// VTEP for the remote node.
 	proto.VXLANTunnelEndpointUpdate{
-		Node:             remoteHostname,
-		MacV4:            "66:3e:ca:a4:db:65",
-		Ipv4Addr:         remoteHostVXLANTunnelIP2,
-		ParentDeviceIpv4: remoteHostIP.String(),
+		Node:           remoteHostname,
+		Mac:            "66:3e:ca:a4:db:65",
+		Ipv4Addr:       remoteHostVXLANTunnelIP2,
+		ParentDeviceIp: remoteHostIP.String(),
 	},
 )
 
@@ -1426,10 +1426,10 @@ var vxlanWithBlockAndDifferentNodeIP = vxlanWithBlock.withKVUpdates(
 ).withName("VXLAN different node IP").withVTEPs(
 	// VTEP for the remote node.
 	proto.VXLANTunnelEndpointUpdate{
-		Node:             remoteHostname,
-		MacV4:            "66:3e:ca:a4:db:65",
-		Ipv4Addr:         remoteHostVXLANTunnelIP,
-		ParentDeviceIpv4: remoteHost2IP.String(),
+		Node:           remoteHostname,
+		Mac:            "66:3e:ca:a4:db:65",
+		Ipv4Addr:       remoteHostVXLANTunnelIP,
+		ParentDeviceIp: remoteHost2IP.String(),
 	},
 ).withRoutes(
 	routeUpdateIPPoolVXLAN,
@@ -1490,16 +1490,16 @@ var vxlanLocalBlockWithBorrows = empty.withKVUpdates(
 	KVPair{Key: localIPAMBlockKey, Value: &localIPAMBlockWithBorrows},
 ).withVTEPs(
 	proto.VXLANTunnelEndpointUpdate{
-		Node:             remoteHostname,
-		MacV4:            "66:3e:ca:a4:db:65",
-		Ipv4Addr:         remoteHostVXLANTunnelIP,
-		ParentDeviceIpv4: remoteHostIP.String(),
+		Node:           remoteHostname,
+		Mac:            "66:3e:ca:a4:db:65",
+		Ipv4Addr:       remoteHostVXLANTunnelIP,
+		ParentDeviceIp: remoteHostIP.String(),
 	},
 	proto.VXLANTunnelEndpointUpdate{
-		Node:             localHostname,
-		MacV4:            "66:48:f6:56:dc:f1",
-		Ipv4Addr:         localHostVXLANTunnelIP,
-		ParentDeviceIpv4: localHostIP.String(),
+		Node:           localHostname,
+		Mac:            "66:48:f6:56:dc:f1",
+		Ipv4Addr:       localHostVXLANTunnelIP,
+		ParentDeviceIp: localHostIP.String(),
 	},
 ).withRoutes(
 	routeUpdateIPPoolVXLAN,
@@ -1692,10 +1692,10 @@ var vxlanWithBlockAndBorrowsAndMissingFirstVTEP = vxlanWithBlockAndBorrows.withK
 	KVPair{Key: remoteHostIPKey, Value: nil},
 ).withName("VXLAN borrow missing VTEP").withVTEPs(
 	proto.VXLANTunnelEndpointUpdate{
-		Node:             remoteHostname2,
-		MacV4:            "66:40:18:59:1f:16",
-		Ipv4Addr:         remoteHost2VXLANTunnelIP,
-		ParentDeviceIpv4: remoteHost2IP.String(),
+		Node:           remoteHostname2,
+		Mac:            "66:40:18:59:1f:16",
+		Ipv4Addr:       remoteHost2VXLANTunnelIP,
+		ParentDeviceIp: remoteHost2IP.String(),
 	},
 ).withRoutes(
 	routeUpdateIPPoolVXLAN,
@@ -1745,10 +1745,10 @@ var vxlanBlockDelete = vxlanWithBlock.withKVUpdates(
 ).withVTEPs(
 	// VTEP for the remote node.
 	proto.VXLANTunnelEndpointUpdate{
-		Node:             remoteHostname,
-		MacV4:            "66:3e:ca:a4:db:65",
-		Ipv4Addr:         remoteHostVXLANTunnelIP,
-		ParentDeviceIpv4: remoteHostIP.String(),
+		Node:           remoteHostname,
+		Mac:            "66:3e:ca:a4:db:65",
+		Ipv4Addr:       remoteHostVXLANTunnelIP,
+		ParentDeviceIp: remoteHostIP.String(),
 	},
 )
 
@@ -1780,10 +1780,10 @@ var vxlanSlash32 = empty.withKVUpdates(
 ).withName("VXLAN /32").withVTEPs(
 	// VTEP for the remote node.
 	proto.VXLANTunnelEndpointUpdate{
-		Node:             remoteHostname,
-		MacV4:            "66:3e:ca:a4:db:65",
-		Ipv4Addr:         remoteHostVXLANTunnelIP,
-		ParentDeviceIpv4: remoteHostIP.String(),
+		Node:           remoteHostname,
+		Mac:            "66:3e:ca:a4:db:65",
+		Ipv4Addr:       remoteHostVXLANTunnelIP,
+		ParentDeviceIp: remoteHostIP.String(),
 	},
 ).withRoutes(
 	// No CIDR_INFO route, it gets subsumed into the REMOTE_WORKLOAD one.
@@ -1808,10 +1808,10 @@ var vxlanSlash32NoBlock = empty.withKVUpdates(
 ).withName("VXLAN /32 no block").withVTEPs(
 	// VTEP for the remote node.
 	proto.VXLANTunnelEndpointUpdate{
-		Node:             remoteHostname,
-		MacV4:            "66:3e:ca:a4:db:65",
-		Ipv4Addr:         remoteHostVXLANTunnelIP,
-		ParentDeviceIpv4: remoteHostIP.String(),
+		Node:           remoteHostname,
+		Mac:            "66:3e:ca:a4:db:65",
+		Ipv4Addr:       remoteHostVXLANTunnelIP,
+		ParentDeviceIp: remoteHostIP.String(),
 	},
 ).withRoutes(
 	routeUpdateIPPoolVXLANSlash32,
@@ -1827,10 +1827,10 @@ var vxlanSlash32NoPool = empty.withKVUpdates(
 ).withName("VXLAN /32 no pool").withVTEPs(
 	// VTEP for the remote node.
 	proto.VXLANTunnelEndpointUpdate{
-		Node:             remoteHostname,
-		MacV4:            "66:3e:ca:a4:db:65",
-		Ipv4Addr:         remoteHostVXLANTunnelIP,
-		ParentDeviceIpv4: remoteHostIP.String(),
+		Node:           remoteHostname,
+		Mac:            "66:3e:ca:a4:db:65",
+		Ipv4Addr:       remoteHostVXLANTunnelIP,
+		ParentDeviceIp: remoteHostIP.String(),
 	},
 ).withRoutes(
 	routeUpdateRemoteHost,
@@ -1936,9 +1936,9 @@ var vxlanV4V6WithBlock = empty.withKVUpdates(
 	// VTEP for the remote node.
 	proto.VXLANTunnelEndpointUpdate{
 		Node:             remoteHostname,
-		MacV4:            "66:3e:ca:a4:db:65",
+		Mac:              "66:3e:ca:a4:db:65",
 		Ipv4Addr:         remoteHostVXLANTunnelIP,
-		ParentDeviceIpv4: remoteHostIP.String(),
+		ParentDeviceIp:   remoteHostIP.String(),
 		MacV6:            "66:a0:68:c9:4c:79",
 		Ipv6Addr:         remoteHostVXLANV6TunnelIP,
 		ParentDeviceIpv6: remoteHostIPv6.String(),
@@ -1953,9 +1953,9 @@ var vxlanV4V6BlockV6Delete = vxlanV4V6WithBlock.withKVUpdates(
 	// VTEP for the remote node.
 	proto.VXLANTunnelEndpointUpdate{
 		Node:             remoteHostname,
-		MacV4:            "66:3e:ca:a4:db:65",
+		Mac:              "66:3e:ca:a4:db:65",
 		Ipv4Addr:         remoteHostVXLANTunnelIP,
-		ParentDeviceIpv4: remoteHostIP.String(),
+		ParentDeviceIp:   remoteHostIP.String(),
 		MacV6:            "66:a0:68:c9:4c:79",
 		Ipv6Addr:         remoteHostVXLANV6TunnelIP,
 		ParentDeviceIpv6: remoteHostIPv6.String(),
@@ -1972,9 +1972,9 @@ var vxlanV4V6BlockV4Delete = vxlanV4V6WithBlock.withKVUpdates(
 	// VTEP for the remote node.
 	proto.VXLANTunnelEndpointUpdate{
 		Node:             remoteHostname,
-		MacV4:            "66:3e:ca:a4:db:65",
+		Mac:              "66:3e:ca:a4:db:65",
 		Ipv4Addr:         remoteHostVXLANTunnelIP,
-		ParentDeviceIpv4: remoteHostIP.String(),
+		ParentDeviceIp:   remoteHostIP.String(),
 		MacV6:            "66:a0:68:c9:4c:79",
 		Ipv6Addr:         remoteHostVXLANV6TunnelIP,
 		ParentDeviceIpv6: remoteHostIPv6.String(),
@@ -2023,10 +2023,10 @@ var vxlanV4V6NodeResIPv6Delete = vxlanV4V6WithBlock.withKVUpdates(
 ).withVTEPs(
 	// VTEP for the remote node.
 	proto.VXLANTunnelEndpointUpdate{
-		Node:             remoteHostname,
-		MacV4:            "66:3e:ca:a4:db:65",
-		Ipv4Addr:         remoteHostVXLANTunnelIP,
-		ParentDeviceIpv4: remoteHostIP.String(),
+		Node:           remoteHostname,
+		Mac:            "66:3e:ca:a4:db:65",
+		Ipv4Addr:       remoteHostVXLANTunnelIP,
+		ParentDeviceIp: remoteHostIP.String(),
 	},
 )
 
@@ -2081,10 +2081,10 @@ var vxlanV4V6TunnelIPv6Delete = vxlanV4V6WithBlock.withKVUpdates(
 ).withName("VXLAN IPv4+IPv6 tunnel IPv6 removed").withVTEPs(
 	// VTEP for the remote node.
 	proto.VXLANTunnelEndpointUpdate{
-		Node:             remoteHostname,
-		MacV4:            "66:3e:ca:a4:db:65",
-		Ipv4Addr:         remoteHostVXLANTunnelIP,
-		ParentDeviceIpv4: remoteHostIP.String(),
+		Node:           remoteHostname,
+		Mac:            "66:3e:ca:a4:db:65",
+		Ipv4Addr:       remoteHostVXLANTunnelIP,
+		ParentDeviceIp: remoteHostIP.String(),
 	},
 )
 
@@ -2095,9 +2095,9 @@ var vxlanV4V6WithMAC = vxlanV4V6WithBlock.withKVUpdates(
 	// VTEP for the remote node.
 	proto.VXLANTunnelEndpointUpdate{
 		Node:             remoteHostname,
-		MacV4:            remoteHostVXLANTunnelMAC,
+		Mac:              remoteHostVXLANTunnelMAC,
 		Ipv4Addr:         remoteHostVXLANTunnelIP,
-		ParentDeviceIpv4: remoteHostIP.String(),
+		ParentDeviceIp:   remoteHostIP.String(),
 		MacV6:            remoteHostVXLANV6TunnelMAC,
 		Ipv6Addr:         remoteHostVXLANV6TunnelIP,
 		ParentDeviceIpv6: remoteHostIPv6.String(),
@@ -2110,9 +2110,9 @@ var vxlanV4V6WithV4MAC = vxlanV4V6WithBlock.withKVUpdates(
 	// VTEP for the remote node.
 	proto.VXLANTunnelEndpointUpdate{
 		Node:             remoteHostname,
-		MacV4:            remoteHostVXLANTunnelMAC,
+		Mac:              remoteHostVXLANTunnelMAC,
 		Ipv4Addr:         remoteHostVXLANTunnelIP,
-		ParentDeviceIpv4: remoteHostIP.String(),
+		ParentDeviceIp:   remoteHostIP.String(),
 		MacV6:            "66:a0:68:c9:4c:79",
 		Ipv6Addr:         remoteHostVXLANV6TunnelIP,
 		ParentDeviceIpv6: remoteHostIPv6.String(),
@@ -2125,9 +2125,9 @@ var vxlanV4V6WithV6MAC = vxlanV4V6WithBlock.withKVUpdates(
 	// VTEP for the remote node.
 	proto.VXLANTunnelEndpointUpdate{
 		Node:             remoteHostname,
-		MacV4:            "66:3e:ca:a4:db:65",
+		Mac:              "66:3e:ca:a4:db:65",
 		Ipv4Addr:         remoteHostVXLANTunnelIP,
-		ParentDeviceIpv4: remoteHostIP.String(),
+		ParentDeviceIp:   remoteHostIP.String(),
 		MacV6:            remoteHostVXLANV6TunnelMAC,
 		Ipv6Addr:         remoteHostVXLANV6TunnelIP,
 		ParentDeviceIpv6: remoteHostIPv6.String(),

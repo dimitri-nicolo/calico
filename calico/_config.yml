@@ -84,6 +84,7 @@ imageNames:
   elasticsearchOperator: tigera/elasticsearch-operator
   prometheusOperator: tigera/prometheus-operator
   windows: tigera/calico-windows-upgrader
+  csi-driver: docker.io/calico/csi
 
 # List of files to exclude. These files won't get included in the deployed site.
 exclude:
@@ -192,3 +193,4 @@ defaults:
         elasticsearchOperator: tigera/elasticsearch-operator
         prometheusOperator: tigera/prometheus-operator
         windows: tigera/calico-windows-upgrader
+        csi-driver: calico/csi
