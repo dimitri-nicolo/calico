@@ -701,10 +701,6 @@ github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb/go.mod h1:+NfK9FKe
 github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d/go.mod h1:+NfK9FKeTrX5uv1uIXGdwYDTeHna2qgaIlx54MXqjAM=
 github.com/heketi/heketi v10.3.0+incompatible/go.mod h1:bB9ly3RchcQqsQ9CpyaQwvva7RS5ytVoSoholZQON6o=
 github.com/heketi/tests v0.0.0-20151005000721-f3775cbcefd6/go.mod h1:xGMAM8JLi7UkZt1i4FQeQy0R2T8GLUwQhOP5M1gBhy4=
-github.com/hjiawei/calico-private v0.0.0-20220503215235-015e6be71694 h1:aFI7JfaxDFAUvwuS8CFAmjFVkPZ8yVsoo4/TIz11600=
-github.com/hjiawei/calico-private v0.0.0-20220503215235-015e6be71694/go.mod h1:e562yyGUNeeJCLwm4HQv+3WJyHje8BHdiRBZcz05NhY=
-github.com/hjiawei/calico-private/api v0.0.0-20220503215235-015e6be71694 h1:cSGTLOKqr9MjEeMExCre+R3vjBwfKmRcTDK+EolRw+w=
-github.com/hjiawei/calico-private/api v0.0.0-20220503215235-015e6be71694/go.mod h1:STeyd1ZdL5HRGkY0Hx1c/16hujhQrJLh8N3p8VXgi3k=
 github.com/howeyc/fsnotify v0.9.0/go.mod h1:41HzSPxBGeFRQKEEwgh49TRw/nKBsYZ2cF1OzPjSJsA=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
 github.com/huandu/xstrings v1.2.0 h1:yPeWdRnmynF7p+lLYz0H2tthW9lqhMJrQV/U7yy4wX0=
@@ -1203,6 +1199,10 @@ github.com/tchap/go-patricia/v2 v2.3.1/go.mod h1:VZRHKAb53DLaG+nA9EaYYiaEx6YztwD
 github.com/tebeka/strftime v0.1.5/go.mod h1:29/OidkoWHdEKZqzyDLUyC+LmgDgdHo4WAFCDT7D/Ig=
 github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae/go.mod h1:quDq6Se6jlGwiIKia/itDZxqC5rj6/8OdFyMMAwTxCs=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
+github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220503224942-90e768b874dd h1:waF+EdP9Wi9nLac/BRwsPa9zOVtp6SuufXfzt5H/cFE=
+github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20220503224942-90e768b874dd/go.mod h1:e562yyGUNeeJCLwm4HQv+3WJyHje8BHdiRBZcz05NhY=
+github.com/tigera/calico-private/api v0.0.0-20220503224942-90e768b874dd h1:cKvcwgTQFxSE7dxO8RK1rBCremTShSSrEE2/h/zxQ4M=
+github.com/tigera/calico-private/api v0.0.0-20220503224942-90e768b874dd/go.mod h1:STeyd1ZdL5HRGkY0Hx1c/16hujhQrJLh8N3p8VXgi3k=
 github.com/tigera/compliance v0.0.0-20220429013921-a294c8d9ac69 h1:VA8tPPiNsijZXF9XoIxKMPp1JNDk8XiFKIs/3lB/t58=
 github.com/tigera/compliance v0.0.0-20220429013921-a294c8d9ac69/go.mod h1:kzPw2IpsUZoqbRun3+9F06CmP6LuX4i97t8kF2mi9QI=
 github.com/tigera/windows-networking v0.0.0-20211112174220-6a90051af748/go.mod h1:zuycD4KqAFNMJC+Bv4fGqGMn7XsS/mZnttHGe96NLk0=
