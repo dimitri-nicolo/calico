@@ -1436,9 +1436,25 @@ func (f *fakeRouteTable) QueueResyncIface(_ string) {
 	panic("implement me")
 }
 
+func (f *fakeRouteTable) ReadRoutesFromKernel(ifaceName string) ([]routetable.Target, error) {
+	panic("implement me")
+}
+
+func (f *fakeRouteTable) SetRemoveExternalRoutes(_ bool) {
+	panic("implement me")
+}
+
 type fakeRouteRules struct {
 	Rules  []*routerule.Rule
 	Errors testutils.ErrorProducer
+}
+
+func (f *fakeRouteRules) GetAllActiveRules() []*routerule.Rule {
+	panic("implement me")
+}
+
+func (f *fakeRouteRules) InitFromKernel() {
+	panic("implement me")
 }
 
 func (f *fakeRouteRules) SetRule(rule *routerule.Rule) {

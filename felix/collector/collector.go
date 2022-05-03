@@ -283,15 +283,10 @@ func (c *collector) getDataAndUpdateEndpoints(tuple Tuple, expired bool, packeti
 		// The entry does not exist. Go ahead and create a new one and add it to the map.
 		data = NewData(tuple, srcEp, dstEp, c.config.MaxOriginalSourceIPsIncluded)
 		c.updateEpStatsCache(tuple, data)
-
-		// Return the new entry.
-		return data
-	}
-
-	if data.reported {
-		// Data has been reported.  If the request has not come from a packet info update (e.g. nflog) then the
-		// endpoint data should be considered frozen since this is a pre-existing connection.
-		if !packetinfo {
+	} else if data.reported {
+		if !data.unreportedPacketInfo && !packetinfo {
+			// Data has been reported.  If the request has not come from a packet info update (e.g. nflog) and we do not
+			// have an unreported packetinfo then the endpoint data should be considered frozen.
 			return data
 		}
 
@@ -311,18 +306,25 @@ func (c *collector) getDataAndUpdateEndpoints(tuple Tuple, expired bool, packeti
 		// Update the source and dest data. We do this even if the endpoints haven't changed because the labels on the
 		// endpoints may have changed and so our matches might be different.
 		data.srcEp, data.dstEp = srcEp, dstEp
-
-		return data
+	} else {
+		// Data has not been reported. Don't downgrade found endpoints (in case the endpoint is deleted prior to being
+		// reported).
+		if srcEp != nil {
+			data.srcEp = srcEp
+		}
+		if dstEp != nil {
+			data.dstEp = dstEp
+		}
 	}
 
-	// Data has not been reported. Don't downgrade found endpoints (in case the endpoint is deleted prior to being
-	// reported).
-	if srcEp != nil {
-		data.srcEp = srcEp
+	// At this point data has either not been reported or was reported and expired. If this was a packetinfo update then
+	// we now have unreported packet info data. We can also update the Domains if there are any - ideally we wouldn't do
+	// this for every packet update, but we need to do it early as we know some customers have DNS TTLs lower than the
+	// export interval so we need to do this before we export.
+	if packetinfo {
+		data.unreportedPacketInfo = true
 	}
-	if dstEp != nil {
-		data.dstEp = dstEp
-	}
+	c.maybeUpdateDomains(data)
 
 	return data
 }
@@ -355,10 +357,15 @@ func (c *collector) lookupEndpoint(ip [16]byte, canCheckEgressDomains bool) *cal
 		// NetworkSets endpoint types are enabled, but no NetworkSet matches the IP.  If canCheckEgressDomains is true
 		// then we can also check for egress domain and lookup NetworkSet from that.
 		if canCheckEgressDomains && c.domainLookup != nil {
-			if domain := c.domainLookup.GetWatchedDomainForIP(ip); domain != "" {
-				if ep, ok := c.luc.GetNetworkSetFromEgressDomain(domain); ok {
-					return ep
-				}
+			var ep *calc.EndpointData
+			var ok bool
+			c.domainLookup.IterWatchedDomainsForIP(ip, func(domain string) bool {
+				ep, ok = c.luc.GetNetworkSetFromEgressDomain(domain)
+				// Returning true stops the iteration, so stop as soon as we locate a network set.
+				return ok
+			})
+			if ok {
+				return ep
 			}
 		}
 	}
@@ -534,6 +541,20 @@ func (c *collector) checkPreDNATTuple(data *Data) {
 	}
 }
 
+// maybeUpdateDomains set the egress Domains if there are any.
+//
+// We only do this for source reported flows where the destination is either network or networkset.
+func (c *collector) maybeUpdateDomains(data *Data) {
+	if c.domainLookup == nil {
+		return
+	}
+	if data.dstEp == nil || data.dstEp.Networkset != nil {
+		if egressDomains := c.domainLookup.GetTopLevelDomainsForIP(data.Tuple.dst); len(egressDomains) > len(data.destDomains) {
+			data.destDomains = egressDomains
+		}
+	}
+}
+
 // reportMetrics reports the metrics if all required data is present, or returns false if not reported.
 // Set the force flag to true if the data should be reported before all asynchronous data is collected.
 func (c *collector) reportMetrics(data *Data, force bool) bool {
@@ -562,6 +583,11 @@ func (c *collector) reportMetrics(data *Data, force bool) bool {
 				return false
 			}
 		}
+
+		// Data has not been reported. Set the egress Domains if there are any. This is also called as part of the
+		// endpoint determination, however, it is possible for the DNS cache to be updated late depending on the
+		// DNSPolicyMode, so do one more check just before we report.
+		c.maybeUpdateDomains(data)
 	}
 
 	// Send the metrics.
@@ -639,6 +665,7 @@ func (c *collector) sendMetrics(data *Data, expired bool) {
 		// from a connection to non-connection state.
 	}
 	data.TcpStats.ClearDirtyFlag()
+	data.unreportedPacketInfo = false
 }
 
 // handleCtInfo handles an update from conntrack
