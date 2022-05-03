@@ -230,7 +230,8 @@ skip_fib:
 		 * the cluster, and routing for that IP would not be via the egress
 		 * gateway.
 		 */
-		if (EGRESS_GATEWAY || (CALI_F_FROM_HEP && state->tun_ip != 0)) {
+		if ((CALI_F_FROM_HEP && state->tun_ip != 0 && ctx->fwd.mark != CALI_SKB_MARK_BYPASS_FWD) ||
+				EGRESS_GATEWAY) {
 			ctx->fwd.mark = CALI_SKB_MARK_SKIP_RPF;
 		}
 		/* Packet is towards host namespace, mark it so that downstream

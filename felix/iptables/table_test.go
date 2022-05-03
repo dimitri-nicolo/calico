@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,17 +15,17 @@
 package iptables_test
 
 import (
-	"os/exec"
-	"strings"
 	"time"
+
+	"github.com/projectcalico/calico/felix/environment"
+	. "github.com/projectcalico/calico/felix/iptables"
+	"github.com/projectcalico/calico/felix/iptables/testutils"
+	"github.com/projectcalico/calico/felix/logutils"
+	"github.com/projectcalico/calico/felix/rules"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
-
-	. "github.com/projectcalico/calico/felix/iptables"
-	"github.com/projectcalico/calico/felix/logutils"
-	"github.com/projectcalico/calico/felix/rules"
 )
 
 var _ = Describe("Table with an empty dataplane (nft)", func() {
@@ -35,15 +35,15 @@ var _ = Describe("Table with an empty dataplane (legacy)", func() {
 	describeEmptyDataplaneTests("legacy")
 
 	It("should find the iptables-legacy-* iptables binaries", func() {
-		dataplane := newMockDataplane("filter", map[string][]string{
+		dataplane := testutils.NewMockDataplane("filter", map[string][]string{
 			"FORWARD": {},
 			"INPUT":   {},
 			"OUTPUT":  {},
 		}, "legacy")
 		iptLock := &mockMutex{}
-		featureDetector := NewFeatureDetector(nil)
-		featureDetector.NewCmd = dataplane.newCmd
-		featureDetector.GetKernelVersionReader = dataplane.getKernelVersionReader
+		featureDetector := environment.NewFeatureDetector(nil)
+		featureDetector.NewCmd = dataplane.NewCmd
+		featureDetector.GetKernelVersionReader = dataplane.GetKernelVersionReader
 		table := NewTable(
 			"filter",
 			4,
@@ -52,11 +52,11 @@ var _ = Describe("Table with an empty dataplane (legacy)", func() {
 			featureDetector,
 			TableOptions{
 				HistoricChainPrefixes: rules.AllHistoricChainNamePrefixes,
-				NewCmdOverride:        dataplane.newCmd,
-				SleepOverride:         dataplane.sleep,
-				NowOverride:           dataplane.now,
+				NewCmdOverride:        dataplane.NewCmd,
+				SleepOverride:         dataplane.Sleep,
+				NowOverride:           dataplane.Now,
 				BackendMode:           "legacy",
-				LookPathOverride:      lookPathAll,
+				LookPathOverride:      testutils.LookPathAll,
 				OpRecorder:            logutils.NewSummarizer("test loop"),
 			},
 		)
@@ -70,20 +70,20 @@ var _ = Describe("Table with an empty dataplane (legacy)", func() {
 })
 
 func describeEmptyDataplaneTests(dataplaneMode string) {
-	var dataplane *mockDataplane
+	var dataplane *testutils.MockDataplane
 	var table *Table
 	var iptLock *mockMutex
-	var featureDetector *FeatureDetector
+	var featureDetector *environment.FeatureDetector
 	BeforeEach(func() {
-		dataplane = newMockDataplane("filter", map[string][]string{
+		dataplane = testutils.NewMockDataplane("filter", map[string][]string{
 			"FORWARD": {},
 			"INPUT":   {},
 			"OUTPUT":  {},
 		}, dataplaneMode)
 		iptLock = &mockMutex{}
-		featureDetector = NewFeatureDetector(nil)
-		featureDetector.NewCmd = dataplane.newCmd
-		featureDetector.GetKernelVersionReader = dataplane.getKernelVersionReader
+		featureDetector = environment.NewFeatureDetector(nil)
+		featureDetector.NewCmd = dataplane.NewCmd
+		featureDetector.GetKernelVersionReader = dataplane.GetKernelVersionReader
 		table = NewTable(
 			"filter",
 			4,
@@ -92,11 +92,11 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 			featureDetector,
 			TableOptions{
 				HistoricChainPrefixes: rules.AllHistoricChainNamePrefixes,
-				NewCmdOverride:        dataplane.newCmd,
-				SleepOverride:         dataplane.sleep,
-				NowOverride:           dataplane.now,
+				NewCmdOverride:        dataplane.NewCmd,
+				SleepOverride:         dataplane.Sleep,
+				NowOverride:           dataplane.Now,
 				BackendMode:           dataplaneMode,
-				LookPathOverride:      lookPathNoLegacy,
+				LookPathOverride:      testutils.LookPathNoLegacy,
 				OpRecorder:            logutils.NewSummarizer("test loop"),
 			},
 		)
@@ -179,11 +179,11 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 				featureDetector,
 				TableOptions{
 					HistoricChainPrefixes: rules.AllHistoricChainNamePrefixes,
-					NewCmdOverride:        dataplane.newCmd,
-					SleepOverride:         dataplane.sleep,
+					NewCmdOverride:        dataplane.NewCmd,
+					SleepOverride:         dataplane.Sleep,
 					InsertMode:            "unknown",
 					BackendMode:           dataplaneMode,
-					LookPathOverride:      lookPathAll,
+					LookPathOverride:      testutils.LookPathAll,
 					OpRecorder:            logutils.NewSummarizer("test loop"),
 				},
 			)
@@ -664,7 +664,7 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 					log.Warn("Simulating an insert in FORWARD chain before iptables-restore happens")
 					if chain, found := dataplane.Chains["FORWARD"]; found {
 						log.Warn("FORWARD chain exists; inserting random rule in FORWARD chain")
-						lines := prependLine(chain, "-j randomly-inserted-rule")
+						lines := testutils.PrependLine(chain, "-j randomly-inserted-rule")
 						dataplane.Chains["FORWARD"] = lines
 					}
 				}
@@ -735,7 +735,7 @@ func describeEmptyDataplaneTests(dataplaneMode string) {
 					log.Warn("Simulating an insert in non-cali-chain before iptables-restore happens")
 					if chain, found := dataplane.Chains["non-cali-chain"]; found {
 						log.Warn("non-cali-chain exists; inserting random rule in non-cali-chain")
-						lines := prependLine(chain, "-j randomly-inserted-rule")
+						lines := testutils.PrependLine(chain, "-j randomly-inserted-rule")
 						dataplane.Chains["non-cali-chain"] = lines
 					}
 				}
@@ -942,31 +942,31 @@ var _ = Describe("Tests of post-update recheck behaviour with no refresh timer (
 })
 
 func describePostUpdateCheckTests(enableRefresh bool, dataplaneMode string) {
-	var dataplane *mockDataplane
+	var dataplane *testutils.MockDataplane
 	var table *Table
 	var requestedDelay time.Duration
 
 	BeforeEach(func() {
-		dataplane = newMockDataplane("filter", map[string][]string{
+		dataplane = testutils.NewMockDataplane("filter", map[string][]string{
 			"FORWARD": {},
 			"INPUT":   {},
 			"OUTPUT":  {},
 		}, dataplaneMode)
 		options := TableOptions{
 			HistoricChainPrefixes: rules.AllHistoricChainNamePrefixes,
-			NewCmdOverride:        dataplane.newCmd,
-			SleepOverride:         dataplane.sleep,
-			NowOverride:           dataplane.now,
+			NewCmdOverride:        dataplane.NewCmd,
+			SleepOverride:         dataplane.Sleep,
+			NowOverride:           dataplane.Now,
 			BackendMode:           dataplaneMode,
-			LookPathOverride:      lookPathNoLegacy,
+			LookPathOverride:      testutils.LookPathNoLegacy,
 			OpRecorder:            logutils.NewSummarizer("test loop"),
 		}
 		if enableRefresh {
 			options.RefreshInterval = 30 * time.Second
 		}
-		featureDetector := NewFeatureDetector(nil)
-		featureDetector.NewCmd = dataplane.newCmd
-		featureDetector.GetKernelVersionReader = dataplane.getKernelVersionReader
+		featureDetector := environment.NewFeatureDetector(nil)
+		featureDetector.NewCmd = dataplane.NewCmd
+		featureDetector.GetKernelVersionReader = dataplane.GetKernelVersionReader
 		table = NewTable(
 			"filter",
 			4,
@@ -1102,7 +1102,7 @@ func describeDirtyDataplaneTests(appendMode bool, dataplaneMode string) {
 	// - rules that are unexpected (in chains that need to be removed)
 	// - rules from previous Calico versions, using different chain name prefixes
 	// - rules that only match the special-case regex.
-	var dataplane *mockDataplane
+	var dataplane *testutils.MockDataplane
 	var table *Table
 	initialChains := func() map[string][]string {
 		return map[string][]string{
@@ -1162,14 +1162,14 @@ func describeDirtyDataplaneTests(appendMode bool, dataplaneMode string) {
 	}
 
 	BeforeEach(func() {
-		dataplane = newMockDataplane("filter", initialChains(), dataplaneMode)
+		dataplane = testutils.NewMockDataplane("filter", initialChains(), dataplaneMode)
 		insertMode := ""
 		if appendMode {
 			insertMode = "append"
 		}
-		featureDetector := NewFeatureDetector(nil)
-		featureDetector.NewCmd = dataplane.newCmd
-		featureDetector.GetKernelVersionReader = dataplane.getKernelVersionReader
+		featureDetector := environment.NewFeatureDetector(nil)
+		featureDetector.NewCmd = dataplane.NewCmd
+		featureDetector.GetKernelVersionReader = dataplane.GetKernelVersionReader
 		table = NewTable(
 			"filter",
 			4,
@@ -1179,11 +1179,11 @@ func describeDirtyDataplaneTests(appendMode bool, dataplaneMode string) {
 			TableOptions{
 				HistoricChainPrefixes:    rules.AllHistoricChainNamePrefixes,
 				ExtraCleanupRegexPattern: "sneaky-rule",
-				NewCmdOverride:           dataplane.newCmd,
-				SleepOverride:            dataplane.sleep,
+				NewCmdOverride:           dataplane.NewCmd,
+				SleepOverride:            dataplane.Sleep,
 				InsertMode:               insertMode,
 				BackendMode:              dataplaneMode,
-				LookPathOverride:         lookPathNoLegacy,
+				LookPathOverride:         testutils.LookPathNoLegacy,
 				OpRecorder:               logutils.NewSummarizer("test loop"),
 			},
 		)
@@ -1581,18 +1581,18 @@ var _ = Describe("Table with inserts and a non-Calico chain (nft)", func() {
 })
 
 func describeInsertAndNonCalicoChainTests(dataplaneMode string) {
-	var dataplane *mockDataplane
+	var dataplane *testutils.MockDataplane
 	var table *Table
 	var iptLock *mockMutex
 	BeforeEach(func() {
-		dataplane = newMockDataplane("filter", map[string][]string{
+		dataplane = testutils.NewMockDataplane("filter", map[string][]string{
 			"FORWARD":    {},
 			"non-calico": {"-m comment \"foo\""},
 		}, dataplaneMode)
 		iptLock = &mockMutex{}
-		featureDetector := NewFeatureDetector(nil)
-		featureDetector.NewCmd = dataplane.newCmd
-		featureDetector.GetKernelVersionReader = dataplane.getKernelVersionReader
+		featureDetector := environment.NewFeatureDetector(nil)
+		featureDetector.NewCmd = dataplane.NewCmd
+		featureDetector.GetKernelVersionReader = dataplane.GetKernelVersionReader
 		table = NewTable(
 			"filter",
 			6,
@@ -1601,11 +1601,11 @@ func describeInsertAndNonCalicoChainTests(dataplaneMode string) {
 			featureDetector,
 			TableOptions{
 				HistoricChainPrefixes: rules.AllHistoricChainNamePrefixes,
-				NewCmdOverride:        dataplane.newCmd,
-				SleepOverride:         dataplane.sleep,
-				NowOverride:           dataplane.now,
+				NewCmdOverride:        dataplane.NewCmd,
+				SleepOverride:         dataplane.Sleep,
+				NowOverride:           dataplane.Now,
 				BackendMode:           dataplaneMode,
-				LookPathOverride:      lookPathNoLegacy,
+				LookPathOverride:      testutils.LookPathNoLegacy,
 				OpRecorder:            logutils.NewSummarizer("test loop"),
 			},
 		)
@@ -1665,15 +1665,4 @@ func (m *mockMutex) Unlock() {
 		Fail("Mutex not held")
 	}
 	m.Held = false
-}
-
-func lookPathNoLegacy(p string) (string, error) {
-	if strings.Contains(p, "legacy") {
-		return "", &exec.Error{}
-	}
-	return p, nil
-}
-
-func lookPathAll(p string) (string, error) {
-	return p, nil
 }

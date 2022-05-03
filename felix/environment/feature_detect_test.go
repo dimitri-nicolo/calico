@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package iptables_test
+package environment_test
 
 import (
 	"errors"
@@ -24,7 +24,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	. "github.com/projectcalico/calico/felix/iptables"
+	. "github.com/projectcalico/calico/felix/environment"
+	"github.com/projectcalico/calico/felix/iptables/cmdshim"
+	"github.com/projectcalico/calico/felix/iptables/testutils"
 )
 
 func TestFeatureDetection(t *testing.T) {
@@ -171,10 +173,10 @@ func TestFeatureDetection(t *testing.T) {
 		tst := tst
 		t.Run("iptables version "+tst.iptablesVersion+" kernel "+tst.kernelVersion, func(t *testing.T) {
 			RegisterTestingT(t)
-			dataplane := newMockDataplane("filter", map[string][]string{}, "legacy")
+			dataplane := testutils.NewMockDataplane("filter", map[string][]string{}, "legacy")
 			featureDetector := NewFeatureDetector(nil)
-			featureDetector.NewCmd = dataplane.newCmd
-			featureDetector.GetKernelVersionReader = dataplane.getKernelVersionReader
+			featureDetector.NewCmd = dataplane.NewCmd
+			featureDetector.GetKernelVersionReader = dataplane.GetKernelVersionReader
 
 			if tst.iptablesVersion == "error" {
 				dataplane.FailNextVersion = true
@@ -254,10 +256,10 @@ func TestFeatureDetectionOverride(t *testing.T) {
 		tst := tst
 		t.Run("iptables version "+tst.iptablesVersion+" kernel "+tst.kernelVersion, func(t *testing.T) {
 			RegisterTestingT(t)
-			dataplane := newMockDataplane("filter", map[string][]string{}, "legacy")
+			dataplane := testutils.NewMockDataplane("filter", map[string][]string{}, "legacy")
 			featureDetector := NewFeatureDetector(tst.override)
-			featureDetector.NewCmd = dataplane.newCmd
-			featureDetector.GetKernelVersionReader = dataplane.getKernelVersionReader
+			featureDetector.NewCmd = dataplane.NewCmd
+			featureDetector.GetKernelVersionReader = dataplane.GetKernelVersionReader
 
 			if tst.iptablesVersion == "error" {
 				dataplane.FailNextVersion = true
@@ -376,9 +378,9 @@ func TestIptablesBackendDetection(t *testing.T) {
 		tst := tst
 		t.Run("DetectingBackend, testing "+tst.name, func(t *testing.T) {
 			RegisterTestingT(t)
-			Expect(DetectBackend(lookPathAll, tst.cmdF.NewCmd, tst.spec)).To(Equal(tst.expectedBackend))
+			Expect(DetectBackend(testutils.LookPathAll, tst.cmdF.NewCmd, tst.spec)).To(Equal(tst.expectedBackend))
 
-			Expect(DetectBackend(lookPathAll, tst.cmdF.NewCmd, strings.ToUpper(tst.spec))).To(Equal(tst.expectedBackend), "Capitalization affected output")
+			Expect(DetectBackend(testutils.LookPathAll, tst.cmdF.NewCmd, strings.ToUpper(tst.spec))).To(Equal(tst.expectedBackend), "Capitalization affected output")
 		})
 	}
 }
@@ -390,7 +392,7 @@ type ipOutputFactory struct {
 	Ip4Nft    int
 }
 
-func (f *ipOutputFactory) NewCmd(name string, arg ...string) CmdIface {
+func (f *ipOutputFactory) NewCmd(name string, arg ...string) cmdshim.CmdIface {
 	switch name {
 	case "iptables-legacy-save":
 		return &ipOutputCmd{out: f.Ip4legacy}
