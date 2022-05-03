@@ -630,18 +630,25 @@ func schema_pkg_apis_projectcalico_v3_AlertExceptionSpec(ref common.ReferenceCal
 							Format:      "",
 						},
 					},
-					"period": {
+					"startTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Period controls how long an alert exception will be active. It is optional and omitting Period will make the alert exception active forever.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							Description: "Defines the start time from which this alert exception will take effect. If the value is in the past, matched alerts will be filtered immediately. If the value is changed to a future time, alert exceptions will restart at that time.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"endTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Defines the end time at which this alert exception will expire. If omitted the alert exception filtering will continue indefinitely.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
 				},
-				Required: []string{"description", "selector"},
+				Required: []string{"description", "selector", "startTime"},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -651,17 +658,8 @@ func schema_pkg_apis_projectcalico_v3_AlertExceptionStatus(ref common.ReferenceC
 			SchemaProps: spec.SchemaProps{
 				Description: "AlertExceptionStatus contains the status of an alert exception.",
 				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"lastExecuted": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-				},
 			},
 		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
