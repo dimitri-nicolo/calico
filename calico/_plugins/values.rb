@@ -441,6 +441,8 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
         key:
         cert:
 
+    resources: {}
+
     # Configuration for the tigera operator
     tigeraOperator:
       image: #{versions.fetch("tigera-operator").image}
