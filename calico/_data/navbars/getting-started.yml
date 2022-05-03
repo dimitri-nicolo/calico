@@ -33,6 +33,8 @@ section:
     path: /getting-started/kubernetes/gke
   - title: RKE
     path: /getting-started/kubernetes/rancher
+  - title: RKE2
+    path: /getting-started/kubernetes/rke2
   - title: TKG
     path: /getting-started/kubernetes/tkg
   - title: MKE
