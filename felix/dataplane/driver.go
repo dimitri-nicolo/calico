@@ -556,10 +556,6 @@ func SupportsBPF() error {
 	return bpf.SupportsBPFDataplane()
 }
 
-func SupportsBPFKprobe() error {
-	return bpf.SupportsBPFKprobe()
-}
-
 func ServePrometheusMetrics(configParams *config.Config) {
 	for {
 		log.WithFields(log.Fields{

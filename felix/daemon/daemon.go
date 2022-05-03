@@ -68,6 +68,7 @@ import (
 	"github.com/projectcalico/calico/felix/collector"
 	"github.com/projectcalico/calico/felix/config"
 	dp "github.com/projectcalico/calico/felix/dataplane"
+	"github.com/projectcalico/calico/felix/environment"
 	"github.com/projectcalico/calico/felix/jitter"
 	"github.com/projectcalico/calico/felix/logutils"
 	"github.com/projectcalico/calico/felix/policysync"
@@ -387,7 +388,7 @@ configRetry:
 	}
 
 	if configParams.FlowLogsCollectProcessInfo {
-		if err := dp.SupportsBPFKprobe(); err != nil {
+		if !environment.NewFeatureDetector(configParams.FeatureDetectOverride).GetFeatures().BPFKprobes {
 			log.Error("FlowLogsCollectProcessInfo enabled but BPF not supported by the kernel. Disabling FlowLogsCollectProcessInfo.")
 			_, err := configParams.OverrideParam("FlowLogsCollectProcessInfo", "false")
 			if err != nil {

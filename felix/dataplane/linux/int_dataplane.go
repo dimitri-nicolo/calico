@@ -988,6 +988,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		)
 		dp.RegisterManager(bpfEndpointManager)
 
+		bpfEndpointManager.Features = dataplaneFeatures
+
 		conntrackScanner := conntrack.NewScanner(bpfMapContext.CtMap,
 			conntrack.NewLivenessScanner(config.BPFConntrackTimeouts, config.BPFNodePortDSREnabled))
 
