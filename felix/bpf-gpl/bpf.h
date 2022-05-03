@@ -78,7 +78,7 @@ struct bpf_map_def_extended {
 #define CALI_F_HEP     	 ((CALI_COMPILE_FLAGS) & CALI_TC_HOST_EP)
 #define CALI_F_WEP     	 (!CALI_F_HEP)
 #define CALI_F_TUNNEL  	 (((CALI_COMPILE_FLAGS) & CALI_TC_TUNNEL) != 0)
-#define CALI_F_L3_DEV    (((CALI_COMPILE_FLAGS) & CALI_L3_DEV) != 0)
+#define CALI_F_L3_DEV    (((CALI_COMPILE_FLAGS) & CALI_TC_L3_DEV) != 0)
 
 #define CALI_F_XDP ((CALI_COMPILE_FLAGS) & CALI_XDP_PROG)
 
