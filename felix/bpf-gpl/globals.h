@@ -14,9 +14,11 @@ struct cali_tc_globals {
 	__be16 psnat_start;
 	__be16 psnat_len;
 	__be16 if_ns;
-	__u8  tcp_stats;
-	__u8  egress_client;
-	__u8 egress_gateway;
+	__u8   tcp_stats;
+	__u8   egress_client;
+	__u8   egress_gateway;
+	__u8   __pad;
+	__be32 host_tunnel_ip;
 	__be32 flags;
 };
 
