@@ -30,6 +30,8 @@ var (
 	eventDismissRequest string
 	//go:embed testdata/event_mixed_request_from_manager.json
 	eventMixedRequest string
+	//go:embed testdata/event_bulk_missing_field.json
+	eventBulkMissingField string
 
 	// requests from es-proxy to elastic
 	//go:embed testdata/event_bulk_delete_request.json
@@ -324,6 +326,17 @@ var _ = Describe("Event middleware tests", func() {
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusInternalServerError))
+		})
+
+		It("should return error when bulk event request items are missing fields", func() {
+			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(eventBulkMissingField)))
+			Expect(err).NotTo(HaveOccurred())
+
+			rr := httptest.NewRecorder()
+			handler := EventHandler(mockESFactory)
+			handler.ServeHTTP(rr, req)
+
+			Expect(rr.Code).To(Equal(http.StatusBadRequest))
 		})
 	})
 })

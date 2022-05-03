@@ -21,6 +21,9 @@ type BulkEventRequestData struct {
 
 // BulkEventRequestItem contains the ID of each document to perform bulk operations.
 type BulkEventRequestItem struct {
+	// Name of the index associated with the ID.
+	Index string `json:"index" validate:"required"`
+
 	// The ID of the document.
 	ID string `json:"id" validate:"required"`
 }

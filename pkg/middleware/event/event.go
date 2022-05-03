@@ -73,6 +73,25 @@ func parseEventRequest(w http.ResponseWriter, r *http.Request) (*v1.BulkEventReq
 		}
 	}
 
+	// validate BulkEventRequestItem index and id
+	var items []v1.BulkEventRequestItem
+	if params.Delete != nil {
+		items = append(items, params.Delete.Items...)
+	}
+	if params.Dismiss != nil {
+		items = append(items, params.Dismiss.Items...)
+	}
+
+	for _, item := range items {
+		if item.ID == "" || item.Index == "" {
+			return nil, &httputils.HttpStatusError{
+				Status: http.StatusBadRequest,
+				Msg:    middleware.ErrParseRequest.Error(),
+				Err:    middleware.ErrParseRequest,
+			}
+		}
+	}
+
 	// Set cluster name to default: "cluster", if empty.
 	if params.ClusterName == "" {
 		params.ClusterName = middleware.MaybeParseClusterNameFromRequest(r)
@@ -143,14 +162,14 @@ func processBulkEventRequest(ctx context.Context, esClient lmaelastic.Client, pa
 
 	if params.Delete != nil {
 		for _, item := range params.Delete.Items {
-			if err := esClient.DeleteBulkSecurityEvent(item.ID); err != nil {
+			if err := esClient.DeleteBulkSecurityEvent(item.Index, item.ID); err != nil {
 				log.WithError(err).Warnf("failed to add event delete request to bulk processor for event %s", item.ID)
 			}
 		}
 	}
 	if params.Dismiss != nil {
 		for _, item := range params.Dismiss.Items {
-			if err := esClient.DismissBulkSecurityEvent(item.ID); err != nil {
+			if err := esClient.DismissBulkSecurityEvent(item.Index, item.ID); err != nil {
 				log.WithError(err).Warnf("failed to add event dismiss request to bulk processor for event %s", item.ID)
 			}
 		}

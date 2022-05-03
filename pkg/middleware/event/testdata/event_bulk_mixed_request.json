@@ -1,9 +1,9 @@
-{"delete":{"_index":"tigera_secure_ee_events..","_id":"id1"}}
-{"delete":{"_index":"tigera_secure_ee_events..","_id":"id3"}}
-{"delete":{"_index":"tigera_secure_ee_events..","_id":"id5"}}
-{"update":{"_index":"tigera_secure_ee_events..","_id":"id2"}}
+{"delete":{"_index":"some-index-1","_id":"id1"}}
+{"delete":{"_index":"some-index-3","_id":"id3"}}
+{"delete":{"_index":"some-index-5","_id":"id5"}}
+{"update":{"_index":"some-index-2","_id":"id2"}}
 {"doc":{"dismissed":true}}
-{"update":{"_index":"tigera_secure_ee_events..","_id":"id4"}}
+{"update":{"_index":"some-index-4","_id":"id4"}}
 {"doc":{"dismissed":true}}
-{"update":{"_index":"tigera_secure_ee_events..","_id":"id6"}}
+{"update":{"_index":"some-index-6","_id":"id6"}}
 {"doc":{"dismissed":true}}
