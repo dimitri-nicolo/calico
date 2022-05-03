@@ -48,7 +48,7 @@ var _ = Describe("Elasticsearch events index", func() {
 		cfg = MustLoadConfig()
 	})
 
-	Context("create index", func() {
+	Context("create and update events index", func() {
 		var (
 			esClient *elastic.Client
 			err      error
@@ -90,7 +90,7 @@ var _ = Describe("Elasticsearch events index", func() {
 			oldIndexName := fmt.Sprintf("%s.%s", EventsIndex, managementClusterName)
 			newIndexName := fmt.Sprintf("%s.%s.lma", EventsIndex, managementClusterName)
 			alias := fmt.Sprintf("%s.%s.", EventsIndex, managementClusterName)
-			_, err := esClient.Index().Index(oldIndexName).BodyJson(map[string]interface{}{"description": "test old index"}).Do(ctx)
+			_, err := esClient.Index().Index(oldIndexName).BodyJson(map[string]interface{}{"some-field": "some-text"}).Do(ctx)
 			Expect(err).ShouldNot(HaveOccurred())
 
 			err = elasticClientManagement.CreateEventsIndex(ctx)
@@ -104,6 +104,50 @@ var _ = Describe("Elasticsearch events index", func() {
 
 			Expect(aliases.Indices[newIndexName].Aliases[0].AliasName).Should(Equal(alias))
 			Expect(aliases.Indices[newIndexName].Aliases[0].IsWriteIndex).Should(BeTrue())
+		})
+
+		It("should update index mapping for both old and new events indices", func() {
+			oldIndexName := fmt.Sprintf("%s.%s", EventsIndex, managementClusterName)
+			newIndexName := fmt.Sprintf("%s.%s.lma", EventsIndex, managementClusterName)
+
+			_, err := esClient.CreateIndex(oldIndexName).Do(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			err = elasticClientManagement.CreateEventsIndex(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			// update to some random mappings
+			randomMapping := `{"properties":{"description":{"type":"keyword"}}}`
+			_, err = esClient.PutMapping().Index(oldIndexName).BodyString(randomMapping).Do(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = esClient.PutMapping().Index(newIndexName).BodyString(randomMapping).Do(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			// CreateEventsIndex will check for existence and update to the latest mapping
+			err = elasticClientManagement.CreateEventsIndex(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			// in Calico Enterprise v3.14 a "dismissed" field is added to both old and new events indices
+			resp, err := esClient.GetMapping().Index(oldIndexName).Do(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp).To(HaveKey(oldIndexName))
+			v, ok := resp[oldIndexName].(map[string]interface{})
+			Expect(ok).To(BeTrue())
+			mappings, ok := v["mappings"].(map[string]interface{})
+			Expect(ok).To(BeTrue())
+			properties, ok := mappings["properties"].(map[string]interface{})
+			Expect(ok).To(BeTrue())
+			Expect(properties).To(HaveKey("dismissed"))
+
+			resp, err = esClient.GetMapping().Index(newIndexName).Do(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resp).To(HaveKey(newIndexName))
+			v, ok = resp[newIndexName].(map[string]interface{})
+			Expect(ok).To(BeTrue())
+			mappings, ok = v["mappings"].(map[string]interface{})
+			Expect(ok).To(BeTrue())
+			properties, ok = mappings["properties"].(map[string]interface{})
+			Expect(ok).To(BeTrue())
+			Expect(properties).To(HaveKey("dismissed"))
 		})
 	})
 
@@ -273,8 +317,9 @@ var _ = Describe("Elasticsearch events index", func() {
 			}
 
 			// dismiss the second event
+			index := elasticClientManaged.ClusterAlias(EventsIndex)
 			id := "lma_dismiss_test_id1"
-			resp, err := elasticClientManaged.DismissSecurityEvent(ctx, id)
+			resp, err := elasticClientManaged.DismissSecurityEvent(ctx, index, id)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.Id).To(Equal(id))
 			Expect(resp.Result).To(Equal("updated"))
@@ -309,8 +354,9 @@ var _ = Describe("Elasticsearch events index", func() {
 			}
 
 			// delete the second event
+			index := elasticClientManaged.ClusterAlias(EventsIndex)
 			id := "lma_delete_test_id1"
-			resp, err := elasticClientManaged.DeleteSecurityEvent(ctx, id)
+			resp, err := elasticClientManaged.DeleteSecurityEvent(ctx, index, id)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.Id).To(Equal(id))
 			Expect(resp.Result).To(Equal("deleted"))
@@ -451,8 +497,9 @@ var _ = Describe("Elasticsearch events index", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// dismiss some events
+			index := elasticClientManaged.ClusterAlias(EventsIndex)
 			for k := range toDismissEventIDs {
-				err := elasticClientManaged.DismissBulkSecurityEvent(k)
+				err := elasticClientManaged.DismissBulkSecurityEvent(index, k)
 				Expect(err).NotTo(HaveOccurred())
 			}
 			err = elasticClientManaged.BulkProcessorClose()
@@ -512,8 +559,9 @@ var _ = Describe("Elasticsearch events index", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// delete some events
+			index := elasticClientManaged.ClusterAlias(EventsIndex)
 			for _, id := range toRemoveEventIDs {
-				err := elasticClientManaged.DeleteBulkSecurityEvent(id)
+				err := elasticClientManaged.DeleteBulkSecurityEvent(index, id)
 				Expect(err).NotTo(HaveOccurred())
 			}
 			err = elasticClientManaged.BulkProcessorClose()
