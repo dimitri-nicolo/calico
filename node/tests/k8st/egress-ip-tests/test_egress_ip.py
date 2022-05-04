@@ -510,20 +510,20 @@ EOF
             # check can connect to a different node
             self.validate_egress_ip(client_blue, server, gw_blue.ip)
             
-    def test_max_hops(self):
+    def test_max_hops_pod_annotation(self):
         with DiagsCollector():
             # Create 3 egress gateways, with an IP from that pool.
             gw1 = self.create_gateway_pod("kind-worker", "gw1", self.egress_cidr)
             gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr)
             gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr)
-            _log.info("test_max_hops: created gw pods [%s, %s, %s]", gw1.ip, gw2.ip, gw3.ip)
+            _log.info("test_max_hops_pod_annotation: created gw pods [%s, %s, %s]", gw1.ip, gw2.ip, gw3.ip)
 
             # Create three clients on the same node with maxNextHops set to 2.
             client_ns = "default"
             node = "kind-worker"
             clients = []
             for i in range(3):
-                _log.info("test_max_hops: create client%d", i)
+                _log.info("test_max_hops_pod_annotation: create client%d", i)
                 c = NetcatClientTCP(client_ns, "test%d" % i, node=node, annotations={
                     "egress.projectcalico.org/maxNextHops": "2",
                     "egress.projectcalico.org/selector": "color == 'red'",
@@ -535,7 +535,69 @@ EOF
             c1 = clients[0]
             c2 = clients[1]
             c3 = clients[2]
-            _log.info("test_max_hops: created client pods [%s, %s, %s]", c1.ip, c2.ip, c3.ip)
+            _log.info("test_max_hops_pod_annotation: created client pods [%s, %s, %s]", c1.ip, c2.ip, c3.ip)
+
+            retry_until_success(self.has_ip_rule, retries=3, wait_time=3, function_kwargs={"nodename": c3.nodename, "ip": c3.ip})
+
+            def verify_tables_and_hops():
+                node_rules_and_tables = self.read_client_hops_for_node(node)
+                assert len(node_rules_and_tables) == 3
+                print(node_rules_and_tables)
+                # Verify we have 3 different tables.
+                table1 = node_rules_and_tables[c1.ip]["table"]
+                table2 = node_rules_and_tables[c2.ip]["table"]
+                table3 = node_rules_and_tables[c3.ip]["table"]
+                print(table1, table2, table3)
+                table_set = {table1, table2, table3}
+                assert len(table_set) == 3
+                
+                hops1 = sorted(node_rules_and_tables[c1.ip]["hops"])
+                hops2 = sorted(node_rules_and_tables[c2.ip]["hops"])
+                hops3 = sorted(node_rules_and_tables[c3.ip]["hops"])
+                return hops1, hops2, hops3
+
+            hops1, hops2, hops3 = verify_tables_and_hops()
+            # Verify each table has different hops.
+            assert (hops1 != hops2) and (hops2 != hops3) and (hops1 != hops3)
+
+            # Delete one gateway, only two hops left
+            pod = gw1
+            _log.info("Removing gateway pod %s", pod.name)
+            self.delete_and_confirm(pod.name, "pod", pod.ns)
+            self.cleanups.remove(pod.delete)
+
+            # We should see same set of hops for each client since each table should has at least two hops.
+            hops1, hops2, hops3 = verify_tables_and_hops()
+            assert (hops1 == hops2) and (hops2 == hops3)
+
+    def test_max_hops_namespace_annotation(self):
+        with DiagsCollector():
+            # Create 3 egress gateways, with an IP from that pool.
+            # Create namespace for client pods with egress annotations on red gateway.
+            client_ns = "ns-client"
+            self.create_namespace(client_ns, annotations={
+                "egress.projectcalico.org/maxNextHops": "2",
+                "egress.projectcalico.org/selector": "color == 'red'",
+                "egress.projectcalico.org/namespaceSelector": "all()",
+            })
+            gw1 = self.create_gateway_pod("kind-worker", "gw1", self.egress_cidr, ns=client_ns)
+            gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr, ns=client_ns)
+            gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr, ns=client_ns)
+            _log.info("test_max_hops_namespace_annotation: created gw pods [%s, %s, %s]", gw1.ip, gw2.ip, gw3.ip)
+
+            # Create three clients without annotations on the same node with maxNextHops set to 2.
+            node = "kind-worker"
+            clients = []
+            for i in range(3):
+                _log.info("test_max_hops_namespace_annotation: create client%d", i)
+                c = NetcatClientTCP(client_ns, "test%d" % i, node=node)
+                self.add_cleanup(c.delete)
+                c.wait_ready()
+                clients.append(c)
+            c1 = clients[0]
+            c2 = clients[1]
+            c3 = clients[2]
+            _log.info("test_max_hops_namespace_annotation: created client pods [%s, %s, %s]", c1.ip, c2.ip, c3.ip)
 
             retry_until_success(self.has_ip_rule, retries=3, wait_time=3, function_kwargs={"nodename": c3.nodename, "ip": c3.ip})
 
