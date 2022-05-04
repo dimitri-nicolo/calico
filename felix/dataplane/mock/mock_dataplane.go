@@ -24,7 +24,6 @@ import (
 
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/config"
-	extdataplane "github.com/projectcalico/calico/felix/dataplane/external"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
@@ -294,13 +293,15 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 	Expect(event).NotTo(BeNil())
 	Expect(reflect.TypeOf(event).Kind()).To(Equal(reflect.Ptr))
 
-	// Test wrapping the message for the external dataplane
-	switch event := event.(type) {
-	case *calc.DatastoreNotReady:
-	default:
-		_, err := extdataplane.WrapPayloadWithEnvelope(event, 0)
-		Expect(err).To(BeNil())
-	}
+	/*
+		// Test wrapping the message for the external dataplane
+		switch event := event.(type) {
+		case *calc.DatastoreNotReady:
+		default:
+			_, err := extdataplane.WrapPayloadWithEnvelope(event, 0)
+			Expect(err).To(BeNil())
+		}
+	*/
 
 	switch event := event.(type) {
 	case *proto.InSync:
