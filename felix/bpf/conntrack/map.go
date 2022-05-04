@@ -121,7 +121,7 @@ const (
 	voFlags2    int = 23
 	voRevKey    int = 24
 	voLegAB     int = 24
-	voLegBA     int = 36
+	voLegBA     int = 48
 	voOrigIP    int = 76
 	voOrigPort  int = 80
 	voOrigSPort int = 82
