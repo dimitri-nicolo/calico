@@ -109,6 +109,8 @@ var withDNSPolicy = initialisedStore.withKVUpdates(
 	// Routes for the local WEPs.
 	routelocalWlTenDotOne,
 	routelocalWlTenDotTwo,
+	routelocalWlV6ColonOne,
+	routelocalWlV6ColonTwo,
 ).withIPSet(selectorIdDNSExternal, allowedEgressDomains).withIPSet(selectorIdDNSEmpty, []string{}).withName("with DNS Policy")
 
 // Same as withDNSPolicy, but with no duplication in the network set domain names.
@@ -141,6 +143,8 @@ var withDNSPolicy2 = initialisedStore.withKVUpdates(
 	// Routes for the local WEPs.
 	routelocalWlTenDotOne,
 	routelocalWlTenDotTwo,
+	routelocalWlV6ColonOne,
+	routelocalWlV6ColonTwo,
 ).withIPSet(selectorIdDNSExternal2, append(allowedEgressDomains, allowedEgressDomains2...)).withIPSet(selectorIdDNSEmpty2, []string{}).withName("with DNS Policy 2")
 
 // withDNSPolicy3 verifies that a GlobalNetworkSet with allowedEgressDomains and a Policy that matches the domains directly but
@@ -167,6 +171,8 @@ var withDNSPolicy3 = initialisedStore.withKVUpdates(
 	// Routes for the local WEPs.
 	routelocalWlTenDotOne,
 	routelocalWlTenDotTwo,
+	routelocalWlV6ColonOne,
+	routelocalWlV6ColonTwo,
 ).withIPSet(selectorIdDNSExternal3, allowedEgressDomains).withName("with DNS Policy 3")
 
 // withServiceAccountPolicy adds two policies containing service account selector.

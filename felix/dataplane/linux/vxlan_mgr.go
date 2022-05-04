@@ -414,7 +414,7 @@ func (m *vxlanManager) CompleteDeferredWork() error {
 		// known VTEPs.
 		var l2routes []routetable.L2Target
 		for _, u := range m.vtepsByNode {
-			mac, err := m.parseMacForIPVersion(u)
+			mac, err := net.ParseMAC(u.Mac)
 			if err != nil {
 				// Don't block programming of other VTEPs if somehow we receive one with a bad mac.
 				m.logCtx.WithError(err).Warn("Failed to parse VTEP mac address")
@@ -590,23 +590,12 @@ func (m *vxlanManager) getParentInterface(localVTEP *proto.VXLANTunnelEndpointUp
 		}
 		for _, addr := range addrs {
 			if addr.IPNet.IP.String() == parentDeviceIP {
-				m.logCtx.Debugf("Found parent interface: %s", link)
+				logrus.Debugf("Found parent interface: %s", link)
 				return link, nil
 			}
 		}
 	}
 	return nil, fmt.Errorf("Unable to find parent interface with address %s", parentDeviceIP)
-}
-
-func (m *vxlanManager) parseMacForIPVersion(vtep *proto.VXLANTunnelEndpointUpdate) (net.HardwareAddr, error) {
-	switch m.ipVersion {
-	case 4:
-		return net.ParseMAC(vtep.Mac)
-	case 6:
-		return net.ParseMAC(vtep.MacV6)
-	default:
-		return nil, fmt.Errorf("Invalid IP version")
-	}
 }
 
 // configureVXLANDevice ensures the VXLAN tunnel device is up and configured correctly.
@@ -617,7 +606,7 @@ func (m *vxlanManager) configureVXLANDevice(mtu int, localVTEP *proto.VXLANTunne
 	if err != nil {
 		return err
 	}
-	mac, err := m.parseMacForIPVersion(localVTEP)
+	mac, err := net.ParseMAC(localVTEP.Mac)
 	if err != nil {
 		return err
 	}

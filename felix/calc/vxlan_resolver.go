@@ -370,16 +370,18 @@ func (c *VXLANResolver) vtepMACForHost(nodename string, ipVersion int) string {
 	switch ipVersion {
 	case 4:
 		mac = c.nodeNameToVXLANMac[nodename]
+		if mac != "" {
+			return mac
+		}
 	case 6:
 		mac = c.nodeNameToVXLANMacV6[nodename]
+		if mac != "" {
+			return mac
+		}
+
 		nodename += "-v6"
 	default:
 		logCtx.Panic("Invalid IP version")
-	}
-
-	// Return stored MAC address if present
-	if mac != "" {
-		return mac
 	}
 
 	// Otherwise generate a MAC address

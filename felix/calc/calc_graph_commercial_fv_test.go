@@ -67,6 +67,8 @@ var localEp1WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	// Routes for the local WEPs.
 	routelocalWlTenDotOne,
 	routelocalWlTenDotTwo,
+	routelocalWlV6ColonOne,
+	routelocalWlV6ColonTwo,
 ).withName("ep1 local, policy")
 
 var hostEp1WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
@@ -162,6 +164,8 @@ var withLocalEndpointsForCapture = initialisedStore.withKVUpdates(
 	// Routes for the local WEPs.
 	routelocalWlTenDotOne,
 	routelocalWlTenDotTwo,
+	routelocalWlV6ColonOne,
+	routelocalWlV6ColonTwo,
 ).withEndpoint(localWlEp1CaptureId, []mock.TierInfo{}).withEndpoint(localWlEp2CaptureId, []mock.TierInfo{}).withName("with local endpoints for capture")
 
 // packet capture that select a single local endpoints
@@ -276,6 +280,8 @@ func commercialPolicyOrderState(policyOrders [3]float64, expectedOrder [3]string
 		// Routes for the local WEPs.
 		routelocalWlTenDotOne,
 		routelocalWlTenDotTwo,
+		routelocalWlV6ColonOne,
+		routelocalWlV6ColonTwo,
 	).withName(fmt.Sprintf("ep1 local, 1 tier, policies %v", expectedOrder[:]))
 	return state
 }
@@ -344,6 +350,8 @@ func tierOrderState(tierOrders [3]float64, expectedOrder [3]string) State {
 		// Routes for the local WEPs.
 		routelocalWlTenDotOne,
 		routelocalWlTenDotTwo,
+		routelocalWlV6ColonOne,
+		routelocalWlV6ColonTwo,
 	).withName(fmt.Sprintf("tier-order-state%v", expectedOrder[:]))
 	return state
 }
@@ -407,6 +415,8 @@ func tierDisabledOrderState(tierOrders [3]float64, expectedOrder [3]string, tier
 		// Routes for the local WEPs.
 		routelocalWlTenDotOne,
 		routelocalWlTenDotTwo,
+		routelocalWlV6ColonOne,
+		routelocalWlV6ColonTwo,
 	).withName(fmt.Sprintf("tier-order-state%v", expectedOrder[:]))
 	return state
 }
@@ -436,6 +446,8 @@ var localEp2WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	// Routes for the local WEPs.
 	routelocalWlTenDotTwo,
 	routelocalWlTenDotThree,
+	routelocalWlV6ColonTwo,
+	routelocalWlV6ColonThree,
 ).withName("ep2 local, policy")
 
 // localEpsWithPolicyAndTier contains both of the above endpoints, which have some
@@ -479,6 +491,9 @@ var localEpsWithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	routelocalWlTenDotOne,
 	routelocalWlTenDotTwo,
 	routelocalWlTenDotThree,
+	routelocalWlV6ColonOne,
+	routelocalWlV6ColonTwo,
+	routelocalWlV6ColonThree,
 ).withName("2 local, overlapping IPs & a policy")
 
 // One local endpoint with a host IP, should generate an IPsec binding for each IP of the endpoint.
@@ -499,6 +514,8 @@ var localEp1WithNode = localEp1WithPolicy.withKVUpdates(
 	// Routes for the local WEPs.
 	routelocalWlTenDotOneWithNodeIP,
 	routelocalWlTenDotTwoWithNodeIP,
+	routelocalWlV6ColonOne,
+	routelocalWlV6ColonTwo,
 ).withName("Local endpoint 1 with a host IP")
 
 var localEp1WithNodeDiffIP = localEp1WithPolicy.withKVUpdates(
@@ -518,6 +535,8 @@ var localEp1WithNodeDiffIP = localEp1WithPolicy.withKVUpdates(
 	// Routes for the local WEPs.
 	routelocalWlTenDotOneWithNodeIPTwo,
 	routelocalWlTenDotTwoWithNodeIPTwo,
+	routelocalWlV6ColonOne,
+	routelocalWlV6ColonTwo,
 ).withName("Local endpoint 1 with a (different) host IP")
 
 // Two nodes sharing an IP but only one of them has endpoints so the other will get ignored.
@@ -539,6 +558,8 @@ var localEp1WithNodesSharingIP = localEp1WithPolicy.withKVUpdates(
 	// Routes for the local WEPs.
 	routelocalWlTenDotOneWithNodeIP,
 	routelocalWlTenDotTwoWithNodeIP,
+	routelocalWlV6ColonOne,
+	routelocalWlV6ColonTwo,
 ).withName("Local endpoint 1 with pair of hosts sharing IP")
 
 var localEp1With3NodesSharingIP = localEp1WithPolicy.withKVUpdates(
@@ -560,6 +581,8 @@ var localEp1With3NodesSharingIP = localEp1WithPolicy.withKVUpdates(
 	// Routes for the local WEPs.
 	routelocalWlTenDotOneWithNodeIP,
 	routelocalWlTenDotTwoWithNodeIP,
+	routelocalWlV6ColonOne,
+	routelocalWlV6ColonTwo,
 ).withName("Local endpoint 1 with triple of hosts sharing IP")
 
 var commRemoteWlEp1 = WorkloadEndpoint{
@@ -663,6 +686,8 @@ var localEp2WithNode = localEp2WithPolicy.withKVUpdates(
 	// Routes for the local WEPs.
 	routelocalWlTenDotTwoWithNodeIP,
 	routelocalWlTenDotThreeWithNodeIP,
+	routelocalWlV6ColonTwo,
+	routelocalWlV6ColonThree,
 ).withName("Local endpoint 2 with a host IP")
 
 // Endpoint 2 using endpoint 1's key (so we can simulate changing an endpoint's IPs.
@@ -713,6 +738,9 @@ var localEp1And2WithNode = localEpsWithPolicy.withKVUpdates(
 	routelocalWlTenDotOneWithNodeIP,
 	routelocalWlTenDotTwoWithNodeIP,
 	routelocalWlTenDotThreeWithNodeIP,
+	routelocalWlV6ColonOne,
+	routelocalWlV6ColonTwo,
+	routelocalWlV6ColonThree,
 ).withName("Local endpoints 1 and 2 sharing an IP with a host IP defined")
 
 // Endpoint 1, 2 and 3 sharing an IP with a node too.
@@ -753,6 +781,9 @@ var threeEndpointsSharingIPWithNode = localEpsWithPolicy.withKVUpdates(
 	routelocalWlTenDotTwoWithNodeIP,
 	routelocalWlTenDotThreeWithNodeIP,
 	routelocalWlTenDotFourWithNodeIP,
+	routelocalWlV6ColonOne,
+	routelocalWlV6ColonTwo,
+	routelocalWlV6ColonThree,
 ).withName("3 endpoints sharing an IP with a host IP defined")
 
 var threeEndpointsSharingIPWithDulicateNodeIP = localEpsWithPolicy.withKVUpdates(
@@ -793,6 +824,9 @@ var threeEndpointsSharingIPWithDulicateNodeIP = localEpsWithPolicy.withKVUpdates
 	routelocalWlTenDotTwoWithNodeIP,
 	routelocalWlTenDotThreeWithNodeIP,
 	routelocalWlTenDotFourWithNodeIP,
+	routelocalWlV6ColonOne,
+	routelocalWlV6ColonTwo,
+	routelocalWlV6ColonThree,
 ).withName("3 endpoints sharing an IP with a duplicate host IP defined")
 
 var remoteWlEpKey3 = WorkloadEndpointKey{remoteHostname, "orch", "wl3", "ep3"}
@@ -910,6 +944,8 @@ var localEpAndRemoteEpWithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	// Routes for the local WEPs.
 	routelocalWlTenDotOne,
 	routelocalWlTenDotTwo,
+	routelocalWlV6ColonOne,
+	routelocalWlV6ColonTwo,
 ).withName("1 local and 1 remote")
 
 var remoteEpsWithPolicyAndTier = withPolicyAndTier.withKVUpdates(
