@@ -400,6 +400,7 @@ func StartDataplaneDriver(configParams *config.Config,
 
 			IPIPMTU:                        configParams.IpInIpMtu,
 			VXLANMTU:                       configParams.VXLANMTU,
+			VXLANMTUV6:                     configParams.VXLANMTUV6,
 			VXLANPort:                      configParams.VXLANPort,
 			IptablesBackend:                configParams.IptablesBackend,
 			IptablesRefreshInterval:        configParams.IptablesRefreshInterval,
