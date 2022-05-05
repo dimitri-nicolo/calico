@@ -272,6 +272,7 @@ var _ = Describe("Test the (Felix) Node update processor", func() {
 			nodeMarker:            res,
 			"IPv4VXLANTunnelAddr": "192.200.200.200",
 			"VXLANTunnelMACAddr":  "00:11:22:33:44:55",
+			"NodeIP":              "192.100.100.100",
 		}
 		kvps, err = up.Process(&model.KVPair{
 			Key:   v3NodeKey1,
@@ -330,6 +331,7 @@ var _ = Describe("Test the (Felix) Node update processor", func() {
 			"VXLANTunnelMACAddr":   "00:11:22:33:44:55",
 			"IPv6VXLANTunnelAddr":  "fd10:11::11",
 			"VXLANTunnelMACAddrV6": "55:44:33:22:11:00",
+			"NodeIP":               "192.100.100.100",
 		}
 		kvps, err = up.Process(&model.KVPair{
 			Key:   v3NodeKey1,
@@ -455,6 +457,7 @@ var _ = Describe("Test the (Felix) Node update processor", func() {
 			nodeMarker:            res,
 			"IPv4VXLANTunnelAddr": nil,
 			"VXLANTunnelMACAddr":  nil,
+			"NodeIP":              "192.100.100.100",
 		}
 		kvps, err = up.Process(&model.KVPair{
 			Key:   v3NodeKey1,
@@ -513,6 +516,7 @@ var _ = Describe("Test the (Felix) Node update processor", func() {
 			"VXLANTunnelMACAddr":   nil,
 			"IPv6VXLANTunnelAddr":  nil,
 			"VXLANTunnelMACAddrV6": nil,
+			"NodeIP":               "192.100.100.100",
 		}
 		kvps, err = up.Process(&model.KVPair{
 			Key:   v3NodeKey1,
