@@ -2,7 +2,7 @@ title: "Visibility and troubleshooting"
 path: /visibility/
 order: 4
 section:  
-- title: Get started with Calico Enterprise Manager UI
+- title: Manager UI tutorial
   path: /visibility/get-started-cem
 - title: Alerts
   path: /visibility/alerts
