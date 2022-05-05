@@ -270,7 +270,7 @@ static CALI_BPF_INLINE void calico_tc_process_ct_lookup(struct cali_tc_ctx *ctx)
 		ctx->state->flags |= CALI_ST_NAT_OUTGOING;
 	}
 
-	if (ct_result_rpf_failed(ctx->state->ct_result.rc)) {
+	if (ct_result_rpf_failed(ctx->state->ct_result.rc) && !EGRESS_GATEWAY) {
 		if (!CALI_F_FROM_WEP) {
 			/* We are possibly past (D)NAT, but that is ok, we need to let the
 			 * IP stack do the RPF check on the source, dest is not important.
