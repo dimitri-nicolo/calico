@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/tigera/voltron/internal/pkg/proxy"
+	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 )
 
 // Option is a common format for New() options

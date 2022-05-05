@@ -7,11 +7,11 @@ import (
 	"crypto/x509"
 	"time"
 
-	"github.com/tigera/voltron/pkg/tunnel"
+	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 
 	"github.com/pkg/errors"
 
-	"github.com/tigera/voltron/internal/pkg/proxy"
+	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 )
 
 // Option is a common format for New() options

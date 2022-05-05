@@ -11,14 +11,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tigera/voltron/pkg/state"
+	"github.com/projectcalico/calico/voltron/pkg/state"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/voltron/internal/pkg/test"
-	"github.com/tigera/voltron/pkg/tunnel"
+	"github.com/projectcalico/calico/voltron/internal/pkg/test"
+	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 )
 
 func init() {

@@ -12,14 +12,14 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/tigera/voltron/internal/pkg/test"
-	"github.com/tigera/voltron/internal/pkg/utils"
+	"github.com/projectcalico/calico/voltron/internal/pkg/test"
+	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/voltron/internal/pkg/proxy"
+	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 )
 
 func init() {

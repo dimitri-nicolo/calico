@@ -9,8 +9,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/voltron/pkg/state"
-	"github.com/tigera/voltron/pkg/tunnel"
+	"github.com/projectcalico/calico/voltron/pkg/state"
+	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 )
 
 // ErrManagerClosed is returned when a closed manager is used

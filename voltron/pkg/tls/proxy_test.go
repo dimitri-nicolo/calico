@@ -9,8 +9,8 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/voltron/internal/pkg/utils"
-	vtls "github.com/tigera/voltron/pkg/tls"
+	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
+	vtls "github.com/projectcalico/calico/voltron/pkg/tls"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

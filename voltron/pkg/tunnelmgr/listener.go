@@ -4,9 +4,9 @@ import (
 	"net"
 	"sync"
 
-	"github.com/tigera/voltron/pkg/tunnel"
+	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 
-	"github.com/tigera/voltron/pkg/state"
+	"github.com/projectcalico/calico/voltron/pkg/state"
 )
 
 // listener implements the net.Listener interface and is used by the Manager to allow components to listen for connections

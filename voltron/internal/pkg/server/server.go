@@ -18,11 +18,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/voltron/internal/pkg/bootstrap"
-	"github.com/tigera/voltron/internal/pkg/proxy"
-	"github.com/tigera/voltron/internal/pkg/utils"
-	"github.com/tigera/voltron/pkg/tunnel"
-	"github.com/tigera/voltron/pkg/tunnelmgr"
+	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
+	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
+	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
+	"github.com/projectcalico/calico/voltron/pkg/tunnel"
+	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
 
 	"github.com/projectcalico/calico/lma/pkg/auth"
 

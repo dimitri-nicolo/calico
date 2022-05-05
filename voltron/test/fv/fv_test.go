@@ -25,12 +25,12 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
-	"github.com/tigera/voltron/internal/pkg/client"
-	"github.com/tigera/voltron/internal/pkg/proxy"
-	"github.com/tigera/voltron/internal/pkg/regex"
-	"github.com/tigera/voltron/internal/pkg/server"
-	"github.com/tigera/voltron/internal/pkg/test"
-	"github.com/tigera/voltron/internal/pkg/utils"
+	"github.com/projectcalico/calico/voltron/internal/pkg/client"
+	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
+	"github.com/projectcalico/calico/voltron/internal/pkg/regex"
+	"github.com/projectcalico/calico/voltron/internal/pkg/server"
+	"github.com/projectcalico/calico/voltron/internal/pkg/test"
+	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 
 	"github.com/projectcalico/calico/lma/pkg/auth"
 

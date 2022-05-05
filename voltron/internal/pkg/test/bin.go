@@ -7,7 +7,7 @@ import (
 
 	"github.com/onsi/ginkgo"
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/voltron/pkg/tunnel"
+	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 )
 
 // HTTPSBin is a bin server that listens on the other end of the tunnel.

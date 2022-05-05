@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"net"
 
-	"github.com/tigera/voltron/pkg/conn"
+	"github.com/projectcalico/calico/voltron/pkg/conn"
 
 	log "github.com/sirupsen/logrus"
 )

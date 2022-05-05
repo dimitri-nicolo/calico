@@ -26,11 +26,11 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/voltron/internal/pkg/bootstrap"
-	jclust "github.com/tigera/voltron/internal/pkg/clusters"
-	vtls "github.com/tigera/voltron/pkg/tls"
-	"github.com/tigera/voltron/pkg/tunnel"
-	"github.com/tigera/voltron/pkg/tunnelmgr"
+	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
+	jclust "github.com/projectcalico/calico/voltron/internal/pkg/clusters"
+	vtls "github.com/projectcalico/calico/voltron/pkg/tls"
+	"github.com/projectcalico/calico/voltron/pkg/tunnel"
+	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
 )
 
 // AnnotationActiveCertificateFingerprint is an annotation that is used to store the fingerprint for

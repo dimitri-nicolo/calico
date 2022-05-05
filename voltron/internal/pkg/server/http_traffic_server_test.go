@@ -15,9 +15,9 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
-	"github.com/tigera/voltron/internal/pkg/bootstrap"
-	"github.com/tigera/voltron/internal/pkg/proxy"
-	"github.com/tigera/voltron/internal/pkg/server"
+	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
+	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
+	"github.com/projectcalico/calico/voltron/internal/pkg/server"
 	"golang.org/x/net/http2"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 

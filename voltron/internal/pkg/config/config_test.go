@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/tigera/voltron/internal/pkg/config"
+	"github.com/projectcalico/calico/voltron/internal/pkg/config"
 )
 
 var _ = Describe("Config test", func() {

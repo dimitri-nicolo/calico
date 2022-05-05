@@ -15,7 +15,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/tigera/voltron/internal/pkg/test"
+	"github.com/projectcalico/calico/voltron/internal/pkg/test"
 )
 
 var _ = Describe("Clusters", func() {

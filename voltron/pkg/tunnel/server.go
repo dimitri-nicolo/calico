@@ -17,7 +17,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/voltron/internal/pkg/utils"
+	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 )
 
 // Server is a connection server that accepts connections from the provided

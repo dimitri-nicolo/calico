@@ -4,7 +4,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/tigera/voltron/pkg/conn"
+	"github.com/projectcalico/calico/voltron/pkg/conn"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

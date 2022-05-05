@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/tigera/voltron/pkg/version"
+	"github.com/projectcalico/calico/voltron/pkg/version"
 )
 
 const (

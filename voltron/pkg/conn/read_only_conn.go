@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/tigera/voltron/pkg/bytes"
+	"github.com/projectcalico/calico/voltron/pkg/bytes"
 )
 
 var ErrAttemptedWrite = errors.New("attempted to write to the connection")

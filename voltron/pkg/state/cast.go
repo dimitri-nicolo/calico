@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/tigera/voltron/pkg/tunnel"
+	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 )
 
 // InterfaceToError casts an interface to an error or nil, and panics otherwise

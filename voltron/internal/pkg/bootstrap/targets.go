@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/tigera/voltron/internal/pkg/proxy"
+	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 )
 
 // Target is the format for env variable to set proxy targets

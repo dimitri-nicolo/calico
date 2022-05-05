@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/yamux"
-	"github.com/tigera/voltron/pkg/state"
+	"github.com/projectcalico/calico/voltron/pkg/state"
 
-	"github.com/tigera/voltron/pkg/tunnel"
-	"github.com/tigera/voltron/pkg/tunnelmgr"
+	"github.com/projectcalico/calico/voltron/pkg/tunnel"
+	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

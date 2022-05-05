@@ -18,9 +18,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/voltron/internal/pkg/client"
-	"github.com/tigera/voltron/internal/pkg/proxy"
-	"github.com/tigera/voltron/pkg/tunnel"
+	"github.com/projectcalico/calico/voltron/internal/pkg/client"
+	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
+	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 )
 
 func init() {

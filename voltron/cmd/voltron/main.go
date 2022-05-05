@@ -9,13 +9,13 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/voltron/internal/pkg/proxy"
-	"github.com/tigera/voltron/internal/pkg/regex"
-	"github.com/tigera/voltron/internal/pkg/utils"
+	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
+	"github.com/projectcalico/calico/voltron/internal/pkg/regex"
+	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 
-	"github.com/tigera/voltron/internal/pkg/bootstrap"
-	"github.com/tigera/voltron/internal/pkg/config"
-	"github.com/tigera/voltron/internal/pkg/server"
+	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
+	"github.com/projectcalico/calico/voltron/internal/pkg/config"
+	"github.com/projectcalico/calico/voltron/internal/pkg/server"
 
 	"github.com/projectcalico/calico/lma/pkg/auth"
 )
