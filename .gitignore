@@ -1,0 +1,50 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+bin
+vendor
+.go-pkg-cache
+go.mod.png
+
+# Below binaries are generated when you use debugger in VS Code
+cmd/**/*debug*
+
+# Ignore Helm packages
+*.tgz
+
+# Generated Manifests
+**/voltron.yaml
+**/guardian.yaml
+
+scripts/certs/*.crt
+scripts/certs/*.key
+scripts/certs/*.key.pub
+
+# Docker image folders
+docker-image/scripts
+docker-image/voltron/templates
+
+# Testing
+*.coverprofile
+
+# Secrets
+test/st-kind/config.json
+test/st-kind/docker_auth.json
+test/st-kind/test-resources/**
+
+# IDE workspace files
+.idea/
+.vscode/
+
+# common makefile
+Makefile.common*
