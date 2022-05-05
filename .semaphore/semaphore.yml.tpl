@@ -410,13 +410,15 @@ blocks:
       commands:
       - cd node
     jobs:
-    - name: "Build image"
-      matrix:
-      # TODO: s390x builds of calico/node are not working.
-      - env_var: ARCH
-        values: [ "arm64", "armv7", "ppc64le" ]
-      commands:
-      - ../.semaphore/run-and-monitor image-$ARCH.log make image ARCH=$ARCH
+# Non-AMD64 images not supported in Enterprise.
+#
+#    - name: "Build image"
+#      matrix:
+#      # TODO: s390x builds of calico/node are not working.
+#      - env_var: ARCH
+#        values: [ "arm64", "armv7", "ppc64le" ]
+#      commands:
+#      - ../.semaphore/run-and-monitor image-$ARCH.log make image ARCH=$ARCH
     - name: "Build Windows archive"
       commands:
       - ../.semaphore/run-and-monitor build-windows-archive.log make build-windows-archive
@@ -584,7 +586,7 @@ blocks:
     jobs:
     - name: "make ci"
       commands:
-      - make ci
+      - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: "licensing"
   run:
@@ -597,7 +599,7 @@ blocks:
     jobs:
     - name: "Licensing tests"
       commands:
-      - make ci
+      - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: "lma"
   run:
@@ -610,7 +612,7 @@ blocks:
     jobs:
     - name: "lma tests"
       commands:
-      - make ci
+      - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: 'es-gateway'
   run:
@@ -625,7 +627,7 @@ blocks:
     jobs:
     - name: "es-gateway tests"
       commands:
-      - make ci
+      - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: "Documentation"
   run:
