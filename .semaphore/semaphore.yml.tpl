@@ -646,7 +646,7 @@ blocks:
     jobs:
     - name: "make ci"
       commands:
-      - make ci
+      - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: "Documentation"
   run:
