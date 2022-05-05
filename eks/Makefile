@@ -1,4 +1,4 @@
-# Copyright 2019 Tigera Inc. All rights reserved.
+# Copyright 2019-2022 Tigera Inc. All rights reserved.
 
 all: eks-log-forwarder-startup
 
@@ -9,7 +9,7 @@ eks-log-forwarder-startup:
 
 else
 
-GO_BUILD_VER    ?= v0.65
+GO_BUILD_VER    ?= v0.65.2
 CALICO_BUILD     = calico/go-build:$(GO_BUILD_VER)
 BINDIR          ?= bin
 SRC_DIR          = $(pwd)
