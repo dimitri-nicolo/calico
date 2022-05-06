@@ -1,6 +1,6 @@
 # To update kube-bench version update the image tag and github.com/aquasecurity/kube-bench in go.mod
 # Image tag and go.mod should point to same version
-FROM gcr.io/unique-caldron-775/cnx/tigera/kube-bench:v0.6.6_go-1.17.8 as base
+FROM gcr.io/unique-caldron-775/cnx/tigera/kube-bench:v0.6.6_go-1.17.9 as base
 
 RUN apk update && apk add curl
 
