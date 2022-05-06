@@ -338,7 +338,7 @@ DEFAULT_MANIFEST_SRC=./_site/$(RELEASE_STREAM)/getting-started/kubernetes/instal
 endif
 MANIFEST_SRC?=$(DEFAULT_MANIFEST_SRC)
 
-release-archive: release-prereqs $(RELEASE_DIR).tgz
+release-archive: $(RELEASE_DIR).tgz
 
 $(RELEASE_DIR).tgz: $(RELEASE_DIR) $(RELEASE_DIR_K8S_MANIFESTS) $(RELEASE_DIR)/README.md
 	# create folder structure in manifest archive for ocp
