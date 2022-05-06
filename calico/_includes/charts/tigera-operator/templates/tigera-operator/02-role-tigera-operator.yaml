@@ -133,6 +133,7 @@ rules:
     resources:
     - ippools
     - kubecontrollersconfigurations
+    - bgpconfigurations
     verbs:
     - get
     - list
