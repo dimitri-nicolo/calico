@@ -393,10 +393,10 @@ blocks:
       - ../.semaphore/run-and-monitor k8s-test.log make k8s-test
     - name: "Node: dual-tor"
       commands:
-      - make dual-tor-test
+      - ../.semaphore/run-and-monitor dual-tor-test.log make dual-tor-test
     - name: "Node: egress-ip"
       commands:
-      - make egress-ip-test
+      - ../.semaphore/run-and-monitor egress-ip-test.log make egress-ip-test
     epilogue:
       always:
         commands:
