@@ -394,13 +394,14 @@ var _ = Describe("OnEndpointTierUpdate with egress IP set ID", func() {
 				WorkloadId: "we1",
 			},
 			Endpoint: &proto.WorkloadEndpoint{
-				Name:              "we1",
-				EgressIpSetId:     "e:abcdef",
-				EgressMaxNextHops: 3,
-				Ipv4Nets:          []string{},
-				Ipv6Nets:          []string{},
-				Ipv4Nat:           []*proto.NatInfo{},
-				Ipv6Nat:           []*proto.NatInfo{},
+				Name:                       "we1",
+				EgressIpSetId:              "e:abcdef",
+				EgressMaxNextHops:          3,
+				Ipv4Nets:                   []string{},
+				Ipv6Nets:                   []string{},
+				Ipv4Nat:                    []*proto.NatInfo{},
+				Ipv6Nat:                    []*proto.NatInfo{},
+				AllowSpoofedSourcePrefixes: []string{},
 			},
 		}}))
 
@@ -418,12 +419,13 @@ var _ = Describe("OnEndpointTierUpdate with egress IP set ID", func() {
 				WorkloadId: "we1",
 			},
 			Endpoint: &proto.WorkloadEndpoint{
-				Name:          "we1",
-				EgressIpSetId: "",
-				Ipv4Nets:      []string{},
-				Ipv6Nets:      []string{},
-				Ipv4Nat:       []*proto.NatInfo{},
-				Ipv6Nat:       []*proto.NatInfo{},
+				Name:                       "we1",
+				EgressIpSetId:              "",
+				Ipv4Nets:                   []string{},
+				Ipv6Nets:                   []string{},
+				Ipv4Nat:                    []*proto.NatInfo{},
+				Ipv6Nat:                    []*proto.NatInfo{},
+				AllowSpoofedSourcePrefixes: []string{},
 			},
 		}}))
 	})
