@@ -622,7 +622,7 @@ blocks:
 
 - name: 'packetcapture'
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/packetcapture/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "${FORCE_RUN} or change_in(['/*', '/packetcapture/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
   task:
     secrets:

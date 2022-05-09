@@ -19,7 +19,10 @@ include ../lib.Makefile
 ###############################################################################
 # Env vars related to building
 ###############################################################################
-SRC_FILES = $(shell find pkg cmd -name '*.go') $(shell find ../libcalico-go/lib -name '*.go') $(shell find ../lma/pkg -name '*.go')
+SRC_FILES = $(shell find pkg cmd -name '*.go') \
+		$(shell find ../api/pkg -name '*.go') \
+		$(shell find ../libcalico-go/lib -name '*.go') \
+		$(shell find ../lma/pkg -name '*.go')
 
 # Exclude deprecation warnings (SA1019), since failing on deprecation defeats the purpose
 # of deprecating.
@@ -42,36 +45,37 @@ build: bin/packetcapture-$(ARCH)
 bin/packetcapture-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/$*/*.go && \
-				( ldd $@ 2>&1 | \
-					grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
-				( echo "Error: $@ was not statically linked"; false ) )'
+			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/$*/*.go'
 
 ###############################################################################
 # BUILD IMAGE
 ###############################################################################
+PACKETCAPTURE_CONTAINER_CREATED=.packetcapture.created-$(ARCH)
+
 # Build the docker image.
 .PHONY: $(BUILD_IMAGES)
 
 # by default, build the image for the target architecture
 .PHONY: image-all
-image-all: $(addprefix sub-image-,$(ARCHES))
+image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-.PHONY: image $(PACKETCAPTURE_IMAGE) $(PACKETCAPTURE_IMAGE)-$(ARCH)
+.PHONY: image
 image: $(BUILD_IMAGES)
 
-$(PACKETCAPTURE_IMAGE): $(PACKETCAPTURE_IMAGE)-$(ARCH)
-$(PACKETCAPTURE_IMAGE)-$(ARCH): bin/packetcapture-$(ARCH)
+$(PACKETCAPTURE_IMAGE): $(PACKETCAPTURE_CONTAINER_CREATED)
+$(PACKETCAPTURE_CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) bin/packetcapture-$(ARCH)
 	$(DOCKER_BUILD) -t $(PACKETCAPTURE_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) . --load
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
+	touch $@
 
 .PHONY: clean
 clean:
 	rm -rf bin \
 		report/*.xml \
 		release-notes-*
+	rm -f $(PACKETCAPTURE_CONTAINER_CREATED)
 	-docker image rm -f $$(docker images $(PACKETCAPTURE_IMAGE) -a -q)
 
 ###############################################################################
@@ -92,7 +96,7 @@ GINKGO = ginkgo $(GINKGO_ARGS)
 .PHONY: ut
 ## Run only Unit Tests.
 ut:
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod download && $(GINKGO) -r pkg/*'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) -r pkg/*'
 
 ###############################################################################
 # CI/CD

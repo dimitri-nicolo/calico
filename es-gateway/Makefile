@@ -76,7 +76,7 @@ GINKGO = ginkgo $(GINKGO_ARGS)
 .PHONY: ut
 ## Run only Unit Tests.
 ut:
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod download && $(GINKGO) pkg/*'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) pkg/*'
 
 ###############################################################################
 # CI/CD
