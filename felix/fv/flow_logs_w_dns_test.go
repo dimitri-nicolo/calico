@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -280,7 +281,21 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 					return nil
 				}
 
+				// At aggregation level None, source and destination IP should be included.
+				if flowLog.Tuple.DestNet().String() == "0.0.0.0" {
+					errs = append(errs, fmt.Sprintf("Empty destination IP: %s", flowLog.Tuple.DestNet().String()))
+				}
+				if flowLog.Tuple.SourceNet().String() == "0.0.0.0" {
+					errs = append(errs, fmt.Sprintf("Empty source IP: %s", flowLog.Tuple.SourceNet().String()))
+				}
+
 				if flowLog.DstMeta.Name == "netset1" {
+					// Networkset 1 is a match on www.google.com
+					domains := destDomainsToSlice(flowLog.FlowDestDomains)
+					if len(domains) != 1 || domains[0] != "www.google.com" {
+						errs = append(errs, fmt.Sprintf("Unexpected domains for netset1: %#v", domains))
+					}
+
 					// Netset1 is matched by the staged policy and the default drop from the enforced policy.
 					// The drop by the enforced policy should be an exact match. The hit from staged policy may be
 					// an allow if the network set has been programmed or otherwise a no-match deny.  As a result we
@@ -300,6 +315,12 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 				}
 
 				if flowLog.DstMeta.Name == "netset2" {
+					// Networkset 2 is a match on microsoft.com
+					domains := destDomainsToSlice(flowLog.FlowDestDomains)
+					if len(domains) != 1 || domains[0] != "microsoft.com" {
+						errs = append(errs, fmt.Sprintf("Unexpected domains for netset2 at %s: %#v", flowLog.Tuple.DestNet().String(), domains))
+					}
+
 					// Netset2 is matched by the staged policy and the default allow from the enforced policy.
 					// The allow by the enforced policy should be an exact match because the policy would otherwise
 					// be dropped and packet retry will continue until it is allowed. The hit from staged policy may be
@@ -366,3 +387,14 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 		infra.Stop()
 	})
 })
+
+func destDomainsToSlice(domains collector.FlowDestDomains) []string {
+	var res []string
+	for k := range domains.Domains {
+		res = append(res, k)
+	}
+	if len(res) > 0 {
+		sort.Strings(res)
+	}
+	return res
+}

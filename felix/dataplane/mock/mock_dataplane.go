@@ -53,6 +53,7 @@ type MockDataplane struct {
 	config                         map[string]string
 	activePacketCaptures           set.Set
 	numEvents                      int
+	encapsulation                  proto.Encapsulation
 }
 
 func (d *MockDataplane) InSync() bool {
@@ -220,6 +221,13 @@ func (d *MockDataplane) NumEventsRecorded() int {
 	defer d.Unlock()
 
 	return d.numEvents
+}
+
+func (d *MockDataplane) Encapsulation() proto.Encapsulation {
+	d.Lock()
+	defer d.Unlock()
+
+	return d.encapsulation
 }
 
 func copyPolOrder(in map[string][]TierInfo) map[string][]TierInfo {
@@ -533,6 +541,8 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 				fmt.Sprintf("Unknown IPsec blacklist removed: %v (all: %v)", addr, d.activeIPSecBlacklist))
 			d.activeIPSecBlacklist.Discard(addr)
 		}
+	case *proto.Encapsulation:
+		d.encapsulation = *event
 	}
 }
 

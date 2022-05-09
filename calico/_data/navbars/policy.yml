@@ -18,12 +18,8 @@ section:
 - title: Policy life cycle and automation
   path: /security/policy-lifecycle/
   section: 
-  - title: Staged policy
+  - title: Stage, preview impacts, and enforce policy
     path: /security/staged-network-policies
-  - title: Preview policy impacts
-    path: /security/policy-impact-preview
-  - title: Policy recommendation
-    path: /security/generate-policy-recommendation
 - title: Troubleshoot policies
   path: /security/policy-troubleshooting    
 - title: Calico Enterprise network policy for beginners

@@ -17,8 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/pkg/proxy"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 
@@ -280,7 +278,7 @@ func (slc *ServiceLookupsCache) OnResourceUpdate(update api.Update) (_ bool) {
 	switch k := update.Key.(type) {
 	case model.ResourceKey:
 		switch k.Kind {
-		case v3.KindK8sService:
+		case model.KindKubernetesService:
 			log.Debugf("processing update for service %s", k)
 			if update.Value == nil {
 				slc.suh.RemoveService(k)

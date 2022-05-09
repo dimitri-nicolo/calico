@@ -40,11 +40,13 @@ import (
 // routeTable is the interface provided by the standard routetable module used to progam the RIB.
 type routeTable interface {
 	routeTableSyncer
+	routeTableReader
 	Index() int
 	SetRoutes(ifaceName string, targets []routetable.Target)
 	RouteRemove(ifaceName string, cidr ip.CIDR)
 	SetL2Routes(ifaceName string, targets []routetable.L2Target)
 	QueueResyncIface(ifaceName string)
+	SetRemoveExternalRoutes(b bool)
 }
 
 type hepListener interface {

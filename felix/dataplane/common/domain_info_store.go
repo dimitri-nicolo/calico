@@ -143,6 +143,8 @@ type nameData struct {
 	// Known values for this name.  Map keys are the actual values (i.e. IPs or lowercase CNAME names),
 	// and valueData is as above.
 	values map[string]*valueData
+	// Top-level domains associated with this name.
+	topLevelDomains []string
 	// Names that we should notify a "change of information" for, and whose cached IP list
 	// should be invalidated, when the info for _this_ name changes.
 	namesToNotify set.Set
@@ -155,6 +157,12 @@ type ipData struct {
 	// chain because it is actually the namesToNotify that we are interested in which is propagated all the way
 	// along the CNAME->A chain.
 	nameDatas set.Set
+	// The set of names to notify.
+	watchedDomains []string
+	// The set of top level names associated with this IP. Note that the way this slice is updated, it is always
+	// generated from scratch - this means it is safe to pass this slice without copying provided the consumer does not
+	// alter the contents.
+	topLevelDomains []string
 }
 
 // dnsExchangeKey is a key used to identify a DNS request and related response.
@@ -247,6 +255,9 @@ type DomainInfoStore struct {
 	// Activity logging.
 	collector collector.Collector
 
+	// The max number of top level domains to associate with a domain or IP.
+	maxTopLevelDomains int
+
 	// Handling of DNS request/response timestamps, so that we can measure and report DNS latency. Because requests and
 	// responses may be out-of-order (in some modes of operation they come through different channels) we may need to
 	// store either the request or the response.  The requests are persisted for up to 10s to find the matching
@@ -262,6 +273,10 @@ type DomainInfoStore struct {
 	resetC   chan struct{}
 
 	dnsResponseDelay time.Duration
+
+	// Whether the old mappings are in the process of being loaded in. During this phase we do not track top level DNS
+	// requests because we cannot guarantee the order of loading.
+	readingMappings bool
 
 	// --- Data for the current set of updates ---
 	// These are updates from new DNS packets that have not been handled by the dataplane.
@@ -312,6 +327,7 @@ type DnsConfig struct {
 	DNSExtraTTL           time.Duration
 	DNSLogsLatency        bool
 	DebugDNSResponseDelay time.Duration
+	MaxTopLevelDomains    int
 }
 
 func NewDomainInfoStore(config *DnsConfig) *DomainInfoStore {
@@ -345,6 +361,7 @@ func newDomainInfoStoreWithShims(
 		saveInterval:         config.DNSCacheSaveInterval,
 		gcInterval:           13 * time.Second,
 		collector:            config.Collector,
+		maxTopLevelDomains:   config.MaxTopLevelDomains,
 		// Only measure latency if we are collecting logs.
 		measureLatency:   config.DNSLogsLatency && config.Collector != nil,
 		latencyInterval:  100 * time.Millisecond,
@@ -648,6 +665,11 @@ func (s *DomainInfoStore) readMappings() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
+	s.readingMappings = true
+	defer func() {
+		s.readingMappings = false
+	}()
+
 	f, err := os.Open(s.saveFile)
 	if err != nil {
 		return err
@@ -680,11 +702,16 @@ const (
 )
 
 func (s *DomainInfoStore) readMappingsV1(scanner *bufio.Scanner) error {
+	// Track which of the names is top-level (i.e. has no parent in the CNAME chain)
+	hasParent := make(map[string]bool)
+
 	for scanner.Scan() {
 		var jsonMapping jsonMappingV1
 		if err := json.Unmarshal(scanner.Bytes(), &jsonMapping); err != nil {
 			return err
 		}
+		hasParent[strings.ToLower(jsonMapping.RHS)] = true
+
 		expiryTime, err := time.Parse(time.RFC3339, jsonMapping.Expiry)
 		if err != nil {
 			return err
@@ -699,6 +726,14 @@ func (s *DomainInfoStore) readMappingsV1(scanner *bufio.Scanner) error {
 			log.Debugf("Ignore expired mapping %v", jsonMapping)
 		}
 	}
+
+	// Loop through the mappings and update any that don't have parents to be "top-level".
+	for name, data := range s.mappings {
+		if !hasParent[name] {
+			s.propagateTopLevelDomains(name, data, []string{name})
+		}
+	}
+
 	s.maybeSignalUpdatesReady("mapping loaded")
 	return scanner.Err()
 }
@@ -829,13 +864,12 @@ func (s *DomainInfoStore) processDNSRequestPacketForLogging(ipv4 *layers.IPv4, d
 //
 // Under certain conditions requests and responses may arrive out of order. This method handles both:
 // - If a request has not been received then the response is stored for a maximum of 1s while we wait for a request.
-//   This should only occur rarely and for a short time because the dataplane will have processed the request first, but
-//   if request and response are processed by different queues then it is theoretically possible for them to arrive out
-//   of order.
+//   Since request and response are processed by different queues then it is theoretically possible for them to arrive
+//   out of order (and infact NFQueued responses seem to regularly arrive before NFLog'd requests.
 // - If a request has been received then the latency is calculated and the response packet is logged with latency.
 //
 // Request packets are processed in processDNSRequestPacketForLogging.
-// Requests that have been held for >1s are removed in releaseUnpairedDataForLogging.
+// Responses that have been held for >1s are removed in releaseUnpairedDataForLogging.
 func (s *DomainInfoStore) processDNSResponsePacketForLogging(ipv4 *layers.IPv4, dns *layers.DNS, timestamp uint64) {
 	// We only need to do anything if we are logging.
 	if s.collector == nil {
@@ -903,7 +937,7 @@ func (s *DomainInfoStore) processDNSResponsePacketForLogging(ipv4 *layers.IPv4, 
 		delete(s.latencyData, key)
 	} else if data.packetTimestamp == 0 {
 		// Packet request had no timestamp, so log without latency and remove cached data.
-		log.Debugf("DNS-LATENCY: Received DNS response and have request with no tiestamp for ID %v", key)
+		log.Debugf("DNS-LATENCY: Received DNS response and have request with no timestamp for ID %v", key)
 		s.collector.LogDNS(ipv4.SrcIP, ipv4.DstIP, dns, nil)
 		delete(s.latencyData, key)
 	} else {
@@ -1023,10 +1057,14 @@ func (s *DomainInfoStore) addIPMapping(nameData *nameData, ipStr string) {
 	ipd := s.reverse[ipBytes]
 	if ipd == nil {
 		ipd = &ipData{
-			nameDatas: set.New(),
+			nameDatas:       set.New(),
+			topLevelDomains: nameData.topLevelDomains,
 		}
 		s.reverse[ipBytes] = ipd
+	} else {
+		ipd.topLevelDomains = s.combineTopLevelDomains(nameData.topLevelDomains, ipd.topLevelDomains)
 	}
+	log.Debugf("IP %s has the top level names %v", ipStr, ipd.topLevelDomains)
 	ipd.nameDatas.Add(nameData)
 }
 
@@ -1133,24 +1171,33 @@ func (s *DomainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 			s.mappingExpiryChannel <- &domainMappingExpired{name: name, value: value}
 		})
 	}
-	if s.mappings[name] == nil {
-		s.mappings[name] = &nameData{
+
+	// Get the stored nameData for this name. If it does not exist, and we are not in the data loading stage of start
+	// up then this must be a top-of-chain request.
+	thisNameData := s.mappings[name]
+	if thisNameData == nil {
+		thisNameData = &nameData{
 			values:        make(map[string]*valueData),
 			namesToNotify: set.New(),
 		}
+		if !s.readingMappings {
+			log.Debugf("Top level CNAME query for %s", name)
+			thisNameData.topLevelDomains = []string{name}
+		}
+		s.mappings[name] = thisNameData
 	}
-	existing := s.mappings[name].values[value]
-	if existing == nil {
+	existingValue := thisNameData.values[value]
+	if existingValue == nil {
 		// If this is the first value for this name, check whether the name matches any
 		// existing wildcards.
-		if len(s.mappings[name].values) == 0 {
+		if len(thisNameData.values) == 0 {
 			for wildcard, regex := range s.wildcards {
 				if regex.MatchString(name) {
-					s.mappings[name].namesToNotify.Add(wildcard)
+					thisNameData.namesToNotify.Add(wildcard)
 				}
 			}
 		}
-		s.mappings[name].values[value] = &valueData{
+		thisNameData.values[value] = &valueData{
 			expiryTime: s.nowFunc().Add(ttl),
 			timer:      makeTimer(),
 			isName:     isName,
@@ -1161,15 +1208,21 @@ func (s *DomainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 			// mapping entry for it so we can record that it is a descendant of the name in
 			// hand.  Then, when we get information for the descendant name, we can correctly
 			// signal changes for the name in hand and any of its ancestors.
-			if s.mappings[value] == nil {
+			if valueNameData := s.mappings[value]; valueNameData == nil {
+				log.Debugf("Storing value %s for name %s with top level names %v", value, name, thisNameData.topLevelDomains)
 				s.mappings[value] = &nameData{
-					values:        make(map[string]*valueData),
-					namesToNotify: set.New(),
+					values:          make(map[string]*valueData),
+					namesToNotify:   set.New(),
+					topLevelDomains: thisNameData.topLevelDomains,
 				}
+			} else {
+				// Propagate the top level names down the chain.
+				log.Debugf("Propagating to %s the top level names %v", value, thisNameData.topLevelDomains)
+				s.propagateTopLevelDomains(value, valueNameData, thisNameData.topLevelDomains)
 			}
 		} else {
 			// Value is an IP. Add to our IP mapping.
-			s.addIPMapping(s.mappings[name], value)
+			s.addIPMapping(thisNameData, value)
 		}
 
 		// Compile the set of changed names. The calling code will signal that the info has changed for
@@ -1181,17 +1234,52 @@ func (s *DomainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 		revision = s.currentRevision
 	} else {
 		newExpiryTime := s.nowFunc().Add(ttl)
-		if newExpiryTime.After(existing.expiryTime) {
+		if newExpiryTime.After(existingValue.expiryTime) {
 			// Update the expiry time of the existing mapping.
-			existing.timer = makeTimer()
-			existing.expiryTime = newExpiryTime
+			existingValue.timer.Stop()
+			existingValue.timer = makeTimer()
+			existingValue.expiryTime = newExpiryTime
 		}
 
 		// Return the revision for this existing mapping.
-		revision = s.mappings[name].revision
+		revision = thisNameData.revision
 	}
 
 	return
+}
+
+func (s *DomainInfoStore) propagateTopLevelDomains(name string, data *nameData, topLevelDomains []string) {
+	var prop func(currentName string, currentNameData *nameData)
+	handled := set.New()
+	prop = func(currentName string, currentNameData *nameData) {
+		if handled.Contains(currentName) {
+			return
+		}
+		handled.Add(currentName)
+		currentNameData.topLevelDomains = s.combineTopLevelDomains(topLevelDomains, currentNameData.topLevelDomains)
+		for value, data := range currentNameData.values {
+			if data.isName {
+				if valueNameData := s.mappings[value]; valueNameData != nil {
+					// Propagate the top level names down the chain.
+					log.Debugf("Propogating to %s the top level names %v", value, topLevelDomains)
+					prop(value, valueNameData)
+				}
+			} else {
+				ipBytes, ok := ip.ParseIPAs16Byte(value)
+				if !ok {
+					return
+				}
+
+				ipd := s.reverse[ipBytes]
+				if ipd != nil {
+					ipd.topLevelDomains = s.combineTopLevelDomains(topLevelDomains, ipd.topLevelDomains)
+				}
+			}
+		}
+	}
+
+	// Recursively propagate the domains.
+	prop(name, data)
 }
 
 func (s *DomainInfoStore) GetDomainIPs(domain string) []string {
@@ -1254,33 +1342,48 @@ func (s *DomainInfoStore) GetDomainIPs(domain string) []string {
 	return ips
 }
 
-// GetWatchedDomainForIP returns an (arbitrary) watched domain associated with an IP. The "watch" refers to an explicit
+// IterWatchedDomainsForIP iterates over the watched domain associated with an IP. The "watch" refers to an explicit
 // request to GetDomainIPs.
 //
 // The signature of this method is somewhat specific to how the collector stores connection data and is used to
 // minimize allocations during connection processing.
-func (s *DomainInfoStore) GetWatchedDomainForIP(ip [16]byte) string {
+func (s *DomainInfoStore) IterWatchedDomainsForIP(ip [16]byte, cb func(domain string) (stop bool)) {
 	// We only need the read lock to access this data.
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	var name string
+	var stop bool
 	if ipData := s.reverse[ip]; ipData != nil {
-		ipData.nameDatas.Iter(func(item interface{}) error {
+		ipData.nameDatas.Iter(func(itemNameData interface{}) error {
 			// Just return the first domain name we find. This should cover the most general case where the user adds
 			// a single entry for a particular domain. Return the first "name to notify" that we find.
-			nd := item.(*nameData)
-			nd.namesToNotify.Iter(func(item2 interface{}) error {
-				// Just use the first "name to notify".
-				name = item2.(string)
-				return set.StopIteration
+			nd := itemNameData.(*nameData)
+			nd.namesToNotify.Iter(func(itemWatchedName interface{}) error {
+				stop = cb(itemWatchedName.(string))
+				if stop {
+					return set.StopIteration
+				}
+				return nil
 			})
-			if name != "" {
+			if stop {
 				return set.StopIteration
 			}
 			return nil
 		})
 	}
-	return name
+}
+
+// GetTopLevelDomainsForIP returns the set of top level domains associated with an IP.
+//
+// The signature of this method is somewhat specific to how the collector stores connection data and is used to
+// minimize allocations during connection processing.
+func (s *DomainInfoStore) GetTopLevelDomainsForIP(ip [16]byte) []string {
+	// We only need the read lock to access this data.
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	if ipData := s.reverse[ip]; ipData != nil {
+		return ipData.topLevelDomains
+	}
+	return nil
 }
 
 func isWildcard(domain string) bool {
@@ -1378,8 +1481,18 @@ func (s *DomainInfoStore) releaseUnpairedDataForLogging(t time.Time) {
 			}
 		} else {
 			// Response. We still need to log this response, but have not latency data associated with it.
+			//
+			// We only log this at debug level because it can be hit quite easily depending on the DNS client. In some
+			// cases the client issues multiple requests in quick succession, each request from the same source port.
+			// Because the same source port is used the second request will have conntrack state ESTABLISHED and will
+			// not match the request snooping rule which matches state NEW. Ideally, these second and third packets
+			// would be marked as RELATED (same 5-tuple but a different DNS request ID) - but there is no kernel module
+			// for processing DNS requests and so the kernel is unable to correlate multiple DNS requests from the same
+			// source. The related packets will therefore have no snooped request and therefore no latency info. Since
+			// collector aggregates DNs logs there will still be latency info but it'll be based off of the first
+			// request/response of the related packet pairs.
 			if data.queueTimestamp < responseCutoff {
-				s.rateLimitedNoRequestLogger.Warnf("DNS-LATENCY: Missed DNS request for response with ID %v", key)
+				s.rateLimitedNoRequestLogger.Debugf("DNS-LATENCY: Missed DNS request for response with ID %v", key)
 				delete(s.latencyData, key)
 				s.collector.LogDNS(data.serverIP, data.clientIP, data.packet, nil)
 			}
@@ -1387,4 +1500,33 @@ func (s *DomainInfoStore) releaseUnpairedDataForLogging(t time.Time) {
 	}
 
 	return
+}
+
+// combineTopLevelDomains combines two sets of top level domains, putting the primary elements at the front (these are
+// the most recently stored), and limiting the length.
+func (s *DomainInfoStore) combineTopLevelDomains(primary, secondary []string) (combined []string) {
+	if len(primary) == 0 {
+		return secondary
+	} else if len(secondary) == 0 {
+		return primary
+	} else if len(primary) >= s.maxTopLevelDomains {
+		return primary[:s.maxTopLevelDomains]
+	}
+	primarySet := set.FromArray(primary)
+
+	var missing []string
+	for _, se := range secondary {
+		if !primarySet.Contains(se) {
+			missing = append(missing, se)
+			if len(missing)+len(primary) >= s.maxTopLevelDomains {
+				break
+			}
+		}
+	}
+
+	if missing == nil {
+		return primary
+	}
+
+	return append(primary, missing...)
 }

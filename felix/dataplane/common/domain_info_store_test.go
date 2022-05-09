@@ -165,6 +165,7 @@ var _ = Describe("Domain Info Store", func() {
 	defaultConfig := &DnsConfig{
 		DNSCacheFile:         "/dnsinfo",
 		DNSCacheSaveInterval: time.Minute,
+		MaxTopLevelDomains:   5,
 	}
 
 	// Create a new datastore.
@@ -271,6 +272,42 @@ var _ = Describe("Domain Info Store", func() {
 			It("should result in a CNAME->A mapping", func() {
 				Expect(domainStore.GetDomainIPs(string(CNAMErecs[0].Name))).To(Equal([]string{aRec.IP.String()}))
 			})
+			It("should reverse lookup to the first CNAME record in the chain", func() {
+				ipb, _ := ip.ParseIPAs16Byte(aRec.IP.String())
+				name := strings.ToLower(string(CNAMErecs[0].Name))
+				Expect(domainStore.GetTopLevelDomainsForIP(ipb)).To(Equal([]string{name}))
+			})
+		})
+
+		// CNAME records could arrive in reverse order if each of the CNAME records were requested individually and
+		// in that order (not very realistic, but a good test scenario).
+		Context("with a chain of CNAME records in reverse order", func() {
+			var orderedNames []string
+			BeforeEach(func() {
+				// Check that we receive signals when there are updates ready.
+				domainStoreCreate()
+				orderedNames = nil
+				for i := range CNAMErecs {
+					programDNSAnswer(domainStore, CNAMErecs[len(CNAMErecs)-i-1])
+					Expect(domainStore.UpdatesReadyChannel()).Should(Receive())
+					domainStore.HandleUpdates()
+					name := strings.ToLower(string(CNAMErecs[len(CNAMErecs)-i-1].Name))
+					orderedNames = append([]string{name}, orderedNames...)
+				}
+				if len(orderedNames) > 5 {
+					orderedNames = orderedNames[:5]
+				}
+				programDNSAnswer(domainStore, aRec)
+				Expect(domainStore.UpdatesReadyChannel()).Should(Receive())
+				domainStore.HandleUpdates()
+			})
+			It("should result in a CNAME->A mapping", func() {
+				Expect(domainStore.GetDomainIPs(string(CNAMErecs[0].Name))).To(Equal([]string{aRec.IP.String()}))
+			})
+			It("should reverse lookup to the all CNAME records in the chain", func() {
+				ipb, _ := ip.ParseIPAs16Byte(aRec.IP.String())
+				Expect(domainStore.GetTopLevelDomainsForIP(ipb)).To(Equal(orderedNames))
+			})
 		})
 	}
 
@@ -325,8 +362,31 @@ var _ = Describe("Domain Info Store", func() {
 		callbackIds = nil
 	}
 
-	Context("with monitor thread", func() {
+	Context("with two CNAME chains ending in the same A record", func() {
+		var orderedNames []string
+		BeforeEach(func() {
+			// Check that we receive signals when there are updates ready.
+			domainStoreCreate()
+			orderedNames = nil
+			for _, recs := range [][]layers.DNSResourceRecord{mockDNSRecCNAME, mockDNSRecCNAMEUnderscore} {
+				for _, rec := range recs {
+					programDNSAnswer(domainStore, rec)
+				}
+				name := strings.ToLower(string(recs[0].Name))
+				orderedNames = append([]string{name}, orderedNames...)
+				programDNSAnswer(domainStore, mockDNSRecA1)
+			}
+			if len(orderedNames) > 5 {
+				orderedNames = orderedNames[:5]
+			}
+		})
+		It("should reverse lookup to top of the two chains", func() {
+			ipb, _ := ip.ParseIPAs16Byte(mockDNSRecA1.IP.String())
+			Expect(domainStore.GetTopLevelDomainsForIP(ipb)).To(Equal(orderedNames))
+		})
+	})
 
+	Context("with monitor thread", func() {
 		var (
 			expectedSeen      bool
 			expectedDomainIPs []string
@@ -857,12 +917,26 @@ var _ = Describe("Domain Info Store", func() {
 					handleUpdatesAndExpectChangesFor("*.google.com")
 					Expect(domainStore.GetDomainIPs("*.google.com")).To(Equal([]string{"1.2.3.5"}))
 				})
+
+				It("should reverse lookup to update.google.com", func() {
+					ipb, _ := ip.ParseIPAs16Byte("1.2.3.5")
+					Expect(domainStore.GetTopLevelDomainsForIP(ipb)).To(Equal([]string{"update.google.com"}))
+				})
 			})
 		})
 
 		// Test where wildcard is configured in the data model when we already have DNS
 		// information that matches it.
 		Context("with IP for update.google.com", func() {
+			getWatchedDomains := func(ipb [16]byte) []string {
+				var domains []string
+				domainStore.IterWatchedDomainsForIP(ipb, func(domain string) (stop bool) {
+					domains = append(domains, domain)
+					return false
+				})
+				return domains
+			}
+
 			BeforeEach(func() {
 				programDNSAnswer(domainStore, testutils.MakeA("update.google.com", "1.2.3.5"))
 			})
@@ -873,26 +947,26 @@ var _ = Describe("Domain Info Store", func() {
 
 			It("should handle reverse lookup when no IP was requested", func() {
 				ipb, _ := ip.ParseIPAs16Byte("1.2.3.5")
-				Expect(domainStore.GetWatchedDomainForIP(ipb)).To(Equal(""))
+				Expect(getWatchedDomains(ipb)).To(BeNil())
 			})
 
 			It("should handle reverse lookup when IP was requested as update.google.com", func() {
 				ipb, _ := ip.ParseIPAs16Byte("1.2.3.5")
 				Expect(domainStore.GetDomainIPs("update.google.com")).To(Equal([]string{"1.2.3.5"}))
-				Expect(domainStore.GetWatchedDomainForIP(ipb)).To(Equal("update.google.com"))
+				Expect(getWatchedDomains(ipb)).To(ConsistOf("update.google.com"))
 			})
 
 			It("should handle reverse lookup when IP was requested as *.google.com", func() {
 				ipb, _ := ip.ParseIPAs16Byte("1.2.3.5")
 				Expect(domainStore.GetDomainIPs("*.google.com")).To(Equal([]string{"1.2.3.5"}))
-				Expect(domainStore.GetWatchedDomainForIP(ipb)).To(Equal("*.google.com"))
+				Expect(getWatchedDomains(ipb)).To(ConsistOf("*.google.com"))
 			})
 
 			It("should handle reverse lookup when IP was requested as update.google.com and *.google.com", func() {
 				ipb, _ := ip.ParseIPAs16Byte("1.2.3.5")
 				Expect(domainStore.GetDomainIPs("*.google.com")).To(Equal([]string{"1.2.3.5"}))
 				Expect(domainStore.GetDomainIPs("update.google.com")).To(Equal([]string{"1.2.3.5"}))
-				Expect(domainStore.GetWatchedDomainForIP(ipb)).To(BeElementOf("update.google.com", "*.google.com"))
+				Expect(getWatchedDomains(ipb)).To(ConsistOf("update.google.com", "*.google.com"))
 			})
 		})
 	})

@@ -98,6 +98,8 @@ clean:
 	find . -name '.*.published*' -type f -delete
 	rm -rf _output _site .jekyll-metadata pinned_versions.yaml _includes/charts/*/values.yaml
 	rm -rf stderr.out filtered.out docs_test.created bin
+	rm -f _includes/charts/tigera-operator/charts/tigera-secure-ee-core.tgz
+	rm -f _includes/charts/tigera-operator/charts/tigera-prometheus-operator.tgz
 
 ###############################################################################
 # CI / test targets
@@ -317,3 +319,65 @@ build-operator-reference:
 	           go mod download all && go build && \
 	           ./gen-crd-api-reference-docs -config /go/src/$(PACKAGE_NAME)/reference/installation/config.json \
 	                   -api-dir github.com/tigera/operator/api -out-file /go/src/$(PACKAGE_NAME)/reference/installation/_api.html'
+
+## START builds the release archives for the version
+## Creates archive of all the manifests
+OUTPUT_DIR?=_output
+OPERATOR_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].tigera-operator.version')
+RELEASE_DIR_NAME?=release-$(CALICO_VER)-$(OPERATOR_VER)
+RELEASE_DIR?=$(OUTPUT_DIR)/$(RELEASE_DIR_NAME)
+RELEASE_DIR_K8S_MANIFESTS?=$(RELEASE_DIR)/manifests
+IGNORED_MANIFESTS= 02-tigera-operator-no-resource-loading.yaml
+# Determine where the manifests live. For older versions we used
+# a different location, but we still need to package them up for patch
+# releases.
+DEFAULT_MANIFEST_SRC=./_site/manifests
+OLD_VERSIONS := v2.0 v2.1 v2.2 v2.3 v2.4
+ifneq ($(filter $(RELEASE_STREAM),$(OLD_VERSIONS)),)
+DEFAULT_MANIFEST_SRC=./_site/$(RELEASE_STREAM)/getting-started/kubernetes/installation
+endif
+MANIFEST_SRC?=$(DEFAULT_MANIFEST_SRC)
+
+release-archive: $(RELEASE_DIR).tgz
+
+$(RELEASE_DIR).tgz: $(RELEASE_DIR) $(RELEASE_DIR_K8S_MANIFESTS) $(RELEASE_DIR)/README.md
+	# create folder structure in manifest archive for ocp
+	RELEASE_DIR=$(RELEASE_DIR) python3 ./release-scripts/generate-ocp-manifests.py
+	# find ignored manifests in the archive and delete them
+	$(foreach var,$(IGNORED_MANIFESTS), find $(RELEASE_DIR) -name $(var) -delete;)
+
+	# converting the generated html file to markdown format for manifest archive.
+	$(HTML_CMD) -f html -t markdown_github-raw_html _site/getting-started/private-registry/private-registry-archive.html -o $(RELEASE_DIR)/private-registry.md
+	tar -czvf $(RELEASE_DIR).tgz -C $(OUTPUT_DIR) $(RELEASE_DIR_NAME)
+
+$(RELEASE_DIR)/README.md:
+	@echo "This directory contains an archive of all the manifests for release of Calico Enterprise $(CALICO_VER)" >> $@
+	@echo "Documentation for this release can be found at https://docs.tigera.io/$(RELEASE_STREAM)" >> $@
+	@echo "" >> $@
+	@echo "To install Calico Enterprise from this archive, please follow the docs at https://docs.tigera.io/$(RELEASE_STREAM)/maintenance/manifest-archive" >> $@
+	@echo "and use the appropriate manifest from the archive where ever you are prompted to download a manifest" >> $@
+	@echo "" >> $@
+	@echo "Example:" >> $@
+	@echo "" >> $@
+	@echo "From the docs for OpenShift installation, we have the following command" >> $@
+	@echo "" >> $@
+	@echo "curl https://docs.tigera.io/manifests/ocp/01-cr-installation.yaml -o manifests/01-cr-installation.yaml" >> $@
+	@echo "" >> $@
+	@echo "For this example, instead of download the manifest using curl, you need to navigate the archive (after extracting) " >> $@
+	@echo "and copy the relevant file at manifests/ocp/01-cr-installation.yaml and paste it into your local manifests folder " >> $@
+	@echo "" >> $@
+
+$(RELEASE_DIR):
+	mkdir -p $(RELEASE_DIR)
+
+$(RELEASE_DIR_K8S_MANIFESTS):
+	# Ensure that the docs site is generated
+	rm -rf ../_site
+	$(MAKE) _site
+
+	# Find all the hosted manifests and copy them into the release dir. Use xargs to mkdir the destination directory structure before copying them.
+	# -printf "%P\n" prints the file name and directory structure with the search dir stripped off
+	find $(MANIFEST_SRC) -name  '*.yaml' -printf "%P\n" | \
+	  xargs -I FILE sh -c \
+	    'mkdir -p $(RELEASE_DIR_K8S_MANIFESTS)/`dirname FILE`;\
+	    cp $(MANIFEST_SRC)/FILE $(RELEASE_DIR_K8S_MANIFESTS)/`dirname FILE`;'

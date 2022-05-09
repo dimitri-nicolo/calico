@@ -37,6 +37,8 @@ section:
     path: /networking/egress/egress-gateway-on-prem
   - title: Configure egress gateways, AWS
     path: /networking/egress/egress-gateway-aws  
+  - title: Optimize egress networking for workloads with long-lived TCP connections
+    path: /networking/egress/egress-gateway-maintenance
   - title: Troubleshoot egress gateways
     path: /networking/egress/troubleshoot
 - title: Customize IP address management

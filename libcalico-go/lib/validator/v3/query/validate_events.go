@@ -15,6 +15,7 @@ var (
 		"dest_name_aggr":   DomainValidator,
 		"dest_namespace":   DomainValidator,
 		"dest_port":        IntRangeValidator(0, MaxTCPUDPPortNum),
+		"dismissed":        SetValidator("true", "false"),
 		"host":             NullValidator,
 		"origin":           NullValidator,
 		"source_ip":        IPValidator,

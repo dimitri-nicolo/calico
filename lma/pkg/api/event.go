@@ -78,11 +78,11 @@ type EventHandler interface {
 	PutSecurityEventWithID(ctx context.Context, data EventsData, id string) (*elastic.IndexResponse, error)
 	PutBulkSecurityEvent(data EventsData) error
 
-	DismissSecurityEvent(ctx context.Context, id string) (*elastic.UpdateResponse, error)
-	DismissBulkSecurityEvent(id string) error
+	DismissSecurityEvent(ctx context.Context, index, id string) (*elastic.UpdateResponse, error)
+	DismissBulkSecurityEvent(index, id string) error
 
-	DeleteSecurityEvent(ctx context.Context, id string) (*elastic.DeleteResponse, error)
-	DeleteBulkSecurityEvent(id string) error
+	DeleteSecurityEvent(ctx context.Context, index, id string) (*elastic.DeleteResponse, error)
+	DeleteBulkSecurityEvent(index, id string) error
 
 	SearchSecurityEvents(ctx context.Context, start, end *time.Time, filterData []EventsSearchFields, allClusters bool) <-chan *EventResult
 

@@ -52,6 +52,12 @@ var _ = Describe("FlowLog JSON serialization", func() {
 				Action:   "allow",
 				Reporter: "src",
 			},
+			FlowDestDomains: FlowDestDomains{
+				Domains: map[string]empty{
+					"google.com":     emptyValue,
+					"www.google.com": emptyValue,
+				},
+			},
 			FlowLabels: FlowLabels{
 				SrcLabels: map[string]string{"foo": "bar", "foo2": "bar2"},
 				DstLabels: map[string]string{"foo": "bar", "foo2": "bar2"},
@@ -210,6 +216,7 @@ var _ = Describe("FlowLog JSON serialization", func() {
 			"DestServicePortName":  nil,
 			"DestServicePortNum":   0,
 			"DestLabels":           nil,
+			"DestDomains":          nil,
 			"Policies":             nil,
 			"OrigSourceIPs":        nil,
 			"NumOrigSourceIPs":     nil,
@@ -327,6 +334,7 @@ var _ = Describe("FlowLog JSON serialization", func() {
 			"DestServiceName":      nil,
 			"DestServicePortName":  nil,
 			"DestServicePortNum":   0,
+			"DestDomains":          nil,
 			"SourceLabels":         nil,
 			"DestLabels":           nil,
 			"Policies":             nil,

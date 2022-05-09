@@ -163,6 +163,7 @@ func configureFlowAggregation(configParams *config.Config, fr *FlowLogsReporter)
 				IncludeProcess(configParams.FlowLogsCollectProcessInfo).
 				IncludeTcpStats(configParams.FlowLogsCollectTcpStats).
 				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
+				MaxDomains(configParams.FlowLogsFileDomainsLimit).
 				PerFlowProcessLimit(configParams.FlowLogsFilePerFlowProcessLimit).
 				PerFlowProcessArgsLimit(configParams.FlowLogsFilePerFlowProcessArgsLimit).
 				NatOutgoingPortLimit(configParams.FlowLogsFileNatOutgoingPortLimit).
@@ -181,6 +182,7 @@ func configureFlowAggregation(configParams *config.Config, fr *FlowLogsReporter)
 				IncludeTcpStats(configParams.FlowLogsCollectTcpStats).
 				IncludeProcess(configParams.FlowLogsCollectProcessInfo).
 				MaxOriginalIPsSize(configParams.FlowLogsMaxOriginalIPsIncluded).
+				MaxDomains(configParams.FlowLogsFileDomainsLimit).
 				PerFlowProcessLimit(configParams.FlowLogsFilePerFlowProcessLimit).
 				PerFlowProcessArgsLimit(configParams.FlowLogsFilePerFlowProcessArgsLimit).
 				NatOutgoingPortLimit(configParams.FlowLogsFileNatOutgoingPortLimit).

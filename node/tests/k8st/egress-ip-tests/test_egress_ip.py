@@ -166,7 +166,7 @@ EOF
                 self.delete_and_confirm(pod.name, "pod", pod.ns)
                 self.cleanups.remove(pod.delete)
                 gw_ips.remove(pod.ip)
-                self.check_ecmp_routes(client, servers, gw_ips)
+                self.check_ecmp_routes(client, servers, gw_ips, allowed_untaken_count=1)
 
             # No Gateway pods in the cluster.
             # Validate all egress ip related ARP and FDB entries been removed.
@@ -384,7 +384,7 @@ EOF
 
         with DiagsCollector():
             # Create egress gateways, with an IP from that pool.
-            termination_grace_period = 5
+            termination_grace_period = 10
             gw = self.create_gateway_pod("kind-worker", "gw", self.egress_cidr, "red", "default", termination_grace_period)
             gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr, "red", "default", termination_grace_period)
             gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr, "red", "default", termination_grace_period)
@@ -398,6 +398,13 @@ EOF
             })
             self.add_cleanup(client.delete)
             client.wait_ready()
+
+            retry_until_success(self.has_ip_route_and_table, retries=3, wait_time=3,
+                                function_kwargs={
+                                    "nodename": client.nodename,
+                                    "client_ip": client.ip,
+                                    "gateway_ips": [gw.ip, gw2.ip, gw3.ip]
+                                })
 
             # Delete gateway pod one by one and check correct annotations are applied to the client pod.
             for pod in [gw, gw2, gw3]:
@@ -502,12 +509,282 @@ EOF
             self.validate_egress_ip(client_red, server, gw_red.ip)
             # check can connect to a different node
             self.validate_egress_ip(client_blue, server, gw_blue.ip)
+            
+    def test_max_hops_pod_annotation(self):
+        with DiagsCollector():
+            # Create 3 egress gateways, with an IP from that pool.
+            gw1 = self.create_gateway_pod("kind-worker", "gw1", self.egress_cidr)
+            gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr)
+            gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr)
+            _log.info("test_max_hops_pod_annotation: created gw pods [%s, %s, %s]", gw1.ip, gw2.ip, gw3.ip)
+
+            # Create three clients on the same node with maxNextHops set to 2.
+            client_ns = "default"
+            node = "kind-worker"
+            clients = []
+            for i in range(3):
+                _log.info("test_max_hops_pod_annotation: create client%d", i)
+                c = NetcatClientTCP(client_ns, "test%d" % i, node=node, annotations={
+                    "egress.projectcalico.org/maxNextHops": "2",
+                    "egress.projectcalico.org/selector": "color == 'red'",
+                    "egress.projectcalico.org/namespaceSelector": "all()",
+                })
+                self.add_cleanup(c.delete)
+                c.wait_ready()
+                clients.append(c)
+            c1 = clients[0]
+            c2 = clients[1]
+            c3 = clients[2]
+            _log.info("test_max_hops_pod_annotation: created client pods [%s, %s, %s]", c1.ip, c2.ip, c3.ip)
+
+            retry_until_success(self.has_ip_rule, retries=3, wait_time=3, function_kwargs={"nodename": c3.nodename, "ip": c3.ip})
+
+            def verify_tables_and_hops():
+                node_rules_and_tables = self.read_client_hops_for_node(node)
+                assert len(node_rules_and_tables) == 3
+                print(node_rules_and_tables)
+                # Verify we have 3 different tables.
+                table1 = node_rules_and_tables[c1.ip]["table"]
+                table2 = node_rules_and_tables[c2.ip]["table"]
+                table3 = node_rules_and_tables[c3.ip]["table"]
+                print(table1, table2, table3)
+                table_set = {table1, table2, table3}
+                assert len(table_set) == 3
+                
+                hops1 = sorted(node_rules_and_tables[c1.ip]["hops"])
+                hops2 = sorted(node_rules_and_tables[c2.ip]["hops"])
+                hops3 = sorted(node_rules_and_tables[c3.ip]["hops"])
+                return hops1, hops2, hops3
+
+            hops1, hops2, hops3 = verify_tables_and_hops()
+            # Verify each table has different hops.
+            assert (hops1 != hops2) and (hops2 != hops3) and (hops1 != hops3)
+
+            # Delete one gateway, only two hops left
+            pod = gw1
+            _log.info("Removing gateway pod %s", pod.name)
+            self.delete_and_confirm(pod.name, "pod", pod.ns)
+            self.cleanups.remove(pod.delete)
+
+            # We should see same set of hops for each client since each table should has at least two hops.
+            hops1, hops2, hops3 = verify_tables_and_hops()
+            assert (hops1 == hops2) and (hops2 == hops3)
+
+    def test_max_hops_namespace_annotation(self):
+        with DiagsCollector():
+            # Create 3 egress gateways, with an IP from that pool.
+            # Create namespace for client pods with egress annotations on red gateway.
+            client_ns = "ns-client"
+            self.create_namespace(client_ns, annotations={
+                "egress.projectcalico.org/maxNextHops": "2",
+                "egress.projectcalico.org/selector": "color == 'red'",
+                "egress.projectcalico.org/namespaceSelector": "all()",
+            })
+            gw1 = self.create_gateway_pod("kind-worker", "gw1", self.egress_cidr, ns=client_ns)
+            gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr, ns=client_ns)
+            gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr, ns=client_ns)
+            _log.info("test_max_hops_namespace_annotation: created gw pods [%s, %s, %s]", gw1.ip, gw2.ip, gw3.ip)
+
+            # Create three clients without annotations on the same node with maxNextHops set to 2.
+            node = "kind-worker"
+            clients = []
+            for i in range(3):
+                _log.info("test_max_hops_namespace_annotation: create client%d", i)
+                c = NetcatClientTCP(client_ns, "test%d" % i, node=node)
+                self.add_cleanup(c.delete)
+                c.wait_ready()
+                clients.append(c)
+            c1 = clients[0]
+            c2 = clients[1]
+            c3 = clients[2]
+            _log.info("test_max_hops_namespace_annotation: created client pods [%s, %s, %s]", c1.ip, c2.ip, c3.ip)
+
+            retry_until_success(self.has_ip_rule, retries=3, wait_time=3, function_kwargs={"nodename": c3.nodename, "ip": c3.ip})
+
+            def verify_tables_and_hops():
+                node_rules_and_tables = self.read_client_hops_for_node(node)
+                assert len(node_rules_and_tables) == 3
+                print(node_rules_and_tables)
+                # Verify we have 3 different tables.
+                table1 = node_rules_and_tables[c1.ip]["table"]
+                table2 = node_rules_and_tables[c2.ip]["table"]
+                table3 = node_rules_and_tables[c3.ip]["table"]
+                print(table1, table2, table3)
+                table_set = {table1, table2, table3}
+                assert len(table_set) == 3
+                
+                hops1 = sorted(node_rules_and_tables[c1.ip]["hops"])
+                hops2 = sorted(node_rules_and_tables[c2.ip]["hops"])
+                hops3 = sorted(node_rules_and_tables[c3.ip]["hops"])
+                return hops1, hops2, hops3
+
+            hops1, hops2, hops3 = verify_tables_and_hops()
+            # Verify each table has different hops.
+            assert (hops1 != hops2) and (hops2 != hops3) and (hops1 != hops3)
+
+            # Delete one gateway, only two hops left
+            pod = gw1
+            _log.info("Removing gateway pod %s", pod.name)
+            self.delete_and_confirm(pod.name, "pod", pod.ns)
+            self.cleanups.remove(pod.delete)
+
+            # We should see same set of hops for each client since each table should has at least two hops.
+            hops1, hops2, hops3 = verify_tables_and_hops()
+            assert (hops1 == hops2) and (hops2 == hops3)
+
+    def test_reuse_valid_table_on_restart(self):
+        with DiagsCollector():
+            _log.info("--- Restarting calico/node with routeTableRage 1,200 ---")
+            oldEnv = {"FELIX_ROUTETABLERANGES": "1-250"}
+            newEnv = {"FELIX_ROUTETABLERANGES": "1-200"}
+            self.update_ds_env("calico-node", "kube-system", newEnv)
+
+            # Create 3 egress gateways, with an IP from that pool.
+            gw1 = self.create_gateway_pod("kind-worker", "gw1", self.egress_cidr)
+            gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr)
+            gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr)
+            _log.info("test_max_hops: created gw pods [%s, %s, %s]", gw1.ip, gw2.ip, gw3.ip)
+
+            # Create three clients on the same node with maxNextHops set to 2.
+            client_ns = "default"
+            node = "kind-worker"
+            clients = []
+            for i in range(3):
+                _log.info("test_max_hops: create client%d", i)
+                c = NetcatClientTCP(client_ns, "test%d" % i, node=node, annotations={
+                    "egress.projectcalico.org/maxNextHops": "2",
+                    "egress.projectcalico.org/selector": "color == 'red'",
+                    "egress.projectcalico.org/namespaceSelector": "all()",
+                })
+                self.add_cleanup(c.delete)
+                c.wait_ready()
+                clients.append(c)
+            c1 = clients[0]
+            c2 = clients[1]
+            c3 = clients[2]
+            _log.info("test_max_hops: created client pods [%s, %s, %s]", c1.ip, c2.ip, c3.ip)
+
+            retry_until_success(self.has_ip_rule, retries=3, wait_time=3, function_kwargs={"nodename": c3.nodename, "ip": c3.ip})
+
+            def verify_tables_and_hops():
+                node_rules_and_tables = self.read_client_hops_for_node(node)
+                assert len(node_rules_and_tables) == 3
+                print(node_rules_and_tables)
+                # Verify we have 3 different tables.
+                table1 = node_rules_and_tables[c1.ip]["table"]
+                table2 = node_rules_and_tables[c2.ip]["table"]
+                table3 = node_rules_and_tables[c3.ip]["table"]
+                print(table1, table2, table3)
+                table_set = {table1, table2, table3}
+                assert len(table_set) == 3
+                assert (int(table1) <= 200) and (int(table2) <= 200) and (int(table3) <= 200)
+                return table1, table2, table3
+
+            table1, table2, table3 = verify_tables_and_hops()
+
+            def customise_ip_rule_and_table(node, src, current_table, new_table, hop1, hop2):
+                run("docker exec %s ip rule add priority 100 from %s fwmark 0x80000/0x80000 lookup %s" % (node, src, new_table))
+                if hop1 == "":
+                    raise Exception('wrong parameters passed for customise_ip_rule_table')
+                if hop2 == "":
+                    run("docker exec %s ip route add table %s default nexthop via %s dev egress.calico onlink" % (node, new_table, hop1))
+                else:
+                    run("docker exec %s ip route add table %s default nexthop via %s dev egress.calico onlink nexthop via %s dev egress.calico onlink" % (node, new_table, hop1, hop2))
+                # Delete current ip rule for c3, so that felix would not pick it up again after restarting.
+                run("docker exec %s ip rule del from %s fwmark 0x80000/0x80000 lookup %s" % (node, src, current_table))
+
+
+            # Create ip rule for c3 and table outside of 1-200 so that it would not be managed by felix.
+            # The new table has valid hops.
+            customise_ip_rule_and_table(node, c3.ip, table3, "203", gw2.ip, gw3.ip)
+            # Create ip rule for c2 and table outside of 1-200 so that it would not be managed by felix.
+            # The new table has invalid number of hops.
+            customise_ip_rule_and_table(node, c2.ip, table2, "202", gw1.ip, "")
+            # Create ip rule for c1 and table outside of 1-200 so that it would not be managed by felix.
+            # The new table has invalid ip for one of its' hops.
+            customise_ip_rule_and_table(node, c1.ip, table1, "201", gw2.ip, "10.10.0.0")
+
+            run("docker exec %s ip rule" % node)
+            run("docker exec %s ip route show table %s" % (node, "203"))
+            run("docker exec %s ip route show table %s" % (node, "202"))
+            run("docker exec %s ip route show table %s" % (node, "201"))
+
+            _log.info("--- Restarting calico/node with routeTableRage 1-250 ---")
+            self.update_ds_env("calico-node", "kube-system", oldEnv)
+
+            retry_until_success(self.has_ip_rule, retries=3, wait_time=3, function_kwargs={"nodename": c3.nodename, "ip": c3.ip})
+
+            run("docker exec %s ip rule" % node)
+
+            node_rules_and_tables = self.read_client_hops_for_node(node)
+            assert len(node_rules_and_tables) == 3
+            # Verify we have 3 different tables.
+            # Two tables have latest indexes and table3 is 203.
+            table1 = node_rules_and_tables[c1.ip]["table"]
+            table2 = node_rules_and_tables[c2.ip]["table"]
+            table3 = node_rules_and_tables[c3.ip]["table"]
+            assert (int(table3) == 203) 
+            assert {table1, table2} == {"250", "249"}
+
+            hops1 = sorted(node_rules_and_tables[c1.ip]["hops"])
+            hops2 = sorted(node_rules_and_tables[c2.ip]["hops"])
+            hops3 = sorted(node_rules_and_tables[c3.ip]["hops"])
+            # skip test: Verify each table has different hops.
+            # assert (hops1 != hops2) and (hops2 != hops3) and (hops1 != hops3)
+            # We have an issue that if workload c3 reusing a table, it could have same hops with c2 or c1 processed ealier than 
+            # c3, since at the time of creating tables for c2 or c1, processWorkloadUpdates is not aware table for c3 exists.
+            # The shuffling function only takes c1, c2 into account.
+            assert (hops1 != hops2)
+
+            # Cleanup manually added tables. ip rules should have been cleaned up already by felix.
+            run("docker exec %s ip route flush table %s" % (node, "203"))
+            run("docker exec %s ip route flush table %s" % (node, "202"))
+            run("docker exec %s ip route flush table %s" % (node, "201"))
 
     def has_ip_rule(self, nodename, ip):
         # Validate egress ip rule exists for a client pod ip on a node.
         output = run("docker exec -t %s ip rule" % nodename)
         if output.find(ip) == -1:
             raise Exception('ip rule does not exist for client pod ip %s, log %s' % (ip, output))
+
+    def has_ip_route_and_table(self, nodename, client_ip, gateway_ips):
+        node_rules_and_tables = self.read_client_hops_for_node(nodename)
+        if client_ip in node_rules_and_tables:
+            rule_and_table = node_rules_and_tables[client_ip]
+            table = rule_and_table["table"]
+            hops = rule_and_table["hops"]
+            _log.info("found rule with ip: %s, pointing to table: %s, with hops: [%s], was looking for hops: [%s]", client_ip, table, hops, gateway_ips)
+            assert set(hops) == set(gateway_ips)
+        else:
+            stop_for_debug()
+            raise Exception("rule and table not found for client with ip %s and hops %s" % (client_ip, gateway_ips))
+
+    def read_client_hops_for_node(self, nodename):
+        # Read client hops for a node
+        rule_dict = {}
+        output = run("docker exec -t %s ip rule" % nodename)
+        for l in output.splitlines():
+            if (l.find("fwmark") != -1) and (l.find("from all fwmark") == -1):
+                # read routing rule, i.e. "100:    from 192.168.162.159 fwmark 0x80000/0x80000 lookup 250"
+                _log.info("read_client_hops_for_node: %s", l)
+                src = re.search(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', l).group()
+                table = re.search(r'(\d+)\D*$', l).group(1)
+                table_output = run("docker exec -t %s ip route show table %s" % (nodename, table))
+                _log.info("read_client_hops_for_node: src %s to table %s [%s]", src, table, table_output)
+
+                # read route table content
+                hops = []
+                for l in table_output.splitlines():
+                    if l.find("egress.calico") != -1:
+                        # "nexthop via 10.10.10.0 dev egress.calico weight 1 onlink"
+                        # or
+                        # "default via 10.10.10.0 dev egress.calico onlink"
+                        _log.info("read_client_hops_for_node: %s", l)
+                        hop = re.search(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', l).group()
+                        hops.append(hop)
+                rule_dict[src] = {"table": table, "hops": hops}
+        print(rule_dict)
+        return rule_dict
 
     def check_ecmp_routes(self, client, servers, gw_ips, allowed_untaken_count=0):
         """
@@ -537,6 +814,10 @@ EOF
                 run("docker exec -t %s ip rule" % client.nodename)
                 run("docker exec -t %s ip route show table 250" % client.nodename)
                 run("docker exec -t %s ip route show table 249" % client.nodename)
+                run("docker exec -t %s ip route show table 248" % client.nodename)
+                run("docker exec -t %s ip route show table 247" % client.nodename)
+                run("docker exec -t %s ip route show table 246" % client.nodename)
+                run("docker exec -t %s ip route show table 245" % client.nodename)
                 _log.info("stop for debug ecmp route %s  Client IPs: %r", gw_ips, client_ip)
                 stop_for_debug()
             assert client_ip in gw_ips, \
