@@ -16,14 +16,6 @@ package config_test
 
 import (
 	"fmt"
-
-	v1 "k8s.io/api/core/v1"
-
-	"github.com/projectcalico/calico/felix/config"
-	"github.com/projectcalico/calico/felix/testutils"
-	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
-
 	"io/ioutil"
 	"net"
 	"os"
@@ -31,6 +23,13 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	v1 "k8s.io/api/core/v1"
+
+	"github.com/projectcalico/calico/felix/config"
+	"github.com/projectcalico/calico/felix/testutils"
+	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -63,7 +62,9 @@ var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 		// Moved to Node.
 		"IpInIpTunnelAddr",
 		"IPv4VXLANTunnelAddr",
+		"IPv6VXLANTunnelAddr",
 		"VXLANTunnelMACAddr",
+		"VXLANTunnelMACAddrV6",
 
 		"NodeIP",
 
@@ -214,8 +215,10 @@ var _ = Describe("Config override empty", func() {
 	})
 })
 
-var nilServerPortSlice []config.ServerPort
-var t bool = true
+var (
+	nilServerPortSlice []config.ServerPort
+	t                  bool = true
+)
 
 var _ = DescribeTable("Config parsing",
 	func(key, value string, expected interface{}, errorExpected ...bool) {

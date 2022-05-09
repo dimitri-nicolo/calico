@@ -1210,7 +1210,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.iptablesMangleTables = append(dp.iptablesMangleTables, mangleTableV6)
 		dp.iptablesFilterTables = append(dp.iptablesFilterTables, filterTableV6)
 
-		if config.RulesConfig.VXLANEnabled {
+		if config.RulesConfig.VXLANEnabledV6 {
 			routeTableVXLANV6 := routetable.New([]string{"^vxlan-v6.calico$"}, 6, true, config.NetlinkTimeout,
 				config.DeviceRouteSourceAddressIPv6, config.DeviceRouteProtocol, true, unix.RT_TABLE_UNSPEC,
 				dp.loopSummarizer, routetable.WithLivenessCB(dp.reportHealth))
@@ -1466,7 +1466,7 @@ func determinePodMTU(config Config) int {
 	for _, s := range []mtuState{
 		{config.IPIPMTU, config.RulesConfig.IPIPEnabled},
 		{config.VXLANMTU, config.RulesConfig.VXLANEnabled},
-		{config.VXLANMTUV6, config.RulesConfig.VXLANEnabled && config.IPv6Enabled},
+		{config.VXLANMTUV6, config.RulesConfig.VXLANEnabledV6},
 		{config.Wireguard.MTU, config.Wireguard.Enabled},
 	} {
 		if s.enabled && s.mtu != 0 && (s.mtu < mtu || mtu == 0) {

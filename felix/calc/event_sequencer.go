@@ -345,6 +345,7 @@ func (buf *EventSequencer) OnPolicyInactive(key model.PolicyKey) {
 		buf.pendingPolicyDeletes.Add(key)
 	}
 }
+
 func (buf *EventSequencer) flushPolicyDeletes() {
 	buf.pendingPolicyDeletes.Iter(func(item interface{}) error {
 		buf.Callback(&proto.ActivePolicyRemove{
@@ -528,8 +529,9 @@ func (buf *EventSequencer) flushEndpointTierDeletes() {
 
 func (buf *EventSequencer) OnEncapUpdate(encap config.Encapsulation) {
 	log.WithFields(log.Fields{
-		"IPIPEnabled":  encap.IPIPEnabled,
-		"VXLANEnabled": encap.VXLANEnabled,
+		"IPIPEnabled":    encap.IPIPEnabled,
+		"VXLANEnabled":   encap.VXLANEnabled,
+		"VXLANEnabledV6": encap.VXLANEnabledV6,
 	}).Debug("Encapsulation update")
 	buf.pendingEncapUpdate = &encap
 }
@@ -537,8 +539,9 @@ func (buf *EventSequencer) OnEncapUpdate(encap config.Encapsulation) {
 func (buf *EventSequencer) flushEncapUpdate() {
 	if buf.pendingEncapUpdate != nil {
 		buf.Callback(&proto.Encapsulation{
-			IpipEnabled:  buf.pendingEncapUpdate.IPIPEnabled,
-			VxlanEnabled: buf.pendingEncapUpdate.VXLANEnabled,
+			IpipEnabled:    buf.pendingEncapUpdate.IPIPEnabled,
+			VxlanEnabled:   buf.pendingEncapUpdate.VXLANEnabled,
+			VxlanEnabledV6: buf.pendingEncapUpdate.VXLANEnabledV6,
 		})
 		buf.pendingEncapUpdate = nil
 	}
@@ -571,6 +574,7 @@ func (buf *EventSequencer) OnHostIPRemove(hostname string) {
 		buf.pendingHostIPDeletes.Add(hostname)
 	}
 }
+
 func (buf *EventSequencer) flushHostIPDeletes() {
 	buf.pendingHostIPDeletes.Iter(func(item interface{}) error {
 		buf.Callback(&proto.HostMetadataRemove{
@@ -756,7 +760,8 @@ func (buf *EventSequencer) OnPacketCaptureInactive(key model.ResourceKey, endpoi
 				OrchestratorId: endpoint.OrchestratorID,
 				WorkloadId:     endpoint.WorkloadID,
 				EndpointId:     endpoint.EndpointID,
-			}}
+			},
+		}
 	}
 }
 
