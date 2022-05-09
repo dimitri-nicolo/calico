@@ -1,5 +1,6 @@
 ---
 description: Upgrade from an earlier release of Calico Enterprise using Kubernetes.
+canonical_url: '/maintenance/kubernetes-upgrade-tsee/index'
 show_read_time: false
 show_toc: false
 ---

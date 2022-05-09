@@ -2,6 +2,7 @@
 title: Configure egress gateways, AWS
 description: Configure specific application traffic to exit the cluster through an egress gateway with a native AWS IP address.
 canonical_url: '/networking/egress/egress-gateway-aws'
+feature_name: 'egress_gateway_aws'
 ---
 
 ### Big picture
@@ -1021,3 +1022,4 @@ Please see also:
 
 - The `egressIP...` and `aws...` fields of the [FelixConfiguration resource]({{site.baseurl}}/reference/resources/felixconfig#spec).
 - [Troubleshooting egress gateways]({{site.baseurl}}/networking/egress/troubleshoot).
+- [Additional configuration for egress gateway maintenance]({{site.baseurl}}/networking/egress/egress-gateway-maintenance)

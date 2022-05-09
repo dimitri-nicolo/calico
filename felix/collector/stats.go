@@ -414,6 +414,9 @@ type Data struct {
 	srcEp *calc.EndpointData
 	dstEp *calc.EndpointData
 
+	// Top level destination (egress) Domains.
+	destDomains []string
+
 	// Pre-DNAT information used to lookup the service information.
 	isDNAT      bool
 	preDNATAddr [16]byte
@@ -455,9 +458,10 @@ type Data struct {
 	updatedAt     time.Duration
 	ruleUpdatedAt time.Duration
 
-	reported bool
-	dirty    bool
-	expired  bool
+	reported             bool
+	unreportedPacketInfo bool
+	dirty                bool
+	expired              bool
 }
 
 func NewData(tuple Tuple, srcEp, dstEp *calc.EndpointData, maxOriginalIPsSize int) *Data {
@@ -880,6 +884,7 @@ func (d *Data) metricUpdateEgressConn(ut UpdateType) MetricUpdate {
 		srcEp:           d.srcEp,
 		dstEp:           d.dstEp,
 		dstService:      metricDstServiceInfo,
+		dstDomains:      d.destDomains,
 		ruleIDs:         d.EgressRuleTrace.Path(),
 		hasDenyRule:     d.EgressRuleTrace.HasDenyRule(),
 		isConnection:    d.isConnection,
@@ -964,6 +969,7 @@ func (d *Data) metricUpdateEgressNoConn(ut UpdateType) MetricUpdate {
 		srcEp:           d.srcEp,
 		dstEp:           d.dstEp,
 		dstService:      metricDstServiceInfo,
+		dstDomains:      d.destDomains,
 		ruleIDs:         d.EgressRuleTrace.Path(),
 		hasDenyRule:     d.EgressRuleTrace.HasDenyRule(),
 		isConnection:    d.isConnection,

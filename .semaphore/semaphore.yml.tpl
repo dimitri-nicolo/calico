@@ -63,6 +63,10 @@ promotions:
   pipeline_file: push-images/packetcapture.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push anomaly-detection-api images
+  pipeline_file: push-images/anomaly-detection-api.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 # Have a separate promotion for publishing Helm charts.
 - name: Publish Helm Charts
   pipeline_file: push-helm-charts/helm-charts.yml
@@ -622,7 +626,7 @@ blocks:
 
 - name: 'packetcapture'
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/packetcapture/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "true or change_in(['/*', '/packetcapture', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
   task:
     secrets:
@@ -632,6 +636,21 @@ blocks:
       - cd packetcapture
     jobs:
     - name: "packetcapture tests"
+      commands:
+      - make ci
+
+- name: 'anomaly-detection-api'
+  run:
+    when: "change_in(['/*', '/anomaly-detection-api/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd anomaly-detection-api
+    jobs:
+    - name: "make ci"
       commands:
       - make ci
 

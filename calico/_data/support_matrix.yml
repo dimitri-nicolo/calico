@@ -1,0 +1,27 @@
+# Support matrix for features.
+# #
+# 1. Add a page variable "feature_name" (should be a valid YAML key).
+# 2. Add the same feature_name as a key under "matrix".
+# 3. Define supported platforms as a list under the "platforms" key.
+#
+# Note that platforms can only be values already specified in the "support_matrix_list"
+# in _config.yml
+network_policy:
+  platforms:
+    - all
+compliance:
+  platforms:
+    - Kubernetes/Kubeadm
+    - RKE
+    - EKS
+egress_gateway:
+  platforms: ['Kubernetes/Kubeadm', 'RKE', 'OpenShift']
+egress_gateway_aws:
+  platforms:
+    - AWS/kOps
+suspicious_ips:
+  platforms:
+    - all
+suspicious_domains:
+  platforms:
+    - all

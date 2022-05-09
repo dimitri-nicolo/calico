@@ -4164,8 +4164,9 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					},
 					"ipipEnabled": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+							Description: "IPIPEnabled overrides whether Felix should configure an IPIP interface on the host. Optional as Felix determines this based on the existing IP pools. [Default: nil (unset)]",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 					"ipipMTU": {
@@ -4177,8 +4178,9 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					},
 					"vxlanEnabled": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+							Description: "VXLANEnabled overrides whether Felix should create the VXLAN tunnel device for VXLAN networking. Optional as Felix determines this based on the existing IP pools. [Default: nil (unset)]",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 					"vxlanMTU": {
@@ -4903,7 +4905,7 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					},
 					"flowLogsFileDomainsLimit": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FlowLogsFileDomainsLimit is used to configure the number of (destination) domains to include in the flow log. The domains are only included at aggregation level 0 or 1. [Default: 5]",
+							Description: "FlowLogsFileDomainsLimit is used to configure the number of (destination) domains to include in the flow log. These are not included for workload or host endpoint destinations. [Default: 5]",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},

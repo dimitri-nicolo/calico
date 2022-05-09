@@ -1,0 +1,7 @@
+---
+layout: null
+---
+
+{% helm tigera-prometheus-operator --execute-dir crds --execute-dir crds %}
+# todo fix bug where empty helm tags doesn't render chart
+{% endhelm %}

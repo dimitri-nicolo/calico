@@ -1,0 +1,46 @@
+{
+  "properties": {
+    "reportName": {
+      "type": "keyword"
+    },
+    "reportTypeName": {
+      "type": "keyword"
+    },
+    "reportSpec": {
+      "type": "object",
+      "enabled": false
+    },
+    "reportTypeSpec": {
+      "type": "object",
+      "enabled": false
+    },
+    "startTime": {
+      "type": "date"
+    },
+    "endTime": {
+      "type": "date"
+    },
+    "generationTime": {
+      "type": "date"
+    },
+    "uiSummary": {
+      "type": "text"
+    },
+    "endpoints": {
+      "type": "object",
+      "enabled": false
+    },
+    "namespaces": {
+      "type": "object",
+      "enabled": false
+    },
+    "services": {
+      "type": "object",
+      "enabled": false
+    },
+    "auditEvents": {
+      "type": "object",
+      "enabled": false
+    }
+  }
+}

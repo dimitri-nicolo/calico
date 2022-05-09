@@ -36,7 +36,6 @@ import (
 )
 
 var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection failures", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
-
 	ctx := context.Background()
 	var err error
 	var c clientv3.Interface
@@ -663,7 +662,6 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 				syncTester.ExpectUpdates(expectedEvents, false)
 			})
 			It("should send no updates when reapplying the RCC", func() {
-
 				By("Updating the remote cluster config (but without changing the syncer connection config)")
 				// Just re-apply the last settings.
 				var outError error
@@ -672,7 +670,6 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 
 				By("Checking we received no events")
 				syncTester.ExpectUpdates([]api.Update{}, false)
-
 			})
 			It("should send restart required when RCC is changed", func() {
 				By("Updating the remote cluster config (changing the syncer connection config)")
@@ -806,7 +803,6 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer config manipulatio
 				syncTester.ExpectUpdates(expectedEvents, false)
 			})
 			It("should see no callback when reapplying the RCC", func() {
-
 				By("Updating the remote cluster config (but without changing the syncer connection config)")
 				// Just re-apply the last settings.
 				var outError error
@@ -1249,7 +1245,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer datastore config t
 					By("done with It")
 				})
 				It("Should receive events for resources created before starting syncer", func() {
-					//runtime.Breakpoint()
+					// runtime.Breakpoint()
 					setup(tc.localCfg, tc.remoteCfg)
 					tc.create()
 
