@@ -73,7 +73,7 @@ clean:
 		report/*.xml \
 		config/
 	find . -name '*.coverprofile' -type f -delete
-	fm -f $(DEEP_PACKET_INSPECTION_CONTAINER_CREATED)
+	rm -f $(DEEP_PACKET_INSPECTION_CONTAINER_CREATED)
 	-docker image rm -f $$(docker images $(DEEP_PACKET_INSPECTION_IMAGE) -a -q)
 
 ###############################################################################
