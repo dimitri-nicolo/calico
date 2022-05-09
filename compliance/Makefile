@@ -49,17 +49,10 @@ VERSION_FLAGS = -X $(PACKAGE_NAME)/pkg/version.VERSION=$(GIT_VERSION) \
 
 NON_SRC_DIRS = test
 # All Compliance Server go files.
-SRC_FILES:=$(shell find . $(foreach dir,$(NON_SRC_DIRS),-path $(dir) -prune -o) -type f -name '*.go') $(shell find ../libcalico-go/lib -name '*.go') $(shell find ../lma/pkg -name '*.go')
-
-.PHONY: clean
-clean:
-	rm -rf bin \
-	       docker-image/scaleloader/bin \
-	       release-notes-*
-	find . -name "*.coverprofile" -type f -delete
-	find . -name "coverage.xml" -type f -delete
-	find . -name ".coverage" -type f -delete
-	find . -name "*.pyc" -type f -delete
+SRC_FILES:=$(shell find . $(foreach dir,$(NON_SRC_DIRS),-path $(dir) -prune -o) -type f -name '*.go') \
+		$(shell find ../api/pkg -name '*.go') \
+		$(shell find ../libcalico-go/lib -name '*.go') \
+		$(shell find ../lma/pkg -name '*.go')
 
 ###############################################################################
 # Building the binary
@@ -79,58 +72,37 @@ sub-build-%:
 .PHONY: bin/server-$(ARCH)
 bin/server-$(ARCH): $(SRC_FILES)
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -i -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/server/server.go && \
-		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
-		-e "not a dynamic executable" || \
-		( echo "Error: bin/server was not statically linked"; false ) )'
+	    go build -v -i -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/server/server.go'
 
 .PHONY: bin/controller-$(ARCH)
 bin/controller-$(ARCH): $(SRC_FILES)
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -i -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/controller/controller.go && \
-		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
-		-e "not a dynamic executable" || \
-		( echo "Error: bin/controller was not statically linked"; false ) )'
+	    go build -v -i -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/controller/controller.go'
 
 .PHONY: bin/snapshotter-$(ARCH)
 bin/snapshotter-$(ARCH): $(SRC_FILES)
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -i -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/snapshotter/snapshotter.go && \
-		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
-		-e "not a dynamic executable" || \
-		( echo "Error: bin/snapshotter was not statically linked"; false ) )'
+	    go build -v -i -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/snapshotter/snapshotter.go'
 
 .PHONY: bin/reporter-$(ARCH)
 bin/reporter-$(ARCH): $(SRC_FILES)
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -i -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/reporter/reporter.go && \
-		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
-		-e "not a dynamic executable" || \
-		( echo "Error: bin/reporter was not statically linked"; false ) )'
+	    go build -v -i -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/reporter/reporter.go'
 
 .PHONY: bin/report-type-gen-$(ARCH)
 bin/report-type-gen-$(ARCH): $(SRC_FILES)
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -i -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/report-type-gen/*.go && \
-		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
-		-e "not a dynamic executable" || \
-		( echo "Error: bin/report-type-gen was not statically linked"; false ) )'
+	    go build -v -i -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/report-type-gen/*.go'
 
 .PHONY: bin/scaleloader-$(ARCH)
 bin/scaleloader-$(ARCH): $(SRC_FILES)
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -i -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/mockdata-scaleloader/scaleloader.go && \
-		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
-		-e "not a dynamic executable" || \
-		( echo "Error: bin/scaleloader was not statically linked"; false ) )'
+	    go build -v -i -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/mockdata-scaleloader/scaleloader.go'
 
 .PHONY: bin/benchmarker-$(ARCH)
 bin/benchmarker-$(ARCH): $(SRC_FILES)
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -i -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/benchmarker/benchmarker.go && \
-		( ldd $@ 2>&1 | grep -q -e "Not a valid dynamic program" \
-		-e "not a dynamic executable" || \
-		( echo "Error: bin/benchmarker was not statically linked"; false ) )'
+	    go build -v -i -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/benchmarker/benchmarker.go'
 
 ###############################################################################
 # Building the report files
@@ -147,35 +119,53 @@ gen-files: bin/report-type-gen-$(ARCH)
 ###############################################################################
 # Building the images
 ###############################################################################
-.PHONY: images $(BUILD_IMAGES) $(-$(ARCH),$(BUILD_IMAGES))
-
-images: $(BUILD_IMAGES) $(COMPLIANCE_SCALELOADER_IMAGE)
-	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
+COMPLIANCE_SERVER_CONTAINER_CREATED=.compliance-server.created-$(ARCH)
+COMPLIANCE_CONTROLLER_CONTAINER_CREATED=.compliance-controller.created-$(ARCH)
+COMPLIANCE_SNAPSHOTTER_CONTAINER_CREATED=.compliance-snapshotter.created-$(ARCH)
+COMPLIANCE_REPORTER_CONTAINER_CREATED=.compliance-reporter.created-$(ARCH)
+COMPLIANCE_SCALELOADER_CONTAINER_CREATED=.compliance-scaleloader.created-$(ARCH)
+COMPLIANCE_BENCHMARKER_CONTAINER_CREATED=.compliance-benchmarker.created-$(ARCH)
 
 # Build the images for the target architecture
-.PHONY: images-all
-images-all: $(addprefix sub-image-,$(VALIDARCHES))
+.PHONY: image-all
+image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
-	$(MAKE) images ARCH=$*
+	$(MAKE) image ARCH=$*
+
+.PHONY: image
+image: $(BUILD_IMAGES)
 
 # Build the tigera/compliance-server docker image, which contains only Compliance server.
-$(COMPLIANCE_SERVER_IMAGE): bin/server-$(ARCH) register
+$(COMPLIANCE_SERVER_IMAGE): $(COMPLIANCE_SERVER_CONTAINER_CREATED)
+$(COMPLIANCE_SERVER_CONTAINER_CREATED): docker-image/server/Dockerfile.$(ARCH) bin/server-$(ARCH) register
 	$(DOCKER_BUILD) -t $(COMPLIANCE_SERVER_IMAGE):latest-$(ARCH) -f docker-image/server/Dockerfile.$(ARCH) . --load
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_SERVER_IMAGE)
+	touch $@
 
 # Build the tigera/compliance-controller docker image, which contains only Compliance controller.
-$(COMPLIANCE_CONTROLLER_IMAGE): bin/controller-$(ARCH) register
+$(COMPLIANCE_CONTROLLER_IMAGE): $(COMPLIANCE_CONTROLLER_CONTAINER_CREATED)
+$(COMPLIANCE_CONTROLLER_CONTAINER_CREATED): docker-image/controller/Dockerfile.$(ARCH) bin/controller-$(ARCH) register
 	$(DOCKER_BUILD) -t $(COMPLIANCE_CONTROLLER_IMAGE):latest-$(ARCH) -f docker-image/controller/Dockerfile.$(ARCH) . --load
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_CONTROLLER_IMAGE)
+	touch $@
 
 # Build the tigera/compliance-snapshotter docker image, which contains only Compliance snapshotter.
-$(COMPLIANCE_SNAPSHOTTER_IMAGE): bin/snapshotter-$(ARCH) register
+$(COMPLIANCE_SNAPSHOTTER_IMAGE): $(COMPLIANCE_SNAPSHOTTER_CONTAINER_CREATED)
+$(COMPLIANCE_SNAPSHOTTER_CONTAINER_CREATED): docker-image/snapshotter/Dockerfile.$(ARCH) bin/snapshotter-$(ARCH) register
 	$(DOCKER_BUILD) -t $(COMPLIANCE_SNAPSHOTTER_IMAGE):latest-$(ARCH) -f docker-image/snapshotter/Dockerfile.$(ARCH) . --load
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_SNAPSHOTTER_IMAGE)
+	touch $@
 
 # Build the tigera/compliance-reporter docker image, which contains only Compliance reporter.
-$(COMPLIANCE_REPORTER_IMAGE): bin/reporter-$(ARCH) register
+$(COMPLIANCE_REPORTER_IMAGE): $(COMPLIANCE_REPORTER_CONTAINER_CREATED)
+$(COMPLIANCE_REPORTER_CONTAINER_CREATED): docker-image/reporter/Dockerfile.$(ARCH) bin/reporter-$(ARCH) register
 	$(DOCKER_BUILD) -t $(COMPLIANCE_REPORTER_IMAGE):latest-$(ARCH) -f docker-image/reporter/Dockerfile.$(ARCH) . --load
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_REPORTER_IMAGE)
+	touch $@
 
 # Build the tigera/compliance-scaleloader docker image, which contains only Compliance scaleloader.
-$(COMPLIANCE_SCALELOADER_IMAGE): bin/scaleloader-$(ARCH) register
+$(COMPLIANCE_SCALELOADER_IMAGE): $(COMPLIANCE_SCALELOADER_CONTAINER_CREATED)
+$(COMPLIANCE_SCALELOADER_CONTAINER_CREATED): docker-image/scaleloader/Dockerfile.$(ARCH) bin/scaleloader-$(ARCH) register
 	rm -rf docker-image/scaleloader/bin
 	rm -rf docker-image/scaleloader/playbooks
 	rm -rf docker-image/scaleloader/scenarios
@@ -184,10 +174,15 @@ $(COMPLIANCE_SCALELOADER_IMAGE): bin/scaleloader-$(ARCH) register
 	cp -r mockdata/scaleloader/playbooks docker-image/scaleloader
 	cp -r mockdata/scaleloader/scenarios docker-image/scaleloader
 	$(DOCKER_BUILD) -t $(COMPLIANCE_SCALELOADER_IMAGE):latest-$(ARCH) -f docker-image/scaleloader/Dockerfile.$(ARCH) docker-image/scaleloader --load
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_SCALELOADER_IMAGE)
+	touch $@
 
 # Build the tigera/compliance-benchmarker docker image, which contains only Compliance benchmarker.
-$(COMPLIANCE_BENCHMARKER_IMAGE): check-kubebench-update bin/benchmarker-$(ARCH) register
+$(COMPLIANCE_BENCHMARKER_IMAGE): $(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED)
+$(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED): check-kubebench-update docker-image/benchmarker/Dockerfile.$(ARCH) bin/benchmarker-$(ARCH) register
 	$(DOCKER_BUILD) -t $(COMPLIANCE_BENCHMARKER_IMAGE):latest-$(ARCH) -f docker-image/benchmarker/Dockerfile.$(ARCH) . --load
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_BENCHMARKER_IMAGE)
+	touch $@
 
 K8S_CLIENT_VERSION := $(shell grep -E 'k8s.io/apiserver' ../go.mod | awk '{print$$2;exit}')
 check-kubebench-update:
@@ -203,6 +198,28 @@ check-kubebench-update:
         exit 1; \
 	fi;
 
+.PHONY: clean
+clean:
+	rm -rf bin \
+	       docker-image/scaleloader/bin \
+	       release-notes-*
+	find . -name "*.coverprofile" -type f -delete
+	find . -name "coverage.xml" -type f -delete
+	find . -name ".coverage" -type f -delete
+	find . -name "*.pyc" -type f -delete
+	rm -f $(COMPLIANCE_SERVER_CONTAINER_CREATED)
+	rm -f $(COMPLIANCE_CONTROLLER_CONTAINER_CREATED)
+	rm -f $(COMPLIANCE_SNAPSHOTTER_CONTAINER_CREATED)
+	rm -f $(COMPLIANCE_REPORTER_CONTAINER_CREATED)
+	rm -f $(COMPLIANCE_SCALELOADER_CONTAINER_CREATED)
+	rm -f $(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED)
+	-docker image rm -f $$(docker images $(COMPLIANCE_SERVER_IMAGE) -a -q)
+	-docker image rm -f $$(docker images $(COMPLIANCE_CONTROLLER_IMAGE) -a -q)
+	-docker image rm -f $$(docker images $(COMPLIANCE_SNAPSHOTTER_IMAGE) -a -q)
+	-docker image rm -f $$(docker images $(COMPLIANCE_REPORTER_IMAGE) -a -q)
+	-docker image rm -f $$(docker images $(COMPLIANCE_SCALELOADER_IMAGE) -a -q)
+	-docker image rm -f $$(docker images $(COMPLIANCE_BENCHMARKER_IMAGE) -a -q)
+
 ###############################################################################
 # Tests
 ###############################################################################
@@ -214,14 +231,13 @@ ut combined.coverprofile: run-elastic
 ###############################################################################
 # CI/CD
 ###############################################################################
-
-.PHONY: cd ci version
+.PHONY: cd ci
 
 ## Builds the code and runs all tests.
 ci: static-checks ut
 
 ## Deploys images to registry
-cd: images-all cd-common
+cd: image-all cd-common
 # push the scale loader separately because we don't release it and therefore don't want it as part of the build images list.
 	$(MAKE) retag-build-images-with-registries push-images-to-registries push-manifests BUILD_IMAGES=$(COMPLIANCE_SCALELOADER_IMAGE) IMAGETAG=$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
 
@@ -260,26 +276,3 @@ cover-report: combined.coverprofile
 	                           sed 's=$(PACKAGE_NAME)/==' | \
 	                           column -t | \
 	                           grep -v '100\.0%'"
-
-bin/server.transfer-url: bin/server-$(ARCH)
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'curl --upload-file bin/server-$(ARCH) https://transfer.sh/tigera-compliance-server > $@'
-
-bin/controller.transfer-url: bin/controller-$(ARCH)
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'curl --upload-file bin/controller-$(ARCH) https://transfer.sh/tigera-compliance-controller > $@'
-
-bin/snapshotter.transfer-url: bin/snapshotter-$(ARCH)
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'curl --upload-file bin/snapshotter-$(ARCH) https://transfer.sh/tigera-compliance-snapshotter > $@'
-
-bin/reporter.transfer-url: bin/reporter-$(ARCH)
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'curl --upload-file bin/reporter-$(ARCH) https://transfer.sh/tigera-compliance-reporter > $@'
-
-bin/scaleloader.transfer-url: bin/scaleloader-$(ARCH)
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'curl --upload-file bin/scaleloader-$(ARCH) https://transfer.sh/tigera-compliance-scaleloader > $@'
-
-bin/benchmarker.transfer-url: bin/benchmarker-$(ARCH)
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'curl --upload-file bin/benchmarker-$(ARCH) https://transfer.sh/tigera-compliance-benchmarker > $@'
-
-# Install or update the tools used by the build
-.PHONY: update-tools
-update-tools:
-	go get -u github.com/onsi/ginkgo/ginkgo

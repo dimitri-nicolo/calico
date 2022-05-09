@@ -1,4 +1,6 @@
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.5 AS base
+ARG UBI_IMAGE
+
+FROM ${UBI_IMAGE} AS ubi
 
 COPY clean.sh /usr/local/bin/clean.sh
 RUN touch /in-the-container
@@ -22,11 +24,11 @@ RUN  /usr/local/bin/clean.sh "/entrypoint.sh" "/bin/scaleloader"
 FROM scratch
 SHELL ["/bin/sh", "-c"]
 
-COPY --from=base /entrypoint.sh /entrypoint.sh   
-COPY --from=base /lib64/ /lib64/
-COPY --from=base /usr/lib64/ /usr/lib64/
-COPY --from=base /bin/ /bin/
-COPY --from=base /usr/bin/ /usr/bin/
+COPY --from=ubi /entrypoint.sh /entrypoint.sh   
+COPY --from=ubi /lib64/ /lib64/
+COPY --from=ubi /usr/lib64/ /usr/lib64/
+COPY --from=ubi /bin/ /bin/
+COPY --from=ubi /usr/bin/ /usr/bin/
 
 ENV RUN_SCENARIO=true
 
