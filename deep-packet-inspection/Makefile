@@ -19,7 +19,10 @@ include ../lib.Makefile
 ###############################################################################
 # Env vars related to building
 ###############################################################################
-SRC_FILES = $(shell find pkg cmd -name '*.go') $(shell find ../libcalico-go/lib -name '*.go') $(shell find ../lma/pkg -name '*.go')
+SRC_FILES = $(shell find pkg cmd -name '*.go') \
+		$(shell find ../api/pkg -name '*.go') \
+		$(shell find ../libcalico-go/lib -name '*.go') \
+		$(shell find ../lma/pkg -name '*.go')
 
 # We use -X to insert the version information into the placeholder variables
 # in the version package.
@@ -38,30 +41,30 @@ build: bin/deep-packet-inspection-$(ARCH)
 bin/deep-packet-inspection-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/$*/*.go && \
-				( ldd $@ 2>&1 | \
-					grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
-				( echo "Error: $@ was not statically linked"; false ) )'
+			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/$*/*.go'
 
 ###############################################################################
 # BUILD IMAGE
 ###############################################################################
+DEEP_PACKET_INSPECTION_CONTAINER_CREATED=.deep-packet-inspection.created-$(ARCH)
+
 # Build the docker image.
 .PHONY: $(BUILD_IMAGES)
 
 # by default, build the image for the target architecture
 .PHONY: image-all
-image-all: $(addprefix sub-image-,$(ARCHES))
+image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-.PHONY: image $(DEEP_PACKET_INSPECTION_IMAGE) $(DEEP_PACKET_INSPECTION_IMAGE)-$(ARCH)
-image: $(BUILD_IMAGES)
+.PHONY: image
+image: $(DEEP_PACKET_INSPECTION_IMAGE)
 
-$(DEEP_PACKET_INSPECTION_IMAGE): $(DEEP_PACKET_INSPECTION_IMAGE)-$(ARCH)
-$(DEEP_PACKET_INSPECTION_IMAGE)-$(ARCH): bin/deep-packet-inspection-$(ARCH)
+$(DEEP_PACKET_INSPECTION_IMAGE): $(DEEP_PACKET_INSPECTION_CONTAINER_CREATED)
+$(DEEP_PACKET_INSPECTION_CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) bin/deep-packet-inspection-$(ARCH)
 	$(DOCKER_BUILD) -t $(DEEP_PACKET_INSPECTION_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) . --load
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
+	touch $@
 
 .PHONY: clean
 clean:
@@ -69,6 +72,7 @@ clean:
 		report/*.xml \
 		config/
 	find . -name '*.coverprofile' -type f -delete
+	fm -f $(DEEP_PACKET_INSPECTION_CONTAINER_CREATED)
 	-docker image rm -f $$(docker images $(DEEP_PACKET_INSPECTION_IMAGE) -a -q)
 
 ###############################################################################
@@ -90,27 +94,27 @@ GINKGO = ginkgo $(GINKGO_ARGS)
 #############################################
 # Run unit level tests
 #############################################
-GINKGO_FOCUS?=Syncer
-
 # Comma separated paths to packages containing fv tests
 FV_PACKAGE=pkg/syncer
 
 .PHONY: ut
 ## Run only Unit Tests.
 ut:
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod download && $(GINKGO) -r -skipPackage=$(FV_PACKAGE) pkg/*'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) -r -skipPackage=$(FV_PACKAGE) pkg/*'
 
 
 ###############################################################################
 # FV Tests
 ###############################################################################
+FV_GINKGO_FOCUS?=Syncer
+
 ## Run the ginkgo FVs
 fv: run-k8s-apiserver
 	 $(DOCKER_RUN) \
 	 	-e KUBECONFIG=/home/user/certs/kubeconfig \
 		-v $(CERTS_PATH):/home/user/certs \
 	 	-e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 $(CALICO_BUILD) \
-		 sh -c '$(GIT_CONFIG_SSH) ginkgo -r --focus="$(GINKGO_FOCUS)" $(GINKGO_ARGS)'
+		 sh -c '$(GIT_CONFIG_SSH) ginkgo -r --focus="$(FV_GINKGO_FOCUS)" $(GINKGO_ARGS)'
 
 ###############################################################################
 # CI/CD

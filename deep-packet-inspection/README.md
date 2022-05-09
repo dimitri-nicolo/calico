@@ -25,7 +25,7 @@ To run all tests
 make fv ut
 ```
 
-FV test runs against real k8s, they should be added to the GINKGO_FOCUS variable in Makefile.
+FV test runs against real k8s, they should be added to the `FV_GINKGO_FOCUS` variable in Makefile.
 
 ## Testing snort with local rules for development
 
