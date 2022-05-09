@@ -641,7 +641,7 @@ blocks:
 
 - name: 'intrusion-detection-controller'
   run:
-    when: "false or change_in(['/*', '/intrusion-detection-controller/', '/api/', '/libcalico-go/', '/licensing/client/', '/licensing/client/monitor/' '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "false or change_in(['/*', '/intrusion-detection-controller/', '/api/', '/libcalico-go/', '/licensing/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
   task:
     secrets:
