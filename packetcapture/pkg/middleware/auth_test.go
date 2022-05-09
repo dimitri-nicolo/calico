@@ -24,8 +24,8 @@ import (
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/auth/testing"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
-	"github.com/projectcalico/calico/packetcapture-api/pkg/cache"
-	"github.com/projectcalico/calico/packetcapture-api/pkg/middleware"
+	"github.com/projectcalico/calico/packetcapture/pkg/cache"
+	"github.com/projectcalico/calico/packetcapture/pkg/middleware"
 )
 
 var _ = Describe("AuthZ", func() {

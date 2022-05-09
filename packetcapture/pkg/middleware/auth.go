@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/projectcalico/calico/lma/pkg/auth"
-	"github.com/projectcalico/calico/packetcapture-api/pkg/cache"
-
 	log "github.com/sirupsen/logrus"
+
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/endpoints/request"
+
+	"github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/packetcapture/pkg/cache"
 )
 
 // AuthZ is used to authorize requests for PacketCapture files access

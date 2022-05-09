@@ -1,13 +1,13 @@
 # Copyright 2019-2022 Tigera Inc. All rights reserved.
 include ../metadata.mk
 
-PACKAGE_NAME    ?= github.com/projectcalico/calico/packetcapture-api
+PACKAGE_NAME    ?= github.com/projectcalico/calico/packetcapture
 
 #############################################
 # Env vars related to packaging and releasing
 #############################################
-PACKETCAPTURE_API_IMAGE ?=packetcapture-api
-BUILD_IMAGES            ?=$(PACKETCAPTURE_API_IMAGE)
+PACKETCAPTURE_IMAGE ?=packetcapture
+BUILD_IMAGES        ?=$(PACKETCAPTURE_IMAGE)
 
 ###############################################################################
 # Include ../lib.Makefile
@@ -36,10 +36,10 @@ VERSION_FLAGS   = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
 # BUILD BINARY
 ###############################################################################
 # This section builds the output binaries.
-build: bin/packetcapture-api-$(ARCH)
+build: bin/packetcapture-$(ARCH)
 
-.PHONY: bin/packetcapture-api-$(ARCH)
-bin/packetcapture-api-$(ARCH): $(SRC_FILES)
+.PHONY: bin/packetcapture-$(ARCH)
+bin/packetcapture-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
 			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/$*/*.go && \
@@ -59,12 +59,12 @@ image-all: $(addprefix sub-image-,$(ARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-.PHONY: image $(PACKETCAPTURE_API_IMAGE) $(PACKETCAPTURE_API_IMAGE)-$(ARCH)
+.PHONY: image $(PACKETCAPTURE_IMAGE) $(PACKETCAPTURE_IMAGE)-$(ARCH)
 image: $(BUILD_IMAGES)
 
-$(PACKETCAPTURE_API_IMAGE): $(PACKETCAPTURE_API_IMAGE)-$(ARCH)
-$(PACKETCAPTURE_API_IMAGE)-$(ARCH): bin/packetcapture-api-$(ARCH)
-	$(DOCKER_BUILD) -t $(PACKETCAPTURE_API_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) . --load
+$(PACKETCAPTURE_IMAGE): $(PACKETCAPTURE_IMAGE)-$(ARCH)
+$(PACKETCAPTURE_IMAGE)-$(ARCH): bin/packetcapture-$(ARCH)
+	$(DOCKER_BUILD) -t $(PACKETCAPTURE_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) . --load
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 
 .PHONY: clean
@@ -72,7 +72,7 @@ clean:
 	rm -rf bin \
 		report/*.xml \
 		release-notes-*
-	-docker image rm -f $$(docker images $(PACKETCAPTURE_API_IMAGE) -a -q)
+	-docker image rm -f $$(docker images $(PACKETCAPTURE_IMAGE) -a -q)
 
 ###############################################################################
 # Testing

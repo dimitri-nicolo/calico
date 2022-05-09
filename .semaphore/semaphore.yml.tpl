@@ -59,8 +59,8 @@ promotions:
   pipeline_file: push-images/es-gateway.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
-- name: Push packetcapture-api images
-  pipeline_file: push-images/packetcapture-api.yml
+- name: Push packetcapture images
+  pipeline_file: push-images/packetcapture.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
 # Have a separate promotion for publishing Helm charts.
@@ -620,18 +620,18 @@ blocks:
       commands:
       - make ci
 
-- name: 'packetcapture-api'
+- name: 'packetcapture'
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/packetcapture-api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "${FORCE_RUN} or change_in(['/*', '/packetcapture/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
   task:
     secrets:
     - name: test-customer-license
     prologue:
       commands:
-      - cd packetcapture-api
+      - cd packetcapture
     jobs:
-    - name: "packetcapture-api tests"
+    - name: "packetcapture tests"
       commands:
       - make ci
 

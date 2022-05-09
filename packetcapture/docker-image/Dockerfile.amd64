@@ -10,13 +10,13 @@ WORKDIR /rootfs
 RUN mkdir -p etc/ssl/certs && \
     cp /etc/ssl/certs/* etc/ssl/certs
 
-ADD bin/packetcapture-api-amd64 /packetcapture-api
+ADD bin/packetcapture-amd64 /packetcapture
 
 FROM scratch
 
 COPY --from=ubi /rootfs /
 # Add your binary to the image
-COPY --chown=1001 --from=ubi /packetcapture-api /packetcapture-api
+COPY --chown=1001 --from=ubi /packetcapture /packetcapture
 
 # Set the working directory to where you can run your application
 WORKDIR /
@@ -24,4 +24,4 @@ WORKDIR /
 USER 1001
 
 # Now define the command-line call to start your application
-ENTRYPOINT ["/packetcapture-api"]
+ENTRYPOINT ["/packetcapture"]

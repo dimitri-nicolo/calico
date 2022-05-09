@@ -15,18 +15,18 @@ import (
 	"os"
 	"strings"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/errors"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/errors"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
-	"github.com/projectcalico/calico/packetcapture-api/pkg/cache"
-	"github.com/projectcalico/calico/packetcapture-api/pkg/capture"
-	"github.com/projectcalico/calico/packetcapture-api/pkg/handlers"
-	"github.com/projectcalico/calico/packetcapture-api/pkg/middleware"
+	"github.com/projectcalico/calico/packetcapture/pkg/cache"
+	"github.com/projectcalico/calico/packetcapture/pkg/capture"
+	"github.com/projectcalico/calico/packetcapture/pkg/handlers"
+	"github.com/projectcalico/calico/packetcapture/pkg/middleware"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const loremLipsum = "Lorem Lipsum"

@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
-	"github.com/projectcalico/calico/packetcapture-api/pkg/middleware"
+	"github.com/projectcalico/calico/packetcapture/pkg/middleware"
 )
 
 var _ = Describe("Parser", func() {

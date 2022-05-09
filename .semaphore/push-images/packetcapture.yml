@@ -1,5 +1,5 @@
 version: v1.0
-name: Publish packetcapture-api images
+name: Publish packetcapture images
 agent:
   machine:
     type: e1-standard-2
@@ -11,7 +11,7 @@ execution_time_limit:
 blocks:
   # Build and push images.
   # We'll only do this on non-PR builds, where we have credentials to do so.
-  - name: "Publish packetcapture-api images"
+  - name: "Publish packetcapture images"
     skip:
       # Only run on branches, not PRs.
       when: "branch !~ '.+'"
@@ -37,9 +37,9 @@ blocks:
       - name: docker
       - name: google-service-account-for-gcr
       jobs:
-      - name: "packetcapture-api"
+      - name: "packetcapture"
         env_vars:
         - name: DEV_REGISTRIES
           value: gcr.io/unique-caldron-775/cnx/tigera
         commands:
-        - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C packetcapture-api image-all cd CONFIRM=true; fi
+        - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make -C packetcapture image-all cd CONFIRM=true; fi

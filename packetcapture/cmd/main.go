@@ -8,20 +8,19 @@ import (
 	"net/http"
 	"os"
 
-	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
-	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
-	cache2 "github.com/projectcalico/calico/packetcapture-api/pkg/cache"
-	"github.com/projectcalico/calico/packetcapture-api/pkg/capture"
-	"github.com/projectcalico/calico/packetcapture-api/pkg/config"
-	"github.com/projectcalico/calico/packetcapture-api/pkg/handlers"
-	"github.com/projectcalico/calico/packetcapture-api/pkg/middleware"
-	"github.com/projectcalico/calico/packetcapture-api/pkg/version"
+	"github.com/kelseyhightower/envconfig"
+	log "github.com/sirupsen/logrus"
 
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/kelseyhightower/envconfig"
-
-	log "github.com/sirupsen/logrus"
+	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
+	cache2 "github.com/projectcalico/calico/packetcapture/pkg/cache"
+	"github.com/projectcalico/calico/packetcapture/pkg/capture"
+	"github.com/projectcalico/calico/packetcapture/pkg/config"
+	"github.com/projectcalico/calico/packetcapture/pkg/handlers"
+	"github.com/projectcalico/calico/packetcapture/pkg/middleware"
+	"github.com/projectcalico/calico/packetcapture/pkg/version"
 )
 
 var (

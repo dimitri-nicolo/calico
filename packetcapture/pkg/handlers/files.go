@@ -18,9 +18,9 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
-	"github.com/projectcalico/calico/packetcapture-api/pkg/cache"
-	"github.com/projectcalico/calico/packetcapture-api/pkg/capture"
-	"github.com/projectcalico/calico/packetcapture-api/pkg/middleware"
+	"github.com/projectcalico/calico/packetcapture/pkg/cache"
+	"github.com/projectcalico/calico/packetcapture/pkg/capture"
+	"github.com/projectcalico/calico/packetcapture/pkg/middleware"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
