@@ -28,9 +28,14 @@ include ../lib.Makefile
 ###############################################################################
 # Define some constants
 ###############################################################################
-BINDIR        ?= bin
-SRC_FILES      = $(shell find pkg cmd -name '*.go') $(shell find ../libcalico-go/lib -name '*.go') $(shell find ../lma/pkg -name '*.go')
-TEST_DIRS     ?= $(shell find pkg -name '*_test.go' -exec dirname {} \; | sort | uniq)
+BINDIR    ?= bin
+SRC_FILES  = $(shell find pkg cmd -name '*.go') \
+		$(shell find ../api/pkg -name '*.go') \
+		$(shell find ../libcalico-go/lib -name '*.go') \
+		$(shell find ../licensing/client -name '*.go') \
+		$(shell find ../licensing/monitor -name '*.go') \
+		$(shell find ../lma/pkg -name '*.go')
+TEST_DIRS ?= $(shell find pkg -name '*_test.go' -exec dirname {} \; | sort | uniq)
 ifdef UNIT_TESTS
 UNIT_TEST_FLAGS= -run $(UNIT_TESTS) -v
 endif
@@ -44,43 +49,44 @@ VERSION_FLAGS=-X $(PACKAGE_NAME)/pkg/version.VERSION=$(GIT_VERSION) \
 # Some will have dedicated targets to make it easier to type, for example
 # "controller" instead of "$(BINDIR)/controller".
 #########################################################################
+IDS_CONTROLLER_CONTAINER_CREATED=.intrusion-detection-controller.created-$(ARCH)
+JOB_INSTALLER_CONTAINER_CREATED=.intrusion-detection-job-installer.created-$(ARCH)
+
 build: $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH)
 
 .PHONY: $(BINDIR)/controller-$(ARCH)
 $(BINDIR)/controller-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD) \
 	    sh -c '$(GIT_CONFIG_SSH) \
-	           go build -o $@ -v -ldflags "$(VERSION_FLAGS)" $(BUILD_TAGS) cmd/controller/controller.go && \
-               ( ldd $(BINDIR)/controller-$(ARCH) 2>&1 | \
-			       grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
-	             ( echo "Error: $(BINDIR)/controller-$(ARCH) was not statically linked"; false ) )'
+	           go build -o $@ -v -ldflags "$(VERSION_FLAGS)" $(BUILD_TAGS) cmd/controller/controller.go'
 
 .PHONY: $(BINDIR)/healthz-$(ARCH)
 $(BINDIR)/healthz-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD) \
 	    sh -c '$(GIT_CONFIG_SSH) \
-	           go build -o $@ -v $(BUILD_TAGS) cmd/healthz/healthz.go && \
-               ( ldd $(BINDIR)/healthz-$(ARCH) 2>&1 | \
-			       grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
-	             ( echo "Error: $(BINDIR)/healthz-$(ARCH) was not statically linked"; false ) )'
+	           go build -o $@ -v $(BUILD_TAGS) cmd/healthz/healthz.go'
 
 # by default, build the image for the target architecture
-.PHONY: images-all
-images-all: $(addprefix sub-images-,$(ARCHES))
-sub-images-%:
-	$(MAKE) images ARCH=$*
+.PHONY: image-all
+image-all: $(addprefix sub-image-,$(VALIDARCHES))
+sub-image-%:
+	$(MAKE) image ARCH=$*
 
-images: $(IDS_CONTROLLER_IMAGE)-$(ARCH) $(JOB_INSTALLER_IMAGE)-$(ARCH)
-	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
+.PHONY: image
+image: $(IDS_CONTROLLER_IMAGE) $(JOB_INSTALLER_IMAGE)
 
-.PHONY: $(IDS_CONTROLLER_IMAGE)-$(ARCH)
-$(IDS_CONTROLLER_IMAGE)-$(ARCH): $(BINDIR)/controller-$(ARCH)
+$(IDS_CONTROLLER_IMAGE): $(IDS_CONTROLLER_CONTAINER_CREATED)
+$(IDS_CONTROLLER_CONTAINER_CREATED): docker-image/controller/Dockerfile.$(ARCH) $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH)
 	$(DOCKER_BUILD) -t $(IDS_CONTROLLER_IMAGE):latest-$(ARCH) -f docker-image/controller/Dockerfile.$(ARCH) . --load
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(IDS_CONTROLLER_IMAGE)
+	touch $@
 
-.PHONY: $(JOB_INSTALLER_IMAGE)-$(ARCH)
-$(JOB_INSTALLER_IMAGE)-$(ARCH): $(BINDIR)/healthz-$(ARCH)
+$(JOB_INSTALLER_IMAGE): $(JOB_INSTALLER_CONTAINER_CREATED)
+$(JOB_INSTALLER_CONTAINER_CREATED): docker-image/install/Dockerfile.$(ARCH)
 	# Run from the "install" sub-directory so that docker has access to all the python bits.
 	$(DOCKER_BUILD) -t $(JOB_INSTALLER_IMAGE):latest-$(ARCH) -f docker-image/install/Dockerfile.$(ARCH) install --load
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(JOB_INSTALLER_IMAGE)
+	touch $@
 
 ##########################################################################
 # Testing
@@ -96,6 +102,8 @@ run-ut:
 .PHONY: clean
 clean:
 	rm -fr $(BINDIR)
+	rm -f $(IDS_CONTROLLER_CONTAINER_CREATED)
+	rm -f $(JOB_INSTALLER_CONTAINER_CREATED)
 	-docker image rm -f $$(docker images $(IDS_CONTROLLER_IMAGE) -a -q)
 	-docker image rm -f $$(docker images $(JOB_INSTALLER_IMAGE) -a -q)
 
@@ -113,7 +121,7 @@ MOCKERY_FILE_PATHS= \
 ci: clean static-checks ut
 
 ## Deploy images to registry
-cd: images cd-common
+cd: image-all cd-common
 
 ###############################################################################
 # Miscellaneous

@@ -36,30 +36,31 @@ build: bin/es-gateway-$(ARCH)
 bin/es-gateway-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/$*/*.go && \
-				( ldd $@ 2>&1 | \
-					grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
-				( echo "Error: $@ was not statically linked"; false ) )'
+			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/$*/*.go'
 
 ###############################################################################
 # Building the image
 ###############################################################################
-.PHONY: image $(ES_GATEWAY_IMAGE) $(ES_GATEWAY_IMAGE)-$(ARCH)
+ES_GATEWAY_CONTAINER_CREATED=.es-gateway.created-$(ARCH)
 
 .PHONY: image-all
-image-all: $(addprefix sub-image-,$(ARCHES))
+image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
+.PHONY: image
 image: $(ES_GATEWAY_IMAGE)
-$(ES_GATEWAY_IMAGE): $(ES_GATEWAY_IMAGE)-$(ARCH)
-$(ES_GATEWAY_IMAGE)-$(ARCH): bin/es-gateway-$(ARCH)
+
+$(ES_GATEWAY_IMAGE): $(ES_GATEWAY_CONTAINER_CREATED)
+$(ES_GATEWAY_CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) bin/es-gateway-$(ARCH)
 	$(DOCKER_BUILD) -t $(ES_GATEWAY_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) . --load
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
+	touch $@
 
 .PHONY: clean
 clean:
 	rm -rf bin
+	rm -f $(ES_GATEWAY_CONTAINER_CREATED)
 	-docker image rm -f $$(docker images $(ES_GATEWAY_IMAGE) -a -q)
 
 ###############################################################################
