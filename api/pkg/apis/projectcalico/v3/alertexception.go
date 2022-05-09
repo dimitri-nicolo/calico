@@ -32,13 +32,13 @@ type AlertExceptionSpec struct {
 	// Selector defines a query string for alert events to be excluded from UI search results.
 	Selector string `json:"selector" validate:"required"`
 
-	// Defines the start time from which this alert exception will take effect.
+	// StartTime defines the start time from which this alert exception will take effect.
 	// If the value is in the past, matched alerts will be filtered immediately.
 	// If the value is changed to a future time, alert exceptions will restart at that time.
 	// +kubebuilder:validation:Format="date-time"
 	StartTime metav1.Time `json:"startTime" validate:"required"`
 
-	// Defines the end time at which this alert exception will expire.
+	// EndTime defines the end time at which this alert exception will expire.
 	// If omitted the alert exception filtering will continue indefinitely.
 	// +optional
 	//+kubebuilder:validation:Format="date-time"

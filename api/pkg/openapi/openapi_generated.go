@@ -632,14 +632,14 @@ func schema_pkg_apis_projectcalico_v3_AlertExceptionSpec(ref common.ReferenceCal
 					},
 					"startTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Defines the start time from which this alert exception will take effect. If the value is in the past, matched alerts will be filtered immediately. If the value is changed to a future time, alert exceptions will restart at that time.",
+							Description: "StartTime defines the start time from which this alert exception will take effect. If the value is in the past, matched alerts will be filtered immediately. If the value is changed to a future time, alert exceptions will restart at that time.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
 					"endTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Defines the end time at which this alert exception will expire. If omitted the alert exception filtering will continue indefinitely.",
+							Description: "EndTime defines the end time at which this alert exception will expire. If omitted the alert exception filtering will continue indefinitely.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},

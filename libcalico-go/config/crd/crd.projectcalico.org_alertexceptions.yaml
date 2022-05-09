@@ -38,8 +38,9 @@ spec:
                 description: The description is displayed by the UI.
                 type: string
               endTime:
-                description: Defines the end time at which this alert exception will
-                  expire. If omitted the alert exception filtering will continue indefinitely.
+                description: EndTime defines the end time at which this alert exception
+                  will expire. If omitted the alert exception filtering will continue
+                  indefinitely.
                 format: date-time
                 type: string
               selector:
@@ -47,10 +48,10 @@ spec:
                   excluded from UI search results.
                 type: string
               startTime:
-                description: Defines the start time from which this alert exception
-                  will take effect. If the value is in the past, matched alerts will
-                  be filtered immediately. If the value is changed to a future time,
-                  alert exceptions will restart at that time.
+                description: StartTime defines the start time from which this alert
+                  exception will take effect. If the value is in the past, matched
+                  alerts will be filtered immediately. If the value is changed to
+                  a future time, alert exceptions will restart at that time.
                 format: date-time
                 type: string
             required:
