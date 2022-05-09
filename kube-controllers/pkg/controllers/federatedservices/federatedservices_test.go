@@ -516,7 +516,7 @@ var (
 		namespace: "namespace1",
 	}
 	svcKeyFed = model.ResourceKey{
-		Kind:      apiv3.KindK8sService,
+		Kind:      model.KindKubernetesService,
 		Name:      "federated",
 		Namespace: "namespace1",
 	}
@@ -525,7 +525,7 @@ var (
 		namespace: "namespace1",
 	}
 	svcKey1 = model.ResourceKey{
-		Kind:      apiv3.KindK8sService,
+		Kind:      model.KindKubernetesService,
 		Name:      "my-local-service",
 		Namespace: "namespace1",
 	}
@@ -541,7 +541,7 @@ var (
 	}
 	svcKey2 = model.RemoteClusterResourceKey{
 		ResourceKey: model.ResourceKey{
-			Kind:      apiv3.KindK8sService,
+			Kind:      model.KindKubernetesService,
 			Name:      "my-remote-service",
 			Namespace: "namespace1",
 		},
@@ -562,7 +562,7 @@ var (
 	}
 	svcKey3 = model.RemoteClusterResourceKey{
 		ResourceKey: model.ResourceKey{
-			Kind:      apiv3.KindK8sService,
+			Kind:      model.KindKubernetesService,
 			Name:      "my-non-matching-remote-service",
 			Namespace: "namespace2",
 		},
@@ -583,7 +583,7 @@ var (
 	}
 	svcKey4 = model.RemoteClusterResourceKey{
 		ResourceKey: model.ResourceKey{
-			Kind:      apiv3.KindK8sService,
+			Kind:      model.KindKubernetesService,
 			Name:      "my-non-matching-remote-service2",
 			Namespace: "namespace1",
 		},

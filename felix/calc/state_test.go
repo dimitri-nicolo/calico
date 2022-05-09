@@ -55,6 +55,7 @@ type State struct {
 	ExpectedNumberOfPolicies             int
 	ExpectedCaptureUpdates               set.Set
 	ExpectedCaptureRemovals              set.Set
+	ExpectedEncapsulation                proto.Encapsulation
 }
 
 func (s State) String() string {
@@ -129,6 +130,7 @@ func (s State) Copy() State {
 			return nil
 		})
 	}
+	cpy.ExpectedEncapsulation = s.ExpectedEncapsulation
 
 	cpy.Name = s.Name
 
@@ -335,6 +337,12 @@ func (s State) withIPSecBlacklist(endpointAddr ...string) (newState State) {
 		newState.ExpectedIPSecBlacklist.Add(a)
 	}
 	return
+}
+
+func (s State) withExpectedEncapsulation(encap proto.Encapsulation) (newState State) {
+	newState = s.Copy()
+	newState.ExpectedEncapsulation = encap
+	return newState
 }
 
 func (s State) Keys() set.Set {

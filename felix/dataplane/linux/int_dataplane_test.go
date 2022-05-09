@@ -114,7 +114,7 @@ var _ = Describe("Constructor test", func() {
 				IptablesMarkDNSPolicy:            0x00001,
 				IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
 
-				IPIPEnabled:       configParams.IpInIpEnabled,
+				IPIPEnabled:       configParams.Encapsulation.IPIPEnabled,
 				IPIPTunnelAddress: configParams.IpInIpTunnelAddr,
 
 				ActionOnDrop:              configParams.DropActionOverride,

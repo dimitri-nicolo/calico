@@ -15,8 +15,6 @@ import (
 	kapiv1 "k8s.io/api/core/v1"
 	"k8s.io/kubernetes/pkg/proxy"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/projectcalico/calico/felix/dispatcher"
 	"github.com/projectcalico/calico/felix/labelindex"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
@@ -69,7 +67,7 @@ func (tpr *L7FrontEndResolver) OnResourceUpdate(update api.Update) (_ bool) {
 	switch k := update.Key.(type) {
 	case model.ResourceKey:
 		switch k.Kind {
-		case v3.KindK8sService:
+		case model.KindKubernetesService:
 			log.Debugf("processing update for service %s", k)
 			if update.Value == nil {
 				if _, ok := tpr.suh.services[k]; ok {

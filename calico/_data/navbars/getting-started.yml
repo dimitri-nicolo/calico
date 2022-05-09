@@ -33,6 +33,8 @@ section:
     path: /getting-started/kubernetes/gke
   - title: RKE
     path: /getting-started/kubernetes/rancher
+  - title: RKE2
+    path: /getting-started/kubernetes/rke2
   - title: TKG
     path: /getting-started/kubernetes/tkg
   - title: MKE
@@ -107,7 +109,12 @@ section:
     path: /maintenance/upgrading-calico-to-calico-enterprise
     section:
     - title: Kubernetes
-      path: /maintenance/upgrade-to-tsee
+      path: /maintenance/upgrade-to-tsee/
+      section:
+      - title: Standard
+        path: /maintenance/upgrade-to-tsee/standard
+      - title: Helm
+        path: /maintenance/upgrade-to-tsee/helm
     - title: OpenShift
       path: /maintenance/upgrade-to-tsee-openshift
 - title: Install a patch release

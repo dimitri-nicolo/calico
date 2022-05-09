@@ -90,7 +90,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", 
 					filtered = append(filtered, u)
 				}
 
-				if (rk.Kind == apiv3.KindK8sEndpoints || rk.Kind == apiv3.KindK8sService) && isBuiltInService(rk.Namespace) {
+				if (rk.Kind == apiv3.KindK8sEndpoints || rk.Kind == model.KindKubernetesService) && isBuiltInService(rk.Namespace) {
 					continue
 				}
 				filtered = append(filtered, u)
@@ -193,7 +193,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", 
 				{
 					KVPair: model.KVPair{
 						Key: model.ResourceKey{
-							Kind:      apiv3.KindK8sService,
+							Kind:      model.KindKubernetesService,
 							Name:      "service1",
 							Namespace: "namespace-1",
 						},
@@ -217,7 +217,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", 
 				{
 					KVPair: model.KVPair{
 						Key: model.ResourceKey{
-							Kind:      apiv3.KindK8sService,
+							Kind:      model.KindKubernetesService,
 							Name:      "service1000",
 							Namespace: "namespace-2",
 						},
@@ -288,7 +288,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", 
 				{
 					KVPair: model.KVPair{
 						Key: model.ResourceKey{
-							Kind:      apiv3.KindK8sService,
+							Kind:      model.KindKubernetesService,
 							Name:      "service1000",
 							Namespace: "namespace-2",
 						},
@@ -299,7 +299,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", 
 					KVPair: model.KVPair{
 						Key: model.RemoteClusterResourceKey{
 							ResourceKey: model.ResourceKey{
-								Kind:      apiv3.KindK8sService,
+								Kind:      model.KindKubernetesService,
 								Name:      "service1000",
 								Namespace: "namespace-2",
 							},
@@ -374,7 +374,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", 
 				filtered = append(filtered, u)
 			}
 
-			if (rk.Kind == apiv3.KindK8sEndpoints || rk.Kind == apiv3.KindK8sService) && isBuiltInService(rk.Namespace) {
+			if (rk.Kind == apiv3.KindK8sEndpoints || rk.Kind == model.KindKubernetesService) && isBuiltInService(rk.Namespace) {
 				continue
 			}
 			filtered = append(filtered, u)
@@ -456,7 +456,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", 
 			{
 				KVPair: model.KVPair{
 					Key: model.ResourceKey{
-						Kind:      apiv3.KindK8sService,
+						Kind:      model.KindKubernetesService,
 						Name:      "service1",
 						Namespace: "namespace-1",
 					},
@@ -480,7 +480,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster federationsyncer tests", 
 			{
 				KVPair: model.KVPair{
 					Key: model.ResourceKey{
-						Kind:      apiv3.KindK8sService,
+						Kind:      model.KindKubernetesService,
 						Name:      "service1000",
 						Namespace: "namespace-2",
 					},

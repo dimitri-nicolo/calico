@@ -2,6 +2,7 @@
 title: Configure egress gateways, on-premises
 description: Configure specific application traffic to exit the cluster through an egress gateway.
 canonical_url: '/networking/egress/egress-gateway-on-prem'
+feature_name: egress_gateway
 ---
 
 ### Big picture
@@ -409,3 +410,4 @@ The new elements required as of v3.11.0 are the volumeMounts and volumes section
 Please see also:
 
 - The `egressIP...` fields of the [FelixConfiguration resource]({{site.baseurl}}/reference/resources/felixconfig#spec).
+- [Additional configuration for egress gateway maintenance]({{site.baseurl}}/networking/egress/egress-gateway-maintenance)

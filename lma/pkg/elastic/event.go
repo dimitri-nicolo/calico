@@ -46,16 +46,22 @@ func (c *client) CreateEventsIndex(ctx context.Context) error {
 		return err
 	}
 
-	// If there is an old events index created by CE <v3.12, add it to the alias as read index.
-	exists, err := c.IndexExists(oldIndex).Do(ctx)
-	if err != nil {
-		log.WithError(err).Error("Failed to check if index exists")
+	// If there is an old events index created by Calico Enterprise prior to v3.12,
+	// add it to the alias as read index and update old events index mapping if necessary.
+	if exists, err := c.IndexExists(oldIndex).Do(ctx); err != nil {
+		log.WithError(err).Error("failed to check if index exists")
 		return err
-	}
-	if exists {
-		_, err := c.Alias().Action(elastic.NewAliasAddAction(alias).Index(oldIndex).IsWriteIndex(false)).Do(ctx)
-		if err != nil {
-			log.WithError(err).Error("Failed to mark old events index as read index")
+	} else if exists {
+		if _, err := c.Alias().Action(elastic.NewAliasAddAction(alias).Index(oldIndex).IsWriteIndex(false)).Do(ctx); err != nil {
+			log.WithError(err).Error("failed to mark old events index as read index")
+			return err
+		}
+
+		var expectedMapping map[string]interface{}
+		if err := json.Unmarshal([]byte(oldEventsMapping), &expectedMapping); err != nil {
+			return nil
+		}
+		if err := c.MaybeUpdateIndexMapping(oldIndex, expectedMapping); err != nil {
 			return err
 		}
 	}
@@ -93,17 +99,13 @@ func (c *client) PutSecurityEvent(ctx context.Context, data api.EventsData) (*el
 }
 
 // DismissSecurityEvent sets the dismissed field to true for an event by id.
-func (c *client) DismissSecurityEvent(ctx context.Context, id string) (*elastic.UpdateResponse, error) {
-	alias := c.ClusterAlias(EventsIndex)
-
-	return c.Update().Index(alias).Id(id).Doc(eventDismissDoc).Do(ctx)
+func (c *client) DismissSecurityEvent(ctx context.Context, index, id string) (*elastic.UpdateResponse, error) {
+	return c.Update().Index(index).Id(id).Doc(eventDismissDoc).Do(ctx)
 }
 
 // DeleteSecurityEvent deletes the event by id.
-func (c *client) DeleteSecurityEvent(ctx context.Context, id string) (*elastic.DeleteResponse, error) {
-	alias := c.ClusterAlias(EventsIndex)
-
-	return c.Delete().Index(alias).Id(id).Do(ctx)
+func (c *client) DeleteSecurityEvent(ctx context.Context, index, id string) (*elastic.DeleteResponse, error) {
+	return c.Delete().Index(index).Id(id).Do(ctx)
 }
 
 // BulkProcessorInitialize creates a bulk processor service and sets default flush size and BulkAfterFunc that
@@ -150,13 +152,12 @@ func (c *client) PutBulkSecurityEvent(data api.EventsData) error {
 // DismissBulkSecurityEvent adds the event dismissal request to bulk processor service,
 // the data is flushed either automatically to Elasticsearch when the document count reaches BulkActions, or
 // when bulk processor service is closed.
-func (c *client) DismissBulkSecurityEvent(id string) error {
+func (c *client) DismissBulkSecurityEvent(index, id string) error {
 	if c.bulkProcessor == nil {
 		return fmt.Errorf("BulkProcessor not initialized")
 	}
-	alias := c.ClusterAlias(EventsIndex)
 
-	r := elastic.NewBulkUpdateRequest().Index(alias).Id(id).Doc(eventDismissDoc)
+	r := elastic.NewBulkUpdateRequest().Index(index).Id(id).Doc(eventDismissDoc)
 	c.bulkProcessor.Add(r)
 	return nil
 }
@@ -164,13 +165,12 @@ func (c *client) DismissBulkSecurityEvent(id string) error {
 // DeleteBulkSecurityEvent adds the event deleting request to bulk processor service,
 // the data is flushed either automatically to Elasticsearch when the document count reaches BulkActions, or
 // when bulk processor service is closed.
-func (c *client) DeleteBulkSecurityEvent(id string) error {
+func (c *client) DeleteBulkSecurityEvent(index, id string) error {
 	if c.bulkProcessor == nil {
 		return fmt.Errorf("BulkProcessor not initalized")
 	}
-	alias := c.ClusterAlias(EventsIndex)
 
-	r := elastic.NewBulkDeleteRequest().Index(alias).Id(id)
+	r := elastic.NewBulkDeleteRequest().Index(index).Id(id)
 	c.bulkProcessor.Add(r)
 	return nil
 }

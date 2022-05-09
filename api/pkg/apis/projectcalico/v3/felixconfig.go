@@ -220,11 +220,13 @@ type FelixConfigurationSpec struct {
 	// to Debug level logs.
 	LogDebugFilenameRegex string `json:"logDebugFilenameRegex,omitempty" validate:"omitempty,regexp"`
 
+	// IPIPEnabled overrides whether Felix should configure an IPIP interface on the host. Optional as Felix determines this based on the existing IP pools. [Default: nil (unset)]
 	IPIPEnabled *bool `json:"ipipEnabled,omitempty" confignamev1:"IpInIpEnabled"`
 	// IPIPMTU is the MTU to set on the tunnel device. See Configuring MTU [Default: 1440]
 	IPIPMTU *int `json:"ipipMTU,omitempty" confignamev1:"IpInIpMtu"`
 
-	VXLANEnabled *bool `json:"vxlanEnabled,omitempty"`
+	// VXLANEnabled overrides whether Felix should create the VXLAN tunnel device for VXLAN networking. Optional as Felix determines this based on the existing IP pools. [Default: nil (unset)]
+	VXLANEnabled *bool `json:"vxlanEnabled,omitempty" confignamev1:"VXLANEnabled"`
 	// VXLANMTU is the MTU to set on the tunnel device. See Configuring MTU [Default: 1440]
 	VXLANMTU  *int `json:"vxlanMTU,omitempty"`
 	VXLANPort *int `json:"vxlanPort,omitempty"`
@@ -539,8 +541,8 @@ type FelixConfigurationSpec struct {
 	// FlowLogsFileNatOutgoingPortLimit is used to specify the maximum number of distinct post SNAT ports that will appear
 	// in the flowLogs. Default value is 3
 	FlowLogsFileNatOutgoingPortLimit *int `json:"flowLogsFileNatOutgoingPortLimit,omitempty" validate:"omitempty"`
-	// FlowLogsFileDomainsLimit is used to configure the number of (destination) domains to include in the flow log. The
-	// domains are only included at aggregation level 0 or 1.
+	// FlowLogsFileDomainsLimit is used to configure the number of (destination) domains to include in the flow log.
+	// These are not included for workload or host endpoint destinations.
 	// [Default: 5]
 	FlowLogsFileDomainsLimit *int `json:"flowLogsFileDomainsLimit,omitempty" validate:"omitempty"`
 

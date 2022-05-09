@@ -737,8 +737,17 @@ func chainsForIfaces(ipVersion uint8,
 
 type mockRouteTable struct {
 	index           int
+	kernelRoutes    map[string][]routetable.Target
 	currentRoutes   map[string][]routetable.Target
 	currentL2Routes map[string][]routetable.L2Target
+}
+
+func (t *mockRouteTable) SetRemoveExternalRoutes(_ bool) {
+	panic("implement me")
+}
+
+func (t *mockRouteTable) ReadRoutesFromKernel(ifaceName string) ([]routetable.Target, error) {
+	return t.kernelRoutes[ifaceName], nil
 }
 
 func (t *mockRouteTable) Index() int {
@@ -780,7 +789,7 @@ func (t *mockRouteTable) Apply() error {
 }
 
 func (t *mockRouteTable) checkRoutes(ifaceName string, expected []routetable.Target) {
-	Expect(t.currentRoutes[ifaceName]).To(Equal(expected))
+	Expect(t.currentRoutes[ifaceName]).To(Equal(expected), "Expect route to exist in table %d. Current routes = %v", t.index, t.currentRoutes)
 }
 
 func (t *mockRouteTable) checkL2Routes(ifaceName string, expected []routetable.L2Target) {

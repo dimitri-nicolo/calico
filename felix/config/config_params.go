@@ -199,6 +199,7 @@ type Config struct {
 	BPFMapSizeRoute                    int              `config:"int;262144;non-zero"`
 	BPFMapSizeConntrack                int              `config:"int;512000;non-zero"`
 	BPFMapSizeIPSets                   int              `config:"int;1048576;non-zero"`
+	BPFHostConntrackBypass             bool             `config:"bool;true"`
 
 	FlowLogsCollectProcessInfo  bool `config:"bool;false"`
 	FlowLogsCollectTcpStats     bool `config:"bool;true"`
@@ -293,14 +294,16 @@ type Config struct {
 	// to Debug level logs.
 	LogDebugFilenameRegex *regexp.Regexp `config:"regexp(nil-on-empty);"`
 
-	VXLANEnabled        bool   `config:"bool;false"`
+	// Optional: VXLAN encap is now determined by the existing IP pools (Encapsulation struct)
+	VXLANEnabled        *bool  `config:"*bool;"`
 	VXLANPort           int    `config:"int;4789"`
 	VXLANVNI            int    `config:"int;4096"`
 	VXLANMTU            int    `config:"int;0"`
 	IPv4VXLANTunnelAddr net.IP `config:"ipv4;"`
 	VXLANTunnelMACAddr  string `config:"string;"`
 
-	IpInIpEnabled    bool   `config:"bool;false"`
+	// Optional: IPIP encap is now determined by the existing IP pools (Encapsulation struct)
+	IpInIpEnabled    *bool  `config:"*bool;"`
 	IpInIpMtu        int    `config:"int;0"`
 	IpInIpTunnelAddr net.IP `config:"ipv4;"`
 
@@ -521,6 +524,9 @@ type Config struct {
 	TPROXYUpstreamConnMark uint32 `config:"mark-bitmask;0x17"`
 
 	KubeMasqueradeBit int `config:"int;14"`
+
+	// Encapsulation information calculated from IP Pools and FelixConfiguration (VXLANEnabled and IpInIpEnabled)
+	Encapsulation Encapsulation
 
 	// State tracking.
 
@@ -777,9 +783,10 @@ func (config *Config) resolve() (changed bool, err error) {
 		}
 	}
 
-	if config.IPSecMode != "" && config.IpInIpEnabled {
+	if config.IPSecMode != "" {
 		log.Info("IPsec is enabled, ignoring IPIP configuration")
-		config.IpInIpEnabled = false
+		f := false
+		config.IpInIpEnabled = &f
 		delete(newRawValues, "IpInIpEnabled")
 		config.IpInIpTunnelAddr = nil
 		delete(newRawValues, "IpInIpTunnelAddr")
@@ -855,7 +862,7 @@ func (config *Config) DatastoreConfig() apiconfig.CalicoAPIConfig {
 		cfg.Spec.EtcdCACertFile = config.EtcdCaFile
 	}
 
-	if !(config.IpInIpEnabled || config.VXLANEnabled || config.BPFEnabled || config.IPSecEnabled()) {
+	if !(config.Encapsulation.IPIPEnabled || config.Encapsulation.VXLANEnabled || config.BPFEnabled || config.IPSecEnabled()) {
 		// Polling k8s for node updates is expensive (because we get many superfluous
 		// updates) so disable if we don't need it.
 		log.Info("Encap disabled, disabling node poll (if KDD is in use).")
@@ -966,6 +973,8 @@ func loadParams() {
 		switch kind {
 		case "bool":
 			param = &BoolParam{}
+		case "*bool":
+			param = &BoolPtrParam{}
 		case "int":
 			intParam := &IntParam{}
 			if kindParams != "" {
@@ -1203,4 +1212,9 @@ func FromConfigUpdate(msg *proto.ConfigUpdate) *Config {
 	// global and per-host datastore configuration fields.
 	p.UpdateFrom(msg.Config, DatastorePerHost)
 	return p
+}
+
+type Encapsulation struct {
+	IPIPEnabled  bool
+	VXLANEnabled bool
 }
