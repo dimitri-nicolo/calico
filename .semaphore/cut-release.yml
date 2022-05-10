@@ -74,3 +74,7 @@ promotions:
     pipeline_file: ../es-gateway/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Cut Voltron Release
+    pipeline_file: ../voltron/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
