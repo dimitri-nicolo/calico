@@ -40,14 +40,14 @@ var _ = Describe("Clusters Endpoint test", func() {
 
 	It("stores body content as file for a successful POST /models", func() {
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("POST", "/clusters/cluster/models/port_scan", strings.NewReader(testBase64FileString))
+		req, _ := http.NewRequest("POST", "/clusters/cluster/models/dynamic/flows/port_scan", strings.NewReader(testBase64FileString))
 		req.Header.Add("Content-Type", "text/plain")
 		handler := modelStorageHandler.HandleClusters()
 
 		handler.ServeHTTP(w, req)
 
 		Expect(w.Result().StatusCode).To(Equal(200))
-		_, err := os.Stat(apiConfig.StoragePath + "/clusters/cluster/models/port_scan.model")
+		_, err := os.Stat(apiConfig.StoragePath + "/clusters/cluster/models/dynamic/flows/port_scan.model")
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -64,7 +64,7 @@ var _ = Describe("Clusters Endpoint test", func() {
 
 	It("returns 405 for PUT method since it is not accepted right now for PUT /models ", func() {
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("PUT", "/clusters/cluster/models/port_scan", strings.NewReader(testBase64FileString))
+		req, _ := http.NewRequest("PUT", "/clusters/cluster/models/dynamic/flows/port_scan", strings.NewReader(testBase64FileString))
 		req.Header.Add("Content-Type", "text/plain")
 		handler := modelStorageHandler.HandleClusters()
 
@@ -75,24 +75,47 @@ var _ = Describe("Clusters Endpoint test", func() {
 
 	It("file content can be fetched for a successful GET /models", func() {
 		postWriter := httptest.NewRecorder()
-		req, _ := http.NewRequest("POST", "/clusters/cluster/models/port_scan", strings.NewReader(testBase64FileString))
+		req, _ := http.NewRequest("POST", "/clusters/cluster/models/dynamic/flows/port_scan", strings.NewReader(testBase64FileString))
 		req.Header.Add("Content-Type", "text/plain")
 		handler := modelStorageHandler.HandleClusters()
 
 		handler.ServeHTTP(postWriter, req)
 
 		Expect(postWriter.Result().StatusCode).To(Equal(200))
-		_, err := os.Stat(apiConfig.StoragePath + "/clusters/cluster/models/port_scan.model")
+		_, err := os.Stat(apiConfig.StoragePath + "/clusters/cluster/models/dynamic/flows/port_scan.model")
 		Expect(err).NotTo(HaveOccurred())
 
 		getWriter := httptest.NewRecorder()
-		getReq, _ := http.NewRequest("GET", "/clusters/cluster/models/port_scan", nil)
+		getReq, _ := http.NewRequest("GET", "/clusters/cluster/models/dynamic/flows/port_scan", nil)
 		handler.ServeHTTP(getWriter, getReq)
 
 		Expect(getWriter.Result().StatusCode).To(Equal(200))
 		bodyBytes, err := ioutil.ReadAll(getWriter.Body)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(bodyBytes)).To(Equal(testBase64FileString))
+	})
 
+	It("file size can be fetched for a successful HEAD /models", func() {
+		postWriter := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/clusters/cluster/models/dynamic/flows/port_scan", strings.NewReader(testBase64FileString))
+		req.Header.Add("Content-Type", "text/plain")
+		handler := modelStorageHandler.HandleClusters()
+
+		handler.ServeHTTP(postWriter, req)
+
+		Expect(postWriter.Result().StatusCode).To(Equal(200))
+		_, err := os.Stat(apiConfig.StoragePath + "/clusters/cluster/models/dynamic/flows/port_scan.model")
+		Expect(err).NotTo(HaveOccurred())
+
+		getWriter := httptest.NewRecorder()
+		getReq, _ := http.NewRequest("HEAD", "/clusters/cluster/models/dynamic/flows/port_scan", nil)
+		handler.ServeHTTP(getWriter, getReq)
+
+		Expect(getWriter.Result().StatusCode).To(Equal(200))
+		Expect(getWriter.Result().ContentLength).To(Equal(int64(12)))
+
+		bodyBytes, err := ioutil.ReadAll(getWriter.Body)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(len(bodyBytes)).To(Equal(0))
 	})
 })

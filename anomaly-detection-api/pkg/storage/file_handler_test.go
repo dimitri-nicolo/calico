@@ -51,15 +51,38 @@ var _ = Describe("File Storage test", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		getReq, _ := http.NewRequest("GET", "/clusters/cluster/models/port_scan", nil)
-		content, apiErr := fileHandler.Load(getReq)
+		_, content, apiErr := fileHandler.Load(getReq)
 		Expect(apiErr).NotTo(HaveOccurred())
 		Expect(content).To(Equal(testBase64FileString))
 	})
 
 	It("returns 404 error if requested on a cluster that does not exist for Load", func() {
 		getReq, _ := http.NewRequest("GET", "/bad-path/cluster/models/port_scan", nil)
-		content, apiErr := fileHandler.Load(getReq)
+		_, content, apiErr := fileHandler.Load(getReq)
 		Expect(content).To(Equal(""))
+		Expect(apiErr.StatusCode).To(Equal(http.StatusNotFound))
+	})
+
+	It("returns file size for State", func() {
+		req, _ := http.NewRequest("POST", "/clusters/cluster/models/port_scan", strings.NewReader(testBase64FileString))
+
+		err := fileHandler.Save(req)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = os.Stat(testModelTempDir + "/clusters/cluster/models/port_scan.model")
+		Expect(err).NotTo(HaveOccurred())
+
+		getReq, _ := http.NewRequest("GET", "/clusters/cluster/models/port_scan", nil)
+		filesize, apiErr := fileHandler.Stat(getReq)
+
+		Expect(apiErr).NotTo(HaveOccurred())
+		Expect(filesize).To(Equal(int64(12)))
+	})
+
+	It("returns 404 error if requested on a cluster that does not exist for Stat", func() {
+		getReq, _ := http.NewRequest("GET", "/bad-path/cluster/models/port_scan", nil)
+		content, apiErr := fileHandler.Stat(getReq)
+		Expect(content).To(Equal(int64(-1)))
 		Expect(apiErr.StatusCode).To(Equal(http.StatusNotFound))
 	})
 })

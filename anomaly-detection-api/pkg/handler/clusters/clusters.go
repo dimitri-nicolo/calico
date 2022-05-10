@@ -4,6 +4,7 @@ package clusters
 import (
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/projectcalico/calico/anomaly-detection-api/pkg/api_error"
 	"github.com/projectcalico/calico/anomaly-detection-api/pkg/config"
@@ -12,7 +13,9 @@ import (
 )
 
 const (
-	AcceptHeaderKey = "Accept"
+	ModelFileDataKey       = "model"
+	AcceptHeaderKey        = "Accept"
+	ContentLengthHeaderKey = "Content-Length"
 
 	StringMIME = "text/plain"
 )
@@ -43,8 +46,19 @@ func (c *ClustersEndpointHandler) HandleClusters() http.HandlerFunc {
 		}
 
 		switch req.Method {
+		case http.MethodHead:
+			size, apiErr := c.storageHandler.Stat(req)
+			if apiErr != nil {
+				api_error.WriteAPIErrorToHeader(w, apiErr)
+				return
+			}
+
+			w.Header().Set(AcceptHeaderKey, StringMIME)
+			// 10 - for decimal value
+			w.Header().Set(ContentLengthHeaderKey, strconv.FormatInt(size, 10))
+			w.WriteHeader(http.StatusOK)
 		case http.MethodGet:
-			fileBytes, apiErr := c.storageHandler.Load(req)
+			size, fileBytes, apiErr := c.storageHandler.Load(req)
 			if apiErr != nil {
 				api_error.WriteAPIErrorToHeader(w, apiErr)
 				return
@@ -61,6 +75,8 @@ func (c *ClustersEndpointHandler) HandleClusters() http.HandlerFunc {
 			}
 
 			w.Header().Set(AcceptHeaderKey, StringMIME)
+			// 10 - for decimal value
+			w.Header().Set(ContentLengthHeaderKey, strconv.FormatInt(size, 10))
 			w.WriteHeader(http.StatusOK)
 		case http.MethodPost:
 			err := c.storageHandler.Save(req)

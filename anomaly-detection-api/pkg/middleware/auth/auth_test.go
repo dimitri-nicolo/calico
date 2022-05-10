@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/projectcalico/calico/anomaly-detection-api/pkg/config"
 	"github.com/projectcalico/calico/anomaly-detection-api/pkg/middleware/auth"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/auth/testing"
@@ -30,13 +31,12 @@ const (
 var _ = Describe("AD API Auth test", func() {
 
 	var (
-		jwtAuth    lmaauth.JWTAuth
-		err        error
-		mAuth      *mockAuth
-		fakeK8sCli *fake.Clientset
-		jwt        = testing.NewFakeJWT(iss, mockADServiceAccountName)
-
-		userInfo = &user.DefaultInfo{
+		jwtAuth            lmaauth.JWTAuth
+		mAuth              *mockAuth
+		fakeK8sCli         *fake.Clientset
+		testRbacAttributes map[string][]*authzv1.ResourceAttributes
+		jwt                = testing.NewFakeJWT(iss, mockADServiceAccountName)
+		userInfo           = &user.DefaultInfo{
 			Name: "default",
 		}
 	)
@@ -45,8 +45,13 @@ var _ = Describe("AD API Auth test", func() {
 		mAuth = &mockAuth{}
 		fakeK8sCli = new(fake.Clientset)
 
+		testConfig, err := config.NewConfigFromEnv()
+		Expect(err).NotTo(HaveOccurred())
+		testRbacAttributes = auth.GetRBACResoureAttribute(testConfig)
+
 		jwtAuth, err = lmaauth.NewJWTAuth(&rest.Config{BearerToken: jwt.ToString()}, fakeK8sCli, lmaauth.WithAuthenticator(iss, mAuth))
 		Expect(err).NotTo(HaveOccurred())
+
 	})
 
 	It("passes the request to the next handler if a valid token is provided", func() {
@@ -61,7 +66,7 @@ var _ = Describe("AD API Auth test", func() {
 			requestReceived = r
 		})
 
-		authMiddleware := auth.Auth(spyHandler, jwtAuth)
+		authMiddleware := auth.Auth(spyHandler, jwtAuth, testRbacAttributes)
 		w := httptest.NewRecorder()
 		authMiddleware.ServeHTTP(w, req)
 
@@ -79,7 +84,7 @@ var _ = Describe("AD API Auth test", func() {
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/test-endpoint", nil)
-		authMiddleware := auth.Auth(spyHandler, jwtAuth)
+		authMiddleware := auth.Auth(spyHandler, jwtAuth, testRbacAttributes)
 
 		authMiddleware.ServeHTTP(w, req)
 
@@ -100,7 +105,7 @@ var _ = Describe("AD API Auth test", func() {
 			requestReceived = r
 		})
 
-		authMiddleware := auth.Auth(spyHandler, jwtAuth)
+		authMiddleware := auth.Auth(spyHandler, jwtAuth, testRbacAttributes)
 		w := httptest.NewRecorder()
 		authMiddleware.ServeHTTP(w, req)
 

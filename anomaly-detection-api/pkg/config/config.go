@@ -13,16 +13,15 @@ type Config struct {
 
 	ServiceEndpoint string `envconfig:"ENDPOINT_URL" default:"http://localhost:8080"`
 	ServiceURL      *url.URL
-
-	StoragePath string `envconfig:"STORAGE_PATH" default:"/store"`
-
-	LogLevel string `envconfig:"LOG_LEVEL" default:"info"`
+	HostedNamespace string `envconfig:"NAMESPACE" default:"tigera-intrusion-detection"`
+	StoragePath     string `envconfig:"STORAGE_PATH" default:"/store"`
 
 	TLSCert string `envconfig:"TLS_CERT" default:"/tls/tls.crt"`
 	TLSKey  string `envconfig:"TLS_KEY" default:"/tls/tls.key"`
 
-	// fv setting
-	DebugRunWithRBACDisabled bool `envconfig:"DEBUG_RBAC_DISABLED" default:"false"`
+	// debug settings
+	DebugRunWithRBACDisabled bool   `envconfig:"DEBUG_RBAC_DISABLED" default:"false"`
+	LogLevel                 string `envconfig:"LOG_LEVEL" default:"info"`
 }
 
 func NewConfigFromEnv() (*Config, error) {
