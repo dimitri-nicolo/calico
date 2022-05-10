@@ -946,6 +946,7 @@ var _ = Describe("SearchElasticHits", func() {
 			}, nil)
 
 			// create some alert exceptions
+			now := time.Now()
 			alertExceptions := []*v3.AlertException{
 				// no expiry
 				{
@@ -956,6 +957,7 @@ var _ = Describe("SearchElasticHits", func() {
 					Spec: v3.AlertExceptionSpec{
 						Description: "AlertException no expiry",
 						Selector:    "origin = origin1",
+						StartTime:   metav1.Time{Time: now.Add(-time.Hour)},
 					},
 				},
 				// not expired
@@ -967,7 +969,8 @@ var _ = Describe("SearchElasticHits", func() {
 					Spec: v3.AlertExceptionSpec{
 						Description: "AlertException not expired",
 						Selector:    "origin = origin2",
-						Period:      &metav1.Duration{Duration: time.Hour},
+						StartTime:   metav1.Time{Time: now.Add(-time.Hour)},
+						EndTime:     &metav1.Time{Time: now.Add(time.Hour)},
 					},
 				},
 				// expired
@@ -979,7 +982,8 @@ var _ = Describe("SearchElasticHits", func() {
 					Spec: v3.AlertExceptionSpec{
 						Description: "AlertException expired",
 						Selector:    "origin = origin3",
-						Period:      &metav1.Duration{Duration: time.Hour},
+						StartTime:   metav1.Time{Time: now.Add(-2 * time.Hour)},
+						EndTime:     &metav1.Time{Time: now.Add(-time.Hour)},
 					},
 				},
 			}

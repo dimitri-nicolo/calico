@@ -198,26 +198,25 @@ func search(
 			}
 		}
 
-		now := time.Now()
+		now := &metav1.Time{Time: time.Now()}
 		for _, alertException := range eventExceptionList.Items {
-			if alertException.Spec.Period != nil {
-				createTimestamp := alertException.GetCreationTimestamp()
-				if createTimestamp.Add(alertException.Spec.Period.Duration).Before(now) {
+			if alertException.Spec.StartTime.Before(now) {
+				if alertException.Spec.EndTime != nil && alertException.Spec.EndTime.Before(now) {
 					// skip expired alert exceptions
 					log.Debugf(`skipping expired alert exception="%s"`, alertException.GetName())
 					continue
 				}
-			}
 
-			q, err := idxHelper.NewSelectorQuery(alertException.Spec.Selector)
-			if err != nil {
-				// skip invalid alert exception selector
-				log.WithError(err).Warnf(`ignoring alert exception="%s", failed to parse selector="%s"`,
-					alertException.GetName(), alertException.Spec.Selector)
-				continue
-			}
+				q, err := idxHelper.NewSelectorQuery(alertException.Spec.Selector)
+				if err != nil {
+					// skip invalid alert exception selector
+					log.WithError(err).Warnf(`ignoring alert exception="%s", failed to parse selector="%s"`,
+						alertException.GetName(), alertException.Spec.Selector)
+					continue
+				}
 
-			esquery = esquery.MustNot(q)
+				esquery = esquery.MustNot(q)
+			}
 		}
 	}
 
