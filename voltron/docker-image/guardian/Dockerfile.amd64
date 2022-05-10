@@ -1,30 +1,29 @@
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.5 as ubi
+ARG UBI_IMAGE
+
+FROM ${UBI_IMAGE} as ubi
+
 RUN microdnf update
 
 # Create Empty root filesystem on /rootfs, copy only required linux utils
 # and supporting files.This filesystem act as placeholder for 
 # all files required in container.
- 
+
 WORKDIR /rootfs
 
 RUN mkdir -p etc/ssl/certs && \
     cp /etc/ssl/certs/* etc/ssl/certs
 
-ADD bin/voltron-amd64 /voltron
+ADD bin/guardian-amd64 /guardian
 
 FROM scratch
 COPY --from=ubi /rootfs /
 # Add your binary to the image
-COPY --chown=1001 --from=ubi /voltron /voltron
-
-# Add the trusted certs from the ubi image.
-COPY --from=ubi /etc/pki /etc/pki
-COPY --from=ubi /usr/share/pki /usr/share/pki
+COPY --chown=1001 --from=ubi /guardian /guardian
 
 # Set the working directory to where you can run your application
 WORKDIR /
 
-USER 1001
+USER 1001 
 
 # Now define the command-line call to start your application
-ENTRYPOINT ["/voltron"]
+ENTRYPOINT ["/guardian"]

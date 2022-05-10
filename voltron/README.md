@@ -1,5 +1,3 @@
-[![Build Status](https://semaphoreci.com/api/v1/projects/78a3e93e-f10d-4028-95f4-317511f2ca92/2741040/badge.svg)](https://semaphoreci.com/calico/voltron)
-
 # Voltron
 Components for managing multiple clusters through a single management plane. 
 
