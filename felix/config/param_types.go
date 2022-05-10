@@ -32,6 +32,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -44,6 +45,7 @@ import (
 	"github.com/projectcalico/calico/felix/idalloc"
 	"github.com/projectcalico/calico/felix/stringutils"
 	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
+	"github.com/projectcalico/calico/node/pkg/lifecycle/utils"
 )
 
 const (
@@ -358,6 +360,25 @@ func (p *Ipv4Param) Parse(raw string) (result interface{}, err error) {
 	res := net.ParseIP(raw)
 	if res == nil {
 		err = p.parseFailed(raw, "invalid IP")
+	}
+	if !utils.IsIPv4(res) {
+		err = p.parseFailed(raw, "not an IPv4 address")
+	}
+	result = res
+	return
+}
+
+type Ipv6Param struct {
+	Metadata
+}
+
+func (p *Ipv6Param) Parse(raw string) (result interface{}, err error) {
+	res := net.ParseIP(raw)
+	if res == nil {
+		err = p.parseFailed(raw, "invalid IP")
+	}
+	if !utils.IsIPv6(res) {
+		err = p.parseFailed(raw, "not an IPv6 address")
 	}
 	result = res
 	return

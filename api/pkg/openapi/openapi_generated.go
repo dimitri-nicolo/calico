@@ -1485,6 +1485,13 @@ func schema_pkg_apis_projectcalico_v3_BGPConfigurationSpec(ref common.ReferenceC
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
+					"bindMode": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BindMode indicates whether to listen for BGP connections on all addresses (None) or only on the node's canonical IP address Node.Spec.BGP.IPvXAddress (NodeIP). Default behaviour is to listen for BGP connections on all addresses.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
@@ -4183,7 +4190,14 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					},
 					"vxlanMTU": {
 						SchemaProps: spec.SchemaProps{
-							Description: "VXLANMTU is the MTU to set on the tunnel device. See Configuring MTU [Default: 1440]",
+							Description: "VXLANMTU is the MTU to set on the IPv4 VXLAN tunnel device. See Configuring MTU [Default: 1410]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"vxlanMTUV6": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VXLANMTUV6 is the MTU to set on the IPv6 VXLAN tunnel device. See Configuring MTU [Default: 1390]",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
@@ -4419,7 +4433,14 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					},
 					"deviceRouteSourceAddress": {
 						SchemaProps: spec.SchemaProps{
-							Description: "This is the source address to use on programmed device routes. By default the source address is left blank, leaving the kernel to choose the source address used.",
+							Description: "This is the IPv4 source address to use on programmed device routes. By default the source address is left blank, leaving the kernel to choose the source address used.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"deviceRouteSourceAddressIPv6": {
+						SchemaProps: spec.SchemaProps{
+							Description: "This is the IPv6 source address to use on programmed device routes. By default the source address is left blank, leaving the kernel to choose the source address used.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -4672,6 +4693,13 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							Description: "BPFMapSizeIPSets sets the size for ipsets map.  The IP sets map must be large enough to hold an entry for each endpoint matched by every selector in the source/destination matches in network policy.  Selectors such as \"all()\" can result in large numbers of entries (one entry per endpoint in that case).",
 							Type:        []string{"integer"},
 							Format:      "int32",
+						},
+					},
+					"bpfEnforceRPF": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BPFEnforceRPF enforce strict RPF on all interfaces with BPF programs regardless of what is the per-interfaces or global setting. Possible values are Disabled or Strict. [Default: Strict]",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"syslogReporterNetwork": {
@@ -5358,6 +5386,13 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					"serviceLoopPrevention": {
 						SchemaProps: spec.SchemaProps{
 							Description: "When service IP advertisement is enabled, prevent routing loops to service IPs that are not in use, by dropping or rejecting packets that do not get DNAT'd by kube-proxy. Unless set to \"Disabled\", in which case such routing loops continue to be allowed. [Default: Drop]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"workloadSourceSpoofing": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WorkloadSourceSpoofing controls whether pods can use the allowedSourcePrefixes annotation to send traffic with a source IP address that is not theirs. This is disabled by default. When set to \"Any\", pods can request any prefix.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -7106,7 +7141,7 @@ func schema_pkg_apis_projectcalico_v3_IPPoolSpec(ref common.ReferenceCallback) c
 					},
 					"blockSize": {
 						SchemaProps: spec.SchemaProps{
-							Description: "The block size to use for IP address assignments from this pool. Defaults to 26 for IPv4 and 112 for IPv6.",
+							Description: "The block size to use for IP address assignments from this pool. Defaults to 26 for IPv4 and 122 for IPv6.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},

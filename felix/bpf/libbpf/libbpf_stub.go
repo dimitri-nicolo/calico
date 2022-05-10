@@ -99,8 +99,8 @@ const (
 	GlobalsIPv6Enabled uint32 = 1
 )
 
-func TcSetGlobals(m *Map, hostIP, intfIP, extToSvcMark uint32, tmtu, vxlanPort, psNatStart, psNatLen, vethNS uint16,
-	enableTcpStats, isEgressGatway, isEgressClient bool, flags uint32) error {
+func TcSetGlobals(m *Map, _, _, _ uint32, _, _, _, _ uint16, _ uint32,
+	_ uint16, _, _, _ bool, flags uint32) error {
 	panic("LIBBPF syscall stub")
 }
 

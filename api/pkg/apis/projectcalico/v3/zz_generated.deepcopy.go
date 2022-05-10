@@ -589,6 +589,11 @@ func (in *BGPConfigurationSpec) DeepCopyInto(out *BGPConfigurationSpec) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.BindMode != nil {
+		in, out := &in.BindMode, &out.BindMode
+		*out = new(BindMode)
+		**out = **in
+	}
 	return
 }
 
@@ -1920,6 +1925,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.VXLANMTU != nil {
 		in, out := &in.VXLANMTU, &out.VXLANMTU
+		*out = new(int)
+		**out = **in
+	}
+	if in.VXLANMTUV6 != nil {
+		in, out := &in.VXLANMTUV6, &out.VXLANMTUV6
 		*out = new(int)
 		**out = **in
 	}

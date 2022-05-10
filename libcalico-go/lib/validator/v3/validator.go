@@ -1195,6 +1195,14 @@ func validateFelixConfigSpec(structLevel validator.StructLevel) {
 		}
 	}
 
+	if c.DeviceRouteSourceAddressIPv6 != "" {
+		parsedAddress := cnet.ParseIP(c.DeviceRouteSourceAddressIPv6)
+		if parsedAddress == nil || parsedAddress.Version() != 6 {
+			structLevel.ReportError(reflect.ValueOf(c.DeviceRouteSourceAddressIPv6),
+				"DeviceRouteSourceAddressIPv6", "", reason("is not a valid IPv6 address"), "")
+		}
+	}
+
 	if c.RouteTableRange != nil && c.RouteTableRanges != nil {
 		structLevel.ReportError(reflect.ValueOf(c.RouteTableRange),
 			"RouteTableRange", "", reason("cannot be set when `RouteTableRanges` is also set"), "")
@@ -1367,12 +1375,6 @@ func validateIPPoolSpec(structLevel validator.StructLevel) {
 	if cidr.Version() == 6 && pool.IPIPMode != api.IPIPModeNever {
 		structLevel.ReportError(reflect.ValueOf(pool.IPIPMode),
 			"IPpool.IPIPMode", "", reason("IPIPMode other than 'Never' is not supported on an IPv6 IP pool"), "")
-	}
-
-	// VXLAN cannot be enabled for IPv6.
-	if cidr.Version() == 6 && pool.VXLANMode != api.VXLANModeNever {
-		structLevel.ReportError(reflect.ValueOf(pool.VXLANMode),
-			"IPpool.VXLANMode", "", reason("VXLANMode other than 'Never' is not supported on an IPv6 IP pool"), "")
 	}
 
 	// Cannot have both VXLAN and IPIP on the same IP pool.

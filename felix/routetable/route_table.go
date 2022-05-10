@@ -42,8 +42,7 @@ import (
 )
 
 const (
-	cleanupGracePeriod = 10 * time.Second
-	maxConnFailures    = 3
+	maxConnFailures = 3
 )
 
 var (
@@ -256,6 +255,9 @@ type RouteTable struct {
 
 	opReporter       logutils.OpRecorder
 	livenessCallback func()
+
+	// The route deletion grace period.
+	routeCleanupGracePeriod time.Duration
 }
 
 type RouteTableOpt func(table *RouteTable)
@@ -263,6 +265,12 @@ type RouteTableOpt func(table *RouteTable)
 func WithLivenessCB(cb func()) RouteTableOpt {
 	return func(table *RouteTable) {
 		table.livenessCallback = cb
+	}
+}
+
+func WithRouteCleanupGracePeriod(routeCleanupGracePeriod time.Duration) RouteTableOpt {
+	return func(table *RouteTable) {
+		table.routeCleanupGracePeriod = routeCleanupGracePeriod
 	}
 }
 
@@ -644,7 +652,7 @@ func (r *RouteTable) Apply() error {
 					// Interface still present.
 					continue
 				}
-				if r.time.Since(firstSeen) < cleanupGracePeriod {
+				if r.time.Since(firstSeen) < r.routeCleanupGracePeriod {
 					// Interface first seen recently.
 					continue
 				}
@@ -926,6 +934,12 @@ func (r *RouteTable) createL3Route(linkAttrs *netlink.LinkAttrs, target Target) 
 		Table:     r.tableIndex,
 	}
 
+	// If this is an IPv6 blackhole route, set the dev to lo. This matches
+	// what the kernel does, and ensures we properly query programmed routes.
+	if r.ipVersion == 6 && target.RouteType() == syscall.RTN_BLACKHOLE {
+		route.LinkIndex = 1
+	}
+
 	if r.deviceRouteSourceAddress != nil {
 		route.Src = r.deviceRouteSourceAddress
 	}
@@ -1017,7 +1031,7 @@ func (r *RouteTable) fullResyncRoutesForLink(logCxt *log.Entry, ifaceName string
 		// before learning about the endpoint, we give each interface a grace period after we first
 		// see it before we remove routes that we're not expecting.  Check whether the grace period
 		// applies to this interface.
-		ifaceInGracePeriod := r.time.Since(r.ifaceNameToFirstSeen[ifaceName]) < cleanupGracePeriod
+		ifaceInGracePeriod := r.time.Since(r.ifaceNameToFirstSeen[ifaceName]) < r.routeCleanupGracePeriod
 		if ifaceInGracePeriod && !routeExpected && !r.vxlan {
 			// Don't remove unexpected routes from interfaces created recently. VXLAN routes don't have a grace period.
 			logCxt.Info("Syncing routes: found unexpected route; ignoring due to grace period.")
@@ -1094,7 +1108,11 @@ func (r *RouteTable) readProgrammedRoutes(logCxt *log.Entry, ifaceName string) (
 	if linkAttrs != nil {
 		// Link attributes might be nil for the special "no-OIF" interface name.
 		routeFilter.LinkIndex = linkAttrs.Index
+	} else if r.ipVersion == 6 {
+		// IPv6 no-OIF interfaces get corrected to lo, which is interface index 1.
+		routeFilter.LinkIndex = 1
 	}
+
 	programmedRoutes, err := nl.RouteListFiltered(r.netlinkFamily, routeFilter, routeFilterFlags)
 	r.livenessCallback()
 	if err != nil {
