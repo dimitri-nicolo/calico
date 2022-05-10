@@ -20,25 +20,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/calico/apiserver/pkg/authentication"
-
 	log "github.com/sirupsen/logrus"
-
 	"github.com/stretchr/testify/mock"
-
-	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
-	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
-	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
-	"github.com/projectcalico/calico/voltron/internal/pkg/regex"
-	"github.com/projectcalico/calico/voltron/internal/pkg/server"
-	"github.com/projectcalico/calico/voltron/internal/pkg/test"
-	"github.com/projectcalico/calico/voltron/pkg/tunnel"
-
-	"github.com/projectcalico/calico/lma/pkg/auth"
-	"github.com/projectcalico/calico/lma/pkg/auth/testing"
-
 	"golang.org/x/net/http2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,6 +29,20 @@ import (
 	"k8s.io/client-go/kubernetes"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
+
+	"github.com/projectcalico/calico/apiserver/pkg/authentication"
+	"github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/lma/pkg/auth/testing"
+	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
+	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
+	"github.com/projectcalico/calico/voltron/internal/pkg/regex"
+	"github.com/projectcalico/calico/voltron/internal/pkg/server"
+	"github.com/projectcalico/calico/voltron/internal/pkg/test"
+	"github.com/projectcalico/calico/voltron/pkg/tunnel"
+
+	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
+	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 )
 
 const (

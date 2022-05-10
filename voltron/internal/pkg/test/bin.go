@@ -7,6 +7,7 @@ import (
 
 	"github.com/onsi/ginkgo"
 	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 )
 

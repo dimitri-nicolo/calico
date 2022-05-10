@@ -13,11 +13,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/yamux"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/hashicorp/yamux"
 	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/voltron/internal/pkg/client"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"

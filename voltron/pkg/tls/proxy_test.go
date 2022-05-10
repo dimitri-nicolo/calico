@@ -8,12 +8,13 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
-	vtls "github.com/projectcalico/calico/voltron/pkg/tls"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
+	vtls "github.com/projectcalico/calico/voltron/pkg/tls"
 )
 
 type mockListener struct {

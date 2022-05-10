@@ -14,23 +14,20 @@ import (
 	"sync"
 	"time"
 
-	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	"github.com/pkg/errors"
-
 	log "github.com/sirupsen/logrus"
-
 	"golang.org/x/net/http2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	jclust "github.com/projectcalico/calico/voltron/internal/pkg/clusters"
 	vtls "github.com/projectcalico/calico/voltron/pkg/tls"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
+
+	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // AnnotationActiveCertificateFingerprint is an annotation that is used to store the fingerprint for
@@ -212,7 +209,7 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 				return errors.Errorf("watcher stopped unexpectedly")
 			}
 
-			mcResource, ok := r.Object.(*apiv3.ManagedCluster)
+			mcResource, ok := r.Object.(*calicov3.ManagedCluster)
 			if !ok {
 				log.Debugf("Unexpected object type %T", r.Object)
 				continue

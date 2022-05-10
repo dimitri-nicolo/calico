@@ -13,15 +13,18 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
-	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
-	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
-	"github.com/projectcalico/calico/voltron/internal/pkg/server"
 	"golang.org/x/net/http2"
+
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 
 	"github.com/projectcalico/calico/lma/pkg/auth"
+	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
+	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
+	"github.com/projectcalico/calico/voltron/internal/pkg/server"
+
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 )
 
 func init() {

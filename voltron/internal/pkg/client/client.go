@@ -8,14 +8,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/calico/voltron/pkg/conn"
-
-	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
-
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
+	"github.com/projectcalico/calico/voltron/pkg/conn"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
+	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
 )
 
 // Client is the voltron client. It accepts requests from voltron server
