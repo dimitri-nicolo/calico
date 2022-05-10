@@ -11,10 +11,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	controller "github.com/tigera/honeypod-controller/cmd/controller"
-	"github.com/tigera/honeypod-controller/pkg/events"
-	hp "github.com/tigera/honeypod-controller/pkg/processor"
-	"github.com/tigera/honeypod-controller/pkg/snort"
+	controller "github.com/projectcalico/calico/honeypod-controller/cmd/controller"
+	"github.com/projectcalico/calico/honeypod-controller/pkg/events"
+	hp "github.com/projectcalico/calico/honeypod-controller/pkg/processor"
+	"github.com/projectcalico/calico/honeypod-controller/pkg/snort"
 
 	"github.com/projectcalico/calico/lma/pkg/api"
 	"github.com/projectcalico/calico/lma/pkg/elastic"

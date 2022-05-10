@@ -18,9 +18,9 @@ import (
 	"github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/monitor"
 
-	"github.com/tigera/honeypod-controller/pkg/events"
-	hp "github.com/tigera/honeypod-controller/pkg/processor"
-	"github.com/tigera/honeypod-controller/pkg/snort"
+	"github.com/projectcalico/calico/honeypod-controller/pkg/events"
+	hp "github.com/projectcalico/calico/honeypod-controller/pkg/processor"
+	"github.com/projectcalico/calico/honeypod-controller/pkg/snort"
 
 	"github.com/projectcalico/calico/lma/pkg/api"
 	"github.com/projectcalico/calico/lma/pkg/elastic"

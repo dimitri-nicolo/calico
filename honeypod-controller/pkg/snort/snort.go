@@ -14,8 +14,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/honeypod-controller/pkg/events"
-	hp "github.com/tigera/honeypod-controller/pkg/processor"
+	"github.com/projectcalico/calico/honeypod-controller/pkg/events"
+	hp "github.com/projectcalico/calico/honeypod-controller/pkg/processor"
 
 	api "github.com/projectcalico/calico/lma/pkg/api"
 )
