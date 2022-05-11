@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,8 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-// Copyright (c) 2020  All rights reserved.
 
 package bpf
 
@@ -174,34 +172,4 @@ func (b *Binary) PatchIfNS(ns uint16) {
 	bytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(bytes, uint32(ns))
 	b.replaceAllLoadImm32([]byte("IFNS"), bytes)
-}
-
-func (b *Binary) PatchTcpStats(tcpStats bool) {
-	bytes := make([]byte, 4)
-	enableTcpStats := 0
-	if tcpStats {
-		enableTcpStats = 1
-	}
-	binary.LittleEndian.PutUint32(bytes, uint32(enableTcpStats))
-	b.replaceAllLoadImm32([]byte("TCPS"), bytes)
-}
-
-func (b *Binary) PatchIsEgressGateway(isEgressGateway bool) {
-	bytes := make([]byte, 4)
-	egressGateway := 0
-	if isEgressGateway {
-		egressGateway = 1
-	}
-	binary.LittleEndian.PutUint32(bytes, uint32(egressGateway))
-	b.replaceAllLoadImm32([]byte("ISEG"), bytes)
-}
-
-func (b *Binary) PatchIsEgressClient(isEgressClient bool) {
-	bytes := make([]byte, 4)
-	egressClient := 0
-	if isEgressClient {
-		egressClient = 1
-	}
-	binary.LittleEndian.PutUint32(bytes, uint32(egressClient))
-	b.replaceAllLoadImm32([]byte("ISEC"), bytes)
 }

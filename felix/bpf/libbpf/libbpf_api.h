@@ -137,9 +137,6 @@ void bpf_tc_set_globals(struct bpf_map *map,
 			ushort psnat_len,
 			uint host_tunnel_ip,
 			ushort if_ns,
-			u_char tcp_stats,
-			u_char egress_gateway,
-			u_char egress_client,
 			uint flags)
 {
 	struct cali_tc_globals data = {
@@ -152,9 +149,6 @@ void bpf_tc_set_globals(struct bpf_map *map,
 		.psnat_len = psnat_len,
 		.host_tunnel_ip = host_tunnel_ip,
 		.if_ns = if_ns,
-		.tcp_stats = tcp_stats,
-		.egress_client = egress_client,
-		.egress_gateway = egress_gateway,
 		.flags = flags,
 	};
 

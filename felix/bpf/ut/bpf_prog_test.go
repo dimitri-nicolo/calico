@@ -242,8 +242,6 @@ outter:
 	Expect(err).NotTo(HaveOccurred())
 	bin.PatchTunnelMTU(natTunnelMTU)
 	bin.PatchVXLANPort(testVxlanPort)
-	bin.PatchIsEgressClient(false)
-	bin.PatchIsEgressGateway(false)
 	bin.PatchPSNATPorts(topts.psnaStart, topts.psnatEnd)
 	bin.PatchSkbMark(skbMark)
 	err = bin.PatchHostTunnelIPv4(node1tunIP)
@@ -628,8 +626,6 @@ outter:
 	Expect(err).NotTo(HaveOccurred())
 	bin.PatchTunnelMTU(natTunnelMTU)
 	bin.PatchVXLANPort(testVxlanPort)
-	bin.PatchIsEgressClient(false)
-	bin.PatchIsEgressGateway(false)
 	tempObj := tempDir + "bpf.o"
 	err = bin.WriteToFile(tempObj)
 	Expect(err).NotTo(HaveOccurred())

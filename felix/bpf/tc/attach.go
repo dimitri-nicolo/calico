@@ -665,7 +665,7 @@ func (ap *AttachPoint) MustReattach() bool {
 }
 
 func ConfigureVethNS(m *libbpf.Map, VethNS uint16) error {
-	return libbpf.TcSetGlobals(m, 0, 0, 0, 0, 0, 0, 0, 0, VethNS, false, false, false, 0)
+	return libbpf.TcSetGlobals(m, 0, 0, 0, 0, 0, 0, 0, 0, VethNS, 0)
 }
 
 func (ap AttachPoint) HookName() string {
@@ -695,6 +695,15 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 	if ap.IPv6Enabled {
 		flags |= libbpf.GlobalsIPv6Enabled
 	}
+	if ap.EnableTCPStats {
+		flags |= libbpf.GlobalsTCPStatsEnabled
+	}
+	if ap.IsEgressGateway {
+		flags |= libbpf.GlobalsIsEgressGateway
+	}
+	if ap.IsEgressClient {
+		flags |= libbpf.GlobalsIsEgressClient
+	}
 
 	hostTunnelIP := hostIP
 
@@ -705,9 +714,8 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 		}
 	}
 
-	return libbpf.TcSetGlobals(m, hostIP, intfIP,
-		ap.ExtToServiceConnmark, ap.TunnelMTU, vxlanPort, ap.PSNATStart, ap.PSNATEnd, hostTunnelIP,
-		ap.VethNS, ap.EnableTCPStats, ap.IsEgressGateway, ap.IsEgressClient, flags)
+	return libbpf.TcSetGlobals(m, hostIP, intfIP, ap.ExtToServiceConnmark, ap.TunnelMTU,
+		vxlanPort, ap.PSNATStart, ap.PSNATEnd, hostTunnelIP, ap.VethNS, flags)
 }
 
 func (ap *AttachPoint) setMapSize(m *libbpf.Map) error {
