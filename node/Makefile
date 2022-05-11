@@ -758,9 +758,12 @@ sub-image-tar-windows-upgrade-%:
 			--no-cache \
 			--build-arg=WINDOWS_VERSION=$* .
 
+# For EE, the images are:
+# - calico-windows
+# - calico-windows-upgrade
 cd-windows-all:
-	$(MAKE) cd-windows-windows WINDOWS_IMAGE_TAR_ROOT=$(WINDOWS_DIST)
-	$(MAKE) cd-windows-windows-upgrade WINDOWS_IMAGE_TAR_ROOT=$(WINDOWS_UPGRADE_DIST)
+	$(MAKE) cd-windows-calico-windows WINDOWS_IMAGE_TAR_ROOT=$(WINDOWS_DIST)
+	$(MAKE) cd-windows-calico-windows-upgrade WINDOWS_IMAGE_TAR_ROOT=$(WINDOWS_UPGRADE_DIST)
 
 # Windows image pushing is different because we do not build docker images directly.
 # Since the build machine is linux, we output the images to a tarball. (We can
