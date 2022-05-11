@@ -1,45 +1,13 @@
 package benchmark_test
 
 import (
-	"context"
-	"time"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	. "github.com/projectcalico/calico/compliance/pkg/benchmark"
-	"github.com/projectcalico/calico/compliance/pkg/benchmark/mock"
-	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 var _ = Describe("Benchmark", func() {
-	var (
-		cfg       *config.Config
-		mockStore *mock.DB
-		mockExec  *mock.Executor
-		healthy   func(bool)
-		isHealthy bool
-	)
-
-	BeforeEach(func() {
-		cfg = &config.Config{}
-		mockStore = mock.NewMockDB()
-		mockExec = new(mock.Executor)
-		healthy = func(h bool) { isHealthy = h }
-	})
-
-	It("should execute a benchmark", func() {
-		ctx, cancel := context.WithCancel(context.Background())
-		go func() {
-			<-time.After(time.Second)
-			cancel()
-		}()
-		_ = Run(ctx, cfg, mockExec, mockStore, mockStore, healthy)
-		Expect(mockStore.NStoreCalls).To(Equal(1))
-		Expect(mockStore.NRetrieveCalls).To(Equal(1))
-		Expect(isHealthy).To(BeTrue())
-	})
 
 	It("should properly compute Benchmarks equality", func() {
 		By("empty benchmarks")
