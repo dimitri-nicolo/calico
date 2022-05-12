@@ -78,11 +78,12 @@ var (
 			}},
 		}},
 	}
-	node1ip   = net.IPv4(10, 10, 0, 1).To4()
-	node1ip2  = net.IPv4(10, 10, 2, 1).To4()
-	node2ip   = net.IPv4(10, 10, 0, 2).To4()
-	intfIP    = net.IPv4(10, 10, 0, 3).To4()
-	node1CIDR = net.IPNet{
+	node1ip    = net.IPv4(10, 10, 0, 1).To4()
+	node1ip2   = net.IPv4(10, 10, 2, 1).To4()
+	node1tunIP = net.IPv4(11, 11, 0, 1).To4()
+	node2ip    = net.IPv4(10, 10, 0, 2).To4()
+	intfIP     = net.IPv4(10, 10, 0, 3).To4()
+	node1CIDR  = net.IPNet{
 		IP:   node1ip,
 		Mask: net.IPv4Mask(255, 255, 255, 255),
 	}
@@ -241,10 +242,10 @@ outter:
 	Expect(err).NotTo(HaveOccurred())
 	bin.PatchTunnelMTU(natTunnelMTU)
 	bin.PatchVXLANPort(testVxlanPort)
-	bin.PatchIsEgressClient(false)
-	bin.PatchIsEgressGateway(false)
 	bin.PatchPSNATPorts(topts.psnaStart, topts.psnatEnd)
 	bin.PatchSkbMark(skbMark)
+	err = bin.PatchHostTunnelIPv4(node1tunIP)
+	Expect(err).NotTo(HaveOccurred())
 	tempObj := tempDir + "bpf.o"
 	err = bin.WriteToFile(tempObj)
 	Expect(err).NotTo(HaveOccurred())
@@ -625,8 +626,6 @@ outter:
 	Expect(err).NotTo(HaveOccurred())
 	bin.PatchTunnelMTU(natTunnelMTU)
 	bin.PatchVXLANPort(testVxlanPort)
-	bin.PatchIsEgressClient(false)
-	bin.PatchIsEgressGateway(false)
 	tempObj := tempDir + "bpf.o"
 	err = bin.WriteToFile(tempObj)
 	Expect(err).NotTo(HaveOccurred())
@@ -950,7 +949,7 @@ func (pkt *Packet) handleL4() error {
 	case *layers.UDP:
 		pkt.udp = v
 		pkt.length += 8
-		v.Length = uint16(pkt.length)
+		pkt.udp.Length = uint16(pkt.length)
 		pkt.l4Protocol = layers.IPProtocolUDP
 		pkt.layers = append(pkt.layers, pkt.udp)
 	case *layers.TCP:
@@ -982,9 +981,10 @@ func (pkt *Packet) handleL3() error {
 	switch v := pkt.l3.(type) {
 	case *layers.IPv4:
 		pkt.ipv4 = v
+		pkt.length += 5 * 4
 		pkt.l3Protocol = layers.EthernetTypeIPv4
 		pkt.ipv4.Protocol = pkt.l4Protocol
-		pkt.ipv4.Length = uint16(pkt.length + 5*4)
+		pkt.ipv4.Length = uint16(pkt.length)
 		pkt.layers = append(pkt.layers, pkt.ipv4)
 	case *layers.IPv6:
 		pkt.ipv6 = v

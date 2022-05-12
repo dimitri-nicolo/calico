@@ -51,7 +51,8 @@ func Start(config *config.Config) {
 			log.Fatal("unable to create authenticator")
 		}
 
-		apiHandler = auth.Auth(sm, jwtAuth)
+		rbacAttributes := auth.GetRBACResoureAttribute(config)
+		apiHandler = auth.Auth(sm, jwtAuth, rbacAttributes)
 	}
 
 	handler := logging.LogRequestHeaders(apiHandler)

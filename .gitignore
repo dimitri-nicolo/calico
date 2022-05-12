@@ -5,8 +5,13 @@ bin/
 .idea
 .vscode
 vendor/
+artifacts/
 
-/* Produced as part of release */
+# Test binary, built with `go test -c`
+*.test
+*.coverprofile
+
+# Produced as part of release
 hack/release/release
 node/windows-packaging/CalicoWindows/confd/config-bgp.ps1
 node/windows-packaging/CalicoWindows/confd/config-bgp.psm1
@@ -14,7 +19,7 @@ _output
 builder.coverprofile
 hack/release/ghr
 
-/* Created by local kind cluster */
+# Created by local kind cluster
 hack/test/kind/kind
 hack/test/kind/kubectl
 hack/test/kind/*kubeconfig.yaml

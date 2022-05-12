@@ -80,10 +80,6 @@ func SupportsBPF() error {
 	return fmt.Errorf("BPF dataplane is not supported on Windows")
 }
 
-func SupportsBPFKprobe() error {
-	return fmt.Errorf("BPF Kprobe is not supported on Windows")
-}
-
 func ServePrometheusMetrics(configParams *config.Config) {
 	for {
 		log.WithFields(log.Fields{

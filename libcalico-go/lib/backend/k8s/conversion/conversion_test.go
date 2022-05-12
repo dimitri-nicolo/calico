@@ -569,6 +569,29 @@ var _ = Describe("Test Pod conversion", func() {
 
 	})
 
+	It("should look the source spoofing disabling annotation", func() {
+		pod := kapiv1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "podA",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"cni.projectcalico.org/podIP":                 "192.168.0.1",
+					"cni.projectcalico.org/allowedSourcePrefixes": "[\"8.8.8.8/32\",\"1.1.1.0/24\"]",
+				},
+				ResourceVersion: "1234",
+			},
+			Spec: kapiv1.PodSpec{
+				NodeName:   "nodeA",
+				Containers: []kapiv1.Container{},
+			},
+		}
+
+		wep, err := podToWorkloadEndpoint(c, &pod)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(c.HasIPAddress(&pod)).To(BeTrue())
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.AllowSpoofedSourcePrefixes).To(ConsistOf([]string{"1.1.1.0/24", "8.8.8.8/32"}))
+	})
+
 	It("should return an error for a bad pod IP", func() {
 		pod := kapiv1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
@@ -3207,6 +3230,218 @@ var _ = Describe("Test Namespace conversion", func() {
 			p, err := c.NamespaceToProfile(&ns)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway).To(BeNil())
+		})
+	})
+
+	It("should parse maxNextHops on pod when annotation is valid", func() {
+		pod := kapiv1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "podA",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"egress.projectcalico.org/namespaceSelector": "black == 'white'",
+					"egress.projectcalico.org/selector":          "red == 'green'",
+					"egress.projectcalico.org/maxNextHops":       "3",
+				},
+			},
+			Spec: kapiv1.PodSpec{
+				NodeName: "nodeA",
+			},
+			Status: kapiv1.PodStatus{
+				PodIP: "192.168.0.1",
+			},
+		}
+
+		wep, err := podToWorkloadEndpoint(c, &pod)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+			NamespaceSelector: "black == 'white'",
+			Selector:          "red == 'green'",
+			MaxNextHops:       3,
+		}))
+	})
+
+	It("should default maxNextHops on pod to 0 when annotation is negative", func() {
+		pod := kapiv1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "podA",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"egress.projectcalico.org/namespaceSelector": "black == 'white'",
+					"egress.projectcalico.org/selector":          "red == 'green'",
+					"egress.projectcalico.org/maxNextHops":       "-100",
+				},
+			},
+			Spec: kapiv1.PodSpec{
+				NodeName: "nodeA",
+			},
+			Status: kapiv1.PodStatus{
+				PodIP: "192.168.0.1",
+			},
+		}
+
+		wep, err := podToWorkloadEndpoint(c, &pod)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+			NamespaceSelector: "black == 'white'",
+			Selector:          "red == 'green'",
+			MaxNextHops:       0,
+		}))
+	})
+
+	It("should default maxNextHops on pod to 0 when annotation is not a number", func() {
+		pod := kapiv1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "podA",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"egress.projectcalico.org/namespaceSelector": "black == 'white'",
+					"egress.projectcalico.org/selector":          "red == 'green'",
+					"egress.projectcalico.org/maxNextHops":       "three",
+				},
+			},
+			Spec: kapiv1.PodSpec{
+				NodeName: "nodeA",
+			},
+			Status: kapiv1.PodStatus{
+				PodIP: "192.168.0.1",
+			},
+		}
+
+		wep, err := podToWorkloadEndpoint(c, &pod)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+			NamespaceSelector: "black == 'white'",
+			Selector:          "red == 'green'",
+			MaxNextHops:       0,
+		}))
+	})
+
+	It("should default maxNextHops on pod to 0 when annotation is larger than an int32", func() {
+		pod := kapiv1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "podA",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"egress.projectcalico.org/namespaceSelector": "black == 'white'",
+					"egress.projectcalico.org/selector":          "red == 'green'",
+					"egress.projectcalico.org/maxNextHops":       "1000000000000000000",
+				},
+			},
+			Spec: kapiv1.PodSpec{
+				NodeName: "nodeA",
+			},
+			Status: kapiv1.PodStatus{
+				PodIP: "192.168.0.1",
+			},
+		}
+
+		wep, err := podToWorkloadEndpoint(c, &pod)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+			NamespaceSelector: "black == 'white'",
+			Selector:          "red == 'green'",
+			MaxNextHops:       0,
+		}))
+	})
+
+	It("should parse maxNextHops on namespace when annotation is valid", func() {
+		ns := kapiv1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "default",
+				Annotations: map[string]string{
+					"egress.projectcalico.org/namespaceSelector": "black == 'white'",
+					"egress.projectcalico.org/selector":          "red == 'green'",
+					"egress.projectcalico.org/maxNextHops":       "3",
+				},
+			},
+			Spec: kapiv1.NamespaceSpec{},
+		}
+
+		By("converting to a Profile", func() {
+			p, err := c.NamespaceToProfile(&ns)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+				NamespaceSelector: "black == 'white'",
+				Selector:          "red == 'green'",
+				MaxNextHops:       3,
+			}))
+		})
+	})
+
+	It("should default maxNextHops on namespace to 0 when annotation is negative", func() {
+		ns := kapiv1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "default",
+				Annotations: map[string]string{
+					"egress.projectcalico.org/namespaceSelector": "black == 'white'",
+					"egress.projectcalico.org/selector":          "red == 'green'",
+					"egress.projectcalico.org/maxNextHops":       "-3",
+				},
+			},
+			Spec: kapiv1.NamespaceSpec{},
+		}
+
+		By("converting to a Profile", func() {
+			p, err := c.NamespaceToProfile(&ns)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+				NamespaceSelector: "black == 'white'",
+				Selector:          "red == 'green'",
+				MaxNextHops:       0,
+			}))
+		})
+	})
+
+	It("should default maxNextHops on namespace to 0 when annotation is not a number", func() {
+		ns := kapiv1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "default",
+				Annotations: map[string]string{
+					"egress.projectcalico.org/namespaceSelector": "black == 'white'",
+					"egress.projectcalico.org/selector":          "red == 'green'",
+					"egress.projectcalico.org/maxNextHops":       "three",
+				},
+			},
+			Spec: kapiv1.NamespaceSpec{},
+		}
+
+		By("converting to a Profile", func() {
+			p, err := c.NamespaceToProfile(&ns)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+				NamespaceSelector: "black == 'white'",
+				Selector:          "red == 'green'",
+				MaxNextHops:       0,
+			}))
+		})
+	})
+
+	It("should default maxNextHops ion namespace to 0 when annotation is larger than an int32", func() {
+		ns := kapiv1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "default",
+				Annotations: map[string]string{
+					"egress.projectcalico.org/namespaceSelector": "black == 'white'",
+					"egress.projectcalico.org/selector":          "red == 'green'",
+					"egress.projectcalico.org/maxNextHops":       "1000000000000000000",
+				},
+			},
+			Spec: kapiv1.NamespaceSpec{},
+		}
+
+		By("converting to a Profile", func() {
+			p, err := c.NamespaceToProfile(&ns)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+				NamespaceSelector: "black == 'white'",
+				Selector:          "red == 'green'",
+				MaxNextHops:       0,
+			}))
 		})
 	})
 

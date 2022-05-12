@@ -107,19 +107,15 @@ func egressAnnotationsToV3Spec(annotations map[string]string) *apiv3.EgressSpec 
 	if egressMaxNextHopsStr != "" {
 		n, err := strconv.Atoi(egressMaxNextHopsStr)
 		if err != nil {
-			log.WithError(err).Errorf("Invalid number of next hops in %v annotation: %v", AnnotationEgressMaxNextHops, err)
-			return nil
+			log.WithError(err).Errorf("Invalid number of next hops %s, in %v annotation. Defaulting to 0.", egressMaxNextHopsStr, AnnotationEgressMaxNextHops)
+		} else if n < 0 {
+			log.Errorf("Invalid number of next hops %s, in %v annotation: must be 0 or greater. Defaulting to 0.", egressMaxNextHopsStr, AnnotationEgressMaxNextHops)
+		} else if n > math.MaxInt32 {
+			// egressMaxNextHops will be converted to an int32 in protobuf, so limit the range here to be a valid int32.
+			log.Errorf("Invalid number of next hops %s, in %v annotation: must be %d or less. Defaulting to 0.", egressMaxNextHopsStr, AnnotationEgressMaxNextHops, math.MaxInt32)
+		} else {
+			egressMaxNextHops = n
 		}
-		if n < 0 {
-			log.WithError(err).Errorf("Invalid number of next hops in %v annotation: must be 0 or greater", AnnotationEgressMaxNextHops)
-			return nil
-		}
-		// egressMaxNextHops will be converted to an int32 in protobuf, so limit the range here to be a valid int32.
-		if n > math.MaxInt32 {
-			log.WithError(err).Errorf("Invalid number of next hops in %v annotation: must be %d or less", AnnotationEgressMaxNextHops, math.MaxInt32)
-			return nil
-		}
-		egressMaxNextHops = n
 	}
 	if egressSelector == "" && egressNamespaceSelector == "" && egressMaxNextHopsStr == "" {
 		// No egress annotations specified, so no egress spec.

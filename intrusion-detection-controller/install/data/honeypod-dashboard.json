@@ -1,0 +1,132 @@
+[
+  {
+    "id": "abaaab30-2db9-11ea-97d3-75fc55c8fec9",
+    "type": "search",
+    "version": "WzI2LDFd",
+    "attributes": {
+      "sort": [
+        "start_time",
+        "desc"
+      ],
+      "hits": 0,
+      "description": "",
+      "title": "honeypod-search",
+      "version": 1,
+      "kibanaSavedObjectMeta": {
+        "searchSourceJSON": "{\"highlightAll\":true,\"version\":true,\"query\":\"\",\"filter\":[],\"indexRefName\":\"kibanaSavedObjectMeta.searchSourceJSON.index\"}"
+      },
+      "columns": [
+        "source_name_aggr",
+        "source_namespace",
+        "dest_name_aggr",
+        "host",
+        "dest_port"
+      ]
+    },
+    "references": [
+      {
+        "type": "index-pattern",
+        "id": "b74ef5b0-c80f-11e8-97f7-15a796350190",
+        "name": "kibanaSavedObjectMeta.searchSourceJSON.index"
+      }
+    ],
+    "migrationVersion": {
+      "search": "7.9.3"
+    }
+  },
+  {
+    "id": "a52a67b0-2dbd-11ea-97d3-75fc55c8fec9",
+    "type": "visualization",
+    "version": "WzI3LDFd",
+    "attributes": {
+      "visState": "{\"title\":\"Honeypod Heatmap\",\"type\":\"heatmap\",\"params\":{\"type\":\"heatmap\",\"addTooltip\":true,\"addLegend\":true,\"enableHover\":false,\"legendPosition\":\"right\",\"times\":[],\"colorsNumber\":10,\"colorSchema\":\"Reds\",\"setColorRange\":false,\"colorsRange\":[],\"invertColors\":false,\"percentageMode\":false,\"valueAxes\":[{\"show\":false,\"id\":\"ValueAxis-1\",\"type\":\"value\",\"scale\":{\"type\":\"log\",\"defaultYExtents\":false},\"labels\":{\"show\":false,\"rotate\":0,\"overwriteColor\":false,\"color\":\"black\"}}],\"dimensions\":{\"x\":{\"accessor\":0,\"format\":{\"id\":\"terms\",\"params\":{\"id\":\"string\",\"otherBucketLabel\":\"Other\",\"missingBucketLabel\":\"Missing\"}},\"params\":{},\"aggType\":\"terms\"},\"y\":[{\"accessor\":2,\"format\":{\"id\":\"number\"},\"params\":{},\"aggType\":\"count\"}],\"series\":[{\"accessor\":1,\"format\":{\"id\":\"terms\",\"params\":{\"id\":\"string\",\"otherBucketLabel\":\"Other\",\"missingBucketLabel\":\"Missing\"}},\"params\":{},\"aggType\":\"terms\"}]}},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"cardinality\",\"schema\":\"metric\",\"params\":{\"field\":\"num_flows\"}},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"segment\",\"params\":{\"field\":\"dest_name_aggr\",\"orderBy\":\"_key\",\"order\":\"asc\",\"size\":5,\"otherBucket\":false,\"otherBucketLabel\":\"Other\",\"missingBucket\":false,\"missingBucketLabel\":\"Missing\"}},{\"id\":\"3\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"group\",\"params\":{\"field\":\"source_name_aggr\",\"orderBy\":\"_key\",\"order\":\"asc\",\"size\":5,\"otherBucket\":false,\"otherBucketLabel\":\"Other\",\"missingBucket\":false,\"missingBucketLabel\":\"Missing\"}}]}",
+      "description": "",
+      "title": "Honeypod Heatmap",
+      "uiStateJSON": "{\"vis\":{\"defaultColors\":{\"1 - 11\":\"rgb(255,245,240)\",\"11 - 21\":\"rgb(254,228,216)\",\"21 - 31\":\"rgb(253,202,181)\",\"31 - 41\":\"rgb(252,171,142)\",\"41 - 51\":\"rgb(252,138,106)\",\"51 - 61\":\"rgb(251,106,74)\",\"61 - 71\":\"rgb(241,68,50)\",\"71 - 81\":\"rgb(217,38,35)\",\"81 - 91\":\"rgb(188,20,26)\",\"91 - 100\":\"rgb(152,12,19)\"}}}",
+      "version": 1,
+      "kibanaSavedObjectMeta": {
+        "searchSourceJSON": "{\"query\":{\"query\":\"\",\"language\":\"kuery\"},\"filter\":[]}"
+      },
+      "savedSearchRefName": "search_0"
+    },
+    "references": [
+      {
+        "type": "search",
+        "id": "abaaab30-2db9-11ea-97d3-75fc55c8fec9",
+        "name": "search_0"
+      }
+    ],
+    "migrationVersion": {
+      "visualization": "7.10.0"
+    }
+  },
+  {
+    "id": "d7f04fd0-2dc1-11ea-97d3-75fc55c8fec9",
+    "type": "visualization",
+    "version": "WzI4LDFd",
+    "attributes": {
+      "visState": "{\"title\":\"Honeypod Gauge\",\"type\":\"pie\",\"params\":{\"type\":\"pie\",\"addTooltip\":true,\"addLegend\":true,\"legendPosition\":\"right\",\"isDonut\":true,\"labels\":{\"show\":false,\"values\":true,\"last_level\":true,\"truncate\":100},\"dimensions\":{\"metric\":{\"accessor\":3,\"format\":{\"id\":\"number\"},\"params\":{},\"aggType\":\"cardinality\"},\"buckets\":[{\"accessor\":2,\"format\":{\"id\":\"terms\",\"params\":{\"id\":\"string\",\"otherBucketLabel\":\"Other\",\"missingBucketLabel\":\"Missing\"}},\"params\":{},\"aggType\":\"terms\"}],\"splitColumn\":[{\"accessor\":0,\"format\":{\"id\":\"terms\",\"params\":{\"id\":\"string\",\"otherBucketLabel\":\"Other\",\"missingBucketLabel\":\"Missing\"}},\"params\":{},\"aggType\":\"terms\"}]},\"row\":false},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"cardinality\",\"schema\":\"metric\",\"params\":{\"field\":\"num_flows\"}},{\"id\":\"3\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"split\",\"params\":{\"field\":\"source_name_aggr\",\"orderBy\":\"_key\",\"order\":\"desc\",\"size\":5,\"otherBucket\":false,\"otherBucketLabel\":\"Other\",\"missingBucket\":false,\"missingBucketLabel\":\"Missing\",\"customLabel\":\"Compromised\"}},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"segment\",\"params\":{\"field\":\"dest_name_aggr\",\"orderBy\":\"1\",\"order\":\"desc\",\"size\":5,\"otherBucket\":false,\"otherBucketLabel\":\"Other\",\"missingBucket\":false,\"missingBucketLabel\":\"Missing\"}}]}",
+      "description": "",
+      "title": "Honeypod Gauge",
+      "uiStateJSON": "{}",
+      "version": 1,
+      "kibanaSavedObjectMeta": {
+        "searchSourceJSON": "{\"query\":{\"query\":\"\",\"language\":\"kuery\"},\"filter\":[]}"
+      },
+      "savedSearchRefName": "search_0"
+    },
+    "references": [
+      {
+        "type": "search",
+        "id": "abaaab30-2db9-11ea-97d3-75fc55c8fec9",
+        "name": "search_0"
+      }
+    ],
+    "migrationVersion": {
+      "visualization": "7.10.0"
+    }
+  },
+  {
+    "id": "1fa34d90-2dc3-11ea-97d3-75fc55c8fec9",
+    "type": "dashboard",
+    "version": "WzI5LDFd",
+    "attributes": {
+      "hits": 0,
+      "timeFrom": "now-30d",
+      "timeRestore": true,
+      "description": "",
+      "title": "Honeypod Dashboard",
+      "panelsJSON": "[{\"embeddableConfig\":{},\"gridData\":{\"x\":24,\"y\":0,\"w\":24,\"h\":15,\"i\":\"1\"},\"panelIndex\":\"1\",\"version\":\"7.3.2\",\"panelRefName\":\"panel_0\"},{\"embeddableConfig\":{},\"gridData\":{\"x\":0,\"y\":0,\"w\":24,\"h\":15,\"i\":\"2\"},\"panelIndex\":\"2\",\"version\":\"7.3.2\",\"panelRefName\":\"panel_1\"},{\"embeddableConfig\":{},\"gridData\":{\"x\":0,\"y\":15,\"w\":48,\"h\":13,\"i\":\"3\"},\"panelIndex\":\"3\",\"version\":\"7.3.2\",\"panelRefName\":\"panel_2\"}]",
+      "timeTo": "now",
+      "optionsJSON": "{\"hidePanelTitles\":true,\"useMargins\":true}",
+      "version": 1,
+      "refreshInterval": {
+        "pause": true,
+        "value": 0
+      },
+      "kibanaSavedObjectMeta": {
+        "searchSourceJSON": "{\"query\":{\"language\":\"kuery\",\"query\":\"dest_namespace : \\\"tigera-internal\\\" \"},\"filter\":[]}"
+      }
+    },
+    "references": [
+      {
+        "type": "visualization",
+        "id": "a52a67b0-2dbd-11ea-97d3-75fc55c8fec9",
+        "name": "panel_0"
+      },
+      {
+        "type": "visualization",
+        "id": "d7f04fd0-2dc1-11ea-97d3-75fc55c8fec9",
+        "name": "panel_1"
+      },
+      {
+        "type": "search",
+        "id": "abaaab30-2db9-11ea-97d3-75fc55c8fec9",
+        "name": "panel_2"
+      }
+    ],
+    "migrationVersion": {
+      "dashboard": "7.9.3"
+    }
+  }
+]

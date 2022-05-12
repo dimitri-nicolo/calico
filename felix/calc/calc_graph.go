@@ -33,12 +33,10 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
-var (
-	gaugeNumActiveSelectors = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "felix_active_local_selectors",
-		Help: "Number of active selectors on this host.",
-	})
-)
+var gaugeNumActiveSelectors = prometheus.NewGauge(prometheus.GaugeOpts{
+	Name: "felix_active_local_selectors",
+	Help: "Number of active selectors on this host.",
+})
 
 func init() {
 	prometheus.MustRegister(gaugeNumActiveSelectors)
@@ -435,7 +433,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	hostIPPassthru := NewDataplanePassthru(callbacks)
 	hostIPPassthru.RegisterWith(allUpdDispatcher)
 
-	if conf.BPFEnabled || conf.Encapsulation.VXLANEnabled || conf.WireguardEnabled ||
+	if conf.BPFEnabled || conf.Encapsulation.VXLANEnabled || conf.Encapsulation.VXLANEnabledV6 || conf.WireguardEnabled ||
 		conf.EgressIPSupport == "EnabledPerNamespace" || conf.EgressIPSupport == "EnabledPerNamespaceOrPerPod" ||
 		conf.AWSSecondaryIPSupport != "Disabled" {
 		// Calculate simple node-ownership routes.
@@ -466,7 +464,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	//         |
 	//      <dataplane>
 	//
-	if conf.Encapsulation.VXLANEnabled {
+	if conf.Encapsulation.VXLANEnabled || conf.Encapsulation.VXLANEnabledV6 {
 		vxlanResolver := NewVXLANResolver(hostname, callbacks, conf.UseNodeResourceUpdates())
 		vxlanResolver.RegisterWith(allUpdDispatcher)
 	}

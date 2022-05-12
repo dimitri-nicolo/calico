@@ -1,0 +1,45 @@
+{
+  "hits": {
+    "hits": [],
+    "total": {
+      "value": 766,
+      "relation": "eq"
+    },
+    "max_score": null
+  },
+  "aggregations": {
+    "composite_aggs": {
+      "after_key": null,
+      "buckets": [
+        {
+          "key": {
+            "source_namespace": "tigera-prometheus",
+            "source_name_aggr": "alertmanager-calico-node-alertmanager-*"
+          },
+          "doc_count": 3506
+        },
+        {
+          "key": {
+            "source_namespace": "tigera-prometheus",
+            "source_name_aggr": "calico-prometheus-operator-7dd764bcfd-*"
+          },
+          "doc_count": 100
+        },
+        {
+          "key": {
+            "source_namespace": "tigera-compliance",
+            "source_name_aggr": "compliance-benchmarker-*"
+          },
+          "doc_count": 1737
+        },
+        {
+          "key": {
+            "source_namespace": "tigera-compliance",
+            "source_name_aggr": "compliance-controller-57df86b7d-*"
+          },
+          "doc_count": 869
+        }
+      ]
+    }
+  }
+}

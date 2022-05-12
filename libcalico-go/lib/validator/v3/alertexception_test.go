@@ -30,6 +30,7 @@ var _ = DescribeTable("AlertException Validator",
 			Spec: api.AlertExceptionSpec{
 				Description: "alert-exception-desc",
 				Selector:    "origin = any",
+				StartTime:   v1.Time{Time: time.Now()},
 			},
 		},
 		true,
@@ -39,17 +40,30 @@ var _ = DescribeTable("AlertException Validator",
 		&api.AlertException{
 			ObjectMeta: v1.ObjectMeta{Name: "alert-exception"},
 			Spec: api.AlertExceptionSpec{
-				Selector: "origin = any",
+				Selector:  "origin = any",
+				StartTime: v1.Time{Time: time.Now()},
 			},
 		},
 		false,
 	),
 
-	Entry("no selector",
+	Entry("missing startTime",
 		&api.AlertException{
 			ObjectMeta: v1.ObjectMeta{Name: "alert-exception"},
 			Spec: api.AlertExceptionSpec{
 				Description: "alert-exception-desc",
+				Selector:    "origin = any",
+			},
+		},
+		false,
+	),
+
+	Entry("missing selector",
+		&api.AlertException{
+			ObjectMeta: v1.ObjectMeta{Name: "alert-exception"},
+			Spec: api.AlertExceptionSpec{
+				Description: "alert-exception-desc",
+				StartTime:   v1.Time{Time: time.Now()},
 			},
 		},
 		false,
@@ -75,24 +89,26 @@ var _ = DescribeTable("AlertException Validator",
 		false,
 	),
 
-	Entry("valid period",
+	Entry("valid startTime and endTime",
 		&api.AlertException{
 			ObjectMeta: v1.ObjectMeta{Name: "alert-exception"},
 			Spec: api.AlertExceptionSpec{
 				Description: "alert-exception-desc",
 				Selector:    "origin = any",
-				Period:      &v1.Duration{Duration: api.AlertExceptionMinPeriod},
+				StartTime:   v1.Time{Time: time.Now()},
+				EndTime:     &v1.Time{Time: time.Now().Add(time.Hour)},
 			},
 		},
 		true,
 	),
-	Entry("period too short",
+	Entry("invalid endTime before startTime",
 		&api.AlertException{
 			ObjectMeta: v1.ObjectMeta{Name: "alert-exception"},
 			Spec: api.AlertExceptionSpec{
 				Description: "alert-exception-desc",
 				Selector:    "origin = any",
-				Period:      &v1.Duration{Duration: api.GlobalAlertMinPeriod - time.Second},
+				StartTime:   v1.Time{Time: time.Now()},
+				EndTime:     &v1.Time{Time: time.Now().Add(-time.Hour)},
 			},
 		},
 		false,

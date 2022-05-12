@@ -13,6 +13,11 @@ type ModelStorageHandler interface {
 	// with the associated storage method
 	Save(r *http.Request) error
 
-	// Loads handles retrival of the file specified in the request
-	Load(r *http.Request) (string, *api_error.APIError)
+	// Loads handles retrival of the file specified in the request and
+	// return the file content as a bas64 string
+	Load(r *http.Request) (int64, string, *api_error.APIError)
+
+	// Stat handles the retrieval of file information of the specified model
+	// in the request. Currently returns file size in bytes as int64
+	Stat(r *http.Request) (int64, *api_error.APIError)
 }

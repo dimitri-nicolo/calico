@@ -17,11 +17,11 @@ const (
 	ModelFileDataKey = "model"
 	AcceptHeaderKey  = "Accept"
 
-	BinaryFileMIME = "application/octet-stream"
+	NoSuchFileDirectoryErrMsg = "no such file or directory"
+	ModelFileExtension        = ".model"
 
-	NoSuchFileDirectorErrMsg = "no such file or directory"
-
-	ModelFileExtension = ".model"
+	fileSizeUnknown = -1
+	emptyContent    = ""
 )
 
 // FileModelStorageHandler serves the storage and retrieval of models as a
@@ -63,36 +63,37 @@ func (s *FileModelStorageHandler) createOnPath(path string, fileBytes []byte) (s
 		err = os.MkdirAll(directory, os.ModePerm)
 
 		if err != nil {
-			return "", err
+			return emptyContent, err
 		}
 	}
 
 	filePath := filepath.Join(directory, filename)
 	f, err := os.Create(filePath)
 	if err != nil {
-		return "", err
+		return emptyContent, err
 	}
 	defer f.Close()
 
 	// write this byte array to the file
 	_, err = f.Write(fileBytes)
 	if err != nil {
-		return "", err
+		return emptyContent, err
 	}
 
 	return filePath, nil
 }
 
-func (s *FileModelStorageHandler) Load(r *http.Request) (string, *api_error.APIError) {
+func (s *FileModelStorageHandler) Load(r *http.Request) (int64, string, *api_error.APIError) {
+
 	modelPath := filepath.Join(s.FileStoragePath, r.URL.Path+ModelFileExtension)
 
 	dat, err := os.ReadFile(modelPath)
 	if err != nil {
 		errStatusCode := http.StatusInternalServerError
-		if strings.Contains(err.Error(), NoSuchFileDirectorErrMsg) {
+		if strings.Contains(err.Error(), NoSuchFileDirectoryErrMsg) {
 			errStatusCode = http.StatusNotFound
 		}
-		return "", &api_error.APIError{
+		return fileSizeUnknown, emptyContent, &api_error.APIError{
 			StatusCode: errStatusCode,
 			Err:        err,
 		}
@@ -100,5 +101,36 @@ func (s *FileModelStorageHandler) Load(r *http.Request) (string, *api_error.APIE
 
 	base64ModelStr := base64.StdEncoding.EncodeToString(dat)
 
-	return base64ModelStr, nil
+	size, apiErr := s.Stat(r)
+	if apiErr != nil {
+		log.Warnf("Unable to get file info for: %s", modelPath)
+		return fileSizeUnknown, base64ModelStr, nil
+	}
+
+	return size, base64ModelStr, nil
+}
+
+func (s *FileModelStorageHandler) Stat(r *http.Request) (int64, *api_error.APIError) {
+	modelPath := s.getModelFilePath(r)
+
+	fi, err := os.Stat(modelPath)
+	if err != nil {
+		errStatusCode := http.StatusInternalServerError
+		if strings.Contains(err.Error(), NoSuchFileDirectoryErrMsg) {
+			errStatusCode = http.StatusNotFound
+		}
+
+		return fileSizeUnknown, &api_error.APIError{
+			StatusCode: errStatusCode,
+			Err:        err,
+		}
+	}
+
+	size := fi.Size()
+
+	return size, nil
+}
+
+func (s *FileModelStorageHandler) getModelFilePath(r *http.Request) string {
+	return filepath.Join(s.FileStoragePath, r.URL.Path+ModelFileExtension)
 }

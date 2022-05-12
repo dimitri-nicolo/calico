@@ -55,6 +55,10 @@ promotions:
   pipeline_file: push-images/node.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push deep-packet-inspection images
+  pipeline_file: push-images/deep-packet-inspection.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 - name: Push es-gateway images
   pipeline_file: push-images/es-gateway.yml
   auto_promote:
@@ -65,6 +69,10 @@ promotions:
     when: "branch =~ 'master|release-'"
 - name: Push anomaly-detection-api images
   pipeline_file: push-images/anomaly-detection-api.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
+- name: Push intrusion-detection-controller images
+  pipeline_file: push-images/intrusion-detection-controller.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
 # Have a separate promotion for publishing Helm charts.
@@ -85,6 +93,8 @@ global_job_config:
     # Add the key to the ssh agent:
     - ssh-add ~/.keys/*
     - checkout
+    - export REPO_DIR="$(pwd)"
+    - mkdir artifacts
     # Semaphore is doing shallow clone on a commit without tags.
     # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always)
     - git fetch --unshallow
@@ -101,6 +111,10 @@ global_job_config:
     - sudo apt-get install -y -u crudini
     - sudo crudini --set /etc/initramfs-tools/update-initramfs.conf '' update_initramfs no
     - cat /etc/initramfs-tools/update-initramfs.conf
+  epilogue:
+    commands:
+    - cd "$REPO_DIR"
+    - .semaphore/publish-artifacts
 
 blocks:
 
@@ -115,7 +129,7 @@ blocks:
 
 - name: "API"
   run:
-    when: "branch =~ '.*' or change_in(['/*', '/api/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "${FORCE_RUN} or change_in(['/*', '/api/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   execution_time_limit:
     minutes: 30
   dependencies: ["Prerequisites"]
@@ -124,11 +138,9 @@ blocks:
       commands:
       - cd api
     jobs:
-    - name: "make build / ci / static-checks"
+    - name: "make ci"
       commands:
-      - make build
-      - make ci
-      - make static-checks
+      - ../.semaphore/run-and-monitor make-ci.log make ci
 
 - name: "apiserver"
   run:
@@ -147,7 +159,7 @@ blocks:
     jobs:
     - name: "make ci"
       commands:
-      - make ci
+      - ../.semaphore/run-and-monitor make-ci.log make ci
 
 - name: "libcalico-go"
   run:
@@ -158,7 +170,7 @@ blocks:
     - name: "libcalico-go: tests"
       commands:
       - cd libcalico-go
-      - make ci
+      - ../.semaphore/run-and-monitor make-ci.log make ci
 
 - name: "Typha"
   run:
@@ -173,7 +185,7 @@ blocks:
     - name: "Typha: UT and FV tests"
       commands:
       - cd typha
-      - make ci EXCEPT=k8sfv-test
+      - ../.semaphore/run-and-monitor make-ci.log make ci EXCEPT=k8sfv-test
     epilogue:
       always:
         commands:
@@ -217,9 +229,9 @@ blocks:
       - 'cache store go-mod-cache ${HOME}/go/pkg/mod/cache'
       - docker save -o /tmp/tigera-felix.tar tigera/felix:latest-amd64
       - 'cache store felix-image-${SEMAPHORE_GIT_SHA} /tmp/tigera-felix.tar'
-      - make ut
-      - make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=true
-      - make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=false
+      - ../.semaphore/run-and-monitor ut.log make ut
+      - ../.semaphore/run-and-monitor k8sfv-typha.log make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=true
+      - ../.semaphore/run-and-monitor k8sfv-no-typha.log make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=false
 
 - name: "Felix: Build Windows binaries"
   run:
@@ -309,7 +321,7 @@ blocks:
         minutes: 120
       commands:
       - make check-wireguard
-      - make fv FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}" FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT}
+      - ../.semaphore/run-and-monitor fv-${SEMAPHORE_JOB_INDEX}.log make fv FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}" FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT}
       parallelism: 3
     epilogue:
       always:
@@ -363,7 +375,7 @@ blocks:
       execution_time_limit:
         minutes: 60
       commands:
-        - make ci
+        - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: "Node: Tests"
   run:
@@ -385,16 +397,16 @@ blocks:
     jobs:
     - name: "Node: CI"
       commands:
-      - make ci
+      - ../.semaphore/run-and-monitor ci.log make ci
     - name: "Node: k8s-test"
       commands:
-      - make k8s-test
+      - ../.semaphore/run-and-monitor k8s-test.log make k8s-test
     - name: "Node: dual-tor"
       commands:
-      - make dual-tor-test
+      - ../.semaphore/run-and-monitor dual-tor-test.log make dual-tor-test
     - name: "Node: egress-ip"
       commands:
-      - make egress-ip-test
+      - ../.semaphore/run-and-monitor egress-ip-test.log make egress-ip-test
     epilogue:
       always:
         commands:
@@ -414,9 +426,18 @@ blocks:
       commands:
       - cd node
     jobs:
+# Non-AMD64 images not supported in Enterprise.
+#
+#    - name: "Build image"
+#      matrix:
+#      # TODO: s390x builds of calico/node are not working.
+#      - env_var: ARCH
+#        values: [ "arm64", "armv7", "ppc64le" ]
+#      commands:
+#      - ../.semaphore/run-and-monitor image-$ARCH.log make image ARCH=$ARCH
     - name: "Build Windows archive"
       commands:
-      - make build-windows-archive
+      - ../.semaphore/run-and-monitor build-windows-archive.log make build-windows-archive
 
 - name: "e2e tests"
   run:
@@ -436,7 +457,7 @@ blocks:
       - name: E2E_FOCUS
         value: "sig-network.*Conformance"
       commands:
-      - make e2e-test
+      - .semaphore/run-and-monitor e2e-test.log make e2e-test
 
 - name: "kube-controllers: Tests"
   run:
@@ -449,7 +470,7 @@ blocks:
     jobs:
     - name: "kube-controllers: tests"
       commands:
-      - make ci
+      - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: "pod2daemon"
   run:
@@ -462,7 +483,7 @@ blocks:
     jobs:
     - name: "pod2daemon tests"
       commands:
-      - make ci
+      - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: "app-policy"
   run:
@@ -475,7 +496,7 @@ blocks:
     jobs:
     - name: "app-policy tests"
       commands:
-      - make ci
+      - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: "calicoctl"
   run:
@@ -488,7 +509,7 @@ blocks:
     jobs:
     - name: "calicoctl tests"
       commands:
-      - make ci
+      - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: "cni-plugin: Windows"
   run:
@@ -514,7 +535,7 @@ blocks:
       - sudo apt-get install -y putty-tools
       - git clone git@github.com:tigera/process.git ~/process
       - cd cni-plugin
-      - make bin/windows/calico.exe && make bin/windows/calico-ipam.exe && make bin/windows/win-fv.exe
+      - ../.semaphore/run-and-monitor build.log make bin/windows/calico.exe bin/windows/calico-ipam.exe bin/windows/win-fv.exe
     epilogue:
       always:
         commands:
@@ -540,7 +561,7 @@ blocks:
       execution_time_limit:
         minutes: 60
       commands:
-      - ./.semaphore/run-win-fv.sh
+      - ../.semaphore/run-and-monitor win-fv-docker.log ./.semaphore/run-win-fv.sh
       env_vars:
       - name: CONTAINER_RUNTIME
         value: docker
@@ -548,7 +569,7 @@ blocks:
       execution_time_limit:
         minutes: 60
       commands:
-      - ./.semaphore/run-win-fv.sh
+      - ../.semaphore/run-and-monitor win-fv-containerd.log ./.semaphore/run-win-fv.sh
       env_vars:
       - name: CONTAINER_RUNTIME
         value: containerd
@@ -566,7 +587,7 @@ blocks:
     jobs:
     - name: "cni-plugin tests"
       commands:
-      - make ci
+      - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: 'calicoq'
   run:
@@ -581,7 +602,7 @@ blocks:
     jobs:
     - name: "make ci"
       commands:
-      - make ci
+      - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: "licensing"
   run:
@@ -594,7 +615,7 @@ blocks:
     jobs:
     - name: "Licensing tests"
       commands:
-      - make ci
+      - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: "lma"
   run:
@@ -606,6 +627,21 @@ blocks:
       - cd lma
     jobs:
     - name: "lma tests"
+      commands:
+      - ../.semaphore/run-and-monitor ci.log make ci
+
+- name: 'deep-packet-inspection'
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/deep-packet-inspection/', '/api/', '/libcalico-go/', '/lma/', '/typha/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd deep-packet-inspection
+    jobs:
+    - name: "deep-packet-inspection tests"
       commands:
       - make ci
 
@@ -622,7 +658,7 @@ blocks:
     jobs:
     - name: "es-gateway tests"
       commands:
-      - make ci
+      - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: 'packetcapture'
   run:
@@ -652,6 +688,21 @@ blocks:
     jobs:
     - name: "make ci"
       commands:
+      - ../.semaphore/run-and-monitor ci.log make ci
+
+- name: 'intrusion-detection-controller'
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/intrusion-detection-controller/', '/api/', '/libcalico-go/', '/licensing/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd intrusion-detection-controller
+    jobs:
+    - name: "intrusion-detection-controller tests"
+      commands:
       - make ci
 
 - name: "Documentation"
@@ -665,9 +716,9 @@ blocks:
     jobs:
     - name: "htmlproofer, kubeval, and helm tests"
       commands:
-      - make htmlproofer
-      - make kubeval
-      - make helm-tests
+      - ../.semaphore/run-and-monitor htmlproofer.log make htmlproofer
+      - ../.semaphore/run-and-monitor kubeval.log make kubeval
+      - ../.semaphore/run-and-monitor helm-tests.log make helm-tests
 
 after_pipeline:
   task:

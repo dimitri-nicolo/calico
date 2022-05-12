@@ -24,7 +24,7 @@ const (
 )
 
 var (
-	validFilePathRegex = regexp.MustCompile(`^\/(clusters){1}\/(.+)\/(models){1}\/([^\/]+)$`)
+	validFilePathRegex = regexp.MustCompile(`^\/(clusters){1}\/(.+)\/(models){1}\/(dynamic|static){1}(\/[^\/]+){2}$`)
 )
 
 // ValidateClustersEndpointRequest validates the request for the /clusters endpoint handled
@@ -59,7 +59,7 @@ func ValidateClustersEndpointRequest(req *http.Request) *api_error.APIError {
 // of text/plain if method is POST
 func ValidateTextContentType(req http.Request) *api_error.APIError {
 	contentType := req.Header.Get(ContentTypeHeaderKey)
-	if len(contentType) == 0 && req.Method == http.MethodGet {
+	if len(contentType) == 0 && req.Method != http.MethodPost {
 		return nil
 	}
 
