@@ -163,10 +163,13 @@ type WorkloadEndpoint struct {
 	IPv6Gateway                *net.IP           `json:"ipv6_gateway,omitempty" validate:"omitempty,ipv6"`
 	Ports                      []EndpointPort    `json:"ports,omitempty" validate:"dive"`
 	GenerateName               string            `json:"generate_name,omitempty"`
-	EgressSelector             string            `json:"egress_selector,omitempty"`
-	EgressMaxNextHops          int               `json:"egress_max_next_hops,omitempty" validate:"omitempty"`
-	DeletionTimestamp          time.Time         `json:"deletion_timestamp,omitempty"`
-	DeletionGracePeriodSeconds int64             `json:"deletion_grace_period_seconds,omitempty"`
+	AllowSpoofedSourcePrefixes []net.IPNet       `json:"allow_spoofed_source_ips,omitempty"`
+
+	// EE properties below
+	EgressSelector             string    `json:"egress_selector,omitempty"`
+	EgressMaxNextHops          int       `json:"egress_max_next_hops,omitempty" validate:"omitempty"`
+	DeletionTimestamp          time.Time `json:"deletion_timestamp,omitempty"`
+	DeletionGracePeriodSeconds int64     `json:"deletion_grace_period_seconds,omitempty"`
 }
 
 type EndpointPort struct {

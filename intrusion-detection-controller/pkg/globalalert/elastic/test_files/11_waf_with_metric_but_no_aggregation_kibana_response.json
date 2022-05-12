@@ -1,0 +1,35 @@
+{
+  "hits": {
+    "total": {
+      "value": 1,
+      "relation": "eq"
+    },
+    "hits": [
+      {
+        "_index" : "tigera_secure_ee_waf.cluster.fluentd-20220307-000001",
+        "_type" : "_doc",
+        "_id" : "kuFBZX8BM9r9G71ae553",
+        "_score" : 1.0,
+        "_source" : {
+          "@timestamp" : "2022-03-07T16:40:56.987845678Z",
+          "destination" : {
+            "hostname" : "echo-a",
+            "ip" : "192.168.81.141",
+            "port_num" : 80
+          },
+          "method" : "GET",
+          "msg" : "WAF check FAILED!",
+          "path" : "/test/artists.php?artist=0+div+1+union%23foo*%2F*bar%0D%0Aselect%23foo%0D%0A1%2C2%2Ccurrent_user",
+          "protocol" : "HTTP/1.1",
+          "rule_info" : "[1] Host:'192.168.81.141' File:'/etc/waf/REQUEST-942-APPLICATION-ATTACK-SQLI.conf' Line:'45' ID:'942100' Data:'' Severity:'0' Version:'OWASP_CRS/3.3.2' Message:'Warning. detected SQLi using libinjection.'",
+          "source" : {
+            "hostname" : "-",
+            "ip" : "192.168.165.73",
+            "port_num" : 51718
+          },
+          "host" : "ip-172-16-101-236.us-west-2.compute.internal"
+        }
+      }
+    ]
+  }
+}

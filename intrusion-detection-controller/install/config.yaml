@@ -1,0 +1,8 @@
+kibana:
+  - ["POST", "api/saved_objects/_bulk_create", "./data/api-kibana-dashboard.json"]
+  - ["POST", "api/saved_objects/_bulk_create", "./data/tor-vpn-dashboard.json"]
+  - ["POST", "api/saved_objects/_bulk_create", "./data/honeypod-dashboard.json"]
+  - ["POST", "api/saved_objects/_bulk_create", "./data/dns-dashboard.json"]
+  - ["POST", "api/saved_objects/_bulk_create", "./data/kubernetes-api-dashboard.json"]
+  - ["POST", "api/saved_objects/config/7.6.2" , "./data/siem-index.json"]
+  - ["POST", "api/saved_objects/_bulk_create", "./data/l7-dashboard.json"]

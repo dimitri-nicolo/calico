@@ -108,6 +108,11 @@ var _ = Describe("Dispatch chains", func() {
 						Action: iptables.ReturnAction{},
 					},
 					{
+						Action: iptables.JumpAction{
+							Target: "cali-rpf-skip",
+						},
+					},
+					{
 						Match:  iptables.Match().RPFCheckFailed(false),
 						Action: iptables.DropAction{},
 					},
@@ -147,7 +152,7 @@ var _ = Describe("Dispatch chains", func() {
 				}
 
 				for _, chain := range expectedChains[kubeIPVSEnabled] {
-					//log.WithField("chain", *chain).Debug("")
+					// log.WithField("chain", *chain).Debug("")
 					Expect(mapChain[chain.Name]).To(Equal(chain))
 				}
 				Expect(result).To(Equal(expectedChains[kubeIPVSEnabled]))

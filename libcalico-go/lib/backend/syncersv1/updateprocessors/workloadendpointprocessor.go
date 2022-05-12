@@ -183,12 +183,24 @@ func ConvertWorkloadEndpointV3ToV1Value(val interface{}) (interface{}, error) {
 		labels[apiv3.LabelServiceAccount] = v3res.Spec.ServiceAccountName
 	}
 
+	var allowedSources []cnet.IPNet
+	if len(v3res.Spec.AllowSpoofedSourcePrefixes) > 0 {
+		for _, prefix := range v3res.Spec.AllowSpoofedSourcePrefixes {
+			_, ipn, err := cnet.ParseCIDROrIP(prefix)
+			if err != nil {
+				return nil, err
+			}
+			allowedSources = append(allowedSources, *(ipn.Network()))
+		}
+	}
+
 	deletionTimestamp := time.Time{}
 	var deletionGracePeriodSeconds int64
 	if v3res.DeletionTimestamp != nil {
 		deletionTimestamp = v3res.DeletionTimestamp.Time
 		deletionGracePeriodSeconds = *v3res.DeletionGracePeriodSeconds
 	}
+
 	v1value := &model.WorkloadEndpoint{
 		State:                      "active",
 		Name:                       v3res.Spec.InterfaceName,
@@ -198,15 +210,19 @@ func ConvertWorkloadEndpointV3ToV1Value(val interface{}) (interface{}, error) {
 		IPv6Nets:                   ipv6Nets,
 		IPv4NAT:                    ipv4NAT,
 		IPv6NAT:                    ipv6NAT,
-		AWSElasticIPs:              v3res.Spec.AWSElasticIPs,
 		Labels:                     labels,
 		IPv4Gateway:                ipv4Gateway,
 		IPv6Gateway:                ipv6Gateway,
 		Ports:                      ports,
 		GenerateName:               v3res.GenerateName,
+		AllowSpoofedSourcePrefixes: allowedSources,
+
+		// EE properties below
+		AWSElasticIPs:              v3res.Spec.AWSElasticIPs,
 		DeletionTimestamp:          deletionTimestamp,
 		DeletionGracePeriodSeconds: deletionGracePeriodSeconds,
 	}
+
 	if v3res.Spec.EgressGateway != nil {
 		// Convert egress Selector and NamespaceSelector fields to a single selector
 		// expression in the same way we do for namespaced policy EntityRule selectors.

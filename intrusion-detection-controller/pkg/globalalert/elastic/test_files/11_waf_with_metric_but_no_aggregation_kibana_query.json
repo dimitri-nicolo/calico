@@ -1,0 +1,22 @@
+{
+  "query": {
+    "bool": {
+      "filter": {
+        "range": {
+          "@timestamp": {
+            "gte": "now-600s",
+            "lte": "now"
+          }
+        }
+      },
+      "must": {
+        "term": {
+          "method": {
+            "value": "GET"
+          }
+        }
+      }
+    }
+  },
+  "Size": 0
+}

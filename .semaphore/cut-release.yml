@@ -70,11 +70,19 @@ promotions:
     pipeline_file: ../calicoq/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Cut Deep Packet Inspection Release
+    pipeline_file: ../deep-packet-inspection/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Cut ES Gateway Release
     pipeline_file: ../es-gateway/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
   - name: Cut Honeypod Controller Release
     pipeline_file: ../honeypod-controller/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Cut IDS Controller Release
+    pipeline_file: ../intrusion-detection-controller/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"

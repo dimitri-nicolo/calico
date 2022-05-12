@@ -1,0 +1,249 @@
+{
+  "hits": {
+    "total": {
+      "value": 2,
+      "relation": "eq"
+    },
+    "hits": [
+      {
+        "_index" : "tigera_secure_ee_flows.cluster.fluentd-20211117-000001",
+        "_type" : "_doc",
+        "_id" : "l4V9LH0BsEf8XW6HqXuw",
+        "_score" : 3.4484708,
+        "_source" : {
+          "start_time" : 1637128638,
+          "end_time" : 1637128967,
+          "source_ip" : null,
+          "source_name" : "-",
+          "source_name_aggr" : "tigera-manager-9f8c9ccb-*",
+          "source_namespace" : "tigera-manager",
+          "nat_outgoing_ports" : null,
+          "source_port" : null,
+          "source_type" : "wep",
+          "source_labels" : {
+            "labels" : [
+              "pod-template-hash=9f8c9ccb",
+              "k8s-app=tigera-manager"
+            ]
+          },
+          "dest_ip" : null,
+          "dest_name" : "-",
+          "dest_name_aggr" : "kse.kubernetes",
+          "dest_namespace" : "default",
+          "dest_port" : 6443,
+          "dest_type" : "ns",
+          "dest_labels" : {
+            "labels" : [
+              "endpoints.projectcalico.org/serviceName=kubernetes",
+              "provider=kubernetes",
+              "component=apiserver"
+            ]
+          },
+          "dest_service_namespace" : "default",
+          "dest_service_name" : "kubernetes",
+          "dest_service_port" : "https",
+          "dest_service_port_num" : 443,
+          "proto" : "tcp",
+          "action" : "allow",
+          "reporter" : "src",
+          "policies" : {
+            "all_policies" : [
+              "0|allow-tigera|tigera-manager/allow-tigera.manager-access|allow|4"
+            ]
+          },
+          "bytes_in" : 0,
+          "bytes_out" : 1440,
+          "num_flows" : 24,
+          "num_flows_started" : 24,
+          "num_flows_completed" : 24,
+          "packets_in" : 0,
+          "packets_out" : 24,
+          "http_requests_allowed_in" : 0,
+          "http_requests_denied_in" : 0,
+          "process_name" : "/voltron",
+          "num_process_names" : 1,
+          "process_id" : "25408",
+          "num_process_ids" : 1,
+          "process_args" : [
+            "-"
+          ],
+          "num_process_args" : 0,
+          "original_source_ips" : null,
+          "num_original_source_ips" : 0,
+          "tcp_mean_send_congestion_window" : 10,
+          "tcp_min_send_congestion_window" : 10,
+          "tcp_mean_smooth_rtt" : 1737,
+          "tcp_max_smooth_rtt" : 5330,
+          "tcp_mean_min_rtt" : 112,
+          "tcp_max_min_rtt" : 156,
+          "tcp_mean_mss" : 1388,
+          "tcp_min_mss" : 1388,
+          "tcp_total_retransmissions" : 0,
+          "tcp_lost_packets" : 0,
+          "tcp_unrecovered_to" : 0,
+          "host" : "jwhuang-bz-mmzt-kadm-node-0",
+          "@timestamp" : 1637128967000
+        }
+      },
+      {
+        "_index" : "tigera_secure_ee_flows.cluster.fluentd-20211117-000001",
+        "_type" : "_doc",
+        "_id" : "mIV9LH0BsEf8XW6HqXuw",
+        "_score" : 3.4484708,
+        "_source" : {
+          "start_time" : 1637128638,
+          "end_time" : 1637128967,
+          "source_ip" : null,
+          "source_name" : "-",
+          "source_name_aggr" : "tigera-manager-9f8c9ccb-*",
+          "source_namespace" : "tigera-manager",
+          "nat_outgoing_ports" : null,
+          "source_port" : null,
+          "source_type" : "wep",
+          "source_labels" : {
+            "labels" : [
+              "pod-template-hash=9f8c9ccb",
+              "k8s-app=tigera-manager"
+            ]
+          },
+          "dest_ip" : null,
+          "dest_name" : "-",
+          "dest_name_aggr" : "kse.kubernetes",
+          "dest_namespace" : "default",
+          "dest_port" : 6443,
+          "dest_type" : "ns",
+          "dest_labels" : {
+            "labels" : [
+              "endpoints.projectcalico.org/serviceName=kubernetes",
+              "provider=kubernetes",
+              "component=apiserver"
+            ]
+          },
+          "dest_service_namespace" : "default",
+          "dest_service_name" : "kubernetes",
+          "dest_service_port" : "https",
+          "dest_service_port_num" : 443,
+          "proto" : "tcp",
+          "action" : "allow",
+          "reporter" : "src",
+          "policies" : {
+            "all_policies" : [
+              "0|allow-tigera|tigera-manager/allow-tigera.manager-access|allow|4"
+            ]
+          },
+          "bytes_in" : 0,
+          "bytes_out" : 60,
+          "num_flows" : 1,
+          "num_flows_started" : 1,
+          "num_flows_completed" : 1,
+          "packets_in" : 0,
+          "packets_out" : 1,
+          "http_requests_allowed_in" : 0,
+          "http_requests_denied_in" : 0,
+          "process_name" : "/es-proxy",
+          "num_process_names" : 1,
+          "process_id" : "25291",
+          "num_process_ids" : 1,
+          "process_args" : [
+            "-"
+          ],
+          "num_process_args" : 0,
+          "original_source_ips" : null,
+          "num_original_source_ips" : 0,
+          "tcp_mean_send_congestion_window" : 10,
+          "tcp_min_send_congestion_window" : 10,
+          "tcp_mean_smooth_rtt" : 1570,
+          "tcp_max_smooth_rtt" : 1570,
+          "tcp_mean_min_rtt" : 113,
+          "tcp_max_min_rtt" : 113,
+          "tcp_mean_mss" : 1388,
+          "tcp_min_mss" : 1388,
+          "tcp_total_retransmissions" : 0,
+          "tcp_lost_packets" : 0,
+          "tcp_unrecovered_to" : 0,
+          "host" : "jwhuang-bz-mmzt-kadm-node-0",
+          "@timestamp" : 1637128967000
+        }
+      },
+      {
+        "_index" : "tigera_secure_ee_flows.cluster.fluentd-20211117-000001",
+        "_type" : "_doc",
+        "_id" : "mYV9LH0BsEf8XW6HqXuw",
+        "_score" : 3.4484708,
+        "_source" : {
+          "start_time" : 1637128638,
+          "end_time" : 1637128967,
+          "source_ip" : null,
+          "source_name" : "-",
+          "source_name_aggr" : "tigera-manager-9f8c9ccb-*",
+          "source_namespace" : "tigera-manager",
+          "nat_outgoing_ports" : null,
+          "source_port" : null,
+          "source_type" : "wep",
+          "source_labels" : {
+            "labels" : [
+              "pod-template-hash=9f8c9ccb",
+              "k8s-app=tigera-manager"
+            ]
+          },
+          "dest_ip" : null,
+          "dest_name" : "-",
+          "dest_name_aggr" : "compliance-server-64bdfd8c49-*",
+          "dest_namespace" : "tigera-compliance",
+          "dest_port" : 5443,
+          "dest_type" : "wep",
+          "dest_labels" : {
+            "labels" : [
+              "pod-template-hash=64bdfd8c49",
+              "k8s-app=compliance-server"
+            ]
+          },
+          "dest_service_namespace" : "tigera-compliance",
+          "dest_service_name" : "compliance",
+          "dest_service_port" : "compliance-api",
+          "dest_service_port_num" : 443,
+          "proto" : "tcp",
+          "action" : "allow",
+          "reporter" : "src",
+          "policies" : {
+            "all_policies" : [
+              "0|allow-tigera|tigera-manager/allow-tigera.manager-access|allow|1"
+            ]
+          },
+          "bytes_in" : 4444,
+          "bytes_out" : 3997,
+          "num_flows" : 1,
+          "num_flows_started" : 1,
+          "num_flows_completed" : 0,
+          "packets_in" : 37,
+          "packets_out" : 38,
+          "http_requests_allowed_in" : 0,
+          "http_requests_denied_in" : 0,
+          "process_name" : "/voltron",
+          "num_process_names" : 1,
+          "process_id" : "25408",
+          "num_process_ids" : 1,
+          "process_args" : [
+            "-"
+          ],
+          "num_process_args" : 0,
+          "original_source_ips" : null,
+          "num_original_source_ips" : 0,
+          "tcp_mean_send_congestion_window" : 10,
+          "tcp_min_send_congestion_window" : 10,
+          "tcp_mean_smooth_rtt" : 1998,
+          "tcp_max_smooth_rtt" : 1998,
+          "tcp_mean_min_rtt" : 123,
+          "tcp_max_min_rtt" : 123,
+          "tcp_mean_mss" : 1388,
+          "tcp_min_mss" : 1388,
+          "tcp_total_retransmissions" : 0,
+          "tcp_lost_packets" : 0,
+          "tcp_unrecovered_to" : 0,
+          "host" : "jwhuang-bz-mmzt-kadm-node-0",
+          "@timestamp" : 1637128967000
+        }
+      }
+    ]
+  }
+}

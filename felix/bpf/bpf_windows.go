@@ -26,7 +26,3 @@ func SyscallSupport() bool {
 func SupportsBPFDataplane() error {
 	return fmt.Errorf("BPF dataplane is not supported on Windows")
 }
-
-func SupportsBPFKprobe() error {
-	return fmt.Errorf("BPF Kprobe is not supported on Windows")
-}
