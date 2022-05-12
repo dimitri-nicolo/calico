@@ -55,6 +55,10 @@ promotions:
   pipeline_file: push-images/node.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push anomaly-detection-api images
+  pipeline_file: push-images/anomaly-detection-api.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 - name: Push deep-packet-inspection images
   pipeline_file: push-images/deep-packet-inspection.yml
   auto_promote:
@@ -63,16 +67,12 @@ promotions:
   pipeline_file: push-images/es-gateway.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
-- name: Push packetcapture images
-  pipeline_file: push-images/packetcapture.yml
-  auto_promote:
-    when: "branch =~ 'master|release-'"
-- name: Push anomaly-detection-api images
-  pipeline_file: push-images/anomaly-detection-api.yml
-  auto_promote:
-    when: "branch =~ 'master|release-'"
 - name: Push intrusion-detection-controller images
   pipeline_file: push-images/intrusion-detection-controller.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
+- name: Push packetcapture images
+  pipeline_file: push-images/packetcapture.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
 # Have a separate promotion for publishing Helm charts.
