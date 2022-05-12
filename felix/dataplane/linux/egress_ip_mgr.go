@@ -796,7 +796,7 @@ func (m *egressIPManager) processGatewayUpdates() error {
 					"workload":   workload,
 					"tableIndex": index,
 					"nextHops":   nextHops,
-				}).Debug("Processing gateways change - checking if workload next hops contain any non-existent gateways")
+				}).Info("Processing gateway update.")
 
 				workloadHasLessHopsThanDesired := (int(workload.EgressMaxNextHops) == 0 && len(nextHops) < len(gateways.getActiveGateways())) ||
 					(int(workload.EgressMaxNextHops) > 0 && len(nextHops) < (int(workload.EgressMaxNextHops)) && len(nextHops) < len(gateways.getActiveGateways()))
@@ -807,10 +807,11 @@ func (m *egressIPManager) processGatewayUpdates() error {
 
 					// Create new route rules and a route table for this workload.
 					log.WithFields(log.Fields{
+						"ipSetID":     id,
 						"workloadIPs": workload.Ipv4Nets,
 						"workloadID":  workloadID,
 						"tableIndex":  index,
-					}).Info("Processing workload - creating route rules and table for this workload.")
+					}).Info("Processing gateway update - recreating route rules and table for workload.")
 					err := m.createWorkloadRuleAndTable(workloadID, workload, len(gateways.getActiveGateways()))
 					if err != nil {
 						lastErr = err
@@ -855,6 +856,36 @@ func (m *egressIPManager) processWorkloadUpdates() error {
 		workload := m.pendingWorkloadUpdates[id]
 		oldWorkload := m.activeWorkloads[id]
 
+		if workload != nil && oldWorkload != nil {
+			log.WithFields(log.Fields{
+				"workloadID":                id,
+				"workload":                  workload,
+				"workload.maxNextHops":      workload.EgressMaxNextHops,
+				"workload.egressIPSetID":    workload.EgressIpSetId,
+				"oldWorkload":               oldWorkload,
+				"oldWorkload.maxNextHops":   oldWorkload.EgressMaxNextHops,
+				"oldWorkload.egressIPSetID": oldWorkload.EgressIpSetId,
+			}).Info("Processing workload update.")
+		}
+
+		if workload != nil && oldWorkload == nil {
+			log.WithFields(log.Fields{
+				"workloadID":             id,
+				"workload":               workload,
+				"workload.maxNextHops":   workload.EgressMaxNextHops,
+				"workload.egressIPSetID": workload.EgressIpSetId,
+			}).Info("Processing workload create.")
+		}
+
+		if workload == nil && oldWorkload != nil {
+			log.WithFields(log.Fields{
+				"workloadID":                id,
+				"oldWorkload":               oldWorkload,
+				"oldWorkload.maxNextHops":   oldWorkload.EgressMaxNextHops,
+				"oldWorkload.egressIPSetID": oldWorkload.EgressIpSetId,
+			}).Info("Processing workload delete.")
+		}
+
 		workloadCreated := workload != nil && oldWorkload == nil
 		workloadDeleted := workload == nil && oldWorkload != nil
 		workloadChanged := workload != nil && oldWorkload != nil
@@ -876,7 +907,6 @@ func (m *egressIPManager) processWorkloadUpdates() error {
 		if workloadCreatedUsingEgress || workloadChangedToStartUsingEgress || workloadChangedToUseDifferentEgress {
 			gateways, exists := m.ipSetIDToGateways[workload.EgressIpSetId]
 			if !exists {
-				log.WithField("IPSetID", workload.EgressIpSetId).Info("Could not find gateways for IPSet, it will be removed.")
 				gateways = make(map[string]gateway)
 			}
 			activeGatewayIPs := gateways.getActiveGateways().getIPs()
@@ -932,10 +962,7 @@ func (m *egressIPManager) notifyWorkloadsOfEgressGatewayMaintenanceWindows() err
 	for id, workload := range m.activeWorkloads {
 		gateways, exists := m.ipSetIDToGateways[workload.EgressIpSetId]
 		if !exists {
-			log.WithFields(log.Fields{
-				"workloadID":    id,
-				"egressIPSetId": workload.EgressIpSetId,
-			}).Info("Couldn't notify workload of gateway maintenance windows - egress ip set not found.")
+			log.Debugf("Workload with ID: %s references an empty set of gateways: %s. No notification required.", id, workload.EgressIpSetId)
 			continue
 		}
 		namespace, name, err := parseNameAndNamespace(id.WorkloadId)
@@ -1103,7 +1130,7 @@ func (m *egressIPManager) setL3Routes(rTable routeTable, ips set.Set) {
 
 func (m *egressIPManager) createWorkloadRuleAndTable(workloadID proto.WorkloadEndpointID, workload *proto.WorkloadEndpoint, numHops int) error {
 	adjustedNumHops := workloadNumHops(int(workload.EgressMaxNextHops), numHops)
-	hopIPs, err := m.determineTableNextHops(workload.EgressIpSetId, adjustedNumHops)
+	hopIPs, err := m.determineTableNextHops(workloadID, workload.EgressIpSetId, adjustedNumHops)
 	if err != nil {
 		return err
 	}
@@ -1435,13 +1462,14 @@ func (m *egressIPManager) configureVXLANDevice(mtu int) error {
 	return nil
 }
 
-func (m *egressIPManager) determineTableNextHops(ipSetID string, maxNextHops int) ([]string, error) {
+func (m *egressIPManager) determineTableNextHops(workloadID proto.WorkloadEndpointID, ipSetID string, maxNextHops int) ([]string, error) {
 	members, exists := m.ipSetIDToGateways[ipSetID]
 	if !exists {
-		return nil, fmt.Errorf("cannot calculate usage map, ipset with id %s does not exist", ipSetID)
+		log.Infof("Workload with ID: %s references an empty set of gateways: %s. Setting its next hops to none.", workloadID, ipSetID)
+		return nil, nil
 	}
 	gatewayIPs := members.getActiveGateways().getIPs()
-	usage := usageMap(gatewayIPs, m.tableIndexToNextHops)
+	usage := usageMap(workloadID, gatewayIPs, m.tableIndexToNextHops)
 	var freqs []int
 	for n := range usage {
 		freqs = append(freqs, n)
@@ -1578,7 +1606,7 @@ func workloadNumHops(egressMaxNextHops int, ipSetSize int) int {
 }
 
 // usageMap returns a map from the number of workloads using the hop to a slice of the hops
-func usageMap(gatewayIPs []string, nextHopsMap map[int][]string) map[int][]string {
+func usageMap(workloadID proto.WorkloadEndpointID, gatewayIPs []string, nextHopsMap map[int][]string) map[int][]string {
 	// calculate the number of wl pods referencing each gw pod.
 	gwPodRefs := make(map[string]int)
 	for _, ipAddr := range gatewayIPs {
@@ -1608,7 +1636,7 @@ func usageMap(gatewayIPs []string, nextHopsMap map[int][]string) map[int][]strin
 		"tableIndexToNextHops": nextHopsMap,
 		"gwPodRefs":            gwPodRefs,
 		"usage":                usage,
-	}).Debug("Calculated egress hop usage.")
+	}).Infof("Calculated egress hop usage for workload with id: %s.", workloadID)
 
 	return usage
 }

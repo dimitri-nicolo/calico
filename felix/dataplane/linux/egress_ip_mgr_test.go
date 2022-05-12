@@ -590,12 +590,9 @@ var _ = Describe("EgressIPManager", func() {
 				Endpoint: endpoint0,
 			})
 
-			// endpoint0 stay in pendingWorkloadUpdates
-			for i := 0; i < 3; i++ {
-				err := manager.CompleteDeferredWork()
-				Expect(err).ToNot(HaveOccurred())
-				Expect(manager.pendingWorkloadUpdates[id0]).To(Equal(endpoint0))
-			}
+			err := manager.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
+			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, []string{})
 
 			manager.OnUpdate(&proto.IPSetUpdate{
 				Id: "setx",
@@ -606,10 +603,10 @@ var _ = Describe("EgressIPManager", func() {
 				},
 				Type: proto.IPSetUpdate_EGRESS_IP,
 			})
-			err := manager.CompleteDeferredWork()
+			err = manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
 
-			// pod-0 use table 3 as the result.
+			// pod-0 use table 1 as the result.
 			expectRulesAndTable([]string{"10.0.240.0/32"}, 1, []string{"10.0.10.1", "10.0.10.2", "10.0.10.3"})
 			mainTable.checkL2Routes("egress.calico", []routetable.L2Target{
 				{
