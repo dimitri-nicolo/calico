@@ -11,7 +11,7 @@ BUILD_IMAGES         ?=$(IDS_CONTROLLER_IMAGE) $(JOB_INSTALLER_IMAGE)
 
 TESLA ?= false
 ifeq ($(TESLA),true)
-	RELEASE_REGISTRIES    = gcr.io/tigera-tesla
+	RELEASE_REGISTRIES    = gcr.io/tigera-tesla/tigera
 	BUILD_TAGS            ?= -tags tesla
 	RELEASE_BRANCH_PREFIX = release-tesla
 	DEV_TAG_SUFFIX        = tesla-0.dev
@@ -76,8 +76,8 @@ sub-image-%:
 image: $(IDS_CONTROLLER_IMAGE) $(JOB_INSTALLER_IMAGE)
 
 $(IDS_CONTROLLER_IMAGE): $(IDS_CONTROLLER_CONTAINER_CREATED)
-$(IDS_CONTROLLER_CONTAINER_CREATED): docker-image/controller/Dockerfile.$(ARCH) $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH)
-	$(DOCKER_BUILD) -t $(IDS_CONTROLLER_IMAGE):latest-$(ARCH) -f docker-image/controller/Dockerfile.$(ARCH) . --load
+$(IDS_CONTROLLER_CONTAINER_CREATED): Dockerfile.$(ARCH) $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH)
+	$(DOCKER_BUILD) -t $(IDS_CONTROLLER_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) . --load
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(IDS_CONTROLLER_IMAGE)
 	touch $@
 
