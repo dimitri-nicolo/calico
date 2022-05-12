@@ -2,11 +2,8 @@
 set -e -o pipefail
 
 # Query fluentd monitor_agent metrics
-# If curl fails, we return the HTTP status code.
-http_status=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:24220/api/plugins.json")
-if [ $http_status != 200 ]; then echo "HTTP status $http_status != 200"; exit $http_status; fi
-
-output=$(curl -s "http://localhost:24220/api/plugins.json")
+# curl will return non-zero error code on failure.
+output=$(curl -f -s "http://localhost:24220/api/plugins.json")
 # Get the current metrics of elasticsearch for flows, dns, l7, audit_ee, audit_kube, bgp.
 # the tigera_secure_ee output contains multiple values.
 tigera_secure_ee=$(echo "$output" | jq -r '.plugins[] | select(.config.index_name) | select(.config.index_name | startswith("tigera_secure_ee"))')
