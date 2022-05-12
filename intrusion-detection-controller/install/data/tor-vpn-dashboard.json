@@ -1,0 +1,185 @@
+[
+  {
+    "id": "10c2d440-2b60-11ea-99ed-a99e6f9cad7a",
+    "type": "search",
+    "version": "WzIxLDFd",
+    "attributes": {
+      "title": "Tor-VPN-search",
+      "description": "",
+      "hits": 0,
+      "columns": [
+        "source_name",
+        "source_namespace",
+        "source_ip",
+        "dest_name",
+        "dest_namespace",
+        "dest_ip",
+        "dest_port",
+        "proto",
+        "action"
+      ],
+      "sort": [
+        "start_time",
+        "desc"
+      ],
+      "version": 1,
+      "kibanaSavedObjectMeta": {
+        "searchSourceJSON": "{\"highlightAll\":true,\"version\":true,\"query\":{\"language\":\"lucene\",\"query\":\"dest_name : threatfeed.tor-bulk-exit-list OR dest_name: threatfeed.ejr-vpn OR source_name : threatfeed.tor-bulk-exit-list OR source_name: threatfeed.ejr-vpn\"},\"filter\":[],\"indexRefName\":\"kibanaSavedObjectMeta.searchSourceJSON.index\"}"
+      }
+    },
+    "references": [
+      {
+        "name": "kibanaSavedObjectMeta.searchSourceJSON.index",
+        "type": "index-pattern",
+        "id": "b74ef5b0-c80f-11e8-97f7-15a796350190"
+      }
+    ],
+    "migrationVersion": {
+      "search": "7.9.3"
+    }
+  },
+  {
+    "id": "4e4c7c50-2b68-11ea-99ed-a99e6f9cad7a",
+    "type": "visualization",
+    "version": "WzIyLDFd",
+    "attributes": {
+      "title": "Tor-VPN Line Graph",
+      "visState": "{\"title\":\"Tor-VPN Line Graph\",\"type\":\"line\",\"params\":{\"type\":\"line\",\"grid\":{\"categoryLines\":false},\"categoryAxes\":[{\"id\":\"CategoryAxis-1\",\"type\":\"category\",\"position\":\"bottom\",\"show\":true,\"style\":{},\"scale\":{\"type\":\"linear\"},\"labels\":{\"show\":true,\"filter\":true,\"truncate\":100},\"title\":{}}],\"valueAxes\":[{\"id\":\"ValueAxis-1\",\"name\":\"LeftAxis-1\",\"type\":\"value\",\"position\":\"left\",\"show\":true,\"style\":{},\"scale\":{\"type\":\"linear\",\"mode\":\"normal\"},\"labels\":{\"show\":true,\"rotate\":0,\"filter\":false,\"truncate\":100},\"title\":{\"text\":\"Count\"}}],\"seriesParams\":[{\"show\":\"true\",\"type\":\"line\",\"mode\":\"normal\",\"data\":{\"label\":\"Count\",\"id\":\"1\"},\"valueAxis\":\"ValueAxis-1\",\"drawLinesBetweenPoints\":true,\"showCircles\":true}],\"addTooltip\":true,\"addLegend\":true,\"legendPosition\":\"right\",\"times\":[],\"addTimeMarker\":false,\"dimensions\":{\"x\":null,\"y\":[{\"accessor\":0,\"format\":{\"id\":\"number\"},\"params\":{},\"aggType\":\"count\"}]}},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"date_histogram\",\"schema\":\"segment\",\"params\":{\"field\":\"start_time\",\"useNormalizedEsInterval\":true,\"interval\":\"auto\",\"drop_partials\":false,\"min_doc_count\":1,\"extended_bounds\":{}}}]}",
+      "uiStateJSON": "{}",
+      "description": "",
+      "version": 1,
+      "kibanaSavedObjectMeta": {
+        "searchSourceJSON": "{\"query\":{\"query\":\"\",\"language\":\"lucene\"},\"filter\":[]}"
+      },
+      "savedSearchRefName": "search_0"
+    },
+    "references": [
+      {
+        "name": "search_0",
+        "type": "search",
+        "id": "10c2d440-2b60-11ea-99ed-a99e6f9cad7a"
+      }
+    ],
+    "migrationVersion": {
+      "visualization": "7.10.0"
+    }
+  },
+  {
+    "id": "b8c5d460-2b67-11ea-99ed-a99e6f9cad7a",
+    "type": "visualization",
+    "version": "WzIzLDFd",
+    "attributes": {
+      "title": "Tor-VPN Tag Cloud",
+      "visState": "{\"title\":\"Tor-VPN Tag Cloud\",\"type\":\"tagcloud\",\"params\":{\"scale\":\"linear\",\"orientation\":\"single\",\"minFontSize\":18,\"maxFontSize\":72,\"showLabel\":true,\"metric\":{\"type\":\"vis_dimension\",\"accessor\":0,\"format\":{\"id\":\"string\",\"params\":{}}}},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"segment\",\"params\":{\"field\":\"dest_ip\",\"orderBy\":\"1\",\"order\":\"desc\",\"size\":5,\"otherBucket\":false,\"otherBucketLabel\":\"Other\",\"missingBucket\":false,\"missingBucketLabel\":\"Missing\"}}]}",
+      "uiStateJSON": "{}",
+      "description": "",
+      "version": 1,
+      "kibanaSavedObjectMeta": {
+        "searchSourceJSON": "{\"query\":{\"query\":\"\",\"language\":\"lucene\"},\"filter\":[]}"
+      },
+      "savedSearchRefName": "search_0"
+    },
+    "references": [
+      {
+        "name": "search_0",
+        "type": "search",
+        "id": "10c2d440-2b60-11ea-99ed-a99e6f9cad7a"
+      }
+    ],
+    "migrationVersion": {
+      "visualization": "7.10.0"
+    }
+  },
+  {
+    "id": "41c01f70-2b66-11ea-99ed-a99e6f9cad7a",
+    "type": "visualization",
+    "version": "WzI0LDFd",
+    "attributes": {
+      "title": "Tor-VPN controls",
+      "visState": "{\"title\":\"Tor-VPN controls\",\"type\":\"input_control_vis\",\"params\":{\"controls\":[{\"id\":\"1577752551155\",\"fieldName\":\"action\",\"parent\":\"\",\"label\":\"Flow Action\",\"type\":\"list\",\"options\":{\"type\":\"terms\",\"multiselect\":true,\"dynamicOptions\":true,\"size\":5,\"order\":\"desc\"},\"indexPatternRefName\":\"control_0_index_pattern\"},{\"id\":\"1577752608301\",\"fieldName\":\"dest_port\",\"parent\":\"\",\"label\":\"Destination port\",\"type\":\"list\",\"options\":{\"type\":\"terms\",\"multiselect\":true,\"dynamicOptions\":false,\"size\":5,\"order\":\"desc\"},\"indexPatternRefName\":\"control_1_index_pattern\"},{\"id\":\"1577752668600\",\"fieldName\":\"source_namespace\",\"parent\":\"\",\"label\":\"Source namespace\",\"type\":\"list\",\"options\":{\"type\":\"terms\",\"multiselect\":true,\"dynamicOptions\":true,\"size\":5,\"order\":\"desc\"},\"indexPatternRefName\":\"control_2_index_pattern\"},{\"id\":\"1577752720078\",\"fieldName\":\"dest_namespace\",\"parent\":\"\",\"label\":\"Destination namespace\",\"type\":\"list\",\"options\":{\"type\":\"terms\",\"multiselect\":true,\"dynamicOptions\":true,\"size\":5,\"order\":\"desc\"},\"indexPatternRefName\":\"control_3_index_pattern\"},{\"id\":\"1577752764096\",\"fieldName\":\"source_name_aggr\",\"parent\":\"\",\"label\":\"Source name\",\"type\":\"list\",\"options\":{\"type\":\"terms\",\"multiselect\":true,\"dynamicOptions\":true,\"size\":5,\"order\":\"desc\"},\"indexPatternRefName\":\"control_4_index_pattern\"},{\"id\":\"1577752792832\",\"fieldName\":\"dest_namespace\",\"parent\":\"\",\"label\":\"Destination name\",\"type\":\"list\",\"options\":{\"type\":\"terms\",\"multiselect\":true,\"dynamicOptions\":true,\"size\":5,\"order\":\"desc\"},\"indexPatternRefName\":\"control_5_index_pattern\"}],\"updateFiltersOnChange\":false,\"useTimeFilter\":false,\"pinFilters\":false},\"aggs\":[]}",
+      "uiStateJSON": "{}",
+      "description": "",
+      "version": 1,
+      "kibanaSavedObjectMeta": {
+        "searchSourceJSON": "{\"query\":{\"query\":\"\",\"language\":\"lucene\"},\"filter\":[]}"
+      }
+    },
+    "references": [
+      {
+        "name": "control_0_index_pattern",
+        "type": "index-pattern",
+        "id": "b74ef5b0-c80f-11e8-97f7-15a796350190"
+      },
+      {
+        "name": "control_1_index_pattern",
+        "type": "index-pattern",
+        "id": "b74ef5b0-c80f-11e8-97f7-15a796350190"
+      },
+      {
+        "name": "control_2_index_pattern",
+        "type": "index-pattern",
+        "id": "b74ef5b0-c80f-11e8-97f7-15a796350190"
+      },
+      {
+        "name": "control_3_index_pattern",
+        "type": "index-pattern",
+        "id": "b74ef5b0-c80f-11e8-97f7-15a796350190"
+      },
+      {
+        "name": "control_4_index_pattern",
+        "type": "index-pattern",
+        "id": "b74ef5b0-c80f-11e8-97f7-15a796350190"
+      },
+      {
+        "name": "control_5_index_pattern",
+        "type": "index-pattern",
+        "id": "b74ef5b0-c80f-11e8-97f7-15a796350190"
+      }
+    ],
+    "migrationVersion": {
+      "visualization": "7.10.0"
+    }
+  },
+  {
+    "id": "e0936290-2b68-11ea-99ed-a99e6f9cad7a",
+    "type": "dashboard",
+    "version": "WzI1LDFd",
+    "attributes": {
+      "title": "Tigera Secure EE Tor-VPN Logs",
+      "hits": 0,
+      "description": "",
+      "panelsJSON": "[{\"gridData\":{\"x\":0,\"y\":15,\"w\":48,\"h\":16,\"i\":\"1\"},\"version\":\"7.3.2\",\"panelIndex\":\"1\",\"embeddableConfig\":{},\"panelRefName\":\"panel_0\"},{\"gridData\":{\"x\":32,\"y\":0,\"w\":16,\"h\":15,\"i\":\"2\"},\"version\":\"7.3.2\",\"panelIndex\":\"2\",\"embeddableConfig\":{},\"panelRefName\":\"panel_1\"},{\"gridData\":{\"x\":0,\"y\":0,\"w\":18,\"h\":15,\"i\":\"3\"},\"version\":\"7.3.2\",\"panelIndex\":\"3\",\"embeddableConfig\":{},\"panelRefName\":\"panel_2\"},{\"gridData\":{\"x\":18,\"y\":0,\"w\":14,\"h\":15,\"i\":\"4\"},\"version\":\"7.3.2\",\"panelIndex\":\"4\",\"embeddableConfig\":{},\"panelRefName\":\"panel_3\"}]",
+      "optionsJSON": "{\"useMargins\":true,\"hidePanelTitles\":false}",
+      "version": 1,
+      "timeRestore": false,
+      "kibanaSavedObjectMeta": {
+        "searchSourceJSON": "{\"query\":{\"query\":\"\",\"language\":\"kuery\"},\"filter\":[]}"
+      }
+    },
+    "references": [
+      {
+        "name": "panel_0",
+        "type": "search",
+        "id": "10c2d440-2b60-11ea-99ed-a99e6f9cad7a"
+      },
+      {
+        "name": "panel_1",
+        "type": "visualization",
+        "id": "41c01f70-2b66-11ea-99ed-a99e6f9cad7a"
+      },
+      {
+        "name": "panel_2",
+        "type": "visualization",
+        "id": "b8c5d460-2b67-11ea-99ed-a99e6f9cad7a"
+      },
+      {
+        "name": "panel_3",
+        "type": "visualization",
+        "id": "4e4c7c50-2b68-11ea-99ed-a99e6f9cad7a"
+      }
+    ],
+    "migrationVersion": {
+      "dashboard": "7.9.3"
+    }
+  }
+]

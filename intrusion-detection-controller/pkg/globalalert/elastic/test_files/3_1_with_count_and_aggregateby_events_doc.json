@@ -1,0 +1,6 @@
+{"index":{"_index":"tigera_secure_ee_events.test-cluster."}}
+{"description":"test alert: sample-test","origin":"sample-test","record":{"count":3506,"source_name_aggr":"alertmanager-calico-node-alertmanager-*","source_namespace":"tigera-prometheus"},"severity":100,"source_name_aggr":"alertmanager-calico-node-alertmanager-*","source_namespace":"tigera-prometheus","time":1615857005,"type":"global_alert"}
+{"index":{"_index":"tigera_secure_ee_events.test-cluster."}}
+{"description":"test alert: sample-test","origin":"sample-test","record":{"count":1737,"source_name_aggr":"compliance-benchmarker-*","source_namespace":"tigera-compliance"},"severity":100,"source_name_aggr":"compliance-benchmarker-*","source_namespace":"tigera-compliance","time":1615857005,"type":"global_alert"}
+{"index":{"_index":"tigera_secure_ee_events.test-cluster."}}
+{"description":"test alert: sample-test","origin":"sample-test","record":{"count":869,"source_name_aggr":"compliance-controller-57df86b7d-*","source_namespace":"tigera-compliance"},"severity":100,"source_name_aggr":"compliance-controller-57df86b7d-*","source_namespace":"tigera-compliance","time":1615857005,"type":"global_alert"}

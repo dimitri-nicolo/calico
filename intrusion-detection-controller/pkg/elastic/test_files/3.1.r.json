@@ -1,0 +1,102 @@
+{
+  "_scroll_id": "DnF1ZXJ5VGhlbkZldGNoDwAAAAAABD7nFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAAQ-5hZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEPugWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABD7pFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAAQ-6hZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEPuwWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABD7rFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAAQ-8xZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEPu0Wb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABD7uFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAAQ-7xZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEPvAWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQAAAAAABD7xFm9CTGZ2OWNZU2E2UjJtdGNYOVJpcUEAAAAAAAQ-8hZvQkxmdjljWVNhNlIybXRjWDlSaXFBAAAAAAAEPvQWb0JMZnY5Y1lTYTZSMm10Y1g5UmlxQQ==",
+  "_shards": {
+    "failed": 0,
+    "skipped": 0,
+    "successful": 15,
+    "total": 15
+  },
+  "hits": {
+    "hits": [
+      {
+        "_id": "BQ15nGkBixKz5K3LBMRy",
+        "_index": "tigera_secure_ee_flows.cluster.20180914",
+        "_score": null,
+        "_source": {
+          "action": "allow",
+          "bytes_in": 18966,
+          "bytes_out": 10048,
+          "dest_ip": "10.10.1.20",
+          "dest_labels": null,
+          "dest_name": "basic-6tn46e",
+          "dest_name_aggr": "basic-*",
+          "dest_namespace": "default",
+          "dest_port": 0,
+          "dest_type": "wep",
+          "end_time": 1536897900,
+          "host": "node02",
+          "http_requests_allowed_in": 0,
+          "http_requests_denied_in": 0,
+          "num_flows": 1,
+          "num_flows_completed": 1,
+          "num_flows_started": 1,
+          "packets_in": 172,
+          "packets_out": 84,
+          "policies": null,
+          "proto": "tcp",
+          "reporter": "dst",
+          "source_ip": "35.32.82.134",
+          "source_labels": null,
+          "source_name": "-",
+          "source_name_aggr": "pub",
+          "source_namespace": "-",
+          "source_port": null,
+          "source_type": "net",
+          "start_time": 1536897600
+        },
+        "_type": "fluentd",
+        "sort": [
+          0
+        ]
+      },
+      {
+        "_id": "BQ15nGkBixKz5K3LBMRz",
+        "_index": "tigera_secure_ee_flows.cluster.20180914",
+        "_score": null,
+        "_source": {
+          "action": "allow",
+          "bytes_in": 18966,
+          "bytes_out": 10048,
+          "dest_ip": "10.10.1.20",
+          "dest_labels": null,
+          "dest_name": "basic-6tn46e",
+          "dest_name_aggr": "basic-*",
+          "dest_namespace": "default",
+          "dest_port": 0,
+          "dest_type": "wep",
+          "end_time": 1536897910,
+          "host": "node02",
+          "http_requests_allowed_in": 0,
+          "http_requests_denied_in": 0,
+          "num_flows": 1,
+          "num_flows_completed": 1,
+          "num_flows_started": 1,
+          "packets_in": 172,
+          "packets_out": 84,
+          "policies": null,
+          "proto": "tcp",
+          "reporter": "dst",
+          "source_ip": "35.32.82.134",
+          "source_labels": null,
+          "source_name": "-",
+          "source_name_aggr": "pub",
+          "source_namespace": "-",
+          "source_port": null,
+          "source_type": "net",
+          "start_time": 1536897610
+        },
+        "_type": "fluentd",
+        "sort": [
+          0
+        ]
+      }
+    ],
+    "max_score": null,
+    "total": {
+      "relation": "eq",
+      "value": 1
+    }
+  },
+  "timed_out": false,
+  "took": 18
+}
