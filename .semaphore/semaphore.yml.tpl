@@ -55,6 +55,10 @@ promotions:
   pipeline_file: push-images/node.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push anomaly-detection-api images
+  pipeline_file: push-images/anomaly-detection-api.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 - name: Push deep-packet-inspection images
   pipeline_file: push-images/deep-packet-inspection.yml
   auto_promote:
@@ -63,12 +67,12 @@ promotions:
   pipeline_file: push-images/es-gateway.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
-- name: Push anomaly-detection-api images
-  pipeline_file: push-images/anomaly-detection-api.yml
-  auto_promote:
-    when: "branch =~ 'master|release-'"
 - name: Push intrusion-detection-controller images
   pipeline_file: push-images/intrusion-detection-controller.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
+- name: Push packetcapture images
+  pipeline_file: push-images/packetcapture.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
 # Have a separate promotion for publishing Helm charts.
@@ -655,6 +659,21 @@ blocks:
     - name: "es-gateway tests"
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
+
+- name: 'packetcapture'
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/packetcapture', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd packetcapture
+    jobs:
+    - name: "packetcapture tests"
+      commands:
+      - make ci
 
 - name: 'anomaly-detection-api'
   run:
