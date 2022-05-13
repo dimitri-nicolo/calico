@@ -89,7 +89,7 @@ require (
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
 	github.com/tigera/api v0.0.0-20211119192830-60ae1a27d9ca
 	github.com/tigera/windows-networking v0.0.0-20211112174220-6a90051af748
-	github.com/vishvananda/netlink v1.1.1-0.20220318152240-083e92e21eeb
+	github.com/vishvananda/netlink v1.2.0-beta.0.20220404152918-5e915e014938
 	github.com/willf/bitset v1.1.11
 	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0
 	go.etcd.io/etcd/api/v3 v3.5.1
