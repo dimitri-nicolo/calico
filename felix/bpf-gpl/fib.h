@@ -180,7 +180,7 @@ skip_redir_ifindex:
 #ifdef BPF_CORE_SUPPORTED
 		case BPF_FIB_LKUP_RET_NO_NEIGH:
 			if (bpf_core_enum_value_exists(enum bpf_func_id, BPF_FUNC_redirect_neigh)) {
-				CALI_DEBUG("FIB lookup succeeded - not neigh - gw %x\n", fib_params.ipv4_dst);
+				CALI_DEBUG("FIB lookup succeeded - not neigh - gw %x\n", bpf_ntohl(fib_params.ipv4_dst));
 				struct bpf_redir_neigh nh_params = {};
 
 				nh_params.nh_family = fib_params.family;
@@ -230,7 +230,8 @@ skip_fib:
 		 * the cluster, and routing for that IP would not be via the egress
 		 * gateway.
 		 */
-		if (EGRESS_GATEWAY || (CALI_F_FROM_HEP && state->tun_ip != 0)) {
+		if ((CALI_F_FROM_HEP && state->tun_ip != 0 && ctx->fwd.mark != CALI_SKB_MARK_BYPASS_FWD) ||
+				EGRESS_GATEWAY) {
 			ctx->fwd.mark = CALI_SKB_MARK_SKIP_RPF;
 		}
 		/* Packet is towards host namespace, mark it so that downstream

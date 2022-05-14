@@ -227,10 +227,12 @@ type FelixConfigurationSpec struct {
 
 	// VXLANEnabled overrides whether Felix should create the VXLAN tunnel device for VXLAN networking. Optional as Felix determines this based on the existing IP pools. [Default: nil (unset)]
 	VXLANEnabled *bool `json:"vxlanEnabled,omitempty" confignamev1:"VXLANEnabled"`
-	// VXLANMTU is the MTU to set on the tunnel device. See Configuring MTU [Default: 1440]
-	VXLANMTU  *int `json:"vxlanMTU,omitempty"`
-	VXLANPort *int `json:"vxlanPort,omitempty"`
-	VXLANVNI  *int `json:"vxlanVNI,omitempty"`
+	// VXLANMTU is the MTU to set on the IPv4 VXLAN tunnel device. See Configuring MTU [Default: 1410]
+	VXLANMTU *int `json:"vxlanMTU,omitempty"`
+	// VXLANMTUV6 is the MTU to set on the IPv6 VXLAN tunnel device. See Configuring MTU [Default: 1390]
+	VXLANMTUV6 *int `json:"vxlanMTUV6,omitempty"`
+	VXLANPort  *int `json:"vxlanPort,omitempty"`
+	VXLANVNI   *int `json:"vxlanVNI,omitempty"`
 
 	// AllowVXLANPacketsFromWorkloads controls whether Felix will add a rule to drop VXLAN encapsulated traffic
 	// from workloads [Default: false]
@@ -326,9 +328,13 @@ type FelixConfigurationSpec struct {
 	// (ie it uses the iptables MASQUERADE target)
 	NATOutgoingAddress string `json:"natOutgoingAddress,omitempty"`
 
-	// This is the source address to use on programmed device routes. By default the source address is left blank,
+	// This is the IPv4 source address to use on programmed device routes. By default the source address is left blank,
 	// leaving the kernel to choose the source address used.
 	DeviceRouteSourceAddress string `json:"deviceRouteSourceAddress,omitempty"`
+
+	// This is the IPv6 source address to use on programmed device routes. By default the source address is left blank,
+	// leaving the kernel to choose the source address used.
+	DeviceRouteSourceAddressIPv6 string `json:"deviceRouteSourceAddressIPv6,omitempty"`
 
 	// This defines the route protocol added to programmed device routes, by default this will be RTPROT_BOOT
 	// when left blank.
@@ -442,6 +448,10 @@ type FelixConfigurationSpec struct {
 	// for each endpoint matched by every selector in the source/destination matches in network policy.  Selectors
 	// such as "all()" can result in large numbers of entries (one entry per endpoint in that case).
 	BPFMapSizeIPSets *int `json:"bpfMapSizeIPSets,omitempty"`
+	// BPFEnforceRPF enforce strict RPF on all interfaces with BPF programs regardless of
+	// what is the per-interfaces or global setting. Possible values are Disabled or
+	// Strict. [Default: Strict]
+	BPFEnforceRPF string `json:"bpfEnforceRPF,omitempty"`
 
 	SyslogReporterNetwork string `json:"syslogReporterNetwork,omitempty"`
 	SyslogReporterAddress string `json:"syslogReporterAddress,omitempty"`
@@ -809,6 +819,10 @@ type FelixConfigurationSpec struct {
 	// [Default: Drop]
 	ServiceLoopPrevention string `json:"serviceLoopPrevention,omitempty" validate:"omitempty,oneof=Drop Reject Disabled"`
 
+	// WorkloadSourceSpoofing controls whether pods can use the allowedSourcePrefixes annotation to send traffic with a source IP
+	// address that is not theirs. This is disabled by default. When set to "Any", pods can request any prefix.
+	WorkloadSourceSpoofing string `json:"workloadSourceSpoofing,omitempty" validate:"omitempty,oneof=Disabled Any)"`
+
 	// MTUIfacePattern is a regular expression that controls which interfaces Felix should scan in order
 	// to calculate the host's MTU.
 	// This should not match workload interfaces (usually named cali...).
@@ -844,6 +858,15 @@ type RouteTableIDRange struct {
 }
 
 type RouteTableRanges []RouteTableIDRange
+
+func (r RouteTableRanges) Len() int {
+	var len int = 0
+	for _, rng := range r {
+		len += rng.Max - rng.Min
+	}
+
+	return len
+}
 
 // ProtoPort is combination of protocol, port, and CIDR. Protocol and port must be specified.
 type ProtoPort struct {

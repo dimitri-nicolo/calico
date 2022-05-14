@@ -105,6 +105,15 @@ func (r *DefaultRuleRenderer) WorkloadRPFDispatchChains(
 ) []*Chain {
 	log.WithField("numGateways", len(gatewayInterfaceNames)).Debug("Rendering workload RPF dispatch chains")
 
+	// Send workload traffic to a specific chain to skip the rpf check for some workloads
+	eofRules := []Rule{{
+		// Check if from-wl traffic should skip rpf
+		Action: JumpAction{Target: ChainRpfSkip},
+	}}
+	// By default, use RPF to prevent a workload from spoofing its source IP.
+	eofRules = append(eofRules,
+		r.RPFilter(ipVersion, 0, 0, r.OpenStackSpecialCasesEnabled, false)...)
+
 	// We can reuse WorkloadFromEndpointPfx and ChainFromWorkloadDispatch here because these
 	// chains are going into the raw table, where that prefix and chain name aren't otherwise
 	// used.
@@ -114,8 +123,7 @@ func (r *DefaultRuleRenderer) WorkloadRPFDispatchChains(
 		"",
 		ChainFromWorkloadDispatch,
 		"",
-		// By default, use RPF to prevent a workload from spoofing its source IP.
-		r.RPFilter(ipVersion, 0, 0, r.OpenStackSpecialCasesEnabled, false),
+		eofRules,
 		nil,
 		// For gateway interfaces, simply return (from ChainFromWorkloadDispatch).
 		func(pfx, name string) Action {

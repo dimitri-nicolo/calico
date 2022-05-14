@@ -1,0 +1,2 @@
+*_template.json is taken from
+https://github.com/tigera/fluentd-docker/blob/master/elastic_mapping_*.template

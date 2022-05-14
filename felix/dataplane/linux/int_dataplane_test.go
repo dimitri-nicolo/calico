@@ -66,8 +66,8 @@ var _ = Describe("Constructor test", func() {
 	var dpConfig intdataplane.Config
 	var healthAggregator *health.HealthAggregator
 	var col collector.Collector
-	var kubernetesProvider = config.ProviderNone
-	var routeSource = "CalicoIPAM"
+	kubernetesProvider := config.ProviderNone
+	routeSource := "CalicoIPAM"
 	var wireguardEncryptHostTraffic bool
 
 	JustBeforeEach(func() {
@@ -158,7 +158,6 @@ var _ = Describe("Constructor test", func() {
 	})
 
 	Context("with health aggregator", func() {
-
 		BeforeEach(func() {
 			healthAggregator = health.NewHealthAggregator()
 		})
@@ -184,7 +183,6 @@ var _ = Describe("Constructor test", func() {
 	})
 
 	Context("with Wireguard on AKS", func() {
-
 		BeforeEach(func() {
 			kubernetesProvider = config.ProviderAKS
 			routeSource = "WorkloadIPs"
@@ -198,7 +196,6 @@ var _ = Describe("Constructor test", func() {
 	})
 
 	Context("with Wireguard on non-managed provider", func() {
-
 		BeforeEach(func() {
 			kubernetesProvider = config.ProviderNone
 			routeSource = "CalicoIPAM"

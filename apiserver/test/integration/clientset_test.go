@@ -1067,10 +1067,9 @@ func testAlertExceptionClient(client calicoclient.Interface, name string) error 
 		Spec: calico.AlertExceptionSpec{
 			Description: "alert exception description",
 			Selector:    "origin=someorigin",
+			StartTime:   metav1.Time{Time: time.Now()},
 		},
-		Status: calico.AlertExceptionStatus{
-			LastExecuted: &v1.Time{Time: time.Now()},
-		},
+		Status: calico.AlertExceptionStatus{},
 	}
 	ctx := context.Background()
 
@@ -1113,7 +1112,6 @@ func testAlertExceptionClient(client calicoclient.Interface, name string) error 
 
 	alertExceptionUpdate := alertExceptionServer.DeepCopy()
 	alertExceptionUpdate.Spec.Description += "-updated"
-	alertExceptionUpdate.Status.LastExecuted = &v1.Time{Time: time.Now()}
 	alertExceptionServer, err = alertExceptionClient.Update(ctx, alertExceptionUpdate, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("error updating alertException %s (%s)", name, err)
@@ -1121,21 +1119,14 @@ func testAlertExceptionClient(client calicoclient.Interface, name string) error 
 	if alertExceptionServer.Spec.Description != alertExceptionUpdate.Spec.Description {
 		return errors.New("didn't update spec.description")
 	}
-	if alertExceptionServer.Status.LastExecuted != nil {
-		return errors.New("status was updated by Update()")
-	}
 
 	alertExceptionUpdate = alertExceptionServer.DeepCopy()
-	alertExceptionUpdate.Status.LastExecuted = &v1.Time{Time: time.Now()}
 	alertExceptionUpdate.Labels = map[string]string{"foo": "bar"}
 	statusDescription := "status"
 	alertExceptionUpdate.Spec.Description = statusDescription
 	alertExceptionServer, err = alertExceptionClient.UpdateStatus(ctx, alertExceptionUpdate, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("error updating alertException %s (%s)", name, err)
-	}
-	if alertExceptionServer.Status.LastExecuted == nil {
-		return fmt.Errorf("didn't update status. %v != %v", alertExceptionUpdate.Status, alertExceptionServer.Status)
 	}
 	if _, ok := alertExceptionServer.Labels["foo"]; ok {
 		return fmt.Errorf("updatestatus updated labels")
@@ -1181,6 +1172,7 @@ func testAlertExceptionClient(client calicoclient.Interface, name string) error 
 			Spec: calico.AlertExceptionSpec{
 				Description: "test",
 				Selector:    "origin=someorigin",
+				StartTime:   metav1.Time{Time: time.Now()},
 			},
 		}
 		_, err = alertExceptionClient.Create(ctx, ae, metav1.CreateOptions{})

@@ -1,0 +1,14 @@
+{
+  "attributes": {
+    "siem:defaultIndex": [
+      "apm-*-transaction*",
+      "auditbeat-*",
+      "endgame-*",
+      "filebeat-*",
+      "packetbeat-*",
+      "winlogbeat-*",
+      "tigera_secure_ee_flows*",
+      "tigera_secure_ee_dns*"
+    ]
+  }
+}

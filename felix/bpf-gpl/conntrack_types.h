@@ -59,7 +59,7 @@ struct calico_ct_value {
 	__u64 last_seen; // 8
 
 	__u8 type;		// 16
-	__u8 flags;
+	__u8 flags;	// 17
 
 	// Important to use explicit padding, otherwise the compiler can decide
 	// not to zero the padding bytes, which upsets the verifier.  Worse than
@@ -83,7 +83,7 @@ struct calico_ct_value {
 
 		// CALI_CT_TYPE_NAT_FWD; key for the CALI_CT_TYPE_NAT_REV entry.
 		struct {
-			struct calico_ct_key nat_rev_key;  // 16
+			struct calico_ct_key nat_rev_key;  // 24
 			__u16 nat_sport;
 			__u8 pad2[46];
 		};

@@ -1,0 +1,42 @@
+{
+  "aggs": {
+    "composite_aggs": {
+      "composite": {
+        "size": 500,
+        "sources": [
+          {
+            "source_namespace": {
+              "terms": {
+                "field": "source_namespace"
+              }
+            }
+          }
+        ],
+        "after": {
+          "source_namespace": "calico-system"
+        }
+      }
+    }
+  },
+  "query": {
+    "bool": {
+      "filter": {
+        "range": {
+          "start_time": {
+            "format": "strict_date_optional_time||epoch_millis",
+            "gte": "1615247000833",
+            "lte": "1615247463833"
+          }
+        }
+      },
+      "must": {
+        "term": {
+          "action": {
+            "value": "allow"
+          }
+        }
+      }
+    }
+  },
+  "size": 0
+}

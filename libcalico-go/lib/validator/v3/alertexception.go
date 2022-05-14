@@ -3,7 +3,6 @@
 package v3
 
 import (
-	"fmt"
 	"reflect"
 
 	validator "gopkg.in/go-playground/validator.v9"
@@ -14,29 +13,47 @@ import (
 )
 
 func validateAlertExceptionSpec(structLevel validator.StructLevel) {
-	validateAlertExceptionPeriod(structLevel)
-	validateAlertExceptionQuery(structLevel)
+	validateAlertExceptionTime(structLevel)
+	validateAlertExceptionSelector(structLevel)
 }
 
 func getAlertExceptionSpec(structLevel validator.StructLevel) api.AlertExceptionSpec {
 	return structLevel.Current().Interface().(api.AlertExceptionSpec)
 }
 
-func validateAlertExceptionPeriod(structLevel validator.StructLevel) {
+func validateAlertExceptionTime(structLevel validator.StructLevel) {
 	s := getAlertExceptionSpec(structLevel)
 
-	if s.Period != nil && s.Period.Duration != 0 && s.Period.Duration < api.AlertExceptionMinPeriod {
+	if s.StartTime.IsZero() {
 		structLevel.ReportError(
-			reflect.ValueOf(s.Period),
-			"Period",
+			reflect.ValueOf(s.EndTime),
+			"StartTime",
 			"",
-			reason(fmt.Sprintf("period %s < %s", s.Period, api.AlertExceptionMinPeriod)),
+			reason("invalid StartTime"),
 			"",
 		)
+	} else if s.EndTime != nil {
+		if s.EndTime.IsZero() {
+			structLevel.ReportError(
+				reflect.ValueOf(s.EndTime),
+				"EndTime",
+				"",
+				reason("invalid EndTime"),
+				"",
+			)
+		} else if s.EndTime.Before(&s.StartTime) {
+			structLevel.ReportError(
+				reflect.ValueOf(s.EndTime),
+				"EndTime",
+				"",
+				reason("EndTime can not be earlier than StartTime"),
+				"",
+			)
+		}
 	}
 }
 
-func validateAlertExceptionQuery(structLevel validator.StructLevel) {
+func validateAlertExceptionSelector(structLevel validator.StructLevel) {
 	s := getAlertExceptionSpec(structLevel)
 
 	if q, err := query.ParseQuery(s.Selector); err != nil {

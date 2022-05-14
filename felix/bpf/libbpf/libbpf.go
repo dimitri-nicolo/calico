@@ -256,7 +256,10 @@ func (o *Obj) AttachCGroup(cgroup, progName string) (*Link, error) {
 
 const (
 	// Set when IPv6 is enabled to configure bpf dataplane accordingly
-	GlobalsIPv6Enabled uint32 = C.CALI_GLOBALS_IPV6_ENABLED
+	GlobalsIPv6Enabled     uint32 = C.CALI_GLOBALS_IPV6_ENABLED
+	GlobalsTCPStatsEnabled uint32 = C.CALI_GLOBALS_TCP_STATS_ENABLED
+	GlobalsIsEgressGateway uint32 = C.CALI_GLOBALS_IS_EGRESS_GATEWAY
+	GlobalsIsEgressClient  uint32 = C.CALI_GLOBALS_IS_EGRESS_CLIENT
 )
 
 func TcSetGlobals(
@@ -268,23 +271,10 @@ func TcSetGlobals(
 	vxlanPort uint16,
 	psNatStart uint16,
 	psNatLen uint16,
+	hostTunnelIP uint32,
 	vethNS uint16,
-	enableTcpStats bool,
-	isEgressGatway bool,
-	isEgressClient bool,
 	flags uint32,
 ) error {
-	var tcpStats, egw, egc C.uchar
-	if enableTcpStats {
-		tcpStats = 1
-	}
-	if isEgressGatway {
-		egw = 1
-	}
-	if isEgressClient {
-		egc = 1
-	}
-
 	_, err := C.bpf_tc_set_globals(m.bpfMap,
 		C.uint(hostIP),
 		C.uint(intfIP),
@@ -293,11 +283,10 @@ func TcSetGlobals(
 		C.ushort(vxlanPort),
 		C.ushort(psNatStart),
 		C.ushort(psNatLen),
+		C.uint(hostTunnelIP),
 		C.ushort(vethNS),
-		tcpStats,
-		egw,
-		egc,
-		C.uint(flags))
+		C.uint(flags),
+	)
 
 	return err
 }

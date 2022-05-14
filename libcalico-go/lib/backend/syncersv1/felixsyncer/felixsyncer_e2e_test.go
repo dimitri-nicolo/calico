@@ -522,6 +522,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 				options.SetOptions{},
 			)
 			Expect(err).NotTo(HaveOccurred())
+
 			// The pool will add as single entry ( +1 )
 			expectedCacheSize += 1
 

@@ -69,7 +69,7 @@ EXCLUDED_IMAGES = [
     'envoy',
     'anomaly_detection_jobs',
     'elasticsearch-metrics',
-    'packetcapture-api',
+    'packetcapture',
     'tigera-prometheus-service',
     'es-gateway',
     'deep-packet-inspection',

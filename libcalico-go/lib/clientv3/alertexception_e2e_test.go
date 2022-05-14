@@ -30,10 +30,12 @@ var _ = testutils.E2eDatastoreDescribe("AlertException tests", testutils.Datasto
 	spec1 := apiv3.AlertExceptionSpec{
 		Description: "test 1",
 		Selector:    "origin = origin1",
+		StartTime:   metav1.Time{Time: time.Unix(1, 0)},
 	}
 	spec2 := apiv3.AlertExceptionSpec{
 		Description: "test 2",
 		Selector:    "origin = origin2",
+		StartTime:   metav1.Time{Time: time.Unix(2, 0)},
 	}
 
 	DescribeTable("AlertException e2e CRUD tests",
@@ -51,7 +53,6 @@ var _ = testutils.E2eDatastoreDescribe("AlertException tests", testutils.Datasto
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
-
 			Expect(outError.Error()).To(ContainSubstring(fmt.Sprintf("resource does not exist: AlertException(%s)", name1)))
 
 			By("Attempting to creating a new AlertException with name1/spec1 and a non-empty ResourceVersion")

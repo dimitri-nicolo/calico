@@ -70,7 +70,23 @@ promotions:
     pipeline_file: ../calicoq/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
-  - name: Test ES Gateway Release
+  - name: Test Cut Deep Packet Inspection Release
+    pipeline_file: ../deep-packet-inspection/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Test Cut ES Gateway Release
     pipeline_file: ../es-gateway/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Test Cut IDS Controller Release
+    pipeline_file: ../intrusion-detection-controller/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Test Cut Packet Capture Release
+    pipeline_file: ../packetcapture/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
+  - name: Test Cut Voltron Release
+    pipeline_file: ../voltron/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
