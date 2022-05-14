@@ -18,6 +18,15 @@ test: ut fv st
 # This variable is only set if ARCHES is not set
 ARCHES ?= $(patsubst docker-image/Dockerfile.%,%,$(wildcard docker-image/Dockerfile.*))
 
+# Some repositories keep their Dockerfile(s) in the sub-directories of the 'docker-image'
+# directory (e.g., voltron). Make sure ARCHES gets filled from all unique Dockerfiles.
+ifeq ($(ARCHES),)
+	dockerfiles_in_subdir=$(wildcard docker-image/**/Dockerfile.*)
+	ifneq ($(dockerfiles_in_subdir),)
+		ARCHES=$(patsubst Dockerfile.%,%,$(shell basename -a $(dockerfiles_in_subdir) | sort | uniq))
+	endif
+endif
+
 # Some repositories keep their Dockerfile(s) in the root directory instead of in
 # the 'docker-image' subdir. Make sure ARCHES gets filled in either way.
 ifeq ($(ARCHES),)
