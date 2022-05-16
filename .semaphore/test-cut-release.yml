@@ -78,6 +78,10 @@ promotions:
     pipeline_file: ../es-gateway/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Test Honeypod Controller Release
+    pipeline_file: ../honeypod-controller/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Test IDS Controller Release
     pipeline_file: ../intrusion-detection-controller/.semaphore/test-cut-release.yml
     auto_promote:

@@ -67,6 +67,10 @@ promotions:
   pipeline_file: push-images/es-gateway.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push honeypod-controller images
+  pipeline_file: push-images/honeypod-controller.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 - name: Push intrusion-detection-controller images
   pipeline_file: push-images/intrusion-detection-controller.yml
   auto_promote:
@@ -702,6 +706,21 @@ blocks:
       - cd intrusion-detection-controller
     jobs:
     - name: "intrusion-detection-controller tests"
+      commands:
+      - make ci
+
+- name: 'honeypod-controller'
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/honeypod-controller/', '/libcalico-go/', '/licensing/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd honeypod-controller
+    jobs:
+    - name: "honeypod-controller tests"
       commands:
       - make ci
 

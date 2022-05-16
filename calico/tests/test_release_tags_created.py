@@ -46,7 +46,7 @@ MAPPED_COMPONENTS = {
     'egress-gateway': 'egress-gateway',
     'guardian': 'voltron',
     'dex': 'dexidp-docker',
-    'honeypod-controller': 'honeypod-controller',
+    'honeypod-controller': 'calico-private',
     'anomaly_detection_jobs': 'anomaly_detection_jobs',
     'elasticsearch-metrics': 'elasticsearch-metrics',
     'packetcapture': 'calico-private',
