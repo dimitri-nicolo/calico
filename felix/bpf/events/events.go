@@ -26,7 +26,7 @@ const (
 
 	// TypeLostEvents does not carry any other information except the number of lost events.
 	TypeLostEvents Type = 0
-	//TypeProtoStats protocol v4 stats
+	// TypeProtoStats protocol v4 stats
 	TypeProtoStats Type = 1
 	// TypeDNSEvent reports information on DNS packets
 	TypeDNSEvent Type = 2
@@ -182,6 +182,10 @@ type ErrLostEvents int
 
 func (e ErrLostEvents) Error() string {
 	return fmt.Sprintf("%d lost events", e)
+}
+
+func (e ErrLostEvents) Num() int {
+	return int(e)
 }
 
 // ParsePolicyVerdict converts a bpf event data and converts to go structure
