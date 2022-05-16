@@ -28,6 +28,8 @@ type ActiveEgressCalculator struct {
 	supportLevel string
 
 	// Active egress selectors.
+	// The key should be based on the parsed selector rather than the raw selector. This is to account for equivalent
+	// selectors, e.g. egress-code == "red" and egress-code == 'red'
 	selectors map[string]*esData
 
 	// Active local endpoints.
@@ -208,7 +210,13 @@ func (aec *ActiveEgressCalculator) updateEndpointEgressData(key model.WorkloadEn
 	aec.incRefSelector(new.selector)
 	egressIPSetID := ""
 	if new.selector != "" {
-		egressIPSetID = aec.selectors[new.selector].ipSet.UniqueID()
+		sel, err := sel.Parse(new.selector)
+		if err != nil {
+			// Should have been validated further back in the pipeline.
+			log.WithField("selector", new.selector).Panic(
+				"Failed to parse egress selector that should have been validated already")
+		}
+		egressIPSetID = aec.selectors[sel.String()].ipSet.UniqueID()
 	}
 	aec.OnEndpointEgressDataUpdate(key, epEgressData{
 		ipSetID:     egressIPSetID,
@@ -266,20 +274,20 @@ func (aec *ActiveEgressCalculator) incRefSelector(selector string) {
 	if selector == "" {
 		return
 	}
-	selData, exists := aec.selectors[selector]
+	sel, err := sel.Parse(selector)
+	if err != nil {
+		// Should have been validated further back in the pipeline.
+		log.WithField("selector", selector).Panic(
+			"Failed to parse egress selector that should have been validated already")
+	}
+	selData, exists := aec.selectors[sel.String()]
 	if !exists {
 		log.Debugf("Selector: %v", selector)
-		sel, err := sel.Parse(selector)
-		if err != nil {
-			// Should have been validated further back in the pipeline.
-			log.WithField("selector", selector).Panic(
-				"Failed to parse egress selector that should have been validated already")
-		}
 		selData = &esData{ipSet: &IPSetData{
 			Selector:         sel,
 			IsEgressSelector: true,
 		}}
-		aec.selectors[selector] = selData
+		aec.selectors[sel.String()] = selData
 		aec.OnIPSetActive(selData.ipSet)
 	}
 	selData.refCount += 1
@@ -289,13 +297,19 @@ func (aec *ActiveEgressCalculator) decRefSelector(selector string) {
 	if selector == "" {
 		return
 	}
-	esData, exists := aec.selectors[selector]
+	sel, err := sel.Parse(selector)
+	if err != nil {
+		// Should have been validated further back in the pipeline.
+		log.WithField("selector", selector).Panic(
+			"Failed to parse egress selector that should have been validated already")
+	}
+	esData, exists := aec.selectors[sel.String()]
 	if !exists || esData.refCount <= 0 {
 		log.Panicf("Decref for unknown egress selector '%v'", selector)
 	}
 	esData.refCount -= 1
 	if esData.refCount == 0 {
 		aec.OnIPSetInactive(esData.ipSet)
-		delete(aec.selectors, selector)
+		delete(aec.selectors, sel.String())
 	}
 }
