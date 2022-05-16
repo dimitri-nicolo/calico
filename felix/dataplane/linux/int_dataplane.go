@@ -58,11 +58,13 @@ import (
 	felixconfig "github.com/projectcalico/calico/felix/config"
 	"github.com/projectcalico/calico/felix/dataplane/common"
 	"github.com/projectcalico/calico/felix/dataplane/linux/debugconsole"
+	"github.com/projectcalico/calico/felix/environment"
 	"github.com/projectcalico/calico/felix/idalloc"
 	"github.com/projectcalico/calico/felix/ifacemonitor"
 	"github.com/projectcalico/calico/felix/ipsec"
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/iptables"
+	"github.com/projectcalico/calico/felix/iptables/cmdshim"
 	"github.com/projectcalico/calico/felix/jitter"
 	"github.com/projectcalico/calico/felix/k8sutils"
 	"github.com/projectcalico/calico/felix/labelindex"
@@ -91,6 +93,9 @@ const (
 
 	// Interface name used by kube-proxy to bind service ips.
 	KubeIPVSInterface = "kube-ipvs0"
+
+	// Route cleanup grace period. Used for workload routes only.
+	routeCleanupGracePeriod = 10 * time.Second
 
 	// Size of a VXLAN header.
 	VXLANHeaderSize = 50
@@ -127,6 +132,8 @@ var (
 
 	processStartTime time.Time
 	zeroKey          = wgtypes.Key{}
+
+	maxCleanupRetries = 5
 )
 
 func init() {
@@ -160,6 +167,7 @@ type Config struct {
 	RuleRendererOverride rules.RuleRenderer
 	IPIPMTU              int
 	VXLANMTU             int
+	VXLANMTUV6           int
 	VXLANPort            int
 
 	MaxIPSetSize                   int
@@ -167,6 +175,7 @@ type Config struct {
 	IPSetsRefreshInterval          time.Duration
 	RouteRefreshInterval           time.Duration
 	DeviceRouteSourceAddress       net.IP
+	DeviceRouteSourceAddressIPv6   net.IP
 	DeviceRouteProtocol            netlink.RouteProtocol
 	RemoveExternalRoutes           bool
 	IptablesRefreshInterval        time.Duration
@@ -222,12 +231,15 @@ type Config struct {
 	BPFMapSizeNATAffinity              int
 	BPFMapSizeIPSets                   int
 	BPFIpv6Enabled                     bool
+	BPFHostConntrackBypass             bool
+	BPFEnforceRPF                      string
 	KubeProxyMinSyncPeriod             time.Duration
 	KubeProxyEndpointSlicesEnabled     bool
 	FlowLogsCollectProcessInfo         bool
 	FlowLogsCollectTcpStats            bool
 	FlowLogsCollectProcessPath         bool
 	FlowLogsFileIncludeService         bool
+	FlowLogsFileDomainsLimit           int
 	NfNetlinkBufSize                   int
 
 	SidecarAccelerationEnabled bool
@@ -330,8 +342,8 @@ type UpdateBatchResolver interface {
 // The internal dataplane does not do consistency checks on the incoming data (as the
 // old Python-based driver used to do).  It expects to be told about dependent resources
 // before they are needed and for their lifetime to exceed that of the resources that
-// depend on them.  For example, it is important the the datastore layer send an
-// IP set create event before it sends a rule that references that IP set.
+// depend on them. For example, it is important that the datastore layer sends an IP set
+// create event before it sends a rule that references that IP set.
 type InternalDataplane struct {
 	toDataplane   chan interface{}
 	fromDataplane chan interface{}
@@ -415,6 +427,7 @@ const (
 
 	ipipMTUOverhead      = 20
 	vxlanMTUOverhead     = 50
+	vxlanV6MTUOverhead   = 70
 	wireguardMTUOverhead = 60
 	aksMTUOverhead       = 100
 )
@@ -431,8 +444,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	// Get the feature detector and feature set upfront.
-	featureDetector := iptables.NewFeatureDetector(config.FeatureDetectOverrides)
-	iptablesFeatures := featureDetector.GetFeatures()
+	featureDetector := environment.NewFeatureDetector(config.FeatureDetectOverrides)
+	dataplaneFeatures := featureDetector.GetFeatures()
 
 	// Based on the feature set, fix the DNSPolicyMode based on dataplane and Kernel version. The delay packet modes
 	// are only available on the iptables dataplane, and the DelayDNSResponse mode is only available on higher kernel
@@ -440,7 +453,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	if config.BPFEnabled && config.DNSPolicyMode != apiv3.DNSPolicyModeNoDelay {
 		log.Warning("Dataplane is using eBPF which does not support NfQueue. Set DNSPolicyMode to NoDelay")
 		config.DNSPolicyMode = apiv3.DNSPolicyModeNoDelay
-	} else if config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDNSResponse && !iptablesFeatures.NFQueueBypass {
+	} else if config.DNSPolicyMode == apiv3.DNSPolicyModeDelayDNSResponse && !dataplaneFeatures.NFQueueBypass {
 		log.Warning("Dataplane does not support NfQueue bypass option. Downgrade DNSPolicyMode to DelayDeniedPacket")
 		config.DNSPolicyMode = apiv3.DNSPolicyModeDelayDeniedPacket
 	}
@@ -495,7 +508,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	dp.ifaceMonitor.StateCallback = dp.onIfaceStateChange
 	dp.ifaceMonitor.AddrCallback = dp.onIfaceAddrsChange
 
-	backendMode := iptables.DetectBackend(config.LookPathOverride, iptables.NewRealCmd, config.IptablesBackend)
+	backendMode := environment.DetectBackend(config.LookPathOverride, cmdshim.NewRealCmd, config.IptablesBackend)
 
 	// Most iptables tables need the same options.
 	iptablesOptions := iptables.TableOptions{
@@ -527,7 +540,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	var iptablesLock sync.Locker
-	if iptablesFeatures.RestoreSupportsLock {
+	if dataplaneFeatures.RestoreSupportsLock {
 		log.Debug("Calico implementation of iptables lock disabled (because detected version of " +
 			"iptables-restore will use its own implementation).")
 		iptablesLock = dummyLock{}
@@ -595,11 +608,13 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			"vxlan.calico",
 			config,
 			dp.loopSummarizer,
+			4,
 		)
-		go vxlanManager.KeepVXLANDeviceInSync(config.VXLANMTU, iptablesFeatures.ChecksumOffloadBroken, 10*time.Second)
+		go vxlanManager.KeepVXLANDeviceInSync(config.VXLANMTU, dataplaneFeatures.ChecksumOffloadBroken, 10*time.Second)
 		dp.RegisterManager(vxlanManager)
 	} else {
-		cleanUpVXLANDevice()
+		// Start a cleanup goroutine not to block felix if it needs to retry
+		go cleanUpVXLANDevice("vxlan.calico")
 	}
 
 	// Allocate the tproxy route table indices before Egress grabs them all.
@@ -679,6 +694,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		DNSExtraTTL:           config.DNSExtraTTL,
 		DNSLogsLatency:        config.DNSLogsLatency,
 		DebugDNSResponseDelay: config.DebugDNSResponseDelay,
+		MaxTopLevelDomains:    config.FlowLogsFileDomainsLimit,
 	})
 	dp.RegisterManager(dp.domainInfoStore)
 
@@ -798,6 +814,13 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	for i, r := range config.RulesConfig.WorkloadIfacePrefixes {
 		interfaceRegexes[i] = "^" + r + ".*"
 	}
+
+	defaultRPFilter, err := os.ReadFile("/proc/sys/net/ipv4/conf/default/rp_filter")
+	if err != nil {
+		log.Warn("could not determine default rp_filter setting, defaulting to strict")
+		defaultRPFilter = []byte{'1'}
+	}
+
 	bpfMapContext := bpfmap.CreateBPFMapContext(config.BPFMapSizeIPSets, config.BPFMapSizeNATFrontend,
 		config.BPFMapSizeNATBackend, config.BPFMapSizeNATAffinity, config.BPFMapSizeRoute, config.BPFMapSizeConntrack, config.BPFMapRepin)
 
@@ -931,7 +954,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		)
 		dp.ipSets = append(dp.ipSets, ipSetsV4)
 		ipsetsManager.AddDataplane(ipSetsV4)
-		bpfRTMgr := newBPFRouteManager(config.Hostname, config.ExternalNodesCidrs, bpfMapContext, dp.loopSummarizer)
+		bpfRTMgr := newBPFRouteManager(&config, bpfMapContext, dp.loopSummarizer)
 		dp.RegisterManager(bpfRTMgr)
 
 		// Create an 'ipset' to represent trusted DNS servers.
@@ -976,6 +999,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			config.FlowLogsCollectTcpStats,
 		)
 		dp.RegisterManager(bpfEndpointManager)
+
+		bpfEndpointManager.Features = dataplaneFeatures
 
 		conntrackScanner := conntrack.NewScanner(bpfMapContext.CtMap,
 			conntrack.NewLivenessScanner(config.BPFConntrackTimeouts, config.BPFNodePortDSREnabled))
@@ -1052,7 +1077,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 	routeTableV4 := routetable.New(interfaceRegexes, 4, false, config.NetlinkTimeout,
 		config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes, unix.RT_TABLE_UNSPEC,
-		dp.loopSummarizer, routetable.WithLivenessCB(dp.reportHealth))
+		dp.loopSummarizer, routetable.WithLivenessCB(dp.reportHealth),
+		routetable.WithRouteCleanupGracePeriod(routeCleanupGracePeriod))
 
 	epManager := newEndpointManager(
 		rawTableV4,
@@ -1065,6 +1091,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		config.RulesConfig.KubeIPVSSupportEnabled,
 		config.RulesConfig.WorkloadIfacePrefixes,
 		dp.endpointStatusCombiner.OnEndpointStatusUpdate,
+		string(defaultRPFilter),
 		config.BPFEnabled,
 		bpfEndpointManager,
 		callbacks,
@@ -1079,6 +1106,12 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	if config.RulesConfig.IPIPEnabled {
 		// Create and maintain the IPIP tunnel device
 		dp.ipipManager = newIPIPManager(ipSetsV4, config.MaxIPSetSize, config.ExternalNodesCidrs, dp.config)
+	} else {
+		// Only clean up IPIP addresses if IPIP is implicitly disabled (no IPIP pools and not explicitly set in FelixConfig)
+		if config.RulesConfig.FelixConfigIPIPEnabled == nil {
+			// Start a cleanup goroutine not to block felix if it needs to retry
+			go cleanUpIPIPAddrs()
+		}
 	}
 
 	if config.RulesConfig.IPIPEnabled || config.RulesConfig.IPSecEnabled || config.EgressIPEnabled {
@@ -1177,10 +1210,31 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.iptablesMangleTables = append(dp.iptablesMangleTables, mangleTableV6)
 		dp.iptablesFilterTables = append(dp.iptablesFilterTables, filterTableV6)
 
+		if config.RulesConfig.VXLANEnabledV6 {
+			routeTableVXLANV6 := routetable.New([]string{"^vxlan-v6.calico$"}, 6, true, config.NetlinkTimeout,
+				config.DeviceRouteSourceAddressIPv6, config.DeviceRouteProtocol, true, unix.RT_TABLE_UNSPEC,
+				dp.loopSummarizer, routetable.WithLivenessCB(dp.reportHealth))
+
+			vxlanManagerV6 := newVXLANManager(
+				ipSetsV6,
+				routeTableVXLANV6,
+				"vxlan-v6.calico",
+				config,
+				dp.loopSummarizer,
+				6,
+			)
+			go vxlanManagerV6.KeepVXLANDeviceInSync(config.VXLANMTUV6, dataplaneFeatures.ChecksumOffloadBroken, 10*time.Second)
+			dp.RegisterManager(vxlanManagerV6)
+		} else {
+			// Start a cleanup goroutine not to block felix if it needs to retry
+			go cleanUpVXLANDevice("vxlan-v6.calico")
+		}
+
 		routeTableV6 := routetable.New(
 			interfaceRegexes, 6, false, config.NetlinkTimeout,
-			config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes,
-			unix.RT_TABLE_UNSPEC, dp.loopSummarizer, routetable.WithLivenessCB(dp.reportHealth))
+			config.DeviceRouteSourceAddressIPv6, config.DeviceRouteProtocol, config.RemoveExternalRoutes,
+			unix.RT_TABLE_UNSPEC, dp.loopSummarizer, routetable.WithLivenessCB(dp.reportHealth),
+			routetable.WithRouteCleanupGracePeriod(routeCleanupGracePeriod))
 
 		if !config.BPFEnabled {
 			dp.RegisterManager(common.NewIPSetsManager(ipSetsV6, config.MaxIPSetSize, dp.domainInfoStore))
@@ -1202,6 +1256,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			config.RulesConfig.KubeIPVSSupportEnabled,
 			config.RulesConfig.WorkloadIfacePrefixes,
 			dp.endpointStatusCombiner.OnEndpointStatusUpdate,
+			"",
 			config.BPFEnabled,
 			nil,
 			callbacks,
@@ -1411,6 +1466,7 @@ func determinePodMTU(config Config) int {
 	for _, s := range []mtuState{
 		{config.IPIPMTU, config.RulesConfig.IPIPEnabled},
 		{config.VXLANMTU, config.RulesConfig.VXLANEnabled},
+		{config.VXLANMTUV6, config.RulesConfig.VXLANEnabledV6},
 		{config.Wireguard.MTU, config.Wireguard.Enabled},
 	} {
 		if s.enabled && s.mtu != 0 && (s.mtu < mtu || mtu == 0) {
@@ -1439,8 +1495,12 @@ func ConfigureDefaultMTUs(hostMTU int, c *Config) {
 		c.IPIPMTU = hostMTU - ipipMTUOverhead
 	}
 	if c.VXLANMTU == 0 {
-		log.Debug("Defaulting VXLAN MTU based on host")
+		log.Debug("Defaulting IPv4 VXLAN MTU based on host")
 		c.VXLANMTU = hostMTU - vxlanMTUOverhead
+	}
+	if c.VXLANMTUV6 == 0 {
+		log.Debug("Defaulting IPv6 VXLAN MTU based on host")
+		c.VXLANMTUV6 = hostMTU - vxlanV6MTUOverhead
 	}
 	if c.Wireguard.MTU == 0 {
 		if c.KubernetesProvider == felixconfig.ProviderAKS && c.Wireguard.EncryptHostTraffic {
@@ -1459,20 +1519,91 @@ func ConfigureDefaultMTUs(hostMTU int, c *Config) {
 	}
 }
 
-func cleanUpVXLANDevice() {
+func cleanUpIPIPAddrs() {
+	// If IPIP is not enabled, check to see if there is are addresses in the IPIP device and delete them if there are.
+	log.Debug("Checking if we need to clean up the IPIP device")
+
+	var errFound bool
+
+cleanupRetry:
+	for i := 0; i <= maxCleanupRetries; i++ {
+		errFound = false
+		if i > 0 {
+			log.Debugf("Retrying %v/%v times", i, maxCleanupRetries)
+		}
+		link, err := netlink.LinkByName("tunl0")
+		if err != nil {
+			if _, ok := err.(netlink.LinkNotFoundError); ok {
+				log.Debug("IPIP disabled and no IPIP device found")
+				return
+			}
+			log.WithError(err).Warn("IPIP disabled and failed to query IPIP device.")
+			errFound = true
+
+			// Sleep for 1 second before retrying
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		addrs, err := netlink.AddrList(link, netlink.FAMILY_V4)
+		if err != nil {
+			log.WithError(err).Warn("IPIP disabled and failed to list addresses, will be unable to remove any old addresses from the device should they exist.")
+			errFound = true
+
+			// Sleep for 1 second before retrying
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		for _, oldAddr := range addrs {
+			if err := netlink.AddrDel(link, &oldAddr); err != nil {
+				log.WithError(err).Errorf("IPIP disabled and failed to delete unwanted IPIP address %s.", oldAddr.IPNet)
+				errFound = true
+
+				// Sleep for 1 second before retrying
+				time.Sleep(1 * time.Second)
+				continue cleanupRetry
+			}
+		}
+	}
+	if errFound {
+		log.Warnf("Giving up trying to clean up IPIP addresses after retrying %v times", maxCleanupRetries)
+	}
+}
+
+func cleanUpVXLANDevice(deviceName string) {
 	// If VXLAN is not enabled, check to see if there is a VXLAN device and delete it if there is.
 	log.Debug("Checking if we need to clean up the VXLAN device")
-	link, err := netlink.LinkByName("vxlan.calico")
-	if err != nil {
-		if _, ok := err.(netlink.LinkNotFoundError); ok {
-			log.Debug("VXLAN disabled and no VXLAN device found")
-			return
+
+	var errFound bool
+	for i := 0; i <= maxCleanupRetries; i++ {
+		errFound = false
+		if i > 0 {
+			log.Debugf("Retrying %v/%v times", i, maxCleanupRetries)
 		}
-		log.WithError(err).Warnf("VXLAN disabled and failed to query VXLAN device.  Ignoring.")
-		return
+		link, err := netlink.LinkByName(deviceName)
+		if err != nil {
+			if _, ok := err.(netlink.LinkNotFoundError); ok {
+				log.Debug("VXLAN disabled and no VXLAN device found")
+				return
+			}
+			log.WithError(err).Warn("VXLAN disabled and failed to query VXLAN device.")
+			errFound = true
+
+			// Sleep for 1 second before retrying
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		if err = netlink.LinkDel(link); err != nil {
+			log.WithError(err).Error("VXLAN disabled and failed to delete unwanted VXLAN device.")
+			errFound = true
+
+			// Sleep for 1 second before retrying
+			time.Sleep(1 * time.Second)
+			continue
+		}
 	}
-	if err = netlink.LinkDel(link); err != nil {
-		log.WithError(err).Error("VXLAN disabled and failed to delete unwanted VXLAN device. Ignoring.")
+	if errFound {
+		log.Warnf("Giving up trying to clean up VXLAN device after retrying %v times", maxCleanupRetries)
 	}
 }
 
@@ -1497,6 +1628,10 @@ type ManagerWithRouteRules interface {
 	GetRouteRules() []routeRules
 }
 
+type routeTableReader interface {
+	ReadRoutesFromKernel(ifaceName string) ([]routetable.Target, error)
+}
+
 // routeTableSyncer is the interface used to manage data-sync of route table managers. This includes notification of
 // interface state changes, hooks to queue a full resync and apply routing updates.
 type routeTableSyncer interface {
@@ -1506,8 +1641,10 @@ type routeTableSyncer interface {
 }
 
 type routeRules interface {
+	GetAllActiveRules() []*routerule.Rule
 	SetRule(rule *routerule.Rule)
 	RemoveRule(rule *routerule.Rule)
+	InitFromKernel()
 	QueueResync()
 	Apply() error
 }
@@ -1828,61 +1965,14 @@ func (d *InternalDataplane) setUpIptablesBPF() {
 	}
 
 	for _, t := range d.iptablesRawTables {
-		// Do not RPF check what is marked as to be skipped by RPF check.
-		rpfRules := []iptables.Rule{{
-			Match:  iptables.Match().MarkMatchesWithMask(tcdefs.MarkSeenBypassSkipRPF, tcdefs.MarkSeenBypassSkipRPFMask),
-			Action: iptables.ReturnAction{},
-		}}
-
-		// For anything we approved for forward, permit accept_local as it is
-		// traffic encapped for NodePort, ICMP replies etc. - stuff we trust.
-		rpfRules = append(rpfRules, iptables.Rule{
-			Match:  iptables.Match().MarkMatchesWithMask(tcdefs.MarkSeenBypassForward, tcdefs.MarksMask).RPFCheckPassed(true),
-			Action: iptables.ReturnAction{},
-		})
-
-		rpfRules = append(rpfRules, d.ruleRenderer.RPFilter(t.IPVersion, tcdefs.MarkSeen, tcdefs.MarkSeenMask,
-			rulesConfig.OpenStackSpecialCasesEnabled, false)...)
-
-		rpfChain := []*iptables.Chain{{
-			Name:  rules.ChainNamePrefix + "RPF",
-			Rules: rpfRules,
-		}}
-		t.UpdateChains(rpfChain)
-
-		var rawRules []iptables.Rule
-		if t.IPVersion == 4 && rulesConfig.WireguardEnabled && len(rulesConfig.WireguardInterfaceName) > 0 &&
-			d.config.Wireguard.EncryptHostTraffic {
-			// Set a mark on packets coming from any interface except for lo, wireguard, or pod veths to ensure the RPF
-			// check allows it.
-			log.Debug("Adding Wireguard iptables rule chain")
-			rawRules = append(rawRules, iptables.Rule{
-				Match:  nil,
-				Action: iptables.JumpAction{Target: rules.ChainSetWireguardIncomingMark},
-			})
-			t.UpdateChain(d.ruleRenderer.WireguardIncomingMarkChain())
-		}
-
-		rawRules = append(rawRules, iptables.Rule{
-			Action: iptables.JumpAction{Target: rpfChain[0].Name},
-		})
-
-		rawChains := []*iptables.Chain{{
-			Name:  rules.ChainRawPrerouting,
-			Rules: rawRules,
-		}}
-		t.UpdateChains(rawChains)
-
+		t.UpdateChains(d.ruleRenderer.StaticBPFModeRawChains(t.IPVersion,
+			d.config.Wireguard.EncryptHostTraffic, d.config.BPFHostConntrackBypass,
+			d.config.BPFEnforceRPF == "Strict",
+		))
 		t.InsertOrAppendRules("PREROUTING", []iptables.Rule{{
 			Action: iptables.JumpAction{Target: rules.ChainRawPrerouting},
 		}})
-
 		if t.IPVersion == 4 {
-			// Iptables for untracked policy.
-			t.UpdateChains(d.ruleRenderer.StaticBPFModeRawChains(t.IPVersion, uint32(tcdefs.MarkSeenBypass)))
-			t.InsertOrAppendRules("PREROUTING", []iptables.Rule{{
-				Action: iptables.JumpAction{Target: rules.ChainRawPrerouting},
-			}})
 			t.InsertOrAppendRules("OUTPUT", []iptables.Rule{{
 				Action: iptables.JumpAction{Target: rules.ChainRawOutput},
 			}})

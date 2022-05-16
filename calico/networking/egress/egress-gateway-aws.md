@@ -2,6 +2,7 @@
 title: Configure egress gateways, AWS
 description: Configure specific application traffic to exit the cluster through an egress gateway with a native AWS IP address.
 canonical_url: '/networking/egress/egress-gateway-aws'
+feature_name: 'egress_gateway_aws'
 ---
 
 ### Big picture
@@ -593,7 +594,7 @@ For the "west-1" availability zone:
 * IP pool "hosts-west-1", CIDR `100.64.0.0/25` (the first 128 addresses in the "west-1" VPC subnet).
 
   * We'll reserve these addresses for hosts to use.
-  * `100.64.0.0/25` covers the addresses from `100.64.0.0` to `100.64.1.255` (but addresses `100.64.0.0` to `100.64.0.3`
+  * `100.64.0.0/25` covers the addresses from `100.64.0.0` to `100.64.0.127` (but addresses `100.64.0.0` to `100.64.0.3`
     were reserved above).
 
 * IP pool "egress-red-west-1", CIDR `100.64.0.128/31` (the next 2 IPs from the "west-1" subnet).
@@ -608,7 +609,7 @@ For the "west-2" availability zone:
 
 * IP pool "hosts-west-2", CIDR `100.64.4.0/25` (the first 128 addresses in the "west-2" VPC subnet).
 
-  * `100.64.4.0/25` covers the addresses from `100.64.4.0` to `100.64.5.255` (but addresses `100.64.4.0` to `100.64.4.3`
+  * `100.64.4.0/25` covers the addresses from `100.64.4.0` to `100.64.4.127` (but addresses `100.64.4.0` to `100.64.4.3`
     were reserved above).
 
 * IP pool "egress-red-west-2", CIDR `100.64.4.128/31` (the next 2 IPs from the "west-2" subnet).
@@ -850,14 +851,14 @@ So, to configure all the pods in a namespace to use the egress gateways that are
 labelled with `egress-code: red`, you would annotate that namespace like this:
 
 ```bash
-kubectl annotate ns <namespace> egress.projectcalico.org/selector='egress-code == "red"'
+kubectl annotate ns <namespace> egress.projectcalico.org/selector="egress-code == 'red'"
 ```
 
 By default, that selector can only match egress gateways in the same namespace.  To select gateways
 in a different namespace, specify a `namespaceSelector` annotation as well, like this:
 
 ```bash
-kubectl annotate ns <namespace> egress.projectcalico.org/namespaceSelector='projectcalico.org/name == "default"'
+kubectl annotate ns <namespace> egress.projectcalico.org/namespaceSelector="projectcalico.org/name == 'default'"
 ```
 
 Egress gateway annotations have the same [syntax and range of
@@ -1021,3 +1022,4 @@ Please see also:
 
 - The `egressIP...` and `aws...` fields of the [FelixConfiguration resource]({{site.baseurl}}/reference/resources/felixconfig#spec).
 - [Troubleshooting egress gateways]({{site.baseurl}}/networking/egress/troubleshoot).
+- [Additional configuration for egress gateway maintenance]({{site.baseurl}}/networking/egress/egress-gateway-maintenance)

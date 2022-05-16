@@ -630,18 +630,25 @@ func schema_pkg_apis_projectcalico_v3_AlertExceptionSpec(ref common.ReferenceCal
 							Format:      "",
 						},
 					},
-					"period": {
+					"startTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Period controls how long an alert exception will be active. It is optional and omitting Period will make the alert exception active forever.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							Description: "StartTime defines the start time from which this alert exception will take effect. If the value is in the past, matched alerts will be filtered immediately. If the value is changed to a future time, alert exceptions will restart at that time.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"endTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EndTime defines the end time at which this alert exception will expire. If omitted the alert exception filtering will continue indefinitely.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
 				},
-				Required: []string{"description", "selector"},
+				Required: []string{"description", "selector", "startTime"},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -651,17 +658,8 @@ func schema_pkg_apis_projectcalico_v3_AlertExceptionStatus(ref common.ReferenceC
 			SchemaProps: spec.SchemaProps{
 				Description: "AlertExceptionStatus contains the status of an alert exception.",
 				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"lastExecuted": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-				},
 			},
 		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -1485,6 +1483,13 @@ func schema_pkg_apis_projectcalico_v3_BGPConfigurationSpec(ref common.ReferenceC
 						SchemaProps: spec.SchemaProps{
 							Description: "Time to allow for software restart for node-to-mesh peerings.  When specified, this is configured as the graceful restart timeout.  When not specified, the BIRD default of 120s is used. This field can only be set on the default BGPConfiguration instance and requires that NodeMesh is enabled",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"bindMode": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BindMode indicates whether to listen for BGP connections on all addresses (None) or only on the node's canonical IP address Node.Spec.BGP.IPvXAddress (NodeIP). Default behaviour is to listen for BGP connections on all addresses.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},
@@ -4164,8 +4169,9 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					},
 					"ipipEnabled": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+							Description: "IPIPEnabled overrides whether Felix should configure an IPIP interface on the host. Optional as Felix determines this based on the existing IP pools. [Default: nil (unset)]",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 					"ipipMTU": {
@@ -4177,13 +4183,21 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					},
 					"vxlanEnabled": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+							Description: "VXLANEnabled overrides whether Felix should create the VXLAN tunnel device for VXLAN networking. Optional as Felix determines this based on the existing IP pools. [Default: nil (unset)]",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 					"vxlanMTU": {
 						SchemaProps: spec.SchemaProps{
-							Description: "VXLANMTU is the MTU to set on the tunnel device. See Configuring MTU [Default: 1440]",
+							Description: "VXLANMTU is the MTU to set on the IPv4 VXLAN tunnel device. See Configuring MTU [Default: 1410]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"vxlanMTUV6": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VXLANMTUV6 is the MTU to set on the IPv6 VXLAN tunnel device. See Configuring MTU [Default: 1390]",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
@@ -4419,7 +4433,14 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					},
 					"deviceRouteSourceAddress": {
 						SchemaProps: spec.SchemaProps{
-							Description: "This is the source address to use on programmed device routes. By default the source address is left blank, leaving the kernel to choose the source address used.",
+							Description: "This is the IPv4 source address to use on programmed device routes. By default the source address is left blank, leaving the kernel to choose the source address used.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"deviceRouteSourceAddressIPv6": {
+						SchemaProps: spec.SchemaProps{
+							Description: "This is the IPv6 source address to use on programmed device routes. By default the source address is left blank, leaving the kernel to choose the source address used.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -4674,6 +4695,13 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							Format:      "int32",
 						},
 					},
+					"bpfEnforceRPF": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BPFEnforceRPF enforce strict RPF on all interfaces with BPF programs regardless of what is the per-interfaces or global setting. Possible values are Disabled or Strict. [Default: Strict]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"syslogReporterNetwork": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
@@ -4903,7 +4931,7 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					},
 					"flowLogsFileDomainsLimit": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FlowLogsFileDomainsLimit is used to configure the number of (destination) domains to include in the flow log. The domains are only included at aggregation level 0 or 1. [Default: 5]",
+							Description: "FlowLogsFileDomainsLimit is used to configure the number of (destination) domains to include in the flow log. These are not included for workload or host endpoint destinations. [Default: 5]",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
@@ -5358,6 +5386,13 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 					"serviceLoopPrevention": {
 						SchemaProps: spec.SchemaProps{
 							Description: "When service IP advertisement is enabled, prevent routing loops to service IPs that are not in use, by dropping or rejecting packets that do not get DNAT'd by kube-proxy. Unless set to \"Disabled\", in which case such routing loops continue to be allowed. [Default: Drop]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"workloadSourceSpoofing": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WorkloadSourceSpoofing controls whether pods can use the allowedSourcePrefixes annotation to send traffic with a source IP address that is not theirs. This is disabled by default. When set to \"Any\", pods can request any prefix.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -7106,7 +7141,7 @@ func schema_pkg_apis_projectcalico_v3_IPPoolSpec(ref common.ReferenceCallback) c
 					},
 					"blockSize": {
 						SchemaProps: spec.SchemaProps{
-							Description: "The block size to use for IP address assignments from this pool. Defaults to 26 for IPv4 and 112 for IPv6.",
+							Description: "The block size to use for IP address assignments from this pool. Defaults to 26 for IPv4 and 122 for IPv6.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},

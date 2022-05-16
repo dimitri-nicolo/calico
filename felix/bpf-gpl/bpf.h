@@ -10,6 +10,7 @@
 #include <bpf_helpers.h>   /* For bpf_xxx helper functions. */
 #include <bpf_endian.h>    /* For bpf_ntohX etc. */
 #include <stdbool.h>
+#include <bpf_core_read.h>
 #include <stddef.h>
 #include <linux/ip.h>
 #include "globals.h"
@@ -56,8 +57,10 @@ struct bpf_map_def_extended {
 // ports is encapped on the "request" leg but the response is returned directly from the
 // node with the backing workload.
 #define CALI_TC_DSR		(1<<4)
-// CALI_TC_WIREGUARD is set for the programs attached to the wireguard interface.
-#define CALI_TC_WIREGUARD	(1<<5)
+// CALI_L3_DEV is set for any L3 device such as wireguard and IPIP tunnels that act fully
+// at layer 3. In kernerls before 5.14 (rhel 4.18.0-330) IPIP tunnels on inbound
+// direction were acting differently, where they could see outer ethernet and ip headers.
+#define CALI_TC_L3_DEV 	(1<<5)
 // CALI_XDP_PROG is set for programs attached to the XDP hook
 #define CALI_XDP_PROG 	(1<<6)
 
@@ -75,7 +78,7 @@ struct bpf_map_def_extended {
 #define CALI_F_HEP     	 ((CALI_COMPILE_FLAGS) & CALI_TC_HOST_EP)
 #define CALI_F_WEP     	 (!CALI_F_HEP)
 #define CALI_F_TUNNEL  	 (((CALI_COMPILE_FLAGS) & CALI_TC_TUNNEL) != 0)
-#define CALI_F_WIREGUARD (((CALI_COMPILE_FLAGS) & CALI_TC_WIREGUARD) != 0)
+#define CALI_F_L3_DEV    (((CALI_COMPILE_FLAGS) & CALI_TC_L3_DEV) != 0)
 
 #define CALI_F_XDP ((CALI_COMPILE_FLAGS) & CALI_XDP_PROG)
 
@@ -87,9 +90,9 @@ struct bpf_map_def_extended {
 
 #define CALI_F_TO_HOST       (CALI_F_FROM_HEP || CALI_F_FROM_WEP)
 #define CALI_F_FROM_HOST     (!CALI_F_TO_HOST)
-#define CALI_F_L3            ((CALI_F_TO_HEP && CALI_F_TUNNEL) || CALI_F_WIREGUARD)
-#define CALI_F_IPIP_ENCAPPED (CALI_F_INGRESS && CALI_F_TUNNEL)
-#define CALI_F_WG_INGRESS    (CALI_F_INGRESS && CALI_F_WIREGUARD)
+#define CALI_F_L3            ((CALI_F_TO_HEP && CALI_F_TUNNEL) || CALI_F_L3_DEV)
+#define CALI_F_IPIP_ENCAPPED ((CALI_F_INGRESS && CALI_F_TUNNEL))
+#define CALI_F_L3_INGRESS    (CALI_F_INGRESS && CALI_F_L3_DEV)
 
 #define CALI_F_CGROUP	(((CALI_COMPILE_FLAGS) & CALI_CGROUP) != 0)
 #define CALI_F_DSR	(CALI_COMPILE_FLAGS & CALI_TC_DSR)
@@ -184,10 +187,10 @@ enum calico_skb_mark {
 	 * do SNAT for this flow.  Subsequent packets will also be allowed to fall through to the host
 	 * netns. */
 	CALI_SKB_MARK_NAT_OUT                = CALI_SKB_MARK_BYPASS  | 0x00800000,
-	/* CALI_SKB_MARK_MASQ enforces MASQ on the connection.
-	 */
+	/* CALI_SKB_MARK_MASQ enforces MASQ on the connection. */
 	CALI_SKB_MARK_MASQ                   = CALI_SKB_MARK_BYPASS  | 0x00600000,
-
+	/* CALI_SKB_MARK_SKIP_FIB is used for packets that should pass through host IP stack. */
+	CALI_SKB_MARK_SKIP_FIB               = CALI_SKB_MARK_SEEN | 0x00100000,
 	/* CT_ESTABLISHED is used by iptables to tell the BPF programs that the packet is part of an
 	 * established Linux conntrack flow. This allows the BPF program to let through pre-existing
 	 * flows at start of day. */
@@ -258,29 +261,28 @@ static CALI_BPF_INLINE __be32 cali_configurable_##name()					\
 CALI_CONFIGURABLE_DEFINE(host_ip, 0x54534f48) /* be 0x54534f48 = ASCII(HOST) */
 CALI_CONFIGURABLE_DEFINE(tunnel_mtu, 0x55544d54) /* be 0x55544d54 = ASCII(TMTU) */
 CALI_CONFIGURABLE_DEFINE(if_ns, 0x534e4649) /* be 0x534a4649 = ASCII(IFNS) */
-CALI_CONFIGURABLE_DEFINE(tcp_stats, 0x53504354) /* be 0x534a4649 = ASCII(TCPS) */
 CALI_CONFIGURABLE_DEFINE(vxlan_port, 0x52505856) /* be 0x52505856 = ASCII(VXPR) */
 CALI_CONFIGURABLE_DEFINE(intf_ip, 0x46544e49) /*be 0x46544e49 = ASCII(INTF) */
 CALI_CONFIGURABLE_DEFINE(ext_to_svc_mark, 0x4b52414d) /*be 0x4b52414d = ASCII(MARK) */
-CALI_CONFIGURABLE_DEFINE(egress_gateway, 0x47455349) /* be 0x47455349 = ASCII(ISEG) */
-CALI_CONFIGURABLE_DEFINE(egress_client, 0x43455349) /* be 0x43455349 = ASCII(ISEC) */
 CALI_CONFIGURABLE_DEFINE(psnat_start, 0x53545250) /* be 0x53545250 = ACSII(PRTS) */
 CALI_CONFIGURABLE_DEFINE(psnat_len, 0x4c545250) /* be 0x4c545250 = ACSII(PRTL) */
 CALI_CONFIGURABLE_DEFINE(flags, 0x00000001)
-
+CALI_CONFIGURABLE_DEFINE(host_tunnel_ip, 0x4c4e5554) /* be 0x4c4e5554 = ACSII(TUNL) */
 
 #define HOST_IP		CALI_CONFIGURABLE(host_ip)
 #define TUNNEL_MTU 	CALI_CONFIGURABLE(tunnel_mtu)
 #define IF_NS		CALI_CONFIGURABLE(if_ns)
-#define ENABLE_TCP_STATS CALI_CONFIGURABLE(tcp_stats)
 #define VXLAN_PORT 	CALI_CONFIGURABLE(vxlan_port)
 #define INTF_IP		CALI_CONFIGURABLE(intf_ip)
 #define EXT_TO_SVC_MARK	CALI_CONFIGURABLE(ext_to_svc_mark)
-#define EGRESS_GATEWAY	CALI_CONFIGURABLE(egress_gateway)
-#define EGRESS_CLIENT	CALI_CONFIGURABLE(egress_client)
 #define PSNAT_START	CALI_CONFIGURABLE(psnat_start)
 #define PSNAT_LEN	CALI_CONFIGURABLE(psnat_len)
 #define GLOBAL_FLAGS 	CALI_CONFIGURABLE(flags)
+#define HOST_TUNNEL_IP CALI_CONFIGURABLE(host_tunnel_ip)
+
+#define EGRESS_GATEWAY 		(GLOBAL_FLAGS & CALI_GLOBALS_IS_EGRESS_GATEWAY)
+#define EGRESS_CLIENT 		(GLOBAL_FLAGS & CALI_GLOBALS_IS_EGRESS_CLIENT)
+#define ENABLE_TCP_STATS 	(GLOBAL_FLAGS & CALI_GLOBALS_TCP_STATS_ENABLED)
 
 #ifdef UNITTEST
 CALI_CONFIGURABLE_DEFINE(__skb_mark, 0x4d424b53) /* be 0x4d424b53 = ASCII(SKBM) */

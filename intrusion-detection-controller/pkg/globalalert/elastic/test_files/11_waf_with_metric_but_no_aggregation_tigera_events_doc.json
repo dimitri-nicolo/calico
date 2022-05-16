@@ -1,0 +1,2 @@
+{"index":{"_index":"tigera_secure_ee_events.test-cluster."}}
+{"description":"test alert: sample-test","origin":"sample-test","record":{"count":1},"severity":100,"time":0,"type":"global_alert"}

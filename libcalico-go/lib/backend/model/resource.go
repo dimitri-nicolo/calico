@@ -234,14 +234,14 @@ func init() {
 	)
 	// Resources that are translations of Kubernetes resources and effectively read-only representations.
 	registerResourceInfo(
-		apiv3.KindK8sService,
-		"k8s-service",
-		reflect.TypeOf(kapiv1.Service{}),
-	)
-	registerResourceInfo(
 		apiv3.KindK8sEndpoints,
 		"k8s-endpoints",
 		reflect.TypeOf(kapiv1.Endpoints{}),
+	)
+	registerResourceInfo(
+		KindKubernetesService,
+		"kubernetesservice",
+		reflect.TypeOf(kapiv1.Service{}),
 	)
 }
 

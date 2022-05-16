@@ -14,15 +14,16 @@ struct cali_tc_globals {
 	__be16 psnat_start;
 	__be16 psnat_len;
 	__be16 if_ns;
-	__u8  tcp_stats;
-	__u8  egress_client;
-	__u8 egress_gateway;
+	__be32 host_tunnel_ip;
 	__be32 flags;
 };
 
 enum cali_globals_flags {
 	/* CALI_GLOBALS_IPV6_ENABLED is set when IPv6 is enabled by Felix */
-	CALI_GLOBALS_IPV6_ENABLED = 0x00000001,
+	CALI_GLOBALS_IPV6_ENABLED 		= 0x00000001,
+	CALI_GLOBALS_TCP_STATS_ENABLED 	= 0x00000002,
+	CALI_GLOBALS_IS_EGRESS_GATEWAY 	= 0x00000004,
+	CALI_GLOBALS_IS_EGRESS_CLIENT 	= 0x00000008,
 };
 
 struct cali_ctlb_globals {

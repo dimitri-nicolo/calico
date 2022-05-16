@@ -62,6 +62,7 @@ type Converter interface {
 	StagedKubernetesNetworkPolicyToStagedName(stagedK8sName string) string
 	K8sNetworkPolicyToCalico(np *networkingv1.NetworkPolicy) (*model.KVPair, error)
 	EndpointSliceToKVP(svc *discovery.EndpointSlice) (*model.KVPair, error)
+	ServiceToKVP(service *kapiv1.Service) (*model.KVPair, error)
 	ProfileNameToNamespace(profileName string) (string, error)
 	ServiceAccountToProfile(sa *kapiv1.ServiceAccount) (*model.KVPair, error)
 	ProfileNameToServiceAccount(profileName string) (ns, sa string, err error)
@@ -106,19 +107,15 @@ func egressAnnotationsToV3Spec(annotations map[string]string) *apiv3.EgressSpec 
 	if egressMaxNextHopsStr != "" {
 		n, err := strconv.Atoi(egressMaxNextHopsStr)
 		if err != nil {
-			log.WithError(err).Errorf("Invalid number of next hops in %v annotation: %v", AnnotationEgressMaxNextHops, err)
-			return nil
+			log.WithError(err).Errorf("Invalid number of next hops %s, in %v annotation. Defaulting to 0.", egressMaxNextHopsStr, AnnotationEgressMaxNextHops)
+		} else if n < 0 {
+			log.Errorf("Invalid number of next hops %s, in %v annotation: must be 0 or greater. Defaulting to 0.", egressMaxNextHopsStr, AnnotationEgressMaxNextHops)
+		} else if n > math.MaxInt32 {
+			// egressMaxNextHops will be converted to an int32 in protobuf, so limit the range here to be a valid int32.
+			log.Errorf("Invalid number of next hops %s, in %v annotation: must be %d or less. Defaulting to 0.", egressMaxNextHopsStr, AnnotationEgressMaxNextHops, math.MaxInt32)
+		} else {
+			egressMaxNextHops = n
 		}
-		if n < 0 {
-			log.WithError(err).Errorf("Invalid number of next hops in %v annotation: must be 0 or greater", AnnotationEgressMaxNextHops)
-			return nil
-		}
-		// egressMaxNextHops will be converted to an int32 in protobuf, so limit the range here to be a valid int32.
-		if n > math.MaxInt32 {
-			log.WithError(err).Errorf("Invalid number of next hops in %v annotation: must be %d or less", AnnotationEgressMaxNextHops, math.MaxInt32)
-			return nil
-		}
-		egressMaxNextHops = n
 	}
 	if egressSelector == "" && egressNamespaceSelector == "" && egressMaxNextHopsStr == "" {
 		// No egress annotations specified, so no egress spec.
@@ -296,6 +293,18 @@ func (c converter) EndpointSliceToKVP(slice *discovery.EndpointSlice) (*model.KV
 		},
 		Value:    slice.DeepCopy(),
 		Revision: slice.ResourceVersion,
+	}, nil
+}
+
+func (c converter) ServiceToKVP(service *kapiv1.Service) (*model.KVPair, error) {
+	return &model.KVPair{
+		Key: model.ResourceKey{
+			Name:      service.Name,
+			Namespace: service.Namespace,
+			Kind:      model.KindKubernetesService,
+		},
+		Value:    service.DeepCopy(),
+		Revision: service.ResourceVersion,
 	}, nil
 }
 

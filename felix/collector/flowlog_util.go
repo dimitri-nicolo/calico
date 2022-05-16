@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2022 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -17,8 +17,6 @@ import (
 )
 
 const (
-	flowLogBufferSize = 1000
-
 	flowLogNamespaceGlobal                  = "-"
 	flowLogFieldNotIncluded                 = "-"
 	flowLogFieldNotIncludedForNumericFields = 0
@@ -142,7 +140,7 @@ func getFlowLogEndpointMetadata(ed *calc.EndpointData, ip [16]byte) (EndpointMet
 			Type:           FlowLogEndpointTypeNs,
 			Namespace:      namespace,
 			AggregatedName: name,
-			Name:           k.Name,
+			Name:           name,
 		}
 	default:
 		return EndpointMetadata{}, fmt.Errorf("Unknown key %#v of type %v", ed.Key, reflect.TypeOf(ed.Key))

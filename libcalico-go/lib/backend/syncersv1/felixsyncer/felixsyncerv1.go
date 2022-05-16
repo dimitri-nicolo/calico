@@ -36,7 +36,6 @@ const (
 
 // New creates a new Felix v1 Syncer.
 func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks api.SyncerCallbacks, includeServices bool, isLeader bool) api.Syncer {
-
 	// Always include the Calico client.
 	clients := map[string]api.Client{
 		calicoClientID: calicoClient,
@@ -147,7 +146,7 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 		}
 
 		// If running in kdd mode, also watch Kubernetes network policies directly.
-		// We don't need this in etcd mode, since kube-controllers copies k8s policies into etcd.
+		// We don't need this in etcd mode, since kube-controllers copies k8s resources into etcd.
 		if cfg.DatastoreType == apiconfig.Kubernetes {
 			additionalTypes = append(additionalTypes, watchersyncer.ResourceType{
 				ListInterface:   model.ResourceListOptions{Kind: model.KindKubernetesNetworkPolicy},
@@ -156,6 +155,11 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 			})
 			additionalTypes = append(additionalTypes, watchersyncer.ResourceType{
 				ListInterface: model.ResourceListOptions{Kind: model.KindKubernetesEndpointSlice},
+				ClientID:      calicoClientID, // This is backed by the calico client
+			})
+
+			additionalTypes = append(additionalTypes, watchersyncer.ResourceType{
+				ListInterface: model.ResourceListOptions{Kind: model.KindKubernetesService},
 				ClientID:      calicoClientID, // This is backed by the calico client
 			})
 		}
@@ -177,7 +181,7 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 			// special k8s wrapped client for this (which is a calico API wrapped k8s API).
 			clients[k8sClientID] = k8s.NewK8sResourceWrapperClient(k8sClientSet)
 			additionalTypes = []watchersyncer.ResourceType{{
-				ListInterface:   model.ResourceListOptions{Kind: apiv3.KindK8sService},
+				ListInterface:   model.ResourceListOptions{Kind: model.KindKubernetesService},
 				UpdateProcessor: nil,         // No need to process the updates so pass nil
 				ClientID:        k8sClientID, // This is backed by the kubernetes wrapped client
 			}}

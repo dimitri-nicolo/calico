@@ -33,7 +33,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/felix/aws"
 	"github.com/projectcalico/calico/felix/bpf"
@@ -289,7 +288,7 @@ func StartDataplaneDriver(configParams *config.Config,
 
 		dpConfig := intdataplane.Config{
 			Hostname:           configParams.FelixHostname,
-			FloatingIPsEnabled: strings.EqualFold(configParams.FloatingIPs, string(v3.FloatingIPsEnabled)),
+			FloatingIPsEnabled: strings.EqualFold(configParams.FloatingIPs, string(apiv3.FloatingIPsEnabled)),
 			IfaceMonitorConfig: ifacemonitor.Config{
 				InterfaceExcludes: configParams.InterfaceExclude,
 				ResyncInterval:    configParams.InterfaceRefreshInterval,
@@ -334,13 +333,16 @@ func StartDataplaneDriver(configParams *config.Config,
 				IptablesMarkDNSPolicy:            markDNSPolicy,
 				IptablesMarkSkipDNSPolicyNfqueue: markSkipDNSPolicyNfqueue,
 
-				VXLANEnabled: configParams.VXLANEnabled,
-				VXLANPort:    configParams.VXLANPort,
-				VXLANVNI:     configParams.VXLANVNI,
+				VXLANEnabled:   configParams.Encapsulation.VXLANEnabled,
+				VXLANEnabledV6: configParams.Encapsulation.VXLANEnabledV6,
+				VXLANPort:      configParams.VXLANPort,
+				VXLANVNI:       configParams.VXLANVNI,
 
-				IPIPEnabled:        configParams.IpInIpEnabled,
-				IPIPTunnelAddress:  configParams.IpInIpTunnelAddr,
-				VXLANTunnelAddress: configParams.IPv4VXLANTunnelAddr,
+				IPIPEnabled:            configParams.Encapsulation.IPIPEnabled,
+				FelixConfigIPIPEnabled: configParams.IpInIpEnabled,
+				IPIPTunnelAddress:      configParams.IpInIpTunnelAddr,
+				VXLANTunnelAddress:     configParams.IPv4VXLANTunnelAddr,
+				VXLANTunnelAddressV6:   configParams.IPv6VXLANTunnelAddr,
 
 				IPSecEnabled: configParams.IPSecEnabled(),
 
@@ -400,11 +402,13 @@ func StartDataplaneDriver(configParams *config.Config,
 
 			IPIPMTU:                        configParams.IpInIpMtu,
 			VXLANMTU:                       configParams.VXLANMTU,
+			VXLANMTUV6:                     configParams.VXLANMTUV6,
 			VXLANPort:                      configParams.VXLANPort,
 			IptablesBackend:                configParams.IptablesBackend,
 			IptablesRefreshInterval:        configParams.IptablesRefreshInterval,
 			RouteRefreshInterval:           configParams.RouteRefreshInterval,
 			DeviceRouteSourceAddress:       configParams.DeviceRouteSourceAddress,
+			DeviceRouteSourceAddressIPv6:   configParams.DeviceRouteSourceAddressIPv6,
 			DeviceRouteProtocol:            netlink.RouteProtocol(configParams.DeviceRouteProtocol),
 			RemoveExternalRoutes:           configParams.RemoveExternalRoutes,
 			IPSetsRefreshInterval:          configParams.IpsetsRefreshInterval,
@@ -416,6 +420,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			MaxIPSetSize:                   configParams.MaxIpsetSize,
 			IPv6Enabled:                    configParams.Ipv6Support,
 			BPFIpv6Enabled:                 configParams.BpfIpv6Support,
+			BPFHostConntrackBypass:         configParams.BPFHostConntrackBypass,
 			StatusReportingInterval:        configParams.ReportingIntervalSecs,
 			XDPRefreshInterval:             configParams.XDPRefreshInterval,
 
@@ -473,6 +478,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			BPFMapSizeNATAffinity:              configParams.BPFMapSizeNATAffinity,
 			BPFMapSizeConntrack:                configParams.BPFMapSizeConntrack,
 			BPFMapSizeIPSets:                   configParams.BPFMapSizeIPSets,
+			BPFEnforceRPF:                      configParams.BPFEnforceRPF,
 			XDPEnabled:                         configParams.XDPEnabled,
 			XDPAllowGeneric:                    configParams.GenericXDPEnabled,
 			BPFConntrackTimeouts:               conntrack.DefaultTimeouts(), // FIXME make timeouts configurable
@@ -482,6 +488,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			FlowLogsCollectProcessPath:         configParams.FlowLogsCollectProcessPath,
 			FlowLogsCollectTcpStats:            configParams.FlowLogsCollectTcpStats,
 			FlowLogsFileIncludeService:         configParams.FlowLogsFileIncludeService,
+			FlowLogsFileDomainsLimit:           configParams.FlowLogsFileDomainsLimit,
 			NfNetlinkBufSize:                   configParams.NfNetlinkBufSize,
 
 			IPAMClient: ipamClient,
@@ -551,10 +558,6 @@ func StartDataplaneDriver(configParams *config.Config,
 
 func SupportsBPF() error {
 	return bpf.SupportsBPFDataplane()
-}
-
-func SupportsBPFKprobe() error {
-	return bpf.SupportsBPFKprobe()
 }
 
 func ServePrometheusMetrics(configParams *config.Config) {

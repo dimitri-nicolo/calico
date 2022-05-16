@@ -199,6 +199,8 @@ type Config struct {
 	BPFMapSizeRoute                    int              `config:"int;262144;non-zero"`
 	BPFMapSizeConntrack                int              `config:"int;512000;non-zero"`
 	BPFMapSizeIPSets                   int              `config:"int;1048576;non-zero"`
+	BPFHostConntrackBypass             bool             `config:"bool;true"`
+	BPFEnforceRPF                      string           `config:"oneof(Disabled,Strict);Strict;non-zero"`
 
 	FlowLogsCollectProcessInfo  bool `config:"bool;false"`
 	FlowLogsCollectTcpStats     bool `config:"bool;true"`
@@ -249,6 +251,7 @@ type Config struct {
 	RouteRefreshInterval               time.Duration     `config:"seconds;90"`
 	InterfaceRefreshInterval           time.Duration     `config:"seconds;90"`
 	DeviceRouteSourceAddress           net.IP            `config:"ipv4;"`
+	DeviceRouteSourceAddressIPv6       net.IP            `config:"ipv6;"`
 	DeviceRouteProtocol                int               `config:"int;3"`
 	RemoveExternalRoutes               bool              `config:"bool;true"`
 	IptablesRefreshInterval            time.Duration     `config:"seconds;90"`
@@ -293,14 +296,19 @@ type Config struct {
 	// to Debug level logs.
 	LogDebugFilenameRegex *regexp.Regexp `config:"regexp(nil-on-empty);"`
 
-	VXLANEnabled        bool   `config:"bool;false"`
-	VXLANPort           int    `config:"int;4789"`
-	VXLANVNI            int    `config:"int;4096"`
-	VXLANMTU            int    `config:"int;0"`
-	IPv4VXLANTunnelAddr net.IP `config:"ipv4;"`
-	VXLANTunnelMACAddr  string `config:"string;"`
+	// Optional: VXLAN encap is now determined by the existing IP pools (Encapsulation struct)
+	VXLANEnabled         *bool  `config:"*bool;"`
+	VXLANPort            int    `config:"int;4789"`
+	VXLANVNI             int    `config:"int;4096"`
+	VXLANMTU             int    `config:"int;0"`
+	VXLANMTUV6           int    `config:"int;0"`
+	IPv4VXLANTunnelAddr  net.IP `config:"ipv4;"`
+	IPv6VXLANTunnelAddr  net.IP `config:"ipv6;"`
+	VXLANTunnelMACAddr   string `config:"string;"`
+	VXLANTunnelMACAddrV6 string `config:"string;"`
 
-	IpInIpEnabled    bool   `config:"bool;false"`
+	// Optional: IPIP encap is now determined by the existing IP pools (Encapsulation struct)
+	IpInIpEnabled    *bool  `config:"*bool;"`
 	IpInIpMtu        int    `config:"int;0"`
 	IpInIpTunnelAddr net.IP `config:"ipv4;"`
 
@@ -318,6 +326,8 @@ type Config struct {
 	AWSRequestTimeout                 time.Duration `config:"seconds;30"`
 
 	ServiceLoopPrevention string `config:"oneof(Drop,Reject,Disabled);Drop"`
+
+	WorkloadSourceSpoofing string `config:"oneof(Disabled,Any);Disabled"`
 
 	ReportingIntervalSecs time.Duration `config:"seconds;30"`
 	ReportingTTLSecs      time.Duration `config:"seconds;90"`
@@ -521,6 +531,9 @@ type Config struct {
 	TPROXYUpstreamConnMark uint32 `config:"mark-bitmask;0x17"`
 
 	KubeMasqueradeBit int `config:"int;14"`
+
+	// Encapsulation information calculated from IP Pools and FelixConfiguration (VXLANEnabled and IpInIpEnabled)
+	Encapsulation Encapsulation
 
 	// State tracking.
 
@@ -777,9 +790,10 @@ func (config *Config) resolve() (changed bool, err error) {
 		}
 	}
 
-	if config.IPSecMode != "" && config.IpInIpEnabled {
+	if config.IPSecMode != "" {
 		log.Info("IPsec is enabled, ignoring IPIP configuration")
-		config.IpInIpEnabled = false
+		f := false
+		config.IpInIpEnabled = &f
 		delete(newRawValues, "IpInIpEnabled")
 		config.IpInIpTunnelAddr = nil
 		delete(newRawValues, "IpInIpTunnelAddr")
@@ -855,7 +869,7 @@ func (config *Config) DatastoreConfig() apiconfig.CalicoAPIConfig {
 		cfg.Spec.EtcdCACertFile = config.EtcdCaFile
 	}
 
-	if !(config.IpInIpEnabled || config.VXLANEnabled || config.BPFEnabled || config.IPSecEnabled()) {
+	if !(config.Encapsulation.IPIPEnabled || config.Encapsulation.VXLANEnabled || config.BPFEnabled || config.IPSecEnabled()) {
 		// Polling k8s for node updates is expensive (because we get many superfluous
 		// updates) so disable if we don't need it.
 		log.Info("Encap disabled, disabling node poll (if KDD is in use).")
@@ -966,6 +980,8 @@ func loadParams() {
 		switch kind {
 		case "bool":
 			param = &BoolParam{}
+		case "*bool":
+			param = &BoolPtrParam{}
 		case "int":
 			intParam := &IntParam{}
 			if kindParams != "" {
@@ -1014,8 +1030,10 @@ func loadParams() {
 		case "millis":
 			param = &MillisParam{}
 		case "iface-list":
-			param = &RegexpParam{Regexp: IfaceListRegexp,
-				Msg: "invalid Linux interface name"}
+			param = &RegexpParam{
+				Regexp: IfaceListRegexp,
+				Msg:    "invalid Linux interface name",
+			}
 		case "iface-list-regexp":
 			param = &RegexpPatternListParam{
 				NonRegexpElemRegexp: NonRegexpIfaceElemRegexp,
@@ -1028,18 +1046,24 @@ func loadParams() {
 				Flags: strings.Split(kindParams, ","),
 			}
 		case "iface-param":
-			param = &RegexpParam{Regexp: IfaceParamRegexp,
-				Msg: "invalid Linux interface parameter"}
+			param = &RegexpParam{
+				Regexp: IfaceParamRegexp,
+				Msg:    "invalid Linux interface parameter",
+			}
 		case "file":
 			param = &FileParam{
 				MustExist:  strings.Contains(kindParams, "must-exist"),
 				Executable: strings.Contains(kindParams, "executable"),
 			}
 		case "authority":
-			param = &RegexpParam{Regexp: AuthorityRegexp,
-				Msg: "invalid URL authority"}
+			param = &RegexpParam{
+				Regexp: AuthorityRegexp,
+				Msg:    "invalid URL authority",
+			}
 		case "ipv4":
 			param = &Ipv4Param{}
+		case "ipv6":
+			param = &Ipv6Param{}
 		case "endpoint-list":
 			param = &EndpointListParam{}
 		case "port-list":
@@ -1049,11 +1073,15 @@ func loadParams() {
 		case "portrange-list":
 			param = &PortRangeListParam{}
 		case "hostname":
-			param = &RegexpParam{Regexp: HostnameRegexp,
-				Msg: "invalid hostname"}
+			param = &RegexpParam{
+				Regexp: HostnameRegexp,
+				Msg:    "invalid hostname",
+			}
 		case "host-address":
-			param = &RegexpParam{Regexp: HostAddressRegexp,
-				Msg: "invalid host address"}
+			param = &RegexpParam{
+				Regexp: HostAddressRegexp,
+				Msg:    "invalid host address",
+			}
 		case "region":
 			param = &RegionParam{}
 		case "oneof":
@@ -1063,10 +1091,13 @@ func loadParams() {
 				lowerCaseToCanon[strings.ToLower(option)] = option
 			}
 			param = &OneofListParam{
-				lowerCaseOptionsToCanonical: lowerCaseToCanon}
+				lowerCaseOptionsToCanonical: lowerCaseToCanon,
+			}
 		case "string":
-			param = &RegexpParam{Regexp: StringRegexp,
-				Msg: "invalid string"}
+			param = &RegexpParam{
+				Regexp: StringRegexp,
+				Msg:    "invalid string",
+			}
 		case "cidr-list":
 			param = &CIDRListParam{}
 		case "server-list":
@@ -1203,4 +1234,10 @@ func FromConfigUpdate(msg *proto.ConfigUpdate) *Config {
 	// global and per-host datastore configuration fields.
 	p.UpdateFrom(msg.Config, DatastorePerHost)
 	return p
+}
+
+type Encapsulation struct {
+	IPIPEnabled    bool
+	VXLANEnabled   bool
+	VXLANEnabledV6 bool
 }

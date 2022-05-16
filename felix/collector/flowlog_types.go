@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2022 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -23,6 +23,7 @@ const (
 
 var (
 	emptyService = FlowService{"-", "-", "-", 0}
+	emptyIP      = [16]byte{}
 )
 
 type FlowLogEndpointType string
@@ -122,9 +123,9 @@ func newFlowMetaWithPrefixNameAggregation(mu MetricUpdate, includeService bool) 
 		return FlowMeta{}, err
 	}
 
-	f.Tuple.src = [16]byte{}
+	f.Tuple.src = emptyIP
 	f.Tuple.l4Src = unsetIntField
-	f.Tuple.dst = [16]byte{}
+	f.Tuple.dst = emptyIP
 	f.SrcMeta.Name = flowLogFieldNotIncluded
 	f.DstMeta.Name = flowLogFieldNotIncluded
 
@@ -137,10 +138,10 @@ func newFlowMetaWithNoDestPortsAggregation(mu MetricUpdate, includeService bool)
 		return FlowMeta{}, err
 	}
 
-	f.Tuple.src = [16]byte{}
+	f.Tuple.src = emptyIP
 	f.Tuple.l4Src = unsetIntField
 	f.Tuple.l4Dst = unsetIntField
-	f.Tuple.dst = [16]byte{}
+	f.Tuple.dst = emptyIP
 	f.SrcMeta.Name = flowLogFieldNotIncluded
 	f.DstMeta.Name = flowLogFieldNotIncluded
 	f.DstService.PortName = flowLogFieldNotIncluded
@@ -168,13 +169,14 @@ type FlowSpec struct {
 	flowExtrasRef
 	FlowLabels
 	FlowPolicies
+	FlowDestDomains
 
-	// Reset aggregated data on the next metric update to ensure we clear out obsolete labels and policies for
+	// Reset aggregated data on the next metric update to ensure we clear out obsolete labels, policies and Domains for
 	// connections that are not actively part of the flow during the export interval.
 	resetAggrData bool
 }
 
-func NewFlowSpec(mu *MetricUpdate, maxOriginalIPsSize int, includeProcess bool, processLimit, processArgsLimit int, displayDebugTraceLogs bool, natOutgoingPortLimit int) *FlowSpec {
+func NewFlowSpec(mu *MetricUpdate, maxOriginalIPsSize, maxDomains int, includeProcess bool, processLimit, processArgsLimit int, displayDebugTraceLogs bool, natOutgoingPortLimit int) *FlowSpec {
 	// NewFlowStatsByProcess potentially needs to update fields in mu *MetricUpdate hence passing it by pointer
 	// TODO: reconsider/refactor the inner functions called in NewFlowStatsByProcess to avoid above scenario
 	return &FlowSpec{
@@ -182,6 +184,7 @@ func NewFlowSpec(mu *MetricUpdate, maxOriginalIPsSize int, includeProcess bool, 
 		FlowPolicies:       NewFlowPolicies(*mu),
 		FlowStatsByProcess: NewFlowStatsByProcess(mu, includeProcess, processLimit, processArgsLimit, displayDebugTraceLogs, natOutgoingPortLimit),
 		flowExtrasRef:      NewFlowExtrasRef(*mu, maxOriginalIPsSize),
+		FlowDestDomains:    NewFlowDestDomains(*mu, maxDomains),
 	}
 }
 
@@ -199,6 +202,7 @@ func (f *FlowSpec) ToFlowLogs(fm FlowMeta, startTime, endTime time.Time, include
 			StartTime:                startTime,
 			EndTime:                  endTime,
 			FlowProcessReportedStats: stat,
+			FlowDestDomains:          f.FlowDestDomains,
 		}
 		if f.flowExtrasRef.originalSourceIPs != nil {
 			fe := FlowExtras{
@@ -229,11 +233,12 @@ func (f *FlowSpec) AggregateMetricUpdate(mu *MetricUpdate) {
 		f.FlowPolicies = make(FlowPolicies)
 		f.FlowLabels.SrcLabels = nil
 		f.FlowLabels.DstLabels = nil
+		f.FlowDestDomains.reset()
 		f.resetAggrData = false
 	}
-
 	f.aggregateFlowLabels(*mu)
 	f.aggregateFlowPolicies(*mu)
+	f.aggregateFlowDestDomains(*mu)
 	f.aggregateFlowExtrasRef(*mu)
 	f.aggregateFlowStatsByProcess(mu)
 }
@@ -355,6 +360,41 @@ func (fp FlowPolicies) aggregateFlowPolicies(mu MetricUpdate) {
 		}
 		fp[fmt.Sprintf("%d|%s|%s", idx, rid.GetFlowLogPolicyName(), rid.IndexStr)] = emptyValue
 	}
+}
+
+type FlowDestDomains struct {
+	maxDomains int
+	Domains    map[string]empty
+}
+
+func NewFlowDestDomains(mu MetricUpdate, maxDomains int) FlowDestDomains {
+	fp := FlowDestDomains{
+		maxDomains: maxDomains,
+	}
+	fp.aggregateFlowDestDomains(mu)
+	return fp
+}
+
+func (fp *FlowDestDomains) aggregateFlowDestDomains(mu MetricUpdate) {
+	if len(mu.dstDomains) == 0 {
+		return
+	}
+	if fp.Domains == nil {
+		fp.Domains = make(map[string]empty)
+	}
+	if len(fp.Domains) >= fp.maxDomains {
+		return
+	}
+	for _, name := range mu.dstDomains {
+		fp.Domains[name] = emptyValue
+		if len(fp.Domains) >= fp.maxDomains {
+			return
+		}
+	}
+}
+
+func (fp *FlowDestDomains) reset() {
+	fp.Domains = nil
 }
 
 type flowExtrasRef struct {
@@ -1040,6 +1080,7 @@ type FlowLog struct {
 	FlowMeta
 	FlowLabels
 	FlowPolicies
+	FlowDestDomains
 	FlowExtras
 	FlowProcessReportedStats
 }

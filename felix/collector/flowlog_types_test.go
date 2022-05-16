@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -690,7 +690,6 @@ var _ = Describe("Flow log types tests", func() {
 			}
 			Expect(fsp.getActiveFlowsCount()).Should(Equal(4))
 			Expect(consists(fsp.toFlowProcessReportedStats(), expectedReportedStats)).Should(Equal(true))
-
 		})
 	})
 })

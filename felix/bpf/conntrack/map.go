@@ -1,7 +1,7 @@
 //go:build !windows
 // +build !windows
 
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -89,7 +89,8 @@ func NewKey(proto uint8, ipA net.IP, portA uint16, ipB net.IP, portB uint16) Key
 //  // not to zero the padding bytes, which upsets the verifier.  Worse than
 //  // that, debug logging often prevents such optimisation resulting in
 //  // failures when debug logging is compiled out only :-).
-//  __u8 pad0[6];
+//  __u8 pad0[5];
+//  __u8 flags2;
 //  union {
 //    // CALI_CT_TYPE_NORMAL and CALI_CT_TYPE_NAT_REV.
 //    struct {
@@ -113,16 +114,18 @@ func NewKey(proto uint8, ipA net.IP, portA uint16, ipB net.IP, portB uint16) Key
 // };
 
 const (
-	voCreated  int = 0
-	voLastSeen     = 8
-	voType         = 16
-	voFlags        = 17
-	voRevKey       = 24
-	voLegAB        = 24
-	voLegBA        = 48
-	voTunIP        = 72
-	voOrigIP       = 76
-	voOrigPort     = 80
+	voCreated   int = 0
+	voLastSeen  int = 8
+	voType      int = 16
+	voFlags     int = 17
+	voFlags2    int = 23
+	voRevKey    int = 24
+	voLegAB     int = 24
+	voLegBA     int = 48
+	voOrigIP    int = 76
+	voOrigPort  int = 80
+	voOrigSPort int = 82
+	voTunIP     int = 72
 )
 
 type Value [ValueSize]byte
@@ -139,8 +142,8 @@ func (e Value) Type() uint8 {
 	return e[voType]
 }
 
-func (e Value) Flags() uint8 {
-	return e[voFlags]
+func (e Value) Flags() uint16 {
+	return uint16(e[voFlags]) | (uint16(e[voFlags2]) << 8)
 }
 
 // OrigIP returns the original destination IP, valid only if Type() is TypeNormal or TypeNATReverse
@@ -156,7 +159,7 @@ func (e Value) OrigPort() uint16 {
 // OrigSPort returns the original source port, valid only if Type() is
 // TypeNATReverse and if the value returned is non-zero.
 func (e Value) OrigSPort() uint16 {
-	return binary.LittleEndian.Uint16(e[voOrigPort+2 : voOrigPort+4])
+	return binary.LittleEndian.Uint16(e[voOrigSPort : voOrigSPort+2])
 }
 
 // NATSPort resturns the port to SNAT to, valid only if Type() is TypeNATForward.
@@ -169,13 +172,14 @@ const (
 	TypeNATForward
 	TypeNATReverse
 
-	FlagNATOut        uint8 = (1 << 0)
-	FlagNATFwdDsr     uint8 = (1 << 1)
-	FlagNATNPFwd      uint8 = (1 << 2)
-	FlagSkipFIB       uint8 = (1 << 3)
-	FlagTrustDNS      uint8 = (1 << 4)
-	FlagTrustWorkload uint8 = (1 << 5)
-	FlagExtLocal      uint8 = (1 << 6)
+	FlagNATOut        uint16 = (1 << 0)
+	FlagNATFwdDsr     uint16 = (1 << 1)
+	FlagNATNPFwd      uint16 = (1 << 2)
+	FlagSkipFIB       uint16 = (1 << 3)
+	FlagTrustDNS      uint16 = (1 << 4)
+	FlagTrustWorkload uint16 = (1 << 5)
+	FlagExtLocal      uint16 = (1 << 6)
+	FlagViaNATIf      uint16 = (1 << 7)
 )
 
 func (e Value) ReverseNATKey() Key {
@@ -200,15 +204,16 @@ func (e *Value) SetLegB2A(leg Leg) {
 	copy(e[voLegBA:voLegBA+legSize], leg.AsBytes())
 }
 
-func initValue(v *Value, created, lastSeen time.Duration, typ, flags uint8) {
+func initValue(v *Value, created, lastSeen time.Duration, typ uint8, flags uint16) {
 	binary.LittleEndian.PutUint64(v[voCreated:voCreated+8], uint64(created))
 	binary.LittleEndian.PutUint64(v[voLastSeen:voLastSeen+8], uint64(lastSeen))
 	v[voType] = typ
-	v[voFlags] = flags
+	v[voFlags] = byte(flags & 0xff)
+	v[voFlags2] = byte((flags >> 8) & 0xff)
 }
 
 // NewValueNormal creates a new Value of type TypeNormal based on the given parameters
-func NewValueNormal(created, lastSeen time.Duration, flags uint8, legA, legB Leg) Value {
+func NewValueNormal(created, lastSeen time.Duration, flags uint16, legA, legB Leg) Value {
 	v := Value{}
 
 	initValue(&v, created, lastSeen, TypeNormal, flags)
@@ -221,7 +226,7 @@ func NewValueNormal(created, lastSeen time.Duration, flags uint8, legA, legB Leg
 
 // NewValueNATForward creates a new Value of type TypeNATForward for the given
 // arguments and the reverse key
-func NewValueNATForward(created, lastSeen time.Duration, flags uint8, revKey Key) Value {
+func NewValueNATForward(created, lastSeen time.Duration, flags uint16, revKey Key) Value {
 	v := Value{}
 
 	initValue(&v, created, lastSeen, TypeNATForward, flags)
@@ -233,7 +238,7 @@ func NewValueNATForward(created, lastSeen time.Duration, flags uint8, revKey Key
 
 // NewValueNATReverse creates a new Value of type TypeNATReverse for the given
 // arguments and reverse parameters
-func NewValueNATReverse(created, lastSeen time.Duration, flags uint8, legA, legB Leg,
+func NewValueNATReverse(created, lastSeen time.Duration, flags uint16, legA, legB Leg,
 	tunnelIP, origIP net.IP, origPort uint16) Value {
 	v := Value{}
 
@@ -271,9 +276,11 @@ func setBit(bits *uint32, bit uint8, val bool) {
 	}
 }
 
+const legExtra = 12
+
 // AsBytes returns Leg serialized as a slice of bytes
 func (leg Leg) AsBytes() []byte {
-	bytes := make([]byte, 24)
+	bytes := make([]byte, legSize)
 
 	bits := uint32(0)
 
@@ -286,9 +293,9 @@ func (leg Leg) AsBytes() []byte {
 
 	binary.LittleEndian.PutUint64(bytes[0:8], leg.Bytes)
 	binary.LittleEndian.PutUint32(bytes[8:12], leg.Packets)
-	binary.LittleEndian.PutUint32(bytes[12:16], leg.Seqno)
-	binary.LittleEndian.PutUint32(bytes[16:20], bits)
-	binary.LittleEndian.PutUint32(bytes[20:24], leg.Ifindex)
+	binary.LittleEndian.PutUint32(bytes[legExtra+0:legExtra+4], leg.Seqno)
+	binary.LittleEndian.PutUint32(bytes[legExtra+4:legExtra+8], bits)
+	binary.LittleEndian.PutUint32(bytes[legExtra+8:legExtra+12], leg.Ifindex)
 
 	return bytes
 }
@@ -321,18 +328,18 @@ func bitSet(bits uint32, bit uint8) bool {
 }
 
 func readConntrackLeg(b []byte) Leg {
-	bits := binary.LittleEndian.Uint32(b[16:20])
+	bits := binary.LittleEndian.Uint32(b[legExtra+4 : legExtra+8])
 	return Leg{
 		Bytes:       binary.LittleEndian.Uint64(b[0:8]),
 		Packets:     binary.LittleEndian.Uint32(b[8:12]),
-		Seqno:       binary.BigEndian.Uint32(b[12:16]),
+		Seqno:       binary.BigEndian.Uint32(b[legExtra+0 : legExtra+4]),
 		SynSeen:     bitSet(bits, 0),
 		AckSeen:     bitSet(bits, 1),
 		FinSeen:     bitSet(bits, 2),
 		RstSeen:     bitSet(bits, 3),
 		Whitelisted: bitSet(bits, 4),
 		Opener:      bitSet(bits, 5),
-		Ifindex:     binary.LittleEndian.Uint32(b[20:24]),
+		Ifindex:     binary.LittleEndian.Uint32(b[legExtra+8 : legExtra+12]),
 	}
 }
 
@@ -381,6 +388,7 @@ func (e Value) String() string {
 	if flags == 0 {
 		flagsStr = " <none>"
 	} else {
+		flagsStr = fmt.Sprintf(" 0x%x", flags)
 		if flags&FlagNATOut != 0 {
 			flagsStr += " nat-out"
 		}

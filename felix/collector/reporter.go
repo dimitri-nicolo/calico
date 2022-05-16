@@ -105,6 +105,9 @@ type MetricUpdate struct {
 	dstEp      *calc.EndpointData
 	dstService MetricServiceInfo
 
+	// Top level egress Domains.
+	dstDomains []string
+
 	// isConnection is true if this update is from an active connection.
 	isConnection bool
 

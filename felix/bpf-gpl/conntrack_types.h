@@ -59,12 +59,14 @@ struct calico_ct_value {
 	__u64 last_seen; // 8
 
 	__u8 type;		// 16
-	__u8 flags;		// 17
+	__u8 flags;	// 17
 
-	__u8 _pad64[6];		// 18
-
-	/* 64bit aligned by here */
-
+	// Important to use explicit padding, otherwise the compiler can decide
+	// not to zero the padding bytes, which upsets the verifier.  Worse than
+	// that, debug logging often prevents such optimisation resulting in
+	// failures when debug logging is compiled out only :-).
+	__u8 pad0[5];
+	__u8 flags2;
 	union {
 		// CALI_CT_TYPE_NORMAL and CALI_CT_TYPE_NAT_REV.
 		struct {
@@ -81,7 +83,7 @@ struct calico_ct_value {
 
 		// CALI_CT_TYPE_NAT_FWD; key for the CALI_CT_TYPE_NAT_REV entry.
 		struct {
-			struct calico_ct_key nat_rev_key;  // 16
+			struct calico_ct_key nat_rev_key;  // 24
 			__u16 nat_sport;
 			__u8 pad2[46];
 		};
@@ -96,6 +98,17 @@ static CALI_BPF_INLINE void __xxx_compile_asserts(void) {
 	COMPILE_TIME_ASSERT((sizeof(struct calico_ct_value) == 88))
 #pragma clang diagnostic pop
 }
+
+#define ct_value_set_flags(v, f) do {		\
+	(v)->flags |= ((f) & 0xff);		\
+	(v)->flags2 |= (((f) >> 8) & 0xff);	\
+} while(0)
+
+#define ct_value_get_flags(v) ({			\
+	__u16 ret = (v)->flags | ((v)->flags2 << 8);	\
+							\
+	ret;						\
+})
 
 struct ct_lookup_ctx {
 	__u8 proto;
@@ -120,7 +133,7 @@ struct ct_create_ctx {
 	__be32 tun_ip; /* is set when the packet arrive through the NP tunnel.
 			* It is also set on the first node when we create the
 			* initial CT entry for the tunneled traffic. */
-	__u8 flags;
+	__u16 flags;
 	enum cali_ct_type type;
 	bool allow_from_host_side;
 };

@@ -53,6 +53,7 @@ type MockDataplane struct {
 	config                         map[string]string
 	activePacketCaptures           set.Set
 	numEvents                      int
+	encapsulation                  proto.Encapsulation
 }
 
 func (d *MockDataplane) InSync() bool {
@@ -222,6 +223,13 @@ func (d *MockDataplane) NumEventsRecorded() int {
 	return d.numEvents
 }
 
+func (d *MockDataplane) Encapsulation() proto.Encapsulation {
+	d.Lock()
+	defer d.Unlock()
+
+	return d.encapsulation
+}
+
 func copyPolOrder(in map[string][]TierInfo) map[string][]TierInfo {
 	localCopy := map[string][]TierInfo{}
 	for k, v := range in {
@@ -284,6 +292,17 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 	fmt.Fprintf(GinkgoWriter, "       <- Event: %v %v\n", evType, event)
 	Expect(event).NotTo(BeNil())
 	Expect(reflect.TypeOf(event).Kind()).To(Equal(reflect.Ptr))
+
+	/*
+		// Test wrapping the message for the external dataplane
+		switch event := event.(type) {
+		case *calc.DatastoreNotReady:
+		default:
+			_, err := extdataplane.WrapPayloadWithEnvelope(event, 0)
+			Expect(err).To(BeNil())
+		}
+	*/
+
 	switch event := event.(type) {
 	case *proto.InSync:
 		d.inSync = true
@@ -533,6 +552,8 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 				fmt.Sprintf("Unknown IPsec blacklist removed: %v (all: %v)", addr, d.activeIPSecBlacklist))
 			d.activeIPSecBlacklist.Discard(addr)
 		}
+	case *proto.Encapsulation:
+		d.encapsulation = *event
 	}
 }
 

@@ -68,6 +68,20 @@ If you are installing on a cluster installed by EKS, GKE, AKS or Mirantis Kubern
    ```bash
 echo '{ installation: {kubernetesProvider: EKS }}' > values.yaml
    ```
+   For Azure AKS cluster with no Kubernetes CNI pre-installed, create `values.yaml` with the following command:
+   ```
+   cat > values.yaml <<EOF
+   installation:
+     kubernetesProvider: AKS
+     cni:
+       type: Calico
+     calicoNetwork:
+       bgp: Disabled
+       ipPools:
+       - cidr: 10.244.0.0/16
+         encapsulation: VXLAN
+   EOF
+   ```
 
 1. Add any other customizations you require to `values.yaml`. You might like to refer to the [helm docs ](https://helm.sh/docs/) 
 {%- if page.version == "master" -%} 
@@ -87,6 +101,7 @@ echo '{ installation: {kubernetesProvider: EKS }}' > values.yaml
 1. [Configure a storage class for {{site.prodname}}]({{site.baseurl}}/getting-started/create-storage)
 
 1. Create the `tigera-operator` namespace:
+   
    ```bash
 kubectl create namespace tigera-operator
    ```
@@ -94,14 +109,16 @@ kubectl create namespace tigera-operator
 1. Install the Tigera {{ site.prodname }} operator and custom resource definitions using the Helm chart, and passing in your image pull secrets
 
 {%- if page.version == "master" -%}:
+   
    ```bash
 helm install calico-enterprise tigera/tigera-operator --version v0.0 \
 --set-file imagePullSecrets.tigera-pull-secret=<path/to/pull/secret>,tigera-prometheus-operator.imagePullSecrets.tigera-pull-secret=<path/to/pull/secret> \
 --namespace tigera-operator
    ```
 or if you created a `values.yaml` above:
+   
    ```bash
-helm install calico projectcalico/tigera-operator --version v0.0 -f values.yaml \
+helm install calico-enterprise tigera/tigera-operator --version v0.0 -f values.yaml \
 --set-file imagePullSecrets.tigera-pull-secret=<path/to/pull/secret>,tigera-prometheus-operator.imagePullSecrets.tigera-pull-secret=<path/to/pull/secret> \
 --namespace tigera-operator
    ```
@@ -112,28 +129,33 @@ helm install calico-enterprise tigera-operator-{% include chart_version_name %}.
 --namespace tigera-operator
    ```
 or if you created a `values.yaml` above:
+   
    ```bash
-helm install calico tigera-operator-{% include chart_version_name %}.tgz -f values.yaml \
+helm install calico-enterprise tigera-operator-{% include chart_version_name %}.tgz -f values.yaml \
 --set-file imagePullSecrets.tigera-pull-secret=<path/to/pull/secret>,tigera-prometheus-operator.imagePullSecrets.tigera-pull-secret=<path/to/pull/secret> \
 --namespace tigera-operator
    ```
 {% endif %}
 
 1. Monitor progress, wait until `apiserver` shows a status of `Available`, then proceed to the next step.
+   
    ```bash
    watch kubectl get tigerastatus/apiserver
    ``` 
 1. Install your {{ site.prodname }} license:
+   
    ```bash
    kubectl apply -f </path/to/license.yaml>
    ```
 
 1. Monitor progress, wait until all components show a status of `Available`, then proceed to the next step.
+   
    ```bash
    watch kubectl get tigerastatus
    ```
    
 1. Apply the following manifest to secure {{site.prodname}} with network policy:
+   
    ```bash
    kubectl apply -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
    ```

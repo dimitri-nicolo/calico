@@ -115,5 +115,6 @@ type ProcessInfoCache interface {
 
 // EgressDomainCache interface used to perform reverse DNS queries.
 type EgressDomainCache interface {
-	GetWatchedDomainForIP(ip [16]byte) string
+	IterWatchedDomainsForIP(ip [16]byte, cb func(domain string) (stop bool))
+	GetTopLevelDomainsForIP(ip [16]byte) []string
 }

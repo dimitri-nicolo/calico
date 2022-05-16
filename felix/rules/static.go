@@ -352,7 +352,7 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 	}
 
 	if ipVersion == 4 && r.VXLANEnabled {
-		// VXLAN is enabled, filter incoming VXLAN packets that match our VXLAN port to ensure they
+		// IPv4 VXLAN is enabled, filter incoming VXLAN packets that match our VXLAN port to ensure they
 		// come from a recognised host and are going to a local address on the host.
 		inputRules = append(inputRules,
 			Rule{
@@ -361,14 +361,36 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 					SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllVXLANSourceNets)).
 					DestAddrType(AddrTypeLocal),
 				Action:  r.filterAllowAction,
-				Comment: []string{"Allow VXLAN packets from whitelisted hosts"},
+				Comment: []string{"Allow IPv4 VXLAN packets from whitelisted hosts"},
 			},
 			Rule{
 				Match: Match().ProtocolNum(ProtoUDP).
 					DestPorts(uint16(r.Config.VXLANPort)).
 					DestAddrType(AddrTypeLocal),
 				Action:  DropAction{},
-				Comment: []string{"Drop VXLAN packets from non-whitelisted hosts"},
+				Comment: []string{"Drop IPv4 VXLAN packets from non-whitelisted hosts"},
+			},
+		)
+	}
+
+	if ipVersion == 6 && r.VXLANEnabledV6 {
+		// IPv6 VXLAN is enabled, filter incoming VXLAN packets that match our VXLAN port to ensure they
+		// come from a recognised host and are going to a local address on the host.
+		inputRules = append(inputRules,
+			Rule{
+				Match: Match().ProtocolNum(ProtoUDP).
+					DestPorts(uint16(r.Config.VXLANPort)).
+					SourceIPSet(r.IPSetConfigV6.NameForMainIPSet(IPSetIDAllVXLANSourceNets)).
+					DestAddrType(AddrTypeLocal),
+				Action:  r.filterAllowAction,
+				Comment: []string{"Allow IPv6 VXLAN packets from whitelisted hosts"},
+			},
+			Rule{
+				Match: Match().ProtocolNum(ProtoUDP).
+					DestPorts(uint16(r.Config.VXLANPort)).
+					DestAddrType(AddrTypeLocal),
+				Action:  DropAction{},
+				Comment: []string{"Drop IPv6 VXLAN packets from non-whitelisted hosts"},
 			},
 		)
 	}
@@ -936,7 +958,7 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *Chain {
 	}
 
 	if ipVersion == 4 && r.VXLANEnabled {
-		// When VXLAN is enabled, auto-allow VXLAN traffic to other Calico nodes.  Without this,
+		// When IPv4 VXLAN is enabled, auto-allow VXLAN traffic to other Calico nodes.  Without this,
 		// it's too easy to make a host policy that blocks VXLAN traffic, resulting in very confusing
 		// connectivity problems.
 		rules = append(rules,
@@ -946,7 +968,23 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *Chain {
 					SrcAddrType(AddrTypeLocal, false).
 					DestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllVXLANSourceNets)),
 				Action:  r.filterAllowAction,
-				Comment: []string{"Allow VXLAN packets to other whitelisted hosts"},
+				Comment: []string{"Allow IPv4 VXLAN packets to other whitelisted hosts"},
+			},
+		)
+	}
+
+	if ipVersion == 6 && r.VXLANEnabledV6 {
+		// When IPv6 VXLAN is enabled, auto-allow VXLAN traffic to other Calico nodes.  Without this,
+		// it's too easy to make a host policy that blocks VXLAN traffic, resulting in very confusing
+		// connectivity problems.
+		rules = append(rules,
+			Rule{
+				Match: Match().ProtocolNum(ProtoUDP).
+					DestPorts(uint16(r.Config.VXLANPort)).
+					SrcAddrType(AddrTypeLocal, false).
+					DestIPSet(r.IPSetConfigV6.NameForMainIPSet(IPSetIDAllVXLANSourceNets)),
+				Action:  r.filterAllowAction,
+				Comment: []string{"Allow IPv6 VXLAN packets to other whitelisted hosts"},
 			},
 		)
 	}
@@ -1100,6 +1138,9 @@ func (r *DefaultRuleRenderer) StaticNATPostroutingChains(ipVersion uint8) []*Cha
 	}
 	if ipVersion == 4 && r.VXLANEnabled && len(r.VXLANTunnelAddress) > 0 {
 		tunnelIfaces = append(tunnelIfaces, "vxlan.calico")
+	}
+	if ipVersion == 6 && r.VXLANEnabledV6 && len(r.VXLANTunnelAddressV6) > 0 {
+		tunnelIfaces = append(tunnelIfaces, "vxlan-v6.calico")
 	}
 	if ipVersion == 4 && r.WireguardEnabled && len(r.WireguardInterfaceName) > 0 {
 		// Wireguard is assigned an IP dynamically and without restarting Felix. Just add the interface if we have
@@ -1558,15 +1599,109 @@ func (r *DefaultRuleRenderer) StaticRawTableChains(ipVersion uint8) []*Chain {
 	}
 }
 
-func (r *DefaultRuleRenderer) StaticBPFModeRawChains(ipVersion uint8, tcBypassMark uint32) []*Chain {
-	rawPreroutingChain := &Chain{
-		Name: ChainRawPrerouting,
-		Rules: []Rule{
-			Rule{
-				// Return, i.e. no-op, if bypass mark is not set.
-				Match:  Match().NotMarkMatchesWithMask(tcBypassMark, 0xffffffff),
-				Action: ReturnAction{},
+func (r *DefaultRuleRenderer) StaticBPFModeRawChains(ipVersion uint8,
+	wgEncryptHost, bypassHostConntrack, enforceRPF bool) []*Chain {
+
+	var rawRules, rpfRules []Rule
+
+	if enforceRPF {
+		rawRules = append(rawRules, Rule{
+			Action: JumpAction{Target: RPFChain},
+		})
+
+		// Do not RPF check what is marked as to be skipped by RPF check.
+		rpfRules = []Rule{
+			{
+				Match:   Match().MarkMatchesWithMask(tcdefs.MarkSeenBypassSkipRPF, tcdefs.MarkSeenBypassSkipRPFMask),
+				Action:  ReturnAction{},
+				Comment: []string{"Skip RPF if requested"},
 			},
+			{
+				Match:   Match().MarkMatchesWithMask(tcdefs.MarkSeenBypassForward, tcdefs.MarkSeenBypassForwardMask),
+				Action:  ReturnAction{},
+				Comment: []string{"Skip RPF on packets returning from tunnel to the client"},
+			},
+		}
+
+		// For anything we approved for forward, permit accept_local as it is
+		// traffic encapped for NodePort, ICMP replies etc. - stuff we trust.
+		rpfRules = append(rpfRules, Rule{
+			Match:  Match().MarkMatchesWithMask(tcdefs.MarkSeenBypassForward, tcdefs.MarksMask).RPFCheckPassed(true),
+			Action: ReturnAction{},
+		})
+
+		// Do the full RPF check and dis-allow accept_local for anything else.
+		rpfRules = append(rpfRules, r.RPFilter(ipVersion, tcdefs.MarkSeen, tcdefs.MarkSeenMask,
+			r.OpenStackSpecialCasesEnabled, false)...)
+
+		if r.WireguardEnabled && len(r.WireguardInterfaceName) > 0 && wgEncryptHost {
+			// Set a mark on packets coming from any interface except for lo, wireguard, or pod veths to ensure the RPF
+			// check allows it.
+			log.Debug("Adding Wireguard iptables rule chain")
+			rawRules = append(rawRules, Rule{
+				Match:  nil,
+				Action: JumpAction{Target: ChainSetWireguardIncomingMark},
+			})
+		}
+	}
+
+	rawRules = append(rawRules,
+		Rule{
+			Match:  Match().NotDestAddrType(AddrTypeLocal),
+			Action: GotoAction{Target: ChainRawUntrackedFlows},
+		},
+		Rule{
+			// Return, i.e. no-op, if bypass mark is not set.
+			Match:   Match().MarkMatchesWithMask(tcdefs.MarkSeenBypass, 0xffffffff),
+			Action:  GotoAction{Target: ChainRawBPFUntrackedPolicy},
+			Comment: []string{"Jump to target for packets with Bypass mark"},
+		},
+	)
+
+	rawPreroutingChain := &Chain{
+		Name:  ChainRawPrerouting,
+		Rules: rawRules,
+	}
+
+	bpfUntrackedFlowChain := &Chain{
+		Name:  ChainRawUntrackedFlows,
+		Rules: []Rule{},
+	}
+
+	if bypassHostConntrack {
+		bpfUntrackedFlowChain = &Chain{
+			Name: ChainRawUntrackedFlows,
+			Rules: []Rule{
+				Rule{
+					Match:   Match().MarkMatchesWithMask(tcdefs.MarkSeenSkipFIB, tcdefs.MarkSeenSkipFIB),
+					Action:  ReturnAction{},
+					Comment: []string{"MarkSeenSkipFIB Mark"},
+				},
+				Rule{
+					Match:   Match().MarkMatchesWithMask(tcdefs.MarkSeenFallThrough, tcdefs.MarkSeenFallThroughMask),
+					Action:  ReturnAction{},
+					Comment: []string{"MarkSeenFallThrough Mark"},
+				},
+				Rule{
+					Match:   Match().MarkMatchesWithMask(tcdefs.MarkSeenMASQ, tcdefs.MarkSeenMASQMask),
+					Action:  ReturnAction{},
+					Comment: []string{"MarkSeenMASQ Mark"},
+				},
+				Rule{
+					Match:   Match().MarkMatchesWithMask(tcdefs.MarkSeenNATOutgoing, tcdefs.MarkSeenNATOutgoingMask),
+					Action:  ReturnAction{},
+					Comment: []string{"MarkSeenNATOutgoing Mark"},
+				},
+				Rule{
+					Action: NoTrackAction{},
+				},
+			},
+		}
+	}
+
+	xdpUntrakedPoliciesChain := &Chain{
+		Name: ChainRawBPFUntrackedPolicy,
+		Rules: []Rule{
 			// At this point we know bypass mark is set, which means that the packet has
 			// been explicitly allowed by untracked ingress policy (XDP).  We should
 			// clear the mark so as not to affect any FROM_HOST processing.  (There
@@ -1586,11 +1721,28 @@ func (r *DefaultRuleRenderer) StaticBPFModeRawChains(ipVersion uint8, tcBypassMa
 			},
 		},
 	}
-	return []*Chain{
+
+	chains := []*Chain{
 		rawPreroutingChain,
+		xdpUntrakedPoliciesChain,
+		bpfUntrackedFlowChain,
 		r.failsafeOutChain("raw", ipVersion),
-		r.StaticRawOutputChain(tcBypassMark),
+		r.WireguardIncomingMarkChain(),
 	}
+
+	if enforceRPF {
+		chains = append(chains, &Chain{
+			Name:  RPFChain,
+			Rules: rpfRules,
+		})
+	}
+
+	if ipVersion == 4 {
+		chains = append(chains,
+			r.StaticRawOutputChain(tcdefs.MarkSeenBypass))
+	}
+
+	return chains
 }
 
 func (r *DefaultRuleRenderer) StaticRawPreroutingChain(ipVersion uint8) *Chain {
@@ -1637,6 +1789,13 @@ func (r *DefaultRuleRenderer) StaticRawPreroutingChain(ipVersion uint8) *Chain {
 			Action: JumpAction{Target: ChainFromWorkloadDispatch},
 		})
 	} else {
+		// Send workload traffic to a specific chain to skip the rpf check for some workloads
+		rules = append(rules,
+			Rule{
+				Match:  Match().MarkMatchesWithMask(markFromWorkload, markFromWorkload),
+				Action: JumpAction{Target: ChainRpfSkip},
+			})
+
 		// Apply strict RPF check to packets from workload interfaces.  This prevents
 		// workloads from spoofing their IPs.  Note: non-privileged containers can't usually
 		// spoof but privileged containers and VMs can.

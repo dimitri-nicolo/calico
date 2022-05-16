@@ -33,12 +33,10 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
-var (
-	gaugeNumActiveSelectors = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "felix_active_local_selectors",
-		Help: "Number of active selectors on this host.",
-	})
-)
+var gaugeNumActiveSelectors = prometheus.NewGauge(prometheus.GaugeOpts{
+	Name: "felix_active_local_selectors",
+	Help: "Number of active selectors on this host.",
+})
 
 func init() {
 	prometheus.MustRegister(gaugeNumActiveSelectors)
@@ -70,6 +68,10 @@ type configCallbacks interface {
 	OnDatastoreNotReady()
 }
 
+type encapCallbacks interface {
+	OnEncapUpdate(encap config.Encapsulation)
+}
+
 type passthruCallbacks interface {
 	OnHostIPUpdate(hostname string, ip *net.IP)
 	OnHostIPRemove(hostname string)
@@ -82,6 +84,8 @@ type passthruCallbacks interface {
 	OnWireguardUpdate(string, *model.Wireguard)
 	OnWireguardRemove(string)
 	OnGlobalBGPConfigUpdate(*v3.BGPConfiguration)
+	OnServiceUpdate(*proto.ServiceUpdate)
+	OnServiceRemove(*proto.ServiceRemove)
 }
 
 type routeCallbacks interface {
@@ -120,6 +124,7 @@ type PacketCaptureSpecification struct {
 type PipelineCallbacks interface {
 	ipSetUpdateCallbacks
 	rulesUpdateCallbacks
+	encapCallbacks
 	endpointCallbacks
 	configCallbacks
 	passthruCallbacks
@@ -428,7 +433,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	hostIPPassthru := NewDataplanePassthru(callbacks)
 	hostIPPassthru.RegisterWith(allUpdDispatcher)
 
-	if conf.BPFEnabled || conf.VXLANEnabled || conf.WireguardEnabled ||
+	if conf.BPFEnabled || conf.Encapsulation.VXLANEnabled || conf.Encapsulation.VXLANEnabledV6 || conf.WireguardEnabled ||
 		conf.EgressIPSupport == "EnabledPerNamespace" || conf.EgressIPSupport == "EnabledPerNamespaceOrPerPod" ||
 		conf.AWSSecondaryIPSupport != "Disabled" {
 		// Calculate simple node-ownership routes.
@@ -459,7 +464,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	//         |
 	//      <dataplane>
 	//
-	if conf.VXLANEnabled {
+	if conf.Encapsulation.VXLANEnabled || conf.Encapsulation.VXLANEnabledV6 {
 		vxlanResolver := NewVXLANResolver(hostname, callbacks, conf.UseNodeResourceUpdates())
 		vxlanResolver.RegisterWith(allUpdDispatcher)
 	}
@@ -543,6 +548,20 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 		tproxyResolver := NewL7FrontEndResolver(callbacks, conf)
 		tproxyResolver.RegisterWith(allUpdDispatcher)
 	}
+
+	// Register for IP Pool updates. EncapsulationResolver will send a message to the
+	// dataplane so that Felix is restarted if IPIP and/or VXLAN encapsulation changes
+	// due to IP pool changes, so that it is recalculated at Felix startup.
+	//
+	//        ...
+	//     Dispatcher (all updates)
+	//         |
+	//         | IP pools
+	//         |
+	//       encapsulation resolver
+	//
+	encapsulationResolver := NewEncapsulationResolver(conf, callbacks)
+	encapsulationResolver.RegisterWith(allUpdDispatcher)
 
 	return &CalcGraph{
 		AllUpdDispatcher:      allUpdDispatcher,

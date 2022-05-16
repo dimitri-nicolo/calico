@@ -31,7 +31,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/asm"
 	"github.com/projectcalico/calico/felix/bpf/bpfutils"
 	"github.com/projectcalico/calico/felix/bpf/libbpf"
-	"github.com/projectcalico/calico/felix/versionparse"
+	"github.com/projectcalico/calico/felix/environment"
 
 	"golang.org/x/sys/unix"
 )
@@ -527,7 +527,7 @@ func getKernelVersionFromVdso() int {
 
 func getKernelVersionSources(progType uint32) []func() int {
 	if progType == unix.BPF_PROG_TYPE_KPROBE {
-		return []func() int{getKernelVersionFromVdso, versionparse.GetKernelVersionCode}
+		return []func() int{getKernelVersionFromVdso, environment.GetKernelVersionCode}
 	}
 	return []func() int{func() int { return 0 }}
 }

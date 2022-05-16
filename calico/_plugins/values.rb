@@ -441,6 +441,8 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
         key:
         cert:
 
+    resources: {}
+
     # Configuration for the tigera operator
     tigeraOperator:
       image: #{versions.fetch("tigera-operator").image}
@@ -688,6 +690,9 @@ def gen_chart_specific_values(versions, imageRegistry, chart, forDocs)
       # flexvol does not use imageRegistry as it is an external OS image
       image: #{versions["flexvol"].registry}/#{versions["flexvol"].image}
       tag: #{versions["flexvol"].version}
+    csi-driver:
+      image: #{imageRegistry}#{imageNames.fetch("csi-driver")}
+      tag: #{versions.fetch("csi-driver")}
 
     # Optional configuration for setting custom BGP templates where
     # key is the filename of the template and value is the contents of the template.

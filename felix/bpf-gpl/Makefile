@@ -43,8 +43,8 @@ CFLAGS +=  \
 TRIPLET := $(shell gcc -dumpmachine)
 CFLAGS += -I/usr/include/$(TRIPLET)
 
-CC := clang-11
-LD := llc-11
+CC := clang-12
+LD := llc-12
 
 UT_C_FILES:=$(shell find ut -name '*.c')
 UT_OBJS:=$(UT_C_FILES:.c=.o) $(shell ./list-ut-objs)
@@ -133,7 +133,10 @@ bin:
 		rm -f $@.$$$$
 
 D_FILES=$(C_FILES:.c=.d)
+
+ifneq ($(MAKECMDGOALS),clean)
 include $(D_FILES)
+endif
 
 clean:
 	rm -f *.o *.ll *.d bin/* ut/*.o ut/*.d ut/*.ll

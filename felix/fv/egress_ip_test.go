@@ -387,9 +387,15 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			app2 := makeClient(felixes[0], "10.65.0.3", "app2")
 			defer app2.Stop()
 
-			By("Check ip rules and routes.")
-			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))
+			By("Check ip rules.")
+			Eventually(getIPRules, "10s", "1s").Should(HaveLen(2))
+			Eventually(getIPRules, "10s", "1s").Should(HaveKey("10.65.0.2"))
+			table2 := getIPRules()["10.65.0.3"]
+			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table2}))
+
+			By("Check ip routes.")
 			checkIPRoute(table1, expectedRoute("10.10.10.1"))
+			checkIPRoute(table2, expectedRoute("10.10.10.1"))
 
 			By("Check L2.")
 			Expect(getIPNeigh()).To(Equal(map[string]string{
@@ -404,8 +410,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			defer gw2.Stop()
 
 			By("Check ip rules and routes.")
-			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))
+			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table2}))
 			checkIPRoute(table1, expectedRoute("10.10.10.1", "10.10.10.2"))
+			checkIPRoute(table2, expectedRoute("10.10.10.1", "10.10.10.2"))
 
 			By("Check L2.")
 			Expect(getIPNeigh()).To(Equal(map[string]string{
@@ -422,8 +429,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			defer gw3.Stop()
 
 			By("Check ip rules and routes.")
-			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))
+			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table2}))
 			checkIPRoute(table1, expectedRoute("10.10.10.1", "10.10.10.2", "10.10.10.3"))
+			checkIPRoute(table2, expectedRoute("10.10.10.1", "10.10.10.2", "10.10.10.3"))
 
 			By("Check L2.")
 			Expect(getIPNeigh()).To(Equal(map[string]string{
@@ -437,12 +445,29 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 				"a2:2a:0a:0a:0a:03": "10.10.10.3",
 			}))
 
+			By("Create another client.")
+			app3 := makeClient(felixes[0], "10.65.0.4", "app3")
+			defer app3.Stop()
+
+			By("Check ip rules.")
+			Eventually(getIPRules, "10s", "1s").Should(HaveLen(3))
+			Eventually(getIPRules, "10s", "1s").Should(HaveKey("10.65.0.4"))
+			table3 := getIPRules()["10.65.0.4"]
+			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table2, "10.65.0.4": table3}))
+
+			By("Check ip routes.")
+			checkIPRoute(table1, expectedRoute("10.10.10.1", "10.10.10.2", "10.10.10.3"))
+			checkIPRoute(table2, expectedRoute("10.10.10.1", "10.10.10.2", "10.10.10.3"))
+			checkIPRoute(table3, expectedRoute("10.10.10.1", "10.10.10.2", "10.10.10.3"))
+
 			By("Remove 3rd gateway again.")
 			gw3.RemoveFromInfra(infra)
 
 			By("Check ip rules and routes.")
-			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))
+			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table2, "10.65.0.4": table3}))
 			checkIPRoute(table1, expectedRoute("10.10.10.1", "10.10.10.2"))
+			checkIPRoute(table2, expectedRoute("10.10.10.1", "10.10.10.2"))
+			checkIPRoute(table3, expectedRoute("10.10.10.1", "10.10.10.2"))
 
 			By("Check L2.")
 			Expect(getIPNeigh()).To(Equal(map[string]string{
@@ -454,27 +479,31 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 				"a2:2a:0a:0a:0a:02": "10.10.10.2",
 			}))
 
-			By("Remove the first gateway.")
-			gw.RemoveFromInfra(infra)
-
-			By("Check ip rules and routes.")
-			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))
-			checkIPRoute(table1, expectedRoute("10.10.10.2"))
-
-			By("Check L2.")
-			Expect(getIPNeigh()).To(Equal(map[string]string{
-				"10.10.10.2": "a2:2a:0a:0a:0a:02",
-			}))
-			Expect(getBridgeFDB()).To(Equal(map[string]string{
-				"a2:2a:0a:0a:0a:02": "10.10.10.2",
-			}))
-
 			By("Remove the second gateway.")
 			gw2.RemoveFromInfra(infra)
 
 			By("Check ip rules and routes.")
-			Consistently(getIPRules, "5s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table1}))
+			Eventually(getIPRules, "10s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table2, "10.65.0.4": table3}))
+			checkIPRoute(table1, expectedRoute("10.10.10.1"))
+			checkIPRoute(table2, expectedRoute("10.10.10.1"))
+			checkIPRoute(table3, expectedRoute("10.10.10.1"))
+
+			By("Check L2.")
+			Expect(getIPNeigh()).To(Equal(map[string]string{
+				"10.10.10.1": "a2:2a:0a:0a:0a:01",
+			}))
+			Expect(getBridgeFDB()).To(Equal(map[string]string{
+				"a2:2a:0a:0a:0a:01": "10.10.10.1",
+			}))
+
+			By("Remove the first gateway.")
+			gw.RemoveFromInfra(infra)
+
+			By("Check ip rules and routes.")
+			Consistently(getIPRules, "5s", "1s").Should(Equal(map[string]string{"10.65.0.2": table1, "10.65.0.3": table2, "10.65.0.4": table3}))
 			checkIPRoute(table1, expectedRoute())
+			checkIPRoute(table2, expectedRoute())
+			checkIPRoute(table3, expectedRoute())
 
 			By("Check L2.")
 			Expect(getIPNeigh()).To(Equal(map[string]string{}))

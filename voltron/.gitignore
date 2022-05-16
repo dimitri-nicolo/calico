@@ -1,0 +1,12 @@
+# Generated Manifests
+**/voltron.yaml
+**/guardian.yaml
+
+scripts/certs/*.crt
+scripts/certs/*.key
+scripts/certs/*.key.pub
+
+# Secrets
+test/st-kind/config.json
+test/st-kind/docker_auth.json
+test/st-kind/test-resources/**

@@ -68,6 +68,7 @@ import (
 	"github.com/projectcalico/calico/felix/collector"
 	"github.com/projectcalico/calico/felix/config"
 	dp "github.com/projectcalico/calico/felix/dataplane"
+	"github.com/projectcalico/calico/felix/environment"
 	"github.com/projectcalico/calico/felix/jitter"
 	"github.com/projectcalico/calico/felix/logutils"
 	"github.com/projectcalico/calico/felix/policysync"
@@ -85,6 +86,7 @@ const (
 	// String sent on the failure report channel to indicate we're shutting down for config
 	// change.
 	reasonConfigChanged        = "config changed"
+	reasonEncapChanged         = "encapsulation changed"
 	reasonLicenseConfigChanged = "license config changed"
 	// String sent on the failure report channel to indicate we're shutting down for a child
 	// process exited. e.g. charon daemon.
@@ -192,7 +194,7 @@ func Run(configFile string, gitVersion string, buildDate string, gitRevision str
 	var v3Client client.Interface
 	var datastoreConfig apiconfig.CalicoAPIConfig
 	var configParams *config.Config
-	var typhaAddr string
+	var typhaAddresses []discovery.Typha
 	var numClientsCreated int
 	var k8sClientSet *kubernetes.Clientset
 configRetry:
@@ -288,6 +290,19 @@ configRetry:
 			continue configRetry
 		}
 
+		// List all IP pools and feed them into an EncapsulationCalculator to determine if
+		// IPIP and/or VXLAN encapsulations should be enabled
+		ippoolKVPList, err := backendClient.List(ctx, model.ResourceListOptions{Kind: apiv3.KindIPPool}, "")
+		if err != nil {
+			log.WithError(err).Error("Failed to list IP Pools")
+			time.Sleep(1 * time.Second)
+			continue configRetry
+		}
+		encapCalculator := calc.NewEncapsulationCalculator(configParams, ippoolKVPList)
+		configParams.Encapsulation.IPIPEnabled = encapCalculator.IPIPEnabled()
+		configParams.Encapsulation.VXLANEnabled = encapCalculator.VXLANEnabled()
+		configParams.Encapsulation.VXLANEnabledV6 = encapCalculator.VXLANEnabledV6()
+
 		// We now have some config flags that affect how we configure the syncer.
 		// After loading the config from the datastore, reconnect, possibly with new
 		// config.  We don't need to re-load the configuration _again_ because the
@@ -326,7 +341,7 @@ configRetry:
 		}
 
 		// If we're configured to discover Typha, do that now so we can retry if we fail.
-		typhaAddr, err = discoverTyphaAddr(configParams, k8sClientSet)
+		typhaAddresses, err = discoverTyphaAddrs(configParams, k8sClientSet)
 		if err != nil {
 			log.WithError(err).Error("Typha discovery enabled but discovery failed.")
 			time.Sleep(1 * time.Second)
@@ -374,7 +389,7 @@ configRetry:
 	}
 
 	if configParams.FlowLogsCollectProcessInfo {
-		if err := dp.SupportsBPFKprobe(); err != nil {
+		if !environment.NewFeatureDetector(configParams.FeatureDetectOverride).GetFeatures().BPFKprobes {
 			log.Error("FlowLogsCollectProcessInfo enabled but BPF not supported by the kernel. Disabling FlowLogsCollectProcessInfo.")
 			_, err := configParams.OverrideParam("FlowLogsCollectProcessInfo", "false")
 			if err != nil {
@@ -437,13 +452,14 @@ configRetry:
 		simulateDataRace()
 	}
 
-	// We may need to temporarily disable encrypted traffic to this node in order to connect to Typha
-	if configParams.WireguardEnabled {
-		err := bootstrapWireguard(configParams, v3Client)
-		if err != nil {
-			time.Sleep(2 * time.Second) // avoid a tight restart loop
-			log.WithError(err).Fatal("Couldn't bootstrap WireGuard host connectivity")
-		}
+	// Perform wireguard bootstrap processing. This may remove wireguard configuration if wireguard is disabled or
+	// if the configuration is obviously broken. This also filters the typha addresses based on whether routing is
+	// obviously broken to the typha node (due to wireguard routing asymmetry). If all typhas would be filtered out then
+	// wireguard is removed from the node and all typhas are returned (unfiltered).
+	typhaAddresses, err = bootstrapWireguardAndFilterTyphaAddresses(configParams, v3Client, typhaAddresses)
+	if err != nil {
+		time.Sleep(2 * time.Second) // avoid a tight restart loop
+		log.WithError(err).Fatal("Couldn't bootstrap WireGuard host connectivity")
 	}
 
 	// Start up the dataplane driver.  This may be the internal go-based driver or an external
@@ -544,11 +560,12 @@ configRetry:
 	var syncer Startable
 	var typhaConnection *syncclient.SyncerClient
 	syncerToValidator := calc.NewSyncerCallbacksDecoupler()
-	if typhaAddr != "" {
+
+	if len(typhaAddresses) > 0 {
 		// Use a remote Syncer, via the Typha server.
-		log.WithField("addr", typhaAddr).Info("Connecting to Typha.")
+		log.WithField("addresses", typhaAddresses).Info("Connecting to Typha.")
 		typhaConnection = syncclient.New(
-			typhaAddr,
+			typhaAddresses,
 			buildinfo.GitVersion,
 			configParams.FelixHostname,
 			fmt.Sprintf("Revision: %s; Build date: %s",
@@ -597,6 +614,11 @@ configRetry:
 				time.Sleep(1 * time.Second)
 			}
 			if err != nil {
+				// We failed to connect to typha. Remove wireguard configuration if necessary (just incase this is
+				// why the connection is failing).
+				if err2 := bootstrapRemoveWireguard(configParams, v3Client); err2 != nil {
+					log.WithError(err2).Error("Failed to remove wireguard configuration")
+				}
 				log.WithError(err).Fatal("Failed to connect to Typha")
 			} else {
 				log.Info("Connected to Typha after retries.")
@@ -637,7 +659,7 @@ configRetry:
 
 	// Create the validator, which sits between the syncer and the
 	// calculation graph.
-	validator := calc.NewValidationFilter(asyncCalcGraph)
+	validator := calc.NewValidationFilter(asyncCalcGraph, configParams)
 
 	go syncerToValidator.SendTo(validator)
 	asyncCalcGraph.Start()
@@ -846,12 +868,14 @@ func monitorAndManageShutdown(failureReportChan <-chan string, driverCmd *exec.C
 		go func() {
 			time.Sleep(2 * time.Second)
 
-			if reason == reasonConfigChanged || reason == reasonLicenseConfigChanged {
+			switch reason {
+			case reasonConfigChanged, reasonLicenseConfigChanged:
 				exitWithCustomRC(configChangedRC, "Exiting for config change")
 				return
-			}
-
-			if reason == reasonChildExited {
+			case reasonEncapChanged:
+				exitWithCustomRC(configChangedRC, "Exiting for encapsulation change")
+				return
+			case reasonChildExited:
 				exitWithCustomRC(childExitedRC, "Exiting for child process exit")
 				return
 			}
@@ -883,9 +907,7 @@ func exitWithCustomRC(rc int, message string) {
 	os.Exit(rc)
 }
 
-var (
-	ErrNotReady = errors.New("datastore is not ready or has not been initialised")
-)
+var ErrNotReady = errors.New("datastore is not ready or has not been initialised")
 
 func loadConfigFromDatastore(
 	ctx context.Context, client bapi.Client, cfg apiconfig.CalicoAPIConfig, hostname string,
@@ -1402,7 +1424,7 @@ func (fc *DataplaneConnector) sendMessagesToDataplaneDriver() {
 				}
 
 				if restartNeeded {
-					fc.shutDownProcess("config changed")
+					fc.shutDownProcess(reasonConfigChanged)
 				}
 			}
 
@@ -1414,6 +1436,12 @@ func (fc *DataplaneConnector) sendMessagesToDataplaneDriver() {
 		case *calc.DatastoreNotReady:
 			log.Warn("Datastore became unready, need to restart.")
 			fc.shutDownProcess("datastore became unready")
+		case *proto.Encapsulation:
+			if msg.IpipEnabled != fc.config.Encapsulation.IPIPEnabled || msg.VxlanEnabled != fc.config.Encapsulation.VXLANEnabled ||
+				msg.VxlanEnabledV6 != fc.config.Encapsulation.VXLANEnabledV6 {
+				log.Warn("IPIP and/or VXLAN encapsulation changed, need to restart.")
+				fc.shutDownProcess(reasonEncapChanged)
+			}
 		}
 		if err := fc.dataplane.SendMessage(msg); err != nil {
 			fc.shutDownProcess("Failed to write to dataplane driver")
@@ -1444,10 +1472,17 @@ func (fc *DataplaneConnector) Start() {
 	go fc.handleEgressPodStatusUpdateFromDataplane()
 }
 
-func discoverTyphaAddr(configParams *config.Config, k8sClientSet kubernetes.Interface) (string, error) {
+func discoverTyphaAddrs(configParams *config.Config, k8sClientSet kubernetes.Interface) ([]discovery.Typha, error) {
 	typhaDiscoveryOpts := configParams.TyphaDiscoveryOpts()
-	typhaDiscoveryOpts = append(typhaDiscoveryOpts, discovery.WithKubeClient(k8sClientSet))
-	return discovery.DiscoverTyphaAddr(typhaDiscoveryOpts...)
+	typhaDiscoveryOpts = append(typhaDiscoveryOpts,
+		discovery.WithKubeClient(k8sClientSet),
+		discovery.WithNodeAffinity(configParams.FelixHostname),
+	)
+	res, err := discovery.DiscoverTyphaAddrs(typhaDiscoveryOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 type featureChecker interface {

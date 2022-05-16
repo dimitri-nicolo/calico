@@ -2,6 +2,7 @@
 title: Configure egress gateways, on-premises
 description: Configure specific application traffic to exit the cluster through an egress gateway.
 canonical_url: '/networking/egress/egress-gateway-on-prem'
+feature_name: egress_gateway
 ---
 
 ### Big picture
@@ -311,14 +312,14 @@ So, to configure that all of the pods in a namespace should use the egress gatew
 labelled with `egress-code: red`, you would annotate that namespace like this:
 
 ```bash
-kubectl annotate ns <namespace> egress.projectcalico.org/selector='egress-code == "red"'
+kubectl annotate ns <namespace> egress.projectcalico.org/selector="egress-code == 'red'"
 ```
 
 By default that selector can only match egress gateways in the same namespace.  To select gateways
 in a different namespace, specify a `namespaceSelector` annotation as well, like this:
 
 ```bash
-kubectl annotate ns <namespace> egress.projectcalico.org/namespaceSelector='projectcalico.org/name == "default"'
+kubectl annotate ns <namespace> egress.projectcalico.org/namespaceSelector="projectcalico.org/name == 'default'"
 ```
 
 Egress gateway annotations have the same [syntax and range of
@@ -409,3 +410,4 @@ The new elements required as of v3.11.0 are the volumeMounts and volumes section
 Please see also:
 
 - The `egressIP...` fields of the [FelixConfiguration resource]({{site.baseurl}}/reference/resources/felixconfig#spec).
+- [Additional configuration for egress gateway maintenance]({{site.baseurl}}/networking/egress/egress-gateway-maintenance)

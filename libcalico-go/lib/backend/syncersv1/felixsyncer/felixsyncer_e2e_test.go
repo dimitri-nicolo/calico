@@ -164,6 +164,19 @@ func calculateDefaultFelixSyncerEntries(cs kubernetes.Interface, dt apiconfig.Da
 			}
 		}
 
+		// Add services
+		if remoteClusterPrefix == "" {
+			svcs, err := cs.CoreV1().Services("").List(context.Background(), metav1.ListOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			for _, svc := range svcs.Items {
+				// Services get updated frequently, so don't include the revision info.
+				svc.ResourceVersion = ""
+				svckv, err := converter.ServiceToKVP(&svc)
+				Expect(err).NotTo(HaveOccurred())
+				expected = append(expected, *svckv)
+			}
+		}
+
 		// Add resources for the namespaces we expect in the cluster.
 		namespaces, err := cs.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
@@ -509,9 +522,9 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 				options.SetOptions{},
 			)
 			Expect(err).NotTo(HaveOccurred())
-			// The pool will add as single entry ( +1 ), plus will also create the default
-			// Felix config with two config options: IPIP enabled, FloatingIPs disabled.
-			expectedCacheSize += 3
+
+			// The pool will add as single entry ( +1 )
+			expectedCacheSize += 1
 
 			syncTester.ExpectData(model.KVPair{
 				Key: model.IPPoolKey{CIDR: net.MustParseCIDR("192.124.0.0/21")},
@@ -524,14 +537,6 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 					Disabled:      false,
 				},
 				Revision: pool.ResourceVersion,
-			})
-			syncTester.ExpectData(model.KVPair{
-				Key:   model.GlobalConfigKey{Name: "IpInIpEnabled"},
-				Value: "true",
-			})
-			syncTester.ExpectData(model.KVPair{
-				Key:   model.GlobalConfigKey{Name: "FloatingIPs"},
-				Value: "Disabled",
 			})
 			syncTester.ExpectCacheSize(expectedCacheSize)
 

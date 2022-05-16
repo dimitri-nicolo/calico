@@ -144,6 +144,17 @@ func (r *RouteRules) getActiveRule(rule *Rule, f RulesMatchFunc) *Rule {
 	return active
 }
 
+// Return all active Rules.
+func (r *RouteRules) GetAllActiveRules() []*Rule {
+	var active []*Rule
+	r.activeRules.Iter(func(item interface{}) error {
+		p := item.(*Rule)
+		active = append(active, p)
+		return nil
+	})
+	return active
+}
+
 // Set a Rule. Add to activeRules if it does not already exist based on matchForUpdate function.
 func (r *RouteRules) SetRule(rule *Rule) {
 
@@ -228,6 +239,31 @@ func (r *RouteRules) PrintCurrentRules() {
 		p.LogCxt().Info("active rule")
 		return nil
 	})
+}
+
+// InitFromKernel init's state by loading rules within the configured table range from the kernel
+func (r *RouteRules) InitFromKernel() {
+	nl, err := r.getNetlinkHandle()
+	if err != nil {
+		log.WithError(err).Info("Route rule init from kernel failed to acquire a handle.")
+		return
+	}
+
+	rules, err := nl.RuleList(r.netlinkFamily)
+	if err != nil {
+		log.WithError(err).Info("Route rule init failed to fetch kernel rules.")
+	}
+
+	felixRules := make([]*Rule, 0)
+	for _, rule := range rules {
+		rule := rule
+		if r.tableIndexSet.Contains(rule.Table) {
+			rule.Family = r.netlinkFamily // feels hacky, but following what other parts of this module do
+			rr := FromNetlinkRule(&rule)  // '&rule' would be the same for all iterations here, so we index into rules list explicitly
+			felixRules = append(felixRules, rr)
+		}
+	}
+	r.activeRules.AddAll(felixRules)
 }
 
 func (r *RouteRules) Apply() error {
