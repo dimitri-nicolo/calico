@@ -688,15 +688,17 @@ func (m *egressIPManager) readInitialKernelState() error {
 	// Read routing rules within the egress manager table range from the kernel.
 	m.routeRules.InitFromKernel()
 	rules := m.routeRules.GetAllActiveRules()
+	ruleTableIndices := set.New()
 	for _, rule := range rules {
 		nlRule := rule.NetLinkRule()
 		r := newEgressRule(nlRule)
 		m.initialKernelState.rules[r.srcIP] = r
+		ruleTableIndices.Add(r.tableIndex)
 	}
 
-	// Read routing tables within the egress manager table range from the kernel.
+	// Read routing tables referenced by a routing rule from the kernel.
 	reservedTables := set.New()
-	m.tableIndexSet.Iter(func(item interface{}) error {
+	ruleTableIndices.Iter(func(item interface{}) error {
 		index := item.(int)
 		hopIPs, err := m.getTableNextHops(index)
 		if err != nil {
