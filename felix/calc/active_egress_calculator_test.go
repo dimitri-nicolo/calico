@@ -568,6 +568,66 @@ var _ = Describe("ActiveEgressCalculator", func() {
 		cbs.ExpectNoMoreCallbacks()
 	})
 
+	It("generates expected callbacks for two WorkloadEndpoints with different but equivalent selector", func() {
+
+		we1Value := &model.WorkloadEndpoint{
+			Name:           "we1",
+			EgressSelector: `black == "red"`,
+		}
+		we2Value := &model.WorkloadEndpoint{
+			Name:           "we1",
+			EgressSelector: "black == 'red'",
+		}
+
+		By("creating two WorkloadEndpoints with similar egress selector")
+		aec.OnUpdate(api.Update{
+			KVPair: model.KVPair{
+				Key:   we1Key,
+				Value: we1Value,
+			},
+			UpdateType: api.UpdateTypeKVNew,
+		})
+		aec.OnUpdate(api.Update{
+			KVPair: model.KVPair{
+				Key:   we2Key,
+				Value: we2Value,
+			},
+			UpdateType: api.UpdateTypeKVNew,
+		})
+
+		// Expect 1 IPSetActive and 2 EgressIPSetIDUpdates.
+		ipSetID := cbs.ExpectActive()
+		cbs.ExpectEgressUpdate(we1Key, epEgressData{ipSetID: ipSetID})
+		cbs.ExpectEgressUpdate(we2Key, epEgressData{ipSetID: ipSetID})
+		cbs.ExpectNoMoreCallbacks()
+
+		By("deleting WorkloadEndpoint #1")
+		aec.OnUpdate(api.Update{
+			KVPair: model.KVPair{
+				Key:   we1Key,
+				Value: nil,
+			},
+			UpdateType: api.UpdateTypeKVUpdated,
+		})
+
+		// Expect EgressUpdate for that endpoint.
+		cbs.ExpectEgressUpdate(we1Key, epEgressData{})
+		cbs.ExpectNoMoreCallbacks()
+
+		By("deleting WorkloadEndpoint #2")
+		aec.OnUpdate(api.Update{
+			KVPair: model.KVPair{
+				Key:   we2Key,
+				Value: nil,
+			},
+			UpdateType: api.UpdateTypeKVUpdated,
+		})
+
+		// Expect IPSetInactive for old selector.
+		cbs.ExpectEgressUpdate(we2Key, epEgressData{})
+		cbs.ExpectInactive(ipSetID)
+		cbs.ExpectNoMoreCallbacks()
+	})
 })
 
 type testCallbacks struct {
