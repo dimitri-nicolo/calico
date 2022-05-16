@@ -79,6 +79,10 @@ promotions:
   pipeline_file: push-images/packetcapture.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push voltron images
+  pipeline_file: push-images/voltron.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 # Have a separate promotion for publishing Helm charts.
 - name: Publish Helm Charts
   pipeline_file: push-helm-charts/helm-charts.yml
@@ -721,6 +725,21 @@ blocks:
       - cd honeypod-controller
     jobs:
     - name: "honeypod-controller tests"
+      commands:
+      - make ci
+
+- name: 'voltron'
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/voltron/', '/api/', '/libcalico-go/lib/logutils/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd voltron
+    jobs:
+    - name: "voltron tests"
       commands:
       - make ci
 

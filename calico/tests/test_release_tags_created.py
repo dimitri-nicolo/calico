@@ -44,7 +44,7 @@ MAPPED_COMPONENTS = {
     'license-agent': 'license-agent',
     'firewall-integration': 'firewall-integration',
     'egress-gateway': 'egress-gateway',
-    'guardian': 'voltron',
+    'guardian': 'calico-private',
     'dex': 'dexidp-docker',
     'honeypod-controller': 'calico-private',
     'anomaly_detection_jobs': 'anomaly_detection_jobs',
