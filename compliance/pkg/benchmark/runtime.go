@@ -102,11 +102,9 @@ func (b *benchmarker) executeBenchmark(ctx context.Context, bt api.BenchmarkType
 
 	b.lastExecutionTimes[bt] = time.Now()
 	// don't store results if they are same as previous execution
-	if last, found := b.lastBenchmarks[bt]; found {
-		if current.Equal(*last) && last.Timestamp.Time.Add(elasticStorageFrequency).After(time.Now()) {
-			log.Info("no change in benchmark results, skip storing to elastic search")
-			return nil
-		}
+	if last := b.lastBenchmarks[bt]; last != nil && current.Equal(*last) && last.Timestamp.Time.Add(elasticStorageFrequency).After(time.Now()) {
+		log.Info("no change in benchmark results, skip storing to elastic search")
+		return nil
 	}
 
 	log.Info("storing benchmark results to elastic search")
