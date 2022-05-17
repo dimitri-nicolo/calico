@@ -1,0 +1,1 @@
+{"from":0,"query":{"bool":{"must_not":[{"term":{"origin":{"value":"origin1"}}},{"term":{"origin":{"value":"origin2"}}}]}},"size":100,"sort":[{"time":{"order":"desc"}}]}

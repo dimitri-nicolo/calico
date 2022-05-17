@@ -1,0 +1,292 @@
+{
+  "index_patterns": [
+    "tigera_secure_ee_flows*"
+  ],
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0
+  },
+  "mappings": {
+    "properties": {
+      "@timestamp": {
+        "type": "date"
+      },
+      "start_time": {
+        "type": "date",
+        "format": "epoch_second"
+      },
+      "end_time": {
+        "type": "date",
+        "format": "epoch_second"
+      },
+      "action": {
+        "type": "keyword"
+      },
+      "bytes_in": {
+        "type": "long"
+      },
+      "bytes_out": {
+        "type": "long"
+      },
+      "dest_ip": {
+        "type": "ip",
+        "null_value": "0.0.0.0"
+      },
+      "dest_name": {
+        "type": "keyword"
+      },
+      "dest_name_aggr": {
+        "type": "keyword"
+      },
+      "dest_namespace": {
+        "type": "keyword"
+      },
+      "dest_port": {
+        /* dest_port is deprecated please use dest_port_num */
+        "type": "long",
+        "null_value": "0"
+      },
+      "dest_port_num": {
+        /* dest_port_num - Destination Port Number replaces dest_port. */
+        "type": "alias",
+        "path": "dest_port"
+      },
+      "dest_type": {
+        "type": "keyword"
+      },
+      "dest_service_name": {
+        "type": "keyword"
+      },
+      "dest_service_namespace": {
+        "type": "keyword"
+      },
+      "dest_service_port": {
+        /* dest_service_port is deprecated please use dest_service_port_name */
+        "type": "keyword"
+      },
+      "dest_service_port_name": {
+        /*
+          dest_service_port_name - Destination Service Port Name is the name of the port exposed by the service which the connection is trying to reach.  
+          Described in the Service resource specs as specs.[]ports.name. It will have the empty character flowlogs field value of '-' when:
+          - the reported flowlog is for the destination endpoint (ie. reporter==dst)
+          - the optional port name field in the Service resource is not provided 
+          - the connection does not have a service destination
+          - in rare cases where the destination is a Service and the Service is unavailable (ie. deleted) while processing the Service information
+          This field replaces dest_service_port.
+        */
+        "type": "alias",
+        "path": "dest_service_port"
+      },
+      "dest_service_port_num": {
+        /*
+          dest_service_port_num - Destination Service Port Number is the numerical value of the port exposed by the service which the connection is trying to reach.  
+          Described in the Service resource specs as specs.[]ports.port. It will have the empty numerical flowlogs field value of 0 when:
+          - the reported flowlog is for the destination endpoint (ie. reporter==dst)
+          - the connection does not have a service destination
+          - in rare cases where the destination is a Service and the Service is unavailable (ie. deleted or down) while processing the Service information
+        */
+        "type": "long",
+        "null_value": "0"
+      },
+      "dest_labels": {
+        /* This is an array of keywords. It is not necessary to declare this as an array. Elastic will automatically accept a list of strings here */
+        "type": "nested",
+        "properties": {
+          "labels": {
+            "type": "keyword"
+          }
+        }
+      },
+      "destination": {
+        "properties": {
+          "bytes": {
+            "type": "alias",
+            "path": "bytes_in"
+          },
+          "ip": {
+            "type": "alias",
+            "path": "dest_ip"
+          },
+          "port": {
+            "type": "alias",
+            "path": "dest_port"
+          },
+          "packets": {
+            "type": "alias",
+            "path": "packets_in"
+          }
+        }
+      },
+      "network": {
+        "properties": {
+          "protocol": {
+            "type": "alias",
+            "path": "proto"
+          }
+        }
+      },
+      "event": {
+        "properties": {
+          "action": {
+            "type": "alias",
+            "path": "action"
+          }
+        }
+      },
+      "reporter": {
+        "type": "keyword"
+      },
+      "nat_outgoing_ports": {
+        "type": "integer"
+      },
+      "num_flows": {
+        "type": "long"
+      },
+      "num_flows_completed": {
+        "type": "long"
+      },
+      "num_flows_started": {
+        "type": "long"
+      },
+      "http_requests_allowed_in": {
+        "type": "long"
+      },
+      "http_requests_denied_in": {
+        "type": "long"
+      },
+      "packets_in": {
+        "type": "long"
+      },
+      "packets_out": {
+        "type": "long"
+      },
+      "proto": {
+        "type": "keyword"
+      },
+      "policies": {
+        /* This is an array of keywords. It is not necessary to declare this as an array. Elastic will automatically accept a list of strings here */
+        "type": "nested",
+        "properties": {
+          "all_policies": {
+            "type": "keyword"
+          }
+        }
+      },
+      "source_ip": {
+        "type": "ip",
+        "null_value": "0.0.0.0"
+      },
+      "source_name": {
+        "type": "keyword"
+      },
+      "source_name_aggr": {
+        "type": "keyword"
+      },
+      "source_namespace": {
+        "type": "keyword"
+      },
+      "source_port": {
+        /* source_port is deprecated please use source_port_num */
+        "type": "long",
+        "null_value": "0"
+      },
+      "source_port_num": {
+        /* source_port_num - Source Port Number: is an alias to duplicate dest_port until a breaking change version occurs to remove source_port and switch to fully source_port_num. */
+        "type": "alias",
+        "path": "source_port"
+      },
+      "source_type": {
+        "type": "keyword"
+      },
+      "source_labels": {
+        /* This is an array of keywords. It is not necessary to declare this as an array. Elastic will automatically accept a list of strings here */
+        "type": "nested",
+        "properties": {
+          "labels": {
+            "type": "keyword"
+          }
+        }
+      },
+      "source": {
+        "properties": {
+          "bytes": {
+            "type": "alias",
+            "path": "bytes_out"
+          },
+          "ip": {
+            "type": "alias",
+            "path": "source_ip"
+          },
+          "port": {
+            "type": "alias",
+            "path": "source_port"
+          },
+          "packets": {
+            "type": "alias",
+            "path": "packets_out"
+          }
+        }
+      },
+      "original_source_ips": {
+        /* This is an array of IP addresses. It is not necessary to declare this as an array. Elastic will automatically accept a list of IP addresses here */
+        "type": "ip",
+        "null_value": "0.0.0.0"
+      },
+      "num_original_source_ips": {
+        "type": "long"
+      },
+      "process_name": {
+        "type": "keyword"
+      },
+      "num_process_names": {
+        "type": "long"
+      },
+      "process_id": {
+        "type": "keyword"
+      },
+      "num_process_ids": {
+        "type": "long"
+      },
+      "process_args": {
+        /* This is an array of keywords. It is not necessary to declare this as an array. Elastic will automatically accept a list of strings here */
+        "type": "keyword"
+      },
+      "num_process_args": {
+        "type": "long"
+      },
+      "tcp_lost_packets": {
+        "type": "long"
+      },
+      "tcp_max_min_rtt": {
+        "type": "long"
+      },
+      "tcp_max_smooth_rtt": {
+        "type": "long"
+      },
+      "tcp_mean_min_rtt": {
+        "type": "long"
+      },
+      "tcp_mean_mss": {
+        "type": "long"
+      },
+      "tcp_mean_send_congestion_window": {
+        "type": "long"
+      },
+      "tcp_mean_smooth_rtt": {
+        "type": "long"
+      },
+      "tcp_min_mss": {
+        "type": "long"
+      },
+      "tcp_min_send_congestion_window": {
+        "type": "long"
+      },
+      "tcp_total_retransmissions": {
+        "type": "long"
+      },
+      "tcp_unrecovered_to": {
+        "type": "long"
+      }
+    }
+  }
+}

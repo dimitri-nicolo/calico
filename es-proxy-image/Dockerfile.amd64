@@ -1,0 +1,18 @@
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.5 as ubi
+RUN microdnf update
+
+# create /etc/es-proxy directory and provide RW permission access to USER 1001
+RUN mkdir -p /etc/es-proxy
+RUN chown -R 1001 /etc/es-proxy
+
+FROM scratch
+# /etc/es-proxy directory used for storing self-signed certificates
+COPY --chown=1001 --from=ubi /etc/es-proxy /etc/es-proxy
+ADD --chown=1001 bin/es-proxy-amd64 /es-proxy
+
+# Add the trusted certs from the ubi image.
+COPY --from=ubi /etc/pki /etc/pki
+COPY --from=ubi /usr/share/pki /usr/share/pki
+
+USER 1001
+ENTRYPOINT ["/es-proxy"]
