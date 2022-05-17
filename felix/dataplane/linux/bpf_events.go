@@ -4,6 +4,7 @@ package intdataplane
 
 import (
 	"errors"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
@@ -35,12 +36,17 @@ type bpfEventPoller struct {
 
 	prometheusLostCounter   prometheus.Counter
 	prometheusNoSinkCounter prometheus.Counter
+
+	numLostEventsSinceLastLog int
+	numGoodEventsSinceLastLog int
+	lastLostEventsLogTime     time.Time
 }
 
 func newBpfEventPoller(e events.Events) *bpfEventPoller {
 	p := &bpfEventPoller{
-		events: e,
-		sinks:  make(map[events.Type]bpfEventSink),
+		events:                e,
+		sinks:                 make(map[events.Type]bpfEventSink),
+		lastLostEventsLogTime: time.Now(),
 	}
 
 	var err error
@@ -84,9 +90,19 @@ func (p *bpfEventPoller) run() {
 		event, err := p.events.Next()
 		if err != nil {
 			if lost, ok := err.(events.ErrLostEvents); ok {
+				p.numLostEventsSinceLastLog += lost.Num()
 				p.prometheusLostCounter.Add(float64(lost))
 			}
-			log.WithError(err).Warn("Failed to get next event")
+			if time.Since(p.lastLostEventsLogTime) > time.Second*60 {
+				log.WithError(err).WithFields(log.Fields{
+					"numLostSinceLastLog":       p.numLostEventsSinceLastLog,
+					"numGoodEventsSinceLastLog": p.numGoodEventsSinceLastLog,
+				}).Warn("Failed to get next event; eBPF-based statistics and/or flow logs collection may be " +
+					"impacted (rate limited to 1 log per 60s)")
+				p.numLostEventsSinceLastLog = 0
+				p.numGoodEventsSinceLastLog = 0
+				p.lastLostEventsLogTime = time.Now()
+			}
 			continue
 		}
 
@@ -100,6 +116,7 @@ func (p *bpfEventPoller) run() {
 		for _, handler := range sink.handlers {
 			handler(event)
 		}
+		p.numGoodEventsSinceLastLog++
 		sink.counter.Inc()
 	}
 }
