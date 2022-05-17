@@ -2,13 +2,6 @@
 layout: null
 ---
 
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: tigera-operator-enterprise
-  labels:
-    name: tigera-operator-enterprise
-
 {% helm tigera-operator --namespace tigera-operator-enterprise %}
 installation:
   enabled: false

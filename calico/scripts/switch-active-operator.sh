@@ -52,6 +52,13 @@ copy_resource_to_ns (){
 EOF
 }
 
+if kubectl get ns ${NEW_NAME} 2>&1 > /dev/null ; then
+  echo "The namespace ${NEW_NAME} already exists. Cannot continue switching the active operator."
+  exit 1
+fi
+
+kubectl_retry 10 create ns ${NEW_NAME}
+
 # Copy over the secrets in the tigera-operator namespace to the new namespace to ensure
 # switching the active operator is non-disruptive.
 for x in node-certs typha-certs; do
@@ -65,6 +72,3 @@ cat <<EOF > ${PATCH_FILE}
 {"data":{"active-namespace": "${NEW_NAME}"}}
 EOF
 kubectl_retry 10 patch configmap -n calico-system active-operator --type=merge --patch-file "${PATCH_FILE}"
-
-# Restart the active operator
-kubectl_retry 10 rollout restart deployment -n ${NEW_NAME} tigera-operator
