@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"sort"
 
-	"github.com/tigera/es-proxy/pkg/math"
+	"github.com/projectcalico/calico/es-proxy/pkg/math"
 )
 
 // GraphProcesses encapsulates the set of processes associated with a particular node or edge in the graph.

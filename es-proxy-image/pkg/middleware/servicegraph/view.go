@@ -6,7 +6,7 @@ import (
 
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 
-	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
+	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 )
 
 // This file is used to process the view data supplied in the service graph request and convert it to sets of parsed

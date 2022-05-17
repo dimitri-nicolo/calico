@@ -15,8 +15,8 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
-	"github.com/tigera/es-proxy/pkg/pip/config"
-	"github.com/tigera/es-proxy/pkg/pip/policycalc"
+	"github.com/projectcalico/calico/es-proxy/pkg/pip/config"
+	"github.com/projectcalico/calico/es-proxy/pkg/pip/policycalc"
 
 	pelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )

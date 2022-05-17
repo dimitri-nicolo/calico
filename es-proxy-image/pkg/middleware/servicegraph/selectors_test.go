@@ -2,11 +2,11 @@
 package servicegraph_test
 
 import (
-	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
+	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/tigera/es-proxy/pkg/middleware/servicegraph"
+	. "github.com/projectcalico/calico/es-proxy/pkg/middleware/servicegraph"
 )
 
 var _ = Describe("Selector tests", func() {

@@ -27,7 +27,7 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
-	"github.com/tigera/compliance/pkg/datastore"
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
 
 	"github.com/projectcalico/calico/lma/pkg/api"
 	lmaerror "github.com/projectcalico/calico/lma/pkg/api"

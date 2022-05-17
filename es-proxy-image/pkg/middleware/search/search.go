@@ -15,12 +15,12 @@ import (
 
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 
-	"github.com/tigera/compliance/pkg/datastore"
-	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
-	"github.com/tigera/es-proxy/pkg/math"
-	"github.com/tigera/es-proxy/pkg/middleware"
-	esSearch "github.com/tigera/es-proxy/pkg/search"
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
+	elasticvariant "github.com/projectcalico/calico/es-proxy/pkg/elastic"
+	"github.com/projectcalico/calico/es-proxy/pkg/math"
+	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
+	esSearch "github.com/projectcalico/calico/es-proxy/pkg/search"
 
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"

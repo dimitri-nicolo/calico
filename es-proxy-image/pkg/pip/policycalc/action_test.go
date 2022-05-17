@@ -6,7 +6,7 @@ import (
 
 	"github.com/projectcalico/calico/lma/pkg/api"
 
-	"github.com/tigera/es-proxy/pkg/pip/policycalc"
+	"github.com/projectcalico/calico/es-proxy/pkg/pip/policycalc"
 )
 
 var _ = Describe("Test action flags", func() {

@@ -18,8 +18,8 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/es-proxy/pkg/pip"
-	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
+	"github.com/projectcalico/calico/es-proxy/pkg/pip"
+	pipcfg "github.com/projectcalico/calico/es-proxy/pkg/pip/config"
 
 	"github.com/projectcalico/calico/lma/pkg/api"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"

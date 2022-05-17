@@ -11,8 +11,8 @@ import (
 	"k8s.io/apiserver/pkg/endpoints/request"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	esauth "github.com/tigera/es-proxy/pkg/auth"
+	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
+	esauth "github.com/projectcalico/calico/es-proxy/pkg/auth"
 
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/httputils"

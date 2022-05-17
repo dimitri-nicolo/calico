@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/tigera/es-proxy/pkg/math"
+	"github.com/projectcalico/calico/es-proxy/pkg/math"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )

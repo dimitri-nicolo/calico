@@ -8,7 +8,7 @@ import (
 
 	pelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 
-	"github.com/tigera/es-proxy/pkg/pip/policycalc"
+	"github.com/projectcalico/calico/es-proxy/pkg/pip/policycalc"
 )
 
 type PIP interface {

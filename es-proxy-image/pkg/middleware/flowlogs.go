@@ -20,9 +20,9 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/compliance/pkg/datastore"
-	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
-	pippkg "github.com/tigera/es-proxy/pkg/pip"
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	elasticvariant "github.com/projectcalico/calico/es-proxy/pkg/elastic"
+	pippkg "github.com/projectcalico/calico/es-proxy/pkg/pip"
 
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"

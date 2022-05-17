@@ -9,7 +9,7 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/api"
 	"github.com/projectcalico/calico/lma/pkg/elastic"
 
-	"github.com/tigera/es-proxy/pkg/pip/policycalc"
+	"github.com/projectcalico/calico/es-proxy/pkg/pip/policycalc"
 )
 
 var (

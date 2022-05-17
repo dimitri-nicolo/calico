@@ -8,8 +8,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/compliance/pkg/datastore"
-	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	elasticvariant "github.com/projectcalico/calico/es-proxy/pkg/elastic"
 
 	lmaerror "github.com/projectcalico/calico/lma/pkg/api"
 	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"

@@ -24,8 +24,8 @@ import (
 	libcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
-	"github.com/tigera/compliance/pkg/datastore"
-	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"

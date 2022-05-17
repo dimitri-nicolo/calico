@@ -8,15 +8,15 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/tigera/es-proxy/pkg/kibana"
+	"github.com/projectcalico/calico/es-proxy/pkg/kibana"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apiserver/pkg/endpoints/request"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/compliance/pkg/datastore"
-	"github.com/tigera/es-proxy/pkg/user"
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	"github.com/projectcalico/calico/es-proxy/pkg/user"
 )
 
 const (

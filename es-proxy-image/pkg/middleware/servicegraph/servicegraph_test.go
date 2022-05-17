@@ -18,11 +18,11 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	. "github.com/tigera/es-proxy/pkg/middleware/servicegraph"
+	. "github.com/projectcalico/calico/es-proxy/pkg/middleware/servicegraph"
 
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
-	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
+	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 )
 
 const (

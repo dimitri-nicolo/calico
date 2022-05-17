@@ -22,9 +22,9 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 
-	"github.com/tigera/compliance/pkg/datastore"
-	calicojson "github.com/tigera/es-proxy/test/json"
-	"github.com/tigera/es-proxy/test/thirdpartymock"
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	calicojson "github.com/projectcalico/calico/es-proxy/test/json"
+	"github.com/projectcalico/calico/es-proxy/test/thirdpartymock"
 
 	"github.com/projectcalico/calico/lma/pkg/api"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"

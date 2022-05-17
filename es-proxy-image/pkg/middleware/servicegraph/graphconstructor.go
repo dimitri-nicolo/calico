@@ -7,8 +7,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	"github.com/tigera/es-proxy/pkg/math"
+	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
+	"github.com/projectcalico/calico/es-proxy/pkg/math"
 )
 
 // This file provides the final graph construction from a set of correlated (time-series) flows and the parsed view

@@ -17,8 +17,8 @@ import (
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
+	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
+	elasticvariant "github.com/projectcalico/calico/es-proxy/pkg/elastic"
 
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"

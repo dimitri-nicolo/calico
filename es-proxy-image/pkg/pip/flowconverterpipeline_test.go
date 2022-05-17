@@ -11,8 +11,8 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/api"
 	"github.com/projectcalico/calico/lma/pkg/elastic"
 
-	"github.com/tigera/es-proxy/pkg/pip/config"
-	"github.com/tigera/es-proxy/pkg/pip/policycalc"
+	"github.com/projectcalico/calico/es-proxy/pkg/pip/config"
+	"github.com/projectcalico/calico/es-proxy/pkg/pip/policycalc"
 )
 
 // epData encapsulates endpoint data for these tests. It is not a full representation, merely enough to make the

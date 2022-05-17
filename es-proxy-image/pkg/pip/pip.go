@@ -12,7 +12,7 @@ import (
 
 	"github.com/projectcalico/calico/lma/pkg/list"
 
-	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
+	pipcfg "github.com/projectcalico/calico/es-proxy/pkg/pip/config"
 
 	pelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )

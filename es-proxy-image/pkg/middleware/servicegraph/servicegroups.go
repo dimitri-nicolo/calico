@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
+	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )

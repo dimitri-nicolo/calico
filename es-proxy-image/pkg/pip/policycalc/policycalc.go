@@ -12,7 +12,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
+	pipcfg "github.com/projectcalico/calico/es-proxy/pkg/pip/config"
 
 	"github.com/projectcalico/calico/lma/pkg/api"
 )

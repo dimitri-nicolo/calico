@@ -6,7 +6,7 @@ import (
 	"math"
 	"sort"
 
-	esmath "github.com/tigera/es-proxy/pkg/math"
+	esmath "github.com/projectcalico/calico/es-proxy/pkg/math"
 )
 
 // GraphByteStats contains byte statistics.

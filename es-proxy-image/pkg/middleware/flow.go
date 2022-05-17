@@ -14,8 +14,8 @@ import (
 
 	k8srequest "k8s.io/apiserver/pkg/endpoints/request"
 
-	"github.com/tigera/compliance/pkg/datastore"
-	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	elasticvariant "github.com/projectcalico/calico/es-proxy/pkg/elastic"
 
 	"github.com/projectcalico/calico/lma/pkg/api"
 	celastic "github.com/projectcalico/calico/lma/pkg/elastic"

@@ -12,7 +12,7 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/jitter"
 
-	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
+	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )

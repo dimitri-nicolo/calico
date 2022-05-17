@@ -18,11 +18,11 @@ import (
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	compcfg "github.com/tigera/compliance/pkg/config"
-	"github.com/tigera/compliance/pkg/replay"
-	"github.com/tigera/compliance/pkg/syncer"
-	"github.com/tigera/compliance/pkg/xrefcache"
-	"github.com/tigera/es-proxy/pkg/pip/policycalc"
+	compcfg "github.com/projectcalico/calico/compliance/pkg/config"
+	"github.com/projectcalico/calico/compliance/pkg/replay"
+	"github.com/projectcalico/calico/compliance/pkg/syncer"
+	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
+	"github.com/projectcalico/calico/es-proxy/pkg/pip/policycalc"
 )
 
 var (

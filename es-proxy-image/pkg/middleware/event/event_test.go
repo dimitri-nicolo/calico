@@ -16,8 +16,8 @@ import (
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/mock"
 
-	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	"github.com/tigera/es-proxy/test/thirdpartymock"
+	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
+	"github.com/projectcalico/calico/es-proxy/test/thirdpartymock"
 
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )

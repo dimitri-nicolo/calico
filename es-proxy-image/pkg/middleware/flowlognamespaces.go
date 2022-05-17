@@ -16,8 +16,8 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
-	"github.com/tigera/compliance/pkg/datastore"
-	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	elasticvariant "github.com/projectcalico/calico/es-proxy/pkg/elastic"
 
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"

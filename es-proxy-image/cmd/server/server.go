@@ -14,7 +14,7 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 
-	"github.com/tigera/es-proxy/pkg/server"
+	"github.com/projectcalico/calico/es-proxy/pkg/server"
 )
 
 // This is filled out during the build process (using git describe output)

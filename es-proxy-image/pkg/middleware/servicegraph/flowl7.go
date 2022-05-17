@@ -11,8 +11,8 @@ import (
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 
-	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
+	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
+	elasticvariant "github.com/projectcalico/calico/es-proxy/pkg/elastic"
 )
 
 type L7Flow struct {

@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 
-	"github.com/tigera/es-proxy/pkg/middleware"
+	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
 
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/auth/testing"

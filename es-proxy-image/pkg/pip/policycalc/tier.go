@@ -5,7 +5,7 @@ import (
 
 	"github.com/projectcalico/calico/lma/pkg/api"
 
-	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
+	pipcfg "github.com/projectcalico/calico/es-proxy/pkg/pip/config"
 )
 
 // rule id index equals -1 for end-of-tier deny.

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
+	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 )
 
 // This file provides the graph node ID handling. It defines an IDInfo struct that encapsulates all possible data that

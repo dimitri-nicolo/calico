@@ -13,7 +13,7 @@ import (
 
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 
-	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
+	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 )
 
 // The NameHelper is used to modify the names in the flow and event data based on request-specific parameters.

@@ -18,8 +18,8 @@ import (
 	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 
-	v1 "github.com/tigera/es-proxy/pkg/apis/v1"
-	elasticvariant "github.com/tigera/es-proxy/pkg/elastic"
+	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
+	elasticvariant "github.com/projectcalico/calico/es-proxy/pkg/elastic"
 )
 
 const (

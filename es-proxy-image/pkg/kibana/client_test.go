@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"sync"
 
-	calicojson "github.com/tigera/es-proxy/test/json"
+	calicojson "github.com/projectcalico/calico/es-proxy/test/json"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

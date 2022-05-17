@@ -11,9 +11,9 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
-	"github.com/tigera/compliance/pkg/syncer"
-	pipcfg "github.com/tigera/es-proxy/pkg/pip/config"
-	"github.com/tigera/es-proxy/pkg/pip/policycalc"
+	"github.com/projectcalico/calico/compliance/pkg/syncer"
+	pipcfg "github.com/projectcalico/calico/es-proxy/pkg/pip/config"
+	"github.com/projectcalico/calico/es-proxy/pkg/pip/policycalc"
 
 	"github.com/projectcalico/calico/lma/pkg/api"
 )

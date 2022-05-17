@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	esauth "github.com/tigera/es-proxy/pkg/auth"
+	esauth "github.com/projectcalico/calico/es-proxy/pkg/auth"
 
 	log "github.com/sirupsen/logrus"
 
