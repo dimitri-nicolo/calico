@@ -1,0 +1,2293 @@
+[
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "frontend-7bbcdbbcbf-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "adservice-775cc65c85-*",
+        "PortNum": 9555,
+        "Protocol": "tcp"
+      },
+      "ServicePort": {
+        "namespace": "storefront",
+        "name": "adservice",
+        "protocol": "tcp",
+        "port_name": "grpc",
+        "port": 9555
+      }
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 7731,
+        "bytes_out": 81413,
+        "mean_duration": 979919,
+        "min_duration": 979919,
+        "max_duration": 7000000,
+        "count": 498
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "frontend-7bbcdbbcbf-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "adservice-775cc65c85-*",
+        "PortNum": 9555,
+        "Protocol": "tcp"
+      },
+      "ServicePort": null
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 498
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "checkoutservice-b55dd855c-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "cartservice-5468974d8-*",
+        "PortNum": 7070,
+        "Protocol": "tcp"
+      },
+      "ServicePort": {
+        "namespace": "storefront",
+        "name": "cartservice",
+        "protocol": "tcp",
+        "port_name": "grpc",
+        "port": 7070
+      }
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 2064,
+        "bytes_out": 1264,
+        "mean_duration": 1750000,
+        "min_duration": 1000000,
+        "max_duration": 7000000,
+        "count": 48
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "frontend-7bbcdbbcbf-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "cartservice-5468974d8-*",
+        "PortNum": 7070,
+        "Protocol": "tcp"
+      },
+      "ServicePort": {
+        "namespace": "storefront",
+        "name": "cartservice",
+        "protocol": "tcp",
+        "port_name": "grpc",
+        "port": 7070
+      }
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 32916,
+        "bytes_out": 21132,
+        "mean_duration": 3973727.5,
+        "min_duration": 2355555,
+        "max_duration": 537000000,
+        "count": 732
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "checkoutservice-b55dd855c-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "cartservice-5468974d8-*",
+        "PortNum": 7070,
+        "Protocol": "tcp"
+      },
+      "ServicePort": null
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 48
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "frontend-7bbcdbbcbf-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "cartservice-5468974d8-*",
+        "PortNum": 7070,
+        "Protocol": "tcp"
+      },
+      "ServicePort": null
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 732
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "frontend-7bbcdbbcbf-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "checkoutservice-b55dd855c-*",
+        "PortNum": 5050,
+        "Protocol": "tcp"
+      },
+      "ServicePort": {
+        "namespace": "storefront",
+        "name": "checkoutservice",
+        "protocol": "tcp",
+        "port_name": "grpc",
+        "port": 5050
+      }
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 3841,
+        "bytes_out": 5434,
+        "mean_duration": 96434782,
+        "min_duration": 96434782,
+        "max_duration": 249000000,
+        "count": 23
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "frontend-7bbcdbbcbf-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "checkoutservice-b55dd855c-*",
+        "PortNum": 5050,
+        "Protocol": "tcp"
+      },
+      "ServicePort": null
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 23
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "checkoutservice-b55dd855c-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "currencyservice-86d778fd89-*",
+        "PortNum": 7000,
+        "Protocol": "tcp"
+      },
+      "ServicePort": {
+        "namespace": "storefront",
+        "name": "currencyservice",
+        "protocol": "tcp",
+        "port_name": "grpc",
+        "port": 7000
+      }
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 1835,
+        "bytes_out": 1407,
+        "mean_duration": 1350649.3506493506,
+        "min_duration": 1000000,
+        "max_duration": 8000000,
+        "count": 77
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "frontend-7bbcdbbcbf-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "currencyservice-86d778fd89-*",
+        "PortNum": 7000,
+        "Protocol": "tcp"
+      },
+      "ServicePort": {
+        "namespace": "storefront",
+        "name": "currencyservice",
+        "protocol": "tcp",
+        "port_name": "grpc",
+        "port": 7000
+      }
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 46153,
+        "bytes_out": 147441,
+        "mean_duration": 1998067,
+        "min_duration": 1439755,
+        "max_duration": 298000000,
+        "count": 2475
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "checkoutservice-b55dd855c-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "currencyservice-86d778fd89-*",
+        "PortNum": 7000,
+        "Protocol": "tcp"
+      },
+      "ServicePort": null
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 77
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "frontend-7bbcdbbcbf-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "currencyservice-86d778fd89-*",
+        "PortNum": 7000,
+        "Protocol": "tcp"
+      },
+      "ServicePort": null
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 2475
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "checkoutservice-b55dd855c-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "emailservice-9cc657959-*",
+        "PortNum": 8080,
+        "Protocol": "tcp"
+      },
+      "ServicePort": {
+        "namespace": "storefront",
+        "name": "emailservice",
+        "protocol": "tcp",
+        "port_name": "grpc",
+        "port": 5000
+      }
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 5883,
+        "bytes_out": 115,
+        "mean_duration": 1826086.956521739,
+        "min_duration": 1000000,
+        "max_duration": 2000000,
+        "count": 23
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "checkoutservice-b55dd855c-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "emailservice-9cc657959-*",
+        "PortNum": 8080,
+        "Protocol": "tcp"
+      },
+      "ServicePort": null
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 23
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "loadgenerator-795cbf498c-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "frontend-7bbcdbbcbf-*",
+        "PortNum": 8080,
+        "Protocol": "tcp"
+      },
+      "ServicePort": {
+        "namespace": "storefront",
+        "name": "frontend",
+        "protocol": "tcp",
+        "port_name": "http",
+        "port": 80
+      }
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 5632,
+        "bytes_out": 6744840,
+        "mean_duration": 47590674.88983051,
+        "min_duration": 27000000,
+        "max_duration": 588000000,
+        "count": 642
+      },
+      "response_code_3xx": {
+        "bytes_in": 3853,
+        "bytes_out": 0,
+        "mean_duration": 4550776.55,
+        "min_duration": 333333,
+        "max_duration": 78000000,
+        "count": 150
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "host",
+        "Namespace": "",
+        "Name": "",
+        "NameAggr": "rob-bz-lc19-kadm-node-2",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "frontend-7bbcdbbcbf-*",
+        "PortNum": 8080,
+        "Protocol": "tcp"
+      },
+      "ServicePort": null
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 60
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 0,
+        "bytes_out": 120,
+        "mean_duration": 816666.6666666666,
+        "min_duration": 0,
+        "max_duration": 5000000,
+        "count": 60
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "loadgenerator-795cbf498c-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "frontend-7bbcdbbcbf-*",
+        "PortNum": 8080,
+        "Protocol": "tcp"
+      },
+      "ServicePort": null
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 792
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "checkoutservice-b55dd855c-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "paymentservice-5746b87f6c-*",
+        "PortNum": 50051,
+        "Protocol": "tcp"
+      },
+      "ServicePort": {
+        "namespace": "storefront",
+        "name": "paymentservice",
+        "protocol": "tcp",
+        "port_name": "grpc",
+        "port": 50051
+      }
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 1195,
+        "bytes_out": 989,
+        "mean_duration": 1956521.7391304348,
+        "min_duration": 1000000,
+        "max_duration": 2000000,
+        "count": 23
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "checkoutservice-b55dd855c-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "paymentservice-5746b87f6c-*",
+        "PortNum": 50051,
+        "Protocol": "tcp"
+      },
+      "ServicePort": null
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 23
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "checkoutservice-b55dd855c-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "productcatalogservice-6b9fdd5bbf-*",
+        "PortNum": 3550,
+        "Protocol": "tcp"
+      },
+      "ServicePort": {
+        "namespace": "storefront",
+        "name": "productcatalogservice",
+        "protocol": "tcp",
+        "port_name": "grpc",
+        "port": 3550
+      }
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 1020,
+        "bytes_out": 9253,
+        "mean_duration": 124761.85,
+        "min_duration": 0,
+        "max_duration": 1000000,
+        "count": 60
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "frontend-7bbcdbbcbf-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "productcatalogservice-6b9fdd5bbf-*",
+        "PortNum": 3550,
+        "Protocol": "tcp"
+      },
+      "ServicePort": {
+        "namespace": "storefront",
+        "name": "productcatalogservice",
+        "protocol": "tcp",
+        "port_name": "grpc",
+        "port": 3550
+      }
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 63963,
+        "bytes_out": 720751,
+        "mean_duration": 255409.5,
+        "min_duration": 195876,
+        "max_duration": 76000000,
+        "count": 3831
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "recommendationservice-5b8966b965-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "productcatalogservice-6b9fdd5bbf-*",
+        "PortNum": 3550,
+        "Protocol": "tcp"
+      },
+      "ServicePort": {
+        "namespace": "storefront",
+        "name": "productcatalogservice",
+        "protocol": "tcp",
+        "port_name": "grpc",
+        "port": 3550
+      }
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 2900,
+        "bytes_out": 809680,
+        "mean_duration": 467241,
+        "min_duration": 467241,
+        "max_duration": 71000000,
+        "count": 580
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "checkoutservice-b55dd855c-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "productcatalogservice-6b9fdd5bbf-*",
+        "PortNum": 3550,
+        "Protocol": "tcp"
+      },
+      "ServicePort": null
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 60
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "frontend-7bbcdbbcbf-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "productcatalogservice-6b9fdd5bbf-*",
+        "PortNum": 3550,
+        "Protocol": "tcp"
+      },
+      "ServicePort": null
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 3831
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "recommendationservice-5b8966b965-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "productcatalogservice-6b9fdd5bbf-*",
+        "PortNum": 3550,
+        "Protocol": "tcp"
+      },
+      "ServicePort": null
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 580
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "frontend-7bbcdbbcbf-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "recommendationservice-5b8966b965-*",
+        "PortNum": 8080,
+        "Protocol": "tcp"
+      },
+      "ServicePort": {
+        "namespace": "storefront",
+        "name": "recommendationservice",
+        "protocol": "tcp",
+        "port_name": "grpc",
+        "port": 8080
+      }
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 33535,
+        "bytes_out": 37349,
+        "mean_duration": 5741767,
+        "min_duration": 5741767,
+        "max_duration": 149000000,
+        "count": 577
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "frontend-7bbcdbbcbf-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "recommendationservice-5b8966b965-*",
+        "PortNum": 8080,
+        "Protocol": "tcp"
+      },
+      "ServicePort": null
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 577
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "checkoutservice-b55dd855c-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "shippingservice-54fbf57657-*",
+        "PortNum": 50051,
+        "Protocol": "tcp"
+      },
+      "ServicePort": {
+        "namespace": "storefront",
+        "name": "shippingservice",
+        "protocol": "tcp",
+        "port_name": "grpc",
+        "port": 50051
+      }
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 5072,
+        "bytes_out": 930,
+        "mean_duration": 2047619.0476190476,
+        "min_duration": 0,
+        "max_duration": 45000000,
+        "count": 42
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "frontend-7bbcdbbcbf-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "shippingservice-54fbf57657-*",
+        "PortNum": 50051,
+        "Protocol": "tcp"
+      },
+      "ServicePort": {
+        "namespace": "storefront",
+        "name": "shippingservice",
+        "protocol": "tcp",
+        "port_name": "grpc",
+        "port": 50051
+      }
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 7081,
+        "bytes_out": 3187,
+        "mean_duration": 729281,
+        "min_duration": 729281,
+        "max_duration": 5000000,
+        "count": 181
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "checkoutservice-b55dd855c-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "shippingservice-54fbf57657-*",
+        "PortNum": 50051,
+        "Protocol": "tcp"
+      },
+      "ServicePort": null
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 42
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  },
+  {
+    "Edge": {
+      "Source": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "frontend-7bbcdbbcbf-*",
+        "PortNum": 0,
+        "Protocol": ""
+      },
+      "Dest": {
+        "Type": "rep",
+        "Namespace": "storefront",
+        "Name": "",
+        "NameAggr": "shippingservice-54fbf57657-*",
+        "PortNum": 50051,
+        "Protocol": "tcp"
+      },
+      "ServicePort": null
+    },
+    "Stats": {
+      "no_response": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 181
+      },
+      "response_code_1xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_2xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_3xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_4xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      },
+      "response_code_5xx": {
+        "bytes_in": 0,
+        "bytes_out": 0,
+        "mean_duration": 0,
+        "min_duration": 0,
+        "max_duration": 0,
+        "count": 0
+      }
+    }
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "verb": "delete",
+  "networkPolicy": {
+    "apiVersion": "networking.k8s.io/v1",
+    "kind": "NetworkPolicy",
+    "metadata": {
+      "name": "calico-node-alertmanager-mesh-xx",
+      "namespace": "tigera-prometheus",
+      "uid": "b795266b-a8f9-46f0-9a99-03369dec3d08",
+      "resourceVersion": "2613",
+      "creationTimestamp": "2019-11-18T18:24:03Z"
+    }
+  }
+}

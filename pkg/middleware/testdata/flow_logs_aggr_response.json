@@ -1,0 +1,334 @@
+{
+  "took": 65,
+  "timed_out": false,
+  "_shards": {
+    "total": 40,
+    "successful": 40,
+    "skipped": 0,
+    "failed": 0
+  },
+  "hits": {
+    "total": {
+      "value": 10000,
+      "relation": "gte"
+    },
+    "max_score": null,
+    "hits": []
+  },
+  "aggregations": {
+    "flog_buckets": {
+      "buckets": [
+        {
+          "dest_labels": {
+            "by_kvpair": {
+              "buckets": []
+            },
+            "doc_count": 5760
+          },
+          "doc_count": 5760,
+          "key": {
+            "action": "allow",
+            "dest_name": "pvt",
+            "dest_namespace": "-",
+            "dest_type": "net",
+            "reporter": "dst",
+            "source_action": "allow",
+            "source_name": "hep1",
+            "source_namespace": "-",
+            "source_type": "hep",
+            "proto": "udp",
+            "source_ip": null,
+            "dest_ip": null,
+            "source_name_full": "",
+            "dest_name_full":"",
+            "dest_port": 53,
+            "source_port": 53
+          },
+          "policies": {
+            "by_tiered_policy": {
+              "buckets": []
+            },
+            "doc_count": 5760
+          },
+          "source_labels": {
+            "by_kvpair": {
+              "buckets": []
+            },
+            "doc_count": 5760
+          },
+          "sum_bytes_in": {
+            "value": 0
+          },
+          "sum_bytes_out": {
+            "value": 0
+          },
+          "sum_http_requests_allowed_in": {
+            "value": 0
+          },
+          "sum_http_requests_denied_in": {
+            "value": 0
+          },
+          "sum_num_flows_completed": {
+            "value": 40147590
+          },
+          "sum_num_flows_started": {
+            "value": 0
+          },
+          "sum_packets_in": {
+            "value": 0
+          },
+          "sum_packets_out": {
+            "value": 0
+          }
+        },
+        {
+          "dest_labels": {
+            "by_kvpair": {
+              "buckets": [
+                {
+                  "doc_count": 2162,
+                  "key": "k8s-app=kube-dns"
+                }
+              ]
+            },
+            "doc_count": 2162
+          },
+          "doc_count": 2162,
+          "key": {
+            "action": "allow",
+            "dest_name": "coredns-5c98db65d4-*",
+            "dest_namespace": "kube-system",
+            "dest_type": "wep",
+            "reporter": "dst",
+            "source_action": "allow",
+            "source_name": "pvt",
+            "source_namespace": "-",
+            "source_type": "net",
+            "proto": "udp",
+            "source_ip": null,
+            "dest_ip": null,
+            "source_name_full": "",
+            "dest_name_full":"",
+            "dest_port": 53,
+            "source_port": 53
+          },
+          "policies": {
+            "by_tiered_policy": {
+              "buckets": [
+                {
+                  "doc_count": 2162,
+                  "key": "0|__PROFILE__|__PROFILE__.kns.kube-system|allow"
+                }
+              ]
+            },
+            "doc_count": 2162
+          },
+          "source_labels": {
+            "by_kvpair": {
+              "buckets": []
+            },
+            "doc_count": 2162
+          },
+          "sum_bytes_in": {
+            "value": 5375653702
+          },
+          "sum_bytes_out": {
+            "value": 9658441200
+          },
+          "sum_http_requests_allowed_in": {
+            "value": 0
+          },
+          "sum_http_requests_denied_in": {
+            "value": 0
+          },
+          "sum_num_flows_completed": {
+            "value": 40024024
+          },
+          "sum_num_flows_started": {
+            "value": 40022689
+          },
+          "sum_packets_in": {
+            "value": 47628818
+          },
+          "sum_packets_out": {
+            "value": 47477647
+          }
+        },
+        {
+          "dest_labels": {
+            "by_kvpair": {
+              "buckets": [
+                {
+                  "doc_count": 2166,
+                  "key": "statefulset.kubernetes.io/pod-name=elastic-operator-0"
+                }
+              ]
+            },
+            "doc_count": 2166
+          },
+          "doc_count": 2166,
+          "key": {
+            "action": "allow",
+            "dest_name": "elastic-operator-*",
+            "dest_namespace": "tigera-eck-operator",
+            "dest_type": "wep",
+            "reporter": "dst",
+            "source_action": "allow",
+            "source_name": "pvt",
+            "source_namespace": "-",
+            "source_type": "net",
+            "proto": "udp",
+            "source_ip": null,
+            "dest_ip": null,
+            "source_name_full": "",
+            "dest_name_full":"",
+            "dest_port": 53,
+            "source_port": 53
+          },
+          "policies": {
+            "by_tiered_policy": {
+              "buckets": [
+                {
+                  "doc_count": 2166,
+                  "key": "0|__PROFILE__|__PROFILE__.kns.tigera-eck-operator|allow"
+                }
+              ]
+            },
+            "doc_count": 2166
+          },
+          "source_labels": {
+            "by_kvpair": {
+              "buckets": []
+            },
+            "doc_count": 2166
+          },
+          "sum_bytes_in": {
+            "value": 21027233066
+          },
+          "sum_bytes_out": {
+            "value": 1156062527
+          },
+          "sum_http_requests_allowed_in": {
+            "value": 0
+          },
+          "sum_http_requests_denied_in": {
+            "value": 0
+          },
+          "sum_num_flows_completed": {
+            "value": 34
+          },
+          "sum_num_flows_started": {
+            "value": 34
+          },
+          "sum_packets_in": {
+            "value": 10044037
+          },
+          "sum_packets_out": {
+            "value": 9304883
+          }
+        },
+        {
+          "dest_labels": {
+            "by_kvpair": {
+              "buckets": [
+                {
+                  "doc_count": 2159,
+                  "key": "common.k8s.elastic.co/template-hash=3239608791"
+                },
+                {
+                  "doc_count": 2159,
+                  "key": "common.k8s.elastic.co/type=elasticsearch"
+                },
+                {
+                  "doc_count": 2159,
+                  "key": "elasticsearch.k8s.elastic.co/cluster-name=tigera-secure"
+                },
+                {
+                  "doc_count": 2159,
+                  "key": "elasticsearch.k8s.elastic.co/node-data=true"
+                },
+                {
+                  "doc_count": 2159,
+                  "key": "elasticsearch.k8s.elastic.co/node-ingest=true"
+                },
+                {
+                  "doc_count": 2159,
+                  "key": "elasticsearch.k8s.elastic.co/node-master=true"
+                },
+                {
+                  "doc_count": 2159,
+                  "key": "elasticsearch.k8s.elastic.co/node-ml=true"
+                },
+                {
+                  "doc_count": 2159,
+                  "key": "elasticsearch.k8s.elastic.co/version=7.3.2"
+                }
+              ]
+            },
+            "doc_count": 2159
+          },
+          "doc_count": 2159,
+          "key": {
+            "action": "allow",
+            "dest_name": "tigera-secure-es-xg2jxdtnqn",
+            "dest_namespace": "tigera-elasticsearch",
+            "dest_type": "wep",
+            "reporter": "dst",
+            "source_action": "allow",
+            "source_name": "pvt",
+            "source_namespace": "-",
+            "source_type": "net",
+            "proto": "udp",
+            "source_ip": null,
+            "dest_ip": null,
+            "source_name_full": "",
+            "dest_name_full":"",
+            "dest_port": 53,
+            "source_port": 53
+          },
+          "policies": {
+            "by_tiered_policy": {
+              "buckets": [
+                {
+                  "doc_count": 2159,
+                  "key": "0|allow-tigera|tigera-elasticsearch/allow-tigera.elasticsearch-access|allow"
+                }
+              ]
+            },
+            "doc_count": 2159
+          },
+          "source_labels": {
+            "by_kvpair": {
+              "buckets": []
+            },
+            "doc_count": 2159
+          },
+          "sum_bytes_in": {
+            "value": 9260442703
+          },
+          "sum_bytes_out": {
+            "value": 18822393643
+          },
+          "sum_http_requests_allowed_in": {
+            "value": 0
+          },
+          "sum_http_requests_denied_in": {
+            "value": 0
+          },
+          "sum_num_flows_completed": {
+            "value": 6647551
+          },
+          "sum_num_flows_started": {
+            "value": 6647551
+          },
+          "sum_packets_in": {
+            "value": 67997871
+          },
+          "sum_packets_out": {
+            "value": 55772551
+          }
+        }
+      ]
+    }
+  }
+}
