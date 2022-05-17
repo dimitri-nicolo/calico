@@ -71,6 +71,10 @@ promotions:
   pipeline_file: push-images/es-gateway.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push es-proxy images
+  pipeline_file: push-images/es-proxy.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 - name: Push honeypod-controller images
   pipeline_file: push-images/honeypod-controller.yml
   auto_promote:
@@ -655,7 +659,7 @@ blocks:
     jobs:
     - name: "deep-packet-inspection tests"
       commands:
-      - make ci
+      - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: 'compliance'
   run:
@@ -670,7 +674,7 @@ blocks:
     jobs:
     - name: "compliance tests"
       commands:
-      - make ci
+      - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: 'es-gateway'
   run:
@@ -687,6 +691,21 @@ blocks:
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
 
+- name: 'es-proxy'
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/es-proxy/', '/api/', '/compliance/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd es-proxy
+    jobs:
+    - name: "es-proxy tests"
+      commands:
+      - ../.semaphore/run-and-monitor ci.log make ci
+
 - name: 'packetcapture'
   run:
     when: "${FORCE_RUN} or change_in(['/*', '/packetcapture', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -700,7 +719,7 @@ blocks:
     jobs:
     - name: "packetcapture tests"
       commands:
-      - make ci
+      - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: 'anomaly-detection-api'
   run:
@@ -730,7 +749,7 @@ blocks:
     jobs:
     - name: "intrusion-detection-controller tests"
       commands:
-      - make ci
+      - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: 'honeypod-controller'
   run:
@@ -745,7 +764,7 @@ blocks:
     jobs:
     - name: "honeypod-controller tests"
       commands:
-      - make ci
+      - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: 'voltron'
   run:
@@ -760,7 +779,7 @@ blocks:
     jobs:
     - name: "voltron tests"
       commands:
-      - make ci
+      - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: "Documentation"
   run:

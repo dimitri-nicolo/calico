@@ -82,6 +82,10 @@ promotions:
     pipeline_file: ../es-gateway/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Test Cut ES Proxy Release
+    pipeline_file: ../es-proxy/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Test Cut Honeypod Controller Release
     pipeline_file: ../honeypod-controller/.semaphore/test-cut-release.yml
     auto_promote:
