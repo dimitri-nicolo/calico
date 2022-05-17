@@ -10,15 +10,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/projectcalico/calico/lma/pkg/httputils"
-
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-
-	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	. "github.com/projectcalico/calico/es-proxy/pkg/middleware/servicegraph"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
 const (

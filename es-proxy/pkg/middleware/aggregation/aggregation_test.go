@@ -15,16 +15,16 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	. "github.com/projectcalico/calico/es-proxy/pkg/middleware/aggregation"
 
 	"github.com/olivere/elastic/v7"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
-
+	. "github.com/projectcalico/calico/es-proxy/pkg/middleware/aggregation"
 	lmaapi "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // MockBackend implements a mock backend for test purposes.

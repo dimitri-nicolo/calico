@@ -8,16 +8,15 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
 	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
 	pipcfg "github.com/projectcalico/calico/es-proxy/pkg/pip/config"
 	"github.com/projectcalico/calico/es-proxy/pkg/pip/policycalc"
-
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	"github.com/projectcalico/calico/lma/pkg/api"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var (

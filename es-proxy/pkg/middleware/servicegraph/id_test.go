@@ -5,8 +5,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 
+	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	. "github.com/projectcalico/calico/es-proxy/pkg/middleware/servicegraph"
 )
 

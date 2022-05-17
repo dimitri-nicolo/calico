@@ -7,11 +7,13 @@ import (
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/projectcalico/calico/compliance/pkg/datastore"
-	"github.com/projectcalico/calico/es-proxy/pkg/user"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/endpoints/request"
+
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	"github.com/projectcalico/calico/es-proxy/pkg/user"
 )
 
 type ElasticsearchLicenseType string

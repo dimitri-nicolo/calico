@@ -21,18 +21,18 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	libcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
-
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	calicojson "github.com/projectcalico/calico/lma/pkg/test/json"
 	"github.com/projectcalico/calico/lma/pkg/test/thirdpartymock"
+
+	libcalicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 )
 
 var (

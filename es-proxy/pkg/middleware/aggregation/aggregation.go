@@ -14,16 +14,15 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	elasticvariant "github.com/projectcalico/calico/es-proxy/pkg/elastic"
-
+	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
+
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // This file implements an aggregated data query handler. The primary use of this is for the UX when querying aggregated

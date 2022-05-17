@@ -7,19 +7,17 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/projectcalico/calico/es-proxy/pkg/kibana"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
-
-	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	"k8s.io/client-go/kubernetes/fake"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	"github.com/projectcalico/calico/es-proxy/pkg/kibana"
 )
 
 const (

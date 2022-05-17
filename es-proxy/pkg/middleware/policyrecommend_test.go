@@ -16,8 +16,6 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
-	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
-
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
@@ -25,14 +23,15 @@ import (
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	"github.com/tigera/api/pkg/lib/numorstring"
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
-
 	"github.com/projectcalico/calico/lma/pkg/api"
 	lmaerror "github.com/projectcalico/calico/lma/pkg/api"
+	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/elastic"
 	"github.com/projectcalico/calico/lma/pkg/policyrec"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	"github.com/tigera/api/pkg/lib/numorstring"
 )
 
 const recommendURLPath = "/recommend"

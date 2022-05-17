@@ -6,13 +6,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/projectcalico/calico/compliance/pkg/syncer"
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
+	"github.com/projectcalico/calico/lma/pkg/api"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
-	"github.com/projectcalico/calico/compliance/pkg/syncer"
-
-	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 // New creates a new EndpointCache.

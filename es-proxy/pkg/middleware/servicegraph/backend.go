@@ -5,16 +5,15 @@ import (
 	"context"
 	"sync"
 
-	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/projectcalico/calico/lma/pkg/auth"
-	"github.com/projectcalico/calico/lma/pkg/k8s"
-
 	log "github.com/sirupsen/logrus"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
+	"github.com/projectcalico/calico/lma/pkg/auth"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	"github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 // Sanity check the realServiceGraphBackend satisfies the ServiceGraphBackend interface.

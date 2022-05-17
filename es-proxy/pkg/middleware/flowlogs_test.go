@@ -14,17 +14,16 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/errors"
-	"github.com/projectcalico/calico/libcalico-go/lib/resources"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/projectcalico/calico/es-proxy/pkg/pip"
 	pipcfg "github.com/projectcalico/calico/es-proxy/pkg/pip/config"
-
+	"github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	"github.com/projectcalico/calico/lma/pkg/api"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	"github.com/projectcalico/calico/lma/pkg/list"
 	"github.com/projectcalico/calico/lma/pkg/rbac"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const (

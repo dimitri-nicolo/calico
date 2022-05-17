@@ -2,10 +2,10 @@
 package servicegraph_test
 
 import (
-	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	. "github.com/projectcalico/calico/es-proxy/pkg/middleware/servicegraph"
 )
 
