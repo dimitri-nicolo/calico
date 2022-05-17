@@ -1,8 +1,5 @@
 # Elasticsearch Access Proxy
 
-[![Build Status](https://semaphoreci.com/api/v1/projects/8057c105-2db0-41f2-9fa5-d772e81803ac/2294605/badge.svg)](https://semaphoreci.com/calico/es-proxy-image)
-[![Docker Image](https://img.shields.io/badge/docker%20image-gcr.io%2Funique--caldron--775%2Fcnx%2Fes--proxy-blue.svg)](https://console.cloud.google.com/gcr/images/unique-caldron-775/GLOBAL/cnx/tigera/es-proxy?project=unique-caldron-775)
-
 Elasticsearch access proxy enables access a password protected Elasticsearch cluster.
 
 ## Building the image
