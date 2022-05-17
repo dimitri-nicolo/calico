@@ -1,0 +1,15 @@
+action: init
+kind: NetworkPolicy
+apiVersion: projectcalico.org/v3
+metadata:
+  name: egress-with-address-selector
+  namespace: "{{.Namespace}}"
+spec:
+  selector: egress-with-address-selector == 'yes'
+  egress:
+    - action: Allow
+      destination:
+        nets:
+          - 8.8.4.4
+  types:
+    - Egress

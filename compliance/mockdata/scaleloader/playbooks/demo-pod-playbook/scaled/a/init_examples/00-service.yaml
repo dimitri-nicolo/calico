@@ -1,0 +1,9 @@
+action: init
+kind: Service
+apiVersion: v1
+metadata:
+  name: demo-service
+  namespace: "{{.Namespace}}"
+  labels:
+    servlabela: "serv label a"
+spec: {}

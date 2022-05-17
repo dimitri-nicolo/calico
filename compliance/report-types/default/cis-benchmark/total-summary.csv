@@ -1,0 +1,10 @@
+{{ $c := csv }}
+{{- $c := $c.AddColumn "startTime"           "{{ dateRfc3339 .StartTime }}" }}
+{{- $c := $c.AddColumn "endTime"             "{{ dateRfc3339 .EndTime }}" }}
+{{- $c := $c.AddColumn "type"             	 "{{ .CISBenchmarkSummary.Type }}" }}
+{{- $c := $c.AddColumn "hiPercentThreshold"  "{{ if .ReportSpec.CIS }}{{ if .ReportSpec.CIS.HighThreshold  }}{{ .ReportSpec.CIS.HighThreshold }}{{ else }}100{{ end }}{{ else }}100{{ end }}" }}
+{{- $c := $c.AddColumn "medPercentThreshold" "{{ if .ReportSpec.CIS }}{{ if .ReportSpec.CIS.MedThreshold  }}{{ .ReportSpec.CIS.MedThreshold }}{{ else }}50{{ end }}{{ else }}50{{ end }}" }}
+{{- $c := $c.AddColumn "hiNodeCount"         "{{ .CISBenchmarkSummary.HighCount }}" }}
+{{- $c := $c.AddColumn "medNodeCount"        "{{ .CISBenchmarkSummary.MedCount }}" }}
+{{- $c := $c.AddColumn "lowNodeCount"        "{{ .CISBenchmarkSummary.LowCount }}" }}
+{{- $c.Render . }}

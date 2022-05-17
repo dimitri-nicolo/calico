@@ -1,0 +1,11 @@
+action: init
+kind: GlobalNetworkSet
+apiVersion: projectcalico.org/v3
+metadata:
+  name: demo-gns
+  labels:
+    gnslabela: "gns label a"
+spec:
+  nets:
+    - "192.168.1.1/31"
+    - "192.168.1.64/31"

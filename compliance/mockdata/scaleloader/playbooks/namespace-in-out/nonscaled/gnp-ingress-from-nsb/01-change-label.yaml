@@ -1,0 +1,15 @@
+action: update
+kind: GlobalNetworkPolicy
+apiVersion: projectcalico.org/v3
+metadata:
+  name: "ingress-from-nsb-ns-{{.Namespace}}"
+  labels:
+    churn-gnp: "knope"
+spec:
+  selector: '{{.Namespace}}-ingress-from-nsb == "yes"'
+  ingress:
+    - action: Allow
+      source:
+        namespaceSelector: nsb-label == "{{.Namespace}}"
+  types:
+    - Ingress

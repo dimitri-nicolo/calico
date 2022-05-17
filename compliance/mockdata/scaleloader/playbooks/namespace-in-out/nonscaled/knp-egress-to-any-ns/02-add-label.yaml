@@ -1,0 +1,17 @@
+action: update
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: egress-to-any-ns
+  namespace: "{{.Namespace}}"
+  labels:
+    churn-k8s: "red-fish"
+spec:
+  podSelector:
+    matchLabels:
+      egress-to-any-ns: 'yes'
+  egress:
+    - to:
+      - namespaceSelector:
+          matchLabels:
+            nsb-label: "{{.Namespace}}"

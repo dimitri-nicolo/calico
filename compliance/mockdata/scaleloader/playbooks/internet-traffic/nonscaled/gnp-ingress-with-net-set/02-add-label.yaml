@@ -1,0 +1,16 @@
+action: update
+kind: GlobalNetworkPolicy
+apiVersion: projectcalico.org/v3
+metadata:
+  name: "ingress-with-net-set-ns-{{.Namespace}}"
+  labels:
+    churn-gnp: "knope"
+    parks: "and-recreation"
+spec:
+  selector: '{{.Namespace}}-ingress-with-net-set == "yes"'
+  ingress:
+    - action: Allow
+      source:
+        selector: gnslabel == "{{.Namespace}}"
+  types:
+    - Ingress

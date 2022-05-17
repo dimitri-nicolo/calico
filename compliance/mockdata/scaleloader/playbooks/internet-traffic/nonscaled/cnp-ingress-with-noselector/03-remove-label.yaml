@@ -1,0 +1,12 @@
+action: update
+kind: NetworkPolicy
+apiVersion: projectcalico.org/v3
+metadata:
+  name: ingress-with-noselector
+  namespace: "{{.Namespace}}"
+spec:
+  selector: ingress-with-noselector == 'yes'
+  ingress:
+    - action: Allow
+  types:
+    - Ingress

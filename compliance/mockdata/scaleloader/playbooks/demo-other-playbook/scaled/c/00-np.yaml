@@ -1,0 +1,15 @@
+action: init
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: demo-c-k8s-np
+  namespace: "{{.Namespace}}"
+spec:
+  podSelector:
+    matchLabels:
+      protected: 'yes'
+  ingress:
+    - from:
+      - podSelector:
+          matchLabels:
+            source: 'non-existant'

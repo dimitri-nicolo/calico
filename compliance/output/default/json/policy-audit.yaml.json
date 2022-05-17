@@ -1,0 +1,41 @@
+{
+ "kind": "GlobalReportType",
+ "apiVersion": "projectcalico.org/v3",
+ "metadata": {
+  "name": "policy-audit",
+  "creationTimestamp": null,
+  "labels": {
+   "global-report-type": "policy-audit"
+  }
+ },
+ "spec": {
+  "uiSummaryTemplate": {
+   "name": "ui-summary.json",
+   "template": "{\"heading\":\"Network Policy Configuration Changes\",\"type\":\"panel\",\"widgets\":[{\"data\":[{\"label\":\"Created\",\"value\":{{ .AuditSummary.NumCreate }}}],\"heading\":\"Network Policies\",\"summary\":{\"label\":\"Total\",\"total\":{{ .AuditSummary.NumTotal }}},\"type\":\"radialbarchart\"},{\"data\":[{\"label\":\"Modified\",\"value\":{{ .AuditSummary.NumModify }}}],\"heading\":\"Network Policies\",\"summary\":{\"label\":\"Total\",\"total\":{{ .AuditSummary.NumTotal }}},\"type\":\"radialbarchart\"},{\"data\":[{\"label\":\"Deleted\",\"value\":{{ .AuditSummary.NumDelete }}}],\"heading\":\"Network Policies\",\"summary\":{\"label\":\"Total\",\"total\":{{ .AuditSummary.NumTotal }}},\"type\":\"radialbarchart\"}]}"
+  },
+  "downloadTemplates": [
+   {
+    "name": "summary.csv",
+    "template": "{{ $c := csv }}\n{{- $c := $c.AddColumn \"startTime\"               \"{{ dateRfc3339 .StartTime }}\" }}\n{{- $c := $c.AddColumn \"endTime\"                 \"{{ dateRfc3339 .EndTime }}\" }}\n{{- $c := $c.AddColumn \"endpointSelector\"        \"{{ if .ReportSpec.Endpoints }}{{ .ReportSpec.Endpoints.Selector }}{{ end }}\" }}\n{{- $c := $c.AddColumn \"namespaceNames\"          \"{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.Namespaces }}{{ join \\\";\\\" .ReportSpec.Endpoints.Namespaces.Names }}{{ end }}{{ end }}\" }}\n{{- $c := $c.AddColumn \"namespaceSelector\"       \"{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.Namespaces }}{{ .ReportSpec.Endpoints.Namespaces.Selector }}{{ end }}{{ end }}\" }}\n{{- $c := $c.AddColumn \"serviceAccountNames\"     \"{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.ServiceAccounts }}{{ join \\\";\\\" .ReportSpec.Endpoints.ServiceAccounts.Names }}{{ end }}{{ end }}\" }}\n{{- $c := $c.AddColumn \"serviceAccountSelectors\" \"{{ if .ReportSpec.Endpoints }}{{ if .ReportSpec.Endpoints.ServiceAccounts }}{{ .ReportSpec.Endpoints.ServiceAccounts.Selector }}{{ end }}{{ end }}\" }}\n{{- $c := $c.AddColumn \"numCreatedPolicies\"      \"{{ .AuditSummary.NumCreate }}\" }}\n{{- $c := $c.AddColumn \"numModifiedPolicies\"     \"{{ .AuditSummary.NumModify }}\" }}\n{{- $c := $c.AddColumn \"numDeletedPolicies\"      \"{{ .AuditSummary.NumDelete }}\" }}\n{{- $c.Render . }}"
+   },
+   {
+    "name": "events.json",
+    "template": "{{ toJson .AuditEvents }}"
+   },
+   {
+    "name": "events.yaml",
+    "template": "{{ toYaml .AuditEvents }}"
+   }
+  ],
+  "auditEventsSelection": {
+   "resources": [
+    {
+     "resource": "globalnetworkpolicies"
+    },
+    {
+     "resource": "networkpolicies"
+    }
+   ]
+  }
+ }
+}

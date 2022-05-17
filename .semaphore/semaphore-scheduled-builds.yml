@@ -61,6 +61,10 @@ promotions:
   pipeline_file: push-images/anomaly-detection-api.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push compliance images
+  pipeline_file: push-images/compliance.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 - name: Push deep-packet-inspection images
   pipeline_file: push-images/deep-packet-inspection.yml
   auto_promote:
@@ -652,6 +656,21 @@ blocks:
       - cd deep-packet-inspection
     jobs:
     - name: "deep-packet-inspection tests"
+      commands:
+      - make ci
+
+- name: 'compliance'
+  run:
+    when: "true or change_in(['/*', '/compliance/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd compliance
+    jobs:
+    - name: "compliance tests"
       commands:
       - make ci
 

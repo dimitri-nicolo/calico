@@ -1,0 +1,14 @@
+action: update
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: ingress-with-address-selector
+  namespace: "{{.Namespace}}"
+spec:
+  podSelector:
+    matchLabels:
+      ingress-with-address-selector: 'yes'
+  ingress:
+    - from:
+      - ipBlock:
+          cidr: "8.8.8.8/32"

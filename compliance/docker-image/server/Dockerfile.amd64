@@ -1,0 +1,22 @@
+ARG UBI_IMAGE
+
+FROM ${UBI_IMAGE} AS ubi
+
+RUN mkdir /code
+ADD bin/server-amd64 /code/server
+
+RUN chgrp -R 0 /code && \
+    chmod -R g=u /code
+
+FROM scratch
+
+COPY --from=ubi /code/ /code/
+
+# Add the trusted certs from the ubi image.
+COPY --from=ubi /etc/pki /etc/pki
+COPY --from=ubi /usr/share/pki /usr/share/pki
+
+USER 999
+
+WORKDIR /code
+ENTRYPOINT ["/code/server"]

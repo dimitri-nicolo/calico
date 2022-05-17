@@ -1,0 +1,13 @@
+apiVersion: projectcalico.org/v3
+kind: GlobalReportType
+metadata:
+  name: network-access
+  labels:
+    global-report-type: network-access
+spec:
+  uiSummaryTemplate:
+    name: ui-summary.json
+  includeEndpointData: true
+  downloadTemplates:
+    - name: summary.csv
+    - name: endpoints.csv

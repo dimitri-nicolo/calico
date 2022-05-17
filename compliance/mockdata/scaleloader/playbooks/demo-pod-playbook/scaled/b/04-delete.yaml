@@ -1,0 +1,12 @@
+action: delete
+kind: "Pod"
+apiVersion: v1
+metadata:
+  name: "demopod-b-{{.ScaleId}}"
+  namespace: "{{.Namespace}}"
+  labels:
+    labela: "podb value for label a"
+    labelb: "podb label b value"
+spec:
+  serviceAccountName: demo-b-sa
+  nodeName: anode

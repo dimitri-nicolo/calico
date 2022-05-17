@@ -1,0 +1,15 @@
+apiVersion: projectcalico.org/v3
+kind: GlobalReportType
+metadata:
+  name: inventory
+  labels:
+    global-report-type: inventory
+spec:
+  uiSummaryTemplate:
+    name: ui-summary.json
+  includeEndpointData: true
+  downloadTemplates:
+    - name: summary.csv
+    - name: endpoints.csv
+    - name: namespaces.csv
+    - name: services.csv

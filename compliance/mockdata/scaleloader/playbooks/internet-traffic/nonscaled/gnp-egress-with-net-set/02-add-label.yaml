@@ -1,0 +1,16 @@
+action: update
+kind: GlobalNetworkPolicy
+apiVersion: projectcalico.org/v3
+metadata:
+  name: "egress-with-net-set-ns-{{.Namespace}}"
+  labels:
+    churn-gnp: "knope"
+    parks: "and-recreation"
+spec:
+  selector: '{{.Namespace}}-egress-with-net-set == "yes"'
+  egress:
+    - action: Allow
+      source:
+        selector: gnslabel == "{{.Namespace}}"
+  types:
+    - Egress
