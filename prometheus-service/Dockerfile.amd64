@@ -1,0 +1,15 @@
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.5 as ubi
+RUN microdnf update
+
+# create /etc/prometheus-service directory and provide RW permission access to USER 1001
+RUN mkdir -p /etc/prometheus-service
+RUN chown -R 1001 /etc/prometheus-service
+
+FROM scratch
+
+COPY --chown=1001 --from=ubi /etc/prometheus-service /etc/prometheus-service
+ADD --chown=1001 bin/prometheus-service-amd64 /prometheus-service
+
+USER 1001
+
+ENTRYPOINT ["/prometheus-service"]
