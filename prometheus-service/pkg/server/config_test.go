@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/tigera/prometheus-service/pkg/server"
+	"github.com/projectcalico/calico/prometheus-service/pkg/server"
 )
 
 var _ = Describe("Config test", func() {

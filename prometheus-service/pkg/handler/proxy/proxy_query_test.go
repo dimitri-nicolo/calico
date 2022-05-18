@@ -20,7 +20,7 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/auth/testing"
 
-	handler "github.com/tigera/prometheus-service/pkg/handler/proxy"
+	handler "github.com/projectcalico/calico/prometheus-service/pkg/handler/proxy"
 )
 
 var _ = Describe("Prometheus Proxy Query test", func() {

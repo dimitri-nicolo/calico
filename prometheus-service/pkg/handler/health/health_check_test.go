@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	health "github.com/tigera/prometheus-service/pkg/handler/health"
+	health "github.com/projectcalico/calico/prometheus-service/pkg/handler/health"
 )
 
 var _ = Describe("Health Check test", func() {

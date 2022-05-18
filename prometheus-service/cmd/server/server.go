@@ -8,7 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	server "github.com/tigera/prometheus-service/pkg/server"
+	server "github.com/projectcalico/calico/prometheus-service/pkg/server"
 )
 
 const (

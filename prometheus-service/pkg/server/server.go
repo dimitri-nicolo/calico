@@ -9,9 +9,9 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-	health "github.com/tigera/prometheus-service/pkg/handler/health"
-	proxy "github.com/tigera/prometheus-service/pkg/handler/proxy"
-	"github.com/tigera/prometheus-service/pkg/middleware"
+	health "github.com/projectcalico/calico/prometheus-service/pkg/handler/health"
+	proxy "github.com/projectcalico/calico/prometheus-service/pkg/handler/proxy"
+	"github.com/projectcalico/calico/prometheus-service/pkg/middleware"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
