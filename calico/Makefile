@@ -3,7 +3,7 @@ include ../metadata.mk
 CALICO_DIR=$(shell git rev-parse --show-toplevel)/calico
 GIT_HASH=$(shell git rev-parse --short=11 HEAD)
 VERSIONS_FILE?=$(CALICO_DIR)/_data/versions.yml
-JEKYLL_VERSION=4.0.0
+JEKYLL_VERSION=pages
 HP_VERSION=v0.2
 DEV?=false
 CONFIG=--config _config.yml
@@ -82,7 +82,7 @@ serve: bin/helm3
 
 .PHONY: build
 _site build: bin/helm3
-	docker run --rm -it \
+	docker run --rm \
 	-e JEKYLL_DOCKER_TAG="" \
 	-e JEKYLL_UID=`id -u` \
 	-v $(CURDIR)/bin/helm3:/usr/local/bin/helm:ro \
@@ -90,6 +90,13 @@ _site build: bin/helm3
 	-v $(CURDIR)/../libcalico-go:/srv/libcalico-go \
 	-v $(VERSIONS_FILE):/srv/jekyll/_data/versions.yml \
 	jekyll/jekyll:$(JEKYLL_VERSION) /bin/sh -c 'bundle update; jekyll build --incremental $(CONFIG)'
+	# Move the manifests into the the generated site, and also update
+	# the repos manifests that the site generated, removing the templates dir.
+	cp -r ../manifests/ _site/manifests
+	rsync -a _site/manifest-templates/ ../manifests/ && rm -r _site/manifest-templates
+
+# Update the static manifests 
+gen-manifests: clean _site
 
 ## Clean enough that a new release build will be clean
 clean:

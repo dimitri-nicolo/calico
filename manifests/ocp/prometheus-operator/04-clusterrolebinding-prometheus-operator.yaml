@@ -1,0 +1,15 @@
+---
+# Source: tigera-prometheus-operator/templates/04-clusterrolebinding-prometheus-operator.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: calico-prometheus-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: calico-prometheus-operator
+subjects:
+- kind: ServiceAccount
+  name: calico-prometheus-operator
+  namespace: tigera-prometheus
+

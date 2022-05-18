@@ -1,0 +1,136 @@
+---
+# Source: tigera-prometheus-operator/templates/00-namespace-tigera-prometheus.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tigera-prometheus
+  annotations:
+    openshift.io/node-selector: ""
+  labels:
+    name: tigera-prometheus
+    openshift.io/run-level: "0"
+
+---
+# Source: tigera-prometheus-operator/templates/04-clusterrolebinding-prometheus-operator.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: calico-prometheus-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: calico-prometheus-operator
+subjects:
+- kind: ServiceAccount
+  name: calico-prometheus-operator
+  namespace: tigera-prometheus
+
+---
+# Source: tigera-prometheus-operator/templates/04-clusterrole-prometheus-operator.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: calico-prometheus-operator
+  namespace: tigera-prometheus
+rules:
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - "*"
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - alertmanagers
+  - alertmanagerconfigs
+  - prometheuses
+  - servicemonitors
+  - prometheusrules
+  - podmonitors
+  - thanosrulers
+  - probes
+  verbs:
+  - "*"
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs: ["*"]
+- apiGroups: [""]
+  resources:
+  - configmaps
+  - secrets
+  verbs: ["*"]
+- apiGroups: [""]
+  resources:
+  - pods
+  verbs: ["list", "delete"]
+- apiGroups: [""]
+  resources:
+  - services
+  - endpoints
+  verbs: ["get", "create", "update"]
+- apiGroups: [""]
+  resources:
+  - nodes
+  - namespaces
+  verbs: ["get", "list", "watch"]
+# The following permissions are required to deploy Prometheus Operator on OpenShift.
+# (You can't set blockOwnerDeletion if an ownerReference refers to a resource you can't set finalizers on.)
+- apiGroups:
+    - monitoring.coreos.com
+  resources:
+    - alertmanagers/finalizers
+    - prometheuses/finalizers
+    - servicemonitors/finalizers
+    - podmonitors/finalizers
+  verbs:
+    - "*"
+
+---
+# Source: tigera-prometheus-operator/templates/04-deployment-prometheus-operator.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calico-prometheus-operator
+  namespace: tigera-prometheus
+  labels:
+    operator: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      operator: prometheus
+  template:
+    metadata:
+      labels:
+        operator: prometheus
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+      serviceAccountName: calico-prometheus-operator
+      containers:
+      - name: calico-prometheus-operator
+        image: gcr.io/unique-caldron-775/cnx/tigera/prometheus-operator:master
+        args:
+          - --prometheus-config-reloader=gcr.io/unique-caldron-775/cnx/tigera/prometheus-config-reloader:master
+          - --config-reloader-memory-request=25Mi
+          - --namespaces=tigera-prometheus
+          - --cluster-domain=cluster.local
+        resources:
+          requests:
+            cpu: 100m
+            memory: 50Mi
+          limits:
+            cpu: 200m
+            memory: 100Mi
+
+---
+# Source: tigera-prometheus-operator/templates/04-serviceaccount-prometheus-operator.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: calico-prometheus-operator
+  namespace: tigera-prometheus
+

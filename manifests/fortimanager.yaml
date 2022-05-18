@@ -1,0 +1,147 @@
+---
+
+# Required RBAC:
+# - watch/list nodes and pods
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: tigera-firewall-controller
+  namespace: tigera-firewall-controller
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tigera-firewall-controller
+rules:
+  - apiGroups: [""]
+    resources:
+      - secrets
+    verbs:
+      - get
+  - apiGroups: ["projectcalico.org"]
+    resources: ["tier.globalnetworkpolicies"]
+    verbs: ["get","watch","list","create","update","delete"]
+  - apiGroups: ["projectcalico.org"]
+    resources: ["tiers"]
+    verbs: ["get","watch","list","update"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tigera-firewall-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tigera-firewall-controller
+subjects:
+- kind: ServiceAccount
+  name: tigera-firewall-controller
+  namespace: tigera-firewall-controller
+
+---
+
+# The actual firewall-controller deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tigera-firewall-controller-fortimanager-policies
+  namespace: tigera-firewall-controller
+  labels:
+    k8s-app: tigera-firewall-controller
+spec:
+  replicas: 1
+  strategy:
+     type: Recreate
+  selector:
+    matchLabels:
+      k8s-app: tigera-firewall-controller
+  template:
+    metadata:
+      name: tigera-firewall-controller-fortimanager-policies
+      namespace: tigera-firewall-controller
+      labels:
+        k8s-app: tigera-firewall-controller
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+      serviceAccountName: tigera-firewall-controller
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
+      imagePullSecrets:
+        - name: tigera-pull-secret
+      containers:
+        - name: tigera-firewall-controlller
+          image: gcr.io/unique-caldron-775/cnx/tigera/firewall-integration:master
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: ENABLED_CONTROLLERS
+              value: "fortinet"
+            - name: LOG_LEVEL
+              value: "info"
+            - name: FW_INSECURE_SKIP_VERIFY
+              value: "true"
+            - name: FW_FORTIMGR_EW_CONFIG_PATH
+              value: "/etc/tigera/fortimgr-configs-policies.yaml"
+          volumeMounts:
+            - name: firewall-configuration
+              mountPath: /etc/tigera/
+      volumes:
+        - name: firewall-configuration
+          configMap:
+            items:
+              - key: tigera.firewall.fortimanager-policies
+                path: fortimgr-configs-policies.yaml
+            name: tigera-fortimanager-controller-configs
+
+---
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-tigera.tigera-firewall-controller-access
+  namespace: tigera-firewall-controller
+spec:
+  order: 1
+  tier: allow-tigera
+  selector: k8s-app == 'tigera-firewall-controller'
+  types:
+  - Ingress
+  - Egress
+  ingress:
+  - action: Deny
+  egress:
+  - action: Allow
+    protocol: TCP
+    source: {}
+    destination:
+      # This policy allows Firewall controller to communicate with kubernetes api server.
+      namespaceSelector: projectcalico.org/name == "default"
+      selector: (provider == "kubernetes" && component == "apiserver" && endpoints.projectcalico.org/serviceName == "kubernetes")
+      # By default, kubernetes api server listens on [6443, 443]. If Api server is customized to listen
+      # on different port, Include the port number below.
+      ports: [443, 6443]
+  - action: Allow
+    protocol: TCP
+    destination:
+      # This policy allows Firewall controller to communicate via IPv4 with external Fortigate firewall.
+      nets: ["0.0.0.0/0"]
+      ports:
+      - 443
+  - action: Allow
+    protocol: TCP
+    destination:
+      # This policy allows Firewall controller to communicate via IPv4 with external Fortigate firewall.
+      nets: ["::/0"]
+      ports:
+      - 443
+  - action: Allow
+    protocol: UDP
+    destination:
+      # This policy allows Firewall controller to communicate with kube-dns.
+      selector: k8s-app == "kube-dns"
+      ports:
+      - 53

@@ -1,0 +1,31 @@
+---
+# Create Namespace:
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tigera-internal
+---
+# Global Alert for network ssh
+apiVersion: projectcalico.org/v3
+kind: GlobalAlertTemplate
+metadata:
+  name: honeypod.network.ssh
+spec:
+  description: "Alerts on Honeypod accessed via SSH"
+  summary: "[Honeypod] Attempted SSH connection by ${source_namespace}/${source_name_aggr}"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_port"="22" AND reporter="dst"'
+  aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod.network.ssh
+spec:
+  description: "[Honeypod] Attempted SSH connection by ${source_namespace}/${source_name_aggr}"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_port"="22" AND reporter="dst"'
+  aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
+---
