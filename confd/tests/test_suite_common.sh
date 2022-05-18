@@ -817,6 +817,7 @@ execute_tests_oneshot() {
         run_edited_individual_test_oneshot 'extensions/bgppeer/specific_node' "# Test Value: {{(json (getv \"/host/kube-master/peer_v4/10.192.0.3\")).extensions.testKey}}"
         run_individual_test_oneshot 'explicit_peering/selectors'
         run_individual_test_oneshot 'explicit_peering/route_reflector'
+        run_individual_test_oneshot 'explicit_peering/route_reflector_v6_by_ip'
         run_individual_test_oneshot 'mesh/static-routes'
         run_individual_test_oneshot 'mesh/static-routes-exclude-node'
         run_individual_test_oneshot 'mesh/communities'
