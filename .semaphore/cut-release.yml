@@ -98,3 +98,7 @@ promotions:
     pipeline_file: ../voltron/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Cut Prometheus Service Release
+    pipeline_file: ../intrusion-detection-controller/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
