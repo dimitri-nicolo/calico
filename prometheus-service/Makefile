@@ -95,6 +95,9 @@ clean:
 ##########################################################################
 # Testing
 ##########################################################################
+PROMETHEUS_SERVICE_TEST_CONTAINER_NAME="fv-prometheus-proxy-test"
+PACKAGE_ROOT=$(shell sh -c "pwd")
+
 report-dir:
 	mkdir -p report
 
@@ -106,19 +109,31 @@ ut: report-dir
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
 .PHONY: fv
-fv: image report-dir
-	$(MAKE) fv-no-setup
+fv: image report-dir run-prometheus-service-proxy fv/fv.test
+		cd fv && ./fv.test $(GINKGO_ARGS) -ginkgo.slowSpecThreshold 30
+		docker rm -f ${PROMETHEUS_SERVICE_TEST_CONTAINER_NAME} || true
 
-## Developer friendly target to only run fvs and skip other
-## setup steps.
-.PHONY: fv-no-setup
-fv-no-setup:
-	PACKAGE_ROOT=$(CURDIR) \
-			     GO_BUILD_IMAGE=$(CALICO_BUILD) \
-		       PACKAGE_NAME=$(PACKAGE_NAME) \
-		       GINKGO_ARGS='$(GINKGO_ARGS)' \
-		       GOMOD_CACHE=$(GOMOD_CACHE) \
-		       ./fv/run_test.sh
+fv/fv.test: $(shell find ./fv -type f -name '*.go' -print)
+# We pre-build the test binary so that we can run it outside a container and allow it
+# to interact with docker.
+	$(DOCKER_RUN) \
+		$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./fv -c --tags fvtests -o fv/fv.test'
+	
+run-prometheus-service-proxy:
+	docker rm -f ${PROMETHEUS_SERVICE_TEST_CONTAINER_NAME} || true
+	${DOCKER_RUN} \
+	--detach \
+	-v ${PACKAGE_ROOT}/test:/test:ro \
+	-v ${PACKAGE_ROOT}/fv/tls.crt:/tls/tls.crt:ro \
+	-v ${PACKAGE_ROOT}/fv/tls.key:/tls/tls.key:ro \
+	-e LISTEN_ADDR="localhost:8090" \
+	-e LOG_LEVEL=debug \
+	-e AUTHENTICATION_ENABLED=false \
+	--name ${PROMETHEUS_SERVICE_TEST_CONTAINER_NAME} \
+	${PROMETHEUS_SERVICE_IMAGE}:latest
+
+
+
 
 ###############################################################################
 # Static checks
@@ -139,28 +154,6 @@ ci: clean image-all static-checks ut fv
 ## Deploys images to registry
 cd: image-all cd-common
 
-###############################################################################
-# Update pins
-###############################################################################
-# Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
-guard-ssh-forwarding-bug:
-	@if [ "$(shell uname)" = "Darwin" ]; then \
-		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
-		echo "$(MAKECMDGOALS)"; \
-		exit 1; \
-	fi;
-
-update-calico-pin:
-	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(PIN_BRANCH))
-	$(call update_replace_submodule_pin,github.com/tigera/api,github.com/tigera/calico-private/api,$(PIN_BRANCH))
-
-LMA_BRANCH?=$(PIN_BRANCH)
-LMA_REPO?=github.com/tigera/lma
-
-update-lma-pin:
-	$(call update_pin,$(LMA_REPO),$(LMA_REPO),$(LMA_BRANCH))
-
-update-pins: guard-ssh-forwarding-bug update-calico-pin update-lma-pin
 
 ###############################################################################
 # Utils

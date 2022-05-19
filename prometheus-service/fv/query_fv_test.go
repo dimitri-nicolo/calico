@@ -30,7 +30,7 @@ var _ = Describe("Prometheus Proxy Test", func() {
 		testPrometheusQuery = "sum(http_requests_total{method=\"GET\"} offset 5m)"
 		testStep            = "15s"
 
-		caCert = "/tls/tls.crt"
+		caCert = "./tls.crt"
 	)
 
 	var mockPrometheusService *http.Server

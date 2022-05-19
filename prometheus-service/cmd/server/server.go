@@ -5,10 +5,9 @@ import (
 	"os"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	server "github.com/projectcalico/calico/prometheus-service/pkg/server"
 
 	log "github.com/sirupsen/logrus"
-
-	server "github.com/projectcalico/calico/prometheus-service/pkg/server"
 )
 
 const (
