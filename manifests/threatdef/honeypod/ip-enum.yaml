@@ -1,0 +1,94 @@
+---
+# Honeypod IP Enumeration
+
+# Daemonset Deployment:
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: tigera-internal-app
+  namespace: tigera-internal
+spec:
+  selector:
+    matchLabels:
+      app: tigera-internal-app
+  template:
+    metadata:
+      labels:
+        app: tigera-internal-app
+    spec:
+      hostNetwork: false
+      hostIPC: false
+      hostPID: false
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+      imagePullSecrets:
+      - name: tigera-pull-secret
+      containers:
+      - name: tigera-internal-app
+        image: gcr.io/unique-caldron-775/cnx/tigera/honeypod:master
+        resources:
+          limits:
+            cpu: 100m
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            memory: 200Mi
+        securityContext:
+            privileged: false
+            allowPrivilegeEscalation: false
+---
+# Global Alert Template and Global Alert for IP Enumeration
+apiVersion: projectcalico.org/v3
+kind: GlobalAlertTemplate
+metadata:
+  name: honeypod.ip.enum
+spec:
+  description: "Alerts on Honeypod accessed via IP enumeration"
+  summary: "[Honeypod] Pod subnet IP enumeration by ${source_namespace}/${source_name_aggr}"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-app" AND reporter="dst"'
+  aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod.ip.enum
+spec:
+  description: "[Honeypod] Pod subnet IP enumeration by ${source_namespace}/${source_name_aggr}"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-app" AND reporter="dst"'
+  aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
+---
+# Global Alert Template and Global Alert for IP Enumeration
+apiVersion: projectcalico.org/v3
+kind: GlobalAlertTemplate
+metadata:
+  name: honeypod.port.scan
+spec:
+  description: "Alerts on Honeypod accessed via port scan"
+  summary: "[Honeypod] Pod subnet port scan by ${source_namespace}/${source_name_aggr}"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-app" AND reporter="dst"'
+  aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
+  metric: count
+  condition: gte
+  threshold: 4
+---
+apiVersion: projectcalico.org/v3
+kind: GlobalAlert
+metadata:
+  name: honeypod.port.scan
+spec:
+  description: "[Honeypod] Pod subnet port scan by ${source_namespace}/${source_name_aggr}"
+  severity: 100
+  dataSet: flows
+  query: 'dest_namespace="tigera-internal" AND "dest_labels.labels"="app=tigera-internal-app" AND reporter="dst"'
+  aggregateBy: [source_namespace, source_name_aggr, dest_namespace, dest_name_aggr, host.keyword]
+  metric: count
+  condition: gte
+  threshold: 4
+---

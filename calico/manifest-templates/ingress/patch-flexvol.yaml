@@ -1,0 +1,52 @@
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: flexvol-driver
+          image: calico/pod2daemon-flexvol:v3.7.2
+          securityContext:
+            privileged: true
+          volumeMounts:
+          - name: flexvol-driver-host
+            mountPath: /host/driver
+      containers:
+        - name: calico-node
+          env:
+            # Enable Calico Enterprise Flow Log generation
+            - name: FELIX_FLOWLOGSFILEENABLED
+              value: "true"
+            # Include endpoint labels in Calico Enterprise Flow Log
+            - name: FELIX_FLOWLOGSFILEINCLUDELABELS
+              value: "true"
+            # Include policies in Calico Enterprise Flow Log
+            - name: FELIX_FLOWLOGSFILEINCLUDEPOLICIES
+              value: "true"
+            # Include services in Calico Enterprise Flow Log
+            - name: FELIX_FLOWLOGSFILEINCLUDESERVICE
+              value: "true"
+            # Enable processing network sets in EE Flow Logs
+            - name: FELIX_FLOWLOGSENABLENETWORKSETS
+              value: "true"
+            - name: FELIX_POLICYSYNCPATHPREFIX
+              value: "/var/run/nodeagent"
+          volumeMounts:
+            - mountPath: /var/log/calico
+              name: var-log-calico
+              readOnly: false
+            - name: policysync
+              mountPath: /var/run/nodeagent
+      volumes:
+        # Used for calico logs
+        - name: var-log-calico
+          hostPath:
+            type: DirectoryOrCreate
+            path: /var/log/calico
+        - name: policysync
+          hostPath:
+            type: DirectoryOrCreate
+            path: /var/run/nodeagent
+        # Used to install Flex Volume Driver
+        - name: flexvol-driver-host
+          hostPath:
+            type: DirectoryOrCreate
+            path: /usr/libexec/kubernetes/kubelet-plugins/volume/exec/nodeagent~uds
