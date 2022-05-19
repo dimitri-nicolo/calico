@@ -46,7 +46,10 @@ BUILD_DIR?=build
 TOP_SRC_DIRS=pkg
 TEST_DIRS     ?= $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*_test.go \
                    -exec dirname {} \\; | sort | uniq")
-SRC_FILES:= $(shell find prometheus-service -type f -name '*.go' -print)
+SRC_FILES:= $(shell find prometheus-service -type f -name '*.go') \
+		$(shell find ../api/pkg -name '*.go') \
+		$(shell find ../libcalico-go/lib -name '*.go') \
+		$(shell find ../lma/pkg -name '*.go')
 
 
 build: prometheus-service
@@ -82,9 +85,7 @@ image: $(PROMETHEUS_SERVICE_IMAGE)
 $(PROMETHEUS_SERVICE_IMAGE): $(PROMETHEUS_SERVICE_IMAGE)-$(ARCH)
 $(PROMETHEUS_SERVICE_IMAGE)-$(ARCH): bin/prometheus-service-$(ARCH)
 	docker build --pull -t $(PROMETHEUS_SERVICE_IMAGE):latest-$(ARCH) -f ./Dockerfile.$(ARCH) .
-ifeq ($(ARCH),amd64)
 	docker tag $(PROMETHEUS_SERVICE_IMAGE):latest-$(ARCH) $(PROMETHEUS_SERVICE_IMAGE):latest
-endif
 
 .PHONY: clean
 clean:
@@ -116,14 +117,12 @@ fv: image report-dir run-prometheus-service-proxy fv/fv.test
 fv/fv.test: $(shell find ./fv -type f -name '*.go' -print)
 # We pre-build the test binary so that we can run it outside a container and allow it
 # to interact with docker.
-	$(DOCKER_RUN) \
-		$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./fv -c --tags fvtests -o fv/fv.test'
+	$(DOCKER_RUN)	$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./fv -c --tags fvtests -o fv/fv.test'
 	
 run-prometheus-service-proxy:
 	docker rm -f ${PROMETHEUS_SERVICE_TEST_CONTAINER_NAME} || true
 	${DOCKER_RUN} \
 	--detach \
-	-v ${PACKAGE_ROOT}/test:/test:ro \
 	-v ${PACKAGE_ROOT}/fv/tls.crt:/tls/tls.crt:ro \
 	-v ${PACKAGE_ROOT}/fv/tls.key:/tls/tls.key:ro \
 	-e LISTEN_ADDR="localhost:8090" \
@@ -131,9 +130,10 @@ run-prometheus-service-proxy:
 	-e AUTHENTICATION_ENABLED=false \
 	--name ${PROMETHEUS_SERVICE_TEST_CONTAINER_NAME} \
 	${PROMETHEUS_SERVICE_IMAGE}:latest
-
-
-
+	until $$(curl --insecure https://localhost:8090 2> /dev/null); do \
+		echo "Waiting for Prometheus Service to come up..."; \
+		sleep 3; \
+	done
 
 ###############################################################################
 # Static checks
