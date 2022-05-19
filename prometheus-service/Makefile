@@ -1,43 +1,12 @@
-PACKAGE_NAME ?= github.com/tigera/prometheus-service
-GO_BUILD_VER ?= v0.65
-GIT_USE_SSH = true
-ORGANIZATION = tigera
-SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_PROMETHEUS_SERVICE_PROJECT_ID)
+include ../metadata.mk
 
-PROMETHEUS_SERVICE_IMAGE ?=tigera/prometheus-service
-BUILD_IMAGES             ?=$(PROMETHEUS_SERVICE_IMAGE)
-DEV_REGISTRIES           ?=gcr.io/unique-caldron-775/cnx
-RELEASE_REGISTRIES       ?= quay.io
-RELEASE_BRANCH_PREFIX    ?= release-calient
-DEV_TAG_SUFFIX           ?= calient-0.dev
-
-EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
+PACKAGE_NAME ?= github.com/projectcalico/calico/prometheus-service
 
 ##############################################################################
-# Download and include Makefile.common before anything else
-#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
-#   that variable is evaluated when we declare DOCKER_RUN and siblings.
+# Constants
 ##############################################################################
-MAKE_BRANCH?=$(GO_BUILD_VER)
-MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
-
-Makefile.common: Makefile.common.$(MAKE_BRANCH)
-	cp "$<" "$@"
-Makefile.common.$(MAKE_BRANCH):
-# Clean up any files downloaded from other branches so they don't accumulate.
-	rm -f Makefile.common.*
-	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
-
-include Makefile.common
-
-build: prometheus-service
-
-BINDIR?=bin
-BUILD_DIR?=build
-TOP_SRC_DIRS=pkg
-TEST_DIRS     ?= $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*_test.go \
-                   -exec dirname {} \\; | sort | uniq")
-GO_FILES= $(shell sh -c "find pkg cmd -name \\*.go")
+PROMETHEUS_SERVICE_IMAGE  ?=prometheus-service
+BUILD_IMAGES          		?=$(PROMETHEUS_SERVICE_IMAGE)
 
 PROMETHEUS_SERVICE_VERSION?=$(shell git describe --tags --dirty --always --abbrev=12)
 PROMETHEUS_SERVICE_BUILD_DATE?=$(shell date -u +'%FT%T%z')
@@ -52,19 +21,42 @@ VERSION_FLAGS=-X $(PACKAGE_NAME)/pkg/handler.VERSION=$(PROMETHEUS_SERVICE_VERSIO
 BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 
+# Create an extended go-build image with docker binary installed for use with st target
+TOOLING_IMAGE?=calico/go-build-with-docker
+TOOLING_IMAGE_VERSION?=v0.24
+TOOLING_IMAGE_CREATED=.go-build-with-docker.created
+
+EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
+
+##############################################################################
+# Include ../lib.Makefile before anything else
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
+##############################################################################
+include ../lib.Makefile
+
 ###############################################################################
 # Build
 ###############################################################################
 # This section builds the output binaries.
 # Some will have dedicated targets to make it easier to type, for example
-# "prometheus-service" instead of "$(BINDIR)/prometheus-service".
-prometheus-service: $(BINDIR)/prometheus-service
+# "prometheus-service" instead of "bin/prometheus-service".
 
-$(BINDIR)/prometheus-service: $(BINDIR)/prometheus-service-amd64
+BUILD_DIR?=build
+TOP_SRC_DIRS=pkg
+TEST_DIRS     ?= $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*_test.go \
+                   -exec dirname {} \\; | sort | uniq")
+SRC_FILES:= $(shell find prometheus-service -type f -name '*.go' -print)
+
+
+build: prometheus-service
+prometheus-service: bin/prometheus-service
+
+bin/prometheus-service: bin/prometheus-service-amd64
 	$(DOCKER_GO_BUILD) \
-		sh -c 'cd $(BINDIR) && ln -sf prometheus-service-$(ARCH) prometheus-service'
+		sh -c 'cd bin && ln -s -T prometheus-service-$(ARCH) prometheus-service'
 
-$(BINDIR)/prometheus-service-$(ARCH): $(GO_FILES)
+bin/prometheus-service-$(ARCH): $(SRC_FILES)
 ifndef RELEASE_BUILD
 	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
 else
@@ -73,9 +65,9 @@ endif
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
 			go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/server" && \
-				( ldd $(BINDIR)/prometheus-service-$(ARCH) 2>&1 | \
+				( ldd bin/prometheus-service-$(ARCH) 2>&1 | \
 	                grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
-				( echo "Error: $(BINDIR)/prometheus-service-$(ARCH) was not statically linked"; false ) )'
+				( echo "Error: bin/prometheus-service-$(ARCH) was not statically linked"; false ) )'
 
 # Build the docker image.
 .PHONY: $(BUILD_IMAGES) $(addsuffix -$(ARCH),$(BUILD_IMAGES))
@@ -88,7 +80,7 @@ sub-image-%:
 
 image: $(PROMETHEUS_SERVICE_IMAGE)
 $(PROMETHEUS_SERVICE_IMAGE): $(PROMETHEUS_SERVICE_IMAGE)-$(ARCH)
-$(PROMETHEUS_SERVICE_IMAGE)-$(ARCH): $(BINDIR)/prometheus-service-$(ARCH)
+$(PROMETHEUS_SERVICE_IMAGE)-$(ARCH): bin/prometheus-service-$(ARCH)
 	docker build --pull -t $(PROMETHEUS_SERVICE_IMAGE):latest-$(ARCH) -f ./Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
 	docker tag $(PROMETHEUS_SERVICE_IMAGE):latest-$(ARCH) $(PROMETHEUS_SERVICE_IMAGE):latest
@@ -98,7 +90,7 @@ endif
 clean:
 	docker rmi -f $(PROMETHEUS_SERVICE_IMAGE):latest > /dev/null 2>&1
 	docker rmi -f $(PROMETHEUS_SERVICE_IMAGE):latest-$(ARCH) > /dev/null 2>&1
-	rm -rf $(BINDIR) .go-pkg-cache Makefile.common*
+	rm -rf bin .go-pkg-cache Makefile.common*
 
 ##########################################################################
 # Testing
@@ -139,8 +131,7 @@ LINT_ARGS += --exclude SA1019
 ###############################################################################
 # CI/CD
 ###############################################################################
-.PHONY: ci cd
-
+.PHONY: ci
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ci: clean image-all static-checks ut fv
@@ -163,7 +154,14 @@ update-calico-pin:
 	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(PIN_BRANCH))
 	$(call update_replace_submodule_pin,github.com/tigera/api,github.com/tigera/calico-private/api,$(PIN_BRANCH))
 
-update-pins: guard-ssh-forwarding-bug update-calico-pin
+LMA_BRANCH?=$(PIN_BRANCH)
+LMA_REPO?=github.com/tigera/lma
+
+update-lma-pin:
+	$(call update_pin,$(LMA_REPO),$(LMA_REPO),$(LMA_BRANCH))
+
+update-pins: guard-ssh-forwarding-bug update-calico-pin update-lma-pin
+
 ###############################################################################
 # Utils
 ###############################################################################

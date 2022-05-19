@@ -2,7 +2,7 @@
 # Copyright (c) 2021 Tigera, Inc. All rights reserved.
 set -xe
 
-FV_PROMETHEUS_SERVICE_TEST_IMAGE=${FV_PROMETHEUS_SERVICE_TEST_IMAGE:-"tigera/prometheus-service:latest"}
+FV_PROMETHEUS_SERVICE_TEST_IMAGE=${FV_PROMETHEUS_SERVICE_TEST_IMAGE:-"prometheus-service:latest"}
 TEST_CONTAINER_NAME="fv-prometheus-proxy-test"
 PACKAGE_ROOT=${PACKAGE_ROOT:-$(pwd)/..}
 GO_BUILD_IMAGE=${GO_BUILD_IMAGE:-"calico/go-build:v0.53"}

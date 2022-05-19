@@ -1,3 +1,6 @@
 # Prometheus Service
 
-L7 API Service for communication directed at a Prometheus instance.
+Sidecar for Prometheus serving as a proxy that extends apriori functionalities before requests are received by Prometheus. 
+
+Currently supports:
+- RBAC check
