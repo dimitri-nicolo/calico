@@ -82,30 +82,22 @@ clean:
 ##########################################################################
 # Testing
 ##########################################################################
-report-dir:
-	mkdir -p report
-
 .PHONY: ut
-ut: report-dir
+ut:
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) go test $(UNIT_TEST_FLAGS) \
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
 .PHONY: fv
-fv: image report-dir run-k8s-apiserver
-	$(MAKE) fv-no-setup
+fv: image run-k8s-apiserver run-elastic
+	APISERVER_NAME=$(APISERVER_NAME) \
+	PACKAGE_NAME=${PACKAGE_NAME} \
+		test/setup_k8s_auth.sh
 
-## Developer friendly target to only run fvs and skip other
-## setup steps.
-.PHONY: fv-no-setup
-fv-no-setup:
-	PACKAGE_ROOT=$(CURDIR) \
-		       GO_BUILD_IMAGE=$(CALICO_BUILD) \
-		       PACKAGE_NAME=$(PACKAGE_NAME) \
-		       GINKGO_ARGS='$(GINKGO_ARGS)' \
-		       FV_ELASTICSEARCH_IMAGE=$(ELASTICSEARCH_IMAGE) \
-		       GOMOD_CACHE=$(GOMOD_CACHE) \
-		       ./test/run_test.sh
+	PACKAGE_NAME=${PACKAGE_NAME} \
+		test/setup_elasticsearch_index.sh
+
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo -r test/'
 
 ###############################################################################
 # Static checks

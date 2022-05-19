@@ -1,5 +1,5 @@
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: tigera-elasticsearch-access-for-tokenuserall
 subjects:
@@ -13,7 +13,7 @@ roleRef:
 ---
 
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: tigera-elasticsearch-access-for-tokenflowonly
 subjects:
@@ -27,7 +27,7 @@ roleRef:
 ---
 
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: tigera-elasticsearch-access-for-tokenauditonly
 subjects:
@@ -41,7 +41,7 @@ roleRef:
 ---
 
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: tigera-elasticsearch-access-for-tokenauditkubeonly
 subjects:
@@ -56,7 +56,7 @@ roleRef:
 ---
 
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: tigera-access-path-to-something-for-tokenusernru
 subjects:

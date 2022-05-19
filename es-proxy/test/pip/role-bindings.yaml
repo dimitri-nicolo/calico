@@ -1,7 +1,7 @@
 
 # basicpolicyreadonly read and delete to default tier and default namespace.
 kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: basicpolicyreadonly-default-tier-policy-creator
   namespace: default
@@ -18,7 +18,7 @@ roleRef:
 
 # basicpolcrud full access to default tier and default namespace.
 kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: basicpolcrud-default-namespace-and-tier-policy-cruder
   namespace: default
@@ -35,7 +35,7 @@ roleRef:
 
 # basicpolicyreadcreate read and create access to default tier and default namespace.
 kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: basicpolicyreadcreate-default-tier-policy-creator
   namespace: default
@@ -52,7 +52,7 @@ roleRef:
 
 # basicpolicyreadupdate read and update to default tier and default namespace.
 kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: basicpolicyreadupdate-default-tier-policy-creator
   namespace: default
@@ -69,7 +69,7 @@ roleRef:
 
 # basicpolicyreaddelete read and delete to default tier and default namespace.
 kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: basicpolicyreaddelete-default-tier-policy-creator
   namespace: default
@@ -86,7 +86,7 @@ roleRef:
 
 # allow flow log access for policy impact test users
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: tigera-elasticsearch-access-for-basicpolicyusers
 subjects:
@@ -113,7 +113,7 @@ roleRef:
 ---
 
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: basicpolcrud-global-policy-create
 subjects:
@@ -129,7 +129,7 @@ roleRef:
 ---
 
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: basicpolcrud-global-policy-crud
 subjects:
@@ -144,7 +144,7 @@ roleRef:
 ---
 
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: basicpolcrud-global-policy-update
 subjects:
@@ -160,7 +160,7 @@ roleRef:
 ---
 
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: basicpolcrud-global-policy-delete
 subjects:
@@ -175,7 +175,7 @@ roleRef:
 ---
 
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: ee-calico-tiered-policy-passthru
 subjects:

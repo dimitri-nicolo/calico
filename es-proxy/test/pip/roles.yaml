@@ -11,7 +11,7 @@ rules:
 ---
 
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: default-tier-policy-cruder
 rules:
@@ -34,7 +34,7 @@ rules:
 ---
 
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: all-tier-policy-reader
 rules:
@@ -55,7 +55,7 @@ rules:
 ---
 
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: default-tier-policy-reader
 rules:
@@ -80,7 +80,7 @@ rules:
 ---
 
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: default-tier-policy-creator
 rules:
@@ -105,7 +105,7 @@ rules:
 ---
 
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: default-tier-policy-updater
 rules:
@@ -130,7 +130,7 @@ rules:
 ---
 
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: default-tier-policy-deleter
 rules:
@@ -155,7 +155,7 @@ rules:
 
 
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: global-policy-crud
 rules:
@@ -173,7 +173,7 @@ rules:
 ---
 
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: global-policy-creator
 rules:
@@ -191,7 +191,7 @@ rules:
 ---
 
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: global-policy-updater
 rules:
@@ -208,7 +208,7 @@ rules:
 ---
 
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: global-policy-deleter
 rules:
@@ -227,7 +227,7 @@ rules:
 # This role accepts all calico NP and GNP resource requests - deferring decision to the AAPIS using the
 # tier.networkpolicies and tier.globalnetworkpolicies roles/bindings.
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: ee-calico-tiered-policy-passthru
 rules:
