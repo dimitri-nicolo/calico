@@ -88,8 +88,7 @@ report-dir:
 .PHONY: ut
 ut: report-dir
 	$(DOCKER_GO_BUILD) \
-		sh -c 'git config --global url.ssh://git@github.com.insteadOf https://github.com && \
-			go test $(UNIT_TEST_FLAGS) \
+		sh -c '$(GIT_CONFIG_SSH) go test $(UNIT_TEST_FLAGS) \
 			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
 .PHONY: fv

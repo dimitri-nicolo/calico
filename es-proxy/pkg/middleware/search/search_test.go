@@ -931,7 +931,7 @@ var _ = Describe("SearchElasticHits", func() {
 
 				// Elastic _search request
 				Expect(req.Method).To(Equal(http.MethodPost))
-				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_events.cluster*/_search"))
+				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_events.cluster./_search"))
 
 				body, err := ioutil.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
@@ -1029,7 +1029,7 @@ var _ = Describe("SearchElasticHits", func() {
 
 				// Elastic _search request
 				Expect(req.Method).To(Equal(http.MethodPost))
-				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_events.cluster*/_search"))
+				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_events.cluster./_search"))
 
 				body, err := ioutil.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
@@ -1121,7 +1121,7 @@ var _ = Describe("SearchElasticHits", func() {
 
 				// Elastic _search request
 				Expect(req.Method).To(Equal(http.MethodPost))
-				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_events.cluster*/_search"))
+				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_events.cluster./_search"))
 
 				body, err := ioutil.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
