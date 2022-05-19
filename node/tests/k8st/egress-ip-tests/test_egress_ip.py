@@ -635,7 +635,7 @@ EOF
     def test_reuse_valid_table_on_restart(self):
         with DiagsCollector():
             _log.info("--- Restarting calico/node with routeTableRage 1,200 ---")
-            oldEnv = {"FELIX_ROUTETABLERANGES": "1-250"}
+            oldEnv = {"FELIX_ROUTETABLERANGES": "201-250"}
             newEnv = {"FELIX_ROUTETABLERANGES": "1-200"}
             self.update_ds_env("calico-node", "kube-system", newEnv)
 
@@ -690,56 +690,52 @@ EOF
                     run("docker exec %s ip route add table %s default nexthop via %s dev egress.calico onlink" % (node, new_table, hop1))
                 else:
                     run("docker exec %s ip route add table %s default nexthop via %s dev egress.calico onlink nexthop via %s dev egress.calico onlink" % (node, new_table, hop1, hop2))
-                # Delete current ip rule for c3, so that felix would not pick it up again after restarting.
+                # Delete current ip rule, so that felix would not pick it up again after restarting.
                 run("docker exec %s ip rule del from %s fwmark 0x80000/0x80000 lookup %s" % (node, src, current_table))
 
 
             # Create ip rule for c3 and table outside of 1-200 so that it would not be managed by felix.
+            # The new range will be 201-250, but start creating table at 211 to allow for some tables to be used by other
+            # features. Egress Gateway won't get the very bottom of the table range specified.
             # The new table has valid hops.
-            customise_ip_rule_and_table(node, c3.ip, table3, "203", gw2.ip, gw3.ip)
+            customise_ip_rule_and_table(node, c3.ip, table3, "213", gw2.ip, gw3.ip)
             # Create ip rule for c2 and table outside of 1-200 so that it would not be managed by felix.
             # The new table has invalid number of hops.
-            customise_ip_rule_and_table(node, c2.ip, table2, "202", gw1.ip, "")
+            customise_ip_rule_and_table(node, c2.ip, table2, "212", gw1.ip, "")
             # Create ip rule for c1 and table outside of 1-200 so that it would not be managed by felix.
             # The new table has invalid ip for one of its' hops.
-            customise_ip_rule_and_table(node, c1.ip, table1, "201", gw2.ip, "10.10.0.0")
+            customise_ip_rule_and_table(node, c1.ip, table1, "211", gw2.ip, "10.10.0.0")
 
             run("docker exec %s ip rule" % node)
-            run("docker exec %s ip route show table %s" % (node, "203"))
-            run("docker exec %s ip route show table %s" % (node, "202"))
-            run("docker exec %s ip route show table %s" % (node, "201"))
+            run("docker exec %s ip route show table %s" % (node, "213"))
+            run("docker exec %s ip route show table %s" % (node, "212"))
+            run("docker exec %s ip route show table %s" % (node, "211"))
 
-            _log.info("--- Restarting calico/node with routeTableRage 1-250 ---")
+            _log.info("--- Restarting calico/node with routeTableRage 201-250 ---")
             self.update_ds_env("calico-node", "kube-system", oldEnv)
 
             retry_until_success(self.has_ip_rule, retries=3, wait_time=3, function_kwargs={"nodename": c3.nodename, "ip": c3.ip})
 
             run("docker exec %s ip rule" % node)
 
-            node_rules_and_tables = self.read_client_hops_for_node(node)
+            node_rules_and_tables = self.read_client_hops_for_node(node, range(201, 251))
             assert len(node_rules_and_tables) == 3
             # Verify we have 3 different tables.
             # Two tables have latest indexes and table3 is 203.
             table1 = node_rules_and_tables[c1.ip]["table"]
             table2 = node_rules_and_tables[c2.ip]["table"]
             table3 = node_rules_and_tables[c3.ip]["table"]
-            assert (int(table3) == 203) 
-            assert {table1, table2} == {"250", "249"}
+            assert {table1, table2, table3} == {"250", "249", "213"}
 
             hops1 = sorted(node_rules_and_tables[c1.ip]["hops"])
             hops2 = sorted(node_rules_and_tables[c2.ip]["hops"])
             hops3 = sorted(node_rules_and_tables[c3.ip]["hops"])
-            # skip test: Verify each table has different hops.
-            # assert (hops1 != hops2) and (hops2 != hops3) and (hops1 != hops3)
-            # We have an issue that if workload c3 reusing a table, it could have same hops with c2 or c1 processed ealier than 
-            # c3, since at the time of creating tables for c2 or c1, processWorkloadUpdates is not aware table for c3 exists.
-            # The shuffling function only takes c1, c2 into account.
-            assert (hops1 != hops2)
+            assert (hops1 != hops2) and (hops2 != hops3) and (hops1 != hops3)
 
             # Cleanup manually added tables. ip rules should have been cleaned up already by felix.
-            run("docker exec %s ip route flush table %s" % (node, "203"))
-            run("docker exec %s ip route flush table %s" % (node, "202"))
-            run("docker exec %s ip route flush table %s" % (node, "201"))
+            run("docker exec %s ip route flush table %s" % (node, "213"))
+            run("docker exec %s ip route flush table %s" % (node, "212"))
+            run("docker exec %s ip route flush table %s" % (node, "211"))
 
     def has_ip_rule(self, nodename, ip):
         # Validate egress ip rule exists for a client pod ip on a node.
@@ -759,7 +755,7 @@ EOF
             stop_for_debug()
             raise Exception("rule and table not found for client with ip %s and hops %s" % (client_ip, gateway_ips))
 
-    def read_client_hops_for_node(self, nodename):
+    def read_client_hops_for_node(self, nodename, table_range=None):
         # Read client hops for a node
         rule_dict = {}
         output = run("docker exec -t %s ip rule" % nodename)
@@ -769,6 +765,11 @@ EOF
                 _log.info("read_client_hops_for_node: %s", l)
                 src = re.search(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', l).group()
                 table = re.search(r'(\d+)\D*$', l).group(1)
+                # In the test_reuse_valid_table_on_restart testcase, there will be multiple routing tables per
+                # workload. In that case, we only care about tables in the currently configured Felix table range.
+                if (not (table_range is None)) and (not (int(table) in set(table_range))):
+                    _log.info("read_client_hops_for_node: ignoring table %s, not in range %s", table, table_range)
+                    continue
                 table_output = run("docker exec -t %s ip route show table %s" % (nodename, table))
                 _log.info("read_client_hops_for_node: src %s to table %s [%s]", src, table, table_output)
 
