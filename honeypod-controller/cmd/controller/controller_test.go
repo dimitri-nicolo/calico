@@ -3,9 +3,12 @@ package main_test
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
+	"path/filepath"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -20,12 +23,21 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
+var (
+	//go:embed testdata/snort/tigera-internal-1.alert
+	snortAlertTigeraInternal1 string
+	//go:embed testdata/snort/tigera-internal-3-6b97f5d974.alert
+	snortAlertTigeraInternal3 string
+)
+
 var _ = Describe("Test Honeypod Controller Processor Test", func() {
 	var (
 		c   elastic.Client
 		cfg *elastic.Config
 		ctx context.Context
 		p   *hp.HoneyPodLogProcessor
+
+		tmpSnortPath string
 	)
 
 	BeforeEach(func() {
@@ -51,6 +63,20 @@ var _ = Describe("Test Honeypod Controller Processor Test", func() {
 		// Create HoneyPodLogProcessor
 		p = hp.NewHoneyPodLogProcessor(c, ctx)
 		Expect(p).NotTo(BeNil())
+
+		// create snort alert files
+		tmpSnortPath, err = os.MkdirTemp("", "honeypod-controller-test-*")
+		Expect(err).NotTo(HaveOccurred())
+		tigeraInternal1Path := filepath.Join(tmpSnortPath, "tigera-internal-1-*")
+		tigeraInternal3Path := filepath.Join(tmpSnortPath, "tigera-internal-3-6b97f5d974-*")
+		Expect(os.Mkdir(tigeraInternal1Path, 0755)).NotTo(HaveOccurred())
+		Expect(os.Mkdir(tigeraInternal3Path, 0755)).NotTo(HaveOccurred())
+		Expect(os.WriteFile(filepath.Join(tigeraInternal1Path, "alert"), []byte(snortAlertTigeraInternal1), 0644)).NotTo(HaveOccurred())
+		Expect(os.WriteFile(filepath.Join(tigeraInternal3Path, "alert"), []byte(snortAlertTigeraInternal3), 0644)).NotTo(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		Expect(os.RemoveAll(tmpSnortPath)).NotTo(HaveOccurred())
 	})
 
 	It("Should be able to create 1 Honeypod event to Elastisearch", func() {
@@ -128,17 +154,17 @@ var _ = Describe("Test Honeypod Controller Processor Test", func() {
 		}
 		Expect(eventsData.Origin).To(Equal("honeypod-controller.snort"))
 		// We modify the path to pcap due to being a test
-		path := "../../test/pcap"
+		path := "testdata/pcap"
 		// Once we can see that the entry was created, we try to retrieve the pcap location
 		matches, err := controller.GetPcaps(eventsData, path)
 		if err != nil {
 			fmt.Println("Failed to get pcaps")
 		}
-		Expect(matches[0]).To(Equal("../../test/pcap/tigera-internal/capture-honey/tigera-internal-3-6b97f5d974-vd6c2_calid322b8d6606.pcap"))
+		Expect(matches[0]).To(Equal("testdata/pcap/tigera-internal/capture-honey/tigera-internal-3-6b97f5d974-vd6c2_calid322b8d6606.pcap"))
 	})
 
 	It("should be able to simulate a snort scan and find scan result", func() {
-		// Values are translated from test/honeypod_alert_good
+		// Values are translated from testdata/honeypod_alert_good
 		t, err := time.Parse(time.RFC3339, "2020-09-25T20:16:37.312Z")
 		Expect(err).NotTo(HaveOccurred())
 		hostKeyword := "garwood-bz-n990-kadm-infra-0"
@@ -157,10 +183,9 @@ var _ = Describe("Test Honeypod Controller Processor Test", func() {
 			},
 		}
 		// We modify the path to snort alert due to being a test
-		snortPath := "../../test/snort"
 		// We pass our pre-create alerts to be processed
 		var store = snort.NewStore(t)
-		err = snort.ProcessSnort(alert, p, snortPath, store)
+		err = snort.ProcessSnort(alert, p, tmpSnortPath, store)
 		Expect(err).NotTo(HaveOccurred())
 		end := time.Now()
 		start := end.Add(-10 * time.Minute)
