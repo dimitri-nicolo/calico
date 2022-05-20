@@ -9,17 +9,11 @@ PROMETHEUS_SERVICE_IMAGE  ?=prometheus-service
 BUILD_IMAGES          		?=$(PROMETHEUS_SERVICE_IMAGE)
 
 PROMETHEUS_SERVICE_VERSION?=$(shell git describe --tags --dirty --always --abbrev=12)
-PROMETHEUS_SERVICE_BUILD_DATE?=$(shell date -u +'%FT%T%z')
-PROMETHEUS_SERVICE_GIT_COMMIT?=$(shell git rev-parse --short HEAD)
-PROMETHEUS_SERVICE_GIT_TAG?=$(shell git describe --tags)
 
-VERSION_FLAGS=-X $(PACKAGE_NAME)/pkg/handler.VERSION=$(PROMETHEUS_SERVICE_VERSION) \
-	-X $(PACKAGE_NAME)/pkg/handler.BUILD_DATE=$(PROMETHEUS_SERVICE_BUILD_DATE) \
-	-X $(PACKAGE_NAME)/pkg/handler.GIT_TAG=$(PROMETHEUS_SERVICE_GIT_TAG) \
-	-X $(PACKAGE_NAME)/pkg/handler.GIT_COMMIT=$(PROMETHEUS_SERVICE_GIT_COMMIT) \
-	-X main.VERSION=$(PROMETHEUS_SERVICE_VERSION)
-BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
-RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
+VERSION_FLAGS   = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
+                  -X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
+                  -X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
+                  -X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT)
 
 # Create an extended go-build image with docker binary installed for use with st target
 TOOLING_IMAGE?=calico/go-build-with-docker
@@ -60,17 +54,9 @@ bin/prometheus-service: bin/prometheus-service-amd64
 		sh -c 'cd bin && ln -s -T prometheus-service-$(ARCH) prometheus-service'
 
 bin/prometheus-service-$(ARCH): $(SRC_FILES)
-ifndef RELEASE_BUILD
-	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
-else
-	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
-endif
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/server" && \
-				( ldd bin/prometheus-service-$(ARCH) 2>&1 | \
-	                grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
-				( echo "Error: bin/prometheus-service-$(ARCH) was not statically linked"; false ) )'
+			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" "$(PACKAGE_NAME)/cmd/server"
 
 # Build the docker image.
 .PHONY: $(BUILD_IMAGES) $(addsuffix -$(ARCH),$(BUILD_IMAGES))
@@ -84,14 +70,13 @@ sub-image-%:
 image: $(PROMETHEUS_SERVICE_IMAGE)
 $(PROMETHEUS_SERVICE_IMAGE): $(PROMETHEUS_SERVICE_IMAGE)-$(ARCH)
 $(PROMETHEUS_SERVICE_IMAGE)-$(ARCH): bin/prometheus-service-$(ARCH)
-	docker build --pull -t $(PROMETHEUS_SERVICE_IMAGE):latest-$(ARCH) -f ./Dockerfile.$(ARCH) .
-	docker tag $(PROMETHEUS_SERVICE_IMAGE):latest-$(ARCH) $(PROMETHEUS_SERVICE_IMAGE):latest
+	$(DOCKER_BUILD) --pull -t $(PROMETHEUS_SERVICE_IMAGE):latest-$(ARCH) -f ./Dockerfile.$(ARCH) .
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 
 .PHONY: clean
 clean:
-	docker rmi -f $(PROMETHEUS_SERVICE_IMAGE):latest > /dev/null 2>&1
-	docker rmi -f $(PROMETHEUS_SERVICE_IMAGE):latest-$(ARCH) > /dev/null 2>&1
-	rm -rf bin .go-pkg-cache Makefile.common*
+	-docker rm -f $(PROMETHEUS_SERVICE_IMAGE):latest
+	-docker rm -f $(PROMETHEUS_SERVICE_IMAGE):latest-$(ARCH)
 
 ##########################################################################
 # Testing
@@ -105,9 +90,8 @@ report-dir:
 .PHONY: ut
 ut: report-dir
 	$(DOCKER_GO_BUILD) \
-		sh -c 'git config --global url.ssh://git@github.com.insteadOf https://github.com && \
-			go test $(UNIT_TEST_FLAGS) \
-			$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
+		sh -c '$(GIT_CONFIG_SSH) \
+			go test $(UNIT_TEST_FLAGS) \$(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 
 .PHONY: fv
 fv: image report-dir run-prometheus-service-proxy fv/fv.test
@@ -129,7 +113,7 @@ run-prometheus-service-proxy:
 	-e LOG_LEVEL=debug \
 	-e AUTHENTICATION_ENABLED=false \
 	--name ${PROMETHEUS_SERVICE_TEST_CONTAINER_NAME} \
-	${PROMETHEUS_SERVICE_IMAGE}:latest
+	tigera/${PROMETHEUS_SERVICE_IMAGE}:latest
 	until $$(curl --insecure https://localhost:8090 2> /dev/null); do \
 		echo "Waiting for Prometheus Service to come up..."; \
 		sleep 3; \
@@ -153,13 +137,3 @@ ci: clean image-all static-checks ut fv
 
 ## Deploys images to registry
 cd: image-all cd-common
-
-
-###############################################################################
-# Utils
-###############################################################################
-# this is not a linked target, available for convenience.
-.PHONY: tidy
-## 'tidy' go modules.
-tidy:
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go mod tidy'

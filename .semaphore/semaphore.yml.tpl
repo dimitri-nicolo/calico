@@ -738,7 +738,7 @@ blocks:
 
 - name: 'prometheus-service'
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/prometheus-service/', '/libcalico-go/', '/lma/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "${FORCE_RUN} or change_in(['/*', '/prometheus-service/', 'libcalico-go/lib/logutils/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
   task:
     secrets:
