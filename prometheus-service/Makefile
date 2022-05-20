@@ -55,7 +55,7 @@ bin/prometheus-service: bin/prometheus-service-amd64
 bin/prometheus-service-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" "$(PACKAGE_NAME)/cmd/server"
+			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" "$(PACKAGE_NAME)/cmd/server"'
 
 # Build the docker image.
 .PHONY: $(BUILD_IMAGES) $(addsuffix -$(ARCH),$(BUILD_IMAGES))
