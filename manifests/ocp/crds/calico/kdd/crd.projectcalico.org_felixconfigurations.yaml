@@ -1,0 +1,543 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: felixconfigurations.crd.projectcalico.org
+spec:
+  group: crd.projectcalico.org
+  names:
+    kind: FelixConfiguration
+    listKind: FelixConfigurationList
+    plural: felixconfigurations
+    singular: felixconfiguration
+  scope: Cluster
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              allowIPIPPacketsFromWorkloads:
+                type: boolean
+              allowVXLANPacketsFromWorkloads:
+                type: boolean
+              awsRequestTimeout:
+                type: string
+              awsSecondaryIPRoutingRulePriority:
+                type: integer
+              awsSecondaryIPSupport:
+                type: string
+              awsSrcDstCheck:
+                enum:
+                - DoNothing
+                - Enable
+                - Disable
+                type: string
+              bpfConnectTimeLoadBalancingEnabled:
+                type: boolean
+              bpfDataIfacePattern:
+                type: string
+              bpfDisableUnprivileged:
+                type: boolean
+              bpfEnabled:
+                type: boolean
+              bpfEnforceRPF:
+                type: string
+              bpfExtToServiceConnmark:
+                type: integer
+              bpfExternalServiceMode:
+                type: string
+              bpfKubeProxyEndpointSlicesEnabled:
+                type: boolean
+              bpfKubeProxyIptablesCleanupEnabled:
+                type: boolean
+              bpfKubeProxyMinSyncPeriod:
+                type: string
+              bpfLogLevel:
+                type: string
+              bpfMapSizeConntrack:
+                type: integer
+              bpfMapSizeIPSets:
+                type: integer
+              bpfMapSizeNATAffinity:
+                type: integer
+              bpfMapSizeNATBackend:
+                type: integer
+              bpfMapSizeNATFrontend:
+                type: integer
+              bpfMapSizeRoute:
+                type: integer
+              bpfPSNATPorts:
+                anyOf:
+                - type: integer
+                - type: string
+                pattern: "^.*"
+                x-kubernetes-int-or-string: true
+              captureDir:
+                minLength: 1
+                type: string
+              captureMaxFiles:
+                minimum: 1
+                type: integer
+              captureMaxSizeBytes:
+                minimum: 1
+                type: integer
+              captureRotationSeconds:
+                minimum: 1
+                type: integer
+              chainInsertMode:
+                type: string
+              dataplaneDriver:
+                type: string
+              dataplaneWatchdogTimeout:
+                type: string
+              debugDisableLogDropping:
+                type: boolean
+              debugMemoryProfilePath:
+                type: string
+              debugSimulateCalcGraphHangAfter:
+                type: string
+              debugSimulateDataplaneHangAfter:
+                type: string
+              defaultEndpointToHostAction:
+                type: string
+              deletedMetricsRetentionSecs:
+                type: integer
+              deviceRouteProtocol:
+                type: integer
+              deviceRouteSourceAddress:
+                type: string
+              deviceRouteSourceAddressIPv6:
+                type: string
+              disableConntrackInvalidCheck:
+                type: boolean
+              dnsCacheEpoch:
+                type: integer
+              dnsCacheFile:
+                type: string
+              dnsCacheSaveInterval:
+                type: string
+              dnsExtraTTL:
+                type: string
+              dnsLogsFileAggregationKind:
+                type: integer
+              dnsLogsFileDirectory:
+                type: string
+              dnsLogsFileEnabled:
+                type: boolean
+              dnsLogsFileIncludeLabels:
+                type: boolean
+              dnsLogsFileMaxFileSizeMB:
+                type: integer
+              dnsLogsFileMaxFiles:
+                type: integer
+              dnsLogsFilePerNodeLimit:
+                type: integer
+              dnsLogsFlushInterval:
+                type: string
+              dnsLogsLatency:
+                type: boolean
+              dnsPacketsNfqueueID:
+                type: integer
+              dnsPacketsNfqueueMaxHoldDuration:
+                type: string
+              dnsPacketsNfqueueSize:
+                type: integer
+              dnsPolicyMode:
+                enum:
+                - NoDelay
+                - DelayDeniedPacket
+                - DelayDNSResponse
+                type: string
+              dnsPolicyNfqueueID:
+                type: integer
+              dnsPolicyNfqueueSize:
+                type: integer
+              dnsTrustedServers:
+                items:
+                  type: string
+                type: array
+              dropActionOverride:
+                type: string
+              egressIPRoutingRulePriority:
+                type: integer
+              egressIPSupport:
+                type: string
+              egressIPVXLANPort:
+                type: integer
+              egressIPVXLANVNI:
+                type: integer
+              endpointReportingDelay:
+                type: string
+              endpointReportingEnabled:
+                type: boolean
+              externalNodesList:
+                items:
+                  type: string
+                type: array
+              failsafeInboundHostPorts:
+                items:
+                  properties:
+                    net:
+                      type: string
+                    port:
+                      type: integer
+                    protocol:
+                      type: string
+                  required:
+                  - port
+                  - protocol
+                  type: object
+                type: array
+              failsafeOutboundHostPorts:
+                items:
+                  properties:
+                    net:
+                      type: string
+                    port:
+                      type: integer
+                    protocol:
+                      type: string
+                  required:
+                  - port
+                  - protocol
+                  type: object
+                type: array
+              featureDetectOverride:
+                type: string
+              floatingIPs:
+                default: Disabled
+                enum:
+                - Enabled
+                - Disabled
+                type: string
+              flowLogsAggregationThresholdBytes:
+                type: integer
+              flowLogsCollectProcessInfo:
+                type: boolean
+              flowLogsCollectProcessPath:
+                type: boolean
+              flowLogsCollectTcpStats:
+                type: boolean
+              flowLogsCollectorDebugTrace:
+                type: boolean
+              flowLogsDynamicAggregationEnabled:
+                type: boolean
+              flowLogsEnableHostEndpoint:
+                type: boolean
+              flowLogsEnableNetworkSets:
+                type: boolean
+              flowLogsFileAggregationKindForAllowed:
+                type: integer
+              flowLogsFileAggregationKindForDenied:
+                type: integer
+              flowLogsFileDirectory:
+                type: string
+              flowLogsFileDomainsLimit:
+                type: integer
+              flowLogsFileEnabled:
+                type: boolean
+              flowLogsFileEnabledForAllowed:
+                type: boolean
+              flowLogsFileEnabledForDenied:
+                type: boolean
+              flowLogsFileIncludeLabels:
+                type: boolean
+              flowLogsFileIncludePolicies:
+                type: boolean
+              flowLogsFileIncludeService:
+                type: boolean
+              flowLogsFileMaxFileSizeMB:
+                type: integer
+              flowLogsFileMaxFiles:
+                type: integer
+              flowLogsFileNatOutgoingPortLimit:
+                type: integer
+              flowLogsFilePerFlowProcessArgsLimit:
+                type: integer
+              flowLogsFilePerFlowProcessLimit:
+                type: integer
+              flowLogsFlushInterval:
+                type: string
+              flowLogsMaxOriginalIPsIncluded:
+                type: integer
+              flowLogsPositionFilePath:
+                type: string
+              genericXDPEnabled:
+                type: boolean
+              healthEnabled:
+                type: boolean
+              healthHost:
+                type: string
+              healthPort:
+                type: integer
+              interfaceExclude:
+                type: string
+              interfacePrefix:
+                type: string
+              interfaceRefreshInterval:
+                type: string
+              ipipEnabled:
+                type: boolean
+              ipipMTU:
+                type: integer
+              ipsecAllowUnsecuredTraffic:
+                type: boolean
+              ipsecESPAlgorithm:
+                type: string
+              ipsecIKEAlgorithm:
+                type: string
+              ipsecLogLevel:
+                type: string
+              ipsecMode:
+                type: string
+              ipsecPolicyRefreshInterval:
+                type: string
+              ipsetsRefreshInterval:
+                type: string
+              iptablesBackend:
+                type: string
+              iptablesFilterAllowAction:
+                type: string
+              iptablesLockFilePath:
+                type: string
+              iptablesLockProbeInterval:
+                type: string
+              iptablesLockTimeout:
+                type: string
+              iptablesMangleAllowAction:
+                type: string
+              iptablesMarkMask:
+                format: int32
+                type: integer
+              iptablesNATOutgoingInterfaceFilter:
+                type: string
+              iptablesPostWriteCheckInterval:
+                type: string
+              iptablesRefreshInterval:
+                type: string
+              ipv6Support:
+                type: boolean
+              kubeMasqueradeBit:
+                type: integer
+              kubeNodePortRanges:
+                items:
+                  anyOf:
+                  - type: integer
+                  - type: string
+                  pattern: "^.*"
+                  x-kubernetes-int-or-string: true
+                type: array
+              l7LogsFileAggregationDestinationInfo:
+                type: string
+              l7LogsFileAggregationHTTPHeaderInfo:
+                type: string
+              l7LogsFileAggregationHTTPMethod:
+                type: string
+              l7LogsFileAggregationNumURLPath:
+                type: integer
+              l7LogsFileAggregationResponseCode:
+                type: string
+              l7LogsFileAggregationServiceInfo:
+                type: string
+              l7LogsFileAggregationSourceInfo:
+                type: string
+              l7LogsFileAggregationTrimURL:
+                type: string
+              l7LogsFileAggregationURLCharLimit:
+                type: integer
+              l7LogsFileDirectory:
+                type: string
+              l7LogsFileEnabled:
+                type: boolean
+              l7LogsFileMaxFileSizeMB:
+                type: integer
+              l7LogsFileMaxFiles:
+                type: integer
+              l7LogsFilePerNodeLimit:
+                type: integer
+              l7LogsFlushInterval:
+                type: string
+              logDebugFilenameRegex:
+                type: string
+              logDropActionOverride:
+                type: boolean
+              logFilePath:
+                type: string
+              logPrefix:
+                type: string
+              logSeverityFile:
+                type: string
+              logSeverityScreen:
+                type: string
+              logSeveritySys:
+                type: string
+              maxIpsetSize:
+                type: integer
+              metadataAddr:
+                type: string
+              metadataPort:
+                type: integer
+              mtuIfacePattern:
+                type: string
+              natOutgoingAddress:
+                type: string
+              natPortRange:
+                anyOf:
+                - type: integer
+                - type: string
+                pattern: "^.*"
+                x-kubernetes-int-or-string: true
+              netlinkTimeout:
+                type: string
+              nfNetlinkBufSize:
+                type: string
+              openstackRegion:
+                type: string
+              policySyncPathPrefix:
+                type: string
+              prometheusGoMetricsEnabled:
+                type: boolean
+              prometheusMetricsCAFile:
+                type: string
+              prometheusMetricsCertFile:
+                type: string
+              prometheusMetricsEnabled:
+                type: boolean
+              prometheusMetricsHost:
+                type: string
+              prometheusMetricsKeyFile:
+                type: string
+              prometheusMetricsPort:
+                type: integer
+              prometheusProcessMetricsEnabled:
+                type: boolean
+              prometheusReporterCAFile:
+                type: string
+              prometheusReporterCertFile:
+                type: string
+              prometheusReporterEnabled:
+                type: boolean
+              prometheusReporterKeyFile:
+                type: string
+              prometheusReporterPort:
+                type: integer
+              prometheusWireGuardMetricsEnabled:
+                type: boolean
+              removeExternalRoutes:
+                type: boolean
+              reportingInterval:
+                type: string
+              reportingTTL:
+                type: string
+              routeRefreshInterval:
+                type: string
+              routeSource:
+                type: string
+              routeTableRange:
+                properties:
+                  max:
+                    type: integer
+                  min:
+                    type: integer
+                required:
+                - max
+                - min
+                type: object
+              routeTableRanges:
+                items:
+                  properties:
+                    max:
+                      type: integer
+                    min:
+                      type: integer
+                  required:
+                  - max
+                  - min
+                  type: object
+                type: array
+              serviceLoopPrevention:
+                type: string
+              sidecarAccelerationEnabled:
+                type: boolean
+              statsDumpFilePath:
+                type: string
+              syslogReporterAddress:
+                type: string
+              syslogReporterNetwork:
+                type: string
+              tproxyMode:
+                type: string
+              tproxyPort:
+                type: integer
+              tproxyUpstreamConnMark:
+                format: int32
+                type: integer
+              usageReportingEnabled:
+                type: boolean
+              usageReportingInitialDelay:
+                type: string
+              usageReportingInterval:
+                type: string
+              useInternalDataplaneDriver:
+                type: boolean
+              vxlanEnabled:
+                type: boolean
+              vxlanMTU:
+                type: integer
+              vxlanMTUV6:
+                type: integer
+              vxlanPort:
+                type: integer
+              vxlanVNI:
+                type: integer
+              windowsDnsCacheFile:
+                type: string
+              windowsDnsExtraTTL:
+                type: string
+              windowsFlowLogsFileDirectory:
+                type: string
+              windowsFlowLogsPositionFilePath:
+                type: string
+              windowsNetworkName:
+                type: string
+              windowsStatsDumpFilePath:
+                type: string
+              wireguardEnabled:
+                type: boolean
+              wireguardHostEncryptionEnabled:
+                type: boolean
+              wireguardInterfaceName:
+                type: string
+              wireguardKeepAlive:
+                type: string
+              wireguardListeningPort:
+                type: integer
+              wireguardMTU:
+                type: integer
+              wireguardRoutingRulePriority:
+                type: integer
+              workloadSourceSpoofing:
+                type: string
+              xdpEnabled:
+                type: boolean
+              xdpRefreshInterval:
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ''
+    plural: ''
+  conditions: []
+  storedVersions: []
+

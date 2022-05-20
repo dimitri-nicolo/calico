@@ -835,7 +835,6 @@ func (m *egressIPManager) processGatewayUpdates() error {
 // if possible, rather than creating new rules and tables.
 func (m *egressIPManager) processWorkloadUpdates() error {
 	var lastErr error
-	// Work out WEP updates.
 	// Handle pending workload endpoint updates.
 	var ids []proto.WorkloadEndpointID
 	for id := range m.pendingWorkloadUpdates {
@@ -850,10 +849,72 @@ func (m *egressIPManager) processWorkloadUpdates() error {
 		}
 		return ids[i].OrchestratorId < ids[j].OrchestratorId
 	})
+
+	existingTables := make(map[proto.WorkloadEndpointID]*egressTable)
+	var workloadsToUseExistingTable []proto.WorkloadEndpointID
+	var workloadsToUseNewTable []proto.WorkloadEndpointID
 	if m.initialKernelState != nil {
 		log.Info("Processing workloads after restart. Will attempt to reuse existing rules and tables to preserve traffic.")
+		// Look for any routing rules and tables which can be reused.
+		for _, id := range ids {
+			workload := m.pendingWorkloadUpdates[id]
+			if workload == nil || workload.EgressIpSetId == "" {
+				continue
+			}
+			gateways, exists := m.ipSetIDToGateways[workload.EgressIpSetId]
+			if !exists {
+				gateways = make(map[string]gateway)
+			}
+			activeGatewayIPs := gateways.getActiveGateways().getIPs()
+			priority := m.dpConfig.EgressIPRoutingRulePriority
+			family := syscall.AF_INET
+			mark := int(m.dpConfig.RulesConfig.IptablesMarkEgress)
+			numHops := workloadNumHops(int(workload.EgressMaxNextHops), len(activeGatewayIPs))
+			_, existingTable, exists := m.reserveFromInitialState(workload.Ipv4Nets, priority, family, mark, numHops, activeGatewayIPs)
+			if exists {
+				log.WithFields(log.Fields{
+					"workloadID": id,
+					"table":      *existingTable,
+				}).Info("Pre-processing workload - reserving table")
+				existingTables[id] = existingTable
+				workloadsToUseExistingTable = append(workloadsToUseExistingTable, id)
+			} else {
+				workloadsToUseNewTable = append(workloadsToUseNewTable, id)
+			}
+		}
+
+		// Process workloads reusing existing tables first, so that workloads needing new tables can be created in such a way
+		// as to even out the distribution of hops across workloads.
+		for _, id := range workloadsToUseExistingTable {
+			logCtx := log.WithField("workloadID", id)
+			workload := m.pendingWorkloadUpdates[id]
+
+			log.WithFields(log.Fields{
+				"workloadID":             id,
+				"workload":               workload,
+				"workload.maxNextHops":   workload.EgressMaxNextHops,
+				"workload.egressIPSetID": workload.EgressIpSetId,
+			}).Info("Processing workload create.")
+
+			existingTable, exists := existingTables[id]
+			if exists {
+				logCtx.Info("Processing workload - suitable route rules pointing to a table with active gateway hops were found.")
+				err := m.createWorkloadRuleAndTableWithIndex(id, workload, existingTable.hopIPs, existingTable.index)
+				if err != nil {
+					logCtx.WithError(err).Info("Couldn't create route table and rules for workload.")
+					lastErr = err
+					continue
+				}
+			}
+			m.activeWorkloads[id] = workload
+			delete(m.pendingWorkloadUpdates, id)
+		}
+	} else {
+		workloadsToUseNewTable = append(workloadsToUseNewTable, ids...)
 	}
-	for _, id := range ids {
+
+	// Process workloads needing new tables last, to even out the distribution of hops across workloads.
+	for _, id := range workloadsToUseNewTable {
 		logCtx := log.WithField("workloadID", id)
 		workload := m.pendingWorkloadUpdates[id]
 		oldWorkload := m.activeWorkloads[id]
@@ -913,30 +974,7 @@ func (m *egressIPManager) processWorkloadUpdates() error {
 			}
 			activeGatewayIPs := gateways.getActiveGateways().getIPs()
 
-			// Find or create a new rule and table pair for each IP address the workload pod has.
-			// If suitable route rules and route table already exist in the kernel, use them.
-			if m.initialKernelState != nil {
-				priority := m.dpConfig.EgressIPRoutingRulePriority
-				family := syscall.AF_INET
-				mark := int(m.dpConfig.RulesConfig.IptablesMarkEgress)
-				numHops := workloadNumHops(int(workload.EgressMaxNextHops), len(activeGatewayIPs))
-				_, existingTable, exists := m.reserveFromInitialState(workload.Ipv4Nets, priority, family, mark, numHops, activeGatewayIPs)
-				if exists {
-					logCtx.Info("Processing workload - suitable route rules pointing to a table with active gateway hops were found.")
-					err := m.createWorkloadRuleAndTableWithIndex(id, workload, existingTable.hopIPs, existingTable.index)
-					if err != nil {
-						logCtx.WithError(err).Info("Couldn't create route table and rules for workload.")
-						lastErr = err
-						continue
-					}
-					m.activeWorkloads[id] = workload
-					delete(m.pendingWorkloadUpdates, id)
-					continue
-				} else {
-					logCtx.Info("Processing workload - no suitable route rules pointing to a table with active gateway hops were found.")
-				}
-			}
-			// Create new route rules and a route table for this workload.
+			logCtx.Info("Processing workload - creating new route rules and table.")
 			err := m.createWorkloadRuleAndTable(id, workload, len(activeGatewayIPs))
 			if err != nil {
 				logCtx.WithError(err).Info("Couldn't create route table and rules for workload.")

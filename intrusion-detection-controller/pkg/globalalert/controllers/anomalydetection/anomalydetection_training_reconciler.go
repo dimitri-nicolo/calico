@@ -26,7 +26,7 @@ import (
 )
 
 var (
-	// due to empty TypeMEta issue: https://github.com/kubernetes/client-go/issues/308
+	// due to empty TypeMeta issue: https://github.com/kubernetes/client-go/issues/308
 	// Deployment GVK is manually declared
 	DeploymentGroupVersionKind = schema.GroupVersionKind{
 		Kind:    "Deployment",
@@ -370,7 +370,7 @@ func (r *adJobTrainingReconciler) removeTrainingCycles(mcs TrainingDetectorsRequ
 	// else update AD_ENABLED_JOBS to exclude detector with deleted GlobalAlert
 	detectorList := collectDetectorsFromGlobalAlerts(managedTrainingDetectorsForCluster.GlobalAlerts)
 
-	adTrainingJobPT, err := r.getADPodTemplateWithEnabledDecorators(detectorList, managedTrainingDetectorsForCluster.ClusterName)
+	adTrainingJobPT, err := r.getADPodTemplateWithEnabledDecorators(managedTrainingDetectorsForCluster.ClusterName, detectorList)
 	if err != nil {
 		log.WithError(err).Errorf("Unable to update training cycles for on cluster %s, unable to retrieve podtemplate for training cronjobs",
 			managedTrainingDetectorsForCluster.ClusterName)

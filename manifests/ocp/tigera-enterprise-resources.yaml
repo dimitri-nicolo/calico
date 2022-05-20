@@ -1,0 +1,55 @@
+---
+# This section configures the Tigera manager.
+apiVersion: operator.tigera.io/v1
+kind: Manager
+metadata:
+  name: tigera-secure
+spec:
+  # Authentication configuration for accessing the Tigera manager.
+  # Default is to use token-based authentication.
+  auth:
+    type: Token
+
+
+---
+# This section installs and configures Calico Enterprise compliance functionality.
+apiVersion: operator.tigera.io/v1
+kind: Compliance
+metadata:
+  name: tigera-secure
+
+
+---
+# This section installs and configures Calico Enterprise intrusion detection functionality.
+apiVersion: operator.tigera.io/v1
+kind: IntrusionDetection
+metadata:
+  name: tigera-secure
+
+
+---
+apiVersion: operator.tigera.io/v1
+kind: LogStorage
+metadata:
+  name: tigera-secure
+spec:
+  nodes:
+    count: 1
+
+
+---
+# This section installs and configures Calico Enterprise log collector functionality.
+apiVersion: operator.tigera.io/v1
+kind: LogCollector
+metadata:
+  name: tigera-secure
+
+
+---
+# This section configures Prometheus for Calico Enterprise.
+apiVersion: operator.tigera.io/v1
+kind: Monitor
+metadata:
+  name: tigera-secure
+
+

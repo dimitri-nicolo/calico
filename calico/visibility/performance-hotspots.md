@@ -27,7 +27,7 @@ This how-to guide uses the following {{site.prodname}} features:
 {{site.prodname}} anomaly detection detects anomalous behavior for patterns and 
 alerts on them. This feature allows you to proactively determine if there is an issue (or not), and potentially 
 resolve problems before service levels are compromised. Anomaly detection uses {{site.prodname}} Elasticsearch logs 
-([flows]({{site.baseurl}}/visibility/elastic/flow) logs, [L7]({{site.baseurl}}/visibility/elastic/l7) logs, and [DNS]({{site.baseurl}}/visibility/elastic/dns) logs) to learn behavior of cluster nodes, pods, services, and other 
+([flows]({{site.baseurl}}/visibility/elastic/flow) logs, [L7]({{site.baseurl}}/visibility/elastic/l7) logs, and [DNS]({{site.baseurl}}/visibility/elastic/dns) logs) to learn the behavior of cluster nodes, pods, services, and other 
 entities that send log records (applications, load balancers, databases, etc.).
 
 Root causes of cluster performance anomalies are numerous, for example:
@@ -46,7 +46,7 @@ identify performance anomalies associated with workloads in your cluster. It can
 periodically retrains the model and performs anomaly detection. Anomaly detecton performs these 
 high-level tasks:
 
-- Learns the normal behaviour and patterns of cluster nodes, pods, services, and other entities that send log records 
+- Learns the normal behavior and patterns of cluster nodes, pods, services, and other entities that send log records 
 (applications, load balancers, databases, etc.).
 - Collects data from different cluster log fields (individual or aggregated) such as connections, 
 bytes sent, latencies, and counters.
@@ -64,12 +64,12 @@ For a list of performance anomaly detectors that are enabled by default, see [An
 
 **Will alerts be unusually high until the engine learns to distinguish normal from anomalous behavior?**
 
->Yes. If you have data for a cluster running several hours, that could result in an unusually high alert rate.
+>Yes. If you have data for a cluster running for several hours, that could result in an unusually high alert rate.
 
 **If the engine detects more than one anomaly (ex. one in `flow` logs, and `DNS` logs), will I get separate alerts?**
 
 >You can see several `suspicious_records` from different logs in the same alert if those records are presented in 
-> the same time interval. Suspicious records in alert are grouped by log names.
+> the same time interval. Suspicious records in an alert are grouped by log names.
 
 **Where does anomaly detection run on multi-cluster management (mcm) deployments?**
 
@@ -83,21 +83,16 @@ For a list of performance anomaly detectors that are enabled by default, see [An
 
 ### How To
 
-- [Install anomaly detection](#install-anomaly-detection)
-- [Monitor anomalies and alerts](#monitor-anomalies-and-alerts)
-- [Disable anomaly detectors](#disable-anomaly-detectors)
+- [Enable and disable anomaly detectors](#enable-and-disable-anomaly-detectors)
+- [Monitor anomaly alerts in Manager UI](#monitor-anomaly-alerts-in-manager-ui)
 
-#### Install anomaly detection
+#### Enable and disable anomaly detectors
 
-{% include /content/anomaly-detection/install-common.md %}
+{% include /content/anomaly-detection/enable-disable-common.md %}
 
-#### Monitor anomalies and alerts
+#### Monitor anomaly alerts in Manager UI
 
 {% include /content/anomaly-detection/monitor.md %}
-
-#### Disable anomaly detectors
-
-{% include /content/anomaly-detection/disable.md %}
 
 ### Above and beyond
 

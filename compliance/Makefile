@@ -133,7 +133,7 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 .PHONY: image
-image: $(BUILD_IMAGES)
+image: $(BUILD_IMAGES) $(COMPLIANCE_SCALELOADER_IMAGE)
 
 # Build the tigera/compliance-server docker image, which contains only Compliance server.
 $(COMPLIANCE_SERVER_IMAGE): $(COMPLIANCE_SERVER_CONTAINER_CREATED)
