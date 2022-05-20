@@ -20,7 +20,6 @@ TOOLING_IMAGE?=calico/go-build-with-docker
 TOOLING_IMAGE_VERSION?=v0.24
 TOOLING_IMAGE_CREATED=.go-build-with-docker.created
 
-EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
 ##############################################################################
 # Include ../lib.Makefile before anything else
@@ -106,14 +105,15 @@ fv/fv.test: $(shell find ./fv -type f -name '*.go' -print)
 run-prometheus-service-proxy:
 	docker rm -f ${PROMETHEUS_SERVICE_TEST_CONTAINER_NAME} || true
 	${DOCKER_RUN} \
-	--detach \
-	-v ${PACKAGE_ROOT}/fv/tls.crt:/tls/tls.crt:ro \
-	-v ${PACKAGE_ROOT}/fv/tls.key:/tls/tls.key:ro \
-	-e LISTEN_ADDR="localhost:8090" \
-	-e LOG_LEVEL=debug \
-	-e AUTHENTICATION_ENABLED=false \
-	--name ${PROMETHEUS_SERVICE_TEST_CONTAINER_NAME} \
-	tigera/${PROMETHEUS_SERVICE_IMAGE}:latest
+		--detach \
+		-v ${PACKAGE_ROOT}/fv/tls.crt:/tls/tls.crt:ro \
+		-v ${PACKAGE_ROOT}/fv/tls.key:/tls/tls.key:ro \
+		-e LISTEN_ADDR="localhost:8090" \
+		-e LOG_LEVEL=debug \
+		-e AUTHENTICATION_ENABLED=false \
+		--name ${PROMETHEUS_SERVICE_TEST_CONTAINER_NAME} \
+		tigera/${PROMETHEUS_SERVICE_IMAGE}:latest
+		
 	until $$(curl --insecure https://localhost:8090 2> /dev/null); do \
 		echo "Waiting for Prometheus Service to come up..."; \
 		sleep 3; \
