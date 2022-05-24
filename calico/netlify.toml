@@ -14,6 +14,8 @@
   if [ -z "$LATEST_RELEASE" ]; then
     jekyll build --config _config.yml,$(pwd)/netlify/_config_noindex.yml --baseurl /$RELEASE_VERSION --destination _site/$RELEASE_VERSION
     mv _site/$RELEASE_VERSION/404.html _site/404.html
+    cp -r ../manifests _site/$RELEASE_VERSION
+    rm -rf _site/$RELEASE_VERSION/manifest-templates
   else
     # build that gets deployed at root /
     jekyll build --config _config.yml,$(pwd)/netlify/_config_latest.yml
@@ -23,6 +25,7 @@
     mv netlify/sitemap-index.xml _site/sitemap.xml
     mv netlify/_redirects _site/_redirects
     cp -r ../manifests _site/$RELEASE_VERSION
+    rm -rf _site/$RELEASE_VERSION/manifest-templates
   fi
   '''
 
@@ -38,6 +41,7 @@
   echo "url: $DEPLOY_PRIME_URL" > _config_url.yml
   jekyll build --config _config.yml,_config_url.yml
   cp -r ../manifests _site/$RELEASE_VERSION
+  rm -rf _site/$RELEASE_VERSION/manifest-templates
   '''
 
 [[redirects]]
