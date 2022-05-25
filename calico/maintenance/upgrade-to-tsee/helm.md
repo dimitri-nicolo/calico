@@ -43,11 +43,13 @@ Upgrading to {{site.prodname}} v3.13 and above, from Calico 3.22 and below is cu
    ```bash
    helm upgrade calico tigera-operator-v0.0.tgz \
    --set-file imagePullSecrets.tigera-pull-secret=<path/to/pull/secret>,tigera-prometheus-operator.imagePullSecrets.tigera-pull-secret=<path/to/pull/secret> \
+   --namespace tigera-operator
    ```
 {% else %}
    ```bash
    helm upgrade calico tigera-operator-{% include chart_version_name %}.tgz \
    --set-file imagePullSecrets.tigera-pull-secret=<path/to/pull/secret>,tigera-prometheus-operator.imagePullSecrets.tigera-pull-secret=<path/to/pull/secret> \
+   --namespace tigera-operator
    ```
 {% endif %}
 
@@ -77,3 +79,8 @@ Upgrading to {{site.prodname}} v3.13 and above, from Calico 3.22 and below is cu
    ```bash
    kubectl apply -f {{ "/manifests/tigera-policies.yaml" | absolute_url }}
    ```
+
+### Next steps
+
+- [Configure access to {{site.prodname}} Manager UI]({{site.baseurl}}/getting-started/cnx/access-the-manager)
+- [Authentication quickstart]({{site.baseurl}}/getting-started/cnx/authentication-quickstart)

@@ -1,4 +1,4 @@
-apiVersion: v1
+apiVersion: v2
 name: tigera-operator
 description: Installs the Tigera operator for Calico and Calico Enterprise
 home: https://docs.tigera.io/about/about-calico
