@@ -27,6 +27,7 @@ global_job_config:
       - docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
       - checkout
       - git fetch --unshallow || true
+      - cd calicoq
 
 blocks:
   - name: 'Test Publish Release Binaries'
