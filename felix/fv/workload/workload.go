@@ -60,6 +60,10 @@ type Workload struct {
 	MTU                   int
 }
 
+func (w *Workload) GetIP() string {
+	return w.IP
+}
+
 var workloadIdx = 0
 var sideServIdx = 0
 
@@ -144,7 +148,7 @@ func New(c *infrastructure.Felix, name, profile, ip, ports, protocol string, mtu
 		specifiedMTU = mtu[0]
 	}
 
-	return &Workload{
+	workload := &Workload{
 		C:                  c.Container,
 		Name:               n,
 		SpoofName:          spoofN,
@@ -156,6 +160,8 @@ func New(c *infrastructure.Felix, name, profile, ip, ports, protocol string, mtu
 		WorkloadEndpoint:   wep,
 		MTU:                specifiedMTU,
 	}
+	c.Workloads = append(c.Workloads, workload)
+	return workload
 }
 
 func (w *Workload) Start() error {
