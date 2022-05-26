@@ -136,7 +136,7 @@ func ConvertDNSLog(l DNSLog, key db.QueryKey, hit *elastic.SearchHit, domains ma
 			Origin:          feeds[0],
 			SourceIP:        l.ClientIP,
 			SourceNamespace: l.ClientNamespace,
-			SourceName:      sname,
+			SourceName:      l.ClientName,
 			SourceNameAggr:  l.ClientNameAggr,
 			Record: SuspiciousDomainEventRecord{
 				DNSLogID:          hit.Id,
