@@ -57,6 +57,7 @@ MAPPED_COMPONENTS = {
     'tigera-api': 'api',
     'deep-packet-inspection': 'calico-private',
     'windows': 'calico-private',
+    'windows-upgrade': 'calico-private',
 }
 
 SKIP_COMPONENTS = [
