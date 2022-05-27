@@ -1,7 +1,0 @@
-kind: OAuthClient
-apiVersion: v1
-metadata:
- name: cnx-manager
-redirectURIs:
- - "https://<CNX_MANAGER_ADDR>/login/oauth/callback" 
-grantMethod: prompt
