@@ -58,12 +58,12 @@ func (r *managedClusterReconciler) Reconcile(namespacedName types.NamespacedName
 		return err
 	}
 
-	if _, ok := r.alertNameToAlertControllerState[namespacedName.Name]; ok {
-		r.cancelAlertController(namespacedName.Name)
+	if _, ok := r.alertNameToAlertControllerState[getVariantSpecificClusterName(namespacedName.Name)]; ok {
+		r.cancelAlertController(getVariantSpecificClusterName(namespacedName.Name))
 	}
 
 	if k8serrors.IsNotFound(err) {
-		// we are done closing the goroutine, noting more to do for deleted managed cluster
+		// we are done closing the goroutine, nothing more to do for deleted managed cluster
 		return nil
 	}
 
