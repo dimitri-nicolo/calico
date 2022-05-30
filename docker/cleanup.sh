@@ -19,6 +19,7 @@ dbus-tools
 device-mapper
 device-mapper-libs
 dnf
+elfutils-debuginfod-client
 elfutils-default-yama-scope
 elfutils-libs
 expat
@@ -72,15 +73,12 @@ lz4-libs
 nss-3.67.0-7.el8_5.x86_64
 nss-sysinit
 openldap
-openssl-1:1.1.1k-6.el8.x86_64
 openssl-libs
-openssl-pkcs11-0.4.10-2.el8.x86_64
 p11-kit
 p11-kit-trust
 pam
 passwd
 platform-python
-platform-python-pip-9.0.3-22.el8.noarch
 platform-python-setuptools
 python3-chardet
 python3-cloud-what
