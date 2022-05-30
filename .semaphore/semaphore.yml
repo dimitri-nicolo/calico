@@ -38,6 +38,7 @@ global_job_config:
       - git submodule update
       - export KIBANA_VERSION=$(jq -r '.version' kibana/package.json)
       - export KIBANA_IMAGE_CACHE_KEY=kibana-image-${SEMAPHORE_GIT_SHA}
+      - export KIBANA_IMAGE_INTERMEDIATE_CACHE_KEY=kibana-image-intermediate-${SEMAPHORE_GIT_SHA}
 
 blocks:
   - name: 'Build Image'
@@ -49,6 +50,10 @@ blocks:
             minutes: 90
           commands:
             - make kibana-image
+            # Save the intermediate image to the cache for debugging purposes since it takes so long to rebuild.
+            - docker save -o ${KIBANA_IMAGE_TAR_PATH} ${KIBANA_IMAGE_NAME}:${KIBANA_VERSION}
+            - cache store ${KIBANA_IMAGE_INTERMEDIATE_CACHE_KEY} ${KIBANA_IMAGE_TAR_PATH}
+            - rm ${KIBANA_IMAGE_TAR_PATH}
             - make image # Test that the image builds correctly
             - docker save -o ${KIBANA_IMAGE_TAR_PATH} ${KIBANA_IMAGE_NAME}:${KIBANA_VERSION}
             - cache store ${KIBANA_IMAGE_CACHE_KEY} ${KIBANA_IMAGE_TAR_PATH}
