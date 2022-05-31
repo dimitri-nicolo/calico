@@ -3,7 +3,7 @@ set -e -o pipefail
 
 # Query fluentd monitor_agent metrics
 # curl will return non-zero error code on failure.
-output=$(curl -s "http://localhost:24220/api/plugins.json")
+output=$(curl -f -s "http://localhost:24220/api/plugins.json")
 # Get the current metrics of elasticsearch for flows, dns, l7, audit_ee, audit_kube, bgp.
 # the tigera_secure_ee output contains multiple values.
 tigera_secure_ee=$(echo "$output" | jq -r '.plugins[] | select(.config.index_name) | select(.config.index_name | startswith("tigera_secure_ee"))')
@@ -18,9 +18,11 @@ fi
 # Verify if we have enough available buffer space left
 # by default, the total buffer size is 512MB in memory or 64GB on disk
 # see: https://docs.fluentd.org/configuration/buffer-section#buffering-parameters
-buffer_avail_ratio=$(echo "$tigera_secure_ee" | jq -r '.buffer_available_buffer_space_ratios' | sort -n | head -n 1)
+# The command below uses awk as an alternative for the `head` command. Head for unknown reasons causes issues with the kubelet.
+buffer_avail_ratio=$(echo $tigera_secure_ee | jq -r ".buffer_available_buffer_space_ratios" | sort -n | awk 'FNR <= 1')
 LOWER_BOUND_PERCENTAGE=5
-if [ "$buffer_avail_ratio" -lt "$LOWER_BOUND_PERCENTAGE" ]; then
+if [ -n $buffer_avail_ratio ] && [ "$buffer_avail_ratio" -lt "$LOWER_BOUND_PERCENTAGE" ]; then
+    echo "Remaining buffer is lower than the required percentage: $buffer_avail_ratio < $LOWER_BOUND_PERCENTAGE"
     # remaining buffer is low so we shouldn't accept new requests
     exit 1
 fi
