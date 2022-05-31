@@ -13,12 +13,14 @@ import (
 )
 
 // installationManifestTemplate represents the template used to generate a manifest that will be applied on managed
-//cluster. Applying the manifest will result in the creation of the ManagementClusterConnection CR and the Secret
-//tigera-managed-cluster-connection.
+// cluster. Applying the manifest will result in the creation of the ManagementClusterConnection CR and the Secret
+// tigera-managed-cluster-connection. The secret must be created in the active
+// operator's namespace.
 //The template contains the following customizable entries:
 // - {{.CACert}}
 // - {{.Cert}}
 // - {{.PrivateKey}}
+// - {{.OperatorNamespace}}
 //By design managementClusterAddr is intended to be left unfilled (until the user downloads this manifest and fills it).
 //In the future, we will autofill this field using user-facing config
 const installationManifestTemplate = `
@@ -40,7 +42,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: tigera-managed-cluster-connection
-  namespace: tigera-operator
+  namespace: {{.OperatorNamespace}}
 type: Opaque
 data:
   # This is the certificate of the management cluster side of the tunnel.
@@ -56,6 +58,7 @@ type manifestConfig struct {
 	Cert                  string
 	PrivateKey            string
 	ManagementClusterAddr string
+	OperatorNamespace     string
 }
 
 // keyPEMEncode encodes a crypto.Signer as a PEM block
@@ -80,7 +83,7 @@ func certPEMEncode(cert *x509.Certificate) []byte {
 
 // InstallationManifest generates an installation manifests that will populate the field
 // for a managed cluster upon creation
-func InstallationManifest(certCA, cert *x509.Certificate, key crypto.Signer, managementClusterAddr string) string {
+func InstallationManifest(certCA, cert *x509.Certificate, key crypto.Signer, managementClusterAddr, operatorNamespace string) string {
 	var manifest bytes.Buffer
 	var tmpl *template.Template
 
@@ -98,6 +101,7 @@ func InstallationManifest(certCA, cert *x509.Certificate, key crypto.Signer, man
 		Cert:                  string(certPEMEncode(cert)),
 		PrivateKey:            string(keyPEMEncode(key)),
 		ManagementClusterAddr: managementClusterAddr,
+		OperatorNamespace:     operatorNamespace,
 	}
 	_ = tmpl.Execute(&manifest, manifestConfig)
 	return manifest.String()
