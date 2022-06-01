@@ -160,7 +160,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: tigera-managed-cluster-connection
-  namespace: tigera-operator
+  namespace: operator-ns
 type: Opaque
 data:
   # This is the certificate of the management cluster side of the tunnel.

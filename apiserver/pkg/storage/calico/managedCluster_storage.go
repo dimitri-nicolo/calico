@@ -77,7 +77,12 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 		}
 
 		// Populate the installation manifest in the response
-		out.Spec.InstallationManifest = helpers.InstallationManifest(resources.CACert, certificate, privKey, resources.ManagementClusterAddr)
+		// - If the operatorNamespace is not set in the ManagedCluster resource, default to tigera-operator.
+		operatorNs := res.Spec.OperatorNamespace
+		if operatorNs == "" {
+			operatorNs = "tigera-operator"
+		}
+		out.Spec.InstallationManifest = helpers.InstallationManifest(resources.CACert, certificate, privKey, resources.ManagementClusterAddr, operatorNs)
 		return out, nil
 	}
 
