@@ -25,7 +25,7 @@ FROM mcr.microsoft.com/windows/nanoserver:${WINDOWS_VERSION}
 ENV PATH="C:\Program Files\PowerShell;C:\utils;C:\Windows\system32;C:\Windows;C:\Windows\System32\WindowsPowerShell\v1.0;"
 
 COPY install-calico-windows.ps1 /
-COPY calico-windows.zip /
+COPY calico-windows.zip /tigera-calico-windows.zip
 COPY host-process-install.ps1 /
 
 # The nanoserver image does not have powershell but this works because
