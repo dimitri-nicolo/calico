@@ -100,7 +100,7 @@ const (
 	GlobalsTCPStatsEnabled  uint32 = 2
 	GlobalsIsEgressGateway  uint32 = 4
 	GlobalsIsEgressClient   uint32 = 8
-	GlobalsRPFStrictEnabled uint32 = 1
+	GlobalsRPFStrictEnabled uint32 = 16
 )
 
 func TcSetGlobals(m *Map, _, _, _ uint32, _, _, _, _ uint16, _ uint32,
