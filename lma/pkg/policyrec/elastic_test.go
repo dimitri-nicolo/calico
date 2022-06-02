@@ -235,7 +235,7 @@ func matchWildcardQuery(wildcardQuery map[string]interface{}, wildcardedPolicyQu
 	Expect(ok).To(BeTrue())
 	allPolicies, ok := wildcardPolicies["policies.all_policies"].(map[string]interface{})
 	Expect(ok).To(BeTrue())
-	actualQuery, ok := allPolicies["wildcard"].(string)
+	actualQuery, ok := allPolicies["value"].(string)
 	Expect(ok).To(BeTrue())
 	Expect(actualQuery).To(Equal(wildcardedPolicyQuery))
 }
