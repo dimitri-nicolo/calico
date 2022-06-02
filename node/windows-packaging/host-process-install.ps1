@@ -14,7 +14,15 @@
 
 # This script is the entrypoint for the install container for the HostProcess
 $ErrorActionPreference = "Stop"
-$rootDir = "c:\CalicoWindows"
+$rootDirCalico = "c:\CalicoWindows"
+$rootDirCalient="c:\TigeraWindows"
+
+# Make Calico dir default. 
+$rootDir = $rootDirCalico
+if (Test-Path $rootDirCalient) {
+    # If Calient dir exists, we assume the node was running Calient.
+    $rootDir = $rootDirCalient
+} 
 
 Write-Host "Uninstalling any existing Calico install before proceeding with installation..."
 if ((Get-Service | where Name -Like 'Calico*') -NE $null) {
