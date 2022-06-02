@@ -29,6 +29,8 @@ spec:
             properties:
               installationManifest:
                 type: string
+              operatorNamespace:
+                type: string
             type: object
           status:
             properties:
