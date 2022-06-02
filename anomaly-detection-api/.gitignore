@@ -1,3 +1,2 @@
-/test-resources/*
-/.vscode
 /fv/fv.test
+/fv/resources/tls

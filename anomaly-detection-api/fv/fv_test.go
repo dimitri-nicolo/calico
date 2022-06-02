@@ -49,7 +49,8 @@ var _ = BeforeSuite(func() {
 	Client = &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
-				RootCAs: caCertPool,
+				InsecureSkipVerify: true,
+				RootCAs:            caCertPool,
 			},
 		},
 	}

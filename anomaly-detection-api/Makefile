@@ -91,7 +91,14 @@ fv/fv.test: $(shell find ./fv -type f -name '*.go' -print)
 # to interact with docker.
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./fv -c --tags fvtests -o fv/fv.test'
 
-run-ad-image-fv:
+gen-crt-key:
+	openssl req -x509 -nodes -newkey rsa:2048 -keyout ${PACKAGE_ROOT}/fv/resources/tls/tls.key -out ${PACKAGE_ROOT}/fv/resources/tls/tls.crt \
+		-subj "/CN=localhost" \
+		-addext "extendedKeyUsage = serverAuth" \
+		-addext "keyUsage = digitalSignature" \
+		-addext "subjectAltName = DNS:localhost"
+
+run-ad-image-fv: gen-crt-key
 	docker rm -f ${AD_API_FV_TEST_CONTAINER_NAME} || true
 	$(DOCKER_RUN) \
 	  --detach \
