@@ -96,10 +96,11 @@ func (m *Map) IsMapInternal() bool {
 }
 
 const (
-	GlobalsIPv6Enabled     uint32 = 1
-	GlobalsTCPStatsEnabled uint32 = 2
-	GlobalsIsEgressGateway uint32 = 4
-	GlobalsIsEgressClient  uint32 = 8
+	GlobalsIPv6Enabled      uint32 = 1
+	GlobalsTCPStatsEnabled  uint32 = 2
+	GlobalsIsEgressGateway  uint32 = 4
+	GlobalsIsEgressClient   uint32 = 8
+	GlobalsRPFStrictEnabled uint32 = 1
 )
 
 func TcSetGlobals(m *Map, _, _, _ uint32, _, _, _, _ uint16, _ uint32,
