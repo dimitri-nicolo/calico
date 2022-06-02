@@ -384,7 +384,7 @@ syn_force_policy:
 	/* DNAT in state is set correctly now */
 
 	if (!(ctx->state->tun_ip) && CALI_F_FROM_HEP) {
-		if (!hep_rpf_check(ctx)) {
+		if (!hep_rpf_check(ctx, false)) {
 			goto deny;
 		}
 	}
