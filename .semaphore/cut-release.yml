@@ -82,6 +82,10 @@ promotions:
     pipeline_file: ../es-gateway/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Cut ES Proxy Release
+    pipeline_file: ../es-proxy/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Cut Honeypod Controller Release
     pipeline_file: ../honeypod-controller/.semaphore/cut-release.yml
     auto_promote:

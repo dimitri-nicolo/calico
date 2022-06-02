@@ -1,0 +1,368 @@
+[
+  {
+    "Endpoint": {
+      "Type": "rep",
+      "Namespace": "",
+      "Name": "",
+      "NameAggr": "rob-bz-lc19-kadm-infra-0",
+      "PortNum": 0,
+      "Protocol": ""
+    },
+    "Stats": {
+      "mean_request_latency": 0,
+      "max_request_latency": 0,
+      "min_request_latency": 0,
+      "latency_count": 0,
+      "response_codes": [
+        {
+          "code": "NOERROR",
+          "count": 4,
+          "mean_request_latency": 0,
+          "max_request_latency": 0,
+          "min_request_latency": 0,
+          "latency_count": 0
+        },
+        {
+          "code": "NXDOMAIN",
+          "count": 8,
+          "mean_request_latency": 0,
+          "max_request_latency": 0,
+          "min_request_latency": 0,
+          "latency_count": 0
+        }
+      ]
+    }
+  },
+  {
+    "Endpoint": {
+      "Type": "rep",
+      "Namespace": "storefront",
+      "Name": "",
+      "NameAggr": "checkoutservice-b55dd855c-*",
+      "PortNum": 0,
+      "Protocol": ""
+    },
+    "Stats": {
+      "mean_request_latency": 562604.1331877729,
+      "max_request_latency": 2277000,
+      "min_request_latency": 509132,
+      "latency_count": 458,
+      "response_codes": [
+        {
+          "code": "NOERROR",
+          "count": 458,
+          "mean_request_latency": 562604.1331877729,
+          "max_request_latency": 2277000,
+          "min_request_latency": 509132,
+          "latency_count": 458
+        }
+      ]
+    }
+  },
+  {
+    "Endpoint": {
+      "Type": "rep",
+      "Namespace": "storefront",
+      "Name": "",
+      "NameAggr": "currencyservice-86d778fd89-*",
+      "PortNum": 0,
+      "Protocol": ""
+    },
+    "Stats": {
+      "mean_request_latency": 1958333.3333333333,
+      "max_request_latency": 3876000,
+      "min_request_latency": 324000,
+      "latency_count": 6,
+      "response_codes": [
+        {
+          "code": "NOERROR",
+          "count": 1,
+          "mean_request_latency": 2484000,
+          "max_request_latency": 2484000,
+          "min_request_latency": 2484000,
+          "latency_count": 1
+        },
+        {
+          "code": "NXDOMAIN",
+          "count": 5,
+          "mean_request_latency": 1853200,
+          "max_request_latency": 3876000,
+          "min_request_latency": 324000,
+          "latency_count": 5
+        }
+      ]
+    }
+  },
+  {
+    "Endpoint": {
+      "Type": "rep",
+      "Namespace": "storefront",
+      "Name": "",
+      "NameAggr": "emailservice-9cc657959-*",
+      "PortNum": 0,
+      "Protocol": ""
+    },
+    "Stats": {
+      "mean_request_latency": 507580.2108695652,
+      "max_request_latency": 4793000,
+      "min_request_latency": 0,
+      "latency_count": 920,
+      "response_codes": [
+        {
+          "code": "NOERROR",
+          "count": 308,
+          "mean_request_latency": 453944,
+          "max_request_latency": 2992000,
+          "min_request_latency": 0,
+          "latency_count": 153
+        },
+        {
+          "code": "NXDOMAIN",
+          "count": 1540,
+          "mean_request_latency": 518279.481095176,
+          "max_request_latency": 4793000,
+          "min_request_latency": 0,
+          "latency_count": 767
+        }
+      ]
+    }
+  },
+  {
+    "Endpoint": {
+      "Type": "rep",
+      "Namespace": "storefront",
+      "Name": "",
+      "NameAggr": "frontend-7bbcdbbcbf-*",
+      "PortNum": 0,
+      "Protocol": ""
+    },
+    "Stats": {
+      "mean_request_latency": 1221056.1979166665,
+      "max_request_latency": 9535000,
+      "min_request_latency": 461000,
+      "latency_count": 192,
+      "response_codes": [
+        {
+          "code": "NOERROR",
+          "count": 182,
+          "mean_request_latency": 1148663.6813186812,
+          "max_request_latency": 8986000,
+          "min_request_latency": 762955,
+          "latency_count": 182
+        },
+        {
+          "code": "NXDOMAIN",
+          "count": 10,
+          "mean_request_latency": 2538600,
+          "max_request_latency": 9535000,
+          "min_request_latency": 461000,
+          "latency_count": 10
+        }
+      ]
+    }
+  },
+  {
+    "Endpoint": {
+      "Type": "rep",
+      "Namespace": "storefront",
+      "Name": "",
+      "NameAggr": "paymentservice-5746b87f6c-*",
+      "PortNum": 0,
+      "Protocol": ""
+    },
+    "Stats": {
+      "mean_request_latency": 1856333.3333333333,
+      "max_request_latency": 4228000,
+      "min_request_latency": 368000,
+      "latency_count": 6,
+      "response_codes": [
+        {
+          "code": "NOERROR",
+          "count": 1,
+          "mean_request_latency": 2348000,
+          "max_request_latency": 2348000,
+          "min_request_latency": 2348000,
+          "latency_count": 1
+        },
+        {
+          "code": "NXDOMAIN",
+          "count": 5,
+          "mean_request_latency": 1758000,
+          "max_request_latency": 4228000,
+          "min_request_latency": 368000,
+          "latency_count": 5
+        }
+      ]
+    }
+  },
+  {
+    "Endpoint": {
+      "Type": "rep",
+      "Namespace": "storefront",
+      "Name": "",
+      "NameAggr": "recommendationservice-5b8966b965-*",
+      "PortNum": 0,
+      "Protocol": ""
+    },
+    "Stats": {
+      "mean_request_latency": 443571.9719257201,
+      "max_request_latency": 9745000,
+      "min_request_latency": 345421,
+      "latency_count": 6839,
+      "response_codes": [
+        {
+          "code": "NOERROR",
+          "count": 1148,
+          "mean_request_latency": 395549,
+          "max_request_latency": 3794000,
+          "min_request_latency": 345421,
+          "latency_count": 1130
+        },
+        {
+          "code": "NXDOMAIN",
+          "count": 5740,
+          "mean_request_latency": 453077.3070590296,
+          "max_request_latency": 9745000,
+          "min_request_latency": 373925,
+          "latency_count": 5709
+        }
+      ]
+    }
+  },
+  {
+    "Endpoint": {
+      "Type": "rep",
+      "Namespace": "tigera-elasticsearch",
+      "Name": "",
+      "NameAggr": "tigera-elasticsearch-metrics-768c587f7d-*",
+      "PortNum": 0,
+      "Protocol": ""
+    },
+    "Stats": {
+      "mean_request_latency": 465235.8333333333,
+      "max_request_latency": 11819000,
+      "min_request_latency": 363332,
+      "latency_count": 378,
+      "response_codes": [
+        {
+          "code": "NOERROR",
+          "count": 126,
+          "mean_request_latency": 369777.5,
+          "max_request_latency": 1528000,
+          "min_request_latency": 363332,
+          "latency_count": 126
+        },
+        {
+          "code": "NXDOMAIN",
+          "count": 252,
+          "mean_request_latency": 512965,
+          "max_request_latency": 11819000,
+          "min_request_latency": 384795,
+          "latency_count": 252
+        }
+      ]
+    }
+  },
+  {
+    "Endpoint": {
+      "Type": "rep",
+      "Namespace": "tigera-fluentd",
+      "Name": "",
+      "NameAggr": "fluentd-node-*",
+      "PortNum": 0,
+      "Protocol": ""
+    },
+    "Stats": {
+      "mean_request_latency": 1044199.1375,
+      "max_request_latency": 2769000,
+      "min_request_latency": 0,
+      "latency_count": 80,
+      "response_codes": [
+        {
+          "code": "NOERROR",
+          "count": 76,
+          "mean_request_latency": 134500,
+          "max_request_latency": 140000,
+          "min_request_latency": 0,
+          "latency_count": 2
+        },
+        {
+          "code": "NXDOMAIN",
+          "count": 152,
+          "mean_request_latency": 1067524.7564102565,
+          "max_request_latency": 2769000,
+          "min_request_latency": 0,
+          "latency_count": 78
+        }
+      ]
+    }
+  },
+  {
+    "Endpoint": {
+      "Type": "rep",
+      "Namespace": "tigera-manager",
+      "Name": "",
+      "NameAggr": "tigera-manager-6945cc846-*",
+      "PortNum": 0,
+      "Protocol": ""
+    },
+    "Stats": {
+      "mean_request_latency": 645750,
+      "max_request_latency": 919000,
+      "min_request_latency": 550000,
+      "latency_count": 16,
+      "response_codes": [
+        {
+          "code": "NOERROR",
+          "count": 6,
+          "mean_request_latency": 581000,
+          "max_request_latency": 919000,
+          "min_request_latency": 550000,
+          "latency_count": 6
+        },
+        {
+          "code": "NXDOMAIN",
+          "count": 10,
+          "mean_request_latency": 684600,
+          "max_request_latency": 881000,
+          "min_request_latency": 552000,
+          "latency_count": 10
+        }
+      ]
+    }
+  },
+  {
+    "Endpoint": {
+      "Type": "rep",
+      "Namespace": "tigera-prometheus",
+      "Name": "",
+      "NameAggr": "alertmanager-calico-node-alertmanager-*",
+      "PortNum": 0,
+      "Protocol": ""
+    },
+    "Stats": {
+      "mean_request_latency": 535675.6160635481,
+      "max_request_latency": 6934000,
+      "min_request_latency": 310946,
+      "latency_count": 1133,
+      "response_codes": [
+        {
+          "code": "NOERROR",
+          "count": 378,
+          "mean_request_latency": 518204.09523809527,
+          "max_request_latency": 4351000,
+          "min_request_latency": 352046,
+          "latency_count": 378
+        },
+        {
+          "code": "NXDOMAIN",
+          "count": 756,
+          "mean_request_latency": 544422.9470198676,
+          "max_request_latency": 6934000,
+          "min_request_latency": 310946,
+          "latency_count": 755
+        }
+      ]
+    }
+  }
+]

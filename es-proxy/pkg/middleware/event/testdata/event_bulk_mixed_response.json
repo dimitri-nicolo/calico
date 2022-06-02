@@ -1,0 +1,66 @@
+{
+  "took": 789,
+  "errors": true,
+  "items": [
+    {
+      "delete": {
+        "_index": "some-index-1",
+        "_id": "id1",
+        "_version": 1,
+        "result": "deleted",
+        "status": 200
+      }
+    },
+    {
+      "delete": {
+        "_index": "some-index-2",
+        "_id": "id3",
+        "_version": 2,
+        "status": 404,
+        "error": {
+          "type": "document_missing_exception",
+          "reason": "[_doc][1]: document missing"
+        }
+      }
+    },
+    {
+      "delete": {
+        "_index": "some-index-3",
+        "_id": "id5",
+        "_version": 3,
+        "result": "deleted",
+        "status": 200
+      }
+    },
+    {
+      "update": {
+        "_index": "some-index-4",
+        "_id": "id2",
+        "_version": 1,
+        "result": "updated",
+        "status": 200
+      }
+    },
+    {
+      "update": {
+        "_index": "some-index-5",
+        "_id": "id4",
+        "_version": 2,
+        "status": 404,
+        "error": {
+          "type": "document_missing_exception",
+          "reason": "[_doc][4]: document missing"
+        }
+      }
+    },
+    {
+      "update": {
+        "_index": "some-index-6",
+        "_id": "id6",
+        "_version": 3,
+        "result": "updated",
+        "status": 200
+      }
+    }
+  ]
+}

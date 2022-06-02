@@ -1,0 +1,264 @@
+{
+  "took": 5186,
+  "timed_out": false,
+  "aggregations": {
+    "flog_buckets": {
+      "buckets": [
+        {
+          "dest_labels": {
+            "by_kvpair": {
+              "buckets": []
+            },
+            "doc_count": 5094
+          },
+          "doc_count": 5094,
+          "key": {
+            "action": "allow",
+            "dest_name": "pvt",
+            "dest_namespace": "-",
+            "dest_type": "net",
+            "flow_impacted": false,
+            "reporter": "dst",
+            "source_action": "allow",
+            "source_name": "pvt",
+            "source_namespace": "-",
+            "source_type": "net"
+          },
+          "policies": {
+            "by_tiered_policy": {
+              "buckets": []
+            },
+            "doc_count": 5094
+          },
+          "source_labels": {
+            "by_kvpair": {
+              "buckets": []
+            },
+            "doc_count": 5094
+          },
+          "sum_bytes_in": {
+            "value": 0
+          },
+          "sum_bytes_out": {
+            "value": 0
+          },
+          "sum_http_requests_allowed_in": {
+            "value": 0
+          },
+          "sum_http_requests_denied_in": {
+            "value": 0
+          },
+          "sum_num_flows_completed": {
+            "value": 35908694
+          },
+          "sum_num_flows_started": {
+            "value": 0
+          },
+          "sum_packets_in": {
+            "value": 0
+          },
+          "sum_packets_out": {
+            "value": 0
+          }
+        },
+        {
+          "dest_labels": {
+            "by_kvpair": {
+              "buckets": [
+                {
+                  "doc_count": 1908,
+                  "key": "k8s-app=kube-dns"
+                }
+              ]
+            },
+            "doc_count": 1908
+          },
+          "doc_count": 1908,
+          "key": {
+            "action": "allow",
+            "dest_name": "coredns-5c98db65d4-*",
+            "dest_namespace": "kube-system",
+            "dest_type": "wep",
+            "flow_impacted": false,
+            "reporter": "dst",
+            "source_action": "allow",
+            "source_name": "pvt",
+            "source_namespace": "-",
+            "source_type": "net"
+          },
+          "policies": {
+            "by_tiered_policy": {
+              "buckets": [
+                {
+                  "doc_count": 1908,
+                  "key": "0|__PROFILE__|__PROFILE__.kns.kube-system|allow"
+                }
+              ]
+            },
+            "doc_count": 1908
+          },
+          "source_labels": {
+            "by_kvpair": {
+              "buckets": []
+            },
+            "doc_count": 1908
+          },
+          "sum_bytes_in": {
+            "value": 4820065328
+          },
+          "sum_bytes_out": {
+            "value": 8660088663
+          },
+          "sum_http_requests_allowed_in": {
+            "value": 0
+          },
+          "sum_http_requests_denied_in": {
+            "value": 0
+          },
+          "sum_num_flows_completed": {
+            "value": 35808723
+          },
+          "sum_num_flows_started": {
+            "value": 35806642
+          },
+          "sum_packets_in": {
+            "value": 42706265
+          },
+          "sum_packets_out": {
+            "value": 42570067
+          }
+        }
+      ]
+    }
+  },
+  "aggregations_preview": {
+    "flog_buckets": {
+      "buckets": [
+        {
+          "dest_labels": {
+            "by_kvpair": {
+              "buckets": []
+            },
+            "doc_count": 5094
+          },
+          "doc_count": 5094,
+          "key": {
+            "action": "allow",
+            "dest_name": "pvt",
+            "dest_namespace": "-",
+            "dest_type": "net",
+            "flow_impacted": false,
+            "reporter": "dst",
+            "source_action": "allow",
+            "source_name": "pvt",
+            "source_namespace": "-",
+            "source_type": "net"
+          },
+          "policies": {
+            "by_tiered_policy": {
+              "buckets": []
+            },
+            "doc_count": 5094
+          },
+          "source_labels": {
+            "by_kvpair": {
+              "buckets": []
+            },
+            "doc_count": 5094
+          },
+          "sum_bytes_in": {
+            "value": 0
+          },
+          "sum_bytes_out": {
+            "value": 0
+          },
+          "sum_http_requests_allowed_in": {
+            "value": 0
+          },
+          "sum_http_requests_denied_in": {
+            "value": 0
+          },
+          "sum_num_flows_completed": {
+            "value": 35908694
+          },
+          "sum_num_flows_started": {
+            "value": 0
+          },
+          "sum_packets_in": {
+            "value": 0
+          },
+          "sum_packets_out": {
+            "value": 0
+          }
+        },
+        {
+          "dest_labels": {
+            "by_kvpair": {
+              "buckets": [
+                {
+                  "doc_count": 1908,
+                  "key": "k8s-app=kube-dns"
+                }
+              ]
+            },
+            "doc_count": 1908
+          },
+          "doc_count": 1908,
+          "key": {
+            "action": "allow",
+            "dest_name": "coredns-5c98db65d4-*",
+            "dest_namespace": "kube-system",
+            "dest_type": "wep",
+            "flow_impacted": false,
+            "reporter": "dst",
+            "source_action": "allow",
+            "source_name": "pvt",
+            "source_namespace": "-",
+            "source_type": "net"
+          },
+          "policies": {
+            "by_tiered_policy": {
+              "buckets": [
+                {
+                  "doc_count": 1908,
+                  "key": "0|__PROFILE__|__PROFILE__.kns.kube-system|allow"
+                }
+              ]
+            },
+            "doc_count": 1908
+          },
+          "source_labels": {
+            "by_kvpair": {
+              "buckets": []
+            },
+            "doc_count": 1908
+          },
+          "sum_bytes_in": {
+            "value": 4820065328
+          },
+          "sum_bytes_out": {
+            "value": 8660088663
+          },
+          "sum_http_requests_allowed_in": {
+            "value": 0
+          },
+          "sum_http_requests_denied_in": {
+            "value": 0
+          },
+          "sum_num_flows_completed": {
+            "value": 35808723
+          },
+          "sum_num_flows_started": {
+            "value": 35806642
+          },
+          "sum_packets_in": {
+            "value": 42706265
+          },
+          "sum_packets_out": {
+            "value": 42570067
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "cluster": "test-cluster-name",
+  "delete": {
+    "items": [
+      {
+        "index": "some-index-1",
+        "id": "id1"
+      },
+      {
+        "index": "some-index-2",
+        "id": "id2"
+      },
+      {
+        "index": "some-index-3",
+        "id": "id3"
+      }
+    ]
+  }
+}

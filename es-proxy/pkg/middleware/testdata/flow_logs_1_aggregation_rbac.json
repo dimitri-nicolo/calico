@@ -1,0 +1,47 @@
+{
+  "took": 3,
+  "timed_out": false,
+  "aggregations": {
+    "flog_buckets": {
+      "buckets": [
+        {
+          "doc_count": 1896,
+          "key": {
+            "action": "allow",
+            "dest_name": "coredns-5c98db65d4-*",
+            "dest_namespace": "kube-system",
+            "dest_type": "wep",
+            "reporter": "dst",
+            "source_name": "pvt",
+            "source_namespace": "-",
+            "source_type": "net"
+          },
+          "sum_bytes_in": {
+            "value": 4815208392
+          },
+          "sum_bytes_out": {
+            "value": 8651313959
+          },
+          "sum_http_requests_allowed_in": {
+            "value": 0
+          },
+          "sum_http_requests_denied_in": {
+            "value": 0
+          },
+          "sum_num_flows_completed": {
+            "value": 35696366
+          },
+          "sum_num_flows_started": {
+            "value": 35695269
+          },
+          "sum_packets_in": {
+            "value": 42663299
+          },
+          "sum_packets_out": {
+            "value": 42526976
+          }
+        }
+      ]
+    }
+  }
+}
