@@ -256,10 +256,11 @@ func (o *Obj) AttachCGroup(cgroup, progName string) (*Link, error) {
 
 const (
 	// Set when IPv6 is enabled to configure bpf dataplane accordingly
-	GlobalsIPv6Enabled     uint32 = C.CALI_GLOBALS_IPV6_ENABLED
-	GlobalsTCPStatsEnabled uint32 = C.CALI_GLOBALS_TCP_STATS_ENABLED
-	GlobalsIsEgressGateway uint32 = C.CALI_GLOBALS_IS_EGRESS_GATEWAY
-	GlobalsIsEgressClient  uint32 = C.CALI_GLOBALS_IS_EGRESS_CLIENT
+	GlobalsIPv6Enabled      uint32 = C.CALI_GLOBALS_IPV6_ENABLED
+	GlobalsTCPStatsEnabled  uint32 = C.CALI_GLOBALS_TCP_STATS_ENABLED
+	GlobalsIsEgressGateway  uint32 = C.CALI_GLOBALS_IS_EGRESS_GATEWAY
+	GlobalsIsEgressClient   uint32 = C.CALI_GLOBALS_IS_EGRESS_CLIENT
+	GlobalsRPFStrictEnabled uint32 = C.CALI_GLOBALS_RPF_STRICT_ENABLED
 )
 
 func TcSetGlobals(
