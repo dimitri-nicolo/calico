@@ -108,8 +108,6 @@ section:
     path: /maintenance/ebpf/use-cases-ebpf 
   - title: Enable the eBPF dataplane
     path: /maintenance/ebpf/enabling-ebpf
-  - title: eBPF on EKS
-    path: /maintenance/ebpf/ebpf-and-eks
   - title: Troubleshoot eBPF dataplane
     path: /maintenance/ebpf/troubleshoot-ebpf
 - title: Reduce node impacts on datastore
