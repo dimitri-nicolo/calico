@@ -590,7 +590,7 @@ func (m *vxlanManager) getParentInterface(localVTEP *proto.VXLANTunnelEndpointUp
 		}
 		for _, addr := range addrs {
 			if addr.IPNet.IP.String() == parentDeviceIP {
-				logrus.Debugf("Found parent interface: %s", link)
+				m.logCtx.Debugf("Found parent interface: %s", link)
 				return link, nil
 			}
 		}
