@@ -151,6 +151,13 @@ The code is a little roundabout for a few reasons:
               {% include version_warning.html %}
               {% endif %}
 
+              {% if site.data.versions.first.prerelease %}
+              <div class="alert alert-warning" role="alert">
+                <strong>Warning:</strong>
+                You are looking at a preview release and this is not suitable for production. Please navigate to the <a href="{{ page.url }}">GA version of this page</a>.
+              </div>
+              {% endif %}
+
               {% if page.calico_enterprise -%}
               {% include enterprise_header.html %}   
               {% endif -%}

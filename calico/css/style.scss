@@ -808,7 +808,7 @@ $max-toc-height: calc(100vh - #{$sticky-top + $navbar-margin-bottom});
 
 .version-combo {
   margin-top:20px;
-  max-width: 150px;
+  max-width: 195px;
   @media (max-width: $screen-xs-max) {
     max-width: 100%;
   }

@@ -28,7 +28,7 @@ version.
         {%- if version.first %}
         {% continue %}
         {%- else %}
-        <li><a href="/{{ version }}/">Version {{ version | replace: "v", ""  }}</a></li>
+        <li><a href="/{{ version | regex_replace: '(v[0-9]+\.[0-9]+)(.*)$', "\1" }}/">Version {{ version | regex_replace: 'v?([0-9]+\.[0-9]+)(.*)$', "\1"  }}{% if version contains 'preview' %}<span class="badge release-badge nightly">preview</span>{% endif %}</a></li>
         {%- endif %}
     {%- endfor %}
     <li><a href="/releases">Earlier versions</a></li>
