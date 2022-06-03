@@ -76,6 +76,7 @@ var _ = Describe("Event middleware tests", func() {
 				// Elastic _bluk request
 				Expect(req.Method).To(Equal(http.MethodPost))
 				Expect(req.URL.Path).To(Equal("/_bulk"))
+				Expect(req.URL.Query().Get("refresh")).To(Equal("wait_for"))
 
 				body, err := ioutil.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
@@ -145,6 +146,7 @@ var _ = Describe("Event middleware tests", func() {
 				// Elastic _bluk request
 				Expect(req.Method).To(Equal(http.MethodPost))
 				Expect(req.URL.Path).To(Equal("/_bulk"))
+				Expect(req.URL.Query().Get("refresh")).To(Equal("wait_for"))
 
 				body, err := ioutil.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
@@ -214,6 +216,7 @@ var _ = Describe("Event middleware tests", func() {
 				// Elastic _bluk request
 				Expect(req.Method).To(Equal(http.MethodPost))
 				Expect(req.URL.Path).To(Equal("/_bulk"))
+				Expect(req.URL.Query().Get("refresh")).To(Equal("wait_for"))
 
 				body, err := ioutil.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())

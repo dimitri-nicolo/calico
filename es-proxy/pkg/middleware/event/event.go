@@ -132,52 +132,50 @@ func processEventRequest(
 }
 
 func processBulkEventRequest(ctx context.Context, esClient lmaelastic.Client, params *v1.BulkEventRequest) (*v1.BulkEventResponse, error) {
-	var resp v1.BulkEventResponse
-	afterFn := func(executionId int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
-		resp.Errors = response.Errors
-		resp.Took = response.Took
-
-		items := make([]*elastic.BulkResponseItem, 0)
-		items = append(items, response.Deleted()...)
-		items = append(items, response.Updated()...)
-		resp.Items = make([]v1.BulkEventResponseItem, len(items))
-		for i, item := range items {
-			resp.Items[i].Index = item.Index
-			resp.Items[i].ID = item.Id
-			resp.Items[i].Result = item.Result
-			resp.Items[i].Status = item.Status
-			if item.Error != nil {
-				resp.Items[i].Error = &v1.BulkEventErrorDetails{
-					Type:   item.Error.Type,
-					Reason: item.Error.Reason,
-				}
-			}
-		}
-	}
-
-	if err := esClient.BulkProcessorInitialize(ctx, afterFn); err != nil {
-		log.WithError(err).Error("failed to initialize bulk processor for events")
+	bulkService := elastic.NewBulkService(esClient.Backend()).Refresh("wait_for")
+	if bulkService == nil {
+		err := errors.New("failed to create bulk service for events")
+		log.WithError(err).Error("failed to process bulk events request")
 		return nil, err
 	}
 
 	if params.Delete != nil {
 		for _, item := range params.Delete.Items {
-			if err := esClient.DeleteBulkSecurityEvent(item.Index, item.ID); err != nil {
-				log.WithError(err).Warnf("failed to add event delete request to bulk processor for event %s", item.ID)
-			}
+			bulkService.Add(elastic.NewBulkDeleteRequest().Index(item.Index).Id(item.ID))
 		}
 	}
 	if params.Dismiss != nil {
 		for _, item := range params.Dismiss.Items {
-			if err := esClient.DismissBulkSecurityEvent(item.Index, item.ID); err != nil {
-				log.WithError(err).Warnf("failed to add event dismiss request to bulk processor for event %s", item.ID)
-			}
+			bulkService.Add(elastic.NewBulkUpdateRequest().Index(item.Index).Id(item.ID).Doc(map[string]bool{"dismissed": true}))
 		}
 	}
 
-	if err := esClient.BulkProcessorClose(); err != nil {
-		log.WithError(err).Error("failed to flush or close bulk processor for events")
+	response, err := bulkService.Do(ctx)
+	if err != nil {
+		log.WithError(err).Error("failed to process bulk events request")
 		return nil, err
+	}
+
+	resp := v1.BulkEventResponse{
+		Errors: response.Errors,
+		Took:   response.Took,
+	}
+
+	items := make([]*elastic.BulkResponseItem, 0)
+	items = append(items, response.Deleted()...)
+	items = append(items, response.Updated()...)
+	resp.Items = make([]v1.BulkEventResponseItem, len(items))
+	for i, item := range items {
+		resp.Items[i].Index = item.Index
+		resp.Items[i].ID = item.Id
+		resp.Items[i].Result = item.Result
+		resp.Items[i].Status = item.Status
+		if item.Error != nil {
+			resp.Items[i].Error = &v1.BulkEventErrorDetails{
+				Type:   item.Error.Type,
+				Reason: item.Error.Reason,
+			}
+		}
 	}
 
 	return &resp, nil
