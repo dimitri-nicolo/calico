@@ -137,4 +137,7 @@ RUN powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_flows" \
 EXPOSE 24284
 
 ENTRYPOINT []
-CMD c:\ruby\msys64\usr\bin\bash.exe -lc "c:/bin/ee_entrypoint.sh c:/ruby/bin/fluentd -c c:/fluentd/etc/fluent.conf"
+# The inner command run by bash.exe is the actual ruby path (c:/ruby27).
+# Using the symlinked path (c:/ruby) fails at runtime:
+# c:/ruby/bin/fluentd: Invalid argument @ rb_readlink - c:/ruby (Errno::EINVAL)
+CMD c:\ruby\msys64\usr\bin\bash.exe -lc "c:/bin/ee_entrypoint.sh c:/ruby27/bin/fluentd -c c:/fluentd/etc/fluent.conf"
