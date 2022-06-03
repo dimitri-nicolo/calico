@@ -1,4 +1,4 @@
-# Copyright (c) 2021 Tigera, Inc. All rights reserved.
+# Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM quay.io/tigera/fluentd-base:v1.11.1-windows
+FROM quay.io/tigera/fluentd-base:v1.14.6-windows
 MAINTAINER laurence@tigera.io
 
 USER ContainerAdministrator
@@ -20,8 +20,13 @@ USER ContainerAdministrator
 # The ROOT_DIR is set for Windows only.
 ENV ROOT_DIR=c:
 
-# Install required gems and other packages.
-RUN gem install \
+# - Add symlink to ruby install path.
+#   - The ruby version gets updated occasionally so using a symlink
+#     keeps us from needing to update the fluentd probes in the operator.
+# - Install required gems and other packages.
+RUN mklink /D c:\ruby c:\ruby27 \
+&& setx /m path "c:\ruby\bin;%path%;" \
+&& gem install \
         elasticsearch-api:7.13.3 \
         elasticsearch-transport:7.13.3 \
         elasticsearch:7.13.3 \
@@ -30,11 +35,14 @@ RUN gem install \
         fluent-plugin-splunk-hec:1.1.2 fluent-plugin-sumologic_output:1.6.1 \
         fluent-plugin-cloudwatch-logs:0.8.0 \
         fluent-plugin-prometheus:2.0.0 \
+        cgi:0.3.1 \
+        rdoc:6.4.0 \
+        bundler:2.3.7 \
  && fluent-gem install fluent-plugin-remote_syslog:1.0.0 \
  && gem sources --clear-all \
  && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc" \
  && powershell -command "mkdir $env:ROOT_DIR\fluentd\plugins" \
- && c:\ruby26\msys64\usr\bin\bash.exe -lc "curl -L -o /usr/bin/jq.exe https://github.com/stedolan/jq/releases/download/jq-1.6/jq-win64.exe"
+ && c:\ruby\msys64\usr\bin\bash.exe -lc "curl -L -o /usr/bin/jq.exe https://github.com/stedolan/jq/releases/download/jq-1.6/jq-win64.exe"
 
 # On Windows, the destination format for ADD and COPY must use forward slashes.
 ADD elastic_mapping_flows.template /fluentd/etc/elastic_mapping_flows.template
@@ -73,6 +81,7 @@ ENV IDS_EVENT_LOG_FILE=${ROOT_DIR}/var/log/calico/ids/events.log
 ENV WAF_LOG_FILE=${ROOT_DIR}/var/log/calico/waf/waf.log
 ENV L7_LOG_FILE=${ROOT_DIR}/var/log/calico/l7logs/l7.log
 ENV EE_AUDIT_LOG_FILE=${ROOT_DIR}/var/log/calico/audit/tsee-audit.log
+ENV RUNTIME_LOG_FILE=${ROOT_DIR}/var/log/calico/runtime-security/report.log
 
 ENV ELASTIC_HOST=elasticsearch
 ENV ELASTIC_PORT=9200
@@ -128,4 +137,4 @@ RUN powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_flows" \
 EXPOSE 24284
 
 ENTRYPOINT []
-CMD c:\ruby26\msys64\usr\bin\bash.exe -lc "c:/bin/ee_entrypoint.sh c:/ruby26/bin/fluentd -c c:/fluentd/etc/fluent.conf"
+CMD c:\ruby\msys64\usr\bin\bash.exe -lc "c:/bin/ee_entrypoint.sh c:/ruby/bin/fluentd -c c:/fluentd/etc/fluent.conf"
