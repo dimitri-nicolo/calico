@@ -24,6 +24,7 @@ import (
 	"net/url"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"time"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
@@ -157,7 +158,7 @@ func cmdAdd(args *skel.CmdArgs) (err error) {
 	// a proper error to the runtime.
 	defer func() {
 		if e := recover(); e != nil {
-			msg := fmt.Sprintf("Calico CNI panicked during ADD: %s", e)
+			msg := fmt.Sprintf("Calico CNI panicked during ADD: %s\nStack trace:\n%s", e, string(debug.Stack()))
 			if err != nil {
 				// If we're recovering and there was also an error, then we need to
 				// present both.
@@ -606,7 +607,7 @@ func cmdDel(args *skel.CmdArgs) (err error) {
 	// a proper error to the runtime.
 	defer func() {
 		if e := recover(); e != nil {
-			msg := fmt.Sprintf("Calico CNI panicked during DEL: %s", e)
+			msg := fmt.Sprintf("Calico CNI panicked during DEL: %s\nStack trace:\n%s", e, string(debug.Stack()))
 			if err != nil {
 				// If we're recovering and there was also an error, then we need to
 				// present both.
