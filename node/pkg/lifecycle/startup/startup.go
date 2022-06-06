@@ -196,11 +196,8 @@ func Run() {
 	}
 
 	// Write BGP related details to the Node if BGP is enabled or environment variable IP is used (for ipsec support).
-	if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" || (os.Getenv("IP") != "none" && os.Getenv("IP") != "") {
-		// Configure the node AS number if BGP is enabled.
-		if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" {
-			configureASNumber(node, os.Getenv("AS"), "environment")
-		}
+	if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" {
+		configureASNumber(node, os.Getenv("AS"), "environment")
 	}
 
 	// Populate a reference to the node based on orchestrator node identifiers.
@@ -239,7 +236,7 @@ func Run() {
 	// All done. Set NetworkUnavailable to false if using Calico for networking.
 	// We do it late in the process to avoid node resource update conflict because setting
 	// node condition will trigger node-controller updating node taints.
-	if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" || (os.Getenv("IP") != "none" && os.Getenv("IP") != "") {
+	if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" {
 		if clientset != nil {
 			err := utils.SetNodeNetworkUnavailableCondition(*clientset, k8sNodeName, false, 30*time.Second)
 			if err != nil {
