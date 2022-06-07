@@ -1101,6 +1101,7 @@ func (r *RouteTable) readProgrammedRoutes(logCxt *log.Entry, ifaceName string) (
 	routeFilter := &netlink.Route{
 		Table: r.tableIndex,
 	}
+
 	routeFilterFlags := netlink.RT_FILTER_OIF
 	if r.tableIndex != 0 {
 		routeFilterFlags |= netlink.RT_FILTER_TABLE
