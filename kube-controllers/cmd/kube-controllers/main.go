@@ -447,7 +447,6 @@ func newEtcdV3Client() (*clientv3.Client, error) {
 		CertFile:      config.Spec.EtcdCertFile,
 		KeyFile:       config.Spec.EtcdKeyFile,
 	}
-
 	tlsClient, err := tlsInfo.ClientConfig()
 	if err != nil {
 		return nil, err
