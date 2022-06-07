@@ -719,7 +719,7 @@ current-context: test-context`
 		})
 
 		// Assert error is generated
-		It("shoud generate error", func() {
+		It("should generate error", func() {
 			// Parse config
 			cfg = new(config.Config)
 			err := cfg.Parse()
