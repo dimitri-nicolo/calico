@@ -232,8 +232,9 @@ skip_fib:
 		 */
 		if ((CALI_F_FROM_HEP && state->tun_ip != 0 && ctx->fwd.mark != CALI_SKB_MARK_BYPASS_FWD) ||
 				EGRESS_GATEWAY) {
-			ctx->fwd.mark = CALI_SKB_MARK_SKIP_RPF;
+                       ctx->fwd.mark = CALI_SKB_MARK_BYPASS;
 		}
+
 		/* Packet is towards host namespace, mark it so that downstream
 		 * programs know that they're not the first to see the packet.
 		 */
@@ -251,15 +252,6 @@ skip_fib:
 				// the egress mark bit.
 				CALI_DEBUG("Traffic is leaving cluster via egress gateway\n");
 				ctx->fwd.mark |= CALI_SKB_MARK_EGRESS;
-			} else {
-				// This is an egress gateway flow on the client node and
-				// we're in the return direction.  Packet may have just
-				// arrived over a tunnel/VXLAN device with cluster encap,
-				// but the source IP is an external destination that would
-				// not be routed via that device.  Hence need to disable
-				// RPF checking.
-				CALI_DEBUG("Return path of egress gateway flow\n");
-				ctx->fwd.mark = CALI_SKB_MARK_SKIP_RPF;
 			}
 		}
 		CALI_DEBUG("Traffic is towards host namespace, marking with %x.\n", ctx->fwd.mark);
