@@ -45,12 +45,7 @@ SRC_FILES:= $(shell find prometheus-service -type f -name '*.go') \
 		$(shell find ../lma/pkg -name '*.go')
 
 
-build: prometheus-service
-prometheus-service: bin/prometheus-service
-
-bin/prometheus-service: bin/prometheus-service-amd64
-	$(DOCKER_GO_BUILD) \
-		sh -c 'cd bin && ln -s -T prometheus-service-$(ARCH) prometheus-service'
+build: bin/prometheus-service-$(ARCH)
 
 bin/prometheus-service-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD) \
@@ -66,16 +61,18 @@ image-all: $(addprefix sub-image-,$(ARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
+PROMETHEUS_SERVICE_CONTAINER_CREATED=.$(PROMETHEUS_SERVICE_IMAGE).created-$(ARCH)
+
 image: $(PROMETHEUS_SERVICE_IMAGE)
-$(PROMETHEUS_SERVICE_IMAGE): $(PROMETHEUS_SERVICE_IMAGE)-$(ARCH)
-$(PROMETHEUS_SERVICE_IMAGE)-$(ARCH): bin/prometheus-service-$(ARCH)
+$(PROMETHEUS_SERVICE_IMAGE): $(PROMETHEUS_SERVICE_CONTAINER_CREATED)
+$(PROMETHEUS_SERVICE_CONTAINER_CREATED): bin/prometheus-service-$(ARCH)
 	$(DOCKER_BUILD) --pull -t $(PROMETHEUS_SERVICE_IMAGE):latest-$(ARCH) -f ./Dockerfile.$(ARCH) .
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 
 .PHONY: clean
 clean:
-	-docker rm -f $(PROMETHEUS_SERVICE_IMAGE):latest
-	-docker rm -f $(PROMETHEUS_SERVICE_IMAGE):latest-$(ARCH)
+	rm -rf bin
+	-docker image rm -f $$(docker images $(PROMETHEUS_SERVICE_IMAGE) -a -q)
 
 ##########################################################################
 # Testing
