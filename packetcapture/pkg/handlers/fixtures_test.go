@@ -11,8 +11,9 @@ import (
 )
 
 var noFiles = []string{}
-var files = []string{"a", "b"}
-var otherFiles = []string{"c", "d"}
+var filesOnNode1 = []string{"a"}
+var filesOnNode2 = []string{"b", "c"}
+var filesOnNode3 = []string{"d", "e", "f"}
 var packetCaptureOneNode = &v3.PacketCapture{
 	TypeMeta: metav1.TypeMeta{
 		Kind:       "",
@@ -27,7 +28,7 @@ var packetCaptureOneNode = &v3.PacketCapture{
 			{
 				Node:      "node",
 				Directory: "dir",
-				FileNames: files,
+				FileNames: filesOnNode1,
 			},
 		},
 	},
@@ -44,14 +45,19 @@ var packetCaptureMultipleNodes = &v3.PacketCapture{
 	Status: v3.PacketCaptureStatus{
 		Files: []v3.PacketCaptureFile{
 			{
-				Node:      "nodeOne",
+				Node:      "node1",
 				Directory: "dir",
-				FileNames: files,
+				FileNames: filesOnNode1,
 			},
 			{
-				Node:      "nodeTwo",
+				Node:      "node2",
 				Directory: "dir",
-				FileNames: otherFiles,
+				FileNames: filesOnNode2,
+			},
+			{
+				Node:      "node3",
+				Directory: "dir",
+				FileNames: filesOnNode3,
 			},
 		},
 	},
@@ -115,7 +121,7 @@ var finishedPacketCaptureOneNode = &v3.PacketCapture{
 			{
 				Node:      "node",
 				Directory: "dir",
-				FileNames: files,
+				FileNames: filesOnNode1,
 				State:     (*v3.PacketCaptureState)(&finished),
 			},
 		},
@@ -133,15 +139,21 @@ var finishedPacketCaptureMultipleNodes = &v3.PacketCapture{
 	Status: v3.PacketCaptureStatus{
 		Files: []v3.PacketCaptureFile{
 			{
-				Node:      "nodeOne",
+				Node:      "node1",
 				Directory: "dir",
-				FileNames: files,
+				FileNames: filesOnNode1,
 				State:     (*v3.PacketCaptureState)(&finished),
 			},
 			{
-				Node:      "nodeTwo",
+				Node:      "node2",
 				Directory: "dir",
-				FileNames: otherFiles,
+				FileNames: filesOnNode2,
+				State:     (*v3.PacketCaptureState)(&finished),
+			},
+			{
+				Node:      "node3",
+				Directory: "dir",
+				FileNames: filesOnNode3,
 				State:     (*v3.PacketCaptureState)(&finished),
 			},
 		},
@@ -160,16 +172,22 @@ var differentStatesPacketCaptureMultipleNodes = &v3.PacketCapture{
 	Status: v3.PacketCaptureStatus{
 		Files: []v3.PacketCaptureFile{
 			{
-				Node:      "nodeOne",
+				Node:      "node1",
 				Directory: "dir",
-				FileNames: files,
+				FileNames: filesOnNode1,
 				State:     &capturing,
 			},
 			{
-				Node:      "nodeTwo",
+				Node:      "node2",
 				Directory: "dir",
-				FileNames: otherFiles,
+				FileNames: filesOnNode2,
 				State:     (*v3.PacketCaptureState)(&scheduled),
+			},
+			{
+				Node:      "node3",
+				Directory: "dir",
+				FileNames: filesOnNode3,
+				State:     (*v3.PacketCaptureState)(&finished),
 			},
 		},
 	},
@@ -187,16 +205,22 @@ var oneFinishedPacketCaptureMultipleNodes = &v3.PacketCapture{
 	Status: v3.PacketCaptureStatus{
 		Files: []v3.PacketCaptureFile{
 			{
-				Node:      "nodeOne",
+				Node:      "node1",
 				Directory: "dir",
-				FileNames: files,
+				FileNames: filesOnNode1,
 				State:     &capturing,
 			},
 			{
-				Node:      "nodeTwo",
+				Node:      "node2",
 				Directory: "dir",
-				FileNames: otherFiles,
+				FileNames: filesOnNode2,
 				State:     (*v3.PacketCaptureState)(&finished),
+			},
+			{
+				Node:      "node3",
+				Directory: "dir",
+				FileNames: filesOnNode3,
+				State:     &capturing,
 			},
 		},
 	},
@@ -204,7 +228,9 @@ var oneFinishedPacketCaptureMultipleNodes = &v3.PacketCapture{
 
 var point = capture.EntryPoint{PodName: "entryPod", PodNamespace: "entryNs", CaptureDirectory: "dir",
 	CaptureNamespace: "ns", CaptureName: "name"}
-var pointNodeOne = capture.EntryPoint{PodName: "entryPodOne", PodNamespace: "entryNs", CaptureDirectory: "dir",
+var pointNode1 = capture.EntryPoint{PodName: "entryPod1", PodNamespace: "entryNs", CaptureDirectory: "dir",
 	CaptureNamespace: "ns", CaptureName: "name"}
-var pointNodeTwo = capture.EntryPoint{PodName: "entryPodTwo", PodNamespace: "entryNs", CaptureDirectory: "dir",
+var pointNode2 = capture.EntryPoint{PodName: "entryPod2", PodNamespace: "entryNs", CaptureDirectory: "dir",
+	CaptureNamespace: "ns", CaptureName: "name"}
+var pointNode3 = capture.EntryPoint{PodName: "entryPod3", PodNamespace: "entryNs", CaptureDirectory: "dir",
 	CaptureNamespace: "ns", CaptureName: "name"}
