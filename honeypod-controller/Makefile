@@ -8,7 +8,7 @@ PACKAGE_NAME            ?= github.com/projectcalico/calico/honeypod-controller
 HONEYPOD_CONTROLLER_IMAGE ?=honeypod-controller
 BUILD_IMAGES              ?=$(HONEYPOD_CONTROLLER_IMAGE)
 
-SNORT_VERSION             ?=2.9.19
+SNORT_VERSION             ?=2.9.20
 
 # Linker flags for building Honeypod Controller.
 #
