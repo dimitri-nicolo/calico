@@ -24,12 +24,16 @@ RUN  /usr/local/bin/clean.sh "/entrypoint.sh" "/bin/scaleloader"
 FROM scratch
 SHELL ["/bin/sh", "-c"]
 
-COPY --from=ubi /entrypoint.sh /entrypoint.sh   
-COPY --from=ubi /lib64/ /lib64/
-COPY --from=ubi /usr/lib64/ /usr/lib64/
+COPY --from=ubi /entrypoint.sh /entrypoint.sh
 COPY --from=ubi /bin/ /bin/
 COPY --from=ubi /usr/bin/ /usr/bin/
+# copies the shared linux libs requred by compliance-scaleloader identified by ldd bin/scaleloader-amd64`
+COPY --from=ubi /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
+COPY --from=ubi /lib64/libc.so.6 /lib64/libc.so.6
+COPY --from=ubi /lib64/libtinfo.so.6 /lib64/libtinfo.so.6
+COPY --from=ubi /lib64/libdl.so.2 /lib64/libdl.so.2
 
 ENV RUN_SCENARIO=true
 
+USER 999
 ENTRYPOINT ["/entrypoint.sh"]
