@@ -1,3 +1,5 @@
+// Copyright 2021-2022 Tigera Inc. All rights reserved.
+
 // Package sync abstracts out the process of (re)connecting and pulling data
 // from a gRPC socket connected to felix, using channels. Consumers of the data
 // can then simply pull it from a pipeline rather than worrying about the network
@@ -5,32 +7,90 @@ package sync
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-	"github.com/tigera/egress-gateway/proto"
 	"google.golang.org/grpc"
+
+	"github.com/tigera/egress-gateway/proto"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const reconnectSleepTime = 3 * time.Second
 
-type Client struct {
+// Connection encapsulates the client's connection functionality. In this instance, its primary use
+// is to aid in facilitating testing, by making mocking easier.
+type Connection interface {
+	Dial() error
+	Close() error
+	Sync() (proto.PolicySync_SyncClient, error)
+}
+
+type connection struct {
+	ctx        context.Context
+	conn       *grpc.ClientConn
 	dialOpts   []grpc.DialOption
 	grpcTarget string
+}
 
+// Dial establishes a new client connection and returns its address. Closes the connection if an
+// error occurs during the dial process. Logs the connection's address.
+func (c connection) Dial() error {
+	var err error
+	c.conn, err = grpc.Dial(c.grpcTarget, c.dialOpts...)
+	if err != nil {
+		return err
+	}
+	log.Tracef("open connection: %p", c.conn)
+
+	return nil
+}
+
+// Close closes the client connection. Logs the closing connection's address.
+func (c connection) Close() error {
+	if c.conn != nil {
+		log.Tracef("close connection: %p", c.conn)
+
+		return c.conn.Close()
+	}
+
+	return nil
+}
+
+// Sync creates a new egress gateway proto client from a client connection and syncs a request.
+// Subscribes to 'l3-routes' type payloads.
+func (c connection) Sync() (proto.PolicySync_SyncClient, error) {
+	client := proto.NewPolicySyncClient(c.conn)
+	if client == nil {
+		return nil, errors.New("could not get new policy sync client")
+	}
+
+	return client.Sync(c.ctx, &proto.SyncRequest{
+		SubscriptionType: "l3-routes",
+	})
+}
+
+type Client struct {
 	updates     chan *proto.ToDataplane
 	updatesLock sync.Mutex
+
+	// client connection methods
+	conn Connection
 
 	// readiness reporting
 	healthy bool
 }
 
 // NewClient builds a policy-sync client
-func NewClient(grpcTarget string, dOps []grpc.DialOption) *Client {
+func NewClient(ctx context.Context, grpcTarget string, dOps []grpc.DialOption) *Client {
 	c := Client{
-		grpcTarget: grpcTarget, // hostname:port to target
-		dialOpts:   dOps,       // dial options for gRPC connections
+		conn: connection{
+			ctx:        ctx,
+			grpcTarget: grpcTarget, // hostname:port to target
+			dialOpts:   dOps,       // dial options for gRPC connections
+		},
 	}
 	c.refreshUpdatesPipeline()
 	return &c
@@ -51,41 +111,7 @@ func (c *Client) SyncForever(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		default:
-			// prepare connection
-			conn, err := grpc.Dial(c.grpcTarget, c.dialOpts...)
-			if err != nil {
-				log.Errorf("could not dial syncserver: %v", err)
-				c.healthy = false
-				break
-			}
-
-			// init a client and request data
-			client := proto.NewPolicySyncClient(conn)
-			stream, err := client.Sync(ctx, &proto.SyncRequest{
-				SubscriptionType: "l3-routes",
-			})
-			if err != nil {
-				log.Errorf("could not initiate sync: %v", err)
-				c.healthy = false
-				break
-			}
-
-			// stream in updates - this stream should stay open and continually feed new updates
-			for {
-				update, err := stream.Recv()
-				if err != nil {
-					log.Warnf("unexpected error during sync: %v", err)
-					c.healthy = false
-					// if the stream to Felix breaks, close the associated updates channel and restart the connection process
-					c.refreshUpdatesPipeline()
-					break
-				}
-
-				c.updates <- update
-				c.healthy = true
-			}
-
-			conn.Close()
+			connectAndSync(ctx, c)
 		}
 		time.Sleep(reconnectSleepTime)
 	}
@@ -103,4 +129,50 @@ func (c *Client) refreshUpdatesPipeline() {
 		close(updatesOld)
 	}
 	c.updatesLock.Unlock()
+}
+
+// connectAndSync encapsulates connection and streaming mechanism.
+func connectAndSync(ctx context.Context, c *Client) {
+	// prepare connection.
+	err := c.conn.Dial()
+	defer func() {
+		err := c.conn.Close()
+		if err != nil {
+			log.WithError(err).Info("Ignoring error while closing connection; will reconnect shortly.")
+		}
+	}()
+
+	if err != nil {
+		log.WithError(err).Error("could not dial syncserver")
+		c.healthy = false
+		return
+	}
+
+	// init a client and request data
+	stream, err := c.conn.Sync()
+	if err != nil {
+		log.WithError(err).Error("could not initiate sync")
+		c.healthy = false
+		return
+	}
+
+	// stream in updates - this stream should stay open and continually feed new updates
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			update, err := stream.Recv()
+			if err != nil {
+				log.WithError(err).Warnf("unexpected error during sync")
+				c.healthy = false
+				// if the stream to Felix breaks, close the associated updates channel and restart the
+				// connection process
+				c.refreshUpdatesPipeline()
+				break
+			}
+			c.updates <- update
+			c.healthy = true
+		}
+	}
 }
