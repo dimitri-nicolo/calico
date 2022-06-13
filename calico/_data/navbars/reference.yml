@@ -112,6 +112,8 @@ section:
   section:
   - title: Overview
     path: /reference/resources/overview
+  - title: Alert exception
+    path: /reference/resources/alertexception
   - title: BGP configuration
     path: /reference/resources/bgpconfig
   - title: BGP peer
