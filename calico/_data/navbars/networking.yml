@@ -50,7 +50,7 @@ section:
      path: /networking/initial-ippool
    - title: Configure IP autodetection
      path: /networking/ip-autodetection
-   - title: Configure dual stack or IPv6 only
+   - title: Configure dual stack
      path: /networking/ipv6
    - title: Configure Kubernetes control plane to operate over IPv6
      path: /networking/ipv6-control-plane
