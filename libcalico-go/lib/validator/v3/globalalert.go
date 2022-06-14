@@ -123,7 +123,7 @@ func validateGlobalAlertAnomalyDetectionSpecs(structLevel validator.StructLevel,
 }
 
 func validateGlobalAlertDetector(structLevel validator.StructLevel, globalAlertName string, ad api.DetectorParams) {
-
+	// also validates that there can be only one unique detector per cluster as a side effect once deployed with apiserver
 	_, isValidJob := ADDetectorsSet()[ad.Name]
 	if !isValidJob {
 		structLevel.ReportError(
