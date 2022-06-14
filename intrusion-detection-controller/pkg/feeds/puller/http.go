@@ -272,7 +272,7 @@ func (h *httpPuller) query(ctx context.Context, feedCacher cacher.GlobalThreatFe
 			func(err error) bool {
 				switch err := err.(type) {
 				case net.Error:
-					return err.Temporary()
+					return err.Timeout()
 				default:
 					return false
 				}
