@@ -143,7 +143,7 @@ func validateGlobalAlertDetector(structLevel validator.StructLevel, globalAlertN
 			reflect.ValueOf(ad.Name),
 			"Detector.Name",
 			"",
-			reason(fmt.Sprintf("detector name must match the GlobalAlert Name for GlobalAlert of Type %s", api.GlobalAlertTypeRuleBased)),
+			reason(fmt.Sprintf("detector name must match the GlobalAlert Name for GlobalAlert of Type %s", api.GlobalAlertTypeAnomalyDetection)),
 			"",
 		)
 	}
