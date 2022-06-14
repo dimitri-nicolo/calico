@@ -58,7 +58,7 @@ func getVariant() string {
 }
 
 func getVersion() string {
-	return startup.CNXVERSION
+	return startup.CNXRELEASEVERSION
 }
 
 // This file contains the upgrade processing for the calico/node.  This
