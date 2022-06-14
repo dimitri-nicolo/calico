@@ -12,7 +12,7 @@ class RESTClient:
     def __init__(self, base_url, username=None, password=None, ca_cert=None, headers=None, verify=True):
         self.headers = {"Content-Type": "application/json"}
         self.base_url = base_url
-        self.verify = verify
+        self.verify = verify if not verify else ca_cert
         if not base_url[-1] == "/":
             self.base_url += "/"
         self.session = requests.Session()
