@@ -13,31 +13,26 @@ type MockK8sCommands struct {
 }
 
 // GetEntryPod provides a mock function with given fields: clusterID, node
-func (_m *MockK8sCommands) GetEntryPod(clusterID string, node string) (string, string, error) {
+func (_m *MockK8sCommands) GetEntryPod(clusterID string, node string) (*EntryPod, error) {
 	ret := _m.Called(clusterID, node)
 
-	var r0 string
-	if rf, ok := ret.Get(0).(func(string, string) string); ok {
+	var r0 *EntryPod
+	if rf, ok := ret.Get(0).(func(string, string) *EntryPod); ok {
 		r0 = rf(clusterID, node)
 	} else {
-		r0 = ret.Get(0).(string)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*EntryPod)
+		}
 	}
 
-	var r1 string
-	if rf, ok := ret.Get(1).(func(string, string) string); ok {
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, string) error); ok {
 		r1 = rf(clusterID, node)
 	} else {
-		r1 = ret.Get(1).(string)
+		r1 = ret.Error(1)
 	}
 
-	var r2 error
-	if rf, ok := ret.Get(2).(func(string, string) error); ok {
-		r2 = rf(clusterID, node)
-	} else {
-		r2 = ret.Error(2)
-	}
-
-	return r0, r1, r2
+	return r0, r1
 }
 
 // GetPacketCapture provides a mock function with given fields: clusterID, name, namespace

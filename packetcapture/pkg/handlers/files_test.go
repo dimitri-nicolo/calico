@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 
 package handlers_test
 
@@ -60,7 +60,11 @@ var _ = Describe("FilesDownload", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureOneNode, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockFileRetrieval.On("OpenTarReader", "cluster", point).Return(tarFileReader, nil, nil)
 		var download = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
 
@@ -100,7 +104,11 @@ var _ = Describe("FilesDownload", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureOneNode, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockFileRetrieval.On("OpenTarReader", "cluster", point).Return(tarFileReader, nil, nil)
 		var download = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
 
@@ -140,7 +148,11 @@ var _ = Describe("FilesDownload", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureNoFiles, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockFileRetrieval.On("OpenTarReader", "cluster", point).Return(tarFileReader, nil, nil)
 		var download = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
 
@@ -179,9 +191,21 @@ var _ = Describe("FilesDownload", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureMultipleNodes, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node1").Return("entryNs", "entryPod1", nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node2").Return("entryNs", "entryPod2", nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node3").Return("entryNs", "entryPod3", nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node1").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod1",
+			PodNamespace:  "entryNs",
+		}, nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node2").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod2",
+			PodNamespace:  "entryNs",
+		}, nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node3").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod3",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockFileRetrieval.On("OpenTarReader", "cluster", pointNode1).Return(tarFileReader1, nil, nil)
 		mockFileRetrieval.On("OpenTarReader", "cluster", pointNode2).Return(tarFileReader2, nil, nil)
 		mockFileRetrieval.On("OpenTarReader", "cluster", pointNode3).Return(tarFileReader3, nil, nil)
@@ -233,9 +257,21 @@ var _ = Describe("FilesDownload", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureMultipleNodes, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node1").Return("entryNs", "entryPod1", nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node2").Return("entryNs", "entryPod2", fmt.Errorf("get entry pod error"))
-		mockK8sCommands.On("GetEntryPod", "cluster", "node3").Return("entryNs", "entryPod3", nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node1").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod1",
+			PodNamespace:  "entryNs",
+		}, nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node2").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod2",
+			PodNamespace:  "entryNs",
+		}, fmt.Errorf("get entry pod error"))
+		mockK8sCommands.On("GetEntryPod", "cluster", "node3").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod3",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockFileRetrieval.On("OpenTarReader", "cluster", pointNode1).Return(tarFileReader1, nil, nil)
 		mockFileRetrieval.On("OpenTarReader", "cluster", pointNode2).Return(nil, nil, fmt.Errorf("open tar reader error"))
 		mockFileRetrieval.On("OpenTarReader", "cluster", pointNode3).Return(tarFileReader3, nil, nil)
@@ -317,7 +353,11 @@ var _ = Describe("FilesDownload", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureOneNode, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockFileRetrieval.On("OpenTarReader", "cluster", point).Return(nil, &errorWriter, nil)
 		var download = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
 
@@ -348,12 +388,16 @@ var _ = Describe("FilesDownload", func() {
 
 		// Bootstrap the download
 		var mockCache = &cache.MockClientCache{}
-		var mockk8sCommands = &capture.MockK8sCommands{}
+		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
-		mockk8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureOneNode, nil)
-		mockk8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureOneNode, nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockFileRetrieval.On("OpenTarReader", "cluster", point).Return(tarFileReader, &errorWriter, nil)
-		var download = handlers.NewFiles(mockCache, mockk8sCommands, mockFileRetrieval)
+		var download = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
 
 		// Bootstrap the http recorder
 		recorder := httptest.NewRecorder()
@@ -397,7 +441,11 @@ var _ = Describe("FilesDownload", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureOneNode, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockFileRetrieval.On("OpenTarReader", "cluster", point).Return(tarFileReader, &errorWriter, nil)
 		var download = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
 
@@ -419,7 +467,11 @@ var _ = Describe("FilesDownload", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureOneNode, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", fmt.Errorf("any error"))
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, fmt.Errorf("any error"))
 		var download = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
 
 		// Bootstrap the http recorder
@@ -437,7 +489,11 @@ var _ = Describe("FilesDownload", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureOneNode, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod1", nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod1",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockFileRetrieval.On("OpenTarReader", "cluster", pointNode1).Return(nil, nil, fmt.Errorf("open tar reader error"))
 		var download = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
 
@@ -489,7 +545,11 @@ var _ = Describe("FilesDelete", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(finishedPacketCaptureOneNode, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockK8sCommands.On("UpdatePacketCaptureStatusWithNoFiles", "cluster", "name", "ns",
 			map[string]struct{}{"node": {}}).Return(nil)
 		mockFileRetrieval.On("Delete", "cluster", point).Return(nil, nil)
@@ -509,9 +569,21 @@ var _ = Describe("FilesDelete", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(finishedPacketCaptureMultipleNodes, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node1").Return("entryNs", "entryPod1", nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node2").Return("entryNs", "entryPod2", nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node3").Return("entryNs", "entryPod3", nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node1").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod1",
+			PodNamespace:  "entryNs",
+		}, nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node2").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod2",
+			PodNamespace:  "entryNs",
+		}, nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node3").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod3",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockK8sCommands.On("UpdatePacketCaptureStatusWithNoFiles", "cluster", "name", "ns",
 			map[string]struct{}{"node1": {}, "node2": {}, "node3": {}}).Return(nil)
 		mockFileRetrieval.On("Delete", "cluster", pointNode1).Return(nil, nil)
@@ -580,7 +652,11 @@ var _ = Describe("FilesDelete", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(finishedPacketCaptureOneNode, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockFileRetrieval.On("Delete", "cluster", point).Return(&errorWriter, nil)
 		var files = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
 
@@ -599,7 +675,11 @@ var _ = Describe("FilesDelete", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(finishedPacketCaptureOneNode, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", fmt.Errorf("any error"))
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, fmt.Errorf("any error"))
 		var files = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
 
 		// Bootstrap the http recorder
@@ -617,7 +697,11 @@ var _ = Describe("FilesDelete", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(finishedPacketCaptureOneNode, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockK8sCommands.On("UpdatePacketCaptureStatusWithNoFiles", "cluster", "name", "ns",
 			map[string]struct{}{"node": {}}).Return(errors.ErrorResourceUpdateConflict{Identifier: "any"})
 		mockFileRetrieval.On("Delete", "cluster", point).Return(nil, nil)
@@ -639,7 +723,11 @@ var _ = Describe("FilesDelete", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(finishedPacketCaptureOneNode, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockK8sCommands.On("UpdatePacketCaptureStatusWithNoFiles", "cluster", "name", "ns",
 			map[string]struct{}{"node": {}}).Return(errors.ErrorResourceUpdateConflict{Identifier: "any"}).Twice()
 		mockK8sCommands.On("UpdatePacketCaptureStatusWithNoFiles", "cluster", "name", "ns",

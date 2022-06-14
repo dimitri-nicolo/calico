@@ -226,11 +226,43 @@ var oneFinishedPacketCaptureMultipleNodes = &v3.PacketCapture{
 	},
 }
 
-var point = capture.EntryPoint{PodName: "entryPod", PodNamespace: "entryNs", CaptureDirectory: "dir",
-	CaptureNamespace: "ns", CaptureName: "name"}
-var pointNode1 = capture.EntryPoint{PodName: "entryPod1", PodNamespace: "entryNs", CaptureDirectory: "dir",
-	CaptureNamespace: "ns", CaptureName: "name"}
-var pointNode2 = capture.EntryPoint{PodName: "entryPod2", PodNamespace: "entryNs", CaptureDirectory: "dir",
-	CaptureNamespace: "ns", CaptureName: "name"}
-var pointNode3 = capture.EntryPoint{PodName: "entryPod3", PodNamespace: "entryNs", CaptureDirectory: "dir",
-	CaptureNamespace: "ns", CaptureName: "name"}
+var point = capture.EntryPoint{
+	EntryPod: capture.EntryPod{
+		ContainerName: "fluentd",
+		PodName:       "entryPod",
+		PodNamespace:  "entryNs",
+	},
+	CaptureDirectory: "dir",
+	CaptureNamespace: "ns",
+	CaptureName:      "name",
+}
+var pointNode1 = capture.EntryPoint{
+	EntryPod: capture.EntryPod{
+		ContainerName: "fluentd",
+		PodName:       "entryPod1",
+		PodNamespace:  "entryNs",
+	},
+	CaptureDirectory: "dir",
+	CaptureNamespace: "ns",
+	CaptureName:      "name",
+}
+var pointNode2 = capture.EntryPoint{
+	EntryPod: capture.EntryPod{
+		ContainerName: "fluentd",
+		PodName:       "entryPod2",
+		PodNamespace:  "entryNs",
+	},
+	CaptureDirectory: "dir",
+	CaptureNamespace: "ns",
+	CaptureName:      "name",
+}
+var pointNode3 = capture.EntryPoint{
+	EntryPod: capture.EntryPod{
+		ContainerName: "fluentd",
+		PodName:       "entryPod3",
+		PodNamespace:  "entryNs",
+	},
+	CaptureDirectory: "dir",
+	CaptureNamespace: "ns",
+	CaptureName:      "name",
+}

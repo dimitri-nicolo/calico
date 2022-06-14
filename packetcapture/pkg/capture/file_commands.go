@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 
 package capture
 
@@ -52,7 +52,10 @@ func (f *fileCommands) command(clusterID string, entryPoint EntryPoint, command 
 		Resource("pods").
 		Name(entryPoint.PodName).
 		Namespace(entryPoint.PodNamespace).
-		SubResource("exec")
+		SubResource("exec").
+		VersionedParams(&v1.PodExecOptions{
+			Container: entryPoint.ContainerName,
+		}, scheme.ParameterCodec)
 
 	req.VersionedParams(
 		&v1.PodExecOptions{

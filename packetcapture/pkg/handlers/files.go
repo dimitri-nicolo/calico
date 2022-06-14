@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 
 package handlers
 
@@ -86,17 +86,17 @@ func (f *Files) Download(w http.ResponseWriter, r *http.Request) {
 	var filesRead = 0
 	for _, file := range packetCapture.Status.Files {
 		log.Debugf("copying files %v", file.FileNames)
-		ns, pod, err := f.K8sCommands.GetEntryPod(clusterID, file.Node)
+		entryPod, err := f.K8sCommands.GetEntryPod(clusterID, file.Node)
 		if err != nil {
 			log.WithError(err).Errorf("failed to locate entry pods for %s/%s", namespace, captureName)
 			continue
 		}
 		var entryPoint = capture.EntryPoint{
+			EntryPod: *entryPod,
+
 			CaptureDirectory: file.Directory,
 			CaptureName:      captureName,
 			CaptureNamespace: namespace,
-			PodName:          pod,
-			PodNamespace:     ns,
 		}
 		log.Debugf("entry pods is %v", entryPoint)
 
@@ -244,13 +244,19 @@ func (f *Files) Delete(w http.ResponseWriter, r *http.Request) {
 	var nodes = make(map[string]struct{})
 	for _, file := range packetCapture.Status.Files {
 		log.Debugf("Delete files %v", file)
-		ns, pod, err := f.K8sCommands.GetEntryPod(clusterID, file.Node)
+		entryPod, err := f.K8sCommands.GetEntryPod(clusterID, file.Node)
 		if err != nil {
 			log.WithError(err).Errorf("Failed locate entry pods for %s/%s", namespace, captureName)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		var entryPoint = capture.EntryPoint{PodNamespace: ns, PodName: pod, CaptureDirectory: file.Directory, CaptureName: captureName, CaptureNamespace: namespace}
+		var entryPoint = capture.EntryPoint{
+			EntryPod: *entryPod,
+
+			CaptureDirectory: file.Directory,
+			CaptureName:      captureName,
+			CaptureNamespace: namespace,
+		}
 		log.Debugf("Entry pods is %v", entryPoint)
 
 		errorReader, err := f.FileCommands.Delete(clusterID, entryPoint)
