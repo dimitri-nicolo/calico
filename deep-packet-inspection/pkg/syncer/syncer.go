@@ -132,7 +132,7 @@ func (r *syncerCallbacks) OnUpdates(updates []bapi.Update) {
 		}
 
 		// Handle DeepPacketInspection resource
-		if k, ok := u.Key.(model.Key); ok && strings.HasPrefix(k.String(), keyPrefixDPI) {
+		if strings.HasPrefix(u.Key.String(), keyPrefixDPI) {
 			switch u.UpdateType {
 			case bapi.UpdateTypeKVDeleted, bapi.UpdateTypeKVNew, bapi.UpdateTypeKVUpdated:
 				r.healthCh <- true
