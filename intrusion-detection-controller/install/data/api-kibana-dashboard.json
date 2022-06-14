@@ -251,5 +251,12 @@
       "title": "tigera_secure_ee_runtime*",
       "timeFieldName": "start_time"
     }
+  },
+  {
+    "type": "index-pattern",
+    "attributes": {
+      "title": "tigera_secure_ee_waf*",
+      "timeFieldName": "@timestamp"
+    }
   }
 ]
