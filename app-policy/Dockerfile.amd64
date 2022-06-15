@@ -37,18 +37,54 @@ RUN chmod 0777 /tmp/dikastes
 RUN mkdir /licenses
 COPY LICENSE /licenses
 
-FROM scratch
-
 COPY --from=build /usr/local/modsecurity/ /usr/local/modsecurity/
 COPY --from=build /usr/lib64/libGeoIP.* /usr/lib64/
+
+FROM scratch
 
 COPY --from=ubi /licenses /licenses
 ADD bin/dikastes-amd64 /dikastes
 ADD bin/healthz-amd64 /healthz
 
 # Include libraries from UBI for dynamic linking.
-COPY --from=ubi /lib64 /lib64
-COPY --from=ubi /lib /lib
+# Copy the specific libraries; these were obtained by running 'ldd /dikastes'
+COPY --from=ubi /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
+COPY --from=ubi /lib64/libbrotlicommon.so.1 /lib64/libbrotlicommon.so.1
+COPY --from=ubi /lib64/libbrotlidec.so.1 /lib64/libbrotlidec.so.1
+COPY --from=ubi /lib64/libcom_err.so.2 /lib64/libcom_err.so.2
+COPY --from=ubi /lib64/libcrypto.so.1.1 /lib64/libcrypto.so.1.1
+COPY --from=ubi /lib64/libcrypt.so.1 /lib64/libcrypt.so.1
+COPY --from=ubi /lib64/libc.so.6 /lib64/libc.so.6
+COPY --from=ubi /lib64/libcurl.so.4 /lib64/libcurl.so.4
+COPY --from=ubi /lib64/libdl.so.2 /lib64/libdl.so.2
+COPY --from=ubi /lib64/libgcc_s.so.1 /lib64/libgcc_s.so.1
+COPY --from=ubi /lib64/libGeoIP.so.1 /lib64/libGeoIP.so.1
+COPY --from=ubi /lib64/libgssapi_krb5.so.2 /lib64/libgssapi_krb5.so.2
+COPY --from=ubi /lib64/libidn2.so.0 /lib64/libidn2.so.0
+COPY --from=ubi /lib64/libk5crypto.so.3 /lib64/libk5crypto.so.3
+COPY --from=ubi /lib64/libkeyutils.so.1 /lib64/libkeyutils.so.1
+COPY --from=ubi /lib64/libkrb5.so.3 /lib64/libkrb5.so.3
+COPY --from=ubi /lib64/libkrb5support.so.0 /lib64/libkrb5support.so.0
+COPY --from=ubi /lib64/liblber-2.4.so.2 /lib64/liblber-2.4.so.2
+COPY --from=ubi /lib64/libldap-2.4.so.2 /lib64/libldap-2.4.so.2
+COPY --from=ubi /lib64/liblzma.so.5 /lib64/liblzma.so.5
+COPY --from=ubi /lib64/libm.so.6 /lib64/libm.so.6
+COPY --from=ubi /lib64/libnghttp2.so.14 /lib64/libnghttp2.so.14
+COPY --from=ubi /lib64/libpcre2-8.so.0 /lib64/libpcre2-8.so.0
+COPY --from=ubi /lib64/libpcre.so.1 /lib64/libpcre.so.1
+COPY --from=ubi /lib64/libpsl.so.5 /lib64/libpsl.so.5
+COPY --from=ubi /lib64/libpthread.so.0 /lib64/libpthread.so.0
+COPY --from=ubi /lib64/libresolv.so.2 /lib64/libresolv.so.2
+COPY --from=ubi /lib64/librt.so.1 /lib64/librt.so.1
+COPY --from=ubi /lib64/libsasl2.so.3 /lib64/libsasl2.so.3
+COPY --from=ubi /lib64/libselinux.so.1 /lib64/libselinux.so.1
+COPY --from=ubi /lib64/libssh.so.4 /lib64/libssh.so.4
+COPY --from=ubi /lib64/libssl.so.1.1 /lib64/libssl.so.1.1
+COPY --from=ubi /lib64/libstdc++.so.6 /lib64/libstdc++.so.6
+COPY --from=ubi /lib64/libunistring.so.2 /lib64/libunistring.so.2
+COPY --from=ubi /lib64/libxml2.so.2 /lib64/libxml2.so.2
+COPY --from=ubi /lib64/libz.so.1 /lib64/libz.so.1
+COPY --from=ubi /usr/local/modsecurity/lib/libmodsecurity.so.3 /usr/local/modsecurity/lib/libmodsecurity.so.3
 
 # Typical Linux systems start numbering human users at 1000, reserving 1-999
 # for services, so we pick 999 to be least likely to overlap.  It's not a big

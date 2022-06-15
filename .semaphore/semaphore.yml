@@ -93,6 +93,10 @@ promotions:
   pipeline_file: push-images/voltron.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push prometheus-service images
+  pipeline_file: push-images/prometheus-service.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 # Have a separate promotion for publishing Helm charts.
 - name: Publish Helm Charts
   pipeline_file: push-helm-charts/helm-charts.yml
@@ -767,6 +771,21 @@ blocks:
     - name: "intrusion-detection-controller tests"
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
+
+- name: 'prometheus-service'
+  run:
+    when: "false or change_in(['/*', '/prometheus-service/', 'libcalico-go/lib/logutils/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd prometheus-service
+    jobs:
+    - name: "prometheus-service tests"
+      commands:
+      - make ci
 
 - name: 'honeypod-controller'
   run:

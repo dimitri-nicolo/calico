@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 
 package handlers_test
 
@@ -20,7 +20,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
-	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/packetcapture/pkg/cache"
 	"github.com/projectcalico/calico/packetcapture/pkg/capture"
 	"github.com/projectcalico/calico/packetcapture/pkg/handlers"
@@ -28,8 +27,6 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
-
-const loremLipsum = "Lorem Lipsum"
 
 var _ = Describe("FilesDownload", func() {
 	var req *http.Request
@@ -46,13 +43,13 @@ var _ = Describe("FilesDownload", func() {
 		req = req.WithContext(middleware.WithCaptureName(req.Context(), "name"))
 	})
 
-	It("Can archive a pcap file with only its header", func() {
+	It("should archive a pcap file with only its header", func() {
 		// Create a temp directory to store all the files needed for the test
 		var tempDir, err = ioutil.TempDir("/tmp", "test")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Create dummy files and add them to a tar archive
-		var tarFile = createTarArchive(tempDir, files, pcapHeader())
+		var tarFile = createTarArchive(tempDir, filesOnNode1, pcapHeader())
 		defer os.RemoveAll(tempDir)
 
 		tarFileReader, err := os.Open(tarFile.Name())
@@ -63,7 +60,11 @@ var _ = Describe("FilesDownload", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureOneNode, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockFileRetrieval.On("OpenTarReader", "cluster", point).Return(tarFileReader, nil, nil)
 		var download = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
 
@@ -83,16 +84,16 @@ var _ = Describe("FilesDownload", func() {
 		// Write the body to file
 		_, err = io.Copy(archive, recorder.Body)
 		Expect(err).NotTo(HaveOccurred())
-		validateArchive(archive, files, pcapHeader())
+		validateArchive(archive, filesOnNode1, pcapHeader())
 	})
 
-	It("Downloads files from a single node", func() {
+	It("should download files from a single node", func() {
 		// Create a temp directory to store all the files needed for the test
 		var tempDir, err = ioutil.TempDir("/tmp", "test")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Create dummy files and add them to a tar archive
-		var tarFile = createTarArchive(tempDir, files, []byte(loremLipsum))
+		var tarFile = createTarArchive(tempDir, filesOnNode1, []byte("node1"))
 		defer os.RemoveAll(tempDir)
 
 		tarFileReader, err := os.Open(tarFile.Name())
@@ -103,7 +104,11 @@ var _ = Describe("FilesDownload", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureOneNode, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockFileRetrieval.On("OpenTarReader", "cluster", point).Return(tarFileReader, nil, nil)
 		var download = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
 
@@ -123,16 +128,16 @@ var _ = Describe("FilesDownload", func() {
 		// Write the body to file
 		_, err = io.Copy(archive, recorder.Body)
 		Expect(err).NotTo(HaveOccurred())
-		validateArchive(archive, files, []byte(loremLipsum))
+		validateArchive(archive, filesOnNode1, []byte("node1"))
 	})
 
-	It("Downloads files from 0 files", func() {
+	It("should download files from 0 files", func() {
 		// Create a temp directory to store all the files needed for the test
 		var tempDir, err = ioutil.TempDir("/tmp", "test")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Create dummy files and add them to a tar archive
-		var tarFile = createTarArchive(tempDir, noFiles, []byte(loremLipsum))
+		var tarFile = createTarArchive(tempDir, noFiles, []byte("node1"))
 		defer os.RemoveAll(tempDir)
 
 		tarFileReader, err := os.Open(tarFile.Name())
@@ -143,7 +148,11 @@ var _ = Describe("FilesDownload", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureNoFiles, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockFileRetrieval.On("OpenTarReader", "cluster", point).Return(tarFileReader, nil, nil)
 		var download = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
 
@@ -159,19 +168,22 @@ var _ = Describe("FilesDownload", func() {
 		Expect(recorder.Header().Get("Content-Length")).To(Equal(""))
 	})
 
-	It("Downloads files from a multiple node", func() {
+	It("should download files from multiple nodes", func() {
 		// Create a temp directory to store all the files needed for the test
 		var tempDir, err = ioutil.TempDir("/tmp", "test")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Create dummy files and add them to a tar archive
-		var tarFileNodeOne = createTarArchive(tempDir, files, []byte(loremLipsum))
-		var tarFileNodeTwo = createTarArchive(tempDir, otherFiles, []byte(loremLipsum))
+		var tarFileNode1 = createTarArchive(tempDir, filesOnNode1, []byte("node1"))
+		var tarFileNode2 = createTarArchive(tempDir, filesOnNode2, []byte("node2"))
+		var tarFileNode3 = createTarArchive(tempDir, filesOnNode3, []byte("node3"))
 		defer os.RemoveAll(tempDir)
 
-		tarFileReaderOne, err := os.Open(tarFileNodeOne.Name())
+		tarFileReader1, err := os.Open(tarFileNode1.Name())
 		Expect(err).NotTo(HaveOccurred())
-		tarFileReaderTwo, err := os.Open(tarFileNodeTwo.Name())
+		tarFileReader2, err := os.Open(tarFileNode2.Name())
+		Expect(err).NotTo(HaveOccurred())
+		tarFileReader3, err := os.Open(tarFileNode3.Name())
 		Expect(err).NotTo(HaveOccurred())
 
 		// Bootstrap the download
@@ -179,10 +191,24 @@ var _ = Describe("FilesDownload", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureMultipleNodes, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "nodeOne").Return("entryNs", "entryPodOne", nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "nodeTwo").Return("entryNs", "entryPodTwo", nil)
-		mockFileRetrieval.On("OpenTarReader", "cluster", pointNodeOne).Return(tarFileReaderOne, nil, nil)
-		mockFileRetrieval.On("OpenTarReader", "cluster", pointNodeTwo).Return(tarFileReaderTwo, nil, nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node1").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod1",
+			PodNamespace:  "entryNs",
+		}, nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node2").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod2",
+			PodNamespace:  "entryNs",
+		}, nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node3").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod3",
+			PodNamespace:  "entryNs",
+		}, nil)
+		mockFileRetrieval.On("OpenTarReader", "cluster", pointNode1).Return(tarFileReader1, nil, nil)
+		mockFileRetrieval.On("OpenTarReader", "cluster", pointNode2).Return(tarFileReader2, nil, nil)
+		mockFileRetrieval.On("OpenTarReader", "cluster", pointNode3).Return(tarFileReader3, nil, nil)
 		var download = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
 
 		// Bootstrap the http recorder
@@ -202,9 +228,77 @@ var _ = Describe("FilesDownload", func() {
 		_, err = io.Copy(archive, recorder.Body)
 		Expect(err).NotTo(HaveOccurred())
 		var allFiles []string
-		allFiles = append(allFiles, files...)
-		allFiles = append(allFiles, otherFiles...)
-		validateArchive(archive, allFiles, []byte(loremLipsum))
+		allFiles = append(allFiles, filesOnNode1...)
+		allFiles = append(allFiles, filesOnNode2...)
+		allFiles = append(allFiles, filesOnNode3...)
+		validateArchive(archive, allFiles,
+			[]byte("node1"),
+			[]byte("node2"), []byte("node2"),
+			[]byte("node3"), []byte("node3"), []byte("node3"))
+	})
+
+	It("should downloads files from multiple nodes and ignore errors in between", func() {
+		// Create a temp directory to store all the files needed for the test
+		var tempDir, err = ioutil.TempDir("/tmp", "test")
+		Expect(err).NotTo(HaveOccurred())
+
+		// Create dummy files and add them to a tar archive
+		var tarFileNode1 = createTarArchive(tempDir, filesOnNode1, []byte("node1"))
+		var tarFileNode3 = createTarArchive(tempDir, filesOnNode3, []byte("node3"))
+		defer os.RemoveAll(tempDir)
+
+		tarFileReader1, err := os.Open(tarFileNode1.Name())
+		Expect(err).NotTo(HaveOccurred())
+		tarFileReader3, err := os.Open(tarFileNode3.Name())
+		Expect(err).NotTo(HaveOccurred())
+
+		// Bootstrap the download
+		var mockCache = &cache.MockClientCache{}
+		var mockK8sCommands = &capture.MockK8sCommands{}
+		var mockFileRetrieval = &capture.MockFileCommands{}
+		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureMultipleNodes, nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node1").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod1",
+			PodNamespace:  "entryNs",
+		}, nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node2").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod2",
+			PodNamespace:  "entryNs",
+		}, fmt.Errorf("get entry pod error"))
+		mockK8sCommands.On("GetEntryPod", "cluster", "node3").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod3",
+			PodNamespace:  "entryNs",
+		}, nil)
+		mockFileRetrieval.On("OpenTarReader", "cluster", pointNode1).Return(tarFileReader1, nil, nil)
+		mockFileRetrieval.On("OpenTarReader", "cluster", pointNode2).Return(nil, nil, fmt.Errorf("open tar reader error"))
+		mockFileRetrieval.On("OpenTarReader", "cluster", pointNode3).Return(tarFileReader3, nil, nil)
+		var download = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
+
+		// Bootstrap the http recorder
+		recorder := httptest.NewRecorder()
+		handler := http.HandlerFunc(download.Download)
+		handler.ServeHTTP(recorder, req)
+
+		Expect(recorder.Code).To(Equal(http.StatusOK))
+		Expect(recorder.Header().Get("Content-Type")).To(Equal("application/zip"))
+		Expect(recorder.Header().Get("Content-Disposition")).To(Equal("attachment; filename=files.zip"))
+		Expect(recorder.Header().Get("Content-Length")).NotTo(Equal(""))
+
+		archive, err := ioutil.TempFile(tempDir, "result.*.zip")
+		Expect(err).NotTo(HaveOccurred())
+
+		// Write the body to file
+		_, err = io.Copy(archive, recorder.Body)
+		Expect(err).NotTo(HaveOccurred())
+		var allFiles []string
+		allFiles = append(allFiles, filesOnNode1...)
+		allFiles = append(allFiles, filesOnNode3...)
+		validateArchive(archive, allFiles,
+			[]byte("node1"),
+			[]byte("node3"), []byte("node3"), []byte("node3"))
 	})
 
 	DescribeTable("Failure to get packet capture",
@@ -249,7 +343,7 @@ var _ = Describe("FilesDownload", func() {
 		Entry("No files generated for packet capture", packetCaptureNoFiles),
 	)
 
-	It("TarError returns an error via io.Reader", func() {
+	It("should ignore tar error", func() {
 		var errorWriter bytes.Buffer
 		var _, err = errorWriter.WriteString("any error")
 		Expect(err).NotTo(HaveOccurred())
@@ -259,7 +353,11 @@ var _ = Describe("FilesDownload", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureOneNode, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockFileRetrieval.On("OpenTarReader", "cluster", point).Return(nil, &errorWriter, nil)
 		var download = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
 
@@ -268,17 +366,17 @@ var _ = Describe("FilesDownload", func() {
 		handler := http.HandlerFunc(download.Download)
 		handler.ServeHTTP(recorder, req)
 
-		Expect(recorder.Code).To(Equal(http.StatusInternalServerError))
-		Expect(strings.Trim(recorder.Body.String(), "\n")).To(Equal("any error"))
+		Expect(recorder.Code).To(Equal(http.StatusNoContent))
+		Expect(recorder.Body.String()).To(BeEmpty())
 	})
 
-	It("Ignore tar output removing leading /' from member names", func() {
+	It("should ignore tar output removing leading /' from member names", func() {
 		// Create a temp directory to store all the files needed for the test
 		var tempDir, err = ioutil.TempDir("/tmp", "test")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Create dummy files and add them to a tar archive
-		var tarFile = createTarArchive(tempDir, files, []byte(loremLipsum))
+		var tarFile = createTarArchive(tempDir, filesOnNode1, []byte("node1"))
 		defer os.RemoveAll(tempDir)
 
 		tarFileReader, err := os.Open(tarFile.Name())
@@ -290,12 +388,16 @@ var _ = Describe("FilesDownload", func() {
 
 		// Bootstrap the download
 		var mockCache = &cache.MockClientCache{}
-		var mockk8sCommands = &capture.MockK8sCommands{}
+		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
-		mockk8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureOneNode, nil)
-		mockk8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureOneNode, nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockFileRetrieval.On("OpenTarReader", "cluster", point).Return(tarFileReader, &errorWriter, nil)
-		var download = handlers.NewFiles(mockCache, mockk8sCommands, mockFileRetrieval)
+		var download = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
 
 		// Bootstrap the http recorder
 		recorder := httptest.NewRecorder()
@@ -313,16 +415,16 @@ var _ = Describe("FilesDownload", func() {
 		// Write the body to file
 		_, err = io.Copy(archive, recorder.Body)
 		Expect(err).NotTo(HaveOccurred())
-		validateArchive(archive, files, []byte(loremLipsum))
+		validateArchive(archive, filesOnNode1, []byte("node1"))
 	})
 
-	It("Ignore tar output No such file or directory", func() {
+	It("should ignore tar output No such file or directory", func() {
 		// Create a temp directory to store all the files needed for the test
 		var tempDir, err = ioutil.TempDir("/tmp", "test")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Create dummy files and add them to a tar archive
-		var tarFile = createTarArchive(tempDir, noFiles, []byte(loremLipsum))
+		var tarFile = createTarArchive(tempDir, noFiles, []byte("node1"))
 		defer os.RemoveAll(tempDir)
 
 		tarFileReader, err := os.Open(tarFile.Name())
@@ -339,7 +441,11 @@ var _ = Describe("FilesDownload", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureOneNode, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockFileRetrieval.On("OpenTarReader", "cluster", point).Return(tarFileReader, &errorWriter, nil)
 		var download = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
 
@@ -355,13 +461,17 @@ var _ = Describe("FilesDownload", func() {
 		Expect(recorder.Header().Get("Content-Length")).To(Equal(""))
 	})
 
-	It("Fails to locate an entry pod", func() {
+	It("should ignore error when failing to locate an entry pod", func() {
 		// Bootstrap the download
 		var mockCache = &cache.MockClientCache{}
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureOneNode, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", fmt.Errorf("any error"))
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, fmt.Errorf("any error"))
 		var download = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
 
 		// Bootstrap the http recorder
@@ -369,8 +479,31 @@ var _ = Describe("FilesDownload", func() {
 		handler := http.HandlerFunc(download.Download)
 		handler.ServeHTTP(recorder, req)
 
-		Expect(recorder.Code).To(Equal(http.StatusInternalServerError))
-		Expect(strings.Trim(recorder.Body.String(), "\n")).To(Equal("any error"))
+		Expect(recorder.Code).To(Equal(http.StatusNoContent))
+		Expect(recorder.Body.String()).To(BeEmpty())
+	})
+
+	It("should ignore error when failing to open tar reader", func() {
+		// Bootstrap the download
+		var mockCache = &cache.MockClientCache{}
+		var mockK8sCommands = &capture.MockK8sCommands{}
+		var mockFileRetrieval = &capture.MockFileCommands{}
+		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(packetCaptureOneNode, nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod1",
+			PodNamespace:  "entryNs",
+		}, nil)
+		mockFileRetrieval.On("OpenTarReader", "cluster", pointNode1).Return(nil, nil, fmt.Errorf("open tar reader error"))
+		var download = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
+
+		// Bootstrap the http recorder
+		recorder := httptest.NewRecorder()
+		handler := http.HandlerFunc(download.Download)
+		handler.ServeHTTP(recorder, req)
+
+		Expect(recorder.Code).To(Equal(http.StatusNoContent))
+		Expect(recorder.Body.String()).To(BeEmpty())
 	})
 })
 
@@ -412,7 +545,11 @@ var _ = Describe("FilesDelete", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(finishedPacketCaptureOneNode, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockK8sCommands.On("UpdatePacketCaptureStatusWithNoFiles", "cluster", "name", "ns",
 			map[string]struct{}{"node": {}}).Return(nil)
 		mockFileRetrieval.On("Delete", "cluster", point).Return(nil, nil)
@@ -432,12 +569,26 @@ var _ = Describe("FilesDelete", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(finishedPacketCaptureMultipleNodes, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "nodeOne").Return("entryNs", "entryPodOne", nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "nodeTwo").Return("entryNs", "entryPodTwo", nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node1").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod1",
+			PodNamespace:  "entryNs",
+		}, nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node2").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod2",
+			PodNamespace:  "entryNs",
+		}, nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node3").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod3",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockK8sCommands.On("UpdatePacketCaptureStatusWithNoFiles", "cluster", "name", "ns",
-			map[string]struct{}{"nodeOne": {}, "nodeTwo": {}}).Return(nil)
-		mockFileRetrieval.On("Delete", "cluster", pointNodeOne).Return(nil, nil)
-		mockFileRetrieval.On("Delete", "cluster", pointNodeTwo).Return(nil, nil)
+			map[string]struct{}{"node1": {}, "node2": {}, "node3": {}}).Return(nil)
+		mockFileRetrieval.On("Delete", "cluster", pointNode1).Return(nil, nil)
+		mockFileRetrieval.On("Delete", "cluster", pointNode2).Return(nil, nil)
+		mockFileRetrieval.On("Delete", "cluster", pointNode3).Return(nil, nil)
 		var download = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
 
 		// Bootstrap the http recorder
@@ -501,7 +652,11 @@ var _ = Describe("FilesDelete", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(finishedPacketCaptureOneNode, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockFileRetrieval.On("Delete", "cluster", point).Return(&errorWriter, nil)
 		var files = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
 
@@ -520,7 +675,11 @@ var _ = Describe("FilesDelete", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(finishedPacketCaptureOneNode, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", fmt.Errorf("any error"))
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, fmt.Errorf("any error"))
 		var files = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
 
 		// Bootstrap the http recorder
@@ -538,9 +697,13 @@ var _ = Describe("FilesDelete", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(finishedPacketCaptureOneNode, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockK8sCommands.On("UpdatePacketCaptureStatusWithNoFiles", "cluster", "name", "ns",
-			map[string]struct{}{"node": {}}).Return(cerrors.ErrorResourceUpdateConflict{Identifier: "any"})
+			map[string]struct{}{"node": {}}).Return(errors.ErrorResourceUpdateConflict{Identifier: "any"})
 		mockFileRetrieval.On("Delete", "cluster", point).Return(nil, nil)
 		var files = handlers.NewFiles(mockCache, mockK8sCommands, mockFileRetrieval)
 
@@ -560,9 +723,13 @@ var _ = Describe("FilesDelete", func() {
 		var mockK8sCommands = &capture.MockK8sCommands{}
 		var mockFileRetrieval = &capture.MockFileCommands{}
 		mockK8sCommands.On("GetPacketCapture", "cluster", "name", "ns").Return(finishedPacketCaptureOneNode, nil)
-		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return("entryNs", "entryPod", nil)
+		mockK8sCommands.On("GetEntryPod", "cluster", "node").Return(&capture.EntryPod{
+			ContainerName: "fluentd",
+			PodName:       "entryPod",
+			PodNamespace:  "entryNs",
+		}, nil)
 		mockK8sCommands.On("UpdatePacketCaptureStatusWithNoFiles", "cluster", "name", "ns",
-			map[string]struct{}{"node": {}}).Return(cerrors.ErrorResourceUpdateConflict{Identifier: "any"}).Twice()
+			map[string]struct{}{"node": {}}).Return(errors.ErrorResourceUpdateConflict{Identifier: "any"}).Twice()
 		mockK8sCommands.On("UpdatePacketCaptureStatusWithNoFiles", "cluster", "name", "ns",
 			map[string]struct{}{"node": {}}).Return(nil)
 		mockFileRetrieval.On("Delete", "cluster", point).Return(nil, nil)
@@ -578,21 +745,21 @@ var _ = Describe("FilesDelete", func() {
 	})
 })
 
-func validateArchive(archive *os.File, files []string, expectedData []byte) {
+func validateArchive(archive *os.File, files []string, expectedData ...[]byte) {
 	defer GinkgoRecover()
 
 	zipReader, err := zip.OpenReader(archive.Name())
 	Expect(err).NotTo(HaveOccurred())
 	Expect(len(zipReader.File)).To(Equal(len(files)))
 
-	for _, f := range zipReader.File {
+	for idx, f := range zipReader.File {
 		file, err := f.Open()
 		Expect(err).NotTo(HaveOccurred())
 		var content bytes.Buffer
 		_, err = io.Copy(&content, file)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(content.String()).To(Equal(string(expectedData)))
+		Expect(content.String()).To(Equal(string(expectedData[idx])))
 		file.Close()
 	}
 }
