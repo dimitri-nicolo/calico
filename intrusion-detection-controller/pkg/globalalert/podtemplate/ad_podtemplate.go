@@ -69,13 +69,23 @@ func DecoratePodTemplateForTrainingCycle(adJobPT *v1.PodTemplate, clusterName, d
 func DecoratePodTemplateForDetectionCycle(adJobPT *v1.PodTemplate, clusterName string, globalAlert v3.GlobalAlert) error {
 	adJobContainerIndex := GetContainerIndex(adJobPT.Template.Spec.Containers, ADJobsContainerName)
 
-	args := append(ADJobStartupArgs(), ADJobTrainCycleArg)
+	args := append(ADJobStartupArgs(), ADJobDetectCycleArg)
 	adJobPT.Template.Spec.Containers[adJobContainerIndex].Command = ADJobStartupCommand()
 	adJobPT.Template.Spec.Containers[adJobContainerIndex].Args = args
 
 	err := decorateBaseADPodTemplate(adJobPT, clusterName, adJobContainerIndex)
 	if err != nil {
 		return err
+	}
+
+	if globalAlert.Spec.Detector != nil && len(globalAlert.Spec.Detector.Name) > 0 {
+		adJobPT.Template.Spec.Containers[adJobContainerIndex].Env = append(
+			adJobPT.Template.Spec.Containers[adJobContainerIndex].Env,
+			v1.EnvVar{
+				Name:  "AD_ENABLED_JOBS",
+				Value: globalAlert.Spec.Detector.Name,
+			},
+		)
 	}
 
 	detectionSchedule := DefaultCronJobDetectionSchedule

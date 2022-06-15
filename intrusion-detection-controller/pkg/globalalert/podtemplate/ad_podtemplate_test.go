@@ -80,11 +80,10 @@ var _ = Describe("ADJob PodTemplate", func() {
 			testPT := *defaultPodTemplate
 			clusterName := "testCluster"
 			cycle := ADJobDetectCycleArg
-			job := "test-job"
 
 			testGlobalAlert := adTestGlobalAlert.DeepCopy()
 			testGlobalAlert.Spec.Severity = 95
-			testGlobalAlert.Spec.Period.Duration = 20 * time.Minute
+			testGlobalAlert.Spec.Period = &metav1.Duration{Duration: 20 * time.Minute}
 
 			err := DecoratePodTemplateForDetectionCycle(&testPT, clusterName, *testGlobalAlert)
 			Expect(err).To(BeNil())
@@ -98,7 +97,7 @@ var _ = Describe("ADJob PodTemplate", func() {
 				},
 				v1.EnvVar{
 					Name:      "AD_ENABLED_JOBS",
-					Value:     job,
+					Value:     testGlobalAlert.Spec.Detector.Name,
 					ValueFrom: nil,
 				},
 				v1.EnvVar{
@@ -124,9 +123,8 @@ var _ = Describe("ADJob PodTemplate", func() {
 			testPT := *defaultPodTemplate
 			clusterName := "testCluster"
 			cycle := ADJobDetectCycleArg
-			job := "test-job"
 
-			err := DecoratePodTemplateForDetectionCycle(&testPT, clusterName, *&adTestGlobalAlert)
+			err := DecoratePodTemplateForDetectionCycle(&testPT, clusterName, adTestGlobalAlert)
 			Expect(err).To(BeNil())
 			containerResultIndex := GetContainerIndex(testPT.Template.Spec.Containers, ADJobsContainerName)
 
@@ -138,7 +136,7 @@ var _ = Describe("ADJob PodTemplate", func() {
 				},
 				v1.EnvVar{
 					Name:      "AD_ENABLED_JOBS",
-					Value:     job,
+					Value:     adTestGlobalAlert.Spec.Detector.Name,
 					ValueFrom: nil,
 				},
 				v1.EnvVar{
