@@ -29,7 +29,6 @@ type Config struct {
 	TunnelCert string `default:"/certs/tunnel/cert" split_words:"true" json:"-"`
 	TunnelKey  string `default:"/certs/tunnel/key" split_words:"true" json:"-"`
 	LogLevel   string `default:"INFO"`
-	PublicIP   string `default:"127.0.0.1:32453" split_words:"true"`
 
 	// HTTPSCert, HTTPSKey - path to an x509 certificate and its private key used
 	// for external communication (Tigera UI <-> Voltron)

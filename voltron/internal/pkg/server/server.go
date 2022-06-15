@@ -81,8 +81,6 @@ type Server struct {
 	tunnelEnableKeepAlive   bool
 	tunnelKeepAliveInterval time.Duration
 
-	publicAddress string
-
 	sniServiceMap map[string]string
 }
 
