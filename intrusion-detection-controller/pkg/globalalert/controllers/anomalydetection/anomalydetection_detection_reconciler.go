@@ -377,8 +377,7 @@ func (r *adDetectionReconciler) createDetectionCycle(podTemplate *v1.PodTemplate
 		detectionSchedule = globalAlert.Spec.Period.Duration
 	}
 
-	err := podtemplate.DecoratePodTemplateForADDetectorCycle(podTemplate, detectionResource.ClusterName,
-		podtemplate.ADJobDetectCycleArg, globalAlert.Spec.Detector.Name, detectionSchedule.String())
+	err := podtemplate.DecoratePodTemplateForDetectionCycle(podTemplate, detectionResource.ClusterName, *globalAlert)
 
 	if err != nil {
 		return nil, err

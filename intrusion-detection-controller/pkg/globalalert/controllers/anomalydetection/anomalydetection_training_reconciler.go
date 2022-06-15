@@ -304,8 +304,7 @@ func (r *adJobTrainingReconciler) getADPodTemplateWithEnabledDecorators(clusterN
 	}
 
 	// add specs for training cycle
-	err = podtemplate.DecoratePodTemplateForADDetectorCycle(adTrainingJobPT, clusterName, podtemplate.ADJobTrainCycleArg, detectorList,
-		DefaultADDetectorTrainingPeriod.String())
+	err = podtemplate.DecoratePodTemplateForTrainingCycle(adTrainingJobPT, clusterName, detectorList)
 	if err != nil {
 		return nil, err
 	}

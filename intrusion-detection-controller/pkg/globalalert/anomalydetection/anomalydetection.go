@@ -113,7 +113,9 @@ func (s *adService) Start() v3.GlobalAlertStatus {
 		return s.globalAlert.Status
 	}
 
-	return reporting.GetGlobalAlertSuccessStatus()
+	s.globalAlert.Status = reporting.GetGlobalAlertSuccessStatus()
+
+	return s.globalAlert.Status
 }
 
 // Stop seizes the detection cycle for the AD Job by deleting the CronJob and removing it from the
