@@ -37,7 +37,7 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
-// routeTable is the interface provided by the standard routetable module used to progam the RIB.
+// routeTable is the interface provided by the standard routetable module used to program the RIB.
 type routeTable interface {
 	routeTableSyncer
 	routeTableReader
@@ -183,7 +183,7 @@ type endpointManager struct {
 	defaultRPFilter string
 
 	// hostIfaceToAddrs maps host interface name to the set of IPs on that interface (reported
-	// fro the dataplane).
+	// from the dataplane).
 	hostIfaceToAddrs map[string]set.Set
 	// rawHostEndpoints contains the raw (i.e. not resolved to interface) host endpoints.
 	rawHostEndpoints map[proto.HostEndpointID]*proto.HostEndpoint
@@ -1408,7 +1408,7 @@ func configureInterface(name string, ipVersion int, rpFilter string, writeProcSy
 		if err != nil {
 			return err
 		}
-		// Disable kernel rpf check for interfaces that have rpf filtering explicitely disabled
+		// Disable kernel rpf check for interfaces that have rpf filtering explicitly disabled
 		// This is set only in IPv4 mode as there's no equivalent sysctl in IPv6
 		err = writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/rp_filter", name), rpFilter)
 		if err != nil {

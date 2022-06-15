@@ -1158,7 +1158,7 @@ func testAlertExceptionClient(client calicoclient.Interface, name string) error 
 			case e := <-w.ResultChan():
 				events = append(events, e)
 			case <-timeout:
-				timeoutErr = fmt.Errorf("timed out wating for events")
+				timeoutErr = fmt.Errorf("timed out waiting for events")
 				return
 			}
 		}

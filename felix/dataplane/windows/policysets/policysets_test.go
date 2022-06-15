@@ -863,7 +863,7 @@ func TestMultiIpPortChunks(t *testing.T) {
 		},
 	}), "incorrect hns rules returned for empty egress rules")
 
-	//verify aclPolicy for multiple ips and port in a sigle inbound rule with chunksize 2
+	//verify aclPolicy for multiple ips and port in a single inbound rule with chunksize 2
 	var aclPolicy []*hns.ACLPolicy
 	aclPolicy, _ = ps.protoRuleToHnsRules("policy-Multi-ips-ports-1",
 		&proto.Rule{
@@ -952,7 +952,7 @@ func TestMultiIpPortChunks(t *testing.T) {
 	},
 	), "incorrect hns rules returned for multi IPs")
 
-	//verify aclPolicy for multiple ips and port in a sigle outbound rule with chunksize 2
+	//verify aclPolicy for multiple ips and port in a single outbound rule with chunksize 2
 	aclPolicy, _ = ps.protoRuleToHnsRules("policy-Multi-ips-ports-out-1",
 		&proto.Rule{
 			Action:   "Allow",

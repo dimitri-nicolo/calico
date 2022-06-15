@@ -378,7 +378,7 @@ func decode(
 // })
 func (rs *resourceStore) GuaranteedUpdate(
 	ctx context.Context, key string, out runtime.Object, ignoreNotFound bool,
-	precondtions *storage.Preconditions, userUpdate storage.UpdateFunc, cachedExistingObject runtime.Object) error {
+	preconditions *storage.Preconditions, userUpdate storage.UpdateFunc, cachedExistingObject runtime.Object) error {
 	klog.V(6).Infof("GuaranteedUpdate called with key: %v on resource %v\n", key, rs.resourceName)
 	// If a cachedExistingObject was passed, use that as the initial object, otherwise use Get() to retrieve it
 	var initObj runtime.Object
@@ -410,7 +410,7 @@ func (rs *resourceStore) GuaranteedUpdate(
 	for totalLoopCount < 5 {
 		totalLoopCount++
 
-		if err := checkPreconditions(key, precondtions, curState.obj); err != nil {
+		if err := checkPreconditions(key, preconditions, curState.obj); err != nil {
 			klog.Errorf("checking preconditions (%s)", err)
 			return err
 		}
