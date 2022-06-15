@@ -103,7 +103,6 @@ func main() {
 
 		opts = append(opts,
 			server.WithInternalCredFiles(cfg.InternalHTTPSCert, cfg.InternalHTTPSKey),
-			server.WithPublicAddr(cfg.PublicIP),
 			server.WithTunnelCreds(tunnelX509Cert, tunnelX509Key),
 			server.WithForwardingEnabled(cfg.ForwardingEnabled),
 			server.WithDefaultForwardServer(cfg.DefaultForwardServer, cfg.DefaultForwardDialRetryAttempts, cfg.DefaultForwardDialInterval),

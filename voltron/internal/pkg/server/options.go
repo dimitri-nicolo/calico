@@ -25,14 +25,6 @@ func WithDefaultAddr(addr string) Option {
 	}
 }
 
-// WithPublicAddr assigns a public address
-func WithPublicAddr(address string) Option {
-	return func(s *Server) error {
-		s.publicAddress = address
-		return nil
-	}
-}
-
 // ProxyTarget represents a target for WithProxyTargets. It defines where a
 // request should be redirected based on patter that matches its path.
 type ProxyTarget struct {
