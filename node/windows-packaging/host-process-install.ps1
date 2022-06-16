@@ -15,7 +15,7 @@
 # This script is the entrypoint for the install container for the HostProcess
 $ErrorActionPreference = "Stop"
 $rootDirCalico = "c:\CalicoWindows"
-$rootDirCalient="c:\TigeraWindows"
+$rootDirCalient="c:\TigeraCalico"
 
 # Make Calico dir default. 
 $rootDir = $rootDirCalico

@@ -206,9 +206,25 @@ func kubeConfigFile() string {
 }
 
 func uninstall() error {
+	// If only the CalicoUpgrade service is installed, skip the
+	// uninstall. Older versions of the uninstall-calico.ps1 script return an
+	// error if a service is not installed. If all of the Calico services we
+	// care about are gone we can skip the uninstall.
+	log.Infoln("Check if Calico services except CalicoUpgrade are installed")
+	stdout, stderr, err := powershell("Get-Service -exclude 'CalicoUpgrade' | where Name -Like 'Calico*'")
+	fmt.Println(stdout, stderr)
+	if err != nil {
+		return err
+	}
+	// If output is empty, no Calico services are installed other than CalicoUpgrade.
+	if stdout == "" {
+		log.Infoln("No Calico services found except CalicoUpgrade. Skipping uninstall")
+		return nil
+	}
+
 	path := filepath.Join(baseDir(), "uninstall-calico.ps1")
 	log.Infof("Start uninstall script %s\n", path)
-	stdout, stderr, err := powershell(path + " -ExceptUpgradeService $true")
+	stdout, stderr, err = powershell(path + " -ExceptUpgradeService $true")
 	fmt.Println(stdout, stderr)
 	if err != nil {
 		return err
@@ -216,7 +232,7 @@ func uninstall() error {
 	// After the uninstall completes, move the existing calico-node.exe to
 	// a temporary file. The calico-upgrade service is still running so not
 	// doing this means we cannot replace calico-node.exe with the upgrade.
-	stdout, stderr, err = powershell(fmt.Sprintf(`mv %v\calico-node.exe %v\calico-node.exe.to-be-replaced`, baseDir(), baseDir()))
+	stdout, stderr, err = powershell(fmt.Sprintf(`mv -Force %v\calico-node.exe %v\calico-node.exe.to-be-replaced`, baseDir(), baseDir()))
 	fmt.Println(stdout, stderr)
 	if err != nil {
 		return err

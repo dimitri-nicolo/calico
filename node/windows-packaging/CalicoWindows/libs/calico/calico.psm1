@@ -233,7 +233,7 @@ function Install-NodeService()
 
 function Remove-NodeService()
 {
-    & $NSSMPath remove CalicoNode confirm
+    removeService -svcName 'CalicoNode'
 }
 
 function Install-FelixService()
@@ -280,7 +280,7 @@ function Install-FelixService()
 }
 
 function Remove-FelixService() {
-    & $NSSMPath remove CalicoFelix confirm
+    removeService -svcName 'CalicoFelix'
 }
 
 function Install-ConfdService()
@@ -327,7 +327,7 @@ function Install-ConfdService()
 }
 
 function Remove-ConfdService() {
-    & $NSSMPath remove CalicoConfd confirm
+    removeService -svcName 'CalicoConfd'
 }
 
 function Install-UpgradeService()
@@ -373,19 +373,30 @@ function Install-UpgradeService()
     Write-Host "Done installing upgrade service."
 }
 
+function removeService()
+{
+    param(
+        [parameter(Mandatory=$true)] $svcName
+    )
+
+    $status = & $NSSMPath status $svcname
+    if ($LastExitCode -NE 0) {
+        Write-Host "$svcName service is not installed."
+        exit 0
+    }
+
+    if ($status -EQ 'SERVICE_RUNNING')
+    {
+        Write-Host "$svcName service is running, stopping it..."
+        & $NSSMPath stop $svcName confirm
+    }
+    Write-Host "Removing $svcName service..."
+    & $NSSMPath remove $svcName confirm
+}
+
 function Remove-UpgradeService()
 {
-    $svc = Get-Service | where Name -EQ 'CalicoUpgrade'
-    if ($svc -NE $null)
-    {
-        if ($svc.Status -EQ 'Running')
-        {
-            Write-Host "CalicoUpgrade service is running, stopping it..."
-            & $NSSMPath stop CalicoUpgrade confirm
-        }
-        Write-Host "Removing CalicoUpgrade service..."
-        & $NSSMPath remove CalicoUpgrade confirm
-    }
+    removeService -svcName 'CalicoUpgrade'
 }
 
 function Wait-ForManagementIP($NetworkName)

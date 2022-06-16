@@ -369,12 +369,13 @@ $ErrorActionPreference = "Stop"
 
 $BaseDir="c:\k"
 $RootDir="c:\TigeraCalico"
-$CalicoZip="c:\tigera-calico-windows.zip"
+$CalicoZipName="tigera-calico-windows.zip"
+$CalicoZipPath="c:\$CalicoZipName"
 
 # If this script is run from a HostProcess container then the installation archive
 # will be in the mount point.
 if ($env:CONTAINER_SANDBOX_MOUNT_POINT) {
-    $CalicoZip="$env:CONTAINER_SANDBOX_MOUNT_POINT\$CalicoZip"
+    $CalicoZipPath="$env:CONTAINER_SANDBOX_MOUNT_POINT\$CalicoZipName"
 }
 
 # Must load the helper modules before doing anything else.
@@ -393,9 +394,9 @@ if (!(Test-Path $helperv2))
 ipmo -force -DisableNameChecking $helper
 ipmo -force -DisableNameChecking $helperv2
 
-if (!(Test-Path $CalicoZip))
+if (!(Test-Path $CalicoZipPath))
 {
-	throw "Cannot find {{site.prodnameWindows}} zip file $CalicoZip."
+	throw "Cannot find {{site.prodnameWindows}} zip file $CalicoZipPath."
 }
 
 $platform=GetPlatformType
@@ -407,7 +408,7 @@ if ((Get-Service -exclude 'CalicoUpgrade' | where Name -Like 'Calico*' | where S
 
 Remove-Item $RootDir -Force  -Recurse -ErrorAction SilentlyContinue
 Write-Host "Unzip {{site.prodnameWindows}} release..."
-Expand-Archive -Force $CalicoZip c:\
+Expand-Archive -Force $CalicoZipPath c:\
 ipmo -force $RootDir\libs\calico\calico.psm1
 
 # This comes after we import calico.psm1
