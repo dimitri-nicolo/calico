@@ -19,7 +19,6 @@ dbus-tools
 device-mapper
 device-mapper-libs
 dnf
-elfutils-debuginfod-client
 elfutils-default-yama-scope
 elfutils-libs
 expat
@@ -45,7 +44,6 @@ libcurl
 libdb
 libdb-utils
 libdnf
-libevent-2.1.8-5.el8.x86_64
 libfdisk
 libidn2
 libmodulemd
@@ -108,20 +106,17 @@ python3-setuptools-wheel
 python3-six
 python3-subscription-manager-rhsm
 python3-syspurpose
-python3-unbound-1.7.3-17.el8.x86_64
 python3-urllib3
 readline
 rpm
 rpm-build-libs
 rpm-libs
-rpm-plugin-systemd-inhibit
 shadow-utils
 systemd
 systemd-libs
 systemd-pam
 tar
 tpm2-tss
-unbound-libs-1.7.3-17.el8.x86_64
 usermode
 util-linux
 virt-what
