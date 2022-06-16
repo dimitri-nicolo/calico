@@ -81,16 +81,15 @@ func main() {
 
 	log.Debugf("starting %s with config: %v", os.Args[0], args)
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	// source felix updates (over gRPC)
-	syncClient := sync.NewClient(syncSocket, getDialOptions())
+	syncClient := sync.NewClient(ctx, syncSocket, getDialOptions())
 	datastore := data.NewRouteStore(syncClient.GetUpdatesPipeline, ip)
-
 	// register datastore observers
 	routeManager := controlplane.NewRouteManager(datastore, "vxlan0", vni)
 
 	// begin syncing
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	go routeManager.Start(ctx)
 	go datastore.SyncForever(ctx)
 	go syncClient.SyncForever(ctx)
