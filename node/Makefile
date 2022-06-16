@@ -762,9 +762,18 @@ sub-image-tar-windows-upgrade-%:
 # For EE, the images are:
 # - calico-windows
 # - calico-windows-upgrade
+#
+# The windows-upgrade image, for dev only, is also copied to the release tag version.
+# The windows-upgrade procedure compares calico-node.exe's CNXRELEASEVERSION to the operator's windows-upgrade component image tag.
+# That means the EE hash release must use a windows-upgrade image tag equal to the release version.
 cd-windows-all:
 	$(MAKE) cd-windows-calico-windows WINDOWS_IMAGE_TAR_ROOT=$(WINDOWS_DIST)
 	$(MAKE) cd-windows-calico-windows-upgrade WINDOWS_IMAGE_TAR_ROOT=$(WINDOWS_UPGRADE_DIST)
+	if [ "$(DEV_REGISTRIES)" = "gcr.io/unique-caldron-775/cnx/tigera" ]; then \
+		dev_tag="gcr.io/unique-caldron-775/cnx/tigera/calico-windows-upgrade:$(GIT_VERSION)"; \
+		dev_rel_tag="gcr.io/unique-caldron-775/cnx/tigera/calico-windows-upgrade:$(NODE_RELEASE_VERSION)"; \
+		$(CRANE_BINDMOUNT) cp $${dev_tag} $${dev_rel_tag}$(double_quote) & \
+	fi;
 
 # Windows image pushing is different because we do not build docker images directly.
 # Since the build machine is linux, we output the images to a tarball. (We can
