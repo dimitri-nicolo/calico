@@ -37,7 +37,7 @@ type connection struct {
 
 // Dial establishes a new client connection and returns its address. Closes the connection if an
 // error occurs during the dial process. Logs the connection's address.
-func (c connection) Dial() error {
+func (c *connection) Dial() error {
 	var err error
 	c.conn, err = grpc.Dial(c.grpcTarget, c.dialOpts...)
 	if err != nil {
@@ -49,7 +49,7 @@ func (c connection) Dial() error {
 }
 
 // Close closes the client connection. Logs the closing connection's address.
-func (c connection) Close() error {
+func (c *connection) Close() error {
 	if c.conn != nil {
 		log.Tracef("close connection: %p", c.conn)
 
@@ -61,7 +61,7 @@ func (c connection) Close() error {
 
 // Sync creates a new egress gateway proto client from a client connection and syncs a request.
 // Subscribes to 'l3-routes' type payloads.
-func (c connection) Sync() (proto.PolicySync_SyncClient, error) {
+func (c *connection) Sync() (proto.PolicySync_SyncClient, error) {
 	client := proto.NewPolicySyncClient(c.conn)
 	if client == nil {
 		return nil, errors.New("could not get new policy sync client")
@@ -86,7 +86,7 @@ type Client struct {
 // NewClient builds a policy-sync client
 func NewClient(ctx context.Context, grpcTarget string, dOps []grpc.DialOption) *Client {
 	c := Client{
-		conn: connection{
+		conn: &connection{
 			ctx:        ctx,
 			grpcTarget: grpcTarget, // hostname:port to target
 			dialOpts:   dOps,       // dial options for gRPC connections
