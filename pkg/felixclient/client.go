@@ -47,7 +47,7 @@ func (fc *felixClient) SendStats(ctx context.Context, collector collector.Ingres
 		select {
 		case data := <-collector.Report():
 			if err := fc.SendData(ctx, client, data); err != nil {
-				// Error reporting stats, exit now to start reconnction processing.
+				// Error reporting stats, exit now to start reconnection processing.
 				log.WithError(err).Warning("Error reporting stats")
 				return
 			}

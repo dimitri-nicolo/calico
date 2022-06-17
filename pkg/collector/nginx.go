@@ -87,7 +87,8 @@ func (nc *nginxCollector) ReadLogs(ctx context.Context) {
 			ingressLog, err := nc.ParseRawLogs(line.Text)
 			if err != nil {
 				// Log line does not have properly formatted ingress info
-				// Skip writing a lot to record this error because it is too noisy.
+				// Log error as a trace log, as the output might be too noisy.
+				log.WithError(err).Trace("failed to parse line: ")
 				continue
 			}
 
@@ -139,7 +140,7 @@ func (nc *nginxCollector) Report() <-chan IngressInfo {
 func (nc *nginxCollector) ParseRawLogs(text string) (IngressLog, error) {
 	keyIndex := strings.Index(text, INGRESSLOGJSONPREFIX+" ")
 	if keyIndex == -1 {
-		return IngressLog{}, fmt.Errorf("Log information not found in this log line")
+		return IngressLog{}, fmt.Errorf("log information not found in this log line. The line is without the prefix: \"%s \"", INGRESSLOGJSONPREFIX)
 	}
 
 	numOpen := 0
