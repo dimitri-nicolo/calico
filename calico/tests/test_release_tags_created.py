@@ -47,7 +47,7 @@ MAPPED_COMPONENTS = {
     'guardian': 'calico-private',
     'dex': 'dexidp-docker',
     'honeypod-controller': 'calico-private',
-    'anomaly_detection_jobs': 'anomaly_detection_jobs',
+    'anomaly-detection-api': 'anomaly-detection-api',
     'elasticsearch-metrics': 'elasticsearch-metrics',
     'packetcapture': 'calico-private',
     'tigera-prometheus-service': 'prometheus-service',
