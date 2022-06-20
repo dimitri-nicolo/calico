@@ -184,6 +184,7 @@ defaults:
         key-cert-provisioner: tigera/key-cert-provisioner
         elasticsearch-metrics: tigera/elasticsearch-metrics
         anomaly_detection_jobs: tigera/anomaly_detection_jobs
+        anomaly-detection-api: tigera/anomaly-detection-api
         es-gateway: tigera/es-gateway
         deep-packet-inspection: tigera/deep-packet-inspection
         # The Prometheus + eck-operator images below are third-party images
