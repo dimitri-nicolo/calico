@@ -83,6 +83,8 @@ section:
     path: /getting-started/calico-enterprise
   - title: System requirements
     path: /getting-started/kubernetes/requirements
+  - title: Supported browsers
+    path: /getting-started/kubernetes/supported-browsers  
 - title: Install on non-cluster hosts
   path: /getting-started/bare-metal/
   section:
