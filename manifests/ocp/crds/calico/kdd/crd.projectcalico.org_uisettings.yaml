@@ -13,6 +13,7 @@ spec:
     listKind: UISettingsList
     plural: uisettings
     singular: uisettings
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
