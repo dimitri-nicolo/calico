@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019,2022 Tigera, Inc. All rights reserved.
 
 package v3
 
@@ -64,23 +64,48 @@ var (
 	}
 )
 
-func validateGlobalAlertSpec(structLevel validator.StructLevel) {
-	validateGlobalAlertPeriod(structLevel)
-	validateGlobalAlertLookback(structLevel)
-	validateGlobalAlertDataSet(structLevel)
-	validateGlobalAlertQuery(structLevel)
-	validateGlobalAlertDescriptionAndSummary(structLevel)
-	validateGlobalAlertAggregateBy(structLevel)
-	validateGlobalAlertMetric(structLevel)
-	validateGlobalAlertAnomalyDetectionSpecs(structLevel)
+func validateGlobalAlert(structLevel validator.StructLevel) {
+	validateGlobalAlertName(structLevel)
+
+	globalAlert := getGlobalAlert(structLevel)
+	validateGlobalAlertSpec(structLevel, globalAlert.Name, globalAlert.Spec)
 }
 
-func getGlobalAlertSpec(structLevel validator.StructLevel) api.GlobalAlertSpec {
-	return structLevel.Current().Interface().(api.GlobalAlertSpec)
+func validateGlobalAlertSpec(structLevel validator.StructLevel, globalAlertName string, globalAlertSpec api.GlobalAlertSpec) {
+	validateGlobalAlertPeriod(structLevel, globalAlertSpec)
+	validateGlobalAlertLookback(structLevel, globalAlertSpec)
+	validateGlobalAlertDataSet(structLevel, globalAlertSpec)
+	validateGlobalAlertQuery(structLevel, globalAlertSpec)
+	validateGlobalAlertDescriptionAndSummary(structLevel, globalAlertSpec)
+	validateGlobalAlertAggregateBy(structLevel, globalAlertSpec)
+	validateGlobalAlertMetric(structLevel, globalAlertSpec)
+	validateGlobalAlertAnomalyDetectionSpecs(structLevel, globalAlertName, globalAlertSpec)
 }
 
-func validateGlobalAlertAnomalyDetectionSpecs(structLevel validator.StructLevel) {
-	s := getGlobalAlertSpec(structLevel)
+func getGlobalAlert(structLevel validator.StructLevel) api.GlobalAlert {
+	return structLevel.Current().Interface().(api.GlobalAlert)
+}
+
+func validateGlobalAlertName(structLevel validator.StructLevel) {
+	globalAlert := getGlobalAlert(structLevel)
+	s := globalAlert.Spec
+	if len(s.Type) != 0 && s.Type == api.GlobalAlertTypeAnomalyDetection {
+		_, ok := ADDetectorsGlobalAlertTemplateNameSet()[globalAlert.Name]
+		if !ok {
+			structLevel.ReportError(
+				reflect.ValueOf(globalAlert.Name),
+				"Name",
+				"",
+				reason(fmt.Sprintf("name must match an existing GlobalAlertTemplate for GlobalAlert of Type %s", api.GlobalAlertTypeAnomalyDetection)),
+				"",
+			)
+
+			return
+		}
+	}
+}
+
+func validateGlobalAlertAnomalyDetectionSpecs(structLevel validator.StructLevel, globalAlertName string, s api.GlobalAlertSpec) {
 	if len(s.Type) != 0 && s.Type == api.GlobalAlertTypeAnomalyDetection {
 		if s.Detector == nil {
 			structLevel.ReportError(
@@ -91,13 +116,14 @@ func validateGlobalAlertAnomalyDetectionSpecs(structLevel validator.StructLevel)
 				"",
 			)
 		} else {
-			validateGlobalAlertDetector(structLevel, *s.Detector)
+			validateGlobalAlertDetector(structLevel, globalAlertName, *s.Detector)
 		}
 
 	}
 }
 
-func validateGlobalAlertDetector(structLevel validator.StructLevel, ad api.DetectorParams) {
+func validateGlobalAlertDetector(structLevel validator.StructLevel, globalAlertName string, ad api.DetectorParams) {
+	// also validates that there can be only one unique detector per cluster as a side effect once deployed with apiserver
 	_, isValidJob := ADDetectorsSet()[ad.Name]
 	if !isValidJob {
 		structLevel.ReportError(
@@ -107,12 +133,23 @@ func validateGlobalAlertDetector(structLevel validator.StructLevel, ad api.Detec
 			reason(fmt.Sprintf("unaccepted Detector for GlobalAlert of Type %s", api.GlobalAlertTypeAnomalyDetection)),
 			"",
 		)
+		return
+	}
+
+	detectorInName := globalAlertName[strings.LastIndex(globalAlertName, ".")+1:]
+	detectorName := strings.ReplaceAll(detectorInName, "-", "_")
+	if ad.Name != detectorName {
+		structLevel.ReportError(
+			reflect.ValueOf(ad.Name),
+			"Detector.Name",
+			"",
+			reason(fmt.Sprintf("detector name must match the GlobalAlert Name for GlobalAlert of Type %s", api.GlobalAlertTypeAnomalyDetection)),
+			"",
+		)
 	}
 }
 
-func validateGlobalAlertDataSet(structLevel validator.StructLevel) {
-	s := getGlobalAlertSpec(structLevel)
-
+func validateGlobalAlertDataSet(structLevel validator.StructLevel, s api.GlobalAlertSpec) {
 	if (len(s.Type) == 0 || s.Type == api.GlobalAlertTypeRuleBased) && len(s.DataSet) == 0 {
 		structLevel.ReportError(
 			reflect.ValueOf(s.DataSet),
@@ -124,9 +161,7 @@ func validateGlobalAlertDataSet(structLevel validator.StructLevel) {
 	}
 }
 
-func validateGlobalAlertPeriod(structLevel validator.StructLevel) {
-	s := getGlobalAlertSpec(structLevel)
-
+func validateGlobalAlertPeriod(structLevel validator.StructLevel, s api.GlobalAlertSpec) {
 	if s.Period != nil && s.Period.Duration != 0 && s.Period.Duration < api.GlobalAlertMinPeriod {
 		structLevel.ReportError(
 			reflect.ValueOf(s.Period),
@@ -138,9 +173,7 @@ func validateGlobalAlertPeriod(structLevel validator.StructLevel) {
 	}
 }
 
-func validateGlobalAlertLookback(structLevel validator.StructLevel) {
-	s := getGlobalAlertSpec(structLevel)
-
+func validateGlobalAlertLookback(structLevel validator.StructLevel, s api.GlobalAlertSpec) {
 	if s.Lookback != nil && s.Lookback.Duration != 0 && s.Lookback.Duration < api.GlobalAlertMinLookback {
 		structLevel.ReportError(
 			reflect.ValueOf(s.Lookback),
@@ -183,9 +216,7 @@ func substituteVariables(s api.GlobalAlertSpec) (string, error) {
 }
 
 // validateGlobalAlertQuery substitutes all variables in the query string and validates it by the query parser.
-func validateGlobalAlertQuery(structLevel validator.StructLevel) {
-	s := getGlobalAlertSpec(structLevel)
-
+func validateGlobalAlertQuery(structLevel validator.StructLevel, s api.GlobalAlertSpec) {
 	if qs, err := substituteVariables(s); err != nil {
 		structLevel.ReportError(
 			reflect.ValueOf(s.Query),
@@ -259,9 +290,7 @@ func validateGlobalAlertQuery(structLevel validator.StructLevel) {
 }
 
 // validateGlobalAlertDescriptionAndSummary validates that there are no unreferenced fields in the description and summary
-func validateGlobalAlertDescriptionAndSummary(structLevel validator.StructLevel) {
-	s := getGlobalAlertSpec(structLevel)
-
+func validateGlobalAlertDescriptionAndSummary(structLevel validator.StructLevel, s api.GlobalAlertSpec) {
 	validateGlobalAlertDescriptionOrSummaryContents(s.Description, "Description", structLevel, s)
 	if s.Summary != "" {
 		validateGlobalAlertDescriptionOrSummaryContents(s.Summary, "Summary", structLevel, s)
@@ -313,11 +342,9 @@ func validateGlobalAlertDescriptionOrSummaryContents(description, fieldName stri
 	}
 }
 
-func validateGlobalAlertAggregateBy(structLevel validator.StructLevel) {
+func validateGlobalAlertAggregateBy(structLevel validator.StructLevel, s api.GlobalAlertSpec) {
 	// We intentionally do not validate field or aggregation names. Fields do need to be numeric for most of the
 	// metrics and aggregation keys do need to exist for them to make sense.
-	s := getGlobalAlertSpec(structLevel)
-
 	if s.DataSet == api.GlobalAlertDataSetVulnerability {
 		if len(s.AggregateBy) > 0 {
 			structLevel.ReportError(
@@ -331,9 +358,7 @@ func validateGlobalAlertAggregateBy(structLevel validator.StructLevel) {
 	}
 }
 
-func validateGlobalAlertMetric(structLevel validator.StructLevel) {
-	s := getGlobalAlertSpec(structLevel)
-
+func validateGlobalAlertMetric(structLevel validator.StructLevel, s api.GlobalAlertSpec) {
 	switch s.Metric {
 	case api.GlobalAlertMetricAvg, api.GlobalAlertMetricMax, api.GlobalAlertMetrixMin, api.GlobalAlertMetricSum:
 		if s.Field == "" {

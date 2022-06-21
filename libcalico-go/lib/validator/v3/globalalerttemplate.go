@@ -1,3 +1,5 @@
+// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+
 package v3
 
 import (
@@ -5,12 +7,20 @@ import (
 	"reflect"
 	"strings"
 
+	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	validator "gopkg.in/go-playground/validator.v9"
 )
 
+func getGlobalAlertTemplate(structLevel validator.StructLevel) api.GlobalAlertTemplate {
+	return structLevel.Current().Interface().(api.GlobalAlertTemplate)
+}
+
 func validateGlobalAlertTemplate(structLevel validator.StructLevel) {
 	validateGlobalAlertTemplateName(structLevel)
+
+	globalAlertTemplate := getGlobalAlertTemplate(structLevel)
+	validateGlobalAlertSpec(structLevel, globalAlertTemplate.Name, globalAlertTemplate.Spec)
 }
 
 // disallows copying of globalAlert ADJobs template name
