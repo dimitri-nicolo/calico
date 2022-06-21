@@ -10,7 +10,7 @@ spec:
   calicoNetwork:
     bgp: Disabled
     ipPools:
-    - cidr: 10.244.0.0/16
+    - cidr: 192.168.0.0/16
       encapsulation: VXLAN
 
   # List of image pull secrets to use when installing images from a container registry.

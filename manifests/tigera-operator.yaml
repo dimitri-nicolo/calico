@@ -21,6 +21,7 @@ spec:
     listKind: AlertExceptionList
     plural: alertexceptions
     singular: alertexception
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -94,6 +95,7 @@ spec:
     listKind: BGPConfigurationList
     plural: bgpconfigurations
     singular: bgpconfiguration
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -281,6 +283,7 @@ spec:
     listKind: BGPPeerList
     plural: bgppeers
     singular: bgppeer
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -428,6 +431,7 @@ spec:
     listKind: BlockAffinityList
     plural: blockaffinities
     singular: blockaffinity
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -493,6 +497,7 @@ spec:
     listKind: CalicoNodeStatusList
     plural: caliconodestatuses
     singular: caliconodestatus
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -754,6 +759,7 @@ spec:
     listKind: ClusterInformationList
     plural: clusterinformations
     singular: clusterinformation
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -826,6 +832,7 @@ spec:
     listKind: DeepPacketInspectionList
     plural: deeppacketinspections
     singular: deeppacketinspection
+  preserveUnknownFields: false
   scope: Namespaced
   versions:
   - name: v1
@@ -934,6 +941,7 @@ spec:
     listKind: FelixConfigurationList
     plural: felixconfigurations
     singular: felixconfiguration
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -2172,6 +2180,7 @@ spec:
     listKind: GlobalAlertList
     plural: globalalerts
     singular: globalalert
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -2337,6 +2346,7 @@ spec:
     listKind: GlobalAlertTemplateList
     plural: globalalerttemplates
     singular: globalalerttemplate
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -2468,6 +2478,7 @@ spec:
     listKind: GlobalNetworkPolicyList
     plural: globalnetworkpolicies
     singular: globalnetworkpolicy
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -3368,6 +3379,7 @@ spec:
     listKind: GlobalNetworkSetList
     plural: globalnetworksets
     singular: globalnetworkset
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -3435,6 +3447,7 @@ spec:
     listKind: GlobalReportList
     plural: globalreports
     singular: globalreport
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -3851,6 +3864,7 @@ spec:
     listKind: GlobalReportTypeList
     plural: globalreporttypes
     singular: globalreporttype
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -3990,6 +4004,7 @@ spec:
     listKind: GlobalThreatFeedList
     plural: globalthreatfeeds
     singular: globalthreatfeed
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -4164,6 +4179,7 @@ spec:
     listKind: HostEndpointList
     plural: hostendpoints
     singular: hostendpoint
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -4273,6 +4289,7 @@ spec:
     listKind: IPAMBlockList
     plural: ipamblocks
     singular: ipamblock
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -4393,6 +4410,7 @@ spec:
     listKind: IPAMConfigList
     plural: ipamconfigs
     singular: ipamconfig
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -4450,6 +4468,7 @@ spec:
     listKind: IPAMHandleList
     plural: ipamhandles
     singular: ipamhandle
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -4507,6 +4526,7 @@ spec:
     listKind: IPPoolList
     plural: ippools
     singular: ippool
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -4631,6 +4651,7 @@ spec:
     listKind: IPReservationList
     plural: ipreservations
     singular: ipreservation
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -4683,6 +4704,7 @@ spec:
     listKind: KubeControllersConfigurationList
     plural: kubecontrollersconfigurations
     singular: kubecontrollersconfiguration
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -4958,6 +4980,7 @@ spec:
     listKind: LicenseKeyList
     plural: licensekeys
     singular: licensekey
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -5040,6 +5063,7 @@ spec:
     listKind: ManagedClusterList
     plural: managedclusters
     singular: managedcluster
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -5115,6 +5139,7 @@ spec:
     listKind: NetworkPolicyList
     plural: networkpolicies
     singular: networkpolicy
+  preserveUnknownFields: false
   scope: Namespaced
   versions:
   - name: v1
@@ -5996,6 +6021,7 @@ spec:
     listKind: NetworkSetList
     plural: networksets
     singular: networkset
+  preserveUnknownFields: false
   scope: Namespaced
   versions:
   - name: v1
@@ -6061,6 +6087,7 @@ spec:
     listKind: PacketCaptureList
     plural: packetcaptures
     singular: packetcapture
+  preserveUnknownFields: false
   scope: Namespaced
   versions:
   - name: v1
@@ -6216,6 +6243,7 @@ spec:
     listKind: RemoteClusterConfigurationList
     plural: remoteclusterconfigurations
     singular: remoteclusterconfiguration
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -6369,6 +6397,7 @@ spec:
     listKind: StagedGlobalNetworkPolicyList
     plural: stagedglobalnetworkpolicies
     singular: stagedglobalnetworkpolicy
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -7276,6 +7305,7 @@ spec:
     listKind: StagedKubernetesNetworkPolicyList
     plural: stagedkubernetesnetworkpolicies
     singular: stagedkubernetesnetworkpolicy
+  preserveUnknownFields: false
   scope: Namespaced
   versions:
   - name: v1
@@ -7778,6 +7808,7 @@ spec:
     listKind: StagedNetworkPolicyList
     plural: stagednetworkpolicies
     singular: stagednetworkpolicy
+  preserveUnknownFields: false
   scope: Namespaced
   versions:
   - name: v1
@@ -8666,6 +8697,7 @@ spec:
     listKind: TierList
     plural: tiers
     singular: tier
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -8723,6 +8755,7 @@ spec:
     listKind: UISettingsList
     plural: uisettings
     singular: uisettings
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
@@ -8961,6 +8994,7 @@ spec:
     listKind: UISettingsGroupList
     plural: uisettingsgroups
     singular: uisettingsgroup
+  preserveUnknownFields: false
   scope: Cluster
   versions:
   - name: v1
