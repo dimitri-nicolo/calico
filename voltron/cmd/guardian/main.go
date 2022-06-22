@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019, 2022 Tigera, Inc. All rights reserved.
 
 package main
 
@@ -40,6 +40,9 @@ type config struct {
 	PrometheusCABundlePath    string `default:"/certs/prometheus/tls.crt" split_words:"true"`
 	PrometheusPath            string `default:"/api/v1/namespaces/tigera-prometheus/services/calico-node-prometheus:9090/proxy/" split_words:"true"`
 	PrometheusEndpoint        string `default:"https://prometheus-http-api.tigera-prometheus.svc:9090" split_words:"true"`
+	QueryserverPath           string `default:"/api/v1/namespaces/tigera-system/services/https:tigera-api:8080/proxy/" split_words:"true"`
+	QueryserverEndpoint       string `default:"https://tigera-api.tigera-system.svc:8080" split_words:"true"`
+	QueryserverCABundlePath   string `default:"/etc/pki/tls/certs/tigera-ca-bundle.crt" split_words:"true"`
 
 	KeepAliveEnable   bool `default:"true" split_words:"true"`
 	KeepAliveInterval int  `default:"100" split_words:"true"`
@@ -148,6 +151,14 @@ func main() {
 			PathReplace:  []byte("/"),
 			TokenPath:    "/var/run/secrets/kubernetes.io/serviceaccount/token",
 			CABundlePath: cfg.PrometheusCABundlePath,
+		},
+		{
+			Path:         cfg.QueryserverPath,
+			Dest:         cfg.QueryserverEndpoint,
+			PathRegexp:   []byte(fmt.Sprintf("^%v/?", cfg.QueryserverPath)),
+			PathReplace:  []byte("/"),
+			TokenPath:    "/var/run/secrets/kubernetes.io/serviceaccount/token",
+			CABundlePath: cfg.QueryserverCABundlePath,
 		},
 	})
 	if err != nil {
