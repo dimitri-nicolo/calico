@@ -8,8 +8,8 @@ import (
 	"os"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/license-agent/pkg/config"
-	"github.com/tigera/license-agent/pkg/metrics"
+	"github.com/projectcalico/calico/license-agent/pkg/config"
+	"github.com/projectcalico/calico/license-agent/pkg/metrics"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
