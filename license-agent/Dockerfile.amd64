@@ -1,0 +1,10 @@
+FROM ubuntu:20.04 as ubuntu
+
+# Get the latest trusted CA bundle.
+RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificates -f
+
+FROM scratch
+COPY --from=ubuntu /etc/ssl/certs /etc/ssl/certs
+ADD bin/license-agent-amd64 /license-agent
+WORKDIR /
+ENTRYPOINT ["/license-agent"]
