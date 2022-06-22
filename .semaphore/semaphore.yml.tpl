@@ -95,6 +95,10 @@ promotions:
   pipeline_file: push-images/prometheus-service.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push license-agent images
+  pipeline_file: push-images/license-agent.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 # Have a separate promotion for publishing Helm charts.
 - name: Publish Helm Charts
   pipeline_file: push-helm-charts/helm-charts.yml
@@ -649,6 +653,19 @@ blocks:
       - cd licensing
     jobs:
     - name: "Licensing tests"
+      commands:
+      - ../.semaphore/run-and-monitor ci.log make ci
+
+- name: "license-agent"
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/licensing/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    prologue:
+      commands:
+      - cd license-agent
+    jobs:
+    - name: "License Agent tests"
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
 

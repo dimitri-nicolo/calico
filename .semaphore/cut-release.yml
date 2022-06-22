@@ -94,6 +94,10 @@ promotions:
     pipeline_file: ../intrusion-detection-controller/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Cut License Agent Release
+    pipeline_file: ../license-agent/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Cut Packet Capture Release
     pipeline_file: ../packetcapture/.semaphore/cut-release.yml
     auto_promote:
