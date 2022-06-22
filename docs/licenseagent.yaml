@@ -1,0 +1,154 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    name: tigera-license-agent
+  name: tigera-license-agent
+
+---
+
+# Required RBAC:
+# - watch/list nodes and access LicenseKeys
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: tigera-license-agent
+  namespace: tigera-license-agent
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tigera-license-agent
+rules:
+  - apiGroups: [""]
+    resources:
+      - nodes
+    verbs:
+      - list
+      - get
+      - watch
+  - apiGroups: ["crd.projectcalico.org"]
+    resources:
+      - licensekeys
+    verbs:
+      - list
+      - get
+      - watch
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tigera-license-agent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tigera-license-agent
+subjects:
+- kind: ServiceAccount
+  name: tigera-license-agent
+  namespace: tigera-license-agent
+
+---
+
+# License-agent deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tigera-license-agent
+  namespace: tigera-license-agent
+  labels:
+    k8s-app: tigera-license-agent
+spec:
+  replicas: 1
+  strategy:
+     type: Recreate
+  selector:
+    matchLabels:
+      k8s-app: tigera-license-agent
+  template:
+    metadata:
+      name: tigera-license-agent
+      namespace: tigera-license-agent
+      labels:
+        k8s-app: tigera-license-agent
+    spec:
+      serviceAccountName: tigera-license-agent
+      imagePullSecrets:
+        - name: tigera-pull-secret
+      containers:
+        - name: tigera-firewall-controlller
+          image: gcr.io/tigera-dev/gobinath/license-agent:latest
+          imagePullPolicy: Always
+          env:
+            - name: DATASTORE_TYPE
+              value: kubernetes
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: license-agent
+  namespace: tigera-license-agent
+  labels:
+    k8s-app: tigera-license-agent
+spec:
+  selector:
+    k8s-app: tigera-license-agent
+  ports:
+    - protocol: TCP
+      name: calico-metrics-port
+      port: 9081
+      targetPort: 9081
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    team: network-operators
+  name: calico-lic-monitor
+  namespace: tigera-prometheus
+spec:
+  endpoints:
+  - honorLabels: true
+    interval: 5s
+    port: calico-metrics-port
+    scrapeTimeout: 5s
+  namespaceSelector:
+    matchNames:
+    - tigera-license-agent
+  selector:
+    matchLabels:
+      k8s-app: tigera-license-agent
+
+---
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: calico-prometheus-license
+  namespace: tigera-prometheus
+  labels:
+    role: tigera-prometheus-rules
+    prometheus: calico-node-prometheus
+spec:
+  groups:
+  - name: tigera-lic.rules
+    rules:
+    - alert: WarningLicenseExpiry
+      expr: license_number_of_days < 50
+      labels:
+        severity: warning
+      annotations:
+        summary: "Calico Enterprise License expires in less than 50 days"
+        description: "Calico Enterprise License expires in less than 50 days"
+    - alert: CriticalLicenseExpiry
+      expr: license_number_of_days < 10
+      labels:
+        severity: critical
+      annotations:
+        summary: "Calico Enterprise License expires in less than 10 days"
+        description: "Calico Enterprise License expires in less than 10 days"
