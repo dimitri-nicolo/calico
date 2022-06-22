@@ -6,8 +6,10 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/license-agent/pkg/metrics"
+
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const validLicenseCertificate = `-----BEGIN CERTIFICATE-----

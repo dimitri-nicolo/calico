@@ -1,7 +1,6 @@
-PACKAGE_NAME    ?= github.com/tigera/license-agent
-GO_BUILD_VER    ?= v0.65
-GIT_USE_SSH      = true
-LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
+include ../metadata.mk
+
+PACKAGE_NAME    ?= github.com/projectcalico/calico/license-agent
 LOCAL_CHECKS     = mod-download
 
 build: license-agent
@@ -17,21 +16,12 @@ RELEASE_BRANCH_PREFIX      ?=release-calient
 DEV_TAG_SUFFIX             ?=calient-0.dev
 
 ##############################################################################
-# Download and include Makefile.common before anything else
+# Include ../lib.Makefile before anything else
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
 #   that variable is evaluated when we declare DOCKER_RUN and siblings.
 ##############################################################################
-MAKE_BRANCH?=$(GO_BUILD_VER)
-MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
+include ../lib.Makefile
 
-Makefile.common: Makefile.common.$(MAKE_BRANCH)
-	cp "$<" "$@"
-Makefile.common.$(MAKE_BRANCH):
-	# Clean up any files downloaded from other branches so they don't accumulate.
-	rm -f Makefile.common.*
-	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
-
-EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 # Allow local libcalico-go to be mapped into the build container.
 ifdef CALICO_PATH
 EXTRA_DOCKER_ARGS += -v $(CALICO_PATH):/go/src/github.com/projectcalico/calico/:ro
@@ -41,9 +31,7 @@ ifdef SSH_AUTH_DIR
 EXTRA_DOCKER_ARGS += --tmpfs /home/user -v $(SSH_AUTH_DIR):/home/user/.ssh:ro
 endif
 
-include Makefile.common
-
-K8S_VERSION    = v1.11.0
+K8S_VERSION    = v1.22.0
 BINDIR        ?= bin
 BUILD_DIR     ?= build
 TOP_SRC_DIRS   = pkg
@@ -66,10 +54,10 @@ LICENSE_AGENT_BUILD_DATE?=$(shell date -u +'%FT%T%z')
 LICENSE_AGENT_GIT_DESCRIPTION?=$(shell git describe --tags)
 LICENSE_AGENT_GIT_REVISION?=$(shell git rev-parse --short HEAD)
 
-VERSION_FLAGS=-X main.VERSION=$(LICENSE_AGENT_VERSION) \
-				-X main.BUILD_DATE=$(LICENSE_AGENT_BUILD_DATE) \
-				-X main.GIT_DESCRIPTION=$(LICENSE_AGENT_GIT_DESCRIPTION) \
-				-X main.GIT_REVISION=$(LICENSE_AGENT_GIT_REVISION)
+VERSION_FLAGS = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
+								-X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
+								-X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
+								-X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT)
 BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 
@@ -96,10 +84,7 @@ endif
 	mkdir -p .go-build-cache && \
 	$(DOCKER_GO_BUILD) \
 		sh -c 'git config --global url.ssh://git@github.com.insteadOf https://github.com && \
-			go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/server" && \
-				( ldd $(BINDIR)/license-agent-$(ARCH) 2>&1 | \
-				grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
-				( echo "Error: $(BINDIR)/license-agent-$(ARCH) was not statically linked"; false ) )'
+			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" "$(PACKAGE_NAME)/cmd/server"'
 
 # Build the docker image.
 .PHONY: $(LICENSE_AGENT_IMAGE) $(LICENSE_AGENT_IMAGE)-$(ARCH)
@@ -110,13 +95,13 @@ image-all: $(addprefix sub-image-,$(ARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
+LICENSE_AGENT_CONTAINER_CREATED=.$(LICENSE_AGENT_IMAGE).created-$(ARCH)
+
 image: $(LICENSE_AGENT_IMAGE)
-$(LICENSE_AGENT_IMAGE): $(LICENSE_AGENT_IMAGE)-$(ARCH)
-$(LICENSE_AGENT_IMAGE)-$(ARCH): $(BINDIR)/license-agent-$(ARCH)
-	docker build --pull -t $(LICENSE_AGENT_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
-ifeq ($(ARCH),amd64)
-	docker tag $(LICENSE_AGENT_IMAGE):latest-$(ARCH) $(LICENSE_AGENT_IMAGE):latest
-endif
+$(LICENSE_AGENT_IMAGE): $(LICENSE_AGENT_CONTAINER_CREATED)
+$(LICENSE_AGENT_CONTAINER_CREATED): $(BINDIR)/license-agent-$(ARCH)
+	$(DOCKER_BUILD) --pull -t $(LICENSE_AGENT_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 
 ##########################################################################
 # Testing
@@ -138,7 +123,6 @@ clean-build-image:
 
 clean-bin:
 	rm -rf $(BINDIR) bin
-
 
 .PHONY: signpost
 signpost:
@@ -164,26 +148,6 @@ ci: clean image-all static-checks ut
 
 ## Deploys images to registry
 cd: image-all cd-common
-
-###############################################################################
-# Update pins
-###############################################################################
-update-calico-pin:
-	$(call update_replace_pin,github.com/projectcalico/calico,github.com/tigera/calico-private,$(PIN_BRANCH))
-	$(call update_replace_submodule_pin,github.com/tigera/api,github.com/tigera/calico-private/api,$(PIN_BRANCH))
-
-# Guard so we don't run this on osx because of ssh-agent to docker forwarding bug
-guard-ssh-forwarding-bug:
-	@if [ "$(shell uname)" = "Darwin" ]; then \
-		echo "ERROR: This target requires ssh-agent to docker key forwarding and is not compatible with OSX/Mac OS"; \
-		echo "$(MAKECMDGOALS)"; \
-		exit 1; \
-	fi;
-
-API_REPO=github.com/tigera/api
-
-## Update dependency pins
-update-pins: guard-ssh-forwarding-bug update-calico-pin
 
 ###############################################################################
 # Utilities
