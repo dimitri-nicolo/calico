@@ -3,15 +3,18 @@
 # 2. Expands special value "all" to include all the platforms defined in support_matrix_list in _config.yml
 Jekyll::Hooks.register :site, :pre_render do |site|
   support_matrix_list = site.config["support_matrix_list"]
-  site.data["support_matrix"].each do |feature_name, platforms|
-    platforms["platforms"].each do |platform|
-      # If we find special string "all", then replace with all platform names specified in the support_matrix_list
-      if platform.downcase == "all"
-        site.data["support_matrix"][feature_name]["platforms"] = support_matrix_list
-        next
-      end
-      if not support_matrix_list.include? platform
-            raise "\n Unexpected platform '#{platform}' specified for feature '#{feature_name}' in the support matrix"
+  support_matrix = site.data["support_matrix"]
+  if !support_matrix.nil?
+    support_matrix.each do |feature_name, platforms|
+      platforms["platforms"].each do |platform|
+        # If we find special string "all", then replace with all platform names specified in the support_matrix_list
+        if platform.downcase == "all"
+          site.data["support_matrix"][feature_name]["platforms"] = support_matrix_list
+          next
+        end
+        if not support_matrix_list.include? platform
+              raise "\n Unexpected platform '#{platform}' specified for feature '#{feature_name}' in the support matrix"
+        end
       end
     end
   end
