@@ -253,10 +253,17 @@
     }
   },
   {
+    "id": "43b1d540-f2f5-11ec-887e-7318b39e03a4",
     "type": "index-pattern",
+    "version": "WzE3OSwxXQ==",
     "attributes": {
       "title": "tigera_secure_ee_waf*",
-      "timeFieldName": "@timestamp"
+      "timeFieldName": "@timestamp",
+      "fields": "[]"
+    },
+    "references": [],
+    "migrationVersion": {
+      "index-pattern": "7.6.0"
     }
   }
 ]
