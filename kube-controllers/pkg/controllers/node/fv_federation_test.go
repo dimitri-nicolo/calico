@@ -1,6 +1,6 @@
 // Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
 
-package fv_test
+package node
 
 import (
 	"context"
@@ -379,7 +379,6 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 	})
 
 	DescribeTable("Test with specific local Calico datastore type", func(isCalicoEtcdDatastore bool) {
-
 		By("Setting up the local and remote clusters")
 		setup(isCalicoEtcdDatastore)
 
