@@ -15,4 +15,6 @@ ADD bin/healthz-amd64 /healthz
 
 WORKDIR /
 
+USER 10001
+
 ENTRYPOINT ["/controller"]
