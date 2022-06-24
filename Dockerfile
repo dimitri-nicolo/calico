@@ -26,7 +26,7 @@ RUN apk update \
  && apk add --no-cache --virtual .build-deps \
         build-base linux-headers \
         ruby-dev gnupg \
- && apk add --no-cache curl=7.80.0-r1 jq=1.6-r1 \
+ && apk add --no-cache curl=7.83.1-r1 jq=1.6-r1 \
  && apk add --no-cache ca-certificates && update-ca-certificates \
  && apk update && apk upgrade libcrypto1.1 libgmpxx gmp gmp-dev build-base \
  && echo 'gem: --no-document' >> /etc/gemrc \
