@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
 
 package main
 
@@ -142,6 +142,13 @@ func main() {
 			PathRegexp:   []byte(fmt.Sprintf("^%v/?", cfg.PrometheusPath)),
 			PathReplace:  []byte("/"),
 			CABundlePath: cfg.PrometheusCABundlePath,
+		},
+		{
+			Path:         cfg.QueryserverPath,
+			Dest:         cfg.QueryserverEndpoint,
+			PathRegexp:   []byte(fmt.Sprintf("^%v/?", cfg.QueryserverPath)),
+			PathReplace:  []byte("/"),
+			CABundlePath: cfg.QueryserverCABundlePath,
 		},
 		{
 			Path:         cfg.KibanaBasePath,
