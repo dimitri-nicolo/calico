@@ -26,6 +26,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/events"
 	"github.com/projectcalico/calico/felix/bpf/polprog"
 	"github.com/projectcalico/calico/felix/bpf/state"
+	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
 	"github.com/projectcalico/calico/felix/proto"
 )
 
@@ -145,7 +146,7 @@ func TestPolicyVerdictEvents(t *testing.T) {
 
 			bpfIfaceName = fmt.Sprintf("FLG%d", i)
 
-			skbMark = 0
+			skbMark = tcdefs.MarkSeen
 			resetCTMap(ctMap) // ensure it is clean to enforce policy
 
 			runBpfTest(t, "calico_to_workload_ep", &tc.policy, func(bpfrun bpfProgRunFn) {
