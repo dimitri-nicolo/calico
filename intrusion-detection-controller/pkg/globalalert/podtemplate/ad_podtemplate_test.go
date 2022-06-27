@@ -12,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("ADJob PodTemplate", func() {
+var _ = Describe("AD PodTemplate", func() {
 
 	adTestGlobalAlert := v3.GlobalAlert{
 		ObjectMeta: metav1.ObjectMeta{
@@ -51,9 +51,10 @@ var _ = Describe("ADJob PodTemplate", func() {
 
 			err := DecoratePodTemplateForTrainingCycle(&testPT, clusterName, detectors)
 			Expect(err).To(BeNil())
-			containerResultIndex := GetContainerIndex(testPT.Template.Spec.Containers, ADJobsContainerName)
+			adContainer, err := getContainer(testPT.Template.Spec.Containers, ADJobsContainerName)
+			Expect(err).To(BeNil())
 
-			Expect(testPT.Template.Spec.Containers[containerResultIndex].Env).To(ContainElements(
+			Expect(adContainer.Env).To(ContainElements(
 				v1.EnvVar{
 					Name:      "CLUSTER_NAME",
 					Value:     clusterName,
@@ -70,8 +71,8 @@ var _ = Describe("ADJob PodTemplate", func() {
 					ValueFrom: nil,
 				},
 			))
-			Expect(testPT.Template.Spec.Containers[containerResultIndex].Command).To(Equal(ADJobStartupCommand()))
-			Expect(testPT.Template.Spec.Containers[containerResultIndex].Args).To(Equal(append(ADJobStartupArgs(), cycle)))
+			Expect(adContainer.Command).To(Equal(ADJobStartupCommand()))
+			Expect(adContainer.Args).To(Equal(append(ADJobStartupArgs(), cycle)))
 		})
 	})
 
@@ -87,9 +88,10 @@ var _ = Describe("ADJob PodTemplate", func() {
 
 			err := DecoratePodTemplateForDetectionCycle(&testPT, clusterName, *testGlobalAlert)
 			Expect(err).To(BeNil())
-			containerResultIndex := GetContainerIndex(testPT.Template.Spec.Containers, ADJobsContainerName)
+			adContainer, err := getContainer(testPT.Template.Spec.Containers, ADJobsContainerName)
+			Expect(err).To(BeNil())
 
-			Expect(testPT.Template.Spec.Containers[containerResultIndex].Env).To(ContainElements(
+			Expect(adContainer.Env).To(ContainElements(
 				v1.EnvVar{
 					Name:      "CLUSTER_NAME",
 					Value:     clusterName,
@@ -114,9 +116,13 @@ var _ = Describe("ADJob PodTemplate", func() {
 					Name:  "AD_DETECTION_VERIFY_MODEL_EXISTENCE",
 					Value: "True",
 				},
+				v1.EnvVar{
+					Name:  "AD_USE_INTERNAL_SCHEDULER",
+					Value: "False",
+				},
 			))
-			Expect(testPT.Template.Spec.Containers[containerResultIndex].Command).To(Equal(ADJobStartupCommand()))
-			Expect(testPT.Template.Spec.Containers[containerResultIndex].Args).To(Equal(append(ADJobStartupArgs(), cycle)))
+			Expect(adContainer.Command).To(Equal(ADJobStartupCommand()))
+			Expect(adContainer.Args).To(Equal(append(ADJobStartupArgs(), cycle)))
 		})
 
 		It("adds ADJob specific commands, args and default envVar to the detection podtemplate if certain fields are not specified in the GlobalAlert", func() {
@@ -126,9 +132,10 @@ var _ = Describe("ADJob PodTemplate", func() {
 
 			err := DecoratePodTemplateForDetectionCycle(&testPT, clusterName, adTestGlobalAlert)
 			Expect(err).To(BeNil())
-			containerResultIndex := GetContainerIndex(testPT.Template.Spec.Containers, ADJobsContainerName)
+			adContainer, err := getContainer(testPT.Template.Spec.Containers, ADJobsContainerName)
+			Expect(err).To(BeNil())
 
-			Expect(testPT.Template.Spec.Containers[containerResultIndex].Env).To(ContainElements(
+			Expect(adContainer.Env).To(ContainElements(
 				v1.EnvVar{
 					Name:      "CLUSTER_NAME",
 					Value:     clusterName,
@@ -153,19 +160,23 @@ var _ = Describe("ADJob PodTemplate", func() {
 					Name:  "AD_DETECTION_VERIFY_MODEL_EXISTENCE",
 					Value: "True",
 				},
+				v1.EnvVar{
+					Name:  "AD_USE_INTERNAL_SCHEDULER",
+					Value: "False",
+				},
 			))
-			Expect(testPT.Template.Spec.Containers[containerResultIndex].Command).To(Equal(ADJobStartupCommand()))
-			Expect(testPT.Template.Spec.Containers[containerResultIndex].Args).To(Equal(append(ADJobStartupArgs(), cycle)))
+			Expect(adContainer.Command).To(Equal(ADJobStartupCommand()))
+			Expect(adContainer.Args).To(Equal(append(ADJobStartupArgs(), cycle)))
 		})
 	})
 
 	Context("decorateBaseADPodTemplate", func() {
 		It("errors when conainer is not found", func() {
 			testPT := *defaultPodTemplate
-			testPT.Template.Spec.Containers[0].Name = "unreconized name"
+			testPT.Template.Spec.Containers[0].Name = "unrecognized name"
 			clusterName := "testCluster"
 
-			err := decorateBaseADPodTemplate(&testPT, clusterName, -1)
+			err := decorateBaseADPodTemplate(clusterName, nil)
 			Expect(err).ToNot(BeNil())
 		})
 	})

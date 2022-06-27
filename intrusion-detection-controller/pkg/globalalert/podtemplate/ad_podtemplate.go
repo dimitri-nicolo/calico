@@ -30,23 +30,30 @@ var (
 	ADJobStartupArgs = func() []string {
 		return []string{"-m", "adj"}
 	}
+
+	ErrADContainerNotFound = fmt.Errorf("unable to retrieve container for %s", ADJobsContainerName)
 )
 
+// DecoratePodTemplateForTrainingCycle adds the appropriate labels and env_vars to setup the v1.PodTemplate for
+// an AD training cycle
 func DecoratePodTemplateForTrainingCycle(adJobPT *v1.PodTemplate, clusterName, detectors string) error {
-	adJobContainerIndex := GetContainerIndex(adJobPT.Template.Spec.Containers, ADJobsContainerName)
-
-	args := append(ADJobStartupArgs(), ADJobTrainCycleArg)
-	adJobPT.Template.Spec.Containers[adJobContainerIndex].Command = ADJobStartupCommand()
-	adJobPT.Template.Spec.Containers[adJobContainerIndex].Args = args
-
-	err := decorateBaseADPodTemplate(adJobPT, clusterName, adJobContainerIndex)
+	adContainer, err := getContainer(adJobPT.Template.Spec.Containers, ADJobsContainerName)
 	if err != nil {
 		return err
 	}
 
+	err = decorateBaseADPodTemplate(clusterName, &adContainer)
+	if err != nil {
+		return err
+	}
+
+	args := append(ADJobStartupArgs(), ADJobTrainCycleArg)
+	adContainer.Command = ADJobStartupCommand()
+	adContainer.Args = args
+
 	if len(detectors) > 0 {
-		adJobPT.Template.Spec.Containers[adJobContainerIndex].Env = append(
-			adJobPT.Template.Spec.Containers[adJobContainerIndex].Env,
+		adContainer.Env = append(
+			adContainer.Env,
 			v1.EnvVar{
 				Name:  "AD_ENABLED_JOBS",
 				Value: detectors,
@@ -54,33 +61,40 @@ func DecoratePodTemplateForTrainingCycle(adJobPT *v1.PodTemplate, clusterName, d
 		)
 	}
 
-	adJobPT.Template.Spec.Containers[adJobContainerIndex].Env = append(
-		adJobPT.Template.Spec.Containers[adJobContainerIndex].Env,
+	adContainer.Env = append(
+		adContainer.Env,
 		v1.EnvVar{
 			Name:  "AD_train_default_query_time_duration",
 			Value: DefaultADDetectorTrainingPeriod.String(),
 		},
 	)
 
-	return nil
+	adContainers := []v1.Container{adContainer}
+	adJobPT.Template.Spec.Containers = adContainers
 
+	return nil
 }
 
+// DecoratePodTemplateForDetectionCycle adds the appropriate labels and env_vars to setup the v1.PodTemplate for
+// an AD detection cycle
 func DecoratePodTemplateForDetectionCycle(adJobPT *v1.PodTemplate, clusterName string, globalAlert v3.GlobalAlert) error {
-	adJobContainerIndex := GetContainerIndex(adJobPT.Template.Spec.Containers, ADJobsContainerName)
-
-	args := append(ADJobStartupArgs(), ADJobDetectCycleArg)
-	adJobPT.Template.Spec.Containers[adJobContainerIndex].Command = ADJobStartupCommand()
-	adJobPT.Template.Spec.Containers[adJobContainerIndex].Args = args
-
-	err := decorateBaseADPodTemplate(adJobPT, clusterName, adJobContainerIndex)
+	adContainer, err := getContainer(adJobPT.Template.Spec.Containers, ADJobsContainerName)
 	if err != nil {
 		return err
 	}
 
+	err = decorateBaseADPodTemplate(clusterName, &adContainer)
+	if err != nil {
+		return err
+	}
+
+	args := append(ADJobStartupArgs(), ADJobDetectCycleArg)
+	adContainer.Command = ADJobStartupCommand()
+	adContainer.Args = args
+
 	if globalAlert.Spec.Detector != nil && len(globalAlert.Spec.Detector.Name) > 0 {
-		adJobPT.Template.Spec.Containers[adJobContainerIndex].Env = append(
-			adJobPT.Template.Spec.Containers[adJobContainerIndex].Env,
+		adContainer.Env = append(
+			adContainer.Env,
 			v1.EnvVar{
 				Name:  "AD_ENABLED_JOBS",
 				Value: globalAlert.Spec.Detector.Name,
@@ -98,8 +112,8 @@ func DecoratePodTemplateForDetectionCycle(adJobPT *v1.PodTemplate, clusterName s
 		detectionSeverity = globalAlert.Spec.Severity
 	}
 
-	adJobPT.Template.Spec.Containers[adJobContainerIndex].Env = append(
-		adJobPT.Template.Spec.Containers[adJobContainerIndex].Env,
+	adContainer.Env = append(
+		adContainer.Env,
 		v1.EnvVar{
 			Name:  "AD_detect_default_query_time_duration",
 			Value: detectionSchedule.String(),
@@ -117,19 +131,21 @@ func DecoratePodTemplateForDetectionCycle(adJobPT *v1.PodTemplate, clusterName s
 		},
 	)
 
+	adContainers := []v1.Container{adContainer}
+	adJobPT.Template.Spec.Containers = adContainers
+
 	return nil
 }
 
-// decorateBaseADPodTemplate adds required fields and environment variables for a PodSpec from the provided
-// v1.PodTemplate common to both detection and training cycles
-func decorateBaseADPodTemplate(adJobPT *v1.PodTemplate, clusterName string, adJobContainerIndex int) error {
-
-	if adJobContainerIndex == -1 {
-		return fmt.Errorf("unable to retrtieve container for %s", ADJobsContainerName)
+// decorateBaseADPodTemplate adds required fields and environment variables for ADContainer
+// common to both detection and training cycles found in the v1.PodTemplate
+func decorateBaseADPodTemplate(clusterName string, adContainer *v1.Container) error {
+	if adContainer == nil {
+		return ErrADContainerNotFound
 	}
 
-	adJobPT.Template.Spec.Containers[adJobContainerIndex].Env = append(
-		adJobPT.Template.Spec.Containers[adJobContainerIndex].Env,
+	adContainer.Env = append(
+		adContainer.Env,
 		v1.EnvVar{
 			Name:  "CLUSTER_NAME",
 			Value: clusterName,
@@ -143,11 +159,12 @@ func decorateBaseADPodTemplate(adJobPT *v1.PodTemplate, clusterName string, adJo
 	return nil
 }
 
-func GetContainerIndex(containers []v1.Container, name string) int {
-	for i, container := range containers {
+// getContainer returns the container specified by name in the Container slice
+func getContainer(containers []v1.Container, name string) (v1.Container, error) {
+	for _, container := range containers {
 		if container.Name == name {
-			return i
+			return container, nil
 		}
 	}
-	return -1
+	return v1.Container{}, ErrADContainerNotFound
 }
