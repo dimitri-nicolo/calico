@@ -43,7 +43,8 @@ module Jekyll
       # iterating over files in that directory.
       extra_args.gsub!(/--execute-dir (\S*)/) do |_|
         e = []
-        Dir.foreach "_includes/charts/#{@chart}/#{$1}" do |file|
+        all_files = Dir.entries "_includes/charts/#{@chart}/#{$1}"
+        all_files.sort.each do |file|
           fpath = File.join($1, file)
           next if File.directory?("_includes/charts/#{@chart}/#{fpath}")
 
@@ -57,7 +58,6 @@ module Jekyll
           if fpath.start_with? "crds" then
             fpath = Pathname.new(fpath).relative_path_from(Pathname.new("crds"))
           end
-
 
             e << "--execute #{fpath}"
         end
