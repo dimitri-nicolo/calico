@@ -26,13 +26,13 @@ SRC_DIRS       = $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*.go \
 TEST_DIRS     ?= $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*_test.go \
                    -exec dirname {} \\; | sort | uniq")
 GO_FILES       = $(shell sh -c "find pkg cmd -name \\*.go") \
-								 		$(shell find ../libcalico-go/lib -name '*.go') \
-										$(shell find ../licensing/client -name '*.go')
+                 $(shell find ../libcalico-go/lib -name '*.go') \
+                 $(shell find ../licensing/client -name '*.go')
 
 VERSION_FLAGS = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
-								-X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
-								-X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
-								-X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT)
+                -X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
+                -X $(PACKAGE_NAME)/pkg/version.GitDescription=$(GIT_DESCRIPTION) \
+                -X $(PACKAGE_NAME)/pkg/version.GitRevision=$(GIT_COMMIT)
 
 ###############################################################################
 # This section builds the output binaries.
@@ -44,15 +44,14 @@ $(BINDIR)/license-agent: $(BINDIR)/license-agent-amd64
 	$(DOCKER_GO_BUILD) \
 		sh -c 'cd $(BINDIR) && ln -s -T license-agent-$(ARCH) license-agent'
 
+.PHONY: $(BINDIR)/license-agent-$(ARCH)
 $(BINDIR)/license-agent-$(ARCH): $(GO_FILES)
-	@echo Building license-agent...
-	mkdir -p .go-build-cache && \
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
 			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" "$(PACKAGE_NAME)/cmd/server"'
 
 # Build the docker image.
-.PHONY: $(LICENSE_AGENT_IMAGE)-$(ARCH)
+.PHONY: $(LICENSE_AGENT_IMAGE)
 
 # by default, build the image for the target architecture
 .PHONY: image-all
