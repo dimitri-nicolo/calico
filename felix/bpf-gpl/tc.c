@@ -427,6 +427,7 @@ syn_force_policy:
 				ctx->state->flags |= CALI_ST_NAT_OUTGOING;
 			}
 		}
+		/* If 3rd party CNI is used and dest is outside cluster. See commit fc711b192f for details. */
 		if (!(r->flags & CALI_RT_IN_POOL)) {
 			CALI_DEBUG("Source %x not in IP pool\n", bpf_ntohl(ctx->state->ip_src));
 			r = cali_rt_lookup(ctx->state->post_nat_ip_dst);
@@ -605,7 +606,7 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 	struct ct_create_ctx ct_ctx_nat = {};
 	int ct_rc = ct_result_rc(state->ct_result.rc);
 	bool ct_related = ct_result_is_related(state->ct_result.rc);
-	__u32 seen_mark;
+	__u32 seen_mark = CALI_SKB_MARK_SEEN;
 	size_t l4_csum_off = 0, l3_csum_off;
 
 	CALI_DEBUG("src=%x dst=%x\n", bpf_ntohl(state->ip_src), bpf_ntohl(state->ip_dst));
@@ -630,7 +631,6 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 		fib = false;
 		seen_mark = CALI_SKB_MARK_NAT_OUT;
 	} else {
-		seen_mark = CALI_SKB_MARK_SEEN;
 		if (state->flags & CALI_ST_SKIP_FIB) {
 			fib = false;
 			seen_mark = CALI_SKB_MARK_SKIP_FIB;
@@ -923,7 +923,7 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 				goto icmp_too_big;
 			}
 			state->ip_src = HOST_IP;
-			seen_mark = CALI_SKB_MARK_BYPASS;
+			seen_mark = CALI_SKB_MARK_BYPASS_FWD_SRC_FIXUP; /* Do FIB if possible */
 
 			goto nat_encap;
 		}
@@ -1278,8 +1278,6 @@ int calico_tc_skb_drop(struct __sk_buff *skb)
 		return TC_ACT_SHOT;
 	}
 
-	event_flow_log(skb, state);
-	CALI_DEBUG("Flow log event generated for DENY/DROP\n");
 	CALI_DEBUG("proto=%d\n", state->ip_proto);
 	CALI_DEBUG("src=%x dst=%x\n", bpf_ntohl(state->ip_src), bpf_ntohl(state->ip_dst));
 	CALI_DEBUG("pre_nat=%x:%d\n", bpf_ntohl(state->pre_nat_ip_dst), state->pre_nat_dport);
@@ -1289,6 +1287,9 @@ int calico_tc_skb_drop(struct __sk_buff *skb)
 	CALI_DEBUG("sport=%d\n", state->sport);
 	CALI_DEBUG("flags=0x%x\n", state->flags);
 	CALI_DEBUG("ct_rc=%d\n", state->ct_result.rc);
+
+	event_flow_log(skb, state);
+	CALI_DEBUG("Flow log event generated for DENY/DROP\n");
 
 	return TC_ACT_SHOT;
 }
