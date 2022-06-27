@@ -70,6 +70,10 @@ var _ = Describe("AD PodTemplate", func() {
 					Value:     DefaultADDetectorTrainingPeriod.String(),
 					ValueFrom: nil,
 				},
+				v1.EnvVar{
+					Name:  "AD_USE_INTERNAL_SCHEDULER",
+					Value: "False",
+				},
 			))
 			Expect(adContainer.Command).To(Equal(ADJobStartupCommand()))
 			Expect(adContainer.Args).To(Equal(append(ADJobStartupArgs(), cycle)))
