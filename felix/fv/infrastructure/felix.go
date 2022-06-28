@@ -93,9 +93,7 @@ func (f *Felix) TriggerDelayedStart() {
 }
 
 func (f *Felix) RunDebugConsoleCommand(commandAndArgs ...string) (string, error) {
-	f.EnsureBinary("run-debug-console-command")
-	return f.ExecCombinedOutput(append([]string{"/run-debug-console-command"}, commandAndArgs...)...)
-
+	return f.ExecCombinedOutput(append([]string{"run-debug-console-command"}, commandAndArgs...)...)
 }
 
 func RunFelix(infra DatastoreInfra, id int, options TopologyOptions) *Felix {

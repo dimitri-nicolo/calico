@@ -20,6 +20,8 @@ package fv_test
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
 	"regexp"
 	"strings"
 
@@ -235,8 +237,11 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			)
 
 			JustBeforeEach(func() {
+				wd, err := os.Getwd()
+				Expect(err).NotTo(HaveOccurred(), "failed to get working directory")
 				c := containers.Run("external-server",
 					containers.RunOpts{AutoRemove: true},
+					"-v", fmt.Sprintf("%s:%s", path.Join(wd, "..", "bin"), "/usr/local/bin"),
 					"--privileged", // So that we can add routes inside the container.
 					utils.Config.BusyboxImage,
 					"/bin/sh", "-c", "sleep 1000")
@@ -249,7 +254,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 					IP:       c.IP,
 				}
 
-				err := extServer.Start()
+				err = extServer.Start()
 				Expect(err).NotTo(HaveOccurred())
 
 				cc = &connectivity.Checker{

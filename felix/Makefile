@@ -357,10 +357,15 @@ build-typha:
 
 .PHONY: fv fv-prereqs fv-no-build
 
+SCAPY_CONTAINER_CREATED=.test-scapy.created
+TEST_DNS_SERVER_CONTAINER_CREATED=.test-dns.created
+
 # Build everything needed to run the FVs but don't actually run them.  The semaphore job runs
 # this target to build everything so that it can be cached and shared between downstream jobs.
 fv-prereqs: $(REMOTE_DEPS) \
             $(FELIX_CONTAINER_CREATED) \
+            $(TEST_DNS_SERVER_CONTAINER_CREATED) \
+            $(SCAPY_CONTAINER_CREATED) \
             $(FV_BINARY) \
             bin/iptables-locker \
             bin/test-workload \
@@ -370,8 +375,8 @@ fv-prereqs: $(REMOTE_DEPS) \
             build-bpf \
             fv/fv.test \
             bin/test-dns \
-            bin/run-debug-console-command \
-            test-dns-server-container  # FIXME
+            bin/tproxy \
+            bin/run-debug-console-command
 
 # runs all of the fv tests
 # to run it in parallel, decide how many parallel engines you will run, and in each one call:
@@ -396,7 +401,6 @@ fv fv/latency.log fv/data-races.log: fv-prereqs
 # The semaphore job runs this target directly to avoid accidental rebuilds.
 fv-no-prereqs:
 	rm -f fv/data-races.log fv/latency.log
-	docker build -t tigera-test/scapy fv/scapy
 	cd fv && \
 	  FV_FELIXIMAGE=$(FV_FELIXIMAGE) \
 	  FV_ETCDIMAGE=$(FV_ETCDIMAGE) \
@@ -532,11 +536,29 @@ bin/test-workload: ../go.mod fv/cgroup/cgroup.go fv/utils/utils.go fv/connectivi
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/test-workload"'
 
-test-dns-server-container: ../go.mod fv/cgroup/cgroup.go fv/utils/utils.go fv/connectivity/*.go fv/test-workload/*.go
+SCAPY_IMAGE_WITH_TAG=tigera-test/scapy:latest
+SCAPY_IMAGE_ID=$(shell docker images -q $(SCAPY_IMAGE_WITH_TAG))
+test-scapy-container: $(SCAPY_CONTAINER_CREATED)
+$(SCAPY_CONTAINER_CREATED): fv/scapy/Dockerfile \
+                            $(shell test "$(SCAPY_IMAGE_ID)" || echo force-rebuild)
+	@echo Building scapy container...
+	docker build -t tigera-test/scapy fv/scapy
+	touch $(SCAPY_CONTAINER_CREATED)
+
+TEST_DNS_SERVER_IMAGE_WITH_TAG=tigera-test/dns-server:latest
+TEST_DNS_SERVER_IMAGE_ID=$(shell docker images -q $(TEST_DNS_SERVER_IMAGE_WITH_TAG))
+test-dns-server-container: $(TEST_DNS_SERVER_CONTAINER_CREATED)
+$(TEST_DNS_SERVER_CONTAINER_CREATED): ../go.mod \
+                                      fv/cgroup/cgroup.go \
+                                      fv/utils/utils.go \
+                                      fv/connectivity/*.go \
+                                      fv/test-workload/*.go \
+                                      $(shell test "$(TEST_DNS_SERVER_IMAGE_ID)" || echo force-rebuild)
 	@echo Building test-dns-server-container...
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o fv/dns/server/dns-server -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/dns/server"'
-	docker build -t tigera-test/dns-server fv/dns/server
+	docker build -t $(TEST_DNS_SERVER_IMAGE_WITH_TAG) fv/dns/server
+	touch $(TEST_DNS_SERVER_CONTAINER_CREATED)
 
 bin/run-debug-console-command:
 	@echo Copying run-debug-console-command script...

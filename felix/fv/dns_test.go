@@ -100,8 +100,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	}
 
 	wgetMicrosoftErr := func() error {
-		w[0].C.EnsureBinary("test-dns")
-		out, err := w[0].ExecCombinedOutput("/test-dns", "-", "microsoft.com", fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
+		out, err := w[0].ExecCombinedOutput("test-dns", "-", "microsoft.com", fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
 		return logAndReport(out, err)
 	}
 
@@ -116,8 +115,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 	}
 
 	hostWgetMicrosoftErr := func() error {
-		felix.EnsureBinary("test-dns")
-		out, err := felix.ExecCombinedOutput("/test-dns", "-", "microsoft.com", fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
+		out, err := felix.ExecCombinedOutput("test-dns", "-", "microsoft.com", fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
 		return logAndReport(out, err)
 	}
 
@@ -1020,8 +1018,7 @@ func waitForIptablesChain(felix *infrastructure.Felix, chainName string) {
 // checkSingleShotDNSConnectivity sends a single udp request to the domain name from the given workload on port 8055.
 // The dnsServerIP is used to tell the test-connection script what dns server to use to resolve the IP for the domain.
 func checkSingleShotDNSConnectivity(w *workload.Workload, domainName, dnsServerIP string) (string, error) {
-	w.C.EnsureBinary("test-connection")
-	output, err := w.ExecCombinedOutput("/test-connection", "-", domainName, "8055", "--protocol=udp", fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
+	output, err := w.ExecCombinedOutput("test-connection", "-", domainName, "8055", "--protocol=udp", fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
 	return output, err
 }
 

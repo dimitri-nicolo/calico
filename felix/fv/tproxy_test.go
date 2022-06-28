@@ -767,7 +767,6 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 							"--privileged", // So that we can add routes inside the container.
 							utils.Config.BusyboxImage,
 							"/bin/sh", "-c", "sleep 1000")
-						externalClient.EnsureBinary("test-connection")
 					})
 
 					AfterEach(func() {
