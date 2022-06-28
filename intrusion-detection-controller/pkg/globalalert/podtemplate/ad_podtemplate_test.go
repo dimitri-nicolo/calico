@@ -60,6 +60,7 @@ var _ = Describe("AD PodTemplate", func() {
 
 			err := DecoratePodTemplateForTrainingCycle(&testPT, testClusterName, detectors)
 			Expect(err).ToNot(BeNil())
+			Expect(err).To(Equal(ErrADContainerNotFound))
 		})
 
 		It("adds ADJob specific commands, args and envVar to the training podtemplate", func() {
@@ -105,6 +106,7 @@ var _ = Describe("AD PodTemplate", func() {
 
 			err := DecoratePodTemplateForDetectionCycle(&testPT, testClusterName, adTestGlobalAlert)
 			Expect(err).ToNot(BeNil())
+			Expect(err).To(Equal(ErrADContainerNotFound))
 		})
 
 		It("adds ADJob specific commands, args and envVar to the detection podtemplate", func() {
