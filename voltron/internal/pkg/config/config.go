@@ -90,6 +90,9 @@ type Config struct {
 	DefaultForwardServer            string        `default:"tigera-secure-es-http.tigera-elasticsearch.svc:9200" split_words:"true"`
 	DefaultForwardDialRetryAttempts int           `default:"5" split_words:"true"`
 	DefaultForwardDialInterval      time.Duration `default:"2s" split_words:"true"`
+
+	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
+	FIPSModeEnabled bool `default:"false" split_words:"true"`
 }
 
 func (cfg Config) String() string {

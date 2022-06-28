@@ -166,3 +166,11 @@ func WithSNIServiceMap(serviceMap map[string]string) Option {
 		return nil
 	}
 }
+
+// WithFIPSModeEnabled enables FIPS 140-2 verified mode.
+func WithFIPSModeEnabled(fipsMode bool) Option {
+	return func(s *Server) error {
+		s.fipsMode = fipsMode
+		return nil
+	}
+}

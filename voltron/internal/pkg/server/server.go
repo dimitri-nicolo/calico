@@ -83,6 +83,9 @@ type Server struct {
 	tunnelKeepAliveInterval time.Duration
 
 	sniServiceMap map[string]string
+
+	// Enable FIPS 140-2 verified mode.
+	fipsMode bool
 }
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
@@ -110,7 +113,16 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, authenticator auth.JWTAut
 	srv.clusters.sniServiceMap = srv.sniServiceMap
 	srv.proxyMux = http.NewServeMux()
 
-	cfg := &tls.Config{}
+	cfg := &tls.Config{
+
+		//todo: max tls version is 1.2 when fips enabled.
+	}
+
+	if srv.fipsMode {
+		cfg.MinVersion = tls.VersionTLS12
+		// FIPS 140-2 does not support v1.3 yet.
+		cfg.MaxVersion = tls.VersionTLS12
+	}
 
 	cfg.Certificates = append(cfg.Certificates, srv.externalCert)
 
@@ -267,7 +279,7 @@ func (s *Server) extractIdentity(t *tunnel.Tunnel, clusterID string, fingerprint
 		// We expect to have a cluster registered with this ID and matching fingerprint
 		// for the cert.
 		clusterID = id.Subject.CommonName
-		fingerprint = utils.GenerateFingerprint(id)
+		fingerprint = utils.GenerateFingerprint(s.fipsMode, id)
 	default:
 		log.Errorf("unknown tunnel identity type %T", id)
 	}

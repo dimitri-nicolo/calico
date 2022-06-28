@@ -131,6 +131,7 @@ func main() {
 			server.WithDefaultForwardServer(cfg.DefaultForwardServer, cfg.DefaultForwardDialRetryAttempts, cfg.DefaultForwardDialInterval),
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
 			server.WithSNIServiceMap(sniServiceMap),
+			server.WithFIPSModeEnabled(cfg.FIPSModeEnabled),
 		)
 	}
 

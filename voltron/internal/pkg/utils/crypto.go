@@ -7,6 +7,7 @@ import (
 	"crypto"
 	"crypto/md5"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -75,7 +76,10 @@ func CertPEMEncode(cert *x509.Certificate) []byte {
 	return pem.EncodeToMemory(block)
 }
 
-// GenerateFingerprint returns the MD5 hash for a x509 certificate printed as a hex number
-func GenerateFingerprint(certificate *x509.Certificate) string {
+// GenerateFingerprint returns the hash for a x509 certificate printed as a hex number
+func GenerateFingerprint(fipsMode bool, certificate *x509.Certificate) string {
+	if fipsMode {
+		return fmt.Sprintf("%x", sha256.Sum256(certificate.Raw))
+	}
 	return fmt.Sprintf("%x", md5.Sum(certificate.Raw))
 }
