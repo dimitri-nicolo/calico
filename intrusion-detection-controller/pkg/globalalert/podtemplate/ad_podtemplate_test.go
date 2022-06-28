@@ -51,7 +51,7 @@ var _ = Describe("AD PodTemplate", func() {
 
 			err := DecoratePodTemplateForTrainingCycle(&testPT, clusterName, detectors)
 			Expect(err).To(BeNil())
-			adContainer, err := getContainer(testPT.Template.Spec.Containers, ADJobsContainerName)
+			adContainer, err := findContainer(&(testPT.Template.Spec.Containers), ADJobsContainerName)
 			Expect(err).To(BeNil())
 
 			Expect(adContainer.Env).To(ContainElements(
@@ -92,7 +92,7 @@ var _ = Describe("AD PodTemplate", func() {
 
 			err := DecoratePodTemplateForDetectionCycle(&testPT, clusterName, *testGlobalAlert)
 			Expect(err).To(BeNil())
-			adContainer, err := getContainer(testPT.Template.Spec.Containers, ADJobsContainerName)
+			adContainer, err := findContainer(&(testPT.Template.Spec.Containers), ADJobsContainerName)
 			Expect(err).To(BeNil())
 
 			Expect(adContainer.Env).To(ContainElements(
@@ -136,7 +136,7 @@ var _ = Describe("AD PodTemplate", func() {
 
 			err := DecoratePodTemplateForDetectionCycle(&testPT, clusterName, adTestGlobalAlert)
 			Expect(err).To(BeNil())
-			adContainer, err := getContainer(testPT.Template.Spec.Containers, ADJobsContainerName)
+			adContainer, err := findContainer(&(testPT.Template.Spec.Containers), ADJobsContainerName)
 			Expect(err).To(BeNil())
 
 			Expect(adContainer.Env).To(ContainElements(

@@ -37,12 +37,12 @@ var (
 // DecoratePodTemplateForTrainingCycle adds the appropriate labels and env_vars to setup the v1.PodTemplate for
 // an AD training cycle
 func DecoratePodTemplateForTrainingCycle(adJobPT *v1.PodTemplate, clusterName, detectors string) error {
-	adContainer, err := getContainer(adJobPT.Template.Spec.Containers, ADJobsContainerName)
+	adContainer, err := findContainer(&adJobPT.Template.Spec.Containers, ADJobsContainerName)
 	if err != nil {
 		return err
 	}
 
-	err = decorateBaseADPodTemplate(clusterName, &adContainer)
+	err = decorateBaseADPodTemplate(clusterName, adContainer)
 	if err != nil {
 		return err
 	}
@@ -69,21 +69,18 @@ func DecoratePodTemplateForTrainingCycle(adJobPT *v1.PodTemplate, clusterName, d
 		},
 	)
 
-	adContainers := []v1.Container{adContainer}
-	adJobPT.Template.Spec.Containers = adContainers
-
 	return nil
 }
 
 // DecoratePodTemplateForDetectionCycle adds the appropriate labels and env_vars to setup the v1.PodTemplate for
 // an AD detection cycle
 func DecoratePodTemplateForDetectionCycle(adJobPT *v1.PodTemplate, clusterName string, globalAlert v3.GlobalAlert) error {
-	adContainer, err := getContainer(adJobPT.Template.Spec.Containers, ADJobsContainerName)
+	adContainer, err := findContainer(&adJobPT.Template.Spec.Containers, ADJobsContainerName)
 	if err != nil {
 		return err
 	}
 
-	err = decorateBaseADPodTemplate(clusterName, &adContainer)
+	err = decorateBaseADPodTemplate(clusterName, adContainer)
 	if err != nil {
 		return err
 	}
@@ -131,9 +128,6 @@ func DecoratePodTemplateForDetectionCycle(adJobPT *v1.PodTemplate, clusterName s
 		},
 	)
 
-	adContainers := []v1.Container{adContainer}
-	adJobPT.Template.Spec.Containers = adContainers
-
 	return nil
 }
 
@@ -159,12 +153,12 @@ func decorateBaseADPodTemplate(clusterName string, adContainer *v1.Container) er
 	return nil
 }
 
-// getContainer returns the container specified by name in the Container slice
-func getContainer(containers []v1.Container, name string) (v1.Container, error) {
-	for _, container := range containers {
-		if container.Name == name {
-			return container, nil
+// findContainer returns the container specified by name in the Container slice
+func findContainer(containers *[]v1.Container, name string) (*v1.Container, error) {
+	for i := 0; i < len(*containers); i++ {
+		if (*containers)[i].Name == name {
+			return &(*containers)[i], nil
 		}
 	}
-	return v1.Container{}, ErrADContainerNotFound
+	return nil, ErrADContainerNotFound
 }
