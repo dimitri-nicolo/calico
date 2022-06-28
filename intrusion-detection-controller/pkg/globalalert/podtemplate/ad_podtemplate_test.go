@@ -13,43 +13,61 @@ import (
 )
 
 var _ = Describe("AD PodTemplate", func() {
+	const (
+		testClusterName = "testCluster"
+	)
 
-	adTestGlobalAlert := v3.GlobalAlert{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "mock-adjob-podtemplate",
-		},
-		Spec: v3.GlobalAlertSpec{
-			Detector: &v3.DetectorParams{
-				Name: "test-detector",
-			},
-		},
-	}
-	defaultPodTemplate := &v1.PodTemplate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "mock-adjob-podtemplate",
-		},
-		Template: v1.PodTemplateSpec{
+	var (
+		adTestGlobalAlert  v3.GlobalAlert
+		defaultPodTemplate *v1.PodTemplate
+	)
+
+	BeforeEach(func() {
+		adTestGlobalAlert = v3.GlobalAlert{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "mock-adjob-podtemplate-spec",
+				Name: "mock-adjob-podtemplate",
 			},
-			Spec: v1.PodSpec{
-				Containers: []v1.Container{
-					{
-						Name: ADJobsContainerName,
+			Spec: v3.GlobalAlertSpec{
+				Detector: &v3.DetectorParams{
+					Name: "test-detector",
+				},
+			},
+		}
+		defaultPodTemplate = &v1.PodTemplate{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "mock-adjob-podtemplate",
+			},
+			Template: v1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "mock-adjob-podtemplate-spec",
+				},
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{
+							Name: ADJobsContainerName,
+						},
 					},
 				},
 			},
-		},
-	}
+		}
+	})
 
 	Context("DecoratePodTemplateForTrainingCycle", func() {
+		It("errors when conainer is not found", func() {
+			testPT := *defaultPodTemplate
+			testPT.Template.Spec.Containers[0].Name = "unreconized name"
+			detectors := "test-job0, test-job1"
+
+			err := DecoratePodTemplateForTrainingCycle(&testPT, testClusterName, detectors)
+			Expect(err).ToNot(BeNil())
+		})
+
 		It("adds ADJob specific commands, args and envVar to the training podtemplate", func() {
 			testPT := *defaultPodTemplate
-			clusterName := "testCluster"
 			cycle := ADJobTrainCycleArg
 			detectors := "test-job0, test-job1"
 
-			err := DecoratePodTemplateForTrainingCycle(&testPT, clusterName, detectors)
+			err := DecoratePodTemplateForTrainingCycle(&testPT, testClusterName, detectors)
 			Expect(err).To(BeNil())
 			adContainer, err := findContainer(&(testPT.Template.Spec.Containers), ADJobsContainerName)
 			Expect(err).To(BeNil())
@@ -57,7 +75,7 @@ var _ = Describe("AD PodTemplate", func() {
 			Expect(adContainer.Env).To(ContainElements(
 				v1.EnvVar{
 					Name:      "CLUSTER_NAME",
-					Value:     clusterName,
+					Value:     testClusterName,
 					ValueFrom: nil,
 				},
 				v1.EnvVar{
@@ -81,16 +99,23 @@ var _ = Describe("AD PodTemplate", func() {
 	})
 
 	Context("DecoratePodTemplateForDetectionCycle", func() {
+		It("errors when conainer is not found", func() {
+			testPT := *defaultPodTemplate
+			testPT.Template.Spec.Containers[0].Name = "unreconized name"
+
+			err := DecoratePodTemplateForDetectionCycle(&testPT, testClusterName, adTestGlobalAlert)
+			Expect(err).ToNot(BeNil())
+		})
+
 		It("adds ADJob specific commands, args and envVar to the detection podtemplate", func() {
 			testPT := *defaultPodTemplate
-			clusterName := "testCluster"
 			cycle := ADJobDetectCycleArg
 
 			testGlobalAlert := adTestGlobalAlert.DeepCopy()
 			testGlobalAlert.Spec.Severity = 95
 			testGlobalAlert.Spec.Period = &metav1.Duration{Duration: 20 * time.Minute}
 
-			err := DecoratePodTemplateForDetectionCycle(&testPT, clusterName, *testGlobalAlert)
+			err := DecoratePodTemplateForDetectionCycle(&testPT, testClusterName, *testGlobalAlert)
 			Expect(err).To(BeNil())
 			adContainer, err := findContainer(&(testPT.Template.Spec.Containers), ADJobsContainerName)
 			Expect(err).To(BeNil())
@@ -98,7 +123,7 @@ var _ = Describe("AD PodTemplate", func() {
 			Expect(adContainer.Env).To(ContainElements(
 				v1.EnvVar{
 					Name:      "CLUSTER_NAME",
-					Value:     clusterName,
+					Value:     testClusterName,
 					ValueFrom: nil,
 				},
 				v1.EnvVar{
@@ -131,10 +156,9 @@ var _ = Describe("AD PodTemplate", func() {
 
 		It("adds ADJob specific commands, args and default envVar to the detection podtemplate if certain fields are not specified in the GlobalAlert", func() {
 			testPT := *defaultPodTemplate
-			clusterName := "testCluster"
 			cycle := ADJobDetectCycleArg
 
-			err := DecoratePodTemplateForDetectionCycle(&testPT, clusterName, adTestGlobalAlert)
+			err := DecoratePodTemplateForDetectionCycle(&testPT, testClusterName, adTestGlobalAlert)
 			Expect(err).To(BeNil())
 			adContainer, err := findContainer(&(testPT.Template.Spec.Containers), ADJobsContainerName)
 			Expect(err).To(BeNil())
@@ -142,7 +166,7 @@ var _ = Describe("AD PodTemplate", func() {
 			Expect(adContainer.Env).To(ContainElements(
 				v1.EnvVar{
 					Name:      "CLUSTER_NAME",
-					Value:     clusterName,
+					Value:     testClusterName,
 					ValueFrom: nil,
 				},
 				v1.EnvVar{
