@@ -114,8 +114,7 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, authenticator auth.JWTAut
 	srv.proxyMux = http.NewServeMux()
 
 	cfg := &tls.Config{
-
-		//todo: max tls version is 1.2 when fips enabled.
+		MinVersion: tls.VersionTLS12,
 	}
 
 	if srv.fipsMode {
