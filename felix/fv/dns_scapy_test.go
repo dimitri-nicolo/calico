@@ -1013,7 +1013,7 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 			allowHostLatencyBug = !bpfEnabled
 		}
 		dnsLogC := felix.WatchStdoutFor(regexp.MustCompile("WARNING.*DNS"))
-		clientContainer.ExecWithInput(dnsRequestBytes(1), "/test-connection",
+		clientContainer.ExecWithInput(dnsRequestBytes(1), "test-connection",
 			clientNamespace,
 			serverIP,
 			"53",
@@ -1021,7 +1021,7 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 			"--source-port=53",
 			"--protocol=udp-noconn",
 			"--stdin")
-		serverContainer.ExecWithInput(dnsResponseBytes(1), "/test-connection",
+		serverContainer.ExecWithInput(dnsResponseBytes(1), "test-connection",
 			serverNamespace,
 			clientIP,
 			"53",

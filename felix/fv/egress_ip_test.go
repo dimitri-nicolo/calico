@@ -20,8 +20,6 @@ package fv_test
 import (
 	"context"
 	"fmt"
-	"os"
-	"path"
 	"regexp"
 	"strings"
 
@@ -35,7 +33,6 @@ import (
 	"github.com/projectcalico/calico/felix/fv/connectivity"
 	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
-	"github.com/projectcalico/calico/felix/fv/utils"
 	"github.com/projectcalico/calico/felix/fv/workload"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
@@ -231,30 +228,24 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		Context("with external server", func() {
 
 			var (
-				extServer *workload.Workload
-				cc        *connectivity.Checker
-				protocol  string
+				extHost     *containers.Container
+				extWorkload *workload.Workload
+				cc          *connectivity.Checker
+				protocol    string
 			)
 
 			JustBeforeEach(func() {
-				wd, err := os.Getwd()
-				Expect(err).NotTo(HaveOccurred(), "failed to get working directory")
-				c := containers.Run("external-server",
-					containers.RunOpts{AutoRemove: true},
-					"-v", fmt.Sprintf("%s:%s", path.Join(wd, "..", "bin"), "/usr/local/bin"),
-					"--privileged", // So that we can add routes inside the container.
-					utils.Config.BusyboxImage,
-					"/bin/sh", "-c", "sleep 1000")
+				extHost = infrastructure.RunExtClient("external-server")
 
-				extServer = &workload.Workload{
-					C:        c,
+				extWorkload = &workload.Workload{
+					C:        extHost,
 					Name:     "ext-server",
 					Ports:    "4321",
 					Protocol: protocol,
-					IP:       c.IP,
+					IP:       extHost.IP,
 				}
 
-				err = extServer.Start()
+				err = extWorkload.Start()
 				Expect(err).NotTo(HaveOccurred())
 
 				cc = &connectivity.Checker{
@@ -263,8 +254,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			})
 
 			AfterEach(func() {
-				extServer.Stop()
-				extServer.C.Stop()
+				extWorkload.Stop()
+				extHost.Stop()
 			})
 
 			for _, sameNode := range []bool{true, false} {
@@ -305,7 +296,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 										felixes[0].Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP, "dev", "tunl0", "onlink")
 									}
 								}
-								extServer.C.Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP)
+								extWorkload.C.Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP)
 							})
 
 							AfterEach(func() {
@@ -314,7 +305,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 							})
 
 							It("server should see gateway IP when client connects to it", func() {
-								cc.ExpectSNAT(client, gw.IP, extServer, 4321)
+								cc.ExpectSNAT(client, gw.IP, extWorkload, 4321)
 								cc.CheckConnectivity()
 							})
 						})

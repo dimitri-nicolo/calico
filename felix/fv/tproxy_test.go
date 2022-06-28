@@ -762,11 +762,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					var externalClient *containers.Container
 
 					BeforeEach(func() {
-						externalClient = containers.Run("external-client",
-							containers.RunOpts{AutoRemove: true},
-							"--privileged", // So that we can add routes inside the container.
-							utils.Config.BusyboxImage,
-							"/bin/sh", "-c", "sleep 1000")
+						externalClient = infrastructure.RunExtClient("ext-client")
 					})
 
 					AfterEach(func() {
