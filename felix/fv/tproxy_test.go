@@ -594,6 +594,14 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 
 					assertPortInIPSet(TPROXYNodeportsSet, "30333", felixes, true)
 
+					for _, f := range felixes {
+						Eventually(func() string {
+							out, err := f.ExecOutput("iptables-save")
+							Expect(err).NotTo(HaveOccurred())
+							return out
+						}, "10s").Should(ContainSubstring("TPROXY"))
+					}
+
 					pol := api.NewGlobalNetworkPolicy()
 					pol.Namespace = "fv"
 					pol.Name = "policy-allow-8055-from-any"
@@ -623,14 +631,14 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					cc.CheckConnectivity()
 
 					// Connection should be proxied at the nodeport's node
-					Expect(proxies[0].ProxiedCount(w[0][0].IP, pod, svc)).To(BeNumerically(">", 0))
-					Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
+					Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
 					// Due to NAT outgoing
-					Expect(proxies[0].ProxiedCount(felixes[1].IP, pod, svc)).To(BeNumerically(">", 0))
+					Eventually(proxies[0].ProxiedCountFn(felixes[1].IP, pod, svc)).Should(BeNumerically(">", 0))
 
 					// Connection should not be proxied on the client pod's node
-					Expect(proxies[1].AcceptedCount(w[1][0].IP, pod, svc)).To(Equal(0))
-					Expect(proxies[1].AcceptedCount(w[1][1].IP, pod, svc)).To(Equal(0))
+					Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(Equal(0))
+					Eventually(proxies[1].AcceptedCountFn(w[1][1].IP, pod, svc)).Should(Equal(0))
 				})
 
 				It("should have connectivity from all workloads via NodePort on node 1", func() {
@@ -644,14 +652,14 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					cc.CheckConnectivity()
 
 					// Connection should be proxied at the nodeport's node
-					Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
-					Expect(proxies[1].ProxiedCount(w[1][1].IP, pod, svc)).To(BeNumerically(">", 0))
+					Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[1].ProxiedCountFn(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
 					// Due to NAT outgoing
-					Expect(proxies[1].ProxiedCount(felixes[0].IP, pod, svc)).To(BeNumerically(">", 0))
+					Eventually(proxies[1].ProxiedCountFn(felixes[0].IP, pod, svc)).Should(BeNumerically(">", 0))
 
 					// Connection should not be proxied on the client pod's node
-					Expect(proxies[0].AcceptedCount(w[0][0].IP, pod, svc)).To(Equal(0))
-					Expect(proxies[0].AcceptedCount(w[0][1].IP, pod, svc)).To(Equal(0))
+					Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc)).Should(Equal(0))
+					Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc)).Should(Equal(0))
 				})
 
 				// The ingress policy tests are not realistinc policies for NodePorts.
@@ -663,7 +671,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 				// regular services.
 
 				Context("With ingress traffic denied from pod IPs to nodeport", func() {
-					It("local pods should have no connectivity to w[0][0]", func() {
+					It("XXX local pods should have no connectivity to w[0][0]", func() {
 						By("Denying traffic from pods to nodeport", func() {
 							pol := api.NewGlobalNetworkPolicy()
 							pol.Namespace = "fv"
@@ -687,6 +695,13 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 							pol = createPolicy(pol)
 						})
 
+						// Wait for iptables to be fully in sync.
+						Eventually(func() string {
+							out, err := felixes[0].ExecOutput("iptables-save")
+							Expect(err).NotTo(HaveOccurred())
+							return out
+						}, "10s").Should(ContainSubstring("policy-deny-1-1"))
+
 						cc.Expect(None, w[0][0], TargetIP(felixes[0].IP), opts...)
 						cc.Expect(None, w[0][1], TargetIP(felixes[0].IP), opts...)
 						cc.Expect(Some, w[1][0], TargetIP(felixes[0].IP), opts...)
@@ -694,16 +709,16 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 						cc.CheckConnectivity()
 
 						// Connection should be proxied at the nodeport's node
-						Expect(proxies[0].AcceptedCount(w[0][0].IP, pod, svc)).To(BeNumerically(">", 0))
-						Expect(proxies[0].AcceptedCount(w[0][1].IP, pod, svc)).To(BeNumerically(">", 0))
-						Expect(proxies[0].ProxiedCount(w[0][0].IP, pod, svc)).To(Equal(0))
-						Expect(proxies[0].ProxiedCount(w[0][1].IP, pod, svc)).To(Equal(0))
+						Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc)).Should(Equal(0))
+						Eventually(proxies[0].ProxiedCountFn(w[0][1].IP, pod, svc)).Should(Equal(0))
 						// Due to NAT outgoing
-						Expect(proxies[0].ProxiedCount(felixes[1].IP, pod, svc)).To(BeNumerically(">", 0))
+						Eventually(proxies[0].ProxiedCountFn(felixes[1].IP, pod, svc)).Should(BeNumerically(">", 0))
 
 						// Connection should not be proxied on the client pod's node
-						Expect(proxies[1].AcceptedCount(w[1][0].IP, pod, svc)).To(Equal(0))
-						Expect(proxies[1].AcceptedCount(w[1][1].IP, pod, svc)).To(Equal(0))
+						Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(Equal(0))
+						Eventually(proxies[1].AcceptedCountFn(w[1][1].IP, pod, svc)).Should(Equal(0))
 					})
 				})
 
@@ -747,14 +762,14 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 						cc.CheckConnectivity()
 
 						// Connection should be proxied at the nodeport's node
-						Expect(proxies[1].AcceptedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
-						Expect(proxies[1].AcceptedCount(w[1][1].IP, pod, svc)).To(BeNumerically(">", 0))
+						Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[1].AcceptedCountFn(w[1][1].IP, pod, svc)).Should(BeNumerically(">", 0))
 						// Due to NAT outgoing
-						Expect(proxies[1].AcceptedCount(felixes[0].IP, pod, svc)).To(BeNumerically(">", 0))
+						Eventually(proxies[1].AcceptedCountFn(felixes[0].IP, pod, svc)).Should(BeNumerically(">", 0))
 
 						// Connection should not be proxied on the client pod's node
-						Expect(proxies[0].AcceptedCount(w[0][1].IP, pod, svc)).To(Equal(0))
-						Expect(proxies[0].AcceptedCount(w[0][1].IP, pod, svc)).To(Equal(0))
+						Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc)).Should(Equal(0))
+						Eventually(proxies[0].AcceptedCountFn(w[0][1].IP, pod, svc)).Should(Equal(0))
 					})
 				})
 
@@ -774,7 +789,7 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 							ExpectWithSrcIPs(felixes[0].IP), ExpectWithPorts(nodeport), expectedFelix0IP)
 						cc.CheckConnectivity()
 
-						Expect(proxies[0].ProxiedCount(externalClient.IP, pod, svc)).To(BeNumerically(">", 0))
+						Eventually(proxies[0].ProxiedCountFn(externalClient.IP, pod, svc)).Should(BeNumerically(">", 0))
 					})
 
 					It("should have connectivity via node 1", func() {
@@ -782,9 +797,9 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 						cc.Expect(Some, externalClient, TargetIP(felixes[1].IP),
 							expectedFelix1IP, ExpectWithPorts(nodeport))
 						cc.CheckConnectivity()
-						Expect(proxies[1].ProxiedCount(externalClient.IP, pod, svc)).To(BeNumerically(">", 0))
-						Expect(proxies[0].AcceptedCount(externalClient.IP, pod, svc)).To(Equal(0))
-						Expect(proxies[0].AcceptedCount(felixes[1].IP, pod, svc)).To(Equal(0))
+						Eventually(proxies[1].ProxiedCountFn(externalClient.IP, pod, svc)).Should(BeNumerically(">", 0))
+						Eventually(proxies[0].AcceptedCountFn(externalClient.IP, pod, svc)).Should(Equal(0))
+						Eventually(proxies[0].AcceptedCountFn(felixes[1].IP, pod, svc)).Should(Equal(0))
 					})
 
 					It("should not have connectivity when denied by preDNAT policy", func() {
@@ -879,11 +894,11 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					cc.Expect(Some, w[1][0], TargetIP(clusterIP), ExpectWithPorts(8090), ExpectWithSrcIPs(felixes[1].IP))
 					cc.CheckConnectivity()
 
-					Expect(proxies[0].AcceptedCount(w[0][0].IP, pod, svc)).To(BeNumerically(">", 0))
-					Expect(proxies[0].ProxiedCount(w[0][0].IP, pod, svc)).To(BeNumerically(">", 0))
+					Eventually(proxies[0].AcceptedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
 
-					Expect(proxies[1].AcceptedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
-					Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
+					Eventually(proxies[1].AcceptedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
 				})
 
 				It("should have connectivity via NodePorts", func() {
@@ -904,13 +919,13 @@ func describeTProxyTest(ipip bool, TPROXYMode string) bool {
 					svc = felixes[0].IP + ":" + strconv.Itoa(int(nodeport))
 
 					// Connection should be proxied at the nodeport's node
-					Expect(proxies[0].ProxiedCount(w[0][0].IP, pod, svc)).To(BeNumerically(">", 0))
-					Expect(proxies[0].ProxiedCount(felixes[1].IP, pod, svc)).To(BeNumerically(">", 0))
+					Eventually(proxies[0].ProxiedCountFn(w[0][0].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[0].ProxiedCountFn(felixes[1].IP, pod, svc)).Should(BeNumerically(">", 0))
 
 					svc = felixes[1].IP + ":" + strconv.Itoa(int(nodeport))
 
-					Expect(proxies[1].ProxiedCount(felixes[0].IP, pod, svc)).To(BeNumerically(">", 0))
-					Expect(proxies[1].ProxiedCount(w[1][0].IP, pod, svc)).To(BeNumerically(">", 0))
+					Eventually(proxies[1].ProxiedCountFn(felixes[0].IP, pod, svc)).Should(BeNumerically(">", 0))
+					Eventually(proxies[1].ProxiedCountFn(w[1][0].IP, pod, svc)).Should(BeNumerically(">", 0))
 				})
 			})
 

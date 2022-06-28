@@ -115,7 +115,7 @@ func (t *TProxy) readStderr() {
 	listening := false
 
 	defer func() {
-		Expect(listening).To(BeTrue(), "Proxy did not starat to listen")
+		Expect(listening).To(BeTrue(), "Proxy did not start to listen")
 		safeClose()
 	}()
 
