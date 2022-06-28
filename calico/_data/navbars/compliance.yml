@@ -8,5 +8,3 @@ section:
   path: /compliance/compliance-reports-cis
 - title: Encrypt data in transit
   path: /compliance/encrypt-cluster-pod-traffic
-- title: Egress gateways
-  path: /compliance/egress-gateways
