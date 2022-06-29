@@ -108,7 +108,6 @@ require (
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200324154536-ceff61240acf
 	google.golang.org/genproto v0.0.0-20220407144326-9054f6ed7bac
 	google.golang.org/grpc v1.45.0
-	gopkg.in/fsnotify/fsnotify.v1 v1.4.7
 	// validator.v9 must be at v9.30.2
 	gopkg.in/go-playground/validator.v9 v9.30.2
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
@@ -343,6 +342,7 @@ require (
 )
 
 replace (
+
 	github.com/Microsoft/hcsshim => github.com/projectcalico/hcsshim v0.8.9-calico
 	github.com/bronze1man/goStrongswanVici => github.com/tigera/goStrongswanVici v0.0.0-20180704141420-9b6fdd821dbe
 
@@ -357,6 +357,7 @@ replace (
 	github.com/prometheus/common => github.com/prometheus/common v0.26.0
 
 	github.com/tigera/api => ./api
+	github.com/vishvananda/netlink => github.com/fasaxc/netlink v1.0.1-0.20220629103609-edfba9db9596
 	google.golang.org/grpc => google.golang.org/grpc v1.40.0
 	k8s.io/api => k8s.io/api v0.23.3
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.23.3
