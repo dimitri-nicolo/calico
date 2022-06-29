@@ -68,7 +68,7 @@ var _ = Describe("with running container", func() {
 			"-v", fmt.Sprintf("%s/..:/codebase", myDir),
 			"-v", fmt.Sprintf("%s:/usr/local/bin/calico-felix", path.Join(wd, "..", fvBin)),
 			"--privileged",
-			"tigera/felix:latest")
+			utils.Config.FelixImage)
 		err = felixCmd.Start()
 		Expect(err).NotTo(HaveOccurred())
 
