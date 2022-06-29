@@ -178,7 +178,7 @@ $(LIBBPF_A): $(shell find bpf-gpl/include/libbpf -type f ! -name "*.a")
 DOCKER_GO_BUILD_CGO=$(DOCKER_RUN) $(TARGET_PLATFORM) -e CGO_ENABLED=$(CGO_ENABLED) -e CGO_LDFLAGS=$(CGO_LDFLAGS) -e CGO_CFLAGS=$(CGO_CFLAGS) $(CALICO_BUILD)
 DOCKER_GO_BUILD_CGO_WINDOWS=$(DOCKER_RUN) $(TARGET_PLATFORM) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD)
 
-bin/calico-felix-$(ARCH): $(LIBBPF_A) $(SRC_FILES)
+bin/calico-felix-$(ARCH): $(LIBBPF_A) $(SRC_FILES) ../go.mod
 	@echo Building felix for $(ARCH) on $(BUILDARCH)
 	mkdir -p bin
 	if [ "$(SEMAPHORE)" != "true" -o ! -e $@ ] ; then \
@@ -187,7 +187,7 @@ bin/calico-felix-$(ARCH): $(LIBBPF_A) $(SRC_FILES)
 	fi
 
 # Cross-compile Felix for Windows
-bin/calico-felix.exe: $(SRC_FILES)
+bin/calico-felix.exe: $(SRC_FILES) ../go.mod
 	@echo Building felix for Windows...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD_CGO_WINDOWS) sh -c '$(GIT_CONFIG_SSH) \
@@ -224,7 +224,7 @@ else
 	@echo "Invoke-WebRequest '`cat $(WINDOWS_ARCHIVE).url`' -O tigera-felix.zip"
 endif
 
-bin/calico-felix-race-$(ARCH): $(LIBBPF_A) $(SRC_FILES)
+bin/calico-felix-race-$(ARCH): $(LIBBPF_A) $(SRC_FILES) ../go.mod
 	@echo Building felix with race detector enabled for $(ARCH) on $(BUILDARCH)
 	mkdir -p bin
 	if [ "$(SEMAPHORE)" != "true" -o ! -e $@ ] ; then \

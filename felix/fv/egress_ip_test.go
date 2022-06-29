@@ -585,6 +585,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		if CurrentGinkgoTestDescription().Failed {
 			infra.DumpErrorData()
 		}
+	})
+
+	AfterEach(func() {
 		infra.Stop()
 	})
 })
