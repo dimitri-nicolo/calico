@@ -278,7 +278,7 @@ func (c *Checker) CheckConnectivityWithTimeout(timeout time.Duration, opts ...in
 }
 
 func (c *Checker) CheckConnectivityWithTimeoutOffset(callerSkip int, timeout time.Duration, opts ...interface{}) {
-
+	log.Info("Starting connectivity check...")
 	for _, o := range opts {
 		switch v := o.(type) {
 		case string:
@@ -323,6 +323,7 @@ func (c *Checker) CheckConnectivityWithTimeoutOffset(callerSkip int, timeout tim
 			}
 			if !failed {
 				// Success!
+				log.Info("Connectivity check passed.")
 				return
 			}
 		}
@@ -347,6 +348,7 @@ func (c *Checker) CheckConnectivityWithTimeoutOffset(callerSkip int, timeout tim
 		message += "\nDescription:\n" + c.description
 	}
 
+	log.Warn("Connectivity check failed: " + message)
 	if c.OnFail != nil {
 		c.OnFail(message)
 	} else {
