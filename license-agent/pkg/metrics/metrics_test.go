@@ -1,0 +1,78 @@
+// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+package metrics_test
+
+import (
+	"time"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	"github.com/projectcalico/calico/license-agent/pkg/metrics"
+
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+)
+
+const validLicenseCertificate = `-----BEGIN CERTIFICATE-----
+MIIFxjCCA66gAwIBAgIQVq3rz5D4nQF1fIgMEh71DzANBgkqhkiG9w0BAQsFADCB
+tTELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDVNh
+biBGcmFuY2lzY28xFDASBgNVBAoTC1RpZ2VyYSwgSW5jMSIwIAYDVQQLDBlTZWN1
+cml0eSA8c2lydEB0aWdlcmEuaW8+MT8wPQYDVQQDEzZUaWdlcmEgRW50aXRsZW1l
+bnRzIEludGVybWVkaWF0ZSBDZXJ0aWZpY2F0ZSBBdXRob3JpdHkwHhcNMTgwNDA1
+MjEzMDI5WhcNMjAxMDA2MjEzMDI5WjCBnjELMAkGA1UEBhMCVVMxEzARBgNVBAgT
+CkNhbGlmb3JuaWExFjAUBgNVBAcTDVNhbiBGcmFuY2lzY28xFDASBgNVBAoTC1Rp
+Z2VyYSwgSW5jMSIwIAYDVQQLDBlTZWN1cml0eSA8c2lydEB0aWdlcmEuaW8+MSgw
+JgYDVQQDEx9UaWdlcmEgRW50aXRsZW1lbnRzIENlcnRpZmljYXRlMIIBojANBgkq
+hkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAwg3LkeHTwMi651af/HEXi1tpM4K0LVqb
+5oUxX5b5jjgi+LHMPzMI6oU+NoGPHNqirhAQqK/k7W7r0oaMe1APWzaCAZpHiMxE
+MlsAXmLVUrKg/g+hgrqeije3JDQutnN9h5oZnsg1IneBArnE/AKIHH8XE79yMG49
+LaKpPGhpF8NoG2yoWFp2ekihSohvqKxa3m6pxoBVdwNxN0AfWxb60p2SF0lOi6B3
+hgK6+ILy08ZqXefiUs+GC1Af4qI1jRhPkjv3qv+H1aQVrq6BqKFXwWIlXCXF57CR
+hvUaTOG3fGtlVyiPE4+wi7QDo0cU/+Gx4mNzvmc6lRjz1c5yKxdYvgwXajSBx2pw
+kTP0iJxI64zv7u3BZEEII6ak9mgUU1CeGZ1KR2Xu80JiWHAYNOiUKCBYHNKDCUYl
+RBErYcAWz2mBpkKyP6hbH16GjXHTTdq5xENmRDHabpHw5o+21LkWBY25EaxjwcZa
+Y3qMIOllTZ2iRrXu7fSP6iDjtFCcE2bFAgMBAAGjZzBlMA4GA1UdDwEB/wQEAwIF
+oDATBgNVHSUEDDAKBggrBgEFBQcDAjAdBgNVHQ4EFgQUIY7LzqNTzgyTBE5efHb5
+kZ71BUEwHwYDVR0jBBgwFoAUxZA5kifzo4NniQfGKb+4wruTIFowDQYJKoZIhvcN
+AQELBQADggIBAAK207LaqMrnphF6CFQnkMLbskSpDZsKfqqNB52poRvUrNVUOB1w
+3dSEaBUjhFgUU6yzF+xnuH84XVbjD7qlM3YbdiKvJS9jrm71saCKMNc+b9HSeQAU
+DGY7GPb7Y/LG0GKYawYJcPpvRCNnDLsSVn5N4J1foWAWnxuQ6k57ymWwcddibYHD
+OPakOvO4beAnvax3+K5dqF0bh2Np79YolKdIgUVzf4KSBRN4ZE3AOKlBfiKUvWy6
+nRGvu8O/8VaI0vGaOdXvWA5b61H0o5cm50A88tTm2LHxTXynE3AYriHxsWBbRpoM
+oFnmDaQtGY67S6xGfQbwxrwCFd1l7rGsyBQ17cuusOvMNZEEWraLY/738yWKw3qX
+U7KBxdPWPIPd6iDzVjcZrS8AehUEfNQ5yd26gDgW+rZYJoAFYv0vydMEyoI53xXs
+cpY84qV37ZC8wYicugidg9cFtD+1E0nVgOLXPkHnmc7lIDHFiWQKfOieH+KoVCbb
+zdFu3rhW31ygphRmgszkHwApllCTBBMOqMaBpS8eHCnetOITvyB4Kiu1/nKvVxhY
+exit11KQv8F3kTIUQRm0qw00TSBjuQHKoG83yfimlQ8OazciT+aLpVaY8SOrrNnL
+IJ8dHgTpF9WWHxx04DDzqrT7Xq99F9RzDzM7dSizGxIxonoWcBjiF6n5
+-----END CERTIFICATE-----`
+
+const validLicenseToken = `eyJhbGciOiJBMTI4R0NNS1ciLCJjdHkiOiJKV1QiLCJlbmMiOiJBMTI4R0NNIiwiaXYiOiJ3VVZPcmpuczY0OEhDWnVtIiwidGFnIjoiTkJ2QllkLXI2X0NycWpfNVBXQm1wZyIsInR5cCI6IkpXVCJ9.rPfPoiuPMQGN-Ff2ybYqAA.RZ4vKYOgvU1D-MOQ.6S71luU6a9b7xD5aR4XHpHXwSrmSTBcuwGM0bq3l01A-Cif0nmJ7yFKfFaWa01Kts3vA4MibqT6NgxueA48oEQoDZqOdgeJgIUYezul7EioBNSjiZV87UIn3A3VOUwToatc1EaxlGs6KsI_E8wBrULYuKbMP8Fe6ir2hz1JZ6l67EwgBNYHDy1WTVYLapuJx2BYIXaxEEoaKUoYSFXQJ2hO-CjijC7gR10Y_raFJ_GPP0Bwo8iohLl42OocLPjK_JhZVm1FzGxZn_LHSnMdxWnBRXw6_Jt1K_39-p4eKfbV6zJ8vPz5eR1eSA06TY3MJljxnj5phuBsvqB5wsX5f0kaBVDwp0NQLtpuaTFqDp0hvG3rAwGQyqq-HjhXrYivN5QnbX70sL4fosFUwwwm4ZIpnPJoDUGfnrB3tvtVMMnP0I_ADxF75Dm_eEm3MEQI9IuhWO1JWxSJM4KV20BiL_UXfX17juxYmeQOkOQ9T2LX4nm0lnxpYksu0eUud2Ak8bUkFs4L7cmxrpfOV_gRPbW-38wl72dTNE58BsbpWrbu8fXcupvuLeGqYbb4bOXwsD7rPVIBFBJngSzPXmCCgZBm7_DYwcjzVMIkNm2zu6wTUd6FluuLgeyHJbR1WYKKMxpnn5__vc-lgPDcSqva36FQrQf3b5sef5uopM26NI3_SngU8bjAEFcMM73_-nLalKqVlq-MlwCCw_nBhK-_W5ZwIRzFfOAborYAgifpo6ckifk8i87HVRxUd96ynxjlZ8c4vm3I4bOvk65kXbarFxpD9V8TVdfpfXAMtlWG3DVAW4DqRxWbpEANbYCMW5K7YkEhwFw58sa6bKO_uCUEC0uX8bYmmAZThPjSLNdXf2cn__zCy3EgX6ePdvkyd12iMe8_a9TGT2EbrzipBxfIbDHc0fc8lO0Gku1UEuIlCmSEEEy7AmlZzhaN6ZkbdFf0QeAhDXPmRri0CUWekCQbcrIZNk97LZsjFpr_NICBNKbaLfh0Yw-cqKNahlhdzpoT1jvC_g8f_9LTafgj12xOLHSwTHAA06iBherrGb6UnRtPGDZ_RmzoPwVSCSSft.s49CPsULUtc_hD1R6RdcuQ`
+
+var licenseKey = struct {
+	description string
+	license     apiv3.LicenseKey
+}{
+	description: "Test License",
+	license: apiv3.LicenseKey{
+		Spec: apiv3.LicenseKeySpec{
+			Token:       validLicenseToken,
+			Certificate: validLicenseCertificate,
+		},
+	},
+}
+
+var _ = Describe("Check License Validity", func() {
+	maxLicensedNodes := 50
+	It("Validates test license", func() {
+		By("Checking timeDuration")
+		min, err := time.ParseDuration("1m")
+		Expect(err).ShouldNot(HaveOccurred())
+
+		By("Checking Validity")
+		lr := metrics.NewLicenseReporter("", "", "", "", min, 9081)
+		isValid, _, maxNodes := lr.LicenseHandler(licenseKey.license)
+		Expect(isValid).To(BeTrue(), "License Valid")
+		Expect(maxNodes).Should(Equal(maxLicensedNodes))
+
+	})
+})

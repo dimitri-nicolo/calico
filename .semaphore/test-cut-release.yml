@@ -106,3 +106,7 @@ promotions:
     pipeline_file: ../prometheus-service/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Test Cut License Agent Release
+    pipeline_file: ../license-agent/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
