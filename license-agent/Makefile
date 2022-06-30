@@ -2,12 +2,10 @@ include ../metadata.mk
 
 PACKAGE_NAME    ?= github.com/projectcalico/calico/license-agent
 
-build: license-agent
-
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_LICENSE_AGENT_PROJECT_ID)
 
-LICENSE_AGENT_IMAGE        ?=tigera/license-agent
+LICENSE_AGENT_IMAGE        ?=license-agent
 BUILD_IMAGES               ?=$(LICENSE_AGENT_IMAGE)
 
 ##############################################################################
@@ -17,17 +15,12 @@ BUILD_IMAGES               ?=$(LICENSE_AGENT_IMAGE)
 ##############################################################################
 include ../lib.Makefile
 
-K8S_VERSION    = v1.22.0
 BINDIR        ?= bin
-BUILD_DIR     ?= build
-TOP_SRC_DIRS   = pkg
-SRC_DIRS       = $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*.go \
+TEST_DIRS     ?= $(shell sh -c "find pkg -name \\*_test.go \
                    -exec dirname {} \\; | sort | uniq")
-TEST_DIRS     ?= $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*_test.go \
-                   -exec dirname {} \\; | sort | uniq")
-GO_FILES       = $(shell sh -c "find pkg cmd -name \\*.go") \
-                 $(shell find ../libcalico-go/lib -name '*.go') \
-                 $(shell find ../licensing/client -name '*.go')
+SRC_FILES      = $(shell sh -c "find pkg cmd -name \\*.go") \
+			$(shell find ../libcalico-go/lib -name '*.go') \
+			$(shell find ../licensing/client -name '*.go')
 
 VERSION_FLAGS = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
                 -X $(PACKAGE_NAME)/pkg/version.BuildDate=$(DATE) \
@@ -36,16 +29,11 @@ VERSION_FLAGS = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
 
 ###############################################################################
 # This section builds the output binaries.
-# Some will have dedicated targets to make it easier to type, for example
-# "license-agent" instead of "$(BINDIR)/license-agent".
-license-agent: $(BINDIR)/license-agent
-
-$(BINDIR)/license-agent: $(BINDIR)/license-agent-amd64
-	$(DOCKER_GO_BUILD) \
-		sh -c 'cd $(BINDIR) && ln -s -T license-agent-$(ARCH) license-agent'
+###############################################################################
+build: $(BINDIR)/license-agent-$(ARCH)
 
 .PHONY: $(BINDIR)/license-agent-$(ARCH)
-$(BINDIR)/license-agent-$(ARCH): $(GO_FILES)
+$(BINDIR)/license-agent-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
 			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" "$(PACKAGE_NAME)/cmd/server"'
@@ -81,7 +69,8 @@ ut: report-dir
 
 .PHONY: clean
 clean:
-	rm -rf $(BINDIR) bin
+	rm -rf $(BINDIR)
+	rm -f $(LICENSE_AGENT_CONTAINER_CREATED)
 	-docker image rm -f $$(docker images $(LICENSE_AGENT_IMAGE) -a -q)
 
 ###############################################################################
