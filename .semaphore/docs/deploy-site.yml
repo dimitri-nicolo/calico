@@ -1,0 +1,26 @@
+version: v1.0
+name: Deploy Site
+execution_time_limit:
+  hours: 2
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
+
+global_job_config:
+  secrets:
+    - name: netlify-build-hooks
+
+blocks:
+  - name: "Trigger site deploy"
+    skip:
+      # Only run on master or release branches, not PRs.
+      when: "(branch =~ 'master|release-.*') and (branch !~ '.+')"
+    dependencies: []
+    task:
+      jobs:
+        - name: Call Build Hook
+          commands:
+            - export BRANCH_NAME=${SEMAPHORE_GIT_BRANCH/.//_}
+            - export HOOK=NETLIFY_${BRANCH_NAME//-/_}
+            - curl -X POST -d {} https://api.netlify.com/build_hooks/${!HOOK}
