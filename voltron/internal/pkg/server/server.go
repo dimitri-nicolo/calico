@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/projectcalico/calico/crypto/tigeratls"
 
 	log "github.com/sirupsen/logrus"
 
@@ -113,15 +114,7 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, authenticator auth.JWTAut
 	srv.clusters.sniServiceMap = srv.sniServiceMap
 	srv.proxyMux = http.NewServeMux()
 
-	cfg := &tls.Config{
-		MinVersion: tls.VersionTLS12,
-	}
-
-	if srv.fipsMode {
-		cfg.MinVersion = tls.VersionTLS12
-		// FIPS 140-2 does not support v1.3 yet.
-		cfg.MaxVersion = tls.VersionTLS12
-	}
+	cfg := tigeratls.NewTLSConfig(srv.fipsMode)
 
 	cfg.Certificates = append(cfg.Certificates, srv.externalCert)
 
