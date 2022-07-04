@@ -299,7 +299,7 @@ func (c *Checker) CheckConnectivityWithTimeoutOffset(callerSkip int, timeout tim
 	var actualConnPretty []string
 	var finalErr error
 
-	for !c.RetriesDisabled && time.Since(start) < timeout || completedAttempts < 2 {
+	for time.Since(start) < timeout || completedAttempts < 2 {
 		actualConn, actualConnPretty = c.ActualConnectivity()
 		failed := false
 		finalErr = nil
@@ -327,6 +327,11 @@ func (c *Checker) CheckConnectivityWithTimeoutOffset(callerSkip int, timeout tim
 				return
 			}
 		}
+
+		if c.RetriesDisabled {
+			break
+		}
+
 		completedAttempts++
 		if c.beforeRetry != nil {
 			log.Debug("calling beforeRetry")
@@ -349,6 +354,8 @@ func (c *Checker) CheckConnectivityWithTimeoutOffset(callerSkip int, timeout tim
 	}
 
 	log.Warn("Connectivity check failed: " + message)
+	message += fmt.Sprintf("\n\n Test took %s and %d tries.\n", time.Since(start), completedAttempts)
+
 	if c.OnFail != nil {
 		c.OnFail(message)
 	} else {
