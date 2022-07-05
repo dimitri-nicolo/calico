@@ -103,7 +103,10 @@ var _ = Describe("EgressIPManager", func() {
 			Hostname: "host0",
 			Ipv4Addr: "172.0.0.2", // mockVXLANDataplane use interface address 172.0.0.2
 		})
-		Expect(manager.NodeIP).To(Equal(net.ParseIP("172.0.0.2")))
+		manager.lock.Lock()
+		nodeIP := manager.nodeIP
+		manager.lock.Unlock()
+		Expect(nodeIP).To(Equal(net.ParseIP("172.0.0.2")))
 		err = manager.configureVXLANDevice(50)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(manager.vxlanDeviceLinkIndex).To(Equal(6))
