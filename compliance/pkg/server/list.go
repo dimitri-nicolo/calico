@@ -124,7 +124,7 @@ func (s *server) handleListReports(response http.ResponseWriter, request *http.R
 			http.Error(response, err.Error(), http.StatusServiceUnavailable)
 			return
 		} else if !include {
-			log.Error("Requester has insufficient permissions to view report, but filter should only include "+
+			log.Errorf("Requester has insufficient permissions to view report, but filter should only include "+
 				"viewable reports.  ReportType: %s, Report: %s", v.ReportTypeName, v.ReportName)
 			continue
 		}

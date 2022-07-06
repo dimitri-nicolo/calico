@@ -164,7 +164,7 @@ func (h *dispatcher) Dispatch(ctx context.Context, cacheRequests []CacheRequest)
 			default:
 				log.Warn("Unknown update type for WorkloadEndpoint")
 			}
-		} else if k, ok := c.KVPair.Key.(model.Key); ok && strings.HasPrefix(k.String(), keyPrefixDPI) {
+		} else if strings.HasPrefix(c.KVPair.Key.String(), keyPrefixDPI) {
 			switch c.UpdateType {
 			case bapi.UpdateTypeKVNew, bapi.UpdateTypeKVUpdated:
 				if dpi, ok := c.KVPair.Value.(*v3.DeepPacketInspection); ok {
