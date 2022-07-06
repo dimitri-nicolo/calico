@@ -34,6 +34,7 @@ type reconciler struct {
 
 	admissionControllerClusterRoleName string
 	intrusionDetectionClusterRoleName  string
+	scannerClusterRoleName             string
 }
 
 // Reconcile makes sure that the managed cluster this is running for has all the configuration needed for it's components
@@ -59,12 +60,12 @@ func (c *reconciler) Reconcile(name types.NamespacedName) error {
 	}
 
 	if err := c.reconcileServiceAccounts(); err != nil {
-		reqLogger.Errorf("error reconciling admission controller service account %+v", err)
+		reqLogger.Errorf("error reconciling service accounts for image assurance %+v", err)
 		return err
 	}
 
 	if err := c.reconcileClusterRoleBinding(); err != nil {
-		reqLogger.Errorf("error reconciling admission controller cluster role binding %+v", err)
+		reqLogger.Errorf("error reconciling cluster role bindings for image assurance %+v", err)
 		return err
 	}
 
@@ -151,7 +152,7 @@ func (c *reconciler) reconcileAdmissionControllerSecret() error {
 	return nil
 }
 
-// reconcileServiceAccount ensures that service account exists for admission controller in management cluster. We don't
+// reconcileServiceAccount ensures that service account exists in management cluster. We don't
 // need to check for the existence of service account, we always write, if nothing has changed it's a no-op, else it's updated.
 func (c *reconciler) reconcileServiceAccounts() error {
 	// Admission controller only runs in the managed cluster.
@@ -162,10 +163,14 @@ func (c *reconciler) reconcileServiceAccounts() error {
 		}
 	}
 
-	// Intrusion detection controller only runs in the management cluster
+	// Intrusion detection controller, scanner only runs in the management cluster
 	if c.management {
-		sa := c.intrusionDetectionControllerServiceAccount()
-		if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, sa); err != nil {
+		isa := c.intrusionDetectionControllerServiceAccount()
+		if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, isa); err != nil {
+			return err
+		}
+		ssa := c.scannerServiceAccount()
+		if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, ssa); err != nil {
 			return err
 		}
 	}
@@ -173,7 +178,7 @@ func (c *reconciler) reconcileServiceAccounts() error {
 	return nil
 }
 
-// reconcileClusterRoleBinding ensures that cluster role binding exists for admission controller in management cluster. We don't
+// reconcileClusterRoleBinding ensures that cluster role bindings exists in management cluster. We don't
 // need to check for the cluster role binding here, we always write, if nothing has changed it's a no-op, else it's updated.
 func (c *reconciler) reconcileClusterRoleBinding() error {
 	// Admission controller only runs in the managed cluster.
@@ -184,10 +189,14 @@ func (c *reconciler) reconcileClusterRoleBinding() error {
 		}
 	}
 
-	// Intrusion detection controller only runs in the management cluster
+	// Intrusion detection controller, scanner only runs in the management cluster
 	if c.management {
-		crb := c.idsControllerClusterRoleBinding()
-		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, crb); err != nil {
+		icrb := c.idsControllerClusterRoleBinding()
+		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, icrb); err != nil {
+			return err
+		}
+		scrb := c.scannerClusterRoleBinding()
+		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, scrb); err != nil {
 			return err
 		}
 	}
@@ -244,6 +253,17 @@ func (c *reconciler) intrusionDetectionControllerServiceAccount() *corev1.Servic
 	}
 }
 
+// scannerServiceAccount returns a definition for service account
+func (c *reconciler) scannerServiceAccount() *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{Kind: rbacv1.ServiceAccountKind, APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      resource.ImageAssuranceScannerServiceAccountName,
+			Namespace: c.managementOperatorNamespace,
+		},
+	}
+}
+
 // admissionControllerClusterRoleBinding returns a definition for cluster role binding
 func (c *reconciler) admissionControllerClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
@@ -284,6 +304,29 @@ func (c *reconciler) idsControllerClusterRoleBinding() *rbacv1.ClusterRoleBindin
 			{
 				Kind:      rbacv1.ServiceAccountKind,
 				Name:      resource.ImageAssuranceIDSControllerServiceAccountName,
+				Namespace: c.managementOperatorNamespace,
+			},
+		},
+	}
+}
+
+// scannerClusterRoleBinding returns a definition for cluster role binding
+func (c *reconciler) scannerClusterRoleBinding() *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		TypeMeta: metav1.TypeMeta{Kind: "ClusterRoleBinding", APIVersion: "rbac.authorization.k8s.io/v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   resource.ImageAssuranceScannerClusterRoleBindingName,
+			Labels: map[string]string{},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     c.scannerClusterRoleName,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      resource.ImageAssuranceScannerServiceAccountName,
 				Namespace: c.managementOperatorNamespace,
 			},
 		},

@@ -33,6 +33,9 @@ const (
 	ImageAssuranceIDSControllerClusterRoleName        = "tigera-image-assurance-intrusion-detection-controller"
 	ImageAssuranceIDSControllerServiceAccountName     = "tigera-image-assurance-intrusion-detection-controller-api-access"
 	ImageAssuranceIDSControllerClusterRoleBindingName = "tigera-image-assurance-intrusion-detection-controller-api-access"
+	ImageAssuranceScannerClusterRoleName              = "tigera-image-assurance-scanner-api-access"
+	ImageAssuranceScannerServiceAccountName           = "tigera-image-assurance-scanner-api-access"
+	ImageAssuranceScannerClusterRoleBindingName       = "tigera-image-assurance-scanner-api-access"
 )
 
 func CreateHashFromObject(obj interface{}) (string, error) {

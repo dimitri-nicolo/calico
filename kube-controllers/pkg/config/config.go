@@ -76,6 +76,7 @@ type Config struct {
 	ElasticCA                         string `default:"" split_words:"true"`
 
 	ImageAssuranceIntrusionDetectionControllerClusterRoleName string `split_words:"true"`
+	ImageAssuranceScannerClusterRoleName                      string `split_words:"true"`
 	ImageAssuranceAdmissionControllerClusterRoleName          string `split_words:"true"`
 
 	KubeControllersConfigName string `split_words:"true"`
