@@ -38,6 +38,10 @@ blocks:
 promotions:
   # Have separate promotions for cutting releases so we can re-run
   # them individually if they fail, and so we can run them in parallel.
+  - name: Cut Anomaly Detection API Release
+    pipeline_file: ../anomaly-detection-api/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Cut API Server Release
     pipeline_file: ../apiserver/.semaphore/cut-release.yml
     auto_promote:

@@ -2,13 +2,6 @@ include ../metadata.mk
 
 PACKAGE_NAME ?= github.com/projectcalico/calico/anomaly-detection-api
 
-##############################################################################
-# Include ../lib.Makefile before anything else
-#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
-#   that variable is evaluated when we declare DOCKER_RUN and siblings.
-##############################################################################
-include ../lib.Makefile
-
 ###############################################################################
 # Build
 ###############################################################################
@@ -18,6 +11,12 @@ include ../lib.Makefile
 ANOMALY_DETECTION_API_IMAGE ?=anomaly-detection-api
 BUILD_IMAGES        ?=$(ANOMALY_DETECTION_API_IMAGE)
 
+##############################################################################
+# Include ../lib.Makefile before anything else
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
+##############################################################################
+include ../lib.Makefile
 
 build: anomaly-detection-api
 

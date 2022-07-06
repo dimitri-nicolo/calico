@@ -39,4 +39,4 @@ blocks:
               value: gcr.io/unique-caldron-775/cnx/tigera
           commands:
             - make git-config CONFIRM=true
-            - make cut-release CONFIRM=true
+            - make cut-release IMAGE_ONLY=true CONFIRM=true

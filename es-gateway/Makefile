@@ -6,18 +6,18 @@ RELEASE_BRANCH_PREFIX ?= release-calient
 DEV_TAG_SUFFIX        ?= calient-0.dev
 
 ###############################################################################
-# Include ../lib.Makefile before anything else
-#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
-#   that variable is evaluated when we declare DOCKER_RUN and siblings.
-###############################################################################
-include ../lib.Makefile
-
-###############################################################################
 # Env vars related to building
 ###############################################################################
 SRC_FILES        = $(shell find pkg cmd -name '*.go') $(shell find ../libcalico-go/lib/logutils -name '*.go')
 ES_GATEWAY_IMAGE ?=es-gateway
 BUILD_IMAGES     ?=$(ES_GATEWAY_IMAGE)
+
+###############################################################################
+# Include ../lib.Makefile before anything else
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
+###############################################################################
+include ../lib.Makefile
 
 # We use -X to insert the version information into the placeholder variables
 # in the version package.
