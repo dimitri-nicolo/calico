@@ -99,9 +99,12 @@ promotions:
   pipeline_file: push-images/license-agent.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
-# Have a separate promotion for publishing Helm charts.
 - name: Publish Helm Charts
-  pipeline_file: push-helm-charts/helm-charts.yml
+  pipeline_file: docs/helm-charts.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
+- name: Publish docs
+  pipeline_file: docs/deploy-site.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
 
