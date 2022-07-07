@@ -50,6 +50,7 @@ func New(
 		admissionControllerClusterRoleName: cfg.AdmissionControllerClusterRoleName,
 		intrusionDetectionClusterRoleName:  cfg.IntrusionDetectionControllerClusterRoleName,
 		scannerClusterRoleName:             cfg.ScannerClusterRoleName,
+		podWatcherClusterRoleName:          cfg.PodWatcherClusterRoleName,
 	}
 
 	// The high requeue attempts is because it's unlikely we would receive an event after failure to re trigger a
@@ -142,6 +143,14 @@ func New(
 		w.AddWatch(
 			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "serviceaccounts", r.managementOperatorNamespace,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ImageAssuranceScannerServiceAccountName))),
+			&corev1.ServiceAccount{},
+			worker.ResourceWatchUpdate, worker.ResourceWatchDelete, worker.ResourceWatchAdd,
+		)
+
+		// Watch for changes to the service accounts created by the reconciler.
+		w.AddWatch(
+			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "serviceaccounts", r.managementOperatorNamespace,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ImageAssurancePodWatcherServiceAccountName))),
 			&corev1.ServiceAccount{},
 			worker.ResourceWatchUpdate, worker.ResourceWatchDelete, worker.ResourceWatchAdd,
 		)

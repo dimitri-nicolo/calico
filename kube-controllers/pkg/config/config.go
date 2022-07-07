@@ -78,6 +78,7 @@ type Config struct {
 	ImageAssuranceIntrusionDetectionControllerClusterRoleName string `split_words:"true"`
 	ImageAssuranceScannerClusterRoleName                      string `split_words:"true"`
 	ImageAssuranceAdmissionControllerClusterRoleName          string `split_words:"true"`
+	ImageAssurancePodWatcherClusterRoleName                   string `split_words:"true"`
 
 	KubeControllersConfigName string `split_words:"true"`
 }

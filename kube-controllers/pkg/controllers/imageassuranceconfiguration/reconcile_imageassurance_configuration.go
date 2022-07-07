@@ -35,6 +35,7 @@ type reconciler struct {
 	admissionControllerClusterRoleName string
 	intrusionDetectionClusterRoleName  string
 	scannerClusterRoleName             string
+	podWatcherClusterRoleName          string
 }
 
 // Reconcile makes sure that the managed cluster this is running for has all the configuration needed for it's components
@@ -163,7 +164,7 @@ func (c *reconciler) reconcileServiceAccounts() error {
 		}
 	}
 
-	// Intrusion detection controller, scanner only runs in the management cluster
+	// Intrusion detection controller, scanner, pod watcher only runs in the management cluster
 	if c.management {
 		isa := c.intrusionDetectionControllerServiceAccount()
 		if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, isa); err != nil {
@@ -171,6 +172,10 @@ func (c *reconciler) reconcileServiceAccounts() error {
 		}
 		ssa := c.scannerServiceAccount()
 		if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, ssa); err != nil {
+			return err
+		}
+		psa := c.podWatcherServiceAccount()
+		if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, psa); err != nil {
 			return err
 		}
 	}
@@ -189,7 +194,7 @@ func (c *reconciler) reconcileClusterRoleBinding() error {
 		}
 	}
 
-	// Intrusion detection controller, scanner only runs in the management cluster
+	// Intrusion detection controller, scanner, pod watcher only runs in the management cluster
 	if c.management {
 		icrb := c.idsControllerClusterRoleBinding()
 		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, icrb); err != nil {
@@ -197,6 +202,10 @@ func (c *reconciler) reconcileClusterRoleBinding() error {
 		}
 		scrb := c.scannerClusterRoleBinding()
 		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, scrb); err != nil {
+			return err
+		}
+		pcrb := c.podWatcherClusterRoleBinding()
+		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, pcrb); err != nil {
 			return err
 		}
 	}
@@ -259,6 +268,17 @@ func (c *reconciler) scannerServiceAccount() *corev1.ServiceAccount {
 		TypeMeta: metav1.TypeMeta{Kind: rbacv1.ServiceAccountKind, APIVersion: "v1"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      resource.ImageAssuranceScannerServiceAccountName,
+			Namespace: c.managementOperatorNamespace,
+		},
+	}
+}
+
+// podWatcherServiceAccount returns a definition for service account
+func (c *reconciler) podWatcherServiceAccount() *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{Kind: rbacv1.ServiceAccountKind, APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      resource.ImageAssurancePodWatcherServiceAccountName,
 			Namespace: c.managementOperatorNamespace,
 		},
 	}
@@ -327,6 +347,29 @@ func (c *reconciler) scannerClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 			{
 				Kind:      rbacv1.ServiceAccountKind,
 				Name:      resource.ImageAssuranceScannerServiceAccountName,
+				Namespace: c.managementOperatorNamespace,
+			},
+		},
+	}
+}
+
+// podWatcherClusterRoleBinding returns a definition for cluster role binding
+func (c *reconciler) podWatcherClusterRoleBinding() *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		TypeMeta: metav1.TypeMeta{Kind: "ClusterRoleBinding", APIVersion: "rbac.authorization.k8s.io/v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   resource.ImageAssurancePodWatcherClusterRoleBindingName,
+			Labels: map[string]string{},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     c.podWatcherClusterRoleName,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      resource.ImageAssurancePodWatcherServiceAccountName,
 				Namespace: c.managementOperatorNamespace,
 			},
 		},
