@@ -127,7 +127,7 @@ defaults:
     scope:
       path: ""
     values:
-      version: v3.23
+      version: master
       layout: docwithnav
       show_title: true
       show_read_time: true
