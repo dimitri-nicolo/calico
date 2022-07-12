@@ -15,6 +15,8 @@ import (
 )
 
 const (
+	MaxNumResults = 10000
+
 	clusterParam       = "cluster"
 	clusterIdHeader    = "x-cluster-id"
 	defaultClusterName = "cluster"

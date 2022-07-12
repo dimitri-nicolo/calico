@@ -1,0 +1,85 @@
+{
+  "took": 7,
+  "timed_out": false,
+  "_shards": {
+    "total": 1,
+    "successful": 1,
+    "skipped": 0,
+    "failed": 0
+  },
+  "hits": {
+    "total": {
+      "value": 2,
+      "relation": "eq"
+    },
+    "max_score": null,
+    "hits": [
+      {
+        "_index": "tigera_secure_ee_l7.cluster.fluentd-20220711-000005",
+        "_type": "_doc",
+        "_id": "gT5k7oEBxIGvgTwfJCIf",
+        "_score": null,
+        "_source": {
+          "start_time": 1657561639,
+          "end_time": 1657561942,
+          "duration_mean": 3193548,
+          "duration_max": 10000000,
+          "bytes_in": 1604,
+          "bytes_out": 1333,
+          "count": 31,
+          "src_name_aggr": "checkoutservice-69c8ff664b-*",
+          "src_namespace": "test-namespace-1",
+          "src_type": "wep",
+          "source_port_num": 0,
+          "dest_name_aggr": "paymentservice-bbcbdc6b6-*",
+          "dest_namespace": "default",
+          "dest_type": "wep",
+          "dest_port_num": 50051,
+          "dest_service_name": "paymentservice",
+          "dest_service_namespace": "default",
+          "dest_service_port_name": "grpc",
+          "dest_service_port": 50051,
+          "method": "POST",
+          "user_agent": "-",
+          "url": "paymentservice:50051/hipstershop.PaymentService/Charge",
+          "response_code": "200",
+          "type": "-",
+          "host": "jwhuang-bz-l3dl-kadm-node-1"
+        }
+      },
+      {
+        "_index": "tigera_secure_ee_l7.cluster.fluentd-20220711-000005",
+        "_type": "_doc",
+        "_id": "aj5l7oEBxIGvgTwf2yZO",
+        "_score": null,
+        "_source": {
+          "start_time": 1657561732,
+          "end_time": 1657562056,
+          "duration_mean": 72103448,
+          "duration_max": 126000000,
+          "bytes_in": 4843,
+          "bytes_out": 6728,
+          "count": 29,
+          "src_name_aggr": "frontend-99684f7f8-*",
+          "src_namespace": "test-namespace-1",
+          "src_type": "wep",
+          "source_port_num": 0,
+          "dest_name_aggr": "checkoutservice-69c8ff664b-*",
+          "dest_namespace": "default",
+          "dest_type": "wep",
+          "dest_port_num": 5050,
+          "dest_service_name": "checkoutservice",
+          "dest_service_namespace": "default",
+          "dest_service_port_name": "grpc",
+          "dest_service_port": 5050,
+          "method": "POST",
+          "user_agent": "-",
+          "url": "checkoutservice:5050/hipstershop.CheckoutService/PlaceOrder",
+          "response_code": "400",
+          "type": "-",
+          "host": "jwhuang-bz-l3dl-kadm-node-2"
+        }
+      }
+    ]
+  }
+}

@@ -13,22 +13,16 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
-
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	elasticvariant "github.com/projectcalico/calico/es-proxy/pkg/elastic"
 	"github.com/projectcalico/calico/es-proxy/pkg/math"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
 	esSearch "github.com/projectcalico/calico/es-proxy/pkg/search"
-
+	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
-)
-
-const (
-	maxNumResults = 10000
 )
 
 // SearchHandler is a handler for the /search endpoint.
@@ -110,7 +104,7 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.Sear
 	}
 
 	// Check that we are not attempting to enumerate more than the maximum number of results.
-	if params.PageNum*params.PageSize > maxNumResults {
+	if params.PageNum*params.PageSize > middleware.MaxNumResults {
 		return nil, &httputils.HttpStatusError{
 			Status: http.StatusBadRequest,
 			Msg:    "page number overflow",
@@ -252,7 +246,7 @@ func search(
 		}
 	}
 
-	cappedTotalHits := math.MinInt(int(result.TotalHits), maxNumResults)
+	cappedTotalHits := math.MinInt(int(result.TotalHits), middleware.MaxNumResults)
 	numPages := 0
 	if params.PageSize > 0 {
 		numPages = ((cappedTotalHits - 1) / params.PageSize) + 1
