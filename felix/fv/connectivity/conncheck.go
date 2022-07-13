@@ -299,7 +299,8 @@ func (c *Checker) CheckConnectivityWithTimeoutOffset(callerSkip int, timeout tim
 	var actualConnPretty []string
 	var finalErr error
 
-	for time.Since(start) < timeout || completedAttempts < 2 {
+	for {
+		checkStartTime := time.Now()
 		actualConn, actualConnPretty = c.ActualConnectivity()
 		failed := false
 		finalErr = nil
@@ -314,6 +315,8 @@ func (c *Checker) CheckConnectivityWithTimeoutOffset(callerSkip int, timeout tim
 			}
 		}
 
+		completedAttempts++
+
 		if !failed {
 			if c.finalTest != nil {
 				finalErr = c.finalTest()
@@ -323,7 +326,7 @@ func (c *Checker) CheckConnectivityWithTimeoutOffset(callerSkip int, timeout tim
 			}
 			if !failed {
 				// Success!
-				log.Info("Connectivity check passed.")
+				log.WithField("attempts", completedAttempts).Info("Connectivity check passed.")
 				return
 			}
 		}
@@ -332,7 +335,15 @@ func (c *Checker) CheckConnectivityWithTimeoutOffset(callerSkip int, timeout tim
 			break
 		}
 
-		completedAttempts++
+		// Check the timeout before we execute the retry function since the retry function might take a while,
+		// effectively cutting down the timeout.  Since one check should take ~2s we also check that we started
+		// the iteration close to the end of the.  Better to be a little permissive than flaky!
+		if time.Since(start) > timeout &&
+			checkStartTime.Sub(start) > timeout-2*time.Second &&
+			completedAttempts >= 2 {
+			break
+		}
+
 		if c.beforeRetry != nil {
 			log.Debug("calling beforeRetry")
 			c.beforeRetry()
