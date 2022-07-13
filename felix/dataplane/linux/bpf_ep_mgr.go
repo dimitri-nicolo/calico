@@ -117,8 +117,8 @@ type bpfDataplane interface {
 	removePolicyProgram(jumpMapFD bpf.MapFD) error
 	setAcceptLocal(iface string, val bool) error
 	setRPFilter(iface string, val int) error
-	setRoute(ip string) error
-	delRoute(ip string) error
+	setRoute(ip.V4CIDR)
+	delRoute(ip.V4CIDR)
 	ruleMatchID(dir rules.RuleDir, action string, owner rules.RuleOwnerType, idx int, name string) polprog.RuleMatchID
 }
 
@@ -225,9 +225,9 @@ type bpfEndpointManager struct {
 
 	bpfPolicyDebugEnabled bool
 
-	routeTable    routetable.RouteTableInterface
-	services      map[serviceKey][]string
-	dirtyServices map[serviceKey][]string
+	routeTable    *routetable.RouteTable
+	services      map[serviceKey][]ip.V4CIDR
+	dirtyServices map[serviceKey]struct{}
 
 	// Maps for policy rule counters
 	polNameToMatchIDs map[string]set.Set[polprog.RuleMatchID]
@@ -370,8 +370,14 @@ func newBPFEndpointManager(
 			254,
 			opReporter,
 		)
-		m.services = make(map[serviceKey][]string)
-		m.dirtyServices = make(map[serviceKey][]string)
+		// Since we do not know what the state of services is at the start, mark
+		// the routes to be all cleaned up. As the service update will arrive,
+		// we will update the state.
+		if err := m.invalidateServiceRoutes(); err != nil {
+			log.WithError(err).Warn("Failed to invalidate existing service routes, unused ones may be left over.")
+		}
+		m.services = make(map[serviceKey][]ip.V4CIDR)
+		m.dirtyServices = make(map[serviceKey]struct{})
 
 		// Anything else would prevent packets being accepted from the special
 		// service veth. It does not create a security hole since BPF does the RPF
@@ -737,6 +743,10 @@ func (m *bpfEndpointManager) markExistingWEPDirty(wlID proto.WorkloadEndpointID,
 }
 
 func (m *bpfEndpointManager) CompleteDeferredWork() error {
+	start := time.Now()
+	defer func() {
+		log.Infof("CompleteDeferredWork took %v", time.Since(start))
+	}()
 	// Do one-off initialisation.
 	m.dp.ensureStarted()
 
@@ -749,6 +759,15 @@ func (m *bpfEndpointManager) CompleteDeferredWork() error {
 
 	bpfEndpointsGauge.Set(float64(len(m.nameToIface)))
 	bpfDirtyEndpointsGauge.Set(float64(m.dirtyIfaceNames.Len()))
+
+	if m.ctlbWorkaroundEnabled {
+		// Update all existing IPs of dirty services
+		for svc := range m.dirtyServices {
+			for _, ip := range m.services[svc] {
+				m.dp.setRoute(ip)
+			}
+		}
+	}
 
 	if err := m.ifStateMap.ApplyAllChanges(); err != nil {
 		log.WithError(err).Warn("Failed to write updates to ifstate BPF map.")
@@ -1739,10 +1758,11 @@ func (m *bpfEndpointManager) ensureBPFDevices() error {
 		return nil
 	}
 
-	nl, err := netlinkshim.NewRealNetlink()
+	nl, err := netlink.NewHandle(syscall.NETLINK_ROUTE)
 	if err != nil {
 		return fmt.Errorf("failed to create nelink: %w", err)
 	}
+	defer nl.Close()
 
 	var bpfout, bpfin netlink.Link
 
@@ -2132,7 +2152,35 @@ func (m *bpfEndpointManager) onServiceUpdate(update *proto.ServiceUpdate) {
 	ips = append(ips, update.ExternalIps...)
 
 	key := serviceKey{name: update.Name, namespace: update.Namespace}
-	m.dirtyServices[key] = ips
+
+	ips4 := make([]ip.V4CIDR, 0, len(ips))
+	for _, i := range ips {
+		cidr, err := ip.CIDRFromString(i + "/32")
+		if err != nil {
+			log.WithFields(log.Fields{"service": key, "ip": i}).Warn("Not a valid CIDR.")
+		} else if cidrv4, ok := cidr.(ip.V4CIDR); !ok {
+			log.WithFields(log.Fields{"service": key, "ip": i}).Debug("Not a valid V4 CIDR.")
+		} else {
+			ips4 = append(ips4, cidrv4)
+		}
+	}
+
+	// Check which IPs have been removed (no-op if we haven't seen it yet)
+	for _, old := range m.services[key] {
+		exists := false
+		for _, svcIP := range ips4 {
+			if old == svcIP {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			m.dp.delRoute(old)
+		}
+	}
+
+	m.services[key] = ips4
+	m.dirtyServices[key] = struct{}{}
 }
 
 func (m *bpfEndpointManager) onServiceRemove(update *proto.ServiceRemove) {
@@ -2146,79 +2194,32 @@ func (m *bpfEndpointManager) onServiceRemove(update *proto.ServiceRemove) {
 	}).Info("Service Remove")
 
 	key := serviceKey{name: update.Name, namespace: update.Namespace}
-	m.dirtyServices[key] = nil
-}
 
-func (m *bpfEndpointManager) reconcileServices() {
-	for svc, ips := range m.dirtyServices {
-		errored := false
-		for _, ip := range ips {
-			if err := m.dp.setRoute(ip); err != nil {
-				log.WithError(err).Errorf("Failed to set route to %s via bpfnatin.", ip)
-				errored = true
-			}
-		}
-
-		known := m.services[svc]
-
-		for _, old := range known {
-			exist := false
-			for _, ip := range ips {
-				if ip == old {
-					exist = true
-					break
-				}
-			}
-
-			if !exist {
-				if err := m.dp.delRoute(old); err != nil {
-					log.WithError(err).Errorf("Failed to delete route to %s via bpfnatin.", old)
-					errored = true
-				}
-			}
-		}
-
-		if !errored {
-			if len(ips) > 0 {
-				m.services[svc] = ips
-			} else {
-				delete(m.services, svc)
-			}
-			delete(m.dirtyServices, svc)
-		}
+	for _, svcIP := range m.services[key] {
+		m.dp.delRoute(svcIP)
 	}
+
+	delete(m.services, key)
 }
 
 var bpfnatGW = ip.FromNetIP(net.IPv4(169, 254, 1, 1))
 
-func (m *bpfEndpointManager) setRoute(dst string) error {
-	cidr, err := ip.CIDRFromString(dst + "/32")
-	if err != nil {
-		return err
-	}
-
+func (m *bpfEndpointManager) setRoute(cidr ip.V4CIDR) {
 	m.routeTable.RouteUpdate(bpfInDev, routetable.Target{
 		Type: routetable.TargetTypeGlobalUnicast,
 		CIDR: cidr,
 		GW:   bpfnatGW,
 	})
 	log.WithFields(log.Fields{
-		"cidr": dst + "/32",
+		"cidr": cidr,
 	}).Debug("setRoute")
-	return nil
 }
 
-func (m *bpfEndpointManager) delRoute(dst string) error {
-	cidr, err := ip.CIDRFromString(dst + "/32")
-	if err != nil {
-		return err
-	}
-
+func (m *bpfEndpointManager) delRoute(cidr ip.V4CIDR) {
 	m.routeTable.RouteRemove(bpfInDev, cidr)
 	log.WithFields(log.Fields{
-		"cidr": dst + "/32",
+		"cidr": cidr,
 	}).Debug("delRoute")
-	return nil
 }
 
 func (m *bpfEndpointManager) GetRouteTableSyncers() []routetable.RouteTableSyncer {
@@ -2265,3 +2266,30 @@ func (m *bpfEndpointManager) addRuleInfo(rule *proto.Rule, idx int,
 }
 
 //ruleMatchID(dir rules.RuleDir, action string, owner rules.RuleOwnerType, idx int, name string) polprog.RuleMatchID
+
+func (m *bpfEndpointManager) invalidateServiceRoutes() error {
+	nl, err := netlink.NewHandle(syscall.NETLINK_ROUTE)
+	if err != nil {
+		return fmt.Errorf("failed to create nelink to load service routes: %w", err)
+	}
+	defer nl.Close()
+
+	bpfin, err := nl.LinkByName(bpfInDev)
+	if err != nil {
+		return fmt.Errorf("couldn't get %s link, device may not exist yet: %w", bpfInDev, err)
+	}
+
+	rts, err := nl.RouteList(bpfin, 4)
+	if err != nil {
+		return fmt.Errorf("failed to get routes on %s: %w", bpfInDev, err)
+	}
+
+	for _, rt := range rts {
+		if rt.Scope == netlink.SCOPE_UNIVERSE /*global*/ && rt.Dst != nil {
+			cidr := ip.CIDRFromIPNet(rt.Dst)
+			m.delRoute(cidr.(ip.V4CIDR))
+		}
+	}
+
+	return nil
+}
