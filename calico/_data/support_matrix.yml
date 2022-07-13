@@ -1,3 +1,11 @@
+# Platform support tagging is currently supported only in Calico Enterprise docs. 
+
+# If you want a platform tag to appear for a topic, a "feature_name:" tag must be added to the topic header.
+# If you specify "all" for a platform, all supported platforms in the "support_matrix_list" are displayed.
+# Topics that should *not* have platform tags include: tech previews, topics in /Reference, MKE, and landing pages (index.md).
+# Currently, unsupported features in Windows and eBPF should not included in the support matrix. Handle Windows and eBPF 
+# unsupported features in their respective "Limitations and known issues" docs, or inline under "Before you begin"
+
 # Support matrix for features.
 # #
 # 1. Add a page variable "feature_name" (should be a valid YAML key).
@@ -6,22 +14,19 @@
 #
 # Note that platforms can only be values already specified in the "support_matrix_list"
 # in _config.yml
-network_policy:
+
+# Generic supports all
+
+feature_generic_all:
   platforms:
     - all
-compliance:
+
+waf:
   platforms:
     - Kubernetes/Kubeadm
-    - RKE
-    - EKS
-egress_gateway:
-  platforms: ['Kubernetes/Kubeadm', 'RKE', 'OpenShift']
-egress_gateway_aws:
-  platforms:
+    - OpenShift
     - AWS/kOps
-suspicious_ips:
-  platforms:
-    - all
-suspicious_domains:
-  platforms:
-    - all
+    - AKS
+    - EKS
+    - GKE
+    - TKG

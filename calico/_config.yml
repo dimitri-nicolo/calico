@@ -117,6 +117,7 @@ support_matrix_list:
   - OpenShift
   - AWS/kOps
   - RKE
+  - RKE2
   - AKS
   - EKS
   - GKE
