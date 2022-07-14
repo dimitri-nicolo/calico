@@ -141,7 +141,27 @@ clean-generated:
 ###############################################################################
 # Building the binary
 ###############################################################################
-build: bin/calico-felix build-bpf bin/calico-felix.exe
+BUILD_TARGETS:=bin/calico-felix
+
+ifeq ($(ARCH), $(filter $(ARCH),amd64 arm64))
+# Currently CGO can be enabled in ARM64 and AMD64 builds.
+CGO_ENABLED=1
+CGO_LDFLAGS="-L$(LIBBPF_CONTAINER_PATH)/$(ARCH) -lbpf -lelf -lz"
+CGO_CFLAGS="-I$(LIBBPF_CONTAINER_PATH) -I$(BPFGPL_CONTAINER_PATH)"
+FV_RACE_DETECTOR_ENABLED?=true
+BUILD_TARGETS+=build-bpf
+else
+CGO_ENABLED=0
+CGO_LDFLAGS=""
+# Race detection requires CGO enabled.
+FV_RACE_DETECTOR_ENABLED?=false
+endif
+
+ifeq ($(ARCH), amd64)
+BUILD_TARGETS+=bin/calico-felix.exe
+endif
+
+build: $(BUILD_TARGETS)
 build-all: $(addprefix sub-build-,$(VALIDARCHES))
 sub-build-%:
 	$(MAKE) build ARCH=$*
@@ -155,23 +175,10 @@ $(LIBBPF_A): $(shell find bpf-gpl/include/libbpf -type f ! -name "*.a")
 	$(MAKE) register ARCH=$(ARCH)
 	$(DOCKER_GO_BUILD) sh -c "make -j 16 -C bpf-gpl/include/libbpf/src BUILD_STATIC_ONLY=1 OBJDIR=$(ARCH)"
 
-# Currently CGO can be enabled in ARM64 and AMD64 builds.
-ifeq ($(ARCH), $(filter $(ARCH),amd64 arm64))
-CGO_ENABLED=1
-CGO_LDFLAGS="-L$(LIBBPF_CONTAINER_PATH)/$(ARCH) -lbpf -lelf -lz"
-CGO_CFLAGS="-I$(LIBBPF_CONTAINER_PATH) -I$(BPFGPL_CONTAINER_PATH)"
-FV_RACE_DETECTOR_ENABLED?=false
-else
-CGO_ENABLED=0
-CGO_LDFLAGS=""
-# Race detection requires CGO enabled.
-FV_RACE_DETECTOR_ENABLED?=false
-endif
-
 DOCKER_GO_BUILD_CGO=$(DOCKER_RUN) $(TARGET_PLATFORM) -e CGO_ENABLED=$(CGO_ENABLED) -e CGO_LDFLAGS=$(CGO_LDFLAGS) -e CGO_CFLAGS=$(CGO_CFLAGS) $(CALICO_BUILD)
 DOCKER_GO_BUILD_CGO_WINDOWS=$(DOCKER_RUN) $(TARGET_PLATFORM) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD)
 
-bin/calico-felix-$(ARCH): $(LIBBPF_A) $(SRC_FILES)
+bin/calico-felix-$(ARCH): $(LIBBPF_A) $(SRC_FILES) ../go.mod
 	@echo Building felix for $(ARCH) on $(BUILDARCH)
 	mkdir -p bin
 	if [ "$(SEMAPHORE)" != "true" -o ! -e $@ ] ; then \
@@ -180,7 +187,7 @@ bin/calico-felix-$(ARCH): $(LIBBPF_A) $(SRC_FILES)
 	fi
 
 # Cross-compile Felix for Windows
-bin/calico-felix.exe: $(SRC_FILES)
+bin/calico-felix.exe: $(SRC_FILES) ../go.mod
 	@echo Building felix for Windows...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD_CGO_WINDOWS) sh -c '$(GIT_CONFIG_SSH) \
@@ -217,7 +224,7 @@ else
 	@echo "Invoke-WebRequest '`cat $(WINDOWS_ARCHIVE).url`' -O tigera-felix.zip"
 endif
 
-bin/calico-felix-race-$(ARCH): $(LIBBPF_A) $(SRC_FILES)
+bin/calico-felix-race-$(ARCH): $(LIBBPF_A) $(SRC_FILES) ../go.mod
 	@echo Building felix with race detector enabled for $(ARCH) on $(BUILDARCH)
 	mkdir -p bin
 	if [ "$(SEMAPHORE)" != "true" -o ! -e $@ ] ; then \
@@ -262,6 +269,9 @@ build-bpf:
 	$(MAKE) register ARCH=$(ARCH)
 	$(DOCKER_GO_BUILD) sh -c "make -j 16 -C bpf-apache all && \
 	                          make -j 16 -C bpf-gpl all ut-objs ARCH=$(ARCH)"
+	rm -rf bin/bpf
+	mkdir -p bin/bpf
+	cp $(ALL_BPF_PROGS) bin/bpf
 
 clean-bpf:
 	rm -f bpf-gpl/*.d bpf-apache/*.d
@@ -290,37 +300,23 @@ image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
+# Note: the felix image is really a "test environment" image.  It doesn't include Felix itself and we don't ship it.
 image: $(FELIX_IMAGE)
 $(FELIX_IMAGE): $(FELIX_IMAGE)-$(ARCH)
-$(FELIX_IMAGE)-$(ARCH): $(FV_BINARY) \
-                        bin/calico-bpf \
-			bin/pktgen \
-			bin/test-connection \
-			bin/test-workload \
-                        build-bpf \
-			bin/test-dns \
-			bin/tproxy \
-                        docker-image/calico-felix-wrapper \
-                        docker-image/felix.cfg \
-                        docker-image/Dockerfile* \
-                        register
-	# Reconstruct the bin and bpf directories because we don't want to accidentally add
-	# leftover files (say from a build on another branch) into the docker image.
-	rm -rf docker-image/bin
-	mkdir -p docker-image/bin
-	cp $(FV_BINARY) docker-image/bin/
-	cp bin/test-dns docker-image/bin/
-	cp bin/tproxy docker-image/bin/
-	cp bin/calico-bpf docker-image/bin/
-	cp bin/pktgen docker-image/bin/
-	cp bin/test-connection docker-image/bin/
-	cp bin/test-workload docker-image/bin/
-	rm -rf docker-image/bpf
-	mkdir -p docker-image/bpf/bin
-	# Copy only the files we're explicitly expecting (in case we have left overs after switching branch).
-	cp $(ALL_BPF_PROGS) docker-image/bpf/bin
-	$(DOCKER_BUILD) --build-arg FV_BINARY=$(FV_BINARY) -t $(FELIX_IMAGE):latest-$(ARCH) --file ./docker-image/Dockerfile.$(ARCH) docker-image --load;
+
+# Touchfile created when we make the felix image.
+FELIX_CONTAINER_CREATED=.calico_felix.created-$(ARCH)
+FELIX_IMAGE_WITH_TAG=$(FELIX_IMAGE):latest-$(ARCH)
+FELIX_IMAGE_ID=$(shell docker images -q $(FELIX_IMAGE_WITH_TAG))
+$(FELIX_IMAGE)-$(ARCH): $(FELIX_CONTAINER_CREATED)
+$(FELIX_CONTAINER_CREATED): docker-image/calico-felix-wrapper \
+                            docker-image/felix.cfg \
+                            docker-image/Dockerfile* \
+                            $(shell test "$(FELIX_IMAGE_ID)" || echo force-rebuild)
+	$(MAKE) register
+	$(DOCKER_BUILD) -t $(FELIX_IMAGE_WITH_TAG) --file ./docker-image/Dockerfile.$(ARCH) docker-image --load;
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
+	touch $(FELIX_CONTAINER_CREATED)
 
 ###############################################################################
 # Static checks
@@ -359,7 +355,29 @@ REMOTE_DEPS=build-typha
 build-typha:
 	make -C ../typha image DEV_REGISTRIES=felix-test
 
-.PHONY: fv
+.PHONY: fv fv-prereqs fv-no-build
+
+SCAPY_CONTAINER_CREATED=.test-scapy.created
+TEST_DNS_SERVER_CONTAINER_CREATED=.test-dns.created
+
+# Build everything needed to run the FVs but don't actually run them.  The semaphore job runs
+# this target to build everything so that it can be cached and shared between downstream jobs.
+fv-prereqs: $(REMOTE_DEPS) \
+            $(FELIX_CONTAINER_CREATED) \
+            $(TEST_DNS_SERVER_CONTAINER_CREATED) \
+            $(SCAPY_CONTAINER_CREATED) \
+            $(FV_BINARY) \
+            bin/iptables-locker \
+            bin/test-workload \
+            bin/test-connection \
+            bin/calico-bpf \
+            bin/pktgen \
+            build-bpf \
+            fv/fv.test \
+            bin/test-dns \
+            bin/tproxy \
+            bin/run-debug-console-command
+
 # runs all of the fv tests
 # to run it in parallel, decide how many parallel engines you will run, and in each one call:
 #	 $(MAKE) fv FV_BATCHES_TO_RUN="<num>" FV_NUM_BATCHES=<num>
@@ -377,10 +395,12 @@ build-typha:
 # To only run specific fv tests, set GINGKO_FOCUS to the desired Describe{}, Context{}
 # or It{} description string. For example, to only run dns_test.go, type:
 # 	GINKGO_FOCUS="DNS Policy" make fv
-#
-fv fv/latency.log fv/data-races.log: $(REMOTE_DEPS) image bin/iptables-locker bin/test-workload bin/test-connection bin/test-dns bin/calico-bpf fv/fv.test test-dns-server-container bin/run-debug-console-command
+fv fv/latency.log fv/data-races.log: fv-prereqs
+	$(MAKE) fv-no-prereqs
+
+# The semaphore job runs this target directly to avoid accidental rebuilds.
+fv-no-prereqs:
 	rm -f fv/data-races.log fv/latency.log
-	docker build -t tigera-test/scapy fv/scapy
 	cd fv && \
 	  FV_FELIXIMAGE=$(FV_FELIXIMAGE) \
 	  FV_ETCDIMAGE=$(FV_ETCDIMAGE) \
@@ -395,6 +415,7 @@ fv fv/latency.log fv/data-races.log: $(REMOTE_DEPS) image bin/iptables-locker bi
 	  GINKGO_FOCUS="$(GINKGO_FOCUS)" \
 	  FELIX_FV_ENABLE_BPF="$(FELIX_FV_ENABLE_BPF)" \
 	  FV_RACE_DETECTOR_ENABLED=$(FV_RACE_DETECTOR_ENABLED) \
+	  FV_BINARY=$(FV_BINARY) \
 	  FELIX_FV_WIREGUARD_AVAILABLE=`./wireguard-available >/dev/null && echo true || echo false` \
 	  ./run-batches
 	@if [ -e fv/latency.log ]; then \
@@ -440,15 +461,12 @@ K8SFV_GO_FILES:=$(shell find ./$(K8SFV_DIR) -name prometheus -prune -o -type f -
 # e.g.
 #       $(MAKE) k8sfv-test JUST_A_MINUTE=true USE_TYPHA=true
 #       $(MAKE) k8sfv-test JUST_A_MINUTE=true USE_TYPHA=false
-k8sfv-test: image k8sfv-test-existing-felix
-# Run k8sfv test with whatever is the existing 'tigera/felix:latest'
-# container image.  To use some existing Felix version other than
-# 'latest', do 'FELIX_VERSION=<...> make k8sfv-test-existing-felix'.
-k8sfv-test-existing-felix: $(REMOTE_DEPS) bin/k8sfv.test
+k8sfv-test: $(REMOTE_DEPS) $(FELIX_CONTAINER_CREATED) $(FV_BINARY) bin/k8sfv.test
 	FV_ETCDIMAGE=$(FV_ETCDIMAGE) \
 	FV_TYPHAIMAGE=$(FV_TYPHAIMAGE) \
 	FV_FELIXIMAGE=$(FV_FELIXIMAGE) \
 	FV_K8SIMAGE=$(FV_K8SIMAGE) \
+	FV_BINARY=$(FV_BINARY) \
 	CERTS_PATH=$(CERTS_PATH) \
 	PRIVATE_KEY=`pwd`/fv/private.key \
 	k8sfv/run-test
@@ -518,11 +536,29 @@ bin/test-workload: ../go.mod fv/cgroup/cgroup.go fv/utils/utils.go fv/connectivi
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o $@ -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/test-workload"'
 
-test-dns-server-container: ../go.mod fv/cgroup/cgroup.go fv/utils/utils.go fv/connectivity/*.go fv/test-workload/*.go
+SCAPY_IMAGE_WITH_TAG=tigera-test/scapy:latest
+SCAPY_IMAGE_ID=$(shell docker images -q $(SCAPY_IMAGE_WITH_TAG))
+test-scapy-container: $(SCAPY_CONTAINER_CREATED)
+$(SCAPY_CONTAINER_CREATED): fv/scapy/Dockerfile \
+                            $(shell test "$(SCAPY_IMAGE_ID)" || echo force-rebuild)
+	@echo Building scapy container...
+	docker build -t tigera-test/scapy fv/scapy
+	touch $(SCAPY_CONTAINER_CREATED)
+
+TEST_DNS_SERVER_IMAGE_WITH_TAG=tigera-test/dns-server:latest
+TEST_DNS_SERVER_IMAGE_ID=$(shell docker images -q $(TEST_DNS_SERVER_IMAGE_WITH_TAG))
+test-dns-server-container: $(TEST_DNS_SERVER_CONTAINER_CREATED)
+$(TEST_DNS_SERVER_CONTAINER_CREATED): ../go.mod \
+                                      fv/cgroup/cgroup.go \
+                                      fv/utils/utils.go \
+                                      fv/connectivity/*.go \
+                                      fv/test-workload/*.go \
+                                      $(shell test "$(TEST_DNS_SERVER_IMAGE_ID)" || echo force-rebuild)
 	@echo Building test-dns-server-container...
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o fv/dns/server/dns-server -v $(BUILD_FLAGS) $(LDFLAGS) "$(PACKAGE_NAME)/fv/dns/server"'
-	docker build -t tigera-test/dns-server fv/dns/server
+	docker build -t $(TEST_DNS_SERVER_IMAGE_WITH_TAG) fv/dns/server
+	touch $(TEST_DNS_SERVER_CONTAINER_CREATED)
 
 bin/run-debug-console-command:
 	@echo Copying run-debug-console-command script...

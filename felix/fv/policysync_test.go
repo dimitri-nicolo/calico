@@ -864,7 +864,7 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 					for i := range w {
 						// Use the fact that anything we exec inside the Felix container runs as root to fix the
 						// permissions on the socket so the test process can connect.
-						Eventually(hostWlSocketPath[i], "3s").Should(BeAnExistingFile())
+						Eventually(hostWlSocketPath[i], "10s").Should(BeAnExistingFile())
 						felixes[i].Exec("chmod", "a+rw", containerWlSocketPath[i])
 						wlConn[i], wlClient[i] = createWorkloadConn(i)
 					}

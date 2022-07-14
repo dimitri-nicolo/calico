@@ -47,7 +47,6 @@ type ConnKey struct {
 }
 
 func New(f *infrastructure.Felix, port uint16) *TProxy {
-	f.EnsureBinary("tproxy")
 	return &TProxy{
 		cname: f.Name,
 		port:  port,
@@ -60,7 +59,7 @@ func New(f *infrastructure.Felix, port uint16) *TProxy {
 }
 
 func (t *TProxy) Start() {
-	t.cmd = utils.Command("docker", "exec", t.cname, "/tproxy",
+	t.cmd = utils.Command("docker", "exec", t.cname, "tproxy",
 		strconv.Itoa(int(t.port)), strconv.Itoa(int(t.port+1)))
 
 	var err error
@@ -116,7 +115,7 @@ func (t *TProxy) readStderr() {
 	listening := false
 
 	defer func() {
-		Expect(listening).To(BeTrue(), "Proxy did not starat to listen")
+		Expect(listening).To(BeTrue(), "Proxy did not start to listen")
 		safeClose()
 	}()
 

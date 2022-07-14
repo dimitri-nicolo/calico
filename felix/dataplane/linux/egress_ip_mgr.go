@@ -347,9 +347,12 @@ type egressIPManager struct {
 	vxlanID     int
 	vxlanPort   int
 
+	// lock protects the fields shared between the main goroutine and the VXLAN device sync goroutine.
+	lock                 sync.Mutex
 	vxlanDeviceLinkIndex int
-
-	NodeIP net.IP
+	nodeIP               net.IP
+	// to rate-limit retries, track if the last kernel sync failed, and if our state has changed since then
+	lastUpdateFailed, unblockingUpdateOccurred bool
 
 	nlHandle netlinkHandle
 	dpConfig Config
@@ -366,11 +369,6 @@ type egressIPManager struct {
 	statusCallback func(namespace, name, cidr string, maintenanceStarted, maintenanceFinished time.Time) error
 
 	healthAgg healthAggregator
-
-	// to rate-limit retries, track if the last kernel sync failed, and if our state has changed since then
-	lastUpdateFailed, unblockingUpdateOccurred bool
-
-	updateLock sync.Mutex // lock for any flags being used concurrently
 
 	hopRand *rand.Rand
 }
@@ -506,15 +504,18 @@ func (m *egressIPManager) OnUpdate(msg interface{}) {
 		log.WithField("msg", msg).Debug("host meta update")
 		if msg.Hostname == m.dpConfig.FelixHostname {
 			log.WithField("msg", msg).Debug("Local host update")
-			m.NodeIP = net.ParseIP(msg.Ipv4Addr)
+			// The node IP is used by the background VXLAN device update thread, need to synchronise.
+			m.lock.Lock()
+			m.nodeIP = net.ParseIP(msg.Ipv4Addr)
+			m.lock.Unlock()
 		}
 	default:
 		return
 	}
 
 	// when an update we care about is seen (when the default switch case isn't hit), we track its occurrence
-	m.updateLock.Lock()
-	defer m.updateLock.Unlock()
+	m.lock.Lock()
+	defer m.lock.Unlock()
 	m.unblockingUpdateOccurred = true
 }
 
@@ -567,11 +568,11 @@ func (m *egressIPManager) handleEgressIPSetDeltaUpdate(ipSetId string, membersRe
 // CompleteDeferredWork attempts to process all updates received by this manager.
 // Will attempt a retry if the first attempt fails, and reports health based on its success
 func (m *egressIPManager) CompleteDeferredWork() error {
-	m.updateLock.Lock()
+	m.lock.Lock()
 	defer func() {
 		// reset flag after attempting to apply an unblocking update
 		m.unblockingUpdateOccurred = false
-		m.updateLock.Unlock()
+		m.lock.Unlock()
 	}()
 
 	// Retry completing deferred work once.
@@ -1382,7 +1383,7 @@ func (m *egressIPManager) KeepVXLANDeviceInSync(mtu int, wait time.Duration) {
 
 // getParentInterface returns the parent interface for the given local NodeIP based on IP address. This link returned is nil
 // if, and only if, an error occurred
-func (m *egressIPManager) getParentInterface() (netlink.Link, error) {
+func (m *egressIPManager) getParentInterface(nodeIP net.IP) (netlink.Link, error) {
 	links, err := m.nlHandle.LinkList()
 	if err != nil {
 		return nil, err
@@ -1393,20 +1394,25 @@ func (m *egressIPManager) getParentInterface() (netlink.Link, error) {
 			return nil, err
 		}
 		for _, addr := range addrs {
-			if addr.IPNet.IP.Equal(m.NodeIP) {
+			if addr.IPNet.IP.Equal(nodeIP) {
 				log.Debugf("Found parent interface: %#v", link)
 				return link, nil
 			}
 		}
 	}
-	return nil, fmt.Errorf("unable to find parent interface with address %s", m.NodeIP.String())
+	return nil, fmt.Errorf("unable to find parent interface with address %s", nodeIP.String())
 }
 
 // configureVXLANDevice ensures the VXLAN tunnel device is up and configured correctly.
 func (m *egressIPManager) configureVXLANDevice(mtu int) error {
 	logCxt := log.WithFields(log.Fields{"device": m.vxlanDevice})
 	logCxt.Debug("Configuring egress ip VXLAN tunnel device")
-	parent, err := m.getParentInterface()
+
+	m.lock.Lock()
+	nodeIP := m.nodeIP
+	m.lock.Unlock()
+
+	parent, err := m.getParentInterface(nodeIP)
 	if err != nil {
 		return err
 	}
@@ -1427,7 +1433,7 @@ func (m *egressIPManager) configureVXLANDevice(mtu int) error {
 		VxlanId:      m.vxlanID,
 		Port:         m.vxlanPort,
 		VtepDevIndex: parent.Attrs().Index,
-		SrcAddr:      m.NodeIP,
+		SrcAddr:      nodeIP,
 	}
 
 	// Try to get the device.
@@ -1494,8 +1500,8 @@ func (m *egressIPManager) configureVXLANDevice(mtu int) error {
 	}
 
 	// Save link index
-	m.updateLock.Lock()
-	defer m.updateLock.Unlock()
+	m.lock.Lock()
+	defer m.lock.Unlock()
 	m.vxlanDeviceLinkIndex = attrs.Index
 	m.unblockingUpdateOccurred = true
 

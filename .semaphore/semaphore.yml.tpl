@@ -249,16 +249,27 @@ blocks:
       execution_time_limit:
         minutes: 60
       commands:
-      - make static-checks
-      - make image fv/fv.test bin/test-workload bin/test-connection bin/test-dns bin/calico-felix bin/calico-felix.exe
+      - make build image fv-prereqs
       - 'cache store bin-${SEMAPHORE_GIT_SHA} bin'
+      - 'cache store fv.test-${SEMAPHORE_GIT_SHA} fv/fv.test'
       - cache store go-pkg-cache .go-pkg-cache
       - 'cache store go-mod-cache ${HOME}/go/pkg/mod/cache'
-      - docker save -o /tmp/tigera-felix.tar tigera/felix:latest-amd64
-      - 'cache store felix-image-${SEMAPHORE_GIT_SHA} /tmp/tigera-felix.tar'
+      - docker save -o /tmp/calico-felix.tar tigera/felix:latest-amd64
+      - 'cache store felix-image-${SEMAPHORE_GIT_SHA} /tmp/calico-felix.tar'
+      - docker save -o /tmp/felixtest-typha.tar felix-test/typha:latest-amd64
+      - 'cache store felixtest-typha-image-${SEMAPHORE_GIT_SHA} /tmp/felixtest-typha.tar'
+      - docker save -o /tmp/felixtest-dns-server.tar tigera-test/dns-server:latest
+      - 'cache store felixtest-dns-server-image-${SEMAPHORE_GIT_SHA} /tmp/felixtest-dns-server.tar'
+      - docker save -o /tmp/felixtest-scapy.tar tigera-test/scapy:latest
+      - 'cache store felixtest-scapy-image-${SEMAPHORE_GIT_SHA} /tmp/felixtest-scapy.tar'
       - ../.semaphore/run-and-monitor ut.log make ut
       - ../.semaphore/run-and-monitor k8sfv-typha.log make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=true
       - ../.semaphore/run-and-monitor k8sfv-no-typha.log make k8sfv-test JUST_A_MINUTE=true USE_TYPHA=false
+    - name: Static checks
+      execution_time_limit:
+        minutes: 60
+      commands:
+      - ../.semaphore/run-and-monitor static-checks.log make static-checks
 
 - name: "Felix: Build Windows binaries"
   run:
@@ -274,7 +285,7 @@ blocks:
 - name: "Felix: Windows FV"
   run:
     when: "${FORCE_RUN} or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: ["Prerequisites", "Felix: Build Windows binaries"]
+  dependencies: ["Felix: Build Windows binaries"]
   task:
     secrets:
     - name: banzai-secrets
@@ -327,7 +338,7 @@ blocks:
 - name: "Felix: FV Tests"
   run:
     when: "${FORCE_RUN} or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: ["Prerequisites", "Felix: Build"]
+  dependencies: ["Felix: Build"]
   task:
     prologue:
       commands:
@@ -335,7 +346,11 @@ blocks:
       - cache restore go-pkg-cache
       - cache restore go-mod-cache
       - 'cache restore bin-${SEMAPHORE_GIT_SHA}'
+      - 'cache restore fv.test-${SEMAPHORE_GIT_SHA}'
       - 'cache restore felix-image-${SEMAPHORE_GIT_SHA}'
+      - 'cache restore felixtest-typha-image-${SEMAPHORE_GIT_SHA}'
+      - 'cache restore felixtest-dns-server-image-${SEMAPHORE_GIT_SHA}'
+      - 'cache restore scapy-image-${SEMAPHORE_GIT_SHA}'
       - |-
         if [ -s /etc/docker/daemon.json  ]; then
         sudo sed -i '$d' /etc/docker/daemon.json && sudo sed -i '$s/$/,/' /etc/docker/daemon.json && sudo bash -c ' cat >> /etc/docker/daemon.json << EOF
@@ -351,9 +366,17 @@ blocks:
         EOF
         ' ; fi
       - sudo systemctl restart docker
-      - docker load -i /tmp/tigera-felix.tar
-      - rm /tmp/tigera-felix.tar
-      - touch bin/*
+      # Load in the docker images pre-built by the build job.
+      - docker load -i /tmp/calico-felix.tar
+      - docker tag tigera/felix:latest-amd64 felix:latest-amd64
+      - rm /tmp/calico-felix.tar
+      - docker load -i /tmp/felixtest-typha.tar
+      - docker tag felix-test/typha:latest-amd64 typha:latest-amd64
+      - rm /tmp/felixtest-typha.tar
+      - docker load -i /tmp/felixtest-dns-server.tar
+      - rm /tmp/felixtest-dns-server.tar
+      - docker load -i /tmp/felixtest-scapy.tar
+      - rm /tmp/felixtest-scapy.tar
       # Pre-loading the IPIP module prevents a flake where the first felix to use IPIP loads the module and
       # routing in that first felix container chooses different source IPs than the tests are expecting.
       - sudo modprobe ipip
@@ -363,7 +386,7 @@ blocks:
         minutes: 120
       commands:
       - make check-wireguard
-      - ../.semaphore/run-and-monitor fv-${SEMAPHORE_JOB_INDEX}.log make fv FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}" FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT}
+      - ../.semaphore/run-and-monitor fv-${SEMAPHORE_JOB_INDEX}.log make fv-no-prereqs FV_BATCHES_TO_RUN="${SEMAPHORE_JOB_INDEX}" FV_NUM_BATCHES=${SEMAPHORE_JOB_COUNT}
       parallelism: 3
     epilogue:
       always:

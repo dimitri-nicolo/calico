@@ -72,8 +72,7 @@ var _ = infrastructure.DatastoreDescribe("flow log with DNS tests", []apiconfig.
 
 	wgetDomainErrFn := func(domain string) func() error {
 		return func() error {
-			ep1_1.C.EnsureBinary("test-dns")
-			out, err := ep1_1.ExecCombinedOutput("/test-dns", "-", domain, fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
+			out, err := ep1_1.ExecCombinedOutput("test-dns", "-", domain, fmt.Sprintf("--dns-server=%s:%d", dnsServerIP, 53))
 			return logAndReport(out, err)
 		}
 	}
