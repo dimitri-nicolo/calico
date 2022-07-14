@@ -370,12 +370,6 @@ func newBPFEndpointManager(
 			254,
 			opReporter,
 		)
-		// Since we do not know what the state of services is at the start, mark
-		// the routes to be all cleaned up. As the service update will arrive,
-		// we will update the state.
-		if err := m.invalidateServiceRoutes(); err != nil {
-			log.WithError(err).Warn("Failed to invalidate existing service routes, unused ones may be left over.")
-		}
 		m.services = make(map[serviceKey][]ip.V4CIDR)
 		m.dirtyServices = set.New[serviceKey]()
 
@@ -1494,6 +1488,7 @@ func (m *bpfEndpointManager) profileNoMatchID(dir rules.RuleDir) polprog.RuleMat
 	return m.ruleMatchIDFromNFLOGPrefix(rules.CalculateNoMatchProfileNFLOGPrefixStr(dir))
 }
 
+//ruleMatchID(dir rules.RuleDir, action string, owner rules.RuleOwnerType, idx int, name string) polprog.RuleMatchID
 func (m *bpfEndpointManager) ruleMatchID(
 	dir rules.RuleDir,
 	action string,
@@ -2255,8 +2250,6 @@ func (m *bpfEndpointManager) addRuleInfo(rule *proto.Rule, idx int,
 
 	return matchID
 }
-
-//ruleMatchID(dir rules.RuleDir, action string, owner rules.RuleOwnerType, idx int, name string) polprog.RuleMatchID
 
 func (m *bpfEndpointManager) invalidateServiceRoutes() error {
 	bpfin, err := netlink.LinkByName(bpfInDev)
