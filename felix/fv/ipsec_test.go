@@ -691,8 +691,9 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 		}
 
 		BeforeEach(func() {
-			// Check that our policy counting function does pick up our policies before we use it in anger below.
-			Eventually(totalPolCount, "5s", "100ms").Should(BeNumerically(">", 0))
+			// Wait for IPsec policy to converge before starting the test.
+			const expNumXFRMPols = 24
+			Eventually(totalPolCount, "10s", "100ms").Should(Equal(expNumXFRMPols))
 		})
 
 		It("should remove the IPsec policy gracefully, maintaining connectivity", func() {
@@ -704,6 +705,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 
 			var wg sync.WaitGroup
 			wg.Add(1)
+			defer wg.Wait() // Make sure we wait for background work to finish even if test fails.
 			go func() {
 				defer wg.Done()
 				time.Sleep(5 * time.Second)
@@ -716,10 +718,11 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 			}
 
 			cc.ResetExpectations()
-			// We expect some loss here due to the way the Charon removes the IKE SAs.  We used to reliably see
-			// <2% packet loss here when using an Alpine base image.  For some reason, we see more loss after
-			// switching to the Debian base image (with same version of Strongswan).
-			const expectedLossPct = 5
+			// Unfortunately, there is a long-standing bug in our IPsec implementation that means that
+			// disabling IPsec _is_ disruptive.  While we carefully tear down the XFRM policies in a non-destructive
+			// way, Felix restarts when IPsec is disabled, which in turn causes the Charon to exit.  As part of its
+			// shut-down processing, it tears down the IPsec peerings, causing unexpected disruption.
+			const expectedLossPct = 10
 			cc.ExpectLoss(w[0], w[1], 20*time.Second, expectedLossPct, -1)
 			cc.ExpectLoss(hostW[0], w[1], 20*time.Second, expectedLossPct, -1)
 			cc.ExpectLoss(w[0], hostW[1], 20*time.Second, expectedLossPct, -1)
