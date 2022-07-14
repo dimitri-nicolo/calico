@@ -55,6 +55,9 @@ type EnvoyLog struct {
 	DSRemoteAddress string `json:"downstream_remote_address"`
 	DSLocalAddress  string `json:"downstream_local_address"`
 
+	// used to calculate latency
+	UpstreamServiceTime string `json:"upstream_service_time"`
+
 	Protocol    string `json:"protocol"`
 	SrcIp       string
 	DstIp       string
@@ -62,6 +65,7 @@ type EnvoyLog struct {
 	DstPort     int32
 	Count       int32
 	DurationMax int32
+	Latency     int32
 }
 
 // TupleKey is an object just for holding the
@@ -111,6 +115,7 @@ func (b BatchEnvoyLog) Insert(log EnvoyLog) {
 		}
 
 		val.Duration = val.Duration + log.Duration
+		val.Latency = val.Latency + log.Latency
 		val.BytesReceived = val.BytesReceived + log.BytesReceived
 		val.BytesSent = val.BytesSent + log.BytesSent
 		val.Count++

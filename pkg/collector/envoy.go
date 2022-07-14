@@ -179,6 +179,11 @@ func (ec *envoyCollector) ParseRawLogs(text string) (EnvoyLog, error) {
 		return EnvoyLog{}, err
 	}
 
+	// calculate latency
+	if ust, err := strconv.Atoi(envoyLog.UpstreamServiceTime); err == nil {
+		envoyLog.Latency = envoyLog.Duration - int32(ust)
+	}
+
 	return ParseFiveTupleInformation(envoyLog)
 }
 

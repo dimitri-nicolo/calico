@@ -27,7 +27,7 @@ type Config struct {
 	// to be behind the latest logs written. A negative number
 	// means that we will not check that the log ingestion is
 	// keeping up with log creation rate.
-	EnvoyTailMaxLag int `envconfig: "ENVOY_TAIL_MAX_LAG"`
+	EnvoyTailMaxLag int `envconfig:"ENVOY_TAIL_MAX_LAG"`
 
 	// Configuration for tests
 	// Sets where the log file should be read from.

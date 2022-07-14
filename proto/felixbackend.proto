@@ -611,6 +611,7 @@ message HttpData {
   string request_method = 9;
   int32 count = 10;
   string domain = 11;
-  int32 duration_max=12;
+  int32 duration_max = 12;
   string type = 13;
+  int32 latency = 14;
 }
