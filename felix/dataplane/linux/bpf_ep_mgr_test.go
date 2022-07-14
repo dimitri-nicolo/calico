@@ -657,7 +657,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			err := bpfEpMgr.CompleteDeferredWork()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(dp.routes).To(HaveLen(1))
-			Expect(dp.routes).To(HaveKey(ip.CIDRFromStringMust("1.2.3.4/32")))
+			Expect(dp.routes).To(HaveKey(ip.MustParseCIDROrIP("1.2.3.4")))
 
 			bpfEpMgr.OnUpdate(&proto.ServiceUpdate{
 				Name:           "service",
@@ -668,8 +668,8 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			err = bpfEpMgr.CompleteDeferredWork()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(dp.routes).To(HaveLen(2))
-			Expect(dp.routes).To(HaveKey(ip.CIDRFromStringMust("1.2.3.4/32")))
-			Expect(dp.routes).To(HaveKey(ip.CIDRFromStringMust("5.6.7.8/32")))
+			Expect(dp.routes).To(HaveKey(ip.MustParseCIDROrIP("1.2.3.4")))
+			Expect(dp.routes).To(HaveKey(ip.MustParseCIDROrIP("5.6.7.8")))
 
 			bpfEpMgr.OnUpdate(&proto.ServiceUpdate{
 				Name:           "service",
@@ -681,10 +681,10 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			err = bpfEpMgr.CompleteDeferredWork()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(dp.routes).To(HaveLen(4))
-			Expect(dp.routes).To(HaveKey(ip.CIDRFromStringMust("1.2.3.4/32")))
-			Expect(dp.routes).To(HaveKey(ip.CIDRFromStringMust("5.6.7.8/32")))
-			Expect(dp.routes).To(HaveKey(ip.CIDRFromStringMust("1.0.0.1/32")))
-			Expect(dp.routes).To(HaveKey(ip.CIDRFromStringMust("1.0.0.2/32")))
+			Expect(dp.routes).To(HaveKey(ip.MustParseCIDROrIP("1.2.3.4")))
+			Expect(dp.routes).To(HaveKey(ip.MustParseCIDROrIP("5.6.7.8")))
+			Expect(dp.routes).To(HaveKey(ip.MustParseCIDROrIP("1.0.0.1")))
+			Expect(dp.routes).To(HaveKey(ip.MustParseCIDROrIP("1.0.0.2")))
 
 			bpfEpMgr.OnUpdate(&proto.ServiceUpdate{
 				Name:      "service",
@@ -694,7 +694,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			err = bpfEpMgr.CompleteDeferredWork()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(dp.routes).To(HaveLen(1))
-			Expect(dp.routes).To(HaveKey(ip.CIDRFromStringMust("1.2.3.4/32")))
+			Expect(dp.routes).To(HaveKey(ip.MustParseCIDROrIP("1.2.3.4")))
 
 			bpfEpMgr.OnUpdate(&proto.ServiceRemove{
 				Name:      "service",
@@ -713,8 +713,8 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			err = bpfEpMgr.CompleteDeferredWork()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(dp.routes).To(HaveLen(2))
-			Expect(dp.routes).To(HaveKey(ip.CIDRFromStringMust("1.2.3.4/32")))
-			Expect(dp.routes).To(HaveKey(ip.CIDRFromStringMust("5.6.7.8/32")))
+			Expect(dp.routes).To(HaveKey(ip.MustParseCIDROrIP("1.2.3.4")))
+			Expect(dp.routes).To(HaveKey(ip.MustParseCIDROrIP("5.6.7.8")))
 
 			bpfEpMgr.OnUpdate(&proto.ServiceRemove{
 				Name:      "service",
