@@ -17,16 +17,69 @@
 
 # Generic supports all
 
+
+# Use this tag for topics that support all platforms for the release.
+# For release support, see the [Product Support Matrix](https://drive.google.com/drive/search?q=product%20support%20matrix)
+
 feature_generic_all:
   platforms:
     - all
 
-waf:
+# Install and upgrade
+# Docs not tagged "by design": System requirements (page does not document all platforms 
+# so would need to be updated first), Upgrade Calico to Calico Enterprise (tags reflect CE, not OSS 
+# platforms)
+
+install_kubernetes_kubeadm:
   platforms:
     - Kubernetes/Kubeadm
-    - OpenShift
-    - AWS/kOps
+
+install_aks:
+  platforms:
     - AKS
+
+install_aws_kops:
+  platforms:
+    - AWS/kOps    
+
+install_eks:
+  platforms:
     - EKS
+
+install_gke:
+  platforms:
     - GKE
-    - TKG
+
+install_ocp:
+  platforms:
+    - OpenShift    
+
+install_rke:
+  platforms:
+    - RKE 
+
+install_rke2:
+  platforms:
+    - RKE2    
+
+install_tkg:
+  platforms:
+    - TKG      
+
+non_cluster_hosts_all:
+  platforms:
+    - all     
+
+upgrade_all_but_ocp:
+  platforms:
+    - Kubernetes/Kubeadm
+    - EKS
+    - AKS
+    - AWS/kOps
+    - RKE
+    - RKE2
+    - TKG    
+
+upgrade_ocp:
+  platforms:
+    - OpenShift     

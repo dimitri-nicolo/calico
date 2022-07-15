@@ -21,7 +21,7 @@ section:
     section:
     - title: System requirements
       path: /getting-started/openshift/requirements
-    - title: Installation
+    - title: Install Calico Enterprise on OpenShift
       path: /getting-started/openshift/installation
   - title: AKS
     path: /getting-started/kubernetes/aks
