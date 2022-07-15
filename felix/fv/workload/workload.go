@@ -164,6 +164,11 @@ func New(c *infrastructure.Felix, name, profile, ip, ports, protocol string, mtu
 	return workload
 }
 
+func run(c *infrastructure.Felix, name, profile, ip, ports, protocol string, mtu int) (w *Workload, err error) {
+	w = New(c, name, profile, ip, ports, protocol, mtu)
+	return w, w.Start()
+}
+
 func (w *Workload) Start() error {
 	var err error
 
