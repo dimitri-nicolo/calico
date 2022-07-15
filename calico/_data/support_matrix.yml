@@ -121,3 +121,15 @@ kubernetes_controlplane_ipv6:
     - Kubernetes/Kubeadm
     - OpenShift
     - TKG
+
+## mcm
+
+federated_endpoint:
+  platforms:
+    - Kubernetes/Kubeadm
+    - AWS/kOps
+    - OpenShift
+    - AKS
+    - RKE
+    - RKE2
+    - TKG
