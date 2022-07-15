@@ -1,3 +1,4 @@
+
 # Platform support tagging is currently supported only in Calico Enterprise docs. 
 
 # If you want a platform tag to appear for a topic, a "feature_name:" tag must be added to the topic header.
@@ -83,3 +84,40 @@ upgrade_all_but_ocp:
 upgrade_ocp:
   platforms:
     - OpenShift     
+
+# Networking
+
+dual_tor:
+  platforms:
+    - Kubernetes/Kubeadm
+    - OpenShift
+    - AWS/kOps
+    - RKE
+    - RKE2
+    - TKG    
+
+egress_gateway:
+  platforms:
+    - Kubernetes/Kubeadm
+    - OpenShift 
+    - AWS/kOps
+    - RKE
+    - RKE2
+    - EKS
+    - TKG 
+
+egress_gateway_aws:
+  platforms:
+    - AWS/kOps  
+
+dual_stack:
+  platforms:
+    - Kubernetes/Kubeadm
+    - OpenShift
+    - TKG     
+
+kubernetes_controlplane_ipv6:
+  platforms:
+    - Kubernetes/Kubeadm
+    - OpenShift
+    - TKG
