@@ -26,6 +26,7 @@ require 'fluent/version'
 #                             - START TIGERA CUSTOM CODE -                              #
 #########################################################################################
 require 'openssl'
+require 'fluent/tls'
 
 # Make OpenSSL run in FIPS mode, disabling certain cryptographic functions.
 OpenSSL.fips_mode = true
@@ -34,6 +35,8 @@ puts('OpenSSL::OPENSSL_LIBRARY_VERSION: %s' % OpenSSL::OPENSSL_LIBRARY_VERSION)
 puts('OpenSSL::OPENSSL_VERSION_NUMBER (base16): %s' % OpenSSL::OPENSSL_VERSION_NUMBER)
 puts('OpenSSL::VERSION (gem version): %s' % OpenSSL::VERSION)
 puts('OpenSSL.fips_mode: %s' % OpenSSL.fips_mode)
+Fluent::TLS::CIPHERS_DEFAULT = 'TLSv1.2+FIPS:kRSA+FIPS:!eNULL:!aNULL'
+puts('Fluent::TLS::CIPHERS_DEFAULT: %s' % Fluent::TLS::CIPHERS_DEFAULT)
 
 #########################################################################################
 #                             - END TIGERA CUSTOM CODE -                                #

@@ -114,7 +114,7 @@ $(FLUENTD_IMAGE):
 
 build-image-%:
 ifeq ($(ARCH), amd64)
-	docker build --pull -f Dockerfile.fips -t $(PUSH_IMAGE_BASE)/$(FLUENTD_IMAGE):$* \
+	docker build --pull -f Dockerfile.fips -t $(IMAGE):latest-$* \
 		--build-arg UBI_VERSION=$(UBI_VERSION) \
 		--build-arg RUBY_MAJOR_VERSION=$(RUBY_MAJOR_VERSION) \
 		--build-arg RUBY_FULL_VERSION=$(RUBY_FULL_VERSION) .
