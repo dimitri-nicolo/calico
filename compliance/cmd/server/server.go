@@ -100,8 +100,7 @@ func main() {
 	}
 
 	esClientFactory := elastic.NewClusterContextClientFactory(elastic.MustLoadConfig())
-	s := server.New(k8sClientFactory, esClientFactory, authn, ":"+*apiPort, *keyPath, *certPath)
-
+	s := server.New(k8sClientFactory, esClientFactory, authn, ":"+*apiPort, *keyPath, *certPath, cfg.FIPSModeEnabled)
 	s.Start()
 
 	// Setup signals.

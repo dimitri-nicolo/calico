@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bmizerany/pat"
+	"github.com/projectcalico/calico/crypto/tigeratls"
 	log "github.com/sirupsen/logrus"
 
 	"k8s.io/apiserver/pkg/endpoints/request"
@@ -21,7 +22,7 @@ import (
 
 // New creates a new server.
 func New(csFactory datastore.ClusterCtxK8sClientFactory, esFactory elastic.ClusterContextClientFactory,
-	authenticator auth.JWTAuth, addr string, key string, cert string) ServerControl {
+	authenticator auth.JWTAuth, addr string, key string, cert string, fipsMode bool) ServerControl {
 
 	s := &server{
 		key:       key,
@@ -29,7 +30,6 @@ func New(csFactory datastore.ClusterCtxK8sClientFactory, esFactory elastic.Clust
 		csFactory: csFactory,
 		esFactory: esFactory,
 	}
-
 	// Create a new pattern matching MUX.
 	mux := pat.New()
 	mux.Get(UrlVersion, http.HandlerFunc(s.handleVersion))
@@ -44,8 +44,9 @@ func New(csFactory datastore.ClusterCtxK8sClientFactory, esFactory elastic.Clust
 
 	// Create a new server using the MUX.
 	s.server = &http.Server{
-		Addr:    addr,
-		Handler: mux,
+		Addr:      addr,
+		Handler:   mux,
+		TLSConfig: tigeratls.NewTLSConfig(fipsMode),
 	}
 
 	return s

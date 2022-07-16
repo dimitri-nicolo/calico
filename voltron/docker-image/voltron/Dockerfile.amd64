@@ -1,25 +1,24 @@
 ARG UBI_IMAGE
-ARG BINARY
 
 FROM ${UBI_IMAGE} as ubi
-ARG BINARY
+
 RUN microdnf update
 
 # Create Empty root filesystem on /rootfs, copy only required linux utils
-# and supporting files.This filesystem act as placeholder for 
+# and supporting files.This filesystem act as placeholder for
 # all files required in container.
- 
+
 WORKDIR /rootfs
 
 RUN mkdir -p etc/ssl/certs && \
     cp /etc/ssl/certs/* etc/ssl/certs
 
-FROM alpine:3.15.0
-ARG BINARY
+ADD bin/voltron-amd64 /voltron
 
+FROM scratch
 COPY --from=ubi /rootfs /
 # Add your binary to the image
-COPY --chown=1001 bin/voltron-amd64 /voltron
+COPY --chown=1001 --from=ubi /voltron /voltron
 
 # Add the trusted certs from the ubi image.
 COPY --from=ubi /etc/pki /etc/pki
@@ -32,4 +31,3 @@ USER 1001
 
 # Now define the command-line call to start your application
 ENTRYPOINT ["/voltron"]
-#CMD ls /

@@ -118,3 +118,12 @@ func WithTunnelDialTimeout(tunnelDialTimeout time.Duration) Option {
 		return nil
 	}
 }
+
+// WithFIPSModeEnabled enables FIPS 140-2 verified mode.
+func WithFIPSModeEnabled(fipsModeEnabled bool) Option {
+	return func(c *Client) error {
+		c.fipsModeEnabled = fipsModeEnabled
+		c.fipsModeEnabled = fipsModeEnabled
+		return nil
+	}
+}

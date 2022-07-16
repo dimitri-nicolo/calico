@@ -46,6 +46,9 @@ type Client struct {
 
 	connRetryAttempts int
 	connRetryInterval time.Duration
+
+	// fipsModeEnabled enables FIPS 140-2 verified mode.
+	fipsModeEnabled bool
 }
 
 // New returns a new Client
@@ -105,10 +108,11 @@ func New(addr string, opts ...Option) (*Client, error) {
 			dialerFunc = func() (*tunnel.Tunnel, error) {
 				log.Debug("Dialing tunnel...")
 
-				tlsConfig := tigeratls.NewTLSConfig(true)
+				tlsConfig := tigeratls.NewTLSConfig(client.fipsModeEnabled)
 				tlsConfig.Certificates = []tls.Certificate{*tunnelCert}
 				tlsConfig.RootCAs = tunnelRootCAs
 				tlsConfig.ServerName = serverName
+				client.http.TLSConfig = tlsConfig
 				return tunnel.DialTLS(
 					tunnelAddress,
 					tlsConfig,
