@@ -85,7 +85,7 @@ type Config struct {
 	ServiceGraphCacheDataSettleTime       time.Duration `envconfig:"SERVICE_GRAPH_CACHE_DATA_SETTLE_TIME" default:"15m"`
 
 	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
-	FIPSModeEnabled bool `default:"false" split_words:"true"`
+	FIPSModeEnabled bool `envconfig:"FIPS_MODE_ENABLED" default:"false"`
 }
 
 func NewConfigFromEnv() (*Config, error) {

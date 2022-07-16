@@ -92,7 +92,7 @@ type Config struct {
 	OIDCAuthGroupsPrefix   string `envconfig:"TIGERA_COMPLIANCE_OIDC_AUTH_GROUPS_PREFIX"`
 
 	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
-	FIPSModeEnabled bool `default:"false" split_words:"true"`
+	FIPSModeEnabled bool `envconfig:"FIPS_MODE_ENABLED" default:"false"`
 }
 
 func MustLoadConfig() *Config {
