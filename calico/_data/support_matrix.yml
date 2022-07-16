@@ -133,3 +133,21 @@ federated_endpoint:
     - RKE
     - RKE2
     - TKG
+
+## Network policy
+
+aws_integration:
+  platforms:
+    - EKS  
+    - AWS/kOps      
+
+auto_hep:
+  platforms:
+    - Kubernetes/Kubeadm
+    - OpenShift
+    - AKS
+    - AWS/kOps
+    - EKS
+    - RKE
+    - RKE2
+    - TKG

@@ -115,12 +115,12 @@ is_latest: false
 support_matrix_list:
   - Kubernetes/Kubeadm
   - OpenShift
-  - AWS/kOps
-  - RKE
-  - RKE2
   - AKS
+  - AWS/kOps
   - EKS
   - GKE
+  - RKE
+  - RKE2
   - TKG
 
 defaults:
