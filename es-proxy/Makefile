@@ -57,9 +57,9 @@ ifeq ($(ARCH), amd64)
 	    sh -c '$(GIT_CONFIG_SSH) \
 	           go build -o $@ -v $(BUILD_TAGS) -ldflags "$(VERSION_FLAGS)" cmd/server/*.go'
 else
-		$(DOCKER_GO_BUILD) \
-    		sh -c '$(GIT_CONFIG_SSH) \
-    			go build -o $@ -v $(BUILD_TAGS) -ldflags "$(VERSION_FLAGS)" cmd/server/*.go'
+	$(DOCKER_GO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) \
+			go build -o $@ -v $(BUILD_TAGS) -ldflags "$(VERSION_FLAGS)" cmd/server/*.go'
 endif
 
 ES_PROXY_CONTAINER_CREATED=.es-proxy.created-$(ARCH)

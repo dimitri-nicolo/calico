@@ -54,6 +54,13 @@ SRC_FILES:=$(shell find . $(foreach dir,$(NON_SRC_DIRS),-path $(dir) -prune -o) 
 		$(shell find ../libcalico-go/lib -name '*.go') \
 		$(shell find ../lma/pkg -name '*.go')
 
+# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
+ifeq ($(ARCH), $(filter $(ARCH),amd64))
+CGO_ENABLED=1
+else
+CGO_ENABLED=0
+endif
+
 ###############################################################################
 # Building the binary
 ###############################################################################
@@ -71,73 +78,38 @@ sub-build-%:
 
 .PHONY: bin/server-$(ARCH)
 bin/server-$(ARCH): $(SRC_FILES)
-ifeq ($(ARCH), amd64)
-	$(DOCKER_RUN) -e CGO_ENABLED=1 $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/server/server.go'
-else
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/server/server.go'
-endif
 
 .PHONY: bin/controller-$(ARCH)
 bin/controller-$(ARCH): $(SRC_FILES)
-ifeq ($(ARCH), amd64)
-	$(DOCKER_RUN) -e CGO_ENABLED=1 $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/controller/controller.go'
-else
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/controller/controller.go'
-endif
 
 .PHONY: bin/snapshotter-$(ARCH)
 bin/snapshotter-$(ARCH): $(SRC_FILES)
-ifeq ($(ARCH), amd64)
-	$(DOCKER_RUN) -e CGO_ENABLED=1 $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/snapshotter/snapshotter.go'
-else
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/snapshotter/snapshotter.go'
-endif
 
 .PHONY: bin/reporter-$(ARCH)
 bin/reporter-$(ARCH): $(SRC_FILES)
-ifeq ($(ARCH), amd64)
-	$(DOCKER_RUN) -e CGO_ENABLED=1 $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/reporter/reporter.go'
-else
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/reporter/reporter.go'
-endif
 
 .PHONY: bin/report-type-gen-$(ARCH)
 bin/report-type-gen-$(ARCH): $(SRC_FILES)
-ifeq ($(ARCH), amd64)
-	$(DOCKER_RUN) -e CGO_ENABLED=1 $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/report-type-gen/*.go'
-else
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/report-type-gen/*.go'
-endif
 
 .PHONY: bin/scaleloader-$(ARCH)
 bin/scaleloader-$(ARCH): $(SRC_FILES)
-ifeq ($(ARCH), amd64)
-	$(DOCKER_RUN) -e CGO_ENABLED=1 $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/mockdata-scaleloader/scaleloader.go'
-else
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/mockdata-scaleloader/scaleloader.go'
-endif
 
 .PHONY: bin/benchmarker-$(ARCH)
 bin/benchmarker-$(ARCH): $(SRC_FILES)
-ifeq ($(ARCH), amd64)
-	$(DOCKER_RUN) -e CGO_ENABLED=1 $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/benchmarker/benchmarker.go'
-else
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/benchmarker/benchmarker.go'
-endif
 
 ###############################################################################
 # Building the report files
