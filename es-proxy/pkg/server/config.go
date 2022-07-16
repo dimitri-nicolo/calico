@@ -83,6 +83,9 @@ type Config struct {
 	ServiceGraphCachePollLoopInterval     time.Duration `envconfig:"SERVICE_GRAPH_CACHE_POLL_LOOP_INTERVAL" default:"2m"`
 	ServiceGraphCachePollQueryInterval    time.Duration `envconfig:"SERVICE_GRAPH_CACHE_POLL_QUERY_INTERVAL" default:"2s"`
 	ServiceGraphCacheDataSettleTime       time.Duration `envconfig:"SERVICE_GRAPH_CACHE_DATA_SETTLE_TIME" default:"15m"`
+
+	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
+	FIPSModeEnabled bool `default:"false" split_words:"true"`
 }
 
 func NewConfigFromEnv() (*Config, error) {

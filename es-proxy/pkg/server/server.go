@@ -3,10 +3,10 @@ package server
 
 import (
 	"context"
-	"crypto/tls"
 	"net/http"
 	"sync"
 
+	"github.com/projectcalico/calico/crypto/tigeratls"
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -110,8 +110,10 @@ func Start(cfg *Config) error {
 	// Create a PIP backend.
 	p := pip.New(policyCalcConfig, &clusterAwareLister{k8sClientFactory}, esClient)
 
+	kibanaTLSConfig := tigeratls.NewTLSConfig(cfg.FIPSModeEnabled)
+	kibanaTLSConfig.InsecureSkipVerify = true
 	kibanaCli := kibana.NewClient(&http.Client{
-		Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}},
+		Transport: &http.Transport{TLSClientConfig: kibanaTLSConfig},
 	}, cfg.ElasticKibanaEndpoint)
 
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
@@ -247,7 +249,7 @@ func Start(cfg *Config) error {
 		Addr:    cfg.ListenAddr,
 		Handler: middleware.LogRequestHeaders(sm),
 	}
-
+	server.TLSConfig = tigeratls.NewTLSConfig(cfg.FIPSModeEnabled)
 	wg.Add(1)
 	go func() {
 		log.Infof("Starting server on %v", cfg.ListenAddr)
