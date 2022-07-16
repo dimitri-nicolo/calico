@@ -236,7 +236,7 @@ func main() {
 		log.Fatal("Unable to create authenticator", err)
 	}
 
-	targets, err := bootstrap.ProxyTargets(targetList)
+	targets, err := bootstrap.ProxyTargets(targetList, cfg.FIPSModeEnabled)
 
 	if err != nil {
 		log.WithError(err).Fatal("Failed to parse default proxy targets.")

@@ -86,7 +86,7 @@ type Server struct {
 	sniServiceMap map[string]string
 
 	// Enable FIPS 140-2 verified mode.
-	fipsMode bool
+	fipsModeEnabled bool
 }
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
@@ -114,8 +114,9 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, authenticator auth.JWTAut
 	srv.clusters.sniServiceMap = srv.sniServiceMap
 	srv.proxyMux = http.NewServeMux()
 
-	cfg := tigeratls.NewTLSConfig(srv.fipsMode)
+	cfg := tigeratls.NewTLSConfig(srv.fipsModeEnabled)
 
+	log.Infof("TLS config.ciphersuites: %v, maxversion", cfg.CipherSuites, cfg.MaxVersion)
 	cfg.Certificates = append(cfg.Certificates, srv.externalCert)
 
 	if len(srv.internalCert.Certificate) > 0 {
@@ -271,7 +272,7 @@ func (s *Server) extractIdentity(t *tunnel.Tunnel, clusterID string, fingerprint
 		// We expect to have a cluster registered with this ID and matching fingerprint
 		// for the cert.
 		clusterID = id.Subject.CommonName
-		fingerprint = utils.GenerateFingerprint(s.fipsMode, id)
+		fingerprint = utils.GenerateFingerprint(s.fipsModeEnabled, id)
 	default:
 		log.Errorf("unknown tunnel identity type %T", id)
 	}

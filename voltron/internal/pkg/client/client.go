@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/projectcalico/calico/crypto/tigeratls"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
@@ -103,13 +104,14 @@ func New(addr string, opts ...Option) (*Client, error) {
 			tunnelRootCAs := client.tunnelRootCAs
 			dialerFunc = func() (*tunnel.Tunnel, error) {
 				log.Debug("Dialing tunnel...")
+
+				tlsConfig := tigeratls.NewTLSConfig(true)
+				tlsConfig.Certificates = []tls.Certificate{*tunnelCert}
+				tlsConfig.RootCAs = tunnelRootCAs
+				tlsConfig.ServerName = serverName
 				return tunnel.DialTLS(
 					tunnelAddress,
-					&tls.Config{
-						Certificates: []tls.Certificate{*tunnelCert},
-						RootCAs:      tunnelRootCAs,
-						ServerName:   serverName,
-					},
+					tlsConfig,
 					client.tunnelDialTimeout,
 					tunnel.WithKeepAliveSettings(tunnelKeepAlive, tunnelKeepAliveInterval),
 				)
@@ -164,10 +166,10 @@ func (c *Client) ServeTunnelHTTP() error {
 	if c.tunnelCert != nil {
 		// we need to upgrade the tunnel to a TLS listener to support HTTP2
 		// on this side.
-		listener = tls.NewListener(listener, &tls.Config{
-			Certificates: []tls.Certificate{*c.tunnelCert},
-			NextProtos:   []string{"h2"},
-		})
+		tlsConfig := tigeratls.NewTLSConfig(true) //todo: fix
+		tlsConfig.Certificates = []tls.Certificate{*c.tunnelCert}
+		tlsConfig.NextProtos = []string{"h2"}
+		listener = tls.NewListener(listener, tlsConfig)
 		log.Infof("serving HTTP/2 enabled")
 	}
 

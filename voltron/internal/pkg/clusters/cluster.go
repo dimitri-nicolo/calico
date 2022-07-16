@@ -14,4 +14,7 @@ type ManagedCluster struct {
 	// assigned to a managed cluster. Only connections that present the certificate that matches the
 	// active fingerprint will be accepted
 	ActiveFingerprint string `json:"activeFingerprint,omitempty"`
+
+	// Enable FIPS 140-2 verified mode.
+	FipsModeEnabled bool
 }

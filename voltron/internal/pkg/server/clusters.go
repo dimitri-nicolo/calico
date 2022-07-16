@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/projectcalico/calico/crypto/tigeratls"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
 
@@ -49,9 +50,10 @@ type cluster struct {
 
 type clusters struct {
 	sync.RWMutex
-	clusters      map[string]*cluster
-	sniServiceMap map[string]string
-	k8sCLI        bootstrap.K8sClient
+	clusters        map[string]*cluster
+	sniServiceMap   map[string]string
+	k8sCLI          bootstrap.K8sClient
+	fipsModeEnabled bool
 
 	// parameters for forwarding guardian requests to a default server
 	forwardingEnabled               bool
@@ -218,6 +220,7 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 			mc := &jclust.ManagedCluster{
 				ID:                mcResource.ObjectMeta.Name,
 				ActiveFingerprint: mcResource.ObjectMeta.Annotations[AnnotationActiveCertificateFingerprint],
+				FipsModeEnabled:   cs.fipsModeEnabled,
 			}
 
 			log.Debugf("Watching K8s resource type: %s for cluster %s", r.Type, mc.ID)
@@ -372,13 +375,15 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 		return err
 	}
 
+	tlsConfig := tigeratls.NewTLSConfig(c.FipsModeEnabled)
+	tlsConfig.InsecureSkipVerify = true //todo: not sure where this comes from, but this should be dealt with.
 	c.proxy = &httputil.ReverseProxy{
 		Director:      proxyVoidDirector,
 		FlushInterval: -1,
 		// TODO set the error logger
 		Transport: &http2.Transport{
 			DialTLS:         c.DialTLS2,
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			TLSClientConfig: tlsConfig,
 			AllowHTTP:       true,
 		},
 	}

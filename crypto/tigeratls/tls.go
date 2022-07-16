@@ -13,23 +13,18 @@ func NewTLSConfig(fipsMode bool) *tls.Config {
 
 	if fipsMode {
 		cfg.CipherSuites = []uint16{
-			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
 		}
 		cfg.CurvePreferences = []tls.CurveID{tls.CurveP384, tls.CurveP256}
 		cfg.MinVersion = tls.VersionTLS12
 		// Our certificate for FIPS validation not mention validation for v1.3.
 		cfg.MaxVersion = tls.VersionTLS12
 		cfg.Renegotiation = tls.RenegotiateNever
-
 	}
 	return cfg
 }

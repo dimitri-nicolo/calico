@@ -8,8 +8,9 @@ PACKAGE_NAME   ?= github.com/projectcalico/calico/voltron
 #############################################
 COMPONENTS            ?=guardian voltron
 VOLTRON_IMAGE         ?=voltron
+VOLTRON_FIPS_IMAGE    ?=voltron-fips
 GUARDIAN_IMAGE        ?=guardian
-BUILD_IMAGES          ?=$(VOLTRON_IMAGE) $(GUARDIAN_IMAGE)
+BUILD_IMAGES          ?=$(VOLTRON_IMAGE)
 
 ##############################################################################
 # Include ../lib.Makefile before anything else
@@ -65,6 +66,19 @@ $(BINDIR)/voltron-$(ARCH): $(SRC_FILES)
 	    sh -c '$(GIT_CONFIG_SSH) \
 	           go build -o $@ -v -ldflags "$(VERSION_FLAGS)" $(BUILD_TAGS) cmd/voltron/main.go'
 
+.PHONY: $(BINDIR)/poc-fips
+$(BINDIR)/poc-fips:
+	$(DOCKER_RUN) -e CGO_ENABLED=1 $(CALICO_BUILD) \
+	    sh -c '$(GIT_CONFIG_SSH) \
+	           go build -o $@ -v -ldflags "$(VERSION_FLAGS)" $(BUILD_TAGS) cmd/tmp-fips/fips.go'
+
+.PHONY: $(BINDIR)/voltron-fips-$(ARCH)
+$(BINDIR)/voltron-fips-$(ARCH): $(SRC_FILES)
+	$(DOCKER_RUN) -e CGO_ENABLED=1 $(CALICO_BUILD) \
+	    sh -c '$(GIT_CONFIG_SSH) \
+	           go build -o $@ -v -ldflags "$(VERSION_FLAGS)" $(BUILD_TAGS) cmd/voltron/main.go'
+
+
 .PHONY: $(BINDIR)/guardian-$(ARCH)
 $(BINDIR)/guardian-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD) \
@@ -87,10 +101,22 @@ sub-image-%:
 image: $(BUILD_IMAGES)
 
 $(VOLTRON_IMAGE): $(VOLTRON_CONTAINER_CREATED)
-$(VOLTRON_CONTAINER_CREATED): docker-image/voltron/Dockerfile.$(ARCH) $(BINDIR)/voltron-$(ARCH)
-	$(DOCKER_BUILD) -t $(VOLTRON_IMAGE):latest-$(ARCH) -f docker-image/voltron/Dockerfile.$(ARCH) . --load
+$(VOLTRON_CONTAINER_CREATED): docker-image/voltron/Dockerfile.$(ARCH) $(BINDIR)/voltron-$(ARCH) $(BINDIR)/voltron-fips-$(ARCH)
+	$(DOCKER_BUILD) -t $(VOLTRON_IMAGE):latest-$(ARCH) --build-arg BINARY=bin/voltron-$(ARCH) -f docker-image/voltron/Dockerfile.$(ARCH) . --load
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(VOLTRON_IMAGE)
 	touch $@
+ifeq ($(ARCH), amd64)
+	$(DOCKER_BUILD) -t $(VOLTRON_FIPS_IMAGE):latest-$(ARCH) --build-arg BINARY="bin/voltron-fips-$(ARCH)" -f docker-image/voltron/Dockerfile.$(ARCH) . --load
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(VOLTRON_FIPS_IMAGE)
+	touch $@
+endif
+
+.PHONY: image2
+image2: $(BINDIR)/voltron-fips-$(ARCH)
+	$(DOCKER_BUILD) -t $(VOLTRON_FIPS_IMAGE):latest-$(ARCH) --build-arg BINARY="bin/voltron-fips-$(ARCH)" -f docker-image/voltron/Dockerfile.$(ARCH) . --load
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(VOLTRON_FIPS_IMAGE)
+	touch $@
+
 
 $(GUARDIAN_IMAGE): $(GUARDIAN_CONTAINER_CREATED)
 $(GUARDIAN_CONTAINER_CREATED): docker-image/guardian/Dockerfile.$(ARCH) $(BINDIR)/guardian-$(ARCH)
