@@ -52,9 +52,15 @@ VERSION_FLAGS=-X $(PACKAGE_NAME)/pkg/handler.VERSION=$(GIT_VERSION) \
 build: $(BINDIR)/es-proxy-$(ARCH)
 
 $(BINDIR)/es-proxy-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD) \
-		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v $(BUILD_TAGS) -ldflags "$(VERSION_FLAGS)" cmd/server/*.go'
+ifeq ($(ARCH), amd64)
+	$(DOCKER_RUN) -e CGO_ENABLED=1 $(CALICO_BUILD) \
+	    sh -c '$(GIT_CONFIG_SSH) \
+	           go build -o $@ -v $(BUILD_TAGS) -ldflags "$(VERSION_FLAGS)" cmd/server/*.go'
+else
+		$(DOCKER_GO_BUILD) \
+    		sh -c '$(GIT_CONFIG_SSH) \
+    			go build -o $@ -v $(BUILD_TAGS) -ldflags "$(VERSION_FLAGS)" cmd/server/*.go'
+endif
 
 ES_PROXY_CONTAINER_CREATED=.es-proxy.created-$(ARCH)
 
