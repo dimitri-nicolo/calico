@@ -29,6 +29,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/projectcalico/calico/crypto/tigeratls"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
@@ -160,6 +161,8 @@ type Config struct {
 	CAFile                         string
 	ClientCN                       string
 	ClientURISAN                   string
+	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
+	FIPSModeEnabled bool
 }
 
 const (
@@ -308,10 +311,8 @@ func (s *Server) serve(cxt context.Context) {
 				"keyFile":  s.config.KeyFile,
 			}).WithError(tlsErr).Panic("Failed to load certificate and key")
 		}
-		tlsConfig := tls.Config{Certificates: []tls.Certificate{cert}}
-		// Typha API is a private binary API so we can enforce a recent TLS variant without
-		// worrying about back-compatibility with old browsers (for example).
-		tlsConfig.MinVersion = tls.VersionTLS12
+		tlsConfig := tigeratls.NewTLSConfig(s.config.FIPSModeEnabled)
+		tlsConfig.Certificates = []tls.Certificate{cert}
 
 		// Set allowed cipher suites.
 		tlsConfig.CipherSuites = s.allowedCiphers()
@@ -336,7 +337,7 @@ func (s *Server) serve(cxt context.Context) {
 		)
 
 		laddr := fmt.Sprintf("0.0.0.0:%v", s.config.ListenPort())
-		l, err = tls.Listen("tcp", laddr, &tlsConfig)
+		l, err = tls.Listen("tcp", laddr, tlsConfig)
 	} else {
 		logCxt.Info("Opening listen socket")
 		l, err = net.ListenTCP("tcp", &net.TCPAddr{Port: s.config.ListenPort()})
