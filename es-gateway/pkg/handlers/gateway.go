@@ -10,6 +10,7 @@ import (
 	"net/http/httputil"
 
 	"github.com/pkg/errors"
+	"github.com/projectcalico/calico/crypto/tigeratls"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/es-gateway/pkg/middlewares"
@@ -36,12 +37,10 @@ func GetProxyHandler(t *proxy.Target, modifyResponseFunc func(*http.Response) er
 	if t.Transport != nil {
 		p.Transport = t.Transport
 	} else if t.Dest.Scheme == "https" {
-		var tlsCfg *tls.Config
+		tlsCfg := tigeratls.NewTLSConfig(t.FIPSModeEnabled)
 
 		if t.AllowInsecureTLS {
-			tlsCfg = &tls.Config{
-				InsecureSkipVerify: true,
-			}
+			tlsCfg.InsecureSkipVerify = true
 		} else {
 			if len(t.CAPem) == 0 {
 				return nil, errors.Errorf("failed to create target handler for path %s: ca bundle was empty", t.Dest)
@@ -61,9 +60,7 @@ func GetProxyHandler(t *proxy.Target, modifyResponseFunc func(*http.Response) er
 			}
 
 			ca.AppendCertsFromPEM(file)
-			tlsCfg = &tls.Config{
-				RootCAs: ca,
-			}
+			tlsCfg.RootCAs = ca
 
 			if t.EnableMutualTLS {
 				clientCert, err := tls.LoadX509KeyPair(t.ClientCert, t.ClientKey)

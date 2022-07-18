@@ -116,3 +116,11 @@ func WithAdminUser(u, p string) Option {
 		return nil
 	}
 }
+
+// WithFIPSModeEnabled when true, the server uses FIPS 140-2 verified crypto mode.
+func WithFIPSModeEnabled(fipsModeEnabled bool) Option {
+	return func(s *Server) error {
+		s.fipsModeEnabled = fipsModeEnabled
+		return nil
+	}
+}
