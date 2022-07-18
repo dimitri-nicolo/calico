@@ -238,11 +238,12 @@ type Config struct {
 	// unset.  Felix will then initiate a secure (TLS) connection to Typha.  Typha must present
 	// a certificate signed by a CA in TyphaCAFile, and with CN matching TyphaCN or URI SAN
 	// matching TyphaURISAN.
-	TyphaKeyFile  string `config:"file(must-exist);;local"`
-	TyphaCertFile string `config:"file(must-exist);;local"`
-	TyphaCAFile   string `config:"file(must-exist);;local"`
-	TyphaCN       string `config:"string;;local"`
-	TyphaURISAN   string `config:"string;;local"`
+	TyphaKeyFile         string `config:"file(must-exist);;local"`
+	TyphaCertFile        string `config:"file(must-exist);;local"`
+	TyphaCAFile          string `config:"file(must-exist);;local"`
+	TyphaCN              string `config:"string;;local"`
+	TyphaURISAN          string `config:"string;;local"`
+	TyphaFIPSMODEENABLED string `config:"bool;;local"`
 
 	Ipv6Support    bool `config:"bool;true"`
 	BpfIpv6Support bool `config:"bool;false"`
