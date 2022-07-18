@@ -151,3 +151,33 @@ auto_hep:
     - RKE
     - RKE2
     - TKG
+
+## compliance
+
+cis_benchmarks:
+  platforms:
+    - Kubernetes/Kubeadm
+    - OpenShift
+    - AWS/kOps
+    - RKE
+    - RKE2
+    - TKG
+
+compliance:
+  platforms:
+    - Kubernetes/Kubeadm
+    - AWS/kOps
+    - RKE
+    - RKE2
+    - EKS   
+
+wireguard_encryption:
+  platforms:
+    - Kubernetes/Kubeadm
+    - OpenShift
+    - AWS/kOps
+    - RKE
+    - RKE2
+    - AKS
+    - EKS
+    - TKG
