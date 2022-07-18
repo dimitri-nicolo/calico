@@ -35,7 +35,7 @@ type managedClusterController struct {
 func NewManagedClusterController(calicoCLI calicoclient.Interface, lmaESClient lma.Client, k8sClient kubernetes.Interface,
 	enableAnomalyDetection bool, anomalyTrainingController controller.AnomalyDetectionController,
 	anomalyDetectionController controller.AnomalyDetectionController, indexSettings es.IndexSettings, namespace string,
-	createManagedCalicoCLI func(string) (calicoclient.Interface, error)) controller.Controller {
+	createManagedCalicoCLI func(string) (calicoclient.Interface, error), fipsModeEnabled bool) controller.Controller {
 	m := &managedClusterController{
 		lmaESClient:            lmaESClient,
 		indexSettings:          indexSettings,
@@ -55,6 +55,7 @@ func NewManagedClusterController(calicoCLI calicoclient.Interface, lmaESClient l
 		adDetectionController:           anomalyDetectionController,
 		alertNameToAlertControllerState: map[string]alertControllerState{},
 		enableAnomalyDetection:          enableAnomalyDetection,
+		fipsModeEnabled:                 fipsModeEnabled,
 	})
 
 	m.worker.AddWatch(

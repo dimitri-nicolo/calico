@@ -67,7 +67,7 @@ type service struct {
 }
 
 // NewService builds Elasticsearch query that will be used periodically to query Elasticsearch data.
-func NewService(lmaESClient lma.Client, clusterName string, alert *v3.GlobalAlert) (Service, error) {
+func NewService(lmaESClient lma.Client, clusterName string, alert *v3.GlobalAlert, fipsModeEnabled bool) (Service, error) {
 	e := &service{
 		clusterName: clusterName,
 		lmaESClient: lmaESClient,
@@ -76,7 +76,7 @@ func NewService(lmaESClient lma.Client, clusterName string, alert *v3.GlobalAler
 	// We query the base API for the vulnerability dataset and ES for others.
 	var err error
 	if alert.Spec.DataSet == v3.GlobalAlertDataSetVulnerability {
-		cfg, cfgErr := getImageAssuranceTLSConfig()
+		cfg, cfgErr := getImageAssuranceTLSConfig(fipsModeEnabled)
 		if cfgErr != nil {
 			return nil, cfgErr
 		}
