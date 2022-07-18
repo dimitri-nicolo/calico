@@ -16903,7 +16903,7 @@ rules:
       - networkpolicies
     verbs:
       - '*'
-  # For tiered network policy actions, tigera-apiserver requires authorization on the tier.networkpolicies pseudo-kind.
+  # For tiered network policy actions, tigera-apiserver requires that we authorize the operator for the tier.networkpolicies pseudo-kind.
   - apiGroups:
       - projectcalico.org
     resourceNames:
