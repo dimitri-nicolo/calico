@@ -96,6 +96,8 @@ var runEarlyNetworking = flagSet.Bool("early", false, "Do early networking setup
 // non-root hostpath init flags
 var initHostpaths = flagSet.Bool("hostpath-init", false, "Initialize hostpaths for non-root access")
 
+var fipsModeEnabled = flagSet.Bool("fipsModeEnabled", false, "Enables FIPS 140-2 verified crypto mode")
+
 func main() {
 	// Make sure the RNG is seeded, we use it for backoffs and the like.
 	seedrng.EnsureSeeded()
@@ -131,7 +133,7 @@ func main() {
 
 	// Check for liveness / readiness flags. Will only run checks specified by flags.
 	if *felixLive || *birdReady || *bird6Ready || *felixReady || *birdLive || *bird6Live || *bgpMetricsReady {
-		health.Run(*birdReady, *bird6Ready, *felixReady, *felixLive, *birdLive, *bird6Live, *bgpMetricsReady, *thresholdTime)
+		health.Run(*birdReady, *bird6Ready, *felixReady, *felixLive, *birdLive, *bird6Live, *bgpMetricsReady, *fipsModeEnabled, *thresholdTime)
 		os.Exit(0)
 	}
 
