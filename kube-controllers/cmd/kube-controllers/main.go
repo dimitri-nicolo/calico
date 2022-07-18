@@ -16,7 +16,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"flag"
 	"fmt"
 	"net/http"
@@ -25,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/projectcalico/calico/crypto/tigeratls"
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 
 	"github.com/pkg/profile"
@@ -116,6 +116,9 @@ var (
 	statusFile string
 )
 
+// fipsModeEnabled enables FIPS 140-2 validated crypto mode.
+var fipsModeEnabled bool
+
 func init() {
 	// Make sure the RNG is seeded.
 	seedrng.EnsureSeeded()
@@ -133,6 +136,7 @@ func init() {
 	if err != nil {
 		log.WithError(err).Fatal("Failed to set klog logging configuration")
 	}
+	fipsModeEnabled = os.Getenv("FIPS_MODE_ENABLED") == "true"
 	ValidateEnvVars()
 }
 
@@ -171,7 +175,7 @@ func main() {
 	}
 
 	esURL := fmt.Sprintf("https://%s:%s", cfg.ElasticHost, cfg.ElasticPort)
-	esClientBuilder := elasticsearch.NewClientBuilder(esURL, cfg.ElasticUsername, cfg.ElasticPassword, cfg.ElasticCA)
+	esClientBuilder := elasticsearch.NewClientBuilder(esURL, cfg.ElasticUsername, cfg.ElasticPassword, cfg.ElasticCA, fipsModeEnabled)
 
 	stop := make(chan struct{})
 
@@ -452,13 +456,18 @@ func newEtcdV3Client() (*clientv3.Client, error) {
 		CertFile:      config.Spec.EtcdCertFile,
 		KeyFile:       config.Spec.EtcdKeyFile,
 	}
+
 	tlsClient, err := tlsInfo.ClientConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	// go 1.13 defaults to TLS 1.3, which we don't support just yet
-	tlsClient.MaxVersion = tls.VersionTLS13
+	baseTLSConfig := tigeratls.NewTLSConfig(fipsModeEnabled)
+	tlsClient.MaxVersion = baseTLSConfig.MaxVersion
+	tlsClient.MinVersion = baseTLSConfig.MinVersion
+	tlsClient.CipherSuites = baseTLSConfig.CipherSuites
+	tlsClient.CurvePreferences = baseTLSConfig.CurvePreferences
+	tlsClient.Renegotiation = baseTLSConfig.Renegotiation
 
 	cfg := clientv3.Config{
 		Endpoints:   etcdLocation,

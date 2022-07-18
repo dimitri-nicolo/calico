@@ -6,7 +6,6 @@ package elasticsearch
 
 import (
 	"bytes"
-	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
@@ -14,6 +13,7 @@ import (
 	"net/http"
 
 	es7 "github.com/elastic/go-elasticsearch/v7"
+	"github.com/projectcalico/calico/crypto/tigeratls"
 )
 
 type client struct {
@@ -97,20 +97,23 @@ type ClientBuilder interface {
 	Build() (Client, error)
 }
 
-func NewClientBuilder(url, username, password string, certPath string) ClientBuilder {
+func NewClientBuilder(url, username, password string, certPath string, fipsModeEnabled bool) ClientBuilder {
 	return &clientBuilder{
 		url:      url,
 		username: username,
 		password: password,
 		certPath: certPath,
+		// fipsModeEnabled enables FIPS 140-2 verified crypto mode.
+		fipsModeEnabled: fipsModeEnabled,
 	}
 }
 
 type clientBuilder struct {
-	url      string
-	username string
-	password string
-	certPath string
+	url             string
+	username        string
+	password        string
+	certPath        string
+	fipsModeEnabled bool
 }
 
 func (builder *clientBuilder) Build() (Client, error) {
@@ -125,10 +128,12 @@ func (builder *clientBuilder) Build() (Client, error) {
 		return nil, fmt.Errorf("failed to parse root certificate")
 	}
 
-	return NewClient(builder.url, builder.username, builder.password, certPool)
+	return NewClient(builder.url, builder.username, builder.password, certPool, builder.fipsModeEnabled)
 }
 
-func NewClient(url, username, password string, roots *x509.CertPool) (Client, error) {
+func NewClient(url, username, password string, roots *x509.CertPool, fipsModeEnabled bool) (Client, error) {
+	tlsConfig := tigeratls.NewTLSConfig(fipsModeEnabled)
+	tlsConfig.RootCAs = roots
 	config := es7.Config{
 		Addresses: []string{
 			url,
@@ -136,9 +141,7 @@ func NewClient(url, username, password string, roots *x509.CertPool) (Client, er
 		Username: username,
 		Password: password,
 		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				RootCAs: roots,
-			},
+			TLSClientConfig: tlsConfig,
 		},
 	}
 
