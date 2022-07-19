@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/kelseyhightower/envconfig"
+	"github.com/projectcalico/calico/crypto/tigeratls"
 	log "github.com/sirupsen/logrus"
 
 	"k8s.io/client-go/kubernetes"
@@ -75,7 +76,12 @@ func main() {
 	http.Handle("/files/", middleware.AuthenticationHandler(authn, authz.Authorize(files.Delete)))
 
 	// Start server
-	log.Fatal(http.ListenAndServeTLS(addr, cfg.HTTPSCert, cfg.HTTPSKey, nil))
+	server := &http.Server{
+		Addr:      addr,
+		TLSConfig: tigeratls.NewTLSConfig(cfg.FIPSModeEnabled),
+	}
+
+	log.Fatal(server.ListenAndServeTLS(cfg.HTTPSCert, cfg.HTTPSKey))
 }
 
 func mustGetAuthenticator(cs lmak8s.ClientSetFactory, cfg *config.Config) lmaauth.JWTAuth {
