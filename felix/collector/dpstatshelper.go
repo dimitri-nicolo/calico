@@ -42,6 +42,7 @@ func New(
 			configParams.PrometheusReporterCertFile,
 			configParams.PrometheusReporterKeyFile,
 			configParams.PrometheusReporterCAFile,
+			configParams.PrometheusReporterFIPSModeEnabled,
 		)
 		pr.AddAggregator(NewPolicyRulesAggregator(configParams.DeletedMetricsRetentionSecs, configParams.FelixHostname))
 		pr.AddAggregator(NewDeniedPacketsAggregator(configParams.DeletedMetricsRetentionSecs, configParams.FelixHostname))

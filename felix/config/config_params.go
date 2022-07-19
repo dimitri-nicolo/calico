@@ -243,7 +243,7 @@ type Config struct {
 	TyphaCAFile          string `config:"file(must-exist);;local"`
 	TyphaCN              string `config:"string;;local"`
 	TyphaURISAN          string `config:"string;;local"`
-	TyphaFIPSMODEENABLED string `config:"bool;;local"`
+	TyphaFIPSMODEENABLED bool   `config:"bool;false;local"`
 
 	Ipv6Support    bool `config:"bool;true"`
 	BpfIpv6Support bool `config:"bool;false"`
@@ -352,6 +352,8 @@ type Config struct {
 	PrometheusMetricsCertFile         string `config:"file(must-exist);"`
 	PrometheusMetricsKeyFile          string `config:"file(must-exist);"`
 	PrometheusMetricsCAFile           string `config:"file(must-exist);"`
+	// PrometheusReporterFIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
+	PrometheusMetricsFIPSModeEnabled bool `config:"bool;false"`
 
 	FailsafeInboundHostPorts  []ProtoPort `config:"port-list;tcp:22,udp:68,tcp:179,tcp:2379,tcp:2380,tcp:5473,tcp:6443,tcp:6666,tcp:6667;die-on-fail"`
 	FailsafeOutboundHostPorts []ProtoPort `config:"port-list;udp:53,udp:67,tcp:179,tcp:2379,tcp:2380,tcp:5473,tcp:6443,tcp:6666,tcp:6667;die-on-fail"`
@@ -360,14 +362,16 @@ type Config struct {
 
 	StatsDumpFilePath string `config:"file;/var/log/calico/stats/dump;die-on-fail"`
 
-	PrometheusReporterEnabled   bool          `config:"bool;false"`
-	PrometheusReporterPort      int           `config:"int(0:65535);9092"`
-	PrometheusReporterCertFile  string        `config:"file(must-exist);"`
-	PrometheusReporterKeyFile   string        `config:"file(must-exist);"`
-	PrometheusReporterCAFile    string        `config:"file(must-exist);"`
-	SyslogReporterNetwork       string        `config:"string;"`
-	SyslogReporterAddress       string        `config:"string;"`
-	DeletedMetricsRetentionSecs time.Duration `config:"seconds;30"`
+	PrometheusReporterEnabled  bool   `config:"bool;false"`
+	PrometheusReporterPort     int    `config:"int(0:65535);9092"`
+	PrometheusReporterCertFile string `config:"file(must-exist);"`
+	PrometheusReporterKeyFile  string `config:"file(must-exist);"`
+	PrometheusReporterCAFile   string `config:"file(must-exist);"`
+	// PrometheusReporterFIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
+	PrometheusReporterFIPSModeEnabled bool          `config:"bool;false"`
+	SyslogReporterNetwork             string        `config:"string;"`
+	SyslogReporterAddress             string        `config:"string;"`
+	DeletedMetricsRetentionSecs       time.Duration `config:"seconds;30"`
 
 	FlowLogsEnableHostEndpoint     bool          `config:"bool;false"`
 	FlowLogsFlushInterval          time.Duration `config:"seconds;300"`
