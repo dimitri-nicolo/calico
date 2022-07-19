@@ -20,6 +20,9 @@ type Config struct {
 	// debug settings
 	DebugRunWithRBACDisabled bool   `envconfig:"DEBUG_RBAC_DISABLED" default:"false"`
 	LogLevel                 string `envconfig:"LOG_LEVEL" default:"info"`
+
+	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
+	FIPSModeEnabled bool `envconfig:"FIPS_MODE_ENABLED" default:"false"`
 }
 
 func NewConfigFromEnv() (*Config, error) {
