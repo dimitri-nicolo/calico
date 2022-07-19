@@ -586,6 +586,7 @@ func servePrometheusMetrics(configParams *config.Config) {
 			configParams.PrometheusMetricsCertFile,
 			configParams.PrometheusMetricsKeyFile,
 			configParams.PrometheusMetricsCAFile,
+			configParams.PrometheusMetricsFIPSModeEnabled,
 		)
 		log.WithError(err).Error(
 			"Prometheus metrics endpoint failed, trying to restart it...")
