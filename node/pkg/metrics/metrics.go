@@ -61,12 +61,14 @@ func Run(stop <-chan struct{}) {
 	certFile := os.Getenv("FELIX_PROMETHEUSREPORTERCERTFILE")
 	keyFile := os.Getenv("FELIX_PROMETHEUSREPORTERKEYFILE")
 	caFile := os.Getenv("FELIX_PROMETHEUSREPORTERCAFILE")
+	fipsModeEnabled := os.Getenv("FELIX_PROMETHEUSREPORTERFIPSMODEENABLED") == "true"
 
 	pr := newPrometheusBGPReporter(
 		metricsPort,
 		certFile,
 		keyFile,
 		caFile,
+		fipsModeEnabled,
 	)
 	log.Infof("Created BGP Prometheus metrics reporter with config: %+v\n", pr)
 

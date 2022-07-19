@@ -3,13 +3,12 @@
 package metrics
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/projectcalico/calico/node/pkg/bgp"
-
-	"fmt"
 
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
@@ -73,17 +72,20 @@ type prometheusBGPReporter struct {
 	registry     *prometheus.Registry
 	aggregators  []prometheusMetricAggregator
 	statsGetters []func() (*bgp.Stats, error)
+	// fipsModeEnabled Enables FIPS 140-2 verified crypto mode.
+	fipsModeEnabled bool
 }
 
 // newPrometheusBGPReporter sets up a new Prometheus reporter instance and returns it
-func newPrometheusBGPReporter(port int, certFile, keyFile, caFile string) *prometheusBGPReporter {
+func newPrometheusBGPReporter(port int, certFile, keyFile, caFile string, fipsModeEnabled bool) *prometheusBGPReporter {
 	registry := prometheus.NewRegistry()
 	return &prometheusBGPReporter{
-		port:     port,
-		certFile: certFile,
-		keyFile:  keyFile,
-		caFile:   caFile,
-		registry: registry,
+		port:            port,
+		certFile:        certFile,
+		keyFile:         keyFile,
+		caFile:          caFile,
+		registry:        registry,
+		fipsModeEnabled: fipsModeEnabled,
 	}
 }
 
@@ -126,6 +128,7 @@ func (pr *prometheusBGPReporter) servePrometheusMetrics(stop <-chan struct{}) {
 				pr.certFile,
 				pr.keyFile,
 				pr.caFile,
+				pr.fipsModeEnabled,
 			)
 			log.WithError(err).Error("BGP Prometheus metrics endpoint failed, trying to restart it...")
 			time.Sleep(1 * time.Second)
