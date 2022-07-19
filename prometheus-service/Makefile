@@ -28,6 +28,13 @@ TOOLING_IMAGE_CREATED=.go-build-with-docker.created
 ##############################################################################
 include ../lib.Makefile
 
+# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
+ifeq ($(ARCH), $(filter $(ARCH),amd64))
+CGO_ENABLED=1
+else
+CGO_ENABLED=0
+endif
+
 ###############################################################################
 # Build
 ###############################################################################
@@ -48,7 +55,7 @@ SRC_FILES:= $(shell find prometheus-service -type f -name '*.go') \
 build: bin/prometheus-service-$(ARCH)
 
 bin/prometheus-service-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
 			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" "$(PACKAGE_NAME)/cmd/server"'
 

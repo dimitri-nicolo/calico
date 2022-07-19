@@ -31,6 +31,8 @@ type Config struct {
 	OIDCAuthUsernamePrefix string `split_words:"true"`
 	OIDCAuthGroupsClaim    string `default:"groups" split_words:"true"`
 	OIDCAuthGroupsPrefix   string `split_words:"true"`
+	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
+	FIPSModeEnabled bool `default:"false" split_words:"true"`
 }
 
 func NewConfigFromEnv() (*Config, error) {
