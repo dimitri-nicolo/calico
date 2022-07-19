@@ -1,4 +1,4 @@
-package clusters_test
+package model_storage_test
 
 import (
 	"io/ioutil"
@@ -11,7 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/anomaly-detection-api/pkg/config"
-	"github.com/projectcalico/calico/anomaly-detection-api/pkg/handler/clusters"
+	"github.com/projectcalico/calico/anomaly-detection-api/pkg/handler/clusters/model_storage"
 )
 
 const (
@@ -19,10 +19,10 @@ const (
 	testModelTempDir     = "../../../test-resources"
 )
 
-var _ = Describe("Clusters Endpoint test", func() {
+var _ = Describe("Model Storage Endpoint test", func() {
 
 	var apiConfig *config.Config
-	var modelStorageHandler *clusters.ClustersEndpointHandler
+	var modelStorageHandler *model_storage.ModelStorageHandler
 
 	BeforeEach(func() {
 		var err error
@@ -30,7 +30,7 @@ var _ = Describe("Clusters Endpoint test", func() {
 		apiConfig.StoragePath = testModelTempDir
 		Expect(err).NotTo(HaveOccurred())
 
-		modelStorageHandler = clusters.NewClustersEndpointHandler(apiConfig)
+		modelStorageHandler = model_storage.NewModelStorageHandler(apiConfig)
 	})
 
 	AfterEach(func() {
@@ -42,44 +42,40 @@ var _ = Describe("Clusters Endpoint test", func() {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("POST", "/clusters/cluster/models/dynamic/flow/port_scan", strings.NewReader(testBase64FileString))
 		req.Header.Add("Content-Type", "text/plain")
-		handler := modelStorageHandler.RouteClustersEndpoint()
 
-		handler.ServeHTTP(w, req)
+		modelStorageHandler.HandleModelStorage(w, req)
 
 		Expect(w.Result().StatusCode).To(Equal(200))
 		_, err := os.Stat(apiConfig.StoragePath + "/clusters/cluster/models/dynamic/flow/port_scan.model")
 		Expect(err).NotTo(HaveOccurred())
 	})
 
+	It("returns 4XX upon failing validation POST /models", func() {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/clusters/cluster/models/dynamic/flow/port_scan", strings.NewReader(testBase64FileString))
+		req.Header.Add("Content-Type", "text/plain")
+		// fails the content length validation check
+		req.ContentLength = 15730001
+		modelStorageHandler.HandleModelStorage(w, req)
+
+		Expect(w.Result().StatusCode).To(BeNumerically(">=", 400))
+	})
+
 	It("returns 405 for PUT method since it is not accepted right now for PUT /models ", func() {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("PUT", "/clusters/cluster/models/dynamic/flow/port_scan", strings.NewReader(testBase64FileString))
 		req.Header.Add("Content-Type", "text/plain")
-		handler := modelStorageHandler.RouteClustersEndpoint()
-
-		handler.ServeHTTP(w, req)
+		modelStorageHandler.HandleModelStorage(w, req)
 
 		Expect(w.Result().StatusCode).To(Equal(405))
-	})
-
-	It("returns 404 for path that is not handled by a registered endpoint ", func() {
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("PUT", "/clusters/cluster/another-path", strings.NewReader(testBase64FileString))
-		req.Header.Add("Content-Type", "text/plain")
-		handler := modelStorageHandler.RouteClustersEndpoint()
-
-		handler.ServeHTTP(w, req)
-
-		Expect(w.Result().StatusCode).To(Equal(404))
 	})
 
 	It("file content can be fetched for a successful GET /models", func() {
 		postWriter := httptest.NewRecorder()
 		req, _ := http.NewRequest("POST", "/clusters/cluster/models/dynamic/flow/port_scan", strings.NewReader(testBase64FileString))
 		req.Header.Add("Content-Type", "text/plain")
-		handler := modelStorageHandler.RouteClustersEndpoint()
 
-		handler.ServeHTTP(postWriter, req)
+		modelStorageHandler.HandleModelStorage(postWriter, req)
 
 		Expect(postWriter.Result().StatusCode).To(Equal(200))
 		_, err := os.Stat(apiConfig.StoragePath + "/clusters/cluster/models/dynamic/flow/port_scan.model")
@@ -87,7 +83,8 @@ var _ = Describe("Clusters Endpoint test", func() {
 
 		getWriter := httptest.NewRecorder()
 		getReq, _ := http.NewRequest("GET", "/clusters/cluster/models/dynamic/flow/port_scan", nil)
-		handler.ServeHTTP(getWriter, getReq)
+
+		modelStorageHandler.HandleModelStorage(getWriter, getReq)
 
 		Expect(getWriter.Result().StatusCode).To(Equal(200))
 		bodyBytes, err := ioutil.ReadAll(getWriter.Body)
@@ -99,9 +96,8 @@ var _ = Describe("Clusters Endpoint test", func() {
 		postWriter := httptest.NewRecorder()
 		req, _ := http.NewRequest("POST", "/clusters/cluster/models/dynamic/flow/port_scan", strings.NewReader(testBase64FileString))
 		req.Header.Add("Content-Type", "text/plain")
-		handler := modelStorageHandler.RouteClustersEndpoint()
 
-		handler.ServeHTTP(postWriter, req)
+		modelStorageHandler.HandleModelStorage(postWriter, req)
 
 		Expect(postWriter.Result().StatusCode).To(Equal(200))
 		_, err := os.Stat(apiConfig.StoragePath + "/clusters/cluster/models/dynamic/flow/port_scan.model")
@@ -109,7 +105,8 @@ var _ = Describe("Clusters Endpoint test", func() {
 
 		getWriter := httptest.NewRecorder()
 		getReq, _ := http.NewRequest("HEAD", "/clusters/cluster/models/dynamic/flow/port_scan", nil)
-		handler.ServeHTTP(getWriter, getReq)
+
+		modelStorageHandler.HandleModelStorage(getWriter, getReq)
 
 		Expect(getWriter.Result().StatusCode).To(Equal(200))
 		Expect(getWriter.Result().ContentLength).To(Equal(int64(12)))

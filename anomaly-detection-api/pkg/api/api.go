@@ -34,11 +34,11 @@ func Start(config *config.Config) {
 
 	log.SetLevel(logLevel)
 
-	modelStorageHandler := clusters.NewClustersEndpointHandler(config)
+	clustersEndpoint := clusters.NewClustersEndpointHandler(config)
 	sm := http.NewServeMux()
 
-	sm.Handle("/health", health.HealthCheck())
-	sm.Handle("/clusters/", modelStorageHandler.HandleClusters())
+	sm.Handle(health.HealthPath, health.HealthCheck())
+	sm.Handle(clusters.ClustersTopPath, clustersEndpoint.RouteClustersEndpoint())
 
 	var apiHandler http.Handler
 	if config.DebugRunWithRBACDisabled {
@@ -51,8 +51,7 @@ func Start(config *config.Config) {
 			log.Fatal("unable to create authenticator")
 		}
 
-		rbacAttributes := auth.GetRBACResoureAttribute(config)
-		apiHandler = auth.Auth(sm, jwtAuth, rbacAttributes)
+		apiHandler = auth.Auth(sm, jwtAuth, config.HostedNamespace)
 	}
 
 	handler := logging.LogRequestHeaders(apiHandler)

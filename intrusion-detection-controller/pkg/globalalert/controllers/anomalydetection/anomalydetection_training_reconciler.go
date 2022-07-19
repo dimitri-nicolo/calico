@@ -319,7 +319,7 @@ func (r *adJobTrainingReconciler) createTrainingCronJobForCluster(clusterName st
 	trainingCronLabels["cluster"] = clusterName
 
 	trainingCronJob := podtemplate.CreateCronJobFromPodTemplate(cronJobName, r.namespace,
-		defaultCronJobTrainingSchedule, trainingCronLabels, adTrainingJobPT)
+		DefaultADDetectorTrainingSchedule, trainingCronLabels, adTrainingJobPT)
 
 	// attach this IDS controller as owner
 	intrusionDetectionDeployment, err := r.k8sClient.AppsV1().Deployments(r.namespace).Get(r.managementClusterCtx, ADJobOwnerLabelValue,

@@ -6,6 +6,10 @@ import (
 	"net/http"
 )
 
+const (
+	HealthPath = "/health"
+)
+
 // HealthCheck is a handler that serves the /health endpoint for liveness and readiness checks
 func HealthCheck() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {

@@ -17,7 +17,6 @@ var _ = Describe("Config test", func() {
 
 		Expect(err).To(BeNil())
 		Expect(config.ListenAddr).To(Equal(":8080"))
-		Expect(config.ServiceEndpoint).To(Equal("http://localhost:8080"))
 		Expect(config.HostedNamespace).To(Equal("tigera-intrusion-detection"))
 		Expect(config.StoragePath).To(Equal("/store"))
 
@@ -51,7 +50,6 @@ var _ = Describe("Config test", func() {
 
 		Expect(err).To(BeNil())
 		Expect(config.ListenAddr).To(Equal(":8081"))
-		Expect(config.ServiceEndpoint).To(Equal("http://anomaly-detection-api.tigera-intrusion-detection.svc.cluster.local:8080"))
 		Expect(config.StoragePath).To(Equal("/storage"))
 		Expect(config.HostedNamespace).To(Equal("another-hosted-namespace"))
 		Expect(config.TLSCert).To(Equal("/other-tls-folder/tls.crt"))

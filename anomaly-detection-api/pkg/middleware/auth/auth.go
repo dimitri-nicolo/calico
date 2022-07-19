@@ -6,56 +6,41 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	authzv1 "k8s.io/api/authorization/v1"
-
 	"github.com/projectcalico/calico/anomaly-detection-api/pkg/api_error"
-	"github.com/projectcalico/calico/anomaly-detection-api/pkg/config"
+	"github.com/projectcalico/calico/anomaly-detection-api/pkg/handler/health"
 
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 )
 
-// GetRBACResoureAttribute returns the RBAC Attributes for the Anomaly Detection API generated
-// from the API Config
-func GetRBACResoureAttribute(config *config.Config) map[string][]*authzv1.ResourceAttributes {
-	return map[string][]*authzv1.ResourceAttributes{
-		http.MethodHead: {
-			{
-				Namespace: config.HostedNamespace,
-				Group:     "detectors.tigera.io",
-				Resource:  "models",
-				Verb:      "get",
-			},
-		},
-		http.MethodGet: {
-			{
-				Namespace: config.HostedNamespace,
-				Group:     "detectors.tigera.io",
-				Resource:  "models",
-				Verb:      "get",
-			},
-		},
-		http.MethodPost: {
-			{
-				Namespace: config.HostedNamespace,
-				Group:     "detectors.tigera.io",
-				Resource:  "models",
-				Verb:      "create",
-			},
-			{
-				Namespace: config.HostedNamespace,
-				Group:     "detectors.tigera.io",
-				Resource:  "models",
-				Verb:      "update",
-			},
-		},
+const (
+	adDetectorsResourceGroup = "detectors.tigera.io"
+	adModelsResourceName     = "models"
+	adMetadataResourceName   = "metadata"
+)
+
+var (
+	publicSystemsEndpoint = map[string]bool{
+		health.HealthPath: true,
 	}
+)
+
+type RequestAccess struct {
+	Path   string
+	Method string
 }
 
 // Auth acts as a middleware for verifying the Authorization: bearer <jwt-auth-token>
 // against the roles set for accessing the AD API
 // fails with http error 401 if not authenticated, 403 if not authorized
-func Auth(h http.Handler, authenticator lmaauth.JWTAuth, rbacAttributes map[string][]*authzv1.ResourceAttributes) http.Handler {
+func Auth(h http.Handler, authenticator lmaauth.JWTAuth, namespace string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		path := req.URL.Path
+		if _, ok := publicSystemsEndpoint[path]; ok {
+			// pass - skip authentication for public system info endpoints
+			log.Infof("Accessing public endpoint %s", path)
+			h.ServeHTTP(w, req)
+			return
+		}
 
 		// authenticate
 		usr, stat, err := authenticator.Authenticate(req)
@@ -65,10 +50,13 @@ func Auth(h http.Handler, authenticator lmaauth.JWTAuth, rbacAttributes map[stri
 			return
 		}
 
-		resources, found := rbacAttributes[req.Method]
+		resources, apiError := GetRBACResoureAttribute(namespace, req)
+		if apiError != nil {
+			api_error.WriteAPIErrorToHeader(w, apiError)
+		}
 
 		// preemptive exit with 405 to disregard continuing
-		if !found {
+		if len(resources) == 0 {
 			api_error.WriteStatusErrorToHeader(w, http.StatusMethodNotAllowed)
 			return
 		}

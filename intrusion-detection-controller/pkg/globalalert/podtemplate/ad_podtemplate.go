@@ -3,7 +3,6 @@ package podtemplate
 import (
 	"fmt"
 	"strconv"
-	"time"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/api/core/v1"
@@ -15,9 +14,6 @@ const (
 
 	ADJobTrainCycleArg  = "train"
 	ADJobDetectCycleArg = "detect"
-
-	DefaultADDetectorTrainingPeriod = 24 * time.Hour
-	DefaultCronJobDetectionSchedule = 15 * time.Minute
 
 	DefaultDetectionAlertSeverity = 100
 )
@@ -55,19 +51,11 @@ func DecoratePodTemplateForTrainingCycle(adJobPT *v1.PodTemplate, clusterName, d
 		adContainer.Env = append(
 			adContainer.Env,
 			v1.EnvVar{
-				Name:  "AD_ENABLED_JOBS",
+				Name:  "AD_ENABLED_DETECTORS",
 				Value: detectors,
 			},
 		)
 	}
-
-	adContainer.Env = append(
-		adContainer.Env,
-		v1.EnvVar{
-			Name:  "AD_train_default_query_time_duration",
-			Value: DefaultADDetectorTrainingPeriod.String(),
-		},
-	)
 
 	return nil
 }
@@ -93,15 +81,10 @@ func DecoratePodTemplateForDetectionCycle(adJobPT *v1.PodTemplate, clusterName s
 		adContainer.Env = append(
 			adContainer.Env,
 			v1.EnvVar{
-				Name:  "AD_ENABLED_JOBS",
+				Name:  "AD_ENABLED_DETECTORS",
 				Value: globalAlert.Spec.Detector.Name,
 			},
 		)
-	}
-
-	detectionSchedule := DefaultCronJobDetectionSchedule
-	if globalAlert.Spec.Period != nil {
-		detectionSchedule = globalAlert.Spec.Period.Duration
 	}
 
 	detectionSeverity := DefaultDetectionAlertSeverity
@@ -112,14 +95,9 @@ func DecoratePodTemplateForDetectionCycle(adJobPT *v1.PodTemplate, clusterName s
 	adContainer.Env = append(
 		adContainer.Env,
 		v1.EnvVar{
-			Name:  "AD_detect_default_query_time_duration",
-			Value: detectionSchedule.String(),
-		},
-		v1.EnvVar{
 			Name:  "AD_ALERT_SEVERITY",
 			Value: strconv.Itoa(detectionSeverity),
 		},
-
 		// set in detection cycle to indicate anomaly detection job image to train a model
 		// in a detection cycle if one does not already exist for the detectors in AD_ENABLED_JOBS
 		v1.EnvVar{
@@ -143,10 +121,6 @@ func decorateBaseADPodTemplate(clusterName string, adContainer *v1.Container) er
 		v1.EnvVar{
 			Name:  "CLUSTER_NAME",
 			Value: clusterName,
-		},
-		v1.EnvVar{
-			Name:  "AD_USE_INTERNAL_SCHEDULER",
-			Value: "False",
 		},
 	)
 

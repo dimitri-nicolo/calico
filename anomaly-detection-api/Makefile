@@ -55,14 +55,13 @@ image-all: $(addprefix sub-image-,$(ARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-.PHONY: image $(BUILD_IMAGES)
+.PHONY: clean image
 image: $(BUILD_IMAGES)
 $(ANOMALY_DETECTION_API_IMAGE): $(ANOMALY_DETECTION_API_IMAGE)-$(ARCH)
 $(ANOMALY_DETECTION_API_IMAGE)-$(ARCH): $(BINDIR)/anomaly-detection-api-$(ARCH)
-	docker build --pull -t $(ANOMALY_DETECTION_API_IMAGE):latest-$(ARCH) -f ./Dockerfile.$(ARCH) .
-ifeq ($(ARCH),amd64)
-	docker tag $(ANOMALY_DETECTION_API_IMAGE):latest-$(ARCH) $(ANOMALY_DETECTION_API_IMAGE):latest
-endif
+	$(DOCKER_BUILD) -t $(ANOMALY_DETECTION_API_IMAGE):latest-$(ARCH) -f ./Dockerfile.$(ARCH) .
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
+	touch $@
 
 ##########################################################################
 # Testing
@@ -108,7 +107,7 @@ run-ad-image-fv: gen-crt-key
 		-e STORAGE_PATH="./fv/temp" \
 		-e LOG_LEVEL=debug \
 		--name ${AD_API_FV_TEST_CONTAINER_NAME} \
-		${ANOMALY_DETECTION_API_IMAGE}
+		${ANOMALY_DETECTION_API_IMAGE}:latest-$(ARCH)
 
 ###############################################################################
 # Static checks

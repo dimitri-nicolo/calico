@@ -80,18 +80,9 @@ var _ = Describe("AD PodTemplate", func() {
 					ValueFrom: nil,
 				},
 				v1.EnvVar{
-					Name:      "AD_ENABLED_JOBS",
+					Name:      "AD_ENABLED_DETECTORS",
 					Value:     detectors,
 					ValueFrom: nil,
-				},
-				v1.EnvVar{
-					Name:      "AD_train_default_query_time_duration",
-					Value:     DefaultADDetectorTrainingPeriod.String(),
-					ValueFrom: nil,
-				},
-				v1.EnvVar{
-					Name:  "AD_USE_INTERNAL_SCHEDULER",
-					Value: "False",
 				},
 			))
 			Expect(adContainer.Command).To(Equal(ADJobStartupCommand()))
@@ -129,13 +120,8 @@ var _ = Describe("AD PodTemplate", func() {
 					ValueFrom: nil,
 				},
 				v1.EnvVar{
-					Name:      "AD_ENABLED_JOBS",
+					Name:      "AD_ENABLED_DETECTORS",
 					Value:     testGlobalAlert.Spec.Detector.Name,
-					ValueFrom: nil,
-				},
-				v1.EnvVar{
-					Name:      "AD_detect_default_query_time_duration",
-					Value:     testGlobalAlert.Spec.Period.Duration.String(),
 					ValueFrom: nil,
 				},
 				v1.EnvVar{
@@ -146,10 +132,6 @@ var _ = Describe("AD PodTemplate", func() {
 				v1.EnvVar{
 					Name:  "AD_DETECTION_VERIFY_MODEL_EXISTENCE",
 					Value: "True",
-				},
-				v1.EnvVar{
-					Name:  "AD_USE_INTERNAL_SCHEDULER",
-					Value: "False",
 				},
 			))
 			Expect(adContainer.Command).To(Equal(ADJobStartupCommand()))
@@ -172,13 +154,8 @@ var _ = Describe("AD PodTemplate", func() {
 					ValueFrom: nil,
 				},
 				v1.EnvVar{
-					Name:      "AD_ENABLED_JOBS",
+					Name:      "AD_ENABLED_DETECTORS",
 					Value:     adTestGlobalAlert.Spec.Detector.Name,
-					ValueFrom: nil,
-				},
-				v1.EnvVar{
-					Name:      "AD_detect_default_query_time_duration",
-					Value:     DefaultCronJobDetectionSchedule.String(),
 					ValueFrom: nil,
 				},
 				v1.EnvVar{
@@ -189,10 +166,6 @@ var _ = Describe("AD PodTemplate", func() {
 				v1.EnvVar{
 					Name:  "AD_DETECTION_VERIFY_MODEL_EXISTENCE",
 					Value: "True",
-				},
-				v1.EnvVar{
-					Name:  "AD_USE_INTERNAL_SCHEDULER",
-					Value: "False",
 				},
 			))
 			Expect(adContainer.Command).To(Equal(ADJobStartupCommand()))

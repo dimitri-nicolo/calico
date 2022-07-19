@@ -2,8 +2,6 @@
 package config
 
 import (
-	"net/url"
-
 	"github.com/kelseyhightower/envconfig"
 )
 
@@ -11,8 +9,8 @@ type Config struct {
 	// this service will be hosted on this addresss
 	ListenAddr string `envconfig:"LISTEN_ADDR" default:":8080"`
 
-	ServiceEndpoint string `envconfig:"ENDPOINT_URL" default:"http://localhost:8080"`
-	ServiceURL      *url.URL
+	// ServiceEndpoint string `envconfig:"ENDPOINT_URL" default:"http://localhost:8080"`
+	// ServiceURL      *url.URL
 	HostedNamespace string `envconfig:"NAMESPACE" default:"tigera-intrusion-detection"`
 	StoragePath     string `envconfig:"STORAGE_PATH" default:"/store"`
 
@@ -29,13 +27,6 @@ func NewConfigFromEnv() (*Config, error) {
 
 	// Load config from environments.
 	err := envconfig.Process("", config)
-	if err != nil {
-		return nil, err
-	}
-
-	// loads the url to host the API on from ServiceEndpoint
-	config.ServiceURL, err = url.Parse(config.ServiceEndpoint)
-
 	if err != nil {
 		return nil, err
 	}

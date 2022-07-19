@@ -6,9 +6,9 @@ import (
 	"github.com/projectcalico/calico/anomaly-detection-api/pkg/api_error"
 )
 
-// ModelStorageHandler serves storage and retrieval for models content
+// ModelStorage serves storage and retrieval for models content
 // in the associated storage method
-type ModelStorageHandler interface {
+type ModelStorage interface {
 	// Save handles the content in the request to save it
 	// with the associated storage method
 	Save(r *http.Request) error
@@ -20,4 +20,13 @@ type ModelStorageHandler interface {
 	// Stat handles the retrieval of file information of the specified model
 	// in the request. Currently returns file size in bytes as int64
 	Stat(r *http.Request) (int64, *api_error.APIError)
+}
+
+// ObjectCache provides an interface for creating a simple cache
+type ObjectCache interface {
+	// Set sets the key to the provided value
+	Set(key string, value interface{}) interface{}
+
+	// Get gets the value associated with the given key.
+	Get(key string) interface{}
 }

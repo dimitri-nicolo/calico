@@ -20,10 +20,8 @@ import (
 )
 
 const (
-	ADTrainingJobTemplateName       = "tigera.io.detectors.training"
-	DefaultADDetectorTrainingPeriod = 24 * time.Hour
-
-	defaultCronJobTrainingSchedule time.Duration = 24 * time.Hour
+	ADTrainingJobTemplateName         = "tigera.io.detectors.training"
+	DefaultADDetectorTrainingSchedule = 1 * time.Hour
 
 	trainingCronJobSuffix = "training"
 

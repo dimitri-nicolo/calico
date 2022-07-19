@@ -2,94 +2,47 @@
 package clusters
 
 import (
-	"io"
+	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/projectcalico/calico/anomaly-detection-api/pkg/api_error"
 	"github.com/projectcalico/calico/anomaly-detection-api/pkg/config"
-	"github.com/projectcalico/calico/anomaly-detection-api/pkg/storage"
-	"github.com/projectcalico/calico/anomaly-detection-api/pkg/validation"
-)
-
-const (
-	ModelFileDataKey       = "model"
-	AcceptHeaderKey        = "Accept"
-	ContentLengthHeaderKey = "Content-Length"
-
-	StringMIME = "text/plain"
+	"github.com/projectcalico/calico/anomaly-detection-api/pkg/handler/clusters/log_type"
+	"github.com/projectcalico/calico/anomaly-detection-api/pkg/handler/clusters/model_storage"
 )
 
 // ClustersEndpointHandler Service for handling the /clusters endpoint
 type ClustersEndpointHandler struct {
-	storageHandler storage.ModelStorageHandler
+	modelStorageHandler    *model_storage.ModelStorageHandler
+	logTypeMetadataHandler *log_type.LogTypeEndpointHandler
 }
 
 func NewClustersEndpointHandler(config *config.Config) *ClustersEndpointHandler {
 	return &ClustersEndpointHandler{
-		storageHandler: &storage.FileModelStorageHandler{
-			FileStoragePath: config.StoragePath,
-		},
+		modelStorageHandler:    model_storage.NewModelStorageHandler(config),
+		logTypeMetadataHandler: log_type.NewLogTypeHandler(),
 	}
 }
 
-// HandleClusters serves the /clusters endpoint with validation. It supports
-// GET /models for model file retrieval
-// POST /models for model file storage
-// throws a 405 - NotSupported error if received any other method
-func (c *ClustersEndpointHandler) HandleClusters() http.HandlerFunc {
+// RouteClustersEndpoint routes the request to the other sub path handlers.  It defaults to a 404 error
+// if the request's URL does not match any registered path
+func (c *ClustersEndpointHandler) RouteClustersEndpoint() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		err := validation.ValidateClustersEndpointRequest(req)
-		if err != nil {
-			api_error.WriteAPIErrorToHeader(w, err)
-			return
-		}
 
-		switch req.Method {
-		case http.MethodHead:
-			size, apiErr := c.storageHandler.Stat(req)
-			if apiErr != nil {
-				api_error.WriteAPIErrorToHeader(w, apiErr)
-				return
-			}
+		path := req.URL.Path
 
-			w.Header().Set(AcceptHeaderKey, StringMIME)
-			// 10 - for decimal value
-			w.Header().Set(ContentLengthHeaderKey, strconv.FormatInt(size, 10))
-			w.WriteHeader(http.StatusOK)
-		case http.MethodGet:
-			size, fileBytes, apiErr := c.storageHandler.Load(req)
-			if apiErr != nil {
-				api_error.WriteAPIErrorToHeader(w, apiErr)
-				return
-			}
+		switch {
+		// /clusters/{cluster_name}/{log_type}/metadata
+		case LogTypeMetadataEndpointRegex.MatchString(path):
+			c.logTypeMetadataHandler.HandleLogTypeMetaData(w, req)
 
-			_, err := io.WriteString(w, fileBytes)
-			if err != nil {
-				apiErr := &api_error.APIError{
-					StatusCode: http.StatusInternalServerError,
-					Err:        err,
-				}
-				api_error.WriteAPIErrorToHeader(w, apiErr)
-				return
-			}
-
-			w.Header().Set(AcceptHeaderKey, StringMIME)
-			// 10 - for decimal value
-			w.Header().Set(ContentLengthHeaderKey, strconv.FormatInt(size, 10))
-			w.WriteHeader(http.StatusOK)
-		case http.MethodPost:
-			err := c.storageHandler.Save(req)
-			if err != nil {
-				apiErr := &api_error.APIError{
-					StatusCode: http.StatusInternalServerError,
-					Err:        err,
-				}
-				api_error.WriteAPIErrorToHeader(w, apiErr)
-			}
-		default:
+		// /clusters/{cluster_name}/models/(dynamic|static)/{detector_category}/{detector_class}.models
+		case ModelStorageEndpointRegex.MatchString(path):
+			c.modelStorageHandler.HandleModelStorage(w, req)
+		default: // default to 404
+			err := fmt.Errorf("request has not matched any registered path")
 			apiErr := &api_error.APIError{
-				StatusCode: http.StatusMethodNotAllowed,
+				StatusCode: http.StatusNotFound,
 				Err:        err,
 			}
 			api_error.WriteAPIErrorToHeader(w, apiErr)

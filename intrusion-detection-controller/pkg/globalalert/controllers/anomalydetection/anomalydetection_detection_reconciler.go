@@ -31,7 +31,7 @@ import (
 
 const (
 	ADDetectionJobTemplateName      = "tigera.io.detectors.detection"
-	DefaultCronJobDetectionSchedule = 15 * time.Minute
+	DefaultCronJobDetectionSchedule = 20 * time.Minute
 	maxCronJobNameLen               = 52
 	numHashChars                    = 5
 	acceptableRFCGlobalAlertName    = maxCronJobNameLen - len(detectionCronJobSuffix) - numHashChars - 2

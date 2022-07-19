@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/calico/anomaly-detection-api/pkg/config"
+	"github.com/projectcalico/calico/anomaly-detection-api/pkg/handler/health"
 	"github.com/projectcalico/calico/anomaly-detection-api/pkg/middleware/auth"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/auth/testing"
@@ -26,36 +26,34 @@ const (
 	iss = "https://example.com/my-issuer"
 
 	mockADServiceAccountName = "ad-service-account"
+	testEndpoint             = "/clusters/cluster_name/models/dynamic/flow/port_scan.models"
 )
 
 var _ = Describe("AD API Auth test", func() {
 
 	var (
-		jwtAuth            lmaauth.JWTAuth
-		mAuth              *mockAuth
-		fakeK8sCli         *fake.Clientset
-		testRbacAttributes map[string][]*authzv1.ResourceAttributes
-		jwt                = testing.NewFakeJWT(iss, mockADServiceAccountName)
-		userInfo           = &user.DefaultInfo{
+		jwtAuth    lmaauth.JWTAuth
+		mAuth      *mockAuth
+		fakeK8sCli *fake.Clientset
+		jwt        = testing.NewFakeJWT(iss, mockADServiceAccountName)
+		userInfo   = &user.DefaultInfo{
 			Name: "default",
 		}
+
+		testNamespace = "test-namespace"
 	)
 
 	BeforeEach(func() {
 		mAuth = &mockAuth{}
 		fakeK8sCli = new(fake.Clientset)
 
-		testConfig, err := config.NewConfigFromEnv()
-		Expect(err).NotTo(HaveOccurred())
-		testRbacAttributes = auth.GetRBACResoureAttribute(testConfig)
-
+		var err error
 		jwtAuth, err = lmaauth.NewJWTAuth(&rest.Config{BearerToken: jwt.ToString()}, fakeK8sCli, lmaauth.WithAuthenticator(iss, mAuth))
 		Expect(err).NotTo(HaveOccurred())
-
 	})
 
 	It("passes the request to the next handler if a valid token is provided", func() {
-		req, _ := http.NewRequest("GET", "/test-endpoint", nil)
+		req, _ := http.NewRequest("GET", testEndpoint, nil)
 		req.Header.Set("Authorization", jwt.BearerTokenHeader())
 
 		mAuth.On("Authenticate", req).Return(userInfo, 200, nil)
@@ -66,14 +64,32 @@ var _ = Describe("AD API Auth test", func() {
 			requestReceived = r
 		})
 
-		authMiddleware := auth.Auth(spyHandler, jwtAuth, testRbacAttributes)
+		authMiddleware := auth.Auth(spyHandler, jwtAuth, testNamespace)
 		w := httptest.NewRecorder()
 		authMiddleware.ServeHTTP(w, req)
 
 		// request is passed to next handler
 		Expect(requestReceived).ToNot(BeNil())
 		Expect(requestReceived.Method).To(Equal("GET"))
-		Expect(requestReceived.URL.Path).To(Equal("/test-endpoint"))
+		Expect(requestReceived.URL.Path).To(Equal(testEndpoint))
+	})
+
+	It("allows unauthenticated requests for public endpoint - health", func() {
+		var requestReceived *http.Request
+		spyHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requestReceived = r
+		})
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", health.HealthPath, nil)
+		authMiddleware := auth.Auth(spyHandler, jwtAuth, testNamespace)
+
+		authMiddleware.ServeHTTP(w, req)
+
+		Expect(w.Code).To(Equal(200))
+		Expect(requestReceived).ToNot(BeNil())
+		Expect(requestReceived.Method).To(Equal("GET"))
+		Expect(requestReceived.URL.Path).To(Equal(health.HealthPath))
 	})
 
 	It("blocks unauthenticated requests", func() {
@@ -83,18 +99,17 @@ var _ = Describe("AD API Auth test", func() {
 		})
 
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/test-endpoint", nil)
-		authMiddleware := auth.Auth(spyHandler, jwtAuth, testRbacAttributes)
+		req, _ := http.NewRequest("GET", testEndpoint, nil)
+		authMiddleware := auth.Auth(spyHandler, jwtAuth, testNamespace)
 
 		authMiddleware.ServeHTTP(w, req)
 
 		Expect(w.Code).To(Equal(401))
 		Expect(requestReceived).To(BeNil())
-
 	})
 
 	It("blocks unauthorized requests", func() {
-		req, _ := http.NewRequest("GET", "/test-endpoint", nil)
+		req, _ := http.NewRequest("GET", testEndpoint, nil)
 		req.Header.Set("Authorization", jwt.BearerTokenHeader())
 
 		mAuth.On("Authenticate", req).Return(userInfo, 200, nil)
@@ -105,7 +120,7 @@ var _ = Describe("AD API Auth test", func() {
 			requestReceived = r
 		})
 
-		authMiddleware := auth.Auth(spyHandler, jwtAuth, testRbacAttributes)
+		authMiddleware := auth.Auth(spyHandler, jwtAuth, testNamespace)
 		w := httptest.NewRecorder()
 		authMiddleware.ServeHTTP(w, req)
 
