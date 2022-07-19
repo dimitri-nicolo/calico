@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/projectcalico/calico/crypto/tigeratls"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -19,7 +20,7 @@ import (
 // client with a certificate signed by a trusted CA, and (b) data is
 // sent to that client encrypted, and cannot be snooped.  Otherwise it
 // is insecure (HTTP).
-func ServePrometheusMetrics(gatherer prometheus.Gatherer, host string, port int, certFile, keyFile, caFile string) (err error) {
+func ServePrometheusMetrics(gatherer prometheus.Gatherer, host string, port int, certFile, keyFile, caFile string, fipsModeEnabled bool) (err error) {
 	mux := http.NewServeMux()
 	handler := promhttp.HandlerFor(gatherer, promhttp.HandlerOpts{})
 	mux.Handle("/metrics", handler)
@@ -31,14 +32,13 @@ func ServePrometheusMetrics(gatherer prometheus.Gatherer, host string, port int,
 		}
 		caCertPool := x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM(caCert)
-		cfg := &tls.Config{
-			ClientAuth: tls.RequireAndVerifyClientCert,
-			ClientCAs:  caCertPool,
-		}
+		tlsConfig := tigeratls.NewTLSConfig(fipsModeEnabled)
+		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
+		tlsConfig.ClientCAs = caCertPool
 		srv := &http.Server{
 			Addr:      fmt.Sprintf("[%v]:%v", host, port),
 			Handler:   handler,
-			TLSConfig: cfg,
+			TLSConfig: tlsConfig,
 		}
 		err = srv.ListenAndServeTLS(certFile, keyFile)
 	} else {
