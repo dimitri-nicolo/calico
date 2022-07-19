@@ -4,7 +4,6 @@ package elastic
 
 import (
 	"context"
-	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"errors"
@@ -17,6 +16,7 @@ import (
 	"time"
 
 	"github.com/olivere/elastic/v7"
+	"github.com/projectcalico/calico/crypto/tigeratls"
 	log "github.com/sirupsen/logrus"
 
 	api "github.com/projectcalico/calico/lma/pkg/api"
@@ -118,7 +118,9 @@ func NewFromConfig(cfg *Config) (Client, error) {
 			}
 		}
 
-		h.Transport = &http.Transport{TLSClientConfig: &tls.Config{RootCAs: ca}}
+		tlsConfig := tigeratls.NewTLSConfig(cfg.FIPSModeEnabled)
+		tlsConfig.RootCAs = ca
+		h.Transport = &http.Transport{TLSClientConfig: tlsConfig}
 	}
 
 	indexSuffix := cfg.ElasticIndexSuffix
