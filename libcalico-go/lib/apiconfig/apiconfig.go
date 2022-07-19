@@ -62,6 +62,8 @@ type EtcdConfig struct {
 	EtcdKey    string `json:"etcdKey" ignored:"true"`
 	EtcdCert   string `json:"etcdCert" ignored:"true"`
 	EtcdCACert string `json:"etcdCACert" ignored:"true"`
+
+	EtcdFIPSModeEnabled bool `json:"etcdFIPSModeEnabled" envconfig:"ETCD_FIPS_MODE_ENABLED"`
 }
 
 type KubeConfig struct {
