@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -40,6 +39,8 @@ import (
 	lclient "github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/monitor"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -135,8 +136,8 @@ const (
 // main config parameters by exiting and allowing itself to be restarted by the init
 // daemon.
 func Run(configFile string, gitVersion string, buildDate string, gitRevision string) {
-	// Go's RNG is not seeded by default.  Do that now.
-	rand.Seed(time.Now().UTC().UnixNano())
+	// Go's RNG is not seeded by default.  Make sure that's done.
+	seedrng.EnsureSeeded()
 
 	// Special-case handling for environment variable-configured logging:
 	// Initialise early so we can trace out config parsing.

@@ -25,6 +25,7 @@ import (
 	"github.com/projectcalico/calico/app-policy/syncher"
 	"github.com/projectcalico/calico/app-policy/uds"
 	"github.com/projectcalico/calico/app-policy/waf"
+	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
 )
 
 const usage = `Dikastes - the decider.
@@ -50,6 +51,9 @@ const (
 
 func main() {
 	log.Info("Dikastes launching with ALP, WAF etc. logger.")
+	// Make sure the RNG is seeded.
+	seedrng.EnsureSeeded()
+
 	arguments, err := docopt.ParseArgs(usage, nil, VERSION)
 	if err != nil {
 		println(usage)

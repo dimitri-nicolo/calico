@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"io/ioutil"
-	"math/rand"
 	"time"
 
 	"gopkg.in/yaml.v2"
@@ -11,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/compliance/mockdata/scaleloader"
+	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
 	"github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
@@ -22,8 +22,8 @@ type Scenario struct {
 
 func main() {
 	// We use rand in the playbook for getting the next step from a random
-	// endpoint.
-	rand.Seed(int64(time.Now().Second()))
+	// endpoint. Make sure the RNG is seeded.
+	seedrng.EnsureSeeded()
 
 	var scenario string
 	var playbookBase string

@@ -20,6 +20,9 @@ import (
 	"github.com/gofrs/flock"
 	"github.com/prometheus/common/log"
 	"github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
+
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/cni-plugin/internal/pkg/utils"
@@ -34,6 +37,9 @@ import (
 )
 
 func Main(version string) {
+	// Make sure the RNG is seeded.
+	seedrng.EnsureSeeded()
+
 	// Set up logging formatting.
 	logrus.SetFormatter(&logutils.Formatter{})
 
