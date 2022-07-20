@@ -122,6 +122,26 @@ kubernetes_controlplane_ipv6:
     - OpenShift
     - TKG
 
+## visibility
+
+kubernetes_audit_logs:
+  platforms:
+    - Kubernetes/Kubeadm
+    - AWS/kOps
+    - EKS
+    - RKE
+    - RKE2 
+
+l7_logs:
+  platforms:
+    - Kubernetes/Kubeadm
+    - AWS/kOps
+    - OpenShift
+    - AKS
+    - EKS
+    - GKE
+    - TKG  
+   
 ## mcm
 
 federated_endpoint:
