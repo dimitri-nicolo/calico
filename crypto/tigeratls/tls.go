@@ -1,6 +1,8 @@
 package tigeratls
 
-import "crypto/tls"
+import (
+	"crypto/tls"
+)
 
 // NewTLSConfig returns a tls.Config with the recommended default settings for Calico Enterprise components.
 // Read more recommendations here in Chapter 3:

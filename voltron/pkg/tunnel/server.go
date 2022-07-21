@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/projectcalico/calico/crypto/tigeratls"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
@@ -35,6 +36,7 @@ type Server struct {
 	clientCertPool *x509.CertPool
 
 	tlsHandshakeTimeout time.Duration
+	fipsModeEnabled     bool
 }
 
 // ServerOption is option for NewServer
@@ -82,6 +84,15 @@ func WithClientCert(cert *x509.Certificate) ServerOption {
 func WithTLSHandshakeTimeout(to time.Duration) ServerOption {
 	return func(s *Server) error {
 		s.tlsHandshakeTimeout = to
+		return nil
+	}
+}
+
+// WithFIPSModeEnabled when true, the server uses FIPS 140-2 validated crypto mode.
+func WithFIPSModeEnabled(fipsModeEnabled bool) ServerOption {
+	log.Infof("Setting fips mode to: %v", fipsModeEnabled)
+	return func(s *Server) error {
+		s.fipsModeEnabled = fipsModeEnabled
 		return nil
 	}
 }
@@ -146,13 +157,11 @@ func (s *Server) Serve(lis net.Listener) error {
 // ServeTLS starts serving TLS connections using the provided listener and the
 // configured certs
 func (s *Server) ServeTLS(lis net.Listener) error {
-	config := &tls.Config{
-		Certificates: s.serverCerts,
-		ClientAuth:   tls.RequireAndVerifyClientCert,
-		ClientCAs:    s.clientCertPool,
-	}
+	config := tigeratls.NewTLSConfig(s.fipsModeEnabled)
+	config.Certificates = s.serverCerts
+	config.ClientAuth = tls.RequireAndVerifyClientCert
+	config.ClientCAs = s.clientCertPool
 	config.BuildNameToCertificate()
-
 	return s.Serve(tls.NewListener(lis, config))
 }
 

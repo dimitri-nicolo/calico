@@ -115,8 +115,6 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, authenticator auth.JWTAut
 	srv.proxyMux = http.NewServeMux()
 
 	cfg := tigeratls.NewTLSConfig(srv.fipsModeEnabled)
-
-	log.Infof("TLS config.ciphersuites: %v, maxversion", cfg.CipherSuites, cfg.MaxVersion)
 	cfg.Certificates = append(cfg.Certificates, srv.externalCert)
 
 	if len(srv.internalCert.Certificate) > 0 {
@@ -138,8 +136,11 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, authenticator auth.JWTAut
 	var tunOpts []tunnel.ServerOption
 
 	if srv.tunnelSigningCert != nil {
-		tunOpts = append(tunOpts, tunnel.WithClientCert(srv.tunnelSigningCert))
-		tunOpts = append(tunOpts, tunnel.WithServerCert(srv.tunnelCert))
+		tunOpts = append(tunOpts,
+			tunnel.WithClientCert(srv.tunnelSigningCert),
+			tunnel.WithServerCert(srv.tunnelCert),
+			tunnel.WithFIPSModeEnabled(srv.fipsModeEnabled),
+		)
 
 		var err error
 		srv.tunSrv, err = tunnel.NewServer(tunOpts...)
