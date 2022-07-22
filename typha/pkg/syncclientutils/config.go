@@ -43,7 +43,7 @@ type TyphaConfig struct {
 	CN       string
 	URISAN   string
 	// FipsModeEnabled Enables FIPS 140-2 verified crypto mode.
-	FipsModeEnabled bool
+	FipsModeEnabled string
 }
 
 // ReadTyphaConfig reads the TyphaConfig from environment variables.
@@ -58,6 +58,7 @@ func ReadTyphaConfig(supportedPrefixes []string) TyphaConfig {
 		nameUpper := strings.ToUpper(field.Name)
 		for _, prefix := range supportedPrefixes {
 			varName := prefix + "TYPHA" + nameUpper
+			log.Infof("varname %s", varName)
 			if value := os.Getenv(varName); value != "" && value != "none" {
 				log.Infof("Found %v=%v", varName, value)
 				if field.Type.Name() == "Duration" {
