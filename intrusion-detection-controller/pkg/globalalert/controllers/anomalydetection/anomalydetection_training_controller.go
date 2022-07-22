@@ -23,12 +23,18 @@ const (
 	ADTrainingJobTemplateName         = "tigera.io.detectors.training"
 	DefaultADDetectorTrainingSchedule = 1 * time.Hour
 
-	trainingCronJobSuffix = "training"
+	trainingJobSuffix = "training"
 
 	ADJobOwnerLabelValue = "intrusion-detection-controller"
 )
 
 var (
+	TrainingJobLabels = func() map[string]string {
+		return map[string]string{
+			"tigera.io.detector-cycle": "training",
+		}
+	}
+
 	TrainingCronJobLabels = func() map[string]string {
 		return map[string]string{
 			"tigera.io.detector-cycle": "training",
