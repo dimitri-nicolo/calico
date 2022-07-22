@@ -41,7 +41,7 @@ install_aks:
 
 install_aws_kops:
   platforms:
-    - AWS/kOps    
+    - AWS/kOps   
 
 install_eks:
   platforms:
@@ -53,23 +53,27 @@ install_gke:
 
 install_ocp:
   platforms:
-    - OpenShift    
+    - OpenShift  
+
+install_mke:
+  platforms:
+    - MKE     
 
 install_rke:
   platforms:
-    - RKE 
+    - RKE    
 
 install_rke2:
   platforms:
-    - RKE2    
+    - RKE2   
 
 install_tkg:
   platforms:
-    - TKG      
+    - TKG    
 
 non_cluster_hosts_all:
   platforms:
-    - all     
+    - all    
 
 upgrade_all_but_ocp:
   platforms:
@@ -79,7 +83,7 @@ upgrade_all_but_ocp:
     - AWS/kOps
     - RKE
     - RKE2
-    - TKG    
+    - TKG   
 
 upgrade_ocp:
   platforms:
@@ -92,19 +96,21 @@ dual_tor:
     - Kubernetes/Kubeadm
     - OpenShift
     - AWS/kOps
+    - MKE
     - RKE
     - RKE2
-    - TKG    
+    - TKG   
 
 egress_gateway:
   platforms:
     - Kubernetes/Kubeadm
-    - OpenShift 
+    - OpenShift
     - AWS/kOps
+    - MKE
     - RKE
     - RKE2
     - EKS
-    - TKG 
+    - TKG
 
 egress_gateway_aws:
   platforms:
@@ -114,12 +120,14 @@ dual_stack:
   platforms:
     - Kubernetes/Kubeadm
     - OpenShift
-    - TKG     
+    - MKE
+    - TKG    
 
 kubernetes_controlplane_ipv6:
   platforms:
     - Kubernetes/Kubeadm
     - OpenShift
+    - MKE
     - TKG
 
 ## visibility
@@ -130,7 +138,7 @@ kubernetes_audit_logs:
     - AWS/kOps
     - EKS
     - RKE
-    - RKE2 
+    - RKE2
 
 l7_logs:
   platforms:
@@ -140,7 +148,7 @@ l7_logs:
     - AKS
     - EKS
     - GKE
-    - TKG  
+    - TKG 
    
 ## mcm
 
@@ -150,6 +158,7 @@ federated_endpoint:
     - AWS/kOps
     - OpenShift
     - AKS
+    - MKE
     - RKE
     - RKE2
     - TKG
@@ -158,7 +167,7 @@ federated_endpoint:
 
 aws_integration:
   platforms:
-    - EKS  
+    - EKS
     - AWS/kOps      
 
 auto_hep:
@@ -179,6 +188,7 @@ cis_benchmarks:
     - Kubernetes/Kubeadm
     - OpenShift
     - AWS/kOps
+    - MKE
     - RKE
     - RKE2
     - TKG
@@ -187,15 +197,17 @@ compliance:
   platforms:
     - Kubernetes/Kubeadm
     - AWS/kOps
+    - MKE
     - RKE
     - RKE2
-    - EKS   
+    - EKS  
 
 wireguard_encryption:
   platforms:
     - Kubernetes/Kubeadm
     - OpenShift
     - AWS/kOps
+    - MKE
     - RKE
     - RKE2
     - AKS

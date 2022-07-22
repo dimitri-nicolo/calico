@@ -119,6 +119,7 @@ support_matrix_list:
   - AWS/kOps
   - EKS
   - GKE
+  - MKE
   - RKE
   - RKE2
   - TKG
