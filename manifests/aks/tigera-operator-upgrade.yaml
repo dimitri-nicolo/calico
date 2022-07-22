@@ -16893,8 +16893,43 @@ rules:
       - globalalerttemplates
       - uisettingsgroups
       - uisettingsgroups/data
+      - networkpolicies
     verbs:
       - '*'
+  # For tiered network policy actions, tigera-apiserver requires that we authorize the operator for the tier.networkpolicies pseudo-kind.
+  - apiGroups:
+      - projectcalico.org
+    resourceNames:
+      - allow-tigera.*
+    resources:
+      - tier.networkpolicies
+    verbs:
+      - list
+      - watch
+      - get
+      - create
+      - update
+      - delete
+  # For tiered network policy actions, tigera-apiserver requires get authorization on the associated tier.
+  - apiGroups:
+      - projectcalico.org
+    resourceNames:
+      - allow-tigera
+    resources:
+      - tiers
+    verbs:
+      - get
+      - delete
+      - update
+  # Separated from the above rule since resourceNames does not support the create verb, and requires a field selector for list/watch verbs.
+  - apiGroups:
+      - projectcalico.org
+    resources:
+      - tiers
+    verbs:
+      - create
+      - list
+      - watch
   - apiGroups:
       - elasticsearch.k8s.elastic.co
     resources:
