@@ -224,15 +224,6 @@ EOM
 
 checkConfiguration $TEST_DIR/tmp/es-secure-with-s3.env es-secure-with-s3 "ES secure with S3"
 
-# Test with S3 and ES not secure
-cat > $TEST_DIR/tmp/es-no-secure-with-s3.env << EOM
-$STANDARD_ENV_VARS
-FLUENTD_ES_SECURE=false
-$S3_VARS
-EOM
-
-checkConfiguration $TEST_DIR/tmp/es-no-secure-with-s3.env es-no-secure-with-s3 "ES unsecure with S3"
-
 # Test with ES not secure and syslog w/no tls
 cat > $TEST_DIR/tmp/es-no-secure-with-syslog-no-tls.env << EOM
 $STANDARD_ENV_VARS
