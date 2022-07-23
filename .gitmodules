@@ -1,3 +1,0 @@
-[submodule "elasticsearch-exporter"]
-	path = elasticsearch-exporter
-	url = git@github.com:tigera/elasticsearch-exporter.git
