@@ -35,7 +35,6 @@ puts('OpenSSL::OPENSSL_LIBRARY_VERSION: %s' % OpenSSL::OPENSSL_LIBRARY_VERSION)
 puts('OpenSSL::OPENSSL_VERSION_NUMBER (base16): %s' % OpenSSL::OPENSSL_VERSION_NUMBER)
 puts('OpenSSL::VERSION (gem version): %s' % OpenSSL::VERSION)
 puts('OpenSSL.fips_mode: %s' % OpenSSL.fips_mode)
-Fluent::TLS::CIPHERS_DEFAULT = 'TLSv1.2+FIPS:kRSA+FIPS:!eNULL:!aNULL'
 puts('Fluent::TLS::CIPHERS_DEFAULT: %s' % Fluent::TLS::CIPHERS_DEFAULT)
 
 #########################################################################################

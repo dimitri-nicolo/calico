@@ -63,6 +63,7 @@ RUN yum install -y --setopt=tsflags=nodocs gcc \
  && git clone --branch v1.14.6 https://github.com/fluent/fluentd  \
  && cd fluentd \
  && cd /fluentd/cloned/fluentd && cp /fluentd/etc/fluentd.rb /fluentd/cloned/fluentd/lib/fluent/command/fluentd.rb \
+ && sed -i 's/CIPHERS_DEFAULT = .*/CIPHERS_DEFAULT = "TLSv1.2+FIPS:!eNULL:!aNULL"/g' /fluentd/cloned/fluentd/lib/fluent/tls.rb \
  && gem build fluentd.gemspec \
  && gem install fluentd-1.14.6.gem \
  && ln -s  /var/lib/ruby/bin/fluentd /usr/bin/fluentd \
@@ -110,7 +111,8 @@ RUN yum install -y --setopt=tsflags=nodocs gcc \
        /var/lib/ruby/3.0.0/cgi \
        /usr/local/lib/ruby/gems/2.7.0/specifications/default/cgi-0.1.0.1.gemspec \
        /ruby-2.7.5.tar.gz \
-       /ruby-2.7.5
+       /ruby-2.7.5 \
+ && yum remove -y make wget gcc gcc-c++ git
 
 ENV LD_PRELOAD=""
 ENV RUBYLIB="/var/lib/ruby/gems/3.0.0/gems/resolv-0.2.1/lib"
