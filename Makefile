@@ -118,10 +118,9 @@ ifeq ($(ARCH), amd64)
 		--build-arg UBI_VERSION=$(UBI_VERSION) \
 		--build-arg RUBY_MAJOR_VERSION=$(RUBY_MAJOR_VERSION) \
 		--build-arg RUBY_FULL_VERSION=$(RUBY_FULL_VERSION) .
+	docker tag $(IMAGE):latest-$* $(IMAGE):latest)
 else
 	docker build --pull $(DOCKER_SQUASH) -t $(IMAGE):latest-$* --file $(DOCKERFILE) .
-	$(if $(filter amd64,$*),\
-		docker tag $(IMAGE):latest-$* $(IMAGE):latest)
 endif
 
 image: build $(FLUENTD_IMAGE)
