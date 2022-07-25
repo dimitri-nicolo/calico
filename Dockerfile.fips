@@ -66,7 +66,7 @@ RUN yum install -y --setopt=tsflags=nodocs gcc \
  && cd fluentd \
  && cd /fluentd/cloned/fluentd \
  && patch /fluentd/cloned/fluentd/lib/fluent/command/fluentd.rb /fluentd/etc/fluentd.diff \
- && patch /fluentd/cloned/fluentd/lib/fluent/command/fluentd.rb /fluentd/etc/tls.diff \
+ && patch /fluentd/cloned/fluentd/lib/fluent/tls.rb /fluentd/etc/tls.diff \
  && gem build fluentd.gemspec \
  && gem install fluentd-1.14.6.gem \
  && ln -s  /var/lib/ruby/bin/fluentd /usr/bin/fluentd \
