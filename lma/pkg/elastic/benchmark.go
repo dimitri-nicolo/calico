@@ -123,11 +123,11 @@ func (c *client) RetrieveLatestBenchmarks(ctx context.Context, ct api.BenchmarkT
 				return
 			}
 			if res == nil {
-				err = fmt.Errorf("Search expected results != nil; got nil")
+				err = fmt.Errorf("search expected results != nil; got nil")
 			} else if res.Hits == nil {
-				err = fmt.Errorf("Search expected results.Hits != nil; got nil")
+				err = fmt.Errorf("search expected results.Hits != nil; got nil")
 			} else if len(res.Hits.Hits) == 0 {
-				err = fmt.Errorf("Search expected results.Hits.Hits > 0; got 0")
+				err = fmt.Errorf("search expected results.Hits.Hits > 0; got 0")
 			}
 			if err != nil {
 				log.WithError(err).Warn("Unexpected results from audit events search")

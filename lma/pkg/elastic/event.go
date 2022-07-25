@@ -15,10 +15,6 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
-const (
-	DefaultEventPageSize = 100
-)
-
 var (
 	eventDismissDoc map[string]bool = map[string]bool{"dismissed": true}
 )
@@ -204,7 +200,7 @@ func (c *client) SearchSecurityEvents(ctx context.Context, start, end *time.Time
 	go func() {
 		defer close(resultChan)
 		scroll := c.Scroll(index).
-			Size(DefaultEventPageSize).
+			Size(DefaultPageSize).
 			Query(queries).
 			Sort(api.EventTime, true)
 
@@ -223,11 +219,11 @@ func (c *client) SearchSecurityEvents(ctx context.Context, start, end *time.Time
 				return
 			}
 			if res == nil {
-				err = fmt.Errorf("Search expected results != nil; got nil")
+				err = fmt.Errorf("search expected results != nil; got nil")
 			} else if res.Hits == nil {
-				err = fmt.Errorf("Search expected results.Hits != nil; got nil")
+				err = fmt.Errorf("search expected results.Hits != nil; got nil")
 			} else if len(res.Hits.Hits) == 0 {
-				err = fmt.Errorf("Search expected results.Hits.Hits > 0; got 0")
+				err = fmt.Errorf("search expected results.Hits.Hits > 0; got 0")
 			}
 			if err != nil {
 				log.WithError(err).Warn("Unexpected results from alert logs search")
