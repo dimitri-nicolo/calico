@@ -99,8 +99,7 @@ RUN yum install -y --setopt=tsflags=nodocs gcc \
  && rm -rf ruby-$RUBY_FULL_VERSION \
  && rm -rf /fluentd/cloned \
  && gem sources --clear-all \
- && rm -rf /var/cache/apk/* \
-       /var/lib/ruby/gems/*/cache/*.gem \
+ && rm -rf /var/lib/ruby/gems/*/cache/*.gem \
        /var/lib/ruby/gems/2.*/gems/fluentd-*/test \
        /usr/local/lib/ruby/gems/2.7.0/gems/bundler-2.1.4 \
        /usr/local/lib/ruby/2.7.0/bundler \
@@ -115,7 +114,8 @@ RUN yum install -y --setopt=tsflags=nodocs gcc \
        /usr/local/lib/ruby/gems/2.7.0/specifications/default/cgi-0.1.0.1.gemspec \
        /ruby-2.7.5.tar.gz \
        /ruby-2.7.5 \
- && yum remove -y make wget gcc gcc-c++ git patch
+ && yum remove -y make wget gcc gcc-c++ git patch \
+ && yum clean all
 
 ENV LD_PRELOAD=""
 ENV RUBYLIB="/var/lib/ruby/gems/3.0.0/gems/resolv-0.2.1/lib"
