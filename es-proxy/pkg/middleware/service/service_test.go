@@ -141,14 +141,14 @@ var _ = Describe("Service middleware tests", func() {
 
 			Expect(resp.Services[0].Name).To(Equal("checkoutservice-69c8ff664b-*"))
 			Expect(resp.Services[0].ErrorRate).To(Equal(0.0))
-			Expect(resp.Services[0].Latency).To(Equal(0.0))
+			Expect(resp.Services[0].Latency).To(BeNumerically("~", 3449.98, 0.01))
 			Expect(resp.Services[0].InboundThroughput).To(BeNumerically("~", 14990.34, 0.01))
 			Expect(resp.Services[0].OutboundThroughput).To(BeNumerically("~", 12463.77, 0.01))
 			Expect(resp.Services[0].RequestThroughput).To(BeNumerically("~", 0.095, 0.001))
 
 			Expect(resp.Services[1].Name).To(Equal("frontend-99684f7f8-*"))
 			Expect(resp.Services[1].ErrorRate).To(BeNumerically("~", 5.577, 0.001))
-			Expect(resp.Services[1].Latency).To(Equal(0.0))
+			Expect(resp.Services[1].Latency).To(BeNumerically("~", 5338.46, 0.01))
 			Expect(resp.Services[1].InboundThroughput).To(BeNumerically("~", 4251.80, 0.01))
 			Expect(resp.Services[1].OutboundThroughput).To(BeNumerically("~", 19909.94, 0.01))
 			Expect(resp.Services[1].RequestThroughput).To(BeNumerically("~", 0.804, 0.001))
@@ -206,14 +206,14 @@ var _ = Describe("Service middleware tests", func() {
 
 			Expect(resp.Services[0].Name).To(Equal("checkoutservice-69c8ff664b-*"))
 			Expect(resp.Services[0].ErrorRate).To(Equal(0.0))
-			Expect(resp.Services[0].Latency).To(Equal(0.0))
+			Expect(resp.Services[0].Latency).To(BeNumerically("~", 3193.52, 0.01))
 			Expect(resp.Services[0].InboundThroughput).To(BeNumerically("~", 16202.02, 0.01))
 			Expect(resp.Services[0].OutboundThroughput).To(BeNumerically("~", 13464.65, 0.01))
 			Expect(resp.Services[0].RequestThroughput).To(BeNumerically("~", 0.102, 0.001))
 
 			Expect(resp.Services[1].Name).To(Equal("frontend-99684f7f8-*"))
 			Expect(resp.Services[1].ErrorRate).To(BeNumerically("~", 100, 0.001))
-			Expect(resp.Services[1].Latency).To(Equal(0.0))
+			Expect(resp.Services[1].Latency).To(BeNumerically("~", 72103.41, 0.01))
 			Expect(resp.Services[1].InboundThroughput).To(BeNumerically("~", 2316.12, 0.01))
 			Expect(resp.Services[1].OutboundThroughput).To(BeNumerically("~", 3217.60, 0.01))
 			Expect(resp.Services[1].RequestThroughput).To(BeNumerically("~", 0.090, 0.001))

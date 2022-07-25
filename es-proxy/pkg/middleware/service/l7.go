@@ -16,6 +16,7 @@ type L7Log struct {
 	StartTime    int64         `json:"start_time"`
 	EndTime      int64         `json:"end_time"`
 	DurationMean time.Duration `json:"duration_mean"`
+	Latency      int           `json:"latency"`
 	BytesIn      int           `json:"bytes_in"`
 	BytesOut     int           `json:"bytes_out"`
 	Count        int           `json:"count"`

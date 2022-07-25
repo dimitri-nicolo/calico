@@ -93,6 +93,7 @@ type service struct {
 	TotalBytesIn     int           // sum(bytes_in)
 	TotalBytesOut    int           // sum(bytes_out)
 	TotalDuration    time.Duration // sum(duration_mean * count) in milliseconds
+	TotalLatency     time.Duration // sum(latency) in milliseconds
 	TotalErrorCount  int           // count(http response_code 400-599)
 	TotalLogDuration int64         // sum(end_time - start_time) in seconds
 }
@@ -131,6 +132,7 @@ func processServiceRequest(
 				s.TotalBytesIn += doc.Source.BytesIn
 				s.TotalBytesOut += doc.Source.BytesOut
 				s.TotalDuration += doc.Source.DurationMean * time.Duration(doc.Source.Count)
+				s.TotalLatency += time.Duration(doc.Source.Latency)
 				s.TotalErrorCount += errCount
 				s.TotalLogDuration += doc.Source.EndTime - doc.Source.StartTime
 			} else {
@@ -140,6 +142,7 @@ func processServiceRequest(
 					TotalBytesIn:     doc.Source.BytesIn,
 					TotalBytesOut:    doc.Source.BytesOut,
 					TotalDuration:    doc.Source.DurationMean * time.Duration(doc.Source.Count),
+					TotalLatency:     time.Duration(doc.Source.Latency),
 					TotalErrorCount:  errCount,
 					TotalLogDuration: doc.Source.EndTime - doc.Source.StartTime,
 				}
@@ -151,11 +154,11 @@ func processServiceRequest(
 	for k, v := range serviceMap {
 		service := v1.Service{
 			Name:               k,
-			ErrorRate:          float64(v.TotalErrorCount) / float64(v.Count) * 100,  // %
-			Latency:            0,                                                    // microseconds
-			InboundThroughput:  float64(v.TotalBytesIn) / v.TotalDuration.Seconds(),  // bytes/second
-			OutboundThroughput: float64(v.TotalBytesOut) / v.TotalDuration.Seconds(), // bytes/second
-			RequestThroughput:  float64(v.Count) / float64(v.TotalLogDuration),       // /second
+			ErrorRate:          float64(v.TotalErrorCount) / float64(v.Count) * 100,        // %
+			Latency:            float64(v.TotalDuration.Microseconds()) / float64(v.Count), // microseconds
+			InboundThroughput:  float64(v.TotalBytesIn) / v.TotalDuration.Seconds(),        // bytes/second
+			OutboundThroughput: float64(v.TotalBytesOut) / v.TotalDuration.Seconds(),       // bytes/second
+			RequestThroughput:  float64(v.Count) / float64(v.TotalLogDuration),             // /second
 		}
 		services = append(services, service)
 	}

@@ -28,7 +28,7 @@ type Service struct {
 	// ErrorRate calculates the percentage of 400-599 HTTP response code of the service.
 	ErrorRate float64 `json:"errorRate" validate:"required"`
 
-	// Latency of the service in milliseconds.
+	// Latency of the service in microseconds.
 	Latency float64 `json:"latency" validate:"required"`
 
 	// InboundThroughput of the service in bytes per second.

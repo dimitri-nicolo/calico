@@ -207,6 +207,14 @@ func Start(cfg *Config) error {
 						k8sClientSet,
 						esClient.Backend(),
 					)))))
+	sm.Handle("/services",
+		middleware.ClusterRequestToResource(l7ResourceName,
+			middleware.AuthenticateRequest(authn,
+				middleware.AuthorizeRequest(authz,
+					service.ServiceHandler(
+						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						esClient.Backend(),
+					)))))
 	// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.
 	sm.Handle("/recommend",
 		middleware.RequestToResource(
@@ -228,14 +236,6 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					middleware.NewFlowHandler(esClient, k8sClientFactory)))))
-	sm.Handle("/services",
-		middleware.RequestToResource(
-			middleware.AuthenticateRequest(authn,
-				middleware.AuthorizeRequest(authz,
-					service.ServiceHandler(
-						middleware.NewAuthorizationReview(k8sClientSetFactory),
-						esClient.Backend(),
-					)))))
 	sm.Handle("/user",
 		middleware.AuthenticateRequest(authn,
 			middleware.NewUserHandler(k8sClientSet, cfg.OIDCAuthEnabled, cfg.OIDCAuthIssuer, cfg.ElasticLicenseType)))
