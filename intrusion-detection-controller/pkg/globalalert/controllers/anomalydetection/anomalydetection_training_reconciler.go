@@ -36,6 +36,12 @@ var (
 	}
 )
 
+type PodTemplateError struct{}
+
+func (m *PodTemplateError) Error() string {
+	return "PodTemplateError"
+}
+
 type adJobTrainingReconciler struct {
 	managementClusterCtx context.Context
 
@@ -235,18 +241,17 @@ func (r *adJobTrainingReconciler) Close() {
 	}
 }
 
-// addTrainingCycle kicks-off an initial training job for a first time detector. Adds to the list of
-// cronjobs state for the cluster and creates the cronjob reference based on the list of
-// AnomalyDetection GlobalAlerts deployed by the cluster. The updated training cronjob will be
-// deployed next iteration of the Reconcile() loop.
+// addTrainingCycle adds to the list of cronjobs state for the cluster and creates the cronjob
+// reference based on the list of AnomalyDetection GlobalAlerts deployed by the cluster. The updated
+// training cronjob will be deployed next iteration of the Reconcile() loop.
 func (r *adJobTrainingReconciler) addTrainingCycle(mcs TrainingDetectorsRequest) error {
 	clusterName := mcs.ClusterName
-	trainingJobStateNameKey := r.getTrainingCycleJobNameForCluster(clusterName)
+	trainingCronJobStateNameKey := r.getTrainingCycleJobNameForCluster(clusterName)
 
 	r.trainingJobsMutex.Lock()
 	defer r.trainingJobsMutex.Unlock()
 
-	trainingCycle, found := r.trainingDetectorsPerCluster[trainingJobStateNameKey]
+	trainingCycle, found := r.trainingDetectorsPerCluster[trainingCronJobStateNameKey]
 
 	// No existing training cycle for the cluster.
 	if !found {
@@ -256,10 +261,48 @@ func (r *adJobTrainingReconciler) addTrainingCycle(mcs TrainingDetectorsRequest)
 		}
 	}
 
-	// Kick-off an initial training job of the detector is not yet present in the list of training
-	// cycle global alert detectors.
+	trainingCycle.GlobalAlerts = append(trainingCycle.GlobalAlerts, mcs.GlobalAlert)
+
+	// Add specs for training cycle.
+	detectorList := collectDetectorsFromGlobalAlerts(trainingCycle.GlobalAlerts)
+	adTrainingJobPT, err := r.getADPodTemplateWithEnabledDecorators(clusterName, detectorList)
+	if err != nil {
+		log.WithError(err).
+			Errorf("Unable to start training cycles for on cluster %s, unable to retrieve podtemplate for training cronjobs",
+				clusterName)
+		return err
+	}
+
+	var trainingCronJob *batchv1.CronJob
+	trainingCronJob, err = r.createTrainingCronJobForCluster(clusterName, trainingCronJobStateNameKey, *adTrainingJobPT)
+	if err != nil {
+		log.WithError(err).Errorf("Unable to create training cycles for on cluster %s", clusterName)
+		return err
+	}
+
+	// Update store entry.
+	trainingCycle.CronJob = trainingCronJob
+	r.trainingDetectorsPerCluster[trainingCronJob.Name] = trainingCycle
+	r.trainingCycleResourceCache.Set(trainingCronJobStateNameKey, *trainingCronJob)
+
+	return nil
+}
+
+// runInitialTrainingJob kicks-off an initial training job if the training cycle isn't found or for
+// a first time detector.
+func (r *adJobTrainingReconciler) runInitialTrainingJob(mcs TrainingDetectorsRequest) error {
+	clusterName := mcs.ClusterName
+	trainingJobStateNameKey := r.getTrainingCycleJobNameForCluster(clusterName)
+
+	r.trainingJobsMutex.Lock()
+	defer r.trainingJobsMutex.Unlock()
+
+	trainingCycle, found := r.trainingDetectorsPerCluster[trainingJobStateNameKey]
+
+	// kick-off an initial training job if there is not existing training cycle or for a first time
+	// detector.
 	detector := mcs.GlobalAlert.Spec.Detector.Name
-	if !collectDetectorsSetFromGlobalAlerts(trainingCycle.GlobalAlerts).Contains(detector) {
+	if !found || !collectDetectorsSetFromGlobalAlerts(trainingCycle.GlobalAlerts).Contains(detector) {
 		adTrainingJobPT, err := r.getADPodTemplateWithEnabledDecorator(clusterName, detector)
 		if err != nil {
 			log.WithError(err).
@@ -276,35 +319,10 @@ func (r *adJobTrainingReconciler) addTrainingCycle(mcs TrainingDetectorsRequest)
 			return err
 		}
 
-		trainingCycle.GlobalAlerts = append(trainingCycle.GlobalAlerts, mcs.GlobalAlert)
-
-		// Add the initial training job to the resource cache, to kick-off the initial training job.
-		r.trainingCycleResourceCache.Set(trainingJobStateNameKey, *adInitialTrainingJob)
+		// Create an initial training job.
+		r.k8sClient.BatchV1().Jobs(r.namespace).
+			Create(r.managementClusterCtx, adInitialTrainingJob, metav1.CreateOptions{})
 	}
-
-	trainingCycle.GlobalAlerts = append(trainingCycle.GlobalAlerts, mcs.GlobalAlert)
-
-	// Add specs for training cycle.
-	detectorList := collectDetectorsFromGlobalAlerts(trainingCycle.GlobalAlerts)
-	adTrainingJobPT, err := r.getADPodTemplateWithEnabledDecorators(clusterName, detectorList)
-	if err != nil {
-		log.WithError(err).
-			Errorf("Unable to start training cycles for on cluster %s, unable to retrieve podtemplate for training cronjobs",
-				clusterName)
-		return err
-	}
-
-	var trainingCronJob *batchv1.CronJob
-	trainingCronJob, err = r.createTrainingCronJobForCluster(clusterName, trainingJobStateNameKey, *adTrainingJobPT)
-	if err != nil {
-		log.WithError(err).Errorf("Unable to create training cycles for on cluster %s", clusterName)
-		return err
-	}
-
-	// Update store entry.
-	trainingCycle.CronJob = trainingCronJob
-	r.trainingDetectorsPerCluster[trainingCronJob.Name] = trainingCycle
-	r.trainingCycleResourceCache.Set(trainingJobStateNameKey, *trainingCronJob)
 
 	return nil
 }
@@ -329,9 +347,12 @@ func collectDetectorsFromGlobalAlerts(globalAlerts []*v3.GlobalAlert) string {
 // collectDetectorsSetFromGlobalAlerts collects and returns the set of detectors of the global
 // alerts.
 func collectDetectorsSetFromGlobalAlerts(globalAlerts []*v3.GlobalAlert) set.Set {
-	var detectors set.Set
+	// var detectors set.Set
+	detectors := set.New()
 	for _, ga := range globalAlerts {
-		detectors.Add(ga.Spec.Detector.Name)
+		if ga.Spec.Detector != nil {
+			detectors.Add(ga.Spec.Detector.Name)
+		}
 	}
 
 	return detectors

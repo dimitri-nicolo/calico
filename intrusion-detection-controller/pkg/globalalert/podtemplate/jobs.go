@@ -36,7 +36,7 @@ func CreateCronJobFromPodTemplate(name, namepsace string, schedule time.Duration
 	return adCronJob
 }
 
-func CreateJobFromPodTemplate(name string, namespace string, labels map[string]string, pt v1.PodTemplate, bfl *int32) *batchv1.Job {
+func CreateJobFromPodTemplate(name, namespace string, labels map[string]string, pt v1.PodTemplate, bfl *int32) *batchv1.Job {
 
 	// combine labels from podtemplate
 	jobLabels := labels
