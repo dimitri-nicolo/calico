@@ -47,11 +47,6 @@ bin/elasticsearch-metrics-$(ARCH):
 		sh -c '$(GIT_CONFIG_SSH) \
 			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/main.go'
 
-	#bash -x  -c "cd elasticsearch-exporter && make -f Makefile.common promu && \
-#	GO111MODULE=on promu build --prefix /go/src/github.com/tigera/elasticsearch-metrics/elasticsearch-exporter "
-	#$(DOCKER_GO_BUILD) bash -x  -c "cd elasticsearch-exporter && make common-build"
-	#cp elasticsearch-exporter/elasticsearch_exporter bin/
-
 image: $(ELASTICSEARCH_METRICS_IMAGE)
 $(ELASTICSEARCH_METRICS_IMAGE): $(ELASTICSEARCH_METRICS_IMAGE)-$(ARCH)
 $(ELASTICSEARCH_METRICS_IMAGE)-$(ARCH): build
