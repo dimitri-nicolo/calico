@@ -97,6 +97,10 @@ build: eks-log-forwarder-startup
 # Build
 ###############################################################################
 
+UBI_VERSION        ?= ubi8
+RUBY_MAJOR_VERSION ?= 2.7
+RUBY_FULL_VERSION  ?= 2.7.5
+
 # Add --squash argument for CICD pipeline runs only to avoid setting "experimental",
 # for Docker processes on personal machine.
 # DOCKER_SQUASH is defaulted to be empty but can be set `DOCKER_SQUASH=--squash make image` 
@@ -109,9 +113,15 @@ $(FLUENTD_IMAGE):
 	$(MAKE) $(addprefix build-image-,$(VALIDARCHES)) IMAGE=$(FLUENTD_IMAGE) DOCKERFILE=$(DOCKERFILE)
 
 build-image-%:
+ifeq ($(ARCH), amd64)
+	docker build --pull -f Dockerfile.fips -t $(IMAGE):latest-$* \
+		--build-arg UBI_VERSION=$(UBI_VERSION) \
+		--build-arg RUBY_MAJOR_VERSION=$(RUBY_MAJOR_VERSION) \
+		--build-arg RUBY_FULL_VERSION=$(RUBY_FULL_VERSION) .
+	docker tag $(IMAGE):latest-$* $(IMAGE):latest
+else
 	docker build --pull $(DOCKER_SQUASH) -t $(IMAGE):latest-$* --file $(DOCKERFILE) .
-	$(if $(filter amd64,$*),\
-		docker tag $(IMAGE):latest-$* $(IMAGE):latest)
+endif
 
 image: build $(FLUENTD_IMAGE)
 
