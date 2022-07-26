@@ -71,7 +71,7 @@ var _ = Describe("AnomalyDetection Reconciler", func() {
 	mockDeployment := &apps.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "intrusion-detection-controller",
-			Namespace: "namespace1",
+			Namespace: namespace,
 		},
 		Spec: apps.DeploymentSpec{
 			Template: v1.PodTemplateSpec{},
@@ -96,12 +96,12 @@ var _ = Describe("AnomalyDetection Reconciler", func() {
 				podTemplateQuery:           mockPodTemplateQuery,
 				trainingCycleResourceCache: mockrc,
 
-				namespace: "namespace1",
+				namespace: namespace,
 
 				// key: cluster name
 				trainingDetectorsPerCluster: map[string]trainingCycleStatePerCluster{
-					"cluster1-training-cycle": {
-						ClusterName: "cluster1",
+					"ut-cluster-training-cycle": {
+						ClusterName: clusterName,
 						CronJob:     nil,
 						GlobalAlerts: []*v3.GlobalAlert{
 							{
@@ -124,7 +124,7 @@ var _ = Describe("AnomalyDetection Reconciler", func() {
 			}
 
 			mcs := TrainingDetectorsRequest{
-				ClusterName: "cluster1",
+				ClusterName: clusterName,
 				GlobalAlert: &v3.GlobalAlert{
 					Spec: v3.GlobalAlertSpec{
 						Detector: &v3.DetectorParams{
@@ -152,12 +152,12 @@ var _ = Describe("AnomalyDetection Reconciler", func() {
 				podTemplateQuery:           mockPodTemplateQuery,
 				trainingCycleResourceCache: mockrc,
 
-				namespace: "namespace1",
+				namespace: namespace,
 
 				// key: cluster name
 				trainingDetectorsPerCluster: map[string]trainingCycleStatePerCluster{
-					"cluster1": {
-						ClusterName: "cl1",
+					"clusterKey1": {
+						ClusterName: clusterName,
 						CronJob:     nil,
 						GlobalAlerts: []*v3.GlobalAlert{
 							{
@@ -174,7 +174,7 @@ var _ = Describe("AnomalyDetection Reconciler", func() {
 			}
 
 			mcs := TrainingDetectorsRequest{
-				ClusterName: "cluster1",
+				ClusterName: clusterName,
 				GlobalAlert: &v3.GlobalAlert{
 					Spec: v3.GlobalAlertSpec{
 						Detector: &v3.DetectorParams{
@@ -189,11 +189,11 @@ var _ = Describe("AnomalyDetection Reconciler", func() {
 			expectedbackoffLimit := int32(0)
 			expectedJob := batchv1.Job{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cluster1-detector1-initial-training",
-					Namespace: "namespace1",
+					Name:      fmt.Sprintf("%s-detector1-initial-training", clusterName),
+					Namespace: namespace,
 					Labels: map[string]string{
 						"tigera.io.detector-cycle": "training",
-						"cluster":                  "cluster1",
+						"cluster":                  clusterName,
 					},
 					OwnerReferences: []metav1.OwnerReference{
 						{
@@ -210,11 +210,11 @@ var _ = Describe("AnomalyDetection Reconciler", func() {
 					BackoffLimit: &expectedbackoffLimit,
 					Template: v1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "cluster1-detector1-initial-training",
-							Namespace: "namespace1",
+							Name:      fmt.Sprintf("%s-detector1-initial-training", clusterName),
+							Namespace: namespace,
 							Labels: map[string]string{
 								"tigera.io.detector-cycle": "training",
-								"cluster":                  "cluster1",
+								"cluster":                  clusterName,
 							},
 						},
 						Spec: v1.PodSpec{
@@ -230,7 +230,7 @@ var _ = Describe("AnomalyDetection Reconciler", func() {
 									Env: []v1.EnvVar{
 										{
 											Name:      "CLUSTER_NAME",
-											Value:     "cluster1",
+											Value:     clusterName,
 											ValueFrom: nil},
 										{
 											Name:      "AD_ENABLED_DETECTORS",
@@ -247,7 +247,7 @@ var _ = Describe("AnomalyDetection Reconciler", func() {
 			}
 
 			By("mocking GetPodTemplate output")
-			mockPodTemplateQuery.On("GetPodTemplate", ctx, "namespace1", "tigera.io.detectors.training").Return(&v1.PodTemplate{Template: v1.PodTemplateSpec{
+			mockPodTemplateQuery.On("GetPodTemplate", ctx, namespace, "tigera.io.detectors.training").Return(&v1.PodTemplate{Template: v1.PodTemplateSpec{
 				Spec: v1.PodSpec{Containers: []v1.Container{{Name: "adjobs"}}},
 			}}, nil)
 
@@ -256,7 +256,7 @@ var _ = Describe("AnomalyDetection Reconciler", func() {
 			Expect(err).To(BeNil())
 
 			By("listing the mock jobs present")
-			list, err := mockK8sClient.BatchV1().Jobs("namespace1").List(ctx, metav1.ListOptions{})
+			list, err := mockK8sClient.BatchV1().Jobs(namespace).List(ctx, metav1.ListOptions{})
 			Expect(err).To(BeNil())
 			Expect(len(list.Items)).To(Equal(1))
 
