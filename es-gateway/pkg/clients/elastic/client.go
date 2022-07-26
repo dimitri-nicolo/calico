@@ -9,8 +9,8 @@ import (
 	"net/http"
 
 	es7 "github.com/elastic/go-elasticsearch/v7"
-	"github.com/projectcalico/calico/crypto/tigeratls"
 
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	httpCommon "github.com/projectcalico/calico/es-gateway/pkg/clients/internal/http"
 )
 
@@ -39,7 +39,7 @@ func NewClient(url, username, password, caCertPath, clientCertPath, clientKeyPat
 	}
 
 	// Set up default HTTP transport config.
-	tlsConfig := tigeratls.NewTLSConfig(fipsModeEnabled)
+	tlsConfig := calicotls.NewTLSConfig(fipsModeEnabled)
 	tlsConfig.RootCAs = caCertPool
 	httpTransport := &http.Transport{
 		TLSClientConfig: tlsConfig,

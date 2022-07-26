@@ -9,9 +9,9 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	"github.com/projectcalico/calico/crypto/tigeratls"
 	log "github.com/sirupsen/logrus"
 
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/es-gateway/pkg/cache"
 	"github.com/projectcalico/calico/es-gateway/pkg/clients/elastic"
 	"github.com/projectcalico/calico/es-gateway/pkg/clients/kibana"
@@ -70,7 +70,7 @@ func New(opts ...Option) (*Server, error) {
 		}
 	}
 
-	cfg := tigeratls.NewTLSConfig(srv.fipsModeEnabled)
+	cfg := calicotls.NewTLSConfig(srv.fipsModeEnabled)
 	cfg.Certificates = append(cfg.Certificates, srv.internalCert)
 	cfg.BuildNameToCertificate()
 

@@ -10,9 +10,9 @@ import (
 	"net/http/httputil"
 
 	"github.com/pkg/errors"
-	"github.com/projectcalico/calico/crypto/tigeratls"
 	log "github.com/sirupsen/logrus"
 
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/es-gateway/pkg/middlewares"
 	"github.com/projectcalico/calico/es-gateway/pkg/proxy"
 )
@@ -37,7 +37,7 @@ func GetProxyHandler(t *proxy.Target, modifyResponseFunc func(*http.Response) er
 	if t.Transport != nil {
 		p.Transport = t.Transport
 	} else if t.Dest.Scheme == "https" {
-		tlsCfg := tigeratls.NewTLSConfig(t.FIPSModeEnabled)
+		tlsCfg := calicotls.NewTLSConfig(t.FIPSModeEnabled)
 
 		if t.AllowInsecureTLS {
 			tlsCfg.InsecureSkipVerify = true

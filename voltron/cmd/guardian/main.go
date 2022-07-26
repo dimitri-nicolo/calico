@@ -190,6 +190,7 @@ func main() {
 		client.WithTunnelDialTimeout(cfg.TunnelDialTimeout),
 		client.WithConnectionRetryAttempts(cfg.ConnectionRetryAttempts),
 		client.WithConnectionRetryInterval(cfg.ConnectionRetryInterval),
+		client.WithFIPSModeEnabled(cfg.FIPSModeEnabled),
 	)
 
 	if err != nil {

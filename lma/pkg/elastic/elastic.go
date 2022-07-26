@@ -16,10 +16,10 @@ import (
 	"time"
 
 	"github.com/olivere/elastic/v7"
-	"github.com/projectcalico/calico/crypto/tigeratls"
 	log "github.com/sirupsen/logrus"
 
-	api "github.com/projectcalico/calico/lma/pkg/api"
+	"github.com/projectcalico/calico/crypto/pkg/tls"
+	"github.com/projectcalico/calico/lma/pkg/api"
 )
 
 const (
@@ -118,7 +118,7 @@ func NewFromConfig(cfg *Config) (Client, error) {
 			}
 		}
 
-		tlsConfig := tigeratls.NewTLSConfig(cfg.FIPSModeEnabled)
+		tlsConfig := tls.NewTLSConfig(cfg.FIPSModeEnabled)
 		tlsConfig.RootCAs = ca
 		h.Transport = &http.Transport{TLSClientConfig: tlsConfig}
 	}

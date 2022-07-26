@@ -25,10 +25,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/projectcalico/calico/crypto/tigeratls"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/node/pkg/bgp"
 	"github.com/projectcalico/calico/node/pkg/metrics"
 )
@@ -163,7 +163,7 @@ func Run(bird, bird6, felixReady, felixLive, birdLive, bird6Live, bgpMetricsRead
 			if err != nil {
 				log.WithError(err).Fatal("Unable to create tls configuration for bgp metrics health check")
 			}
-			tlsConfig = tigeratls.NewTLSConfig(fipsModeEnabled)
+			tlsConfig = tls.NewTLSConfig(fipsModeEnabled)
 			tlsConfig.Certificates = []tls.Certificate{pair}
 			tlsConfig.InsecureSkipVerify = true
 		}

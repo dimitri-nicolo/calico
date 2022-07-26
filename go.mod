@@ -337,7 +337,7 @@ require (
 	k8s.io/kubelet v0.0.0 // indirect
 	k8s.io/legacy-cloud-providers v0.0.0 // indirect
 	k8s.io/mount-utils v0.23.3 // indirect
-	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.27 // indirect
+	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.30 // indirect
 	sigs.k8s.io/controller-runtime v0.11.1 // indirect
 	sigs.k8s.io/json v0.0.0-20211020170558-c049b76a60c6 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
@@ -363,7 +363,7 @@ replace (
 	k8s.io/api => k8s.io/api v0.23.3
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.23.3
 	k8s.io/apimachinery => k8s.io/apimachinery v0.23.3
-	k8s.io/apiserver => k8s.io/apiserver v0.23.3
+	k8s.io/apiserver => github.com/rene-dekker/kubernetes-apiserver v0.0.0-20220725212204-c3de2ee40752
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.23.3
 	k8s.io/client-go => k8s.io/client-go v0.23.3
 	k8s.io/cloud-provider => k8s.io/cloud-provider v0.23.3

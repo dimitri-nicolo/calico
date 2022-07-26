@@ -14,10 +14,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/projectcalico/calico/crypto/tigeratls"
 
 	log "github.com/sirupsen/logrus"
 
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
@@ -114,7 +114,7 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, authenticator auth.JWTAut
 	srv.clusters.sniServiceMap = srv.sniServiceMap
 	srv.proxyMux = http.NewServeMux()
 
-	cfg := tigeratls.NewTLSConfig(srv.fipsModeEnabled)
+	cfg := calicotls.NewTLSConfig(srv.fipsModeEnabled)
 	cfg.Certificates = append(cfg.Certificates, srv.externalCert)
 
 	if len(srv.internalCert.Certificate) > 0 {

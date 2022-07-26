@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"net"
 
-	"github.com/projectcalico/calico/crypto/tigeratls"
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/voltron/pkg/conn"
 
 	log "github.com/sirupsen/logrus"
@@ -75,7 +75,7 @@ func extractSNI(connection net.Conn, fipsModeEnabled bool) (string, []byte, erro
 		return "", nil, err
 	}
 
-	cfg := tigeratls.NewTLSConfig(fipsModeEnabled)
+	cfg := calicotls.NewTLSConfig(fipsModeEnabled)
 	cfg.Certificates = []tls.Certificate{cert}
 	srv := tls.Server(roConn, cfg)
 	defer func() {

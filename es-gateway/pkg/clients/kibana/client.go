@@ -9,7 +9,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/projectcalico/calico/crypto/tigeratls"
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -45,7 +46,7 @@ func NewClient(url, username, password, caCertPath, clientCertPath, clientKeyPat
 	}
 
 	// Set up default HTTP transport config.
-	tlsConfig := tigeratls.NewTLSConfig(fipsModeEnabled)
+	tlsConfig := calicotls.NewTLSConfig(fipsModeEnabled)
 	tlsConfig.RootCAs = caCertPool
 	httpTransport := &http.Transport{
 		TLSClientConfig: tlsConfig,

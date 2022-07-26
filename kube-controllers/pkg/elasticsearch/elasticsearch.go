@@ -13,7 +13,8 @@ import (
 	"net/http"
 
 	es7 "github.com/elastic/go-elasticsearch/v7"
-	"github.com/projectcalico/calico/crypto/tigeratls"
+
+	"github.com/projectcalico/calico/crypto/pkg/tls"
 )
 
 type client struct {
@@ -103,6 +104,7 @@ func NewClientBuilder(url, username, password string, certPath string, fipsModeE
 		username: username,
 		password: password,
 		certPath: certPath,
+
 		// fipsModeEnabled enables FIPS 140-2 verified crypto mode.
 		fipsModeEnabled: fipsModeEnabled,
 	}
@@ -132,7 +134,7 @@ func (builder *clientBuilder) Build() (Client, error) {
 }
 
 func NewClient(url, username, password string, roots *x509.CertPool, fipsModeEnabled bool) (Client, error) {
-	tlsConfig := tigeratls.NewTLSConfig(fipsModeEnabled)
+	tlsConfig := tls.NewTLSConfig(fipsModeEnabled)
 	tlsConfig.RootCAs = roots
 	config := es7.Config{
 		Addresses: []string{

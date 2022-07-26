@@ -63,13 +63,13 @@ build: $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH)
 
 .PHONY: $(BINDIR)/controller-$(ARCH)
 $(BINDIR)/controller-$(ARCH): $(SRC_FILES)
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
+	$(DOCKER_GO_BUILD_CGO) \
 	    sh -c '$(GIT_CONFIG_SSH) \
 	           go build -o $@ -v -ldflags "$(VERSION_FLAGS)" $(BUILD_TAGS) cmd/controller/controller.go'
 
 .PHONY: $(BINDIR)/healthz-$(ARCH)
 $(BINDIR)/healthz-$(ARCH): $(SRC_FILES)
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
+	$(DOCKER_GO_BUILD_CGO) \
 	    sh -c '$(GIT_CONFIG_SSH) \
 	           go build -o $@ -v $(BUILD_TAGS) cmd/healthz/healthz.go'
 

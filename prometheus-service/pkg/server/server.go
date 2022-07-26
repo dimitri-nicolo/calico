@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"sync"
 
-	"github.com/projectcalico/calico/crypto/tigeratls"
+	"github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	health "github.com/projectcalico/calico/prometheus-service/pkg/handler/health"
 	proxy "github.com/projectcalico/calico/prometheus-service/pkg/handler/proxy"
@@ -80,7 +80,7 @@ func Start(config *Config) {
 	server = &http.Server{
 		Addr:      config.ListenAddr,
 		Handler:   middleware.LogRequestHeaders(sm),
-		TLSConfig: tigeratls.NewTLSConfig(config.FIPSModeEnabled),
+		TLSConfig: tls.NewTLSConfig(config.FIPSModeEnabled),
 	}
 
 	wg.Add(1)

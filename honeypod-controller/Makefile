@@ -52,7 +52,7 @@ build: bin/controller-$(ARCH)
 
 .PHONY: bin/controller-$(ARCH)
 bin/controller-$(ARCH): $(SRC_FILES)
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
+	$(DOCKER_GO_BUILD_CGO) \
 		sh -c '$(GIT_CONFIG_SSH) \
 			go build -o $@ -v $(BUILD_FLAGS) -ldflags "$(VERSION_FLAGS)" cmd/controller/controller.go'
 

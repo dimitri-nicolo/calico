@@ -9,11 +9,11 @@ import (
 	"os"
 
 	"github.com/kelseyhightower/envconfig"
-	"github.com/projectcalico/calico/crypto/tigeratls"
 	log "github.com/sirupsen/logrus"
 
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/projectcalico/calico/crypto/pkg/tls"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	cache2 "github.com/projectcalico/calico/packetcapture/pkg/cache"
@@ -78,7 +78,7 @@ func main() {
 	// Start server
 	server := &http.Server{
 		Addr:      addr,
-		TLSConfig: tigeratls.NewTLSConfig(cfg.FIPSModeEnabled),
+		TLSConfig: tls.NewTLSConfig(cfg.FIPSModeEnabled),
 	}
 
 	log.Fatal(server.ListenAndServeTLS(cfg.HTTPSCert, cfg.HTTPSKey))

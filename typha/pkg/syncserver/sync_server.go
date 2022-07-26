@@ -29,14 +29,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/calico/crypto/tigeratls"
+	cprometheus "github.com/projectcalico/calico/libcalico-go/lib/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
-	cprometheus "github.com/projectcalico/calico/libcalico-go/lib/prometheus"
-
 	"github.com/projectcalico/calico/typha/pkg/buildinfo"
 	"github.com/projectcalico/calico/typha/pkg/jitter"
 	"github.com/projectcalico/calico/typha/pkg/snapcache"
@@ -161,6 +160,7 @@ type Config struct {
 	CAFile                         string
 	ClientCN                       string
 	ClientURISAN                   string
+
 	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
 	FIPSModeEnabled bool
 }
@@ -303,8 +303,10 @@ func (s *Server) serve(cxt context.Context) {
 	)
 	if s.config.requiringTLS() {
 		pwd, _ := os.Getwd()
-		logCxt.WithField("pwd", pwd).WithField("s.config.FIPSModeEnabled", s.config.FIPSModeEnabled).
-			Info("Opening TLS listen socket")
+		logCxt.WithFields(log.Fields{
+			"pwd":             pwd,
+			"fipsModeEnabled": s.config.FIPSModeEnabled,
+		}).Info("Opening TLS listen socket")
 		cert, tlsErr := tls.LoadX509KeyPair(s.config.CertFile, s.config.KeyFile)
 		if tlsErr != nil {
 			logCxt.WithFields(log.Fields{
@@ -312,7 +314,7 @@ func (s *Server) serve(cxt context.Context) {
 				"keyFile":  s.config.KeyFile,
 			}).WithError(tlsErr).Panic("Failed to load certificate and key")
 		}
-		tlsConfig := tigeratls.NewTLSConfig(s.config.FIPSModeEnabled)
+		tlsConfig := calicotls.NewTLSConfig(s.config.FIPSModeEnabled)
 		tlsConfig.Certificates = []tls.Certificate{cert}
 
 		// Arrange for server to verify the clients' certificates.

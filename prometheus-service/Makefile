@@ -55,7 +55,7 @@ SRC_FILES:= $(shell find prometheus-service -type f -name '*.go') \
 build: bin/prometheus-service-$(ARCH)
 
 bin/prometheus-service-$(ARCH): $(SRC_FILES)
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
+	$(DOCKER_GO_BUILD_CGO) \
 		sh -c '$(GIT_CONFIG_SSH) \
 			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" "$(PACKAGE_NAME)/cmd/server"'
 

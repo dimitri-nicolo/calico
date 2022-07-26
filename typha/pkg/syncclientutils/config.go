@@ -42,8 +42,9 @@ type TyphaConfig struct {
 	CAFile   string
 	CN       string
 	URISAN   string
-	// FipsModeEnabled Enables FIPS 140-2 verified crypto mode.
-	FipsModeEnabled string
+
+	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
+	FIPSModeEnabled string
 }
 
 // ReadTyphaConfig reads the TyphaConfig from environment variables.

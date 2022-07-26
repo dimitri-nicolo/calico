@@ -23,12 +23,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/projectcalico/calico/crypto/tigeratls"
 	log "github.com/sirupsen/logrus"
 	"go.etcd.io/etcd/client/pkg/v3/srv"
 	"go.etcd.io/etcd/client/pkg/v3/transport"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
+
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -114,7 +115,7 @@ func NewEtcdV3Client(config *apiconfig.EtcdConfig) (api.Client, error) {
 		return nil, fmt.Errorf("could not initialize etcdv3 client: %+v", err)
 	}
 
-	baseTLSConfig := tigeratls.NewTLSConfig(config.EtcdFIPSModeEnabled)
+	baseTLSConfig := calicotls.NewTLSConfig(config.EtcdFIPSModeEnabled)
 	tlsConfig.MaxVersion = baseTLSConfig.MaxVersion
 	tlsConfig.MinVersion = baseTLSConfig.MinVersion
 	tlsConfig.CipherSuites = baseTLSConfig.CipherSuites

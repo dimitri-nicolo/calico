@@ -9,9 +9,10 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/projectcalico/calico/crypto/tigeratls"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 )
 
 // Serve Prometheus metrics from the specified gatherer at /metrics.
@@ -32,7 +33,7 @@ func ServePrometheusMetrics(gatherer prometheus.Gatherer, host string, port int,
 		}
 		caCertPool := x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM(caCert)
-		tlsConfig := tigeratls.NewTLSConfig(fipsModeEnabled)
+		tlsConfig := calicotls.NewTLSConfig(fipsModeEnabled)
 		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
 		tlsConfig.ClientCAs = caCertPool
 		srv := &http.Server{

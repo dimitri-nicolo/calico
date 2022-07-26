@@ -24,16 +24,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/projectcalico/calico/crypto/tigeratls"
-	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
-
 	"github.com/pkg/profile"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-
-	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/authorization"
-	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/elasticsearchconfiguration"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
 
 	log "github.com/sirupsen/logrus"
 	"go.etcd.io/etcd/client/pkg/v3/srv"
@@ -46,12 +38,11 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-
+	"github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/kube-controllers/pkg/config"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/authorization"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/controller"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/elasticsearchconfiguration"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/federatedservices"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/flannelmigration"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/managedcluster"
@@ -61,10 +52,12 @@ import (
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/pod"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/service"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/serviceaccount"
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 	relasticsearch "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
-
-	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-
+	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
+	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
 	lclient "github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/monitor"
@@ -73,6 +66,8 @@ import (
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
 	"github.com/projectcalico/calico/typha/pkg/cmdwrapper"
+
+	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
 
 // backendClientAccessor is an interface to access the backend client from the main v2 client.
@@ -114,10 +109,10 @@ var (
 	VERSION    string
 	version    bool
 	statusFile string
-)
 
-// fipsModeEnabled enables FIPS 140-2 validated crypto mode.
-var fipsModeEnabled bool
+	// fipsModeEnabled enables FIPS 140-2 validated crypto mode.
+	fipsModeEnabled bool
+)
 
 func init() {
 	// Make sure the RNG is seeded.
@@ -462,7 +457,7 @@ func newEtcdV3Client() (*clientv3.Client, error) {
 		return nil, err
 	}
 
-	baseTLSConfig := tigeratls.NewTLSConfig(fipsModeEnabled)
+	baseTLSConfig := tls.NewTLSConfig(fipsModeEnabled)
 	tlsClient.MaxVersion = baseTLSConfig.MaxVersion
 	tlsClient.MinVersion = baseTLSConfig.MinVersion
 	tlsClient.CipherSuites = baseTLSConfig.CipherSuites

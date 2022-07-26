@@ -78,37 +78,37 @@ sub-build-%:
 
 .PHONY: bin/server-$(ARCH)
 bin/server-$(ARCH): $(SRC_FILES)
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/server/server.go'
 
 .PHONY: bin/controller-$(ARCH)
 bin/controller-$(ARCH): $(SRC_FILES)
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/controller/controller.go'
 
 .PHONY: bin/snapshotter-$(ARCH)
 bin/snapshotter-$(ARCH): $(SRC_FILES)
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/snapshotter/snapshotter.go'
 
 .PHONY: bin/reporter-$(ARCH)
 bin/reporter-$(ARCH): $(SRC_FILES)
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/reporter/reporter.go'
 
 .PHONY: bin/report-type-gen-$(ARCH)
 bin/report-type-gen-$(ARCH): $(SRC_FILES)
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/report-type-gen/*.go'
 
 .PHONY: bin/scaleloader-$(ARCH)
 bin/scaleloader-$(ARCH): $(SRC_FILES)
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/mockdata-scaleloader/scaleloader.go'
 
 .PHONY: bin/benchmarker-$(ARCH)
 bin/benchmarker-$(ARCH): $(SRC_FILES)
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
+	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/benchmarker/benchmarker.go'
 
 ###############################################################################

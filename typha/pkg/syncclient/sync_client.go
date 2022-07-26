@@ -26,9 +26,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/calico/crypto/tigeratls"
 	log "github.com/sirupsen/logrus"
 
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/typha/pkg/discovery"
 	"github.com/projectcalico/calico/typha/pkg/syncproto"
@@ -51,6 +51,7 @@ type Options struct {
 	ServerCN     string
 	ServerURISAN string
 	SyncerType   syncproto.SyncerType
+
 	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
 	FIPSModeEnabled bool
 }
@@ -225,7 +226,7 @@ func (s *SyncerClient) connect(cxt context.Context, typhaAddr discovery.Typha) e
 			log.WithError(err).Error("Failed to load certificate and key")
 			return err
 		}
-		tlsConfig := tigeratls.NewTLSConfig(s.options.FIPSModeEnabled)
+		tlsConfig := calicotls.NewTLSConfig(s.options.FIPSModeEnabled)
 		tlsConfig.Certificates = []tls.Certificate{cert}
 
 		// Set InsecureSkipVerify true, because when it's false crypto/tls insists on

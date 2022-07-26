@@ -12,7 +12,7 @@ import (
 	"regexp"
 
 	"github.com/pkg/errors"
-	"github.com/projectcalico/calico/crypto/tigeratls"
+	"github.com/projectcalico/calico/crypto/pkg/tls"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -31,6 +31,7 @@ type Target struct {
 	// Transport to use for this target. If nil, Proxy will provide one
 	Transport        http.RoundTripper
 	AllowInsecureTLS bool
+
 	// Enables FIPS 140-2 verified mode.
 	FIPSModeEnabled bool
 }
@@ -72,7 +73,7 @@ func newTargetHandler(tgt Target) (func(http.ResponseWriter, *http.Request), err
 	if tgt.Transport != nil {
 		p.Transport = tgt.Transport
 	} else if tgt.Dest.Scheme == "https" {
-		tlsCfg := tigeratls.NewTLSConfig(tgt.FIPSModeEnabled)
+		tlsCfg := tls.NewTLSConfig(tgt.FIPSModeEnabled)
 
 		if tgt.AllowInsecureTLS {
 			tlsCfg.InsecureSkipVerify = true

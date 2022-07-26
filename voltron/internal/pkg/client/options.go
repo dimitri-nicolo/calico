@@ -123,7 +123,6 @@ func WithTunnelDialTimeout(tunnelDialTimeout time.Duration) Option {
 func WithFIPSModeEnabled(fipsModeEnabled bool) Option {
 	return func(c *Client) error {
 		c.fipsModeEnabled = fipsModeEnabled
-		c.fipsModeEnabled = fipsModeEnabled
 		return nil
 	}
 }

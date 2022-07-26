@@ -238,12 +238,11 @@ type Config struct {
 	// unset.  Felix will then initiate a secure (TLS) connection to Typha.  Typha must present
 	// a certificate signed by a CA in TyphaCAFile, and with CN matching TyphaCN or URI SAN
 	// matching TyphaURISAN.
-	TyphaKeyFile         string `config:"file(must-exist);;local"`
-	TyphaCertFile        string `config:"file(must-exist);;local"`
-	TyphaCAFile          string `config:"file(must-exist);;local"`
-	TyphaCN              string `config:"string;;local"`
-	TyphaURISAN          string `config:"string;;local"`
-	TyphaFIPSMODEENABLED bool   `config:"bool;false;local"`
+	TyphaKeyFile  string `config:"file(must-exist);;local"`
+	TyphaCertFile string `config:"file(must-exist);;local"`
+	TyphaCAFile   string `config:"file(must-exist);;local"`
+	TyphaCN       string `config:"string;;local"`
+	TyphaURISAN   string `config:"string;;local"`
 
 	Ipv6Support    bool `config:"bool;true"`
 	BpfIpv6Support bool `config:"bool;false"`
@@ -352,6 +351,7 @@ type Config struct {
 	PrometheusMetricsCertFile         string `config:"file(must-exist);"`
 	PrometheusMetricsKeyFile          string `config:"file(must-exist);"`
 	PrometheusMetricsCAFile           string `config:"file(must-exist);"`
+
 	// PrometheusReporterFIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
 	PrometheusMetricsFIPSModeEnabled bool `config:"bool;false"`
 
@@ -367,6 +367,7 @@ type Config struct {
 	PrometheusReporterCertFile string `config:"file(must-exist);"`
 	PrometheusReporterKeyFile  string `config:"file(must-exist);"`
 	PrometheusReporterCAFile   string `config:"file(must-exist);"`
+
 	// PrometheusReporterFIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
 	PrometheusReporterFIPSModeEnabled bool          `config:"bool;false"`
 	SyslogReporterNetwork             string        `config:"string;"`

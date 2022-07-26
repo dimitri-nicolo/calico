@@ -38,6 +38,7 @@ import (
 	"github.com/projectcalico/calico/voltron/internal/pkg/regex"
 	"github.com/projectcalico/calico/voltron/internal/pkg/server"
 	"github.com/projectcalico/calico/voltron/internal/pkg/test"
+	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 
 	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -70,6 +71,7 @@ type k8sClient struct {
 }
 
 var _ = Describe("Server Proxy to tunnel", func() {
+	fipsmode := true
 	var (
 		k8sAPI bootstrap.K8sClient
 
@@ -360,7 +362,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        clusterA,
-							Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: test.CertificateFingerprint(clusterACert)},
+							Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(fipsmode, clusterACert)},
 						},
 					}, metav1.CreateOptions{})
 					Expect(err).ShouldNot(HaveOccurred())
@@ -435,7 +437,6 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					var (
 						clusterBTLSCert tls.Certificate
 					)
-
 					BeforeEach(func() {
 						clusterBCertTemplate := test.CreateClientCertificateTemplate(clusterB, "localhost")
 						clusterBPrivKey, clusterBCert, err := test.CreateCertPair(clusterBCertTemplate, voltronTunnelCert, voltronTunnelPrivKey)
@@ -444,7 +445,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 						_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:        clusterB,
-								Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: test.CertificateFingerprint(clusterBCert)},
+								Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(true, clusterBCert)},
 							},
 						}, metav1.CreateOptions{})
 						Expect(err).ShouldNot(HaveOccurred())
@@ -614,7 +615,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        clusterA,
-					Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: test.CertificateFingerprint(cert)},
+					Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(fipsmode, cert)},
 				},
 			}, metav1.CreateOptions{})
 			Expect(err).ShouldNot(HaveOccurred())

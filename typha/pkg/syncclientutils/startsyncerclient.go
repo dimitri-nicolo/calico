@@ -67,7 +67,7 @@ func MustStartSyncerClientIfTyphaConfigured(
 			CAFile:          typhaConfig.CAFile,
 			ServerCN:        typhaConfig.CN,
 			ServerURISAN:    typhaConfig.URISAN,
-			FIPSModeEnabled: typhaConfig.FipsModeEnabled == "true",
+			FIPSModeEnabled: typhaConfig.FIPSModeEnabled == "true",
 		},
 	)
 	if err := typhaConnection.Start(context.Background()); err != nil {

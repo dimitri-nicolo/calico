@@ -15,13 +15,13 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/projectcalico/calico/crypto/tigeratls"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	jclust "github.com/projectcalico/calico/voltron/internal/pkg/clusters"
 	vtls "github.com/projectcalico/calico/voltron/pkg/tls"
@@ -221,7 +221,7 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 			mc := &jclust.ManagedCluster{
 				ID:                mcResource.ObjectMeta.Name,
 				ActiveFingerprint: mcResource.ObjectMeta.Annotations[AnnotationActiveCertificateFingerprint],
-				FipsModeEnabled:   cs.fipsModeEnabled,
+				FIPSModeEnabled:   cs.fipsModeEnabled,
 			}
 
 			log.Debugf("Watching K8s resource type: %s for cluster %s", r.Type, mc.ID)
@@ -376,7 +376,7 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 		return err
 	}
 
-	tlsConfig := tigeratls.NewTLSConfig(c.FipsModeEnabled)
+	tlsConfig := calicotls.NewTLSConfig(c.FIPSModeEnabled)
 	tlsConfig.InsecureSkipVerify = true //todo: not sure where this comes from, but this should be dealt with.
 	c.proxy = &httputil.ReverseProxy{
 		Director:      proxyVoidDirector,

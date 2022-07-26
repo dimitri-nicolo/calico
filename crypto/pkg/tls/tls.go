@@ -1,4 +1,4 @@
-package tigeratls
+package tls
 
 import (
 	"crypto/tls"

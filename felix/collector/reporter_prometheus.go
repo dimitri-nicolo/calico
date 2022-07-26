@@ -40,6 +40,7 @@ type PrometheusReporter struct {
 
 	// Allow the time function to be mocked for test purposes.
 	timeNowFn func() time.Duration
+
 	// fipsModeEnabled Enables FIPS 140-2 verified crypto mode.
 	fipsModeEnabled bool
 }

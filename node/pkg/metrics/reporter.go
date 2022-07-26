@@ -72,6 +72,7 @@ type prometheusBGPReporter struct {
 	registry     *prometheus.Registry
 	aggregators  []prometheusMetricAggregator
 	statsGetters []func() (*bgp.Stats, error)
+
 	// fipsModeEnabled Enables FIPS 140-2 verified crypto mode.
 	fipsModeEnabled bool
 }

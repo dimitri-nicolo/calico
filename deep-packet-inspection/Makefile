@@ -48,7 +48,7 @@ build: bin/deep-packet-inspection-$(ARCH)
 
 .PHONY: bin/deep-packet-inspection-$(ARCH)
 bin/deep-packet-inspection-$(ARCH): $(SRC_FILES)
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD)\
+	$(DOCKER_GO_BUILD_CGO) \
 		sh -c '$(GIT_CONFIG_SSH) \
 			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/$*/*.go'
 

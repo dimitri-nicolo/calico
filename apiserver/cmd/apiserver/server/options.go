@@ -64,6 +64,7 @@ type CalicoServerOptions struct {
 	ManagedClustersCACertPath      string
 	ManagedClustersCAKeyPath       string
 	EnableManagedClustersCreateAPI bool
+	FIPSModeEnabled                bool
 
 	// Use this to populate the managementClusterAddr inside the managementClusterConnection CR.
 	ManagementClusterAddr   string

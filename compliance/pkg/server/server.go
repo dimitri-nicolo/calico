@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/bmizerany/pat"
-	"github.com/projectcalico/calico/crypto/tigeratls"
 	log "github.com/sirupsen/logrus"
 
 	"k8s.io/apiserver/pkg/endpoints/request"
@@ -16,6 +15,7 @@ import (
 	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	"github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/elastic"
 )
@@ -46,7 +46,7 @@ func New(csFactory datastore.ClusterCtxK8sClientFactory, esFactory elastic.Clust
 	s.server = &http.Server{
 		Addr:      addr,
 		Handler:   mux,
-		TLSConfig: tigeratls.NewTLSConfig(fipsMode),
+		TLSConfig: tls.NewTLSConfig(fipsMode),
 	}
 
 	return s

@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/projectcalico/calico/crypto/tigeratls"
 	log "github.com/sirupsen/logrus"
 
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 )
 
@@ -157,7 +157,7 @@ func (s *Server) Serve(lis net.Listener) error {
 // ServeTLS starts serving TLS connections using the provided listener and the
 // configured certs
 func (s *Server) ServeTLS(lis net.Listener) error {
-	config := tigeratls.NewTLSConfig(s.fipsModeEnabled)
+	config := calicotls.NewTLSConfig(s.fipsModeEnabled)
 	config.Certificates = s.serverCerts
 	config.ClientAuth = tls.RequireAndVerifyClientCert
 	config.ClientCAs = s.clientCertPool
