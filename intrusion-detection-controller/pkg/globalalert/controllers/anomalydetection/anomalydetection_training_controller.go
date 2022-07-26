@@ -1,3 +1,4 @@
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 package anomalydetection
 
 import (
@@ -24,13 +25,20 @@ const (
 	ADTrainingJobTemplateName         = "tigera.io.detectors.training"
 	DefaultADDetectorTrainingSchedule = 1 * time.Hour
 
-	trainingJobSuffix = "training"
+	initialTrainingJobSuffix = "initial-training"
+	trainingCycleSuffix      = "training"
 
 	ADJobOwnerLabelValue = "intrusion-detection-controller"
 )
 
 var (
 	TrainingJobLabels = func() map[string]string {
+		return map[string]string{
+			"tigera.io.detector-cycle": "training",
+		}
+	}
+
+	TrainingCycleLabels = func() map[string]string {
 		return map[string]string{
 			"tigera.io.detector-cycle": "training",
 		}
@@ -116,8 +124,8 @@ func (c *adJobTrainingController) AddDetector(resource interface{}) error {
 	if err != nil {
 		// No need to continue with training cycles, as the pod template will not available for cronJobs
 		// as well.
-		_, ok := err.(*PodTemplateError)
-		if ok {
+		var podTemplateError *PodTemplateError
+		if errors.As(err, &podTemplateError) {
 			log.Error(err)
 			return err
 		}

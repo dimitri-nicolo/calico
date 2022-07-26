@@ -1,3 +1,4 @@
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 package anomalydetection
 
 import (
@@ -36,12 +37,6 @@ var (
 	}
 )
 
-type PodTemplateError struct{}
-
-func (m *PodTemplateError) Error() string {
-	return "PodTemplateError"
-}
-
 type adJobTrainingReconciler struct {
 	managementClusterCtx context.Context
 
@@ -67,7 +62,7 @@ type trainingCycleStatePerCluster struct {
 // deployed Cronjobs relating to the DetectionCycleState controlled by the Detection Controller
 func (r *adJobTrainingReconciler) listTrainingCronJobs() (map[string]interface{}, error) {
 	detectionCronJobs := make(map[string]interface{})
-	detectionJobLabelByteStr := maputil.CreateLabelValuePairStr(TrainingJobLabels())
+	detectionJobLabelByteStr := maputil.CreateLabelValuePairStr(TrainingCycleLabels())
 
 	detectionCronJobList, err := r.k8sClient.BatchV1().CronJobs(r.namespace).List(r.managementClusterCtx,
 		metav1.ListOptions{
@@ -292,17 +287,18 @@ func (r *adJobTrainingReconciler) addTrainingCycle(mcs TrainingDetectorsRequest)
 // a first time detector.
 func (r *adJobTrainingReconciler) runInitialTrainingJob(mcs TrainingDetectorsRequest) error {
 	clusterName := mcs.ClusterName
-	trainingJobStateNameKey := r.getTrainingCycleJobNameForCluster(clusterName)
+	trainingCycleJobStateNameKey := r.getTrainingCycleJobNameForCluster(clusterName)
 
 	r.trainingJobsMutex.Lock()
 	defer r.trainingJobsMutex.Unlock()
 
-	trainingCycle, found := r.trainingDetectorsPerCluster[trainingJobStateNameKey]
+	trainingCycle, found := r.trainingDetectorsPerCluster[trainingCycleJobStateNameKey]
 
 	// kick-off an initial training job if there is not existing training cycle or for a first time
 	// detector.
 	detector := mcs.GlobalAlert.Spec.Detector.Name
 	if !found || !collectDetectorsSetFromGlobalAlerts(trainingCycle.GlobalAlerts).Contains(detector) {
+		trainingJobStateNameKey := r.getInitialTrainingJobNameForCluster(clusterName, detector)
 		adTrainingJobPT, err := r.getADPodTemplateWithEnabledDecorator(clusterName, detector)
 		if err != nil {
 			log.WithError(err).
@@ -320,17 +316,28 @@ func (r *adJobTrainingReconciler) runInitialTrainingJob(mcs TrainingDetectorsReq
 		}
 
 		// Create an initial training job.
-		r.k8sClient.BatchV1().Jobs(r.namespace).
+		_, err = r.k8sClient.BatchV1().Jobs(r.namespace).
 			Create(r.managementClusterCtx, adInitialTrainingJob, metav1.CreateOptions{})
+		if err != nil {
+			log.WithError(err).
+				Errorf("Unable to create initial training jod for on cluster %s", clusterName)
+			return err
+		}
 	}
 
 	return nil
 }
 
+// getInitialTrainingJobNameForCluster creates a standardized string from the cluster's name to be
+// used as the initial training job name created for the cluster.
+func (r *adJobTrainingReconciler) getInitialTrainingJobNameForCluster(clusterName, detector string) string {
+	return fmt.Sprintf("%s-%s-%s", clusterName, detector, initialTrainingJobSuffix)
+}
+
 // getTrainingCycleCronJobNameForCluster creates a standardized string from the cluster's name to be
-//  used as the cronjob name created for the cluster.
+// used as the cronjob name created for the cluster.
 func (r *adJobTrainingReconciler) getTrainingCycleJobNameForCluster(clusterName string) string {
-	return fmt.Sprintf("%s-%s-cycle", clusterName, trainingJobSuffix)
+	return fmt.Sprintf("%s-%s-cycle", clusterName, trainingCycleSuffix)
 }
 
 // collectDetectorsSetFromGlobalAlerts collects and returns the comma delimited string of detectors
@@ -347,7 +354,6 @@ func collectDetectorsFromGlobalAlerts(globalAlerts []*v3.GlobalAlert) string {
 // collectDetectorsSetFromGlobalAlerts collects and returns the set of detectors of the global
 // alerts.
 func collectDetectorsSetFromGlobalAlerts(globalAlerts []*v3.GlobalAlert) set.Set {
-	// var detectors set.Set
 	detectors := set.New()
 	for _, ga := range globalAlerts {
 		if ga.Spec.Detector != nil {
@@ -407,8 +413,9 @@ func (r *adJobTrainingReconciler) createInitialTrainingJobForCluster(
 	trainingLabels := TrainingJobLabels()
 	trainingLabels["cluster"] = clusterName
 
-	// Restart policy set to 'Never' and a backoffLimit of zero means that the job will error out,
-	// instead of crash-looping.
+	// Restart policy set to 'Never' and a backoffLimit of zero means that in the event that it
+	// results in an error, the initial training job would not be put in a crashloop since we have the
+	// fallback of the pre-trained model in the AD Pods themselves.
 	adTrainingJobPT.Template.Spec.RestartPolicy = v1.RestartPolicyNever
 	backoffLimit := int32(0)
 
@@ -436,7 +443,7 @@ func (r *adJobTrainingReconciler) createInitialTrainingJobForCluster(
 // createTrainingCronJobForCluster creates the training cronjob from the expected podtemplate, adTrainingJobPT
 // is assumed to have the Pod's specs set for training
 func (r *adJobTrainingReconciler) createTrainingCronJobForCluster(clusterName string, cronJobName string, adTrainingJobPT v1.PodTemplate) (*batchv1.CronJob, error) {
-	trainingCronLabels := TrainingJobLabels()
+	trainingCronLabels := TrainingCycleLabels()
 	trainingCronLabels["cluster"] = clusterName
 
 	trainingCronJob := podtemplate.CreateCronJobFromPodTemplate(cronJobName, r.namespace,
