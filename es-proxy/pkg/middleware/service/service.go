@@ -23,8 +23,7 @@ import (
 )
 
 const (
-	defaultTimeRange = 1 * time.Hour
-	defaultTimeout   = 60 * time.Second
+	httpStatusServerErrorUpperBound = 599
 )
 
 // ServiceHandler handles service requests from manager dashboard.
@@ -122,7 +121,8 @@ func processServiceRequest(
 		if sourceNameAggr != api.FlowLogNetworkPrivate && sourceNameAggr != api.FlowLogNetworkPublic {
 			errCount := 0
 			if responseCode, err := strconv.Atoi(doc.Source.ResponseCode); err == nil {
-				if responseCode >= http.StatusBadRequest && responseCode <= 599 {
+				// Count HTTP error responses from 400 - 499 (client error) + 500 - 599 (server error)
+				if responseCode >= http.StatusBadRequest && responseCode <= httpStatusServerErrorUpperBound {
 					errCount = doc.Source.Count
 				}
 			}
@@ -176,7 +176,7 @@ func search(
 	r *http.Request,
 ) (*esSearch.ESResults, error) {
 	// create a context with timeout to ensure we don't block for too long.
-	ctx, cancelWithTimeout := context.WithTimeout(r.Context(), defaultTimeout)
+	ctx, cancelWithTimeout := context.WithTimeout(r.Context(), middleware.DefaultRequestTimeout)
 	defer cancelWithTimeout()
 
 	// Get service details from L7 ApplicationLayer logs.
@@ -185,10 +185,8 @@ func search(
 
 	esquery := elastic.NewBoolQuery()
 	// Selector query.
-	var selector elastic.Query
-	var err error
 	if len(params.Selector) > 0 {
-		selector, err = idxHelper.NewSelectorQuery(params.Selector)
+		selector, err := idxHelper.NewSelectorQuery(params.Selector)
 		if err != nil {
 			// NewSelectorQuery returns an HttpStatusError.
 			return nil, err
@@ -200,7 +198,7 @@ func search(
 	if params.TimeRange == nil {
 		now := time.Now()
 		params.TimeRange = &lmav1.TimeRange{
-			From: now.Add(-defaultTimeRange),
+			From: now.Add(-middleware.DefaultRequestTimeRange),
 			To:   now,
 		}
 	}
@@ -223,7 +221,7 @@ func search(
 		EsQuery:  esquery,
 		Index:    index,
 		PageSize: middleware.MaxNumResults,
-		Timeout:  defaultTimeout,
+		Timeout:  middleware.DefaultRequestTimeout,
 	}
 
 	result, err := esSearch.Hits(ctx, query, esClient)

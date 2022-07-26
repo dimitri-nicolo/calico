@@ -3,16 +3,10 @@ package v1
 
 import (
 	"encoding/json"
-	"time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-)
-
-const (
-	defaultRequestTimeout = 60 * time.Second
-	defaultPageSize       = 100
 )
 
 // SearchRequest contains the parameters for defining raw logs queries. This interface returns a maximum of 10,000
@@ -43,12 +37,6 @@ type SearchRequest struct {
 
 	// Timeout for the request. Defaults to 60s.
 	Timeout *v1.Duration `json:"timeout" validate:"omitempty"`
-}
-
-// decodeRequestBody sets the search parameters to their default values.
-func (params *SearchRequest) DefaultParams() {
-	params.PageSize = defaultPageSize
-	params.Timeout = &v1.Duration{Duration: defaultRequestTimeout}
 }
 
 // SearchRequestSortBy encapsulates the sort-by parameters a search query will return results by.

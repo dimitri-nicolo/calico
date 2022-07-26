@@ -25,6 +25,10 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
+const (
+	defaultPageSize = 100
+)
+
 // SearchHandler is a handler for the /search endpoint.
 //
 // Uses a request body (JSON.blob) to extract parameters to build an elasticsearch query,
@@ -70,8 +74,11 @@ func parseRequestBodyForParams(w http.ResponseWriter, r *http.Request) (*v1.Sear
 		}
 	}
 
-	var params v1.SearchRequest
-	params.DefaultParams()
+	// Initialize the search parameters to their default values.
+	params := v1.SearchRequest{
+		PageSize: defaultPageSize,
+		Timeout:  &metav1.Duration{Duration: middleware.DefaultRequestTimeout},
+	}
 
 	// Decode the http request body into the struct.
 	if err := httputils.Decode(w, r, &params); err != nil {

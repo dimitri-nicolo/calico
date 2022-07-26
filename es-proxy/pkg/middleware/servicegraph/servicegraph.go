@@ -13,6 +13,7 @@ import (
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
+	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
 
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
@@ -23,10 +24,6 @@ import (
 // This file implements the main HTTP handler factory for service graph. This is the main entry point for service
 // graph in es-proxy. The handler pulls together various components to parse the request, query the flow data,
 // filter and aggregate the flows. All HTTP request processing is handled here.
-
-const (
-	defaultRequestTimeout = 60 * time.Second
-)
 
 func NewServiceGraphHandler(
 	ctx context.Context,
@@ -132,7 +129,7 @@ func (s *serviceGraph) getServiceGraphRequest(w http.ResponseWriter, req *http.R
 	}
 
 	if sgr.Timeout.Duration == 0 {
-		sgr.Timeout.Duration = defaultRequestTimeout
+		sgr.Timeout.Duration = middleware.DefaultRequestTimeout
 	}
 	if sgr.Cluster == "" {
 		sgr.Cluster = "cluster"

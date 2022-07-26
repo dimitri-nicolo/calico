@@ -1,9 +1,7 @@
 // Copyright (c) 2022 Tigera, Inc. All rights reserved.
 package service
 
-import (
-	"time"
-)
+import "time"
 
 type l7Doc struct {
 	ID     string `json:"id"`

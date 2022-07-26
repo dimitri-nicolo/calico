@@ -1,3 +1,4 @@
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 package elastic
 
 import (
@@ -17,9 +18,7 @@ import (
 	api "github.com/projectcalico/calico/lma/pkg/api"
 )
 
-const (
-	AuditLogIndex = "tigera_secure_ee_audit_*"
-)
+const AuditLogIndex = "tigera_secure_ee_audit_*"
 
 func (c *client) GetAuditEvents(ctx context.Context, start, end *time.Time) <-chan *api.AuditEventResult {
 	return c.SearchAuditEvents(ctx, nil, start, end)

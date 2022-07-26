@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2022 Tigera, Inc. All rights reserved.
 package elastic
 
 import (
@@ -14,9 +14,7 @@ import (
 	api "github.com/projectcalico/calico/lma/pkg/api"
 )
 
-const (
-	DNSIndex = "tigera_secure_ee_dns"
-)
+const DNSIndex = "tigera_secure_ee_dns"
 
 func (c *client) GetDNSLogs(ctx context.Context, start, end *time.Time) <-chan *api.DNSResult {
 	return c.SearchDNSLogs(ctx, nil, start, end)
