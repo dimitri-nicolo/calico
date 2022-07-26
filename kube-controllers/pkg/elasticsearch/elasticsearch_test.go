@@ -93,6 +93,7 @@ func assertResponse(expected expected, err error, mockES *mockES) {
 }
 
 var _ = Describe("Elasticsearch", func() {
+	fipsModeEnabled := true
 	DescribeTable("DeleteUser",
 		func(mock mockReq, expected expected) {
 			// Configure ES to return a specific response
@@ -100,7 +101,7 @@ var _ = Describe("Elasticsearch", func() {
 			defer mockES.es.Close()
 
 			// Configure ES client
-			var client, err = elasticsearch.NewClient(mockES.es.URL, esAdminName, esAdminPassword, nil)
+			var client, err = elasticsearch.NewClient(mockES.es.URL, esAdminName, esAdminPassword, nil, fipsModeEnabled)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Invoke Delete
@@ -131,7 +132,7 @@ var _ = Describe("Elasticsearch", func() {
 			defer mockES.es.Close()
 
 			// Configure ES client
-			var client, err = elasticsearch.NewClient(mockES.es.URL, esAdminName, esAdminPassword, nil)
+			var client, err = elasticsearch.NewClient(mockES.es.URL, esAdminName, esAdminPassword, nil, fipsModeEnabled)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Invoke Delete
@@ -161,7 +162,7 @@ var _ = Describe("Elasticsearch", func() {
 			defer mockES.es.Close()
 
 			// Configure ES client
-			var client, err = elasticsearch.NewClient(mockES.es.URL, esAdminName, esAdminPassword, nil)
+			var client, err = elasticsearch.NewClient(mockES.es.URL, esAdminName, esAdminPassword, nil, fipsModeEnabled)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Invoke GetUser

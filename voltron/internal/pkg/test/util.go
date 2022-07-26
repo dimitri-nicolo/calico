@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 )
 

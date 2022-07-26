@@ -69,7 +69,7 @@ var _ = Describe("Check License Validity", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 
 		By("Checking Validity")
-		lr := metrics.NewLicenseReporter("", "", "", "", min, 9081)
+		lr := metrics.NewLicenseReporter("", "", "", "", min, 9081, true)
 		isValid, _, maxNodes := lr.LicenseHandler(licenseKey.license)
 		Expect(isValid).To(BeTrue(), "License Valid")
 		Expect(maxNodes).Should(Equal(maxLicensedNodes))

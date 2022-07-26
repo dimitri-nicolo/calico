@@ -29,13 +29,14 @@ import (
 	"sync"
 	"time"
 
-	cprometheus "github.com/projectcalico/calico/libcalico-go/lib/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
+
 	log "github.com/sirupsen/logrus"
 
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
+	cprometheus "github.com/projectcalico/calico/libcalico-go/lib/prometheus"
 	"github.com/projectcalico/calico/typha/pkg/buildinfo"
 	"github.com/projectcalico/calico/typha/pkg/jitter"
 	"github.com/projectcalico/calico/typha/pkg/snapcache"

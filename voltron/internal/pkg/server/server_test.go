@@ -71,7 +71,7 @@ type k8sClient struct {
 }
 
 var _ = Describe("Server Proxy to tunnel", func() {
-	fipsmode := true
+	fipsmode := false
 	var (
 		k8sAPI bootstrap.K8sClient
 
@@ -445,7 +445,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 						_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:        clusterB,
-								Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(true, clusterBCert)},
+								Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(fipsmode, clusterBCert)},
 							},
 						}, metav1.CreateOptions{})
 						Expect(err).ShouldNot(HaveOccurred())

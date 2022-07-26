@@ -12,7 +12,9 @@ import (
 	"regexp"
 
 	"github.com/pkg/errors"
+
 	"github.com/projectcalico/calico/crypto/pkg/tls"
+
 	log "github.com/sirupsen/logrus"
 )
 
