@@ -2,7 +2,7 @@ FROM registry.access.redhat.com/ubi8/ubi-minimal:8.5 AS ubi
 
 FROM scratch
 
-ADD bin/eck-operator-amd64 ./elastic-operator
+ADD bin/eck-operator-amd64 /elastic-operator
 ADD cloud-on-k8s/config/eck.yaml /conf/eck.yaml
 ADD cloud-on-k8s/*.txt /licenses/
 
@@ -13,5 +13,5 @@ COPY --from=ubi /lib64/libc.so.6 /lib64/libc.so.6
 
 USER 1001
 
-ENTRYPOINT ["./elastic-operator"]
+ENTRYPOINT ["/elastic-operator"]
 CMD ["manager"]
