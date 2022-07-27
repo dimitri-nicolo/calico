@@ -149,7 +149,6 @@ func main() {
 	}
 
 	// returns nil if not provided and falls back to simple TCP.
-
 	// BEGIN TIGERA CHANGES
 	fipsModeEnabled := os.Getenv("FIPS_MODE_ENABLED") == "true"
 	tlsConfig := createTLSConfig(*esCA, *esClientCert, *esClientPrivateKey, *esInsecureSkipVerify, fipsModeEnabled)
