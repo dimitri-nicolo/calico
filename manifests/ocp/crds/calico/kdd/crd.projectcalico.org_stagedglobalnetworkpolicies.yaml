@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: "(devel)"
-  creationTimestamp:
+  creationTimestamp: 
   name: stagedglobalnetworkpolicies.crd.projectcalico.org
 spec:
   group: crd.projectcalico.org
