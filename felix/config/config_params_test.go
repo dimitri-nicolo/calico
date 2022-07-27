@@ -82,6 +82,10 @@ var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 
 		// Temporary field to implement and test IPv6 in BPF dataplane
 		"BpfIpv6Support",
+
+		// These are set via ENV by the operator.
+		"PrometheusMetricsFIPSModeEnabled",
+		"PrometheusReporterFIPSModeEnabled",
 	}
 	cpFieldNameToFC := map[string]string{
 		"IpInIpEnabled":                      "IPIPEnabled",
