@@ -33,6 +33,8 @@ import (
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/authorization"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/elasticsearchconfiguration"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
+
 	log "github.com/sirupsen/logrus"
 	"go.etcd.io/etcd/client/pkg/v3/srv"
 	"go.etcd.io/etcd/client/pkg/v3/transport"
@@ -115,6 +117,9 @@ var (
 )
 
 func init() {
+	// Make sure the RNG is seeded.
+	seedrng.EnsureSeeded()
+
 	// Add a flag to check the version.
 	flag.BoolVar(&version, "version", false, "Display version")
 	flag.StringVar(&statusFile, "status-file", status.DefaultStatusFile, "File to write status information to")

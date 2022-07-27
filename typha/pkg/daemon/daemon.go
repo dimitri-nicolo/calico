@@ -16,7 +16,6 @@ package daemon
 
 import (
 	"context"
-	"math/rand"
 	"os"
 	"os/signal"
 	"runtime"
@@ -30,6 +29,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
@@ -148,7 +149,7 @@ func (t *TyphaDaemon) InitializeAndServeForever(cxt context.Context) error {
 // DoEarlyRuntimeSetup does early runtime/logging configuration that needs to happen before we do any work.
 func (t *TyphaDaemon) DoEarlyRuntimeSetup() {
 	// Go's RNG is not seeded by default.  Do that now.
-	rand.Seed(time.Now().UTC().UnixNano())
+	seedrng.EnsureSeeded()
 
 	// Special-case handling for environment variable-configured logging:
 	// Initialise early so we can trace out config parsing.

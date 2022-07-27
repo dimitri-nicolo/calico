@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
-	"time"
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	. "github.com/onsi/ginkgo"
@@ -25,13 +24,14 @@ import (
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
+	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
 )
 
 // This file is to hold private only tests to try to reduce the possibility of
 // merge conflicts from the OS repo.
 var _ = Describe("CalicoCni Private", func() {
-	// Create a random seed
-	rand.Seed(time.Now().UTC().UnixNano())
+	// Make sure the RNG is seeded.
+	seedrng.EnsureSeeded()
 	hostname, _ := names.Hostname()
 	ctx := context.Background()
 	calicoClient, err := client.NewFromEnv()
@@ -132,8 +132,8 @@ var _ = Describe("CalicoCni Private", func() {
 })
 
 var _ = Describe("CalicoCNI Private Kubernetes CNI tests", func() {
-	// Create a random seed
-	rand.Seed(time.Now().UTC().UnixNano())
+	// Make sure the RNG is seeded.
+	seedrng.EnsureSeeded()
 	hostname, _ := names.Hostname()
 	calicoClient, err := client.NewFromEnv()
 	if err != nil {

@@ -22,6 +22,8 @@ import (
 	confdConfig "github.com/projectcalico/calico/confd/pkg/config"
 	confd "github.com/projectcalico/calico/confd/pkg/run"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
+
 	"github.com/projectcalico/calico/node/pkg/nodeinit"
 
 	"github.com/sirupsen/logrus"
@@ -95,6 +97,9 @@ var runEarlyNetworking = flagSet.Bool("early", false, "Do early networking setup
 var initHostpaths = flagSet.Bool("hostpath-init", false, "Initialize hostpaths for non-root access")
 
 func main() {
+	// Make sure the RNG is seeded, we use it for backoffs and the like.
+	seedrng.EnsureSeeded()
+
 	// Log to stdout.  this prevents our logs from being interpreted as errors by, for example,
 	// fluentd's default configuration.
 	logrus.SetOutput(os.Stdout)

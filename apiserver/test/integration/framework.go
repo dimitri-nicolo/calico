@@ -28,6 +28,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
@@ -43,7 +45,7 @@ import (
 const defaultEtcdPathPrefix = ""
 
 func init() {
-	rand.Seed(time.Now().UnixNano())
+	seedrng.EnsureSeeded()
 }
 
 type TestServerConfig struct {
