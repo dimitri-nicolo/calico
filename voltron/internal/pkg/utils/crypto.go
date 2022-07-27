@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 
 	"github.com/pkg/errors"
@@ -78,8 +79,11 @@ func CertPEMEncode(cert *x509.Certificate) []byte {
 
 // GenerateFingerprint returns the hash for a x509 certificate printed as a hex number
 func GenerateFingerprint(fipsMode bool, certificate *x509.Certificate) string {
+	var fingerprint string
 	if fipsMode {
-		return fmt.Sprintf("%x", sha256.Sum256(certificate.Raw))
+		fingerprint = fmt.Sprintf("%x", sha256.Sum256(certificate.Raw))
 	}
-	return fmt.Sprintf("%x", md5.Sum(certificate.Raw))
+	fingerprint = fmt.Sprintf("%x", md5.Sum(certificate.Raw))
+	log.Infof("Created fingerprint for cert with fipsModeEnabled: %t,  common name: %s and fingerprint: %s", fipsMode, certificate.Subject.CommonName, fingerprint)
+	return fingerprint
 }
