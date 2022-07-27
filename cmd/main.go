@@ -32,11 +32,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/version"
-	logr "github.com/tigera/elasticsearch-metrics/pkg/logger"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 // This file is a modified version of main.go from the original repo with added and modified TLS settings.
+// See README.md for more information.
 
 const name = "elasticsearch_exporter"
 
@@ -112,6 +112,8 @@ func main() {
 		logOutput = kingpin.Flag("log.output",
 			"Sets the log output. Valid outputs are stdout and stderr").
 			Default("stdout").String()
+
+		// BEGIN TIGERA CHANGES
 		ca = kingpin.Flag("ca.crt",
 			"Path to PEM file that contains trusted Certificate Authorities.").
 			Default("/tls/ca.crt").String()
@@ -121,13 +123,14 @@ func main() {
 		certificate = kingpin.Flag("tls.crt",
 			"Path to PEM file that contains the corresponding cert for the private key.").
 			Default("/tls/tls.crt").String()
+		// END TIGERA CHANGES
 	)
 
 	kingpin.Version(version.Print(name))
 	kingpin.CommandLine.HelpFlag.Short('h')
 	kingpin.Parse()
 
-	logger := logr.GetLogger(*logLevel, *logOutput, *logFormat)
+	logger := getLogger(*logLevel, *logOutput, *logFormat)
 
 	esURL, err := url.Parse(*esURI)
 	if err != nil {
@@ -140,14 +143,17 @@ func main() {
 
 	esUsername := os.Getenv("ES_USERNAME")
 	esPassword := os.Getenv("ES_PASSWORD")
-	fipsModeEnabled := os.Getenv("FIPS_MODE_ENABLED") == "true"
 
 	if esUsername != "" && esPassword != "" {
 		esURL.User = url.UserPassword(esUsername, esPassword)
 	}
 
 	// returns nil if not provided and falls back to simple TCP.
+
+	// BEGIN TIGERA CHANGES
+	fipsModeEnabled := os.Getenv("FIPS_MODE_ENABLED") == "true"
 	tlsConfig := createTLSConfig(*esCA, *esClientCert, *esClientPrivateKey, *esInsecureSkipVerify, fipsModeEnabled)
+	// END TIGERA CHANGES
 
 	var httpTransport http.RoundTripper
 
@@ -203,7 +209,7 @@ func main() {
 	if *esExportIndicesMappings {
 		prometheus.MustRegister(collector.NewIndicesMappings(logger, httpClient, esURL))
 	}
-
+	// BEGIN TIGERA CHANGES
 	caCertFile, err := ioutil.ReadFile(*ca)
 	if err != nil {
 		log.Fatalf("error reading CA certificate: %v", err)
@@ -215,11 +221,10 @@ func main() {
 	serverTLSConfig.ClientCAs = caCertPool
 	serverTLSConfig.ClientAuth = tls.RequireAndVerifyClientCert
 	serverTLSConfig.MinVersion = tls.VersionTLS12
-
-	// create a http server
 	server := &http.Server{
 		TLSConfig: serverTLSConfig,
 	}
+	// END TIGERA CHANGES
 
 	// Create a context that is cancelled on SIGKILL or SIGINT.
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
@@ -274,7 +279,9 @@ func main() {
 	)
 
 	go func() {
+		// BEGIN TIGERA CHANGES
 		if err := server.ListenAndServeTLS(*certificate, *privateKey); err != nil {
+			// END TIGERA CHANGES
 			_ = level.Error(logger).Log(
 				"msg", "http server quit",
 				"err", err,
@@ -290,6 +297,8 @@ func main() {
 	defer srvCancel()
 	_ = server.Shutdown(srvCtx)
 }
+
+// BEGIN TIGERA CHANGES
 
 // NewTLSConfig returns a tls.Config with the recommended default settings for Calico Enterprise components.
 // Read more recommendations here in Chapter 3:
@@ -318,8 +327,12 @@ func NewTLSConfig(fipsMode bool) *tls.Config {
 	return cfg
 }
 
+// END TIGERA CHANGES
+
 func createTLSConfig(pemFile, pemCertFile, pemPrivateKeyFile string, insecureSkipVerify, fipsModeEnabled bool) *tls.Config {
+	// BEGIN TIGERA CHANGES
 	tlsConfig := NewTLSConfig(fipsModeEnabled)
+	// END TIGERA CHANGES
 	if insecureSkipVerify {
 		// pem settings are irrelevant if we're skipping verification anyway
 		tlsConfig.InsecureSkipVerify = true

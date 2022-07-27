@@ -45,7 +45,7 @@ build: bin/elasticsearch-metrics-$(ARCH)
 bin/elasticsearch-metrics-$(ARCH):
 	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/main.go'
+			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/*.go'
 
 image: $(ELASTICSEARCH_METRICS_IMAGE)
 $(ELASTICSEARCH_METRICS_IMAGE): $(ELASTICSEARCH_METRICS_IMAGE)-$(ARCH)
