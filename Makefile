@@ -4,7 +4,8 @@ GO_BUILD_VER?=v0.73
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID=$(SEMAPHORE_ECK_OPERATOR_DOCKER_PROJECT_ID)
 
-ECK_OPERATOR_IMAGE   ?=tigera/eck-operator
+ECK_OPERATOR_NAME     ?= eck-operator
+ECK_OPERATOR_IMAGE    ?=tigera/$(ECK_OPERATOR_NAME)
 BUILD_IMAGES          ?=$(ECK_OPERATOR_IMAGE)
 DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
 RELEASE_REGISTRIES    ?=quay.io
@@ -52,9 +53,9 @@ else
 CGO_ENABLED=0
 endif
 
-build: bin/$(ECK_OPERATOR_IMAGE)-$(ARCH)
+build: bin/$(ECK_OPERATOR_NAME)-$(ARCH)
 
-bin/$(ECK_OPERATOR_IMAGE)-$(ARCH): prepare-build
+bin/$(ECK_OPERATOR_NAME)-$(ARCH): prepare-build
 	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
 			cd cloud-on-k8s && go build -o ../$@ -v -ldflags $(LDFLAGS) cmd/main.go'
