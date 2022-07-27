@@ -1,10 +1,11 @@
 PACKAGE_NAME?=github.com/tigera/eck-operator-docker
-GO_BUILD_VER?=v0.65.2
+GO_BUILD_VER?=v0.73
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID=$(SEMAPHORE_ECK_OPERATOR_DOCKER_PROJECT_ID)
 
-ECK_OPERATOR_IMAGE   ?=tigera/eck-operator
+ECK_OPERATOR_NAME     ?= eck-operator
+ECK_OPERATOR_IMAGE    ?=tigera/$(ECK_OPERATOR_NAME)
 BUILD_IMAGES          ?=$(ECK_OPERATOR_IMAGE)
 DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
 RELEASE_REGISTRIES    ?=quay.io
@@ -13,7 +14,12 @@ DEV_TAG_SUFFIX        ?=calient-0.dev
 
 GO_VERSION  ?=1.17.9
 UBI_VERSION ?=8.5
-BUILDER_VERSION ?=v0.0.1
+
+VERSION ?= $(shell cat cloud-on-k8s/VERSION)
+LDFLAGS ?= "-X github.com/elastic/cloud-on-k8s/pkg/about.version=$(VERSION) \
+	-X github.com/elastic/cloud-on-k8s/pkg/about.buildHash=$(shell cd cloud-on-k8s && git rev-parse --short=8 --verify HEAD) \
+	-X github.com/elastic/cloud-on-k8s/pkg/about.buildDate=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ') \
+	-X github.com/elastic/cloud-on-k8s/pkg/about.buildSnapshot=false"
 
 ###############################################################################
 # Download and include Makefile.common
@@ -40,25 +46,31 @@ ifdef CI
 DOCKER_SQUASH=--squash
 endif
 
-build:
+# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
+ifeq ($(ARCH), $(filter $(ARCH),amd64))
+CGO_ENABLED=1
+else
+CGO_ENABLED=0
+endif
+
+build: bin/$(ECK_OPERATOR_NAME)-$(ARCH)
+
+bin/$(ECK_OPERATOR_NAME)-$(ARCH): prepare-build
+	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) \
+			cd cloud-on-k8s && go build -o ../$@ -v -ldflags $(LDFLAGS) cmd/main.go'
 
 image: $(ECK_OPERATOR_IMAGE)
 $(ECK_OPERATOR_IMAGE): $(ECK_OPERATOR_IMAGE)-$(ARCH)
-$(ECK_OPERATOR_IMAGE)-$(ARCH): build eck-builder-image
-	docker build --build-arg BUILDER_VERSION=$(BUILDER_VERSION) $(DOCKER_SQUASH) -t $(ECK_OPERATOR_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
+$(ECK_OPERATOR_IMAGE)-$(ARCH): build
+	docker build $(DOCKER_SQUASH) -t $(ECK_OPERATOR_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
 	docker tag $(ECK_OPERATOR_IMAGE):latest-$(ARCH) $(ECK_OPERATOR_IMAGE):latest
 endif
 
-
-# Replace cloud-on-k8s/Dockerfile ubi-minimal version with $(UBI_VERSION)
-# Replace cloud-on-k8s/Dockerfile golang version with $(GO_VERSION)
-# Create a builder image that forms the basis for the tigera/eck-operator image.
-# Checkout the Dockerfile to revert it to the original
-eck-builder-image:
+prepare-build:
 	git submodule update --init --recursive
-	$(DOCKER_GO_BUILD) bash -x prepare-create-eck-builder-image.sh
-	bash -x create-eck-builder-image.sh tigera/eck-operator-builder:$(BUILDER_VERSION) $(UBI_VERSION) $(GO_VERSION)
+	$(DOCKER_GO_BUILD) bash -x prepare-build.sh
 
 .PHONY: cd
 cd: image cd-common

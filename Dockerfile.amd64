@@ -1,13 +1,17 @@
-ARG BUILDER_VERSION
-FROM tigera/eck-operator-builder:$BUILDER_VERSION as builder
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.5 AS ubi
 
 FROM scratch
 
-COPY --from=builder ./elastic-operator .
-COPY --from=builder /conf/eck.yaml /conf/eck.yaml
-COPY --from=builder /licenses/* /licenses/
+ADD bin/eck-operator-amd64 /elastic-operator
+ADD cloud-on-k8s/config/eck.yaml /conf/eck.yaml
+ADD cloud-on-k8s/*.txt /licenses/
+
+# Copy dependencies from UBI to scratch
+COPY --from=ubi /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
+COPY --from=ubi /lib64/libpthread.so.0 /lib64/libpthread.so.0
+COPY --from=ubi /lib64/libc.so.6 /lib64/libc.so.6
 
 USER 1001
 
-ENTRYPOINT ["./elastic-operator"]
+ENTRYPOINT ["/elastic-operator"]
 CMD ["manager"]
