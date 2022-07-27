@@ -82,8 +82,9 @@ func GenerateFingerprint(fipsMode bool, certificate *x509.Certificate) string {
 	var fingerprint string
 	if fipsMode {
 		fingerprint = fmt.Sprintf("%x", sha256.Sum256(certificate.Raw))
+	} else {
+		fingerprint = fmt.Sprintf("%x", md5.Sum(certificate.Raw))
 	}
-	fingerprint = fmt.Sprintf("%x", md5.Sum(certificate.Raw))
-	log.Infof("Created fingerprint for cert with fipsModeEnabled: %t,  common name: %s and fingerprint: %s", fipsMode, certificate.Subject.CommonName, fingerprint)
+	log.Debugf("Created fingerprint for cert with fipsModeEnabled: %t,  common name: %s and fingerprint: %s", fipsMode, certificate.Subject.CommonName, fingerprint)
 	return fingerprint
 }
