@@ -330,8 +330,8 @@ func (r *adJobTrainingReconciler) runInitialTrainingJob(mcs TrainingDetectorsReq
 
 // getInitialTrainingJobNameForCluster creates a standardized string from the cluster's name to be
 // used as the initial training job name created for the cluster.
-func (r *adJobTrainingReconciler) getInitialTrainingJobNameForCluster(clusterName, detector string) string {
-	return fmt.Sprintf("%s-%s-%s", clusterName, detector, initialTrainingJobSuffix)
+func (r *adJobTrainingReconciler) getInitialTrainingJobNameForCluster(cluster, detector string) string {
+	return util.GetValidInitialTrainingJobName(cluster, detector, initialTrainingJobSuffix)
 }
 
 // getTrainingCycleCronJobNameForCluster creates a standardized string from the cluster's name to be
