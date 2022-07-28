@@ -237,7 +237,17 @@ skip_fib:
 				ctx->fwd.mark |= CALI_SKB_MARK_EGRESS;
 			}
 		}
-		CALI_DEBUG("Traffic is towards host namespace, marking with %x.\n", ctx->fwd.mark);
+
+		if (CALI_F_NAT_IF) {
+			/* We mark the packet so that next iface knows, it went through
+			 * bpfnatout - if it gets (S)NATed, a new connection is created
+			 * and we know that returning packets must go via bpfnatout again.
+			 */
+			ctx->fwd.mark |= CALI_SKB_MARK_FROM_NAT_IFACE_OUT;
+			CALI_DEBUG("marking CALI_SKB_MARK_FROM_NAT_IFACE_OUT\n");
+		}
+
+		CALI_DEBUG("Traffic is towards host namespace, marking with 0x%x.\n", ctx->fwd.mark);
 		__u32 non_calico_mark = ctx->skb->mark & 0xfffff;
 		ctx->skb->mark = ctx->fwd.mark | non_calico_mark; /* make sure that each pkt has SEEN mark */
 	}

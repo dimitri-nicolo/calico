@@ -118,6 +118,7 @@ type Target struct {
 	Type      TargetType
 	CIDR      ip.CIDR
 	GW        ip.Addr
+	Src       ip.Addr
 	DestMAC   net.HardwareAddr
 	MultiPath []NextHop
 }
@@ -841,7 +842,7 @@ func (r *RouteTable) syncRoutesForLink(ifaceName string, fullSync bool, firstTry
 		r.waitForPendingConntrackDeletion(target.CIDR.Addr())
 		if err := nl.RouteAdd(&route); err != nil {
 			if firstTry {
-				logCxt.WithError(err).Debug("Failed to add route on first attempt, retrying...")
+				logCxt.WithError(err).WithField("route", route).Debug("Failed to add route on first attempt, retrying...")
 			} else {
 				logCxt.WithError(err).WithFields(log.Fields{
 					"route":  route,
@@ -940,7 +941,9 @@ func (r *RouteTable) createL3Route(linkAttrs *netlink.LinkAttrs, target Target) 
 		route.LinkIndex = 1
 	}
 
-	if r.deviceRouteSourceAddress != nil {
+	if target.Src != nil {
+		route.Src = target.Src.AsNetIP()
+	} else if r.deviceRouteSourceAddress != nil {
 		route.Src = r.deviceRouteSourceAddress
 	}
 

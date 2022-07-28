@@ -74,16 +74,18 @@ type State struct {
 	RuleIDs             [MaxRuleIDs]uint64
 	ConntrackRCFlags    uint32
 	ConntrackNATIP      uint32
-	ConntrackNATPort    uint32
+	ConntrackNATsIP     uint32
+	ConntrackNATPorts   uint32
 	ConntrackTunIP      uint32
 	ConntrackIfIndexFwd uint32
 	ConntrackIfIndexCtd uint32
+	pad                 uint32
 	TimeStamp           uint64
 	NATData             uint64
 	ProgStartTime       uint64
 }
 
-const expectedSize = 8 /*eventhdr*/ + 344
+const expectedSize = 8 /*eventhdr*/ + 352
 
 func (s *State) AsBytes() []byte {
 	size := unsafe.Sizeof(State{})
