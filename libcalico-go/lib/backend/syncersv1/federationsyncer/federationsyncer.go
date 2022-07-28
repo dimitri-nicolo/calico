@@ -8,6 +8,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
@@ -27,7 +29,7 @@ var emptyDatastoreConfig = apiconfig.NewCalicoAPIConfig()
 
 // New creates a new federation syncer. This particular syncer requires both Calico datastore access and Kubernetes
 
-func New(calicoClient api.Client, k8sClientset *kubernetes.Clientset, callbacks api.SyncerCallbacks) api.Syncer {
+func New(calicoClient api.Client, k8sClientset *kubernetes.Clientset, callbacks api.SyncerCallbacks, statusGauge *prometheus.GaugeVec) api.Syncer {
 	k8sServicesClient := k8s.NewK8sResourceWrapperClient(k8sClientset)
 	// The resources in this syncer are backed by two different clients, so we specify which client for each
 	// resource type.
@@ -58,7 +60,7 @@ func New(calicoClient api.Client, k8sClientset *kubernetes.Clientset, callbacks 
 	return watchersyncer.NewMultiClient(
 		clients,
 		resourceTypes,
-		remotecluster.NewWrappedCallbacks(callbacks, k8sClientset, federationRemoteClusterProcessor{}),
+		remotecluster.NewWrappedCallbacks(callbacks, k8sClientset, federationRemoteClusterProcessor{}, statusGauge),
 	)
 }
 
