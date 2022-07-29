@@ -171,6 +171,7 @@ type Config struct {
 	VXLANPort            int
 
 	MaxIPSetSize                   int
+	RouteSyncDisabled              bool
 	IptablesBackend                string
 	IPSetsRefreshInterval          time.Duration
 	RouteRefreshInterval           time.Duration
@@ -598,9 +599,16 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	dp.ipSets = append(dp.ipSets, ipSetsV4)
 
 	if config.RulesConfig.VXLANEnabled {
-		routeTableVXLAN := routetable.New([]string{"^vxlan.calico$"}, 4, true, config.NetlinkTimeout,
-			config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, true, unix.RT_TABLE_UNSPEC,
-			dp.loopSummarizer, routetable.WithLivenessCB(dp.reportHealth))
+		var routeTableVXLAN routeTable
+		if !config.RouteSyncDisabled {
+			log.Debug("RouteSyncDisabled is false.")
+			routeTableVXLAN = routetable.New([]string{"^vxlan.calico$"}, 4, true, config.NetlinkTimeout,
+				config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, true, unix.RT_TABLE_UNSPEC,
+				dp.loopSummarizer, routetable.WithLivenessCB(dp.reportHealth))
+		} else {
+			log.Info("RouteSyncDisabled is true, using DummyTable.")
+			routeTableVXLAN = &routetable.DummyTable{}
+		}
 
 		vxlanManager := newVXLANManager(
 			ipSetsV4,
@@ -1081,10 +1089,18 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		log.Info("conntrackScanner started")
 	}
 
-	routeTableV4 := routetable.New(interfaceRegexes, 4, false, config.NetlinkTimeout,
-		config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes, unix.RT_TABLE_UNSPEC,
-		dp.loopSummarizer, routetable.WithLivenessCB(dp.reportHealth),
-		routetable.WithRouteCleanupGracePeriod(routeCleanupGracePeriod))
+	var routeTableV4 routeTable
+
+	if !config.RouteSyncDisabled {
+		log.Debug("RouteSyncDisabled is false.")
+		routeTableV4 = routetable.New(interfaceRegexes, 4, false, config.NetlinkTimeout,
+			config.DeviceRouteSourceAddress, config.DeviceRouteProtocol, config.RemoveExternalRoutes, unix.RT_TABLE_UNSPEC,
+			dp.loopSummarizer, routetable.WithLivenessCB(dp.reportHealth),
+			routetable.WithRouteCleanupGracePeriod(routeCleanupGracePeriod))
+	} else {
+		log.Info("RouteSyncDisabled is true, using DummyTable.")
+		routeTableV4 = &routetable.DummyTable{}
+	}
 
 	epManager := newEndpointManager(
 		rawTableV4,
@@ -1217,9 +1233,16 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		dp.iptablesFilterTables = append(dp.iptablesFilterTables, filterTableV6)
 
 		if config.RulesConfig.VXLANEnabledV6 {
-			routeTableVXLANV6 := routetable.New([]string{"^vxlan-v6.calico$"}, 6, true, config.NetlinkTimeout,
-				config.DeviceRouteSourceAddressIPv6, config.DeviceRouteProtocol, true, unix.RT_TABLE_UNSPEC,
-				dp.loopSummarizer, routetable.WithLivenessCB(dp.reportHealth))
+			var routeTableVXLANV6 routeTable
+			if !config.RouteSyncDisabled {
+				log.Debug("RouteSyncDisabled is false.")
+				routeTableVXLANV6 = routetable.New([]string{"^vxlan-v6.calico$"}, 6, true, config.NetlinkTimeout,
+					config.DeviceRouteSourceAddressIPv6, config.DeviceRouteProtocol, true, unix.RT_TABLE_UNSPEC,
+					dp.loopSummarizer, routetable.WithLivenessCB(dp.reportHealth))
+			} else {
+				log.Debug("RouteSyncDisabled is true, using DummyTable for routeTableVXLANV6.")
+				routeTableVXLANV6 = &routetable.DummyTable{}
+			}
 
 			vxlanManagerV6 := newVXLANManager(
 				ipSetsV6,
@@ -1236,11 +1259,18 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			go cleanUpVXLANDevice("vxlan-v6.calico")
 		}
 
-		routeTableV6 := routetable.New(
-			interfaceRegexes, 6, false, config.NetlinkTimeout,
-			config.DeviceRouteSourceAddressIPv6, config.DeviceRouteProtocol, config.RemoveExternalRoutes,
-			unix.RT_TABLE_UNSPEC, dp.loopSummarizer, routetable.WithLivenessCB(dp.reportHealth),
-			routetable.WithRouteCleanupGracePeriod(routeCleanupGracePeriod))
+		var routeTableV6 routeTable
+		if !config.RouteSyncDisabled {
+			log.Debug("RouteSyncDisabled is false.")
+			routeTableV6 = routetable.New(
+				interfaceRegexes, 6, false, config.NetlinkTimeout,
+				config.DeviceRouteSourceAddressIPv6, config.DeviceRouteProtocol, config.RemoveExternalRoutes,
+				unix.RT_TABLE_UNSPEC, dp.loopSummarizer, routetable.WithLivenessCB(dp.reportHealth),
+				routetable.WithRouteCleanupGracePeriod(routeCleanupGracePeriod))
+		} else {
+			log.Debug("RouteSyncDisabled is true, using DummyTable for routeTableV6.")
+			routeTableV6 = &routetable.DummyTable{}
+		}
 
 		if !config.BPFEnabled {
 			dp.RegisterManager(common.NewIPSetsManager(ipSetsV6, config.MaxIPSetSize, dp.domainInfoStore))
@@ -1452,7 +1482,7 @@ func writeMTUFile(mtu int) error {
 	// Write the smallest MTU to disk so other components can rely on this calculation consistently.
 	filename := "/var/lib/calico/mtu"
 	log.Debugf("Writing %d to "+filename, mtu)
-	if err := ioutil.WriteFile(filename, []byte(fmt.Sprintf("%d", mtu)), 0644); err != nil {
+	if err := ioutil.WriteFile(filename, []byte(fmt.Sprintf("%d", mtu)), 0o644); err != nil {
 		log.WithError(err).Error("Unable to write to " + filename)
 		return err
 	}

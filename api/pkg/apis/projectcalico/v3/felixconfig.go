@@ -765,6 +765,10 @@ type FelixConfigurationSpec struct {
 	// EgressIPRoutingRulePriority controls the priority value to use for the egress IP routing rule. [Default: 100]
 	EgressIPRoutingRulePriority *int `json:"egressIPRoutingRulePriority,omitempty" validate:"omitempty,gt=0,lt=32766"`
 
+	// RouteSyncDisabled will disable all operations performed on the route table. Set to true to
+	// run in network-policy mode only.
+	RouteSyncDisabled *bool `json:"routeSyncDisabled,omitempty"`
+
 	// WireguardEnabled controls whether Wireguard is enabled. [Default: false]
 	WireguardEnabled *bool `json:"wireguardEnabled,omitempty"`
 	// WireguardListeningPort controls the listening port used by Wireguard. [Default: 51820]

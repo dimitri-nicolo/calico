@@ -74,6 +74,7 @@ var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 		"EnableNflogSize",
 
 		"loadClientConfigFromEnvironment",
+		"RouteSyncDisabled",
 
 		"loadClientConfigFromEnvironment",
 		"useNodeResourceUpdates",
