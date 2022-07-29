@@ -1,8 +1,10 @@
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 package anomalydetection
 
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -23,13 +25,20 @@ const (
 	ADTrainingJobTemplateName         = "tigera.io.detectors.training"
 	DefaultADDetectorTrainingSchedule = 1 * time.Hour
 
-	trainingCronJobSuffix = "training"
+	initialTrainingJobSuffix = "initial-training"
+	trainingCycleSuffix      = "training"
 
 	ADJobOwnerLabelValue = "intrusion-detection-controller"
 )
 
 var (
-	TrainingCronJobLabels = func() map[string]string {
+	TrainingJobLabels = func() map[string]string {
+		return map[string]string{
+			"tigera.io.detector-cycle": "training",
+		}
+	}
+
+	TrainingCycleLabels = func() map[string]string {
 		return map[string]string{
 			"tigera.io.detector-cycle": "training",
 		}
@@ -104,10 +113,28 @@ func (c *adJobTrainingController) AddDetector(resource interface{}) error {
 	trainingDetectorStateForCluster, ok := resource.(TrainingDetectorsRequest)
 
 	if !ok {
-		return errors.New("unexpected type for an ADJob Training resource")
+		return fmt.Errorf("unexpected type for an ADJob Training resource")
 	}
 
-	err := c.adTrainingReconciler.addTrainingCycle(trainingDetectorStateForCluster)
+	// Kicks-off an initial training job if the training cycle isn't found or for a first time
+	// detector, otherwise returns.
+	log.Infof("Run initial training job for cluster: %s",
+		trainingDetectorStateForCluster.ClusterName)
+	err := c.adTrainingReconciler.runInitialTrainingJob(trainingDetectorStateForCluster)
+	if err != nil {
+		// No need to continue with training cycles, as the pod template will not available for cronJobs
+		// as well.
+		var podTemplateError *PodTemplateError
+		if errors.As(err, &podTemplateError) {
+			log.Error(err)
+			return err
+		}
+		log.Warn("Initial training job cannot complete rely on training model fallbacks")
+	}
+
+	log.Infof("Add a training cycle cronJob for cluster: %s",
+		trainingDetectorStateForCluster.ClusterName)
+	err = c.adTrainingReconciler.addTrainingCycle(trainingDetectorStateForCluster)
 	if err != nil {
 		return err
 	}
