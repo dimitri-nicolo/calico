@@ -16932,6 +16932,7 @@ rules:
       - certificatesigningrequests
     verbs:
       - list
+      - watch
 ---
 # Source: tigera-operator/templates/tigera-operator/02-rolebinding-tigera-operator.yaml
 kind: ClusterRoleBinding

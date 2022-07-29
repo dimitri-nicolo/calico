@@ -46,6 +46,7 @@ func IsNamespaced(kind string) bool {
 	case KindKubernetesEndpointSlice:
 		// KindKubernetesEndpointSlice is a special-case resource. We don't expose it over the
 		// v3 API, but it is used in the felix syncer.
+		return true
 	case KindKubernetesService:
 		return true
 	}

@@ -395,8 +395,22 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 		)
 	}
 
-	// Note that we do not need to do this filtering for wireguard because it already has the peering and allowed IPs
-	// baked into the crypto routing table.
+	if ipVersion == 4 && r.WireguardEnabled {
+		// When IPv4 Wireguard is enabled, auto-allow Wireguard traffic from other nodes.  Without this,
+		// it's too easy to make a host policy that blocks Wireguard traffic, resulting in very confusing
+		// connectivity problems.
+		inputRules = append(inputRules,
+			Rule{
+				Match: Match().ProtocolNum(ProtoUDP).
+					DestPorts(uint16(r.Config.WireguardListeningPort)).
+					DestAddrType(AddrTypeLocal),
+				Action:  r.filterAllowAction,
+				Comment: []string{"Allow incoming IPv4 Wireguard packets"},
+			},
+			// Note that we do not need a drop rule for Wireguard because it already has the peering and allowed IPs
+			// baked into the crypto routing table.
+		)
+	}
 
 	if r.KubeIPVSSupportEnabled {
 		// Check if packet belongs to forwarded traffic. (e.g. part of an ipvs connection).
@@ -1015,9 +1029,22 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *Chain {
 		)
 	}
 
-	// TODO(rlb): For wireguard, we add the destination port to the failsafes. We may want to revisit this so that we
-	// only include nodes that support wireguard. This will tie in with whether or not we want to include external
-	// wireguard destinations.
+	if ipVersion == 4 && r.WireguardEnabled {
+		// When IPv4 Wireguard is enabled, auto-allow Wireguard traffic to other Calico nodes.  Without this,
+		// it's too easy to make a host policy that blocks Wireguard traffic, resulting in very confusing
+		// connectivity problems.
+		rules = append(rules,
+			Rule{
+				Match: Match().ProtocolNum(ProtoUDP).
+					DestPorts(uint16(r.Config.WireguardListeningPort)).
+					// Note that we do not need to limit the destination hosts to Calico nodes because allowed peers are
+					// programmed separately
+					SrcAddrType(AddrTypeLocal, false),
+				Action:  r.filterAllowAction,
+				Comment: []string{"Allow outgoing IPv4 Wireguard packets"},
+			},
+		)
+	}
 
 	// Apply host endpoint policy to traffic that has not been DNAT'd.  In the DNAT case we
 	// can't correctly apply policy here because the packet's OIF is still the OIF from a
@@ -1090,7 +1117,8 @@ func (r *DefaultRuleRenderer) StaticNATPreroutingChains(ipVersion uint8) []*Chai
 					NotDestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostNets)),
 				Action: SetMaskedMarkAction{
 					Mark: r.IptablesMarkEgress,
-					Mask: r.IptablesMarkEgress},
+					Mask: r.IptablesMarkEgress,
+				},
 				Comment: []string{"Set mark for egress packet"},
 			},
 		)
@@ -1600,8 +1628,8 @@ func (r *DefaultRuleRenderer) StaticRawTableChains(ipVersion uint8) []*Chain {
 }
 
 func (r *DefaultRuleRenderer) StaticBPFModeRawChains(ipVersion uint8,
-	wgEncryptHost, bypassHostConntrack bool) []*Chain {
-
+	wgEncryptHost, bypassHostConntrack bool,
+) []*Chain {
 	var rawRules []Rule
 
 	if r.WireguardEnabled && len(r.WireguardInterfaceName) > 0 && wgEncryptHost {
@@ -1641,27 +1669,27 @@ func (r *DefaultRuleRenderer) StaticBPFModeRawChains(ipVersion uint8,
 		bpfUntrackedFlowChain = &Chain{
 			Name: ChainRawUntrackedFlows,
 			Rules: []Rule{
-				Rule{
+				{
 					Match:   Match().MarkMatchesWithMask(tcdefs.MarkSeenSkipFIB, tcdefs.MarkSeenSkipFIB),
 					Action:  ReturnAction{},
 					Comment: []string{"MarkSeenSkipFIB Mark"},
 				},
-				Rule{
+				{
 					Match:   Match().MarkMatchesWithMask(tcdefs.MarkSeenFallThrough, tcdefs.MarkSeenFallThroughMask),
 					Action:  ReturnAction{},
 					Comment: []string{"MarkSeenFallThrough Mark"},
 				},
-				Rule{
+				{
 					Match:   Match().MarkMatchesWithMask(tcdefs.MarkSeenMASQ, tcdefs.MarkSeenMASQMask),
 					Action:  ReturnAction{},
 					Comment: []string{"MarkSeenMASQ Mark"},
 				},
-				Rule{
+				{
 					Match:   Match().MarkMatchesWithMask(tcdefs.MarkSeenNATOutgoing, tcdefs.MarkSeenNATOutgoingMask),
 					Action:  ReturnAction{},
 					Comment: []string{"MarkSeenNATOutgoing Mark"},
 				},
-				Rule{
+				{
 					Action: NoTrackAction{},
 				},
 			},
@@ -1681,11 +1709,11 @@ func (r *DefaultRuleRenderer) StaticBPFModeRawChains(ipVersion uint8,
 			// mark.  Note that we can clear the mark without stomping on anyone else's
 			// logic because no one else's iptables should have had a chance to execute
 			// yet.
-			Rule{
+			{
 				Action: SetMarkAction{Mark: 0},
 			},
 			// Now ensure that the packet is not tracked.
-			Rule{
+			{
 				Action: NoTrackAction{},
 			},
 		},
@@ -1768,13 +1796,17 @@ func (r *DefaultRuleRenderer) StaticRawPreroutingChain(ipVersion uint8) *Chain {
 
 	rules = append(rules,
 		// Send non-workload traffic to the untracked policy chains.
-		Rule{Match: Match().MarkClear(markFromWorkload),
-			Action: JumpAction{Target: ChainDispatchFromHostEndpoint}},
+		Rule{
+			Match:  Match().MarkClear(markFromWorkload),
+			Action: JumpAction{Target: ChainDispatchFromHostEndpoint},
+		},
 		// Then, if the packet was marked as allowed, accept it.  Packets also return here
 		// without the mark bit set if the interface wasn't one that we're policing.  We
 		// let those packets fall through to the user's policy.
-		Rule{Match: Match().MarkSingleBitSet(r.IptablesMarkAccept),
-			Action: AcceptAction{}},
+		Rule{
+			Match:  Match().MarkSingleBitSet(r.IptablesMarkAccept),
+			Action: AcceptAction{},
+		},
 	)
 
 	return &Chain{
@@ -1881,15 +1913,21 @@ func (r *DefaultRuleRenderer) StaticRawOutputChain(tcBypassMark uint32) *Chain {
 	}
 	if tcBypassMark == 0 {
 		rules = append(rules, []Rule{
-			{Match: Match().MarkSingleBitSet(r.IptablesMarkAccept),
-				Action: AcceptAction{}},
+			{
+				Match:  Match().MarkSingleBitSet(r.IptablesMarkAccept),
+				Action: AcceptAction{},
+			},
 		}...)
 	} else {
 		rules = append(rules, []Rule{
-			{Match: Match().MarkSingleBitSet(r.IptablesMarkAccept),
-				Action: SetMaskedMarkAction{Mark: tcBypassMark, Mask: 0xffffffff}},
-			{Match: Match().MarkMatchesWithMask(tcBypassMark, 0xffffffff),
-				Action: AcceptAction{}},
+			{
+				Match:  Match().MarkSingleBitSet(r.IptablesMarkAccept),
+				Action: SetMaskedMarkAction{Mark: tcBypassMark, Mask: 0xffffffff},
+			},
+			{
+				Match:  Match().MarkMatchesWithMask(tcBypassMark, 0xffffffff),
+				Action: AcceptAction{},
+			},
 		}...)
 	}
 	return &Chain{
