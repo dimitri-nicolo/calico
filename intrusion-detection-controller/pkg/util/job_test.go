@@ -37,6 +37,7 @@ var _ = DescribeTable("GetRFC1123JobName",
 
 	// Test valid names.
 	Entry("Cluster and detector are valid", "c-lu.s-ter", "d-g.a", "c-lu.s-ter-d-g.a-initial-training"),
+	Entry("Valid names, start and end with numerical chars", "7c-lu.s-ter", "d-g.a4", "7c-lu.s-ter-d-g.a4-initial-training"),
 
 	// Test name edge cases. Names may contain leading or trailing '-' or '.' that will be removed, even though they are valid characters.
 	Entry("Cluster name with invalid characters", "$#%@-c!*l#u(s..^t*--e---)}{|r---@----", "dga", "c-l-u-s.-t-e-r-dga-initial-training"),
@@ -46,6 +47,9 @@ var _ = DescribeTable("GetRFC1123JobName",
 	Entry("Detector name all invalid characters", "cluster-name", ".-*)(_).$--#%@-!*#(^*--", "cluster-name-z-initial-training"),
 	Entry("Cluster and detector name all invalid characters", ".-.$--#%@-!*#(^*--", ".-*)(_).$--#%@-!*#(^*--", "z-z-initial-training"),
 	Entry("Cluster and detector contain valid characters but invalid substrings", "c.-lu...-..ster", "d--g....a", "c.-lu.-.ster-d-g.a-initial-training"),
+
+	// Test capital letters.
+	Entry("Cluster and detector contain capital letters", "ClUsTEr23", "Http_RequEst", "cluster23-http-request-initial-training"),
 
 	// Test name length.
 	Entry("Length of the resulting name does not surpass the max size", "$#%@-c!*l#u(s..^t*--e---)}{|r---@--n-a-m-e--", "d&e@t#e#c(t_o)r_n+ame", "c-l-u-s.-t-e-r-n-a-m-e-d-e-t-e-c-t-o-r-n-ame-initial-trai"),

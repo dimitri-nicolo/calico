@@ -28,16 +28,20 @@ const (
 func GetValidInitialTrainingJobName(clusterName, detectorName, suffix string) string {
 	name := fmt.Sprintf("%s-%s-%s", clusterName, detectorName, suffix)
 
-	// If the job name is in a valid RFC1123 label format, return.
-	if len(name) <= lenOfMaxValidInitialTrainingJobName && isValidJobName(name) {
+	// If the name length is less than or equal to the length of a valid DNS1123 label length,
+	// minus the length of the hash suffix appended onto it and is a valid DNS1123 subdomain format,
+	// return.
+	if len(name) <= lenOfMaxValidInitialTrainingJobName &&
+		len(k8svalidation.IsDNS1123Subdomain(name)) == 0 {
+
 		return name
 	}
 
 	// The name is not in RFC1123 label format, at least one conversion has to occur to make it valid.
 	// An empty string will contain a wildcard 'z' character.
 
-	validClusterName := convertToValidJobName(clusterName)
-	validDetectorName := convertToValidJobName(detectorName)
+	validClusterName := convertToValidName(clusterName)
+	validDetectorName := convertToValidName(detectorName)
 
 	rfcName := fmt.Sprintf("%s-%s-initial-training", validClusterName, validDetectorName)
 
@@ -56,10 +60,10 @@ func GetValidInitialTrainingJobName(clusterName, detectorName, suffix string) st
 	return rfcName
 }
 
-// convertToValidJobName converts all characters to lower case and removes all invalid Job name
+// convertToValidName converts all characters to lower case and removes all invalid Job name
 // characters. A wild card, 'z', is used in case all characters of the name are invalid and are
 // removed.
-func convertToValidJobName(name string) string {
+func convertToValidName(name string) string {
 	rfcWildcard := "z"
 
 	// Convert all uppercase to lower case.
@@ -84,20 +88,4 @@ func convertToValidJobName(name string) string {
 	}
 
 	return rfcName
-}
-
-// isValidJobName return true if the name is a valid job name with respect to the characters, and
-// does not validate the length.
-// The name must:
-// - start with an alphabetic character
-// - end with an alphanumeric character
-// - contain only lowercase alphanumeric characters or '-' or '.'
-// - does not contain ".-" or "-." substrings.
-func isValidJobName(name string) bool {
-	nameRFC1123PolicyLabelFmt := "[a-z0-9]([-a-z0-9]*[a-z0-9])?"
-	nameRFC1123PolicySubdomainFmt := nameRFC1123PolicyLabelFmt + "(" + nameRFC1123PolicyLabelFmt + ")*"
-	// Names must follow a simple subdomain DNS1123 format.
-	isValidLabelNameFmt := regexp.MustCompile("^" + nameRFC1123PolicySubdomainFmt + "$").MatchString
-
-	return isValidLabelNameFmt(name)
 }
