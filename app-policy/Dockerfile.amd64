@@ -47,6 +47,7 @@ ADD bin/dikastes-amd64 /dikastes
 ADD bin/healthz-amd64 /healthz
 
 # Include libraries from UBI for dynamic linking.
+#
 # Copy the specific libraries; these were obtained by running 'ldd /dikastes'
 COPY --from=ubi /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
 COPY --from=ubi /lib64/libbrotlicommon.so.1 /lib64/libbrotlicommon.so.1
