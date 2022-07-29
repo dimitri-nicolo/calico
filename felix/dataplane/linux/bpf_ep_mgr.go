@@ -174,6 +174,7 @@ type bpfEndpointManager struct {
 	iptablesFilterTable iptablesTable
 
 	startupOnce      sync.Once
+	copyDeltaOnce    sync.Once
 	mapCleanupRunner *ratelimited.Runner
 
 	// onStillAlive is called from loops to reset the watchdog.
@@ -666,7 +667,10 @@ func (m *bpfEndpointManager) CompleteDeferredWork() error {
 	}
 	bpfHappyEndpointsGauge.Set(float64(len(m.happyWEPs)))
 	// Copy data from old map to the new map
-	bpfmap.MigrateDataFromOldMap(m.bpfMapContext)
+	m.copyDeltaOnce.Do(func() {
+		log.Info("Copy delta entries from old map to the new map")
+		bpfmap.MigrateDataFromOldMap(m.bpfMapContext)
+	})
 	return nil
 }
 
