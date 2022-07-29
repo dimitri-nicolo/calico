@@ -23,3 +23,6 @@ hack/release/ghr
 hack/test/kind/kind
 hack/test/kind/kubectl
 hack/test/kind/*kubeconfig.yaml
+
+# Sub-chart created as part of build.
+charts/tigera-operator/charts

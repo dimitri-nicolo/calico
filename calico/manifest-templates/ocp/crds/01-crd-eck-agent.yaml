@@ -1,7 +1,0 @@
----
-layout: null
----
-{% helm tigera-operator --execute crds/eck/01-crd-eck-agent.yaml %}
-installation:
-  kubernetesProvider: openshift
-{% endhelm %}

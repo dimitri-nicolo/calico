@@ -1,6 +1,0 @@
----
-layout: null
----
-{% helm tigera-prometheus-operator --execute crds/01-crd-podmonitors.yaml %}
-# todo: fix bug where empty values doesn't render
-{% endhelm %}

@@ -1,6 +1,0 @@
----
-layout: null
----
-{% helm tigera-prometheus-operator %}
-# todo: fix bug where empty values doesn't render
-{% endhelm %}

@@ -29,7 +29,6 @@ blocks:
       jobs:
         - name: Build and push helm charts for branch
           commands:
-            - cd calico
             - make charts
             - make helm-install-gcs-plugin
             - make publish-charts

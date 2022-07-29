@@ -1,6 +1,0 @@
----
-layout: null
----
-{% helm tigera-prometheus-operator --execute templates/04-clusterrole-prometheus-operator.yaml %}
-# todo: fix bug where empty values doesn't render
-{% endhelm %}

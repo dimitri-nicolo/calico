@@ -1,6 +1,6 @@
 PACKAGE_NAME = github.com/projectcalico/calico
 
-include metadata.mk 
+include metadata.mk
 include lib.Makefile
 
 DOCKER_RUN := mkdir -p ./.go-pkg-cache bin $(GOMOD_CACHE) && \
@@ -35,6 +35,7 @@ clean:
 	$(MAKE) -C pod2daemon clean
 	$(MAKE) -C typha clean
 	$(MAKE) -C calico clean
+	rm -f $(SUB_CHARTS)
 
 generate:
 	$(MAKE) gen-semaphore-yaml
@@ -42,7 +43,37 @@ generate:
 	$(MAKE) -C libcalico-go gen-files
 	$(MAKE) -C felix gen-files
 	$(MAKE) -C app-policy protobuf
-	$(MAKE) -C calico gen-manifests
+	$(MAKE) gen-manifests
+
+gen-manifests: bin/helm
+	# TODO: Ideally we don't need to do this, but the sub-charts
+	# mess up manifest generation if they are present.
+	rm -f $(SUB_CHARTS)
+	cd ./manifests && \
+		OPERATOR_VERSION=$(OPERATOR_VERSION) \
+		CALICO_VERSION=$(CALICO_VERSION) \
+		./generate.sh
+
+# Build the tigera-operator helm chart.
+SUB_CHARTS=charts/tigera-operator/charts/tigera-prometheus-operator.tgz
+chart: bin/tigera-operator-$(GIT_VERSION).tgz
+bin/tigera-operator-$(GIT_VERSION).tgz: bin/helm $(shell find ./charts/tigera-operator -type f) $(SUB_CHARTS)
+	bin/helm package ./charts/tigera-operator \
+	--destination ./bin/ \
+	--version $(GIT_VERSION) \
+	--app-version $(GIT_VERSION)
+
+# Build the tigera-prometheus-operator.tgz helm chart.
+bin/tigera-prometheus-operator-$(GIT_VERSION).tgz:
+	bin/helm package ./charts/tigera-prometheus-operator \
+	--destination ./bin/ \
+	--version $(GIT_VERSION) \
+	--app-version $(GIT_VERSION)
+
+# Include the tigera-prometheus-operator helm chart as a sub-chart.
+charts/tigera-operator/charts/tigera-prometheus-operator.tgz: bin/tigera-prometheus-operator-$(GIT_VERSION).tgz
+	mkdir -p $(@D)
+	cp bin/tigera-prometheus-operator-$(GIT_VERSION).tgz $@
 
 # Build all Calico images for the current architecture.
 image:
@@ -56,7 +87,7 @@ image:
 	$(MAKE) -C node image IMAGETAG=$(GIT_VERSION) VALIDARCHES=$(ARCH)
 
 ###############################################################################
-# Run local e2e smoke test against the checked-out code 
+# Run local e2e smoke test against the checked-out code
 # using a local kind cluster.
 ###############################################################################
 E2E_FOCUS ?= "sig-network.*Conformance"
