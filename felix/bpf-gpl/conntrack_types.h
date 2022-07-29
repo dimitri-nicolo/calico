@@ -37,7 +37,6 @@ enum cali_ct_type {
 struct calico_ct_leg {
 	__u64 bytes;
 	__u32 packets;
-
 	__u32 seqno;
 
 	__u32 syn_seen:1;
@@ -73,15 +72,15 @@ struct calico_ct_value {
 	union {
 		// CALI_CT_TYPE_NORMAL and CALI_CT_TYPE_NAT_REV.
 		struct {
-			struct calico_ct_leg a_to_b;	// 24
-			struct calico_ct_leg b_to_a;	// 48
+			struct calico_ct_leg a_to_b; // 24
+			struct calico_ct_leg b_to_a; // 48
 
 			// CALI_CT_TYPE_NAT_REV
-			__u32 tun_ip;			// 72
-			__u32 orig_ip;			// 76
-			__u16 orig_port;		// 80
-			__u16 orig_sport;		// 82
-			__u32 orig_sip;                 // 84
+			__u32 tun_ip;                      // 72
+			__u32 orig_ip;                     // 76
+			__u16 orig_port;                   // 80
+			__u16 orig_sport;                  // 82
+			__u32 orig_sip;                    // 84
 		};
 
 		// CALI_CT_TYPE_NAT_FWD; key for the CALI_CT_TYPE_NAT_REV entry.
