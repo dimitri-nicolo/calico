@@ -2,10 +2,12 @@
 report/
 bin/
 *.created*
+*.pyc
 .idea
 .vscode
 vendor/
 artifacts/
+postrelease-checks.xml
 
 # Test binary, built with `go test -c`
 *.test

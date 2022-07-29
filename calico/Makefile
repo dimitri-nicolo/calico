@@ -25,6 +25,7 @@ ifdef EXTRA_JEKYLL_CONFIG
 endif
 
 include ../metadata.mk
+
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 LOCAL_USER_ID?=$(shell id -u $$USER)
 PACKAGE_NAME = github.com/projectcalico/calico/calico
@@ -188,27 +189,9 @@ endif
 	# Check the redirect_from lines and strip the .md from the URL
 	find $(VERSION) \( -name '*.md' -o -name '*.html' \) -exec sed -i 's#^\(redirect_from:.*\)\.md#\1#' '{}' \;
 
-update_canonical_urls:
-	# Looks through all directories and replaces previous latest release version numbers in canonical URLs with new
-	python release-scripts/update-canonical-urls.py
-
-DOCS_TEST_CONTAINER=projectcalico/release-test
-.PHONY: release-test-image
-release-test-image:
-	cd release-scripts/tests && docker build -t $(DOCS_TEST_CONTAINER) . && cd -
-
-.PHONY: release-test
-release-test: release-test-image
-	docker run --rm \
-	-v /var/run/docker.sock:/var/run/docker.sock \
-	-v $(CURDIR):/docs \
-	-e RELEASE_STREAM=$(RELEASE_STREAM) \
-	$(DOCS_TEST_CONTAINER) sh -c \
-	"nosetests . -e "$(EXCLUDE_REGEX)" \
-	-s -v --with-xunit \
-	--xunit-file='/docs/nosetests.xml' \
-	--with-timer $(EXTRA_NOSE_ARGS)"
-
+###############################################################################
+# Utilities
+###############################################################################
 API_GEN_REPO?=tmjd/gen-crd-api-reference-docs
 API_GEN_BRANCH?=kb_v2
 OPERATOR_VERSION?=master
