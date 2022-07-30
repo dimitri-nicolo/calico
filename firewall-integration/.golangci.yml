@@ -1,0 +1,16 @@
+# options for analysis running
+run:
+  skip-dirs:
+
+  # timeout for analysis, e.g. 30s, 5m, default is 1m
+  timeout: 2m
+
+  modules-download-mode: readonly
+
+  linters:
+    disable-all: false
+    presets:
+      - bugs
+      - unused
+    fast: false
+
