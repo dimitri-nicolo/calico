@@ -403,3 +403,4 @@ rules:
       - certificatesigningrequests
     verbs:
       - list
+      - watch
