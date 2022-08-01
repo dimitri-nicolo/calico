@@ -275,6 +275,7 @@ func TcSetGlobals(
 	hostTunnelIP uint32,
 	vethNS uint16,
 	flags uint32,
+	wgPort uint16,
 ) error {
 	_, err := C.bpf_tc_set_globals(m.bpfMap,
 		C.uint(hostIP),
@@ -287,6 +288,7 @@ func TcSetGlobals(
 		C.uint(hostTunnelIP),
 		C.ushort(vethNS),
 		C.uint(flags),
+		C.ushort(wgPort),
 	)
 
 	return err
