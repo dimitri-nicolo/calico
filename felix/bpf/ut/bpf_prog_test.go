@@ -47,6 +47,10 @@ import (
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/arp"
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
+	"github.com/projectcalico/calico/felix/bpf/counters"
+	"github.com/projectcalico/calico/felix/bpf/failsafes"
+	"github.com/projectcalico/calico/felix/bpf/ipsets"
+	"github.com/projectcalico/calico/felix/bpf/jump"
 	"github.com/projectcalico/calico/felix/bpf/nat"
 	"github.com/projectcalico/calico/felix/bpf/perf"
 	"github.com/projectcalico/calico/felix/bpf/routes"
@@ -412,9 +416,9 @@ func bpftool(args ...string) ([]byte, error) {
 var (
 	mapInitOnce sync.Once
 
-	natMap, natBEMap, ctMap, rtMap, ipsMap, stateMap, testStateMap, tcJumpMap, xdpJumpMap, affinityMap, arpMap, fsafeMap bpf.Map
-	perfMap                                                                                                              bpf.Map
-	allMaps, progMaps                                                                                                    []bpf.Map
+	natMap, natBEMap, ctMap, rtMap, ipsMap, stateMap, testStateMap, tcJumpMap, xdpJumpMap, affinityMap, arpMap, fsafeMap, countersMap bpf.Map
+	perfMap                                                                                                                           bpf.Map
+	allMaps, progMaps                                                                                                                 []bpf.Map
 )
 
 func initMapsOnce() {
@@ -434,8 +438,10 @@ func initMapsOnce() {
 		arpMap = arp.Map(mc)
 		perfMap = perf.Map(mc, "perf_evnt", 512)
 		fsafeMap = failsafes.Map(mc)
+		countersMap = counters.MapForTest(mc)
 
-		allMaps = []bpf.Map{natMap, natBEMap, ctMap, rtMap, ipsMap, stateMap, testStateMap, tcJumpMap, xdpJumpMap, affinityMap, arpMap, fsafeMap}
+		allMaps = []bpf.Map{natMap, natBEMap, ctMap, rtMap, ipsMap, stateMap, testStateMap,
+			tcJumpMap, xdpJumpMap, affinityMap, arpMap, fsafeMap, countersMap}
 		for _, m := range allMaps {
 			err := m.EnsureExists()
 			if err != nil {
@@ -459,6 +465,7 @@ func initMapsOnce() {
 			affinityMap,
 			arpMap,
 			fsafeMap,
+			countersMap,
 		}
 
 	})
@@ -472,7 +479,7 @@ func cleanUpMaps() {
 	defer log.SetLevel(logLevel)
 
 	for _, m := range allMaps {
-		if m == stateMap || m == testStateMap || m == tcJumpMap || m == xdpJumpMap {
+		if m == stateMap || m == testStateMap || m == tcJumpMap || m == xdpJumpMap || m == countersMap {
 			continue // Can't clean up array maps
 		}
 		log.WithField("map", m.GetName()).Info("Cleaning")

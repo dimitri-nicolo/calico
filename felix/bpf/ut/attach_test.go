@@ -77,7 +77,7 @@ func TestReattachPrograms(t *testing.T) {
 
 	// Start with a clean base state in case another test left something behind.
 	t.Log("Doing initial clean up")
-	tc.CleanUpJumpMaps()
+	tc.CleanUpMaps()
 	bpf.CleanAttachedProgDir()
 
 	startingJumpMaps := countJumpMaps()
@@ -144,7 +144,7 @@ func TestReattachPrograms(t *testing.T) {
 
 	// Clean up maps, but nothing should change
 	t.Log("Cleaning up, should remove the first map")
-	tc.CleanUpJumpMaps()
+	tc.CleanUpMaps()
 	Expect(countJumpMaps()).To(BeNumerically("==", startingJumpMaps+3), "unexpected number of jump maps")
 	Expect(countTCDirs()).To(BeNumerically("==", startingTCDirs+3), "unexpected number of TC dirs")
 	Expect(countHashFiles()).To(BeNumerically("==", startingHashFiles+3), "unexpected number of hash files")
@@ -158,7 +158,7 @@ func TestReattachPrograms(t *testing.T) {
 	Expect(err).NotTo(HaveOccurred())
 	err = tc.RemoveQdisc(vethName2)
 	Expect(err).NotTo(HaveOccurred())
-	tc.CleanUpJumpMaps()
+	tc.CleanUpMaps()
 	Expect(countJumpMaps()).To(BeNumerically("==", startingJumpMaps+1), "unexpected number of jump maps")
 	Expect(countTCDirs()).To(BeNumerically("==", startingTCDirs+1), "unexpected number of TC dirs")
 	Expect(countHashFiles()).To(BeNumerically("==", startingHashFiles+1), "unexpected number of hash files")
@@ -183,7 +183,7 @@ func TestReattachPrograms(t *testing.T) {
 	t.Log("Removing the XDP program and cleaning up its jump map, should return to base state")
 	err = ap3.DetachProgram()
 	Expect(err).NotTo(HaveOccurred())
-	tc.CleanUpJumpMaps()
+	tc.CleanUpMaps()
 	Expect(countJumpMaps()).To(BeNumerically("==", startingJumpMaps), "unexpected number of jump maps")
 	Expect(countTCDirs()).To(BeNumerically("==", startingTCDirs), "unexpected number of TC dirs")
 	Expect(countHashFiles()).To(BeNumerically("==", startingHashFiles), "unexpected number of hash files")

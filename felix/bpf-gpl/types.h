@@ -1,5 +1,5 @@
 // Project Calico BPF dataplane programs.
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2022 Tigera, Inc. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 #ifndef __CALI_BPF_TYPES_H__
@@ -19,6 +19,7 @@
 #include "nat_types.h"
 #include "perf_types.h"
 #include "reasons.h"
+#include "counters.h"
 
 #define MAX_RULE_IDS	32
 
@@ -131,6 +132,7 @@ struct cali_tc_ctx {
   struct calico_nat_dest *nat_dest;
   struct arp_key arpk;
   struct fwd fwd;
+  counters_t *counters;
 };
 
 static CALI_BPF_INLINE struct ethhdr* tc_ethhdr(struct cali_tc_ctx *ctx)
