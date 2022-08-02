@@ -449,3 +449,16 @@ func handleNamespace(resource resourcemgr.ResourceObject, rm resourcemgr.Resourc
 
 	return nil
 }
+
+// CheckLocked checks if the datastore is locked. This is important for
+// datastore migrations and splitting up IP pools so that the underlying
+// data is not changed while the operations are being carried out.
+func CheckLocked(ctx context.Context, c client.Interface) (bool, error) {
+	// Get the cluster information resource
+	clusterinfo, err := c.ClusterInformation().Get(ctx, "default", options.GetOptions{})
+	if err != nil {
+		return false, fmt.Errorf("Error retrieving ClusterInformation: %s", err)
+	}
+
+	return !*clusterinfo.Spec.DatastoreReady, nil
+}
