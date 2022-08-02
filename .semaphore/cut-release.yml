@@ -110,6 +110,10 @@ promotions:
     pipeline_file: ../packetcapture/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Cut Queryserver Release
+    pipeline_file: ../ts-queryserver/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Cut Voltron Release
     pipeline_file: ../voltron/.semaphore/cut-release.yml
     auto_promote:

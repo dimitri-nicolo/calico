@@ -91,6 +91,10 @@ promotions:
   pipeline_file: push-images/packetcapture.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push ts-queryserver images
+  pipeline_file: push-images/ts-queryserver.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 - name: Push voltron images
   pipeline_file: push-images/voltron.yml
   auto_promote:
@@ -799,6 +803,21 @@ blocks:
       - cd packetcapture
     jobs:
     - name: "packetcapture tests"
+      commands:
+      - ../.semaphore/run-and-monitor ci.log make ci
+
+- name: 'ts-queryserver'
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/ts-queryserver/', '/api/', '/calicoctl/', '/felix/', '/lma/', '/libcalico-go/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd ts-queryserver
+    jobs:
+    - name: "ts-queryserver tests"
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
 
