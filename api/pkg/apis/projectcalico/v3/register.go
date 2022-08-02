@@ -48,6 +48,8 @@ var (
 		&NetworkSetList{},
 		&CalicoNodeStatus{},
 		&CalicoNodeStatusList{},
+		&IPAMConfiguration{},
+		&IPAMConfigurationList{},
 
 		// Enterprise-only types.
 		&AlertException{},

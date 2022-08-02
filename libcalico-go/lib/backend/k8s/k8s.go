@@ -313,6 +313,12 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		apiv3.KindDeepPacketInspection,
 		resources.NewDeepPacketInspectionClient(cs, crdClientV1),
 	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
+		libapiv3.KindIPAMConfig,
+		resources.NewIPAMConfigClient(cs, crdClientV1),
+	)
 
 	if !ca.K8sUsePodCIDR {
 		// Using Calico IPAM - use CRDs to back IPAM resources.
@@ -572,23 +578,26 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindBGPConfiguration,
 		apiv3.KindBGPPeer,
 		apiv3.KindClusterInformation,
-		apiv3.KindLicenseKey,
 		apiv3.KindCalicoNodeStatus,
-		apiv3.KindFelixConfiguration,
 		apiv3.KindGlobalNetworkPolicy,
-		apiv3.KindStagedGlobalNetworkPolicy,
 		apiv3.KindNetworkPolicy,
-		apiv3.KindStagedNetworkPolicy,
-		apiv3.KindStagedKubernetesNetworkPolicy,
-		apiv3.KindTier,
-		apiv3.KindUISettings,
-		apiv3.KindUISettingsGroup,
 		apiv3.KindGlobalNetworkSet,
 		apiv3.KindNetworkSet,
 		apiv3.KindIPPool,
 		apiv3.KindIPReservation,
 		apiv3.KindHostEndpoint,
 		apiv3.KindKubeControllersConfiguration,
+		libapiv3.KindIPAMConfig,
+
+		// Enterprise
+		apiv3.KindLicenseKey,
+		apiv3.KindFelixConfiguration,
+		apiv3.KindStagedGlobalNetworkPolicy,
+		apiv3.KindStagedNetworkPolicy,
+		apiv3.KindStagedKubernetesNetworkPolicy,
+		apiv3.KindTier,
+		apiv3.KindUISettings,
+		apiv3.KindUISettingsGroup,
 		apiv3.KindRemoteClusterConfiguration,
 		apiv3.KindAlertException,
 		apiv3.KindGlobalAlert,

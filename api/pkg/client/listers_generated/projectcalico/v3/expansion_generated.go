@@ -76,6 +76,10 @@ type GlobalThreatFeedListerExpansion interface{}
 // HostEndpointLister.
 type HostEndpointListerExpansion interface{}
 
+// IPAMConfigurationListerExpansion allows custom methods to be added to
+// IPAMConfigurationLister.
+type IPAMConfigurationListerExpansion interface{}
+
 // IPPoolListerExpansion allows custom methods to be added to
 // IPPoolLister.
 type IPPoolListerExpansion interface{}

@@ -1509,6 +1509,11 @@ func (c shimClient) EnsureInitialized(ctx context.Context, calicoVersion, cnxVer
 	return nil
 }
 
+// IPAMConfig returns an interface for managing the IPAMConfig resource.
+func (c shimClient) IPAMConfig() client.IPAMConfigInterface {
+	return c.client.IPAMConfig()
+}
+
 // KubeControllersConfiguration returns an interface for managing the Kubernetes controllers configuration resource.
 func (c shimClient) KubeControllersConfiguration() client.KubeControllersConfigurationInterface {
 	return c.client.KubeControllersConfiguration()
