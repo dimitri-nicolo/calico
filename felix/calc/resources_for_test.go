@@ -18,8 +18,10 @@ package calc_test
 // the model package.
 
 import (
+	log "github.com/sirupsen/logrus"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
+	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 	kapiv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	discovery "k8s.io/api/discovery/v1"
@@ -823,6 +825,7 @@ var localHostIP = mustParseIP("192.168.0.1")
 var remoteHostIP = mustParseIP("192.168.0.2")
 var remoteHostIPv6 = mustParseIP("dead:beef:0001::2")
 var remoteHost2IP = mustParseIP("192.168.0.3")
+var remoteHost2IPv6 = mustParseIP("dead:beef:0001::3")
 
 var localHostIPWithPrefix = "192.168.0.1/24"
 var remoteHostIPWithPrefix = "192.168.0.2/24"
@@ -1140,3 +1143,20 @@ var remoteHostVXLANV6TunnelMAC = "10:f3:27:5c:47:66"
 var netCidrs1 []string = []string{"122.10.1.2/16", "122.10.1.2/24"}
 var netCidrs1res string = "12.1.0.0/24"
 var netCidrs2res string = "12.1.2.142/32"
+
+var t = true
+
+var wgPrivateKey1 = mustGeneratePrivateKey()
+var wgPublicKey1 = wgPrivateKey1.PublicKey()
+var wgPrivateKey2 = mustGeneratePrivateKey()
+var wgPublicKey2 = wgPrivateKey2.PublicKey()
+
+func mustGeneratePrivateKey() wgtypes.Key {
+	if k, err := wgtypes.GeneratePrivateKey(); err != nil {
+		log.WithError(err).Fatal("Error generating wireguard private key")
+	} else {
+		return k
+	}
+	// This will never run, but it's included to appease golanci-lint
+	return wgtypes.Key{}
+}

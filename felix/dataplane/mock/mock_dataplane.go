@@ -38,6 +38,8 @@ type MockDataplane struct {
 	activePreDNATPolicies          set.Set[proto.PolicyID]
 	activeProfiles                 set.Set[proto.ProfileID]
 	activeVTEPs                    map[string]proto.VXLANTunnelEndpointUpdate
+	activeWireguardEndpoints       map[string]proto.WireguardEndpointUpdate
+	activeWireguardV6Endpoints     map[string]proto.WireguardEndpointV6Update
 	activeRoutes                   set.Set[proto.RouteUpdate]
 	activeIPSecTunnels             set.Set[string]
 	activeIPSecBindings            set.Set[IPSecBinding]
@@ -117,6 +119,28 @@ func (d *MockDataplane) ActiveVTEPs() set.Set[proto.VXLANTunnelEndpointUpdate] {
 
 	cp := set.New[proto.VXLANTunnelEndpointUpdate]()
 	for _, v := range d.activeVTEPs {
+		cp.Add(v)
+	}
+
+	return cp
+}
+func (d *MockDataplane) ActiveWireguardEndpoints() set.Set[proto.WireguardEndpointUpdate] {
+	d.Lock()
+	defer d.Unlock()
+
+	cp := set.New[proto.WireguardEndpointUpdate]()
+	for _, v := range d.activeWireguardEndpoints {
+		cp.Add(v)
+	}
+
+	return cp
+}
+func (d *MockDataplane) ActiveWireguardV6Endpoints() set.Set[proto.WireguardEndpointV6Update] {
+	d.Lock()
+	defer d.Unlock()
+
+	cp := set.New[proto.WireguardEndpointV6Update]()
+	for _, v := range d.activeWireguardV6Endpoints {
 		cp.Add(v)
 	}
 
@@ -259,13 +283,16 @@ func (d *MockDataplane) Config() map[string]string {
 
 func NewMockDataplane() *MockDataplane {
 	s := &MockDataplane{
-		ipSets:                         make(map[string]set.Set[string]),
-		activePolicies:                 map[proto.PolicyID]*proto.Policy{},
-		activeProfiles:                 set.New[proto.ProfileID](),
-		activeUntrackedPolicies:        set.New[proto.PolicyID](),
-		activePreDNATPolicies:          set.New[proto.PolicyID](),
-		activeRoutes:                   set.New[proto.RouteUpdate](),
-		activeVTEPs:                    make(map[string]proto.VXLANTunnelEndpointUpdate),
+		ipSets:                     make(map[string]set.Set[string]),
+		activePolicies:             map[proto.PolicyID]*proto.Policy{},
+		activeProfiles:             set.New[proto.ProfileID](),
+		activeUntrackedPolicies:    set.New[proto.PolicyID](),
+		activePreDNATPolicies:      set.New[proto.PolicyID](),
+		activeRoutes:               set.New[proto.RouteUpdate](),
+		activeVTEPs:                make(map[string]proto.VXLANTunnelEndpointUpdate),
+		activeWireguardEndpoints:   make(map[string]proto.WireguardEndpointUpdate),
+		activeWireguardV6Endpoints: make(map[string]proto.WireguardEndpointV6Update),
+
 		activeIPSecTunnels:             set.New(),
 		activeIPSecBindings:            set.New(),
 		activeIPSecBlacklist:           set.New(),
@@ -490,6 +517,20 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 	case *proto.VXLANTunnelEndpointRemove:
 		Expect(d.activeVTEPs).To(HaveKey(event.Node), "delete for unknown VTEP")
 		delete(d.activeVTEPs, event.Node)
+	case *proto.WireguardEndpointUpdate:
+		d.activeWireguardEndpoints[event.Hostname] = *event
+	case *proto.WireguardEndpointRemove:
+		Expect(d.activeWireguardEndpoints).To(HaveKey(event.Hostname), "delete for unknown IPv4 Wireguard Endpoint")
+		delete(d.activeWireguardEndpoints, event.Hostname)
+	case *proto.WireguardEndpointV6Update:
+		d.activeWireguardV6Endpoints[event.Hostname] = *event
+	case *proto.WireguardEndpointV6Remove:
+		Expect(d.activeWireguardV6Endpoints).To(HaveKey(event.Hostname), "delete for unknown IPv6 Wireguard Endpoint")
+		delete(d.activeWireguardV6Endpoints, event.Hostname)
+	case *proto.Encapsulation:
+		d.encapsulation = *event
+
+	// Enterprise cases below.
 	case *proto.PacketCaptureUpdate:
 		var update = *event
 		var id = fmt.Sprintf("%+v-%+v", update.Id, update.Endpoint)
@@ -547,8 +588,6 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 				fmt.Sprintf("Unknown IPsec blacklist removed: %v (all: %v)", addr, d.activeIPSecBlacklist))
 			d.activeIPSecBlacklist.Discard(addr)
 		}
-	case *proto.Encapsulation:
-		d.encapsulation = *event
 	}
 }
 

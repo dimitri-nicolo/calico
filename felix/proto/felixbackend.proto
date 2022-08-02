@@ -135,7 +135,32 @@ message ToDataplane {
     // VXLANTunnelEndpointRemove is send when a route is deleted.
     VXLANTunnelEndpointRemove vtep_remove = 26;
 
+    // WireguardEndpointUpdate is sent to setup IPv4 wireguard on the host.
+    WireguardEndpointUpdate wireguard_endpoint_update = 27;
+    // WireguardEndpointRemove is sent to undo IPv4 wireguard on the host.
+    WireguardEndpointRemove wireguard_endpoint_remove = 28;
+
+    // GlobalBGPConfigUpdate is sent when global BGPConfiguration changes.
+    GlobalBGPConfigUpdate global_bgp_config_update = 29;
+
+    Encapsulation encapsulation = 30;
+
+    ServiceUpdate service_update = 31;
+    ServiceRemove service_remove = 32;
+
+    // WireguardEndpointV6Update is sent to setup IPv6 wireguard on the host.
+    WireguardEndpointV6Update wireguard_endpoint_v6_update = 33;
+    // WireguardEndpointV6Remove is sent to undo IPv6 wireguard on the host.
+    WireguardEndpointV6Remove wireguard_endpoint_v6_remove = 34;
+
+    // HostMetadataV6Update is sent when a host IPv6 address is added or updated.
+    HostMetadataV6Update host_metadata_v6_update = 35;
+    // HostMetadataV6Remove is sent when a host IPv6 address is removed.
+    HostMetadataV6Remove host_metadata_v6_remove = 36;
+
+    //--------------------------------------------------------------------
     // Private members below here; use ids >100 to avoid merge conflicts.
+    //--------------------------------------------------------------------
 
     // Sent when the set of IPs behind one of our IPsec tunnels changes.
     IPSecTunnelAdd ipsec_tunnel_add = 126;
@@ -147,23 +172,10 @@ message ToDataplane {
     // Send when one or more IPs is un-blacklisted.
     IPSecBlacklistRemove ipsec_binding_remove = 125;
 
-    // WireguardEndpointUpdate is sent to setup wireguard on the host.
-    WireguardEndpointUpdate wireguard_endpoint_update = 27;
-    // WireguardEndpointRemove is sent to undo wireguard on the host.
-    WireguardEndpointRemove wireguard_endpoint_remove = 28;
-
-    // GlobalBGPConfigUpdate is sent when global BGPConfiguration changes.
-    GlobalBGPConfigUpdate global_bgp_config_update = 29;
-
     // PacketCaptureUpdate is sent to setup packetcapture.
     PacketCaptureUpdate packet_capture_update = 128;
     // PacketCaptureRemove is sent to stop packetcapture.
     PacketCaptureRemove packet_capture_remove = 129;
-
-    Encapsulation encapsulation = 30;
-
-    ServiceUpdate service_update = 31;
-    ServiceRemove service_remove = 32;
   }
 }
 
@@ -501,6 +513,9 @@ message WorkloadEndpointStatusRemove {
 message WireguardStatusUpdate {
   // Wireguard public-key set on the interface.
   string public_key = 1;
+
+  // The IP version of this update
+  IPVersion ip_version = 2;
 }
 
 message HostMetadataUpdate {
@@ -511,6 +526,16 @@ message HostMetadataUpdate {
 message HostMetadataRemove {
   string hostname = 1;
   string ipv4_addr = 2;
+}
+
+message HostMetadataV6Update {
+  string hostname = 1;
+  string ipv6_addr = 2;
+}
+
+message HostMetadataV6Remove {
+  string hostname = 1;
+  string ipv6_addr = 2;
 }
 
 message IPSecTunnelAdd {
@@ -771,18 +796,34 @@ message HTTPData {
 }
 
 message WireguardEndpointUpdate {
-  // The name of the wireguard host.
+  // The name of the IPv4 wireguard host.
   string hostname = 1;
 
-  // The public key for this endpoint.
+  // The public key for IPv4 wireguard on this endpoint.
   string public_key = 2;
 
-  // The IP address of the wireguard interface.
+  // The IP address of the IPv4 wireguard interface.
   string interface_ipv4_addr = 3;
 }
 
 message WireguardEndpointRemove {
-  // The name of the wireguard host.
+  // The name of the IPv4 wireguard host.
+  string hostname = 1;
+}
+
+message WireguardEndpointV6Update {
+  // The name of the IPv6 wireguard host.
+  string hostname = 1;
+
+  // The public key for IPv6 wireguard on this endpoint.
+  string public_key_v6 = 2;
+
+  // The IP address of the IPv6 wireguard interface.
+  string interface_ipv6_addr = 3;
+}
+
+message WireguardEndpointV6Remove {
+  // The name of the IPv6 wireguard host.
   string hostname = 1;
 }
 

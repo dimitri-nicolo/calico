@@ -75,6 +75,8 @@ type encapCallbacks interface {
 type passthruCallbacks interface {
 	OnHostIPUpdate(hostname string, ip *net.IP)
 	OnHostIPRemove(hostname string)
+	OnHostIPv6Update(hostname string, ip *net.IP)
+	OnHostIPv6Remove(hostname string)
 	OnIPPoolUpdate(model.IPPoolKey, *model.IPPool)
 	OnIPPoolRemove(model.IPPoolKey)
 	OnServiceAccountUpdate(*proto.ServiceAccountUpdate)
@@ -433,7 +435,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, conf 
 	hostIPPassthru := NewDataplanePassthru(callbacks)
 	hostIPPassthru.RegisterWith(allUpdDispatcher)
 
-	if conf.BPFEnabled || conf.Encapsulation.VXLANEnabled || conf.Encapsulation.VXLANEnabledV6 || conf.WireguardEnabled ||
+	if conf.BPFEnabled || conf.Encapsulation.VXLANEnabled || conf.Encapsulation.VXLANEnabledV6 || conf.WireguardEnabled || conf.WireguardEnabledV6 ||
 		conf.EgressIPSupport == "EnabledPerNamespace" || conf.EgressIPSupport == "EnabledPerNamespaceOrPerPod" ||
 		conf.AWSSecondaryIPSupport != "Disabled" {
 		// Calculate simple node-ownership routes.
