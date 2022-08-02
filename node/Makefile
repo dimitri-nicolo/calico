@@ -387,11 +387,11 @@ cnx-node.tar: $(NODE_CONTAINER_CREATED)
 calico-node.tar: cnx-node.tar
 	cp cnx-node.tar calico-node.tar
 
-calico-apiserver.tar: ../go.mod $(shell find ../apiserver -name '*.go')
+calico-apiserver.tar: ../go.mod $(shell find ../apiserver -name '*.go') $(shell find ../libcalico-go -name '*.go')
 	make -C ../apiserver image
 	docker save --output $@ tigera/cnx-apiserver:latest-$(ARCH)
 
-calico-cni.tar: ../go.mod $(shell find ../cni-plugin -name '*.go')
+calico-cni.tar: ../go.mod $(shell find ../cni-plugin -name '*.go') $(shell find ../libcalico-go -name '*.go')
 	make -C ../cni-plugin image
 	docker save --output $@ tigera/cni:latest-$(ARCH)
 
@@ -399,11 +399,11 @@ pod2daemon.tar: ../go.mod $(shell find ../pod2daemon -name '*.go')
 	make -C ../pod2daemon image
 	docker save --output $@ tigera/pod2daemon-flexvol:latest-$(ARCH)
 
-calicoctl.tar: ../go.mod $(shell find ../calicoctl -name '*.go')
+calicoctl.tar: ../go.mod $(shell find ../calicoctl -name '*.go') $(shell find ../libcalico-go -name '*.go')
 	make -C ../calicoctl image
 	docker save --output $@ tigera/calicoctl:latest-$(ARCH)
 
-kube-controllers.tar: ../go.mod $(shell find ../kube-controllers -name '*.go')
+kube-controllers.tar: ../go.mod $(shell find ../kube-controllers -name '*.go') $(shell find ../libcalico-go -name '*.go')
 	make -C ../kube-controllers image
 	docker save --output $@ tigera/kube-controllers:latest-$(ARCH)
 
