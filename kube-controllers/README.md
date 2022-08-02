@@ -31,7 +31,7 @@ Contributions to this code are welcome!  The code in this repository can be buil
 
 For more information, see `make help`.
 
-[controllers-src]: https://github.com/projectcalico/kube-controllers/tree/master/pkg/controllers
+[controllers-src]: https://github.com/projectcalico/calico/tree/master/kube-controllers/pkg/controllers
 [calico-docs]: https://docs.projectcalico.org/latest/reference/kube-controllers/configuration
 
 #### Build tags
