@@ -179,7 +179,7 @@ rules:
     verbs:
       - list
       - watch
-      - create 
+      - create
       - update
   # Needed for operator lock
   - apiGroups:
@@ -403,4 +403,15 @@ rules:
       - certificatesigningrequests
     verbs:
       - list
-      - watch  
+      - watch
+  - apiGroups:
+      - storage.k8s.io
+    resources:
+      - csidrivers
+    verbs:
+      - list
+      - watch
+      - update
+      - get
+      - create
+      - delete
