@@ -1,5 +1,5 @@
 PACKAGE_NAME?=github.com/tigera/elasticsearch-metrics
-GO_BUILD_VER?=v0.65
+GO_BUILD_VER?=v0.73
 
 ELASTICSEARCH_METRICS_IMAGE ?=tigera/elasticsearch-metrics
 BUILD_IMAGES                ?=$(ELASTICSEARCH_METRICS_IMAGE)
@@ -32,11 +32,20 @@ clean:
 	rm -rf bin \
 		   Makefile.common*
 
-build:
-	git submodule update --init --recursive
-	mkdir -p bin
-	$(DOCKER_GO_BUILD) bash -x  -c "cd elasticsearch-exporter && make common-build"
-	cp elasticsearch-exporter/elasticsearch_exporter bin/
+# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
+ifeq ($(ARCH), $(filter $(ARCH),amd64))
+CGO_ENABLED=1
+else
+CGO_ENABLED=0
+endif
+
+build: bin/elasticsearch-metrics-$(ARCH)
+
+.PHONY: bin/elasticsearch-metrics-$(ARCH)
+bin/elasticsearch-metrics-$(ARCH):
+	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) \
+			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/*.go'
 
 image: $(ELASTICSEARCH_METRICS_IMAGE)
 $(ELASTICSEARCH_METRICS_IMAGE): $(ELASTICSEARCH_METRICS_IMAGE)-$(ARCH)
