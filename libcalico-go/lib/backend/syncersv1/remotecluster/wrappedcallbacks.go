@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -13,6 +14,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend"
@@ -24,6 +27,18 @@ import (
 
 // Time to wait before retry failed connections to datastores.
 const retrySeconds = 10 * time.Second
+
+// Metrics for remote cluster config status.
+var (
+	statusToGaugeValue = map[model.RemoteClusterStatusType]float64{
+		model.RemoteClusterConnectionFailed:            0,
+		model.RemoteClusterConnecting:                  1,
+		model.RemoteClusterInSync:                      2,
+		model.RemoteClusterResyncInProgress:            3,
+		model.RemoteClusterConfigChangeRestartRequired: 4,
+		model.RemoteClusterConfigIncomplete:            5,
+	}
+)
 
 // RemoteClusterInterface provides appropriate hooks for the syncer to:
 // - get the Calico API config from the RemoteClusterConfig, returning nil if the RemoteClusterConfig
@@ -44,11 +59,11 @@ type RemoteClusterClientInterface interface {
 	CreateClient(config apiconfig.CalicoAPIConfig) (api.Client, error)
 }
 
-func NewWrappedCallbacks(callbacks api.SyncerCallbacks, k8sClientset *kubernetes.Clientset, rci RemoteClusterInterface) api.SyncerCallbacks {
+func NewWrappedCallbacks(callbacks api.SyncerCallbacks, k8sClientset *kubernetes.Clientset, rci RemoteClusterInterface, statusGauge *prometheus.GaugeVec) api.SyncerCallbacks {
 	// Store remotes as they are created so that they can be stopped.
 	// A non-thread safe map is fine, because a mutex is used when it's accessed.
 	remotes := make(map[model.ResourceKey]*RemoteSyncer)
-	wcb := wrappedCallbacks{callbacks: callbacks, remotes: remotes, rci: rci}
+	wcb := wrappedCallbacks{callbacks: callbacks, remotes: remotes, rci: rci, statusGauge: statusGauge}
 	sw := NewSecretWatcher(&wcb, k8sClientset)
 	wcb.secretWatcher = sw
 	return &wcb
@@ -75,6 +90,9 @@ type wrappedCallbacks struct {
 	allRCCsAreSynced bool
 
 	secretWatcher *secretWatcher
+
+	// GaugeVec to capture the RCC status.
+	statusGauge *prometheus.GaugeVec
 }
 
 type RemoteSyncer struct {
@@ -184,6 +202,7 @@ func (a *wrappedCallbacks) handleRCCUpdate(update api.Update) {
 				},
 				UpdateType: api.UpdateTypeKVNew,
 			}})
+			a.reportRemoteClusterStatus(key.Name, model.RemoteClusterConnecting)
 			a.updateRCC(key, rcConfig, "new RCC", clog)
 		}
 	case api.UpdateTypeKVDeleted:
@@ -238,6 +257,7 @@ func (a *wrappedCallbacks) updateRCC(key model.ResourceKey, rcConfig *apiv3.Remo
 			},
 			UpdateType: api.UpdateTypeKVUpdated,
 		}})
+		a.reportRemoteClusterStatus(key.Name, model.RemoteClusterConfigIncomplete)
 	}
 
 	isValid := datastoreConfig != nil
@@ -273,6 +293,7 @@ func (a *wrappedCallbacks) updateRCC(key model.ResourceKey, rcConfig *apiv3.Remo
 			},
 			UpdateType: api.UpdateTypeKVUpdated,
 		}})
+		a.reportRemoteClusterStatus(key.Name, model.RemoteClusterConfigChangeRestartRequired)
 	}
 }
 
@@ -420,6 +441,7 @@ func (a *wrappedCallbacks) createRemoteSyncer(ctx context.Context, key model.Res
 					},
 					UpdateType: api.UpdateTypeKVUpdated,
 				}})
+				a.reportRemoteClusterStatus(key.Name, model.RemoteClusterResyncInProgress)
 			},
 		}
 
@@ -451,6 +473,7 @@ func (a *wrappedCallbacks) handleRemoteInSync(ctx context.Context, key model.Res
 			},
 			UpdateType: api.UpdateTypeKVUpdated,
 		}})
+		a.reportRemoteClusterStatus(key.Name, model.RemoteClusterInSync)
 	}
 	a.finishRemote(key)
 }
@@ -483,6 +506,7 @@ func (a *wrappedCallbacks) handleConnectionFailed(ctx context.Context, key model
 			},
 			UpdateType: api.UpdateTypeKVUpdated,
 		}})
+		a.reportRemoteClusterStatus(key.Name, model.RemoteClusterConnectionFailed)
 		return false
 	}
 }
@@ -558,6 +582,11 @@ func (a *wrappedCallbacks) stopRCC(key model.ResourceKey, remove bool) {
 				},
 				UpdateType: api.UpdateTypeKVDeleted,
 			}})
+			// Delete the Gauge once the remote cluster is removed to avoid memory leak.
+			if a.statusGauge != nil {
+				log.Infof("Deleting the status gauge for cluster: %s", key)
+				a.statusGauge.DeleteLabelValues(strings.ToLower(key.Name))
+			}
 		} else {
 			log.Debugf("Callback update for %s: %s", key, updateTypeToString(api.UpdateTypeKVUpdated))
 			a.callbacks.OnUpdates([]api.Update{{
@@ -570,6 +599,7 @@ func (a *wrappedCallbacks) stopRCC(key model.ResourceKey, remove bool) {
 				},
 				UpdateType: api.UpdateTypeKVUpdated,
 			}})
+			a.reportRemoteClusterStatus(key.Name, model.RemoteClusterConfigIncomplete)
 		}
 	}
 	a.cleanStaleSecrets()
@@ -641,4 +671,12 @@ func updateTypeToString(ut api.UpdateType) string {
 		return "UpdateTypeKVDeleted"
 	}
 	return "UknownUpdateType"
+}
+
+// reportRemoteClusterStatus reports all the remote cluster status.
+func (a *wrappedCallbacks) reportRemoteClusterStatus(key string, status model.RemoteClusterStatusType) {
+	if a.statusGauge != nil {
+		log.Debugf("Reporting remote cluster Status for cluster: %s - Status: %v ", key, statusToGaugeValue[status])
+		a.statusGauge.WithLabelValues(strings.ToLower(key)).Set(statusToGaugeValue[status])
+	}
 }

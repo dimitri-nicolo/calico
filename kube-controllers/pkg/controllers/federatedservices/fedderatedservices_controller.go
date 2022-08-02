@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/syncersv1/remotecluster"
@@ -39,6 +40,17 @@ const (
 	FederationServiceSelectorAnnotation = FederationAnnotationPrefix + "serviceSelector"
 	LabelClusterName                    = FederationAnnotationPrefix + "remoteClusterName"
 )
+
+var (
+	remoteClusterStatusGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "remote_cluster_connection_status",
+		Help: "0-NotConnecting ,1-Connecting, 2-InSync, 3-ReSyncInProgress, 4-ConfigChangeRestartRequired, 5-ConfigInComplete.",
+	}, []string{"remote_cluster_name"})
+)
+
+func init() {
+	prometheus.MustRegister(remoteClusterStatusGauge)
+}
 
 // backendClientAccessor is an interface to access the backend client from the main v2 client.
 type backendClientAccessor interface {
@@ -166,6 +178,7 @@ func NewFederatedServicesController(ctx context.Context, k8sClientset *kubernete
 		c.(backendClientAccessor).Backend(),
 		k8sClientset,
 		restartMonitor,
+		remoteClusterStatusGauge,
 	)
 
 	return fec
