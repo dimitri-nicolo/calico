@@ -1722,28 +1722,27 @@ func parseNameAndNamespace(wlId string) (string, string, error) {
 }
 
 func sortStringSet(s set.Set[string]) []string {
-       var sorted []string
-       s.Iter(func(item string) error {
-               sorted = append(sorted, item)
-               return nil
-       })
+	var sorted []string
+	s.Iter(func(item string) error {
+		sorted = append(sorted, item)
+		return nil
+	})
 
-       sort.Slice(sorted, func(p, q int) bool {
-               return sorted[p] < sorted[q]
-       })
-       return sorted
+	sort.Slice(sorted, func(p, q int) bool {
+		return sorted[p] < sorted[q]
+	})
+	return sorted
 }
 
 func sortIntSet(s set.Set[int]) []int {
-       var sorted []int
-       s.Iter(func(item int) error {
-               sorted = append(sorted, item)
+	var sorted []int
+	s.Iter(func(item int) error {
+		sorted = append(sorted, item)
 
-	                       return nil
-        })
-        sort.Slice(sorted, func(p, q int) bool {
-                return sorted[p] < sorted[q]
-        })
-        return sorted
+		return nil
+	})
+	sort.Slice(sorted, func(p, q int) bool {
+		return sorted[p] < sorted[q]
+	})
+	return sorted
 }
-

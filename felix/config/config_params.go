@@ -201,6 +201,7 @@ type Config struct {
 	BPFMapSizeIPSets                   int              `config:"int;1048576;non-zero"`
 	BPFHostConntrackBypass             bool             `config:"bool;true"`
 	BPFEnforceRPF                      string           `config:"oneof(Disabled,Strict);Strict;non-zero"`
+	BPFPolicyDebugEnabled              bool             `config:"bool;true"`
 
 	FlowLogsCollectProcessInfo  bool `config:"bool;false"`
 	FlowLogsCollectTcpStats     bool `config:"bool;true"`

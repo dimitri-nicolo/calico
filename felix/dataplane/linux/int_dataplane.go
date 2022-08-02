@@ -212,6 +212,7 @@ type Config struct {
 	ExternalNodesCidrs []string
 
 	BPFEnabled                         bool
+	BPFPolicyDebugEnabled              bool
 	BPFDisableUnprivileged             bool
 	BPFKubeProxyIptablesCleanupEnabled bool
 	BPFLogLevel                        string
@@ -530,6 +531,13 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		log.Info("BPF enabled, configuring iptables layer to clean up kube-proxy's rules.")
 		iptablesOptions.ExtraCleanupRegexPattern = rules.KubeProxyInsertRuleRegex
 		iptablesOptions.HistoricChainPrefixes = append(iptablesOptions.HistoricChainPrefixes, rules.KubeProxyChainPrefixes...)
+	}
+
+	if config.BPFEnabled && !config.BPFPolicyDebugEnabled {
+		err := os.RemoveAll(bpf.RuntimePolDir)
+		if err != nil && !os.IsNotExist(err) {
+			log.WithError(err).Info("Policy debug disabled but failed to remove the debug directory.  Ignoring.")
+		}
 	}
 
 	// However, the NAT tables need an extra cleanup regex.

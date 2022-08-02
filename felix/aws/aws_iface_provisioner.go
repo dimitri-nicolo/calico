@@ -129,7 +129,7 @@ type SecondaryIfaceProvisioner struct {
 	awsGatewayAddr      ip.Addr
 	awsSubnetCIDR       ip.CIDR
 	// ourHostIPs contains the IPs that our host has assigned in IPAM for primary IPs.
-	ourHostIPs set.Set[ip.Addr] 
+	ourHostIPs set.Set[ip.Addr]
 
 	// datastoreUpdateC carries updates from Felix's main dataplane loop to our loop.
 	datastoreUpdateC chan DatastoreState
@@ -1758,7 +1758,7 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(awsState *awsSta
 
 	// Collect all the elastic IP IDs that we _may_ want to attach.
 	eipToCandidatePrivIPs := map[ip.Addr][]ip.Addr{}
-	privIPsToDo := set.NewBoxed[ip.Addr]() 
+	privIPsToDo := set.NewBoxed[ip.Addr]()
 	for _, addrInfo := range m.ds.LocalAWSAddrsByDst {
 		privIPAddr := ip.MustParseCIDROrIP(addrInfo.Dst).Addr()
 		if _, ok := privIPToElasticIPID[privIPAddr]; ok {

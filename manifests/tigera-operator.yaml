@@ -1119,6 +1119,11 @@ spec:
                   are inclusive. [Default: 20000:29999]'
                 pattern: ^.*
                 x-kubernetes-int-or-string: true
+              bpfPolicyDebugEnabled:
+                description: BPFPolicyDebugEnabled when true, Felix records detailed
+                  information about the BPF policy programs, which can be examined
+                  with the calico-bpf command-line tool.
+                type: boolean
               captureDir:
                 description: 'CaptureDir controls directory to store file capture.
                   [Default: /var/log/calico/pcap]'

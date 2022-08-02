@@ -119,7 +119,7 @@ type EventSequencer struct {
 	sentServices        set.Set[serviceID]
 
 	// Enterprise-only fields.
-	sentPacketCapture   set.Set[string]
+	sentPacketCapture set.Set[string]
 
 	Callback EventHandler
 }

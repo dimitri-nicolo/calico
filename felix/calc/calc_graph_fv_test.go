@@ -838,13 +838,12 @@ func stringifyRoutes(routes set.Set[proto.RouteUpdate]) []string {
 func stringifyPacketCapture(pc set.Set[proto.PacketCaptureUpdate]) []string {
 	out := make([]string, 0, pc.Len())
 	routes.Iter(func(item proto.PacketCapture) error {
-			out = append(out, fmt.Sprintf("%+v-%+v", update.Id, update.Endpoint))
-			return nil
+		out = append(out, fmt.Sprintf("%+v-%+v", update.Id, update.Endpoint))
+		return nil
 	})
 	sort.Strings(out)
 	return out
 }
-
 
 type flushStrategy int
 
