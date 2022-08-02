@@ -148,10 +148,10 @@ type bpfEndpointManager struct {
 	profiles       map[proto.ProfileID]*proto.Profile
 
 	// Indexes
-	policiesToWorkloads map[string]set.Set          /*proto.WorkloadEndpointID*/
-	profilesToWorkloads map[proto.ProfileID]set.Set /*proto.WorkloadEndpointID*/
+	policiesToWorkloads map[proto.PolicyID]set.Set[any]  /* FIXME proto.WorkloadEndpointID or string (for a HEP) */
+	profilesToWorkloads map[proto.ProfileID]set.Set[any] /* FIXME proto.WorkloadEndpointID or string (for a HEP) */
 
-	dirtyIfaceNames set.Set
+	dirtyIfaceNames set.Set[string]
 
 	bpfLogLevel             string
 	hostname                string
@@ -265,9 +265,9 @@ func newBPFEndpointManager(
 		policies:                map[proto.PolicyID]*proto.Policy{},
 		profiles:                map[proto.ProfileID]*proto.Profile{},
 		nameToIface:             map[string]bpfInterface{},
-		policiesToWorkloads:     map[string]set.Set{},
-		profilesToWorkloads:     map[proto.ProfileID]set.Set{},
-		dirtyIfaceNames:         set.New(),
+		policiesToWorkloads:     map[proto.PolicyID]set.Set[any]{},
+		profilesToWorkloads:     map[proto.ProfileID]set.Set[any]{},
+		dirtyIfaceNames:         set.New[string](),
 		bpfLogLevel:             config.BPFLogLevel,
 		hostname:                config.Hostname,
 		fibLookupEnabled:        fibLookupEnabled,
@@ -463,8 +463,8 @@ func (m *bpfEndpointManager) onInterfaceAddrsUpdate(update *ifaceAddrsUpdate) {
 
 	if update.Addrs != nil && update.Addrs.Len() > 0 {
 		log.Debugf("Interface %+v received address update %+v", update.Name, update.Addrs)
-		update.Addrs.Iter(func(item interface{}) error {
-			ip := net.ParseIP(item.(string))
+		update.Addrs.Iter(func(item string) error {
+			ip := net.ParseIP(item)
 			if ip.To4() != nil {
 				ipAddrs = append(ipAddrs, ip)
 			}
@@ -582,8 +582,8 @@ func (m *bpfEndpointManager) onPolicyUpdate(msg *proto.ActivePolicyUpdate) {
 	polID := *msg.Id
 	log.WithField("id", polID).Debug("Policy update")
 	m.policies[polID] = msg.Policy
-	// Note, polID.Name includes the tier name as well as the policy name.
-	m.markEndpointsDirty(m.policiesToWorkloads[polID.Name], "policy")
+	// Note, polID includes the tier name as well as the policy name.
+	m.markEndpointsDirty(m.policiesToWorkloads[polID], "policy")
 }
 
 // onPolicyRemove removes the policy from the cache and marks any endpoints using it dirty.
@@ -591,10 +591,10 @@ func (m *bpfEndpointManager) onPolicyUpdate(msg *proto.ActivePolicyUpdate) {
 func (m *bpfEndpointManager) onPolicyRemove(msg *proto.ActivePolicyRemove) {
 	polID := *msg.Id
 	log.WithField("id", polID).Debug("Policy removed")
-	// Note, polID.Name includes the tier name as well as the policy name.
-	m.markEndpointsDirty(m.policiesToWorkloads[polID.Name], "policy")
+	// Note, polID includes the tier name as well as the policy name.
+	m.markEndpointsDirty(m.policiesToWorkloads[polID], "policy")
 	delete(m.policies, polID)
-	delete(m.policiesToWorkloads, polID.Name)
+	delete(m.policiesToWorkloads, polID)
 }
 
 // onProfileUpdate stores the profile in the cache and marks any endpoints that use it as dirty.
@@ -615,12 +615,12 @@ func (m *bpfEndpointManager) onProfileRemove(msg *proto.ActiveProfileRemove) {
 	delete(m.profilesToWorkloads, profID)
 }
 
-func (m *bpfEndpointManager) markEndpointsDirty(ids set.Set, kind string) {
+func (m *bpfEndpointManager) markEndpointsDirty(ids set.Set[any], kind string) {
 	if ids == nil {
 		// Hear about the policy/profile before the endpoint.
 		return
 	}
-	ids.Iter(func(item interface{}) error {
+	ids.Iter(func(item any) error {
 		switch id := item.(type) {
 		case proto.WorkloadEndpointID:
 			m.markExistingWEPDirty(id, kind)
@@ -680,8 +680,7 @@ func (m *bpfEndpointManager) applyProgramsToDirtyDataInterfaces() {
 	var mutex sync.Mutex
 	errs := map[string]error{}
 	var wg sync.WaitGroup
-	m.dirtyIfaceNames.Iter(func(item interface{}) error {
-		iface := item.(string)
+	m.dirtyIfaceNames.Iter(func(iface string) error {
 		if !m.isDataIface(iface) {
 			log.WithField("iface", iface).Debug(
 				"Ignoring interface that doesn't match the host data interface regex")
@@ -744,8 +743,7 @@ func (m *bpfEndpointManager) applyProgramsToDirtyDataInterfaces() {
 		return nil
 	})
 	wg.Wait()
-	m.dirtyIfaceNames.Iter(func(item interface{}) error {
-		iface := item.(string)
+	m.dirtyIfaceNames.Iter(func(iface string) error {
 		if !m.isDataIface(iface) {
 			log.WithField("iface", iface).Debug(
 				"Ignoring interface that doesn't match the host data interface regex")
@@ -777,9 +775,7 @@ func (m *bpfEndpointManager) updateWEPsInDataplane() {
 	maxWorkers := runtime.GOMAXPROCS(0)
 	sem := semaphore.NewWeighted(int64(maxWorkers))
 
-	m.dirtyIfaceNames.Iter(func(item interface{}) error {
-		ifaceName := item.(string)
-
+	m.dirtyIfaceNames.Iter(func(ifaceName string) error {
 		if !m.isWorkloadIface(ifaceName) {
 			return nil
 		}
@@ -811,9 +807,7 @@ func (m *bpfEndpointManager) updateWEPsInDataplane() {
 		m.mapCleanupRunner.Trigger()
 	}
 
-	m.dirtyIfaceNames.Iter(func(item interface{}) error {
-		ifaceName := item.(string)
-
+	m.dirtyIfaceNames.Iter(func(ifaceName string) error {
 		if !m.isWorkloadIface(ifaceName) {
 			return nil
 		}
@@ -1365,10 +1359,14 @@ func (m *bpfEndpointManager) addWEPToIndexes(wlID proto.WorkloadEndpointID, wl *
 
 func (m *bpfEndpointManager) addPolicyToEPMappings(polNames []string, id interface{}) {
 	for _, pol := range polNames {
-		if m.policiesToWorkloads[pol] == nil {
-			m.policiesToWorkloads[pol] = set.New()
+		polID := proto.PolicyID{
+			Tier: "default", // TODO
+			Name: pol,
 		}
-		m.policiesToWorkloads[pol].Add(id)
+		if m.policiesToWorkloads[polID] == nil {
+			m.policiesToWorkloads[polID] = set.NewBoxed[any]()
+		}
+		m.policiesToWorkloads[polID].Add(id)
 	}
 }
 
@@ -1377,7 +1375,7 @@ func (m *bpfEndpointManager) addProfileToEPMappings(profileIds []string, id inte
 		profID := proto.ProfileID{Name: profName}
 		profSet := m.profilesToWorkloads[profID]
 		if profSet == nil {
-			profSet = set.New()
+			profSet = set.NewBoxed[any]()
 			m.profilesToWorkloads[profID] = profSet
 		}
 		profSet.Add(id)
@@ -1404,19 +1402,23 @@ func (m *bpfEndpointManager) removeWEPFromIndexes(wlID proto.WorkloadEndpointID,
 
 func (m *bpfEndpointManager) removePolicyToEPMappings(polNames []string, id interface{}) {
 	for _, pol := range polNames {
-		polSet := m.policiesToWorkloads[pol]
+		polID := proto.PolicyID{
+			Tier: "default", // TODO
+			Name: pol,
+		}
+		polSet := m.policiesToWorkloads[polID]
 		if polSet == nil {
 			continue
 		}
 		polSet.Discard(id)
 		if polSet.Len() == 0 {
 			// Defensive; we also clean up when the profile is removed.
-			delete(m.policiesToWorkloads, pol)
+			delete(m.policiesToWorkloads, polID)
 		}
 	}
 }
 
-func (m *bpfEndpointManager) removeProfileToEPMappings(profileIds []string, id interface{}) {
+func (m *bpfEndpointManager) removeProfileToEPMappings(profileIds []string, id any) {
 	for _, profName := range profileIds {
 		profID := proto.ProfileID{Name: profName}
 		profSet := m.profilesToWorkloads[profID]

@@ -241,7 +241,7 @@ func (rs *RuleScanner) updateRules(key interface{}, inbound, outbound []model.Ru
 	}
 
 	// Figure out which IP sets are new.
-	addedUids := set.New()
+	addedUids := set.New[string]()
 	for uid := range currentUIDToIPSet {
 		log.Debugf("Checking if UID %v is new.", uid)
 		if !rs.rulesIDToUIDs.Contains(key, uid) {
@@ -251,7 +251,7 @@ func (rs *RuleScanner) updateRules(key interface{}, inbound, outbound []model.Ru
 	}
 
 	// Figure out which IP sets are no-longer in use.
-	removedUids := set.New()
+	removedUids := set.New[string]()
 	rs.rulesIDToUIDs.Iter(key, func(uid string) {
 		if _, ok := currentUIDToIPSet[uid]; !ok {
 			log.Debugf("Removed UID: %v", uid)
@@ -260,8 +260,7 @@ func (rs *RuleScanner) updateRules(key interface{}, inbound, outbound []model.Ru
 	})
 
 	// Add the new into the index, triggering events as we discover newly-active IP sets.
-	addedUids.Iter(func(item interface{}) error {
-		uid := item.(string)
+	addedUids.Iter(func(uid string) error {
 		rs.rulesIDToUIDs.Put(key, uid)
 		if !rs.uidsToRulesIDs.ContainsKey(uid) {
 			ipSet := currentUIDToIPSet[uid]
@@ -280,8 +279,7 @@ func (rs *RuleScanner) updateRules(key interface{}, inbound, outbound []model.Ru
 	})
 
 	// And remove the old, triggering events as we clean up unused IP sets.
-	removedUids.Iter(func(item interface{}) error {
-		uid := item.(string)
+	removedUids.Iter(func(uid string) error {
 		rs.rulesIDToUIDs.Discard(key, uid)
 		rs.uidsToRulesIDs.Discard(uid, key)
 		if !rs.uidsToRulesIDs.ContainsKey(uid) {

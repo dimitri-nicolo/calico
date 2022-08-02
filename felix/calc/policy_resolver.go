@@ -56,7 +56,7 @@ type PolicyResolver struct {
 	endpoints             map[model.Key]interface{}
 	endpointEgressData    map[model.WorkloadEndpointKey]epEgressData
 	endpointGatewayUsage  map[model.WorkloadEndpointKey]int
-	dirtyEndpoints        set.Set
+	dirtyEndpoints        set.Set[any] /* FIXME model.WorkloadEndpointKey or model.HostEndpointKey */
 	sortRequired          bool
 	policySorter          *PolicySorter
 	Callbacks             []PolicyResolverCallbacks
@@ -74,7 +74,7 @@ func NewPolicyResolver() *PolicyResolver {
 		endpoints:             make(map[model.Key]interface{}),
 		endpointEgressData:    make(map[model.WorkloadEndpointKey]epEgressData),
 		endpointGatewayUsage:  make(map[model.WorkloadEndpointKey]int),
-		dirtyEndpoints:        set.New(),
+		dirtyEndpoints:        set.NewBoxed[any](),
 		policySorter:          NewPolicySorter(),
 		Callbacks:             []PolicyResolverCallbacks{},
 	}
@@ -196,7 +196,7 @@ func (pr *PolicyResolver) maybeFlush() {
 		pr.refreshSortOrder()
 	}
 	pr.dirtyEndpoints.Iter(pr.sendEndpointUpdate)
-	pr.dirtyEndpoints = set.New()
+	pr.dirtyEndpoints = set.NewBoxed[any]()
 }
 
 func (pr *PolicyResolver) sendEndpointUpdate(endpointID interface{}) error {

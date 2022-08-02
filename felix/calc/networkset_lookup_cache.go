@@ -30,8 +30,8 @@ func init() {
 }
 
 type networkSetData struct {
-	cidrs                set.Set
-	allowedEgressDomains set.Set
+	cidrs                set.Set[ip.CIDR]
+	allowedEgressDomains set.Set[string]
 	endpointData         *EndpointData
 }
 
@@ -40,8 +40,8 @@ type NetworkSetLookupsCache struct {
 	nsMutex                  sync.RWMutex
 	networkSets              map[model.Key]*networkSetData
 	ipTree                   *IpTrie
-	networksetToEgressDomain map[string]set.Set
-	egressDomainToNetworkset map[string]set.Set
+	networksetToEgressDomain map[string]set.Set[string]
+	egressDomainToNetworkset map[string]set.Set[model.Key]
 }
 
 func NewNetworkSetLookupsCache() *NetworkSetLookupsCache {
@@ -53,7 +53,7 @@ func NewNetworkSetLookupsCache() *NetworkSetLookupsCache {
 
 		// Reverse lookups by CIDR and egress domain.
 		ipTree:                   NewIpTrie(),
-		egressDomainToNetworkset: make(map[string]set.Set),
+		egressDomainToNetworkset: make(map[string]set.Set[model.Key]),
 	}
 
 	return nc
@@ -78,7 +78,7 @@ func (nc *NetworkSetLookupsCache) OnUpdate(nsUpdate api.Update) (_ bool) {
 					Key:        k,
 					Networkset: nsUpdate.Value,
 				},
-				cidrs:                set.FromArray(ip.CIDRsFromCalicoNets(networkset.Nets)),
+				cidrs:                set.FromArrayBoxed(ip.CIDRsFromCalicoNets(networkset.Nets)),
 				allowedEgressDomains: set.FromArray(networkset.AllowedEgressDomains),
 			})
 		}
@@ -102,36 +102,32 @@ func (nc *NetworkSetLookupsCache) addOrUpdateNetworkset(data *networkSetData) {
 	currentData, exists := nc.networkSets[data.endpointData.Key]
 	if currentData == nil {
 		currentData = &networkSetData{
-			cidrs:                set.New(),
-			allowedEgressDomains: set.New(),
+			cidrs:                set.NewBoxed[ip.CIDR](),
+			allowedEgressDomains: set.New[string](),
 		}
 	}
 	nc.networkSets[data.endpointData.Key] = data
 
-	set.IterDifferences(data.cidrs, currentData.cidrs,
+	set.IterDifferencesBoxed[ip.CIDR](data.cidrs, currentData.cidrs,
 		// In new, not current.  Add new entry to mappings.
-		func(item interface{}) error {
-			newCIDR := item.(ip.CIDR)
+		func(newCIDR ip.CIDR) error {
 			nc.ipTree.InsertKey(newCIDR, data.endpointData.Key)
 			return nil
 		},
 		// In current, not new.  Remove old entry from mappings.
-		func(item interface{}) error {
-			oldCIDR := item.(ip.CIDR)
+		func(oldCIDR ip.CIDR) error {
 			nc.ipTree.DeleteKey(oldCIDR, data.endpointData.Key)
 			return nil
 		},
 	)
-	set.IterDifferences(data.allowedEgressDomains, currentData.allowedEgressDomains,
+	set.IterDifferences[string](data.allowedEgressDomains, currentData.allowedEgressDomains,
 		// In new, not current.  Add new entry to mappings.
-		func(item interface{}) error {
-			newDomain := item.(string)
+		func(newDomain string) error {
 			nc.addDomainMapping(newDomain, data.endpointData.Key)
 			return nil
 		},
 		// In current, not new.  Remove old entry from mappings.
-		func(item interface{}) error {
-			oldDomain := item.(string)
+		func(oldDomain string) error {
 			nc.removeDomainMapping(oldDomain, data.endpointData.Key)
 			return nil
 		},
@@ -153,13 +149,11 @@ func (nc *NetworkSetLookupsCache) removeNetworkSet(key model.Key) {
 		// We don't know about this networkset. Nothing to do.
 		return
 	}
-	currentData.cidrs.Iter(func(item interface{}) error {
-		oldCIDR := item.(ip.CIDR)
+	currentData.cidrs.Iter(func(oldCIDR ip.CIDR) error {
 		nc.ipTree.DeleteKey(oldCIDR, key)
 		return nil
 	})
-	currentData.allowedEgressDomains.Iter(func(item interface{}) error {
-		oldDomain := item.(string)
+	currentData.allowedEgressDomains.Iter(func(oldDomain string) error {
 		nc.removeDomainMapping(oldDomain, key)
 		return nil
 	})
@@ -171,7 +165,7 @@ func (nc *NetworkSetLookupsCache) addDomainMapping(domain string, key model.Key)
 	// Add the networkset key to the set specific to this domain, creating a new set if this is the first.
 	current := nc.egressDomainToNetworkset[domain]
 	if current == nil {
-		current = set.New()
+		current = set.NewBoxed[model.Key]()
 		nc.egressDomainToNetworkset[domain] = current
 	}
 	current.Add(key)
@@ -217,9 +211,7 @@ func (nc *NetworkSetLookupsCache) GetNetworkSetFromEgressDomain(domain string) (
 	if keys == nil {
 		return
 	}
-	keys.Iter(func(item interface{}) error {
-		key := item.(model.Key)
-
+	keys.Iter(func(key model.Key) error {
 		// If we locate the networkset (we should unless our data is corrupt) then update the return values and stop
 		// further iteration
 		if ns := nc.networkSets[key]; ns != nil {
@@ -240,14 +232,12 @@ func (nc *NetworkSetLookupsCache) DumpNetworksets() string {
 	lines = append(lines, "-------")
 	for key, ns := range nc.networkSets {
 		cidrStr := []string{}
-		ns.cidrs.Iter(func(item interface{}) error {
-			cidr := item.(ip.CIDR)
+		ns.cidrs.Iter(func(cidr ip.CIDR) error {
 			cidrStr = append(cidrStr, cidr.String())
 			return nil
 		})
 		domainStr := []string{}
-		ns.allowedEgressDomains.Iter(func(item interface{}) error {
-			domain := item.(string)
+		ns.allowedEgressDomains.Iter(func(domain string) error {
 			domainStr = append(domainStr, domain)
 			return nil
 		})

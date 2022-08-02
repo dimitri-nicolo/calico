@@ -22,7 +22,7 @@ type captureManager struct {
 	// pending updates for an interface state (up/down)
 	pendingInterfaceUpdates map[string]ifacemonitor.State
 	// active interfaces
-	activeUpInterfaces set.Set
+	activeUpInterfaces set.Set[string]
 	// pending workload endpoint updates
 	pendingWlEpUpdates map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
 	// active worloads endpoint updates
@@ -51,7 +51,7 @@ type captureTuple struct {
 func newCaptureManager(captures capture.ActiveCaptures, wlInterfacePrefixes []string) *captureManager {
 	captureManager := captureManager{}
 	captureManager.wlInterfaceRegexp = regexp.MustCompile("^(" + strings.Join(wlInterfacePrefixes, "|") + ").*")
-	captureManager.activeUpInterfaces = set.New()
+	captureManager.activeUpInterfaces = set.New[string]()
 	captureManager.pendingInterfaceUpdates = make(map[string]ifacemonitor.State)
 	captureManager.activeWlEndpoints = make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint)
 	captureManager.pendingWlEpUpdates = make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint)

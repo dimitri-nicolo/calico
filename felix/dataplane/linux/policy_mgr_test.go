@@ -252,7 +252,7 @@ var _ = Describe("Raw egress policy manager", func() {
 	var (
 		policyMgr    *policyManager
 		rawTable     *mockTable
-		neededIPSets set.Set
+		neededIPSets set.Set[string]
 	)
 
 	BeforeEach(func() {
@@ -271,7 +271,7 @@ var _ = Describe("Raw egress policy manager", func() {
 			IptablesMarkSkipDNSPolicyNfqueue: 0x400000,
 			DNSPolicyNfqueueID:               100,
 		})
-		policyMgr = newRawEgressPolicyManager(rawTable, ruleRenderer, 4, func(ipSets set.Set) { neededIPSets = ipSets })
+		policyMgr = newRawEgressPolicyManager(rawTable, ruleRenderer, 4, func(ipSets set.Set[string]) { neededIPSets = ipSets })
 	})
 
 	It("correctly reports needed IP sets", func() {
@@ -360,7 +360,7 @@ func MatchIPSets(items ...interface{}) *ipSetsMatcher {
 }
 
 func (m *ipSetsMatcher) Match(actual interface{}) (success bool, err error) {
-	actualSet := actual.(set.Set)
+	actualSet := actual.(set.Set[string])
 	actualCopy := actualSet.Copy()
 	for _, expected := range m.items {
 		actualCopy.Add("cali40" + expected.(string))
@@ -370,11 +370,11 @@ func (m *ipSetsMatcher) Match(actual interface{}) (success bool, err error) {
 }
 
 func (m *ipSetsMatcher) FailureMessage(actual interface{}) (message string) {
-	return fmt.Sprintf("Expected %v to match IP set IDs: %v", actual.(set.Set), m.items)
+	return fmt.Sprintf("Expected %v to match IP set IDs: %v", actual.(set.Set[string]), m.items)
 }
 
 func (m *ipSetsMatcher) NegatedFailureMessage(actual interface{}) (message string) {
-	return fmt.Sprintf("Expected %v not to match IP set IDs: %v", actual.(set.Set), m.items)
+	return fmt.Sprintf("Expected %v not to match IP set IDs: %v", actual.(set.Set[string]), m.items)
 }
 
 type mockPolRenderer struct {

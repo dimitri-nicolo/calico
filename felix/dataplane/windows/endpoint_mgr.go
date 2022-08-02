@@ -74,7 +74,7 @@ type endpointManager struct {
 	hns             hnsInterface
 
 	// pendingIPSetUpdate stores any ipset id which has been updated.
-	pendingIPSetUpdate set.Set
+	pendingIPSetUpdate set.Set[string]
 
 	// pendingHostAddrs is either nil if no update is pending for the host addresses, or it contains the new set of IPs.
 	pendingHostAddrs []string
@@ -124,7 +124,7 @@ func newEndpointManager(hns hnsInterface,
 		addressToEndpointId: make(map[string]string),
 		activeWlEndpoints:   map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
 		pendingWlEpUpdates:  map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
-		pendingIPSetUpdate:  set.New(),
+		pendingIPSetUpdate:  set.New[string](),
 		hostAddrs:           hostIPv4s,
 		eventListeners:      eventListeners,
 	}
@@ -332,8 +332,7 @@ func (m *endpointManager) ProcessPolicyProfileUpdate(policySetId string) {
 // have already been processed by the various managers and we should now have a complete picture
 // of the policy/rules to be applied for each pending endpoint.
 func (m *endpointManager) CompleteDeferredWork() error {
-	m.pendingIPSetUpdate.Iter(func(item interface{}) error {
-		id := item.(string)
+	m.pendingIPSetUpdate.Iter(func(id string) error {
 		m.ProcessIpSetUpdate(id)
 		return set.RemoveItem
 	})

@@ -31,9 +31,9 @@ type IPSetsDataplane interface {
 	RemoveIPSet(setID string)
 	GetIPFamily() ipsets.IPFamily
 	GetTypeOf(setID string) (ipsets.IPSetType, error)
-	GetMembers(setID string) (set.Set, error)
+	GetMembers(setID string) (set.Set[string], error)
 	QueueResync()
-	ApplyUpdates(ipsetFilter func(ipSetName string) bool) set.Set
+	ApplyUpdates(ipsetFilter func(ipSetName string) bool) set.Set[string]
 	ApplyDeletions()
 }
 
@@ -50,14 +50,14 @@ type IPSetsManager struct {
 	// Map from each active domain set ID to the IPs that are currently programmed for it and
 	// why.  The interior map is from each IP to the set of lower case domain names that have resolved to
 	// that IP.
-	domainSetProgramming map[string]map[string]set.Set
+	domainSetProgramming map[string]map[string]set.Set[string]
 
 	// Map from each active lower case domain name to the IDs of the domain sets that include that domain
 	// name.
-	domainSetIds map[string]set.Set
+	domainSetIds map[string]set.Set[string]
 
 	// IP set IDs that we don't process.
-	ignoredSetIds set.Set
+	ignoredSetIds set.Set[string]
 }
 
 type DomainInfoChangeHandler interface {
@@ -77,9 +77,9 @@ func NewIPSetsManager(ipsets_ IPSetsDataplane, maxIPSetSize int, domainInfoStore
 		maxSize:         maxIPSetSize,
 		domainInfoStore: domainInfoStore,
 
-		domainSetProgramming: make(map[string]map[string]set.Set),
-		domainSetIds:         make(map[string]set.Set),
-		ignoredSetIds:        set.New(),
+		domainSetProgramming: make(map[string]map[string]set.Set[string]),
+		domainSetIds:         make(map[string]set.Set[string]),
+		ignoredSetIds:        set.New[string](),
 	}
 	domainInfoStore.RegisterHandler(ipsm)
 	return ipsm
@@ -99,7 +99,7 @@ func (m *IPSetsManager) GetIPSetType(setID string) (typ ipsets.IPSetType, err er
 	return
 }
 
-func (m *IPSetsManager) GetIPSetMembers(setID string) (members set.Set /*<string>*/, err error) {
+func (m *IPSetsManager) GetIPSetMembers(setID string) (members set.Set[string], err error) {
 	for _, dp := range m.dataplanes {
 		members, err = dp.GetMembers(setID)
 		if err == nil {
@@ -211,8 +211,8 @@ func (m *IPSetsManager) handleDomainIPSetUpdate(msg *proto.IPSetUpdate, metadata
 
 	if m.domainSetProgramming[msg.Id] != nil {
 		log.Info("IPSetUpdate for existing IP set")
-		domainsToAdd := set.New()
-		domainsToRemove := set.New()
+		domainsToAdd := set.New[string]()
+		domainsToRemove := set.New[string]()
 		for _, mixedCaseMsgDomain := range msg.Members {
 			domainsToAdd.Add(mixedCaseMsgDomain)
 		}
@@ -233,7 +233,7 @@ func (m *IPSetsManager) handleDomainIPSetUpdate(msg *proto.IPSetUpdate, metadata
 	}
 
 	// Accumulator for the IPs that we need to program for this domain set.
-	ipToDomains := make(map[string]set.Set)
+	ipToDomains := make(map[string]set.Set[string])
 
 	// For each domain name in this set...
 	for _, mixedCaseDomain := range msg.Members {
@@ -245,7 +245,7 @@ func (m *IPSetsManager) handleDomainIPSetUpdate(msg *proto.IPSetUpdate, metadata
 		// Merge the IPs for this domain into the accumulator.
 		for _, ip := range m.domainInfoStore.GetDomainIPs(domain) {
 			if ipToDomains[ip] == nil {
-				ipToDomains[ip] = set.New()
+				ipToDomains[ip] = set.New[string]()
 			}
 			ipToDomains[ip].Add(domain)
 		}
@@ -266,10 +266,10 @@ func (m *IPSetsManager) handleDomainIPSetUpdate(msg *proto.IPSetUpdate, metadata
 	m.domainSetProgramming[msg.Id] = ipToDomains
 }
 
-func setToSlice(setOfThings set.Set) []string {
+func setToSlice(setOfThings set.Set[string]) []string {
 	slice := make([]string, 0, setOfThings.Len())
-	setOfThings.Iter(func(item interface{}) error {
-		slice = append(slice, item.(string))
+	setOfThings.Iter(func(item string) error {
+		slice = append(slice, item)
 		return nil
 	})
 	return slice
@@ -291,8 +291,8 @@ func (m *IPSetsManager) handleDomainIPSetDeltaUpdateNoLog(ipSetId string, domain
 	// Accumulators for the IPs that we need to remove and add.  Do remove processing first, so
 	// that it works to process a domain info change by calling this function with the same
 	// domain name being removed and then added again.
-	ipsToRemove := set.New()
-	ipsToAdd := set.New()
+	ipsToRemove := set.New[string]()
+	ipsToAdd := set.New[string]()
 
 	// For each removed domain name...
 	for _, mixedCaseDomain := range domainsRemoved {
@@ -325,7 +325,7 @@ func (m *IPSetsManager) handleDomainIPSetDeltaUpdateNoLog(ipSetId string, domain
 		// programming, noting any updates that we need to send to the dataplane.
 		for _, ip := range m.domainInfoStore.GetDomainIPs(domain) {
 			if ipToDomains[ip] == nil {
-				ipToDomains[ip] = set.New()
+				ipToDomains[ip] = set.New[string]()
 				ipsToAdd.Add(ip)
 			}
 			ipToDomains[ip].Add(domain)
@@ -334,7 +334,7 @@ func (m *IPSetsManager) handleDomainIPSetDeltaUpdateNoLog(ipSetId string, domain
 
 	// If there are any IPs that are now in both ipsToRemove and ipsToAdd, we don't need either
 	// to add or remove those IPs.
-	ipsToRemove.Iter(func(item interface{}) error {
+	ipsToRemove.Iter(func(item string) error {
 		if ipsToAdd.Contains(item) {
 			ipsToAdd.Discard(item)
 			return set.RemoveItem
@@ -371,9 +371,9 @@ func (m *IPSetsManager) OnDomainChange(domain string) (dataplaneSyncNeeded bool)
 
 		// Tell each domain set that includes this domain name to requery the IPs for the
 		// domain name and adjust its overall IP set accordingly.
-		domainSetIds.Iter(func(item interface{}) error {
+		domainSetIds.Iter(func(item string) error {
 			// Handle as a delta update where the same domain name is removed and then re-added.
-			m.handleDomainIPSetDeltaUpdateNoLog(item.(string), []string{domain}, []string{domain})
+			m.handleDomainIPSetDeltaUpdateNoLog(item, []string{domain}, []string{domain})
 			return nil
 		})
 	}

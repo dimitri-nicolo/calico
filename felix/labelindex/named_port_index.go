@@ -43,12 +43,12 @@ type endpointData struct {
 	deletionTimestamp          time.Time
 	deletionGracePeriodSeconds int64
 
-	cachedMatchingIPSetIDs set.Set /* or, as an optimization, nil if there are none */
+	cachedMatchingIPSetIDs set.Set[string] /* or, as an optimization, nil if there are none */
 }
 
 func (d *endpointData) AddMatchingIPSetID(id string) {
 	if d.cachedMatchingIPSetIDs == nil {
-		d.cachedMatchingIPSetIDs = set.New()
+		d.cachedMatchingIPSetIDs = set.New[string]()
 	}
 	d.cachedMatchingIPSetIDs.Add(id)
 }
@@ -229,7 +229,7 @@ func (d *endpointData) Equals(other *endpointData) bool {
 type npParentData struct {
 	id          string
 	labels      map[string]string
-	endpointIDs set.Set
+	endpointIDs set.Set[any]
 }
 
 func (d *npParentData) DiscardEndpointID(id interface{}) {
@@ -244,7 +244,7 @@ func (d *npParentData) DiscardEndpointID(id interface{}) {
 
 func (d *npParentData) AddEndpointID(id interface{}) {
 	if d.endpointIDs == nil {
-		d.endpointIDs = set.New()
+		d.endpointIDs = set.NewBoxed[any]()
 	}
 	d.endpointIDs.Add(id)
 }
@@ -597,7 +597,7 @@ func (idx *SelectorAndNamedPortIndex) updateEndpointOrSet(
 	// Record the new endpoint data.
 	idx.endpointDataByID[id] = newEndpointData
 
-	newParentIDs := set.New()
+	newParentIDs := set.NewBoxed[any]()
 	for _, parent := range newEndpointData.parents {
 		parent.AddEndpointID(id)
 		newParentIDs.Add(parent.id)
@@ -802,8 +802,7 @@ func (idx *SelectorAndNamedPortIndex) recalcCachedContributions(epID interface{}
 		return nil
 	}
 	contrib := map[string][]IPSetMember{}
-	epData.cachedMatchingIPSetIDs.Iter(func(item interface{}) error {
-		ipSetID := item.(string)
+	epData.cachedMatchingIPSetIDs.Iter(func(ipSetID string) error {
 		ipSetData := idx.ipSetDataByID[ipSetID]
 		contrib[ipSetID] = idx.calculateEndpointContribution(epID, epData, ipSetData)
 		return nil

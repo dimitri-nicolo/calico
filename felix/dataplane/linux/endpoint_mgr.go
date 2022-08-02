@@ -155,7 +155,7 @@ type endpointManager struct {
 	// Active state, updated in CompleteDeferredWork.
 	activeWlEndpoints          map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
 	activeWlIfaceNameToID      map[string]proto.WorkloadEndpointID
-	activeUpIfaces             set.Set
+	activeUpIfaces             set.Set[string]
 	activeWlIDToChains         map[proto.WorkloadEndpointID][]*iptables.Chain
 	activeWlDispatchChains     map[string]*iptables.Chain
 	activeWlRPFDispatchChains  map[string]*iptables.Chain
@@ -167,11 +167,11 @@ type endpointManager struct {
 
 	// wlIfaceNamesToReconfigure contains names of workload interfaces that need to have
 	// their configuration (sysctls etc.) refreshed.
-	wlIfaceNamesToReconfigure set.Set
+	wlIfaceNamesToReconfigure set.Set[string]
 
 	// epIDsToUpdateStatus contains IDs of endpoints that we need to report status for.
 	// Mix of host and workload endpoint IDs.
-	epIDsToUpdateStatus set.Set
+	epIDsToUpdateStatus set.Set[any]
 
 	// sourceSpoofingConfig maps interface names to lists of source IPs that we accept from these interfaces
 	// these interfaces (in addition to the pod IPs)
@@ -184,7 +184,7 @@ type endpointManager struct {
 
 	// hostIfaceToAddrs maps host interface name to the set of IPs on that interface (reported
 	// from the dataplane).
-	hostIfaceToAddrs map[string]set.Set
+	hostIfaceToAddrs map[string]set.Set[string]
 	// rawHostEndpoints contains the raw (i.e. not resolved to interface) host endpoints.
 	rawHostEndpoints map[proto.HostEndpointID]*proto.HostEndpoint
 	// hostEndpointsDirty is set to true when host endpoints are updated.
@@ -317,7 +317,7 @@ func newEndpointManagerWithShims(
 		pendingWlEpUpdates:  map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
 		pendingIfaceUpdates: map[string]ifacemonitor.State{},
 
-		activeUpIfaces: set.New(),
+		activeUpIfaces: set.New[string](),
 
 		activeWlEndpoints:     map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
 		activeWlIfaceNameToID: map[string]proto.WorkloadEndpointID{},
@@ -325,15 +325,15 @@ func newEndpointManagerWithShims(
 
 		shadowedWlEndpoints: map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
 
-		wlIfaceNamesToReconfigure: set.New(),
+		wlIfaceNamesToReconfigure: set.New[string](),
 
-		epIDsToUpdateStatus: set.New(),
+		epIDsToUpdateStatus: set.NewBoxed[any](),
 
 		sourceSpoofingConfig: map[string][]string{},
 		rpfSkipChainDirty:    true,
 		defaultRPFilter:      defaultRPFilter,
 
-		hostIfaceToAddrs:   map[string]set.Set{},
+		hostIfaceToAddrs:   map[string]set.Set[string]{},
 		rawHostEndpoints:   map[proto.HostEndpointID]*proto.HostEndpoint{},
 		hostEndpointsDirty: true,
 
@@ -811,8 +811,7 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 		m.needToCheckEndpointMarkChains = true
 	}
 
-	m.wlIfaceNamesToReconfigure.Iter(func(item interface{}) error {
-		ifaceName := item.(string)
+	m.wlIfaceNamesToReconfigure.Iter(func(ifaceName string) error {
 		err := m.configureInterface(ifaceName)
 		if err != nil {
 			if exists, err := m.interfaceExistsInProcSys(ifaceName); err == nil && !exists {
@@ -1226,7 +1225,7 @@ func (m *endpointManager) updateDispatchChains(
 	newChains []*iptables.Chain,
 	table iptablesTable,
 ) {
-	seenChains := set.New()
+	seenChains := set.New[string]()
 	for _, newChain := range newChains {
 		seenChains.Add(newChain.Name)
 		oldChain := activeChains[newChain.Name]

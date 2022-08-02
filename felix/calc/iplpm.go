@@ -33,14 +33,14 @@ type IPTrieNode struct {
 // Root of IpTree
 type IpTrie struct {
 	lpmCache      *patricia.Trie
-	existingCidrs set.Set
+	existingCidrs set.Set[ip.CIDR]
 }
 
 // NewIpTrie creates new Patricia trie and Initializes
 func NewIpTrie() *IpTrie {
 	return &IpTrie{
 		lpmCache:      patricia.NewTrie(),
-		existingCidrs: set.New(),
+		existingCidrs: set.NewBoxed[ip.CIDR](),
 	}
 }
 
@@ -145,8 +145,7 @@ func (t *IpTrie) InsertKey(cidr ip.CIDR, key model.Key) {
 func (t *IpTrie) DumpCIDRKeys() []string {
 	ec := t.existingCidrs
 	lines := []string{}
-	ec.Iter(func(item interface{}) error {
-		cidr := item.(ip.CIDR)
+	ec.Iter(func(cidr ip.CIDR) error {
 		keyStrings := []string{}
 		keys, _ := t.GetKeys(cidr)
 		for _, key := range keys {

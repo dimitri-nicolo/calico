@@ -1508,13 +1508,13 @@ int calico_tc_skb_drop(struct __sk_buff *skb)
 			 */
 			CALI_INFO("Allowing WG %x <-> %x despite blocked by policy - known hosts.\n",
 					bpf_ntohl(ctx.state->ip_src), bpf_ntohl(ctx.state->ip_dst));
-			event_flow_log(skb, state);
+			event_flow_log(skb, ctx.state);
 			CALI_DEBUG("Flow log event generated for ALLOW\n");
 			goto allow;
 		}
 	}
 
-	event_flow_log(skb, state);
+	event_flow_log(skb, ctx.state);
 	CALI_DEBUG("Flow log event generated for DENY/DROP\n");
 	goto deny;
 

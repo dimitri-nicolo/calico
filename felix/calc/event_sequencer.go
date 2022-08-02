@@ -63,61 +63,63 @@ type EventSequencer struct {
 	// Buffers used to hold data that we haven't flushed yet so we can coalesce multiple
 	// updates and generate updates in dependency order.
 	pendingAddedIPSets           map[string]proto.IPSetUpdate_IPSetType
-	pendingRemovedIPSets         set.Set
+	pendingRemovedIPSets         set.Set[string]
 	pendingAddedIPSetMembers     multidict.StringToIface
 	pendingRemovedIPSetMembers   multidict.StringToIface
 	pendingPolicyUpdates         map[model.PolicyKey]*ParsedRules
-	pendingPolicyDeletes         set.Set
+	pendingPolicyDeletes         set.Set[model.PolicyKey]
 	pendingProfileUpdates        map[model.ProfileRulesKey]*ParsedRules
-	pendingProfileDeletes        set.Set
+	pendingProfileDeletes        set.Set[model.ProfileRulesKey]
 	pendingEncapUpdate           *config.Encapsulation
 	pendingEndpointUpdates       map[model.Key]interface{}
 	pendingEndpointEgressUpdates map[model.Key]EndpointEgressData
 	pendingEndpointTierUpdates   map[model.Key][]tierInfo
-	pendingEndpointDeletes       set.Set
+	pendingEndpointDeletes       set.Set[model.Key]
 	pendingHostIPUpdates         map[string]*net.IP
-	pendingHostIPDeletes         set.Set
+	pendingHostIPDeletes         set.Set[string]
 	pendingIPPoolUpdates         map[ip.CIDR]*model.IPPool
-	pendingIPPoolDeletes         set.Set
+	pendingIPPoolDeletes         set.Set[ip.CIDR]
 	pendingNotReady              bool
 	pendingGlobalConfig          map[string]string
 	pendingHostConfig            map[string]string
 	pendingServiceAccountUpdates map[proto.ServiceAccountID]*proto.ServiceAccountUpdate
-	pendingServiceAccountDeletes set.Set
+	pendingServiceAccountDeletes set.Set[proto.ServiceAccountID]
 	pendingNamespaceUpdates      map[proto.NamespaceID]*proto.NamespaceUpdate
-	pendingNamespaceDeletes      set.Set
+	pendingNamespaceDeletes      set.Set[proto.NamespaceID]
 	pendingRouteUpdates          map[routeID]*proto.RouteUpdate
-	pendingRouteDeletes          set.Set
+	pendingRouteDeletes          set.Set[routeID]
 	pendingVTEPUpdates           map[string]*proto.VXLANTunnelEndpointUpdate
-	pendingVTEPDeletes           set.Set
-	pendingIPSecTunnelAdds       set.Set
-	pendingIPSecTunnelRemoves    set.Set
-	pendingIPSecBindingAdds      set.Set
-	pendingIPSecBindingRemoves   set.Set
-	pendingIPSecBlacklistAdds    set.Set
-	pendingIPSecBlacklistRemoves set.Set
+	pendingVTEPDeletes           set.Set[string]
+	pendingIPSecTunnelAdds       set.Set[ip.Addr]
+	pendingIPSecTunnelRemoves    set.Set[ip.Addr]
+	pendingIPSecBindingAdds      set.Set[IPSecBinding]
+	pendingIPSecBindingRemoves   set.Set[IPSecBinding]
+	pendingIPSecBlacklistAdds    set.Set[ip.Addr]
+	pendingIPSecBlacklistRemoves set.Set[ip.Addr]
 	pendingWireguardUpdates      map[string]*model.Wireguard
-	pendingWireguardDeletes      set.Set
+	pendingWireguardDeletes      set.Set[string]
 	pendingGlobalBGPConfig       *proto.GlobalBGPConfigUpdate
 	pendingPacketCaptureUpdates  map[string]*proto.PacketCaptureUpdate
 	pendingPacketCaptureRemovals map[string]*proto.PacketCaptureRemove
 	pendingServiceUpdates        map[serviceID]*proto.ServiceUpdate
-	pendingServiceDeletes        set.Set
+	pendingServiceDeletes        set.Set[serviceID]
 
 	// Sets to record what we've sent downstream. Updated whenever we flush.
-	sentIPSets          set.Set
-	sentPolicies        set.Set
-	sentProfiles        set.Set
-	sentEndpoints       set.Set
-	sentHostIPs         set.Set
-	sentIPPools         set.Set
-	sentServiceAccounts set.Set
-	sentNamespaces      set.Set
-	sentRoutes          set.Set
-	sentVTEPs           set.Set
-	sentWireguard       set.Set
-	sentPacketCapture   set.Set
-	sentServices        set.Set
+	sentIPSets          set.Set[string]
+	sentPolicies        set.Set[model.PolicyKey]
+	sentProfiles        set.Set[model.ProfileRulesKey]
+	sentEndpoints       set.Set[model.Key]
+	sentHostIPs         set.Set[string]
+	sentIPPools         set.Set[ip.CIDR]
+	sentServiceAccounts set.Set[proto.ServiceAccountID]
+	sentNamespaces      set.Set[proto.NamespaceID]
+	sentRoutes          set.Set[routeID]
+	sentVTEPs           set.Set[string]
+	sentWireguard       set.Set[string]
+	sentServices        set.Set[serviceID]
+
+	// Enterprise-only fields.
+	sentPacketCapture   set.Set[string]
 
 	Callback EventHandler
 }
@@ -141,57 +143,57 @@ func NewEventSequencer(conf configInterface) *EventSequencer {
 	buf := &EventSequencer{
 		config:                     conf,
 		pendingAddedIPSets:         map[string]proto.IPSetUpdate_IPSetType{},
-		pendingRemovedIPSets:       set.New(),
+		pendingRemovedIPSets:       set.New[string](),
 		pendingAddedIPSetMembers:   multidict.NewStringToIface(),
 		pendingRemovedIPSetMembers: multidict.NewStringToIface(),
 
 		pendingPolicyUpdates:         map[model.PolicyKey]*ParsedRules{},
-		pendingPolicyDeletes:         set.New(),
+		pendingPolicyDeletes:         set.New[model.PolicyKey](),
 		pendingProfileUpdates:        map[model.ProfileRulesKey]*ParsedRules{},
-		pendingProfileDeletes:        set.New(),
+		pendingProfileDeletes:        set.New[model.ProfileRulesKey](),
 		pendingEndpointUpdates:       map[model.Key]interface{}{},
 		pendingEndpointEgressUpdates: map[model.Key]EndpointEgressData{},
 		pendingEndpointTierUpdates:   map[model.Key][]tierInfo{},
-		pendingEndpointDeletes:       set.New(),
+		pendingEndpointDeletes:       set.NewBoxed[model.Key](),
 		pendingHostIPUpdates:         map[string]*net.IP{},
-		pendingHostIPDeletes:         set.New(),
+		pendingHostIPDeletes:         set.New[string](),
 		pendingIPPoolUpdates:         map[ip.CIDR]*model.IPPool{},
-		pendingIPPoolDeletes:         set.New(),
+		pendingIPPoolDeletes:         set.NewBoxed[ip.CIDR](),
 		pendingServiceAccountUpdates: map[proto.ServiceAccountID]*proto.ServiceAccountUpdate{},
-		pendingServiceAccountDeletes: set.New(),
+		pendingServiceAccountDeletes: set.New[proto.ServiceAccountID](),
 		pendingNamespaceUpdates:      map[proto.NamespaceID]*proto.NamespaceUpdate{},
-		pendingNamespaceDeletes:      set.New(),
+		pendingNamespaceDeletes:      set.New[proto.NamespaceID](),
 		pendingRouteUpdates:          map[routeID]*proto.RouteUpdate{},
-		pendingRouteDeletes:          set.New(),
+		pendingRouteDeletes:          set.New[routeID](),
 		pendingVTEPUpdates:           map[string]*proto.VXLANTunnelEndpointUpdate{},
-		pendingVTEPDeletes:           set.New(),
-		pendingIPSecTunnelAdds:       set.New(),
-		pendingIPSecTunnelRemoves:    set.New(),
-		pendingIPSecBindingAdds:      set.New(),
-		pendingIPSecBindingRemoves:   set.New(),
-		pendingIPSecBlacklistAdds:    set.New(),
-		pendingIPSecBlacklistRemoves: set.New(),
+		pendingVTEPDeletes:           set.New[string](),
+		pendingIPSecTunnelAdds:       set.NewBoxed[ip.Addr](),
+		pendingIPSecTunnelRemoves:    set.NewBoxed[ip.Addr](),
+		pendingIPSecBindingAdds:      set.NewBoxed[IPSecBinding](),
+		pendingIPSecBindingRemoves:   set.NewBoxed[IPSecBinding](),
+		pendingIPSecBlacklistAdds:    set.NewBoxed[ip.Addr](),
+		pendingIPSecBlacklistRemoves: set.NewBoxed[ip.Addr](),
 		pendingWireguardUpdates:      map[string]*model.Wireguard{},
-		pendingWireguardDeletes:      set.New(),
+		pendingWireguardDeletes:      set.New[string](),
 		pendingPacketCaptureUpdates:  map[string]*proto.PacketCaptureUpdate{},
 		pendingPacketCaptureRemovals: map[string]*proto.PacketCaptureRemove{},
 		pendingServiceUpdates:        map[serviceID]*proto.ServiceUpdate{},
-		pendingServiceDeletes:        set.New(),
+		pendingServiceDeletes:        set.New[serviceID](),
 
 		// Sets to record what we've sent downstream. Updated whenever we flush.
-		sentIPSets:          set.New(),
-		sentPolicies:        set.New(),
-		sentProfiles:        set.New(),
-		sentEndpoints:       set.New(),
-		sentHostIPs:         set.New(),
-		sentIPPools:         set.New(),
-		sentServiceAccounts: set.New(),
-		sentNamespaces:      set.New(),
-		sentRoutes:          set.New(),
-		sentVTEPs:           set.New(),
-		sentWireguard:       set.New(),
-		sentPacketCapture:   set.New(),
-		sentServices:        set.New(),
+		sentIPSets:          set.New[string](),
+		sentPolicies:        set.New[model.PolicyKey](),
+		sentProfiles:        set.New[model.ProfileRulesKey](),
+		sentEndpoints:       set.NewBoxed[model.Key](),
+		sentHostIPs:         set.New[string](),
+		sentIPPools:         set.NewBoxed[ip.CIDR](),
+		sentServiceAccounts: set.New[proto.ServiceAccountID](),
+		sentNamespaces:      set.New[proto.NamespaceID](),
+		sentRoutes:          set.New[routeID](),
+		sentVTEPs:           set.New[string](),
+		sentWireguard:       set.New[string](),
+		sentServices:        set.New[serviceID](),
+		sentPacketCapture:   set.New[string](),
 	}
 	return buf
 }
@@ -347,11 +349,11 @@ func (buf *EventSequencer) OnPolicyInactive(key model.PolicyKey) {
 }
 
 func (buf *EventSequencer) flushPolicyDeletes() {
-	buf.pendingPolicyDeletes.Iter(func(item interface{}) error {
+	buf.pendingPolicyDeletes.Iter(func(item model.PolicyKey) error {
 		buf.Callback(&proto.ActivePolicyRemove{
 			Id: &proto.PolicyID{
-				Tier: item.(model.PolicyKey).Tier,
-				Name: item.(model.PolicyKey).Name,
+				Tier: item.Tier,
+				Name: item.Name,
 			},
 		})
 		buf.sentPolicies.Discard(item)
@@ -394,10 +396,10 @@ func (buf *EventSequencer) OnProfileInactive(key model.ProfileRulesKey) {
 }
 
 func (buf *EventSequencer) flushProfileDeletes() {
-	buf.pendingProfileDeletes.Iter(func(item interface{}) error {
+	buf.pendingProfileDeletes.Iter(func(item model.ProfileRulesKey) error {
 		buf.Callback(&proto.ActiveProfileRemove{
 			Id: &proto.ProfileID{
-				Name: item.(model.ProfileRulesKey).Name,
+				Name: item.Name,
 			},
 		})
 		buf.sentProfiles.Discard(item)
@@ -505,7 +507,7 @@ func (buf *EventSequencer) flushEndpointTierUpdates() {
 }
 
 func (buf *EventSequencer) flushEndpointTierDeletes() {
-	buf.pendingEndpointDeletes.Iter(func(item interface{}) error {
+	buf.pendingEndpointDeletes.Iter(func(item model.Key) error {
 		switch key := item.(type) {
 		case model.WorkloadEndpointKey:
 			buf.Callback(&proto.WorkloadEndpointRemove{
@@ -576,9 +578,9 @@ func (buf *EventSequencer) OnHostIPRemove(hostname string) {
 }
 
 func (buf *EventSequencer) flushHostIPDeletes() {
-	buf.pendingHostIPDeletes.Iter(func(item interface{}) error {
+	buf.pendingHostIPDeletes.Iter(func(item string) error {
 		buf.Callback(&proto.HostMetadataRemove{
-			Hostname: item.(string),
+			Hostname: item,
 		})
 		buf.sentHostIPs.Discard(item)
 		return set.RemoveItem
@@ -636,8 +638,7 @@ func (buf *EventSequencer) OnIPPoolRemove(key model.IPPoolKey) {
 }
 
 func (buf *EventSequencer) flushIPPoolDeletes() {
-	buf.pendingIPPoolDeletes.Iter(func(item interface{}) error {
-		key := item.(ip.CIDR)
+	buf.pendingIPPoolDeletes.Iter(func(key ip.CIDR) error {
 		buf.Callback(&proto.IPAMPoolRemove{
 			Id: cidrToIPPoolID(key),
 		})
@@ -647,8 +648,7 @@ func (buf *EventSequencer) flushIPPoolDeletes() {
 }
 
 func (buf *EventSequencer) flushHostWireguardDeletes() {
-	buf.pendingWireguardDeletes.Iter(func(item interface{}) error {
-		key := item.(string)
+	buf.pendingWireguardDeletes.Iter(func(key string) error {
 		if buf.sentWireguard.Contains(key) {
 			buf.Callback(&proto.WireguardEndpointRemove{
 				Hostname: key,
@@ -824,16 +824,15 @@ func (buf *EventSequencer) Flush() {
 }
 
 func (buf *EventSequencer) flushRemovedIPSets() {
-	buf.pendingRemovedIPSets.Iter(func(item interface{}) (err error) {
-		setID := item.(string)
+	buf.pendingRemovedIPSets.Iter(func(setID string) (err error) {
 		log.Debugf("Flushing IP set remove: %v", setID)
 		buf.Callback(&proto.IPSetRemove{
 			Id: setID,
 		})
 		buf.pendingRemovedIPSetMembers.DiscardKey(setID)
 		buf.pendingAddedIPSetMembers.DiscardKey(setID)
-		buf.pendingRemovedIPSets.Discard(item)
-		buf.sentIPSets.Discard(item)
+		buf.pendingRemovedIPSets.Discard(setID)
+		buf.sentIPSets.Discard(setID)
 		return
 	})
 	log.Debugf("Done flushing IP set removes")
@@ -850,13 +849,11 @@ func (buf *EventSequencer) flushAddsOrRemoves(setID string) {
 	deltaUpdate := proto.IPSetDeltaUpdate{
 		Id: setID,
 	}
-	buf.pendingAddedIPSetMembers.Iter(setID, func(item interface{}) {
-		member := item.(labelindex.IPSetMember)
-		deltaUpdate.AddedMembers = append(deltaUpdate.AddedMembers, memberToProto(member))
+	buf.pendingAddedIPSetMembers.Iter(setID, func(member interface{}) {
+		deltaUpdate.AddedMembers = append(deltaUpdate.AddedMembers, memberToProto(member.(labelindex.IPSetMember)))
 	})
-	buf.pendingRemovedIPSetMembers.Iter(setID, func(item interface{}) {
-		member := item.(labelindex.IPSetMember)
-		deltaUpdate.RemovedMembers = append(deltaUpdate.RemovedMembers, memberToProto(member))
+	buf.pendingRemovedIPSetMembers.Iter(setID, func(member interface{}) {
+		deltaUpdate.RemovedMembers = append(deltaUpdate.RemovedMembers, memberToProto(member.(labelindex.IPSetMember)))
 	})
 	buf.pendingAddedIPSetMembers.DiscardKey(setID)
 	buf.pendingRemovedIPSetMembers.DiscardKey(setID)
@@ -886,8 +883,7 @@ func (buf *EventSequencer) OnServiceAccountRemove(id proto.ServiceAccountID) {
 
 func (buf *EventSequencer) flushServiceAccounts() {
 	// Order doesn't matter, but send removes first to reduce max occupancy
-	buf.pendingServiceAccountDeletes.Iter(func(item interface{}) error {
-		id := item.(proto.ServiceAccountID)
+	buf.pendingServiceAccountDeletes.Iter(func(id proto.ServiceAccountID) error {
 		msg := proto.ServiceAccountRemove{Id: &id}
 		buf.Callback(&msg)
 		buf.sentServiceAccounts.Discard(id)
@@ -964,8 +960,8 @@ func (buf *EventSequencer) flushIPSecBindings() {
 	// the dataplane from adding a proper binding.
 	if buf.pendingIPSecBlacklistRemoves.Len() > 0 {
 		var addrs []string
-		buf.pendingIPSecBlacklistRemoves.Iter(func(item interface{}) error {
-			addrs = append(addrs, item.(ip.Addr).String())
+		buf.pendingIPSecBlacklistRemoves.Iter(func(addr ip.Addr) error {
+			addrs = append(addrs, addr.String())
 			return set.RemoveItem
 		})
 		upd := &proto.IPSecBlacklistRemove{
@@ -991,8 +987,7 @@ func (buf *EventSequencer) flushIPSecBindings() {
 	// then we can change "add, remove, add" into "add, update, remove" and accidentally remove the updated policy.
 	// This is because the dataplane indexes policies on the policy selector (i.e. the match criteria for the
 	// rule) rather than the whole rule, in order to match the kernel behaviour.
-	buf.pendingIPSecBindingRemoves.Iter(func(item interface{}) error {
-		b := item.(IPSecBinding)
+	buf.pendingIPSecBindingRemoves.Iter(func(b IPSecBinding) error {
 		upd := getOrCreateUpd(b.TunnelAddr)
 		upd.RemovedAddrs = append(upd.RemovedAddrs, b.WorkloadAddr.String())
 		return set.RemoveItem
@@ -1003,8 +998,7 @@ func (buf *EventSequencer) flushIPSecBindings() {
 	}
 
 	// Now we've removed all the individual bindings, clean up any tunnels that are no longer present.
-	buf.pendingIPSecTunnelRemoves.Iter(func(item interface{}) error {
-		addr := item.(ip.Addr)
+	buf.pendingIPSecTunnelRemoves.Iter(func(addr ip.Addr) error {
 		buf.Callback(&proto.IPSecTunnelRemove{
 			TunnelAddr: addr.String(),
 		})
@@ -1012,8 +1006,7 @@ func (buf *EventSequencer) flushIPSecBindings() {
 	})
 
 	// Then create any new tunnels.
-	buf.pendingIPSecTunnelAdds.Iter(func(item interface{}) error {
-		addr := item.(ip.Addr)
+	buf.pendingIPSecTunnelAdds.Iter(func(addr ip.Addr) error {
 		buf.Callback(&proto.IPSecTunnelAdd{
 			TunnelAddr: addr.String(),
 		})
@@ -1021,8 +1014,7 @@ func (buf *EventSequencer) flushIPSecBindings() {
 	})
 
 	// Now send the adds.
-	buf.pendingIPSecBindingAdds.Iter(func(item interface{}) error {
-		b := item.(IPSecBinding)
+	buf.pendingIPSecBindingAdds.Iter(func(b IPSecBinding) error {
 		upd := getOrCreateUpd(b.TunnelAddr)
 		upd.AddedAddrs = append(upd.AddedAddrs, b.WorkloadAddr.String())
 		return set.RemoveItem
@@ -1036,8 +1028,8 @@ func (buf *EventSequencer) flushIPSecBindings() {
 	// in the dataplane.
 	if buf.pendingIPSecBlacklistAdds.Len() > 0 {
 		var addrs []string
-		buf.pendingIPSecBlacklistAdds.Iter(func(item interface{}) error {
-			addrs = append(addrs, item.(ip.Addr).String())
+		buf.pendingIPSecBlacklistAdds.Iter(func(addr ip.Addr) error {
+			addrs = append(addrs, addr.String())
 			return set.RemoveItem
 		})
 		upd := &proto.IPSecBlacklistAdd{
@@ -1102,8 +1094,7 @@ func (buf *EventSequencer) OnGlobalBGPConfigUpdate(cfg *v3.BGPConfiguration) {
 
 func (buf *EventSequencer) flushNamespaces() {
 	// Order doesn't matter, but send removes first to reduce max occupancy
-	buf.pendingNamespaceDeletes.Iter(func(item interface{}) error {
-		id := item.(proto.NamespaceID)
+	buf.pendingNamespaceDeletes.Iter(func(id proto.NamespaceID) error {
 		msg := proto.NamespaceRemove{Id: &id}
 		buf.Callback(&msg)
 		buf.sentNamespaces.Discard(id)
@@ -1137,8 +1128,7 @@ func (buf *EventSequencer) OnVTEPRemove(dst string) {
 }
 
 func (buf *EventSequencer) flushVTEPRemoves() {
-	buf.pendingVTEPDeletes.Iter(func(item interface{}) error {
-		node := item.(string)
+	buf.pendingVTEPDeletes.Iter(func(node string) error {
 		msg := proto.VXLANTunnelEndpointRemove{Node: node}
 		buf.Callback(&msg)
 		buf.sentVTEPs.Discard(node)
@@ -1187,8 +1177,7 @@ func (buf *EventSequencer) flushRouteAdds() {
 }
 
 func (buf *EventSequencer) flushRouteRemoves() {
-	buf.pendingRouteDeletes.Iter(func(item interface{}) error {
-		id := item.(routeID)
+	buf.pendingRouteDeletes.Iter(func(id routeID) error {
 		msg := proto.RouteRemove{Dst: id.dst}
 		buf.Callback(&msg)
 		buf.sentRoutes.Discard(id)
@@ -1244,8 +1233,7 @@ func (buf *EventSequencer) OnServiceRemove(update *proto.ServiceRemove) {
 
 func (buf *EventSequencer) flushServices() {
 	// Order doesn't matter, but send removes first to reduce max occupancy
-	buf.pendingServiceDeletes.Iter(func(item interface{}) error {
-		id := item.(serviceID)
+	buf.pendingServiceDeletes.Iter(func(id serviceID) error {
 		msg := &proto.ServiceRemove{
 			Name:      id.Name,
 			Namespace: id.Namespace,

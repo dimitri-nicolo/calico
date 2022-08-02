@@ -296,8 +296,8 @@ func (c *IPSecBindingCalculator) OnEndpointUpdate(update api.Update) (_ bool) {
 		c.activateBindingsForNode(otherNode, nodeIP)
 	}
 
-	removedIPs := set.FromArray(oldIPs)
-	addedIPs := set.New()
+	removedIPs := set.FromArrayBoxed(oldIPs)
+	addedIPs := set.NewBoxed[ip.Addr]()
 	for _, addr := range newIPs {
 		if removedIPs.Contains(addr) {
 			removedIPs.Discard(addr)
@@ -308,8 +308,7 @@ func (c *IPSecBindingCalculator) OnEndpointUpdate(update api.Update) (_ bool) {
 
 	c.endpointKeysToIPs[wepKey] = newIPs
 
-	removedIPs.Iter(func(item interface{}) error {
-		addr := item.(ip.Addr)
+	removedIPs.Iter(func(addr ip.Addr) error {
 		// Remove old reverse index.
 		c.removeIPToKey(addr, wepKey)
 		// Now check what that leaves behind.
@@ -363,9 +362,7 @@ func (c *IPSecBindingCalculator) OnEndpointUpdate(update api.Update) (_ bool) {
 		return nil
 	})
 
-	addedIPs.Iter(func(item interface{}) error {
-		addr := item.(ip.Addr)
-
+	addedIPs.Iter(func(addr ip.Addr) error {
 		// Before we add the IP to the index, check who has that IP already.  If we're about to give the IP multiple
 		// owners then we'll need to remove the old binding because it's no longer unique.
 		numWepsWithThatIP := len(c.ipToEndpointKeys[addr])

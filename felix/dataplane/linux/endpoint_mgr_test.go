@@ -860,9 +860,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 			mangleTable     *mockTable
 			filterTable     *mockTable
 			rrConfigNormal  rules.Config
-			eth0Addrs       set.Set
-			loAddrs         set.Set
-			eth1Addrs       set.Set
+			eth0Addrs       set.Set[string]
+			loAddrs         set.Set[string]
+			eth1Addrs       set.Set[string]
 			routeTable      *mockRouteTable
 			mockProcSys     *testProcSys
 			statusReportRec *statusReportRecorder
@@ -896,13 +896,13 @@ func endpointManagerTests(ipVersion uint8) func() {
 				EgressIPVXLANPort:                4790,
 				VXLANVNI:                         4096,
 			}
-			eth0Addrs = set.New()
+			eth0Addrs = set.New[string]()
 			eth0Addrs.Add(ipv4)
 			eth0Addrs.Add(ipv6)
-			loAddrs = set.New()
+			loAddrs = set.New[string]()
 			loAddrs.Add("127.0.1.1")
 			loAddrs.Add("::1")
-			eth1Addrs = set.New()
+			eth1Addrs = set.New[string]()
 			eth1Addrs.Add(ipv4Eth1)
 		})
 
@@ -2119,7 +2119,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 						})
 						epMgr.OnUpdate(&ifaceAddrsUpdate{
 							Name:  "cali12345-ab",
-							Addrs: set.New(),
+							Addrs: set.New[string](),
 						})
 						applyUpdates(epMgr)
 					})
@@ -2138,7 +2138,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 						})
 						epMgr.OnUpdate(&ifaceAddrsUpdate{
 							Name:  "cali12345-ab",
-							Addrs: set.New(),
+							Addrs: set.New[string](),
 						})
 						applyUpdates(epMgr)
 					})
@@ -2310,7 +2310,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 							})
 							epMgr.OnUpdate(&ifaceAddrsUpdate{
 								Name:  "cali12345-cd",
-								Addrs: set.New(),
+								Addrs: set.New[string](),
 							})
 							epMgr.OnUpdate(&proto.WorkloadEndpointUpdate{
 								Id: &wlEPID1,

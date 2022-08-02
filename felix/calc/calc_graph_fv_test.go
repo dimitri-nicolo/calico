@@ -788,7 +788,7 @@ func expectCorrectDataplaneState(mockDataplane *mock.MockDataplane, state State)
 		"Active VTEPs were incorrect after moving to state: %v",
 		state.Name)
 	// Comparing stringified versions of the routes here so that, on failure, we get much more readable output.
-	Expect(stringify(mockDataplane.ActiveRoutes())).To(Equal(stringify(state.ExpectedRoutes)),
+	Expect(stringifyRoutes(mockDataplane.ActiveRoutes())).To(Equal(stringifyRoutes(state.ExpectedRoutes)),
 		"Active routes were incorrect after moving to state: %v",
 		state.Name)
 	Expect(mockDataplane.EndpointToPolicyOrder()).To(Equal(state.ExpectedEndpointPolicyOrder),
@@ -817,7 +817,7 @@ func expectCorrectDataplaneState(mockDataplane *mock.MockDataplane, state State)
 			"IPsec blacklist incorrect after moving to state: %v",
 			state.Name)
 	}
-	Expect(stringify(mockDataplane.ActivePacketCaptureUpdates())).To(Equal(stringify(state.ExpectedCaptureUpdates)),
+	Expect(stringifyPacketCapture(mockDataplane.ActivePacketCaptureUpdates())).To(Equal(stringifyPacketCapture(state.ExpectedCaptureUpdates)),
 		"Active packet captured were incorrect after moving to state: %v",
 		state.Name)
 	Expect(mockDataplane.Encapsulation()).To(Equal(state.ExpectedEncapsulation),
@@ -825,21 +825,26 @@ func expectCorrectDataplaneState(mockDataplane *mock.MockDataplane, state State)
 		state.Name)
 }
 
-func stringify(routes set.Set) []string {
+func stringifyRoutes(routes set.Set[proto.RouteUpdate]) []string {
 	out := make([]string, 0, routes.Len())
-	routes.Iter(func(item interface{}) error {
-		switch item.(type) {
-		case proto.PacketCaptureUpdate:
-			update := item.(proto.PacketCaptureUpdate)
-			out = append(out, fmt.Sprintf("%+v-%+v", update.Id, update.Endpoint))
-		default:
-			out = append(out, fmt.Sprintf("%+v", item))
-		}
+	routes.Iter(func(item proto.RouteUpdate) error {
+		out = append(out, fmt.Sprintf("%+v", item))
 		return nil
 	})
 	sort.Strings(out)
 	return out
 }
+
+func stringifyPacketCapture(pc set.Set[proto.PacketCaptureUpdate]) []string {
+	out := make([]string, 0, pc.Len())
+	routes.Iter(func(item proto.PacketCapture) error {
+			out = append(out, fmt.Sprintf("%+v-%+v", update.Id, update.Endpoint))
+			return nil
+	})
+	sort.Strings(out)
+	return out
+}
+
 
 type flushStrategy int
 
