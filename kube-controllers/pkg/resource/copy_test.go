@@ -24,7 +24,6 @@ var _ = Describe("ConfigMap", func() {
 				Name:                       "TestName",
 				GenerateName:               "TestGenerateName",
 				Namespace:                  "TestNamespace",
-				SelfLink:                   "/selflink",
 				UID:                        "TestUID",
 				ResourceVersion:            "TestResourceVersion",
 				Generation:                 int64(4),
@@ -64,7 +63,6 @@ var _ = Describe("Secret", func() {
 				Name:                       "TestName",
 				GenerateName:               "TestGenerateName",
 				Namespace:                  "TestNamespace",
-				SelfLink:                   "/selflink",
 				UID:                        "TestUID",
 				ResourceVersion:            "TestResourceVersion",
 				Generation:                 int64(4),
@@ -103,7 +101,6 @@ var _ = Describe("LicenseKey", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:                       "default",
 				GenerateName:               "TestGenerateName",
-				SelfLink:                   "/selflink",
 				UID:                        "TestUID",
 				ResourceVersion:            "TestResourceVersion",
 				Generation:                 int64(4),
@@ -139,7 +136,6 @@ var _ = Describe("LicenseKey", func() {
 func compareMetaObject(orig, cp metav1.ObjectMeta) {
 	Expect(cp.Name).Should(Equal(orig.Name))
 	Expect(cp.Namespace).Should(Equal(orig.Namespace))
-	Expect(cp.SelfLink).Should(Equal(""))
 	Expect(cp.UID).Should(Equal(types.UID("")))
 	Expect(cp.ResourceVersion).Should(Equal(""))
 	Expect(cp.Generation).Should(Equal(int64(0)))
