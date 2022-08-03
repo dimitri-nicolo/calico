@@ -24,6 +24,7 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+
 	"github.com/projectcalico/calico/firewall-integration/pkg/config"
 	"github.com/projectcalico/calico/firewall-integration/pkg/controllers/controller"
 	panclient "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/backend/client"

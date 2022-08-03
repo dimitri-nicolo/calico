@@ -13,10 +13,11 @@ import (
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 )

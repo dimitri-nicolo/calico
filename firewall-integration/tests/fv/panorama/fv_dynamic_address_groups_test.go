@@ -20,12 +20,13 @@ import (
 	"github.com/PaloAltoNetworks/pango/objs/addrgrp"
 	dvgrp "github.com/PaloAltoNetworks/pango/pnrm/dg"
 
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	fakeclientset "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
+
 	"github.com/projectcalico/calico/firewall-integration/pkg/config"
 	pan "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama"
 	panutils "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils"
 	panutilmocks "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils/mocks"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	fakeclientset "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 
 	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/kube-controllers/tests/testutils"

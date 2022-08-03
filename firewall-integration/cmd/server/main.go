@@ -24,6 +24,7 @@ import (
 
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+
 	"github.com/projectcalico/calico/firewall-integration/pkg/config"
 	"github.com/projectcalico/calico/firewall-integration/pkg/controllers/fortimanager"
 	"github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama"

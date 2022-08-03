@@ -14,6 +14,7 @@ import (
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+
 	"github.com/projectcalico/calico/firewall-integration/pkg/config"
 	fortilib "github.com/projectcalico/calico/firewall-integration/pkg/fortimanager"
 
