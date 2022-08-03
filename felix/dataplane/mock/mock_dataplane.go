@@ -53,7 +53,7 @@ type MockDataplane struct {
 	serviceAccounts                map[proto.ServiceAccountID]*proto.ServiceAccountUpdate
 	namespaces                     map[proto.NamespaceID]*proto.NamespaceUpdate
 	config                         map[string]string
-	activePacketCaptures           set.Set
+	activePacketCaptures           set.Set[string]
 	numEvents                      int
 	encapsulation                  proto.Encapsulation
 }
@@ -153,21 +153,21 @@ func (d *MockDataplane) ActiveRoutes() set.Set[proto.RouteUpdate] {
 	return d.activeRoutes.Copy()
 }
 
-func (d *MockDataplane) ActiveIPSecBindings() set.Set {
+func (d *MockDataplane) ActiveIPSecBindings() set.Set[IPSecBinding] {
 	d.Lock()
 	defer d.Unlock()
 
 	return d.activeIPSecBindings.Copy()
 }
 
-func (d *MockDataplane) ActiveIPSecBlacklist() set.Set {
+func (d *MockDataplane) ActiveIPSecBlacklist() set.Set[string] {
 	d.Lock()
 	defer d.Unlock()
 
 	return d.activeIPSecBlacklist.Copy()
 }
 
-func (d *MockDataplane) ActivePacketCaptureUpdates() set.Set {
+func (d *MockDataplane) ActivePacketCaptureUpdates() set.Set[string] {
 	d.Lock()
 	defer d.Unlock()
 
@@ -293,9 +293,9 @@ func NewMockDataplane() *MockDataplane {
 		activeWireguardEndpoints:   make(map[string]proto.WireguardEndpointUpdate),
 		activeWireguardV6Endpoints: make(map[string]proto.WireguardEndpointV6Update),
 
-		activeIPSecTunnels:             set.New(),
-		activeIPSecBindings:            set.New(),
-		activeIPSecBlacklist:           set.New(),
+		activeIPSecTunnels:             set.New[string](),
+		activeIPSecBindings:            set.New[IPSecBinding](),
+		activeIPSecBlacklist:           set.New[string](),
 		endpointToPolicyOrder:          make(map[string][]TierInfo),
 		endpointToUntrackedPolicyOrder: make(map[string][]TierInfo),
 		endpointToPreDNATPolicyOrder:   make(map[string][]TierInfo),
@@ -304,7 +304,7 @@ func NewMockDataplane() *MockDataplane {
 		endpointToAllPolicyIDs:         make(map[string][]proto.PolicyID),
 		serviceAccounts:                make(map[proto.ServiceAccountID]*proto.ServiceAccountUpdate),
 		namespaces:                     make(map[proto.NamespaceID]*proto.NamespaceUpdate),
-		activePacketCaptures:           set.New(),
+		activePacketCaptures:           set.New[string](),
 	}
 	return s
 }
@@ -566,8 +566,8 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 				Expect(addr).NotTo(Equal(a), "Binding added but still have an active blacklist")
 				return nil
 			})
-			d.activeIPSecBindings.Iter(func(item IPSecBinding) error {
-				Expect(addr).NotTo(Equal(a), "already have a binding for this IP")
+			d.activeIPSecBindings.Iter(func(b IPSecBinding) error {
+				Expect(addr).NotTo(Equal(b.EndpointAddr), "already have a binding for this IP")
 				return nil
 			})
 			d.activeIPSecBindings.Add(b)
@@ -576,7 +576,7 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 		for _, addr := range event.AddedAddrs {
 			Expect(d.activeIPSecBlacklist.Contains(addr)).To(BeFalse(),
 				fmt.Sprintf("IPsec blacklist duplicate added: %v (all: %v)", addr, d.activeIPSecBlacklist))
-			d.activeIPSecBindings.Iter(func(item IPSecBinding) error {
+			d.activeIPSecBindings.Iter(func(b IPSecBinding) error {
 				Expect(b.EndpointAddr).NotTo(Equal(addr), "Blacklist added but still have an active binding")
 				return nil
 			})

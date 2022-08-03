@@ -1770,7 +1770,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 						})
 						epMgr.OnUpdate(&ifaceAddrsUpdate{
 							Name:  "cali12345-ab",
-							Addrs: set.New(),
+							Addrs: set.New[string](),
 						})
 						err := epMgr.ResolveUpdateBatch()
 						Expect(err).ToNot(HaveOccurred())
@@ -1895,7 +1895,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 							})
 							epMgr.OnUpdate(&ifaceAddrsUpdate{
 								Name:  "cali12345-ab",
-								Addrs: set.New(),
+								Addrs: set.New[string](),
 							})
 							err = epMgr.ResolveUpdateBatch()
 							Expect(err).ToNot(HaveOccurred())

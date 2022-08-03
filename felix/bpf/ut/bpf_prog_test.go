@@ -29,12 +29,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/projectcalico/calico/felix/bpf/failsafes"
-
-	"github.com/projectcalico/calico/felix/bpf/ipsets"
-	"github.com/projectcalico/calico/felix/bpf/jump"
-	"github.com/projectcalico/calico/felix/bpf/polprog"
-
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	. "github.com/onsi/gomega"
@@ -53,6 +47,7 @@ import (
 	"github.com/projectcalico/calico/felix/bpf/jump"
 	"github.com/projectcalico/calico/felix/bpf/nat"
 	"github.com/projectcalico/calico/felix/bpf/perf"
+	"github.com/projectcalico/calico/felix/bpf/polprog"
 	"github.com/projectcalico/calico/felix/bpf/routes"
 	"github.com/projectcalico/calico/felix/bpf/state"
 	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"

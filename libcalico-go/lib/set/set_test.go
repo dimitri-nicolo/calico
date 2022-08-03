@@ -34,11 +34,11 @@ func (t typedFactory) New() set.Set[int] {
 }
 
 func (t typedFactory) From(i ...int) set.Set[int] {
-	return set.From(i...)
+	return set.From[int](i...)
 }
 
 func (t typedFactory) FromArray(i []int) set.Set[int] {
-	return set.FromArray(i)
+	return set.FromArray[int](i)
 }
 
 type boxedFactory struct{}
@@ -48,11 +48,11 @@ func (t boxedFactory) New() set.Set[int] {
 }
 
 func (t boxedFactory) From(i ...int) set.Set[int] {
-	return set.FromBoxed(i...)
+	return set.FromBoxed[int](i...)
 }
 
 func (t boxedFactory) FromArray(i []int) set.Set[int] {
-	return set.FromArrayBoxed(i)
+	return set.FromArrayBoxed[int](i)
 }
 
 var _ = Describe("Typed set", func() {
@@ -277,13 +277,13 @@ var _ = Describe("Add sets", func() {
 	It("should update the receiving set with the additional entries from the other set", func() {
 		By("Creating two sets with different contents")
 		s1 := set.From("a", "b", "c", "d")
-		s2 := set.From("c", "d", "e", 1)
+		s2 := set.From("c", "d", "e", "1")
 
 		By("Addings the sets")
 		s2.AddSet(s1)
 
 		By("Checking the results")
 		Expect(s1).To(Equal(set.From("a", "b", "c", "d")))
-		Expect(s2).To(Equal(set.From("a", "b", "c", "d", "e", 1)))
+		Expect(s2).To(Equal(set.From("a", "b", "c", "d", "e", "1")))
 	})
 })

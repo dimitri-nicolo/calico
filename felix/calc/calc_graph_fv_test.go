@@ -828,7 +828,7 @@ func expectCorrectDataplaneState(mockDataplane *mock.MockDataplane, state State)
 			"IPsec blacklist incorrect after moving to state: %v",
 			state.Name)
 	}
-	Expect(stringifyPacketCapture(mockDataplane.ActivePacketCaptureUpdates())).To(Equal(stringifyPacketCapture(state.ExpectedCaptureUpdates)),
+	Expect(toSlice(mockDataplane.ActivePacketCaptureUpdates())).To(Equal(stringifyPacketCapture(state.ExpectedCaptureUpdates)),
 		"Active packet captured were incorrect after moving to state: %v",
 		state.Name)
 	Expect(mockDataplane.Encapsulation()).To(Equal(state.ExpectedEncapsulation),
@@ -848,8 +848,18 @@ func stringifyRoutes(routes set.Set[proto.RouteUpdate]) []string {
 
 func stringifyPacketCapture(pc set.Set[proto.PacketCaptureUpdate]) []string {
 	out := make([]string, 0, pc.Len())
-	routes.Iter(func(item proto.PacketCapture) error {
+	pc.Iter(func(update proto.PacketCaptureUpdate) error {
 		out = append(out, fmt.Sprintf("%+v-%+v", update.Id, update.Endpoint))
+		return nil
+	})
+	sort.Strings(out)
+	return out
+}
+
+func toSlice(s set.Set[string]) []string {
+	out := make([]string, 0, s.Len())
+	s.Iter(func(pc string) error {
+		out = append(out, pc)
 		return nil
 	})
 	sort.Strings(out)

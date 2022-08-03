@@ -120,7 +120,7 @@ func TestLoadKitchenSinkPolicy(t *testing.T) {
 
 	cleanIPSetMap()
 
-	pg := polprog.NewBuilder(alloc, ipsMap.MapFD(), stateMap.MapFD(), tcJumpMap.MapFD(), false)
+	pg := polprog.NewBuilder(alloc, ipsMap.MapFD(), stateMap.MapFD(), tcJumpMap.MapFD())
 	insns, err := pg.Instructions(polprog.Rules{
 		Tiers: []polprog.Tier{{
 			Name: "base tier",

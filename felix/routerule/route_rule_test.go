@@ -126,11 +126,11 @@ var _ = Describe("RouteRules with RulesMatchPrioSrcTable match func", func() {
 	BeforeEach(func() {
 		dataplane = &mockDataplane{
 			ruleKeyToRule:   map[string]netlink.Rule{},
-			addedRuleKeys:   set.New(),
-			deletedRuleKeys: set.New(),
+			addedRuleKeys:   set.New[string](),
+			deletedRuleKeys: set.New[string](),
 		}
 
-		tableIndexSet := set.New()
+		tableIndexSet := set.New[int]()
 		tableIndexSet.Add(15)
 		tableIndexSet.Add(16)
 

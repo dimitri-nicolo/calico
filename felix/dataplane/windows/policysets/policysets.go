@@ -736,7 +736,7 @@ func ruleHasNegativeMatches(pRule *proto.Rule) bool {
 func (s *PolicySets) getIPSetAddresses(setIds []string) ([]string, error) {
 	var addresses []string
 
-	ips := set.New()
+	ips := set.New[string]()
 	for _, ipsetId := range setIds {
 		for _, cache := range s.IpSetCaches {
 			ipList := cache.GetIPSetMembers(ipsetId)
@@ -752,8 +752,7 @@ func (s *PolicySets) getIPSetAddresses(setIds []string) ([]string, error) {
 		}
 	}
 
-	ips.Iter(func(item interface{}) error {
-		ip := item.(string)
+	ips.Iter(func(ip string) error {
 		addresses = append(addresses, ip)
 		return nil
 	})

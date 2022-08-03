@@ -62,7 +62,7 @@ var _ = Describe("Set", func() {
 
 func BenchmarkSetGeneric(b *testing.B) {
 	t := *NewTuple(localIp1, localIp2, proto_tcp, 1000, 1000)
-	s := set.New()
+	s := set.New[Tuple]()
 	b.ResetTimer()
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {

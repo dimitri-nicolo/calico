@@ -35,7 +35,7 @@ type EndpointEventHandler struct {
 	endpoints []string
 
 	// epSetWithPolicyUpdate stores set of endpoint ids whose policies has been updated.
-	epSetWithPolicyUpdate set.Set
+	epSetWithPolicyUpdate set.Set[string]
 
 	inSync bool
 
@@ -124,7 +124,7 @@ func NewInfoReader(lookupsCache *calc.LookupsCache, period time.Duration) *InfoR
 		bufferedConntracks: []collector.ConntrackInfo{},
 		epEventHandler: &EndpointEventHandler{
 			endpoints:             []string{},
-			epSetWithPolicyUpdate: set.New(),
+			epSetWithPolicyUpdate: set.New[string](),
 		},
 	}
 }

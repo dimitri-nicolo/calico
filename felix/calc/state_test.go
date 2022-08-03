@@ -43,7 +43,7 @@ type State struct {
 	ExpectedProfileIDs                   set.Set[proto.ProfileID]
 	ExpectedRoutes                       set.Set[proto.RouteUpdate]
 	ExpectedVTEPs                        set.Set[proto.VXLANTunnelEndpointUpdate]
-	ExpectedIPSecBindings                set.Set[IPSecBinding]
+	ExpectedIPSecBindings                set.Set[mock.IPSecBinding]
 	ExpectedIPSecBlacklist               set.Set[string]
 	ExpectedCachedRemoteEndpoints        []*calc.EndpointData
 	ExpectedWireguardEndpoints           set.Set[proto.WireguardEndpointUpdate]
@@ -55,8 +55,8 @@ type State struct {
 	ExpectedNumberOfALPPolicies          int
 	ExpectedNumberOfTiers                int
 	ExpectedNumberOfPolicies             int
-	ExpectedCaptureUpdates               set.Set
-	ExpectedCaptureRemovals              set.Set
+	ExpectedCaptureUpdates               set.Set[proto.PacketCaptureUpdate]
+	ExpectedCaptureRemovals              set.Set[proto.PacketCaptureUpdate]
 	ExpectedEncapsulation                proto.Encapsulation
 }
 
@@ -77,7 +77,7 @@ func NewState() State {
 		ExpectedProfileIDs:                   set.New[proto.ProfileID](),
 		ExpectedRoutes:                       set.New[proto.RouteUpdate](),
 		ExpectedVTEPs:                        set.New[proto.VXLANTunnelEndpointUpdate](),
-		ExpectedIPSecBindings:                set.New[IPSecBinding](),
+		ExpectedIPSecBindings:                set.NewBoxed[mock.IPSecBinding](),
 		ExpectedIPSecBlacklist:               nil, // Created on demand, nil means "ignore"
 		ExpectedCachedRemoteEndpoints:        []*calc.EndpointData{},
 		ExpectedWireguardEndpoints:           set.New[proto.WireguardEndpointUpdate](),
@@ -88,8 +88,8 @@ func NewState() State {
 		ExpectedEndpointEgressData:           make(map[string]calc.EndpointEgressData),
 		ExpectedNumberOfPolicies:             -1,
 		ExpectedNumberOfTiers:                -1,
-		ExpectedCaptureUpdates:               set.New(),
-		ExpectedCaptureRemovals:              set.New(),
+		ExpectedCaptureUpdates:               set.New[proto.PacketCaptureUpdate](),
+		ExpectedCaptureRemovals:              set.New[proto.PacketCaptureUpdate](),
 	}
 }
 
@@ -131,7 +131,7 @@ func (s State) Copy() State {
 
 	cpy.ExpectedCachedRemoteEndpoints = append(cpy.ExpectedCachedRemoteEndpoints, s.ExpectedCachedRemoteEndpoints...)
 	if s.ExpectedCaptureUpdates != nil {
-		s.ExpectedCaptureUpdates.Iter(func(item interface{}) error {
+		s.ExpectedCaptureUpdates.Iter(func(item proto.PacketCaptureUpdate) error {
 			cpy.ExpectedCaptureUpdates.Add(item)
 			return nil
 		})
@@ -318,7 +318,7 @@ func (s State) withIPSecBinding(tunnelAddr, endpointAddr string) (newState State
 	newState = s.Copy()
 	if newState.ExpectedIPSecBlacklist == nil {
 		// Once we're checking IPsec state, make sure we check the blacklist too...
-		newState.ExpectedIPSecBlacklist = set.New()
+		newState.ExpectedIPSecBlacklist = set.New[string]()
 	}
 	newState.ExpectedIPSecBindings.Add(mock.IPSecBinding{tunnelAddr, endpointAddr})
 	return
@@ -328,7 +328,7 @@ func (s State) withoutIPSecBinding(tunnelAddr, endpointAddr string) (newState St
 	newState = s.Copy()
 	if newState.ExpectedIPSecBlacklist == nil {
 		// Once we're checking IPsec state, make sure we check the blacklist too...
-		newState.ExpectedIPSecBlacklist = set.New()
+		newState.ExpectedIPSecBlacklist = set.New[string]()
 	}
 	newState.ExpectedIPSecBindings.Discard(mock.IPSecBinding{tunnelAddr, endpointAddr})
 	return
@@ -337,7 +337,7 @@ func (s State) withoutIPSecBinding(tunnelAddr, endpointAddr string) (newState St
 func (s State) withIPSecBlacklist(endpointAddr ...string) (newState State) {
 	newState = s.Copy()
 	if newState.ExpectedIPSecBlacklist == nil {
-		newState.ExpectedIPSecBlacklist = set.New()
+		newState.ExpectedIPSecBlacklist = set.New[string]()
 	}
 	for _, a := range endpointAddr {
 		newState.ExpectedIPSecBlacklist.Add(a)

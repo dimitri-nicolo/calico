@@ -119,23 +119,23 @@ var (
 
 	// Default set of IP pools that we use for simple tests.  Contains a host and workload pool for
 	// the local same-AZ subnet and a remote one.
-	defaultPools = map[string]set.Set{
+	defaultPools = map[string]set.Set[string]{
 		subnetIDWest1Calico: set.FromArray([]string{ipPoolIDWest1Hosts, ipPoolIDWest1Gateways}),
 		subnetIDWest2Calico: set.FromArray([]string{ipPoolIDWest2Hosts, ipPoolIDWest2Gateways}),
 	}
 	// alternatePools is like defaultPools but it has a different local subnet and associated pools.
 	// When switching from defaultPools to alternatePools we expect Felix to clean up the state assocaited
 	// with the default pools.
-	alternatePools = map[string]set.Set{
+	alternatePools = map[string]set.Set[string]{
 		subnetIDWest1CalicoAlt: set.FromArray([]string{ipPoolIDWest1HostsAlt, ipPoolIDWest1GatewaysAlt}),
 		subnetIDWest2Calico:    set.FromArray([]string{ipPoolIDWest2Hosts, ipPoolIDWest2Gateways}),
 	}
 	// mixedPools has both local subnets so we can test what Felix does when there's a choice (which would
 	// be a misconfiguration!)
-	mixedPools = map[string]set.Set{
-		subnetIDWest1Calico:    set.FromArray([]string{ipPoolIDWest1Hosts, ipPoolIDWest1Gateways}),
-		subnetIDWest1CalicoAlt: set.FromArray([]string{ipPoolIDWest1HostsAlt, ipPoolIDWest1GatewaysAlt}),
-		subnetIDWest2Calico:    set.FromArray([]string{ipPoolIDWest2Hosts, ipPoolIDWest2Gateways}),
+	mixedPools = map[string]set.Set[string]{
+		subnetIDWest1Calico:    set.FromArray[string]([]string{ipPoolIDWest1Hosts, ipPoolIDWest1Gateways}),
+		subnetIDWest1CalicoAlt: set.FromArray[string]([]string{ipPoolIDWest1HostsAlt, ipPoolIDWest1GatewaysAlt}),
+		subnetIDWest2Calico:    set.FromArray[string]([]string{ipPoolIDWest2Hosts, ipPoolIDWest2Gateways}),
 	}
 
 	// Canned datastore snapshots.
@@ -590,9 +590,9 @@ func TestSecondaryIfaceProvisioner_AWSPoolsButNoWorkloadsMainline(t *testing.T) 
 
 			sip.OnDatastoreUpdate(DatastoreState{
 				LocalAWSAddrsByDst: nil,
-				PoolIDsBySubnetID: map[string]set.Set{
-					subnetIDWest1Calico: set.FromArray([]string{ipPoolIDWest1Hosts, ipPoolIDWest1Gateways}),
-					subnetIDWest2Calico: set.FromArray([]string{ipPoolIDWest2Hosts, ipPoolIDWest2Gateways}),
+				PoolIDsBySubnetID: map[string]set.Set[string]{
+					subnetIDWest1Calico: set.FromArray[string]([]string{ipPoolIDWest1Hosts, ipPoolIDWest1Gateways}),
+					subnetIDWest2Calico: set.FromArray[string]([]string{ipPoolIDWest2Hosts, ipPoolIDWest2Gateways}),
 				},
 			})
 

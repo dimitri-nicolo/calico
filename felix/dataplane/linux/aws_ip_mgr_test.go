@@ -112,7 +112,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 
 		Expect(fakes.DatastoreState).To(Equal(&aws.DatastoreState{
 			LocalAWSAddrsByDst: map[ip.Addr]aws.AddrInfo{},
-			PoolIDsBySubnetID:  map[string]set.Set{},
+			PoolIDsBySubnetID:  map[string]set.Set[string]{},
 		}))
 	})
 
@@ -131,7 +131,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 
 		Expect(fakes.DatastoreState).To(Equal(&aws.DatastoreState{
 			LocalAWSAddrsByDst: map[ip.Addr]aws.AddrInfo{},
-			PoolIDsBySubnetID:  map[string]set.Set{},
+			PoolIDsBySubnetID:  map[string]set.Set[string]{},
 		}))
 
 		m.OnSecondaryIfaceStateUpdate(&aws.LocalAWSNetworkState{})
@@ -251,8 +251,8 @@ func describeAWSIPMgrCommonTests(mode string) {
 						Dst:         workloadRoute.Dst,
 					},
 				},
-				PoolIDsBySubnetID: map[string]set.Set{
-					"subnet-123456789012345657": set.From("hosts-pool", "workloads-pool"),
+				PoolIDsBySubnetID: map[string]set.Set[string]{
+					"subnet-123456789012345657": set.From[string]("hosts-pool", "workloads-pool"),
 				},
 			}))
 		})
@@ -284,8 +284,8 @@ func describeAWSIPMgrCommonTests(mode string) {
 							ElasticIPs:  []ip.Addr{ip.FromString(elasticIP1)},
 						},
 					},
-					PoolIDsBySubnetID: map[string]set.Set{
-						"subnet-123456789012345657": set.From("hosts-pool", "workloads-pool"),
+					PoolIDsBySubnetID: map[string]set.Set[string]{
+						"subnet-123456789012345657": set.From[string]("hosts-pool", "workloads-pool"),
 					},
 				}))
 			})
@@ -325,8 +325,8 @@ func describeAWSIPMgrCommonTests(mode string) {
 								ElasticIPs: []ip.Addr{ip.FromString(elasticIP2)},
 							},
 						},
-						PoolIDsBySubnetID: map[string]set.Set{
-							"subnet-123456789012345657": set.From("hosts-pool", "workloads-pool"),
+						PoolIDsBySubnetID: map[string]set.Set[string]{
+							"subnet-123456789012345657": set.From[string]("hosts-pool", "workloads-pool"),
 						},
 					}))
 				})
@@ -365,8 +365,8 @@ func describeAWSIPMgrCommonTests(mode string) {
 									ElasticIPs: []ip.Addr{ip.FromString(elasticIP1), ip.FromString(elasticIP2)},
 								},
 							},
-							PoolIDsBySubnetID: map[string]set.Set{
-								"subnet-123456789012345657": set.From("hosts-pool", "workloads-pool"),
+							PoolIDsBySubnetID: map[string]set.Set[string]{
+								"subnet-123456789012345657": set.From[string]("hosts-pool", "workloads-pool"),
 							},
 						}))
 					})
@@ -412,9 +412,9 @@ func describeAWSIPMgrCommonTests(mode string) {
 						Dst:         workloadRoute.Dst,
 					},
 				},
-				PoolIDsBySubnetID: map[string]set.Set{
-					"subnet-123456789012345657": set.From("hosts-pool"),
-					"subnet-000002":             set.From("workloads-pool"),
+				PoolIDsBySubnetID: map[string]set.Set[string]{
+					"subnet-123456789012345657": set.From[string]("hosts-pool"),
+					"subnet-000002":             set.From[string]("workloads-pool"),
 				},
 			}))
 		})
@@ -439,8 +439,8 @@ func describeAWSIPMgrCommonTests(mode string) {
 			Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 			Expect(fakes.DatastoreState).To(Equal(&aws.DatastoreState{
 				LocalAWSAddrsByDst: map[ip.Addr]aws.AddrInfo{},
-				PoolIDsBySubnetID: map[string]set.Set{
-					"subnet-123456789012345657": set.From("hosts-pool"),
+				PoolIDsBySubnetID: map[string]set.Set[string]{
+					"subnet-123456789012345657": set.From[string]("hosts-pool"),
 				},
 			}))
 
@@ -453,7 +453,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 			Expect(m.CompleteDeferredWork()).NotTo(HaveOccurred())
 			Expect(fakes.DatastoreState).To(Equal(&aws.DatastoreState{
 				LocalAWSAddrsByDst: map[ip.Addr]aws.AddrInfo{},
-				PoolIDsBySubnetID:  map[string]set.Set{},
+				PoolIDsBySubnetID:  map[string]set.Set[string]{},
 			}))
 		})
 
@@ -753,7 +753,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 				secondaryLink.addrs = append(secondaryLink.addrs, *extraNLAddr)
 				m.OnUpdate(&ifaceAddrsUpdate{
 					Name: "eth1",
-					Addrs: set.From(
+					Addrs: set.From[string](
 						"daed:beef::",
 						"1.2.3.4",
 						eth1PrimaryIP,
@@ -1113,7 +1113,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 					secondaryLink.addrs = nil
 					m.OnUpdate(&ifaceAddrsUpdate{
 						Name: "eth1",
-						Addrs: set.From(
+						Addrs: set.From[string](
 							"daed:beef::", // IPv6 ignored.
 						),
 					})
@@ -1125,7 +1125,7 @@ func describeAWSIPMgrCommonTests(mode string) {
 					// Finally signal the correct state.
 					m.OnUpdate(&ifaceAddrsUpdate{
 						Name: "eth1",
-						Addrs: set.From(
+						Addrs: set.From[string](
 							"daed:beef::",
 							eth1PrimaryIP,
 						),
@@ -1313,7 +1313,7 @@ func (f *awsIPMgrFakes) NewRouteTable(
 func (f *awsIPMgrFakes) NewRouteRules(
 	ipVersion int,
 	priority int,
-	tableIndexSet set.Set,
+	tableIndexSet set.Set[int],
 	updateFunc routerule.RulesMatchFunc,
 	removeFunc routerule.RulesMatchFunc,
 	netlinkTimeout time.Duration,

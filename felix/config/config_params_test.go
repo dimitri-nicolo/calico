@@ -113,7 +113,7 @@ var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 	})
 
 	It("FelixConfigurationSpec should contain all Config fields", func() {
-		missingFields := set.New()
+		missingFields := set.New[string]()
 		for n, f := range cpFields {
 			mappedName := cpFieldNameToFC[n]
 			if mappedName != "" {
@@ -135,7 +135,7 @@ var _ = Describe("FelixConfigurationSpec vs ConfigParams parity", func() {
 		Expect(missingFields).To(BeEmpty())
 	})
 	It("Config should contain all FelixConfigurationSpec fields", func() {
-		missingFields := set.New()
+		missingFields := set.New[string]()
 		for n := range fcFields {
 			mappedName := fcFieldNameToCP[n]
 			if mappedName != "" {

@@ -98,15 +98,14 @@ var (
 
 func checkProcessArgs(actual, expected []string, numArgs int) bool {
 	count := 0
-	actualArgSet := set.New()
+	actualArgSet := set.New[string]()
 	for _, a := range actual {
 		actualArgSet.Add(a)
 	}
 	if actualArgSet.Len() != numArgs {
 		return false
 	}
-	actualArgSet.Iter(func(item interface{}) error {
-		arg := item.(string)
+	actualArgSet.Iter(func(arg string) error {
 		for _, e := range expected {
 			if arg == e {
 				count = count + 1
@@ -289,9 +288,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 
 	extractFlowProcessInfo := func(mus ...MetricUpdate) testProcessInfo {
 		fpi := testProcessInfo{}
-		procNames := set.New()
-		procID := set.New()
-		procArgs := set.New()
+		procNames := set.New[string]()
+		procID := set.New[int]()
+		procArgs := set.New[string]()
 		processName := ""
 		processID := ""
 		for i, mu := range mus {
@@ -336,9 +335,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 			fpi.processArgs = []string{"-"}
 		} else {
 			argCount := 0
-			procArgs.Iter(func(item interface{}) error {
-				if item.(string) != "" {
-					fpi.processArgs = append(fpi.processArgs, item.(string))
+			procArgs.Iter(func(item string) error {
+				if item != "" {
+					fpi.processArgs = append(fpi.processArgs, item)
 					argCount = argCount + 1
 					if argCount == 5 {
 						return set.StopIteration

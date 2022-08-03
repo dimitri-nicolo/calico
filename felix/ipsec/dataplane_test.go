@@ -131,7 +131,7 @@ func describeIPSecDataplaneTests(allowUnsecured bool) {
 		}
 		mIKEDaemon = &mockIKEDaemon{
 			Keys:       map[string]string{},
-			Conns:      set.New(),
+			Conns:      set.New[Conn](),
 			ErrorQueue: testutils.NewErrorProducer(),
 		}
 		dataplane = newDataplane()
@@ -400,7 +400,7 @@ func (p *mockPolicyTable) DeleteRule(sel PolicySelector) {
 
 type mockIKEDaemon struct {
 	Keys  map[string]string
-	Conns set.Set
+	Conns set.Set[Conn]
 
 	ErrorQueue testutils.ErrorProducer
 }
