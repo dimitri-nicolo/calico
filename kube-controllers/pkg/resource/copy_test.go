@@ -40,8 +40,7 @@ var _ = Describe("ConfigMap", func() {
 				OwnerReferences: []metav1.OwnerReference{{
 					Name: "TestOwner",
 				}},
-				Finalizers:  []string{"TestFinalizer"},
-				ClusterName: "TestClusterName",
+				Finalizers: []string{"TestFinalizer"},
 			},
 			Data: map[string]string{
 				"key": "value",
@@ -81,8 +80,7 @@ var _ = Describe("Secret", func() {
 				OwnerReferences: []metav1.OwnerReference{{
 					Name: "TestOwner",
 				}},
-				Finalizers:  []string{"TestFinalizer"},
-				ClusterName: "TestClusterName",
+				Finalizers: []string{"TestFinalizer"},
 			},
 			Data: map[string][]byte{
 				"key": []byte("value"),
@@ -121,8 +119,7 @@ var _ = Describe("LicenseKey", func() {
 				OwnerReferences: []metav1.OwnerReference{{
 					Name: "TestOwner",
 				}},
-				Finalizers:  []string{"TestFinalizer"},
-				ClusterName: "TestClusterName",
+				Finalizers: []string{"TestFinalizer"},
 			},
 			Spec: v3.LicenseKeySpec{
 				Token:       "token",
@@ -153,5 +150,4 @@ func compareMetaObject(orig, cp metav1.ObjectMeta) {
 	Expect(cp.Annotations).Should(Equal(orig.Annotations))
 	Expect(cp.OwnerReferences).Should(Equal(([]metav1.OwnerReference)(nil)))
 	Expect(cp.Finalizers).Should(Equal(orig.Finalizers))
-	Expect(cp.ClusterName).Should(Equal(orig.ClusterName))
 }
