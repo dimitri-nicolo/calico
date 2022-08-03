@@ -650,22 +650,22 @@ func (b *Block) nextInsnReachble() bool {
 // of the map
 func RelocateBpfInsn(fd uint32, data []byte, offset uint64) error {
 	insn := bpfInsn(data, offset)
-	binary.LittleEndian.PutUint32(insn[4:], fd)
-	insn[1] = uint8((RPseudoMapFD << 4) | insn[1]&0x0f)
-	copy(data[offset:], insn[:])
+	binary.LittleEndian.PutUint32(insn.Instruction[4:], fd)
+	insn.Instruction[1] = uint8((RPseudoMapFD << 4) | insn.Instruction[1]&0x0f)
+	copy(data[offset:], insn.Instruction[:])
 	return nil
 }
 
 func bpfInsn(data []byte, offset uint64) Insn {
 	var insn Insn
-	copy(insn[:], data[offset:])
+	copy(insn.Instruction[:], data[offset:])
 	return insn
 }
 
 func GetBPFInsns(data []byte) Insns {
 	var insns Insns
 	var insn Insn
-	for i := 0; i < len(data); i += len(insn) {
+	for i := 0; i < len(data); i += len(insn.Instruction) {
 		insn = bpfInsn(data, uint64(i))
 		insns = append(insns, insn)
 	}

@@ -1956,7 +1956,7 @@ func (m *bpfEndpointManager) setEgressProgramming(ifaceName string, isEgressGate
 func (m *bpfEndpointManager) updatePolicyProgram(jumpMapFD bpf.MapFD, rules polprog.Rules) (asm.Insns, error) {
 	opts := []polprog.Option{polprog.WithActionDropOverride(m.actionOnDrop)}
 	if m.bpfPolicyDebugEnabled {
-		opts = append(polprog.WithPolicyDebugEnabled())
+		opts = append(opts, polprog.WithPolicyDebugEnabled())
 	}
 	pg := polprog.NewBuilder(m.ipSetIDAlloc, m.bpfMapContext.IpsetsMap.MapFD(), m.bpfMapContext.StateMap.MapFD(), jumpMapFD, opts...)
 
