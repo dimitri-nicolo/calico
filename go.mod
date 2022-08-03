@@ -6,6 +6,7 @@ require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/Masterminds/sprig v2.20.0+incompatible
 	github.com/Microsoft/hcsshim v0.8.22
+	github.com/PaloAltoNetworks/pango v0.8.0
 	github.com/SermoDigital/jose v0.9.2-0.20161205224733-f6df55f235c2
 	github.com/Workiva/go-datastructures v1.0.53
 	github.com/alecthomas/participle v0.7.1
@@ -51,7 +52,9 @@ require (
 	github.com/howeyc/fsnotify v0.9.0
 	github.com/hpcloud/tail v1.0.0
 	github.com/ishidawataru/sctp v0.0.0-20191218070446-00ab2ac2db07
+	github.com/jarcoal/httpmock v1.2.0
 	github.com/joho/godotenv v1.4.0
+	github.com/jpillora/backoff v1.0.0
 	github.com/juju/clock v0.0.0-20190205081909-9c5c9712527c
 	github.com/juju/errors v0.0.0-20200330140219-3fe23663418f
 	github.com/juju/mutex v0.0.0-20180619145857-d21b13acf4bf
@@ -323,7 +326,7 @@ require (
 	k8s.io/gengo v0.0.0-20211129171323-c02415ce4185 // indirect
 	k8s.io/kube-proxy v0.0.0 // indirect
 	k8s.io/kube-scheduler v0.0.0 // indirect
-	k8s.io/kubectl v0.0.0 // indirect
+	k8s.io/kubectl v0.0.0
 	k8s.io/kubelet v0.0.0 // indirect
 	k8s.io/legacy-cloud-providers v0.0.0 // indirect
 	k8s.io/mount-utils v0.24.0 // indirect

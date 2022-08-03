@@ -75,6 +75,10 @@ promotions:
   pipeline_file: push-images/es-proxy.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push firewall-integration images
+  pipeline_file: push-images/firewall-integration.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 - name: Push honeypod-controller images
   pipeline_file: push-images/honeypod-controller.yml
   auto_promote:
@@ -785,6 +789,21 @@ blocks:
       - cd es-proxy
     jobs:
     - name: "es-proxy tests"
+      commands:
+      - ../.semaphore/run-and-monitor ci.log make ci
+
+- name: 'firewall-integration'
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/firewall-integration/', '/api/', '/compliance/', '/kube-controllers/', '/libcalico-go/', '/lma/', '/felix/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd firewall-integration
+    jobs:
+    - name: "firewall-integration tests"
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
 
