@@ -201,7 +201,7 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 	return watchersyncer.NewMultiClient(
 		clients,
 		resourceTypes,
-		remotecluster.NewWrappedCallbacks(callbacks, k8sClientSet, felixRemoteClusterProcessor{}),
+		remotecluster.NewWrappedCallbacks(callbacks, k8sClientSet, felixRemoteClusterProcessor{}, nil),
 	)
 }
 

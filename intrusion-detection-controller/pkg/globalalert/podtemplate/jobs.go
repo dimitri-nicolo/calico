@@ -14,7 +14,7 @@ const (
 
 func CreateCronJobFromPodTemplate(name, namepsace string, schedule time.Duration, labels map[string]string, pt v1.PodTemplate) *batchv1.CronJob {
 
-	adjobTemplate := CreateJobFromPodTemplate(name, namepsace, labels, pt)
+	adjobTemplate := CreateJobFromPodTemplate(name, namepsace, labels, pt, nil)
 
 	cronSchedule := CronJobEveryEntryPrefix + " " + schedule.String()
 
@@ -36,7 +36,7 @@ func CreateCronJobFromPodTemplate(name, namepsace string, schedule time.Duration
 	return adCronJob
 }
 
-func CreateJobFromPodTemplate(name string, namespace string, labels map[string]string, pt v1.PodTemplate) *batchv1.Job {
+func CreateJobFromPodTemplate(name, namespace string, labels map[string]string, pt v1.PodTemplate, bfl *int32) *batchv1.Job {
 
 	// combine labels from podtemplate
 	jobLabels := labels
@@ -54,15 +54,20 @@ func CreateJobFromPodTemplate(name string, namespace string, labels map[string]s
 		Spec: pt.Template.Spec,
 	}
 
+	jobSepc := batchv1.JobSpec{
+		Template: template,
+	}
+	if bfl != nil {
+		jobSepc.BackoffLimit = bfl
+	}
+
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 			Labels:    jobLabels,
 		},
-		Spec: batchv1.JobSpec{
-			Template: template,
-		},
+		Spec: jobSepc,
 	}
 
 	return job

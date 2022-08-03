@@ -99,7 +99,7 @@ func DecoratePodTemplateForDetectionCycle(adJobPT *v1.PodTemplate, clusterName s
 			Value: strconv.Itoa(detectionSeverity),
 		},
 		// set in detection cycle to indicate anomaly detection job image to train a model
-		// in a detection cycle if one does not already exist for the detectors in AD_ENABLED_JOBS
+		// in a detection cycle if one does not already exist for the detectors in AD_ENABLED_DETECTORS
 		v1.EnvVar{
 			Name:  "AD_DETECTION_VERIFY_MODEL_EXISTENCE",
 			Value: "True",

@@ -1,3 +1,4 @@
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 package anomalydetection
 
 import (
@@ -20,6 +21,7 @@ import (
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/maputil"
 	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/util"
 	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
@@ -60,7 +62,7 @@ type trainingCycleStatePerCluster struct {
 // deployed Cronjobs relating to the DetectionCycleState controlled by the Detection Controller
 func (r *adJobTrainingReconciler) listTrainingCronJobs() (map[string]interface{}, error) {
 	detectionCronJobs := make(map[string]interface{})
-	detectionJobLabelByteStr := maputil.CreateLabelValuePairStr(TrainingCronJobLabels())
+	detectionJobLabelByteStr := maputil.CreateLabelValuePairStr(TrainingCycleLabels())
 
 	detectionCronJobList, err := r.k8sClient.BatchV1().CronJobs(r.namespace).List(r.managementClusterCtx,
 		metav1.ListOptions{
@@ -234,19 +236,19 @@ func (r *adJobTrainingReconciler) Close() {
 	}
 }
 
-// addTrainingCycle adds to the list of cronjobs state for the cluster and creates the cronjob reference
-// based on the list of AnomalyDetection GlobalAlerts deployed by the cluster.  The updated training cronjob
-// will be deployed next iteration of the Reconcile() loop.
+// addTrainingCycle adds to the list of cronjobs state for the cluster and creates the cronjob
+// reference based on the list of AnomalyDetection GlobalAlerts deployed by the cluster. The updated
+// training cronjob will be deployed next iteration of the Reconcile() loop.
 func (r *adJobTrainingReconciler) addTrainingCycle(mcs TrainingDetectorsRequest) error {
 	clusterName := mcs.ClusterName
-	trainingCronJobStateNameKey := r.getTrainingCycleCronJobNameForCluster(clusterName)
+	trainingCronJobStateNameKey := r.getTrainingCycleJobNameForCluster(clusterName)
 
 	r.trainingJobsMutex.Lock()
 	defer r.trainingJobsMutex.Unlock()
 
 	trainingCycle, found := r.trainingDetectorsPerCluster[trainingCronJobStateNameKey]
 
-	// no existing training cycle for the cluster
+	// No existing training cycle for the cluster.
 	if !found {
 		trainingCycle = trainingCycleStatePerCluster{
 			ClusterName:  mcs.ClusterName,
@@ -256,12 +258,13 @@ func (r *adJobTrainingReconciler) addTrainingCycle(mcs TrainingDetectorsRequest)
 
 	trainingCycle.GlobalAlerts = append(trainingCycle.GlobalAlerts, mcs.GlobalAlert)
 
-	// add specs for training cycle
+	// Add specs for training cycle.
 	detectorList := collectDetectorsFromGlobalAlerts(trainingCycle.GlobalAlerts)
 	adTrainingJobPT, err := r.getADPodTemplateWithEnabledDecorators(clusterName, detectorList)
 	if err != nil {
-		log.WithError(err).Errorf("Unable to start training cycles for on cluster %s, unable to retrieve podtemplate for training cronjobs",
-			clusterName)
+		log.WithError(err).
+			Errorf("Unable to start training cycles for on cluster %s, unable to retrieve podtemplate for training cronjobs",
+				clusterName)
 		return err
 	}
 
@@ -272,19 +275,73 @@ func (r *adJobTrainingReconciler) addTrainingCycle(mcs TrainingDetectorsRequest)
 		return err
 	}
 
-	// update store entry
+	// Update store entry.
 	trainingCycle.CronJob = trainingCronJob
 	r.trainingDetectorsPerCluster[trainingCronJob.Name] = trainingCycle
 	r.trainingCycleResourceCache.Set(trainingCronJobStateNameKey, *trainingCronJob)
+
 	return nil
 }
 
-// getTrainingCycleCronJobNameForCluster creates a standardized string from the cluster's name to be used as the cronjob name
-// created for the cluster.
-func (r *adJobTrainingReconciler) getTrainingCycleCronJobNameForCluster(clusterName string) string {
-	return fmt.Sprintf("%s-%s-cycle", clusterName, trainingCronJobSuffix)
+// runInitialTrainingJob kicks-off an initial training job if the training cycle isn't found or for
+// a first time detector.
+func (r *adJobTrainingReconciler) runInitialTrainingJob(mcs TrainingDetectorsRequest) error {
+	clusterName := mcs.ClusterName
+	trainingCycleJobStateNameKey := r.getTrainingCycleJobNameForCluster(clusterName)
+
+	r.trainingJobsMutex.Lock()
+	defer r.trainingJobsMutex.Unlock()
+
+	trainingCycle, found := r.trainingDetectorsPerCluster[trainingCycleJobStateNameKey]
+
+	// kick-off an initial training job if there is not existing training cycle or for a first time
+	// detector.
+	detector := mcs.GlobalAlert.Spec.Detector.Name
+	if !found || !collectDetectorsSetFromGlobalAlerts(trainingCycle.GlobalAlerts).Contains(detector) {
+		trainingJobStateNameKey := r.getInitialTrainingJobNameForCluster(clusterName, detector)
+		adTrainingJobPT, err := r.getADPodTemplateWithEnabledDecorator(clusterName, detector)
+		if err != nil {
+			log.WithError(err).
+				Errorf("Unable to start initial training pod for on cluster %s, unable to retrieve podtemplate for training job",
+					clusterName)
+			return err
+		}
+
+		adInitialTrainingJob, err :=
+			r.createInitialTrainingJobForCluster(clusterName, trainingJobStateNameKey, *adTrainingJobPT)
+		if err != nil {
+			log.WithError(err).
+				Errorf("Unable to create initial training pod for on cluster %s", clusterName)
+			return err
+		}
+
+		// Create an initial training job.
+		_, err = r.k8sClient.BatchV1().Jobs(r.namespace).
+			Create(r.managementClusterCtx, adInitialTrainingJob, metav1.CreateOptions{})
+		if err != nil {
+			log.WithError(err).
+				Errorf("Unable to create initial training jod for on cluster %s", clusterName)
+			return err
+		}
+	}
+
+	return nil
 }
 
+// getInitialTrainingJobNameForCluster creates a standardized string from the cluster's name to be
+// used as the initial training job name created for the cluster.
+func (r *adJobTrainingReconciler) getInitialTrainingJobNameForCluster(cluster, detector string) string {
+	return util.GetValidInitialTrainingJobName(cluster, detector, initialTrainingJobSuffix)
+}
+
+// getTrainingCycleCronJobNameForCluster creates a standardized string from the cluster's name to be
+// used as the cronjob name created for the cluster.
+func (r *adJobTrainingReconciler) getTrainingCycleJobNameForCluster(clusterName string) string {
+	return fmt.Sprintf("%s-%s-cycle", clusterName, trainingCycleSuffix)
+}
+
+// collectDetectorsSetFromGlobalAlerts collects and returns the comma delimited string of detectors
+// of the global alerts.
 func collectDetectorsFromGlobalAlerts(globalAlerts []*v3.GlobalAlert) string {
 	var detectorList []string
 	for _, ga := range globalAlerts {
@@ -294,8 +351,44 @@ func collectDetectorsFromGlobalAlerts(globalAlerts []*v3.GlobalAlert) string {
 	return strings.Join(detectorList, ",")
 }
 
-func (r *adJobTrainingReconciler) getADPodTemplateWithEnabledDecorators(clusterName string,
-	detectorList string) (*v1.PodTemplate, error) {
+// collectDetectorsSetFromGlobalAlerts collects and returns the set of detectors of the global
+// alerts.
+func collectDetectorsSetFromGlobalAlerts(globalAlerts []*v3.GlobalAlert) set.Set {
+	detectors := set.New()
+	for _, ga := range globalAlerts {
+		if ga.Spec.Detector != nil {
+			detectors.Add(ga.Spec.Detector.Name)
+		}
+	}
+
+	return detectors
+}
+
+// getADPodTemplateWithEnabledDecorator returns a pod template with enabled detector for an individual detector.
+func (r *adJobTrainingReconciler) getADPodTemplateWithEnabledDecorator(
+	clusterName string, detector string,
+) (*v1.PodTemplate, error) {
+	adTrainingJobPT, err := r.podTemplateQuery.GetPodTemplate(r.managementClusterCtx, r.namespace, ADTrainingJobTemplateName)
+	if err != nil {
+		log.WithError(err).
+			Errorf("Unable to start initial training pod for on cluster %s, unable to specify training ADJob run to the ADJob PodTemnplate",
+				clusterName)
+		return nil, err
+	}
+
+	// Add specs for training cycle.
+	err = podtemplate.DecoratePodTemplateForTrainingCycle(adTrainingJobPT, clusterName, detector)
+	if err != nil {
+		return nil, err
+	}
+
+	return adTrainingJobPT, nil
+}
+
+// getADPodTemplateWithEnabledDecorators returns a pod template with enabled detector for a list of detectors.
+func (r *adJobTrainingReconciler) getADPodTemplateWithEnabledDecorators(
+	clusterName string, detectorList string,
+) (*v1.PodTemplate, error) {
 	adTrainingJobPT, err := r.podTemplateQuery.GetPodTemplate(r.managementClusterCtx, r.namespace, ADTrainingJobTemplateName)
 	if err != nil {
 		log.WithError(err).Errorf("Unable to start training cycles for on cluster %s, unable to specify training ADJob run to the ADJob PodTemnplate",
@@ -312,10 +405,45 @@ func (r *adJobTrainingReconciler) getADPodTemplateWithEnabledDecorators(clusterN
 	return adTrainingJobPT, nil
 }
 
+// createInitialTrainingJobForCluster creates an initial training job from the expected podtemplate,
+// adTrainingJobPT is assumed to have the Pod's specs set for training.
+func (r *adJobTrainingReconciler) createInitialTrainingJobForCluster(
+	clusterName string, cronJobName string, adTrainingJobPT v1.PodTemplate,
+) (*batchv1.Job, error) {
+	trainingLabels := TrainingJobLabels()
+	trainingLabels["cluster"] = clusterName
+
+	// Restart policy set to 'Never' and a backoffLimit of zero means that in the event that it
+	// results in an error, the initial training job would not be put in a crashloop since we have the
+	// fallback of the pre-trained model in the AD Pods themselves.
+	adTrainingJobPT.Template.Spec.RestartPolicy = v1.RestartPolicyNever
+	backoffLimit := int32(0)
+
+	trainingJob := podtemplate.CreateJobFromPodTemplate(
+		cronJobName, r.namespace, trainingLabels, adTrainingJobPT, &backoffLimit)
+
+	// Attach this IDS controller as owner
+	intrusionDetectionDeployment, err := r.k8sClient.AppsV1().Deployments(r.namespace).
+		Get(r.managementClusterCtx, ADJobOwnerLabelValue, metav1.GetOptions{})
+
+	if err != nil {
+		log.WithError(err).
+			Errorf("Unable to start initial training for on cluster %s, unable to create training cycles for models",
+				clusterName)
+		return nil, err
+	}
+
+	trainingJob.OwnerReferences = []metav1.OwnerReference{
+		*metav1.NewControllerRef(intrusionDetectionDeployment, DeploymentGroupVersionKind),
+	}
+
+	return trainingJob, nil
+}
+
 // createTrainingCronJobForCluster creates the training cronjob from the expected podtemplate, adTrainingJobPT
 // is assumed to have the Pod's specs set for training
 func (r *adJobTrainingReconciler) createTrainingCronJobForCluster(clusterName string, cronJobName string, adTrainingJobPT v1.PodTemplate) (*batchv1.CronJob, error) {
-	trainingCronLabels := TrainingCronJobLabels()
+	trainingCronLabels := TrainingCycleLabels()
 	trainingCronLabels["cluster"] = clusterName
 
 	trainingCronJob := podtemplate.CreateCronJobFromPodTemplate(cronJobName, r.namespace,
@@ -344,7 +472,7 @@ func (r *adJobTrainingReconciler) removeTrainingCycles(mcs TrainingDetectorsRequ
 	r.trainingJobsMutex.Lock()
 	defer r.trainingJobsMutex.Unlock()
 
-	trainingCycleCronJobNameKey := r.getTrainingCycleCronJobNameForCluster(mcs.ClusterName)
+	trainingCycleCronJobNameKey := r.getTrainingCycleJobNameForCluster(mcs.ClusterName)
 	managedTrainingDetectorsForCluster, found := r.trainingDetectorsPerCluster[trainingCycleCronJobNameKey]
 
 	if !found {
@@ -366,7 +494,7 @@ func (r *adJobTrainingReconciler) removeTrainingCycles(mcs TrainingDetectorsRequ
 		return nil
 	}
 
-	// else update AD_ENABLED_JOBS to exclude detector with deleted GlobalAlert
+	// else update AD_ENABLED_DETECTORS to exclude detector with deleted GlobalAlert
 	detectorList := collectDetectorsFromGlobalAlerts(managedTrainingDetectorsForCluster.GlobalAlerts)
 
 	adTrainingJobPT, err := r.getADPodTemplateWithEnabledDecorators(managedTrainingDetectorsForCluster.ClusterName, detectorList)
