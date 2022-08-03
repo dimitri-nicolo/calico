@@ -32,8 +32,10 @@ var _ = DescribeTable("GetRFC1123JobName",
 	Entry("L7 bytes", "cluster1", "l7_bytes", "cluster1-l7-bytes-initial-training"),
 	Entry("DNS Latency anomaly", "cluster1", "l7_latency", "cluster1-l7-latency-initial-training"),
 	Entry("Port Scan detection", "cluster1", "port_scan", "cluster1-port-scan-initial-training"),
-	Entry("Time series anomaly in DNS log", "cluster1", "process_restarts", "cluster1-process-restarts-initial-training"),
-	Entry("Time series anomaly in flows log", "cluster1", "time_series_flows", "cluster1-time-series-flows-initial-training"),
+	Entry("Bytes in detection", "cluster1", "bytes_in", "cluster1-bytes-in-initial-training"),
+	Entry("Bytes out detection", "cluster1", "bytes_out", "cluster1-bytes-out-initial-training"),
+	Entry("Process bytes detection", "cluster1", "process_bytes", "cluster1-process-bytes-initial-training"),
+	Entry("Process restarts detection", "cluster1", "process_restarts", "cluster1-process-restarts-initial-training"),
 
 	// Test valid names.
 	Entry("Cluster and detector are valid", "c-lu.s-ter", "d-g.a", "c-lu.s-ter-d-g.a-initial-training"),
