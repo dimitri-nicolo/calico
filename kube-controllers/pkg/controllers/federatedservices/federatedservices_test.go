@@ -633,7 +633,7 @@ var _ = Describe("Federated Endpoints Controller tests", func() {
 			ctx:           context.Background(),
 			inSync:        make(chan struct{}, 1),
 			allServices:   make(map[serviceID]*serviceInfo),
-			dirtyServices: set.New(),
+			dirtyServices: set.New[serviceID](),
 		}
 		fsc.serviceLabelHandler = labelindex.NewInheritIndex(fsc.onServiceMatchStarted, fsc.onServiceMatchStopped)
 	})
