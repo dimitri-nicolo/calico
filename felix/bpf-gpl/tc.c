@@ -303,7 +303,7 @@ static CALI_BPF_INLINE void calico_tc_process_ct_lookup(struct cali_tc_ctx *ctx)
 				// mid-flow TCP packet will not be allowed on the FROM_HOST side if
 				// it isn't already whitelisted.
 				CALI_DEBUG("CT mid-flow miss from egress gateway\n");
-				ctx->state->ct_result.rc = CALI_CT_NEW | CALI_CT_ALLOW_FROM_SIDE;
+				ctx->state->ct_result.rc = CALI_CT_NEW | CT_RES_ALLOW_FROM_SIDE;
 #endif
 
 			} else {
@@ -832,8 +832,8 @@ static CALI_BPF_INLINE struct fwd calico_tc_skb_accepted(struct cali_tc_ctx *ctx
 		if (CALI_F_FROM_WEP && state->flags & CALI_ST_SKIP_FIB) {
 			ct_ctx_nat.flags |= CALI_CT_FLAG_SKIP_FIB;
 		}
-		if (state->ct_result.rc & CALI_CT_ALLOW_FROM_SIDE) {
-			// See comment above where CALI_CT_ALLOW_FROM_SIDE is set.
+		if (state->ct_result.rc & CT_RES_ALLOW_FROM_SIDE) {
+			// See comment above where CT_RES_ALLOW_FROM_SIDE is set.
 			ct_ctx_nat.allow_from_host_side = true;
 		}
 

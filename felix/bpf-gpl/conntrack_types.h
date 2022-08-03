@@ -184,7 +184,7 @@ enum calico_ct_result_type {
 #define CT_RES_RELATED         0x100
 #define CT_RES_RPF_FAILED      0x200
 #define CT_RES_TUN_SRC_CHANGED 0x400
-#define CT_RES_RESERVED_800	0x800
+#define CT_RES_ALLOW_FROM_SIDE 0x800
 #define CT_RES_SYN		0x1000
 #define CT_RES_CONFIRMED	0x2000
 

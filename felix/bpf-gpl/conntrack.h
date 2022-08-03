@@ -875,7 +875,7 @@ static CALI_BPF_INLINE struct calico_ct_result calico_ct_v4_lookup(struct cali_t
 			 * Relax strict RPF in case the connection is marked as egress GW
 			 */
 			if (!same_if && !ret_from_tun && !hep_rpf_check(tc_ctx, result.flags & CALI_CT_FLAG_EGRESS_GW) && !CALI_F_NAT_IF) {
-				ct_result_set_flag(result.rc, CALI_CT_RPF_FAILED);
+				ct_result_set_flag(result.rc, CT_RES_RPF_FAILED);
 			} else {
 				src_to_dst->ifindex = ifindex;
 			}
