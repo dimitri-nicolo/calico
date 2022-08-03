@@ -14,21 +14,23 @@ import (
 	"syscall"
 
 	log "github.com/sirupsen/logrus"
+
 	"gopkg.in/yaml.v2"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/health"
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-
-	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	"github.com/projectcalico/calico/firewall-integration/pkg/config"
 	"github.com/projectcalico/calico/firewall-integration/pkg/controllers/fortimanager"
 	"github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama"
 	panutils "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils"
 	fortilib "github.com/projectcalico/calico/firewall-integration/pkg/fortimanager"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 const jsonContentType = "application/json"

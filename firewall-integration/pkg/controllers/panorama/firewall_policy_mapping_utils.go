@@ -13,6 +13,7 @@ import (
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"github.com/tigera/api/pkg/lib/numorstring"
+
 	panclient "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/backend/client"
 	panutils "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils"
 
