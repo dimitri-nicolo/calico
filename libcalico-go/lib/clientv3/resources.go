@@ -356,7 +356,7 @@ func kvPairToResource(kvp *model.KVPair) resource {
 }
 
 // checkNamespace checks that the namespace is supplied on a namespaced resource type.
-func (c *resources) checkNamespace(ns, kind string) error {
+func checkNamespace(ns, kind string) error {
 	if namespace.IsNamespaced(kind) && len(ns) == 0 {
 		return cerrors.ErrorValidation{
 			ErroredFields: []cerrors.ErroredField{{
