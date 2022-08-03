@@ -51,7 +51,9 @@ require (
 	github.com/howeyc/fsnotify v0.9.0
 	github.com/hpcloud/tail v1.0.0
 	github.com/ishidawataru/sctp v0.0.0-20191218070446-00ab2ac2db07
+	github.com/jarcoal/httpmock v1.2.0
 	github.com/joho/godotenv v1.4.0
+	github.com/jpillora/backoff v1.0.0
 	github.com/juju/clock v0.0.0-20190205081909-9c5c9712527c
 	github.com/juju/errors v0.0.0-20200330140219-3fe23663418f
 	github.com/juju/mutex v0.0.0-20180619145857-d21b13acf4bf
@@ -71,6 +73,7 @@ require (
 	github.com/olivere/elastic/v7 v7.0.31
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
+	github.com/PaloAltoNetworks/pango v0.8.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/profile v1.6.0
@@ -266,6 +269,8 @@ require (
 	github.com/opencontainers/runc v1.0.2 // indirect
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417 // indirect
 	github.com/opencontainers/selinux v1.8.2 // indirect
+	github.com/pelletier/go-toml v1.9.5 // indirect
+	github.com/pelletier/go-toml/v2 v2.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/pquerna/cachecontrol v0.0.0-20171018203845-0dec1b30a021 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
@@ -328,7 +333,7 @@ require (
 	k8s.io/gengo v0.0.0-20210813121822-485abfe95c7c // indirect
 	k8s.io/kube-proxy v0.0.0 // indirect
 	k8s.io/kube-scheduler v0.0.0 // indirect
-	k8s.io/kubectl v0.0.0 // indirect
+	k8s.io/kubectl v0.0.0
 	k8s.io/kubelet v0.0.0 // indirect
 	k8s.io/legacy-cloud-providers v0.0.0 // indirect
 	k8s.io/mount-utils v0.23.3 // indirect
@@ -337,11 +342,6 @@ require (
 	sigs.k8s.io/json v0.0.0-20211020170558-c049b76a60c6 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
-)
-
-require (
-	github.com/pelletier/go-toml v1.9.5 // indirect
-	github.com/pelletier/go-toml/v2 v2.0.1 // indirect
 )
 
 replace (
