@@ -16,10 +16,9 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
-
-	aapi "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
 )
 
 // NewIPAMConfigurationStorage creates a new libcalico-based storage.Interface implementation for IPAMConfig
@@ -58,8 +57,8 @@ func NewIPAMConfigurationStorage(opts Options) (registry.DryRunnableStorage, fac
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         etcd.APIObjectVersioner{},
-		aapiType:          reflect.TypeOf(aapi.IPAMConfiguration{}),
-		aapiListType:      reflect.TypeOf(aapi.IPAMConfigurationList{}),
+		aapiType:          reflect.TypeOf(v3.IPAMConfiguration{}),
+		aapiListType:      reflect.TypeOf(v3.IPAMConfigurationList{}),
 		libCalicoType:     reflect.TypeOf(libapi.IPAMConfig{}),
 		libCalicoListType: reflect.TypeOf(libapi.IPAMConfigList{}),
 		isNamespaced:      false,
@@ -102,6 +101,10 @@ func (gc IPAMConfigConverter) convertToAAPI(libcalicoObject resourceObject, aapi
 	aapiIPAMConfig.Spec.MaxBlocksPerHost = int32(lcgIPAMConfig.Spec.MaxBlocksPerHost)
 	aapiIPAMConfig.TypeMeta = lcgIPAMConfig.TypeMeta
 	aapiIPAMConfig.ObjectMeta = lcgIPAMConfig.ObjectMeta
+
+	// libcalico uses a different Kind for these resources - IPAMConfig.
+	aapiIPAMConfig.TypeMeta.APIVersion = aapi.GroupVersionCurrent
+	aapiIPAMConfig.Kind = aapi.KindIPAMConfiguration
 }
 
 func (gc IPAMConfigConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
@@ -112,6 +115,7 @@ func (gc IPAMConfigConverter) convertToAAPIList(libcalicoListObject resourceList
 		return
 	}
 	aapiIPAMConfigList.TypeMeta = lcgIPAMConfigList.TypeMeta
+	aapiIPAMConfigList.TypeMeta.Kind = aapi.KindIPAMConfigurationList
 	aapiIPAMConfigList.ListMeta = lcgIPAMConfigList.ListMeta
 	for _, item := range lcgIPAMConfigList.Items {
 		aapiIPAMConfig := aapi.IPAMConfiguration{}

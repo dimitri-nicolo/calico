@@ -8,11 +8,13 @@
 HELM=${HELM:-../bin/helm}
 
 # Get versions to install.
-defaultCalicoVersion=master
+defaultCalicoVersion=master # TODO
 CALICO_VERSION=${CALICO_VERSION:-$defaultCalicoVersion}
 
 defaultOperatorVersion=$(cat ../charts/tigera-operator/values.yaml | grep version: | cut -d" " -f4)
 OPERATOR_VERSION=${OPERATOR_VERSION:-$defaultOperatorVersion}
+
+NON_HELM_MANIFEST_IMAGES="calico/apiserver calico/windows calico/ctl calico/csi"
 
 echo "Generating manifests for Calico=$CALICO_VERSION and tigera-operator=$OPERATOR_VERSION"
 
@@ -119,3 +121,14 @@ ${HELM} template --include-crds \
 # The first two lines are a newline and a yaml separator - remove them.
 find ocp/tigera-operator -name "*.yaml" | xargs sed -i -e 1,2d
 mv $(find ocp/tigera-operator -name "*.yaml") ocp/ && rm -r ocp/tigera-operator
+
+##########################################################################
+# Replace image versions for "static" Calico manifests.
+##########################################################################
+if [[ $CALICO_VERSION != master ]]; then
+echo "Replacing image versions for static manifests"
+	for img in $NON_HELM_MANIFEST_IMAGES; do
+		echo $img
+		find . -type f -exec sed -i "s|$img:[A-Xa-z0-9_.-]*|$img:$CALICO_VERSION|g" {} \;
+	done
+fi

@@ -7,7 +7,6 @@ import (
 
 	"k8s.io/klog/v2"
 
-	aapi "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/errors"
@@ -190,9 +189,9 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		aapi := &v3.CalicoNodeStatus{}
 		CalicoNodeStatusConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
-	case *v3.IPAMConfiguration:
+	case *libapi.IPAMConfig:
 		lcg := libcalicoObject.(*libapi.IPAMConfig)
-		aapi := &aapi.IPAMConfiguration{}
+		aapi := &v3.IPAMConfiguration{}
 		IPAMConfigConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
 	default:

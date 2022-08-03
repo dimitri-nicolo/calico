@@ -151,6 +151,8 @@ section:
     path: /reference/resources/ippool
   - title: IP reservation
     path: /reference/resources/ipreservation
+  - title: IPAM configuration
+    path: /reference/resources/ipamconfig
   - title: License key
     path: /reference/resources/licensekey
   - title: Kubernetes controllers configuration
