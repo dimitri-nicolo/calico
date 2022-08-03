@@ -3875,7 +3875,7 @@ func TestIPAMConfigClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &v3.IPAMConfiguration{}
-			})
+			}, false)
 			defer shutdownServer()
 			if err := testIPAMConfigClient(client, name); err != nil {
 				t.Fatal(err)
