@@ -13,22 +13,21 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/calc"
-	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
-	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/calico/libcalico-go/lib/selector"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/health"
-	"github.com/projectcalico/calico/libcalico-go/lib/jitter"
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 	"github.com/projectcalico/calico/firewall-integration/pkg/config"
 	"github.com/projectcalico/calico/firewall-integration/pkg/controllers/controller"
 	panclient "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/backend/client"
 	pansyncer "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/backend/syncer"
 	panutils "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils"
+	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
+	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
+	"github.com/projectcalico/calico/libcalico-go/lib/jitter"
+	"github.com/projectcalico/calico/libcalico-go/lib/selector"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 
 	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
