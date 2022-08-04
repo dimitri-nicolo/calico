@@ -805,7 +805,7 @@ func (nfx *nfQueueConnection) setVerdict(id uint32, verdict int, failureMessages
 }
 
 // setVerdictWithMark attempts to set the verdict (with mark) for the specified packet. It retries in the event of a
-//failure.
+// failure.
 func (nfx *nfQueueConnection) setVerdictWithMark(id uint32, verdict int, mark int, failureMessages ...string) {
 	var err error
 	for i := 0; i < nfSetVerdictRepeatAttempts; i++ {

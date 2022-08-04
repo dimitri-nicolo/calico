@@ -1,4 +1,4 @@
-//go:build !windows
+//go:build windows
 
 // Copyright (c) 2021 Tigera, Inc. All rights reserved.
 
@@ -6,8 +6,6 @@ package timeshim
 
 import (
 	"time"
-
-	"github.com/projectcalico/calico/felix/bpf"
 )
 
 // Time is our shim interface to the time package.
@@ -86,5 +84,5 @@ func (realTime) Since(t time.Time) time.Duration {
 }
 
 func (realTime) KTimeNanos() int64 {
-	return bpf.KTimeNanos()
+	panic("Not implemented on Windows")
 }

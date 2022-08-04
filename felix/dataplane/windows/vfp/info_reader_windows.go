@@ -68,8 +68,8 @@ func (h *EndpointEventHandler) processUpdates(vfpOps *vfpctrl.VfpOperations) {
 
 	vfpOps.HandleEndpointEvent(vfpctrl.DPEventEndpointsUpdated(h.endpoints))
 
-	h.epSetWithPolicyUpdate.Iter(func(item interface{}) error {
-		vfpOps.HandleEndpointEvent(vfpctrl.DPEventPolicyUpdated(item.(string)))
+	h.epSetWithPolicyUpdate.Iter(func(item string) error {
+		vfpOps.HandleEndpointEvent(vfpctrl.DPEventPolicyUpdated(item))
 		return set.RemoveItem
 	})
 	h.inSync = true
