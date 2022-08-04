@@ -9,17 +9,17 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	uruntime "k8s.io/apimachinery/pkg/util/runtime"
+
+	"github.com/projectcalico/calico/firewall-integration/pkg/config"
+	fortilib "github.com/projectcalico/calico/firewall-integration/pkg/fortimanager"
+	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 
-	"github.com/projectcalico/calico/firewall-integration/pkg/config"
-	fortilib "github.com/projectcalico/calico/firewall-integration/pkg/fortimanager"
-
-	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
-	"github.com/projectcalico/calico/libcalico-go/lib/health"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	uruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
 const (

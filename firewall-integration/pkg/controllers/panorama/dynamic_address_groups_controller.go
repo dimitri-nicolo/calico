@@ -11,18 +11,16 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/firewall-integration/pkg/config"
+	"github.com/projectcalico/calico/firewall-integration/pkg/controllers/controller"
+	panutils "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils"
 	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/libcalico-go/lib/jitter"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
 	clientv3 "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
-
-	"github.com/projectcalico/calico/firewall-integration/pkg/config"
-	"github.com/projectcalico/calico/firewall-integration/pkg/controllers/controller"
-	panutils "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
