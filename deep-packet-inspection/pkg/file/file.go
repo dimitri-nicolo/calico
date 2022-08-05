@@ -31,11 +31,11 @@ type FileMaintainer interface {
 }
 
 func NewFileMaintainer(fileMaintenanceInterval time.Duration) FileMaintainer {
-	return &fileMaintainer{filePaths: set.New(), fileMaintenanceInterval: fileMaintenanceInterval}
+	return &fileMaintainer{filePaths: set.New[string](), fileMaintenanceInterval: fileMaintenanceInterval}
 }
 
 type fileMaintainer struct {
-	filePaths               set.Set
+	filePaths               set.Set[string]
 	fileMaintenanceInterval time.Duration
 }
 
@@ -59,12 +59,12 @@ func (f fileMaintainer) run(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			f.filePaths.Iter(func(path interface{}) error {
+			f.filePaths.Iter(func(path string) error {
 				// loop through all files in this path and delete files if there are more than 5
 				// Delete all older files if there are more than maxAllowedAlertFiles files
-				files, err := ioutil.ReadDir(path.(string))
+				files, err := ioutil.ReadDir(path)
 				if err != nil {
-					log.WithError(err).Errorf("Failed to read alert files from %s", path.(string))
+					log.WithError(err).Errorf("Failed to read alert files from %s", path)
 					return nil
 				}
 
@@ -74,7 +74,7 @@ func (f fileMaintainer) run(ctx context.Context) {
 				if len(files) > maxAllowedAlertFiles {
 					for i := len(files) - 1; i >= maxAllowedAlertFiles; i-- {
 						log.Debugf("Removing older file %s", files[i].Name())
-						f := fmt.Sprintf("%s/%s", path.(string), files[i].Name())
+						f := fmt.Sprintf("%s/%s", path, files[i].Name())
 						if err := os.Remove(f); err != nil {
 							log.WithError(err).Errorf("Failed to remove older alert files from %s", f)
 						}

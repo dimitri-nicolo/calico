@@ -186,7 +186,7 @@ $(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED): check-kubebench-update docker-image
 
 K8S_CLIENT_VERSION := $(shell grep -E 'k8s.io/apiserver' ../go.mod | awk '{print$$2;exit}')
 check-kubebench-update:
-	if [ "$(K8S_CLIENT_VERSION)" = "v0.23.3" ]; then \
+	if [ "$(K8S_CLIENT_VERSION)" = "v0.24.0" ]; then \
 		echo "No need for kubebench update"; \
 	else \
 		echo "************ \n"; \

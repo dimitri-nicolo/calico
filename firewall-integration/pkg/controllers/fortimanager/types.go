@@ -54,11 +54,11 @@ func NewMockFortinetClient() FortinetClient {
 	clusterAddressGroup := map[string]AddressGroup{
 		"color_red": AddressGroup{
 			Name:    "color_red",
-			Members: set.New(),
+			Members: set.New[string](),
 		},
 		"app_is_nginx": AddressGroup{
 			Name:    "app_is_nginx",
-			Members: set.New(),
+			Members: set.New[string](),
 		},
 	}
 	return &mockFortinetClient{
@@ -105,11 +105,11 @@ func (fc *mockFortinetClient) ListAddressGroups() ([]AddressGroup, error) {
 	return []AddressGroup{
 		AddressGroup{
 			Name:    "color_red",
-			Members: set.New(),
+			Members: set.New[string](),
 		},
 		AddressGroup{
 			Name:    "app_is_nginx",
-			Members: set.New(),
+			Members: set.New[string](),
 		},
 	}, nil
 }
@@ -145,7 +145,7 @@ type FirewallAddress struct {
 
 type AddressGroup struct {
 	Name    string
-	Members set.Set
+	Members set.Set[string]
 }
 
 func ConvertK8sNodeToFortinetFirewallAddress(node *v1.Node) (fortilib.RespFortiGateFWAddressData, error) {

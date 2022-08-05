@@ -53,7 +53,7 @@ const (
 )
 
 // The Panorama policy rules are filtered by the set of tags.
-type FirewallPolicyFilter set.Set
+type FirewallPolicyFilter set.Set[string]
 
 // The Panorama policy integration object id.
 type panoramaObjectID struct {
@@ -117,7 +117,7 @@ type firewallPolicyIntegrationController struct {
 	// The rule to policy mapping. Used for faster access to the policies each Panorama rule defines.
 	// The value is a set of policies, each of which contain at least one v3 rule referencing a
 	// Panorama rule in it's annotations.
-	panRuleToPolicyMap map[string]set.Set
+	panRuleToPolicyMap map[string]set.Set[string]
 
 	// Mutex to lock policy for asynchronous syncing.
 	mutex sync.Mutex
@@ -154,7 +154,7 @@ func NewFirewallPolicyIntegrationController(
 		policyOrder:                   &cfg.FwPolicyOrder,
 		decoupler:                     calc.NewSyncerCallbacksDecoupler(),
 		restartChan:                   make(chan string),
-		panRuleToPolicyMap:            make(map[string]set.Set),
+		panRuleToPolicyMap:            make(map[string]set.Set[string]),
 		waitGroup:                     wg,
 		mutex:                         sync.Mutex{},
 	}
@@ -658,8 +658,7 @@ func (c *firewallPolicyIntegrationController) deleteFromPolicy(panRuleName strin
 
 	// Inspect every policy that contains a reference to a Panorama rule and delete it.
 	if policies, exists := c.panRuleToPolicyMap[panRuleName]; exists {
-		policies.Iter(func(item interface{}) error {
-			key := item.(string)
+		policies.Iter(func(key string) error {
 			if item, exists := c.cache.Get(key); exists {
 				policy := item.(v3.GlobalNetworkPolicy)
 				// delete every v3 rule referencing this Panorama rule in its annotation.
@@ -694,7 +693,7 @@ func (c *firewallPolicyIntegrationController) mapPolicyToRule(ruleKey, policy st
 	if rpmItem, exists := c.panRuleToPolicyMap[ruleKey]; exists {
 		rpmItem.Add(policy)
 	} else {
-		c.panRuleToPolicyMap[ruleKey] = set.New()
+		c.panRuleToPolicyMap[ruleKey] = set.New[string]()
 		c.panRuleToPolicyMap[ruleKey].Add(policy)
 	}
 }

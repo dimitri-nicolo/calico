@@ -20,15 +20,17 @@ const (
 // GraphSelectorsConstructor provides selectors used to asynchronously perform associated queries for an edge or a node.
 // These selectors are used in the other raw and service graph APIs to look update additional data for an edge or a
 // node. The format of these selectors is the Kibana-style selector.  For example,
-//   source_namespace == "namespace1 || (dest_type == "wep" && dest_namespace == "namespace2")
+//
+//	source_namespace == "namespace1 || (dest_type == "wep" && dest_namespace == "namespace2")
 //
 // The JSON formatted output of this is actually a simple set of selector strings for each search option:
-// {
-//   "l3_flows": "xx = 'y'",
-//   "l7_flows": "xx = 'y'",
-//   "dns_logs": "xx = 'y'"
-//   "alerts": "_id = 'abcdef'"
-// }
+//
+//	{
+//	  "l3_flows": "xx = 'y'",
+//	  "l7_flows": "xx = 'y'",
+//	  "dns_logs": "xx = 'y'"
+//	  "alerts": "_id = 'abcdef'"
+//	}
 type GraphSelectorsConstructor struct {
 	L3Flows *GraphSelectorConstructor
 	L7Flows *GraphSelectorConstructor
@@ -270,15 +272,28 @@ func combineInSelectors(op v1.GraphSelectorOperator, sel1, sel2 *GraphSelectorCo
 		log.Panic("combineInSelectors called with non-matching selector types")
 	}
 
-	vals1 := set.FromArray(sel1.value)
-	vals2 := set.FromArray(sel2.value)
+	var vals1, vals2 set.Set[string]
+	switch sel1.value.(type) {
+	case string:
+		vals1 = set.From[string](sel1.value.(string))
+	case []string:
+		vals1 = set.From[string](sel1.value.([]string)...)
+	}
+
+	switch sel2.value.(type) {
+	case string:
+		vals2 = set.From[string](sel2.value.(string))
+	case []string:
+		vals2 = set.From[string](sel2.value.([]string)...)
+	}
+
 	var combined []string
 	switch op {
 	case v1.OpAnd:
 		// Only include values in both sel1 and sel2
-		vals1.Iter(func(item interface{}) error {
+		vals1.Iter(func(item string) error {
 			if vals2.Contains(item) {
-				combined = append(combined, item.(string))
+				combined = append(combined, item)
 			}
 			return nil
 		})
@@ -287,9 +302,9 @@ func combineInSelectors(op v1.GraphSelectorOperator, sel1, sel2 *GraphSelectorCo
 		combined = append([]string(nil), sel2.value.([]string)...)
 
 		// Add any value from sel1 that was not in selector 2.
-		vals1.Iter(func(item interface{}) error {
+		vals1.Iter(func(item string) error {
 			if !vals2.Contains(item) {
-				combined = append(combined, item.(string))
+				combined = append(combined, item)
 			}
 			return nil
 		})
@@ -358,9 +373,10 @@ func (s *SelectorHelper) GetLayerNodeSelectors(layer string) SelectorPairs {
 }
 
 // GetNamespaceNodeSelectors returns the selectors for a namespace node.
-//TODO(rlb): When multiple services are part of the same group, we'll include these in an aggregated namespaces group
-//           which is not correctly handled below. However, you really have to go out of your way to have multiple
-//           service namespaces in the same group, so ignoring this for now.
+// TODO(rlb): When multiple services are part of the same group, we'll include these in an aggregated namespaces group
+//
+//	which is not correctly handled below. However, you really have to go out of your way to have multiple
+//	service namespaces in the same group, so ignoring this for now.
 func (s *SelectorHelper) GetNamespaceNodeSelectors(namespace string) SelectorPairs {
 	return SelectorPairs{
 		Source: GraphSelectorsConstructor{

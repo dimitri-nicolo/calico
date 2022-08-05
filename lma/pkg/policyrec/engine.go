@@ -48,7 +48,7 @@ type endpointRulePerProtocol struct {
 // entityRule is the value that holds the list of ports and computed selectors.
 type entityRule struct {
 	selector selectorBuilder
-	ports    set.Set
+	ports    set.Set[numorstring.Port]
 	// TODO(doublek): Add service account string
 }
 
@@ -240,7 +240,7 @@ func (ere *endpointRecommendationEngine) processRuleFromFlow(flow api.Flow) {
 		} else {
 			rule = entityRule{
 				selector: NewSelectorBuilder(flow.Destination.Labels),
-				ports:    set.New(),
+				ports:    set.New[numorstring.Port](),
 			}
 		}
 		if flow.Destination.Port != nil {
@@ -262,7 +262,7 @@ func (ere *endpointRecommendationEngine) processRuleFromFlow(flow api.Flow) {
 		} else {
 			rule = entityRule{
 				selector: NewSelectorBuilder(flow.Source.Labels),
-				ports:    set.New(),
+				ports:    set.New[numorstring.Port](),
 			}
 		}
 		if flow.Destination.Port != nil {
@@ -309,7 +309,7 @@ func (ere *endpointRecommendationEngine) rulesFromTraffic(policyType v3.PolicyTy
 
 		// Try to also collect all ports together for same selectors.
 		if dedupedRule, ok := dedupedRules[selKey]; ok {
-			dedupedRule.ports.Iter(func(item interface{}) error {
+			dedupedRule.ports.Iter(func(item numorstring.Port) error {
 				rule.ports.Add(item)
 				return nil
 			})
@@ -320,8 +320,8 @@ func (ere *endpointRecommendationEngine) rulesFromTraffic(policyType v3.PolicyTy
 	rules := make([]v3.Rule, 0)
 	for selKey, rule := range dedupedRules {
 		ports := make([]numorstring.Port, 0)
-		rule.ports.Iter(func(item interface{}) error {
-			ports = append(ports, item.(numorstring.Port))
+		rule.ports.Iter(func(item numorstring.Port) error {
+			ports = append(ports, item)
 			return nil
 		})
 

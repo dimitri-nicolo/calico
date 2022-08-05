@@ -73,7 +73,7 @@ type SelectorsController struct {
 	devToRcacheAddrGrp map[string]rcache.ResourceCache
 	xrefCache          xrefcache.XrefCache
 	healthAggregator   *health.HealthAggregator
-	gnpToNodes         map[string]set.Set
+	gnpToNodes         map[string]set.Set[string]
 	gnpToPods          map[string]resources.Set
 	syncerUpdateChan   chan []syncer.Update
 	calicoClientset    clientv3.ProjectcalicoV3Interface
@@ -170,7 +170,7 @@ func NewSelectorsController(ctx context.Context, cfg *config.Config, h *health.H
 		},
 	}, cache.Indexers{})
 
-	gnpToNodes := make(map[string]set.Set)
+	gnpToNodes := make(map[string]set.Set[string])
 	gnpToPods := make(map[string]resources.Set)
 	// Create cache clients for all Forti devices
 	devToRcacheAddr := getResourceCacheAddress(fcs)
@@ -218,7 +218,7 @@ func NewSelectorsController(ctx context.Context, cfg *config.Config, h *health.H
 	return sc
 }
 
-//Get label selector for selecting network policies
+// Get label selector for selecting network policies
 func getPolicySelectorLabel(policySelector string) string {
 	//Remove single quotes from selector expression.
 	//Single quotes in selector expression isn't processed by kubernetes api's
@@ -226,8 +226,8 @@ func getPolicySelectorLabel(policySelector string) string {
 	return strings.Replace(policySelector, "'", "", -1)
 }
 
-//Create ListWatcher & Informer for Global Network Policies
-func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set, gnpToPods map[string]resources.Set,
+// Create ListWatcher & Informer for Global Network Policies
+func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set[string], gnpToPods map[string]resources.Set,
 	calicoClient clientv3.ProjectcalicoV3Interface,
 	devToRcacheAddrGrp map[string]rcache.ResourceCache,
 	syncerUpdateChan chan<- []syncer.Update) cache.Controller {
@@ -259,14 +259,14 @@ func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set, gnp
 			//Create address Group
 			addrGroup := AddressGroup{
 				Name:    gnp.Name,
-				Members: set.New(),
+				Members: set.New[string](),
 			}
 			//Insert Address Group in Cache
 			for _, cache := range devToRcacheAddrGrp {
 				cache.Set(gnp.Name, addrGroup)
 			}
 
-			gnpToNodes[gnp.Name] = set.New()
+			gnpToNodes[gnp.Name] = set.New[string]()
 			gnpToPods[gnp.Name] = resources.NewSet()
 
 			gnp.TypeMeta = resources.TypeCalicoGlobalNetworkPolicies
@@ -300,7 +300,7 @@ func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set, gnp
 			//Create address Group
 			addrGroup := AddressGroup{
 				Name:    gnpNew.Name,
-				Members: set.New(),
+				Members: set.New[string](),
 			}
 
 			//Update Address Group in Cache
@@ -310,7 +310,7 @@ func newCalicoGnpInformer(cfg *config.Config, gnpToNodes map[string]set.Set, gnp
 
 			gnpNew.TypeMeta = resources.TypeCalicoGlobalNetworkPolicies
 
-			gnpToNodes[gnpNew.Name] = set.New()
+			gnpToNodes[gnpNew.Name] = set.New[string]()
 			gnpToPods[gnpNew.Name] = resources.NewSet()
 
 			//Create an update
@@ -562,8 +562,8 @@ func (sc *SelectorsController) syncToFortiGateAddrGrp(key, dev string) error {
 		// Existing object. Time to update it.
 		clog.Debug("Updating AddressGroup in FortiGate")
 		members := []string{}
-		addr.Members.Iter(func(item interface{}) error {
-			nodeName := item.(string)
+		addr.Members.Iter(func(item string) error {
+			nodeName := item
 			members = append(members, nodeName)
 			return nil
 		})
@@ -745,8 +745,8 @@ func (sc *SelectorsController) handleNodeUpdate(update syncer.Update) {
 		// Iterate over nodes linked to a GNP, if Node is
 		// NOT present in xrefcache, that means Node had been removed.
 		nodes := sc.gnpToNodes[update.ResourceID.Name]
-		nodes.Iter(func(item interface{}) error {
-			nodeName := item.(string)
+		nodes.Iter(func(item string) error {
+			nodeName := item
 			// If a Node isn't present in xrefcache, delete in Fortigate
 			_, ok := cachedEntryGNP.ScheduledNodes[nodeName]
 			if !ok {
@@ -761,8 +761,8 @@ func (sc *SelectorsController) handleNodeUpdate(update syncer.Update) {
 		// Address Group name must match with network policy Name.
 		nodes = sc.gnpToNodes[update.ResourceID.Name]
 		members := []string{}
-		nodes.Iter(func(item interface{}) error {
-			nodeName := item.(string)
+		nodes.Iter(func(item string) error {
+			nodeName := item
 			_, ok := cachedEntryGNP.ScheduledNodes[nodeName]
 			if !ok {
 				// The Node that we were tracking is no longer referenced in the GNP,

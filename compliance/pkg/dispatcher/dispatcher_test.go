@@ -59,18 +59,18 @@ var (
 
 type tester struct {
 	d         dispatcher.Dispatcher
-	policies  set.Set
-	pods      set.Set
-	status    set.Set
+	policies  set.Set[apiv3.ResourceID]
+	pods      set.Set[apiv3.ResourceID]
+	status    set.Set[syncer.StatusUpdate]
 	resources int
 }
 
 func newTester() *tester {
 	return &tester{
 		d:        dispatcher.NewDispatcher("test"),
-		policies: set.New(),
-		pods:     set.New(),
-		status:   set.New(),
+		policies: set.New[apiv3.ResourceID](),
+		pods:     set.New[apiv3.ResourceID](),
+		status:   set.New[syncer.StatusUpdate](),
 	}
 }
 
@@ -137,7 +137,7 @@ var _ = Describe("label selector checks", func() {
 
 		By("Checking we get updates for both pod resources")
 		Expect(t.pods.Len()).To(Equal(2))
-		Expect(t.pods.Equals(set.From(pod1ID, pod2ID))).To(BeTrue())
+		Expect(t.pods.Equals(set.From[apiv3.ResourceID](pod1ID, pod2ID))).To(BeTrue())
 
 		By("Checking we get no updates for policy resources")
 		Expect(t.policies.Len()).To(BeZero())
@@ -172,18 +172,18 @@ var _ = Describe("label selector checks", func() {
 
 		By("Checking we get updates for the pod delete")
 		Expect(t.pods.Len()).To(Equal(1))
-		Expect(t.pods.Equals(set.From(pod2ID))).To(BeTrue())
+		Expect(t.pods.Equals(set.From[apiv3.ResourceID](pod2ID))).To(BeTrue())
 
 		By("Checking we get updates for the policy update")
 		Expect(t.policies.Len()).To(Equal(1))
-		Expect(t.policies.Equals(set.From(policy1ID))).To(BeTrue())
+		Expect(t.policies.Equals(set.From[apiv3.ResourceID](policy1ID))).To(BeTrue())
 
 		By("Checking we got one new or modified resource")
 		Expect(t.resources).To(Equal(1))
 		Expect(t.status.Len()).To(Equal(1))
 
 		By("Checking we the in-sync status update")
-		Expect(t.status.Equals(set.From(syncer.StatusUpdate{
+		Expect(t.status.Equals(set.From[syncer.StatusUpdate](syncer.StatusUpdate{
 			Type: syncer.StatusTypeInSync,
 		}))).To(BeTrue())
 	})

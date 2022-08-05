@@ -95,14 +95,14 @@ func (r *adJobTrainingReconciler) Run(stop <-chan struct{}) {
 // Reconcile is the main reconciliation loop called by the worker of the Training Job Controller.
 //
 // Reconcialiation for the AD Training CrongJob conducts the verfication of the received resource as follows:
-// 	- verfies if the received resource name is within the list of Training CronJobs, ignores if not
-//  - if it is indicated that all AD GlobalAlerts assosciated with the cluster has been removed, remove also
-//    the cronjob that was training the detectors assosciated with them
-//  - verfies that the resource is present,
-//			-if not found restores it with the initial Training CronJob
-// 				configuration it had when it was first added
-//  - verrifes that the fields of the received Training CronJob has not been altered, restore it
-// 		with the initial CronJob configuration if found otherwise
+//   - verfies if the received resource name is within the list of Training CronJobs, ignores if not
+//   - if it is indicated that all AD GlobalAlerts assosciated with the cluster has been removed, remove also
+//     the cronjob that was training the detectors assosciated with them
+//   - verfies that the resource is present,
+//     -if not found restores it with the initial Training CronJob
+//     configuration it had when it was first added
+//   - verrifes that the fields of the received Training CronJob has not been altered, restore it
+//     with the initial CronJob configuration if found otherwise
 func (r *adJobTrainingReconciler) reconcile() bool {
 	workqueue := r.trainingCycleResourceCache.GetQueue()
 
@@ -353,8 +353,8 @@ func collectDetectorsFromGlobalAlerts(globalAlerts []*v3.GlobalAlert) string {
 
 // collectDetectorsSetFromGlobalAlerts collects and returns the set of detectors of the global
 // alerts.
-func collectDetectorsSetFromGlobalAlerts(globalAlerts []*v3.GlobalAlert) set.Set {
-	detectors := set.New()
+func collectDetectorsSetFromGlobalAlerts(globalAlerts []*v3.GlobalAlert) set.Set[string] {
+	detectors := set.New[string]()
 	for _, ga := range globalAlerts {
 		if ga.Spec.Detector != nil {
 			detectors.Add(ga.Spec.Detector.Name)

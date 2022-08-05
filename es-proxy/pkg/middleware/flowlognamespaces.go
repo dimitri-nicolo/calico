@@ -246,7 +246,7 @@ func getNamespacesFromElastic(params *FlowLogNamespaceParams, esClient lmaelasti
 
 	// Perform the query with composite aggregation
 	rcvdBuckets, rcvdErrors := esClient.SearchCompositeAggregations(ctx, aggQuery, nil)
-	nsSet := set.New()
+	nsSet := set.New[string]()
 	namespaces := make([]Namespace, 0)
 	for bucket := range rcvdBuckets {
 		// Pull namespaces out of the buckets
@@ -287,10 +287,10 @@ func getNamespacesFromElastic(params *FlowLogNamespaceParams, esClient lmaelasti
 
 	// Convert the set to the namespace slice
 	i := 0
-	nsSet.Iter(func(item interface{}) error {
+	nsSet.Iter(func(item string) error {
 		// Only add items up to the limit
 		if i < int(params.Limit) {
-			namespaces = append(namespaces, Namespace{Name: item.(string)})
+			namespaces = append(namespaces, Namespace{Name: item})
 			i++
 		}
 		return nil

@@ -189,11 +189,11 @@ type L3FlowData struct {
 }
 
 // GetL3FlowData queries, correlates and aggregates L3 flow data.
-// - Source and dest flows are correlated so that we have a single flow with stats for denied-at-source,
-//   allowed-at-dest and denied-at-dest.
-// - Port information is aggregated when an endpoint port is not part of a service - this prevents bloating a graph
-//   when an endpoint is subjected to a port scan.
-// - Stats for TCP and Processes are aggregated for each flow.
+//   - Source and dest flows are correlated so that we have a single flow with stats for denied-at-source,
+//     allowed-at-dest and denied-at-dest.
+//   - Port information is aggregated when an endpoint port is not part of a service - this prevents bloating a graph
+//     when an endpoint is subjected to a port scan.
+//   - Stats for TCP and Processes are aggregated for each flow.
 func GetL3FlowData(
 	ctx context.Context, es lmaelastic.Client, cluster string, tr lmav1.TimeRange,
 	fc *FlowConfig, cfg *Config,
@@ -698,8 +698,8 @@ func (d *flowReconciliationData) getFlows(source, dest FlowEndpoint) []L3Flow {
 		})
 	}
 
-	allServices := func(allowed, denied map[v1.ServicePort]flowStats) set.Set {
-		services := set.New()
+	allServices := func(allowed, denied map[v1.ServicePort]flowStats) set.Set[v1.ServicePort] {
+		services := set.New[v1.ServicePort]()
 		for s := range allowed {
 			services.Add(s)
 		}
@@ -710,8 +710,7 @@ func (d *flowReconciliationData) getFlows(source, dest FlowEndpoint) []L3Flow {
 	}
 
 	addSingleReportedFlows := func(allowed, denied map[v1.ServicePort]flowStats, rep reporter) {
-		allServices(allowed, denied).Iter(func(item interface{}) error {
-			svc := item.(v1.ServicePort)
+		allServices(allowed, denied).Iter(func(svc v1.ServicePort) error {
 			stats := v1.GraphL3Stats{
 				Connections: allowed[svc].connStats.Add(denied[svc].connStats),
 				Allowed:     allowed[svc].packetStats,
@@ -761,9 +760,7 @@ func (d *flowReconciliationData) getFlows(source, dest FlowEndpoint) []L3Flow {
 	// The flow will be reported at source and dest, which most importantly means the allowed flows at source need to be
 	// divvied up to be allowed or denied at dest.
 	log.Debug("  L3Flow reported at source and dest")
-	allServices(d.sourceReportedAllowed, d.sourceReportedDenied).Iter(func(item interface{}) error {
-		svc := item.(v1.ServicePort)
-
+	allServices(d.sourceReportedAllowed, d.sourceReportedDenied).Iter(func(svc v1.ServicePort) error {
 		// Get the stats for allowed and denied at dest.  Combine the stats for direct A->B and A->SVC->B. We don't expect
 		// the latter, but just in case...
 		totalAllowedAtDest := d.destReportedAllowed[v1.ServicePort{Protocol: svc.Protocol}].packetStats.

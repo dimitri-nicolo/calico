@@ -82,7 +82,7 @@ func (s ServiceGroup) String() string {
 }
 
 type serviceGroups struct {
-	serviceGroups              set.Set
+	serviceGroups              set.Set[*ServiceGroup]
 	serviceGroupsByServiceName map[v1.NamespacedName]*ServiceGroup
 	serviceGroupsByEndpointKey map[FlowEndpoint]*ServiceGroup
 	finished                   bool
@@ -103,8 +103,8 @@ func (sgs *serviceGroups) String() string {
 
 func (sgs *serviceGroups) Iter(cb func(*ServiceGroup) error) error {
 	var err error
-	sgs.serviceGroups.Iter(func(item interface{}) error {
-		if err = cb(item.(*ServiceGroup)); err != nil {
+	sgs.serviceGroups.Iter(func(item *ServiceGroup) error {
+		if err = cb(item); err != nil {
 			return set.StopIteration
 		}
 		return nil
@@ -126,7 +126,7 @@ func (sgs *serviceGroups) GetByEndpoint(ep FlowEndpoint) *ServiceGroup {
 func NewServiceGroups() ServiceGroups {
 	// Create a ServiceGroups helper.
 	sd := &serviceGroups{
-		serviceGroups:              set.New(),
+		serviceGroups:              set.New[*ServiceGroup](),
 		serviceGroupsByServiceName: make(map[v1.NamespacedName]*ServiceGroup),
 		serviceGroupsByEndpointKey: make(map[FlowEndpoint]*ServiceGroup),
 	}
@@ -145,8 +145,7 @@ func (sd *serviceGroups) FinishMappings() {
 	sd.finished = true
 
 	// Calculate the service groups name and namespace.
-	sd.serviceGroups.Iter(func(item interface{}) error {
-		sg := item.(*ServiceGroup)
+	sd.serviceGroups.Iter(func(sg *ServiceGroup) error {
 		names := &nameCalculator{names: make(map[string]bool)}
 		namespaces := &nameCalculator{names: make(map[string]bool)}
 		for svcKey := range sg.ServicePorts {
@@ -162,8 +161,7 @@ func (sd *serviceGroups) FinishMappings() {
 	// Trace out the service groups if the log level is debug.
 	if log.IsLevelEnabled(log.DebugLevel) {
 		log.Debug("=== Service groups ===")
-		sd.serviceGroups.Iter(func(item interface{}) error {
-			sg := item.(*ServiceGroup)
+		sd.serviceGroups.Iter(func(sg *ServiceGroup) error {
 			log.Debugf("%s ->", sg)
 			for sk, svc := range sg.ServicePorts {
 				log.Debugf("  %s ->", sk)
@@ -191,9 +189,7 @@ func (sd *serviceGroups) FinishMappings() {
 
 	// Update the ID for each group, and simplify the groups to use the aggregated name instead of the full name if the
 	// port is common across replicas.
-	sd.serviceGroups.Iter(func(item interface{}) error {
-		sg := item.(*ServiceGroup)
-
+	sd.serviceGroups.Iter(func(sg *ServiceGroup) error {
 		// Sort the services for easier testing.
 		sort.Sort(v1.SortableNamespacedNames(sg.Services))
 

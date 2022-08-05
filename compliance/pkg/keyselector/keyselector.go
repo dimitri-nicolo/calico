@@ -8,8 +8,6 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
-
-	"github.com/projectcalico/calico/compliance/pkg/sethelper"
 )
 
 // This file implements a key selector. This acts as a bridge between the resources that are configured with one or more
@@ -31,8 +29,8 @@ type MatchStopped func(owner, client apiv3.ResourceID, key string, lastKey bool)
 // KeySelector interface. Used for handling callbacks and managing resource label and selectors.
 type KeySelector interface {
 	RegisterCallbacks(kinds []metav1.TypeMeta, started MatchStarted, stopped MatchStopped)
-	SetOwnerKeys(owner apiv3.ResourceID, keys set.Set)
-	SetClientKeys(client apiv3.ResourceID, keys set.Set)
+	SetOwnerKeys(owner apiv3.ResourceID, keys set.Set[string])
+	SetClientKeys(client apiv3.ResourceID, keys set.Set[string])
 	DeleteOwner(owner apiv3.ResourceID)
 	DeleteClient(client apiv3.ResourceID)
 }
@@ -40,11 +38,11 @@ type KeySelector interface {
 // New creates a new KeyManager.
 func New() KeySelector {
 	keym := &keySelector{
-		keysByOwner:       make(map[apiv3.ResourceID]set.Set),
-		keysByClient:      make(map[apiv3.ResourceID]set.Set),
+		keysByOwner:       make(map[apiv3.ResourceID]set.Set[string]),
+		keysByClient:      make(map[apiv3.ResourceID]set.Set[string]),
 		clientsByKey:      make(map[string]resources.Set),
 		ownersByKey:       make(map[string]resources.Set),
-		keysByOwnerClient: make(map[ownerClient]set.Set),
+		keysByOwnerClient: make(map[ownerClient]set.Set[string]),
 	}
 	return keym
 }
@@ -52,11 +50,11 @@ func New() KeySelector {
 // keySelector implements the KeyManager interface.
 type keySelector struct {
 	// The cross referencing.
-	keysByOwner       map[apiv3.ResourceID]set.Set
-	keysByClient      map[apiv3.ResourceID]set.Set
+	keysByOwner       map[apiv3.ResourceID]set.Set[string]
+	keysByClient      map[apiv3.ResourceID]set.Set[string]
 	ownersByKey       map[string]resources.Set
 	clientsByKey      map[string]resources.Set
-	keysByOwnerClient map[ownerClient]set.Set
+	keysByOwnerClient map[ownerClient]set.Set[string]
 
 	// Callbacks
 	cbs []callbacksWithKind
@@ -85,24 +83,22 @@ func (ls *keySelector) RegisterCallbacks(kinds []metav1.TypeMeta, started MatchS
 }
 
 // SetOwnerKeys sets owners keys.
-func (m *keySelector) SetOwnerKeys(owner apiv3.ResourceID, keys set.Set) {
+func (m *keySelector) SetOwnerKeys(owner apiv3.ResourceID, keys set.Set[string]) {
 	// Start by finding the delta sets of Keys.
 	currentSet := m.keysByOwner[owner]
 	if currentSet == nil {
-		currentSet = set.New()
+		currentSet = set.New[string]()
 	}
 	if keys == nil {
 		delete(m.keysByOwner, owner)
-		keys = set.New()
+		keys = set.New[string]()
 	} else {
 		m.keysByOwner[owner] = keys
 	}
 
-	sethelper.IterDifferences(currentSet, keys,
+	set.IterDifferences(currentSet, keys,
 		// Key address is removed from the owners list.
-		func(item interface{}) error {
-			key := item.(string)
-
+		func(key string) error {
 			// Update the ownersByKey set.
 			owners := m.ownersByKey[key]
 			owners.Discard(owner)
@@ -122,9 +118,7 @@ func (m *keySelector) SetOwnerKeys(owner apiv3.ResourceID, keys set.Set) {
 			return nil
 		},
 		// New Key address is added to the owners list.
-		func(item interface{}) error {
-			key := item.(string)
-
+		func(key string) error {
 			// Update the ownersByKey set.
 			owners := m.ownersByKey[key]
 			if owners == nil {
@@ -148,24 +142,22 @@ func (m *keySelector) SetOwnerKeys(owner apiv3.ResourceID, keys set.Set) {
 }
 
 // SetClientKeys sets clients keys.
-func (m *keySelector) SetClientKeys(client apiv3.ResourceID, keys set.Set) {
+func (m *keySelector) SetClientKeys(client apiv3.ResourceID, keys set.Set[string]) {
 	// Start by finding the delta sets of Keys.
 	currentSet := m.keysByClient[client]
 	if currentSet == nil {
-		currentSet = set.New()
+		currentSet = set.New[string]()
 	}
 	if keys == nil {
 		delete(m.keysByClient, client)
-		keys = set.New()
+		keys = set.New[string]()
 	} else {
 		m.keysByClient[client] = keys
 	}
 
-	sethelper.IterDifferences(currentSet, keys,
+	set.IterDifferences(currentSet, keys,
 		// Key address is removed from the clients list.
-		func(item interface{}) error {
-			key := item.(string)
-
+		func(key string) error {
 			// Update the clientsByKey set.
 			clients := m.clientsByKey[key]
 			clients.Discard(client)
@@ -185,9 +177,7 @@ func (m *keySelector) SetClientKeys(client apiv3.ResourceID, keys set.Set) {
 			return nil
 		},
 		// New Key address is added to the clients list.
-		func(item interface{}) error {
-			key := item.(string)
-
+		func(key string) error {
 			// Update the clientsByKey set.
 			clients := m.clientsByKey[key]
 			if clients == nil {
@@ -225,7 +215,7 @@ func (c *keySelector) onKeyMatchStarted(owner, client apiv3.ResourceID, key stri
 	oc := ownerClient{owner: owner, client: client}
 	keys := c.keysByOwnerClient[oc]
 	if keys == nil {
-		keys = set.New()
+		keys = set.New[string]()
 		c.keysByOwnerClient[oc] = keys
 		firstKey = true
 	}

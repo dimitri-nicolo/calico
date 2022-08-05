@@ -56,7 +56,7 @@ const (
 	matchDelimitersRegexDef = `(?m)[^\s\)\("']+|"([^"]*)"|'([^']*)'`
 )
 
-type AddressGroupsFilter set.Set
+type AddressGroupsFilter set.Set[string]
 
 type PanoramaClient interface {
 	Get(url string, response *pkgutil.PredefinedSecurityRulesResponse) ([]byte, error)
@@ -346,37 +346,41 @@ func setAddressBucketsByStaticAddresses(buckets *Addresses, staticAddresses []st
 // by single quotes. Single quotes are used to encapsulate names that may contain delimiters.
 //
 // Algorithm:
-// 1. Split the match string by delimeters [\(, \), \', \", \s], preserving single and double
-//		quotes.
-// 			Preserve single and double quotes to differentiate cases where tag names may
-//			be either 'or' or "AND" that are not logical operators. Delimiters that lie
-//			within single or double quotes are not interpreted as such, and remain as
-//			part of the words, ie. 'my() tag' will be interpreted as a word. The begining and end of a
-//			sentence is the empty delimiter, i.e it will occupy an index in the delimiters array.
-//			Consecutive delimiters are placed into the same index.
-// 2. Combine the delimiters and modified words into an array representing the selector equivalent.
-//			Encapsulate words with "has()", convert AND/and to "&&", and OR/or to "||",
-// 			and remove single and double quotes. By definition the delimiters will always have greater
-//			length than the number of words.
-//			Base case, match: "" defines words: [] (empty), delimiters: [""].
-//			Simple cases,
-//				match: "tag1" defines words[tag1], delimiters: ["", ""].
-//				match: "\stag1" defines words[tag1], delimiters: ["\s", ""]. Note: \s defines a space.
-//				match: "(tag1)" defines words[tag1], delimiters: ["(", ")"].
-// 				match: "'tag1'" defines words['tag1'], delimiters: ["", ""].
-// 				match: "\"tag1\"" defines words[\"tag1\"], delimiters: ["", ""].
-// 3. Join the words from step (2.) and delimiters from step (3.) into a single selector string.
+//  1. Split the match string by delimeters [\(, \), \', \", \s], preserving single and double
+//     quotes.
+//     Preserve single and double quotes to differentiate cases where tag names may
+//     be either 'or' or "AND" that are not logical operators. Delimiters that lie
+//     within single or double quotes are not interpreted as such, and remain as
+//     part of the words, ie. 'my() tag' will be interpreted as a word. The begining and end of a
+//     sentence is the empty delimiter, i.e it will occupy an index in the delimiters array.
+//     Consecutive delimiters are placed into the same index.
+//  2. Combine the delimiters and modified words into an array representing the selector equivalent.
+//     Encapsulate words with "has()", convert AND/and to "&&", and OR/or to "||",
+//     and remove single and double quotes. By definition the delimiters will always have greater
+//     length than the number of words.
+//     Base case, match: "" defines words: [] (empty), delimiters: [""].
+//     Simple cases,
+//     match: "tag1" defines words[tag1], delimiters: ["", ""].
+//     match: "\stag1" defines words[tag1], delimiters: ["\s", ""]. Note: \s defines a space.
+//     match: "(tag1)" defines words[tag1], delimiters: ["(", ")"].
+//     match: "'tag1'" defines words['tag1'], delimiters: ["", ""].
+//     match: "\"tag1\"" defines words[\"tag1\"], delimiters: ["", ""].
+//  3. Join the words from step (2.) and delimiters from step (3.) into a single selector string.
 //
 // Example input:
-// 	match filter: "('tag1' or ('tag2'     OR tag3 and tag4)) and 'tag5'"
+//
+//	match filter: "('tag1' or ('tag2'     OR tag3 and tag4)) and 'tag5'"
+//
 // Step 1 - Get words and delimiters from the match string:
-// 	words : ['tag1', or, 'tag2', OR, tag3, and, tag4, and, 'tag5']
-// 	delimeters: ["", " ", " (", "     ", " ", " ", " ", ")) ", " ", ""] : len(10)
+//
+//	words : ['tag1', or, 'tag2', OR, tag3, and, tag4, and, 'tag5']
+//	delimeters: ["", " ", " (", "     ", " ", " ", " ", ")) ", " ", ""] : len(10)
+//
 // Step 2 - Insert the delimiters and modified (selector format) words into a selector Array in order:
 // ["", has(tag1), " ", ||, " (", has(tag2), "     ", ||, " ", has(tag3), " ", &&, " ", has(tag4), ")) ", &&, " ", has(tag5), ""]
 // Output - Join the selector array into a single string:
-// 	"(has(tag1) || (has(tag2)     || has(tag3) && has(tag4))) && has(tag5)"
 //
+//	"(has(tag1) || (has(tag2)     || has(tag3) && has(tag4))) && has(tag5)"
 func ConvertMatchFilterToSelector(match string) (string, error) {
 	// Split the match filter into its components words and delimiters.
 	words, delimiters := getMatchFilterWordsAndDelimiters(match)
@@ -426,11 +430,13 @@ func ConvertMatchFilterToSelector(match string) (string, error) {
 // and end of the match string are an empty string delimiter.
 //
 // Example input:
-// 	match filter: "word0 or((word1 and    \"word  )2\")or word3 and'word4')and'word5'"
+//
+//	match filter: "word0 or((word1 and    \"word  )2\")or word3 and'word4')and'word5'"
+//
 // output:
+//
 //	words: "[word0, or, word1, \"word  )2\", or, word3, and, 'word4', and, 'word5']"
 //	delimiters: "["", " ", "((", " ", "    ", ")", " ", " ", "", ")", "", ""]"
-//
 func getMatchFilterWordsAndDelimiters(match string) (words, delimiters []string) {
 	regex := regexp.MustCompile(matchDelimitersRegexDef)
 	// Find all strings that do not match the delimiters.

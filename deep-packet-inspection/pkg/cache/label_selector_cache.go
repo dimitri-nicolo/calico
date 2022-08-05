@@ -29,28 +29,28 @@ type selectorAndLabelCache struct {
 	dpiKeyToSelector map[interface{}]selector.Selector
 
 	// Current matches
-	wepKeysByDPIKey map[interface{}]set.Set
-	dpiKeysByWEPKey map[interface{}]set.Set
+	wepKeysByDPIKey map[interface{}]set.Set[interface{}]
+	dpiKeysByWEPKey map[interface{}]set.Set[interface{}]
 
 	// Callback functions
 	OnMatchStarted MatchCallback
 	OnMatchStopped MatchCallback
 
-	dirtyWEPKeys set.Set
+	dirtyWEPKeys set.Set[interface{}]
 }
 
 func NewSelectorAndLabelCache(onMatchStarted, onMatchStopped MatchCallback) SelectorAndLabelCache {
 	return &selectorAndLabelCache{
 		wepKeyToLabel:    make(map[interface{}]parser.MapAsLabels),
 		dpiKeyToSelector: make(map[interface{}]selector.Selector),
-		dpiKeysByWEPKey:  map[interface{}]set.Set{},
-		wepKeysByDPIKey:  map[interface{}]set.Set{},
+		dpiKeysByWEPKey:  map[interface{}]set.Set[interface{}]{},
+		wepKeysByDPIKey:  map[interface{}]set.Set[interface{}]{},
 
 		// Callback functions
 		OnMatchStarted: onMatchStarted,
 		OnMatchStopped: onMatchStopped,
 
-		dirtyWEPKeys: set.New(),
+		dirtyWEPKeys: set.NewBoxed[interface{}](),
 	}
 }
 
@@ -136,13 +136,14 @@ func (cache *selectorAndLabelCache) flushUpdates() {
 }
 
 // scanAllLabels for each cached label
-// 	if label matches the selector
-//		- and if the label is already part selector (aka it is already in wepKeysByDPIKey[dpiKey]) do nothing
-//  	- else add update both the wepKeysByDPIKey and dpiKeysByWEPKey and calls OnMatchStarted or OnMatchStopped callback function.
-// 	if label that doesn't match the selector
-//  	-  if the label was previously part of selector (aka in wepKeysByDPIKey[dpiKey]),
-//         update both the wepKeysByDPIKey and dpiKeysByWEPKey
-//  	- else do nothing
+//
+//		if label matches the selector
+//			- and if the label is already part selector (aka it is already in wepKeysByDPIKey[dpiKey]) do nothing
+//	 	- else add update both the wepKeysByDPIKey and dpiKeysByWEPKey and calls OnMatchStarted or OnMatchStopped callback function.
+//		if label that doesn't match the selector
+//	 	-  if the label was previously part of selector (aka in wepKeysByDPIKey[dpiKey]),
+//	        update both the wepKeysByDPIKey and dpiKeysByWEPKey
+//	 	- else do nothing
 func (cache *selectorAndLabelCache) scanAllLabels(dpiKey interface{}, sel selector.Selector) {
 	log.Debugf("Scanning all (%v) labels against selector of %v", len(cache.wepKeyToLabel), dpiKey)
 	for wepKey, labels := range cache.wepKeyToLabel {
@@ -170,7 +171,7 @@ func (cache *selectorAndLabelCache) updateMatches(dpiKey interface{}, sel select
 func (cache *selectorAndLabelCache) storeMatch(dpiKey, wepKey interface{}) {
 	wepKeys := cache.wepKeysByDPIKey[dpiKey]
 	if wepKeys == nil {
-		wepKeys = set.New()
+		wepKeys = set.NewBoxed[interface{}]()
 		cache.wepKeysByDPIKey[dpiKey] = wepKeys
 	}
 	previouslyMatched := wepKeys.Contains(wepKey)
@@ -181,7 +182,7 @@ func (cache *selectorAndLabelCache) storeMatch(dpiKey, wepKey interface{}) {
 
 		dpiKeys, ok := cache.dpiKeysByWEPKey[wepKey]
 		if !ok {
-			dpiKeys = set.New()
+			dpiKeys = set.NewBoxed[interface{}]()
 			cache.dpiKeysByWEPKey[wepKey] = dpiKeys
 		}
 		dpiKeys.Add(dpiKey)

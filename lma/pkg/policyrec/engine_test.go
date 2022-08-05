@@ -233,9 +233,9 @@ func matchSelector(actual, expected string) bool {
 	// TODO(doublek): Add support for ||-ed selectors as well.
 	actualSelectors := strings.Split(actual, " && ")
 	expectedSelectors := strings.Split(expected, " && ")
-	as := set.FromArray(actualSelectors)
-	es := set.FromArray(expectedSelectors)
-	es.Iter(func(item interface{}) error {
+	as := set.FromArray[string](actualSelectors)
+	es := set.FromArray[string](expectedSelectors)
+	es.Iter(func(item string) error {
 		if as.Contains(item) {
 			as.Discard(item)
 			return set.RemoveItem
