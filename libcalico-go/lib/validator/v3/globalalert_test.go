@@ -907,9 +907,9 @@ var _ = DescribeTable("GlobalAlert Validator",
 		},
 		false,
 	),
-	Entry("invalid AnomalyDetection template with non matching detector.nam and name",
+	Entry("invalid AnomalyDetection template with non matching detector.name and name",
 		&api.GlobalAlert{
-			ObjectMeta: v1.ObjectMeta{Name: GlobalAlertDetectorTemplateNamePrefix + "ip-sweep"},
+			ObjectMeta: v1.ObjectMeta{Name: GlobalAlertDetectorTemplateNamePrefix + "bytes-in"},
 			Spec: api.GlobalAlertSpec{
 				Type: api.GlobalAlertTypeAnomalyDetection,
 				Detector: &api.DetectorParams{
