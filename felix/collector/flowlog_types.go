@@ -931,7 +931,8 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 			pid = flowLogFieldNotIncluded
 		} else if numPids == 1 {
 			// Get the first and only PID.
-			stats.processIDs.Iter(func(pid string) error {
+			stats.processIDs.Iter(func(p string) error {
+				pid = p
 				return set.StopIteration
 			})
 		} else {

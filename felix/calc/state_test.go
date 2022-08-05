@@ -77,7 +77,7 @@ func NewState() State {
 		ExpectedProfileIDs:                   set.New[proto.ProfileID](),
 		ExpectedRoutes:                       set.New[proto.RouteUpdate](),
 		ExpectedVTEPs:                        set.New[proto.VXLANTunnelEndpointUpdate](),
-		ExpectedIPSecBindings:                set.NewBoxed[mock.IPSecBinding](),
+		ExpectedIPSecBindings:                set.New[mock.IPSecBinding](),
 		ExpectedIPSecBlacklist:               nil, // Created on demand, nil means "ignore"
 		ExpectedCachedRemoteEndpoints:        []*calc.EndpointData{},
 		ExpectedWireguardEndpoints:           set.New[proto.WireguardEndpointUpdate](),

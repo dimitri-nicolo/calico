@@ -54,6 +54,10 @@ func NewIPAMConfigurationStorage(opts Options) (registry.DryRunnableStorage, fac
 		olo := opts.(options.ListOptions)
 		return c.IPAMConfig().Watch(ctx, olo)
 	}
+	hasRestrictionsFn := func(obj resourceObject) bool {
+		return false
+	}
+
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
@@ -71,6 +75,7 @@ func NewIPAMConfigurationStorage(opts Options) (registry.DryRunnableStorage, fac
 		watch:             watchFn,
 		resourceName:      "IPAMConfiguration",
 		converter:         IPAMConfigConverter{},
+		hasRestrictions:   hasRestrictionsFn,
 	}, Codec: opts.RESTOptions.StorageConfig.Codec}
 	return dryRunnableStorage, func() {}
 }

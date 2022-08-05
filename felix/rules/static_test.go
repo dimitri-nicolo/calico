@@ -1698,8 +1698,8 @@ var _ = Describe("Static", func() {
 						IptablesMarkPass:            0x20,
 						IptablesMarkScratch0:        0x40,
 						IptablesMarkScratch1:        0x80,
-						IptablesMarkEndpoint:        0xff00,
-						IptablesMarkNonCaliEndpoint: 0x100,
+						IptablesMarkEndpoint:        0xff000,
+						IptablesMarkNonCaliEndpoint: 0x1000,
 						WireguardEnabled:            enableIPv4,
 						WireguardEnabledV6:          enableIPv6,
 						WireguardInterfaceName:      "wireguard.cali",
@@ -1756,7 +1756,7 @@ var _ = Describe("Static", func() {
 						},
 
 						// Non-workload traffic, send to host chains.
-						Rule{Action: ClearMarkAction{Mark: 0xf0}},
+						Rule{Action: ClearMarkAction{Mark: 0xf1}},
 						Rule{Action: JumpAction{Target: ChainDispatchFromHostEndpoint}},
 						Rule{
 							Match:   Match().MarkSingleBitSet(0x10),
@@ -1772,25 +1772,47 @@ var _ = Describe("Static", func() {
 				})
 
 				It("should include the expected WireGuard PREROUTING chain in the raw chains", func() {
-					Expect(findChain(rr.StaticRawTableChains(ipVersion), "cali-PREROUTING")).To(Equal(&Chain{
-						Name: "cali-PREROUTING",
-						Rules: []Rule{
-							{Match: nil,
-								Action: ClearMarkAction{Mark: 0xf0}},
-							{Match: nil,
-								Action: JumpAction{Target: "cali-wireguard-incoming-mark"}},
-							{Match: Match().InInterface("cali+"),
-								Action: SetMarkAction{Mark: 0x40}},
-							{Match: Match().MarkMatchesWithMask(0x40, 0x40),
-								Action: JumpAction{Target: ChainRpfSkip}},
-							{Match: Match().MarkMatchesWithMask(0x40, 0x40).RPFCheckFailed(false),
-								Action: DropAction{}},
-							{Match: Match().MarkClear(0x40),
-								Action: JumpAction{Target: "cali-from-host-endpoint"}},
-							{Match: Match().MarkMatchesWithMask(0x10, 0x10),
-								Action: AcceptAction{}},
-						},
-					}))
+					// We use different RPF rules based on IP version.
+					if ipVersion == 4 {
+						Expect(findChain(rr.StaticRawTableChains(ipVersion), "cali-PREROUTING")).To(Equal(&Chain{
+							Name: "cali-PREROUTING",
+							Rules: []Rule{
+								{Match: nil,
+									Action: ClearMarkAction{Mark: 0xf1}},
+								{Match: nil,
+									Action: JumpAction{Target: "cali-wireguard-incoming-mark"}},
+								{Match: Match().InInterface("cali+"),
+									Action: SetMarkAction{Mark: 0x40}},
+								{Match: Match().MarkMatchesWithMask(0x40, 0x40),
+									Action: JumpAction{Target: "cali-from-wl-dispatch"}},
+								{Match: Match().MarkClear(0x40),
+									Action: JumpAction{Target: "cali-from-host-endpoint"}},
+								{Match: Match().MarkMatchesWithMask(0x10, 0x10),
+									Action: AcceptAction{}},
+							},
+						}))
+					} else {
+						Expect(findChain(rr.StaticRawTableChains(ipVersion), "cali-PREROUTING")).To(Equal(&Chain{
+							Name: "cali-PREROUTING",
+							Rules: []Rule{
+								{Match: nil,
+									Action: ClearMarkAction{Mark: 0xf1}},
+								{Match: nil,
+									Action: JumpAction{Target: "cali-wireguard-incoming-mark"}},
+								{Match: Match().InInterface("cali+"),
+									Action: SetMarkAction{Mark: 0x40}},
+								{Match: Match().MarkMatchesWithMask(0x40, 0x40),
+									Action: JumpAction{Target: ChainRpfSkip}},
+								{Match: Match().MarkMatchesWithMask(0x40, 0x40).RPFCheckFailed(false),
+									Action: DropAction{}},
+								{Match: Match().MarkClear(0x40),
+									Action: JumpAction{Target: "cali-from-host-endpoint"}},
+								{Match: Match().MarkMatchesWithMask(0x10, 0x10),
+									Action: AcceptAction{}},
+							},
+						}))
+					}
+
 					Expect(findChain(rr.StaticRawTableChains(ipVersion), "cali-wireguard-incoming-mark")).To(Equal(&Chain{
 						Name: "cali-wireguard-incoming-mark",
 						Rules: []Rule{

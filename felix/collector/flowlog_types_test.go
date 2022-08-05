@@ -521,7 +521,7 @@ var _ = Describe("Flow log types tests", func() {
 				},
 			}
 			Expect(fsp.getActiveFlowsCount()).Should(Equal(1))
-			Expect(consists(fsp.toFlowProcessReportedStats(), expectedReportedStats)).Should(Equal(true))
+			Expect(fsp.toFlowProcessReportedStats()).To(ConsistOf(expectedReportedStats))
 
 			By("aggregating the metric update with different process name")
 			fsp.aggregateFlowStatsByProcess(&muWithProcessName2)

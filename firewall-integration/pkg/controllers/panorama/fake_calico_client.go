@@ -121,6 +121,10 @@ func (c FakeDagCalicoClient) IPReservations() clientv3.IPReservationInterface {
 	panic("not implemented") // TODO: Implement
 }
 
+func (c FakeDagCalicoClient) IPAMConfigurations() clientv3.IPAMConfigurationInterface {
+	panic("not implemented") // TODO: Implement
+}
+
 func (c FakeDagCalicoClient) KubeControllersConfigurations() clientv3.KubeControllersConfigurationInterface {
 	panic("not implemented") // TODO: Implement
 }

@@ -417,7 +417,7 @@ var _ = Describe("Tests controller updateCache functionality", func() {
 	var (
 		dagc                          dynamicAddressGroupsController
 		mccl                          *FakeDagCalicoClient
-		tags                          set.Set
+		tags                          set.Set[string]
 		globalNetworkSetStartingState []v3.GlobalNetworkSet
 
 		deviceGroupsTest1 = dvgrp.Entry{
@@ -572,7 +572,6 @@ var _ = DescribeTable(
 				},
 				OwnerReferences: nil,
 				Finalizers:      nil,
-				ClusterName:     "",
 				ManagedFields:   nil,
 			},
 			Spec: v3.GlobalNetworkSetSpec{
@@ -630,7 +629,6 @@ var _ = DescribeTable(
 				},
 				OwnerReferences: nil,
 				Finalizers:      nil,
-				ClusterName:     "",
 				ManagedFields:   nil,
 			},
 			Spec: v3.GlobalNetworkSetSpec{

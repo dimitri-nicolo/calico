@@ -56,8 +56,8 @@ func mappingMatchesLine(m *mapping, line string) bool {
 }
 
 func fileHasMappingsAndNot(mappings []mapping, notMappings []mapping) func() error {
-	mset := set.FromArray(mappings)
-	notset := set.FromArray(notMappings)
+	mset := set.FromArray[mapping](mappings)
+	notset := set.FromArray[mapping](notMappings)
 	return func() error {
 		f, err := os.Open(path.Join(dnsDir, "dnsinfo.txt"))
 		if err == nil {
@@ -65,15 +65,13 @@ func fileHasMappingsAndNot(mappings []mapping, notMappings []mapping) func() err
 			scanner := bufio.NewScanner(f)
 			for scanner.Scan() {
 				line := scanner.Text()
-				mset.Iter(func(item interface{}) error {
-					m := item.(mapping)
+				mset.Iter(func(m mapping) error {
 					if mappingMatchesLine(&m, line) {
 						return set.RemoveItem
 					}
 					return nil
 				})
-				notset.Iter(func(item interface{}) error {
-					m := item.(mapping)
+				notset.Iter(func(m mapping) error {
 					if mappingMatchesLine(&m, line) {
 						log.Infof("Found wrong mapping: %v", m)
 						problems = append(problems, fmt.Sprintf("Found wrong mapping: %v", m))
@@ -85,8 +83,7 @@ func fileHasMappingsAndNot(mappings []mapping, notMappings []mapping) func() err
 				log.Info("All expected mappings found")
 			} else {
 				log.Infof("Missing %v expected mappings", mset.Len())
-				mset.Iter(func(item interface{}) error {
-					m := item.(mapping)
+				mset.Iter(func(m mapping) error {
 					log.Infof("Missed mapping: %v", m)
 					problems = append(problems, fmt.Sprintf("Missed mapping: %v", m))
 					return nil

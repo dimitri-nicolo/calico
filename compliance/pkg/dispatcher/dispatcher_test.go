@@ -70,7 +70,7 @@ func newTester() *tester {
 		d:        dispatcher.NewDispatcher("test"),
 		policies: set.New[apiv3.ResourceID](),
 		pods:     set.New[apiv3.ResourceID](),
-		status:   set.New[syncer.StatusUpdate](),
+		status:   set.NewBoxed[syncer.StatusUpdate](),
 	}
 }
 
@@ -183,7 +183,7 @@ var _ = Describe("label selector checks", func() {
 		Expect(t.status.Len()).To(Equal(1))
 
 		By("Checking we the in-sync status update")
-		Expect(t.status.Equals(set.From[syncer.StatusUpdate](syncer.StatusUpdate{
+		Expect(t.status.Equals(set.FromBoxed[syncer.StatusUpdate](syncer.StatusUpdate{
 			Type: syncer.StatusTypeInSync,
 		}))).To(BeTrue())
 	})
