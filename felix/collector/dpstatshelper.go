@@ -3,6 +3,8 @@
 package collector
 
 import (
+	"os"
+
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
@@ -35,6 +37,15 @@ func New(
 
 	rm := NewReporterManager(configParams.FlowLogsCollectorDebugTrace)
 	if configParams.PrometheusReporterEnabled {
+		fipsModeEnabled := os.Getenv("FIPS_MODE_ENABLED") == "true"
+		log.WithFields(log.Fields{
+			"port":            configParams.PrometheusReporterPort,
+			"fipsModeEnabled": fipsModeEnabled,
+			"certFile":        configParams.PrometheusReporterCertFile,
+			"keyFile":         configParams.PrometheusReporterKeyFile,
+			"caFile":          configParams.PrometheusReporterCAFile,
+		}).Info("Starting prometheus reporter")
+
 		pr := NewPrometheusReporter(
 			registry,
 			configParams.PrometheusReporterPort,
@@ -42,7 +53,7 @@ func New(
 			configParams.PrometheusReporterCertFile,
 			configParams.PrometheusReporterKeyFile,
 			configParams.PrometheusReporterCAFile,
-			configParams.PrometheusReporterFIPSModeEnabled,
+			fipsModeEnabled,
 		)
 		pr.AddAggregator(NewPolicyRulesAggregator(configParams.DeletedMetricsRetentionSecs, configParams.FelixHostname))
 		pr.AddAggregator(NewDeniedPacketsAggregator(configParams.DeletedMetricsRetentionSecs, configParams.FelixHostname))

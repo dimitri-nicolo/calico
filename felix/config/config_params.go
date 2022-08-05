@@ -352,9 +352,6 @@ type Config struct {
 	PrometheusMetricsKeyFile          string `config:"file(must-exist);"`
 	PrometheusMetricsCAFile           string `config:"file(must-exist);"`
 
-	// PrometheusReporterFIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
-	PrometheusMetricsFIPSModeEnabled bool `config:"bool;false"`
-
 	FailsafeInboundHostPorts  []ProtoPort `config:"port-list;tcp:22,udp:68,tcp:179,tcp:2379,tcp:2380,tcp:5473,tcp:6443,tcp:6666,tcp:6667;die-on-fail"`
 	FailsafeOutboundHostPorts []ProtoPort `config:"port-list;udp:53,udp:67,tcp:179,tcp:2379,tcp:2380,tcp:5473,tcp:6443,tcp:6666,tcp:6667;die-on-fail"`
 
@@ -368,11 +365,9 @@ type Config struct {
 	PrometheusReporterKeyFile  string `config:"file(must-exist);"`
 	PrometheusReporterCAFile   string `config:"file(must-exist);"`
 
-	// PrometheusReporterFIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
-	PrometheusReporterFIPSModeEnabled bool          `config:"bool;false"`
-	SyslogReporterNetwork             string        `config:"string;"`
-	SyslogReporterAddress             string        `config:"string;"`
-	DeletedMetricsRetentionSecs       time.Duration `config:"seconds;30"`
+	SyslogReporterNetwork       string        `config:"string;"`
+	SyslogReporterAddress       string        `config:"string;"`
+	DeletedMetricsRetentionSecs time.Duration `config:"seconds;30"`
 
 	FlowLogsEnableHostEndpoint     bool          `config:"bool;false"`
 	FlowLogsFlushInterval          time.Duration `config:"seconds;300"`

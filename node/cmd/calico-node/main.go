@@ -21,6 +21,7 @@ import (
 
 	confdConfig "github.com/projectcalico/calico/confd/pkg/config"
 	confd "github.com/projectcalico/calico/confd/pkg/run"
+	"github.com/prometheus/common/log"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
 
@@ -96,8 +97,6 @@ var runEarlyNetworking = flagSet.Bool("early", false, "Do early networking setup
 // non-root hostpath init flags
 var initHostpaths = flagSet.Bool("hostpath-init", false, "Initialize hostpaths for non-root access")
 
-var fipsModeEnabled = flagSet.Bool("fipsModeEnabled", false, "Enables FIPS 140-2 verified crypto mode")
-
 func main() {
 	// Make sure the RNG is seeded, we use it for backoffs and the like.
 	seedrng.EnsureSeeded()
@@ -131,9 +130,12 @@ func main() {
 		}
 	}
 
+	// Enables FIPS 140-2 verified crypto mode.
+	fipsModeEnabled := os.Getenv("FIPS_MODE_ENABLED") == "true"
+	log.Infof("FIPS mode enabled=%t", fipsModeEnabled)
 	// Check for liveness / readiness flags. Will only run checks specified by flags.
 	if *felixLive || *birdReady || *bird6Ready || *felixReady || *birdLive || *bird6Live || *bgpMetricsReady {
-		health.Run(*birdReady, *bird6Ready, *felixReady, *felixLive, *birdLive, *bird6Live, *bgpMetricsReady, *fipsModeEnabled, *thresholdTime)
+		health.Run(*birdReady, *bird6Ready, *felixReady, *felixLive, *birdLive, *bird6Live, *bgpMetricsReady, fipsModeEnabled, *thresholdTime)
 		os.Exit(0)
 	}
 
@@ -192,7 +194,7 @@ func main() {
 		logrus.SetFormatter(&logutils.Formatter{Component: "bgp-metrics"})
 		// To halt the metrics process, close the signal
 		signal := make(chan struct{})
-		metrics.Run(signal)
+		metrics.Run(signal, fipsModeEnabled)
 	} else if *runEarlyNetworking {
 		logrus.SetFormatter(&logutils.Formatter{Component: "early-networking"})
 		earlynetworking.Run()

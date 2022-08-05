@@ -102,18 +102,17 @@ type Config struct {
 	LogSeverityScreen string `config:"oneof(DEBUG,INFO,WARNING,ERROR,CRITICAL);INFO"`
 	LogSeveritySys    string `config:"oneof(DEBUG,INFO,WARNING,ERROR,CRITICAL);INFO"`
 
-	HealthEnabled                    bool   `config:"bool;false"`
-	HealthHost                       string `config:"host-address;localhost"`
-	HealthPort                       int    `config:"int(0,65535);9098"`
-	PrometheusMetricsEnabled         bool   `config:"bool;false"`
-	PrometheusMetricsHost            string `config:"host-address;"`
-	PrometheusMetricsPort            int    `config:"int(0,65535);9093"`
-	PrometheusGoMetricsEnabled       bool   `config:"bool;true"`
-	PrometheusProcessMetricsEnabled  bool   `config:"bool;true"`
-	PrometheusMetricsCertFile        string `config:"file(must-exist);;"`
-	PrometheusMetricsKeyFile         string `config:"file(must-exist);;"`
-	PrometheusMetricsCAFile          string `config:"file(must-exist);;"`
-	PrometheusMetricsFIPSModeEnabled bool   `config:"bool;false"`
+	HealthEnabled                   bool   `config:"bool;false"`
+	HealthHost                      string `config:"host-address;localhost"`
+	HealthPort                      int    `config:"int(0,65535);9098"`
+	PrometheusMetricsEnabled        bool   `config:"bool;false"`
+	PrometheusMetricsHost           string `config:"host-address;"`
+	PrometheusMetricsPort           int    `config:"int(0,65535);9093"`
+	PrometheusGoMetricsEnabled      bool   `config:"bool;true"`
+	PrometheusProcessMetricsEnabled bool   `config:"bool;true"`
+	PrometheusMetricsCertFile       string `config:"file(must-exist);;"`
+	PrometheusMetricsKeyFile        string `config:"file(must-exist);;"`
+	PrometheusMetricsCAFile         string `config:"file(must-exist);;"`
 
 	SnapshotCacheMaxBatchSize int `config:"int(1,);100"`
 
