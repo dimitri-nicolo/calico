@@ -1,17 +1,19 @@
 # Declare UBI and Ruby versions
 ARG UBI_VERSION
+ARG UBI_IMAGE_VERSION
 ARG RUBY_MAJOR_VERSION
 ARG RUBY_FULL_VERSION
 
 # Ruby Builder
-FROM registry.access.redhat.com/$UBI_VERSION/ubi
+FROM registry.access.redhat.com/$UBI_VERSION/ubi:$UBI_IMAGE_VERSION
 
 ENV ARCH=amd64
 ENV GOSU_VERSION=1.10
 
 ARG RUBY_MAJOR_VERSION
 ARG RUBY_FULL_VERSION
-ARG RUBY_SHA256=2755b900a21235b443bb16dadd9032f784d4a88f143d852bc5d154f22b8781f1
+# sha_256 checksum of ruby-2.7.6
+ARG RUBY_SHA256=e7203b0cc09442ed2c08936d483f8ac140ec1c72e37bb5c401646b7866cb5d10
 
 COPY fluent.conf /fluentd/etc/
 COPY upstream-patches/fluentd.diff /fluentd/etc/
@@ -44,7 +46,7 @@ RUN yum install -y --setopt=tsflags=nodocs gcc \
  && mkdir -p /var/lib/ruby/etc/ \
  && echo 'gem: --no-document' >> /var/lib/ruby/etc/gemrc \
  && gem install oj -v 2.18.3 \
- && gem install json -v 2.1.0 \
+ && gem install json -v 2.6.2 \
  && wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$ARCH" \
  && wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$ARCH.asc" \
  && export GNUPGHOME="$(mktemp -d)" \
@@ -89,7 +91,7 @@ RUN yum install -y --setopt=tsflags=nodocs gcc \
         fluent-plugin-prometheus:2.0.0 \
         cgi:0.3.1 \
         rdoc:6.4.0 \
-        bundler:2.3.7 \
+        bundler:2.3.19 \
  && fluent-gem install fluent-plugin-remote_syslog:1.0.0 \
  && gem install /fluentd/cloned/fluentd/fluentd-1.14.6.gem \
  && gem sources --clear-all \
@@ -99,8 +101,12 @@ RUN yum install -y --setopt=tsflags=nodocs gcc \
  && rm -rf ruby-$RUBY_FULL_VERSION \
  && rm -rf /fluentd/cloned \
  && gem sources --clear-all \
+# remove pre-installed packages in ruby that may have high CVE issues
  && rm -rf /var/lib/ruby/gems/*/cache/*.gem \
        /var/lib/ruby/gems/2.*/gems/fluentd-*/test \
+       /var/lib/ruby/lib/ruby/gems/2.7.0/gems/bundler-2.1.4 \
+       /var/lib/ruby/lib/ruby/gems/2.7.0/specifications/default/bundler-2.1.4.gemspec \
+       /var/lib/ruby/lib/ruby/2.7.0/bundler \
        /usr/local/lib/ruby/gems/2.7.0/gems/bundler-2.1.4 \
        /usr/local/lib/ruby/2.7.0/bundler \
        /usr/local/lib/ruby/gems/2.7.0/specifications/default/bundler-2.1.4.gemspec \

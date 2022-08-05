@@ -31,7 +31,7 @@ RUN apk update \
  && apk update && apk upgrade libcrypto1.1 libgmpxx gmp gmp-dev build-base \
  && echo 'gem: --no-document' >> /etc/gemrc \
  && gem install oj -v 3.10.18 \
- && gem install json -v 2.4.1 \
+ && gem install json -v 2.6.2 \
  && gem install async-http -v 0.54.0 \
  && gem install ext_monitor -v 0.1.2 \
  && gem install fluentd -v 1.14.6 \
@@ -48,11 +48,12 @@ RUN apk update \
         fluent-plugin-prometheus:2.0.0 \
         cgi:0.3.1 \
         rdoc:6.4.0 \
-        bundler:2.3.7 \
+        bundler:2.3.19 \
  && fluent-gem install fluent-plugin-remote_syslog:1.0.0 \
  && gem sources --clear-all \
  && apk del .build-deps \
  && apk del ruby-bundler ruby-bundler-doc build-base --force \
+# remove pre-installed packages in ruby that may have high CVE issues
  && rm -rf /var/cache/apk/* \
            /home/fluent/.gem/ruby/*/cache/*.gem \
            /tmp/* /var/tmp/* \

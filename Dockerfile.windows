@@ -37,7 +37,7 @@ RUN mklink /D c:\ruby c:\ruby27 \
         fluent-plugin-prometheus:2.0.0 \
         cgi:0.3.1 \
         rdoc:6.4.0 \
-        bundler:2.3.7 \
+        bundler:2.3.19 \
  && fluent-gem install fluent-plugin-remote_syslog:1.0.0 \
  && gem sources --clear-all \
  && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc" \

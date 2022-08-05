@@ -98,8 +98,9 @@ build: eks-log-forwarder-startup
 ###############################################################################
 
 UBI_VERSION        ?= ubi8
+UBI_IMAGE_VERSION  ?= 8.6
 RUBY_MAJOR_VERSION ?= 2.7
-RUBY_FULL_VERSION  ?= 2.7.5
+RUBY_FULL_VERSION  ?= 2.7.6
 
 # Add --squash argument for CICD pipeline runs only to avoid setting "experimental",
 # for Docker processes on personal machine.
@@ -116,6 +117,7 @@ build-image-%:
 ifeq ($(ARCH), amd64)
 	docker build --pull -f Dockerfile.fips -t $(IMAGE):latest-$* \
 		--build-arg UBI_VERSION=$(UBI_VERSION) \
+		--build-arg UBI_IMAGE_VERSION=$(UBI_IMAGE_VERSION) \
 		--build-arg RUBY_MAJOR_VERSION=$(RUBY_MAJOR_VERSION) \
 		--build-arg RUBY_FULL_VERSION=$(RUBY_FULL_VERSION) .
 	docker tag $(IMAGE):latest-$* $(IMAGE):latest
