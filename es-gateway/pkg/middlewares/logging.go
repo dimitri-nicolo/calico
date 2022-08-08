@@ -9,7 +9,7 @@ import (
 
 func logRequestHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Infof("ES Gateway received request for URI %s", r.RequestURI)
+		log.Debugf("ES Gateway received request for URI %s", r.RequestURI)
 		next.ServeHTTP(w, r)
 	})
 }
