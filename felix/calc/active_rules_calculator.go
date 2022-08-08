@@ -259,10 +259,10 @@ func (arc *ActiveRulesCalculator) updateStats() {
 	}
 
 	// Get the set of all endpoints matching ALP Policy
-	endpoints := set.New[string]()
+	endpoints := set.New[model.WorkloadEndpointKey]()
 	arc.allALPPolicies.Iter(func(polID model.PolicyKey) error {
 		arc.policyIDToEndpointKeys.Iter(polID, func(epKey interface{}) {
-			endpoints.Add(epKey.(string))
+			endpoints.Add(epKey.(model.WorkloadEndpointKey))
 		})
 		return nil
 	})
@@ -349,12 +349,10 @@ func (arc *ActiveRulesCalculator) onMatchStopped(selID, labelId interface{}) {
 	arc.PolicyMatchListener.OnPolicyMatchStopped(polKey, labelId)
 }
 
-var (
-	DummyDropRules = model.ProfileRules{
-		InboundRules:  []model.Rule{{Action: "deny"}},
-		OutboundRules: []model.Rule{{Action: "deny"}},
-	}
-)
+var DummyDropRules = model.ProfileRules{
+	InboundRules:  []model.Rule{{Action: "deny"}},
+	OutboundRules: []model.Rule{{Action: "deny"}},
+}
 
 func (arc *ActiveRulesCalculator) sendProfileUpdate(profileID string) {
 	active := arc.profileIDToEndpointKeys.ContainsKey(profileID)
