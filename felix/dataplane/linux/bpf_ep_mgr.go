@@ -1098,7 +1098,6 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 }
 
 func (m *bpfEndpointManager) addHostPolicy(rules *polprog.Rules, hostEndpoint *proto.HostEndpoint, polDirection PolDirection) {
-
 	// When there is applicable pre-DNAT policy that does not explicitly Allow or Deny traffic,
 	// we continue on to subsequent tiers and normal or AoF policy.
 	rules.HostPreDnatTiers = m.extractTiers(hostEndpoint.PreDnatTiers, polDirection, NoEndTierDrop)
@@ -1431,8 +1430,8 @@ func (m *bpfEndpointManager) ruleMatchID(
 	action string,
 	owner rules.RuleOwnerType,
 	idx int,
-	name string) polprog.RuleMatchID {
-
+	name string,
+) polprog.RuleMatchID {
 	var a rules.RuleAction
 	switch action {
 	case "", "allow":
@@ -1462,18 +1461,15 @@ func (m *bpfEndpointManager) isDataIface(iface string) bool {
 
 func (m *bpfEndpointManager) addWEPToIndexes(wlID proto.WorkloadEndpointID, wl *proto.WorkloadEndpoint) {
 	for _, t := range wl.Tiers {
-		m.addPolicyToEPMappings(t.IngressPolicies, wlID)
-		m.addPolicyToEPMappings(t.EgressPolicies, wlID)
+		m.addPolicyToEPMappings(t.Name, t.IngressPolicies, wlID)
+		m.addPolicyToEPMappings(t.Name, t.EgressPolicies, wlID)
 	}
 	m.addProfileToEPMappings(wl.ProfileIds, wlID)
 }
 
-func (m *bpfEndpointManager) addPolicyToEPMappings(polNames []string, id interface{}) {
+func (m *bpfEndpointManager) addPolicyToEPMappings(tier string, polNames []string, id interface{}) {
 	for _, pol := range polNames {
-		polID := proto.PolicyID{
-			Tier: "default", // TODO
-			Name: pol,
-		}
+		polID := proto.PolicyID{Tier: tier, Name: pol}
 		if m.policiesToWorkloads[polID] == nil {
 			m.policiesToWorkloads[polID] = set.NewBoxed[any]()
 		}
@@ -1499,8 +1495,8 @@ func (m *bpfEndpointManager) removeWEPFromIndexes(wlID proto.WorkloadEndpointID,
 	}
 
 	for _, t := range wep.Tiers {
-		m.removePolicyToEPMappings(t.IngressPolicies, wlID)
-		m.removePolicyToEPMappings(t.EgressPolicies, wlID)
+		m.removePolicyToEPMappings(t.Name, t.IngressPolicies, wlID)
+		m.removePolicyToEPMappings(t.Name, t.EgressPolicies, wlID)
 	}
 
 	m.removeProfileToEPMappings(wep.ProfileIds, wlID)
@@ -1511,12 +1507,9 @@ func (m *bpfEndpointManager) removeWEPFromIndexes(wlID proto.WorkloadEndpointID,
 	})
 }
 
-func (m *bpfEndpointManager) removePolicyToEPMappings(polNames []string, id interface{}) {
+func (m *bpfEndpointManager) removePolicyToEPMappings(tier string, polNames []string, id interface{}) {
 	for _, pol := range polNames {
-		polID := proto.PolicyID{
-			Tier: "default", // TODO
-			Name: pol,
-		}
+		polID := proto.PolicyID{Tier: tier, Name: pol}
 		polSet := m.policiesToWorkloads[polID]
 		if polSet == nil {
 			continue
@@ -1622,8 +1615,8 @@ func (m *bpfEndpointManager) OnHEPUpdate(hostIfaceToEpMap map[string]proto.HostE
 func (m *bpfEndpointManager) addHEPToIndexes(ifaceName string, ep *proto.HostEndpoint) {
 	for _, tiers := range [][]*proto.TierInfo{ep.Tiers, ep.UntrackedTiers, ep.PreDnatTiers, ep.ForwardTiers} {
 		for _, t := range tiers {
-			m.addPolicyToEPMappings(t.IngressPolicies, ifaceName)
-			m.addPolicyToEPMappings(t.EgressPolicies, ifaceName)
+			m.addPolicyToEPMappings(t.Name, t.IngressPolicies, ifaceName)
+			m.addPolicyToEPMappings(t.Name, t.EgressPolicies, ifaceName)
 		}
 	}
 	m.addProfileToEPMappings(ep.ProfileIds, ifaceName)
@@ -1632,8 +1625,8 @@ func (m *bpfEndpointManager) addHEPToIndexes(ifaceName string, ep *proto.HostEnd
 func (m *bpfEndpointManager) removeHEPFromIndexes(ifaceName string, ep *proto.HostEndpoint) {
 	for _, tiers := range [][]*proto.TierInfo{ep.Tiers, ep.UntrackedTiers, ep.PreDnatTiers, ep.ForwardTiers} {
 		for _, t := range tiers {
-			m.removePolicyToEPMappings(t.IngressPolicies, ifaceName)
-			m.removePolicyToEPMappings(t.EgressPolicies, ifaceName)
+			m.removePolicyToEPMappings(t.Name, t.IngressPolicies, ifaceName)
+			m.removePolicyToEPMappings(t.Name, t.EgressPolicies, ifaceName)
 		}
 	}
 
@@ -1777,7 +1770,6 @@ func (m *bpfEndpointManager) ensureQdisc(iface string) error {
 
 // Ensure TC/XDP program is attached to the specified interface and return its jump map FD.
 func (m *bpfEndpointManager) ensureProgramAttached(ap attachPoint) (bpf.MapFD, error) {
-
 	jumpMapFD := m.getJumpMapFD(ap)
 	if jumpMapFD != 0 {
 		ap.Log().Debugf("Known jump map fd=%v", jumpMapFD)
@@ -1829,7 +1821,6 @@ func (m *bpfEndpointManager) ensureProgramAttached(ap attachPoint) (bpf.MapFD, e
 // Ensure that the specified interface does not have our XDP program, in any mode, but avoid
 // touching anyone else's XDP program(s).
 func (m *bpfEndpointManager) ensureNoProgram(ap attachPoint) error {
-
 	// Clean up jump map FD if there is one.
 	jumpMapFD := m.getJumpMapFD(ap)
 	if jumpMapFD != 0 {
@@ -1894,7 +1885,7 @@ func (m *bpfEndpointManager) writePolicyDebugInfo(insns asm.Insns, ifaceName str
 	if !m.bpfPolicyDebugEnabled {
 		return nil
 	}
-	if err := os.MkdirAll(bpf.RuntimePolDir, 0600); err != nil {
+	if err := os.MkdirAll(bpf.RuntimePolDir, 0o600); err != nil {
 		return err
 	}
 
@@ -1911,7 +1902,7 @@ func (m *bpfEndpointManager) writePolicyDebugInfo(insns asm.Insns, ifaceName str
 		errStr = polErr.Error()
 	}
 
-	var policyDebugInfo = bpf.PolicyDebugInfo{
+	policyDebugInfo := bpf.PolicyDebugInfo{
 		IfaceName:  ifaceName,
 		Hook:       "tc " + string(tcHook),
 		PolicyInfo: insns,
@@ -1926,7 +1917,7 @@ func (m *bpfEndpointManager) writePolicyDebugInfo(insns asm.Insns, ifaceName str
 		return err
 	}
 
-	if err := ioutil.WriteFile(filename, buffer.Bytes(), 0600); err != nil {
+	if err := ioutil.WriteFile(filename, buffer.Bytes(), 0o600); err != nil {
 		return err
 	}
 	return nil
