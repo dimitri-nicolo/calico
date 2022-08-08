@@ -3,6 +3,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net"
 	"net/url"
@@ -57,9 +58,31 @@ func main() {
 	k8s := bootstrap.NewK8sClientWithConfig(config)
 
 	if cfg.EnableMultiClusterManagement {
-		tunnelX509Cert, tunnelX509Key, err := utils.LoadX509Pair(cfg.TunnelCert, cfg.TunnelKey)
+		// the cert used to sign guardian certs is required no matter what to verify inbound connections
+		tunnelSigningX509Cert, err := utils.LoadX509Cert(cfg.TunnelCert)
 		if err != nil {
 			log.WithError(err).Fatal("couldn't load tunnel X509 key pair")
+		}
+
+		if cfg.UseHTTPSCertOnTunnel {
+			// if a tunnelCert and tunnelKey was specified, use those for the voltron server cert.
+			// this uses a different certificate chain for guardian and voltron, but allows use of
+			// a separate, public CA to verify voltron certificates instead of relying on self-signed certs.
+			tlsCert, err := tls.LoadX509KeyPair(cfg.HTTPSCert, cfg.HTTPSKey)
+			if err != nil {
+				log.WithError(err).Fatal("couldn't load tunnel X509 key pair")
+			}
+
+			opts = append(opts, server.WithTunnelCert(tlsCert))
+		} else if cfg.TunnelKey != "" {
+			// otherwise, use the signing chain
+			tlsCert, err := tls.LoadX509KeyPair(cfg.TunnelCert, cfg.TunnelKey)
+			if err != nil {
+				log.WithError(err).Fatal("couldn't load tunnel X509 key pair")
+			}
+			opts = append(opts, server.WithTunnelCert(tlsCert))
+		} else {
+			log.Fatal("must specify either a tunnel cert & key or a signing key")
 		}
 
 		// With the introduction of Centralized ElasticSearch for Multi-cluster Management,
@@ -103,7 +126,7 @@ func main() {
 
 		opts = append(opts,
 			server.WithInternalCredFiles(cfg.InternalHTTPSCert, cfg.InternalHTTPSKey),
-			server.WithTunnelCreds(tunnelX509Cert, tunnelX509Key),
+			server.WithTunnelSigningCreds(tunnelSigningX509Cert),
 			server.WithForwardingEnabled(cfg.ForwardingEnabled),
 			server.WithDefaultForwardServer(cfg.DefaultForwardServer, cfg.DefaultForwardDialRetryAttempts, cfg.DefaultForwardDialInterval),
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),

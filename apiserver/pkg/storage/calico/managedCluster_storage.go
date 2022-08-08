@@ -82,7 +82,7 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 		if operatorNs == "" {
 			operatorNs = "tigera-operator"
 		}
-		out.Spec.InstallationManifest = helpers.InstallationManifest(resources.CACert, certificate, privKey, resources.ManagementClusterAddr, operatorNs)
+		out.Spec.InstallationManifest = helpers.InstallationManifest(resources.CACert, certificate, privKey, resources.ManagementClusterAddr, resources.ManagementClusterCAType, operatorNs)
 		return out, nil
 	}
 

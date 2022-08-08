@@ -6,11 +6,14 @@ package tunnel
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 
 	"github.com/hashicorp/yamux"
 	"github.com/pkg/errors"
@@ -93,7 +96,12 @@ func (d *dialer) Dial() (*Tunnel, error) {
 	for i := 0; i < d.retryAttempts; i++ {
 		t, err := d.dialerFun()
 		if err != nil {
-			log.WithError(err).Infof("dial attempt %d failed, will retry in %s", i, d.retryInterval.String())
+			var xerr x509.UnknownAuthorityError
+			if errors.As(err, &xerr) {
+				log.WithError(err).Infof("tcp.tls.Dial failed: %s. fingerprint='%s' issuerCommonName='%s' subjectCommonName='%s'", xerr.Error(), utils.GenerateFingerprint(xerr.Cert), xerr.Cert.Issuer.CommonName, xerr.Cert.Subject.CommonName)
+			} else {
+				log.WithError(err).Infof("dial attempt %d failed, will retry in %s", i, d.retryInterval.String())
+			}
 			time.Sleep(d.retryInterval)
 			continue
 		}
@@ -340,7 +348,7 @@ func (a addr) String() string {
 func Dial(target string, opts ...Option) (*Tunnel, error) {
 	c, err := net.Dial("tcp", target)
 	if err != nil {
-		return nil, errors.Errorf("tcp.Dial failed: %s", err)
+		return nil, errors.Errorf("tcp.Dial failed: %v", err)
 	}
 
 	return NewClientTunnel(c, opts...)
@@ -363,7 +371,7 @@ func DialTLS(target string, config *tls.Config, timeout time.Duration, opts ...O
 	c, err := tls.DialWithDialer(dialer, "tcp", target, config)
 	log.Debugf("Finished TLS dial to %s", target)
 	if err != nil {
-		return nil, errors.Errorf("tcp.tls.Dial failed: %s", err)
+		return nil, fmt.Errorf("tcp.tls.Dial failed: %w", err)
 	}
 
 	return NewClientTunnel(c, append(opts, WithDialTimeout(timeout))...)

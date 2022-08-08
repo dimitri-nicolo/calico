@@ -17,34 +17,38 @@ import (
 	"github.com/pkg/errors"
 )
 
-// LoadX509Pair reads certificates and private keys from file and returns the cert and key (as a
-// crypto.Signer)
-func LoadX509Pair(certFile, keyFile string) (*x509.Certificate, crypto.Signer, error) {
-	certPEMBlock, err := ioutil.ReadFile(certFile)
-	if err != nil {
-		return nil, nil, errors.WithMessage(err, fmt.Sprintf("Could not read cert %s", certFile))
-	}
+// LoadX509Key reads private keys from file and returns the key as a crypto.Signer
+func LoadX509Key(keyFile string) (crypto.Signer, error) {
 	keyPEMBlock, err := ioutil.ReadFile(keyFile)
 	if err != nil {
-		return nil, nil, errors.WithMessage(err, fmt.Sprintf("Could not read key %s", keyFile))
+		return nil, errors.WithMessage(err, fmt.Sprintf("Could not read key %s", keyFile))
 	}
 
 	key, err := ssh.ParseRawPrivateKey(keyPEMBlock)
 	if err != nil {
-		return nil, nil, errors.WithMessage(err, "Could not parse key")
+		return nil, errors.WithMessage(err, "Could not parse key")
+	}
+
+	return key.(crypto.Signer), nil
+}
+
+// LoadX509Cert reads a certificate from file and returns the cert (as a crypto.Signer)
+func LoadX509Cert(certFile string) (*x509.Certificate, error) {
+	certPEMBlock, err := ioutil.ReadFile(certFile)
+	if err != nil {
+		return nil, errors.WithMessage(err, fmt.Sprintf("Could not read cert %s", certFile))
 	}
 
 	block, _ := pem.Decode(certPEMBlock)
 	if block == nil {
-		return nil, nil, errors.WithMessage(err, "Could not decode cert")
+		return nil, errors.WithMessage(err, "Could not decode cert")
 	}
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		return nil, nil, errors.WithMessage(err, "Could not parse cert")
+		return nil, errors.WithMessage(err, "Could not parse cert")
 	}
 
-	return cert, key.(crypto.Signer), nil
-
+	return cert, nil
 }
 
 // KeyPEMEncode encodes a crypto.Signer as a PEM block

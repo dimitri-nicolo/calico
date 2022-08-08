@@ -3,7 +3,6 @@
 package server
 
 import (
-	"crypto"
 	"crypto/tls"
 	"crypto/x509"
 	"io/ioutil"
@@ -88,12 +87,18 @@ func WithInternalCreds(certBytes []byte, keyBytes []byte) Option {
 	}
 }
 
-// WithTunnelCreds sets the credentials to be used for the tunnel server and to
-// be used to generate creds for guardians.
-func WithTunnelCreds(cert *x509.Certificate, key crypto.Signer) Option {
+// WithTunnelSigningCreds sets the credentials to be used to to generate creds for guardians.
+func WithTunnelSigningCreds(cert *x509.Certificate) Option {
 	return func(s *Server) error {
-		s.tunnelCert = cert
-		s.tunnelKey = key
+		s.tunnelSigningCert = cert
+		return nil
+	}
+}
+
+// WithTunnelCert sets the credentials to be used for the tunnel server
+func WithTunnelCert(tlsCert tls.Certificate) Option {
+	return func(s *Server) error {
+		s.tunnelCert = tlsCert
 		return nil
 	}
 }

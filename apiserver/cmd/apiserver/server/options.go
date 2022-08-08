@@ -66,7 +66,8 @@ type CalicoServerOptions struct {
 	EnableManagedClustersCreateAPI bool
 
 	// Use this to populate the managementClusterAddr inside the managementClusterConnection CR.
-	ManagementClusterAddr string
+	ManagementClusterAddr   string
+	ManagementClusterCAType string
 
 	StopCh <-chan struct{}
 }
@@ -90,6 +91,8 @@ func (s *CalicoServerOptions) addFlags(flags *pflag.FlagSet) {
 	flags.StringVar(&s.ManagementClusterAddr, "managementClusterAddr",
 		"<your-management-cluster-address>",
 		"If set, manifests created for new managed clusters will use this value.")
+	flags.StringVar(&s.ManagementClusterCAType, "managementClusterCAType", "Tigera",
+		"Controls the value of tls.ca in generated ManagementClusterConnection resources")
 }
 
 func (o CalicoServerOptions) Validate(args []string) error {
@@ -197,6 +200,7 @@ func (o *CalicoServerOptions) Config() (*apiserver.Config, error) {
 			ManagedClustersCAKey:           o.ManagedClustersCAKeyPath,
 			EnableManagedClustersCreateAPI: o.EnableManagedClustersCreateAPI,
 			ManagementClusterAddr:          o.ManagementClusterAddr,
+			ManagementClusterCAType:        o.ManagementClusterCAType,
 			KubernetesAPIServerConfig:      serverConfig.ClientConfig,
 			MinResourceRefreshInterval:     minResourceRefreshInterval,
 		},

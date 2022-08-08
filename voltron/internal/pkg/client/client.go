@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,8 +26,11 @@ type Client struct {
 	targets   []proxy.Target
 	closeOnce sync.Once
 
-	tunnelAddr    string
-	tunnelCert    *tls.Certificate
+	tunnelAddr string
+	tunnelCert *tls.Certificate
+
+	// tunnelRootCAs defines the set of root certificate authorities that guardian will use when verifying voltron certificates.
+	// if nil, dialer will use the host's CA set.
 	tunnelRootCAs *x509.CertPool
 
 	tunnelEnableKeepAlive   bool
@@ -68,6 +72,18 @@ func New(addr string, opts ...Option) (*Client, error) {
 		}
 	}
 
+	// default expected serverName to the value set when certs are signed
+	// by the apiserver: 'voltron'.
+	serverName := "voltron"
+
+	// tunnelRootCAs will be nil if using certs from the system for the case of a signed voltron cert.
+	// in this case, the serverName will match the remote address
+	if client.tunnelRootCAs == nil {
+		// strip the port
+		serverName = strings.Split(client.tunnelAddr, ":")[0]
+		log.Debug("expecting TLS server name: ", serverName)
+	}
+
 	// set the dialer for the tunnel manager if one hasn't been specified
 	tunnelAddress := client.tunnelAddr
 	tunnelKeepAlive := client.tunnelEnableKeepAlive
@@ -92,7 +108,7 @@ func New(addr string, opts ...Option) (*Client, error) {
 					&tls.Config{
 						Certificates: []tls.Certificate{*tunnelCert},
 						RootCAs:      tunnelRootCAs,
-						ServerName:   "voltron",
+						ServerName:   serverName,
 					},
 					client.tunnelDialTimeout,
 					tunnel.WithKeepAliveSettings(tunnelKeepAlive, tunnelKeepAliveInterval),

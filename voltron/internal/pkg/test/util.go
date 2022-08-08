@@ -8,6 +8,7 @@ import (
 	"crypto/md5"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -369,4 +370,8 @@ func KeyToPemBytes(key *rsa.PrivateKey) []byte {
 
 func CertificateFingerprint(cert *x509.Certificate) string {
 	return fmt.Sprintf("%x", md5.Sum(cert.Raw))
+}
+
+func X509CertToTLSCert(cert *x509.Certificate, key *rsa.PrivateKey) (tls.Certificate, error) {
+	return tls.X509KeyPair(CertToPemBytes(cert), KeyToPemBytes(key))
 }

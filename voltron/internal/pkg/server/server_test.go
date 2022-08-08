@@ -74,6 +74,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		k8sAPI bootstrap.K8sClient
 
 		voltronTunnelCert      *x509.Certificate
+		voltronTunnelTLSCert   tls.Certificate
 		voltronTunnelPrivKey   *rsa.PrivateKey
 		voltronExtHttpsCert    *x509.Certificate
 		voltronExtHttpsPrivKey *rsa.PrivateKey
@@ -94,6 +95,10 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		voltronTunnelCertTemplate := test.CreateCACertificateTemplate("voltron")
 		voltronTunnelPrivKey, voltronTunnelCert, err = test.CreateCertPair(voltronTunnelCertTemplate, nil, nil)
 		Expect(err).ShouldNot(HaveOccurred())
+
+		// convert x509 cert to tls cert
+		voltronTunnelTLSCert, err = test.X509CertToTLSCert(voltronTunnelCert, voltronTunnelPrivKey)
+		Expect(err).NotTo(HaveOccurred())
 
 		voltronExtHttpCertTemplate := test.CreateServerCertificateTemplate("localhost")
 		voltronExtHttpsPrivKey, voltronExtHttpsCert, err = test.CreateCertPair(voltronExtHttpCertTemplate, nil, nil)
@@ -165,7 +170,8 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			srv, httpsAddr, tunnelAddr, srvWg = createAndStartServer(k8sAPI,
 				config,
 				mockAuthenticator,
-				server.WithTunnelCreds(voltronTunnelCert, voltronTunnelPrivKey),
+				server.WithTunnelSigningCreds(voltronTunnelCert),
+				server.WithTunnelCert(voltronTunnelTLSCert),
 				server.WithExternalCreds(test.CertToPemBytes(voltronExtHttpsCert), test.KeyToPemBytes(voltronExtHttpsPrivKey)),
 				server.WithInternalCreds(test.CertToPemBytes(voltronIntHttpsCert), test.KeyToPemBytes(voltronIntHttpsPrivKey)),
 				server.WithDefaultProxy(defaultProxy),
@@ -359,7 +365,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					}, metav1.CreateOptions{})
 					Expect(err).ShouldNot(HaveOccurred())
 
-					clusterATLSCert, err = tls.X509KeyPair(test.CertToPemBytes(clusterACert), test.KeyToPemBytes(clusterAPrivKey))
+					clusterATLSCert, err = test.X509CertToTLSCert(clusterACert, clusterAPrivKey)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -443,7 +449,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 						}, metav1.CreateOptions{})
 						Expect(err).ShouldNot(HaveOccurred())
 
-						clusterBTLSCert, err = tls.X509KeyPair(test.CertToPemBytes(clusterBCert), test.KeyToPemBytes(clusterBPrivKey))
+						clusterBTLSCert, err = test.X509CertToTLSCert(clusterBCert, clusterBPrivKey)
 						Expect(err).NotTo(HaveOccurred())
 					})
 
@@ -570,6 +576,10 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			voltronTunnelPrivKey, voltronTunnelCert, err = test.CreateCertPair(voltronTunnelCertTemplate, nil, nil)
 			Expect(err).ShouldNot(HaveOccurred())
 
+			// convert x509 cert to tls cert
+			voltronTunnelTLSCert, err = test.X509CertToTLSCert(voltronTunnelCert, voltronTunnelPrivKey)
+			Expect(err).NotTo(HaveOccurred())
+
 			voltronTunnelCAs = x509.NewCertPool()
 			voltronTunnelCAs.AppendCertsFromPEM(test.CertToPemBytes(voltronTunnelCert))
 
@@ -577,7 +587,8 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				k8sAPI,
 				config,
 				mockAuthenticator,
-				server.WithTunnelCreds(voltronTunnelCert, voltronTunnelPrivKey),
+				server.WithTunnelSigningCreds(voltronTunnelCert),
+				server.WithTunnelCert(voltronTunnelTLSCert),
 				server.WithDefaultProxy(defaultProxy),
 				server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
 				server.WithInternalCreds(test.CertToPemBytes(voltronIntHttpsCert), test.KeyToPemBytes(voltronIntHttpsPrivKey)),
@@ -612,7 +623,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			Expect(list.Items).To(HaveLen(1))
 
 			// Try to connect clusterA to the new fake voltron, should fail
-			tlsCert, err := tls.X509KeyPair(test.CertToPemBytes(cert), test.KeyToPemBytes(privKey))
+			tlsCert, err := test.X509CertToTLSCert(cert, privKey)
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = tunnel.DialTLS(tunnelAddr, &tls.Config{

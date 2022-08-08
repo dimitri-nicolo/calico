@@ -44,19 +44,27 @@ var (
 	tunnelCert    *x509.Certificate
 	tunnelPrivKey *rsa.PrivateKey
 	rootCAs       *x509.CertPool
+	tunnelTLS     tls.Certificate
 )
 
 func init() {
+	var err error
 	log.SetOutput(GinkgoWriter)
 	log.SetLevel(log.DebugLevel)
 
-	tunnelCert, _ = test.CreateSelfSignedX509Cert("voltron", true)
+	tunnelCert, err = test.CreateSelfSignedX509Cert("voltron", true)
+	if err != nil {
+		panic(err)
+	}
 
 	block, _ := pem.Decode([]byte(test.PrivateRSA))
 	tunnelPrivKey, _ = x509.ParsePKCS1PrivateKey(block.Bytes)
 
 	rootCAs = x509.NewCertPool()
 	rootCAs.AddCert(tunnelCert)
+
+	certPEM := utils.CertPEMEncode(tunnelCert)
+	tunnelTLS, _ = tls.X509KeyPair(certPEM, []byte(test.PrivateRSA))
 }
 
 type testClient struct {
@@ -200,7 +208,8 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 			k8sAPI,
 			&rest.Config{BearerToken: "manager-token"},
 			authenticator,
-			server.WithTunnelCreds(tunnelCert, tunnelPrivKey),
+			server.WithTunnelSigningCreds(tunnelCert),
+			server.WithTunnelCert(tunnelTLS),
 			server.WithExternalCredsFiles("../../internal/pkg/server/testdata/localhost.pem", "../../internal/pkg/server/testdata/localhost.key"),
 			server.WithInternalCredFiles("../../internal/pkg/server/testdata/tigera-manager-svc.pem", "../../internal/pkg/server/testdata/tigera-manager-svc.key"),
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
@@ -259,7 +268,8 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 
 		guardian, err = client.New(
 			lisTun.Addr().String(),
-			client.WithTunnelCreds(certPemID1, keyPemID1, rootCAs),
+			client.WithTunnelCreds(certPemID1, keyPemID1),
+			client.WithTunnelRootCA(rootCAs),
 			client.WithProxyTargets(
 				[]proxy.Target{
 					{
@@ -282,7 +292,8 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 
 		guardian2, err = client.New(
 			lisTun.Addr().String(),
-			client.WithTunnelCreds(certPemID2, keyPemID2, rootCAs),
+			client.WithTunnelCreds(certPemID2, keyPemID2),
+			client.WithTunnelRootCA(rootCAs),
 			client.WithProxyTargets(
 				[]proxy.Target{
 					{

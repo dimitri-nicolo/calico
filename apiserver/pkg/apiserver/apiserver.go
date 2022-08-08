@@ -67,6 +67,7 @@ type ExtraConfig struct {
 	ManagedClustersCAKey           string
 	EnableManagedClustersCreateAPI bool
 	ManagementClusterAddr          string
+	ManagementClusterCAType        string
 	KubernetesAPIServerConfig      *rest.Config
 	MinResourceRefreshInterval     time.Duration
 }
@@ -134,9 +135,10 @@ func (c completedConfig) New() (*ProjectCalicoServer, error) {
 			return nil, err
 		}
 		res = &calico.ManagedClusterResources{
-			CACert:                x509Cert,
-			CAKey:                 rsaKey,
-			ManagementClusterAddr: c.ExtraConfig.ManagementClusterAddr,
+			CACert:                  x509Cert,
+			CAKey:                   rsaKey,
+			ManagementClusterAddr:   c.ExtraConfig.ManagementClusterAddr,
+			ManagementClusterCAType: c.ExtraConfig.ManagementClusterCAType,
 		}
 	}
 

@@ -316,9 +316,12 @@ var _ = Describe("TLS Stream", func() {
 		lis, err = net.Listen("tcp", "localhost:0")
 		Expect(err).ShouldNot(HaveOccurred())
 
-		var err error
+		cert, err := tls.X509KeyPair(test.CertToPemBytes(srvCert), []byte(test.PrivateRSA))
+		Expect(err).ShouldNot(HaveOccurred())
+
 		srv, err = tunnel.NewServer(
-			tunnel.WithCredsPEM(test.PemEncodeCert(srvCert), []byte(test.PrivateRSA)),
+			tunnel.WithServerCert(cert),
+			tunnel.WithClientCert(srvCert),
 			tunnel.WithTLSHandshakeTimeout(200*time.Millisecond),
 		)
 		Expect(err).NotTo(HaveOccurred())

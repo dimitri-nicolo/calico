@@ -4,7 +4,6 @@ package server
 
 import (
 	"context"
-	"crypto"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -73,10 +72,12 @@ type Server struct {
 
 	addr string
 
-	// Creds to be used for the tunnel endpoints and to generate creds for the
-	// tunnel clients a.k.a guardians
-	tunnelCert *x509.Certificate
-	tunnelKey  crypto.Signer
+	// tunnelSigningCert is the cert that was used to generate creds for the tunnel clients a.k.a guardians and
+	// thus the cert that can be used to verify its identity
+	tunnelSigningCert *x509.Certificate
+
+	// tunnelCert is the cert to be used for the tunnel endpoint
+	tunnelCert tls.Certificate
 
 	tunnelEnableKeepAlive   bool
 	tunnelKeepAliveInterval time.Duration
@@ -131,8 +132,10 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, authenticator auth.JWTAut
 
 	var tunOpts []tunnel.ServerOption
 
-	if srv.tunnelCert != nil && srv.tunnelKey != nil {
-		tunOpts = append(tunOpts, tunnel.WithCreds(srv.tunnelCert, srv.tunnelKey))
+	if srv.tunnelSigningCert != nil {
+		tunOpts = append(tunOpts, tunnel.WithClientCert(srv.tunnelSigningCert))
+		tunOpts = append(tunOpts, tunnel.WithServerCert(srv.tunnelCert))
+
 		var err error
 		srv.tunSrv, err = tunnel.NewServer(tunOpts...)
 		if err != nil {

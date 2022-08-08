@@ -36,6 +36,8 @@ spec:
   # will connect. Valid examples are: "0.0.0.0:31000", "example.com:32000", "[::1]:32500"
   managementClusterAddr: "{{.ManagementClusterAddr}}"
 
+  tls:
+    ca: "{{.ManagementClusterCAType}}"
 ---
 
 apiVersion: v1
@@ -54,11 +56,12 @@ data:
 
 // manifestConfig renders manifest based on a predefined template
 type manifestConfig struct {
-	CACert                string
-	Cert                  string
-	PrivateKey            string
-	ManagementClusterAddr string
-	OperatorNamespace     string
+	CACert                  string
+	Cert                    string
+	PrivateKey              string
+	ManagementClusterAddr   string
+	ManagementClusterCAType string
+	OperatorNamespace       string
 }
 
 // keyPEMEncode encodes a crypto.Signer as a PEM block
@@ -83,7 +86,7 @@ func certPEMEncode(cert *x509.Certificate) []byte {
 
 // InstallationManifest generates an installation manifests that will populate the field
 // for a managed cluster upon creation
-func InstallationManifest(certCA, cert *x509.Certificate, key crypto.Signer, managementClusterAddr, operatorNamespace string) string {
+func InstallationManifest(certCA, cert *x509.Certificate, key crypto.Signer, managementClusterAddr, managementClusterCAType, operatorNamespace string) string {
 	var manifest bytes.Buffer
 	var tmpl *template.Template
 
@@ -97,11 +100,12 @@ func InstallationManifest(certCA, cert *x509.Certificate, key crypto.Signer, man
 	tmpl, _ = template.New("ClusterManifest").Funcs(funcMap).Parse(text)
 
 	manifestConfig := &manifestConfig{
-		CACert:                string(certPEMEncode(certCA)),
-		Cert:                  string(certPEMEncode(cert)),
-		PrivateKey:            string(keyPEMEncode(key)),
-		ManagementClusterAddr: managementClusterAddr,
-		OperatorNamespace:     operatorNamespace,
+		CACert:                  string(certPEMEncode(certCA)),
+		Cert:                    string(certPEMEncode(cert)),
+		PrivateKey:              string(keyPEMEncode(key)),
+		ManagementClusterAddr:   managementClusterAddr,
+		ManagementClusterCAType: managementClusterCAType,
+		OperatorNamespace:       operatorNamespace,
 	}
 	_ = tmpl.Execute(&manifest, manifestConfig)
 	return manifest.String()
