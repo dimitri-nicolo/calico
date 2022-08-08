@@ -396,9 +396,12 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 				}
 				if opts.EnableIPv6 {
 					jBlockV6 := fmt.Sprintf("dead:beef::100:%d:0/96", j)
-					if opts.VXLANMode == api.VXLANModeNever && !opts.IPIPRoutesEnabled {
+					ipSec := opts.InitialFelixConfiguration != nil && opts.InitialFelixConfiguration.Spec.IPSecMode != ""
+					if opts.VXLANMode == api.VXLANModeNever && !opts.IPIPRoutesEnabled && !ipSec {
 						// If VXLAN is enabled, Felix will program these routes itself.
 						// If IPIP routes are enabled, these routes will conflict with configured ones and a 'RTNETLINK answers: File exists' error would occur.
+						//
+						// Enterprise-only: IPSec also programs routes that conflict.
 						err := iFelix.ExecMayFail("ip", "-6", "route", "add", jBlockV6, "via", jFelix.IPv6, "dev", "eth0")
 						Expect(err).ToNot(HaveOccurred())
 					}
