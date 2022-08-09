@@ -19,9 +19,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/prometheus/common/log"
+
 	confdConfig "github.com/projectcalico/calico/confd/pkg/config"
 	confd "github.com/projectcalico/calico/confd/pkg/run"
-	"github.com/prometheus/common/log"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
 
