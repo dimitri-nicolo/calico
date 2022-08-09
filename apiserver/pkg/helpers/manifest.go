@@ -35,9 +35,10 @@ spec:
   # ManagementClusterAddr should be the externally reachable address to which your managed cluster
   # will connect. Valid examples are: "0.0.0.0:31000", "example.com:32000", "[::1]:32500"
   managementClusterAddr: "{{.ManagementClusterAddr}}"
-
+{{ if .ManagementClusterCAType }}
   tls:
     ca: "{{.ManagementClusterCAType}}"
+{{ end }}
 ---
 
 apiVersion: v1

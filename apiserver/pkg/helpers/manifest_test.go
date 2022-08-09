@@ -13,18 +13,28 @@ func TestInstallationManifest(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	tests := []struct {
-		description      string
-		caCert           []byte
-		cert             []byte
-		key              []byte
-		expectedManifest string
+		description             string
+		caCert                  []byte
+		cert                    []byte
+		key                     []byte
+		managementClusterCAType string
+		expectedManifest        string
 	}{
 		{
 			"valid certificate and client",
 			[]byte(CACert),
 			[]byte(ClientCert),
 			[]byte(ClientKey),
+			"",
 			ExpectedManifest,
+		},
+		{
+			"catype public",
+			[]byte(CACert),
+			[]byte(ClientCert),
+			[]byte(ClientKey),
+			"Public",
+			ExpectedManifestCAPublic,
 		},
 	}
 
@@ -39,7 +49,7 @@ func TestInstallationManifest(t *testing.T) {
 		g.Expect(err).NotTo(HaveOccurred())
 
 		// Invoke InstallationManifest
-		manifest := InstallationManifest(ca, clientCert, clientKey, "example.org:1234", "", "operator-ns")
+		manifest := InstallationManifest(ca, clientCert, clientKey, "example.org:1234", test.managementClusterCAType, "operator-ns")
 		g.Expect(manifest).NotTo(BeNil())
 		g.Expect(manifest).To(Equal(test.expectedManifest))
 	}
