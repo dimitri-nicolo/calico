@@ -71,19 +71,21 @@ type Dialer interface {
 }
 
 type dialer struct {
-	dialerFun     DialerFunc
-	retryAttempts int
-	retryInterval time.Duration
-	timeout       time.Duration
+	dialerFun       DialerFunc
+	retryAttempts   int
+	retryInterval   time.Duration
+	timeout         time.Duration
+	fipsModeEnabled bool
 }
 
 // NewDialer creates a new Dialer.
-func NewDialer(dialerFunc DialerFunc, retryAttempts int, retryInterval time.Duration, timeout time.Duration) Dialer {
+func NewDialer(dialerFunc DialerFunc, retryAttempts int, retryInterval time.Duration, timeout time.Duration, fipsModeEnabled bool) Dialer {
 	return &dialer{
-		dialerFun:     dialerFunc,
-		retryAttempts: retryAttempts,
-		retryInterval: retryInterval,
-		timeout:       timeout,
+		dialerFun:       dialerFunc,
+		retryAttempts:   retryAttempts,
+		retryInterval:   retryInterval,
+		timeout:         timeout,
+		fipsModeEnabled: fipsModeEnabled,
 	}
 }
 
@@ -98,7 +100,7 @@ func (d *dialer) Dial() (*Tunnel, error) {
 		if err != nil {
 			var xerr x509.UnknownAuthorityError
 			if errors.As(err, &xerr) {
-				log.WithError(err).Infof("tcp.tls.Dial failed: %s. fingerprint='%s' issuerCommonName='%s' subjectCommonName='%s'", xerr.Error(), utils.GenerateFingerprint(xerr.Cert), xerr.Cert.Issuer.CommonName, xerr.Cert.Subject.CommonName)
+				log.WithError(err).Infof("tcp.tls.Dial failed: %s. fingerprint='%s' issuerCommonName='%s' subjectCommonName='%s'", xerr.Error(), utils.GenerateFingerprint(d.fipsModeEnabled, xerr.Cert), xerr.Cert.Issuer.CommonName, xerr.Cert.Subject.CommonName)
 			} else {
 				log.WithError(err).Infof("dial attempt %d failed, will retry in %s", i, d.retryInterval.String())
 			}

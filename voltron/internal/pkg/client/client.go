@@ -125,6 +125,7 @@ func New(addr string, opts ...Option) (*Client, error) {
 			client.tunnelDialRetryAttempts,
 			client.tunnelDialRetryInterval,
 			client.tunnelDialTimeout,
+			client.fipsModeEnabled,
 		)
 	}
 
