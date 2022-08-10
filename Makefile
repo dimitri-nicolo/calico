@@ -1,5 +1,5 @@
 PACKAGE_NAME?=github.com/tigera/elasticsearch-docker
-GO_BUILD_VER?=v0.65
+GO_BUILD_VER?=v0.73
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID=$(SEMAPHORE_ELASTICSEARCH_DOCKER_PROJECT_ID)
@@ -47,6 +47,8 @@ $(ELASTICSEARCH_IMAGE)-$(ARCH): build
 	docker build $(DOCKER_BUILD) --pull -t $(ELASTICSEARCH_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
 	docker tag $(ELASTICSEARCH_IMAGE):latest-$(ARCH) $(ELASTICSEARCH_IMAGE):latest
+	# build fips image for amd64
+	docker build $(DOCKER_BUILD) --pull -t $(ELASTICSEARCH_IMAGE):latest-amd64-fips --file ./Dockerfile.amd64-fips .
 endif
 
 .PHONY: cd

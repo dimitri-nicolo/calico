@@ -1,0 +1,105 @@
+From 25fd8660291d991e6acfac3a5f167281b893e41c Mon Sep 17 00:00:00 2001
+From: Jiawei Huang <jiawei@tigera.io>
+Date: Wed, 10 Aug 2022 11:47:06 -0700
+Subject: [PATCH 1/1] Patch java security policy to support Bouncy Castle JCE
+
+This changeset includes the necessary java security policy changes for
+Bouncy Castle JCE provider to make the JVM fips compliant. These changes
+are tested under JDK11. For NIST validation on Bouncy Castle, see [1].
+
+Here is the test environment performed within Tigera.
+
+Bouncy Castle JCE provider downloaded from [2]:
+* bc-fips version 1.0.2.3.
+* bctls-fips version 1.0.11.
+  - 1.0.12 and 1.0.13 contain bugs that will cause
+    `org.bouncycastle.tls.TlsProtocol.getPeer()` null pointer exception.
+
+Eclipse Adoptium OpenJDK 11 downloaded from [3]:
+* Oracle JDK11 is in archive mode and it is not available for general
+  public with out a Oracle JDK License [4] as of Apr 2019.
+
+[1] https://csrc.nist.gov/projects/cryptographic-module-validation-program/Certificate/3514
+[2] https://www.bouncycastle.org/fips-java/
+[3] https://github.com/adoptium/temurin11-binaries/releases/tag/jdk-11.0.16%2B8
+[4] https://www.oracle.com/ca-en/java/technologies/javase/jdk11-archive-downloads.html
+---
+ conf/security/java.policy   | 17 +++++++++++++++++
+ conf/security/java.security | 21 +++++++--------------
+ 2 files changed, 24 insertions(+), 14 deletions(-)
+
+diff --git a/conf/security/java.policy b/conf/security/java.policy
+index 1554541..74b3f42 100644
+--- a/conf/security/java.policy
++++ b/conf/security/java.policy
+@@ -41,4 +41,21 @@ grant {
+     permission java.util.PropertyPermission "java.vm.version", "read";
+     permission java.util.PropertyPermission "java.vm.vendor", "read";
+     permission java.util.PropertyPermission "java.vm.name", "read";
++
++    // bc-fips
++    permission java.security.SecurityPermission "getProperty.jdk.certpath.disabledAlgorithms";
++    permission java.security.SecurityPermission "getProperty.jdk.tls.disabledAlgorithms";
++    permission java.security.SecurityPermission "getProperty.keystore.type.compat";
++    permission java.security.SecurityPermission "putProviderProperty.BCFIPS";
++    permission java.security.SecurityPermission "putProviderProperty.BCJSSE";
++    permission java.lang.RuntimePermission "getProtectionDomain";
++    permission java.util.PropertyPermission "java.runtime.name", "read";
++    permission org.bouncycastle.crypto.CryptoServicesPermission "tlsAlgorithmsEnabled";
++    //io.netty.handler.codec.DecoderException
++    permission java.lang.RuntimePermission "accessClassInPackage.sun.security.internal.spec";
++    //java.security.InvalidAlgorithmParameterException: Cannot process GCMParameterSpec
++    permission java.lang.RuntimePermission "accessDeclaredMembers";
++    permission org.bouncycastle.crypto.CryptoServicesPermission "exportSecretKey";
++    permission org.bouncycastle.crypto.CryptoServicesPermission "exportPrivateKey";
++    permission java.io.FilePermission "/usr/share/elasticsearch/config/cacerts.bcfks", "read";
+ };
+diff --git a/conf/security/java.security b/conf/security/java.security
+index 51f12d2..902fb97 100644
+--- a/conf/security/java.security
++++ b/conf/security/java.security
+@@ -60,18 +60,11 @@
+ #
+ # List of providers and their preference orders (see above):
+ #
+-security.provider.1=SUN
+-security.provider.2=SunRsaSign
+-security.provider.3=SunEC
+-security.provider.4=SunJSSE
+-security.provider.5=SunJCE
+-security.provider.6=SunJGSS
+-security.provider.7=SunSASL
+-security.provider.8=XMLDSig
+-security.provider.9=SunPCSC
+-security.provider.10=JdkLDAP
+-security.provider.11=JdkSASL
+-security.provider.12=SunPKCS11
++security.provider.1=org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider C:HYBRID;ENABLE{All};
++security.provider.2=org.bouncycastle.jsse.provider.BouncyCastleJsseProvider fips:BCFIPS
++security.provider.3=SUN
++security.provider.4=SunRsaSign
++security.provider.5=SunJGSS
+ 
+ #
+ # A list of preferred providers for specific algorithms. These providers will
+@@ -273,7 +266,7 @@ policy.ignoreIdentityScope=false
+ #
+ # Default keystore type.
+ #
+-keystore.type=pkcs12
++keystore.type=BCFKS
+ 
+ #
+ # Controls compatibility mode for JKS and PKCS12 keystore types.
+@@ -316,7 +309,7 @@ security.overridePropertiesFile=true
+ # Determines the default key and trust manager factory algorithms for
+ # the javax.net.ssl package.
+ #
+-ssl.KeyManagerFactory.algorithm=SunX509
++ssl.KeyManagerFactory.algorithm=PKIX
+ ssl.TrustManagerFactory.algorithm=PKIX
+ 
+ #
+-- 
+2.34.1
+
