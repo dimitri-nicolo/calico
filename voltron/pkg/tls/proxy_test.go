@@ -401,7 +401,12 @@ func testDownstreamServer(listener net.Listener, cert tls.Certificate, expectedR
 }
 
 func getCerts() (*x509.CertPool, tls.Certificate, error) {
-	certx, keyx, err := utils.LoadX509Pair("testdata/cert", "testdata/key")
+	keyx, err := utils.LoadX509Key("testdata/key")
+	if err != nil {
+		panic(err)
+	}
+
+	certx, err := utils.LoadX509Cert("testdata/cert")
 	if err != nil {
 		panic(err)
 	}

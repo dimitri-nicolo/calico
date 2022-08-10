@@ -41,7 +41,7 @@ func startTester(mockClientSetFactory *datastore.MockClusterCtxK8sClientFactory,
 
 	By("Starting the compliance server")
 
-	s := server.New(mockClientSetFactory, mockESFactory, authenticator, t.addr, "", "")
+	s := server.New(mockClientSetFactory, mockESFactory, authenticator, t.addr, "", "", true)
 	s.Start()
 	t.server = s
 	t.client = &http.Client{Timeout: time.Second * 10}

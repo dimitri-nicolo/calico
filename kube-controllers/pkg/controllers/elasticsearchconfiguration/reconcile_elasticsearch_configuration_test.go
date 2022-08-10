@@ -106,8 +106,10 @@ var _ = Describe("Reconcile", func() {
 	var managementESConfigMap *corev1.ConfigMap
 	var managementClientObjects []runtime.Object
 	var restartChan chan string
+	fipsModeEnabled := true
 
 	BeforeEach(func() {
+
 		// Make chan size >1 so we don't need to wait for a listener to insert
 		restartChan = make(chan string, 5)
 		esCertSecret = &corev1.Secret{
@@ -187,7 +189,7 @@ var _ = Describe("Reconcile", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil)
+			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
 			Expect(err).ShouldNot(HaveOccurred())
 			mockESClientBuild.On("Build").Return(esClient, err)
 
@@ -211,7 +213,7 @@ var _ = Describe("Reconcile", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil)
+			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
 			Expect(err).ShouldNot(HaveOccurred())
 			mockESClientBuild.On("Build").Return(esClient, err)
 
@@ -245,7 +247,7 @@ var _ = Describe("Reconcile", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil)
+			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
 			Expect(err).ShouldNot(HaveOccurred())
 			mockESClientBuild.On("Build").Return(esClient, err)
 
@@ -309,7 +311,7 @@ var _ = Describe("Reconcile", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil)
+			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
 			Expect(err).ShouldNot(HaveOccurred())
 			mockESClientBuild.On("Build").Return(esClient, err)
 
@@ -337,7 +339,7 @@ var _ = Describe("Reconcile", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil)
+			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
 			Expect(err).ShouldNot(HaveOccurred())
 			mockESClientBuild.On("Build").Return(esClient, err)
 
@@ -375,7 +377,7 @@ var _ = Describe("Reconcile", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil)
+			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
 			Expect(err).ShouldNot(HaveOccurred())
 			mockESClientBuild.On("Build").Return(esClient, err)
 
@@ -427,7 +429,7 @@ var _ = Describe("Reconcile", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil)
+			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
 			Expect(err).ShouldNot(HaveOccurred())
 			mockESClientBuild.On("Build").Return(esClient, err)
 
@@ -448,7 +450,7 @@ var _ = Describe("Reconcile", func() {
 			}))
 
 			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil)
+			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
 			Expect(err).ShouldNot(HaveOccurred())
 			mockESClientBuild.On("Build").Return(esClient, err)
 
@@ -486,7 +488,7 @@ var _ = Describe("Reconcile", func() {
 			}))
 
 			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil)
+			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
 			Expect(err).ShouldNot(HaveOccurred())
 			mockESClientBuild.On("Build").Return(esClient, nil)
 
@@ -527,7 +529,7 @@ var _ = Describe("Reconcile", func() {
 			}))
 
 			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil)
+			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
 			Expect(err).ShouldNot(HaveOccurred())
 			mockESClientBuild.On("Build").Return(esClient, nil)
 
@@ -577,7 +579,7 @@ var _ = Describe("Reconcile", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil)
+			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
 			Expect(err).ShouldNot(HaveOccurred())
 			mockESClientBuild.On("Build").Return(esClient, err)
 
@@ -623,7 +625,7 @@ var _ = Describe("Reconcile", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil)
+			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
 			Expect(err).ShouldNot(HaveOccurred())
 			mockESClientBuild.On("Build").Return(esClient, err)
 
@@ -645,7 +647,7 @@ var _ = Describe("Reconcile", func() {
 			}))
 
 			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil)
+			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
 			Expect(err).ShouldNot(HaveOccurred())
 			mockESClientBuild.On("Build").Return(esClient, err)
 
@@ -684,7 +686,7 @@ var _ = Describe("Reconcile", func() {
 			}))
 
 			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil)
+			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
 			Expect(err).ShouldNot(HaveOccurred())
 			mockESClientBuild.On("Build").Return(esClient, nil)
 
@@ -727,7 +729,7 @@ var _ = Describe("Reconcile", func() {
 			}))
 
 			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil)
+			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
 			Expect(err).ShouldNot(HaveOccurred())
 			mockESClientBuild.On("Build").Return(esClient, nil)
 
@@ -779,7 +781,7 @@ var _ = Describe("Reconcile", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			mockESClientBuild := new(elasticsearch.MockClientBuilder)
-			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil)
+			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
 			Expect(err).ShouldNot(HaveOccurred())
 			mockESClientBuild.On("Build").Return(esClient, err)
 

@@ -3,7 +3,6 @@
 package proxy
 
 import (
-	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
@@ -13,6 +12,9 @@ import (
 	"regexp"
 
 	"github.com/pkg/errors"
+
+	"github.com/projectcalico/calico/crypto/pkg/tls"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -31,6 +33,9 @@ type Target struct {
 	// Transport to use for this target. If nil, Proxy will provide one
 	Transport        http.RoundTripper
 	AllowInsecureTLS bool
+
+	// Enables FIPS 140-2 verified mode.
+	FIPSModeEnabled bool
 }
 
 // Proxy proxies HTTP based on the provided list of targets
@@ -70,12 +75,10 @@ func newTargetHandler(tgt Target) (func(http.ResponseWriter, *http.Request), err
 	if tgt.Transport != nil {
 		p.Transport = tgt.Transport
 	} else if tgt.Dest.Scheme == "https" {
-		var tlsCfg *tls.Config
+		tlsCfg := tls.NewTLSConfig(tgt.FIPSModeEnabled)
 
 		if tgt.AllowInsecureTLS {
-			tlsCfg = &tls.Config{
-				InsecureSkipVerify: true,
-			}
+			tlsCfg.InsecureSkipVerify = true
 		} else {
 			if len(tgt.CAPem) == 0 {
 				return nil, errors.Errorf("failed to create target handler for path %s: ca bundle was empty", tgt.Path)
@@ -95,9 +98,7 @@ func newTargetHandler(tgt Target) (func(http.ResponseWriter, *http.Request), err
 			}
 
 			ca.AppendCertsFromPEM(file)
-			tlsCfg = &tls.Config{
-				RootCAs: ca,
-			}
+			tlsCfg.RootCAs = ca
 		}
 
 		p.Transport = &http.Transport{

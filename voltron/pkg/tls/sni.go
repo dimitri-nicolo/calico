@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"net"
 
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/voltron/pkg/conn"
 
 	log "github.com/sirupsen/logrus"
@@ -65,7 +66,7 @@ Zjr9rbhG52zGe3CnwwPUWH8=
 
 // extractSNI attempts to read the client hello of the TLS Handshake and extract the servername. No bytes are written to
 // the connection, and any bytes read from the connection are returned, even if an error occurred.
-func extractSNI(connection net.Conn) (string, []byte, error) {
+func extractSNI(connection net.Conn, fipsModeEnabled bool) (string, []byte, error) {
 	roConn := conn.NewReadOnly(connection)
 
 	// we need to provide the tls certificates to avoid returning a "no tls certificates found" error in the server
@@ -74,9 +75,9 @@ func extractSNI(connection net.Conn) (string, []byte, error) {
 		return "", nil, err
 	}
 
-	srv := tls.Server(roConn, &tls.Config{
-		Certificates: []tls.Certificate{cert},
-	})
+	cfg := calicotls.NewTLSConfig(fipsModeEnabled)
+	cfg.Certificates = []tls.Certificate{cert}
+	srv := tls.Server(roConn, cfg)
 	defer func() {
 		if err := srv.Close(); err != nil {
 			log.WithError(err).Error("failed to close tls server")

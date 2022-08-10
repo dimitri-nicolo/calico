@@ -39,7 +39,7 @@ func TestInstallationManifest(t *testing.T) {
 		g.Expect(err).NotTo(HaveOccurred())
 
 		// Invoke InstallationManifest
-		manifest := InstallationManifest(ca, clientCert, clientKey, "example.org:1234", "operator-ns")
+		manifest := InstallationManifest(ca, clientCert, clientKey, "example.org:1234", "", "operator-ns")
 		g.Expect(manifest).NotTo(BeNil())
 		g.Expect(manifest).To(Equal(test.expectedManifest))
 	}

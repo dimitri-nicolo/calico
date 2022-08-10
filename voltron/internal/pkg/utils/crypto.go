@@ -7,44 +7,50 @@ import (
 	"crypto"
 	"crypto/md5"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 
 	"github.com/pkg/errors"
 )
 
-// LoadX509Pair reads certificates and private keys from file and returns the cert and key (as a
-// crypto.Signer)
-func LoadX509Pair(certFile, keyFile string) (*x509.Certificate, crypto.Signer, error) {
-	certPEMBlock, err := ioutil.ReadFile(certFile)
-	if err != nil {
-		return nil, nil, errors.WithMessage(err, fmt.Sprintf("Could not read cert %s", certFile))
-	}
+// LoadX509Key reads private keys from file and returns the key as a crypto.Signer
+func LoadX509Key(keyFile string) (crypto.Signer, error) {
 	keyPEMBlock, err := ioutil.ReadFile(keyFile)
 	if err != nil {
-		return nil, nil, errors.WithMessage(err, fmt.Sprintf("Could not read key %s", keyFile))
+		return nil, errors.WithMessage(err, fmt.Sprintf("Could not read key %s", keyFile))
 	}
 
 	key, err := ssh.ParseRawPrivateKey(keyPEMBlock)
 	if err != nil {
-		return nil, nil, errors.WithMessage(err, "Could not parse key")
+		return nil, errors.WithMessage(err, "Could not parse key")
+	}
+
+	return key.(crypto.Signer), nil
+}
+
+// LoadX509Cert reads a certificate from file and returns the cert (as a crypto.Signer)
+func LoadX509Cert(certFile string) (*x509.Certificate, error) {
+	certPEMBlock, err := ioutil.ReadFile(certFile)
+	if err != nil {
+		return nil, errors.WithMessage(err, fmt.Sprintf("Could not read cert %s", certFile))
 	}
 
 	block, _ := pem.Decode(certPEMBlock)
 	if block == nil {
-		return nil, nil, errors.WithMessage(err, "Could not decode cert")
+		return nil, errors.WithMessage(err, "Could not decode cert")
 	}
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		return nil, nil, errors.WithMessage(err, "Could not parse cert")
+		return nil, errors.WithMessage(err, "Could not parse cert")
 	}
 
-	return cert, key.(crypto.Signer), nil
-
+	return cert, nil
 }
 
 // KeyPEMEncode encodes a crypto.Signer as a PEM block
@@ -71,7 +77,14 @@ func CertPEMEncode(cert *x509.Certificate) []byte {
 	return pem.EncodeToMemory(block)
 }
 
-// GenerateFingerprint returns the MD5 hash for a x509 certificate printed as a hex number
-func GenerateFingerprint(certificate *x509.Certificate) string {
-	return fmt.Sprintf("%x", md5.Sum(certificate.Raw))
+// GenerateFingerprint returns the hash for a x509 certificate printed as a hex number
+func GenerateFingerprint(fipsMode bool, certificate *x509.Certificate) string {
+	var fingerprint string
+	if fipsMode {
+		fingerprint = fmt.Sprintf("%x", sha256.Sum256(certificate.Raw))
+	} else {
+		fingerprint = fmt.Sprintf("%x", md5.Sum(certificate.Raw))
+	}
+	log.Debugf("Created fingerprint for cert with fipsModeEnabled: %t,  common name: %s and fingerprint: %s", fipsMode, certificate.Subject.CommonName, fingerprint)
+	return fingerprint
 }

@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -34,6 +35,7 @@ var (
 type config struct {
 	LogLevel                  string `default:"INFO"`
 	CertPath                  string `default:"/certs" split_words:"true" json:"-"`
+	VoltronCAType             string `default:"Tigera" split_words:"true"`
 	VoltronURL                string `required:"true" split_words:"true"`
 	PacketCaptureCABundlePath string `default:"/certs/packetcapture/tls.crt" split_words:"true"`
 	PacketCaptureEndpoint     string `default:"https://tigera-packetcapture.tigera-packetcapture.svc" split_words:"true"`
@@ -61,6 +63,9 @@ type config struct {
 	Listen     bool   `default:"true"`
 	ListenHost string `default:"" split_words:"true"`
 	ListenPort string `default:"8080" split_words:"true"`
+
+	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
+	FIPSModeEnabled bool `default:"false" split_words:"true"`
 }
 
 func (cfg config) String() string {
@@ -98,7 +103,6 @@ func main() {
 
 	cert := fmt.Sprintf("%s/managed-cluster.crt", cfg.CertPath)
 	key := fmt.Sprintf("%s/managed-cluster.key", cfg.CertPath)
-	serverCrt := fmt.Sprintf("%s/management-cluster.crt", cfg.CertPath)
 	log.Infof("Voltron Address: %s", cfg.VoltronURL)
 
 	pemCert, err := ioutil.ReadFile(cert)
@@ -110,10 +114,20 @@ func main() {
 		log.Fatalf("Failed to load key: %s", err)
 	}
 
-	ca := x509.NewCertPool()
-	content, _ := ioutil.ReadFile(serverCrt)
-	if ok := ca.AppendCertsFromPEM(content); !ok {
-		log.Fatalf("Cannot append the certificate to ca pool: %s", err)
+	var ca *x509.CertPool
+	if strings.ToLower(cfg.VoltronCAType) == "public" {
+		// leave the ca cert pool as a nil pointer which will cause the tls dialer to load certs from the system.
+		log.Info("using system certs")
+	} else {
+		serverCrt := fmt.Sprintf("%s/management-cluster.crt", cfg.CertPath)
+		pemServerCrt, err := ioutil.ReadFile(serverCrt)
+		if err != nil {
+			log.WithError(err).Fatal("failed to read server cert")
+		}
+		ca = x509.NewCertPool()
+		if ok := ca.AppendCertsFromPEM(pemServerCrt); !ok {
+			log.Fatalf("Cannot append the certificate to ca pool")
+		}
 	}
 
 	health, err := client.NewHealth()
@@ -160,7 +174,7 @@ func main() {
 			TokenPath:    "/var/run/secrets/kubernetes.io/serviceaccount/token",
 			CABundlePath: cfg.QueryserverCABundlePath,
 		},
-	})
+	}, cfg.FIPSModeEnabled)
 	if err != nil {
 		log.Fatalf("Failed to parse default proxy targets: %s", err)
 	}
@@ -169,12 +183,14 @@ func main() {
 		cfg.VoltronURL,
 		client.WithKeepAliveSettings(cfg.KeepAliveEnable, cfg.KeepAliveInterval),
 		client.WithProxyTargets(targets),
-		client.WithTunnelCreds(pemCert, pemKey, ca),
+		client.WithTunnelCreds(pemCert, pemKey),
+		client.WithTunnelRootCA(ca),
 		client.WithTunnelDialRetryAttempts(cfg.TunnelDialRetryAttempts),
 		client.WithTunnelDialRetryInterval(cfg.TunnelDialRetryInterval),
 		client.WithTunnelDialTimeout(cfg.TunnelDialTimeout),
 		client.WithConnectionRetryAttempts(cfg.ConnectionRetryAttempts),
 		client.WithConnectionRetryInterval(cfg.ConnectionRetryInterval),
+		client.WithFIPSModeEnabled(cfg.FIPSModeEnabled),
 	)
 
 	if err != nil {

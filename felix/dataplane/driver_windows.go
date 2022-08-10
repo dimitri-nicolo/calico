@@ -106,6 +106,7 @@ func ServePrometheusMetrics(configParams *config.Config) {
 			configParams.PrometheusMetricsCertFile,
 			configParams.PrometheusMetricsKeyFile,
 			configParams.PrometheusMetricsCAFile,
+			false,
 		)
 
 		log.WithError(err).Error(

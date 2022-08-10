@@ -67,7 +67,7 @@ const (
 var (
 	gaugeFlowStoreCacheSizeLength = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "felix_collector_allowed_flowlog_aggregator_store",
-		Help: "Total number of FlowEntries with action=allow currently residing in the FlowStore cache used by the aggregator.",
+		Help: "Total number of FlowEntries with a given action currently residing in the FlowStore cache used by the aggregator.",
 	},
 		[]string{"action"})
 )
@@ -218,7 +218,6 @@ func (c *flowLogAggregator) NatOutgoingPortLimit(n int) FlowLogAggregator {
 
 // FeedUpdate constructs and aggregates flow logs from MetricUpdates.
 func (fa *flowLogAggregator) FeedUpdate(mu *MetricUpdate) error {
-	defer fa.reportFlowLogStoreMetrics()
 
 	// Filter out any action that we aren't configured to handle. Use the hasDenyRule flag rather than the actual
 	// verdict rule to determine if we treat this as a deny or an allow from an aggregation perspective. This allows
@@ -239,6 +238,7 @@ func (fa *flowLogAggregator) FeedUpdate(mu *MetricUpdate) error {
 
 	fa.flMutex.Lock()
 	defer fa.flMutex.Unlock()
+	defer fa.reportFlowLogStoreMetrics()
 
 	logutil.Tracef(fa.displayDebugTraceLogs, "Flow Log Aggregator got Metric Update: %+v", *mu)
 
@@ -256,7 +256,7 @@ func (fa *flowLogAggregator) FeedUpdate(mu *MetricUpdate) error {
 		}
 		if fa.HasAggregationLevelChanged() {
 			for flowMeta, flowEntry := range fa.flowStore {
-				//TODO: Instead of iterating through all the entries, we should store the reverse mappings
+				// TODO: Instead of iterating through all the entries, we should store the reverse mappings
 				if !flowEntry.shouldExport && flowEntry.spec.ContainsActiveRefs(mu) {
 					newEntry.spec.MergeWith(*mu, flowEntry.spec)
 					delete(fa.flowStore, flowMeta)

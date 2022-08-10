@@ -227,6 +227,8 @@ ci: clean mod-download build static-checks test-cni-versions image-all test-inst
 
 ## Deploys images to registry
 cd: image-all cd-common
+	$(MAKE) FIPS=true retag-build-images-with-registries push-images-to-registries push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(BRANCH_NAME)-fips
+	$(MAKE) FIPS=true retag-build-images-with-registries push-images-to-registries push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(shell git describe --tags --dirty --long --always --abbrev=12)-fips EXCLUDEARCH="$(EXCLUDEARCH)"
 
 ## Build fv binary for Windows
 $(BIN_WIN)/win-fv.exe: $(WINFV_SRCFILES)

@@ -44,19 +44,27 @@ var (
 	tunnelCert    *x509.Certificate
 	tunnelPrivKey *rsa.PrivateKey
 	rootCAs       *x509.CertPool
+	tunnelTLS     tls.Certificate
 )
 
 func init() {
+	var err error
 	log.SetOutput(GinkgoWriter)
 	log.SetLevel(log.DebugLevel)
 
-	tunnelCert, _ = test.CreateSelfSignedX509Cert("voltron", true)
+	tunnelCert, err = test.CreateSelfSignedX509Cert("voltron", true)
+	if err != nil {
+		panic(err)
+	}
 
 	block, _ := pem.Decode([]byte(test.PrivateRSA))
 	tunnelPrivKey, _ = x509.ParsePKCS1PrivateKey(block.Bytes)
 
 	rootCAs = x509.NewCertPool()
 	rootCAs.AddCert(tunnelCert)
+
+	certPEM := utils.CertPEMEncode(tunnelCert)
+	tunnelTLS, _ = tls.X509KeyPair(certPEM, []byte(test.PrivateRSA))
 }
 
 type testClient struct {
@@ -72,7 +80,9 @@ func (c *testClient) doRequest(clusterID string) (string, error) {
 	Expect(err).NotTo(HaveOccurred())
 
 	if resp.StatusCode != 200 {
-		return "", errors.Errorf("error status: %d", resp.StatusCode)
+		body, err := ioutil.ReadAll(resp.Body)
+		Expect(err).NotTo(HaveOccurred())
+		return "", errors.Errorf("error status: %d, body: %s", resp.StatusCode, body)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -132,6 +142,7 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 		lisTs2 net.Listener
 
 		wgSrvCnlt sync.WaitGroup
+		fipsMode  = true
 	)
 
 	clusterID := "external-cluster"
@@ -200,10 +211,12 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 			k8sAPI,
 			&rest.Config{BearerToken: "manager-token"},
 			authenticator,
-			server.WithTunnelCreds(tunnelCert, tunnelPrivKey),
+			server.WithTunnelSigningCreds(tunnelCert),
+			server.WithTunnelCert(tunnelTLS),
 			server.WithExternalCredsFiles("../../internal/pkg/server/testdata/localhost.pem", "../../internal/pkg/server/testdata/localhost.key"),
 			server.WithInternalCredFiles("../../internal/pkg/server/testdata/tigera-manager-svc.pem", "../../internal/pkg/server/testdata/tigera-manager-svc.key"),
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
+			server.WithFIPSModeEnabled(fipsMode),
 		)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -239,14 +252,14 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 	It("should register 2 clusters", func() {
 		k8sAPI.WaitForManagedClustersWatched()
 		var err error
-		certPemID1, keyPemID1, fingerprintID1, err = test.GenerateTestCredentials(clusterID, tunnelCert, tunnelPrivKey)
+		certPemID1, keyPemID1, fingerprintID1, err = test.GenerateTestCredentials(clusterID, tunnelCert, tunnelPrivKey, fipsMode)
 		Expect(err).NotTo(HaveOccurred())
 		annotationsID1 := map[string]string{server.AnnotationActiveCertificateFingerprint: fingerprintID1}
 
 		Expect(k8sAPI.AddCluster(clusterID, clusterID, annotationsID1)).ShouldNot(HaveOccurred())
 		Expect(<-watchSync).NotTo(HaveOccurred())
 
-		certPemID2, keyPemID2, fingerprintID2, err = test.GenerateTestCredentials(clusterID2, tunnelCert, tunnelPrivKey)
+		certPemID2, keyPemID2, fingerprintID2, err = test.GenerateTestCredentials(clusterID2, tunnelCert, tunnelPrivKey, fipsMode)
 		Expect(err).NotTo(HaveOccurred())
 		annotationsID2 := map[string]string{server.AnnotationActiveCertificateFingerprint: fingerprintID2}
 
@@ -259,7 +272,8 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 
 		guardian, err = client.New(
 			lisTun.Addr().String(),
-			client.WithTunnelCreds(certPemID1, keyPemID1, rootCAs),
+			client.WithTunnelCreds(certPemID1, keyPemID1),
+			client.WithTunnelRootCA(rootCAs),
 			client.WithProxyTargets(
 				[]proxy.Target{
 					{
@@ -282,7 +296,8 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 
 		guardian2, err = client.New(
 			lisTun.Addr().String(),
-			client.WithTunnelCreds(certPemID2, keyPemID2, rootCAs),
+			client.WithTunnelCreds(certPemID2, keyPemID2),
+			client.WithTunnelRootCA(rootCAs),
 			client.WithProxyTargets(
 				[]proxy.Target{
 					{

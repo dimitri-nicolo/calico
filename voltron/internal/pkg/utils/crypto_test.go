@@ -18,7 +18,10 @@ func TestLoadingCertificates(t *testing.T) {
 	}
 
 	for _, entry := range data {
-		var _, _, err = LoadX509Pair(entry.certFile, entry.keyFile)
+		_, err := LoadX509Key(entry.keyFile)
+		g.Expect(err).NotTo(HaveOccurred())
+
+		_, err = LoadX509Cert(entry.certFile)
 		g.Expect(err).NotTo(HaveOccurred())
 	}
 }

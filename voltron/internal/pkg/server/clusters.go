@@ -21,6 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	jclust "github.com/projectcalico/calico/voltron/internal/pkg/clusters"
 	vtls "github.com/projectcalico/calico/voltron/pkg/tls"
@@ -49,9 +50,10 @@ type cluster struct {
 
 type clusters struct {
 	sync.RWMutex
-	clusters      map[string]*cluster
-	sniServiceMap map[string]string
-	k8sCLI        bootstrap.K8sClient
+	clusters        map[string]*cluster
+	sniServiceMap   map[string]string
+	k8sCLI          bootstrap.K8sClient
+	fipsModeEnabled bool
 
 	// parameters for forwarding guardian requests to a default server
 	forwardingEnabled               bool
@@ -88,6 +90,7 @@ func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {
 			vtls.WithSNIServiceMap(cs.sniServiceMap),
 			vtls.WithConnectionRetryAttempts(cs.defaultForwardDialRetryAttempts),
 			vtls.WithConnectionRetryInterval(cs.defaultForwardDialRetryInterval),
+			vtls.WithFipsModeEnabled(cs.fipsModeEnabled),
 		)
 		if err != nil {
 			return nil, err
@@ -218,6 +221,7 @@ func (cs *clusters) watchK8sFrom(ctx context.Context, syncC chan<- error, last s
 			mc := &jclust.ManagedCluster{
 				ID:                mcResource.ObjectMeta.Name,
 				ActiveFingerprint: mcResource.ObjectMeta.Annotations[AnnotationActiveCertificateFingerprint],
+				FIPSModeEnabled:   cs.fipsModeEnabled,
 			}
 
 			log.Debugf("Watching K8s resource type: %s for cluster %s", r.Type, mc.ID)
@@ -372,13 +376,15 @@ func (c *cluster) assignTunnel(t *tunnel.Tunnel) error {
 		return err
 	}
 
+	tlsConfig := calicotls.NewTLSConfig(c.FIPSModeEnabled)
+	tlsConfig.InsecureSkipVerify = true //todo: not sure where this comes from, but this should be dealt with.
 	c.proxy = &httputil.ReverseProxy{
 		Director:      proxyVoidDirector,
 		FlushInterval: -1,
 		// TODO set the error logger
 		Transport: &http2.Transport{
 			DialTLS:         c.DialTLS2,
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			TLSClientConfig: tlsConfig,
 			AllowHTTP:       true,
 		},
 	}

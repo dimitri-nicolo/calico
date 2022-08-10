@@ -26,6 +26,7 @@ type proxy struct {
 	retryInterval            time.Duration
 	connectTimeout           time.Duration
 	maxConcurrentConnections int
+	fipsModeEnabled          bool
 }
 
 const (
@@ -140,7 +141,7 @@ func (p *proxy) proxyConnection(srcConn net.Conn) error {
 	var bytesRead []byte
 
 	// we try to extract the SNI so that we can verify this is a tls connection
-	serverName, bytesRead, err := extractSNI(srcConn)
+	serverName, bytesRead, err := extractSNI(srcConn, p.fipsModeEnabled)
 	if err != nil {
 		return err
 	}

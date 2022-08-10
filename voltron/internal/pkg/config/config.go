@@ -34,6 +34,9 @@ type Config struct {
 	// for external communication (Tigera UI <-> Voltron)
 	HTTPSCert string `default:"/certs/https/cert" split_words:"true" json:"-"`
 	HTTPSKey  string `default:"/certs/https/key" split_words:"true" json:"-"`
+
+	UseHTTPSCertOnTunnel bool `split_words:"true"`
+
 	// InternalHTTPSCert, InternalHTTPSKey - path to an x509 certificate and its private key used
 	//for internal communication within the K8S cluster
 	InternalHTTPSCert string `default:"/certs/internal/cert" split_words:"true" json:"-"`
@@ -87,6 +90,9 @@ type Config struct {
 	DefaultForwardServer            string        `default:"tigera-secure-es-http.tigera-elasticsearch.svc:9200" split_words:"true"`
 	DefaultForwardDialRetryAttempts int           `default:"5" split_words:"true"`
 	DefaultForwardDialInterval      time.Duration `default:"2s" split_words:"true"`
+
+	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
+	FIPSModeEnabled bool `default:"false" split_words:"true"`
 }
 
 func (cfg Config) String() string {

@@ -40,7 +40,7 @@ type globalAlertController struct {
 func NewGlobalAlertController(calicoCLI calicoclient.Interface, lmaESClient lma.Client, k8sClient kubernetes.Interface,
 	enableAnomalyDetection bool, podTemplateQuery podtemplate.ADPodTemplateQuery,
 	adDetectionController controller.AnomalyDetectionController, adTrainingController controller.AnomalyDetectionController,
-	clusterName string, namespace string) (controller.Controller, []health.Pinger) {
+	clusterName string, namespace string, fipsModeEnabled bool) (controller.Controller, []health.Pinger) {
 
 	c := &globalAlertController{
 		lmaESClient: lmaESClient,
@@ -63,6 +63,7 @@ func NewGlobalAlertController(calicoCLI calicoclient.Interface, lmaESClient lma.
 			clusterName:            c.clusterName,
 			namespace:              namespace,
 			enableAnomalyDetection: enableAnomalyDetection,
+			fipsModeEnabled:        fipsModeEnabled,
 		})
 
 	pinger := c.worker.AddWatch(

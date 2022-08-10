@@ -34,6 +34,9 @@ type Config struct {
 	// Multi-cluster settings
 	MultiClusterForwardingCA       string `default:"/manager-tls/cert"`
 	MultiClusterForwardingEndpoint string `default:"https://localhost:9443"`
+
+	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
+	FIPSModeEnabled bool `default:"false" split_words:"true"`
 }
 
 // Return a string representation on the Config instance.

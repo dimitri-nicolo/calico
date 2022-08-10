@@ -5,12 +5,14 @@ import (
 	"crypto/x509"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	"github.com/projectcalico/calico/voltron/pkg/conn"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
@@ -25,8 +27,11 @@ type Client struct {
 	targets   []proxy.Target
 	closeOnce sync.Once
 
-	tunnelAddr    string
-	tunnelCert    *tls.Certificate
+	tunnelAddr string
+	tunnelCert *tls.Certificate
+
+	// tunnelRootCAs defines the set of root certificate authorities that guardian will use when verifying voltron certificates.
+	// if nil, dialer will use the host's CA set.
 	tunnelRootCAs *x509.CertPool
 
 	tunnelEnableKeepAlive   bool
@@ -41,6 +46,9 @@ type Client struct {
 
 	connRetryAttempts int
 	connRetryInterval time.Duration
+
+	// fipsModeEnabled enables FIPS 140-2 verified mode.
+	fipsModeEnabled bool
 }
 
 // New returns a new Client
@@ -68,6 +76,18 @@ func New(addr string, opts ...Option) (*Client, error) {
 		}
 	}
 
+	// default expected serverName to the value set when certs are signed
+	// by the apiserver: 'voltron'.
+	serverName := "voltron"
+
+	// tunnelRootCAs will be nil if using certs from the system for the case of a signed voltron cert.
+	// in this case, the serverName will match the remote address
+	if client.tunnelRootCAs == nil {
+		// strip the port
+		serverName = strings.Split(client.tunnelAddr, ":")[0]
+		log.Debug("expecting TLS server name: ", serverName)
+	}
+
 	// set the dialer for the tunnel manager if one hasn't been specified
 	tunnelAddress := client.tunnelAddr
 	tunnelKeepAlive := client.tunnelEnableKeepAlive
@@ -87,13 +107,14 @@ func New(addr string, opts ...Option) (*Client, error) {
 			tunnelRootCAs := client.tunnelRootCAs
 			dialerFunc = func() (*tunnel.Tunnel, error) {
 				log.Debug("Dialing tunnel...")
+
+				tlsConfig := calicotls.NewTLSConfig(client.fipsModeEnabled)
+				tlsConfig.Certificates = []tls.Certificate{*tunnelCert}
+				tlsConfig.RootCAs = tunnelRootCAs
+				tlsConfig.ServerName = serverName
 				return tunnel.DialTLS(
 					tunnelAddress,
-					&tls.Config{
-						Certificates: []tls.Certificate{*tunnelCert},
-						RootCAs:      tunnelRootCAs,
-						ServerName:   "voltron",
-					},
+					tlsConfig,
 					client.tunnelDialTimeout,
 					tunnel.WithKeepAliveSettings(tunnelKeepAlive, tunnelKeepAliveInterval),
 				)
@@ -104,6 +125,7 @@ func New(addr string, opts ...Option) (*Client, error) {
 			client.tunnelDialRetryAttempts,
 			client.tunnelDialRetryInterval,
 			client.tunnelDialTimeout,
+			client.fipsModeEnabled,
 		)
 	}
 
@@ -148,10 +170,10 @@ func (c *Client) ServeTunnelHTTP() error {
 	if c.tunnelCert != nil {
 		// we need to upgrade the tunnel to a TLS listener to support HTTP2
 		// on this side.
-		listener = tls.NewListener(listener, &tls.Config{
-			Certificates: []tls.Certificate{*c.tunnelCert},
-			NextProtos:   []string{"h2"},
-		})
+		tlsConfig := calicotls.NewTLSConfig(c.fipsModeEnabled)
+		tlsConfig.Certificates = []tls.Certificate{*c.tunnelCert}
+		tlsConfig.NextProtos = []string{"h2"}
+		listener = tls.NewListener(listener, tlsConfig)
 		log.Infof("serving HTTP/2 enabled")
 	}
 

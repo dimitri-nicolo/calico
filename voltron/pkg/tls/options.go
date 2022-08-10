@@ -81,3 +81,11 @@ func WithMaxConcurrentConnections(maxConcurrency int) ProxyOption {
 		return nil
 	}
 }
+
+// WithFipsModeEnabled Enables FIPS 140-2 verified crypto mode.
+func WithFipsModeEnabled(fipsModeEnabled bool) ProxyOption {
+	return func(p *proxy) error {
+		p.fipsModeEnabled = fipsModeEnabled
+		return nil
+	}
+}

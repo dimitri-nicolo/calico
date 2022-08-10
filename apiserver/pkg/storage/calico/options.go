@@ -20,9 +20,10 @@ const (
 // to generate a fully populated manifest. The CA certificate and private key
 // will be read from a local volume mounted using a K8S secret
 type ManagedClusterResources struct {
-	CACert                *x509.Certificate
-	CAKey                 *rsa.PrivateKey
-	ManagementClusterAddr string
+	CACert                  *x509.Certificate
+	CAKey                   *rsa.PrivateKey
+	ManagementClusterAddr   string
+	ManagementClusterCAType string
 }
 
 type Options struct {

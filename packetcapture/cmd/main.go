@@ -13,6 +13,7 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/projectcalico/calico/crypto/pkg/tls"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	cache2 "github.com/projectcalico/calico/packetcapture/pkg/cache"
@@ -75,7 +76,12 @@ func main() {
 	http.Handle("/files/", middleware.AuthenticationHandler(authn, authz.Authorize(files.Delete)))
 
 	// Start server
-	log.Fatal(http.ListenAndServeTLS(addr, cfg.HTTPSCert, cfg.HTTPSKey, nil))
+	server := &http.Server{
+		Addr:      addr,
+		TLSConfig: tls.NewTLSConfig(cfg.FIPSModeEnabled),
+	}
+
+	log.Fatal(server.ListenAndServeTLS(cfg.HTTPSCert, cfg.HTTPSKey))
 }
 
 func mustGetAuthenticator(cs lmak8s.ClientSetFactory, cfg *config.Config) lmaauth.JWTAuth {

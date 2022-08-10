@@ -5,13 +5,12 @@ package test
 
 import (
 	"crypto"
-	"crypto/md5"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"fmt"
 	"io"
 	"math/big"
 	"net"
@@ -19,6 +18,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+
+	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 )
 
 const pubRSA = `
@@ -238,7 +239,7 @@ func DataFlow(r io.Reader, w io.Writer, msg []byte) ([]byte, error) {
 	return res, err
 }
 
-func GenerateTestCredentials(clusterName string, caCert *x509.Certificate, caKey crypto.Signer) (cert []byte, key []byte, fingerprint string, err error) {
+func GenerateTestCredentials(clusterName string, caCert *x509.Certificate, caKey crypto.Signer, fipsMode bool) (cert []byte, key []byte, fingerprint string, err error) {
 	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, nil, "", err
@@ -276,8 +277,8 @@ func GenerateTestCredentials(clusterName string, caCert *x509.Certificate, caKey
 		Bytes: x509Cert.Raw,
 	}
 
-	fingerprint = fmt.Sprintf("%x", md5.Sum(x509Cert.Raw))
 	cert = pem.EncodeToMemory(block2)
+	fingerprint = utils.GenerateFingerprint(fipsMode, x509Cert)
 
 	return cert, key, fingerprint, nil
 
@@ -367,6 +368,6 @@ func KeyToPemBytes(key *rsa.PrivateKey) []byte {
 	return pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: privBytes})
 }
 
-func CertificateFingerprint(cert *x509.Certificate) string {
-	return fmt.Sprintf("%x", md5.Sum(cert.Raw))
+func X509CertToTLSCert(cert *x509.Certificate, key *rsa.PrivateKey) (tls.Certificate, error) {
+	return tls.X509KeyPair(CertToPemBytes(cert), KeyToPemBytes(key))
 }

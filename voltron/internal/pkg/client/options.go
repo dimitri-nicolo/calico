@@ -36,7 +36,7 @@ func WithDefaultAddr(addr string) Option {
 }
 
 // WithTunnelCreds sets the credential to be used when establishing the tunnel
-func WithTunnelCreds(certPEM []byte, keyPEM []byte, ca *x509.CertPool) Option {
+func WithTunnelCreds(certPEM []byte, keyPEM []byte) Option {
 	return func(c *Client) error {
 		if certPEM == nil || keyPEM == nil {
 			return errors.Errorf("WithTunnelCreds: cert and key are required")
@@ -48,6 +48,13 @@ func WithTunnelCreds(certPEM []byte, keyPEM []byte, ca *x509.CertPool) Option {
 		}
 
 		c.tunnelCert = &cert
+		return nil
+	}
+}
+
+// WithTunnelRootCA sets the cert to be used when verifying the server's identity.
+func WithTunnelRootCA(ca *x509.CertPool) Option {
+	return func(c *Client) error {
 		c.tunnelRootCAs = ca
 		return nil
 	}
@@ -108,6 +115,14 @@ func WithConnectionRetryInterval(connRetryInterval time.Duration) Option {
 func WithTunnelDialTimeout(tunnelDialTimeout time.Duration) Option {
 	return func(c *Client) error {
 		c.tunnelDialTimeout = tunnelDialTimeout
+		return nil
+	}
+}
+
+// WithFIPSModeEnabled enables FIPS 140-2 verified mode.
+func WithFIPSModeEnabled(fipsModeEnabled bool) Option {
+	return func(c *Client) error {
+		c.fipsModeEnabled = fipsModeEnabled
 		return nil
 	}
 }

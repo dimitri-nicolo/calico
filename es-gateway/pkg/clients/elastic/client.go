@@ -10,6 +10,7 @@ import (
 
 	es7 "github.com/elastic/go-elasticsearch/v7"
 
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	httpCommon "github.com/projectcalico/calico/es-gateway/pkg/clients/internal/http"
 )
 
@@ -24,7 +25,7 @@ type Client interface {
 }
 
 // NewClient returns a newly configured ES client.
-func NewClient(url, username, password, caCertPath, clientCertPath, clientKeyPath string, mTLS bool) (Client, error) {
+func NewClient(url, username, password, caCertPath, clientCertPath, clientKeyPath string, mTLS, fipsModeEnabled bool) (Client, error) {
 	// Attempt to load CA cert.
 	caCert, err := ioutil.ReadFile(caCertPath)
 	if err != nil {
@@ -38,10 +39,10 @@ func NewClient(url, username, password, caCertPath, clientCertPath, clientKeyPat
 	}
 
 	// Set up default HTTP transport config.
+	tlsConfig := calicotls.NewTLSConfig(fipsModeEnabled)
+	tlsConfig.RootCAs = caCertPool
 	httpTransport := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			RootCAs: caCertPool,
-		},
+		TLSClientConfig: tlsConfig,
 	}
 
 	// Determine whether mTLS is enabled for Elasticsearch.

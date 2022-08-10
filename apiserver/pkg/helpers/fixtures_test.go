@@ -154,6 +154,8 @@ spec:
   # will connect. Valid examples are: "0.0.0.0:31000", "example.com:32000", "[::1]:32500"
   managementClusterAddr: "example.org:1234"
 
+  tls:
+    ca: ""
 ---
 
 apiVersion: v1

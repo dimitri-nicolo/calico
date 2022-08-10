@@ -33,7 +33,7 @@ type User struct {
 // later use.
 func elasticAuthHandler(c cache.SecretsCache, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Infof("Attempting ES authentication for request with URI %s", r.RequestURI)
+		log.Debugf("Attempting ES authentication for request with URI %s", r.RequestURI)
 		var err error
 
 		authValue, ok := r.Header["Authorization"]

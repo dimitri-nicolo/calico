@@ -4,7 +4,6 @@ package server
 
 import (
 	"context"
-	"crypto"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -18,6 +17,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
@@ -73,15 +73,20 @@ type Server struct {
 
 	addr string
 
-	// Creds to be used for the tunnel endpoints and to generate creds for the
-	// tunnel clients a.k.a guardians
-	tunnelCert *x509.Certificate
-	tunnelKey  crypto.Signer
+	// tunnelSigningCert is the cert that was used to generate creds for the tunnel clients a.k.a guardians and
+	// thus the cert that can be used to verify its identity
+	tunnelSigningCert *x509.Certificate
+
+	// tunnelCert is the cert to be used for the tunnel endpoint
+	tunnelCert tls.Certificate
 
 	tunnelEnableKeepAlive   bool
 	tunnelKeepAliveInterval time.Duration
 
 	sniServiceMap map[string]string
+
+	// Enable FIPS 140-2 verified mode.
+	fipsModeEnabled bool
 }
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
@@ -109,8 +114,7 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, authenticator auth.JWTAut
 	srv.clusters.sniServiceMap = srv.sniServiceMap
 	srv.proxyMux = http.NewServeMux()
 
-	cfg := &tls.Config{}
-
+	cfg := calicotls.NewTLSConfig(srv.fipsModeEnabled)
 	cfg.Certificates = append(cfg.Certificates, srv.externalCert)
 
 	if len(srv.internalCert.Certificate) > 0 {
@@ -131,8 +135,13 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, authenticator auth.JWTAut
 
 	var tunOpts []tunnel.ServerOption
 
-	if srv.tunnelCert != nil && srv.tunnelKey != nil {
-		tunOpts = append(tunOpts, tunnel.WithCreds(srv.tunnelCert, srv.tunnelKey))
+	if srv.tunnelSigningCert != nil {
+		tunOpts = append(tunOpts,
+			tunnel.WithClientCert(srv.tunnelSigningCert),
+			tunnel.WithServerCert(srv.tunnelCert),
+			tunnel.WithFIPSModeEnabled(srv.fipsModeEnabled),
+		)
+
 		var err error
 		srv.tunSrv, err = tunnel.NewServer(tunOpts...)
 		if err != nil {
@@ -264,7 +273,7 @@ func (s *Server) extractIdentity(t *tunnel.Tunnel, clusterID string, fingerprint
 		// We expect to have a cluster registered with this ID and matching fingerprint
 		// for the cert.
 		clusterID = id.Subject.CommonName
-		fingerprint = utils.GenerateFingerprint(id)
+		fingerprint = utils.GenerateFingerprint(s.fipsModeEnabled, id)
 	default:
 		log.Errorf("unknown tunnel identity type %T", id)
 	}

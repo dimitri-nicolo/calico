@@ -32,6 +32,7 @@ COPY --from=ubi /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
 COPY --from=ubi /lib64/libc.so.6 /lib64/libc.so.6
 COPY --from=ubi /lib64/libtinfo.so.6 /lib64/libtinfo.so.6
 COPY --from=ubi /lib64/libdl.so.2 /lib64/libdl.so.2
+COPY --from=ubi /lib64/libpthread.so.0 /lib64/libpthread.so.0
 
 ENV RUN_SCENARIO=true
 

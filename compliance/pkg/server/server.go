@@ -15,13 +15,14 @@ import (
 	calicov3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	"github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 // New creates a new server.
 func New(csFactory datastore.ClusterCtxK8sClientFactory, esFactory elastic.ClusterContextClientFactory,
-	authenticator auth.JWTAuth, addr string, key string, cert string) ServerControl {
+	authenticator auth.JWTAuth, addr string, key string, cert string, fipsMode bool) ServerControl {
 
 	s := &server{
 		key:       key,
@@ -29,7 +30,6 @@ func New(csFactory datastore.ClusterCtxK8sClientFactory, esFactory elastic.Clust
 		csFactory: csFactory,
 		esFactory: esFactory,
 	}
-
 	// Create a new pattern matching MUX.
 	mux := pat.New()
 	mux.Get(UrlVersion, http.HandlerFunc(s.handleVersion))
@@ -44,8 +44,9 @@ func New(csFactory datastore.ClusterCtxK8sClientFactory, esFactory elastic.Clust
 
 	// Create a new server using the MUX.
 	s.server = &http.Server{
-		Addr:    addr,
-		Handler: mux,
+		Addr:      addr,
+		Handler:   mux,
+		TLSConfig: tls.NewTLSConfig(fipsMode),
 	}
 
 	return s

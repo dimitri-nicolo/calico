@@ -52,7 +52,7 @@ func (b *strAsByteSlice) UnmarshalJSON(j []byte) error {
 }
 
 // ProxyTargets decodes Targets into []proxy.Target
-func ProxyTargets(tgts Targets) ([]proxy.Target, error) {
+func ProxyTargets(tgts Targets, fipsModeEnabled bool) ([]proxy.Target, error) {
 	var ret []proxy.Target
 
 	// pathSet helps keep track of the paths we've seen so we don't have duplicates
@@ -104,6 +104,7 @@ func ProxyTargets(tgts Targets) ([]proxy.Target, error) {
 			}
 			pt.PathRegexp = r
 		}
+		pt.FIPSModeEnabled = fipsModeEnabled
 
 		pt.PathReplace = t.PathReplace
 
