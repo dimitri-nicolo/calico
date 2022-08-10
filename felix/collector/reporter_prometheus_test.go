@@ -3,9 +3,8 @@
 package collector
 
 import (
-	"time"
-
 	"sync/atomic"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -397,7 +396,7 @@ var _ = Describe("Prometheus Reporter verification", func() {
 	mt := &mockTime{}
 	BeforeEach(func() {
 		// Create a PrometheusReporter and start the reporter without starting the HTTP service.
-		pr = NewPrometheusReporter(prometheus.NewRegistry(), 0, retentionTime, "", "", "")
+		pr = NewPrometheusReporter(prometheus.NewRegistry(), 0, retentionTime, "", "", "", true)
 		pa = NewPolicyRulesAggregator(retentionTime, "testHost")
 		pr.timeNowFn = mt.getMockTime
 		pa.timeNowFn = mt.getMockTime

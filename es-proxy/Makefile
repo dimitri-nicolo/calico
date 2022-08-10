@@ -51,10 +51,17 @@ VERSION_FLAGS=-X $(PACKAGE_NAME)/pkg/handler.VERSION=$(GIT_VERSION) \
 # "es-proxy" instead of "$(BINDIR)/es-proxy".
 build: $(BINDIR)/es-proxy-$(ARCH)
 
+# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
+ifeq ($(ARCH), $(filter $(ARCH),amd64))
+CGO_ENABLED=1
+else
+CGO_ENABLED=0
+endif
+
 $(BINDIR)/es-proxy-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_GO_BUILD_CGO)  \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v $(BUILD_TAGS) -ldflags "$(VERSION_FLAGS)" cmd/server/*.go'
+			   go build -o $@ -v $(BUILD_TAGS) -ldflags "$(VERSION_FLAGS)" cmd/server/*.go'
 
 ES_PROXY_CONTAINER_CREATED=.es-proxy.created-$(ARCH)
 

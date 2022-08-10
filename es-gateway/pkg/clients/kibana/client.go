@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"time"
 
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -30,7 +32,7 @@ type Client interface {
 }
 
 // NewClient returns a newly configured ES client.
-func NewClient(url, username, password, caCertPath, clientCertPath, clientKeyPath string, mTLS bool) (Client, error) {
+func NewClient(url, username, password, caCertPath, clientCertPath, clientKeyPath string, mTLS, fipsModeEnabled bool) (Client, error) {
 	// Load CA cert
 	caCert, err := ioutil.ReadFile(caCertPath)
 	if err != nil {
@@ -44,10 +46,10 @@ func NewClient(url, username, password, caCertPath, clientCertPath, clientKeyPat
 	}
 
 	// Set up default HTTP transport config.
+	tlsConfig := calicotls.NewTLSConfig(fipsModeEnabled)
+	tlsConfig.RootCAs = caCertPool
 	httpTransport := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			RootCAs: caCertPool,
-		},
+		TLSClientConfig: tlsConfig,
 	}
 
 	// Determine whether mTLS is enabled for Kibana.

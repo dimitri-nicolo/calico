@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/es-gateway/pkg/cache"
 	"github.com/projectcalico/calico/es-gateway/pkg/clients/elastic"
 	"github.com/projectcalico/calico/es-gateway/pkg/clients/kibana"
@@ -49,6 +50,8 @@ type Server struct {
 
 	cache     cache.SecretsCache // Used to store secrets related authN and credential swapping
 	collector metrics.Collector  // Used to collect prometheus metrics.
+
+	fipsModeEnabled bool // FIPSModeEnabled uses images and features only that are using FIPS 140-2 validated cryptographic modules and standards.
 }
 
 // New returns a new ES Gateway server. Validate and set the server options. Set up the Elasticsearch and Kibana
@@ -67,7 +70,7 @@ func New(opts ...Option) (*Server, error) {
 		}
 	}
 
-	cfg := &tls.Config{}
+	cfg := calicotls.NewTLSConfig(srv.fipsModeEnabled)
 	cfg.Certificates = append(cfg.Certificates, srv.internalCert)
 	cfg.BuildNameToCertificate()
 

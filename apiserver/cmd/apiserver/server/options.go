@@ -64,6 +64,7 @@ type CalicoServerOptions struct {
 	ManagedClustersCACertPath      string
 	ManagedClustersCAKeyPath       string
 	EnableManagedClustersCreateAPI bool
+	FIPSModeEnabled                bool
 
 	// Use this to populate the managementClusterAddr inside the managementClusterConnection CR.
 	ManagementClusterAddr   string
@@ -143,6 +144,7 @@ func (o *CalicoServerOptions) Config() (*apiserver.Config, error) {
 		tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
 	}
 	serverConfig.SecureServing.CipherSuites = cipherSuites
+	serverConfig.SecureServing.MinTLSVersion = tls.VersionTLS12
 
 	if o.PrintSwagger {
 		o.DisableAuth = true

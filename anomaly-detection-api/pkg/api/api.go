@@ -11,6 +11,7 @@ import (
 	"github.com/projectcalico/calico/anomaly-detection-api/pkg/handler/health"
 	"github.com/projectcalico/calico/anomaly-detection-api/pkg/middleware/auth"
 	"github.com/projectcalico/calico/anomaly-detection-api/pkg/middleware/logging"
+	"github.com/projectcalico/calico/crypto/pkg/tls"
 
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 
@@ -56,8 +57,9 @@ func Start(config *config.Config) {
 
 	handler := logging.LogRequestHeaders(apiHandler)
 	server = &http.Server{
-		Addr:    config.ListenAddr,
-		Handler: handler,
+		Addr:      config.ListenAddr,
+		Handler:   handler,
+		TLSConfig: tls.NewTLSConfig(config.FIPSModeEnabled),
 	}
 
 	waitGroup.Add(1)

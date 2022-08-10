@@ -28,6 +28,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/typha/pkg/discovery"
 	"github.com/projectcalico/calico/typha/pkg/syncproto"
@@ -50,6 +51,9 @@ type Options struct {
 	ServerCN     string
 	ServerURISAN string
 	SyncerType   syncproto.SyncerType
+
+	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
+	FIPSModeEnabled bool
 }
 
 func (o *Options) readTimeout() time.Duration {
@@ -222,10 +226,8 @@ func (s *SyncerClient) connect(cxt context.Context, typhaAddr discovery.Typha) e
 			log.WithError(err).Error("Failed to load certificate and key")
 			return err
 		}
-		tlsConfig := tls.Config{Certificates: []tls.Certificate{cert}}
-		// Typha API is a private binary API so we can enforce a recent TLS variant without
-		// worrying about back-compatibility with old browsers (for example).
-		tlsConfig.MinVersion = tls.VersionTLS12
+		tlsConfig := calicotls.NewTLSConfig(s.options.FIPSModeEnabled)
+		tlsConfig.Certificates = []tls.Certificate{cert}
 
 		// Set InsecureSkipVerify true, because when it's false crypto/tls insists on
 		// verifying the server's hostname or IP address against tlsConfig.ServerName, and
@@ -255,7 +257,7 @@ func (s *SyncerClient) connect(cxt context.Context, typhaAddr discovery.Typha) e
 				&net.Dialer{Timeout: 10 * time.Second},
 				"tcp",
 				addr,
-				&tlsConfig)
+				tlsConfig)
 		}
 	} else {
 		connFunc = func(addr string) (net.Conn, error) {

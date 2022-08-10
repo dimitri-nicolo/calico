@@ -34,6 +34,7 @@ type globalAlertReconciler struct {
 	clusterName            string
 	namespace              string
 	enableAnomalyDetection bool
+	fipsModeEnabled        bool
 }
 
 // alertState has the alert and cancel function to stop the alert routine.
@@ -67,7 +68,7 @@ func (r *globalAlertReconciler) Reconcile(namespacedName types.NamespacedName) e
 	}
 
 	alert, err := alert.NewAlert(obj, r.calicoCLI, r.lmaESClient, r.k8sClient, r.enableAnomalyDetection, r.podTemplateQuery,
-		r.adDetectionController, r.adTrainingController, r.clusterName, r.namespace)
+		r.adDetectionController, r.adTrainingController, r.clusterName, r.namespace, r.fipsModeEnabled)
 	if err != nil {
 		return err
 	}

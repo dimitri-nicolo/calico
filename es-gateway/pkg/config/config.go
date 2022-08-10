@@ -52,6 +52,9 @@ type Config struct {
 	// Prometheus metrics are exposed on this port.
 	MetricsEnabled bool `default:"false" split_words:"true"`
 	MetricsPort    int  `default:"9091" split_words:"true"`
+
+	// FIPSModeEnabled uses images and features only that are using FIPS 140-2 validated cryptographic modules and standards.
+	FIPSModeEnabled bool `default:"false" split_words:"true"`
 }
 
 // Return a string representation on the Config instance.

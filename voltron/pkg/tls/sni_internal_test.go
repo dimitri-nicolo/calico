@@ -27,7 +27,7 @@ var _ = Describe("extractSNI", func() {
 				log.Error(err)
 			}
 		}()
-		extractedServerName, bytesRead, err := extractSNI(dst)
+		extractedServerName, bytesRead, err := extractSNI(dst, false)
 
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(extractedServerName).Should(Equal(serverName))
@@ -44,7 +44,7 @@ var _ = Describe("extractSNI", func() {
 			_, err := src.Write([]byte("ting\r\n"))
 			Expect(err).ShouldNot(HaveOccurred())
 		}()
-		extractedServerName, bytesRead, err := extractSNI(dst)
+		extractedServerName, bytesRead, err := extractSNI(dst, false)
 
 		Expect(err).Should(BeAssignableToTypeOf(tls.RecordHeaderError{}))
 		Expect(extractedServerName).Should(Equal(""))

@@ -63,6 +63,9 @@ type config struct {
 	Listen     bool   `default:"true"`
 	ListenHost string `default:"" split_words:"true"`
 	ListenPort string `default:"8080" split_words:"true"`
+
+	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
+	FIPSModeEnabled bool `default:"false" split_words:"true"`
 }
 
 func (cfg config) String() string {
@@ -171,7 +174,7 @@ func main() {
 			TokenPath:    "/var/run/secrets/kubernetes.io/serviceaccount/token",
 			CABundlePath: cfg.QueryserverCABundlePath,
 		},
-	})
+	}, cfg.FIPSModeEnabled)
 	if err != nil {
 		log.Fatalf("Failed to parse default proxy targets: %s", err)
 	}
@@ -187,6 +190,7 @@ func main() {
 		client.WithTunnelDialTimeout(cfg.TunnelDialTimeout),
 		client.WithConnectionRetryAttempts(cfg.ConnectionRetryAttempts),
 		client.WithConnectionRetryInterval(cfg.ConnectionRetryInterval),
+		client.WithFIPSModeEnabled(cfg.FIPSModeEnabled),
 	)
 
 	if err != nil {

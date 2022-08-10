@@ -45,6 +45,13 @@ VERSION_FLAGS=-X $(PACKAGE_NAME)/pkg/version.VERSION=$(GIT_VERSION) \
 	-X $(PACKAGE_NAME)/pkg/version.GIT_DESCRIPTION=$(GIT_DESCRIPTION) \
 	-X $(PACKAGE_NAME)/pkg/version.GIT_REVISION=$(GIT_COMMIT)
 
+# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
+ifeq ($(ARCH), $(filter $(ARCH),amd64))
+CGO_ENABLED=1
+else
+CGO_ENABLED=0
+endif
+
 # This section builds the output binaries.
 # Some will have dedicated targets to make it easier to type, for example
 # "controller" instead of "$(BINDIR)/controller".
@@ -56,13 +63,13 @@ build: $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH)
 
 .PHONY: $(BINDIR)/controller-$(ARCH)
 $(BINDIR)/controller-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_GO_BUILD_CGO) \
 	    sh -c '$(GIT_CONFIG_SSH) \
 	           go build -o $@ -v -ldflags "$(VERSION_FLAGS)" $(BUILD_TAGS) cmd/controller/controller.go'
 
 .PHONY: $(BINDIR)/healthz-$(ARCH)
 $(BINDIR)/healthz-$(ARCH): $(SRC_FILES)
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_GO_BUILD_CGO) \
 	    sh -c '$(GIT_CONFIG_SSH) \
 	           go build -o $@ -v $(BUILD_TAGS) cmd/healthz/healthz.go'
 

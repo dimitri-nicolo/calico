@@ -40,6 +40,7 @@ type managedClusterReconciler struct {
 	adTrainingController  controller.AnomalyDetectionController
 
 	enableAnomalyDetection bool
+	fipsModeEnabled        bool
 }
 
 // alertControllerState has the Controller and cancel function to stop the Controller.
@@ -109,7 +110,7 @@ func (r *managedClusterReconciler) startManagedClusterAlertController(name strin
 	// create the GlobalAlertController for the managed cluster - this controller will monitor all GlobalAlert operations
 	// of the assigned managedcluster
 	alertController, _ := alert.NewGlobalAlertController(managedCLI, lmaESClient, r.k8sClient,
-		r.enableAnomalyDetection, r.podTemplateQuery, r.adDetectionController, r.adTrainingController, clusterName, r.namespace)
+		r.enableAnomalyDetection, r.podTemplateQuery, r.adDetectionController, r.adTrainingController, clusterName, r.namespace, r.fipsModeEnabled)
 
 	r.alertNameToAlertControllerState[clusterName] = alertControllerState{
 		alertController: alertController,

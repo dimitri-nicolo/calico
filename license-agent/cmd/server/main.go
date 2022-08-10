@@ -60,7 +60,7 @@ func main() {
 	key := checkFileExists(cfg.MetricsKeyFile)
 
 	//Create New Instance of License reporter
-	lr := metrics.NewLicenseReporter(cfg.MetricsHost, cert, key, ca, cfg.MetricPollInterval, cfg.MetricsPort)
+	lr := metrics.NewLicenseReporter(cfg.MetricsHost, cert, key, ca, cfg.MetricPollInterval, cfg.MetricsPort, os.Getenv("FIPS_MODE_ENABLED") == "true")
 	//Start License metric server and scraper
 	lr.Start()
 }

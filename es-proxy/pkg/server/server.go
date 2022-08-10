@@ -3,7 +3,6 @@ package server
 
 import (
 	"context"
-	"crypto/tls"
 	"net/http"
 	"sync"
 
@@ -14,6 +13,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/es-proxy/pkg/handler"
 	"github.com/projectcalico/calico/es-proxy/pkg/kibana"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
@@ -110,8 +110,10 @@ func Start(cfg *Config) error {
 	// Create a PIP backend.
 	p := pip.New(policyCalcConfig, &clusterAwareLister{k8sClientFactory}, esClient)
 
+	kibanaTLSConfig := calicotls.NewTLSConfig(cfg.FIPSModeEnabled)
+	kibanaTLSConfig.InsecureSkipVerify = true
 	kibanaCli := kibana.NewClient(&http.Client{
-		Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}},
+		Transport: &http.Transport{TLSClientConfig: kibanaTLSConfig},
 	}, cfg.ElasticKibanaEndpoint)
 
 	sm.Handle("/version", http.HandlerFunc(handler.VersionHandler))
@@ -247,7 +249,7 @@ func Start(cfg *Config) error {
 		Addr:    cfg.ListenAddr,
 		Handler: middleware.LogRequestHeaders(sm),
 	}
-
+	server.TLSConfig = calicotls.NewTLSConfig(cfg.FIPSModeEnabled)
 	wg.Add(1)
 	go func() {
 		log.Infof("Starting server on %v", cfg.ListenAddr)

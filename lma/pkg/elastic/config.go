@@ -32,6 +32,9 @@ type Config struct {
 	ElasticShards            int           `envconfig:"ELASTIC_SHARDS" default:"5"`
 	ElasticReplicas          int           `envconfig:"ELASTIC_REPLICAS" default:"0"`
 
+	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode. Not prefixed with ELASTIC_ as this is a global configuration.
+	FIPSModeEnabled bool `envconfig:"FIPS_MODE_ENABLED" default:"0"`
+
 	// Parsed values.
 	ParsedElasticURL *url.URL
 	ParsedLogLevel   log.Level

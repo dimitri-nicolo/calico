@@ -16,7 +16,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"flag"
 	"fmt"
 	"net/http"
@@ -25,15 +24,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
-
 	"github.com/pkg/profile"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-
-	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/authorization"
-	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/elasticsearchconfiguration"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
 
 	log "github.com/sirupsen/logrus"
 	"go.etcd.io/etcd/client/pkg/v3/srv"
@@ -46,12 +38,11 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
-	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-
+	"github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/kube-controllers/pkg/config"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/authorization"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/controller"
+	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/elasticsearchconfiguration"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/federatedservices"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/flannelmigration"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/managedcluster"
@@ -61,10 +52,12 @@ import (
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/pod"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/service"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/serviceaccount"
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 	relasticsearch "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
-
-	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
-
+	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
+	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/libcalico-go/lib/seedrng"
 	lclient "github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/monitor"
@@ -73,6 +66,8 @@ import (
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s"
 	"github.com/projectcalico/calico/typha/pkg/cmdwrapper"
+
+	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 )
 
 // backendClientAccessor is an interface to access the backend client from the main v2 client.
@@ -114,6 +109,9 @@ var (
 	VERSION    string
 	version    bool
 	statusFile string
+
+	// fipsModeEnabled enables FIPS 140-2 validated crypto mode.
+	fipsModeEnabled bool
 )
 
 func init() {
@@ -133,6 +131,7 @@ func init() {
 	if err != nil {
 		log.WithError(err).Fatal("Failed to set klog logging configuration")
 	}
+	fipsModeEnabled = os.Getenv("FIPS_MODE_ENABLED") == "true"
 	ValidateEnvVars()
 }
 
@@ -171,7 +170,7 @@ func main() {
 	}
 
 	esURL := fmt.Sprintf("https://%s:%s", cfg.ElasticHost, cfg.ElasticPort)
-	esClientBuilder := elasticsearch.NewClientBuilder(esURL, cfg.ElasticUsername, cfg.ElasticPassword, cfg.ElasticCA)
+	esClientBuilder := elasticsearch.NewClientBuilder(esURL, cfg.ElasticUsername, cfg.ElasticPassword, cfg.ElasticCA, fipsModeEnabled)
 
 	stop := make(chan struct{})
 
@@ -452,13 +451,18 @@ func newEtcdV3Client() (*clientv3.Client, error) {
 		CertFile:      config.Spec.EtcdCertFile,
 		KeyFile:       config.Spec.EtcdKeyFile,
 	}
+
 	tlsClient, err := tlsInfo.ClientConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	// go 1.13 defaults to TLS 1.3, which we don't support just yet
-	tlsClient.MaxVersion = tls.VersionTLS13
+	baseTLSConfig := tls.NewTLSConfig(fipsModeEnabled)
+	tlsClient.MaxVersion = baseTLSConfig.MaxVersion
+	tlsClient.MinVersion = baseTLSConfig.MinVersion
+	tlsClient.CipherSuites = baseTLSConfig.CipherSuites
+	tlsClient.CurvePreferences = baseTLSConfig.CurvePreferences
+	tlsClient.Renegotiation = baseTLSConfig.Renegotiation
 
 	cfg := clientv3.Config{
 		Endpoints:   etcdLocation,

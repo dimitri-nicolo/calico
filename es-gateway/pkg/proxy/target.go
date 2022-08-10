@@ -65,10 +65,13 @@ type Target struct {
 
 	// Allow TLS without the verify step. This is useful for testing.
 	AllowInsecureTLS bool
+
+	// FIPSModeEnabled uses images and features only that are using FIPS 140-2 validated cryptographic modules and standards.
+	FIPSModeEnabled bool
 }
 
 // CreateTarget returns a Target instance based on the provided parameter values.
-func CreateTarget(catchAllRoute *Route, routes Routes, dest, caCertPath, clientCertPath, clientKeyPath string, enableMTLS, allowInsecureTLS bool) (*Target, error) {
+func CreateTarget(catchAllRoute *Route, routes Routes, dest, caCertPath, clientCertPath, clientKeyPath string, enableMTLS, allowInsecureTLS, fipsModeEnabled bool) (*Target, error) {
 	var err error
 
 	target := &Target{
