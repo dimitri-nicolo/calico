@@ -167,8 +167,14 @@ func showBpfMap(felix *infrastructure.Felix, m bpf.Map) map[string]interface{} {
 	Expect(fileExists).Should(BeTrue(), fmt.Sprintf("showBpfMap: map %s didn't show up inside container", m.Path()))
 	cmd, err := bpf.ShowMapCmd(m)
 	Expect(err).NotTo(HaveOccurred(), "Failed to get BPF map show command: "+m.Path())
+	retriesAllowed := 4
+retry:
 	log.WithField("cmd", cmd).Debug("showBPFMap")
 	out, err := felix.ExecOutput(cmd...)
+	if err != nil && retriesAllowed > 0 {
+		retriesAllowed--
+		goto retry
+	}
 	Expect(err).NotTo(HaveOccurred(), "Failed to get show BPF map: "+m.Path())
 	var mapData map[string]interface{}
 	err = json.Unmarshal([]byte(out), &mapData)

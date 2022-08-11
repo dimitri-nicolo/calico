@@ -3323,7 +3323,7 @@ func describeBPFTests(opts ...bpfTestOpt) bool {
 				// ready, that is their tc programs are loaded. The test matrix
 				// checks all of these options and we do not want to get false
 				// positives.
-				Eventually(readyIfaces, "15s", "300ms").Should(Equal(len(felixes) * ifaceCnt))
+				Eventually(readyIfaces, "20s", "300ms").Should(Equal(len(felixes) * ifaceCnt))
 			}
 
 			expectPongs := func() {
