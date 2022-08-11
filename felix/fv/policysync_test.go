@@ -82,6 +82,7 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 		felix, etcd, calicoClient, infra = infrastructure.StartSingleNodeEtcdTopology(options)
 		infrastructure.CreateDefaultProfile(calicoClient, "default", map[string]string{"default": ""}, "default == ''")
 
+		expectedInterfaces := []string{"eth0"}
 		// Create three workloads, using that profile.
 		for ii := range w {
 			iiStr := strconv.Itoa(ii)
@@ -90,9 +91,12 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 			w[ii].WorkloadEndpoint.Spec.Orchestrator = "k8s"
 			w[ii].WorkloadEndpoint.Spec.Pod = "fv-pod-" + iiStr
 			w[ii].Configure(calicoClient)
+			expectedInterfaces = append(expectedInterfaces, w[ii].InterfaceName)
 		}
-
 		hostMgmtCredsPath = filepath.Join(tempDir, binder.CredentialsSubdir)
+		if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
+			ensureProgramAttached(felix, expectedInterfaces)
+		}
 	})
 
 	AfterEach(func() {
