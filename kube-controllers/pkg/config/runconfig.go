@@ -121,6 +121,8 @@ type ImageAssuranceConfig struct {
 	IntrusionDetectionControllerClusterRoleName string
 	AdmissionControllerClusterRoleName          string
 	ScannerClusterRoleName                      string
+	ScannerCLIClusterRoleName                   string
+	ScannerCLITokenSecretName                   string
 	PodWatcherClusterRoleName                   string
 }
 
@@ -408,6 +410,8 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 		rc.ImageAssurance.IntrusionDetectionControllerClusterRoleName = envCfg.ImageAssuranceIntrusionDetectionControllerClusterRoleName
 		rc.ImageAssurance.AdmissionControllerClusterRoleName = envCfg.ImageAssuranceAdmissionControllerClusterRoleName
 		rc.ImageAssurance.ScannerClusterRoleName = envCfg.ImageAssuranceScannerClusterRoleName
+		rc.ImageAssurance.ScannerCLITokenSecretName = envCfg.ImageAssuranceScannerCLITokenSecretName
+		rc.ImageAssurance.ScannerCLIClusterRoleName = envCfg.ImageAssuranceScannerCLIClusterRoleName
 		rc.ImageAssurance.PodWatcherClusterRoleName = envCfg.ImageAssurancePodWatcherClusterRoleName
 	}
 	if rc.ManagedCluster != nil {
@@ -417,6 +421,8 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 		rc.ManagedCluster.ImageAssuranceConfig.NumberOfWorkers = envCfg.ManagedClusterImageAssuranceConfigurationWorkers
 		rc.ManagedCluster.ImageAssuranceConfig.IntrusionDetectionControllerClusterRoleName = envCfg.ImageAssuranceIntrusionDetectionControllerClusterRoleName
 		rc.ManagedCluster.ImageAssuranceConfig.ScannerClusterRoleName = envCfg.ImageAssuranceScannerClusterRoleName
+		rc.ManagedCluster.ImageAssuranceConfig.ScannerCLIClusterRoleName = envCfg.ImageAssuranceScannerCLIClusterRoleName
+		rc.ManagedCluster.ImageAssuranceConfig.ScannerCLITokenSecretName = envCfg.ImageAssuranceScannerCLITokenSecretName
 		rc.ManagedCluster.ImageAssuranceConfig.PodWatcherClusterRoleName = envCfg.ImageAssurancePodWatcherClusterRoleName
 		rc.ManagedCluster.ImageAssuranceConfig.AdmissionControllerClusterRoleName = envCfg.ImageAssuranceAdmissionControllerClusterRoleName
 		rc.ManagedCluster.MultiClusterForwardingEndpoint = envCfg.MultiClusterForwardingEndpoint
