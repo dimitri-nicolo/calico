@@ -875,7 +875,7 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 					strings.Contains(out, felix.IP+":53 (proto 17)") &&
 					strings.Contains(out, server.IP+":53 (proto 17)"))
 			}, "5s", "0.5s").Should(BeTrue())
-			
+
 			// Ensure workloads are set up.
 			for ii := range w {
 				Eventually(func() int {
