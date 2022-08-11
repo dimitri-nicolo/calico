@@ -222,6 +222,9 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					iiStr := strconv.Itoa(ii)
 					w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
 					w[ii].Configure(client)
+					if bpfEnabled {
+						ensureProgramAttached(felix, []string{"eth0", w[ii].InterfaceName})
+					}
 				}
 			})
 
@@ -711,6 +714,9 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 			iiStr := strconv.Itoa(ii)
 			w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
 			w[ii].Configure(client)
+			if bpfEnabled {
+				ensureProgramAttached(felix, []string{"eth0", w[ii].InterfaceName})
+			}
 		}
 
 		// Start scapy, in the same namespace as Felix.
@@ -841,11 +847,13 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 		server = felixes[1]
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
+		expectedInterfaces := []string{"eth0"}
 		// Create a workload, using that profile.
 		for ii := range w {
 			iiStr := strconv.Itoa(ii)
 			w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
 			w[ii].Configure(client)
+			expectedInterfaces = append(expectedInterfaces, w[ii].InterfaceName)
 		}
 
 		// Configure Felix to trust itself, the other Felix, and w[1] as DNS servers.
@@ -857,6 +865,8 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 		log.Info("Felix has restarted")
 
 		if bpfEnabled {
+			ensureProgramAttached(felix, expectedInterfaces)
+			ensureProgramAttached(server, []string{"eth0"})
 			// Wait for trusted DNS servers ipset to be populated.
 			Eventually(func() bool {
 				out, err := felix.ExecOutput("calico-bpf", "ipsets", "dump")
@@ -865,7 +875,7 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 					strings.Contains(out, felix.IP+":53 (proto 17)") &&
 					strings.Contains(out, server.IP+":53 (proto 17)"))
 			}, "5s", "0.5s").Should(BeTrue())
-
+			
 			// Ensure workloads are set up.
 			for ii := range w {
 				Eventually(func() int {

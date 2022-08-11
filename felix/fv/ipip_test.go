@@ -95,7 +95,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ IPIP topology before adding
 			for ii, f := range felixes {
 				expectedIfaces := []string{"eth0", "tunl0", w[ii].InterfaceName}
 				ensureProgramAttached(f, expectedIfaces)
-				Eventually(f.NumTCBPFProgsEth0, "5s", "200ms").Should(Equal(2))
+				Eventually(f.NumTCBPFProgsEth0, "20s", "200ms").Should(Equal(2))
 			}
 		}
 
