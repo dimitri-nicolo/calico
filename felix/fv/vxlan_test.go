@@ -139,7 +139,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ VXLAN topology before addin
 				}
 				if bpfEnabled {
 					for ii, f := range felixes {
-						expectedInterfaces := []string{"eth0", w[ii].InterfaceName, hostW[ii].InterfaceName, "vxlan.calico"}
+						expectedInterfaces := []string{"eth0", w[ii].InterfaceName, "vxlan.calico"}
 						ensureProgramAttached(f, expectedInterfaces)
 					}
 				}
