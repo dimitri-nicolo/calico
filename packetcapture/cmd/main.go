@@ -73,7 +73,7 @@ func main() {
 	http.Handle("/version", http.HandlerFunc(version.Handler))
 	http.Handle("/health", http.HandlerFunc(handlers.Health))
 	http.Handle("/download/", middleware.Parse(middleware.AuthenticationHandler(authn, authz.Authorize(files.Download))))
-	http.Handle("/files/", middleware.AuthenticationHandler(authn, authz.Authorize(files.Delete)))
+	http.Handle("/files/", middleware.Parse(middleware.AuthenticationHandler(authn, authz.Authorize(files.Delete))))
 
 	// Start server
 	server := &http.Server{
