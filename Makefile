@@ -13,14 +13,13 @@ SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_FLUENTD_DOCKER_PROJECT_ID)
 # If this is a windows release we're not building the images and they will all be "cut" together
 ifdef WINDOWS_RELEASE
 FLUENTD_IMAGE=tigera/fluentd-windows
-ARCHES=windows-1809 windows-20H2 windows-2022
+ARCHES=windows-1809 windows-2022
 else
 # For Windows we append to the image tag to identify the Windows 10 version.
 # For example, "v3.5.0-calient-0.dev-26-gbaba2f0b96a4-windows-1903"
 #
 # We support these platforms:
 # - Windows 10 1809 amd64
-# - Windows 10 20H2 amd64
 # - Windows 10 2022 amd64
 #
 # For Linux, we leave the image tag alone.
@@ -34,8 +33,6 @@ $(eval WINDOWS_BUILD_VERSION := $(shell (Get-ItemProperty "HKLM:\SOFTWARE\Micros
 # Get Windows version based on build number.
 ifeq ($(WINDOWS_BUILD_VERSION),17763)
 WINDOWS_VERSION := 1809
-else ifeq ($(WINDOWS_BUILD_VERSION),19042)
-WINDOWS_VERSION := 20H2
 else ifeq ($(WINDOWS_BUILD_VERSION),20348)
 WINDOWS_VERSION := 2022
 else
@@ -114,15 +111,15 @@ $(FLUENTD_IMAGE):
 	$(MAKE) $(addprefix build-image-,$(VALIDARCHES)) IMAGE=$(FLUENTD_IMAGE) DOCKERFILE=$(DOCKERFILE)
 
 build-image-%:
-ifeq ($(ARCH), amd64)
+ifeq ($(OS),Windows_NT)
+	docker build --pull $(DOCKER_SQUASH) -t $(IMAGE):latest-$* --file $(DOCKERFILE) .
+else
 	docker build --pull -f Dockerfile.fips -t $(IMAGE):latest-$* \
 		--build-arg UBI_VERSION=$(UBI_VERSION) \
 		--build-arg UBI_IMAGE_VERSION=$(UBI_IMAGE_VERSION) \
 		--build-arg RUBY_MAJOR_VERSION=$(RUBY_MAJOR_VERSION) \
 		--build-arg RUBY_FULL_VERSION=$(RUBY_FULL_VERSION) .
 	docker tag $(IMAGE):latest-$* $(IMAGE):latest
-else
-	docker build --pull $(DOCKER_SQUASH) -t $(IMAGE):latest-$* --file $(DOCKERFILE) .
 endif
 
 image: build $(FLUENTD_IMAGE)
