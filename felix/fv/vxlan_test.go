@@ -19,7 +19,6 @@ package fv_test
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -58,9 +57,13 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ VXLAN topology before addin
 		routeSource := testConfig.RouteSource
 		brokenXSum := testConfig.BrokenXSum
 		enableIPv6 := testConfig.EnableIPv6
+
+		if BPFMode() && enableIPv6 && !BPFIPv6Support() {
+			return
+		}
+
 		Describe(fmt.Sprintf("VXLAN mode set to %s, routeSource %s, brokenXSum: %v, enableIPv6: %v", vxlanMode, routeSource, brokenXSum, enableIPv6), func() {
 			var (
-				bpfEnabled      = os.Getenv("FELIX_FV_ENABLE_BPF") == "true"
 				infra           infrastructure.DatastoreInfra
 				felixes         []*infrastructure.Felix
 				client          client.Interface
@@ -137,11 +140,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ VXLAN topology before addin
 
 					hostW[ii] = workload.Run(felixes[ii], fmt.Sprintf("host%d", ii), "", felixes[ii].IP, "8055", "tcp")
 				}
-				if bpfEnabled {
-					for ii, f := range felixes {
-						expectedInterfaces := []string{"eth0", w[ii].InterfaceName, "vxlan.calico"}
-						ensureProgramAttached(f, expectedInterfaces)
-					}
+
+				if BPFMode() {
+					ensureAllNodesBPFProgramsAttached(felixes)
 				}
 
 				cc = &connectivity.Checker{}

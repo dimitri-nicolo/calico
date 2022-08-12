@@ -18,7 +18,6 @@ package fv_test
 
 import (
 	"fmt"
-	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -30,11 +29,10 @@ import (
 
 var _ = Describe("Spoof tests", func() {
 	var (
-		bpfEnabled = os.Getenv("FELIX_FV_ENABLE_BPF") == "true"
-		infra      infrastructure.DatastoreInfra
-		felixes    []*infrastructure.Felix
-		w          [3]*workload.Workload
-		cc         *connectivity.Checker
+		infra   infrastructure.DatastoreInfra
+		felixes []*infrastructure.Felix
+		w       [3]*workload.Workload
+		cc      *connectivity.Checker
 	)
 
 	teardownInfra := func() {
@@ -113,10 +111,9 @@ var _ = Describe("Spoof tests", func() {
 				w[ii] = workload.Run(felixes[ii], wName, "default", wIP, "8055", "tcp")
 				w[ii].ConfigureInInfra(infra)
 			}
-			if bpfEnabled {
-				for ii, f := range felixes {
-					ensureProgramAttached(f, []string{"eth0", w[ii].InterfaceName})
-				}
+
+			if BPFMode() {
+				ensureAllNodesBPFProgramsAttached(felixes)
 			}
 		})
 
@@ -128,6 +125,10 @@ var _ = Describe("Spoof tests", func() {
 	})
 
 	Context("IPv6", func() {
+		if BPFMode() && !BPFIPv6Support() {
+			return
+		}
+
 		BeforeEach(func() {
 			var err error
 			infra, err = infrastructure.GetEtcdDatastoreInfra()

@@ -94,8 +94,8 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 			expectedInterfaces = append(expectedInterfaces, w[ii].InterfaceName)
 		}
 		hostMgmtCredsPath = filepath.Join(tempDir, binder.CredentialsSubdir)
-		if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
-			ensureProgramAttached(felix, expectedInterfaces)
+		if BPFMode() {
+			ensureBPFProgramsAttached(felix)
 		}
 	})
 

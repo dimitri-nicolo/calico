@@ -223,7 +223,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
 					w[ii].Configure(client)
 					if bpfEnabled {
-						ensureProgramAttached(felix, []string{"eth0", w[ii].InterfaceName})
+						ensureBPFProgramsAttached(felix)
 					}
 				}
 			})
@@ -715,7 +715,7 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 			w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
 			w[ii].Configure(client)
 			if bpfEnabled {
-				ensureProgramAttached(felix, []string{"eth0", w[ii].InterfaceName})
+				ensureBPFProgramsAttached(felix)
 			}
 		}
 
@@ -865,8 +865,8 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 		log.Info("Felix has restarted")
 
 		if bpfEnabled {
-			ensureProgramAttached(felix, expectedInterfaces)
-			ensureProgramAttached(server, []string{"eth0"})
+			ensureBPFProgramsAttached(felix)
+			ensureBPFProgramsAttached(server)
 			// Wait for trusted DNS servers ipset to be populated.
 			Eventually(func() bool {
 				out, err := felix.ExecOutput("calico-bpf", "ipsets", "dump")
