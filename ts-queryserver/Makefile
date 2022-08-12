@@ -54,7 +54,7 @@ build: bin/cnx-queryserver-$(ARCH)
 bin/cnx-queryserver-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD_CGO) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" queryserver/*.go'
+			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" queryserver/$*/*.go'
 
 ###############################################################################
 # BUILD IMAGE
@@ -65,7 +65,7 @@ QUERYSERVER_CONTAINER_CREATED=.cnx-queryserver.created-$(ARCH)
 .PHONY: image-all
 image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
-	$(MAKE) image ARCH=$(ARCH)
+	$(MAKE) image ARCH=$*
 
 .PHONY: image
 image: $(QUERYSERVER_IMAGE)

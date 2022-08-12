@@ -1,7 +1,0 @@
-FROM alpine:3.9
-
-ADD bin/calicoctl /bin/calicoctl
-
-RUN apk add --no-cache bash curl docker wget
-
-WORKDIR /

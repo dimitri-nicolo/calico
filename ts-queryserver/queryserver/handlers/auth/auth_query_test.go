@@ -13,7 +13,6 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/calico/lma/pkg/auth"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/auth/testing"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
@@ -22,6 +21,7 @@ import (
 
 	authzv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
@@ -36,7 +36,7 @@ var _ = Describe("Queryserver query test", func() {
 	)
 
 	var (
-		authnz     auth.JWTAuth
+		authnz     lmaauth.JWTAuth
 		c          clientv3.Interface
 		mAuth      *mockJWTAuth
 		fakeK8sCli *fake.Clientset
@@ -55,8 +55,8 @@ var _ = Describe("Queryserver query test", func() {
 
 		mAuth = &mockJWTAuth{}
 		fakeK8sCli = new(fake.Clientset)
-		authnz, err = auth.NewJWTAuth(
-			&rest.Config{BearerToken: jwt.ToString()}, fakeK8sCli, auth.WithAuthenticator(iss, mAuth))
+		authnz, err = lmaauth.NewJWTAuth(
+			&rest.Config{BearerToken: jwt.ToString()}, fakeK8sCli, lmaauth.WithAuthenticator(iss, mAuth))
 		Expect(err).NotTo(HaveOccurred())
 
 		qh = handlers.NewQuery(client.NewQueryInterface(c))
