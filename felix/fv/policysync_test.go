@@ -1140,13 +1140,13 @@ func calcRouteUpdates(localIndex int, felixes []*infrastructure.Felix, workloads
 func expectRouteUpdates(mockWlClient *mockWorkloadClient, updates []interface{}) {
 	Eventually(func() []proto.RouteUpdate {
 		return setToSlice(mockWlClient.ActiveRoutes())
-	}, "1s").Should(ContainElements(updates...))
+	}, "5s").Should(ContainElements(updates...))
 }
 
 func notExpectRouteUpdates(mockWlClient *mockWorkloadClient, updates []interface{}) {
 	Eventually(func() []proto.RouteUpdate {
 		return setToSlice(mockWlClient.ActiveRoutes())
-	}, "1s").Should(Not(ContainElements(updates...)))
+	}, "5s").Should(Not(ContainElements(updates...)))
 }
 
 func unixDialer(target string, timeout time.Duration) (net.Conn, error) {
