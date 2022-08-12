@@ -26,6 +26,9 @@ endif
 MAKE_BRANCH?=$(GO_BUILD_VER)
 MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
 
+ELASTICSEARCH_CONTAINER_MARKER=.elasticsearch_container-$(ARCH).created
+ELASTICSEARCH_CONTAINER_FIPS_MARKER=.elasticsearch_container-$(ARCH)-fips.created
+
 Makefile.common: Makefile.common.$(MAKE_BRANCH)
 	cp "$<" "$@"
 Makefile.common.$(MAKE_BRANCH):
@@ -35,27 +38,45 @@ Makefile.common.$(MAKE_BRANCH):
 
 include Makefile.common
 
-bin/readiness-probe: readiness-probe
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) \
-		go build -o $@ "$(PACKAGE_NAME)/readiness-probe"';
 
-build: bin/readiness-probe
+# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
+ifeq ($(ARCH), $(filter $(ARCH),amd64))
+CGO_ENABLED=1
+else
+CGO_ENABLED=0
+endif
+
+build: bin/readiness-probe-$(ARCH)
+
+.PHONY: bin/readiness-probe-$(ARCH)
+bin/readiness-probe-$(ARCH): readiness-probe/main.go
+	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
+		go build -v -o $@ readiness-probe/main.go'
+
 
 image: $(ELASTICSEARCH_IMAGE)
-$(ELASTICSEARCH_IMAGE): $(ELASTICSEARCH_IMAGE)-$(ARCH)
-$(ELASTICSEARCH_IMAGE)-$(ARCH): build
-	docker build $(DOCKER_BUILD) --pull -t $(ELASTICSEARCH_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
-ifeq ($(ARCH),amd64)
-	docker tag $(ELASTICSEARCH_IMAGE):latest-$(ARCH) $(ELASTICSEARCH_IMAGE):latest
-	# build fips image for amd64
-	docker build $(DOCKER_BUILD) --pull -t $(ELASTICSEARCH_IMAGE):latest-amd64-fips --file ./Dockerfile.amd64-fips .
-endif
+
+$(ELASTICSEARCH_IMAGE): $(ELASTICSEARCH_CONTAINER_MARKER) $(ELASTICSEARCH_CONTAINER_FIPS_MARKER)
+
+$(ELASTICSEARCH_CONTAINER_MARKER): Dockerfile.$(ARCH) build
+	docker buildx build --pull -t $(ELASTICSEARCH_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) . --load
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
+	touch $@
+
+# build fips image
+$(ELASTICSEARCH_CONTAINER_FIPS_MARKER): Dockerfile-fips.$(ARCH) build
+	docker buildx build --pull -t $(ELASTICSEARCH_IMAGE):latest-fips-$(ARCH) -f Dockerfile-fips.$(ARCH) . --load
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest-fips LATEST_IMAGE_TAG=latest-fips
+	touch $@
+
 
 .PHONY: cd
 cd: image cd-common
+	$(MAKE) FIPS=true retag-build-images-with-registries push-images-to-registries push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(BRANCH_NAME)-fips LATEST_IMAGE_TAG=latest-fips
+	$(MAKE) FIPS=true retag-build-images-with-registries push-images-to-registries push-manifests IMAGETAG=$(if $(IMAGETAG_PREFIX),$(IMAGETAG_PREFIX)-)$(shell git describe --tags --dirty --long --always --abbrev=12)-fips EXCLUDEARCH="$(EXCLUDEARCH)" LATEST_IMAGE_TAG=latest-fips
 
 .PHONY: clean
 clean:
-	rm -rf bin \
-		   .go-pkg-cache \
-		   Makefile.*
+	rm -rf bin .go-pkg-cache Makefile.*
+	rm -f $(ELASTICSEARCH_CONTAINER_MARKER) $(ELASTICSEARCH_CONTAINER_FIPS_MARKER)
+	-docker image rm -f $$(docker images $(ELASTICSEARCH_IMAGE) -a -q)

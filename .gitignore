@@ -1,3 +1,4 @@
+*.created*
 .go-pkg-cache
 .idea
 .vscode

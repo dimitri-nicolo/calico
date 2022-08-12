@@ -27,13 +27,14 @@ COPY fips-patch/0001-Patch-java-security-policy-to-support-Bouncy-Castle.patch /
 RUN mkdir /usr/share/bc-fips && \
 	curl -sfL https://downloads.bouncycastle.org/fips-java/bc-fips-${BC_FIPS_VERSION}.jar -o /usr/share/bc-fips/bc-fips.jar && \
 	curl -sfL https://downloads.bouncycastle.org/fips-java/bctls-fips-${BCTLS_FIPS_VERSION}.jar -o /usr/share/bc-fips/bctls-fips.jar
-RUN patch -d /usr/share/elasticsearch/jdk -p1 < /tmp/jvm-bc-fips.patch && \
-	rm -f /tmp/jvm-bc-fips.patch
+RUN patch -d /usr/share/elasticsearch/jdk -p1 < /tmp/jvm-bc-fips.patch
 
 # patch elasticsearch script
 COPY fips-patch/0002-Remove-password-prompt-in-bin-elasticsearch-script.patch /tmp/es-remove-password-prompt.patch
-RUN patch -d /usr/share/elasticsearch -p1 < /tmp/es-remove-password-prompt.patch && \
-	rm -f /tmp/es-remove-password-prompt.patch
+RUN patch -d /usr/share/elasticsearch -p1 < /tmp/es-remove-password-prompt.patch
+
+# cleanup
+RUN rm -fr /tmp/*
 
 # save truststore
 RUN cp -R /etc/ssl/ /holder
@@ -72,4 +73,4 @@ RUN apt purge -y curl \
 # restore truststore
 RUN cp -R /holder /etc/ssl && rm -rf /holder
 
-COPY /bin/readiness-probe /
+COPY bin/readiness-probe-amd64 /readiness-probe

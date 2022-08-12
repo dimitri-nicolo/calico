@@ -42,4 +42,4 @@ RUN apt purge -y curl \
 # restore truststore
 RUN cp -R /holder /etc/ssl && rm -rf /holder
 
-COPY /bin/readiness-probe /
+COPY bin/readiness-probe-amd64 /readiness-probe
