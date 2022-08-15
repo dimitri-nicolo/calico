@@ -25,6 +25,9 @@
       "duration_max": {
         "type": "long"
       },
+      "latency": {
+        "type": "long"
+      },
       "bytes_in": {
         "type": "long"
       },
