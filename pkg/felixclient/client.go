@@ -142,15 +142,19 @@ func (fc *felixClient) dataplaneStatsFromL7Log(logData collector.EnvoyLog) *prot
 	}
 
 	d := &proto.DataplaneStats{
-		SrcIp:    logData.SrcIp,
-		DstIp:    logData.DstIp,
-		SrcPort:  logData.SrcPort,
-		DstPort:  logData.DstPort,
-		Protocol: &proto.Protocol{&proto.Protocol_Name{logData.Protocol}},
+		SrcIp:   logData.SrcIp,
+		DstIp:   logData.DstIp,
+		SrcPort: logData.SrcPort,
+		DstPort: logData.DstPort,
+		Protocol: &proto.Protocol{
+			NumberOrName: &proto.Protocol_Name{
+				Name: logData.Protocol,
+			},
+		},
 	}
 
 	d.HttpData = []*proto.HttpData{
-		&proto.HttpData{
+		{
 			Duration:      logData.Duration,
 			ResponseCode:  logData.ResponseCode,
 			BytesSent:     logData.BytesSent,
@@ -162,6 +166,7 @@ func (fc *felixClient) dataplaneStatsFromL7Log(logData collector.EnvoyLog) *prot
 			Domain:        logData.Domain,
 			DurationMax:   logData.DurationMax,
 			Type:          logData.Type,
+			Latency:       logData.Latency,
 		},
 	}
 

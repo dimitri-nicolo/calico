@@ -1,0 +1,20 @@
+{
+  "duration": 6,
+  "downstream_local_address": "10.105.83.191:80",
+  "user_agent": "curl/7.68.0",
+  "response_code": 200,
+  "start_time": "2020-11-24T22:24:29.238Z",
+  "request_id": "e23c0019-36b7-4142-8e86-39d15b00e965",
+  "upstream_host": "10.105.83.191:80",
+  "bytes_received": 0,
+  "request_path": "/ip",
+  "hostname": "ubuntu-76895788d9-tkkr4",
+  "downstream_direct_remote_address": "192.168.138.208:34366",
+  "reporter": "source",
+  "bytes_sent": 33,
+  "request_method": "GET",
+  "connection_id": 0,
+  "downstream_remote_address": "192.168.138.208:34366",
+  "type": "HTTP/1.1",
+  "upstream_local_address": "192.168.138.208:34368"
+}

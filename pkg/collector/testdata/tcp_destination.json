@@ -1,0 +1,20 @@
+{
+  "reporter": "destination",
+  "bytes_sent": 7,
+  "request_method": null,
+  "downstream_remote_address": "192.168.138.208:46330",
+  "connection_id": 0,
+  "type": "tcp",
+  "upstream_local_address": "192.168.45.171:34674",
+  "duration": 2,
+  "downstream_local_address": "192.168.45.171:6379",
+  "response_code": 0,
+  "user_agent": null,
+  "start_time": "2020-11-24T22:33:32.279Z",
+  "request_id": null,
+  "upstream_host": "192.168.45.171:6379",
+  "request_path": null,
+  "bytes_received": 14,
+  "hostname": "redis-6d765dd54b-4695l",
+  "downstream_direct_remote_address": "192.168.138.208:46330"
+}
