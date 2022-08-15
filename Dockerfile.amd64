@@ -1,6 +1,7 @@
-FROM docker.elastic.co/elasticsearch/elasticsearch:7.16.2
+FROM docker.elastic.co/elasticsearch/elasticsearch:7.17.5
 
-RUN apt -y update && apt -y upgrade && apt clean all
+RUN apt-get -y update && apt-get -y upgrade && \
+	apt-get autoremove && apt-get clean
 
 # add storage plugin
 RUN cd /bin/ && elasticsearch-plugin install --batch repository-gcs
@@ -41,4 +42,4 @@ RUN apt purge -y curl \
 # restore truststore
 RUN cp -R /holder /etc/ssl && rm -rf /holder
 
-COPY /bin/readiness-probe /
+COPY bin/readiness-probe-amd64 /readiness-probe
