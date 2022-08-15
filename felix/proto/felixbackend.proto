@@ -768,6 +768,7 @@ message HTTPData {
   string domain = 11;
   int32 duration_max = 12;
   string type = 13;
+  int32 latency = 14;
 }
 
 message WireguardEndpointUpdate {
