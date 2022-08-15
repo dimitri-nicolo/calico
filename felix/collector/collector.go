@@ -1020,6 +1020,7 @@ func (c *collector) LogL7(hd *proto.HTTPData, data *Data, tuple Tuple, httpDataC
 		DurationMax:   int(hd.DurationMax),
 		BytesReceived: int(hd.BytesReceived),
 		BytesSent:     int(hd.BytesSent),
+		Latency:       int(hd.Latency),
 		Method:        hd.RequestMethod,
 		Path:          hd.RequestPath,
 		UserAgent:     hd.UserAgent,
