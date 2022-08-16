@@ -2,7 +2,7 @@ ORGANIZATION=tigera
 PACKAGE_NAME?=github.com/tigera/egress-gateway
 SEMAPHORE_PROJECT_ID=$(SEMAPHORE_EGRESS_GATEWAY_PROJECT_ID)
 
-GO_BUILD_VER?=v0.65
+GO_BUILD_VER?=v0.73
 GIT_USE_SSH=true
 
 EGRESS_GATEWAY_IMAGE  ?=tigera/egress-gateway
@@ -120,6 +120,13 @@ local_build:
 endif
 EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
+# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
+ifeq ($(ARCH), $(filter $(ARCH),amd64))
+CGO_ENABLED=1
+else
+CGO_ENABLED=0
+endif
+
 .PHONY: build-all
 ## Build the binaries for all architectures and platforms
 build-all: $(addprefix bin/egressd-,$(VALIDARCHES))
@@ -129,10 +136,9 @@ build-all: $(addprefix bin/egressd-,$(VALIDARCHES))
 build: bin/egressd-$(ARCH)
 bin/egressd-amd64: ARCH=amd64
 bin/egressd-%: local_build proto $(SRC_FILES)
-	mkdir -p bin
-	$(DOCKER_RUN_RO) \
-	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
-	  $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go build $(BUILD_FLAGS) -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" -v -o bin/egressd-$(ARCH) ./cmd/egressd'
+	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e CGO_LDFLAGS=$(CGO_LDFLAGS) $(CALICO_BUILD) \
+		sh -c '$(GIT_CONFIG_SSH) \
+	  	go build $(BUILD_FLAGS) -ldflags "-X main.VERSION=$(GIT_VERSION) " -o bin/egressd-$(ARCH) ./cmd/egressd'
 
 ###############################################################################
 # Building the image
