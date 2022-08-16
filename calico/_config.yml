@@ -111,19 +111,6 @@ breadcrumbs:
 # Set to 'true' to show warning that points users to latest version of each page.
 is_latest: false
 
-# Lits of all supported platforms. These are the only allowed platform values in _data/support_matrix.yml.
-support_matrix_list:
-  - Kubernetes/Kubeadm
-  - OpenShift
-  - AKS
-  - AWS/kOps
-  - EKS
-  - GKE
-  - MKE
-  - RKE
-  - RKE2
-  - TKG
-
 defaults:
   -
     scope:
