@@ -402,7 +402,7 @@ func (c *reconciler) scannerCLIClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     c.scannerClusterRoleName,
+			Name:     c.scannerCLIClusterRoleName,
 		},
 		Subjects: []rbacv1.Subject{
 			{
