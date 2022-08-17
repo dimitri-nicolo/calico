@@ -5,6 +5,7 @@ package fv_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"github.com/tigera/l7-collector/proto"
 )
 
@@ -73,9 +74,15 @@ var _ = Describe("Envoy Collector FV Test", func() {
 			// Validate the result
 			var result *proto.DataplaneStats
 			Eventually(handler.StatsChan(), handler.Timeout(), handler.Interval()).Should(Receive(&result))
+
+			Expect(result.SrcIp).To(Equal(httpBatchStat3.SrcIp))
+			Expect(result.DstIp).To(Equal(httpBatchStat3.DstIp))
+			Expect(result.SrcPort).To(Equal(httpBatchStat3.SrcPort))
+			Expect(result.DstPort).To(Equal(httpBatchStat3.DstPort))
+			Expect(result.Protocol).To(Equal(httpBatchStat3.Protocol))
 			Expect(len(result.HttpData)).To(Equal(3))
+			Expect(result.HttpData).To(ConsistOf(httpBatchStat3.HttpData))
 			Expect(result.Stats[0].Value).To(Equal(int64(3)))
-			Expect(result).To(Equal(httpBatchStat3))
 		})
 	})
 
