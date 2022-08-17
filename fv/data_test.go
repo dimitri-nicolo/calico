@@ -93,7 +93,7 @@ var (
 		DstPort:  int32(80),
 		Protocol: &proto.Protocol{NumberOrName: &proto.Protocol_Name{Name: "tcp"}},
 		HttpData: []*proto.HttpData{
-			&proto.HttpData{
+			{
 				Duration:      3,
 				ResponseCode:  200,
 				BytesSent:     33,
@@ -106,7 +106,7 @@ var (
 				Domain:        "http-service",
 				DurationMax:   3,
 			},
-			&proto.HttpData{
+			{
 				Duration:      3,
 				ResponseCode:  200,
 				BytesSent:     33,
@@ -119,7 +119,7 @@ var (
 				Domain:        "http-service",
 				DurationMax:   3,
 			},
-			&proto.HttpData{
+			{
 				Duration:      3,
 				ResponseCode:  200,
 				BytesSent:     33,
