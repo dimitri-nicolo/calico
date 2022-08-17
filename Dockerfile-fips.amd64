@@ -73,5 +73,5 @@ RUN apt purge -y curl \
 # restore truststore
 RUN cp -R /holder /etc/ssl && rm -rf /holder
 
-COPY script/initialize_keystore.sh /etc/initialize_keystore.sh
+COPY script/initialize_keystore.sh /usr/bin/initialize_keystore.sh
 COPY bin/readiness-probe-amd64 /readiness-probe
