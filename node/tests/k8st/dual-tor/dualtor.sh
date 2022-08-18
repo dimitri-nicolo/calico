@@ -590,6 +590,7 @@ EOF
 
     # Remove taints for master node, this would allow some test cases to run pod on master node.
     ${kubectl} taint node kind-control-plane node-role.kubernetes.io/master-
+    ${kubectl} taint node kind-control-plane node-role.kubernetes.io/control-plane-
 
 }
 
