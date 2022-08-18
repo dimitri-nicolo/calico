@@ -50,6 +50,8 @@ func New(
 		admissionControllerClusterRoleName: cfg.AdmissionControllerClusterRoleName,
 		intrusionDetectionClusterRoleName:  cfg.IntrusionDetectionControllerClusterRoleName,
 		scannerClusterRoleName:             cfg.ScannerClusterRoleName,
+		scannerCLIClusterRoleName:          cfg.ScannerCLIClusterRoleName,
+		scannerCLITokenSecretName:          cfg.ScannerCLITokenSecretName,
 		podWatcherClusterRoleName:          cfg.PodWatcherClusterRoleName,
 	}
 
@@ -153,6 +155,18 @@ func New(
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ImageAssurancePodWatcherServiceAccountName))),
 			&corev1.ServiceAccount{},
 			worker.ResourceWatchUpdate, worker.ResourceWatchDelete, worker.ResourceWatchAdd,
+		)
+		w.AddWatch(
+			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "serviceaccounts", resource.ManagerNameSpaceName,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ImageAssuranceScannerCLIServiceAccountName))),
+			&corev1.ServiceAccount{},
+			worker.ResourceWatchUpdate, worker.ResourceWatchDelete, worker.ResourceWatchAdd,
+		)
+		w.AddWatch(
+			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "secrets", resource.ManagerNameSpaceName,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", r.scannerCLITokenSecretName))),
+			&corev1.Secret{},
+			worker.ResourceWatchDelete, worker.ResourceWatchAdd,
 		)
 	}
 

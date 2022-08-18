@@ -129,6 +129,7 @@ func NewL7MetaSpecFromUpdate(update L7Update, ak L7AggregationKind) (L7Meta, L7S
 		DurationMax:   update.DurationMax,
 		BytesReceived: update.BytesReceived,
 		BytesSent:     update.BytesSent,
+		Latency:       update.Latency,
 		Count:         update.Count,
 	}
 

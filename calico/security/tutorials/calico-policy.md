@@ -2,7 +2,6 @@
 title: Calico policy tutorial
 description: Learn how to create more advanced Calico network policies (namespace, allow and deny all ingress and egress).
 canonical_url: "/security/tutorials/calico-policy"
-feature_name: feature_generic_all
 ---
 
 Calico network policies **extend** the functionalities of Kubernetes network policies. To demonstrate this, this tutorial follows a similar approach to the [Kubernetes Advanced Network Policy Tutorial]({{ site.baseurl }}/security/tutorials/kubernetes-policy-advanced), but instead uses Calico network policies and highlights differences between the two policy types, making use of features that are not available in Kubernetes network policies.

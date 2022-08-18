@@ -19,6 +19,7 @@ type L7Update struct {
 	DurationMax   int
 	BytesReceived int
 	BytesSent     int
+	Latency       int
 
 	ServiceName      string
 	ServiceNamespace string
@@ -40,6 +41,7 @@ type L7Log struct {
 	EndTime      int64         `json:"end_time"`
 	DurationMean time.Duration `json:"duration_mean"`
 	DurationMax  time.Duration `json:"duration_max"`
+	Latency      time.Duration `json:"latency"`
 	BytesIn      int           `json:"bytes_in"`
 	BytesOut     int           `json:"bytes_out"`
 	Count        int           `json:"count"`
@@ -99,6 +101,7 @@ type L7Spec struct {
 	DurationMax   int
 	BytesReceived int
 	BytesSent     int
+	Latency       int
 	Count         int
 }
 
@@ -109,6 +112,7 @@ func (a *L7Spec) Merge(b L7Spec) {
 	}
 	a.BytesReceived = a.BytesReceived + b.BytesReceived
 	a.BytesSent = a.BytesSent + b.BytesSent
+	a.Latency = a.Latency + b.Latency
 	a.Count = a.Count + b.Count
 }
 
@@ -153,6 +157,7 @@ func (ld L7Data) ToL7Log(startTime, endTime time.Time) *L7Log {
 	// Calculate and convert durations
 	res.DurationMean = (time.Duration(ld.Duration) * time.Millisecond) / time.Duration(ld.Count)
 	res.DurationMax = time.Duration(ld.DurationMax) * time.Millisecond
+	res.Latency = time.Duration(ld.Latency) * time.Millisecond
 
 	// Create the URL from the domain and path
 	// Path is expected to have a leading "/" character.

@@ -13,12 +13,16 @@ import (
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 
 	log "github.com/sirupsen/logrus"
+	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 )
+
+// scanner cli token expiration time default 100 years
+var scannerCLITokenExpirationSeconds int64 = 100 * 365 * 86400
 
 type reconciler struct {
 	clusterName string
@@ -35,6 +39,8 @@ type reconciler struct {
 	admissionControllerClusterRoleName string
 	intrusionDetectionClusterRoleName  string
 	scannerClusterRoleName             string
+	scannerCLIClusterRoleName          string
+	scannerCLITokenSecretName          string
 	podWatcherClusterRoleName          string
 }
 
@@ -67,6 +73,11 @@ func (c *reconciler) Reconcile(name types.NamespacedName) error {
 
 	if err := c.reconcileClusterRoleBinding(); err != nil {
 		reqLogger.Errorf("error reconciling cluster role bindings for image assurance %+v", err)
+		return err
+	}
+
+	if err := c.reconcileCLIServiceAccountToken(); err != nil {
+		reqLogger.Errorf("error reconciling cli service account token for image assurance %+v", err)
 		return err
 	}
 
@@ -202,6 +213,10 @@ func (c *reconciler) reconcileClusterRoleBinding() error {
 		}
 		scrb := c.scannerClusterRoleBinding()
 		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, scrb); err != nil {
+			return err
+		}
+		ccrb := c.scannerCLIClusterRoleBinding()
+		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, ccrb); err != nil {
 			return err
 		}
 		pcrb := c.podWatcherClusterRoleBinding()
@@ -372,6 +387,99 @@ func (c *reconciler) podWatcherClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 				Name:      resource.ImageAssurancePodWatcherServiceAccountName,
 				Namespace: c.managementOperatorNamespace,
 			},
+		},
+	}
+}
+
+// scannerCLIClusterRoleBinding returns a definition for cluster role binding
+func (c *reconciler) scannerCLIClusterRoleBinding() *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		TypeMeta: metav1.TypeMeta{Kind: "ClusterRoleBinding", APIVersion: "rbac.authorization.k8s.io/v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   resource.ImageAssuranceScannerCLIClusterRoleBindingName,
+			Labels: map[string]string{},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     c.scannerCLIClusterRoleName,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      resource.ImageAssuranceScannerCLIServiceAccountName,
+				Namespace: resource.ManagerNameSpaceName,
+			},
+		},
+	}
+}
+
+// reconcileCLIServiceAccountToken creates a token for tigera-image-assurance-scanner-cli-api-access service account that
+// can be used with scanner CLI.
+func (c *reconciler) reconcileCLIServiceAccountToken() error {
+	scsa := c.scannerCLITokenServiceAccount()
+	if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, scsa); err != nil {
+		return err
+	}
+
+	secret := c.scannerCLITokenSecret()
+	if err := resource.WriteSecretToK8s(c.managementK8sCLI, secret); err != nil {
+		return err
+	}
+
+	tokenRequest := c.scannerCLITokenTokenRequest(secret)
+	tokenResp, err := resource.WriteServiceAccountTokenRequestToK8s(c.managementK8sCLI, tokenRequest, scsa.Name)
+	if err != nil {
+		return err
+	}
+
+	secret.Data["token"] = []byte(tokenResp.Status.Token)
+	if err := resource.WriteSecretToK8s(c.managementK8sCLI, secret); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+//scannerCLITokenSecret returns definition for scanner CLI API token secret with a well known name in manager namespace.
+func (c *reconciler) scannerCLITokenSecret() *corev1.Secret {
+	return &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      c.scannerCLITokenSecretName,
+			Namespace: resource.ManagerNameSpaceName,
+		},
+		Data: map[string][]byte{},
+	}
+}
+
+func (c *reconciler) scannerCLITokenTokenRequest(secret *corev1.Secret) *authv1.TokenRequest {
+	return &authv1.TokenRequest{
+		TypeMeta: metav1.TypeMeta{Kind: "TokenRequest", APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      c.scannerCLITokenSecretName,
+			Namespace: resource.ManagerNameSpaceName,
+		},
+		Spec: authv1.TokenRequestSpec{
+			Audiences:         []string{resource.ImageAssuranceScannerCLIServiceAccountName},
+			ExpirationSeconds: &scannerCLITokenExpirationSeconds,
+			BoundObjectRef: &authv1.BoundObjectReference{
+				Kind:       "Secret",
+				APIVersion: secret.APIVersion,
+				Name:       secret.Name,
+				UID:        secret.UID,
+			},
+		},
+	}
+}
+
+// scannerCLITokenServiceAccount returns a definition for service account to be created in manager namespace for cli api access.
+func (c *reconciler) scannerCLITokenServiceAccount() *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{Kind: rbacv1.ServiceAccountKind, APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      resource.ImageAssuranceScannerCLIServiceAccountName,
+			Namespace: resource.ManagerNameSpaceName,
 		},
 	}
 }

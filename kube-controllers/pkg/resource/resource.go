@@ -4,7 +4,6 @@ package resource
 
 import (
 	"crypto/sha1"
-
 	"fmt"
 )
 
@@ -25,6 +24,7 @@ const (
 	ImageAssuranceAPICertPairSecretName               = "tigera-image-assurance-api-cert-pair"
 	ImageAssuranceAPICertSecretName                   = "tigera-image-assurance-api-cert"
 	ImageAssuranceNameSpaceName                       = "tigera-image-assurance"
+	ManagerNameSpaceName                              = "tigera-manager"
 	AdmissionControllerResourceName                   = "admission-controller-api-access"
 	ImageAssuranceAdmissionControllerDeploymentName   = "tigera-image-assurance-admission-controller"
 	ImageAssuranceAdmissionControllerRoleName         = "tigera-image-assurance-admission-controller"
@@ -37,6 +37,8 @@ const (
 	ImageAssuranceScannerClusterRoleName              = "tigera-image-assurance-scanner-api-access"
 	ImageAssuranceScannerServiceAccountName           = "tigera-image-assurance-scanner-api-access"
 	ImageAssuranceScannerClusterRoleBindingName       = "tigera-image-assurance-scanner-api-access"
+	ImageAssuranceScannerCLIServiceAccountName        = "tigera-image-assurance-scanner-cli-api-access"
+	ImageAssuranceScannerCLIClusterRoleBindingName    = "tigera-image-assurance-scanner-cli-api-access"
 	ImageAssurancePodWatcherClusterRoleName           = "tigera-image-assurance-pod-watcher-api-access"
 	ImageAssurancePodWatcherServiceAccountName        = "tigera-image-assurance-pod-watcher-api-access"
 	ImageAssurancePodWatcherClusterRoleBindingName    = "tigera-image-assurance-pod-watcher-api-access"

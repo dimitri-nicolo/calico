@@ -9,6 +9,7 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	tigeraapi "github.com/tigera/api/pkg/client/clientset_generated/clientset"
 
+	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -116,4 +117,15 @@ func WriteClusterRoleBindingToK8s(cli kubernetes.Interface, crb *rbacv1.ClusterR
 		}
 	}
 	return nil
+}
+
+// WriteServiceAccountTokenRequestToK8s creates token against the token requests that is sent for a given service account name.
+func WriteServiceAccountTokenRequestToK8s(cli kubernetes.Interface, treq *authenticationv1.TokenRequest, saName string) (*authenticationv1.TokenRequest, error) {
+	ctx := context.Background()
+
+	response, err := cli.CoreV1().ServiceAccounts(treq.Namespace).CreateToken(ctx, saName, treq, metav1.CreateOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return response, nil
 }

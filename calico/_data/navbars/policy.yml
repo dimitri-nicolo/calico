@@ -9,6 +9,9 @@ section:
   section:
   - title: Get started with tiered policy
     path: /security/tiered-policy
+    section:
+    - title: Change allow-tigera tier behavior
+      path: /security/allow-tigera
   - title: Create RBAC for tiered policy
     path: /security/rbac-tiered-policies
 - title: Get started with network sets
@@ -30,7 +33,7 @@ section:
   - title: Get started with Calico Enterprise network policy
     path: /security/calico-network-policy
   - title: Calico Enterprise policy tutorial
-    path: /security/simple-policy-cnx    
+    path: /security/simple-policy-cnx
   - title: Policy rules
     path: /security/policy-rules
     section:
