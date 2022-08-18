@@ -461,7 +461,6 @@ func (c *reconciler) scannerCLITokenTokenRequest(secret *corev1.Secret) *authv1.
 			Namespace: resource.ManagerNameSpaceName,
 		},
 		Spec: authv1.TokenRequestSpec{
-			Audiences:         []string{resource.ImageAssuranceScannerCLIServiceAccountName},
 			ExpirationSeconds: &scannerCLITokenExpirationSeconds,
 			BoundObjectRef: &authv1.BoundObjectReference{
 				Kind:       "Secret",
