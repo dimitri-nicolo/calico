@@ -74,4 +74,4 @@ RUN apt purge -y curl \
 RUN cp -R /holder /etc/ssl && rm -rf /holder
 
 COPY script/initialize_keystore.sh /usr/bin/initialize_keystore.sh
-COPY bin/readiness-probe-amd64 /readiness-probe
+COPY bin/readiness-probe-amd64 /usr/bin/readiness-probe
