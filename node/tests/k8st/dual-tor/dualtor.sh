@@ -10,7 +10,7 @@ TEST_DIR=./tests/k8st
 : ${KIND:=dist/kind}
 
 echo "Download kind executable with multiple networks support"
-curl -L https://github.com/projectcalico/kind/releases/download/multiple-networks-0.2/kind -o ${KIND}
+curl -L https://github.com/projectcalico/kind/releases/download/multiple-networks-0.3/kind -o ${KIND}
 chmod +x ${KIND}
 
 # Set config variables needed for ${kubectl} and calicoctl.
