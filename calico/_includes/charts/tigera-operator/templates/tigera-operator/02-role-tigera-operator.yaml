@@ -404,3 +404,14 @@ rules:
     verbs:
       - list
       - watch
+  - apiGroups:
+      - storage.k8s.io
+    resources:
+      - csidrivers
+    verbs:
+      - list
+      - watch
+      - get
+      - create
+      - update
+      - delete
