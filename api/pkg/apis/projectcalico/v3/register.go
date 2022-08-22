@@ -50,6 +50,8 @@ var (
 		&CalicoNodeStatusList{},
 		&IPAMConfiguration{},
 		&IPAMConfigurationList{},
+		&BlockAffinity{},
+		&BlockAffinityList{},
 
 		// Enterprise-only types.
 		&AlertException{},

@@ -37,18 +37,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
-// routeTable is the interface provided by the standard routetable module used to program the RIB.
-type routeTable interface {
-	routeTableSyncer
-	routeTableReader
-	Index() int
-	SetRoutes(ifaceName string, targets []routetable.Target)
-	RouteRemove(ifaceName string, cidr ip.CIDR)
-	SetL2Routes(ifaceName string, targets []routetable.L2Target)
-	QueueResyncIface(ifaceName string)
-	SetRemoveExternalRoutes(b bool)
-}
-
 type hepListener interface {
 	OnHEPUpdate(hostIfaceToEpMap map[string]proto.HostEndpoint)
 }
@@ -142,7 +130,7 @@ type endpointManager struct {
 	mangleTable  iptablesTable
 	filterTable  iptablesTable
 	ruleRenderer rules.RuleRenderer
-	routeTable   routeTable
+	routeTable   routetable.RouteTableInterface
 	writeProcSys procSysWriter
 	osStat       func(path string) (os.FileInfo, error)
 	epMarkMapper rules.EndpointMarkMapper
@@ -230,7 +218,7 @@ func newEndpointManager(
 	mangleTable iptablesTable,
 	filterTable iptablesTable,
 	ruleRenderer rules.RuleRenderer,
-	routeTable routeTable,
+	routeTable routetable.RouteTableInterface,
 	ipVersion uint8,
 	epMarkMapper rules.EndpointMarkMapper,
 	kubeIPVSSupportEnabled bool,
@@ -275,7 +263,7 @@ func newEndpointManagerWithShims(
 	mangleTable iptablesTable,
 	filterTable iptablesTable,
 	ruleRenderer rules.RuleRenderer,
-	routeTable routeTable,
+	routeTable routetable.RouteTableInterface,
 	ipVersion uint8,
 	epMarkMapper rules.EndpointMarkMapper,
 	kubeIPVSSupportEnabled bool,
@@ -465,8 +453,8 @@ func (m *endpointManager) CompleteDeferredWork() error {
 	return nil
 }
 
-func (m *endpointManager) GetRouteTableSyncers() []routeTableSyncer {
-	return []routeTableSyncer{m.routeTable}
+func (m *endpointManager) GetRouteTableSyncers() []routetable.RouteTableSyncer {
+	return []routetable.RouteTableSyncer{m.routeTable}
 }
 
 func (m *endpointManager) markEndpointStatusDirtyByIface(ifaceName string) {

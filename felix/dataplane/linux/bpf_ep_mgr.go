@@ -222,7 +222,7 @@ type bpfEndpointManager struct {
 
 	bpfPolicyDebugEnabled bool
 
-	routeTable    *routetable.RouteTable
+	routeTable    routetable.RouteTableInterface
 	services      map[serviceKey][]string
 	dirtyServices map[serviceKey][]string
 
@@ -2175,12 +2175,12 @@ func (m *bpfEndpointManager) delRoute(dst string) error {
 	return nil
 }
 
-func (m *bpfEndpointManager) GetRouteTableSyncers() []routeTableSyncer {
+func (m *bpfEndpointManager) GetRouteTableSyncers() []routetable.RouteTableSyncer {
 	if !m.ctlbWorkaroundEnabled {
 		return nil
 	}
 
-	tables := []routeTableSyncer{m.routeTable}
+	tables := []routetable.RouteTableSyncer{m.routeTable}
 
 	return tables
 }

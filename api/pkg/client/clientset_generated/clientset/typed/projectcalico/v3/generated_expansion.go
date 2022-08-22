@@ -14,6 +14,8 @@ type BGPConfigurationExpansion interface{}
 
 type BGPPeerExpansion interface{}
 
+type BlockAffinityExpansion interface{}
+
 type CalicoNodeStatusExpansion interface{}
 
 type ClusterInformationExpansion interface{}

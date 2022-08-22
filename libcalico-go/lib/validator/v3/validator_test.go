@@ -4178,6 +4178,20 @@ func init() {
 			Name:      "test",
 			Namespace: "name/na@e",
 		}, false),
+
+		// Block Affinities validation in BlockAffinitySpec
+		Entry("should accept non-deleted block affinities", libapiv3.BlockAffinitySpec{
+			Deleted: "false",
+			State:   "confirmed",
+			CIDR:    "10.0.0.0/24",
+			Node:    "node-1",
+		}, true),
+		Entry("should not accept delted block affinities", libapiv3.BlockAffinitySpec{
+			Deleted: "true",
+			State:   "confirmed",
+			CIDR:    "10.0.0.0/24",
+			Node:    "node-1",
+		}, false),
 	)
 
 	Describe("particular error string checking", func() {
