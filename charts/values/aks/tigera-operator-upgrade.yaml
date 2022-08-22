@@ -1,0 +1,19 @@
+# NS: tigera-operator-enterprise
+installation:
+  enabled: false
+  imagePullSecrets:
+    - name: tigera-pull-secret
+apiServer:
+  enabled: false
+intrusionDetection:
+  enabled: false
+logCollector:
+  enabled: false
+logStorage:
+  enabled: false
+manager:
+  enabled: false
+monitor:
+  enabled: false
+compliance:
+  enabled: false

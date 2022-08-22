@@ -51,7 +51,7 @@ type endpointsCache struct {
 func newEndpointCache() *endpointCache {
 	return &endpointCache{
 		endpoints:            make(map[model.Key]*endpointData),
-		unprotectedEndpoints: set.New(),
+		unprotectedEndpoints: set.NewBoxed[model.Key](),
 	}
 }
 
@@ -65,7 +65,7 @@ type endpointCache struct {
 	numUnlabelled int
 
 	// Stores endpoint keys that have no policies associated (i.e., "unprotected").
-	unprotectedEndpoints set.Set
+	unprotectedEndpoints set.Set[model.Key]
 }
 
 func (c *endpointsCache) TotalHostEndpoints() api.EndpointSummary {

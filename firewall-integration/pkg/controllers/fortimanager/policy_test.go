@@ -412,7 +412,7 @@ func matchSelector(actual, expected string) bool {
 	expectedSelectors := strings.Split(expected, " && ")
 	as := set.FromArray(actualSelectors)
 	es := set.FromArray(expectedSelectors)
-	es.Iter(func(item interface{}) error {
+	es.Iter(func(item string) error {
 		if as.Contains(item) {
 			as.Discard(item)
 			return set.RemoveItem

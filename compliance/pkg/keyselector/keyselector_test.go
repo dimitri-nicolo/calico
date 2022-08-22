@@ -41,8 +41,8 @@ type cb struct {
 
 type tester struct {
 	k            KeySelector
-	matchStarted set.Set
-	matchStopped set.Set
+	matchStarted set.Set[cb]
+	matchStopped set.Set[cb]
 }
 
 func newTester() *tester {
@@ -64,21 +64,21 @@ func (t *tester) onMatchStopped(owner, client apiv3.ResourceID, key string, last
 	t.matchStopped.Add(cb{owner, client, key, last})
 }
 
-func (t *tester) setClientKeys(client apiv3.ResourceID, keys set.Set) {
+func (t *tester) setClientKeys(client apiv3.ResourceID, keys set.Set[string]) {
 	if client.TypeMeta != resources.TypeK8sEndpoints {
 		panic("Error in test code, passing in wrong client type")
 	}
-	t.matchStarted = set.New()
-	t.matchStopped = set.New()
+	t.matchStarted = set.New[cb]()
+	t.matchStopped = set.New[cb]()
 	t.k.SetClientKeys(client, keys)
 }
 
-func (t *tester) setOwnerKeys(owner apiv3.ResourceID, keys set.Set) {
+func (t *tester) setOwnerKeys(owner apiv3.ResourceID, keys set.Set[string]) {
 	if owner.TypeMeta != resources.TypeCalicoHostEndpoints {
 		panic("Error in test code, passing in wrong owner type")
 	}
-	t.matchStarted = set.New()
-	t.matchStopped = set.New()
+	t.matchStarted = set.New[cb]()
+	t.matchStopped = set.New[cb]()
 	t.k.SetOwnerKeys(owner, keys)
 }
 
@@ -86,8 +86,8 @@ func (t *tester) deleteClient(client apiv3.ResourceID) {
 	if client.TypeMeta != resources.TypeK8sEndpoints {
 		panic("Error in test code, passing in wrong client type")
 	}
-	t.matchStarted = set.New()
-	t.matchStopped = set.New()
+	t.matchStarted = set.New[cb]()
+	t.matchStopped = set.New[cb]()
 	t.k.DeleteClient(client)
 }
 
@@ -95,8 +95,8 @@ func (t *tester) deleteOwner(owner apiv3.ResourceID) {
 	if owner.TypeMeta != resources.TypeCalicoHostEndpoints {
 		panic("Error in test code, passing in wrong owner type")
 	}
-	t.matchStarted = set.New()
-	t.matchStopped = set.New()
+	t.matchStarted = set.New[cb]()
+	t.matchStopped = set.New[cb]()
 	t.k.DeleteOwner(owner)
 }
 

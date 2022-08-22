@@ -31,6 +31,7 @@ type ProjectcalicoV3Interface interface {
 	GlobalReportTypesGetter
 	GlobalThreatFeedsGetter
 	HostEndpointsGetter
+	IPAMConfigurationsGetter
 	IPPoolsGetter
 	IPReservationsGetter
 	KubeControllersConfigurationsGetter
@@ -120,6 +121,10 @@ func (c *ProjectcalicoV3Client) GlobalThreatFeeds() GlobalThreatFeedInterface {
 
 func (c *ProjectcalicoV3Client) HostEndpoints() HostEndpointInterface {
 	return newHostEndpoints(c)
+}
+
+func (c *ProjectcalicoV3Client) IPAMConfigurations() IPAMConfigurationInterface {
+	return newIPAMConfigurations(c)
 }
 
 func (c *ProjectcalicoV3Client) IPPools() IPPoolInterface {

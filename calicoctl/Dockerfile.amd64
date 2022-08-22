@@ -14,6 +14,9 @@
 
 # Enterprise version is not Apache licensed and doesn't have a LICENSE file
 
+ARG UBI_IMAGE
+FROM ${UBI_IMAGE} as ubi
+
 FROM scratch
 
 ARG GIT_VERSION=unknown
@@ -25,6 +28,10 @@ LABEL name="Calico CLI tool" \
       summary="Calico CLI tool" \
       description="calicoctl(1) is a command line tool used to interface with the Calico datastore " \
       maintainer="maintainers@projectcalico.org"
+
+# Copy hostname configuration files from UBI so glibc hostname lookups work.
+COPY --from=ubi /etc/host.conf /etc/host.conf
+COPY --from=ubi /etc/nsswitch.conf /etc/nsswitch.conf
 
 ADD bin/calicoctl-linux-amd64 /calicoctl
 

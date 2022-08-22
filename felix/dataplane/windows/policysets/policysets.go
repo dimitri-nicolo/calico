@@ -77,7 +77,7 @@ func (s *PolicySets) AddOrReplacePolicySet(setId string, policy interface{}) {
 	// keep track of any IP sets which were referenced by the policy/profile so that
 	// we can easily tell which Policy sets are impacted when a IP set is modified.
 	var rules []*hns.ACLPolicy
-	var policyIpSetIds set.Set
+	var policyIpSetIds set.Set[string]
 
 	setMetadata := PolicySetMetadata{
 		SetId: setId,
@@ -239,8 +239,7 @@ func (s *PolicySets) ProcessIpSetUpdate(ipSetId string) []string {
 // getPoliciesByIpSetId locates any Policy set(s) which reference the provided IP set
 func (s *PolicySets) getPoliciesByIpSetId(ipSetId string) (policies []string) {
 	for policySetId, policySet := range s.policySetIdToPolicySet {
-		policySet.IpSetIds.Iter(func(item interface{}) error {
-			id := item.(string)
+		policySet.IpSetIds.Iter(func(id string) error {
 			if id == ipSetId {
 				policies = append(policies, policySetId)
 			}
@@ -252,12 +251,12 @@ func (s *PolicySets) getPoliciesByIpSetId(ipSetId string) (policies []string) {
 
 // getReferencedIpSetIds returns all of the IP sets which are referenced by the provided
 // inbound and outbound proto Rules.
-func getReferencedIpSetIds(inboundRules []*proto.Rule, outboundRules []*proto.Rule) set.Set {
+func getReferencedIpSetIds(inboundRules []*proto.Rule, outboundRules []*proto.Rule) set.Set[string] {
 	var rules []*proto.Rule
 	rules = append(rules, inboundRules...)
 	rules = append(rules, outboundRules...)
 
-	ipSetIds := set.New()
+	ipSetIds := set.New[string]()
 	for _, rule := range rules {
 		ipSetIds.AddAll(rule.SrcIpSetIds)
 		ipSetIds.AddAll(rule.DstIpSetIds)
@@ -353,7 +352,6 @@ func getHnsRuleID(prefix string, ruleName string, idx int) string {
 //
 // The following types of rules are not supported in this release and will be logged+skipped:
 // Rules with: Negative match criteria, Actions other than 'allow' or 'deny'and ICMP type/codes.
-//
 func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, idx int, isInbound bool, ipPortsPerRule int) ([]*hns.ACLPolicy, error) {
 	log.WithField("policyId", policyId).Debug("protoRuleToHnsRules")
 
@@ -605,7 +603,7 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, idx
 
 	localAddrChunks := SplitIPList(localAddresses, ipPortsPerRule)
 	remoteAddrChunks := SplitIPList(remoteAddresses, ipPortsPerRule)
-	//assign src/dstPortsChunks based on traffic direction
+	// assign src/dstPortsChunks based on traffic direction
 	if isInbound {
 		remotePortChunks = SplitPortList(pRule.SrcPorts, ipPortsPerRule)
 		localPortChunks = SplitPortList(pRule.DstPorts, ipPortsPerRule)
@@ -617,14 +615,14 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, idx
 	for _, localAddr := range localAddrChunks {
 		localAddrs := strings.Join(localAddr, ",")
 
-		//iterate loop for each chunk of source port and append them in aclpolicy
+		// iterate loop for each chunk of source port and append them in aclpolicy
 		for _, lPorts := range localPortChunks {
 			localPorts := appendPortsinList(lPorts)
 
 			for _, remoteAddr := range remoteAddrChunks {
 				remoteAddrs := strings.Join(remoteAddr, ",")
 
-				//iterate loop for each chunk of destination port and append them in aclpolicy
+				// iterate loop for each chunk of destination port and append them in aclpolicy
 				for _, rPorts := range remotePortChunks {
 					remotePorts := appendPortsinList(rPorts)
 
@@ -634,10 +632,10 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, idx
 						newPolicy.Id = getHnsRuleID(prefixStr, ruleCopy.RuleId, i)
 						i++
 					}
-					//assign ports chunks in aclpolicy
+					// assign ports chunks in aclpolicy
 					newPolicy.LocalPorts = localPorts
 					newPolicy.RemotePorts = remotePorts
-					//assign addresses chunks in aclpolicy
+					// assign addresses chunks in aclpolicy
 					newPolicy.LocalAddresses = localAddrs
 					newPolicy.RemoteAddresses = remoteAddrs
 					// Add this rule to the rules being returned
@@ -662,7 +660,7 @@ func appendPortsinList(dPorts []*proto.PortRange) (listPorts string) {
 	return
 }
 
-//convert proto.PortRange format port into HCS format port
+// convert proto.PortRange format port into HCS format port
 func protoPortToHCSPort(port *proto.PortRange) string {
 	portNum := ""
 	if port.First == port.Last {
@@ -673,7 +671,7 @@ func protoPortToHCSPort(port *proto.PortRange) string {
 	return portNum
 }
 
-//This function will create chunks of ports/ports range with chunksize
+// This function will create chunks of ports/ports range with chunksize
 func SplitPortList(ports []*proto.PortRange, chunkSize int) (splits [][]*proto.PortRange) {
 
 	if len(ports) == 0 {
@@ -691,7 +689,7 @@ func SplitPortList(ports []*proto.PortRange, chunkSize int) (splits [][]*proto.P
 	return
 }
 
-//This function will create chunks of IP addresses/Cidr with chunksize
+// This function will create chunks of IP addresses/Cidr with chunksize
 func SplitIPList(ipAddrs []string, chunkSize int) (splits [][]string) {
 
 	if len(ipAddrs) == 0 {
@@ -737,7 +735,7 @@ func ruleHasNegativeMatches(pRule *proto.Rule) bool {
 func (s *PolicySets) getIPSetAddresses(setIds []string) ([]string, error) {
 	var addresses []string
 
-	ips := set.New()
+	ips := set.New[string]()
 	for _, ipsetId := range setIds {
 		for _, cache := range s.IpSetCaches {
 			ipList := cache.GetIPSetMembers(ipsetId)
@@ -753,8 +751,7 @@ func (s *PolicySets) getIPSetAddresses(setIds []string) ([]string, error) {
 		}
 	}
 
-	ips.Iter(func(item interface{}) error {
-		ip := item.(string)
+	ips.Iter(func(ip string) error {
 		addresses = append(addresses, ip)
 		return nil
 	})

@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build !windows
+
 package routetable
 
 import (
@@ -118,6 +120,7 @@ type Target struct {
 	Type      TargetType
 	CIDR      ip.CIDR
 	GW        ip.Addr
+	Src       ip.Addr
 	DestMAC   net.HardwareAddr
 	MultiPath []NextHop
 }
@@ -628,7 +631,7 @@ func (r *RouteTable) Apply() error {
 			// Track the seen interfaces, and for each seen interface flag for full resync. No point in doing a full resync
 			// for interfaces that are still in our cache and have been deleted, so leave them unchanged - if there are any
 			// route deletions then the delta processing for those interfaces will ensure conntrack entries are deleted.
-			seen := set.New()
+			seen := set.New[string]()
 			for _, link := range links {
 				r.livenessCallback()
 				attrs := link.Attrs()
@@ -745,11 +748,10 @@ func (r *RouteTable) syncRoutesForLink(ifaceName string, fullSync bool, firstTry
 
 	// Any deleted route that is not being replaced by a route with the same CIDR should have the corresponding
 	// conntrack entry removed.
-	deletedConnCIDRs := set.New()
+	deletedConnCIDRs := set.NewBoxed[ip.CIDR]()
 	defer func() {
 		cidrsToTarget := r.ifaceNameToTargets[ifaceName]
-		deletedConnCIDRs.Iter(func(item interface{}) error {
-			cidr := item.(ip.CIDR)
+		deletedConnCIDRs.Iter(func(cidr ip.CIDR) error {
 			if _, ok := cidrsToTarget[cidr]; !ok {
 				// Route is deleted and CIDR should not be routable anymore - remove conntrack entries.
 				r.startConntrackDeletion(cidr.Addr())
@@ -841,7 +843,7 @@ func (r *RouteTable) syncRoutesForLink(ifaceName string, fullSync bool, firstTry
 		r.waitForPendingConntrackDeletion(target.CIDR.Addr())
 		if err := nl.RouteAdd(&route); err != nil {
 			if firstTry {
-				logCxt.WithError(err).Debug("Failed to add route on first attempt, retrying...")
+				logCxt.WithError(err).WithField("route", route).Debug("Failed to add route on first attempt, retrying...")
 			} else {
 				logCxt.WithError(err).WithFields(log.Fields{
 					"route":  route,
@@ -874,7 +876,7 @@ func (r *RouteTable) syncRoutesForLink(ifaceName string, fullSync bool, firstTry
 	return resyncErr
 }
 
-func (r *RouteTable) applyRouteDeltas(ifaceName string, deletedConnCIDRs set.Set) (targetsToCreate, targetsToDelete []Target) {
+func (r *RouteTable) applyRouteDeltas(ifaceName string, deletedConnCIDRs set.Set[ip.CIDR]) (targetsToCreate, targetsToDelete []Target) {
 	// Determine the set of deleted, created and current targets
 	cidrsToTarget := r.ifaceNameToTargets[ifaceName]
 	if cidrsToTarget == nil {
@@ -934,13 +936,15 @@ func (r *RouteTable) createL3Route(linkAttrs *netlink.LinkAttrs, target Target) 
 		Table:     r.tableIndex,
 	}
 
-	// If this is an IPv6 blackhole route, set the dev to lo. This matches
+	// If this is an IPv6 blackhole or throw route, set the dev to lo. This matches
 	// what the kernel does, and ensures we properly query programmed routes.
-	if r.ipVersion == 6 && target.RouteType() == syscall.RTN_BLACKHOLE {
+	if r.ipVersion == 6 && (target.RouteType() == syscall.RTN_BLACKHOLE || target.RouteType() == syscall.RTN_THROW) {
 		route.LinkIndex = 1
 	}
 
-	if r.deviceRouteSourceAddress != nil {
+	if target.Src != nil {
+		route.Src = target.Src.AsNetIP()
+	} else if r.deviceRouteSourceAddress != nil {
 		route.Src = r.deviceRouteSourceAddress
 	}
 
@@ -969,7 +973,7 @@ func (r *RouteTable) createL3Route(linkAttrs *netlink.LinkAttrs, target Target) 
 // fullResyncRoutesForLink performs a full resync of the routes by first listing current routes and correlating against
 // the expected set. After correlation, it will create a set of routes to delete and update the delta routes to add
 // back any missing routes.
-func (r *RouteTable) fullResyncRoutesForLink(logCxt *log.Entry, ifaceName string, deletedConnCIDRs set.Set) ([]netlink.Route, error) {
+func (r *RouteTable) fullResyncRoutesForLink(logCxt *log.Entry, ifaceName string, deletedConnCIDRs set.Set[ip.CIDR]) ([]netlink.Route, error) {
 	programmedRoutes, err := r.readProgrammedRoutes(logCxt, ifaceName)
 	if err != nil {
 		return nil, err
@@ -982,7 +986,7 @@ func (r *RouteTable) fullResyncRoutesForLink(logCxt *log.Entry, ifaceName string
 		pendingDeltaTargets = map[ip.CIDR]*Target{}
 		r.pendingIfaceNameToDeltaTargets[ifaceName] = pendingDeltaTargets
 	}
-	alreadyCorrectCIDRs := set.New()
+	alreadyCorrectCIDRs := set.NewBoxed[ip.CIDR]()
 	leaveDirty := false
 	for _, route := range programmedRoutes {
 		logCxt.WithField("route", route).Debug("Processing route")

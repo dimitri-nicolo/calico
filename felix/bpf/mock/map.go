@@ -1,7 +1,7 @@
 //go:build !windows
 // +build !windows
 
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -46,6 +46,11 @@ func (m *Map) MapFD() bpf.MapFD {
 
 func (m *Map) Open() error {
 	m.logCxt.Info("Open called")
+	return nil
+}
+
+func (m *Map) Close() error {
+	m.logCxt.Info("Close called")
 	return nil
 }
 
@@ -130,6 +135,15 @@ func (m *Map) CopyDeltaFromOldMap() error {
 	return nil
 }
 
+func (m *Map) ContainsKey(k []byte) bool {
+	_, ok := m.Contents[string(k)]
+	return ok
+}
+
+func (*Map) ErrIsNotExists(err error) bool {
+	return bpf.IsNotExists(err)
+}
+
 func NewMockMap(params bpf.MapParameters) *Map {
 	if params.KeySize <= 0 {
 		logrus.WithField("params", params).Panic("KeySize should be >0")
@@ -159,6 +173,10 @@ func (*DummyMap) GetName() string {
 }
 
 func (*DummyMap) Open() error {
+	return nil
+}
+
+func (*DummyMap) Close() error {
 	return nil
 }
 
@@ -196,4 +214,8 @@ func (*DummyMap) Size() int {
 
 func (*DummyMap) CopyDeltaFromOldMap() error {
 	return nil
+}
+
+func (*DummyMap) ErrIsNotExists(err error) bool {
+	return bpf.IsNotExists(err)
 }

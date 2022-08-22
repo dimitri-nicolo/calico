@@ -30,7 +30,7 @@ type ipsecManager struct {
 
 	// activeHostnameToIP maps hostname to string IP address.
 	activeHostnameToIP map[string]string
-	dirtyHosts         set.Set
+	dirtyHosts         set.Set[string]
 }
 
 func (d *ipsecManager) OnUpdate(msg interface{}) {

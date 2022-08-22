@@ -22,17 +22,18 @@ import (
 	dvgrp "github.com/PaloAltoNetworks/pango/pnrm/dg"
 	"github.com/PaloAltoNetworks/pango/poli/security"
 
-	"github.com/projectcalico/calico/felix/fv/containers"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	fakeclientset "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
+
 	"github.com/projectcalico/calico/firewall-integration/pkg/config"
 	pan "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama"
 	panutils "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils"
 	panutilmocks "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils/mocks"
 	"github.com/projectcalico/calico/firewall-integration/pkg/util"
+
+	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/kube-controllers/tests/testutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
-
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	fakeclientset "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"

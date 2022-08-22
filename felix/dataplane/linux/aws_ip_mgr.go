@@ -40,11 +40,11 @@ type awsIPManager struct {
 	// Indexes of data we've learned from the datastore.
 
 	poolsByID                 map[string]*proto.IPAMPool
-	poolIDsBySubnetID         map[string]set.Set
+	poolIDsBySubnetID         map[string]set.Set[string]
 	localAWSRoutesByDst       map[ip.CIDR]*proto.RouteUpdate
-	localRouteDestsBySubnetID map[string]set.Set /*ip.CIDR*/
+	localRouteDestsBySubnetID map[string]set.Set[ip.CIDR]
 	workloadEndpointsByID     map[proto.WorkloadEndpointID]awsEndpointInfo
-	workloadEndpointIDsByCIDR map[ip.CIDR]set.Set /*proto.WorkloadEndpointID; expect one but can have glitches*/
+	workloadEndpointIDsByCIDR map[ip.CIDR]set.Set[proto.WorkloadEndpointID]
 	awsResyncNeeded           bool
 
 	// ifaceProvisioner manages the AWS fabric resources.  It runs in the background to decouple AWS fabric updates
@@ -125,11 +125,11 @@ func NewAWSIPManager(
 
 	sm := &awsIPManager{
 		poolsByID:                 map[string]*proto.IPAMPool{},
-		poolIDsBySubnetID:         map[string]set.Set{},
+		poolIDsBySubnetID:         map[string]set.Set[string]{},
 		localAWSRoutesByDst:       map[ip.CIDR]*proto.RouteUpdate{},
-		localRouteDestsBySubnetID: map[string]set.Set{},
+		localRouteDestsBySubnetID: map[string]set.Set[ip.CIDR]{},
 		workloadEndpointsByID:     map[proto.WorkloadEndpointID]awsEndpointInfo{},
-		workloadEndpointIDsByCIDR: map[ip.CIDR]set.Set{},
+		workloadEndpointIDsByCIDR: map[ip.CIDR]set.Set[proto.WorkloadEndpointID]{},
 
 		freeRouteTableIndexes:  routeTableIndexes,
 		routeTablesByIfaceName: map[string]routeTable{},
@@ -237,7 +237,7 @@ func (a *awsIPManager) onPoolUpdate(id string, pool *proto.IPAMPool) {
 			"pool":      id,
 		}).Info("IP pool now associated with AWS subnet.")
 		if _, ok := a.poolIDsBySubnetID[newSubnetID]; !ok {
-			a.poolIDsBySubnetID[newSubnetID] = set.New()
+			a.poolIDsBySubnetID[newSubnetID] = set.New[string]()
 		}
 		a.poolIDsBySubnetID[newSubnetID].Add(id)
 		a.queueAWSResync("IP pool change (new AWS subnet added)")
@@ -290,7 +290,7 @@ func (a *awsIPManager) onRouteUpdate(dst ip.CIDR, route *proto.RouteUpdate) {
 	}
 	if newSubnetID != "" && oldSubnetID != newSubnetID {
 		if _, ok := a.localRouteDestsBySubnetID[newSubnetID]; !ok {
-			a.localRouteDestsBySubnetID[newSubnetID] = set.New()
+			a.localRouteDestsBySubnetID[newSubnetID] = set.NewBoxed[ip.CIDR]()
 		}
 		a.localRouteDestsBySubnetID[newSubnetID].Add(dst)
 		a.queueAWSResync("route subnet added")
@@ -338,8 +338,7 @@ func (a *awsIPManager) onIfaceAddrsUpdate(msg *ifaceAddrsUpdate) {
 		logrus.WithField("update", msg).Debug("Secondary ENI addrs changed.")
 		seenExpected := false
 		seenUnexpected := false
-		msg.Addrs.Iter(func(item interface{}) error {
-			addrStr := item.(string)
+		msg.Addrs.Iter(func(addrStr string) error {
 			if strings.Contains(addrStr, ":") {
 				return nil // Ignore IPv6
 			}
@@ -410,7 +409,7 @@ func (a *awsIPManager) onWorkloadUpdateOrRemove(logCtx *logrus.Entry, wepID prot
 	if len(newEIPs) > 0 {
 		for _, cidr := range newEP.IPv4Nets {
 			if a.workloadEndpointIDsByCIDR[cidr] == nil {
-				a.workloadEndpointIDsByCIDR[cidr] = set.New()
+				a.workloadEndpointIDsByCIDR[cidr] = set.New[proto.WorkloadEndpointID]()
 			}
 			a.workloadEndpointIDsByCIDR[cidr].Add(wepID)
 		}
@@ -451,11 +450,10 @@ func (a *awsIPManager) lookUpElasticIPs(privIP ip.CIDR) []ip.Addr {
 	// It's possible that multiple local pods transiently share an IP address.  Deal with that by
 	// returning the intersection of their elastic IPs.  That way we only assign IPs that are valid for all
 	// pods sharing the IP.
-	var elasticIPs set.Set
-	weps.Iter(func(item interface{}) error {
-		wepID := item.(proto.WorkloadEndpointID)
+	var elasticIPs set.Set[ip.Addr]
+	weps.Iter(func(wepID proto.WorkloadEndpointID) error {
 		wep := a.workloadEndpointsByID[wepID]
-		elasticIPsThisWEP := set.New()
+		elasticIPsThisWEP := set.NewBoxed[ip.Addr]()
 		for _, eip := range wep.ElasticIPs {
 			if elasticIPs != nil && !elasticIPs.Contains(eip) {
 				logrus.WithFields(logrus.Fields{
@@ -473,8 +471,7 @@ func (a *awsIPManager) lookUpElasticIPs(privIP ip.CIDR) []ip.Addr {
 
 	// Convert back to slice.
 	var elasticIPsSlice []ip.Addr
-	elasticIPs.Iter(func(item interface{}) error {
-		addr := item.(ip.Addr)
+	elasticIPs.Iter(func(addr ip.Addr) error {
 		elasticIPsSlice = append(elasticIPsSlice, addr)
 		return nil
 	})
@@ -509,7 +506,7 @@ func (a *awsIPManager) CompleteDeferredWork() error {
 		// fabric appropriately and then send us a SecondaryIfaceState.
 		ds := aws.DatastoreState{
 			LocalAWSAddrsByDst: map[ip.Addr]aws.AddrInfo{},
-			PoolIDsBySubnetID:  map[string]set.Set{},
+			PoolIDsBySubnetID:  map[string]set.Set[string]{},
 		}
 		for k, v := range a.localAWSRoutesByDst {
 			ds.LocalAWSAddrsByDst[k.Addr()] = aws.AddrInfo{
@@ -549,8 +546,8 @@ func (a *awsIPManager) resyncWithDataplane() error {
 	if err != nil {
 		return fmt.Errorf("failed to load local interfaces: %w", err)
 	}
-	activeRules := set.New() /* awsRuleKey */
-	activeIfaceNames := set.New()
+	activeRules := set.NewBoxed[awsRuleKey]()
+	activeIfaceNames := set.New[string]()
 	var finalErr error
 
 	for _, iface := range ifaces {
@@ -630,7 +627,7 @@ func (a *awsIPManager) findPrimaryInterfaceMTU(ifaces []netlink.Link) (int, erro
 	return 0, errPrimaryMTUNotFound
 }
 
-func (a *awsIPManager) cleanUpPrimaryIPs(matchedNICs set.Set) {
+func (a *awsIPManager) cleanUpPrimaryIPs(matchedNICs set.Set[string]) {
 	if matchedNICs.Len() != len(a.ifaceNameToPrimaryIP) {
 		// Clean up primary IPs of interfaces that no longer exist.
 		for iface := range a.ifaceNameToPrimaryIP {
@@ -784,7 +781,7 @@ func (a *awsIPManager) configureNIC(iface netlink.Link, ifaceName string, primar
 }
 
 // addIfaceActiveRules adds awsRuleKey values to activeRules according to the secondary IPs of the AWS ENI.
-func (a *awsIPManager) addIfaceActiveRules(activeRules set.Set, awsENI aws.Iface, routingTableID int) {
+func (a *awsIPManager) addIfaceActiveRules(activeRules set.Set[awsRuleKey], awsENI aws.Iface, routingTableID int) {
 	// Send traffic from the primary IP of the interface to the dedicated routing table.
 	// This is needed because:
 	// - We want the primary IP of the ENI to be able to reach remote IPs within the
@@ -847,7 +844,7 @@ func (a *awsIPManager) programIfaceRoutes(rt routeTable, ifaceName string) {
 
 // cleanUpRoutingTables scans routeTableIndexByIfaceName for routing tables that are no longer needed (i.e. no
 // longer appear in activeIfaceNames and releases them.
-func (a *awsIPManager) cleanUpRoutingTables(activeIfaceNames set.Set) {
+func (a *awsIPManager) cleanUpRoutingTables(activeIfaceNames set.Set[string]) {
 	for ifaceName, rt := range a.routeTablesByIfaceName {
 		if activeIfaceNames.Contains(ifaceName) {
 			continue // NIC is known to AWS and the local dataplane.  All good.
@@ -869,7 +866,7 @@ func (a *awsIPManager) cleanUpRoutingTables(activeIfaceNames set.Set) {
 
 // updateRouteRules calculates route rule deltas between the active rules and the set of rules that we've
 // previously programmed.  It sends those to the RouteRules instance.
-func (a *awsIPManager) updateRouteRules(activeRuleKeys set.Set /* awsRulesKey */) {
+func (a *awsIPManager) updateRouteRules(activeRuleKeys set.Set[awsRuleKey]) {
 	for k, r := range a.routeRulesInDataplane {
 		if activeRuleKeys.Contains(k) {
 			continue // Route was present and still wanted; nothing to do.
@@ -878,8 +875,7 @@ func (a *awsIPManager) updateRouteRules(activeRuleKeys set.Set /* awsRulesKey */
 		a.routeRules.RemoveRule(r)
 		delete(a.routeRulesInDataplane, k)
 	}
-	activeRuleKeys.Iter(func(item interface{}) error {
-		k := item.(awsRuleKey)
+	activeRuleKeys.Iter(func(k awsRuleKey) error {
 		if _, ok := a.routeRulesInDataplane[k]; ok {
 			return nil // Route already present.  Nothing to do.
 		}
@@ -948,7 +944,7 @@ var (
 type routeRulesNewFn func(
 	ipVersion int,
 	priority int,
-	tableIndexSet set.Set,
+	tableIndexSet set.Set[int],
 	updateFunc routerule.RulesMatchFunc,
 	removeFunc routerule.RulesMatchFunc,
 	netlinkTimeout time.Duration,
@@ -984,7 +980,7 @@ type awsNetlinkIface interface {
 func realRouteRuleNew(
 	version int,
 	priority int,
-	indexSet set.Set,
+	indexSet set.Set[int],
 	updateFunc routerule.RulesMatchFunc,
 	removeFunc routerule.RulesMatchFunc,
 	timeout time.Duration,

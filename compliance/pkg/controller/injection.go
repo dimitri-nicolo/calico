@@ -19,7 +19,6 @@ package controller
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -128,7 +127,6 @@ func (f *fakeJobControl) CreateJob(namespace string, job *batchv1.Job) (*batchv1
 	if f.Err != nil {
 		return nil, f.Err
 	}
-	job.SelfLink = fmt.Sprintf("/api/batch/v1/namespaces/%s/jobs/%s", namespace, job.Name)
 	f.Jobs = append(f.Jobs, *job)
 	job.UID = "test-uid"
 	return job, nil

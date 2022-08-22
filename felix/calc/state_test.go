@@ -36,16 +36,18 @@ type State struct {
 	// List of KVPairs that are in the datastore.  Stored as a list rather
 	// than a map to give us a deterministic ordering of injection.
 	DatastoreState                       []model.KVPair
-	ExpectedIPSets                       map[string]set.Set
-	ExpectedPolicyIDs                    set.Set
-	ExpectedUntrackedPolicyIDs           set.Set
-	ExpectedPreDNATPolicyIDs             set.Set
-	ExpectedProfileIDs                   set.Set
-	ExpectedRoutes                       set.Set
-	ExpectedVTEPs                        set.Set
-	ExpectedIPSecBindings                set.Set
-	ExpectedIPSecBlacklist               set.Set
+	ExpectedIPSets                       map[string]set.Set[string]
+	ExpectedPolicyIDs                    set.Set[proto.PolicyID]
+	ExpectedUntrackedPolicyIDs           set.Set[proto.PolicyID]
+	ExpectedPreDNATPolicyIDs             set.Set[proto.PolicyID]
+	ExpectedProfileIDs                   set.Set[proto.ProfileID]
+	ExpectedRoutes                       set.Set[proto.RouteUpdate]
+	ExpectedVTEPs                        set.Set[proto.VXLANTunnelEndpointUpdate]
+	ExpectedIPSecBindings                set.Set[mock.IPSecBinding]
+	ExpectedIPSecBlacklist               set.Set[string]
 	ExpectedCachedRemoteEndpoints        []*calc.EndpointData
+	ExpectedWireguardEndpoints           set.Set[proto.WireguardEndpointUpdate]
+	ExpectedWireguardV6Endpoints         set.Set[proto.WireguardEndpointV6Update]
 	ExpectedEndpointPolicyOrder          map[string][]mock.TierInfo
 	ExpectedUntrackedEndpointPolicyOrder map[string][]mock.TierInfo
 	ExpectedPreDNATEndpointPolicyOrder   map[string][]mock.TierInfo
@@ -53,8 +55,8 @@ type State struct {
 	ExpectedNumberOfALPPolicies          int
 	ExpectedNumberOfTiers                int
 	ExpectedNumberOfPolicies             int
-	ExpectedCaptureUpdates               set.Set
-	ExpectedCaptureRemovals              set.Set
+	ExpectedCaptureUpdates               set.Set[proto.PacketCaptureUpdate]
+	ExpectedCaptureRemovals              set.Set[proto.PacketCaptureUpdate]
 	ExpectedEncapsulation                proto.Encapsulation
 }
 
@@ -68,24 +70,26 @@ func (s State) String() string {
 func NewState() State {
 	return State{
 		DatastoreState:                       []model.KVPair{},
-		ExpectedIPSets:                       make(map[string]set.Set),
-		ExpectedPolicyIDs:                    set.New(),
-		ExpectedUntrackedPolicyIDs:           set.New(),
-		ExpectedPreDNATPolicyIDs:             set.New(),
-		ExpectedProfileIDs:                   set.New(),
-		ExpectedRoutes:                       set.New(),
-		ExpectedVTEPs:                        set.New(),
-		ExpectedIPSecBindings:                set.New(),
+		ExpectedIPSets:                       make(map[string]set.Set[string]),
+		ExpectedPolicyIDs:                    set.New[proto.PolicyID](),
+		ExpectedUntrackedPolicyIDs:           set.New[proto.PolicyID](),
+		ExpectedPreDNATPolicyIDs:             set.New[proto.PolicyID](),
+		ExpectedProfileIDs:                   set.New[proto.ProfileID](),
+		ExpectedRoutes:                       set.New[proto.RouteUpdate](),
+		ExpectedVTEPs:                        set.New[proto.VXLANTunnelEndpointUpdate](),
+		ExpectedIPSecBindings:                set.New[mock.IPSecBinding](),
 		ExpectedIPSecBlacklist:               nil, // Created on demand, nil means "ignore"
 		ExpectedCachedRemoteEndpoints:        []*calc.EndpointData{},
+		ExpectedWireguardEndpoints:           set.New[proto.WireguardEndpointUpdate](),
+		ExpectedWireguardV6Endpoints:         set.New[proto.WireguardEndpointV6Update](),
 		ExpectedEndpointPolicyOrder:          make(map[string][]mock.TierInfo),
 		ExpectedUntrackedEndpointPolicyOrder: make(map[string][]mock.TierInfo),
 		ExpectedPreDNATEndpointPolicyOrder:   make(map[string][]mock.TierInfo),
 		ExpectedEndpointEgressData:           make(map[string]calc.EndpointEgressData),
 		ExpectedNumberOfPolicies:             -1,
 		ExpectedNumberOfTiers:                -1,
-		ExpectedCaptureUpdates:               set.New(),
-		ExpectedCaptureRemovals:              set.New(),
+		ExpectedCaptureUpdates:               set.New[proto.PacketCaptureUpdate](),
+		ExpectedCaptureRemovals:              set.New[proto.PacketCaptureUpdate](),
 	}
 }
 
@@ -115,6 +119,8 @@ func (s State) Copy() State {
 	cpy.ExpectedProfileIDs = s.ExpectedProfileIDs.Copy()
 	cpy.ExpectedRoutes = s.ExpectedRoutes.Copy()
 	cpy.ExpectedVTEPs = s.ExpectedVTEPs.Copy()
+	cpy.ExpectedWireguardEndpoints = s.ExpectedWireguardEndpoints.Copy()
+	cpy.ExpectedWireguardV6Endpoints = s.ExpectedWireguardV6Endpoints.Copy()
 	cpy.ExpectedNumberOfALPPolicies = s.ExpectedNumberOfALPPolicies
 	cpy.ExpectedNumberOfTiers = s.ExpectedNumberOfTiers
 	cpy.ExpectedNumberOfPolicies = s.ExpectedNumberOfPolicies
@@ -125,7 +131,7 @@ func (s State) Copy() State {
 
 	cpy.ExpectedCachedRemoteEndpoints = append(cpy.ExpectedCachedRemoteEndpoints, s.ExpectedCachedRemoteEndpoints...)
 	if s.ExpectedCaptureUpdates != nil {
-		s.ExpectedCaptureUpdates.Iter(func(item interface{}) error {
+		s.ExpectedCaptureUpdates.Iter(func(item proto.PacketCaptureUpdate) error {
 			cpy.ExpectedCaptureUpdates.Add(item)
 			return nil
 		})
@@ -184,11 +190,11 @@ func (s State) withIPSet(name string, members []string) (newState State) {
 	if members == nil {
 		delete(newState.ExpectedIPSets, name)
 	} else {
-		set := set.New()
+		memSet := set.New[string]()
 		for _, ip := range members {
-			set.Add(strings.ToLower(ip))
+			memSet.Add(strings.ToLower(ip))
 		}
-		newState.ExpectedIPSets[name] = set
+		newState.ExpectedIPSets[name] = memSet
 	}
 	return
 }
@@ -236,7 +242,7 @@ func (s State) withName(name string) (newState State) {
 
 func (s State) withActivePolicies(ids ...proto.PolicyID) (newState State) {
 	newState = s.Copy()
-	newState.ExpectedPolicyIDs = set.New()
+	newState.ExpectedPolicyIDs = set.New[proto.PolicyID]()
 	for _, id := range ids {
 		newState.ExpectedPolicyIDs.Add(id)
 	}
@@ -263,7 +269,7 @@ func (s State) withTotalActivePolicies(count int) (newState State) {
 
 func (s State) withUntrackedPolicies(ids ...proto.PolicyID) (newState State) {
 	newState = s.Copy()
-	newState.ExpectedUntrackedPolicyIDs = set.New()
+	newState.ExpectedUntrackedPolicyIDs = set.New[proto.PolicyID]()
 	for _, id := range ids {
 		newState.ExpectedUntrackedPolicyIDs.Add(id)
 	}
@@ -272,7 +278,7 @@ func (s State) withUntrackedPolicies(ids ...proto.PolicyID) (newState State) {
 
 func (s State) withPreDNATPolicies(ids ...proto.PolicyID) (newState State) {
 	newState = s.Copy()
-	newState.ExpectedPreDNATPolicyIDs = set.New()
+	newState.ExpectedPreDNATPolicyIDs = set.New[proto.PolicyID]()
 	for _, id := range ids {
 		newState.ExpectedPreDNATPolicyIDs.Add(id)
 	}
@@ -281,7 +287,7 @@ func (s State) withPreDNATPolicies(ids ...proto.PolicyID) (newState State) {
 
 func (s State) withActiveProfiles(ids ...proto.ProfileID) (newState State) {
 	newState = s.Copy()
-	newState.ExpectedProfileIDs = set.New()
+	newState.ExpectedProfileIDs = set.New[proto.ProfileID]()
 	for _, id := range ids {
 		newState.ExpectedProfileIDs.Add(id)
 	}
@@ -312,7 +318,7 @@ func (s State) withIPSecBinding(tunnelAddr, endpointAddr string) (newState State
 	newState = s.Copy()
 	if newState.ExpectedIPSecBlacklist == nil {
 		// Once we're checking IPsec state, make sure we check the blacklist too...
-		newState.ExpectedIPSecBlacklist = set.New()
+		newState.ExpectedIPSecBlacklist = set.New[string]()
 	}
 	newState.ExpectedIPSecBindings.Add(mock.IPSecBinding{tunnelAddr, endpointAddr})
 	return
@@ -322,7 +328,7 @@ func (s State) withoutIPSecBinding(tunnelAddr, endpointAddr string) (newState St
 	newState = s.Copy()
 	if newState.ExpectedIPSecBlacklist == nil {
 		// Once we're checking IPsec state, make sure we check the blacklist too...
-		newState.ExpectedIPSecBlacklist = set.New()
+		newState.ExpectedIPSecBlacklist = set.New[string]()
 	}
 	newState.ExpectedIPSecBindings.Discard(mock.IPSecBinding{tunnelAddr, endpointAddr})
 	return
@@ -331,7 +337,7 @@ func (s State) withoutIPSecBinding(tunnelAddr, endpointAddr string) (newState St
 func (s State) withIPSecBlacklist(endpointAddr ...string) (newState State) {
 	newState = s.Copy()
 	if newState.ExpectedIPSecBlacklist == nil {
-		newState.ExpectedIPSecBlacklist = set.New()
+		newState.ExpectedIPSecBlacklist = set.New[string]()
 	}
 	for _, a := range endpointAddr {
 		newState.ExpectedIPSecBlacklist.Add(a)
@@ -345,8 +351,20 @@ func (s State) withExpectedEncapsulation(encap proto.Encapsulation) (newState St
 	return newState
 }
 
-func (s State) Keys() set.Set {
-	set := set.New()
+func (s State) withWireguardEndpoints(endpoints ...proto.WireguardEndpointUpdate) (newState State) {
+	newState = s.Copy()
+	newState.ExpectedWireguardEndpoints = set.FromArray(endpoints)
+	return newState
+}
+
+func (s State) withWireguardV6Endpoints(endpoints ...proto.WireguardEndpointV6Update) (newState State) {
+	newState = s.Copy()
+	newState.ExpectedWireguardV6Endpoints = set.FromArray(endpoints)
+	return newState
+}
+
+func (s State) Keys() set.Set[string] {
+	set := set.New[string]()
 	for _, kv := range s.DatastoreState {
 		set.Add(kvToPath(kv))
 	}
@@ -427,10 +445,10 @@ func (s State) NumALPPolicies() int {
 	return s.ExpectedNumberOfALPPolicies
 }
 
-func (s State) ActiveKeys(keyTypeExample interface{}) set.Set {
+func (s State) ActiveKeys(keyTypeExample interface{}) set.Set[model.Key] {
 	// Need to be a little careful here, the DatastoreState can contain an ordered sequence of updates and deletions
 	// We need to track which keys are actually still live at the end of it.
-	keys := set.New()
+	keys := set.NewBoxed[model.Key]()
 	for _, u := range s.DatastoreState {
 		if reflect.TypeOf(u.Key) != reflect.TypeOf(keyTypeExample) {
 			continue

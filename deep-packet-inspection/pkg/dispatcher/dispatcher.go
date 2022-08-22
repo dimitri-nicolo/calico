@@ -49,7 +49,7 @@ type dispatcher struct {
 
 	// wepKeyToDPIs maps WEP key to set of DPI object as each WEP can map to multiple DPI selectors, it is used in
 	// combination with wepKeyToIface to restart affected snort processes if interface changes.
-	wepKeyToDPIs map[interface{}]set.Set
+	wepKeyToDPIs map[interface{}]set.Set[DPI]
 
 	// dpiKeyToDPI maps DPI key to DPI object that has processor and event generator.
 	dpiKeyToDPI map[interface{}]DPI
@@ -117,7 +117,7 @@ func NewDispatcher(cfg *config.Config,
 	dispatch := &dispatcher{
 		wepKeyToIface:       make(map[interface{}]string),
 		dpiKeyToDPI:         make(map[interface{}]DPI),
-		wepKeyToDPIs:        make(map[interface{}]set.Set),
+		wepKeyToDPIs:        make(map[interface{}]set.Set[DPI]),
 		snortProcessor:      snortProcessor,
 		eventGenerator:      eventGenerator,
 		cfg:                 cfg,
@@ -245,13 +245,13 @@ func (h *dispatcher) processDirtyItems(ctx context.Context) {
 			// stop and remove all old WEP interfaces
 			prcs, ok := h.wepKeyToDPIs[i.wepKey]
 			if ok {
-				prcs.Iter(func(dpi interface{}) error {
-					h.startDPIOnWEP(ctx, dpi.(DPI), i.dpiKey.(model.ResourceKey), i.wepKey.(model.WorkloadEndpointKey))
+				prcs.Iter(func(dpi DPI) error {
+					h.startDPIOnWEP(ctx, dpi, i.dpiKey.(model.ResourceKey), i.wepKey.(model.WorkloadEndpointKey))
 					return nil
 				})
 				// add the updated WEP interfaces
-				prcs.Iter(func(dpi interface{}) error {
-					h.startDPIOnWEP(ctx, dpi.(DPI), i.dpiKey.(model.ResourceKey), i.wepKey.(model.WorkloadEndpointKey))
+				prcs.Iter(func(dpi DPI) error {
+					h.startDPIOnWEP(ctx, dpi, i.dpiKey.(model.ResourceKey), i.wepKey.(model.WorkloadEndpointKey))
 					return nil
 				})
 			}
@@ -266,7 +266,7 @@ func (h *dispatcher) processDirtyItems(ctx context.Context) {
 				// Update the mapping of WEP interface to snortProcessor and also mapping of DPI key to snortProcessor
 				dpis, ok := h.wepKeyToDPIs[i.wepKey]
 				if !ok {
-					dpis = set.New()
+					dpis = set.NewBoxed[DPI]()
 				}
 				dpis.Add(dpi)
 				h.wepKeyToDPIs[i.wepKey] = dpis

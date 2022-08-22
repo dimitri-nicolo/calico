@@ -10,9 +10,9 @@ import (
 
 // NormalizedIPSet converts the IP strings into a set of normalized Keys. If there is an error with any of the IPs
 // this function returns the set of all IPs that could be converted along with the last error that it encountered.
-func NormalizedIPSet(ips ...string) (set.Set, error) {
+func NormalizedIPSet(ips ...string) (set.Set[string], error) {
 	var lastErr error
-	s := set.New()
+	s := set.New[string]()
 	for i := range ips {
 		ip, err := NormalizeIP(ips[i])
 		if err != nil {

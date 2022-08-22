@@ -56,8 +56,8 @@ func mappingMatchesLine(m *mapping, line string) bool {
 }
 
 func fileHasMappingsAndNot(mappings []mapping, notMappings []mapping) func() error {
-	mset := set.FromArray(mappings)
-	notset := set.FromArray(notMappings)
+	mset := set.FromArray[mapping](mappings)
+	notset := set.FromArray[mapping](notMappings)
 	return func() error {
 		f, err := os.Open(path.Join(dnsDir, "dnsinfo.txt"))
 		if err == nil {
@@ -65,15 +65,13 @@ func fileHasMappingsAndNot(mappings []mapping, notMappings []mapping) func() err
 			scanner := bufio.NewScanner(f)
 			for scanner.Scan() {
 				line := scanner.Text()
-				mset.Iter(func(item interface{}) error {
-					m := item.(mapping)
+				mset.Iter(func(m mapping) error {
 					if mappingMatchesLine(&m, line) {
 						return set.RemoveItem
 					}
 					return nil
 				})
-				notset.Iter(func(item interface{}) error {
-					m := item.(mapping)
+				notset.Iter(func(m mapping) error {
 					if mappingMatchesLine(&m, line) {
 						log.Infof("Found wrong mapping: %v", m)
 						problems = append(problems, fmt.Sprintf("Found wrong mapping: %v", m))
@@ -85,8 +83,7 @@ func fileHasMappingsAndNot(mappings []mapping, notMappings []mapping) func() err
 				log.Info("All expected mappings found")
 			} else {
 				log.Infof("Missing %v expected mappings", mset.Len())
-				mset.Iter(func(item interface{}) error {
-					m := item.(mapping)
+				mset.Iter(func(m mapping) error {
 					log.Infof("Missed mapping: %v", m)
 					problems = append(problems, fmt.Sprintf("Missed mapping: %v", m))
 					return nil
@@ -225,6 +222,9 @@ var _ = Describe("_BPF-SAFE_ DNS Policy", func() {
 					iiStr := strconv.Itoa(ii)
 					w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
 					w[ii].Configure(client)
+					if bpfEnabled {
+						ensureBPFProgramsAttached(felix)
+					}
 				}
 			})
 
@@ -714,6 +714,9 @@ var _ = Describe("_BPF-SAFE_ DNS Policy with server on host", func() {
 			iiStr := strconv.Itoa(ii)
 			w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
 			w[ii].Configure(client)
+			if bpfEnabled {
+				ensureBPFProgramsAttached(felix)
+			}
 		}
 
 		// Start scapy, in the same namespace as Felix.
@@ -844,11 +847,13 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 		server = felixes[1]
 		infrastructure.CreateDefaultProfile(client, "default", map[string]string{"default": ""}, "")
 
+		expectedInterfaces := []string{"eth0"}
 		// Create a workload, using that profile.
 		for ii := range w {
 			iiStr := strconv.Itoa(ii)
 			w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
 			w[ii].Configure(client)
+			expectedInterfaces = append(expectedInterfaces, w[ii].InterfaceName)
 		}
 
 		// Configure Felix to trust itself, the other Felix, and w[1] as DNS servers.
@@ -860,6 +865,8 @@ var _ = Describe("_BPF-SAFE_ Precise DNS logging", func() {
 		log.Info("Felix has restarted")
 
 		if bpfEnabled {
+			ensureBPFProgramsAttached(felix)
+			ensureBPFProgramsAttached(server)
 			// Wait for trusted DNS servers ipset to be populated.
 			Eventually(func() bool {
 				out, err := felix.ExecOutput("calico-bpf", "ipsets", "dump")

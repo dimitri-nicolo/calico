@@ -38,6 +38,8 @@ type GlobalThreatFeedExpansion interface{}
 
 type HostEndpointExpansion interface{}
 
+type IPAMConfigurationExpansion interface{}
+
 type IPPoolExpansion interface{}
 
 type IPReservationExpansion interface{}

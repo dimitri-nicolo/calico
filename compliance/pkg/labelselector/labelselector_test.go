@@ -25,21 +25,21 @@ var (
 		Name:      "testNP",
 		Namespace: "namespace",
 	}
-	podSet    = set.From(podID)
-	policySet = set.From(policyID)
+	podSet    = set.From[apiv3.ResourceID](podID)
+	policySet = set.From[apiv3.ResourceID](policyID)
 )
 
 type tester struct {
 	l        labelselector.LabelSelector
-	policies set.Set
-	pods     set.Set
+	policies set.Set[apiv3.ResourceID]
+	pods     set.Set[apiv3.ResourceID]
 }
 
 func newTester() *tester {
 	return &tester{
 		l:        labelselector.New(),
-		policies: set.New(),
-		pods:     set.New(),
+		policies: set.New[apiv3.ResourceID](),
+		pods:     set.New[apiv3.ResourceID](),
 	}
 }
 

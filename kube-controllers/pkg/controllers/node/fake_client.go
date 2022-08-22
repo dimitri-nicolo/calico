@@ -235,6 +235,10 @@ func (f *FakeCalicoClient) CalicoNodeStatus() clientv3.CalicoNodeStatusInterface
 	panic("not implemented")
 }
 
+func (f *FakeCalicoClient) IPAMConfig() clientv3.IPAMConfigInterface {
+	panic("not implemented")
+}
+
 // EnsureInitialized is used to ensure the backend datastore is correctly
 // initialized for use by Calico.  This method may be called multiple times, and
 // will have no effect if the datastore is already correctly initialized.

@@ -33,6 +33,9 @@ const (
 	MarkLinuxConntrackEstablished     = 0x08000000
 	MarkLinuxConntrackEstablishedMask = 0x08000000
 
+	MarkSeenToNatIfaceOut   = 0x41000000
+	MarkSeenFromNatIfaceOut = 0x81000000
+
 	MarkEgress     = 0x10000000
 	MarkEgressMask = 0x10000000
 

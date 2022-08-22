@@ -51,7 +51,7 @@ type VersionedEndpointResource interface {
 	GetFlowLogAggregationName() string
 	GetCalicoV1Labels() map[string]string
 	GetCalicoV1Profiles() []string
-	getIPOrEndpointIDs() (set.Set, error)
+	getIPOrEndpointIDs() (set.Set[string], error)
 	getEnvoyEnabled(engine *endpointHandler) bool
 	getServiceAccount() *apiv3.ResourceID
 }
@@ -157,7 +157,7 @@ func (v *versionedK8sPod) GetCalicoV1Profiles() []string {
 	return v.v1.ProfileIDs
 }
 
-func (v *versionedK8sPod) getIPOrEndpointIDs() (set.Set, error) {
+func (v *versionedK8sPod) getIPOrEndpointIDs() (set.Set[string], error) {
 	if v.validIP {
 		// Where possible use the IP address to identify the pod.
 		return ips.NormalizedIPSet(v.v3.Spec.IPNetworks...)
@@ -166,7 +166,7 @@ func (v *versionedK8sPod) getIPOrEndpointIDs() (set.Set, error) {
 	// then use the pod ID converted to a string to identify this endpoint.
 	id := resources.GetResourceID(v.Pod).String()
 	log.Debugf("Including %s in IP/endpoint ID match", id)
-	return set.From(id), nil
+	return set.From[string](id), nil
 }
 
 func (v *versionedK8sPod) getEnvoyEnabled(engine *endpointHandler) bool {
@@ -264,7 +264,7 @@ func (v *versionedCalicoHostEndpoint) GetCalicoV1Profiles() []string {
 	return v.v1.ProfileIDs
 }
 
-func (v *versionedCalicoHostEndpoint) getIPOrEndpointIDs() (set.Set, error) {
+func (v *versionedCalicoHostEndpoint) getIPOrEndpointIDs() (set.Set[string], error) {
 	if len(v.Spec.ExpectedIPs) == 0 {
 		return nil, errors.New("no expectedIPs configured")
 	}

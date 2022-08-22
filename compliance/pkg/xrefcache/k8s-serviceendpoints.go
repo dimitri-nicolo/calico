@@ -30,7 +30,7 @@ var (
 // endpoints.
 type VersionedServiceEndpointsResource interface {
 	VersionedResource
-	getIPAndEndpointIDs() (set.Set, error)
+	getIPAndEndpointIDs() (set.Set[string], error)
 }
 
 type CacheEntryServiceEndpoints struct {
@@ -72,9 +72,9 @@ func (v *versionedK8sServiceEndpoints) GetCalicoV1() interface{} {
 	return nil
 }
 
-func (v *versionedK8sServiceEndpoints) getIPAndEndpointIDs() (set.Set, error) {
+func (v *versionedK8sServiceEndpoints) getIPAndEndpointIDs() (set.Set[string], error) {
 	var lastErr error
-	s := set.New()
+	s := set.New[string]()
 	for ssIdx := range v.Endpoints.Subsets {
 		for addrIdx := range v.Endpoints.Subsets[ssIdx].Addresses {
 			if target := v.Endpoints.Subsets[ssIdx].Addresses[addrIdx].TargetRef; target != nil && target.Kind == "Pod" {

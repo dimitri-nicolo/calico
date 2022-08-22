@@ -91,8 +91,10 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 			w[ii].WorkloadEndpoint.Spec.Pod = "fv-pod-" + iiStr
 			w[ii].Configure(calicoClient)
 		}
-
 		hostMgmtCredsPath = filepath.Join(tempDir, binder.CredentialsSubdir)
+		if BPFMode() {
+			ensureBPFProgramsAttached(felix)
+		}
 	})
 
 	AfterEach(func() {
@@ -300,7 +302,7 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 								if os.Getenv("FELIX_FV_ENABLE_BPF") == "true" {
 									// FIXME avoid blocking policysync while BPF dataplane does its thing.
 									// When BPF dataplane reprograms policy it can block >1s.
-									waitTime = "5s"
+									waitTime = "10s"
 								}
 
 								if wlIdx != 2 {
@@ -312,7 +314,7 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 								Expect(err).NotTo(HaveOccurred())
 
 								if wlIdx != 2 {
-									Eventually(mockWlClient[wlIdx].ActivePolicies, waitTime).Should(Equal(set.New()))
+									Eventually(mockWlClient[wlIdx].ActivePolicies, waitTime).Should(Equal(set.New[proto.PolicyID]()))
 								}
 							}
 						}
@@ -376,8 +378,8 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 									IngressPolicyNames: []string{"default.policy-0"},
 								}}}))
 
-							Consistently(mockWlClient[1].ActivePolicies).Should(Equal(set.New()))
-							Consistently(mockWlClient[2].ActivePolicies).Should(Equal(set.New()))
+							Consistently(mockWlClient[1].ActivePolicies).Should(Equal(set.New[proto.PolicyID]()))
+							Consistently(mockWlClient[2].ActivePolicies).Should(Equal(set.New[proto.PolicyID]()))
 						})
 
 						It("should be correctly mapped to proto policy", func() {
@@ -430,7 +432,7 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 							_, err := calicoClient.GlobalNetworkPolicies().Delete(ctx, "policy-0", options.DeleteOptions{})
 							Expect(err).NotTo(HaveOccurred())
 
-							Eventually(mockWlClient[0].ActivePolicies).Should(Equal(set.New()))
+							Eventually(mockWlClient[0].ActivePolicies).Should(Equal(set.New[proto.PolicyID]()))
 						})
 
 						It("should handle a change of selector", func() {
@@ -448,7 +450,7 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 
 							Eventually(mockWlClient[0].EndpointToPolicyOrder).Should(Equal(
 								map[string][]mock.TierInfo{"k8s/fv/fv-pod-0/eth0": {}}))
-							Eventually(mockWlClient[0].ActivePolicies).Should(Equal(set.New()))
+							Eventually(mockWlClient[0].ActivePolicies).Should(Equal(set.New[proto.PolicyID]()))
 
 							By("Updating workload 1 to make the policy active")
 							Eventually(mockWlClient[1].ActivePolicies).Should(Equal(set.From(policyID)))
@@ -459,7 +461,7 @@ var _ = Context("_POL-SYNC_ _BPF-SAFE_ policy sync API tests", func() {
 									IngressPolicyNames: []string{"default.policy-0"},
 								}}}))
 
-							Consistently(mockWlClient[2].ActivePolicies).Should(Equal(set.New()))
+							Consistently(mockWlClient[2].ActivePolicies).Should(Equal(set.New[proto.PolicyID]()))
 						})
 
 						It("should handle a change of profiles", func() {
@@ -726,6 +728,9 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 			wl.WorkloadEndpoint.Spec.Pod = "fv-pod-" + iiStr
 			wl.ConfigureInInfra(infra)
 			w[ii] = wl
+		}
+		if BPFMode() {
+			ensureAllNodesBPFProgramsAttached(felixes)
 		}
 	})
 
@@ -1080,10 +1085,10 @@ var _ = infrastructure.DatastoreDescribe("_POL-SYNC_ _BPF-SAFE_ route sync API t
 	})
 })
 
-func setToSlice(s set.Set) []proto.RouteUpdate {
+func setToSlice(s set.Set[proto.RouteUpdate]) []proto.RouteUpdate {
 	r := make([]proto.RouteUpdate, s.Len())
-	s.Iter(func(item interface{}) error {
-		r = append(r, item.(proto.RouteUpdate))
+	s.Iter(func(item proto.RouteUpdate) error {
+		r = append(r, item)
 		return nil
 	})
 	return r
@@ -1136,13 +1141,13 @@ func calcRouteUpdates(localIndex int, felixes []*infrastructure.Felix, workloads
 func expectRouteUpdates(mockWlClient *mockWorkloadClient, updates []interface{}) {
 	Eventually(func() []proto.RouteUpdate {
 		return setToSlice(mockWlClient.ActiveRoutes())
-	}, "1s").Should(ContainElements(updates...))
+	}, "5s").Should(ContainElements(updates...))
 }
 
 func notExpectRouteUpdates(mockWlClient *mockWorkloadClient, updates []interface{}) {
 	Eventually(func() []proto.RouteUpdate {
 		return setToSlice(mockWlClient.ActiveRoutes())
-	}, "1s").Should(Not(ContainElements(updates...)))
+	}, "5s").Should(Not(ContainElements(updates...)))
 }
 
 func unixDialer(target string, timeout time.Duration) (net.Conn, error) {

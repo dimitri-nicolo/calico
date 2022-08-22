@@ -1,0 +1,96 @@
+imagePullSecrets: {}
+
+installation:
+  enabled: true
+  variant: TigeraSecureEnterprise
+  kubernetesProvider: ""
+
+apiServer:
+  enabled: true
+
+intrusionDetection:
+  enabled: true
+
+logCollector:
+  enabled: true
+
+logStorage:
+  enabled: true
+  nodes:
+    count: 1
+
+manager:
+  enabled: true
+
+monitor:
+  enabled: true
+
+compliance:
+  enabled: true
+
+# Optional configuration for setting custom BGP templates where
+# key is the filename of the template and value is the contents of the template.
+bgp: {}
+
+certs:
+  node:
+    key:
+    cert:
+    commonName:
+  typha:
+    key:
+    cert:
+    commonName:
+    caBundle:
+  manager:
+    key:
+    cert:
+  elasticsearch:
+    key:
+    cert:
+  kibana:
+    key:
+    cert:
+  apiServer:
+    key:
+    cert:
+  compliance:
+    key:
+    cert:
+
+# Resource requests and limits for the tigera/operator pod.
+resources: {}
+
+# Tolerations for the tigera/operator pod.
+tolerations:
+- effect: NoExecute
+  operator: Exists
+- effect: NoSchedule
+  operator: Exists
+
+# NodeSelector for the tigera/operator pod.
+nodeSelector:
+  kubernetes.io/os: linux
+
+# Custom annotations for the tigera/operator pod.
+podAnnotations: {}
+
+# Custom labels for the tigera/operator pod.
+podLabels: {}
+
+# Image and registry configuration for the tigera/operator pod.
+tigeraOperator:
+  image: tigera/operator
+  version: master
+  registry: quay.io
+
+calicoctl:
+  enabled: false
+  image: docker.io/calico/ctl
+  tag: master
+  binPath: /bin
+
+techPreviewOptions:
+  # set to name of desired apparmor policy for the calico-node container and
+  # pod will be annotated with 'container.apparmor.security.beta.kubernetes.io/calico-node'
+  nodeApparmorPolicyName: ""

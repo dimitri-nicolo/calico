@@ -545,6 +545,11 @@ var baseTests = []StateList{
 		vxlanV4V6WithV6MAC,
 		vxlanV4V6WithBlock,
 	},
+	{
+		wireguardV4,
+		wireguardV6,
+		wireguardV4V6,
+	},
 }
 
 var logOnce sync.Once
@@ -787,8 +792,14 @@ func expectCorrectDataplaneState(mockDataplane *mock.MockDataplane, state State)
 	Expect(mockDataplane.ActiveVTEPs()).To(Equal(state.ExpectedVTEPs),
 		"Active VTEPs were incorrect after moving to state: %v",
 		state.Name)
+	Expect(mockDataplane.ActiveWireguardEndpoints()).To(Equal(state.ExpectedWireguardEndpoints),
+		"Active IPv4 Wireguard Endpoints were incorrect after moving to state: %v",
+		state.Name)
+	Expect(mockDataplane.ActiveWireguardV6Endpoints()).To(Equal(state.ExpectedWireguardV6Endpoints),
+		"Active IPv6 Wireguard Endpoints were incorrect after moving to state: %v",
+		state.Name)
 	// Comparing stringified versions of the routes here so that, on failure, we get much more readable output.
-	Expect(stringify(mockDataplane.ActiveRoutes())).To(Equal(stringify(state.ExpectedRoutes)),
+	Expect(stringifyRoutes(mockDataplane.ActiveRoutes())).To(Equal(stringifyRoutes(state.ExpectedRoutes)),
 		"Active routes were incorrect after moving to state: %v",
 		state.Name)
 	Expect(mockDataplane.EndpointToPolicyOrder()).To(Equal(state.ExpectedEndpointPolicyOrder),
@@ -817,7 +828,7 @@ func expectCorrectDataplaneState(mockDataplane *mock.MockDataplane, state State)
 			"IPsec blacklist incorrect after moving to state: %v",
 			state.Name)
 	}
-	Expect(stringify(mockDataplane.ActivePacketCaptureUpdates())).To(Equal(stringify(state.ExpectedCaptureUpdates)),
+	Expect(toSlice(mockDataplane.ActivePacketCaptureUpdates())).To(Equal(stringifyPacketCapture(state.ExpectedCaptureUpdates)),
 		"Active packet captured were incorrect after moving to state: %v",
 		state.Name)
 	Expect(mockDataplane.Encapsulation()).To(Equal(state.ExpectedEncapsulation),
@@ -825,16 +836,30 @@ func expectCorrectDataplaneState(mockDataplane *mock.MockDataplane, state State)
 		state.Name)
 }
 
-func stringify(routes set.Set) []string {
+func stringifyRoutes(routes set.Set[proto.RouteUpdate]) []string {
 	out := make([]string, 0, routes.Len())
-	routes.Iter(func(item interface{}) error {
-		switch item.(type) {
-		case proto.PacketCaptureUpdate:
-			update := item.(proto.PacketCaptureUpdate)
-			out = append(out, fmt.Sprintf("%+v-%+v", update.Id, update.Endpoint))
-		default:
-			out = append(out, fmt.Sprintf("%+v", item))
-		}
+	routes.Iter(func(item proto.RouteUpdate) error {
+		out = append(out, fmt.Sprintf("%+v", item))
+		return nil
+	})
+	sort.Strings(out)
+	return out
+}
+
+func stringifyPacketCapture(pc set.Set[proto.PacketCaptureUpdate]) []string {
+	out := make([]string, 0, pc.Len())
+	pc.Iter(func(update proto.PacketCaptureUpdate) error {
+		out = append(out, fmt.Sprintf("%+v-%+v", update.Id, update.Endpoint))
+		return nil
+	})
+	sort.Strings(out)
+	return out
+}
+
+func toSlice(s set.Set[string]) []string {
+	out := make([]string, 0, s.Len())
+	s.Iter(func(pc string) error {
+		out = append(out, pc)
 		return nil
 	})
 	sort.Strings(out)

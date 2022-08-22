@@ -60,7 +60,7 @@ func NewDataplaneWithShims(
 		forwardMark:           forwardMark,
 		allowUnsecuredTraffic: allowUnsecuredTraffic,
 
-		bindingsByTunnel: map[string]set.Set{},
+		bindingsByTunnel: map[string]set.Set[string]{},
 
 		polTable:  polTable,
 		ikeDaemon: ikeDaemon,
@@ -92,7 +92,7 @@ type Dataplane struct {
 	localTunnelAddr       string
 	allowUnsecuredTraffic bool
 
-	bindingsByTunnel map[string]set.Set
+	bindingsByTunnel map[string]set.Set[string]
 
 	ikeDaemon ikeDaemon
 	polTable  polTable
@@ -107,7 +107,7 @@ func (d *Dataplane) AddTunnel(remoteTunnelAddr string) {
 	}
 
 	d.configureTunnel(remoteTunnelAddr)
-	d.bindingsByTunnel[remoteTunnelAddr] = set.New()
+	d.bindingsByTunnel[remoteTunnelAddr] = set.New[string]()
 
 	if remoteTunnelAddr != d.localTunnelAddr {
 		// Allow the remote host to send encrypted traffic to our local workloads.  This balances the OUT rule

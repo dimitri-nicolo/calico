@@ -37,6 +37,10 @@ func (_m *MockClientInterface) ClusterInformation() clientv3.ClusterInformationI
 	return nil
 }
 
+func (_m *MockClientInterface) IPAMConfig() clientv3.IPAMConfigInterface {
+	return nil
+}
+
 func (_m *MockClientInterface) DeepPacketInspections() clientv3.DeepPacketInspectionInterface {
 	ret := _m.Called()
 

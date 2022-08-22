@@ -140,7 +140,7 @@ func (s *serviceGraph) getServiceGraphRequest(w http.ResponseWriter, req *http.R
 
 	// Sanity check any user configuration that may potentially break the API. In particular all user defined names
 	// that may be embedded in an ID should adhere to the IDValueRegex.
-	allLayers := set.New()
+	allLayers := set.New[string]()
 	for _, layer := range sgr.SelectedView.Layers {
 		if !IDValueRegex.MatchString(layer.Name) {
 			return nil, httputils.NewHttpStatusErrorBadRequest(fmt.Sprintf("Request body contains an invalid layer name: %s", layer.Name), nil)
@@ -151,7 +151,7 @@ func (s *serviceGraph) getServiceGraphRequest(w http.ResponseWriter, req *http.R
 		allLayers.Add(layer.Name)
 	}
 
-	allAggrHostnames := set.New()
+	allAggrHostnames := set.New[string]()
 	for _, selector := range sgr.SelectedView.HostAggregationSelectors {
 		if !IDValueRegex.MatchString(selector.Name) {
 			return nil, httputils.NewHttpStatusErrorBadRequest(fmt.Sprintf("Request body contains an invalid aggregated host name: %s", selector.Name), nil)

@@ -44,7 +44,7 @@ type wepCache struct {
 }
 
 type wepData struct {
-	ipList  set.Set
+	ipList  set.Set[string]
 	ns      string
 	podName string
 }
@@ -79,10 +79,10 @@ func (r *wepCache) Update(updateType bapi.UpdateType, wepKVPair model.KVPair) {
 			if ok {
 				// Remove the old IPs that are no longer in the WEP
 				oldIPList := data.ipList
-				oldIPList.Iter(func(item interface{}) error {
+				oldIPList.Iter(func(item string) error {
 					for i := range newIPs {
-						if !reflect.DeepEqual(newIPs[i], item.(string)) {
-							delete(r.ipToWEPKey, item.(string))
+						if !reflect.DeepEqual(newIPs[i], item) {
+							delete(r.ipToWEPKey, item)
 						}
 					}
 					return nil
@@ -95,7 +95,7 @@ func (r *wepCache) Update(updateType bapi.UpdateType, wepKVPair model.KVPair) {
 			}
 
 			// Cache all the IPs in WEP
-			data.ipList = set.New()
+			data.ipList = set.New[string]()
 			for i := range newIPs {
 				ip := net.IP(newIPs[i][:16])
 				data.ipList.Add(ip.String())
@@ -108,8 +108,8 @@ func (r *wepCache) Update(updateType bapi.UpdateType, wepKVPair model.KVPair) {
 		if wepKey, ok := wepKVPair.Key.(model.WorkloadEndpointKey); ok {
 			oldWEPData, ok := r.wepKeyToWEPData[wepKey]
 			if ok {
-				oldWEPData.ipList.Iter(func(item interface{}) error {
-					delete(r.ipToWEPKey, item.(string))
+				oldWEPData.ipList.Iter(func(item string) error {
+					delete(r.ipToWEPKey, item)
 					return nil
 				})
 				delete(r.wepKeyToWEPData, wepKey)

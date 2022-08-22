@@ -142,6 +142,12 @@ func (k FrontendKey) String() string {
 	return fmt.Sprintf("NATKey{Proto:%v Addr:%v Port:%v SrcAddr:%v}", k.Proto(), k.Addr(), k.Port(), k.SrcCIDR())
 }
 
+func FrontendKeyFromBytes(b []byte) FrontendKey {
+	var k FrontendKey
+	copy(k[:], b)
+	return k
+}
+
 const (
 	NATFlgExternalLocal = 0x1
 	NATFlgInternalLocal = 0x2
@@ -218,6 +224,12 @@ func (v FrontendValue) AsBytes() []byte {
 	return v[:]
 }
 
+func FrontendValueFromBytes(b []byte) FrontendValue {
+	var v FrontendValue
+	copy(v[:], b)
+	return v
+}
+
 type BackendKey [backendKeySize]byte
 
 func NewNATBackendKey(id, ordinal uint32) BackendKey {
@@ -241,6 +253,12 @@ func (v BackendKey) String() string {
 
 func (k BackendKey) AsBytes() []byte {
 	return k[:]
+}
+
+func BackendKeyFromBytes(b []byte) BackendKey {
+	var k BackendKey
+	copy(k[:], b)
+	return k
 }
 
 type BackendValue [backendValueSize]byte
@@ -272,6 +290,12 @@ func (k BackendValue) AsBytes() []byte {
 	return k[:]
 }
 
+func BackendValueFromBytes(b []byte) BackendValue {
+	var v BackendValue
+	copy(v[:], b)
+	return v
+}
+
 var FrontendMapParameters = bpf.MapParameters{
 	Filename:   "/sys/fs/bpf/tc/globals/cali_v4_nat_fe",
 	Type:       "lpm_trie",
@@ -283,7 +307,7 @@ var FrontendMapParameters = bpf.MapParameters{
 	Version:    3,
 }
 
-func FrontendMap(mc *bpf.MapContext) bpf.Map {
+func FrontendMap(mc *bpf.MapContext) bpf.MapWithExistsCheck {
 	return mc.NewPinnedMap(FrontendMapParameters)
 }
 
@@ -297,7 +321,7 @@ var BackendMapParameters = bpf.MapParameters{
 	Flags:      unix.BPF_F_NO_PREALLOC,
 }
 
-func BackendMap(mc *bpf.MapContext) bpf.Map {
+func BackendMap(mc *bpf.MapContext) bpf.MapWithExistsCheck {
 	return mc.NewPinnedMap(BackendMapParameters)
 }
 

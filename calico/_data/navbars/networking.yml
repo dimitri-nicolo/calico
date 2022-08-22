@@ -30,6 +30,8 @@ section:
     path: /networking/custom-bgp-config
   - title: Configure outgoing NAT
     path: /networking/workloads-outside-cluster
+  - title: Use a specific MAC address for a pod
+    path: /networking/pod-mac-address
 - title: Egress gateways
   path: /networking/egress/
   section: 

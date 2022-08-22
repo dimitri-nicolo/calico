@@ -1,7 +1,0 @@
----
-layout: null
----
-{% helm tigera-operator --execute crds/operator.tigera.io_authentications_crd.yaml %}
-installation:
-  kubernetesProvider: openshift
-{% endhelm %}

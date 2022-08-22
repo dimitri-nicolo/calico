@@ -318,7 +318,7 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 		}, nil
 	}
 
-	var policySet set.Set
+	var policySet set.Set[model.Key]
 
 	// If an endpoint has been specified, determine the labels on the endpoint.
 	if req.Endpoint != nil {
@@ -611,11 +611,11 @@ func (c *cachedQuery) getNetworkSetLabelsAndProfiles(key model.Key) (map[string]
 	return labels, profiles, nil
 }
 
-func (c *cachedQuery) queryPoliciesByLabel(labels map[string]string, profiles []string, filterIn set.Set) set.Set {
+func (c *cachedQuery) queryPoliciesByLabel(labels map[string]string, profiles []string, filterIn set.Set[model.Key]) set.Set[model.Key] {
 	policies := c.polEplabelHandler.QueryPolicies(labels, profiles)
 
 	// Filter out the rule matches, and only filter in those in the supplied set (if supplied).
-	results := set.New()
+	results := set.NewBoxed[model.Key]()
 	for _, p := range policies {
 		if filterIn != nil && !filterIn.Contains(p) {
 			continue
@@ -626,26 +626,22 @@ func (c *cachedQuery) queryPoliciesByLabel(labels map[string]string, profiles []
 	return results
 }
 
-func (c *cachedQuery) queryPoliciesByLabelMatchingRule(labels map[string]string, profiles []string, filterIn set.Set) set.Set {
+func (c *cachedQuery) queryPoliciesByLabelMatchingRule(labels map[string]string, profiles []string, filterIn set.Set[model.Key]) set.Set[model.Key] {
 	selectors := c.polEplabelHandler.QueryRuleSelectors(labels, profiles)
 
 	// Convert the selectors to a set of the policy matches.
-	results := set.New()
+	results := set.NewBoxed[model.Key]()
+
 	// Iterate over all the selectors and join the sets
 	for _, selector := range selectors {
 		matching := c.policies.GetPolicyKeySetByRuleSelector(selector)
-		matching.Iter(func(item interface{}) error {
-			converted, ok := item.(model.Key)
-			if !ok {
-				return fmt.Errorf("object: %v stored against selector: %s is not a policy key", item, selector)
-			}
-
+		matching.Iter(func(k model.Key) error {
 			// Only filter policies in if they are in the supplied set (if supplied).
-			if filterIn != nil && !filterIn.Contains(converted) {
+			if filterIn != nil && !filterIn.Contains(k) {
 				return nil
 			}
 
-			results.Add(converted)
+			results.Add(k)
 			return nil
 		})
 	}

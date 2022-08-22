@@ -29,12 +29,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/projectcalico/calico/felix/bpf/failsafes"
-
-	"github.com/projectcalico/calico/felix/bpf/ipsets"
-	"github.com/projectcalico/calico/felix/bpf/jump"
-	"github.com/projectcalico/calico/felix/bpf/polprog"
-
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	. "github.com/onsi/gomega"
@@ -47,8 +41,13 @@ import (
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/arp"
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
+	"github.com/projectcalico/calico/felix/bpf/counters"
+	"github.com/projectcalico/calico/felix/bpf/failsafes"
+	"github.com/projectcalico/calico/felix/bpf/ipsets"
+	"github.com/projectcalico/calico/felix/bpf/jump"
 	"github.com/projectcalico/calico/felix/bpf/nat"
 	"github.com/projectcalico/calico/felix/bpf/perf"
+	"github.com/projectcalico/calico/felix/bpf/polprog"
 	"github.com/projectcalico/calico/felix/bpf/routes"
 	"github.com/projectcalico/calico/felix/bpf/state"
 	tcdefs "github.com/projectcalico/calico/felix/bpf/tc/defs"
@@ -235,6 +234,12 @@ outer:
 		if strings.Contains(section, "host") {
 			obj += "hep_"
 			progLog = "HEP"
+		} else if strings.Contains(section, "nat") {
+			obj += "nat_"
+			progLog = "NAT"
+		} else if strings.Contains(section, "wireguard") {
+			obj += "wg_"
+			progLog = "WG"
 		} else {
 			obj += "wep_"
 			progLog = "WEP"
@@ -406,9 +411,9 @@ func bpftool(args ...string) ([]byte, error) {
 var (
 	mapInitOnce sync.Once
 
-	natMap, natBEMap, ctMap, rtMap, ipsMap, stateMap, testStateMap, tcJumpMap, xdpJumpMap, affinityMap, arpMap, fsafeMap bpf.Map
-	perfMap                                                                                                              bpf.Map
-	allMaps, progMaps                                                                                                    []bpf.Map
+	natMap, natBEMap, ctMap, rtMap, ipsMap, stateMap, testStateMap, tcJumpMap, xdpJumpMap, affinityMap, arpMap, fsafeMap, countersMap bpf.Map
+	perfMap                                                                                                                           bpf.Map
+	allMaps, progMaps                                                                                                                 []bpf.Map
 )
 
 func initMapsOnce() {
@@ -428,8 +433,10 @@ func initMapsOnce() {
 		arpMap = arp.Map(mc)
 		perfMap = perf.Map(mc, "perf_evnt", 512)
 		fsafeMap = failsafes.Map(mc)
+		countersMap = counters.MapForTest(mc)
 
-		allMaps = []bpf.Map{natMap, natBEMap, ctMap, rtMap, ipsMap, stateMap, testStateMap, tcJumpMap, xdpJumpMap, affinityMap, arpMap, fsafeMap}
+		allMaps = []bpf.Map{natMap, natBEMap, ctMap, rtMap, ipsMap, stateMap, testStateMap,
+			tcJumpMap, xdpJumpMap, affinityMap, arpMap, fsafeMap, countersMap}
 		for _, m := range allMaps {
 			err := m.EnsureExists()
 			if err != nil {
@@ -453,6 +460,7 @@ func initMapsOnce() {
 			affinityMap,
 			arpMap,
 			fsafeMap,
+			countersMap,
 		}
 
 	})
@@ -466,7 +474,7 @@ func cleanUpMaps() {
 	defer log.SetLevel(logLevel)
 
 	for _, m := range allMaps {
-		if m == stateMap || m == testStateMap || m == tcJumpMap || m == xdpJumpMap {
+		if m == stateMap || m == testStateMap || m == tcJumpMap || m == xdpJumpMap || m == countersMap {
 			continue // Can't clean up array maps
 		}
 		log.WithField("map", m.GetName()).Info("Cleaning")
@@ -576,6 +584,13 @@ func bpftoolProgLoadAll(fname, bpfFsDir string, forXDP bool, polProg bool, maps 
 		_, err = bpftool("map", "update", "pinned", jumpMap.Path(), "key", "8", "0", "0", "0", "value", "pinned", path.Join(bpfFsDir, "classifier_tc_drop_v6"))
 		if err != nil {
 			return errors.Wrap(err, "failed to update jump map (drop_v6 program)")
+		}
+	}
+
+	if !forXDP {
+		_, err = bpftool("map", "update", "pinned", jumpMap.Path(), "key", "4", "0", "0", "0", "value", "pinned", path.Join(bpfFsDir, "classifier_tc_host_ct_conflict"))
+		if err != nil {
+			return errors.Wrap(err, "failed to update jump map (icmp program)")
 		}
 	}
 

@@ -293,7 +293,7 @@ func (l *licenseMonitor) refreshLicense(lic *model.KVPair) error {
 	defer l.activeLicenseLock.Unlock()
 
 	var ttl time.Duration
-	oldFeatures := set.New()
+	oldFeatures := set.New[string]()
 	if l.activeLicense != nil {
 		ttl = l.activeLicense.Expiry.Time().Sub(l.now())
 		oldFeatures = set.FromArray(l.activeLicense.Features)

@@ -147,7 +147,7 @@ type nameData struct {
 	topLevelDomains []string
 	// Names that we should notify a "change of information" for, and whose cached IP list
 	// should be invalidated, when the info for _this_ name changes.
-	namesToNotify set.Set
+	namesToNotify set.Set[string]
 	// The revision sent to the dataplane associated with the creation or update of this nameData.
 	revision uint64
 }
@@ -156,7 +156,7 @@ type ipData struct {
 	// The set of nameData entries that directly contain the IP.  We don't need to work our way backwards through the
 	// chain because it is actually the namesToNotify that we are interested in which is propagated all the way
 	// along the CNAME->A chain.
-	nameDatas set.Set
+	nameDatas set.Set[*nameData]
 	// The set of names to notify.
 	watchedDomains []string
 	// The set of top level names associated with this IP. Note that the way this slice is updated, it is always
@@ -291,7 +291,7 @@ type DomainInfoStore struct {
 
 	// The collated set of domain name changes for the current (not handled) set of updates. These are always stored
 	// lowercase.
-	changedNames set.Set // string
+	changedNames set.Set[string]
 
 	// --- Data for the handled set of updates ---\
 	// These are updates that have been handled by the dataplane loop and programmed into the IP set dataplanes,
@@ -379,7 +379,7 @@ func newDomainInfoStoreWithShims(
 		msgChannel: make(chan DataWithTimestamp, 1000),
 
 		// Create an empty set of changed names.
-		changedNames: set.New(),
+		changedNames: set.New[string](),
 
 		// Current update revision starts at 1.  0 is used to indicate no required updates.
 		currentRevision: 1,
@@ -461,13 +461,12 @@ func (s *DomainInfoStore) HandleUpdates() (needsDataplaneSync bool) {
 	s.currentRevision++
 
 	changedNames := s.changedNames
-	s.changedNames = set.New()
+	s.changedNames = set.New[string]()
 	s.mutex.Unlock()
 
 	// Call into the handlers while we are not holding the lock.  This is important because the handlers will call back
 	// into the DomainInfoStore to obtain domain->IP mapping info.
-	changedNames.Iter(func(item interface{}) error {
-		name := item.(string)
+	changedNames.Iter(func(name string) error {
 		for ii := range s.handlers {
 			if s.handlers[ii].OnDomainChange(name) {
 				// Track in member data that the dataplane needs a sync. It is not sufficient to just use a local
@@ -1048,7 +1047,7 @@ func (s *DomainInfoStore) expireAllMappings() {
 }
 
 // Add a mapping between an IP and the nameData that directly contains the IP.
-func (s *DomainInfoStore) addIPMapping(nameData *nameData, ipStr string) {
+func (s *DomainInfoStore) addIPMapping(nd *nameData, ipStr string) {
 	ipBytes, ok := ip.ParseIPAs16Byte(ipStr)
 	if !ok {
 		return
@@ -1057,15 +1056,15 @@ func (s *DomainInfoStore) addIPMapping(nameData *nameData, ipStr string) {
 	ipd := s.reverse[ipBytes]
 	if ipd == nil {
 		ipd = &ipData{
-			nameDatas:       set.New(),
-			topLevelDomains: nameData.topLevelDomains,
+			nameDatas:       set.New[*nameData](),
+			topLevelDomains: nd.topLevelDomains,
 		}
 		s.reverse[ipBytes] = ipd
 	} else {
-		ipd.topLevelDomains = s.combineTopLevelDomains(nameData.topLevelDomains, ipd.topLevelDomains)
+		ipd.topLevelDomains = s.combineTopLevelDomains(nd.topLevelDomains, ipd.topLevelDomains)
 	}
 	log.Debugf("IP %s has the top level names %v", ipStr, ipd.topLevelDomains)
-	ipd.nameDatas.Add(nameData)
+	ipd.nameDatas.Add(nd)
 }
 
 // Remove a mapping between an IP and the nameData that directly contained the IP.
@@ -1178,7 +1177,7 @@ func (s *DomainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 	if thisNameData == nil {
 		thisNameData = &nameData{
 			values:        make(map[string]*valueData),
-			namesToNotify: set.New(),
+			namesToNotify: set.New[string](),
 		}
 		if !s.readingMappings {
 			log.Debugf("Top level CNAME query for %s", name)
@@ -1212,7 +1211,7 @@ func (s *DomainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 				log.Debugf("Storing value %s for name %s with top level names %v", value, name, thisNameData.topLevelDomains)
 				s.mappings[value] = &nameData{
 					values:          make(map[string]*valueData),
-					namesToNotify:   set.New(),
+					namesToNotify:   set.New[string](),
 					topLevelDomains: thisNameData.topLevelDomains,
 				}
 			} else {
@@ -1250,7 +1249,7 @@ func (s *DomainInfoStore) storeInfo(name, value string, ttl time.Duration, isNam
 
 func (s *DomainInfoStore) propagateTopLevelDomains(name string, data *nameData, topLevelDomains []string) {
 	var prop func(currentName string, currentNameData *nameData)
-	handled := set.New()
+	handled := set.New[string]()
 	prop = func(currentName string, currentNameData *nameData) {
 		if handled.Contains(currentName) {
 			return
@@ -1289,8 +1288,8 @@ func (s *DomainInfoStore) GetDomainIPs(domain string) []string {
 	domain = strings.ToLower(domain)
 	ips := s.resultsCache[domain]
 	if ips == nil {
-		var collectIPsForName func(string, set.Set)
-		collectIPsForName = func(name string, collectedNames set.Set) {
+		var collectIPsForName func(string, set.Set[string])
+		collectIPsForName = func(name string, collectedNames set.Set[string]) {
 			if collectedNames.Contains(name) {
 				log.Warningf("%v has a CNAME loop back to itself", name)
 				return
@@ -1330,11 +1329,11 @@ func (s *DomainInfoStore) GetDomainIPs(domain string) []string {
 			}
 			for name := range s.mappings {
 				if regex.MatchString(name) {
-					collectIPsForName(name, set.New())
+					collectIPsForName(name, set.New[string]())
 				}
 			}
 		} else {
-			collectIPsForName(domain, set.New())
+			collectIPsForName(domain, set.New[string]())
 		}
 		s.resultsCache[domain] = ips
 	}
@@ -1353,12 +1352,11 @@ func (s *DomainInfoStore) IterWatchedDomainsForIP(ip [16]byte, cb func(domain st
 	defer s.mutex.RUnlock()
 	var stop bool
 	if ipData := s.reverse[ip]; ipData != nil {
-		ipData.nameDatas.Iter(func(itemNameData interface{}) error {
+		ipData.nameDatas.Iter(func(nd *nameData) error {
 			// Just return the first domain name we find. This should cover the most general case where the user adds
 			// a single entry for a particular domain. Return the first "name to notify" that we find.
-			nd := itemNameData.(*nameData)
-			nd.namesToNotify.Iter(func(itemWatchedName interface{}) error {
-				stop = cb(itemWatchedName.(string))
+			nd.namesToNotify.Iter(func(itemWatchedName string) error {
+				stop = cb(itemWatchedName)
 				if stop {
 					return set.StopIteration
 				}
@@ -1402,8 +1400,7 @@ func (s *DomainInfoStore) compileChangedNames(name string) {
 	s.changedNames.Add(name)
 	delete(s.resultsCache, name)
 	if nameData := s.mappings[name]; nameData != nil {
-		nameData.namesToNotify.Iter(func(item interface{}) error {
-			ancestor := item.(string)
+		nameData.namesToNotify.Iter(func(ancestor string) error {
 			s.changedNames.Add(ancestor)
 			delete(s.resultsCache, ancestor)
 			return nil
@@ -1417,7 +1414,7 @@ func (s *DomainInfoStore) collectGarbage() (numDeleted int) {
 
 	if s.gcTrigger {
 		// Accumulate the mappings that are still useful.
-		namesToKeep := set.New()
+		namesToKeep := set.New[string]()
 		for name, nameData := range s.mappings {
 			// A mapping is still useful if it has any unexpired values, because policy
 			// might be configured at any moment for that mapping's name, and then we'd

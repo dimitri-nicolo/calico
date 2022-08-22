@@ -1128,7 +1128,7 @@ func TestMultiIpPortChunks(t *testing.T) {
 		// Intersection with first CIDR, picks up some IPs from each IP set.
 		{
 			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
-			Id: "API0|selector-cidr---rule-1---0", RemoteAddresses: "10.0.0.1/32,10.0.0.2/31",
+			Id: "API0|selector-cidr---rule-1---0", RemoteAddresses: "10.0.0.1/32,10.0.0.2/32,10.0.0.3/32",
 		},
 		// Intersection with second CIDR picks up only one IP.
 		{
@@ -1139,7 +1139,7 @@ func TestMultiIpPortChunks(t *testing.T) {
 		// Intersection with both picks up everything.
 		{
 			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
-			Id: "API2|selector-cidr---rule-3---0", RemoteAddresses: "10.0.0.1/32,10.0.0.2/31,10.1.0.1/32",
+			Id: "API2|selector-cidr---rule-3---0", RemoteAddresses: "10.0.0.1/32,10.0.0.2/32,10.0.0.3/32,10.1.0.1/32",
 		},
 		// Rule 4 becomes a no-op since intersection is empty.
 

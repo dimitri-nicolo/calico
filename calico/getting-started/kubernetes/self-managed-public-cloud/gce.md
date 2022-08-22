@@ -171,7 +171,7 @@ kubectl create -f {{ "/manifests/tigera-operator.yaml" | absolute_url }}
 Download the custom resources necessary to configure {{site.prodname}}
 
 ```
-curl {{ "/manifests/custom-resources.yaml" | absolute_url}} -O
+curl {{ "/manifests/custom-resources.yaml" | absolute_url }} -O
 ```
 
 If you wish to customize the {{site.prodname}} install, customize the downloaded custom-resources.yaml manifest.  Then create the manifest to install {{site.prodname}}.

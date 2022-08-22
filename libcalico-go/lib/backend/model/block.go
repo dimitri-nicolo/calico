@@ -29,16 +29,19 @@ import (
 
 const (
 	// Common attributes which may be set on allocations by clients.
-	IPAMBlockAttributePod              = "pod"
-	IPAMBlockAttributeNamespace        = "namespace"
-	IPAMBlockAttributeNode             = "node"
-	IPAMBlockAttributeType             = "type"
-	IPAMBlockAttributeTypeIPIP         = "ipipTunnelAddress"
-	IPAMBlockAttributeTypeVXLAN        = "vxlanTunnelAddress"
-	IPAMBlockAttributeTypeVXLANV6      = "vxlanV6TunnelAddress"
-	IPAMBlockAttributeTypeWireguard    = "wireguardTunnelAddress"
+	IPAMBlockAttributePod             = "pod"
+	IPAMBlockAttributeNamespace       = "namespace"
+	IPAMBlockAttributeNode            = "node"
+	IPAMBlockAttributeType            = "type"
+	IPAMBlockAttributeTypeIPIP        = "ipipTunnelAddress"
+	IPAMBlockAttributeTypeVXLAN       = "vxlanTunnelAddress"
+	IPAMBlockAttributeTypeVXLANV6     = "vxlanV6TunnelAddress"
+	IPAMBlockAttributeTypeWireguard   = "wireguardTunnelAddress"
+	IPAMBlockAttributeTypeWireguardV6 = "wireguardV6TunnelAddress"
+	IPAMBlockAttributeTimestamp       = "timestamp"
+
+	// Enterprise-only.
 	IPAMBlockAttributeTypeAWSSecondary = "awsSecondaryIface"
-	IPAMBlockAttributeTimestamp        = "timestamp"
 )
 
 var (

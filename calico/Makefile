@@ -25,6 +25,7 @@ ifdef EXTRA_JEKYLL_CONFIG
 endif
 
 include ../metadata.mk
+
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 LOCAL_USER_ID?=$(shell id -u $$USER)
 PACKAGE_NAME = github.com/projectcalico/calico/calico
@@ -65,14 +66,13 @@ install-git-hooks:
 	./install-git-hooks
 
 ## Serve a local view of your current site on port 4000
-serve: bin/helm3
+serve:
 	# We have to override JEKYLL_DOCKER_TAG which is usually set to 'pages'.
 	# When set to 'pages', jekyll starts in safe mode which means it will not
 	# load any plugins. Since we're no longer running in github-pages, but would
 	# like to use a docker image that comes preloaded with all the github-pages plugins,
 	# its ok to override this variable.
 	docker run --rm -it \
-	  -v $(CURDIR)/bin/helm3:/usr/local/bin/helm:ro \
 	  -v $(CURDIR):/srv/jekyll \
 	  -v $(CURDIR)/../libcalico-go:/srv/libcalico-go \
 	  -e JEKYLL_DOCKER_TAG="" \
@@ -80,23 +80,27 @@ serve: bin/helm3
 	  -p 4000:4000 \
 	  jekyll/jekyll:$(JEKYLL_VERSION) /bin/sh -c 'bundle update; jekyll serve --incremental $(CONFIG)'
 
+DOCS_SOURCE=$(find . -name '*.md') $(find ../manifests -type f)
+
 .PHONY: build
-_site build: bin/helm3
+_site build: bin/ocp.tgz $(DOCS_SOURCE)
 	docker run --rm \
 	-e JEKYLL_DOCKER_TAG="" \
 	-e JEKYLL_UID=`id -u` \
-	-v $(CURDIR)/bin/helm3:/usr/local/bin/helm:ro \
-	-v $(CURDIR):/srv/jekyll \
+	-v $(CURDIR)/:/srv/jekyll \
 	-v $(CURDIR)/../libcalico-go:/srv/libcalico-go \
 	-v $(VERSIONS_FILE):/srv/jekyll/_data/versions.yml \
 	jekyll/jekyll:$(JEKYLL_VERSION) /bin/sh -c 'bundle update; jekyll build --incremental $(CONFIG)'
 	# Move the manifests into the the generated site, and also update
 	# the repos manifests that the site generated, removing the templates dir.
 	cp -r ../manifests/ _site/manifests
-	rsync -a _site/manifest-templates/ ../manifests/ && rm -r _site/manifest-templates
+	# Move ocp.tgz into place in the generate site.
+	cp bin/ocp.tgz _site/manifests
 
-# Update the static manifests 
-gen-manifests: clean _site
+# Creates the tar file used for installing Calico on OpenShift.
+bin/ocp.tgz:
+	mkdir -p bin
+	tar czvf $@ -C ../manifests/ ocp
 
 ## Clean enough that a new release build will be clean
 clean:
@@ -130,7 +134,7 @@ test: docs_test.created
 		--xunit-file='/code/tests/report/nosetests.xml' \
 		--with-timer $(EXTRA_NOSE_ARGS)"
 
-ci: clean htmlproofer kubeval
+ci: htmlproofer kubeval
 
 htmlproofer: _site
 	# Run htmlproofer, failing if we hit any errors.
@@ -155,13 +159,6 @@ kubeval: _site
 	-rm stderr.out
 	! grep -C3 -P "invalid|\t\*" filtered.out
 	rm filtered.out
-
-# TODO(doublek): These Helm tests are not valid for Enterprise since helm v3 isn't supported yet.
-helm-tests: bin/helm3 values.yaml
-	$(DOCKER_RUN) \
-		-v $(CURDIR)/bin/helm3:/usr/local/bin/helm \
-		$(CALICO_BUILD) \
-		sh -c "$(GIT_CONFIG_SSH) ginkgo -cover -r ./helm-tests -chart-path=./_includes/$(RELEASE_STREAM)/charts/calico $(GINKGO_ARGS)"
 
 ###############################################################################
 # Docs automation
@@ -192,127 +189,9 @@ endif
 	# Check the redirect_from lines and strip the .md from the URL
 	find $(VERSION) \( -name '*.md' -o -name '*.html' \) -exec sed -i 's#^\(redirect_from:.*\)\.md#\1#' '{}' \;
 
-update_canonical_urls:
-	# Looks through all directories and replaces previous latest release version numbers in canonical URLs with new
-	python release-scripts/update-canonical-urls.py
-
-# Copy a docs change from ORIG_VERSION (default master) to a specified version.
-# The docs change copied is all modifications from the master branch.
-backport_docs_change:
-ifndef VERSION
-	$(error VERSION is undefined - run using make backport_docs_change VERSION=vX.Y)
-endif
-ifndef ORIG_VERSION
-	# Backporting changes from master.
-	$(eval ORIG_VERSION = master)
-endif
-	# (Note that ... indicates the diff from the merge-base.)
-	git diff master...HEAD -- $(ORIG_VERSION) > backport_main.patch
-	git diff master...HEAD -- _includes/$(ORIG_VERSION) > backport_includes.patch
-	git diff master...HEAD -- _data/`echo $(ORIG_VERSION) | tr . _` > backport_data.patch
-	git diff master...HEAD -- _plugins/$(ORIG_VERSION) > backport_helm_values.patch
-
-	-git apply --3way -p2 --directory=$(VERSION) backport_main.patch
-	-git apply --3way -p3 --directory=_includes/$(VERSION) backport_includes.patch
-	-git apply --3way -p3 --directory=_data/`echo $(VERSION) | tr . _` backport_data.patch
-	-git apply --3way -p3 --directory=_plugins/$(VERSION) backport_helm_values.patch
-	# "error: unrecognized input" can be ignored if you didn't modify those directories.
-	# "error: patch failed" means you will need to manually patch certain directories.
-
 ###############################################################################
 # Utilities
 ###############################################################################
-HELM3_RELEASE=helm-v3.3.1-linux-amd64.tar.gz 
-
-helm-deps: bin/helm3
-bin/helm3:
-	mkdir -p bin
-	$(eval TMP := $(shell mktemp -d))
-	wget -q https://get.helm.sh/$(HELM3_RELEASE) -O $(TMP)/helm3.tar.gz
-	tar -zxvf $(TMP)/helm3.tar.gz -C $(TMP)
-	mv $(TMP)/linux-amd64/helm bin/helm3
-
-###############################################################################
-# Helm
-###############################################################################
-# Build values.yaml for all charts
-.PHONY: values.yaml
-values.yaml: _includes/charts/tigera-prometheus-operator/values.yaml _includes/charts/tigera-operator/values.yaml
-_includes/charts/%/values.yaml: _plugins/values.rb _plugins/helm.rb _data/versions.yml
-	docker run --rm \
-	  -v $(CURDIR):/calico \
-	  -w /calico \
-	  ruby:2.5 ruby ./hack/gen_values_yml.rb --registry $(REGISTRY) --chart $* > $@
-
-# The following chunk of conditionals sets the Version of the helm chart.
-# Note that helm requires strict semantic versioning, so we use v0.0 to represent 'master'.
-ifdef CHART_RELEASE
-chartVersion:=$(CALICO_VER)
-appVersion:=$(CALICO_VER)
-else
-# otherwise, it's a nightly build.
-ifeq ($(RELEASE_STREAM), master)
-# For master, helm requires semantic versioning, so use v0.0
-chartVersion:=v0.0
-appVersion:=$(CALICO_VER)-$(GIT_HASH)
-else
-chartVersion:=$(RELEASE_STREAM)
-appVersion:=$(CALICO_VER)-$(GIT_HASH)
-endif
-endif
-
-charts: bin/helm3 chart/tigera-prometheus-operator chart/tigera-operator
-chart/tigera-operator: _includes/charts/tigera-operator/charts/tigera-prometheus-operator.tgz
-chart/%: _includes/charts/%/values.yaml
-	mkdir -p bin
-	bin/helm3 package ./_includes/charts/$(@F) \
-	--destination ./bin/ \
-	--version $(chartVersion) \
-	--app-version $(appVersion)
-
-chart-release: charts
-ifndef CHART_RELEASE
-	$(error CHART_RELEASE is undefined)
-endif
-	mv ./bin/tigera-operator-$(CALICO_VER).tgz ./bin/tigera-operator-$(CALICO_VER)-$(CHART_RELEASE).tgz
-
-helm-install-gcs-plugin:
-	bin/helm3 plugin install https://github.com/viglesiasce/helm-gcs.git
-# Upload to Google tigera-helm-charts storage bucket.
-publish-charts:
-	bin/helm3 repo add tigera gs://tigera-helm-charts
-	for chart in ./bin/*.tgz; do \
-		bin/helm3 gcs push $$chart gs://tigera-helm-charts; \
-	done
-
-# Copy the prometheus-operator chart package as a sub-chart for tigera-operator for helm packaging.
-# After the changes in PR #3580, Tigera Operator doesn't depend on Prometheus/Alertmanager resources.
-# The symbolic link of tigera-prometheus-operator folder is also removed from the tigera-operator/charts
-# directory to keep the folder strucure clean. However, this causes a helm packaging issue that
-# prometheus-operator chart is not packaged as a sub-chart. Since we will always build the
-# prometheus-operator chart together with the tigera-operator chart, copying the prometheus-operator
-# chart package to the tigera-operator/charts directory fixes helm packaging.
-_includes/charts/tigera-operator/charts/tigera-prometheus-operator.tgz:
-	mkdir -p $(@D)
-	cp $$(pwd)/bin/tigera-prometheus-operator-$(chartVersion).tgz $@
-
-DOCS_TEST_CONTAINER=projectcalico/release-test
-.PHONY: release-test-image
-release-test-image:
-	cd release-scripts/tests && docker build -t $(DOCS_TEST_CONTAINER) . && cd -
-
-.PHONY: release-test
-release-test: release-test-image
-	docker run --rm \
-	-v /var/run/docker.sock:/var/run/docker.sock \
-	-v $(CURDIR):/docs \
-	-e RELEASE_STREAM=$(RELEASE_STREAM) \
-	$(DOCS_TEST_CONTAINER) sh -c \
-	"nosetests . -e "$(EXCLUDE_REGEX)" \
-	-s -v --with-xunit \
-	--xunit-file='/docs/nosetests.xml' \
-	--with-timer $(EXTRA_NOSE_ARGS)"
-
 API_GEN_REPO?=tmjd/gen-crd-api-reference-docs
 API_GEN_BRANCH?=kb_v2
 OPERATOR_VERSION?=master
@@ -353,8 +232,8 @@ MANIFEST_SRC?=$(DEFAULT_MANIFEST_SRC)
 release-archive: $(RELEASE_DIR).tgz
 
 $(RELEASE_DIR).tgz: $(RELEASE_DIR) $(RELEASE_DIR_K8S_MANIFESTS) $(RELEASE_DIR)/README.md
-	# create folder structure in manifest archive for ocp
-	RELEASE_DIR=$(RELEASE_DIR) python3 ./release-scripts/generate-ocp-manifests.py
+	$(MAKE) bin/ocp.tgz
+
 	# find ignored manifests in the archive and delete them
 	$(foreach var,$(IGNORED_MANIFESTS), find $(RELEASE_DIR) -name $(var) -delete;)
 

@@ -10,7 +10,7 @@ TEST_DIR=./tests/k8st
 : ${KIND:=dist/kind}
 
 echo "Download kind executable with multiple networks support"
-curl -L https://github.com/projectcalico/kind/releases/download/multiple-networks-0.2/kind -o ${KIND}
+curl -L https://github.com/projectcalico/kind/releases/download/multiple-networks-0.3/kind -o ${KIND}
 chmod +x ${KIND}
 
 # Set config variables needed for ${kubectl} and calicoctl.
@@ -590,6 +590,7 @@ EOF
 
     # Remove taints for master node, this would allow some test cases to run pod on master node.
     ${kubectl} taint node kind-control-plane node-role.kubernetes.io/master-
+    ${kubectl} taint node kind-control-plane node-role.kubernetes.io/control-plane-
 
 }
 

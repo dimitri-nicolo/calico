@@ -343,7 +343,7 @@ func getNamesFromElastic(params *FlowLogNamesParams, esClient lmaelastic.Client,
 	// be cheaper since the four queries themselves should be much cheaper to run than
 	// the single composite aggregation query.
 	rcvdBuckets, rcvdErrors := esClient.SearchCompositeAggregations(ctx, aggQuery, nil)
-	nameSet := set.New()
+	nameSet := set.New[string]()
 	names := make([]string, 0)
 	for bucket := range rcvdBuckets {
 		// Pull endpoint names out of the buckets
@@ -392,10 +392,10 @@ func getNamesFromElastic(params *FlowLogNamesParams, esClient lmaelastic.Client,
 
 	// Convert the set to the name slice
 	i := 0
-	nameSet.Iter(func(item interface{}) error {
+	nameSet.Iter(func(item string) error {
 		// Only add items up to the limit
 		if i < int(params.Limit) {
-			names = append(names, item.(string))
+			names = append(names, item)
 			i++
 		}
 		return nil

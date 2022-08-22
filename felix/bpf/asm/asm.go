@@ -276,22 +276,27 @@ const (
 
 const insnSize = 8
 
-type Insn [insnSize]uint8
+type Insn struct {
+	Instruction [insnSize]uint8 `json:"inst"`
+	Labels      []string        `json:"labels,omitempty"`
+	Comments    []string        `json:"comments,omitempty"`
+}
 
 type Insns []Insn
 
 func (ns Insns) AsBytes() []byte {
 	bs := make([]byte, 0, len(ns)*insnSize)
 	for _, n := range ns {
-		bs = append(bs, n[:]...)
+		bs = append(bs, n.Instruction[:]...)
 	}
 	return bs
 }
 
 func MakeInsn(opcode OpCode, dst, src Reg, offset int16, imm int32) Insn {
-	insn := [8]uint8{uint8(opcode), uint8(src<<4 | dst), 0, 0, 0, 0, 0, 0}
-	binary.LittleEndian.PutUint16(insn[2:4], uint16(offset))
-	binary.LittleEndian.PutUint32(insn[4:], uint32(imm))
+	insn := Insn{}
+	insn.Instruction = [8]uint8{uint8(opcode), uint8(src<<4 | dst), 0, 0, 0, 0, 0, 0}
+	binary.LittleEndian.PutUint16(insn.Instruction[2:4], uint16(offset))
+	binary.LittleEndian.PutUint32(insn.Instruction[4:], uint32(imm))
 	return insn
 }
 
@@ -300,38 +305,42 @@ func (n Insn) String() string {
 }
 
 func (n Insn) OpCode() OpCode {
-	return OpCode(n[0])
+	return OpCode(n.Instruction[0])
 }
 
 func (n Insn) Dst() Reg {
-	return Reg(n[1] & 0xf)
+	return Reg(n.Instruction[1] & 0xf)
 }
 
 func (n Insn) Src() Reg {
-	return Reg((n[1] >> 4) & 0xf)
+	return Reg((n.Instruction[1] >> 4) & 0xf)
 }
 
 func (n Insn) Off() int16 {
-	return int16(binary.LittleEndian.Uint16(n[2:4]))
+	return int16(binary.LittleEndian.Uint16(n.Instruction[2:4]))
 }
 
 func (n Insn) Imm() int32 {
-	return int32(binary.LittleEndian.Uint32(n[4:8]))
+	return int32(binary.LittleEndian.Uint32(n.Instruction[4:8]))
 }
 
 type Block struct {
-	insns            Insns
-	fixUps           []fixUp
-	labelToInsnIdx   map[string]int
-	insnIdxToLabels  map[int][]string
-	inUseJumpTargets set.Set
+	insns              Insns
+	fixUps             []fixUp
+	labelToInsnIdx     map[string]int
+	insnIdxToLabels    map[int][]string
+	insnIdxToComments  map[int][]string
+	inUseJumpTargets   set.Set[string]
+	policyDebugEnabled bool
 }
 
-func NewBlock() *Block {
+func NewBlock(policyDebugEnabled bool) *Block {
 	return &Block{
-		labelToInsnIdx:   map[string]int{},
-		insnIdxToLabels:  map[int][]string{},
-		inUseJumpTargets: set.New(),
+		labelToInsnIdx:     map[string]int{},
+		insnIdxToLabels:    map[int][]string{},
+		inUseJumpTargets:   set.New[string](),
+		insnIdxToComments:  map[int][]string{},
+		policyDebugEnabled: policyDebugEnabled,
 	}
 }
 
@@ -586,14 +595,32 @@ func (b *Block) Assemble() (Insns, error) {
 		}
 		// Offset is relative to the next instruction since the PC is auto-incremented.
 		offset := labelIdx - f.origInsnIdx - 1
-		binary.LittleEndian.PutUint16(b.insns[f.origInsnIdx][2:4], uint16(offset))
+		binary.LittleEndian.PutUint16(b.insns[f.origInsnIdx].Instruction[2:4], uint16(offset))
 	}
+
+	if b.policyDebugEnabled {
+		for idx := range b.insns {
+			if labels, ok := b.insnIdxToLabels[idx]; ok {
+				b.insns[idx].Labels = append(b.insns[idx].Labels, labels...)
+			}
+			if comments, ok := b.insnIdxToComments[idx]; ok {
+				b.insns[idx].Comments = append(b.insns[idx].Comments, comments...)
+			}
+		}
+	}
+
 	return b.insns, nil
 }
 
 func (b *Block) LabelNextInsn(label string) {
 	b.labelToInsnIdx[label] = len(b.insns)
 	b.insnIdxToLabels[len(b.insns)] = append(b.insnIdxToLabels[len(b.insns)], label)
+}
+
+func (b *Block) AddComment(comment string) {
+	if b.policyDebugEnabled {
+		b.insnIdxToComments[len(b.insns)] = append(b.insnIdxToComments[len(b.insns)], comment)
+	}
 }
 
 func (b *Block) nextInsnReachble() bool {
@@ -623,22 +650,22 @@ func (b *Block) nextInsnReachble() bool {
 // of the map
 func RelocateBpfInsn(fd uint32, data []byte, offset uint64) error {
 	insn := bpfInsn(data, offset)
-	binary.LittleEndian.PutUint32(insn[4:], fd)
-	insn[1] = uint8((RPseudoMapFD << 4) | insn[1]&0x0f)
-	copy(data[offset:], insn[:])
+	binary.LittleEndian.PutUint32(insn.Instruction[4:], fd)
+	insn.Instruction[1] = uint8((RPseudoMapFD << 4) | insn.Instruction[1]&0x0f)
+	copy(data[offset:], insn.Instruction[:])
 	return nil
 }
 
 func bpfInsn(data []byte, offset uint64) Insn {
 	var insn Insn
-	copy(insn[:], data[offset:])
+	copy(insn.Instruction[:], data[offset:])
 	return insn
 }
 
 func GetBPFInsns(data []byte) Insns {
 	var insns Insns
 	var insn Insn
-	for i := 0; i < len(data); i += len(insn) {
+	for i := 0; i < len(data); i += len(insn.Instruction) {
 		insn = bpfInsn(data, uint64(i))
 		insns = append(insns, insn)
 	}

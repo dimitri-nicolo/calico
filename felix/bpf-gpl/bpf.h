@@ -63,6 +63,7 @@ struct bpf_map_def_extended {
 #define CALI_TC_L3_DEV 	(1<<5)
 // CALI_XDP_PROG is set for programs attached to the XDP hook
 #define CALI_XDP_PROG 	(1<<6)
+#define CALI_TC_NAT_IF	(1<<7)
 
 #ifndef CALI_DROP_WORKLOAD_TO_HOST
 #define CALI_DROP_WORKLOAD_TO_HOST false
@@ -75,10 +76,11 @@ struct bpf_map_def_extended {
 #define CALI_F_INGRESS ((CALI_COMPILE_FLAGS) & CALI_TC_INGRESS)
 #define CALI_F_EGRESS  (!CALI_F_INGRESS)
 
-#define CALI_F_HEP     	 ((CALI_COMPILE_FLAGS) & CALI_TC_HOST_EP)
+#define CALI_F_HEP     	 ((CALI_COMPILE_FLAGS) & (CALI_TC_HOST_EP | CALI_TC_NAT_IF))
 #define CALI_F_WEP     	 (!CALI_F_HEP)
 #define CALI_F_TUNNEL  	 (((CALI_COMPILE_FLAGS) & CALI_TC_TUNNEL) != 0)
 #define CALI_F_L3_DEV    (((CALI_COMPILE_FLAGS) & CALI_TC_L3_DEV) != 0)
+#define CALI_F_NAT_IF    (((CALI_COMPILE_FLAGS) & CALI_TC_NAT_IF) != 0)
 
 #define CALI_F_XDP ((CALI_COMPILE_FLAGS) & CALI_XDP_PROG)
 
@@ -88,7 +90,7 @@ struct bpf_map_def_extended {
 #define CALI_F_FROM_WEP (CALI_F_WEP && CALI_F_EGRESS)
 #define CALI_F_TO_WEP   (CALI_F_WEP && CALI_F_INGRESS)
 
-#define CALI_F_TO_HOST       (CALI_F_FROM_HEP || CALI_F_FROM_WEP)
+#define CALI_F_TO_HOST       ((CALI_F_FROM_HEP || CALI_F_FROM_WEP) != 0)
 #define CALI_F_FROM_HOST     (!CALI_F_TO_HOST)
 #define CALI_F_L3            ((CALI_F_TO_HEP && CALI_F_TUNNEL) || CALI_F_L3_DEV)
 #define CALI_F_IPIP_ENCAPPED ((CALI_F_INGRESS && CALI_F_TUNNEL))
@@ -152,6 +154,12 @@ static CALI_BPF_INLINE void __compile_asserts(void) {
 
      . . . 1  . . . .  . . . .       EGRESS => packet should be routed via an egress gateway
 
+     . . 1 .  . . . .  . . . .       conflicts with WG mark
+
+     . 1 . .  . . . .  . . . .       packet should go back to bpfnatout
+
+     1 . . .  . . . .  . . . .       packet passed through bpfnatout
+
  */
 
 enum calico_skb_mark {
@@ -192,6 +200,14 @@ enum calico_skb_mark {
 	 * flows at start of day. */
 	CALI_SKB_MARK_CT_ESTABLISHED         = 0x08000000,
 	CALI_SKB_MARK_CT_ESTABLISHED_MASK    = 0x08000000,
+       /* CALI_SKB_MARK_TO_NAT_IFACE_OUT signals to routing that this packet should to
+        * to the bpfnatout interface.
+        */
+       CALI_SKB_MARK_TO_NAT_IFACE_OUT        = 0x41000000,
+       /* CALI_SKB_MARK_FROM_NAT_IFACE_OUT signals to the next hop that the packet passed
+	* through bpfnatout so that it can set its conntrack correctly.
+	*/
+       CALI_SKB_MARK_FROM_NAT_IFACE_OUT      = 0x81000000,
 
 	/* EGRESS => packet should be routed via an egress gateway. */
 	CALI_SKB_MARK_EGRESS                 = 0x10000000,
@@ -264,6 +280,7 @@ CALI_CONFIGURABLE_DEFINE(psnat_start, 0x53545250) /* be 0x53545250 = ACSII(PRTS)
 CALI_CONFIGURABLE_DEFINE(psnat_len, 0x4c545250) /* be 0x4c545250 = ACSII(PRTL) */
 CALI_CONFIGURABLE_DEFINE(flags, 0x00000001)
 CALI_CONFIGURABLE_DEFINE(host_tunnel_ip, 0x4c4e5554) /* be 0x4c4e5554 = ACSII(TUNL) */
+CALI_CONFIGURABLE_DEFINE(wg_port, 0x54504757) /* be 0x54504757 = ASCII(WGPT) */
 
 #define HOST_IP		CALI_CONFIGURABLE(host_ip)
 #define TUNNEL_MTU 	CALI_CONFIGURABLE(tunnel_mtu)
@@ -274,7 +291,8 @@ CALI_CONFIGURABLE_DEFINE(host_tunnel_ip, 0x4c4e5554) /* be 0x4c4e5554 = ACSII(TU
 #define PSNAT_START	CALI_CONFIGURABLE(psnat_start)
 #define PSNAT_LEN	CALI_CONFIGURABLE(psnat_len)
 #define GLOBAL_FLAGS 	CALI_CONFIGURABLE(flags)
-#define HOST_TUNNEL_IP CALI_CONFIGURABLE(host_tunnel_ip)
+#define HOST_TUNNEL_IP	CALI_CONFIGURABLE(host_tunnel_ip)
+#define WG_PORT		CALI_CONFIGURABLE(wg_port)
 
 #define EGRESS_GATEWAY 		(GLOBAL_FLAGS & CALI_GLOBALS_IS_EGRESS_GATEWAY)
 #define EGRESS_CLIENT 		(GLOBAL_FLAGS & CALI_GLOBALS_IS_EGRESS_CLIENT)

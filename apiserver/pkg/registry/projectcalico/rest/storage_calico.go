@@ -45,6 +45,7 @@ import (
 	calicoglobalreporttype "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/globalreporttype"
 	calicogthreatfeed "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/globalthreatfeed"
 	calicohostendpoint "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/hostendpoint"
+	calicoipamconfig "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/ipamconfig"
 	calicoippool "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/ippool"
 	calicoipreservation "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/ipreservation"
 	calicokubecontrollersconfig "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/kubecontrollersconfig"
@@ -831,6 +832,28 @@ func (p RESTStorageProvider) NewV3Storage(
 		[]string{"caliconodestatus"},
 	)
 
+	ipamconfigRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("ipamconfigurations"))
+	if err != nil {
+		return nil, err
+	}
+	ipamconfigOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   ipamconfigRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicoipamconfig.EmptyObject(),
+			ScopeStrategy: calicoipamconfig.NewStrategy(scheme),
+			NewListFunc:   calicoipamconfig.NewList,
+			GetAttrsFunc:  calicoipamconfig.GetAttrs,
+			Trigger:       nil,
+		},
+		calicostorage.Options{
+			RESTOptions: ipamconfigRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+		[]string{"ipamconfig"},
+	)
+
 	storage := map[string]rest.Storage{}
 	storage["networkpolicies"] = rESTInPeace(calicopolicy.NewREST(scheme, *policyOpts))
 	storage["stagednetworkpolicies"] = rESTInPeace(calicostagedpolicy.NewREST(scheme, *stagedpolicyOpts))
@@ -895,6 +918,7 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["remoteclusterconfigurations"] = rESTInPeace(calicoremoteclusterconfig.NewREST(scheme, *remoteclusterconfigOpts))
 	storage["felixconfigurations"] = rESTInPeace(calicofelixconfig.NewREST(scheme, *felixConfigOpts))
 	storage["caliconodestatuses"] = rESTInPeace(caliconodestatus.NewREST(scheme, *caliconodestatusOpts))
+	storage["ipamconfigurations"] = rESTInPeace(calicoipamconfig.NewREST(scheme, *ipamconfigOpts))
 
 	kubeControllersConfigsStorage, kubeControllersConfigsStatusStorage, err := calicokubecontrollersconfig.NewREST(scheme, *kubeControllersConfigsOpts)
 	if err != nil {

@@ -90,6 +90,8 @@ type Interface interface {
 	DeepPacketInspections() DeepPacketInspectionInterface
 	// CalicoNodeStatus returns an interface for managing CalicoNodeStatus resources.
 	CalicoNodeStatus() CalicoNodeStatusInterface
+	// IPAMConfig returns an interface for managing IPAMConfig resources.
+	IPAMConfig() IPAMConfigInterface
 
 	// EnsureInitialized is used to ensure the backend datastore is correctly
 	// initialized for use by Calico.  This method may be called multiple times, and

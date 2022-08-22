@@ -24,10 +24,10 @@ type PoliciesCache interface {
 	TotalNetworkPoliciesByNamespace() map[string]api.PolicySummary
 	GetPolicy(model.Key) api.Policy
 	GetTier(model.Key) api.Tier
-	GetOrderedPolicies(set.Set) []api.Tier
+	GetOrderedPolicies(set.Set[model.Key]) []api.Tier
 	RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface)
 	RegisterWithLabelHandler(handler labelhandler.Interface)
-	GetPolicyKeySetByRuleSelector(string) set.Set
+	GetPolicyKeySetByRuleSelector(string) set.Set[model.Key]
 }
 
 func NewPoliciesCache() PoliciesCache {
@@ -55,13 +55,13 @@ type policiesCache struct {
 
 type policyCache struct {
 	policies          map[model.Key]*policyData
-	unmatchedPolicies set.Set
+	unmatchedPolicies set.Set[model.Key]
 }
 
 func newPolicyCache() *policyCache {
 	return &policyCache{
 		policies:          make(map[model.Key]*policyData),
-		unmatchedPolicies: set.New(),
+		unmatchedPolicies: set.NewBoxed[model.Key](),
 	}
 }
 
@@ -99,7 +99,7 @@ func (c *policiesCache) GetTier(key model.Key) api.Tier {
 	return c.combineTierDataWithRules(t)
 }
 
-func (c *policiesCache) GetOrderedPolicies(keys set.Set) []api.Tier {
+func (c *policiesCache) GetOrderedPolicies(keys set.Set[model.Key]) []api.Tier {
 	c.orderPolicies()
 	var tierDatas []*tierData
 	if keys == nil {
@@ -131,11 +131,11 @@ func (c *policiesCache) GetOrderedPolicies(keys set.Set) []api.Tier {
 	return tiers
 }
 
-func (c *policiesCache) GetPolicyKeySetByRuleSelector(selector string) set.Set {
+func (c *policiesCache) GetPolicyKeySetByRuleSelector(selector string) set.Set[model.Key] {
 	if rs := c.ruleSelectors[selector]; rs != nil {
 		return rs.policies
 	}
-	return set.New()
+	return set.NewBoxed[model.Key]()
 }
 
 func (c *policiesCache) RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface) {
@@ -307,7 +307,7 @@ func (c *policiesCache) addPolicyRuleSelectors(p *model.Policy, polKey model.Key
 		rsi := c.ruleSelectors[s]
 		if rsi == nil {
 			rsi = &ruleSelectorInfo{
-				policies: set.New(),
+				policies: set.NewBoxed[model.Key](),
 			}
 			c.ruleSelectors[s] = rsi
 		}
@@ -587,7 +587,7 @@ func (d *tierData) GetResource() api.Resource {
 type ruleSelectorInfo struct {
 	numRuleRefs int
 	endpoints   api.EndpointCounts
-	policies    set.Set
+	policies    set.Set[model.Key]
 }
 
 // policyDataWithRuleData is a non-cached version of the policy data, but it includes

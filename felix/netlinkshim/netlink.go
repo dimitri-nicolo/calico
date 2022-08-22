@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build !windows
+
 package netlinkshim
 
 import (
@@ -39,6 +41,7 @@ type Interface interface {
 	RuleAdd(rule *netlink.Rule) error
 	RuleDel(rule *netlink.Rule) error
 	Delete()
+	NeighAdd(neigh *netlink.Neigh) error
 }
 
 func NewRealNetlink() (Interface, error) {

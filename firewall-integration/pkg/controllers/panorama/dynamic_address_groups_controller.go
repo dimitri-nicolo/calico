@@ -48,7 +48,7 @@ const (
 )
 
 // The address groups are filtered by the set of tags.
-type AddressGroupsFilter set.Set
+type AddressGroupsFilter set.Set[string]
 
 // dynamicAddressGroupsController implements the Controller interface for managing Panorama
 // dynamic address groups, syncing them to the Calico datastore as GlobalNetworkSet.

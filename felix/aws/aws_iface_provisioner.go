@@ -129,7 +129,7 @@ type SecondaryIfaceProvisioner struct {
 	awsGatewayAddr      ip.Addr
 	awsSubnetCIDR       ip.CIDR
 	// ourHostIPs contains the IPs that our host has assigned in IPAM for primary IPs.
-	ourHostIPs set.Set /* ip.Addr */
+	ourHostIPs set.Set[ip.Addr]
 
 	// datastoreUpdateC carries updates from Felix's main dataplane loop to our loop.
 	datastoreUpdateC chan DatastoreState
@@ -147,7 +147,7 @@ type sleepClock interface {
 
 type DatastoreState struct {
 	LocalAWSAddrsByDst map[ip.Addr]AddrInfo
-	PoolIDsBySubnetID  map[string]set.Set /*string*/
+	PoolIDsBySubnetID  map[string]set.Set[string]
 }
 
 type AddrInfo struct {
@@ -657,7 +657,7 @@ func (m *SecondaryIfaceProvisioner) checkFixOrReleaseExistingAWSResources(awsSta
 		return err
 	}
 
-	var enisToRelease set.Set
+	var enisToRelease set.Set[string]
 	if m.mode == v3.AWSSecondaryIPEnabledENIPerWorkload {
 		// Scan for ENIs with primary IPs that don't match a local workload.
 		enisToRelease = m.findENIsWithNoWorkload(awsState)
@@ -900,8 +900,8 @@ func (m *SecondaryIfaceProvisioner) loadAWSENIsState() (s *awsState, err error) 
 }
 
 // findUnusedAWSSecondaryIPs scans the AWS state for secondary IPs that are not assigned in Calico IPAM.
-func (m *SecondaryIfaceProvisioner) findUnusedAWSSecondaryIPs(awsState *awsState) set.Set /* ip.Addr */ {
-	awsIPsToRelease := set.New()
+func (m *SecondaryIfaceProvisioner) findUnusedAWSSecondaryIPs(awsState *awsState) set.Set[ip.Addr] {
+	awsIPsToRelease := set.NewBoxed[ip.Addr]()
 	summary := map[string][]string{}
 	for addr, eniID := range awsState.eniIDBySecondaryIP {
 		release := false
@@ -947,8 +947,8 @@ func (m *SecondaryIfaceProvisioner) loadLocalAWSSubnets() (map[string]ec2types.S
 
 // findENIsWithNoPoolOrIPAMEntry scans the awsState for secondary AWS ENIs that were created by Calico but no longer
 // have an associated IP pool (or are missing their IPAM entry).
-func (m *SecondaryIfaceProvisioner) findENIsWithNoPoolOrIPAMEntry(awsState *awsState) (set.Set /* string (IDs) */, error) {
-	enisToRelease := set.New()
+func (m *SecondaryIfaceProvisioner) findENIsWithNoPoolOrIPAMEntry(awsState *awsState) (set.Set[string], error) {
+	enisToRelease := set.New[string]()
 	for eniID, eni := range awsState.calicoOwnedENIsByID {
 		if _, ok := m.ds.PoolIDsBySubnetID[eni.SubnetID]; !ok {
 			// No longer have an IP pool for this ENI.
@@ -1012,7 +1012,7 @@ func (m *SecondaryIfaceProvisioner) findRoutesWithNoAWSAddr(awsState *awsState, 
 
 // unassignAWSIPs unassigns (releases) the given IPs in the AWS fabric.  It updates the free IP counters
 // in the awsState (but it does not refresh the AWS ENI data itself).
-func (m *SecondaryIfaceProvisioner) unassignAWSIPs(awsIPsToRelease set.Set, awsState *awsState) error {
+func (m *SecondaryIfaceProvisioner) unassignAWSIPs(awsIPsToRelease set.Set[ip.Addr], awsState *awsState) error {
 	if awsIPsToRelease.Len() == 0 {
 		return nil
 	}
@@ -1022,8 +1022,7 @@ func (m *SecondaryIfaceProvisioner) unassignAWSIPs(awsIPsToRelease set.Set, awsS
 
 	// Batch up the IPs by ENI; the AWS API lets us release multiple IPs from the same ENI in one shot.
 	ipsToReleaseByENIID := map[string][]string{}
-	awsIPsToRelease.Iter(func(item interface{}) error {
-		addr := item.(ip.Addr)
+	awsIPsToRelease.Iter(func(addr ip.Addr) error {
 		eniID := awsState.eniIDBySecondaryIP[addr]
 		ipsToReleaseByENIID[eniID] = append(ipsToReleaseByENIID[eniID], addr.String())
 		return nil
@@ -1050,7 +1049,7 @@ func (m *SecondaryIfaceProvisioner) unassignAWSIPs(awsIPsToRelease set.Set, awsS
 }
 
 // releaseAWSENIs tries to unattach and release the given ENIs.
-func (m *SecondaryIfaceProvisioner) releaseAWSENIs(enisToRelease set.Set, awsState *awsState) error {
+func (m *SecondaryIfaceProvisioner) releaseAWSENIs(enisToRelease set.Set[string], awsState *awsState) error {
 	if enisToRelease.Len() == 0 {
 		return nil
 	}
@@ -1059,10 +1058,9 @@ func (m *SecondaryIfaceProvisioner) releaseAWSENIs(enisToRelease set.Set, awsSta
 	m.resetRecheckInterval("release-eni")
 
 	// Detach any ENIs that we want to delete.  They must be detached first.
-	enisToRelease.Iter(func(item interface{}) error {
+	enisToRelease.Iter(func(eniID string) error {
 		ctx, cancel := m.newContext()
 		defer cancel()
-		eniID := item.(string)
 		attachID := awsState.attachmentIDByENIID[eniID]
 		_, err := m.ec2Client.EC2Svc.DetachNetworkInterface(ctx, &ec2.DetachNetworkInterfaceInput{
 			AttachmentId: &attachID,
@@ -1091,10 +1089,9 @@ func (m *SecondaryIfaceProvisioner) releaseAWSENIs(enisToRelease set.Set, awsSta
 
 	var finalErr error
 	for i := 0; i < 5; i++ {
-		enisToRelease.Iter(func(item interface{}) error {
+		enisToRelease.Iter(func(eniID string) error {
 			// Worth trying this even if detach fails.  Possible the failure was caused by it already
 			// being detached.
-			eniID := item.(string)
 			ctx, cancel := m.newContext()
 			defer cancel()
 			_, err := m.ec2Client.EC2Svc.DeleteNetworkInterface(ctx, &ec2.DeleteNetworkInterfaceInput{
@@ -1140,7 +1137,7 @@ func (m *SecondaryIfaceProvisioner) reportMainLoopLive() {
 // information.
 func (m *SecondaryIfaceProvisioner) calculateBestSubnet(awsState *awsState, localSubnetsByID map[string]ec2types.Subnet) string {
 	// Match AWS subnets against our IP pools.
-	localIPPoolSubnetIDs := set.New()
+	localIPPoolSubnetIDs := set.New[string]()
 	for subnetID := range m.ds.PoolIDsBySubnetID {
 		if _, ok := localSubnetsByID[subnetID]; ok {
 			localIPPoolSubnetIDs.Add(subnetID)
@@ -1151,8 +1148,7 @@ func (m *SecondaryIfaceProvisioner) calculateBestSubnet(awsState *awsState, loca
 	// If the IP pools only name one then that is preferred.  If there's more than one in the IP pools but we've
 	// already got a local ENI, that one is preferred.  If there's a tie, pick the one with the most routes.
 	subnetScores := map[string]int{}
-	localIPPoolSubnetIDs.Iter(func(item interface{}) error {
-		subnetID := item.(string)
+	localIPPoolSubnetIDs.Iter(func(subnetID string) error {
 		subnetScores[subnetID] += 1000000
 		return nil
 	})
@@ -1340,8 +1336,7 @@ func (m *SecondaryIfaceProvisioner) attachOrphanENIs(awsState *awsState, bestSub
 // and then frees those IPs.
 func (m *SecondaryIfaceProvisioner) freeUnusedHostCalicoIPs(awsState *awsState) error {
 	var finalErr error
-	m.ourHostIPs.Iter(func(item interface{}) error {
-		addr := item.(ip.Addr)
+	m.ourHostIPs.Iter(func(addr ip.Addr) error {
 		if _, ok := awsState.eniIDByPrimaryIP[addr]; ok {
 			return nil
 		}
@@ -1742,7 +1737,7 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(awsState *awsSta
 	// Figure out which IPs already have an elastic IP attached.
 	logrus.Debug("Checking if we need to associate any elastic IPs.")
 	privIPToElasticIPID := map[ip.Addr]string{}
-	inUseElasticIPs := set.New()
+	inUseElasticIPs := set.NewBoxed[ip.Addr]()
 	for eniID, eni := range awsState.calicoOwnedENIsByID {
 		for _, privIP := range eni.IPAddresses {
 			if privIP.Association != nil {
@@ -1763,7 +1758,7 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(awsState *awsSta
 
 	// Collect all the elastic IP IDs that we _may_ want to attach.
 	eipToCandidatePrivIPs := map[ip.Addr][]ip.Addr{}
-	privIPsToDo := set.New() // ip.Addr
+	privIPsToDo := set.NewBoxed[ip.Addr]()
 	for _, addrInfo := range m.ds.LocalAWSAddrsByDst {
 		privIPAddr := ip.MustParseCIDROrIP(addrInfo.Dst).Addr()
 		if _, ok := privIPToElasticIPID[privIPAddr]; ok {
@@ -1892,8 +1887,8 @@ func (m *SecondaryIfaceProvisioner) checkAndAssociateElasticIPs(awsState *awsSta
 
 // findENIsWithNoWorkload is used in ENI-per-workload mode to find ENIs that have a primary IP that doesn't match any
 // workloads.
-func (m *SecondaryIfaceProvisioner) findENIsWithNoWorkload(state *awsState) set.Set {
-	enisIDsToRelease := set.New()
+func (m *SecondaryIfaceProvisioner) findENIsWithNoWorkload(state *awsState) set.Set[string] {
+	enisIDsToRelease := set.New[string]()
 	for eniID, eni := range state.calicoOwnedENIsByID {
 		for _, addr := range eni.IPAddresses {
 			if addr.Primary {
@@ -1916,7 +1911,7 @@ func (m *SecondaryIfaceProvisioner) ensureIPAMLoaded() error {
 	logrus.Debug("Refreshing cache of host IPs from Calico IPAM.")
 	m.ourHostIPs = nil // Make sure we retry after a failure.
 
-	hostIPs := set.New()
+	hostIPs := set.NewBoxed[ip.Addr]()
 	ctx, cancel := m.newContext()
 	defer cancel()
 	ourIPs, err := m.ipamClient.IPsByHandle(ctx, m.hostPrimaryIPIPAMHandle())

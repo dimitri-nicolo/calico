@@ -113,7 +113,7 @@ func (f *routeTableFactory) NewRouteTable(interfacePrefixes []string,
 type routeRulesGenerator interface {
 	NewRouteRules(
 		ipVersion int,
-		tableIndexSet set.Set,
+		tableIndexSet set.Set[int],
 		updateFunc, removeFunc routerule.RulesMatchFunc,
 		netlinkTimeout time.Duration,
 		recorder logutils.OpRecorder,
@@ -126,7 +126,7 @@ type routeRulesFactory struct {
 
 func (f *routeRulesFactory) NewRouteRules(
 	ipVersion int,
-	tableIndexSet set.Set,
+	tableIndexSet set.Set[int],
 	updateFunc, removeFunc routerule.RulesMatchFunc,
 	netlinkTimeout time.Duration,
 	opRecorder logutils.OpRecorder,
@@ -340,7 +340,7 @@ type egressIPManager struct {
 	pendingWorkloadUpdates map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
 
 	// Dirty Egress IPSet to be processed in CompleteDeferredWork.
-	dirtyEgressIPSet set.Set
+	dirtyEgressIPSet set.Set[string]
 
 	// VXLAN configuration.
 	vxlanDevice string
@@ -359,7 +359,7 @@ type egressIPManager struct {
 
 	// represents the entire block of table indices the manager is allowed to use.
 	// gets passed to routerule package when creating rules
-	tableIndexSet set.Set
+	tableIndexSet set.Set[int]
 
 	opRecorder logutils.OpRecorder
 
@@ -375,7 +375,7 @@ type egressIPManager struct {
 
 func newEgressIPManager(
 	deviceName string,
-	rtTableIndices set.Set,
+	rtTableIndices set.Set[int],
 	dpConfig Config,
 	opRecorder logutils.OpRecorder,
 	statusCallback func(namespace, name, cidr string, maintenanceStarted, maintenanceFinished time.Time) error,
@@ -389,7 +389,7 @@ func newEgressIPManager(
 	// Prepare table index stack for allocation.
 	tableIndexStack := stack.New()
 	// Prepare table index set to be passed to routeRules.
-	tableIndexSet := set.New()
+	tableIndexSet := set.New[int]()
 	// Sort indices to make route table allocation deterministic.
 	sorted := sortIntSet(rtTableIndices)
 	for _, element := range sorted {
@@ -427,7 +427,7 @@ func newEgressIPManagerWithShims(
 	mainTable routeTable,
 	rrGenerator routeRulesGenerator,
 	rtGenerator routeTableGenerator,
-	tableIndexSet set.Set,
+	tableIndexSet set.Set[int],
 	tableIndexStack *stack.Stack,
 	deviceName string,
 	dpConfig Config,
@@ -456,7 +456,7 @@ func newEgressIPManagerWithShims(
 		vxlanDevice:                deviceName,
 		vxlanID:                    dpConfig.RulesConfig.EgressIPVXLANVNI,
 		vxlanPort:                  dpConfig.RulesConfig.EgressIPVXLANPort,
-		dirtyEgressIPSet:           set.New(),
+		dirtyEgressIPSet:           set.New[string](),
 		dpConfig:                   dpConfig,
 		nlHandle:                   nlHandle,
 		opRecorder:                 opRecorder,
@@ -689,7 +689,7 @@ func (m *egressIPManager) readInitialKernelState() error {
 	// Read routing rules within the egress manager table range from the kernel.
 	m.routeRules.InitFromKernel()
 	rules := m.routeRules.GetAllActiveRules()
-	ruleTableIndices := set.New()
+	ruleTableIndices := set.New[int]()
 	for _, rule := range rules {
 		nlRule := rule.NetLinkRule()
 		r := newEgressRule(nlRule)
@@ -698,9 +698,8 @@ func (m *egressIPManager) readInitialKernelState() error {
 	}
 
 	// Read routing tables referenced by a routing rule from the kernel.
-	reservedTables := set.New()
-	ruleTableIndices.Iter(func(item interface{}) error {
-		index := item.(int)
+	reservedTables := set.New[int]()
+	ruleTableIndices.Iter(func(index int) error {
 		hopIPs, err := m.getTableNextHops(index)
 		if err != nil {
 			log.WithError(err).WithField("table", index).Error("failed to get route table targets")
@@ -1079,7 +1078,7 @@ func (m *egressIPManager) workloadIPToFullRule(workloadIP string, tableIndex int
 
 // Set L2 routes for all active EgressIPSet.
 func (m *egressIPManager) setL2Routes() {
-	gatewayIPs := set.New()
+	gatewayIPs := set.New[string]()
 	for _, gateways := range m.ipSetIDToGateways {
 		for _, g := range gateways {
 			ipString := strings.Split(g.cidr, "/")[0]
@@ -1106,7 +1105,7 @@ func (m *egressIPManager) setL2Routes() {
 }
 
 // Set L3 routes for an EgressIPSet.
-func (m *egressIPManager) setL3Routes(rTable routeTable, ips set.Set) {
+func (m *egressIPManager) setL3Routes(rTable routeTable, ips set.Set[string]) {
 	logCxt := log.WithField("table", rTable.Index())
 	var multipath []routetable.NextHop
 
@@ -1599,7 +1598,7 @@ func (m *egressIPManager) reserveFromInitialState(srcIPs []string, priority int,
 	return rules, table, true
 }
 
-func (m *egressIPManager) removeIndicesFromTableStack(indices set.Set) {
+func (m *egressIPManager) removeIndicesFromTableStack(indices set.Set[int]) {
 	s := stack.New()
 	// Pop items off the stack until the index to be removed has been popped.
 	for {
@@ -1722,10 +1721,10 @@ func parseNameAndNamespace(wlId string) (string, string, error) {
 	return parts[0], parts[1], nil
 }
 
-func sortStringSet(s set.Set) []string {
+func sortStringSet(s set.Set[string]) []string {
 	var sorted []string
-	s.Iter(func(item interface{}) error {
-		sorted = append(sorted, item.(string))
+	s.Iter(func(item string) error {
+		sorted = append(sorted, item)
 		return nil
 	})
 
@@ -1735,10 +1734,11 @@ func sortStringSet(s set.Set) []string {
 	return sorted
 }
 
-func sortIntSet(s set.Set) []int {
+func sortIntSet(s set.Set[int]) []int {
 	var sorted []int
-	s.Iter(func(item interface{}) error {
-		sorted = append(sorted, item.(int))
+	s.Iter(func(item int) error {
+		sorted = append(sorted, item)
+
 		return nil
 	})
 	sort.Slice(sorted, func(p, q int) bool {

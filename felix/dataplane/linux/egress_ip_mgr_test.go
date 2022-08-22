@@ -52,7 +52,7 @@ var _ = Describe("EgressIPManager", func() {
 		rtFactory = &mockRouteTableFactory{count: 0, tables: make(map[int]*mockRouteTable)}
 
 		// Ten free tables to use.
-		tableIndexSet := set.New()
+		tableIndexSet := set.New[int]()
 		tableIndexStack := stack.New()
 		for i := 10; i > 0; i-- {
 			tableIndexStack.Push(i)
@@ -1226,13 +1226,12 @@ func dummyWorkloadEndpointUpdate(podNum int, ipSetId string, cidrs []string, nex
 type mockRouteRules struct {
 	matchForUpdate routerule.RulesMatchFunc
 	matchForRemove routerule.RulesMatchFunc
-	activeRules    set.Set
+	activeRules    set.Set[*routerule.Rule]
 }
 
 func (r *mockRouteRules) GetAllActiveRules() []*routerule.Rule {
 	var active []*routerule.Rule
-	r.activeRules.Iter(func(item interface{}) error {
-		p := item.(*routerule.Rule)
+	r.activeRules.Iter(func(p *routerule.Rule) error {
 		active = append(active, p)
 		return nil
 	})
@@ -1245,8 +1244,7 @@ func (r *mockRouteRules) InitFromKernel() {
 
 func (r *mockRouteRules) getActiveRule(rule *routerule.Rule, f routerule.RulesMatchFunc) *routerule.Rule {
 	var active *routerule.Rule
-	r.activeRules.Iter(func(item interface{}) error {
-		p := item.(*routerule.Rule)
+	r.activeRules.Iter(func(p *routerule.Rule) error {
 		if f(p, rule) {
 			active = p
 			return set.StopIteration
@@ -1278,8 +1276,7 @@ func (r *mockRouteRules) Apply() error {
 
 func (r *mockRouteRules) hasRule(priority int, src string, mark int, table int) bool {
 	result := false
-	r.activeRules.Iter(func(item interface{}) error {
-		rule := item.(*routerule.Rule)
+	r.activeRules.Iter(func(rule *routerule.Rule) error {
 		nlRule := rule.NetLinkRule()
 		rule.LogCxt().Debug("checking rule")
 		if nlRule.Priority == priority &&
@@ -1332,7 +1329,7 @@ type mockRouteRulesFactory struct {
 
 func (f *mockRouteRulesFactory) NewRouteRules(
 	ipVersion int,
-	tableIndexSet set.Set,
+	tableIndexSet set.Set[int],
 	updateFunc, removeFunc routerule.RulesMatchFunc,
 	netlinkTimeout time.Duration,
 	opRecorder logutils.OpRecorder,
@@ -1340,7 +1337,7 @@ func (f *mockRouteRulesFactory) NewRouteRules(
 	rr := &mockRouteRules{
 		matchForUpdate: routerule.RulesMatchSrcFWMarkTable,
 		matchForRemove: routerule.RulesMatchSrcFWMark,
-		activeRules:    set.New(),
+		activeRules:    set.New[*routerule.Rule](),
 	}
 	f.routeRules = rr
 	return rr

@@ -296,6 +296,7 @@ func (c *resources) Watch(ctx context.Context, opts options.ListOptions, kind st
 	ctx, cancel := context.WithCancel(ctx)
 	backend, err := c.backend.Watch(ctx, list, opts.ResourceVersion)
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 	w := &watcher{
@@ -356,7 +357,6 @@ func kvPairToResource(kvp *model.KVPair) resource {
 
 // checkNamespace checks that the namespace is supplied on a namespaced resource type.
 func checkNamespace(ns, kind string) error {
-
 	if namespace.IsNamespaced(kind) && len(ns) == 0 {
 		return cerrors.ErrorValidation{
 			ErroredFields: []cerrors.ErroredField{{

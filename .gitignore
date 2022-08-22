@@ -2,10 +2,12 @@
 report/
 bin/
 *.created*
+*.pyc
 .idea
 .vscode
 vendor/
 artifacts/
+postrelease-checks.xml
 
 # Test binary, built with `go test -c`
 *.test
@@ -23,3 +25,6 @@ hack/release/ghr
 hack/test/kind/kind
 hack/test/kind/kubectl
 hack/test/kind/*kubeconfig.yaml
+
+# Sub-chart created as part of build.
+charts/tigera-operator/charts

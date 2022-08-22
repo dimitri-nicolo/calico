@@ -350,7 +350,7 @@ func (ec *EndpointLookupsCache) addOrUpdateEndpoint(key model.Key, incomingEndpo
 	// If the endpoint exists, and it was updated, then we might have to add or
 	// remove IPs.
 	// First up, get all current ip addresses.
-	var ipsToRemove set.Set = set.New()
+	var ipsToRemove set.Set[[16]byte] = set.NewBoxed[[16]byte]()
 
 	currentEndpoint, endpointAlreadyExists := ec.endpointData[key]
 	// Create a copy so that we can figure out which IPs to keep and
@@ -367,7 +367,7 @@ func (ec *EndpointLookupsCache) addOrUpdateEndpoint(key model.Key, incomingEndpo
 
 	// Collect all IPs that correspond to this endpoint and mark
 	// any IP that shouldn't be discarded.
-	ipsToUpdate := set.New()
+	ipsToUpdate := set.NewBoxed[[16]byte]()
 	for _, ip := range ipsOfIncomingEndpoint {
 		// If this is an already existing IP, then remove it,
 		if ipsToRemove.Contains(ip) {
@@ -392,15 +392,13 @@ func (ec *EndpointLookupsCache) addOrUpdateEndpoint(key model.Key, incomingEndpo
 	ec.endpointData[incomingEndpointData.Key] = incomingEndpointData
 
 	// update endpoint data lookup by ips
-	ipsToUpdate.Iter(func(item interface{}) error {
-		newIP := item.([16]byte)
+	ipsToUpdate.Iter(func(newIP [16]byte) error {
 		ec.updateIPToEndpointMapping(newIP, incomingEndpointData)
 		return nil
 	})
 
 	ipsToRemove.Iter(
-		func(item interface{}) error {
-			ip := item.([16]byte)
+		func(ip [16]byte) error {
 			ec.removeEndpointDataIpMapping(key, ip)
 			return set.RemoveItem
 		})
@@ -498,7 +496,7 @@ func (ec *EndpointLookupsCache) removeEndpoint(key model.Key) {
 		return
 	}
 
-	ipsMarkedAsDeleted := set.New()
+	ipsMarkedAsDeleted := set.NewBoxed[[16]byte]()
 
 	// if the endpoint has not been marked for deletion ignore it as it may have been
 	// updated before the deletion timer has been triggered
@@ -514,8 +512,7 @@ func (ec *EndpointLookupsCache) removeEndpoint(key model.Key) {
 		ipsMarkedAsDeleted.AddAll(extractIPsFromHostEndpoint(currentEndpointData.Endpoint.(*model.HostEndpoint)))
 	}
 
-	ipsMarkedAsDeleted.Iter(func(item interface{}) error {
-		ip := item.([16]byte)
+	ipsMarkedAsDeleted.Iter(func(ip [16]byte) error {
 		ec.removeEndpointDataIpMapping(key, ip)
 		return nil
 	})
@@ -697,7 +694,7 @@ func (ec *EndpointLookupsCache) DumpEndpoints() string {
 
 	for key, endpointData := range ec.endpointData {
 		ipStr := []string{}
-		ips := set.New()
+		ips := set.NewBoxed[[16]byte]()
 
 		if !endpointData.markedToBeDeleted {
 			switch endpointData.Key.(type) {
@@ -708,8 +705,7 @@ func (ec *EndpointLookupsCache) DumpEndpoints() string {
 			}
 		}
 
-		ips.Iter(func(item interface{}) error {
-			ip := item.([16]byte)
+		ips.Iter(func(ip [16]byte) error {
 			ipStr = append(ipStr, net.IP(ip[:16]).String())
 			return nil
 		})

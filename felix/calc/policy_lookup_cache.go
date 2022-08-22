@@ -35,8 +35,8 @@ var (
 type PolicyLookupsCache struct {
 	lock sync.RWMutex
 
-	nflogPrefixesPolicy  map[model.PolicyKey]set.Set
-	nflogPrefixesProfile map[model.ProfileRulesKey]set.Set
+	nflogPrefixesPolicy  map[model.PolicyKey]set.Set[string]
+	nflogPrefixesProfile map[model.ProfileRulesKey]set.Set[string]
 	nflogPrefixHash      map[[64]byte]pcRuleID
 
 	useIDs bool
@@ -47,8 +47,8 @@ type PolicyLookupsCache struct {
 
 func NewPolicyLookupsCache() *PolicyLookupsCache {
 	pc := &PolicyLookupsCache{
-		nflogPrefixesPolicy:  map[model.PolicyKey]set.Set{},
-		nflogPrefixesProfile: map[model.ProfileRulesKey]set.Set{},
+		nflogPrefixesPolicy:  map[model.PolicyKey]set.Set[string]{},
+		nflogPrefixesProfile: map[model.ProfileRulesKey]set.Set[string]{},
 		nflogPrefixHash:      map[[64]byte]pcRuleID{},
 		tierRefs:             map[string]int{},
 		ids:                  idalloc.New(),
@@ -220,9 +220,9 @@ func (pc *PolicyLookupsCache) removeProfileRulesNFLOGPrefixes(key model.ProfileR
 // settings. This method adds any new rules and removes any obsolete rules.
 // TODO (rlb): Maybe we should do a lazy clean up of rules?
 func (pc *PolicyLookupsCache) updateRulesNFLOGPrefixes(
-	v1Name, namespace, tier, name string, oldPrefixes set.Set, ingress []model.Rule, egress []model.Rule,
-) set.Set {
-	newPrefixes := set.New()
+	v1Name, namespace, tier, name string, oldPrefixes set.Set[string], ingress []model.Rule, egress []model.Rule,
+) set.Set[string] {
+	newPrefixes := set.New[string]()
 
 	convertAction := func(a string) rules.RuleAction {
 		switch a {
@@ -279,9 +279,9 @@ func (pc *PolicyLookupsCache) updateRulesNFLOGPrefixes(
 
 	// Delete the stale prefixes.
 	if oldPrefixes != nil {
-		oldPrefixes.Iter(func(item interface{}) error {
+		oldPrefixes.Iter(func(item string) error {
 			if !newPrefixes.Contains(item) {
-				pc.deleteNFLogPrefixEntry(item.(string))
+				pc.deleteNFLogPrefixEntry(item)
 			}
 			return nil
 		})
@@ -291,10 +291,10 @@ func (pc *PolicyLookupsCache) updateRulesNFLOGPrefixes(
 }
 
 // deleteRulesNFLOGPrefixes deletes the supplied set of prefixes.
-func (pc *PolicyLookupsCache) deleteRulesNFLOGPrefixes(prefixes set.Set) {
+func (pc *PolicyLookupsCache) deleteRulesNFLOGPrefixes(prefixes set.Set[string]) {
 	if prefixes != nil {
-		prefixes.Iter(func(item interface{}) error {
-			pc.deleteNFLogPrefixEntry(item.(string))
+		prefixes.Iter(func(item string) error {
+			pc.deleteNFLogPrefixEntry(item)
 			return nil
 		})
 	}

@@ -147,7 +147,7 @@ func (s *server) prepareReportForDownload(
 		templates[rt.DownloadTemplates[idx].Name] = rt.DownloadTemplates[idx]
 	}
 
-	handled := set.New()
+	handled := set.New[string]()
 	for _, format := range formats {
 		if handled.Contains(format) {
 			// Handle de-duplication of the formats.
@@ -210,7 +210,7 @@ type downloadFile struct {
 
 const fileNameTimeFormat = "20060102150405"
 
-//generates our report download file name
+// generates our report download file name
 func generateFileName(dc *downloadContent, outputFormat string) string {
 	startDateStr := dc.startDate.Format(fileNameTimeFormat)
 	endDateStr := dc.endDate.Format(fileNameTimeFormat)
@@ -225,7 +225,7 @@ func generateFileName(dc *downloadContent, outputFormat string) string {
 
 // areValidFormats returns true if all formats passed are valid for the ReportType.
 func areValidFormats(formats []string, rt *v3.ReportTypeSpec) bool {
-	valid := set.New()
+	valid := set.New[string]()
 	for idx := range rt.DownloadTemplates {
 		valid.Add(rt.DownloadTemplates[idx].Name)
 	}

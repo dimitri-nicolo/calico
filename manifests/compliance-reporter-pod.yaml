@@ -21,7 +21,7 @@ spec:
     # Modify this image name, if you have re-tagged the image and are using a local
     # docker image repository.
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    image: gcr.io/unique-caldron-775/cnx/tigera/compliance-reporter:master
+    image: {{page.registry}}{% include component_image component="compliance-reporter" %}
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     env:
       # Modify this value with name of an existing globalreport resource.
@@ -83,4 +83,3 @@ spec:
       - key: tls.crt
         path: ca.pem
       secretName: tigera-secure-es-gateway-http-certs-public
-

@@ -62,7 +62,7 @@ type bpfIPSets struct {
 
 	bpfMap bpf.Map
 
-	dirtyIPSetIDs   set.Set
+	dirtyIPSetIDs   set.Set[uint64]
 	resyncScheduled bool
 
 	opRecorder logutils.OpRecorder
@@ -77,7 +77,7 @@ func NewBPFIPSets(
 	return &bpfIPSets{
 		IPVersionConfig:  ipVersionConfig,
 		ipSets:           map[uint64]*bpfIPSet{},
-		dirtyIPSetIDs:    set.New(), /*set entries are uint64 IDs */
+		dirtyIPSetIDs:    set.New[uint64](),
 		bpfMap:           ipSetsMap,
 		resyncScheduled:  true,
 		ipSetIDAllocator: ipSetIDAllocator,
@@ -112,9 +112,9 @@ func (m *bpfIPSets) getOrCreateIPSet(setID string) *bpfIPSet {
 		ipSet = &bpfIPSet{
 			ID:             id,
 			OriginalID:     setID,
-			DesiredEntries: set.New(),
-			PendingAdds:    set.New(),
-			PendingRemoves: set.New(),
+			DesiredEntries: set.New[IPSetEntry](),
+			PendingAdds:    set.New[IPSetEntry](),
+			PendingRemoves: set.New[IPSetEntry](),
 		}
 		m.ipSets[id] = ipSet
 	} else {
@@ -231,13 +231,13 @@ func (m *bpfIPSets) GetTypeOf(setID string) (ipsets.IPSetType, error) {
 	return ipSet.Type, nil
 }
 
-func (m *bpfIPSets) GetMembers(setID string) (set.Set, error) {
+func (m *bpfIPSets) GetMembers(setID string) (set.Set[string], error) {
 	// GetMembers is only called from XDPState, and XDPState does not coexist with
 	// config.BPFEnabled.
 	panic("Not implemented")
 }
 
-func (m *bpfIPSets) ApplyUpdates(_ func(ipSetName string) bool) set.Set {
+func (m *bpfIPSets) ApplyUpdates(_ func(ipSetName string) bool) set.Set[string] {
 	var numAdds, numDels uint
 	startTime := time.Now()
 
@@ -300,8 +300,7 @@ func (m *bpfIPSets) ApplyUpdates(_ func(ipSetName string) bool) set.Set {
 		}
 	}
 
-	m.dirtyIPSetIDs.Iter(func(item interface{}) error {
-		setID := item.(uint64)
+	m.dirtyIPSetIDs.Iter(func(setID uint64) error {
 		leaveDirty := false
 		ipSet := m.getExistingIPSet(setID)
 		if ipSet == nil {
@@ -310,8 +309,7 @@ func (m *bpfIPSets) ApplyUpdates(_ func(ipSetName string) bool) set.Set {
 			return set.RemoveItem
 		}
 
-		ipSet.PendingRemoves.Iter(func(item interface{}) error {
-			entry := item.(IPSetEntry)
+		ipSet.PendingRemoves.Iter(func(entry IPSetEntry) error {
 			if debug {
 				log.WithFields(log.Fields{"setID": setID, "entry": entry}).Debug("Removing entry from IP set")
 			}
@@ -325,8 +323,7 @@ func (m *bpfIPSets) ApplyUpdates(_ func(ipSetName string) bool) set.Set {
 			return set.RemoveItem
 		})
 
-		ipSet.PendingAdds.Iter(func(item interface{}) error {
-			entry := item.(IPSetEntry)
+		ipSet.PendingAdds.Iter(func(entry IPSetEntry) error {
 			if debug {
 				log.WithFields(log.Fields{"setID": setID, "entry": entry}).Debug("Adding entry to IP set")
 			}
@@ -379,7 +376,7 @@ func (m *bpfIPSets) markIPSetDirty(data *bpfIPSet) {
 	m.dirtyIPSetIDs.Add(data.ID)
 }
 
-func (m *bpfIPSets) SetFilter(ipSetNames set.Set) {
+func (m *bpfIPSets) SetFilter(ipSetNames set.Set[string]) {
 	// Not needed for this IP set dataplane.  All known IP sets
 	// are written into the corresponding BPF map.
 }
@@ -389,12 +386,12 @@ type bpfIPSet struct {
 	ID         uint64
 
 	// DesiredEntries contains all the entries that we _want_ to be in the set.
-	DesiredEntries set.Set /* of IPSetEntry */
+	DesiredEntries set.Set[IPSetEntry]
 	// PendingAdds contains all the entries that we need to add to bring the dataplane into sync with DesiredEntries.
-	PendingAdds set.Set /* of IPSetEntry */
+	PendingAdds set.Set[IPSetEntry]
 	// PendingRemoves contains all the entries that we need to remove from the dataplane to bring the
 	// dataplane into sync with DesiredEntries.
-	PendingRemoves set.Set /* of IPSetEntry */
+	PendingRemoves set.Set[IPSetEntry]
 
 	Deleted bool
 
@@ -407,8 +404,7 @@ func (m *bpfIPSet) ReplaceMembers(members []string) {
 }
 
 func (m *bpfIPSet) RemoveAll() {
-	m.DesiredEntries.Iter(func(item interface{}) error {
-		entry := item.(IPSetEntry)
+	m.DesiredEntries.Iter(func(entry IPSetEntry) error {
 		m.RemoveMember(entry)
 		return nil
 	})

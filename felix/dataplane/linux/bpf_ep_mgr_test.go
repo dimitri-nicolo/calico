@@ -17,6 +17,7 @@
 package intdataplane
 
 import (
+	"fmt"
 	"regexp"
 	"sync"
 
@@ -24,15 +25,18 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/environment"
 	"github.com/projectcalico/calico/felix/logutils"
 
 	"github.com/projectcalico/calico/felix/bpf"
+	"github.com/projectcalico/calico/felix/bpf/asm"
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
+	"github.com/projectcalico/calico/felix/bpf/ifstate"
 	bpfipsets "github.com/projectcalico/calico/felix/bpf/ipsets"
+	"github.com/projectcalico/calico/felix/bpf/mock"
 	"github.com/projectcalico/calico/felix/bpf/polprog"
 	"github.com/projectcalico/calico/felix/bpf/state"
-	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/idalloc"
 	"github.com/projectcalico/calico/felix/ifacemonitor"
 	"github.com/projectcalico/calico/felix/ipsets"
@@ -41,10 +45,12 @@ import (
 )
 
 type mockDataplane struct {
-	mutex  sync.Mutex
-	lastFD uint32
-	fds    map[string]uint32
-	state  map[uint32]polprog.Rules
+	mutex     sync.Mutex
+	lastFD    uint32
+	fds       map[string]uint32
+	state     map[uint32]polprog.Rules
+	routes    map[string]struct{}
+	shouldErr bool
 }
 
 func newMockDataplane() *mockDataplane {
@@ -52,10 +58,15 @@ func newMockDataplane() *mockDataplane {
 		lastFD: 5,
 		fds:    map[string]uint32{},
 		state:  map[uint32]polprog.Rules{},
+		routes: map[string]struct{}{},
 	}
 }
 
 func (m *mockDataplane) ensureStarted() {
+}
+
+func (m *mockDataplane) ensureBPFDevices() error {
+	return nil
 }
 
 func (m *mockDataplane) ensureProgramAttached(ap attachPoint) (bpf.MapFD, error) {
@@ -85,11 +96,11 @@ func (m *mockDataplane) ensureQdisc(iface string) error {
 	return nil
 }
 
-func (m *mockDataplane) updatePolicyProgram(jumpMapFD bpf.MapFD, rules polprog.Rules) error {
+func (m *mockDataplane) updatePolicyProgram(jumpMapFD bpf.MapFD, rules polprog.Rules) (asm.Insns, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	m.state[uint32(jumpMapFD)] = rules
-	return nil
+	return nil, nil
 }
 
 func (m *mockDataplane) removePolicyProgram(jumpMapFD bpf.MapFD) error {
@@ -100,6 +111,10 @@ func (m *mockDataplane) removePolicyProgram(jumpMapFD bpf.MapFD) error {
 }
 
 func (m *mockDataplane) setAcceptLocal(iface string, val bool) error {
+	return nil
+}
+
+func (m *mockDataplane) setRPFilter(iface string, val int) error {
 	return nil
 }
 
@@ -123,7 +138,47 @@ func (m *mockDataplane) setAndReturn(vari **polprog.Rules, key string) func() *p
 	}
 }
 
+func (m *mockDataplane) setRoute(ip string) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	defer func() { m.shouldErr = false }()
+
+	if m.shouldErr {
+		return fmt.Errorf("setRoute error")
+	}
+
+	m.routes[ip] = struct{}{}
+
+	return nil
+}
+
+func (m *mockDataplane) delRoute(ip string) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	defer func() { m.shouldErr = false }()
+
+	if m.shouldErr {
+		return fmt.Errorf("delRoute error")
+	}
+
+	if _, ok := m.routes[ip]; !ok {
+		return fmt.Errorf("no route for %s", ip)
+	}
+
+	delete(m.routes, ip)
+
+	return nil
+}
+
+func (m *mockDataplane) setErr() {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	m.shouldErr = true
+}
+
 var _ = Describe("BPF Endpoint Manager", func() {
+
 	var (
 		bpfEpMgr             *bpfEndpointManager
 		dp                   *mockDataplane
@@ -141,6 +196,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 		lookupsCache         *calc.LookupsCache
 		actionOnDrop         string
 		enableTcpStats       bool
+		ifStateMap           *mock.Map
 	)
 
 	BeforeEach(func() {
@@ -157,6 +213,8 @@ var _ = Describe("BPF Endpoint Manager", func() {
 		bpfMapContext.IpsetsMap = bpfipsets.Map(bpfMapContext)
 		bpfMapContext.StateMap = state.Map(bpfMapContext)
 		bpfMapContext.CtMap = conntrack.Map(bpfMapContext)
+		ifStateMap = mock.NewMockMap(ifstate.MapParams)
+		bpfMapContext.IfStateMap = ifStateMap
 		rrConfigNormal = rules.Config{
 			IPIPEnabled:                      true,
 			IPIPTunnelAddress:                nil,
@@ -186,7 +244,8 @@ var _ = Describe("BPF Endpoint Manager", func() {
 
 	JustBeforeEach(func() {
 		dp = newMockDataplane()
-		bpfEpMgr = newBPFEndpointManager(
+		bpfEpMgr, _ = newBPFEndpointManager(
+			dp,
 			&Config{
 				Hostname:              "uthost",
 				BPFLogLevel:           "info",
@@ -198,6 +257,9 @@ var _ = Describe("BPF Endpoint Manager", func() {
 					EndpointToHostAction: endpointToHostAction,
 				},
 				BPFExtToServiceConnmark: 0,
+				FeatureDetectOverrides: map[string]string{
+					"BPFConnectTimeLoadBalancingWorkaround": "enabled",
+				},
 			},
 			bpfMapContext,
 			fibLookupEnabled,
@@ -212,7 +274,6 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			enableTcpStats,
 		)
 		bpfEpMgr.Features = environment.NewFeatureDetector(nil).GetFeatures()
-		bpfEpMgr.dp = dp
 	})
 
 	It("exists", func() {
@@ -224,6 +285,9 @@ var _ = Describe("BPF Endpoint Manager", func() {
 			bpfEpMgr.OnUpdate(&ifaceUpdate{Name: name, State: state, Index: index})
 			err := bpfEpMgr.CompleteDeferredWork()
 			Expect(err).NotTo(HaveOccurred())
+			if state == ifacemonitor.StateUp {
+				Expect(ifStateMap.ContainsKey(ifstate.NewKey(uint32(index)).AsBytes())).To(BeTrue())
+			}
 		}
 	}
 
@@ -377,7 +441,10 @@ var _ = Describe("BPF Endpoint Manager", func() {
 
 			It("stores host endpoint for eth0", func() {
 				Expect(bpfEpMgr.hostIfaceToEpMap["eth0"]).To(Equal(hostEp))
-				Expect(bpfEpMgr.policiesToWorkloads["default.mypolicy"]).To(HaveKey("eth0"))
+				Expect(bpfEpMgr.policiesToWorkloads[proto.PolicyID{
+					Tier: "default",
+					Name: "default.mypolicy",
+				}]).To(HaveKey("eth0"))
 
 				var eth0I, eth0E, eth0X *polprog.Rules
 
@@ -424,7 +491,10 @@ var _ = Describe("BPF Endpoint Manager", func() {
 
 			It("stores host endpoint for eth0", func() {
 				Expect(bpfEpMgr.hostIfaceToEpMap["eth0"]).To(Equal(hostEp))
-				Expect(bpfEpMgr.policiesToWorkloads["default.mypolicy"]).To(HaveKey("eth0"))
+				Expect(bpfEpMgr.policiesToWorkloads[proto.PolicyID{
+					Tier: "default",
+					Name: "default.mypolicy",
+				}]).To(HaveKey("eth0"))
 			})
 		})
 	})
@@ -440,7 +510,10 @@ var _ = Describe("BPF Endpoint Manager", func() {
 
 			It("stores host endpoint for eth0", func() {
 				Expect(bpfEpMgr.hostIfaceToEpMap["eth0"]).To(Equal(hostEp))
-				Expect(bpfEpMgr.policiesToWorkloads["default.mypolicy"]).To(HaveKey("eth0"))
+				Expect(bpfEpMgr.policiesToWorkloads[proto.PolicyID{
+					Tier: "default",
+					Name: "default.mypolicy",
+				}]).To(HaveKey("eth0"))
 			})
 		})
 	})
@@ -456,7 +529,10 @@ var _ = Describe("BPF Endpoint Manager", func() {
 
 			It("stores host endpoint for eth0", func() {
 				Expect(bpfEpMgr.hostIfaceToEpMap["eth0"]).To(Equal(hostEp))
-				Expect(bpfEpMgr.policiesToWorkloads["default.mypolicy"]).To(HaveKey("eth0"))
+				Expect(bpfEpMgr.policiesToWorkloads[proto.PolicyID{
+					Tier: "default",
+					Name: "default.mypolicy",
+				}]).To(HaveKey("eth0"))
 			})
 
 			Context("with eth0 down", func() {
@@ -464,7 +540,10 @@ var _ = Describe("BPF Endpoint Manager", func() {
 
 				It("clears host endpoint for eth0", func() {
 					Expect(bpfEpMgr.hostIfaceToEpMap).To(BeEmpty())
-					Expect(bpfEpMgr.policiesToWorkloads["default.mypolicy"]).NotTo(HaveKey("eth0"))
+					Expect(bpfEpMgr.policiesToWorkloads[proto.PolicyID{
+						Tier: "default",
+						Name: "default.mypolicy",
+					}]).NotTo(HaveKey("eth0"))
 				})
 			})
 			Context("with eth0 deleted", func() {
@@ -472,17 +551,101 @@ var _ = Describe("BPF Endpoint Manager", func() {
 
 				It("clears host endpoint for eth0", func() {
 					Expect(bpfEpMgr.hostIfaceToEpMap).To(BeEmpty())
-					Expect(bpfEpMgr.policiesToWorkloads["default.mypolicy"]).NotTo(HaveKey("eth0"))
+					Expect(bpfEpMgr.policiesToWorkloads[proto.PolicyID{
+						Tier: "default",
+						Name: "default.mypolicy",
+					}]).NotTo(HaveKey("eth0"))
 				})
 			})
-			Context("with eth0 deleted", func() {
-				JustBeforeEach(genIfaceUpdate("eth0", ifacemonitor.StateNotPresent, 10))
+		})
+	})
 
-				It("clears host endpoint for eth0", func() {
-					Expect(bpfEpMgr.hostIfaceToEpMap).To(BeEmpty())
-					Expect(bpfEpMgr.policiesToWorkloads["default.mypolicy"]).NotTo(HaveKey("eth0"))
-				})
+	Describe("bpfnatip", func() {
+		It("should program the routes reflecting service state", func() {
+			bpfEpMgr.OnUpdate(&proto.ServiceUpdate{
+				Name:      "service",
+				Namespace: "test",
+				ClusterIp: "1.2.3.4",
 			})
+			err := bpfEpMgr.CompleteDeferredWork()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(dp.routes).To(HaveLen(1))
+			Expect(dp.routes).To(HaveKey("1.2.3.4"))
+
+			bpfEpMgr.OnUpdate(&proto.ServiceUpdate{
+				Name:           "service",
+				Namespace:      "test",
+				ClusterIp:      "1.2.3.4",
+				LoadbalancerIp: "5.6.7.8",
+			})
+			err = bpfEpMgr.CompleteDeferredWork()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(dp.routes).To(HaveLen(2))
+			Expect(dp.routes).To(HaveKey("1.2.3.4"))
+			Expect(dp.routes).To(HaveKey("5.6.7.8"))
+
+			bpfEpMgr.OnUpdate(&proto.ServiceUpdate{
+				Name:           "service",
+				Namespace:      "test",
+				ClusterIp:      "1.2.3.4",
+				LoadbalancerIp: "5.6.7.8",
+				ExternalIps:    []string{"1.0.0.1", "1.0.0.2"},
+			})
+			err = bpfEpMgr.CompleteDeferredWork()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(dp.routes).To(HaveLen(4))
+			Expect(dp.routes).To(HaveKey("1.2.3.4"))
+			Expect(dp.routes).To(HaveKey("5.6.7.8"))
+			Expect(dp.routes).To(HaveKey("1.0.0.1"))
+			Expect(dp.routes).To(HaveKey("1.0.0.2"))
+
+			bpfEpMgr.OnUpdate(&proto.ServiceUpdate{
+				Name:      "service",
+				Namespace: "test",
+				ClusterIp: "1.2.3.4",
+			})
+			err = bpfEpMgr.CompleteDeferredWork()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(dp.routes).To(HaveLen(1))
+			Expect(dp.routes).To(HaveKey("1.2.3.4"))
+
+			bpfEpMgr.OnUpdate(&proto.ServiceRemove{
+				Name:      "service",
+				Namespace: "test",
+			})
+			err = bpfEpMgr.CompleteDeferredWork()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(dp.routes).To(HaveLen(0))
+
+			dp.setErr()
+			bpfEpMgr.OnUpdate(&proto.ServiceUpdate{
+				Name:           "service",
+				Namespace:      "test",
+				ClusterIp:      "1.2.3.4",
+				LoadbalancerIp: "5.6.7.8",
+			})
+			err = bpfEpMgr.CompleteDeferredWork()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(dp.routes).To(HaveLen(1))
+			Expect(dp.routes).To(HaveKey("5.6.7.8"))
+			err = bpfEpMgr.CompleteDeferredWork()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(dp.routes).To(HaveLen(2))
+			Expect(dp.routes).To(HaveKey("1.2.3.4"))
+			Expect(dp.routes).To(HaveKey("5.6.7.8"))
+
+			dp.setErr()
+			bpfEpMgr.OnUpdate(&proto.ServiceRemove{
+				Name:      "service",
+				Namespace: "test",
+			})
+			err = bpfEpMgr.CompleteDeferredWork()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(dp.routes).To(HaveLen(1))
+			Expect(dp.routes).To(HaveKey("1.2.3.4"))
+			err = bpfEpMgr.CompleteDeferredWork()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(dp.routes).To(HaveLen(0))
 		})
 	})
 })

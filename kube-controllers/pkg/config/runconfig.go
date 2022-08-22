@@ -43,6 +43,9 @@ import (
 
 var title = cases.Title(language.English)
 
+// Export for testing purposes
+var DefaultKCC *v3.KubeControllersConfiguration
+
 const datastoreBackoff = time.Second
 
 // RunConfig represents the configuration for all controllers and includes

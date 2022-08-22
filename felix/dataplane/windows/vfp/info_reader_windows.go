@@ -35,7 +35,7 @@ type EndpointEventHandler struct {
 	endpoints []string
 
 	// epSetWithPolicyUpdate stores set of endpoint ids whose policies has been updated.
-	epSetWithPolicyUpdate set.Set
+	epSetWithPolicyUpdate set.Set[string]
 
 	inSync bool
 
@@ -68,8 +68,8 @@ func (h *EndpointEventHandler) processUpdates(vfpOps *vfpctrl.VfpOperations) {
 
 	vfpOps.HandleEndpointEvent(vfpctrl.DPEventEndpointsUpdated(h.endpoints))
 
-	h.epSetWithPolicyUpdate.Iter(func(item interface{}) error {
-		vfpOps.HandleEndpointEvent(vfpctrl.DPEventPolicyUpdated(item.(string)))
+	h.epSetWithPolicyUpdate.Iter(func(item string) error {
+		vfpOps.HandleEndpointEvent(vfpctrl.DPEventPolicyUpdated(item))
 		return set.RemoveItem
 	})
 	h.inSync = true
@@ -124,7 +124,7 @@ func NewInfoReader(lookupsCache *calc.LookupsCache, period time.Duration) *InfoR
 		bufferedConntracks: []collector.ConntrackInfo{},
 		epEventHandler: &EndpointEventHandler{
 			endpoints:             []string{},
-			epSetWithPolicyUpdate: set.New(),
+			epSetWithPolicyUpdate: set.New[string](),
 		},
 	}
 }

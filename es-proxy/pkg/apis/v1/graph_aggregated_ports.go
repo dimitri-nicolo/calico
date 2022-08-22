@@ -34,7 +34,7 @@ func (p *AggregatedProtoPorts) Combine(p2 *AggregatedProtoPorts) *AggregatedProt
 	// Determine the full set of protocols that are explicitly defined.
 	nodeProtoPorts := map[string]AggregatedPorts{}
 	newProtoPorts := map[string]AggregatedPorts{}
-	protoset := set.New()
+	protoset := set.New[string]()
 	var protos []string
 	for i := range p2.ProtoPorts {
 		newProtoPorts[p2.ProtoPorts[i].Protocol] = p2.ProtoPorts[i]

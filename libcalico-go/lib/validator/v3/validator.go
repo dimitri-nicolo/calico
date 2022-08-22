@@ -324,6 +324,7 @@ func init() {
 	registerStructValidator(validate, validateICMPFields, api.ICMPFields{})
 	registerStructValidator(validate, validateIPPoolSpec, api.IPPoolSpec{})
 	registerStructValidator(validate, validateNodeSpec, libapi.NodeSpec{})
+	registerStructValidator(validate, validateIPAMConfigSpec, libapi.IPAMConfigSpec{})
 	registerStructValidator(validate, validateObjectMeta, metav1.ObjectMeta{})
 	registerStructValidator(validate, validateTier, api.Tier{})
 	registerStructValidator(validate, validateUISettingsGroup, api.UISettingsGroup{})
@@ -898,7 +899,7 @@ func validateKeyValueList(fl validator.FieldLevel) bool {
 		return true
 	}
 
-	var rex = regexp.MustCompile("\\s*(\\w+)=(.*)")
+	rex := regexp.MustCompile("\\s*(\\w+)=(.*)")
 	for _, item := range strings.Split(n, ",") {
 		if item == "" {
 			// Accept empty items (e.g tailing ",")
@@ -1657,6 +1658,15 @@ func validateEntityRule(structLevel validator.StructLevel) {
 			structLevel.ReportError(reflect.ValueOf(rule.Services),
 				"Services field", "", reason("cannot specify Nets/NotNets and Services on the same rule"), "")
 		}
+	}
+}
+
+func validateIPAMConfigSpec(structLevel validator.StructLevel) {
+	ics := structLevel.Current().Interface().(libapi.IPAMConfigSpec)
+
+	if ics.MaxBlocksPerHost < 0 {
+		structLevel.ReportError(reflect.ValueOf(ics.MaxBlocksPerHost), "MaxBlocksPerHost", "",
+			reason("must be greater than or equal to 0"), "")
 	}
 }
 
@@ -2584,7 +2594,6 @@ func validateRouteTableIDRange(structLevel validator.StructLevel) {
 	if includesReserved {
 		log.Infof("Felix route-table range includes reserved Linux tables, values 253-255 will be ignored.")
 	}
-
 }
 
 func validateBGPConfigurationSpec(structLevel validator.StructLevel) {

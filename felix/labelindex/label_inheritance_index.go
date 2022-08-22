@@ -16,31 +16,31 @@
 // items (currently WorkloadEndpoints/HostEndpoint) it has been told about start (or stop) matching
 // the label selectors (which are extracted from the active policy rules) it has been told about.
 //
-// Label inheritance
+// # Label inheritance
 //
 // As the name suggests, the InheritIndex supports the notion of label inheritance.  In our
 // data-model:
 //
-//     - endpoints have their own labels; these take priority over any inherited labels
-//     - endpoints also inherit labels from any explicitly-named profiles in their data
-//     - profiles have explicit labels
+//   - endpoints have their own labels; these take priority over any inherited labels
+//   - endpoints also inherit labels from any explicitly-named profiles in their data
+//   - profiles have explicit labels
 //
 // For example, suppose an endpoint had labels
 //
-//     {"a": "ep-a", "b": "ep-b"}
+//	{"a": "ep-a", "b": "ep-b"}
 //
 // and it explicitly referenced profile "profile-A", which had these labels:
 //
-//     {"a": "prof-a", "c": "prof-c", "d": "prof-d"}
+//	{"a": "prof-a", "c": "prof-c", "d": "prof-d"}
 //
 // then the resulting labels for the endpoint after considering inheritance would be:
 //
-//     {
-//         "a": "ep-a",    // Explicit endpoint label "wins" over profile labels.
-//         "b": "ep-b",
-//         "c": "prof-c",  // Profile label gets inherited.
-//         "d": "prof-d",
-//     }
+//	{
+//	    "a": "ep-a",    // Explicit endpoint label "wins" over profile labels.
+//	    "b": "ep-b",
+//	    "c": "prof-c",  // Profile label gets inherited.
+//	    "d": "prof-d",
+//	}
 package labelindex
 
 import (
@@ -56,6 +56,8 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/selector/parser"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
+
+// FIXME make InheritIndex generic
 
 // itemData holds the data that we know about a particular item (i.e. a workload or host endpoint).
 // In particular, it holds it current explicitly-assigned labels and a pointer to the parent data
@@ -85,7 +87,7 @@ func (itemData *itemData) Get(labelName string) (value string, present bool) {
 type parentData struct {
 	id      string
 	labels  map[string]string
-	itemIDs set.Set
+	itemIDs set.Set[any]
 }
 
 type MatchCallback func(selId, labelId interface{})
@@ -96,14 +98,14 @@ type InheritIndex struct {
 	selectorsById        map[interface{}]selector.Selector
 
 	// Current matches.
-	selIdsByLabelId map[interface{}]set.Set
-	labelIdsBySelId map[interface{}]set.Set
+	selIdsByLabelId map[interface{}]set.Set[any]
+	labelIdsBySelId map[interface{}]set.Set[any]
 
 	// Callback functions
 	OnMatchStarted MatchCallback
 	OnMatchStopped MatchCallback
 
-	dirtyItemIDs set.Set
+	dirtyItemIDs set.Set[any]
 }
 
 func NewInheritIndex(onMatchStarted, onMatchStopped MatchCallback) *InheritIndex {
@@ -113,14 +115,14 @@ func NewInheritIndex(onMatchStarted, onMatchStopped MatchCallback) *InheritIndex
 		parentDataByParentID: map[string]*parentData{},
 		selectorsById:        map[interface{}]selector.Selector{},
 
-		selIdsByLabelId: map[interface{}]set.Set{},
-		labelIdsBySelId: map[interface{}]set.Set{},
+		selIdsByLabelId: map[interface{}]set.Set[any]{},
+		labelIdsBySelId: map[interface{}]set.Set[any]{},
 
 		// Callback functions
 		OnMatchStarted: onMatchStarted,
 		OnMatchStopped: onMatchStopped,
 
-		dirtyItemIDs: set.New(),
+		dirtyItemIDs: set.NewBoxed[any](),
 	}
 	return &inheritIDx
 }
@@ -273,7 +275,7 @@ func (idx *InheritIndex) onItemParentsUpdate(id interface{}, oldParents, newPare
 	// Calculate the current set of parent IDs so we can skip deletion of parents that are still
 	// present.  We need to do this to avoid removing a still-current parent via
 	// discardParentIfEmpty().
-	currentParentIDs := set.New()
+	currentParentIDs := set.NewBoxed[any]()
 	for _, parentData := range newParents {
 		currentParentIDs.Add(parentData.id)
 	}
@@ -292,7 +294,7 @@ func (idx *InheritIndex) onItemParentsUpdate(id interface{}, oldParents, newPare
 
 	for _, parent := range newParents {
 		if parent.itemIDs == nil {
-			parent.itemIDs = set.New()
+			parent.itemIDs = set.NewBoxed[any]()
 		}
 		parent.itemIDs.Add(id)
 	}
@@ -384,7 +386,7 @@ func (idx *InheritIndex) updateMatches(
 func (idx *InheritIndex) storeMatch(selId, labelId interface{}) {
 	labelIds := idx.labelIdsBySelId[selId]
 	if labelIds == nil {
-		labelIds = set.New()
+		labelIds = set.NewBoxed[any]()
 		idx.labelIdsBySelId[selId] = labelIds
 	}
 	previouslyMatched := labelIds.Contains(labelId)
@@ -394,7 +396,7 @@ func (idx *InheritIndex) storeMatch(selId, labelId interface{}) {
 
 		selIDs, ok := idx.selIdsByLabelId[labelId]
 		if !ok {
-			selIDs = set.New()
+			selIDs = set.NewBoxed[any]()
 			idx.selIdsByLabelId[labelId] = selIDs
 		}
 		selIDs.Add(selId)

@@ -543,8 +543,8 @@ type FlowStats struct {
 	FlowReportedStats
 	FlowReportedTCPStats
 	flowReferences
-	processIDs  set.Set
-	processArgs set.Set
+	processIDs  set.Set[string]
+	processArgs set.Set[string]
 
 	// Reset Process IDs  on the next metric update aggregation cycle. this ensures that we only clear
 	// process ID information when we receive a new metric update.
@@ -566,10 +566,10 @@ func NewFlowStats(mu MetricUpdate) FlowStats {
 		flowsCompletedRefs.AddWithValue(mu.tuple, mu.natOutgoingPort)
 	}
 
-	pids := set.New()
+	pids := set.New[string]()
 	pids.Add(strconv.Itoa(mu.processID))
 
-	processArgs := set.New()
+	processArgs := set.New[string]()
 	if mu.processArgs != "" {
 		processArgs.Add(mu.processArgs)
 	}
@@ -931,8 +931,8 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 			pid = flowLogFieldNotIncluded
 		} else if numPids == 1 {
 			// Get the first and only PID.
-			stats.processIDs.Iter(func(item interface{}) error {
-				pid = item.(string)
+			stats.processIDs.Iter(func(p string) error {
+				pid = p
 				return set.StopIteration
 			})
 		} else {
@@ -953,9 +953,9 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 				// and other flow has args read from /proc/pid/cmdline. In this
 				// we just show a single arg which is longest, with numProcessArgs
 				// set to 1.
-				stats.processArgs.Iter(func(item interface{}) error {
-					if len(item.(string)) > len(tempStr) {
-						tempStr = item.(string)
+				stats.processArgs.Iter(func(item string) error {
+					if len(item) > len(tempStr) {
+						tempStr = item
 					}
 					return nil
 				})
@@ -963,14 +963,14 @@ func (f *FlowStatsByProcess) toFlowProcessReportedStats() []FlowProcessReportedS
 				return []string{tempStr}
 			}
 			if numProcessArgs == 1 || numAllowedArgs == 1 {
-				stats.processArgs.Iter(func(item interface{}) error {
-					aList = append(aList, item.(string))
+				stats.processArgs.Iter(func(item string) error {
+					aList = append(aList, item)
 					return set.StopIteration
 				})
 			} else {
 				argCount := 0
-				stats.processArgs.Iter(func(item interface{}) error {
-					aList = append(aList, item.(string))
+				stats.processArgs.Iter(func(item string) error {
+					aList = append(aList, item)
 					argCount = argCount + 1
 					if argCount == numAllowedArgs {
 						return set.StopIteration

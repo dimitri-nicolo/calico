@@ -228,7 +228,8 @@ func (a *allocation) isHostOwnedAddress() bool {
 	vxlanV6 := a.attrs[ipam.AttributeType] == ipam.AttributeTypeVXLANV6
 	wg := a.attrs[ipam.AttributeType] == ipam.AttributeTypeWireguard
 	awsIP := a.attrs[ipam.AttributeType] == ipam.AttributeTypeAWSSecondary
-	return ipip || vxlan || vxlanV6 || wg || awsIP
+	wgV6 := a.attrs[ipam.AttributeType] == ipam.AttributeTypeWireguardV6
+	return ipip || vxlan || vxlanV6 || wg || wgV6 || awsIP
 }
 
 func (a *allocation) isWindowsReserved() bool {

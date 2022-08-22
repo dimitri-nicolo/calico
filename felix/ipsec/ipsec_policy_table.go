@@ -85,7 +85,7 @@ type PolicyTable struct {
 	resyncRequired bool
 
 	pendingRuleUpdates map[PolicySelector]*PolicyRule
-	pendingDeletions   set.Set
+	pendingDeletions   set.Set[PolicySelector]
 
 	selectorToRule map[PolicySelector]*PolicyRule
 
@@ -134,7 +134,7 @@ func NewPolicyTableWithShims(
 		ipsecEnabled:       ipsecEnabled,
 		resyncRequired:     true,
 		pendingRuleUpdates: map[PolicySelector]*PolicyRule{},
-		pendingDeletions:   set.New(),
+		pendingDeletions:   set.New[PolicySelector](),
 		selectorToRule:     map[PolicySelector]*PolicyRule{},
 		nlHandleFactory:    nlHandleFactory,
 		sleep:              sleep,
@@ -462,8 +462,7 @@ func (p *PolicyTable) tryUpdates() (err error) {
 		log.WithField("numUpdates", p.pendingDeletions.Len()).Info("Applying IPsec policy deletions")
 	}
 	var lastErr error
-	p.pendingDeletions.Iter(func(item interface{}) error {
-		sel := item.(PolicySelector)
+	p.pendingDeletions.Iter(func(sel PolicySelector) error {
 		xPol := netlink.XfrmPolicy{}
 		sel.Populate(&xPol)
 		p.selectorToRule[sel].Populate(&xPol, p.ourReqID)
@@ -514,8 +513,8 @@ func (p *PolicyTable) DumpStateToLog() {
 	for sel, pol := range p.pendingRuleUpdates {
 		log.Infof("Pending policy update: %v %v", sel, pol)
 	}
-	p.pendingDeletions.Iter(func(item interface{}) error {
-		log.Infof("Pending deletion: %v", item)
+	p.pendingDeletions.Iter(func(sel PolicySelector) error {
+		log.Infof("Pending deletion: %v", sel)
 		return nil
 	})
 	pols, err := p.nl().XfrmPolicyList(netlink.FAMILY_V4)

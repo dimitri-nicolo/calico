@@ -65,7 +65,7 @@ type ActiveRulesCalculator struct {
 	allProfileRules map[string]*model.ProfileRules
 
 	// Caches for ALP policies for stat collector.
-	allALPPolicies set.Set
+	allALPPolicies set.Set[model.PolicyKey]
 
 	// Policy/profile ID to matching endpoint sets.
 	policyIDToEndpointKeys  multidict.IfaceToIface
@@ -81,7 +81,7 @@ type ActiveRulesCalculator struct {
 	datastoreInSync bool
 	// Set containing the names of any profiles that were missing during the resync.  Used to
 	// log out those profiles at the end of the resync.
-	missingProfiles set.Set
+	missingProfiles set.Set[string]
 
 	// Callback objects.
 	RuleScanner           ruleScanner
@@ -99,12 +99,12 @@ func NewActiveRulesCalculator() *ActiveRulesCalculator {
 		allProfileRules: make(map[string]*model.ProfileRules),
 		allTiers:        make(map[string]*model.Tier),
 
-		allALPPolicies: set.New(),
+		allALPPolicies: set.New[model.PolicyKey](),
 
 		// Policy/profile ID to matching endpoint sets.
 		policyIDToEndpointKeys:  multidict.NewIfaceToIface(),
 		profileIDToEndpointKeys: multidict.NewIfaceToIface(),
-		missingProfiles:         set.New(),
+		missingProfiles:         set.New[string](),
 
 		// Cache of profile IDs by local endpoint.
 		endpointKeyToProfileIDs: NewEndpointKeyToProfileIDMap(),
@@ -259,10 +259,10 @@ func (arc *ActiveRulesCalculator) updateStats() {
 	}
 
 	// Get the set of all endpoints matching ALP Policy
-	endpoints := set.New()
-	arc.allALPPolicies.Iter(func(polID interface{}) error {
+	endpoints := set.New[model.WorkloadEndpointKey]()
+	arc.allALPPolicies.Iter(func(polID model.PolicyKey) error {
 		arc.policyIDToEndpointKeys.Iter(polID, func(epKey interface{}) {
-			endpoints.Add(epKey)
+			endpoints.Add(epKey.(model.WorkloadEndpointKey))
 		})
 		return nil
 	})
@@ -276,8 +276,8 @@ func (arc *ActiveRulesCalculator) OnStatusUpdate(status api.SyncStatus) {
 		if arc.missingProfiles.Len() > 0 {
 			// Log out any profiles that were missing during the resync.  We defer
 			// this until now because we may hear about profiles or endpoints first.
-			arc.missingProfiles.Iter(func(item interface{}) error {
-				log.WithField("profileID", item).Warning(
+			arc.missingProfiles.Iter(func(profileID string) error {
+				log.WithField("profileID", profileID).Warning(
 					"End of resync: local endpoints refer to missing " +
 						"or invalid profile, profile's rules replaced " +
 						"with drop rules.")
@@ -349,12 +349,10 @@ func (arc *ActiveRulesCalculator) onMatchStopped(selID, labelId interface{}) {
 	arc.PolicyMatchListener.OnPolicyMatchStopped(polKey, labelId)
 }
 
-var (
-	DummyDropRules = model.ProfileRules{
-		InboundRules:  []model.Rule{{Action: "deny"}},
-		OutboundRules: []model.Rule{{Action: "deny"}},
-	}
-)
+var DummyDropRules = model.ProfileRules{
+	InboundRules:  []model.Rule{{Action: "deny"}},
+	OutboundRules: []model.Rule{{Action: "deny"}},
+}
 
 func (arc *ActiveRulesCalculator) sendProfileUpdate(profileID string) {
 	active := arc.profileIDToEndpointKeys.ContainsKey(profileID)

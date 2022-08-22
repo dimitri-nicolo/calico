@@ -30,11 +30,13 @@ enum cali_ct_type {
 #define CALI_CT_FLAG_TRUST_DNS	0x10 /* marks connection to a trusted DNS server */
 #define CALI_CT_FLAG_EGRESS_GW	0x20 /* marks flow via an egress gateway to outside cluster */
 #define CALI_CT_FLAG_EXT_LOCAL	0x40 /* marks traffic from external client to a local service */
+#define CALI_CT_FLAG_VIA_NAT_IF	0x80 /* marks connection first seen on the service veth */
+#define CALI_CT_FLAG_BA		0x100 /* marks that src->dst is the B->A leg */
+#define CALI_CT_FLAG_HOST_PSNAT 0x200 /* marks that this is from host port collision resolution */
 
 struct calico_ct_leg {
 	__u64 bytes;
 	__u32 packets;
-
 	__u32 seqno;
 
 	__u32 syn_seen:1;
@@ -70,15 +72,15 @@ struct calico_ct_value {
 	union {
 		// CALI_CT_TYPE_NORMAL and CALI_CT_TYPE_NAT_REV.
 		struct {
-			struct calico_ct_leg a_to_b;	// 24
-			struct calico_ct_leg b_to_a;	// 48
+			struct calico_ct_leg a_to_b; // 24
+			struct calico_ct_leg b_to_a; // 48
 
 			// CALI_CT_TYPE_NAT_REV
-			__u32 tun_ip;			// 72
-			__u32 orig_ip;			// 76
-			__u16 orig_port;		// 80
-			__u16 orig_sport;		// 82
-			__u32 _pad32;			// 84
+			__u32 tun_ip;                      // 72
+			__u32 orig_ip;                     // 76
+			__u16 orig_port;                   // 80
+			__u16 orig_sport;                  // 82
+			__u32 orig_sip;                    // 84
 		};
 
 		// CALI_CT_TYPE_NAT_FWD; key for the CALI_CT_TYPE_NAT_REV entry.
@@ -122,6 +124,7 @@ struct ct_lookup_ctx {
 struct ct_create_ctx {
 	struct __sk_buff *skb;
 	__u8 proto;
+	__be32 orig_src;
 	__be32 src;
 	__be32 orig_dst;
 	__be32 dst;
@@ -178,26 +181,29 @@ enum calico_ct_result_type {
 	CALI_CT_INVALID = 6,
 };
 
-#define CALI_CT_RELATED         0x100
-#define CALI_CT_RPF_FAILED      0x200
-#define CALI_CT_TUN_SRC_CHANGED 0x400
-#define CALI_CT_ALLOW_FROM_SIDE 0x800
-#define CALI_CT_SYN		0x1000
+#define CT_RES_RELATED         0x100
+#define CT_RES_RPF_FAILED      0x200
+#define CT_RES_TUN_SRC_CHANGED 0x400
+#define CT_RES_ALLOW_FROM_SIDE 0x800
+#define CT_RES_SYN		0x1000
+#define CT_RES_CONFIRMED	0x2000
 
 #define ct_result_rc(rc)		((rc) & 0xff)
 #define ct_result_flags(rc)		((rc) & ~0xff)
 #define ct_result_set_rc(val, rc)	((val) = ct_result_flags(val) | (rc))
 #define ct_result_set_flag(val, flags)	((val) |= (flags))
 
-#define ct_result_is_related(rc)	((rc) & CALI_CT_RELATED)
-#define ct_result_rpf_failed(rc)	((rc) & CALI_CT_RPF_FAILED)
-#define ct_result_tun_src_changed(rc)	((rc) & CALI_CT_TUN_SRC_CHANGED)
-#define ct_result_is_syn(rc)		((rc) & CALI_CT_SYN)
+#define ct_result_is_related(rc)	((rc) & CT_RES_RELATED)
+#define ct_result_rpf_failed(rc)	((rc) & CT_RES_RPF_FAILED)
+#define ct_result_tun_src_changed(rc)	((rc) & CT_RES_TUN_SRC_CHANGED)
+#define ct_result_is_syn(rc)		((rc) & CT_RES_SYN)
+#define ct_result_is_confirmed(rc)	((rc) & CT_RES_CONFIRMED)
 
 struct calico_ct_result {
 	__s16 rc;
 	__u16 flags;
 	__be32 nat_ip;
+	__be32 nat_sip;
 	__u16 nat_port;
 	__u16 nat_sport;
 	__be32 tun_ip;
@@ -207,6 +213,7 @@ struct calico_ct_result {
 				* ingress interface index.  For a CT state created by a
 				* packet _from_ the host, it's CT_INVALID_IFINDEX (0).
 				*/
+	__u32 __pad;
 	__u64 prev_ts; /* This is the previous packet's timestamp for the CT entry */
 };
 

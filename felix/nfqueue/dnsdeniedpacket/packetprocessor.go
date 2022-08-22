@@ -95,7 +95,7 @@ const (
 type PacketProcessor interface {
 	Start()
 	Stop()
-	OnIPSetMemberUpdates(newMemberUpdates set.Set)
+	OnIPSetMemberUpdates(newMemberUpdates set.Set[string])
 	DebugKillCurrentNfqueueConnection() error
 	DebugNumPackets(num int) error
 	DebugNumIPs(num int) error
@@ -215,7 +215,7 @@ func (p *packetProcessor) loop(ctx context.Context) {
 
 // OnIPSetMemberUpdates accepts a set of IPs which the packetProcessor uses to decide what, if any, packets should be
 // released from the packetProcessor.
-func (p *packetProcessor) OnIPSetMemberUpdates(newMemberUpdates set.Set) {
+func (p *packetProcessor) OnIPSetMemberUpdates(newMemberUpdates set.Set[string]) {
 	p.handler.onIPSetMemberUpdates(newMemberUpdates)
 }
 
@@ -323,7 +323,7 @@ func (h *handler) OnRelease(id uint32, reason nfqueue.ReleaseReason) {
 
 // onIPSetMemberUpdates accepts a set of IPs which the packetProcessor uses to decide what, if any, packets should be
 // released from the packetProcessor.
-func (h *handler) onIPSetMemberUpdates(newMemberUpdates set.Set) {
+func (h *handler) onIPSetMemberUpdates(newMemberUpdates set.Set[string]) {
 	log.Debugf("IPSet updates containing: %#v", newMemberUpdates)
 	h.lock.Lock()
 	defer h.lock.Unlock()
@@ -392,5 +392,5 @@ type nfqueuePacket struct {
 type ipsetUpdates struct {
 	next       *ipsetUpdates
 	expiryTime time.Time
-	ips        set.Set
+	ips        set.Set[string]
 }

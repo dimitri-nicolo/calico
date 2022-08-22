@@ -77,7 +77,7 @@ type federatedServicesController struct {
 	allServices map[serviceID]*serviceInfo
 
 	// The set of all services whose endpoints need to be recalculated or deleted.
-	dirtyServices set.Set
+	dirtyServices set.Set[serviceID]
 
 	// Syncer callback decoupler ensures syncer callbacks are serialized. This avoids the need
 	// for locking our datastructures.
@@ -101,11 +101,11 @@ type serviceInfo struct {
 	federationConfigErr error
 
 	// The backing services is the set of services that are used to calculate the federated service endpoints.
-	backingServices set.Set
+	backingServices set.Set[serviceID]
 
 	// The set of federated services that this backing service is used by, this is used to determine which federated
 	// services need to be recalculated in the event of an endpoint update.
-	federatedServices set.Set
+	federatedServices set.Set[serviceID]
 }
 
 // serviceID contains the key identifiers for a service (local and remote).
@@ -133,7 +133,7 @@ func NewFederatedServicesController(ctx context.Context, k8sClientset *kubernete
 		k8sClientset:  k8sClientset,
 		inSync:        make(chan struct{}),
 		allServices:   make(map[serviceID]*serviceInfo),
-		dirtyServices: set.New(),
+		dirtyServices: set.New[serviceID](),
 		decoupler:     calc.NewSyncerCallbacksDecoupler(),
 		cfg:           cfg,
 	}
@@ -427,8 +427,8 @@ func (c *federatedServicesController) OnUpdates(updates []bapi.Update) {
 		if entry == nil {
 			// For new entries we need to do some initialization of the structure.
 			entry = &serviceInfo{
-				backingServices:   set.New(),
-				federatedServices: set.New(),
+				backingServices:   set.New[serviceID](),
+				federatedServices: set.New[serviceID](),
 			}
 			c.allServices[id] = entry
 		}
@@ -478,7 +478,7 @@ func (c *federatedServicesController) OnUpdates(updates []bapi.Update) {
 			// service.
 			if changed {
 				clog.Debug("Endpoints entry updated")
-				entry.federatedServices.Iter(func(item interface{}) error {
+				entry.federatedServices.Iter(func(item serviceID) error {
 					clog.Debugf("Marking service as dirty: %#v", item)
 					c.dirtyServices.Add(item)
 					return nil
@@ -563,8 +563,7 @@ func (c *federatedServicesController) OnUpdates(updates []bapi.Update) {
 // endpoint list has changed, or that the associated service has been deleted.
 func (c *federatedServicesController) handleDirtyServices() {
 	log.Debug("Processing modified services")
-	c.dirtyServices.Iter(func(item interface{}) error {
-		fsid := item.(serviceID)
+	c.dirtyServices.Iter(func(fsid serviceID) error {
 		log.Debugf("Processing dirty service: %#v", fsid)
 
 		k := fsid.namespace + "/" + fsid.name
@@ -619,8 +618,7 @@ func (c *federatedServicesController) calculateEndpoints(id serviceID, serviceIn
 	// ports.  Order the services to avoid overly large deltas to the endpoints data, and to ensure a non-changing
 	// update doesn't cause any unnecessary update churn.
 	var subsets []v1.EndpointSubset
-	serviceInfo.backingServices.Iter(func(item interface{}) error {
-		sid := item.(serviceID)
+	serviceInfo.backingServices.Iter(func(sid serviceID) error {
 		if c.allServices[sid].endpoints == nil {
 			// The endpoints data is missing, so nothing to include.
 			return nil

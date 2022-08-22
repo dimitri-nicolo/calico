@@ -45,6 +45,5 @@ func clearSystemData(meta metav1.ObjectMeta) metav1.ObjectMeta {
 		Annotations: meta.Annotations,
 		Labels:      meta.Labels,
 		Finalizers:  meta.Finalizers,
-		ClusterName: meta.ClusterName,
 	}
 }
