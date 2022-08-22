@@ -968,8 +968,9 @@ spec:
   nodeName: %s
   terminationGracePeriodSeconds: %d
   volumes:
-      - flexVolume:
-          driver: nodeagent/uds
+      - hostPath:
+          type: DirectoryOrCreate
+          path: /var/run
         name: policysync
 """ % (egress_cidr, color, name, ns, host, termgraceperiod))
         self.add_cleanup(gateway.delete)
