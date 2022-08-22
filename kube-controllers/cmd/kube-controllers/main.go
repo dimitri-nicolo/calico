@@ -185,7 +185,7 @@ func main() {
 	initCtx, cancelInit := context.WithTimeout(ctx, 60*time.Second)
 	// Loop until context expires or calicoClient is initialized.
 	for {
-		err := calicoClient.EnsureInitialized(initCtx, "", "k8s")
+		err := calicoClient.EnsureInitialized(initCtx, "", "", "k8s")
 		if err != nil {
 			log.WithError(err).Info("Failed to initialize datastore")
 			s.SetReady(
