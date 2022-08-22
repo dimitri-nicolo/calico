@@ -81,7 +81,7 @@ type routeTableGenerator interface {
 		deviceRouteSourceAddress net.IP,
 		deviceRouteProtocol int,
 		removeExternalRoutes bool,
-		opRecorder logutils.OpRecorder) routeTable
+		opRecorder logutils.OpRecorder) routetable.RouteTableInterface
 }
 
 type routeTableFactory struct {
@@ -96,7 +96,7 @@ func (f *routeTableFactory) NewRouteTable(interfacePrefixes []string,
 	deviceRouteSourceAddress net.IP,
 	deviceRouteProtocol int,
 	removeExternalRoutes bool,
-	opRecorder logutils.OpRecorder) routeTable {
+	opRecorder logutils.OpRecorder) routetable.RouteTableInterface {
 
 	f.count += 1
 	return routetable.New(interfacePrefixes,
@@ -307,7 +307,7 @@ type egressIPManager struct {
 	initialKernelState *initialKernelState
 
 	// route table for programming L2 routes.
-	l2Table routeTable
+	l2Table routetable.RouteTableInterface
 
 	// rrGenerator dynamically creates routeRules instance to program route rules.
 	rrGenerator routeRulesGenerator
@@ -324,7 +324,7 @@ type egressIPManager struct {
 	// We could have code to free the unused routetable if it is inSync. However, since
 	// the total number of routetables is limited, we may just avoid the complexity.
 	// Just keep it and it could be reused by another EgressIPSet.
-	tableIndexToRouteTable map[int]routeTable
+	tableIndexToRouteTable map[int]routetable.RouteTableInterface
 	// Tracks next hops for all route tables in use.
 	tableIndexToNextHops map[int][]string
 
@@ -424,7 +424,7 @@ func newEgressIPManager(
 }
 
 func newEgressIPManagerWithShims(
-	mainTable routeTable,
+	mainTable routetable.RouteTableInterface,
 	rrGenerator routeRulesGenerator,
 	rtGenerator routeTableGenerator,
 	tableIndexSet set.Set[int],
@@ -446,7 +446,7 @@ func newEgressIPManagerWithShims(
 		initialKernelState:         newInitialKernelState(),
 		tableIndexSet:              tableIndexSet,
 		tableIndexStack:            tableIndexStack,
-		tableIndexToRouteTable:     make(map[int]routeTable),
+		tableIndexToRouteTable:     make(map[int]routetable.RouteTableInterface),
 		tableIndexToNextHops:       make(map[int][]string),
 		pendingWorkloadUpdates:     make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
 		ipSetIDToGateways:          make(map[string]gatewaysByIP),
@@ -1105,7 +1105,7 @@ func (m *egressIPManager) setL2Routes() {
 }
 
 // Set L3 routes for an EgressIPSet.
-func (m *egressIPManager) setL3Routes(rTable routeTable, ips set.Set[string]) {
+func (m *egressIPManager) setL3Routes(rTable routetable.RouteTableInterface, ips set.Set[string]) {
 	logCxt := log.WithField("table", rTable.Index())
 	var multipath []routetable.NextHop
 
@@ -1211,7 +1211,7 @@ func (m *egressIPManager) deleteWorkloadRuleAndTable(id proto.WorkloadEndpointID
 	}
 }
 
-func (m *egressIPManager) newRouteTable(tableNum int) routeTable {
+func (m *egressIPManager) newRouteTable(tableNum int) routetable.RouteTableInterface {
 	return m.rtGenerator.NewRouteTable(
 		[]string{"^" + m.vxlanDevice + "$", routetable.InterfaceNone},
 		4,
@@ -1322,10 +1322,10 @@ func (m *egressIPManager) getTableNextHops(index int) ([]string, error) {
 	return hopIPs, nil
 }
 
-func (m *egressIPManager) GetRouteTableSyncers() []routeTableSyncer {
-	rts := []routeTableSyncer{m.l2Table.(routeTableSyncer)}
+func (m *egressIPManager) GetRouteTableSyncers() []routetable.RouteTableSyncer {
+	rts := []routetable.RouteTableSyncer{m.l2Table}
 	for _, t := range m.tableIndexToRouteTable {
-		rts = append(rts, t.(routeTableSyncer))
+		rts = append(rts, t.(routetable.RouteTableSyncer))
 	}
 
 	return rts

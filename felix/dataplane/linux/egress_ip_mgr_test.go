@@ -1305,7 +1305,7 @@ func (f *mockRouteTableFactory) NewRouteTable(interfacePrefixes []string,
 	deviceRouteSourceAddress net.IP,
 	deviceRouteProtocol int,
 	removeExternalRoutes bool,
-	opRecorder logutils.OpRecorder) routeTable {
+	opRecorder logutils.OpRecorder) routetable.RouteTableInterface {
 
 	table := &mockRouteTable{
 		index:           tableIndex,

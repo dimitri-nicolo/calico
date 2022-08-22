@@ -58,8 +58,8 @@ type awsIPManager struct {
 
 	// Dataplane state.
 
-	routeTablesByTableIdx  map[int]routeTable
-	routeTablesByIfaceName map[string]routeTable
+	routeTablesByTableIdx  map[int]routetable.RouteTableInterface
+	routeTablesByIfaceName map[string]routetable.RouteTableInterface
 	freeRouteTableIndexes  []int
 	routeRules             routeRules
 	routeRulesInDataplane  map[awsRuleKey]*routerule.Rule
@@ -132,8 +132,8 @@ func NewAWSIPManager(
 		workloadEndpointIDsByCIDR: map[ip.CIDR]set.Set[proto.WorkloadEndpointID]{},
 
 		freeRouteTableIndexes:  routeTableIndexes,
-		routeTablesByIfaceName: map[string]routeTable{},
-		routeTablesByTableIdx:  map[int]routeTable{},
+		routeTablesByIfaceName: map[string]routetable.RouteTableInterface{},
+		routeTablesByTableIdx:  map[int]routetable.RouteTableInterface{},
 		ifaceNameToPrimaryIP:   map[string]string{},
 		ifaceNameToIfaceIdx:    map[string]int{},
 
@@ -804,7 +804,7 @@ func (a *awsIPManager) addIfaceActiveRules(activeRules set.Set[awsRuleKey], awsE
 }
 
 // programIfaceRoutes updates the routing table for the given interface with the correct routes.
-func (a *awsIPManager) programIfaceRoutes(rt routeTable, ifaceName string) {
+func (a *awsIPManager) programIfaceRoutes(rt routetable.RouteTableInterface, ifaceName string) {
 	// Add a default route via the AWS subnet's gateway.  This is how traffic to the outside world gets
 	// routed properly.
 	routes := []routetable.Target{
@@ -889,7 +889,7 @@ func (a *awsIPManager) updateRouteRules(activeRuleKeys set.Set[awsRuleKey]) {
 	})
 }
 
-func (a *awsIPManager) getOrAllocRoutingTable(ifaceName string) routeTable {
+func (a *awsIPManager) getOrAllocRoutingTable(ifaceName string) routetable.RouteTableInterface {
 	if rt, ok := a.routeTablesByIfaceName[ifaceName]; !ok {
 		logrus.WithField("ifaceName", ifaceName).Info("Making routing table for AWS interface.")
 		tableIndex := a.claimTableID()
@@ -923,8 +923,8 @@ func (a *awsIPManager) releaseRoutingTableID(id int) {
 	a.freeRouteTableIndexes = append(a.freeRouteTableIndexes, id)
 }
 
-func (a *awsIPManager) GetRouteTableSyncers() []routeTableSyncer {
-	var rts []routeTableSyncer
+func (a *awsIPManager) GetRouteTableSyncers() []routetable.RouteTableSyncer {
+	var rts []routetable.RouteTableSyncer
 	for _, t := range a.routeTablesByTableIdx {
 		rts = append(rts, t)
 	}
@@ -962,7 +962,7 @@ type routeTableNewFn func(
 	removeExternalRoutes bool,
 	tableIndex int,
 	opReporter logutils.OpRecorder,
-) routeTable
+) routetable.RouteTableInterface
 
 type awsNetlinkIface interface {
 	LinkList() ([]netlink.Link, error)
@@ -1000,7 +1000,7 @@ func realRouteTableNew(
 	removeExternalRoutes bool,
 	tableIndex int,
 	opReporter logutils.OpRecorder,
-) routeTable {
+) routetable.RouteTableInterface {
 	return routetable.New(interfaceRegexes, ipVersion, vxlan, netlinkTimeout, deviceRouteSourceAddress,
 		deviceRouteProtocol, removeExternalRoutes, tableIndex, opReporter)
 }

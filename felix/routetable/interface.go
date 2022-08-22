@@ -34,4 +34,7 @@ type RouteTableInterface interface {
 	SetL2Routes(ifaceName string, targets []L2Target)
 	RouteRemove(ifaceName string, cidr ip.CIDR)
 	RouteUpdate(ifaceName string, target Target)
+	Index() int
+	QueueResyncIface(ifaceName string)
+	ReadRoutesFromKernel(ifaceName string) ([]Target, error)
 }
