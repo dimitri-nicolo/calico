@@ -32,7 +32,7 @@ import (
 
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 
-	aapi "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
+	aapi "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // NewBlockAffinityStorage creates a new libcalico-based storage.Interface implementation for BlockAffinity

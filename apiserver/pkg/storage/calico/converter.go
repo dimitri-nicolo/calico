@@ -198,7 +198,7 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 	// the v3 client is used for mostly internal operations.
 	case *libapi.BlockAffinity:
 		lcg := libcalicoObject.(*libapi.BlockAffinity)
-		aapi := &aapi.BlockAffinity{}
+		aapi := &v3.BlockAffinity{}
 		BlockAffinityConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
 	default:
