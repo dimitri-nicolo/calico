@@ -177,15 +177,38 @@ func main() {
 	// Create the context.
 	ctx, cancel := context.WithCancel(context.Background())
 
-	if !cfg.DoNotInitializeCalico {
-		log.Info("Ensuring Calico datastore is initialized")
-		initCtx, cancelInit := context.WithTimeout(ctx, 10*time.Second)
-		defer cancelInit()
-		err = calicoClient.EnsureInitialized(initCtx, "", "", "k8s")
+	// Create the status file. We will only update it if we have healthchecks enabled.
+	s := status.New(statusFile)
+
+	log.Info("Ensuring Calico datastore is initialized")
+	s.SetReady("Startup", false, "initialized to false")
+	initCtx, cancelInit := context.WithTimeout(ctx, 60*time.Second)
+	// Loop until context expires or calicoClient is initialized.
+	for {
+		err := calicoClient.EnsureInitialized(initCtx, "", "", "k8s")
 		if err != nil {
-			log.WithError(err).Fatal("Failed to initialize Calico datastore")
+			log.WithError(err).Info("Failed to initialize datastore")
+			s.SetReady(
+				"Startup",
+				false,
+				fmt.Sprintf("Error initializing datastore: %v", err),
+			)
+		} else {
+			// Exit loop
+			break
+		}
+
+		select {
+		case <-initCtx.Done():
+			log.Fatal("Failed to initialize Calico datastore")
+			break
+		case <-time.After(5 * time.Second):
+			// Try to initialize again
 		}
 	}
+	log.Info("Calico datastore is initialized")
+	s.SetReady("Startup", true, "")
+	cancelInit()
 
 	controllerCtrl := &controllerControl{
 		ctx:              ctx,
@@ -232,9 +255,6 @@ func main() {
 		controllerCtrl.restartCfgChan = cCtrlr.ConfigChan()
 		controllerCtrl.InitControllers(ctx, runCfg, k8sClientset, calicoClient, esClientBuilder)
 	}
-
-	// Create the status file. We will only update it if we have healthchecks enabled.
-	s := status.New(statusFile)
 
 	if cfg.DatastoreType == "etcdv3" {
 		// If configured to do so, start an etcdv3 compaction.
@@ -335,10 +355,14 @@ func runHealthChecks(ctx context.Context, s *status.Status, k8sClientset *kubern
 				)
 			}
 		}(k8sCheckDone)
-		k8sClientset.Discovery().RESTClient().Get().AbsPath("/healthz").Do(ctx).StatusCode(&healthStatus)
+
+		// Call the /healthz endpoint using the same clientset as our main controllers. This allows us to share a connection
+		// and gives us a good idea of whether or not the other controllers are currently experiencing issues accessing the apiserver.
+		result := k8sClientset.Discovery().RESTClient().Get().Timeout(20 * time.Second).AbsPath("/healthz").Do(ctx).StatusCode(&healthStatus)
 		k8sCheckDone <- nil
+
 		if healthStatus != http.StatusOK {
-			log.WithError(err).Errorf("Failed to reach apiserver")
+			log.WithError(result.Error()).WithField("status", healthStatus).Errorf("Received bad status code from apiserver")
 			s.SetReady(
 				"KubeAPIServer",
 				false,

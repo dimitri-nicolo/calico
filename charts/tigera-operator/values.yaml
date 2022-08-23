@@ -81,7 +81,7 @@ podLabels: {}
 # Image and registry configuration for the tigera/operator pod.
 tigeraOperator:
   image: tigera/operator
-  version: master
+  version: v1.28.0
   registry: quay.io
 
 calicoctl:
@@ -94,3 +94,4 @@ techPreviewOptions:
   # set to name of desired apparmor policy for the calico-node container and
   # pod will be annotated with 'container.apparmor.security.beta.kubernetes.io/calico-node'
   nodeApparmorPolicyName: ""
+

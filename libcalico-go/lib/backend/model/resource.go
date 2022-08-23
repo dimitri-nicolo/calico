@@ -248,6 +248,11 @@ func init() {
 		"kubernetesservice",
 		reflect.TypeOf(kapiv1.Service{}),
 	)
+	registerResourceInfo(
+		libapiv3.KindBlockAffinity,
+		"blockaffinities",
+		reflect.TypeOf(libapiv3.BlockAffinity{}),
+	)
 }
 
 type ResourceKey struct {

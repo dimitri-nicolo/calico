@@ -800,6 +800,9 @@ func (t *mockRouteTable) SetL2Routes(ifaceName string, targets []routetable.L2Ta
 	t.currentL2Routes[ifaceName] = targets
 }
 
+func (t *mockRouteTable) RouteUpdate(_ string, _ routetable.Target) {
+}
+
 func (t *mockRouteTable) OnIfaceStateChanged(string, ifacemonitor.State) {}
 func (t *mockRouteTable) QueueResync()                                   {}
 func (t *mockRouteTable) QueueResyncIface(string)                        {}

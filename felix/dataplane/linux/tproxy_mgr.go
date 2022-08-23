@@ -232,8 +232,8 @@ func (m *tproxyManager) CompleteDeferredWork() error {
 	return nil
 }
 
-func (m *tproxyManager) GetRouteTableSyncers() []routeTableSyncer {
-	var rts []routeTableSyncer
+func (m *tproxyManager) GetRouteTableSyncers() []routetable.RouteTableSyncer {
+	var rts []routetable.RouteTableSyncer
 
 	if m.rt4 != nil {
 		rts = append(rts, m.rt4)

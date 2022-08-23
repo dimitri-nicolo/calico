@@ -353,6 +353,8 @@ blocks:
       value: win_ppk_key
     - name: K8S_VERSION
       value: 1.22.1
+    - name: WINDOWS_VERSION
+      value: "1809"
     jobs:
     - name: Windows FV
       commands:

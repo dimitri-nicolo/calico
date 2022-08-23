@@ -1290,7 +1290,7 @@ func (f *awsIPMgrFakes) NewRouteTable(
 	deviceRouteProtocol netlink.RouteProtocol,
 	removeExternalRoutes bool,
 	index int,
-	reporter logutils.OpRecorder) routeTable {
+	reporter logutils.OpRecorder) routetable.RouteTableInterface {
 
 	Expect(version).To(BeNumerically("==", 4))
 	Expect(vxlan).To(BeFalse())
@@ -1422,6 +1422,10 @@ func (f *fakeRouteTable) SetRoutes(ifaceName string, targets []routetable.Target
 		Expect(f.Regexes[0]).To(Or(Equal("^" + ifaceName + "$")))
 	}
 	f.Routes[ifaceName] = targets
+}
+
+func (f *fakeRouteTable) RouteUpdate(_ string, _ routetable.Target) {
+	panic("implement me")
 }
 
 func (f *fakeRouteTable) RouteRemove(_ string, _ ip.CIDR) {

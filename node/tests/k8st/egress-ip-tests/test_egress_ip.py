@@ -509,7 +509,7 @@ EOF
             self.validate_egress_ip(client_red, server, gw_red.ip)
             # check can connect to a different node
             self.validate_egress_ip(client_blue, server, gw_blue.ip)
-            
+
     def test_max_hops_pod_annotation(self):
         with DiagsCollector():
             # Create 3 egress gateways, with an IP from that pool.
@@ -550,7 +550,7 @@ EOF
                 print(table1, table2, table3)
                 table_set = {table1, table2, table3}
                 assert len(table_set) == 3
-                
+
                 hops1 = sorted(node_rules_and_tables[c1.ip]["hops"])
                 hops2 = sorted(node_rules_and_tables[c2.ip]["hops"])
                 hops3 = sorted(node_rules_and_tables[c3.ip]["hops"])
@@ -612,7 +612,7 @@ EOF
                 print(table1, table2, table3)
                 table_set = {table1, table2, table3}
                 assert len(table_set) == 3
-                
+
                 hops1 = sorted(node_rules_and_tables[c1.ip]["hops"])
                 hops2 = sorted(node_rules_and_tables[c2.ip]["hops"])
                 hops3 = sorted(node_rules_and_tables[c3.ip]["hops"])
@@ -953,7 +953,7 @@ spec:
   - name: cnx-pull-secret
   containers:
   - name: gateway
-    image: gcr.io/unique-caldron-775/cnx/tigera/egress-gateway:master-amd64 
+    image: gcr.io/unique-caldron-775/cnx/tigera/egress-gateway:master-amd64
     env:
     - name: EGRESS_POD_IP
       valueFrom:
@@ -1046,7 +1046,7 @@ class NetcatClientTCP(Pod):
         finished = datetime.strptime(finished_str, "%Y-%m-%dT%H:%M:%SZ")
         if abs((finished - started).total_seconds()) > (error_margin + termination_grace_period):
             raise Exception('egress.projectcalico.org/gatewayMaintenanceFinishedTimestamp annotation expected to be: within %ds of %s, but was: %s. Annotations were: %s' % ((error_margin + termination_grace_period), started, finished_str, annotations))
- 
+
     def get_last_output(self):
         return self.last_output
 
