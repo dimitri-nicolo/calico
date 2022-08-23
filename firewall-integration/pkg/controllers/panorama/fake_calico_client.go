@@ -65,6 +65,10 @@ func (c FakeDagCalicoClient) BGPPeers() clientv3.BGPPeerInterface {
 	panic("not implemented") // TODO: Implement
 }
 
+func (c FakeDagCalicoClient) BlockAffinities() clientv3.BlockAffinityInterface {
+	panic("not implemented") // TODO: Implement
+}
+
 func (c FakeDagCalicoClient) CalicoNodeStatuses() clientv3.CalicoNodeStatusInterface {
 	panic("not implemented") // TODO: Implement
 }
