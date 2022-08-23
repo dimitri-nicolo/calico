@@ -17,8 +17,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// This is the golang version of the bash script written for ECK version 1.3.2, located here
-// https://github.com/elastic/cloud-on-k8s/blob/1.3.2/pkg/controller/elasticsearch/nodespec/readiness_probe.go#L31
+// This is the golang version of the bash script written for ECK version 1.8.0, located here
+// https://github.com/elastic/cloud-on-k8s/blob/1.8.0/pkg/controller/elasticsearch/nodespec/readiness_probe.go#L31
 //
 // The readiness probe was re written in golang so that curl can be removed from the Elasticsearch image.
 func main() {
