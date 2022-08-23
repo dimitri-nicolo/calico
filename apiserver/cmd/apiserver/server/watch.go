@@ -38,12 +38,14 @@ func WatchExtensionAuth(ctx context.Context) (bool, error) {
 	if err != nil {
 		// attempt 2: in cluster config
 		if cfg, err = rest.InClusterConfig(); err != nil {
+			cancel()
 			return false, err
 		}
 	}
 
 	client, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
+		cancel()
 		return false, fmt.Errorf("Failed to get client to watch extension auth ConfigMap: %v", err)
 	}
 
