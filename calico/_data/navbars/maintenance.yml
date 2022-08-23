@@ -116,6 +116,8 @@ section:
   path: /reference/typha/overview
 - title: Remove nodes from a cluster
   path: /maintenance/decommissioning-a-node
+- title: FIPS
+  path: /maintenance/fips
 - title: Troubleshooting
   path: /maintenance/troubleshoot/
   section:
