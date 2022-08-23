@@ -3966,7 +3966,7 @@ func TestBlockAffinityClient(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
 				return &v3.BlockAffinity{}
-			})
+			}, true)
 			defer shutdownServer()
 			if err := testBlockAffinityClient(client, name); err != nil {
 				t.Fatal(err)
