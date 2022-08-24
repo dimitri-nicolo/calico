@@ -85,40 +85,20 @@ clean:
 ###############################################################################
 # Testing
 ###############################################################################
-#############################################
-# Run unit level tests
-#############################################
 .PHONY: ut
-## Run only Unit Tests.
-ut:
-	echo "running UTs"
-	./run-uts
+ut: run-etcd
+	$(DOCKER_RUN) $(CALICO_BUILD) ./run-uts
 
-.PHONY: ut-containerized
-## Run UT in a Docker container
-ut-containerized: run-etcd
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'make WHAT=$(WHAT) SKIP=$(SKIP) ut'
-
-#############################################
-# Run FV tests
-#############################################
 .PHONY: fv
-fv:
-	echo "running FVs"
-	./run-fvs
-
-# test targets used by build
-.PHONY: fv-containerized
-## Run FV in a Docker container
-fv-containerized: run-etcd
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'make WHAT=$(WHAT) SKIP=$(SKIP) fv'
+fv: run-etcd
+	$(DOCKER_RUN) $(CALICO_BUILD) ./run-fvs
 
 ###############################################################################
 # CI/CD
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: clean image static-checks ut-containerized fv-containerized
+ci: clean image static-checks ut fv
 
 ## Deploys images to registry
 cd: image cd-common
