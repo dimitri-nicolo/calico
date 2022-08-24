@@ -51,6 +51,7 @@
   command = '''
   bundle install
   make bin/helm3
+  make bin/ocp.tgz
   export PATH=$PATH:$(pwd)/bin
   echo "url: $DEPLOY_PRIME_URL" > _config_url.yml
   jekyll build --config _config.yml,_config_url.yml
