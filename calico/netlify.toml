@@ -55,8 +55,8 @@
   export PATH=$PATH:$(pwd)/bin
   echo "url: $DEPLOY_PRIME_URL" > _config_url.yml
   jekyll build --config _config.yml,_config_url.yml
-  cp -r ../manifests _site/$RELEASE_VERSION
-  cp bin/ocp.tgz _site/$RELEASE_VERSION/manifests/
+  cp -r ../manifests _site/
+  cp bin/ocp.tgz _site/manifests/
   '''
 
 [[redirects]]
