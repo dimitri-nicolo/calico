@@ -4,8 +4,13 @@ order: 6
 section:
 - title: Threat defense
   path: /threat/
-- title: Detect and alert on anomalies
-  path: /threat/security-anomalies
+- title: Anomaly detection
+  path: /threat/anomaly-detection/
+  section:
+  - title: Detect and alert on anomalies
+    path: /threat/anomaly-detection/security-anomalies
+  - title: Configure Anomaly Detection Storage
+    path: /threat/anomaly-detection/storage
 - title: Suspicious IPs
   path: /threat/suspicious-ips
 - title: Suspicious domains

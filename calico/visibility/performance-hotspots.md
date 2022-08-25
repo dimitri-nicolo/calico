@@ -81,6 +81,11 @@ For a list of performance anomaly detectors that are enabled by default, see [An
 
 - Kubernetes/kubeadm, OpenShift, AWS/kOps, RKE, EKS, TKG, AKS, GKE, Windows
 
+**Optional**
+
+By default models created from Anomaly Detection's training cycle are stored in an ephemeral storage.
+To persist storage for the training models [configure a storage class]({{site.baseurl}}/threat/anomaly-detection/storage)
+
 ### How To
 
 - [Enable and disable anomaly detectors](#enable-and-disable-anomaly-detectors)
@@ -98,4 +103,4 @@ For a list of performance anomaly detectors that are enabled by default, see [An
 
 - [Anomaly detection reference]({{site.baseurl}}/reference/anomaly-detection/all-detectors)
 - [Global Alert reference]({{site.baseurl}}/reference/resources/globalalert)
-- [Detect and alert on security anomalies]({{site.baseurl}}/threat/security-anomalies)
+- [Detect and alert on security anomalies]({{site.baseurl}}/threat/anomaly-detection/security-anomalies)

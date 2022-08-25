@@ -17,6 +17,7 @@ rules:
       - secrets
       - serviceaccounts
       - resourcequotas
+      - persistentvolumeclaims
     verbs:
       - create
       - get

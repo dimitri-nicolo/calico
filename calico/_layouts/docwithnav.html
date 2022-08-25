@@ -182,11 +182,6 @@ The code is a little roundabout for a few reasons:
             </div>
           </div>
           <div class="toc-container">
-            {% if page.feature_name -%}
-              <div>
-                {% include support_matrix.html html=content %}
-              </div>
-            {% endif -%}
             {% if page.show_toc -%}
               <div class="sticky-toc">
                 {% include toc.html html=content class=".toc" item_class=".toc__nested" %}
