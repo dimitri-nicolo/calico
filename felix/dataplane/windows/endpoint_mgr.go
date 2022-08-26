@@ -397,23 +397,36 @@ func (m *endpointManager) CompleteDeferredWork() error {
 
 			// Figure out which tiers apply in the ingress/egress direction.  We skip any tiers that have no policies
 			// that apply to this endpoint.  At this point we're working with policy names only.
+			//
+			// Also note whether the default tier has policies or not. If the
+			// default tier does not have policies in a direction, then a profile should be added for that direction.
 			var ingressPolNames, egressPolNames [][]string
+			var defaultTierIngressAppliesToEP bool
+			var defaultTierEgressAppliesToEP bool
 			for _, t := range workload.Tiers {
+				log.Debugf("windows workload %v, tiers: %v", workload.Name, t.Name)
 				if len(t.IngressPolicies) > 0 {
+					if t.Name == "default" {
+						defaultTierIngressAppliesToEP = true
+					}
 					ingressPolNames = append(ingressPolNames, prependAll(policysets.PolicyNamePrefix, t.IngressPolicies))
 				}
 				if len(t.EgressPolicies) > 0 {
+					if t.Name == "default" {
+						defaultTierEgressAppliesToEP = true
+					}
 					egressPolNames = append(egressPolNames, prependAll(policysets.PolicyNamePrefix, t.EgressPolicies))
 				}
 			}
+			log.Debugf("default tier has ingress policies: %v, egress policies: %v", defaultTierIngressAppliesToEP, defaultTierEgressAppliesToEP)
 
 			// If _no_ policies apply at all, then we fall through to the profiles.  Otherwise, there's no way to get
 			// from policies to profiles.
-			if len(ingressPolNames) == 0 {
+			if len(ingressPolNames) == 0 || !defaultTierIngressAppliesToEP {
 				ingressPolNames = append(ingressPolNames, prependAll(policysets.ProfileNamePrefix, workload.ProfileIds))
 			}
 
-			if len(egressPolNames) == 0 {
+			if len(egressPolNames) == 0 || !defaultTierEgressAppliesToEP {
 				egressPolNames = append(egressPolNames, prependAll(policysets.ProfileNamePrefix, workload.ProfileIds))
 			}
 
@@ -429,6 +442,15 @@ func (m *endpointManager) CompleteDeferredWork() error {
 			// Flatten any tiers.
 			flatIngressRules := flattenTiers(ingressRules)
 			flatEgressRules := flattenTiers(egressRules)
+
+			if log.GetLevel() >= log.DebugLevel {
+				for _, rule := range flatIngressRules {
+					log.WithFields(log.Fields{"rule": rule}).Debug("ingress rules after flattening")
+				}
+				for _, rule := range flatEgressRules {
+					log.WithFields(log.Fields{"rule": rule}).Debug("egress rules after flattening")
+				}
+			}
 
 			// Make sure priorities are ascending.
 			rewritePriorities(flatIngressRules, policysets.PolicyRuleMaxPriority)

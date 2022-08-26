@@ -172,6 +172,21 @@ func TestFlatten(t *testing.T) {
 		{Action: hns.Block, RemoteAddresses: "10.0.10.2/32", LocalPorts: "6380, 6381"},
 		{Action: hns.Block, RemoteAddresses: "10.0.10.0/24", LocalPorts: "6390-6400"},
 	}))
+
+	t.Log("Should pass to last tier which has only the rule from the profile")
+	Expect(flattenTiers([][]*hns.ACLPolicy{
+		{
+			{Action: hns.Block, RemoteAddresses: "192.168.1.123/32", LocalPorts: "8080"},
+			{Action: policysets.ActionPass},
+		},
+		{
+			// This would be the allow rule added for the profile.
+			{Action: hns.Allow, Protocol: 256},
+		},
+	})).To(Equal([]*hns.ACLPolicy{
+		{Action: hns.Block, RemoteAddresses: "192.168.1.123/32", LocalPorts: "8080"},
+		{Action: hns.Allow},
+	}))
 }
 
 func TestReWritePriority(t *testing.T) {

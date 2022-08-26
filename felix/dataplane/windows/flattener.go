@@ -21,13 +21,28 @@ func flattenTiers(tiers [][]*hns.ACLPolicy) []*hns.ACLPolicy {
 		log.Panic("Ran out of rules")
 	}
 
+	if log.GetLevel() >= log.DebugLevel {
+		for i, t := range tiers {
+			for _, rule := range t {
+				log.WithFields(log.Fields{"rule": rule}).Infof("flattener: tier %d", i)
+			}
+		}
+	}
+
 	lastTier := tiers[len(tiers)-1]
+	log.Debugf("flattener: last tier is %+v", lastTier)
+	if log.GetLevel() >= log.DebugLevel {
+		for _, rule := range lastTier {
+			log.WithFields(log.Fields{"rule": rule}).Info("flattener: lastTier")
+		}
+	}
 	// For last tier, no further flattening is required.
 	// However, there could still be rules with `pass` action
 	// which should be `passed` to `default-deny`. Pre-process
 	// last tier before running flattenTiersRecurse.
 	for _, r := range lastTier {
 		if r.Action == policysets.ActionPass {
+			log.Debug("flattener: setting pass rules in last tier to block")
 			r.Action = hns.Block
 		}
 	}
@@ -40,16 +55,26 @@ func flattenTiersRecurse(tiers [][]*hns.ACLPolicy) []*hns.ACLPolicy {
 		log.Panic("Ran out of rules")
 	}
 	if len(tiers) == 1 {
+		log.Debugf("flattener: only 1 tier, returning it: %v", tiers[0])
 		return tiers[0]
 	}
 
 	foundPass := false
 
 	oldFirstTier := tiers[0]
+	log.Debugf("flattener: old first tier: %+v", oldFirstTier)
+	if log.GetLevel() >= log.DebugLevel {
+		for _, rule := range oldFirstTier {
+			log.WithFields(log.Fields{"rule": rule}).Debug("flattener: old first tier")
+		}
+	}
+
 	var newFirstTier []*hns.ACLPolicy
 
+	log.Debugf("flattener: loop through rules of old first tier")
 	for _, r := range oldFirstTier {
 		if r.Action == policysets.ActionPass {
+			log.Debugf("flattener: found pass rule in old first tier: %+v", r)
 			foundPass = true
 			oldSecondTier := tiers[1]
 			newFirstTier = appendCombinedRules(newFirstTier, oldSecondTier, r)
@@ -60,6 +85,7 @@ func flattenTiersRecurse(tiers [][]*hns.ACLPolicy) []*hns.ACLPolicy {
 
 	if !foundPass {
 		// There are further tiers but no pass actions so it's impossible to get there.
+		log.Debug("flattener: further tiers but no pass rules found, returning old first tier")
 		return oldFirstTier
 	}
 
