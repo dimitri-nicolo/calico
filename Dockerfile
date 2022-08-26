@@ -13,7 +13,6 @@
 # limitations under the License.
 
 FROM ruby:2.7.6-alpine3.16
-MAINTAINER spike@tigera.io
 
 # Need to define root user explicitly (for remaining setup) and be numeric for k8s validation
 USER 0
@@ -38,17 +37,19 @@ RUN apk update \
  && gem install bigdecimal -v 1.4.4 \
  && gem install resolv -v 0.2.1 \
  && gem install \
-        elasticsearch-api:7.13.3 \
-        elasticsearch-transport:7.13.3 \
-        elasticsearch:7.13.3 \
-        elasticsearch-xpack:7.6.0 \
-        fluent-plugin-elasticsearch:4.2.2 fluent-plugin-s3:1.3.0 \
-        fluent-plugin-splunk-hec:1.1.2 fluent-plugin-sumologic_output:1.6.1 \
-        fluent-plugin-cloudwatch-logs:0.8.0 \
-        fluent-plugin-prometheus:2.0.0 \
-        cgi:0.3.1 \
-        rdoc:6.4.0 \
         bundler:2.3.19 \
+        cgi:0.3.1 \
+        elasticsearch-api:7.17.5 \
+        elasticsearch-transport:7.17.5 \
+        elasticsearch-xpack:7.17.1 \
+        elasticsearch:7.17.5 \
+        fluent-plugin-cloudwatch-logs:0.8.0 \
+        fluent-plugin-elasticsearch:5.2.3 \
+        fluent-plugin-prometheus:2.0.0 \
+        fluent-plugin-s3:1.3.0 \
+        fluent-plugin-splunk-hec:1.1.2 \
+        fluent-plugin-sumologic_output:1.6.1 \
+        rdoc:6.4.0 \
  && fluent-gem install fluent-plugin-remote_syslog:1.0.0 \
  && gem sources --clear-all \
  && apk del .build-deps \
