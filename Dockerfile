@@ -39,10 +39,10 @@ RUN apk update \
  && gem install \
         bundler:2.3.19 \
         cgi:0.3.1 \
-        elasticsearch-api:7.17.5 \
-        elasticsearch-transport:7.17.5 \
+        elasticsearch-api:7.17.1 \
+        elasticsearch-transport:7.17.1 \
         elasticsearch-xpack:7.17.1 \
-        elasticsearch:7.17.5 \
+        elasticsearch:7.17.1 \
         fluent-plugin-cloudwatch-logs:0.8.0 \
         fluent-plugin-elasticsearch:5.2.3 \
         fluent-plugin-prometheus:2.0.0 \
