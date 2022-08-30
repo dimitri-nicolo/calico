@@ -5,10 +5,7 @@ FROM docker.elastic.co/kibana/kibana:${KIBANA_VERSION}
 
 USER root
 
-RUN yum -y update && yum -y upgrade && yum clean all
-
-COPY cleanup.sh /
-RUN /cleanup.sh
+RUN apt-get -y update && apt-get -y upgrade && apt-get clean
 
 ARG GTM_INTEGRATION=disable
 
