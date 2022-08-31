@@ -40,7 +40,6 @@ commit your changes. **The following manifests are not auto generated:**
 - ocp/00-namespace-tigera-operator.yaml
 - ocp/01-cr-apiserver.yaml
 - ocp/01-cr-installation.yaml
-- ocp/02-pull-secret.yaml
 - ocp/tigera-enterprise-resources.yaml
 - ocp/tigera-prometheus-operator.yaml
 - psp-guardian.yaml

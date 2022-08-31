@@ -125,6 +125,7 @@ ${HELM} template --include-crds \
 	--set monitor.enabled=false \
 	--set compliance.enabled=false \
 	--set tigeraOperator.version=$OPERATOR_VERSION \
+	--set imagePullSecrets.tigera-pull-secret=SECRET \
 	--set calicoctl.image=$REGISTRY/tigera/calicoctl \
 	--set calicoctl.tag=$CALICO_VERSION \
 # The first two lines are a newline and a yaml separator - remove them.
