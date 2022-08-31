@@ -93,6 +93,10 @@ promotions:
   pipeline_file: push-images/packetcapture.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push continuous-policy-recommendation images
+  pipeline_file: push-images/continuous-policy-recommendation.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 - name: Push ts-queryserver images
   pipeline_file: push-images/ts-queryserver.yml
   auto_promote:
@@ -831,6 +835,21 @@ blocks:
       - cd packetcapture
     jobs:
     - name: "packetcapture tests"
+      commands:
+      - ../.semaphore/run-and-monitor ci.log make ci
+
+- name: 'continuous-policy-recommendation'
+  run:
+    when: "true or change_in(['/*', '/continuous-policy-recommendation/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd continuous-policy-recommendation
+    jobs:
+    - name: "continuous-policy-recommendation tests"
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
 
