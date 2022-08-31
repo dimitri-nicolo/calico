@@ -1,7 +1,7 @@
-# Calico Version master
-# https://projectcalico.docs.tigera.io/releases#master
+# Calico Enterprise Version master
+# https://docs.tigera.io/releases#master
 # This manifest includes the following component versions:
-#   calico/ctl:v3.24.0
+#   calico/ctl:master
 
 apiVersion: v1
 kind: ServiceAccount
@@ -20,18 +20,21 @@ spec:
   nodeSelector:
     kubernetes.io/os: linux
   hostNetwork: true
+  imagePullSecrets:
+    - name: cnx-pull-secret
+    - name: calico-pull-secret
   serviceAccountName: calicoctl
   containers:
-  - name: calicoctl
-    image: calico/ctl:v3.24.0
-    command:
-      - /calicoctl
-    args:
-      - version
-      - --poll=1m
-    env:
-    - name: DATASTORE_TYPE
-      value: kubernetes
+    - name: calicoctl
+      image: gcr.io/unique-caldron-775/cnx/tigera/calicoctl:master
+      command:
+        - /calicoctl
+      args:
+        - version
+        - --poll=1m
+      env:
+        - name: DATASTORE_TYPE
+          value: kubernetes
 
 ---
 
@@ -70,14 +73,17 @@ rules:
       - bgppeers
       - bgpconfigurations
       - clusterinformations
+      - licensekeys
       - felixconfigurations
       - globalnetworkpolicies
       - globalnetworksets
+      - remoteclusterconfigurations
       - ippools
       - ipreservations
       - kubecontrollersconfigurations
       - networkpolicies
       - networksets
+      - tiers
       - hostendpoints
       - ipamblocks
       - blockaffinities
@@ -93,6 +99,7 @@ rules:
     resources:
       - networkpolicies
     verbs:
+      - watch
       - get
       - list
 
@@ -107,7 +114,6 @@ roleRef:
   kind: ClusterRole
   name: calicoctl
 subjects:
-- kind: ServiceAccount
-  name: calicoctl
-  namespace: kube-system
-
+  - kind: ServiceAccount
+    name: calicoctl
+    namespace: kube-system

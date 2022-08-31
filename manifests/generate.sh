@@ -1,20 +1,27 @@
 #!/bin/bash
 
-# This script updates the manifsts in this directory using helm.
+# This script updates the manifests in this directory using helm.
 # Values files for the manifests in this directory can be found in 
-# ../calico/charts/values.
+# ../charts/tigera-operator/values.
 
 # Helm binary to use. Default to the one installed by the Makefile.
 HELM=${HELM:-../bin/helm}
 
 # Get versions to install.
-defaultCalicoVersion=master # TODO
+defaultCalicoVersion=master
 CALICO_VERSION=${CALICO_VERSION:-$defaultCalicoVersion}
 
+defaultRegistry=gcr.io/unique-caldron-775/cnx
+REGISTRY=${REGISTRY:-$defaultRegistry}
+
+# Versions retrieved from charts.
 defaultOperatorVersion=$(cat ../charts/tigera-operator/values.yaml | grep version: | cut -d" " -f4)
 OPERATOR_VERSION=${OPERATOR_VERSION:-$defaultOperatorVersion}
 
+# Images used in manifests that are not rendered by Helm.
 NON_HELM_MANIFEST_IMAGES="calico/apiserver calico/windows calico/ctl calico/csi calico/node-driver-registrar"
+NON_HELM_MANIFEST_IMAGES_ENT="compliance-reporter firewall-integration ingress-collector license-agent prometheus-operator prometheus-config-reloader anomaly_detection_jobs honeypod honeypod-controller honeypod-exp-service calico-windows calicoctl"
+NON_HELM_MANIFEST_IMAGES+=" $NON_HELM_MANIFEST_IMAGES_ENT"
 
 echo "Generating manifests for Calico=$CALICO_VERSION and tigera-operator=$OPERATOR_VERSION"
 
@@ -62,22 +69,23 @@ for FILE in $VALUES_FILES; do
 	${HELM} -n ${ns:-"tigera-operator"} template \
 		../charts/tigera-operator \
 	        --set version=$CALICO_VERSION \
+	        --include-crds \
 		-f ../charts/values/$FILE > $FILE
 done
 
 ##########################################################################
 # Build CRDs files used in docs.
 ##########################################################################
-echo "# Tigera Operator and Calico Enterprise CRDs" > crds.yaml
+echo "# Tigera Operator and Calico Enterprise CRDs" > operator-crds.yaml
 for FILE in $(ls ../charts/tigera-operator/crds); do
         ${HELM} template ../charts/tigera-operator \
                 --include-crds \
-                --show-only $FILE >> crds.yaml
+                --show-only $FILE >> operator-crds.yaml
 done
 for FILE in $(ls ../charts/tigera-operator/crds/calico); do
         ${HELM} template ../charts/tigera-operator \
                 --include-crds \
-                --show-only calico/$FILE >> crds.yaml
+                --show-only calico/$FILE >> operator-crds.yaml
 done
 
 echo "# ECK operator CRDs." > eck-operator-crds.yaml
@@ -117,18 +125,19 @@ ${HELM} template --include-crds \
 	--set monitor.enabled=false \
 	--set compliance.enabled=false \
 	--set tigeraOperator.version=$OPERATOR_VERSION \
-	--set calicoctl.tag=$CALICO_VERSION
+	--set calicoctl.image=$REGISTRY/tigera/calicoctl \
+	--set calicoctl.tag=$CALICO_VERSION \
 # The first two lines are a newline and a yaml separator - remove them.
 find ocp/tigera-operator -name "*.yaml" | xargs sed -i -e 1,2d
 mv $(find ocp/tigera-operator -name "*.yaml") ocp/ && rm -r ocp/tigera-operator
 
 ##########################################################################
-# Replace image versions for "static" Calico manifests.
+# Replace versions for "static" Calico Enterprise manifests.
 ##########################################################################
 if [[ $CALICO_VERSION != master ]]; then
-echo "Replacing image versions for static manifests"
-	for img in $NON_HELM_MANIFEST_IMAGES; do
-		echo $img
-		find . -type f -exec sed -i "s|$img:[A-Xa-z0-9_.-]*|$img:$CALICO_VERSION|g" {} \;
-	done
+  echo "Replacing image tags for static enterprise manifests"
+  for img in $NON_HELM_MANIFEST_IMAGES; do
+    echo $img
+    find . -type f -exec sed -i "s;\(quay.io\|gcr.io/unique-caldron-775/cnx\)/tigera/$img:[A-Za-z0-9_.-]*;$REGISTRY/tigera/$img:$CALICO_VERSION;g" {} \;
+  done
 fi

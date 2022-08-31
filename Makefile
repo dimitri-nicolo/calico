@@ -48,10 +48,7 @@ gen-manifests: bin/helm
 	# TODO: Ideally we don't need to do this, but the sub-charts
 	# mess up manifest generation if they are present.
 	rm -f $(SUB_CHARTS)
-	cd ./manifests && \
-		OPERATOR_VERSION=$(OPERATOR_VERSION) \
-		CALICO_VERSION=$(CALICO_VERSION) \
-		./generate.sh
+	cd ./manifests && ./generate.sh
 
 gen-semaphore-yaml:
 	cd .semaphore && ./generate-semaphore-yaml.sh

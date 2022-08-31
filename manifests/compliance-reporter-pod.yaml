@@ -21,7 +21,7 @@ spec:
     # Modify this image name, if you have re-tagged the image and are using a local
     # docker image repository.
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    image: {{page.registry}}{% include component_image component="compliance-reporter" %}
+    image: gcr.io/unique-caldron-775/cnx/tigera/compliance-reporter:master
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     env:
       # Modify this value with name of an existing globalreport resource.
@@ -72,14 +72,15 @@ spec:
         port: 9099
         host: localhost
   volumes:
-  - name: var-log-calico 
-    hostPath:
-      path: /var/log/calico
-      type: DirectoryOrCreate
-  - name: elastic-ca-cert-volume
-    secret:
-      optional: true
-      items:
-      - key: tls.crt
-        path: ca.pem
-      secretName: tigera-secure-es-gateway-http-certs-public
+    - name: var-log-calico
+      hostPath:
+        path: /var/log/calico
+        type: DirectoryOrCreate
+    - name: elastic-ca-cert-volume
+      secret:
+        optional: true
+        items:
+          - key: tls.crt
+            path: ca.pem
+        secretName: tigera-secure-es-gateway-http-certs-public
+

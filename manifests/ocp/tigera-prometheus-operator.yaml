@@ -1,5 +1,3 @@
----
-# Source: tigera-prometheus-operator/templates/00-namespace-tigera-prometheus.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
