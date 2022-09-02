@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/ingress-collector
-GO_BUILD_VER    ?= v0.65
+GO_BUILD_VER    ?= v0.73.2
 GIT_USE_SSH     := true
 LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 
