@@ -50,6 +50,8 @@ spec:
             - configMapRef:
                 name: kubernetes-services-endpoint
                 optional: true
+      imagePullSecrets:
+        - name: tigera-pull-secret
       volumes:
         - name: var-lib-calico
           hostPath:

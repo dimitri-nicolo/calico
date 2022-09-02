@@ -86,7 +86,7 @@ tigeraOperator:
 
 calicoctl:
   enabled: false
-  image: docker.io/calico/ctl
+  image: gcr.io/unique-caldron-775/cnx/tigera/calicoctl:master
   tag: master
   binPath: /bin
 
