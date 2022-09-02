@@ -84,13 +84,6 @@ func (b BatchIngressLog) Full() bool {
 	return len(b.logs) == b.size
 }
 
-func (b BatchIngressLog) Clear() {
-	if b.size < 0 {
-		b.logs = make(map[string]IngressLog)
-	}
-	b.logs = make(map[string]IngressLog, b.size)
-}
-
 func (b BatchIngressLog) Logs() []IngressLog {
 	logs := []IngressLog{}
 	for _, val := range b.logs {
