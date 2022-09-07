@@ -808,7 +808,7 @@ func (h *connection) sendSnapshotAndUpdatesToClient(logCxt *log.Entry) {
 						"snapAge":        crumbAge,
 						"mySeqNo":        breadcrumb.SequenceNumber,
 						"latestSeqNo":    latestCrumb.SequenceNumber,
-						"mySnapshotSize": breadcrumb.KVs.Size(),
+						"mySnapshotSize": breadcrumb.KVs.Len(),
 					}).Warn("Client fell behind. Disconnecting.")
 					return
 				} else if !loggedClientBehind {
@@ -817,7 +817,7 @@ func (h *connection) sendSnapshotAndUpdatesToClient(logCxt *log.Entry) {
 						"mySeqNo":        breadcrumb.SequenceNumber,
 						"latestSeqNo":    latestCrumb.SequenceNumber,
 						"gracePeriod":    h.config.NewClientFallBehindGracePeriod,
-						"mySnapshotSize": breadcrumb.KVs.Size(),
+						"mySnapshotSize": breadcrumb.KVs.Len(),
 					}).Warn("Client is a long way behind after sending snapshot; " +
 						"allowing grace period for it to catch up.")
 					loggedClientBehind = true
@@ -829,7 +829,7 @@ func (h *connection) sendSnapshotAndUpdatesToClient(logCxt *log.Entry) {
 					"snapAge":        crumbAge,
 					"mySeqNo":        breadcrumb.SequenceNumber,
 					"latestSeqNo":    latestCrumb.SequenceNumber,
-					"mySnapshotSize": breadcrumb.KVs.Size(),
+					"mySnapshotSize": breadcrumb.KVs.Len(),
 				}).Info("Client was behind after sending snapshot but it has now caught up.")
 				loggedClientBehind = false // Avoid logging the "caught up" log on every loop.
 			}
@@ -881,11 +881,6 @@ func (h *connection) streamSnapshotToClient(logCxt *log.Entry, breadcrumb *snapc
 	logCxt.Info("Starting to send snapshot to client")
 	startTime := time.Now()
 
-	// Get an iterator for the snapshot. cancelC is used to ensure that the iterator's goroutine gets cleaned up.
-	cancelC := make(chan struct{})
-	defer close(cancelC)
-	iter := breadcrumb.KVs.Iterator(cancelC)
-
 	// sendKVs is a utility function that sends the kvs buffer to the client and clears the buffer.
 	var kvs []syncproto.SerializedUpdate
 	var numKeys int
@@ -906,34 +901,36 @@ func (h *connection) streamSnapshotToClient(logCxt *log.Entry, breadcrumb *snapc
 		return err
 	}
 
-	for {
-		select {
-		case entry := <-iter:
-			if entry == nil {
-				// End of the iterator.  Make sure we send the last batch, if there is one...
-				err = sendKVs()
-				logCxt.WithField("numKeys", numKeys).Info("Finished sending snapshot to client")
-				summarySnapshotSendTime.Observe(time.Since(startTime).Seconds())
-				return
-			}
-			// Skip sending remoteClusterStatus to client.
-			if !strings.HasPrefix(entry.Value.(syncproto.SerializedUpdate).Key, remoteCluster) {
-				kvs = append(kvs, entry.Value.(syncproto.SerializedUpdate))
-			}
-
-			if len(kvs) >= h.config.MaxMessageSize {
-				// Buffer is full, send the next batch.
-				err = sendKVs()
-				if err != nil {
-					return
-				}
-			}
-		case <-h.cxt.Done():
+	breadcrumb.KVs.Ascend(func(entry syncproto.SerializedUpdate) bool {
+		if h.cxt.Err() != nil {
 			err = h.cxt.Err()
-			logCxt.WithError(err).Info("Asked to stop by Context")
-			return
+			return false
 		}
+		// Skip sending remoteClusterStatus to client.
+		if strings.HasPrefix(entry.Key, remoteCluster) {
+			return true
+		}
+		kvs = append(kvs, entry)
+		if len(kvs) >= h.config.MaxMessageSize {
+			// Buffer is full, send the next batch.
+			err = sendKVs()
+			if err != nil {
+				return false
+			}
+		}
+		return true
+	})
+	if err != nil {
+		return
 	}
+
+	err = sendKVs()
+	if err != nil {
+		return
+	}
+	logCxt.WithField("numKeys", numKeys).Info("Finished sending snapshot to client")
+	summarySnapshotSendTime.Observe(time.Since(startTime).Seconds())
+	return
 }
 
 // sendPingsToClient loops, sending pings to the client at the configured interval.
