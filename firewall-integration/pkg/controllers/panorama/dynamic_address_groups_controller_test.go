@@ -7,48 +7,57 @@ import (
 	"reflect"
 	"sort"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
-	. "github.com/onsi/gomega"
-
 	panw "github.com/PaloAltoNetworks/pango"
 	"github.com/PaloAltoNetworks/pango/objs/addr"
 	"github.com/PaloAltoNetworks/pango/objs/addrgrp"
 	dvgrp "github.com/PaloAltoNetworks/pango/pnrm/dg"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/gomega"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	fakeclientset "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
+
+	panutils "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils"
+	"github.com/projectcalico/calico/firewall-integration/tests/mocks"
 	rcache "github.com/projectcalico/calico/kube-controllers/pkg/cache"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	panutils "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils"
-	"github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils/mocks"
-
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 const (
 	expectedDataFolder = "./utils/data/expected/gns"
 	inputDataFolder    = "./utils/data/input/"
+
+	fakeGnsClientKey                    = "someGnsKey"
+	fakeGnsClientSomeCreateErrorMessage = "someCreateError"
+	fakeGnsClientSomeDeleteErrorMessage = "someDeleteError"
+	fakeGnsClientSomeGetErrorMessage    = "someGetError"
+	fakeGnsClientSomeUpdateErrorMessage = "someUpdateError"
 )
 
 // syncToDatastore
-var _ = Describe("Tests controller syncToDatastore functionality", func() {
+var _ = Describe("Test syncToDatastore", func() {
 	var (
-		dagc dynamicAddressGroupsController
-		mccl *FakeDagCalicoClient
+		dagc    dynamicAddressGroupsController
+		mockGns *mocks.GlobalNetworkSetInterface
 	)
+
+	// Load the input data.
+	var globalNetworkSetStartingState []v3.GlobalNetworkSet
+	file := fmt.Sprintf("%s/%s", inputDataFolder, "globalNetworkSetStartingState.json")
+	panutils.LoadData(file, &globalNetworkSetStartingState)
 
 	BeforeEach(func() {
 		// Setup tags input for the dynamic address groups controller.
 		tags := set.FromArray([]string{"tag1", "tag2", "tag3"})
-		// Load the input data.
-		var globalNetworkSetStartingState []v3.GlobalNetworkSet
-		file := fmt.Sprintf("%s/%s", inputDataFolder, "globalNetworkSetStartingState.json")
-		panutils.LoadData(file, &globalNetworkSetStartingState)
-		// Define a mock calico client, with sample datastore input.
-		mccl = NewFakeDagCalicoClient(globalNetworkSetStartingState)
-		// Define a mock Panorama client.
+		// Mock global network set.
+		mockGns = &mocks.GlobalNetworkSetInterface{}
+		// Mock Panorama client.
 		mpcl := &mocks.MockPanoramaClient{}
 		// Create a cache to store GlobalNetworkSets in.
 		mgns := make(map[string]interface{})
@@ -60,13 +69,14 @@ var _ = Describe("Tests controller syncToDatastore functionality", func() {
 			ObjectType:  reflect.TypeOf(v3.GlobalNetworkSet{}),
 			LogTypeDesc: "AddressGroupGlobalNetworkSets",
 		}
+
 		// Define a dynamic address groups controller.
 		dagc = dynamicAddressGroupsController{
-			tags:         tags,
-			calicoClient: mccl,
-			cache:        rcache.NewResourceCache(cacheArgs),
-			pancli:       mpcl,
-			isInSync:     true,
+			tags:             tags,
+			globalNetworkSet: mockGns,
+			cache:            rcache.NewResourceCache(cacheArgs),
+			pancli:           mpcl,
+			isInSync:         true,
 		}
 		// Define the cache.
 		for _, gns := range globalNetworkSetStartingState {
@@ -74,17 +84,130 @@ var _ = Describe("Tests controller syncToDatastore functionality", func() {
 		}
 	})
 
-	It("should handle an error other than KeyNotFound returned by datastore Get", func() {
+	// Test Errors
+	It("Returns an error if datastore Get returns an error other than KeyNotFound", func() {
+		key := fakeGnsClientKey
+
 		By("Defining the value returned by datastore Get as not a KeyNotFound error.")
-		key := FakeGnsClientErrorKey
+		someError := fmt.Errorf(fakeGnsClientSomeGetErrorMessage)
+		mockGns.On("Get", dagc.ctx, key, metav1.GetOptions{}).Return(nil, someError)
+
 		err := dagc.syncToDatastore(key)
 
 		By("Validating the returned error is \"some error\".")
 		Expect(err).NotTo(BeNil())
-		Expect(err.Error()).To(Equal(FakeGnsClientSomeErrorMessage))
+		Expect(err.Error()).To(Equal(fakeGnsClientSomeGetErrorMessage))
 	})
 
-	It("should handle the datastor re-syncing a non-Panorama GlobalNetworkSet, without annotation: \"firewall.tigera.io/type\": \"Panorama\", returned by the datastore Get", func() {
+	It("Returns an error if gns Delete returns an error other than KeyNotFound", func() {
+		key := fakeGnsClientKey
+
+		By("Defining the value returned by datastore Get as not a KeyNotFound error.")
+		keyNotFoundError := kerrors.NewNotFound(
+			schema.GroupResource{Group: "projectcalico.org", Resource: "globalnetworksets"},
+			key)
+		mockGns.On("Get", dagc.ctx, key, metav1.GetOptions{}).Return(nil, keyNotFoundError)
+		someError := fmt.Errorf(fakeGnsClientSomeDeleteErrorMessage)
+		mockGns.On("Delete", dagc.ctx, key, metav1.DeleteOptions{}).Return(someError)
+
+		err := dagc.syncToDatastore(key)
+
+		By("Validating the returned error is \"some error\".")
+		Expect(err).NotTo(BeNil())
+		Expect(err.Error()).To(Equal(fakeGnsClientSomeDeleteErrorMessage))
+	})
+
+	It("Returns an error if gns Create returns an error", func() {
+		key := fakeGnsClientKey
+
+		By("Defining the value returned by datastore Get as not a KeyNotFound error.")
+		validPanoramaGlobalNetworkSetInput := v3.GlobalNetworkSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "pan.addressgroup8-ri4np",
+				Labels: map[string]string{
+					"firewall.tigera.io/tag1": "",
+					"firewall.tigera.io/tag3": "",
+				},
+				Annotations: map[string]string{
+					"firewall.tigera.io/device-groups": "shared",
+					"firewall.tigera.io/errors":        "unsupported-ip-ranges-present,unsupported-ip-wildcards-present",
+					"firewall.tigera.io/name":          "address_group8",
+					"firewall.tigera.io/object-type":   "AddressGroup",
+					"firewall.tigera.io/type":          "Panorama",
+				},
+			},
+			Spec: v3.GlobalNetworkSetSpec{
+				Nets: []string{
+					"10.10.10.10/31", "10.10.10.11/31", "10.10.10.12/31", "10.10.10.13/31",
+				},
+				AllowedEgressDomains: []string{
+					"www.tigera-test1.gr", "www.tigera-test4.gr", "www.tigera-test5.gr",
+				},
+			},
+		}
+
+		// Set a value with key and gns in the cache.
+		dagc.cache.Set(key, validPanoramaGlobalNetworkSetInput)
+
+		keyNotFoundGetError := kerrors.NewNotFound(
+			schema.GroupResource{Group: "projectcalico.org", Resource: "globalnetworksets"},
+			key)
+		mockGns.On("Get", dagc.ctx, key, metav1.GetOptions{}).Return(nil, keyNotFoundGetError)
+		fakeCreateError := fmt.Errorf(fakeGnsClientSomeCreateErrorMessage)
+		mockGns.On("Create", dagc.ctx, &validPanoramaGlobalNetworkSetInput, metav1.CreateOptions{}).Return(nil, fakeCreateError)
+
+		err := dagc.syncToDatastore(key)
+
+		By("Validating the returned error is a fakeCreateError.")
+		Expect(err).ToNot(BeNil())
+		Expect(err).To(Equal(fakeCreateError))
+	})
+
+	It("Returns an error if gns Update returns an error", func() {
+		key := fakeGnsClientKey
+
+		By("Defining the value returned by datastore Get as not a KeyNotFound error.")
+		validPanoramaGlobalNetworkSetInput := v3.GlobalNetworkSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "pan.addressgroup8-ri4np",
+				Labels: map[string]string{
+					"firewall.tigera.io/tag1": "",
+					"firewall.tigera.io/tag3": "",
+				},
+				Annotations: map[string]string{
+					"firewall.tigera.io/device-groups": "shared",
+					"firewall.tigera.io/errors":        "unsupported-ip-ranges-present,unsupported-ip-wildcards-present",
+					"firewall.tigera.io/name":          "address_group8",
+					"firewall.tigera.io/object-type":   "AddressGroup",
+					"firewall.tigera.io/type":          "Panorama",
+				},
+			},
+			Spec: v3.GlobalNetworkSetSpec{
+				Nets: []string{
+					"10.10.10.10/31", "10.10.10.11/31", "10.10.10.12/31", "10.10.10.13/31",
+				},
+				AllowedEgressDomains: []string{
+					"www.tigera-test1.gr", "www.tigera-test4.gr", "www.tigera-test5.gr",
+				},
+			},
+		}
+
+		// Set a value with key and gns in the cache.
+		dagc.cache.Set(key, validPanoramaGlobalNetworkSetInput)
+
+		mockGns.On("Get", dagc.ctx, key, metav1.GetOptions{}).Return(&validPanoramaGlobalNetworkSetInput, nil)
+		fakeUpdateError := fmt.Errorf(fakeGnsClientSomeUpdateErrorMessage)
+		mockGns.On("Update", dagc.ctx, &validPanoramaGlobalNetworkSetInput, metav1.UpdateOptions{}).Return(nil, fakeUpdateError)
+
+		err := dagc.syncToDatastore(key)
+
+		By("Validating the returned error is a fakeCreateError.")
+		Expect(err).ToNot(BeNil())
+		Expect(err).To(Equal(fakeUpdateError))
+	})
+
+	// Test handling non-Panorama GlobalNetworkSets.
+	It("should handle the datastore re-syncing a non-Panorama GlobalNetworkSet, without annotation: \"firewall.tigera.io/type\": \"Panorama\", returned by the datastore Get", func() {
 		By("Defining a non-Panorama GlobalNetworkSet.")
 		// Does not contain the "firewall.tigera.io/type":"Panorama" annotation.
 		nonPanoramaGlobalNetworkSetInput := v3.GlobalNetworkSet{
@@ -135,40 +258,52 @@ var _ = Describe("Tests controller syncToDatastore functionality", func() {
 			},
 		}
 
-		By("Defining the GNS key.")
 		key := nonPanoramaGlobalNetworkSetInput.Name
 
-		By("Sync the key with a non-Panorama GlobalNetworkSet.")
-		updateVal, err := mccl.gnsClient.Update(dagc.ctx, &nonPanoramaGlobalNetworkSetInput, metav1.UpdateOptions{})
+		// Define a mock calico client, with sample datastore input.
+		mockGnsList := &v3.GlobalNetworkSetList{}
+		mockGnsList.Items = append(mockGnsList.Items, globalNetworkSetStartingState...)
+		// Load a fake calico client with the starting gns data.
+		mccl := fakeclientset.NewSimpleClientset(mockGnsList).ProjectcalicoV3()
+		dagc.globalNetworkSet = mccl.GlobalNetworkSets()
+
+		By("sync the key with a non-Panorama GlobalNetworkSet.")
+		updateVal, err := mccl.GlobalNetworkSets().Update(dagc.ctx, &nonPanoramaGlobalNetworkSetInput, metav1.UpdateOptions{})
 		validatePanoramaGnsFields(*updateVal, nonPanoramaGlobalNetworkSetInput)
 		Expect(err).To(BeNil())
 
-		By("Testing a sync of a non-Panorama GlobalNetworkSet.")
-		gnsBefore, _ := mccl.gnsClient.Get(dagc.ctx, key, metav1.GetOptions{})
+		By("testing a sync of a non-Panorama GlobalNetworkSet.")
+		gnsBefore, _ := mccl.GlobalNetworkSets().Get(dagc.ctx, key, metav1.GetOptions{})
 		isPanorama := dagc.isPanoramaGlobalNetworkSet(gnsBefore)
 		Expect(isPanorama).To(BeFalse())
 
-		By("Sync the non-Panorama GlobalNetworkSet with the context of the cache back to a valid GNS.")
+		By("sync the non-Panorama GlobalNetworkSet with the context of the cache back to a valid GNS.")
 		dagc.cache.Set(key, validPanoramaGlobalNetworkSetInput)
 		err = dagc.syncToDatastore(key)
 		Expect(err).To(BeNil())
 
-		By("Loading the expected data")
+		By("loading the expected data")
 		var expectedGnsList []v3.GlobalNetworkSet
-		file := fmt.Sprintf("%s/%s", expectedDataFolder, "expectedGnsList.json")
+		file = fmt.Sprintf("%s/%s", expectedDataFolder, "expectedGnsList.json")
 		panutils.LoadData(file, &expectedGnsList)
 
-		By("Validating the datastore contains the expected values")
-		gnsListAfterUpdate, _ := mccl.gnsClient.List(dagc.ctx, metav1.ListOptions{})
+		By("validating the datastore contains the expected values")
+		gnsListAfterUpdate, _ := mccl.GlobalNetworkSets().List(dagc.ctx, metav1.ListOptions{})
 		Expect(len(gnsListAfterUpdate.Items)).To(Equal(len(expectedGnsList)))
 		for _, expectedGns := range expectedGnsList {
-			item, err := mccl.gnsClient.Get(dagc.ctx, expectedGns.Name, metav1.GetOptions{})
+			item, err := mccl.GlobalNetworkSets().Get(dagc.ctx, expectedGns.Name, metav1.GetOptions{})
 			Expect(err).To(BeNil())
 			validatePanoramaGnsFields(*item, expectedGns)
 		}
 	})
 
-	It("should handle a key that is stored in the datastore but not in the cache.", func() {
+	// Test handling a deletion from the datastore.
+	It("should handle deleting a key from the datastore, when the datastore contains the key, and the cache doesn't.", func() {
+		keyNotFoundGetError := kerrors.NewNotFound(
+			schema.GroupResource{Group: "projectcalico.org", Resource: "globalnetworksets"},
+			"pan.addressgroup22-ri4np",
+		)
+
 		By("Defining a Panorama GlobalNetworkSet.")
 		validPanoramaglobalNetworkSetInput := v3.GlobalNetworkSet{
 			ObjectMeta: metav1.ObjectMeta{
@@ -195,45 +330,51 @@ var _ = Describe("Tests controller syncToDatastore functionality", func() {
 			},
 		}
 
-		By("Defining the GNS key.")
 		key := validPanoramaglobalNetworkSetInput.Name
 
-		By("Creating the GlobalNetworkSet in the datastore.")
-		_, err := mccl.gnsClient.Create(dagc.ctx, &validPanoramaglobalNetworkSetInput, metav1.CreateOptions{})
+		// Define a mock calico client, with sample datastore input.
+		mockGnsList := &v3.GlobalNetworkSetList{}
+		mockGnsList.Items = append(mockGnsList.Items, globalNetworkSetStartingState...)
+		// Load a fake calico client with the starting gns data.
+		mccl := fakeclientset.NewSimpleClientset(mockGnsList).ProjectcalicoV3()
+		dagc.globalNetworkSet = mccl.GlobalNetworkSets()
 
-		By("Validating the datastore Create did not return an error.")
+		By("creating the GlobalNetworkSet in the datastore.")
+		_, err := mccl.GlobalNetworkSets().Create(dagc.ctx, &validPanoramaglobalNetworkSetInput, metav1.CreateOptions{})
+
+		By("validating the datastore Create did not return an error.")
 		Expect(err).To(BeNil())
 
-		By("Validating the cache does not contain the key.")
+		By("validating the cache does not contain the key.")
 		_, found := dagc.cache.Get(key)
 		Expect(found).NotTo(BeTrue())
 
-		By("Validating the datastore does contain the key.")
-		val, err := mccl.gnsClient.Get(dagc.ctx, key, metav1.GetOptions{})
+		By("validating the datastore does contain the key.")
+		val, err := mccl.GlobalNetworkSets().Get(dagc.ctx, key, metav1.GetOptions{})
 		Expect(err).To(BeNil())
 		Expect(val.Name).To(Equal(key))
 
-		By("Syncing the datastore with the case. Delete key from datastore.")
+		By("syncing the datastore with the case. Delete key from datastore.")
 		err = dagc.syncToDatastore(key)
 
-		By("Validating sync to datastore does not return an error.")
+		By("validating sync to datastore does not return an error.")
 		Expect(err).To(BeNil())
 
 		By("Validating key has been deleted in the datastore.")
-		_, err = mccl.gnsClient.Get(dagc.ctx, key, metav1.GetOptions{})
+		_, err = mccl.GlobalNetworkSets().Get(dagc.ctx, key, metav1.GetOptions{})
 		Expect(err).NotTo(BeNil())
-		Expect(err.Error()).To(Equal(" \"NotFound\" not found"))
+		Expect(err.Error()).To(Equal(keyNotFoundGetError.Error()))
 
-		By("Loading the expected data")
+		By("loading the expected data")
 		var expectedGnsList []v3.GlobalNetworkSet
-		file := fmt.Sprintf("%s/%s", expectedDataFolder, "expectedGnsList.json")
+		file = fmt.Sprintf("%s/%s", expectedDataFolder, "expectedGnsList.json")
 		panutils.LoadData(file, &expectedGnsList)
 
 		By("Verifying the datastore against the expected result list.")
-		gnsListAfterSync, _ := mccl.gnsClient.List(dagc.ctx, metav1.ListOptions{})
+		gnsListAfterSync, _ := mccl.GlobalNetworkSets().List(dagc.ctx, metav1.ListOptions{})
 		Expect(len(gnsListAfterSync.Items)).To(Equal(len(expectedGnsList)))
 		for _, expectedGns := range expectedGnsList {
-			item, err := mccl.gnsClient.Get(dagc.ctx, expectedGns.Name, metav1.GetOptions{})
+			item, err := mccl.GlobalNetworkSets().Get(dagc.ctx, expectedGns.Name, metav1.GetOptions{})
 			Expect(err).To(BeNil())
 			validatePanoramaGnsFields(*item, expectedGns)
 		}
@@ -266,16 +407,23 @@ var _ = Describe("Tests controller syncToDatastore functionality", func() {
 			},
 		}
 
-		By("Defining the GNS key.")
+		// Set the key and not found error.
 		key := validPanoramaGlobalNetworkSetInput.Name
+		keyNotFoundGetError := kerrors.NewNotFound(
+			schema.GroupResource{Group: "projectcalico.org", Resource: "globalnetworksets"},
+			key,
+		)
 
-		By("Deleting the key, if it exists, from the datastore")
-		err := dagc.calicoClient.GlobalNetworkSets().Delete(dagc.ctx, key, metav1.DeleteOptions{})
-		Expect(err).To(BeNil())
+		// Define a mock calico client, with sample datastore input.
+		mockGnsList := &v3.GlobalNetworkSetList{}
+		mockGnsList.Items = append(mockGnsList.Items, globalNetworkSetStartingState...)
+		// Load a fake calico client with the starting gns data.
+		mccl := fakeclientset.NewSimpleClientset(mockGnsList).ProjectcalicoV3()
+		dagc.globalNetworkSet = mccl.GlobalNetworkSets()
 
 		By("Validating the datastore does contain the key.")
-		_, err = dagc.calicoClient.GlobalNetworkSets().Get(dagc.ctx, key, metav1.GetOptions{})
-		Expect(err.Error()).To(Equal(" \"NotFound\" not found"))
+		_, err := dagc.globalNetworkSet.Get(dagc.ctx, key, metav1.GetOptions{})
+		Expect(err.Error()).To(Equal(keyNotFoundGetError.Error()))
 
 		By("Validating the key does not exist in the cache.")
 		_, found := dagc.cache.Get(key)
@@ -293,14 +441,14 @@ var _ = Describe("Tests controller syncToDatastore functionality", func() {
 		Expect(err).To(BeNil())
 
 		By("Validating key has been created in the datastore.")
-		gns, err := mccl.gnsClient.Get(dagc.ctx, key, metav1.GetOptions{})
+		gns, err := mccl.GlobalNetworkSets().Get(dagc.ctx, key, metav1.GetOptions{})
 		Expect(err).To(BeNil())
 		// Validate the Panorama fields are as expected.
 		validatePanoramaGnsFields(*gns, validPanoramaGlobalNetworkSetInput)
 
 		By("Loading the expected gns cached with added key data")
 		var expectedGnsCacheWithAddedKey []v3.GlobalNetworkSet
-		file := fmt.Sprintf("%s/%s", expectedDataFolder, "expectedGnsCacheWithAddedKey.json")
+		file = fmt.Sprintf("%s/%s", expectedDataFolder, "expectedGnsCacheWithAddedKey.json")
 		panutils.LoadData(file, &expectedGnsCacheWithAddedKey)
 
 		By("Validating the cache contains the expected values")
@@ -369,8 +517,15 @@ var _ = Describe("Tests controller syncToDatastore functionality", func() {
 		By("Defining the GNS key.")
 		key := validPanoramaGlobalNetworkSetInput.Name
 
+		// Define a mock calico client, with sample datastore input.
+		mockGnsList := &v3.GlobalNetworkSetList{}
+		mockGnsList.Items = append(mockGnsList.Items, globalNetworkSetStartingState...)
+		// Load a fake calico client with the starting gns data.
+		mccl := fakeclientset.NewSimpleClientset(mockGnsList).ProjectcalicoV3()
+		dagc.globalNetworkSet = mccl.GlobalNetworkSets()
+
 		By("Validating the datastore does contain the key.")
-		oldGns, err := dagc.calicoClient.GlobalNetworkSets().Get(dagc.ctx, key, metav1.GetOptions{})
+		oldGns, err := dagc.globalNetworkSet.Get(dagc.ctx, key, metav1.GetOptions{})
 		Expect(err).To(BeNil())
 		// Verify the relevant datastore GNS fields are equal to the inserted GNS ones.
 		validatePanoramaGnsFields(*oldGns, validPanoramaGlobalNetworkSetInput)
@@ -391,14 +546,14 @@ var _ = Describe("Tests controller syncToDatastore functionality", func() {
 		Expect(sync).To(BeNil())
 
 		By("Validating key has been updated in the datastore.")
-		gns, err := mccl.gnsClient.Get(dagc.ctx, key, metav1.GetOptions{})
+		gns, err := dagc.globalNetworkSet.Get(dagc.ctx, key, metav1.GetOptions{})
 		Expect(err).To(BeNil())
 		// Validate the datastore fields have been updated and are now equal to the inserted GNS.
 		validatePanoramaGnsFields(*gns, cachePanoramaGlobalNetworkSetInput)
 
 		By("Loading the expected gns cached with added key data")
 		var expectedGnsListWithUpdatedKey []v3.GlobalNetworkSet
-		file := fmt.Sprintf("%s/%s", expectedDataFolder, "expectedGnsListWithUpdatedKey.json")
+		file = fmt.Sprintf("%s/%s", expectedDataFolder, "expectedGnsListWithUpdatedKey.json")
 		panutils.LoadData(file, &expectedGnsListWithUpdatedKey)
 
 		By("Validating the cache contains the expected values")
@@ -416,9 +571,9 @@ var _ = Describe("Tests controller syncToDatastore functionality", func() {
 var _ = Describe("Tests controller updateCache functionality", func() {
 	var (
 		dagc                          dynamicAddressGroupsController
-		mccl                          *FakeDagCalicoClient
 		tags                          set.Set[string]
 		globalNetworkSetStartingState []v3.GlobalNetworkSet
+		mockGnsList                   *v3.GlobalNetworkSetList
 
 		deviceGroupsTest1 = dvgrp.Entry{
 			Name: "device_group1",
@@ -428,11 +583,9 @@ var _ = Describe("Tests controller updateCache functionality", func() {
 	BeforeEach(func() {
 		// Setup tags input for the dynamic address groups controller.
 		tags = set.FromArray([]string{"tag1", "tag2", "tag3"})
-		// Load the input data.
-		file := fmt.Sprintf("%s/%s", inputDataFolder, "globalNetworkSetStartingState.json")
-		panutils.LoadData(file, &globalNetworkSetStartingState)
 		// Define a mock calico client, with sample datastore input.
-		mccl = NewFakeDagCalicoClient(globalNetworkSetStartingState)
+		mockGnsList = &v3.GlobalNetworkSetList{}
+		mockGnsList.Items = append(mockGnsList.Items, globalNetworkSetStartingState...)
 	})
 
 	It("should handle an error generated by the call to GetAddressGroups", func() {
@@ -455,13 +608,17 @@ var _ = Describe("Tests controller updateCache functionality", func() {
 			ObjectType:  reflect.TypeOf(v3.GlobalNetworkSet{}),
 			LogTypeDesc: "AddressGroupGlobalNetworkSets",
 		}
+
+		// Load a fake calico client with the starting gns data.
+		mccl := fakeclientset.NewSimpleClientset(mockGnsList).ProjectcalicoV3().GlobalNetworkSets()
+
 		// Define a dynamic address groups controller.
 		dagc = dynamicAddressGroupsController{
-			tags:         tags,
-			calicoClient: mccl,
-			cache:        rcache.NewResourceCache(cacheArgs),
-			pancli:       mpcl,
-			isInSync:     true,
+			tags:             tags,
+			globalNetworkSet: mccl,
+			cache:            rcache.NewResourceCache(cacheArgs),
+			pancli:           mpcl,
+			isInSync:         true,
 		}
 		// Define the cache.
 		for _, gns := range globalNetworkSetStartingState {
@@ -503,13 +660,17 @@ var _ = Describe("Tests controller updateCache functionality", func() {
 			ObjectType:  reflect.TypeOf(v3.GlobalNetworkSet{}),
 			LogTypeDesc: "AddressGroupGlobalNetworkSets",
 		}
+
+		// Load a fake calico client with the starting gns data.
+		mccl := fakeclientset.NewSimpleClientset(mockGnsList).ProjectcalicoV3().GlobalNetworkSets()
+
 		// Define a dynamic address groups controller.
 		dagc = dynamicAddressGroupsController{
-			tags:         tags,
-			calicoClient: mccl,
-			cache:        rcache.NewResourceCache(cacheArgs),
-			pancli:       mpcl,
-			isInSync:     true,
+			tags:             tags,
+			globalNetworkSet: mccl,
+			cache:            rcache.NewResourceCache(cacheArgs),
+			pancli:           mpcl,
+			isInSync:         true,
 		}
 
 		By("Verifying the cache is empty.")
