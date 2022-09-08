@@ -97,7 +97,7 @@ func NewMockSearchClient(results []interface{}) lmaelastic.Client {
 		return nil, errors.New("Unexpected result type")
 	}
 
-	return lmaelastic.NewMockClient(doFunc)
+	return lmaelastic.NewMockComplianceClient(doFunc)
 }
 
 func MaybeParseClusterNameFromRequest(r *http.Request) string {

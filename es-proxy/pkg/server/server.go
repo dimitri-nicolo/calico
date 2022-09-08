@@ -212,6 +212,7 @@ func Start(cfg *Config) error {
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
 					service.ServiceHandler(
+						lmaindex.L7Logs(),
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						esClient.Backend(),
 					)))))

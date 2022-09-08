@@ -22,12 +22,11 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
-const (
-	httpStatusServerErrorUpperBound = 599
-)
+const httpStatusServerErrorUpperBound = 599
 
 // ServiceHandler handles service requests from manager dashboard.
 func ServiceHandler(
+	idxHelper lmaindex.Helper,
 	authReview middleware.AuthorizationReview,
 	client *elastic.Client,
 ) http.Handler {
@@ -38,7 +37,7 @@ func ServiceHandler(
 			return
 		}
 
-		resp, err := processServiceRequest(params, authReview, client, r)
+		resp, err := processServiceRequest(idxHelper, params, authReview, client, r)
 		if err != nil {
 			httputils.EncodeError(w, err)
 			return
@@ -99,12 +98,13 @@ type service struct {
 
 // processServiceRequest translates service request parameters to Elastic queries and return responses.
 func processServiceRequest(
+	idxHelper lmaindex.Helper,
 	params *v1.ServiceRequest,
 	authReview middleware.AuthorizationReview,
 	client *elastic.Client,
 	r *http.Request,
 ) (*v1.ServiceResponse, error) {
-	res, err := search(params, authReview, client, r)
+	res, err := search(idxHelper, params, authReview, client, r)
 	if err != nil {
 		return nil, err
 	}
@@ -170,6 +170,7 @@ func processServiceRequest(
 
 // search returns the results of ES search.
 func search(
+	idxHelper lmaindex.Helper,
 	params *v1.ServiceRequest,
 	authReview middleware.AuthorizationReview,
 	esClient *elastic.Client,
@@ -180,7 +181,6 @@ func search(
 	defer cancelWithTimeout()
 
 	// Get service details from L7 ApplicationLayer logs.
-	idxHelper := lmaindex.L7Logs()
 	index := idxHelper.GetIndex(elasticvariant.AddIndexInfix(params.ClusterName))
 
 	esquery := elastic.NewBoolQuery()

@@ -388,8 +388,8 @@ func (c *client) Reset() {
 	).Do(context.Background())
 }
 
-// NewMockClient creates a mock client used for testing.
-func NewMockClient(doFunc func(ctx context.Context, s *elastic.SearchService) (*elastic.SearchResult, error)) Client {
+// NewMockComplianceClient creates a mock client used for testing.
+func NewMockComplianceClient(doFunc func(ctx context.Context, s *elastic.SearchService) (*elastic.SearchResult, error)) Client {
 	mc := mockComplianceClient{}
 	mc.DoFunc = doFunc
 	return &mc
@@ -444,5 +444,5 @@ func NewMockSearchClient(results []interface{}) Client {
 		return nil, errors.New("Unexpected result type")
 	}
 
-	return NewMockClient(doFunc)
+	return NewMockComplianceClient(doFunc)
 }
