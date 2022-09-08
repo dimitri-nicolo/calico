@@ -64,6 +64,9 @@ type Config struct {
 	// accessing other clusters.
 	VoltronCAPath string `envconfig:"VOLTRON_CA_PATH" default:"/manager-tls/cert"`
 
+	// Location of the Voltron service.
+	VoltronURL string `envconfig:"VOLTRON_URL" default:"https://localhost:9443"`
+
 	// Dex settings for authentication.
 	OIDCAuthEnabled        bool   `envconfig:"OIDC_AUTH_ENABLED" default:"false"`
 	OIDCAuthIssuer         string `envconfig:"OIDC_AUTH_ISSUER"`
@@ -123,7 +126,6 @@ func validateConfig(config *Config) error {
 	}
 	if config.ElasticURL.Scheme == "http" && config.ElasticCAPath != "" {
 		return errors.New("Elasticsearch CA provided but scheme is set to http")
-
 	}
 	return nil
 }
