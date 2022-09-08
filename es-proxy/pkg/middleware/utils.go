@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
 package middleware
 
 import (
@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
@@ -15,6 +16,11 @@ import (
 )
 
 const (
+	DefaultRequestTimeRange = 1 * time.Hour
+	DefaultRequestTimeout   = 60 * time.Second
+
+	MaxNumResults = 10000
+
 	clusterParam       = "cluster"
 	clusterIdHeader    = "x-cluster-id"
 	defaultClusterName = "cluster"
@@ -91,7 +97,7 @@ func NewMockSearchClient(results []interface{}) lmaelastic.Client {
 		return nil, errors.New("Unexpected result type")
 	}
 
-	return lmaelastic.NewMockClient(doFunc)
+	return lmaelastic.NewMockComplianceClient(doFunc)
 }
 
 func MaybeParseClusterNameFromRequest(r *http.Request) string {

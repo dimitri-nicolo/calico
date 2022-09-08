@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2022 Tigera, Inc. All rights reserved.
 package elastic
 
 import (
@@ -22,7 +22,6 @@ const (
 	IPSweepJobIndex                = ".ml-anomalies-custom-ip_sweep_pods"
 	InboundServiceBytesJobIndex    = ".ml-anomalies-custom-service_bytes_anomaly"
 	OutboundServiceBytesJobIndex   = ".ml-anomalies-custom-service_bytes_anomaly"
-	DefaultADPageSize              = 100
 )
 
 func (c *client) GetADLogs(ctx context.Context, start, end *time.Time) <-chan *api.ADResult {
@@ -31,7 +30,7 @@ func (c *client) GetADLogs(ctx context.Context, start, end *time.Time) <-chan *a
 
 // Issue an Elasticsearch query that matches anomaly detection logs.
 func (c *client) SearchADLogs(ctx context.Context, filter *api.ADLogsSelection, start, end *time.Time) <-chan *api.ADResult {
-	resultChan := make(chan *api.ADResult, DefaultADPageSize)
+	resultChan := make(chan *api.ADResult, DefaultPageSize)
 	adIndices := getADJobIndices(c)
 
 	// Create ES queries using given filters and time interval.
@@ -41,7 +40,7 @@ func (c *client) SearchADLogs(ctx context.Context, filter *api.ADLogsSelection, 
 		defer close(resultChan)
 
 		scroll := c.Scroll(adIndices...).
-			Size(DefaultADPageSize).
+			Size(DefaultPageSize).
 			Query(queries).
 			Sort(api.ADLogTimestamp, true)
 
@@ -60,11 +59,11 @@ func (c *client) SearchADLogs(ctx context.Context, filter *api.ADLogsSelection, 
 			}
 
 			if res == nil {
-				err = fmt.Errorf("Search expected results != nil; got nil")
+				err = fmt.Errorf("search expected results != nil; got nil")
 			} else if res.Hits == nil {
-				err = fmt.Errorf("Search expected results.Hits != nil; got nil")
+				err = fmt.Errorf("search expected results.Hits != nil; got nil")
 			} else if len(res.Hits.Hits) == 0 {
-				err = fmt.Errorf("Search expected results.Hits.Hits > 0; got 0")
+				err = fmt.Errorf("search expected results.Hits.Hits > 0; got 0")
 			}
 			if err != nil {
 				log.WithError(err).Warn("Unexpected results from anomaly detection logs search")
@@ -78,7 +77,7 @@ func (c *client) SearchADLogs(ctx context.Context, filter *api.ADLogsSelection, 
 				var m map[string]interface{}
 				if err := json.Unmarshal(hit.Source, &m); err != nil {
 					log.WithFields(log.Fields{"index": hit.Index, "id": hit.Id}).WithError(err).Warn("Failed to unmarshal event json")
-					resultChan <- &api.ADResult{Err: fmt.Errorf("Failed to unmarshal event json")}
+					resultChan <- &api.ADResult{Err: fmt.Errorf("failed to unmarshal event json")}
 					continue
 				}
 
@@ -94,7 +93,7 @@ func (c *client) SearchADLogs(ctx context.Context, filter *api.ADLogsSelection, 
 					var d api.ADRecordLog
 					if err := json.Unmarshal(hit.Source, &d); err != nil {
 						log.WithFields(log.Fields{"index": hit.Index, "id": hit.Id}).WithError(err).Warn("Failed to unmarshal anomaly detection record json")
-						resultChan <- &api.ADResult{Err: fmt.Errorf("Failed to unmarshal anomaly detection record json")}
+						resultChan <- &api.ADResult{Err: fmt.Errorf("failed to unmarshal anomaly detection record json")}
 						continue
 					}
 					resultChan <- &api.ADResult{ADRecordLog: &d}

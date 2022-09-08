@@ -13,16 +13,17 @@ build: ut
 
 # Mocks auto generated testify mocks by mockery. Run `make gen-mocks` to regenerate the testify mocks.
 MOCKERY_FILE_PATHS= \
-	pkg/api/ReportEventFetcher \
 	pkg/api/ListDestination \
+	pkg/api/ReportEventFetcher \
+	pkg/auth/JWTAuth \
+	pkg/auth/RBACAuthorizer \
+	pkg/elastic/Client \
 	pkg/elastic/ClusterContextClientFactory \
 	pkg/elastic/FlowFilter \
-	pkg/elastic/Client \
-	pkg/auth/RBACAuthorizer \
-	pkg/rbac/FlowHelper \
+	pkg/elastic/index/Helper \
 	pkg/k8s/ClientSet \
 	pkg/k8s/ClientSetFactory \
-	pkg/auth/JWTAuth
+	pkg/rbac/FlowHelper
 
 # Note that mockery doesn't add the correct elasticsearch dependency, so if you uncomment this to regenerate the client
 # be sure to check that the elasticsearch dependency for the generated mock is correct

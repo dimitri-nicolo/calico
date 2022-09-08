@@ -1,3 +1,4 @@
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 package elastic
 
 import (
@@ -17,10 +18,7 @@ import (
 	api "github.com/projectcalico/calico/lma/pkg/api"
 )
 
-const (
-	AuditLogIndex   = "tigera_secure_ee_audit_*"
-	DefaultPageSize = 100
-)
+const AuditLogIndex = "tigera_secure_ee_audit_*"
 
 func (c *client) GetAuditEvents(ctx context.Context, start, end *time.Time) <-chan *api.AuditEventResult {
 	return c.SearchAuditEvents(ctx, nil, start, end)
@@ -48,11 +46,11 @@ func (c *client) SearchAuditEvents(ctx context.Context, filter *v3.AuditEventsSe
 				return
 			}
 			if res == nil {
-				err = fmt.Errorf("Search expected results != nil; got nil")
+				err = fmt.Errorf("search expected results != nil; got nil")
 			} else if res.Hits == nil {
-				err = fmt.Errorf("Search expected results.Hits != nil; got nil")
+				err = fmt.Errorf("search expected results.Hits != nil; got nil")
 			} else if len(res.Hits.Hits) == 0 {
-				err = fmt.Errorf("Search expected results.Hits.Hits > 0; got 0")
+				err = fmt.Errorf("search expected results.Hits.Hits > 0; got 0")
 			}
 			if err != nil {
 				log.WithError(err).Warn("Unexpected results from audit events search")

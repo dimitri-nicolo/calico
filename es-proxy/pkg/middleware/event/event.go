@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"time"
 
 	"github.com/olivere/elastic/v7"
 	log "github.com/sirupsen/logrus"
@@ -15,10 +14,6 @@ import (
 
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
-)
-
-const (
-	defaultTimeout = 60 * time.Second
 )
 
 // EventHandler handles event bulk requests for deleting and dimssing events.
@@ -107,7 +102,7 @@ func processEventRequest(
 	params *v1.BulkEventRequest,
 ) (*v1.BulkEventResponse, error) {
 	// create a context with timeout to ensure we don't block for too long.
-	ctx, cancelWithTimeout := context.WithTimeout(r.Context(), defaultTimeout)
+	ctx, cancelWithTimeout := context.WithTimeout(r.Context(), middleware.DefaultRequestTimeout)
 	defer cancelWithTimeout()
 
 	esClient, err := esClientFactory.ClientForCluster(params.ClusterName)

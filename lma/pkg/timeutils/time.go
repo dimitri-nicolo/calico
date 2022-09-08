@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 package timeutils
 
 import (
@@ -79,7 +79,7 @@ func ParseTime(now time.Time, tstr *string) (*time.Time, interface{}, error) {
 
 	// Not now-X format, parse as RFC3339.
 	if t, err := time.Parse(time.RFC3339, *tstr); err == nil {
-		log.Debugf("Time is in valid RFC3339 format: %s", *tstr)
+		log.Debugf("Time is in a valid RFC3339 format: %s", *tstr)
 		tutc := t.UTC()
 		return &tutc, tutc.Unix(), nil
 	} else {

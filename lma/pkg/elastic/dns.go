@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2022 Tigera, Inc. All rights reserved.
 package elastic
 
 import (
@@ -14,10 +14,7 @@ import (
 	api "github.com/projectcalico/calico/lma/pkg/api"
 )
 
-const (
-	DNSIndex           = "tigera_secure_ee_dns"
-	DefaultDNSPageSize = 100
-)
+const DNSIndex = "tigera_secure_ee_dns"
 
 func (c *client) GetDNSLogs(ctx context.Context, start, end *time.Time) <-chan *api.DNSResult {
 	return c.SearchDNSLogs(ctx, nil, start, end)
@@ -25,7 +22,7 @@ func (c *client) GetDNSLogs(ctx context.Context, start, end *time.Time) <-chan *
 
 // Issue an Elasticsearch query that matches alert logs.
 func (c *client) SearchDNSLogs(ctx context.Context, filter *api.DNSLogsSelection, start, end *time.Time) <-chan *api.DNSResult {
-	resultChan := make(chan *api.DNSResult, DefaultDNSPageSize)
+	resultChan := make(chan *api.DNSResult, DefaultPageSize)
 	dnsSearchIndex := c.ClusterIndex(DNSIndex, "*")
 
 	// Create ES queries using given filters and time interval.
@@ -35,7 +32,7 @@ func (c *client) SearchDNSLogs(ctx context.Context, filter *api.DNSLogsSelection
 		defer close(resultChan)
 
 		scroll := c.Scroll(dnsSearchIndex).
-			Size(DefaultDNSPageSize).
+			Size(DefaultPageSize).
 			Query(queries).
 			Sort(api.DNSLogStartTime, true)
 
@@ -54,11 +51,11 @@ func (c *client) SearchDNSLogs(ctx context.Context, filter *api.DNSLogsSelection
 			}
 
 			if res == nil {
-				err = fmt.Errorf("Search expected results != nil; got nil")
+				err = fmt.Errorf("search expected results != nil; got nil")
 			} else if res.Hits == nil {
-				err = fmt.Errorf("Search expected results.Hits != nil; got nil")
+				err = fmt.Errorf("search expected results.Hits != nil; got nil")
 			} else if len(res.Hits.Hits) == 0 {
-				err = fmt.Errorf("Search expected results.Hits.Hits > 0; got 0")
+				err = fmt.Errorf("search expected results.Hits.Hits > 0; got 0")
 			}
 			if err != nil {
 				log.WithError(err).Warn("Unexpected results from DNS logs search")

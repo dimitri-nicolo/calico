@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 package aggregation
 
 import (
@@ -16,6 +16,7 @@ import (
 
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	elasticvariant "github.com/projectcalico/calico/es-proxy/pkg/elastic"
+	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
@@ -34,7 +35,6 @@ import (
 // - Hard coded limits on the aggregation hits.
 
 const (
-	defaultRequestTimeout  = 60 * time.Second
 	minAggregationInterval = 10 * time.Minute
 	minTimeBuckets         = 4
 	maxTimeBuckets         = 24
@@ -167,10 +167,10 @@ func (s *aggregation) getAggregationRequest(w http.ResponseWriter, req *http.Req
 	}
 
 	if ar.Timeout == 0 {
-		ar.Timeout = defaultRequestTimeout
+		ar.Timeout = middleware.DefaultRequestTimeout
 	}
 	if ar.Cluster == "" {
-		ar.Cluster = "cluster"
+		ar.Cluster = middleware.MaybeParseClusterNameFromRequest(req)
 	}
 	if len(ar.Aggregations) == 0 {
 		return nil, httputils.NewHttpStatusErrorBadRequest("Request body contains no aggregations", nil)

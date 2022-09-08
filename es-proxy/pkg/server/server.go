@@ -21,6 +21,7 @@ import (
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/event"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/rawquery"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/search"
+	"github.com/projectcalico/calico/es-proxy/pkg/middleware/service"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/servicegraph"
 	"github.com/projectcalico/calico/es-proxy/pkg/pip"
 	pipcfg "github.com/projectcalico/calico/es-proxy/pkg/pip/config"
@@ -204,6 +205,15 @@ func Start(cfg *Config) error {
 						lmaindex.Alerts(),
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						k8sClientSet,
+						esClient.Backend(),
+					)))))
+	sm.Handle("/services",
+		middleware.ClusterRequestToResource(l7ResourceName,
+			middleware.AuthenticateRequest(authn,
+				middleware.AuthorizeRequest(authz,
+					service.ServiceHandler(
+						lmaindex.L7Logs(),
+						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						esClient.Backend(),
 					)))))
 	// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.

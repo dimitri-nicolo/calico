@@ -1,0 +1,1 @@
+{"from":0,"query":{"bool":{"filter":[{"range":{"end_time":{"from":1657670462,"include_lower":false,"include_upper":true,"to":1657674062}}},{"bool":{"should":[{"term":{"src_type":"wep"}},{"term":{"dest_type":"wep"}}]}}]}},"size":10000}
