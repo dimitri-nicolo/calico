@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 #include "events.h"
-#include "tcp_stats_iptables.h"
+#include "tcp_stats.h"
 #include "socket_lookup.h"
 #include "globals.h"
 

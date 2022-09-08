@@ -40,7 +40,7 @@
 #include "tcv6.h"
 #include "policy_program.h"
 #include "parsing.h"
-#include "tcp_stats_bpf.h"
+#include "tcp_stats.h"
 #include "socket_lookup.h"
 #include "failsafe.h"
 #include "metadata.h"

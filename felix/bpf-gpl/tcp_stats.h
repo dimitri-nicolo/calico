@@ -1,13 +1,13 @@
 // Project Calico BPF dataplane programs.
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2022 Tigera, Inc. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
-#ifndef __CALI_TCPSTATS_IPTABLES_H__
-#define __CALI_TCPSTATS_IPTABLES_H__
+#ifndef __CALI_TCPSTATS_H__
+#define __CALI_TCPSTATS_H__
 
 #include "sstats.h"
 
-#define SEND_TCP_STATS_INTERVAL 500000
+#define SEND_TCP_STATS_INTERVAL 5000000000
 
 static CALI_BPF_INLINE void send_tcp_stats(struct bpf_sock *sk, struct bpf_tcp_sock *tsk, struct cali_tc_ctx *ctx) {
 	struct calico_socket_stats_key key = {};

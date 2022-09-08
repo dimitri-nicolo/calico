@@ -938,15 +938,13 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	if config.FlowLogsCollectTcpStats {
 		eventTcpStatsSink = events.NewEventTcpStatsSink()
 		bpfEventPoller.Register(events.TypeTcpStats, eventTcpStatsSink.HandleEvent)
-		if !config.BPFEnabled {
-			socketStatsMap := stats.SocketStatsMap(bpfMapContext)
-			err := socketStatsMap.EnsureExists()
-			if err != nil {
-				log.WithError(err).Error("Failed to create socket stats BPF map. Disabling socket stats collection")
-				config.FlowLogsCollectTcpStats = false
-			}
-
+		socketStatsMap := stats.SocketStatsMap(bpfMapContext)
+		err := socketStatsMap.EnsureExists()
+		if err != nil {
+			log.WithError(err).Error("Failed to create socket stats BPF map. Disabling socket stats collection")
+			config.FlowLogsCollectTcpStats = false
 		}
+
 	}
 
 	var ipSetsV6 *ipsets.IPSets

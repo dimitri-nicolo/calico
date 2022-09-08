@@ -112,7 +112,7 @@ var MapParameters = bpf.MapParameters{
 	ValueSize:  expectedSize,
 	MaxEntries: 1,
 	Name:       "cali_v4_state",
-	Version:    4,
+	Version:    5,
 }
 
 func Map(mc *bpf.MapContext) bpf.Map {
