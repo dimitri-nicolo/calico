@@ -1,5 +1,5 @@
 // Copyright (c) 2022 Tigera, Inc. All rights reserved.
-package service
+package process
 
 import (
 	"bytes"
@@ -28,22 +28,16 @@ import (
 
 var (
 	// requests from manager to es-proxy
-	//go:embed testdata/service_request_from_manager.json
-	serviceRequest string
-	//go:embed testdata/service_request_with_selector_from_manager.json
-	serviceRequestWithSelector string
+	//go:embed testdata/process_request_from_manager.json
+	processRequest string
 
 	// requests from es-proxy to elastic
-	//go:embed testdata/l7_search_request.json
-	l7SearchRequest string
-	//go:embed testdata/l7_search_request_with_namespace.json
-	l7SearchRequestWithNamespace string
+	//go:embed testdata/flow_search_request.json
+	flowSearchRequest string
 
 	// responses from elastic to es-proxy
-	//go:embed testdata/l7_search_response.json
-	l7SearchResponse string
-	//go:embed testdata/l7_search_response_with_namespace.json
-	l7SearchResponseWithNamespace string
+	//go:embed testdata/flow_search_response.json
+	flowSearchResponse string
 )
 
 // The user authentication review mock struct implementing the authentication review interface.
@@ -100,17 +94,17 @@ var _ = Describe("Service middleware tests", func() {
 
 				// Elastic _search request
 				Expect(req.Method).To(Equal(http.MethodPost))
-				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_l7.test-cluster-name.*/_search"))
+				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_flows.test-cluster-name.*/_search"))
 
 				body, err := ioutil.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(body).To(Equal([]byte(l7SearchRequest)))
+				Expect(body).To(Equal([]byte(flowSearchRequest)))
 
 				Expect(req.Body.Close()).NotTo(HaveOccurred())
 				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 			}).Return(&http.Response{
 				StatusCode: http.StatusOK,
-				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(l7SearchResponse))),
+				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(flowSearchResponse))),
 			}, nil)
 
 			// mock es client
@@ -122,106 +116,54 @@ var _ = Describe("Service middleware tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// validate responses
-			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(serviceRequest)))
+			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(processRequest)))
 			Expect(err).NotTo(HaveOccurred())
 
 			rr := httptest.NewRecorder()
-			idxHelper := lmaindex.L7Logs()
-			handler := ServiceHandler(idxHelper, userAuthReview, client)
+			idxHelper := lmaindex.FlowLogs()
+			handler := ProcessHandler(idxHelper, userAuthReview, client)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusOK))
 
-			var resp v1.ServiceResponse
+			var resp v1.ProcessResponse
 			err = json.Unmarshal(rr.Body.Bytes(), &resp)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(resp.Services).To(HaveLen(2))
+			Expect(resp.Processes).To(HaveLen(9))
 
-			// sort services slice as the order isn't guaranteed when translated from map.
-			sort.Slice(resp.Services, func(i, j int) bool {
-				return resp.Services[i].Name < resp.Services[j].Name
+			// sort process slice as the order isn't guaranteed when translated from map.
+			sort.Slice(resp.Processes, func(i, j int) bool {
+				return resp.Processes[i].Name < resp.Processes[j].Name
 			})
 
-			Expect(resp.Services[0].Name).To(Equal("checkoutservice-69c8ff664b-*"))
-			Expect(resp.Services[0].ErrorRate).To(Equal(0.0))
-			Expect(resp.Services[0].Latency).To(BeNumerically("~", 3449.98, 0.01))
-			Expect(resp.Services[0].InboundThroughput).To(BeNumerically("~", 14990.34, 0.01))
-			Expect(resp.Services[0].OutboundThroughput).To(BeNumerically("~", 12463.77, 0.01))
-			Expect(resp.Services[0].RequestThroughput).To(BeNumerically("~", 0.095, 0.001))
-
-			Expect(resp.Services[1].Name).To(Equal("frontend-99684f7f8-*"))
-			Expect(resp.Services[1].ErrorRate).To(BeNumerically("~", 5.577, 0.001))
-			Expect(resp.Services[1].Latency).To(BeNumerically("~", 5338.46, 0.01))
-			Expect(resp.Services[1].InboundThroughput).To(BeNumerically("~", 4251.80, 0.01))
-			Expect(resp.Services[1].OutboundThroughput).To(BeNumerically("~", 19909.94, 0.01))
-			Expect(resp.Services[1].RequestThroughput).To(BeNumerically("~", 0.804, 0.001))
-		})
-
-		It("should return a valid services response filtered by namespace", func() {
-			// mock http client
-			mockDoer.On("Do", mock.AnythingOfType("*http.Request")).Run(func(args mock.Arguments) {
-				defer GinkgoRecover()
-				req := args.Get(0).(*http.Request)
-
-				// Elastic _search request
-				Expect(req.Method).To(Equal(http.MethodPost))
-				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_l7.test-cluster-name.*/_search"))
-
-				body, err := ioutil.ReadAll(req.Body)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(body).To(Equal([]byte(l7SearchRequestWithNamespace)))
-
-				Expect(req.Body.Close()).NotTo(HaveOccurred())
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
-			}).Return(&http.Response{
-				StatusCode: http.StatusOK,
-				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(l7SearchResponseWithNamespace))),
-			}, nil)
-
-			// mock es client
-			client, err := elastic.NewClient(
-				elastic.SetHttpClient(mockDoer),
-				elastic.SetSniff(false),
-				elastic.SetHealthcheck(false),
-			)
-			Expect(err).NotTo(HaveOccurred())
-
-			// validate responses
-			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(serviceRequestWithSelector)))
-			Expect(err).NotTo(HaveOccurred())
-
-			rr := httptest.NewRecorder()
-			idxHelper := lmaindex.L7Logs()
-			handler := ServiceHandler(idxHelper, userAuthReview, client)
-			handler.ServeHTTP(rr, req)
-
-			Expect(rr.Code).To(Equal(http.StatusOK))
-
-			var resp v1.ServiceResponse
-			err = json.Unmarshal(rr.Body.Bytes(), &resp)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(resp.Services).To(HaveLen(2))
-
-			// sort services slice as the order isn't guaranteed when translated from map.
-			sort.Slice(resp.Services, func(i, j int) bool {
-				return resp.Services[i].Name < resp.Services[j].Name
-			})
-
-			Expect(resp.Services[0].Name).To(Equal("checkoutservice-69c8ff664b-*"))
-			Expect(resp.Services[0].ErrorRate).To(Equal(0.0))
-			Expect(resp.Services[0].Latency).To(BeNumerically("~", 3193.52, 0.01))
-			Expect(resp.Services[0].InboundThroughput).To(BeNumerically("~", 16202.02, 0.01))
-			Expect(resp.Services[0].OutboundThroughput).To(BeNumerically("~", 13464.65, 0.01))
-			Expect(resp.Services[0].RequestThroughput).To(BeNumerically("~", 0.102, 0.001))
-
-			Expect(resp.Services[1].Name).To(Equal("frontend-99684f7f8-*"))
-			Expect(resp.Services[1].ErrorRate).To(BeNumerically("~", 100, 0.001))
-			Expect(resp.Services[1].Latency).To(BeNumerically("~", 72103.41, 0.01))
-			Expect(resp.Services[1].InboundThroughput).To(BeNumerically("~", 2316.12, 0.01))
-			Expect(resp.Services[1].OutboundThroughput).To(BeNumerically("~", 3217.60, 0.01))
-			Expect(resp.Services[1].RequestThroughput).To(BeNumerically("~", 0.090, 0.001))
+			Expect(resp.Processes[0].Name).To(Equal("/app/cartservice"))
+			Expect(resp.Processes[0].Endpoint).To(Equal("cartservice-74f56fd4b-*"))
+			Expect(resp.Processes[0].InstanceCount).To(Equal(3))
+			Expect(resp.Processes[1].Name).To(Equal("/src/checkoutservice"))
+			Expect(resp.Processes[1].Endpoint).To(Equal("checkoutservice-69c8ff664b-*"))
+			Expect(resp.Processes[1].InstanceCount).To(Equal(4))
+			Expect(resp.Processes[2].Name).To(Equal("/src/server"))
+			Expect(resp.Processes[2].Endpoint).To(Equal("frontend-99684f7f8-*"))
+			Expect(resp.Processes[2].InstanceCount).To(Equal(3))
+			Expect(resp.Processes[3].Name).To(Equal("/usr/local/bin/locust"))
+			Expect(resp.Processes[3].Endpoint).To(Equal("loadgenerator-555fbdc87d-*"))
+			Expect(resp.Processes[3].InstanceCount).To(Equal(1))
+			Expect(resp.Processes[4].Name).To(Equal("/usr/local/bin/python"))
+			Expect(resp.Processes[4].Endpoint).To(Equal("loadgenerator-555fbdc87d-*"))
+			Expect(resp.Processes[4].InstanceCount).To(Equal(2))
+			Expect(resp.Processes[5].Name).To(Equal("/usr/local/bin/python"))
+			Expect(resp.Processes[5].Endpoint).To(Equal("recommendationservice-5f8c456796-*"))
+			Expect(resp.Processes[5].InstanceCount).To(Equal(2))
+			Expect(resp.Processes[6].Name).To(Equal("/usr/local/openjdk-8/bin/java"))
+			Expect(resp.Processes[6].Endpoint).To(Equal("adservice-77d5cd745d-*"))
+			Expect(resp.Processes[6].InstanceCount).To(Equal(3))
+			Expect(resp.Processes[7].Name).To(Equal("python"))
+			Expect(resp.Processes[7].Endpoint).To(Equal("recommendationservice-5f8c456796-*"))
+			Expect(resp.Processes[7].InstanceCount).To(Equal(2))
+			Expect(resp.Processes[8].Name).To(Equal("wget"))
+			Expect(resp.Processes[8].Endpoint).To(Equal("loadgenerator-555fbdc87d-*"))
+			Expect(resp.Processes[8].InstanceCount).To(Equal(1))
 		})
 
 		It("should return error when request is not POST", func() {
@@ -237,8 +179,8 @@ var _ = Describe("Service middleware tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			rr := httptest.NewRecorder()
-			idxHelper := lmaindex.L7Logs()
-			handler := ServiceHandler(idxHelper, userAuthReview, client)
+			idxHelper := lmaindex.FlowLogs()
+			handler := ProcessHandler(idxHelper, userAuthReview, client)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusMethodNotAllowed))
@@ -257,8 +199,8 @@ var _ = Describe("Service middleware tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			rr := httptest.NewRecorder()
-			idxHelper := lmaindex.L7Logs()
-			handler := ServiceHandler(idxHelper, userAuthReview, client)
+			idxHelper := lmaindex.FlowLogs()
+			handler := ProcessHandler(idxHelper, userAuthReview, client)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusBadRequest))
@@ -272,11 +214,11 @@ var _ = Describe("Service middleware tests", func() {
 
 				// Elastic _search request
 				Expect(req.Method).To(Equal(http.MethodPost))
-				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_l7.test-cluster-name.*/_search"))
+				Expect(req.URL.Path).To(Equal("/tigera_secure_ee_flows.test-cluster-name.*/_search"))
 
 				body, err := ioutil.ReadAll(req.Body)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(body).To(Equal([]byte(l7SearchRequestWithNamespace)))
+				Expect(body).To(Equal([]byte(flowSearchRequest)))
 
 				Expect(req.Body.Close()).NotTo(HaveOccurred())
 				req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
@@ -294,12 +236,12 @@ var _ = Describe("Service middleware tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// validate responses
-			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(serviceRequestWithSelector)))
+			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(processRequest)))
 			Expect(err).NotTo(HaveOccurred())
 
 			rr := httptest.NewRecorder()
-			idxHelper := lmaindex.L7Logs()
-			handler := ServiceHandler(idxHelper, userAuthReview, client)
+			idxHelper := lmaindex.FlowLogs()
+			handler := ProcessHandler(idxHelper, userAuthReview, client)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusInternalServerError))
@@ -311,7 +253,7 @@ var _ = Describe("Service middleware tests", func() {
 			mockIdxHelper.On("GetIndex", mock.Anything).Return("any-index")
 			mockIdxHelper.On("NewSelectorQuery", mock.Anything).Return(nil, fmt.Errorf("NewSelectorQuery failed"))
 
-			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(serviceRequestWithSelector)))
+			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(processRequest)))
 			Expect(err).NotTo(HaveOccurred())
 
 			// mock es client
@@ -323,7 +265,7 @@ var _ = Describe("Service middleware tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			rr := httptest.NewRecorder()
-			handler := ServiceHandler(&mockIdxHelper, userAuthReview, client)
+			handler := ProcessHandler(&mockIdxHelper, userAuthReview, client)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusInternalServerError))
@@ -334,11 +276,12 @@ var _ = Describe("Service middleware tests", func() {
 			mockIdxHelper := lmaindex.MockHelper{}
 			now := time.Now()
 			mockIdxHelper.On("GetIndex", mock.Anything).Return("any-index")
+			mockIdxHelper.On("NewSelectorQuery", mock.Anything).Return(elastic.NewBoolQuery(), nil)
 			mockIdxHelper.On("NewTimeRangeQuery", mock.Anything, mock.Anything).
 				Return(elastic.NewRangeQuery("any-time-field").Gt(now.Unix()).Lte(now.Unix()), nil)
 			mockIdxHelper.On("NewRBACQuery", mock.Anything).Return(nil, fmt.Errorf("NewRBACQuery failed"))
 
-			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(serviceRequest)))
+			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(processRequest)))
 			Expect(err).NotTo(HaveOccurred())
 
 			// mock es client
@@ -350,7 +293,7 @@ var _ = Describe("Service middleware tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			rr := httptest.NewRecorder()
-			handler := ServiceHandler(&mockIdxHelper, userAuthReview, client)
+			handler := ProcessHandler(&mockIdxHelper, userAuthReview, client)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusInternalServerError))
@@ -361,10 +304,11 @@ var _ = Describe("Service middleware tests", func() {
 			mockIdxHelper := lmaindex.MockHelper{}
 			now := time.Now()
 			mockIdxHelper.On("GetIndex", mock.Anything).Return("any-index")
+			mockIdxHelper.On("NewSelectorQuery", mock.Anything).Return(elastic.NewBoolQuery(), nil)
 			mockIdxHelper.On("NewTimeRangeQuery", mock.Anything, mock.Anything).
 				Return(elastic.NewRangeQuery("any-time-field").Gt(now.Unix()).Lte(now.Unix()), nil)
 
-			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(serviceRequest)))
+			req, err := http.NewRequest(http.MethodPost, "", bytes.NewReader([]byte(processRequest)))
 			Expect(err).NotTo(HaveOccurred())
 
 			// mock es client
@@ -382,7 +326,7 @@ var _ = Describe("Service middleware tests", func() {
 			}
 
 			rr := httptest.NewRecorder()
-			handler := ServiceHandler(&mockIdxHelper, mockUserAuthReviewFailed, client)
+			handler := ProcessHandler(&mockIdxHelper, mockUserAuthReviewFailed, client)
 			handler.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusInternalServerError))

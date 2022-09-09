@@ -1,0 +1,7 @@
+{
+  "cluster": "test-cluster-name",
+  "time_range": {
+    "from": "2022-07-13T00:01:02Z",
+    "to": "2022-07-13T01:01:02Z"
+  }
+}

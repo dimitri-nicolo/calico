@@ -19,6 +19,7 @@ import (
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/aggregation"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/event"
+	"github.com/projectcalico/calico/es-proxy/pkg/middleware/process"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/rawquery"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/search"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/service"
@@ -211,6 +212,15 @@ func Start(cfg *Config) error {
 				middleware.AuthorizeRequest(authz,
 					service.ServiceHandler(
 						lmaindex.L7Logs(),
+						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						esClient.Backend(),
+					)))))
+	sm.Handle("/processes",
+		middleware.ClusterRequestToResource(flowLogsResourceName,
+			middleware.AuthenticateRequest(authn,
+				middleware.AuthorizeRequest(authz,
+					process.ProcessHandler(
+						lmaindex.FlowLogs(),
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						esClient.Backend(),
 					)))))
