@@ -111,31 +111,24 @@ func (c *endpointsCache) onUpdate(update dispatcherv1v3.Update) {
 		// All endpoints are unprotected initially. policyEndpointMatch() will
 		// remove them from this set if policies apply on this endpoint.
 		ec.unprotectedEndpoints.Add(uv3.Key)
+		ec.updateFailedEndpoints(uv3)
 	case bapi.UpdateTypeKVUpdated:
 		ed := ec.endpoints[uv3.Key]
 		wasUnlabelled := !ed.IsLabelled()
 		ed.resource = uv3.Value.(api.Resource)
 		ec.updateHasLabelsCounts(wasUnlabelled, !ed.IsLabelled())
+		ec.updateFailedEndpoints(uv3)
 	case bapi.UpdateTypeKVDeleted:
 		ed := ec.endpoints[uv3.Key]
 		ec.unprotectedEndpoints.Discard(uv3.Key)
 		ec.updateHasLabelsCounts(!ed.IsLabelled(), false)
+		ec.updateFailedEndpoints(uv3)
 		delete(ec.endpoints, uv3.Key)
 	}
 
-	if uv3.Key.(model.ResourceKey).Kind == libapi.KindWorkloadEndpoint {
-		if wep, ok := uv3.Value.(*libapi.WorkloadEndpoint); ok {
-			if wep.Status.Phase == string(corev1.PodFailed) {
-				ec.failedEndpoints.Add(uv3.Key)
-			} else if ec.failedEndpoints.Contains(uv3.Key) {
-				ec.failedEndpoints.Discard(uv3.Key)
-			}
-		}
-
-		if len(ec.endpoints) == 0 {
-			// Workload endpoints cache is empty for this namespace. Delete from the cache.
-			delete(c.workloadEndpointsByNamespace, uv3.Key.(model.ResourceKey).Namespace)
-		}
+	if uv3.Key.(model.ResourceKey).Kind == libapi.KindWorkloadEndpoint && len(ec.endpoints) == 0 {
+		// Workload endpoints cache is empty for this namespace. Delete from the cache.
+		delete(c.workloadEndpointsByNamespace, uv3.Key.(model.ResourceKey).Namespace)
 	}
 }
 
@@ -190,6 +183,16 @@ func (c *endpointCache) updateHasLabelsCounts(before, after bool) {
 		c.numUnlabelled++
 	} else {
 		c.numUnlabelled--
+	}
+}
+
+func (c *endpointCache) updateFailedEndpoints(uv3 *bapi.Update) {
+	if wep, ok := uv3.Value.(*libapi.WorkloadEndpoint); ok {
+		if wep.Status.Phase == string(corev1.PodFailed) {
+			c.failedEndpoints.Add(uv3.Key)
+		} else {
+			c.failedEndpoints.Discard(uv3.Key)
+		}
 	}
 }
 
