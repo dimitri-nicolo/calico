@@ -1,17 +1,17 @@
-// Copyright (c) 2018-2020 Tigera, Inc. All rights reserved.
-package handlers
+// Copyright (c) 2018-2022 Tigera, Inc. All rights reserved.
+package query
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
-
-	"fmt"
 
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -74,6 +74,7 @@ type Query interface {
 	Endpoint(w http.ResponseWriter, r *http.Request)
 	Endpoints(w http.ResponseWriter, r *http.Request)
 	Summary(w http.ResponseWriter, r *http.Request)
+	Metrics(w http.ResponseWriter, r *http.Request)
 }
 
 func NewQuery(qi client.QueryInterface) Query {
@@ -86,6 +87,38 @@ type query struct {
 
 func (q *query) Summary(w http.ResponseWriter, r *http.Request) {
 	q.runQuery(w, r, client.QueryClusterReq{}, false)
+}
+
+func (q *query) Metrics(w http.ResponseWriter, r *http.Request) {
+	resp, err := q.qi.RunQuery(context.Background(), client.QueryClusterReq{})
+	if err != nil {
+		log.Warnf("failed to get metrics")
+		return
+	}
+
+	clusterResp, ok := resp.(*client.QueryClusterResp)
+	if !ok {
+		log.Warnf("failed to convert metrics response type")
+		return
+	}
+
+	hostEndpointsGauge.With(prometheus.Labels{"namespace": "", "type": ""}).Set(float64(clusterResp.NumHostEndpoints))
+	hostEndpointsGauge.With(prometheus.Labels{"namespace": "", "type": "unlabeled"}).Set(float64(clusterResp.NumUnlabelledHostEndpoints))
+	hostEndpointsGauge.With(prometheus.Labels{"namespace": "", "type": "unprotected"}).Set(float64(clusterResp.NumUnprotectedHostEndpoints))
+
+	workloadEndpointsGauge.With(prometheus.Labels{"namespace": "", "type": ""}).Set(float64(clusterResp.NumWorkloadEndpoints))
+	workloadEndpointsGauge.With(prometheus.Labels{"namespace": "", "type": "unlabeled"}).Set(float64(clusterResp.NumUnlabelledWorkloadEndpoints))
+	workloadEndpointsGauge.With(prometheus.Labels{"namespace": "", "type": "unprotected"}).Set(float64(clusterResp.NumUnprotectedWorkloadEndpoints))
+	workloadEndpointsGauge.With(prometheus.Labels{"namespace": "", "type": "failed"}).Set(float64(clusterResp.NumFailedWorkloadEndpoints))
+
+	for k, v := range clusterResp.NamespaceCounts {
+		workloadEndpointsGauge.With(prometheus.Labels{"namespace": k, "type": ""}).Set(float64(v.NumWorkloadEndpoints))
+		workloadEndpointsGauge.With(prometheus.Labels{"namespace": k, "type": "unlabeled"}).Set(float64(v.NumUnlabelledWorkloadEndpoints))
+		workloadEndpointsGauge.With(prometheus.Labels{"namespace": k, "type": "unprotected"}).Set(float64(v.NumUnprotectedWorkloadEndpoints))
+		workloadEndpointsGauge.With(prometheus.Labels{"namespace": k, "type": "failed"}).Set(float64(v.NumFailedWorkloadEndpoints))
+	}
+
+	prometheusHandler.ServeHTTP(w, r)
 }
 
 func (q *query) Endpoints(w http.ResponseWriter, r *http.Request) {

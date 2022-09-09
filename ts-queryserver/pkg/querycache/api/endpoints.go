@@ -18,4 +18,5 @@ type EndpointSummary struct {
 	Total             int
 	NumWithNoLabels   int
 	NumWithNoPolicies int
+	NumFailed         int
 }

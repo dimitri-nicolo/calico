@@ -26,11 +26,11 @@ import (
 // NewQueryInterface returns a queryable resource cache.
 func NewQueryInterface(ci clientv3.Interface) QueryInterface {
 	cq := &cachedQuery{
-		policies:          cache.NewPoliciesCache(),
-		endpoints:         cache.NewEndpointsCache(),
-		nodes:             cache.NewNodeCache(),
-		networksets:       cache.NewNetworkSetsCache(),
-		polEplabelHandler: labelhandler.NewLabelHandler(),
+		policies:                   cache.NewPoliciesCache(),
+		endpoints:                  cache.NewEndpointsCache(),
+		nodes:                      cache.NewNodeCache(),
+		networksets:                cache.NewNetworkSetsCache(),
+		policyEndpointLabelHandler: labelhandler.NewLabelHandler(),
 		wepConverter: dispatcherv1v3.NewConverterFromSyncerUpdateProcessor(
 			updateprocessors.NewWorkloadEndpointUpdateProcessor(),
 		),
@@ -70,11 +70,11 @@ func NewQueryInterface(ci clientv3.Interface) QueryInterface {
 
 	// Register the label handlers *after* the actual resource caches (since the
 	// resource caches register for updates from the label handler)
-	cq.polEplabelHandler.RegisterWithDispatcher(dispatcher)
+	cq.policyEndpointLabelHandler.RegisterWithDispatcher(dispatcher)
 
 	// Register the policy and endpoint caches for updates from the label handler.
-	cq.endpoints.RegisterWithLabelHandler(cq.polEplabelHandler)
-	cq.policies.RegisterWithLabelHandler(cq.polEplabelHandler)
+	cq.endpoints.RegisterWithLabelHandler(cq.policyEndpointLabelHandler)
+	cq.policies.RegisterWithLabelHandler(cq.policyEndpointLabelHandler)
 
 	// Create a SyncerQueryHandler which ensures syncer updates and query requests are
 	// serialized. This handler will pass syncer updates to the dispatcher (see below),
@@ -122,9 +122,9 @@ type cachedQuery struct {
 	// A cache of all loaded networksets.
 	networksets cache.NetworkSetsCache
 
-	// polEplabelHandler handles the relationship between policy and rule selectors
+	// policyEndpointLabelHandler handles the relationship between policy and rule selectors
 	// and endpoint and networkset labels.
-	polEplabelHandler labelhandler.Interface
+	policyEndpointLabelHandler labelhandler.Interface
 
 	// Converters for some of the resources.
 	wepConverter dispatcherv1v3.Converter
@@ -161,15 +161,18 @@ func (c *cachedQuery) runQuerySummary(cxt context.Context, req QueryClusterReq) 
 	totWEP := 0
 	numUnlabelledWEP := 0
 	numUnprotectedWEP := 0
+	numFailedWEP := 0
 	namespaceSummary := make(map[string]QueryClusterNamespaceCounts)
 	for ns, weps := range c.endpoints.TotalWorkloadEndpointsByNamespace() {
 		totWEP += weps.Total
 		numUnlabelledWEP += weps.NumWithNoLabels
 		numUnprotectedWEP += weps.NumWithNoPolicies
+		numFailedWEP += weps.NumFailed
 		namespaceSummary[ns] = QueryClusterNamespaceCounts{
 			NumWorkloadEndpoints:            weps.Total,
 			NumUnlabelledWorkloadEndpoints:  weps.NumWithNoLabels,
 			NumUnprotectedWorkloadEndpoints: weps.NumWithNoPolicies,
+			NumFailedWorkloadEndpoints:      weps.NumFailed,
 		}
 	}
 
@@ -199,6 +202,7 @@ func (c *cachedQuery) runQuerySummary(cxt context.Context, req QueryClusterReq) 
 		NumUnlabelledWorkloadEndpoints:    numUnlabelledWEP,
 		NumUnprotectedHostEndpoints:       hepSummary.NumWithNoPolicies,
 		NumUnprotectedWorkloadEndpoints:   numUnprotectedWEP,
+		NumFailedWorkloadEndpoints:        numFailedWEP,
 		NumNodes:                          c.nodes.TotalNodes(),
 		NumNodesWithNoEndpoints:           c.nodes.TotalNodesWithNoEndpoints(),
 		NumNodesWithNoWorkloadEndpoints:   c.nodes.TotalNodesWithNoWorkloadEndpoints(),
@@ -237,7 +241,7 @@ func (c *cachedQuery) runQueryEndpoints(cxt context.Context, req QueryEndpointsR
 		}
 	}
 
-	epkeys, err := c.polEplabelHandler.QueryEndpoints(selector)
+	epkeys, err := c.policyEndpointLabelHandler.QueryEndpoints(selector)
 	if err != nil {
 		return nil, err
 	}
@@ -612,7 +616,7 @@ func (c *cachedQuery) getNetworkSetLabelsAndProfiles(key model.Key) (map[string]
 }
 
 func (c *cachedQuery) queryPoliciesByLabel(labels map[string]string, profiles []string, filterIn set.Set[model.Key]) set.Set[model.Key] {
-	policies := c.polEplabelHandler.QueryPolicies(labels, profiles)
+	policies := c.policyEndpointLabelHandler.QueryPolicies(labels, profiles)
 
 	// Filter out the rule matches, and only filter in those in the supplied set (if supplied).
 	results := set.NewBoxed[model.Key]()
@@ -627,7 +631,7 @@ func (c *cachedQuery) queryPoliciesByLabel(labels map[string]string, profiles []
 }
 
 func (c *cachedQuery) queryPoliciesByLabelMatchingRule(labels map[string]string, profiles []string, filterIn set.Set[model.Key]) set.Set[model.Key] {
-	selectors := c.polEplabelHandler.QueryRuleSelectors(labels, profiles)
+	selectors := c.policyEndpointLabelHandler.QueryRuleSelectors(labels, profiles)
 
 	// Convert the selectors to a set of the policy matches.
 	results := set.NewBoxed[model.Key]()

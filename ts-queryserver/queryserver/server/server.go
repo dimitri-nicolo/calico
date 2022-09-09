@@ -15,6 +15,7 @@ import (
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/config"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/handlers"
 	handler "github.com/projectcalico/calico/ts-queryserver/queryserver/handlers/auth"
+	"github.com/projectcalico/calico/ts-queryserver/queryserver/handlers/query"
 )
 
 var (
@@ -30,7 +31,7 @@ func Start(cfg *apiconfig.CalicoAPIConfig, servercfg *config.Config, authHandler
 	}
 
 	sm := http.NewServeMux()
-	qh := handlers.NewQuery(client.NewQueryInterface(c))
+	qh := query.NewQuery(client.NewQueryInterface(c))
 	sm.HandleFunc("/endpoints", authHandler.AuthenticationHandler(qh.Endpoints))
 	sm.HandleFunc("/endpoints/", authHandler.AuthenticationHandler(qh.Endpoint))
 	sm.HandleFunc("/policies", authHandler.AuthenticationHandler(qh.Policies))
@@ -38,6 +39,7 @@ func Start(cfg *apiconfig.CalicoAPIConfig, servercfg *config.Config, authHandler
 	sm.HandleFunc("/nodes", authHandler.AuthenticationHandler(qh.Nodes))
 	sm.HandleFunc("/nodes/", authHandler.AuthenticationHandler(qh.Node))
 	sm.HandleFunc("/summary", authHandler.AuthenticationHandler(qh.Summary))
+	sm.HandleFunc("/metrics", authHandler.AuthenticationHandler(qh.Metrics))
 	sm.HandleFunc("/version", handlers.VersionHandler)
 
 	lic := handlers.License{Client: c}

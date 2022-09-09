@@ -17,7 +17,7 @@ import (
 // against the cached data.  It takes one of the Query*Req structures as the query request
 // and returns the corresponding Query*Resp structure, or an error.
 type QueryInterface interface {
-	RunQuery(context.Context, interface{}) (interface{}, error)
+	RunQuery(ctx context.Context, req interface{}) (interface{}, error)
 }
 
 type QueryClusterReq struct {
@@ -34,6 +34,7 @@ type QueryClusterResp struct {
 	NumUnlabelledWorkloadEndpoints    int                                    `json:"numUnlabelledWorkloadEndpoints"`
 	NumUnprotectedHostEndpoints       int                                    `json:"numUnprotectedHostEndpoints"`
 	NumUnprotectedWorkloadEndpoints   int                                    `json:"numUnprotectedWorkloadEndpoints"`
+	NumFailedWorkloadEndpoints        int                                    `json:"numFailedWorkloadEndpoints"`
 	NumNodes                          int                                    `json:"numNodes"`
 	NumNodesWithNoEndpoints           int                                    `json:"numNodesWithNoEndpoints"`
 	NumNodesWithNoHostEndpoints       int                                    `json:"numNodesWithNoHostEndpoints"`
@@ -47,6 +48,7 @@ type QueryClusterNamespaceCounts struct {
 	NumUnmatchedNetworkPolicies     int `json:"numUnmatchedNetworkPolicies"`
 	NumUnlabelledWorkloadEndpoints  int `json:"numUnlabelledWorkloadEndpoints"`
 	NumUnprotectedWorkloadEndpoints int `json:"numUnprotectedWorkloadEndpoints"`
+	NumFailedWorkloadEndpoints      int `json:"numFailedWorkloadEndpoints"`
 }
 
 type QueryNodesReq struct {

@@ -313,6 +313,7 @@ func (wc defaultWorkloadEndpointConverter) podToDefaultWorkloadEndpoint(pod *kap
 		AllowSpoofedSourcePrefixes: requestedSourcePrefixes,
 	}
 	wep.Status = libapiv3.WorkloadEndpointStatus{
+		Phase:         string(pod.Status.Phase),
 		EgressGateway: annotationsToEgressGatewaySpec(pod.Annotations),
 	}
 

@@ -93,6 +93,10 @@ ut: run-etcd
 fv: run-etcd
 	$(DOCKER_RUN) $(CALICO_BUILD) ./run-fvs
 
+# Mocks auto generated testify mocks by mockery. Run `make gen-mocks` to regenerate the testify mocks.
+MOCKERY_FILE_PATHS= \
+	pkg/querycache/client/QueryInterface
+
 ###############################################################################
 # CI/CD
 ###############################################################################

@@ -19,6 +19,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
 	"github.com/projectcalico/calico/calicoctl/calicoctl/resourcemgr"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
@@ -28,10 +30,8 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/config"
-	"github.com/projectcalico/calico/ts-queryserver/queryserver/handlers"
+	queryhdr "github.com/projectcalico/calico/ts-queryserver/queryserver/handlers/query"
 	"github.com/projectcalico/calico/ts-queryserver/queryserver/server"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3, func(config apiconfig.CalicoAPIConfig) {
@@ -139,15 +139,15 @@ func calculateQueryUrl(addr string, query interface{}) string {
 			u = u + "/" + getNameFromResource(qt.Endpoint)
 			break
 		}
-		parms = appendStringParm(parms, handlers.QuerySelector, qt.Selector)
-		parms = appendStringParm(parms, handlers.QueryUnprotected, strconv.FormatBool(qt.Unprotected))
-		parms = appendStringParm(parms, handlers.QueryUnlabelled, fmt.Sprint(qt.Unlabelled))
-		parms = appendStringParm(parms, handlers.QueryNode, qt.Node)
-		parms = appendResourceParm(parms, handlers.QueryPolicy, qt.Policy)
-		parms = appendStringParm(parms, handlers.QueryRuleDirection, qt.RuleDirection)
-		parms = appendStringParm(parms, handlers.QueryRuleIndex, fmt.Sprint(qt.RuleIndex))
-		parms = appendStringParm(parms, handlers.QueryRuleEntity, qt.RuleEntity)
-		parms = appendStringParm(parms, handlers.QueryRuleNegatedSelector, fmt.Sprint(qt.RuleNegatedSelector))
+		parms = appendStringParm(parms, queryhdr.QuerySelector, qt.Selector)
+		parms = appendStringParm(parms, queryhdr.QueryUnprotected, strconv.FormatBool(qt.Unprotected))
+		parms = appendStringParm(parms, queryhdr.QueryUnlabelled, fmt.Sprint(qt.Unlabelled))
+		parms = appendStringParm(parms, queryhdr.QueryNode, qt.Node)
+		parms = appendResourceParm(parms, queryhdr.QueryPolicy, qt.Policy)
+		parms = appendStringParm(parms, queryhdr.QueryRuleDirection, qt.RuleDirection)
+		parms = appendStringParm(parms, queryhdr.QueryRuleIndex, fmt.Sprint(qt.RuleIndex))
+		parms = appendStringParm(parms, queryhdr.QueryRuleEntity, qt.RuleEntity)
+		parms = appendStringParm(parms, queryhdr.QueryRuleNegatedSelector, fmt.Sprint(qt.RuleNegatedSelector))
 		parms = appendPageParms(parms, qt.Page)
 		parms = appendSortParms(parms, qt.Sort)
 	case client.QueryPoliciesReq:
@@ -156,12 +156,12 @@ func calculateQueryUrl(addr string, query interface{}) string {
 			u = u + "/" + getNameFromResource(qt.Policy)
 			break
 		}
-		parms = appendResourceParm(parms, handlers.QueryEndpoint, qt.Endpoint)
-		parms = appendResourceParm(parms, handlers.QueryNetworkSet, qt.NetworkSet)
-		parms = appendStringParm(parms, handlers.QueryTier, qt.Tier)
-		parms = appendStringParm(parms, handlers.QueryUnmatched, fmt.Sprint(qt.Unmatched))
+		parms = appendResourceParm(parms, queryhdr.QueryEndpoint, qt.Endpoint)
+		parms = appendResourceParm(parms, queryhdr.QueryNetworkSet, qt.NetworkSet)
+		parms = appendStringParm(parms, queryhdr.QueryTier, qt.Tier)
+		parms = appendStringParm(parms, queryhdr.QueryUnmatched, fmt.Sprint(qt.Unmatched))
 		for k, v := range qt.Labels {
-			parms = append(parms, handlers.QueryLabelPrefix+k+"="+v)
+			parms = append(parms, queryhdr.QueryLabelPrefix+k+"="+v)
 		}
 		parms = appendPageParms(parms, qt.Page)
 		parms = appendSortParms(parms, qt.Sort)
@@ -185,11 +185,11 @@ func calculateQueryUrl(addr string, query interface{}) string {
 
 func appendPageParms(parms []string, page *client.Page) []string {
 	if page == nil {
-		return append(parms, handlers.QueryNumPerPage+"="+handlers.AllResults)
+		return append(parms, queryhdr.QueryNumPerPage+"="+queryhdr.AllResults)
 	}
 	return append(parms,
-		fmt.Sprintf("%s=%d", handlers.QueryPageNum, page.PageNum),
-		fmt.Sprintf("%s=%d", handlers.QueryNumPerPage, page.NumPerPage),
+		fmt.Sprintf("%s=%d", queryhdr.QueryPageNum, page.PageNum),
+		fmt.Sprintf("%s=%d", queryhdr.QueryNumPerPage, page.NumPerPage),
 	)
 }
 
@@ -198,9 +198,9 @@ func appendSortParms(parms []string, sort *client.Sort) []string {
 		return parms
 	}
 	for _, f := range sort.SortBy {
-		parms = append(parms, fmt.Sprintf("%s=%s", handlers.QuerySortBy, f))
+		parms = append(parms, fmt.Sprintf("%s=%s", queryhdr.QuerySortBy, f))
 	}
-	return append(parms, fmt.Sprintf("%s=%v", handlers.QueryReverseSort, sort.Reverse))
+	return append(parms, fmt.Sprintf("%s=%v", queryhdr.QueryReverseSort, sort.Reverse))
 }
 
 func appendStringParm(parms []string, key, value string) []string {

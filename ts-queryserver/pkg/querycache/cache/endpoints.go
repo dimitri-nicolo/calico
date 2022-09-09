@@ -4,6 +4,8 @@ package cache
 import (
 	log "github.com/sirupsen/logrus"
 
+	corev1 "k8s.io/api/core/v1"
+
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -52,6 +54,7 @@ func newEndpointCache() *endpointCache {
 	return &endpointCache{
 		endpoints:            make(map[model.Key]*endpointData),
 		unprotectedEndpoints: set.NewBoxed[model.Key](),
+		failedEndpoints:      set.NewBoxed[model.Key](),
 	}
 }
 
@@ -66,6 +69,9 @@ type endpointCache struct {
 
 	// Stores endpoint keys that have no policies associated (i.e., "unprotected").
 	unprotectedEndpoints set.Set[model.Key]
+
+	// Stores workload endpoints that are failed
+	failedEndpoints set.Set[model.Key]
 }
 
 func (c *endpointsCache) TotalHostEndpoints() api.EndpointSummary {
@@ -83,6 +89,7 @@ func (c *endpointsCache) TotalWorkloadEndpointsByNamespace() map[string]api.Endp
 			Total:             len(cache.endpoints),
 			NumWithNoLabels:   cache.numUnlabelled,
 			NumWithNoPolicies: cache.unprotectedEndpoints.Len(),
+			NumFailed:         cache.failedEndpoints.Len(),
 		}
 	}
 	return weps
@@ -116,9 +123,19 @@ func (c *endpointsCache) onUpdate(update dispatcherv1v3.Update) {
 		delete(ec.endpoints, uv3.Key)
 	}
 
-	if uv3.Key.(model.ResourceKey).Kind == libapi.KindWorkloadEndpoint && len(ec.endpoints) == 0 {
-		// Workload endpoints cache is empty for this namespace. Delete from the cache.
-		delete(c.workloadEndpointsByNamespace, uv3.Key.(model.ResourceKey).Namespace)
+	if uv3.Key.(model.ResourceKey).Kind == libapi.KindWorkloadEndpoint {
+		if wep, ok := uv3.Value.(*libapi.WorkloadEndpoint); ok {
+			if wep.Status.Phase == string(corev1.PodFailed) {
+				ec.failedEndpoints.Add(uv3.Key)
+			} else if ec.failedEndpoints.Contains(uv3.Key) {
+				ec.failedEndpoints.Discard(uv3.Key)
+			}
+		}
+
+		if len(ec.endpoints) == 0 {
+			// Workload endpoints cache is empty for this namespace. Delete from the cache.
+			delete(c.workloadEndpointsByNamespace, uv3.Key.(model.ResourceKey).Namespace)
+		}
 	}
 }
 

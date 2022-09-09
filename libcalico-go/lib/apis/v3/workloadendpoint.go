@@ -93,6 +93,8 @@ type WorkloadEndpointSpec struct {
 
 // WorkloadEndpointStatus contains the status for a WorkloadEndpoint resource.
 type WorkloadEndpointStatus struct {
+	// Phase is a simple, high-level summary of where the workload is in its lifecycle.
+	Phase string `json:"phase,omitempty" validate:"omitempty"`
 	// EgressGateway contains the status of Egress Gateways used by this WorkloadEndpoint.
 	EgressGateway *EgressGatewayStatus `json:"egressGateway,omitempty" validate:"omitempty"`
 }

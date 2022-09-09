@@ -1,0 +1,19 @@
+# HELP queryserver_host_endpoints_total Total number of host endpoints in the cluster. Type can be one of unlabeled, unprotected, or empty.
+# TYPE queryserver_host_endpoints_total gauge
+queryserver_host_endpoints_total{namespace="",type=""} 1
+queryserver_host_endpoints_total{namespace="",type="unlabeled"} 2
+queryserver_host_endpoints_total{namespace="",type="unprotected"} 3
+# HELP queryserver_workload_endpoints_total Total number of workload endpoints in a cluster or a namespace. Type can be one of unlabeled, unprotected, failed, or empty.
+# TYPE queryserver_workload_endpoints_total gauge
+queryserver_workload_endpoints_total{namespace="",type=""} 4
+queryserver_workload_endpoints_total{namespace="",type="failed"} 7
+queryserver_workload_endpoints_total{namespace="",type="unlabeled"} 5
+queryserver_workload_endpoints_total{namespace="",type="unprotected"} 6
+queryserver_workload_endpoints_total{namespace="ns1",type=""} 8
+queryserver_workload_endpoints_total{namespace="ns1",type="failed"} 11
+queryserver_workload_endpoints_total{namespace="ns1",type="unlabeled"} 9
+queryserver_workload_endpoints_total{namespace="ns1",type="unprotected"} 10
+queryserver_workload_endpoints_total{namespace="ns2",type=""} 12
+queryserver_workload_endpoints_total{namespace="ns2",type="failed"} 15
+queryserver_workload_endpoints_total{namespace="ns2",type="unlabeled"} 13
+queryserver_workload_endpoints_total{namespace="ns2",type="unprotected"} 14

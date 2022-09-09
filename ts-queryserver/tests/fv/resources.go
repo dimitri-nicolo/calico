@@ -6,6 +6,10 @@ import (
 
 	. "github.com/onsi/gomega"
 
+	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/projectcalico/calico/calicoctl/calicoctl/resourcemgr"
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
@@ -16,9 +20,6 @@ import (
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	networkingv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 /*
@@ -244,6 +245,9 @@ var (
 			InterfaceName: "cali987654",
 			IPNetworks:    []string{"1.2.3.4/32"},
 		},
+		Status: libapi.WorkloadEndpointStatus{
+			Phase: string(corev1.PodPending),
+		},
 	}
 
 	wep1_n1_ns1_updated_profile = &libapi.WorkloadEndpoint{
@@ -350,6 +354,9 @@ var (
 			InterfaceName: "cali123456",
 			IPNetworks:    []string{"1.2.3.6/32"},
 		},
+		Status: libapi.WorkloadEndpointStatus{
+			Phase: string(corev1.PodFailed),
+		},
 	}
 
 	wep4_n2_ns1 = &libapi.WorkloadEndpoint{
@@ -376,6 +383,9 @@ var (
 			InterfaceName: "caliabcdef",
 			IPNetworks:    []string{"1.2.3.7/32"},
 		},
+		Status: libapi.WorkloadEndpointStatus{
+			Phase: string(corev1.PodRunning),
+		},
 	}
 
 	wep5_n3_ns2_unlabelled = &libapi.WorkloadEndpoint{
@@ -396,6 +406,9 @@ var (
 			Endpoint:      "foobarbaz",
 			InterfaceName: "calia1b2c3",
 			IPNetworks:    []string{"1.2.3.8/32"},
+		},
+		Status: libapi.WorkloadEndpointStatus{
+			Phase: string(corev1.PodUnknown),
 		},
 	}
 

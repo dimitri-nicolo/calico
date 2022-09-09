@@ -11,24 +11,23 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	authzv1 "k8s.io/api/authorization/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/rest"
+	k8stesting "k8s.io/client-go/testing"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/auth/testing"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
-	"github.com/projectcalico/calico/ts-queryserver/queryserver/handlers"
 	authhandler "github.com/projectcalico/calico/ts-queryserver/queryserver/handlers/auth"
-
-	authzv1 "k8s.io/api/authorization/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-
-	"k8s.io/apiserver/pkg/authentication/user"
-	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/rest"
-	k8stesting "k8s.io/client-go/testing"
+	"github.com/projectcalico/calico/ts-queryserver/queryserver/handlers/query"
 )
 
-var _ = Describe("Queryserver query test", func() {
+var _ = Describe("Queryserver query auth test", func() {
 	const (
 		iss      = "https://example.com/my-issuer"
 		name     = "Gerrit"
@@ -42,7 +41,7 @@ var _ = Describe("Queryserver query test", func() {
 		fakeK8sCli *fake.Clientset
 		jwt        = testing.NewFakeJWT(iss, name)
 		userInfo   = &user.DefaultInfo{Name: "default"}
-		qh         handlers.Query
+		qh         query.Query
 	)
 
 	BeforeEach(func() {
@@ -59,7 +58,7 @@ var _ = Describe("Queryserver query test", func() {
 			&rest.Config{BearerToken: jwt.ToString()}, fakeK8sCli, lmaauth.WithAuthenticator(iss, mAuth))
 		Expect(err).NotTo(HaveOccurred())
 
-		qh = handlers.NewQuery(client.NewQueryInterface(c))
+		qh = query.NewQuery(client.NewQueryInterface(c))
 	})
 
 	It("returns a valid handler", func() {

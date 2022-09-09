@@ -3516,6 +3516,13 @@ func schema_libcalico_go_lib_apis_v3_WorkloadEndpointStatus(ref common.Reference
 				Description: "WorkloadEndpointStatus contains the status for a WorkloadEndpoint resource.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"phase": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Phase is a simple, high-level summary of where the workload is in its lifecycle.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"egressGateway": {
 						SchemaProps: spec.SchemaProps{
 							Description: "EgressGateway contains the status of Egress Gateways used by this WorkloadEndpoint.",
