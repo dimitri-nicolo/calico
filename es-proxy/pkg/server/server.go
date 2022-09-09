@@ -43,8 +43,6 @@ var (
 // indices or index patterns from here and these parameters are
 // only required in such cases.
 const (
-	voltronServiceURL = "https://localhost:9443"
-
 	dnsLogsResourceName  = "dns"
 	eventsResourceName   = "events"
 	flowLogsResourceName = "flows"
@@ -101,12 +99,12 @@ func Start(cfg *Config) error {
 		return err
 	}
 
-	k8sClientFactory := datastore.NewClusterCtxK8sClientFactory(restConfig, cfg.VoltronCAPath, voltronServiceURL)
+	k8sClientFactory := datastore.NewClusterCtxK8sClientFactory(restConfig, cfg.VoltronCAPath, cfg.VoltronURL)
 	authz := lmaauth.NewRBACAuthorizer(k8sCli)
 
 	// For handlers that use the newer AuthorizationReview to perform RBAC checks, the k8sClientSetFactory provide
 	// cluster and user aware k8s clients.
-	k8sClientSetFactory := k8s.NewClientSetFactory(cfg.VoltronCAPath, voltronServiceURL)
+	k8sClientSetFactory := k8s.NewClientSetFactory(cfg.VoltronCAPath, cfg.VoltronURL)
 
 	// Create a PIP backend.
 	p := pip.New(policyCalcConfig, &clusterAwareLister{k8sClientFactory}, esClient)
