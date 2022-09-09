@@ -1262,6 +1262,13 @@ publish-charts:
 		bin/helm3 gcs push $$chart gs://tigera-helm-charts; \
 	done
 
+bin/yq:
+	mkdir -p bin
+	$(eval TMP := $(shell mktemp -d))
+	wget https://github.com/mikefarah/yq/releases/download/v4.27.3/yq_linux_$(BUILDARCH).tar.gz -O $(TMP)/yq4.tar.gz
+	tar -zxvf $(TMP)/yq4.tar.gz -C $(TMP)
+	mv $(TMP)/yq_linux_$(BUILDARCH) bin/yq
+
 ###############################################################################
 # Common functions for launching a local etcd instance.
 ###############################################################################

@@ -18,10 +18,22 @@ REGISTRY=${REGISTRY:-$defaultRegistry}
 defaultOperatorVersion=$(cat ../charts/tigera-operator/values.yaml | grep version: | cut -d" " -f4)
 OPERATOR_VERSION=${OPERATOR_VERSION:-$defaultOperatorVersion}
 
+defaultOperatorRegistry=$(cat ../charts/tigera-operator/values.yaml | grep registry: | cut -d" " -f4)
+OPERATOR_REGISTRY=${OPERATOR_REGISTRY:-$defaultOperatorRegistry}
+
 # Images used in manifests that are not rendered by Helm.
 NON_HELM_MANIFEST_IMAGES="calico/apiserver calico/windows calico/ctl calico/csi calico/node-driver-registrar"
-NON_HELM_MANIFEST_IMAGES_ENT="compliance-reporter firewall-integration ingress-collector license-agent prometheus-operator prometheus-config-reloader anomaly_detection_jobs honeypod honeypod-controller honeypod-exp-service calico-windows calicoctl"
+NON_HELM_MANIFEST_IMAGES_ENT="tigera/compliance-reporter tigera/firewall-integration tigera/ingress-collector \
+tigera/license-agent tigera/prometheus-operator tigera/prometheus-config-reloader tigera/anomaly_detection_jobs \
+tigera/honeypod tigera/honeypod-controller tigera/honeypod-exp-service tigera/calico-windows tigera/calicoctl"
 NON_HELM_MANIFEST_IMAGES+=" $NON_HELM_MANIFEST_IMAGES_ENT"
+
+# yq binary to use for parsing component versions not found in charts. Default to the one installed by the Makefile.
+YQ=${YQ:-../bin/yq}
+
+# Version file used when components in non-helm manifests have unique image versions. Should only be set for hashreleases.
+# Defaults to nil, which results in CALICO_VERSION being set as the version for all non-helm manifest images.
+VERSIONS_FILE=${VERSIONS_FILE:-}
 
 echo "Generating manifests for Calico=$CALICO_VERSION and tigera-operator=$OPERATOR_VERSION"
 
@@ -49,6 +61,7 @@ ${HELM} -n tigera-operator template \
 	--set monitor.enabled=false \
 	--set compliance.enabled=false \
 	--set tigeraOperator.version=$OPERATOR_VERSION \
+	--set tigeraOperator.registry=$OPERATOR_REGISTRY \
 	--set calicoctl.tag=$CALICO_VERSION \
 	../charts/tigera-operator >> tigera-operator.yaml
 
@@ -68,7 +81,9 @@ for FILE in $VALUES_FILES; do
 	ns=$(cat ../charts/values/$FILE | grep -Po '# NS: \K(.*)')
 	${HELM} -n ${ns:-"tigera-operator"} template \
 		../charts/tigera-operator \
-	        --set version=$CALICO_VERSION \
+	        --set tigeraOperator.version=$OPERATOR_VERSION \
+	        --set tigeraOperator.registry=$OPERATOR_REGISTRY \
+	        --set calicoctl.tag=$CALICO_VERSION \
 	        --include-crds \
 		-f ../charts/values/$FILE > $FILE
 done
@@ -125,6 +140,7 @@ ${HELM} template --include-crds \
 	--set monitor.enabled=false \
 	--set compliance.enabled=false \
 	--set tigeraOperator.version=$OPERATOR_VERSION \
+	--set tigeraOperator.registry=$OPERATOR_REGISTRY \
 	--set imagePullSecrets.tigera-pull-secret=SECRET \
 	--set calicoctl.image=$REGISTRY/tigera/calicoctl \
 	--set calicoctl.tag=$CALICO_VERSION \
@@ -139,6 +155,11 @@ if [[ $CALICO_VERSION != master ]]; then
   echo "Replacing image tags for static enterprise manifests"
   for img in $NON_HELM_MANIFEST_IMAGES; do
     echo $img
-    find . -type f -exec sed -i "s;\(quay.io\|gcr.io/unique-caldron-775/cnx\)/tigera/$img:[A-Za-z0-9_.-]*;$REGISTRY/tigera/$img:$CALICO_VERSION;g" {} \;
+    if [[ $VERSIONS_FILE ]]; then
+      ver=$(cat $VERSIONS_FILE | $YQ '.[0].components.* | select(.image == "'$img'").version')
+    else
+      ver=$CALICO_VERSION
+    fi
+    find . -type f -exec sed -i "s;\(quay.io\|gcr.io/unique-caldron-775/cnx\)/$img:[A-Za-z0-9_.-]*;$REGISTRY/$img:$ver;g" {} \;
   done
 fi

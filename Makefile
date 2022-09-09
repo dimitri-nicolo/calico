@@ -44,7 +44,7 @@ generate:
 	$(MAKE) -C app-policy protobuf
 	$(MAKE) gen-manifests
 
-gen-manifests: bin/helm
+gen-manifests: bin/helm bin/yq
 	# TODO: Ideally we don't need to do this, but the sub-charts
 	# mess up manifest generation if they are present.
 	rm -f $(SUB_CHARTS)
