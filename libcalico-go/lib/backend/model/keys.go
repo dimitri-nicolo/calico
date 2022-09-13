@@ -217,10 +217,291 @@ func IsListOptionsLastSegmentPrefix(listOptions ListInterface) bool {
 // of our <Type>Key structs.  Returns nil if the string doesn't match one of
 // our key types.
 func KeyFromDefaultPath(path string) Key {
+	// "v3" resource keys strictly require a leading slash but older "v1" keys were permissive.
+	// For ease of parsing, strip the slash off now but pass it down to keyFromDefaultPathInner so
+	// it can check for it later.
+	normalizedPath := path
+	if strings.HasPrefix(normalizedPath, "/") {
+		normalizedPath = normalizedPath[1:]
+	}
+
+	parts := strings.Split(normalizedPath, "/")
+	if len(parts) < 3 {
+		// After removing the optional `/` prefix, should have at least 3 segments.
+		return nil
+	}
+
+	if parts[0] == "cluster" {
+		if len(parts) < 5 {
+			// After removing the cluster prefix, should still have at least 3 segments.
+			return nil
+		}
+
+		// Enterprise only: remote cluster key, which looks like a normal key
+		// prefixed with "/cluster/<name>"
+		clusterName := parts[1]
+		remotePath := normalizedPath[len("cluster/")+len(clusterName):]
+		remoteKey := keyFromDefaultPathInner(remotePath, parts[2:])
+		if resourceKey, ok := remoteKey.(ResourceKey); ok {
+			return RemoteClusterResourceKey{
+				Cluster:     unescapeName(clusterName),
+				ResourceKey: resourceKey,
+			}
+		}
+		return nil
+	}
+
+	return keyFromDefaultPathInner(path, parts)
+}
+
+func keyFromDefaultPathInner(path string, parts []string) Key {
+	if parts[0] != "calico" {
+		return nil
+	}
+
+	switch parts[1] {
+	case "v1":
+		switch parts[2] {
+		case "ipam":
+			return IPPoolListOptions{}.KeyFromDefaultPath(path)
+		case "config":
+			return GlobalConfigKey{Name: strings.Join(parts[3:], "/")}
+		case "host":
+			if len(parts) < 5 {
+				return nil
+			}
+			hostname := parts[3]
+			switch parts[4] {
+			case "workload":
+				if len(parts) != 9 || parts[7] != "endpoint" {
+					return nil
+				}
+				return WorkloadEndpointKey{
+					Hostname:       unescapeName(hostname),
+					OrchestratorID: unescapeName(parts[5]),
+					WorkloadID:     unescapeName(parts[6]),
+					EndpointID:     unescapeName(parts[8]),
+				}
+			case "endpoint":
+				if len(parts) != 6 {
+					return nil
+				}
+				return HostEndpointKey{
+					Hostname:   unescapeName(hostname),
+					EndpointID: unescapeName(parts[5]),
+				}
+			case "config":
+				return HostConfigKey{
+					Hostname: hostname,
+					Name:     strings.Join(parts[5:], "/"),
+				}
+			case "metadata":
+				if len(parts) != 5 {
+					return nil
+				}
+				return HostMetadataKey{
+					Hostname: hostname,
+				}
+			case "bird_ip":
+				if len(parts) != 5 {
+					return nil
+				}
+				return HostIPKey{
+					Hostname: hostname,
+				}
+			case "wireguard":
+				if len(parts) != 5 {
+					return nil
+				}
+				return WireguardKey{
+					NodeName: hostname,
+				}
+			}
+		case "netset":
+			if len(parts) != 4 {
+				return nil
+			}
+			return NetworkSetKey{
+				Name: unescapeName(parts[3]),
+			}
+		case "Ready":
+			if len(parts) > 3 || path[0] != '/' {
+				return nil
+			}
+			return ReadyFlagKey{}
+		case "policy":
+			if len(parts) < 6 {
+				return nil
+			}
+			switch parts[3] {
+			case "tier":
+				if len(parts) < 6 {
+					return nil
+				}
+				switch parts[5] {
+				case "metadata":
+					if len(parts) != 6 {
+						return nil
+					}
+					return TierKey{
+						Name: unescapeName(parts[4]),
+					}
+				case "policy":
+					if len(parts) != 7 {
+						return nil
+					}
+					return PolicyKey{
+						Tier: unescapeName(parts[4]),
+						Name: unescapeName(parts[6]),
+					}
+				}
+			case "profile":
+				pk := unescapeName(parts[4])
+				switch parts[5] {
+				case "rules":
+					return ProfileRulesKey{ProfileKey: ProfileKey{pk}}
+				case "labels":
+					return ProfileLabelsKey{ProfileKey: ProfileKey{pk}}
+				}
+			}
+		case "licensekey":
+			if len(parts) != 4 {
+				return nil
+			}
+			return LicenseKeyKey{
+				Name: unescapeName(parts[3]),
+			}
+		}
+	case "bgp":
+		switch parts[2] {
+		case "v1":
+			if len(parts) < 5 {
+				return nil
+			}
+			switch parts[3] {
+			case "global":
+				return GlobalBGPConfigListOptions{}.KeyFromDefaultPath(path)
+			case "host":
+				if len(parts) < 6 {
+					return nil
+				}
+				return NodeBGPConfigListOptions{}.KeyFromDefaultPath(path)
+			}
+		}
+	case "ipam":
+		if len(parts) < 5 {
+			return nil
+		}
+		switch parts[2] {
+		case "v2":
+			switch parts[3] {
+			case "assignment":
+				return BlockListOptions{}.KeyFromDefaultPath(path)
+			case "handle":
+				if len(parts) > 5 {
+					return nil
+				}
+				return IPAMHandleKey{
+					HandleID: parts[4],
+				}
+			case "host":
+				return BlockAffinityListOptions{}.KeyFromDefaultPath(path)
+			}
+		}
+	case "resources":
+		switch parts[2] {
+		case "v3":
+			// v3 resource keys strictly require the leading slash.
+			if len(parts) < 6 || parts[3] != "projectcalico.org" || path[0] != '/' {
+				return nil
+			}
+			switch len(parts) {
+			case 6:
+				ri, ok := resourceInfoByPlural[unescapeName(parts[4])]
+				if !ok {
+					log.Warnf("(BUG) unknown resource type: %v", path)
+					return nil
+				}
+				if namespace.IsNamespaced(ri.kind) {
+					log.Warnf("(BUG) Path is a global resource, but resource is namespaced: %v", path)
+					return nil
+				}
+				log.Debugf("Path is a global resource: %v", path)
+				return ResourceKey{
+					Kind: ri.kind,
+					Name: unescapeName(parts[5]),
+				}
+			case 7:
+				ri, ok := resourceInfoByPlural[unescapeName(parts[4])]
+				if !ok {
+					log.Warnf("(BUG) unknown resource type: %v", path)
+					return nil
+				}
+				if !namespace.IsNamespaced(ri.kind) {
+					log.Warnf("(BUG) Path is a namespaced resource, but resource is global: %v", path)
+					return nil
+				}
+				log.Debugf("Path is a namespaced resource: %v", path)
+				return ResourceKey{
+					Kind:      ri.kind,
+					Namespace: unescapeName(parts[5]),
+					Name:      unescapeName(parts[6]),
+				}
+			}
+		}
+	case "felix":
+		if len(parts) < 4 {
+			return nil
+		}
+		switch parts[2] {
+		case "v1":
+			switch parts[3] {
+			case "host":
+				if len(parts) != 7 || parts[5] != "endpoint" {
+					return nil
+				}
+				return HostEndpointStatusKey{
+					Hostname:   parts[4],
+					EndpointID: unescapeName(parts[6]),
+				}
+			case "remotecluster":
+				if len(parts) != 5 {
+					return nil
+				}
+				return RemoteClusterStatusKey{
+					Name: unescapeName(parts[4]),
+				}
+			}
+		case "v2":
+			if len(parts) < 7 {
+				return nil
+			}
+			if parts[4] != "host" {
+				return nil
+			}
+			switch parts[6] {
+			case "status":
+				return ActiveStatusReportListOptions{}.KeyFromDefaultPath(path)
+			case "last_reported_status":
+				return LastStatusReportListOptions{}.KeyFromDefaultPath(path)
+			case "workload":
+				return WorkloadEndpointStatusListOptions{}.KeyFromDefaultPath(path)
+			}
+		}
+	}
+	log.Debugf("Path is unknown: %v", path)
+	return nil
+}
+
+// OldKeyFromDefaultPath is the old, (slower) implementation of KeyFromDefaultPath.  It is kept to allow
+// fuzzing the new version against it.  Parses the default path representation of a key into one
+// of our <Type>Key structs.  Returns nil if the string doesn't match one of
+// our key types.
+func OldKeyFromDefaultPath(path string) Key {
 	if m := matchWorkloadEndpoint.FindStringSubmatch(path); m != nil {
 		log.Debugf("Path is a workload endpoint: %v", path)
 		return WorkloadEndpointKey{
-			Hostname:       m[1],
+			Hostname:       unescapeName(m[1]),
 			OrchestratorID: unescapeName(m[2]),
 			WorkloadID:     unescapeName(m[3]),
 			EndpointID:     unescapeName(m[4]),
@@ -228,7 +509,7 @@ func KeyFromDefaultPath(path string) Key {
 	} else if m := matchHostEndpoint.FindStringSubmatch(path); m != nil {
 		log.Debugf("Path is a host endpoint: %v", path)
 		return HostEndpointKey{
-			Hostname:   m[1],
+			Hostname:   unescapeName(m[1]),
 			EndpointID: unescapeName(m[2]),
 		}
 	} else if m := matchNetworkSet.FindStringSubmatch(path); m != nil {
@@ -242,7 +523,11 @@ func KeyFromDefaultPath(path string) Key {
 			Name: unescapeName(m[1]),
 		}
 	} else if m := matchGlobalResource.FindStringSubmatch(path); m != nil {
-		ri := resourceInfoByPlural[unescapeName(m[1])]
+		ri, ok := resourceInfoByPlural[unescapeName(m[1])]
+		if !ok {
+			log.Warnf("(BUG) unknown resource type: %v", path)
+			return nil
+		}
 		if namespace.IsNamespaced(ri.kind) {
 			log.Warnf("(BUG) Path is a global resource, but resource is namespaced: %v", path)
 			return nil
@@ -253,7 +538,11 @@ func KeyFromDefaultPath(path string) Key {
 			Name: unescapeName(m[2]),
 		}
 	} else if m := matchNamespacedResource.FindStringSubmatch(path); m != nil {
-		ri := resourceInfoByPlural[unescapeName(m[1])]
+		ri, ok := resourceInfoByPlural[unescapeName(m[1])]
+		if !ok {
+			log.Warnf("(BUG) unknown resource type: %v", path)
+			return nil
+		}
 		if !namespace.IsNamespaced(ri.kind) {
 			log.Warnf("(BUG) Path is a namespaced resource, but resource is global: %v", path)
 			return nil
