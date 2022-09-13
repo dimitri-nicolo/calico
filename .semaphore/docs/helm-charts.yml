@@ -29,6 +29,6 @@ blocks:
       jobs:
         - name: Build and push helm charts for branch
           commands:
-            - make charts
+            - make chart
             - make helm-install-gcs-plugin
             - make publish-charts

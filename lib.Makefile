@@ -1253,13 +1253,13 @@ bin/helm:
 	mv $(TMP)/linux-amd64/helm bin/helm
 
 helm-install-gcs-plugin:
-	bin/helm3 plugin install https://github.com/viglesiasce/helm-gcs.git
+	bin/helm plugin install https://github.com/viglesiasce/helm-gcs.git
 
 # Upload to Google tigera-helm-charts storage bucket.
 publish-charts:
-	bin/helm3 repo add tigera gs://tigera-helm-charts
+	bin/helm repo add tigera gs://tigera-helm-charts
 	for chart in ./bin/*.tgz; do \
-		bin/helm3 gcs push $$chart gs://tigera-helm-charts; \
+		bin/helm gcs push $$chart gs://tigera-helm-charts; \
 	done
 
 bin/yq:
