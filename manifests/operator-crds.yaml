@@ -4,9 +4,9 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: amazoncloudintegrations.operator.tigera.io
   annotations:
-    helm.sh/hook: crd-install
+    controller-gen.kubebuilder.io/version: v0.3.0
+  name: amazoncloudintegrations.operator.tigera.io
 spec:
   group: operator.tigera.io
   names:
@@ -91,6 +91,42 @@ spec:
     storage: true
     subresources:
       status: {}
+  - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: AmazonCloudIntegration is the Schema for the amazoncloudintegrations
+          API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AmazonCloudIntegrationSpec defines the desired state of AmazonCloudIntegration
+            type: object
+          status:
+            description: AmazonCloudIntegrationStatus defines the observed state of
+              AmazonCloudIntegration
+            type: object
+        type: object
+    served: false
+    storage: false
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
 ---
 # Source: crds/operator.tigera.io_apiservers_crd.yaml
 apiVersion: apiextensions.k8s.io/v1
@@ -560,8 +596,8 @@ spec:
                                                     or empty namespaces list means
                                                     "this pod's namespace". An empty
                                                     selector ({}) matches all namespaces.
-                                                    This field is alpha-level and
-                                                    is only honored when PodAffinityNamespaceSelector
+                                                    This field is beta-level and is
+                                                    only honored when PodAffinityNamespaceSelector
                                                     feature is enabled.
                                                   properties:
                                                     matchExpressions:
@@ -758,7 +794,7 @@ spec:
                                                 namespaces list means "this pod's
                                                 namespace". An empty selector ({})
                                                 matches all namespaces. This field
-                                                is alpha-level and is only honored
+                                                is beta-level and is only honored
                                                 when PodAffinityNamespaceSelector
                                                 feature is enabled.
                                               properties:
@@ -954,8 +990,8 @@ spec:
                                                     or empty namespaces list means
                                                     "this pod's namespace". An empty
                                                     selector ({}) matches all namespaces.
-                                                    This field is alpha-level and
-                                                    is only honored when PodAffinityNamespaceSelector
+                                                    This field is beta-level and is
+                                                    only honored when PodAffinityNamespaceSelector
                                                     feature is enabled.
                                                   properties:
                                                     matchExpressions:
@@ -1152,7 +1188,7 @@ spec:
                                                 namespaces list means "this pod's
                                                 namespace". An empty selector ({})
                                                 matches all namespaces. This field
-                                                is alpha-level and is only honored
+                                                is beta-level and is only honored
                                                 when PodAffinityNamespaceSelector
                                                 feature is enabled.
                                               properties:
@@ -1456,7 +1492,6 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
-    helm.sh/hook: crd-install
   name: applicationlayers.operator.tigera.io
 spec:
   group: operator.tigera.io
@@ -1538,8 +1573,6 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
-    helm.sh/hook: crd-install
-  creationTimestamp: null
   name: authentications.operator.tigera.io
 spec:
   group: operator.tigera.io
@@ -1768,9 +1801,9 @@ status:
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: compliances.operator.tigera.io
   annotations:
-    helm.sh/hook: crd-install
+    controller-gen.kubebuilder.io/version: v0.3.0
+  name: compliances.operator.tigera.io
 spec:
   group: operator.tigera.io
   names:
@@ -1790,12 +1823,12 @@ spec:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
               of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
             description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
@@ -1815,6 +1848,12 @@ spec:
     storage: true
     subresources:
       status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
 ---
 # Source: crds/operator.tigera.io_imagesets_crd.yaml
 apiVersion: apiextensions.k8s.io/v1
@@ -1822,7 +1861,6 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
-    helm.sh/hook: crd-install
   name: imagesets.operator.tigera.io
 spec:
   group: operator.tigera.io
@@ -1838,7 +1876,7 @@ spec:
       openAPIV3Schema:
         description: ImageSet is used to specify image digests for the images that
           the operator deploys. The name of the ImageSet is expected to be in the
-          format `<variang>-<release>`. The `variant` used is `enterprise` if the
+          format `<variant>-<release>`. The `variant` used is `enterprise` if the
           InstallationSpec Variant is `TigeraSecureEnterprise` otherwise it is `calico`.
           The `release` must match the version of the variant that the operator is
           built to deploy, this version can be obtained by passing the `--version`
@@ -1900,7 +1938,6 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
-    helm.sh/hook: crd-install
   name: installations.operator.tigera.io
 spec:
   group: operator.tigera.io
@@ -14156,9 +14193,9 @@ status:
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: intrusiondetections.operator.tigera.io
   annotations:
-    helm.sh/hook: crd-install
+    controller-gen.kubebuilder.io/version: v0.3.0
+  name: intrusiondetections.operator.tigera.io
 spec:
   group: operator.tigera.io
   names:
@@ -14178,12 +14215,12 @@ spec:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
               of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
             description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
@@ -14235,7 +14272,7 @@ spec:
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                           description: 'Limits describes the maximum amount of compute
-                            resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                            resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                           type: object
                         requests:
                           additionalProperties:
@@ -14248,7 +14285,7 @@ spec:
                             resources required. If Requests is omitted for a container,
                             it defaults to Limits if that is explicitly specified,
                             otherwise to an implementation-defined value. More info:
-                            https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                            https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                           type: object
                       type: object
                   required:
@@ -14269,15 +14306,20 @@ spec:
     storage: true
     subresources:
       status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
 ---
 # Source: crds/operator.tigera.io_logcollectors_crd.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: logcollectors.operator.tigera.io
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
-    helm.sh/hook: crd-install
+  name: logcollectors.operator.tigera.io
 spec:
   group: operator.tigera.io
   names:
@@ -14433,13 +14475,18 @@ spec:
     storage: true
     subresources:
       status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
 ---
 # Source: crds/operator.tigera.io_logstorages_crd.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    helm.sh/hook: crd-install
     controller-gen.kubebuilder.io/version: v0.3.0
   name: logstorages.operator.tigera.io
 spec:
@@ -14499,7 +14546,7 @@ spec:
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                           description: 'Limits describes the maximum amount of compute
-                            resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                            resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                           type: object
                         requests:
                           additionalProperties:
@@ -14512,7 +14559,7 @@ spec:
                             resources required. If Requests is omitted for a container,
                             it defaults to Limits if that is explicitly specified,
                             otherwise to an implementation-defined value. More info:
-                            https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                            https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                           type: object
                       type: object
                   required:
@@ -14598,7 +14645,7 @@ spec:
                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                           x-kubernetes-int-or-string: true
                         description: 'Limits describes the maximum amount of compute
-                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                       requests:
                         additionalProperties:
@@ -14610,7 +14657,7 @@ spec:
                         description: 'Requests describes the minimum amount of compute
                           resources required. If Requests is omitted for a container,
                           it defaults to Limits if that is explicitly specified, otherwise
-                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
                 type: object
@@ -14625,6 +14672,13 @@ spec:
                       x days, use a retention period of x+1. Default: 91'
                     format: int32
                     type: integer
+                  bgpLogs:
+                    description: 'BGPLogs configures the retention period for BGP
+                      logs, in days.  Logs written on a day that started at least
+                      this long ago are removed.  To keep logs for at least x days,
+                      use a retention period of x+1. Default: 8'
+                    format: int32
+                    type: integer
                   complianceReports:
                     description: 'ComplianceReports configures the retention period
                       for compliance reports, in days. Reports are output from the
@@ -14633,6 +14687,13 @@ spec:
                       more details on reports. Logs written on a day that started
                       at least this long ago are removed.  To keep logs for at least
                       x days, use a retention period of x+1. Default: 91'
+                    format: int32
+                    type: integer
+                  dnsLogs:
+                    description: 'DNSLogs configures the retention period for DNS
+                      logs, in days.  Logs written on a day that started at least
+                      this long ago are removed.  To keep logs for at least x days,
+                      use a retention period of x+1. Default: 8'
                     format: int32
                     type: integer
                   flows:
@@ -14697,9 +14758,9 @@ status:
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: managementclusterconnections.operator.tigera.io
   annotations:
-    helm.sh/hook: crd-install
+    controller-gen.kubebuilder.io/version: v0.3.0
+  name: managementclusterconnections.operator.tigera.io
 spec:
   group: operator.tigera.io
   names:
@@ -14719,12 +14780,12 @@ spec:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
               of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
             description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
@@ -14737,18 +14798,44 @@ spec:
                   cluster. Ex.: "10.128.0.10:30449". A managed cluster should be able
                   to access this address. This field is used by managed clusters only.'
                 type: string
+              tls:
+                description: TLS provides options for configuring how Managed Clusters
+                  can establish an mTLS connection with the Management Cluster.
+                properties:
+                  ca:
+                    description: "CA indicates which verification method the tunnel
+                      client should use to verify the tunnel server's identity. \n
+                      When left blank or set to 'Tigera', the tunnel client will expect
+                      a self-signed cert to be included in the certificate bundle
+                      and will expect the cert to have a Common Name (CN) of 'voltron'.
+                      \n When set to 'Public', the tunnel client will use its installed
+                      system certs and will use the managementClusterAddr to verify
+                      the tunnel server's identity. \n Default: Tigera"
+                    enum:
+                    - Tigera
+                    - Public
+                    type: string
+                type: object
             type: object
         type: object
     served: true
     storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
 ---
 # Source: crds/operator.tigera.io_managementclusters_crd.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: managementclusters.operator.tigera.io
   annotations:
-    helm.sh/hook: crd-install
+    controller-gen.kubebuilder.io/version: v0.3.0
+  name: managementclusters.operator.tigera.io
 spec:
   group: operator.tigera.io
   names:
@@ -14768,12 +14855,12 @@ spec:
             apiVersion:
               description: 'APIVersion defines the versioned schema of this representation
               of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
               type: string
             kind:
               description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
               type: string
             metadata:
               type: object
@@ -14787,20 +14874,53 @@ spec:
                   that will connect both clusters. Valid examples are: "0.0.0.0:31000",
                   "example.com:32000", "[::1]:32500"'
                   type: string
+              tls:
+                description: TLS provides options for configuring how Managed Clusters
+                  can establish an mTLS connection with the Management Cluster.
+                properties:
+                  secretName:
+                    description: "SecretName indicates the name of the secret in the
+                      tigera-operator namespace that contains the private key and
+                      certificate that the management cluster uses when it listens
+                      for incoming connections. \n When set to tigera-management-cluster-connection
+                      voltron will use the same cert bundle which Guardian client
+                      certs are signed with. \n When set to manager-tls, voltron will
+                      use the same cert bundle which Manager UI is served with. This
+                      cert bundle must be a publicly signed cert created by the user.
+                      Note that Tigera Operator will generate a self-signed manager-tls
+                      cert if one does not exist, and use of that cert will result
+                      in Guardian being unable to verify Voltron's identity. \n If
+                      changed on a running cluster with connected managed clusters,
+                      all managed clusters will disconnect as they will no longer
+                      be able to verify Voltron's identity. To reconnect existing
+                      managed clusters, change the tls.ca of the  managed clusters'
+                      ManagementClusterConnection resource. \n One of: tigera-management-cluster-connection,
+                      manager-tls \n Default: tigera-management-cluster-connection"
+                    enum:
+                    - tigera-management-cluster-connection
+                    - manager-tls
+                    type: string
+                type: object
               type: object
           type: object
       served: true
       storage: true
       subresources:
         status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
 ---
 # Source: crds/operator.tigera.io_managers_crd.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: managers.operator.tigera.io
   annotations:
-    helm.sh/hook: crd-install
+    controller-gen.kubebuilder.io/version: v0.3.0
+  name: managers.operator.tigera.io
 spec:
   group: operator.tigera.io
   names:
@@ -14834,8 +14954,8 @@ spec:
               manager.
             properties:
               auth:
-                description: Auth defines the authentication strategy for the Calico
-                  Enterprise manager GUI.
+                description: Deprecated. Please use the Authentication CR for configuring
+                  authentication.
                 properties:
                   authority:
                     description: Authority configures the OAuth2/OIDC authority/issuer
@@ -14881,20 +15001,29 @@ spec:
                     - OAuth
                     type: string
                 type: object
+              state:
+                description: State provides user-readable status.
+                type: string
             type: object
         type: object
     served: true
     storage: true
     subresources:
       status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
 ---
 # Source: crds/operator.tigera.io_monitors_crd.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: monitors.operator.tigera.io
   annotations:
-    helm.sh/hook: crd-install
+    controller-gen.kubebuilder.io/version: v0.3.0
+  name: monitors.operator.tigera.io
 spec:
   group: operator.tigera.io
   names:
@@ -14937,6 +15066,12 @@ spec:
     storage: true
     subresources:
       status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
 ---
 # Source: crds/operator.tigera.io_tigerastatuses_crd.yaml
 apiVersion: apiextensions.k8s.io/v1
@@ -14944,10 +15079,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
-    helm.sh/hook: crd-install
   name: tigerastatuses.operator.tigera.io
-  annotations:
-    helm.sh/hook: crd-install
 spec:
   group: operator.tigera.io
   names:
