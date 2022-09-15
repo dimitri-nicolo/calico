@@ -24,11 +24,12 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/projectcalico/calico/typha/pkg/daemon"
-	"github.com/projectcalico/calico/typha/pkg/discovery"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/projectcalico/calico/typha/pkg/daemon"
+	"github.com/projectcalico/calico/typha/pkg/discovery"
+	"github.com/projectcalico/calico/typha/pkg/syncproto"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
@@ -135,7 +136,7 @@ var _ = Describe("Daemon", func() {
 
 			It("should create the server components", func() {
 				d.CreateServer()
-				Expect(d.SyncerPipelines).To(HaveLen(5))
+				Expect(d.CachesBySyncerType).To(HaveLen(syncproto.NumSyncerTypes))
 				for _, p := range d.SyncerPipelines {
 					Expect(p.SyncerToValidator).ToNot(BeNil())
 					Expect(p.Syncer).ToNot(BeNil())
