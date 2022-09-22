@@ -1,5 +1,6 @@
 ---
 title: Controlling ingress and egress traffic with network policy
+description: Tutorial on how to create ingress and egress policies.
 canonical_url: '/security/advanced-policy'
 ---
 

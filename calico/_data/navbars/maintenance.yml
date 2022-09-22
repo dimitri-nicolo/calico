@@ -106,7 +106,7 @@ section:
   section:
   - title: eBPF use cases
     path: /maintenance/ebpf/use-cases-ebpf 
-  - title: Enable the eBPF dataplane
+  - title: Enable eBPF on an existing cluster
     path: /maintenance/ebpf/enabling-ebpf
   - title: Install in eBPF mode
     path: /maintenance/ebpf/install
