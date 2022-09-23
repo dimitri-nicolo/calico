@@ -86,6 +86,8 @@ section:
     section:
     - title: Prometheus support
       path: /maintenance/monitor/support
+    - title: Bring your own Prometheus
+      path: /maintenance/monitor/prometheus/byo-prometheus
     - title: Configure Prometheus
       path: /maintenance/monitor/prometheus/prometheus
     - title: Configure Alertmanager
