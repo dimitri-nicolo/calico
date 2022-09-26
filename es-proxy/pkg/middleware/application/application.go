@@ -1,5 +1,5 @@
 // Copyright (c) 2022 Tigera, Inc. All rights reserved.
-package service
+package application
 
 import (
 	"context"
@@ -16,28 +16,50 @@ import (
 	elasticvariant "github.com/projectcalico/calico/es-proxy/pkg/elastic"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
 	esSearch "github.com/projectcalico/calico/es-proxy/pkg/search"
-	"github.com/projectcalico/calico/lma/pkg/api"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
-const httpStatusServerErrorUpperBound = 599
+type ApplicationType int
 
-// ServiceHandler handles service requests from manager dashboard.
-func ServiceHandler(
+const (
+	ApplicationTypeService = iota
+	ApplicationTypeURL
+
+	httpStatusServerErrorUpperBound = 599
+)
+
+// ApplicationHandler handles application log requests from manager dashboard.
+func ApplicationHandler(
 	idxHelper lmaindex.Helper,
 	authReview middleware.AuthorizationReview,
 	client *elastic.Client,
+	applicationType ApplicationType,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		params, err := parseServiceRequest(w, r)
+		params, err := parseApplicationRequest(w, r)
 		if err != nil {
 			httputils.EncodeError(w, err)
 			return
 		}
 
-		resp, err := processServiceRequest(idxHelper, params, authReview, client, r)
+		var resp interface{}
+		switch applicationType {
+		case ApplicationTypeService:
+			resp, err = processServiceRequest(idxHelper, params, authReview, client, r)
+		case ApplicationTypeURL:
+			resp, err = processURLRequest(idxHelper, params, authReview, client, r)
+		default:
+			log.Errorf("Invalid application type %v.", applicationType)
+
+			err = &httputils.HttpStatusError{
+				Status: http.StatusInternalServerError,
+				Msg:    http.StatusText(http.StatusInternalServerError),
+				Err:    errors.New("invalid application handler type"),
+			}
+		}
+
 		if err != nil {
 			httputils.EncodeError(w, err)
 			return
@@ -46,8 +68,8 @@ func ServiceHandler(
 	})
 }
 
-// parseServiceRequest extracts parameters from the request body and validates them.
-func parseServiceRequest(w http.ResponseWriter, r *http.Request) (*v1.ServiceRequest, error) {
+// parseApplicationRequest extracts parameters from the request body and validates them.
+func parseApplicationRequest(w http.ResponseWriter, r *http.Request) (*v1.ApplicationRequest, error) {
 	// Validate http method.
 	if r.Method != http.MethodPost {
 		log.WithError(middleware.ErrInvalidMethod).Info("Invalid http method.")
@@ -60,7 +82,7 @@ func parseServiceRequest(w http.ResponseWriter, r *http.Request) (*v1.ServiceReq
 	}
 
 	// Decode the http request body into the struct.
-	var params v1.ServiceRequest
+	var params v1.ApplicationRequest
 
 	if err := httputils.Decode(w, r, &params); err != nil {
 		var mr *httputils.HttpStatusError
@@ -71,7 +93,7 @@ func parseServiceRequest(w http.ResponseWriter, r *http.Request) (*v1.ServiceReq
 			log.WithError(mr.Err).Info("Error validating service requests.")
 			return nil, &httputils.HttpStatusError{
 				Status: http.StatusBadRequest,
-				Msg:    http.StatusText(http.StatusInternalServerError),
+				Msg:    http.StatusText(http.StatusBadRequest),
 				Err:    err,
 			}
 		}
@@ -99,7 +121,7 @@ type service struct {
 // processServiceRequest translates service request parameters to Elastic queries and return responses.
 func processServiceRequest(
 	idxHelper lmaindex.Helper,
-	params *v1.ServiceRequest,
+	params *v1.ApplicationRequest,
 	authReview middleware.AuthorizationReview,
 	client *elastic.Client,
 	r *http.Request,
@@ -118,7 +140,7 @@ func processServiceRequest(
 		}
 
 		sourceNameAggr := doc.Source.SourceNameAggr
-		if sourceNameAggr != api.FlowLogNetworkPrivate && sourceNameAggr != api.FlowLogNetworkPublic {
+		if sourceNameAggr != "" {
 			errCount := 0
 			if responseCode, err := strconv.Atoi(doc.Source.ResponseCode); err == nil {
 				// Count HTTP error responses from 400 - 499 (client error) + 500 - 599 (server error)
@@ -168,10 +190,70 @@ func processServiceRequest(
 	}, nil
 }
 
+type url struct {
+	RequestCount int
+}
+
+type urlMapKey struct {
+	URL            string
+	SourceNameAggr string
+}
+
+// processURLRequest translates url request parameters to Elastic queries and return responses.
+func processURLRequest(
+	idxHelper lmaindex.Helper,
+	params *v1.ApplicationRequest,
+	authReview middleware.AuthorizationReview,
+	client *elastic.Client,
+	r *http.Request,
+) (*v1.URLResponse, error) {
+	res, err := search(idxHelper, params, authReview, client, r)
+	if err != nil {
+		return nil, err
+	}
+
+	urlMap := make(map[urlMapKey]*url)
+	for _, rawHit := range res.RawHits {
+		var doc l7Doc
+		if err := json.Unmarshal(rawHit, &doc); err != nil {
+			log.WithError(err).Warnf("failed to unmarshal L7 raw hit: %s", rawHit)
+			continue
+		}
+
+		key := urlMapKey{
+			URL:            doc.Source.URL,
+			SourceNameAggr: doc.Source.SourceNameAggr,
+		}
+		if key.URL != "" && key.SourceNameAggr != "" {
+			if s, found := urlMap[key]; found {
+				s.RequestCount += doc.Source.Count
+			} else {
+				urlMap[key] = &url{
+					RequestCount: doc.Source.Count,
+				}
+			}
+		}
+	}
+
+	urls := make([]v1.URL, 0)
+	for k, v := range urlMap {
+		url := v1.URL{
+			URL:          k.URL,
+			Service:      k.SourceNameAggr,
+			RequestCount: v.RequestCount,
+		}
+		urls = append(urls, url)
+	}
+
+	return &v1.URLResponse{
+		URLs: urls,
+	}, nil
+}
+
 // search returns the results of ES search.
 func search(
 	idxHelper lmaindex.Helper,
-	params *v1.ServiceRequest,
+	params *v1.ApplicationRequest,
 	authReview middleware.AuthorizationReview,
 	esClient *elastic.Client,
 	r *http.Request,
