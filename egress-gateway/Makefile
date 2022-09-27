@@ -1,19 +1,14 @@
-ORGANIZATION=tigera
-PACKAGE_NAME?=github.com/tigera/egress-gateway
+include ../metadata.mk
+
+PACKAGE_NAME?=github.com/projectcalico/calico/egress-gateway
 SEMAPHORE_PROJECT_ID=$(SEMAPHORE_EGRESS_GATEWAY_PROJECT_ID)
 
-GO_BUILD_VER?=v0.73.2
-GIT_USE_SSH=true
-
-EGRESS_GATEWAY_IMAGE  ?=tigera/egress-gateway
-EGRESS_GATEWAY_TESTING_IMAGE ?=tigera/egress-gateway-testing
+EGRESS_GATEWAY_IMAGE  ?=egress-gateway
+EGRESS_GATEWAY_TESTING_IMAGE ?=egress-gateway-testing
 BUILD_IMAGES          ?=$(EGRESS_GATEWAY_IMAGE)
 DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
-RELEASE_REGISTRIES    ?=quay.io
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
-
-EXTRA_DOCKER_ARGS+=-e GOPRIVATE='github.com/tigera/*'
 
 ###############################################################################
 # Shortcut targets
@@ -30,23 +25,14 @@ GATEWAY_TEST_CONTAINER_CREATED=.egress_gateway_testing.created-$(ARCH)
 GATEWAY_CONTAINER_FILES=$(shell find ./filesystem -type f)
 GATEWAY_DAEMON_EXECUTABLE=./bin/egressd-$(ARCH)
 # Files to be built
-SRC_FILES=$(shell find . -name '*.go' |grep -v vendor)
+SRC_FILES=$(shell find . -name '*.go' | grep -v vendor) ../felix/proto/felixbackend.pb.go
 
 ###############################################################################
-# Download and include Makefile.common
+# Include ../lib.Makefile
 #   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
 #   that variable is evaluated when we declare DOCKER_RUN and siblings.
 ###############################################################################
-MAKE_BRANCH?=$(GO_BUILD_VER)
-MAKE_REPO?=https://raw.githubusercontent.com/projectcalico/go-build/$(MAKE_BRANCH)
-Makefile.common: Makefile.common.$(MAKE_BRANCH)
-	cp "$<" "$@"
-Makefile.common.$(MAKE_BRANCH):
-	# Clean up any files downloaded from other branches so they don't accumulate.
-	rm -f Makefile.common.*
-	curl --fail $(MAKE_REPO)/Makefile.common -o "$@"
-
-include Makefile.common
+include ../lib.Makefile
 
 ###############################################################################
 ## Clean enough that a new release build will be clean
@@ -65,60 +51,15 @@ clean:
 	-docker rmi $(EGRESS_GATEWAY_TESTING_IMAGE):latest-$(ARCH)
 
 ###############################################################################
-# Compile Proto's
+# Protobufs, defer to felix's makefile.
 ###############################################################################
-# We use gogofast for protobuf compilation.  Regular gogo is incompatible with
-# gRPC, since gRPC uses golang/protobuf for marshalling/unmarshalling in that
-# case.  See https://github.com/gogo/protobuf/issues/386 for more details.
-# Note that we cannot seem to use gogofaster because of incompatibility with
-# Envoy's validation library.
-# When importing, we must use gogo versions of google/protobuf and
-# google/rpc (aka googleapis).
-PROTOC_IMPORTS =  -I proto\
-		  -I ./
 
+../felix/proto/felixbackend.pb.go: ../felix/proto/felixbackend.proto
+	$(MAKE) --directory ../felix make proto
 
-proto: proto/felixbackend.pb.go
-
-# Generate the protobuf bindings for go. The proto/felixbackend.pb.go file is included in SRC_FILES
-# In order to make use of complex structures like protobuf.google.timestamp, we need to link the
-# protobuf google types when generating go code from protobuf messages
-proto/felixbackend.pb.go: proto/felixbackend.proto
-	docker run --rm --user $(LOCAL_USER_ID):$(LOCAL_GROUP_ID) \
-		  -v $(CURDIR):/code -v $(CURDIR)/proto:/src:rw \
-		      $(PROTOC_CONTAINER) \
-		      --gogofaster_out=\
-	Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types,\
-	Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,\
-	Mgoogle/protobuf/struct.proto=github.com/gogo/protobuf/types,\
-	Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,\
-	Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types,\
-	plugins=grpc:. \
-	felixbackend.proto
-	# Make sure the generated code won't cause a static-checks failure.
-	$(MAKE) fix
 ###############################################################################
 # Building the binary
 ###############################################################################
-# If local build is set, then always build the binary since we might not
-# detect when another local repository has been modified.
-ifeq ($(LOCAL_BUILD),true)
-.PHONY: $(SRC_FILES)
-endif
-
-# Build mounts for running in "local build" mode. This allows an easy build using local development code,
-# assuming that there is a local checkout of libcalico in the same directory as this repo.
-.PHONY:local_build
-ifdef LOCAL_BUILD
-EXTRA_DOCKER_ARGS+=-v $(CURDIR)/../libcalico-go-private:/go/src/github.com/projectcalico/libcalico-go:rw
-local_build:
-	$(DOCKER_RUN) $(CALICO_BUILD) go mod edit -replace=github.com/projectcalico/libcalico-go=../libcalico-go
-
-else
-local_build:
-	@echo "Building Egress Gateway for Calico version ${GIT_VERSION}"
-endif
-EXTRA_DOCKER_ARGS += -e GOPRIVATE=github.com/tigera/*
 
 # We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
 ifeq ($(ARCH), $(filter $(ARCH),amd64))
@@ -135,10 +76,10 @@ build-all: $(addprefix bin/egressd-,$(VALIDARCHES))
 ## Build the binary for the current architecture and platform
 build: bin/egressd-$(ARCH)
 bin/egressd-amd64: ARCH=amd64
-bin/egressd-%: local_build proto $(SRC_FILES)
+bin/egressd-%: $(SRC_FILES)
 	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) -e CGO_LDFLAGS=$(CGO_LDFLAGS) $(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
-	  	go build $(BUILD_FLAGS) -ldflags "-X main.VERSION=$(GIT_VERSION) " -o bin/egressd-$(ARCH) ./cmd/egressd'
+		  go build $(BUILD_FLAGS) -ldflags "-X main.VERSION=$(GIT_VERSION) " -o bin/egressd-$(ARCH) ./cmd/egressd'
 
 ###############################################################################
 # Building the image
@@ -163,7 +104,7 @@ $(GATEWAY_TEST_CONTAINER_CREATED): register ./test/Dockerfile.$(ARCH) $(GATEWAY_
 	touch $@
 
 ## Run the tests in a container. Useful for CI, Mac dev
-ut: local_build proto
+ut: ../felix/proto/felixbackend.pb.go
 	mkdir -p report
 	$(DOCKER_RUN) $(CALICO_BUILD) /bin/bash -c "$(GIT_CONFIG_SSH) go test -v $(GOTEST_ARGS) ./..."
 

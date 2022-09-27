@@ -16,8 +16,8 @@ import (
 	"github.com/projectcalico/calico/egress-gateway/controlplane/mock"
 	"github.com/projectcalico/calico/egress-gateway/netlinkshim"
 	mocknetlink "github.com/projectcalico/calico/egress-gateway/netlinkshim/mock"
-	"github.com/projectcalico/calico/egress-gateway/proto"
 	netutil "github.com/projectcalico/calico/egress-gateway/util/net"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 const (
@@ -40,15 +40,15 @@ func TestProgramsKernel(test *testing.T) {
 		DstNodeIp:   "192.168.1.1",
 	}
 	gatewayUpdate := proto.RouteUpdate{
-		Type: proto.RouteType_LOCAL_WORKLOAD,
-		IpPoolType: proto.IPPoolType_NO_ENCAP,
-		Dst: "10.0.2.0/31",
+		Type:        proto.RouteType_LOCAL_WORKLOAD,
+		IpPoolType:  proto.IPPoolType_NO_ENCAP,
+		Dst:         "10.0.2.0/31",
 		DstNodeName: "example.local",
-		DstNodeIp: "192.168.2.2",
+		DstNodeIp:   "192.168.2.2",
 	}
 	store := mock.Store{
 		WorkloadsByDst: routesByWorkloadCIDR,
-		GatewayUpdate: &gatewayUpdate,
+		GatewayUpdate:  &gatewayUpdate,
 	}
 
 	log.Info("initialising mock netlink handle...")
@@ -133,15 +133,15 @@ func TestHandlesFailures(test *testing.T) {
 		DstNodeIp:   "192.168.1.1",
 	}
 	gatewayUpdate := proto.RouteUpdate{
-		Type: proto.RouteType_LOCAL_WORKLOAD,
-		IpPoolType: proto.IPPoolType_NO_ENCAP,
-		Dst: "10.0.2.0/31",
+		Type:        proto.RouteType_LOCAL_WORKLOAD,
+		IpPoolType:  proto.IPPoolType_NO_ENCAP,
+		Dst:         "10.0.2.0/31",
 		DstNodeName: "example.local",
-		DstNodeIp: "192.168.2.2",
+		DstNodeIp:   "192.168.2.2",
 	}
 	store := mock.Store{
 		WorkloadsByDst: routesByWorkloadCIDR,
-		GatewayUpdate: &gatewayUpdate,
+		GatewayUpdate:  &gatewayUpdate,
 	}
 
 	log.Info("initialising mock netlink handle...")
@@ -219,16 +219,16 @@ func TestHandlesTunnels(test *testing.T) {
 		DstNodeIp:   "192.168.2.2",
 	}
 	gatewayUpdate := proto.RouteUpdate{
-		Type: proto.RouteType_LOCAL_WORKLOAD,
-		IpPoolType: proto.IPPoolType_NO_ENCAP,
-		Dst: "10.0.2.0/31",
+		Type:        proto.RouteType_LOCAL_WORKLOAD,
+		IpPoolType:  proto.IPPoolType_NO_ENCAP,
+		Dst:         "10.0.2.0/31",
 		DstNodeName: "example.local",
-		DstNodeIp: "192.168.2.2",
+		DstNodeIp:   "192.168.2.2",
 	}
 	store := mock.Store{
 		WorkloadsByDst: routesByWorkloadCIDR,
-		TunnelsByDst: tunnelsByDst,
-		GatewayUpdate: &gatewayUpdate,
+		TunnelsByDst:   tunnelsByDst,
+		GatewayUpdate:  &gatewayUpdate,
 	}
 
 	log.Info("initialising mock netlink handle...")

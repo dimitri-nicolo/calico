@@ -14,10 +14,10 @@ import (
 
 	"github.com/projectcalico/calico/egress-gateway/data"
 	"github.com/projectcalico/calico/egress-gateway/netlinkshim"
-	"github.com/projectcalico/calico/egress-gateway/proto"
 	netutil "github.com/projectcalico/calico/egress-gateway/util/net"
 	netlinkutil "github.com/projectcalico/calico/egress-gateway/util/netlink"
 	protoutil "github.com/projectcalico/calico/egress-gateway/util/proto"
+	"github.com/projectcalico/calico/felix/proto"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
@@ -74,7 +74,7 @@ func NewRouteManager(s data.RouteStore, egressTunnelIfaceName string, vni int, o
 	m := &RouteManager{
 		macBuilder:                          netutil.NewMACBuilder(),
 		backoffManager:                      wait.NewJitteredBackoffManager(backoffDuration, jitter, clock.RealClock{}),
-		latestUpdate:                        make(chan data.RouteStore, 1), //channel of size one, if it gets full, older updates will be discarded
+		latestUpdate:                        make(chan data.RouteStore, 1), // channel of size one, if it gets full, older updates will be discarded
 		egressTunnelWorkloadRoutesByDstCIDR: make(map[string]netlink.Route),
 		egressTunnelNeighsByKey:             make(map[string]netlink.Neigh),
 		egressTunnelBridgeNeighsByKey:       make(map[string]netlink.Neigh),

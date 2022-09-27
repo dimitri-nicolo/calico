@@ -1,6 +1,6 @@
 package proto
 
-import "github.com/projectcalico/calico/egress-gateway/proto"
+import "github.com/projectcalico/calico/felix/proto"
 
 // IsWireguardTunnel returns true if a route update represents a remote host's WireGuard tunnel
 func IsWireguardTunnel(ru *proto.RouteUpdate) bool {

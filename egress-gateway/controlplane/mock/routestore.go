@@ -2,7 +2,7 @@ package mock
 
 import (
 	"github.com/projectcalico/calico/egress-gateway/data"
-	"github.com/projectcalico/calico/egress-gateway/proto"
+	"github.com/projectcalico/calico/felix/proto"
 )
 
 type Store struct {
@@ -15,7 +15,7 @@ func (s Store) Routes() (
 	thisWorkload *proto.RouteUpdate,
 	workloadsByNodeName map[string][]proto.RouteUpdate,
 	tunnelsByNodeName map[string][]proto.RouteUpdate,
-){
+) {
 	thisWorkload = s.GatewayUpdate
 	workloadsByNodeName = make(map[string][]proto.RouteUpdate)
 	tunnelsByNodeName = make(map[string][]proto.RouteUpdate)
@@ -37,7 +37,6 @@ func (s Store) Routes() (
 	return thisWorkload, workloadsByNodeName, tunnelsByNodeName
 }
 
-
 func (s Store) Subscribe(o data.RouteObserver) {
-	//chillin
+	// chillin
 }
