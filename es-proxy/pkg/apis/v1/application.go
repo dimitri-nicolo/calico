@@ -5,7 +5,7 @@ import (
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
-type ServiceRequest struct {
+type ApplicationRequest struct {
 	// The cluster name. Defaults to "cluster".
 	ClusterName string `json:"cluster" validate:"omitempty"`
 
@@ -39,4 +39,20 @@ type Service struct {
 
 	// RequestThroughput of the service per second.
 	RequestThroughput float64 `json:"requestThroughput" validate:"required"`
+}
+
+type URLResponse struct {
+	// URLs contains a list of service info.
+	URLs []URL `json:"urls" validate:"required"`
+}
+
+type URL struct {
+	// URL of the request.
+	URL string `json:"url" validate:"required"`
+
+	// Service initiates the request.
+	Service string `json:"service" validate:"required"`
+
+	// RequestCount counts the requests.
+	RequestCount int `json:"requestCount" validate:"required"`
 }
