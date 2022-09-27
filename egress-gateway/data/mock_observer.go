@@ -1,7 +1,7 @@
 package data
 
 import (
-	"github.com/tigera/egress-gateway/proto"
+	"github.com/projectcalico/calico/egress-gateway/proto"
 )
 
 type MockObserver struct {

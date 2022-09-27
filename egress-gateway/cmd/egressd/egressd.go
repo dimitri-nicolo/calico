@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/tigera/egress-gateway/controlplane"
-	"github.com/tigera/egress-gateway/data"
-	"github.com/tigera/egress-gateway/sync"
+	"github.com/projectcalico/calico/egress-gateway/controlplane"
+	"github.com/projectcalico/calico/egress-gateway/data"
+	"github.com/projectcalico/calico/egress-gateway/sync"
 
 	docopt "github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"

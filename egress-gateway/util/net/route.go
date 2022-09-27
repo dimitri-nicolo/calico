@@ -6,7 +6,7 @@ import (
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 
-	"github.com/tigera/egress-gateway/netlinkshim"
+	"github.com/projectcalico/calico/egress-gateway/netlinkshim"
 )
 
 // GetDefaultRoute inspects routing table 254 of the underlying controlplane for the most generic

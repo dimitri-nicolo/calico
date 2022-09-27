@@ -13,11 +13,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	"github.com/tigera/egress-gateway/controlplane/mock"
-	"github.com/tigera/egress-gateway/netlinkshim"
-	mocknetlink "github.com/tigera/egress-gateway/netlinkshim/mock"
-	"github.com/tigera/egress-gateway/proto"
-	netutil "github.com/tigera/egress-gateway/util/net"
+	"github.com/projectcalico/calico/egress-gateway/controlplane/mock"
+	"github.com/projectcalico/calico/egress-gateway/netlinkshim"
+	mocknetlink "github.com/projectcalico/calico/egress-gateway/netlinkshim/mock"
+	"github.com/projectcalico/calico/egress-gateway/proto"
+	netutil "github.com/projectcalico/calico/egress-gateway/util/net"
 )
 
 const (

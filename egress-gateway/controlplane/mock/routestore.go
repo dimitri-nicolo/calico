@@ -1,8 +1,8 @@
 package mock
 
 import (
-	"github.com/tigera/egress-gateway/data"
-	"github.com/tigera/egress-gateway/proto"
+	"github.com/projectcalico/calico/egress-gateway/data"
+	"github.com/projectcalico/calico/egress-gateway/proto"
 )
 
 type Store struct {

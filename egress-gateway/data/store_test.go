@@ -7,7 +7,7 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
-	"github.com/tigera/egress-gateway/proto"
+	"github.com/projectcalico/calico/egress-gateway/proto"
 )
 
 // TestStoreWaitsTillInSync ensures no store conumers are notified of updates until the first in-sync msg of a connection is received

@@ -12,12 +12,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/tigera/egress-gateway/data"
-	"github.com/tigera/egress-gateway/netlinkshim"
-	"github.com/tigera/egress-gateway/proto"
-	netutil "github.com/tigera/egress-gateway/util/net"
-	netlinkutil "github.com/tigera/egress-gateway/util/netlink"
-	protoutil "github.com/tigera/egress-gateway/util/proto"
+	"github.com/projectcalico/calico/egress-gateway/data"
+	"github.com/projectcalico/calico/egress-gateway/netlinkshim"
+	"github.com/projectcalico/calico/egress-gateway/proto"
+	netutil "github.com/projectcalico/calico/egress-gateway/util/net"
+	netlinkutil "github.com/projectcalico/calico/egress-gateway/util/netlink"
+	protoutil "github.com/projectcalico/calico/egress-gateway/util/proto"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"

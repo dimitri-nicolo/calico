@@ -13,7 +13,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	"github.com/tigera/egress-gateway/proto"
+	"github.com/projectcalico/calico/egress-gateway/proto"
 
 	log "github.com/sirupsen/logrus"
 )

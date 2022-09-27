@@ -14,8 +14,8 @@ import (
 	"github.com/vishvananda/netlink/nl"
 	"golang.org/x/sys/unix"
 
-	"github.com/tigera/egress-gateway/netlinkshim"
-	netlinkutil "github.com/tigera/egress-gateway/util/netlink"
+	"github.com/projectcalico/calico/egress-gateway/netlinkshim"
+	netlinkutil "github.com/projectcalico/calico/egress-gateway/util/netlink"
 )
 
 // MockHandle mimics a netlink handle without any actual kernel programming

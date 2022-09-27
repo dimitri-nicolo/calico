@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
-	mymock "github.com/tigera/egress-gateway/sync/mocks"
+	mymock "github.com/projectcalico/calico/egress-gateway/sync/mocks"
 )
 
 // Client tests
