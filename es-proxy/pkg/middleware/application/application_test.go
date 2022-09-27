@@ -46,7 +46,7 @@ var (
 	l7SearchResponseWithNamespace string
 )
 
-// The user authentication review mock struct implementing the authentication review interface.
+// The user authorization review mock struct implementing the authentication review interface.
 type userAuthorizationReviewMock struct {
 	verbs []libcalicov3.AuthorizedResourceVerbs
 	err   error
@@ -136,7 +136,7 @@ var _ = Describe("Application middleware tests", func() {
 			err = json.Unmarshal(rr.Body.Bytes(), &resp)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(resp.Services).To(HaveLen(3))
+			Expect(resp.Services).To(HaveLen(2))
 
 			// sort services slice as the order isn't guaranteed when translated from map.
 			sort.Slice(resp.Services, func(i, j int) bool {
@@ -156,13 +156,6 @@ var _ = Describe("Application middleware tests", func() {
 			Expect(resp.Services[1].InboundThroughput).To(BeNumerically("~", 4251.80, 0.01))
 			Expect(resp.Services[1].OutboundThroughput).To(BeNumerically("~", 19909.94, 0.01))
 			Expect(resp.Services[1].RequestThroughput).To(BeNumerically("~", 0.804, 0.001))
-
-			Expect(resp.Services[2].Name).To(Equal("pvt"))
-			Expect(resp.Services[2].ErrorRate).To(Equal(0.0))
-			Expect(resp.Services[2].Latency).To(BeNumerically("~", 1461.38, 0.01))
-			Expect(resp.Services[2].InboundThroughput).To(BeNumerically("~", 9862.310, 0.01))
-			Expect(resp.Services[2].OutboundThroughput).To(BeNumerically("~", 67543.816, 0.01))
-			Expect(resp.Services[2].RequestThroughput).To(BeNumerically("~", 1.572, 0.001))
 		})
 
 		It("should return a valid services response filtered by namespace", func() {
@@ -441,7 +434,7 @@ var _ = Describe("Application middleware tests", func() {
 			err = json.Unmarshal(rr.Body.Bytes(), &resp)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(resp.URLs).To(HaveLen(4))
+			Expect(resp.URLs).To(HaveLen(3))
 
 			// sort urls slice as the order isn't guaranteed when translated from map.
 			sort.Slice(resp.URLs, func(i, j int) bool {
@@ -456,17 +449,13 @@ var _ = Describe("Application middleware tests", func() {
 			Expect(resp.URLs[0].Service).To(Equal("frontend-99684f7f8-*"))
 			Expect(resp.URLs[0].RequestCount).To(Equal(491))
 
-			Expect(resp.URLs[1].URL).To(Equal("adservice:9555/hipstershop.AdService/GetAds"))
-			Expect(resp.URLs[1].Service).To(Equal("pvt"))
-			Expect(resp.URLs[1].RequestCount).To(Equal(492))
+			Expect(resp.URLs[1].URL).To(Equal("checkoutservice:5050/hipstershop.CheckoutService/PlaceOrder"))
+			Expect(resp.URLs[1].Service).To(Equal("frontend-99684f7f8-*"))
+			Expect(resp.URLs[1].RequestCount).To(Equal(29))
 
-			Expect(resp.URLs[2].URL).To(Equal("checkoutservice:5050/hipstershop.CheckoutService/PlaceOrder"))
-			Expect(resp.URLs[2].Service).To(Equal("frontend-99684f7f8-*"))
-			Expect(resp.URLs[2].RequestCount).To(Equal(29))
-
-			Expect(resp.URLs[3].URL).To(Equal("paymentservice:50051/hipstershop.PaymentService/Charge"))
-			Expect(resp.URLs[3].Service).To(Equal("checkoutservice-69c8ff664b-*"))
-			Expect(resp.URLs[3].RequestCount).To(Equal(60)) // 31+29
+			Expect(resp.URLs[2].URL).To(Equal("paymentservice:50051/hipstershop.PaymentService/Charge"))
+			Expect(resp.URLs[2].Service).To(Equal("checkoutservice-69c8ff664b-*"))
+			Expect(resp.URLs[2].RequestCount).To(Equal(60)) // 31+29
 		})
 
 		It("should return a valid services response filtered by namespace", func() {

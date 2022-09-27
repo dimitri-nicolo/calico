@@ -16,6 +16,7 @@ import (
 	elasticvariant "github.com/projectcalico/calico/es-proxy/pkg/elastic"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
 	esSearch "github.com/projectcalico/calico/es-proxy/pkg/search"
+	"github.com/projectcalico/calico/lma/pkg/api"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
@@ -30,7 +31,7 @@ const (
 	httpStatusServerErrorUpperBound = 599
 )
 
-// ApplicationHandler handles application log requests from manager dashboard.
+// ApplicationHandler handles application layer (l7) log requests from manager dashboard.
 func ApplicationHandler(
 	idxHelper lmaindex.Helper,
 	authReview middleware.AuthorizationReview,
@@ -118,7 +119,7 @@ type service struct {
 	TotalLogDuration int64         // sum(end_time - start_time) in seconds
 }
 
-// processServiceRequest translates service request parameters to Elastic queries and return responses.
+// processServiceRequest translates service request parameters to Elastic queries and returns responses.
 func processServiceRequest(
 	idxHelper lmaindex.Helper,
 	params *v1.ApplicationRequest,
@@ -140,7 +141,8 @@ func processServiceRequest(
 		}
 
 		sourceNameAggr := doc.Source.SourceNameAggr
-		if sourceNameAggr != "" {
+		if sourceNameAggr != "" &&
+			sourceNameAggr != api.FlowLogNetworkPrivate && sourceNameAggr != api.FlowLogNetworkPublic {
 			errCount := 0
 			if responseCode, err := strconv.Atoi(doc.Source.ResponseCode); err == nil {
 				// Count HTTP error responses from 400 - 499 (client error) + 500 - 599 (server error)
@@ -199,7 +201,7 @@ type urlMapKey struct {
 	SourceNameAggr string
 }
 
-// processURLRequest translates url request parameters to Elastic queries and return responses.
+// processURLRequest translates url request parameters to Elastic queries and returns responses.
 func processURLRequest(
 	idxHelper lmaindex.Helper,
 	params *v1.ApplicationRequest,
@@ -224,7 +226,8 @@ func processURLRequest(
 			URL:            doc.Source.URL,
 			SourceNameAggr: doc.Source.SourceNameAggr,
 		}
-		if key.URL != "" && key.SourceNameAggr != "" {
+		if key.URL != "" && key.SourceNameAggr != "" &&
+			key.SourceNameAggr != api.FlowLogNetworkPrivate && key.SourceNameAggr != api.FlowLogNetworkPublic {
 			if s, found := urlMap[key]; found {
 				s.RequestCount += doc.Source.Count
 			} else {
