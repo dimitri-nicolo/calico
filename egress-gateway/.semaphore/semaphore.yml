@@ -1,0 +1,53 @@
+version: v1.0
+name: egress-gateway build and test
+
+execution_time_limit:
+  hours: 4
+
+agent:
+  machine:
+    type: e1-standard-4
+    os_image: ubuntu1804
+
+global_job_config:
+  secrets:
+    - name: docker-hub
+    # Mount the github SSH secret for pulling private repositories.
+    - name: private-repo
+    # Mount a secret for pulling images from GCR.
+    - name: tigera-dev-ci-pull-credentials
+  prologue:
+    commands:
+      - echo $DOCKERHUB_PASSWORD | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+      # Correct permissions since they are too open by default:
+      - chmod 0600 ~/.keys/*
+      # Add the key to the ssh agent:
+      - ssh-add ~/.keys/*
+      # Login to docker in order to pull images.
+      - docker login --username casey@tigera.io -u _json_key -p "$(cat /home/semaphore/tigera-dev-ci.json)" https://gcr.io
+      - checkout
+      # Semaphore is doing shallow clone on a commit without tags.
+      # unshallow it for GIT_VERSION:=$(shell git describe --tags --dirty --always) @ Makefile.common
+      - git fetch --unshallow || true
+
+promotions:
+  - name: Push images
+    pipeline_file: push-images.yml
+    auto_promote:
+      # Push images only if build passed and only for branches, not PRs.
+      when: "result = 'passed' and branch =~ '.+'"
+
+blocks:
+  # Run the full set of tests. Each job can potentially be run in parallel,
+  # provided Semaphore has enough boxes available.
+  - name: "Tests"
+    dependencies: []
+    task:
+      jobs:
+        - name: "make ci"
+          execution_time_limit:
+            # Semaphore's default is 1 hour, and these tests take about that time or a little
+            # longer.
+            minutes: 90
+          commands:
+           - make ci
