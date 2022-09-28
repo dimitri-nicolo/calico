@@ -1,4 +1,4 @@
-FROM docker.elastic.co/elasticsearch/elasticsearch:7.17.5 as elastic
+FROM docker.elastic.co/elasticsearch/elasticsearch:7.17.6 as elastic
 
 RUN apt-get -y update && apt-get -y upgrade
 
