@@ -132,6 +132,7 @@ func main() {
 			server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
 			server.WithSNIServiceMap(sniServiceMap),
 			server.WithFIPSModeEnabled(cfg.FIPSModeEnabled),
+			server.WithCheckManagedClusterAuthorizationBeforeProxy(cfg.CheckManagedClusterAuthorizationBeforeProxy),
 		)
 	}
 

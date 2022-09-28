@@ -97,6 +97,15 @@ type Config struct {
 
 	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
 	FIPSModeEnabled bool `default:"false" split_words:"true"`
+
+	// CheckManagedClusterAuthorizationBeforeProxy instructs Voltron
+	// to additionally check if the user has 'GET' permissions on the ManagedCluster
+	// resource before forwarding a request over the tunnel to that managed cluster.
+	// If left disabled, the request is still authorized on the managed cluster once it arrives
+	// over the tunnel.
+	// Enabling it reduces some load on the managed cluster while also adding a second control
+	// of allow / deny based on the ManagedCluster RBAC.
+	CheckManagedClusterAuthorizationBeforeProxy bool `default:"false" split_words:"true"`
 }
 
 func (cfg Config) String() string {
