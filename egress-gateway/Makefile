@@ -6,7 +6,6 @@ SEMAPHORE_PROJECT_ID=$(SEMAPHORE_EGRESS_GATEWAY_PROJECT_ID)
 EGRESS_GATEWAY_IMAGE  ?=egress-gateway
 EGRESS_GATEWAY_TESTING_IMAGE ?=egress-gateway-testing
 BUILD_IMAGES          ?=$(EGRESS_GATEWAY_IMAGE)
-DEV_REGISTRIES        ?=gcr.io/unique-caldron-775/cnx
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
