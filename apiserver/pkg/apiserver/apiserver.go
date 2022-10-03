@@ -246,6 +246,7 @@ func NewCalicoResourceLister(cc api.Client) CalicoResourceLister {
 		client:           cc,
 		tiers:            make(map[string]*v3.Tier),
 		uisettingsgroups: make(map[string]*v3.UISettingsGroup),
+		managedclusters:  make(map[string]*v3.ManagedCluster),
 	}
 }
 
@@ -254,6 +255,7 @@ type CalicoResourceLister interface {
 	WaitForCacheSync(stopCh <-chan struct{})
 	ListTiers() ([]*v3.Tier, error)
 	ListUISettingsGroups() ([]*v3.UISettingsGroup, error)
+	ListManagedClusters() ([]*v3.ManagedCluster, error)
 }
 
 // calicoResourceLister implements the CalicoResourceLister interface returning Tiers.
@@ -264,6 +266,7 @@ type calicoResourceLister struct {
 	sync             chan struct{}
 	tiers            map[string]*v3.Tier
 	uisettingsgroups map[string]*v3.UISettingsGroup
+	managedclusters  map[string]*v3.ManagedCluster
 }
 
 func (t *calicoResourceLister) ListTiers() ([]*v3.Tier, error) {
@@ -286,6 +289,16 @@ func (t *calicoResourceLister) ListUISettingsGroups() ([]*v3.UISettingsGroup, er
 	return sgs, nil
 }
 
+func (t *calicoResourceLister) ListManagedClusters() ([]*v3.ManagedCluster, error) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	managedClusters := make([]*v3.ManagedCluster, 0, len(t.managedclusters))
+	for _, managedCluster := range t.managedclusters {
+		managedClusters = append(managedClusters, managedCluster)
+	}
+	return managedClusters, nil
+}
+
 func (t *calicoResourceLister) Start() {
 	t.sync = make(chan struct{})
 	t.syncer = watchersyncer.New(
@@ -293,6 +306,7 @@ func (t *calicoResourceLister) Start() {
 		[]watchersyncer.ResourceType{
 			{ListInterface: model.ResourceListOptions{Kind: v3.KindTier}},
 			{ListInterface: model.ResourceListOptions{Kind: v3.KindUISettingsGroup}},
+			{ListInterface: model.ResourceListOptions{Kind: v3.KindManagedCluster}},
 		},
 		t,
 	)
@@ -316,18 +330,31 @@ func (t *calicoResourceLister) OnUpdates(updates []api.Update) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	for _, u := range updates {
+		// The syncer API is sort of broken in that there are scenarios in which you can receive a KVUpdate that is actually a delete.
+		// The correct way to tell if an update on the syncer API is a delete operation or not is to check if u.KVPair.Value == nil.
+		// If it's nil, it should be treated as a delete regardless of the update type, and if it's non-nil it should be treated as an add / update.
+		isDelete := func(u api.Update) bool {
+			return u.KVPair.Value == nil
+		}
+
 		switch u.Key.(model.ResourceKey).Kind {
 		case v3.KindTier:
-			if u.UpdateType == api.UpdateTypeKVDeleted {
+			if isDelete(u) {
 				delete(t.tiers, u.Key.(model.ResourceKey).Name)
 			} else {
 				t.tiers[u.Key.(model.ResourceKey).Name] = u.Value.(*v3.Tier)
 			}
 		case v3.KindUISettingsGroup:
-			if u.UpdateType == api.UpdateTypeKVDeleted {
+			if isDelete(u) {
 				delete(t.uisettingsgroups, u.Key.(model.ResourceKey).Name)
 			} else {
 				t.uisettingsgroups[u.Key.(model.ResourceKey).Name] = u.Value.(*v3.UISettingsGroup)
+			}
+		case v3.KindManagedCluster:
+			if isDelete(u) {
+				delete(t.managedclusters, u.Key.(model.ResourceKey).Name)
+			} else {
+				t.managedclusters[u.Key.(model.ResourceKey).Name] = u.Value.(*v3.ManagedCluster)
 			}
 		}
 	}

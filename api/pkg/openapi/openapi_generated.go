@@ -1164,8 +1164,16 @@ func schema_pkg_apis_projectcalico_v3_AuthorizedResourceGroup(ref common.Referen
 							Format:      "",
 						},
 					},
+					"managedCluster": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ManagedCluster is the name of the ManagedCluster. This is only valid for managedclusters.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
-				Required: []string{"namespace", "uiSettingsGroup"},
+				Required: []string{"namespace", "uiSettingsGroup", "managedCluster"},
 			},
 		},
 	}
