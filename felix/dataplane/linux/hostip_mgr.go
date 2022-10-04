@@ -21,7 +21,9 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/dataplane/common"
+	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/ipsets"
+	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
@@ -30,29 +32,33 @@ type hostIPManager struct {
 	nonHostIfacesRegexp *regexp.Regexp
 	// hostIfaceToAddrs maps host interface name to the set of IPs on that interface (reported from the dataplane).
 	hostIfaceToAddrs map[string]set.Set[string]
+	routesByDest     set.Set[ip.CIDR]
 
 	hostIPSetID     string
 	ipsetsDataplane common.IPSetsDataplane
 	maxSize         int
+	tunIPSetID      string
+	routesDirty     bool
 }
 
 func newHostIPManager(wlIfacesPrefixes []string,
 	ipSetID string,
 	ipsets common.IPSetsDataplane,
-	maxIPSetSize int) *hostIPManager {
+	maxIPSetSize int, tunIpSetID string) *hostIPManager {
 
 	return newHostIPManagerWithShims(
 		wlIfacesPrefixes,
 		ipSetID,
 		ipsets,
 		maxIPSetSize,
+		tunIpSetID,
 	)
 }
 
 func newHostIPManagerWithShims(wlIfacesPrefixes []string,
 	ipSetID string,
 	ipsets common.IPSetsDataplane,
-	maxIPSetSize int) *hostIPManager {
+	maxIPSetSize int, tunIpSetID string) *hostIPManager {
 
 	wlIfacesPattern := "^(" + strings.Join(wlIfacesPrefixes, "|") + ").*"
 	wlIfacesRegexp := regexp.MustCompile(wlIfacesPattern)
@@ -63,6 +69,9 @@ func newHostIPManagerWithShims(wlIfacesPrefixes []string,
 		hostIPSetID:         ipSetID,
 		ipsetsDataplane:     ipsets,
 		maxSize:             maxIPSetSize,
+		tunIPSetID:          tunIpSetID,
+		routesByDest:        set.NewBoxed[ip.CIDR](),
+		routesDirty:         true,
 	}
 }
 
@@ -99,10 +108,62 @@ func (m *hostIPManager) OnUpdate(msg interface{}) {
 			MaxSize: m.maxSize,
 		}
 		m.ipsetsDataplane.AddOrReplaceIPSet(metadata, m.getCurrentMembers())
+	case *proto.RouteUpdate:
+		m.onRouteUpdate(msg)
+	case *proto.RouteRemove:
+		m.onRouteRemove(msg)
 	}
 }
 
+func (m *hostIPManager) onRouteUpdate(update *proto.RouteUpdate) {
+	cidr, err := ip.CIDRFromString(update.Dst)
+	if err != nil {
+		log.Warn("Unable to parse route update destination. Skipping update.")
+		return
+	}
+
+	m.deleteRoute(cidr)
+
+	if update.Type == proto.RouteType_REMOTE_TUNNEL {
+		m.routesByDest.Add(cidr)
+		m.routesDirty = true
+	}
+}
+
+func (m *hostIPManager) onRouteRemove(msg *proto.RouteRemove) {
+	cidr, err := ip.CIDRFromString(msg.Dst)
+	if err != nil {
+		log.Warn("Unable to parse route remove destination. Skipping update.")
+		return
+	}
+	m.deleteRoute(cidr)
+}
+
+func (m *hostIPManager) deleteRoute(cidr ip.CIDR) {
+	if m.routesByDest.Contains(cidr) {
+		m.routesByDest.Discard(cidr)
+		m.routesDirty = true
+	}
+}
+
+func (m *hostIPManager) getCurrentTunMembers() []string {
+	members := []string{}
+	m.routesByDest.Iter(func(cidr ip.CIDR) error {
+		members = append(members, cidr.Addr().String())
+		return nil
+	})
+	return members
+}
+
 func (m *hostIPManager) CompleteDeferredWork() error {
-	// Nothing to do, we don't defer any work.
+	if m.routesDirty {
+		metadata := ipsets.IPSetMetadata{
+			Type:    ipsets.IPSetTypeHashIP,
+			SetID:   m.tunIPSetID,
+			MaxSize: m.maxSize,
+		}
+		m.ipsetsDataplane.AddOrReplaceIPSet(metadata, m.getCurrentTunMembers())
+		m.routesDirty = false
+	}
 	return nil
 }

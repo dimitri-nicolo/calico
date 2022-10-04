@@ -1004,6 +1004,22 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *Chain {
 		)
 	}
 
+	if ipVersion == 4 && r.EgressIPEnabled && !r.BPFEnabled {
+		// When Egress IP is enabled, auto-allow VXLAN traffic to egress gateways with source IP
+		// as host IP.
+		match := Match().ProtocolNum(ProtoUDP)
+		match = match.SrcAddrType(AddrTypeLocal, false)
+		match = match.
+			DestPorts(
+				uint16(r.Config.EgressIPVXLANPort), // egress.calico
+			)
+		rules = append(rules, Rule{
+			Match:   match,
+			Action:  r.filterAllowAction,
+			Comment: []string{"Accept VXLAN UDP traffic from egress clients"},
+		})
+	}
+
 	if ipVersion == 6 && r.VXLANEnabledV6 {
 		// When IPv6 VXLAN is enabled, auto-allow VXLAN traffic to other Calico nodes.  Without this,
 		// it's too easy to make a host policy that blocks VXLAN traffic, resulting in very confusing

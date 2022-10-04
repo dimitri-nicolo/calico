@@ -814,7 +814,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			config.RulesConfig.WorkloadIfacePrefixes,
 			rules.IPSetIDThisHostIPs,
 			ipSetsV4,
-			config.MaxIPSetSize))
+			config.MaxIPSetSize,
+			rules.IPSetIDAllTunnelNets))
 		dp.RegisterManager(newPolicyManager(rawTableV4, mangleTableV4, filterTableV4, ruleRenderer, 4))
 
 		// Clean up any leftover BPF state.
@@ -1297,7 +1298,8 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 				config.RulesConfig.WorkloadIfacePrefixes,
 				rules.IPSetIDThisHostIPs,
 				ipSetsV6,
-				config.MaxIPSetSize))
+				config.MaxIPSetSize,
+				rules.IPSetIDAllTunnelNets))
 			dp.RegisterManager(newPolicyManager(rawTableV6, mangleTableV6, filterTableV6, ruleRenderer, 6))
 		}
 		dp.RegisterManager(newEndpointManager(

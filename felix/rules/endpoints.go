@@ -427,24 +427,41 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 
 	// Accept the UDP VXLAN traffic for egressgateways
 	if !r.BPFEnabled && ipVersion == 4 && isEgressGateway {
-		match := Match().ProtocolNum(ProtoUDP)
-		if dir == RuleDirIngress {
-			match = match.SourceIPSet(r.IPSetConfigV4.
-				NameForMainIPSet(IPSetIDAllHostNets))
-		} else {
-			match = match.DestIPSet(r.IPSetConfigV4.
-				NameForMainIPSet(IPSetIDAllHostNets))
-		}
-		match = match.
-			DestPorts(
-				uint16(r.Config.EgressIPVXLANPort), // egress.calico
-			)
+		programEgwRule := func(ipset string) {
+			match := Match().ProtocolNum(ProtoUDP)
 
-		rules = append(rules, Rule{
-			Match:   match,
-			Action:  AcceptAction{},
-			Comment: []string{"Accept VXLAN UDP traffic for egressgateways"},
-		})
+			if dir == RuleDirIngress {
+				match = match.SourceIPSet(r.IPSetConfigV4.
+					NameForMainIPSet(ipset))
+			} else {
+				match = match.DestIPSet(r.IPSetConfigV4.
+					NameForMainIPSet(ipset))
+			}
+			match = match.
+				DestPorts(
+					uint16(r.Config.EgressIPVXLANPort), // egress.calico
+				)
+
+			rules = append(rules, Rule{
+				Match:   match,
+				Action:  AcceptAction{},
+				Comment: []string{"Accept VXLAN UDP traffic for egressgateways"},
+			})
+		}
+		// Auto-allow VXLAN UDP traffic for egressgateways from/to host IPs
+		programEgwRule(IPSetIDAllHostNets)
+		// Auto-allow VXLAN UDP traffic for egressgateways from/to tunnel IPs in case of overlay
+		if r.VXLANEnabled || r.IPIPEnabled || r.WireguardEnabled {
+			programEgwRule(IPSetIDAllTunnelNets)
+		}
+
+		// Drop rest of the packets to Egress Gateways
+		if dir == RuleDirIngress {
+			rules = append(rules, Rule{
+				Action:  DropAction{},
+				Comment: []string{"Drop any other traffic to egressgateways"},
+			})
+		}
 	}
 
 	if !allowVXLANEncap {

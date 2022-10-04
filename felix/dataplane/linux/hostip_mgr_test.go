@@ -19,6 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/calico/felix/dataplane/common"
+	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
@@ -30,7 +31,62 @@ var _ = Describe("Host ip manager", func() {
 
 	BeforeEach(func() {
 		ipSets = common.NewMockIPSets()
-		hostIPMgr = newHostIPManager([]string{"cali"}, "this-host", ipSets, 1024)
+		hostIPMgr = newHostIPManager([]string{"cali"}, "this-host", ipSets, 1024, "all-tunnel")
+	})
+
+	Describe("after sending a route update", func() {
+		BeforeEach(func() {
+			hostIPMgr.OnUpdate(&proto.RouteUpdate{
+				Type: proto.RouteType_REMOTE_TUNNEL,
+				Dst:  "192.0.0.1/32",
+			})
+			hostIPMgr.OnUpdate(&proto.RouteUpdate{
+				Type: proto.RouteType_REMOTE_TUNNEL,
+				Dst:  "192.0.0.2/32",
+			})
+			err := hostIPMgr.CompleteDeferredWork()
+			Expect(err).ToNot(HaveOccurred())
+		})
+		It("should create the IP set", func() {
+			Expect(ipSets.AddOrReplaceCalled).To(BeTrue())
+		})
+		It("should add the right members", func() {
+			Expect(ipSets.Members).To(HaveLen(1))
+			expIPs := set.From("192.0.0.1", "192.0.0.2")
+			Expect(ipSets.Members["all-tunnel"]).To(Equal(expIPs))
+		})
+		Describe("after sending a route update with same CIDR but different type", func() {
+			BeforeEach(func() {
+				hostIPMgr.OnUpdate(&proto.RouteUpdate{
+					Type: proto.RouteType_REMOTE_WORKLOAD,
+					Dst:  "192.0.0.1/32",
+				})
+				err := hostIPMgr.CompleteDeferredWork()
+				Expect(err).ToNot(HaveOccurred())
+			})
+			It("should delete the right member", func() {
+				Expect(ipSets.Members).To(HaveLen(1))
+				Expect(ipSets.Members["all-tunnel"].Len()).To(Equal(1))
+				expIPs := set.From("192.0.0.2")
+				Expect(ipSets.Members["all-tunnel"]).To(Equal(expIPs))
+			})
+		})
+		Describe("after sending a route remove", func() {
+			BeforeEach(func() {
+				hostIPMgr.OnUpdate(&proto.RouteRemove{
+					Dst: "192.0.0.2/32",
+				})
+				hostIPMgr.OnUpdate(&proto.RouteRemove{
+					Dst: "192.0.0.1/32",
+				})
+				err := hostIPMgr.CompleteDeferredWork()
+				Expect(err).ToNot(HaveOccurred())
+			})
+			It("should delete the right member", func() {
+				Expect(ipSets.Members).To(HaveLen(1))
+				Expect(ipSets.Members["all-tunnel"].Len()).To(Equal(0))
+			})
+		})
 	})
 
 	Describe("after sending a replace", func() {
@@ -46,7 +102,7 @@ var _ = Describe("Host ip manager", func() {
 			Expect(ipSets.AddOrReplaceCalled).To(BeTrue())
 		})
 		It("should add the right members", func() {
-			Expect(ipSets.Members).To(HaveLen(1))
+			Expect(ipSets.Members).To(HaveLen(2))
 			expIPs := set.From("10.0.0.1", "10.0.0.2")
 			Expect(ipSets.Members["this-host"]).To(Equal(expIPs))
 		})
@@ -78,7 +134,7 @@ var _ = Describe("Host ip manager", func() {
 				Expect(ipSets.AddOrReplaceCalled).To(BeFalse())
 			})
 			It("should have old members", func() {
-				Expect(ipSets.Members).To(HaveLen(1))
+				Expect(ipSets.Members).To(HaveLen(2))
 				expIPs := set.From("10.0.0.1", "10.0.0.2")
 				Expect(ipSets.Members["this-host"]).To(Equal(expIPs))
 			})
@@ -98,7 +154,7 @@ var _ = Describe("Host ip manager", func() {
 				Expect(ipSets.AddOrReplaceCalled).To(BeTrue())
 			})
 			It("should have old members", func() {
-				Expect(ipSets.Members).To(HaveLen(1))
+				Expect(ipSets.Members).To(HaveLen(2))
 				expIPs := set.From("10.0.0.1", "10.0.0.2", "10.0.0.8", "10.0.0.9")
 				Expect(ipSets.Members["this-host"]).To(Equal(expIPs))
 			})
@@ -118,7 +174,7 @@ var _ = Describe("Host ip manager", func() {
 				Expect(ipSets.AddOrReplaceCalled).To(BeTrue())
 			})
 			It("should add the right members", func() {
-				Expect(ipSets.Members).To(HaveLen(1))
+				Expect(ipSets.Members).To(HaveLen(2))
 				expIPs := set.From("10.0.0.2", "10.0.0.3")
 				Expect(ipSets.Members["this-host"]).To(Equal(expIPs))
 			})

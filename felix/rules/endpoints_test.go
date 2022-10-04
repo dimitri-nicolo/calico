@@ -863,6 +863,13 @@ var _ = Describe("Endpoints", func() {
 								DestPorts(uint16(EgressIPVXLANPort)),
 								Action:  AcceptAction{},
 								Comment: []string{"Accept VXLAN UDP traffic for egressgateways"}},
+							{Match: Match().ProtocolNum(ProtoUDP).
+								SourceIPSet("cali40all-tunnel-net").
+								DestPorts(uint16(EgressIPVXLANPort)),
+								Action:  AcceptAction{},
+								Comment: []string{"Accept VXLAN UDP traffic for egressgateways"}},
+							{Action: DropAction{}, Comment: []string{"Drop any other traffic to egressgateways"}},
+
 							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
 							{Match: Match().MarkClear(0x10),
@@ -911,6 +918,11 @@ var _ = Describe("Endpoints", func() {
 							{Action: ClearMarkAction{Mark: 0x88}},
 							{Match: Match().ProtocolNum(ProtoUDP).
 								DestIPSet("cali40all-hosts-net").
+								DestPorts(uint16(EgressIPVXLANPort)),
+								Action:  AcceptAction{},
+								Comment: []string{"Accept VXLAN UDP traffic for egressgateways"}},
+							{Match: Match().ProtocolNum(ProtoUDP).
+								DestIPSet("cali40all-tunnel-net").
 								DestPorts(uint16(EgressIPVXLANPort)),
 								Action:  AcceptAction{},
 								Comment: []string{"Accept VXLAN UDP traffic for egressgateways"}},
