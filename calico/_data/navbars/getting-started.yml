@@ -27,20 +27,20 @@ section:
       path: /getting-started/openshift/installation
   - title: AKS
     path: /getting-started/kubernetes/aks
-  - title: AWS using kOps
-    path: /getting-started/kubernetes/aws    
   - title: EKS
     path: /getting-started/kubernetes/eks
   - title: GKE
-    path: /getting-started/kubernetes/gke 
+    path: /getting-started/kubernetes/gke
+  - title: kOps on AWS
+    path: /getting-started/kubernetes/aws      
+  - title: MKE
+    path: /getting-started/kubernetes/docker-enterprise   
   - title: RKE
     path: /getting-started/kubernetes/rancher
   - title: RKE2
     path: /getting-started/kubernetes/rke2
   - title: TKG
     path: /getting-started/kubernetes/tkg
-  - title: MKE
-    path: /getting-started/kubernetes/docker-enterprise
   - title: Calico Enterprise for Windows
     path: /getting-started/windows-calico/
     section:
@@ -85,8 +85,6 @@ section:
     path: /getting-started/calico-enterprise
   - title: System requirements
     path: /getting-started/kubernetes/requirements
-  - title: Supported browsers
-    path: /getting-started/kubernetes/supported-browsers  
 - title: Install on non-cluster hosts
   path: /getting-started/bare-metal/
   section:
