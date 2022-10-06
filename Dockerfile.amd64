@@ -1,24 +1,39 @@
-FROM docker.elastic.co/elasticsearch/elasticsearch:7.17.6 as elastic
+FROM ubuntu:22.04 as builder
+
+################################################################################
+# Build and patch elasticsearch from source
+################################################################################
+ENV ELASTIC_VERSION=7.17.6
+ENV GRADLE_VERSION=7.5.1
 
 RUN apt-get -y update && apt-get -y upgrade
 
-# add storage plugin
-RUN cd /bin/ && elasticsearch-plugin install --batch repository-gcs
+RUN apt-get install -y \
+	curl \
+	openjdk-18-jre \
+	patch \
+	unzip
 
-# replace jdk
-ENV OPENJDK_VERSION=17.0.4.1
-ENV OPENJDK_PATCH=1
-RUN rm -fr /usr/share/elasticsearch/jdk && \
-	curl -sfL https://github.com/adoptium/temurin17-binaries/releases/download/jdk-${OPENJDK_VERSION}%2B${OPENJDK_PATCH}/OpenJDK17U-jdk_x64_linux_hotspot_${OPENJDK_VERSION}_${OPENJDK_PATCH}.tar.gz -o /tmp/jdk.tar.gz && \
-	tar -xf /tmp/jdk.tar.gz -C /usr/share/elasticsearch && \
-	mv /usr/share/elasticsearch/jdk-${OPENJDK_VERSION}+${OPENJDK_PATCH} /usr/share/elasticsearch/jdk && \
-	rm -f /usr/share/elasticsearch/jdk/lib/src.zip && \
-	/etc/ca-certificates/update.d/docker-openjdk
+COPY patches/elastic-7.17.x-Update-dependencies-to-reduce-CVEs.patch /elastic-build/update-deps.patch
 
-# cleanup /tmp for the next stage
-RUN rm -fr /tmp/*
+RUN curl -sfL https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip -o /tmp/gradle.zip && \
+	unzip /tmp/gradle.zip -d /elastic-build
+
+RUN curl -sfL https://github.com/elastic/elasticsearch/archive/refs/tags/v${ELASTIC_VERSION}.tar.gz -o /tmp/elasticsearch.tar.gz && \
+	tar -xf /tmp/elasticsearch.tar.gz -C /elastic-build
+
+WORKDIR /elastic-build/elasticsearch-${ELASTIC_VERSION}
+
+RUN patch -p1 < /elastic-build/update-deps.patch
+
+RUN /elastic-build/gradle-${GRADLE_VERSION}/bin/gradle :distribution:archives:linux-tar:assemble \
+	-Dbuild.snapshot=false \
+	-Dlicense.key=x-pack/license-tools/src/test/resources/public.key
 
 
+################################################################################
+# Install and config the elasticsearch archive
+#
 # Recreating the elasticsearch container image by copying essential files from
 # the official elasticsearch conainer image. Making a new stage from scratch
 # removes unnecessary packages from elasticsearch base (ubunu) to reduce CVEs
@@ -27,77 +42,119 @@ RUN rm -fr /tmp/*
 # https://github.com/elastic/dockerfiles/blob/vx.y.z/elasticsearch/Dockerfile.
 # We need to review and update them when upgrading to a newer version of
 # elasticsearch.
+################################################################################
+RUN mkdir /usr/share/elasticsearch
+WORKDIR /usr/share/elasticsearch
+
+RUN tar -zxf /elastic-build/elasticsearch-${ELASTIC_VERSION}/distribution/archives/linux-tar/build/distributions/elasticsearch-${ELASTIC_VERSION}-linux-x86_64.tar.gz --strip-components=1 
+
+RUN cp /elastic-build/elasticsearch-${ELASTIC_VERSION}/distribution/docker/src/docker/bin/docker-entrypoint.sh bin/
+
+# `tini` is a tiny but valid init for containers. This is used to cleanly
+# control how ES and any child processes are shut down.
+#
+# The tini GitHub page gives instructions for verifying the binary using
+# gpg, but the keyservers are slow to return the key and this can fail the
+# build. Instead, we check the binary against the published checksum.
+RUN set -eux ; \
+    tini_bin="" ; \
+    case "$(arch)" in \
+        aarch64) tini_bin='tini-arm64' ;; \
+        x86_64)  tini_bin='tini-amd64' ;; \
+        *) echo >&2 ; echo >&2 "Unsupported architecture $(arch)" ; echo >&2 ; exit 1 ;; \
+    esac ; \
+    curl --retry 10 -S -L -O https://github.com/krallin/tini/releases/download/v0.19.0/${tini_bin} ; \
+    curl --retry 10 -S -L -O https://github.com/krallin/tini/releases/download/v0.19.0/${tini_bin}.sha256sum ; \
+    sha256sum -c ${tini_bin}.sha256sum ; \
+    rm ${tini_bin}.sha256sum ; \
+    mv ${tini_bin} /bin/tini ; \
+    chmod 0555 /bin/tini
+
+RUN groupadd -g 1000 elasticsearch && \
+    adduser --uid 1000 --gid 1000 --home /usr/share/elasticsearch elasticsearch && \
+    adduser elasticsearch root && \
+    chown -R 0:0 /usr/share/elasticsearch
+
+# Add storage plugin
+RUN bin/elasticsearch-plugin install --batch repository-gcs
+
+# Cleanup /tmp for the next stage
+RUN rm -fr /tmp/*
+
+
+################################################################################
+# Build the actual scratch-based elasticsearch image
+################################################################################
 
 FROM scratch
-
+ 
 ENV ELASTIC_CONTAINER=true
-ENV PATH=/usr/share/elasticsearch/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ENV PATH=/usr/share/elasticsearch/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # ca store
-COPY --from=elastic /etc/ca-certificates.conf /etc/ca-certificates.conf
-COPY --from=elastic /etc/ssl /etc/ssl
+COPY --from=builder /etc/ca-certificates.conf /etc/ca-certificates.conf
+COPY --from=builder /etc/ssl /etc/ssl/
 
 # NSS
-COPY --from=elastic /etc/nsswitch.conf /etc/nsswitch.conf
-COPY --from=elastic /etc/group /etc/group
-COPY --from=elastic /etc/hosts /etc/hosts
-COPY --from=elastic /etc/networks /etc/networks
-COPY --from=elastic /etc/passwd /etc/passwd
-COPY --from=elastic /etc/shadow /etc/shadow
+COPY --from=builder /etc/nsswitch.conf /etc/nsswitch.conf
+COPY --from=builder /etc/group /etc/group
+COPY --from=builder /etc/hosts /etc/hosts
+COPY --from=builder /etc/networks /etc/networks
+COPY --from=builder /etc/passwd /etc/passwd
+COPY --from=builder /etc/shadow /etc/shadow
 
 # add /tmp
-COPY --from=elastic --chown=1000:0 /tmp /tmp
+COPY --from=builder --chown=1000:0 /tmp /tmp/
 
 # elasticsearch jars and openjdk
-COPY --from=elastic /usr/local/bin/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-COPY --from=elastic /usr/share/elasticsearch /usr/share/elasticsearch
+COPY --from=builder /usr/share/elasticsearch /usr/share/elasticsearch/
 # tigera custom elasticsearch readiness-probe
 COPY bin/readiness-probe-amd64 /usr/bin/readiness-probe
 
 # binary dependencies
-COPY --from=elastic /bin/bash /bin/bash
-COPY --from=elastic /bin/sh /bin/sh
-COPY --from=elastic /bin/tini /bin/tini
-COPY --from=elastic /usr/bin/basename /usr/bin/basename
-COPY --from=elastic /usr/bin/bash /usr/bin/bash
-COPY --from=elastic /usr/bin/cat /usr/bin/cat
-COPY --from=elastic /usr/bin/chown /usr/bin/chown
-COPY --from=elastic /usr/bin/cp /usr/bin/cp
-COPY --from=elastic /usr/bin/date /usr/bin/date
-COPY --from=elastic /usr/bin/dirname /usr/bin/dirname
-COPY --from=elastic /usr/bin/env /usr/bin/env
-COPY --from=elastic /usr/bin/grep /usr/bin/grep
-COPY --from=elastic /usr/bin/id /usr/bin/id
-COPY --from=elastic /usr/bin/ln /usr/bin/ln
-COPY --from=elastic /usr/bin/ls /usr/bin/ls
-COPY --from=elastic /usr/bin/mkdir /usr/bin/mkdir
-COPY --from=elastic /usr/bin/sh /usr/bin/sh
-COPY --from=elastic /usr/bin/sleep /usr/bin/sleep
-COPY --from=elastic /usr/bin/touch /usr/bin/touch
-COPY --from=elastic /usr/bin/uname /usr/bin/uname
-COPY --from=elastic /usr/sbin/chroot /usr/sbin/chroot
+COPY --from=builder /bin/bash /bin/bash
+COPY --from=builder /bin/sh /bin/sh
+COPY --from=builder /bin/tini /bin/tini
+COPY --from=builder /usr/bin/basename /usr/bin/basename
+COPY --from=builder /usr/bin/bash /usr/bin/bash
+COPY --from=builder /usr/bin/cat /usr/bin/cat
+COPY --from=builder /usr/bin/chown /usr/bin/chown
+COPY --from=builder /usr/bin/cp /usr/bin/cp
+COPY --from=builder /usr/bin/date /usr/bin/date
+COPY --from=builder /usr/bin/dirname /usr/bin/dirname
+COPY --from=builder /usr/bin/env /usr/bin/env
+COPY --from=builder /usr/bin/grep /usr/bin/grep
+COPY --from=builder /usr/bin/id /usr/bin/id
+COPY --from=builder /usr/bin/ln /usr/bin/ln
+COPY --from=builder /usr/bin/ls /usr/bin/ls
+COPY --from=builder /usr/bin/mkdir /usr/bin/mkdir
+COPY --from=builder /usr/bin/sh /usr/bin/sh
+COPY --from=builder /usr/bin/sleep /usr/bin/sleep
+COPY --from=builder /usr/bin/touch /usr/bin/touch
+COPY --from=builder /usr/bin/uname /usr/bin/uname
+COPY --from=builder /usr/sbin/chroot /usr/sbin/chroot
 
-COPY --from=elastic /lib/x86_64-linux-gnu/libacl.so.1 /lib/x86_64-linux-gnu/libacl.so.1
-COPY --from=elastic /lib/x86_64-linux-gnu/libattr.so.1 /lib/x86_64-linux-gnu/libattr.so.1
-COPY --from=elastic /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/libc.so.6
-COPY --from=elastic /lib/x86_64-linux-gnu/libdl.so.2 /lib/x86_64-linux-gnu/libdl.so.2
-COPY --from=elastic /lib/x86_64-linux-gnu/libm.so.6 /lib/x86_64-linux-gnu/libm.so.6
-COPY --from=elastic /lib/x86_64-linux-gnu/libnss_dns.so.2 /lib/x86_64-linux-gnu/libnss_dns.so.2
-COPY --from=elastic /lib/x86_64-linux-gnu/libnss_files.so.2 /lib/x86_64-linux-gnu/libnss_files.so.2
-COPY --from=elastic /lib/x86_64-linux-gnu/libpcre.so.3 /lib/x86_64-linux-gnu/libpcre.so.3
-COPY --from=elastic /lib/x86_64-linux-gnu/libpcre2-8.so.0 /lib/x86_64-linux-gnu/libpcre2-8.so.0
-COPY --from=elastic /lib/x86_64-linux-gnu/libpthread.so.0 /lib/x86_64-linux-gnu/libpthread.so.0
-COPY --from=elastic /lib/x86_64-linux-gnu/libresolv.so.2 /lib/x86_64-linux-gnu/libresolv.so.2
-COPY --from=elastic /lib/x86_64-linux-gnu/librt.so.1 /lib/x86_64-linux-gnu/librt.so.1
-COPY --from=elastic /lib/x86_64-linux-gnu/libselinux.so.1 /lib/x86_64-linux-gnu/libselinux.so.1
-COPY --from=elastic /lib/x86_64-linux-gnu/libtinfo.so.6 /lib/x86_64-linux-gnu/libtinfo.so.6
-COPY --from=elastic /lib/x86_64-linux-gnu/libz.so.1 /lib/x86_64-linux-gnu/libz.so.1
-COPY --from=elastic /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
+COPY --from=builder /lib/x86_64-linux-gnu/libacl.so.1 /lib/x86_64-linux-gnu/libacl.so.1
+COPY --from=builder /lib/x86_64-linux-gnu/libattr.so.1 /lib/x86_64-linux-gnu/libattr.so.1
+COPY --from=builder /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/libc.so.6
+COPY --from=builder /lib/x86_64-linux-gnu/libdl.so.2 /lib/x86_64-linux-gnu/libdl.so.2
+COPY --from=builder /lib/x86_64-linux-gnu/libm.so.6 /lib/x86_64-linux-gnu/libm.so.6
+COPY --from=builder /lib/x86_64-linux-gnu/libnss_dns.so.2 /lib/x86_64-linux-gnu/libnss_dns.so.2
+COPY --from=builder /lib/x86_64-linux-gnu/libnss_files.so.2 /lib/x86_64-linux-gnu/libnss_files.so.2
+COPY --from=builder /lib/x86_64-linux-gnu/libpcre.so.3 /lib/x86_64-linux-gnu/libpcre.so.3
+COPY --from=builder /lib/x86_64-linux-gnu/libpcre2-8.so.0 /lib/x86_64-linux-gnu/libpcre2-8.so.0
+COPY --from=builder /lib/x86_64-linux-gnu/libpthread.so.0 /lib/x86_64-linux-gnu/libpthread.so.0
+COPY --from=builder /lib/x86_64-linux-gnu/libresolv.so.2 /lib/x86_64-linux-gnu/libresolv.so.2
+COPY --from=builder /lib/x86_64-linux-gnu/librt.so.1 /lib/x86_64-linux-gnu/librt.so.1
+COPY --from=builder /lib/x86_64-linux-gnu/libselinux.so.1 /lib/x86_64-linux-gnu/libselinux.so.1
+COPY --from=builder /lib/x86_64-linux-gnu/libtinfo.so.6 /lib/x86_64-linux-gnu/libtinfo.so.6
+COPY --from=builder /lib/x86_64-linux-gnu/libz.so.1 /lib/x86_64-linux-gnu/libz.so.1
+COPY --from=builder /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
 
 WORKDIR /usr/share/elasticsearch
 
 EXPOSE 9200 9300
 
-ENTRYPOINT ["/bin/tini", "--", "/usr/local/bin/docker-entrypoint.sh"]
+ENTRYPOINT ["/bin/tini", "--", "/usr/share/elasticsearch/bin/docker-entrypoint.sh"]
 
 CMD ["eswrapper"]

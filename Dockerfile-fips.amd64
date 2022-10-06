@@ -1,15 +1,93 @@
-FROM docker.elastic.co/elasticsearch/elasticsearch:7.17.5
+FROM ubuntu:22.04 as builder
 
-RUN apt-get -y update && apt-get -y upgrade && \
-	apt-get install patch && \
-	apt-get autoremove && apt-get clean
+################################################################################
+# Build and patch elasticsearch from source
+################################################################################
+ENV ELASTIC_VERSION=7.17.6
+ENV GRADLE_VERSION=7.5.1
 
-# add storage plugin
-RUN cd /bin/ && elasticsearch-plugin install --batch repository-gcs
+RUN apt-get -y update && apt-get -y upgrade
 
-# replace jdk
-ENV OPENJDK_VERSION=11.0.16
-ENV OPENJDK_PATCH=8
+RUN apt-get install -y \
+	curl \
+	openjdk-18-jre \
+	p11-kit \
+	patch \
+	unzip
+
+COPY patches/elastic-7.17.x-Update-dependencies-to-reduce-CVEs.patch /elastic-build/update-deps.patch
+
+RUN curl -sfL https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip -o /tmp/gradle.zip && \
+	unzip /tmp/gradle.zip -d /elastic-build
+
+RUN curl -sfL https://github.com/elastic/elasticsearch/archive/refs/tags/v${ELASTIC_VERSION}.tar.gz -o /tmp/elasticsearch.tar.gz && \
+	tar -xf /tmp/elasticsearch.tar.gz -C /elastic-build
+
+WORKDIR /elastic-build/elasticsearch-${ELASTIC_VERSION}
+
+RUN patch -p1 < /elastic-build/update-deps.patch
+
+RUN /elastic-build/gradle-${GRADLE_VERSION}/bin/gradle :distribution:archives:linux-tar:assemble \
+	-Dbuild.snapshot=false \
+	-Dlicense.key=x-pack/license-tools/src/test/resources/public.key
+
+
+################################################################################
+# Install and config the elasticsearch archive
+#
+# Recreating the elasticsearch container image by copying essential files from
+# the official elasticsearch conainer image. Making a new stage from scratch
+# removes unnecessary packages from elasticsearch base (ubunu) to reduce CVEs
+# in the base fs. Certain Dockerfile instructions in the scratch stage
+# are extracted from:
+# https://github.com/elastic/dockerfiles/blob/vx.y.z/elasticsearch/Dockerfile.
+# We need to review and update them when upgrading to a newer version of
+# elasticsearch.
+################################################################################
+ENV OPENJDK_VERSION=11.0.16.1
+ENV OPENJDK_PATCH=1
+
+ENV BC_FIPS_VERSION=1.0.2.3
+ENV BCTLS_FIPS_VERSION=1.0.11
+
+RUN mkdir /usr/share/elasticsearch
+WORKDIR /usr/share/elasticsearch
+
+RUN tar -zxf /elastic-build/elasticsearch-${ELASTIC_VERSION}/distribution/archives/linux-tar/build/distributions/elasticsearch-${ELASTIC_VERSION}-linux-x86_64.tar.gz --strip-components=1 
+
+RUN cp /elastic-build/elasticsearch-${ELASTIC_VERSION}/distribution/docker/src/docker/bin/docker-entrypoint.sh bin/
+
+# `tini` is a tiny but valid init for containers. This is used to cleanly
+# control how ES and any child processes are shut down.
+#
+# The tini GitHub page gives instructions for verifying the binary using
+# gpg, but the keyservers are slow to return the key and this can fail the
+# build. Instead, we check the binary against the published checksum.
+RUN set -eux ; \
+    tini_bin="" ; \
+    case "$(arch)" in \
+        aarch64) tini_bin='tini-arm64' ;; \
+        x86_64)  tini_bin='tini-amd64' ;; \
+        *) echo >&2 ; echo >&2 "Unsupported architecture $(arch)" ; echo >&2 ; exit 1 ;; \
+    esac ; \
+    curl --retry 10 -S -L -O https://github.com/krallin/tini/releases/download/v0.19.0/${tini_bin} ; \
+    curl --retry 10 -S -L -O https://github.com/krallin/tini/releases/download/v0.19.0/${tini_bin}.sha256sum ; \
+    sha256sum -c ${tini_bin}.sha256sum ; \
+    rm ${tini_bin}.sha256sum ; \
+    mv ${tini_bin} /bin/tini ; \
+    chmod 0555 /bin/tini
+
+RUN groupadd -g 1000 elasticsearch && \
+    adduser --uid 1000 --gid 1000 --home /usr/share/elasticsearch elasticsearch && \
+    adduser elasticsearch root && \
+    chown -R 0:0 /usr/share/elasticsearch
+
+# Add storage plugin
+RUN bin/elasticsearch-plugin install --batch repository-gcs
+
+# Downgrade JDK to 11 which is certified to work with Bouncy Castle FIPS provider
+RUN cp /elastic-build/elasticsearch-${ELASTIC_VERSION}/distribution/docker/src/docker/bin/docker-openjdk /etc/ca-certificates/update.d/
+
 RUN rm -fr /usr/share/elasticsearch/jdk && \
 	curl -sfL https://github.com/adoptium/temurin11-binaries/releases/download/jdk-${OPENJDK_VERSION}%2B${OPENJDK_PATCH}/OpenJDK11U-jdk_x64_linux_hotspot_${OPENJDK_VERSION}_${OPENJDK_PATCH}.tar.gz -o /tmp/jdk.tar.gz && \
 	tar -xf /tmp/jdk.tar.gz -C /usr/share/elasticsearch && \
@@ -17,61 +95,102 @@ RUN rm -fr /usr/share/elasticsearch/jdk && \
 	rm -f /usr/share/elasticsearch/jdk/lib/src.zip && \
 	/etc/ca-certificates/update.d/docker-openjdk
 
-# install bouncy castle fips provider
-ENV BC_FIPS_VERSION=1.0.2.3
+# Install Bouncy Castle FIPS provider
 # as of Aug 2022, bctls-fips version 1.0.12 and 1.0.13 will cause null pointer
 # exceptions in org.bouncycastle.tls.TlsProtocol.getPeer(). DO NOT upgrade to
 # newer versions unless the issue is resolved.
-ENV BCTLS_FIPS_VERSION=1.0.11
-COPY fips-patch/0001-Patch-java-security-policy-to-support-Bouncy-Castle.patch /tmp/jvm-bc-fips.patch
+COPY patches/fips-jdk11-Patch-java-security-policy-to-support-Bouncy-Castle.patch /tmp/jvm-bc-fips.patch
 RUN mkdir /usr/share/bc-fips && \
 	curl -sfL https://downloads.bouncycastle.org/fips-java/bc-fips-${BC_FIPS_VERSION}.jar -o /usr/share/bc-fips/bc-fips.jar && \
 	curl -sfL https://downloads.bouncycastle.org/fips-java/bctls-fips-${BCTLS_FIPS_VERSION}.jar -o /usr/share/bc-fips/bctls-fips.jar
 RUN patch -d /usr/share/elasticsearch/jdk -p1 < /tmp/jvm-bc-fips.patch
 
-# patch elasticsearch script
-COPY fips-patch/0002-Remove-password-prompt-in-bin-elasticsearch-script.patch /tmp/es-remove-password-prompt.patch
+# Patch elasticsearch script
+COPY patches/fips-elastic-7.17.x-Remove-password-prompt-in-bin-elasticsearch-script.patch /tmp/es-remove-password-prompt.patch
 RUN patch -d /usr/share/elasticsearch -p1 < /tmp/es-remove-password-prompt.patch
 
-# cleanup
+# Cleanup /tmp for the next stage
 RUN rm -fr /tmp/*
 
-# save truststore
-RUN cp -R /etc/ssl/ /holder
 
-# Remove unnecessary packages
-RUN apt purge -y curl \
-&& apt purge -y bzip2 \
-&& apt purge -y libgssapi-krb5-2 \
-&& apt purge -y libgssapi3-heimdal \
-&& apt purge -y libkrb5-26-heimdal \
-&& apt purge -y libgssapi-krb5-2 \
-&& apt purge -y libkrb5-3 \
-&& apt purge -y libkrb5support0  \
-&& apt purge -y libldap-common \
-&& apt purge -y p11-kit-modules  \
-&& apt purge -y patch  \
-&& apt purge -y libsqlite3-0 \
-&& apt purge -y unzip \
-&& apt purge -y vim-common \
-&& apt purge -y vim-tiny \
-&& apt purge -y zip  \
-&& apt purge -y libssl1.1  \
-&& apt purge -y openssl  \
-&& apt purge -y libnghttp2-14  \
-&& apt purge -y libncurses6 \
-&& apt purge -y xxd \
-&& apt-mark manual apt \
-&& apt purge -y --allow-remove-essential libblkid1 \
-&& apt purge -y --allow-remove-essential ncurses-bin \
-&& apt purge -y --allow-remove-essential ncurses-base \
-&& apt purge -y --allow-remove-essential libmount1 \
-&& apt purge -y libncursesw6 \
-&& apt purge -y libsmartcols1 \
-&& apt -y autoremove
+################################################################################
+# Build the actual scratch-based elasticsearch image
+################################################################################
 
-# restore truststore
-RUN cp -R /holder /etc/ssl && rm -rf /holder
+FROM scratch
+ 
+ENV ELASTIC_CONTAINER=true
+ENV PATH=/usr/share/elasticsearch/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
+# ca store
+COPY --from=builder /etc/ca-certificates.conf /etc/ca-certificates.conf
+COPY --from=builder /etc/ssl /etc/ssl/
+
+# NSS
+COPY --from=builder /etc/nsswitch.conf /etc/nsswitch.conf
+COPY --from=builder /etc/group /etc/group
+COPY --from=builder /etc/hosts /etc/hosts
+COPY --from=builder /etc/networks /etc/networks
+COPY --from=builder /etc/passwd /etc/passwd
+COPY --from=builder /etc/shadow /etc/shadow
+
+# add /tmp
+COPY --from=builder --chown=1000:0 /tmp /tmp/
+
+# elasticsearch jars and openjdk
+COPY --from=builder /usr/share/elasticsearch /usr/share/elasticsearch/
+COPY --from=builder /usr/share/bc-fips /usr/share/bc-fips/
+
+# Copy initialize keystore script for Bouncy Castle FIPS provider
 COPY script/initialize_keystore.sh /usr/bin/initialize_keystore.sh
+
+# Tigera custom elasticsearch readiness-probe
 COPY bin/readiness-probe-amd64 /usr/bin/readiness-probe
+
+# binary dependencies
+COPY --from=builder /bin/bash /bin/bash
+COPY --from=builder /bin/sh /bin/sh
+COPY --from=builder /bin/tini /bin/tini
+COPY --from=builder /usr/bin/basename /usr/bin/basename
+COPY --from=builder /usr/bin/bash /usr/bin/bash
+COPY --from=builder /usr/bin/cat /usr/bin/cat
+COPY --from=builder /usr/bin/chown /usr/bin/chown
+COPY --from=builder /usr/bin/cp /usr/bin/cp
+COPY --from=builder /usr/bin/date /usr/bin/date
+COPY --from=builder /usr/bin/dirname /usr/bin/dirname
+COPY --from=builder /usr/bin/env /usr/bin/env
+COPY --from=builder /usr/bin/grep /usr/bin/grep
+COPY --from=builder /usr/bin/id /usr/bin/id
+COPY --from=builder /usr/bin/ln /usr/bin/ln
+COPY --from=builder /usr/bin/ls /usr/bin/ls
+COPY --from=builder /usr/bin/mkdir /usr/bin/mkdir
+COPY --from=builder /usr/bin/sh /usr/bin/sh
+COPY --from=builder /usr/bin/sleep /usr/bin/sleep
+COPY --from=builder /usr/bin/touch /usr/bin/touch
+COPY --from=builder /usr/bin/uname /usr/bin/uname
+COPY --from=builder /usr/sbin/chroot /usr/sbin/chroot
+
+COPY --from=builder /lib/x86_64-linux-gnu/libacl.so.1 /lib/x86_64-linux-gnu/libacl.so.1
+COPY --from=builder /lib/x86_64-linux-gnu/libattr.so.1 /lib/x86_64-linux-gnu/libattr.so.1
+COPY --from=builder /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/libc.so.6
+COPY --from=builder /lib/x86_64-linux-gnu/libdl.so.2 /lib/x86_64-linux-gnu/libdl.so.2
+COPY --from=builder /lib/x86_64-linux-gnu/libm.so.6 /lib/x86_64-linux-gnu/libm.so.6
+COPY --from=builder /lib/x86_64-linux-gnu/libnss_dns.so.2 /lib/x86_64-linux-gnu/libnss_dns.so.2
+COPY --from=builder /lib/x86_64-linux-gnu/libnss_files.so.2 /lib/x86_64-linux-gnu/libnss_files.so.2
+COPY --from=builder /lib/x86_64-linux-gnu/libpcre.so.3 /lib/x86_64-linux-gnu/libpcre.so.3
+COPY --from=builder /lib/x86_64-linux-gnu/libpcre2-8.so.0 /lib/x86_64-linux-gnu/libpcre2-8.so.0
+COPY --from=builder /lib/x86_64-linux-gnu/libpthread.so.0 /lib/x86_64-linux-gnu/libpthread.so.0
+COPY --from=builder /lib/x86_64-linux-gnu/libresolv.so.2 /lib/x86_64-linux-gnu/libresolv.so.2
+COPY --from=builder /lib/x86_64-linux-gnu/librt.so.1 /lib/x86_64-linux-gnu/librt.so.1
+COPY --from=builder /lib/x86_64-linux-gnu/libselinux.so.1 /lib/x86_64-linux-gnu/libselinux.so.1
+COPY --from=builder /lib/x86_64-linux-gnu/libtinfo.so.6 /lib/x86_64-linux-gnu/libtinfo.so.6
+COPY --from=builder /lib/x86_64-linux-gnu/libz.so.1 /lib/x86_64-linux-gnu/libz.so.1
+COPY --from=builder /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
+
+WORKDIR /usr/share/elasticsearch
+
+EXPOSE 9200 9300
+
+ENTRYPOINT ["/bin/tini", "--", "/usr/share/elasticsearch/bin/docker-entrypoint.sh"]
+
+CMD ["eswrapper"]
