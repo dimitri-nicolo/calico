@@ -267,7 +267,7 @@ type Config struct {
 
 	EgressIPEnabled             bool
 	EgressIPRoutingRulePriority int
-	EgressIPVXLANPort	   int
+	EgressIPVXLANPort           int
 
 	// Optional stats collector
 	Collector collector.Collector

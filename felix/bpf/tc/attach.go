@@ -662,7 +662,7 @@ func (ap *AttachPoint) MustReattach() bool {
 }
 
 func ConfigureVethNS(m *libbpf.Map, VethNS uint16) error {
-	bpfGlobalData := libbpf.BpfGlobalData{VethNS: VethNS,}
+	bpfGlobalData := libbpf.BpfGlobalData{VethNS: VethNS}
 	return libbpf.TcSetGlobals(m, bpfGlobalData)
 }
 
@@ -675,15 +675,22 @@ func (ap AttachPoint) Config() string {
 }
 
 func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
-	var globalData libbpf.BpfGlobalData
+	globalData := libbpf.BpfGlobalData{ExtToSvcMark: ap.ExtToServiceConnmark,
+		VxlanPort:    ap.VXLANPort,
+		Tmtu:         ap.TunnelMTU,
+		PSNatStart:   ap.PSNATStart,
+		PSNatLen:     ap.PSNATEnd,
+		VethNS:       ap.VethNS,
+		WgPort:       ap.WgPort,
+		EgwVxlanPort: ap.EGWVxlanPort,
+	}
 	var err error
 
 	globalData.HostIP, err = convertIPToUint32(ap.HostIP)
 	if err != nil {
 		return err
 	}
-	
-	globalData.VxlanPort = ap.VXLANPort
+
 	if globalData.VxlanPort == 0 {
 		globalData.VxlanPort = 4789
 	}
@@ -717,14 +724,6 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 			return err
 		}
 	}
-	globalData.ExtToSvcMark = ap.ExtToServiceConnmark
-	globalData.Tmtu = ap.TunnelMTU
-	globalData.PSNatStart = ap.PSNATStart
-	globalData.PSNatLen = ap.PSNATEnd
-	globalData.VethNS = ap.VethNS
-	globalData.WgPort = ap.WgPort
-	globalData.EgwVxlanPort = ap.EGWVxlanPort
-
 	return libbpf.TcSetGlobals(m, globalData)
 }
 

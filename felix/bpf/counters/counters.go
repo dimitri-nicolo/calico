@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	MaxCounterNumber    int = 14
+	MaxCounterNumber    int = 16
 	counterMapKeySize   int = 4
 	counterMapValueSize int = 8
 )
@@ -47,6 +47,9 @@ const (
 	DroppedFailedDecap
 	DroppedUnauthSource
 	DroppedUnknownRoute
+	AcceptedByXDP
+	WEPNotReady
+	AcceptedByEgressGW
 )
 
 type Description struct {
@@ -124,6 +127,10 @@ var descriptions DescList = DescList{
 	{
 		Counter:  DroppedUnknownRoute,
 		Category: "Dropped", Caption: "packets with unknown route",
+	},
+	{
+		Counter:  AcceptedByEgressGW,
+		Category: "Accepted", Caption: "by Egress gateways",
 	},
 }
 

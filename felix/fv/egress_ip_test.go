@@ -178,7 +178,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		topologyOptions := infrastructure.DefaultTopologyOptions()
 		topologyOptions.ExtraEnvVars["FELIX_EGRESSIPSUPPORT"] = supportLevel
 		topologyOptions.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
-		topologyOptions.EnableIPv6 = false
 		if overlay == OV_VXLAN {
 			topologyOptions.VXLANMode = api.VXLANModeAlways
 		}

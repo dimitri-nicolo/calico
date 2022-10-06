@@ -2281,7 +2281,7 @@ func PolicyDebugJSONFileName(iface, dir string) string {
 	return (RuntimePolDir + "/" + iface + "_" + dir + ".json")
 }
 
-const countersMapVersion = 1
+const countersMapVersion = 2
 
 func CountersMapName() string {
 	return fmt.Sprintf("cali_counters%d", countersMapVersion)

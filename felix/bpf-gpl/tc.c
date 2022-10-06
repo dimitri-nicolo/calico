@@ -431,15 +431,14 @@ syn_force_policy:
 		if (CALI_F_FROM_WEP) {
 			ip_addr = ctx->state->ip_dst;
 		}
-		bpf_printk("Sridhar addr src=0x%x dst=0x%x dport=0x%x\n", ctx->state->ip_src, ctx->state->ip_dst, ctx->state->dport);
 		struct cali_rt *rt = cali_rt_lookup(ip_addr);
 		if (rt && cali_rt_is_host(rt) && 
 				is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
 			COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
 			if (CALI_F_FROM_WEP) {
-				bpf_printk("Packet is from egress gateway pod. Allow\n");
+				CALI_DEBUG("Allow VXLAN packet from EGW pod\n");
 			} else {
-				bpf_printk("Packet is to egress gateway pod. Allow\n");
+				CALI_DEBUG("Allow VXLAN packet to EGW pod\n");
 			}
 			goto skip_policy;
 		}
@@ -466,7 +465,9 @@ syn_force_policy:
 			}
 		}
 
-		// Check whether the workload needs outgoing NAT to this address.
+		// Check whether the workload needs outgoing NAT to this address, except from an egress gateway
+		// client. This is because, packets from egress clients are destined outside the cluster and if
+		// the packet gets SNATed, the return traffic is not VXLAN encapsulated.
 		if (!EGRESS_CLIENT && (r->flags & CALI_RT_NAT_OUT)) {
 			if (!(cali_rt_lookup_flags(ctx->state->post_nat_ip_dst) & CALI_RT_IN_POOL)) {
 				CALI_DEBUG("Source is in NAT-outgoing pool "
@@ -1321,7 +1322,6 @@ allow:
 			.res = rc,
 			.mark = seen_mark,
 		};
-		CALI_DEBUG("Sridhar fib %d\n",fib);
 		fwd_fib_set(&fwd, fib);
 		return fwd;
 	}
