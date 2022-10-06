@@ -20,6 +20,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+const unusedCounters = 2
+
 func TestCounterMapSize(t *testing.T) {
 	RegisterTestingT(t)
 
@@ -27,5 +29,5 @@ func TestCounterMapSize(t *testing.T) {
 	Expect(MaxCounterNumber%2 == 0).To(BeTrue())
 
 	noOfDescriptions := len(Descriptions())
-	Expect(MaxCounterNumber).Should(Equal(noOfDescriptions + noOfDescriptions%2))
+	Expect(MaxCounterNumber).Should(Equal(unusedCounters + noOfDescriptions + noOfDescriptions%2))
 }
