@@ -105,6 +105,11 @@ func TestPrecompiledBinariesAreLoadable(t *testing.T) {
 									continue
 								}
 								for _, enableTcpStats := range []bool{false, true} {
+									egw := []bool{false}
+									if epType == tc.EpTypeWorkload {
+										egw = []bool{true, false}
+									}
+									for _, egwEnabled := range egw {
 
 									ap := tc.AttachPoint{
 										Type:           epType,
@@ -117,6 +122,7 @@ func TestPrecompiledBinariesAreLoadable(t *testing.T) {
 										HostIP:         net.ParseIP("10.0.0.1"),
 										IntfIP:         net.ParseIP("10.0.0.2"),
 										EnableTCPStats: enableTcpStats,
+										IsEgressGateway: egwEnabled,
 									}
 
 									t.Run(ap.FileName(), func(t *testing.T) {
@@ -132,6 +138,7 @@ func TestPrecompiledBinariesAreLoadable(t *testing.T) {
 										Expect(err).NotTo(HaveOccurred())
 										Expect(opts).NotTo(Equal(nil))
 									})
+								}
 								}
 							}
 						}

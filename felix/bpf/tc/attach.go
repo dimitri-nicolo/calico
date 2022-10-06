@@ -72,6 +72,7 @@ type AttachPoint struct {
 	MapSizes             map[string]uint32
 	Features             environment.Features
 	RPFStrictEnabled     bool
+	EGWVxlanPort         uint16
 }
 
 var tcLock sync.RWMutex
@@ -661,7 +662,8 @@ func (ap *AttachPoint) MustReattach() bool {
 }
 
 func ConfigureVethNS(m *libbpf.Map, VethNS uint16) error {
-	return libbpf.TcSetGlobals(m, 0, 0, 0, 0, 0, 0, 0, 0, VethNS, 0, 0)
+	bpfGlobalData := libbpf.BpfGlobalData{VethNS: VethNS,}
+	return libbpf.TcSetGlobals(m, bpfGlobalData)
 }
 
 func (ap AttachPoint) HookName() string {
@@ -673,49 +675,57 @@ func (ap AttachPoint) Config() string {
 }
 
 func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
-	hostIP, err := convertIPToUint32(ap.HostIP)
+	var globalData libbpf.BpfGlobalData
+	var err error
+
+	globalData.HostIP, err = convertIPToUint32(ap.HostIP)
 	if err != nil {
 		return err
 	}
-	vxlanPort := ap.VXLANPort
-	if vxlanPort == 0 {
-		vxlanPort = 4789
+	
+	globalData.VxlanPort = ap.VXLANPort
+	if globalData.VxlanPort == 0 {
+		globalData.VxlanPort = 4789
 	}
 
-	intfIP, err := convertIPToUint32(ap.IntfIP)
+	globalData.IntfIP, err = convertIPToUint32(ap.IntfIP)
 	if err != nil {
 		return err
 	}
 
-	var flags uint32
 	if ap.IPv6Enabled {
-		flags |= libbpf.GlobalsIPv6Enabled
+		globalData.Flags |= libbpf.GlobalsIPv6Enabled
 	}
 	if ap.EnableTCPStats {
-		flags |= libbpf.GlobalsTCPStatsEnabled
+		globalData.Flags |= libbpf.GlobalsTCPStatsEnabled
 	}
 	if ap.IsEgressGateway {
-		flags |= libbpf.GlobalsIsEgressGateway
+		globalData.Flags |= libbpf.GlobalsIsEgressGateway
 	}
 	if ap.IsEgressClient {
-		flags |= libbpf.GlobalsIsEgressClient
+		globalData.Flags |= libbpf.GlobalsIsEgressClient
 	}
 	if ap.RPFStrictEnabled {
-		flags |= libbpf.GlobalsRPFStrictEnabled
+		globalData.Flags |= libbpf.GlobalsRPFStrictEnabled
 	}
 
-	hostTunnelIP := hostIP
+	globalData.HostTunnelIP = globalData.HostIP
 
 	if ap.HostTunnelIP != nil {
-		hostTunnelIP, err = convertIPToUint32(ap.HostTunnelIP)
+		globalData.HostTunnelIP, err = convertIPToUint32(ap.HostTunnelIP)
 		if err != nil {
 			return err
 		}
 	}
+	globalData.ExtToSvcMark = ap.ExtToServiceConnmark
+	globalData.Tmtu = ap.TunnelMTU
+	globalData.PSNatStart = ap.PSNATStart
+	globalData.PSNatLen = ap.PSNATEnd
+	globalData.VethNS = ap.VethNS
+	globalData.WgPort = ap.WgPort
+	globalData.EgwVxlanPort = ap.EGWVxlanPort
 
-	return libbpf.TcSetGlobals(m, hostIP, intfIP,
-		ap.ExtToServiceConnmark, ap.TunnelMTU, vxlanPort, ap.PSNATStart, ap.PSNATEnd, hostTunnelIP,
-		ap.VethNS, flags, ap.WgPort)
+	return libbpf.TcSetGlobals(m, globalData)
 }
 
 func (ap *AttachPoint) setMapSize(m *libbpf.Map) error {

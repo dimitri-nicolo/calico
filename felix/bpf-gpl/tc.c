@@ -201,7 +201,7 @@ static CALI_BPF_INLINE int pre_policy_processing(struct cali_tc_ctx *ctx)
 	/* Now we've got as far as the UDP header, check if this is one of our VXLAN packets, which we
 	 * use to forward traffic for node ports. */
 	if (dnat_should_decap() /* Compile time: is this a BPF program that should decap packets? */ &&
-			is_vxlan_tunnel(ctx->ip_header) /* Is this a VXLAN packet? */ ) {
+			is_vxlan_tunnel(ctx->ip_header, VXLAN_PORT) /* Is this a VXLAN packet? */ ) {
 		/* Decap it; vxlan_attempt_decap will revalidate the packet if needed. */
 		switch (vxlan_attempt_decap(ctx)) {
 		case -1:
@@ -426,6 +426,25 @@ syn_force_policy:
 		goto skip_policy;
 	}
 
+	if (EGRESS_GATEWAY && !skb_refresh_validate_ptrs(ctx, UDP_SIZE) && CALI_F_WEP) {
+		__be32 ip_addr = ctx->state->ip_src;
+		if (CALI_F_FROM_WEP) {
+			ip_addr = ctx->state->ip_dst;
+		}
+		bpf_printk("Sridhar addr src=0x%x dst=0x%x dport=0x%x\n", ctx->state->ip_src, ctx->state->ip_dst, ctx->state->dport);
+		struct cali_rt *rt = cali_rt_lookup(ip_addr);
+		if (rt && cali_rt_is_host(rt) && 
+				is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
+			COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
+			if (CALI_F_FROM_WEP) {
+				bpf_printk("Packet is from egress gateway pod. Allow\n");
+			} else {
+				bpf_printk("Packet is to egress gateway pod. Allow\n");
+			}
+			goto skip_policy;
+		}
+	}
+
 	if (CALI_F_FROM_WEP && !EGRESS_GATEWAY) {
 		/* Do RPF check since it's our responsibility to police that.  Skip this
 		 * on egress from an egress gateway, because the whole point of egress
@@ -448,13 +467,14 @@ syn_force_policy:
 		}
 
 		// Check whether the workload needs outgoing NAT to this address.
-		if (r->flags & CALI_RT_NAT_OUT) {
+		if (!EGRESS_CLIENT && (r->flags & CALI_RT_NAT_OUT)) {
 			if (!(cali_rt_lookup_flags(ctx->state->post_nat_ip_dst) & CALI_RT_IN_POOL)) {
 				CALI_DEBUG("Source is in NAT-outgoing pool "
 					   "but dest is not, need to SNAT.\n");
 				ctx->state->flags |= CALI_ST_NAT_OUTGOING;
 			}
 		}
+		
 		/* If 3rd party CNI is used and dest is outside cluster. See commit fc711b192f for details. */
 		if (!(r->flags & CALI_RT_IN_POOL)) {
 			CALI_DEBUG("Source %x not in IP pool\n", bpf_ntohl(ctx->state->ip_src));
@@ -1301,6 +1321,7 @@ allow:
 			.res = rc,
 			.mark = seen_mark,
 		};
+		CALI_DEBUG("Sridhar fib %d\n",fib);
 		fwd_fib_set(&fwd, fib);
 		return fwd;
 	}

@@ -230,6 +230,7 @@ type bpfEndpointManager struct {
 
 	lookupsCache *calc.LookupsCache
 	actionOnDrop string
+	egwVxlanPort uint16
 }
 
 type serviceKey struct {
@@ -317,6 +318,7 @@ func newBPFEndpointManager(
 		ipv6Enabled:           config.BPFIpv6Enabled,
 		rpfStrictModeEnabled:  config.BPFEnforceRPF,
 		bpfPolicyDebugEnabled: config.BPFPolicyDebugEnabled,
+		egwVxlanPort: uint16(config.EgressIPVXLANPort),
 	}
 
 	// Calculate allowed XDP attachment modes.  Note, in BPF mode untracked ingress policy is
@@ -1040,6 +1042,7 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 	ap.ExtToServiceConnmark = uint32(m.bpfExtToServiceConnmark)
 
 	ap.EnableTCPStats = m.enableTcpStats
+	ap.EGWVxlanPort = m.egwVxlanPort 
 	if endpoint != nil {
 		ap.IsEgressGateway = endpoint.IsEgressGateway
 		ap.IsEgressClient = (endpoint.EgressIpSetId != "")
@@ -1227,7 +1230,7 @@ func (m *bpfEndpointManager) calculateTCAttachPoint(policyDirection PolDirection
 		}
 	} else if ifaceName == "wireguard.cali" {
 		endpointType = tc.EpTypeL3Device
-	} else if ifaceName == bpfInDev || ifaceName == bpfOutDev {
+	}else if ifaceName == bpfInDev || ifaceName == bpfOutDev {
 		endpointType = tc.EpTypeNAT
 		ap.HostTunnelIP = m.tunnelIP
 		log.Debugf("Setting tunnel ip %s on ap %s", m.tunnelIP, ifaceName)

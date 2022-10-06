@@ -409,6 +409,7 @@ func StartDataplaneDriver(configParams *config.Config,
 
 			EgressIPEnabled:             configParams.EgressIPCheckEnabled(),
 			EgressIPRoutingRulePriority: configParams.EgressIPRoutingRulePriority,
+			EgressIPVXLANPort: configParams.EgressIPVXLANPort,
 
 			ConfigChangedRestartCallback: configChangedRestartCallback,
 			FatalErrorRestartCallback:    fatalErrorCallback,

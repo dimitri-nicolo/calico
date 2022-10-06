@@ -250,6 +250,12 @@ cancel_fib:
 skip_fib:
 
 	if (CALI_F_TO_HOST) {
+		if (state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) {
+			CALI_DEBUG("Traffic is towards egress client 0x%x\n",state->ct_result.flags);
+			ctx->fwd.mark |= CALI_SKB_MARK_EGRESS;
+		}
+	}
+	if (CALI_F_TO_HOST) {
 		/* Packet is towards host namespace, mark it so that downstream
 		 * programs know that they're not the first to see the packet.
 		 */
