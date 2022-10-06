@@ -1,5 +1,5 @@
 // Copyright (c) 2022 Tigera, Inc. All rights reserved.
-package service
+package application
 
 import "time"
 
@@ -21,5 +21,6 @@ type L7Log struct {
 
 	SourceNameAggr string `json:"src_name_aggr"`
 
+	URL          string `json:"url"`
 	ResponseCode string `json:"response_code"`
 }
