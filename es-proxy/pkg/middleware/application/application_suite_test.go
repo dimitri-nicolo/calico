@@ -1,5 +1,5 @@
 // Copyright (c) 2022 Tigera, Inc. All rights reserved.
-package service
+package application
 
 import (
 	"testing"
@@ -13,5 +13,5 @@ import (
 func TestMiddleware(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Service Middleware Suite")
+	RunSpecs(t, "Application Middleware Suite")
 }

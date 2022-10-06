@@ -1,0 +1,12 @@
+imagePullSecrets: {}
+
+installation:
+  kubernetesProvider: ""
+
+prometheusOperator:
+  image: gcr.io/unique-caldron-775/cnx/tigera/prometheus-operator
+  tag: master
+
+prometheusConfigReloader:
+  image: gcr.io/unique-caldron-775/cnx/tigera/prometheus-config-reloader
+  tag: master
