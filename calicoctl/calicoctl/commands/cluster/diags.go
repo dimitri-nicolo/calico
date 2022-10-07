@@ -468,12 +468,44 @@ func collectCalicoTigeraDescribePodsAndLogs(dir, sinceFlag string) {
 					{
 						Info:     fmt.Sprintf("Collect logs for '%s' pod", pod),
 						CmdStr:   fmt.Sprintf("kubectl -n %s logs %s --since=%s", namespace, pod, sinceFlag),
-						FilePath: fmt.Sprintf("%s/%s.log", namespaceDir, pod),
+						FilePath: fmt.Sprintf("%s/%s-pod.log", namespaceDir, pod),
 					},
 					{
 						Info:     fmt.Sprintf("Collect describe for '%s' pod", pod),
 						CmdStr:   fmt.Sprintf("kubectl -n %s describe pods %s", namespace, pod),
-						FilePath: fmt.Sprintf("%s/%s-describe.txt", namespaceDir, pod),
+						FilePath: fmt.Sprintf("%s/%s-pod-describe.txt", namespaceDir, pod),
+					},
+				})
+			}
+
+			output, err = common.ExecCmd(fmt.Sprintf(
+				"kubectl get services -n %s -o go-template --template {{range.items}}{{.metadata.name}},{{end}}",
+				namespace,
+			))
+			if err != nil {
+				fmt.Printf("Could not retrieve '%s' namespace's services: %s\n", namespace, err)
+				continue
+			}
+			calicoServices := strings.TrimSuffix(output.String(), ",")
+			log.Debugf("'%s' namespace's services: %s\n", namespace, calicoServices)
+
+			services := strings.Split(strings.TrimSpace(calicoServices), ",")
+			for _, service := range services {
+				common.ExecAllCmdsWriteToFile([]common.Cmd{
+					{
+						Info:     fmt.Sprintf("Collect logs for '%s' service", service),
+						CmdStr:   fmt.Sprintf("kubectl -n %s logs services/%s --since=%s", namespace, service, sinceFlag),
+						FilePath: fmt.Sprintf("%s/%s-service.log", namespaceDir, service),
+					},
+					{
+						Info:     fmt.Sprintf("Collect describe for '%s' service", service),
+						CmdStr:   fmt.Sprintf("kubectl -n %s describe services/%s", namespace, service),
+						FilePath: fmt.Sprintf("%s/%s-service-describe.txt", namespaceDir, service),
+					},
+					{
+						Info:     fmt.Sprintf("Collect describe for '%s' endpoint", service),
+						CmdStr:   fmt.Sprintf("kubectl -n %s describe endpoints/%s", namespace, service),
+						FilePath: fmt.Sprintf("%s/%s-endpoint-describe.txt", namespaceDir, service),
 					},
 				})
 			}
