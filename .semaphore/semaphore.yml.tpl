@@ -67,6 +67,10 @@ promotions:
   pipeline_file: push-images/deep-packet-inspection.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push egress-gateway images
+  pipeline_file: push-images/egress-gateway.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 - name: Push es-gateway images
   pipeline_file: push-images/es-gateway.yml
   auto_promote:
@@ -775,6 +779,19 @@ blocks:
     - name: "compliance tests"
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
+
+- name: "Egress gateway"
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/egress-gateway/', '/libcalico-go/lib/logutils/', '/libcalico-go/lib/health/', '/felix/proto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    prologue:
+      commands:
+      - cd egress-gateway
+    jobs:
+      - name: "make ci"
+        commands:
+         - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: 'es-gateway'
   run:

@@ -82,6 +82,10 @@ promotions:
     pipeline_file: ../deep-packet-inspection/.semaphore/cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Cut Egress Gateway Release
+    pipeline_file: ../egress-gateway/.semaphore/cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
   - name: Cut ES Gateway Release
     pipeline_file: ../es-gateway/.semaphore/cut-release.yml
     auto_promote:
