@@ -47,8 +47,6 @@ Description:
 	switch command {
 	case "diags":
 		return cluster.Diags(args)
-	case "health-check":
-		return cluster.HealthCheck(args)
 	default:
 		fmt.Println(doc)
 	}
