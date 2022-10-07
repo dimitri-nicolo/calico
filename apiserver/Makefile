@@ -187,6 +187,7 @@ fv: fv-kdd
 fv-etcd: run-kubernetes-server hack-lib
 	$(DOCKER_RUN) \
 		-v $(CERTS_PATH):/home/user/certs \
+		-v $(SECRETS_PATH):/home/user/secrets \
 		-e KUBECONFIG=/home/user/certs/kubeconfig \
 		$(CALICO_BUILD) \
 		sh -c 'ETCD_ENDPOINTS="http://127.0.0.1:2379" DATASTORE_TYPE="etcdv3" test/integration.sh'
@@ -195,6 +196,7 @@ fv-etcd: run-kubernetes-server hack-lib
 fv-kdd: run-kubernetes-server hack-lib
 	$(DOCKER_RUN) \
 		-v $(CERTS_PATH):/home/user/certs \
+		-v $(SECRETS_PATH):/home/user/secrets \
 		-e KUBECONFIG=/home/user/certs/kubeconfig \
 		$(CALICO_BUILD) \
 		sh -c 'DATASTORE_TYPE="kubernetes" test/integration.sh'

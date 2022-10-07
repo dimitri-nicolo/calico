@@ -56,11 +56,7 @@ class TestCalicoctlConvert(TestBase):
 
     def setUp(self):
         super(TestCalicoctlConvert, self).setUp()
-        # Load valid license file from test-data, and then create it.
-        with open("/code/test-data/licenses/license.yaml") as f:
-          license = "".join(f.readlines())
-          rc = calicoctl("create", data=license)
-          rc.assert_no_error()
+        self.apply_license()
 
     def _test_convert(self, filename, applySuccess, format="yaml"):
         """

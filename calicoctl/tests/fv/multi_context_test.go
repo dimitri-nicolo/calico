@@ -21,6 +21,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	licutils "github.com/projectcalico/calico/licensing/utils"
+
 	. "github.com/onsi/gomega"
 
 	. "github.com/projectcalico/calico/calicoctl/tests/fv/utils"
@@ -41,7 +43,7 @@ func TestMultiCluster(t *testing.T) {
 	}, ":"))
 
 	// Setup the license
-	out := Calicoctl(true, "create", "-f", "/go/src/github.com/projectcalico/calico/calicoctl/test-data/licenses/license.yaml", "--context", "main")
+	out := Calicoctl(true, "create", "-f", licutils.ValidEnterpriseTestLicensePath(), "--context", "main")
 	Expect(out).To(ContainSubstring("Successfully"))
 
 	// Set Calico version in ClusterInformation for both contexts

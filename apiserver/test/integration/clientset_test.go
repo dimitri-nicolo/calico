@@ -30,6 +30,10 @@ import (
 	"testing"
 	"time"
 
+	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+	"github.com/tigera/api/pkg/lib/numorstring"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,8 +42,6 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 
-	licFeatures "github.com/projectcalico/calico/licensing/client/features"
-
 	"github.com/projectcalico/calico/apiserver/pkg/apiserver"
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authenticationreview"
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizationreview"
@@ -47,12 +49,9 @@ import (
 	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	libclient "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
-
-	"github.com/tigera/api/pkg/lib/numorstring"
-
-	calico "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset"
+	licclient "github.com/projectcalico/calico/licensing/client"
+	licFeatures "github.com/projectcalico/calico/licensing/client/features"
+	"github.com/projectcalico/calico/licensing/utils"
 )
 
 // TestGroupVersion is trivial.
@@ -918,7 +917,7 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 	}
 
 	// Confirm that valid, but expired licenses, are rejected
-	expiredLicenseKey := getExpiredLicenseKey(name)
+	expiredLicenseKey := utils.ExpiredTestLicense()
 	_, err = licenseKeyClient.Create(ctx, expiredLicenseKey, metav1.CreateOptions{})
 	if err == nil {
 		return fmt.Errorf("expected creating the expiredLicenseKey")
@@ -926,21 +925,29 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 		fmt.Printf("Incorrect error: %+v\n", err)
 	}
 	// Valid Enterprise License with Maximum supported Nodes 100
-	enterpriseValidLicenseKey := getLicenseKey(name, validLicenseCertificate, enterpriseToken)
+	enterpriseValidLicenseKey := utils.ValidEnterpriseTestLicense()
+	claims, err := licclient.Decode(*enterpriseValidLicenseKey)
+	if err != nil {
+		fmt.Printf("Failed to decode 'valid' license  %v\n", err)
+		return err
+	}
+
 	lic, err := licenseKeyClient.Create(ctx, enterpriseValidLicenseKey, metav1.CreateOptions{})
 	if err != nil {
 		fmt.Printf("Check for License Expiry date %v\n", err)
 		return err
 	}
-	// Check for Maxiumum nodes
-	if lic.Status.MaxNodes != 50 {
-		fmt.Printf("Valid License's Maxiumum Node doesn't match :%d\n", lic.Status.MaxNodes)
+
+	// Check for maximum nodes.
+	if lic.Status.MaxNodes != *claims.Nodes {
+		fmt.Printf("Valid License's Maximum Node doesn't match :%d\n", lic.Status.MaxNodes)
 		return fmt.Errorf("Incorrect Maximum Nodes in LicenseKey")
 	}
 
-	// Check for Certificate Expiry date
-	if lic.Status.Expiry.Time.String() != "2022-10-02 04:38:32 +0000 UTC" {
-		fmt.Printf("Valid License's Expiry date don't match with Certificate:%v\n", lic.Status.Expiry)
+	// Check for Certificate Expiry date exists.  Since hte cert is provided to us as configuration, we can't check
+	// the exact date.
+	if !lic.Status.Expiry.Time.After(time.Now()) {
+		fmt.Printf("Valid License's Expiry date missing/in past:%v\n", lic.Status.Expiry)
 		return fmt.Errorf("License Expiry date don't match")
 	}
 
@@ -955,7 +962,7 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 	}
 
 	// Valid CloudPro License with Maximum supported Nodes 100
-	cloudProLicenseKey := getLicenseKey(name, validLicenseCertificate, cloudProToken)
+	cloudProLicenseKey := utils.ValidCloudProTestLicense()
 	licenseKeyClient.Delete(ctx, "default", metav1.DeleteOptions{})
 	if err != nil {
 		fmt.Printf("Could not delete license %v\n", err)
@@ -966,15 +973,22 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 		fmt.Printf("Check for License Expiry date %v\n", err)
 		return err
 	}
-	// Check for Maxiumum nodes
-	if lic.Status.MaxNodes != 50 {
-		fmt.Printf("Valid License's Maxiumum Node doesn't match :%d\n", lic.Status.MaxNodes)
+
+	claims, err = licclient.Decode(*cloudProLicenseKey)
+	if err != nil {
+		fmt.Printf("Failed to decode 'valid' license  %v\n", err)
+		return err
+	}
+
+	// Check for Maximum nodes
+	if lic.Status.MaxNodes != *claims.Nodes {
+		fmt.Printf("Valid License's Maximum Node doesn't match :%d\n", lic.Status.MaxNodes)
 		return fmt.Errorf("Incorrect Maximum Nodes in LicenseKey")
 	}
 
 	// Check for Certificate Expiry date
-	if lic.Status.Expiry.Time.String() != "2023-03-17 03:23:00 +0000 UTC" {
-		fmt.Printf("Valid License's Expiry date don't match with Certificate:%v\n", lic.Status.Expiry)
+	if !lic.Status.Expiry.Time.After(time.Now()) {
+		fmt.Printf("Valid License's Expiry date missing/in past:%v\n", lic.Status.Expiry)
 		return fmt.Errorf("License Expiry date don't match")
 	}
 
@@ -998,51 +1012,6 @@ func testLicenseKeyClient(client calicoclient.Interface, name string) error {
 	}
 
 	return nil
-}
-
-const expiredLicenseCertificate = `-----BEGIN CERTIFICATE-----
-MIIFxjCCA66gAwIBAgIQVq3rz5D4nQF1fIgMEh71DzANBgkqhkiG9w0BAQsFADCB
-tTELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDVNh
-biBGcmFuY2lzY28xFDASBgNVBAoTC1RpZ2VyYSwgSW5jMSIwIAYDVQQLDBlTZWN1
-cml0eSA8c2lydEB0aWdlcmEuaW8+MT8wPQYDVQQDEzZUaWdlcmEgRW50aXRsZW1l
-bnRzIEludGVybWVkaWF0ZSBDZXJ0aWZpY2F0ZSBBdXRob3JpdHkwHhcNMTgwNDA1
-MjEzMDI5WhcNMjAxMDA2MjEzMDI5WjCBnjELMAkGA1UEBhMCVVMxEzARBgNVBAgT
-CkNhbGlmb3JuaWExFjAUBgNVBAcTDVNhbiBGcmFuY2lzY28xFDASBgNVBAoTC1Rp
-Z2VyYSwgSW5jMSIwIAYDVQQLDBlTZWN1cml0eSA8c2lydEB0aWdlcmEuaW8+MSgw
-JgYDVQQDEx9UaWdlcmEgRW50aXRsZW1lbnRzIENlcnRpZmljYXRlMIIBojANBgkq
-hkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAwg3LkeHTwMi651af/HEXi1tpM4K0LVqb
-5oUxX5b5jjgi+LHMPzMI6oU+NoGPHNqirhAQqK/k7W7r0oaMe1APWzaCAZpHiMxE
-MlsAXmLVUrKg/g+hgrqeije3JDQutnN9h5oZnsg1IneBArnE/AKIHH8XE79yMG49
-LaKpPGhpF8NoG2yoWFp2ekihSohvqKxa3m6pxoBVdwNxN0AfWxb60p2SF0lOi6B3
-hgK6+ILy08ZqXefiUs+GC1Af4qI1jRhPkjv3qv+H1aQVrq6BqKFXwWIlXCXF57CR
-hvUaTOG3fGtlVyiPE4+wi7QDo0cU/+Gx4mNzvmc6lRjz1c5yKxdYvgwXajSBx2pw
-kTP0iJxI64zv7u3BZEEII6ak9mgUU1CeGZ1KR2Xu80JiWHAYNOiUKCBYHNKDCUYl
-RBErYcAWz2mBpkKyP6hbH16GjXHTTdq5xENmRDHabpHw5o+21LkWBY25EaxjwcZa
-Y3qMIOllTZ2iRrXu7fSP6iDjtFCcE2bFAgMBAAGjZzBlMA4GA1UdDwEB/wQEAwIF
-oDATBgNVHSUEDDAKBggrBgEFBQcDAjAdBgNVHQ4EFgQUIY7LzqNTzgyTBE5efHb5
-kZ71BUEwHwYDVR0jBBgwFoAUxZA5kifzo4NniQfGKb+4wruTIFowDQYJKoZIhvcN
-AQELBQADggIBAAK207LaqMrnphF6CFQnkMLbskSpDZsKfqqNB52poRvUrNVUOB1w
-3dSEaBUjhFgUU6yzF+xnuH84XVbjD7qlM3YbdiKvJS9jrm71saCKMNc+b9HSeQAU
-DGY7GPb7Y/LG0GKYawYJcPpvRCNnDLsSVn5N4J1foWAWnxuQ6k57ymWwcddibYHD
-OPakOvO4beAnvax3+K5dqF0bh2Np79YolKdIgUVzf4KSBRN4ZE3AOKlBfiKUvWy6
-nRGvu8O/8VaI0vGaOdXvWA5b61H0o5cm50A88tTm2LHxTXynE3AYriHxsWBbRpoM
-oFnmDaQtGY67S6xGfQbwxrwCFd1l7rGsyBQ17cuusOvMNZEEWraLY/738yWKw3qX
-U7KBxdPWPIPd6iDzVjcZrS8AehUEfNQ5yd26gDgW+rZYJoAFYv0vydMEyoI53xXs
-cpY84qV37ZC8wYicugidg9cFtD+1E0nVgOLXPkHnmc7lIDHFiWQKfOieH+KoVCbb
-zdFu3rhW31ygphRmgszkHwApllCTBBMOqMaBpS8eHCnetOITvyB4Kiu1/nKvVxhY
-exit11KQv8F3kTIUQRm0qw00TSBjuQHKoG83yfimlQ8OazciT+aLpVaY8SOrrNnL
-IJ8dHgTpF9WWHxx04DDzqrT7Xq99F9RzDzM7dSizGxIxonoWcBjiF6n5
------END CERTIFICATE-----`
-
-const expiredLicenseToken = `eyJhbGciOiJBMTI4R0NNS1ciLCJjdHkiOiJKV1QiLCJlbmMiOiJBMTI4R0NNIiwiaXYiOiI5WGxaNTlIb3FfTXRkU25oIiwidGFnIjoiSng5SnJFWEpidThYTktBRTFkNF9odyIsInR5cCI6IkpXVCJ9.3aOzJ8CseHdknq4-5iyyVQ.Ajhfz-axov0_Fb64.0YE2hNz_KvgatHKB8hJCgemy09n8zJDc6haiFLkYGh9L96MXEhCUXg9V9iLioi311BtLT6RWXLuQspTNHLDvdIJLyPoNR3OvIYcHTz7kHhaX61lGutAEUBDdByPczoLVkkZccaKgIP8xho4XWmkjDMWXvhMXcTilN3cgeAEdQILXWL1pDPf-h0u-a7Esw5d0O8Ok1CBjFLrthgGnCVtMH5t7l3kBiWbzmAVo7Nz9Eegki0bmOqVSzBxmpDspNitbZFxzYWV23Km6Lmx_FWsEsTtx4nLyBARuxBQsf_l2UjqwowXUlK26Lw7Vqt6e8Upbw4sUrMjIZQzBbKwbAfPFm14QwgXmOfkcMwpeqz8v4oVml3WDIK4Ree6K-Z-ae-cMRGGCTHdp6XDidwykYAQXYC4pbdm-Hm86qO6AYODP_v8lvorXJQgfC0L4Mf5_7uM3daYxIa_80ZlNF9Ffa4YPsB4CuJFbHEEhSStDUlxCNTh5W1SnhgYgelVttnwaYCCVHlyqP4vCCGYgQIkoy01RKCq5dqXl2JPqpUt1bJZ_ywDlhi1xTKrO4uA6qfvKR_tNC1eYPrNmAR7sXMTj8gbUpklvh00edn-sHaR0yTj7ShMbAkK0o9WKUmElsMa_cpjTQ7dVEw6E1hoxjIdEI9kL87ex8uPRQ5383Df-NxO8I093Ef1RXVROeQp3Sass38ewkBuAM32AHUNfY8eP3aaw1ntGzeh93sa015Ob158t5W4ExsVp25RvM0RaV7UBhX0rkbCIVclJR87PkoSAfxtH5E1pkyBJB7rwGHKhWo0kO7U0QFLhAE2_l77pLME_QaHXLogUdLgGbloH2igxFLzboNfTs2yTc2JHeJDiPZDJBs-hbOEdJDD_JX_BcSWw_ZKFxeqA36RZl8LHvXOIS0C4LXmG9qAJvIabIlSIkVRNoSPWL8iXfCwkGHLl3uFc0_0USnunVIELwtEiaf2RUUv2-W1oHBBkrmkW2vxtwMB7GMItUs4l2oR024Qgqm4w9aIVBHvpz9f9QBKcUiWOyMvrqwCLUPDApQdU9bETwEngZOYtSZdX5G5qU-WbpVH91Y7ta81mJEm7Dtj55S5Vyx0NXyeO49M.BWNb4Ddh5iAoVq9eA8Vo_w`
-
-func getExpiredLicenseKey(name string) *v3.LicenseKey {
-	expiredLicenseKey := &v3.LicenseKey{ObjectMeta: metav1.ObjectMeta{Name: name}}
-
-	expiredLicenseKey.Spec.Certificate = expiredLicenseCertificate
-	expiredLicenseKey.Spec.Token = expiredLicenseToken
-
-	return expiredLicenseKey
 }
 
 // TestAlertExceptionClient exercises the AlertException client.
@@ -3683,7 +3652,7 @@ func testUISettingsClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("expecting User field not to be filled in: %v", uiSettingsServer.Spec.User)
 	}
 
-	/// Try updating without the owner reference. This should fail.
+	// / Try updating without the owner reference. This should fail.
 	updatedUISettings := uiSettingsServer.DeepCopy()
 	updatedUISettings.Labels = map[string]string{"foo": "bar"}
 	updatedUISettings.Spec.Description = "updated description"
