@@ -76,6 +76,7 @@ const (
 	IPSetIDAllHostNets        = "all-hosts-net"
 	IPSetIDAllVXLANSourceNets = "all-vxlan-net"
 	IPSetIDThisHostIPs        = "this-host"
+	IPSetIDAllTunnelNets      = "all-tunnel-net"
 
 	ChainFIPDnat = ChainNamePrefix + "fip-dnat"
 	ChainFIPSnat = ChainNamePrefix + "fip-snat"

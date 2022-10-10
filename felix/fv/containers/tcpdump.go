@@ -7,27 +7,25 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
-
+	"strings"
 	"sync"
+	"time"
 
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
-
-	"strings"
-
-	"time"
 
 	"github.com/onsi/ginkgo"
 
 	"github.com/projectcalico/calico/felix/fv/utils"
 )
 
-func AttachTCPDump(c *Container, iface string) *TCPDump {
+func AttachTCPDump(c *Container, iface string, filter ...string) *TCPDump {
 	t := &TCPDump{
 		logEnabled:       true,
 		containerID:      c.GetID(),
 		containerName:    c.Name,
 		iface:            iface,
+		filter:           filter,
 		matchers:         map[string]*tcpDumpMatcher{},
 		listeningStarted: make(chan struct{}),
 	}
@@ -50,6 +48,7 @@ type TCPDump struct {
 	containerID      string
 	containerName    string
 	iface            string
+	filter           []string
 	cmd              *exec.Cmd
 	out, err         io.ReadCloser
 	listeningStarted chan struct{}
@@ -84,12 +83,17 @@ func (t *TCPDump) MatchCount(name string) int {
 func (t *TCPDump) Start() {
 	// docker run --rm --network=container:48b6c5f44d57 --privileged corfr/tcpdump -nli cali01
 
-	t.cmd = utils.Command("docker", "run",
+	args := []string{
+		"run",
 		"--rm",
 		fmt.Sprintf("--network=container:%s", t.containerID),
 		"--privileged",
 		"corfr/tcpdump", "-nli", t.iface,
-	)
+	}
+	if len(t.filter) > 0 {
+		args = append(args, t.filter...)
+	}
+	t.cmd = utils.Command("docker", args...)
 	var err error
 	t.out, err = t.cmd.StdoutPipe()
 	Expect(err).NotTo(HaveOccurred())

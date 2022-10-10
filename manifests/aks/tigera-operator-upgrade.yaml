@@ -13595,9 +13595,9 @@ status:
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: amazoncloudintegrations.operator.tigera.io
   annotations:
-    helm.sh/hook: crd-install
+    controller-gen.kubebuilder.io/version: v0.3.0
+  name: amazoncloudintegrations.operator.tigera.io
 spec:
   group: operator.tigera.io
   names:
@@ -13682,6 +13682,42 @@ spec:
     storage: true
     subresources:
       status: {}
+  - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: AmazonCloudIntegration is the Schema for the amazoncloudintegrations
+          API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AmazonCloudIntegrationSpec defines the desired state of AmazonCloudIntegration
+            type: object
+          status:
+            description: AmazonCloudIntegrationStatus defines the observed state of
+              AmazonCloudIntegration
+            type: object
+        type: object
+    served: false
+    storage: false
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
 
 ---
 # Source: crds/operator.tigera.io_apiservers_crd.yaml
@@ -14152,8 +14188,8 @@ spec:
                                                     or empty namespaces list means
                                                     "this pod's namespace". An empty
                                                     selector ({}) matches all namespaces.
-                                                    This field is alpha-level and
-                                                    is only honored when PodAffinityNamespaceSelector
+                                                    This field is beta-level and is
+                                                    only honored when PodAffinityNamespaceSelector
                                                     feature is enabled.
                                                   properties:
                                                     matchExpressions:
@@ -14350,7 +14386,7 @@ spec:
                                                 namespaces list means "this pod's
                                                 namespace". An empty selector ({})
                                                 matches all namespaces. This field
-                                                is alpha-level and is only honored
+                                                is beta-level and is only honored
                                                 when PodAffinityNamespaceSelector
                                                 feature is enabled.
                                               properties:
@@ -14546,8 +14582,8 @@ spec:
                                                     or empty namespaces list means
                                                     "this pod's namespace". An empty
                                                     selector ({}) matches all namespaces.
-                                                    This field is alpha-level and
-                                                    is only honored when PodAffinityNamespaceSelector
+                                                    This field is beta-level and is
+                                                    only honored when PodAffinityNamespaceSelector
                                                     feature is enabled.
                                                   properties:
                                                     matchExpressions:
@@ -14744,7 +14780,7 @@ spec:
                                                 namespaces list means "this pod's
                                                 namespace". An empty selector ({})
                                                 matches all namespaces. This field
-                                                is alpha-level and is only honored
+                                                is beta-level and is only honored
                                                 when PodAffinityNamespaceSelector
                                                 feature is enabled.
                                               properties:
@@ -15049,7 +15085,6 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
-    helm.sh/hook: crd-install
   name: applicationlayers.operator.tigera.io
 spec:
   group: operator.tigera.io
@@ -15132,8 +15167,6 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
-    helm.sh/hook: crd-install
-  creationTimestamp: null
   name: authentications.operator.tigera.io
 spec:
   group: operator.tigera.io
@@ -15144,213 +15177,213 @@ spec:
     singular: authentication
   scope: Cluster
   versions:
-    - name: v1
-      schema:
-        openAPIV3Schema:
-          description: Authentication is the Schema for the authentications API
-          properties:
-            apiVersion:
-              description: 'APIVersion defines the versioned schema of this representation
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: Authentication is the Schema for the authentications API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
               of an object. Servers should convert recognized schemas to the latest
               internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-              type: string
-            kind:
-              description: 'Kind is a string value representing the REST resource this
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
               submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-              type: string
-            metadata:
-              type: object
-            spec:
-              description: AuthenticationSpec defines the desired state of Authentication
-              properties:
-                groupsPrefix:
-                  description: If specified, GroupsPrefix is prepended to each group
-                    obtained from the identity provider. Note that Kibana does not support
-                    a groups prefix, so this prefix is removed from Kubernetes Groups
-                    when translating log access ClusterRoleBindings into Elastic.
-                  type: string
-                ldap:
-                  description: LDAP contains the configuration needed to setup LDAP
-                    authentication.
-                  properties:
-                    groupSearch:
-                      description: Group search configuration to find the groups that
-                        a user is in.
-                      properties:
-                        baseDN:
-                          description: BaseDN to start the search from. For example
-                            "cn=groups,dc=example,dc=com"
-                          type: string
-                        filter:
-                          description: Optional filter to apply when searching the directory.
-                            For example "(objectClass=posixGroup)"
-                          type: string
-                        nameAttribute:
-                          description: The attribute of the group that represents its
-                            name. This attribute can be used to apply RBAC to a user
-                            group.
-                          type: string
-                        userMatchers:
-                          description: Following list contains field pairs that are
-                            used to match a user to a group. It adds an additional requirement
-                            to the filter that an attribute in the group must match
-                            the user's attribute value.
-                          items:
-                            description: UserMatch when the value of a UserAttribute
-                              and a GroupAttribute match, a user belongs to the group.
-                            properties:
-                              groupAttribute:
-                                description: The attribute of a group that links it
-                                  to a user.
-                                type: string
-                              userAttribute:
-                                description: The attribute of a user that links it to
-                                  a group.
-                                type: string
-                            required:
-                              - groupAttribute
-                              - userAttribute
-                            type: object
-                          type: array
-                      required:
-                        - baseDN
-                        - nameAttribute
-                        - userMatchers
-                      type: object
-                    host:
-                      description: 'The host and port of the LDAP server. Example: ad.example.com:636'
-                      type: string
-                    startTLS:
-                      description: StartTLS whether to enable the startTLS feature for
-                        establishing TLS on an existing LDAP session. If true, the ldap://
-                        protocol is used and then issues a StartTLS command, otherwise,
-                        connections will use the ldaps:// protocol.
-                      type: boolean
-                    userSearch:
-                      description: User entry search configuration to match the credentials
-                        with a user.
-                      properties:
-                        baseDN:
-                          description: BaseDN to start the search from. For example
-                            "cn=users,dc=example,dc=com"
-                          type: string
-                        filter:
-                          description: Optional filter to apply when searching the directory.
-                            For example "(objectClass=person)"
-                          type: string
-                        nameAttribute:
-                          description: 'A mapping of the attribute that is used as the
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AuthenticationSpec defines the desired state of Authentication
+            properties:
+              groupsPrefix:
+                description: If specified, GroupsPrefix is prepended to each group
+                  obtained from the identity provider. Note that Kibana does not support
+                  a groups prefix, so this prefix is removed from Kubernetes Groups
+                  when translating log access ClusterRoleBindings into Elastic.
+                type: string
+              ldap:
+                description: LDAP contains the configuration needed to setup LDAP
+                  authentication.
+                properties:
+                  groupSearch:
+                    description: Group search configuration to find the groups that
+                      a user is in.
+                    properties:
+                      baseDN:
+                        description: BaseDN to start the search from. For example
+                          "cn=groups,dc=example,dc=com"
+                        type: string
+                      filter:
+                        description: Optional filter to apply when searching the directory.
+                          For example "(objectClass=posixGroup)"
+                        type: string
+                      nameAttribute:
+                        description: The attribute of the group that represents its
+                          name. This attribute can be used to apply RBAC to a user
+                          group.
+                        type: string
+                      userMatchers:
+                        description: Following list contains field pairs that are
+                          used to match a user to a group. It adds an additional requirement
+                          to the filter that an attribute in the group must match
+                          the user's attribute value.
+                        items:
+                          description: UserMatch when the value of a UserAttribute
+                            and a GroupAttribute match, a user belongs to the group.
+                          properties:
+                            groupAttribute:
+                              description: The attribute of a group that links it
+                                to a user.
+                              type: string
+                            userAttribute:
+                              description: The attribute of a user that links it to
+                                a group.
+                              type: string
+                          required:
+                          - groupAttribute
+                          - userAttribute
+                          type: object
+                        type: array
+                    required:
+                    - baseDN
+                    - nameAttribute
+                    - userMatchers
+                    type: object
+                  host:
+                    description: 'The host and port of the LDAP server. Example: ad.example.com:636'
+                    type: string
+                  startTLS:
+                    description: StartTLS whether to enable the startTLS feature for
+                      establishing TLS on an existing LDAP session. If true, the ldap://
+                      protocol is used and then issues a StartTLS command, otherwise,
+                      connections will use the ldaps:// protocol.
+                    type: boolean
+                  userSearch:
+                    description: User entry search configuration to match the credentials
+                      with a user.
+                    properties:
+                      baseDN:
+                        description: BaseDN to start the search from. For example
+                          "cn=users,dc=example,dc=com"
+                        type: string
+                      filter:
+                        description: Optional filter to apply when searching the directory.
+                          For example "(objectClass=person)"
+                        type: string
+                      nameAttribute:
+                        description: 'A mapping of the attribute that is used as the
                           username. This attribute can be used to apply RBAC to a
                           user. Default: uid'
-                          type: string
-                      required:
-                        - baseDN
-                      type: object
-                  required:
-                    - host
-                    - userSearch
-                  type: object
-                managerDomain:
-                  description: ManagerDomain is the domain name of the Manager
-                  type: string
-                oidc:
-                  description: OIDC contains the configuration needed to setup OIDC
-                    authentication.
-                  properties:
-                    emailVerification:
-                      description: 'Some providers do not include the claim "email_verified"
+                        type: string
+                    required:
+                    - baseDN
+                    type: object
+                required:
+                - host
+                - userSearch
+                type: object
+              managerDomain:
+                description: ManagerDomain is the domain name of the Manager
+                type: string
+              oidc:
+                description: OIDC contains the configuration needed to setup OIDC
+                  authentication.
+                properties:
+                  emailVerification:
+                    description: 'Some providers do not include the claim "email_verified"
                       when there is no verification in the user enrollment process
                       or if they are acting as a proxy for another identity provider.
                       By default those tokens are deemed invalid. To skip this check,
                       set the value to "InsecureSkip". Default: Verify'
-                      enum:
-                        - Verify
-                        - InsecureSkip
-                      type: string
-                    groupsClaim:
-                      description: GroupsClaim specifies which claim to use from the
-                        OIDC provider as the group.
-                      type: string
-                    groupsPrefix:
-                      description: Deprecated. Please use Authentication.Spec.GroupsPrefix
-                        instead.
-                      type: string
-                    issuerURL:
-                      description: IssuerURL is the URL to the OIDC provider.
-                      type: string
-                    promptTypes:
-                      description: 'PromptTypes is an optional list of string values
+                    enum:
+                    - Verify
+                    - InsecureSkip
+                    type: string
+                  groupsClaim:
+                    description: GroupsClaim specifies which claim to use from the
+                      OIDC provider as the group.
+                    type: string
+                  groupsPrefix:
+                    description: Deprecated. Please use Authentication.Spec.GroupsPrefix
+                      instead.
+                    type: string
+                  issuerURL:
+                    description: IssuerURL is the URL to the OIDC provider.
+                    type: string
+                  promptTypes:
+                    description: 'PromptTypes is an optional list of string values
                       that specifies whether the identity provider prompts the end
                       user for re-authentication and consent. See the RFC for more
                       information on prompt types: https://openid.net/specs/openid-connect-core-1_0.html.
                       Default: "Consent"'
-                      items:
-                        description: 'PromptType is a value that specifies whether the
+                    items:
+                      description: 'PromptType is a value that specifies whether the
                         identity provider prompts the end user for re-authentication
                         and consent. One of: None, Login, Consent, SelectAccount.'
-                        enum:
-                          - None
-                          - Login
-                          - Consent
-                          - SelectAccount
-                        type: string
-                      type: array
-                    requestedScopes:
-                      description: 'RequestedScopes is a list of scopes to request from
+                      enum:
+                      - None
+                      - Login
+                      - Consent
+                      - SelectAccount
+                      type: string
+                    type: array
+                  requestedScopes:
+                    description: 'RequestedScopes is a list of scopes to request from
                       the OIDC provider. If not provided, the following scopes are
                       requested: ["openid", "email", "profile", "groups", "offline_access"].'
-                      items:
-                        type: string
-                      type: array
-                    type:
-                      description: 'Default: "Dex"'
-                      enum:
-                        - Dex
-                        - Tigera
+                    items:
                       type: string
-                    usernameClaim:
-                      description: UsernameClaim specifies which claim to use from the
-                        OIDC provider as the username.
-                      type: string
-                    usernamePrefix:
-                      description: Deprecated. Please use Authentication.Spec.UsernamePrefix
-                        instead.
-                      type: string
-                  required:
-                    - issuerURL
-                    - usernameClaim
-                  type: object
-                openshift:
-                  description: Openshift contains the configuration needed to setup
-                    Openshift OAuth authentication.
-                  properties:
-                    issuerURL:
-                      description: 'IssuerURL is the URL to the Openshift OAuth provider.
+                    type: array
+                  type:
+                    description: 'Default: "Dex"'
+                    enum:
+                    - Dex
+                    - Tigera
+                    type: string
+                  usernameClaim:
+                    description: UsernameClaim specifies which claim to use from the
+                      OIDC provider as the username.
+                    type: string
+                  usernamePrefix:
+                    description: Deprecated. Please use Authentication.Spec.UsernamePrefix
+                      instead.
+                    type: string
+                required:
+                - issuerURL
+                - usernameClaim
+                type: object
+              openshift:
+                description: Openshift contains the configuration needed to setup
+                  Openshift OAuth authentication.
+                properties:
+                  issuerURL:
+                    description: 'IssuerURL is the URL to the Openshift OAuth provider.
                       Ex.: https://api.my-ocp-domain.com:6443'
-                      type: string
-                  required:
-                    - issuerURL
-                  type: object
-                usernamePrefix:
-                  description: If specified, UsernamePrefix is prepended to each user
-                    obtained from the identity provider. Note that Kibana does not support
-                    a user prefix, so this prefix is removed from Kubernetes User when
-                    translating log access ClusterRoleBindings into Elastic.
-                  type: string
-              type: object
-            status:
-              description: AuthenticationStatus defines the observed state of Authentication
-              properties:
-                state:
-                  description: State provides user-readable status.
-                  type: string
-              type: object
-          type: object
-      served: true
-      storage: true
-      subresources:
-        status: {}
+                    type: string
+                required:
+                - issuerURL
+                type: object
+              usernamePrefix:
+                description: If specified, UsernamePrefix is prepended to each user
+                  obtained from the identity provider. Note that Kibana does not support
+                  a user prefix, so this prefix is removed from Kubernetes User when
+                  translating log access ClusterRoleBindings into Elastic.
+                type: string
+            type: object
+          status:
+            description: AuthenticationStatus defines the observed state of Authentication
+            properties:
+              state:
+                description: State provides user-readable status.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
 status:
   acceptedNames:
     kind: ""
@@ -15363,9 +15396,9 @@ status:
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: compliances.operator.tigera.io
   annotations:
-    helm.sh/hook: crd-install
+    controller-gen.kubebuilder.io/version: v0.3.0
+  name: compliances.operator.tigera.io
 spec:
   group: operator.tigera.io
   names:
@@ -15385,12 +15418,12 @@ spec:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
               of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
             description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
@@ -15410,6 +15443,12 @@ spec:
     storage: true
     subresources:
       status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
 
 ---
 # Source: crds/operator.tigera.io_imagesets_crd.yaml
@@ -15418,7 +15457,6 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
-    helm.sh/hook: crd-install
   name: imagesets.operator.tigera.io
 spec:
   group: operator.tigera.io
@@ -15434,7 +15472,7 @@ spec:
       openAPIV3Schema:
         description: ImageSet is used to specify image digests for the images that
           the operator deploys. The name of the ImageSet is expected to be in the
-          format `<variang>-<release>`. The `variant` used is `enterprise` if the
+          format `<variant>-<release>`. The `variant` used is `enterprise` if the
           InstallationSpec Variant is `TigeraSecureEnterprise` otherwise it is `calico`.
           The `release` must match the version of the variant that the operator is
           built to deploy, this version can be obtained by passing the `--version`
@@ -15497,7 +15535,6 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
-    helm.sh/hook: crd-install
   name: installations.operator.tigera.io
 spec:
   group: operator.tigera.io
@@ -27754,9 +27791,9 @@ status:
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: intrusiondetections.operator.tigera.io
   annotations:
-    helm.sh/hook: crd-install
+    controller-gen.kubebuilder.io/version: v0.3.0
+  name: intrusiondetections.operator.tigera.io
 spec:
   group: operator.tigera.io
   names:
@@ -27776,12 +27813,12 @@ spec:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
               of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
             description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
@@ -27833,7 +27870,7 @@ spec:
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                           description: 'Limits describes the maximum amount of compute
-                            resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                            resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                           type: object
                         requests:
                           additionalProperties:
@@ -27846,7 +27883,7 @@ spec:
                             resources required. If Requests is omitted for a container,
                             it defaults to Limits if that is explicitly specified,
                             otherwise to an implementation-defined value. More info:
-                            https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                            https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                           type: object
                       type: object
                   required:
@@ -27867,16 +27904,21 @@ spec:
     storage: true
     subresources:
       status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
 
 ---
 # Source: crds/operator.tigera.io_logcollectors_crd.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: logcollectors.operator.tigera.io
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
-    helm.sh/hook: crd-install
+  name: logcollectors.operator.tigera.io
 spec:
   group: operator.tigera.io
   names:
@@ -28032,6 +28074,12 @@ spec:
     storage: true
     subresources:
       status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
 
 ---
 # Source: crds/operator.tigera.io_logstorages_crd.yaml
@@ -28039,7 +28087,6 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    helm.sh/hook: crd-install
     controller-gen.kubebuilder.io/version: v0.3.0
   name: logstorages.operator.tigera.io
 spec:
@@ -28099,7 +28146,7 @@ spec:
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                           description: 'Limits describes the maximum amount of compute
-                            resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                            resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                           type: object
                         requests:
                           additionalProperties:
@@ -28112,7 +28159,7 @@ spec:
                             resources required. If Requests is omitted for a container,
                             it defaults to Limits if that is explicitly specified,
                             otherwise to an implementation-defined value. More info:
-                            https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                            https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                           type: object
                       type: object
                   required:
@@ -28198,7 +28245,7 @@ spec:
                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                           x-kubernetes-int-or-string: true
                         description: 'Limits describes the maximum amount of compute
-                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                       requests:
                         additionalProperties:
@@ -28210,7 +28257,7 @@ spec:
                         description: 'Requests describes the minimum amount of compute
                           resources required. If Requests is omitted for a container,
                           it defaults to Limits if that is explicitly specified, otherwise
-                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
                 type: object
@@ -28225,6 +28272,13 @@ spec:
                       x days, use a retention period of x+1. Default: 91'
                     format: int32
                     type: integer
+                  bgpLogs:
+                    description: 'BGPLogs configures the retention period for BGP
+                      logs, in days.  Logs written on a day that started at least
+                      this long ago are removed.  To keep logs for at least x days,
+                      use a retention period of x+1. Default: 8'
+                    format: int32
+                    type: integer
                   complianceReports:
                     description: 'ComplianceReports configures the retention period
                       for compliance reports, in days. Reports are output from the
@@ -28233,6 +28287,13 @@ spec:
                       more details on reports. Logs written on a day that started
                       at least this long ago are removed.  To keep logs for at least
                       x days, use a retention period of x+1. Default: 91'
+                    format: int32
+                    type: integer
+                  dnsLogs:
+                    description: 'DNSLogs configures the retention period for DNS
+                      logs, in days.  Logs written on a day that started at least
+                      this long ago are removed.  To keep logs for at least x days,
+                      use a retention period of x+1. Default: 8'
                     format: int32
                     type: integer
                   flows:
@@ -28298,9 +28359,9 @@ status:
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: managementclusterconnections.operator.tigera.io
   annotations:
-    helm.sh/hook: crd-install
+    controller-gen.kubebuilder.io/version: v0.3.0
+  name: managementclusterconnections.operator.tigera.io
 spec:
   group: operator.tigera.io
   names:
@@ -28320,12 +28381,12 @@ spec:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
               of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
             description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
@@ -28338,19 +28399,45 @@ spec:
                   cluster. Ex.: "10.128.0.10:30449". A managed cluster should be able
                   to access this address. This field is used by managed clusters only.'
                 type: string
+              tls:
+                description: TLS provides options for configuring how Managed Clusters
+                  can establish an mTLS connection with the Management Cluster.
+                properties:
+                  ca:
+                    description: "CA indicates which verification method the tunnel
+                      client should use to verify the tunnel server's identity. \n
+                      When left blank or set to 'Tigera', the tunnel client will expect
+                      a self-signed cert to be included in the certificate bundle
+                      and will expect the cert to have a Common Name (CN) of 'voltron'.
+                      \n When set to 'Public', the tunnel client will use its installed
+                      system certs and will use the managementClusterAddr to verify
+                      the tunnel server's identity. \n Default: Tigera"
+                    enum:
+                    - Tigera
+                    - Public
+                    type: string
+                type: object
             type: object
         type: object
     served: true
     storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
 
 ---
 # Source: crds/operator.tigera.io_managementclusters_crd.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: managementclusters.operator.tigera.io
   annotations:
-    helm.sh/hook: crd-install
+    controller-gen.kubebuilder.io/version: v0.3.0
+  name: managementclusters.operator.tigera.io
 spec:
   group: operator.tigera.io
   names:
@@ -28360,50 +28447,83 @@ spec:
     singular: managementcluster
   scope: Cluster
   versions:
-    - name: v1
-      schema:
-        openAPIV3Schema:
-          description: The presence of ManagementCluster in your cluster, will configure
-            it to be the management plane to which managed clusters can connect. At
-            most one instance of this resource is supported. It must be named "tigera-secure".
-          properties:
-            apiVersion:
-              description: 'APIVersion defines the versioned schema of this representation
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: The presence of ManagementCluster in your cluster, will configure
+          it to be the management plane to which managed clusters can connect. At
+          most one instance of this resource is supported. It must be named "tigera-secure".
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
               of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
-              type: string
-            kind:
-              description: 'Kind is a string value representing the REST resource this
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
-              type: string
-            metadata:
-              type: object
-            spec:
-              description: ManagementClusterSpec defines the desired state of a ManagementCluster
-              properties:
-                address:
-                  description: 'This field specifies the externally reachable address
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ManagementClusterSpec defines the desired state of a ManagementCluster
+            properties:
+              address:
+                description: 'This field specifies the externally reachable address
                   to which your managed cluster will connect. When a managed cluster
                   is added, this field is used to populate an easy-to-apply manifest
                   that will connect both clusters. Valid examples are: "0.0.0.0:31000",
                   "example.com:32000", "[::1]:32500"'
-                  type: string
-              type: object
-          type: object
-      served: true
-      storage: true
-      subresources:
-        status: {}
+                type: string
+              tls:
+                description: TLS provides options for configuring how Managed Clusters
+                  can establish an mTLS connection with the Management Cluster.
+                properties:
+                  secretName:
+                    description: "SecretName indicates the name of the secret in the
+                      tigera-operator namespace that contains the private key and
+                      certificate that the management cluster uses when it listens
+                      for incoming connections. \n When set to tigera-management-cluster-connection
+                      voltron will use the same cert bundle which Guardian client
+                      certs are signed with. \n When set to manager-tls, voltron will
+                      use the same cert bundle which Manager UI is served with. This
+                      cert bundle must be a publicly signed cert created by the user.
+                      Note that Tigera Operator will generate a self-signed manager-tls
+                      cert if one does not exist, and use of that cert will result
+                      in Guardian being unable to verify Voltron's identity. \n If
+                      changed on a running cluster with connected managed clusters,
+                      all managed clusters will disconnect as they will no longer
+                      be able to verify Voltron's identity. To reconnect existing
+                      managed clusters, change the tls.ca of the  managed clusters'
+                      ManagementClusterConnection resource. \n One of: tigera-management-cluster-connection,
+                      manager-tls \n Default: tigera-management-cluster-connection"
+                    enum:
+                    - tigera-management-cluster-connection
+                    - manager-tls
+                    type: string
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
 
 ---
 # Source: crds/operator.tigera.io_managers_crd.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: managers.operator.tigera.io
   annotations:
-    helm.sh/hook: crd-install
+    controller-gen.kubebuilder.io/version: v0.3.0
+  name: managers.operator.tigera.io
 spec:
   group: operator.tigera.io
   names:
@@ -28437,8 +28557,8 @@ spec:
               manager.
             properties:
               auth:
-                description: Auth defines the authentication strategy for the Calico
-                  Enterprise manager GUI.
+                description: Deprecated. Please use the Authentication CR for configuring
+                  authentication.
                 properties:
                   authority:
                     description: Authority configures the OAuth2/OIDC authority/issuer
@@ -28484,21 +28604,30 @@ spec:
                     - OAuth
                     type: string
                 type: object
+              state:
+                description: State provides user-readable status.
+                type: string
             type: object
         type: object
     served: true
     storage: true
     subresources:
       status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
 
 ---
 # Source: crds/operator.tigera.io_monitors_crd.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: monitors.operator.tigera.io
   annotations:
-    helm.sh/hook: crd-install
+    controller-gen.kubebuilder.io/version: v0.3.0
+  name: monitors.operator.tigera.io
 spec:
   group: operator.tigera.io
   names:
@@ -28541,6 +28670,12 @@ spec:
     storage: true
     subresources:
       status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
 
 ---
 # Source: crds/operator.tigera.io_tigerastatuses_crd.yaml
@@ -28549,10 +28684,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
-    helm.sh/hook: crd-install
   name: tigerastatuses.operator.tigera.io
-  annotations:
-    helm.sh/hook: crd-install
 spec:
   group: operator.tigera.io
   names:

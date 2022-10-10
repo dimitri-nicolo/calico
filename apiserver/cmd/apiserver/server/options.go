@@ -92,7 +92,7 @@ func (s *CalicoServerOptions) addFlags(flags *pflag.FlagSet) {
 	flags.StringVar(&s.ManagementClusterAddr, "managementClusterAddr",
 		"<your-management-cluster-address>",
 		"If set, manifests created for new managed clusters will use this value.")
-	flags.StringVar(&s.ManagementClusterCAType, "managementClusterCAType", "Tigera",
+	flags.StringVar(&s.ManagementClusterCAType, "managementClusterCAType", "",
 		"Controls the value of tls.ca in generated ManagementClusterConnection resources")
 }
 

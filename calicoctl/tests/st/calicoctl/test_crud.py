@@ -37,11 +37,7 @@ class TestCalicoctlCommands(TestBase):
 
     def setUp(self):
         super(TestCalicoctlCommands, self).setUp()
-        # Load valid license file from test-data, and then create it.
-        with open("/code/test-data/licenses/license.yaml") as f:
-          license = "".join(f.readlines())
-          rc = calicoctl("create", data=license)
-          rc.assert_no_error()
+        self.apply_license()
 
     def test_get(self):
         """
@@ -2821,11 +2817,7 @@ class InvalidData(TestBase):
 
     def setUp(self):
         super(InvalidData, self).setUp()
-        # Load valid license file from test-data, and then create it.
-        with open("/code/test-data/licenses/license.yaml") as f:
-          license = "".join(f.readlines())
-          rc = calicoctl("create", data=license)
-          rc.assert_no_error()
+        self.apply_license()
 
     @parameterized.expand(testdata)
     def test_invalid_profiles_rejected(self, name, testdata, error):

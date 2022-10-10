@@ -23,12 +23,11 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	fakeclientset "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 
+	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/firewall-integration/pkg/config"
 	pan "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama"
 	panutils "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils"
-	panutilmocks "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils/mocks"
-
-	"github.com/projectcalico/calico/felix/fv/containers"
+	panutilmocks "github.com/projectcalico/calico/firewall-integration/tests/mocks"
 	"github.com/projectcalico/calico/kube-controllers/tests/testutils"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 
@@ -148,7 +147,7 @@ var _ = Describe("Tests address groups controller", func() {
 						Order: &cfg.FwPolicyTierOrder,
 					},
 				}
-				fccl := fakeclientset.NewSimpleClientset(mockTier, mockGnpList).ProjectcalicoV3()
+				fccl := fakeclientset.NewSimpleClientset(mockTier, mockGnpList).ProjectcalicoV3().GlobalNetworkSets()
 
 				By("defining the address groups controller")
 				controller, err := pan.NewDynamicAddressGroupsController(ctx, k8sClient, fccl, mockPanCl, cfg, hl, &wg)
@@ -167,7 +166,7 @@ var _ = Describe("Tests address groups controller", func() {
 				panutils.LoadData(file, &expectedGnsMap)
 
 				By("validating the list of global networks sets present in the datastore, and that the device group is shared")
-				gnsList, err := fccl.GlobalNetworkSets().List(ctx, metav1.ListOptions{})
+				gnsList, err := fccl.List(ctx, metav1.ListOptions{})
 				Expect(err).To(BeNil())
 				Expect(len(gnsList.Items)).To(Equal(len(expectedGnsMap)))
 
@@ -226,7 +225,7 @@ var _ = Describe("Tests address groups controller", func() {
 					Order: &cfg.FwPolicyTierOrder,
 				},
 			}
-			fccl := fakeclientset.NewSimpleClientset(mockTier, mockGnpList).ProjectcalicoV3()
+			fccl := fakeclientset.NewSimpleClientset(mockTier, mockGnpList).ProjectcalicoV3().GlobalNetworkSets()
 
 			expectedErrorMessage := "device group: \"device.group.not.present\" does not exist"
 
@@ -278,7 +277,7 @@ var _ = Describe("Tests address groups controller", func() {
 						Order: &cfg.FwPolicyTierOrder,
 					},
 				}
-				fccl := fakeclientset.NewSimpleClientset(mockTier, mockGnpList).ProjectcalicoV3()
+				fccl := fakeclientset.NewSimpleClientset(mockTier, mockGnpList).ProjectcalicoV3().GlobalNetworkSets()
 
 				By("defining the address groups controller")
 				wg.Add(1)
@@ -297,7 +296,7 @@ var _ = Describe("Tests address groups controller", func() {
 				panutils.LoadData(file, &expectedGNSMap)
 
 				By("validating the list of global networks sets present in the datastore, and that the device group is shared")
-				gnsList, err := fccl.GlobalNetworkSets().List(ctx, metav1.ListOptions{})
+				gnsList, err := fccl.List(ctx, metav1.ListOptions{})
 				Expect(err).To(BeNil())
 				Expect(len(gnsList.Items)).To(Equal(len(expectedGNSMap)))
 				for _, gns := range gnsList.Items {

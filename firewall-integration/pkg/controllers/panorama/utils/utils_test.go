@@ -9,13 +9,12 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils/mocks"
-
 	panw "github.com/PaloAltoNetworks/pango"
 	"github.com/PaloAltoNetworks/pango/objs/addr"
 	"github.com/PaloAltoNetworks/pango/objs/addrgrp"
 	dvgrp "github.com/PaloAltoNetworks/pango/pnrm/dg"
 
+	"github.com/projectcalico/calico/firewall-integration/tests/mocks"
 	"github.com/projectcalico/calico/libcalico-go/lib/selector"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 

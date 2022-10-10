@@ -18,11 +18,11 @@ import (
 	"github.com/projectcalico/calico/es-proxy/pkg/kibana"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/aggregation"
+	"github.com/projectcalico/calico/es-proxy/pkg/middleware/application"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/event"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/process"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/rawquery"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/search"
-	"github.com/projectcalico/calico/es-proxy/pkg/middleware/service"
 	"github.com/projectcalico/calico/es-proxy/pkg/middleware/servicegraph"
 	"github.com/projectcalico/calico/es-proxy/pkg/pip"
 	pipcfg "github.com/projectcalico/calico/es-proxy/pkg/pip/config"
@@ -206,15 +206,6 @@ func Start(cfg *Config) error {
 						k8sClientSet,
 						esClient.Backend(),
 					)))))
-	sm.Handle("/services",
-		middleware.ClusterRequestToResource(l7ResourceName,
-			middleware.AuthenticateRequest(authn,
-				middleware.AuthorizeRequest(authz,
-					service.ServiceHandler(
-						lmaindex.L7Logs(),
-						middleware.NewAuthorizationReview(k8sClientSetFactory),
-						esClient.Backend(),
-					)))))
 	sm.Handle("/processes",
 		middleware.ClusterRequestToResource(flowLogsResourceName,
 			middleware.AuthenticateRequest(authn,
@@ -223,6 +214,26 @@ func Start(cfg *Config) error {
 						lmaindex.FlowLogs(),
 						middleware.NewAuthorizationReview(k8sClientSetFactory),
 						esClient.Backend(),
+					)))))
+	sm.Handle("/services",
+		middleware.ClusterRequestToResource(l7ResourceName,
+			middleware.AuthenticateRequest(authn,
+				middleware.AuthorizeRequest(authz,
+					application.ApplicationHandler(
+						lmaindex.L7Logs(),
+						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						esClient.Backend(),
+						application.ApplicationTypeService,
+					)))))
+	sm.Handle("/urls",
+		middleware.ClusterRequestToResource(l7ResourceName,
+			middleware.AuthenticateRequest(authn,
+				middleware.AuthorizeRequest(authz,
+					application.ApplicationHandler(
+						lmaindex.L7Logs(),
+						middleware.NewAuthorizationReview(k8sClientSetFactory),
+						esClient.Backend(),
+						application.ApplicationTypeURL,
 					)))))
 	// Perform authn using KubernetesAuthn handler, but authz using PolicyRecommendationHandler.
 	sm.Handle("/recommend",

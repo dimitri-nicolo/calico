@@ -54,8 +54,6 @@ section:
      path: /networking/ip-autodetection
    - title: Configure dual stack
      path: /networking/ipv6
-   - title: Configure Kubernetes control plane to operate over IPv6
-     path: /networking/ipv6-control-plane
    - title: Use specific IP address for a pod
      path: /networking/use-specific-ip
    - title: Assign IP addresses based on topology

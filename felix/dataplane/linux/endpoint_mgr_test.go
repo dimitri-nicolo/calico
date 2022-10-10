@@ -359,6 +359,14 @@ func chainsForIfaces(ipVersion uint8,
 				Action:  iptables.AcceptAction{},
 				Comment: []string{"Accept VXLAN UDP traffic for egressgateways"},
 			})
+			outRules = append(outRules, iptables.Rule{
+				Match: iptables.Match().
+					ProtocolNum(ProtoUDP).
+					DestIPSet("cali40all-tunnel-net").
+					DestPorts(uint16(EgressIPVXLANPort)),
+				Action:  iptables.AcceptAction{},
+				Comment: []string{"Accept VXLAN UDP traffic for egressgateways"},
+			})
 		}
 
 		if !host {
@@ -543,6 +551,18 @@ func chainsForIfaces(ipVersion uint8,
 					DestPorts(uint16(EgressIPVXLANPort)),
 				Action:  iptables.AcceptAction{},
 				Comment: []string{"Accept VXLAN UDP traffic for egressgateways"},
+			})
+			inRules = append(inRules, iptables.Rule{
+				Match: iptables.Match().
+					ProtocolNum(ProtoUDP).
+					SourceIPSet("cali40all-tunnel-net").
+					DestPorts(uint16(EgressIPVXLANPort)),
+				Action:  iptables.AcceptAction{},
+				Comment: []string{"Accept VXLAN UDP traffic for egressgateways"},
+			})
+			inRules = append(inRules, iptables.Rule{
+				Action:  iptables.DropAction{},
+				Comment: []string{"Drop any other traffic to egressgateways"},
 			})
 		}
 
