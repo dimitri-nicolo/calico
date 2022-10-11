@@ -953,13 +953,13 @@ spec:
   - name: cnx-pull-secret
   containers:
   - name: gateway
-    image: gcr.io/unique-caldron-775/cnx/tigera/egress-gateway:master-amd64
+    image: docker.io/tigera/egress-gateway:latest-amd64
     env:
     - name: EGRESS_POD_IP
       valueFrom:
         fieldRef:
           fieldPath: status.podIP
-    imagePullPolicy: Always
+    imagePullPolicy: Never
     securityContext:
       privileged: true
     volumeMounts:

@@ -332,7 +332,7 @@ $(FELIX_GPL_SOURCE):
 ###############################################################################
 # FV Tests
 ###############################################################################
-K8ST_IMAGE_TARS=calico-node.tar calico-apiserver.tar cnx-node.tar calico-cni.tar pod2daemon.tar calicoctl.tar kube-controllers.tar
+K8ST_IMAGE_TARS=calico-node.tar calico-apiserver.tar cnx-node.tar calico-cni.tar pod2daemon.tar calicoctl.tar kube-controllers.tar egress-gateway.tar
 
 ifeq ($(SEMAPHORE_GIT_REF_TYPE), pull-request)
 # Determine the tests to run using the test spider tool, which emits a list of impacted packages.
@@ -406,6 +406,10 @@ calicoctl.tar: ../go.mod $(shell find ../calicoctl -name '*.go') $(shell find ..
 kube-controllers.tar: ../go.mod $(shell find ../kube-controllers -name '*.go') $(shell find ../libcalico-go -name '*.go')
 	make -C ../kube-controllers image
 	docker save --output $@ tigera/kube-controllers:latest-$(ARCH)
+
+egress-gateway.tar: ../go.mod $(shell find ../egress-gateway -name '*.go') ../egress-gateway/* $(shell find ../libcalico-go -name '*.go')
+	make -C ../egress-gateway image
+	docker save --output $@ tigera/egress-gateway:latest-$(ARCH)
 
 load-container-images: $(K8ST_IMAGE_TARS) $(KUBECTL)
 	# Load the latest tar files onto the currently running kind cluster.
@@ -495,8 +499,9 @@ k8s-test:
 	$(MAKE) kind-k8st-cleanup
 
 .PHONY: kind-k8st-setup
-kind-k8st-setup: $(K8ST_IMAGE_TARS) kind-cluster-create
-	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) KUBECONFIG=$(KIND_KUBECONFIG) ARCH=$(ARCH) ./tests/k8st/deploy_resources_on_kind_cluster.sh
+TEST_LICENSE=$(SECRETS_PATH)/license.yaml
+kind-k8st-setup: $(K8ST_IMAGE_TARS) kind-cluster-create $(TEST_LICENSE)
+	TSEE_TEST_LICENSE=$(TEST_LICENSE) GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) KUBECONFIG=$(KIND_KUBECONFIG) ARCH=$(ARCH) ./tests/k8st/deploy_resources_on_kind_cluster.sh
 
 .PHONY: kind-k8st-run-test
 kind-k8st-run-test: .calico_test.created $(KIND_KUBECONFIG)
