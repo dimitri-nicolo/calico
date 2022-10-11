@@ -24,7 +24,7 @@ GATEWAY_TEST_CONTAINER_CREATED=.egress_gateway_testing.created-$(ARCH)
 GATEWAY_CONTAINER_FILES=$(shell find ./filesystem -type f)
 GATEWAY_DAEMON_EXECUTABLE=./bin/egressd-$(ARCH)
 # Files to be built
-SRC_FILES=$(shell find . -name '*.go' | grep -v vendor) ../felix/proto/felixbackend.pb.go
+SRC_FILES=$(shell find . -name '*.go' | grep -v vendor) ../felix/proto/felixbackend.pb.go $(shell find ../libcalico-go -name '*.go' | grep -v vendor)
 
 ###############################################################################
 # Include ../lib.Makefile
@@ -95,6 +95,7 @@ sub-image-%:
 $(EGRESS_GATEWAY_IMAGE): $(GATEWAY_CONTAINER_CREATED)
 $(GATEWAY_CONTAINER_CREATED): register ./Dockerfile.$(ARCH) $(GATEWAY_CONTAINER_FILES) $(GATEWAY_DAEMON_EXECUTABLE)
 	docker build --pull -t $(EGRESS_GATEWAY_IMAGE):latest-$(ARCH) . --build-arg GIT_VERSION=$(GIT_VERSION) -f ./Dockerfile.$(ARCH)
+	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
 $(EGRESS_GATEWAY_TESTING_IMAGE): $(GATEWAY_TEST_CONTAINER_CREATED)

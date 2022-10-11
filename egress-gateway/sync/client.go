@@ -169,7 +169,7 @@ func connectAndSync(ctx context.Context, c *Client) {
 				// if the stream to Felix breaks, close the associated updates channel and restart the
 				// connection process
 				c.refreshUpdatesPipeline()
-				break
+				return
 			}
 			c.updates <- update
 			c.healthy = true
