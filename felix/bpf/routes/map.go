@@ -74,6 +74,8 @@ const (
 	FlagsRemoteHost           = FlagHost
 	FlagsLocalHost            = FlagLocal | FlagHost
 	FlagsLocalWorkload        = FlagLocal | FlagWorkload
+	FlagsRemoteTunneledHost   = FlagsRemoteHost  | FlagTunneled
+	FlagsLocalTunneledHost    = FlagsLocalHost | FlagTunneled
 
 	_ = FlagsUnknown
 )

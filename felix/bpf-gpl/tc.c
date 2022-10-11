@@ -426,14 +426,18 @@ syn_force_policy:
 		goto skip_policy;
 	}
 
+	if (CALI_F_FROM_HOST && ctx->state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) {
+		CALI_DEBUG("Traffic is egress gw flow src=0x%x dst=0x%x\n",ctx->state->ip_src, ctx->state->ip_dst);
+	}
+
 	if (EGRESS_GATEWAY && !skb_refresh_validate_ptrs(ctx, UDP_SIZE) && CALI_F_WEP) {
 		__be32 ip_addr = ctx->state->ip_src;
 		if (CALI_F_FROM_WEP) {
 			ip_addr = ctx->state->ip_dst;
 		}
-		struct cali_rt *rt = cali_rt_lookup(ip_addr);
-		if (rt && cali_rt_is_host(rt) && 
-				is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
+		if ((rt_addr_is_remote_host(ip_addr) 
+			|| rt_addr_is_remote_tunneled_host(ip_addr)) && 
+			is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
 			COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
 			if (CALI_F_FROM_WEP) {
 				CALI_DEBUG("Allow VXLAN packet from EGW pod\n");
@@ -441,6 +445,8 @@ syn_force_policy:
 				CALI_DEBUG("Allow VXLAN packet to EGW pod\n");
 			}
 			goto skip_policy;
+		} else if (CALI_F_TO_WEP) {
+			goto deny;
 		}
 	}
 
