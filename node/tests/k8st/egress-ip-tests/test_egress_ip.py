@@ -951,6 +951,18 @@ metadata:
 spec:
   imagePullSecrets:
   - name: cnx-pull-secret
+  initContainers:
+  - name: egress-gateway-init
+    image: docker.io/tigera/egress-gateway:latest-amd64
+    env:
+    - name: EGRESS_POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+    imagePullPolicy: Never
+    securityContext:
+      privileged: true
+    command: ["/init-gateway.sh"]
   containers:
   - name: gateway
     image: docker.io/tigera/egress-gateway:latest-amd64
@@ -961,7 +973,9 @@ spec:
           fieldPath: status.podIP
     imagePullPolicy: Never
     securityContext:
-      privileged: true
+      capabilities:
+        add: ["NET_ADMIN"]
+    command: ["/start-gateway.sh"]
     volumeMounts:
         - mountPath: /var/run
           name: policysync

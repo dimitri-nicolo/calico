@@ -1,6 +1,9 @@
 #!/bin/sh
 
-# Script to initialize settings for EGW
+# This script initializes settings necessary for EGW pods to run.
+# The reason for having a separate init script is that, this script
+# runs as part of an init container, which runs in privileged mode.
+# This allows us to run the EGW pods as non-privileged.
 
 set -e
 
