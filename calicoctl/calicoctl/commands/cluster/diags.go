@@ -27,10 +27,13 @@ const (
 )
 
 type diagOpts struct {
-	Config     string `docopt:"--config"`
-	Since      string `docopt:"--since"`
-	MaxLogs    int    `docopt:"--max-logs"`
-	FocusNodes string `docopt:"--focus-nodes"`
+	Cluster              bool // Only needed for Bind to work.
+	Diags                bool // Only needed for Bind to work.
+	Config               string
+	Since                string
+	MaxLogs              int
+	FocusNodes           string
+	AllowVersionMismatch bool
 }
 
 // Diags executes a series of kubectl exec commands to retrieve logs and resource information
@@ -44,9 +47,7 @@ Options:
      --since=<SINCE>           Only collect logs newer than provided relative duration, in seconds (s), minutes (m) or hours (h).
      --max-logs=<MAXLOGS>      Only collect up to this number of logs, for each kind of Calico component. [default: 5]
      --focus-nodes=<NODES>     Comma-separated list of nodes from which we should try first to collect logs.
-  -c --config=<CONFIG>         Path to the file containing connection configuration in
-                               YAML or JSON format.
-                               [default: ` + constants.DefaultConfigPath + `]
+  -c --config=<CONFIG>         Path to connection configuration file. [default: ` + constants.DefaultConfigPath + `]
      --allow-version-mismatch  Allow client and cluster versions mismatch.
 
 Description:
@@ -56,21 +57,27 @@ Description:
 	if err != nil {
 		return fmt.Errorf("Invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand.", strings.Join(args, " "))
 	}
+	fmt.Printf("DEBUG: parsedArgs=%v\n", parsedArgs)
 	if len(parsedArgs) == 0 {
 		return nil
 	}
 
-	err = common.CheckVersionMismatch(parsedArgs["--config"], parsedArgs["--allow-version-mismatch"])
-	if err != nil {
-		return err
-	}
-
 	var opts diagOpts
-	parsedArgs.Bind(&opts)
+	err = parsedArgs.Bind(&opts)
+	if err != nil {
+		return fmt.Errorf("error understanding options: %w", err)
+	}
+	fmt.Printf("DEBUG: opts=%#v\n", opts)
 
 	// Default --since to "0s", which kubectl understands as meaning all logs.
 	if opts.Since == "" {
 		opts.Since = "0s"
+	}
+	fmt.Printf("DEBUG: opts=%#v\n", opts)
+
+	err = common.CheckVersionMismatch(parsedArgs["--config"], parsedArgs["--allow-version-mismatch"])
+	if err != nil {
+		return err
 	}
 
 	return collectDiags(&opts)
