@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
 
 package server_test
 
@@ -71,7 +71,6 @@ type k8sClient struct {
 }
 
 var _ = Describe("Server Proxy to tunnel", func() {
-	fipsmode := false
 	var (
 		k8sAPI bootstrap.K8sClient
 
@@ -362,7 +361,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        clusterA,
-							Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(fipsmode, clusterACert)},
+							Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(clusterACert)},
 						},
 					}, metav1.CreateOptions{})
 					Expect(err).ShouldNot(HaveOccurred())
@@ -445,7 +444,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 						_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:        clusterB,
-								Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(fipsmode, clusterBCert)},
+								Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(clusterBCert)},
 							},
 						}, metav1.CreateOptions{})
 						Expect(err).ShouldNot(HaveOccurred())
@@ -615,7 +614,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        clusterA,
-					Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(fipsmode, cert)},
+					Annotations: map[string]string{server.AnnotationActiveCertificateFingerprint: utils.GenerateFingerprint(cert)},
 				},
 			}, metav1.CreateOptions{})
 			Expect(err).ShouldNot(HaveOccurred())

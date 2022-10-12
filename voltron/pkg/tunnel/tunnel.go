@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2022 Tigera, Inc. All rights reserved.
 
 // Package tunnel defines an authenticated tunnel API, that allows creating byte
 // pipes in both directions, initiated from either side of the tunnel.
@@ -100,7 +100,7 @@ func (d *dialer) Dial() (*Tunnel, error) {
 		if err != nil {
 			var xerr x509.UnknownAuthorityError
 			if errors.As(err, &xerr) {
-				log.WithError(err).Infof("tcp.tls.Dial failed: %s. fingerprint='%s' issuerCommonName='%s' subjectCommonName='%s'", xerr.Error(), utils.GenerateFingerprint(d.fipsModeEnabled, xerr.Cert), xerr.Cert.Issuer.CommonName, xerr.Cert.Subject.CommonName)
+				log.WithError(err).Infof("tcp.tls.Dial failed: %s. fingerprint='%s' issuerCommonName='%s' subjectCommonName='%s'", xerr.Error(), utils.GenerateFingerprint(xerr.Cert), xerr.Cert.Issuer.CommonName, xerr.Cert.Subject.CommonName)
 			} else {
 				log.WithError(err).Infof("dial attempt %d failed, will retry in %s", i, d.retryInterval.String())
 			}
