@@ -12,6 +12,7 @@ import (
 	"github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/argutils"
@@ -195,10 +196,18 @@ func collectSelectedNodeLogs(dir string, opts *diagOpts) error {
 }
 
 func collectDiagsForSelectedPods(dir string, opts *diagOpts, kubeClient *kubernetes.Clientset, nodeList []string, ns string, selector *v1.LabelSelector) {
-	// List pods matching the namespace and selector.
-	pl, err := kubeClient.CoreV1().Pods(ns).List(context.TODO(), v1.ListOptions{LabelSelector: selector.String()})
+
+	labelMap, err := v1.LabelSelectorAsMap(selector)
 	if err != nil {
-		fmt.Printf("ERROR listing pods in namespace %v matching '%v': %v\n", ns, selector.String(), err)
+		fmt.Printf("ERROR forming pod selector: %v\n", err)
+		return
+	}
+	selectorString := labels.SelectorFromSet(labelMap).String()
+
+	// List pods matching the namespace and selector.
+	pl, err := kubeClient.CoreV1().Pods(ns).List(context.TODO(), v1.ListOptions{LabelSelector: selectorString})
+	if err != nil {
+		fmt.Printf("ERROR listing pods in namespace %v matching '%v': %v\n", ns, selectorString, err)
 		return
 	}
 
