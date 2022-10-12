@@ -121,7 +121,7 @@ RUN yum install -y --setopt=tsflags=nodocs gcc \
        /usr/local/lib/ruby/gems/2.7.0/specifications/default/cgi-0.1.0.1.gemspec \
        /ruby-2.7.5.tar.gz \
        /ruby-2.7.5 \
- && yum remove -y make wget gcc gcc-c++ git patch \
+ && yum remove -y make wget gcc gcc-c++ git patch vim-minimal zlib-devel libcom_err-devel python3-libxml python3-libxml2 \
  && yum clean all
 
 ENV LD_PRELOAD=""
