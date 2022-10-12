@@ -1,0 +1,24 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    team: network-operators
+  name: fluentd-metrics
+spec:
+  endpoints:
+    - honorLabels: true
+      interval: 5s
+      port: fluentd-metrics-port
+      scheme: https
+      scrapeTimeout: 5s
+      tlsConfig:
+        caFile: /etc/pki/tls/certs/tigera-ca-bundle.crt
+        certFile: /calico-node-prometheus-client-tls/tls.crt
+        keyFile: /calico-node-prometheus-client-tls/tls.key
+        serverName: tigera-fluentd-prometheus-tls
+  namespaceSelector:
+    matchNames:
+      - tigera-fluentd
+  selector:
+    matchLabels:
+      k8s-app: fluentd-node

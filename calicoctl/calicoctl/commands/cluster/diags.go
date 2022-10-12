@@ -2,6 +2,8 @@
 package cluster
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -9,9 +11,15 @@ import (
 
 	"github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/kubernetes"
 
+	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/argutils"
+	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/clientmgr"
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/common"
 	"github.com/projectcalico/calico/calicoctl/calicoctl/commands/constants"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 )
 
 const (
@@ -19,18 +27,28 @@ const (
 	directoryName = "calico-diagnostics"
 )
 
+type diagOpts struct {
+	Cluster              bool // Only needed for Bind to work.
+	Diags                bool // Only needed for Bind to work.
+	Config               string
+	Since                string
+	MaxLogs              int
+	FocusNodes           string
+	AllowVersionMismatch bool
+}
+
 // Diags executes a series of kubectl exec commands to retrieve logs and resource information
 // for the configured cluster.
 func Diags(args []string) error {
 	doc := constants.DatastoreIntro + `Usage:
-  calicoctl cluster diags [--since=<SINCE>] [--config=<CONFIG>] [--allow-version-mismatch]
+  calicoctl cluster diags [options]
 
 Options:
   -h --help                    Show this screen.
-     --since=<SINCE>           Only collect logs newer than provided relative duration, in seconds (s), minutes (m) or hours (h)
-  -c --config=<CONFIG>         Path to the file containing connection configuration in
-                               YAML or JSON format.
-                               [default: ` + constants.DefaultConfigPath + `]
+     --since=<SINCE>           Only collect logs newer than provided relative duration, in seconds (s), minutes (m) or hours (h).
+     --max-logs=<MAXLOGS>      Only collect up to this number of logs, for each kind of Calico component. [default: 5]
+     --focus-nodes=<NODES>     Comma-separated list of nodes from which we should try first to collect logs.
+  -c --config=<CONFIG>         Path to connection configuration file. [default: ` + constants.DefaultConfigPath + `]
      --allow-version-mismatch  Allow client and cluster versions mismatch.
 
 Description:
@@ -40,28 +58,35 @@ Description:
 	if err != nil {
 		return fmt.Errorf("Invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand.", strings.Join(args, " "))
 	}
+	fmt.Printf("DEBUG: parsedArgs=%v\n", parsedArgs)
 	if len(parsedArgs) == 0 {
 		return nil
 	}
+
+	var opts diagOpts
+	err = parsedArgs.Bind(&opts)
+	if err != nil {
+		return fmt.Errorf("error understanding options: %w", err)
+	}
+	fmt.Printf("DEBUG: opts=%#v\n", opts)
+
+	// Default --since to "0s", which kubectl understands as meaning all logs.
+	if opts.Since == "" {
+		opts.Since = "0s"
+	}
+	fmt.Printf("DEBUG: opts=%#v\n", opts)
 
 	err = common.CheckVersionMismatch(parsedArgs["--config"], parsedArgs["--allow-version-mismatch"])
 	if err != nil {
 		return err
 	}
 
-	since := parsedArgs["--since"]
-	// Set a default if since flag was not specified
-	if since == nil {
-		since = "0s"
-	}
-	return collectDiags(since.(string))
+	return collectDiags(&opts)
 }
 
-func collectDiags(since string) error {
-	/*
-		// Ensure since value is valid with proper time unit
-		sinceFlag := argutils.ValidateSinceDuration(since)
-	*/
+func collectDiags(opts *diagOpts) error {
+	// Ensure since value is valid with proper time unit
+	argutils.ValidateSinceDuration(opts.Since)
 
 	// Ensure kubectl command is available (since we need it to access BGP information)
 	if err := common.KubectlExists(); err != nil {
@@ -87,9 +112,134 @@ func collectDiags(since string) error {
 	}
 
 	collectGlobalClusterInformation(dir)
+	err = collectSelectedNodeLogs(dir, opts)
+	if err != nil {
+		fmt.Printf("ERROR collecting logs from selected nodes: %v\n", err)
+	}
 	createArchive(rootDir)
 
 	return nil
+}
+
+func collectSelectedNodeLogs(dir string, opts *diagOpts) error {
+	// Create Kubernetes client from config or env vars.
+	kubeClient, _, _, err := clientmgr.GetClients(opts.Config)
+	if err != nil {
+		return fmt.Errorf("error creating clients: %w", err)
+	}
+	if kubeClient == nil {
+		return errors.New("can't create Kubernetes client on etcd datastore")
+	}
+
+	// If --focus-nodes is specified, put those node names at the start of the node list.
+	nodeList := strings.Split(opts.FocusNodes, ",")
+
+	// Keep track of nodes already in the list.
+	nodesAlreadyListed := set.New[string]()
+	for _, nodeName := range nodeList {
+		nodesAlreadyListed.Add(nodeName)
+	}
+
+	// Add all other nodes into the list.
+	nl, err := kubeClient.CoreV1().Nodes().List(context.TODO(), v1.ListOptions{})
+	if err != nil {
+		fmt.Printf("ERROR listing all nodes in cluster: %v\n", err)
+		// Continue because we can still use the --focus-nodes, if specified.
+	} else {
+		for _, node := range nl.Items {
+			if !nodesAlreadyListed.Contains(node.Name) {
+				nodeList = append(nodeList, node.Name)
+			}
+		}
+	}
+
+	// Iterate through all Calico/Tigera namespaces.
+	nsl, err := kubeClient.CoreV1().Namespaces().List(context.TODO(), v1.ListOptions{})
+	if err != nil {
+		// Fatal, can't identify our namespaces.
+		return fmt.Errorf("error listing namespaces: %w", err)
+	}
+	for _, ns := range nsl.Items {
+		if !(strings.Contains(ns.Name, "calico") || strings.Contains(ns.Name, "tigera")) {
+			continue
+		}
+
+		fmt.Printf("Collecting detailed diags for namespace %v...\n", ns.Name)
+
+		// Iterate through DaemonSets in this namespace.
+		dsl, err := kubeClient.AppsV1().DaemonSets(ns.Name).List(context.TODO(), v1.ListOptions{})
+		if err != nil {
+			fmt.Printf("ERROR listing DaemonSets in namespace %v: %v\n", ns.Name, err)
+			// Continue because deployments or other namespaces might work.
+		} else {
+			for _, ds := range dsl.Items {
+				collectDiagsForSelectedPods(dir, opts, kubeClient, nodeList, ns.Name, ds.Spec.Selector)
+			}
+		}
+
+		// Iterate through Deployments in this namespace.
+		dl, err := kubeClient.AppsV1().Deployments(ns.Name).List(context.TODO(), v1.ListOptions{})
+		if err != nil {
+			fmt.Printf("ERROR listing Deployments in namespace %v: %v\n", ns.Name, err)
+			// Continue because other namespaces might work.
+		} else {
+			for _, d := range dl.Items {
+				collectDiagsForSelectedPods(dir, opts, kubeClient, nodeList, ns.Name, d.Spec.Selector)
+			}
+		}
+	}
+	return nil
+}
+
+func collectDiagsForSelectedPods(dir string, opts *diagOpts, kubeClient *kubernetes.Clientset, nodeList []string, ns string, selector *v1.LabelSelector) {
+
+	labelMap, err := v1.LabelSelectorAsMap(selector)
+	if err != nil {
+		fmt.Printf("ERROR forming pod selector: %v\n", err)
+		return
+	}
+	selectorString := labels.SelectorFromSet(labelMap).String()
+
+	// List pods matching the namespace and selector.
+	pl, err := kubeClient.CoreV1().Pods(ns).List(context.TODO(), v1.ListOptions{LabelSelector: selectorString})
+	if err != nil {
+		fmt.Printf("ERROR listing pods in namespace %v matching '%v': %v\n", ns, selectorString, err)
+		return
+	}
+
+	// Map the pod names against their node names.
+	podNamesByNode := map[string][]string{}
+	for _, p := range pl.Items {
+		podNamesByNode[p.Spec.NodeName] = append(podNamesByNode[p.Spec.NodeName], p.Name)
+	}
+
+	nextNodeIndex := 0
+	for logsWanted := opts.MaxLogs; logsWanted > 0; {
+		// Get the next node name to look at.
+		if nextNodeIndex >= len(nodeList) {
+			// There are no more nodes we can look at.
+			break
+		}
+		nodeName := nodeList[nextNodeIndex]
+		nextNodeIndex++
+
+		for _, podName := range podNamesByNode[nodeName] {
+			fmt.Printf("Collecting detailed diags for pod %v in namespace %v on node %v...\n", podName, ns, nodeName)
+			collectDiagsForPod(dir, opts, kubeClient, nodeName, ns, podName)
+			logsWanted--
+			if logsWanted <= 0 {
+				break
+			}
+		}
+	}
+}
+
+func collectDiagsForPod(dir string, opts *diagOpts, kubeClient *kubernetes.Clientset, nodeName, ns, podName string) {
+	// Do kubectl logs, with --since and opts.Since.
+
+	// Do kubectl describe.
+
+	// If the pod is a calico-node pod, get dataplane and eBPF diags.
 }
 
 func collectCalicoResource(dir string) {

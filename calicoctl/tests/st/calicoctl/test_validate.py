@@ -24,8 +24,8 @@ from tests.st.utils.data import *
 logging.basicConfig(level=logging.DEBUG, format="%(message)s")
 logger = logging.getLogger(__name__)
 
-filebase = "test-data/licenses/"
-filebase_v3 = "test-data/v3/"
+licenses_dir = "test-data/licenses/"
+v3_dir = "test-data/v3/"
 
 class TestCalicoctlValidate(TestBase):
     """
@@ -40,14 +40,14 @@ class TestCalicoctlValidate(TestBase):
         - Expect error for non-license manifest (and non-zero exit code)
         - Expect success for valid license
         """
-        rc = calicoctl("validate -f %s" % (filebase+"expired-production-license.yaml"))
+        rc = calicoctl("validate -f %s" % (licenses_dir + "expired-production-license.yaml"))
         rc.assert_no_error()
 
-        rc = calicoctl("validate -f %s" % (filebase+"corrupt-license.yaml"))
+        rc = calicoctl("validate -f %s" % (licenses_dir + "corrupt-license.yaml"))
         rc.assert_error()
 
-        rc = calicoctl("validate -f %s" % (filebase_v3+"networkpolicy.yaml"))
+        rc = calicoctl("validate -f %s" % (v3_dir + "networkpolicy.yaml"))
         rc.assert_error()
 
-        rc = calicoctl("validate -f %s" % (filebase+"license.yaml"))
-        rc.assert_no_error
+        rc = calicoctl("validate -f %s" % self.find_valid_license())
+        rc.assert_no_error()

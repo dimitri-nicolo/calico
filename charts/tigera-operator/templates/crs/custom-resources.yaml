@@ -19,15 +19,3 @@ spec:
 {{ $installSpec | toYaml | indent 2 }}
 
 {{ end }}
-
-{{ if .Values.apiServer.enabled }}
-{{ $apiServerSpec := omit .Values.apiServer "enabled" }}
----
-
-apiVersion: operator.tigera.io/v1
-kind: APIServer
-metadata:
-  name: default
-spec:
-{{ $apiServerSpec | toYaml | indent 2 }}
-{{ end }}

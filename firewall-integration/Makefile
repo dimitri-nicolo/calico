@@ -2,6 +2,8 @@
 include ../metadata.mk
 
 PACKAGE_NAME    ?= github.com/projectcalico/calico/firewall-integration
+CONFIRM         ?= true
+BRANCH_NAME     ?= $(PIN_BRANCH)
 
 #############################################
 # Env vars related to packaging and releasing
@@ -37,7 +39,7 @@ VERSION_FLAGS   = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
 # BUILD BINARY
 ###############################################################################
 # This section builds the output binaries.
-build: bin/controller-$(ARCH)
+build: bin/firewall-integration-$(ARCH)
 
 # We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
 ifeq ($(ARCH), $(filter $(ARCH),amd64))
@@ -46,11 +48,11 @@ else
 CGO_ENABLED=0
 endif
 
-.PHONY: bin/controller-$(ARCH)
-bin/controller-$(ARCH): $(SRC_FILES)
+.PHONY: bin/firewall-integration-$(ARCH)
+bin/firewall-integration-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD_CGO) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/server/*.go'
+			go build -o $@ -v $(BUILD_TAGS) -ldflags "$(VERSION_FLAGS)" cmd/server/*.go'
 
 ###############################################################################
 # BUILD IMAGE
@@ -67,10 +69,10 @@ sub-image-%:
 	$(MAKE) image ARCH=$*
 
 .PHONY: image
-image: $(BUILD_IMAGES)
+image: $(FIREWALL_INTEGRATION_IMAGE)
 
 $(FIREWALL_INTEGRATION_IMAGE): $(FIREWALL_INTEGRATION_CONTAINER_CREATED)
-$(FIREWALL_INTEGRATION_CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) bin/controller-$(ARCH)
+$(FIREWALL_INTEGRATION_CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) bin/firewall-integration-$(ARCH)
 	$(DOCKER_BUILD) -t $(FIREWALL_INTEGRATION_IMAGE):latest-$(ARCH) -f docker-image/Dockerfile.$(ARCH) . --load
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
@@ -79,6 +81,7 @@ $(FIREWALL_INTEGRATION_CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) bin/c
 clean:
 	rm -rf bin
 	rm -f $(FIREWALL_INTEGRATION_CONTAINER_CREATED)
+	find . -name "*.coverprofile" -type f -delete
 	-docker image rm -f $$(docker images $(FIREWALL_INTEGRATION_IMAGE) -a -q)
 
 ###############################################################################
@@ -111,7 +114,7 @@ fv:
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ## Building the image is required for fvs.
-ci: clean build static-checks ut fv
+ci: clean image static-checks ut fv
 
 ## Deploys images to registry
-cd: image-all cd-common
+cd: image cd-common

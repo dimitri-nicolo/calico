@@ -138,7 +138,7 @@ func main() {
 			if err != nil {
 				log.WithError(err).Fatal("Failed to define Panorama address groups controller")
 			}
-			dagc, err := panorama.NewDynamicAddressGroupsController(ctx, k8sClient, calicoClient, panCli, cfg, h, &wg)
+			dagc, err := panorama.NewDynamicAddressGroupsController(ctx, k8sClient, calicoClient.GlobalNetworkSets(), panCli, cfg, h, &wg)
 			if err != nil {
 				log.Fatal("Failed to configure Panorama address groups controller")
 				return

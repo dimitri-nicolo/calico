@@ -142,7 +142,7 @@ fv: bin/calicoctl-linux-amd64 version-helper
 	while ! docker exec st-apiserver-6443 kubectl --server=https://127.0.0.1:6443 create clusterrolebinding anonymous-admin --clusterrole=cluster-admin --user=system:anonymous; do sleep 2; done
 
 	# Run the tests
-	$(DOCKER_RUN) $(CALICO_BUILD) sh -c 'cd /go/src/$(PACKAGE_NAME) && go test $(GO_TEST_ARGS) ./tests/fv'
+	$(DOCKER_RUN) -v $(SECRETS_PATH):/secrets $(CALICO_BUILD) sh -c 'cd /go/src/$(PACKAGE_NAME) && go test $(GO_TEST_ARGS) ./tests/fv'
 	# Cleanup
 	$(MAKE) stop-etcd
 	$(MAKE) stop-kubernetes-master KUBE_APISERVER_PORT=6443
@@ -172,6 +172,7 @@ st: bin/calicoctl-linux-amd64 version-helper
 		   --rm -t \
 		   -v $(CERTS_PATH):/home/user/certs \
 		   -v $(CURDIR):/code \
+		   -v $(SECRETS_PATH):/secrets \
 		   -v /var/run/docker.sock:/var/run/docker.sock \
 		   $(TEST_CONTAINER_NAME) \
 		   sh -c 'nosetests $(ST_TO_RUN) -sv --nologcapture  --with-xunit --xunit-file="/code/report/nosetests.xml" --with-timer $(ST_OPTIONS)'

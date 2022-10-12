@@ -63,7 +63,9 @@ report-dir:
 
 .PHONY: ut
 ut: report-dir
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_RUN) \
+		-v $(SECRETS_PATH):/secrets \
+		$(CALICO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
 			go test $(UNIT_TEST_FLAGS) $(addprefix $(PACKAGE_NAME)/,$(TEST_DIRS))'
 

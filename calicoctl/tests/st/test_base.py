@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
+import os.path
 from unittest import TestCase
 
 from tests.st.utils.utils import (get_ip, wipe_etcd, calicoctl)
@@ -39,3 +40,19 @@ class TestBase(TestCase):
 
     def wipe_etcd(self):
         wipe_etcd(self.ip)
+
+    def apply_license(self):
+        # Load valid license file from test-data, and then create it.
+        with open(self.find_valid_license()) as f:
+            license = "".join(f.readlines())
+            rc = calicoctl("create", data=license)
+            rc.assert_no_error()
+
+    @staticmethod
+    def find_valid_license():
+        home = os.getenv("HOME")
+        for p in ["/secrets", home + "/.banzai/secrets", home + "/secrets"]:
+            lic_path = p + "/license.yaml"
+            if os.path.exists(lic_path):
+                return lic_path
+        raise Exception("Failed to find a valid license")

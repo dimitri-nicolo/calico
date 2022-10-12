@@ -53,10 +53,10 @@ type AddressGroupsFilter set.Set[string]
 // dynamicAddressGroupsController implements the Controller interface for managing Panorama
 // dynamic address groups, syncing them to the Calico datastore as GlobalNetworkSet.
 type dynamicAddressGroupsController struct {
-	cache        rcache.ResourceCache
-	calicoClient clientv3.ProjectcalicoV3Interface
-	ctx          context.Context
-	cfg          *config.Config
+	cache            rcache.ResourceCache
+	globalNetworkSet clientv3.GlobalNetworkSetInterface
+	ctx              context.Context
+	cfg              *config.Config
 
 	// The controller's health report aggregator.
 	healthAggregator              *health.HealthAggregator
@@ -96,7 +96,7 @@ type dynamicAddressGroupsController struct {
 func NewDynamicAddressGroupsController(
 	ctx context.Context,
 	clientset *kubernetes.Clientset,
-	c clientv3.ProjectcalicoV3Interface,
+	gns clientv3.GlobalNetworkSetInterface,
 	pcl panutils.PanoramaClient,
 	cfg *config.Config,
 	h *health.HealthAggregator,
@@ -104,7 +104,7 @@ func NewDynamicAddressGroupsController(
 ) (controller.Controller, error) {
 	log.Trace("instantiating Panorama dynamic address groups controller")
 	dagc := &dynamicAddressGroupsController{
-		calicoClient:                  c,
+		globalNetworkSet:              gns,
 		ctx:                           ctx,
 		cfg:                           cfg,
 		deviceGroup:                   cfg.FwDeviceGroup,
@@ -155,23 +155,23 @@ func NewDynamicAddressGroupsController(
 	listFunc := func() (map[string]interface{}, error) {
 		log.Trace("Listing Panorama's address group GlobalNetworkSets Calico datastore")
 		// Get all GlobalNetworkSets from datastore.
-		globalNetworkSets, err := c.GlobalNetworkSets().List(ctx, metav1.ListOptions{})
+		globalNetworkSets, err := dagc.globalNetworkSet.List(ctx, metav1.ListOptions{})
 		if err != nil {
 			log.WithError(err).Error("Unexpected error querying GlobalNetworkSets")
 			return nil, err
 		}
 
 		globalNetworkSetsMap := make(map[string]interface{})
-		for _, globalNetworkSet := range globalNetworkSets.Items {
+		for _, gns := range globalNetworkSets.Items {
 			// Filter in only objects that are written by address groups controller.
-			if !dagc.isPanoramaGlobalNetworkSet(&globalNetworkSet) {
+			if !dagc.isPanoramaGlobalNetworkSet(&gns) {
 				continue
 			} else {
 				// Set the GlobalNetworkSet map values relevant to this controller.
 				// Names are unique identifiers.
-				key := globalNetworkSet.Name
+				key := gns.Name
 				destGlobalNetworkSet := &v3.GlobalNetworkSet{}
-				dagc.copyGlobalNetworkSet(destGlobalNetworkSet, globalNetworkSet)
+				dagc.copyGlobalNetworkSet(destGlobalNetworkSet, gns)
 				globalNetworkSetsMap[key] = *destGlobalNetworkSet
 			}
 		}
@@ -264,7 +264,7 @@ func (c *dynamicAddressGroupsController) syncToDatastore(key string) error {
 
 	// Start by looking up the existing entry if it already exists. Double check that the annotation
 	// indicates this resource is owned by the dynamic address groups controller.
-	currentGns, err := c.calicoClient.GlobalNetworkSets().Get(c.ctx, key, metav1.GetOptions{})
+	currentGns, err := c.globalNetworkSet.Get(c.ctx, key, metav1.GetOptions{})
 	if err != nil {
 		clog.WithError(err).Debugf("Error querying GlobalNetworkSets, with type %s", reflect.TypeOf(err))
 		if !kerrors.IsNotFound(err) {
@@ -284,7 +284,7 @@ func (c *dynamicAddressGroupsController) syncToDatastore(key string) error {
 		// The object does not exist in the cache (and therefore is not required) - delete from the
 		// datastore.
 		clog.Info("Deleting GlobalNetworkSet from Calico datastore")
-		err := c.calicoClient.GlobalNetworkSets().Delete(c.ctx, key, metav1.DeleteOptions{})
+		err := c.globalNetworkSet.Delete(c.ctx, key, metav1.DeleteOptions{})
 		if err != nil && !kerrors.IsNotFound(err) {
 			clog.WithError(err).Infof("Unexpected error deleting GlobalNetworkSet: %s", key)
 			// We hit an error other than "not found".
@@ -298,7 +298,7 @@ func (c *dynamicAddressGroupsController) syncToDatastore(key string) error {
 
 	if currentGns == nil {
 		clog.Info("Creating GlobalNetworkSet in Calico datastore")
-		if _, err = c.calicoClient.GlobalNetworkSets().Create(c.ctx, &requiredGns, metav1.CreateOptions{}); err != nil {
+		if _, err = c.globalNetworkSet.Create(c.ctx, &requiredGns, metav1.CreateOptions{}); err != nil {
 			clog.WithError(err).Infof("Error creating GlobalNetworkSet in Calico datastore: %#v", requiredGns)
 			return err
 		}
@@ -306,7 +306,7 @@ func (c *dynamicAddressGroupsController) syncToDatastore(key string) error {
 		// Copies all necessary fields, only if any of them differ.
 		clog.Info("Updating GlobalNetworkSet in Calico datastore")
 		c.copyGlobalNetworkSet(currentGns, requiredGns)
-		if _, err = c.calicoClient.GlobalNetworkSets().Update(c.ctx, currentGns, metav1.UpdateOptions{}); err != nil {
+		if _, err = c.globalNetworkSet.Update(c.ctx, currentGns, metav1.UpdateOptions{}); err != nil {
 			clog.WithError(err).Infof("Error updating GlobalNetworkSet in Calico datastore: %#v", currentGns)
 			return err
 		}

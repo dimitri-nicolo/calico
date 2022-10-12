@@ -1,0 +1,24 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    team: network-operators
+  name: elasticsearch-metrics
+spec:
+  endpoints:
+    - honorLabels: true
+      interval: 5s
+      port: metrics-port
+      scheme: https
+      scrapeTimeout: 5s
+      tlsConfig:
+        caFile: /etc/pki/tls/certs/tigera-ca-bundle.crt
+        certFile: /calico-node-prometheus-client-tls/tls.crt
+        keyFile: /calico-node-prometheus-client-tls/tls.key
+        serverName: tigera-elasticsearch-metrics
+  namespaceSelector:
+    matchNames:
+      - tigera-elasticsearch
+  selector:
+    matchLabels:
+      k8s-app: tigera-elasticsearch-metrics

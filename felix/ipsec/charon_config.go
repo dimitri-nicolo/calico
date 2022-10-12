@@ -177,7 +177,7 @@ func NewCharonConfig(rootDir, configFile string) *CharonConfig {
 
 	// Main config file should exists.
 	if _, err := os.Stat(mainConfig); os.IsNotExist(err) {
-		log.Panicf("Main config file not exists for charon")
+		log.WithField("path", mainConfig).Panic("Main config file not exists for charon")
 	}
 
 	return &CharonConfig{

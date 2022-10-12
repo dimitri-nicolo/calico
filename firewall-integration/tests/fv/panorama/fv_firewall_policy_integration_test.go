@@ -28,8 +28,8 @@ import (
 	"github.com/projectcalico/calico/firewall-integration/pkg/config"
 	pan "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama"
 	panutils "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils"
-	panutilmocks "github.com/projectcalico/calico/firewall-integration/pkg/controllers/panorama/utils/mocks"
 	"github.com/projectcalico/calico/firewall-integration/pkg/util"
+	panutilmocks "github.com/projectcalico/calico/firewall-integration/tests/mocks"
 
 	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/kube-controllers/tests/testutils"
