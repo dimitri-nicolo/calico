@@ -1,6 +1,9 @@
 #!/bin/sh
 
-# Script to start egress gateway pod
+# This script initializes settings necessary for EGW pods to run.
+# The reason for having a separate init script is that, this script
+# runs as part of an init container, which runs in privileged mode.
+# This allows us to run the EGW pods as non-privileged.
 
 set -e
 
@@ -19,15 +22,12 @@ iptables=iptables-${IPTABLES_BACKEND}
 
 : ${EGRESS_VXLAN_PORT:=4790}
 
-: ${DAEMON_LOG_SEVERITY:=info}
-
-: ${DAEMON_SOCKET_PATH:=/var/run/nodeagent/socket}
-
 if [ -z "$EGRESS_POD_IP" ]
 then
     echo "EGRESS_POD_IP not defined."
     exit 1
 fi
+
 MAC=`echo $EGRESS_POD_IP | awk -F. '{printf "a2:2a:%02x:%02x:%02x:%02x", $1, $2, $3, $4}'`
 
 echo Egress VXLAN VNI: $EGRESS_VXLAN_VNI  VXLAN PORT: $EGRESS_VXLAN_PORT VXLAN MAC: $MAC Pod IP: $EGRESS_POD_IP
@@ -44,6 +44,3 @@ echo Configure network settings
 echo 1 > /proc/sys/net/ipv4/ip_forward
 echo 0 > /proc/sys/net/ipv4/conf/all/rp_filter
 echo 0 > /proc/sys/net/ipv4/conf/vxlan0/rp_filter
-
-echo Egress gateway starting...
-/egressd start $EGRESS_POD_IP --log-severity $DAEMON_LOG_SEVERITY --vni $EGRESS_VXLAN_VNI --socket-path $DAEMON_SOCKET_PATH
