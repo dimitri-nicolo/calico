@@ -631,22 +631,30 @@ func collectGlobalClusterInformation(dir string) {
 
 // func collectDiagsForPod(pod, namespace, dir /*node_name*/, sinceFlag string) {
 func collectDiagsForPod(dir string, opts *diagOpts, kubeClient *kubernetes.Clientset, nodeName, namespace, podName string) {
+	nodeDir := fmt.Sprintf("%s/%s", dir, nodeName)
+	if _, err := os.Stat(nodeDir); errors.Is(err, os.ErrNotExist) {
+		err := os.Mkdir(nodeDir, os.ModePerm)
+		if err != nil {
+			fmt.Printf("error creating node diagnostics directory: %v", err)
+			return
+		}
+	}
 	fmt.Printf("Collecting diags for pod: %s\n", podName)
 	common.ExecAllCmdsWriteToFile([]common.Cmd{
 		{
 			Info:     fmt.Sprintf("Collect logs for pod %s", podName),
 			CmdStr:   fmt.Sprintf("kubectl logs --since=%s -n %s %s", opts.Since, namespace, podName),
-			FilePath: fmt.Sprintf("%s/%s.log", dir, podName),
+			FilePath: fmt.Sprintf("%s/%s.log", nodeDir, podName),
 		},
 		{
 			Info:     fmt.Sprintf("Collect describe for pod %s", podName),
 			CmdStr:   fmt.Sprintf("kubectl -n %s describe pods %s", namespace, podName),
-			FilePath: fmt.Sprintf("%s/%s-describe.txt", dir, podName),
+			FilePath: fmt.Sprintf("%s/%s-describe.txt", nodeDir, podName),
 		},
 	})
 
 	if strings.Contains(podName, "calico-node") {
-		collectCalicoNodeDiags(dir, opts, kubeClient, nodeName, namespace, podName)
+		collectCalicoNodeDiags(nodeDir, opts, kubeClient, nodeName, namespace, podName)
 	}
 }
 
