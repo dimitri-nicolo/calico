@@ -1,6 +1,6 @@
 #!/bin/bash
 
 set -e
-
-cd .git/hooks
+mydir=$(dirname $0)
+cd $mydir/../.git/hooks
 ln -sf ../../git-hooks/* ./
