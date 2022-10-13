@@ -43,8 +43,26 @@ var _ = Describe("Clusters", func() {
 		})
 
 		It("should be possible to add a cluster", func() {
-			Expect(k8sAPI.AddCluster(clusterID, clusterName, nil)).ShouldNot(HaveOccurred())
+			annotations := map[string]string{
+				AnnotationActiveCertificateFingerprint: "active-fingerprint-hash-1",
+			}
+			Expect(k8sAPI.AddCluster(clusterID, clusterName, annotations)).ShouldNot(HaveOccurred())
 			Eventually(func() int { return len(clusters.List()) }).Should(Equal(1))
+		})
+
+		It("should be able to update cluster active fingerprint", func() {
+			Expect(clusters.clusters[clusterID].ActiveFingerprint).To(Equal("active-fingerprint-hash-1"))
+			mc, err := k8sAPI.ManagedClusters().Get(ctx, clusterID, metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(mc.GetAnnotations()).To(HaveKeyWithValue(AnnotationActiveCertificateFingerprint, "active-fingerprint-hash-1"))
+
+			err = clusters.clusters[clusterID].updateFingerprint("active-fingerprint-hash-2")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(clusters.clusters[clusterID].ActiveFingerprint).To(Equal("active-fingerprint-hash-2"))
+			mc, err = k8sAPI.ManagedClusters().Get(ctx, clusterID, metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(mc.GetAnnotations()).To(HaveKeyWithValue(AnnotationActiveCertificateFingerprint, "active-fingerprint-hash-2"))
 		})
 
 		It("should be possible to delete a cluster", func() {

@@ -5,7 +5,6 @@ package server
 import (
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -48,6 +47,24 @@ type cluster struct {
 	tlsProxy vtls.Proxy
 }
 
+func (c *cluster) updateFingerprint(fingerprint string) error {
+	mc, err := c.k8sCLI.ManagedClusters().Get(context.Background(), c.ID, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	mc.Annotations[AnnotationActiveCertificateFingerprint] = fingerprint
+	_, err = c.k8sCLI.ManagedClusters().Update(context.Background(), mc, metav1.UpdateOptions{})
+	if err != nil {
+		return err
+	}
+
+	c.Lock()
+	c.ActiveFingerprint = fingerprint
+	c.Unlock()
+
+	return nil
+}
+
 type clusters struct {
 	sync.RWMutex
 	clusters        map[string]*cluster
@@ -60,16 +77,6 @@ type clusters struct {
 	defaultForwardServerName        string
 	defaultForwardDialRetryAttempts int
 	defaultForwardDialRetryInterval time.Duration
-}
-
-func returnJSON(w http.ResponseWriter, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		log.Error("Error while encoding data for response")
-		// TODO: We need named errors, with predefined
-		// error codes and user-friendly error messages here
-		http.Error(w, "\"An error occurred\"", 500)
-	}
 }
 
 func (cs *clusters) add(mc *jclust.ManagedCluster) (*cluster, error) {

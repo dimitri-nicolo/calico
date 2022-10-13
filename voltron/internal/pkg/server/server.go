@@ -4,8 +4,11 @@ package server
 
 import (
 	"context"
+	"crypto/md5"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"net/http"
@@ -17,19 +20,17 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/client-go/rest"
+
+	"github.com/projectcalico/calico/apiserver/pkg/authentication"
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
+	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
-
-	"github.com/projectcalico/calico/lma/pkg/auth"
-
-	"github.com/projectcalico/calico/apiserver/pkg/authentication"
-
-	"k8s.io/apiserver/pkg/authentication/user"
-	"k8s.io/client-go/rest"
 )
 
 const (
@@ -234,10 +235,36 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 				return
 
 			}
-			if fingerprint != c.ActiveFingerprint {
-				log.Error("Stored fingerprint does not match provided fingerprint")
-				closeTunnel(t)
-				return
+			// Before Calico Enterprise v3.15, we use md5 hash algorithm for the managed cluster
+			// certificate fingerprint. md5 is known to cause collisions and it is not approved in
+			// FIPS mode. From v3.15, we are upgrading the active fingerprint to use sha256 hash algorithm.
+			if hex.DecodedLen(len(c.ActiveFingerprint)) == sha256.Size {
+				if fingerprint != c.ActiveFingerprint {
+					log.Error("Stored fingerprint does not match provided fingerprint")
+					closeTunnel(t)
+					return
+				}
+			} else {
+				// check pre-v3.15 fingerprint (md5)
+				if id, ok := t.Identity().(*x509.Certificate); ok {
+					fingerprintMD5 := fmt.Sprintf("%x", md5.Sum(id.Raw))
+					if fingerprintMD5 == c.ActiveFingerprint {
+						// update to v3.15 fingerprint hash (sha256) when matched
+						if err := c.updateFingerprint(fingerprint); err != nil {
+							log.WithError(err).Warnf("failed to update cluster %s stored fingerprint %s", clusterID, fingerprintMD5)
+						} else {
+							log.Infof("cluster %s stored fingerprint is updated to %s (from %s).", clusterID, fingerprint, fingerprintMD5)
+						}
+					} else {
+						log.Error("Stored fingerprint does not match provided fingerprint")
+						closeTunnel(t)
+						return
+					}
+				} else {
+					log.Errorf("Unknown tunnel identity type %T", t.Identity())
+					closeTunnel(t)
+					return
+				}
 			}
 
 			if err := c.assignTunnel(t); err != nil {

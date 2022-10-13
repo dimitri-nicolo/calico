@@ -4,6 +4,7 @@ package server_test
 
 import (
 	"context"
+	"crypto/md5"
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
@@ -58,6 +59,8 @@ var (
 
 	// Tokens issued by k8s.
 	janeBearerToken = testing.NewFakeJWT(k8sIssuer, "jane@example.io")
+
+	watchSync chan error
 )
 
 func init() {
@@ -277,6 +280,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(400))
 			})
+
 			It("Should not proxy anywhere - multiple headers", func() {
 				tr := &http.Transport{
 					TLSClientConfig: &tls.Config{
@@ -536,6 +540,141 @@ var _ = Describe("Server Proxy to tunnel", func() {
 		})
 	})
 
+	Context("ManagedCluster active fingerprint validation and upgrade", func() {
+		var (
+			tunnelAddr    string
+			srvWg         *sync.WaitGroup
+			srv           *server.Server
+			defaultServer *httptest.Server
+		)
+
+		BeforeEach(func() {
+			var err error
+
+			mockAuthenticator := new(auth.MockJWTAuth)
+			mockAuthenticator.On("Authenticate", mock.Anything).Return(
+				&user.DefaultInfo{
+					Name:   "jane@example.io",
+					Groups: []string{"developers"},
+				}, 0, nil)
+
+			defaultServer = httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					// Echo the token, such that we can determine if the auth header was successfully swapped.
+					w.Header().Set(authentication.AuthorizationHeader, r.Header.Get(authentication.AuthorizationHeader))
+				}))
+
+			defaultURL, err := url.Parse(defaultServer.URL)
+			Expect(err).NotTo(HaveOccurred())
+
+			defaultProxy, e := proxy.New([]proxy.Target{
+				{Path: "/", Dest: defaultURL},
+				{Path: "/compliance/", Dest: defaultURL},
+			})
+			Expect(e).NotTo(HaveOccurred())
+
+			tunnelTargetWhitelist, err := regex.CompileRegexStrings([]string{`^/$`, `^/some/path$`})
+			Expect(err).ShouldNot(HaveOccurred())
+
+			k8sTargets, err := regex.CompileRegexStrings([]string{`^/api/?`, `^/apis/?`})
+			Expect(err).ShouldNot(HaveOccurred())
+
+			watchSync = make(chan error)
+			srv, _, tunnelAddr, srvWg = createAndStartServer(k8sAPI,
+				config,
+				mockAuthenticator,
+				server.WithTunnelSigningCreds(voltronTunnelCert),
+				server.WithTunnelCert(voltronTunnelTLSCert),
+				server.WithExternalCreds(test.CertToPemBytes(voltronExtHttpsCert), test.KeyToPemBytes(voltronExtHttpsPrivKey)),
+				server.WithInternalCreds(test.CertToPemBytes(voltronIntHttpsCert), test.KeyToPemBytes(voltronIntHttpsPrivKey)),
+				server.WithDefaultProxy(defaultProxy),
+				server.WithKubernetesAPITargets(k8sTargets),
+				server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
+			)
+		})
+
+		AfterEach(func() {
+			Expect(srv.Close()).NotTo(HaveOccurred())
+			defaultServer.Close()
+			srvWg.Wait()
+		})
+
+		It("should update md5 fingerprint to sha256 when matched", func() {
+			certTemplate := test.CreateClientCertificateTemplate(clusterA, "localhost")
+			privKey, cert, err := test.CreateCertPair(certTemplate, voltronTunnelCert, voltronTunnelPrivKey)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: clusterA,
+					Annotations: map[string]string{
+						server.AnnotationActiveCertificateFingerprint: fmt.Sprintf("%x", md5.Sum(cert.Raw)), // old md5 sum
+					},
+				},
+			}, metav1.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			list, err := k8sAPI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(list.Items).To(HaveLen(1))
+
+			tlsCert, err := test.X509CertToTLSCert(cert, privKey)
+			Expect(err).NotTo(HaveOccurred())
+
+			t, err := tunnel.DialTLS(tunnelAddr, &tls.Config{
+				Certificates: []tls.Certificate{tlsCert},
+				RootCAs:      voltronTunnelCAs,
+				ServerName:   "voltron",
+			}, 5*time.Second)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func() string {
+				mc, err := k8sAPI.ManagedClusters().Get(context.Background(), clusterA, metav1.GetOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				return mc.Annotations[server.AnnotationActiveCertificateFingerprint]
+			}, 3*time.Second, 500*time.Millisecond).Should(Equal(utils.GenerateFingerprint(cert))) // new sha256 sum
+
+			Expect(t.Close()).NotTo(HaveOccurred())
+		})
+
+		It("should not modify md5 fingerprint if not matched", func() {
+			certTemplate := test.CreateClientCertificateTemplate(clusterB, "localhost")
+			privKey, cert, err := test.CreateCertPair(certTemplate, voltronTunnelCert, voltronTunnelPrivKey)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: clusterB,
+					Annotations: map[string]string{
+						server.AnnotationActiveCertificateFingerprint: "md5-sum-can-not-be-matched",
+					},
+				},
+			}, metav1.CreateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			list, err := k8sAPI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(list.Items).To(HaveLen(1))
+
+			tlsCert, err := test.X509CertToTLSCert(cert, privKey)
+			Expect(err).NotTo(HaveOccurred())
+
+			t, err := tunnel.DialTLS(tunnelAddr, &tls.Config{
+				Certificates: []tls.Certificate{tlsCert},
+				RootCAs:      voltronTunnelCAs,
+				ServerName:   "voltron",
+			}, 5*time.Second)
+			Expect(err).NotTo(HaveOccurred())
+
+			// wait for one cycle of clusters.watchK8sFrom() to complete
+			Expect(<-watchSync).NotTo(HaveOccurred())
+
+			mc, err := k8sAPI.ManagedClusters().Get(context.Background(), clusterB, metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(mc.Annotations[server.AnnotationActiveCertificateFingerprint]).To(Equal("md5-sum-can-not-be-matched"))
+
+			Expect(t.Close()).NotTo(HaveOccurred())
+		})
+	})
+
 	Context("Voltron tunnel configured with tls certificate with invalid Key Extension", func() {
 		var (
 			wg            *sync.WaitGroup
@@ -692,7 +831,7 @@ func createAndStartServer(k8sAPI bootstrap.K8sClient, config *rest.Config, authe
 	}()
 
 	go func() {
-		_ = srv.WatchK8s()
+		_ = srv.WatchK8sWithSync(watchSync)
 	}()
 
 	return srv, lisHTTPS.Addr().String(), lisTun.Addr().String(), &wg
