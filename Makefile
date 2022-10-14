@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/l7-collector
-GO_BUILD_VER    ?= v0.73.2
+GO_BUILD_VER    ?= v0.75
 GIT_USE_SSH     := true
 
 ORGANIZATION=tigera
