@@ -56,15 +56,6 @@ CALICO_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '[0].title')
 ###############################################################################
 include ../lib.Makefile
 
-##############################################################################
-# Always install the git hooks to prevent publishing closed source code to a non-private repo.
-hooks_installed:=$(shell ./install-git-hooks)
-
-.PHONY: install-git-hooks
-## Install Git hooks
-install-git-hooks:
-	./install-git-hooks
-
 ## Serve a local view of your current site on port 4000
 serve:
 	# We have to override JEKYLL_DOCKER_TAG which is usually set to 'pages'.

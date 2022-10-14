@@ -324,9 +324,6 @@ $(FELIX_CONTAINER_CREATED): docker-image/calico-felix-wrapper \
 # FIXME re-enable linting once we figure out why the linter barfs on this repo.
 LINT_ARGS = --disable gosimple,unused,staticcheck,govet,errcheck,structcheck,varcheck,deadcode,ineffassign --max-issues-per-linter 0 --max-same-issues 0 --timeout 8m
 
-# Always install the git hooks to prevent publishing closed source code to a non-private repo.
-hooks_installed:=$(shell ./install-git-hooks)
-
 .PHONY: golangci-lint
 golangci-lint: $(LIBBPF_A) $(GENERATED_FILES)
 	$(DOCKER_GO_BUILD_CGO) golangci-lint run $(LINT_ARGS)
