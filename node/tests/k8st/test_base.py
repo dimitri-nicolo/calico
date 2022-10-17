@@ -412,9 +412,12 @@ EOF
 
     @property
     def ip(self):
-        if not self._ip:
+        start_time = time.time()
+        while not self._ip:
+            assert time.time() - start_time < 30, "Pod failed to get IP address within 30s"
             self._ip = run("kubectl get po %s -n %s -o json | jq '.status.podIP'" %
                            (self.name, self.ns)).strip().strip('"')
+            time.sleep(0.1)
         return self._ip
 
     @property

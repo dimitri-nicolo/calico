@@ -125,6 +125,8 @@ EOF
             gw = self.create_gateway_pod("kind-worker", "gw", self.egress_cidr)
             gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr)
             gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr)
+            for g in [gw, gw2, gw3]:
+                g.wait_ready()
 
             # Prepare nine external servers with random port number.
             # The number is three times of the number of gateway pods to make sure
@@ -183,6 +185,8 @@ EOF
             gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr)
             gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr)
             gw_ips = [gw.ip, gw2.ip, gw3.ip]
+            for g in [gw, gw2, gw3]:
+                g.wait_ready()
 
             self.check_ecmp_routes(client, servers, gw_ips, allowed_untaken_count=1)
 
@@ -201,6 +205,8 @@ EOF
             # red gateways, same host, same namespaces
             gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr, ns="ns3")
             gw3_1 = self.create_gateway_pod("kind-worker3", "gw3-1", self.egress_cidr, ns="ns3")
+            for g in [gw, gw2, gw2_1, gw3, gw3_1]:
+                g.wait_ready()
 
             # Prepare nine external servers with random port number.
             # The number is three times of the number of gateway pods to make sure
@@ -289,6 +295,8 @@ EOF
             # Create two gateway pods
             gw_red = self.create_gateway_pod("kind-worker", "gw-red", self.egress_cidr)
             gw_blue = self.create_gateway_pod("kind-worker2", "gw-blue", self.egress_cidr, color="blue")
+            for g in [gw_blue, gw_red]:
+                g.wait_ready()
 
             # Create namespace for client pods with egress annotations on red gateway.
             client_ns = "ns-client"
@@ -356,29 +364,51 @@ EOF
             retry_until_success(client.cannot_connect, retries=3, wait_time=3, function_kwargs={"ip": server.ip, "port": server.port})
 
     def test_egress_ip_with_policy_to_gateway(self):
-
         with DiagsCollector():
-            client, server, _ = self.setup_client_server_gateway("kind-worker2")
+            client, server, gw = self.setup_client_server_gateway("kind-worker2")
+            # Note: setup_client_server_gateway checks the baseline connectivity.
 
-            # Deny egress from client to server.
+            # Start by denying all egress traffic from the client.  Otherwise, we can't be sure that our allow
+            # policy is actually what makes the difference.
             calicoctl("""apply -f - << EOF
 apiVersion: projectcalico.org/v3
 kind: GlobalNetworkPolicy
 metadata:
-  name: deny-egress-to-gateway
+  name: deny-egress
 spec:
+  order: 100
   selector: app == 'client'
   types:
   - Egress
   egress:
   - action: Deny
-    protocol: TCP
-    destination:
-      selector: color == 'red'
 EOF
 """)
-            self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy deny-egress-to-gateway"))
+            self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy deny-egress"))
             retry_until_success(client.cannot_connect, retries=3, wait_time=1, function_kwargs={"ip": server.ip, "port": server.port})
+
+            # Allow egress to the server only (there's no need to allow egress to the gateway).
+            calicoctl("""apply -f - << EOF
+apiVersion: projectcalico.org/v3
+kind: GlobalNetworkPolicy
+metadata:
+  name: allow-to-server
+spec:
+  order: 99
+  selector: app == 'client'
+  types:
+  - Egress
+  egress:
+  - action: Allow
+    protocol: TCP
+    destination:
+      nets:
+      - "%s/32"
+EOF
+""" % server.ip)
+            self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy allow-to-server"))
+            retry_until_success(client.can_connect, retries=3, wait_time=1, function_kwargs={"ip": server.ip, "port": server.port})
+            self.validate_egress_ip(client, server, gw.ip)
 
     def test_gateway_termination_annotations(self):
 
@@ -388,6 +418,8 @@ EOF
             gw = self.create_gateway_pod("kind-worker", "gw", self.egress_cidr, "red", "default", termination_grace_period)
             gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr, "red", "default", termination_grace_period)
             gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr, "red", "default", termination_grace_period)
+            for g in [gw, gw2, gw3]:
+                g.wait_ready()
 
             # Create client.
             _log.info("ecmp create client")
@@ -426,6 +458,8 @@ EOF
             gw_red = self.create_gateway_pod("kind-worker", "gw-red", self.egress_cidr)
             gw_blue = self.create_gateway_pod("kind-worker2", "gw-blue",
                     self.egress_cidr, color="blue")
+            for g in [gw_blue, gw_red]:
+                g.wait_ready()
 
             # Create namespace for client pods with egress annotations on red gateway.
             client_ns = "ns-client"
@@ -516,6 +550,8 @@ EOF
             gw1 = self.create_gateway_pod("kind-worker", "gw1", self.egress_cidr)
             gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr)
             gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr)
+            for g in [gw1, gw2, gw3]:
+                g.wait_ready()
             _log.info("test_max_hops_pod_annotation: created gw pods [%s, %s, %s]", gw1.ip, gw2.ip, gw3.ip)
 
             # Create three clients on the same node with maxNextHops set to 2.
@@ -583,6 +619,8 @@ EOF
             gw1 = self.create_gateway_pod("kind-worker", "gw1", self.egress_cidr, ns=client_ns)
             gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr, ns=client_ns)
             gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr, ns=client_ns)
+            for g in [gw1, gw2, gw3]:
+                g.wait_ready()
             _log.info("test_max_hops_namespace_annotation: created gw pods [%s, %s, %s]", gw1.ip, gw2.ip, gw3.ip)
 
             # Create three clients without annotations on the same node with maxNextHops set to 2.
@@ -643,6 +681,8 @@ EOF
             gw1 = self.create_gateway_pod("kind-worker", "gw1", self.egress_cidr)
             gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr)
             gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr)
+            for g in [gw1, gw2, gw3]:
+                g.wait_ready()
             _log.info("test_max_hops: created gw pods [%s, %s, %s]", gw1.ip, gw2.ip, gw3.ip)
 
             # Create three clients on the same node with maxNextHops set to 2.
@@ -864,8 +904,8 @@ EOF
         self.add_cleanup(server.kill)
         server.wait_running()
 
-        # Create egress gateway, with an IP from that pool.
-        gateway = self.create_gateway_pod(gateway_node, "gw", self.egress_cidr)
+        # Create egress gateway, with an IP from that pool.  Configure it to ping the server.
+        gateway = self.create_gateway_pod(gateway_node, "gw", self.egress_cidr, icmp_probes=server.ip)
 
         client_ns = "default"
         client = NetcatClientTCP(client_ns, "test1", node="kind-worker", labels={"app": "client"}, annotations={
@@ -877,6 +917,7 @@ EOF
 
         # Give the server a route back to the egress IP.
         self.server_add_route(server, gateway)
+        gateway.wait_ready()
 
         self.validate_egress_ip(client, server, gateway.ip)
 
@@ -932,7 +973,7 @@ spec:
 
         return pod.ip, svc_ip, 8080, int(node_port)
 
-    def create_gateway_pod(self, host, name, egress_cidr, color="red", ns="default", termgraceperiod=0):
+    def create_gateway_pod(self, host, name, egress_cidr, color="red", ns="default", termgraceperiod=0, probe_url="", icmp_probes=""):
         """
         Create egress gateway pod, with an IP from that pool.
         """
@@ -967,6 +1008,31 @@ spec:
   - name: gateway
     image: docker.io/tigera/egress-gateway:latest-amd64
     env:
+    # Optional: comma-delimited list of IP addresses to send ICMP pings to; if all probes fail, the egress
+    # gateway will report non-ready.
+    - name: ICMP_PROBES
+      value: "%s"
+    # Only used if ICMP_PROBES is non-empty: interval to send probes.
+    - name: ICMP_PROBE_INTERVAL
+      value: "5s"
+    # Only used if ICMP_PROBES is non-empty: timeout on each probe.
+    - name: ICMP_PROBE_TIMEOUT
+      value: "15s"
+    # Optional HTTP URL to send periodic probes to; if the probe fails that is reflected in 
+    # the health reported on the health port.
+    - name: HTTP_PROBE_URL
+      value: "%s"
+    # Only used if HTTP_PROBE_URL is non-empty: interval to send probes.
+    - name: HTTP_PROBE_INTERVAL
+      value: "10s"
+    # Only used if HTTP_PROBE_URL is non-empty: timeout before reporting non-ready if there are no successful probes.
+    - name: HTTP_PROBE_TIMEOUT
+      value: "30s"
+    # Port that the egress gateway serves its health reports.  Must match the readiness probe and health
+    # port defined below.
+    - name: HEALTH_PORT
+      value: "8080"
+    # Use downward API to tell the pod its own IP address.
     - name: EGRESS_POD_IP
       valueFrom:
         fieldRef:
@@ -979,15 +1045,23 @@ spec:
     volumeMounts:
         - mountPath: /var/run
           name: policysync
+    ports:
+        - name: health
+          containerPort: 8080
+    readinessProbe:
+        httpGet:
+          path: /readiness
+          port: 8080
+        initialDelaySeconds: 3
+        periodSeconds: 3
   nodeName: %s
   terminationGracePeriodSeconds: %d
   volumes:
       - flexVolume:
           driver: nodeagent/uds
         name: policysync
-""" % (egress_cidr, color, name, ns, host, termgraceperiod))
+""" % (egress_cidr, color, name, ns, icmp_probes, probe_url, host, termgraceperiod))
         self.add_cleanup(gateway.delete)
-        gateway.wait_ready()
 
         return gateway
 
