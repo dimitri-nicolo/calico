@@ -1,0 +1,65 @@
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  annotations:
+    seccomp.security.alpha.kubernetes.io/allowedProfileNames: '*'
+  name: tigera-egress-gateway
+spec:
+  allowPrivilegeEscalation: true
+  allowedCapabilities:
+  - 'NET_ADMIN'
+  fsGroup:
+    rule: RunAsAny
+  hostIPC: true
+  hostNetwork: true
+  hostPID: true
+  hostPorts:
+  - max: 65535
+    min: 0
+  privileged: true
+  runAsUser:
+    rule: RunAsAny
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  volumes:
+  - csi
+  - projected
+
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tigera-egress-gateway
+rules:
+- apiGroups:
+  - policy
+  resourceNames:
+  - tigera-egress-gateway
+  resources:
+  - podsecuritypolicies
+  verbs:
+  - use
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tigera-egress-gateway
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name:  tigera-egress-gateway
+subjects:
+- kind: ServiceAccount
+  name:  tigera-egress-gateway
+  namespace: default
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tigera-egress-gateway
+  namespace: default
