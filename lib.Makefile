@@ -1,3 +1,9 @@
+# Find path to the repo root dir (i.e. this files's dir).  Must be first in the file, before including anything.
+REPO_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+
+# Always install the git hooks to prevent publishing closed source code to a non-private repo.
+install_hooks:=$(shell $(REPO_DIR)/hack/install-git-hooks)
+
 # Disable built-in rules
 .SUFFIXES:
 
@@ -588,7 +594,7 @@ pre-commit:
 
 .PHONY: install-git-hooks
 install-git-hooks:
-	./install-git-hooks
+	$(REPO_DIR)/install-git-hooks
 
 .PHONY: check-module-path-tigera-api
 check-module-path-tigera-api:

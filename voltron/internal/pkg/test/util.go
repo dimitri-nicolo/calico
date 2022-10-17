@@ -239,7 +239,7 @@ func DataFlow(r io.Reader, w io.Writer, msg []byte) ([]byte, error) {
 	return res, err
 }
 
-func GenerateTestCredentials(clusterName string, caCert *x509.Certificate, caKey crypto.Signer, fipsMode bool) (cert []byte, key []byte, fingerprint string, err error) {
+func GenerateTestCredentials(clusterName string, caCert *x509.Certificate, caKey crypto.Signer) (cert []byte, key []byte, fingerprint string, err error) {
 	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, nil, "", err
@@ -278,7 +278,7 @@ func GenerateTestCredentials(clusterName string, caCert *x509.Certificate, caKey
 	}
 
 	cert = pem.EncodeToMemory(block2)
-	fingerprint = utils.GenerateFingerprint(fipsMode, x509Cert)
+	fingerprint = utils.GenerateFingerprint(x509Cert)
 
 	return cert, key, fingerprint, nil
 

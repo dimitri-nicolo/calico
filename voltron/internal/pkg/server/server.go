@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
 
 package server
 
@@ -273,7 +273,7 @@ func (s *Server) extractIdentity(t *tunnel.Tunnel, clusterID string, fingerprint
 		// We expect to have a cluster registered with this ID and matching fingerprint
 		// for the cert.
 		clusterID = id.Subject.CommonName
-		fingerprint = utils.GenerateFingerprint(s.fipsModeEnabled, id)
+		fingerprint = utils.GenerateFingerprint(id)
 	default:
 		log.Errorf("unknown tunnel identity type %T", id)
 	}

@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
 package fv_test
 
 import (
@@ -252,14 +252,14 @@ var _ = Describe("Voltron-Guardian interaction", func() {
 	It("should register 2 clusters", func() {
 		k8sAPI.WaitForManagedClustersWatched()
 		var err error
-		certPemID1, keyPemID1, fingerprintID1, err = test.GenerateTestCredentials(clusterID, tunnelCert, tunnelPrivKey, fipsMode)
+		certPemID1, keyPemID1, fingerprintID1, err = test.GenerateTestCredentials(clusterID, tunnelCert, tunnelPrivKey)
 		Expect(err).NotTo(HaveOccurred())
 		annotationsID1 := map[string]string{server.AnnotationActiveCertificateFingerprint: fingerprintID1}
 
 		Expect(k8sAPI.AddCluster(clusterID, clusterID, annotationsID1)).ShouldNot(HaveOccurred())
 		Expect(<-watchSync).NotTo(HaveOccurred())
 
-		certPemID2, keyPemID2, fingerprintID2, err = test.GenerateTestCredentials(clusterID2, tunnelCert, tunnelPrivKey, fipsMode)
+		certPemID2, keyPemID2, fingerprintID2, err = test.GenerateTestCredentials(clusterID2, tunnelCert, tunnelPrivKey)
 		Expect(err).NotTo(HaveOccurred())
 		annotationsID2 := map[string]string{server.AnnotationActiveCertificateFingerprint: fingerprintID2}
 

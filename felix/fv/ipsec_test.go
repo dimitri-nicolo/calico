@@ -59,7 +59,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		// noise from the rest of the system.
 		tcpdumps = nil
 		for _, f := range felixes {
-			tcpdump := containers.AttachTCPDump(f.Container, "eth0")
+			tcpdump := containers.AttachTCPDump(f.Container, "eth0", "esp", "or", "udp", "or", "net", "10.65.0.0/16")
 			tcpdump.AddMatcher("numIKEPackets", regexp.MustCompile(`.*isakmp:.*`))
 			tcpdump.AddMatcher("numInboundESPPackets", regexp.MustCompile(`.*`+regexp.QuoteMeta("> "+f.IP)+`.*ESP.*`))
 			tcpdump.AddMatcher("numOutboundESPPackets", regexp.MustCompile(`.*`+regexp.QuoteMeta(f.IP+" >")+`.*ESP.*`))
@@ -614,7 +614,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 		// noise from the rest of the system.
 		tcpdumps = nil
 		for _, f := range felixes {
-			tcpdump := containers.AttachTCPDump(f.Container, "eth0")
+			tcpdump := containers.AttachTCPDump(f.Container, "eth0", "esp", "or", "udp")
 			tcpdump.AddMatcher("numInboundESPPackets", regexp.MustCompile(`.*`+regexp.QuoteMeta("> "+f.IP)+`.*ESP.*`))
 			tcpdump.AddMatcher("numPlaintextOutboundWorkloadPackets", regexp.MustCompile(`.*10\.65\.\d+\.2.*`+regexp.QuoteMeta(" >")+`.*`))
 			tcpdump.AddMatcher("numInboundWorkloadToHostPackets",
@@ -673,13 +673,23 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 		Eventually(func() int {
 			return tcpdumps[2].MatchCount("numInboundESPPackets")
 		}).Should(BeNumerically(">", 0))
+
+		// Wait for tcpdump to finish its output.
+		lastSeenESP := 0
+		Eventually(func() int {
+			espSeen := tcpdumps[2].MatchCount("numInboundESPPackets")
+			newESPs := espSeen - lastSeenESP
+			lastSeenESP = espSeen
+			return newESPs
+		}, "2s", "200ms").Should(BeNumerically("==", 0))
+
 		Consistently(func() int {
 			return tcpdumps[0].MatchCount("numPlaintextOutboundWorkloadPackets")
 		}).Should(BeZero(), "expected no plaintext outbound workload packets")
 		Eventually(func() int {
 			return tcpdumps[2].MatchCount("numInboundESPPackets") -
 				tcpdumps[2].MatchCount("numInboundWorkloadToHostPackets")
-		}()).Should(BeZero(), "saw a difference between the number of encrypted and plaintext packets")
+		}).Should(BeZero(), "saw a difference between the number of encrypted and plaintext packets")
 	})
 
 	describeGracefulShutdownTest := func(disableFunc func(clientv3.Interface)) {

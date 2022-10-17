@@ -69,6 +69,10 @@ promotions:
   pipeline_file: push-images/deep-packet-inspection.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push egress-gateway images
+  pipeline_file: push-images/egress-gateway.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 - name: Push es-gateway images
   pipeline_file: push-images/es-gateway.yml
   auto_promote:
@@ -509,6 +513,30 @@ blocks:
     - name: "Node: dual-tor"
       commands:
       - ../.semaphore/run-and-monitor dual-tor-test.log make dual-tor-test
+    epilogue:
+      always:
+        commands:
+        - test-results publish ./report/nosetests.xml --name "node-ci" || true
+        - test-results publish ./report/k8s-tests.xml --name "node-k8s-test" || true
+
+- name: "Node/egress gateway tests"
+  run:
+    when: "true or change_in(['/*', '/api/', '/libcalico-go/', '/typha/', '/felix/', '/confd/', '/bird/', '/pod2daemon/', '/node/', '/egress-gateway/', '/licensing/', '/hack/test/certs/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    agent:
+      machine:
+        type: e1-standard-8
+        os_image: ubuntu1804
+    secrets:
+    # Mount a secret for pulling images from GCR, and a license for the k8s FVs
+    - name: tigera-dev-ci-pull-credentials
+    - name: google-service-account-for-gcr
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd node
+    jobs:
     - name: "Node: egress-ip"
       commands:
       - ../.semaphore/run-and-monitor egress-ip-test.log make egress-ip-test
@@ -777,6 +805,19 @@ blocks:
     - name: "compliance tests"
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
+
+- name: "Egress gateway"
+  run:
+    when: "true or change_in(['/*', '/egress-gateway/', '/libcalico-go/lib/logutils/', '/libcalico-go/lib/health/', '/felix/proto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    prologue:
+      commands:
+      - cd egress-gateway
+    jobs:
+      - name: "make ci"
+        commands:
+         - ../.semaphore/run-and-monitor ci.log make ci
 
 - name: 'es-gateway'
   run:

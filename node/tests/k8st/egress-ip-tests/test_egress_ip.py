@@ -951,17 +951,31 @@ metadata:
 spec:
   imagePullSecrets:
   - name: cnx-pull-secret
-  containers:
-  - name: gateway
-    image: gcr.io/unique-caldron-775/cnx/tigera/egress-gateway:master-amd64
+  initContainers:
+  - name: egress-gateway-init
+    image: docker.io/tigera/egress-gateway:latest-amd64
     env:
     - name: EGRESS_POD_IP
       valueFrom:
         fieldRef:
           fieldPath: status.podIP
-    imagePullPolicy: Always
+    imagePullPolicy: Never
     securityContext:
       privileged: true
+    command: ["/init-gateway.sh"]
+  containers:
+  - name: gateway
+    image: docker.io/tigera/egress-gateway:latest-amd64
+    env:
+    - name: EGRESS_POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+    imagePullPolicy: Never
+    securityContext:
+      capabilities:
+        add: ["NET_ADMIN"]
+    command: ["/start-gateway.sh"]
     volumeMounts:
         - mountPath: /var/run
           name: policysync

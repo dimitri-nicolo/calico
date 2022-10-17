@@ -18,3 +18,4 @@ test/integration/apiserver.local.config/certificates/apiserver.crt
 test/integration/apiserver.local.config/certificates/apiserver.key
 .apiserver.created*
 .vscode
+*.log
