@@ -28,8 +28,13 @@ const (
 )
 
 type diagOpts struct {
-	Cluster              bool // Only needed for Bind to work.
-	Diags                bool // Only needed for Bind to work.
+	// Even though we already know, in this file, that we are doing the "calicoctl cluster
+	// diags" command, these two fields must be present or else Bind returns an error and fails
+	// to fill in the fields that we really do need.
+	Cluster bool // Only needed for Bind to work.
+	Diags   bool // Only needed for Bind to work.
+
+	// Fields that we really want Bind to fill in.
 	Config               string
 	Since                string
 	MaxLogs              int
@@ -58,7 +63,6 @@ Description:
 	if err != nil {
 		return fmt.Errorf("Invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand.", strings.Join(args, " "))
 	}
-	fmt.Printf("DEBUG: parsedArgs=%v\n", parsedArgs)
 	if len(parsedArgs) == 0 {
 		return nil
 	}
@@ -68,13 +72,11 @@ Description:
 	if err != nil {
 		return fmt.Errorf("error understanding options: %w", err)
 	}
-	fmt.Printf("DEBUG: opts=%#v\n", opts)
 
 	// Default --since to "0s", which kubectl understands as meaning all logs.
 	if opts.Since == "" {
 		opts.Since = "0s"
 	}
-	fmt.Printf("DEBUG: opts=%#v\n", opts)
 
 	err = common.CheckVersionMismatch(parsedArgs["--config"], parsedArgs["--allow-version-mismatch"])
 	if err != nil {
@@ -112,23 +114,22 @@ func collectDiags(opts *diagOpts) error {
 	}
 
 	collectGlobalClusterInformation(dir)
-	err = collectSelectedNodeLogs(dir, opts)
-	if err != nil {
-		fmt.Printf("ERROR collecting logs from selected nodes: %v\n", err)
-	}
+	collectSelectedNodeLogs(dir, opts)
 	createArchive(rootDir)
 
 	return nil
 }
 
-func collectSelectedNodeLogs(dir string, opts *diagOpts) error {
+func collectSelectedNodeLogs(dir string, opts *diagOpts) {
 	// Create Kubernetes client from config or env vars.
 	kubeClient, _, _, err := clientmgr.GetClients(opts.Config)
 	if err != nil {
-		return fmt.Errorf("error creating clients: %w", err)
+		fmt.Printf("ERROR creating clients: %v\n", err)
+		return
 	}
 	if kubeClient == nil {
-		return errors.New("can't create Kubernetes client on etcd datastore")
+		fmt.Println("ERROR: can't create Kubernetes client on etcd datastore")
+		return
 	}
 
 	// If --focus-nodes is specified, put those node names at the start of the node list.
@@ -156,8 +157,9 @@ func collectSelectedNodeLogs(dir string, opts *diagOpts) error {
 	// Iterate through all Calico/Tigera namespaces.
 	nsl, err := kubeClient.CoreV1().Namespaces().List(context.TODO(), v1.ListOptions{})
 	if err != nil {
+		fmt.Printf("ERROR listing namespaces: %v\n", err)
 		// Fatal, can't identify our namespaces.
-		return fmt.Errorf("error listing namespaces: %w", err)
+		return
 	}
 	for _, ns := range nsl.Items {
 		if !(strings.Contains(ns.Name, "calico") || strings.Contains(ns.Name, "tigera")) {
@@ -188,7 +190,7 @@ func collectSelectedNodeLogs(dir string, opts *diagOpts) error {
 			}
 		}
 	}
-	return nil
+	return
 }
 
 func collectDiagsForSelectedPods(dir string, opts *diagOpts, kubeClient *kubernetes.Clientset, nodeList []string, ns string, selector *v1.LabelSelector) {
