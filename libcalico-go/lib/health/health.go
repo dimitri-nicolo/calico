@@ -16,6 +16,7 @@ package health
 
 import (
 	"bytes"
+	"fmt"
 	"net"
 	"net/http"
 	"sort"
@@ -35,6 +36,20 @@ type HealthReport struct {
 	Detail string
 }
 
+func (h *HealthReport) String() string {
+	var parts []string
+	if h.Live {
+		parts = append(parts, "live")
+	}
+	if h.Ready {
+		parts = append(parts, "ready")
+	}
+	if h.Detail != "" {
+		parts = append(parts, "detail="+h.Detail)
+	}
+	return strings.Join(parts, ",")
+}
+
 type reporterState struct {
 	// The reporter's name.
 	name string
@@ -50,6 +65,23 @@ type reporterState struct {
 
 	// Time of that most recent report.
 	timestamp time.Time
+}
+
+func (r *reporterState) String() string {
+	var timeoutStr string
+	if r.timeout == 0 {
+		timeoutStr = "none"
+	} else {
+		timeoutStr = r.timeout.String()
+	}
+	timestampStr := "-"
+	agoStr := "-"
+	if !r.timestamp.IsZero() {
+		timestampStr = r.timestamp.Format("15:04:05")
+		agoStr = fmt.Sprintf("%.1f", time.Since(r.timestamp).Seconds())
+	}
+	return fmt.Sprintf("health.reporterState{name:%q, reports:%q, latest:%q, timestamp:%s(%ss ago) timeout:%s}",
+		r.name, r.reports.String(), r.latest.String(), timestampStr, agoStr, timeoutStr)
 }
 
 func (r *reporterState) HasReadinessProblem() bool {
@@ -127,10 +159,11 @@ func (aggregator *HealthAggregator) Report(name string, report *HealthReport) {
 	defer aggregator.mutex.Unlock()
 	reporter := aggregator.reporters[name]
 
+	reports := aggregator.reporters[name].reports
 	logCxt := log.WithFields(log.Fields{
-		"name":       name,
-		"newReport":  report,
-		"lastReport": reporter.latest,
+		"name":      name,
+		"newReport": formatReport(&reports, report),
+		"oldReport": formatReport(&reports, &reporter.latest),
 	})
 
 	if reporter.latest != *report {
@@ -139,6 +172,26 @@ func (aggregator *HealthAggregator) Report(name string, report *HealthReport) {
 	}
 	reporter.timestamp = time.Now()
 	return
+}
+
+func formatReport(reports, report *HealthReport) string {
+	var parts []string
+
+	if reports.Live {
+		if report.Live {
+			parts = append(parts, "live")
+		} else {
+			parts = append(parts, "non-live")
+		}
+	}
+	if reports.Ready {
+		if report.Ready {
+			parts = append(parts, "ready")
+		} else {
+			parts = append(parts, "non-ready")
+		}
+	}
+	return strings.Join(parts, ",")
 }
 
 func NewHealthAggregator() *HealthAggregator {
@@ -219,9 +272,15 @@ func (aggregator *HealthAggregator) Summary() *HealthReport {
 			readinessStr = "reporting ready"
 		}
 		componentNames = append(componentNames, reporter.name)
+		var timeoutStr string
+		if reporter.timeout == 0 {
+			timeoutStr = "-"
+		} else {
+			timeoutStr = reporter.timeout.String()
+		}
 		componentData[reporter.name] = []string{
 			reporter.name,
-			reporter.timeout.String(),
+			timeoutStr,
 			livenessStr,
 			readinessStr,
 			reporter.latest.Detail,
@@ -234,15 +293,15 @@ func (aggregator *HealthAggregator) Summary() *HealthReport {
 		table.Append(componentData[name])
 	}
 	table.Render()
+
 	summary.Detail = strings.TrimSpace(buf.String())
+	log.Debugf("Calculated health summary: live=%v ready=%v\n%s", summary.Live, summary.Ready, summary.Detail)
 
 	// Summary status has changed so update previous status and log.
 	if aggregator.lastReport == nil || *summary != *aggregator.lastReport {
 		aggregator.lastReport = summary
-		log.WithField("newStatus", summary).Info("Overall health status changed")
+		log.Infof("Overall health status changed: live=%v ready=%v\n%s", summary.Live, summary.Ready, summary.Detail)
 	}
-
-	log.WithField("healthResult", summary).Debug("Calculated health summary")
 
 	return summary
 }
