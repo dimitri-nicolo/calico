@@ -71,6 +71,7 @@ var _ = Describe("EgressIPManager", func() {
 
 		podStatusCallback = &mockEgressPodStatusCallback{state: []statusCallbackEntry{}}
 		healthAgg = health.NewHealthAggregator()
+		healthReportC := make(chan<- EGWHealthReport)
 
 		manager = newEgressIPManagerWithShims(
 			mainTable,
@@ -88,6 +89,7 @@ var _ = Describe("EgressIPManager", func() {
 			podStatusCallback.statusCallback,
 			healthAgg,
 			rand.NewSource(1), // Seed with 1 to get predictable tests every time.
+			healthReportC,
 		)
 
 		Expect(healthAgg.Summary().Ready).To(BeFalse())
@@ -117,7 +119,7 @@ var _ = Describe("EgressIPManager", func() {
 		for _, m := range members {
 			matchers = append(matchers, ipSetMemberEquals(m))
 		}
-		Expect(manager.ipSetIDToGateways[id]).To(ContainElements(matchers))
+		Expect(manager.egwTracker.ipSetIDToGateways[id]).To(ContainElements(matchers))
 	}
 
 	expectNoRulesAndTable := func(srcIPs []string, table int) {
@@ -204,39 +206,39 @@ var _ = Describe("EgressIPManager", func() {
 
 			expectIPSetMembers("set0", []gateway{
 				{
-					cidr:                "10.0.0.1",
+					addr:                ip.FromString("10.0.0.1"),
 					maintenanceStarted:  zeroTime,
 					maintenanceFinished: zeroTime,
 				},
 				{
-					cidr:                "10.0.0.2",
+					addr:                ip.FromString("10.0.0.2"),
 					maintenanceStarted:  zeroTime,
 					maintenanceFinished: zeroTime,
 				},
 				{
-					cidr:                "10.0.0.3",
+					addr:                ip.FromString("10.0.0.3"),
 					maintenanceStarted:  zeroTime,
 					maintenanceFinished: zeroTime,
 				},
 			})
 			expectIPSetMembers("set1", []gateway{
 				{
-					cidr:                "10.0.1.1",
+					addr:                ip.FromString("10.0.1.1"),
 					maintenanceStarted:  zeroTime,
 					maintenanceFinished: zeroTime,
 				},
 				{
-					cidr:                "10.0.1.2",
+					addr:                ip.FromString("10.0.1.2"),
 					maintenanceStarted:  zeroTime,
 					maintenanceFinished: zeroTime,
 				},
 				{
-					cidr:                "10.0.1.3",
+					addr:                ip.FromString("10.0.1.3"),
 					maintenanceStarted:  zeroTime,
 					maintenanceFinished: zeroTime,
 				},
 			})
-			Expect(manager.ipSetIDToGateways["nonEgressSet"]).To(BeNil())
+			Expect(manager.egwTracker.ipSetIDToGateways["nonEgressSet"]).To(BeNil())
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
@@ -462,7 +464,7 @@ var _ = Describe("EgressIPManager", func() {
 			err = manager.CompleteDeferredWork()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(healthAgg.Summary().Ready).To(BeTrue())
-			Expect(manager.dirtyEgressIPSet).NotTo(ContainElement(*breakingWorkloadUpdate.Id))
+			Expect(manager.egwTracker.dirtyEgressIPSet).NotTo(ContainElement(*breakingWorkloadUpdate.Id))
 		})
 
 		It("should use same table if endpoint has second ip address", func() {
@@ -1039,17 +1041,17 @@ var _ = Describe("EgressIPManager", func() {
 
 			expectIPSetMembers("set0", []gateway{
 				{
-					cidr:                "10.0.0.1",
+					addr:                ip.FromString("10.0.0.1"),
 					maintenanceStarted:  zeroTime,
 					maintenanceFinished: zeroTime,
 				},
 				{
-					cidr:                "10.0.0.2",
+					addr:                ip.FromString("10.0.0.2"),
 					maintenanceStarted:  zeroTime,
 					maintenanceFinished: zeroTime,
 				},
 				{
-					cidr:                "10.0.0.3",
+					addr:                ip.FromString("10.0.0.3"),
 					maintenanceStarted:  zeroTime,
 					maintenanceFinished: zeroTime,
 				},
@@ -1356,7 +1358,7 @@ func formatTerminatingEgressMemberStr(cidr string, start, finish time.Time) stri
 	Expect(err).NotTo(HaveOccurred())
 	finishBytes, err := finish.MarshalText()
 	Expect(err).NotTo(HaveOccurred())
-	return fmt.Sprintf("%s,%s,%s", cidr, string(startBytes), string(finishBytes))
+	return fmt.Sprintf("%s,%s,%s,0", cidr, string(startBytes), string(finishBytes))
 }
 
 func ipSetMemberEquals(expected gateway) types.GomegaMatcher {
@@ -1370,12 +1372,18 @@ type ipSetMemberMatcher struct {
 func (m *ipSetMemberMatcher) Match(actual interface{}) (bool, error) {
 	member, ok := actual.(gateway)
 	if !ok {
-		return false, fmt.Errorf("ipSetMemberMatcher must be passed an gateway. Got\n%s", format.Object(actual, 1))
+		memberPtr, ok := actual.(*gateway)
+		if !ok {
+			return false, fmt.Errorf("ipSetMemberMatcher must be passed an gateway. Got\n%s", format.Object(actual, 1))
+		}
+		member = *memberPtr
 	}
 	// Need to compare time.Time using Equal(), since having a nil loc and a UTC loc are equivalent.
-	match := m.expected.cidr == member.cidr &&
+	match := m.expected.addr == member.addr &&
 		m.expected.maintenanceStarted.Equal(member.maintenanceStarted) &&
-		m.expected.maintenanceFinished.Equal(member.maintenanceFinished)
+		m.expected.maintenanceFinished.Equal(member.maintenanceFinished) &&
+		m.expected.healthPort == member.healthPort &&
+		m.expected.health == member.health
 	return match, nil
 
 }
@@ -1405,7 +1413,7 @@ var (
 	statusCallbackFail = errors.New("mock egress pod status callback failure")
 )
 
-func (t *mockEgressPodStatusCallback) statusCallback(namespace, name, ip string, maintenanceStarted, maintenanceFinished time.Time) error {
+func (t *mockEgressPodStatusCallback) statusCallback(namespace, name string, ip ip.Addr, maintenanceStarted, maintenanceFinished time.Time) error {
 	log.WithFields(log.Fields{
 		"namespace":           namespace,
 		"name":                name,
@@ -1419,7 +1427,7 @@ func (t *mockEgressPodStatusCallback) statusCallback(namespace, name, ip string,
 	t.state = append(t.state, statusCallbackEntry{
 		namespace:           namespace,
 		name:                name,
-		ip:                  ip,
+		ip:                  ip.String(),
 		maintenanceStarted:  maintenanceStarted,
 		maintenanceFinished: maintenanceFinished,
 	})

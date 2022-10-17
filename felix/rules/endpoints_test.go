@@ -862,13 +862,23 @@ var _ = Describe("Endpoints", func() {
 								SourceIPSet("cali40all-hosts-net").
 								DestPorts(uint16(EgressIPVXLANPort)),
 								Action:  AcceptAction{},
-								Comment: []string{"Accept VXLAN UDP traffic for egressgateways"}},
+								Comment: []string{"Accept VXLAN UDP traffic for egress gateways"}},
+							{Match: Match().ProtocolNum(ProtoTCP).
+								SourceIPSet("cali40all-hosts-net").
+								DestPorts(uint16(8080)),
+								Action:  AcceptAction{},
+								Comment: []string{"Accept readiness probes for egress gateways"}},
 							{Match: Match().ProtocolNum(ProtoUDP).
 								SourceIPSet("cali40all-tunnel-net").
 								DestPorts(uint16(EgressIPVXLANPort)),
 								Action:  AcceptAction{},
-								Comment: []string{"Accept VXLAN UDP traffic for egressgateways"}},
-							{Action: DropAction{}, Comment: []string{"Drop any other traffic to egressgateways"}},
+								Comment: []string{"Accept VXLAN UDP traffic for egress gateways"}},
+							{Match: Match().ProtocolNum(ProtoTCP).
+								SourceIPSet("cali40all-tunnel-net").
+								DestPorts(uint16(8080)),
+								Action:  AcceptAction{},
+								Comment: []string{"Accept readiness probes for egress gateways"}},
+							{Action: DropAction{}, Comment: []string{"Drop any other traffic to egress gateways"}},
 
 							{Comment: []string{"Start of tier default"},
 								Action: ClearMarkAction{Mark: 0x10}},
@@ -920,12 +930,12 @@ var _ = Describe("Endpoints", func() {
 								DestIPSet("cali40all-hosts-net").
 								DestPorts(uint16(EgressIPVXLANPort)),
 								Action:  AcceptAction{},
-								Comment: []string{"Accept VXLAN UDP traffic for egressgateways"}},
+								Comment: []string{"Accept VXLAN UDP traffic for egress gateways"}},
 							{Match: Match().ProtocolNum(ProtoUDP).
 								DestIPSet("cali40all-tunnel-net").
 								DestPorts(uint16(EgressIPVXLANPort)),
 								Action:  AcceptAction{},
-								Comment: []string{"Accept VXLAN UDP traffic for egressgateways"}},
+								Comment: []string{"Accept VXLAN UDP traffic for egress gateways"}},
 							dropVXLANRule,
 							dropIPIPRule,
 

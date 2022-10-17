@@ -265,6 +265,13 @@ var baseTests = []StateList{
 		endpointWithLocalTerminatingEgressGateway,
 	},
 
+	// test egress gateway health port
+	{
+		endpointWithRemoteActiveEgressGateway,
+		endpointWithRemoteActiveEgressGatewayWithPort,
+		endpointWithLocalActiveEgressGateway,
+	},
+
 	// test egress gateway maxNextHops
 	{
 		endpointWithPodSelectorZeroMaxNextHops,

@@ -206,6 +206,7 @@ func chainsForIfaces(ipVersion uint8,
 ) []*iptables.Chain {
 	const (
 		ProtoUDP          = 17
+		ProtoTCP          = 6
 		ProtoIPIP         = 4
 		VXLANPort         = 4789
 		EgressIPVXLANPort = 4790
@@ -357,7 +358,7 @@ func chainsForIfaces(ipVersion uint8,
 					DestIPSet("cali40all-hosts-net").
 					DestPorts(uint16(EgressIPVXLANPort)),
 				Action:  iptables.AcceptAction{},
-				Comment: []string{"Accept VXLAN UDP traffic for egressgateways"},
+				Comment: []string{"Accept VXLAN UDP traffic for egress gateways"},
 			})
 			outRules = append(outRules, iptables.Rule{
 				Match: iptables.Match().
@@ -365,7 +366,7 @@ func chainsForIfaces(ipVersion uint8,
 					DestIPSet("cali40all-tunnel-net").
 					DestPorts(uint16(EgressIPVXLANPort)),
 				Action:  iptables.AcceptAction{},
-				Comment: []string{"Accept VXLAN UDP traffic for egressgateways"},
+				Comment: []string{"Accept VXLAN UDP traffic for egress gateways"},
 			})
 		}
 
@@ -550,7 +551,15 @@ func chainsForIfaces(ipVersion uint8,
 					SourceIPSet("cali40all-hosts-net").
 					DestPorts(uint16(EgressIPVXLANPort)),
 				Action:  iptables.AcceptAction{},
-				Comment: []string{"Accept VXLAN UDP traffic for egressgateways"},
+				Comment: []string{"Accept VXLAN UDP traffic for egress gateways"},
+			})
+			inRules = append(inRules, iptables.Rule{
+				Match: iptables.Match().
+					ProtocolNum(ProtoTCP).
+					SourceIPSet("cali40all-hosts-net").
+					DestPorts(8080),
+				Action:  iptables.AcceptAction{},
+				Comment: []string{"Accept readiness probes for egress gateways"},
 			})
 			inRules = append(inRules, iptables.Rule{
 				Match: iptables.Match().
@@ -558,11 +567,19 @@ func chainsForIfaces(ipVersion uint8,
 					SourceIPSet("cali40all-tunnel-net").
 					DestPorts(uint16(EgressIPVXLANPort)),
 				Action:  iptables.AcceptAction{},
-				Comment: []string{"Accept VXLAN UDP traffic for egressgateways"},
+				Comment: []string{"Accept VXLAN UDP traffic for egress gateways"},
+			})
+			inRules = append(inRules, iptables.Rule{
+				Match: iptables.Match().
+					ProtocolNum(ProtoTCP).
+					SourceIPSet("cali40all-tunnel-net").
+					DestPorts(8080),
+				Action:  iptables.AcceptAction{},
+				Comment: []string{"Accept readiness probes for egress gateways"},
 			})
 			inRules = append(inRules, iptables.Rule{
 				Action:  iptables.DropAction{},
-				Comment: []string{"Drop any other traffic to egressgateways"},
+				Comment: []string{"Drop any other traffic to egress gateways"},
 			})
 		}
 

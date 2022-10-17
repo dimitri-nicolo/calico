@@ -1,0 +1,456 @@
+// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+
+package intdataplane
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"net/http"
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/felix/ip"
+	"github.com/projectcalico/calico/felix/jitter"
+	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
+)
+
+var (
+	numEGWPollsGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "felix_egress_gateway_remote_polls",
+		Help: "Number of remote egress gateways that are being actively polled.",
+	}, []string{"status"})
+)
+
+func init() {
+	prometheus.MustRegister(numEGWPollsGauge)
+}
+
+type EgressGWTracker struct {
+	ipSetIDToGateways map[string]gatewaysByIP
+	dirtyEgressIPSet  set.Typed[string]
+
+	nextPollerNonce int
+	pollers         map[egwPollerID]*egwPoller
+
+	healthReportC chan<- EGWHealthReport
+
+	fastRetryTicker *jitter.Ticker
+}
+
+func NewEgressGWTracker(healthReportC chan<- EGWHealthReport) *EgressGWTracker {
+	return &EgressGWTracker{
+		ipSetIDToGateways: map[string]gatewaysByIP{},
+		dirtyEgressIPSet:  set.New[string](),
+
+		pollers: map[egwPollerID]*egwPoller{},
+
+		healthReportC: healthReportC,
+
+		fastRetryTicker: jitter.NewTicker(100*time.Millisecond, 10*time.Millisecond),
+	}
+}
+
+func (m *EgressGWTracker) OnIPSetDeltaUpdate(msg *proto.IPSetDeltaUpdate) {
+	if _, found := m.ipSetIDToGateways[msg.Id]; !found {
+		log.WithField("msg", msg).Debug("Ignoring IP set delta update (not a set we're tracking)")
+		return
+	}
+	log.Infof("EgressIP set delta update: id=%v removed=%v added=%v", msg.Id, msg.RemovedMembers, msg.AddedMembers)
+
+	gateways, exists := m.ipSetIDToGateways[msg.Id]
+	if !exists {
+		gateways = make(gatewaysByIP)
+		m.ipSetIDToGateways[msg.Id] = gateways
+	}
+
+	// The member string contains cidr,deletionTimestamp, and so we could get the same cidr in membersAdded
+	// and in membersRemoved, with different timestamps. For this reason, process the removes before the adds.
+	for _, mStr := range msg.RemovedMembers {
+		member, err := parseMember(mStr)
+		if err != nil {
+			log.WithError(err).Errorf("BUG: error parsing ip set member from member string %s", mStr)
+			continue
+		}
+		m.stopPollerIfRunning(msg.Id, member.addr)
+		delete(gateways, member.addr)
+	}
+
+	for _, mStr := range msg.AddedMembers {
+		member, err := parseMember(mStr)
+		if err != nil {
+			log.WithError(err).Errorf("BUG: error parsing ip set member from member string %s", mStr)
+			continue
+		}
+		gateways[member.addr] = member
+		if member.healthPort != 0 {
+			m.ensurePollerRunning(msg.Id, member.addr, member.healthPort)
+		} else {
+			m.stopPollerIfRunning(msg.Id, member.addr)
+		}
+	}
+	m.markSetDirty(msg.Id)
+}
+
+func (m *EgressGWTracker) OnIPSetUpdate(msg *proto.IPSetUpdate) {
+	if msg.Type != proto.IPSetUpdate_EGRESS_IP {
+		log.WithField("msg", msg).Debug("Ignore non-EGW IP set update")
+		return
+	}
+
+	oldGWs := m.ipSetIDToGateways[msg.Id]
+
+	log.Infof("Update whole EgressIP set: msg=%v", msg)
+	newGWs := make(gatewaysByIP)
+	for _, mStr := range msg.Members {
+		member, err := parseMember(mStr)
+		if err != nil {
+			log.WithError(err).Errorf("BUG: error parsing details from memberStr: %s", mStr)
+			continue
+		}
+		newGWs[member.addr] = member
+		if member.healthPort != 0 {
+			m.ensurePollerRunning(msg.Id, member.addr, member.healthPort)
+		} else {
+			m.stopPollerIfRunning(msg.Id, member.addr)
+		}
+	}
+
+	for k, oldGW := range oldGWs {
+		if _, ok := newGWs[k]; ok {
+			continue
+		}
+		m.stopPollerIfRunning(msg.Id, oldGW.addr)
+	}
+
+	m.ipSetIDToGateways[msg.Id] = newGWs
+	m.markSetDirty(msg.Id)
+}
+
+func (m *EgressGWTracker) OnIPSetRemove(msg *proto.IPSetRemove) {
+	if _, found := m.ipSetIDToGateways[msg.Id]; !found {
+		return
+	}
+	log.Infof("Remove whole EgressIP set: msg=%v", msg)
+	for _, oldGW := range m.ipSetIDToGateways[msg.Id] {
+		m.stopPollerIfRunning(msg.Id, oldGW.addr)
+	}
+	delete(m.ipSetIDToGateways, msg.Id)
+	m.markSetDirty(msg.Id)
+}
+
+// OnEGWHealthReport is called (on the main dataplane goroutine) when one of our pollers makes a report.
+func (m *EgressGWTracker) OnEGWHealthReport(r EGWHealthReport) {
+	logCtx := log.WithFields(log.Fields{"egwAddr": r.PollerID.addr, "health": r.Health})
+	if p := m.pollers[r.PollerID]; p == nil || p.nonce != r.PollerNonce {
+		// This is a message from an old poller.
+		logCtx.WithFields(log.Fields{
+			"messageNonce":  r.PollerNonce,
+			"currentPoller": p,
+		}).Info("Received message from a defunct egress gateway poller, ignoring.")
+		return
+	}
+	// If the poller exists, and it has the right nonce then the gateway should exist
+	gws := m.ipSetIDToGateways[r.PollerID.setID]
+	gw := gws[r.PollerID.addr]
+	gw.health = r.Health
+	m.markSetDirty(r.PollerID.setID)
+	logCtx.Info("Egress gateway health changed.")
+}
+
+func (m *EgressGWTracker) markSetDirty(setID string) {
+	m.dirtyEgressIPSet.Add(setID)
+}
+
+func (m *EgressGWTracker) Dirty() bool {
+	return m.dirtyEgressIPSet.Len() > 0
+}
+
+func (m *EgressGWTracker) GetAndClearDirtySetIDs() []string {
+	s := sortStringSet(m.dirtyEgressIPSet)
+	m.dirtyEgressIPSet.Clear()
+	return s
+}
+
+func (m *EgressGWTracker) GatewaysByID(id string) (gatewaysByIP, bool) {
+	gws, exists := m.ipSetIDToGateways[id]
+	return gws, exists
+}
+
+func (m *EgressGWTracker) AllGatewayIPs() set.Set[ip.Addr] {
+	gatewayIPs := set.NewBoxed[ip.Addr]()
+	for _, gateways := range m.ipSetIDToGateways {
+		for _, g := range gateways {
+			gatewayIPs.Add(g.addr)
+		}
+	}
+	return gatewayIPs
+}
+
+func (m *EgressGWTracker) ensurePollerRunning(setID string, addr ip.Addr, port uint16) {
+	id := egwPollerID{
+		setID: setID,
+		addr:  addr,
+	}
+	if _, exists := m.pollers[id]; exists {
+		return
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	poller := &egwPoller{
+		id:         id,
+		nonce:      m.nextPollerNonce,
+		cancel:     cancel,
+		reportC:    m.healthReportC,
+		url:        fmt.Sprintf("http://%s:%d/readiness", addr, port),
+		fastRetryC: m.fastRetryTicker.C,
+	}
+	m.nextPollerNonce += 1
+	m.pollers[id] = poller
+	poller.Start(ctx)
+}
+
+func (m *EgressGWTracker) stopPollerIfRunning(setID string, ip ip.Addr) {
+	k := egwPollerID{
+		setID: setID,
+		addr:  ip,
+	}
+	if p, exists := m.pollers[k]; !exists {
+		return
+	} else {
+		p.cancel()
+	}
+	delete(m.pollers, k)
+	// Note: we don't wait for the poller to stop here since that could deadlock if it is trying to send a message
+	// to this goroutine.  Instead, we filter out messages from defunct pollers based on the per-poller nonce.
+}
+
+// gateway stores an IPSet member's cidr and maintenance window.
+// If the maintenanceStarted.IsZero() or maintenanceFinished.IsZero() then the member is not terminating.
+// Otherwise, it is in the process of terminating, and will be deleted at the given maintenanceFinished timestamp.
+type gateway struct {
+	addr                ip.Addr
+	maintenanceStarted  time.Time
+	maintenanceFinished time.Time
+	healthPort          uint16
+	health              EGWHealth
+}
+
+type EGWHealth string
+
+const (
+	EGWHealthUnknown     EGWHealth = ""
+	EGWHealthUp          EGWHealth = "up"
+	EGWHealthProbeFailed EGWHealth = "probe-failed"
+)
+
+type egwPollerID struct {
+	setID string
+	addr  ip.Addr
+}
+
+type egwPoller struct {
+	id         egwPollerID
+	nonce      int
+	url        string
+	cancel     func()
+	reportC    chan<- EGWHealthReport
+	fastRetryC <-chan time.Time
+}
+
+func (p *egwPoller) Start(ctx context.Context) {
+	go p.loop(ctx)
+}
+
+const (
+	// FIXME Add config for these
+	egwPollTime    = 10 * time.Second
+	egwPollTimeout = 10 * time.Second
+)
+
+type EGWHealthReport struct {
+	PollerID egwPollerID
+	// PollerNonce is a unique value for each poller that we create. By including it in the messages we send mack to
+	// the main goroutine, it allows us to tell the difference between messages that were already in a queue from a
+	// poller that was just shut down and messages from a fresh poller that has just been created.
+	PollerNonce int
+	Health      EGWHealth
+}
+
+func (p *egwPoller) loop(ctx context.Context) {
+	logCtx := log.WithFields(log.Fields{
+		"probeURL":    p.url,
+		"pollerNonce": p.nonce,
+	})
+	logCtx.Info("Polling health of remote egress gateway.")
+	ticker := jitter.NewTicker(egwPollTime*95/100, egwPollTime*10/100)
+	defer ticker.Stop()
+	lastReportedHealth := EGWHealthUnknown
+	lastPromHealth := EGWHealthUnknown
+	defer func() {
+		if lastPromHealth != EGWHealthUnknown {
+			numEGWPollsGauge.WithLabelValues(string(lastPromHealth)).Dec()
+		}
+	}()
+	var numBadReports int
+	var reportC chan<- EGWHealthReport
+
+	numEGWPollsGauge.WithLabelValues("total").Inc()
+	defer numEGWPollsGauge.WithLabelValues("total").Dec()
+
+	for ctx.Err() == nil {
+		egwHealth, err := p.doOneProbe(ctx, logCtx)
+		if err != nil { // Only used for context done.
+			break
+		}
+
+		if egwHealth != lastPromHealth {
+			if lastPromHealth != EGWHealthUnknown {
+				numEGWPollsGauge.WithLabelValues(string(lastPromHealth)).Dec()
+			}
+			if egwHealth != EGWHealthUnknown {
+				numEGWPollsGauge.WithLabelValues(string(egwHealth)).Inc()
+			}
+			lastPromHealth = egwHealth
+		}
+
+		if egwHealth == EGWHealthUp {
+			numBadReports = 0
+		} else {
+			numBadReports++
+		}
+
+		if egwHealth != lastReportedHealth {
+			if egwHealth == EGWHealthUp || numBadReports >= 3 {
+				// Got a new report to send, unmask the report channel.
+				reportC = p.reportC
+			} else {
+				log.Debug("Delaying report of egress gateway non-ready until we have multiple failures.")
+			}
+		} else {
+			// Not ready to send; mask the channel, so we don't send anything.
+			reportC = nil
+		}
+
+		select {
+		case reportC <- EGWHealthReport{
+			PollerID:    p.id,
+			PollerNonce: p.nonce,
+			Health:      egwHealth,
+		}:
+			lastReportedHealth = egwHealth
+		case <-ticker.C:
+		case <-ctx.Done():
+		}
+	}
+	logCtx.Info("Stopped polling health of remote egress gateway.")
+}
+
+func (p *egwPoller) doOneProbe(ctx context.Context, logCtx *log.Entry) (EGWHealth, error) {
+	logCtx.Debug("Doing poll...")
+	toCtx, cancel := context.WithTimeout(ctx, egwPollTimeout)
+	req, err := http.NewRequestWithContext(toCtx, "GET", p.url, nil)
+	defer cancel()
+
+	egwHealth := EGWHealthUnknown
+
+	if err != nil {
+		if err == ctx.Err() {
+			return egwHealth, err
+		}
+		logCtx.WithError(err).Warn("Failed to initiate probe to remote egress gateway.")
+		egwHealth = EGWHealthProbeFailed
+	} else if resp, err := http.DefaultClient.Do(req); err != nil {
+		logCtx.WithError(err).Warn("Remote egress gateway readiness probe failed (connection failure).")
+		egwHealth = EGWHealthProbeFailed
+	} else {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			logCtx.WithError(err).Warn("Remote egress gateway readiness probe failed (read failure).")
+			egwHealth = EGWHealthProbeFailed
+		} else if err = resp.Body.Close(); err != nil {
+			logCtx.WithError(err).Warn("Remote egress gateway readiness probe failed (failed to close connection body).")
+			egwHealth = EGWHealthProbeFailed
+		} else {
+			if log.GetLevel() >= log.DebugLevel {
+				logCtx.Debugf("Response from egress gateway readiness probe:\n%s", body)
+			}
+			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+				logCtx.Debug("Remote egress gateway readiness probe succeeded (egress gateway reports ready).")
+				egwHealth = EGWHealthUp
+			} else {
+				logCtx.Warn("Remote egress gateway readiness probe failed (egress gateway reports not ready).")
+				egwHealth = EGWHealthProbeFailed
+			}
+		}
+	}
+	return egwHealth, nil
+}
+
+// gatewaysByIP maps a member's IP to a gateway
+type gatewaysByIP map[ip.Addr]*gateway
+
+func (g gatewaysByIP) allIPs() set.Set[ip.Addr] {
+	s := set.NewBoxed[ip.Addr]()
+	for _, m := range g {
+		s.Add(m.addr)
+	}
+	return s
+}
+
+func (g gatewaysByIP) activeGateways() gatewaysByIP {
+	active := make(gatewaysByIP)
+	now := time.Now()
+	for _, m := range g {
+		m := m
+		if now.After(m.maintenanceStarted) && now.Before(m.maintenanceFinished) {
+			continue
+		}
+		// FIXME This classes "unknown" and "up" together, which makes sure that we don't flap at start-of-day.
+		// FIXME Would be nice to be more precise to avoid using a bad EGW at start of day.
+		if m.healthPort != 0 && m.health == EGWHealthProbeFailed {
+			continue
+		}
+		active[m.addr] = m
+	}
+	return active
+}
+
+func (g gatewaysByIP) terminatingGateways() gatewaysByIP {
+	terminating := make(gatewaysByIP)
+	now := time.Now()
+	for _, m := range g {
+		if (now.Equal(m.maintenanceStarted) || now.After(m.maintenanceStarted)) &&
+			(now.Equal(m.maintenanceFinished) || now.Before(m.maintenanceFinished)) {
+			terminating[m.addr] = m
+		}
+	}
+	return terminating
+}
+
+func (g gatewaysByIP) filteredByHopIPs(hopIPs []ip.Addr) gatewaysByIP {
+	gws := make(gatewaysByIP)
+	hopIPsSet := set.FromArrayBoxed(hopIPs)
+	for _, m := range g {
+		if hopIPsSet.Contains(m.addr) {
+			gws[m.addr] = m
+		}
+	}
+	return gws
+}
+
+// Finds the latest maintenance window on the supplied egress gateway pods.
+func (g gatewaysByIP) latestTerminatingGateway() *gateway {
+	var member *gateway
+	for _, m := range g.terminatingGateways() {
+		if m.maintenanceFinished.IsZero() {
+			continue
+		}
+		if member == nil || m.maintenanceFinished.After(member.maintenanceFinished) {
+			member = m
+		}
+	}
+	return member
+}

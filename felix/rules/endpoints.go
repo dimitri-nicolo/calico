@@ -425,32 +425,43 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 		},
 	})
 
-	// Accept the UDP VXLAN traffic for egressgateways
+	// Accept the UDP VXLAN traffic for egress gateways
 	if !r.BPFEnabled && ipVersion == 4 && isEgressGateway {
 		programEgwRule := func(ipset string) {
-			match := Match().ProtocolNum(ProtoUDP)
-
-			if dir == RuleDirIngress {
-				match = match.SourceIPSet(r.IPSetConfigV4.
-					NameForMainIPSet(ipset))
-			} else {
-				match = match.DestIPSet(r.IPSetConfigV4.
-					NameForMainIPSet(ipset))
+			baseMatch := func(proto uint8) MatchCriteria {
+				if dir == RuleDirIngress {
+					return Match().ProtocolNum(proto).SourceIPSet(r.IPSetConfigV4.
+						NameForMainIPSet(ipset))
+				} else {
+					return Match().ProtocolNum(proto).DestIPSet(r.IPSetConfigV4.
+						NameForMainIPSet(ipset))
+				}
 			}
-			match = match.
-				DestPorts(
-					uint16(r.Config.EgressIPVXLANPort), // egress.calico
-				)
 
-			rules = append(rules, Rule{
-				Match:   match,
-				Action:  AcceptAction{},
-				Comment: []string{"Accept VXLAN UDP traffic for egressgateways"},
-			})
+			rules = append(rules,
+				Rule{
+					Match: baseMatch(ProtoUDP).
+						DestPorts(
+							uint16(r.Config.EgressIPVXLANPort), // egress.calico
+						),
+					Action:  AcceptAction{},
+					Comment: []string{"Accept VXLAN UDP traffic for egress gateways"},
+				},
+			)
+			if dir == RuleDirIngress {
+				rules = append(rules,
+					Rule{
+						Match: baseMatch(ProtoTCP).
+							DestPorts(8080), // FIXME make configurable?
+						Action:  AcceptAction{},
+						Comment: []string{"Accept readiness probes for egress gateways"},
+					},
+				)
+			}
 		}
-		// Auto-allow VXLAN UDP traffic for egressgateways from/to host IPs
+		// Auto-allow VXLAN UDP traffic for egress gateways from/to host IPs
 		programEgwRule(IPSetIDAllHostNets)
-		// Auto-allow VXLAN UDP traffic for egressgateways from/to tunnel IPs in case of overlay
+		// Auto-allow VXLAN UDP traffic for egress gateways from/to tunnel IPs in case of overlay
 		if r.VXLANEnabled || r.IPIPEnabled || r.WireguardEnabled {
 			programEgwRule(IPSetIDAllTunnelNets)
 		}
@@ -459,7 +470,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 		if dir == RuleDirIngress {
 			rules = append(rules, Rule{
 				Action:  DropAction{},
-				Comment: []string{"Drop any other traffic to egressgateways"},
+				Comment: []string{"Drop any other traffic to egress gateways"},
 			})
 		}
 	}
@@ -627,7 +638,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 		// TODO (Matt): This (and the policy equivalent just above) can probably be refactored.
 		//              At least the magic 1 and 2 need to be combined with the equivalent in CalculateActions.
 		// No profile matched the packet: drop it.
-		//if dropIfNoProfilesMatched {
+		// if dropIfNoProfilesMatched {
 		rules = append(rules, Rule{
 			Match: Match(),
 			Action: NflogAction{
@@ -637,7 +648,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 		})
 
 		rules = append(rules, r.DropRules(Match(), "Drop if no profiles matched")...)
-		//}
+		// }
 	}
 
 	return &Chain{

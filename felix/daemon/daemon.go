@@ -1351,7 +1351,7 @@ func (fc *DataplaneConnector) handleEgressPodStatusUpdateFromDataplane() {
 			err = fc.reconcileEgressPodStatusUpdate(
 				current.Namespace,
 				current.Name,
-				current.Cidr,
+				current.Addr,
 				proto.ConvertTimestamp(current.MaintenanceStarted),
 				proto.ConvertTimestamp(current.MaintenanceFinished))
 			if err == nil {

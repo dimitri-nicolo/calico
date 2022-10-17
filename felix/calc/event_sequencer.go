@@ -769,7 +769,7 @@ func (buf *EventSequencer) flushAddedIPSets() {
 
 func memberToProto(member labelindex.IPSetMember) string {
 	if member.IsEgressGateway {
-		// The member strings for egress gateway need to contain the cidr, the maintenace started timestamp, and the
+		// The member strings for egress gateway need to contain the cidr, the maintenance started timestamp, and the
 		// maintenance finished timestamps for each member, because the egress gateway manager needs to detect when
 		// an egress gateway pod is terminating.
 		maintenanceFinished := member.DeletionTimestamp
@@ -787,7 +787,12 @@ func memberToProto(member labelindex.IPSetMember) string {
 			return fmt.Sprintf("%s,,", member.CIDR.String())
 		}
 
-		return fmt.Sprintf("%s,%s,%s", member.CIDR.String(), strings.ToLower(string(startBytes)), strings.ToLower(string(finishBytes)))
+		return fmt.Sprintf("%s,%s,%s,%d",
+			member.CIDR.String(),
+			strings.ToLower(string(startBytes)),
+			strings.ToLower(string(finishBytes)),
+			member.PortNumber,
+		)
 	}
 
 	switch member.Protocol {

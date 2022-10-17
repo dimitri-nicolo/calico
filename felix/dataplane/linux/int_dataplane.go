@@ -30,6 +30,8 @@ import (
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	"github.com/projectcalico/calico/felix/ip"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
@@ -424,6 +426,9 @@ type InternalDataplane struct {
 
 	awsStateUpdC <-chan *aws.LocalAWSNetworkState
 	awsSubnetMgr *awsIPManager
+
+	egwHealthReportC chan EGWHealthReport
+	egressIPManager  *egressIPManager
 }
 
 const (
@@ -667,34 +672,31 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	}
 
 	if config.EgressIPEnabled {
-		// If IPIP or VXLAN is enabled, MTU of egress.calico device should be 50 bytes less than
-		// MTU of IPIP or VXLAN device. MTU of the VETH device of a workload should be set to
-		// the same value as MTU of egress.calico device.
-		mtu := config.VXLANMTU
-
 		// Allocate all remaining tables to the egress manager.
 		// This assumes no remaining modules need to reserve table indices.
 		egressTablesIndices := config.RouteTableManager.GrabAllRemainingIndices()
 
-		if config.RulesConfig.VXLANEnabled {
-			mtu = config.VXLANMTU - VXLANHeaderSize
-		} else if config.RulesConfig.IPIPEnabled {
-			mtu = config.IPIPMTU - VXLANHeaderSize
-		}
-
-		egressStatusCallback := func(namespace, name, cidr string, maintenanceStarted, maintenanceFinished time.Time) error {
+		egressStatusCallback := func(namespace, name string, addr ip.Addr, maintenanceStarted, maintenanceFinished time.Time) error {
 			dp.fromDataplane <- &proto.EgressPodStatusUpdate{
 				Namespace:           namespace,
 				Name:                name,
-				Cidr:                cidr,
+				Addr:                addr.String(),
 				MaintenanceStarted:  proto.ConvertTime(maintenanceStarted),
 				MaintenanceFinished: proto.ConvertTime(maintenanceFinished),
 			}
 			return nil
 		}
-		egressIpMgr := newEgressIPManager("egress.calico", egressTablesIndices, config, dp.loopSummarizer, egressStatusCallback, config.HealthAggregator)
-		go egressIpMgr.KeepVXLANDeviceInSync(mtu, 10*time.Second)
-		dp.RegisterManager(egressIpMgr)
+		dp.egwHealthReportC = make(chan EGWHealthReport, 100)
+		dp.egressIPManager = newEgressIPManager(
+			"egress.calico",
+			egressTablesIndices,
+			config,
+			dp.loopSummarizer,
+			egressStatusCallback,
+			config.HealthAggregator,
+			dp.egwHealthReportC,
+		)
+		dp.RegisterManager(dp.egressIPManager)
 	} else {
 		// If Egress ip is not enabled, check to see if there is a VXLAN device and delete it if there is.
 		log.Info("Checking if we need to clean up the egress VXLAN device")
@@ -1765,6 +1767,19 @@ func (d *InternalDataplane) Start() {
 	d.doStaticDataplaneConfig()
 
 	// Then, start the worker threads.
+	if d.egressIPManager != nil {
+		// If IPIP or VXLAN is enabled, MTU of egress.calico device should be 50 bytes less than
+		// MTU of IPIP or VXLAN device. MTU of the VETH device of a workload should be set to
+		// the same value as MTU of egress.calico device.
+		mtu := d.config.VXLANMTU
+
+		if d.config.RulesConfig.VXLANEnabled {
+			mtu = d.config.VXLANMTU - VXLANHeaderSize
+		} else if d.config.RulesConfig.IPIPEnabled {
+			mtu = d.config.IPIPMTU - VXLANHeaderSize
+		}
+		go d.egressIPManager.KeepVXLANDeviceInSync(mtu, 10*time.Second)
+	}
 	go d.loopUpdatingDataplane()
 	go d.loopReportingStatus()
 	go d.ifaceMonitor.MonitorInterfaces()
@@ -2390,6 +2405,8 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			}
 		case msg := <-d.awsStateUpdC:
 			d.awsSubnetMgr.OnSecondaryIfaceStateUpdate(msg)
+		case msg := <-d.egwHealthReportC:
+			d.egressIPManager.OnEGWHealthReport(msg)
 		case <-ipSetsRefreshC:
 			log.Debug("Refreshing IP sets state")
 			d.forceIPSetsRefresh = true
