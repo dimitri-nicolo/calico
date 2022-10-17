@@ -32,7 +32,8 @@ func TestStoreWaitsTillInSync(test *testing.T) {
 
 	// instantiate the store and a mock observer to notify (observer registers itself with the store when constructed)
 	aggregator := health.NewHealthAggregator()
-	store = NewRouteStore(newMockUpdatesPipeline, net.ParseIP("10.10.10.0"), aggregator)
+	healthTimeout := 10 * time.Second
+	store = NewRouteStore(newMockUpdatesPipeline, net.ParseIP("10.10.10.0"), aggregator, healthTimeout)
 	observer := NewMockObserver(store)
 
 	ctx := context.Background()
@@ -82,7 +83,8 @@ func TestStoreResyncsAfterClosedConnection(test *testing.T) {
 
 	// instantiate the store and a mock observer to notify (observer registers itself with the store when constructed)
 	aggregator := health.NewHealthAggregator()
-	store = NewRouteStore(newMockUpdatesPipeline, net.ParseIP("10.10.10.0"), aggregator)
+	healthTimeout := 10 * time.Second
+	store = NewRouteStore(newMockUpdatesPipeline, net.ParseIP("10.10.10.0"), aggregator, healthTimeout)
 	observer := NewMockObserver(store)
 
 	ctx := context.Background()

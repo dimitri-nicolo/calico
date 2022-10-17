@@ -107,9 +107,6 @@ func main() {
 		}
 		log.WithField("ip", ip).Info("Parsed IP address from argument.")
 	}
-	log.SetFormatter(&logutils.Formatter{Component: "felix"})
-	// Install a hook that adds file/line no information.
-	log.AddHook(&logutils.ContextHook{})
 
 	var vni int
 	argVNI, ok := args["--vni"].(string)
