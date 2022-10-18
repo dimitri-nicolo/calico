@@ -74,7 +74,7 @@ func (m *EgressGWTracker) OnIPSetDeltaUpdate(msg *proto.IPSetDeltaUpdate) {
 	// The member string contains cidr,deletionTimestamp, and so we could get the same cidr in membersAdded
 	// and in membersRemoved, with different timestamps. For this reason, process the removes before the adds.
 	for _, mStr := range msg.RemovedMembers {
-		member, err := parseMember(mStr)
+		member, err := parseEGWIPSetMember(mStr)
 		if err != nil {
 			log.WithError(err).Errorf("BUG: error parsing ip set member from member string %s", mStr)
 			continue
@@ -84,7 +84,7 @@ func (m *EgressGWTracker) OnIPSetDeltaUpdate(msg *proto.IPSetDeltaUpdate) {
 	}
 
 	for _, mStr := range msg.AddedMembers {
-		member, err := parseMember(mStr)
+		member, err := parseEGWIPSetMember(mStr)
 		if err != nil {
 			log.WithError(err).Errorf("BUG: error parsing ip set member from member string %s", mStr)
 			continue
@@ -110,7 +110,7 @@ func (m *EgressGWTracker) OnIPSetUpdate(msg *proto.IPSetUpdate) {
 	log.Infof("Update whole EgressIP set: msg=%v", msg)
 	newGWs := make(gatewaysByIP)
 	for _, mStr := range msg.Members {
-		member, err := parseMember(mStr)
+		member, err := parseEGWIPSetMember(mStr)
 		if err != nil {
 			log.WithError(err).Errorf("BUG: error parsing details from memberStr: %s", mStr)
 			continue
@@ -160,6 +160,9 @@ func (m *EgressGWTracker) OnEGWHealthReport(r EGWHealthReport) {
 	// If the poller exists, and it has the right nonce then the gateway should exist
 	gws := m.ipSetIDToGateways[r.PollerID.setID]
 	gw := gws[r.PollerID.addr]
+	if gw.health != r.Health && r.Health == EGWHealthProbeFailed {
+		gw.healthFailedAt = time.Now()
+	}
 	gw.health = r.Health
 	m.markSetDirty(r.PollerID.setID)
 	logCtx.Info("Egress gateway health changed.")
@@ -237,11 +240,15 @@ func (m *EgressGWTracker) stopPollerIfRunning(setID string, ip ip.Addr) {
 // If the maintenanceStarted.IsZero() or maintenanceFinished.IsZero() then the member is not terminating.
 // Otherwise, it is in the process of terminating, and will be deleted at the given maintenanceFinished timestamp.
 type gateway struct {
-	addr                ip.Addr
+	addr ip.Addr
+
+	// Start and end time of planned maintenance (i.e. time pod was scheduled for deletion and the deletionTimestamp).
 	maintenanceStarted  time.Time
 	maintenanceFinished time.Time
-	healthPort          uint16
-	health              EGWHealth
+
+	healthPort     uint16
+	health         EGWHealth
+	healthFailedAt time.Time
 }
 
 type EGWHealth string
@@ -427,6 +434,16 @@ func (g gatewaysByIP) terminatingGateways() gatewaysByIP {
 	for _, m := range g {
 		if (now.Equal(m.maintenanceStarted) || now.After(m.maintenanceStarted)) &&
 			(now.Equal(m.maintenanceFinished) || now.Before(m.maintenanceFinished)) {
+			terminating[m.addr] = m
+		}
+	}
+	return terminating
+}
+
+func (g gatewaysByIP) failedGateways() gatewaysByIP {
+	terminating := make(gatewaysByIP)
+	for _, m := range g {
+		if m.healthPort != 0 && m.health == EGWHealthProbeFailed {
 			terminating[m.addr] = m
 		}
 	}

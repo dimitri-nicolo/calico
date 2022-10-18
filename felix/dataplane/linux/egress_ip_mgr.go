@@ -626,6 +626,7 @@ func (m *egressIPManager) processGatewayUpdates() error {
 	dirtySetIDs := m.egwTracker.GetAndClearDirtySetIDs()
 
 	var lastErr error
+	sortedWEPIDs := m.sortedWorkloadIDs() /* sort for determinism in tests */
 	for _, id := range dirtySetIDs {
 		gateways, exists := m.egwTracker.GatewaysByID(id)
 		if !exists {
@@ -633,77 +634,89 @@ func (m *egressIPManager) processGatewayUpdates() error {
 			gateways = make(gatewaysByIP)
 		}
 		gatewayIPs := gateways.allIPs()
+		failedGateways := gateways.failedGateways()
 
 		// Check if any existing workloads have next hops for deleted gateways.
-		var workloadIDs []proto.WorkloadEndpointID
-		for workloadID := range m.activeWorkloads {
-			workloadIDs = append(workloadIDs, workloadID)
-		}
-		sort.Slice(workloadIDs, func(i, j int) bool {
-			if workloadIDs[i].EndpointId != workloadIDs[j].EndpointId {
-				return workloadIDs[i].EndpointId < workloadIDs[j].EndpointId
-			}
-			if workloadIDs[i].WorkloadId != workloadIDs[j].WorkloadId {
-				return workloadIDs[i].WorkloadId < workloadIDs[j].WorkloadId
-			}
-			return workloadIDs[i].OrchestratorId < workloadIDs[j].OrchestratorId
-		})
-		for _, workloadID := range workloadIDs {
+		for _, workloadID := range sortedWEPIDs {
 			workload := m.activeWorkloads[workloadID]
 			// Check if this workload uses the current gateways
-			if workload.EgressIpSetId == id {
-				index, exists := m.workloadToTableIndex[workloadID]
-				if !exists {
-					lastErr = fmt.Errorf("table index not found for workload with id %s", workloadID)
-					continue
-				}
-				nextHops, exists := m.tableIndexToNextHops[index]
-				if !exists {
-					lastErr = fmt.Errorf("next hops not found for table with index %d", index)
-					continue
-				}
+			if workload.EgressIpSetId != id {
+				continue
+			}
+			index, exists := m.workloadToTableIndex[workloadID]
+			if !exists {
+				lastErr = fmt.Errorf("table index not found for workload with id %s", workloadID)
+				continue
+			}
+			nextHops, exists := m.tableIndexToNextHops[index]
+			if !exists {
+				lastErr = fmt.Errorf("next hops not found for table with index %d", index)
+				continue
+			}
+			log.WithFields(log.Fields{
+				"ipSetID":    id,
+				"gateways":   gateways,
+				"workloadID": workloadID,
+				"workload":   workload,
+				"tableIndex": index,
+				"nextHops":   nextHops,
+			}).Info("Processing gateway update.")
+
+			numActiveGateways := len(gateways.activeGateways())
+			maxNextHops := int(workload.EgressMaxNextHops)
+			if maxNextHops == 0 {
+				// No limit so default to using all EGWs.
+				maxNextHops = numActiveGateways
+			}
+			numDesiredGateways := maxNextHops
+			if numDesiredGateways > numActiveGateways {
+				numDesiredGateways = numActiveGateways
+			}
+			workloadHasLessHopsThanDesired := len(nextHops) < numDesiredGateways
+			workloadHasNonExistentHop := !gatewayIPs.ContainsAll(set.FromArrayBoxed(nextHops))
+			workloadHasFailedHop := len(failedGateways.filteredByHopIPs(nextHops)) > 0
+			if workloadHasLessHopsThanDesired || workloadHasNonExistentHop || workloadHasFailedHop {
 				log.WithFields(log.Fields{
-					"ipSetID":    id,
-					"gateways":   gateways,
-					"workloadID": workloadID,
-					"workload":   workload,
-					"tableIndex": index,
-					"nextHops":   nextHops,
-				}).Info("Processing gateway update.")
+					"ipSetID":                        id,
+					"workloadIPs":                    workload.Ipv4Nets,
+					"workloadID":                     workloadID,
+					"tableIndex":                     index,
+					"existingEGWs":                   nextHops,
+					"workloadHasLessHopsThanDesired": workloadHasLessHopsThanDesired,
+					"workloadHasNonExistentHop":      workloadHasNonExistentHop,
+					"workloadHasFailedHop":           workloadHasFailedHop,
+				}).Info("Processing gateway update - recreating route rules and table for workload.")
 
-				numActiveGateways := len(gateways.activeGateways())
-				maxNextHops := int(workload.EgressMaxNextHops)
-				if maxNextHops == 0 {
-					// No limit so default to using all EGWs.
-					maxNextHops = numActiveGateways
-				}
-				numDesiredGateways := maxNextHops
-				if numDesiredGateways > numActiveGateways {
-					numDesiredGateways = numActiveGateways
-				}
-				workloadHasLessHopsThanDesired := len(nextHops) < numDesiredGateways
-				workloadHasNonExistentHop := !gatewayIPs.ContainsAll(set.FromArrayBoxed(nextHops))
-				if workloadHasLessHopsThanDesired || workloadHasNonExistentHop {
-					// Delete the old route rules and table as they contain an invalid hop.
-					m.deleteWorkloadRuleAndTable(workloadID, workload)
+				// Delete the old route rules and table as they contain an invalid hop.
+				m.deleteWorkloadRuleAndTable(workloadID, workload)
 
-					// Create new route rules and a route table for this workload.
-					log.WithFields(log.Fields{
-						"ipSetID":     id,
-						"workloadIPs": workload.Ipv4Nets,
-						"workloadID":  workloadID,
-						"tableIndex":  index,
-					}).Info("Processing gateway update - recreating route rules and table for workload.")
-					err := m.createWorkloadRuleAndTable(workloadID, workload, numActiveGateways)
-					if err != nil {
-						lastErr = err
-						continue
-					}
+				// Create new route rules and a route table for this workload.
+				err := m.createWorkloadRuleAndTable(workloadID, workload, numActiveGateways)
+				if err != nil {
+					lastErr = err
+					continue
 				}
 			}
 		}
 	}
 	return lastErr
+}
+
+func (m *egressIPManager) sortedWorkloadIDs() []proto.WorkloadEndpointID {
+	var workloadIDs []proto.WorkloadEndpointID
+	for workloadID := range m.activeWorkloads {
+		workloadIDs = append(workloadIDs, workloadID)
+	}
+	sort.Slice(workloadIDs, func(i, j int) bool {
+		if workloadIDs[i].EndpointId != workloadIDs[j].EndpointId {
+			return workloadIDs[i].EndpointId < workloadIDs[j].EndpointId
+		}
+		if workloadIDs[i].WorkloadId != workloadIDs[j].WorkloadId {
+			return workloadIDs[i].WorkloadId < workloadIDs[j].WorkloadId
+		}
+		return workloadIDs[i].OrchestratorId < workloadIDs[j].OrchestratorId
+	})
+	return workloadIDs
 }
 
 // processWorkloadUpdates takes WorkLoadEndpoints from state and programs route rules for their CIDR's pointing to an egress route table
@@ -918,7 +931,6 @@ func (m *egressIPManager) notifyWorkloadsOfEgressGatewayMaintenanceWindows() err
 			existing = gateway{}
 		}
 
-		// TODO notify of health failure too?
 		if !latest.maintenanceStarted.IsZero() &&
 			!latest.maintenanceFinished.IsZero() &&
 			(latest.addr != existing.addr ||
@@ -1583,7 +1595,7 @@ func usageMap(workloadID proto.WorkloadEndpointID, gatewayIPs set.Set[ip.Addr], 
 	return usage
 }
 
-func parseMember(memberStr string) (*gateway, error) {
+func parseEGWIPSetMember(memberStr string) (*gateway, error) {
 	maintenanceStarted := time.Time{}
 	maintenanceFinished := time.Time{}
 	var healthPort uint16
