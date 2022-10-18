@@ -43,7 +43,8 @@ class _TestEgressIP(TestBase):
                   "FELIX_EGRESSIPSUPPORT": "EnabledPerNamespaceOrPerPod",
                   "FELIX_IPINIPENABLED": "false",
                   "FELIX_VXLANENABLED": "false",
-                  "FELIX_WIREGUARDENABLED": "false"}
+                  "FELIX_WIREGUARDENABLED": "false",
+                  "FELIX_EGRESSGATEWAYPOLLINTERVAL": "1"}
         if backend == "VXLAN":
             modeVxlan = "Always"
             modeIPIP = "Never"
@@ -189,6 +190,76 @@ EOF
                 g.wait_ready()
 
             self.check_ecmp_routes(client, servers, gw_ips, allowed_untaken_count=1)
+
+    def test_egw_readiness(self):
+        """
+        Test egress gateway readiness probes and felix-to-EGW probes.  After blocking an
+        EGW readiness probe Felix should remove that EGW from the pool.
+        :return: None
+        """
+
+        with DiagsCollector():
+            # Prepare nine external servers with random port number.
+            # The number is three times of the number of gateway pods to make sure
+            # every ECMP route get chance to be used.
+            servers = []
+            for i in range(9):
+                s = NetcatServerTCP(randint(100, 65000))
+                servers.append(s)
+                self.add_cleanup(s.kill)
+
+            # Create a few egress gateways.  We set each one up with a different ICMP probe so that we can
+            # break each one's probe separately.
+            gw = self.create_gateway_pod("kind-worker", "gw", self.egress_cidr, icmp_probes=servers[0].ip)
+            gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr, icmp_probes=servers[1].ip)
+            gw3 = self.create_gateway_pod("kind-worker3", "gw3", self.egress_cidr, icmp_probes=servers[2].ip)
+
+            for s in servers:
+                s.wait_running()
+                self.server_add_route(s, gw)
+                self.server_add_route(s, gw2)
+                self.server_add_route(s, gw3)
+
+            for g in [gw, gw2, gw3]:
+                g.wait_ready()
+
+            # Create client.
+            _log.info("ecmp create client")
+            client_ns = "default"
+            client = NetcatClientTCP(client_ns, "test1", annotations={
+                "egress.projectcalico.org/selector": "color == 'red'",
+                "egress.projectcalico.org/namespaceSelector": "all()",
+            })
+            self.add_cleanup(client.delete)
+            client.wait_ready()
+
+            # Set ECMP hash policy to L4 (source, dest, src port, dest port)
+            run("docker exec -t %s sysctl -w net.ipv4.fib_multipath_hash_policy=1" % client.nodename)
+
+            # Send packet to servers and check source ip.
+            # Since each server has same port number and different ip,
+            # we should expect packets take all three EMCP routes.
+            gw_ips = [gw.ip, gw2.ip, gw3.ip]
+            self.check_ecmp_routes(client, servers, gw_ips)
+
+            # Break one of the gateway's ICMP probes, it should be taken out of service.
+            self.server_del_route(servers[0], gw)
+            gw.wait_not_ready()
+
+            def check_routes(expected):
+                tables = self.read_client_hops_for_node(client.nodename)
+                hops = tables[client.ip]["hops"]
+                assert set(hops) == set(expected), "Expected client's hops to be gw2 and gw3 only."
+
+            retry_until_success(check_routes, retries=10, wait_time=3, function_args=[[gw2.ip, gw3.ip]])
+            self.check_ecmp_routes(client, servers[1:], gw_ips[1:])
+
+            # Reinstate the probe, it should be added back into service.
+            self.server_add_route(servers[0], gw)
+            gw.wait_ready()
+
+            retry_until_success(check_routes, retries=10, wait_time=3, function_args=[[gw.ip, gw2.ip, gw3.ip]])
+            self.check_ecmp_routes(client, servers, gw_ips)
 
     def test_ecmp_with_pod_namespace_selector(self):
 
@@ -829,7 +900,7 @@ EOF
 
     def check_ecmp_routes(self, client, servers, gw_ips, allowed_untaken_count=0):
         """
-        Validate that client went though every ECMP route when
+        Validate that client went through every ECMP route when
         accessing number of servers.
         """
         _log.info("--- Checking ecmp routes %s from client %s %s ---", gw_ips, client.name, client.ip)
@@ -944,6 +1015,12 @@ EOF
         """
         server.execute("ip r a %s/32 via %s" % (pod.ip, pod.hostip))
 
+    def server_del_route(self, server, pod):
+        """
+        delete route to a pod for a server
+        """
+        server.execute("ip r del %s/32 via %s" % (pod.ip, pod.hostip))
+
     def create_backend_service(self, host, name, ns="default"):
         """
         Create a backend server pod and a service
@@ -1015,10 +1092,10 @@ spec:
       value: "%s"
     # Only used if ICMP_PROBES is non-empty: interval to send probes.
     - name: ICMP_PROBE_INTERVAL
-      value: "5s"
+      value: "1s"
     # Only used if ICMP_PROBES is non-empty: timeout on each probe.
     - name: ICMP_PROBE_TIMEOUT
-      value: "15s"
+      value: "3s"
     # Optional HTTP URL to send periodic probes to; if the probe fails that is reflected in 
     # the health reported on the health port.
     - name: HTTP_PROBE_URL
