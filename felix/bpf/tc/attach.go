@@ -73,6 +73,7 @@ type AttachPoint struct {
 	Features             environment.Features
 	RPFStrictEnabled     bool
 	EGWVxlanPort         uint16
+	EGIpEnabled          bool
 }
 
 var tcLock sync.RWMutex
@@ -683,6 +684,7 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 		VethNS:       ap.VethNS,
 		WgPort:       ap.WgPort,
 		EgwVxlanPort: ap.EGWVxlanPort,
+		EGIpEnabled:  0,
 	}
 	var err error
 
@@ -698,6 +700,10 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 	globalData.IntfIP, err = convertIPToUint32(ap.IntfIP)
 	if err != nil {
 		return err
+	}
+
+	if ap.EGIpEnabled {
+		globalData.EGIpEnabled = 1
 	}
 
 	if ap.IPv6Enabled {

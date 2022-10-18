@@ -274,6 +274,7 @@ type BpfGlobalData struct {
 	Flags        uint32
 	WgPort       uint16
 	EgwVxlanPort uint16
+	EGIpEnabled  uint16
 }
 
 func TcSetGlobals(
@@ -292,6 +293,7 @@ func TcSetGlobals(
 		C.ushort(globalData.VethNS),
 		C.uint(globalData.Flags),
 		C.ushort(globalData.WgPort),
+		C.ushort(globalData.EGIpEnabled),
 		C.ushort(globalData.EgwVxlanPort),
 	)
 

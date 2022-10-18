@@ -17,6 +17,7 @@ struct cali_tc_globals {
 	__be32 host_tunnel_ip;
 	__be32 flags;
 	__be16 wg_port;
+	__be16 eg_ip_enabled;
 	__be16 egw_vxlan_port;
 };
 
