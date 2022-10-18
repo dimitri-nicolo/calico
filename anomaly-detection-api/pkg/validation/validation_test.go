@@ -60,7 +60,7 @@ var _ = Describe("Validation test", func() {
 		It("fails validation for a POST method with request body too large", func() {
 			req, _ := http.NewRequest("POST", "/clusters/cluster/models/dynamic/flow/port_scan", strings.NewReader(testBase64FileString))
 
-			modelSize := 15730001
+			modelSize := 100000001
 			req.Header.Add("Content-Type", httputils.StringMIME)
 			req.Header.Add("Content-Length", strconv.Itoa(modelSize))
 			req.ContentLength = int64(modelSize)
