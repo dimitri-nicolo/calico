@@ -8,9 +8,10 @@ import (
 	"net"
 	"sync"
 
+	log "github.com/sirupsen/logrus"
+
 	protoutil "github.com/projectcalico/calico/egress-gateway/util/proto"
 	"github.com/projectcalico/calico/felix/proto"
-	log "github.com/sirupsen/logrus"
 )
 
 // RouteObserver allows a module to be notified of updates regarding routes

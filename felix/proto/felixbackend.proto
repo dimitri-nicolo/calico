@@ -49,6 +49,11 @@ message SyncRequest {
   // Determines which types of payloads will be sent to the client.
   // Valid values are "per-pod-policies" or "l3-routes".
   string subscriptionType = 3;
+
+  // Enterprise-only fields, start at 100.
+
+  // Controls whether IPv6 routes will be sent or not.
+  bool supportsIPv6RouteUpdates = 100;
 }
 
 // Rationale for having explicit Remove messages rather than sending and update

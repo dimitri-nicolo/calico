@@ -12,6 +12,7 @@ import (
 	"github.com/projectcalico/calico/egress-gateway/controlplane"
 	"github.com/projectcalico/calico/egress-gateway/data"
 	"github.com/projectcalico/calico/egress-gateway/sync"
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 
 	docopt "github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
@@ -63,6 +64,11 @@ func main() {
 
 		log.SetLevel(ls)
 	}
+	// Replace logrus' formatter with a custom one using our time format,
+	// shared with the Python code.
+	log.SetFormatter(&logutils.Formatter{Component: "felix"})
+	// Install a hook that adds file/line no information.
+	log.AddHook(&logutils.ContextHook{})
 
 	var vni int
 	argVNI, ok := args["--vni"].(string)

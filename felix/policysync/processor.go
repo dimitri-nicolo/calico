@@ -82,14 +82,15 @@ func newSubscriptionType(s string) (SubscriptionType, error) {
 
 type EndpointInfo struct {
 	// The channel to send updates for this workload to.
-	output         chan<- proto.ToDataplane
-	subscription   SubscriptionType
-	syncRequest    proto.SyncRequest
-	currentJoinUID uint64
-	endpointUpd    *proto.WorkloadEndpointUpdate
-	syncedPolicies map[proto.PolicyID]bool
-	syncedProfiles map[proto.ProfileID]bool
-	syncedIPSets   map[string]bool
+	output             chan<- proto.ToDataplane
+	subscription       SubscriptionType
+	syncRequest        proto.SyncRequest
+	currentJoinUID     uint64
+	endpointUpd        *proto.WorkloadEndpointUpdate
+	syncedPolicies     map[proto.PolicyID]bool
+	syncedProfiles     map[proto.ProfileID]bool
+	syncedIPSets       map[string]bool
+	supportsIPv6Routes bool
 }
 
 type JoinMetadata struct {
@@ -182,6 +183,7 @@ func (p *Processor) handleJoin(joinReq JoinRequest) {
 		subType = SubscriptionTypePerPodPolicies
 	}
 	ei.subscription = subType
+	ei.supportsIPv6Routes = joinReq.SyncRequest.SupportsIPv6RouteUpdates
 	ei.currentJoinUID = joinReq.JoinUID
 	ei.output = joinReq.C
 	ei.syncedPolicies = map[proto.PolicyID]bool{}
@@ -965,8 +967,14 @@ func (ei *EndpointInfo) sendMsg(payload interface{}) {
 		case *proto.ToDataplane_ConfigUpdate:
 			ei.output <- proto.ToDataplane{Payload: payload}
 		case *proto.ToDataplane_RouteUpdate:
+			if !ei.supportsIPv6Routes && strings.Contains(payload.RouteUpdate.Dst, ":") {
+				return
+			}
 			ei.output <- proto.ToDataplane{Payload: payload}
 		case *proto.ToDataplane_RouteRemove:
+			if !ei.supportsIPv6Routes && strings.Contains(payload.RouteRemove.Dst, ":") {
+				return
+			}
 			ei.output <- proto.ToDataplane{Payload: payload}
 		}
 	default:
