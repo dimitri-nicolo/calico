@@ -2407,6 +2407,10 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			d.awsSubnetMgr.OnSecondaryIfaceStateUpdate(msg)
 		case msg := <-d.egwHealthReportC:
 			d.egressIPManager.OnEGWHealthReport(msg)
+			// Drain the rest of the channel.  This makes sure that we combine work if we're getting backed up.
+			for _, msg := range drainChan(d.egwHealthReportC, 1000) {
+				d.egressIPManager.OnEGWHealthReport(msg)
+			}
 		case <-ipSetsRefreshC:
 			log.Debug("Refreshing IP sets state")
 			d.forceIPSetsRefresh = true
@@ -2486,6 +2490,18 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			}
 		}
 	}
+}
+
+func drainChan[T any](c <-chan T, limit int) (result []T) {
+	for i := 0; i < limit; i++ {
+		select {
+		case v := <-c:
+			result = append(result, v)
+		default:
+			return
+		}
+	}
+	return
 }
 
 func (d *InternalDataplane) configureKernel() {
