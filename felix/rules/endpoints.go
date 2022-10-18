@@ -426,6 +426,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 	})
 
 	// Accept the UDP VXLAN traffic for egress gateways
+	endOfChainDropComment := "Drop if no profiles matched"
 	if !r.BPFEnabled && ipVersion == 4 && isEgressGateway {
 		programEgwRule := func(ipset string) {
 			baseMatch := func(proto uint8) MatchCriteria {
@@ -466,12 +467,15 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 			programEgwRule(IPSetIDAllTunnelNets)
 		}
 
-		// Drop rest of the packets to Egress Gateways
+	}
+
+	if !r.BPFEnabled && isEgressGateway {
 		if dir == RuleDirIngress {
-			rules = append(rules, Rule{
-				Action:  DropAction{},
-				Comment: []string{"Drop any other traffic to egress gateways"},
-			})
+			// Block any other traffic _to_ egress gateways; zero out the policy and profiles so that we'll
+			// just render an end-of-chain drop.
+			tiers = nil
+			profileIds = nil
+			endOfChainDropComment = "Drop all other ingress traffic to egress gateway."
 		}
 	}
 
@@ -625,9 +629,11 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 				})
 		}
 
-		nfqueueRule := r.NfqueueRuleDelayDeniedPacket(Match(), "Drop if no profiles matched")
-		if nfqueueRule != nil {
-			rules = append(rules, *nfqueueRule)
+		if !isEgressGateway { // We don't support DNS policy on EGWs so no point in queueing.
+			nfqueueRule := r.NfqueueRuleDelayDeniedPacket(Match(), endOfChainDropComment)
+			if nfqueueRule != nil {
+				rules = append(rules, *nfqueueRule)
+			}
 		}
 
 		// When rendering normal rules, if no profile marked the packet as accepted, drop
@@ -647,7 +653,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 			},
 		})
 
-		rules = append(rules, r.DropRules(Match(), "Drop if no profiles matched")...)
+		rules = append(rules, r.DropRules(Match(), endOfChainDropComment)...)
 		// }
 	}
 

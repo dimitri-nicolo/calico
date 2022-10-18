@@ -433,12 +433,16 @@ func chainsForIfaces(ipVersion uint8,
 		}
 
 		if tableKind == "normal" {
+			if !isEgressGateway {
+				outRules = append(outRules,
+					iptables.Rule{
+						Match:   iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+						Action:  iptables.NfqueueAction{QueueNum: 100},
+						Comment: []string{"Drop if no profiles matched"},
+					},
+				)
+			}
 			outRules = append(outRules, []iptables.Rule{
-				{
-					Match:   iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
-					Action:  iptables.NfqueueAction{QueueNum: 100},
-					Comment: []string{"Drop if no profiles matched"},
-				},
 				{
 					Match: iptables.Match(),
 					Action: iptables.NflogAction{
@@ -577,19 +581,23 @@ func chainsForIfaces(ipVersion uint8,
 				Action:  iptables.AcceptAction{},
 				Comment: []string{"Accept readiness probes for egress gateways"},
 			})
-			inRules = append(inRules, iptables.Rule{
-				Action:  iptables.DropAction{},
-				Comment: []string{"Drop any other traffic to egress gateways"},
-			})
 		}
 
 		if tableKind == "normal" {
+			if !isEgressGateway {
+				inRules = append(inRules,
+					iptables.Rule{
+						Match:   iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+						Action:  iptables.NfqueueAction{QueueNum: 100},
+						Comment: []string{"Drop if no profiles matched"},
+					},
+				)
+			}
+			dropComment := "Drop if no profiles matched"
+			if isEgressGateway {
+				dropComment = "Drop all other ingress traffic to egress gateway."
+			}
 			inRules = append(inRules, []iptables.Rule{
-				{
-					Match:   iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
-					Action:  iptables.NfqueueAction{QueueNum: 100},
-					Comment: []string{"Drop if no profiles matched"},
-				},
 				{
 					Match: iptables.Match(),
 					Action: iptables.NflogAction{
@@ -600,7 +608,7 @@ func chainsForIfaces(ipVersion uint8,
 				{
 					Match:   iptables.Match(),
 					Action:  iptables.DropAction{},
-					Comment: []string{"Drop if no profiles matched"},
+					Comment: []string{dropComment},
 				},
 			}...)
 		}
