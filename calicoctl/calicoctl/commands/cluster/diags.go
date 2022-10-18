@@ -35,6 +35,7 @@ type diagOpts struct {
 	Diags   bool // Only needed for Bind to work.
 
 	// Fields that we really want Bind to fill in.
+	Help                 bool
 	Config               string
 	Since                string
 	MaxLogs              int
@@ -45,32 +46,56 @@ type diagOpts struct {
 // Diags executes a series of kubectl exec commands to retrieve logs and resource information
 // for the configured cluster.
 func Diags(args []string) error {
-	doc := constants.DatastoreIntro + `Usage:
+	usage := `Usage:
   calicoctl cluster diags [options]
 
 Options:
   -h --help                    Show this screen.
-     --since=<SINCE>           Only collect logs newer than provided relative duration, in seconds (s), minutes (m) or hours (h).
-     --max-logs=<MAXLOGS>      Only collect up to this number of logs, for each kind of Calico component. [default: 5]
-     --focus-nodes=<NODES>     Comma-separated list of nodes from which we should try first to collect logs.
-  -c --config=<CONFIG>         Path to connection configuration file. [default: ` + constants.DefaultConfigPath + `]
+     --since=<SINCE>           Only collect logs newer than provided relative
+                               duration, in seconds (s), minutes (m) or hours (h).
+     --max-logs=<MAXLOGS>      Only collect up to this number of logs, for each
+                               kind of Calico component. [default: 5]
+     --focus-nodes=<NODES>     Comma-separated list of nodes from which we should
+                               try first to collect logs.
+  -c --config=<CONFIG>         Path to connection configuration file.
+                               [default: ` + constants.DefaultConfigPath + `]
      --allow-version-mismatch  Allow client and cluster versions mismatch.
-
-Description:
-  The cluster diags command collects a snapshot of diagnostic info and logs related to Calico for the given cluster.
 `
-	parsedArgs, err := docopt.ParseArgs(doc, args, "")
+	doc := constants.DatastoreIntro + usage + `
+Description:
+  The cluster diags command collects a snapshot of diagnostic info and logs related
+  to Calico for the given cluster.  It generates a .tar.gz file containing all the
+  diags.
+
+  By default, in order to keep the .tar.gz file to a reasonable size, this command
+  only collects up to 5 sets of logs for each kind of Calico pod (for example,
+  for calico-node, or Typha, or the intrusion detection controller).  To collect
+  more (or fewer) sets of logs, use the --max-logs option.
+
+  To tell calicoctl to try to collect logs first from particular nodes of interest,
+  set the --focus-nodes option to the relevant node names, comma-separated.  For a
+  Calico component with pods on multiple nodes, calicoctl will first collect logs
+  from the pods (if any) on the focus nodes, then from other nodes in the cluster.
+
+  To collect logs only for the last few hours, minutes, or seconds, set the --since
+  option to indicate the desired period.
+`
+	// Make our own Parser so we can print out options when bad options are given.
+	parser := &docopt.Parser{HelpHandler: docopt.NoHelpHandler, SkipHelpFlags: true}
+	parsedArgs, err := parser.ParseArgs(doc, args, "")
 	if err != nil {
-		return fmt.Errorf("Invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand.", strings.Join(args, " "))
-	}
-	if len(parsedArgs) == 0 {
-		return nil
+		return fmt.Errorf("Invalid option: 'calicoctl %s'.\n\n%v", strings.Join(args, " "), usage)
 	}
 
 	var opts diagOpts
 	err = parsedArgs.Bind(&opts)
 	if err != nil {
 		return fmt.Errorf("error understanding options: %w", err)
+	}
+
+	if opts.Help {
+		fmt.Print(doc)
+		return nil
 	}
 
 	// Default --since to "0s", which kubectl understands as meaning all logs.
