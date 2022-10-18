@@ -100,7 +100,7 @@ func diagsTestable(args []string, print func(a ...any) (int, error), continuatio
 	}
 
 	if opts.Help {
-		print(doc)
+		_, _ = print(doc)
 		return nil
 	}
 
@@ -220,7 +220,6 @@ func collectSelectedNodeLogs(dir string, opts *diagOpts) {
 			}
 		}
 	}
-	return
 }
 
 func collectDiagsForSelectedPods(dir string, opts *diagOpts, kubeClient *kubernetes.Clientset, nodeList []string, ns string, selector *v1.LabelSelector) {
