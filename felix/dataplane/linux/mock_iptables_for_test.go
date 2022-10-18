@@ -19,8 +19,9 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	. "github.com/onsi/gomega"
-	"github.com/projectcalico/calico/felix/iptables"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/felix/iptables"
 )
 
 type mockTable struct {

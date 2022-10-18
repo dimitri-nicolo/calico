@@ -33,20 +33,24 @@ type EgressGWTracker struct {
 	ipSetIDToGateways map[string]gatewaysByIP
 	dirtyEgressIPSet  set.Typed[string]
 
-	nextPollerNonce int
-	pollers         map[egwPollerID]*egwPoller
+	nextPollerNonce     int
+	pollers             map[egwPollerID]*egwPoller
+	pollInterval        time.Duration
+	minPollFailureCount int
 
 	healthReportC chan<- EGWHealthReport
 
 	fastRetryTicker *jitter.Ticker
 }
 
-func NewEgressGWTracker(healthReportC chan<- EGWHealthReport) *EgressGWTracker {
+func NewEgressGWTracker(healthReportC chan<- EGWHealthReport, pollInterval time.Duration, pollFailCount int) *EgressGWTracker {
 	return &EgressGWTracker{
 		ipSetIDToGateways: map[string]gatewaysByIP{},
 		dirtyEgressIPSet:  set.New[string](),
 
-		pollers: map[egwPollerID]*egwPoller{},
+		pollers:             map[egwPollerID]*egwPoller{},
+		pollInterval:        pollInterval,
+		minPollFailureCount: pollFailCount,
 
 		healthReportC: healthReportC,
 
@@ -200,12 +204,14 @@ func (m *EgressGWTracker) ensurePollerRunning(setID string, addr ip.Addr, port u
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	poller := &egwPoller{
-		id:         id,
-		nonce:      m.nextPollerNonce,
-		cancel:     cancel,
-		reportC:    m.healthReportC,
-		url:        fmt.Sprintf("http://%s:%d/readiness", addr, port),
-		fastRetryC: m.fastRetryTicker.C,
+		id:                  id,
+		nonce:               m.nextPollerNonce,
+		cancel:              cancel,
+		reportC:             m.healthReportC,
+		url:                 fmt.Sprintf("http://%s:%d/readiness", addr, port),
+		fastRetryC:          m.fastRetryTicker.C,
+		pollInterval:        m.pollInterval,
+		minPollFailureCount: m.minPollFailureCount,
 	}
 	m.nextPollerNonce += 1
 	m.pollers[id] = poller
@@ -252,23 +258,19 @@ type egwPollerID struct {
 }
 
 type egwPoller struct {
-	id         egwPollerID
-	nonce      int
-	url        string
-	cancel     func()
-	reportC    chan<- EGWHealthReport
-	fastRetryC <-chan time.Time
+	id                  egwPollerID
+	nonce               int
+	url                 string
+	cancel              func()
+	reportC             chan<- EGWHealthReport
+	fastRetryC          <-chan time.Time
+	pollInterval        time.Duration
+	minPollFailureCount int
 }
 
 func (p *egwPoller) Start(ctx context.Context) {
 	go p.loop(ctx)
 }
-
-const (
-	// FIXME Add config for these
-	egwPollTime    = 10 * time.Second
-	egwPollTimeout = 10 * time.Second
-)
 
 type EGWHealthReport struct {
 	PollerID egwPollerID
@@ -285,7 +287,7 @@ func (p *egwPoller) loop(ctx context.Context) {
 		"pollerNonce": p.nonce,
 	})
 	logCtx.Info("Polling health of remote egress gateway.")
-	ticker := jitter.NewTicker(egwPollTime*95/100, egwPollTime*10/100)
+	ticker := jitter.NewTicker(p.pollInterval*95/100, p.pollInterval*10/100)
 	defer ticker.Stop()
 	lastReportedHealth := EGWHealthUnknown
 	lastPromHealth := EGWHealthUnknown
@@ -323,7 +325,7 @@ func (p *egwPoller) loop(ctx context.Context) {
 		}
 
 		if egwHealth != lastReportedHealth {
-			if egwHealth == EGWHealthUp || numBadReports >= 3 {
+			if egwHealth == EGWHealthUp || numBadReports >= p.minPollFailureCount {
 				// Got a new report to send, unmask the report channel.
 				reportC = p.reportC
 			} else {
@@ -350,7 +352,7 @@ func (p *egwPoller) loop(ctx context.Context) {
 
 func (p *egwPoller) doOneProbe(ctx context.Context, logCtx *log.Entry) (EGWHealth, error) {
 	logCtx.Debug("Doing poll...")
-	toCtx, cancel := context.WithTimeout(ctx, egwPollTimeout)
+	toCtx, cancel := context.WithTimeout(ctx, p.pollInterval)
 	req, err := http.NewRequestWithContext(toCtx, "GET", p.url, nil)
 	defer cancel()
 
@@ -408,8 +410,9 @@ func (g gatewaysByIP) activeGateways() gatewaysByIP {
 		if now.After(m.maintenanceStarted) && now.Before(m.maintenanceFinished) {
 			continue
 		}
-		// FIXME This classes "unknown" and "up" together, which makes sure that we don't flap at start-of-day.
-		// FIXME Would be nice to be more precise to avoid using a bad EGW at start of day.
+		// This classes "unknown" and "up" together, which makes sure that we don't flap at start-of-day.
+		// Would be nice to be more precise to avoid using a bad EGW at start of day but that'd delay programming
+		// of EGWs until we've polled them all.
 		if m.healthPort != 0 && m.health == EGWHealthProbeFailed {
 			continue
 		}

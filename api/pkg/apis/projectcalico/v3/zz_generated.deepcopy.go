@@ -2653,6 +2653,16 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(int)
 		**out = **in
 	}
+	if in.EgressGatewayPollInterval != nil {
+		in, out := &in.EgressGatewayPollInterval, &out.EgressGatewayPollInterval
+		*out = new(v1.Duration)
+		**out = **in
+	}
+	if in.EgressGatewayPollFailureCount != nil {
+		in, out := &in.EgressGatewayPollFailureCount, &out.EgressGatewayPollFailureCount
+		*out = new(int)
+		**out = **in
+	}
 	if in.RouteSyncDisabled != nil {
 		in, out := &in.RouteSyncDisabled, &out.RouteSyncDisabled
 		*out = new(bool)
