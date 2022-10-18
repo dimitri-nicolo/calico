@@ -43,10 +43,7 @@ type diagOpts struct {
 	AllowVersionMismatch bool
 }
 
-// Diags executes a series of kubectl exec commands to retrieve logs and resource information
-// for the configured cluster.
-func Diags(args []string) error {
-	usage := `Usage:
+var usage = `Usage:
   calicoctl cluster diags [options]
 
 Options:
@@ -61,7 +58,8 @@ Options:
                                [default: ` + constants.DefaultConfigPath + `]
      --allow-version-mismatch  Allow client and cluster versions mismatch.
 `
-	doc := constants.DatastoreIntro + usage + `
+
+var doc = constants.DatastoreIntro + usage + `
 Description:
   The cluster diags command collects a snapshot of diagnostic info and logs related
   to Calico for the given cluster.  It generates a .tar.gz file containing all the
@@ -80,6 +78,14 @@ Description:
   To collect logs only for the last few hours, minutes, or seconds, set the --since
   option to indicate the desired period.
 `
+
+// Diags executes a series of kubectl exec commands to retrieve logs and resource information
+// for the configured cluster.
+func Diags(args []string) error {
+	return diagsTestable(args, fmt.Print, collectDiags)
+}
+
+func diagsTestable(args []string, print func(a ...any) (int, error), continuation func(*diagOpts) error) error {
 	// Make our own Parser so we can print out options when bad options are given.
 	parser := &docopt.Parser{HelpHandler: docopt.NoHelpHandler, SkipHelpFlags: true}
 	parsedArgs, err := parser.ParseArgs(doc, args, "")
@@ -94,7 +100,7 @@ Description:
 	}
 
 	if opts.Help {
-		fmt.Print(doc)
+		print(doc)
 		return nil
 	}
 
@@ -103,17 +109,16 @@ Description:
 		opts.Since = "0s"
 	}
 
-	err = common.CheckVersionMismatch(parsedArgs["--config"], parsedArgs["--allow-version-mismatch"])
-	if err != nil {
-		return err
-	}
-
-	return collectDiags(&opts)
+	return continuation(&opts)
 }
 
 func collectDiags(opts *diagOpts) error {
 	// Ensure since value is valid with proper time unit
 	argutils.ValidateSinceDuration(opts.Since)
+
+	if err := common.CheckVersionMismatch(opts.Config, opts.AllowVersionMismatch); err != nil {
+		return err
+	}
 
 	// Ensure kubectl command is available (since we need it to access BGP information)
 	if err := common.KubectlExists(); err != nil {
