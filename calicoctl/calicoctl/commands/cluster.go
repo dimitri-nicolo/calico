@@ -18,7 +18,6 @@ func Cluster(args []string) error {
   calicoctl cluster <command> [<args>...]
 
     diags            Collect snapshot of diagnostic info and logs related to Calico at the cluster-level.
-    health-check     Verify Calico Enterprise installation and configuration 
 
 Options:
   -h --help      Show this screen.

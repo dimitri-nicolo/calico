@@ -266,382 +266,118 @@ func collectDiagsForSelectedPods(dir string, opts *diagOpts, kubeClient *kuberne
 }
 
 func collectCalicoResource(dir string) {
-	fmt.Println("Collecting Calico resources...")
-	common.ExecAllCmdsWriteToFile([]common.Cmd{
-		{
-			Info:     "Collect Calico clusterinformations",
-			CmdStr:   "kubectl get clusterinformations -o wide",
-			FilePath: fmt.Sprintf("%s/clusterinformations.txt", dir),
-		},
-		{
-			Info:     "Collect Calico clusterinformations",
-			CmdStr:   "kubectl get clusterinformations -o yaml",
-			FilePath: fmt.Sprintf("%s/clusterinformations.yaml", dir),
-		},
-		{
-			Info:     "Collect Calico felixconfigurations",
-			CmdStr:   "kubectl get felixconfigurations -o wide",
-			FilePath: fmt.Sprintf("%s/felixconfigurations.txt", dir),
-		},
-		{
-			Info:     "Collect Calico felixconfigurations",
-			CmdStr:   "kubectl get felixconfigurations -o yaml",
-			FilePath: fmt.Sprintf("%s/felixconfigurations.yaml", dir),
-		},
-		{
-			Info:     "Collect Calico bgppeers",
-			CmdStr:   "kubectl get bgppeers -o wide",
-			FilePath: fmt.Sprintf("%s/bgppeers.txt", dir),
-		},
-		{
-			Info:     "Collect Calico bgppeers",
-			CmdStr:   "kubectl get bgppeers -o yaml",
-			FilePath: fmt.Sprintf("%s/bgppeers.yaml", dir),
-		},
-		{
-			Info:     "Collect Calico bgpconfigurations",
-			CmdStr:   "kubectl get bgpconfigurations -o wide",
-			FilePath: fmt.Sprintf("%s/bgpconfigurations.txt", dir),
-		},
-		{
-			Info:     "Collect Calico bgpconfigurations",
-			CmdStr:   "kubectl get bgpconfigurations -o yaml",
-			FilePath: fmt.Sprintf("%s/bgpconfigurations.yaml", dir),
-		},
-		{
-			Info:     "Collect Calico ipamblocks",
-			CmdStr:   "kubectl get ipamblocks -o wide",
-			FilePath: fmt.Sprintf("%s/ipamblocks.txt", dir),
-		},
-		{
-			Info:     "Collect Calico ipamblocks",
-			CmdStr:   "kubectl get ipamblocks -o yaml",
-			FilePath: fmt.Sprintf("%s/ipamblocks.yaml", dir),
-		},
-		{
-			Info:     "Collect Calico blockaffinities",
-			CmdStr:   "kubectl get blockaffinities -o wide",
-			FilePath: fmt.Sprintf("%s/blockaffinities.txt", dir),
-		},
-		{
-			Info:     "Collect Calico blockaffinities",
-			CmdStr:   "kubectl get blockaffinities -o yaml",
-			FilePath: fmt.Sprintf("%s/blockaffinities.yaml", dir),
-		},
-		{
-			Info:     "Collect Calico ipamhandles",
-			CmdStr:   "kubectl get ipamhandles -o wide",
-			FilePath: fmt.Sprintf("%s/ipamhandles.txt", dir),
-		},
-		{
-			Info:     "Collect Calico ipamhandles",
-			CmdStr:   "kubectl get ipamhandles -o yaml",
-			FilePath: fmt.Sprintf("%s/ipamhandles.yaml", dir),
-		},
-		{
-			Info:     "Collect Calico tiers",
-			CmdStr:   "kubectl get tiers -o wide",
-			FilePath: fmt.Sprintf("%s/tiers.txt", dir),
-		},
-		{
-			Info:     "Collect Calico tiers",
-			CmdStr:   "kubectl get tiers -o yaml",
-			FilePath: fmt.Sprintf("%s/tiers.yaml", dir),
-		},
-		{
-			Info:     "Collect Calico networkpolicies",
-			CmdStr:   "kubectl get networkpolicies -o wide",
-			FilePath: fmt.Sprintf("%s/networkpolicies.txt", dir),
-		},
-		{
-			Info:     "Collect Calico networkpolicies",
-			CmdStr:   "kubectl get networkpolicies -o yaml",
-			FilePath: fmt.Sprintf("%s/networkpolicies.yaml", dir),
-		},
-		{
-			Info:     "Collect Calico clusterinformations",
-			CmdStr:   "kubectl get clusterinformations -o wide",
-			FilePath: fmt.Sprintf("%s/clusterinformations.txt", dir),
-		},
-		{
-			Info:     "Collect Calico clusterinformations",
-			CmdStr:   "kubectl get clusterinformations -o yaml",
-			FilePath: fmt.Sprintf("%s/clusterinformations.yaml", dir),
-		},
-		{
-			Info:     "Collect Calico hostendpoints",
-			CmdStr:   "kubectl get hostendpoints -o wide",
-			FilePath: fmt.Sprintf("%s/hostendpoints.txt", dir),
-		},
-		{
-			Info:     "Collect Calico hostendpoints",
-			CmdStr:   "kubectl get hostendpoints -o yaml",
-			FilePath: fmt.Sprintf("%s/hostendpoints.yaml", dir),
-		},
-		{
-			Info:     "Collect Calico ippools",
-			CmdStr:   "kubectl get ippools -o wide",
-			FilePath: fmt.Sprintf("%s/ippools.txt", dir),
-		},
-		{
-			Info:     "Collect Calico ippools",
-			CmdStr:   "kubectl get ippools -o yaml",
-			FilePath: fmt.Sprintf("%s/ippools.yaml", dir),
-		},
-		{
-			Info:     "Collect Calico licensekeys",
-			CmdStr:   "kubectl get licensekeys -o wide",
-			FilePath: fmt.Sprintf("%s/licensekeys.txt", dir),
-		},
-		{
-			Info:     "Collect Calico licensekeys",
-			CmdStr:   "kubectl get licensekeys -o yaml",
-			FilePath: fmt.Sprintf("%s/licensekeys.yaml", dir),
-		},
-		{
-			Info:     "Collect Calico networksets",
-			CmdStr:   "kubectl get networksets -o wide",
-			FilePath: fmt.Sprintf("%s/networksets.txt", dir),
-		},
-		{
-			Info:     "Collect Calico networksets",
-			CmdStr:   "kubectl get networksets -o yaml",
-			FilePath: fmt.Sprintf("%s/networksets.yaml", dir),
-		},
-		{
-			Info:     "Collect Calico globalnetworksets",
-			CmdStr:   "kubectl get globalnetworksets -o wide",
-			FilePath: fmt.Sprintf("%s/globalnetworksets.txt", dir),
-		},
-		{
-			Info:     "Collect Calico globalnetworksets",
-			CmdStr:   "kubectl get globalnetworksets -o yaml",
-			FilePath: fmt.Sprintf("%s/globalnetworksets.yaml", dir),
-		},
-		{
-			Info:     "Collect Calico globalnetworkpolicies",
-			CmdStr:   "kubectl get globalnetworkpolicies -o wide",
-			FilePath: fmt.Sprintf("%s/globalnetworkpolicies.txt", dir),
-		},
-		{
-			Info:     "Collect Calico globalnetworkpolicies",
-			CmdStr:   "kubectl get globalnetworkpolicies -o yaml",
-			FilePath: fmt.Sprintf("%s/globalnetworkpolicies.yaml", dir),
-		},
+	commands := []common.Cmd{}
+	for _, resource := range []string{
+		"clusterinformations",
+		"felixconfigurations",
+		"bgppeers",
+		"bgpconfigurations",
+		"ipamblocks",
+		"blockaffinities",
+		"ipamhandles",
+		"tiers",
+		"networkpolicies",
+		"clusterinformations",
+		"hostendpoints",
+		"ippools",
+		"licensekeys",
+		"networksets",
+		"globalnetworksets",
+		"globalnetworkpolicies",
+	} {
+		commands = append(commands, common.Cmd{
+			Info:     fmt.Sprintf("Collect Calico %v (yaml)", resource),
+			CmdStr:   fmt.Sprintf("kubectl get %v -o yaml", resource),
+			FilePath: fmt.Sprintf("%s/%v.yaml", dir, resource),
+		}, common.Cmd{
+			Info:     fmt.Sprintf("Collect Calico %v (wide text)", resource),
+			CmdStr:   fmt.Sprintf("kubectl get %v -o wide", resource),
+			FilePath: fmt.Sprintf("%s/%v.txt", dir, resource),
+		})
+	}
+
+	commands = append(commands, common.Cmd{
+		Info:     fmt.Sprintf("Collect all in %s", common.CalicoNamespace),
+		CmdStr:   fmt.Sprintf("kubectl get all -n %s -o wide", common.CalicoNamespace),
+		FilePath: fmt.Sprintf("%s/calico-system.txt", dir),
 	})
+	common.ExecAllCmdsWriteToFile(commands)
 }
 
 func collectTigeraOperator(dir string) {
-	fmt.Println("Collecting Tigera operator details ...")
-	common.ExecAllCmdsWriteToFile([]common.Cmd{
-		{
-			Info:     "Collect tigerastatuses",
-			CmdStr:   "kubectl get tigerastatuses -o wide",
-			FilePath: fmt.Sprintf("%s/tigerastatuses.txt", dir),
-		},
-		{
-			Info:     "Collect tigerastatuses",
-			CmdStr:   "kubectl get tigerastatuses -o yaml",
-			FilePath: fmt.Sprintf("%s/tigerastatuses.yaml", dir),
-		},
-		{
-			Info:     "Collect installations",
-			CmdStr:   "kubectl get installations -o wide",
-			FilePath: fmt.Sprintf("%s/installations.txt", dir),
-		},
-		{
-			Info:     "Collect installations",
-			CmdStr:   "kubectl get installations -o yaml",
-			FilePath: fmt.Sprintf("%s/installations.yaml", dir),
-		},
-		{
-			Info:     "Collect apiservers",
-			CmdStr:   "kubectl get apiservers -o wide",
-			FilePath: fmt.Sprintf("%s/apiservers.txt", dir),
-		},
-		{
-			Info:     "Collect apiservers",
-			CmdStr:   "kubectl get apiservers -o yaml",
-			FilePath: fmt.Sprintf("%s/apiservers.yaml", dir),
-		},
-		{
-			Info:     "Collect compliances",
-			CmdStr:   "kubectl get compliances -o wide",
-			FilePath: fmt.Sprintf("%s/compliances.txt", dir),
-		},
-		{
-			Info:     "Collect compliances",
-			CmdStr:   "kubectl get compliances -o yaml",
-			FilePath: fmt.Sprintf("%s/compliances.yaml", dir),
-		},
-		{
-			Info:     "Collect intrusiondetections",
-			CmdStr:   "kubectl get intrusiondetections -o wide",
-			FilePath: fmt.Sprintf("%s/intrusiondetections.txt", dir),
-		},
-		{
-			Info:     "Collect intrusiondetections",
-			CmdStr:   "kubectl get intrusiondetections -o yaml",
-			FilePath: fmt.Sprintf("%s/intrusiondetections.yaml", dir),
-		},
-		{
-			Info:     "Collect managers",
-			CmdStr:   "kubectl get managers -o wide",
-			FilePath: fmt.Sprintf("%s/managers.txt", dir),
-		},
-		{
-			Info:     "Collect managers",
-			CmdStr:   "kubectl get managers -o yaml",
-			FilePath: fmt.Sprintf("%s/managers.yaml", dir),
-		},
-		{
-			Info:     "Collect logcollectors",
-			CmdStr:   "kubectl get logcollectors -o wide",
-			FilePath: fmt.Sprintf("%s/logcollectors.txt", dir),
-		},
-		{
-			Info:     "Collect logcollectors",
-			CmdStr:   "kubectl get logcollectors -o yaml",
-			FilePath: fmt.Sprintf("%s/logcollectors.yaml", dir),
-		},
-		{
-			Info:     "Collect logstorages",
-			CmdStr:   "kubectl get logstorages -o wide",
-			FilePath: fmt.Sprintf("%s/logstorages.txt", dir),
-		},
-		{
-			Info:     "Collect logstorages",
-			CmdStr:   "kubectl get logstorages -o yaml",
-			FilePath: fmt.Sprintf("%s/logstorages.yaml", dir),
-		},
-		{
-			Info:     "Collect managementclusterconnections",
-			CmdStr:   "kubectl get managementclusterconnections -o wide",
-			FilePath: fmt.Sprintf("%s/managementclusterconnections.txt", dir),
-		},
-		{
-			Info:     "Collect managementclusterconnections",
-			CmdStr:   "kubectl get managementclusterconnections -o yaml",
-			FilePath: fmt.Sprintf("%s/managementclusterconnections.yaml", dir),
-		},
+	commands := []common.Cmd{}
+	for _, resource := range []string{
+		"tigerastatuses",
+		"installations",
+		"apiservers",
+		"compliances",
+		"intrusiondetections",
+		"managers",
+		"logcollectors",
+		"logstorages",
+		"managementclusterconnections",
+	} {
+		commands = append(commands, common.Cmd{
+			Info:     fmt.Sprintf("Collect %v (yaml)", resource),
+			CmdStr:   fmt.Sprintf("kubectl get %v -o yaml", resource),
+			FilePath: fmt.Sprintf("%s/%v.yaml", dir, resource),
+		}, common.Cmd{
+			Info:     fmt.Sprintf("Collect %v (wide text)", resource),
+			CmdStr:   fmt.Sprintf("kubectl get %v -o wide", resource),
+			FilePath: fmt.Sprintf("%s/%v.txt", dir, resource),
+		})
+	}
+
+	commands = append(commands, common.Cmd{
+		Info:     fmt.Sprintf("Collect all in %s", common.TigeraOperatorNamespace),
+		CmdStr:   fmt.Sprintf("kubectl get all -n %s -o wide", common.TigeraOperatorNamespace),
+		FilePath: fmt.Sprintf("%s/tigera-operator.txt", dir),
 	})
+	common.ExecAllCmdsWriteToFile(commands)
 }
 
 func collectKubernetesResource(dir string) {
 	fmt.Println("Collecting core kubernetes resources...")
-
-	common.ExecAllCmdsWriteToFile([]common.Cmd{
-		{
-			Info:     "Collect nodes",
-			CmdStr:   "kubectl get nodes -o wide",
-			FilePath: fmt.Sprintf("%s/nodes.txt", dir),
-		},
-		{
-			Info:     "Collect nodes",
-			CmdStr:   "kubectl get nodes -o yaml",
-			FilePath: fmt.Sprintf("%s/nodes.yaml", dir),
-		},
-		{
-			Info:     "Collect pods",
-			CmdStr:   "kubectl get pods --all-namespaces -o yaml",
-			FilePath: fmt.Sprintf("%s/pods.yaml", dir),
-		},
-		{
-			Info:     "Collect pods",
-			CmdStr:   "kubectl get pods --all-namespaces -o wide",
-			FilePath: fmt.Sprintf("%s/pods.txt", dir),
-		},
-		{
-			Info:     "Collect deployments",
-			CmdStr:   "kubectl get deployments --all-namespaces -o wide",
-			FilePath: fmt.Sprintf("%s/deployments.txt", dir),
-		},
-		{
-			Info:     "Collect deployments",
-			CmdStr:   "kubectl get deployments --all-namespaces -o yaml",
-			FilePath: fmt.Sprintf("%s/deployments.yaml", dir),
-		},
-		{
-			Info:     "Collect daemonsets",
-			CmdStr:   "kubectl get daemonsets --all-namespaces -o wide",
-			FilePath: fmt.Sprintf("%s/daemonsets.txt", dir),
-		},
-		{
-			Info:     "Collect daemonsets",
-			CmdStr:   "kubectl get daemonsets --all-namespaces -o yaml",
-			FilePath: fmt.Sprintf("%s/daemonsets.yaml", dir),
-		},
-		{
-			Info:     "Collect services",
-			CmdStr:   "kubectl get services --all-namespaces -o wide",
-			FilePath: fmt.Sprintf("%s/services.txt", dir),
-		},
-		{
-			Info:     "Collect services",
-			CmdStr:   "kubectl get services --all-namespaces -o yaml",
-			FilePath: fmt.Sprintf("%s/services.yaml", dir),
-		},
-		{
-			Info:     "Collect endpoints",
-			CmdStr:   "kubectl get endpoints --all-namespaces -o wide",
-			FilePath: fmt.Sprintf("%s/endpoints.txt", dir),
-		},
-		{
-			Info:     "Collect endpoints",
-			CmdStr:   "kubectl get endpoints --all-namespaces -o yaml",
-			FilePath: fmt.Sprintf("%s/endpoints.yaml", dir),
-		},
-		{
-			Info:     "Collect configmaps",
-			CmdStr:   "kubectl get configmaps --all-namespaces -o wide",
-			FilePath: fmt.Sprintf("%s/configmaps.txt", dir),
-		},
-		{
-			Info:     "Collect configmaps",
-			CmdStr:   "kubectl get configmaps --all-namespaces -o yaml",
-			FilePath: fmt.Sprintf("%s/configmaps.yaml", dir),
-		},
-		{
-			Info:     "Collect persistent volume claim",
-			CmdStr:   "kubectl get pvc --all-namespaces -o wide",
-			FilePath: fmt.Sprintf("%s/pvc.txt", dir),
-		},
-		{
-			Info:     "Collect persistent volume claim",
-			CmdStr:   "kubectl get pvc --all-namespaces -o yaml",
-			FilePath: fmt.Sprintf("%s/pvc.yaml", dir),
-		},
-		{
-			Info:     "Collect persistent volume",
-			CmdStr:   "kubectl get pv --all-namespaces -o wide",
-			FilePath: fmt.Sprintf("%s/pv.txt", dir),
-		},
-		{
-			Info:     "Collect persistent volume",
-			CmdStr:   "kubectl get pv --all-namespaces -o yaml",
-			FilePath: fmt.Sprintf("%s/pv.yaml", dir),
-		},
-		{
-			Info:     "Collect storage class",
-			CmdStr:   "kubectl get sc --all-namespaces -o wide",
-			FilePath: fmt.Sprintf("%s/sc.txt", dir),
-		},
-		{
-			Info:     "Collect storage class",
-			CmdStr:   "kubectl get sc --all-namespaces -o yaml",
-			FilePath: fmt.Sprintf("%s/sc.yaml", dir),
-		},
-		{
-			Info:     "Collect all namespaces",
-			CmdStr:   "kubectl get namespaces -o wide",
-			FilePath: fmt.Sprintf("%s/namespaces.txt", dir),
-		},
-		{
-			Info:     "Collect all namespaces",
-			CmdStr:   "kubectl get namespaces -o yaml",
-			FilePath: fmt.Sprintf("%s/namespaces.yaml", dir),
-		},
+	commands := []common.Cmd{}
+	for _, resource := range []string{
+		"pods",
+		"deployments",
+		"daemonsets",
+		"services",
+		"endpoints",
+		"configmaps",
+		"pvc",
+		"pv",
+		"sc",
+	} {
+		commands = append(commands, common.Cmd{
+			Info:     fmt.Sprintf("Collect %v (yaml)", resource),
+			CmdStr:   fmt.Sprintf("kubectl get %v --all-namespaces -o yaml", resource),
+			FilePath: fmt.Sprintf("%s/%v.yaml", dir, resource),
+		}, common.Cmd{
+			Info:     fmt.Sprintf("Collect %v (wide text)", resource),
+			CmdStr:   fmt.Sprintf("kubectl get %v --all-namespaces -o wide", resource),
+			FilePath: fmt.Sprintf("%s/%v.txt", dir, resource),
+		})
+	}
+	commands = append(commands, common.Cmd{
+		Info:     "Collect nodes (yaml)",
+		CmdStr:   "kubectl get nodes -o yaml",
+		FilePath: fmt.Sprintf("%s/nodes.yaml", dir),
+	}, common.Cmd{
+		Info:     "Collect nodes (wide text)",
+		CmdStr:   "kubectl get nodes -o wide",
+		FilePath: fmt.Sprintf("%s/nodes.txt", dir),
+	}, common.Cmd{
+		Info:     "Collect namespaces (yaml)",
+		CmdStr:   "kubectl get namespaces -o wide",
+		FilePath: fmt.Sprintf("%s/namespaces.yaml", dir),
+	}, common.Cmd{
+		Info:     "Collect namespaces (wide text)",
+		CmdStr:   "kubectl get namespaces -o yaml",
+		FilePath: fmt.Sprintf("%s/namespaces.txt", dir),
 	})
+	common.ExecAllCmdsWriteToFile(commands)
 }
 
 // collectGlobalClusterInformation collects the Kubernetes resource, Calico Resource and Tigera operator details
@@ -651,7 +387,7 @@ func collectGlobalClusterInformation(dir string) {
 		{
 			Info:     "Collect kubernetes Client and Server version",
 			CmdStr:   "kubectl version -o yaml",
-			FilePath: fmt.Sprintf("%s/version.txt", dir),
+			FilePath: fmt.Sprintf("%s/version.yaml", dir),
 		},
 	})
 
@@ -666,11 +402,10 @@ func collectDiagsForPod(dir string, opts *diagOpts, kubeClient *kubernetes.Clien
 	if _, err := os.Stat(nodeDir); errors.Is(err, os.ErrNotExist) {
 		err := os.Mkdir(nodeDir, os.ModePerm)
 		if err != nil {
-			fmt.Printf("error creating node diagnostics directory: %v", err)
+			fmt.Printf("error creating node diagnostics directory: %v\n", err)
 			return
 		}
 	}
-	fmt.Printf("Collecting diags for pod: %s\n", podName)
 	common.ExecAllCmdsWriteToFile([]common.Cmd{
 		{
 			Info:     fmt.Sprintf("Collect logs for pod %s", podName),
@@ -680,17 +415,17 @@ func collectDiagsForPod(dir string, opts *diagOpts, kubeClient *kubernetes.Clien
 		{
 			Info:     fmt.Sprintf("Collect describe for pod %s", podName),
 			CmdStr:   fmt.Sprintf("kubectl -n %s describe pods %s", namespace, podName),
-			FilePath: fmt.Sprintf("%s/%s-describe.txt", nodeDir, podName),
+			FilePath: fmt.Sprintf("%s/%s.txt", nodeDir, podName),
 		},
 	})
 
-	if strings.Contains(podName, "calico-node") {
+	if strings.Contains(podName, "calico-node-") {
 		collectCalicoNodeDiags(nodeDir, opts, kubeClient, nodeName, namespace, podName)
 	}
 }
 
 func collectCalicoNodeDiags(dir string, opts *diagOpts, kubeClient *kubernetes.Clientset, nodeName, namespace, podName string) {
-	fmt.Printf("Collecting diags for calico-node: %s\n", podName)
+	fmt.Printf("Collecting dataplane diags for calico-node: %s\n", podName)
 
 	curNodeDir := fmt.Sprintf("%s/%s", dir, podName)
 	err := os.Mkdir(curNodeDir, os.ModePerm)
@@ -699,86 +434,127 @@ func collectCalicoNodeDiags(dir string, opts *diagOpts, kubeClient *kubernetes.C
 		return
 	}
 
+	commands := []common.Cmd{}
+	for _, resource := range []string{
+		"pods",
+		"deployments",
+		"daemonsets",
+		"services",
+		"endpoints",
+		"configmaps",
+		"pvc",
+		"pv",
+		"sc",
+	} {
+		commands = append(commands, common.Cmd{
+			Info:     fmt.Sprintf("Collect %v (yaml)", resource),
+			CmdStr:   fmt.Sprintf("kubectl get %v --all-namespaces -o yaml", resource),
+			FilePath: fmt.Sprintf("%s/%v.yaml", dir, resource),
+		}, common.Cmd{
+			Info:     fmt.Sprintf("Collect %v (wide text)", resource),
+			CmdStr:   fmt.Sprintf("kubectl get %v --all-namespaces -o wide", resource),
+			FilePath: fmt.Sprintf("%s/%v.txt", dir, resource),
+		})
+	}
+	commands = append(commands, common.Cmd{
+		Info:     "Collect nodes (yaml)",
+		CmdStr:   "kubectl get nodes -o yaml",
+		FilePath: fmt.Sprintf("%s/nodes.yaml", dir),
+	}, common.Cmd{
+		Info:     "Collect nodes (wide text)",
+		CmdStr:   "kubectl get nodes -o wide",
+		FilePath: fmt.Sprintf("%s/nodes.txt", dir),
+	}, common.Cmd{
+		Info:     "Collect namespaces (yaml)",
+		CmdStr:   "kubectl get namespaces -o wide",
+		FilePath: fmt.Sprintf("%s/namespaces.yaml", dir),
+	}, common.Cmd{
+		Info:     "Collect namespaces (wide text)",
+		CmdStr:   "kubectl get namespaces -o yaml",
+		FilePath: fmt.Sprintf("%s/namespaces.txt", dir),
+	})
+	common.ExecAllCmdsWriteToFile(commands)
+
 	common.ExecAllCmdsWriteToFile([]common.Cmd{
 		// ip diagnostics
 		{
-			Info:     fmt.Sprintf("Collect iptables for node %s", podName),
+			Info:     fmt.Sprintf("Collect iptables for node %s", nodeName),
 			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- iptables-save -c", namespace, podName),
 			FilePath: fmt.Sprintf("%s/iptables-save.txt", curNodeDir),
 		},
 		{
-			Info:     fmt.Sprintf("Collect ip routes for node %s", podName),
+			Info:     fmt.Sprintf("Collect ip routes for node %s", nodeName),
 			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- ip route", namespace, podName),
 			FilePath: fmt.Sprintf("%s/iproute.txt", curNodeDir),
 		},
 		{
-			Info:     fmt.Sprintf("Collect ipv6 routes for node %s", podName),
+			Info:     fmt.Sprintf("Collect ipv6 routes for node %s", nodeName),
 			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- ip -6 route", namespace, podName),
 			FilePath: fmt.Sprintf("%s/ipv6route.txt", curNodeDir),
 		},
 		{
-			Info:     fmt.Sprintf("Collect ip rule for node %s", podName),
+			Info:     fmt.Sprintf("Collect ip rule for node %s", nodeName),
 			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- ip rule", namespace, podName),
 			FilePath: fmt.Sprintf("%s/iprule.txt", curNodeDir),
 		},
 		{
-			Info:     fmt.Sprintf("Collect ip route show table all for node %s", podName),
+			Info:     fmt.Sprintf("Collect ip route show table all for node %s", nodeName),
 			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- ip route show table all", namespace, podName),
 			FilePath: fmt.Sprintf("%s/iproute-all-table.txt", curNodeDir),
 		},
 		{
-			Info:     fmt.Sprintf("Collect ip addr for node %s", podName),
+			Info:     fmt.Sprintf("Collect ip addr for node %s", nodeName),
 			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- ip addr", namespace, podName),
 			FilePath: fmt.Sprintf("%s/ipaddr.txt", curNodeDir),
 		},
 		{
-			Info:     fmt.Sprintf("Collect ip link for node %s", podName),
+			Info:     fmt.Sprintf("Collect ip link for node %s", nodeName),
 			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- ip link", namespace, podName),
 			FilePath: fmt.Sprintf("%s/iplink.txt", curNodeDir),
 		},
 		{
-			Info:     fmt.Sprintf("Collect ip neigh for node %s", podName),
+			Info:     fmt.Sprintf("Collect ip neigh for node %s", nodeName),
 			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- ip neigh", namespace, podName),
 			FilePath: fmt.Sprintf("%s/ipneigh.txt", curNodeDir),
 		},
 		{
-			Info:     fmt.Sprintf("Collect ipset list for node %s", podName),
+			Info:     fmt.Sprintf("Collect ipset list for node %s", nodeName),
 			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- ipset list", namespace, podName),
 			FilePath: fmt.Sprintf("%s/ipsetlist.txt", curNodeDir),
 		},
 		// eBPF diagnostics
 		{
-			Info:     fmt.Sprintf("Collect eBPF conntrack for node %s", podName),
+			Info:     fmt.Sprintf("Collect eBPF conntrack for node %s", nodeName),
 			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- calico-node -bpf conntrack dump", namespace, podName),
 			FilePath: fmt.Sprintf("%s/eBPFconntrack.txt", curNodeDir),
 		},
 		{
-			Info:     fmt.Sprintf("Collect eBPF ipsets for node %s", podName),
+			Info:     fmt.Sprintf("Collect eBPF ipsets for node %s", nodeName),
 			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- calico-node -bpf ipsets dump", namespace, podName),
 			FilePath: fmt.Sprintf("%s/eBPFipsets.txt", curNodeDir),
 		},
 		{
-			Info:     fmt.Sprintf("Collect eBPF nat for node %s", podName),
+			Info:     fmt.Sprintf("Collect eBPF nat for node %s", nodeName),
 			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- calico-node -bpf nat dump", namespace, podName),
 			FilePath: fmt.Sprintf("%s/eBPFnat.txt", curNodeDir),
 		},
 		{
-			Info:     fmt.Sprintf("Collect eBPF routes for node %s", podName),
+			Info:     fmt.Sprintf("Collect eBPF routes for node %s", nodeName),
 			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- calico-node -bpf routes dump", namespace, podName),
 			FilePath: fmt.Sprintf("%s/eBPFroutes.txt", curNodeDir),
 		},
 		{
-			Info:     fmt.Sprintf("Collect eBPF prog for node %s", podName),
+			Info:     fmt.Sprintf("Collect eBPF prog for node %s", nodeName),
 			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- bpftool prog list", namespace, podName),
 			FilePath: fmt.Sprintf("%s/eBPFprog.txt", curNodeDir),
 		},
 		{
-			Info:     fmt.Sprintf("Collect eBPF map for node %s", podName),
+			Info:     fmt.Sprintf("Collect eBPF map for node %s", nodeName),
 			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- bpftool map list", namespace, podName),
 			FilePath: fmt.Sprintf("%s/eBPFmap.txt", curNodeDir),
 		},
 		{
-			Info:     fmt.Sprintf("Collect tc qdisc for node %s", podName),
+			Info:     fmt.Sprintf("Collect tc qdisc for node %s", nodeName),
 			CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- tc qdisc show", namespace, podName),
 			FilePath: fmt.Sprintf("%s/tcqdisc.txt", curNodeDir),
 		},
@@ -800,7 +576,7 @@ func collectCalicoNodeDiags(dir string, opts *diagOpts, kubeClient *kubernetes.C
 				id := strings.Split(bpfMap, ":")
 				common.ExecAllCmdsWriteToFile([]common.Cmd{
 					{
-						Info:     fmt.Sprintf("Collect eBPF map id %s dumps for node %s", id[0], podName),
+						Info:     fmt.Sprintf("Collect eBPF map id %s dumps for node %s", id[0], nodeName),
 						CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- bpftool map dump id %s", namespace, podName, id[0]),
 						FilePath: fmt.Sprintf("%s/eBPFmap-%s.txt", curNodeDir, id[0]),
 					},
@@ -821,7 +597,7 @@ func collectCalicoNodeDiags(dir string, opts *diagOpts, kubeClient *kubernetes.C
 		cniLogFiles := strings.Split(strings.TrimSpace(output.String()), "\n")
 		for _, logFile := range cniLogFiles {
 			common.ExecCmdWriteToFile(common.Cmd{
-				Info:     fmt.Sprintf("Collect CNI log %s for the node %s", logFile, podName),
+				Info:     fmt.Sprintf("Collect CNI log %s for the node %s", logFile, nodeName),
 				CmdStr:   fmt.Sprintf("kubectl exec -n %s -t %s -- cat /var/log/calico/cni/%s", namespace, podName, logFile),
 				FilePath: fmt.Sprintf("%s/%s.log", curNodeDir, logFile),
 			})
