@@ -9,6 +9,7 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 )
 

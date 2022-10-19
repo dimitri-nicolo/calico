@@ -10,9 +10,10 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/felix/jitter"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
-	"github.com/sirupsen/logrus"
 )
 
 const HealthName = "icmp probes"

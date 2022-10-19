@@ -12,12 +12,13 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/felix/calc"
 	"github.com/projectcalico/calico/felix/ip"
 	"github.com/projectcalico/calico/felix/labelindex"
 	"github.com/projectcalico/calico/felix/proto"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
-	"github.com/sirupsen/logrus"
 )
 
 func TestEgressHealthMainline(t *testing.T) {
