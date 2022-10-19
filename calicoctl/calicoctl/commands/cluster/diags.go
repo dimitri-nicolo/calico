@@ -268,22 +268,21 @@ func collectDiagsForSelectedPods(dir string, opts *diagOpts, kubeClient *kuberne
 func collectCalicoResource(dir string) {
 	commands := []common.Cmd{}
 	for _, resource := range []string{
+		"bgpconfigurations",
+		"bgppeers",
+		"blockaffinities",
 		"clusterinformations",
 		"felixconfigurations",
-		"bgppeers",
-		"bgpconfigurations",
-		"ipamblocks",
-		"blockaffinities",
-		"ipamhandles",
-		"tiers",
-		"networkpolicies",
-		"clusterinformations",
+		"globalnetworkpolicies",
+		"globalnetworksets",
 		"hostendpoints",
+		"ipamblocks",
+		"ipamhandles",
 		"ippools",
 		"licensekeys",
+		"networkpolicies",
 		"networksets",
-		"globalnetworksets",
-		"globalnetworkpolicies",
+		"tiers",
 	} {
 		commands = append(commands, common.Cmd{
 			Info:     fmt.Sprintf("Collect Calico %v (yaml)", resource),
@@ -307,15 +306,15 @@ func collectCalicoResource(dir string) {
 func collectTigeraOperator(dir string) {
 	commands := []common.Cmd{}
 	for _, resource := range []string{
-		"tigerastatuses",
-		"installations",
 		"apiservers",
 		"compliances",
+		"installations",
 		"intrusiondetections",
-		"managers",
 		"logcollectors",
 		"logstorages",
 		"managementclusterconnections",
+		"managers",
+		"tigerastatuses",
 	} {
 		commands = append(commands, common.Cmd{
 			Info:     fmt.Sprintf("Collect %v (yaml)", resource),
@@ -340,15 +339,16 @@ func collectKubernetesResource(dir string) {
 	fmt.Println("Collecting core kubernetes resources...")
 	commands := []common.Cmd{}
 	for _, resource := range []string{
-		"pods",
-		"deployments",
-		"daemonsets",
-		"services",
-		"endpoints",
 		"configmaps",
-		"pvc",
+		"daemonsets",
+		"deployments",
+		"endpoints",
+		"endpointslices",
+		"pods",
 		"pv",
+		"pvc",
 		"sc",
+		"services",
 	} {
 		commands = append(commands, common.Cmd{
 			Info:     fmt.Sprintf("Collect %v (yaml)", resource),
@@ -419,7 +419,7 @@ func collectDiagsForPod(dir string, opts *diagOpts, kubeClient *kubernetes.Clien
 		},
 	})
 
-	if strings.Contains(podName, "calico-node-") {
+	if strings.HasPrefix(podName, "calico-node-") {
 		collectCalicoNodeDiags(nodeDir, opts, kubeClient, nodeName, namespace, podName)
 	}
 }
