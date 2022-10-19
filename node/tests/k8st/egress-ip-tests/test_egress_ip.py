@@ -1011,12 +1011,12 @@ spec:
     env:
     # Optional: comma-delimited list of IP addresses to send ICMP pings to; if all probes fail, the egress
     # gateway will report non-ready.
-    - name: ICMP_PROBES
+    - name: ICMP_PROBE_IPS
       value: "%s"
-    # Only used if ICMP_PROBES is non-empty: interval to send probes.
+    # Only used if ICMP_PROBE_IPS is non-empty: interval to send probes.
     - name: ICMP_PROBE_INTERVAL
       value: "5s"
-    # Only used if ICMP_PROBES is non-empty: timeout on each probe.
+    # Only used if ICMP_PROBE_IPS is non-empty: timeout on each probe.
     - name: ICMP_PROBE_TIMEOUT
       value: "15s"
     # Optional HTTP URL to send periodic probes to; if the probe fails that is reflected in 
