@@ -1045,7 +1045,7 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 
 	ap.EnableTCPStats = m.enableTcpStats
 	ap.EGWVxlanPort = m.egwVxlanPort
-	ap.EGIpEnabled = m.egIPEnabled
+	ap.EgressIPEnabled = m.egIPEnabled
 	if endpoint != nil {
 		ap.IsEgressGateway = endpoint.IsEgressGateway
 		ap.IsEgressClient = (endpoint.EgressIpSetId != "")
@@ -1133,7 +1133,7 @@ func (m *bpfEndpointManager) attachDataIfaceProgram(ifaceName string, ep *proto.
 	ap.HostIP = m.hostIP
 	ap.TunnelMTU = uint16(m.vxlanMTU)
 	ap.ExtToServiceConnmark = uint32(m.bpfExtToServiceConnmark)
-	ap.EGIpEnabled = m.egIPEnabled
+	ap.EgressIPEnabled = m.egIPEnabled
 	ap.EGWVxlanPort = m.egwVxlanPort
 	ip, err := m.getInterfaceIP(ifaceName)
 	if err != nil {

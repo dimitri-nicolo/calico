@@ -73,7 +73,7 @@ type AttachPoint struct {
 	Features             environment.Features
 	RPFStrictEnabled     bool
 	EGWVxlanPort         uint16
-	EGIpEnabled          bool
+	EgressIPEnabled      bool
 }
 
 var tcLock sync.RWMutex
@@ -677,14 +677,14 @@ func (ap AttachPoint) Config() string {
 
 func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 	globalData := libbpf.BpfGlobalData{ExtToSvcMark: ap.ExtToServiceConnmark,
-		VxlanPort:    ap.VXLANPort,
-		Tmtu:         ap.TunnelMTU,
-		PSNatStart:   ap.PSNATStart,
-		PSNatLen:     ap.PSNATEnd,
-		VethNS:       ap.VethNS,
-		WgPort:       ap.WgPort,
-		EgwVxlanPort: ap.EGWVxlanPort,
-		EGIpEnabled:  0,
+		VxlanPort:       ap.VXLANPort,
+		Tmtu:            ap.TunnelMTU,
+		PSNatStart:      ap.PSNATStart,
+		PSNatLen:        ap.PSNATEnd,
+		VethNS:          ap.VethNS,
+		WgPort:          ap.WgPort,
+		EgwVxlanPort:    ap.EGWVxlanPort,
+		EgressIPEnabled: 0,
 	}
 	var err error
 
@@ -702,8 +702,8 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 		return err
 	}
 
-	if ap.EGIpEnabled {
-		globalData.EGIpEnabled = 1
+	if ap.EgressIPEnabled {
+		globalData.EgressIPEnabled = 1
 	}
 
 	if ap.IPv6Enabled {
