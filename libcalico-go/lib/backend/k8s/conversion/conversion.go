@@ -109,7 +109,6 @@ func egressAnnotationsToV3Spec(annotations map[string]string) *apiv3.EgressSpec 
 			// any whitespace, etc., that may have existed in the original string.
 			egressNamespaceSelector = parsed.String()
 		}
-
 	}
 	var egressMaxNextHops int
 	egressMaxNextHopsStr := annotations[AnnotationEgressMaxNextHops]
