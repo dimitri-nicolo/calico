@@ -248,6 +248,7 @@ cancel_fib:
 #endif /* CALI_FIB_ENABLED */
 
 skip_fib:
+
 	if (CALI_F_TO_HOST) {
 		/* Packet is towards host namespace, mark it so that downstream
 		 * programs know that they're not the first to see the packet.
@@ -257,7 +258,6 @@ skip_fib:
 			CALI_DEBUG("To host marked with FLAG_EXT_LOCAL\n");
 			ctx->fwd.mark |= EXT_TO_SVC_MARK;
 		}
-
 		if (state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) {
 			CALI_DEBUG("Traffic is an egress gateway flow\n");
 			ctx->fwd.mark |= CALI_SKB_MARK_EGRESS;

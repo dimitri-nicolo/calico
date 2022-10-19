@@ -124,7 +124,7 @@ func TestPrecompiledBinariesAreLoadable(t *testing.T) {
 												IntfIP:          net.ParseIP("10.0.0.2"),
 												EnableTCPStats:  enableTcpStats,
 												IsEgressGateway: isEgw,
-												EGIpEnabled:     egIpEnabled,
+												EgressIPEnabled: egIpEnabled,
 											}
 
 											t.Run(ap.FileName(), func(t *testing.T) {

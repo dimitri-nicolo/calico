@@ -426,16 +426,17 @@ syn_force_policy:
 		goto skip_policy;
 	}
 
+	// Auto allow VXLAN packets to egress gateways
 	if (EG_IP_ENABLED && (CALI_F_FROM_HOST) && !skb_refresh_validate_ptrs(ctx, UDP_SIZE) &&
 			cali_rt_flags_local_host(cali_rt_lookup_flags(ctx->state->ip_src)) &&
 			is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
 		// Auto allow VXLAN packets from egress gateway clients
-		CALI_DEBUG("Allow VXLAN packet from EGW clients\n");
+		CALI_DEBUG("Allow VXLAN packet to Egress Gateways\n");
 		COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
 		goto skip_policy;
 	}
 
-	// Auto-allow VXLAN packets to egress gateway pod
+	// Auto-allow VXLAN packets from/to egress gateway pod
 	if (EGRESS_GATEWAY && !skb_refresh_validate_ptrs(ctx, UDP_SIZE) && CALI_F_WEP) {
 		__be32 ip_addr = ctx->state->ip_src;
 		if (CALI_F_FROM_WEP) {
