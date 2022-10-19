@@ -59,17 +59,12 @@ func NewEgressGWTracker(healthReportC chan<- EGWHealthReport, pollInterval time.
 }
 
 func (m *EgressGWTracker) OnIPSetDeltaUpdate(msg *proto.IPSetDeltaUpdate) {
-	if _, found := m.ipSetIDToGateways[msg.Id]; !found {
+	gateways, found := m.ipSetIDToGateways[msg.Id]
+	if !found {
 		log.WithField("msg", msg).Debug("Ignoring IP set delta update (not a set we're tracking)")
 		return
 	}
 	log.Infof("EgressIP set delta update: id=%v removed=%v added=%v", msg.Id, msg.RemovedMembers, msg.AddedMembers)
-
-	gateways, exists := m.ipSetIDToGateways[msg.Id]
-	if !exists {
-		gateways = make(gatewaysByIP)
-		m.ipSetIDToGateways[msg.Id] = gateways
-	}
 
 	// The member string contains cidr,deletionTimestamp, and so we could get the same cidr in membersAdded
 	// and in membersRemoved, with different timestamps. For this reason, process the removes before the adds.
@@ -334,22 +329,40 @@ func (p *egwPoller) loop(ctx context.Context) {
 		if egwHealth != lastReportedHealth {
 			if egwHealth == EGWHealthUp || numBadReports >= p.minPollFailureCount {
 				// Got a new report to send, unmask the report channel.
+				logCtx.Debug("Unmasking report chan.")
 				reportC = p.reportC
 			} else {
-				log.Debug("Delaying report of egress gateway non-ready until we have multiple failures.")
+				logCtx.Debug("Delaying report of egress gateway non-ready until we have multiple failures.")
 			}
 		} else {
 			// Not ready to send; mask the channel, so we don't send anything.
 			reportC = nil
 		}
 
-		select {
-		case reportC <- EGWHealthReport{
+		report := EGWHealthReport{
 			PollerID:    p.id,
 			PollerNonce: p.nonce,
 			Health:      egwHealth,
-		}:
+		}
+
+		// Try to send on the health channel if we can before we wait for the next tick.  This ensures that, if
+		// the next tick is ready to pop, we'll prefer to send a health report first.
+		if reportC != nil {
+			select {
+			case reportC <- report:
+				lastReportedHealth = egwHealth
+				logCtx.WithField("health", egwHealth).Debug("Sent health report.")
+				reportC = nil
+			default:
+				logCtx.Debug("Report chan is blocked, will select over ticker and report chan.")
+			}
+		}
+
+		select {
+		case reportC <- report:
 			lastReportedHealth = egwHealth
+			logCtx.WithField("health", egwHealth).Debug("Sent health report.")
+			reportC = nil
 		case <-ticker.C:
 		case <-ctx.Done():
 		}
@@ -363,39 +376,38 @@ func (p *egwPoller) doOneProbe(ctx context.Context, logCtx *log.Entry) (EGWHealt
 	req, err := http.NewRequestWithContext(toCtx, "GET", p.url, nil)
 	defer cancel()
 
-	egwHealth := EGWHealthUnknown
-
+	var overallErr error
 	if err != nil {
-		if err == ctx.Err() {
-			return egwHealth, err
-		}
-		logCtx.WithError(err).Warn("Failed to initiate probe to remote egress gateway.")
-		egwHealth = EGWHealthProbeFailed
+		overallErr = fmt.Errorf("failed to initiate probe: %w", err)
 	} else if resp, err := http.DefaultClient.Do(req); err != nil {
-		logCtx.WithError(err).Warn("Remote egress gateway readiness probe failed (connection failure).")
-		egwHealth = EGWHealthProbeFailed
+		overallErr = fmt.Errorf("failed to connect: %w", err)
 	} else {
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			logCtx.WithError(err).Warn("Remote egress gateway readiness probe failed (read failure).")
-			egwHealth = EGWHealthProbeFailed
+			overallErr = fmt.Errorf("failed to read: %w", err)
 		} else if err = resp.Body.Close(); err != nil {
-			logCtx.WithError(err).Warn("Remote egress gateway readiness probe failed (failed to close connection body).")
-			egwHealth = EGWHealthProbeFailed
+			overallErr = fmt.Errorf("failed to close response body: %w", err)
 		} else {
 			if log.GetLevel() >= log.DebugLevel {
 				logCtx.Debugf("Response from egress gateway readiness probe:\n%s", body)
 			}
 			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 				logCtx.Debug("Remote egress gateway readiness probe succeeded (egress gateway reports ready).")
-				egwHealth = EGWHealthUp
+				return EGWHealthUp, nil
 			} else {
-				logCtx.Warn("Remote egress gateway readiness probe failed (egress gateway reports not ready).")
-				egwHealth = EGWHealthProbeFailed
+				overallErr = fmt.Errorf("remote egress gateway reports non-ready")
 			}
 		}
 	}
-	return egwHealth, nil
+
+	if ctx.Err() != nil {
+		// Poller is being shut down.
+		logCtx.WithField("result", overallErr).Debug("Poller is being stopped, ignoring result of probe.")
+		return "", ctx.Err()
+	}
+
+	log.WithError(overallErr).Warn("Egress gateway health probe failed.")
+	return EGWHealthProbeFailed, nil
 }
 
 // gatewaysByIP maps a member's IP to a gateway
@@ -441,13 +453,13 @@ func (g gatewaysByIP) terminatingGateways() gatewaysByIP {
 }
 
 func (g gatewaysByIP) failedGateways() gatewaysByIP {
-	terminating := make(gatewaysByIP)
+	failed := make(gatewaysByIP)
 	for _, m := range g {
 		if m.healthPort != 0 && m.health == EGWHealthProbeFailed {
-			terminating[m.addr] = m
+			failed[m.addr] = m
 		}
 	}
-	return terminating
+	return failed
 }
 
 func (g gatewaysByIP) filteredByHopIPs(hopIPs []ip.Addr) gatewaysByIP {
