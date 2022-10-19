@@ -434,47 +434,6 @@ func collectCalicoNodeDiags(dir string, opts *diagOpts, kubeClient *kubernetes.C
 		return
 	}
 
-	commands := []common.Cmd{}
-	for _, resource := range []string{
-		"pods",
-		"deployments",
-		"daemonsets",
-		"services",
-		"endpoints",
-		"configmaps",
-		"pvc",
-		"pv",
-		"sc",
-	} {
-		commands = append(commands, common.Cmd{
-			Info:     fmt.Sprintf("Collect %v (yaml)", resource),
-			CmdStr:   fmt.Sprintf("kubectl get %v --all-namespaces -o yaml", resource),
-			FilePath: fmt.Sprintf("%s/%v.yaml", dir, resource),
-		}, common.Cmd{
-			Info:     fmt.Sprintf("Collect %v (wide text)", resource),
-			CmdStr:   fmt.Sprintf("kubectl get %v --all-namespaces -o wide", resource),
-			FilePath: fmt.Sprintf("%s/%v.txt", dir, resource),
-		})
-	}
-	commands = append(commands, common.Cmd{
-		Info:     "Collect nodes (yaml)",
-		CmdStr:   "kubectl get nodes -o yaml",
-		FilePath: fmt.Sprintf("%s/nodes.yaml", dir),
-	}, common.Cmd{
-		Info:     "Collect nodes (wide text)",
-		CmdStr:   "kubectl get nodes -o wide",
-		FilePath: fmt.Sprintf("%s/nodes.txt", dir),
-	}, common.Cmd{
-		Info:     "Collect namespaces (yaml)",
-		CmdStr:   "kubectl get namespaces -o wide",
-		FilePath: fmt.Sprintf("%s/namespaces.yaml", dir),
-	}, common.Cmd{
-		Info:     "Collect namespaces (wide text)",
-		CmdStr:   "kubectl get namespaces -o yaml",
-		FilePath: fmt.Sprintf("%s/namespaces.txt", dir),
-	})
-	common.ExecAllCmdsWriteToFile(commands)
-
 	common.ExecAllCmdsWriteToFile([]common.Cmd{
 		// ip diagnostics
 		{
