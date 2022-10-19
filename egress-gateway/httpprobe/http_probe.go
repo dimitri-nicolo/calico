@@ -19,7 +19,8 @@ const HealthName = "http probes"
 
 func StartBackgroundHTTPProbe(ctx context.Context, urls []string, interval time.Duration, timeout time.Duration, healthAgg *health.HealthAggregator) error {
 	healthAgg.RegisterReporter(HealthName, &health.HealthReport{Ready: true}, timeout)
-
+	// Since we want the overall readiness to be "up" if _any_ probe is successful, start one goroutine for each
+	// URL.
 	for _, url := range urls {
 		_, err := url2.Parse(url)
 		if err != nil {

@@ -40,10 +40,17 @@ Options:
 
 Environment variables:
   HEALTH_PORT     Port on which to serve readiness/liveness health reports. [default: 8080]
-  HTTP_PROBE_URL  Optional HTTP URL to send periodic probes to; if the probe fails that is reflected in 
-                  the health reported on the health port.
+
+  HTTP_PROBE_URLS  Optional comma-delimited list of URLs to send periodic probes to;  If all probes fail then the 
+                   daemon will report non-ready on the health port.
   HTTP_PROBE_INTERVAL: Interval between HTTP probes; uses Go's interval format, examples: 10s 1m30s. [default: 10s]
   HTTP_PROBE_TIMEOUT: Timeout for HTTP probes; uses Go's interval format, examples: 10s 1m30s. [default: 10s]
+
+  ICMP_PROBE_IPS:      Comma-delimited list of IP addresses to send ICMP pings to.  If all probes fail then the 
+                       daemon will report non-ready on the health port.
+  ICMP_PROBE_INTERVAL: Interval at which to send ICMP probes.
+  ICMP_PROBE_TIMEOUT:  Timeout for the set of ICMP pings.  If no ping responses are received within the timeout
+                       then the daemon will report non-ready.  Timeout should be longer than ICMP_PROBE_INTERVAL.
 `
 )
 
@@ -137,6 +144,9 @@ func main() {
 	// If configured, start a background goroutine to do an HTTP probe.
 	if len(envVars.HTTPProbeURLs) > 0 {
 		log.WithField("probeURLs", envVars.HTTPProbeURLs).Info("HTTP probes are configured.")
+		if envVars.HTTPProbeTimeout < envVars.HTTPProbeInterval {
+			exitWithErrorAndUsage(fmt.Errorf("HTTP probes timeout should be larger than HTTP probe interval"))
+		}
 		err := httpprobe.StartBackgroundHTTPProbe(
 			ctx,
 			envVars.HTTPProbeURLs,
@@ -152,7 +162,7 @@ func main() {
 	}
 
 	// If configured, start probing over ICMP.
-	var ipAddrs []net.IP
+	var icmpProbeAddrs []net.IP
 	for _, rawAddr := range envVars.ICMPProbes {
 		if rawAddr == "" {
 			continue
@@ -161,11 +171,15 @@ func main() {
 		if ipAddr == nil {
 			exitWithErrorAndUsage(fmt.Errorf("failed to parse ICMP probe IP address: %q", rawAddr))
 		}
-		ipAddrs = append(ipAddrs, ipAddr)
+		icmpProbeAddrs = append(icmpProbeAddrs, ipAddr)
 	}
-	if len(ipAddrs) > 0 {
+	if len(icmpProbeAddrs) > 0 {
 		log.WithField("icmpProbes", envVars.ICMPProbes).Info("ICMP probes configured")
-		err := icmpprobe.StartBackgroundICMPProbes(ctx, ipAddrs, envVars.ICMPProbeInterval, envVars.ICMPProbeTimeout, healthAgg)
+		if envVars.ICMPProbeTimeout < envVars.ICMPProbeInterval {
+			exitWithErrorAndUsage(fmt.Errorf("ICMP probes timeout should be larger than ICMP probe interval"))
+		}
+
+		err := icmpprobe.StartBackgroundICMPProbes(ctx, icmpProbeAddrs, envVars.ICMPProbeInterval, envVars.ICMPProbeTimeout, healthAgg)
 		if err != nil {
 			exitWithErrorAndUsage(fmt.Errorf("failed to start ICMP probes: %w", err))
 		}
