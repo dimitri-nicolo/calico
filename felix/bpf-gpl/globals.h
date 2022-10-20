@@ -17,7 +17,6 @@ struct cali_tc_globals {
 	__be32 host_tunnel_ip;
 	__be32 flags;
 	__be16 wg_port;
-	__be16 eg_ip_enabled;
 	__be16 egw_vxlan_port;
 };
 
@@ -28,6 +27,7 @@ enum cali_globals_flags {
 	CALI_GLOBALS_IS_EGRESS_GATEWAY 	= 0x00000004,
 	CALI_GLOBALS_IS_EGRESS_CLIENT 	= 0x00000008,
 	CALI_GLOBALS_RPF_STRICT_ENABLED = 0x00000010,
+	CALI_GLOBALS_IS_EGRESS_IP_ENABLED = 0x00000020,
 };
 
 struct cali_ctlb_globals {

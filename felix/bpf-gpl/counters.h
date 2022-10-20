@@ -5,11 +5,11 @@
 #ifndef __CALI_COUNTERS_H__
 #define __CALI_COUNTERS_H__
 
-#define MAX_COUNTERS_SIZE 16
+#define MAX_COUNTERS_SIZE 14
 
 typedef __u64 counters_t[MAX_COUNTERS_SIZE];
 
-CALI_MAP(cali_counters, 2,
+CALI_MAP(cali_counters, 1,
 		BPF_MAP_TYPE_PERCPU_ARRAY,
 		__u32, counters_t, 1,
 		0, MAP_PIN_GLOBAL)

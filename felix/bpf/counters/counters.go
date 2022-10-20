@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	MaxCounterNumber    int = 16
+	MaxCounterNumber    int = 14
 	counterMapKeySize   int = 4
 	counterMapValueSize int = 8
 )
@@ -47,9 +47,10 @@ const (
 	DroppedFailedDecap
 	DroppedUnauthSource
 	DroppedUnknownRoute
+	AcceptedByEgressGW
+	// Add counters above this
 	AcceptedByXDP
 	WEPNotReady
-	AcceptedByEgressGW
 )
 
 type Description struct {

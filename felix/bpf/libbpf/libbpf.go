@@ -259,6 +259,7 @@ const (
 	GlobalsIsEgressGateway  uint32 = C.CALI_GLOBALS_IS_EGRESS_GATEWAY
 	GlobalsIsEgressClient   uint32 = C.CALI_GLOBALS_IS_EGRESS_CLIENT
 	GlobalsRPFStrictEnabled uint32 = C.CALI_GLOBALS_RPF_STRICT_ENABLED
+	GlobalsEgressIPEnabled  uint32 = C.CALI_GLOBALS_IS_EGRESS_IP_ENABLED
 )
 
 type BpfGlobalData struct {
@@ -274,7 +275,6 @@ type BpfGlobalData struct {
 	Flags           uint32
 	WgPort          uint16
 	EgwVxlanPort    uint16
-	EgressIPEnabled uint16
 }
 
 func TcSetGlobals(
@@ -293,7 +293,6 @@ func TcSetGlobals(
 		C.ushort(globalData.VethNS),
 		C.uint(globalData.Flags),
 		C.ushort(globalData.WgPort),
-		C.ushort(globalData.EgressIPEnabled),
 		C.ushort(globalData.EgwVxlanPort),
 	)
 

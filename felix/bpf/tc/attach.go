@@ -684,7 +684,6 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 		VethNS:          ap.VethNS,
 		WgPort:          ap.WgPort,
 		EgwVxlanPort:    ap.EGWVxlanPort,
-		EgressIPEnabled: 0,
 	}
 	var err error
 
@@ -703,7 +702,7 @@ func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 	}
 
 	if ap.EgressIPEnabled {
-		globalData.EgressIPEnabled = 1
+		globalData.Flags |= libbpf.GlobalsEgressIPEnabled
 	}
 
 	if ap.IPv6Enabled {

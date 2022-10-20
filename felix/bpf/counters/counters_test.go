@@ -20,7 +20,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-const unusedCounters = 2
+const unusedCounters = 0
 
 func TestCounterMapSize(t *testing.T) {
 	RegisterTestingT(t)
