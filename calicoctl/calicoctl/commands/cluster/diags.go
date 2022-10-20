@@ -139,13 +139,13 @@ func collectDiags(opts *diagOpts) error {
 	dir := fmt.Sprintf("%s/%s", rootDir, directoryName)
 
 	collectGlobalClusterInformation(dir + "/cluster")
-	collectSelectedNodeLogs(dir+"/nodes", opts)
+	collectSelectedNodeLogs(dir+"/nodes", dir+"/links", opts)
 	createArchive(rootDir)
 
 	return nil
 }
 
-func collectSelectedNodeLogs(dir string, opts *diagOpts) {
+func collectSelectedNodeLogs(dir, linkDir string, opts *diagOpts) {
 	// Create Kubernetes client from config or env vars.
 	kubeClient, _, _, err := clientmgr.GetClients(opts.Config)
 	if err != nil {
@@ -200,7 +200,7 @@ func collectSelectedNodeLogs(dir string, opts *diagOpts) {
 			// Continue because deployments or other namespaces might work.
 		} else {
 			for _, ds := range dsl.Items {
-				collectDiagsForSelectedPods(dir, opts, kubeClient, nodeList, ns.Name, ds.Spec.Selector)
+				collectDiagsForSelectedPods(dir, linkDir, opts, kubeClient, nodeList, ns.Name, ds.Spec.Selector)
 			}
 		}
 
@@ -211,13 +211,13 @@ func collectSelectedNodeLogs(dir string, opts *diagOpts) {
 			// Continue because other namespaces might work.
 		} else {
 			for _, d := range dl.Items {
-				collectDiagsForSelectedPods(dir, opts, kubeClient, nodeList, ns.Name, d.Spec.Selector)
+				collectDiagsForSelectedPods(dir, linkDir, opts, kubeClient, nodeList, ns.Name, d.Spec.Selector)
 			}
 		}
 	}
 }
 
-func collectDiagsForSelectedPods(dir string, opts *diagOpts, kubeClient *kubernetes.Clientset, nodeList []string, ns string, selector *v1.LabelSelector) {
+func collectDiagsForSelectedPods(dir, linkDir string, opts *diagOpts, kubeClient *kubernetes.Clientset, nodeList []string, ns string, selector *v1.LabelSelector) {
 
 	labelMap, err := v1.LabelSelectorAsMap(selector)
 	if err != nil {
@@ -251,7 +251,7 @@ func collectDiagsForSelectedPods(dir string, opts *diagOpts, kubeClient *kuberne
 
 		for _, podName := range podNamesByNode[nodeName] {
 			fmt.Printf("Collecting detailed diags for pod %v in namespace %v on node %v...\n", podName, ns, nodeName)
-			collectDiagsForPod(dir, opts, kubeClient, nodeName, ns, podName)
+			collectDiagsForPod(dir, linkDir, opts, kubeClient, nodeName, ns, podName)
 			logsWanted--
 			if logsWanted <= 0 {
 				break
@@ -392,7 +392,7 @@ func collectGlobalClusterInformation(dir string) {
 }
 
 // func collectDiagsForPod(pod, namespace, dir /*node_name*/, sinceFlag string) {
-func collectDiagsForPod(dir string, opts *diagOpts, kubeClient *kubernetes.Clientset, nodeName, namespace, podName string) {
+func collectDiagsForPod(dir, linkDir string, opts *diagOpts, kubeClient *kubernetes.Clientset, nodeName, namespace, podName string) {
 	nodeDir := dir + "/" + nodeName
 	namespaceDir := nodeDir + "/" + namespace
 	common.ExecAllCmdsWriteToFile([]common.Cmd{
@@ -400,11 +400,13 @@ func collectDiagsForPod(dir string, opts *diagOpts, kubeClient *kubernetes.Clien
 			Info:     fmt.Sprintf("Collect logs for pod %s", podName),
 			CmdStr:   fmt.Sprintf("kubectl logs --since=%s -n %s %s --all-containers", opts.Since, namespace, podName),
 			FilePath: fmt.Sprintf("%s/%s.log", namespaceDir, podName),
+			SymLink:  fmt.Sprintf("%s/%s/%s.log", linkDir, namespace, podName),
 		},
 		{
 			Info:     fmt.Sprintf("Collect describe for pod %s", podName),
 			CmdStr:   fmt.Sprintf("kubectl -n %s describe pods %s", namespace, podName),
 			FilePath: fmt.Sprintf("%s/%s.txt", namespaceDir, podName),
+			SymLink:  fmt.Sprintf("%s/%s/%s.txt", linkDir, namespace, podName),
 		},
 	})
 
