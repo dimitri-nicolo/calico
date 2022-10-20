@@ -677,13 +677,13 @@ func (ap AttachPoint) Config() string {
 
 func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 	globalData := libbpf.BpfGlobalData{ExtToSvcMark: ap.ExtToServiceConnmark,
-		VxlanPort:       ap.VXLANPort,
-		Tmtu:            ap.TunnelMTU,
-		PSNatStart:      ap.PSNATStart,
-		PSNatLen:        ap.PSNATEnd,
-		VethNS:          ap.VethNS,
-		WgPort:          ap.WgPort,
-		EgwVxlanPort:    ap.EGWVxlanPort,
+		VxlanPort:    ap.VXLANPort,
+		Tmtu:         ap.TunnelMTU,
+		PSNatStart:   ap.PSNATStart,
+		PSNatLen:     ap.PSNATEnd,
+		VethNS:       ap.VethNS,
+		WgPort:       ap.WgPort,
+		EgwVxlanPort: ap.EGWVxlanPort,
 	}
 	var err error
 
