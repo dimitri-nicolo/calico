@@ -308,10 +308,6 @@ func (m *bpfRouteManager) calculateRoute(cidr ip.V4CIDR) *routes.Value {
 		flags |= routes.FlagsRemoteTunneledHost
 		routeVal := routes.NewValueWithNextHop(flags, cidr.Addr().(ip.V4Addr))
 		route = &routeVal
-	case proto.RouteType_LOCAL_TUNNEL:
-		flags |= routes.FlagsLocalTunneledHost
-		routeVal := routes.NewValueWithNextHop(flags, cidr.Addr().(ip.V4Addr))
-		route = &routeVal
 	case proto.RouteType_LOCAL_HOST:
 		// It may be a localhost IP that is not assigned to a device like an
 		// k8s ExternalIP. Route resolver knew that it was assigned to our
@@ -519,6 +515,12 @@ func (m *bpfRouteManager) onRouteUpdate(update *proto.RouteUpdate) {
 	v4CIDR, ok := cidr.(ip.V4CIDR)
 	if !ok {
 		// FIXME IPv6
+		return
+	}
+
+	// For now don't handle the tunnel addresses, which were previously not being included in the route updates.
+	if update.Type == proto.RouteType_LOCAL_TUNNEL {
+		m.onRouteRemove(&proto.RouteRemove{Dst: update.Dst})
 		return
 	}
 
