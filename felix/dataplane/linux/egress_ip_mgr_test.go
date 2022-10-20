@@ -72,7 +72,7 @@ var _ = Describe("EgressIPManager", func() {
 		podStatusCallback = &mockEgressPodStatusCallback{state: []statusCallbackEntry{}}
 		healthAgg = health.NewHealthAggregator()
 		healthReportC := make(chan<- EGWHealthReport)
-
+		ipsets := newMockSets()
 		manager = newEgressIPManagerWithShims(
 			mainTable,
 			rrFactory,
@@ -90,6 +90,7 @@ var _ = Describe("EgressIPManager", func() {
 			healthAgg,
 			rand.NewSource(1), // Seed with 1 to get predictable tests every time.
 			healthReportC,
+			ipsets,
 		)
 
 		Expect(healthAgg.Summary().Ready).To(BeFalse())
@@ -97,6 +98,9 @@ var _ = Describe("EgressIPManager", func() {
 		err := manager.CompleteDeferredWork()
 		Expect(err).ToNot(HaveOccurred())
 		Expect(healthAgg.Summary().Ready).To(BeTrue())
+
+		// IPSet should be created.
+		ipsets.Verify(rules.IPSetIDAllEGWHealthPorts, nil)
 
 		// No routeRules should be created.
 		Expect(manager.routeRules).To(BeNil())
@@ -183,9 +187,9 @@ var _ = Describe("EgressIPManager", func() {
 				formatActiveEgressMemberStr("10.0.0.3"),
 			}
 			ips1 = []string{
-				formatActiveEgressMemberStr("10.0.1.1"),
-				formatActiveEgressMemberStr("10.0.1.2"),
-				formatActiveEgressMemberStr("10.0.1.3"),
+				formatActiveEgressMemberPortStr("10.0.1.1", 8080),
+				formatActiveEgressMemberPortStr("10.0.1.2", 8080),
+				formatActiveEgressMemberPortStr("10.0.1.3", 8082),
 			}
 
 			manager.OnUpdate(&proto.IPSetUpdate{
@@ -226,16 +230,19 @@ var _ = Describe("EgressIPManager", func() {
 					addr:                ip.FromString("10.0.1.1"),
 					maintenanceStarted:  zeroTime,
 					maintenanceFinished: zeroTime,
+					healthPort:          8080,
 				},
 				{
 					addr:                ip.FromString("10.0.1.2"),
 					maintenanceStarted:  zeroTime,
 					maintenanceFinished: zeroTime,
+					healthPort:          8080,
 				},
 				{
 					addr:                ip.FromString("10.0.1.3"),
 					maintenanceStarted:  zeroTime,
 					maintenanceFinished: zeroTime,
+					healthPort:          8082,
 				},
 			})
 			Expect(manager.egwTracker.ipSetIDToGateways["nonEgressSet"]).To(BeNil())
@@ -1353,12 +1360,20 @@ func formatActiveEgressMemberStr(cidr string) string {
 	return formatTerminatingEgressMemberStr(cidr, time.Time{}, time.Time{})
 }
 
+func formatActiveEgressMemberPortStr(cidr string, healthPort int) string {
+	return formatTerminatingEgressMemberPortStr(cidr, time.Time{}, time.Time{}, healthPort)
+}
+
 func formatTerminatingEgressMemberStr(cidr string, start, finish time.Time) string {
+	return formatTerminatingEgressMemberPortStr(cidr, start, finish, 0)
+}
+
+func formatTerminatingEgressMemberPortStr(cidr string, start time.Time, finish time.Time, healthPort int) string {
 	startBytes, err := start.MarshalText()
 	Expect(err).NotTo(HaveOccurred())
 	finishBytes, err := finish.MarshalText()
 	Expect(err).NotTo(HaveOccurred())
-	return fmt.Sprintf("%s,%s,%s,0", cidr, string(startBytes), string(finishBytes))
+	return fmt.Sprintf("%s,%s,%s,%d", cidr, string(startBytes), string(finishBytes), healthPort)
 }
 
 func ipSetMemberEquals(expected gateway) types.GomegaMatcher {

@@ -697,6 +697,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			egressStatusCallback,
 			config.HealthAggregator,
 			dp.egwHealthReportC,
+			ipSetsV4,
 		)
 		dp.RegisterManager(dp.egressIPManager)
 	} else {

@@ -30,11 +30,11 @@ type Ticker struct {
 }
 
 func NewTicker(minDuration time.Duration, maxJitter time.Duration) *Ticker {
-	if minDuration < 0 {
-		log.WithField("duration", minDuration).Panic("Negative duration")
+	if minDuration <= 0 {
+		log.WithField("duration", minDuration).Panic("Non-positive duration")
 	}
-	if maxJitter < 0 {
-		log.WithField("jitter", minDuration).Panic("Negative jitter")
+	if maxJitter <= 0 {
+		log.WithField("jitter", minDuration).Panic("Non-positive jitter")
 	}
 	c := make(chan time.Time, 1)
 	ticker := &Ticker{

@@ -53,8 +53,6 @@ func NewEgressGWTracker(healthReportC chan<- EGWHealthReport, pollInterval time.
 		minPollFailureCount: pollFailCount,
 
 		healthReportC: healthReportC,
-
-		fastRetryTicker: jitter.NewTicker(100*time.Millisecond, 10*time.Millisecond),
 	}
 }
 
@@ -193,6 +191,11 @@ func (m *EgressGWTracker) AllGatewayIPs() set.Set[ip.Addr] {
 }
 
 func (m *EgressGWTracker) ensurePollerRunning(setID string, addr ip.Addr, port uint16) {
+	if m.pollInterval == 0 {
+		log.Debug("Zero poll interval; disabling poller.")
+		return
+	}
+
 	id := egwPollerID{
 		setID: setID,
 		addr:  addr,
@@ -207,7 +210,6 @@ func (m *EgressGWTracker) ensurePollerRunning(setID string, addr ip.Addr, port u
 		cancel:              cancel,
 		reportC:             m.healthReportC,
 		url:                 fmt.Sprintf("http://%s:%d/readiness", addr, port),
-		fastRetryC:          m.fastRetryTicker.C,
 		pollInterval:        m.pollInterval,
 		minPollFailureCount: m.minPollFailureCount,
 	}
@@ -229,6 +231,18 @@ func (m *EgressGWTracker) stopPollerIfRunning(setID string, ip ip.Addr) {
 	delete(m.pollers, k)
 	// Note: we don't wait for the poller to stop here since that could deadlock if it is trying to send a message
 	// to this goroutine.  Instead, we filter out messages from defunct pollers based on the per-poller nonce.
+}
+
+func (m *EgressGWTracker) AllHealthPortIPSetMembers() []string {
+	members := set.New[string]()
+	for _, gws := range m.ipSetIDToGateways {
+		for _, g := range gws {
+			if g.healthPort != 0 {
+				members.Add(fmt.Sprintf("%s,tcp:%d", g.addr, g.healthPort))
+			}
+		}
+	}
+	return members.Slice()
 }
 
 // gateway stores an IPSet member's cidr and maintenance window.

@@ -16,6 +16,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/projectcalico/calico/felix/ipsets"
+	"github.com/projectcalico/calico/felix/rules"
 	"golang.org/x/sys/unix"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
@@ -68,6 +70,10 @@ var (
 const (
 	egressHealthName = "egress-networking-in-sync"
 )
+
+type egressIPSets interface {
+	AddOrReplaceIPSet(meta ipsets.IPSetMetadata, members []string)
+}
 
 type healthAggregator interface {
 	RegisterReporter(name string, reports *health.HealthReport, timeout time.Duration)
@@ -275,8 +281,9 @@ type egressIPManager struct {
 	vxlanDeviceLinkIndex int
 	nodeIP               net.IP
 	// to rate-limit retries, track if the last kernel sync failed, and if our state has changed since then
-	lastUpdateFailed, unblockingUpdateOccurred bool
+	lastUpdateFailed, unblockingUpdateOccurred, firstSyncDone bool
 
+	ipsets   egressIPSets
 	nlHandle netlinkHandle
 	dpConfig Config
 
@@ -304,6 +311,7 @@ func newEgressIPManager(
 	statusCallback func(namespace, name string, addr ip.Addr, maintenanceStarted, maintenanceFinished time.Time) error,
 	healthAgg healthAggregator,
 	healthReportC chan<- EGWHealthReport,
+	ipsets egressIPSets,
 ) *egressIPManager {
 	nlHandle, err := netlink.NewHandle()
 	if err != nil {
@@ -344,6 +352,7 @@ func newEgressIPManager(
 		healthAgg,
 		rand.New(hopRandSource),
 		healthReportC,
+		ipsets,
 	)
 	return mgr
 }
@@ -363,6 +372,7 @@ func newEgressIPManagerWithShims(
 	healthAgg healthAggregator,
 	hopRandSource rand.Source,
 	healthReportC chan<- EGWHealthReport,
+	ipsets egressIPSets,
 ) *egressIPManager {
 
 	mgr := egressIPManager{
@@ -393,6 +403,7 @@ func newEgressIPManagerWithShims(
 		statusCallback:         statusCallback,
 		healthAgg:              healthAgg,
 		hopRand:                rand.New(hopRandSource),
+		ipsets:                 ipsets,
 	}
 
 	if healthAgg != nil {
@@ -450,7 +461,7 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 	// The VXLAN device may have come online, or
 	// a routetable may have been free'd following a starvation error
 	var err error
-	if !m.lastUpdateFailed || m.unblockingUpdateOccurred {
+	if !m.lastUpdateFailed || m.unblockingUpdateOccurred || !m.firstSyncDone {
 		for i := 0; i < 2; i += 1 {
 			if err = m.completeDeferredWork(); err == nil {
 				m.lastUpdateFailed = false
@@ -475,10 +486,23 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 // When called for the first time, will init egressIPManager config with existing kernel data
 func (m *egressIPManager) completeDeferredWork() error {
 	var lastErr error
-	if !m.egwTracker.Dirty() && len(m.pendingWorkloadUpdates) == 0 {
+	if !m.egwTracker.Dirty() && len(m.pendingWorkloadUpdates) == 0 && !m.firstSyncDone {
 		log.Debug("No change since last application, nothing to do")
 		return nil
 	}
+
+	// Set up the all-EGW-health-port IP set before we do anything else.  Need to make sure the set exists before
+	// we return from the first completeDeferredWork call.
+	if !m.dpConfig.BPFEnabled && (!m.firstSyncDone || m.egwTracker.Dirty()) {
+		// It's a little inefficient to recalculate the whole set each time, but it saves needing to do reference
+		// counting to deal with corner cases such as EGWs being in multiple IP sets.
+		m.ipsets.AddOrReplaceIPSet(ipsets.IPSetMetadata{
+			SetID:   rules.IPSetIDAllEGWHealthPorts,
+			Type:    ipsets.IPSetTypeHashIPPort,
+			MaxSize: m.dpConfig.MaxIPSetSize,
+		}, m.egwTracker.AllHealthPortIPSetMembers())
+	}
+	m.firstSyncDone = true
 
 	if m.vxlanDeviceLinkIndex == 0 {
 		// vxlan device not configured yet. Defer processing updates.
