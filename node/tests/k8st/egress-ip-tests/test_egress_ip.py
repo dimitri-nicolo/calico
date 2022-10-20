@@ -677,6 +677,10 @@ EOF
             newEnv = {"FELIX_ROUTETABLERANGES": "1-200"}
             self.update_ds_env("calico-node", "kube-system", newEnv)
 
+            # def undo_route_table_range():
+            #     self.update_ds_env("calico-node", "kube-system", {"FELIX_ROUTETABLERANGES": "1-250"})
+            # self.add_cleanup(undo_route_table_range)
+
             # Create 3 egress gateways, with an IP from that pool.
             gw1 = self.create_gateway_pod("kind-worker", "gw1", self.egress_cidr)
             gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr)
