@@ -269,6 +269,7 @@ var baseTests = []StateList{
 	{
 		endpointWithRemoteActiveEgressGateway,
 		endpointWithRemoteActiveEgressGatewayWithPort,
+		endpointWithLocalActiveEgressGatewayAndPort,
 		endpointWithLocalActiveEgressGateway,
 	},
 

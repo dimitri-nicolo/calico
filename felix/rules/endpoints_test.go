@@ -121,6 +121,7 @@ var _ = Describe("Endpoints", func() {
 					nil,
 					nil,
 					NotAnEgressGateway,
+					0,
 					UndefinedIPVersion)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
 						Name: "cali-tw-cali1234",
@@ -178,6 +179,7 @@ var _ = Describe("Endpoints", func() {
 					nil,
 					nil,
 					NotAnEgressGateway,
+					8080,
 					UndefinedIPVersion,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
@@ -215,6 +217,7 @@ var _ = Describe("Endpoints", func() {
 					}},
 					[]string{"prof1", "prof2"},
 					NotAnEgressGateway,
+					0,
 					UndefinedIPVersion,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
@@ -338,6 +341,7 @@ var _ = Describe("Endpoints", func() {
 					}},
 					[]string{"prof1", "prof2"},
 					NotAnEgressGateway,
+					0,
 					UndefinedIPVersion,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
@@ -455,6 +459,7 @@ var _ = Describe("Endpoints", func() {
 					}},
 					[]string{"prof1", "prof2"},
 					NotAnEgressGateway,
+					0,
 					UndefinedIPVersion,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
@@ -847,6 +852,7 @@ var _ = Describe("Endpoints", func() {
 					}},
 					[]string{"prof1", "prof2"},
 					IsAnEgressGateway,
+					8080,
 					4,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
@@ -965,6 +971,7 @@ var _ = Describe("Endpoints", func() {
 					nil,
 					nil,
 					NotAnEgressGateway,
+					0,
 					UndefinedIPVersion,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
@@ -1065,6 +1072,7 @@ var _ = Describe("Endpoints", func() {
 						nil,
 						nil,
 						NotAnEgressGateway,
+						0,
 						UndefinedIPVersion,
 					)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 						{
@@ -1126,6 +1134,7 @@ var _ = Describe("Endpoints", func() {
 						nil,
 						nil,
 						NotAnEgressGateway,
+						0,
 						UndefinedIPVersion,
 					)
 					expected := trimSMChain(kubeIPVSEnabled, []*Chain{
@@ -1189,6 +1198,7 @@ var _ = Describe("Endpoints", func() {
 						nil,
 						nil,
 						NotAnEgressGateway,
+						0,
 						UndefinedIPVersion,
 					)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 						{
@@ -1270,6 +1280,7 @@ var _ = Describe("Endpoints", func() {
 						}},
 						[]string{"prof1", "prof2"},
 						NotAnEgressGateway,
+						0,
 						UndefinedIPVersion,
 					)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 						{

@@ -277,6 +277,7 @@ type RuleRenderer interface {
 		tiers []*proto.TierInfo,
 		profileIDs []string,
 		isEgressGateway bool,
+		egwHealthPort uint16,
 		ipVersion uint8,
 	) []*iptables.Chain
 

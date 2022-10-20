@@ -442,6 +442,7 @@ message WorkloadEndpoint {
   repeated NatInfo ipv6_nat = 9;
   string egress_ip_set_id = 100;
   bool is_egress_gateway = 101;
+  int32 egress_gateway_health_port = 104;
   repeated string aws_elastic_ips = 102;
   int32 egress_max_next_hops = 103;
   repeated string allow_spoofed_source_prefixes = 10;

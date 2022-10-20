@@ -43,6 +43,7 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 	tiers []*proto.TierInfo,
 	profileIDs []string,
 	isEgressGateway bool,
+	egwHealthPort uint16,
 	ipVersion uint8,
 ) []*Chain {
 	allowVXLANEncapFromWorkloads := r.Config.AllowVXLANPacketsFromWorkloads
@@ -67,6 +68,7 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 			alwaysAllowVXLANEncap,
 			alwaysAllowIPIPEncap,
 			isEgressGateway,
+			egwHealthPort,
 			ipVersion,
 		),
 		// Chain for traffic _from_ the endpoint.
@@ -89,6 +91,7 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 			allowVXLANEncapFromWorkloads,
 			allowIPIPEncapFromWorkloads,
 			isEgressGateway,
+			0,
 			ipVersion,
 		),
 	)
@@ -135,6 +138,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			alwaysAllowVXLANEncap,
 			alwaysAllowIPIPEncap,
 			NotAnEgressGateway,
+			0,
 			UndefinedIPVersion,
 		),
 		// Chain for input traffic _from_ the endpoint.
@@ -155,6 +159,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			alwaysAllowVXLANEncap,
 			alwaysAllowIPIPEncap,
 			NotAnEgressGateway,
+			0,
 			UndefinedIPVersion,
 		),
 		// Chain for forward traffic _to_ the endpoint.
@@ -175,6 +180,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			alwaysAllowVXLANEncap,
 			alwaysAllowIPIPEncap,
 			NotAnEgressGateway,
+			0,
 			UndefinedIPVersion,
 		),
 		// Chain for forward traffic _from_ the endpoint.
@@ -195,6 +201,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			alwaysAllowVXLANEncap,
 			alwaysAllowIPIPEncap,
 			NotAnEgressGateway,
+			0,
 			UndefinedIPVersion,
 		),
 	)
@@ -240,6 +247,7 @@ func (r *DefaultRuleRenderer) HostEndpointToMangleEgressChains(
 			alwaysAllowVXLANEncap,
 			alwaysAllowIPIPEncap,
 			NotAnEgressGateway,
+			0,
 			UndefinedIPVersion,
 		),
 	}
@@ -267,6 +275,7 @@ func (r *DefaultRuleRenderer) HostEndpointToRawEgressChain(
 		alwaysAllowVXLANEncap,
 		alwaysAllowIPIPEncap,
 		NotAnEgressGateway,
+		0,
 		UndefinedIPVersion,
 	)
 }
@@ -297,6 +306,7 @@ func (r *DefaultRuleRenderer) HostEndpointToRawChains(
 			alwaysAllowVXLANEncap,
 			alwaysAllowIPIPEncap,
 			NotAnEgressGateway,
+			0,
 			UndefinedIPVersion,
 		),
 	}
@@ -327,6 +337,7 @@ func (r *DefaultRuleRenderer) HostEndpointToMangleIngressChains(
 			alwaysAllowVXLANEncap,
 			alwaysAllowIPIPEncap,
 			NotAnEgressGateway,
+			0,
 			UndefinedIPVersion,
 		),
 	}
@@ -380,6 +391,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 	allowVXLANEncap bool,
 	allowIPIPEncap bool,
 	isEgressGateway bool,
+	egwHealthPort uint16,
 	ipVersion uint8,
 ) *Chain {
 	rules := []Rule{}
@@ -449,11 +461,10 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 					Comment: []string{"Accept VXLAN UDP traffic for egress gateways"},
 				},
 			)
-			if dir == RuleDirIngress {
+			if dir == RuleDirIngress && egwHealthPort != 0 {
 				rules = append(rules,
 					Rule{
-						Match: baseMatch(ProtoTCP).
-							DestPorts(8080), // FIXME make configurable?
+						Match:   baseMatch(ProtoTCP).DestPorts(egwHealthPort),
 						Action:  AcceptAction{},
 						Comment: []string{"Accept readiness probes for egress gateways"},
 					},

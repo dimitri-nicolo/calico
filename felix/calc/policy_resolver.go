@@ -242,6 +242,7 @@ func (pr *PolicyResolver) sendEndpointUpdate(endpointID interface{}) error {
 		egressData.EgressIPSetID = pr.endpointEgressData[key].ipSetID
 		egressData.MaxNextHops = pr.endpointEgressData[key].maxNextHops
 		egressData.IsEgressGateway = pr.endpointGatewayUsage[key] > 0
+		egressData.HealthPort = findHealthPort(endpoint.(*model.WorkloadEndpoint))
 	}
 
 	log.Debugf("Endpoint tier update: %v -> %v", endpointID, applicableTiers)
@@ -250,6 +251,15 @@ func (pr *PolicyResolver) sendEndpointUpdate(endpointID interface{}) error {
 			endpoint, egressData, applicableTiers)
 	}
 	return nil
+}
+
+func findHealthPort(endpoint *model.WorkloadEndpoint) uint16 {
+	for _, p := range endpoint.Ports {
+		if p.Name == "health" {
+			return p.Port
+		}
+	}
+	return 0
 }
 
 func (pr *PolicyResolver) OnEndpointEgressDataUpdate(key model.WorkloadEndpointKey, egressData epEgressData) {

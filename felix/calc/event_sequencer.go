@@ -53,6 +53,9 @@ type EndpointEgressData struct {
 
 	// The number of egress gateway pods this workload should use.
 	MaxNextHops int
+
+	// Health port of the EGW or 0 if EGW has none.
+	HealthPort uint16
 }
 
 // EventSequencer buffers and coalesces updates from the calculation graph then flushes them
@@ -481,6 +484,7 @@ func (buf *EventSequencer) flushEndpointTierUpdates() {
 			protoEp := ModelWorkloadEndpointToProto(wlep, tiers)
 			protoEp.EgressIpSetId = buf.pendingEndpointEgressUpdates[key].EgressIPSetID
 			protoEp.IsEgressGateway = buf.pendingEndpointEgressUpdates[key].IsEgressGateway
+			protoEp.EgressGatewayHealthPort = int32(buf.pendingEndpointEgressUpdates[key].HealthPort)
 			protoEp.EgressMaxNextHops = int32(buf.pendingEndpointEgressUpdates[key].MaxNextHops)
 			if protoEp.IsEgressGateway {
 				// To break gatewaying loops, we do not allow a workload to route

@@ -1633,6 +1633,10 @@ var (
 	}
 
 	createEndpointWithLocalEgressGateway = func(name string, gateway *WorkloadEndpoint, ipSetMemberStr string) State {
+		healthPort := uint16(0)
+		if strings.Contains(ipSetMemberStr, "8080") {
+			healthPort = 8080
+		}
 		return initialisedStore.withKVUpdates(
 			KVPair{
 				Key: endpointWithOwnEgressGatewayID,
@@ -1652,6 +1656,7 @@ var (
 			"orch/gw1/ep1",
 			calc.EndpointEgressData{
 				IsEgressGateway: true,
+				HealthPort:      healthPort,
 			},
 		).withEndpoint(
 			"orch/wep1o/ep1",
@@ -1693,6 +1698,11 @@ var (
 		"endpointWithLocalActiveEgressGateway",
 		activeGatewayEndpoint,
 		egressActiveMemberStr("137.0.0.1/32"))
+
+	endpointWithLocalActiveEgressGatewayAndPort = createEndpointWithLocalEgressGateway(
+		"endpointWithLocalActiveEgressGatewayAndPort",
+		activeGatewayEndpointWithPort,
+		egressActiveMemberStrWithPort("137.0.0.1/32", 8080))
 
 	endpointWithLocalTerminatingEgressGateway = createEndpointWithLocalEgressGateway(
 		"endpointWithLocalTerminatingEgressGateway",

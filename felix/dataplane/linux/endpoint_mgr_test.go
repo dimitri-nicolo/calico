@@ -1827,14 +1827,15 @@ func endpointManagerTests(ipVersion uint8) func() {
 						epMgr.OnUpdate(&proto.WorkloadEndpointUpdate{
 							Id: &wlEPID1,
 							Endpoint: &proto.WorkloadEndpoint{
-								State:           "active",
-								Mac:             "01:02:03:04:05:06",
-								Name:            "cali12345-ab",
-								ProfileIds:      []string{},
-								Tiers:           tiers,
-								Ipv4Nets:        []string{"10.0.240.2/24"},
-								Ipv6Nets:        []string{"2001:db8:2::2/128"},
-								IsEgressGateway: true,
+								State:                   "active",
+								Mac:                     "01:02:03:04:05:06",
+								Name:                    "cali12345-ab",
+								ProfileIds:              []string{},
+								Tiers:                   tiers,
+								Ipv4Nets:                []string{"10.0.240.2/24"},
+								Ipv6Nets:                []string{"2001:db8:2::2/128"},
+								IsEgressGateway:         true,
+								EgressGatewayHealthPort: 8080,
 							},
 						})
 						err = epMgr.ResolveUpdateBatch()
@@ -1954,14 +1955,15 @@ func endpointManagerTests(ipVersion uint8) func() {
 							epMgr.OnUpdate(&proto.WorkloadEndpointUpdate{
 								Id: &wlEPID1,
 								Endpoint: &proto.WorkloadEndpoint{
-									State:           "active",
-									Mac:             "01:02:03:04:05:06",
-									Name:            "cali12345-ab",
-									ProfileIds:      []string{},
-									Tiers:           tiers,
-									Ipv4Nets:        []string{"10.0.240.2/24"},
-									Ipv6Nets:        []string{"2001:db8:2::2/128"},
-									IsEgressGateway: true,
+									State:                   "active",
+									Mac:                     "01:02:03:04:05:06",
+									Name:                    "cali12345-ab",
+									ProfileIds:              []string{},
+									Tiers:                   tiers,
+									Ipv4Nets:                []string{"10.0.240.2/24"},
+									Ipv6Nets:                []string{"2001:db8:2::2/128"},
+									IsEgressGateway:         true,
+									EgressGatewayHealthPort: 8080,
 								},
 							})
 							err = epMgr.ResolveUpdateBatch()
