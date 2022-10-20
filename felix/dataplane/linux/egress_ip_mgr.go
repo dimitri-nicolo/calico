@@ -649,7 +649,7 @@ func (m *egressIPManager) cleanupInitialKernelState() error {
 // processGatewayUpdates handles all gateway updates. Any route tables which contain next hops for gateways which no
 // longer exist are deleted and recreated with new valid hops.
 func (m *egressIPManager) processGatewayUpdates() error {
-	dirtySetIDs := m.egwTracker.GetAndClearDirtySetIDs()
+	dirtySetIDs := m.egwTracker.UpdatePollersGetAndClearDirtySetIDs()
 
 	var lastErr error
 	sortedWEPIDs := m.sortedWorkloadIDs() /* sort for determinism in tests */

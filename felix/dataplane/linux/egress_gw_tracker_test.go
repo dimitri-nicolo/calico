@@ -48,9 +48,9 @@ func TestEgressHealthMainline(t *testing.T) {
 	})
 
 	// Set should get marked dirty.
-	dirtySets := tracker.GetAndClearDirtySetIDs()
+	dirtySets := tracker.UpdatePollersGetAndClearDirtySetIDs()
 	Expect(dirtySets).To(ConsistOf("set-1"))
-	Expect(tracker.GetAndClearDirtySetIDs()).To(BeEmpty(), "GetAndClearDirtySetIDs should clear the set IDs")
+	Expect(tracker.UpdatePollersGetAndClearDirtySetIDs()).To(BeEmpty(), "UpdatePollersGetAndClearDirtySetIDs should clear the set IDs")
 
 	// Gateways should start in state EGWHealthUnknown.
 	gws, exists = tracker.GatewaysByID("set-1")
@@ -74,9 +74,9 @@ func TestEgressHealthMainline(t *testing.T) {
 	tracker.OnEGWHealthReport(healthReport)
 
 	// Set should get marked dirty.
-	dirtySets = tracker.GetAndClearDirtySetIDs()
+	dirtySets = tracker.UpdatePollersGetAndClearDirtySetIDs()
 	Expect(dirtySets).To(ConsistOf("set-1"), "Expected health reports to cause EGW IP set to be marked dirty.")
-	Expect(tracker.GetAndClearDirtySetIDs()).To(BeEmpty(), "GetAndClearDirtySetIDs should clear the set IDs")
+	Expect(tracker.UpdatePollersGetAndClearDirtySetIDs()).To(BeEmpty(), "UpdatePollersGetAndClearDirtySetIDs should clear the set IDs")
 
 	gws, exists = tracker.GatewaysByID("set-1")
 	Expect(exists).To(BeTrue())
@@ -103,9 +103,9 @@ func TestEgressHealthMainline(t *testing.T) {
 	tracker.OnEGWHealthReport(healthReport)
 
 	// Set should get marked dirty.
-	dirtySets = tracker.GetAndClearDirtySetIDs()
+	dirtySets = tracker.UpdatePollersGetAndClearDirtySetIDs()
 	Expect(dirtySets).To(ConsistOf("set-1"), "Expected health reports to cause EGW IP set to be marked dirty.")
-	Expect(tracker.GetAndClearDirtySetIDs()).To(BeEmpty(), "GetAndClearDirtySetIDs should clear the set IDs")
+	Expect(tracker.UpdatePollersGetAndClearDirtySetIDs()).To(BeEmpty(), "UpdatePollersGetAndClearDirtySetIDs should clear the set IDs")
 
 	// Gateway that failed should be reported as such.
 	gws, exists = tracker.GatewaysByID("set-1")
@@ -148,10 +148,11 @@ func TestEgressHealthMainline(t *testing.T) {
 			}),
 		},
 	})
+	Expect(tracker.UpdatePollersGetAndClearDirtySetIDs()).To(ConsistOf("set-1"))
 
 	Eventually(fromPollerC).Should(Receive(&healthReport))
 	Expect(healthReport.Health).To(Equal(EGWHealthUp))
-	Expect(healthReport.PollerID.addr).To(Equal(h[2].IP))
+	Expect(healthReport.Addr).To(Equal(h[2].IP))
 	tracker.OnEGWHealthReport(healthReport)
 
 	gws, exists = tracker.GatewaysByID("set-1")
@@ -169,6 +170,7 @@ func TestEgressHealthMainline(t *testing.T) {
 	tracker.OnIPSetRemove(&proto.IPSetRemove{
 		Id: "set-1",
 	})
+	Expect(tracker.UpdatePollersGetAndClearDirtySetIDs()).To(ConsistOf("set-1"))
 
 	gws, exists = tracker.GatewaysByID("set-1")
 	Expect(exists).To(BeFalse())
@@ -216,8 +218,7 @@ func TestEgressHealthTimeout(t *testing.T) {
 	})
 
 	// Set should get marked dirty.
-	dirtySets := tracker.GetAndClearDirtySetIDs()
-	Expect(dirtySets).To(ConsistOf("set-1"))
+	Expect(tracker.UpdatePollersGetAndClearDirtySetIDs()).To(ConsistOf("set-1"))
 
 	// Expect a report from each poller, which we feed back to the tracker.
 	var healthReport EGWHealthReport
@@ -268,8 +269,7 @@ func TestEgressHealthFailCount(t *testing.T) {
 	})
 
 	// Set should get marked dirty.
-	dirtySets := tracker.GetAndClearDirtySetIDs()
-	Expect(dirtySets).To(ConsistOf("set-1"))
+	Expect(tracker.UpdatePollersGetAndClearDirtySetIDs()).To(ConsistOf("set-1"))
 
 	// Expect a report from the poller, which we feed back to the tracker.
 	var healthReport EGWHealthReport
@@ -308,6 +308,7 @@ func TestEgressHealthDefunctPoller(t *testing.T) {
 			}),
 		},
 	})
+	Expect(tracker.UpdatePollersGetAndClearDirtySetIDs()).To(ConsistOf("set-1"))
 
 	// Expect a report from the poller but we stash it to simulate a race with recreating the poller...
 	var healthReport EGWHealthReport
@@ -319,6 +320,7 @@ func TestEgressHealthDefunctPoller(t *testing.T) {
 		Id:      "set-1",
 		Members: []string{},
 	})
+	Expect(tracker.UpdatePollersGetAndClearDirtySetIDs()).To(ConsistOf("set-1"))
 
 	// Check poller was stopped.
 	Eventually(h[0].SinceLastPoll, "1s", "1ms").Should(BeNumerically(">", 150*time.Millisecond))
@@ -342,6 +344,7 @@ func TestEgressHealthDefunctPoller(t *testing.T) {
 			}),
 		},
 	})
+	Expect(tracker.UpdatePollersGetAndClearDirtySetIDs()).To(ConsistOf("set-1"))
 
 	var healthReport2 EGWHealthReport
 	Eventually(fromPollerC, "200ms", "1ms").Should(Receive(&healthReport2), "expected poller to send a message when first poll succeeds")

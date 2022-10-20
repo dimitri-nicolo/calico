@@ -34,7 +34,7 @@ type EgressGWTracker struct {
 	dirtyEgressIPSet  set.Typed[string]
 
 	nextPollerNonce     int
-	pollers             map[egwPollerID]*egwPoller
+	pollers             map[string] /*set ID*/ map[ip.Addr]*egwPoller
 	pollInterval        time.Duration
 	minPollFailureCount int
 
@@ -49,7 +49,7 @@ func NewEgressGWTracker(ctx context.Context, healthReportC chan<- EGWHealthRepor
 		ipSetIDToGateways: map[string]gatewaysByIP{},
 		dirtyEgressIPSet:  set.New[string](),
 
-		pollers:             map[egwPollerID]*egwPoller{},
+		pollers:             map[string]map[ip.Addr]*egwPoller{},
 		pollInterval:        pollInterval,
 		minPollFailureCount: pollFailCount,
 
@@ -74,7 +74,6 @@ func (m *EgressGWTracker) OnIPSetDeltaUpdate(msg *proto.IPSetDeltaUpdate) {
 			log.WithError(err).Errorf("BUG: error parsing ip set member from member string %s", mStr)
 			continue
 		}
-		m.stopPollerIfRunning(msg.Id, member.addr)
 		delete(gateways, member.addr)
 	}
 
@@ -85,11 +84,6 @@ func (m *EgressGWTracker) OnIPSetDeltaUpdate(msg *proto.IPSetDeltaUpdate) {
 			continue
 		}
 		gateways[member.addr] = member
-		if member.healthPort != 0 {
-			m.ensurePollerRunning(msg.Id, member.addr, member.healthPort)
-		} else {
-			m.stopPollerIfRunning(msg.Id, member.addr)
-		}
 	}
 	m.markSetDirty(msg.Id)
 }
@@ -100,8 +94,6 @@ func (m *EgressGWTracker) OnIPSetUpdate(msg *proto.IPSetUpdate) {
 		return
 	}
 
-	oldGWs := m.ipSetIDToGateways[msg.Id]
-
 	log.Infof("Update whole EgressIP set: msg=%v", msg)
 	newGWs := make(gatewaysByIP)
 	for _, mStr := range msg.Members {
@@ -111,18 +103,6 @@ func (m *EgressGWTracker) OnIPSetUpdate(msg *proto.IPSetUpdate) {
 			continue
 		}
 		newGWs[member.addr] = member
-		if member.healthPort != 0 {
-			m.ensurePollerRunning(msg.Id, member.addr, member.healthPort)
-		} else {
-			m.stopPollerIfRunning(msg.Id, member.addr)
-		}
-	}
-
-	for k, oldGW := range oldGWs {
-		if _, ok := newGWs[k]; ok {
-			continue
-		}
-		m.stopPollerIfRunning(msg.Id, oldGW.addr)
 	}
 
 	m.ipSetIDToGateways[msg.Id] = newGWs
@@ -134,32 +114,29 @@ func (m *EgressGWTracker) OnIPSetRemove(msg *proto.IPSetRemove) {
 		return
 	}
 	log.Infof("Remove whole EgressIP set: msg=%v", msg)
-	for _, oldGW := range m.ipSetIDToGateways[msg.Id] {
-		m.stopPollerIfRunning(msg.Id, oldGW.addr)
-	}
 	delete(m.ipSetIDToGateways, msg.Id)
 	m.markSetDirty(msg.Id)
 }
 
 // OnEGWHealthReport is called (on the main dataplane goroutine) when one of our pollers makes a report.
 func (m *EgressGWTracker) OnEGWHealthReport(r EGWHealthReport) {
-	logCtx := log.WithFields(log.Fields{"egwAddr": r.PollerID.addr, "health": r.Health})
-	if p := m.pollers[r.PollerID]; p == nil || p.nonce != r.PollerNonce {
+	logCtx := log.WithFields(log.Fields{"egwAddr": r.Addr, "health": r.Health})
+	if p := m.pollers[r.SetID][r.Addr]; p == nil || p.nonce != r.PollerNonce {
 		// This is a message from an old poller.
 		logCtx.WithFields(log.Fields{
 			"messageNonce":  r.PollerNonce,
 			"currentPoller": p,
-		}).Info("Received message from a defunct egress gateway poller, ignoring.")
+		}).Debug("Received message from a defunct egress gateway poller, ignoring.")
 		return
 	}
 	// If the poller exists, and it has the right nonce then the gateway should exist
-	gws := m.ipSetIDToGateways[r.PollerID.setID]
-	gw := gws[r.PollerID.addr]
+	gws := m.ipSetIDToGateways[r.SetID]
+	gw := gws[r.Addr]
 	if gw.healthStatus != r.Health && r.Health == EGWHealthProbeFailed {
 		gw.healthFailedAt = time.Now()
 	}
 	gw.healthStatus = r.Health
-	m.markSetDirty(r.PollerID.setID)
+	m.markSetDirty(r.SetID)
 	logCtx.Info("Egress gateway health changed.")
 }
 
@@ -171,8 +148,9 @@ func (m *EgressGWTracker) Dirty() bool {
 	return m.dirtyEgressIPSet.Len() > 0
 }
 
-func (m *EgressGWTracker) GetAndClearDirtySetIDs() []string {
+func (m *EgressGWTracker) UpdatePollersGetAndClearDirtySetIDs() []string {
 	s := sortStringSet(m.dirtyEgressIPSet)
+	m.updatePollers(s)
 	m.dirtyEgressIPSet.Clear()
 	return s
 }
@@ -192,22 +170,46 @@ func (m *EgressGWTracker) AllGatewayIPs() set.Set[ip.Addr] {
 	return gatewayIPs
 }
 
+func (m *EgressGWTracker) updatePollers(dirtySetIDs []string) {
+	for _, setID := range dirtySetIDs {
+		pollers := m.pollers[setID]
+		gws := m.ipSetIDToGateways[setID]
+
+		// Start any pollers that we do need.
+		for addr, gw := range gws {
+			if gw.healthPort != 0 {
+				m.ensurePollerRunning(setID, addr, gw.healthPort)
+			}
+		}
+
+		// Stop any pollers we don't need.
+		for addr := range pollers {
+			if gw, ok := gws[addr]; !ok || gw.healthPort == 0 {
+				m.stopPollerIfRunning(setID, addr)
+			}
+		}
+	}
+}
+
 func (m *EgressGWTracker) ensurePollerRunning(setID string, addr ip.Addr, port uint16) {
 	if m.pollInterval == 0 {
 		log.Debug("Zero poll interval; disabling poller.")
 		return
 	}
 
-	id := egwPollerID{
-		setID: setID,
-		addr:  addr,
+	pollersForSet, ok := m.pollers[setID]
+	if !ok {
+		pollersForSet = map[ip.Addr]*egwPoller{}
+		m.pollers[setID] = pollersForSet
 	}
-	if _, exists := m.pollers[id]; exists {
+
+	if _, exists := pollersForSet[addr]; exists {
 		return
 	}
 	ctx, cancel := context.WithCancel(m.context)
 	poller := &egwPoller{
-		id:                  id,
+		setID:               setID,
+		addr:                addr,
 		nonce:               m.nextPollerNonce,
 		cancel:              cancel,
 		reportC:             m.healthReportC,
@@ -216,23 +218,27 @@ func (m *EgressGWTracker) ensurePollerRunning(setID string, addr ip.Addr, port u
 		minPollFailureCount: m.minPollFailureCount,
 	}
 	m.nextPollerNonce += 1
-	m.pollers[id] = poller
+	pollersForSet[addr] = poller
 	poller.Start(ctx)
 }
 
 func (m *EgressGWTracker) stopPollerIfRunning(setID string, ip ip.Addr) {
-	k := egwPollerID{
-		setID: setID,
-		addr:  ip,
-	}
-	if p, exists := m.pollers[k]; !exists {
+	pollersForSet, exists := m.pollers[setID]
+	if !exists {
 		return
-	} else {
-		p.cancel()
 	}
-	delete(m.pollers, k)
+	p, exists := pollersForSet[ip]
+	if !exists {
+		return
+	}
+
 	// Note: we don't wait for the poller to stop here since that could deadlock if it is trying to send a message
 	// to this goroutine.  Instead, we filter out messages from defunct pollers based on the per-poller nonce.
+	p.cancel()
+	delete(pollersForSet, ip)
+	if len(pollersForSet) == 0 {
+		delete(m.pollers, setID)
+	}
 }
 
 func (m *EgressGWTracker) AllHealthPortIPSetMembers() []string {
@@ -270,13 +276,9 @@ const (
 	EGWHealthProbeFailed EGWHealth = "probe-failed"
 )
 
-type egwPollerID struct {
-	setID string
-	addr  ip.Addr
-}
-
 type egwPoller struct {
-	id                  egwPollerID
+	setID               string
+	addr                ip.Addr
 	nonce               int
 	url                 string
 	cancel              func()
@@ -291,7 +293,8 @@ func (p *egwPoller) Start(ctx context.Context) {
 }
 
 type EGWHealthReport struct {
-	PollerID egwPollerID
+	SetID string
+	Addr  ip.Addr
 	// PollerNonce is a unique value for each poller that we create. By including it in the messages we send mack to
 	// the main goroutine, it allows us to tell the difference between messages that were already in a queue from a
 	// poller that was just shut down and messages from a fresh poller that has just been created.
@@ -356,7 +359,8 @@ func (p *egwPoller) loop(ctx context.Context) {
 		}
 
 		report := EGWHealthReport{
-			PollerID:    p.id,
+			SetID:       p.setID,
+			Addr:        p.addr,
 			PollerNonce: p.nonce,
 			Health:      egwHealth,
 		}
