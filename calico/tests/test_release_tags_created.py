@@ -43,7 +43,7 @@ MAPPED_COMPONENTS = {
     'tigera-cni': 'calico-private',
     'license-agent': 'license-agent',
     'firewall-integration': 'firewall-integration',
-    'egress-gateway': 'egress-gateway',
+    'egress-gateway': 'calico-private',
     'guardian': 'calico-private',
     'dex': 'dexidp-docker',
     'honeypod-controller': 'calico-private',
