@@ -4,6 +4,7 @@ package intdataplane
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha1"
 	"errors"
 	"fmt"
@@ -389,6 +390,7 @@ func newEgressIPManagerWithShims(
 		workloadToTableIndex:       make(map[proto.WorkloadEndpointID]int),
 		workloadMaintenanceWindows: make(map[proto.WorkloadEndpointID]gateway),
 		egwTracker: NewEgressGWTracker(
+			context.Background(),
 			healthReportC,
 			dpConfig.EgressGatewayPollInterval,
 			dpConfig.EgressGatewayPollFailureCount,

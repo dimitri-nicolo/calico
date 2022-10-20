@@ -41,9 +41,10 @@ type EgressGWTracker struct {
 	healthReportC chan<- EGWHealthReport
 
 	fastRetryTicker *jitter.Ticker
+	context         context.Context
 }
 
-func NewEgressGWTracker(healthReportC chan<- EGWHealthReport, pollInterval time.Duration, pollFailCount int) *EgressGWTracker {
+func NewEgressGWTracker(ctx context.Context, healthReportC chan<- EGWHealthReport, pollInterval time.Duration, pollFailCount int) *EgressGWTracker {
 	return &EgressGWTracker{
 		ipSetIDToGateways: map[string]gatewaysByIP{},
 		dirtyEgressIPSet:  set.New[string](),
@@ -53,6 +54,7 @@ func NewEgressGWTracker(healthReportC chan<- EGWHealthReport, pollInterval time.
 		minPollFailureCount: pollFailCount,
 
 		healthReportC: healthReportC,
+		context:       ctx,
 	}
 }
 
@@ -153,10 +155,10 @@ func (m *EgressGWTracker) OnEGWHealthReport(r EGWHealthReport) {
 	// If the poller exists, and it has the right nonce then the gateway should exist
 	gws := m.ipSetIDToGateways[r.PollerID.setID]
 	gw := gws[r.PollerID.addr]
-	if gw.health != r.Health && r.Health == EGWHealthProbeFailed {
+	if gw.healthStatus != r.Health && r.Health == EGWHealthProbeFailed {
 		gw.healthFailedAt = time.Now()
 	}
-	gw.health = r.Health
+	gw.healthStatus = r.Health
 	m.markSetDirty(r.PollerID.setID)
 	logCtx.Info("Egress gateway health changed.")
 }
@@ -203,7 +205,7 @@ func (m *EgressGWTracker) ensurePollerRunning(setID string, addr ip.Addr, port u
 	if _, exists := m.pollers[id]; exists {
 		return
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(m.context)
 	poller := &egwPoller{
 		id:                  id,
 		nonce:               m.nextPollerNonce,
@@ -256,7 +258,7 @@ type gateway struct {
 	maintenanceFinished time.Time
 
 	healthPort     uint16
-	health         EGWHealth
+	healthStatus   EGWHealth
 	healthFailedAt time.Time
 }
 
@@ -359,19 +361,6 @@ func (p *egwPoller) loop(ctx context.Context) {
 			Health:      egwHealth,
 		}
 
-		// Try to send on the health channel if we can before we wait for the next tick.  This ensures that, if
-		// the next tick is ready to pop, we'll prefer to send a health report first.
-		if reportC != nil {
-			select {
-			case reportC <- report:
-				lastReportedHealth = egwHealth
-				logCtx.WithField("health", egwHealth).Debug("Sent health report.")
-				reportC = nil
-			default:
-				logCtx.Debug("Report chan is blocked, will select over ticker and report chan.")
-			}
-		}
-
 		select {
 		case reportC <- report:
 			lastReportedHealth = egwHealth
@@ -386,7 +375,11 @@ func (p *egwPoller) loop(ctx context.Context) {
 
 func (p *egwPoller) doOneProbe(ctx context.Context, logCtx *log.Entry) (EGWHealth, error) {
 	logCtx.Debug("Doing poll...")
-	toCtx, cancel := context.WithTimeout(ctx, p.pollInterval)
+	// Set the timeout to be 90% of the poll interval.  Originally, I tried setting this to be the full poll interval
+	// but then there's a good chance that the ticker will pop before we return.  That leads to a 50:50 chance of
+	// looping again instead of sending the report.
+	timeout := p.pollInterval * 90 / 100
+	toCtx, cancel := context.WithTimeout(ctx, timeout)
 	req, err := http.NewRequestWithContext(toCtx, "GET", p.url, nil)
 	defer cancel()
 
@@ -446,7 +439,7 @@ func (g gatewaysByIP) activeGateways() gatewaysByIP {
 		// This classes "unknown" and "up" together, which makes sure that we don't flap at start-of-day.
 		// Would be nice to be more precise to avoid using a bad EGW at start of day but that'd delay programming
 		// of EGWs until we've polled them all.
-		if m.healthPort != 0 && m.health == EGWHealthProbeFailed {
+		if m.healthPort != 0 && m.healthStatus == EGWHealthProbeFailed {
 			continue
 		}
 		active[m.addr] = m
@@ -469,7 +462,7 @@ func (g gatewaysByIP) terminatingGateways() gatewaysByIP {
 func (g gatewaysByIP) failedGateways() gatewaysByIP {
 	failed := make(gatewaysByIP)
 	for _, m := range g {
-		if m.healthPort != 0 && m.health == EGWHealthProbeFailed {
+		if m.healthPort != 0 && m.healthStatus == EGWHealthProbeFailed {
 			failed[m.addr] = m
 		}
 	}

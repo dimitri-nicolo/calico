@@ -1398,7 +1398,7 @@ func (m *ipSetMemberMatcher) Match(actual interface{}) (bool, error) {
 		m.expected.maintenanceStarted.Equal(member.maintenanceStarted) &&
 		m.expected.maintenanceFinished.Equal(member.maintenanceFinished) &&
 		m.expected.healthPort == member.healthPort &&
-		m.expected.health == member.health
+		m.expected.healthStatus == member.healthStatus
 	return match, nil
 
 }

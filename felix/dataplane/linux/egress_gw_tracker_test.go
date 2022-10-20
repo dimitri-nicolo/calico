@@ -3,6 +3,7 @@
 package intdataplane
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -22,18 +23,7 @@ import (
 )
 
 func TestEgressHealthMainline(t *testing.T) {
-	RegisterTestingT(t)
-
-	// Create the tracker and the channel that its EGW poll threads will use to send messages back to the
-	// main thread.  The tracker doesn't listen on its own channel, it expects the main thread to give it a call back
-	// when a message arrives.
-	fromPollerC := make(chan EGWHealthReport, 1) // Need buffered chan since Should(Receive()) doesn't block.
-	tracker := NewEgressGWTracker(fromPollerC, 100*time.Millisecond, 1)
-
-	// Set up local sockets; these are our pretend remote egress gateways.  We can control the status code that
-	// they each return.
-	h, cancel, err := createMockHealthListeners(3)
-	Expect(err).NotTo(HaveOccurred())
+	tracker, h, fromPollerC, cancel := setupEgressHealthTest(t, 100*time.Millisecond, 1, 3)
 	defer cancel()
 
 	// Set shouldn't exist before we add it...
@@ -69,11 +59,11 @@ func TestEgressHealthMainline(t *testing.T) {
 	gw1 := gws[h[0].IP]
 	Expect(gw1.addr).To(Equal(h[0].IP))
 	Expect(gw1.healthPort).To(Equal(uint16(h[0].Port)))
-	Expect(gw1.health).To(Equal(EGWHealthUnknown))
+	Expect(gw1.healthStatus).To(Equal(EGWHealthUnknown))
 	gw2 := gws[h[1].IP]
 	Expect(gw2.addr).To(Equal(h[1].IP))
 	Expect(gw2.healthPort).To(Equal(uint16(h[1].Port)))
-	Expect(gw2.health).To(Equal(EGWHealthUnknown))
+	Expect(gw2.healthStatus).To(Equal(EGWHealthUnknown))
 	Expect(gws.failedGateways()).To(BeEmpty())
 
 	// Expect a report from each poller, which we feed back to the tracker.
@@ -93,10 +83,10 @@ func TestEgressHealthMainline(t *testing.T) {
 	Expect(gws).To(HaveLen(2))
 	gw1 = gws[h[0].IP]
 	Expect(gw1.addr).To(Equal(h[0].IP))
-	Expect(gw1.health).To(Equal(EGWHealthUp))
+	Expect(gw1.healthStatus).To(Equal(EGWHealthUp))
 	gw2 = gws[h[1].IP]
 	Expect(gw2.addr).To(Equal(h[1].IP))
-	Expect(gw2.health).To(Equal(EGWHealthUp))
+	Expect(gw2.healthStatus).To(Equal(EGWHealthUp))
 	Expect(gws.failedGateways()).To(BeEmpty())
 	Expect(gws.allIPs()).To(Equal(set.FromBoxed(h[0].IP, h[1].IP)))
 	Expect(gws.activeGateways()).To(HaveLen(2))
@@ -124,7 +114,7 @@ func TestEgressHealthMainline(t *testing.T) {
 	failedGWs := gws.failedGateways()
 	Expect(failedGWs).To(HaveLen(1))
 	Expect(failedGWs).To(HaveKey(h[0].IP))
-	Expect(failedGWs[h[0].IP].health).To(Equal(EGWHealthProbeFailed))
+	Expect(failedGWs[h[0].IP].healthStatus).To(Equal(EGWHealthProbeFailed))
 	activeGWs := gws.activeGateways()
 	Expect(activeGWs).To(HaveLen(1))
 	Expect(activeGWs).To(HaveKey(h[1].IP))
@@ -189,18 +179,28 @@ func TestEgressHealthMainline(t *testing.T) {
 	Expect(fromPollerC).ToNot(Receive())
 }
 
-func TestEgressHealthTimeout(t *testing.T) {
+func setupEgressHealthTest(t *testing.T, pollInterval time.Duration, pollFailCount, numListeners int) (*EgressGWTracker, []*healthHandler, chan EGWHealthReport, func()) {
 	RegisterTestingT(t)
 
 	// Create the tracker and the channel that its EGW poll threads will use to send messages back to the
 	// main thread.  The tracker doesn't listen on its own channel, it expects the main thread to give it a call back
 	// when a message arrives.
 	fromPollerC := make(chan EGWHealthReport, 1) // Need buffered chan since Should(Receive()) doesn't block.
-	tracker := NewEgressGWTracker(fromPollerC, 100*time.Millisecond, 1)
+	ctx, cancel1 := context.WithCancel(context.Background())
+	tracker := NewEgressGWTracker(ctx, fromPollerC, pollInterval, pollFailCount)
 
 	// Set up local sockets; these are our pretend remote egress gateways.  We can trigger one of them to time out.
-	h, cancel, err := createMockHealthListeners(1)
+	h, cancel2, err := createMockHealthListeners(numListeners)
 	Expect(err).NotTo(HaveOccurred())
+
+	return tracker, h, fromPollerC, func() {
+		cancel1()
+		cancel2()
+	}
+}
+
+func TestEgressHealthTimeout(t *testing.T) {
+	tracker, h, fromPollerC, cancel := setupEgressHealthTest(t, 100*time.Millisecond, 1, 1)
 	defer cancel()
 
 	// Send in an egress IP set with health.  This should trigger pollers to start.
@@ -252,17 +252,7 @@ func TestEgressHealthTimeout(t *testing.T) {
 }
 
 func TestEgressHealthFailCount(t *testing.T) {
-	RegisterTestingT(t)
-
-	// Create the tracker and the channel that its EGW poll threads will use to send messages back to the
-	// main thread.  The tracker doesn't listen on its own channel, it expects the main thread to give it a call back
-	// when a message arrives.
-	fromPollerC := make(chan EGWHealthReport, 1) // Need buffered chan since Should(Receive()) doesn't block.
-	tracker := NewEgressGWTracker(fromPollerC, 100*time.Millisecond, 3)
-
-	// Set up local sockets; these are our pretend remote egress gateways.  We can trigger one of them to time out.
-	h, cancel, err := createMockHealthListeners(1)
-	Expect(err).NotTo(HaveOccurred())
+	tracker, h, fromPollerC, cancel := setupEgressHealthTest(t, 100*time.Millisecond, 3, 1)
 	defer cancel()
 
 	// Send in an egress IP set with health.  This should trigger pollers to start.
@@ -304,17 +294,7 @@ func TestEgressHealthFailCount(t *testing.T) {
 }
 
 func TestEgressHealthDefunctPoller(t *testing.T) {
-	RegisterTestingT(t)
-
-	// Create the tracker and the channel that its EGW poll threads will use to send messages back to the
-	// main thread.  The tracker doesn't listen on its own channel, it expects the main thread to give it a call back
-	// when a message arrives.
-	fromPollerC := make(chan EGWHealthReport, 1) // Need buffered chan since Should(Receive()) doesn't block.
-	tracker := NewEgressGWTracker(fromPollerC, 100*time.Millisecond, 1)
-
-	// Set up local sockets; these are our pretend remote egress gateways.  We can trigger one of them to time out.
-	h, cancel, err := createMockHealthListeners(1)
-	Expect(err).NotTo(HaveOccurred())
+	tracker, h, fromPollerC, cancel := setupEgressHealthTest(t, 100*time.Millisecond, 1, 1)
 	defer cancel()
 
 	// Send in an egress IP set with health.  This should trigger pollers to start.
@@ -369,12 +349,12 @@ func TestEgressHealthDefunctPoller(t *testing.T) {
 	// Send in the second report, should be accepted.
 	tracker.OnEGWHealthReport(healthReport2)
 	gws, _ = tracker.GatewaysByID("set-1")
-	Expect(gws[h[0].IP].health).To(Equal(EGWHealthProbeFailed))
+	Expect(gws[h[0].IP].healthStatus).To(Equal(EGWHealthProbeFailed))
 
 	// Send in the first report again for good measure, should _still_ be ignored.
 	tracker.OnEGWHealthReport(healthReport)
 	gws, _ = tracker.GatewaysByID("set-1")
-	Expect(gws[h[0].IP].health).To(Equal(EGWHealthProbeFailed))
+	Expect(gws[h[0].IP].healthStatus).To(Equal(EGWHealthProbeFailed))
 }
 
 type healthHandler struct {
