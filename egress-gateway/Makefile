@@ -108,11 +108,17 @@ ut: ../felix/proto/felixbackend.pb.go
 	mkdir -p report
 	$(DOCKER_RUN) $(CALICO_BUILD) /bin/bash -c "$(GIT_CONFIG_SSH) go test -v $(GOTEST_ARGS) ./..."
 
+fv:
+	echo "egress-gateway currently has no FV tests."
+
+st:
+	echo "egress-gateway ST tests are currently in the node 'k8st' framework."
+	echo "To run them: make --directory ../node egress-ip-tests"
 
 ###############################################################################
 # CI/CD
 ###############################################################################
 .PHONY: ci
-ci: clean image-all
+ci: clean image-all test
 ## Deploys images to registry
 cd: cd-common

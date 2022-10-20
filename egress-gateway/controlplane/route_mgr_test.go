@@ -8,6 +8,7 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 	"k8s.io/apimachinery/pkg/util/clock"
@@ -58,10 +59,12 @@ func TestProgramsKernel(test *testing.T) {
 
 	log.Info("adding mock default route...")
 	createDefaultLinkAndRoute(test, nl) // necessary for route manager init
+	healthAgg := health.NewHealthAggregator()
 	routeManager := NewRouteManager(
 		store,
 		dummyIfaceName,
 		vni,
+		healthAgg,
 		OptNetlink(nl),
 	)
 
@@ -151,10 +154,12 @@ func TestHandlesFailures(test *testing.T) {
 	defer destroyDummyLink(test, nl, link)
 
 	backoffMgr := wait.NewJitteredBackoffManager(5*time.Second, 0, clock.RealClock{})
+	healthAgg := health.NewHealthAggregator()
 	routeManager := NewRouteManager(
 		store,
 		dummyIfaceName,
 		vni,
+		healthAgg,
 		OptNetlink(nl),
 		OptBackoffManager(backoffMgr),
 	)
@@ -238,10 +243,12 @@ func TestHandlesTunnels(test *testing.T) {
 
 	log.Info("adding mock default route...")
 	defaultLink, defaultRoute := createDefaultLinkAndRoute(test, nl) // necessary for route manager init
+	healthAgg := health.NewHealthAggregator()
 	routeManager := NewRouteManager(
 		store,
 		dummyIfaceName,
 		vni,
+		healthAgg,
 		OptNetlink(nl),
 	)
 

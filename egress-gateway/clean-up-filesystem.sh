@@ -40,6 +40,7 @@ bin_dirs=(
 bin_allow_list_patterns=(
   # eg dependencies.
   '/ip$' # iproute2; used to add/manipulate routes etc.
+  'ping'
 
   # iptables/ip sets
   xtables
@@ -226,6 +227,7 @@ packages_to_keep=(
   iproute
   ipset
   iptables
+  iputils
   kmod
   langpacks
   libacl
@@ -235,6 +237,7 @@ packages_to_keep=(
   libelf
   libgcc
   libibverbs
+  libidn2
   libnl
   libmnl
   libnetfilter
@@ -245,6 +248,7 @@ packages_to_keep=(
   libpwquality
   libselinux
   libsigsegv
+  libunistring
   libzstd
   mpfr
   ncurses
