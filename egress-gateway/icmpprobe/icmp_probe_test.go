@@ -13,17 +13,6 @@ import (
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 )
 
-func TestRegex(t *testing.T) {
-	for _, example := range []string{
-		"64 bytes from 8.8.8.8: icmp_seq=2 ttl=115 time=3.100 ms",
-		"127 bytes from 127.0.0.1: icmp_seq=1000 ttl=1 time=35 s",
-	} {
-		if !goodResponseRE.MatchString(example) {
-			t.Errorf("Regex didn't match example: %q", example)
-		}
-	}
-}
-
 func TestMainline(t *testing.T) {
 	RegisterTestingT(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

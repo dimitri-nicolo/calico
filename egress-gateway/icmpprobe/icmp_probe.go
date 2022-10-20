@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
-	"regexp"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -26,11 +25,6 @@ func StartBackgroundICMPProbes(ctx context.Context, addrs []net.IP, interval tim
 	}
 	return nil
 }
-
-var (
-	// Should match lines like this: `64 bytes from 8.8.8.8: icmp_seq=1 ttl=116 time=5.87 ms`
-	goodResponseRE = regexp.MustCompile(`(\d+) bytes from (.+): icmp_seq=(\d+) ttl=(\d+) time=([\d.]+ \w+)`)
-)
 
 func LoopDoingProbes(ctx context.Context, addr net.IP, interval time.Duration, healthAgg *health.HealthAggregator) {
 	logCtx := logrus.WithField("ip", addr)

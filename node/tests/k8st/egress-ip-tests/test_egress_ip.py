@@ -748,6 +748,10 @@ EOF
             newEnv = {"FELIX_ROUTETABLERANGES": "1-200"}
             self.update_ds_env("calico-node", "kube-system", newEnv)
 
+            def undo_route_table_range():
+                self.update_ds_env("calico-node", "kube-system", {"FELIX_ROUTETABLERANGES": "1-250"})
+            self.add_cleanup(undo_route_table_range)
+
             # Create 3 egress gateways, with an IP from that pool.
             gw1 = self.create_gateway_pod("kind-worker", "gw1", self.egress_cidr)
             gw2 = self.create_gateway_pod("kind-worker2", "gw2", self.egress_cidr)
@@ -1088,12 +1092,12 @@ spec:
     env:
     # Optional: comma-delimited list of IP addresses to send ICMP pings to; if all probes fail, the egress
     # gateway will report non-ready.
-    - name: ICMP_PROBES
+    - name: ICMP_PROBE_IPS
       value: "%s"
-    # Only used if ICMP_PROBES is non-empty: interval to send probes.
+    # Only used if ICMP_PROBE_IPS is non-empty: interval to send probes.
     - name: ICMP_PROBE_INTERVAL
       value: "1s"
-    # Only used if ICMP_PROBES is non-empty: timeout on each probe.
+    # Only used if ICMP_PROBE_IPS is non-empty: timeout on each probe.
     - name: ICMP_PROBE_TIMEOUT
       value: "3s"
     # Optional HTTP URL to send periodic probes to; if the probe fails that is reflected in 

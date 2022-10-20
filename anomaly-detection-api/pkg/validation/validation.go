@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	MaxModelStringSizeAllowed = 15730000 // 15MB
+	MaxModelStringSizeAllowed = 100000000 // 100MB
 )
 
 var (
@@ -150,6 +150,8 @@ func ValidateContentType(req http.Request, contentTypeValue string) *api_error.A
 // the /clusters{cluster_name}/models/ endpoint
 func ValidateModelSizeRequestBody(req *http.Request) *api_error.APIError {
 	if stateChangingMethods[req.Method] {
+
+		log.Debugf("attempt at uploading %s model of size %d", req.URL.Path, req.ContentLength)
 
 		if req.ContentLength > MaxModelStringSizeAllowed {
 			return &api_error.APIError{

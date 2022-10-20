@@ -62,7 +62,7 @@ type envConfig struct {
 	HTTPProbeInterval time.Duration `envconfig:"HTTP_PROBE_INTERVAL" default:"10s"`
 	HTTPProbeTimeout  time.Duration `envconfig:"HTTP_PROBE_TIMEOUT" default:"10s"`
 
-	ICMPProbes        []string      `envconfig:"ICMP_PROBES" default:""`
+	ICMPProbes        []string      `envconfig:"ICMP_PROBE_IPS" default:""`
 	ICMPProbeInterval time.Duration `envconfig:"ICMP_PROBE_INTERVAL" default:"5s"`
 	ICMPProbeTimeout  time.Duration `envconfig:"ICMP_PROBE_TIMEOUT" default:"15s"`
 

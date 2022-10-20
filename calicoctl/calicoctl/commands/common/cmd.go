@@ -5,7 +5,9 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -71,6 +73,7 @@ type Cmd struct {
 	Info     string
 	CmdStr   string
 	FilePath string
+	SymLink  string
 }
 
 // ExecCmdWriteToFile executes the provided command c and outputs the result to a
@@ -79,6 +82,14 @@ func ExecCmdWriteToFile(c Cmd) {
 
 	if c.Info != "" {
 		fmt.Println(c.Info)
+	}
+
+	// Create the containing directory, if needed.
+	dir := filepath.Dir(c.FilePath)
+	err := os.MkdirAll(dir, os.ModePerm)
+	if err != nil {
+		fmt.Printf("Error creating directory for %v: %v\n", c.FilePath, err)
+		return
 	}
 
 	parts := strings.Fields(c.CmdStr)
@@ -101,6 +112,24 @@ func ExecCmdWriteToFile(c Cmd) {
 		log.Errorf("Error writing diags to file: %s\n", err)
 	}
 	log.Debugf("Command executed successfully and outputted to %s", c.FilePath)
+
+	if c.SymLink != "" {
+		dir = filepath.Dir(c.SymLink)
+		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+			fmt.Printf("Error creating directory for %v: %v\n", c.SymLink, err)
+			return
+		}
+		relativeTarget, err := filepath.Rel(dir, c.FilePath)
+		if err != nil {
+			fmt.Printf("Error computing relative path for %v: %v\n", c.SymLink, err)
+			return
+		}
+		err = os.Symlink(relativeTarget, c.SymLink)
+		if err != nil {
+			fmt.Printf("Error making symlink %v: %v\n", c.SymLink, err)
+			return
+		}
+	}
 }
 
 // ExecAllCmdsWriteToFile iterates through the provided list of Cmd objects and attempts

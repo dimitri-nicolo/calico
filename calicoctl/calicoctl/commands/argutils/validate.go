@@ -70,10 +70,9 @@ func ValidateResourceName(str string) string {
 
 // ValidateSinceDuration takes a string as an input and makes sure it has a valid value and
 // time unit.
-func ValidateSinceDuration(str string) string {
+func ValidateSinceDuration(str string) {
 	if !validSinceRegex.MatchString(str) {
 		fmt.Printf("Error executing command: invalid duration for since flag (try 10s, 5m, or 1h): %s\n", str)
 		os.Exit(1)
 	}
-	return str
 }

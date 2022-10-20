@@ -10,7 +10,7 @@ Endpoints to save, load, and stat model files called by Anomaly-Detection pods.
 
 #### POST /clusters/{cluser_name}/models/dynamic/{detector_category}/{detector_class} 
 
-Saves a model provided in the body of the request. If a model already exists for the specified  /clusters/{cluser_name}/models/dynamic/{detector_category}/{detector_class} path, it will replace the existing model with the one provided in the body.  The cluster name and detector name will be validated that they are RFC1123 compliant, and the file size in the body to be capped at 15 Mb.
+Saves a model provided in the body of the request. If a model already exists for the specified  /clusters/{cluser_name}/models/dynamic/{detector_category}/{detector_class} path, it will replace the existing model with the one provided in the body.  The cluster name and detector name will be validated that they are RFC1123 compliant, and the file size in the body to be capped at 100 Mb.
 
 ##### Request Fields
 

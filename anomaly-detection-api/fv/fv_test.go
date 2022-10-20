@@ -205,7 +205,7 @@ var _ = Describe("FV", func() {
 			req, err := http.NewRequest("POST", endpointPath, strings.NewReader(testBase64FileString))
 			Expect(err).NotTo(HaveOccurred())
 
-			modelSize := 15730001
+			modelSize := 100000001
 			req.Header.Add("Content-Type", "text/plain")
 			req.ContentLength = int64(modelSize)
 			token := make([]byte, modelSize)
@@ -225,7 +225,7 @@ var _ = Describe("FV", func() {
 			req, err := http.NewRequest("POST", endpointPath, strings.NewReader(testBase64FileString))
 			Expect(err).NotTo(HaveOccurred())
 
-			modelSize := 15730001
+			modelSize := 100000001
 			req.Header.Add("Content-Type", "text/plain")
 			req.ContentLength = int64(modelSize)
 			token := make([]byte, modelSize)
