@@ -3,7 +3,6 @@ package cluster
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -138,13 +137,9 @@ func collectDiags(opts *diagOpts) error {
 
 	// Within temp dir create a folder that will be used to zip everything up in the end
 	dir := fmt.Sprintf("%s/%s", rootDir, directoryName)
-	err = os.Mkdir(dir, os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("error creating root diagnostics directory: %v", err)
-	}
 
-	collectGlobalClusterInformation(dir)
-	collectSelectedNodeLogs(dir, opts)
+	collectGlobalClusterInformation(dir + "/cluster")
+	collectSelectedNodeLogs(dir+"/nodes", opts)
 	createArchive(rootDir)
 
 	return nil
@@ -391,31 +386,25 @@ func collectGlobalClusterInformation(dir string) {
 		},
 	})
 
-	collectCalicoResource(dir)
-	collectTigeraOperator(dir)
-	collectKubernetesResource(dir)
+	collectCalicoResource(dir + "/calico")
+	collectTigeraOperator(dir + "/tigera")
+	collectKubernetesResource(dir + "/kubernetes")
 }
 
 // func collectDiagsForPod(pod, namespace, dir /*node_name*/, sinceFlag string) {
 func collectDiagsForPod(dir string, opts *diagOpts, kubeClient *kubernetes.Clientset, nodeName, namespace, podName string) {
-	nodeDir := fmt.Sprintf("%s/%s", dir, nodeName)
-	if _, err := os.Stat(nodeDir); errors.Is(err, os.ErrNotExist) {
-		err := os.Mkdir(nodeDir, os.ModePerm)
-		if err != nil {
-			fmt.Printf("error creating node diagnostics directory: %v\n", err)
-			return
-		}
-	}
+	nodeDir := dir + "/" + nodeName
+	namespaceDir := nodeDir + "/" + namespace
 	common.ExecAllCmdsWriteToFile([]common.Cmd{
 		{
 			Info:     fmt.Sprintf("Collect logs for pod %s", podName),
 			CmdStr:   fmt.Sprintf("kubectl logs --since=%s -n %s %s", opts.Since, namespace, podName),
-			FilePath: fmt.Sprintf("%s/%s.log", nodeDir, podName),
+			FilePath: fmt.Sprintf("%s/%s.log", namespaceDir, podName),
 		},
 		{
 			Info:     fmt.Sprintf("Collect describe for pod %s", podName),
 			CmdStr:   fmt.Sprintf("kubectl -n %s describe pods %s", namespace, podName),
-			FilePath: fmt.Sprintf("%s/%s.txt", nodeDir, podName),
+			FilePath: fmt.Sprintf("%s/%s.txt", namespaceDir, podName),
 		},
 	})
 
@@ -424,16 +413,8 @@ func collectDiagsForPod(dir string, opts *diagOpts, kubeClient *kubernetes.Clien
 	}
 }
 
-func collectCalicoNodeDiags(dir string, opts *diagOpts, kubeClient *kubernetes.Clientset, nodeName, namespace, podName string) {
+func collectCalicoNodeDiags(curNodeDir string, opts *diagOpts, kubeClient *kubernetes.Clientset, nodeName, namespace, podName string) {
 	fmt.Printf("Collecting dataplane diags for calico-node: %s\n", podName)
-
-	curNodeDir := fmt.Sprintf("%s/%s", dir, podName)
-	err := os.Mkdir(curNodeDir, os.ModePerm)
-	if err != nil {
-		fmt.Printf("Error creating diagnostics directory for calico-node %s: %v\n", podName, err)
-		return
-	}
-
 	common.ExecAllCmdsWriteToFile([]common.Cmd{
 		// ip diagnostics
 		{

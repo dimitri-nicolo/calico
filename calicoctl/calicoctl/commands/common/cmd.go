@@ -5,7 +5,9 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -79,6 +81,14 @@ func ExecCmdWriteToFile(c Cmd) {
 
 	if c.Info != "" {
 		fmt.Println(c.Info)
+	}
+
+	// Create the containing directory, if needed.
+	dir := filepath.Dir(c.FilePath)
+	err := os.MkdirAll(dir, os.ModePerm)
+	if err != nil {
+		fmt.Printf("Error creating directory for %v: %v\n", c.FilePath, err)
+		return
 	}
 
 	parts := strings.Fields(c.CmdStr)
