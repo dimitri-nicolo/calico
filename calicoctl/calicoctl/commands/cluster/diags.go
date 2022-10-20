@@ -398,7 +398,7 @@ func collectDiagsForPod(dir string, opts *diagOpts, kubeClient *kubernetes.Clien
 	common.ExecAllCmdsWriteToFile([]common.Cmd{
 		{
 			Info:     fmt.Sprintf("Collect logs for pod %s", podName),
-			CmdStr:   fmt.Sprintf("kubectl logs --since=%s -n %s %s", opts.Since, namespace, podName),
+			CmdStr:   fmt.Sprintf("kubectl logs --since=%s -n %s %s --all-containers", opts.Since, namespace, podName),
 			FilePath: fmt.Sprintf("%s/%s.log", namespaceDir, podName),
 		},
 		{
