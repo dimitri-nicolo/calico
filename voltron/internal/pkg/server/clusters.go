@@ -47,7 +47,9 @@ type cluster struct {
 	tlsProxy vtls.Proxy
 }
 
-func (c *cluster) updateFingerprint(fingerprint string) error {
+// updateActiveFingerprint updates the active fingerprint annotation for a ManagedCluster resource
+// in the management cluster.
+func (c *cluster) updateActiveFingerprint(fingerprint string) error {
 	mc, err := c.k8sCLI.ManagedClusters().Get(context.Background(), c.ID, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -58,9 +60,7 @@ func (c *cluster) updateFingerprint(fingerprint string) error {
 		return err
 	}
 
-	c.Lock()
 	c.ActiveFingerprint = fingerprint
-	c.Unlock()
 
 	return nil
 }

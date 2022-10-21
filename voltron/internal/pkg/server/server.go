@@ -209,13 +209,9 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 			}
 		}
 
-		var clusterID string
-		var fingerprint string
-
-		clusterID, fingerprint = s.extractIdentity(t, clusterID, fingerprint)
+		clusterID, fingerprint := s.extractIdentity(t)
 
 		c := s.clusters.get(clusterID)
-
 		if c == nil {
 			log.Errorf("cluster %q does not exist", clusterID)
 			t.Close()
@@ -230,7 +226,7 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 			defer c.RUnlock()
 
 			if len(c.ActiveFingerprint) == 0 {
-				log.Error("No fingerprint has been stored against the current connection")
+				log.Error("no fingerprint has been stored against the current connection")
 				closeTunnel(t)
 				return
 
@@ -240,28 +236,21 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 			// FIPS mode. From v3.15, we are upgrading the active fingerprint to use sha256 hash algorithm.
 			if hex.DecodedLen(len(c.ActiveFingerprint)) == sha256.Size {
 				if fingerprint != c.ActiveFingerprint {
-					log.Error("Stored fingerprint does not match provided fingerprint")
+					log.Error("stored fingerprint does not match provided fingerprint")
 					closeTunnel(t)
 					return
 				}
 			} else {
 				// check pre-v3.15 fingerprint (md5)
-				if id, ok := t.Identity().(*x509.Certificate); ok {
-					fingerprintMD5 := fmt.Sprintf("%x", md5.Sum(id.Raw))
-					if fingerprintMD5 == c.ActiveFingerprint {
-						// update to v3.15 fingerprint hash (sha256) when matched
-						if err := c.updateFingerprint(fingerprint); err != nil {
-							log.WithError(err).Warnf("failed to update cluster %s stored fingerprint %s", clusterID, fingerprintMD5)
-						} else {
-							log.Infof("cluster %s stored fingerprint is updated to %s (from %s).", clusterID, fingerprint, fingerprintMD5)
-						}
-					} else {
-						log.Error("Stored fingerprint does not match provided fingerprint")
-						closeTunnel(t)
-						return
-					}
-				} else {
-					log.Errorf("Unknown tunnel identity type %T", t.Identity())
+				if s.extractMD5Identity(t) != c.ActiveFingerprint {
+					log.Error("stored fingerprint does not match provided fingerprint")
+					closeTunnel(t)
+					return
+				}
+
+				// update to v3.15 fingerprint hash (sha256) when matched
+				if err := c.updateActiveFingerprint(fingerprint); err != nil {
+					log.WithError(err).Errorf("failed to update cluster %s stored fingerprint", clusterID)
 					closeTunnel(t)
 					return
 				}
@@ -291,7 +280,7 @@ func closeTunnel(t *tunnel.Tunnel) {
 	}
 }
 
-func (s *Server) extractIdentity(t *tunnel.Tunnel, clusterID string, fingerprint string) (string, string) {
+func (s *Server) extractIdentity(t *tunnel.Tunnel) (clusterID, fingerprint string) {
 	switch id := t.Identity().(type) {
 	case *x509.Certificate:
 		// N.B. By now, we know that we signed this certificate as these checks
@@ -304,7 +293,17 @@ func (s *Server) extractIdentity(t *tunnel.Tunnel, clusterID string, fingerprint
 	default:
 		log.Errorf("unknown tunnel identity type %T", id)
 	}
-	return clusterID, fingerprint
+	return
+}
+
+func (s *Server) extractMD5Identity(t *tunnel.Tunnel) (fingerprint string) {
+	switch id := t.Identity().(type) {
+	case *x509.Certificate:
+		fingerprint = fmt.Sprintf("%x", md5.Sum(id.Raw))
+	default:
+		log.Errorf("unknown tunnel identity type %T", id)
+	}
+	return
 }
 
 func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {

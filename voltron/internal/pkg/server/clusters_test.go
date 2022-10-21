@@ -56,7 +56,7 @@ var _ = Describe("Clusters", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(mc.GetAnnotations()).To(HaveKeyWithValue(AnnotationActiveCertificateFingerprint, "active-fingerprint-hash-1"))
 
-			err = clusters.clusters[clusterID].updateFingerprint("active-fingerprint-hash-2")
+			err = clusters.clusters[clusterID].updateActiveFingerprint("active-fingerprint-hash-2")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(clusters.clusters[clusterID].ActiveFingerprint).To(Equal("active-fingerprint-hash-2"))
