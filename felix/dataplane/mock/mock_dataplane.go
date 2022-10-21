@@ -432,6 +432,7 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 			EgressIPSetID:   event.Endpoint.EgressIpSetId,
 			IsEgressGateway: event.Endpoint.IsEgressGateway,
 			MaxNextHops:     int(event.Endpoint.EgressMaxNextHops),
+			HealthPort:      uint16(event.Endpoint.EgressGatewayHealthPort),
 		}
 		d.endpointToAllPolicyIDs[id.String()] = allPolsIDs
 

@@ -656,6 +656,7 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 						workload.Tiers,
 						workload.ProfileIds,
 						workload.IsEgressGateway,
+						uint16(workload.EgressGatewayHealthPort),
 						m.ipVersion,
 					)
 					m.filterTable.UpdateChains(chains)

@@ -77,6 +77,7 @@ const (
 	IPSetIDAllVXLANSourceNets = "all-vxlan-net"
 	IPSetIDThisHostIPs        = "this-host"
 	IPSetIDAllTunnelNets      = "all-tunnel-net"
+	IPSetIDAllEGWHealthPorts  = "egw-health-ports"
 
 	ChainFIPDnat = ChainNamePrefix + "fip-dnat"
 	ChainFIPSnat = ChainNamePrefix + "fip-snat"
@@ -277,6 +278,7 @@ type RuleRenderer interface {
 		tiers []*proto.TierInfo,
 		profileIDs []string,
 		isEgressGateway bool,
+		egwHealthPort uint16,
 		ipVersion uint8,
 	) []*iptables.Chain
 

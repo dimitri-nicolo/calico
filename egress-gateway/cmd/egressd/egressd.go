@@ -13,6 +13,9 @@ import (
 
 	docopt "github.com/docopt/docopt-go"
 	"github.com/kelseyhightower/envconfig"
+	log "github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
+
 	"github.com/projectcalico/calico/egress-gateway/controlplane"
 	"github.com/projectcalico/calico/egress-gateway/data"
 	"github.com/projectcalico/calico/egress-gateway/httpprobe"
@@ -20,8 +23,6 @@ import (
 	"github.com/projectcalico/calico/egress-gateway/sync"
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 )
 
 var (

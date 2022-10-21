@@ -15,6 +15,9 @@
 package intdataplane
 
 import (
+	"sort"
+
+	"github.com/davecgh/go-spew/spew"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
@@ -40,10 +43,7 @@ func logChains(message string, chains []*iptables.Chain) {
 	if chains == nil {
 		log.Debug(message, " with nil chains")
 	} else {
-		log.WithField("chains", chains).Debug(message)
-		for _, chain := range chains {
-			log.WithField("chain", *chain).Debug("")
-		}
+		log.Debug(message, spew.Sdump(chains))
 	}
 }
 
@@ -86,5 +86,21 @@ func (t *mockTable) checkChainsSameAsBefore() {
 	for _, chain := range t.expectedChains {
 		log.WithField("chain", *chain).Debug("")
 	}
-	Expect(t.currentChains).To(Equal(t.expectedChains), t.Table+" chains incorrect")
+
+	var currentChains []iptables.Chain
+	for _, c := range t.currentChains {
+		currentChains = append(currentChains, *c)
+	}
+	sort.Slice(currentChains, func(i, j int) bool {
+		return currentChains[i].Name < currentChains[j].Name
+	})
+	var expectedChains []iptables.Chain
+	for _, c := range t.expectedChains {
+		expectedChains = append(expectedChains, *c)
+	}
+	sort.Slice(expectedChains, func(i, j int) bool {
+		return expectedChains[i].Name < expectedChains[j].Name
+	})
+
+	Expect(currentChains).To(Equal(expectedChains), t.Table+" chains incorrect")
 }

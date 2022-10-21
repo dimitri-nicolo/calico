@@ -8,11 +8,12 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
-	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/wait"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
 
 	"github.com/projectcalico/calico/egress-gateway/controlplane/mock"
 	"github.com/projectcalico/calico/egress-gateway/netlinkshim"

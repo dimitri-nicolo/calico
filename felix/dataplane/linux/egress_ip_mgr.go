@@ -3,18 +3,24 @@
 package intdataplane
 
 import (
+	"bytes"
+	"context"
 	"crypto/sha1"
 	"errors"
 	"fmt"
 	"math/rand"
 	"net"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 
 	"golang.org/x/sys/unix"
+
+	"github.com/projectcalico/calico/felix/ipsets"
+	"github.com/projectcalico/calico/felix/rules"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/libcalico-go/lib/names"
@@ -66,6 +72,10 @@ var (
 const (
 	egressHealthName = "egress-networking-in-sync"
 )
+
+type egressIPSets interface {
+	AddOrReplaceIPSet(meta ipsets.IPSetMetadata, members []string)
+}
 
 type healthAggregator interface {
 	RegisterReporter(name string, reports *health.HealthReport, timeout time.Duration)
@@ -152,15 +162,6 @@ func (f *routeRulesFactory) NewRouteRules(
 	return rr
 }
 
-// gateway stores an IPSet member's cidr and maintenance window.
-// If the maintenanceStarted.IsZero() or maintenanceFinished.IsZero() then the member is not terminating.
-// Otherwise it is in the process of terminating, and will be deleted at the given maintenanceFinished timestamp.
-type gateway struct {
-	cidr                string
-	maintenanceStarted  time.Time
-	maintenanceFinished time.Time
-}
-
 func (g gateway) String() string {
 	start, err := g.maintenanceStarted.MarshalText()
 	if err != nil {
@@ -170,101 +171,38 @@ func (g gateway) String() string {
 	if err != nil {
 		finish = []byte("<invalid_finish_time>")
 	}
-	return fmt.Sprintf("gateway: [cidr=%s, maintenanceStarted=%s, maintenanceFinished=%s]", g.cidr, string(start), string(finish))
-}
-
-// gatewaysByIP maps a member's IP to a gateway
-type gatewaysByIP map[string]gateway
-
-func (g gatewaysByIP) getIPs() []string {
-	var ips []string
-	for _, m := range g {
-		ipAddr := ip.MustParseCIDROrIP(m.cidr).Addr()
-		ips = append(ips, ipAddr.String())
-	}
-	return ips
-}
-
-func (g gatewaysByIP) getActiveGateways() gatewaysByIP {
-	active := make(map[string]gateway)
-	now := time.Now()
-	for _, m := range g {
-		m := m
-		if now.Before(m.maintenanceStarted) || now.After(m.maintenanceFinished) {
-			active[m.cidr] = m
-		}
-	}
-	return active
-}
-
-func (g gatewaysByIP) getTerminatingGateways() gatewaysByIP {
-	terminating := make(map[string]gateway)
-	now := time.Now()
-	for _, m := range g {
-		m := m
-		if (now.Equal(m.maintenanceStarted) || now.After(m.maintenanceStarted)) &&
-			(now.Equal(m.maintenanceFinished) || now.Before(m.maintenanceFinished)) {
-			terminating[m.cidr] = m
-		}
-	}
-	return terminating
-}
-
-func (g gatewaysByIP) getFilteredGateways(hopIPs []string) gatewaysByIP {
-	terminating := make(map[string]gateway)
-	hopIPsSet := set.FromArray(hopIPs)
-	for cidr, m := range g {
-		m := m
-		ipAddr := strings.TrimSuffix(cidr, "/32")
-		if hopIPsSet.Contains(ipAddr) {
-			terminating[cidr] = m
-		}
-	}
-	return terminating
-}
-
-// Finds the latest maintenance window on the supplied egress gateway pods.
-func (g gatewaysByIP) latestTerminatingGateway() gateway {
-	member := gateway{
-		cidr:                "",
-		maintenanceStarted:  time.Time{},
-		maintenanceFinished: time.Time{},
-	}
-	for _, m := range g.getTerminatingGateways() {
-		m := m
-		if m.maintenanceFinished.After(member.maintenanceFinished) {
-			member = m
-		}
-	}
-	return member
+	return fmt.Sprintf("gateway: [ip=%s, maintenanceStarted=%s, maintenanceFinished=%s]", g.addr, string(start), string(finish))
 }
 
 type egressRule struct {
 	used       bool
-	srcIP      string
+	srcIP      ip.Addr
 	priority   int
 	family     int
 	mark       int
 	tableIndex int
 }
 
-func newEgressRule(nlRule *netlink.Rule) *egressRule {
+func newEgressRule(nlRule *netlink.Rule) (*egressRule, error) {
+	if nlRule.Src == nil {
+		return nil, fmt.Errorf("netlink rule has no source, can't be one of ours: %v", nlRule)
+	}
 	return &egressRule{
-		srcIP:      nlRule.Src.IP.String(),
+		srcIP:      ip.FromNetIP(nlRule.Src.IP),
 		tableIndex: nlRule.Table,
 		priority:   nlRule.Priority,
 		family:     nlRule.Family,
 		mark:       nlRule.Mark,
-	}
+	}, nil
 }
 
 type egressTable struct {
 	used   bool
 	index  int
-	hopIPs []string
+	hopIPs []ip.Addr
 }
 
-func newEgressTable(index int, hopIPs []string) *egressTable {
+func newEgressTable(index int, hopIPs []ip.Addr) *egressTable {
 	return &egressTable{
 		index:  index,
 		hopIPs: hopIPs,
@@ -273,14 +211,14 @@ func newEgressTable(index int, hopIPs []string) *egressTable {
 
 type initialKernelState struct {
 	// rules is a map from src IP to egressRule
-	rules map[string]*egressRule
+	rules map[ip.Addr]*egressRule
 	// tables is a map from table index to egressTable
 	tables map[int]*egressTable
 }
 
 func newInitialKernelState() *initialKernelState {
 	return &initialKernelState{
-		rules:  make(map[string]*egressRule),
+		rules:  make(map[ip.Addr]*egressRule),
 		tables: make(map[int]*egressTable),
 	}
 }
@@ -323,12 +261,11 @@ type egressIPManager struct {
 	// the table so routetable should not be freed immediately.
 	// We could have code to free the unused routetable if it is inSync. However, since
 	// the total number of routetables is limited, we may just avoid the complexity.
-	// Just keep it and it could be reused by another EgressIPSet.
+	// Just keep it; it could be reused by another EgressIPSet.
 	tableIndexToRouteTable map[int]routetable.RouteTableInterface
 	// Tracks next hops for all route tables in use.
-	tableIndexToNextHops map[int][]string
-
-	ipSetIDToGateways map[string]gatewaysByIP
+	tableIndexToNextHops map[int][]ip.Addr
+	egwTracker           *EgressGWTracker
 
 	activeWorkloads      map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
 	workloadToTableIndex map[proto.WorkloadEndpointID]int
@@ -338,9 +275,6 @@ type egressIPManager struct {
 	// Pending workload endpoints updates, we store these up as OnUpdate is called, then process them
 	// in CompleteDeferredWork.
 	pendingWorkloadUpdates map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
-
-	// Dirty Egress IPSet to be processed in CompleteDeferredWork.
-	dirtyEgressIPSet set.Set[string]
 
 	// VXLAN configuration.
 	vxlanDevice string
@@ -352,8 +286,9 @@ type egressIPManager struct {
 	vxlanDeviceLinkIndex int
 	nodeIP               net.IP
 	// to rate-limit retries, track if the last kernel sync failed, and if our state has changed since then
-	lastUpdateFailed, unblockingUpdateOccurred bool
+	lastUpdateFailed, unblockingUpdateOccurred, firstSyncDone bool
 
+	ipsets   egressIPSets
 	nlHandle netlinkHandle
 	dpConfig Config
 
@@ -366,7 +301,7 @@ type egressIPManager struct {
 	disableChecksumOffload func(ifName string) error
 
 	// Callback function used to notify of workload pods impacted by a terminating egress gateway pod
-	statusCallback func(namespace, name, cidr string, maintenanceStarted, maintenanceFinished time.Time) error
+	statusCallback func(namespace, name string, addr ip.Addr, maintenanceStarted, maintenanceFinished time.Time) error
 
 	healthAgg healthAggregator
 
@@ -378,8 +313,10 @@ func newEgressIPManager(
 	rtTableIndices set.Set[int],
 	dpConfig Config,
 	opRecorder logutils.OpRecorder,
-	statusCallback func(namespace, name, cidr string, maintenanceStarted, maintenanceFinished time.Time) error,
+	statusCallback func(namespace, name string, addr ip.Addr, maintenanceStarted, maintenanceFinished time.Time) error,
 	healthAgg healthAggregator,
+	healthReportC chan<- EGWHealthReport,
+	ipsets egressIPSets,
 ) *egressIPManager {
 	nlHandle, err := netlink.NewHandle()
 	if err != nil {
@@ -419,6 +356,8 @@ func newEgressIPManager(
 		statusCallback,
 		healthAgg,
 		rand.New(hopRandSource),
+		healthReportC,
+		ipsets,
 	)
 	return mgr
 }
@@ -434,9 +373,11 @@ func newEgressIPManagerWithShims(
 	nlHandle netlinkHandle,
 	opRecorder logutils.OpRecorder,
 	disableChecksumOffload func(ifName string) error,
-	statusCallback func(namespace, name, cidr string, maintenanceStarted, maintenanceFinished time.Time) error,
+	statusCallback func(namespace, name string, addr ip.Addr, maintenanceStarted, maintenanceFinished time.Time) error,
 	healthAgg healthAggregator,
 	hopRandSource rand.Source,
+	healthReportC chan<- EGWHealthReport,
+	ipsets egressIPSets,
 ) *egressIPManager {
 
 	mgr := egressIPManager{
@@ -447,23 +388,28 @@ func newEgressIPManagerWithShims(
 		tableIndexSet:              tableIndexSet,
 		tableIndexStack:            tableIndexStack,
 		tableIndexToRouteTable:     make(map[int]routetable.RouteTableInterface),
-		tableIndexToNextHops:       make(map[int][]string),
+		tableIndexToNextHops:       make(map[int][]ip.Addr),
 		pendingWorkloadUpdates:     make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
-		ipSetIDToGateways:          make(map[string]gatewaysByIP),
 		activeWorkloads:            make(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint),
 		workloadToTableIndex:       make(map[proto.WorkloadEndpointID]int),
 		workloadMaintenanceWindows: make(map[proto.WorkloadEndpointID]gateway),
-		vxlanDevice:                deviceName,
-		vxlanID:                    dpConfig.RulesConfig.EgressIPVXLANVNI,
-		vxlanPort:                  dpConfig.RulesConfig.EgressIPVXLANPort,
-		dirtyEgressIPSet:           set.New[string](),
-		dpConfig:                   dpConfig,
-		nlHandle:                   nlHandle,
-		opRecorder:                 opRecorder,
-		disableChecksumOffload:     disableChecksumOffload,
-		statusCallback:             statusCallback,
-		healthAgg:                  healthAgg,
-		hopRand:                    rand.New(hopRandSource),
+		egwTracker: NewEgressGWTracker(
+			context.Background(),
+			healthReportC,
+			dpConfig.EgressGatewayPollInterval,
+			dpConfig.EgressGatewayPollFailureCount,
+		),
+		vxlanDevice:            deviceName,
+		vxlanID:                dpConfig.RulesConfig.EgressIPVXLANVNI,
+		vxlanPort:              dpConfig.RulesConfig.EgressIPVXLANPort,
+		dpConfig:               dpConfig,
+		nlHandle:               nlHandle,
+		opRecorder:             opRecorder,
+		disableChecksumOffload: disableChecksumOffload,
+		statusCallback:         statusCallback,
+		healthAgg:              healthAgg,
+		hopRand:                rand.New(hopRandSource),
+		ipsets:                 ipsets,
 	}
 
 	if healthAgg != nil {
@@ -477,23 +423,11 @@ func newEgressIPManagerWithShims(
 func (m *egressIPManager) OnUpdate(msg interface{}) {
 	switch msg := msg.(type) {
 	case *proto.IPSetDeltaUpdate:
-		log.WithField("msg", msg).Debug("IP set delta update")
-		if _, found := m.ipSetIDToGateways[msg.Id]; found {
-			m.handleEgressIPSetDeltaUpdate(msg.Id, msg.RemovedMembers, msg.AddedMembers)
-			m.dirtyEgressIPSet.Add(msg.Id)
-		}
+		m.egwTracker.OnIPSetDeltaUpdate(msg)
 	case *proto.IPSetUpdate:
-		log.WithField("msg", msg).Debug("IP set update")
-		if msg.Type == proto.IPSetUpdate_EGRESS_IP {
-			m.handleEgressIPSetUpdate(msg)
-			m.dirtyEgressIPSet.Add(msg.Id)
-		}
+		m.egwTracker.OnIPSetUpdate(msg)
 	case *proto.IPSetRemove:
-		log.WithField("msg", msg).Debug("IP set remove")
-		if _, found := m.ipSetIDToGateways[msg.Id]; found {
-			m.handleEgressIPSetRemove(msg)
-			m.dirtyEgressIPSet.Add(msg.Id)
-		}
+		m.egwTracker.OnIPSetRemove(msg)
 	case *proto.WorkloadEndpointUpdate:
 		log.WithField("msg", msg).Debug("workload endpoint update")
 		m.pendingWorkloadUpdates[*msg.Id] = msg.Endpoint
@@ -519,52 +453,6 @@ func (m *egressIPManager) OnUpdate(msg interface{}) {
 	m.unblockingUpdateOccurred = true
 }
 
-func (m *egressIPManager) handleEgressIPSetUpdate(msg *proto.IPSetUpdate) {
-	log.Infof("Update whole EgressIP set: msg=%v", msg)
-	gateways := make(map[string]gateway)
-	for _, mStr := range msg.Members {
-		member, err := parseMember(mStr)
-		if err != nil {
-			log.WithError(err).Errorf("error parsing details from memberStr: %s", mStr)
-		}
-		gateways[member.cidr] = member
-	}
-	m.ipSetIDToGateways[msg.Id] = gateways
-}
-
-func (m *egressIPManager) handleEgressIPSetRemove(msg *proto.IPSetRemove) {
-	log.Infof("Remove whole EgressIP set: msg=%v", msg)
-	delete(m.ipSetIDToGateways, msg.Id)
-}
-
-func (m *egressIPManager) handleEgressIPSetDeltaUpdate(ipSetId string, membersRemoved []string, membersAdded []string) {
-	log.Infof("EgressIP set delta update: id=%v removed=%v added=%v", ipSetId, membersRemoved, membersAdded)
-
-	gateways, exists := m.ipSetIDToGateways[ipSetId]
-	if !exists {
-		gateways = make(map[string]gateway)
-		m.ipSetIDToGateways[ipSetId] = gateways
-	}
-
-	// The member string contains cidr,deletionTimestamp, and so we could get the same cidr in membersAdded
-	// and in membersRemoved, with different timestamps. For this reason, process the removes before the adds.
-	for _, mStr := range membersRemoved {
-		member, err := parseMember(mStr)
-		if err != nil {
-			log.WithError(err).Errorf("error parsing ip set member from member string %s", mStr)
-		}
-		delete(gateways, member.cidr)
-	}
-
-	for _, mStr := range membersAdded {
-		member, err := parseMember(mStr)
-		if err != nil {
-			log.WithError(err).Errorf("error parsing ip set member from member string %s", mStr)
-		}
-		gateways[member.cidr] = member
-	}
-}
-
 // CompleteDeferredWork attempts to process all updates received by this manager.
 // Will attempt a retry if the first attempt fails, and reports health based on its success
 func (m *egressIPManager) CompleteDeferredWork() error {
@@ -579,7 +467,7 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 	// The VXLAN device may have come online, or
 	// a routetable may have been free'd following a starvation error
 	var err error
-	if !m.lastUpdateFailed || m.unblockingUpdateOccurred {
+	if !m.lastUpdateFailed || m.unblockingUpdateOccurred || !m.firstSyncDone {
 		for i := 0; i < 2; i += 1 {
 			if err = m.completeDeferredWork(); err == nil {
 				m.lastUpdateFailed = false
@@ -604,10 +492,23 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 // When called for the first time, will init egressIPManager config with existing kernel data
 func (m *egressIPManager) completeDeferredWork() error {
 	var lastErr error
-	if m.dirtyEgressIPSet.Len() == 0 && len(m.pendingWorkloadUpdates) == 0 {
+	if !m.egwTracker.Dirty() && len(m.pendingWorkloadUpdates) == 0 && m.firstSyncDone {
 		log.Debug("No change since last application, nothing to do")
 		return nil
 	}
+
+	// Set up the all-EGW-health-port IP set before we do anything else.  Need to make sure the set exists before
+	// we return from the first completeDeferredWork call.
+	if !m.dpConfig.BPFEnabled && (!m.firstSyncDone || m.egwTracker.Dirty()) {
+		// It's a little inefficient to recalculate the whole set each time, but it saves needing to do reference
+		// counting to deal with corner cases such as EGWs being in multiple IP sets.
+		m.ipsets.AddOrReplaceIPSet(ipsets.IPSetMetadata{
+			SetID:   rules.IPSetIDAllEGWHealthPorts,
+			Type:    ipsets.IPSetTypeHashIPPort,
+			MaxSize: m.dpConfig.MaxIPSetSize,
+		}, m.egwTracker.AllHealthPortIPSetMembers())
+	}
+	m.firstSyncDone = true
 
 	if m.vxlanDeviceLinkIndex == 0 {
 		// vxlan device not configured yet. Defer processing updates.
@@ -629,7 +530,7 @@ func (m *egressIPManager) completeDeferredWork() error {
 		)
 	}
 
-	if m.dirtyEgressIPSet.Len() > 0 {
+	if m.egwTracker.Dirty() {
 		// Work out all L2 routes updates.
 		m.setL2Routes()
 	}
@@ -645,7 +546,7 @@ func (m *egressIPManager) completeDeferredWork() error {
 		}
 	}
 
-	if m.dirtyEgressIPSet.Len() > 0 {
+	if m.egwTracker.Dirty() {
 		log.Info("Processing gateway updates.")
 		err := m.processGatewayUpdates()
 		if err != nil {
@@ -692,7 +593,12 @@ func (m *egressIPManager) readInitialKernelState() error {
 	ruleTableIndices := set.New[int]()
 	for _, rule := range rules {
 		nlRule := rule.NetLinkRule()
-		r := newEgressRule(nlRule)
+		r, err := newEgressRule(nlRule)
+		if err != nil {
+			log.WithError(err).Warn("Found routing rule in our range that doesn't look like an egress gateway rule.  Will clean it up.")
+			m.routeRules.RemoveRule(rule)
+			continue
+		}
 		m.initialKernelState.rules[r.srcIP] = r
 		ruleTableIndices.Add(r.tableIndex)
 	}
@@ -752,80 +658,100 @@ func (m *egressIPManager) cleanupInitialKernelState() error {
 // processGatewayUpdates handles all gateway updates. Any route tables which contain next hops for gateways which no
 // longer exist are deleted and recreated with new valid hops.
 func (m *egressIPManager) processGatewayUpdates() error {
-	sortedUpdates := sortStringSet(m.dirtyEgressIPSet)
+	dirtySetIDs := m.egwTracker.UpdatePollersGetAndClearDirtySetIDs()
 
 	var lastErr error
-	for _, id := range sortedUpdates {
-		gateways, exists := m.ipSetIDToGateways[id]
+	sortedWEPIDs := m.sortedWorkloadIDs() /* sort for determinism in tests */
+	for _, id := range dirtySetIDs {
+		gateways, exists := m.egwTracker.GatewaysByID(id)
 		if !exists {
 			log.WithField("IPSetID", id).Info("Could not find gateways for IPSet, it will be removed.")
-			gateways = make(map[string]gateway)
+			gateways = make(gatewaysByIP)
 		}
-		gatewayIPs := gateways.getIPs()
+		gatewayIPs := gateways.allIPs()
+		failedGateways := gateways.failedGateways()
 
 		// Check if any existing workloads have next hops for deleted gateways.
-		var workloadIDs []proto.WorkloadEndpointID
-		for workloadID := range m.activeWorkloads {
-			workloadIDs = append(workloadIDs, workloadID)
-		}
-		sort.Slice(workloadIDs, func(i, j int) bool {
-			if workloadIDs[i].EndpointId != workloadIDs[j].EndpointId {
-				return workloadIDs[i].EndpointId < workloadIDs[j].EndpointId
-			}
-			if workloadIDs[i].WorkloadId != workloadIDs[j].WorkloadId {
-				return workloadIDs[i].WorkloadId < workloadIDs[j].WorkloadId
-			}
-			return workloadIDs[i].OrchestratorId < workloadIDs[j].OrchestratorId
-		})
-		for _, workloadID := range workloadIDs {
+		for _, workloadID := range sortedWEPIDs {
 			workload := m.activeWorkloads[workloadID]
 			// Check if this workload uses the current gateways
-			if workload.EgressIpSetId == id {
-				index, exists := m.workloadToTableIndex[workloadID]
-				if !exists {
-					lastErr = fmt.Errorf("table index not found for workload with id %s", workloadID)
-					continue
-				}
-				nextHops, exists := m.tableIndexToNextHops[index]
-				if !exists {
-					lastErr = fmt.Errorf("next hops not found for table with index %d", index)
-					continue
-				}
+			if workload.EgressIpSetId != id {
+				continue
+			}
+			index, exists := m.workloadToTableIndex[workloadID]
+			if !exists {
+				lastErr = fmt.Errorf("table index not found for workload with id %s", workloadID)
+				continue
+			}
+			nextHops, exists := m.tableIndexToNextHops[index]
+			if !exists {
+				lastErr = fmt.Errorf("next hops not found for table with index %d", index)
+				continue
+			}
+			log.WithFields(log.Fields{
+				"ipSetID":    id,
+				"gateways":   gateways,
+				"workloadID": workloadID,
+				"workload":   workload,
+				"tableIndex": index,
+				"nextHops":   nextHops,
+			}).Info("Processing gateway update.")
+
+			numActiveGateways := len(gateways.activeGateways())
+			maxNextHops := int(workload.EgressMaxNextHops)
+			if maxNextHops == 0 {
+				// No limit so default to using all EGWs.
+				maxNextHops = numActiveGateways
+			}
+			numDesiredGateways := maxNextHops
+			if numDesiredGateways > numActiveGateways {
+				numDesiredGateways = numActiveGateways
+			}
+			workloadHasLessHopsThanDesired := len(nextHops) < numDesiredGateways
+			workloadHasNonExistentHop := !gatewayIPs.ContainsAll(set.FromArrayBoxed(nextHops))
+			workloadHasFailedHop := len(failedGateways.filteredByHopIPs(nextHops)) > 0
+			if workloadHasLessHopsThanDesired || workloadHasNonExistentHop || workloadHasFailedHop {
 				log.WithFields(log.Fields{
-					"ipSetID":    id,
-					"gateways":   gateways,
-					"workloadID": workloadID,
-					"workload":   workload,
-					"tableIndex": index,
-					"nextHops":   nextHops,
-				}).Info("Processing gateway update.")
+					"ipSetID":                        id,
+					"workloadIPs":                    workload.Ipv4Nets,
+					"workloadID":                     workloadID,
+					"tableIndex":                     index,
+					"existingEGWs":                   nextHops,
+					"workloadHasLessHopsThanDesired": workloadHasLessHopsThanDesired,
+					"workloadHasNonExistentHop":      workloadHasNonExistentHop,
+					"workloadHasFailedHop":           workloadHasFailedHop,
+				}).Info("Processing gateway update - recreating route rules and table for workload.")
 
-				workloadHasLessHopsThanDesired := (int(workload.EgressMaxNextHops) == 0 && len(nextHops) < len(gateways.getActiveGateways())) ||
-					(int(workload.EgressMaxNextHops) > 0 && len(nextHops) < (int(workload.EgressMaxNextHops)) && len(nextHops) < len(gateways.getActiveGateways()))
-				workloadHasNonExistentHop := !set.FromArray(gatewayIPs).ContainsAll(set.FromArray(nextHops))
-				if workloadHasLessHopsThanDesired || workloadHasNonExistentHop {
-					// Delete the old route rules and table as they contain an invalid hop.
-					m.deleteWorkloadRuleAndTable(workloadID, workload)
+				// Delete the old route rules and table as they contain an invalid hop.
+				m.deleteWorkloadRuleAndTable(workloadID, workload)
 
-					// Create new route rules and a route table for this workload.
-					log.WithFields(log.Fields{
-						"ipSetID":     id,
-						"workloadIPs": workload.Ipv4Nets,
-						"workloadID":  workloadID,
-						"tableIndex":  index,
-					}).Info("Processing gateway update - recreating route rules and table for workload.")
-					err := m.createWorkloadRuleAndTable(workloadID, workload, len(gateways.getActiveGateways()))
-					if err != nil {
-						lastErr = err
-						continue
-					}
+				// Create new route rules and a route table for this workload.
+				err := m.createWorkloadRuleAndTable(workloadID, workload, numActiveGateways)
+				if err != nil {
+					lastErr = err
+					continue
 				}
 			}
 		}
-		// Remove id from dirtyEgressIPSet.
-		m.dirtyEgressIPSet.Discard(id)
 	}
 	return lastErr
+}
+
+func (m *egressIPManager) sortedWorkloadIDs() []proto.WorkloadEndpointID {
+	var workloadIDs []proto.WorkloadEndpointID
+	for workloadID := range m.activeWorkloads {
+		workloadIDs = append(workloadIDs, workloadID)
+	}
+	sort.Slice(workloadIDs, func(i, j int) bool {
+		if workloadIDs[i].EndpointId != workloadIDs[j].EndpointId {
+			return workloadIDs[i].EndpointId < workloadIDs[j].EndpointId
+		}
+		if workloadIDs[i].WorkloadId != workloadIDs[j].WorkloadId {
+			return workloadIDs[i].WorkloadId < workloadIDs[j].WorkloadId
+		}
+		return workloadIDs[i].OrchestratorId < workloadIDs[j].OrchestratorId
+	})
+	return workloadIDs
 }
 
 // processWorkloadUpdates takes WorkLoadEndpoints from state and programs route rules for their CIDR's pointing to an egress route table
@@ -861,15 +787,15 @@ func (m *egressIPManager) processWorkloadUpdates() error {
 			if workload == nil || workload.EgressIpSetId == "" {
 				continue
 			}
-			gateways, exists := m.ipSetIDToGateways[workload.EgressIpSetId]
+			gateways, exists := m.egwTracker.GatewaysByID(workload.EgressIpSetId)
 			if !exists {
-				gateways = make(map[string]gateway)
+				gateways = make(gatewaysByIP)
 			}
-			activeGatewayIPs := gateways.getActiveGateways().getIPs()
+			activeGatewayIPs := gateways.activeGateways().allIPs()
 			priority := m.dpConfig.EgressIPRoutingRulePriority
 			family := syscall.AF_INET
 			mark := int(m.dpConfig.RulesConfig.IptablesMarkEgress)
-			numHops := workloadNumHops(int(workload.EgressMaxNextHops), len(activeGatewayIPs))
+			numHops := workloadNumHops(int(workload.EgressMaxNextHops), activeGatewayIPs.Len())
 			_, existingTable, exists := m.reserveFromInitialState(workload.Ipv4Nets, priority, family, mark, numHops, activeGatewayIPs)
 			if exists {
 				log.WithFields(log.Fields{
@@ -968,14 +894,14 @@ func (m *egressIPManager) processWorkloadUpdates() error {
 		workloadChangedToStartUsingEgress := workloadChanged && workload.EgressIpSetId != "" && oldWorkload.EgressIpSetId == ""
 
 		if workloadCreatedUsingEgress || workloadChangedToStartUsingEgress || workloadChangedToUseDifferentEgress {
-			gateways, exists := m.ipSetIDToGateways[workload.EgressIpSetId]
+			gateways, exists := m.egwTracker.GatewaysByID(workload.EgressIpSetId)
 			if !exists {
-				gateways = make(map[string]gateway)
+				gateways = make(gatewaysByIP)
 			}
-			activeGatewayIPs := gateways.getActiveGateways().getIPs()
+			activeGatewayIPs := gateways.activeGateways().allIPs()
 
 			logCtx.Info("Processing workload - creating new route rules and table.")
-			err := m.createWorkloadRuleAndTable(id, workload, len(activeGatewayIPs))
+			err := m.createWorkloadRuleAndTable(id, workload, activeGatewayIPs.Len())
 			if err != nil {
 				logCtx.WithError(err).Info("Couldn't create route table and rules for workload.")
 				lastErr = err
@@ -1000,7 +926,7 @@ func (m *egressIPManager) notifyWorkloadsOfEgressGatewayMaintenanceWindows() err
 	}
 
 	for id, workload := range m.activeWorkloads {
-		gateways, exists := m.ipSetIDToGateways[workload.EgressIpSetId]
+		gateways, exists := m.egwTracker.GatewaysByID(workload.EgressIpSetId)
 		if !exists {
 			log.Debugf("Workload with ID: %s references an empty set of gateways: %s. No notification required.", id, workload.EgressIpSetId)
 			continue
@@ -1029,18 +955,22 @@ func (m *egressIPManager) notifyWorkloadsOfEgressGatewayMaintenanceWindows() err
 			return fmt.Errorf("cannot find next hops for table with index %d", index)
 		}
 
-		terminatingGatewayHops := gateways.getTerminatingGateways().getFilteredGateways(nextHops)
+		terminatingGatewayHops := gateways.terminatingGateways().filteredByHopIPs(nextHops)
 		latest := terminatingGatewayHops.latestTerminatingGateway()
+		if latest == nil {
+			continue
+		}
+
 		existing, exists := m.workloadMaintenanceWindows[id]
 		if !exists {
 			existing = gateway{}
 		}
-		m.workloadMaintenanceWindows[id] = latest
 
-		if latest.cidr != "" &&
-			!latest.maintenanceStarted.IsZero() &&
+		if !latest.maintenanceStarted.IsZero() &&
 			!latest.maintenanceFinished.IsZero() &&
-			latest != existing {
+			(latest.addr != existing.addr ||
+				!latest.maintenanceStarted.Equal(existing.maintenanceStarted) ||
+				!latest.maintenanceFinished.Equal(existing.maintenanceFinished)) {
 			log.WithFields(log.Fields{
 				"nextHops":             nextHops,
 				"gateways":             gateways,
@@ -1048,10 +978,11 @@ func (m *egressIPManager) notifyWorkloadsOfEgressGatewayMaintenanceWindows() err
 				"name":                 name,
 				"latestTerminatingHop": latest.String(),
 			}).Info("Notifying workload of its next hops which are terminating.")
+			m.workloadMaintenanceWindows[id] = *latest
 			err = m.statusCallback(
 				namespace,
 				wepName,
-				strings.TrimSuffix(latest.cidr, "/32"),
+				latest.addr,
 				latest.maintenanceStarted,
 				latest.maintenanceFinished)
 			if err != nil {
@@ -1078,30 +1009,33 @@ func (m *egressIPManager) workloadIPToFullRule(workloadIP string, tableIndex int
 
 // Set L2 routes for all active EgressIPSet.
 func (m *egressIPManager) setL2Routes() {
-	gatewayIPs := set.New[string]()
-	for _, gateways := range m.ipSetIDToGateways {
-		for _, g := range gateways {
-			ipString := strings.Split(g.cidr, "/")[0]
-			gatewayIPs.Add(ipString)
-		}
-	}
-
-	// Sort gateways to make L2 target update deterministic.
-	sorted := sortStringSet(gatewayIPs)
+	gatewayIPs := m.egwTracker.AllGatewayIPs()
 
 	var l2routes []routetable.L2Target
-	for _, gatewayIP := range sorted {
+	for _, gatewayIP := range sortAddrSet(gatewayIPs) {
 		l2routes = append(l2routes, routetable.L2Target{
 			// remote VTEP mac is generated based on gateway pod ip.
-			VTEPMAC: ipStringToMac(gatewayIP),
-			GW:      ip.FromString(gatewayIP),
-			IP:      ip.FromString(gatewayIP),
+			VTEPMAC: ipToMac(gatewayIP),
+			GW:      gatewayIP,
+			IP:      gatewayIP,
 		})
 	}
 
-	// Set L2 route. If there is no l2route target, old entries will be removed.
+	// Set L2 route. If there is no L2Target, old entries will be removed.
 	log.WithField("l2routes", l2routes).Info("Egress ip manager sending L2 updates")
 	m.l2Table.SetL2Routes(m.vxlanDevice, l2routes)
+}
+
+func sortAddrSet(in set.Set[ip.Addr]) []ip.Addr {
+	s := in.Slice()
+	sortAddrSlice(s)
+	return s
+}
+
+func sortAddrSlice(s []ip.Addr) {
+	sort.Slice(s, func(i, j int) bool {
+		return bytes.Compare(s[i].AsNetIP(), s[j].AsNetIP()) < 0
+	})
 }
 
 // Set L3 routes for an EgressIPSet.
@@ -1147,7 +1081,7 @@ func (m *egressIPManager) setL3Routes(rTable routetable.RouteTableInterface, ips
 		// Route table module may report warning of `file exists` on programming route for egress.vxlan device.
 		// This is because route table module processes route updates organized by interface names.
 		// In this case, default route for egress.calico interface could not be programmed unless
-		// the default route linked with InterfaceNone been removed. After couple of failures on processing
+		// the default route linked with InterfaceNone been removed. After a couple of failures on processing
 		// egress.calico updates, route table module will continue on processing InterfaceNone updates
 		// and remove default route (see RouteRemove below).
 		// Route updates for egress.vxlan will be successful at next dataplane apply().
@@ -1181,7 +1115,7 @@ func (m *egressIPManager) createWorkloadRuleAndTable(workloadID proto.WorkloadEn
 	return m.createWorkloadRuleAndTableWithIndex(workloadID, workload, hopIPs, index)
 }
 
-func (m *egressIPManager) createWorkloadRuleAndTableWithIndex(workloadID proto.WorkloadEndpointID, workload *proto.WorkloadEndpoint, hopIPs []string, index int) error {
+func (m *egressIPManager) createWorkloadRuleAndTableWithIndex(workloadID proto.WorkloadEndpointID, workload *proto.WorkloadEndpoint, hopIPs []ip.Addr, index int) error {
 	// Create new route rules and a route table for this workload.
 	log.WithFields(log.Fields{
 		"workloadID":  workloadID,
@@ -1204,7 +1138,7 @@ func (m *egressIPManager) deleteWorkloadRuleAndTable(id proto.WorkloadEndpointID
 		log.WithField("workloadID", id).Debug("Cannot delete routing table for workload, it has already been deleted.")
 	} else {
 		for _, ipAddr := range workload.Ipv4Nets {
-			m.deleteRouteRule(ipAddr, index)
+			m.deleteRouteRule(ip.FromIPOrCIDRString(ipAddr), index)
 		}
 		m.deleteRouteTable(index)
 		delete(m.workloadToTableIndex, id)
@@ -1241,15 +1175,24 @@ func (m *egressIPManager) getNextTableIndex() (int, error) {
 	return index, nil
 }
 
-func (m *egressIPManager) createRouteTable(index int, hopIPs []string) {
+func (m *egressIPManager) createRouteTable(index int, hopIPs []ip.Addr) {
+	hopIPsStr := ipsToStringSlice(hopIPs)
 	log.WithFields(log.Fields{
 		"index":  index,
-		"hopIPs": strings.Join(hopIPs, ","),
+		"hopIPs": strings.Join(hopIPsStr, ","),
 	}).Debug("Creating route table.")
 	table := m.newRouteTable(index)
-	m.setL3Routes(table, set.FromArray(hopIPs))
+	m.setL3Routes(table, set.FromArray(hopIPsStr))
 	m.tableIndexToRouteTable[index] = table
 	m.tableIndexToNextHops[index] = hopIPs
+}
+
+func ipsToStringSlice(addrs []ip.Addr) []string {
+	out := make([]string, len(addrs))
+	for i, addr := range addrs {
+		out[i] = addr.String()
+	}
+	return out
 }
 
 func (m *egressIPManager) deleteRouteTable(index int) {
@@ -1278,18 +1221,17 @@ func (m *egressIPManager) createRouteRule(srcIP string, tableIndex int) {
 	m.routeRules.SetRule(rule)
 }
 
-func (m *egressIPManager) deleteRouteRule(srcIP string, tableIndex int) *routerule.Rule {
+func (m *egressIPManager) deleteRouteRule(srcIP ip.Addr, tableIndex int) *routerule.Rule {
 	log.WithField("srcIP", srcIP).Debug("Deleting route rule.")
-	ipAddr := ip.MustParseCIDROrIP(srcIP).ToIPNet()
 	rule := routerule.NewRule(4, m.dpConfig.EgressIPRoutingRulePriority).
-		MatchSrcAddress(ipAddr).
+		MatchSrcAddress(srcIP.AsCIDR().ToIPNet()).
 		MatchFWMark(m.dpConfig.RulesConfig.IptablesMarkEgress).
 		GoToTable(tableIndex)
 	m.routeRules.RemoveRule(rule)
 	return rule
 }
 
-func (m *egressIPManager) getTableNextHops(index int) ([]string, error) {
+func (m *egressIPManager) getTableNextHops(index int) ([]ip.Addr, error) {
 	table := m.newRouteTable(index)
 	// get targets for both possible interface names
 	vxlanTargets, err := table.ReadRoutesFromKernel(m.vxlanDevice)
@@ -1300,22 +1242,22 @@ func (m *egressIPManager) getTableNextHops(index int) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	var hopIPs []string
+	var hopIPs []ip.Addr
 	for _, vxlanTarget := range vxlanTargets {
 		if vxlanTarget.GW != nil {
-			hopIPs = append(hopIPs, vxlanTarget.GW.String())
+			hopIPs = append(hopIPs, vxlanTarget.GW)
 		} else {
 			for _, hop := range vxlanTarget.MultiPath {
-				hopIPs = append(hopIPs, hop.Gw.String())
+				hopIPs = append(hopIPs, hop.Gw)
 			}
 		}
 	}
 	for _, noneTarget := range noneTargets {
 		if noneTarget.GW != nil {
-			hopIPs = append(hopIPs, noneTarget.GW.String())
+			hopIPs = append(hopIPs, noneTarget.GW)
 		} else {
 			for _, hop := range noneTarget.MultiPath {
-				hopIPs = append(hopIPs, hop.Gw.String())
+				hopIPs = append(hopIPs, hop.Gw)
 			}
 		}
 	}
@@ -1338,12 +1280,8 @@ func (m *egressIPManager) GetRouteRules() []routeRules {
 	return nil
 }
 
-// ipStringToMac defines how an egress gateway pod's MAC is generated
-func ipStringToMac(s string) net.HardwareAddr {
-	ipAddr := ip.FromString(s)
-	if ipAddr == nil {
-		log.Errorf("could not parse ip from string: %s", s)
-	}
+// ipToMac defines how an egress gateway pod's MAC is generated
+func ipToMac(ipAddr ip.Addr) net.HardwareAddr {
 	netIP := ipAddr.AsNetIP()
 	// Any MAC address that has the values 2, 3, 6, 7, A, B, E, or F
 	// as the second most significant nibble are locally administered.
@@ -1353,6 +1291,7 @@ func ipStringToMac(s string) net.HardwareAddr {
 
 func (m *egressIPManager) KeepVXLANDeviceInSync(mtu int, wait time.Duration) {
 	log.Info("egress ip VXLAN tunnel device thread started.")
+
 	logNextTime := true
 	for {
 		err := m.configureVXLANDevice(mtu)
@@ -1486,7 +1425,7 @@ func (m *egressIPManager) configureVXLANDevice(mtu int) error {
 		}
 	}
 
-	// Disable checksum offload.  Otherwise we end up with invalid checksums when a
+	// Disable checksum offload.  Otherwise, we end up with invalid checksums when a
 	// packet is encapped for egress gateway and then double-encapped for the regular
 	// cluster IP-IP or VXLAN overlay.
 	if err := m.disableChecksumOffload(m.vxlanDevice); err != nil {
@@ -1507,13 +1446,13 @@ func (m *egressIPManager) configureVXLANDevice(mtu int) error {
 	return nil
 }
 
-func (m *egressIPManager) determineTableNextHops(workloadID proto.WorkloadEndpointID, ipSetID string, maxNextHops int) ([]string, error) {
-	members, exists := m.ipSetIDToGateways[ipSetID]
+func (m *egressIPManager) determineTableNextHops(workloadID proto.WorkloadEndpointID, ipSetID string, maxNextHops int) ([]ip.Addr, error) {
+	members, exists := m.egwTracker.GatewaysByID(ipSetID)
 	if !exists {
 		log.Infof("Workload with ID: %s references an empty set of gateways: %s. Setting its next hops to none.", workloadID, ipSetID)
 		return nil, nil
 	}
-	gatewayIPs := members.getActiveGateways().getIPs()
+	gatewayIPs := members.activeGateways().allIPs()
 	usage := usageMap(workloadID, gatewayIPs, m.tableIndexToNextHops)
 	var freqs []int
 	for n := range usage {
@@ -1521,13 +1460,13 @@ func (m *egressIPManager) determineTableNextHops(workloadID proto.WorkloadEndpoi
 	}
 	sort.Ints(freqs)
 
-	var hops []string
+	var hops []ip.Addr
 	for _, n := range freqs {
 		nHops := usage[n]
 		m.hopRand.Shuffle(len(nHops), func(i, j int) { nHops[i], nHops[j] = nHops[j], nHops[i] })
 		hops = append(hops, nHops...)
 	}
-	numHops := workloadNumHops(maxNextHops, len(gatewayIPs))
+	numHops := workloadNumHops(maxNextHops, gatewayIPs.Len())
 	index := numHops
 	if len(hops) < numHops {
 		index = len(hops)
@@ -1538,7 +1477,7 @@ func (m *egressIPManager) determineTableNextHops(workloadID proto.WorkloadEndpoi
 // reserveFromInitialState searches the rules and tables found from the kernel, and looks for route rules for all the
 // workload's IP addresses which point to a route table with the correct number of hops, which are currently not
 // terminating.
-func (m *egressIPManager) reserveFromInitialState(srcIPs []string, priority int, family int, mark int, numHops int, activeGateways []string) ([]*egressRule, *egressTable, bool) {
+func (m *egressIPManager) reserveFromInitialState(srcIPs []string, priority int, family int, mark int, numHops int, activeGateways set.Set[ip.Addr]) ([]*egressRule, *egressTable, bool) {
 	state := m.initialKernelState
 	if state == nil {
 		return nil, nil, false
@@ -1559,7 +1498,7 @@ func (m *egressIPManager) reserveFromInitialState(srcIPs []string, priority int,
 	var index int
 	for i, srcIP := range srcIPs {
 		ipAddr := ip.MustParseCIDROrIP(srcIP).Addr()
-		rule, exists := state.rules[ipAddr.String()]
+		rule, exists := state.rules[ipAddr]
 		if !exists || rule.used {
 			return nil, nil, false
 		}
@@ -1585,7 +1524,7 @@ func (m *egressIPManager) reserveFromInitialState(srcIPs []string, priority int,
 	if len(table.hopIPs) != numHops {
 		return nil, nil, false
 	}
-	if !set.FromArray(activeGateways).ContainsAll(set.FromArray(table.hopIPs)) {
+	if !activeGateways.ContainsAll(set.FromArrayBoxed(table.hopIPs)) {
 		return nil, nil, false
 	}
 
@@ -1622,6 +1561,10 @@ func (m *egressIPManager) removeIndicesFromTableStack(indices set.Set[int]) {
 	}
 }
 
+func (m *egressIPManager) OnEGWHealthReport(msg EGWHealthReport) {
+	m.egwTracker.OnEGWHealthReport(msg)
+}
+
 // hardwareAddrForNode deterministically creates a unique hardware address from a hostname.
 // IMPORTANT: an egress gateway pod needs to perform an identical operation when programming its own L2 routes to this node,
 // as shown here https://github.com/tigera/egress-gateway/blob/18133f0b37119b3463cd5af75539e27fec69b16b/util/net/mac.go#L20 (change with caution).
@@ -1651,12 +1594,13 @@ func workloadNumHops(egressMaxNextHops int, ipSetSize int) int {
 }
 
 // usageMap returns a map from the number of workloads using the hop to a slice of the hops
-func usageMap(workloadID proto.WorkloadEndpointID, gatewayIPs []string, nextHopsMap map[int][]string) map[int][]string {
+func usageMap(workloadID proto.WorkloadEndpointID, gatewayIPs set.Set[ip.Addr], nextHopsMap map[int][]ip.Addr) map[int][]ip.Addr {
 	// calculate the number of wl pods referencing each gw pod.
-	gwPodRefs := make(map[string]int)
-	for _, ipAddr := range gatewayIPs {
+	gwPodRefs := make(map[ip.Addr]int)
+	gatewayIPs.Iter(func(ipAddr ip.Addr) error {
 		gwPodRefs[ipAddr] = 0
-	}
+		return nil
+	})
 	for _, wlHops := range nextHopsMap {
 		for _, hop := range wlHops {
 			_, exists := gwPodRefs[hop]
@@ -1666,14 +1610,14 @@ func usageMap(workloadID proto.WorkloadEndpointID, gatewayIPs []string, nextHops
 		}
 	}
 	// calculate the reverse-mapping, i.e. the mapping from reference count to the gw pods with that number of refs.
-	usage := make(map[int][]string)
+	usage := make(map[int][]ip.Addr)
 	for hop, n := range gwPodRefs {
 		usage[n] = append(usage[n], hop)
 	}
 
 	// sort hops slices
 	for n := range usage {
-		sort.Strings(usage[n])
+		sortAddrSlice(usage[n])
 	}
 
 	log.WithFields(log.Fields{
@@ -1686,30 +1630,36 @@ func usageMap(workloadID proto.WorkloadEndpointID, gatewayIPs []string, nextHops
 	return usage
 }
 
-func parseMember(memberStr string) (gateway, error) {
-	var cidr string
+func parseEGWIPSetMember(memberStr string) (*gateway, error) {
 	maintenanceStarted := time.Time{}
 	maintenanceFinished := time.Time{}
+	var healthPort uint16
 
 	a := strings.Split(memberStr, ",")
-	if len(a) == 0 || len(a) > 3 {
-		return gateway{}, fmt.Errorf("error parsing member str, expected \"cidr,maintenanceStartedTimestamp,maintenanceFinishedTimestamp\" but got: %s", memberStr)
+	if len(a) == 0 || len(a) > 4 {
+		return nil, fmt.Errorf("error parsing member str, expected \"cidr,maintenanceStartedTimestamp,maintenanceFinishedTimestamp\" but got: %s", memberStr)
 	}
 
-	cidr = a[0]
-	if len(a) == 3 {
+	addr := ip.MustParseCIDROrIP(a[0]).Addr()
+	if len(a) == 4 {
 		if err := maintenanceStarted.UnmarshalText([]byte(strings.ToUpper(a[1]))); err != nil {
 			log.WithField("memberStr", memberStr).Warn("unable to parse maintenance started timestamp from member str, defaulting to zero value.")
 		}
 		if err := maintenanceFinished.UnmarshalText([]byte(strings.ToUpper(a[2]))); err != nil {
 			log.WithField("memberStr", memberStr).Warn("unable to parse maintenance finished timestamp from member str, defaulting to zero value.")
 		}
+		if healthPort64, err := strconv.ParseUint(a[3], 10, 16); err != nil {
+			log.WithField("memberStr", memberStr).Warn("unable to parse port from member str, defaulting to zero value.")
+		} else {
+			healthPort = uint16(healthPort64)
+		}
 	}
 
-	return gateway{
-		cidr:                cidr,
+	return &gateway{
+		addr:                addr,
 		maintenanceStarted:  maintenanceStarted,
 		maintenanceFinished: maintenanceFinished,
+		healthPort:          healthPort,
 	}, nil
 }
 
@@ -1722,16 +1672,9 @@ func parseNameAndNamespace(wlId string) (string, string, error) {
 }
 
 func sortStringSet(s set.Set[string]) []string {
-	var sorted []string
-	s.Iter(func(item string) error {
-		sorted = append(sorted, item)
-		return nil
-	})
-
-	sort.Slice(sorted, func(p, q int) bool {
-		return sorted[p] < sorted[q]
-	})
-	return sorted
+	slice := s.Slice()
+	sort.Strings(slice)
+	return slice
 }
 
 func sortIntSet(s set.Set[int]) []int {

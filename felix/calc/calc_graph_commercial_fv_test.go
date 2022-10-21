@@ -8,6 +8,7 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo"
+	"github.com/tigera/api/pkg/lib/numorstring"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -1032,7 +1033,7 @@ var commercialTests = []StateList{
 		localEp2WithNode,      // Delete and re-add as a different endpoint.
 	},
 	{
-		localEp1WithNode,       //Start with a local endpoint.
+		localEp1WithNode,       // Start with a local endpoint.
 		localEp1WithNodeDiffIP, // Change its node's IP.
 		localEp2AsEp1WithNode,  // Change node IP and endpoint IP.
 		localEp2WithNode,       // Delete and re-add as a different endpoint.
@@ -1575,6 +1576,19 @@ var (
 		},
 	}
 
+	activeGatewayEndpointWithPort = &WorkloadEndpoint{
+		Name:     "gw1",
+		IPv4Nets: []calinet.IPNet{mustParseNet("137.0.0.1/32")},
+		Labels: map[string]string{
+			"egress-provider":             "true",
+			"projectcalico.org/namespace": "egress",
+		},
+		Ports: []EndpointPort{
+			{Name: "something", Port: 9090, Protocol: numorstring.ProtocolFromStringV1("tcp")},
+			{Name: "health", Port: 8080, Protocol: numorstring.ProtocolFromStringV1("tcp")},
+		},
+	}
+
 	terminatingGatewayEndpoint = &WorkloadEndpoint{
 		Name:     "gw1",
 		IPv4Nets: []calinet.IPNet{mustParseNet("137.0.0.1/32")},
@@ -1619,6 +1633,10 @@ var (
 	}
 
 	createEndpointWithLocalEgressGateway = func(name string, gateway *WorkloadEndpoint, ipSetMemberStr string) State {
+		healthPort := uint16(0)
+		if strings.Contains(ipSetMemberStr, "8080") {
+			healthPort = 8080
+		}
 		return initialisedStore.withKVUpdates(
 			KVPair{
 				Key: endpointWithOwnEgressGatewayID,
@@ -1638,6 +1656,7 @@ var (
 			"orch/gw1/ep1",
 			calc.EndpointEgressData{
 				IsEgressGateway: true,
+				HealthPort:      healthPort,
 			},
 		).withEndpoint(
 			"orch/wep1o/ep1",
@@ -1665,20 +1684,30 @@ var (
 		activeGatewayEndpoint,
 		egressActiveMemberStr("137.0.0.1/32"))
 
+	endpointWithRemoteActiveEgressGatewayWithPort = createEndpointWithRemoteEgressGateway(
+		"endpointWithRemoteActiveEgressGatewayWithPort",
+		activeGatewayEndpointWithPort,
+		egressActiveMemberStrWithPort("137.0.0.1/32", 8080))
+
 	endpointWithRemoteTerminatingEgressGateway = createEndpointWithRemoteEgressGateway(
 		"endpointWithRemoteTerminatingEgressGateway",
 		terminatingGatewayEndpoint,
-		egressTerminatingMemberStr("137.0.0.1/32", nowTime, inSixtySecsTime))
+		egressTerminatingMemberStr("137.0.0.1/32", nowTime, inSixtySecsTime, 0))
 
 	endpointWithLocalActiveEgressGateway = createEndpointWithLocalEgressGateway(
 		"endpointWithLocalActiveEgressGateway",
 		activeGatewayEndpoint,
 		egressActiveMemberStr("137.0.0.1/32"))
 
+	endpointWithLocalActiveEgressGatewayAndPort = createEndpointWithLocalEgressGateway(
+		"endpointWithLocalActiveEgressGatewayAndPort",
+		activeGatewayEndpointWithPort,
+		egressActiveMemberStrWithPort("137.0.0.1/32", 8080))
+
 	endpointWithLocalTerminatingEgressGateway = createEndpointWithLocalEgressGateway(
 		"endpointWithLocalTerminatingEgressGateway",
 		terminatingGatewayEndpoint,
-		egressTerminatingMemberStr("137.0.0.1/32", nowTime, inSixtySecsTime))
+		egressTerminatingMemberStr("137.0.0.1/32", nowTime, inSixtySecsTime, 0))
 
 	createEndpointWithMaxNextHopsOnPod = func(name string, maxNextHops int) State {
 		return initialisedStore.withKVUpdates(
@@ -1801,10 +1830,14 @@ var (
 )
 
 func egressActiveMemberStr(cidr string) string {
-	return egressTerminatingMemberStr(cidr, time.Time{}, time.Time{})
+	return egressTerminatingMemberStr(cidr, time.Time{}, time.Time{}, 0)
 }
 
-func egressTerminatingMemberStr(cidr string, start, finish time.Time) string {
+func egressActiveMemberStrWithPort(cidr string, port uint16) string {
+	return egressTerminatingMemberStr(cidr, time.Time{}, time.Time{}, port)
+}
+
+func egressTerminatingMemberStr(cidr string, start, finish time.Time, port uint16) string {
 	startBytes, err := start.MarshalText()
 	if err != nil {
 		panic(err)
@@ -1813,5 +1846,5 @@ func egressTerminatingMemberStr(cidr string, start, finish time.Time) string {
 	if err != nil {
 		panic(err)
 	}
-	return fmt.Sprintf("%s,%s,%s", cidr, strings.ToLower(string(startBytes)), strings.ToLower(string(finishBytes)))
+	return fmt.Sprintf("%s,%s,%s,%d", cidr, strings.ToLower(string(startBytes)), strings.ToLower(string(finishBytes)), port)
 }

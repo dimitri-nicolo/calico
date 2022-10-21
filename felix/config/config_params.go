@@ -517,10 +517,12 @@ type Config struct {
 	GenericXDPEnabled bool `config:"bool;false"`
 
 	// Config for egress gateways.
-	EgressIPSupport             string `config:"oneof(Disabled,EnabledPerNamespace,EnabledPerNamespaceOrPerPod);Disabled"`
-	EgressIPVXLANPort           int    `config:"int;4790"`
-	EgressIPVXLANVNI            int    `config:"int;4097"`
-	EgressIPRoutingRulePriority int    `config:"int;100"`
+	EgressIPSupport               string        `config:"oneof(Disabled,EnabledPerNamespace,EnabledPerNamespaceOrPerPod);Disabled"`
+	EgressIPVXLANPort             int           `config:"int;4790"`
+	EgressIPVXLANVNI              int           `config:"int;4097"`
+	EgressIPRoutingRulePriority   int           `config:"int;100"`
+	EgressGatewayPollInterval     time.Duration `config:"seconds;10"`
+	EgressGatewayPollFailureCount int           `config:"int;3"`
 
 	// Config for packet capturing
 	CaptureDir             string `config:"string;/var/log/calico/pcap"`
