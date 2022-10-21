@@ -489,7 +489,7 @@ func (m *egressIPManager) CompleteDeferredWork() error {
 // When called for the first time, will init egressIPManager config with existing kernel data
 func (m *egressIPManager) completeDeferredWork() error {
 	var lastErr error
-	if !m.egwTracker.Dirty() && len(m.pendingWorkloadUpdates) == 0 && !m.firstSyncDone {
+	if !m.egwTracker.Dirty() && len(m.pendingWorkloadUpdates) == 0 && m.firstSyncDone {
 		log.Debug("No change since last application, nothing to do")
 		return nil
 	}

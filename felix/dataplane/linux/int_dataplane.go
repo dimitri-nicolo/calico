@@ -676,6 +676,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	if config.EgressIPEnabled {
 		// Allocate all remaining tables to the egress manager.
 		// This assumes no remaining modules need to reserve table indices.
+		log.Info("Egress IP support enabled, creating egress IP manager")
 		egressTablesIndices := config.RouteTableManager.GrabAllRemainingIndices()
 
 		egressStatusCallback := func(namespace, name string, addr ip.Addr, maintenanceStarted, maintenanceFinished time.Time) error {
