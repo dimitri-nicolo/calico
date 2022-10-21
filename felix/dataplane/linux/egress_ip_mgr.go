@@ -183,14 +183,17 @@ type egressRule struct {
 	tableIndex int
 }
 
-func newEgressRule(nlRule *netlink.Rule) *egressRule {
+func newEgressRule(nlRule *netlink.Rule) (*egressRule, error) {
+	if nlRule.Src == nil {
+		return nil, fmt.Errorf("netlink rule has no source, can't be one of ours: %v", nlRule)
+	}
 	return &egressRule{
 		srcIP:      ip.FromNetIP(nlRule.Src.IP),
 		tableIndex: nlRule.Table,
 		priority:   nlRule.Priority,
 		family:     nlRule.Family,
 		mark:       nlRule.Mark,
-	}
+	}, nil
 }
 
 type egressTable struct {
@@ -590,7 +593,12 @@ func (m *egressIPManager) readInitialKernelState() error {
 	ruleTableIndices := set.New[int]()
 	for _, rule := range rules {
 		nlRule := rule.NetLinkRule()
-		r := newEgressRule(nlRule)
+		r, err := newEgressRule(nlRule)
+		if err != nil {
+			log.WithError(err).Warn("Found routing rule in our range that doesn't look like an egress gateway rule.  Will clean it up.")
+			m.routeRules.RemoveRule(rule)
+			continue
+		}
 		m.initialKernelState.rules[r.srcIP] = r
 		ruleTableIndices.Add(r.tableIndex)
 	}
