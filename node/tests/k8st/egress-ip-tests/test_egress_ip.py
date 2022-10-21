@@ -1158,11 +1158,17 @@ class NetcatServerTCP(Container):
         self.port = port
 
     def get_recent_client_ip(self):
-        for line in self.logs().split('\n'):
-            m = re.match(r"Connection from ([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+) [0-9]+ received", line)
-            if m:
-                ip = m.group(1)
-        return ip
+        ip = None
+        for attempt in range(3):
+            for line in self.logs().split('\n'):
+                m = re.match(r"Connection from ([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+) [0-9]+ received", line)
+                if m:
+                    ip = m.group(1)
+            if ip is not None:
+                return ip
+            else:
+                time.sleep(1)
+        assert False, "Couldn't find a recent client IP in the logs."
 
 class NetcatClientTCP(Pod):
 
