@@ -249,7 +249,7 @@ EOF
             def check_routes(expected):
                 tables = self.read_client_hops_for_node(client.nodename)
                 hops = tables[client.ip]["hops"]
-                assert set(hops) == set(expected), "Expected client's hops to be gw2 and gw3 only."
+                assert set(hops) == set(expected), ("Expected client's hops to be %s not %s." % (expected, hops))
 
             retry_until_success(check_routes, retries=10, wait_time=3, function_args=[[gw2.ip, gw3.ip]])
             self.check_ecmp_routes(client, servers[1:], gw_ips[1:])
@@ -737,9 +737,11 @@ EOF
             self.delete_and_confirm(pod.name, "pod", pod.ns)
             self.cleanups.remove(pod.delete)
 
-            # We should see same set of hops for each client since each table should has at least two hops.
-            hops1, hops2, hops3 = verify_tables_and_hops()
-            assert (hops1 == hops2) and (hops2 == hops3)
+            def check_hops():
+                # We should see same set of hops for each client since each table should has at least two hops.
+                hops1, hops2, hops3 = verify_tables_and_hops()
+                assert (hops1 == hops2) and (hops2 == hops3)
+            retry_until_success(check_hops)
 
     def test_reuse_valid_table_on_restart(self):
         with DiagsCollector():
@@ -920,7 +922,7 @@ EOF
         retry_until_success(self.has_ip_rule, retries=3, wait_time=3, function_kwargs={"nodename": client.nodename, "ip": client.ip})
 
         expected_ips = gw_ips[:]
-        for s in servers:
+        for s in servers * 5:
             _log.info("Checking can-connect, Client IP: %s Server IP: %s Port: %d", client.ip, s.ip, s.port)
             retry_until_success(client.can_connect, retries=3, wait_time=1, function_kwargs={"ip": s.ip, "port": s.port})
             # Check the source IP as seen by the server.
@@ -942,6 +944,9 @@ EOF
 
             if client_ip in expected_ips:
                 expected_ips.remove(client_ip)
+
+            if len(expected_ips) == 0:
+                break
 
         if len(expected_ips) > allowed_untaken_count:
                 _log.info("traffic is not taking ECMP route via gateway ips %s" % (expected_ips))
