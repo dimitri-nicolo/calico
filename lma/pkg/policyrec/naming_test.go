@@ -1,7 +1,9 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019, 2022 Tigera, Inc. All rights reserved.
 package policyrec_test
 
 import (
+	"fmt"
+
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -161,6 +163,16 @@ var (
 			Namespace: "test-wc-namespace",
 		},
 	}
+	namespace1Object = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "namespace1",
+		},
+	}
+	namespace2Object = &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "namespace2",
+		},
+	}
 )
 
 var _ = Describe("Test Generating Names for Recommended Policies", func() {
@@ -168,12 +180,7 @@ var _ = Describe("Test Generating Names for Recommended Policies", func() {
 	kube := fake.NewSimpleClientset(depPod, deployment, jobPod, job, dsPod, ds, rsPod, rs, rsDep, orphanPod, alonePod, wcDep)
 	DescribeTable("Extracts the query parameters from the request and validates them",
 		func(k k8s.Interface, searchName, searchNamespace, expectedName string) {
-			params := &policyrec.PolicyRecommendationParams{
-				EndpointName: searchName,
-				Namespace:    searchNamespace,
-			}
-
-			genName := policyrec.GeneratePolicyName(k, params)
+			genName := policyrec.GeneratePolicyName(k, searchName, searchNamespace)
 			Expect(genName).To(Equal(expectedName))
 		},
 		// pod -> deployment
@@ -190,5 +197,23 @@ var _ = Describe("Test Generating Names for Recommended Policies", func() {
 		Entry("Given a pod name that does not have a reference, it should return the pod name", kube, "test-app-abcdefg", "test-alone-namespace", "test-app-abcdefg"),
 		// wildcard name -> deployment
 		Entry("Given a wildcard name (probably replicaset), it should return the deployment that would create it", kube, "test-app-*", "test-wc-namespace", "test-app"),
+	)
+})
+
+var _ = Describe("Test Namespace existence for recommended policies", func() {
+	// Define the kubernetes interface
+	kubeNamespaces := fake.NewSimpleClientset(namespace1Object, namespace2Object)
+	DescribeTable("DoesNamespaceExist",
+		func(k k8s.Interface, namespace string, expectedError error, expectedOK bool) {
+			err, ok := policyrec.DoesNamespaceExist(k, namespace)
+			if expectedError == nil {
+				Expect(err).To(BeNil())
+			} else {
+				Expect(err.Error()).To(Equal(expectedError.Error()))
+			}
+			Expect(ok).To(Equal(expectedOK))
+		},
+		Entry("Namespace1 exists", kubeNamespaces, "namespace1", nil, true),
+		Entry("Namespace does not exist", kubeNamespaces, "non-existent-namespace", fmt.Errorf("namespaces \"non-existent-namespace\" not found"), false),
 	)
 })

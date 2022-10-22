@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019, 2022 Tigera, Inc. All rights reserved.
 package policyrec
 
 import (
@@ -46,20 +46,19 @@ func ExtractPolicyRecommendationParamsFromRequest(req *http.Request) (*PolicyRec
 	return &reqParams, nil
 }
 
+// ValidatePolicyRecommendationParams returns an error when the policy recommendation query
+// parameters are not set correctly.
+// If Endpoint is not empty and Namespace is empty, then the query is global.
 func ValidatePolicyRecommendationParams(params *PolicyRecommendationParams) error {
-	// StartTime, EndTime, and EndpointName are not allowed to be nil
-	// If Namespace is empty, then the query is global
+	// StartTime, EndTime, are not allowed to be empty. Endpoint and Namespace cannot both be empty.
 	if params.StartTime == "" {
-		return fmt.Errorf("Invalid start_time specified")
+		return fmt.Errorf("invalid start_time specified")
 	}
 	if params.EndTime == "" {
-		return fmt.Errorf("Invalid end_time specified")
+		return fmt.Errorf("invalid end_time specified")
 	}
-	if params.EndpointName == "" {
-		return fmt.Errorf("endpoint_name cannot be empty")
-	}
-	if params.Namespace == "" {
-		return fmt.Errorf("namespace cannot be empty")
+	if params.Namespace == "" && params.EndpointName == "" {
+		return fmt.Errorf("namespace and endpoint_name cannot both be empty")
 	}
 
 	return nil

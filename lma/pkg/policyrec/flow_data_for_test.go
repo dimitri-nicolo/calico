@@ -1,7 +1,9 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
 package policyrec_test
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/lma/pkg/api"
@@ -34,18 +36,19 @@ var (
 	namespace3DefaultAllowProfile, _ = api.PolicyHitFromFlowLogPolicyString("0|__PROFILE__|__PROFILE__.kns.namespace3|allow|0", 0)
 
 	// Endpoints
-	pod1Aggr    = "pod-1-*"
-	pod1        = "pod-1"
-	pod2Aggr    = "pod-2-*"
-	pod2        = "pod-2"
-	pod3Aggr    = "pod-3-*"
-	pod3        = "pod-3"
-	pod4Rs1Aggr = "pod-4-rs-1-*"
-	pod4Rs2Aggr = "pod-4-rs-2-*"
-	ns1         = "netset-1"
-	ns1Aggr     = "netset-1"
-	gns1        = "gns-1"
-	gns1Aggr    = "gns-1"
+	emptyEndpoint = ""
+	pod1Aggr      = "pod-1-*"
+	pod1          = "pod-1"
+	pod2Aggr      = "pod-2-*"
+	pod2          = "pod-2"
+	pod3Aggr      = "pod-3-*"
+	pod3          = "pod-3"
+	pod4Rs1Aggr   = "pod-4-rs-1-*"
+	pod4Rs2Aggr   = "pod-4-rs-2-*"
+	ns1           = "netset-1"
+	ns1Aggr       = "netset-1"
+	gns1          = "gns-1"
+	gns1Aggr      = "gns-1"
 
 	// Labels
 	pod1LabelsBlue = map[string]string{
@@ -353,6 +356,7 @@ var (
 					},
 				},
 			},
+			Ingress: []v3.Rule{},
 		},
 	}
 
@@ -380,6 +384,7 @@ var (
 					},
 				},
 			},
+			Ingress: []v3.Rule{},
 		},
 	}
 
@@ -397,6 +402,7 @@ var (
 			Tier:     "default",
 			Selector: "name == 'pod-2' && namespace == 'namespace1'",
 			Types:    []v3.PolicyType{v3.PolicyTypeIngress},
+			Egress:   []v3.Rule{},
 			Ingress: []v3.Rule{
 				{
 					Action:   v3.Allow,
@@ -443,6 +449,7 @@ var (
 					},
 				},
 			},
+			Ingress: []v3.Rule{},
 		},
 	}
 
@@ -482,6 +489,7 @@ var (
 					},
 				},
 			},
+			Ingress: []v3.Rule{},
 		},
 	}
 
@@ -539,6 +547,7 @@ var (
 			Tier:     "default",
 			Selector: "pod-name == 'pod-3' && pod-namespace == 'namespace2'",
 			Types:    []v3.PolicyType{v3.PolicyTypeIngress},
+			Egress:   []v3.Rule{},
 			Ingress: []v3.Rule{
 				{
 					Action:   v3.Allow,
@@ -594,6 +603,7 @@ var (
 			Tier:     "default",
 			Selector: "pod-name == 'pod-3' && pod-namespace == 'namespace2'",
 			Types:    []v3.PolicyType{v3.PolicyTypeIngress},
+			Egress:   []v3.Rule{},
 			Ingress: []v3.Rule{
 				{
 					Action:   v3.Allow,
@@ -623,12 +633,295 @@ var (
 			Tier:     "default",
 			Selector: "pod-name == 'pod-3' && pod-namespace == 'namespace2'",
 			Types:    []v3.PolicyType{v3.PolicyTypeIngress},
+			Egress:   []v3.Rule{},
 			Ingress: []v3.Rule{
 				{
 					Action:   v3.Allow,
 					Protocol: &protoTCPNS,
 					Source: v3.EntityRule{
 						NamespaceSelector: "projectcalico.org/name == 'namespace3'",
+					},
+					Destination: v3.EntityRule{
+						Ports: []numorstring.Port{
+							numorstring.SinglePort(port5432),
+							numorstring.SinglePort(port8080),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Egress policy matching pod1-blue in namespace1, to pod2 port 443.
+	namespaceNetworkPolicyNamespace1Pod1BlueToPod2 = &v3.StagedNetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       v3.KindStagedNetworkPolicy,
+			APIVersion: v3.GroupVersionCurrent,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "default." + namespace1 + "-policy",
+			Namespace: namespace1,
+		},
+		Spec: v3.StagedNetworkPolicySpec{
+			Tier:         "default",
+			StagedAction: v3.StagedActionSet,
+			Selector:     fmt.Sprintf("projectcalico.org/name == '%s'", namespace1),
+			Types:        []v3.PolicyType{v3.PolicyTypeEgress},
+			Egress: []v3.Rule{
+				{
+					Action:   v3.Allow,
+					Protocol: &protoTCPNS,
+					Destination: v3.EntityRule{
+						NamespaceSelector: fmt.Sprintf("projectcalico.org/name == '%s'", namespace1),
+						Ports:             []numorstring.Port{numorstring.SinglePort(port443)},
+					},
+				},
+			},
+			Ingress: []v3.Rule{},
+		},
+	}
+
+	// Egress policy matching pod1 (both blue and red labels) in namespace1, to pod2 port 443.
+	namespaceEgressNetworkPolicyNamespace1Pod1ToPod2 = &v3.StagedNetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       v3.KindStagedNetworkPolicy,
+			APIVersion: v3.GroupVersionCurrent,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "default." + namespace1 + "-policy",
+			Namespace: namespace1,
+		},
+		Spec: v3.StagedNetworkPolicySpec{
+			Tier:         "default",
+			StagedAction: v3.StagedActionSet,
+			Selector:     fmt.Sprintf("projectcalico.org/name == '%s'", namespace1),
+			Types:        []v3.PolicyType{v3.PolicyTypeEgress},
+			Egress: []v3.Rule{
+				{
+					Action:   v3.Allow,
+					Protocol: &protoTCPNS,
+					Destination: v3.EntityRule{
+						NamespaceSelector: fmt.Sprintf("projectcalico.org/name == '%s'", namespace1),
+						Ports:             []numorstring.Port{numorstring.SinglePort(port443)},
+					},
+				},
+			},
+			Ingress: []v3.Rule{},
+		},
+	}
+
+	// Egress policy matching pod1-blue in namespace1, to pod2 port 443 and udp to external network port 53.
+	namespaceNetworkPolicyNamespace1Pod1BlueToPod2AndExternalNet = &v3.StagedNetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       v3.KindStagedNetworkPolicy,
+			APIVersion: v3.GroupVersionCurrent,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "default." + namespace1 + "-policy",
+			Namespace: namespace1,
+		},
+		Spec: v3.StagedNetworkPolicySpec{
+			Tier:         "default",
+			StagedAction: v3.StagedActionSet,
+			Selector:     fmt.Sprintf("projectcalico.org/name == '%s'", namespace1),
+			Types:        []v3.PolicyType{v3.PolicyTypeEgress},
+			Egress: []v3.Rule{
+				{
+					Action:   v3.Allow,
+					Protocol: &protoUDPNS,
+					Destination: v3.EntityRule{
+						NamespaceSelector: "global()",
+						Ports:             []numorstring.Port{numorstring.SinglePort(port53)},
+					},
+				},
+				{
+					Action:   v3.Allow,
+					Protocol: &protoTCPNS,
+					Destination: v3.EntityRule{
+						NamespaceSelector: fmt.Sprintf("projectcalico.org/name == '%s'", namespace1),
+						Ports:             []numorstring.Port{numorstring.SinglePort(port443)},
+					},
+				},
+			},
+			Ingress: []v3.Rule{},
+		},
+	}
+
+	// Egress policy matching pod1 in namespace1, to pod2 port 443 and pod3 port 5432 and 8080.
+	namespaceNetworkPolicyNamespace1Pod1ToPod2AndPod3 = &v3.StagedNetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       v3.KindStagedNetworkPolicy,
+			APIVersion: v3.GroupVersionCurrent,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "default." + namespace1 + "-policy",
+			Namespace: namespace1,
+		},
+		Spec: v3.StagedNetworkPolicySpec{
+			Tier:         "default",
+			StagedAction: v3.StagedActionSet,
+			Selector:     fmt.Sprintf("projectcalico.org/name == '%s'", namespace1),
+			Types:        []v3.PolicyType{v3.PolicyTypeEgress},
+			Egress: []v3.Rule{
+				{
+					Action:   v3.Allow,
+					Protocol: &protoTCPNS,
+					Destination: v3.EntityRule{
+						NamespaceSelector: fmt.Sprintf("projectcalico.org/name == '%s'", namespace1),
+						Ports: []numorstring.Port{
+							numorstring.SinglePort(443),
+						},
+					},
+				},
+				{
+					Action:   v3.Allow,
+					Protocol: &protoTCPNS,
+					Destination: v3.EntityRule{
+						NamespaceSelector: fmt.Sprintf("projectcalico.org/name == '%s'", namespace2),
+						Ports: []numorstring.Port{
+							numorstring.SinglePort(port5432),
+							numorstring.SinglePort(port8080)},
+					},
+				},
+			},
+			Ingress: []v3.Rule{},
+		},
+	}
+
+	// Ingress and egress policy matching pod2 in namespace1.
+	namespaceNetworkPolicyNamespace1Pod2 = &v3.StagedNetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       v3.KindStagedNetworkPolicy,
+			APIVersion: v3.GroupVersionCurrent,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "default." + namespace1 + "-policy",
+			Namespace: namespace1,
+		},
+		Spec: v3.StagedNetworkPolicySpec{
+			Tier:         "default",
+			StagedAction: v3.StagedActionSet,
+			Selector:     fmt.Sprintf("projectcalico.org/name == '%s'", namespace1),
+			Types:        []v3.PolicyType{v3.PolicyTypeEgress},
+			Ingress:      []v3.Rule{},
+			Egress: []v3.Rule{
+				{
+					Action:   v3.Allow,
+					Protocol: &protoTCPNS,
+					Destination: v3.EntityRule{
+						NamespaceSelector: fmt.Sprintf("projectcalico.org/name == '%s'", namespace1),
+						Ports:             []numorstring.Port{numorstring.SinglePort(port443)},
+					},
+				},
+				{
+					Action:   v3.Allow,
+					Protocol: &protoTCPNS,
+					Destination: v3.EntityRule{
+						NamespaceSelector: fmt.Sprintf("projectcalico.org/name == '%s'", namespace2),
+						Ports:             []numorstring.Port{numorstring.SinglePort(port5432)},
+					},
+				},
+			},
+		},
+	}
+
+	// Ingress policy matching pod3 from pod1 and pod2.
+	namespaceNetworkPolicyNamespace1Pod3 = &v3.StagedNetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       v3.KindStagedNetworkPolicy,
+			APIVersion: v3.GroupVersionCurrent,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "default." + namespace2 + "-policy",
+			Namespace: namespace2,
+		},
+		Spec: v3.StagedNetworkPolicySpec{
+			Tier:         "default",
+			StagedAction: v3.StagedActionSet,
+			Selector:     fmt.Sprintf("projectcalico.org/name == '%s'", namespace2),
+			Types:        []v3.PolicyType{v3.PolicyTypeIngress},
+			Egress:       []v3.Rule{},
+			Ingress: []v3.Rule{
+				{
+					Action:   v3.Allow,
+					Protocol: &protoTCPNS,
+					Source: v3.EntityRule{
+						NamespaceSelector: fmt.Sprintf("projectcalico.org/name == '%s'", namespace1),
+					},
+					Destination: v3.EntityRule{
+						Ports: []numorstring.Port{
+							numorstring.SinglePort(port8080),
+							numorstring.SinglePort(port5432),
+						},
+					},
+				},
+				{
+					Action:   v3.Allow,
+					Protocol: &protoTCPNS,
+					Source: v3.EntityRule{
+						NamespaceSelector: "global()",
+					},
+					Destination: v3.EntityRule{
+						Ports: []numorstring.Port{numorstring.SinglePort(port5432)},
+					},
+				},
+			},
+		},
+	}
+
+	// Ingress policy matching pod3 in namespace2, from pod4 to port 5432.
+	namespaceIngressNetworkPolicyToNamespace2Pod3FromPod4Port5432 = &v3.StagedNetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       v3.KindStagedNetworkPolicy,
+			APIVersion: v3.GroupVersionCurrent,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "default." + namespace2 + "-policy",
+			Namespace: namespace2,
+		},
+		Spec: v3.StagedNetworkPolicySpec{
+			Tier:         "default",
+			StagedAction: v3.StagedActionSet,
+			Selector:     fmt.Sprintf("projectcalico.org/name == '%s'", namespace2),
+			Types:        []v3.PolicyType{v3.PolicyTypeIngress},
+			Ingress: []v3.Rule{
+				{
+					Action:   v3.Allow,
+					Protocol: &protoTCPNS,
+					Source: v3.EntityRule{
+						NamespaceSelector: fmt.Sprintf("projectcalico.org/name == '%s'", namespace3),
+					},
+					Destination: v3.EntityRule{
+						Ports: []numorstring.Port{numorstring.SinglePort(port5432)},
+					},
+				},
+			},
+			Egress: []v3.Rule{},
+		},
+	}
+
+	// Ingress policy matching pod3 in namespace2, from pod4 to port 5432.
+	namespaceIngressNetworkPolicyToNamespace2Pod3FromPod4Port5432And8080 = &v3.StagedNetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       v3.KindStagedNetworkPolicy,
+			APIVersion: v3.GroupVersionCurrent,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "default." + namespace2 + "-policy",
+			Namespace: namespace2,
+		},
+		Spec: v3.StagedNetworkPolicySpec{
+			Tier:         "default",
+			StagedAction: v3.StagedActionSet,
+			Selector:     fmt.Sprintf("projectcalico.org/name == '%s'", namespace2),
+			Types:        []v3.PolicyType{v3.PolicyTypeIngress},
+			Egress:       []v3.Rule{},
+			Ingress: []v3.Rule{
+				{
+					Action:   v3.Allow,
+					Protocol: &protoTCPNS,
+					Source: v3.EntityRule{
+						NamespaceSelector: fmt.Sprintf("projectcalico.org/name == '%s'", namespace3),
 					},
 					Destination: v3.EntityRule{
 						Ports: []numorstring.Port{

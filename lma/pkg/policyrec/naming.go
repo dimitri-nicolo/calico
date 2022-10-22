@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019,2022 Tigera, Inc. All rights reserved.
 package policyrec
 
 import (
@@ -13,32 +13,50 @@ import (
 
 const wildcardSuffix = "-*"
 
-func GeneratePolicyName(k k8s.Interface, params *PolicyRecommendationParams) string {
+// DoesNamespaceExist returns true if the namespace object query returns a valid object. Returns an
+// error if the query returns an error.
+func DoesNamespaceExist(k k8s.Interface, name string) (error, bool) {
+	ctx := context.Background()
+
+	obj, err := k.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return err, false
+	} else if obj == nil {
+		return nil, false
+	}
+
+	return nil, true
+}
+
+// GeneratePolicyName generates a policy namespace for policy recommendation, using the endpoint
+// name and namespace.
+func GeneratePolicyName(k k8s.Interface, name, namespace string) string {
 	// Checks the owner reference and returns the name of highest owner in the chain.
 	// Remove the trailing -* wildcard suffix from the name if it exists.
-	name := strings.TrimSuffix(params.EndpointName, wildcardSuffix)
+	policyName := strings.TrimSuffix(name, wildcardSuffix)
+
 	// TODO: What to do about no namespace for global policies?
 	// TODO: What do we do about resources that share the same name/namespace but are different resources?
-	ns := params.Namespace
-	obj := GetObjectMeta(k, "", name, ns)
+	obj := GetObjectMeta(k, "", policyName, namespace)
 	if obj == nil {
 		// For some reason, the resource we are searching for does not exist. Return the searched name.
-		return name
+		return policyName
 	}
 	for len(obj.GetObjectMeta().GetOwnerReferences()) > 0 {
 		// Only do the lookup on the first owner reference.
 		ref := obj.GetObjectMeta().GetOwnerReferences()[0]
-		obj = GetObjectMeta(k, ref.Kind, ref.Name, ns)
-		name = ref.Name
+		obj = GetObjectMeta(k, ref.Kind, ref.Name, namespace)
+		policyName = ref.Name
 		if obj == nil {
 			// For some reason, the resource referenced does not exist. Return the searched name.
 			break
 		}
 	}
 
-	return name
+	return policyName
 }
 
+// GetObjectMeta returns the object metadata of a resource, if that resource exists.
 func GetObjectMeta(k k8s.Interface, kind, name, namespace string) metav1.ObjectMetaAccessor {
 	ctx := context.Background()
 	// Query each of the valid Kinds until something matches
