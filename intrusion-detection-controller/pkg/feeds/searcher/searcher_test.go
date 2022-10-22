@@ -87,7 +87,7 @@ func runTest(t *testing.T, successful bool, expectedSecurityEvents []events.Susp
 	}
 	eventsDB := &db.MockEvents{ErrorIndex: eventsErrorIdx, Events: []db.SecurityEventInterface{}}
 	uut := NewSearcher(f, 0, suspiciousIP, eventsDB).(*searcher)
-	feedCacher := &cacher.MockGlobalThreatFeedCache{}
+	feedCacher := cacher.NewMockGlobalThreatFeedCache()
 
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()

@@ -12,7 +12,21 @@ type MockGlobalThreatFeedCache struct {
 	cachedFeed *apiV3.GlobalThreatFeed
 }
 
-func (s *MockGlobalThreatFeedCache) Run(ctx context.Context) {
+// NewMockGlobalThreatFeedCache ensures all mock Global Threat Feeds are mode Enabled so tests pass.
+func NewMockGlobalThreatFeedCache() *MockGlobalThreatFeedCache {
+	mode := new(apiV3.ThreatFeedMode)
+	*mode = apiV3.ThreatFeedModeEnabled
+
+	return &MockGlobalThreatFeedCache{
+		&apiV3.GlobalThreatFeed{
+			Spec: apiV3.GlobalThreatFeedSpec{
+				Mode: mode,
+			},
+		},
+	}
+}
+
+func (s *MockGlobalThreatFeedCache) Run(_ context.Context) {
 }
 
 func (s *MockGlobalThreatFeedCache) Close() {

@@ -41,8 +41,22 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 	ctx := context.Background()
 	name1 := "threatfeed-1"
 	name2 := "threatfeed-2"
+
+	mode1 := new(apiv3.ThreatFeedMode)
+	*mode1 = apiv3.ThreatFeedModeEnabled
+	mode2 := new(apiv3.ThreatFeedMode)
+	*mode2 = apiv3.ThreatFeedModeDisabled
+
+	type1 := new(apiv3.ThreatFeedType)
+	*type1 = apiv3.ThreatFeedTypeBuiltin
+	type2 := new(apiv3.ThreatFeedType)
+	*type2 = apiv3.ThreatFeedTypeCustom
+
 	spec1 := apiv3.GlobalThreatFeedSpec{
-		Content: apiv3.ThreatFeedContentIPset,
+		Content:     apiv3.ThreatFeedContentIPset,
+		Mode:        mode1,
+		Description: "test1",
+		FeedType:    type1,
 		GlobalNetworkSet: &apiv3.GlobalNetworkSetSync{
 			Labels: map[string]string{"level": "high"},
 		},
@@ -69,7 +83,10 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 		},
 	}
 	spec2 := apiv3.GlobalThreatFeedSpec{
-		Content: apiv3.ThreatFeedContentIPset,
+		Content:     apiv3.ThreatFeedContentIPset,
+		Mode:        mode2,
+		Description: "test2",
+		FeedType:    type2,
 		GlobalNetworkSet: &apiv3.GlobalNetworkSetSync{
 			Labels: map[string]string{"level": "low"},
 		},
@@ -103,7 +120,8 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 
 			be, err := backend.NewClient(config)
 			Expect(err).NotTo(HaveOccurred())
-			be.Clean()
+			err = be.Clean()
+			Expect(err).NotTo(HaveOccurred())
 
 			By("Updating the GlobalThreatFeed before it is created")
 			_, outError := c.GlobalThreatFeeds().Update(ctx, &apiv3.GlobalThreatFeed{
@@ -111,7 +129,6 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
-
 			Expect(outError.Error()).To(ContainSubstring(fmt.Sprintf("resource does not exist: GlobalThreatFeed(%s)", name1)))
 
 			By("Attempting to creating a new GlobalThreatFeed with name1/spec1 and a non-empty ResourceVersion")
@@ -131,7 +148,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 			Expect(res1).To(MatchResource(apiv3.KindGlobalThreatFeed, testutils.ExpectNoNamespace, name1, spec1))
 
 			// Track the version of the original data for name1.
-			rv1_1 := res1.ResourceVersion
+			rv11 := res1.ResourceVersion
 
 			By("Attempting to create the same GlobalThreatFeed with name1")
 			_, outError = c.GlobalThreatFeeds().Create(ctx, &apiv3.GlobalThreatFeed{
@@ -169,7 +186,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 			By("Getting GlobalThreatFeed (name2) and comparing the output against spec2")
 			res, outError = c.GlobalThreatFeeds().Get(ctx, name2, options.GetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(res2).To(MatchResource(apiv3.KindGlobalThreatFeed, testutils.ExpectNoNamespace, name2, spec2))
+			Expect(res).To(MatchResource(apiv3.KindGlobalThreatFeed, testutils.ExpectNoNamespace, name2, spec2))
 			Expect(res.ResourceVersion).To(Equal(res2.ResourceVersion))
 
 			By("Listing all the GlobalThreatFeeds, expecting a two results with name1/spec1 and name2/spec2")
@@ -181,7 +198,10 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 
 			By("Updating GlobalThreatFeed name1")
 			spec1Tmp := apiv3.GlobalThreatFeedSpec{
-				Content: apiv3.ThreatFeedContentIPset,
+				Content:     apiv3.ThreatFeedContentIPset,
+				Mode:        mode1,
+				Description: "test1",
+				FeedType:    type1,
 				GlobalNetworkSet: &apiv3.GlobalNetworkSetSync{
 					Labels: map[string]string{"level": "high"},
 				},
@@ -231,7 +251,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 			Expect(outError.Error()).To(Equal("error with field Metadata.UID = '' (field must be set for an Update request)"))
 
 			// Track the version of the updated name1 data.
-			rv1_2 := res1.ResourceVersion
+			rv12 := res1.ResourceVersion
 
 			By("Updating GlobalThreatFeed name1 without specifying a resource version")
 			res1.Spec = spec1
@@ -242,28 +262,28 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 
 			By("Updating GlobalThreatFeed name1 using the previous resource version")
 			res1.Spec = spec1
-			res1.ResourceVersion = rv1_1
+			res1.ResourceVersion = rv11
 			_, outError = c.GlobalThreatFeeds().Update(ctx, res1, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
 			Expect(outError.Error()).To(Equal("update conflict: GlobalThreatFeed(" + name1 + ")"))
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Getting GlobalThreatFeed (name1) with the original resource version and comparing the output against spec1")
-				res, outError = c.GlobalThreatFeeds().Get(ctx, name1, options.GetOptions{ResourceVersion: rv1_1})
+				res, outError = c.GlobalThreatFeeds().Get(ctx, name1, options.GetOptions{ResourceVersion: rv11})
 				Expect(outError).NotTo(HaveOccurred())
 				Expect(res).To(MatchResource(apiv3.KindGlobalThreatFeed, testutils.ExpectNoNamespace, name1, spec1))
-				Expect(res.ResourceVersion).To(Equal(rv1_1))
+				Expect(res.ResourceVersion).To(Equal(rv11))
 			}
 
-			By("Getting GlobalThreatFeed (name1) with the updated resource version and comparing the output against spec2")
-			res, outError = c.GlobalThreatFeeds().Get(ctx, name1, options.GetOptions{ResourceVersion: rv1_2})
+			By("Getting GlobalThreatFeed (name1) with the updated resource version and comparing the output against spec1Tmp")
+			res, outError = c.GlobalThreatFeeds().Get(ctx, name1, options.GetOptions{ResourceVersion: rv12})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(res).To(MatchResource(apiv3.KindGlobalThreatFeed, testutils.ExpectNoNamespace, name1, spec1Tmp))
-			Expect(res.ResourceVersion).To(Equal(rv1_2))
+			Expect(res.ResourceVersion).To(Equal(rv12))
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Listing GlobalThreatFeeds with the original resource version and checking for a single result with name1/spec1")
-				outList, outError = c.GlobalThreatFeeds().List(ctx, options.ListOptions{ResourceVersion: rv1_1})
+				outList, outError = c.GlobalThreatFeeds().List(ctx, options.ListOptions{ResourceVersion: rv11})
 				Expect(outError).NotTo(HaveOccurred())
 				Expect(outList.Items).To(HaveLen(1))
 				Expect(&outList.Items[0]).To(MatchResource(apiv3.KindGlobalThreatFeed, testutils.ExpectNoNamespace, name1, spec1))
@@ -278,13 +298,13 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Deleting GlobalThreatFeed (name1) with the old resource version")
-				_, outError = c.GlobalThreatFeeds().Delete(ctx, name1, options.DeleteOptions{ResourceVersion: rv1_1})
+				_, outError = c.GlobalThreatFeeds().Delete(ctx, name1, options.DeleteOptions{ResourceVersion: rv11})
 				Expect(outError).To(HaveOccurred())
 				Expect(outError.Error()).To(Equal("update conflict: GlobalThreatFeed(" + name1 + ")"))
 			}
 
 			By("Deleting GlobalThreatFeed (name1) with the new resource version")
-			dres, outError := c.GlobalThreatFeeds().Delete(ctx, name1, options.DeleteOptions{ResourceVersion: rv1_2})
+			dres, outError := c.GlobalThreatFeeds().Delete(ctx, name1, options.DeleteOptions{ResourceVersion: rv12})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(dres).To(MatchResource(apiv3.KindGlobalThreatFeed, testutils.ExpectNoNamespace, name1, spec1Tmp))
 
@@ -344,7 +364,8 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 
 			be, err := backend.NewClient(config)
 			Expect(err).NotTo(HaveOccurred())
-			be.Clean()
+			err = be.Clean()
+			Expect(err).NotTo(HaveOccurred())
 
 			By("Listing GlobalThreatFeeds with the latest resource version and checking for two results with name1/spec2 and name2/spec2")
 			outList, outError := c.GlobalThreatFeeds().List(ctx, options.ListOptions{})
@@ -396,7 +417,6 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 					Previous: outRes1,
 				},
 			})
-			testWatcher1.Stop()
 
 			By("Starting a watcher from rev0 - this should get all events")
 			w, err = c.GlobalThreatFeeds().Watch(ctx, options.ListOptions{ResourceVersion: rev0})
@@ -435,16 +455,15 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 					Object:   outRes3,
 				},
 			})
-			testWatcher2.Stop()
 
 			// Only etcdv3 supports watching a specific instance of a resource.
 			if config.Spec.DatastoreType == apiconfig.EtcdV3 {
 				By("Starting a watcher from rev0 watching name1 - this should get all events for name1")
 				w, err = c.GlobalThreatFeeds().Watch(ctx, options.ListOptions{Name: name1, ResourceVersion: rev0})
 				Expect(err).NotTo(HaveOccurred())
-				testWatcher2_1 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
-				defer testWatcher2_1.Stop()
-				testWatcher2_1.ExpectEvents(apiv3.KindGlobalThreatFeed, []watch.Event{
+				testwatcher21 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
+				defer testwatcher21.Stop()
+				testwatcher21.ExpectEvents(apiv3.KindGlobalThreatFeed, []watch.Event{
 					{
 						Type:   watch.Added,
 						Object: outRes1,
@@ -454,7 +473,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 						Previous: outRes1,
 					},
 				})
-				testWatcher2_1.Stop()
+				testwatcher21.Stop()
 			}
 
 			By("Starting a watcher not specifying a rev - expect the current snapshot")
@@ -468,7 +487,6 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 					Object: outRes3,
 				},
 			})
-			testWatcher3.Stop()
 
 			By("Configuring GlobalThreatFeed name1/spec1 again and storing the response")
 			outRes1, err = c.GlobalThreatFeeds().Create(
@@ -497,7 +515,8 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 			})
 
 			By("Cleaning the datastore and expecting deletion events for each configured resource (tests prefix deletes results in individual events for each key)")
-			be.Clean()
+			err = be.Clean()
+			Expect(err).NotTo(HaveOccurred())
 			testWatcher4.ExpectEvents(apiv3.KindGlobalThreatFeed, []watch.Event{
 				{
 					Type:     watch.Deleted,
@@ -508,7 +527,6 @@ var _ = testutils.E2eDatastoreDescribe("GlobalThreatFeed tests", testutils.Datas
 					Previous: outRes3,
 				},
 			})
-			testWatcher4.Stop()
 		})
 	})
 })

@@ -67,24 +67,30 @@ func (d *searcher) doSearch(ctx context.Context, feedCacher cacher.GlobalThreatF
 		return
 	}
 
-	results, lastSuccessfulSearch, setHash, err := d.q.QuerySet(ctx, getCachedFeedResponse.GlobalThreatFeed)
-	if err != nil {
-		log.WithError(err).Error("query failed")
-		utils.AddErrorToFeedStatus(feedCacher, cacher.SearchFailed, err)
-		return
-	}
-	var clean = true
-	for _, result := range results {
-		err := d.events.PutSecurityEventWithID(ctx, result)
+	// Ensure Global Threat Feed is Enabled before querying Elasticsearch and sending event.
+	mode := getCachedFeedResponse.GlobalThreatFeed.Spec.Mode
+	if mode != nil && *mode == v3.ThreatFeedModeEnabled {
+		results, lastSuccessfulSearch, setHash, err := d.q.QuerySet(ctx, getCachedFeedResponse.GlobalThreatFeed)
 		if err != nil {
-			clean = false
+			log.WithError(err).Error("query failed")
 			utils.AddErrorToFeedStatus(feedCacher, cacher.SearchFailed, err)
-			log.WithError(err).Error("failed to store event")
+			return
 		}
-	}
-	if clean {
-		updateFeedStatusAfterSuccessfulSearch(feedCacher, lastSuccessfulSearch)
-		updateFeedAfterSuccessfulSearch(feedCacher, setHash)
+		var clean = true
+		for _, result := range results {
+			err := d.events.PutSecurityEventWithID(ctx, result)
+			if err != nil {
+				clean = false
+				utils.AddErrorToFeedStatus(feedCacher, cacher.SearchFailed, err)
+				log.WithError(err).Error("failed to store event")
+			}
+		}
+		if clean {
+			updateFeedStatusAfterSuccessfulSearch(feedCacher, lastSuccessfulSearch)
+			updateFeedAfterSuccessfulSearch(feedCacher, setHash)
+		}
+	} else {
+		log.WithFields(log.Fields{"feedName": getCachedFeedResponse.GlobalThreatFeed.Name}).Debug("Feed is currently not enabled.")
 	}
 }
 

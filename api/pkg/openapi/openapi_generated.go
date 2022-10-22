@@ -6773,6 +6773,27 @@ func schema_pkg_apis_projectcalico_v3_GlobalThreatFeedSpec(ref common.ReferenceC
 							Format:      "",
 						},
 					},
+					"mode": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Determines whether the Global Threat Feed is Enabled or Disabled.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"description": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Human-readable description of the template.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"feedType": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Distinguishes between Builtin Global Threat Feeds and Custom feed types.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"globalNetworkSet": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("github.com/tigera/api/pkg/apis/projectcalico/v3.GlobalNetworkSetSync"),
