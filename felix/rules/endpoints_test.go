@@ -121,6 +121,7 @@ var _ = Describe("Endpoints", func() {
 					nil,
 					nil,
 					NotAnEgressGateway,
+					0,
 					UndefinedIPVersion)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
 						Name: "cali-tw-cali1234",
@@ -178,6 +179,7 @@ var _ = Describe("Endpoints", func() {
 					nil,
 					nil,
 					NotAnEgressGateway,
+					8080,
 					UndefinedIPVersion,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
@@ -215,6 +217,7 @@ var _ = Describe("Endpoints", func() {
 					}},
 					[]string{"prof1", "prof2"},
 					NotAnEgressGateway,
+					0,
 					UndefinedIPVersion,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
@@ -338,6 +341,7 @@ var _ = Describe("Endpoints", func() {
 					}},
 					[]string{"prof1", "prof2"},
 					NotAnEgressGateway,
+					0,
 					UndefinedIPVersion,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
@@ -455,6 +459,7 @@ var _ = Describe("Endpoints", func() {
 					}},
 					[]string{"prof1", "prof2"},
 					NotAnEgressGateway,
+					0,
 					UndefinedIPVersion,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
@@ -847,6 +852,7 @@ var _ = Describe("Endpoints", func() {
 					}},
 					[]string{"prof1", "prof2"},
 					IsAnEgressGateway,
+					8080,
 					4,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
@@ -862,50 +868,26 @@ var _ = Describe("Endpoints", func() {
 								SourceIPSet("cali40all-hosts-net").
 								DestPorts(uint16(EgressIPVXLANPort)),
 								Action:  AcceptAction{},
-								Comment: []string{"Accept VXLAN UDP traffic for egressgateways"}},
+								Comment: []string{"Accept VXLAN UDP traffic for egress gateways"}},
+							{Match: Match().ProtocolNum(ProtoTCP).
+								SourceIPSet("cali40all-hosts-net").
+								DestPorts(uint16(8080)),
+								Action:  AcceptAction{},
+								Comment: []string{"Accept readiness probes for egress gateways"}},
 							{Match: Match().ProtocolNum(ProtoUDP).
 								SourceIPSet("cali40all-tunnel-net").
 								DestPorts(uint16(EgressIPVXLANPort)),
 								Action:  AcceptAction{},
-								Comment: []string{"Accept VXLAN UDP traffic for egressgateways"}},
-							{Action: DropAction{}, Comment: []string{"Drop any other traffic to egressgateways"}},
+								Comment: []string{"Accept VXLAN UDP traffic for egress gateways"}},
+							{Match: Match().ProtocolNum(ProtoTCP).
+								SourceIPSet("cali40all-tunnel-net").
+								DestPorts(uint16(8080)),
+								Action:  AcceptAction{},
+								Comment: []string{"Accept readiness probes for egress gateways"}},
 
-							{Comment: []string{"Start of tier default"},
-								Action: ClearMarkAction{Mark: 0x10}},
-							{Match: Match().MarkClear(0x10),
-								Action: JumpAction{Target: "cali-pi-default/ai"}},
-							{Match: Match().MarkSingleBitSet(0x8),
-								Action:  ReturnAction{},
-								Comment: []string{"Return if policy accepted"}},
-							{Match: Match().MarkClear(0x10),
-								Action: JumpAction{Target: "cali-pi-default/bi"}},
-							{Match: Match().MarkSingleBitSet(0x8),
-								Action:  ReturnAction{},
-								Comment: []string{"Return if policy accepted"}},
-							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000).MarkClear(0x10),
-								Comment: []string{"Drop if no policies passed packet"},
-								Action:  NfqueueAction{QueueNum: 100}},
-							{Match: Match().MarkClear(0x10),
-								Action: NflogAction{Group: 1, Prefix: "DPI|default"}},
-							{Match: Match().MarkClear(0x10),
-								Action:  DropAction{},
-								Comment: []string{"Drop if no policies passed packet"}},
-
-							{Action: JumpAction{Target: "cali-pri-prof1"}},
-							{Match: Match().MarkSingleBitSet(0x8),
-								Action:  ReturnAction{},
-								Comment: []string{"Return if profile accepted"}},
-							{Action: JumpAction{Target: "cali-pri-prof2"}},
-							{Match: Match().MarkSingleBitSet(0x8),
-								Action:  ReturnAction{},
-								Comment: []string{"Return if profile accepted"}},
-
-							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
-								Comment: []string{"Drop if no profiles matched"},
-								Action:  NfqueueAction{QueueNum: 100}},
 							{Action: NflogAction{Group: 1, Prefix: "DRI"}},
 							{Action: DropAction{},
-								Comment: []string{"Drop if no profiles matched"}},
+								Comment: []string{"Drop all other ingress traffic to egress gateway."}},
 						},
 					},
 					{
@@ -920,12 +902,12 @@ var _ = Describe("Endpoints", func() {
 								DestIPSet("cali40all-hosts-net").
 								DestPorts(uint16(EgressIPVXLANPort)),
 								Action:  AcceptAction{},
-								Comment: []string{"Accept VXLAN UDP traffic for egressgateways"}},
+								Comment: []string{"Accept VXLAN UDP traffic for egress gateways"}},
 							{Match: Match().ProtocolNum(ProtoUDP).
 								DestIPSet("cali40all-tunnel-net").
 								DestPorts(uint16(EgressIPVXLANPort)),
 								Action:  AcceptAction{},
-								Comment: []string{"Accept VXLAN UDP traffic for egressgateways"}},
+								Comment: []string{"Accept VXLAN UDP traffic for egress gateways"}},
 							dropVXLANRule,
 							dropIPIPRule,
 
@@ -959,9 +941,6 @@ var _ = Describe("Endpoints", func() {
 								Action:  ReturnAction{},
 								Comment: []string{"Return if profile accepted"}},
 
-							{Match: Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
-								Comment: []string{"Drop if no profiles matched"},
-								Action:  NfqueueAction{QueueNum: 100}},
 							{Action: NflogAction{Group: 2, Prefix: "DRE"}},
 							{Action: DropAction{},
 								Comment: []string{"Drop if no profiles matched"}},
@@ -992,6 +971,7 @@ var _ = Describe("Endpoints", func() {
 					nil,
 					nil,
 					NotAnEgressGateway,
+					0,
 					UndefinedIPVersion,
 				)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 					{
@@ -1092,6 +1072,7 @@ var _ = Describe("Endpoints", func() {
 						nil,
 						nil,
 						NotAnEgressGateway,
+						0,
 						UndefinedIPVersion,
 					)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 						{
@@ -1153,6 +1134,7 @@ var _ = Describe("Endpoints", func() {
 						nil,
 						nil,
 						NotAnEgressGateway,
+						0,
 						UndefinedIPVersion,
 					)
 					expected := trimSMChain(kubeIPVSEnabled, []*Chain{
@@ -1216,6 +1198,7 @@ var _ = Describe("Endpoints", func() {
 						nil,
 						nil,
 						NotAnEgressGateway,
+						0,
 						UndefinedIPVersion,
 					)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 						{
@@ -1297,6 +1280,7 @@ var _ = Describe("Endpoints", func() {
 						}},
 						[]string{"prof1", "prof2"},
 						NotAnEgressGateway,
+						0,
 						UndefinedIPVersion,
 					)).To(Equal(trimSMChain(kubeIPVSEnabled, []*Chain{
 						{

@@ -49,6 +49,11 @@ message SyncRequest {
   // Determines which types of payloads will be sent to the client.
   // Valid values are "per-pod-policies" or "l3-routes".
   string subscriptionType = 3;
+
+  // Enterprise-only fields, start at 100.
+
+  // Controls whether IPv6 routes will be sent or not.
+  bool supportsIPv6RouteUpdates = 100;
 }
 
 // Rationale for having explicit Remove messages rather than sending and update
@@ -437,6 +442,7 @@ message WorkloadEndpoint {
   repeated NatInfo ipv6_nat = 9;
   string egress_ip_set_id = 100;
   bool is_egress_gateway = 101;
+  int32 egress_gateway_health_port = 104;
   repeated string aws_elastic_ips = 102;
   int32 egress_max_next_hops = 103;
   repeated string allow_spoofed_source_prefixes = 10;
@@ -872,7 +878,7 @@ message PacketCaptureSpecification {
 message EgressPodStatusUpdate {
   string name = 1;
   string namespace = 2;
-  string cidr = 3;
+  string addr = 3;
   google.protobuf.Timestamp maintenance_started = 4;
   google.protobuf.Timestamp maintenance_finished = 5;
 }

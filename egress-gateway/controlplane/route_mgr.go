@@ -18,6 +18,7 @@ import (
 	netlinkutil "github.com/projectcalico/calico/egress-gateway/util/netlink"
 	protoutil "github.com/projectcalico/calico/egress-gateway/util/proto"
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
@@ -33,6 +34,7 @@ import (
 type RouteManager struct {
 	macBuilder     *netutil.MACBuilder // 'egress.calico' MAC addresses are programmatically generated using a builder
 	backoffManager wait.BackoffManager
+	healthAgg      *health.HealthAggregator
 	// latest snapshot of the datastore's route updates - old updates are overwritten if a new one comes in
 	latestUpdate chan data.RouteStore
 
@@ -69,8 +71,11 @@ const (
 	jitter          = 0.1
 )
 
+const healthName = "dataplane"
+
 // NewRouteManager constructs a new route manager, registered with RouteStore 's', which will tunnel packets through the provided interface
-func NewRouteManager(s data.RouteStore, egressTunnelIfaceName string, vni int, opts ...RouteManagerOpt) *RouteManager {
+func NewRouteManager(s data.RouteStore, egressTunnelIfaceName string, vni int, healthAgg *health.HealthAggregator, opts ...RouteManagerOpt) *RouteManager {
+	healthAgg.RegisterReporter(healthName, &health.HealthReport{Ready: true}, 0)
 	m := &RouteManager{
 		macBuilder:                          netutil.NewMACBuilder(),
 		backoffManager:                      wait.NewJitteredBackoffManager(backoffDuration, jitter, clock.RealClock{}),
@@ -79,6 +84,7 @@ func NewRouteManager(s data.RouteStore, egressTunnelIfaceName string, vni int, o
 		egressTunnelNeighsByKey:             make(map[string]netlink.Neigh),
 		egressTunnelBridgeNeighsByKey:       make(map[string]netlink.Neigh),
 		exitRoutesByDstCIDR:                 make(map[string]netlink.Route),
+		healthAgg:                           healthAgg,
 	}
 
 	// apply options
@@ -174,6 +180,7 @@ func (m *RouteManager) Start(ctx context.Context) {
 		var inSync bool
 		select {
 		case <-ctx.Done():
+			m.healthAgg.Report(healthName, &health.HealthReport{Ready: false})
 			return
 		// pull in the latest snapshot of the routeStore if it exists, to build netlink structs from its routes
 		case s = <-m.latestUpdate:
@@ -216,6 +223,7 @@ func (m *RouteManager) Start(ctx context.Context) {
 			log.Info("retrying kernel sync...")
 			inSync = m.ensureNetworking()
 		}
+		m.healthAgg.Report(healthName, &health.HealthReport{Ready: inSync})
 
 		// either an update or retry has occurred so our retry timer is now stale
 		stopBackoffTimer()
@@ -605,7 +613,7 @@ func ensureNeighs(nl netlinkshim.Handle, neighsByKey map[string]netlink.Neigh, i
 
 	// now program desired state
 	for key, n := range neighsByKey {
-		// if the neigh doesnt exist in the kernel, or if an out-of-sync version does, program our in-memory version
+		// if the neigh doesn't exist in the kernel, or if an out-of-sync version does, program our in-memory version
 		kn, ok := kernelNeighsByKey[key]
 		if !ok || !netlinkutil.NeighsEqual(kn, n) {
 			if err = nl.NeighSet(&n); err != nil {

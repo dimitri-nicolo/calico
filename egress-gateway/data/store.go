@@ -7,10 +7,13 @@ import (
 	"context"
 	"net"
 	"sync"
+	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	protoutil "github.com/projectcalico/calico/egress-gateway/util/proto"
 	"github.com/projectcalico/calico/felix/proto"
-	log "github.com/sirupsen/logrus"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
 )
 
 // RouteObserver allows a module to be notified of updates regarding routes
@@ -33,6 +36,9 @@ type RouteStore interface {
 
 // routeStore stores all information needed to program the Egress Gateway's return routes to workloads
 type routeStore struct {
+	healthAgg      *health.HealthAggregator
+	healthInterval time.Duration
+
 	// will be notified of updates
 	observers []RouteObserver
 
@@ -60,7 +66,11 @@ type routeStore struct {
 }
 
 // NewRouteStore instantiates a new store for route updates
-func NewRouteStore(getUpdatesPipeline func() <-chan *proto.ToDataplane, egressPodIP net.IP) *routeStore {
+const healthName = "datastore connection"
+
+func NewRouteStore(getUpdatesPipeline func() <-chan *proto.ToDataplane, egressPodIP net.IP, healthAgg *health.HealthAggregator, healthTimeout time.Duration) *routeStore {
+	healthAgg.RegisterReporter(healthName, &health.HealthReport{Ready: true}, healthTimeout)
+	healthAgg.Report(healthName, &health.HealthReport{Ready: false})
 	return &routeStore{
 		observers:                  make([]RouteObserver, 0),
 		RWMutex:                    sync.RWMutex{},
@@ -69,6 +79,8 @@ func NewRouteStore(getUpdatesPipeline func() <-chan *proto.ToDataplane, egressPo
 		gatewayIP:                  egressPodIP,
 		inSync:                     false,
 		getUpdatesPipeline:         getUpdatesPipeline,
+		healthAgg:                  healthAgg,
+		healthInterval:             healthTimeout / 10,
 	}
 }
 
@@ -114,13 +126,18 @@ func (s *routeStore) SyncForever(ctx context.Context) {
 	s.inSync = false
 	updates := s.getUpdatesPipeline()
 
+	healthTicker := time.NewTicker(s.healthInterval)
 	for {
 		select {
 		case <-ctx.Done():
 			return
+		case <-healthTicker.C:
+			if s.inSync {
+				s.healthAgg.Report(healthName, &health.HealthReport{Ready: true})
+			}
 		case update, ok := <-updates:
 			if !ok {
-				// if the updates pipeline closes, get a fresh pipline and start resyncing from scratch
+				// if the updates pipeline closes, get a fresh pipeline and start resyncing from scratch
 				log.Debug("updates channel closed by upstream, fetching new channel...")
 				updates = s.getUpdatesPipeline()
 				s.inSync = false
@@ -181,6 +198,9 @@ func (s *routeStore) SyncForever(ctx context.Context) {
 					s.maybeNotifyResync()
 				default:
 					log.Debugf("Unexpected update received: %+v", update)
+				}
+				if s.inSync {
+					s.healthAgg.Report(healthName, &health.HealthReport{Ready: true})
 				}
 			}
 		}

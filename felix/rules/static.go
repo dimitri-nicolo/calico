@@ -1018,6 +1018,14 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *Chain {
 			Action:  r.filterAllowAction,
 			Comment: []string{"Accept VXLAN UDP traffic from egress clients"},
 		})
+
+		// Auto-allow HTTP traffic to the egress gateways health ports.
+		rules = append(rules, Rule{
+			Match: Match().ProtocolNum(ProtoTCP).SrcAddrType(AddrTypeLocal, false).DestIPPortSet(
+				r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllEGWHealthPorts)),
+			Action:  r.filterAllowAction,
+			Comment: []string{"Accept egress gateway health port probe traffic"},
+		})
 	}
 
 	if ipVersion == 6 && r.VXLANEnabledV6 {

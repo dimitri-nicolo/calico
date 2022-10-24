@@ -3,6 +3,7 @@
 package v3
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"unicode/utf8"
@@ -24,6 +25,17 @@ func validateGlobalThreatFeedSpec(structLevel validator.StructLevel) {
 			"Content",
 			"",
 			reason(string(api.ThreatFeedContentDomainNameSet)+" does not support syncing with a GlobalNetworkSet"),
+			"",
+		)
+	}
+
+	if len(spec.Description) > api.MaxDescriptionLength {
+		message := fmt.Sprintf("Invalid maximum length of characters in description = %d as this should be <= %d", len(spec.Description), api.MaxDescriptionLength)
+		structLevel.ReportError(
+			reflect.ValueOf(spec.Description),
+			"Description",
+			"",
+			reason(message),
 			"",
 		)
 	}

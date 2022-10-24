@@ -68,7 +68,8 @@ func (c *connection) Sync() (proto.PolicySync_SyncClient, error) {
 	}
 
 	return client.Sync(c.ctx, &proto.SyncRequest{
-		SubscriptionType: "l3-routes",
+		SubscriptionType:         "l3-routes",
+		SupportsIPv6RouteUpdates: false,
 	})
 }
 
@@ -164,7 +165,7 @@ func connectAndSync(ctx context.Context, c *Client) {
 		default:
 			update, err := stream.Recv()
 			if err != nil {
-				log.WithError(err).Warnf("unexpected error during sync")
+				log.WithError(err).Warnf("Connection to calico-node failed (perhaps calico-node is being restarted?).")
 				c.healthy = false
 				// if the stream to Felix breaks, close the associated updates channel and restart the
 				// connection process

@@ -7,7 +7,9 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
+
 	"github.com/projectcalico/calico/felix/proto"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
 )
 
 // TestStoreWaitsTillInSync ensures no store conumers are notified of updates until the first in-sync msg of a connection is received
@@ -29,7 +31,9 @@ func TestStoreWaitsTillInSync(test *testing.T) {
 	mockUpdates = append(mockUpdates, update1, update2, update3)
 
 	// instantiate the store and a mock observer to notify (observer registers itself with the store when constructed)
-	store = NewRouteStore(newMockUpdatesPipeline, net.ParseIP("10.10.10.0"))
+	aggregator := health.NewHealthAggregator()
+	healthTimeout := 10 * time.Second
+	store = NewRouteStore(newMockUpdatesPipeline, net.ParseIP("10.10.10.0"), aggregator, healthTimeout)
 	observer := NewMockObserver(store)
 
 	ctx := context.Background()
@@ -78,7 +82,9 @@ func TestStoreResyncsAfterClosedConnection(test *testing.T) {
 	update2 := newRouteUpdate("10.0.0.1/0", "192.168.1.1", "foo.bar", proto.RouteType_REMOTE_WORKLOAD)
 
 	// instantiate the store and a mock observer to notify (observer registers itself with the store when constructed)
-	store = NewRouteStore(newMockUpdatesPipeline, net.ParseIP("10.10.10.0"))
+	aggregator := health.NewHealthAggregator()
+	healthTimeout := 10 * time.Second
+	store = NewRouteStore(newMockUpdatesPipeline, net.ParseIP("10.10.10.0"), aggregator, healthTimeout)
 	observer := NewMockObserver(store)
 
 	ctx := context.Background()

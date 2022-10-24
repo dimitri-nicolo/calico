@@ -206,6 +206,7 @@ func chainsForIfaces(ipVersion uint8,
 ) []*iptables.Chain {
 	const (
 		ProtoUDP          = 17
+		ProtoTCP          = 6
 		ProtoIPIP         = 4
 		VXLANPort         = 4789
 		EgressIPVXLANPort = 4790
@@ -357,7 +358,7 @@ func chainsForIfaces(ipVersion uint8,
 					DestIPSet("cali40all-hosts-net").
 					DestPorts(uint16(EgressIPVXLANPort)),
 				Action:  iptables.AcceptAction{},
-				Comment: []string{"Accept VXLAN UDP traffic for egressgateways"},
+				Comment: []string{"Accept VXLAN UDP traffic for egress gateways"},
 			})
 			outRules = append(outRules, iptables.Rule{
 				Match: iptables.Match().
@@ -365,7 +366,7 @@ func chainsForIfaces(ipVersion uint8,
 					DestIPSet("cali40all-tunnel-net").
 					DestPorts(uint16(EgressIPVXLANPort)),
 				Action:  iptables.AcceptAction{},
-				Comment: []string{"Accept VXLAN UDP traffic for egressgateways"},
+				Comment: []string{"Accept VXLAN UDP traffic for egress gateways"},
 			})
 		}
 
@@ -432,12 +433,16 @@ func chainsForIfaces(ipVersion uint8,
 		}
 
 		if tableKind == "normal" {
+			if !isEgressGateway {
+				outRules = append(outRules,
+					iptables.Rule{
+						Match:   iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+						Action:  iptables.NfqueueAction{QueueNum: 100},
+						Comment: []string{"Drop if no profiles matched"},
+					},
+				)
+			}
 			outRules = append(outRules, []iptables.Rule{
-				{
-					Match:   iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
-					Action:  iptables.NfqueueAction{QueueNum: 100},
-					Comment: []string{"Drop if no profiles matched"},
-				},
 				{
 					Match: iptables.Match(),
 					Action: iptables.NflogAction{
@@ -550,7 +555,15 @@ func chainsForIfaces(ipVersion uint8,
 					SourceIPSet("cali40all-hosts-net").
 					DestPorts(uint16(EgressIPVXLANPort)),
 				Action:  iptables.AcceptAction{},
-				Comment: []string{"Accept VXLAN UDP traffic for egressgateways"},
+				Comment: []string{"Accept VXLAN UDP traffic for egress gateways"},
+			})
+			inRules = append(inRules, iptables.Rule{
+				Match: iptables.Match().
+					ProtocolNum(ProtoTCP).
+					SourceIPSet("cali40all-hosts-net").
+					DestPorts(8080),
+				Action:  iptables.AcceptAction{},
+				Comment: []string{"Accept readiness probes for egress gateways"},
 			})
 			inRules = append(inRules, iptables.Rule{
 				Match: iptables.Match().
@@ -558,21 +571,33 @@ func chainsForIfaces(ipVersion uint8,
 					SourceIPSet("cali40all-tunnel-net").
 					DestPorts(uint16(EgressIPVXLANPort)),
 				Action:  iptables.AcceptAction{},
-				Comment: []string{"Accept VXLAN UDP traffic for egressgateways"},
+				Comment: []string{"Accept VXLAN UDP traffic for egress gateways"},
 			})
 			inRules = append(inRules, iptables.Rule{
-				Action:  iptables.DropAction{},
-				Comment: []string{"Drop any other traffic to egressgateways"},
+				Match: iptables.Match().
+					ProtocolNum(ProtoTCP).
+					SourceIPSet("cali40all-tunnel-net").
+					DestPorts(8080),
+				Action:  iptables.AcceptAction{},
+				Comment: []string{"Accept readiness probes for egress gateways"},
 			})
 		}
 
 		if tableKind == "normal" {
+			if !isEgressGateway {
+				inRules = append(inRules,
+					iptables.Rule{
+						Match:   iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
+						Action:  iptables.NfqueueAction{QueueNum: 100},
+						Comment: []string{"Drop if no profiles matched"},
+					},
+				)
+			}
+			dropComment := "Drop if no profiles matched"
+			if isEgressGateway {
+				dropComment = "Drop all other ingress traffic to egress gateway."
+			}
 			inRules = append(inRules, []iptables.Rule{
-				{
-					Match:   iptables.Match().MarkSingleBitSet(0x00001).NotMarkMatchesWithMask(0x400000, 0x400000),
-					Action:  iptables.NfqueueAction{QueueNum: 100},
-					Comment: []string{"Drop if no profiles matched"},
-				},
 				{
 					Match: iptables.Match(),
 					Action: iptables.NflogAction{
@@ -583,7 +608,7 @@ func chainsForIfaces(ipVersion uint8,
 				{
 					Match:   iptables.Match(),
 					Action:  iptables.DropAction{},
-					Comment: []string{"Drop if no profiles matched"},
+					Comment: []string{dropComment},
 				},
 			}...)
 		}
@@ -1802,14 +1827,15 @@ func endpointManagerTests(ipVersion uint8) func() {
 						epMgr.OnUpdate(&proto.WorkloadEndpointUpdate{
 							Id: &wlEPID1,
 							Endpoint: &proto.WorkloadEndpoint{
-								State:           "active",
-								Mac:             "01:02:03:04:05:06",
-								Name:            "cali12345-ab",
-								ProfileIds:      []string{},
-								Tiers:           tiers,
-								Ipv4Nets:        []string{"10.0.240.2/24"},
-								Ipv6Nets:        []string{"2001:db8:2::2/128"},
-								IsEgressGateway: true,
+								State:                   "active",
+								Mac:                     "01:02:03:04:05:06",
+								Name:                    "cali12345-ab",
+								ProfileIds:              []string{},
+								Tiers:                   tiers,
+								Ipv4Nets:                []string{"10.0.240.2/24"},
+								Ipv6Nets:                []string{"2001:db8:2::2/128"},
+								IsEgressGateway:         true,
+								EgressGatewayHealthPort: 8080,
 							},
 						})
 						err = epMgr.ResolveUpdateBatch()
@@ -1929,14 +1955,15 @@ func endpointManagerTests(ipVersion uint8) func() {
 							epMgr.OnUpdate(&proto.WorkloadEndpointUpdate{
 								Id: &wlEPID1,
 								Endpoint: &proto.WorkloadEndpoint{
-									State:           "active",
-									Mac:             "01:02:03:04:05:06",
-									Name:            "cali12345-ab",
-									ProfileIds:      []string{},
-									Tiers:           tiers,
-									Ipv4Nets:        []string{"10.0.240.2/24"},
-									Ipv6Nets:        []string{"2001:db8:2::2/128"},
-									IsEgressGateway: true,
+									State:                   "active",
+									Mac:                     "01:02:03:04:05:06",
+									Name:                    "cali12345-ab",
+									ProfileIds:              []string{},
+									Tiers:                   tiers,
+									Ipv4Nets:                []string{"10.0.240.2/24"},
+									Ipv6Nets:                []string{"2001:db8:2::2/128"},
+									IsEgressGateway:         true,
+									EgressGatewayHealthPort: 8080,
 								},
 							})
 							err = epMgr.ResolveUpdateBatch()

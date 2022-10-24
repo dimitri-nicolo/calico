@@ -5444,6 +5444,19 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							Format:      "int32",
 						},
 					},
+					"egressGatewayPollInterval": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EgressGatewayPollInterval is the interval at which Felix will poll remote egress gateways to check their health.  Only Egress Gateways with a named \"health\" port will be polled in this way.  Egress Gateways that fail the health check will be taken our of use as if they have been deleted.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"egressGatewayPollFailureCount": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EgressGatewayPollFailureCount is the minimum number of poll failures before a remote Egress Gateway is considered to have failed.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 					"routeSyncDisabled": {
 						SchemaProps: spec.SchemaProps{
 							Description: "RouteSyncDisabled will disable all operations performed on the route table. Set to true to run in network-policy mode only.",
@@ -6756,6 +6769,27 @@ func schema_pkg_apis_projectcalico_v3_GlobalThreatFeedSpec(ref common.ReferenceC
 					"content": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Content describes the kind of data the data feed provides.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"mode": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Determines whether the Global Threat Feed is Enabled or Disabled.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"description": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Human-readable description of the template.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"feedType": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Distinguishes between Builtin Global Threat Feeds and Custom feed types.",
 							Type:        []string{"string"},
 							Format:      "",
 						},

@@ -775,12 +775,20 @@ func (idx *SelectorAndNamedPortIndex) calculateEndpointContribution(id interface
 			for _, addr := range d.nets {
 				if ipSetData.isEgressSelector {
 					if addr.Version() == 4 {
-						contrib = append(contrib, IPSetMember{
+						member := IPSetMember{
 							CIDR:                       addr,
 							IsEgressGateway:            true,
 							DeletionTimestamp:          d.deletionTimestamp,
 							DeletionGracePeriodSeconds: d.deletionGracePeriodSeconds,
-						})
+						}
+						// For egress gateways, we include the health port, if available.  The dataplane uses this
+						// to do health probes of remote EGWs.
+						for _, p := range d.ports {
+							if p.Name == "health" {
+								member.PortNumber = p.Port
+							}
+						}
+						contrib = append(contrib, member)
 					} else {
 						// For egress IP, only IPv4 addresses are useful.
 					}

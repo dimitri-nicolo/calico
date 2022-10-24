@@ -34,14 +34,19 @@ var _ = DescribeTable("GlobalThreatFeed Validator",
 	Entry("allow GlobalThreatFeed with valid K8s name",
 		&api.GlobalThreatFeed{
 			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
-			Spec:       api.GlobalThreatFeedSpec{Content: api.ThreatFeedContentIPset},
+			Spec: api.GlobalThreatFeedSpec{
+				Content:     api.ThreatFeedContentIPset,
+				Description: "test",
+			},
 		},
 		true,
 	),
 	Entry("allow GlobalThreatFeed with missing Content",
 		&api.GlobalThreatFeed{
 			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
-			Spec:       api.GlobalThreatFeedSpec{},
+			Spec: api.GlobalThreatFeedSpec{
+				Description: "test",
+			},
 		},
 		true,
 	),
@@ -55,7 +60,10 @@ var _ = DescribeTable("GlobalThreatFeed Validator",
 	Entry("allow GlobalThreatFeed with Content DomainNameSet",
 		&api.GlobalThreatFeed{
 			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
-			Spec:       api.GlobalThreatFeedSpec{Content: api.ThreatFeedContentDomainNameSet},
+			Spec: api.GlobalThreatFeedSpec{
+				Content:     api.ThreatFeedContentDomainNameSet,
+				Description: "test",
+			},
 		},
 		true,
 	),
@@ -63,13 +71,32 @@ var _ = DescribeTable("GlobalThreatFeed Validator",
 		&api.GlobalThreatFeed{
 			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
 			Spec: api.GlobalThreatFeedSpec{
-				Content: api.ThreatFeedContentIPset,
+				Content:     api.ThreatFeedContentIPset,
+				Description: "test",
 				GlobalNetworkSet: &api.GlobalNetworkSetSync{
 					Labels: map[string]string{"foo": "bar", "biz": "baz"},
 				},
 			},
 		},
 		true,
+	),
+	Entry("allow GlobalThreatFeed with valid max length description",
+		&api.GlobalThreatFeed{
+			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+			Spec: api.GlobalThreatFeedSpec{
+				Description: "this global threat feed description is valid because the maximum number of characters is acceptable repeat this global threat feed description is valid because the maximum number of characters is acceptable repeat again and again and again and again finish",
+			},
+		},
+		true,
+	),
+	Entry("disallow GlobalThreatFeed with invalid max length description",
+		&api.GlobalThreatFeed{
+			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
+			Spec: api.GlobalThreatFeedSpec{
+				Description: "this global threat feed description is valid because the maximum number of characters is unacceptable repeat this global threat feed description is valid because the maximum number of characters is acceptable repeat again and again and again and again complete",
+			},
+		},
+		false,
 	),
 	Entry("disallow GlobalThreatFeed with invalid gns labels",
 		&api.GlobalThreatFeed{
@@ -99,7 +126,8 @@ var _ = DescribeTable("GlobalThreatFeed Validator",
 		&api.GlobalThreatFeed{
 			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
 			Spec: api.GlobalThreatFeedSpec{
-				Content: api.ThreatFeedContentIPset,
+				Content:     api.ThreatFeedContentIPset,
+				Description: "test",
 				GlobalNetworkSet: &api.GlobalNetworkSetSync{
 					Labels: map[string]string{"foo": "bar", "biz": "baz"},
 				},
@@ -120,7 +148,8 @@ var _ = DescribeTable("GlobalThreatFeed Validator",
 		&api.GlobalThreatFeed{
 			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
 			Spec: api.GlobalThreatFeedSpec{
-				Content: api.ThreatFeedContentIPset,
+				Content:     api.ThreatFeedContentIPset,
+				Description: "test",
 				GlobalNetworkSet: &api.GlobalNetworkSetSync{
 					Labels: map[string]string{"foo": "bar", "biz": "baz"},
 				},
@@ -225,7 +254,8 @@ var _ = DescribeTable("GlobalThreatFeed Validator",
 		&api.GlobalThreatFeed{
 			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
 			Spec: api.GlobalThreatFeedSpec{
-				Content: api.ThreatFeedContentIPset,
+				Content:     api.ThreatFeedContentIPset,
+				Description: "test",
 				GlobalNetworkSet: &api.GlobalNetworkSetSync{
 					Labels: map[string]string{"foo": "bar", "biz": "baz"},
 				},
@@ -470,7 +500,8 @@ var _ = DescribeTable("GlobalThreatFeed Validator",
 		&api.GlobalThreatFeed{
 			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
 			Spec: api.GlobalThreatFeedSpec{
-				Content: api.ThreatFeedContentIPset,
+				Content:     api.ThreatFeedContentIPset,
+				Description: "test",
 				GlobalNetworkSet: &api.GlobalNetworkSetSync{
 					Labels: map[string]string{"foo": "bar", "biz": "baz"},
 				},
@@ -542,7 +573,8 @@ var _ = DescribeTable("GlobalThreatFeed Validator",
 		&api.GlobalThreatFeed{
 			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
 			Spec: api.GlobalThreatFeedSpec{
-				Content: api.ThreatFeedContentIPset,
+				Content:     api.ThreatFeedContentIPset,
+				Description: "test",
 				GlobalNetworkSet: &api.GlobalNetworkSetSync{
 					Labels: map[string]string{"foo": "bar", "biz": "baz"},
 				},
@@ -661,7 +693,8 @@ var _ = DescribeTable("GlobalThreatFeed Validator",
 		&api.GlobalThreatFeed{
 			ObjectMeta: v1.ObjectMeta{Name: "juve"},
 			Spec: api.GlobalThreatFeedSpec{
-				Content: api.ThreatFeedContentIPset,
+				Content:     api.ThreatFeedContentIPset,
+				Description: "test",
 				GlobalNetworkSet: &api.GlobalNetworkSetSync{
 					Labels: map[string]string{"foo": "bar", "biz": "baz"},
 				},
@@ -719,7 +752,8 @@ var _ = DescribeTable("GlobalThreatFeed Validator",
 		&api.GlobalThreatFeed{
 			ObjectMeta: v1.ObjectMeta{Name: "sandwiches"},
 			Spec: api.GlobalThreatFeedSpec{
-				Content: api.ThreatFeedContentIPset,
+				Content:     api.ThreatFeedContentIPset,
+				Description: "test",
 				GlobalNetworkSet: &api.GlobalNetworkSetSync{
 					Labels: map[string]string{"foo": "bar", "biz": "baz"},
 				},
@@ -790,6 +824,7 @@ var _ = DescribeTable("GlobalThreatFeed Validator",
 		&api.GlobalThreatFeed{
 			ObjectMeta: v1.ObjectMeta{Name: "juve"},
 			Spec: api.GlobalThreatFeedSpec{
+				Description: "test",
 				Pull: &api.Pull{
 					HTTP: &api.HTTPPull{
 						URL: "http://tigera.io/threats",

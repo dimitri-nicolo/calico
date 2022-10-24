@@ -53,6 +53,9 @@ type EndpointEgressData struct {
 
 	// The number of egress gateway pods this workload should use.
 	MaxNextHops int
+
+	// Health port of the EGW or 0 if EGW has none.
+	HealthPort uint16
 }
 
 // EventSequencer buffers and coalesces updates from the calculation graph then flushes them
@@ -481,6 +484,7 @@ func (buf *EventSequencer) flushEndpointTierUpdates() {
 			protoEp := ModelWorkloadEndpointToProto(wlep, tiers)
 			protoEp.EgressIpSetId = buf.pendingEndpointEgressUpdates[key].EgressIPSetID
 			protoEp.IsEgressGateway = buf.pendingEndpointEgressUpdates[key].IsEgressGateway
+			protoEp.EgressGatewayHealthPort = int32(buf.pendingEndpointEgressUpdates[key].HealthPort)
 			protoEp.EgressMaxNextHops = int32(buf.pendingEndpointEgressUpdates[key].MaxNextHops)
 			if protoEp.IsEgressGateway {
 				// To break gatewaying loops, we do not allow a workload to route
@@ -769,25 +773,7 @@ func (buf *EventSequencer) flushAddedIPSets() {
 
 func memberToProto(member labelindex.IPSetMember) string {
 	if member.IsEgressGateway {
-		// The member strings for egress gateway need to contain the cidr, the maintenace started timestamp, and the
-		// maintenance finished timestamps for each member, because the egress gateway manager needs to detect when
-		// an egress gateway pod is terminating.
-		maintenanceFinished := member.DeletionTimestamp
-		maintenanceStarted := maintenanceFinished.Add(-time.Second * time.Duration(member.DeletionGracePeriodSeconds))
-
-		startBytes, err := maintenanceStarted.MarshalText()
-		if err != nil {
-			log.WithField("member", member).Warnf("unable to marshal timestamp to text, defaulting to empty str: %s", maintenanceStarted)
-			return fmt.Sprintf("%s,,", member.CIDR.String())
-		}
-
-		finishBytes, err := maintenanceFinished.MarshalText()
-		if err != nil {
-			log.WithField("member", member).Warnf("unable to marshal timestamp to text, defaulting to empty str: %s", maintenanceFinished)
-			return fmt.Sprintf("%s,,", member.CIDR.String())
-		}
-
-		return fmt.Sprintf("%s,%s,%s", member.CIDR.String(), strings.ToLower(string(startBytes)), strings.ToLower(string(finishBytes)))
+		return EgressIPSetMemberToProto(member)
 	}
 
 	switch member.Protocol {
@@ -808,6 +794,33 @@ func memberToProto(member labelindex.IPSetMember) string {
 	}
 	log.WithField("member", member).Panic("Unknown IP set member type")
 	return ""
+}
+
+func EgressIPSetMemberToProto(member labelindex.IPSetMember) string {
+	// The member strings for egress gateway need to contain the cidr, the maintenance started timestamp, and the
+	// maintenance finished timestamps for each member, because the egress gateway manager needs to detect when
+	// an egress gateway pod is terminating.
+	maintenanceFinished := member.DeletionTimestamp
+	maintenanceStarted := maintenanceFinished.Add(-time.Second * time.Duration(member.DeletionGracePeriodSeconds))
+
+	startBytes, err := maintenanceStarted.MarshalText()
+	if err != nil {
+		log.WithField("member", member).Warnf("unable to marshal timestamp to text, defaulting to empty str: %s", maintenanceStarted)
+		return fmt.Sprintf("%s,,", member.CIDR.String())
+	}
+
+	finishBytes, err := maintenanceFinished.MarshalText()
+	if err != nil {
+		log.WithField("member", member).Warnf("unable to marshal timestamp to text, defaulting to empty str: %s", maintenanceFinished)
+		return fmt.Sprintf("%s,,", member.CIDR.String())
+	}
+
+	return fmt.Sprintf("%s,%s,%s,%d",
+		member.CIDR.String(),
+		strings.ToLower(string(startBytes)),
+		strings.ToLower(string(finishBytes)),
+		member.PortNumber,
+	)
 }
 
 func (buf *EventSequencer) OnPacketCaptureActive(key model.ResourceKey, endpoint model.WorkloadEndpointKey, spec PacketCaptureSpecification) {

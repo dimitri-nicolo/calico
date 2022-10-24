@@ -1470,10 +1470,19 @@ func testGlobalAlertTemplateClient(client calicoclient.Interface, name string) e
 // TestGlobalThreatFeedClient exercises the GlobalThreatFeed client.
 func TestGlobalThreatFeedClient(t *testing.T) {
 	const name = "test-globalthreatfeed"
+	var mode *v3.ThreatFeedMode
+	mode = new(v3.ThreatFeedMode)
+	*mode = v3.ThreatFeedModeEnabled
+
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &v3.GlobalThreatFeed{}
+				return &v3.GlobalThreatFeed{
+					Spec: v3.GlobalThreatFeedSpec{
+						Mode:        mode,
+						Description: "test",
+					},
+				}
 			}, true)
 			defer shutdownServer()
 			if err := testGlobalThreatFeedClient(client, name); err != nil {
@@ -1557,9 +1566,17 @@ func testIPReservationClient(client calicoclient.Interface, name string) error {
 }
 
 func testGlobalThreatFeedClient(client calicoclient.Interface, name string) error {
+	var mode *v3.ThreatFeedMode
+	mode = new(v3.ThreatFeedMode)
+	*mode = v3.ThreatFeedModeEnabled
+
 	globalThreatFeedClient := client.ProjectcalicoV3().GlobalThreatFeeds()
 	globalThreatFeed := &v3.GlobalThreatFeed{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: calico.GlobalThreatFeedSpec{
+			Mode:        mode,
+			Description: "test",
+		},
 		Status: calico.GlobalThreatFeedStatus{
 			LastSuccessfulSync:   &metav1.Time{Time: time.Now()},
 			LastSuccessfulSearch: &metav1.Time{Time: time.Now()},
@@ -1612,6 +1629,8 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 
 	globalThreatFeedUpdate := globalThreatFeedServer.DeepCopy()
 	globalThreatFeedUpdate.Spec.Content = "IPSet"
+	globalThreatFeedUpdate.Spec.Mode = mode
+	globalThreatFeedUpdate.Spec.Description = "test"
 	globalThreatFeedUpdate.Status.LastSuccessfulSync = &v1.Time{Time: time.Now()}
 	globalThreatFeedServer, err = globalThreatFeedClient.Update(ctx, globalThreatFeedUpdate, metav1.UpdateOptions{})
 	if err != nil {
@@ -1679,6 +1698,10 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 	for i := 0; i < 2; i++ {
 		gtf := &v3.GlobalThreatFeed{
 			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("gtf%d", i)},
+			Spec: v3.GlobalThreatFeedSpec{
+				Mode:        mode,
+				Description: "test",
+			},
 		}
 		_, err = globalThreatFeedClient.Create(ctx, gtf, metav1.CreateOptions{})
 		if err != nil {
@@ -1691,6 +1714,15 @@ func testGlobalThreatFeedClient(client calicoclient.Interface, name string) erro
 	}
 	if len(events) != 2 {
 		return fmt.Errorf("expected 2 watch events got %d", len(events))
+	}
+
+	// Delete two GlobalThreatFeeds
+	for i := 0; i < 2; i++ {
+		gtf := fmt.Sprintf("gtf%d", i)
+		err = globalThreatFeedClient.Delete(ctx, gtf, metav1.DeleteOptions{})
+		if err != nil {
+			return fmt.Errorf("error creating the globalThreatFeed '%v' (%v)", gtf, err)
+		}
 	}
 
 	return nil

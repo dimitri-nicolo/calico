@@ -55,7 +55,7 @@ var _ = Describe("Model Storage Endpoint test", func() {
 		req, _ := http.NewRequest("POST", "/clusters/cluster/models/dynamic/flow/port_scan", strings.NewReader(testBase64FileString))
 		req.Header.Add("Content-Type", "text/plain")
 		// fails the content length validation check
-		req.ContentLength = 15730001
+		req.ContentLength = 100000001
 		modelStorageHandler.HandleModelStorage(w, req)
 
 		Expect(w.Result().StatusCode).To(BeNumerically(">=", 400))
