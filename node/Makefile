@@ -751,11 +751,11 @@ sub-image-tar-windows-%:
 	make -C ../calico build
 	cp ../calico/_site/scripts/install-calico-windows.ps1 $(WINDOWS_DIST_STAGE)
 	# copy calico install zip file to staging dir
-	cp dist/tigera-calico-windows-$(GIT_VERSION).zip $(WINDOWS_DIST_STAGE)/calico-windows.zip
+	cp dist/tigera-calico-windows-$(NODE_GIT_VERSION).zip $(WINDOWS_DIST_STAGE)/calico-windows.zip
 	cd $(WINDOWS_DIST_STAGE) && \
 	docker buildx build \
 		--platform windows/amd64 \
-		--output=type=docker,dest=$(CURDIR)/$(WINDOWS_DIST)/image-$(GIT_VERSION)-$*.tar \
+		--output=type=docker,dest=$(CURDIR)/$(WINDOWS_DIST)/image-$(NODE_GIT_VERSION)-$*.tar \
 		--pull \
 		--build-arg=WINDOWS_VERSION=$* .
 
@@ -765,7 +765,7 @@ sub-image-tar-windows-upgrade-%:
 	cd $(WINDOWS_UPGRADE_ROOT) && \
 		docker buildx build \
 			--platform windows/amd64 \
-			--output=type=docker,dest=$(CURDIR)/$(WINDOWS_UPGRADE_DIST)/image-$(GIT_VERSION)-$*.tar \
+			--output=type=docker,dest=$(CURDIR)/$(WINDOWS_UPGRADE_DIST)/image-$(NODE_GIT_VERSION)-$*.tar \
 			--pull \
 			--no-cache \
 			--build-arg=WINDOWS_VERSION=$* .
@@ -781,7 +781,7 @@ cd-windows-all:
 	$(MAKE) cd-windows-calico-windows WINDOWS_IMAGE_TAR_ROOT=$(WINDOWS_DIST)
 	$(MAKE) cd-windows-calico-windows-upgrade WINDOWS_IMAGE_TAR_ROOT=$(WINDOWS_UPGRADE_DIST)
 	if [ "$(DEV_REGISTRIES)" = "gcr.io/unique-caldron-775/cnx/tigera" ]; then \
-		dev_tag="gcr.io/unique-caldron-775/cnx/tigera/calico-windows-upgrade:$(GIT_VERSION)"; \
+		dev_tag="gcr.io/unique-caldron-775/cnx/tigera/calico-windows-upgrade:$(NODE_GIT_VERSION)"; \
 		dev_rel_tag="gcr.io/unique-caldron-775/cnx/tigera/calico-windows-upgrade:$(NODE_RELEASE_VERSION)"; \
 		$(CRANE_BINDMOUNT) cp $${dev_tag} $${dev_rel_tag}$(double_quote) & \
 	fi;
@@ -813,10 +813,10 @@ endif
 	for registry in $(DEV_REGISTRIES); do \
 		echo Pushing Windows images to $${registry}; \
 		all_images=""; \
-		manifest_image="$${registry}/$*:$(GIT_VERSION)"; \
+		manifest_image="$${registry}/$*:$(NODE_GIT_VERSION)"; \
 		for win_ver in $(WINDOWS_VERSIONS); do \
-			image_tar="$(WINDOWS_IMAGE_TAR_ROOT)/image-$(GIT_VERSION)-$${win_ver}.tar"; \
-			image="$${registry}/$*:$(GIT_VERSION)-windows-$${win_ver}"; \
+			image_tar="$(WINDOWS_IMAGE_TAR_ROOT)/image-$(NODE_GIT_VERSION)-$${win_ver}.tar"; \
+			image="$${registry}/$*:$(NODE_GIT_VERSION)-windows-$${win_ver}"; \
 			echo Pushing image $${image} ...; \
 			$(CRANE_BINDMOUNT) push $${image_tar} $${image}$(double_quote) & \
 			all_images="$${all_images} $${image}"; \
@@ -825,7 +825,7 @@ endif
 		$(DOCKER_MANIFEST) create --amend $${manifest_image} $${all_images}; \
 		for win_ver in $(WINDOWS_VERSIONS); do \
 			version=$$(docker manifest inspect mcr.microsoft.com/windows/nanoserver:$${win_ver} | grep "os.version" | head -n 1 | awk -F\" '{print $$4}'); \
-			image="$${registry}/$*:$(GIT_VERSION)-windows-$${win_ver}"; \
+			image="$${registry}/$*:$(NODE_GIT_VERSION)-windows-$${win_ver}"; \
 			$(DOCKER_MANIFEST) annotate --os windows --arch amd64 --os-version $${version} $${manifest_image} $${image}; \
 		done; \
 		$(DOCKER_MANIFEST) push --purge $${manifest_image}; \
