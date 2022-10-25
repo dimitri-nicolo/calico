@@ -4,7 +4,7 @@ order: 4
 section:  
 - title: Manager UI tutorial
   path: /visibility/get-started-cem
-- title: Alerts
+- title: Manage alerts
   path: /visibility/alerts
 - title: Kibana dashboards and logs
   path: /visibility/kibana  
