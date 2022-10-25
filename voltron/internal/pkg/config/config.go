@@ -69,6 +69,10 @@ type Config struct {
 	QueryserverEndpoint          string `default:"https://tigera-api.tigera-system.svc:8080" split_words:"true"`
 	QueryserverCABundlePath      string `default:"/etc/pki/tls/certs/tigera-ca-bundle.crt" split_words:"true"`
 
+	EnableCalicoCloudRbacApi       bool   `split_words:"true"`
+	CalicoCloudRbacApiCABundlePath string `split_words:"true"`
+	CalicoCloudRbacApiEndpoint     string `split_words:"true"`
+
 	// Dex settings
 	DexEnabled      bool   `default:"false" split_words:"true"`
 	DexURL          string `default:"https://tigera-dex.tigera-dex.svc.cluster.local:5556/" split_words:"true"`
