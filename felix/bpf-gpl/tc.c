@@ -201,7 +201,7 @@ static CALI_BPF_INLINE int pre_policy_processing(struct cali_tc_ctx *ctx)
 	/* Now we've got as far as the UDP header, check if this is one of our VXLAN packets, which we
 	 * use to forward traffic for node ports. */
 	if (dnat_should_decap() /* Compile time: is this a BPF program that should decap packets? */ &&
-			is_vxlan_tunnel(ctx->ip_header) /* Is this a VXLAN packet? */ ) {
+			is_vxlan_tunnel(ctx->ip_header, VXLAN_PORT) /* Is this a VXLAN packet? */ ) {
 		/* Decap it; vxlan_attempt_decap will revalidate the packet if needed. */
 		switch (vxlan_attempt_decap(ctx)) {
 		case -1:
@@ -426,6 +426,37 @@ syn_force_policy:
 		goto skip_policy;
 	}
 
+	// Auto allow VXLAN packets to egress gateways
+	if (EGRESS_IP_ENABLED && (CALI_F_FROM_HOST) && !skb_refresh_validate_ptrs(ctx, UDP_SIZE) &&
+			cali_rt_flags_local_host(cali_rt_lookup_flags(ctx->state->ip_src)) &&
+			is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
+		// Auto allow VXLAN packets from egress gateway clients
+		CALI_DEBUG("Allow VXLAN packet to Egress Gateways\n");
+		COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
+		goto skip_policy;
+	}
+
+	// Auto-allow VXLAN packets from/to egress gateway pod
+	if (EGRESS_GATEWAY && !skb_refresh_validate_ptrs(ctx, UDP_SIZE) && CALI_F_WEP) {
+		__be32 ip_addr = ctx->state->ip_src;
+		if (CALI_F_FROM_WEP) {
+			ip_addr = ctx->state->ip_dst;
+		}
+		if ((rt_addr_is_remote_host(ip_addr) 
+			|| rt_addr_is_remote_tunneled_host(ip_addr)) && 
+			is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
+			COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
+			if (CALI_F_FROM_WEP) {
+				CALI_DEBUG("Allow VXLAN packet from EGW pod\n");
+			} else {
+				CALI_DEBUG("Allow VXLAN packet to EGW pod\n");
+			}
+			goto skip_policy;
+		} else if (CALI_F_TO_WEP) {
+			goto deny;
+		}
+	}
+
 	if (CALI_F_FROM_WEP && !EGRESS_GATEWAY) {
 		/* Do RPF check since it's our responsibility to police that.  Skip this
 		 * on egress from an egress gateway, because the whole point of egress
@@ -447,14 +478,17 @@ syn_force_policy:
 			}
 		}
 
-		// Check whether the workload needs outgoing NAT to this address.
-		if (r->flags & CALI_RT_NAT_OUT) {
+		// Check whether the workload needs outgoing NAT to this address, except from an egress gateway
+		// client. This is because, packets from egress clients are destined outside the cluster and if
+		// the packet gets SNATed, the return traffic is not VXLAN encapsulated.
+		if (!EGRESS_CLIENT && (r->flags & CALI_RT_NAT_OUT)) {
 			if (!(cali_rt_lookup_flags(ctx->state->post_nat_ip_dst) & CALI_RT_IN_POOL)) {
 				CALI_DEBUG("Source is in NAT-outgoing pool "
 					   "but dest is not, need to SNAT.\n");
 				ctx->state->flags |= CALI_ST_NAT_OUTGOING;
 			}
 		}
+		
 		/* If 3rd party CNI is used and dest is outside cluster. See commit fc711b192f for details. */
 		if (!(r->flags & CALI_RT_IN_POOL)) {
 			CALI_DEBUG("Source %x not in IP pool\n", bpf_ntohl(ctx->state->ip_src));

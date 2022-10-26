@@ -259,15 +259,8 @@ skip_fib:
 			ctx->fwd.mark |= EXT_TO_SVC_MARK;
 		}
 		if (state->ct_result.flags & CALI_CT_FLAG_EGRESS_GW) {
-			if ((ct_result_rc(state->ct_result.rc) == CALI_CT_NEW) ||
-			    (state->ct_result.ifindex_created == ctx->skb->ifindex)) {
-				// This is an egress gateway flow on the client node,
-				// we're in the outbound direction, and we already
-				// arranged above to drop to the IP stack.  Also now set
-				// the egress mark bit.
-				CALI_DEBUG("Traffic is leaving cluster via egress gateway\n");
-				ctx->fwd.mark |= CALI_SKB_MARK_EGRESS;
-			}
+			CALI_DEBUG("Traffic is an egress gateway flow\n");
+			ctx->fwd.mark |= CALI_SKB_MARK_EGRESS;
 		}
 
 		if (CALI_F_NAT_IF) {

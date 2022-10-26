@@ -47,6 +47,10 @@ const (
 	DroppedFailedDecap
 	DroppedUnauthSource
 	DroppedUnknownRoute
+	AcceptedByEgressGW
+	// Add counters above this
+	AcceptedByXDP
+	WEPNotReady
 )
 
 type Description struct {
@@ -124,6 +128,10 @@ var descriptions DescList = DescList{
 	{
 		Counter:  DroppedUnknownRoute,
 		Category: "Dropped", Caption: "packets with unknown route",
+	},
+	{
+		Counter:  AcceptedByEgressGW,
+		Category: "Accepted", Caption: "by Egress gateways",
 	},
 }
 

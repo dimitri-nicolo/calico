@@ -145,12 +145,12 @@ static CALI_BPF_INLINE int vxlan_v4_decap(struct __sk_buff *skb)
 	return ret;
 }
 
-static CALI_BPF_INLINE int is_vxlan_tunnel(struct iphdr *ip)
+static CALI_BPF_INLINE int is_vxlan_tunnel(struct iphdr *ip, short vxlanport)
 {
 	struct udphdr *udp = (struct udphdr *)(ip +1);
 
 	return ip->protocol == IPPROTO_UDP &&
-		udp->dest == bpf_htons(VXLAN_PORT);
+		udp->dest == bpf_htons(vxlanport);
 }
 
 static CALI_BPF_INLINE bool vxlan_size_ok(struct cali_tc_ctx *ctx)

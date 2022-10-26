@@ -269,6 +269,7 @@ type Config struct {
 
 	EgressIPEnabled               bool
 	EgressIPRoutingRulePriority   int
+	EgressIPVXLANPort             int
 	EgressGatewayPollInterval     time.Duration
 	EgressGatewayPollFailureCount int
 
