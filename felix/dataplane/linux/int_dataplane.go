@@ -673,44 +673,6 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		}
 	}
 
-	if config.EgressIPEnabled {
-		// Allocate all remaining tables to the egress manager.
-		// This assumes no remaining modules need to reserve table indices.
-		log.Info("Egress IP support enabled, creating egress IP manager")
-		egressTablesIndices := config.RouteTableManager.GrabAllRemainingIndices()
-
-		egressStatusCallback := func(namespace, name string, addr ip.Addr, maintenanceStarted, maintenanceFinished time.Time) error {
-			dp.fromDataplane <- &proto.EgressPodStatusUpdate{
-				Namespace:           namespace,
-				Name:                name,
-				Addr:                addr.String(),
-				MaintenanceStarted:  proto.ConvertTime(maintenanceStarted),
-				MaintenanceFinished: proto.ConvertTime(maintenanceFinished),
-			}
-			return nil
-		}
-		dp.egwHealthReportC = make(chan EGWHealthReport, 100)
-		dp.egressIPManager = newEgressIPManager(
-			"egress.calico",
-			egressTablesIndices,
-			config,
-			dp.loopSummarizer,
-			egressStatusCallback,
-			config.HealthAggregator,
-			dp.egwHealthReportC,
-			ipSetsV4,
-		)
-		dp.RegisterManager(dp.egressIPManager)
-	} else {
-		// If Egress ip is not enabled, check to see if there is a VXLAN device and delete it if there is.
-		log.Info("Checking if we need to clean up the egress VXLAN device")
-		if link, err := netlink.LinkByName("egress.calico"); err != nil && err != syscall.ENODEV {
-			log.WithError(err).Warnf("Failed to query egress VXLAN device")
-		} else if err = netlink.LinkDel(link); err != nil {
-			log.WithError(err).Error("Failed to delete unwanted egress VXLAN device")
-		}
-	}
-
 	dp.endpointStatusCombiner = newEndpointStatusCombiner(dp.fromDataplane, config.IPv6Enabled)
 	dp.domainInfoStore = common.NewDomainInfoStore(&common.DnsConfig{
 		Collector:             config.Collector,
@@ -969,6 +931,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	)
 	dp.RegisterManager(tproxyMgr)
 
+	var bpfIPSetsV4 *bpfipsets.BPFIPSets
 	if config.BPFEnabled {
 		log.Info("BPF enabled, starting BPF endpoint manager and map manager.")
 		err := bpfmap.CreateBPFMaps(bpfMapContext)
@@ -980,14 +943,18 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		// metadata name is set whereas TC doesn't set that field.
 		ipSetIDAllocator := idalloc.New()
 		ipSetIDAllocator.ReserveWellKnownID(bpfipsets.TrustedDNSServersName, bpfipsets.TrustedDNSServersID)
-		ipSetsV4 := bpfipsets.NewBPFIPSets(
+		if config.EgressIPEnabled {
+			log.Infof("Sridhar %s %d", bpfipsets.EgressGWHealthPortsName, bpfipsets.EgressGWHealthPortsID)
+			ipSetIDAllocator.ReserveWellKnownID(bpfipsets.EgressGWHealthPortsName, bpfipsets.EgressGWHealthPortsID)
+		}
+		bpfIPSetsV4 = bpfipsets.NewBPFIPSets(
 			ipSetsConfigV4,
 			ipSetIDAllocator,
 			bpfMapContext.IpsetsMap,
 			dp.loopSummarizer,
 		)
-		dp.ipSets = append(dp.ipSets, ipSetsV4)
-		ipsetsManager.AddDataplane(ipSetsV4)
+		dp.ipSets = append(dp.ipSets, bpfIPSetsV4)
+		ipsetsManager.AddDataplane(bpfIPSetsV4)
 		bpfRTMgr := newBPFRouteManager(&config, bpfMapContext, dp.loopSummarizer)
 		dp.RegisterManager(bpfRTMgr)
 
@@ -997,7 +964,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			trustedDNSServers = append(trustedDNSServers,
 				fmt.Sprintf("%v,udp:%v", serverPort.IP, serverPort.Port))
 		}
-		ipSetsV4.AddOrReplaceIPSet(
+		bpfIPSetsV4.AddOrReplaceIPSet(
 			ipsets.IPSetMetadata{SetID: bpfipsets.TrustedDNSServersName, Type: ipsets.IPSetTypeHashIPPort},
 			trustedDNSServers,
 		)
@@ -1113,6 +1080,45 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 
 		conntrackScanner.Start()
 		log.Info("conntrackScanner started")
+	}
+
+	if config.EgressIPEnabled {
+		// Allocate all remaining tables to the egress manager.
+		// This assumes no remaining modules need to reserve table indices.
+		log.Info("Egress IP support enabled, creating egress IP manager")
+		egressTablesIndices := config.RouteTableManager.GrabAllRemainingIndices()
+
+		egressStatusCallback := func(namespace, name string, addr ip.Addr, maintenanceStarted, maintenanceFinished time.Time) error {
+			dp.fromDataplane <- &proto.EgressPodStatusUpdate{
+				Namespace:           namespace,
+				Name:                name,
+				Addr:                addr.String(),
+				MaintenanceStarted:  proto.ConvertTime(maintenanceStarted),
+				MaintenanceFinished: proto.ConvertTime(maintenanceFinished),
+			}
+			return nil
+		}
+		dp.egwHealthReportC = make(chan EGWHealthReport, 100)
+		dp.egressIPManager = newEgressIPManager(
+			"egress.calico",
+			egressTablesIndices,
+			config,
+			dp.loopSummarizer,
+			egressStatusCallback,
+			config.HealthAggregator,
+			dp.egwHealthReportC,
+			ipSetsV4,
+			bpfIPSetsV4,
+		)
+		dp.RegisterManager(dp.egressIPManager)
+	} else {
+		// If Egress ip is not enabled, check to see if there is a VXLAN device and delete it if there is.
+		log.Info("Checking if we need to clean up the egress VXLAN device")
+		if link, err := netlink.LinkByName("egress.calico"); err != nil && err != syscall.ENODEV {
+			log.WithError(err).Warnf("Failed to query egress VXLAN device")
+		} else if err = netlink.LinkDel(link); err != nil {
+			log.WithError(err).Error("Failed to delete unwanted egress VXLAN device")
+		}
 	}
 
 	var routeTableV4 routetable.RouteTableInterface

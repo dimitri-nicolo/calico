@@ -19,6 +19,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	bpfipsets "github.com/projectcalico/calico/felix/bpf/ipsets"
 	"github.com/projectcalico/calico/felix/ipsets"
 	"github.com/projectcalico/calico/felix/rules"
 
@@ -306,6 +307,8 @@ type egressIPManager struct {
 	healthAgg healthAggregator
 
 	hopRand *rand.Rand
+
+	bpfIPSets egressIPSets
 }
 
 func newEgressIPManager(
@@ -317,6 +320,7 @@ func newEgressIPManager(
 	healthAgg healthAggregator,
 	healthReportC chan<- EGWHealthReport,
 	ipsets egressIPSets,
+	bpfIPSets egressIPSets,
 ) *egressIPManager {
 	nlHandle, err := netlink.NewHandle()
 	if err != nil {
@@ -358,6 +362,7 @@ func newEgressIPManager(
 		rand.New(hopRandSource),
 		healthReportC,
 		ipsets,
+		bpfIPSets,
 	)
 	return mgr
 }
@@ -378,6 +383,7 @@ func newEgressIPManagerWithShims(
 	hopRandSource rand.Source,
 	healthReportC chan<- EGWHealthReport,
 	ipsets egressIPSets,
+	bpfIPSets egressIPSets,
 ) *egressIPManager {
 
 	mgr := egressIPManager{
@@ -410,6 +416,7 @@ func newEgressIPManagerWithShims(
 		healthAgg:              healthAgg,
 		hopRand:                rand.New(hopRandSource),
 		ipsets:                 ipsets,
+		bpfIPSets:              bpfIPSets,
 	}
 
 	if healthAgg != nil {
@@ -499,14 +506,21 @@ func (m *egressIPManager) completeDeferredWork() error {
 
 	// Set up the all-EGW-health-port IP set before we do anything else.  Need to make sure the set exists before
 	// we return from the first completeDeferredWork call.
-	if !m.dpConfig.BPFEnabled && (!m.firstSyncDone || m.egwTracker.Dirty()) {
+	if !m.firstSyncDone || m.egwTracker.Dirty() {
 		// It's a little inefficient to recalculate the whole set each time, but it saves needing to do reference
 		// counting to deal with corner cases such as EGWs being in multiple IP sets.
-		m.ipsets.AddOrReplaceIPSet(ipsets.IPSetMetadata{
-			SetID:   rules.IPSetIDAllEGWHealthPorts,
-			Type:    ipsets.IPSetTypeHashIPPort,
-			MaxSize: m.dpConfig.MaxIPSetSize,
-		}, m.egwTracker.AllHealthPortIPSetMembers())
+		if !m.dpConfig.BPFEnabled {
+			m.ipsets.AddOrReplaceIPSet(ipsets.IPSetMetadata{
+				SetID:   rules.IPSetIDAllEGWHealthPorts,
+				Type:    ipsets.IPSetTypeHashIPPort,
+				MaxSize: m.dpConfig.MaxIPSetSize,
+			}, m.egwTracker.AllHealthPortIPSetMembers())
+		} else {
+			log.Infof("Sridhar %+v", m.egwTracker.AllHealthPortIPSetMembers())
+			m.bpfIPSets.AddOrReplaceIPSet(
+				ipsets.IPSetMetadata{SetID: bpfipsets.EgressGWHealthPortsName, Type: ipsets.IPSetTypeHashIPPort},
+				m.egwTracker.AllHealthPortIPSetMembers())
+		}
 	}
 	m.firstSyncDone = true
 
