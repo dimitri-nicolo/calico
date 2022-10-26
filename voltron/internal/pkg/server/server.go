@@ -241,6 +241,13 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 					return
 				}
 			} else {
+				// md5 is not approved in FIPS mode so not upgrading from md5 to sha256
+				if s.fipsModeEnabled {
+					log.Errorf("cluster %s stored fingerprint can not be updated in FIPS mode", clusterID)
+					closeTunnel(t)
+					return
+				}
+
 				// check pre-v3.15 fingerprint (md5)
 				if s.extractMD5Identity(t) != c.ActiveFingerprint {
 					log.Error("stored fingerprint does not match provided fingerprint")
@@ -254,6 +261,8 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 					closeTunnel(t)
 					return
 				}
+
+				log.Infof("Cluster %s stored fingerprint is successfully updated", clusterID)
 			}
 
 			if err := c.assignTunnel(t); err != nil {

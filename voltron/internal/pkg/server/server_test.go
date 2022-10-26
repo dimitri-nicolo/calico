@@ -9,11 +9,12 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -414,7 +415,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 							f, ok := w.(http.Flusher)
 							Expect(ok).To(BeTrue())
 
-							body, err := ioutil.ReadAll(r.Body)
+							body, err := io.ReadAll(r.Body)
 							Expect(err).ShouldNot(HaveOccurred())
 
 							Expect(string(body)).Should(Equal("HELLO"))
@@ -497,7 +498,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 								f, ok := w.(http.Flusher)
 								Expect(ok).To(BeTrue())
 
-								body, err := ioutil.ReadAll(r.Body)
+								body, err := io.ReadAll(r.Body)
 								Expect(err).ShouldNot(HaveOccurred())
 
 								Expect(string(body)).Should(Equal("HELLO"))
@@ -546,12 +547,17 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			srvWg         *sync.WaitGroup
 			srv           *server.Server
 			defaultServer *httptest.Server
+
+			defaultProxy          *proxy.Proxy
+			k8sTargets            []regexp.Regexp
+			mockAuthenticator     *auth.MockJWTAuth
+			tunnelTargetWhitelist []regexp.Regexp
 		)
 
 		BeforeEach(func() {
 			var err error
 
-			mockAuthenticator := new(auth.MockJWTAuth)
+			mockAuthenticator = new(auth.MockJWTAuth)
 			mockAuthenticator.On("Authenticate", mock.Anything).Return(
 				&user.DefaultInfo{
 					Name:   "jane@example.io",
@@ -567,16 +573,16 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			defaultURL, err := url.Parse(defaultServer.URL)
 			Expect(err).NotTo(HaveOccurred())
 
-			defaultProxy, e := proxy.New([]proxy.Target{
+			defaultProxy, err = proxy.New([]proxy.Target{
 				{Path: "/", Dest: defaultURL},
 				{Path: "/compliance/", Dest: defaultURL},
 			})
-			Expect(e).NotTo(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 
-			tunnelTargetWhitelist, err := regex.CompileRegexStrings([]string{`^/$`, `^/some/path$`})
+			tunnelTargetWhitelist, err = regex.CompileRegexStrings([]string{`^/$`, `^/some/path$`})
 			Expect(err).ShouldNot(HaveOccurred())
 
-			k8sTargets, err := regex.CompileRegexStrings([]string{`^/api/?`, `^/apis/?`})
+			k8sTargets, err = regex.CompileRegexStrings([]string{`^/api/?`, `^/apis/?`})
 			Expect(err).ShouldNot(HaveOccurred())
 
 			watchSync = make(chan error)
@@ -599,7 +605,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			srvWg.Wait()
 		})
 
-		When("the connecting clusters fingerprint matches the md5 active fingerprint", func() {
+		When("the connecting clusters fingerprint matches the md5 active fingerprint in non-FIPS mode", func() {
 			It("upgrades the active fingerprint to sha256", func() {
 				certTemplate := test.CreateClientCertificateTemplate(clusterA, "localhost")
 				privKey, cert, err := test.CreateCertPair(certTemplate, voltronTunnelCert, voltronTunnelPrivKey)
@@ -633,6 +639,61 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					Expect(err).NotTo(HaveOccurred())
 					return mc.Annotations[server.AnnotationActiveCertificateFingerprint]
 				}, 3*time.Second, 500*time.Millisecond).Should(Equal(utils.GenerateFingerprint(cert))) // new sha256 sum
+
+				Expect(t.Close()).NotTo(HaveOccurred())
+			})
+		})
+
+		When("the connecting clusters fingerprint matches the md5 active fingerprint in FIPS mode", func() {
+			It("doesn't modify the existing md5 active fingerprint", func() {
+				// recreate server to enable fips mode
+				srv, _, tunnelAddr, srvWg = createAndStartServer(k8sAPI,
+					config,
+					mockAuthenticator,
+					server.WithTunnelSigningCreds(voltronTunnelCert),
+					server.WithTunnelCert(voltronTunnelTLSCert),
+					server.WithExternalCreds(test.CertToPemBytes(voltronExtHttpsCert), test.KeyToPemBytes(voltronExtHttpsPrivKey)),
+					server.WithInternalCreds(test.CertToPemBytes(voltronIntHttpsCert), test.KeyToPemBytes(voltronIntHttpsPrivKey)),
+					server.WithDefaultProxy(defaultProxy),
+					server.WithKubernetesAPITargets(k8sTargets),
+					server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
+					server.WithFIPSModeEnabled(true),
+				)
+
+				certTemplate := test.CreateClientCertificateTemplate(clusterA, "localhost")
+				privKey, cert, err := test.CreateCertPair(certTemplate, voltronTunnelCert, voltronTunnelPrivKey)
+				Expect(err).NotTo(HaveOccurred())
+
+				fingerprintMD5 := fmt.Sprintf("%x", md5.Sum(cert.Raw))
+				_, err = k8sAPI.ManagedClusters().Create(context.Background(), &calicov3.ManagedCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: clusterA,
+						Annotations: map[string]string{
+							server.AnnotationActiveCertificateFingerprint: fingerprintMD5, // old md5 sum
+						},
+					},
+				}, metav1.CreateOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				list, err := k8sAPI.ManagedClusters().List(context.Background(), metav1.ListOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(list.Items).To(HaveLen(1))
+
+				tlsCert, err := test.X509CertToTLSCert(cert, privKey)
+				Expect(err).NotTo(HaveOccurred())
+
+				t, err := tunnel.DialTLS(tunnelAddr, &tls.Config{
+					Certificates: []tls.Certificate{tlsCert},
+					RootCAs:      voltronTunnelCAs,
+					ServerName:   "voltron",
+				}, 5*time.Second)
+				Expect(err).NotTo(HaveOccurred())
+
+				// wait for one cycle of clusters.watchK8sFrom() to complete
+				Expect(<-watchSync).NotTo(HaveOccurred())
+
+				mc, err := k8sAPI.ManagedClusters().Get(context.Background(), clusterA, metav1.GetOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(mc.Annotations[server.AnnotationActiveCertificateFingerprint]).To(Equal(fingerprintMD5)) // old md5 sum
 
 				Expect(t.Close()).NotTo(HaveOccurred())
 			})
