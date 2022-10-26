@@ -4,15 +4,15 @@ set -eux
 echo "Initializing jdk keystore and setting it to BouncyCastleFipsProvider..."
 
 /usr/share/elasticsearch/jdk/bin/keytool \
--destkeystore /usr/share/elasticsearch/config/cacerts.bcfks \
--deststorepass ${KEYSTORE_PASSWORD} \
--deststoretype bcfks \
--importkeystore \
--providerclass org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider \
--providerpath /usr/share/bc-fips/bc-fips.jar \
--srckeystore /usr/share/elasticsearch/jdk/lib/security/cacerts \
--srcstorepass changeit \
--srcstoretype jks
+    -destkeystore /usr/share/elasticsearch/config/cacerts.bcfks \
+    -deststorepass ${KEYSTORE_PASSWORD} \
+    -deststoretype bcfks \
+    -importkeystore \
+    -providerclass org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider \
+    -providerpath /usr/share/bc-fips/bc-fips.jar \
+    -srckeystore /usr/share/elasticsearch/jdk/lib/security/cacerts \
+    -srcstorepass changeit \
+    -srcstoretype jks
 
 echo "Keystore initialization successful."
 
