@@ -24,6 +24,12 @@ EXCLUDEARCH?=
 include ../lib.Makefile
 
 ###############################################################################
+# Static checks
+###############################################################################
+# skip-files calicoctl/commands/crds/crds.go - removes const values generation for libcalico-go.
+LINT_ARGS += --skip-files calicoctl/commands/crds/crds.go
+
+###############################################################################
 
 CALICOCTL_DIR=calicoctl
 CTL_CONTAINER_CREATED=$(CALICOCTL_DIR)/.calico_ctl.created-$(ARCH)
