@@ -11,7 +11,7 @@ Build an image using the `make image` command.
 - Run Elasticsearch (not password protected yet):
 
   ```bash
-  docker stop es; sleep 5; docker run --rm -d -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" --name es docker.elastic.co/elasticsearch/elasticsearch:7.17.5
+  docker stop es; sleep 5; docker run --rm -d -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" --name es docker.elastic.co/elasticsearch/elasticsearch:7.17.6
   ```
 
 - Run the proxy.
