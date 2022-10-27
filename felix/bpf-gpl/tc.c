@@ -427,8 +427,8 @@ syn_force_policy:
 	}
 
 	// Auto allow VXLAN packets to egress gateways
-	if (EGRESS_IP_ENABLED && (CALI_F_FROM_HOST) && !skb_refresh_validate_ptrs(ctx, UDP_SIZE) &&
-			cali_rt_flags_local_host(cali_rt_lookup_flags(ctx->state->ip_src)) &&
+	if (EGRESS_IP_ENABLED && (CALI_F_FROM_HOST) && ctx->state->ip_src == HOST_IP 
+			&& !skb_refresh_validate_ptrs(ctx, UDP_SIZE) &&
 			is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
 		// Auto allow VXLAN packets from egress gateway clients
 		CALI_DEBUG("Allow VXLAN packet to Egress Gateways\n");
@@ -438,20 +438,19 @@ syn_force_policy:
 
 	// Auto-allow VXLAN packets from/to egress gateway pod
 	if (EGRESS_GATEWAY && !skb_refresh_validate_ptrs(ctx, UDP_SIZE) && CALI_F_WEP) {
-		__be32 ip_addr = ctx->state->ip_src;
-		if (CALI_F_FROM_WEP) {
-			ip_addr = ctx->state->ip_dst;
-		}
-		if ((rt_addr_is_remote_host(ip_addr) 
-			|| rt_addr_is_remote_tunneled_host(ip_addr)) && 
-			is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
-			COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
-			if (CALI_F_FROM_WEP) {
-				CALI_DEBUG("Allow VXLAN packet from EGW pod\n");
-			} else {
-				CALI_DEBUG("Allow VXLAN packet to EGW pod\n");
+		__be32 ip_addr = CALI_F_FROM_WEP ? ctx->state->ip_dst : ctx->state->ip_src;
+		if (is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
+			__be32 flags = cali_rt_lookup_flags(ip_addr);
+			if (cali_rt_flags_remote_host(flags) ||
+				cali_rt_flags_remote_tunneled_host(flags)) {
+				COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
+				if (CALI_F_FROM_WEP) {
+					CALI_DEBUG("Allow VXLAN packet from EGW pod\n");
+				} else {
+					CALI_DEBUG("Allow VXLAN packet to EGW pod\n");
+				}
+				goto skip_policy;
 			}
-			goto skip_policy;
 		} else if (CALI_F_TO_WEP) {
 			goto deny;
 		}
@@ -479,8 +478,8 @@ syn_force_policy:
 		}
 
 		// Check whether the workload needs outgoing NAT to this address, except from an egress gateway
-		// client. This is because, packets from egress clients are destined outside the cluster and if
-		// the packet gets SNATed, the return traffic is not VXLAN encapsulated.
+		// client. This is because, packets from egress clients are destined outside the cluster
+		// the SNATing is done by the egw itself.
 		if (!EGRESS_CLIENT && (r->flags & CALI_RT_NAT_OUT)) {
 			if (!(cali_rt_lookup_flags(ctx->state->post_nat_ip_dst) & CALI_RT_IN_POOL)) {
 				CALI_DEBUG("Source is in NAT-outgoing pool "

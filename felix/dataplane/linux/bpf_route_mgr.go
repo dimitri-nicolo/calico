@@ -518,7 +518,7 @@ func (m *bpfRouteManager) onRouteUpdate(update *proto.RouteUpdate) {
 		return
 	}
 
-	// For now don't handle the tunnel addresses, which were previously not being included in the route updates.
+	// For now don't handle the local tunnel addresses, which were previously not being included in the route updates.
 	if update.Type == proto.RouteType_LOCAL_TUNNEL {
 		m.onRouteRemove(&proto.RouteRemove{Dst: update.Dst})
 		return
