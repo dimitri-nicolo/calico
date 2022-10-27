@@ -11,6 +11,9 @@
 // IP set ID for trusted DNS servers.  Must match the ID defined in ipsets.go.
 #define TRUSTED_DNS_SERVERS_ID (RESERVED_IP_SET_BASE + 1)
 
+// IP set ID for Egress gateway health check.  Must match the ID defined in ipsets.go.
+#define EGRESS_GW_HEALTH_ID (RESERVED_IP_SET_BASE + 2)
+
 enum calico_policy_result {
 	CALI_POL_NO_MATCH,
 	CALI_POL_ALLOW,

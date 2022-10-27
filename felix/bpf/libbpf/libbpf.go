@@ -263,18 +263,19 @@ const (
 )
 
 type BpfGlobalData struct {
-	HostIP       uint32
-	IntfIP       uint32
-	ExtToSvcMark uint32
-	Tmtu         uint16
-	VxlanPort    uint16
-	PSNatStart   uint16
-	PSNatLen     uint16
-	HostTunnelIP uint32
-	VethNS       uint16
-	Flags        uint32
-	WgPort       uint16
-	EgwVxlanPort uint16
+	HostIP        uint32
+	IntfIP        uint32
+	ExtToSvcMark  uint32
+	Tmtu          uint16
+	VxlanPort     uint16
+	PSNatStart    uint16
+	PSNatLen      uint16
+	HostTunnelIP  uint32
+	VethNS        uint16
+	Flags         uint32
+	WgPort        uint16
+	EgwVxlanPort  uint16
+	EgwHealthPort uint32
 }
 
 func TcSetGlobals(
@@ -294,6 +295,7 @@ func TcSetGlobals(
 		C.uint(globalData.Flags),
 		C.ushort(globalData.WgPort),
 		C.ushort(globalData.EgwVxlanPort),
+		C.uint(globalData.EgwHealthPort),
 	)
 
 	return err

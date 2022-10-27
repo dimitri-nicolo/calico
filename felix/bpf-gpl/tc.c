@@ -45,6 +45,7 @@
 #include "failsafe.h"
 #include "metadata.h"
 #include "bpf_helpers.h"
+#include "egw.h"
 
 #if !defined(__BPFTOOL_LOADER__) && !defined (__IPTOOL_LOADER__)
 const volatile struct cali_tc_globals __globals;
@@ -427,20 +428,29 @@ syn_force_policy:
 	}
 
 	// Auto allow VXLAN packets to egress gateways
-	if (EGRESS_IP_ENABLED && (CALI_F_FROM_HOST) && !skb_refresh_validate_ptrs(ctx, UDP_SIZE) &&
-			cali_rt_flags_local_host(cali_rt_lookup_flags(ctx->state->ip_src)) &&
-			is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
-		// Auto allow VXLAN packets from egress gateway clients
-		CALI_DEBUG("Allow VXLAN packet to Egress Gateways\n");
-		COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
-		goto skip_policy;
+	if (EGRESS_IP_ENABLED && (CALI_F_FROM_HOST) && 
+			cali_rt_flags_local_host(cali_rt_lookup_flags(ctx->state->ip_src))) {
+		if (!skb_refresh_validate_ptrs(ctx, UDP_SIZE) &&
+				is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
+			CALI_DEBUG("Allow VXLAN packet to Egress Gateways\n");
+			COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
+			goto skip_policy;
+		}
+		// Auto Allow health traffic to EGW pod
+		if (calico_check_for_egw_health(ctx)) {
+			CALI_DEBUG("Allow EGW health check packets\n");
+			COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
+			goto skip_policy;
+		}
 	}
 
 	// Auto-allow VXLAN packets from/to egress gateway pod
 	if (EGRESS_GATEWAY && !skb_refresh_validate_ptrs(ctx, UDP_SIZE) && CALI_F_WEP) {
 		__be32 ip_addr = ctx->state->ip_src;
+		__be32 egw_health_port = 0;
 		if (CALI_F_FROM_WEP) {
 			ip_addr = ctx->state->ip_dst;
+			egw_health_port = EGW_HEALTH_PORT; 
 		}
 		if ((rt_addr_is_remote_host(ip_addr) 
 			|| rt_addr_is_remote_tunneled_host(ip_addr)) && 
@@ -453,6 +463,11 @@ syn_force_policy:
 			}
 			goto skip_policy;
 		} else if (CALI_F_TO_WEP) {
+			if (egw_health_port && (ctx->state->ip_proto == IPPROTO_TCP) && 
+					(ctx->state->dport == egw_health_port)) {
+				CALI_DEBUG("Allow health check traffic to EGW pod\n");
+				goto skip_policy;
+			}	       
 			goto deny;
 		}
 	}
