@@ -427,27 +427,33 @@ syn_force_policy:
 	}
 
 	// Auto allow VXLAN packets to egress gateways to leave the client's host
-	if (EGRESS_IP_ENABLED && (CALI_F_FROM_HOST) && ctx->state->ip_src == HOST_IP 
-			&& !skb_refresh_validate_ptrs(ctx, UDP_SIZE) &&
+	// as well as at the ingress of the EGW pod host.
+	if (CALI_F_HEP && EGRESS_IP_ENABLED &&
+			!skb_refresh_validate_ptrs(ctx, UDP_SIZE) &&
 			is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
-		// Auto allow VXLAN packets from egress gateway clients
-		CALI_DEBUG("Allow VXLAN packet to Egress Gateways\n");
-		COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
-		goto skip_policy;
+		if ((CALI_F_FROM_HOST && (ctx->state->ip_src == HOST_IP)) ||
+				(CALI_F_TO_HOST && rt_addr_is_remote_host(ctx->state->ip_src)))
+		{
+			CALI_DEBUG("Allow VXLAN packet to Egress Gateways\n");
+			COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
+			goto skip_policy;
+		}
 	}
 
 	// Auto-allow VXLAN packets from/to egress gateway pod
-	if (CALI_F_WEP && EGRESS_GATEWAY && !skb_refresh_validate_ptrs(ctx, UDP_SIZE)
-			&& is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
-		__be32 ip_addr = CALI_F_FROM_WEP ? ctx->state->ip_dst : ctx->state->ip_src;
-		if (rt_addr_is_remote_host(ip_addr)) {
-			COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
-			if (CALI_F_FROM_WEP) {
-				CALI_DEBUG("Allow VXLAN packet from EGW pod\n");
-			} else {
-				CALI_DEBUG("Allow VXLAN packet to EGW pod\n");
+	if (CALI_F_WEP && EGRESS_GATEWAY) {
+		if (!skb_refresh_validate_ptrs(ctx, UDP_SIZE) &&
+				is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
+			__be32 ip_addr = CALI_F_FROM_WEP ? ctx->state->ip_dst : ctx->state->ip_src;
+			if (rt_addr_is_remote_host(ip_addr)) {
+				COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
+				if (CALI_F_FROM_WEP) {
+					CALI_DEBUG("Allow VXLAN packet from EGW pod\n");
+				} else {
+					CALI_DEBUG("Allow VXLAN packet to EGW pod\n");
+				}
+				goto skip_policy;
 			}
-			goto skip_policy;
 		} else if (CALI_F_TO_WEP) {
 			goto deny;
 		}
