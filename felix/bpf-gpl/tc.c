@@ -427,17 +427,13 @@ syn_force_policy:
 	}
 
 	// Auto allow VXLAN packets to egress gateways to leave the client's host
-	// as well as at the ingress of the EGW pod host.
-	if (CALI_F_HEP && EGRESS_IP_ENABLED &&
+	if (CALI_F_FROM_HOST && EGRESS_IP_ENABLED &&
 			!skb_refresh_validate_ptrs(ctx, UDP_SIZE) &&
-			is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
-		if ((CALI_F_FROM_HOST && (ctx->state->ip_src == HOST_IP)) ||
-				(CALI_F_TO_HOST && rt_addr_is_remote_host(ctx->state->ip_src)))
-		{
-			CALI_DEBUG("Allow VXLAN packet to Egress Gateways\n");
-			COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
-			goto skip_policy;
-		}
+			is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT) &&
+			ctx->state->ip_src == HOST_IP) {
+		CALI_DEBUG("Allow VXLAN packet to Egress Gateways\n");
+		COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
+		goto skip_policy;
 	}
 
 	// Auto-allow VXLAN packets from/to egress gateway pod
