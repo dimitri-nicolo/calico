@@ -932,7 +932,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 	)
 	dp.RegisterManager(tproxyMgr)
 
-	var bpfIPSetsV4 *bpfipsets.BPFIPSets
+	var bpfIPSets egressIPSets
 	if config.BPFEnabled {
 		log.Info("BPF enabled, starting BPF endpoint manager and map manager.")
 		err := bpfmap.CreateBPFMaps(bpfMapContext)
@@ -945,14 +945,15 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		ipSetIDAllocator := idalloc.New()
 		ipSetIDAllocator.ReserveWellKnownID(bpfipsets.TrustedDNSServersName, bpfipsets.TrustedDNSServersID)
 		ipSetIDAllocator.ReserveWellKnownID(bpfipsets.EgressGWHealthPortsName, bpfipsets.EgressGWHealthPortsID)
-		bpfIPSetsV4 = bpfipsets.NewBPFIPSets(
+		ipSetsV4 := bpfipsets.NewBPFIPSets(
 			ipSetsConfigV4,
 			ipSetIDAllocator,
 			bpfMapContext.IpsetsMap,
 			dp.loopSummarizer,
 		)
-		dp.ipSets = append(dp.ipSets, bpfIPSetsV4)
-		ipsetsManager.AddDataplane(bpfIPSetsV4)
+		dp.ipSets = append(dp.ipSets, ipSetsV4)
+		ipsetsManager.AddDataplane(ipSetsV4)
+		bpfIPSets = ipSetsV4
 		bpfRTMgr := newBPFRouteManager(&config, bpfMapContext, dp.loopSummarizer)
 		dp.RegisterManager(bpfRTMgr)
 
@@ -962,7 +963,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			trustedDNSServers = append(trustedDNSServers,
 				fmt.Sprintf("%v,udp:%v", serverPort.IP, serverPort.Port))
 		}
-		bpfIPSetsV4.AddOrReplaceIPSet(
+		ipSetsV4.AddOrReplaceIPSet(
 			ipsets.IPSetMetadata{SetID: bpfipsets.TrustedDNSServersName, Type: ipsets.IPSetTypeHashIPPort},
 			trustedDNSServers,
 		)
@@ -1106,7 +1107,7 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 			config.HealthAggregator,
 			dp.egwHealthReportC,
 			ipSetsV4,
-			bpfIPSetsV4,
+			bpfIPSets,
 		)
 		dp.RegisterManager(dp.egressIPManager)
 	} else {

@@ -73,6 +73,7 @@ var _ = Describe("EgressIPManager", func() {
 		healthAgg = health.NewHealthAggregator()
 		healthReportC := make(chan<- EGWHealthReport)
 		ipsets := newMockSets()
+		bpfIPsets := newMockSets()
 		manager = newEgressIPManagerWithShims(
 			mainTable,
 			rrFactory,
@@ -91,6 +92,7 @@ var _ = Describe("EgressIPManager", func() {
 			rand.NewSource(1), // Seed with 1 to get predictable tests every time.
 			healthReportC,
 			ipsets,
+			bpfIPsets,
 		)
 
 		Expect(healthAgg.Summary().Ready).To(BeFalse())
