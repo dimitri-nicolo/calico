@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os/exec"
 	"regexp"
@@ -681,7 +682,8 @@ type CheckCmd struct {
 	ipSource   string
 	portSource string
 
-	duration time.Duration
+	duration time.Duration // Duration for long running stream tests
+	timeout  time.Duration // Timeout for one-off pings.
 
 	sendLen int
 	recvLen int
@@ -702,6 +704,7 @@ func (cmd *CheckCmd) run(cName string, logMsg string) *Result {
 		fmt.Sprintf("--duration=%d", int(cmd.duration.Seconds())),
 		fmt.Sprintf("--sendlen=%d", cmd.sendLen),
 		fmt.Sprintf("--recvlen=%d", cmd.recvLen),
+		fmt.Sprintf("--timeout=%f", cmd.timeout.Seconds()),
 		cmd.nsPath, cmd.ip, cmd.port,
 	}
 
@@ -799,14 +802,22 @@ func WithRecvLen(l int) CheckOption {
 	}
 }
 
+func WithTimeout(t time.Duration) CheckOption {
+	return func(c *CheckCmd) {
+		c.timeout = t
+	}
+}
+
 // Check executes the connectivity check
 func Check(cName, logMsg, ip, port, protocol string, opts ...CheckOption) *Result {
 
+	const defaultPingTimeout = 2 * time.Second
 	cmd := CheckCmd{
 		nsPath:   "-",
 		ip:       ip,
 		port:     port,
 		protocol: protocol,
+		timeout:  defaultPingTimeout,
 	}
 
 	for _, opt := range opts {
@@ -871,6 +882,7 @@ type PersistentConnection struct {
 	SourcePort          int
 	MonitorConnectivity bool
 	NamespacePath       string
+	Timeout             time.Duration
 
 	loopFile string
 	runCmd   *exec.Cmd
@@ -927,21 +939,32 @@ func (pc *PersistentConnection) Start() error {
 	if pc.MonitorConnectivity {
 		args = append(args, "--log-pongs")
 	}
+	if pc.Timeout > 0 {
+		args = append(args, fmt.Sprintf("--timeout=%d", pc.Timeout/time.Second))
+	}
 	runCmd := utils.Command(
 		"docker",
 		args...,
 	)
-	logName := fmt.Sprintf("permanent connection %s", n)
+	logName := fmt.Sprintf("persistent connection %s", n)
 	stdout, err := runCmd.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("failed to start output logging for %s", logName)
 	}
+	stderr, err := runCmd.StderrPipe()
+	if err != nil {
+		return fmt.Errorf("failed to start errput logging for %s", logName)
+	}
+	log.WithField("name", logName).Info("Started")
+
 	stdoutReader := bufio.NewReader(stdout)
 	go func() {
+		log.WithField("name", logName).Info("stdout reader started")
+		defer log.WithField("name", logName).Info("stdout reader exited")
 		for {
 			line, err := stdoutReader.ReadString('\n')
 			if err != nil {
-				log.WithError(err).Info("End of permanent connection stdout")
+				log.WithError(err).Info("End of persistent connection stdout")
 				return
 			}
 			line = strings.TrimSpace(string(line))
@@ -954,12 +977,27 @@ func (pc *PersistentConnection) Start() error {
 			}
 		}
 	}()
+	stderrReader := bufio.NewReader(stderr)
+	go func() {
+		for {
+			line, err := stderrReader.ReadString('\n')
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					log.Info("Persistent connection stderr closed.")
+					return
+				}
+				log.WithError(err).Info("Failed to read persistent connection stderr")
+				return
+			}
+			log.Infof("%s stderr: %s", logName, line)
+		}
+	}()
 	if err := runCmd.Start(); err != nil {
-		return fmt.Errorf("failed to start a permanent connection: %v", err)
+		return fmt.Errorf("failed to start a persistent connection: %v", err)
 	}
 	Eventually(func() error {
 		return pc.Runtime.ExecMayFail("stat", loopFile)
-	}, 5*time.Second, time.Second).Should(
+	}, 5*time.Second, 100*time.Millisecond).Should(
 		HaveOccurred(),
 		"Failed to wait for test-connection to be ready, the loop file did not disappear",
 	)
@@ -984,5 +1022,6 @@ func (pc *PersistentConnection) LastPongTime() time.Time {
 func (pc *PersistentConnection) PongCount() int {
 	pc.Lock()
 	defer pc.Unlock()
+	log.WithField("name", pc.Name).Infof("pong count %d", pc.pongCount)
 	return pc.pongCount
 }
