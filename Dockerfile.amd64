@@ -58,12 +58,18 @@ RUN cp /elastic-build/elasticsearch-${ELASTIC_VERSION}/distribution/docker/src/d
 RUN curl -sfL https://github.com/krallin/tini/releases/download/v${TINI_VERSION}/tini-amd64 -o /usr/bin/tini && \
     chmod 0755 /usr/bin/tini
 
-RUN groupadd -g 1000 elasticsearch && \
-    adduser --uid 1000 --gid 1000 --home /usr/share/elasticsearch elasticsearch && \
-    chown -R 0:0 /usr/share/elasticsearch
-
 # Add storage plugin
 RUN bin/elasticsearch-plugin install --batch repository-gcs
+
+# Change /usr/share/elasticsearch folder ownership to elasticsearch user and group.
+# Elastic gradle step installs bundle JDK into the /usr/share/elasticsearch/jdk folder.
+# The folder permisison is 0750 and when we deploy this UBI based container to Openshift,
+# which has SELinux enabled by default, elasticsearch user get permissions errors on
+# accessing JDK files. This is not an issue on non-SELinux enabled hosts like Ubuntu.
+# Changing the folder ownership works on both hosts.
+RUN groupadd -g 1000 elasticsearch && \
+    adduser --uid 1000 --gid 1000 --home /usr/share/elasticsearch elasticsearch && \
+    chown -R 1000:1000 /usr/share/elasticsearch
 
 # Cleanup /tmp for the next stage
 RUN rm -fr /tmp/*
