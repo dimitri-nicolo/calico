@@ -1514,7 +1514,7 @@ int calico_tc_skb_drop(struct __sk_buff *skb)
 		CALI_DEBUG("Counters map lookup failed: DROP\n");
 		return TC_ACT_SHOT;
 	}
-#if 0	
+
 	if (CALI_F_FROM_HOST && EGRESS_IP_ENABLED) {
 		// Auto Allow health check traffic to EGW pod
 		if (calico_check_for_egw_health(&ctx)) {
@@ -1524,7 +1524,6 @@ int calico_tc_skb_drop(struct __sk_buff *skb)
 			goto allow;
 		}
 	}
-#endif
 
 	COUNTER_INC(&ctx, CALI_REASON_DROPPED_BY_POLICY);
 
