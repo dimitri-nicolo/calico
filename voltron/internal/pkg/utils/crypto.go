@@ -5,8 +5,8 @@ package utils
 
 import (
 	"crypto"
-	"crypto/md5"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -76,15 +76,14 @@ func CertPEMEncode(cert *x509.Certificate) []byte {
 	return pem.EncodeToMemory(block)
 }
 
-// GenerateFingerprint returns the MD5 hash for a x509 certificate printed as a hex number
+// GenerateFingerprint returns the sha256 hash for a x509 certificate printed as a hex number
 func GenerateFingerprint(certificate *x509.Certificate) string {
 	// NewManagedClusterStorage() call in managedCluster_storage.go generates the certificate fingerprint
-	// using md5. This checksum is saved as one of the annotations for this ManagedCluster resource.
+	// using sha256. This checksum is saved as one of the annotations for this ManagedCluster resource.
 	// When voltron accepts the tunnel connection from guardian in voltron server.go, this internal active
-	// fingerprint is checked. If we want to upgrade to a better hash algorithm, we need to change both
-	// places and properly update the annotation for any existing ManagedCluster resources. For now,
-	// we have to stay with md5 no matter if FIPS is enabled or not.
-	fingerprint := fmt.Sprintf("%x", md5.Sum(certificate.Raw))
+	// fingerprint is checked. If we want to upgrade to a better hash algorithm in the future, we need to
+	// change both places and properly update the annotation for any existing ManagedCluster resources.
+	fingerprint := fmt.Sprintf("%x", sha256.Sum256(certificate.Raw))
 	log.Debugf("Created fingerprint for cert with common name: %s and fingerprint: %s", certificate.Subject.CommonName, fingerprint)
 	return fingerprint
 }

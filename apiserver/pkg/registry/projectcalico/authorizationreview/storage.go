@@ -134,6 +134,7 @@ func (r *REST) Create(ctx context.Context, obj runtime.Object, _ rest.ValidateOb
 					Tier:            m.Tier,
 					Namespace:       m.Namespace,
 					UISettingsGroup: m.UISettingsGroup,
+					ManagedCluster:  m.ManagedCluster,
 				})
 			}
 			res.Verbs = append(res.Verbs, v3.AuthorizedResourceVerb{

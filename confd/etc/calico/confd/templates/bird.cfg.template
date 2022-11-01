@@ -195,6 +195,7 @@ template bgp bgp_template {
 {{else if ne "" $onode_ip}}protocol bgp Mesh_{{$id}} from bgp_template {
   neighbor {{$onode_ip}} {{if ne "" $listen_port}}port {{$listen_port}} {{end}}as {{if exists $onode_as_key}}{{getv $onode_as_key}}{{else}}{{getv "/global/as_num"}}{{end}};
   source address {{$node_ip}};  # The local address we use for the TCP connection
+  ttl security off;
   multihop;
   {{- /*
        Make the peering unidirectional. This avoids a race where
@@ -236,10 +237,19 @@ protocol bgp Global_{{$id}} from bgp_template {
 {{- if eq $data.source_addr "UseNodeIP"}}
   source address {{$node_ip}};  # The local address we use for the TCP connection
 {{- end}}
+{{- if $data.ttl_security }}
+  ttl security on;
+{{- else }}
+  ttl security off;
+{{- end }}
 {{- if $data.directly_connected}}
   direct;
 {{- else}}
+{{- if $data.ttl_security }}
+  multihop {{ $data.ttl_security }};
+{{- else }}
   multihop;
+{{- end }}
 {{- end}}
   gateway {{$data.gateway_mode}};
 {{- if and ($data.calico_node) (gt $data.ip $node_ip)}}
@@ -293,10 +303,19 @@ protocol bgp Node_{{$id}} from bgp_template {
 {{- if eq $data.source_addr "UseNodeIP"}}
   source address {{$node_ip}};  # The local address we use for the TCP connection
 {{- end}}
+{{- if $data.ttl_security }}
+  ttl security on;
+{{- else }}
+  ttl security off;
+{{- end }}
 {{- if $data.directly_connected}}
   direct;
 {{- else}}
+{{- if $data.ttl_security }}
+  multihop {{ $data.ttl_security }};
+{{- else }}
   multihop;
+{{- end }}
 {{- end}}
   gateway {{$data.gateway_mode}};
 {{- if eq $data.restart_mode "LongLivedGracefulRestart"}}

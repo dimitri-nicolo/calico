@@ -1164,8 +1164,16 @@ func schema_pkg_apis_projectcalico_v3_AuthorizedResourceGroup(ref common.Referen
 							Format:      "",
 						},
 					},
+					"managedCluster": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ManagedCluster is the name of the ManagedCluster. This is only valid for managedclusters.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
-				Required: []string{"namespace", "uiSettingsGroup"},
+				Required: []string{"namespace", "uiSettingsGroup", "managedCluster"},
 			},
 		},
 	}
@@ -1774,6 +1782,13 @@ func schema_pkg_apis_projectcalico_v3_BGPPeerSpec(ref common.ReferenceCallback) 
 							Description: "Maximum number of local AS numbers that are allowed in the AS path for received routes. This removes BGP loop prevention and should only be used if absolutely necesssary.",
 							Type:        []string{"integer"},
 							Format:      "int32",
+						},
+					},
+					"ttlSecurity": {
+						SchemaProps: spec.SchemaProps{
+							Description: "TTLSecurity enables the generalized TTL security mechanism (GTSM) which protects against spoofed packets by ignoring received packets with a smaller than expected TTL value. The provided value is the number of hops (edges) between the peers.",
+							Type:        []string{"integer"},
+							Format:      "byte",
 						},
 					},
 				},

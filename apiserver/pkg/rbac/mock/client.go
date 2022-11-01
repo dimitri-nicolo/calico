@@ -24,6 +24,7 @@ type MockClient struct {
 	Namespaces          []string
 	Tiers               []string
 	UISettingsGroups    []string
+	ManagedClusters     []string
 	ResourcesQueries    int
 }
 
@@ -62,6 +63,7 @@ func (m *MockClient) ServerPreferredResources() ([]*meta_v1.APIResourceList, err
 				{Name: "globalnetworksets", Namespaced: false},
 				{Name: "uisettings", Namespaced: false},
 				{Name: "uisettingsgroups", Namespaced: false},
+				{Name: "managedclusters", Namespaced: false},
 			},
 		},
 
@@ -224,4 +226,21 @@ func (m *MockClient) ListUISettingsGroups() ([]*v3.UISettingsGroup, error) {
 		}
 	}
 	return gps, nil
+}
+
+func (m *MockClient) ListManagedClusters() ([]*v3.ManagedCluster, error) {
+	if m.ManagedClusters == nil {
+		log.Debug("ListManagedClusters returning error")
+		return nil, fmt.Errorf("no ManagedClusters set")
+	}
+
+	mgs := make([]*v3.ManagedCluster, len(m.ManagedClusters))
+	for i, name := range m.ManagedClusters {
+		mgs[i] = &v3.ManagedCluster{
+			ObjectMeta: meta_v1.ObjectMeta{
+				Name: name,
+			},
+		}
+	}
+	return mgs, nil
 }

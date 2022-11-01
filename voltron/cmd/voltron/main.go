@@ -205,6 +205,16 @@ func main() {
 		})
 	}
 
+	if cfg.EnableCalicoCloudRbacApi && cfg.CalicoCloudRbacApiEndpoint != "" && cfg.CalicoCloudRbacApiCABundlePath != "" {
+		targetList = append(targetList, bootstrap.Target{
+			Path:         "/cloud-rbac/",
+			Dest:         cfg.CalicoCloudRbacApiEndpoint,
+			PathRegexp:   []byte("^/cloud-rbac/?"),
+			PathReplace:  []byte("/"),
+			CABundlePath: cfg.CalicoCloudRbacApiCABundlePath,
+		})
+	}
+
 	var options []auth.JWTAuthOption
 	if cfg.OIDCAuthEnabled {
 		// If dex is enabled we need to add the CA Bundle, otherwise the default trusted certs from the image will

@@ -1,32 +1,29 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
 
 package calico
 
 import (
-	"crypto/md5"
+	"crypto/sha256"
 	"fmt"
 	"reflect"
 
-	"k8s.io/klog"
-
-	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
-
-	"github.com/projectcalico/calico/licensing/client/features"
-
-	"github.com/projectcalico/calico/apiserver/pkg/helpers"
-
 	"golang.org/x/net/context"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
 	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
+	"k8s.io/klog"
 
-	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
+	"github.com/projectcalico/calico/apiserver/pkg/helpers"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/watch"
+	"github.com/projectcalico/calico/licensing/client/features"
+
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 // AnnotationActiveCertificateFingerprint is an annotation that is used to store the fingerprint for
@@ -64,7 +61,7 @@ func NewManagedClusterStorage(opts Options) (registry.DryRunnableStorage, factor
 			}
 		}
 		// Store the hash of the certificate as an annotation
-		fingerprint := fmt.Sprintf("%x", md5.Sum(certificate.Raw))
+		fingerprint := fmt.Sprintf("%x", sha256.Sum256(certificate.Raw))
 		if res.Annotations == nil {
 			res.Annotations = make(map[string]string)
 		}

@@ -4,8 +4,11 @@ package server
 
 import (
 	"context"
+	"crypto/md5"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"net/http"
@@ -17,19 +20,17 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/client-go/rest"
+
+	"github.com/projectcalico/calico/apiserver/pkg/authentication"
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
+	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/voltron/internal/pkg/bootstrap"
 	"github.com/projectcalico/calico/voltron/internal/pkg/proxy"
 	"github.com/projectcalico/calico/voltron/internal/pkg/utils"
 	"github.com/projectcalico/calico/voltron/pkg/tunnel"
 	"github.com/projectcalico/calico/voltron/pkg/tunnelmgr"
-
-	"github.com/projectcalico/calico/lma/pkg/auth"
-
-	"github.com/projectcalico/calico/apiserver/pkg/authentication"
-
-	"k8s.io/apiserver/pkg/authentication/user"
-	"k8s.io/client-go/rest"
 )
 
 const (
@@ -208,13 +209,9 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 			}
 		}
 
-		var clusterID string
-		var fingerprint string
-
-		clusterID, fingerprint = s.extractIdentity(t, clusterID, fingerprint)
+		clusterID, fingerprint := s.extractIdentity(t)
 
 		c := s.clusters.get(clusterID)
-
 		if c == nil {
 			log.Errorf("cluster %q does not exist", clusterID)
 			t.Close()
@@ -229,15 +226,43 @@ func (s *Server) acceptTunnels(opts ...tunnel.Option) {
 			defer c.RUnlock()
 
 			if len(c.ActiveFingerprint) == 0 {
-				log.Error("No fingerprint has been stored against the current connection")
+				log.Error("no fingerprint has been stored against the current connection")
 				closeTunnel(t)
 				return
 
 			}
-			if fingerprint != c.ActiveFingerprint {
-				log.Error("Stored fingerprint does not match provided fingerprint")
-				closeTunnel(t)
-				return
+			// Before Calico Enterprise v3.15, we use md5 hash algorithm for the managed cluster
+			// certificate fingerprint. md5 is known to cause collisions and it is not approved in
+			// FIPS mode. From v3.15, we are upgrading the active fingerprint to use sha256 hash algorithm.
+			if hex.DecodedLen(len(c.ActiveFingerprint)) == sha256.Size {
+				if fingerprint != c.ActiveFingerprint {
+					log.Error("stored fingerprint does not match provided fingerprint")
+					closeTunnel(t)
+					return
+				}
+			} else {
+				// md5 is not approved in FIPS mode so not upgrading from md5 to sha256
+				if s.fipsModeEnabled {
+					log.Errorf("cluster %s stored fingerprint can not be updated in FIPS mode", clusterID)
+					closeTunnel(t)
+					return
+				}
+
+				// check pre-v3.15 fingerprint (md5)
+				if s.extractMD5Identity(t) != c.ActiveFingerprint {
+					log.Error("stored fingerprint does not match provided fingerprint")
+					closeTunnel(t)
+					return
+				}
+
+				// update to v3.15 fingerprint hash (sha256) when matched
+				if err := c.updateActiveFingerprint(fingerprint); err != nil {
+					log.WithError(err).Errorf("failed to update cluster %s stored fingerprint", clusterID)
+					closeTunnel(t)
+					return
+				}
+
+				log.Infof("Cluster %s stored fingerprint is successfully updated", clusterID)
 			}
 
 			if err := c.assignTunnel(t); err != nil {
@@ -264,7 +289,7 @@ func closeTunnel(t *tunnel.Tunnel) {
 	}
 }
 
-func (s *Server) extractIdentity(t *tunnel.Tunnel, clusterID string, fingerprint string) (string, string) {
+func (s *Server) extractIdentity(t *tunnel.Tunnel) (clusterID, fingerprint string) {
 	switch id := t.Identity().(type) {
 	case *x509.Certificate:
 		// N.B. By now, we know that we signed this certificate as these checks
@@ -277,7 +302,17 @@ func (s *Server) extractIdentity(t *tunnel.Tunnel, clusterID string, fingerprint
 	default:
 		log.Errorf("unknown tunnel identity type %T", id)
 	}
-	return clusterID, fingerprint
+	return
+}
+
+func (s *Server) extractMD5Identity(t *tunnel.Tunnel) (fingerprint string) {
+	switch id := t.Identity().(type) {
+	case *x509.Certificate:
+		fingerprint = fmt.Sprintf("%x", md5.Sum(id.Raw))
+	default:
+		log.Errorf("unknown tunnel identity type %T", id)
+	}
+	return
 }
 
 func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {

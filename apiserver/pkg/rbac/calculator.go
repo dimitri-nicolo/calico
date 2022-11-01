@@ -46,6 +46,7 @@ const (
 	resourceGlobalNetworkPolicies       = "globalnetworkpolicies"
 	resourceStageNetworkPolicies        = "stagednetworkpolicies"
 	resourceStagedGlobalNetworkPolicies = "stagedglobalnetworkpolicies"
+	resourceManagedClusters             = "managedclusters"
 )
 
 var (
@@ -106,25 +107,38 @@ func (r ResourceType) String() string {
 
 // Match contains details of a set of RBAC authorization matches for given ResourceType/Verb combination.  An empty
 // string indicates a wildcard match.
-// - A blank namespace indicates a cluster-wide match. This is applicable to namespaced and cluster-scoped resource
-//   types.
-// - The UISettingsGroup field will never be wildcarded for UISettings, i.e. the response will contain explicit
-//   match entries for each authorized UISettingsGroup.
-// - The Tier field will never be wildcarded for Calico tiered policies, i.e. the response will contain explicit
-//   match entries for each authorized tier.
-// - For Namespace queries: the Namespace field will never be wildcarded for the "get" verb, it may be wildcarded or
-//   explicit for "watch", and is only ever wildcarded for remaining verbs (e.g. the RBAC calculator never expands down
-//   to individual namespaces for "create", "delete" etc.)
-// - For Tier queries: the Tier field will never be wildcarded for the "get" verb, it may be wildcarded or explicit for
-//   "watch", and is only ever wildcarded for remaining verbs (e.g. the RBAC calculator never expands down to individual
-//   tiers for "create", "delete" etc.)
-// - For UISettingsGroup queries: the UISettingsGroup field will never be wildcarded for the "get" verb, it may be
-//   wildcarded or explicit for "watch", and is only ever wildcarded for remaining verbs (e.g. the RBAC calculator never
-//   expands down to individual UISettingsGroups for "create", "delete" etc.)
 type Match struct {
-	Namespace       string `json:"namespace"`
-	Tier            string `json:"tier"`
+	// A blank namespace indicates a cluster-wide match. This is applicable to namespaced and cluster-scoped resource
+	// types.
+	//
+	// For Namespace queries, the Namespace field will never be wildcarded for the "get" verb, it may be wildcarded or
+	// explicit for "watch", and is only ever wildcarded for remaining verbs (e.g. the RBAC calculator never expands down
+	// to individual namespaces for "create", "delete" etc.)
+	Namespace string `json:"namespace"`
+
+	// Tier will never be wildcarded for Calico tiered policies, i.e. the response will contain explicit
+	// match entries for each authorized tier.
+	//
+	// For Tier queries, the Tier field will never be wildcarded for the "get" verb, it may be wildcarded or explicit for
+	// "watch", and is only ever wildcarded for remaining verbs (e.g. the RBAC calculator never expands down to individual
+	// tiers for "create", "delete" etc.)
+	Tier string `json:"tier"`
+
+	// The UISettingsGroup field will never be wildcarded for UISettings, i.e. the response will contain explicit
+	// match entries for each authorized UISettingsGroup.
+	//
+	// For UISettingsGroup queries, the UISettingsGroup field will never be wildcarded for the "get" verb, it may be
+	// wildcarded or explicit for "watch", and is only ever wildcarded for remaining verbs (e.g. the RBAC calculator never
+	// expands down to individual UISettingsGroups for "create", "delete" etc.)
 	UISettingsGroup string `json:"uisettingsgroup"`
+
+	// The ManagedCluster field will never be wildcarded for ManagedClusters, i.e. the response will contain explicit
+	// match entries for each authorized ManagedCluster.
+	//
+	// For ManagedCluster queries, the ManagedCluster field will never be wildcarded for the "get" verb, it may be
+	// wildcarded or explicit for "watch", and is only ever wildcarded for remaining verbs (e.g. the RBAC calculator never
+	// expands down to individual ManagedClusters for "create", "delete" etc.)
+	ManagedCluster string `json:"managedcluster"`
 }
 
 func (m Match) String() string {
@@ -132,10 +146,16 @@ func (m Match) String() string {
 }
 
 // NewCalculator creates a new RBAC Calculator.
-func NewCalculator(resourceLister ResourceLister, clusterRoleGetter ClusterRoleGetter, clusterRoleBindingLister ClusterRoleBindingLister,
-	roleGetter RoleGetter, roleBindingLister RoleBindingLister,
-	namespaceLister NamespaceLister, calicoResourceLister CalicoResourceLister,
-	minResourceRefreshInterval time.Duration) Calculator {
+func NewCalculator(
+	resourceLister ResourceLister,
+	clusterRoleGetter ClusterRoleGetter,
+	clusterRoleBindingLister ClusterRoleBindingLister,
+	roleGetter RoleGetter,
+	roleBindingLister RoleBindingLister,
+	namespaceLister NamespaceLister,
+	calicoResourceLister CalicoResourceLister,
+	minResourceRefreshInterval time.Duration,
+) Calculator {
 
 	// Split out the cluster and namespaced rule resolvers - this allows us to perform namespace queries without
 	// checking cluster rules every time. For cluster specific rule resolver, use a "no-op" RuleBindingLister - this
@@ -189,6 +209,7 @@ type NamespaceLister interface {
 type CalicoResourceLister interface {
 	ListTiers() ([]*v3.Tier, error)
 	ListUISettingsGroups() ([]*v3.UISettingsGroup, error)
+	ListManagedClusters() ([]*v3.ManagedCluster, error)
 }
 
 // ResourceLister interface is used to list registered resource types.
@@ -210,7 +231,7 @@ func (ar apiResource) isNamespace() bool {
 	return ar.Resource == resourceNamespaces
 }
 
-// isNamespace returns true if the apiResource represents a Calico Tier.
+// isTier returns true if the apiResource represents a Calico Tier.
 func (ar apiResource) isTier() bool {
 	if ar.APIGroup != v3.Group {
 		return false
@@ -246,21 +267,30 @@ func (ar apiResource) isTieredPolicy() bool {
 	return false
 }
 
-// rbacResource returns the resource type actually used to calculate the users RBAC. For most resources this is
-// simply the resource plural form unchanged, except:
-// - for Calico tiered policies we use a special "tier.xxx" format to allow special case processing for fine grained
-//   access control at the tier level
-// - for uisettings resources, the RBAC is controlled by the uisettingsgroups/data sub resource.
+// isManagedCluster returns true is the apiResource represents a Calico ManagedCluster.
+func (ar apiResource) isManagedCluster() bool {
+	return ar.APIGroup == v3.Group &&
+		ar.Resource == resourceManagedClusters
+}
+
+// rbacResource returns the resource type actually used to calculate the users RBAC.
 func (ar apiResource) rbacResource() (resource string, subresource string) {
 	if ar.isTieredPolicy() {
+		// for Calico tiered policies we use a special "tier.xxx" format to allow special case processing for fine grained
+		// access control at the tier level
 		return "tier." + ar.Resource, ""
 	} else if ar.isUISettings() {
+		// for uisettings resources, the RBAC is controlled by the uisettingsgroups/data sub resource.
 		return resourceUISettingsGroups, resourceUISettingsGroupsData
 	}
+	// For all other resources this is simply the resource plural form unchanged
 	return ar.Resource, ""
 }
 
 // calculator implements the Calculator interface.
+//
+// this struct mainly serves as a cached resource store and defers implementation of the Calculator interface
+// to the userCalculator.
 type calculator struct {
 	resourceLister         ResourceLister
 	namespaceLister        NamespaceLister
@@ -271,9 +301,11 @@ type calculator struct {
 	// This is determined at most once per request, and only in the event the request contains an unknown resource type.
 	// Once a resource type is known, the properties associated with that resource type are not expected to change.
 	minResourceRefreshInterval time.Duration
-	resources                  map[ResourceType]apiResource
-	resourceUpdateTime         time.Time
-	resourceLock               sync.Mutex
+
+	// resources is the set of cached resources.
+	resources          map[ResourceType]apiResource
+	resourceUpdateTime time.Time
+	resourceLock       sync.Mutex
 }
 
 // CalculatePermissions calculates the RBAC permissions for a specific user and set of resource types.
@@ -286,15 +318,9 @@ func (c *calculator) CalculatePermissions(user user.Info, rvs []ResourceVerbs) (
 		return nil, err
 	}
 
-	// Create a new user calculator using the current set of resources. This may result in an update to the cached
-	// resource types if the calculcator does not know about a requested resource type.
-	r := c.newUserCalculator(user, resources, resourceUpdateTime)
-	for _, rv := range rvs {
-		r.updatePermissions(rv.ResourceType, rv.Verbs)
-	}
-
-	// Return the authorized verbs for the user and any errors that were hit.
-	return r.permissions, utilerrors.Flatten(utilerrors.NewAggregate(r.errors))
+	// Create a new user calculator using the current set of resources and return the authorized verbs for the user and any errors that were hit.
+	// This may result in an update to the cached resource types if the calculcator does not know about a requested resource type.
+	return newUserCalculator(c, user, resources, resourceUpdateTime).Calculate(rvs)
 }
 
 // getResourceInfo returns the current registered resource cache and loads from API if it has not yet been initialized.
@@ -365,17 +391,6 @@ func (_ *emptyK8sClusterRoleBindingLister) ListClusterRoleBindings() ([]*rbacv1.
 	return nil, nil
 }
 
-// newUserCalculator returns a new Calculator accumulator. This is used to gather user specific Calculator permissions.
-func (c *calculator) newUserCalculator(user user.Info, resources map[ResourceType]apiResource, resourceUpdateTime time.Time) *userCalculator {
-	return &userCalculator{
-		resources:           resources,
-		resourcesUpdateTime: resourceUpdateTime,
-		user:                user,
-		calculator:          c,
-		permissions:         make(Permissions),
-	}
-}
-
 // userCalculator is used to gather user specific Calculator permissions.
 type userCalculator struct {
 	resources                    map[ResourceType]apiResource
@@ -390,12 +405,26 @@ type userCalculator struct {
 	gettableUISettingsGroups     []string
 	allNamespaces                []string
 	gettableNamespaces           []string
+	allManagedClusters           []string
+	gettableManagedClusters      []string
 	clusterRules                 []rbacv1.PolicyRule
 	namespacedRules              map[string][]rbacv1.PolicyRule
 	canGetAllTiersVal            *bool
 	canGetAllUISettingsGroupsVal *bool
 	canGetAllNamespacesVal       *bool
+	canGetAllManagedClustersVal  *bool
 	permissions                  Permissions
+}
+
+// newUserCalculator returns a new Calculator accumulator. This is used to gather user specific Calculator permissions.
+func newUserCalculator(c *calculator, user user.Info, resources map[ResourceType]apiResource, resourceUpdateTime time.Time) *userCalculator {
+	return &userCalculator{
+		resources:           resources,
+		resourcesUpdateTime: resourceUpdateTime,
+		user:                user,
+		calculator:          c,
+		permissions:         make(Permissions),
+	}
 }
 
 // getMatches returns the calculated matches for a specific resource and verb.
@@ -427,46 +456,56 @@ func (u *userCalculator) getMatches(verb Verb, ar apiResource, subresource strin
 	// In general we only look for user authorization at the namespace and cluster scoped level. However, there are
 	// some important deviations that are specific to providing a good user experience with the Tigera UI.
 	//
-	// - "get" queries for namespaces and tiers are always expanded out by name, even if the user has cluster-scoped
+	// - "get" queries for namespaces, tiers, and managedclusters are always expanded out by name, even if the user has cluster-scoped
 	//   get access for that resource. This is to allow RBAC controls being set to not permit "list" access, but provide
 	//   a way for the UI to determine the limited subset of tiers and namespaces the user is allowed to see.
 	//   We may wish to expand this to include other resource types too - especially anywhere the UI provides
 	//   field selections refering to another resource.
-	// - "watch" queries for namespaces and tiers will be expanded out by name iff the user does not have cluster-scoped
+	// - "watch" queries for namespaces, tiers, and managedclusters will be expanded out by name iff the user does not have cluster-scoped
 	//   watch access.
 	// - Any action for tiered policies is expanded across the "gettable" tiers. The RBAC calculator never wildcards the
 	//   tier value for a tiered policy verb.
 
-	if ar.isTier() && verb == VerbGet {
-		// Special case tier gets - we always expand get across Tiers, so include all configured Tiers.
-		log.Debug("Return gettable Tiers")
-		for _, tier := range u.getGettableTiers() {
-			match.Tier = tier
-			matches = append(matches, match)
-		}
+	if verb == VerbGet {
+		if ar.isTier() {
+			// Special case tier gets - we always expand get across Tiers, so include all configured Tiers.
+			log.Debug("Return gettable Tiers")
+			for _, tier := range u.getGettableTiers() {
+				match.Tier = tier
+				matches = append(matches, match)
+			}
 
-		return matches
-	} else if ar.isUISettingsGroup() && verb == VerbGet {
-		// Special case UISettingsGroups gets - we always expand get across Namespaces, so include all configured Namespaces.
-		log.Debug("Return gettable Namespaces")
-		for _, gp := range u.getGettableUISettingsGroups() {
-			match.UISettingsGroup = gp
-			matches = append(matches, match)
-		}
+			return matches
+		} else if ar.isUISettingsGroup() {
+			// Special case UISettingsGroups gets - we always expand get across Namespaces, so include all configured Namespaces.
+			log.Debug("Return gettable Namespaces")
+			for _, gp := range u.getGettableUISettingsGroups() {
+				match.UISettingsGroup = gp
+				matches = append(matches, match)
+			}
 
-		return matches
-	} else if ar.isNamespace() && verb == VerbGet {
-		// Special case namespace gets - we always expand get across Namespaces, so include all configured Namespaces.
-		log.Debug("Return gettable Namespaces")
-		for _, namespace := range u.getGettableNamespaces() {
-			match.Namespace = namespace
-			matches = append(matches, match)
-		}
+			return matches
+		} else if ar.isNamespace() {
+			// Special case namespace gets - we always expand get across Namespaces, so include all configured Namespaces.
+			log.Debug("Return gettable Namespaces")
+			for _, namespace := range u.getGettableNamespaces() {
+				match.Namespace = namespace
+				matches = append(matches, match)
+			}
 
-		return matches
+			return matches
+		} else if ar.isManagedCluster() {
+			// Special case ManagedCluster gets - we always expand get across all ManagedCluster resources, so include all configured ManagedClusters.
+			for _, managedCluster := range u.getGettableManagedClusters() {
+				match.ManagedCluster = managedCluster
+				matches = append(matches, match)
+			}
+
+			return matches
+		}
 	}
 
-	// Check if this rh is allowed cluster-wide with full wildcarded name. If it is then:
+	// Check if this resource is allowed cluster-wide with full wildcarded name. If it is then:
 	if rbac_auth.RulesAllow(record, u.getClusterRules()...) {
 		log.Debug("Full wildcard match")
 
@@ -493,38 +532,48 @@ func (u *userCalculator) getMatches(verb Verb, ar apiResource, subresource strin
 		return matches
 	}
 
-	// If not allowed cluster-wide with full wildcarded-name, then expand watch for tier, namespace and uisettings.
-	if ar.isTier() && verb == VerbWatch {
-		log.Debug("Return individual watchable Tiers")
-		tiers := u.expandClusterResourceByName(u.getAllTiers(), verb, ar)
-		for _, tier := range tiers {
-			match.Tier = tier
-			matches = append(matches, match)
+	if verb == VerbWatch {
+		// If not allowed cluster-wide with full wildcarded-name, then expand watch for tier, namespace and uisettings.
+		if ar.isTier() {
+			log.Debug("Return individual watchable Tiers")
+			tiers := u.expandClusterResourceByName(u.getAllTiers(), verb, ar)
+			for _, tier := range tiers {
+				match.Tier = tier
+				matches = append(matches, match)
+			}
+			// Nothing else to do for this resource.
+			return matches
+		} else if ar.isUISettingsGroup() {
+			log.Debug("Return individual watchable UISettingsGroup")
+			gps := u.expandClusterResourceByName(u.getAllUISettingsGroups(), verb, ar)
+			for _, gp := range gps {
+				match.UISettingsGroup = gp
+				matches = append(matches, match)
+			}
+			// Nothing else to do for this resource.
+			return matches
+		} else if ar.isNamespace() {
+			log.Debug("Return individual watchable Namespaces")
+			namespaces := u.expandClusterResourceByName(u.getAllNamespaces(), verb, ar)
+			for _, namespace := range namespaces {
+				match.Namespace = namespace
+				matches = append(matches, match)
+			}
+			// Nothing else to do for this resource.
+			return matches
+		} else if ar.isManagedCluster() {
+			log.Debug("Return individual watchable ManagedClusters")
+			managedClusters := u.expandClusterResourceByName(u.getAllManagedClusters(), verb, ar)
+			for _, managedCluster := range managedClusters {
+				match.ManagedCluster = managedCluster
+				matches = append(matches, match)
+			}
+			return matches
 		}
-		// Nothing else to do for this resource.
-		return matches
-	} else if ar.isUISettingsGroup() && verb == VerbWatch {
-		log.Debug("Return individual watchable UISettingsGroup")
-		gps := u.expandClusterResourceByName(u.getAllUISettingsGroups(), verb, ar)
-		for _, gp := range gps {
-			match.UISettingsGroup = gp
-			matches = append(matches, match)
-		}
-		// Nothing else to do for this resource.
-		return matches
-	} else if ar.isNamespace() && verb == VerbWatch {
-		log.Debug("Return individual watchable Namespaces")
-		namespaces := u.expandClusterResourceByName(u.getAllNamespaces(), verb, ar)
-		for _, namespace := range namespaces {
-			match.Namespace = namespace
-			matches = append(matches, match)
-		}
-		// Nothing else to do for this resource.
-		return matches
 	}
 
 	// If we are processing a tiered policy, check if the user has cluster-scoped access within the tier. We check this
-	// by using a rh name of <tier-name>.*
+	// by using a resource name of <tier-name>.*
 	//
 	// Note that if we do not have cluster-wide access for the tier then we'll need to check per-namespace, so we track
 	// Tiers that did not match cluster scoped.
@@ -565,7 +614,7 @@ func (u *userCalculator) getMatches(verb Verb, ar apiResource, subresource strin
 		}
 	}
 
-	// If the rh is not namespaced then no more checks.
+	// If the resource is not namespaced then no more checks.
 	if !ar.Namespaced {
 		log.Debug("Resource is not namespaced, so nothing left to check")
 		return matches
@@ -579,7 +628,7 @@ func (u *userCalculator) getMatches(verb Verb, ar apiResource, subresource strin
 		record.Namespace = namespace
 		record.Name = ""
 		if rbac_auth.RulesAllow(record, rules...) {
-			// The user is authorized for full wildcarded names for the rh type in this namespace
+			// The user is authorized for full wildcarded names for the resource type in this namespace
 			// -  If this is a tiered policy then expand by tier.
 			// -  Otherwise, include a single wildcarded name result.
 			if !ar.isTieredPolicy() {
@@ -601,7 +650,7 @@ func (u *userCalculator) getMatches(verb Verb, ar apiResource, subresource strin
 		}
 
 		// Did not match wildcarded tier, so try individual Tiers (that were not matched cluster-wide).
-		// [note: tiersNoClusterMatch will be nil if this is not a tiered policy rh]
+		// [note: tiersNoClusterMatch will be nil if this is not a tiered policy resource]
 		for _, tier := range tiersNoClusterMatch {
 			record.Name = tier + ".*"
 			if rbac_auth.RulesAllow(record, rules...) {
@@ -850,6 +899,13 @@ func (u *userCalculator) getNamespacedRules() map[string][]rbacv1.PolicyRule {
 		log.Debugf("getNamespacedRules returns %v", u.namespacedRules)
 	}
 	return u.namespacedRules
+}
+
+func (u *userCalculator) Calculate(rvs []ResourceVerbs) (Permissions, error) {
+	for _, rv := range rvs {
+		u.updatePermissions(rv.ResourceType, rv.Verbs)
+	}
+	return u.permissions, utilerrors.Flatten(utilerrors.NewAggregate(u.errors))
 }
 
 // updatePermissions calculates the RBAC permissions for a specific resource type and set of verbs, and updates the
