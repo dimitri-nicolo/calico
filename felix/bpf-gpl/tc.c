@@ -427,44 +427,34 @@ syn_force_policy:
 		goto skip_policy;
 	}
 
-	// Auto allow VXLAN packets to egress gateways
-	if (EGRESS_IP_ENABLED && (CALI_F_FROM_HOST) && 
-			cali_rt_flags_local_host(cali_rt_lookup_flags(ctx->state->ip_src))) {
+	// Auto allow VXLAN packets to egress gateways to leave the client's host
+	if (CALI_F_FROM_HOST && EGRESS_IP_ENABLED) {
 		if (!skb_refresh_validate_ptrs(ctx, UDP_SIZE) &&
-				is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
+			is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT) &&
+			ctx->state->ip_src == HOST_IP) {
 			CALI_DEBUG("Allow VXLAN packet to Egress Gateways\n");
-			COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
-			goto skip_policy;
-		}
-		// Auto Allow health traffic to EGW pod
-		if (calico_check_for_egw_health(ctx)) {
-			CALI_DEBUG("Allow EGW health check packets\n");
 			COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
 			goto skip_policy;
 		}
 	}
 
 	// Auto-allow VXLAN packets from/to egress gateway pod
-	if (EGRESS_GATEWAY && !skb_refresh_validate_ptrs(ctx, UDP_SIZE) && CALI_F_WEP) {
-		__be32 ip_addr = ctx->state->ip_src;
-		__be32 egw_health_port = 0;
-		if (CALI_F_FROM_WEP) {
-			ip_addr = ctx->state->ip_dst;
-			egw_health_port = EGW_HEALTH_PORT; 
-		}
-		if ((rt_addr_is_remote_host(ip_addr) 
-			|| rt_addr_is_remote_tunneled_host(ip_addr)) && 
-			is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
-			COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
-			if (CALI_F_FROM_WEP) {
-				CALI_DEBUG("Allow VXLAN packet from EGW pod\n");
-			} else {
-				CALI_DEBUG("Allow VXLAN packet to EGW pod\n");
+	if (CALI_F_WEP && EGRESS_GATEWAY) {
+		if (!skb_refresh_validate_ptrs(ctx, UDP_SIZE) &&
+				is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
+			__be32 ip_addr = CALI_F_FROM_WEP ? ctx->state->ip_dst : ctx->state->ip_src;
+			if (rt_addr_is_remote_host(ip_addr)) {
+				COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
+				if (CALI_F_FROM_WEP) {
+					CALI_DEBUG("Allow VXLAN packet from EGW pod\n");
+				} else {
+					CALI_DEBUG("Allow VXLAN packet to EGW pod\n");
+				}
+				goto skip_policy;
 			}
-			goto skip_policy;
 		} else if (CALI_F_TO_WEP) {
-			if (egw_health_port && (ctx->state->ip_proto == IPPROTO_TCP) && 
-					(ctx->state->dport == egw_health_port)) {
+			if (EGW_HEALTH_PORT && (ctx->state->ip_proto == IPPROTO_TCP) && 
+					(ctx->state->dport == EGW_HEALTH_PORT)) {
 				CALI_DEBUG("Allow health check traffic to EGW pod\n");
 				goto skip_policy;
 			}	       
@@ -494,8 +484,8 @@ syn_force_policy:
 		}
 
 		// Check whether the workload needs outgoing NAT to this address, except from an egress gateway
-		// client. This is because, packets from egress clients are destined outside the cluster and if
-		// the packet gets SNATed, the return traffic is not VXLAN encapsulated.
+		// client. This is because, packets from egress clients are destined outside the cluster
+		// the SNATing is done by the egw itself.
 		if (!EGRESS_CLIENT && (r->flags & CALI_RT_NAT_OUT)) {
 			if (!(cali_rt_lookup_flags(ctx->state->post_nat_ip_dst) & CALI_RT_IN_POOL)) {
 				CALI_DEBUG("Source is in NAT-outgoing pool "
@@ -1524,6 +1514,18 @@ int calico_tc_skb_drop(struct __sk_buff *skb)
 		CALI_DEBUG("Counters map lookup failed: DROP\n");
 		return TC_ACT_SHOT;
 	}
+#if 0	
+	if (CALI_F_FROM_HOST && EGRESS_IP_ENABLED) {
+		// Auto Allow health check traffic to EGW pod
+		if (calico_check_for_egw_health(&ctx)) {
+			CALI_DEBUG("Allow EGW health check packets\n");
+			COUNTER_INC(&ctx, CALI_REASON_ACCEPTED_BY_EGW);
+			event_flow_log(skb, ctx.state);
+			goto allow;
+		}
+	}
+#endif
+
 	COUNTER_INC(&ctx, CALI_REASON_DROPPED_BY_POLICY);
 
 	CALI_DEBUG("proto=%d\n", ctx.state->ip_proto);
@@ -1569,7 +1571,6 @@ int calico_tc_skb_drop(struct __sk_buff *skb)
 			goto allow;
 		}
 	}
-
 	event_flow_log(skb, ctx.state);
 	CALI_DEBUG("Flow log event generated for DENY/DROP\n");
 	goto deny;

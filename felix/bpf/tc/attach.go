@@ -664,7 +664,7 @@ func (ap *AttachPoint) MustReattach() bool {
 }
 
 func ConfigureVethNS(m *libbpf.Map, VethNS uint16) error {
-	bpfGlobalData := libbpf.BpfGlobalData{VethNS: VethNS}
+	bpfGlobalData := libbpf.TcGlobalData{VethNS: VethNS}
 	return libbpf.TcSetGlobals(m, bpfGlobalData)
 }
 
@@ -677,7 +677,7 @@ func (ap AttachPoint) Config() string {
 }
 
 func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
-	globalData := libbpf.BpfGlobalData{ExtToSvcMark: ap.ExtToServiceConnmark,
+	globalData := libbpf.TcGlobalData{ExtToSvcMark: ap.ExtToServiceConnmark,
 		VxlanPort:     ap.VXLANPort,
 		Tmtu:          ap.TunnelMTU,
 		PSNatStart:    ap.PSNATStart,

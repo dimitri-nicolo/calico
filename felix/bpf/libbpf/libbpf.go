@@ -262,7 +262,7 @@ const (
 	GlobalsEgressIPEnabled  uint32 = C.CALI_GLOBALS_IS_EGRESS_IP_ENABLED
 )
 
-type BpfGlobalData struct {
+type TcGlobalData struct {
 	HostIP        uint32
 	IntfIP        uint32
 	ExtToSvcMark  uint32
@@ -280,7 +280,7 @@ type BpfGlobalData struct {
 
 func TcSetGlobals(
 	m *Map,
-	globalData BpfGlobalData,
+	globalData TcGlobalData,
 ) error {
 	_, err := C.bpf_tc_set_globals(m.bpfMap,
 		C.uint(globalData.HostIP),

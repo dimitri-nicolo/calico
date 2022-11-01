@@ -145,7 +145,7 @@ static CALI_BPF_INLINE int vxlan_v4_decap(struct __sk_buff *skb)
 	return ret;
 }
 
-static CALI_BPF_INLINE int is_vxlan_tunnel(struct iphdr *ip, short vxlanport)
+static CALI_BPF_INLINE int is_vxlan_tunnel(struct iphdr *ip, __u16 vxlanport)
 {
 	struct udphdr *udp = (struct udphdr *)(ip +1);
 
