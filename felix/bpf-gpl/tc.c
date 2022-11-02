@@ -443,7 +443,7 @@ syn_force_policy:
 				is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
 			__be32 ip_addr = CALI_F_FROM_WEP ? ctx->state->ip_dst : ctx->state->ip_src;
 			__be32 flags = cali_rt_lookup_flags(ip_addr);
-			if (cali_rt_flags_remote_host(flags) || cali_rt_flags_local_host(flags)) {
+			if (cali_rt_flags_host(flags)) {
 				COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
 				if (CALI_F_FROM_WEP) {
 					CALI_DEBUG("Allow VXLAN packet from EGW pod\n");
@@ -1564,8 +1564,6 @@ int calico_tc_skb_drop(struct __sk_buff *skb)
 			 */
 			CALI_INFO("Allowing WG %x <-> %x despite blocked by policy - known hosts.\n",
 					bpf_ntohl(ctx.state->ip_src), bpf_ntohl(ctx.state->ip_dst));
-			event_flow_log(skb, ctx.state);
-			CALI_DEBUG("Flow log event generated for ALLOW\n");
 			goto allow;
 		}
 	}
