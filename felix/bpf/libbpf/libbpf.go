@@ -275,7 +275,7 @@ type TcGlobalData struct {
 	Flags         uint32
 	WgPort        uint16
 	EgwVxlanPort  uint16
-	EgwHealthPort uint32
+	EgwHealthPort uint16
 }
 
 func TcSetGlobals(
@@ -295,7 +295,7 @@ func TcSetGlobals(
 		C.uint(globalData.Flags),
 		C.ushort(globalData.WgPort),
 		C.ushort(globalData.EgwVxlanPort),
-		C.uint(globalData.EgwHealthPort),
+		C.ushort(globalData.EgwHealthPort),
 	)
 
 	return err

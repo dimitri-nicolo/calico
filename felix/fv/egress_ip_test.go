@@ -30,9 +30,12 @@ import (
 
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
+	"github.com/tigera/api/pkg/lib/numorstring"
+
 	"github.com/projectcalico/calico/felix/fv/connectivity"
 	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
+	"github.com/projectcalico/calico/felix/fv/utils"
 	"github.com/projectcalico/calico/felix/fv/workload"
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
@@ -86,6 +89,68 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		gw.WorkloadEndpoint.Labels["egress-code"] = "red"
 		gw.ConfigureInInfra(infra)
 		return gw
+	}
+
+	denyPolicyEGW := func(gw *workload.Workload) {
+		protoUDP := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
+		pol := api.NewGlobalNetworkPolicy()
+		pol.Name = "egw-deny-ingress"
+		pol.Spec.Ingress = []api.Rule{{Action: "Deny", Protocol: &protoUDP}}
+		pol.Spec.Ingress[0].Destination = api.EntityRule{Ports: []numorstring.Port{numorstring.SinglePort(4790)}}
+		pol.Spec.Selector = gw.NameSelector()
+		pol, err := client.GlobalNetworkPolicies().Create(utils.Ctx, pol, utils.NoOptions)
+		Expect(err).NotTo(HaveOccurred())
+	}
+
+	createHostEndPointPolicy := func(felix *infrastructure.Felix) {
+		protoTCP := numorstring.ProtocolFromString(numorstring.ProtocolTCP)
+		protoUDP := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
+
+		hep := api.NewHostEndpoint()
+		hep.Name = "hep-" + felix.Name
+		hep.Labels = map[string]string{
+			"name":          hep.Name,
+			"hostname":      felix.Hostname,
+			"host-endpoint": "true",
+		}
+		hep.Spec.Node = felix.Hostname
+		hep.Spec.ExpectedIPs = []string{felix.IP}
+		hep.Spec.InterfaceName = "eth0"
+		_, err := client.HostEndpoints().Create(utils.Ctx, hep, options.SetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		// create an allow-all policy
+		order := 100.0
+		allowAllPolicy := api.NewGlobalNetworkPolicy()
+		allowAllPolicy.Name = "default.allow-all"
+		allowAllPolicy.Spec.Ingress = []api.Rule{{Action: api.Allow}}
+		allowAllPolicy.Spec.Egress = []api.Rule{{Action: api.Allow}}
+		allowAllPolicy.Spec.Selector = fmt.Sprintf("hostname == '%s'", felix.Hostname)
+		allowAllPolicy.Spec.Order = &order
+		allowAllPolicy, err = client.GlobalNetworkPolicies().Create(utils.Ctx, allowAllPolicy, utils.NoOptions)
+		Expect(err).NotTo(HaveOccurred())
+
+		//create a policy to drop traffic to port 4790
+		order = 0.0
+		denyEGWPolicy := api.NewGlobalNetworkPolicy()
+		denyEGWPolicy.Name = "default.deny-egw"
+		denyEGWPolicy.Spec.Egress = []api.Rule{{Action: api.Deny, Protocol: &protoUDP}}
+		denyEGWPolicy.Spec.Egress[0].Destination = api.EntityRule{Ports: []numorstring.Port{numorstring.SinglePort(4790)}}
+		denyEGWPolicy.Spec.Selector = fmt.Sprintf("hostname == '%s'", felix.Hostname)
+		denyEGWPolicy.Spec.Order = &order
+		denyEGWPolicy, err = client.GlobalNetworkPolicies().Create(utils.Ctx, denyEGWPolicy, utils.NoOptions)
+		Expect(err).NotTo(HaveOccurred())
+
+		// create a policy to drop EGW health probes
+		order = 1.0
+		denyEGWHealthPolicy := api.NewGlobalNetworkPolicy()
+		denyEGWHealthPolicy.Name = "default.deny-egw-health"
+		denyEGWHealthPolicy.Spec.Egress = []api.Rule{{Action: api.Deny, Protocol: &protoTCP}}
+		denyEGWHealthPolicy.Spec.Egress[0].Destination = api.EntityRule{Ports: []numorstring.Port{numorstring.SinglePort(8080)}}
+		denyEGWHealthPolicy.Spec.Selector = fmt.Sprintf("hostname == '%s'", felix.Hostname)
+		denyEGWHealthPolicy.Spec.Order = &order
+		denyEGWHealthPolicy, err = client.GlobalNetworkPolicies().Create(utils.Ctx, denyEGWHealthPolicy, utils.NoOptions)
+		Expect(err).NotTo(HaveOccurred())
 	}
 
 	makeClient := func(felix *infrastructure.Felix, wIP, wName string) *workload.Workload {
@@ -178,6 +243,8 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		topologyOptions := infrastructure.DefaultTopologyOptions()
 		topologyOptions.ExtraEnvVars["FELIX_EGRESSIPSUPPORT"] = supportLevel
 		topologyOptions.ExtraEnvVars["FELIX_PolicySyncPathPrefix"] = "/var/run/calico/policysync"
+		topologyOptions.ExtraEnvVars["FELIX_EGRESSIPVXLANPORT"] = "4790"
+		topologyOptions.EnableIPv6 = false
 		if overlay == OV_VXLAN {
 			topologyOptions.VXLANMode = api.VXLANModeAlways
 		}
@@ -282,6 +349,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 							})
 
 							JustBeforeEach(func() {
+								if !sameNode && ov == OV_NONE {
+									createHostEndPointPolicy(felixes[0])
+								}
 								client = makeClient(felixes[0], "10.65.0.2", "client")
 								if sameNode {
 									gw = makeGateway(felixes[0], "10.10.10.1", "gw")
@@ -296,6 +366,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 										felixes[0].Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP, "dev", "tunl0", "onlink")
 									}
 								}
+								denyPolicyEGW(gw)
 								extWorkload.C.Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP)
 							})
 

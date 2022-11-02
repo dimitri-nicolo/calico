@@ -442,7 +442,8 @@ syn_force_policy:
 		if (!skb_refresh_validate_ptrs(ctx, UDP_SIZE) &&
 				is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
 			__be32 ip_addr = CALI_F_FROM_WEP ? ctx->state->ip_dst : ctx->state->ip_src;
-			if (rt_addr_is_remote_host(ip_addr)) {
+			__be32 flags = cali_rt_lookup_flags(ip_addr);
+			if (cali_rt_flags_remote_host(flags) || cali_rt_flags_local_host(flags)) {
 				COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
 				if (CALI_F_FROM_WEP) {
 					CALI_DEBUG("Allow VXLAN packet from EGW pod\n");
@@ -1516,7 +1517,7 @@ int calico_tc_skb_drop(struct __sk_buff *skb)
 
 	if (CALI_F_FROM_HOST && EGRESS_IP_ENABLED &&
 			(ctx.state->ip_src == HOST_IP) &&
-			calico_check_for_egw_health(&ctx)) {
+			dest_is_egw_health(ctx.state->ip_dst, ctx.state->dport)) {
 		// Auto Allow health check traffic to EGW pod
 		CALI_DEBUG("Allow EGW health check packets\n");
 		COUNTER_INC(&ctx, CALI_REASON_ACCEPTED_BY_EGW);

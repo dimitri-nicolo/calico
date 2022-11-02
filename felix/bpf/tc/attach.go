@@ -74,7 +74,7 @@ type AttachPoint struct {
 	RPFStrictEnabled        bool
 	EGWVxlanPort            uint16
 	EgressIPEnabled         bool
-	EgressGatewayHealthPort uint32
+	EgressGatewayHealthPort uint16
 }
 
 var tcLock sync.RWMutex

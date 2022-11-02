@@ -516,7 +516,6 @@ func (m *egressIPManager) completeDeferredWork() error {
 				MaxSize: m.dpConfig.MaxIPSetSize,
 			}, m.egwTracker.AllHealthPortIPSetMembers())
 		} else {
-			log.Infof("Sridhar %+v", m.egwTracker.AllHealthPortIPSetMembers())
 			m.bpfIPSets.AddOrReplaceIPSet(
 				ipsets.IPSetMetadata{SetID: bpfipsets.EgressGWHealthPortsName, Type: ipsets.IPSetTypeHashIPPort},
 				m.egwTracker.AllHealthPortIPSetMembers())

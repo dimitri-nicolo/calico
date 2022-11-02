@@ -18,7 +18,7 @@ struct cali_tc_globals {
 	__be32 flags;
 	__be16 wg_port;
 	__be16 egw_vxlan_port;
-	__be32 egw_health_port;
+	__be16 egw_health_port;
 };
 
 enum cali_globals_flags {
