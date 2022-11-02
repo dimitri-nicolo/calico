@@ -1521,7 +1521,6 @@ int calico_tc_skb_drop(struct __sk_buff *skb)
 		// Auto Allow health check traffic to EGW pod
 		CALI_DEBUG("Allow EGW health check packets\n");
 		COUNTER_INC(&ctx, CALI_REASON_ACCEPTED_BY_EGW);
-		event_flow_log(skb, ctx.state);
 		goto allow;
 	}
 
@@ -1577,6 +1576,7 @@ int calico_tc_skb_drop(struct __sk_buff *skb)
 allow:
 	ctx.state->pol_rc = CALI_POL_ALLOW;
 	ctx.state->flags |= CALI_ST_SKIP_POLICY;
+	ctx.state->rules_hit = 0;
 	CALI_JUMP_TO(skb, PROG_INDEX_ALLOWED);
 	/* should not reach here */
 	CALI_DEBUG("Failed to jump to allow program.");
