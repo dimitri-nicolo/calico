@@ -27,9 +27,8 @@ type ActiveEgressCalculator struct {
 	// "EnabledPerNamespaceOrPerPod" or "EnabledPerNamespace".
 	supportLevel string
 
-	// Active egress selectors.
-	// The key should be based on the parsed selector rather than the raw selector. This is to account for equivalent
-	// selectors, e.g. egress-code == "red" and egress-code == 'red'
+	// Active egress selectors. These are normalized to a standard format in the syncer before
+	// they get to Felix, so we can safely use them as keys in the map without fear of duplicates.
 	selectors map[string]*esData
 
 	// Active local endpoints.
