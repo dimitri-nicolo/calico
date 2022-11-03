@@ -313,8 +313,8 @@ var _ = Describe("Test Pod conversion", func() {
 
 		// Check egress.
 		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
-			NamespaceSelector: "wblack == 'white'",
-			Selector:          "wred == 'green'",
+			NamespaceSelector: "wblack == \"white\"",
+			Selector:          "wred == \"green\"",
 		}))
 		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.AWSElasticIPs).To(ConsistOf("44.55.66.77", "88.55.66.77"))
 	})
@@ -3093,6 +3093,55 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 	})
 })
 
+var _ = Describe("Test Namespace conversion egress gateway", func() {
+
+	// Use a single instance of the Converter for these tests.
+	c := NewConverter()
+
+	// This testcase asserts that two semantically identical strings resolve to the same selectors,
+	// regardless of whitespace / formatting / etc.
+	It("should parse two Namespaces with slightly different egress annotations properly", func() {
+		ns := kapiv1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "default",
+				Annotations: map[string]string{
+					"egress.projectcalico.org/namespaceSelector": "black == 'white'",
+					"egress.projectcalico.org/selector":          "red == 'green'",
+				},
+			},
+			Spec: kapiv1.NamespaceSpec{},
+		}
+
+		ns2 := kapiv1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "default",
+				Annotations: map[string]string{
+					"egress.projectcalico.org/namespaceSelector": "black == 'white' ",
+					"egress.projectcalico.org/selector":          "red == \"green\"",
+				},
+			},
+			Spec: kapiv1.NamespaceSpec{},
+		}
+
+		// We expect the namespace selector and selector to be the same, despite
+		// minor string formatting differences in the originals.
+		expectedNamespaceSelector := "black == \"white\""
+		expectedSelector := "red == \"green\""
+
+		for _, ns := range []kapiv1.Namespace{ns, ns2} {
+			// Parse the namespace.
+			p, err := c.NamespaceToProfile(&ns)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Expect the parsed selectors to match the expected values.
+			Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
+				NamespaceSelector: expectedNamespaceSelector,
+				Selector:          expectedSelector,
+			}))
+		}
+	})
+})
+
 var _ = Describe("Test Namespace conversion", func() {
 
 	// Use a single instance of the Converter for these tests.
@@ -3138,8 +3187,8 @@ var _ = Describe("Test Namespace conversion", func() {
 
 		// Check egress.
 		Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
-			NamespaceSelector: "black == 'white'",
-			Selector:          "red == 'green'",
+			NamespaceSelector: "black == \"white\"",
+			Selector:          "red == \"green\"",
 		}))
 	})
 
@@ -3256,8 +3305,8 @@ var _ = Describe("Test Namespace conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
-			NamespaceSelector: "black == 'white'",
-			Selector:          "red == 'green'",
+			NamespaceSelector: "black == \"white\"",
+			Selector:          "red == \"green\"",
 			MaxNextHops:       3,
 		}))
 	})
@@ -3285,8 +3334,8 @@ var _ = Describe("Test Namespace conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
-			NamespaceSelector: "black == 'white'",
-			Selector:          "red == 'green'",
+			NamespaceSelector: "black == \"white\"",
+			Selector:          "red == \"green\"",
 			MaxNextHops:       0,
 		}))
 	})
@@ -3314,8 +3363,8 @@ var _ = Describe("Test Namespace conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
-			NamespaceSelector: "black == 'white'",
-			Selector:          "red == 'green'",
+			NamespaceSelector: "black == \"white\"",
+			Selector:          "red == \"green\"",
 			MaxNextHops:       0,
 		}))
 	})
@@ -3343,8 +3392,8 @@ var _ = Describe("Test Namespace conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
-			NamespaceSelector: "black == 'white'",
-			Selector:          "red == 'green'",
+			NamespaceSelector: "black == \"white\"",
+			Selector:          "red == \"green\"",
 			MaxNextHops:       0,
 		}))
 	})
@@ -3366,8 +3415,8 @@ var _ = Describe("Test Namespace conversion", func() {
 			p, err := c.NamespaceToProfile(&ns)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
-				NamespaceSelector: "black == 'white'",
-				Selector:          "red == 'green'",
+				NamespaceSelector: "black == \"white\"",
+				Selector:          "red == \"green\"",
 				MaxNextHops:       3,
 			}))
 		})
@@ -3390,8 +3439,8 @@ var _ = Describe("Test Namespace conversion", func() {
 			p, err := c.NamespaceToProfile(&ns)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
-				NamespaceSelector: "black == 'white'",
-				Selector:          "red == 'green'",
+				NamespaceSelector: "black == \"white\"",
+				Selector:          "red == \"green\"",
 				MaxNextHops:       0,
 			}))
 		})
@@ -3414,8 +3463,8 @@ var _ = Describe("Test Namespace conversion", func() {
 			p, err := c.NamespaceToProfile(&ns)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
-				NamespaceSelector: "black == 'white'",
-				Selector:          "red == 'green'",
+				NamespaceSelector: "black == \"white\"",
+				Selector:          "red == \"green\"",
 				MaxNextHops:       0,
 			}))
 		})
@@ -3438,8 +3487,8 @@ var _ = Describe("Test Namespace conversion", func() {
 			p, err := c.NamespaceToProfile(&ns)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(p.Value.(*apiv3.Profile).Spec.EgressGateway).To(Equal(&apiv3.EgressSpec{
-				NamespaceSelector: "black == 'white'",
-				Selector:          "red == 'green'",
+				NamespaceSelector: "black == \"white\"",
+				Selector:          "red == \"green\"",
 				MaxNextHops:       0,
 			}))
 		})
