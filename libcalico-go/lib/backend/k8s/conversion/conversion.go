@@ -90,16 +90,24 @@ func (c converter) ParseWorkloadEndpointName(workloadName string) (names.Workloa
 func egressAnnotationsToV3Spec(annotations map[string]string) *apiv3.EgressSpec {
 	egressSelector := annotations[AnnotationEgressSelector]
 	if egressSelector != "" {
-		if _, err := selector.Parse(egressSelector); err != nil {
+		if parsed, err := selector.Parse(egressSelector); err != nil {
 			log.WithError(err).Errorf("Invalid selector expression in %v annotation: %v", AnnotationEgressSelector, err)
 			return nil
+		} else {
+			// Convert the parsed egress selector to a string. This normalizes the selector and removes
+			// any whitespace, etc., that may have existed in the original string.
+			egressSelector = parsed.String()
 		}
 	}
 	egressNamespaceSelector := annotations[AnnotationEgressNamespaceSelector]
 	if egressNamespaceSelector != "" {
-		if _, err := selector.Parse(egressNamespaceSelector); err != nil {
+		if parsed, err := selector.Parse(egressNamespaceSelector); err != nil {
 			log.WithError(err).Errorf("Invalid selector expression in %v annotation: %v", AnnotationEgressNamespaceSelector, err)
 			return nil
+		} else {
+			// Convert the parsed egress selector to a string. This normalizes the selector and removes
+			// any whitespace, etc., that may have existed in the original string.
+			egressNamespaceSelector = parsed.String()
 		}
 	}
 	var egressMaxNextHops int

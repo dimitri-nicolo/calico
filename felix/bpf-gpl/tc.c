@@ -45,6 +45,7 @@
 #include "failsafe.h"
 #include "metadata.h"
 #include "bpf_helpers.h"
+#include "rule_counters.h"
 
 #if !defined(__BPFTOOL_LOADER__) && !defined (__IPTOOL_LOADER__)
 const volatile struct cali_tc_globals __globals;
@@ -653,6 +654,7 @@ int calico_tc_skb_accepted_entrypoint(struct __sk_buff *skb)
 	event_flow_log(skb, ctx.state);
 	CALI_DEBUG("Flow log event generated for ALLOW\n");
 
+	update_rule_counters(ctx.state);
 	struct calico_nat_dest *nat_dest = NULL;
 	struct calico_nat_dest nat_dest_2 = {
 		.addr=ctx.state->nat_dest.addr,
@@ -1507,6 +1509,7 @@ int calico_tc_skb_drop(struct __sk_buff *skb)
 		CALI_DEBUG("Counters map lookup failed: DROP\n");
 		return TC_ACT_SHOT;
 	}
+	update_rule_counters(ctx.state);
 	COUNTER_INC(&ctx, CALI_REASON_DROPPED_BY_POLICY);
 
 	CALI_DEBUG("proto=%d\n", ctx.state->ip_proto);

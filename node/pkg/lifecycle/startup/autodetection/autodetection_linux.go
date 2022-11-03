@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2021-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@ package autodetection
 // Default interfaces to exclude for any logic following the first-found
 // auto detect IP method
 var DEFAULT_INTERFACES_TO_EXCLUDE []string = []string{
-	"docker.*", "cbr.*", "dummy.*",
-	"virbr.*", "lxcbr.*", "veth.*", "lo",
-	"cali.*", "tunl.*", "flannel.*", "kube-ipvs.*", "cni.*",
+	"^docker.*", "^cbr.*", "^dummy.*",
+	"^virbr.*", "^lxcbr.*", "^veth.*", "^lo",
+	"^cali.*", "^tunl.*", "^flannel.*", "^kube-ipvs.*", "^cni.*",
+	"^vxlan\\.calico.*", "^vxlan-v6\\.calico.*", "^wireguard\\.cali.*", "^wg-v6\\.cali.*",
 }
