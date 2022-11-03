@@ -91,7 +91,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		return gw
 	}
 
-	denyPolicyEGW := func(gw *workload.Workload) {
+	denyPolicyEGW := func(felix *infrastructure.Felix, gw *workload.Workload) {
 		protoUDP := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
 		pol := api.NewGlobalNetworkPolicy()
 		pol.Name = "egw-deny-ingress"
@@ -100,6 +100,11 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		pol.Spec.Selector = gw.NameSelector()
 		pol, err := client.GlobalNetworkPolicies().Create(utils.Ctx, pol, utils.NoOptions)
 		Expect(err).NotTo(HaveOccurred())
+		if BPFMode() {
+			Eventually(func() bool {
+				return bpfCheckIfPolicyProgrammed(felix, gw.InterfaceName, "ingress", "default.egw-deny-ingress", "deny", true)
+			}, "5s", "200ms").Should(BeTrue())
+		}
 	}
 
 	createHostEndPointPolicy := func(felix *infrastructure.Felix) {
@@ -151,6 +156,25 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		denyEGWHealthPolicy.Spec.Order = &order
 		denyEGWHealthPolicy, err = client.GlobalNetworkPolicies().Create(utils.Ctx, denyEGWHealthPolicy, utils.NoOptions)
 		Expect(err).NotTo(HaveOccurred())
+
+		if BPFMode() {
+			Eventually(func() bool {
+				return bpfCheckIfPolicyProgrammed(felix, "eth0", "egress", "default.allow-all", "allow", false)
+			}, "5s", "200ms").Should(BeTrue())
+
+			Eventually(func() bool {
+				return bpfCheckIfPolicyProgrammed(felix, "eth0", "ingress", "default.allow-all", "allow", false)
+			}, "5s", "200ms").Should(BeTrue())
+
+			Eventually(func() bool {
+				return bpfCheckIfPolicyProgrammed(felix, "eth0", "egress", "default.deny-egw", "deny", false)
+			}, "5s", "200ms").Should(BeTrue())
+
+			Eventually(func() bool {
+				return bpfCheckIfPolicyProgrammed(felix, "eth0", "egress", "default.deny-egw-health", "deny", false)
+			}, "5s", "200ms").Should(BeTrue())
+		}
+
 	}
 
 	makeClient := func(felix *infrastructure.Felix, wIP, wName string) *workload.Workload {
@@ -354,6 +378,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 								client = makeClient(felixes[0], "10.65.0.2", "client")
 								if sameNode {
 									gw = makeGateway(felixes[0], "10.10.10.1", "gw")
+									denyPolicyEGW(felixes[0], gw)
 								} else {
 									gw = makeGateway(felixes[1], "10.10.10.1", "gw")
 									switch ov {
@@ -364,8 +389,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 									case OV_IPIP:
 										felixes[0].Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP, "dev", "tunl0", "onlink")
 									}
+									denyPolicyEGW(felixes[1], gw)
 								}
-								denyPolicyEGW(gw)
+
 								extWorkload.C.Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP)
 							})
 
