@@ -350,6 +350,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 				extWorkload *workload.Workload
 				cc          *connectivity.Checker
 				protocol    string
+				felix       *infrastructure.Felix
 			)
 
 			JustBeforeEach(func() {
@@ -400,13 +401,10 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 							})
 
 							JustBeforeEach(func() {
-								if !sameNode && ov == OV_NONE {
-									createHostEndPointPolicy(felixes[0])
-								}
 								client = makeClient(felixes[0], "10.65.0.2", "client")
 								if sameNode {
 									gw = makeGateway(felixes[0], "10.10.10.1", "gw")
-									denyPolicyEGW(felixes[0], gw)
+									felix = felixes[0]
 								} else {
 									gw = makeGateway(felixes[1], "10.10.10.1", "gw")
 									switch ov {
@@ -417,8 +415,15 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 									case OV_IPIP:
 										felixes[0].Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP, "dev", "tunl0", "onlink")
 									}
-									denyPolicyEGW(felixes[1], gw)
+									felix = felixes[1]
 								}
+								if BPFMode() {
+									ensureAllNodesBPFProgramsAttached(felixes)
+								}
+								if !sameNode && ov == OV_NONE {
+									createHostEndPointPolicy(felixes[0])
+								}
+								denyPolicyEGW(felix, gw)
 								extWorkload.C.Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP)
 							})
 
