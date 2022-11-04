@@ -106,7 +106,7 @@ var (
         "should": [
           {"bool": {
 						"must": [
-              {"term": {"source_name_aggr": "{{.EndpointName}}"}},
+              {"term": {"source_namespace": "{{.Namespace}}"}}
             ]
 						OR
             "must": [
@@ -116,12 +116,12 @@ var (
           }},
           {"bool": {
 						"must": [
-              {"term": {"source_name_aggr": "{{.EndpointName}}"}},
+              {"term": {"dest_namespace": "{{.Namespace}}"}}
             ]
 						OR
             "must": [
-              {"term": {"source_name_aggr": "{{.EndpointName}}"}},
-              {"term": {"source_namespace": "{{.Namespace}}"}}
+              {"term": {"dest_name_aggr": "{{.EndpointName}}"}},
+              {"term": {"dest_namespace": "{{.Namespace}}"}}
             ]
           }}
         ]
