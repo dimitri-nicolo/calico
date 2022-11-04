@@ -175,3 +175,10 @@ func WithFIPSModeEnabled(fipsModeEnabled bool) Option {
 		return nil
 	}
 }
+
+func WithCheckManagedClusterAuthorizationBeforeProxy(checkManagedClusterAuthorizationBeforeProxy bool) Option {
+	return func(s *Server) error {
+		s.checkManagedClusterAuthorizationBeforeProxy = checkManagedClusterAuthorizationBeforeProxy
+		return nil
+	}
+}

@@ -20,6 +20,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	authorizationv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/rest"
 
@@ -88,6 +89,9 @@ type Server struct {
 
 	// Enable FIPS 140-2 verified mode.
 	fipsModeEnabled bool
+
+	// checkManagedClusterAuthorizationBeforeProxy
+	checkManagedClusterAuthorizationBeforeProxy bool
 }
 
 // New returns a new Server. k8s may be nil and options must check if it is nil
@@ -362,6 +366,26 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 		log.Errorf("clusterMuxer: %s", msg)
 		writeHTTPError(w, clusterNotFoundError(clusterID))
 		return
+	}
+
+	// perform an authorization to make sure this user can get this cluster
+	if s.checkManagedClusterAuthorizationBeforeProxy {
+		ok, err := s.authenticator.Authorize(usr, &authorizationv1.ResourceAttributes{
+			Verb:     "get",
+			Group:    "projectcalico.org",
+			Version:  "v3",
+			Resource: "managedclusters",
+			Name:     clusterID,
+		}, nil)
+		if err != nil {
+			log.Errorf("Could not authenticate user for cluster: %s", err)
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		if !ok {
+			http.Error(w, "not authorized for managed cluster", http.StatusUnauthorized)
+			return
+		}
 	}
 
 	// We proxy through a secure tunnel, therefore we only enforce https for HTTP/2

@@ -10,6 +10,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -26,6 +27,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"golang.org/x/net/http2"
 
+	authorizationv1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/kubernetes"
@@ -139,6 +141,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			srvWg                 *sync.WaitGroup
 			srv                   *server.Server
 			defaultServer         *httptest.Server
+			mockAuthorize         *mock.Call
 		)
 
 		BeforeEach(func() {
@@ -150,6 +153,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					Name:   "jane@example.io",
 					Groups: []string{"developers"},
 				}, 0, nil)
+			mockAuthorize = mockAuthenticator.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
 
 			defaultServer = httptest.NewServer(
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -182,6 +186,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 				server.WithDefaultProxy(defaultProxy),
 				server.WithKubernetesAPITargets(k8sTargets),
 				server.WithTunnelTargetWhitelist(tunnelTargetWhitelist),
+				server.WithCheckManagedClusterAuthorizationBeforeProxy(true),
 			)
 		})
 
@@ -435,6 +440,21 @@ var _ = Describe("Server Proxy to tunnel", func() {
 					}()
 
 					wg.Wait()
+				})
+
+				It("should not send requests if not authorized on that managedcluster", func() {
+					mockAuthorize.Unset()
+					mockAuthorize.On("Authorize", mock.Anything, &authorizationv1.ResourceAttributes{
+						Verb:     "get",
+						Group:    "projectcalico.org",
+						Version:  "v3",
+						Resource: "managedclusters",
+						Name:     clusterA,
+					}, (*authorizationv1.NonResourceAttributes)(nil)).Return(false, nil)
+					resp := clientHelloReq(httpsAddr, clusterA, http.StatusUnauthorized)
+					bits, err := ioutil.ReadAll(resp.Body)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(string(bits)).To(Equal("not authorized for managed cluster\n"))
 				})
 
 				Context("A second cluster is registered", func() {
@@ -851,8 +871,8 @@ func configureHTTPSClient() *http.Client {
 	}
 }
 
-func clientHelloReq(addr string, target string, expectStatus int) {
-	Eventually(func() bool {
+func clientHelloReq(addr string, target string, expectStatus int) (resp *http.Response) {
+	Eventually(func() error {
 		req, err := http.NewRequest("GET", "https://"+addr+"/some/path", strings.NewReader("HELLO"))
 		Expect(err).NotTo(HaveOccurred())
 
@@ -865,10 +885,13 @@ func clientHelloReq(addr string, target string, expectStatus int) {
 			},
 		}
 		client := &http.Client{Transport: tr}
-		resp, err := client.Do(req)
-
-		return err == nil && resp.StatusCode == expectStatus
-	}, 2*time.Second, 400*time.Millisecond).Should(BeTrue())
+		resp, err = client.Do(req)
+		if err != nil || resp.StatusCode != expectStatus {
+			return fmt.Errorf("err=%v status=%d expectedStatus=%d", err, resp.StatusCode, expectStatus)
+		}
+		return nil
+	}, 2*time.Second, 400*time.Millisecond).ShouldNot(HaveOccurred())
+	return
 }
 
 func createAndStartServer(k8sAPI bootstrap.K8sClient, config *rest.Config, authenticator auth.JWTAuth,
