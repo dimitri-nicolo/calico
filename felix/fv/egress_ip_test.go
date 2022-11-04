@@ -102,23 +102,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		return true
 	}
 
-/*
-	denyPolicyEGW := func(felix *infrastructure.Felix, gw *workload.Workload) {
-		protoUDP := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
-		pol := api.NewGlobalNetworkPolicy()
-		pol.Name = "default.egw-deny-ingress"
-		pol.Spec.Ingress = []api.Rule{{Action: "Deny", Protocol: &protoUDP}}
-		pol.Spec.Ingress[0].Destination = api.EntityRule{Ports: []numorstring.Port{numorstring.SinglePort(4790)}}
-		pol.Spec.Selector = gw.NameSelector()
-		pol, err := client.GlobalNetworkPolicies().Create(utils.Ctx, pol, utils.NoOptions)
-		Expect(err).NotTo(HaveOccurred())
-		if BPFMode() {
-			Eventually(func() bool {
-				return bpfCheckIfPolicyProgrammed(felix, gw.InterfaceName, "ingress", "default.egw-deny-ingress", "deny", true)
-			}, "5s", "200ms").Should(BeTrue())
-		}
-	} */
-
 	createHostEndPointPolicy := func(felix *infrastructure.Felix) {
 		protoTCP := numorstring.ProtocolFromString(numorstring.ProtocolTCP)
 		protoUDP := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
@@ -351,7 +334,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 				extWorkload *workload.Workload
 				cc          *connectivity.Checker
 				protocol    string
-				//felix       *infrastructure.Felix
 			)
 
 			JustBeforeEach(func() {
@@ -403,18 +385,25 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 
 							JustBeforeEach(func() {
 								rulesProgrammed := func() bool {
-									out, err := felixes[1].ExecOutput("iptables-save", "-t", "filter")
+									felix := felixes[1]
+									if sameNode {
+										felix = felixes[0]
+									}
+									if BPFMode() {
+										return bpfCheckIfPolicyProgrammed(felix, gw.InterfaceName, "ingress", "default.egw-deny-ingress", "deny", true)
+									}
+									out, err := felix.ExecOutput("iptables-save", "-t", "filter")
 									Expect(err).NotTo(HaveOccurred())
-									return (strings.Count(out, "default.egw-deny-ingress") != 0)
+									return (strings.Contains(out, "default.egw-deny-ingress"))
 								}
 
-								denyEGWIng := func() {
+								createEgwIngPol := func() {
 									protoUDP := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
 									pol := api.NewGlobalNetworkPolicy()
 									pol.Name = "default.egw-deny-ingress"
 									pol.Spec.Tier = "default"
 									pol.Spec.Types = []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress}
-									pol.Spec.Ingress = []api.Rule{{Action: api.Allow, Protocol: &protoUDP}}
+									pol.Spec.Ingress = []api.Rule{{Action: api.Deny, Protocol: &protoUDP}}
 									pol.Spec.Ingress[0].Destination = api.EntityRule{Ports: []numorstring.Port{numorstring.SinglePort(4790)}}
 									pol.Spec.Egress = []api.Rule{{Action: api.Allow}}
 									pol.Spec.Selector = gw.NameSelector()
@@ -425,7 +414,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 								egwClient = makeClient(felixes[0], "10.65.0.2", "client")
 								if sameNode {
 									gw = makeGateway(felixes[0], "10.10.10.1", "gw")
-									//felix = felixes[0]
 								} else {
 									gw = makeGateway(felixes[1], "10.10.10.1", "gw")
 									switch ov {
@@ -436,7 +424,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 									case OV_IPIP:
 										felixes[0].Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP, "dev", "tunl0", "onlink")
 									}
-									//felix = felixes[1]
 								}
 								if BPFMode() {
 									ensureAllNodesBPFProgramsAttached(felixes)
@@ -444,11 +431,9 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 								if !sameNode && ov == OV_NONE {
 									createHostEndPointPolicy(felixes[0])
 								}
-								//denyPolicyEGW(felix, gw)
-								denyEGWIng()
+								createEgwIngPol()
 								Eventually(rulesProgrammed, "10s", "1s").Should(BeTrue(),
 									"Expected iptables rules to appear on the correct felix instances")
-
 								extWorkload.C.Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP)
 							})
 
