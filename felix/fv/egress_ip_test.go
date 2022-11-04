@@ -91,10 +91,21 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		return gw
 	}
 
+	rulesProgrammed := func(felix *infrastructure.Felix, polNames []string) bool {
+		out, err := felix.ExecOutput("iptables-save", "-t", "filter")
+		Expect(err).NotTo(HaveOccurred())
+		for _, polName := range polNames {
+			if strings.Count(out, polName) == 0 {
+				return false
+			}
+		}
+		return true
+	}
+
 	denyPolicyEGW := func(felix *infrastructure.Felix, gw *workload.Workload) {
 		protoUDP := numorstring.ProtocolFromString(numorstring.ProtocolUDP)
 		pol := api.NewGlobalNetworkPolicy()
-		pol.Name = "egw-deny-ingress"
+		pol.Name = "default.egw-deny-ingress"
 		pol.Spec.Ingress = []api.Rule{{Action: "Deny", Protocol: &protoUDP}}
 		pol.Spec.Ingress[0].Destination = api.EntityRule{Ports: []numorstring.Port{numorstring.SinglePort(4790)}}
 		pol.Spec.Selector = gw.NameSelector()
@@ -158,6 +169,12 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 		Expect(err).NotTo(HaveOccurred())
 
 		if BPFMode() {
+			hostEndpointProgrammed := func() bool {
+				return felix.NumTCBPFProgsEth0() == 2
+			}
+			Eventually(hostEndpointProgrammed, "10s", "1s").Should(BeTrue(),
+				"Expected host endpoint to be programmed")
+
 			Eventually(func() bool {
 				return bpfCheckIfPolicyProgrammed(felix, "eth0", "egress", "default.allow-all", "allow", false)
 			}, "5s", "200ms").Should(BeTrue())
@@ -173,6 +190,17 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 			Eventually(func() bool {
 				return bpfCheckIfPolicyProgrammed(felix, "eth0", "egress", "default.deny-egw-health", "deny", false)
 			}, "5s", "200ms").Should(BeTrue())
+		} else {
+			hostEndpointProgrammed := func() bool {
+				out, err := felix.ExecOutput("iptables-save", "-t", "filter")
+				Expect(err).NotTo(HaveOccurred())
+				return (strings.Count(out, "cali-thfw-eth0") > 0)
+			}
+			Eventually(hostEndpointProgrammed, "10s", "1s").Should(BeTrue(),
+				"Expected HostEndpoint iptables rules to appear")
+			polNames := []string{"default.allow-all", "default.deny-egw", "default.deny-egw-health"}
+			Eventually(rulesProgrammed(felix, polNames), "10s", "1s").Should(BeTrue(),
+				"Expected iptables rules to appear on the felix instances")
 		}
 
 	}
@@ -391,7 +419,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ Egress IP", []apiconfig.Dat
 									}
 									denyPolicyEGW(felixes[1], gw)
 								}
-
 								extWorkload.C.Exec("ip", "route", "add", "10.10.10.1/32", "via", gw.C.IP)
 							})
 
