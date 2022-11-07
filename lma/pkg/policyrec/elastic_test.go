@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
 package policyrec_test
 
 import (
@@ -30,6 +30,24 @@ var (
 		Unprotected:   false,
 		DocumentIndex: "test-flow-log-index",
 	}
+
+	testNamespaceOnlyParameters = &policyrec.PolicyRecommendationParams{
+		StartTime:     "now-3h",
+		EndTime:       "now-0h",
+		EndpointName:  "",
+		Namespace:     "test-namespace",
+		Unprotected:   false,
+		DocumentIndex: "test-flow-log-index",
+	}
+
+	testNamespaceOnlyParametersUnprotected = &policyrec.PolicyRecommendationParams{
+		StartTime:     "now-3h",
+		EndTime:       "now-0h",
+		EndpointName:  "",
+		Namespace:     "test-namespace",
+		Unprotected:   true,
+		DocumentIndex: "test-flow-log-index",
+	}
 )
 
 var _ = Describe("Policy Recommendation Unit Tests for functions interfacing with elasticsearch", func() {
@@ -45,6 +63,18 @@ var _ = Describe("Policy Recommendation Unit Tests for functions interfacing wit
 		boolQuery, ok = query.(*elastic.BoolQuery)
 		Expect(ok).To(BeTrue())
 		matchBoolTopLevelQuery(boolQuery, testParams)
+
+		By("Validating an unprotected namespace query")
+		query = policyrec.BuildElasticQuery(testNamespaceOnlyParametersUnprotected)
+		boolQuery, ok = query.(*elastic.BoolQuery)
+		Expect(ok).To(BeTrue())
+		matchBoolTopLevelQuery(boolQuery, testNamespaceOnlyParametersUnprotected)
+
+		By("Validating a namespace query for all traffic in the default tier")
+		query = policyrec.BuildElasticQuery(testNamespaceOnlyParameters)
+		boolQuery, ok = query.(*elastic.BoolQuery)
+		Expect(ok).To(BeTrue())
+		matchBoolTopLevelQuery(boolQuery, testNamespaceOnlyParameters)
 	})
 })
 
@@ -126,10 +156,14 @@ func matchBoolTopLevelQuery(boolQuery *elastic.BoolQuery, params *policyrec.Poli
 			case "bool":
 				innerBoolQuery, ok := v.(map[string]interface{})
 				Expect(ok).To(BeTrue())
-				matchInnerBoolShouldQuery(innerBoolQuery, params)
+				if params.EndpointName != "" {
+					matchInnerBoolShouldQuery(innerBoolQuery, params)
+				} else {
+					matchNamespaceInnerBoolShouldQuery(innerBoolQuery, params)
+
+				}
 			}
 		}
-
 	}
 }
 
@@ -245,6 +279,39 @@ func matchWildcardQuery(wildcardQuery map[string]interface{}, wildcardedPolicyQu
 //        "should": [
 //          {"bool": {
 //            "must": [
+//              {"term": {"source_namespace": "test-namespace"}}
+//            ]
+//          }},
+//          {"bool": {
+//            "must": [
+//              {"term": {"dest_namespace": "test-namespace"}}
+//            ]
+//          }}
+//        ]
+//      }}
+func matchNamespaceInnerBoolShouldQuery(boolQuery map[string]interface{}, params *policyrec.PolicyRecommendationParams) {
+	shouldQuery, ok := boolQuery["should"].([]interface{})
+	Expect(ok).To(BeTrue())
+
+	for _, shouldPart := range shouldQuery {
+		part, ok := shouldPart.(map[string]interface{})
+		Expect(ok).To(BeTrue())
+		for k, v := range part {
+			Expect(k).To(Equal("bool"))
+			innerBoolQuery, ok := v.(map[string]interface{})
+			Expect(ok).To(BeTrue())
+			mustQuery, ok := innerBoolQuery["must"]
+			Expect(ok).To(BeTrue())
+			matchNamespaceInnerMustQuery(mustQuery, params)
+		}
+	}
+}
+
+// Matches the inner "should" query
+//      {"bool": {
+//        "should": [
+//          {"bool": {
+//            "must": [
 //              {"term": {"source_name_aggr": "test-app-pod"}},
 //              {"term": {"source_namespace": "test-namespace"}}
 //            ]
@@ -271,6 +338,30 @@ func matchInnerBoolShouldQuery(boolQuery map[string]interface{}, params *policyr
 			mustQuery, ok := innerBoolQuery["must"].([]interface{})
 			Expect(ok).To(BeTrue())
 			matchInnerMustQuery(mustQuery, params)
+		}
+	}
+}
+
+// Matches inner must queries such as (and corresponding source variant):
+//            "must": [
+//              {"term": {"dest_namespace": "test-namespace"}}
+//            ]
+func matchNamespaceInnerMustQuery(mustQuery interface{}, params *policyrec.PolicyRecommendationParams) {
+	mustPart := mustQuery
+	part, ok := mustPart.(map[string]interface{})
+	Expect(ok).To(BeTrue())
+	for k, v := range part {
+		Expect(k).To(Equal("term"))
+		termQuery, ok := v.(map[string]interface{})
+		Expect(ok).To(BeTrue())
+		for tk, tv := range termQuery {
+			switch tk {
+			case "source_name_aggr", "dest_name_aggr":
+				Expect(tv).To(Equal(params.EndpointName))
+			case "source_namespace", "dest_namespace":
+				Expect(tv).To(Equal(params.Namespace))
+
+			}
 		}
 	}
 }
