@@ -15,9 +15,6 @@ spec:
 
   # Optionally, a custom registry to use for pulling images.
   # registry: <my-registry>
-  registry: UseDefault
-  imagePath: UseDefault
-  imagePrefix: UseDefault
 
   # Enables provider-specific settings required for compatibility.
   kubernetesProvider: AKS
@@ -44,7 +41,7 @@ spec:
 apiVersion: operator.tigera.io/v1
 kind: APIServer
 metadata:
-  name: tigera-secure
+  name: default
 
 ---
 
