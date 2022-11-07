@@ -46,34 +46,35 @@ import (
 )
 
 type AttachPoint struct {
-	Type                 EndpointType
-	ToOrFrom             ToOrFromEp
-	Hook                 bpf.Hook
-	Iface                string
-	LogLevel             string
-	HostIP               net.IP
-	HostTunnelIP         net.IP
-	IntfIP               net.IP
-	FIB                  bool
-	ToHostDrop           bool
-	DSR                  bool
-	TunnelMTU            uint16
-	VXLANPort            uint16
-	WgPort               uint16
-	ExtToServiceConnmark uint32
-	VethNS               uint16
-	EnableTCPStats       bool
-	IsEgressGateway      bool
-	IsEgressClient       bool
-	ForceReattach        bool
-	PSNATStart           uint16
-	PSNATEnd             uint16
-	IPv6Enabled          bool
-	MapSizes             map[string]uint32
-	Features             environment.Features
-	RPFStrictEnabled     bool
-	EGWVxlanPort         uint16
-	EgressIPEnabled      bool
+	Type                    EndpointType
+	ToOrFrom                ToOrFromEp
+	Hook                    bpf.Hook
+	Iface                   string
+	LogLevel                string
+	HostIP                  net.IP
+	HostTunnelIP            net.IP
+	IntfIP                  net.IP
+	FIB                     bool
+	ToHostDrop              bool
+	DSR                     bool
+	TunnelMTU               uint16
+	VXLANPort               uint16
+	WgPort                  uint16
+	ExtToServiceConnmark    uint32
+	VethNS                  uint16
+	EnableTCPStats          bool
+	IsEgressGateway         bool
+	IsEgressClient          bool
+	ForceReattach           bool
+	PSNATStart              uint16
+	PSNATEnd                uint16
+	IPv6Enabled             bool
+	MapSizes                map[string]uint32
+	Features                environment.Features
+	RPFStrictEnabled        bool
+	EGWVxlanPort            uint16
+	EgressIPEnabled         bool
+	EgressGatewayHealthPort uint16
 }
 
 var tcLock sync.RWMutex
@@ -677,13 +678,14 @@ func (ap AttachPoint) Config() string {
 
 func (ap *AttachPoint) ConfigureProgram(m *libbpf.Map) error {
 	globalData := libbpf.TcGlobalData{ExtToSvcMark: ap.ExtToServiceConnmark,
-		VxlanPort:    ap.VXLANPort,
-		Tmtu:         ap.TunnelMTU,
-		PSNatStart:   ap.PSNATStart,
-		PSNatLen:     ap.PSNATEnd,
-		VethNS:       ap.VethNS,
-		WgPort:       ap.WgPort,
-		EgwVxlanPort: ap.EGWVxlanPort,
+		VxlanPort:     ap.VXLANPort,
+		Tmtu:          ap.TunnelMTU,
+		PSNatStart:    ap.PSNATStart,
+		PSNatLen:      ap.PSNATEnd,
+		VethNS:        ap.VethNS,
+		WgPort:        ap.WgPort,
+		EgwVxlanPort:  ap.EGWVxlanPort,
+		EgwHealthPort: ap.EgressGatewayHealthPort,
 	}
 	var err error
 

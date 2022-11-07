@@ -45,6 +45,7 @@
 #include "failsafe.h"
 #include "metadata.h"
 #include "bpf_helpers.h"
+#include "egw.h"
 #include "rule_counters.h"
 
 #if !defined(__BPFTOOL_LOADER__) && !defined (__IPTOOL_LOADER__)
@@ -431,7 +432,7 @@ syn_force_policy:
 	if (CALI_F_FROM_HOST && EGRESS_IP_ENABLED &&
 			!skb_refresh_validate_ptrs(ctx, UDP_SIZE) &&
 			is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT) &&
-			ctx->state->ip_src == HOST_IP) {
+			(ctx->state->ip_src == HOST_IP)) {
 		CALI_DEBUG("Allow VXLAN packet to Egress Gateways\n");
 		COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
 		goto skip_policy;
@@ -442,7 +443,8 @@ syn_force_policy:
 		if (!skb_refresh_validate_ptrs(ctx, UDP_SIZE) &&
 				is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
 			__be32 ip_addr = CALI_F_FROM_WEP ? ctx->state->ip_dst : ctx->state->ip_src;
-			if (rt_addr_is_remote_host(ip_addr)) {
+			__be32 flags = cali_rt_lookup_flags(ip_addr);
+			if (cali_rt_flags_host(flags)) {
 				COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
 				if (CALI_F_FROM_WEP) {
 					CALI_DEBUG("Allow VXLAN packet from EGW pod\n");
@@ -452,6 +454,11 @@ syn_force_policy:
 				goto skip_policy;
 			}
 		} else if (CALI_F_TO_WEP) {
+			if (EGW_HEALTH_PORT && (ctx->state->ip_proto == IPPROTO_TCP) && 
+					(ctx->state->dport == EGW_HEALTH_PORT)) {
+				CALI_DEBUG("Allow health check traffic to EGW pod\n");
+				goto skip_policy;
+			}	       
 			goto deny;
 		}
 	}
@@ -1509,6 +1516,16 @@ int calico_tc_skb_drop(struct __sk_buff *skb)
 		CALI_DEBUG("Counters map lookup failed: DROP\n");
 		return TC_ACT_SHOT;
 	}
+
+	if (CALI_F_FROM_HOST && EGRESS_IP_ENABLED &&
+			(ctx.state->ip_src == HOST_IP) &&
+			dest_is_egw_health(ctx.state->ip_dst, ctx.state->dport)) {
+		// Auto Allow health check traffic to EGW pod
+		CALI_DEBUG("Allow EGW health check packets\n");
+		COUNTER_INC(&ctx, CALI_REASON_ACCEPTED_BY_EGW);
+		goto allow;
+	}
+
 	update_rule_counters(ctx.state);
 	COUNTER_INC(&ctx, CALI_REASON_DROPPED_BY_POLICY);
 
@@ -1550,12 +1567,9 @@ int calico_tc_skb_drop(struct __sk_buff *skb)
 			 */
 			CALI_INFO("Allowing WG %x <-> %x despite blocked by policy - known hosts.\n",
 					bpf_ntohl(ctx.state->ip_src), bpf_ntohl(ctx.state->ip_dst));
-			event_flow_log(skb, ctx.state);
-			CALI_DEBUG("Flow log event generated for ALLOW\n");
 			goto allow;
 		}
 	}
-
 	event_flow_log(skb, ctx.state);
 	CALI_DEBUG("Flow log event generated for DENY/DROP\n");
 	goto deny;
@@ -1563,6 +1577,7 @@ int calico_tc_skb_drop(struct __sk_buff *skb)
 allow:
 	ctx.state->pol_rc = CALI_POL_ALLOW;
 	ctx.state->flags |= CALI_ST_SKIP_POLICY;
+	ctx.state->rules_hit = 0;
 	CALI_JUMP_TO(skb, PROG_INDEX_ALLOWED);
 	/* should not reach here */
 	CALI_DEBUG("Failed to jump to allow program.");
