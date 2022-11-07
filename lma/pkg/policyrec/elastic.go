@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
 package policyrec
 
 import (
@@ -105,12 +105,20 @@ var (
       {"bool": {
         "should": [
           {"bool": {
+						"must": [
+              {"term": {"source_namespace": "{{.Namespace}}"}}
+            ]
+						OR
             "must": [
               {"term": {"source_name_aggr": "{{.EndpointName}}"}},
               {"term": {"source_namespace": "{{.Namespace}}"}}
             ]
           }},
           {"bool": {
+						"must": [
+              {"term": {"dest_namespace": "{{.Namespace}}"}}
+            ]
+						OR
             "must": [
               {"term": {"dest_name_aggr": "{{.EndpointName}}"}},
               {"term": {"dest_namespace": "{{.Namespace}}"}}
@@ -129,7 +137,7 @@ func BuildElasticQuery(params *PolicyRecommendationParams) elastic.Query {
 	sourceTermsQuery := elastic.NewTermsQuery("source_type", "net", "ns", "wep", "hep")
 	destTermsQuery := elastic.NewTermsQuery("dest_type", "net", "ns", "wep", "hep")
 
-	nameAndNamespaceQuery := buildNameAndNamespaceQuery(params.Namespace, params.EndpointName)
+	nameAndNamespaceQuery := buildNameOrNamespaceQuery(params.Namespace, params.EndpointName)
 
 	unprotectedWildcardQuery := buildUnprotectedQuery(params.Namespace)
 
@@ -175,19 +183,31 @@ func buildUnprotectedQuery(namespace string) elastic.Query {
 	return elastic.NewWildcardQuery("policies.all_policies", namespaceProfile)
 }
 
-func buildNameAndNamespaceQuery(namespace, name string) elastic.Query {
-	nameAndNamespaceQuery := elastic.NewBoolQuery()
+func buildNameOrNamespaceQuery(namespace, name string) elastic.Query {
+	nameOrNamespaceQuery := elastic.NewBoolQuery()
 	sourceQuery := elastic.NewBoolQuery()
-	sourceQuery = sourceQuery.Must(
-		elastic.NewTermQuery("source_namespace", namespace),
-		elastic.NewTermQuery("source_name_aggr", name),
-	)
 	destQuery := elastic.NewBoolQuery()
-	destQuery = destQuery.Must(
-		elastic.NewTermQuery("dest_namespace", namespace),
-		elastic.NewTermQuery("dest_name_aggr", name),
-	)
-	return nameAndNamespaceQuery.Should(sourceQuery, destQuery)
+
+	// An empty name results in a namespace only query.
+	if name == "" {
+		sourceQuery = sourceQuery.Must(
+			elastic.NewTermQuery("source_namespace", namespace),
+		)
+		destQuery = destQuery.Must(
+			elastic.NewTermQuery("dest_namespace", namespace),
+		)
+	} else {
+		sourceQuery = sourceQuery.Must(
+			elastic.NewTermQuery("source_namespace", namespace),
+			elastic.NewTermQuery("source_name_aggr", name),
+		)
+		destQuery = destQuery.Must(
+			elastic.NewTermQuery("dest_namespace", namespace),
+			elastic.NewTermQuery("dest_name_aggr", name),
+		)
+	}
+
+	return nameOrNamespaceQuery.Should(sourceQuery, destQuery)
 
 }
 
