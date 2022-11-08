@@ -100,9 +100,13 @@ const (
 	GlobalsIsEgressGateway  uint32 = 4
 	GlobalsIsEgressClient   uint32 = 8
 	GlobalsRPFStrictEnabled uint32 = 16
+	GlobalsEgressIPEnabled  uint32 = 32
 )
 
-func TcSetGlobals(m *Map, _, _, _ uint32, _, _, _, _ uint16, _, _ uint32, _ uint16, _ uint32) error {
+type BpfGlobalData struct {
+}
+
+func TcSetGlobals(m *Map, globalData BpfGlobalData) error {
 	panic("LIBBPF syscall stub")
 }
 
