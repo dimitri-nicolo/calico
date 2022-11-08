@@ -9,7 +9,7 @@ HP_VERSION=3.19.2
 HP_IGNORE_LOCAL_DIRS="/_includes/"
 
 # URLs to ignore when checking external links.
-HP_IGNORE_URLS="/docs.openshift.org/,/openid.net/specs/openid-connect-core-1_0.html,/docs.openshift.com/,#,/github.com\/projectcalico\/calico\/releases\/download/,/v2.3/,/v2.4/,/v2.5/,/v2.6/,/eksctl.io/,/stackpoint.io/,/api.my-ocp-domain.com/,/docs.vmware.com/,/github.com\/projectcalico\/felix\/issues\/1347/"
+HP_IGNORE_URLS="/docs.openshift.org/,/openid.net/specs/openid-connect-core-1_0.html,/datatracker.ietf.org/doc/html/rfc7938,/docs.openshift.com/,#,/github.com\/projectcalico\/calico\/releases\/download/,/v2.3/,/v2.4/,/v2.5/,/v2.6/,/eksctl.io/,/stackpoint.io/,/api.my-ocp-domain.com/,/docs.vmware.com/,/github.com\/projectcalico\/felix\/issues\/1347/"
 
 # jekyll uid
 JEKYLL_UID=${JEKYLL_UID:=`id -u`}
