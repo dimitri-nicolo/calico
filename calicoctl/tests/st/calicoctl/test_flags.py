@@ -60,17 +60,25 @@ class TestCalicoctlCLIFlags(TestBase):
         rc.assert_no_error()
 
         # Set the correct CalicoVersion in the cluster
-        output = set_cluster_version()
-        output.assert_no_error()
+        rc = set_cluster_version()
+        rc.assert_no_error()
 
         # CalicoVersion is correct in the cluster, expect no error
         rc = calicoctl("replace", data=node_name1_rev1, allowVersionMismatch=False)
-        output.assert_no_error()
+        rc.assert_no_error()
 
         # Set an incorrect CalicoVersion in the cluster
-        output = set_cluster_version("v0.0.0.1.2.3")
-        output.assert_no_error()
+        rc = set_cluster_version("v0.0.0.1.2.3")
+        rc.assert_no_error()
 
         # CalicoVersion is incorrect in the cluster, expect error
         rc = calicoctl("replace", data=node_name1_rev1, allowVersionMismatch=False)
         rc.assert_error("Version mismatch.")
+
+        # Test that the bgp peers <peer-name> command accepts the --allow-version-mismatch flag
+        # Without the --allow-version-mismatch flag, it should error but not with "Usage:"
+        rc = calicoctl("bgp peers peer-name", allowVersionMismatch=False)
+        rc.assert_error("Version mismatch.")
+        rc = calicoctl("bgp peers peer-name", allowVersionMismatch=True)
+        rc.assert_error()
+        rc.assert_output_not_contains("Usage:")
