@@ -113,7 +113,7 @@ ENV RUNTIME_LOG_FILE=/var/log/calico/runtime-security/report.log
 #TLS Settings
 ENV TLS_KEY_PATH=/tls/tls.key
 ENV TLS_CRT_PATH=/tls/tls.crt
-ENV CA_CRT_PATH=/tigera-ca-bundle/tigera-ca-bundle.crt
+ENV CA_CRT_PATH=/etc/pki/tigera/tigera-ca-bundle.crt
 
 ENV POS_DIR=/var/log/calico
 
