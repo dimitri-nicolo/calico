@@ -110,7 +110,7 @@ SYSLOG_PROTOCOL=tcp
 SYSLOG_TLS=true
 SYSLOG_VERIFY_MODE=\${OPENSSL::SSL::VERIFY_NONE}
 SYSLOG_HOSTNAME=nodename
-SYSLOG_CA_FILE=/tigera-ca-bundle/tigera-ca-bundle.crt
+SYSLOG_CA_FILE=/etc/pki/tigera/tigera-ca-bundle.crt
 EOM
 )
 
@@ -129,7 +129,7 @@ SYSLOG_PROTOCOL=tcp
 SYSLOG_TLS=true
 SYSLOG_VERIFY_MODE=\${OPENSSL::SSL::VERIFY_NONE}
 SYSLOG_HOSTNAME=nodename
-SYSLOG_CA_FILE=/tigera-ca-bundle/tigera-ca-bundle.crt
+SYSLOG_CA_FILE=/etc/pki/tigera/tigera-ca-bundle.crt
 EOM
 )
 
