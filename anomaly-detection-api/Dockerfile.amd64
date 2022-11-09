@@ -1,18 +1,7 @@
-ARG UBI_IMAGE
-
-FROM ${UBI_IMAGE} as ubi
-
-RUN microdnf update
-
-# create /etc/anomaly-detection-api directory and provide RW permission access to USER 1001
-RUN mkdir -p /etc/anomaly-detection-api
-RUN chown -R 1001 /etc/anomaly-detection-api
-
 FROM scratch
 
-COPY --chown=1001 --from=ubi /etc/anomaly-detection-api /etc/anomaly-detection-api
-ADD --chown=1001 bin/anomaly-detection-api-amd64 /anomaly-detection-api
+ADD bin/anomaly-detection-api-amd64 /usr/bin/anomaly-detection-api
 
-USER 1001
+USER 10001:10001
 
-ENTRYPOINT ["/anomaly-detection-api"]
+ENTRYPOINT ["/usr/bin/anomaly-detection-api"]

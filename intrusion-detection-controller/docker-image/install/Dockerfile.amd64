@@ -17,5 +17,4 @@ ADD bin/intrusion-detection-job-installer-amd64 /usr/bin/intrusion-detection-job
 
 USER 10001:10001
 
-# Now define the command-line call to start your application
 ENTRYPOINT ["/usr/bin/intrusion-detection-job-installer"]

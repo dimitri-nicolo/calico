@@ -65,7 +65,7 @@ ADD nsswitch.conf /etc/nsswitch.conf
 WORKDIR /code
 ENV PATH="$PATH:/code"
 
-USER 999
+USER 10001:10001
 # Run Typha by default
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["wrapper", "/code/calico-typha"]

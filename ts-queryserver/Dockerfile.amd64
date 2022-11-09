@@ -1,23 +1,19 @@
 ARG UBI_IMAGE
 
 FROM ${UBI_IMAGE} as ubi
-RUN microdnf update
 
-# At runtime, queryserver generate certificates in /code directory
-# hence, provide RW permission for user 1001
-RUN mkdir /code
-RUN chown -R 1001 /code
+RUN microdnf upgrade
+
 
 FROM scratch
-COPY --chown=1001 --from=ubi /code /code
-ADD --chown=1001 bin/cnx-queryserver-amd64 /code/cnx-queryserver
+
+ADD bin/cnx-queryserver-amd64 /usr/bin/cnx-queryserver
 
 # Copy dependencies from UBI to scratch
 COPY --from=ubi /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
 COPY --from=ubi /lib64/libpthread.so.0 /lib64/libpthread.so.0
 COPY --from=ubi /lib64/libc.so.6 /lib64/libc.so.6
 
-WORKDIR /code
+USER 10001:10001
 
-USER 1001
-ENTRYPOINT ["./cnx-queryserver"]
+ENTRYPOINT ["/usr/bin/cnx-queryserver"]
