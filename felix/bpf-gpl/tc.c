@@ -45,6 +45,7 @@
 #include "failsafe.h"
 #include "metadata.h"
 #include "bpf_helpers.h"
+#include "egw.h"
 #include "rule_counters.h"
 
 #if !defined(__BPFTOOL_LOADER__) && !defined (__IPTOOL_LOADER__)
@@ -202,7 +203,7 @@ static CALI_BPF_INLINE int pre_policy_processing(struct cali_tc_ctx *ctx)
 	/* Now we've got as far as the UDP header, check if this is one of our VXLAN packets, which we
 	 * use to forward traffic for node ports. */
 	if (dnat_should_decap() /* Compile time: is this a BPF program that should decap packets? */ &&
-			is_vxlan_tunnel(ctx->ip_header) /* Is this a VXLAN packet? */ ) {
+			is_vxlan_tunnel(ctx->ip_header, VXLAN_PORT) /* Is this a VXLAN packet? */ ) {
 		/* Decap it; vxlan_attempt_decap will revalidate the packet if needed. */
 		switch (vxlan_attempt_decap(ctx)) {
 		case -1:
@@ -427,6 +428,41 @@ syn_force_policy:
 		goto skip_policy;
 	}
 
+	// Auto allow VXLAN packets to egress gateways to leave the client's host
+	if (CALI_F_FROM_HOST && EGRESS_IP_ENABLED &&
+			!skb_refresh_validate_ptrs(ctx, UDP_SIZE) &&
+			is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT) &&
+			(ctx->state->ip_src == HOST_IP)) {
+		CALI_DEBUG("Allow VXLAN packet to Egress Gateways\n");
+		COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
+		goto skip_policy;
+	}
+
+	// Auto-allow VXLAN packets from/to egress gateway pod
+	if (CALI_F_WEP && EGRESS_GATEWAY) {
+		if (!skb_refresh_validate_ptrs(ctx, UDP_SIZE) &&
+				is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
+			__be32 ip_addr = CALI_F_FROM_WEP ? ctx->state->ip_dst : ctx->state->ip_src;
+			__be32 flags = cali_rt_lookup_flags(ip_addr);
+			if (cali_rt_flags_host(flags)) {
+				COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
+				if (CALI_F_FROM_WEP) {
+					CALI_DEBUG("Allow VXLAN packet from EGW pod\n");
+				} else {
+					CALI_DEBUG("Allow VXLAN packet to EGW pod\n");
+				}
+				goto skip_policy;
+			}
+		} else if (CALI_F_TO_WEP) {
+			if (EGW_HEALTH_PORT && (ctx->state->ip_proto == IPPROTO_TCP) && 
+					(ctx->state->dport == EGW_HEALTH_PORT)) {
+				CALI_DEBUG("Allow health check traffic to EGW pod\n");
+				goto skip_policy;
+			}	       
+			goto deny;
+		}
+	}
+
 	if (CALI_F_FROM_WEP && !EGRESS_GATEWAY) {
 		/* Do RPF check since it's our responsibility to police that.  Skip this
 		 * on egress from an egress gateway, because the whole point of egress
@@ -448,14 +484,17 @@ syn_force_policy:
 			}
 		}
 
-		// Check whether the workload needs outgoing NAT to this address.
-		if (r->flags & CALI_RT_NAT_OUT) {
+		// Check whether the workload needs outgoing NAT to this address, except from an egress gateway
+		// client. This is because, packets from egress clients are destined outside the cluster
+		// the SNATing is done by the egw itself.
+		if (!EGRESS_CLIENT && (r->flags & CALI_RT_NAT_OUT)) {
 			if (!(cali_rt_lookup_flags(ctx->state->post_nat_ip_dst) & CALI_RT_IN_POOL)) {
 				CALI_DEBUG("Source is in NAT-outgoing pool "
 					   "but dest is not, need to SNAT.\n");
 				ctx->state->flags |= CALI_ST_NAT_OUTGOING;
 			}
 		}
+		
 		/* If 3rd party CNI is used and dest is outside cluster. See commit fc711b192f for details. */
 		if (!(r->flags & CALI_RT_IN_POOL)) {
 			CALI_DEBUG("Source %x not in IP pool\n", bpf_ntohl(ctx->state->ip_src));
@@ -1477,6 +1516,16 @@ int calico_tc_skb_drop(struct __sk_buff *skb)
 		CALI_DEBUG("Counters map lookup failed: DROP\n");
 		return TC_ACT_SHOT;
 	}
+
+	if (CALI_F_FROM_HOST && EGRESS_IP_ENABLED &&
+			(ctx.state->ip_src == HOST_IP) &&
+			dest_is_egw_health(ctx.state->ip_dst, ctx.state->dport)) {
+		// Auto Allow health check traffic to EGW pod
+		CALI_DEBUG("Allow EGW health check packets\n");
+		COUNTER_INC(&ctx, CALI_REASON_ACCEPTED_BY_EGW);
+		goto allow;
+	}
+
 	update_rule_counters(ctx.state);
 	COUNTER_INC(&ctx, CALI_REASON_DROPPED_BY_POLICY);
 
@@ -1518,12 +1567,9 @@ int calico_tc_skb_drop(struct __sk_buff *skb)
 			 */
 			CALI_INFO("Allowing WG %x <-> %x despite blocked by policy - known hosts.\n",
 					bpf_ntohl(ctx.state->ip_src), bpf_ntohl(ctx.state->ip_dst));
-			event_flow_log(skb, ctx.state);
-			CALI_DEBUG("Flow log event generated for ALLOW\n");
 			goto allow;
 		}
 	}
-
 	event_flow_log(skb, ctx.state);
 	CALI_DEBUG("Flow log event generated for DENY/DROP\n");
 	goto deny;
@@ -1531,6 +1577,7 @@ int calico_tc_skb_drop(struct __sk_buff *skb)
 allow:
 	ctx.state->pol_rc = CALI_POL_ALLOW;
 	ctx.state->flags |= CALI_ST_SKIP_POLICY;
+	ctx.state->rules_hit = 0;
 	CALI_JUMP_TO(skb, PROG_INDEX_ALLOWED);
 	/* should not reach here */
 	CALI_DEBUG("Failed to jump to allow program.");

@@ -46,6 +46,12 @@ const (
 
 	// IP set ID for trusted DNS servers.  Must match the ID defined in policy.h.
 	TrustedDNSServersID uint64 = ReservedIPSetBase + 1
+
+	// IP set name for Egress Gateway health ports.
+	EgressGWHealthPortsName = "egress-gw-health-ports"
+
+	// IP set ID for Egress gateway health ports.
+	EgressGWHealthPortsID uint64 = ReservedIPSetBase + 2
 )
 
 func init() {

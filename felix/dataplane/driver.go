@@ -408,6 +408,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			IPSecPolicyRefreshInterval: configParams.IPSecPolicyRefreshInterval,
 
 			EgressIPEnabled:               configParams.EgressIPCheckEnabled(),
+			EgressIPVXLANPort:             configParams.EgressIPVXLANPort,
 			EgressIPRoutingRulePriority:   configParams.EgressIPRoutingRulePriority,
 			EgressGatewayPollInterval:     configParams.EgressGatewayPollInterval,
 			EgressGatewayPollFailureCount: configParams.EgressGatewayPollFailureCount,

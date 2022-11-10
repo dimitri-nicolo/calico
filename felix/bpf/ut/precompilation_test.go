@@ -105,33 +105,43 @@ func TestPrecompiledBinariesAreLoadable(t *testing.T) {
 									continue
 								}
 								for _, enableTcpStats := range []bool{false, true} {
-
-									ap := tc.AttachPoint{
-										Type:           epType,
-										ToOrFrom:       toOrFrom,
-										Hook:           bpf.HookIngress,
-										ToHostDrop:     epToHostDrop,
-										FIB:            fibEnabled,
-										DSR:            dsr,
-										LogLevel:       logLevel,
-										HostIP:         net.ParseIP("10.0.0.1"),
-										IntfIP:         net.ParseIP("10.0.0.2"),
-										EnableTCPStats: enableTcpStats,
+									egw := []bool{false}
+									if epType == tc.EpTypeWorkload {
+										egw = []bool{true, false}
 									}
+									egIPEnabled := []bool{true, false}
+									for _, isEgw := range egw {
+										for _, egIpEnabled := range egIPEnabled {
+											ap := tc.AttachPoint{
+												Type:            epType,
+												ToOrFrom:        toOrFrom,
+												Hook:            bpf.HookIngress,
+												ToHostDrop:      epToHostDrop,
+												FIB:             fibEnabled,
+												DSR:             dsr,
+												LogLevel:        logLevel,
+												HostIP:          net.ParseIP("10.0.0.1"),
+												IntfIP:          net.ParseIP("10.0.0.2"),
+												EnableTCPStats:  enableTcpStats,
+												IsEgressGateway: isEgw,
+												EgressIPEnabled: egIpEnabled,
+											}
 
-									t.Run(ap.FileName(), func(t *testing.T) {
-										RegisterTestingT(t)
-										logCxt.Debugf("Testing %v in %v", ap.ProgramName(), ap.FileName())
+											t.Run(ap.FileName(), func(t *testing.T) {
+												RegisterTestingT(t)
+												logCxt.Debugf("Testing %v in %v", ap.ProgramName(), ap.FileName())
 
-										vethName, veth := createVeth()
-										defer deleteLink(veth)
-										ap.Iface = vethName
-										err := tc.EnsureQdisc(ap.Iface)
-										Expect(err).NotTo(HaveOccurred())
-										opts, err := ap.AttachProgram()
-										Expect(err).NotTo(HaveOccurred())
-										Expect(opts).NotTo(Equal(nil))
-									})
+												vethName, veth := createVeth()
+												defer deleteLink(veth)
+												ap.Iface = vethName
+												err := tc.EnsureQdisc(ap.Iface)
+												Expect(err).NotTo(HaveOccurred())
+												opts, err := ap.AttachProgram()
+												Expect(err).NotTo(HaveOccurred())
+												Expect(opts).NotTo(Equal(nil))
+											})
+										}
+									}
 								}
 							}
 						}

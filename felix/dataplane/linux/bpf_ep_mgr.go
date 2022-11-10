@@ -237,6 +237,8 @@ type bpfEndpointManager struct {
 
 	lookupsCache *calc.LookupsCache
 	actionOnDrop string
+	egIPEnabled  bool
+	egwVxlanPort uint16
 }
 
 type serviceKey struct {
@@ -324,6 +326,8 @@ func newBPFEndpointManager(
 		ipv6Enabled:           config.BPFIpv6Enabled,
 		rpfStrictModeEnabled:  config.BPFEnforceRPF,
 		bpfPolicyDebugEnabled: config.BPFPolicyDebugEnabled,
+		egwVxlanPort:          uint16(config.EgressIPVXLANPort),
+		egIPEnabled:           config.EgressIPEnabled,
 		polNameToMatchIDs:     map[string]set.Set[polprog.RuleMatchID]{},
 		dirtyRules:            set.New[polprog.RuleMatchID](),
 	}
@@ -1084,9 +1088,12 @@ func (m *bpfEndpointManager) attachWorkloadProgram(ifaceName string, endpoint *p
 	ap.ExtToServiceConnmark = uint32(m.bpfExtToServiceConnmark)
 
 	ap.EnableTCPStats = m.enableTcpStats
+	ap.EGWVxlanPort = m.egwVxlanPort
+	ap.EgressIPEnabled = m.egIPEnabled
 	if endpoint != nil {
 		ap.IsEgressGateway = endpoint.IsEgressGateway
 		ap.IsEgressClient = (endpoint.EgressIpSetId != "")
+		ap.EgressGatewayHealthPort = uint16(endpoint.EgressGatewayHealthPort)
 	}
 	if !m.isEgressProgrammingCorrect(ap.Iface, ap.IsEgressGateway, ap.IsEgressClient) {
 		log.WithField("iface", ap.Iface).Infof(
@@ -1171,6 +1178,8 @@ func (m *bpfEndpointManager) attachDataIfaceProgram(ifaceName string, ep *proto.
 	ap.HostIP = m.hostIP
 	ap.TunnelMTU = uint16(m.vxlanMTU)
 	ap.ExtToServiceConnmark = uint32(m.bpfExtToServiceConnmark)
+	ap.EgressIPEnabled = m.egIPEnabled
+	ap.EGWVxlanPort = m.egwVxlanPort
 	ip, err := m.getInterfaceIP(ifaceName)
 	if err != nil {
 		log.Debugf("Error getting IP for interface %+v: %+v", ifaceName, err)
