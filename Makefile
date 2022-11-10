@@ -1,4 +1,4 @@
-GO_BUILD_VER ?= v0.75
+GO_BUILD_VER ?= v0.76
 
 # Override shell if we're on Windows
 # https://stackoverflow.com/a/63840549
@@ -95,7 +95,7 @@ build: eks-log-forwarder-startup
 ###############################################################################
 
 UBI_VERSION        ?= ubi8
-UBI_IMAGE_VERSION  ?= 8.6
+UBI_IMAGE_VERSION  ?= 8.7
 RUBY_MAJOR_VERSION ?= 2.7
 RUBY_FULL_VERSION  ?= 2.7.6
 
