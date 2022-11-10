@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -11,14 +12,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/elastic/cloud-on-k8s/pkg/controller/elasticsearch/label"
-
-	"github.com/elastic/cloud-on-k8s/pkg/controller/elasticsearch/volume"
+	esHttp "github.com/elastic/cloud-on-k8s/v2/pkg/controller/common/http"
+	"github.com/elastic/cloud-on-k8s/v2/pkg/controller/elasticsearch/label"
+	"github.com/elastic/cloud-on-k8s/v2/pkg/controller/elasticsearch/volume"
 	"github.com/sirupsen/logrus"
 )
 
-// This is the golang version of the bash script written for ECK version 1.8.0, located here
-// https://github.com/elastic/cloud-on-k8s/blob/1.8.0/pkg/controller/elasticsearch/nodespec/readiness_probe.go#L31
+// This is the golang version of the bash script written for ECK version 2.5.0, located here
+// https://github.com/elastic/cloud-on-k8s/blob/2.5.0/pkg/controller/elasticsearch/nodespec/readiness_probe.go#L33
 //
 // The readiness probe was re written in golang so that curl can be removed from the Elasticsearch image.
 func main() {
@@ -77,14 +78,21 @@ func main() {
 		}},
 	}
 
-	r, err := client.Get(endpoint)
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		fail("failed to construct readiness probe request", err)
+	}
+	req.Header.Add(esHttp.InternalProductRequestHeaderKey, esHttp.InternalProductRequestHeaderValue)
+
+	resp, err := client.Do(req)
 	if err != nil {
 		fail("readiness probe failed", err)
 	}
+	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(r.Body)
-	if r.StatusCode != 200 || (r.StatusCode == 503 && len(version) > 1 && version[0:2] == ".6") {
-		fail(fmt.Sprintf("status: %d, body: %s", r.StatusCode, string(body)), nil)
+	body, err := io.ReadAll(resp.Body)
+	if resp.StatusCode != 200 || (resp.StatusCode == 503 && len(version) > 1 && version[0:2] == ".6") {
+		fail(fmt.Sprintf("status: %d, body: %s", resp.StatusCode, string(body)), nil)
 	}
 
 	os.Exit(0)
