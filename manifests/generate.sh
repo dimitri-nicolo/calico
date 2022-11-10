@@ -147,6 +147,8 @@ ${HELM} template --include-crds \
 # The first two lines are a newline and a yaml separator - remove them.
 find ocp/tigera-operator -name "*.yaml" | xargs sed -i -e 1,2d
 mv $(find ocp/tigera-operator -name "*.yaml") ocp/ && rm -r ocp/tigera-operator
+# The rendered pull secret base64 encodes our dummy value - restore it to ensure doc references are valid.
+sed -i "s/U0VDUkVU/SECRET/g" ocp/02-pull-secret.yaml
 
 ##########################################################################
 # Replace versions for "static" Calico Enterprise manifests.
