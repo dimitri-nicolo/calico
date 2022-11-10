@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ruby:2.7.6-alpine3.16.2
+FROM ruby:2.7.6-alpine3.16
 
 # Need to define root user explicitly (for remaining setup) and be numeric for k8s validation
 USER 0
