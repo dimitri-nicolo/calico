@@ -244,17 +244,22 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		_, err = client.HostEndpoints().Create(utils.Ctx, hep, options.SetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		if !bpfEnabled {
-			// Wait for felix to see and program that host endpoint.
-			hostEndpointProgrammed := func() bool {
+		if BPFMode() {
+			ensureAllNodesBPFProgramsAttached(felixes)
+		}
+
+		hostEndpointProgrammed := func() bool {
+			if BPFMode() {
+				return felixes[1].NumTCBPFProgsEth0() == 2
+			} else {
 				out, err := felixes[1].ExecOutput("iptables-save", "-t", "filter")
 				Expect(err).NotTo(HaveOccurred())
 				return (strings.Count(out, "cali-thfw-eth0") > 0)
 			}
-			Eventually(hostEndpointProgrammed, "10s", "1s").Should(BeTrue(),
-				"Expected HostEndpoint iptables rules to appear")
-
-			// Wait for felix to see and program some expected nflog entries.
+		}
+		Eventually(hostEndpointProgrammed, "10s", "1s").Should(BeTrue(),
+			"Expected HostEndpoint iptables rules to appear")
+		if !bpfEnabled {
 			rulesProgrammed := func() bool {
 				out0, err := felixes[0].ExecOutput("iptables-save", "-t", "filter")
 				Expect(err).NotTo(HaveOccurred())
@@ -274,7 +279,21 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 			Eventually(rulesProgrammed, "10s", "1s").Should(BeTrue(),
 				"Expected iptables rules to appear on the correct felix instances")
 		} else {
-			time.Sleep(10 * time.Second)
+			Eventually(func() bool {
+				return bpfCheckIfPolicyProgrammed(felixes[1], "eth0", "egress", "default.gnp-1", "allow", false)
+			}, "5s", "200ms").Should(BeTrue())
+
+			Eventually(func() bool {
+				return bpfCheckIfPolicyProgrammed(felixes[1], "eth0", "ingress", "default.gnp-1", "allow", false)
+			}, "5s", "200ms").Should(BeTrue())
+
+			if !applyOnForwardSupported {
+				fmt.Println("Waiting ", wlHost2[1].InterfaceName)
+				time.Sleep(0 * time.Second)
+				Eventually(func() bool {
+					return bpfCheckIfPolicyProgrammed(felixes[1], wlHost2[1].InterfaceName, "ingress", "default/default.np-1", "deny", true)
+				}, "5s", "200ms").Should(BeTrue())
+			}
 		}
 
 		// Describe the connectivity that we now expect.
