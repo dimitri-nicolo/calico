@@ -240,7 +240,7 @@ func Start(cfg *Config) error {
 		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authn,
 				middleware.AuthorizeRequest(authz,
-					middleware.PolicyRecommendationHandler(k8sClientFactory, k8sClientSet, esClient)))))
+					middleware.PolicyRecommendationHandler(k8sClientSetFactory, k8sClientFactory, esClient)))))
 	sm.Handle("/flowLogNamespaces",
 		middleware.RequestToResource(
 			middleware.AuthenticateRequest(authn,

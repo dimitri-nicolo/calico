@@ -21,18 +21,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
-	k8s "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/fake"
+	fakeK8s "k8s.io/client-go/kubernetes/fake"
 
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
 	"github.com/projectcalico/calico/lma/pkg/api"
-	lmaerror "github.com/projectcalico/calico/lma/pkg/api"
 	lmaauth "github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/elastic"
-	"github.com/projectcalico/calico/lma/pkg/policyrec"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	lmapolicyrec "github.com/projectcalico/calico/lma/pkg/policyrec"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+	clientsetfake "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
 	"github.com/tigera/api/pkg/lib/numorstring"
 )
 
@@ -69,7 +68,7 @@ var (
 				"app": "app1",
 			},
 			OwnerReferences: []metav1.OwnerReference{
-				metav1.OwnerReference{
+				{
 					Kind: "Deployment",
 					Name: "app1",
 				},
@@ -162,7 +161,7 @@ var (
 				"app": "app1",
 			},
 			OwnerReferences: []metav1.OwnerReference{
-				metav1.OwnerReference{
+				{
 					Kind: "Deployment",
 					Name: "nginx",
 				},
@@ -193,7 +192,7 @@ var (
 				"app": "app3",
 			},
 			OwnerReferences: []metav1.OwnerReference{
-				metav1.OwnerReference{
+				{
 					Kind: "Deployment",
 					Name: "nginx2",
 				},
@@ -242,28 +241,28 @@ var (
 		},
 	}
 
-	app1Query = &policyrec.PolicyRecommendationParams{
+	app1Query = &lmapolicyrec.PolicyRecommendationParams{
 		StartTime:    "now-1h",
 		EndTime:      "now",
 		EndpointName: "app1-abcdef-*",
 		Namespace:    "namespace1",
 	}
 
-	nginxQuery = &policyrec.PolicyRecommendationParams{
+	nginxQuery = &lmapolicyrec.PolicyRecommendationParams{
 		StartTime:    "now-1h",
 		EndTime:      "now",
 		EndpointName: "nginx-12345-*",
 		Namespace:    "namespace1",
 	}
 
-	namespace1Query = &policyrec.PolicyRecommendationParams{
+	namespace1Query = &lmapolicyrec.PolicyRecommendationParams{
 		StartTime:    "now-1h",
 		EndTime:      "now",
 		EndpointName: "",
 		Namespace:    "namespace1",
 	}
 
-	namespace2Query = &policyrec.PolicyRecommendationParams{
+	namespace2Query = &lmapolicyrec.PolicyRecommendationParams{
 		StartTime:    "now-1h",
 		EndTime:      "now",
 		EndpointName: "",
@@ -285,7 +284,7 @@ var (
 			Types:        []v3.PolicyType{v3.PolicyTypeEgress},
 			Selector:     "app == 'app1'",
 			Egress: []v3.Rule{
-				v3.Rule{
+				{
 					Action:   v3.Allow,
 					Protocol: &protoInRule,
 					Destination: v3.EntityRule{
@@ -312,7 +311,7 @@ var (
 			Types:        []v3.PolicyType{v3.PolicyTypeIngress},
 			Selector:     "app == 'nginx'",
 			Ingress: []v3.Rule{
-				v3.Rule{
+				{
 					Action:   v3.Allow,
 					Protocol: &protoInRule,
 					Source: v3.EntityRule{
@@ -418,36 +417,36 @@ var (
 	}
 
 	app1ToNginxFlows = []*elastic.CompositeAggregationBucket{
-		&elastic.CompositeAggregationBucket{
+		{
 			CompositeAggregationKey: []elastic.CompositeAggregationSourceValue{
-				elastic.CompositeAggregationSourceValue{Name: "source_type", Value: api.FlowLogEndpointTypeWEP},
-				elastic.CompositeAggregationSourceValue{Name: "source_namespace", Value: "namespace1"},
-				elastic.CompositeAggregationSourceValue{Name: "source_name_aggr", Value: "app1-abcdef-*"},
-				elastic.CompositeAggregationSourceValue{Name: "dest_type", Value: api.FlowLogEndpointTypeWEP},
-				elastic.CompositeAggregationSourceValue{Name: "dest_namespace", Value: "namespace1"},
-				elastic.CompositeAggregationSourceValue{Name: "dest_name_aggr", Value: "nginx-12345-*"},
-				elastic.CompositeAggregationSourceValue{Name: "proto", Value: "6"},
-				elastic.CompositeAggregationSourceValue{Name: "dest_ip", Value: ""},
-				elastic.CompositeAggregationSourceValue{Name: "source_ip", Value: ""},
-				elastic.CompositeAggregationSourceValue{Name: "source_port", Value: ""},
-				elastic.CompositeAggregationSourceValue{Name: "dest_port", Value: 80.0},
-				elastic.CompositeAggregationSourceValue{Name: "reporter", Value: "src"},
-				elastic.CompositeAggregationSourceValue{Name: "action", Value: "allow"},
+				{Name: "source_type", Value: api.FlowLogEndpointTypeWEP},
+				{Name: "source_namespace", Value: "namespace1"},
+				{Name: "source_name_aggr", Value: "app1-abcdef-*"},
+				{Name: "dest_type", Value: api.FlowLogEndpointTypeWEP},
+				{Name: "dest_namespace", Value: "namespace1"},
+				{Name: "dest_name_aggr", Value: "nginx-12345-*"},
+				{Name: "proto", Value: "6"},
+				{Name: "dest_ip", Value: ""},
+				{Name: "source_ip", Value: ""},
+				{Name: "source_port", Value: ""},
+				{Name: "dest_port", Value: 80.0},
+				{Name: "reporter", Value: "src"},
+				{Name: "action", Value: "allow"},
 			},
 			AggregatedTerms: map[string]*elastic.AggregatedTerm{
-				"source_labels": &elastic.AggregatedTerm{
+				"source_labels": {
 					DocCount: 1,
 					Buckets: map[interface{}]int64{
 						"app=app1": 1,
 					},
 				},
-				"dest_labels": &elastic.AggregatedTerm{
+				"dest_labels": {
 					DocCount: 1,
 					Buckets: map[interface{}]int64{
 						"app=nginx": 1,
 					},
 				},
-				"policies": &elastic.AggregatedTerm{
+				"policies": {
 					DocCount: 1,
 					Buckets: map[interface{}]int64{
 						"0|__PROFILE__|__PROFILE__.kns.namespace1|allow|0": 1,
@@ -455,36 +454,36 @@ var (
 				},
 			},
 		},
-		&elastic.CompositeAggregationBucket{
+		{
 			CompositeAggregationKey: []elastic.CompositeAggregationSourceValue{
-				elastic.CompositeAggregationSourceValue{Name: "source_type", Value: api.FlowLogEndpointTypeWEP},
-				elastic.CompositeAggregationSourceValue{Name: "source_namespace", Value: "namespace1"},
-				elastic.CompositeAggregationSourceValue{Name: "source_name_aggr", Value: "app1-abcdef-*"},
-				elastic.CompositeAggregationSourceValue{Name: "dest_type", Value: api.FlowLogEndpointTypeWEP},
-				elastic.CompositeAggregationSourceValue{Name: "dest_namespace", Value: "namespace1"},
-				elastic.CompositeAggregationSourceValue{Name: "dest_name_aggr", Value: "nginx-12345-*"},
-				elastic.CompositeAggregationSourceValue{Name: "proto", Value: "6"},
-				elastic.CompositeAggregationSourceValue{Name: "dest_ip", Value: ""},
-				elastic.CompositeAggregationSourceValue{Name: "source_ip", Value: ""},
-				elastic.CompositeAggregationSourceValue{Name: "source_port", Value: ""},
-				elastic.CompositeAggregationSourceValue{Name: "dest_port", Value: 80.0},
-				elastic.CompositeAggregationSourceValue{Name: "reporter", Value: "dst"},
-				elastic.CompositeAggregationSourceValue{Name: "action", Value: "allow"},
+				{Name: "source_type", Value: api.FlowLogEndpointTypeWEP},
+				{Name: "source_namespace", Value: "namespace1"},
+				{Name: "source_name_aggr", Value: "app1-abcdef-*"},
+				{Name: "dest_type", Value: api.FlowLogEndpointTypeWEP},
+				{Name: "dest_namespace", Value: "namespace1"},
+				{Name: "dest_name_aggr", Value: "nginx-12345-*"},
+				{Name: "proto", Value: "6"},
+				{Name: "dest_ip", Value: ""},
+				{Name: "source_ip", Value: ""},
+				{Name: "source_port", Value: ""},
+				{Name: "dest_port", Value: 80.0},
+				{Name: "reporter", Value: "dst"},
+				{Name: "action", Value: "allow"},
 			},
 			AggregatedTerms: map[string]*elastic.AggregatedTerm{
-				"source_labels": &elastic.AggregatedTerm{
+				"source_labels": {
 					DocCount: 1,
 					Buckets: map[interface{}]int64{
 						"app=app1": 1,
 					},
 				},
-				"dest_labels": &elastic.AggregatedTerm{
+				"dest_labels": {
 					DocCount: 1,
 					Buckets: map[interface{}]int64{
 						"app=nginx": 1,
 					},
 				},
-				"policies": &elastic.AggregatedTerm{
+				"policies": {
 					DocCount: 1,
 					Buckets: map[interface{}]int64{
 						"0|__PROFILE__|__PROFILE__.kns.namespace1|allow|0": 1,
@@ -495,36 +494,36 @@ var (
 	}
 
 	app1ToNginxEgressFlows = []*elastic.CompositeAggregationBucket{
-		&elastic.CompositeAggregationBucket{
+		{
 			CompositeAggregationKey: []elastic.CompositeAggregationSourceValue{
-				elastic.CompositeAggregationSourceValue{Name: "source_type", Value: api.FlowLogEndpointTypeWEP},
-				elastic.CompositeAggregationSourceValue{Name: "source_namespace", Value: "namespace1"},
-				elastic.CompositeAggregationSourceValue{Name: "source_name_aggr", Value: "app1-abcdef-*"},
-				elastic.CompositeAggregationSourceValue{Name: "dest_type", Value: api.FlowLogEndpointTypeWEP},
-				elastic.CompositeAggregationSourceValue{Name: "dest_namespace", Value: "namespace1"},
-				elastic.CompositeAggregationSourceValue{Name: "dest_name_aggr", Value: "nginx-12345-*"},
-				elastic.CompositeAggregationSourceValue{Name: "proto", Value: "6"},
-				elastic.CompositeAggregationSourceValue{Name: "dest_ip", Value: ""},
-				elastic.CompositeAggregationSourceValue{Name: "source_ip", Value: ""},
-				elastic.CompositeAggregationSourceValue{Name: "source_port", Value: ""},
-				elastic.CompositeAggregationSourceValue{Name: "dest_port", Value: 80.0},
-				elastic.CompositeAggregationSourceValue{Name: "reporter", Value: "src"},
-				elastic.CompositeAggregationSourceValue{Name: "action", Value: "allow"},
+				{Name: "source_type", Value: api.FlowLogEndpointTypeWEP},
+				{Name: "source_namespace", Value: "namespace1"},
+				{Name: "source_name_aggr", Value: "app1-abcdef-*"},
+				{Name: "dest_type", Value: api.FlowLogEndpointTypeWEP},
+				{Name: "dest_namespace", Value: "namespace1"},
+				{Name: "dest_name_aggr", Value: "nginx-12345-*"},
+				{Name: "proto", Value: "6"},
+				{Name: "dest_ip", Value: ""},
+				{Name: "source_ip", Value: ""},
+				{Name: "source_port", Value: ""},
+				{Name: "dest_port", Value: 80.0},
+				{Name: "reporter", Value: "src"},
+				{Name: "action", Value: "allow"},
 			},
 			AggregatedTerms: map[string]*elastic.AggregatedTerm{
-				"source_labels": &elastic.AggregatedTerm{
+				"source_labels": {
 					DocCount: 1,
 					Buckets: map[interface{}]int64{
 						"app=app1": 1,
 					},
 				},
-				"dest_labels": &elastic.AggregatedTerm{
+				"dest_labels": {
 					DocCount: 1,
 					Buckets: map[interface{}]int64{
 						"app=nginx": 1,
 					},
 				},
-				"policies": &elastic.AggregatedTerm{
+				"policies": {
 					DocCount: 1,
 					Buckets: map[interface{}]int64{
 						"0|__PROFILE__|__PROFILE__.kns.namespace1|allow|0": 1,
@@ -806,35 +805,81 @@ var (
 
 var _ = Describe("Policy Recommendation", func() {
 	var (
-		fakeKube           k8s.Interface
 		ec                 *fakeAggregator
 		mockRBACAuthorizer *lmaauth.MockRBACAuthorizer
 	)
 	BeforeEach(func() {
-		fakeKube = fake.NewSimpleClientset(namespace1Namespace, namespace2Namespace, app1Dep, app1Rs, app2Dep, app2Rs, app3Dep, app3Rs, nginxDep,
-			nginxRs, nginx2Dep, nginx2Rs, nginx3Dep, nginx3Rs)
 		ec = newFakeAggregator()
 		mockRBACAuthorizer = new(lmaauth.MockRBACAuthorizer)
 	})
+
 	DescribeTable("Recommend policies for matching flows and endpoint",
 		func(queryResults []*elastic.CompositeAggregationBucket, queryError error,
-			query *policyrec.PolicyRecommendationParams,
+			query *lmapolicyrec.PolicyRecommendationParams,
 			expectedResponse *PolicyRecommendationResponse, statusCode int) {
-
-			mockClientSet := datastore.NewClientSet(fakeKube, nil)
-
-			mockK8sClientFactory := new(datastore.MockClusterCtxK8sClientFactory)
-			mockK8sClientFactory.On("RBACAuthorizerForCluster", mock.Anything).Return(mockRBACAuthorizer, nil)
-			mockK8sClientFactory.On("ClientSetForCluster", mock.Anything).Return(mockClientSet, nil)
-
-			By("Initializing the engine") // Tempted to say "Start your engines!"
-			hdlr := PolicyRecommendationHandler(mockK8sClientFactory, mockClientSet, ec)
 
 			jsonQuery, err := json.Marshal(query)
 			Expect(err).To(BeNil())
 
 			req, err := http.NewRequest(http.MethodPost, recommendURLPath, bytes.NewBuffer(jsonQuery))
 			Expect(err).To(BeNil())
+
+			// The mock k8s client set, with test data.
+			mockLmaK8sClientSet := lmak8s.MockClientSet{}
+			mockLmaK8sClientSet.On("ProjectcalicoV3").Return(
+				clientsetfake.NewSimpleClientset().ProjectcalicoV3(),
+			)
+			coreV1 := fakeK8s.NewSimpleClientset().CoreV1()
+			_, err = coreV1.Namespaces().Create(req.Context(), namespace1Namespace, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+			_, err = coreV1.Namespaces().Create(req.Context(), namespace2Namespace, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+
+			appV1 := fakeK8s.NewSimpleClientset().AppsV1()
+			_, err = appV1.Deployments(app1Dep.Namespace).Create(req.Context(), app1Dep, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+			_, err = appV1.Deployments(app2Dep.Namespace).Create(req.Context(), app2Dep, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+			_, err = appV1.Deployments(app3Dep.Namespace).Create(req.Context(), app3Dep, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+			_, err = appV1.ReplicaSets(app1Rs.Namespace).Create(req.Context(), app1Rs, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+			_, err = appV1.ReplicaSets(app2Rs.Namespace).Create(req.Context(), app2Rs, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+			_, err = appV1.ReplicaSets(app3Rs.Namespace).Create(req.Context(), app3Rs, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+
+			_, err = appV1.Deployments(nginxDep.Namespace).Create(req.Context(), nginxDep, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+			_, err = appV1.Deployments(nginx2Dep.Namespace).Create(req.Context(), nginx2Dep, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+			_, err = appV1.Deployments(nginx3Dep.Namespace).Create(req.Context(), nginx3Dep, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+			_, err = appV1.ReplicaSets(nginxRs.Namespace).Create(req.Context(), nginxRs, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+			_, err = appV1.ReplicaSets(nginx2Rs.Namespace).Create(req.Context(), nginx2Rs, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+			_, err = appV1.ReplicaSets(nginx3Rs.Namespace).Create(req.Context(), nginx3Rs, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+
+			batchV1 := fakeK8s.NewSimpleClientset().BatchV1()
+
+			batchV1Beta1 := fakeK8s.NewSimpleClientset().BatchV1beta1()
+
+			// Define the return methods called by this test.
+			mockLmaK8sClientSet.On("CoreV1").Return(coreV1)
+			mockLmaK8sClientSet.On("AppsV1").Return(appV1)
+			mockLmaK8sClientSet.On("BatchV1").Return(batchV1)
+			mockLmaK8sClientSet.On("BatchV1beta1").Return(batchV1Beta1)
+
+			mockLmaK8sClientFactory := &lmak8s.MockClientSetFactory{}
+			mockLmaK8sClientFactory.On("NewClientSetForApplication", "cluster").Return(&mockLmaK8sClientSet, nil)
+
+			mockK8sClientFactory := new(datastore.MockClusterCtxK8sClientFactory)
+			mockK8sClientFactory.On("RBACAuthorizerForCluster", mock.Anything).Return(mockRBACAuthorizer, nil)
+
+			By("Initializing the engine") // Tempted to say "Start your engines!"
+			hdlr := PolicyRecommendationHandler(mockLmaK8sClientFactory, mockK8sClientFactory, ec)
 
 			mockRBACAuthorizer.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
 
@@ -854,11 +899,11 @@ var _ = Describe("Policy Recommendation", func() {
 				Expect(w.Code).To(Equal(http.StatusNotFound))
 				recResponse, err := ioutil.ReadAll(w.Body)
 				Expect(err).NotTo(HaveOccurred())
-				errorBody := &lmaerror.Error{}
+				errorBody := &api.Error{}
 				err = json.Unmarshal(recResponse, errorBody)
 				Expect(err).To(BeNil())
 				Expect(errorBody.Code).To(Equal(statusCode))
-				Expect(errorBody.Feature).To(Equal(lmaerror.PolicyRec))
+				Expect(errorBody.Feature).To(Equal(api.PolicyRec))
 				return
 			}
 
@@ -879,7 +924,7 @@ var _ = Describe("Policy Recommendation", func() {
 		Entry("for source endpoint", app1ToNginxFlows, nil,
 			app1Query,
 			&PolicyRecommendationResponse{
-				Recommendation: &policyrec.Recommendation{
+				Recommendation: &lmapolicyrec.Recommendation{
 					NetworkPolicies: []*v3.StagedNetworkPolicy{
 						app1Policy,
 					},
@@ -889,7 +934,7 @@ var _ = Describe("Policy Recommendation", func() {
 		Entry("for destination endpoint", app1ToNginxFlows, nil,
 			nginxQuery,
 			&PolicyRecommendationResponse{
-				Recommendation: &policyrec.Recommendation{
+				Recommendation: &lmapolicyrec.Recommendation{
 					NetworkPolicies: []*v3.StagedNetworkPolicy{
 						nginxPolicy,
 					},
@@ -899,14 +944,14 @@ var _ = Describe("Policy Recommendation", func() {
 		Entry("for destination endpoint with egress only flows - no rules will be computed", app1ToNginxEgressFlows, nil,
 			nginxQuery, nil, http.StatusInternalServerError),
 		Entry("for unknown endpoint", []*elastic.CompositeAggregationBucket{}, nil,
-			&policyrec.PolicyRecommendationParams{
+			&lmapolicyrec.PolicyRecommendationParams{
 				StartTime:    "now-1h",
 				EndTime:      "now",
 				EndpointName: "idontexist-*",
 				Namespace:    "default",
 			}, nil, http.StatusNotFound),
 		Entry("for query that errors out - invalid time parameters", nil, fmt.Errorf("Elasticsearch error"),
-			&policyrec.PolicyRecommendationParams{
+			&lmapolicyrec.PolicyRecommendationParams{
 				StartTime:    "now",
 				EndTime:      "now-1h",
 				EndpointName: "someendpoint-*",
@@ -916,23 +961,35 @@ var _ = Describe("Policy Recommendation", func() {
 
 	DescribeTable("Namespace policy - recommend policies for matching flows and namespace",
 		func(queryResults []*elastic.CompositeAggregationBucket, queryError error,
-			query *policyrec.PolicyRecommendationParams,
+			query *lmapolicyrec.PolicyRecommendationParams,
 			expectedResponse *PolicyRecommendationResponse, statusCode int) {
-
-			mockClientSet := datastore.NewClientSet(fakeKube, nil)
-
-			mockK8sClientFactory := new(datastore.MockClusterCtxK8sClientFactory)
-			mockK8sClientFactory.On("RBACAuthorizerForCluster", mock.Anything).Return(mockRBACAuthorizer, nil)
-			mockK8sClientFactory.On("ClientSetForCluster", mock.Anything).Return(mockClientSet, nil)
-
-			By("Initializing the engine") // Tempted to say "Start your engines!"
-			hdlr := PolicyRecommendationHandler(mockK8sClientFactory, mockClientSet, ec)
 
 			jsonQuery, err := json.Marshal(query)
 			Expect(err).To(BeNil())
 
 			req, err := http.NewRequest(http.MethodPost, recommendURLPath, bytes.NewBuffer(jsonQuery))
 			Expect(err).To(BeNil())
+
+			// The mock k8s client set, with test data.
+			mockLmaK8sClientSet := lmak8s.MockClientSet{}
+			mockLmaK8sClientSet.On("ProjectcalicoV3").Return(
+				clientsetfake.NewSimpleClientset().ProjectcalicoV3(),
+			)
+			coreV1 := fakeK8s.NewSimpleClientset().CoreV1()
+			_, err = coreV1.Namespaces().Create(req.Context(), namespace1Namespace, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+			_, err = coreV1.Namespaces().Create(req.Context(), namespace2Namespace, metav1.CreateOptions{})
+			Expect(err).To(BeNil())
+			mockLmaK8sClientSet.On("CoreV1").Return(coreV1)
+
+			mockLmaK8sClientFactory := &lmak8s.MockClientSetFactory{}
+			mockLmaK8sClientFactory.On("NewClientSetForApplication", "cluster").Return(&mockLmaK8sClientSet, nil)
+
+			mockK8sClientFactory := new(datastore.MockClusterCtxK8sClientFactory)
+			mockK8sClientFactory.On("RBACAuthorizerForCluster", mock.Anything).Return(mockRBACAuthorizer, nil)
+
+			By("Initializing the engine") // Tempted to say "Start your engines!"
+			hdlr := PolicyRecommendationHandler(mockLmaK8sClientFactory, mockK8sClientFactory, ec)
 
 			mockRBACAuthorizer.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(true, nil)
 
@@ -952,11 +1009,11 @@ var _ = Describe("Policy Recommendation", func() {
 				Expect(w.Code).To(Equal(http.StatusNotFound))
 				recResponse, err := ioutil.ReadAll(w.Body)
 				Expect(err).NotTo(HaveOccurred())
-				errorBody := &lmaerror.Error{}
+				errorBody := &api.Error{}
 				err = json.Unmarshal(recResponse, errorBody)
 				Expect(err).To(BeNil())
 				Expect(errorBody.Code).To(Equal(statusCode))
-				Expect(errorBody.Feature).To(Equal(lmaerror.PolicyRec))
+				Expect(errorBody.Feature).To(Equal(api.PolicyRec))
 				return
 			}
 
@@ -981,7 +1038,7 @@ var _ = Describe("Policy Recommendation", func() {
 		},
 		Entry("policy for namespace1", flowsForNamespaceTest, nil, namespace1Query,
 			&PolicyRecommendationResponse{
-				Recommendation: &policyrec.Recommendation{
+				Recommendation: &lmapolicyrec.Recommendation{
 					NetworkPolicies: []*v3.StagedNetworkPolicy{
 						namespace1Policy,
 					},
@@ -990,7 +1047,7 @@ var _ = Describe("Policy Recommendation", func() {
 			}, http.StatusOK),
 		Entry("policy for namespace2", flowsForNamespaceTest, nil, namespace2Query,
 			&PolicyRecommendationResponse{
-				Recommendation: &policyrec.Recommendation{
+				Recommendation: &lmapolicyrec.Recommendation{
 					NetworkPolicies: []*v3.StagedNetworkPolicy{
 						namespace2Policy,
 					},

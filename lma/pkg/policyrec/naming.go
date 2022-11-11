@@ -1,4 +1,4 @@
-// Copyright (c) 2019,2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019, 2022 Tigera, Inc. All rights reserved.
 package policyrec
 
 import (
@@ -8,6 +8,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
 
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -15,14 +17,9 @@ const wildcardSuffix = "-*"
 
 // DoesNamespaceExist returns true if the namespace object query returns a valid object. Returns an
 // error if the query returns an error.
-func DoesNamespaceExist(k k8s.Interface, name string) (error, bool) {
-	ctx := context.Background()
-
-	obj, err := k.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
+func DoesNamespaceExist(cs lmak8s.ClientSet, name string) (error, bool) {
+	if namespace, err := cs.CoreV1().Namespaces().Get(context.Background(), name, metav1.GetOptions{}); err != nil || namespace == nil {
 		return err, false
-	} else if obj == nil {
-		return nil, false
 	}
 
 	return nil, true
@@ -30,7 +27,7 @@ func DoesNamespaceExist(k k8s.Interface, name string) (error, bool) {
 
 // GeneratePolicyName generates a policy namespace for policy recommendation, using the endpoint
 // name and namespace.
-func GeneratePolicyName(k k8s.Interface, name, namespace string) string {
+func GeneratePolicyName(k lmak8s.ClientSet, name, namespace string) string {
 	// Checks the owner reference and returns the name of highest owner in the chain.
 	// Remove the trailing -* wildcard suffix from the name if it exists.
 	policyName := strings.TrimSuffix(name, wildcardSuffix)
@@ -59,7 +56,7 @@ func GeneratePolicyName(k k8s.Interface, name, namespace string) string {
 // GetObjectMeta returns the object metadata of a resource, if that resource exists.
 func GetObjectMeta(k k8s.Interface, kind, name, namespace string) metav1.ObjectMetaAccessor {
 	ctx := context.Background()
-	// Query each of the valid Kinds until something matches
+	// Query each of the valid Kinds until something matches.
 	switch kind {
 	case "DaemonSet":
 		obj, err := k.AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{})

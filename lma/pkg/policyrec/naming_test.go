@@ -3,14 +3,17 @@ package policyrec_test
 
 import (
 	"fmt"
+	"net/http"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 
+	clientsetfake "github.com/tigera/api/pkg/client/clientset_generated/clientset/fake"
+
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/lma/pkg/policyrec"
 
 	. "github.com/onsi/ginkgo"
@@ -27,7 +30,7 @@ var (
 			Name:      "test-app-abcdefg",
 			Namespace: "test-dep-namespace",
 			OwnerReferences: []metav1.OwnerReference{
-				metav1.OwnerReference{
+				{
 					Kind: "Deployment",
 					Name: "test-app",
 				},
@@ -51,7 +54,7 @@ var (
 			Name:      "test-app-abcdefg",
 			Namespace: "test-job-namespace",
 			OwnerReferences: []metav1.OwnerReference{
-				metav1.OwnerReference{
+				{
 					Kind: "Job",
 					Name: "test-app",
 				},
@@ -75,7 +78,7 @@ var (
 			Name:      "test-app-abcdefg",
 			Namespace: "test-ds-namespace",
 			OwnerReferences: []metav1.OwnerReference{
-				metav1.OwnerReference{
+				{
 					Kind: "DaemonSet",
 					Name: "test-app",
 				},
@@ -99,7 +102,7 @@ var (
 			Name:      "test-app-abcdefg",
 			Namespace: "test-rs-namespace",
 			OwnerReferences: []metav1.OwnerReference{
-				metav1.OwnerReference{
+				{
 					Kind: "ReplicaSet",
 					Name: "test-app-rs",
 				},
@@ -114,7 +117,7 @@ var (
 			Name:      "test-app-rs",
 			Namespace: "test-rs-namespace",
 			OwnerReferences: []metav1.OwnerReference{
-				metav1.OwnerReference{
+				{
 					Kind: "Deployment",
 					Name: "test-app",
 				},
@@ -138,7 +141,7 @@ var (
 			Name:      "test-app-abcdefg",
 			Namespace: "test-orphan-namespace",
 			OwnerReferences: []metav1.OwnerReference{
-				metav1.OwnerReference{
+				{
 					Kind: "Deployment",
 					Name: "test-app",
 				},
@@ -176,35 +179,101 @@ var (
 )
 
 var _ = Describe("Test Generating Names for Recommended Policies", func() {
+	req := &http.Request{Header: http.Header{}}
+
 	// Define the kubernetes interface
-	kube := fake.NewSimpleClientset(depPod, deployment, jobPod, job, dsPod, ds, rsPod, rs, rsDep, orphanPod, alonePod, wcDep)
+	mockLmaK8sClientSet := &lmak8s.MockClientSet{}
+	mockLmaK8sClientSet.On("ProjectcalicoV3").Return(
+		clientsetfake.NewSimpleClientset().ProjectcalicoV3(),
+	)
+	coreV1 := fake.NewSimpleClientset().CoreV1()
+	_, err := coreV1.Namespaces().Create(req.Context(), namespace1Object, metav1.CreateOptions{})
+	Expect(err).To(BeNil())
+	_, err = coreV1.Namespaces().Create(req.Context(), namespace2Object, metav1.CreateOptions{})
+	Expect(err).To(BeNil())
+	_, err = coreV1.Pods("test-dep-namespace").Create(req.Context(), depPod, metav1.CreateOptions{})
+	Expect(err).To(BeNil())
+	_, err = coreV1.Pods("test-job-namespace").Create(req.Context(), jobPod, metav1.CreateOptions{})
+	Expect(err).To(BeNil())
+	_, err = coreV1.Pods("test-rs-namespace").Create(req.Context(), rsPod, metav1.CreateOptions{})
+	Expect(err).To(BeNil())
+	_, err = coreV1.Pods("test-orphan-namespace").Create(req.Context(), orphanPod, metav1.CreateOptions{})
+	Expect(err).To(BeNil())
+	_, err = coreV1.Pods("test-alone-namespace").Create(req.Context(), alonePod, metav1.CreateOptions{})
+	Expect(err).To(BeNil())
+	_, err = coreV1.Pods("test-ds-namespace").Create(req.Context(), dsPod, metav1.CreateOptions{})
+	Expect(err).To(BeNil())
+
+	appV1 := fake.NewSimpleClientset().AppsV1()
+	_, err = appV1.Deployments("test-dep-namespace").Create(req.Context(), deployment, metav1.CreateOptions{})
+	Expect(err).To(BeNil())
+	_, err = appV1.DaemonSets("test-ds-namespace").Create(req.Context(), ds, metav1.CreateOptions{})
+	Expect(err).To(BeNil())
+	_, err = appV1.ReplicaSets("test-rs-namespace").Create(req.Context(), rs, metav1.CreateOptions{})
+	Expect(err).To(BeNil())
+	_, err = appV1.Deployments("test-rs-namespace").Create(req.Context(), rsDep, metav1.CreateOptions{})
+	Expect(err).To(BeNil())
+	_, err = appV1.Deployments("test-wc-namespace").Create(req.Context(), wcDep, metav1.CreateOptions{})
+	Expect(err).To(BeNil())
+
+	batchV1 := fake.NewSimpleClientset().BatchV1()
+	_, err = batchV1.Jobs("test-job-namespace").Create(req.Context(), job, metav1.CreateOptions{})
+	Expect(err).To(BeNil())
+
+	batchV1beta1 := fake.NewSimpleClientset().BatchV1beta1()
+
+	// Define the return methods called by this test.
+	mockLmaK8sClientSet.On("CoreV1").Return(coreV1)
+	mockLmaK8sClientSet.On("AppsV1").Return(appV1)
+	mockLmaK8sClientSet.On("BatchV1").Return(batchV1)
+	mockLmaK8sClientSet.On("BatchV1beta1").Return(batchV1beta1)
+
 	DescribeTable("Extracts the query parameters from the request and validates them",
-		func(k k8s.Interface, searchName, searchNamespace, expectedName string) {
+		func(k lmak8s.ClientSet, searchName, searchNamespace, expectedName string) {
 			genName := policyrec.GeneratePolicyName(k, searchName, searchNamespace)
 			Expect(genName).To(Equal(expectedName))
 		},
 		// pod -> deployment
-		Entry("Given a pod name that has a reference to a deployment, it should return the deployment name", kube, "test-app-abcdefg", "test-dep-namespace", "test-app"),
+		Entry("Given a pod name that has a reference to a deployment, it should return the deployment name", mockLmaK8sClientSet, "test-app-abcdefg", "test-dep-namespace", "test-app"),
 		// pod -> job
-		Entry("Given a pod name that has a reference to a job, it should return the job name", kube, "test-app-abcdefg", "test-job-namespace", "test-app"),
+		Entry("Given a pod name that has a reference to a job, it should return the job name", mockLmaK8sClientSet, "test-app-abcdefg", "test-job-namespace", "test-app"),
 		// pod -> daemonset
-		Entry("Given a pod name that has a reference to a daemonset, it should return the daemonset name", kube, "test-app-abcdefg", "test-ds-namespace", "test-app"),
+		Entry("Given a pod name that has a reference to a daemonset, it should return the daemonset name", mockLmaK8sClientSet, "test-app-abcdefg", "test-ds-namespace", "test-app"),
 		// pod -> replicaset -> deployment
-		Entry("Given a pod name that has a reference to a replicaset which was created by a deployment, it should return the deployment name", kube, "test-app-abcdefg", "test-rs-namespace", "test-app"),
+		Entry("Given a pod name that has a reference to a replicaset which was created by a deployment, it should return the deployment name", mockLmaK8sClientSet, "test-app-abcdefg", "test-rs-namespace", "test-app"),
 		// something that doesn't exist
-		Entry("Given a pod name that has a reference to a deployment that doesn't exist, the non-existing deployment name is returned", kube, "test-app-abcdefg", "test-orphan-namespace", "test-app"),
+		Entry("Given a pod name that has a reference to a deployment that doesn't exist, the non-existing deployment name is returned", mockLmaK8sClientSet, "test-app-abcdefg", "test-orphan-namespace", "test-app"),
 		// no owner reference
-		Entry("Given a pod name that does not have a reference, it should return the pod name", kube, "test-app-abcdefg", "test-alone-namespace", "test-app-abcdefg"),
+		Entry("Given a pod name that does not have a reference, it should return the pod name", mockLmaK8sClientSet, "test-app-abcdefg", "test-alone-namespace", "test-app-abcdefg"),
 		// wildcard name -> deployment
-		Entry("Given a wildcard name (probably replicaset), it should return the deployment that would create it", kube, "test-app-*", "test-wc-namespace", "test-app"),
+		Entry("Given a wildcard name (probably replicaset), it should return the deployment that would create it", mockLmaK8sClientSet, "test-app-*", "test-wc-namespace", "test-app"),
 	)
 })
 
 var _ = Describe("Test Namespace existence for recommended policies", func() {
+	req := &http.Request{Header: http.Header{}}
+
 	// Define the kubernetes interface
-	kubeNamespaces := fake.NewSimpleClientset(namespace1Object, namespace2Object)
+	mockLmaK8sClientSet := &lmak8s.MockClientSet{}
+	mockLmaK8sClientSet.On("ProjectcalicoV3").Return(
+		clientsetfake.NewSimpleClientset().ProjectcalicoV3(),
+	)
+	coreV1 := fake.NewSimpleClientset().CoreV1()
+	_, err := coreV1.Namespaces().Create(req.Context(), namespace1Object, metav1.CreateOptions{})
+	Expect(err).To(BeNil())
+	_, err = coreV1.Namespaces().Create(req.Context(), namespace2Object, metav1.CreateOptions{})
+	Expect(err).To(BeNil())
+
+	appV1 := fake.NewSimpleClientset().AppsV1()
+	batchV1 := fake.NewSimpleClientset().BatchV1()
+
+	// Define the return methods called by this test.
+	mockLmaK8sClientSet.On("CoreV1").Return(coreV1)
+	mockLmaK8sClientSet.On("AppsV1").Return(appV1)
+	mockLmaK8sClientSet.On("BatchV1").Return(batchV1)
+
 	DescribeTable("DoesNamespaceExist",
-		func(k k8s.Interface, namespace string, expectedError error, expectedOK bool) {
+		func(k lmak8s.ClientSet, namespace string, expectedError error, expectedOK bool) {
 			err, ok := policyrec.DoesNamespaceExist(k, namespace)
 			if expectedError == nil {
 				Expect(err).To(BeNil())
@@ -213,7 +282,7 @@ var _ = Describe("Test Namespace existence for recommended policies", func() {
 			}
 			Expect(ok).To(Equal(expectedOK))
 		},
-		Entry("Namespace1 exists", kubeNamespaces, "namespace1", nil, true),
-		Entry("Namespace does not exist", kubeNamespaces, "non-existent-namespace", fmt.Errorf("namespaces \"non-existent-namespace\" not found"), false),
+		Entry("Namespace1 exists", mockLmaK8sClientSet, "namespace1", nil, true),
+		Entry("Namespace does not exist", mockLmaK8sClientSet, "non-existent-namespace", fmt.Errorf("namespaces \"non-existent-namespace\" not found"), false),
 	)
 })
