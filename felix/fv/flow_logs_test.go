@@ -259,7 +259,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 		}
 		Eventually(hostEndpointProgrammed, "10s", "1s").Should(BeTrue(),
 			"Expected HostEndpoint iptables rules to appear")
-		if !bpfEnabled {
+		if !BPFMode() {
 			rulesProgrammed := func() bool {
 				out0, err := felixes[0].ExecOutput("iptables-save", "-t", "filter")
 				Expect(err).NotTo(HaveOccurred())
@@ -288,8 +288,6 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ flow log tests", []apiconfi
 			}, "5s", "200ms").Should(BeTrue())
 
 			if !applyOnForwardSupported {
-				fmt.Println("Waiting ", wlHost2[1].InterfaceName)
-				time.Sleep(0 * time.Second)
 				Eventually(func() bool {
 					return bpfCheckIfPolicyProgrammed(felixes[1], wlHost2[1].InterfaceName, "ingress", "default/default.np-1", "deny", true)
 				}, "5s", "200ms").Should(BeTrue())
