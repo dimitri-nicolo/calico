@@ -27,7 +27,12 @@ Description:
 
   See 'calicoctl bgp <command> --help' to read about a specific subcommand.`
 
-	arguments, err := docopt.ParseArgs(doc, args, "")
+	var parser = &docopt.Parser{
+		HelpHandler:   docopt.PrintHelpAndExit,
+		OptionsFirst:  true,
+		SkipHelpFlags: false,
+	}
+	arguments, err := parser.ParseArgs(doc, args, "")
 	if err != nil {
 		return fmt.Errorf("Invalid option: 'calicoctl %s'. Use flag '--help' to read about a specific subcommand.", strings.Join(args, " "))
 	}
