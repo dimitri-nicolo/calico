@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.6 as builder
+FROM registry.access.redhat.com/ubi8/ubi-minimal:latest as builder
 
 ################################################################################
 # Build and patch elasticsearch from source
