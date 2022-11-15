@@ -50,7 +50,7 @@ bin/elasticsearch-metrics-$(ARCH):
 image: $(ELASTICSEARCH_METRICS_IMAGE)
 $(ELASTICSEARCH_METRICS_IMAGE): $(ELASTICSEARCH_METRICS_IMAGE)-$(ARCH)
 $(ELASTICSEARCH_METRICS_IMAGE)-$(ARCH): build
-	docker build --pull -t $(ELASTICSEARCH_METRICS_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
+	docker buildx build --pull -t $(ELASTICSEARCH_METRICS_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
 	docker tag $(ELASTICSEARCH_METRICS_IMAGE):latest-$(ARCH) $(ELASTICSEARCH_METRICS_IMAGE):latest
 endif
