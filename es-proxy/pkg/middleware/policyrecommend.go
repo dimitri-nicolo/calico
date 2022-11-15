@@ -13,6 +13,7 @@ import (
 
 	"github.com/projectcalico/calico/lma/pkg/api"
 	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/lma/pkg/policyrec"
 	"github.com/projectcalico/calico/lma/pkg/rbac"
 
@@ -20,7 +21,8 @@ import (
 )
 
 const (
-	defaultTierName = "default"
+	defaultTierName    = "default"
+	defaultPolicyOrder = float64(1000)
 )
 
 // The response that we return.
@@ -31,8 +33,8 @@ type PolicyRecommendationResponse struct {
 // PolicyRecommendationHandler returns a handler that writes a json response containing recommended
 // policies.
 func PolicyRecommendationHandler(
+	clientSetk8sClientFactory lmak8s.ClientSetFactory,
 	k8sClientFactory datastore.ClusterCtxK8sClientFactory,
-	k8sClient datastore.ClientSet,
 	c policyrec.CompositeAggregator,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -52,6 +54,14 @@ func PolicyRecommendationHandler(
 			clusterID = datastore.DefaultCluster
 		}
 		log.WithField("cluster", clusterID).Debug("Cluster ID for index")
+
+		// Get the k8s client set for this cluster.
+		clientSet, err := clientSetk8sClientFactory.NewClientSetForApplication(clusterID)
+		if err != nil {
+			log.WithError(err).Error("failed to create a new client set for the cluster: ", clusterID)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
 
 		// Ensure index is properly scoped by to the correct cluster.
 		params.DocumentIndex = lmaindex.FlowLogs().GetIndex(elasticvariant.AddIndexInfix(clusterID))
@@ -103,9 +113,14 @@ func PolicyRecommendationHandler(
 		// TODO(doublek): Tier and policy order should be obtained from the observation point policy.
 		// Set order to 1000 so that the policy is in the middle of the tier and can be moved up or down
 		// as necessary.
-		recommendedPolicyOrder := float64(1000)
+
+		recommendedPolicyOrder := defaultPolicyOrder
 		recEngine := policyrec.NewEndpointRecommendationEngine(
-			k8sClient, params.EndpointName, params.Namespace, defaultTierName, &recommendedPolicyOrder)
+			clientSet,
+			params.EndpointName,
+			params.Namespace,
+			defaultTierName,
+			&recommendedPolicyOrder)
 		for _, flow := range flows {
 			log.WithField("flow", flow).Debug("Calling recommendation engine with flow")
 			err := recEngine.ProcessFlow(*flow)
