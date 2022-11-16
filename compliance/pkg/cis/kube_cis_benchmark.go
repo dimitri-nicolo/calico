@@ -33,7 +33,7 @@ func (b *Benchmarker) ExecuteBenchmarks(ctx context.Context, ct api.BenchmarkTyp
 	if ct == api.TypeKubernetes {
 		return b.executeKubeBenchmark(ctx, nodename)
 	}
-	return nil, fmt.Errorf("No handler found for benchmark type %s", ct)
+	return nil, fmt.Errorf("no handler found for benchmark type %s", ct)
 }
 
 func configExists(cfgPath string) bool {
@@ -44,7 +44,8 @@ func configExists(cfgPath string) bool {
 // executeKubeBenchmark executes kube-bench.
 func (b *Benchmarker) executeKubeBenchmark(ctx context.Context, nodename string) (*api.Benchmarks, error) {
 	var args []string
-
+	args = append(args, "--config", "/etc/kube-bench/cfg/config.yaml")
+	args = append(args, "--config-dir", "/etc/kube-bench/cfg")
 	args = append(args, "--json")
 	log.WithField("cmd", args).Debug("executing benchmarker")
 

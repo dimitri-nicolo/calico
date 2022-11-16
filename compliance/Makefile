@@ -66,6 +66,7 @@ endif
 ###############################################################################
 build: bin/benchmarker-$(ARCH) \
 	bin/controller-$(ARCH) \
+	bin/kube-bench-$(ARCH) \
 	bin/report-type-gen-$(ARCH) \
 	bin/reporter-$(ARCH) \
 	bin/scaleloader-$(ARCH) \
@@ -79,37 +80,42 @@ sub-build-%:
 .PHONY: bin/server-$(ARCH)
 bin/server-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/server/server.go'
+	    go build -v -o $@ -ldflags "$(VERSION_FLAGS)" cmd/server/server.go'
 
 .PHONY: bin/controller-$(ARCH)
 bin/controller-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/controller/controller.go'
+	    go build -v -o $@ -ldflags "$(VERSION_FLAGS)" cmd/controller/controller.go'
 
 .PHONY: bin/snapshotter-$(ARCH)
 bin/snapshotter-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/snapshotter/snapshotter.go'
+	    go build -v -o $@ -ldflags "$(VERSION_FLAGS)" cmd/snapshotter/snapshotter.go'
 
 .PHONY: bin/reporter-$(ARCH)
 bin/reporter-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/reporter/reporter.go'
+	    go build -v -o $@ -ldflags "$(VERSION_FLAGS)" cmd/reporter/reporter.go'
 
 .PHONY: bin/report-type-gen-$(ARCH)
 bin/report-type-gen-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/report-type-gen/*.go'
+	    go build -v -o $@ -ldflags "$(VERSION_FLAGS)" cmd/report-type-gen/*.go'
 
 .PHONY: bin/scaleloader-$(ARCH)
 bin/scaleloader-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/mockdata-scaleloader/scaleloader.go'
+	    go build -v -o $@ -ldflags "$(VERSION_FLAGS)" cmd/mockdata-scaleloader/scaleloader.go'
+
+.PHONY: bin/kube-bench-$(ARCH)
+bin/kube-bench-$(ARCH): cmd/kube-bench/main.go
+	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
+	    go build -v -o $@ -ldflags "$(VERSION_FLAGS)" cmd/kube-bench/main.go'
 
 .PHONY: bin/benchmarker-$(ARCH)
 bin/benchmarker-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
-	    go build -v -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/benchmarker/benchmarker.go'
+	    go build -v -o $@ -ldflags "$(VERSION_FLAGS)" cmd/benchmarker/benchmarker.go'
 
 ###############################################################################
 # Building the report files
@@ -185,9 +191,10 @@ $(COMPLIANCE_SCALELOADER_CONTAINER_CREATED): docker-image/scaleloader/Dockerfile
 	touch $@
 
 # Build the tigera/compliance-benchmarker docker image, which contains only Compliance benchmarker.
+KUBE_BENCH_VERSION := $(shell grep -E 'github.com/aquasecurity/kube-bench' ../go.mod | awk '{print$$2;exit}')
 $(COMPLIANCE_BENCHMARKER_IMAGE): $(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED)
-$(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED): check-kubebench-update docker-image/benchmarker/Dockerfile.$(ARCH) bin/benchmarker-$(ARCH) register
-	$(DOCKER_BUILD) -t $(COMPLIANCE_BENCHMARKER_IMAGE):latest-$(ARCH) -f docker-image/benchmarker/Dockerfile.$(ARCH) . --load
+$(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED): check-kubebench-update docker-image/benchmarker/Dockerfile.$(ARCH) bin/benchmarker-$(ARCH) bin/kube-bench-$(ARCH) register
+	$(DOCKER_BUILD) --build-arg KUBECTL_VERSION=$(KUBECTL_VERSION) --build-arg KUBE_BENCH_VERSION=$(KUBE_BENCH_VERSION) -t $(COMPLIANCE_BENCHMARKER_IMAGE):latest-$(ARCH) -f docker-image/benchmarker/Dockerfile.$(ARCH) . --load
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_BENCHMARKER_IMAGE)
 	touch $@
 
