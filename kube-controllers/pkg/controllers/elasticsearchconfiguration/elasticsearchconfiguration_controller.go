@@ -1,9 +1,18 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
 
 package elasticsearchconfiguration
 
 import (
 	"fmt"
+
+	esv1 "github.com/elastic/cloud-on-k8s/v2/pkg/apis/elasticsearch/v1"
+	log "github.com/sirupsen/logrus"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/config"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/controller"
@@ -12,14 +21,6 @@ import (
 	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 	relasticsearch "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch"
-
-	esv1 "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1"
-	log "github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/cache"
 )
 
 const (
@@ -35,16 +36,16 @@ const (
 // does the following:
 //
 // If the management flag is false:
-// - Creates the elasticsearch users and roles in elasticsearch for the components in the the managed cluster and stores
-//   them in secrets in the managed cluster. There are certain components that only run in the management cluster, like
-//   the Manager and the ComplianceServer, and those users and roles will not be created
-// - Copies over the Secret in the management cluster that contains the elasticsearch tls certificate
-// - Copies the ConfigMap that has other elasticsearch related configuration that a managed cluster needs
+//   - Creates the elasticsearch users and roles in elasticsearch for the components in the the managed cluster and stores
+//     them in secrets in the managed cluster. There are certain components that only run in the management cluster, like
+//     the Manager and the ComplianceServer, and those users and roles will not be created
+//   - Copies over the Secret in the management cluster that contains the elasticsearch tls certificate
+//   - Copies the ConfigMap that has other elasticsearch related configuration that a managed cluster needs
 //
 // If the management flag is true:
-// - Creates the elasticsearch users and roles in elasticsearch for the components in the the management cluster and stores
-//   them in secrets in the management cluster. There are certain components that only run in the management cluster, like
-//   the Manager and the ComplianceServer, and those users and roles will be created
+//   - Creates the elasticsearch users and roles in elasticsearch for the components in the the management cluster and stores
+//     them in secrets in the management cluster. There are certain components that only run in the management cluster, like
+//     the Manager and the ComplianceServer, and those users and roles will be created
 //
 // A note on when the Reconcile function is run:
 // Regardless of whether the management flag is true or false, we add watches using the managedK8sCli to watch the component

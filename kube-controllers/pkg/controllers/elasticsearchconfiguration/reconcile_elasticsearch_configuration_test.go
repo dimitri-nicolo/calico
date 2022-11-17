@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
 
 package elasticsearchconfiguration
 
@@ -9,26 +9,22 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	"golang.org/x/crypto/bcrypt"
-
-	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
-
-	"k8s.io/client-go/kubernetes"
-
-	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
-
-	esv1 "github.com/elastic/cloud-on-k8s/pkg/apis/elasticsearch/v1"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	esv1 "github.com/elastic/cloud-on-k8s/v2/pkg/apis/elasticsearch/v1"
+	"golang.org/x/crypto/bcrypt"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 
+	"github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch"
 	esusers "github.com/projectcalico/calico/kube-controllers/pkg/elasticsearch/users"
+	"github.com/projectcalico/calico/kube-controllers/pkg/resource"
 	relasticsearchfake "github.com/projectcalico/calico/kube-controllers/pkg/resource/elasticsearch/fake"
 )
 
