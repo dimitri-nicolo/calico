@@ -32,10 +32,8 @@ func New(start, end time.Time, lister api.ListDestination, eventer api.ReportEve
 	}
 }
 
-// Start will first initialize the replayer to a synced state
-//   specified by the start Time, send an in-sync update,
-//   replay all the audit events between the start and end Times,
-//   and then send a complete update.
+// Start will first initialize the replayer to a synced state specified by the start Time, send an in-sync update,
+// replay all the audit events between the start and end Times, and then send a complete update.
 func (r *replayer) Start(ctx context.Context) {
 	log.Info("Initializing replayer cache to start time")
 	if err := r.initialize(ctx); err != nil {
@@ -139,7 +137,7 @@ func (r *replayer) replay(ctx context.Context, from, to *time.Time, notifyUpdate
 
 		// Nil resource and nil error means a status object.
 		if res == nil {
-			clog.Info("No resource in audit event (maybe a status event or wrong event type) - skipping")
+			clog.Debug("No resource in audit event (maybe a status event or wrong event type) - skipping")
 			continue
 		}
 
@@ -174,7 +172,7 @@ func (r *replayer) replay(ctx context.Context, from, to *time.Time, notifyUpdate
 					continue
 				}
 				if oldResVer > newResVer {
-					clog.Info("Resource version conflict detected - skipping")
+					clog.Debug("Resource version conflict detected - skipping")
 					continue
 				}
 			}

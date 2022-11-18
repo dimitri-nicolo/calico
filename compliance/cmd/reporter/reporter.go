@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
 package main
 
 import (
@@ -12,11 +12,10 @@ import (
 
 	"k8s.io/klog"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/health"
-
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/report"
 	"github.com/projectcalico/calico/compliance/pkg/version"
+	"github.com/projectcalico/calico/libcalico-go/lib/health"
 	"github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
@@ -55,7 +54,7 @@ func main() {
 	// Create a health check aggregator and start the health check service.
 	h := health.NewHealthAggregator()
 	h.ServeHTTP(cfg.HealthEnabled, cfg.HealthHost, cfg.HealthPort)
-	h.RegisterReporter(healthReporterName, &health.HealthReport{Live: true}, cfg.HealthTimeout)
+	h.RegisterReporter(healthReporterName, &health.HealthReport{Live: true}, cfg.HealthTimeoutReporter)
 
 	// Define a function that can be used to report health.
 	healthy := func() {
@@ -79,7 +78,6 @@ func main() {
 	healthy()
 
 	// Run the reporter.
-	log.Debug("Running reporter")
 	if err := report.Run(
 		cxt, cfg, healthy, elasticClient, elasticClient, elasticClient,
 		elasticClient, elasticClient, elasticClient,

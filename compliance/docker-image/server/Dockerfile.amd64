@@ -2,38 +2,31 @@ ARG UBI_IMAGE
 
 FROM ${UBI_IMAGE} AS ubi
 
-RUN mkdir /code
-ADD bin/server-amd64 /code/server
+RUN microdnf upgrade
 
-RUN chgrp -R 0 /code && \
-    chmod -R g=u /code
 
 FROM scratch
 
-COPY --from=ubi /code/ /code/
-
-# Add the trusted certs from the ubi image.
-COPY --from=ubi /etc/pki /etc/pki
-COPY --from=ubi /usr/share/pki /usr/share/pki
+ADD bin/server-amd64 /usr/bin/compliance-server
 
 # Because we build our binary with CGO, we need to add the necessary *.so files for dynamic linking.
 # If *.so files are missing, you will see an error saying that your entrypoint cannot be found.
 # The necessary files can be found using the ldd command on the binary.
 COPY --from=ubi /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
-COPY --from=ubi /lib64/libpthread.so.0 /lib64/libpthread.so.0
 COPY --from=ubi /lib64/libc.so.6 /lib64/libc.so.6
+COPY --from=ubi /lib64/libpthread.so.0 /lib64/libpthread.so.0
 
 # The following libs won't show when doing ldd, but are necessary.
 COPY --from=ubi /lib64/libnss_dns.so.2 /lib64/libnss_dns.so.2
 COPY --from=ubi /lib64/libresolv.so.2 /lib64/libresolv.so.2
-COPY --from=ubi /etc/nsswitch.conf /etc/nsswitch.conf
+
 COPY --from=ubi /etc/group /etc/group
 COPY --from=ubi /etc/hosts /etc/hosts
 COPY --from=ubi /etc/networks /etc/networks
+COPY --from=ubi /etc/nsswitch.conf /etc/nsswitch.conf
 COPY --from=ubi /etc/passwd /etc/passwd
 COPY --from=ubi /etc/shadow /etc/shadow
 
-USER 999
+USER 10001:10001
 
-WORKDIR /code
-ENTRYPOINT ["/code/server"]
+ENTRYPOINT ["/usr/bin/compliance-server"]

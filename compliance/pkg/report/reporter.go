@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
 package report
 
 import (
@@ -6,14 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/compliance"
-	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 
 	"github.com/projectcalico/calico/compliance/pkg/archive"
 	"github.com/projectcalico/calico/compliance/pkg/config"
@@ -22,7 +17,11 @@ import (
 	"github.com/projectcalico/calico/compliance/pkg/replay"
 	"github.com/projectcalico/calico/compliance/pkg/syncer"
 	"github.com/projectcalico/calico/compliance/pkg/xrefcache"
+	"github.com/projectcalico/calico/libcalico-go/lib/compliance"
+	"github.com/projectcalico/calico/libcalico-go/lib/resources"
 	api "github.com/projectcalico/calico/lma/pkg/api"
+
+	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
 const (
@@ -59,6 +58,8 @@ func Run(
 	archiver api.ReportStorer,
 	benchmarker api.BenchmarksQuery,
 ) error {
+	log.Info("Running reporter")
+
 	// Inidicate healthy.
 	healthy()
 
@@ -71,7 +72,7 @@ func Run(
 
 	var longTermArchiver archive.LogDispatcher
 	if reportCfg.ArchiveLogsEnabled {
-		logrus.WithFields(logrus.Fields{
+		log.WithFields(log.Fields{
 			"directory": reportCfg.ArchiveLogsDirectory,
 			"max_size":  reportCfg.ArchiveLogsMaxFileSizeMB,
 			"max_files": reportCfg.ArchiveLogsMaxFiles,
@@ -87,7 +88,7 @@ func Run(
 	r := &reporter{
 		ctx: ctx,
 		cfg: reportCfg,
-		clog: logrus.WithFields(logrus.Fields{
+		clog: log.WithFields(log.Fields{
 			"name":  reportCfg.Report.Name,
 			"type":  reportCfg.ReportType.Name,
 			"start": cfg.ParsedReportStart.Format(time.RFC3339),
@@ -116,13 +117,14 @@ func Run(
 		flowLogFilter:    flow.NewFlowLogFilter(),
 		longTermArchiver: longTermArchiver,
 	}
+
 	return r.run()
 }
 
 type reporter struct {
 	ctx         context.Context
 	cfg         *Config
-	clog        *logrus.Entry
+	clog        *log.Entry
 	xc          xrefcache.XrefCache
 	replayer    syncer.Starter
 	auditer     api.AuditLogReportHandler
@@ -155,6 +157,8 @@ type reportEndpoint struct {
 }
 
 func (r *reporter) run() error {
+	r.clog.Info("Reporter run started")
+
 	// Report healthy.
 	r.healthy()
 
@@ -163,11 +167,11 @@ func (r *reporter) run() error {
 		(r.cfg.ReportType.Spec.AuditEventsSelection != nil && r.cfg.Report.Spec.Endpoints != nil) {
 		// We either want endpoint data in the report, or we are gathering audit logs and have specified an in-scope
 		// endpoints filter with which we will filter in-scope resources.
-		r.clog.Debug("Including endpoint data in report, or require endpoints for filtering")
+		r.clog.Info("Including endpoint data in report, or require endpoints for filtering")
 
 		// Register the endpoint selectors to specify which endpoints we will receive notification for.
 		if err := r.xc.RegisterInScopeEndpoints(r.cfg.Report.Spec.Endpoints); err != nil {
-			r.clog.WithError(err).Debug("Unable to register inscope endpoints selection")
+			r.clog.WithError(err).Error("Unable to register inscope endpoints selection")
 			return nil
 		}
 
@@ -185,14 +189,14 @@ func (r *reporter) run() error {
 
 		// Create the initial ReportData structure
 		if r.cfg.ReportType.Spec.IncludeEndpointData {
-			r.clog.Debug("Including endpoint data in report")
+			r.clog.Info("Including endpoint data in report")
 			r.transferAggregatedData()
 		}
 
 		// Include flow logs if required.
 		if r.cfg.ReportType.Spec.IncludeEndpointFlowLogData {
 			// We also need to include flow logs data for the in-scope endpoints.
-			r.clog.Debug("Including flow log data in report")
+			r.clog.Info("Including flow log data in report")
 			r.addFlowLogEntries()
 		}
 		r.flowLogFilter = nil
@@ -204,7 +208,7 @@ func (r *reporter) run() error {
 	// Include audit data if required.
 	if r.cfg.ReportType.Spec.AuditEventsSelection != nil {
 		// We need to include audit log data in the report.
-		r.clog.Debug("Including audit event data in report")
+		r.clog.Info("Including audit event data in report")
 		if err := r.addAuditEvents(); err != nil {
 			r.clog.WithError(err).Error("Hit error gathering audit logs")
 			return err
@@ -217,7 +221,7 @@ func (r *reporter) run() error {
 	// Include benchmarks if required.
 	if r.cfg.ReportType.Spec.IncludeCISBenchmarkData {
 		// We need to include benchmarks in the report.
-		r.clog.Debug("Including benchmarks in report")
+		r.clog.Info("Including benchmarks in report")
 		if err := r.addBenchmarks(); err != nil {
 			r.clog.WithError(err).Error("Hit error gathering benchmarks")
 			return err
@@ -227,7 +231,7 @@ func (r *reporter) run() error {
 	// Indicate we are healthy.
 	r.healthy()
 
-	r.clog.Debug("Rendering report data based on template")
+	r.clog.Info("Rendering report data based on template")
 	summary, err := compliance.RenderTemplate(r.cfg.ReportType.Spec.UISummaryTemplate.Template, r.data)
 	if err != nil {
 		r.clog.WithError(err).Error("Error rendering data into summary")
@@ -237,7 +241,7 @@ func (r *reporter) run() error {
 	r.healthy()
 
 	// Set the generation time and store the report data.
-	r.clog.Debug("Storing report into archiver")
+	r.clog.Info("Storing report into archiver")
 	r.data.GenerationTime = metav1.Now()
 	_ = r.archiver.StoreArchivedReport(&api.ArchivedReportData{
 		ReportData: r.data,
@@ -248,23 +252,27 @@ func (r *reporter) run() error {
 	r.healthy()
 
 	// Set the generation time and store the report data.
-	err = r.longTermArchiver.Initialize()
-	if err != nil {
-		r.clog.WithError(err).
-			Error("Long-term storage file dispatcher unable to initialize")
+	r.clog.Info("Initializing long-term storage")
+	if err = r.longTermArchiver.Initialize(); err != nil {
+		r.clog.WithError(err).Error("Long-term storage file dispatcher unable to initialize")
 		return err
 	}
 
-	r.clog.Debug("Sending report to long-term storage")
-	err = r.longTermArchiver.Dispatch(api.ArchivedReportData{
+	r.clog.Info("Sending report to long-term storage")
+	if err = r.longTermArchiver.Dispatch(api.ArchivedReportData{
 		ReportData: r.data,
 		UISummary:  summary,
-	})
+	}); err != nil {
+		r.clog.WithError(err).Error("Error sending report to long-term storage")
+		return err
+	}
 
 	// Indicate we are healthy.
 	r.healthy()
 
-	return err
+	r.clog.Info("Report is successfully executed")
+
+	return nil
 }
 
 func (r *reporter) onUpdate(update syncer.Update) {
@@ -354,11 +362,11 @@ func (r *reporter) addFlowLogEntries() {
 // addAuditEvents reads audit logs from storage, filters them based on the resources specified in
 // `filter`. Blank fields in the filter ResourceIDs are regarded as wildcard matches for that
 // parameter.  Fields within a ResourceID are ANDed, different ResourceIDs are ORed. For example:
-// - an empty filter would include no audit events
-// - a filter containing a blank ResourceID would contain all audit events
-// - a filter containing two ResourceIDs, one with Kind set to "NetworkPolicy", the other with kind
-//   set to "GlobalNetworkPolicy" would include all Kubernetes and Calico NetworkPolicy and
-//   all Calico GlobalNetworkPolicy audit events.
+//   - an empty filter would include no audit events
+//   - a filter containing a blank ResourceID would contain all audit events
+//   - a filter containing two ResourceIDs, one with Kind set to "NetworkPolicy", the other with kind
+//     set to "GlobalNetworkPolicy" would include all Kubernetes and Calico NetworkPolicy and
+//     all Calico GlobalNetworkPolicy audit events.
 func (r *reporter) addAuditEvents() error {
 	for e := range r.auditer.SearchAuditEvents(r.ctx, r.cfg.ReportType.Spec.AuditEventsSelection,
 		&r.cfg.ParsedReportStart, &r.cfg.ParsedReportEnd) {

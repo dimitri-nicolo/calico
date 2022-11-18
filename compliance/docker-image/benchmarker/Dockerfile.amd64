@@ -1,21 +1,36 @@
-# To update kube-bench version update the image tag and github.com/aquasecurity/kube-bench in go.mod
-# Image tag and go.mod should point to same version
-# The tigera/kube-bench repo will still have to be re-built and the tagged image, v0.6.6_go-x.x,
-# needs to be replaced after each update to the go version. See tigera/kube-bench readme for more
-# info.
-FROM gcr.io/unique-caldron-775/cnx/tigera/kube-bench:v0.6.6_go-1.18 as base
+ARG UBI_IMAGE
 
-RUN apk update && apk add curl
+FROM ${UBI_IMAGE} AS ubi
 
-RUN cp /usr/local/bin/kube-bench /bin/kube-bench
-RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
-RUN chmod +x ./kubectl
-RUN mv ./kubectl /bin
+ARG KUBECTL_VERSION
+ARG KUBE_BENCH_VERSION
 
-ADD bin/benchmarker-amd64 /bin/benchmarker
+RUN microdnf upgrade && microdnf install tar gzip
 
-ENV PATH=/bin:$PATH
+# install kube-bench configs
+# ref: https://github.com/aquasecurity/kube-bench/blob/main/docs/installation.md
+RUN curl -sfL https://github.com/aquasecurity/kube-bench/archive/refs/tags/${KUBE_BENCH_VERSION}.tar.gz -o /tmp/kube-bench.tar.gz && \
+	mkdir -p /tmp/kube-bench && tar -xf /tmp/kube-bench.tar.gz --strip-components 1 -C /tmp/kube-bench && \
+	mkdir -p /etc/kube-bench && mv /tmp/kube-bench/cfg /etc/kube-bench/
 
-WORKDIR /opt/kube-bench
+# install kubectl
+RUN curl -sfL https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl -o /usr/bin/kubectl && \
+	chmod 755 /usr/bin/kubectl
 
-ENTRYPOINT ["benchmarker"]
+
+FROM scratch
+
+ADD bin/benchmarker-amd64 /usr/bin/compliance-benchmarker
+ADD bin/kube-bench-amd64 /usr/bin/kube-bench
+
+COPY --from=ubi /etc/kube-bench /etc/kube-bench/
+COPY --from=ubi /usr/bin/kubectl /usr/bin/kubectl
+
+# Because we build our binary with CGO, we need to add the necessary *.so files for dynamic linking.
+# If *.so files are missing, you will see an error saying that your entrypoint cannot be found.
+# The necessary files can be found using the ldd command on the binary.
+COPY --from=ubi /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
+COPY --from=ubi /lib64/libc.so.6 /lib64/libc.so.6
+COPY --from=ubi /lib64/libpthread.so.0 /lib64/libpthread.so.0
+
+ENTRYPOINT ["/usr/bin/compliance-benchmarker"]

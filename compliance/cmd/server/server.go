@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2019-2022 Tigera, Inc. All rights reserved.
 package main
 
 import (
@@ -8,9 +8,13 @@ import (
 	"os/signal"
 	"syscall"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/caimeo/iniflags"
+	log "github.com/sirupsen/logrus"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
+
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/klog"
 
 	"github.com/projectcalico/calico/compliance/pkg/config"
 	"github.com/projectcalico/calico/compliance/pkg/datastore"
@@ -19,12 +23,6 @@ import (
 	"github.com/projectcalico/calico/compliance/pkg/version"
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	"github.com/projectcalico/calico/lma/pkg/elastic"
-
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
-
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/klog"
 )
 
 var (

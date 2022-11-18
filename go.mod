@@ -11,13 +11,13 @@ require (
 	github.com/Workiva/go-datastructures v1.0.53
 	github.com/alecthomas/participle v0.7.1
 	github.com/apparentlymart/go-cidr v1.1.0
-	github.com/aquasecurity/kube-bench v0.6.6
+	github.com/aquasecurity/kube-bench v0.6.10
 	github.com/avast/retry-go v3.0.0+incompatible
-	github.com/aws/aws-sdk-go-v2 v1.11.0
-	github.com/aws/aws-sdk-go-v2/config v1.10.0
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.8.0
+	github.com/aws/aws-sdk-go-v2 v1.16.16
+	github.com/aws/aws-sdk-go-v2/config v1.17.8
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.17
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.21.0
-	github.com/aws/smithy-go v1.9.0
+	github.com/aws/smithy-go v1.13.3
 	github.com/bmizerany/pat v0.0.0-20210406213842-e4b6760bdd6f
 	github.com/bronze1man/goStrongswanVici v0.0.0-20190828090544-27d02f80ba40
 	github.com/buger/jsonparser v1.1.1
@@ -127,7 +127,7 @@ require (
 	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.80.1
 	k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1
-	k8s.io/kubernetes v1.21.8
+	k8s.io/kubernetes v1.25.2
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed
 	modernc.org/memory v1.1.1
 	sigs.k8s.io/kind v0.11.1
@@ -163,13 +163,15 @@ require (
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d // indirect
 	github.com/aws/aws-sdk-go v1.43.41 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.6.0 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.0 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.0.0 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.5.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.6.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.9.0 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.12.21 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.23 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.17 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.24 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.17 // indirect
+	github.com/aws/aws-sdk-go-v2/service/securityhub v1.23.5 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.11.23 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.13.6 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.16.19 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bi-zone/etw v0.0.0-20200916105032-b215904fae4f // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
@@ -197,6 +199,7 @@ require (
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/fastly/go-utils v0.0.0-20180712184237-d95a45783239 // indirect
+	github.com/fatih/color v1.13.0 // indirect
 	github.com/felixge/httpsnoop v1.0.1 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.3+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
@@ -231,9 +234,19 @@ require (
 	github.com/huandu/xstrings v1.3.1 // indirect
 	github.com/imdario/mergo v0.3.13 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
+	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
+	github.com/jackc/pgconn v1.13.0 // indirect
+	github.com/jackc/pgio v1.0.0 // indirect
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgproto3/v2 v2.3.1 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b // indirect
+	github.com/jackc/pgtype v1.12.0 // indirect
+	github.com/jackc/pgx/v4 v4.17.2 // indirect
 	github.com/jcchavezs/porto v0.1.0 // indirect
 	github.com/jehiah/go-strftime v0.0.0-20171201141054-1d33003b3869 // indirect
 	github.com/jinzhu/copier v0.3.2 // indirect
+	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/joeshaw/multierror v0.0.0-20140124173710-69b34d4ec901 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
@@ -247,8 +260,8 @@ require (
 	github.com/lithammer/dedent v1.1.0 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
-	github.com/mattn/go-colorable v0.1.12 // indirect
-	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/mattn/go-runewidth v0.0.10 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/mdlayher/genetlink v1.0.0 // indirect
@@ -283,7 +296,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema v1.2.4 // indirect
 	github.com/seccomp/libseccomp-golang v0.9.2-0.20210429002308-3879420cc921 // indirect
 	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4 // indirect
-	github.com/spf13/afero v1.8.2 // indirect
+	github.com/spf13/afero v1.9.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/storageos/go-api v2.2.0+incompatible // indirect
@@ -330,6 +343,8 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/warnings.v0 v0.1.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	gorm.io/driver/postgres v1.3.10 // indirect
+	gorm.io/gorm v1.23.10 // indirect
 	howett.net/plist v1.0.0 // indirect
 	k8s.io/cloud-provider v0.24.0 // indirect
 	k8s.io/component-helpers v0.24.0 // indirect
