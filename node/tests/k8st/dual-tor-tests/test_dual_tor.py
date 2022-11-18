@@ -124,12 +124,17 @@ def get_plane(ns, src_pod_name, dst_ip):
         print "For some reason, running ServiceIP failover test (without tor2tor, tor2node), traceroute could get into the the state that it lost packets on last test case. Print log for now and retry with longer timeout. We will debug it later."
         trlines = traceroute(ns, src_pod_name, dst_ip, "25s")
 
-    marker = str(route_order) + "  172"
+    # We are looking for a line like this:
+    #  1  172.31.11.1  0.009 ms  *  172.31.12.1  0.010 ms
+    # But sometimes we see this, which is also OK:
+    #  1  *  172.31.12.1  0.013 ms  *
+    # Or even this:
+    #  1  *  *  172.31.12.1  0.013 ms  *
+    # And so on.
     for l in trlines:
-        if marker in l:
-            m = re.search('172\.31\..(\d)', l)
-            if m:
-                return m.group(1)
+        m = re.search(str(route_order) + ' ( \* )* 172\.31\..(\d)', l)
+        if m:
+            return m.group(2)
 
     raise Exception("error match route info")
 
