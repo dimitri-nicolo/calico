@@ -15,16 +15,6 @@ import (
 
 const wildcardSuffix = "-*"
 
-// DoesNamespaceExist returns true if the namespace object query returns a valid object. Returns an
-// error if the query returns an error.
-func DoesNamespaceExist(cs lmak8s.ClientSet, name string) (error, bool) {
-	if namespace, err := cs.CoreV1().Namespaces().Get(context.Background(), name, metav1.GetOptions{}); err != nil || namespace == nil {
-		return err, false
-	}
-
-	return nil, true
-}
-
 // GeneratePolicyName generates a policy namespace for policy recommendation, using the endpoint
 // name and namespace.
 func GeneratePolicyName(k lmak8s.ClientSet, name, namespace string) string {

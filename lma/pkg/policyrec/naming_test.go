@@ -2,7 +2,6 @@
 package policyrec_test
 
 import (
-	"fmt"
 	"net/http"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -247,42 +246,5 @@ var _ = Describe("Test Generating Names for Recommended Policies", func() {
 		Entry("Given a pod name that does not have a reference, it should return the pod name", mockLmaK8sClientSet, "test-app-abcdefg", "test-alone-namespace", "test-app-abcdefg"),
 		// wildcard name -> deployment
 		Entry("Given a wildcard name (probably replicaset), it should return the deployment that would create it", mockLmaK8sClientSet, "test-app-*", "test-wc-namespace", "test-app"),
-	)
-})
-
-var _ = Describe("Test Namespace existence for recommended policies", func() {
-	req := &http.Request{Header: http.Header{}}
-
-	// Define the kubernetes interface
-	mockLmaK8sClientSet := &lmak8s.MockClientSet{}
-	mockLmaK8sClientSet.On("ProjectcalicoV3").Return(
-		clientsetfake.NewSimpleClientset().ProjectcalicoV3(),
-	)
-	coreV1 := fake.NewSimpleClientset().CoreV1()
-	_, err := coreV1.Namespaces().Create(req.Context(), namespace1Object, metav1.CreateOptions{})
-	Expect(err).To(BeNil())
-	_, err = coreV1.Namespaces().Create(req.Context(), namespace2Object, metav1.CreateOptions{})
-	Expect(err).To(BeNil())
-
-	appV1 := fake.NewSimpleClientset().AppsV1()
-	batchV1 := fake.NewSimpleClientset().BatchV1()
-
-	// Define the return methods called by this test.
-	mockLmaK8sClientSet.On("CoreV1").Return(coreV1)
-	mockLmaK8sClientSet.On("AppsV1").Return(appV1)
-	mockLmaK8sClientSet.On("BatchV1").Return(batchV1)
-
-	DescribeTable("DoesNamespaceExist",
-		func(k lmak8s.ClientSet, namespace string, expectedError error, expectedOK bool) {
-			err, ok := policyrec.DoesNamespaceExist(k, namespace)
-			if expectedError == nil {
-				Expect(err).To(BeNil())
-			} else {
-				Expect(err.Error()).To(Equal(expectedError.Error()))
-			}
-			Expect(ok).To(Equal(expectedOK))
-		},
-		Entry("Namespace1 exists", mockLmaK8sClientSet, "namespace1", nil, true),
-		Entry("Namespace does not exist", mockLmaK8sClientSet, "non-existent-namespace", fmt.Errorf("namespaces \"non-existent-namespace\" not found"), false),
 	)
 })

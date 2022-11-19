@@ -168,13 +168,6 @@ func (ere *recommendationEngine) Recommend() (*Recommendation, error) {
 	// Set the policy's name.
 	var name string
 	if ere.isNamespacePolicy {
-		if err, ok := DoesNamespaceExist(ere.clientSet, ere.endpointNamespace); err != nil {
-			log.WithError(err).Errorf("failed to query for namespace: %s", ere.endpointNamespace)
-			return nil, err
-		} else if !ok {
-			log.WithError(err).Errorf("failed to query for namespace: %s", ere.endpointNamespace)
-			return nil, fmt.Errorf("namespace '%s' not found", name)
-		}
 		name = ere.endpointNamespace
 	} else {
 		name = GeneratePolicyName(ere.clientSet, ere.endpointName, ere.endpointNamespace)
