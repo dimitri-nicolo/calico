@@ -22,6 +22,8 @@ type ClusterInformationExpansion interface{}
 
 type DeepPacketInspectionExpansion interface{}
 
+type ExternalNetworkExpansion interface{}
+
 type FelixConfigurationExpansion interface{}
 
 type GlobalAlertExpansion interface{}

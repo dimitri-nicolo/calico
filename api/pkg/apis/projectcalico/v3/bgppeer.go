@@ -131,6 +131,10 @@ type BGPPeerSpec struct {
 	// (edges) between the peers.
 	// +optional
 	TTLSecurity *uint8 `json:"ttlSecurity,omitempty"`
+
+	// Name of the external network which this peer is belong to.
+	// +optional
+	ExternalNetwork string `json:"externalNetwork,omitempty" validate:"omitempty,name"`
 }
 
 type SourceAddress string

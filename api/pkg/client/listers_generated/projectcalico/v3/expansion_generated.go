@@ -44,6 +44,10 @@ type DeepPacketInspectionListerExpansion interface{}
 // DeepPacketInspectionNamespaceLister.
 type DeepPacketInspectionNamespaceListerExpansion interface{}
 
+// ExternalNetworkListerExpansion allows custom methods to be added to
+// ExternalNetworkLister.
+type ExternalNetworkListerExpansion interface{}
+
 // FelixConfigurationListerExpansion allows custom methods to be added to
 // FelixConfigurationLister.
 type FelixConfigurationListerExpansion interface{}

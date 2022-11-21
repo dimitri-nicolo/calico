@@ -93,6 +93,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.EntityRule":                            schema_pkg_apis_projectcalico_v3_EntityRule(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.ErrorCondition":                        schema_pkg_apis_projectcalico_v3_ErrorCondition(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.EtcdConfig":                            schema_pkg_apis_projectcalico_v3_EtcdConfig(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.ExternalNetwork":                       schema_pkg_apis_projectcalico_v3_ExternalNetwork(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.ExternalNetworkList":                   schema_pkg_apis_projectcalico_v3_ExternalNetworkList(ref),
+		"github.com/tigera/api/pkg/apis/projectcalico/v3.ExternalNetworkSpec":                   schema_pkg_apis_projectcalico_v3_ExternalNetworkSpec(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.FederatedServicesControllerConfig":     schema_pkg_apis_projectcalico_v3_FederatedServicesControllerConfig(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.FelixConfiguration":                    schema_pkg_apis_projectcalico_v3_FelixConfiguration(ref),
 		"github.com/tigera/api/pkg/apis/projectcalico/v3.FelixConfigurationList":                schema_pkg_apis_projectcalico_v3_FelixConfigurationList(ref),
@@ -1789,6 +1792,13 @@ func schema_pkg_apis_projectcalico_v3_BGPPeerSpec(ref common.ReferenceCallback) 
 							Description: "TTLSecurity enables the generalized TTL security mechanism (GTSM) which protects against spoofed packets by ignoring received packets with a smaller than expected TTL value. The provided value is the number of hops (edges) between the peers.",
 							Type:        []string{"integer"},
 							Format:      "byte",
+						},
+					},
+					"externalNetwork": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name of the external network which this peer is belong to.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},
@@ -3986,6 +3996,116 @@ func schema_pkg_apis_projectcalico_v3_EtcdConfig(ref common.ReferenceCallback) c
 						},
 					},
 				},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_ExternalNetwork(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.ExternalNetworkSpec"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.ExternalNetworkSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_ExternalNetworkList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ExternalNetworkList is a list of ExternalNetwork resources.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.ExternalNetwork"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.ExternalNetwork", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_ExternalNetworkSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ExternalNetworkSpec contains the specification for a external network resource.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"routeTableIndex": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The index of a linux kernel routing table that should be used for the routes associated with the external network. The value should be unique for each external network. The value should not be in the range of `RouteTableRanges` field in FelixConfiguration. The kernel routing table index should not be used by other processes on the node.",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+				},
+				Required: []string{"routeTableIndex"},
 			},
 		},
 	}
