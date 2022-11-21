@@ -32,6 +32,9 @@ type Config struct {
 	OIDCAuthGroupsClaim    string `default:"groups" split_words:"true"`
 	OIDCAuthGroupsPrefix   string `split_words:"true"`
 
+	CalicoCloudRequireTenantClaim bool   `envconfig:"CALICO_CLOUD_REQUIRE_TENANT_CLAIM" default:"false"`
+	CalicoCloudTenantClaim        string `envconfig:"CALICO_CLOUD_TENANT_CLAIM"`
+
 	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
 	FIPSModeEnabled bool `default:"false" split_words:"true"`
 }
