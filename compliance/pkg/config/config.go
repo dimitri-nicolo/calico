@@ -91,6 +91,9 @@ type Config struct {
 	OIDCAuthUsernamePrefix string `envconfig:"TIGERA_COMPLIANCE_OIDC_AUTH_USERNAME_PREFIX"`
 	OIDCAuthGroupsPrefix   string `envconfig:"TIGERA_COMPLIANCE_OIDC_AUTH_GROUPS_PREFIX"`
 
+	CalicoCloudRequireTenantClaim bool   `envconfig:"CALICO_CLOUD_REQUIRE_TENANT_CLAIM" default:"false"`
+	CalicoCloudTenantClaim        string `envconfig:"CALICO_CLOUD_TENANT_CLAIM"`
+
 	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
 	FIPSModeEnabled bool `envconfig:"FIPS_MODE_ENABLED" default:"false"`
 }
