@@ -77,6 +77,9 @@ type Config struct {
 	OIDCAuthUsernamePrefix string `envconfig:"OIDC_AUTH_USERNAME_PREFIX"`
 	OIDCAuthGroupsPrefix   string `envconfig:"OIDC_AUTH_GROUPS_PREFIX"`
 
+	CalicoCloudRequireTenantClaim bool   `envconfig:"CALICO_CLOUD_REQUIRE_TENANT_CLAIM" default:"false"`
+	CalicoCloudTenantClaim        string `envconfig:"CALICO_CLOUD_TENANT_CLAIM"`
+
 	// Service graph settings.  See servicegraph.Config for details.
 	ServiceGraphCacheMaxEntries           int           `envconfig:"SERVICE_GRAPH_CACHE_MAX_ENTRIES" default:"10"`
 	ServiceGraphCacheMaxBucketsPerQuery   int           `envconfig:"SERVICE_GRAPH_CACHE_MAX_BUCKETS_PER_QUERY" default:"1000"`
