@@ -1,7 +1,6 @@
 PACKAGE_NAME    ?= github.com/tigera/ingress-collector
 GO_BUILD_VER    ?= v0.76
 GIT_USE_SSH     := true
-LIBCALICO_REPO   = github.com/tigera/libcalico-go-private
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID?=$(SEMAPHORE_INGRESS_COLLECTOR_PROJECT_ID)

@@ -19,6 +19,7 @@ import (
 	"net"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func GetDialer(proto string) func(context.Context, string) (net.Conn, error) {
@@ -33,6 +34,6 @@ func GetDialer(proto string) func(context.Context, string) (net.Conn, error) {
 
 func GetDialOptions() []grpc.DialOption {
 	return []grpc.DialOption{
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(GetDialer("unix"))}
 }
