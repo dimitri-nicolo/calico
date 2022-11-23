@@ -333,6 +333,7 @@ $(FELIX_GPL_SOURCE):
 # FV Tests
 ###############################################################################
 K8ST_IMAGE_TARS=calico-node.tar calico-apiserver.tar cnx-node.tar calico-cni.tar pod2daemon.tar calicoctl.tar kube-controllers.tar egress-gateway.tar
+tars: $(K8ST_IMAGE_TARS)
 
 ifeq ($(SEMAPHORE_GIT_REF_TYPE), pull-request)
 # Determine the tests to run using the test spider tool, which emits a list of impacted packages.
@@ -486,7 +487,8 @@ tests/k8st/reliable-nc/bin/reliable-nc: tests/k8st/reliable-nc/reliable-nc.go
 ## By default, run tests tagged with "vanilla". This excludes dual tor tests from running
 ## on a test environment which doesn't support dual tor, and excludes egress IP tests which
 ## reconfigure the cluster configuration.
-K8ST_TO_RUN ?= -A vanilla
+# K8ST_TO_RUN ?= -A vanilla
+K8ST_TO_RUN ?= egress-ip-tests/test_egress_ip.py:TestEgressIPNoOverlay.test_ecmp_mainline -s --nocapture --nologcapture
 
 .PHONY: egress-ip-test
 egress-ip-test:
@@ -500,7 +502,7 @@ k8s-test:
 
 .PHONY: kind-k8st-setup
 TEST_LICENSE=$(SECRETS_PATH)/license.yaml
-kind-k8st-setup: $(K8ST_IMAGE_TARS) kind-cluster-create $(TEST_LICENSE)
+kind-k8st-setup: kind-cluster-create $(TEST_LICENSE)
 	TSEE_TEST_LICENSE=$(TEST_LICENSE) GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) KUBECONFIG=$(KIND_KUBECONFIG) ARCH=$(ARCH) ./tests/k8st/deploy_resources_on_kind_cluster.sh
 
 .PHONY: kind-k8st-run-test

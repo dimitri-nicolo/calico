@@ -13,6 +13,15 @@ from tests.k8st.utils.utils import DiagsCollector, calicoctl, kubectl, run, node
 
 _log = logging.getLogger(__name__)
 
+def wait():
+    sleep = True
+    while sleep:
+        file_list = run("docker exec  kind-control-plane ls /")
+        if file_list.find("test-done") == -1:
+            time.sleep(10)
+        else:
+            sleep = False
+
 # Note: The very first step for egress ip test cases is to setup ipipMode/vxlanMode accordingly.
 # If we add more test cases for other feature, we would need to refactor overlay mode setup and
 # make it easier for each test case to configure it.
@@ -160,6 +169,8 @@ EOF
             # we should expect packets take all three EMCP route.
             gw_ips = [gw.ip, gw2.ip, gw3.ip]
             self.check_ecmp_routes(client, servers, gw_ips, allowed_untaken_count=1)
+
+            wait()
 
             # Delete gateway pod one by one and check
             # correct ECMP routes(or unreachable route when no gateway pod
