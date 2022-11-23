@@ -5,7 +5,7 @@ package collector
 import (
 	"context"
 
-	"github.com/tigera/l7-collector/pkg/config"
+	"github.com/projectcalico/calico/l7-collector/pkg/config"
 )
 
 const (

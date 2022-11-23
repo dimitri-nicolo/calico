@@ -5,8 +5,8 @@ package felixclient
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/tigera/l7-collector/pkg/collector"
-	"github.com/tigera/l7-collector/proto"
+	"github.com/projectcalico/calico/l7-collector/pkg/collector"
+	"github.com/projectcalico/calico/l7-collector/proto"
 )
 
 var (

@@ -3,7 +3,7 @@
 package fv_test
 
 import (
-	"github.com/tigera/l7-collector/proto"
+	"github.com/projectcalico/calico/l7-collector/proto"
 )
 
 var (

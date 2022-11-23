@@ -7,10 +7,10 @@ import (
 	"flag"
 	"sync"
 
-	"github.com/tigera/l7-collector/pkg/collector"
-	"github.com/tigera/l7-collector/pkg/config"
-	"github.com/tigera/l7-collector/pkg/felixclient"
-	"github.com/tigera/l7-collector/uds"
+	"github.com/projectcalico/calico/l7-collector/pkg/collector"
+	"github.com/projectcalico/calico/l7-collector/pkg/config"
+	"github.com/projectcalico/calico/l7-collector/pkg/felixclient"
+	"github.com/projectcalico/calico/l7-collector/uds"
 )
 
 func main() {

@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/tigera/l7-collector/pkg/config"
+	"github.com/projectcalico/calico/l7-collector/pkg/config"
 )
 
 var (

@@ -13,11 +13,11 @@ import (
 
 	"google.golang.org/grpc"
 
-	"github.com/tigera/l7-collector/pkg/collector"
-	"github.com/tigera/l7-collector/pkg/config"
-	"github.com/tigera/l7-collector/pkg/felixclient"
-	"github.com/tigera/l7-collector/proto"
-	"github.com/tigera/l7-collector/uds"
+	"github.com/projectcalico/calico/l7-collector/pkg/collector"
+	"github.com/projectcalico/calico/l7-collector/pkg/config"
+	"github.com/projectcalico/calico/l7-collector/pkg/felixclient"
+	"github.com/projectcalico/calico/l7-collector/proto"
+	"github.com/projectcalico/calico/l7-collector/uds"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 )
