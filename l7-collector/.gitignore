@@ -1,0 +1,10 @@
+vendor/
+proto/*.pb.go
+.go-pkg-cache/
+bin/
+report/
+Makefile.common*
+.envoy-collector*
+*.log
+.idea/
+.vscode/

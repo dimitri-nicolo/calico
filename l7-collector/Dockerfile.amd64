@@ -1,0 +1,4 @@
+FROM scratch
+
+ADD bin/l7-collector-amd64 /l7-collector
+CMD ["/l7-collector"]
