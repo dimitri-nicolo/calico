@@ -1,8 +1,6 @@
 FROM alpine:3 as base
 
 RUN apk update && apk upgrade && apk add iptables
-ADD init_iptables.sh init_iptables.sh
-RUN chmod u+x init_iptables.sh
 
 # Set permissions specifically for OpenShift
 RUN chgrp -R 0 /sbin/iptables && \
@@ -11,13 +9,12 @@ RUN chgrp -R 0 /sbin/iptables && \
 RUN chgrp -R 0 /usr/lib/xtables && \
     chmod -R g=u /usr/lib/xtables
 
+
 FROM scratch
 
 COPY --from=base /sbin/iptables /sbin/iptables
 COPY --from=base /bin/sh /bin/sh
-COPY --from=base /init_iptables.sh /init_iptables.sh
 
-# shell
 COPY --from=base /lib/ld-musl-x86_64.so.1 /lib/ld-musl-x86_64.so.1
 
 #iptables
@@ -27,6 +24,8 @@ COPY --from=base /usr/lib/libxtables.so.12 /usr/lib/libxtables.so.12
 COPY --from=base /usr/lib/xtables/* /usr/lib/xtables/
 COPY --from=base /run /run
 
+ADD init_iptables.sh /usr/bin/init_iptables.sh
+
 ENV PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-ENTRYPOINT ["./init_iptables.sh"]
+ENTRYPOINT ["/usr/bin/init_iptables.sh"]
