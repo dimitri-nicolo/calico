@@ -1,0 +1,19 @@
+{
+  "bytes_sent": 18,
+  "duration": 2,
+  "response_code": 200,
+  "downstream_remote_address": "192.168.42.254:42204",
+  "domain": "currencyservice:7000",
+  "reporter": "destination",
+  "request_path": "/hipstershop.CurrencyService/Convert",
+  "request_method": "POST",
+  "upstream_service_time": "1",
+  "start_time": "2022-07-15T18:25:15.106Z",
+  "upstream_host": "192.168.42.201:7000",
+  "bytes_received": 25,
+  "downstream_local_address": "192.168.42.201:7000",
+  "user_agent": "grpc-go/1.40.0",
+  "request_id": "7053f97f-7ae5-47f3-9c1c-ec758113a488",
+  "upstream_local_address": "192.168.42.254:45357",
+  "type": "HTTP/2"
+}
