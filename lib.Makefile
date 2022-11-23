@@ -1339,7 +1339,7 @@ help:
 ###############################################################################
 # Common functions for launching a local Elastic instance.
 ###############################################################################
-ELASTIC_VERSION ?= 7.17.6
+ELASTIC_VERSION ?= 7.17.7
 ELASTIC_IMAGE   ?= docker.elastic.co/elasticsearch/elasticsearch:$(ELASTIC_VERSION)
 
 ## Run elasticsearch as a container (tigera-elastic)

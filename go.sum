@@ -328,8 +328,8 @@ github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/elastic/cloud-on-k8s/v2 v2.0.0-20221014162453-642f9ecd3e2e h1:+1qjNNLu8lCjBgDkmZIgXX+l8vKflj0rh55jt4crn8g=
 github.com/elastic/cloud-on-k8s/v2 v2.0.0-20221014162453-642f9ecd3e2e/go.mod h1:JxIOs0Ah6u3sCcyOXDVA0CTAkNttW9AePq67dwQ7hXg=
-github.com/elastic/go-elasticsearch/v7 v7.3.0 h1:H29Nqf9cB9dVxX6LwS+zTDC2D4t9s+8dK8ln4HPS9rw=
-github.com/elastic/go-elasticsearch/v7 v7.3.0/go.mod h1:OJ4wdbtDNk5g503kvlHLyErCgQwwzmDtaFC4XyOxXA4=
+github.com/elastic/go-elasticsearch/v7 v7.17.7 h1:pcYNfITNPusl+cLwLN6OLmVT+F73Els0nbaWOmYachs=
+github.com/elastic/go-elasticsearch/v7 v7.17.7/go.mod h1:OJ4wdbtDNk5g503kvlHLyErCgQwwzmDtaFC4XyOxXA4=
 github.com/elastic/go-licenser v0.4.0 h1:jLq6A5SilDS/Iz1ABRkO6BHy91B9jBora8FwGRsDqUI=
 github.com/elastic/go-licenser v0.4.0/go.mod h1:V56wHMpmdURfibNBggaSBfqgPxyT1Tldns1i87iTEvU=
 github.com/elastic/go-sysinfo v1.7.1 h1:Wx4DSARcKLllpKT2TnFVdSUJOsybqMYCNQZq1/wO+s0=
