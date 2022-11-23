@@ -104,6 +104,6 @@ clean:
 ###############################################################################
 .PHONY: ci cd
 
-ci: clean static-checks ut
+ci: clean protobuf static-checks ut
 
 cd: image-all cd-common
