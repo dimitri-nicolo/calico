@@ -258,6 +258,11 @@ func (c client) BlockAffinities() BlockAffinityInterface {
 	return blockAffinities{client: c}
 }
 
+// ExternalNetwork returns an interface for managing the ExternalNetwork resource.
+func (c client) ExternalNetwork() ExternalNetworkInterface {
+	return ExternalNetwork{client: c}
+}
+
 type poolAccessor struct {
 	client *client
 }
