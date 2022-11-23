@@ -242,6 +242,69 @@ var _ = Describe("Test dex username prefixes", func() {
 
 })
 
+// Claims used in Calico Cloud
+var _ = Describe("Test dex additional claims", func() {
+	const (
+		iss            = "https://127.0.0.1:9443/dex"
+		name           = "Gerrit"
+		email          = "rene@tigera.io"
+		usernamePrefix = "my-user:"
+		usernameClaim  = "email"
+		clientID       = "tigera-manager"
+		group          = "admins"
+
+		badIss       = "https:/accounts.google.com"
+		badExp       = 1600964803 //Recently expired
+		badClientID  = "starbucks"
+		ccClaimName  = "https://calicocloud.io/tenantID"
+		ccClaimValue = "ccClaim"
+	)
+
+	var dex auth.Authenticator
+	var err error
+	var jwt *testing.FakeJWT
+	var keySet *testKeySet
+	var req *http.Request
+
+	BeforeEach(func() {
+		keySet = &testKeySet{}
+		opts := []auth.DexOption{
+			auth.WithCalicoCloudTenantClaim(ccClaimValue),
+			auth.WithKeySet(keySet),
+		}
+		dex, err = auth.NewDexAuthenticator(iss, clientID, usernameClaim, opts...)
+		Expect(err).NotTo(HaveOccurred())
+		req = &http.Request{Header: http.Header{}}
+	})
+
+	It("should authenticate a dex user with the required claim", func() {
+		jwt = testing.NewFakeJWT(iss, name).WithClaim(auth.ClaimNameEmail, email).WithClaim(auth.ClaimNameAud, clientID).WithClaim(auth.ClaimNameGroups, []string{group}).WithClaim(ccClaimName, ccClaimValue)
+		keySet.On("VerifySignature", mock.Anything, strings.TrimSpace(jwt.ToString())).Return([]byte(jwt.PayloadJSON), nil)
+		req.Header.Set("Authorization", jwt.BearerTokenHeader())
+		_, stat, err := dex.Authenticate(req)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(stat).To(Equal(200))
+	})
+
+	It("should reject a user without the required claim", func() {
+		jwt = testing.NewFakeJWT(iss, name).WithClaim(auth.ClaimNameEmail, email).WithClaim(auth.ClaimNameAud, clientID).WithClaim(auth.ClaimNameGroups, []string{group})
+		keySet.On("VerifySignature", mock.Anything, jwt.ToString()).Return([]byte(jwt.PayloadJSON), nil)
+		req.Header.Set("Authorization", jwt.BearerTokenHeader())
+		_, stat, err := dex.Authenticate(req)
+		Expect(err).To(HaveOccurred())
+		Expect(stat).To(Equal(401))
+	})
+
+	It("should reject a user with incorrect required claim", func() {
+		jwt = testing.NewFakeJWT(iss, name).WithClaim(auth.ClaimNameEmail, email).WithClaim(auth.ClaimNameAud, clientID).WithClaim(auth.ClaimNameGroups, []string{group}).WithClaim(ccClaimName, "badclaimvalue")
+		keySet.On("VerifySignature", mock.Anything, jwt.ToString()).Return([]byte(jwt.PayloadJSON), nil)
+		req.Header.Set("Authorization", jwt.BearerTokenHeader())
+		_, stat, err := dex.Authenticate(req)
+		Expect(err).To(HaveOccurred())
+		Expect(stat).To(Equal(401))
+	})
+})
+
 type testKeySet struct {
 	mock.Mock
 }

@@ -228,14 +228,24 @@ func main() {
 			})
 		}
 
+		authOpts := []auth.DexOption{
+			auth.WithGroupsClaim(cfg.OIDCAuthGroupsClaim),
+			auth.WithJWKSURL(cfg.OIDCAuthJWKSURL),
+			auth.WithUsernamePrefix(cfg.OIDCAuthUsernamePrefix),
+			auth.WithGroupsPrefix(cfg.OIDCAuthGroupsPrefix),
+		}
+		if cfg.CalicoCloudRequireTenantClaim {
+			if cfg.CalicoCloudTenantClaim == "" {
+				log.Panic("Tenant claim not specified")
+			}
+			authOpts = append(authOpts, auth.WithCalicoCloudTenantClaim(cfg.CalicoCloudTenantClaim))
+		}
+
 		oidcAuth, err := auth.NewDexAuthenticator(
 			cfg.OIDCAuthIssuer,
 			cfg.OIDCAuthClientID,
 			cfg.OIDCAuthUsernameClaim,
-			auth.WithGroupsClaim(cfg.OIDCAuthGroupsClaim),
-			auth.WithJWKSURL(cfg.OIDCAuthJWKSURL),
-			auth.WithUsernamePrefix(cfg.OIDCAuthUsernamePrefix),
-			auth.WithGroupsPrefix(cfg.OIDCAuthGroupsPrefix))
+			authOpts...)
 		if err != nil {
 			log.WithError(err).Panic("Unable to create dex authenticator")
 		}

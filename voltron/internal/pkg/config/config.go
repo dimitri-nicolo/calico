@@ -72,6 +72,8 @@ type Config struct {
 	EnableCalicoCloudRbacApi       bool   `split_words:"true"`
 	CalicoCloudRbacApiCABundlePath string `split_words:"true"`
 	CalicoCloudRbacApiEndpoint     string `split_words:"true"`
+	CalicoCloudRequireTenantClaim  bool   `split_words:"true"`
+	CalicoCloudTenantClaim         string `split_words:"true"`
 
 	// Dex settings
 	DexEnabled      bool   `default:"false" split_words:"true"`
