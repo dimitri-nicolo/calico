@@ -18,6 +18,7 @@ global_job_config:
       - ssh-add ~/.keys/*
       - checkout
       - git fetch --unshallow || true
+      - cd l7-collector
 
 blocks:
   - name: 'Test Cut Release'
@@ -33,6 +34,9 @@ blocks:
           - echo $MARVIN_QUAY_TOKEN | docker login --username $MARVIN_QUAY_USERNAME https://quay.io --password-stdin
       jobs:
         - name: Test Cut Release
+          env_vars:
+            - name: DEV_REGISTRIES
+              value: gcr.io/unique-caldron-775/cnx/tigera
           commands:
             - make git-config CONFIRM=true
             - make cut-release DRYRUN=true

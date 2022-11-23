@@ -63,6 +63,10 @@ promotions:
   pipeline_file: push-images/compliance.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push continuous-policy-recommendation images
+  pipeline_file: push-images/continuous-policy-recommendation.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 - name: Push deep-packet-inspection images
   pipeline_file: push-images/deep-packet-inspection.yml
   auto_promote:
@@ -91,12 +95,20 @@ promotions:
   pipeline_file: push-images/intrusion-detection-controller.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push l7-collector images
+  pipeline_file: push-images/l7-collector.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
+- name: Push license-agent images
+  pipeline_file: push-images/license-agent.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 - name: Push packetcapture images
   pipeline_file: push-images/packetcapture.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
-- name: Push continuous-policy-recommendation images
-  pipeline_file: push-images/continuous-policy-recommendation.yml
+- name: Push prometheus-service images
+  pipeline_file: push-images/prometheus-service.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
 - name: Push ts-queryserver images
@@ -105,14 +117,6 @@ promotions:
     when: "branch =~ 'master|release-'"
 - name: Push voltron images
   pipeline_file: push-images/voltron.yml
-  auto_promote:
-    when: "branch =~ 'master|release-'"
-- name: Push prometheus-service images
-  pipeline_file: push-images/prometheus-service.yml
-  auto_promote:
-    when: "branch =~ 'master|release-'"
-- name: Push license-agent images
-  pipeline_file: push-images/license-agent.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
 - name: Publish Helm Charts
@@ -735,57 +739,18 @@ blocks:
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
 
-- name: "licensing"
+- name: 'anomaly-detection-api'
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/licensing/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: ["Prerequisites"]
-  task:
-    prologue:
-      commands:
-      - cd licensing
-    jobs:
-    - name: "Licensing tests"
-      commands:
-      - ../.semaphore/run-and-monitor ci.log make ci
-
-- name: "license-agent"
-  run:
-    when: "${FORCE_RUN} or change_in(['/*', '/licensing/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: ["Prerequisites"]
-  task:
-    prologue:
-      commands:
-      - cd license-agent
-    jobs:
-    - name: "License Agent tests"
-      commands:
-      - ../.semaphore/run-and-monitor ci.log make ci
-
-- name: "lma"
-  run:
-    when: "${FORCE_RUN} or change_in(['/*', '/lma/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: ["Prerequisites"]
-  task:
-    prologue:
-      commands:
-      - cd lma
-    jobs:
-    - name: "lma tests"
-      commands:
-      - ../.semaphore/run-and-monitor ci.log make ci
-
-- name: 'deep-packet-inspection'
-  run:
-    when: "${FORCE_RUN} or change_in(['/*', '/deep-packet-inspection/', '/api/', '/libcalico-go/', '/lma/', '/typha/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "change_in(['/*', '/anomaly-detection-api/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
   task:
     secrets:
     - name: test-customer-license
     prologue:
       commands:
-      - cd deep-packet-inspection
+      - cd anomaly-detection-api
     jobs:
-    - name: "deep-packet-inspection tests"
+    - name: "make ci"
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
 
@@ -804,7 +769,37 @@ blocks:
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
 
-- name: "Egress gateway"
+- name: 'continuous-policy-recommendation'
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/continuous-policy-recommendation/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd continuous-policy-recommendation
+    jobs:
+    - name: "continuous-policy-recommendation tests"
+      commands:
+      - ../.semaphore/run-and-monitor ci.log make ci
+
+- name: 'deep-packet-inspection'
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/deep-packet-inspection/', '/api/', '/libcalico-go/', '/lma/', '/typha/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd deep-packet-inspection
+    jobs:
+    - name: "deep-packet-inspection tests"
+      commands:
+      - ../.semaphore/run-and-monitor ci.log make ci
+
+- name: "egress-gateway"
   run:
     when: "${FORCE_RUN} or change_in(['/*', '/egress-gateway/', '/libcalico-go/lib/logutils/', '/libcalico-go/lib/health/', '/felix/proto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
@@ -862,63 +857,18 @@ blocks:
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
 
-- name: 'packetcapture'
+- name: 'honeypod-controller'
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/packetcapture', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "${FORCE_RUN} or change_in(['/*', '/honeypod-controller/', '/libcalico-go/', '/licensing/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
   task:
     secrets:
     - name: test-customer-license
     prologue:
       commands:
-      - cd packetcapture
+      - cd honeypod-controller
     jobs:
-    - name: "packetcapture tests"
-      commands:
-      - ../.semaphore/run-and-monitor ci.log make ci
-
-- name: 'continuous-policy-recommendation'
-  run:
-    when: "${FORCE_RUN} or change_in(['/*', '/continuous-policy-recommendation/', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: ["Prerequisites"]
-  task:
-    secrets:
-    - name: test-customer-license
-    prologue:
-      commands:
-      - cd continuous-policy-recommendation
-    jobs:
-    - name: "continuous-policy-recommendation tests"
-      commands:
-      - ../.semaphore/run-and-monitor ci.log make ci
-
-- name: 'ts-queryserver'
-  run:
-    when: "${FORCE_RUN} or change_in(['/*', '/ts-queryserver/', '/api/', '/calicoctl/', '/felix/', '/lma/', '/libcalico-go/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: ["Prerequisites"]
-  task:
-    secrets:
-    - name: test-customer-license
-    prologue:
-      commands:
-      - cd ts-queryserver
-    jobs:
-    - name: "ts-queryserver tests"
-      commands:
-      - ../.semaphore/run-and-monitor ci.log make ci
-
-- name: 'anomaly-detection-api'
-  run:
-    when: "change_in(['/*', '/anomaly-detection-api/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: ["Prerequisites"]
-  task:
-    secrets:
-    - name: test-customer-license
-    prologue:
-      commands:
-      - cd anomaly-detection-api
-    jobs:
-    - name: "make ci"
+    - name: "honeypod-controller tests"
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
 
@@ -937,6 +887,73 @@ blocks:
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
 
+- name: "l7-collector"
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/l7-collector/', '/libcalico-go/lib/testutils'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    prologue:
+      commands:
+      - cd l7-collector
+    jobs:
+    - name: "l7-collector tests"
+      commands:
+      - ../.semaphore/run-and-monitor ci.log make ci
+
+- name: "licensing"
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/licensing/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    prologue:
+      commands:
+      - cd licensing
+    jobs:
+    - name: "Licensing tests"
+      commands:
+      - ../.semaphore/run-and-monitor ci.log make ci
+
+- name: "license-agent"
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/licensing/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    prologue:
+      commands:
+      - cd license-agent
+    jobs:
+    - name: "License Agent tests"
+      commands:
+      - ../.semaphore/run-and-monitor ci.log make ci
+
+- name: "lma"
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/lma/', '/libcalico-go/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    prologue:
+      commands:
+      - cd lma
+    jobs:
+    - name: "lma tests"
+      commands:
+      - ../.semaphore/run-and-monitor ci.log make ci
+
+- name: 'packetcapture'
+  run:
+    when: "${FORCE_RUN} or change_in(['/*', '/packetcapture', '/api/', '/libcalico-go/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    secrets:
+    - name: test-customer-license
+    prologue:
+      commands:
+      - cd packetcapture
+    jobs:
+    - name: "packetcapture tests"
+      commands:
+      - ../.semaphore/run-and-monitor ci.log make ci
+
 - name: 'prometheus-service'
   run:
     when: "${FORCE_RUN} or change_in(['/*', '/prometheus-service/', 'libcalico-go/lib/logutils/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
@@ -952,18 +969,18 @@ blocks:
       commands:
       - make ci
 
-- name: 'honeypod-controller'
+- name: 'ts-queryserver'
   run:
-    when: "${FORCE_RUN} or change_in(['/*', '/honeypod-controller/', '/libcalico-go/', '/licensing/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "${FORCE_RUN} or change_in(['/*', '/ts-queryserver/', '/api/', '/calicoctl/', '/felix/', '/lma/', '/libcalico-go/', '/licensing/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
   task:
     secrets:
     - name: test-customer-license
     prologue:
       commands:
-      - cd honeypod-controller
+      - cd ts-queryserver
     jobs:
-    - name: "honeypod-controller tests"
+    - name: "ts-queryserver tests"
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
 
