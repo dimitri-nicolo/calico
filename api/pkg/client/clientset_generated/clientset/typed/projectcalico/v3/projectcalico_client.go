@@ -18,6 +18,7 @@ type ProjectcalicoV3Interface interface {
 	AuthenticationReviewsGetter
 	AuthorizationReviewsGetter
 	BGPConfigurationsGetter
+	BGPFiltersGetter
 	BGPPeersGetter
 	BlockAffinitiesGetter
 	CalicoNodeStatusesGetter
@@ -70,6 +71,10 @@ func (c *ProjectcalicoV3Client) AuthorizationReviews() AuthorizationReviewInterf
 
 func (c *ProjectcalicoV3Client) BGPConfigurations() BGPConfigurationInterface {
 	return newBGPConfigurations(c)
+}
+
+func (c *ProjectcalicoV3Client) BGPFilters() BGPFilterInterface {
+	return newBGPFilters(c)
 }
 
 func (c *ProjectcalicoV3Client) BGPPeers() BGPPeerInterface {
