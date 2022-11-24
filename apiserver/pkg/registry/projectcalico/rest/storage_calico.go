@@ -37,6 +37,7 @@ import (
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/caliconodestatus"
 	calicoclusterinformation "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/clusterinformation"
 	calicodeeppacketinspection "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/deeppacketinspection"
+	calicoexternalnetwork "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/externalnetwork"
 	calicofelixconfig "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/felixconfig"
 	calicogalert "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/globalalert"
 	calicogalerttemplate "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/globalalerttemplate"
@@ -877,6 +878,28 @@ func (p RESTStorageProvider) NewV3Storage(
 		[]string{"blockaffinity", "affinity", "affinities"},
 	)
 
+	externalnetworkRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("externalnetworks"))
+	if err != nil {
+		return nil, err
+	}
+	externalnetworkOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   externalnetworkRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicoexternalnetwork.EmptyObject(),
+			ScopeStrategy: calicoexternalnetwork.NewStrategy(scheme),
+			NewListFunc:   calicoexternalnetwork.NewList,
+			GetAttrsFunc:  calicoexternalnetwork.GetAttrs,
+			Trigger:       nil,
+		},
+		calicostorage.Options{
+			RESTOptions: externalnetworkRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+		[]string{"externalnetwork"},
+	)
+
 	storage := map[string]rest.Storage{}
 	storage["networkpolicies"] = rESTInPeace(calicopolicy.NewREST(scheme, *policyOpts))
 	storage["stagednetworkpolicies"] = rESTInPeace(calicostagedpolicy.NewREST(scheme, *stagedpolicyOpts))
@@ -943,6 +966,7 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["caliconodestatuses"] = rESTInPeace(caliconodestatus.NewREST(scheme, *caliconodestatusOpts))
 	storage["ipamconfigurations"] = rESTInPeace(calicoipamconfig.NewREST(scheme, *ipamconfigOpts))
 	storage["blockaffinities"] = rESTInPeace(calicoblockaffinity.NewREST(scheme, *blockAffinityOpts))
+	storage["externalnetworks"] = rESTInPeace(calicoexternalnetwork.NewREST(scheme, *externalnetworkOpts))
 
 	kubeControllersConfigsStorage, kubeControllersConfigsStatusStorage, err := calicokubecontrollersconfig.NewREST(scheme, *kubeControllersConfigsOpts)
 	if err != nil {
