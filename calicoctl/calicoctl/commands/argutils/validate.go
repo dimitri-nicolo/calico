@@ -76,3 +76,11 @@ func ValidateSinceDuration(str string) {
 		os.Exit(1)
 	}
 }
+
+// ValidateMaxLogs takes a int as an input and makes sure it has a non-negative value
+func ValidateMaxLogs(num int) {
+	if num < 0 {
+		fmt.Printf("Error executing command: negative value for max-logs flag\n")
+		os.Exit(1)
+	}
+}

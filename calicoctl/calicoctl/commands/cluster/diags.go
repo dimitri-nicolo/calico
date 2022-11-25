@@ -115,6 +115,9 @@ func collectDiags(opts *diagOpts) error {
 	// Ensure since value is valid with proper time unit
 	argutils.ValidateSinceDuration(opts.Since)
 
+	// Ensure max-logs value is non-negative
+	argutils.ValidateMaxLogs(opts.MaxLogs)
+
 	if err := common.CheckVersionMismatch(opts.Config, opts.AllowVersionMismatch); err != nil {
 		return err
 	}
