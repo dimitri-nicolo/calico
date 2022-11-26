@@ -9484,6 +9484,257 @@ func schema_pkg_apis_projectcalico_v3_PolicyControllerConfig(ref common.Referenc
 	}
 }
 
+func schema_pkg_apis_projectcalico_v3_PolicyRecommendationScope(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.PolicyRecommendationScopeSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.PolicyRecommendationScopeStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.PolicyRecommendationScopeSpec", "github.com/tigera/api/pkg/apis/projectcalico/v3.PolicyRecommendationScopeStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_PolicyRecommendationScopeList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "PolicyRecommendationList contains a list of Monitor",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.PolicyRecommendationScope"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.PolicyRecommendationScope", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_PolicyRecommendationScopeNamespaceSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "PolicyRecommendationScopeNamespaceSpec contains namespace information that defines the namespace based recommended policy.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"recStatus": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Recommendation status. One of Enabled, Disabled.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"selector": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The namespace selector is an expression used to pick out the namespaces that the policy recommendation engine should create policies for. The syntax is the same as the NetworkPolicy.projectcalico.org resource selectors.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"tierName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The name of the policy recommendation tier for namespace-segmented policies. [Default: \"namespace-segmentation\"]",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"selector"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_PolicyRecommendationScopeSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"interval": {
+						SchemaProps: spec.SchemaProps{
+							Description: "How frequently to run the recommendation engine to create and refine recommended policies. [Default: 150s]",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"initialLookback": {
+						SchemaProps: spec.SchemaProps{
+							Description: "How far back to look in flow logs when first creating a recommended policy. [Default: 24h]",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"stabilizationPeriod": {
+						SchemaProps: spec.SchemaProps{
+							Description: "StabilizationPeriod is the amount of time a recommended policy should remain unchanged to be deemed stable and ready to be enforced. [Default: 10m]",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"maxRules": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The maximum number of rules that are permitted in the ingress or egress set. For egress rules, any egress domain rules will be simplified by contracting all domains into a single egress domain NetworkSet. If the number of rules exceeds this limit, the recommendation engine will treat this as an error condition. [Default: 20]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"policiesLearningCutOff": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The number of staged policies that are actively learning at any one time, after which the policy recommendation engine will stop adding new recommendations. [Default: 20]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"namespaceSpec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The namespace spec contains the namespace relative recommendation vars.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.PolicyRecommendationScopeNamespaceSpec"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.PolicyRecommendationScopeNamespaceSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_PolicyRecommendationScopeStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"conditions": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/tigera/api/pkg/apis/projectcalico/v3.PolicyRecommendationScopeStatusCondition"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/tigera/api/pkg/apis/projectcalico/v3.PolicyRecommendationScopeStatusCondition"},
+	}
+}
+
+func schema_pkg_apis_projectcalico_v3_PolicyRecommendationScopeStatusCondition(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Condition contains various status information",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"message": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"reason": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
+						},
+					},
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Default: "",
+							Type:    []string{"string"},
+							Format:  "",
+						},
+					},
+				},
+				Required: []string{"status", "type"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_projectcalico_v3_Position(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{

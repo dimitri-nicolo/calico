@@ -114,6 +114,11 @@ func (f *FakeCalicoClient) ManagedClusters() clientv3.ManagedClusterInterface {
 	panic("not implemented") // TODO: Implement
 }
 
+// ManagedClusters returns an interface for managing the managed cluster resources.
+func (f *FakeCalicoClient) PolicyRecommendationScopes() clientv3.PolicyRecommendationScopeInterface {
+	panic("not implemented") // TODO: Implement
+}
+
 // PacketCaptures returns a testify mock interface for managing the packet capture resources.
 func (f *FakeCalicoClient) PacketCaptures() clientv3.PacketCaptureInterface {
 	ret := f.Called()

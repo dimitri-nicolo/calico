@@ -436,6 +436,207 @@ func testStagedNetworkPolicyClient(client calicoclient.Interface, name string) e
 	return nil
 }
 
+func TestPolicyRecommendationScopeClient(t *testing.T) {
+	name := "test-policy-recommendation-scope"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &v3.Tier{}
+			}, true)
+			defer shutdownServer()
+			if err := testPolicyRecommendationScopeClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("%s failed", name)
+	}
+}
+
+func testPolicyRecommendationScopeClient(client calicoclient.Interface, name string) error {
+	policyrecommendationscopeClient := client.ProjectcalicoV3().PolicyRecommendationScopes()
+	defaultValue := 20
+
+	policyrecommendationscope := &v3.PolicyRecommendationScope{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: calico.PolicyRecommendationScopeSpec{
+			MaxRules:               &defaultValue,
+			PoliciesLearningCutOff: &defaultValue,
+			NamespaceSpec: v3.PolicyRecommendationScopeNamespaceSpec{
+				RecStatus: v3.PolicyRecommendationScopeEnabled,
+				Selector:  "foo == \"bar\"",
+			},
+		},
+		Status: calico.PolicyRecommendationScopeStatus{
+			Conditions: []calico.PolicyRecommendationScopeStatusCondition{
+				{
+					Message: "0",
+					Reason:  "0",
+					Status:  "0",
+					Type:    "0",
+				},
+			},
+		},
+	}
+
+	ctx := context.Background()
+
+	// empty resources
+	policyrecommendationscopes, err := policyrecommendationscopeClient.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing policyrecommendationscopes (%s)", err)
+	}
+	if policyrecommendationscopes.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+
+	policyrecommendationscopeOnServer, err := policyrecommendationscopeClient.Create(ctx, policyrecommendationscope, metav1.CreateOptions{})
+	if nil != err {
+		return fmt.Errorf("error creating the policyrecommendationscope '%v' (%v)", policyrecommendationscopeOnServer, err)
+	}
+	if name != policyrecommendationscopeOnServer.Name {
+		return fmt.Errorf("didn't get the same policyrecommendationscope back from the server \n%+v\n%+v", policyrecommendationscopes, policyrecommendationscopeOnServer)
+	}
+	if !reflect.DeepEqual(policyrecommendationscopeOnServer.Status, calico.PolicyRecommendationScopeStatus{}) {
+		return fmt.Errorf("status was set on create to %#v", policyrecommendationscopeOnServer.Status)
+	}
+
+	policyrecommendationscopeOnServer, err = policyrecommendationscopeClient.Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting policyrecommendationscope %s (%s)", name, err)
+	}
+	if name != policyrecommendationscopeOnServer.Name &&
+		policyrecommendationscopeOnServer.ResourceVersion == policyrecommendationscope.ResourceVersion {
+		return fmt.Errorf("didn't get the same policyrecommendationscope back from the server \n%+v\n%+v", policyrecommendationscope, policyrecommendationscopeOnServer)
+	}
+	updatedValue := 30
+
+	policyrecommendationscopeUpdated := policyrecommendationscopeOnServer.DeepCopy()
+	policyrecommendationscopeUpdated.Labels = map[string]string{"foo": "bar"}
+	policyrecommendationscopeUpdated.Spec.MaxRules = &updatedValue
+	policyrecommendationscopeUpdated.Spec.PoliciesLearningCutOff = &updatedValue
+
+	policyrecommendationscopeUpdated.Status.Conditions = append(policyrecommendationscopeUpdated.Status.Conditions,
+		v3.PolicyRecommendationScopeStatusCondition{
+			Message: "1",
+			Reason:  "1",
+			Status:  "1",
+			Type:    "1",
+		})
+
+	policyrecommendationscopeOnServer, err = policyrecommendationscopeClient.UpdateStatus(ctx, policyrecommendationscopeUpdated, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("error updating status policyrecommendationscope %s (%s)", name, err)
+	}
+
+	if len(policyrecommendationscopeOnServer.Status.Conditions) < 1 {
+		return fmt.Errorf("didn't update status. %v != %v", policyrecommendationscopeOnServer.Status, policyrecommendationscopeUpdated.Status)
+	}
+
+	if _, ok := policyrecommendationscopeOnServer.Labels["foo"]; ok {
+		return fmt.Errorf("labels were not updated")
+	}
+
+	if *policyrecommendationscopeOnServer.Spec.MaxRules != defaultValue {
+		return fmt.Errorf("Specs MaxRules were updated in update status %+v != %+v", policyrecommendationscopeOnServer.Spec, policyrecommendationscope.Spec)
+	}
+
+	if *policyrecommendationscopeOnServer.Spec.PoliciesLearningCutOff != defaultValue {
+		return fmt.Errorf("Specs PoliciesLearningCutOff were updated in update status %+v != %+v", policyrecommendationscopeOnServer.Spec, policyrecommendationscope.Spec)
+	}
+
+	policyrecommendationscopeUpdated = policyrecommendationscopeOnServer.DeepCopy()
+	policyrecommendationscopeUpdated.Labels = map[string]string{"foo": "bar"}
+	policyrecommendationscopeUpdated.Spec.MaxRules = &updatedValue
+	policyrecommendationscopeUpdated.Spec.PoliciesLearningCutOff = &updatedValue
+
+	policyrecommendationscopeUpdated.Status.Conditions = append(policyrecommendationscopeUpdated.Status.Conditions,
+		v3.PolicyRecommendationScopeStatusCondition{
+			Message: "1",
+			Reason:  "1",
+			Status:  "1",
+			Type:    "1",
+		})
+
+	policyrecommendationscopeOnServer, err = policyrecommendationscopeClient.Update(ctx, policyrecommendationscopeUpdated, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("error updating policyrecommendationscope %s (%s)", name, err)
+	}
+
+	if *policyrecommendationscopeOnServer.Spec.MaxRules != updatedValue {
+		return fmt.Errorf("Specs were not updated")
+	}
+
+	if *policyrecommendationscopeOnServer.Spec.PoliciesLearningCutOff != updatedValue {
+		return fmt.Errorf("Specs were not updated")
+	}
+
+	if len(policyrecommendationscopeOnServer.Status.Conditions) < 1 {
+		return fmt.Errorf("didn't update status. %v != %v", policyrecommendationscopeOnServer.Status, policyrecommendationscopeUpdated.Status)
+	}
+
+	err = policyrecommendationscopeClient.Delete(ctx, name, metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("policyrecommendationscope should be deleted (%s)", err)
+	}
+
+	// Test watch
+	w, err := client.ProjectcalicoV3().PolicyRecommendationScopes().Watch(ctx, v1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error watching PolicyRecommendationScope (%s)", err)
+	}
+	var events []watch.Event
+	done := sync.WaitGroup{}
+	done.Add(1)
+	timeout := time.After(500 * time.Millisecond)
+	var timeoutErr error
+	// watch for 2 events
+	go func() {
+		defer done.Done()
+		for i := 0; i < 2; i++ {
+			select {
+			case e := <-w.ResultChan():
+				events = append(events, e)
+			case <-timeout:
+				timeoutErr = fmt.Errorf("timed out wating for events")
+				return
+			}
+		}
+	}()
+
+	// Create two PolicyRecScopes
+	for i := 0; i < 2; i++ {
+		ga := &v3.PolicyRecommendationScope{
+			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("ga%d", i)},
+			Spec: calico.PolicyRecommendationScopeSpec{
+				MaxRules:               &defaultValue,
+				PoliciesLearningCutOff: &defaultValue,
+				NamespaceSpec: v3.PolicyRecommendationScopeNamespaceSpec{
+					RecStatus: v3.PolicyRecommendationScopeEnabled,
+					Selector:  "foo == \"bar\"",
+				},
+			},
+		}
+		_, err = policyrecommendationscopeClient.Create(ctx, ga, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("error creating the PolicyRecommendationScope '%v' (%v)", ga, err)
+		}
+	}
+	done.Wait()
+	if timeoutErr != nil {
+		return timeoutErr
+	}
+	if len(events) != 2 {
+		return fmt.Errorf("expected 2 watch events got %d", len(events))
+	}
+
+	return nil
+}
+
 // TestTierClient exercises the Tier client.
 func TestTierClient(t *testing.T) {
 	const name = "test-tier"

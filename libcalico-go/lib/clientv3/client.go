@@ -113,6 +113,11 @@ func (c client) StagedKubernetesNetworkPolicies() StagedKubernetesNetworkPolicyI
 	return stagedKubernetesNetworkPolicies{client: c}
 }
 
+// PolicyRecommendationScopes returns an interface for managing policy recommendation scope resources.
+func (c client) PolicyRecommendationScopes() PolicyRecommendationScopeInterface {
+	return policyRecommendationScopes{client: c}
+}
+
 // IPPools returns an interface for managing IP pool resources.
 func (c client) IPPools() IPPoolInterface {
 	return ipPools{client: c}

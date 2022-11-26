@@ -64,6 +64,11 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		aapiPolicy := &v3.StagedGlobalNetworkPolicy{}
 		StagedGlobalNetworkPolicyConverter{}.convertToAAPI(lcgPolicy, aapiPolicy)
 		return aapiPolicy
+	case *v3.PolicyRecommendationScope:
+		lcgPolicyReccomendationScope := libcalicoObject.(*v3.PolicyRecommendationScope)
+		aapiPolicyRecommendationScope := &v3.PolicyRecommendationScope{}
+		PolicyRecommendationScopeConverter{}.convertToAAPI(lcgPolicyReccomendationScope, aapiPolicyRecommendationScope)
+		return aapiPolicyRecommendationScope
 	case *v3.GlobalNetworkSet:
 		lcgNetworkSet := libcalicoObject.(*v3.GlobalNetworkSet)
 		aapiNetworkSet := &v3.GlobalNetworkSet{}

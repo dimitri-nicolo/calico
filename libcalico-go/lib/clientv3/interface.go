@@ -33,6 +33,8 @@ type Interface interface {
 	StagedNetworkPolicies() StagedNetworkPolicyInterface
 	// StagedKubernetesNetworkPolicies returns an interface for managing staged kubernetes network policy resources.
 	StagedKubernetesNetworkPolicies() StagedKubernetesNetworkPolicyInterface
+	// PolicyRecommendationScope returns an interface for managing policy recommendation scope resources.
+	PolicyRecommendationScopes() PolicyRecommendationScopeInterface
 	// IPPools returns an interface for managing IP pool resources.
 	IPPools() IPPoolInterface
 	// IPReservations returns an interface for managing IP reservation resources.

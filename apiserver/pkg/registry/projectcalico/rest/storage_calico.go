@@ -57,6 +57,7 @@ import (
 	calicopolicy "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/networkpolicy"
 	caliconetworkset "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/networkset"
 	calicopacketcapture "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/packetcapture"
+	calicopolicyrecommendationscope "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/policyrecommendationscope"
 	calicoprofile "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/profile"
 	calicoremoteclusterconfig "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/remoteclusterconfig"
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/server"
@@ -239,6 +240,48 @@ func (p RESTStorageProvider) NewV3Storage(
 		},
 		calicostorage.Options{
 			RESTOptions:    stagedgpolicyRESTOptions,
+			LicenseMonitor: licenseMonitor,
+		},
+		p.StorageType,
+		authorizer,
+		[]string{},
+	)
+
+	policyRecommendationScopeRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("policyrecommendationscopes"))
+	if err != nil {
+		return nil, err
+	}
+
+	sharedPolicyRecommendationScopeEtcdOpts := etcd.Options{
+		RESTOptions:   policyRecommendationScopeRESTOptions,
+		Capacity:      1000,
+		ObjectType:    calicogthreatfeed.EmptyObject(),
+		ScopeStrategy: calicogthreatfeed.NewStrategy(scheme),
+		NewListFunc:   calicogthreatfeed.NewList,
+		GetAttrsFunc:  calicogthreatfeed.GetAttrs,
+		Trigger:       nil,
+	}
+
+	policyrecommendationscopeOpts := server.NewOptions(
+		sharedPolicyRecommendationScopeEtcdOpts,
+		calicostorage.Options{
+			RESTOptions:    policyRecommendationScopeRESTOptions,
+			LicenseMonitor: licenseMonitor,
+		},
+		p.StorageType,
+		authorizer,
+		[]string{},
+	)
+
+	policyRecommendationScopeStatusRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("policyrecommendationscopes/status"))
+	if err != nil {
+		return nil, err
+	}
+
+	policyRecommendationScopeStatusStatusOpts := server.NewOptions(
+		sharedPolicyRecommendationScopeEtcdOpts,
+		calicostorage.Options{
+			RESTOptions:    policyRecommendationScopeStatusRESTOptions,
 			LicenseMonitor: licenseMonitor,
 		},
 		p.StorageType,
@@ -931,6 +974,20 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["tiers"] = rESTInPeace(calicotier.NewREST(scheme, *tierOpts))
 	storage["globalnetworkpolicies"] = rESTInPeace(calicogpolicy.NewREST(scheme, *gpolicyOpts))
 	storage["stagedglobalnetworkpolicies"] = rESTInPeace(calicostagedgpolicy.NewREST(scheme, *stagedgpolicyOpts))
+
+	policyRecommendationScopeStorage, policyRecommendationScopeStatusStorage, err := calicopolicyrecommendationscope.NewREST(
+		scheme,
+		*policyrecommendationscopeOpts,
+		*policyRecommendationScopeStatusStatusOpts,
+	)
+
+	if err != nil {
+		err = fmt.Errorf("unable to create REST storage for a resource due to %v, will die", err)
+		panic(err)
+	}
+	storage["policyrecommendationscopes"] = policyRecommendationScopeStorage
+	storage["policyrecommendationscopes/status"] = policyRecommendationScopeStatusStorage
+
 	storage["globalnetworksets"] = rESTInPeace(calicognetworkset.NewREST(scheme, *gNetworkSetOpts))
 	storage["networksets"] = rESTInPeace(caliconetworkset.NewREST(scheme, *networksetOpts))
 	storage["uisettingsgroups"] = rESTInPeace(calicouisettingsgroup.NewREST(scheme, *uiSettingsGroupOpts))
@@ -959,6 +1016,7 @@ func (p RESTStorageProvider) NewV3Storage(
 	}
 	storage["globalalerts"] = globalAlertsStorage
 	storage["globalalerts/status"] = globalAlertsStatusStorage
+
 	storage["globalalerttemplates"] = rESTInPeace(calicogalerttemplate.NewREST(scheme, *gAlertTemplateOpts))
 
 	globalThreatFeedsStorage, globalThreatFeedsStatusStorage, err := calicogthreatfeed.NewREST(scheme, *gThreatFeedOpts, *gThreatFeedStatusOpts)
