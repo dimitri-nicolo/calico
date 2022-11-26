@@ -60,6 +60,8 @@ var (
 		&AuthenticationReviewList{},
 		&AuthorizationReview{},
 		&AuthorizationReviewList{},
+		&BGPFilter{},
+		&BGPFilterList{},
 		&DeepPacketInspection{},
 		&DeepPacketInspectionList{},
 		&GlobalAlert{},
