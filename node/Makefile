@@ -472,10 +472,10 @@ dual-tor-cleanup:
 
 .PHONY: external-network-setup
 EXTERNAL_NETWORK_DIR=tests/k8st/external-network
-external-network-setup: external-network-cleanup kubectl dist/calicoctl $(K8ST_IMAGE_TARS) .calico_test.created tests/k8st/reliable-nc/bin/reliable-nc
-	docker build -t calico-test/busybox-with-reliable-nc tests/k8st/reliable-nc
+# external-network-setup: external-network-cleanup kubectl dist/calicoctl $(K8ST_IMAGE_TARS) .calico_test.created tests/k8st/reliable-nc/bin/reliable-nc
+external-network-setup: external-network-cleanup kubectl dist/calicoctl
 	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) STEPS=setup \
-	ROUTER_IMAGE=$(BIRD_IMAGE) CALICOCTL=`pwd`/dist/calicoctl $(EXTERNAL_NETWORK_DIR)/external-networks.sh
+	ROUTER_IMAGE=$(BIRD_IMAGE) CALICOCTL=`pwd`/dist/calicoctl K8S_VERSION=$(K8S_VERSION) $(EXTERNAL_NETWORK_DIR)/external-networks.sh
 
 .PHONY: external-network-cleanup
 external-network-cleanup:
