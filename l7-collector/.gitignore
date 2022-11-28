@@ -1,2 +1,0 @@
-.envoy-collector*
-proto/*.pb.go

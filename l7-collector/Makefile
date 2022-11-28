@@ -87,12 +87,17 @@ $(ENVOY_INIT_CONTAINER_CREATED): envoy-init/Dockerfile.$(ARCH) envoy-init/init_i
 
 .PHONY: clean
 clean:
-	rm -rf bin proto/felixbackend.pb.go
+	rm -rf bin
 	rm -f $(L7_COLLECTOR_CONTAINER_CREATED)
 	rm -f $(ENVOY_INIT_CONTAINER_CREATED)
 
 	-docker image rm -f $$(docker images $(L7_COLLECTOR_IMAGE) -a -q)
 	-docker image rm -f $$(docker images $(ENVOY_INIT_IMAGE) -a -q)
+
+###############################################################################
+# Generate files
+###############################################################################
+gen-files: protobuf
 
 ###############################################################################
 # UTs
@@ -114,6 +119,6 @@ fv: bin/l7-collector-$(ARCH)
 ###############################################################################
 .PHONY: ci cd
 
-ci: clean protobuf static-checks ut
+ci: clean static-checks ut
 
 cd: image-all cd-common
