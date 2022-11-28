@@ -1,3 +1,6 @@
+##############################################################################
+# Copyright 2020-2022 Tigera Inc. All rights reserved.
+##############################################################################
 include ../metadata.mk
 
 PACKAGE_NAME          ?= github.com/projectcalico/calico/l7-collector
