@@ -205,6 +205,12 @@ EOF
 
     # Create BGPConfiguration, BGPPeers etc.
     add_calico_resources
+
+    # Add some routes for each routers
+    docker exec bird-a1 ip route add blackhole 10.233.11.8
+    docker exec bird-b1 ip route add blackhole 10.233.21.8
+    docker exec bird-b2 ip route add blackhole 10.233.21.9
+    docker exec bird-c1 ip route add blackhole 10.233.31.8
 }
 
 function do_cleanup {
