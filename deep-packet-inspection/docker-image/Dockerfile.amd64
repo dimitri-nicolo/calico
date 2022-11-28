@@ -81,26 +81,10 @@ RUN mkdir -p /usr/local/etc/rules \
     && wget https://www.snort.org/downloads/community/snort3-community-rules.tar.gz \
     && tar xzf snort3-community-rules.tar.gz -C /usr/local/etc/rules/
 
-FROM ${UBI_IMAGE} as ubi
-
-RUN microdnf update
-
-# Create Empty root filesystem on /rootfs, copy only required linux utils
-# and supporting files.This filesystem act as placeholder for
-# all files required in container.
-
-WORKDIR /rootfs
-
-RUN mkdir -p etc/ssl/certs && \
-    cp /etc/ssl/certs/* etc/ssl/certs
-
-ADD bin/deep-packet-inspection-amd64 /deep-packet-inspection
 
 FROM scratch
 
-COPY --from=ubi /rootfs /
-# Add dpi binary to the image
-COPY --from=ubi /deep-packet-inspection /deep-packet-inspection
+ADD bin/deep-packet-inspection-amd64 /usr/bin/deep-packet-inspection
 
 # Copy Snort and related files over
 COPY --from=snort /usr/local/bin/snort /usr/local/bin/snort
@@ -142,4 +126,4 @@ COPY --from=snort /var/log/snort-alerts /var/log/snort-alerts
 WORKDIR /
 
 # Command-line call to start the application
-ENTRYPOINT ["/deep-packet-inspection"]
+ENTRYPOINT ["/usr/bin/deep-packet-inspection"]
