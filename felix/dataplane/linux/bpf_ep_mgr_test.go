@@ -18,7 +18,6 @@ package intdataplane
 
 import (
 	"encoding/binary"
-	"fmt"
 	"hash/fnv"
 	"regexp"
 	"strconv"
