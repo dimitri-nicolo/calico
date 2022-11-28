@@ -20,6 +20,13 @@ VERSION_FLAGS=-X main.VERSION=$(GIT_VERSION) \
 	-X main.GIT_DESCRIPTION=$(GIT_DESCRIPTION) \
 	-X main.GIT_REVISION=$(GIT_COMMIT)
 
+# We need CGO to leverage Boring SSL.  However, the cross-compile doesn't support CGO yet.
+ifeq ($(ARCH), $(filter $(ARCH),amd64))
+CGO_ENABLED=1
+else
+CGO_ENABLED=0
+endif
+
 ###############################################################################
 # Building the binary
 ###############################################################################
@@ -27,7 +34,7 @@ build: bin/l7-collector-$(ARCH)
 
 .PHONY: bin/l7-collector-$(ARCH)
 bin/l7-collector-$(ARCH): $(SRC_FILES) protobuf
-	$(DOCKER_GO_BUILD) \
+	$(DOCKER_GO_BUILD_CGO) \
 		sh -c '$(GIT_CONFIG_SSH) \
 			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/l7-collector/*.go'
 
@@ -75,6 +82,15 @@ $(ENVOY_INIT_CONTAINER_CREATED): envoy-init/Dockerfile.$(ARCH) envoy-init/init_i
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(ENVOY_INIT_IMAGE)
 	touch $@
 
+.PHONY: clean
+clean:
+	rm -rf bin proto/felixbackend.pb.go
+	rm -f $(L7_COLLECTOR_CONTAINER_CREATED)
+	rm -f $(ENVOY_INIT_CONTAINER_CREATED)
+
+	-docker image rm -f $$(docker images $(L7_COLLECTOR_IMAGE) -a -q)
+	-docker image rm -f $$(docker images $(ENVOY_INIT_IMAGE) -a -q)
+
 ###############################################################################
 # UTs
 ###############################################################################
@@ -89,15 +105,6 @@ fv: bin/l7-collector-$(ARCH)
 	    $(LOCAL_BUILD_MOUNTS) \
 	    $(CALICO_BUILD) sh -c "$(GIT_CONFIG_SSH) \
 	    ginkgo fv -r --skipPackage deps -focus='$(GINKGO_FOCUS)' $(GINKGO_ARGS) $(WHAT)"
-
-.PHONY: clean
-clean:
-	rm -rf bin proto/felixbackend.pb.go
-	rm -f $(L7_COLLECTOR_CONTAINER_CREATED)
-	rm -f $(ENVOY_INIT_CONTAINER_CREATED)
-
-	-docker image rm -f $$(docker images $(L7_COLLECTOR_IMAGE) -a -q)
-	-docker image rm -f $$(docker images $(ENVOY_INIT_IMAGE) -a -q)
 
 ###############################################################################
 # CI/CD
