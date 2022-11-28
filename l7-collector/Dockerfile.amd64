@@ -1,0 +1,16 @@
+ARG UBI_IMAGE
+
+FROM ${UBI_IMAGE} AS ubi
+
+RUN microdnf upgrade
+
+
+FROM scratch
+
+COPY --from=ubi /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
+COPY --from=ubi /lib64/libc.so.6 /lib64/libc.so.6
+COPY --from=ubi /lib64/libpthread.so.0 /lib64/libpthread.so.0
+
+ADD bin/l7-collector-amd64 /usr/bin/l7-collector
+
+ENTRYPOINT ["/usr/bin/l7-collector"]
