@@ -1,13 +1,10 @@
-#!/bin/bash -ex
+#!/bin/bash -e
 
 # test directory.
 TEST_DIR=./tests/k8st
 
 # kubectl binary.
-: ${kubectl:=./kubectl}
-
-# Set config variables needed for ${kubectl} and calicoctl.
-export KUBECONFIG=~/.kube/kind-config-kind
+: ${kubectl:=../hack/test/kind/kubectl}
 
 # Normally, cleanup any leftover state, then setup, then test.
 : ${STEPS:=cleanup setup}
@@ -101,6 +98,7 @@ function do_setup {
     docker network connect --ip=172.31.31.4 enetC kind-worker
 
     # Configure Router end of cluster node peerings.
+    # Note default route will be filtered out for each router. 
     cat <<EOF | docker exec -i bird-a1 sh -c "cat > /etc/bird/nodes-enetA.conf"
 template bgp nodes {
   description "Connection to BGP peer";
@@ -108,7 +106,10 @@ template bgp nodes {
   direct;
   gateway recursive;
   import all;
-  export all;
+  export filter {
+      if net = 0.0.0.0/0 then reject;
+      accept;
+  };
   add paths on;
   graceful restart;
   graceful restart time 0;
@@ -132,7 +133,10 @@ template bgp nodes {
   direct;
   gateway recursive;
   import all;
-  export all;
+  export filter {
+      if net = 0.0.0.0/0 then reject;
+      accept;
+  };
   add paths on;
   graceful restart;
   graceful restart time 0;
@@ -156,7 +160,10 @@ template bgp nodes {
   direct;
   gateway recursive;
   import all;
-  export all;
+  export filter {
+      if net = 0.0.0.0/0 then reject;
+      accept;
+  };
   add paths on;
   graceful restart;
   graceful restart time 0;
@@ -180,7 +187,10 @@ template bgp nodes {
   direct;
   gateway recursive;
   import all;
-  export all;
+  export filter {
+      if net = 0.0.0.0/0 then reject;
+      accept;
+  };
   add paths on;
   graceful restart;
   graceful restart time 0;

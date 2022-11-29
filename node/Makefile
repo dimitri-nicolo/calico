@@ -470,17 +470,6 @@ dual-tor-run-test:
 dual-tor-cleanup:
 	-STEPS=cleanup $(DUAL_TOR_DIR)/dualtor.sh
 
-.PHONY: external-network-setup
-EXTERNAL_NETWORK_DIR=tests/k8st/external-network
-# external-network-setup: external-network-cleanup kubectl dist/calicoctl $(K8ST_IMAGE_TARS) .calico_test.created tests/k8st/reliable-nc/bin/reliable-nc
-external-network-setup: external-network-cleanup kubectl dist/calicoctl
-	GCR_IO_PULL_SECRET=$(GCR_IO_PULL_SECRET) STEPS=setup \
-	ROUTER_IMAGE=$(BIRD_IMAGE) CALICOCTL=`pwd`/dist/calicoctl K8S_VERSION=$(K8S_VERSION) $(EXTERNAL_NETWORK_DIR)/external-networks.sh
-
-.PHONY: external-network-cleanup
-external-network-cleanup:
-	-STEPS=cleanup $(EXTERNAL_NETWORK_DIR)/external-networks.sh
-
 tests/k8st/reliable-nc/bin/reliable-nc: tests/k8st/reliable-nc/reliable-nc.go
 	mkdir -p dist
 	$(DOCKER_GO_BUILD) \
@@ -531,6 +520,30 @@ kind-k8st-run-test: .calico_test.created $(KIND_KUBECONFIG)
 
 .PHONY: kind-k8st-cleanup
 kind-k8st-cleanup: kind-cluster-destroy
+
+.PHONY: external-network-test
+k8s-test:
+	$(MAKE) kind-k8st-setup
+	$(MAKE) external-network-setup
+	$(MAKE) external-network-run-test
+	$(MAKE) external-network-cleanup
+	$(MAKE) kind-k8st-cleanup
+
+.PHONY: external-network-setup
+EXTERNAL_NETWORK_DIR=tests/k8st/external-network
+external-network-setup: external-network-cleanup kubectl dist/calicoctl
+	STEPS=setup \
+	ROUTER_IMAGE=$(BIRD_IMAGE) CALICOCTL=`pwd`/dist/calicoctl KUBECONFIG=$(KIND_KUBECONFIG) $(EXTERNAL_NETWORK_DIR)/external-networks.sh
+
+# TODO
+.PHONY: external-network-run-test
+external-network-run-test:
+	@echo "Start to run external network tests ..."
+	KUBECONFIG=$(KIND_KUBECONFIG) $(EXTERNAL_NETWORK_DIR)/bird-config.sh
+	
+.PHONY: external-network-cleanup
+external-network-cleanup:
+	-STEPS=cleanup $(EXTERNAL_NETWORK_DIR)/external-networks.sh
 
 # Needed for Semaphore CI (where disk space is a real issue during k8s-test)
 .PHONY: remove-go-build-image
