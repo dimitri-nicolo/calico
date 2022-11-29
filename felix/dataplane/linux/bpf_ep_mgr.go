@@ -741,7 +741,6 @@ func (m *bpfEndpointManager) CompleteDeferredWork() error {
 
 	m.applyProgramsToDirtyDataInterfaces()
 	m.updateWEPsInDataplane()
-	m.reconcileServices()
 	if m.bpfPolicyDebugEnabled {
 		m.removeDirtyPolicies()
 	}
@@ -1487,7 +1486,6 @@ func (m *bpfEndpointManager) profileNoMatchID(dir rules.RuleDir) polprog.RuleMat
 	return m.ruleMatchIDFromNFLOGPrefix(rules.CalculateNoMatchProfileNFLOGPrefixStr(dir))
 }
 
-//ruleMatchID(dir rules.RuleDir, action string, owner rules.RuleOwnerType, idx int, name string) polprog.RuleMatchID
 func (m *bpfEndpointManager) ruleMatchID(
 	dir rules.RuleDir,
 	action string,
@@ -2270,3 +2268,5 @@ func (m *bpfEndpointManager) invalidateServiceRoutes() error {
 
 	return nil
 }
+
+//ruleMatchID(dir rules.RuleDir, action string, owner rules.RuleOwnerType, idx int, name string) polprog.RuleMatchID
