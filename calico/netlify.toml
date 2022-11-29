@@ -58,6 +58,109 @@
   cp bin/ocp.tgz _site/manifests/
   '''
 
+<<<<<<< HEAD
+=======
+# Deploys master branch as a separate individual site, master build is different from branch deploys
+# it doesn't have a manifests only build and served without /archive prefix
+[context.master]
+  command = '''
+  cp netlify/Gemfile Gemfile && bundle install
+  make bin/ocp.tgz
+  export PATH=$PATH:$(pwd)/bin
+  jekyll build --config _config.yml,$(pwd)/netlify/_config_noindex.yml --baseurl /master --destination _site/master
+  cp -r ../manifests _site/master/
+  cp bin/ocp.tgz _site/master/manifests/
+  '''
+
+# proxy redirect for Helm chart repo
+[[redirects]]
+   from = "/charts/*"
+   to = "https://calico-public.s3.amazonaws.com/charts/:splat"
+   status = 200
+   headers = {X-From = "Netlify"}
+
+# proxy redirects for website and manifests for v3.24
+[[redirects]]
+  from = "/archive/v3.24/*"
+  to = "https://calico-v3-24.netlify.app/archive/v3.24/:splat"
+  status = 200
+
+
+# proxy redirects for website and manifests for v3.23
+[[redirects]]
+  from = "/archive/v3.23/*"
+  to = "https://calico-v3-23.netlify.app/archive/v3.23/:splat"
+  status = 200
+
+# proxy redirects for website and manifests for v3.22
+[[redirects]]
+  from = "/archive/v3.22/*"
+  to = "https://calico-v3-22.netlify.app/archive/v3.22/:splat"
+  status = 200
+
+# proxy redirects for website and manifests for v3.21
+[[redirects]]
+  from = "/archive/v3.21/*"
+  to = "https://calico-v3-21.netlify.app/archive/v3.21/:splat"
+  status = 200
+
+# proxy redirects for website and manifests for v3.20
+[[redirects]]
+  from = "/archive/v3.20/*"
+  to = "https://calico-v3-20.netlify.app/archive/v3.20/:splat"
+  status = 200
+
+# proxy redirects for website and manifests for v3.19
+[[redirects]]
+  from = "/archive/v3.19/*"
+  to = "https://calico-v3-19.netlify.app/archive/v3.19/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/v3.19/*"
+  to = "https://calico-v3-19.netlify.app/v3.19/:splat"
+  status = 200
+
+# proxy redirects for website and manifests for v3.18
+[[redirects]]
+  from = "/archive/v3.18/*"
+  to = "https://calico-v3-18.netlify.app/archive/v3.18/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/v3.18/*"
+  to = "https://calico-v3-18.netlify.app/v3.18/:splat"
+  status = 200
+
+# proxy redirects for website and manifests for v3.17
+[[redirects]]
+  from = "/archive/v3.17/*"
+  to = "https://calico-v3-17.netlify.app/archive/v3.17/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/v3.17/*"
+  to = "https://calico-v3-17.netlify.app/v3.17/:splat"
+  status = 200
+
+# proxy redirects for website and manifests for v3.16
+[[redirects]]
+  from = "/archive/v3.16/*"
+  to = "https://calico-v3-16.netlify.app/archive/v3.16/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/v3.16/*"
+  to = "https://calico-v3-16.netlify.app/v3.16/:splat"
+  status = 200
+
+# proxy redirects for website and manifests for v3.15
+[[redirects]]
+  from = "/archive/v3.15/*"
+  to = "https://calico-v3-15.netlify.app/archive/v3.15/:splat"
+  status = 200
+
+>>>>>>> os-master-part
 [[redirects]]
   from = "/v3.15/*"
   to = "https://tigera-v3-15.netlify.app/v3.15/:splat"
