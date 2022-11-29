@@ -7,6 +7,7 @@ PACKAGE_NAME          ?= github.com/projectcalico/calico/l7-collector
 
 L7_COLLECTOR_IMAGE    ?=l7-collector
 ENVOY_INIT_IMAGE      ?=envoy-init
+BUILD_IMAGES          ?=$(L7_COLLECTOR_IMAGE) $(ENVOY_INIT_IMAGE)
 
 ##############################################################################
 # Include ../lib.Makefile before anything else
