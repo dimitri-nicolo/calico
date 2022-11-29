@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ruby:2.7.6-alpine3.16.2
+FROM ruby:2.7.6-alpine3.16
 
 # Need to define root user explicitly (for remaining setup) and be numeric for k8s validation
 USER 0
@@ -50,7 +50,7 @@ RUN apk update \
         fluent-plugin-splunk-hec:1.1.2 \
         fluent-plugin-sumologic_output:1.6.1 \
         rdoc:6.4.0 \
- && fluent-gem install fluent-plugin-remote_syslog:1.0.0 \
+ && fluent-gem install fluent-plugin-remote_syslog:1.1.0 \
  && gem sources --clear-all \
  && apk del .build-deps \
  && apk del ruby-bundler ruby-bundler-doc build-base --force \
@@ -113,7 +113,7 @@ ENV RUNTIME_LOG_FILE=/var/log/calico/runtime-security/report.log
 #TLS Settings
 ENV TLS_KEY_PATH=/tls/tls.key
 ENV TLS_CRT_PATH=/tls/tls.crt
-ENV CA_CRT_PATH=/etc/pki/tls/certs/tigera-ca-bundle.crt
+ENV CA_CRT_PATH=/etc/pki/tigera/tigera-ca-bundle.crt
 
 ENV POS_DIR=/var/log/calico
 

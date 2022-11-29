@@ -1,7 +1,7 @@
 if [ -z "${SYSLOG_VERIFY_MODE}" ]; then
   sed -i 's|verify_mode .*||g' ${ROOT_DIR}/fluentd/etc/outputs/out-syslog.conf
 fi
-if [ ! -f ${ROOT_DIR}/etc/fluentd/syslog/ca.pem ]; then
+if [ "${SYSLOG_TLS}" == "false" ]; then
   sed -i 's|ca_file .*||g' ${ROOT_DIR}/fluentd/etc/outputs/out-syslog.conf
 fi
 if [ "${SYSLOG_FLOW_LOG}" == "true" ]; then
