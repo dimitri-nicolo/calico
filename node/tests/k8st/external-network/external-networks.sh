@@ -9,6 +9,9 @@ TEST_DIR=./tests/k8st
 # Normally, cleanup any leftover state, then setup, then test.
 : ${STEPS:=cleanup setup}
 
+nodeIP=$(${kubectl} get node kind-worker -o jsonpath='{.status.addresses[0].address}')
+echo kind-worker node ip $nodeIP
+
 function add_calico_resources() {
   # Setup BGPPeers for each router.
     ${CALICOCTL} apply -f - <<EOF
@@ -58,7 +61,7 @@ EOF
     ${kubectl} label node kind-worker egress=true --overwrite
 
     # Makes sure kind-worker use the correct node ip for node-node mesh.
-    ${kubectl} annotate node kind-worker projectcalico.org/IPv4Address=172.18.0.4/24 --overwrite
+    ${kubectl} annotate node kind-worker projectcalico.org/IPv4Address=$nodeIP --overwrite
 }
 
 function do_setup {
@@ -81,7 +84,7 @@ function do_setup {
     #  +---------------------------------------------------------------------------------+ 
     #  |                                                                                 |
     #  +---------------------------------------------------------------------------------+ 
-    #                  kind-worker (node ip 172.18.0.4)
+    #                  kind-worker (node ip 172.18.0.x)
     
     docker network create --subnet=172.31.11.0/24 --ip-range=172.31.11.0/24 --gateway 172.31.11.2 enetA
     docker network create --subnet=172.31.21.0/24 --ip-range=172.31.21.0/24 --gateway 172.31.21.2 enetB
@@ -206,12 +209,6 @@ protocol bgp node1 from nodes {
 }
 EOF
     docker exec bird-c1 birdcl configure
-
-    # Fix rp_filter in each node.
-    ${KIND} get nodes | xargs -n1 -I {} docker exec {} sysctl -w net.ipv4.conf.all.rp_filter=1
-
-    # Fix /etc/resolv.conf in each node.
-    ${KIND} get nodes | xargs -n1 -I {} docker exec {} sh -c "echo nameserver 8.8.8.8 > /etc/resolv.conf"
 
     # Create BGPConfiguration, BGPPeers etc.
     add_calico_resources

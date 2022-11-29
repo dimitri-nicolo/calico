@@ -1,9 +1,11 @@
 
-# Dual ToR testing
+# External network testing
 
-Scripts in this directory model a Dual ToR setup, so that we can test
-resilience, failover and load-balancing within that kind of setup.
+Scripts in this directory model a KIND cluster setup which includes a cluster node peering with four routers in three external networks.
 
-Please see
-https://docs.google.com/document/d/1muUCnXMWt1YOkclT_f19HVE1kHxoQsCOJv_6-rZi9Ps/edit?pli=1#
-for more context.
+To run the test manually on your local VM, following the steps below:
+- make kind-k8st-setup
+- make external-network-setup
+- make external-network-run-test or running your own test code
+- make external-network-cleanup
+- make kind-k8st-cleanup

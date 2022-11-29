@@ -522,7 +522,7 @@ kind-k8st-run-test: .calico_test.created $(KIND_KUBECONFIG)
 kind-k8st-cleanup: kind-cluster-destroy
 
 .PHONY: external-network-test
-k8s-test:
+external-network-test:
 	$(MAKE) kind-k8st-setup
 	$(MAKE) external-network-setup
 	$(MAKE) external-network-run-test

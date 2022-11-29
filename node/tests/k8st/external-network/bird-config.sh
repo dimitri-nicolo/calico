@@ -143,7 +143,8 @@ EOF
   echo Reload bird config
   ${CalicoNodeExec} "sv hup bird"
 
-  sleep 3
+  echo Sleep 10 seconds...
+  sleep 10
 
   echo; echo bird show protocols:
   ${CalicoNodeExec} "birdcl -s /var/run/calico/bird.ctl show protocols"
