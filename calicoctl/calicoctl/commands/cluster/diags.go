@@ -294,7 +294,11 @@ func collectCalicoResource(dir string) {
 	}
 
 	commands = append(commands, common.Cmd{
-		Info:     fmt.Sprintf("Collect all in %s", common.CalicoNamespace),
+		Info:     fmt.Sprintf("Collect all in %s (yaml)", common.CalicoNamespace),
+		CmdStr:   fmt.Sprintf("kubectl get all -n %s -o yaml", common.CalicoNamespace),
+		FilePath: fmt.Sprintf("%s/calico-system.yaml", dir),
+	}, common.Cmd{
+		Info:     fmt.Sprintf("Collect all in %s (wide text)", common.CalicoNamespace),
 		CmdStr:   fmt.Sprintf("kubectl get all -n %s -o wide", common.CalicoNamespace),
 		FilePath: fmt.Sprintf("%s/calico-system.txt", dir),
 	})
@@ -326,7 +330,11 @@ func collectTigeraOperator(dir string) {
 	}
 
 	commands = append(commands, common.Cmd{
-		Info:     fmt.Sprintf("Collect all in %s", common.TigeraOperatorNamespace),
+		Info:     fmt.Sprintf("Collect all in %s (yaml)", common.TigeraOperatorNamespace),
+		CmdStr:   fmt.Sprintf("kubectl get all -n %s -o yaml", common.TigeraOperatorNamespace),
+		FilePath: fmt.Sprintf("%s/tigera-operator.yaml", dir),
+	}, common.Cmd{
+		Info:     fmt.Sprintf("Collect all in %s (wide text)", common.TigeraOperatorNamespace),
 		CmdStr:   fmt.Sprintf("kubectl get all -n %s -o wide", common.TigeraOperatorNamespace),
 		FilePath: fmt.Sprintf("%s/tigera-operator.txt", dir),
 	})
