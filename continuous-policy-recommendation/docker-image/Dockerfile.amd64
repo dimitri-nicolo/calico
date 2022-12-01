@@ -2,7 +2,7 @@ ARG UBI_IMAGE
 
 FROM ${UBI_IMAGE} as ubi
 
-RUN microdnf update
+RUN microdnf upgrade
 
 # create /etc/continuous-policy-recommendation directory and provide RW permission access to USER 1001
 RUN mkdir -p /etc/continuous-policy-recommendation
@@ -12,10 +12,6 @@ FROM scratch
 # /etc/continuous-policy-recommendation directory used for storing self-signed certificates
 COPY --chown=1001 --from=ubi /etc/continuous-policy-recommendation /etc/continuous-policy-recommendation
 ADD --chown=1001 bin/continuous-policy-recommendation-amd64 /continuous-policy-recommendation
-
-# Add the trusted certs from the ubi image.
-COPY --from=ubi /etc/pki /etc/pki
-COPY --from=ubi /usr/share/pki /usr/share/pki
 
 # Because we build our binary with CGO, we need to add the necessary *.so files for dynamic linking.
 # If *.so files are missing, you will see an error saying that your entrypoint cannot be found.

@@ -6,9 +6,6 @@ RUN microdnf update
 
 FROM scratch
 
-# Add the trusted certs from the ubi image.
-COPY --from=ubi /etc/ssl/certs /etc/ssl/certs/
-
 COPY --from=ubi /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
 COPY --from=ubi /lib64/libc.so.6 /lib64/libc.so.6
 COPY --from=ubi /lib64/libnss_dns.so.2 /lib64/libnss_dns.so.2
