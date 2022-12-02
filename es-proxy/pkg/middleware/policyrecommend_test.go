@@ -342,7 +342,7 @@ var (
 			StagedAction: v3.StagedActionSet,
 			Tier:         "default",
 			Types:        []v3.PolicyType{v3.PolicyTypeIngress, v3.PolicyTypeEgress},
-			Selector:     "projectcalico.org/name == 'namespace1'",
+			Selector:     "projectcalico.org/namespace == 'namespace1'",
 			Egress: []v3.Rule{
 				{
 					Action:   v3.Allow,
@@ -399,7 +399,7 @@ var (
 			StagedAction: v3.StagedActionSet,
 			Tier:         "default",
 			Types:        []v3.PolicyType{v3.PolicyTypeEgress},
-			Selector:     "projectcalico.org/name == 'namespace2'",
+			Selector:     "projectcalico.org/namespace == 'namespace2'",
 			Egress: []v3.Rule{
 				{
 					Action:   v3.Allow,

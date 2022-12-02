@@ -665,7 +665,7 @@ var (
 		Spec: v3.StagedNetworkPolicySpec{
 			Tier:         "default",
 			StagedAction: v3.StagedActionSet,
-			Selector:     fmt.Sprintf("projectcalico.org/name == '%s'", namespace1),
+			Selector:     fmt.Sprintf("projectcalico.org/namespace == '%s'", namespace1),
 			Types:        []v3.PolicyType{v3.PolicyTypeEgress},
 			Egress: []v3.Rule{
 				{
@@ -694,7 +694,7 @@ var (
 		Spec: v3.StagedNetworkPolicySpec{
 			Tier:         "default",
 			StagedAction: v3.StagedActionSet,
-			Selector:     fmt.Sprintf("projectcalico.org/name == '%s'", namespace1),
+			Selector:     fmt.Sprintf("projectcalico.org/namespace == '%s'", namespace1),
 			Types:        []v3.PolicyType{v3.PolicyTypeEgress},
 			Egress: []v3.Rule{
 				{
@@ -723,7 +723,7 @@ var (
 		Spec: v3.StagedNetworkPolicySpec{
 			Tier:         "default",
 			StagedAction: v3.StagedActionSet,
-			Selector:     fmt.Sprintf("projectcalico.org/name == '%s'", namespace1),
+			Selector:     fmt.Sprintf("projectcalico.org/namespace == '%s'", namespace1),
 			Types:        []v3.PolicyType{v3.PolicyTypeEgress},
 			Egress: []v3.Rule{
 				{
@@ -760,7 +760,7 @@ var (
 		Spec: v3.StagedNetworkPolicySpec{
 			Tier:         "default",
 			StagedAction: v3.StagedActionSet,
-			Selector:     fmt.Sprintf("projectcalico.org/name == '%s'", namespace1),
+			Selector:     fmt.Sprintf("projectcalico.org/namespace == '%s'", namespace1),
 			Types:        []v3.PolicyType{v3.PolicyTypeEgress},
 			Egress: []v3.Rule{
 				{
@@ -801,7 +801,7 @@ var (
 		Spec: v3.StagedNetworkPolicySpec{
 			Tier:         "default",
 			StagedAction: v3.StagedActionSet,
-			Selector:     fmt.Sprintf("projectcalico.org/name == '%s'", namespace1),
+			Selector:     fmt.Sprintf("projectcalico.org/namespace == '%s'", namespace1),
 			Types:        []v3.PolicyType{v3.PolicyTypeEgress},
 			Ingress:      []v3.Rule{},
 			Egress: []v3.Rule{
@@ -838,7 +838,7 @@ var (
 		Spec: v3.StagedNetworkPolicySpec{
 			Tier:         "default",
 			StagedAction: v3.StagedActionSet,
-			Selector:     fmt.Sprintf("projectcalico.org/name == '%s'", namespace2),
+			Selector:     fmt.Sprintf("projectcalico.org/namespace == '%s'", namespace2),
 			Types:        []v3.PolicyType{v3.PolicyTypeIngress},
 			Egress:       []v3.Rule{},
 			Ingress: []v3.Rule{
@@ -882,7 +882,7 @@ var (
 		Spec: v3.StagedNetworkPolicySpec{
 			Tier:         "default",
 			StagedAction: v3.StagedActionSet,
-			Selector:     fmt.Sprintf("projectcalico.org/name == '%s'", namespace2),
+			Selector:     fmt.Sprintf("projectcalico.org/namespace == '%s'", namespace2),
 			Types:        []v3.PolicyType{v3.PolicyTypeIngress},
 			Ingress: []v3.Rule{
 				{
@@ -913,7 +913,7 @@ var (
 		Spec: v3.StagedNetworkPolicySpec{
 			Tier:         "default",
 			StagedAction: v3.StagedActionSet,
-			Selector:     fmt.Sprintf("projectcalico.org/name == '%s'", namespace2),
+			Selector:     fmt.Sprintf("projectcalico.org/namespace == '%s'", namespace2),
 			Types:        []v3.PolicyType{v3.PolicyTypeIngress},
 			Egress:       []v3.Rule{},
 			Ingress: []v3.Rule{
