@@ -37,8 +37,9 @@ const (
 	policyRecommendationNameSuffix = "policy"
 
 	// TODO(doublek): Import these from libcalico-go when we bump pins.
-	namespaceByNameLabel    = "projectcalico.org/name"
-	globalNamespaceSelector = "global()"
+	namespaceLabelSelectorKey = "projectcalico.org/namespace"
+	namespaceByNameLabel      = "projectcalico.org/name"
+	globalNamespaceSelector   = "global()"
 )
 
 // The rules for recommend policy are aggregated per endpoint + protocol with
@@ -189,19 +190,21 @@ func (ere *recommendationEngine) Recommend() (*Recommendation, error) {
 	if len(ere.egressRules) > 0 {
 		policyTypes = append(policyTypes, v3.PolicyTypeEgress)
 	}
+
+	// If namespace based policy recommendation.
 	if IsEmptyEndpointName(ere.endpointName) {
 		snp := v3.NewStagedNetworkPolicy()
 		snp.ObjectMeta = metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s.%s-%s", ere.policyTier, name, policyRecommendationNameSuffix),
 			Namespace: ere.policyNamespace,
 		}
-		policySelector := fmt.Sprintf("%s == '%s'", namespaceByNameLabel, ere.policyNamespace)
+		policyLabelSelector := fmt.Sprintf("%s == '%s'", namespaceLabelSelectorKey, ere.policyNamespace)
 
 		snp.Spec = v3.StagedNetworkPolicySpec{
 			StagedAction: v3.StagedActionSet,
 			Tier:         ere.policyTier,
 			Types:        policyTypes,
-			Selector:     policySelector,
+			Selector:     policyLabelSelector,
 			Ingress:      ere.ingressRules,
 			Egress:       ere.egressRules,
 		}
