@@ -20,6 +20,7 @@ node/windows-packaging/CalicoWindows/confd/config-bgp.psm1
 _output
 builder.coverprofile
 hack/release/ghr
+manifests/ocp.tgz
 
 # Created by local kind cluster
 hack/test/kind/kind
