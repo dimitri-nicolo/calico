@@ -2248,25 +2248,4 @@ func (m *bpfEndpointManager) addRuleInfo(rule *proto.Rule, idx int,
 	return matchID
 }
 
-func (m *bpfEndpointManager) invalidateServiceRoutes() error {
-	bpfin, err := netlink.LinkByName(bpfInDev)
-	if err != nil {
-		return fmt.Errorf("couldn't get %s link, device may not exist yet: %w", bpfInDev, err)
-	}
-
-	rts, err := netlink.RouteList(bpfin, 4)
-	if err != nil {
-		return fmt.Errorf("failed to get routes on %s: %w", bpfInDev, err)
-	}
-
-	for _, rt := range rts {
-		if rt.Scope == netlink.SCOPE_UNIVERSE /*global*/ && rt.Dst != nil {
-			cidr := ip.CIDRFromIPNet(rt.Dst)
-			m.delRoute(cidr.(ip.V4CIDR))
-		}
-	}
-
-	return nil
-}
-
 //ruleMatchID(dir rules.RuleDir, action string, owner rules.RuleOwnerType, idx int, name string) polprog.RuleMatchID
