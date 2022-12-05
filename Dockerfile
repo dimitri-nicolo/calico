@@ -17,17 +17,15 @@ FROM ruby:2.7.6-alpine3.16
 # Need to define root user explicitly (for remaining setup) and be numeric for k8s validation
 USER 0
 
-RUN apk update \
- && apk add --no-cache \
-        ca-certificates \
+RUN apk update && apk upgrade \
+&& apk add --no-cache \
+        curl \
+        jq \
         ruby ruby-irb ruby-etc ruby-webrick \
         tini \
  && apk add --no-cache --virtual .build-deps \
         build-base linux-headers \
         ruby-dev gnupg \
- && apk add --no-cache curl=7.83.1-r2 jq=1.6-r1 \
- && apk add --no-cache ca-certificates && update-ca-certificates \
- && apk update && apk upgrade libcrypto1.1 libgmpxx gmp gmp-dev build-base \
  && echo 'gem: --no-document' >> /etc/gemrc \
  && gem install oj -v 3.10.18 \
  && gem install json -v 2.6.2 \
@@ -39,12 +37,12 @@ RUN apk update \
  && gem install \
         bundler:2.3.19 \
         cgi:0.3.1 \
-        elasticsearch-api:7.17.1 \
-        elasticsearch-transport:7.17.1 \
-        elasticsearch-xpack:7.17.1 \
-        elasticsearch:7.17.1 \
+        elasticsearch-api:7.17.7 \
+        elasticsearch-transport:7.17.7 \
+        elasticsearch-xpack:7.17.7 \
+        elasticsearch:7.17.7 \
         fluent-plugin-cloudwatch-logs:0.8.0 \
-        fluent-plugin-elasticsearch:5.2.3 \
+        fluent-plugin-elasticsearch:5.2.4 \
         fluent-plugin-prometheus:2.0.0 \
         fluent-plugin-s3:1.3.0 \
         fluent-plugin-splunk-hec:1.1.2 \
