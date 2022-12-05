@@ -4,7 +4,6 @@ Tigera licensing and entitlement commandline tool
 
 ![carrotctl](./carrabbit.png) <!-- .element height="20%" width="20%" -->
 
-
 ## Setup 
 
 Download the `carrotctl` binary from the releases page on Github.
@@ -83,7 +82,6 @@ y
 Created license file 'happy-carrot-inc-license.yaml'
 ```
 
-
 ## Retrieve a license from database
 
 `carrotctl list --customer=boxy-box-inc` will list all key license fields for all the licenses issued for a customer name matching `boxy-box-inc*`
@@ -130,7 +128,6 @@ Flags:
   -i, --license-id string   License ID
 ```
 
-
 ### Example
 
 - List all customers and their licenses (this could take a while if there's a lot of customers and licenses in the database)
@@ -145,7 +142,6 @@ boxy                       57b415fd-cb48-4c4f-b12d-693e4466c42c       Unlimited 
 weetabix-inc               f9fb8c9d-6d12-4ab7-80dd-201ec2289faa       Unlimited      2021-07-08 00:00:00 +0000 UTC   cnx|all
 weetabix-inc               137ca41f-62f6-4862-8329-b3056db5ba87       Unlimited      2021-07-08 00:00:00 +0000 UTC   cnx|all
 ```
-
 
 - List all the licenses issued for customer `weetabix-inc`
 

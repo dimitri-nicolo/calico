@@ -25,7 +25,6 @@ together.
 > the node with `calicoctl node run`.
 {: .alert .alert-info}
 
-
 #### Felix agent
 
 The Felix daemon is the heart of {{site.prodname}} networking.  Felix's primary job is to

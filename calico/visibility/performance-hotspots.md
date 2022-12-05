@@ -75,7 +75,6 @@ For a list of performance anomaly detectors that are enabled by default, see [An
 
 >Anomaly detection runs on the management cluster, but users on managed clusters can enable/disable alerts. 
 
-
 ### Before you begin
 
 **Supported**
@@ -90,7 +89,6 @@ To use L7/HTTP anomaly detectors, you must enable L7 logs on the cluster.
 
 By default, anomaly detection training cycle models are stored in ephemeral storage.
 To persist storage for the training models, see [configure a storage class]({{site.baseurl}}/threat/anomaly-detection/storage).
-
 
 ### How To
 
