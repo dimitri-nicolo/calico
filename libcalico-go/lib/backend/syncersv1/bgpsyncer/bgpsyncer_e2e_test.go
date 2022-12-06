@@ -227,7 +227,7 @@ var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAl
 			// The peer will add as single entry ( +1 )
 			expectedCacheSize += 1
 			syncTester.ExpectCacheSize(expectedCacheSize)
-			syncTester.ExpectPath("/calico/resources/v3/projectcalico.org/externalnetwork/net1")
+			syncTester.ExpectPath("/calico/resources/v3/projectcalico.org/externalnetworks/net1")
 
 			// For non-kubernetes, check that we can allocate an IP address and get a syncer update
 			// for the allocation block.
