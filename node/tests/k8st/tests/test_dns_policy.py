@@ -82,8 +82,10 @@ metadata:
     egress: restricted
 spec:
   containers:
-  - name: lm
-    image: laurenceman/alpine
+  - name: alpine
+    image: alpine
+    command: ["/bin/sleep"]
+    args: ["infinity"]
   terminationGracePeriodSeconds: 0
 EOF
 """ % self.ns)
