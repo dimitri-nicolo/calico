@@ -22,7 +22,7 @@ import (
 	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
-var _ = Describe("Policy Recommendation Scope Controller", func() {
+var _ = Describe("ManagedCluster reconciler test", func() {
 	const (
 		testResourceName = "TestName"
 	)

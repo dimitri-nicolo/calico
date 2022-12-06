@@ -8,19 +8,11 @@ import (
 	"os/signal"
 	"syscall"
 
+	log "github.com/sirupsen/logrus"
+
 	v1 "k8s.io/api/core/v1"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
-
-	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
-	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
-	lincensing_client "github.com/projectcalico/calico/licensing/client"
-
-	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
-
-	"github.com/projectcalico/calico/licensing/client/features"
-	"github.com/projectcalico/calico/licensing/monitor"
-	"github.com/projectcalico/calico/lma/pkg/elastic"
 
 	"github.com/projectcalico/calico/continuous-policy-recommendation/pkg/cache"
 	"github.com/projectcalico/calico/continuous-policy-recommendation/pkg/config"
@@ -28,8 +20,14 @@ import (
 	"github.com/projectcalico/calico/continuous-policy-recommendation/pkg/namespace"
 	"github.com/projectcalico/calico/continuous-policy-recommendation/pkg/policyrecommendation"
 	"github.com/projectcalico/calico/continuous-policy-recommendation/pkg/stagednetworkpolicies"
-
-	log "github.com/sirupsen/logrus"
+	"github.com/projectcalico/calico/continuous-policy-recommendation/pkg/syncer"
+	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
+	lincensing_client "github.com/projectcalico/calico/licensing/client"
+	"github.com/projectcalico/calico/licensing/client/features"
+	"github.com/projectcalico/calico/licensing/monitor"
+	"github.com/projectcalico/calico/lma/pkg/elastic"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 )
 
 // backendClientAccessor is an interface to access the backend client from the main v2 client.
@@ -62,12 +60,8 @@ func main() {
 	envCfg := elastic.MustLoadConfig()
 	esClientFactory := elastic.NewClusterContextClientFactory(envCfg)
 	lmaESClient, err := esClientFactory.ClientForCluster(lmak8s.DefaultCluster)
-
 	if err != nil {
 		log.WithError(err).Fatal("Could not connect to Elasticsearch")
-	}
-	if err := lmaESClient.CreateEventsIndex(ctx); err != nil {
-		log.WithError(err).Fatal("Failed to create events index")
 	}
 
 	// setup license check
@@ -98,8 +92,8 @@ func main() {
 		},
 	)
 
-	// Start the license monitor, which will trigger the callback above at start of day and then whenever the license
-	// status changes.
+	// Start the license monitor, which will trigger the callback above at start of day and then
+	// whenever the license status changes.
 	go func() {
 		err := licenseMonitor.MonitorForever(context.Background())
 		if err != nil {
@@ -107,23 +101,49 @@ func main() {
 		}
 	}()
 
-	// setup caches
-
-	// SNP cache
+	// Setup Caches
+	// StagedNetworkPolicy cache
 	snpResourceCache := cache.NewSynchronizedObjectCache[*v3.StagedNetworkPolicy]()
 
 	// Namespace cache
 	namespaceCache := cache.NewSynchronizedObjectCache[*v1.Namespace]()
 
+	// NetworkSets Cache
+	networkSetCache := cache.NewSynchronizedObjectCache[*v3.NetworkSet]()
+
+	// Cache set
+	caches := &syncer.CacheSet{
+		Namespaces:            namespaceCache,
+		NetworkSets:           networkSetCache,
+		StagedNetworkPolicies: snpResourceCache,
+	}
+
+	// Setup Synchronizer
+	cacheSynchronizer := syncer.NewCacheSynchronizer(clientSet, *caches)
+
+	// Controller Setup
 	// create main controller
-	managementStandalonePolicyRecController :=
-		policyrecommendation.NewPolicyRecommendationController(
-			clientSet.ProjectcalicoV3(),
-			lmaESClient,
-		)
-	managedclusterController := managedcluster.NewManagedClusterController(clientSet.ProjectcalicoV3(), clientFactory, esClientFactory)
-	stagednetworkpolicyController := stagednetworkpolicies.NewStagedNetworkPolicyController(clientSet.ProjectcalicoV3(), snpResourceCache)
-	namespaceController := namespace.NewNamespaceController(clientSet, namespaceCache)
+	managementStandalonePolicyRecController := policyrecommendation.NewPolicyRecommendationController(
+		clientSet.ProjectcalicoV3(),
+		&lmaESClient,
+		cacheSynchronizer,
+		caches,
+		lmak8s.DefaultCluster,
+	)
+	managedclusterController := managedcluster.NewManagedClusterController(
+		clientSet.ProjectcalicoV3(),
+		clientFactory,
+		esClientFactory,
+	)
+	stagednetworkpolicyController := stagednetworkpolicies.NewStagedNetworkPolicyController(
+		clientSet.ProjectcalicoV3(),
+		snpResourceCache,
+	)
+	namespaceController := namespace.NewNamespaceController(
+		clientSet,
+		namespaceCache,
+		cacheSynchronizer,
+	)
 
 	// setup shutdown sigs
 	shutdown := make(chan os.Signal, 1)

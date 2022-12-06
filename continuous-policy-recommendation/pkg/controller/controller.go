@@ -27,3 +27,8 @@ type Reconciler interface {
 	// Close
 	Close()
 }
+
+type Watcher interface {
+	Run(stop <-chan struct{})
+	Close()
+}

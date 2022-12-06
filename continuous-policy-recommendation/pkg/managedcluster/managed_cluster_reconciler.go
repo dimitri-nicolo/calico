@@ -18,6 +18,7 @@ import (
 	"github.com/projectcalico/calico/continuous-policy-recommendation/pkg/namespace"
 	"github.com/projectcalico/calico/continuous-policy-recommendation/pkg/policyrecommendation"
 	"github.com/projectcalico/calico/continuous-policy-recommendation/pkg/stagednetworkpolicies"
+	"github.com/projectcalico/calico/continuous-policy-recommendation/pkg/syncer"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/api/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
@@ -38,6 +39,10 @@ type managedClusterState struct {
 	cancel      context.CancelFunc
 }
 
+// Reconcile listens for ManagedCluster Resource and creates the caches and Controllers for the attached ManagedCluster
+// based on the ClientSet created for the ManagedCluster.  Controllers created for the ManagedCluster will watch Kubernetes
+// resources only on their assigned ManagedClusters.  All connections opened by the Controllers for the ManagedCluster
+// will go through the Voltron - Guardian tunnel.
 func (r *managedClusterReconciler) Reconcile(namespacedName types.NamespacedName) error {
 	mc, err := r.managementStandaloneCalico.ManagedClusters().Get(context.Background(), namespacedName.Name, metav1.GetOptions{})
 	if err != nil && !k8serrors.IsNotFound(err) {
@@ -88,9 +93,34 @@ func (r *managedClusterReconciler) startRecommendationPolicyControllerForManaged
 	// Namespace cache
 	namespaceCache := cache.NewSynchronizedObjectCache[*v1.Namespace]()
 
-	policyRecController := policyrecommendation.NewPolicyRecommendationController(clientSetForCluster.ProjectcalicoV3(), mcLMAElasticClient)
-	stagednetworkpoliciesController := stagednetworkpolicies.NewStagedNetworkPolicyController(clientSetForCluster.ProjectcalicoV3(), snpResourceCache)
-	namespaceController := namespace.NewNamespaceController(clientSetForCluster, namespaceCache)
+	// NetworkSets Cache
+	networkSetCache := cache.NewSynchronizedObjectCache[*v3.NetworkSet]()
+
+	caches := &syncer.CacheSet{
+		Namespaces:            namespaceCache,
+		NetworkSets:           networkSetCache,
+		StagedNetworkPolicies: snpResourceCache,
+	}
+
+	// Setup Synchronizer
+	cacheSynchronizer := syncer.NewCacheSynchronizer(clientSetForCluster, *caches)
+
+	policyRecController := policyrecommendation.NewPolicyRecommendationController(
+		clientSetForCluster.ProjectcalicoV3(),
+		&mcLMAElasticClient,
+		cacheSynchronizer,
+		caches,
+		mc.Name,
+	)
+	stagednetworkpoliciesController := stagednetworkpolicies.NewStagedNetworkPolicyController(
+		clientSetForCluster.ProjectcalicoV3(),
+		snpResourceCache,
+	)
+	namespaceController := namespace.NewNamespaceController(
+		clientSetForCluster,
+		namespaceCache,
+		cacheSynchronizer,
+	)
 
 	controllers := []controller.Controller{policyRecController, stagednetworkpoliciesController, namespaceController}
 
@@ -114,11 +144,6 @@ func (r *managedClusterReconciler) createLMAElasticClientForManagedCluster(ctx c
 	envCfg.ElasticIndexSuffix = clusterName
 	lmaESClient, err := r.elasticClientFactory.ClientForCluster(clusterName)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := lmaESClient.CreateEventsIndex(ctx); err != nil {
-		log.WithError(err).Errorf("failed to create events index for managed cluster %s", clusterName)
 		return nil, err
 	}
 

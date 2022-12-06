@@ -1,0 +1,53 @@
+{
+  "key1": {
+    "source_type": "wep",
+    "dest_type": "net",
+    "source_port": 0,
+    "dest_port": 443,
+    "source_namespace": "namespace1",
+    "dest_namespace": "-",
+    "source_name_aggr": "pvtshoot-cb7967588-*",
+    "dest_name_aggr": "pub",
+    "proto": "tcp",
+    "source_ip": "10.244.102.136",
+    "dest_ip": "104.154.207.153",
+    "reporter": "src",
+    "action":"allow",
+    "dest_domains": null,
+    "dest_service_name": "-"
+  },
+  "key2": {
+    "source_type": "net",
+    "dest_type": "wep",
+    "source_port": 0,
+    "dest_port": 45,
+    "source_namespace": "",
+    "dest_namespace": "namespace1",
+    "source_name_aggr": "pub",
+    "dest_name_aggr": "pvtshoot-cb7967588-*",
+    "proto": "tcp",
+    "source_ip": "104.154.207.153",
+    "dest_ip": "10.244.102.136",
+    "reporter": "dst",
+    "action":"allow",
+    "dest_domains": null,
+    "dest_service_name": "-"
+    },
+  "key3": {
+    "source_type": "net",
+    "dest_type": "wep",
+    "source_port": 0,
+    "dest_port": 33,
+    "source_namespace": "",
+    "dest_namespace": "namespace1",
+    "source_name_aggr": "pub",
+    "dest_name_aggr": "pvtshoot-cb7967588-*",
+    "proto": "tcp",
+    "source_ip": "104.154.207.153",
+    "dest_ip": "10.244.102.137",
+    "reporter": "dst",
+    "action":"allow",
+    "dest_domains": null,
+    "dest_service_name": "-"
+    }
+}

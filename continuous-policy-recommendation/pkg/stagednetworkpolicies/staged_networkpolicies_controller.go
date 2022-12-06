@@ -18,8 +18,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const KindStagedNetworkPolicies = "stagednetworkpolicies"
+const (
+	KindStagedNetworkPolicies = "stagednetworkpolicies"
+)
 
+// StagedNetworkPolicyController restores the StagedNetworkPolicy created by the Policy Recommendation Engine
 type StagedNetworkPolicyController struct {
 	watcher controller.Watcher
 	calico  calicoclient.ProjectcalicoV3Interface

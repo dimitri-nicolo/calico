@@ -270,8 +270,7 @@ func (q *CompositeAggregationQuery) ConvertBucketHelper(item *elastic.Aggregatio
 
 	// Extract the key data.
 	for i := range q.AggCompositeSourceInfos {
-		// Get the composite value to construct our key. The key should always be there, so error out if it
-		// isn't there.
+		// Get the composite value to construct our key. Error out if it isn't there.
 		name := q.AggCompositeSourceInfos[i].Name
 		val, ok := item.Key[name]
 		if !ok {
@@ -704,12 +703,12 @@ func searchCompositeAggregationsHelper(
 			//           hook directly into the HTTP client.
 			rawResults, ok := searchResult.Aggregations.Composite(query.Name)
 			if !ok {
-				log.Infof("No results for composite query of %s", query.DocumentIndex)
+				log.Debugf("No results for composite query of %s", query.DocumentIndex)
 				return
 			}
-
 			// Loop through each of the items in the buckets and convert to a result bucket.
 			for _, item := range rawResults.Buckets {
+				log.Debugf("aggregation bucket: %v", item.Key)
 				cab, err := query.ConvertBucket(item)
 				if err != nil {
 					log.WithError(err).Error("error processing ES composite aggregation bucket")
@@ -730,7 +729,6 @@ func searchCompositeAggregationsHelper(
 
 			// If we get the requested number of buckets then there may be more results to obtain.
 			if len(rawResults.Buckets) < query.getMaxBuckets() || rawResults.AfterKey == nil || len(rawResults.AfterKey) == 0 {
-				log.Debugf("Completed processing %s", query.DocumentIndex)
 				return
 			}
 

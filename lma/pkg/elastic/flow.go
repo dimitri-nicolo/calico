@@ -15,8 +15,10 @@ import (
 
 const (
 	FlowlogBuckets     = "flog_buckets"
+	FlowDomainNone     = "-"
 	FlowNameAggregated = "-"
 	FlowNamespaceNone  = "-"
+	FlowServiceNone    = "-"
 	FlowIPNone         = "0.0.0.0"
 )
 
@@ -159,6 +161,18 @@ func GetFlowEndpointIPFromCompAggKey(k CompositeAggregationKey, idx int) *net.IP
 	return nil
 }
 
+// GetFlowEndpointDomain extracts the flow endpoint domains as a string from the composite
+// aggregation key.
+func GetFlowEndpointDomainsFromCompAggKey(k CompositeAggregationKey, idx int) string {
+	if v := k[idx].Value; v == nil {
+		return ""
+	}
+	if domains := k[idx].String(); domains != FlowDomainNone {
+		return domains
+	}
+	return ""
+}
+
 // GetFlowEndpointPort extracts the flow endpoint port from the composite aggregation key.
 func GetFlowEndpointPortFromCompAggKey(k CompositeAggregationKey, idx int) *uint16 {
 	if v := k[idx].Float64(); v != 0 {
@@ -166,6 +180,14 @@ func GetFlowEndpointPortFromCompAggKey(k CompositeAggregationKey, idx int) *uint
 		return &u16
 	}
 	return nil
+}
+
+// GetFlowEndpointService extracts the flow endpoint service from the composite aggregation key.
+func GetFlowEndpointServiceFromCompAggKey(k CompositeAggregationKey, idx int) string {
+	if svc := k[idx].String(); svc != FlowServiceNone {
+		return svc
+	}
+	return ""
 }
 
 // ------------------------- TODO: Similar logic in PIP.
@@ -188,12 +210,14 @@ func ConvertFlow(b *CompositeAggregationBucket, compositeIdxs map[string]int, te
 			Port:      GetFlowEndpointPortFromCompAggKey(k, compositeIdxs["source_port"]),
 		},
 		Destination: api.FlowEndpointData{
-			Type:      GetFlowEndpointTypeFromCompAggKey(k, compositeIdxs["dest_type"]),
-			Name:      GetFlowEndpointNameFromCompAggKey(k, compositeIdxs["dest_name"], compositeIdxs["dest_name_aggr"]),
-			Namespace: GetFlowEndpointNamespaceFromCompAggKey(k, compositeIdxs["dest_namespace"]),
-			Labels:    GetFlowEndpointLabelsFromCompAggKey(b.AggregatedTerms[termKeys["dest_labels"]]),
-			IP:        GetFlowEndpointIPFromCompAggKey(k, compositeIdxs["dest_ip"]),
-			Port:      GetFlowEndpointPortFromCompAggKey(k, compositeIdxs["dest_port"]),
+			Type:        GetFlowEndpointTypeFromCompAggKey(k, compositeIdxs["dest_type"]),
+			Name:        GetFlowEndpointNameFromCompAggKey(k, compositeIdxs["dest_name"], compositeIdxs["dest_name_aggr"]),
+			Namespace:   GetFlowEndpointNamespaceFromCompAggKey(k, compositeIdxs["dest_namespace"]),
+			Labels:      GetFlowEndpointLabelsFromCompAggKey(b.AggregatedTerms[termKeys["dest_labels"]]),
+			IP:          GetFlowEndpointIPFromCompAggKey(k, compositeIdxs["dest_ip"]),
+			Port:        GetFlowEndpointPortFromCompAggKey(k, compositeIdxs["dest_port"]),
+			ServiceName: GetFlowEndpointServiceFromCompAggKey(k, compositeIdxs["dest_service_name"]),
+			Domains:     GetFlowEndpointDomainsFromCompAggKey(k, compositeIdxs["dest_domains"]),
 		},
 		ActionFlag: GetFlowActionFromCompAggKey(k, compositeIdxs["action"]),
 		Proto:      GetFlowProtoFromCompAggKey(k, compositeIdxs["proto"]),

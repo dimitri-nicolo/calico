@@ -13,26 +13,33 @@ import (
 	"github.com/projectcalico/calico/continuous-policy-recommendation/pkg/cache"
 	"github.com/projectcalico/calico/continuous-policy-recommendation/pkg/constants"
 	"github.com/projectcalico/calico/continuous-policy-recommendation/pkg/controller"
+	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
 
 	log "github.com/sirupsen/logrus"
 )
 
 const KindNamespace = "namespaces"
 
+// NamespaceController watches for namespace changes and syncs all corresponding resource caches.
 type namespaceController struct {
 	watcher controller.Watcher
 	cancel  context.CancelFunc
 }
 
-func NewNamespaceController(kubernetes kubernetes.Interface, resourceCache cache.ObjectCache[*v1.Namespace]) controller.Controller {
-	namespaceReconciler := &namespaceReconciler{
-		resourceCache: resourceCache,
-		kubernetes:    kubernetes,
-	}
+func NewNamespaceController(kubernetes kubernetes.Interface,
+	resourceCache cache.ObjectCache[*v1.Namespace],
+	synchronizer client.QueryInterface,
+) controller.Controller {
+	namespaceReconciler := NewNamespaceReconciler(kubernetes, resourceCache, synchronizer)
 
 	watcher := controller.NewWatcher(
 		namespaceReconciler,
-		k8scache.NewListWatchFromClient(kubernetes.CoreV1().RESTClient(), KindNamespace, constants.AllNamespaceKey, fields.Everything()),
+		k8scache.NewListWatchFromClient(
+			kubernetes.CoreV1().RESTClient(),
+			KindNamespace,
+			constants.AllNamespaceKey,
+			fields.Everything(),
+		),
 		&v1.Namespace{},
 	)
 

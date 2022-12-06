@@ -21,11 +21,6 @@ const (
 	resyncPeriod              = 0
 )
 
-type Watcher interface {
-	Run(stop <-chan struct{})
-	Close()
-}
-
 type watcher struct {
 	workqueue.RateLimitingInterface
 	reconciler         Reconciler
@@ -112,7 +107,7 @@ func (w *watcher) process() bool {
 
 	defer w.Done(key)
 
-	log.Debugf("Received %v", key)
+	log.Debugf("Received %v, and type: %s", key, reflect.TypeOf(w.resource.obj).String())
 	reqLogger := log.WithField("key", key)
 	reqLogger.Debug("Processing next item")
 

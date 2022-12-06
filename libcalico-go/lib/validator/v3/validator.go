@@ -201,7 +201,7 @@ var (
 	// reserved linux kernel routing tables (cannot be targeted by routeTableRanges)
 	routeTablesReservedLinux = []int{253, 254, 255}
 
-	stagedActionRegex = regexp.MustCompile("^(" + string(api.StagedActionSet) + "|" + string(api.StagedActionDelete) + ")$")
+	stagedActionRegex = regexp.MustCompile("^(" + string(api.StagedActionSet) + "|" + string(api.StagedActionDelete) + "|" + string(api.StagedActionLearn) + "|" + string(api.StagedActionIgnore) + ")$")
 
 	allDigits = regexp.MustCompile(`^\d+$`)
 	portRange = regexp.MustCompile(`^(\d+):(\d+)$`)

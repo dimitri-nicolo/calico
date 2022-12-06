@@ -2,9 +2,12 @@ package namespace
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,6 +16,10 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/projectcalico/calico/continuous-policy-recommendation/pkg/cache"
+	"github.com/projectcalico/calico/continuous-policy-recommendation/pkg/syncer"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
 )
 
 var _ = Describe("Namespace Controller", func() {
@@ -21,19 +28,29 @@ var _ = Describe("Namespace Controller", func() {
 	)
 
 	var (
-		nr            namespaceReconciler
-		resourceCache cache.ObjectCache[*v1.Namespace]
-		k8sClient     kubernetes.Interface
+		nr                    namespaceReconciler
+		resourceCache         cache.ObjectCache[*v1.Namespace]
+		k8sClient             kubernetes.Interface
+		mockSynchronizer      client.MockQueryInterface
+		mockedPolicyRecStatus v3.PolicyRecommendationScopeStatus
 	)
 
 	BeforeEach(func() {
 		k8sClient = fake.NewSimpleClientset()
 		resourceCache = cache.NewSynchronizedObjectCache[*v1.Namespace]()
 
-		nr = namespaceReconciler{
-			k8sClient,
-			resourceCache,
+		mockSynchronizer = client.MockQueryInterface{}
+		mockedPolicyRecStatus = v3.PolicyRecommendationScopeStatus{
+			Conditions: []v3.PolicyRecommendationScopeStatusCondition{
+				{
+					Message: "Ran at" + time.Now().String(),
+					Status:  "enabled",
+					Type:    "OK",
+				},
+			},
 		}
+
+		nr = *NewNamespaceReconciler(k8sClient, resourceCache, &mockSynchronizer)
 	})
 
 	AfterEach(func() {
@@ -51,17 +68,31 @@ var _ = Describe("Namespace Controller", func() {
 
 		Expect(err).ShouldNot(HaveOccurred())
 
+		var namespaceQueryArg syncer.NamespaceQuery
+		mockSynchronizer.On("RunQuery", mock.Anything, mock.Anything).Run(
+			func(args mock.Arguments) {
+				namespaceQueryArg = args[1].(syncer.NamespaceQuery)
+			},
+		).Return(mockedPolicyRecStatus, nil)
+
 		err = nr.Reconcile(types.NamespacedName{
 			Name: ns.Name,
 		})
 		Expect(err).To(BeNil())
-		namespace := resourceCache.Get(testResourceName)
 
+		namespace := resourceCache.Get(testResourceName)
 		Expect(namespace).ToNot(BeNil())
+
+		Expect(namespaceQueryArg.MetaSelectors.Source.KVPair.Key).To(Equal(
+			model.ResourceKey{
+				Name: namespace.Name,
+				Kind: namespace.Kind,
+			},
+		))
+		Expect(namespaceQueryArg.MetaSelectors.Source.UpdateType).To(Equal(api.UpdateTypeKVNew))
 	})
 
 	It("deletes an already stored namespace in the cache if it's not found in the cluster", func() {
-
 		resourceCache.Set(
 			testResourceName,
 			&v1.Namespace{
@@ -71,11 +102,27 @@ var _ = Describe("Namespace Controller", func() {
 			},
 		)
 
+		var namespaceQueryArg syncer.NamespaceQuery
+		mockSynchronizer.On("RunQuery", mock.Anything, mock.Anything).Run(
+			func(args mock.Arguments) {
+				namespaceQueryArg = args[1].(syncer.NamespaceQuery)
+			},
+		).Return(mockedPolicyRecStatus, nil)
+
 		err := nr.Reconcile(types.NamespacedName{
 			Name: testResourceName,
 		})
 		Expect(err).To(BeNil())
+
 		namespace := resourceCache.Get(testResourceName)
 		Expect(namespace).To(BeNil())
+
+		Expect(namespaceQueryArg.MetaSelectors.Source.KVPair.Key).To(Equal(
+			model.ResourceKey{
+				Name: testResourceName,
+				Kind: KindNamespace,
+			},
+		))
+		Expect(namespaceQueryArg.MetaSelectors.Source.UpdateType).To(Equal(api.UpdateTypeKVDeleted))
 	})
 })

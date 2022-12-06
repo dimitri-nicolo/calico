@@ -23,13 +23,19 @@ const (
 	KindManagedClusters = "managedclusters"
 )
 
+// ManagedClusterController watches for ManagedCluster and sets up the Controllers for each ManagedCluster
+// attached
 type managedClusterController struct {
 	watcher                    controller.Watcher
 	managementStandaloneCalico calicoclient.ProjectcalicoV3Interface
 	cancel                     context.CancelFunc
 }
 
-func NewManagedClusterController(managementStandaloneCalico calicoclient.ProjectcalicoV3Interface, clientFactory lmak8s.ClientSetFactory, esClientFactory lmaelastic.ClusterContextClientFactory) controller.Controller {
+func NewManagedClusterController(
+	managementStandaloneCalico calicoclient.ProjectcalicoV3Interface,
+	clientFactory lmak8s.ClientSetFactory,
+	esClientFactory lmaelastic.ClusterContextClientFactory,
+) controller.Controller {
 	managedClusterReconciler := &managedClusterReconciler{
 		managementStandaloneCalico: managementStandaloneCalico,
 		clientFactory:              clientFactory,

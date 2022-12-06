@@ -5,6 +5,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -81,7 +82,7 @@ var _ = Describe("Staged Network Policies Controller", func() {
 				Namespace: testResourceNamespace,
 			},
 			Spec: v3.StagedNetworkPolicySpec{
-				StagedAction: "Set",
+				StagedAction: v3.StagedActionDelete,
 			},
 		}
 
@@ -95,7 +96,7 @@ var _ = Describe("Staged Network Policies Controller", func() {
 					Namespace: testResourceNamespace,
 				},
 				Spec: v3.StagedNetworkPolicySpec{
-					StagedAction: "Delete",
+					StagedAction: v3.StagedActionDelete,
 				},
 			},
 			metav1.CreateOptions{},
