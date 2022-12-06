@@ -1065,6 +1065,8 @@ compare_templates() {
     done
 
     if [ $rc -eq 2 ]; then
+        echo "Recording failed testcase directory to ${LOGPATH}/testcase_directory.txt"
+        echo "${testdir}" > ${LOGPATH}/testcase_directory.txt
         echo "Copying nodes to ${LOGPATH}/nodes.yaml"
         $CALICOCTL get nodes -o yaml > ${LOGPATH}/nodes.yaml
         echo "Copying bgp config to ${LOGPATH}/bgpconfig.yaml"
@@ -1072,7 +1074,7 @@ compare_templates() {
         echo "Copying bgp peers to ${LOGPATH}/bgppeers.yaml"
         $CALICOCTL get bgppeers -o yaml > ${LOGPATH}/bgppeers.yaml
         echo "Copying bgp filters to ${LOGPATH}/bgpfilters.yaml"
-        $CALICOCTL get bgpfilter -o yaml > ${LOGPATH}/bgpfilters.yaml
+        $CALICOCTL get bgpfilters -o yaml > ${LOGPATH}/bgpfilters.yaml
         echo "Copying ip pools to ${LOGPATH}/ippools.yaml"
         $CALICOCTL get ippools -o yaml > ${LOGPATH}/ippools.yaml
         echo "Listing running processes"
@@ -1657,25 +1659,33 @@ apiVersion: projectcalico.org/v3
 metadata:
   name: test-filter
 spec:
-  export_v4:
-    - action: accept
+  exportV4:
+    - action: Accept
+      matchOperator: In
       cidr: 77.0.0.0/16
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 77.1.0.0/16
-  import_v4:
-    - action: accept
+  importV4:
+    - action: Accept
+      matchOperator: In
       cidr: 44.0.0.0/16
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 44.1.0.0/16
-  export_v6:
-    - action: accept
+  exportV6:
+    - action: Accept
+      matchOperator: In
       cidr: 9000::0/64
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 9000:1::0/64
-  import_v6:
-    - action: accept
+  importV6:
+    - action: Accept
+      matchOperator: In
       cidr: 5000::0/64
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 5000:1::0/64
 ---
 kind: BGPPeer
@@ -1761,25 +1771,33 @@ apiVersion: projectcalico.org/v3
 metadata:
   name: test-filter-1
 spec:
-  export_v4:
-    - action: accept
+  exportV4:
+    - action: Accept
+      matchOperator: In
       cidr: 77.0.0.0/16
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 77.1.0.0/16
-  import_v4:
-    - action: accept
+  importV4:
+    - action: Accept
+      matchOperator: In
       cidr: 44.0.0.0/16
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 44.1.0.0/16
-  export_v6:
-    - action: accept
+  exportV6:
+    - action: Accept
+      matchOperator: In
       cidr: 9000::0/64
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 9000:1::0/64
-  import_v6:
-    - action: accept
+  importV6:
+    - action: Accept
+      matchOperator: In
       cidr: 5000::0/64
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 5000:1::0/64
 ---
 kind: BGPFilter
@@ -1787,25 +1805,33 @@ apiVersion: projectcalico.org/v3
 metadata:
   name: test-filter-2
 spec:
-  export_v4:
-    - action: accept
+  exportV4:
+    - action: Accept
+      matchOperator: In
       cidr: 77.2.0.0/16
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 77.3.0.0/16
-  import_v4:
-    - action: accept
+  importV4:
+    - action: Accept
+      matchOperator: In
       cidr: 44.2.0.0/16
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 44.3.0.0/16
-  export_v6:
-    - action: accept
+  exportV6:
+    - action: Accept
+      matchOperator: In
       cidr: 9000:2::0/64
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 9000:3::0/64
-  import_v6:
-    - action: accept
+  importV6:
+    - action: Accept
+      matchOperator: In
       cidr: 5000:2::0/64
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 5000:3::0/64
 ---
 kind: BGPPeer
@@ -1936,25 +1962,33 @@ apiVersion: projectcalico.org/v3
 metadata:
   name: test-filter-1
 spec:
-  export_v4:
-    - action: accept
+  exportV4:
+    - action: Accept
+      matchOperator: In
       cidr: 77.0.0.0/16
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 77.1.0.0/16
-  import_v4:
-    - action: accept
+  importV4:
+    - action: Accept
+      matchOperator: In
       cidr: 44.0.0.0/16
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 44.1.0.0/16
-  export_v6:
-    - action: accept
+  exportV6:
+    - action: Accept
+      matchOperator: In
       cidr: 9000::0/64
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 9000:1::0/64
-  import_v6:
-    - action: accept
+  importV6:
+    - action: Accept
+      matchOperator: In
       cidr: 5000::0/64
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 5000:1::0/64
 ---
 kind: BGPFilter
@@ -1962,25 +1996,33 @@ apiVersion: projectcalico.org/v3
 metadata:
   name: test-filter-2
 spec:
-  export_v4:
-    - action: accept
+  exportV4:
+    - action: Accept
+      matchOperator: In
       cidr: 77.2.0.0/16
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 77.3.0.0/16
-  import_v4:
-    - action: accept
+  importV4:
+    - action: Accept
+      matchOperator: In
       cidr: 44.2.0.0/16
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 44.3.0.0/16
-  export_v6:
-    - action: accept
+  exportV6:
+    - action: Accept
+      matchOperator: In
       cidr: 9000:2::0/64
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 9000:3::0/64
-  import_v6:
-    - action: accept
+  importV6:
+    - action: Accept
+      matchOperator: In
       cidr: 5000:2::0/64
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 5000:3::0/64
 ---
 kind: BGPPeer
@@ -2069,25 +2111,33 @@ apiVersion: projectcalico.org/v3
 metadata:
   name: test-filter-1
 spec:
-  export_v4:
-    - action: accept
+  exportV4:
+    - action: Accept
+      matchOperator: In
       cidr: 77.0.0.0/16
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 77.1.0.0/16
-  import_v4:
-    - action: accept
+  importV4:
+    - action: Accept
+      matchOperator: In
       cidr: 44.0.0.0/16
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 44.1.0.0/16
-  export_v6:
-    - action: accept
+  exportV6:
+    - action: Accept
+      matchOperator: In
       cidr: 9000::0/64
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 9000:1::0/64
-  import_v6:
-    - action: accept
+  importV6:
+    - action: Accept
+      matchOperator: In
       cidr: 5000::0/64
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 5000:1::0/64
 ---
 kind: BGPFilter
@@ -2095,25 +2145,33 @@ apiVersion: projectcalico.org/v3
 metadata:
   name: test-filter-2
 spec:
-  export_v4:
-    - action: accept
+  exportV4:
+    - action: Accept
+      matchOperator: In
       cidr: 77.2.0.0/16
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 77.3.0.0/16
-  import_v4:
-    - action: accept
+  importV4:
+    - action: Accept
+      matchOperator: In
       cidr: 44.2.0.0/16
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 44.3.0.0/16
-  export_v6:
-    - action: accept
+  exportV6:
+    - action: Accept
+      matchOperator: In
       cidr: 9000:2::0/64
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 9000:3::0/64
-  import_v6:
-    - action: accept
+  importV6:
+    - action: Accept
+      matchOperator: In
       cidr: 5000:2::0/64
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 5000:3::0/64
 ---
 kind: BGPPeer
@@ -2437,29 +2495,37 @@ apiVersion: projectcalico.org/v3
 metadata:
   name: test-filter
 spec:
-  export_v4:
-    - action: accept
+  exportV4:
+    - action: Accept
+      matchOperator: In
       cidr: 77.0.0.0/16
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 77.1.0.0/16
-  import_v4:
-    - action: accept
+  importV4:
+    - action: Accept
+      matchOperator: In
       cidr: 44.0.0.0/16
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 44.1.0.0/16
-  export_v6:
-    - action: accept
+  exportV6:
+    - action: Accept
+      matchOperator: In
       cidr: 9000::0/64
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 9000:1::0/64
-  import_v6:
-    - action: accept
+  importV6:
+    - action: Accept
+      matchOperator: In
       cidr: 5000::0/64
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 5000:1::0/64
 EOF
 
-    test_confd_templates bgpfilter/non_existent_filter/explicit_peer
+    test_confd_templates bgpfilter/node_mesh
 
     # Kill confd.
     kill -9 $CONFD_PID
@@ -2534,25 +2600,33 @@ apiVersion: projectcalico.org/v3
 metadata:
   name: test-filter
 spec:
-  export_v4:
-    - action: accept
+  exportV4:
+    - action: Accept
+      matchOperator: In
       cidr: 77.0.0.0/16
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 77.1.0.0/16
-  import_v4:
-    - action: accept
+  importV4:
+    - action: Accept
+      matchOperator: In
       cidr: 44.0.0.0/16
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 44.1.0.0/16
-  export_v6:
-    - action: accept
+  exportV6:
+    - action: Accept
+      matchOperator: In
       cidr: 9000::0/64
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 9000:1::0/64
-  import_v6:
-    - action: accept
+  importV6:
+    - action: Accept
+      matchOperator: In
       cidr: 5000::0/64
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 5000:1::0/64
 ---
 kind: BGPPeer
@@ -2592,22 +2666,8 @@ EOF
         kill_typha
     fi
 }
-#
-#test_bgp_filter_cidr_equal() {
-#
-#}
-#test_bgp_filter_cidr_not_equal() {
-#
-#}
-#test_bgp_filter_cidr_in() {
-#
-#}
-#
-#test_bgp_filter_cidr_not_in() {
-#
-#}
-#
-test_bgp_filter_names() {
+
+test_bgp_filter_match_operators() {
     # For KDD, run Typha and clean up the output directory.
     if [ "$DATASTORE_TYPE" = kubernetes ]; then
         start_typha
@@ -2623,10 +2683,7 @@ test_bgp_filter_names() {
     # Turn the node-mesh off
     turn_mesh_off
 
-    # Create 3 nodes and a BGPFilter then globally pair the nodes all using the same filter that contains
-    # a very long filter name with all possible characters (eg. '.' and '-'). The significance of 43 here is
-    # that BIRD symbol names max out at 64 chars, so 43 is the maximum filter name size after subtracting our
-    # boilerplate content eg. "bgp_" + "[ex | im]port_filter_v[4 | 6]"
+    # Create 3 nodes and a BGPFilter then globally pair the nodes all using the same filter
     $CALICOCTL apply -f - <<EOF
 kind: Node
 apiVersion: projectcalico.org/v3
@@ -2664,53 +2721,214 @@ spec:
 kind: BGPFilter
 apiVersion: projectcalico.org/v3
 metadata:
-  name: 43characters.exactly.so.should.not.truncate
+  name: test-filter-match-operators
 spec:
-  export_v4:
-    - action: accept
+  exportV4:
+    - action: Accept
+      matchOperator: In
       cidr: 77.0.0.0/16
-    - action: reject
+    - action: Reject
+      matchOperator: NotIn
       cidr: 77.1.0.0/16
-  import_v4:
-    - action: accept
+    - action: Accept
+      matchOperator: Equal
+      cidr: 77.2.0.0/16
+    - action: Reject
+      matchOperator: NotEqual
+      cidr: 77.3.0.0/16
+  importV4:
+    - action: Accept
+      matchOperator: In
       cidr: 44.0.0.0/16
-    - action: reject
+    - action: Reject
+      matchOperator: NotIn
       cidr: 44.1.0.0/16
-  export_v6:
-    - action: accept
-      cidr: 9000::0/64
-    - action: reject
+    - action: Accept
+      matchOperator: Equal
+      cidr: 44.2.0.0/16
+    - action: Reject
+      matchOperator: NotEqual
+      cidr: 44.3.0.0/16
+  exportV6:
+    - action: Accept
+      matchOperator: In
+      cidr: 9000:0::0/64
+    - action: Reject
+      matchOperator: NotIn
       cidr: 9000:1::0/64
-  import_v6:
-    - action: accept
+    - action: Accept
+      matchOperator: Equal
+      cidr: 9000:2::0/64
+    - action: Reject
+      matchOperator: NotEqual
+      cidr: 9000:3::0/64
+  importV6:
+    - action: Accept
+      matchOperator: In
+      cidr: 5000:0::0/64
+    - action: Reject
+      matchOperator: NotIn
+      cidr: 5000:1::0/64
+    - action: Accept
+      matchOperator: Equal
+      cidr: 5000:2::0/64
+    - action: Reject
+      matchOperator: NotEqual
+      cidr: 5000:3::0/64
+---
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: test-global-peer-with-filter
+spec:
+  peerSelector: has(global-peer)
+  filters:
+    - test-filter-match-operators
+EOF
+
+    test_confd_templates bgpfilter/match_operators
+
+    # Kill confd.
+    kill -9 $CONFD_PID
+
+    # Turn the node-mesh back on.
+    turn_mesh_on
+
+    # Delete remaining resources.
+    $CALICOCTL delete bgpfilter test-filter-match-operators
+    $CALICOCTL delete bgppeer test-global-peer-with-filter
+    if [ "$DATASTORE_TYPE" = etcdv3 ]; then
+      $CALICOCTL delete node kube-master
+      $CALICOCTL delete node kube-node-1
+      $CALICOCTL delete node kube-node-2
+    fi
+
+    # For KDD, kill Typha.
+    if [ "$DATASTORE_TYPE" = kubernetes ]; then
+        kill_typha
+    fi
+}
+
+test_bgp_filter_names() {
+    # For KDD, run Typha and clean up the output directory.
+    if [ "$DATASTORE_TYPE" = kubernetes ]; then
+        start_typha
+        rm -f /etc/calico/confd/config/*
+    fi
+
+    # Run confd as a background process.
+    echo "Running confd as background process"
+    NODENAME=kube-master BGP_LOGSEVERITYSCREEN="debug" confd -confdir=/etc/calico/confd >$LOGPATH/logd1 2>&1 &
+    CONFD_PID=$!
+    echo "Running with PID " $CONFD_PID
+
+    # Turn the node-mesh off
+    turn_mesh_off
+
+    # Create 3 nodes and a BGPFilter then globally pair the nodes all using the same filter that contains
+    # a very long filter name with all possible characters (eg. '.' and '-'). The significance of 45 here is
+    # that BIRD symbol names max out at 64 chars, so 45 is the maximum filter name size after subtracting our
+    # boilerplate content eg. "bgp_" + "[ex | im]portFilterV[4 | 6]"
+    $CALICOCTL apply -f - <<EOF
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: kube-master
+  labels:
+    global-peer: yes
+spec:
+  bgp:
+    ipv4Address: 10.192.0.2/16
+    ipv6Address: "2001::102/64"
+---
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: kube-node-1
+  labels:
+    global-peer: yes
+spec:
+  bgp:
+    ipv4Address: 10.192.0.3/16
+    ipv6Address: "2001::103/64"
+---
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: kube-node-2
+  labels:
+    global-peer: yes
+spec:
+  bgp:
+    ipv4Address: 10.192.0.4/16
+    ipv6Address: "2001::104/64"
+---
+kind: BGPFilter
+apiVersion: projectcalico.org/v3
+metadata:
+  name: 45characters.exactly.so.should.not.truncate-1
+spec:
+  exportV4:
+    - action: Accept
+      matchOperator: In
+      cidr: 77.0.0.0/16
+    - action: Reject
+      matchOperator: In
+      cidr: 77.1.0.0/16
+  importV4:
+    - action: Accept
+      matchOperator: In
+      cidr: 44.0.0.0/16
+    - action: Reject
+      matchOperator: In
+      cidr: 44.1.0.0/16
+  exportV6:
+    - action: Accept
+      matchOperator: In
+      cidr: 9000::0/64
+    - action: Reject
+      matchOperator: In
+      cidr: 9000:1::0/64
+  importV6:
+    - action: Accept
+      matchOperator: In
       cidr: 5000::0/64
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 5000:1::0/64
 ---
 kind: BGPFilter
 apiVersion: projectcalico.org/v3
 metadata:
-  name: 44characters.exactly.so.should.truncate-1234
+  name: 46characters.exactly.so.should.truncate-123456
 spec:
-  export_v4:
-    - action: accept
+  exportV4:
+    - action: Accept
+      matchOperator: In
       cidr: 77.2.0.0/16
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 77.3.0.0/16
-  import_v4:
-    - action: accept
+  importV4:
+    - action: Accept
+      matchOperator: In
       cidr: 44.2.0.0/16
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 44.3.0.0/16
-  export_v6:
-    - action: accept
+  exportV6:
+    - action: Accept
+      matchOperator: In
       cidr: 9000:2::0/64
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 9000:3::0/64
-  import_v6:
-    - action: accept
+  importV6:
+    - action: Accept
+      matchOperator: In
       cidr: 5000:2::0/64
-    - action: reject
+    - action: Reject
+      matchOperator: In
       cidr: 5000:3::0/64
 ---
 kind: BGPPeer
@@ -2720,8 +2938,8 @@ metadata:
 spec:
   peerSelector: has(global-peer)
   filters:
-    - 43characters.exactly.so.should.not.truncate
-    - 44characters.exactly.so.should.truncate-1234
+    - 45characters.exactly.so.should.not.truncate-1
+    - 46characters.exactly.so.should.truncate-123456
 EOF
 
     test_confd_templates bgpfilter/filter_names/
@@ -2733,9 +2951,9 @@ EOF
     turn_mesh_on
 
     # Delete remaining resources.
-    $CALICOCTL delete bgpfilter 43characters.exactly.so.should.not.truncate
-    $CALICOCTL delete bgpfilter 44characters.exactly.so.should.truncate-1234
-    $CALICOCTL delete bgppeer test-global-peer-with-long-filter-name
+    $CALICOCTL delete bgpfilter 45characters.exactly.so.should.not.truncate-1
+    $CALICOCTL delete bgpfilter 46characters.exactly.so.should.truncate-123456
+    $CALICOCTL delete bgppeer test-global-peer-with-truncated-filter-name
     if [ "$DATASTORE_TYPE" = etcdv3 ]; then
       $CALICOCTL delete node kube-master
       $CALICOCTL delete node kube-node-1
@@ -2758,4 +2976,5 @@ test_bgp_filters() {
   test_bgp_filter_with_node_mesh_enabled
   test_bgp_filter_deletion
   test_bgp_filter_names
+  test_bgp_filter_match_operators
 }
