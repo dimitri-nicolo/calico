@@ -778,6 +778,26 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			syncTester.ExpectPath("/calico/resources/v3/projectcalico.org/packetcaptures/namespace-1/my-capture")
 			syncTester.ExpectCacheSize(expectedCacheSize)
 
+			By("Creating an ExternalNetwork")
+			externalNetworkName := "my-network"
+			index := uint32(10)
+			_, err = c.ExternalNetwork().Create(
+				ctx,
+				&apiv3.ExternalNetwork{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: externalNetworkName,
+					},
+					Spec: apiv3.ExternalNetworkSpec{
+						RouteTableIndex: &index,
+					},
+				},
+				options.SetOptions{},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			expectedCacheSize += 1
+			syncTester.ExpectPath("/calico/resources/v3/projectcalico.org/externalnetworks/my-network")
+			syncTester.ExpectCacheSize(expectedCacheSize)
+
 			By("Starting a new syncer and verifying that all current entries are returned before sync status")
 			// We need to create a new syncTester and syncer.
 			current := syncTester.GetCacheEntries()

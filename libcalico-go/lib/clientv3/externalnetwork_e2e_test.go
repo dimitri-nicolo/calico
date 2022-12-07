@@ -37,8 +37,8 @@ import (
 var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
 
 	ctx := context.Background()
-	name1 := "ExternalNetwork-1"
-	name2 := "ExternalNetwork-2"
+	name1 := "externalnetwork-1"
+	name2 := "externalnetwork-2"
 	index1 := uint32(100)
 	index2 := uint32(200)
 	spec1 := apiv3.ExternalNetworkSpec{
@@ -172,17 +172,17 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			Expect(outError.Error()).To(Equal("update conflict: ExternalNetwork(" + name1 + ")"))
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
-				By("Getting ExternalNetwork (name1) with the original resource version and comparing the output against status1")
+				By("Getting ExternalNetwork (name1) with the original resource version and comparing the output against spec1")
 				res, outError = c.ExternalNetwork().Get(ctx, name1, options.GetOptions{ResourceVersion: rv1_1})
 				Expect(outError).NotTo(HaveOccurred())
-				Expect(res).To(MatchResource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec1, status1))
+				Expect(res).To(MatchResource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec1))
 				Expect(res.ResourceVersion).To(Equal(rv1_1))
 			}
 
-			By("Getting ExternalNetwork (name1) with the updated resource version and comparing the output against status2")
+			By("Getting ExternalNetwork (name1) with the updated resource version and comparing the output against spec2")
 			res, outError = c.ExternalNetwork().Get(ctx, name1, options.GetOptions{ResourceVersion: rv1_2})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(res).To(MatchResource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec1, status2))
+			Expect(res).To(MatchResource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec2))
 			Expect(res.ResourceVersion).To(Equal(rv1_2))
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
@@ -194,11 +194,11 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 				))
 			}
 
-			By("Listing ExternalNetwork with the latest resource version and checking for two results with name1/spec1 and name2/spec2")
+			By("Listing ExternalNetwork with the latest resource version and checking for two results with name1/spec2 and name2/spec2")
 			outList, outError = c.ExternalNetwork().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(outList.Items).To(ConsistOf(
-				testutils.Resource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec1),
+				testutils.Resource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec2),
 				testutils.Resource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name2, spec2),
 			))
 
@@ -212,7 +212,7 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			By("Deleting ExternalNetwork (name1) with the new resource version")
 			dres, outError := c.ExternalNetwork().Delete(ctx, name1, options.DeleteOptions{ResourceVersion: rv1_2})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(dres).To(MatchResource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec1, status2))
+			Expect(dres).To(MatchResource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec2))
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Updating ExternalNetwork name2 with a 2s TTL and waiting for the entry to be deleted")
@@ -245,7 +245,7 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 				By("Attempting to deleting ExternalNetwork (name2)")
 				dres, outError = c.ExternalNetwork().Delete(ctx, name2, options.DeleteOptions{})
 				Expect(outError).NotTo(HaveOccurred())
-				Expect(dres).To(MatchResource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name2, spec2, status2))
+				Expect(dres).To(MatchResource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name2, spec2))
 			}
 
 			By("Attempting to deleting ExternalNetwork (name2) again")
@@ -291,6 +291,7 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 				},
 				options.SetOptions{},
 			)
+			Expect(err).NotTo(HaveOccurred())
 			rev1 := outRes1.ResourceVersion
 
 			By("Configuring a ExternalNetwork name2/spec2 and storing the response")
@@ -337,7 +338,7 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 				ctx,
 				&apiv3.ExternalNetwork{
 					ObjectMeta: outRes2.ObjectMeta,
-					Spec:       spec2,
+					Spec:       spec1,
 				},
 				options.SetOptions{},
 			)
