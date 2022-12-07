@@ -49,6 +49,7 @@ rules:
       - networkpolicies
       - clusterinformations
       - tiers
+      - externalnetworks
     verbs:
       - create
       - get
