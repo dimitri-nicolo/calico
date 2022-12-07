@@ -2,24 +2,35 @@
 # It is the source of truth for two different consumers:
 # - the 'archive index' page which must show a link to each release
 # - the netlify build machinery which must build each site.
-# The format is a list with each field corresponding to a 'release-vX.Y' branch.
-# To support 'branch-per-directory', an entry named 'legacy' can be specified which is a dictionary describing
-# all releases using the old model.
+# Each version has the following fields:
+# - version: The version in vx.y format corresponding to a 'release-vX.Y' branch.
+# - preview: if true, the version drop down shows a special badge.
+# - latest: if true, it will be listed differently in the drop down and releases page
 # Order matters - place latest releases first
-- v3.13
-- v3.12
-- v3.11
-- v3.10
-- v3.9
-- v3.8
-- v3.7
-- v3.6
-- v3.5
-- v3.4
-- v3.3
-- v3.2
-- v3.1
-- v3.0
-- v2.8
-- v2.7
-- legacy: [v2.6, v2.5, v2.4, v2.3, v2.2, v2.1]
+- version: v3.15
+  preview: true
+- version: v3.14
+  latest: true
+- version: v3.13
+- version: v3.12
+- version: v3.11
+- version: v3.10
+- version: v3.9
+- version: v3.8
+- version: v3.7
+- version: v3.6
+- version: v3.5
+- version: v3.4
+- version: v3.3
+- version: v3.2
+- version: v3.1
+- version: v3.0
+- version: v2.8
+- version: v2.7
+- version: v2.6
+- version: v2.6
+- version: v2.5
+- version: v2.4
+- version: v2.3
+- version: v2.2
+- version: v2.1

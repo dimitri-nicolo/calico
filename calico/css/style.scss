@@ -846,6 +846,10 @@ $max-toc-height: calc(100vh - #{$sticky-top + $navbar-margin-bottom});
   background-color: #f0ad4e;
 }
 
+.preview {
+  background-color: #aaffff;
+}
+
 .bg-primary {
   background-color: #007bff!important;
 }

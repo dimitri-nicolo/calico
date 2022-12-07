@@ -4,32 +4,39 @@ description: Home
 layout: docwithnav
 ---
 This page contains permalinks to specific versions of {{site.prodname}} documentation, as well as links to the latest released
-and the nightly build of documentation. Each set of versioned docs includes a Release Nodes page for that particular
+and the nightly build of documentation. Each set of versioned docs includes a Release Notes page for that particular
 version.
-{%- if site.archive %}
-- [latest](/) (currently {{site.data.versions.first.title}})
-- [nightly](/master/){: data-proofer-ignore=""} (master)
-- [{{site.data.versions.first.title}}](/{{page.version}})
-{%- for version in site.data.archives %}
-{%- if version.first %}
-    {%- for v in version["legacy"] %}
-- [{{ v }}](/{{ v }}/){: data-proofer-ignore=""}
-    {%- endfor %}
-{%- else %}
-- [{{ version }}](/{{ version }}/)
-{%- endif %}
+
+- [master](/master){: data-proofer-ignore=""} (nightly)
+{%- for archive in site.data.archives %}
+  {%- if archive.preview %}
+- [{{ archive.version }}](/{{ archive.version }}){: data-proofer-ignore=""} (preview)
+  {%- elsif archive.latest %}
+    {%- if site.data.versions.first.title == "master" %}
+- [latest](/{{ archive.version }}){: data-proofer-ignore=""} (currently {{archive.version}})
+    {%- else %}
+- [latest](/{{ archive.version }}){: data-proofer-ignore=""} (currently {{site.data.versions.first.title}})
+    {%- endif %}
+  {%- else %}
+- [{{ archive.version }}](/{{ archive.version }}){: data-proofer-ignore=""}
+  {%- endif %}
 {%- endfor %}
-{% endif %}
+
 <div id="release-list" class="hidden" markdown="0" data-proofer-ignore>
-    <li><a href="/">{% if site.data.versions.first.title == "master" %}nightly{% else %}{{site.data.versions.first.title | regex_replace: site.version_pattern,"Version \1"}}{% endif %}<span class="badge release-badge latest">latest</span></a></li>
+    {%- for archive in site.data.archives %}
+        {% if archive.latest %}
+            <li><a href="/{{archive.version}}">{{archive.version}}<span class="badge release-badge latest">latest</span></a></li>
+        {% endif %}  
+    {%- endfor %} 
     <li role="separator" class="divider"></li>
-    <li><a href="/master">nightly<span class="badge release-badge nightly">master</span></a></li>
-    {%- for version in site.data.archives %}
-        {%- if version.first %}
-        {% continue %}
-        {%- else %}
-        <li><a href="/{{ version | regex_replace: '(v[0-9]+\.[0-9]+)(.*)$', "\1" }}/">Version {{ version | regex_replace: 'v?([0-9]+\.[0-9]+)(.*)$', "\1"  }}{% if version contains 'preview' %}<span class="badge release-badge nightly">preview</span>{% endif %}</a></li>
-        {%- endif %}
-    {%- endfor %}
+    <li><a href="/master">master<span class="badge release-badge nightly">nightly</span></a></li>
+    {%- for archive in site.data.archives %}
+        {% if archive.preview %}
+            <li><a href="{{ archive.version }}">{{ archive.version }}<span class="badge release-badge preview">preview</span></a></li>
+        {% else %}
+            <li><a href="{{ archive.version }}">{{ archive.version }} </a></li>
+        {% endif %}
+        {%- if forloop.index > 5 %}{% break %}{% endif %}
+    {%- endfor %} 
     <li><a href="/releases">Earlier versions</a></li>
 </div>

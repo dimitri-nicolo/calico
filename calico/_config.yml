@@ -4,9 +4,7 @@
 # Make our URLs look nice. We're not a blog with dated posts, we just want the title.
 permalink:     /:title.html
 
-archive: false
 noindex: false
-version_pattern: v?([0-9]+\.[0-9]+)(?:.*?)$
 
 plugins:
   - jekyll-redirect-from
