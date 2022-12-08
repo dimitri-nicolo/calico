@@ -32,9 +32,9 @@ version.
     <li><a href="/master">master<span class="badge release-badge nightly">nightly</span></a></li>
     {%- for archive in site.data.archives %}
         {% if archive.preview %}
-            <li><a href="{{ archive.version }}">{{ archive.version }}<span class="badge release-badge preview">preview</span></a></li>
+            <li><a href="/{{ archive.version }}">{{ archive.version }}<span class="badge release-badge preview">preview</span></a></li>
         {% else %}
-            <li><a href="{{ archive.version }}">{{ archive.version }} </a></li>
+            <li><a href="/{{ archive.version }}">{{ archive.version }} </a></li>
         {% endif %}
         {%- if forloop.index > 5 %}{% break %}{% endif %}
     {%- endfor %} 
