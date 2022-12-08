@@ -2,10 +2,6 @@ include ../metadata.mk
 
 PACKAGE_NAME            ?= github.com/projectcalico/calico/compliance
 
-# Override VALIDARCHES inferenced in common Makefile.
-#   This repo differs in how ARCHES are determined compared to common logic.
-#   overriding the value with the only platform supported ATM.
-
 COMPLIANCE_SERVER_IMAGE      =compliance-server
 COMPLIANCE_CONTROLLER_IMAGE  =compliance-controller
 COMPLIANCE_SNAPSHOTTER_IMAGE =compliance-snapshotter
@@ -31,8 +27,6 @@ include ../lib.Makefile
 ##############################################################################
 # Define some constants
 ##############################################################################
-KUBE_BENCH_VERSION		?= b649588f46c54c84cd9c88510680b5a651f12d46
-
 # Linker flags for building Compliance Server.
 #
 # We use -X to insert the version information into the placeholder variables
