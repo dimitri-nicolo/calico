@@ -350,7 +350,7 @@ func (c *MockIPAMClient) BlockAffinities() client.BlockAffinityInterface {
 	return nil
 }
 
-func (c *MockIPAMClient) ExternalNetwork() client.ExternalNetworkInterface {
+func (c *MockIPAMClient) ExternalNetworks() client.ExternalNetworkInterface {
 	// DO NOTHING
 	return nil
 }

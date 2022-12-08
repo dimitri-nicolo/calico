@@ -35,13 +35,13 @@ type ExternalNetworkInterface interface {
 }
 
 // ExternalNetwork implements ExternalNetworkInterface
-type ExternalNetwork struct {
+type ExternalNetworks struct {
 	client client
 }
 
 // Create takes the representation of a ExternalNetwork and creates it.  Returns the stored
 // representation of the ExternalNetwork, and an error, if there is any.
-func (r ExternalNetwork) Create(ctx context.Context, res *apiv3.ExternalNetwork, opts options.SetOptions) (*apiv3.ExternalNetwork, error) {
+func (r ExternalNetworks) Create(ctx context.Context, res *apiv3.ExternalNetwork, opts options.SetOptions) (*apiv3.ExternalNetwork, error) {
 	if err := validator.Validate(res); err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (r ExternalNetwork) Create(ctx context.Context, res *apiv3.ExternalNetwork,
 
 // Update takes the representation of a ExternalNetwork and updates it. Returns the stored
 // representation of the ExternalNetwork, and an error, if there is any.
-func (r ExternalNetwork) Update(ctx context.Context, res *apiv3.ExternalNetwork, opts options.SetOptions) (*apiv3.ExternalNetwork, error) {
+func (r ExternalNetworks) Update(ctx context.Context, res *apiv3.ExternalNetwork, opts options.SetOptions) (*apiv3.ExternalNetwork, error) {
 	if err := validator.Validate(res); err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (r ExternalNetwork) Update(ctx context.Context, res *apiv3.ExternalNetwork,
 }
 
 // Delete takes name of the ExternalNetwork and deletes it. Returns an error if one occurs.
-func (r ExternalNetwork) Delete(ctx context.Context, name string, opts options.DeleteOptions) (*apiv3.ExternalNetwork, error) {
+func (r ExternalNetworks) Delete(ctx context.Context, name string, opts options.DeleteOptions) (*apiv3.ExternalNetwork, error) {
 	out, err := r.client.resources.Delete(ctx, opts, apiv3.KindExternalNetwork, noNamespace, name)
 	if out != nil {
 		return out.(*apiv3.ExternalNetwork), err
@@ -78,7 +78,7 @@ func (r ExternalNetwork) Delete(ctx context.Context, name string, opts options.D
 
 // Get takes name of the ExternalNetwork, and returns the corresponding ExternalNetwork object,
 // and an error if there is any.
-func (r ExternalNetwork) Get(ctx context.Context, name string, opts options.GetOptions) (*apiv3.ExternalNetwork, error) {
+func (r ExternalNetworks) Get(ctx context.Context, name string, opts options.GetOptions) (*apiv3.ExternalNetwork, error) {
 	out, err := r.client.resources.Get(ctx, opts, apiv3.KindExternalNetwork, noNamespace, name)
 	if out != nil {
 		return out.(*apiv3.ExternalNetwork), err
@@ -87,7 +87,7 @@ func (r ExternalNetwork) Get(ctx context.Context, name string, opts options.GetO
 }
 
 // List returns the list of ExternalNetwork objects that match the supplied options.
-func (r ExternalNetwork) List(ctx context.Context, opts options.ListOptions) (*apiv3.ExternalNetworkList, error) {
+func (r ExternalNetworks) List(ctx context.Context, opts options.ListOptions) (*apiv3.ExternalNetworkList, error) {
 	res := &apiv3.ExternalNetworkList{}
 	if err := r.client.resources.List(ctx, opts, apiv3.KindExternalNetwork, apiv3.KindExternalNetworkList, res); err != nil {
 		return nil, err
@@ -97,6 +97,6 @@ func (r ExternalNetwork) List(ctx context.Context, opts options.ListOptions) (*a
 
 // Watch returns a watch.Interface that watches the BGPPeers that match the
 // supplied options.
-func (r ExternalNetwork) Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error) {
+func (r ExternalNetworks) Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error) {
 	return r.client.resources.Watch(ctx, opts, apiv3.KindExternalNetwork, nil)
 }

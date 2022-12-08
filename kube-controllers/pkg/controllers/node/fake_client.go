@@ -235,6 +235,10 @@ func (f *FakeCalicoClient) CalicoNodeStatus() clientv3.CalicoNodeStatusInterface
 	panic("not implemented")
 }
 
+func (f *FakeCalicoClient) ExternalNetworks() clientv3.ExternalNetworkInterface {
+	panic("not implemented")
+}
+
 func (f *FakeCalicoClient) IPAMConfig() clientv3.IPAMConfigInterface {
 	panic("not implemented")
 }

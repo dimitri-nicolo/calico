@@ -27,28 +27,28 @@ func NewExternalNetworkStorage(opts Options) (registry.DryRunnableStorage, facto
 	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
 		res := obj.(*api.ExternalNetwork)
-		return c.ExternalNetwork().Create(ctx, res, oso)
+		return c.ExternalNetworks().Create(ctx, res, oso)
 	}
 	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
 		res := obj.(*api.ExternalNetwork)
-		return c.ExternalNetwork().Update(ctx, res, oso)
+		return c.ExternalNetworks().Update(ctx, res, oso)
 	}
 	getFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
 		ogo := opts.(options.GetOptions)
-		return c.ExternalNetwork().Get(ctx, name, ogo)
+		return c.ExternalNetworks().Get(ctx, name, ogo)
 	}
 	deleteFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
 		odo := opts.(options.DeleteOptions)
-		return c.ExternalNetwork().Delete(ctx, name, odo)
+		return c.ExternalNetworks().Delete(ctx, name, odo)
 	}
 	listFn := func(ctx context.Context, c clientv3.Interface, opts clientOpts) (resourceListObject, error) {
 		olo := opts.(options.ListOptions)
-		return c.ExternalNetwork().List(ctx, olo)
+		return c.ExternalNetworks().List(ctx, olo)
 	}
 	watchFn := func(ctx context.Context, c clientv3.Interface, opts clientOpts) (watch.Interface, error) {
 		olo := opts.(options.ListOptions)
-		return c.ExternalNetwork().Watch(ctx, olo)
+		return c.ExternalNetworks().Watch(ctx, olo)
 	}
 	hasRestrictionsFn := func(obj resourceObject) bool {
 		return false

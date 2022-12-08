@@ -212,7 +212,7 @@ var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAl
 
 			By("Creating an ExternalNetwork")
 			index := uint32(28)
-			_, err = c.ExternalNetwork().Create(
+			_, err = c.ExternalNetworks().Create(
 				ctx,
 				&apiv3.ExternalNetwork{
 					ObjectMeta: metav1.ObjectMeta{Name: "net1"},

@@ -58,7 +58,7 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			be.Clean()
 
 			By("Updating the ExternalNetwork before it is created")
-			_, outError := c.ExternalNetwork().Update(ctx, &apiv3.ExternalNetwork{
+			_, outError := c.ExternalNetworks().Update(ctx, &apiv3.ExternalNetwork{
 				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: "test-fail-ExternalNetwork"},
 				Spec:       spec1,
 			}, options.SetOptions{})
@@ -66,7 +66,7 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			Expect(outError.Error()).To(ContainSubstring("resource does not exist: ExternalNetwork(" + name1 + ") with error:"))
 
 			By("Attempting to creating a new ExternalNetwork with name1/spec1 and a non-empty ResourceVersion")
-			_, outError = c.ExternalNetwork().Create(ctx, &apiv3.ExternalNetwork{
+			_, outError = c.ExternalNetworks().Create(ctx, &apiv3.ExternalNetwork{
 				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "12345"},
 				Spec:       spec1,
 			}, options.SetOptions{})
@@ -74,7 +74,7 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			Expect(outError.Error()).To(Equal("error with field Metadata.ResourceVersion = '12345' (field must not be set for a Create request)"))
 
 			By("Creating a new ExternalNetwork with name1/spec1")
-			res1, outError := c.ExternalNetwork().Create(ctx, &apiv3.ExternalNetwork{
+			res1, outError := c.ExternalNetworks().Create(ctx, &apiv3.ExternalNetwork{
 				ObjectMeta: metav1.ObjectMeta{Name: name1},
 				Spec:       spec1,
 			}, options.SetOptions{})
@@ -84,7 +84,7 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			rv1_1 := res1.ResourceVersion
 
 			By("Attempting to create the same ExternalNetwork with name1 but with spec2")
-			_, outError = c.ExternalNetwork().Create(ctx, &apiv3.ExternalNetwork{
+			_, outError = c.ExternalNetworks().Create(ctx, &apiv3.ExternalNetwork{
 				ObjectMeta: metav1.ObjectMeta{Name: name1},
 				Spec:       spec2,
 			}, options.SetOptions{})
@@ -92,38 +92,38 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			Expect(outError.Error()).To(Equal("resource already exists: ExternalNetwork(" + name1 + ")"))
 
 			By("Getting ExternalNetwork (name1) and comparing the output against spec1")
-			res, outError := c.ExternalNetwork().Get(ctx, name1, options.GetOptions{})
+			res, outError := c.ExternalNetworks().Get(ctx, name1, options.GetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(res).To(MatchResource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec1))
 			Expect(res.ResourceVersion).To(Equal(res1.ResourceVersion))
 
 			By("Getting ExternalNetwork (name2) before it is created")
-			_, outError = c.ExternalNetwork().Get(ctx, name2, options.GetOptions{})
+			_, outError = c.ExternalNetworks().Get(ctx, name2, options.GetOptions{})
 			Expect(outError).To(HaveOccurred())
 			Expect(outError.Error()).To(ContainSubstring("resource does not exist: ExternalNetwork(" + name2 + ") with error:"))
 
 			By("Listing all the ExternalNetwork, expecting a single result with name1/spec1")
-			outList, outError := c.ExternalNetwork().List(ctx, options.ListOptions{})
+			outList, outError := c.ExternalNetworks().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(outList.Items).To(ConsistOf(
 				testutils.Resource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec1),
 			))
 
 			By("Creating a new ExternalNetwork with name2")
-			res2, outError := c.ExternalNetwork().Create(ctx, &apiv3.ExternalNetwork{
+			res2, outError := c.ExternalNetworks().Create(ctx, &apiv3.ExternalNetwork{
 				ObjectMeta: metav1.ObjectMeta{Name: name2},
 				Spec:       spec2,
 			}, options.SetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 
 			By("Getting ExternalNetwork (name2) and comparing the output against spec2")
-			res, outError = c.ExternalNetwork().Get(ctx, name2, options.GetOptions{})
+			res, outError = c.ExternalNetworks().Get(ctx, name2, options.GetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(res2).To(MatchResource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name2, spec2))
 			Expect(res.ResourceVersion).To(Equal(res2.ResourceVersion))
 
 			By("Listing all the ExternalNetwork, expecting two results with name1/spec1 and name2/spec2")
-			outList, outError = c.ExternalNetwork().List(ctx, options.ListOptions{})
+			outList, outError = c.ExternalNetworks().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(outList.Items).To(ConsistOf(
 				testutils.Resource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec1),
@@ -132,12 +132,12 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 
 			By("Updating ExternalNetwork name1 with index2")
 			res1.Spec.RouteTableIndex = &index2
-			res1, outError = c.ExternalNetwork().Update(ctx, res1, options.SetOptions{})
+			res1, outError = c.ExternalNetworks().Update(ctx, res1, options.SetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(res1).To(MatchResource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec2))
 
 			By("Attempting to update the ExternalNetwork without a Creation Timestamp")
-			res, outError = c.ExternalNetwork().Update(ctx, &apiv3.ExternalNetwork{
+			res, outError = c.ExternalNetworks().Update(ctx, &apiv3.ExternalNetwork{
 				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", UID: "test-fail-ExternalNetwork"},
 				Spec:       spec1,
 			}, options.SetOptions{})
@@ -146,7 +146,7 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			Expect(outError.Error()).To(Equal("error with field Metadata.CreationTimestamp = '0001-01-01 00:00:00 +0000 UTC' (field must be set for an Update request)"))
 
 			By("Attempting to update the ExternalNetwork without a UID")
-			res, outError = c.ExternalNetwork().Update(ctx, &apiv3.ExternalNetwork{
+			res, outError = c.ExternalNetworks().Update(ctx, &apiv3.ExternalNetwork{
 				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now()},
 				Spec:       spec1,
 			}, options.SetOptions{})
@@ -160,34 +160,34 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			By("Updating ExternalNetwork name1 without specifying a resource version")
 			res1.Spec = spec1
 			res1.ObjectMeta.ResourceVersion = ""
-			_, outError = c.ExternalNetwork().Update(ctx, res1, options.SetOptions{})
+			_, outError = c.ExternalNetworks().Update(ctx, res1, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
 			Expect(outError.Error()).To(Equal("error with field Metadata.ResourceVersion = '' (field must be set for an Update request)"))
 
 			By("Updating ExternalNetwork name1 using the previous resource version")
 			res1.Spec = spec1
 			res1.ResourceVersion = rv1_1
-			_, outError = c.ExternalNetwork().Update(ctx, res1, options.SetOptions{})
+			_, outError = c.ExternalNetworks().Update(ctx, res1, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
 			Expect(outError.Error()).To(Equal("update conflict: ExternalNetwork(" + name1 + ")"))
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Getting ExternalNetwork (name1) with the original resource version and comparing the output against spec1")
-				res, outError = c.ExternalNetwork().Get(ctx, name1, options.GetOptions{ResourceVersion: rv1_1})
+				res, outError = c.ExternalNetworks().Get(ctx, name1, options.GetOptions{ResourceVersion: rv1_1})
 				Expect(outError).NotTo(HaveOccurred())
 				Expect(res).To(MatchResource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec1))
 				Expect(res.ResourceVersion).To(Equal(rv1_1))
 			}
 
 			By("Getting ExternalNetwork (name1) with the updated resource version and comparing the output against spec2")
-			res, outError = c.ExternalNetwork().Get(ctx, name1, options.GetOptions{ResourceVersion: rv1_2})
+			res, outError = c.ExternalNetworks().Get(ctx, name1, options.GetOptions{ResourceVersion: rv1_2})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(res).To(MatchResource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec2))
 			Expect(res.ResourceVersion).To(Equal(rv1_2))
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Listing ExternalNetwork with the original resource version and checking for a single result with name1/spec1")
-				outList, outError = c.ExternalNetwork().List(ctx, options.ListOptions{ResourceVersion: rv1_1})
+				outList, outError = c.ExternalNetworks().List(ctx, options.ListOptions{ResourceVersion: rv1_1})
 				Expect(outError).NotTo(HaveOccurred())
 				Expect(outList.Items).To(ConsistOf(
 					testutils.Resource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec1),
@@ -195,7 +195,7 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			}
 
 			By("Listing ExternalNetwork with the latest resource version and checking for two results with name1/spec2 and name2/spec2")
-			outList, outError = c.ExternalNetwork().List(ctx, options.ListOptions{})
+			outList, outError = c.ExternalNetworks().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(outList.Items).To(ConsistOf(
 				testutils.Resource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec2),
@@ -204,62 +204,62 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Deleting ExternalNetwork (name1) with the old resource version")
-				_, outError = c.ExternalNetwork().Delete(ctx, name1, options.DeleteOptions{ResourceVersion: rv1_1})
+				_, outError = c.ExternalNetworks().Delete(ctx, name1, options.DeleteOptions{ResourceVersion: rv1_1})
 				Expect(outError).To(HaveOccurred())
 				Expect(outError.Error()).To(Equal("update conflict: ExternalNetwork(" + name1 + ")"))
 			}
 
 			By("Deleting ExternalNetwork (name1) with the new resource version")
-			dres, outError := c.ExternalNetwork().Delete(ctx, name1, options.DeleteOptions{ResourceVersion: rv1_2})
+			dres, outError := c.ExternalNetworks().Delete(ctx, name1, options.DeleteOptions{ResourceVersion: rv1_2})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(dres).To(MatchResource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec2))
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Updating ExternalNetwork name2 with a 2s TTL and waiting for the entry to be deleted")
-				_, outError = c.ExternalNetwork().Update(ctx, res2, options.SetOptions{TTL: 2 * time.Second})
+				_, outError = c.ExternalNetworks().Update(ctx, res2, options.SetOptions{TTL: 2 * time.Second})
 				Expect(outError).NotTo(HaveOccurred())
 				time.Sleep(1 * time.Second)
-				_, outError = c.ExternalNetwork().Get(ctx, name2, options.GetOptions{})
+				_, outError = c.ExternalNetworks().Get(ctx, name2, options.GetOptions{})
 				Expect(outError).NotTo(HaveOccurred())
 				time.Sleep(2 * time.Second)
-				_, outError = c.ExternalNetwork().Get(ctx, name2, options.GetOptions{})
+				_, outError = c.ExternalNetworks().Get(ctx, name2, options.GetOptions{})
 				Expect(outError).To(HaveOccurred())
 				Expect(outError.Error()).To(ContainSubstring("resource does not exist: ExternalNetwork(" + name2 + ") with error:"))
 
 				By("Creating ExternalNetwork name2 with a 2s TTL and waiting for the entry to be deleted")
-				_, outError = c.ExternalNetwork().Create(ctx, &apiv3.ExternalNetwork{
+				_, outError = c.ExternalNetworks().Create(ctx, &apiv3.ExternalNetwork{
 					ObjectMeta: metav1.ObjectMeta{Name: name2},
 					Spec:       spec2,
 				}, options.SetOptions{TTL: 2 * time.Second})
 				Expect(outError).NotTo(HaveOccurred())
 				time.Sleep(1 * time.Second)
-				_, outError = c.ExternalNetwork().Get(ctx, name2, options.GetOptions{})
+				_, outError = c.ExternalNetworks().Get(ctx, name2, options.GetOptions{})
 				Expect(outError).NotTo(HaveOccurred())
 				time.Sleep(2 * time.Second)
-				_, outError = c.ExternalNetwork().Get(ctx, name2, options.GetOptions{})
+				_, outError = c.ExternalNetworks().Get(ctx, name2, options.GetOptions{})
 				Expect(outError).To(HaveOccurred())
 				Expect(outError.Error()).To(ContainSubstring("resource does not exist: ExternalNetwork(" + name2 + ") with error:"))
 			}
 
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
 				By("Attempting to deleting ExternalNetwork (name2)")
-				dres, outError = c.ExternalNetwork().Delete(ctx, name2, options.DeleteOptions{})
+				dres, outError = c.ExternalNetworks().Delete(ctx, name2, options.DeleteOptions{})
 				Expect(outError).NotTo(HaveOccurred())
 				Expect(dres).To(MatchResource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name2, spec2))
 			}
 
 			By("Attempting to deleting ExternalNetwork (name2) again")
-			_, outError = c.ExternalNetwork().Delete(ctx, name2, options.DeleteOptions{})
+			_, outError = c.ExternalNetworks().Delete(ctx, name2, options.DeleteOptions{})
 			Expect(outError).To(HaveOccurred())
 			Expect(outError.Error()).To(ContainSubstring("resource does not exist: ExternalNetwork(" + name2 + ") with error:"))
 
 			By("Listing all ExternalNetwork and expecting no items")
-			outList, outError = c.ExternalNetwork().List(ctx, options.ListOptions{})
+			outList, outError = c.ExternalNetworks().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(outList.Items).To(HaveLen(0))
 
 			By("Getting ExternalNetwork (name2) and expecting an error")
-			_, outError = c.ExternalNetwork().Get(ctx, name2, options.GetOptions{})
+			_, outError = c.ExternalNetworks().Get(ctx, name2, options.GetOptions{})
 			Expect(outError).To(HaveOccurred())
 			Expect(outError.Error()).To(ContainSubstring("resource does not exist: ExternalNetwork(" + name2 + ") with error:"))
 		},
@@ -277,13 +277,13 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			be.Clean()
 
 			By("Listing ExternalNetwork with the latest resource version and checking for two results with name1 and name2")
-			outList, outError := c.ExternalNetwork().List(ctx, options.ListOptions{})
+			outList, outError := c.ExternalNetworks().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(outList.Items).To(HaveLen(0))
 			rev0 := outList.ResourceVersion
 
 			By("Configuring a ExternalNetwork name1 and storing the response")
-			outRes1, err := c.ExternalNetwork().Create(
+			outRes1, err := c.ExternalNetworks().Create(
 				ctx,
 				&apiv3.ExternalNetwork{
 					ObjectMeta: metav1.ObjectMeta{Name: name1},
@@ -295,7 +295,7 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			rev1 := outRes1.ResourceVersion
 
 			By("Configuring a ExternalNetwork name2/spec2 and storing the response")
-			outRes2, err := c.ExternalNetwork().Create(
+			outRes2, err := c.ExternalNetworks().Create(
 				ctx,
 				&apiv3.ExternalNetwork{
 					ObjectMeta: metav1.ObjectMeta{Name: name2},
@@ -305,13 +305,13 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			)
 
 			By("Starting a watcher from revision rev1 - this should skip the first creation")
-			w, err := c.ExternalNetwork().Watch(ctx, options.ListOptions{ResourceVersion: rev1})
+			w, err := c.ExternalNetworks().Watch(ctx, options.ListOptions{ResourceVersion: rev1})
 			Expect(err).NotTo(HaveOccurred())
 			testWatcher1 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
 			defer testWatcher1.Stop()
 
 			By("Deleting res1")
-			_, err = c.ExternalNetwork().Delete(ctx, name1, options.DeleteOptions{})
+			_, err = c.ExternalNetworks().Delete(ctx, name1, options.DeleteOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Checking for two events, create res2 and delete re1")
@@ -328,13 +328,13 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			testWatcher1.Stop()
 
 			By("Starting a watcher from rev0 - this should get all events")
-			w, err = c.ExternalNetwork().Watch(ctx, options.ListOptions{ResourceVersion: rev0})
+			w, err = c.ExternalNetworks().Watch(ctx, options.ListOptions{ResourceVersion: rev0})
 			Expect(err).NotTo(HaveOccurred())
 			testWatcher2 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
 			defer testWatcher2.Stop()
 
 			By("Modifying res2")
-			outRes3, err := c.ExternalNetwork().Update(
+			outRes3, err := c.ExternalNetworks().Update(
 				ctx,
 				&apiv3.ExternalNetwork{
 					ObjectMeta: outRes2.ObjectMeta,
@@ -367,7 +367,7 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			// Only etcdv3 supports watching a specific instance of a resource.
 			if config.Spec.DatastoreType == apiconfig.EtcdV3 {
 				By("Starting a watcher from rev0 watching name1 - this should get all events for name1")
-				w, err = c.ExternalNetwork().Watch(ctx, options.ListOptions{Name: name1, ResourceVersion: rev0})
+				w, err = c.ExternalNetworks().Watch(ctx, options.ListOptions{Name: name1, ResourceVersion: rev0})
 				Expect(err).NotTo(HaveOccurred())
 				testWatcher2_1 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
 				defer testWatcher2_1.Stop()
@@ -385,7 +385,7 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			}
 
 			By("Starting a watcher not specifying a rev - expect the current snapshot")
-			w, err = c.ExternalNetwork().Watch(ctx, options.ListOptions{})
+			w, err = c.ExternalNetworks().Watch(ctx, options.ListOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			testWatcher3 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
 			defer testWatcher3.Stop()
@@ -398,7 +398,7 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			testWatcher3.Stop()
 
 			By("Configuring ExternalNetwork name1/spec1 again and storing the response")
-			outRes1, err = c.ExternalNetwork().Create(
+			outRes1, err = c.ExternalNetworks().Create(
 				ctx,
 				&apiv3.ExternalNetwork{
 					ObjectMeta: metav1.ObjectMeta{Name: name1},
@@ -408,7 +408,7 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			)
 
 			By("Starting a watcher not specifying a rev - expect the current snapshot")
-			w, err = c.ExternalNetwork().Watch(ctx, options.ListOptions{})
+			w, err = c.ExternalNetworks().Watch(ctx, options.ListOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			testWatcher4 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
 			defer testWatcher4.Stop()

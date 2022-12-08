@@ -781,7 +781,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			By("Creating an ExternalNetwork")
 			externalNetworkName := "my-network"
 			index := uint32(10)
-			_, err = c.ExternalNetwork().Create(
+			_, err = c.ExternalNetworks().Create(
 				ctx,
 				&apiv3.ExternalNetwork{
 					ObjectMeta: metav1.ObjectMeta{
