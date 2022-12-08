@@ -57,25 +57,36 @@ gen-semaphore-yaml:
 	cd .semaphore && ./generate-semaphore-yaml.sh
 
 # Build the tigera-operator helm chart.
+ifdef CHART_RELEASE
+chartVersion:=$(RELEASE_STREAM)
+appVersion:=$(RELEASE_STREAM)
+else
+chartVersion:=$(GIT_VERSION)
+appVersion:=$(GIT_VERSION)
+endif
+
+chart-release: var-require-all-CHART_RELEASE-RELEASE_STREAM chart
+	mv ./bin/tigera-operator-$(RELEASE_STREAM).tgz ./bin/tigera-operator-$(RELEASE_STREAM)-$(CHART_RELEASE).tgz
+
 SUB_CHARTS=charts/tigera-operator/charts/tigera-prometheus-operator.tgz
-chart: bin/tigera-operator-$(GIT_VERSION).tgz
-bin/tigera-operator-$(GIT_VERSION).tgz: bin/helm $(shell find ./charts/tigera-operator -type f) $(SUB_CHARTS)
+chart: bin/tigera-operator-$(chartVersion).tgz
+bin/tigera-operator-$(chartVersion).tgz: bin/helm $(shell find ./charts/tigera-operator -type f) $(SUB_CHARTS)
 	bin/helm package ./charts/tigera-operator \
 	--destination ./bin/ \
-	--version $(GIT_VERSION) \
-	--app-version $(GIT_VERSION)
+	--version $(chartVersion) \
+	--app-version $(appVersion)
 
 # Build the tigera-prometheus-operator.tgz helm chart.
-bin/tigera-prometheus-operator-$(GIT_VERSION).tgz:
+bin/tigera-prometheus-operator-$(chartVersion).tgz:
 	bin/helm package ./charts/tigera-prometheus-operator \
 	--destination ./bin/ \
-	--version $(GIT_VERSION) \
-	--app-version $(GIT_VERSION)
+	--version $(chartVersion) \
+	--app-version $(appVersion)
 
 # Include the tigera-prometheus-operator helm chart as a sub-chart.
-charts/tigera-operator/charts/tigera-prometheus-operator.tgz: bin/tigera-prometheus-operator-$(GIT_VERSION).tgz
+charts/tigera-operator/charts/tigera-prometheus-operator.tgz: bin/tigera-prometheus-operator-$(chartVersion).tgz
 	mkdir -p $(@D)
-	cp bin/tigera-prometheus-operator-$(GIT_VERSION).tgz $@
+	cp bin/tigera-prometheus-operator-$(chartVersion).tgz $@
 
 # Build all Calico images for the current architecture.
 image:

@@ -2,18 +2,6 @@ include ../metadata.mk
 
 PACKAGE_NAME            ?= github.com/projectcalico/calico/compliance
 
-##############################################################################
-# Include ../lib.Makefile before anything else
-#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
-#   that variable is evaluated when we declare DOCKER_RUN and siblings.
-##############################################################################
-include ../lib.Makefile
-
-##############################################################################
-# Define some constants
-##############################################################################
-KUBE_BENCH_VERSION		?= b649588f46c54c84cd9c88510680b5a651f12d46
-
 # Override VALIDARCHES inferenced in common Makefile.
 #   This repo differs in how ARCHES are determined compared to common logic.
 #   overriding the value with the only platform supported ATM.
@@ -33,6 +21,17 @@ BUILD_IMAGES ?=$(COMPLIANCE_SERVER_IMAGE) \
 	$(COMPLIANCE_REPORTER_IMAGE) \
 	$(COMPLIANCE_BENCHMARKER_IMAGE)
 
+##############################################################################
+# Include ../lib.Makefile before anything else
+#   Additions to EXTRA_DOCKER_ARGS need to happen before the include since
+#   that variable is evaluated when we declare DOCKER_RUN and siblings.
+##############################################################################
+include ../lib.Makefile
+
+##############################################################################
+# Define some constants
+##############################################################################
+KUBE_BENCH_VERSION		?= b649588f46c54c84cd9c88510680b5a651f12d46
 
 # Linker flags for building Compliance Server.
 #

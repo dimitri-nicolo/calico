@@ -36,6 +36,8 @@ EXCLUDED_IMAGES = [
     'cnx-queryserver',
     'flexvol',
     'dikastes',
+    'csi-node-driver-registrar',
+    'csi-driver',
 
     # Enterprise images
     'calicoq',

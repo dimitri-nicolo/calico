@@ -45,3 +45,9 @@ blocks:
           value: gcr.io/unique-caldron-775/cnx/tigera
         commands:
         - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make VALIDARCHES=amd64 -C apiserver image-all cd-common CONFIRM=true; fi
+      - name: "Linux arm64"
+        env_vars:
+          - name: DEV_REGISTRIES
+            value: gcr.io/unique-caldron-775/cnx/tigera
+        commands:
+          - if [ -z "${SEMAPHORE_GIT_PR_NUMBER}" ]; then make VALIDARCHES=arm64 -C apiserver image-all cd-common CONFIRM=true; fi
