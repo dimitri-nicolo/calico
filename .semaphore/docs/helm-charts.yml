@@ -15,6 +15,7 @@ global_job_config:
       - export GOOGLE_APPLICATION_CREDENTIALS=$HOME/secrets/banzai-google-service-account.json
       - gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
       - checkout
+      - git fetch --unshallow
   secrets:
     - name: marvin-github-ssh-private-key
     - name: banzai-secrets
