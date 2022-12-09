@@ -9,14 +9,20 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
+	"github.com/SermoDigital/jose/jws"
 	log "github.com/sirupsen/logrus"
+
+	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/prometheus/client_golang/prometheus"
 
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
+	"github.com/projectcalico/calico/lma/pkg/timeutils"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
+	"github.com/projectcalico/calico/ts-queryserver/queryserver/config"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
@@ -77,16 +83,22 @@ type Query interface {
 	Metrics(w http.ResponseWriter, r *http.Request)
 }
 
-func NewQuery(qi client.QueryInterface) Query {
-	return &query{qi: qi}
+func NewQuery(qi client.QueryInterface, cfg *config.Config) Query {
+	return &query{cfg: cfg, qi: qi}
 }
 
 type query struct {
-	qi client.QueryInterface
+	cfg *config.Config
+	qi  client.QueryInterface
 }
 
 func (q *query) Summary(w http.ResponseWriter, r *http.Request) {
-	q.runQuery(w, r, client.QueryClusterReq{}, false)
+	q.runQuery(w, r, client.QueryClusterReq{
+		TimeRange:          q.getTimeRange(r),
+		PrometheusEndpoint: q.cfg.PrometheusEndpoint,
+		FIPSModeEnabled:    q.cfg.FIPSModeEnabled,
+		Token:              q.getToken(r),
+	}, false)
 }
 
 func (q *query) Metrics(w http.ResponseWriter, r *http.Request) {
@@ -111,11 +123,25 @@ func (q *query) Metrics(w http.ResponseWriter, r *http.Request) {
 	workloadEndpointsGauge.With(prometheus.Labels{"namespace": "", "type": "unprotected"}).Set(float64(clusterResp.NumUnprotectedWorkloadEndpoints))
 	workloadEndpointsGauge.With(prometheus.Labels{"namespace": "", "type": "failed"}).Set(float64(clusterResp.NumFailedWorkloadEndpoints))
 
+	networkPolicyGauge.With(prometheus.Labels{"namespace": "", "type": ""}).Set(float64(clusterResp.NumNetworkPolicies))
+	networkPolicyGauge.With(prometheus.Labels{"namespace": "", "type": "unmatched"}).Set(float64(clusterResp.NumUnmatchedNetworkPolicies))
+
+	globalNetworkPolicyGauge.With(prometheus.Labels{"type": ""}).Set(float64(clusterResp.NumGlobalNetworkPolicies))
+	globalNetworkPolicyGauge.With(prometheus.Labels{"type": "unmatched"}).Set(float64(clusterResp.NumUnmatchedGlobalNetworkPolicies))
+
+	nodeGuage.With(prometheus.Labels{"type": ""}).Set(float64(clusterResp.NumNodes))
+	nodeGuage.With(prometheus.Labels{"type": "no-endpoints"}).Set(float64(clusterResp.NumNodesWithNoEndpoints))
+	nodeGuage.With(prometheus.Labels{"type": "no-host-endpoints"}).Set(float64(clusterResp.NumNodesWithNoHostEndpoints))
+	nodeGuage.With(prometheus.Labels{"type": "no-workload-endpoints"}).Set(float64(clusterResp.NumNodesWithNoWorkloadEndpoints))
+
 	for k, v := range clusterResp.NamespaceCounts {
 		workloadEndpointsGauge.With(prometheus.Labels{"namespace": k, "type": ""}).Set(float64(v.NumWorkloadEndpoints))
 		workloadEndpointsGauge.With(prometheus.Labels{"namespace": k, "type": "unlabeled"}).Set(float64(v.NumUnlabelledWorkloadEndpoints))
 		workloadEndpointsGauge.With(prometheus.Labels{"namespace": k, "type": "unprotected"}).Set(float64(v.NumUnprotectedWorkloadEndpoints))
 		workloadEndpointsGauge.With(prometheus.Labels{"namespace": k, "type": "failed"}).Set(float64(v.NumFailedWorkloadEndpoints))
+
+		networkPolicyGauge.With(prometheus.Labels{"namespace": k, "type": ""}).Set(float64(v.NumNetworkPolicies))
+		networkPolicyGauge.With(prometheus.Labels{"namespace": k, "type": "unmatched"}).Set(float64(v.NumUnmatchedNetworkPolicies))
 	}
 
 	prometheusHandler.ServeHTTP(w, r)
@@ -481,4 +507,35 @@ func (q *query) getSort(r *http.Request) *client.Sort {
 		SortBy:  sortBy,
 		Reverse: reverse,
 	}
+}
+
+func (q *query) getTimeRange(r *http.Request) *promv1.Range {
+	now := time.Now()
+
+	s := r.URL.Query().Get("from")
+	from, _, err := timeutils.ParseTime(now, &s)
+	if err != nil || from == nil {
+		log.WithError(err).Debugf("failed to parse datetime from query parameter from=%s", s)
+		return nil
+	}
+
+	s = r.URL.Query().Get("to")
+	to, _, err := timeutils.ParseTime(now, &s)
+	if err != nil || to == nil {
+		log.WithError(err).Debugf("failed to parse datetime from query parameter to=%s", s)
+		return nil
+	}
+
+	return &promv1.Range{Start: *from, End: *to}
+}
+
+func (q *query) getToken(r *http.Request) string {
+	if _, err := jws.ParseJWTFromRequest(r); err != nil {
+		log.WithError(err).Debug("failed to parse token from request header")
+		return ""
+	}
+
+	authHeader := r.Header.Get("Authorization")
+	// Strip the "Bearer " part of the token.
+	return strings.TrimSpace(authHeader[7:])
 }

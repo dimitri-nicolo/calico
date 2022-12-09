@@ -56,7 +56,7 @@ func (s *Server) Start() error {
 	}
 
 	sm := http.NewServeMux()
-	qh := query.NewQuery(client.NewQueryInterface(s.k8sClient, c, s.stopCh))
+	qh := query.NewQuery(client.NewQueryInterface(s.k8sClient, c, s.stopCh), s.servercfg)
 	sm.HandleFunc("/endpoints", s.authHandler.AuthenticationHandler(qh.Endpoints))
 	sm.HandleFunc("/endpoints/", s.authHandler.AuthenticationHandler(qh.Endpoint))
 	sm.HandleFunc("/policies", s.authHandler.AuthenticationHandler(qh.Policies))

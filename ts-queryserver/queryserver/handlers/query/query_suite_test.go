@@ -1,5 +1,5 @@
 // Copyright (c) 2022 Tigera. All rights reserved.
-package query_test
+package query
 
 import (
 	"testing"

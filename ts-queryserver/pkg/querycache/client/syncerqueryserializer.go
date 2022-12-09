@@ -3,6 +3,7 @@ package client
 
 import (
 	"context"
+	"reflect"
 
 	log "github.com/sirupsen/logrus"
 
@@ -45,7 +46,7 @@ type queryResp struct {
 }
 
 func (uqf *syncerQuerySerializer) RunQuery(ctx context.Context, val interface{}) (interface{}, error) {
-	log.WithField("Request", val).Info("Run query")
+	log.WithField("Request", reflect.TypeOf(val)).Info("Run query")
 	qrq := queryReq{
 		ctx:  ctx,
 		val:  val,

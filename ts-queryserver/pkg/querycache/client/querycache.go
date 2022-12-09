@@ -3,13 +3,17 @@ package client
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"os"
 
 	log "github.com/sirupsen/logrus"
 
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -163,14 +167,31 @@ func (c *cachedQuery) RunQuery(cxt context.Context, req interface{}) (interface{
 }
 
 func (c *cachedQuery) runQuerySummary(cxt context.Context, req QueryClusterReq) (*QueryClusterResp, error) {
+	// by default, we get summary data from in-memory cache.
+	// when datetime range is valid, we get historical summary data from time-series database.
+	endpointsCache := c.endpoints
+	policiesCache := c.policies
+	nodeCache := c.nodes
+	if req.TimeRange != nil {
+		tlsConfig, err := getTLSConfig(req.FIPSModeEnabled)
+		if err != nil {
+			log.WithError(err).Warn("failed to get TLS config to retrieve historical summary data")
+			return nil, err
+		}
+
+		endpointsCache = cache.NewEndpointsCacheHistory(req.PrometheusEndpoint, req.Token, tlsConfig, req.TimeRange)
+		policiesCache = cache.NewPoliciesCacheHistory(req.PrometheusEndpoint, req.Token, tlsConfig, req.TimeRange)
+		nodeCache = cache.NewNodeCacheHistory(req.PrometheusEndpoint, req.Token, tlsConfig, req.TimeRange)
+	}
+
 	// Get the summary counts for the endpoints, summing up the per namespace counts.
-	hepSummary := c.endpoints.TotalHostEndpoints()
+	hepSummary := endpointsCache.TotalHostEndpoints()
 	totWEP := 0
 	numUnlabelledWEP := 0
 	numUnprotectedWEP := 0
 	numFailedWEP := 0
 	namespaceSummary := make(map[string]QueryClusterNamespaceCounts)
-	for ns, weps := range c.endpoints.TotalWorkloadEndpointsByNamespace() {
+	for ns, weps := range endpointsCache.TotalWorkloadEndpointsByNamespace() {
 		totWEP += weps.Total
 		numUnlabelledWEP += weps.NumWithNoLabels
 		numUnprotectedWEP += weps.NumWithNoPolicies
@@ -184,10 +205,10 @@ func (c *cachedQuery) runQuerySummary(cxt context.Context, req QueryClusterReq) 
 	}
 
 	// Get the summary counts for policies, summing up the per namespace counts.
-	gnpSummary := c.policies.TotalGlobalNetworkPolicies()
+	gnpSummary := policiesCache.TotalGlobalNetworkPolicies()
 	totNP := 0
 	numUnmatchedNP := 0
-	for ns, nps := range c.policies.TotalNetworkPoliciesByNamespace() {
+	for ns, nps := range policiesCache.TotalNetworkPoliciesByNamespace() {
 		totNP += nps.Total
 		numUnmatchedNP += nps.NumUnmatched
 
@@ -210,10 +231,10 @@ func (c *cachedQuery) runQuerySummary(cxt context.Context, req QueryClusterReq) 
 		NumUnprotectedHostEndpoints:       hepSummary.NumWithNoPolicies,
 		NumUnprotectedWorkloadEndpoints:   numUnprotectedWEP,
 		NumFailedWorkloadEndpoints:        numFailedWEP,
-		NumNodes:                          c.nodes.TotalNodes(),
-		NumNodesWithNoEndpoints:           c.nodes.TotalNodesWithNoEndpoints(),
-		NumNodesWithNoWorkloadEndpoints:   c.nodes.TotalNodesWithNoWorkloadEndpoints(),
-		NumNodesWithNoHostEndpoints:       c.nodes.TotalNodesWithNoHostEndpoints(),
+		NumNodes:                          nodeCache.TotalNodes(),
+		NumNodesWithNoEndpoints:           nodeCache.TotalNodesWithNoEndpoints(),
+		NumNodesWithNoWorkloadEndpoints:   nodeCache.TotalNodesWithNoWorkloadEndpoints(),
+		NumNodesWithNoHostEndpoints:       nodeCache.TotalNodesWithNoHostEndpoints(),
 		NamespaceCounts:                   namespaceSummary,
 	}
 	return resp, nil
@@ -872,4 +893,22 @@ func getDispachers(cq *cachedQuery) []dispatcherv1v3.Resource {
 	}
 
 	return dispatchers
+}
+
+func getTLSConfig(fipsMode bool) (*tls.Config, error) {
+	caBundle, err := os.ReadFile(os.Getenv("TRUSTED_BUNDLE_PATH"))
+	if err != nil {
+		return nil, err
+	}
+
+	caCertPool := x509.NewCertPool()
+	ok := caCertPool.AppendCertsFromPEM(caBundle)
+	if !ok {
+		return nil, fmt.Errorf("failed to parse root certificate")
+	}
+
+	tlsConfig := calicotls.NewTLSConfig(fipsMode)
+	tlsConfig.RootCAs = caCertPool
+
+	return tlsConfig, nil
 }

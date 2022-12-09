@@ -4,6 +4,8 @@ package client
 import (
 	"context"
 
+	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
 
@@ -21,6 +23,12 @@ type QueryInterface interface {
 }
 
 type QueryClusterReq struct {
+	// date time range for historical summary data
+	TimeRange *promv1.Range
+	// prometheus endpoint to retrieve historical data
+	PrometheusEndpoint string
+	FIPSModeEnabled    bool
+	Token              string
 }
 
 type QueryClusterResp struct {
