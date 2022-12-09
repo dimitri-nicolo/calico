@@ -70,22 +70,31 @@ function do_setup {
 
     # Create docker networks for this topology:
     #
-    #                         
+    #    +---------+            +---------+                           +---------+
+    #    | nginx-a |            | nginx-b |                           | nginx-c |
+    #    +---------+            +---------+                           +---------+
+    #         | .1                | .1                                    |.1
+    #         |                   |                                       |
+    #         | 172.31.41         | 172.31.41                             | 172.31.41
+    #         | 'servernetA'      | 'servernetB'                          | 'servernetC'
+    #         |                   |                                       |
+    #         |                   |                                       |
+    #         |.2                 |.2                                     |.2
     #    +---------+         +---------+         +---------+          +---------+
     #    | bird-a1 |         | bird-b1 |---------| bird-b2 |          | bird-c1 |
     #    +---------+         +---------+         +---------+          +---------+
-    #           |.1               |.1                 |.3                 |.1
-    #           |                 |                   |                   |
-    #           |                 |--------------------                   |
-    #           | 172.31.11       | 172.31.21                             | 172.31.31
-    #           |  'enetA'        |  'enetB'                              |  'enetC'
-    #           |                 |                                       |
-    #           |.4               |.4                                     |.4
-    #  +---------------------------------------------------------------------------------+ 
+    #         |.1                 |.1                 |.3                 |.1
+    #         |                   |                   |                   |
+    #         |                   |--------------------                   |
+    #         | 172.31.11         | 172.31.21                             | 172.31.31
+    #         |  'enetA'          |  'enetB'                              |  'enetC'
+    #         |                   |                                       |
+    #         |.4                 |.4                                     |.4
+    #  +---------------------------------------------------------------------------------+
     #  |                                                                                 |
-    #  +---------------------------------------------------------------------------------+ 
+    #  +---------------------------------------------------------------------------------+
     #                  kind-worker (node ip 172.18.0.x)
-    
+
     docker network create --subnet=172.31.11.0/24 --ip-range=172.31.11.0/24 --gateway 172.31.11.2 enetA
     docker network create --subnet=172.31.21.0/24 --ip-range=172.31.21.0/24 --gateway 172.31.21.2 enetB
     docker network create --subnet=172.31.31.0/24 --ip-range=172.31.31.0/24 --gateway 172.31.31.2 enetC
@@ -218,14 +227,40 @@ EOF
     docker exec bird-b1 ip route add blackhole 10.233.21.8
     docker exec bird-b2 ip route add blackhole 10.233.21.9
     docker exec bird-c1 ip route add blackhole 10.233.31.8
+
+
+    # Add nginx docker containers to each external network (as docker-in-docker on the external bird containers)
+    docker exec bird-a1 docker network create --subnet 172.31.41.0/24 --ip-range 172.31.41.0/24 --gateway 172.31.41.2 servernetA
+    docker exec bird-a1 mkdir -p /tmp/nginx
+    cat <<EOF | docker exec -i bird-a1 sh -c "cat > /tmp/nginx/index.html"
+server A
+EOF
+    docker exec bird-a1 chmod -R 0755 /tmp/nginx/
+    docker exec bird-a1 docker run --network servernetA --ip 172.31.41.1 -d --name nginx-a -v /tmp/nginx/:/usr/share/nginx/html:ro nginx
+
+    docker exec bird-b1 docker network create --subnet 172.31.41.0/24 --ip-range 172.31.41.0/24 --gateway 172.31.41.2 servernetB
+    docker exec bird-b1 mkdir -p /tmp/nginx
+    cat <<EOF | docker exec -i bird-b1 sh -c "cat > /tmp/nginx/index.html"
+server B
+EOF
+    docker exec bird-b1 chmod -R 0755 /tmp/nginx/
+    docker exec bird-b1 docker run --network servernetB --ip 172.31.41.1 -d --name nginx-b -v /tmp/nginx/:/usr/share/nginx/html:ro nginx
+
+    docker exec bird-c1 docker network create --subnet 172.31.41.0/24 --ip-range 172.31.41.0/24 --gateway 172.31.41.2 servernetC
+    docker exec bird-c1 mkdir -p /tmp/nginx
+    cat <<EOF | docker exec -i bird-c1 sh -c "cat > /tmp/nginx/index.html"
+server C
+EOF
+    docker exec bird-c1 chmod -R 0755 /tmp/nginx/
+    docker exec bird-c1 docker run --network servernetC --ip 172.31.41.1 -d --name nginx-c -v /tmp/nginx/:/usr/share/nginx/html:ro nginx
 }
 
 function do_cleanup {
     docker rm -f bird-a1 bird-b1 bird-b2 bird-c1
 
-    docker network disconnect enetA kind-worker
-    docker network disconnect enetB kind-worker
-    docker network disconnect enetC kind-worker
+    docker network disconnect enetA kind-worker || true
+    docker network disconnect enetB kind-worker || true
+    docker network disconnect enetC kind-worker || true
     docker network rm enetA enetB enetC || true
 
     docker network ls

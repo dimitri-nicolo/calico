@@ -531,9 +531,10 @@ external-network-test:
 
 .PHONY: external-network-setup
 EXTERNAL_NETWORK_DIR=tests/k8st/external-network
+#TODO: build calico/bird-dind:latest-amd64 docker-in-docker+bird image locally prior to running this
 external-network-setup: external-network-cleanup kubectl dist/calicoctl
 	STEPS=setup \
-	ROUTER_IMAGE=$(BIRD_IMAGE) CALICOCTL=`pwd`/dist/calicoctl KUBECONFIG=$(KIND_KUBECONFIG) $(EXTERNAL_NETWORK_DIR)/external-networks.sh
+	ROUTER_IMAGE=calico/bird-dind:latest-amd64 CALICOCTL=`pwd`/dist/calicoctl KUBECONFIG=$(KIND_KUBECONFIG) $(EXTERNAL_NETWORK_DIR)/external-networks.sh
 
 # TODO
 .PHONY: external-network-run-test
