@@ -438,4 +438,30 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			testWatcher4.Stop()
 		})
 	})
+
+	Describe("ExternalNetwork validations", func() {
+		It("should not create resources which overlapping RouteTableIndex ", func() {
+			c, err := clientv3.New(config)
+			Expect(err).NotTo(HaveOccurred())
+
+			be, err := backend.NewClient(config)
+			Expect(err).NotTo(HaveOccurred())
+			be.Clean()
+
+			By("Creating a new ExternalNetwork with name1/spec1")
+			res1, outError := c.ExternalNetworks().Create(ctx, &apiv3.ExternalNetwork{
+				ObjectMeta: metav1.ObjectMeta{Name: name1},
+				Spec:       spec1,
+			}, options.SetOptions{})
+			Expect(outError).NotTo(HaveOccurred())
+
+			By("Creating a new ExternalNetwork with name2/spec1")
+			res1, outError := c.ExternalNetworks().Create(ctx, &apiv3.ExternalNetwork{
+				ObjectMeta: metav1.ObjectMeta{Name: name1},
+				Spec:       spec2,
+			}, options.SetOptions{})
+			Expect(outError).NotTo(HaveOccurred())
+		})
+	})
+
 })
