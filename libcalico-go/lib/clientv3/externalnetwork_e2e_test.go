@@ -28,6 +28,7 @@ import (
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
 	"github.com/projectcalico/calico/libcalico-go/lib/testutils"
@@ -39,24 +40,35 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 	ctx := context.Background()
 	name1 := "externalnetwork-1"
 	name2 := "externalnetwork-2"
+	name3 := "externalnetwork-3"
 	index1 := uint32(100)
 	index2 := uint32(200)
+	index3 := uint32(300)
 	spec1 := apiv3.ExternalNetworkSpec{
 		RouteTableIndex: &index1,
 	}
 	spec2 := apiv3.ExternalNetworkSpec{
 		RouteTableIndex: &index2,
 	}
+	spec3 := apiv3.ExternalNetworkSpec{
+		RouteTableIndex: &index3,
+	}
+
+	var c clientv3.Interface
+	var be api.Client
+
+	BeforeEach(func() {
+		var err error
+		c, err = clientv3.New(config)
+		Expect(err).NotTo(HaveOccurred())
+
+		be, err = backend.NewClient(config)
+		Expect(err).NotTo(HaveOccurred())
+		be.Clean()
+	})
 
 	DescribeTable("ExternalNetwork e2e CRUD tests",
 		func(name1, name2 string) {
-			c, err := clientv3.New(config)
-			Expect(err).NotTo(HaveOccurred())
-
-			be, err := backend.NewClient(config)
-			Expect(err).NotTo(HaveOccurred())
-			be.Clean()
-
 			By("Updating the ExternalNetwork before it is created")
 			_, outError := c.ExternalNetworks().Update(ctx, &apiv3.ExternalNetwork{
 				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: "test-fail-ExternalNetwork"},
@@ -130,11 +142,11 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 				testutils.Resource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name2, spec2),
 			))
 
-			By("Updating ExternalNetwork name1 with index2")
-			res1.Spec.RouteTableIndex = &index2
+			By("Updating ExternalNetwork name1 with index3")
+			res1.Spec.RouteTableIndex = &index3
 			res1, outError = c.ExternalNetworks().Update(ctx, res1, options.SetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(res1).To(MatchResource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec2))
+			Expect(res1).To(MatchResource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec3))
 
 			By("Attempting to update the ExternalNetwork without a Creation Timestamp")
 			res, outError = c.ExternalNetworks().Update(ctx, &apiv3.ExternalNetwork{
@@ -155,7 +167,7 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			Expect(outError.Error()).To(Equal("error with field Metadata.UID = '' (field must be set for an Update request)"))
 
 			// Track the version of the updated name1 data.
-			rv1_2 := res1.ResourceVersion
+			rv1_3 := res1.ResourceVersion
 
 			By("Updating ExternalNetwork name1 without specifying a resource version")
 			res1.Spec = spec1
@@ -179,11 +191,11 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 				Expect(res.ResourceVersion).To(Equal(rv1_1))
 			}
 
-			By("Getting ExternalNetwork (name1) with the updated resource version and comparing the output against spec2")
-			res, outError = c.ExternalNetworks().Get(ctx, name1, options.GetOptions{ResourceVersion: rv1_2})
+			By("Getting ExternalNetwork (name1) with the updated resource version and comparing the output against spec3")
+			res, outError = c.ExternalNetworks().Get(ctx, name1, options.GetOptions{ResourceVersion: rv1_3})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(res).To(MatchResource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec2))
-			Expect(res.ResourceVersion).To(Equal(rv1_2))
+			Expect(res).To(MatchResource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec3))
+			Expect(res.ResourceVersion).To(Equal(rv1_3))
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Listing ExternalNetwork with the original resource version and checking for a single result with name1/spec1")
@@ -194,11 +206,11 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 				))
 			}
 
-			By("Listing ExternalNetwork with the latest resource version and checking for two results with name1/spec2 and name2/spec2")
+			By("Listing ExternalNetwork with the latest resource version and checking for two results with name1/spec3 and name2/spec2")
 			outList, outError = c.ExternalNetworks().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(outList.Items).To(ConsistOf(
-				testutils.Resource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec2),
+				testutils.Resource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec3),
 				testutils.Resource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name2, spec2),
 			))
 
@@ -210,9 +222,9 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			}
 
 			By("Deleting ExternalNetwork (name1) with the new resource version")
-			dres, outError := c.ExternalNetworks().Delete(ctx, name1, options.DeleteOptions{ResourceVersion: rv1_2})
+			dres, outError := c.ExternalNetworks().Delete(ctx, name1, options.DeleteOptions{ResourceVersion: rv1_3})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(dres).To(MatchResource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec2))
+			Expect(dres).To(MatchResource(apiv3.KindExternalNetwork, testutils.ExpectNoNamespace, name1, spec3))
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Updating ExternalNetwork name2 with a 2s TTL and waiting for the entry to be deleted")
@@ -269,13 +281,6 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 
 	Describe("ExternalNetwork watch functionality", func() {
 		It("should handle watch events for different resource versions and event types", func() {
-			c, err := clientv3.New(config)
-			Expect(err).NotTo(HaveOccurred())
-
-			be, err := backend.NewClient(config)
-			Expect(err).NotTo(HaveOccurred())
-			be.Clean()
-
 			By("Listing ExternalNetwork with the latest resource version and checking for two results with name1 and name2")
 			outList, outError := c.ExternalNetworks().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
@@ -415,10 +420,6 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			testWatcher4.ExpectEventsAnyOrder(apiv3.KindExternalNetwork, []watch.Event{
 				{
 					Type:   watch.Added,
-					Object: outRes1,
-				},
-				{
-					Type:   watch.Added,
 					Object: outRes3,
 				},
 			})
@@ -440,27 +441,65 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 	})
 
 	Describe("ExternalNetwork validations", func() {
-		It("should not create resources which overlapping RouteTableIndex ", func() {
-			c, err := clientv3.New(config)
-			Expect(err).NotTo(HaveOccurred())
-
-			be, err := backend.NewClient(config)
-			Expect(err).NotTo(HaveOccurred())
-			be.Clean()
-
+		It("should not create resources which overlapping existing value or RouteTableRanges", func() {
 			By("Creating a new ExternalNetwork with name1/spec1")
-			res1, outError := c.ExternalNetworks().Create(ctx, &apiv3.ExternalNetwork{
+			_, outError := c.ExternalNetworks().Create(ctx, &apiv3.ExternalNetwork{
 				ObjectMeta: metav1.ObjectMeta{Name: name1},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 
 			By("Creating a new ExternalNetwork with name2/spec1")
-			res1, outError := c.ExternalNetworks().Create(ctx, &apiv3.ExternalNetwork{
-				ObjectMeta: metav1.ObjectMeta{Name: name1},
+			_, outError = c.ExternalNetworks().Create(ctx, &apiv3.ExternalNetwork{
+				ObjectMeta: metav1.ObjectMeta{Name: name2},
+				Spec:       spec1,
+			}, options.SetOptions{})
+			Expect(outError.Error()).To(ContainSubstring("RouteTableIndex conflicts with an existing value"))
+
+			By("Creating a default FelixConfiguration with RouteTableRanges 200-299")
+			felixSpec1 := apiv3.FelixConfigurationSpec{
+				DataplaneDriver: "test-dataplane-driver1",
+				RouteTableRanges: &apiv3.RouteTableRanges{
+					apiv3.RouteTableIDRange{Min: 200, Max: 299},
+				},
+			}
+			_, outError = c.FelixConfigurations().Create(
+				ctx,
+				&apiv3.FelixConfiguration{
+					ObjectMeta: metav1.ObjectMeta{Name: "default"},
+					Spec:       felixSpec1,
+				},
+				options.SetOptions{},
+			)
+			Expect(outError).NotTo(HaveOccurred())
+
+			By("Creating a new ExternalNetwork with name2/spec2, table 200 within RouteTableRanges")
+			_, outError = c.ExternalNetworks().Create(ctx, &apiv3.ExternalNetwork{
+				ObjectMeta: metav1.ObjectMeta{Name: name2},
 				Spec:       spec2,
 			}, options.SetOptions{})
+			Expect(outError.Error()).To(ContainSubstring("RouteTableIndex conflicts with RouteTableRanges of FelixConfigurations"))
+
+			By("Creating a new ExternalNetwork with name3/spec3, table 300 outside RouteTableRanges")
+			_, outError = c.ExternalNetworks().Create(ctx, &apiv3.ExternalNetwork{
+				ObjectMeta: metav1.ObjectMeta{Name: name3},
+				Spec:       spec3,
+			}, options.SetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
+
+			By("Update ExternalNetwork with name3/spec1, conflicting with resources of name1")
+			_, outError = c.ExternalNetworks().Update(ctx, &apiv3.ExternalNetwork{
+				ObjectMeta: metav1.ObjectMeta{Name: name3},
+				Spec:       spec1,
+			}, options.SetOptions{})
+			Expect(outError.Error()).To(ContainSubstring("RouteTableIndex conflicts with an existing value"))
+
+			By("Update ExternalNetwork with name3/spec2, conflicting with RouteTableRanges")
+			_, outError = c.ExternalNetworks().Update(ctx, &apiv3.ExternalNetwork{
+				ObjectMeta: metav1.ObjectMeta{Name: name3},
+				Spec:       spec2,
+			}, options.SetOptions{})
+			Expect(outError.Error()).To(ContainSubstring("RouteTableIndex conflicts with RouteTableRanges of FelixConfigurations"))
 		})
 	})
 
