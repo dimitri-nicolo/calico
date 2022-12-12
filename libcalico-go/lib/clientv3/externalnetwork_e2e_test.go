@@ -407,10 +407,11 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 				ctx,
 				&apiv3.ExternalNetwork{
 					ObjectMeta: metav1.ObjectMeta{Name: name1},
-					Spec:       spec1,
+					Spec:       spec3,
 				},
 				options.SetOptions{},
 			)
+			Expect(err).NotTo(HaveOccurred())
 
 			By("Starting a watcher not specifying a rev - expect the current snapshot")
 			w, err = c.ExternalNetworks().Watch(ctx, options.ListOptions{})
@@ -418,6 +419,10 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			testWatcher4 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
 			defer testWatcher4.Stop()
 			testWatcher4.ExpectEventsAnyOrder(apiv3.KindExternalNetwork, []watch.Event{
+				{
+					Type:   watch.Added,
+					Object: outRes1,
+				},
 				{
 					Type:   watch.Added,
 					Object: outRes3,
