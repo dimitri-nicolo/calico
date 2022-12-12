@@ -768,7 +768,7 @@ execute_tests_daemon() {
         run_individual_test 'mesh/communities'
         run_individual_test 'mesh/restart-time'
 
-        run_edited_individual_test 'extensions/bgpconfig' "# Test Value: {{(json (getv \"/global/extensions\")).testKey}}"
+        run_edited_individual_test 'extensions/bgpconfig' "# Test Value: {{(json (getv \"/bgp/v1/global/extensions\")).testKey}}"
     done
 
     # Turn the node-mesh off.
@@ -780,8 +780,8 @@ execute_tests_daemon() {
         run_individual_test 'explicit_peering/global-external'
         run_individual_test 'explicit_peering/global-ipv6'
         run_individual_test 'explicit_peering/specific_node'
-        run_edited_individual_test 'extensions/bgppeer/global' "# Test Value: {{(json (getv \"/global/peer_v4/10.192.0.3\")).extensions.testKey}}"
-        run_edited_individual_test 'extensions/bgppeer/specific_node' "# Test Value: {{(json (getv \"/host/kube-master/peer_v4/10.192.0.3\")).extensions.testKey}}"
+        run_edited_individual_test 'extensions/bgppeer/global' "# Test Value: {{(json (getv \"/bgp/v1/global/peer_v4/10.192.0.3\")).extensions.testKey}}"
+        run_edited_individual_test 'extensions/bgppeer/specific_node' "# Test Value: {{(json (getv \"/bgp/v1/host/kube-master/peer_v4/10.192.0.3\")).extensions.testKey}}"
         run_individual_test 'explicit_peering/selectors'
         run_individual_test 'explicit_peering/route_reflector'
         run_individual_test 'explicit_peering/keepnexthop'
@@ -816,9 +816,9 @@ execute_tests_oneshot() {
         run_individual_test_oneshot 'mesh/vxlan-always'
         run_individual_test_oneshot 'explicit_peering/global'
         run_individual_test_oneshot 'explicit_peering/specific_node'
-        run_edited_individual_test_oneshot 'extensions/bgpconfig' "# Test Value: {{(json (getv \"/global/extensions\")).testKey}}"
-        run_edited_individual_test_oneshot 'extensions/bgppeer/global' "# Test Value: {{(json (getv \"/global/peer_v4/10.192.0.3\")).extensions.testKey}}"
-        run_edited_individual_test_oneshot 'extensions/bgppeer/specific_node' "# Test Value: {{(json (getv \"/host/kube-master/peer_v4/10.192.0.3\")).extensions.testKey}}"
+        run_edited_individual_test_oneshot 'extensions/bgpconfig' "# Test Value: {{(json (getv \"/bgp/v1/global/extensions\")).testKey}}"
+        run_edited_individual_test_oneshot 'extensions/bgppeer/global' "# Test Value: {{(json (getv \"/bgp/v1/global/peer_v4/10.192.0.3\")).extensions.testKey}}"
+        run_edited_individual_test_oneshot 'extensions/bgppeer/specific_node' "# Test Value: {{(json (getv \"/bgp/v1/host/kube-master/peer_v4/10.192.0.3\")).extensions.testKey}}"
         run_individual_test_oneshot 'explicit_peering/selectors'
         run_individual_test_oneshot 'explicit_peering/route_reflector'
         run_individual_test_oneshot 'explicit_peering/route_reflector_v6_by_ip'

@@ -417,14 +417,6 @@ var _ = DescribeTable(
 		nil,
 		true,
 	),
-	Entry(
-		"BGP Filter",
-		"/calico/bgp/v1/filters/my-bgp-filter",
-		BGPFilterKey{
-			Name: "my-bgp-filter",
-		},
-		false,
-	),
 )
 
 var _ = DescribeTable(
