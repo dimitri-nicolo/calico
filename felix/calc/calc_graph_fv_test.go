@@ -913,7 +913,7 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 		eventBuf = NewEventSequencer(mockDataplane)
 		eventBuf.Callback = mockDataplane.OnEvent
 		conf.Encapsulation = config.Encapsulation{VXLANEnabled: true, VXLANEnabledV6: true}
-		calcGraph = NewCalculationGraph(eventBuf, lookupsCache, conf, tierSupportEnabled)
+		calcGraph = NewCalculationGraph(eventBuf, lookupsCache, conf, tierSupportEnabled, func() {})
 		calcGraph.EnableIPSec(eventBuf)
 		l7Resolver = NewL7FrontEndResolver(eventBuf, conf)
 		statsCollector := NewStatsCollector(func(stats StatsUpdate) error {
