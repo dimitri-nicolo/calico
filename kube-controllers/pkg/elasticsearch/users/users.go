@@ -295,7 +295,12 @@ func buildElasticsearchIntrusionDetectionUserRoleIndex(clusterName string, isMan
 			{
 				Names:      []string{indexPattern("tigera_secure_ee_dns", "*", ".*")},
 				Privileges: []string{"read"},
-			}}
+			},
+			{
+				Names:      []string{indexPattern("tigera_secure_ee_waf", "*", ".*")},
+				Privileges: []string{"read"},
+			},
+		}
 		readPrivileges = append(readPrivileges, datasetReadPrivileges...)
 	} else {
 		allPrivileges.Names = append(allPrivileges.Names, indexPattern("tigera_secure_ee_events", clusterName, "*"))
