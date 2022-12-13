@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/kelseyhightower/memkv"
+	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"net"
 	"os"
 	"path"
@@ -37,6 +39,7 @@ func newFuncMap() map[string]interface{} {
 	m["base64Encode"] = Base64Encode
 	m["base64Decode"] = Base64Decode
 	m["hashToIPv4"] = hashToIPv4
+	m["emitBIRDExternalNetworkConfig"] = EmitBIRDExternalNetworkConfig
 	return m
 }
 
@@ -44,6 +47,28 @@ func addFuncs(out, in map[string]interface{}) {
 	for name, fn := range in {
 		out[name] = fn
 	}
+}
+
+func EmitBIRDExternalNetworkConfig(pairs memkv.KVPairs) ([]string, error) {
+	lines := []string{}
+	var line string
+	for _, kvp := range pairs {
+		var externalNetwork v3.ExternalNetwork
+		err := json.Unmarshal([]byte(kvp.Value), &externalNetwork)
+		if err != nil {
+			return []string{}, fmt.Errorf("Error unmarshalling JSON into ExternalNetwork: %s", err)
+		}
+		var routeTableIndex uint32
+		if externalNetwork.Spec.RouteTableIndex != nil {
+			routeTableIndex = *externalNetwork.Spec.RouteTableIndex
+		}
+		line = fmt.Sprintf("# ExternalNetwork %s with routeTableIndex = %d", path.Base(kvp.Key), routeTableIndex)
+	}
+	if len(lines) == 0 {
+		line = fmt.Sprint("# No ExternalNetworks configured")
+		lines = append(lines, line)
+	}
+	return lines, nil
 }
 
 // hashToIPv4 hashes the given string and
