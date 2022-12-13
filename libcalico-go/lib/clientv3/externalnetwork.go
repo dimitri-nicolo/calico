@@ -120,7 +120,7 @@ func (r ExternalNetworks) Create(ctx context.Context, res *apiv3.ExternalNetwork
 // Update takes the representation of a ExternalNetwork and updates it. Returns the stored
 // representation of the ExternalNetwork, and an error, if there is any.
 func (r ExternalNetworks) Update(ctx context.Context, res *apiv3.ExternalNetwork, opts options.SetOptions) (*apiv3.ExternalNetwork, error) {
-	// Validate before creating the resource.
+	// Validate before updating the resource.
 	if err := r.validate(ctx, res); err != nil {
 		return nil, err
 	}

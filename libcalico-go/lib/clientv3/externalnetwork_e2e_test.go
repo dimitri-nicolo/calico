@@ -402,7 +402,7 @@ var _ = testutils.E2eDatastoreDescribe("ExternalNetwork tests", testutils.Datast
 			})
 			testWatcher3.Stop()
 
-			By("Configuring ExternalNetwork name1/spec1 again and storing the response")
+			By("Configuring ExternalNetwork name1/spec3 and storing the response")
 			outRes1, err = c.ExternalNetworks().Create(
 				ctx,
 				&apiv3.ExternalNetwork{
