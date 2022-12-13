@@ -1691,6 +1691,7 @@ func validateNodeSpec(structLevel validator.StructLevel) {
 
 func validateBGPPeerSpec(structLevel validator.StructLevel) {
 	ps := structLevel.Current().Interface().(api.BGPPeerSpec)
+	log.Info("Marva: %v", ps)
 
 	if ps.Node != "" && ps.NodeSelector != "" {
 		structLevel.ReportError(reflect.ValueOf(ps.Node), "Node", "",
@@ -1705,6 +1706,7 @@ func validateBGPPeerSpec(structLevel validator.StructLevel) {
 			reason("ASNumber field must be empty when PeerSelector is specified"), "")
 	}
 	ok, msg := validateReachablyBy(ps.ReachableBy, ps.PeerIP)
+	log.Info("Marva: %v", msg)
 	if !ok {
 		structLevel.ReportError(reflect.ValueOf(ps.ReachableBy), "ReachableBy", "",
 			reason(msg), "")
