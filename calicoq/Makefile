@@ -43,7 +43,7 @@ sub-image-%:
 
 BINARY = bin/calicoq
 $(CALICOQ_IMAGE): $(BINARY)
-	$(DOCKER_BUILD) -t $(CALICOQ_IMAGE):latest-$(ARCH) --file Dockerfile . --load
+	$(DOCKER_BUILD) -t $(CALICOQ_IMAGE):latest-$(ARCH) --file Dockerfile.$(ARCH) . --load
 ifeq ($(ARCH),amd64)
 	docker tag $(CALICOQ_IMAGE):latest-$(ARCH) $(CALICOQ_IMAGE):latest
 endif
