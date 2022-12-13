@@ -35,7 +35,7 @@ const (
 	DefaultCronJobDetectionSchedule = 20 * time.Minute
 	maxCronJobNameLen               = 52
 	numHashChars                    = 5
-	acceptableRFCGlobalAlertName    = maxCronJobNameLen - len(detectionCronJobSuffix) - numHashChars - 2
+	acceptableRFCGlobalAlertNameLen = maxCronJobNameLen - len(detectionCronJobSuffix) - numHashChars - 2
 
 	ClusterKey = "cluster"
 
@@ -421,14 +421,19 @@ func (r *adDetectionReconciler) createDetectionCycle(podTemplate *v1.PodTemplate
 // max CronJob 52 char limit
 func (r *adDetectionReconciler) getDetectionCycleCronJobNameForGlobaAlert(clusterName string, globaAlertName string) string {
 	// Convert all uppercase to lower case
-
 	rfcClusterGlobalAlertName := strings.ToLower(fmt.Sprintf("%s-%s", clusterName, globaAlertName))
 
-	if len(rfcClusterGlobalAlertName) > acceptableRFCGlobalAlertName {
-		rfcClusterGlobalAlertName = rfcClusterGlobalAlertName[:acceptableRFCGlobalAlertName]
+	if len(rfcClusterGlobalAlertName) > acceptableRFCGlobalAlertNameLen {
+		rfcClusterGlobalAlertName = rfcClusterGlobalAlertName[:acceptableRFCGlobalAlertNameLen]
 	}
 
-	return fmt.Sprintf("%s-%s-%s", rfcClusterGlobalAlertName, detectionCronJobSuffix, util.ComputeSha256HashWithLimit(globaAlertName, numHashChars))
+	// clusterName and globalAlertName should be RFC1123 compliant since they are retrieved from individual Calico resource
+	// the combination with trimming the name might result in an non compliant name (ie. ending with period ".")
+	rfcClusterGlobalAlertName = util.ConvertToValidName(rfcClusterGlobalAlertName)
+
+	fullCronJobName := fmt.Sprintf("%s-%s-%s", rfcClusterGlobalAlertName, detectionCronJobSuffix, util.ComputeSha256HashWithLimit(globaAlertName, numHashChars))
+
+	return fullCronJobName
 }
 
 // removeDetector removes from the GlobalAlert from the detection state for the cluster and signals for the detection CronJob to be delete.
