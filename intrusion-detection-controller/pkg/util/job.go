@@ -40,8 +40,8 @@ func GetValidInitialTrainingJobName(clusterName, detectorName, suffix string) st
 	// The name is not in RFC1123 label format, at least one conversion has to occur to make it valid.
 	// An empty string will contain a wildcard 'z' character.
 
-	validClusterName := convertToValidName(clusterName)
-	validDetectorName := convertToValidName(detectorName)
+	validClusterName := ConvertToValidName(clusterName)
+	validDetectorName := ConvertToValidName(detectorName)
 
 	rfcName := fmt.Sprintf("%s-%s-initial-training", validClusterName, validDetectorName)
 
@@ -60,10 +60,10 @@ func GetValidInitialTrainingJobName(clusterName, detectorName, suffix string) st
 	return rfcName
 }
 
-// convertToValidName converts all characters to lower case and removes all invalid Job name
+// ConvertToValidName converts all characters to lower case and removes all invalid Job name
 // characters. A wild card, 'z', is used in case all characters of the name are invalid and are
 // removed.
-func convertToValidName(name string) string {
+func ConvertToValidName(name string) string {
 	rfcWildcard := "z"
 
 	// Convert all uppercase to lower case.
