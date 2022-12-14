@@ -96,6 +96,8 @@ type Interface interface {
 	BlockAffinities() BlockAffinityInterface
 	// BGPFilter returns an interface for managing BGPFilter resources.
 	BGPFilter() BGPFilterInterface
+	// ExternalNetworks returns an interface for managing ExternalNetwork resources.
+	ExternalNetworks() ExternalNetworkInterface
 
 	// EnsureInitialized is used to ensure the backend datastore is correctly
 	// initialized for use by Calico.  This method may be called multiple times, and

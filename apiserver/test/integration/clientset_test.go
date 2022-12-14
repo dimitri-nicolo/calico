@@ -4193,3 +4193,83 @@ func testBGPFilterClient(client calicoclient.Interface, name string) error {
 
 	return nil
 }
+
+// TestExternalNetworkClient exercises the ExternalNetwork client.
+func TestExternalNetworkClient(t *testing.T) {
+	const name = "test-externalnetwork"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &v3.ExternalNetwork{}
+			}, false)
+			defer shutdownServer()
+			if err := testExternalNetworkClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-externalnetwork test failed")
+	}
+}
+
+func testExternalNetworkClient(client calicoclient.Interface, name string) error {
+	externalNetworkClient := client.ProjectcalicoV3().ExternalNetworks()
+	index := uint32(28)
+	externalNetwork := &v3.ExternalNetwork{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+
+		Spec: v3.ExternalNetworkSpec{
+			RouteTableIndex: &index,
+		},
+	}
+	ctx := context.Background()
+
+	_, err := externalNetworkClient.List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing ExternalNetworks: %s", err)
+	}
+
+	externalNetworkNew, err := externalNetworkClient.Create(ctx, externalNetwork, metav1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("error creating the object '%v' (%v)", externalNetwork, err)
+	}
+
+	if externalNetworkNew.Name != externalNetwork.Name {
+		return fmt.Errorf("didn't get the same object back from the server \n%+v\n%+v", externalNetwork, externalNetworkNew)
+	}
+
+	if *externalNetwork.Spec.RouteTableIndex != 28 {
+		return fmt.Errorf("didn't get the correct object back from the server \n%+v\n%+v", externalNetwork, externalNetworkNew)
+	}
+
+	externalNetworkNew, err = externalNetworkClient.Get(ctx, externalNetwork.Name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting object %s (%s)", externalNetwork.Name, err)
+	}
+
+	index = 10
+	externalNetworkNew.Spec.RouteTableIndex = &index
+
+	_, err = externalNetworkClient.Update(ctx, externalNetworkNew, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("error updating object %s (%s)", name, err)
+	}
+
+	externalNetworkUpdated, err := externalNetworkClient.Get(ctx, externalNetwork.Name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting object %s (%s)", externalNetwork.Name, err)
+	}
+
+	if *externalNetworkUpdated.Spec.RouteTableIndex != 10 {
+		return fmt.Errorf("didn't get the correct object back from the server \n%+v\n%+v", externalNetworkUpdated, externalNetworkNew)
+	}
+
+	err = externalNetworkClient.Delete(ctx, externalNetwork.Name, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("object should be deleted (%s)", err)
+	}
+
+	return nil
+}

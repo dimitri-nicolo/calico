@@ -131,9 +131,14 @@ type BGPPeerSpec struct {
 	// (edges) between the peers.
 	// +optional
 	TTLSecurity *uint8 `json:"ttlSecurity,omitempty"`
+
 	// The ordered set of BGPFilters applied on this BGP peer.
 	// +optional
 	Filters []string `json:"filters,omitempty" validate:"omitempty,dive,name"`
+
+	// Name of the external network to which this peer belongs.
+	// +optional
+	ExternalNetwork string `json:"externalNetwork,omitempty" validate:"omitempty,name"`
 }
 
 type SourceAddress string

@@ -258,6 +258,11 @@ func init() {
 		"BGPFilters",
 		reflect.TypeOf(apiv3.BGPFilter{}),
 	)
+	registerResourceInfo(
+		apiv3.KindExternalNetwork,
+		"ExternalNetworks",
+		reflect.TypeOf(apiv3.ExternalNetwork{}),
+	)
 }
 
 type ResourceKey struct {

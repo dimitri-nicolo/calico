@@ -255,6 +255,25 @@ var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAl
 			syncTester.ExpectCacheSize(expectedCacheSize)
 			syncTester.ExpectPath("/calico/resources/v3/projectcalico.org/bgpfilters/filter-1")
 
+			By("Creating an ExternalNetwork")
+			index := uint32(28)
+			_, err = c.ExternalNetworks().Create(
+				ctx,
+				&apiv3.ExternalNetwork{
+					ObjectMeta: metav1.ObjectMeta{Name: "net1"},
+					Spec: apiv3.ExternalNetworkSpec{
+						RouteTableIndex: &index,
+					},
+				},
+				options.SetOptions{},
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			// The peer will add as single entry ( +1 )
+			expectedCacheSize += 1
+			syncTester.ExpectCacheSize(expectedCacheSize)
+			syncTester.ExpectPath("/calico/resources/v3/projectcalico.org/externalnetworks/net1")
+
 			// For non-kubernetes, check that we can allocate an IP address and get a syncer update
 			// for the allocation block.
 			var blockAffinityKeyV1 model.BlockAffinityKey

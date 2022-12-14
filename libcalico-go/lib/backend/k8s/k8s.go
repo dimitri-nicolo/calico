@@ -332,6 +332,13 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		resources.NewBGPFilterClient(cs, crdClientV1),
 	)
 
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindExternalNetwork,
+		resources.NewExternalNetworkClient(cs, crdClientV1),
+	)
+
 	if !ca.K8sUsePodCIDR {
 		// Using Calico IPAM - use CRDs to back IPAM resources.
 		log.Debug("Calico is configured to use calico-ipam")
@@ -622,6 +629,7 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindPacketCapture,
 		apiv3.KindDeepPacketInspection,
 		apiv3.KindBGPFilter,
+		apiv3.KindExternalNetwork,
 	}
 	ctx := context.Background()
 	for _, k := range kinds {
@@ -779,6 +787,8 @@ func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 					&apiv3.CalicoNodeStatusList{},
 					&apiv3.BGPFilter{},
 					&apiv3.BGPFilterList{},
+					&apiv3.ExternalNetwork{},
+					&apiv3.ExternalNetworkList{},
 				)
 				return nil
 			})

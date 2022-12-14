@@ -143,6 +143,10 @@ func New(calicoClient api.Client, cfg apiconfig.CalicoAPIConfigSpec, callbacks a
 				ListInterface: model.ResourceListOptions{Kind: apiv3.KindBGPConfiguration},
 				ClientID:      calicoClientID, // This is backed by the calico client
 			},
+			{
+				ListInterface: model.ResourceListOptions{Kind: apiv3.KindExternalNetwork},
+				ClientID:      calicoClientID,
+			},
 		}
 
 		// If running in kdd mode, also watch Kubernetes network policies directly.

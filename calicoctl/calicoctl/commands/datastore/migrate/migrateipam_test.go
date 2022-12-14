@@ -355,6 +355,11 @@ func (c *MockIPAMClient) BlockAffinities() client.BlockAffinityInterface {
 	return nil
 }
 
+func (c *MockIPAMClient) ExternalNetworks() client.ExternalNetworkInterface {
+	// DO NOTHING
+	return nil
+}
+
 func (c *MockIPAMClient) EnsureInitialized(ctx context.Context, calicoVersion, cnxVersion, clusterType string) error {
 	// DO NOTHING
 	return nil

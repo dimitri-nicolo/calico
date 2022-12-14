@@ -54,6 +54,10 @@ func (c *FakeProjectcalicoV3) DeepPacketInspections(namespace string) v3.DeepPac
 	return &FakeDeepPacketInspections{c, namespace}
 }
 
+func (c *FakeProjectcalicoV3) ExternalNetworks() v3.ExternalNetworkInterface {
+	return &FakeExternalNetworks{c}
+}
+
 func (c *FakeProjectcalicoV3) FelixConfigurations() v3.FelixConfigurationInterface {
 	return &FakeFelixConfigurations{c}
 }

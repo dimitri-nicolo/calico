@@ -1510,6 +1510,10 @@ func (c shimClient) CalicoNodeStatus() client.CalicoNodeStatusInterface {
 	panic("not implemented")
 }
 
+func (c shimClient) ExternalNetworks() client.ExternalNetworkInterface {
+	panic("not implemented")
+}
+
 func (c shimClient) EnsureInitialized(ctx context.Context, calicoVersion, cnxVersion string, clusterType string) error {
 	return nil
 }

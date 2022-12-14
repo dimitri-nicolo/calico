@@ -474,6 +474,10 @@ func (b *mockDatastore) KubeControllersConfiguration() clientv3.KubeControllersC
 	panic("not implemented")
 }
 
+func (b *mockDatastore) ExternalNetworks() clientv3.ExternalNetworkInterface {
+	panic("not implemented")
+}
+
 var _ RealClientV3 = (*mockDatastore)(nil)
 
 type dummySyncer struct {

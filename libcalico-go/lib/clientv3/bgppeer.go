@@ -42,38 +42,64 @@ type bgpPeers struct {
 }
 
 // validate validates BGPPeer fields before creating or updating a BGPPeer.
-// Currently it only verifies that any BGPFilters that are specified do
-// indeed exist.
+// Currently it only verifies that any BGPFilters and ExternalNetwork that
+// are specified do indeed exist.
 func (r bgpPeers) validate(ctx context.Context, new *apiv3.BGPPeer) error {
-	if len(new.Spec.Filters) == 0 {
-		return nil
-	}
+	// Validate that all specified BGPFilters exist
+	if len(new.Spec.Filters) > 0 {
+		allFilterList, err := r.client.BGPFilter().List(ctx, options.ListOptions{})
+		if err != nil {
+			return err
+		}
 
-	allFilterList, err := r.client.BGPFilter().List(ctx, options.ListOptions{})
-	if err != nil {
-		return err
-	}
+		allFilterSet := set.New[string]()
+		missingFilters := []string{}
 
-	allFilterSet := set.New[string]()
-	missingFilters := []string{}
+		for _, f := range allFilterList.Items {
+			allFilterSet.Add(f.Name)
+		}
 
-	for _, f := range allFilterList.Items {
-		allFilterSet.Add(f.Name)
-	}
+		for _, f := range new.Spec.Filters {
+			if !allFilterSet.Contains(f) {
+				missingFilters = append(missingFilters, f)
+			}
+		}
 
-	for _, f := range new.Spec.Filters {
-		if !allFilterSet.Contains(f) {
-			missingFilters = append(missingFilters, f)
+		if len(missingFilters) > 0 {
+			return cerrors.ErrorValidation{
+				ErroredFields: []cerrors.ErroredField{{
+					Name:   "BGPPeer.Spec.Filters",
+					Reason: "BGPFilter(s) not found",
+					Value:  missingFilters,
+				}},
+			}
 		}
 	}
 
-	if len(missingFilters) > 0 {
-		return cerrors.ErrorValidation{
-			ErroredFields: []cerrors.ErroredField{{
-				Name:   "BGPPeer.Spec.Filters",
-				Reason: "BGPFilter(s) not found",
-				Value:  missingFilters,
-			}},
+	// Validate that the specified ExternalNetwork exists
+	if len(new.Spec.ExternalNetwork) > 0 {
+		externalNetworkPresent := false
+
+		allExternalNetworkList, err := r.client.ExternalNetworks().List(ctx, options.ListOptions{})
+		if err != nil {
+			return err
+		}
+
+		for _, en := range allExternalNetworkList.Items {
+			if en.Name == new.Spec.ExternalNetwork {
+				externalNetworkPresent = true
+				break
+			}
+		}
+
+		if !externalNetworkPresent {
+			return cerrors.ErrorValidation{
+				ErroredFields: []cerrors.ErroredField{{
+					Name:   "BGPPeer.Spec.ExternalNetwork",
+					Reason: "ExternalNetwork not found",
+					Value:  new.Spec.ExternalNetwork,
+				}},
+			}
 		}
 	}
 

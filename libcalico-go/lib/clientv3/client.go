@@ -263,6 +263,11 @@ func (c client) BGPFilter() BGPFilterInterface {
 	return BGPFilter{client: c}
 }
 
+// ExternalNetworks returns an interface for managing the ExternalNetwork resource.
+func (c client) ExternalNetworks() ExternalNetworkInterface {
+	return ExternalNetworks{client: c}
+}
+
 type poolAccessor struct {
 	client *client
 }

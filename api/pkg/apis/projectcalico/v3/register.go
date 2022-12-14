@@ -94,6 +94,8 @@ var (
 		&UISettingsGroupList{},
 		&UISettings{},
 		&UISettingsList{},
+		&ExternalNetwork{},
+		&ExternalNetworkList{},
 	}
 )
 

@@ -90,6 +90,22 @@ var _ = testutils.E2eDatastoreDescribe("BGPPeer tests", testutils.DatastoreAll, 
 			},
 		},
 	}
+	nameWithEN := "bgppeer-with-external-network"
+	specWithEN := apiv3.BGPPeerSpec{
+		Node:            "node1",
+		PeerIP:          "10.0.0.1",
+		ASNumber:        numorstring.ASNumber(6512),
+		ExternalNetwork: "net0",
+	}
+
+	rTableIndex := uint32(100)
+	enSpec := apiv3.ExternalNetworkSpec{
+		RouteTableIndex: &rTableIndex,
+	}
+	rTableIndex2 := uint32(200)
+	enSpec2 := apiv3.ExternalNetworkSpec{
+		RouteTableIndex: &rTableIndex2,
+	}
 
 	DescribeTable("BGPPeer e2e CRUD tests",
 		func(name1, name2 string, spec1, spec2 apiv3.BGPPeerSpec) {
@@ -524,6 +540,50 @@ var _ = testutils.E2eDatastoreDescribe("BGPPeer tests", testutils.DatastoreAll, 
 			_, outError = c.BGPFilter().Create(ctx, &apiv3.BGPFilter{
 				ObjectMeta: metav1.ObjectMeta{Name: filterName2},
 				Spec:       filterSpec2,
+			}, options.SetOptions{})
+			Expect(outError).NotTo(HaveOccurred())
+			_, outError = c.BGPPeers().Update(ctx, peerRes, options.SetOptions{})
+			Expect(outError).NotTo(HaveOccurred())
+		})
+
+		It("should validate if a ExternalNetwork exists when it is specified in a BGPPeer", func() {
+			c, err := clientv3.New(config)
+			Expect(err).NotTo(HaveOccurred())
+
+			be, err := backend.NewClient(config)
+			Expect(err).NotTo(HaveOccurred())
+			be.Clean()
+
+			By("Attempting to create a new BGPPeer with nameWithEN/specWithEN before creating the ExternalNetwork")
+			_, outError := c.BGPPeers().Create(ctx, &apiv3.BGPPeer{
+				ObjectMeta: metav1.ObjectMeta{Name: nameWithEN},
+				Spec:       specWithEN,
+			}, options.SetOptions{})
+			Expect(outError).To(HaveOccurred())
+			Expect(outError.Error()).To(Equal("error with field BGPPeer.Spec.ExternalNetwork = 'net0' (ExternalNetwork not found)"))
+
+			By("Creating the ExternalNetwork first and then creating the BGPPeer afterwards")
+			_, outError = c.ExternalNetworks().Create(ctx, &apiv3.ExternalNetwork{
+				ObjectMeta: metav1.ObjectMeta{Name: "net0"},
+				Spec:       enSpec,
+			}, options.SetOptions{})
+			Expect(outError).NotTo(HaveOccurred())
+			peerRes, outError := c.BGPPeers().Create(ctx, &apiv3.BGPPeer{
+				ObjectMeta: metav1.ObjectMeta{Name: nameWithEN},
+				Spec:       specWithEN,
+			}, options.SetOptions{})
+			Expect(outError).NotTo(HaveOccurred())
+
+			By("Attempting to update the BGPPeer with a non-existent BGPFilter")
+			peerRes.Spec.ExternalNetwork = "net1"
+			_, outError = c.BGPPeers().Update(ctx, peerRes, options.SetOptions{})
+			Expect(outError).To(HaveOccurred())
+			Expect(outError.Error()).To(Equal("error with field BGPPeer.Spec.ExternalNetwork = 'net1' (ExternalNetwork not found)"))
+
+			By("Creating the second ExternalNetwork first and then updating the BGPPeer afterwards")
+			_, outError = c.ExternalNetworks().Create(ctx, &apiv3.ExternalNetwork{
+				ObjectMeta: metav1.ObjectMeta{Name: "net1"},
+				Spec:       enSpec2,
 			}, options.SetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 			_, outError = c.BGPPeers().Update(ctx, peerRes, options.SetOptions{})

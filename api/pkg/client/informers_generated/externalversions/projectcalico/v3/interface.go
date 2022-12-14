@@ -30,6 +30,8 @@ type Interface interface {
 	ClusterInformations() ClusterInformationInformer
 	// DeepPacketInspections returns a DeepPacketInspectionInformer.
 	DeepPacketInspections() DeepPacketInspectionInformer
+	// ExternalNetworks returns a ExternalNetworkInformer.
+	ExternalNetworks() ExternalNetworkInformer
 	// FelixConfigurations returns a FelixConfigurationInformer.
 	FelixConfigurations() FelixConfigurationInformer
 	// GlobalAlerts returns a GlobalAlertInformer.
@@ -143,6 +145,11 @@ func (v *version) ClusterInformations() ClusterInformationInformer {
 // DeepPacketInspections returns a DeepPacketInspectionInformer.
 func (v *version) DeepPacketInspections() DeepPacketInspectionInformer {
 	return &deepPacketInspectionInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// ExternalNetworks returns a ExternalNetworkInformer.
+func (v *version) ExternalNetworks() ExternalNetworkInformer {
+	return &externalNetworkInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // FelixConfigurations returns a FelixConfigurationInformer.
