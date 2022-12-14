@@ -30,6 +30,10 @@ func (c *FakeProjectcalicoV3) BGPConfigurations() v3.BGPConfigurationInterface {
 	return &FakeBGPConfigurations{c}
 }
 
+func (c *FakeProjectcalicoV3) BGPFilters() v3.BGPFilterInterface {
+	return &FakeBGPFilters{c}
+}
+
 func (c *FakeProjectcalicoV3) BGPPeers() v3.BGPPeerInterface {
 	return &FakeBGPPeers{c}
 }
@@ -48,6 +52,10 @@ func (c *FakeProjectcalicoV3) ClusterInformations() v3.ClusterInformationInterfa
 
 func (c *FakeProjectcalicoV3) DeepPacketInspections(namespace string) v3.DeepPacketInspectionInterface {
 	return &FakeDeepPacketInspections{c, namespace}
+}
+
+func (c *FakeProjectcalicoV3) ExternalNetworks() v3.ExternalNetworkInterface {
+	return &FakeExternalNetworks{c}
 }
 
 func (c *FakeProjectcalicoV3) FelixConfigurations() v3.FelixConfigurationInterface {

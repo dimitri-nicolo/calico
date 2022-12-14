@@ -370,6 +370,11 @@ func (b *mockDatastore) WorkloadEndpoints() clientv3.WorkloadEndpointInterface {
 	panic("not implemented")
 }
 
+// BGPFilter returns an interface for managing BGP peer resources.
+func (b *mockDatastore) BGPFilter() clientv3.BGPFilterInterface {
+	panic("not implemented")
+}
+
 // BGPPeers returns an interface for managing BGP peer resources.
 func (b *mockDatastore) BGPPeers() clientv3.BGPPeerInterface {
 	panic("not implemented")
@@ -466,6 +471,10 @@ func (b *mockDatastore) GlobalAlerts() clientv3.GlobalAlertInterface {
 }
 
 func (b *mockDatastore) KubeControllersConfiguration() clientv3.KubeControllersConfigurationInterface {
+	panic("not implemented")
+}
+
+func (b *mockDatastore) ExternalNetworks() clientv3.ExternalNetworkInterface {
 	panic("not implemented")
 }
 

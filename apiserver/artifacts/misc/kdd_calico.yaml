@@ -221,6 +221,22 @@ spec:
 ---
 
 apiVersion: apiextensions.k8s.io/v1beta1
+description: Calico BGP Filters
+kind: CustomResourceDefinition
+metadata:
+  name: bgpfilters.crd.projectcalico.org
+spec:
+  scope: Cluster
+  group: crd.projectcalico.org
+  version: v1
+  names:
+    kind: BGPFilter
+    plural: bgpfilters
+    singular: bgpfilter
+
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
 description: Calico BGP Configuration
 kind: CustomResourceDefinition
 metadata:
@@ -313,6 +329,22 @@ spec:
     kind: Tier
     plural: tiers
     singular: tier
+
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
+description: Calico External Networks
+kind: CustomResourceDefinition
+metadata:
+  name: externalnetworks.crd.projectcalico.org
+spec:
+  scope: Cluster
+  group: crd.projectcalico.org
+  version: v1
+  names:
+    kind: ExternalNetwork
+    plural: externalnetworks
+    singular: externalnetwork
 
 ---
 apiVersion: v1

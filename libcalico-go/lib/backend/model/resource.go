@@ -253,6 +253,16 @@ func init() {
 		"blockaffinities",
 		reflect.TypeOf(libapiv3.BlockAffinity{}),
 	)
+	registerResourceInfo(
+		apiv3.KindBGPFilter,
+		"BGPFilters",
+		reflect.TypeOf(apiv3.BGPFilter{}),
+	)
+	registerResourceInfo(
+		apiv3.KindExternalNetwork,
+		"ExternalNetworks",
+		reflect.TypeOf(apiv3.ExternalNetwork{}),
+	)
 }
 
 type ResourceKey struct {

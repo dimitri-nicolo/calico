@@ -134,6 +134,11 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		aapi := &v3.BGPPeer{}
 		BGPPeerConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
+	case *v3.BGPFilter:
+		lcg := libcalicoObject.(*v3.BGPFilter)
+		aapi := &v3.BGPFilter{}
+		BGPFilterConverter{}.convertToAAPI(lcg, aapi)
+		return aapi
 	case *v3.Profile:
 		lcg := libcalicoObject.(*v3.Profile)
 		aapi := &v3.Profile{}
@@ -200,6 +205,11 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		lcg := libcalicoObject.(*libapi.BlockAffinity)
 		aapi := &v3.BlockAffinity{}
 		BlockAffinityConverter{}.convertToAAPI(lcg, aapi)
+		return aapi
+	case *v3.ExternalNetwork:
+		lcg := libcalicoObject.(*v3.ExternalNetwork)
+		aapi := &v3.ExternalNetwork{}
+		ExternalNetworkConverter{}.convertToAAPI(lcg, aapi)
 		return aapi
 	default:
 		klog.Infof("Unrecognized libcalico object (type %v)", reflect.TypeOf(libcalicoObject))

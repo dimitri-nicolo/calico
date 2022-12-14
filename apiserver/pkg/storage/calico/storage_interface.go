@@ -55,6 +55,8 @@ func NewStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyFunc)
 		return NewBGPConfigurationStorage(opts)
 	case "projectcalico.org/bgppeers":
 		return NewBGPPeerStorage(opts)
+	case "projectcalico.org/bgpfilters":
+		return NewBGPFilterStorage(opts)
 	case "projectcalico.org/profiles":
 		return NewProfileStorage(opts)
 	case "projectcalico.org/remoteclusterconfigurations":
@@ -83,6 +85,8 @@ func NewStorage(opts Options) (registry.DryRunnableStorage, factory.DestroyFunc)
 		return NewIPAMConfigurationStorage(opts)
 	case "projectcalico.org/blockaffinities":
 		return NewBlockAffinityStorage(opts)
+	case "projectcalico.org/externalnetworks":
+		return NewExternalNetworkStorage(opts)
 	default:
 		klog.Fatalf("Unable to create storage for resource %v", opts.RESTOptions.ResourcePrefix)
 		return registry.DryRunnableStorage{}, nil

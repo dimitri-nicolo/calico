@@ -310,6 +310,11 @@ func (c *MockIPAMClient) BGPPeers() client.BGPPeerInterface {
 	return nil
 }
 
+func (c *MockIPAMClient) BGPFilter() client.BGPFilterInterface {
+	// DO NOTHING
+	return nil
+}
+
 func (c *MockIPAMClient) IPAM() ipam.Interface {
 	// DO NOTHING
 	return nil
@@ -346,6 +351,11 @@ func (c *MockIPAMClient) IPAMConfig() client.IPAMConfigInterface {
 }
 
 func (c *MockIPAMClient) BlockAffinities() client.BlockAffinityInterface {
+	// DO NOTHING
+	return nil
+}
+
+func (c *MockIPAMClient) ExternalNetworks() client.ExternalNetworkInterface {
 	// DO NOTHING
 	return nil
 }

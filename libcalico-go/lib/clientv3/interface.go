@@ -94,6 +94,10 @@ type Interface interface {
 	IPAMConfig() IPAMConfigInterface
 	// BlockAffinities returns an interface for viewing IPAM block affinity resources.
 	BlockAffinities() BlockAffinityInterface
+	// BGPFilter returns an interface for managing BGPFilter resources.
+	BGPFilter() BGPFilterInterface
+	// ExternalNetworks returns an interface for managing ExternalNetwork resources.
+	ExternalNetworks() ExternalNetworkInterface
 
 	// EnsureInitialized is used to ensure the backend datastore is correctly
 	// initialized for use by Calico.  This method may be called multiple times, and

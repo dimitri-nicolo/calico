@@ -12,6 +12,8 @@ type AuthorizationReviewExpansion interface{}
 
 type BGPConfigurationExpansion interface{}
 
+type BGPFilterExpansion interface{}
+
 type BGPPeerExpansion interface{}
 
 type BlockAffinityExpansion interface{}
@@ -21,6 +23,8 @@ type CalicoNodeStatusExpansion interface{}
 type ClusterInformationExpansion interface{}
 
 type DeepPacketInspectionExpansion interface{}
+
+type ExternalNetworkExpansion interface{}
 
 type FelixConfigurationExpansion interface{}
 

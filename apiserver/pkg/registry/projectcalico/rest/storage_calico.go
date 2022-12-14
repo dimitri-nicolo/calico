@@ -32,11 +32,13 @@ import (
 
 	calicoalertexception "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/alertexception"
 	calicobgpconfiguration "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/bgpconfiguration"
+	calicobgpfilter "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/bgpfilter"
 	calicobgppeer "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/bgppeer"
 	calicoblockaffinity "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/blockaffinity"
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/caliconodestatus"
 	calicoclusterinformation "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/clusterinformation"
 	calicodeeppacketinspection "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/deeppacketinspection"
+	calicoexternalnetwork "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/externalnetwork"
 	calicofelixconfig "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/felixconfig"
 	calicogalert "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/globalalert"
 	calicogalerttemplate "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/globalalerttemplate"
@@ -561,6 +563,29 @@ func (p RESTStorageProvider) NewV3Storage(
 		[]string{},
 	)
 
+	bgpFilterRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("bgpfilters"))
+	if err != nil {
+		return nil, err
+	}
+	bgpFilterOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   bgpFilterRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicobgpfilter.EmptyObject(),
+			ScopeStrategy: calicobgpfilter.NewStrategy(scheme),
+			NewListFunc:   calicobgpfilter.NewList,
+			GetAttrsFunc:  calicobgpfilter.GetAttrs,
+			Trigger:       nil,
+		},
+		calicostorage.Options{
+			RESTOptions:    bgpFilterRESTOptions,
+			LicenseMonitor: licenseMonitor,
+		},
+		p.StorageType,
+		authorizer,
+		[]string{},
+	)
+
 	profileRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("profiles"))
 	if err != nil {
 		return nil, err
@@ -877,6 +902,28 @@ func (p RESTStorageProvider) NewV3Storage(
 		[]string{"blockaffinity", "affinity", "affinities"},
 	)
 
+	externalnetworkRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("externalnetworks"))
+	if err != nil {
+		return nil, err
+	}
+	externalnetworkOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   externalnetworkRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicoexternalnetwork.EmptyObject(),
+			ScopeStrategy: calicoexternalnetwork.NewStrategy(scheme),
+			NewListFunc:   calicoexternalnetwork.NewList,
+			GetAttrsFunc:  calicoexternalnetwork.GetAttrs,
+			Trigger:       nil,
+		},
+		calicostorage.Options{
+			RESTOptions: externalnetworkRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+		[]string{"externalnetwork"},
+	)
+
 	storage := map[string]rest.Storage{}
 	storage["networkpolicies"] = rESTInPeace(calicopolicy.NewREST(scheme, *policyOpts))
 	storage["stagednetworkpolicies"] = rESTInPeace(calicostagedpolicy.NewREST(scheme, *stagedpolicyOpts))
@@ -937,12 +984,14 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["ipreservations"] = rESTInPeace(calicoipreservation.NewREST(scheme, *ipReservationSetOpts))
 	storage["bgpconfigurations"] = rESTInPeace(calicobgpconfiguration.NewREST(scheme, *bgpConfigurationOpts))
 	storage["bgppeers"] = rESTInPeace(calicobgppeer.NewREST(scheme, *bgpPeerOpts))
+	storage["bgpfilters"] = rESTInPeace(calicobgpfilter.NewREST(scheme, *bgpFilterOpts))
 	storage["profiles"] = rESTInPeace(calicoprofile.NewREST(scheme, *profileOpts))
 	storage["remoteclusterconfigurations"] = rESTInPeace(calicoremoteclusterconfig.NewREST(scheme, *remoteclusterconfigOpts))
 	storage["felixconfigurations"] = rESTInPeace(calicofelixconfig.NewREST(scheme, *felixConfigOpts))
 	storage["caliconodestatuses"] = rESTInPeace(caliconodestatus.NewREST(scheme, *caliconodestatusOpts))
 	storage["ipamconfigurations"] = rESTInPeace(calicoipamconfig.NewREST(scheme, *ipamconfigOpts))
 	storage["blockaffinities"] = rESTInPeace(calicoblockaffinity.NewREST(scheme, *blockAffinityOpts))
+	storage["externalnetworks"] = rESTInPeace(calicoexternalnetwork.NewREST(scheme, *externalnetworkOpts))
 
 	kubeControllersConfigsStorage, kubeControllersConfigsStatusStorage, err := calicokubecontrollersconfig.NewREST(scheme, *kubeControllersConfigsOpts)
 	if err != nil {

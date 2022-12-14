@@ -45,6 +45,12 @@ func New(client api.Client, callbacks api.SyncerCallbacks, node string, cfg apic
 		{
 			ListInterface: model.ResourceListOptions{Kind: apiv3.KindBGPPeer},
 		},
+		{
+			ListInterface: model.ResourceListOptions{Kind: apiv3.KindBGPFilter},
+		},
+		{
+			ListInterface: model.ResourceListOptions{Kind: apiv3.KindExternalNetwork},
+		},
 	}
 
 	// If using Calico IPAM, include IPAM resources.

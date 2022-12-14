@@ -20,6 +20,10 @@ type AuthorizationReviewListerExpansion interface{}
 // BGPConfigurationLister.
 type BGPConfigurationListerExpansion interface{}
 
+// BGPFilterListerExpansion allows custom methods to be added to
+// BGPFilterLister.
+type BGPFilterListerExpansion interface{}
+
 // BGPPeerListerExpansion allows custom methods to be added to
 // BGPPeerLister.
 type BGPPeerListerExpansion interface{}
@@ -43,6 +47,10 @@ type DeepPacketInspectionListerExpansion interface{}
 // DeepPacketInspectionNamespaceListerExpansion allows custom methods to be added to
 // DeepPacketInspectionNamespaceLister.
 type DeepPacketInspectionNamespaceListerExpansion interface{}
+
+// ExternalNetworkListerExpansion allows custom methods to be added to
+// ExternalNetworkLister.
+type ExternalNetworkListerExpansion interface{}
 
 // FelixConfigurationListerExpansion allows custom methods to be added to
 // FelixConfigurationLister.
