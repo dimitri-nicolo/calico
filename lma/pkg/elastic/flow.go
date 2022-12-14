@@ -116,7 +116,7 @@ func GetCompositeAggrFlows(
 	// -  We exceed the context deadline.
 	var timedOut bool
 	if err != nil {
-		if _, ok := err.(TimedOutError); ok { //nolint:golint,gosimple
+		if _, ok := err.(TimedOutError); ok {
 			// Response from ES indicates a handled timeout.
 			log.Info("Response from ES indicates time out - flag results as timedout")
 			timedOut = true

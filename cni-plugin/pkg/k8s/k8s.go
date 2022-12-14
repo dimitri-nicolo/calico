@@ -131,7 +131,8 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 		podInterface = &k8sconversion.PodInterface{
 			IsDefault:          true,
 			InsidePodIfaceName: args.IfName,
-			HostSideIfaceName:  k8sconversion.NewConverter().VethNameForWorkload(epIDs.Namespace, epIDs.Pod),
+			//nolint:staticcheck // Ignore SA1019 deprecated
+			HostSideIfaceName: k8sconversion.NewConverter().VethNameForWorkload(epIDs.Namespace, epIDs.Pod),
 		}
 	}
 

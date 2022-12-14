@@ -8,10 +8,6 @@ LOCAL_CHECKS=check-boring-ssl
 RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
-# This excludes deprecation checks. libcalico-go-private has deprecated VethNameForWorkload but libcalico-go has not, so
-# to the drift between public and private to a minimum we just disable the deprecation checks.
-LINT_ARGS = --max-issues-per-linter 0 --max-same-issues 0 --deadline 5m --exclude SA1019
-
 # Name of the images.
 # e.g., <registry>/<name>:<tag>
 CNI_PLUGIN_IMAGE ?=cni

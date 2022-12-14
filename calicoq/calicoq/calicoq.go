@@ -79,8 +79,8 @@ Options:
 func main() {
 	log.SetLevel(log.FatalLevel)
 
-	// Disabling staticheck lint. TODO: update docopt.Parse (which is a deprecated package)
-	arguments, err := docopt.Parse(usage, nil, true, commands.VERSION, false) //nolint:golint,staticcheck
+	//nolint:staticcheck // Ignore SA1019 deprecated
+	arguments, err := docopt.Parse(usage, nil, true, commands.VERSION, false)
 	if err != nil {
 		log.Fatalf("Failed to parse command line arguments: %v", err)
 		os.Exit(1)
