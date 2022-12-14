@@ -54,7 +54,7 @@ clean:
 ###############################################################################
 
 ../felix/proto/felixbackend.pb.go: ../felix/proto/felixbackend.proto
-	$(MAKE) --directory ../felix make protobuf
+	$(MAKE) --directory ../felix protobuf
 
 ###############################################################################
 # Building the binary
