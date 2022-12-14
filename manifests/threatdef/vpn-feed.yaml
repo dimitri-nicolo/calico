@@ -1,11 +1,12 @@
 apiVersion: projectcalico.org/v3
 kind: GlobalThreatFeed
 metadata:
-  name: ejr-vpn
+  name: vpn-feed
 spec:
   pull:
     http:
-      url: https://raw.githubusercontent.com/ejrv/VPNs/master/vpn-ipv4.txt
+      url: https://raw.githubusercontent.com/X4BNet/lists_vpn/main/ipv4.txt
   globalNetworkSet:
     labels:
-      feed: ejr-vpn
+      feed: vpn-feed
+

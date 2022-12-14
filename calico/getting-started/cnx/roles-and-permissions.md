@@ -31,7 +31,6 @@ The [Calico Enterprise API server]({{site.baseurl}}/reference/installation/api#o
 | Visibility and troubleshooting | Elasticsearch logs: flow, audit, dns, intrusion detection, bgp |
 | Multi-cluster management       | Management and managed clusters in single management plane.  |
 
-
 #### Predefined roles and permissions
 
 {{site.prodname}} provides the following predefined roles and permissions:
@@ -54,7 +53,6 @@ For RBAC details on any given feature, see the feature. For example:
 - [Tiered policy RBAC]({{site.baseurl}}/security/rbac-tiered-policies)
 - [Policy preview RBAC]({{site.baseurl}}/security/policy-impact-preview)
 - [Staged policy RBAC]({{site.baseurl}}/security/staged-network-policies) 
-- [Policy recommendation RBAC]({{site.baseurl}}/security/generate-policy-recommendation)
 - [Elasticsearch logs RBAC]({{site.baseurl}}/visibility/elastic/rbac-elasticsearch) 
 - [Compliance reports RBAC]({{site.baseurl}}/compliance/overview)
 - [Multi-cluster management RBAC]({{site.baseurl}}/multicluster/mcm/create-a-management-cluster)

@@ -12,8 +12,14 @@ Enable WireGuard to secure on the wire in-cluster pod traffic in a {{site.prodna
 
 When this feature is enabled, {{site.prodname}} automatically creates and manages WireGuard tunnels between nodes providing transport-level security for on-the-wire, in-cluster pod traffic. WireGuard provides {% include open-new-window.html text='formally verified' url='https://www.wireguard.com/formal-verification/' %} secure and {% include open-new-window.html text='performant tunnels' url='https://www.wireguard.com/performance/' %} without any specialized hardware. For a deep dive in to WireGuard implementation, see this {% include open-new-window.html text='whitepaper' url='https://www.wireguard.com/papers/wireguard.pdf' %}.
 
-{{ site.prodname }} supports WireGuard encryption for both IPv4 and IPv6 traffic. These can be independently enabled in the FelixConfiguration resource: `wireguardEnabled`
-enables encrypting IPv4 traffic over an IPv4 underlay network and `wireguardEnabledV6` enables encrypting IPv6 traffic over an IPv6 underlay network.
+### Concepts
+#### About WireGuard
+
+{{ site.prodname }} supports both host-to-host encryption for pod traffic, and direct node-to-node communication. Because {{site.prodname}} is not implemented using a sidecar, traffic is not encrypted for the full journey from one pod to another; traffic is only encrypted on the host-to-host portion of the journey.
+
+{{site.prodname}} supports WireGuard encryption for both IPv4 and IPv6 traffic. You can enable traffic independently using parameters in the FelixConfiguration resource:
+  - `wireguardEnabled` -  enables encrypting IPv4 traffic over an IPv4 underlay network
+  - `wireguardEnabledV6`  - enables encrypting IPv6 traffic over an IPv6 underlay network
 
 ### Features
 
@@ -26,6 +32,7 @@ This how-to guide uses the following {{site.prodname}} features:
 **Unsupported**
 
 - GKE
+- Using your own custom keys to encrypt traffic
 
 **Limitations**
 
@@ -36,7 +43,7 @@ This how-to guide uses the following {{site.prodname}} features:
 **Supported encryption**
 
 - Pod-to-pod traffic
-- Encryption for direct node-to-node communication is only supported on managed clusters deployed on EKS (AWS CNI) and AKS (Azure CNI).
+- Encryption for direct node-to-node communication is only supported on managed clusters deployed on EKS (AWS CNI) and AKS (Azure CNI)
 
 **Required**
 
@@ -52,6 +59,8 @@ This how-to guide uses the following {{site.prodname}} features:
 - [Install WireGuard](#install-wireguard)
 - [Enable WireGuard for a cluster](#enable-wireguard-for-a-cluster)
 - [Verify encryption is enabled](#verify-encryption-is-enabled)
+- [Enable WireGuard statistics](#enable-wireguard-statistics)
+- [View WireGuard statistics](#view-wireguard-statistics) 
 - [Disable WireGuard for an individual node](#disable-wireguard-for-an-individual-node)
 - [Disable WireGuard for a cluster](#disable-wireguard-for-a-cluster)
 
@@ -85,7 +94,6 @@ AKS cluster nodes run Ubuntu with a kernel that has WireGuard installed already,
 <%
 To install WireGuard for OpenShift v4.8:
 
-
    1. Install requirements:
       - {% include open-new-window.html text='CoreOS Butane' url='https://coreos.github.io/butane/getting-started/' %}
       - {% include open-new-window.html text='Openshift CLI' url='https://docs.openshift.com/container-platform/4.2/cli_reference/openshift_cli/getting-started-cli.html' %}
@@ -108,7 +116,6 @@ To install WireGuard for OpenShift v4.8:
        a. You must then set the URLs for the `KERNEL_CORE_RPM`, `KERNEL_DEVEL_RPM` and `KERNEL_MODULES_RPM` packages in the conf file `$FAKEROOT/etc/kvc/wireguard-kmod.conf`. Obtain copies for `kernel-core`, `kernel-devel`, and `kernel-modules` rpms from {% include open-new-window.html text='RedHat Access' url='https://access.redhat.com/downloads/content/package-browser' %} and host it in an http file server that is reachable by your OCP workers.
 
        b. For help configuring `kvc-wireguard-kmod/wireguard-kmod.conf` and WireGuard version to kernel version compatibility, see the {% include open-new-window.html text='kvc-wireguard-kmod README file' url='https://github.com/tigera/kvc-wireguard-kmod#quick-config-variables-guide' %}.
-
 
    1. Get RHEL Entitlement data from your own RHEL8 system from a host in your cluster.
       ```bash
@@ -183,6 +190,13 @@ Since v3.11.1, WireGuard statistics are now automatically enabled with the enabl
 To view WireGuard statistics in Manager UI, you must enable them. From the left navbar, click **Dashboard**, and the Layout Settings icon. 
 
 ![Wireguard Dashboard Toggle]({{site.baseurl}}/images/wireguard/stats-toggle.png)
+
+##### WireGuard Dashboard toggle
+
+When viewing WireGuard statistics, you might wonder why the charts in the Manager UI Dashboard show more ingress traffic than egress if all the traffic goes within the cluster. The chart might show a 1% difference between traffic for the following reasons:
+- Sampling time. The statistics are generated a few microseconds apart.
+- Packet loss. If a node resends a lost packet, then the node counts the packet twice where the receiver counts it only once.
+- Averaging/smoothing. The statistics are smoothed out over a few seconds.
 
 #### Disable WireGuard for an individual node
 

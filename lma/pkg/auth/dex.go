@@ -36,6 +36,8 @@ type dexAuthenticator struct {
 	groupsPrefix string
 
 	verifier *oidc.IDTokenVerifier
+
+	requiredClaims map[string]string
 }
 
 // DexOption can be provided to NewDexAuthenticator to configure the authenticator.
@@ -125,6 +127,26 @@ func WithGroupsClaim(groupsClaim string) DexOption {
 		d.groupsClaim = groupsClaim
 		return nil
 	}
+}
+
+// WithRequiredClaim adds claims required to authenticate.
+func WithRequiredClaims(claims map[string]string) DexOption {
+	return func(d *dexAuthenticator) error {
+		if d.requiredClaims == nil {
+			d.requiredClaims = make(map[string]string)
+		}
+		for k, v := range claims {
+			d.requiredClaims[k] = v
+		}
+		return nil
+	}
+}
+
+// WithCalicoCloudTenantClaim adds required Calico Cloud Tenant claim
+func WithCalicoCloudTenantClaim(tenant string) DexOption {
+	return WithRequiredClaims(map[string]string{
+		"https://calicocloud.io/tenantID": tenant,
+	})
 }
 
 // The value passed in as a prefix will be modified according to the kubernetes specs for UsernamePrefix for backwards
@@ -230,6 +252,23 @@ func (d *dexAuthenticator) Authenticate(r *http.Request) (user.Info, int, error)
 				return nil, 400, errors.New("unexpected type for element in groups claim")
 			}
 			groups = append(groups, fmt.Sprintf("%s%s", d.groupsPrefix, groupStr))
+		}
+	}
+
+	for claimname, claimvalue := range d.requiredClaims {
+		if v, ok := claims[claimname]; !ok {
+			log.WithFields(log.Fields{
+				"username":  username,
+				"claimname": claimname,
+			}).Warn("required claim missing")
+			return nil, 401, fmt.Errorf("claim validation failed")
+		} else if v != claimvalue { // Assuming if v is not a string it will fail
+			log.WithFields(log.Fields{
+				"username":  username,
+				"claimname": claimname,
+				"actual":    v,
+			}).Warn("required claim incorrect")
+			return nil, 401, fmt.Errorf("claim validation failed")
 		}
 	}
 

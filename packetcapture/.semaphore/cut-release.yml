@@ -7,7 +7,7 @@ execution_time_limit:
 agent:
   machine:
     type: e1-standard-2
-    os_image: ubuntu1804
+    os_image: ubuntu2004
 
 global_job_config:
   prologue:
@@ -39,4 +39,4 @@ blocks:
               value: gcr.io/unique-caldron-775/cnx/tigera
           commands:
             - make git-config CONFIRM=true
-            - make cut-release CONFIRM=true
+            - make cut-release CONFIRM=true IMAGE_ONLY=true

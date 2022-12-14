@@ -474,6 +474,7 @@ type BackendBGPPeer struct {
 	NumAllowLocalAS   int32                `json:"num_allow_local_as"`
 	TTLSecurity       uint8                `json:"ttl_security"`
 	ExternalNetwork   string               `json:"external_network"`
+	Filters           []string             `json:"filters"`
 }
 
 type bgpPrefix struct {
@@ -612,6 +613,7 @@ func (c *client) updatePeersV1() {
 					CalicoNode:      isCalicoNode,
 					TTLSecurity:     ttlSecurityHopCount,
 					ExternalNetwork: v3res.Spec.ExternalNetwork,
+					Filters:         v3res.Spec.Filters,
 					NumAllowLocalAS: numLocalAS,
 				})
 			}
@@ -817,6 +819,7 @@ func (c *client) nodeAsBGPPeers(nodeName string, v4 bool, v6 bool, v3peer *apiv3
 		}
 
 		peer.ExternalNetwork = v3peer.Spec.ExternalNetwork
+		peer.Filters = v3peer.Spec.Filters
 
 		// If peer node has listenPort set in BGPConfiguration, use that.
 		if port, ok := c.nodeListenPorts[nodeName]; ok {
@@ -1000,6 +1003,11 @@ func (c *client) onUpdates(updates []api.Update, needUpdatePeersV1 bool) {
 		if v3key.Kind == apiv3.KindExternalNetwork {
 			needUpdatePeersV1 = true
 			needUpdatePeersReasons = append(needUpdatePeersReasons, "ExternalNetwork updated or deleted")
+		}
+
+		if v3key.Kind == apiv3.KindBGPFilter {
+			needUpdatePeersV1 = true
+			needUpdatePeersReasons = append(needUpdatePeersReasons, "BGPFilter updated or deleted")
 		}
 	}
 

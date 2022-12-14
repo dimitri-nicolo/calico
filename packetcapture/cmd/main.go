@@ -94,14 +94,23 @@ func mustGetAuthenticator(cs lmak8s.ClientSetFactory, cfg *config.Config) lmaaut
 
 	var options []lmaauth.JWTAuthOption
 	if cfg.DexEnabled {
+		opts := []lmaauth.DexOption{
+			lmaauth.WithGroupsClaim(cfg.OIDCAuthGroupsClaim),
+			lmaauth.WithJWKSURL(cfg.OIDCAuthJWKSURL),
+			lmaauth.WithUsernamePrefix(cfg.OIDCAuthUsernamePrefix),
+			lmaauth.WithGroupsPrefix(cfg.OIDCAuthGroupsPrefix),
+		}
+		if cfg.CalicoCloudRequireTenantClaim {
+			if cfg.CalicoCloudTenantClaim == "" {
+				log.Panic("Tenant claim not specified")
+			}
+			opts = append(opts, lmaauth.WithCalicoCloudTenantClaim(cfg.CalicoCloudTenantClaim))
+		}
 		oidcAuth, err := lmaauth.NewDexAuthenticator(
 			cfg.OIDCAuthIssuer,
 			cfg.OIDCAuthClientID,
 			cfg.OIDCAuthUsernameClaim,
-			lmaauth.WithGroupsClaim(cfg.OIDCAuthGroupsClaim),
-			lmaauth.WithJWKSURL(cfg.OIDCAuthJWKSURL),
-			lmaauth.WithUsernamePrefix(cfg.OIDCAuthUsernamePrefix),
-			lmaauth.WithGroupsPrefix(cfg.OIDCAuthGroupsPrefix))
+			opts...)
 		if err != nil {
 			log.WithError(err).Panic("Unable to create dex authenticator")
 		}

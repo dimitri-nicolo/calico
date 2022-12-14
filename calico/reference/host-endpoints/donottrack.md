@@ -3,7 +3,6 @@ title: Untracked policy
 canonical_url: '/reference/host-endpoints/donottrack'
 ---
 
-
 Policy for host endpoints can be marked as `doNotTrack`.  This means that rules
 in that policy should be applied before any data plane connection tracking, and
 that packets allowed by these rules should not be tracked.

@@ -67,8 +67,6 @@ Prometheus Alertmanager (or simply Alertmanager), deployed as part of the {{site
 
 Its critical function means that it runs on every machine that provides endpoints. A binary running inside `{{site.noderunning}}` monitors the BIRD daemon for peering and routing activity and reports these statics to Prometheus.
 
-For a detailed explanation on the various components within `{{site.noderunning}}` please see [Anatomy of a `{{site.noderunning}}` container]({{site.baseurl}}/reference/architecture/components).
-
 ### How to
 
 BGP metrics are generated within `{{site.noderunning}}` every 5 seconds using statistics pulled from the BIRD daemon.
@@ -86,7 +84,6 @@ Refer to [Configuring Prometheus]({{site.baseurl}}/maintenance/monitor/prometheu
 #### BGP peers metric
  
 The metric `bgp_peers` has the relevant labels `instance`, `status` and `ip_verison`. Using this metric, you can identify how many peers have a specific BGP connection status with a given node instance and IP version. This metric will be available as a combination of `{instance, status, ip_verison}`.
-
 
 Example queries:
 - Total number of peers currently with a BGP connection to the node instance “calico-node-1”, with status “Established”, for IP version “IPv4”.

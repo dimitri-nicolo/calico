@@ -42,7 +42,7 @@ var (
 	cancel context.CancelFunc
 )
 
-var _ = Describe("AnomalyDetection Reconciler", func() {
+var _ = Describe("AnomalyDetection Training Reconciler", func() {
 
 	now := time.Now()
 	lastExecutedTime := now.Add(-2 * time.Second)

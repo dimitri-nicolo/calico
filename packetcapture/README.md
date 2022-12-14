@@ -123,7 +123,6 @@ make ut
 | PACKETCAPTURE_API_MULTI_CLUSTER_FORWARDING_CA | `/manager-tls/cert`      |    CA certificate for multicluster communication |
 | PACKETCAPTURE_API_MULTI_CLUSTER_FORWARDING_ENDPOINT | `https://localhost:9443`      |    CA endpoint for multicluster communication |
 
-
 This API makes use of tigera-packetcapture service account and requires the following permissions:
 - GET for api group `projectcalico.org` for resource `packetcaptures`
 - CREATE for api group `projectcalico.org` for resource `authenticationreviews`

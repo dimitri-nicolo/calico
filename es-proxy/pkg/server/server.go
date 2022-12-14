@@ -72,6 +72,12 @@ func Start(cfg *Config) error {
 			lmaauth.WithUsernamePrefix(cfg.OIDCAuthUsernamePrefix),
 			lmaauth.WithGroupsPrefix(cfg.OIDCAuthGroupsPrefix),
 		}
+		if cfg.CalicoCloudRequireTenantClaim {
+			if cfg.CalicoCloudTenantClaim == "" {
+				log.Panic("Tenant claim not specified")
+			}
+			opts = append(opts, lmaauth.WithCalicoCloudTenantClaim(cfg.CalicoCloudTenantClaim))
+		}
 		dex, err := lmaauth.NewDexAuthenticator(
 			cfg.OIDCAuthIssuer,
 			cfg.OIDCAuthClientID,

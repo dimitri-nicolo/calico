@@ -1,10 +1,8 @@
-ARG UBI_IMAGE
+FROM ubuntu:22.04 AS snort
 
-FROM ubuntu:20.04 AS snort
-
-ENV SNORT3_VERSION=3.1.21.0
-ENV DAQ_VERSION=3.0.6
-ENV GPERFTOOLS_VERSION=2.9.1
+ENV SNORT3_VERSION=3.1.47.0
+ENV DAQ_VERSION=3.0.9
+ENV GPERFTOOLS_VERSION=2.10
 ENV OPEN_APPID_VERSION=26425
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -16,6 +14,7 @@ RUN apt-get install -y \
     autoconf \
     build-essential \
     cmake \
+    curl \
     flex \
     libcmocka-dev \
     libdumbnet-dev \
@@ -28,15 +27,14 @@ RUN apt-get install -y \
     libssl-dev \
     pkgconf \
     uuid-dev \
-    wget \
     zlib1g-dev
 
-RUN mkdir snort-source-files
-WORKDIR snort-source-files
+RUN mkdir /build
+WORKDIR /build
 
 # Install snort DAQ (Data Acquisition library)
-RUN wget https://github.com/snort3/libdaq/archive/refs/tags/v${DAQ_VERSION}.tar.gz -O libdaq-${DAQ_VERSION}.tar.gz \
-    && tar xzf libdaq-${DAQ_VERSION}.tar.gz \
+RUN curl -sfL https://github.com/snort3/libdaq/archive/refs/tags/v${DAQ_VERSION}.tar.gz -o libdaq.tar.gz \
+    && tar xzf libdaq.tar.gz \
     && cd libdaq-${DAQ_VERSION}/ \
     && ./bootstrap \
     && ./configure --enable-shared --disable-static \
@@ -44,16 +42,16 @@ RUN wget https://github.com/snort3/libdaq/archive/refs/tags/v${DAQ_VERSION}.tar.
     && make install
 
 # Install google's thread-caching malloc
-RUN wget https://github.com/gperftools/gperftools/releases/download/gperftools-${GPERFTOOLS_VERSION}/gperftools-${GPERFTOOLS_VERSION}.tar.gz \
-    && tar xzf gperftools-${GPERFTOOLS_VERSION}.tar.gz \
+RUN curl -sfL https://github.com/gperftools/gperftools/releases/download/gperftools-${GPERFTOOLS_VERSION}/gperftools-${GPERFTOOLS_VERSION}.tar.gz -o gperftools.tar.gz \
+    && tar xzf gperftools.tar.gz \
     && cd gperftools-${GPERFTOOLS_VERSION}/ \
     && ./configure --enable-shared --disable-static \
     && make -j4 \
     && make install
 
 # Build and Install Snort 3
-RUN wget https://github.com/snort3/snort3/archive/refs/tags/${SNORT3_VERSION}.tar.gz -O snort3-${SNORT3_VERSION}.tar.gz \
-    && tar xzf snort3-${SNORT3_VERSION}.tar.gz \
+RUN curl -sfL https://github.com/snort3/snort3/archive/refs/tags/${SNORT3_VERSION}.tar.gz -o snort3.tar.gz \
+    && tar xzf snort3.tar.gz \
     && cd snort3-${SNORT3_VERSION}/ \
     && ./configure_cmake.sh --build-type=Release --enable-tcmalloc --prefix=/usr/local \
     && cd build \
@@ -64,66 +62,52 @@ RUN wget https://github.com/snort3/snort3/archive/refs/tags/${SNORT3_VERSION}.ta
 RUN snort -V
 
 # Installing Snort OpenAppID
-RUN wget https://snort.org/downloads/openappid/${OPEN_APPID_VERSION} -O OpenAppId-${OPEN_APPID_VERSION}.tgz \
-    && tar -xzvf OpenAppId-${OPEN_APPID_VERSION}.tgz \
+RUN curl -sfL https://snort.org/downloads/openappid/${OPEN_APPID_VERSION} -o OpenAppId.tgz \
+    && tar -xzf OpenAppId.tgz \
     && cp -R odp /usr/local/lib/
 
-WORKDIR /
-
 # Create Snorts Log directory and dry-run the snort config to check for errors
-RUN mkdir /var/log/snort \
+RUN mkdir /var/log/snort /var/log/snort-alerts \
     && snort -c /usr/local/etc/snort/snort.lua -T
-
-RUN mkdir /var/log/snort-alerts
 
 # Install snort 3 rule
 RUN mkdir -p /usr/local/etc/rules \
-    && wget https://www.snort.org/downloads/community/snort3-community-rules.tar.gz \
+    && curl -sfL https://www.snort.org/downloads/community/snort3-community-rules.tar.gz -o snort3-community-rules.tar.gz \
     && tar xzf snort3-community-rules.tar.gz -C /usr/local/etc/rules/
 
-FROM ${UBI_IMAGE} as ubi
-
-RUN microdnf update
-
-# Create Empty root filesystem on /rootfs, copy only required linux utils
-# and supporting files.This filesystem act as placeholder for
-# all files required in container.
-
-WORKDIR /rootfs
-
-RUN mkdir -p etc/ssl/certs && \
-    cp /etc/ssl/certs/* etc/ssl/certs
-
-ADD bin/deep-packet-inspection-amd64 /deep-packet-inspection
 
 FROM scratch
 
-COPY --from=ubi /rootfs /
-# Add dpi binary to the image
-COPY --from=ubi /deep-packet-inspection /deep-packet-inspection
+ADD bin/deep-packet-inspection-amd64 /usr/bin/deep-packet-inspection
 
 # Copy Snort and related files over
-COPY --from=snort /usr/local/bin/snort /usr/local/bin/snort
+COPY --from=snort /usr/local/bin/snort /usr/bin/snort
 COPY --from=snort /usr/local/lib/libdaq.so.3 /usr/lib/libdaq.so.3
 COPY --from=snort /usr/local/lib/libtcmalloc.so.4 /usr/lib/libtcmalloc.so.4
 
 COPY --from=snort /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/libc.so.6
-COPY --from=snort /lib/x86_64-linux-gnu/libcrypto.so.1.1 /lib/x86_64-linux-gnu/libcrypto.so.1.1
+COPY --from=snort /lib/x86_64-linux-gnu/libcap.so.2 /lib/x86_64-linux-gnu/libcap.so.2
+COPY --from=snort /lib/x86_64-linux-gnu/libcrypto.so.3 /lib/x86_64-linux-gnu/libcrypto.so.3
+COPY --from=snort /lib/x86_64-linux-gnu/libdbus-1.so.3 /lib/x86_64-linux-gnu/libdbus-1.so.3
 COPY --from=snort /lib/x86_64-linux-gnu/libdl.so.2 /lib/x86_64-linux-gnu/libdl.so.2
 COPY --from=snort /lib/x86_64-linux-gnu/libdumbnet.so.1 /lib/x86_64-linux-gnu/libdumbnet.so.1
 COPY --from=snort /lib/x86_64-linux-gnu/libgcc_s.so.1 /lib/x86_64-linux-gnu/libgcc_s.so.1
+COPY --from=snort /lib/x86_64-linux-gnu/libgcrypt.so.20 /lib/x86_64-linux-gnu/libgcrypt.so.20
+COPY --from=snort /lib/x86_64-linux-gnu/libgpg-error.so.0 /lib/x86_64-linux-gnu/libgpg-error.so.0
 COPY --from=snort /lib/x86_64-linux-gnu/libhwloc.so.15 /lib/x86_64-linux-gnu/libhwloc.so.15
-COPY --from=snort /lib/x86_64-linux-gnu/libltdl.so.7 /lib/x86_64-linux-gnu/libltdl.so.7
 COPY --from=snort /lib/x86_64-linux-gnu/libluajit-5.1.so.2 /lib/x86_64-linux-gnu/libluajit-5.1.so.2
+COPY --from=snort /lib/x86_64-linux-gnu/liblz4.so.1 /lib/x86_64-linux-gnu/liblz4.so.1
 COPY --from=snort /lib/x86_64-linux-gnu/liblzma.so.5 /lib/x86_64-linux-gnu/liblzma.so.5
 COPY --from=snort /lib/x86_64-linux-gnu/libm.so.6 /lib/x86_64-linux-gnu/libm.so.6
 COPY --from=snort /lib/x86_64-linux-gnu/libpcap.so.0.8 /lib/x86_64-linux-gnu/libpcap.so.0.8
 COPY --from=snort /lib/x86_64-linux-gnu/libpcre.so.3 /lib/x86_64-linux-gnu/libpcre.so.3
 COPY --from=snort /lib/x86_64-linux-gnu/libpthread.so.0 /lib/x86_64-linux-gnu/libpthread.so.0
 COPY --from=snort /lib/x86_64-linux-gnu/libstdc++.so.6 /lib/x86_64-linux-gnu/libstdc++.so.6
+COPY --from=snort /lib/x86_64-linux-gnu/libsystemd.so.0 /lib/x86_64-linux-gnu/libsystemd.so.0
 COPY --from=snort /lib/x86_64-linux-gnu/libudev.so.1 /lib/x86_64-linux-gnu/libudev.so.1
 COPY --from=snort /lib/x86_64-linux-gnu/libuuid.so.1 /lib/x86_64-linux-gnu/libuuid.so.1
 COPY --from=snort /lib/x86_64-linux-gnu/libz.so.1 /lib/x86_64-linux-gnu/libz.so.1
+COPY --from=snort /lib/x86_64-linux-gnu/libzstd.so.1 /lib/x86_64-linux-gnu/libzstd.so.1
 COPY --from=snort /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
 
 COPY --from=snort /usr/local/etc/rules /usr/local/etc/rules
@@ -133,13 +117,5 @@ COPY --from=snort /usr/local/etc/snort /usr/local/etc/snort
 COPY --from=snort /var/log/snort/ /var/log/snort/
 COPY --from=snort /var/log/snort-alerts /var/log/snort-alerts
 
-# For debugging
-#COPY --from=snort /bin/ /bin
-#COPY --from=snort /sbin/ /sbin
-#COPY --from=snort /usr/bin/ /usr/bin
-#COPY --from=snort /etc/alternatives /etc/alternatives
-
-WORKDIR /
-
 # Command-line call to start the application
-ENTRYPOINT ["/deep-packet-inspection"]
+ENTRYPOINT ["/usr/bin/deep-packet-inspection"]

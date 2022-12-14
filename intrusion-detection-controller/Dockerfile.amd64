@@ -1,24 +1,23 @@
-FROM ubuntu:20.04 as ubuntu
-RUN apt-get update && apt-get install -y ca-certificates
+ARG UBI_IMAGE
 
-RUN rm -rf /tmp
-RUN mkdir /tmp
+FROM ${UBI_IMAGE} AS ubi
+
+RUN microdnf upgrade
+
 
 FROM scratch
 
-COPY --from=ubuntu /etc/passwd /etc/passwd
-COPY --from=ubuntu /etc/ssl/certs /etc/ssl/certs
-COPY --from=ubuntu /tmp /tmp
+COPY --from=ubi /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
+COPY --from=ubi /lib64/libc.so.6 /lib64/libc.so.6
+COPY --from=ubi /lib64/libpthread.so.0 /lib64/libpthread.so.0
 
-COPY --from=ubuntu /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/libc.so.6
-COPY --from=ubuntu /lib/x86_64-linux-gnu/libpthread.so.0 /lib/x86_64-linux-gnu/libpthread.so.0
-COPY --from=ubuntu /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
+ADD bin/controller-amd64 /usr/bin/intrusion-detection-controller
+ADD bin/healthz-amd64 /usr/bin/healthz
 
-ADD bin/controller-amd64 /controller
-ADD bin/healthz-amd64 /healthz
+# IDS controller syslog forwarding feature requires privileged user and group (0)
+# to write event logs into /var/log/calico. The host path is owned by root.
+# Tigera operator /operator/pkg/render/intrusion_detection.go controls UID and GID
+# for IDS controller container. Setting UID/GID here to non-root as a fallback.
+USER 10001:10001
 
-WORKDIR /
-
-USER 10001
-
-ENTRYPOINT ["/controller"]
+ENTRYPOINT ["/usr/bin/intrusion-detection-controller"]

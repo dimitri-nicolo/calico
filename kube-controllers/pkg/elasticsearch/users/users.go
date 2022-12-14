@@ -189,6 +189,10 @@ func ElasticsearchUsers(clusterName string, management bool) (map[ElasticsearchU
 								Privileges: []string{"read"},
 							},
 							{
+								Names:      []string{indexPattern("tigera_secure_ee_waf", clusterName, ".*")},
+								Privileges: []string{"read"},
+							},
+							{
 								Names:      []string{indexPattern("tigera_secure_ee_events", clusterName, ".*")},
 								Privileges: []string{"read", "write"},
 							},
@@ -291,7 +295,12 @@ func buildElasticsearchIntrusionDetectionUserRoleIndex(clusterName string, isMan
 			{
 				Names:      []string{indexPattern("tigera_secure_ee_dns", "*", ".*")},
 				Privileges: []string{"read"},
-			}}
+			},
+			{
+				Names:      []string{indexPattern("tigera_secure_ee_waf", "*", ".*")},
+				Privileges: []string{"read"},
+			},
+		}
 		readPrivileges = append(readPrivileges, datasetReadPrivileges...)
 	} else {
 		allPrivileges.Names = append(allPrivileges.Names, indexPattern("tigera_secure_ee_events", clusterName, "*"))
@@ -319,6 +328,10 @@ func buildElasticsearchADJobUserRoleIndex(clusterName string, isManagement bool)
 		},
 		{
 			Names:      []string{indexPattern("tigera_secure_ee_l7", esADJobIndexPatternClusterName, ".*")},
+			Privileges: []string{"read"},
+		},
+		{
+			Names:      []string{indexPattern("tigera_secure_ee_waf", esADJobIndexPatternClusterName, ".*")},
 			Privileges: []string{"read"},
 		},
 		{

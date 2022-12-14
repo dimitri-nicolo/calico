@@ -38,7 +38,6 @@ If your deployment is configured to peer with BGP routers outside the cluster, t
 | Cluster (default) | All nodes in the cluster statically advertise a route to the service CIDR. | Load balanced across nodes in the cluster using ECMP, then forwarded to appropriate pod in the service using SNAT. May incur second hop to another node, but good overall load balancing. | Obscured by SNAT        |
 | Local             | The nodes with a pod backing the service advertise a specific route (/32 or /128) to the service's IP. | Load balanced across nodes with endpoints for the service.  Avoids second hop for LoadBalancer and NodePort type services, traffic may be unevenly load balanced. (Other traffic is load balanced across nodes in the cluster.) | Preserved               |
 
-
 If your {{site.prodname}} deployment is configured to peer with BGP routers outside the cluster, those routers - plus any further upstream places that those routers propagate to - will be able to send traffic to a Kubernetes service cluster IP, and that traffic is routed to one of the available endpoints for that service.
 
 #### Tips for success
@@ -261,6 +260,11 @@ For example, to exclude the node `control-plane-01` from service advertisement, 
 ```
 kubectl label node control-plane-01 node.kubernetes.io/exclude-from-external-load-balancers=true
 ```
+
+#### Fine-grained IP range advertisement
+
+The [BGPFilter]({{site.baseurl}}/reference/resources/bgpfilter) resource in conjunction with BGPPeer resource can be used for fine-grained control over which routes
+and IP ranges are exported or imported to or from the specified peers respectively.
 
 ### Tutorial
 

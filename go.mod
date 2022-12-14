@@ -31,7 +31,7 @@ require (
 	github.com/distribution/distribution v2.8.1+incompatible
 	github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815
 	github.com/elastic/cloud-on-k8s/v2 v2.0.0-20221014162453-642f9ecd3e2e
-	github.com/elastic/go-elasticsearch/v7 v7.3.0
+	github.com/elastic/go-elasticsearch/v7 v7.17.7
 	github.com/envoyproxy/go-control-plane v0.10.1
 	github.com/florianl/go-nfqueue v1.2.0
 	github.com/gavv/monotime v0.0.0-20190418164738-30dba4353424

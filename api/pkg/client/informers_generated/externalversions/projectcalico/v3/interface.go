@@ -18,6 +18,8 @@ type Interface interface {
 	AuthorizationReviews() AuthorizationReviewInformer
 	// BGPConfigurations returns a BGPConfigurationInformer.
 	BGPConfigurations() BGPConfigurationInformer
+	// BGPFilters returns a BGPFilterInformer.
+	BGPFilters() BGPFilterInformer
 	// BGPPeers returns a BGPPeerInformer.
 	BGPPeers() BGPPeerInformer
 	// BlockAffinities returns a BlockAffinityInformer.
@@ -113,6 +115,11 @@ func (v *version) AuthorizationReviews() AuthorizationReviewInformer {
 // BGPConfigurations returns a BGPConfigurationInformer.
 func (v *version) BGPConfigurations() BGPConfigurationInformer {
 	return &bGPConfigurationInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// BGPFilters returns a BGPFilterInformer.
+func (v *version) BGPFilters() BGPFilterInformer {
+	return &bGPFilterInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // BGPPeers returns a BGPPeerInformer.

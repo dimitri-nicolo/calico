@@ -72,7 +72,6 @@ func New(opts ...Option) (*Server, error) {
 
 	cfg := calicotls.NewTLSConfig(srv.fipsModeEnabled)
 	cfg.Certificates = append(cfg.Certificates, srv.internalCert)
-	cfg.BuildNameToCertificate()
 
 	// -----------------------------------------------------------------------------------------------------
 	// Load all k8s secrets required for authN and credential swapping and keep it in sync.

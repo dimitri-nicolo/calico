@@ -258,6 +258,11 @@ func (c client) BlockAffinities() BlockAffinityInterface {
 	return blockAffinities{client: c}
 }
 
+// BGPFilter returns an interface for managing the BGPFilter resource.
+func (c client) BGPFilter() BGPFilterInterface {
+	return BGPFilter{client: c}
+}
+
 // ExternalNetworks returns an interface for managing the ExternalNetwork resource.
 func (c client) ExternalNetworks() ExternalNetworkInterface {
 	return ExternalNetworks{client: c}

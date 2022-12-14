@@ -20,6 +20,10 @@ type AuthorizationReviewListerExpansion interface{}
 // BGPConfigurationLister.
 type BGPConfigurationListerExpansion interface{}
 
+// BGPFilterListerExpansion allows custom methods to be added to
+// BGPFilterLister.
+type BGPFilterListerExpansion interface{}
+
 // BGPPeerListerExpansion allows custom methods to be added to
 // BGPPeerLister.
 type BGPPeerListerExpansion interface{}

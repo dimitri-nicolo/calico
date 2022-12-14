@@ -326,7 +326,6 @@ extra egress gateway is provisioned.
 %>
 {% endtabs %}
 
-
 #### Configure AWS IAM roles
 
 In order to provision the required AWS resources, each {{ site.noderunning }} pod in your cluster requires the 
@@ -918,7 +917,6 @@ EOF
 >   "health" port.  This ensures that during an upgrade, health probes are only sent to upgraded egress gateways.
 {: .alert .alert-info}
 
-
 #### Configure a Namespace or Pod to use egress gateways
 
 In a {{site.prodname}} deployment, the Kubernetes Namespace and Pod resources honor annotations that
@@ -947,7 +945,7 @@ To configure a specific Kubernetes Pod to use egress gateways, specify the same 
 creating the pod.  For example:
 
 ```bash
-kubectl apply -f - <<'EOF'
+kubectl apply -f - <<EOF
 apiVersion: v1
 kind: Pod
 metadata:
@@ -1021,8 +1019,23 @@ docker run --net=host --privileged subfuzion/netcat -v -l -k -p 8089
 
 Then provision an egress IP Pool, and egress gateways, as above.
 
-Then deploy a pod, with egress annotations as above, and with any image that includes netcat, for
-example `laurenceman/alpine`.
+Then deploy a pod, with egress annotations as above, and with any image that includes netcat, for example:
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-netcat-pod
+  namespace: my-namespace
+spec:
+  containers:
+  - name: alpine
+    image: alpine
+    command: ["/bin/sleep"]
+    args: ["infinity"]
+EOF
+```
 
 Now you can use `kubectl exec` to initiate an outbound connection from that pod:
 
@@ -1067,7 +1080,6 @@ the following.
     admission controller would police those bespoke annotations (that that cluster's users could
     place on Namespace or Pod resources) and either reject the operation in hand, or allow it
     through after adding the corresponding {{site.prodname}} egress annotations.
-
 
 #### Policy enforcement for flows via an egress gateway
 
