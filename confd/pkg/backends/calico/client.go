@@ -456,7 +456,7 @@ func (c *client) OnSyncChange(source string, ready bool) {
 	}
 }
 
-type bgpPeer struct {
+type BackendBGPPeer struct {
 	PeerIP            cnet.IP              `json:"ip"`
 	ASNum             numorstring.ASNumber `json:"as_num,string"`
 	RRClusterID       string               `json:"rr_cluster_id"`
@@ -501,7 +501,7 @@ func (c *client) updatePeersV1() {
 	peersV1 := make(map[string]string)
 
 	// Common subroutine for emitting both global and node-specific peerings.
-	emit := func(key model.Key, peer *bgpPeer) {
+	emit := func(key model.Key, peer *BackendBGPPeer) {
 		log.WithFields(log.Fields{"key": key, "peer": peer}).Debug("Maybe emit peering")
 
 		// Compute etcd v1 path for this peering key.
@@ -561,7 +561,7 @@ func (c *client) updatePeersV1() {
 			}
 			log.Debugf("Local nodes %#v", localNodeNames)
 
-			var peers []*bgpPeer
+			var peers []*BackendBGPPeer
 			if v3res.Spec.PeerSelector != "" {
 				for _, peerNodeName := range c.nodeLabelManager.nodesMatching(v3res.Spec.PeerSelector) {
 					peers = append(peers, c.nodeAsBGPPeers(peerNodeName, true, true, v3res)...)
@@ -603,7 +603,7 @@ func (c *client) updatePeersV1() {
 					ttlSecurityHopCount = *v3res.Spec.TTLSecurity
 				}
 
-				peers = append(peers, &bgpPeer{
+				peers = append(peers, &BackendBGPPeer{
 					PeerIP:          *ip,
 					ASNum:           v3res.Spec.ASNumber,
 					SourceAddr:      string(v3res.Spec.SourceAddress),
@@ -686,7 +686,7 @@ func (c *client) updatePeersV1() {
 			continue
 		}
 
-		var peers []*bgpPeer
+		var peers []*BackendBGPPeer
 		for _, peerNodeName := range peerNodeNames {
 			peers = append(peers, c.nodeAsBGPPeers(peerNodeName, includeV4, includeV6, v3res)...)
 		}
@@ -790,7 +790,7 @@ func (c *client) globalAS() string {
 	return c.cache[asKey]
 }
 
-func (c *client) nodeAsBGPPeers(nodeName string, v4 bool, v6 bool, v3peer *apiv3.BGPPeer) (peers []*bgpPeer) {
+func (c *client) nodeAsBGPPeers(nodeName string, v4 bool, v6 bool, v3peer *apiv3.BGPPeer) (peers []*BackendBGPPeer) {
 	ipv4Str, ipv6Str, asNum, rrClusterID := c.nodeToBGPFields(nodeName)
 	versions := map[string]string{}
 	if v4 {
@@ -800,7 +800,7 @@ func (c *client) nodeAsBGPPeers(nodeName string, v4 bool, v6 bool, v3peer *apiv3
 		versions["IPv6"] = ipv6Str
 	}
 	for version, ipStr := range versions {
-		peer := &bgpPeer{}
+		peer := &BackendBGPPeer{}
 		if ipStr == "" {
 			log.Debugf("No %v for node %v", version, nodeName)
 			continue
@@ -1831,7 +1831,7 @@ func (c *client) DeleteStaticRoutes(cidrs []string) {
 	c.onNewUpdates()
 }
 
-func (c *client) setPeerConfigFieldsFromV3Resource(peers []*bgpPeer, v3res *apiv3.BGPPeer) {
+func (c *client) setPeerConfigFieldsFromV3Resource(peers []*BackendBGPPeer, v3res *apiv3.BGPPeer) {
 	// Get the password, if one is configured
 	// Get the password, if one is configured.
 	password := c.getPassword(v3res)

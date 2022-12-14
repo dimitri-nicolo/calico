@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/kelseyhightower/memkv"
+	"github.com/projectcalico/calico/confd/pkg/backends/calico"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"net"
 	"os"
@@ -15,6 +16,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+)
+
+const (
+	maxBIRDSymLen = 64
 )
 
 func newFuncMap() map[string]interface{} {
@@ -40,6 +45,7 @@ func newFuncMap() map[string]interface{} {
 	m["base64Decode"] = Base64Decode
 	m["hashToIPv4"] = hashToIPv4
 	m["emitBIRDExternalNetworkConfig"] = EmitBIRDExternalNetworkConfig
+	m["emitExternalNetworkTableName"] = EmitExternalNetworkTableName
 	return m
 }
 
@@ -49,10 +55,29 @@ func addFuncs(out, in map[string]interface{}) {
 	}
 }
 
-func EmitBIRDExternalNetworkConfig(pairs memkv.KVPairs) ([]string, error) {
+func EmitExternalNetworkTableName(name string) (string, error) {
+	// call truncateAndHashName here to normalize
+	pieces := []string{"T_", ""}
+	// resizedName, err := truncateAndHashName(name, maxBIRDSymLen - len(strings.Join(pieces, "")))
+	// if err != nil {
+	//     return "", err
+	// }
+	// pieces[1] = resizedName
+	pieces[1] = name
+	fullName := strings.Join(pieces, "")
+	return fmt.Sprintf("'%s'", fullName), nil
+}
+
+func EmitBIRDExternalNetworkConfig(externalNetworkKVPs memkv.KVPairs, globalPeersKVP memkv.KVPairs,
+	nodeSpecificPeersKVP memkv.KVPairs) ([]string, error) {
 	lines := []string{}
 	var line string
-	for _, kvp := range pairs {
+	if len(externalNetworkKVPs) == 0 {
+		line = fmt.Sprint("# No ExternalNetworks configured")
+		lines = append(lines, line)
+		return lines, nil
+	}
+	for _, kvp := range externalNetworkKVPs {
 		var externalNetwork v3.ExternalNetwork
 		err := json.Unmarshal([]byte(kvp.Value), &externalNetwork)
 		if err != nil {
@@ -62,11 +87,50 @@ func EmitBIRDExternalNetworkConfig(pairs memkv.KVPairs) ([]string, error) {
 		if externalNetwork.Spec.RouteTableIndex != nil {
 			routeTableIndex = *externalNetwork.Spec.RouteTableIndex
 		}
-		line = fmt.Sprintf("# ExternalNetwork %s with routeTableIndex = %d", path.Base(kvp.Key), routeTableIndex)
-	}
-	if len(lines) == 0 {
-		line = fmt.Sprint("# No ExternalNetworks configured")
+		externalNetworkName := path.Base(kvp.Key)
+		// call truncateAndHashName here to normalize
+		tableName, err := EmitExternalNetworkTableName(externalNetworkName)
+		if err != nil {
+			return []string{}, err
+		}
+		kernelName := fmt.Sprintf("'K_%s'", externalNetworkName)
+		line = fmt.Sprintf("# ExternalNetwork %s", externalNetworkName)
 		lines = append(lines, line)
+
+		line = fmt.Sprintf("table %s;", tableName)
+		lines = append(lines, line)
+
+		//var bgpPeerProtocols []string
+
+		for _, globalPeerKVP := range globalPeersKVP {
+			var globalPeer calico.BackendBGPPeer
+			err = json.Unmarshal([]byte(globalPeerKVP.Value), globalPeer)
+			if err != nil {
+				return []string{}, fmt.Errorf("Error unmarshalling JSON into BackendBGPPeer: %s", err)
+			}
+			if globalPeer.ExternalNetwork != "" {
+
+			}
+		}
+
+		//for _, nodeSpecificPeerKVP := range nodeSpecificPeersKVP {
+
+		//}
+
+		kernel := []string{
+			fmt.Sprintf("protocol kernel %s from kernel_template {", kernelName),
+			"device routes yes;",
+			fmt.Sprintf("  table %s;", tableName),
+			fmt.Sprintf("  kernel table %d;", routeTableIndex),
+			"  export filter {",
+			"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+			" # Print \"if proto = <peer> then accept;\" for all global and node-specific peers",
+			"    reject;",
+			"  };",
+			"}",
+		}
+
+		lines = append(lines, kernel...)
 	}
 	return lines, nil
 }

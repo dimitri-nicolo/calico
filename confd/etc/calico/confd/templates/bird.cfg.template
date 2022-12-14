@@ -110,13 +110,14 @@ listen bgp{{$listen_address}}{{$listen_port}};
 {{- end}}
 {{- end}}
 
-
-# Configure synchronization between routing tables and kernel.
-protocol kernel {
+template kernel kernel_template {
   learn;             # Learn all alien routes from the kernel
   persist;           # Don't remove routes on bird shutdown
   scan time 2;       # Scan kernel routing table every 2 seconds
-  import all;
+}
+
+# Configure synchronization between routing tables and kernel.
+protocol kernel from kernel_template {
   export filter calico_kernel_programming; # Default is export none
   graceful restart;  # Turn on graceful restart to reduce potential flaps in
                      # routes when reloading BIRD configuration.  With a full
@@ -144,6 +145,10 @@ protocol direct {
                                           # cluster IP. We use static routes
                                           # for when we legitimately want to
                                           # export cluster IPs.
+  table master;
+{{- range ls "/resources/v3/projectcalico.org/externalnetworks" }}
+  table {{ emitExternalNetworkTableName . }};
+{{- end }}
 }
 
 protocol bfd {
@@ -167,6 +172,12 @@ template bgp bgp_template {
   connect retry time 5;
   error wait time 5,30;
 }
+
+# ------------- External Networks -------------
+{{- range $line := emitBIRDExternalNetworkConfig (gets "/resources/v3/projectcalico.org/externalnetworks/*") }}
+{{ $line }}
+{{- end }}
+
 
 # ------------- Node-to-node mesh -------------
 {{- $node_cid_key := printf "/bgp/v1/host/%s/rr_cluster_id" (getenv "NODENAME")}}
