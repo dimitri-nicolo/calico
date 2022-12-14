@@ -126,8 +126,6 @@ func New(k8s bootstrap.K8sClient, config *rest.Config, authenticator auth.JWTAut
 		cfg.Certificates = append(cfg.Certificates, srv.internalCert)
 	}
 
-	cfg.BuildNameToCertificate()
-
 	srv.http = &http.Server{
 		Addr:        srv.addr,
 		Handler:     srv.proxyMux,
