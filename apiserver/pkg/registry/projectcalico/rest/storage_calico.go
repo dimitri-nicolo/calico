@@ -32,6 +32,7 @@ import (
 
 	calicoalertexception "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/alertexception"
 	calicobgpconfiguration "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/bgpconfiguration"
+	calicobgpfilter "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/bgpfilter"
 	calicobgppeer "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/bgppeer"
 	calicoblockaffinity "github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/blockaffinity"
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/caliconodestatus"
@@ -561,6 +562,29 @@ func (p RESTStorageProvider) NewV3Storage(
 		[]string{},
 	)
 
+	bgpFilterRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("bgpfilters"))
+	if err != nil {
+		return nil, err
+	}
+	bgpFilterOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   bgpFilterRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicobgpfilter.EmptyObject(),
+			ScopeStrategy: calicobgpfilter.NewStrategy(scheme),
+			NewListFunc:   calicobgpfilter.NewList,
+			GetAttrsFunc:  calicobgpfilter.GetAttrs,
+			Trigger:       nil,
+		},
+		calicostorage.Options{
+			RESTOptions:    bgpFilterRESTOptions,
+			LicenseMonitor: licenseMonitor,
+		},
+		p.StorageType,
+		authorizer,
+		[]string{},
+	)
+
 	profileRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("profiles"))
 	if err != nil {
 		return nil, err
@@ -937,6 +961,7 @@ func (p RESTStorageProvider) NewV3Storage(
 	storage["ipreservations"] = rESTInPeace(calicoipreservation.NewREST(scheme, *ipReservationSetOpts))
 	storage["bgpconfigurations"] = rESTInPeace(calicobgpconfiguration.NewREST(scheme, *bgpConfigurationOpts))
 	storage["bgppeers"] = rESTInPeace(calicobgppeer.NewREST(scheme, *bgpPeerOpts))
+	storage["bgpfilters"] = rESTInPeace(calicobgpfilter.NewREST(scheme, *bgpFilterOpts))
 	storage["profiles"] = rESTInPeace(calicoprofile.NewREST(scheme, *profileOpts))
 	storage["remoteclusterconfigurations"] = rESTInPeace(calicoremoteclusterconfig.NewREST(scheme, *remoteclusterconfigOpts))
 	storage["felixconfigurations"] = rESTInPeace(calicofelixconfig.NewREST(scheme, *felixConfigOpts))

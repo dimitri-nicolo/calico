@@ -12,6 +12,8 @@ type AuthorizationReviewExpansion interface{}
 
 type BGPConfigurationExpansion interface{}
 
+type BGPFilterExpansion interface{}
+
 type BGPPeerExpansion interface{}
 
 type BlockAffinityExpansion interface{}

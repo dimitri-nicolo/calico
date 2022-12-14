@@ -25,6 +25,10 @@ func (_m *MockClientInterface) BGPConfigurations() clientv3.BGPConfigurationInte
 	return nil
 }
 
+func (_m *MockClientInterface) BGPFilter() clientv3.BGPFilterInterface {
+	return nil
+}
+
 func (_m *MockClientInterface) BGPPeers() clientv3.BGPPeerInterface {
 	return nil
 }
