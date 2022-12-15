@@ -200,6 +200,7 @@ func Run(configFile string, gitVersion string, buildDate string, gitRevision str
 	var typhaAddresses []discovery.Typha
 	var numClientsCreated int
 	var k8sClientSet *kubernetes.Clientset
+	var recalculateEncap func()
 configRetry:
 	for {
 		if numClientsCreated > 60 {
@@ -301,10 +302,15 @@ configRetry:
 			time.Sleep(1 * time.Second)
 			continue configRetry
 		}
-		encapCalculator := calc.NewEncapsulationCalculator(configParams, ippoolKVPList)
-		configParams.Encapsulation.IPIPEnabled = encapCalculator.IPIPEnabled()
-		configParams.Encapsulation.VXLANEnabled = encapCalculator.VXLANEnabled()
-		configParams.Encapsulation.VXLANEnabledV6 = encapCalculator.VXLANEnabledV6()
+		// The encap may change below if we disable IPSec.
+		recalculateEncap = func() {
+			encapCalculator := calc.NewEncapsulationCalculator(configParams, ippoolKVPList)
+			configParams.Encapsulation.IPIPEnabled = encapCalculator.IPIPEnabled()
+			configParams.Encapsulation.VXLANEnabled = encapCalculator.VXLANEnabled()
+			configParams.Encapsulation.VXLANEnabledV6 = encapCalculator.VXLANEnabledV6()
+			log.WithField("encaps", configParams.Encapsulation).Info("Calculated enabled encapsulations from IP pools.")
+		}
+		recalculateEncap()
 
 		// We now have some config flags that affect how we configure the syncer.
 		// After loading the config from the datastore, reconnect, possibly with new
@@ -378,7 +384,10 @@ configRetry:
 	licenseStatus := licenseMonitor.GetLicenseStatus()
 
 	// Correct the config based on licensed features.
-	removeUnlicensedFeaturesFromConfig(configParams, licenseMonitor)
+	if removeUnlicensedFeaturesFromConfig(configParams, licenseMonitor) {
+		// If we happened to disable IPSec, that has a knock-on impact on encapsulation mode.
+		recalculateEncap()
+	}
 
 	if configParams.BPFEnabled {
 		// Check for BPF dataplane support before we do anything that relies on the flag being set one way or another.
@@ -1444,7 +1453,10 @@ func (fc *DataplaneConnector) sendMessagesToDataplaneDriver() {
 			}()
 			if msg.IpipEnabled != encap.IPIPEnabled || msg.VxlanEnabled != encap.VXLANEnabled ||
 				msg.VxlanEnabledV6 != encap.VXLANEnabledV6 {
-				log.Warn("IPIP and/or VXLAN encapsulation changed, need to restart.")
+				log.WithFields(log.Fields{
+					"old": encap,
+					"new": msg,
+				}).Warn("IPIP and/or VXLAN encapsulation changed, need to restart.")
 				fc.shutDownProcess(reasonEncapChanged)
 			}
 		}
@@ -1563,7 +1575,7 @@ type featureChecker interface {
 // removeUnlicensedFeaturesFromConfig modifies the requested Config depending on licensed features. Values overridden
 // due to license have a higher priority than other methods of config injection and therefore cannot
 // be adjusted by the user.
-func removeUnlicensedFeaturesFromConfig(configParams *config.Config, licenseMonitor featureChecker) {
+func removeUnlicensedFeaturesFromConfig(configParams *config.Config, licenseMonitor featureChecker) bool {
 	licenseOverrides := make(map[string]string)
 
 	if configParams.UseInternalDataplaneDriver {
@@ -1624,5 +1636,7 @@ func removeUnlicensedFeaturesFromConfig(configParams *config.Config, licenseMoni
 		if err != nil {
 			log.WithError(err).Fatal("Failed to set config overrides.")
 		}
+		return true
 	}
+	return false
 }
