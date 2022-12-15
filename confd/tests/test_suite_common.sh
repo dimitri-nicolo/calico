@@ -3922,7 +3922,7 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: BGPPeer
 metadata:
-  name: external-route-reflector-ipv4
+  name: external-route-reflector-a-ipv4
 spec:
   peerIP: 10.225.0.4
   asNumber: 65515
@@ -3933,9 +3933,31 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: BGPPeer
 metadata:
-  name: external-route-reflector-ipv6
+  name: external-route-reflector-b-ipv4
+spec:
+  peerIP: 10.225.0.5
+  asNumber: 65515
+  reachableBy: 10.224.0.1
+  keepOriginalNextHop: true
+  nodeSelector: route-reflector == 'true'
+---
+apiVersion: projectcalico.org/v3
+kind: BGPPeer
+metadata:
+  name: external-route-reflector-a-ipv6
 spec:
   peerIP: ffee::10
+  asNumber: 65515
+  reachableBy: ffee::1:1
+  keepOriginalNextHop: true
+  nodeSelector: route-reflector == 'true'
+---
+apiVersion: projectcalico.org/v3
+kind: BGPPeer
+metadata:
+  name: external-route-reflector-b-ipv6
+spec:
+  peerIP: ffee::11
   asNumber: 65515
   reachableBy: ffee::1:1
   keepOriginalNextHop: true
@@ -3952,8 +3974,10 @@ EOF
 
     # Delete remaining resources.
     $CALICOCTL delete bgppeer peer-with-route-reflectors
-    $CALICOCTL delete bgppeer external-route-reflector-ipv4
-    $CALICOCTL delete bgppeer external-route-reflector-ipv6
+    $CALICOCTL delete bgppeer external-route-reflector-a-ipv4
+    $CALICOCTL delete bgppeer external-route-reflector-b-ipv4
+    $CALICOCTL delete bgppeer external-route-reflector-a-ipv6
+    $CALICOCTL delete bgppeer external-route-reflector-b-ipv6
 
     if [ "$DATASTORE_TYPE" = etcdv3 ]; then
         $CALICOCTL delete node kube-master
