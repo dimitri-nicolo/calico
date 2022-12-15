@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/kelseyhightower/memkv"
-	"github.com/projectcalico/calico/confd/pkg/backends/calico"
+	"github.com/projectcalico/calico/confd/pkg/backends"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 	"net"
 	"os"
@@ -46,7 +46,7 @@ func newFuncMap() map[string]interface{} {
 	m["hashToIPv4"] = hashToIPv4
 	m["emitBIRDExternalNetworkConfig"] = EmitBIRDExternalNetworkConfig
 	m["emitExternalNetworkTableName"] = EmitExternalNetworkTableName
-	m["emitFunctionName"] = EmitFunctionName
+	m["emitFunctionName"] = EmitBGPFilterFunctionName
 	m["emitBIRDBGPFilterFuncs"] = EmitBIRDBGPFilterFuncs
 	return m
 }
@@ -58,19 +58,17 @@ func addFuncs(out, in map[string]interface{}) {
 }
 
 func EmitExternalNetworkTableName(name string) (string, error) {
-	// call truncateAndHashName here to normalize
 	pieces := []string{"T_", ""}
-	// resizedName, err := truncateAndHashName(name, maxBIRDSymLen - len(strings.Join(pieces, "")))
-	// if err != nil {
-	//     return "", err
-	// }
-	// pieces[1] = resizedName
-	pieces[1] = name
+	resizedName, err := truncateAndHashName(name, maxBIRDSymLen-len(strings.Join(pieces, "")))
+	if err != nil {
+		return "", err
+	}
+	pieces[1] = resizedName
 	fullName := strings.Join(pieces, "")
 	return fmt.Sprintf("'%s'", fullName), nil
 }
 
-func emitFilterStatement(matchOperator, cidr, action string) (string, error) {
+func emitBGPFilterStatement(matchOperator, cidr, action string) (string, error) {
 	matchOperatorLUT := map[string]string{
 		string(v3.Equal): "=",
 		v3.NotEqual:      "!=",
@@ -87,10 +85,10 @@ func emitFilterStatement(matchOperator, cidr, action string) (string, error) {
 	return fmt.Sprintf("if ( net %s %s ) then { %s; }", op, cidr, strings.ToLower(action)), nil
 }
 
-// EmitFunctionName returns a formatted name for use as a BIRD function, truncating and hashing if the provided
+// EmitBGPFilterFunctionName returns a formatted name for use as a BIRD function, truncating and hashing if the provided
 // name would result in a function name longer than the max allowable length of 64 chars.
 // e.g. input of ("my-bgp-filter", "import", "4") would result in output of "'bgp_my-bpg-filter_importFilterV4'"
-func EmitFunctionName(filterName, direction, version string) (string, error) {
+func EmitBGPFilterFunctionName(filterName, direction, version string) (string, error) {
 	normalizedDirection := strings.ToLower(direction)
 	switch normalizedDirection {
 	case "import":
@@ -144,8 +142,8 @@ func EmitBIRDExternalNetworkConfig(externalNetworkKVPs memkv.KVPairs, globalPeer
 		//var bgpPeerProtocols []string
 
 		for _, globalPeerKVP := range globalPeersKVP {
-			var globalPeer calico.BackendBGPPeer
-			err = json.Unmarshal([]byte(globalPeerKVP.Value), globalPeer)
+			var globalPeer backends.BGPPeer
+			err = json.Unmarshal([]byte(globalPeerKVP.Value), &globalPeer)
 			if err != nil {
 				return []string{}, fmt.Errorf("Error unmarshalling JSON into BackendBGPPeer: %s", err)
 			}
@@ -263,7 +261,7 @@ func EmitBIRDBGPFilterFuncs(pairs memkv.KVPairs, version int) ([]string, error) 
 		var filterFuncName string
 		var filterRule string
 		if emitImports {
-			filterFuncName, err = EmitFunctionName(filterName, "import", versionStr)
+			filterFuncName, err = EmitBGPFilterFunctionName(filterName, "import", versionStr)
 			if err != nil {
 				return []string{}, err
 			}
@@ -285,7 +283,7 @@ func EmitBIRDBGPFilterFuncs(pairs memkv.KVPairs, version int) ([]string, error) 
 			}
 
 			for _, fields := range ruleFields {
-				filterRule, err = emitFilterStatement(fields[0], fields[1], fields[2])
+				filterRule, err = emitBGPFilterStatement(fields[0], fields[1], fields[2])
 				if err != nil {
 					return []string{}, err
 				}
@@ -298,7 +296,7 @@ func EmitBIRDBGPFilterFuncs(pairs memkv.KVPairs, version int) ([]string, error) 
 		}
 
 		if emitExports {
-			filterFuncName, err = EmitFunctionName(filterName, "export", versionStr)
+			filterFuncName, err = EmitBGPFilterFunctionName(filterName, "export", versionStr)
 			if err != nil {
 				return []string{}, err
 			}
@@ -320,7 +318,7 @@ func EmitBIRDBGPFilterFuncs(pairs memkv.KVPairs, version int) ([]string, error) 
 			}
 
 			for _, fields := range ruleFields {
-				filterRule, err = emitFilterStatement(fields[0], fields[1], fields[2])
+				filterRule, err = emitBGPFilterStatement(fields[0], fields[1], fields[2])
 				if err != nil {
 					return []string{}, err
 				}
