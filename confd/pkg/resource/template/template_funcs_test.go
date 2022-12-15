@@ -9,12 +9,12 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
-func Test_EmitFunctionName(t *testing.T) {
+func Test_EmitBGPFilterFunctionName(t *testing.T) {
 	str := "should-not-be-truncated"
 	direction := "import"
 	version := "4"
 	maxFuncNameLen := 66 //Max BIRD symbol length of 64 + 2 for bookending single quotes
-	output, err := EmitFunctionName(str, direction, version)
+	output, err := EmitBGPFilterFunctionName(str, direction, version)
 	if err != nil {
 		t.Errorf("Unexpected error calling EmitFunctionName(%s, %s, %s): %s", str, direction, version, err)
 	}
@@ -24,7 +24,7 @@ func Test_EmitFunctionName(t *testing.T) {
 	}
 
 	str = "very-long-name-that-should-be-truncated-because-it-is-longer-than-the-max-bird-symbol-length-of-64-chars"
-	output, err = EmitFunctionName(str, direction, version)
+	output, err = EmitBGPFilterFunctionName(str, direction, version)
 	if err != nil {
 		t.Errorf("Unexpected error calling EmitFunctionName(%s, %s, %s): %s", str, direction, version, err)
 	}

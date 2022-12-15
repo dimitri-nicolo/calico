@@ -171,7 +171,8 @@ template bgp bgp_template {
 }
 
 # ------------- External Networks -------------
-{{- range $line := emitBIRDExternalNetworkConfig (gets "/resources/v3/projectcalico.org/externalnetworks/*") }}
+{{- $node_peers_key := printf "/bgp/v1/host/%s/peer_v4" (getenv "NODENAME") }}
+{{- range $line := emitBIRDExternalNetworkConfig (gets "/resources/v3/projectcalico.org/externalnetworks/*") (gets "/bgp/v1/global/peer_v4/*") (gets (printf "%s/*" $node_peers_key)) }}
 {{ $line }}
 {{- end }}
 
