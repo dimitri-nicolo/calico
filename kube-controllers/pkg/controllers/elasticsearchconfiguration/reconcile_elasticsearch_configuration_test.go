@@ -179,8 +179,7 @@ var _ = Describe("Reconcile", func() {
 			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			}))
+			ts := getESServer()
 
 			Expect(err).ShouldNot(HaveOccurred())
 
@@ -203,8 +202,7 @@ var _ = Describe("Reconcile", func() {
 			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			}))
+			ts := getESServer()
 
 			Expect(err).ShouldNot(HaveOccurred())
 
@@ -238,7 +236,7 @@ var _ = Describe("Reconcile", func() {
 			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+			ts := getESServer()
 
 			Expect(err).ShouldNot(HaveOccurred())
 
@@ -301,8 +299,7 @@ var _ = Describe("Reconcile", func() {
 			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			}))
+			ts := getESServer()
 
 			Expect(err).ShouldNot(HaveOccurred())
 
@@ -329,8 +326,7 @@ var _ = Describe("Reconcile", func() {
 			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			}))
+			ts := getESServer()
 
 			Expect(err).ShouldNot(HaveOccurred())
 
@@ -368,7 +364,7 @@ var _ = Describe("Reconcile", func() {
 			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+			ts := getESServer()
 
 			Expect(err).ShouldNot(HaveOccurred())
 
@@ -419,8 +415,7 @@ var _ = Describe("Reconcile", func() {
 			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			}))
+			ts := getESServer()
 
 			Expect(err).ShouldNot(HaveOccurred())
 
@@ -442,8 +437,7 @@ var _ = Describe("Reconcile", func() {
 		})
 
 		It("regenerates user Secrets if the Secret's hash is stale", func() {
-			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			}))
+			ts := getESServer()
 
 			mockESClientBuild := new(elasticsearch.MockClientBuilder)
 			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
@@ -480,8 +474,7 @@ var _ = Describe("Reconcile", func() {
 		})
 
 		It("does not regenerate the user secrets when the owner reference hasn't changed", func() {
-			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			}))
+			ts := getESServer()
 
 			mockESClientBuild := new(elasticsearch.MockClientBuilder)
 			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
@@ -521,8 +514,7 @@ var _ = Describe("Reconcile", func() {
 		})
 
 		It("regenerates the user secrets when the owner reference has changed", func() {
-			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			}))
+			ts := getESServer()
 
 			mockESClientBuild := new(elasticsearch.MockClientBuilder)
 			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
@@ -569,8 +561,7 @@ var _ = Describe("Reconcile", func() {
 			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			}))
+			ts := getESServer()
 
 			Expect(err).ShouldNot(HaveOccurred())
 
@@ -615,8 +606,7 @@ var _ = Describe("Reconcile", func() {
 			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			}))
+			ts := getESServer()
 
 			Expect(err).ShouldNot(HaveOccurred())
 
@@ -639,8 +629,7 @@ var _ = Describe("Reconcile", func() {
 		})
 
 		It("regenerates user Secrets if the Secret's hash is stale", func() {
-			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			}))
+			ts := getESServer()
 
 			mockESClientBuild := new(elasticsearch.MockClientBuilder)
 			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
@@ -678,8 +667,7 @@ var _ = Describe("Reconcile", func() {
 		})
 
 		It("does not regenerate the user secrets when the owner reference hasn't changed", func() {
-			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			}))
+			ts := getESServer()
 
 			mockESClientBuild := new(elasticsearch.MockClientBuilder)
 			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
@@ -721,8 +709,7 @@ var _ = Describe("Reconcile", func() {
 		})
 
 		It("regenerates the user secrets when the owner reference has changed", func() {
-			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			}))
+			ts := getESServer()
 
 			mockESClientBuild := new(elasticsearch.MockClientBuilder)
 			esClient, err := elasticsearch.NewClient(ts.URL, "", "", nil, fipsModeEnabled)
@@ -771,8 +758,7 @@ var _ = Describe("Reconcile", func() {
 			err := esK8sCli.Get().Resource("elasticsearches").Namespace(resource.TigeraElasticsearchNamespace).Name(resource.DefaultTSEEInstanceName).Do(ctx).Into(es)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			}))
+			ts := getESServer()
 
 			Expect(err).ShouldNot(HaveOccurred())
 
@@ -795,6 +781,12 @@ var _ = Describe("Reconcile", func() {
 		})
 	})
 })
+
+func getESServer() *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("X-Elastic-Product", "Elasticsearch")
+	}))
+}
 
 func assertManagementConfiguration(managementK8sCli kubernetes.Interface, operatorNs string, expectedESCertSecret *corev1.Secret, expectedGatewayCertSecret *corev1.Secret, expectedESConfigMap *corev1.ConfigMap) {
 	ctx := context.Background()
