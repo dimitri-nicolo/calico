@@ -656,7 +656,9 @@ var _ = Describe("With an in-process Server with short ping timeout", func() {
 		)
 		err := client.Start(clientCxt)
 		Expect(err).NotTo(HaveOccurred())
-		go recorder.Loop(clientCxt)
+		recorderCtx, recorderCancel := context.WithCancel(context.Background())
+		defer recorderCancel()
+		go recorder.Loop(recorderCtx)
 		defer func() {
 			clientCancel()
 			client.Finished.Wait()
@@ -690,7 +692,9 @@ var _ = Describe("With an in-process Server with short ping timeout", func() {
 			nil,
 		)
 		err := client.Start(clientCxt)
-		go recorder.Loop(clientCxt)
+		recorderCtx, recorderCancel := context.WithCancel(context.Background())
+		defer recorderCancel()
+		go recorder.Loop(recorderCtx)
 		Expect(err).NotTo(HaveOccurred())
 		defer func() {
 			clientCancel()
@@ -915,7 +919,9 @@ var _ = Describe("With an in-process Server with long ping interval", func() {
 			},
 		)
 		err := client.Start(clientCxt)
-		go recorder.Loop(clientCxt)
+		recorderCtx, recorderCancel := context.WithCancel(context.Background())
+		defer recorderCancel()
+		go recorder.Loop(recorderCtx)
 		Expect(err).NotTo(HaveOccurred())
 		defer func() {
 			clientCancel()
@@ -1028,7 +1034,9 @@ var _ = Describe("With an in-process Server with short grace period", func() {
 			)
 
 			err = client.Start(clientCxt)
-			go recorder.Loop(clientCxt)
+			recorderCtx, recorderCancel := context.WithCancel(context.Background())
+			defer recorderCancel()
+			go recorder.Loop(recorderCtx)
 			Expect(err).NotTo(HaveOccurred())
 			defer func() {
 				clientCancel()
@@ -1088,7 +1096,9 @@ var _ = Describe("With an in-process Server with short grace period", func() {
 				nil,
 			)
 			err = client.Start(clientCxt)
-			go recorder.Loop(clientCxt)
+			recorderCtx, recorderCancel := context.WithCancel(context.Background())
+			defer recorderCancel()
+			go recorder.Loop(recorderCtx)
 			Expect(err).NotTo(HaveOccurred())
 			defer func() {
 				clientCancel()
@@ -1220,7 +1230,9 @@ var _ = Describe("With an in-process Server with short write timeout", func() {
 					)
 
 					err := client.Start(clientCxt)
-					go recorder.Loop(clientCxt)
+					recorderCtx, recorderCancel := context.WithCancel(context.Background())
+					defer recorderCancel()
+					go recorder.Loop(recorderCtx)
 					Expect(err).NotTo(HaveOccurred())
 					defer func() {
 						clientCancel()
@@ -1414,15 +1426,17 @@ var _ = Describe("with server requiring TLS", func() {
 
 	// Each client we create gets recorded here for cleanup.
 	type clientState struct {
-		clientCxt    context.Context
-		clientCancel context.CancelFunc
-		client       *syncclient.SyncerClient
-		recorder     *StateRecorder
-		startErr     error
+		clientCxt      context.Context
+		clientCancel   context.CancelFunc
+		recorderCancel context.CancelFunc
+		client         *syncclient.SyncerClient
+		recorder       *StateRecorder
+		startErr       error
 	}
 
 	createClient := func(options *syncclient.Options) clientState {
 		clientCxt, clientCancel := context.WithCancel(context.Background())
+		recorderCxt, recorderCancel := context.WithCancel(context.Background())
 		recorder := NewRecorder()
 		serverAddr := fmt.Sprintf("127.0.0.1:%d", server.Port())
 		client := syncclient.New(
@@ -1435,14 +1449,15 @@ var _ = Describe("with server requiring TLS", func() {
 		)
 
 		err := client.Start(clientCxt)
-		go recorder.Loop(clientCxt)
+		go recorder.Loop(recorderCxt)
 
 		cs := clientState{
-			clientCxt:    clientCxt,
-			client:       client,
-			clientCancel: clientCancel,
-			recorder:     recorder,
-			startErr:     err,
+			clientCxt:      clientCxt,
+			client:         client,
+			clientCancel:   clientCancel,
+			recorderCancel: recorderCancel,
+			recorder:       recorder,
+			startErr:       err,
 		}
 		return cs
 	}
@@ -1507,6 +1522,7 @@ var _ = Describe("with server requiring TLS", func() {
 		}
 		// Connect with specified TLS options.
 		clientState := createClient(options)
+		defer clientState.recorderCancel()
 		if clientCertName == "" || expectConnection {
 			// Expecting this connection to succeed so there should be no error from Start().
 			Expect(clientState.startErr).NotTo(HaveOccurred())
