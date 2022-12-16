@@ -16,7 +16,6 @@ const (
 	ElasticsearchRoleNameKibanaAdmin     = "kibana_admin"
 	ElasticsearchRoleNameKibanaViewer    = "kibana_viewer"
 	ElasticsearchRoleNameL7Viewer        = "l7_viewer"
-	ElasticsearchRoleNameWAFViewer       = "waf_viewer"
 
 	ElasticsearchRoleNameSuperUser = "superuser"
 )
@@ -82,15 +81,6 @@ func GetAuthorizationRoles(clusterName string) []elasticsearch.Role {
 			Definition: &elasticsearch.RoleDefinition{
 				Indices: []elasticsearch.RoleIndex{{
 					Names:      []string{indexPattern("tigera_secure_ee_l7", clusterName, ".*")},
-					Privileges: []string{"read"},
-				}},
-			},
-		},
-		{
-			Name: formatRoleName(ElasticsearchRoleNameWAFViewer, clusterName),
-			Definition: &elasticsearch.RoleDefinition{
-				Indices: []elasticsearch.RoleIndex{{
-					Names:      []string{indexPattern("tigera_secure_ee_waf", clusterName, ".*")},
 					Privileges: []string{"read"},
 				}},
 			},
