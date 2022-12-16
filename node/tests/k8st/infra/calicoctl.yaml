@@ -90,6 +90,7 @@ rules:
       - ipamhandles
       - tiers
       - licensekeys
+      - externalnetworks
     verbs:
       - create
       - get

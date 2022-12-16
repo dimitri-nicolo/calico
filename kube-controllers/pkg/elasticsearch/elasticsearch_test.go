@@ -60,8 +60,15 @@ func configureESMock(req mockReq) *mockES {
 
 	// Configure ES mock
 	mock.es = httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		mock.interceptedRequests = append(mock.interceptedRequests, request)
-		writer.WriteHeader(req.statusCode)
+		if request.Method == http.MethodGet && request.URL.Path == "/" {
+			// This is a version check. See elasticsearch.go's genuineCheckHeader stuff.
+			writer.Header().Add("X-Elastic-Product", "Elasticsearch")
+			writer.WriteHeader(http.StatusOK)
+		} else {
+			mock.interceptedRequests = append(mock.interceptedRequests, request)
+			writer.WriteHeader(req.statusCode)
+		}
+
 		if req.hasBody {
 			_, _ = writer.Write([]byte(req.body))
 		}
@@ -94,22 +101,22 @@ func assertResponse(expected expected, err error, mockES *mockES) {
 
 var _ = Describe("Elasticsearch", func() {
 	fipsModeEnabled := true
-	DescribeTable("DeleteUser",
+	FDescribeTable("DeleteUser",
 		func(mock mockReq, expected expected) {
 			// Configure ES to return a specific response
-			var mockES = configureESMock(mock)
-			defer mockES.es.Close()
+			var es = configureESMock(mock)
+			defer es.es.Close()
 
 			// Configure ES client
-			var client, err = elasticsearch.NewClient(mockES.es.URL, esAdminName, esAdminPassword, nil, fipsModeEnabled)
+			var client, err = elasticsearch.NewClient(es.es.URL, esAdminName, esAdminPassword, nil, fipsModeEnabled)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Invoke Delete
 			err = client.DeleteUser(esUser)
 
-			assertResponse(expected, err, mockES)
+			assertResponse(expected, err, es)
 
-			mockES.es.Close()
+			es.es.Close()
 		},
 		Entry("Delete API returns 200",
 			mockReq{200, false, ""},
@@ -128,17 +135,17 @@ var _ = Describe("Elasticsearch", func() {
 	DescribeTable("DeleteRole",
 		func(mock mockReq, expected expected) {
 			// Configure ES to return a specific response
-			var mockES = configureESMock(mock)
-			defer mockES.es.Close()
+			var es = configureESMock(mock)
+			defer es.es.Close()
 
 			// Configure ES client
-			var client, err = elasticsearch.NewClient(mockES.es.URL, esAdminName, esAdminPassword, nil, fipsModeEnabled)
+			var client, err = elasticsearch.NewClient(es.es.URL, esAdminName, esAdminPassword, nil, fipsModeEnabled)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Invoke Delete
 			err = client.DeleteRole(role)
 
-			assertResponse(expected, err, mockES)
+			assertResponse(expected, err, es)
 		},
 		Entry("Delete API returns 200",
 			mockReq{200, false, ""},
@@ -158,11 +165,11 @@ var _ = Describe("Elasticsearch", func() {
 	DescribeTable("GetUsers",
 		func(mock mockReq, expected expected, expectedUsers []elasticsearch.User) {
 			// Configure ES to return a specific response
-			var mockES = configureESMock(mock)
-			defer mockES.es.Close()
+			var es = configureESMock(mock)
+			defer es.es.Close()
 
 			// Configure ES client
-			var client, err = elasticsearch.NewClient(mockES.es.URL, esAdminName, esAdminPassword, nil, fipsModeEnabled)
+			var client, err = elasticsearch.NewClient(es.es.URL, esAdminName, esAdminPassword, nil, fipsModeEnabled)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Invoke GetUser
@@ -176,7 +183,7 @@ var _ = Describe("Elasticsearch", func() {
 				return users[i].Username < users[j].Username
 			})
 
-			assertResponse(expected, err, mockES)
+			assertResponse(expected, err, es)
 			Expect(users).To(Equal(expectedUsers))
 		},
 		Entry("GET API returns 400",

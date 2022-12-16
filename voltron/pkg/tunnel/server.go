@@ -161,7 +161,7 @@ func (s *Server) ServeTLS(lis net.Listener) error {
 	config.Certificates = s.serverCerts
 	config.ClientAuth = tls.RequireAndVerifyClientCert
 	config.ClientCAs = s.clientCertPool
-	config.BuildNameToCertificate()
+
 	return s.Serve(tls.NewListener(lis, config))
 }
 
