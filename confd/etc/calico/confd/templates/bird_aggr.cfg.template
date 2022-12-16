@@ -24,7 +24,7 @@ protocol static {
 {{- end}}
   table master;
 {{- range ls "/resources/v3/projectcalico.org/externalnetworks" }}
-  # table {{ emitExternalNetworkTableName . }};
+  table {{ emitExternalNetworkTableName . }};
 {{- end }}
 }
 {{else}}# No IP blocks or static routes for this host.{{end}}

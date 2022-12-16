@@ -22,6 +22,10 @@ protocol static {
    route {{$cidr}} blackhole;
 {{- end}}
 {{- end}}
+  table master;
+{{- range ls "/resources/v3/projectcalico.org/externalnetworks" }}
+  table {{ emitExternalNetworkTableName . }};
+{{- end }}
 }
 {{else}}# No IP blocks or static routes for this host.{{end}}
 

@@ -97,7 +97,6 @@ func EmitBGPFilterFunctionName(filterName, direction, version string) (string, e
 		return "", fmt.Errorf("Provided direction '%s' does not map to either 'import' or 'export'", direction)
 	}
 	pieces := []string{"bgp_", "", "_", normalizedDirection, "FilterV", version}
-	maxBIRDSymLen := 64
 	resizedName, err := truncateAndHashName(filterName, maxBIRDSymLen-len(strings.Join(pieces, "")))
 	if err != nil {
 		return "", err
@@ -107,7 +106,7 @@ func EmitBGPFilterFunctionName(filterName, direction, version string) (string, e
 	return fmt.Sprintf("'%s'", fullName), nil
 }
 
-func EmitBIRDExternalNetworkConfig(externalNetworkKVPs memkv.KVPairs, globalPeersKVP memkv.KVPairs,
+func EmitBIRDExternalNetworkConfig(selfIP string, externalNetworkKVPs memkv.KVPairs, globalPeersKVP memkv.KVPairs,
 	nodeSpecificPeersKVP memkv.KVPairs) ([]string, error) {
 	lines := []string{}
 	var line string
@@ -127,47 +126,85 @@ func EmitBIRDExternalNetworkConfig(externalNetworkKVPs memkv.KVPairs, globalPeer
 			routeTableIndex = *externalNetwork.Spec.RouteTableIndex
 		}
 		externalNetworkName := path.Base(kvp.Key)
-		// call truncateAndHashName here to normalize
 		tableName, err := EmitExternalNetworkTableName(externalNetworkName)
 		if err != nil {
 			return []string{}, err
 		}
-		kernelName := fmt.Sprintf("'K_%s'", externalNetworkName)
+
 		line = fmt.Sprintf("# ExternalNetwork %s", externalNetworkName)
 		lines = append(lines, line)
 
 		line = fmt.Sprintf("table %s;", tableName)
 		lines = append(lines, line)
 
-		//var bgpPeerProtocols []string
+		var bgpPeerProtocols []string
 
 		for _, globalPeerKVP := range globalPeersKVP {
 			var globalPeer backends.BGPPeer
 			err = json.Unmarshal([]byte(globalPeerKVP.Value), &globalPeer)
 			if err != nil {
-				return []string{}, fmt.Errorf("Error unmarshalling JSON into BackendBGPPeer: %s", err)
+				return []string{}, fmt.Errorf("Error unmarshalling JSON into backend BGPPeer: %s", err)
 			}
-			if globalPeer.ExternalNetwork != "" {
-
+			if globalPeer.PeerIP.String() == selfIP {
+				continue // Skip ourselves because we don't generate a protocol definition for ourselves
+			}
+			if globalPeer.ExternalNetwork == externalNetworkName {
+				var sep string
+				if globalPeer.PeerIP.Version() == 4 {
+					sep = "."
+				} else {
+					sep = ":"
+				}
+				ipParts := strings.Split(globalPeer.PeerIP.String(), sep)
+				ipParts = append([]string{"Global"}, ipParts...)
+				if globalPeer.Port > 0 {
+					portStrParts := []string{"port", strconv.Itoa(int(globalPeer.Port))}
+					ipParts = append(ipParts, portStrParts...)
+				}
+				peerProtoStr := fmt.Sprintf("    if proto = \"%s\" then accept;", strings.Join(ipParts, "_"))
+				bgpPeerProtocols = append(bgpPeerProtocols, peerProtoStr)
 			}
 		}
 
-		//for _, nodeSpecificPeerKVP := range nodeSpecificPeersKVP {
+		for _, nodeSpecificPeerKVP := range nodeSpecificPeersKVP {
+			var nodeSpecificPeer backends.BGPPeer
+			err = json.Unmarshal([]byte(nodeSpecificPeerKVP.Value), &nodeSpecificPeer)
+			if err != nil {
+				return []string{}, fmt.Errorf("Error unmarshalling JSON into backend BGPPeer: %s", err)
+			}
+			if nodeSpecificPeer.ExternalNetwork == externalNetworkName {
+				var sep string
+				if nodeSpecificPeer.PeerIP.Version() == 4 {
+					sep = "."
+				} else {
+					sep = ":"
+				}
+				ipParts := strings.Split(nodeSpecificPeer.PeerIP.String(), sep)
+				ipParts = append([]string{"Node"}, ipParts...)
+				if nodeSpecificPeer.Port > 0 {
+					portStrParts := []string{"port", strconv.Itoa(int(nodeSpecificPeer.Port))}
+					ipParts = append(ipParts, portStrParts...)
+				}
+				peerProtoStr := fmt.Sprintf("    if proto = \"%s\" then accept;", strings.Join(ipParts, "_"))
+				bgpPeerProtocols = append(bgpPeerProtocols, peerProtoStr)
+			}
+		}
 
-		//}
-
+		kernelName := strings.Replace(tableName, "T_", "K_", 1)
 		kernel := []string{
 			fmt.Sprintf("protocol kernel %s from kernel_template {", kernelName),
-			"device routes yes;",
+			"  device routes yes;",
 			fmt.Sprintf("  table %s;", tableName),
 			fmt.Sprintf("  kernel table %d;", routeTableIndex),
 			"  export filter {",
 			"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
-			" # Print \"if proto = <peer> then accept;\" for all global and node-specific peers",
+		}
+		kernel = append(kernel, bgpPeerProtocols...)
+		kernel = append(kernel, []string{
 			"    reject;",
 			"  };",
 			"}",
-		}
+		}...)
 
 		lines = append(lines, kernel...)
 	}
