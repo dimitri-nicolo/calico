@@ -59,7 +59,7 @@ endif
 IDS_CONTROLLER_CONTAINER_CREATED=.intrusion-detection-controller.created-$(ARCH)
 JOB_INSTALLER_CONTAINER_CREATED=.intrusion-detection-job-installer.created-$(ARCH)
 
-build: $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH)
+build: $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH) $(BINDIR)/intrusion-detection-job-installer-$(ARCH)
 
 .PHONY: $(BINDIR)/controller-$(ARCH)
 $(BINDIR)/controller-$(ARCH): $(SRC_FILES)
@@ -72,6 +72,12 @@ $(BINDIR)/healthz-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD_CGO) \
 	    sh -c '$(GIT_CONFIG_SSH) \
 	           go build -o $@ -v $(BUILD_TAGS) cmd/healthz/healthz.go'
+
+.PHONY: $(BINDIR)/intrusion-detection-job-installer-$(ARCH)
+$(BINDIR)/intrusion-detection-job-installer-$(ARCH):
+	$(DOCKER_GO_BUILD_CGO) \
+	    sh -c '$(GIT_CONFIG_SSH) \
+	           go build -o $@ -v -ldflags "$(VERSION_FLAGS)" $(BUILD_TAGS) install/cmd/install.go'
 
 # by default, build the image for the target architecture
 .PHONY: image-all
@@ -89,9 +95,8 @@ $(IDS_CONTROLLER_CONTAINER_CREATED): Dockerfile.$(ARCH) $(BINDIR)/controller-$(A
 	touch $@
 
 $(JOB_INSTALLER_IMAGE): $(JOB_INSTALLER_CONTAINER_CREATED)
-$(JOB_INSTALLER_CONTAINER_CREATED): docker-image/install/Dockerfile.$(ARCH)
-	# Run from the "install" sub-directory so that docker has access to all the python bits.
-	$(DOCKER_BUILD) -t $(JOB_INSTALLER_IMAGE):latest-$(ARCH) -f docker-image/install/Dockerfile.$(ARCH) install --load
+$(JOB_INSTALLER_CONTAINER_CREATED): docker-image/install/Dockerfile.$(ARCH) $(BINDIR)/intrusion-detection-job-installer-$(ARCH)
+	$(DOCKER_BUILD) -t $(JOB_INSTALLER_IMAGE):latest-$(ARCH) -f docker-image/install/Dockerfile.$(ARCH) . --load
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(JOB_INSTALLER_IMAGE)
 	touch $@
 
