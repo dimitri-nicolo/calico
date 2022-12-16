@@ -47,7 +47,7 @@ execute_test_suite() {
 
     # Run the set of tests using confd in oneshot mode.
     echo "Execute oneshot-mode tests"
-    #execute_tests_oneshot
+    execute_tests_oneshot
     echo "Oneshot-mode tests passed"
 
     # Now run a set of tests with confd running continuously.
@@ -55,10 +55,10 @@ execute_test_suite() {
     # confd, so order the tests accordingly.  We'll start with a set of tests that use the
     # node mesh enabled, so turn it on now before we start confd.
     echo "Execute daemon-mode tests"
-    #turn_mesh_on
-    #for i in $(seq 1 2); do
-    #    execute_tests_daemon
-    #done
+    turn_mesh_on
+    for i in $(seq 1 2); do
+        execute_tests_daemon
+    done
     echo "Daemon-mode tests passed"
 }
 
