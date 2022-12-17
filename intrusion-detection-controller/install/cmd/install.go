@@ -8,9 +8,10 @@ import (
 	"os"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/intrusion-detection-controller/install/pkg/config"
-	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -77,6 +78,9 @@ func main() {
 func postDashboard(client *http.Client, url, username, password, dashboardName, dashboard string) {
 	log.Infof("POST %v %v", url, dashboardName)
 	req, err := http.NewRequest("POST", url, strings.NewReader(dashboard))
+	if err != nil {
+		log.Panicf("unable to setup dashboard %s, err=%v", dashboardName, err)
+	}
 	req.SetBasicAuth(username, password)
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("kbn-xsrf", "reporting")
@@ -87,6 +91,9 @@ func postDashboard(client *http.Client, url, username, password, dashboardName, 
 	}
 	if resp.StatusCode == http.StatusConflict {
 		req, err = http.NewRequest("PUT", url, strings.NewReader(dashboard))
+		if err != nil {
+			log.Panicf("unable to setup dashboard %s, err=%v", dashboardName, err)
+		}
 		req.SetBasicAuth(username, password)
 		req.Header.Add("Content-Type", "application/json")
 		req.Header.Add("kbn-xsrf", "reporting")
