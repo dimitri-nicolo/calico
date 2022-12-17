@@ -7,9 +7,9 @@ DASHBOARDS="api-kibana-dashboard.json tor-vpn-dashboard.json honeypod-dashboard.
 for FILE in $DASHBOARDS; do
   CODE=1
   while [ $CODE != 0 ]; do
-    RESPONSE=$(curl --insecure --max-time 2 -XPOST "https://${USERNAME}:${PASSWORD}@localhost:9443/tigera-kibana/api/saved_objects/_bulk_get" --header 'kbn-xsrf: reporting' --header 'Content-Type: application/json' --data-raw "$(jq -c '. | map({id: .id, type: .type})' data/${FILE})")
+    RESPONSE=$(curl --insecure --max-time 2 -XPOST "https://${USERNAME}:${PASSWORD}@localhost:9443/tigera-kibana/api/saved_objects/_bulk_get" --header 'kbn-xsrf: reporting' --header 'Content-Type: application/json' --data-raw "$(jq -c '. | map({id: .id, type: .type})' cmd/data/${FILE})")
     CODE=$?
   done
 
-  echo $RESPONSE | jq '.saved_objects | map(del(.namespaces) | del(.updated_at))' > data/${FILE}
+  echo $RESPONSE | jq '.saved_objects | map(del(.namespaces) | del(.updated_at))' > cmd/data/${FILE}
 done

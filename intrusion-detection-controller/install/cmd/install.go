@@ -85,7 +85,7 @@ func postDashboard(client *http.Client, url, username, password, dashboardName, 
 	if err != nil {
 		log.Panicf("unable to setup dashboard %s, err=%v", dashboardName, err)
 	}
-	if resp.StatusCode == 409 {
+	if resp.StatusCode == http.StatusConflict {
 		req, err = http.NewRequest("PUT", url, strings.NewReader(dashboard))
 		req.SetBasicAuth(username, password)
 		req.Header.Add("Content-Type", "application/json")
@@ -96,7 +96,7 @@ func postDashboard(client *http.Client, url, username, password, dashboardName, 
 			log.Panicf("unable to setup dashboard %s, err=%v", dashboardName, err)
 		}
 	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		log.Panicf("unable to setup dashboard %s, status=%v", dashboardName, resp.Status)
 	}
 	log.Info(resp.Status)

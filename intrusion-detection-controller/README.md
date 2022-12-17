@@ -10,7 +10,7 @@
 When Kibana and Elasticsearch versions are upgraded the dashboard json in the `install/data` directory may need to be upgraded to
 be compatible with the new version. Luckily, when Kibana and Elasticsearch are upgraded with dashboards already loaded
 the Dashboards will be upgraded internally. All we need to do is export the upgrade version from Elasticsearch and update
-the json files in `install/data`.
+the json files in `install/cmd/data`.
 
 The process for upgrading the dashboards is as follows:
   1. Create a K8s cluster with Calico Enterprise installed with the previous version of Elasticsearch and Kibana.
