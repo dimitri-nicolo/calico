@@ -29,6 +29,31 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var (
+	globalOverridesLock    sync.Mutex
+	globalTimeoutOverrides map[string]time.Duration
+)
+
+func SetGlobalTimeoutOverrides(overrides map[string]time.Duration) {
+	overridesCopy := map[string]time.Duration{}
+	for k, v := range overrides {
+		overridesCopy[k] = v
+	}
+	globalOverridesLock.Lock()
+	defer globalOverridesLock.Unlock()
+	globalTimeoutOverrides = overrides
+}
+
+func GlobalOverride(name string) *time.Duration {
+	globalOverridesLock.Lock()
+	defer globalOverridesLock.Unlock()
+	override, ok := globalTimeoutOverrides[name]
+	if ok {
+		return &override
+	}
+	return nil
+}
+
 // The HealthReport struct has slots for the levels of health that we monitor and aggregate.
 type HealthReport struct {
 	Live   bool
@@ -109,7 +134,16 @@ func (r *reporterState) HasLivenessProblem() bool {
 // TimedOut checks whether the reporter is due for another report. This is the case when
 // the reports are configured to expire and the time since the last report exceeds the report timeout duration.
 func (r *reporterState) TimedOut() bool {
-	return r.timeout != 0 && time.Since(r.timestamp) > r.timeout
+	timeout := r.Timeout()
+	return timeout != 0 && time.Since(r.timestamp) > timeout
+}
+
+func (r *reporterState) Timeout() time.Duration {
+	o := GlobalOverride(r.name)
+	if o != nil {
+		return *o
+	}
+	return r.timeout
 }
 
 // A HealthAggregator receives health reports from individual reporters (which are typically
@@ -272,12 +306,21 @@ func (aggregator *HealthAggregator) Summary() *HealthReport {
 			readinessStr = "reporting ready"
 		}
 		componentNames = append(componentNames, reporter.name)
+
+		suffix := ""
+		timeout := reporter.timeout
+		if ov := GlobalOverride(reporter.name); ov != nil {
+			suffix = " (override)"
+			timeout = *ov
+		}
 		var timeoutStr string
-		if reporter.timeout == 0 {
+		if timeout == 0 {
 			timeoutStr = "-"
 		} else {
-			timeoutStr = reporter.timeout.String()
+			timeoutStr = timeout.String()
 		}
+		timeoutStr += suffix
+
 		componentData[reporter.name] = []string{
 			reporter.name,
 			timeoutStr,
