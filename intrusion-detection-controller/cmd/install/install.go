@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/crypto/pkg/tls"
-	"github.com/projectcalico/calico/intrusion-detection-controller/install/pkg/config"
+	"github.com/projectcalico/calico/intrusion-detection-controller/pkg/config"
 )
 
 var (

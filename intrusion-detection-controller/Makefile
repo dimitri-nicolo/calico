@@ -77,7 +77,7 @@ $(BINDIR)/healthz-$(ARCH): $(SRC_FILES)
 $(BINDIR)/intrusion-detection-job-installer-$(ARCH):
 	$(DOCKER_GO_BUILD_CGO) \
 	    sh -c '$(GIT_CONFIG_SSH) \
-	           go build -o $@ -v -ldflags "$(VERSION_FLAGS)" $(BUILD_TAGS) install/cmd/install.go'
+	           go build -o $@ -v -ldflags "$(VERSION_FLAGS)" $(BUILD_TAGS) cmd/install/install.go'
 
 # by default, build the image for the target architecture
 .PHONY: image-all
@@ -89,8 +89,8 @@ sub-image-%:
 image: $(IDS_CONTROLLER_IMAGE) $(JOB_INSTALLER_IMAGE)
 
 $(IDS_CONTROLLER_IMAGE): $(IDS_CONTROLLER_CONTAINER_CREATED)
-$(IDS_CONTROLLER_CONTAINER_CREATED): Dockerfile.$(ARCH) $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH)
-	$(DOCKER_BUILD) -t $(IDS_CONTROLLER_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) . --load
+$(IDS_CONTROLLER_CONTAINER_CREATED): docker-image/controller/Dockerfile.$(ARCH) $(BINDIR)/controller-$(ARCH) $(BINDIR)/healthz-$(ARCH)
+	$(DOCKER_BUILD) -t $(IDS_CONTROLLER_IMAGE):latest-$(ARCH) -f docker-image/controller/Dockerfile.$(ARCH) . --load
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(IDS_CONTROLLER_IMAGE)
 	touch $@
 
@@ -139,4 +139,4 @@ cd: image-all cd-common
 # Miscellaneous
 ###############################################################################
 migrate-dashboards:
-	bash install/migrate_dashboards.sh
+	bash migrate_dashboards.sh
