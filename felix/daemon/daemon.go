@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"reflect"
 	"runtime"
 	"runtime/debug"
 	"sync"
@@ -87,6 +88,7 @@ const (
 	// String sent on the failure report channel to indicate we're shutting down for config
 	// change.
 	reasonConfigChanged        = "config changed"
+	reasonConfigUpdateFailed   = "config update failed"
 	reasonEncapChanged         = "encapsulation changed"
 	reasonLicenseConfigChanged = "license config changed"
 	// String sent on the failure report channel to indicate we're shutting down for a child
@@ -176,7 +178,7 @@ func Run(configFile string, gitVersion string, buildDate string, gitRevision str
 	// config that indicates that.
 	healthAggregator := health.NewHealthAggregator()
 
-	const healthName = "felix-startup"
+	const healthName = "FelixStartup"
 
 	// Register this function as a reporter of liveness and readiness, with no timeout.
 	healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, 0)
@@ -198,6 +200,7 @@ func Run(configFile string, gitVersion string, buildDate string, gitRevision str
 	var typhaAddresses []discovery.Typha
 	var numClientsCreated int
 	var k8sClientSet *kubernetes.Clientset
+	var recalculateEncap func()
 configRetry:
 	for {
 		if numClientsCreated > 60 {
@@ -299,10 +302,15 @@ configRetry:
 			time.Sleep(1 * time.Second)
 			continue configRetry
 		}
-		encapCalculator := calc.NewEncapsulationCalculator(configParams, ippoolKVPList)
-		configParams.Encapsulation.IPIPEnabled = encapCalculator.IPIPEnabled()
-		configParams.Encapsulation.VXLANEnabled = encapCalculator.VXLANEnabled()
-		configParams.Encapsulation.VXLANEnabledV6 = encapCalculator.VXLANEnabledV6()
+		// The encap may change below if we disable IPSec.
+		recalculateEncap = func() {
+			encapCalculator := calc.NewEncapsulationCalculator(configParams, ippoolKVPList)
+			configParams.Encapsulation.IPIPEnabled = encapCalculator.IPIPEnabled()
+			configParams.Encapsulation.VXLANEnabled = encapCalculator.VXLANEnabled()
+			configParams.Encapsulation.VXLANEnabledV6 = encapCalculator.VXLANEnabledV6()
+			log.WithField("encaps", configParams.Encapsulation).Info("Calculated enabled encapsulations from IP pools.")
+		}
+		recalculateEncap()
 
 		// We now have some config flags that affect how we configure the syncer.
 		// After loading the config from the datastore, reconnect, possibly with new
@@ -376,7 +384,10 @@ configRetry:
 	licenseStatus := licenseMonitor.GetLicenseStatus()
 
 	// Correct the config based on licensed features.
-	removeUnlicensedFeaturesFromConfig(configParams, licenseMonitor)
+	if removeUnlicensedFeaturesFromConfig(configParams, licenseMonitor) {
+		// If we happened to disable IPSec, that has a knock-on impact on encapsulation mode.
+		recalculateEncap()
+	}
 
 	if configParams.BPFEnabled {
 		// Check for BPF dataplane support before we do anything that relies on the flag being set one way or another.
@@ -418,6 +429,9 @@ configRetry:
 			}
 		}
 	}
+
+	// Set any watchdog timeout overrides before we initialise components.
+	health.SetGlobalTimeoutOverrides(configParams.HealthTimeoutOverrides)
 
 	// We're now both live and ready.
 	healthAggregator.Report(healthName, &health.HealthReport{Live: true, Ready: true})
@@ -703,9 +717,7 @@ configRetry:
 
 	// Send the opening message to the dataplane driver, giving it its
 	// config.
-	dpConnector.ToDataplane <- &proto.ConfigUpdate{
-		Config: configParams.RawValues(),
-	}
+	dpConnector.ToDataplane <- configParams.ToConfigUpdate()
 
 	if configParams.PrometheusMetricsEnabled {
 		log.Info("Prometheus metrics enabled.  Starting server.")
@@ -1028,7 +1040,9 @@ func getAndMergeConfig(
 }
 
 type DataplaneConnector struct {
-	config                     *config.Config
+	configLock sync.Mutex
+	config     *config.Config
+
 	configUpdChan              chan<- map[string]string
 	ToDataplane                chan interface{}
 	StatusUpdatesFromDataplane chan interface{}
@@ -1137,10 +1151,21 @@ func (fc *DataplaneConnector) handleProcessStatusUpdate(ctx context.Context, msg
 		UptimeSeconds: msg.Uptime,
 		FirstUpdate:   !fc.firstStatusReportSent,
 	}
+
+	var hostname, regionString string
+	var reportingTTL time.Duration
+	func() {
+		fc.configLock.Lock()
+		defer fc.configLock.Unlock()
+		hostname = fc.config.FelixHostname
+		regionString = model.RegionString(fc.config.OpenstackRegion)
+		reportingTTL = fc.config.ReportingTTLSecs
+	}()
+
 	kv := model.KVPair{
-		Key:   model.ActiveStatusReportKey{Hostname: fc.config.FelixHostname, RegionString: model.RegionString(fc.config.OpenstackRegion)},
+		Key:   model.ActiveStatusReportKey{Hostname: hostname, RegionString: regionString},
 		Value: &statusReport,
-		TTL:   fc.config.ReportingTTLSecs,
+		TTL:   reportingTTL,
 	}
 	applyCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	_, err := fc.datastore.Apply(applyCtx, &kv)
@@ -1156,7 +1181,7 @@ func (fc *DataplaneConnector) handleProcessStatusUpdate(ctx context.Context, msg
 		fc.firstStatusReportSent = true
 	}
 	kv = model.KVPair{
-		Key:   model.LastStatusReportKey{Hostname: fc.config.FelixHostname, RegionString: model.RegionString(fc.config.OpenstackRegion)},
+		Key:   model.LastStatusReportKey{Hostname: hostname, RegionString: regionString},
 		Value: &statusReport,
 	}
 	applyCtx, cancel = context.WithTimeout(ctx, 2*time.Second)
@@ -1166,12 +1191,22 @@ func (fc *DataplaneConnector) handleProcessStatusUpdate(ctx context.Context, msg
 		log.Warningf("Failed to write status to datastore: %v", err)
 	}
 }
+
 func (fc *DataplaneConnector) reconcileWireguardStatUpdate(dpPubKey string, ipVersion proto.IPVersion) error {
 	// In case of a recoverable failure (ErrorResourceUpdateConflict), retry update 3 times.
 	for iter := 0; iter < 3; iter++ {
 		// Read node resource from datastore and compare it with the publicKey from dataplane.
 		getCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		node, err := fc.datastorev3.Nodes().Get(getCtx, fc.config.FelixHostname, options.GetOptions{})
+
+		felixHostname := func() string {
+			// Using a func() here to make sure Unlock() runs before we do the
+			// network operations below.
+			fc.configLock.Lock()
+			defer fc.configLock.Unlock()
+			return fc.config.FelixHostname
+		}()
+
+		node, err := fc.datastorev3.Nodes().Get(getCtx, felixHostname, options.GetOptions{})
 		cancel()
 		if err != nil {
 			switch err.(type) {
@@ -1376,14 +1411,24 @@ func (fc *DataplaneConnector) handleEgressPodStatusUpdateFromDataplane() {
 	}
 }
 
-var handledConfigChanges = set.From("CalicoVersion", "CNXVersion", "ClusterGUID", "ClusterType", "DNSCacheEpoch", "DNSExtraTTL", "WindowsDNSExtraTTL")
+var handledConfigChanges = set.From(
+	"CalicoVersion",
+	"ClusterGUID",
+	"ClusterType",
+	"HealthTimeoutOverrides",
+
+	// Enterprise extras...
+	"CNXVersion",
+	"DNSCacheEpoch",
+	"DNSExtraTTL",
+	"WindowsDNSExtraTTL",
+)
 
 func (fc *DataplaneConnector) sendMessagesToDataplaneDriver() {
 	defer func() {
 		fc.shutDownProcess("Failed to send messages to dataplane")
 	}()
 
-	var config map[string]string
 	for {
 		msg := <-fc.ToDataplane
 		switch msg := msg.(type) {
@@ -1395,59 +1440,23 @@ func (fc *DataplaneConnector) sendMessagesToDataplaneDriver() {
 				fc.InSync <- true
 			}
 		case *proto.ConfigUpdate:
-			if config != nil {
-				log.WithFields(log.Fields{
-					"old": config,
-					"new": msg.Config,
-				}).Info("Config updated, checking whether we need to restart")
-				restartNeeded := false
-				for kNew, vNew := range msg.Config {
-					logCxt := log.WithFields(log.Fields{"key": kNew, "new": vNew})
-					if vOld, prs := config[kNew]; !prs {
-						logCxt = logCxt.WithField("updateType", "add")
-					} else if vNew != vOld {
-						logCxt = logCxt.WithFields(log.Fields{"old": vOld, "updateType": "update"})
-					} else {
-						continue
-					}
-					if handledConfigChanges.Contains(kNew) {
-						logCxt.Info("Config change can be handled without restart")
-						continue
-					}
-					logCxt.Warning("Config change requires restart")
-					restartNeeded = true
-				}
-				for kOld, vOld := range config {
-					logCxt := log.WithFields(log.Fields{"key": kOld, "old": vOld, "updateType": "delete"})
-					if _, prs := msg.Config[kOld]; prs {
-						// Key was present in the message so we've handled above.
-						continue
-					}
-					if handledConfigChanges.Contains(kOld) {
-						logCxt.Info("Config change can be handled without restart")
-						continue
-					}
-					logCxt.Warning("Config change requires restart")
-					restartNeeded = true
-				}
-
-				if restartNeeded {
-					fc.shutDownProcess(reasonConfigChanged)
-				}
-			}
-
-			// Take a copy of the config to compare against next time.
-			config = make(map[string]string)
-			for k, v := range msg.Config {
-				config[k] = v
-			}
+			fc.handleConfigUpdate(msg)
 		case *calc.DatastoreNotReady:
 			log.Warn("Datastore became unready, need to restart.")
 			fc.shutDownProcess("datastore became unready")
 		case *proto.Encapsulation:
-			if msg.IpipEnabled != fc.config.Encapsulation.IPIPEnabled || msg.VxlanEnabled != fc.config.Encapsulation.VXLANEnabled ||
-				msg.VxlanEnabledV6 != fc.config.Encapsulation.VXLANEnabledV6 {
-				log.Warn("IPIP and/or VXLAN encapsulation changed, need to restart.")
+			encap := func() config.Encapsulation {
+				// Using a func() here to limit the scope of our defer.
+				fc.configLock.Lock()
+				defer fc.configLock.Unlock()
+				return fc.config.Encapsulation
+			}()
+			if msg.IpipEnabled != encap.IPIPEnabled || msg.VxlanEnabled != encap.VXLANEnabled ||
+				msg.VxlanEnabledV6 != encap.VXLANEnabledV6 {
+				log.WithFields(log.Fields{
+					"old": encap,
+					"new": msg,
+				}).Warn("IPIP and/or VXLAN encapsulation changed, need to restart.")
 				fc.shutDownProcess(reasonEncapChanged)
 			}
 		}
@@ -1480,6 +1489,71 @@ func (fc *DataplaneConnector) Start() {
 	go fc.handleEgressPodStatusUpdateFromDataplane()
 }
 
+func (fc *DataplaneConnector) handleConfigUpdate(msg *proto.ConfigUpdate) {
+	sourceToRaw := map[string]map[string]string{}
+	for _, kvs := range msg.SourceToRawConfig {
+		sourceToRaw[kvs.Source] = kvs.Config
+	}
+
+	log.WithField("configUpdate", msg).WithFields(log.Fields{
+		"configBySource": sourceToRaw,
+	}).Info("Configuration update from calculation graph.")
+
+	var oldConfigCopy, newConfigCopy *config.Config
+	var changedFields set.Set[string]
+	err := func() error {
+		// Using a func to limit the scope of our defer...
+		fc.configLock.Lock()
+		defer fc.configLock.Unlock()
+		oldConfigCopy = fc.config.Copy()
+		var err error
+		changedFields, err = fc.config.UpdateFromConfigUpdate(msg)
+		newConfigCopy = fc.config.Copy()
+		return err
+	}()
+
+	if err != nil {
+		// This shouldn't happen since the config update was _generated_ by the Config object held
+		// by the calculation graph.
+		log.WithError(err).Error("Bug: failed to apply configuration update.")
+		fc.shutDownProcess(reasonConfigUpdateFailed)
+	}
+
+	oldRawConfig := oldConfigCopy.RawValues()
+	newRawConfig := newConfigCopy.RawValues()
+	restartNeeded := false
+	changedFields.Iter(func(fieldName string) error {
+		logCtx := log.WithFields(log.Fields{
+			"key":      fieldName,
+			"oldValue": oldRawConfig[fieldName],
+			"newValue": newRawConfig[fieldName],
+		})
+		if handledConfigChanges.Contains(fieldName) {
+			logCtx.Info("Configuration value changed; change DOES NOT require Felix to restart.")
+		} else {
+			logCtx.Info("Configuration value changed; change DOES require Felix to restart.")
+			restartNeeded = true
+		}
+		return nil
+	})
+
+	if restartNeeded {
+		fc.shutDownProcess(reasonConfigChanged)
+	}
+
+	if changedFields.Len() > 0 {
+		fc.ApplyNoRestartConfig(oldConfigCopy, newConfigCopy)
+	}
+}
+
+// ApplyNoRestartConfig applies the configuration that is owned by this file and that can be handled
+// without a restart.
+func (fc *DataplaneConnector) ApplyNoRestartConfig(old, new *config.Config) {
+	if !reflect.DeepEqual(old.HealthTimeoutOverrides, new.HealthTimeoutOverrides) {
+		health.SetGlobalTimeoutOverrides(new.HealthTimeoutOverrides)
+	}
+}
+
 func discoverTyphaAddrs(configParams *config.Config, k8sClientSet kubernetes.Interface) ([]discovery.Typha, error) {
 	typhaDiscoveryOpts := configParams.TyphaDiscoveryOpts()
 	typhaDiscoveryOpts = append(typhaDiscoveryOpts,
@@ -1501,7 +1575,7 @@ type featureChecker interface {
 // removeUnlicensedFeaturesFromConfig modifies the requested Config depending on licensed features. Values overridden
 // due to license have a higher priority than other methods of config injection and therefore cannot
 // be adjusted by the user.
-func removeUnlicensedFeaturesFromConfig(configParams *config.Config, licenseMonitor featureChecker) {
+func removeUnlicensedFeaturesFromConfig(configParams *config.Config, licenseMonitor featureChecker) bool {
 	licenseOverrides := make(map[string]string)
 
 	if configParams.UseInternalDataplaneDriver {
@@ -1562,5 +1636,7 @@ func removeUnlicensedFeaturesFromConfig(configParams *config.Config, licenseMoni
 		if err != nil {
 			log.WithError(err).Fatal("Failed to set config overrides.")
 		}
+		return true
 	}
+	return false
 }

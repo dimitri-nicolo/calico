@@ -88,6 +88,7 @@ type ActiveRulesCalculator struct {
 	PolicyMatchListener   PolicyMatchListener
 	PolicyLookupCache     ruleScanner
 	OnPolicyCountsChanged func(numTiers, numPolicies, numProfiles, numALPPolicies, numALPEndpoints int)
+	OnAlive               func()
 }
 
 type egressSelector string

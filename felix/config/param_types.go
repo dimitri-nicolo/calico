@@ -54,6 +54,7 @@ const (
 
 type Metadata struct {
 	Name              string
+	DefaultString     string
 	Default           interface{}
 	ZeroValue         interface{}
 	NonZero           bool
@@ -837,5 +838,14 @@ type KeyValueListParam struct {
 
 func (p *KeyValueListParam) Parse(raw string) (result interface{}, err error) {
 	result, err = stringutils.ParseKeyValueList(raw)
+	return
+}
+
+type KeyDurationListParam struct {
+	Metadata
+}
+
+func (p *KeyDurationListParam) Parse(raw string) (result interface{}, err error) {
+	result, err = stringutils.ParseKeyDurationList(raw)
 	return
 }

@@ -38,6 +38,7 @@ type EventHandler func(message interface{})
 type configInterface interface {
 	UpdateFrom(map[string]string, config.Source) (changed bool, err error)
 	RawValues() map[string]string
+	ToConfigUpdate() *proto.ConfigUpdate
 }
 
 // Struct for additional data that feeds into proto.WorkloadEndpoint but is computed rather than
@@ -309,9 +310,7 @@ func (buf *EventSequencer) flushConfigUpdate() {
 	if globalChanged || hostChanged {
 		rawConfig := buf.config.RawValues()
 		log.WithField("merged", rawConfig).Info("Config changed. Sending ConfigUpdate message.")
-		buf.Callback(&proto.ConfigUpdate{
-			Config: rawConfig,
-		})
+		buf.Callback(buf.config.ToConfigUpdate())
 	}
 	buf.pendingGlobalConfig = nil
 	buf.pendingHostConfig = nil
