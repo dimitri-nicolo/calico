@@ -1,5 +1,5 @@
 PACKAGE_NAME?=github.com/tigera/eck-operator-docker
-GO_BUILD_VER?=v0.76
+GO_BUILD_VER?=v0.78
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID=$(SEMAPHORE_ECK_OPERATOR_DOCKER_PROJECT_ID)
@@ -13,7 +13,7 @@ RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
 GO_VERSION  ?=1.18
-UBI_VERSION ?=8.7
+UBI_VERSION ?=latest
 
 VERSION ?= $(shell cat cloud-on-k8s/VERSION)
 LDFLAGS ?= "-X github.com/elastic/cloud-on-k8s/pkg/about.version=$(VERSION) \
