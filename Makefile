@@ -62,7 +62,7 @@ bin/$(ECK_OPERATOR_NAME)-$(ARCH): prepare-build
 image: $(ECK_OPERATOR_IMAGE)
 $(ECK_OPERATOR_IMAGE): $(ECK_OPERATOR_IMAGE)-$(ARCH)
 $(ECK_OPERATOR_IMAGE)-$(ARCH): build
-	docker build $(DOCKER_SQUASH) -t $(ECK_OPERATOR_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
+	docker buildx build --pull $(DOCKER_SQUASH) -t $(ECK_OPERATOR_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
 	docker tag $(ECK_OPERATOR_IMAGE):latest-$(ARCH) $(ECK_OPERATOR_IMAGE):latest
 endif
