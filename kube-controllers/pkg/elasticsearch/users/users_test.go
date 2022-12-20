@@ -360,6 +360,10 @@ var _ = Describe("ElasticseachUsers", func() {
 											Privileges: []string{"read"},
 										},
 										{
+											Names:      []string{"tigera_secure_ee_waf.*.*"},
+											Privileges: []string{"read"},
+										},
+										{
 											Names: []string{
 												".tigera.ipset.cluster",
 												".tigera.domainnameset.cluster",
