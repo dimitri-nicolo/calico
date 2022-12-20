@@ -13,7 +13,6 @@ RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
 GO_VERSION  ?=1.18
-UBI_VERSION ?=latest
 
 VERSION ?= $(shell cat cloud-on-k8s/VERSION)
 LDFLAGS ?= "-X github.com/elastic/cloud-on-k8s/pkg/about.version=$(VERSION) \
