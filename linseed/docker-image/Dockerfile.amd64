@@ -4,30 +4,28 @@ FROM ${UBI_IMAGE} as ubi
 
 RUN microdnf upgrade
 
-# Create certificate directory under user 1001
-RUN mkdir -p /certs/https/
-RUN chown -R 1001 /certs/https/
-
 FROM scratch
 
 # Because we build our binary with CGO, we need to add the necessary *.so files for dynamic linking.
 # If *.so files are missing, you will see an error saying that your entrypoint cannot be found.
 # The necessary files can be found using the ldd command on the binary.
 COPY --from=ubi /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
-COPY --from=ubi /lib64/libpthread.so.0 /lib64/libpthread.so.0
+COPY --from=ubi /lib64/libdl.so.2 /lib64/libdl.so.2
 COPY --from=ubi /lib64/libc.so.6 /lib64/libc.so.6
+COPY --from=ubi /lib64/libpthread.so.0 /lib64/libpthread.so.0
 
 # The following dependencies do not show up when performing ldd on the binary, but are still necessary.
-COPY --from=ubi /lib64/libresolv.so.2 /lib64/libresolv.so.2
+COPY --from=ubi /lib64/libnss_files.so.2 /lib64/libnss_files.so.2
 COPY --from=ubi /lib64/libnss_dns.so.2 /lib64/libnss_dns.so.2
 
-COPY --chown=1001 --from=ubi /certs/https/ /certs/https/
+# Copy hostname configuration files from UBI so glibc hostname lookups work.
+COPY --from=ubi /etc/hosts /etc/hosts
+COPY --from=ubi /etc/host.conf /etc/host.conf
+COPY --from=ubi /etc/nsswitch.conf /etc/nsswitch.conf
+
 ADD bin/linseed-amd64 /linseed
 
-# Set the working directory to where you can run your application
-WORKDIR /
-
-USER 1001:1001
+USER 1001
 
 # Now define the command-line call to start your application
 ENTRYPOINT ["/linseed"]

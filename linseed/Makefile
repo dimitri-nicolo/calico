@@ -111,7 +111,6 @@ run-image: stop-image
 	docker run --detach \
 	--net=host \
     --name=tigera-$(LINSEED_IMAGE) \
-    -e "LINSEED_PORT=8444" \
     -v $(REPO_ROOT)/linseed/fv/cert/localhost.crt:/certs/https/tls.crt \
     -v $(REPO_ROOT)/linseed/fv/cert/localhost.key:/certs/https/tls.key \
     tigera/$(LINSEED_IMAGE):latest

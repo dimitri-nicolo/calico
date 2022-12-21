@@ -33,11 +33,13 @@ func main() {
 
 	cfg := config.Config{}
 	if err := envconfig.Process(config.EnvConfigPrefix, &cfg); err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	// Configure logging
 	config.ConfigureLogging(cfg.LogLevel)
+
+	log.Debugf("Starting with %#v", cfg)
 
 	var addr = fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
 	log.Infof("Listening for HTTPS requests at %s", addr)
