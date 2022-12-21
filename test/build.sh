@@ -5,4 +5,4 @@ BASE_DIR=$(dirname $SCRIPT_DIR)
 
 pushd $BASE_DIR > /dev/null
 
-docker build -t tigera/fluentd .
+docker buildx build --pull -t tigera/fluentd .
