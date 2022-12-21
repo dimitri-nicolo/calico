@@ -1,4 +1,4 @@
-GO_BUILD_VER ?= v0.76
+GO_BUILD_VER ?= v0.78
 
 # Override shell if we're on Windows
 # https://stackoverflow.com/a/63840549
@@ -95,7 +95,7 @@ build: eks-log-forwarder-startup
 ###############################################################################
 
 UBI_VERSION        ?= ubi8
-UBI_IMAGE_VERSION  ?= 8.7
+UBI_IMAGE_VERSION  ?= latest
 RUBY_MAJOR_VERSION ?= 2.7
 RUBY_FULL_VERSION  ?= 2.7.6
 
@@ -114,7 +114,7 @@ build-image-%:
 ifeq ($(OS),Windows_NT)
 	docker build --pull $(DOCKER_SQUASH) -t $(IMAGE):latest-$* --file $(DOCKERFILE) .
 else
-	docker build --pull -f Dockerfile.fips -t $(IMAGE):latest-$* \
+	docker buildx build --pull -f Dockerfile.fips -t $(IMAGE):latest-$* \
 		--build-arg UBI_VERSION=$(UBI_VERSION) \
 		--build-arg UBI_IMAGE_VERSION=$(UBI_IMAGE_VERSION) \
 		--build-arg RUBY_MAJOR_VERSION=$(RUBY_MAJOR_VERSION) \
