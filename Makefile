@@ -1,5 +1,5 @@
 PACKAGE_NAME    ?= github.com/tigera/ingress-collector
-GO_BUILD_VER    ?= v0.76
+GO_BUILD_VER    ?= v0.78
 GIT_USE_SSH     := true
 
 ORGANIZATION=tigera
@@ -154,7 +154,7 @@ sub-image-%:
 
 $(INGRESS_COLLECTOR_IMAGE): $(CONTAINER_CREATED)
 $(CONTAINER_CREATED): Dockerfile.$(ARCH) bin/ingress-collector-$(ARCH)
-	docker build -t $(INGRESS_COLLECTOR_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f Dockerfile.$(ARCH) .
+	docker buildx build --pull -t $(INGRESS_COLLECTOR_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
 	docker tag $(INGRESS_COLLECTOR_IMAGE):latest-$(ARCH) $(INGRESS_COLLECTOR_IMAGE):latest
 endif
