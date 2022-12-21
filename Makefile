@@ -1,5 +1,5 @@
 PACKAGE_NAME?=github.com/tigera/eck-operator-docker
-GO_BUILD_VER?=v0.76
+GO_BUILD_VER?=v0.78
 
 ORGANIZATION=tigera
 SEMAPHORE_PROJECT_ID=$(SEMAPHORE_ECK_OPERATOR_DOCKER_PROJECT_ID)
@@ -13,7 +13,6 @@ RELEASE_BRANCH_PREFIX ?=release-calient
 DEV_TAG_SUFFIX        ?=calient-0.dev
 
 GO_VERSION  ?=1.18
-UBI_VERSION ?=8.7
 
 VERSION ?= $(shell cat cloud-on-k8s/VERSION)
 LDFLAGS ?= "-X github.com/elastic/cloud-on-k8s/pkg/about.version=$(VERSION) \
@@ -63,7 +62,7 @@ bin/$(ECK_OPERATOR_NAME)-$(ARCH): prepare-build
 image: $(ECK_OPERATOR_IMAGE)
 $(ECK_OPERATOR_IMAGE): $(ECK_OPERATOR_IMAGE)-$(ARCH)
 $(ECK_OPERATOR_IMAGE)-$(ARCH): build
-	docker build $(DOCKER_SQUASH) -t $(ECK_OPERATOR_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
+	docker buildx build --pull $(DOCKER_SQUASH) -t $(ECK_OPERATOR_IMAGE):latest-$(ARCH) --file ./Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
 	docker tag $(ECK_OPERATOR_IMAGE):latest-$(ARCH) $(ECK_OPERATOR_IMAGE):latest
 endif
