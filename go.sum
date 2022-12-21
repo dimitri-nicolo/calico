@@ -459,10 +459,10 @@ github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.8.1 h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYKsk=
 github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69rRypqCw=
-github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20221121170556-2cdc2cabff45 h1:pyUZDnrrcWb8C8IXooT4NftvMQgFINqFTNr2DYBZAkU=
-github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20221121170556-2cdc2cabff45/go.mod h1:0JKVvPMUCi6/vsC8QjhWNxFkVWAOyIumErCJVYuyDQA=
-github.com/tigera/calico-private/api v0.0.0-20221121170556-2cdc2cabff45 h1:FppdvBwEAjksIsNDTZV6eRgOSiRTvxwL3js2WrhgHmo=
-github.com/tigera/calico-private/api v0.0.0-20221121170556-2cdc2cabff45/go.mod h1:STeyd1ZdL5HRGkY0Hx1c/16hujhQrJLh8N3p8VXgi3k=
+github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20221221172510-600c23b429ec h1:+OdZfgEB2+iccP50z43+V+ezLAeXqvlbXNf+dvD6nig=
+github.com/tigera/calico-private v1.11.0-cni-plugin-private.0.20221221172510-600c23b429ec/go.mod h1:sJCbl4VehL829lH9GMDlmE0gD7x+gbeMqixgE9QnM+g=
+github.com/tigera/calico-private/api v0.0.0-20221221172510-600c23b429ec h1:LGm/iqFaJoq5vJ+0Mc3IU7n8IgcM6Ef1XZlXsRariQY=
+github.com/tigera/calico-private/api v0.0.0-20221221172510-600c23b429ec/go.mod h1:STeyd1ZdL5HRGkY0Hx1c/16hujhQrJLh8N3p8VXgi3k=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20201229170055-e5319fda7802/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
