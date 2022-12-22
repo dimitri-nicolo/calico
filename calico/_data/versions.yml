@@ -141,7 +141,7 @@
       image: tigera/prometheus
       version: master
     coreos-prometheus:
-      version: v2.32.0
+      version: v2.42.0
     prometheus-operator:
       image: tigera/prometheus-operator
       version: master
