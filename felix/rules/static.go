@@ -429,18 +429,18 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 		)
 	}
 	if ipVersion == 4 && r.EgressIPEnabled && !r.BPFEnabled {
-		// Auto-allow VXLAN traffic destined to egress.calico. Such traffic has destination of the local host and expected udp port. Therefore we need to explicitly accept it in INPUT chain.
-		match := Match().ProtocolNum(ProtoUDP)
-		match = match.DestAddrType(AddrTypeLocal)
-		match = match.
-			DestPorts(
-				uint16(r.Config.EgressIPVXLANPort), // egress.calico
-			)
-		inputRules = append(inputRules, Rule{
-			Match:   match,
-			Action:  r.filterAllowAction,
-			Comment: []string{"Allow VXLAN UDP traffic to egress clients"},
-		})
+		// Auto-allow VXLAN traffic destined to egress.calico.
+		// Such traffic has destination of the local host and expected udp port.
+		// Therefore we need to explicitly accept it in INPUT chain.
+		inputRules = append(inputRules,
+			Rule{
+				Match: Match().ProtocolNum(ProtoUDP).
+					DestPorts(uint16(r.Config.EgressIPVXLANPort)).
+					DestAddrType(AddrTypeLocal),
+				Action:  r.filterAllowAction,
+				Comment: []string{"Allow VXLAN UDP traffic to egress clients"},
+			},
+		)
 	}
 
 	if r.KubeIPVSSupportEnabled {
