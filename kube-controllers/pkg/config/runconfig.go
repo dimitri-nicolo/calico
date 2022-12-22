@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -129,6 +129,7 @@ type ImageAssuranceConfig struct {
 	ScannerCLITokenSecretName                   string
 	PodWatcherClusterRoleName                   string
 	OperatorCloudClusterRoleName                string
+	RuntimeCleanerClusterRoleName               string
 }
 
 type RunConfigController struct {
@@ -420,6 +421,7 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 		rc.ImageAssurance.ScannerCLIClusterRoleName = envCfg.ImageAssuranceScannerCLIClusterRoleName
 		rc.ImageAssurance.PodWatcherClusterRoleName = envCfg.ImageAssurancePodWatcherClusterRoleName
 		rc.ImageAssurance.OperatorCloudClusterRoleName = envCfg.ImageAssuranceOperatorClusterRoleName
+		rc.ImageAssurance.RuntimeCleanerClusterRoleName = envCfg.ImageAssuranceRuntimeCleanerClusterRoleName
 	}
 	if rc.ManagedCluster != nil {
 		rc.ManagedCluster.NumberOfWorkers = envCfg.ManagedClusterWorkers
@@ -434,6 +436,7 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 		rc.ManagedCluster.ImageAssuranceConfig.OperatorCloudClusterRoleName = envCfg.ImageAssuranceOperatorClusterRoleName
 		rc.ManagedCluster.ImageAssuranceConfig.AdmissionControllerClusterRoleName = envCfg.ImageAssuranceAdmissionControllerClusterRoleName
 		rc.ManagedCluster.ImageAssuranceConfig.CRAdaptorClusterRoleName = envCfg.ImageAssuranceCRAdaptorClusterRoleName
+		rc.ManagedCluster.ImageAssuranceConfig.RuntimeCleanerClusterRoleName = envCfg.ImageAssuranceRuntimeCleanerClusterRoleName
 		rc.ManagedCluster.MultiClusterForwardingEndpoint = envCfg.MultiClusterForwardingEndpoint
 		rc.ManagedCluster.MultiClusterForwardingCA = envCfg.MultiClusterForwardingCA
 		restCfg, err := clientcmd.BuildConfigFromFlags("", envCfg.Kubeconfig)

@@ -44,6 +44,7 @@ type reconciler struct {
 	scannerCLITokenSecretName          string
 	podWatcherClusterRoleName          string
 	operatorClusterRoleName            string
+	runtimeCleanerClusterRoleName      string
 }
 
 // Reconcile makes sure that the managed cluster this is running for has all the configuration needed for it's components
@@ -232,6 +233,10 @@ func (c *reconciler) reconcileServiceAccounts() error {
 		if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, operatorSA); err != nil {
 			return err
 		}
+		rsa := c.runtimeCleanerServiceAccount()
+		if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, rsa); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -273,6 +278,10 @@ func (c *reconciler) reconcileClusterRoleBinding() error {
 		}
 		operatorCRB := c.operatorClusterRoleBinding()
 		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, operatorCRB); err != nil {
+			return err
+		}
+		rcrb := c.runtimeCleanerClusterRoleBinding()
+		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, rcrb); err != nil {
 			return err
 		}
 	}
@@ -368,6 +377,17 @@ func (c *reconciler) podWatcherServiceAccount() *corev1.ServiceAccount {
 		TypeMeta: metav1.TypeMeta{Kind: rbacv1.ServiceAccountKind, APIVersion: "v1"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      resource.ImageAssurancePodWatcherServiceAccountName,
+			Namespace: c.managementOperatorNamespace,
+		},
+	}
+}
+
+// runtimeCleanerServiceAccount returns a definition for service account
+func (c *reconciler) runtimeCleanerServiceAccount() *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{Kind: rbacv1.ServiceAccountKind, APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      resource.ImageAssuranceRuntimeCleanerServiceAccountName,
 			Namespace: c.managementOperatorNamespace,
 		},
 	}
@@ -499,6 +519,29 @@ func (c *reconciler) podWatcherClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	}
 }
 
+// runtimeCleanerClusterRoleBinding returns a definition for cluster role binding
+func (c *reconciler) runtimeCleanerClusterRoleBinding() *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		TypeMeta: metav1.TypeMeta{Kind: "ClusterRoleBinding", APIVersion: "rbac.authorization.k8s.io/v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   resource.ImageAssuranceRuntimeCleanerClusterRoleBindingName,
+			Labels: map[string]string{},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     c.runtimeCleanerClusterRoleName,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      resource.ImageAssuranceRuntimeCleanerServiceAccountName,
+				Namespace: c.managementOperatorNamespace,
+			},
+		},
+	}
+}
+
 // operatorClusterRoleBinding returns a definition for cluster role binding
 func (c *reconciler) operatorClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
@@ -572,7 +615,7 @@ func (c *reconciler) reconcileCLIServiceAccountToken() error {
 	return nil
 }
 
-//scannerCLITokenSecret returns definition for scanner CLI API token secret with a well known name in manager namespace.
+// scannerCLITokenSecret returns definition for scanner CLI API token secret with a well known name in manager namespace.
 func (c *reconciler) scannerCLITokenSecret() *corev1.Secret {
 	return &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
