@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ruby:2.7-alpine3.16
+FROM ruby:2.7-alpine3.16 as builder
 
 # Need to define root user explicitly (for remaining setup) and be numeric for k8s validation
 USER 0
@@ -31,12 +31,12 @@ RUN apk update && apk upgrade \
  && gem install json -v 2.6.2 \
  && gem install async-http -v 0.54.0 \
  && gem install ext_monitor -v 0.1.2 \
- && gem install fluentd -v 1.14.6 \
+ && gem install fluentd -v 1.15.3 \
  && gem install bigdecimal -v 1.4.4 \
  && gem install resolv -v 0.2.1 \
  && gem install \
         bundler:2.3.19 \
-        cgi:0.3.1 \
+        cgi:0.3.5 \
         elasticsearch-api:7.17.7 \
         elasticsearch-transport:7.17.7 \
         elasticsearch-xpack:7.17.7 \
@@ -80,10 +80,113 @@ RUN addgroup -S fluent && adduser -S -G fluent fluent \
     && mkdir -p /fluentd/etc /fluentd/plugins \
     && chown -R fluent /fluentd && chgrp -R fluent /fluentd
 
+COPY readiness.sh /bin/
+RUN chmod +x /bin/readiness.sh
+
+COPY liveness.sh /bin/
+RUN chmod +x /bin/liveness.sh
+
+COPY syslog-environment.sh /bin/
+COPY syslog-config.sh /bin/
+RUN chmod +x /bin/syslog-config.sh /bin/syslog-environment.sh
+
+COPY splunk-environment.sh /bin/
+RUN chmod +x /bin/splunk-environment.sh
+
+COPY splunk-config.sh /bin/
+RUN chmod +x /bin/splunk-config.sh
+
+COPY sumo-environment.sh /bin/
+RUN chmod +x /bin/sumo-environment.sh
+
+COPY sumo-config.sh /bin/
+RUN chmod +x /bin/sumo-config.sh
+
+COPY ee_entrypoint.sh /bin/
+RUN chmod +x /bin/ee_entrypoint.sh
+
+COPY eks/bin/eks-log-forwarder-startup /bin/
+
+RUN mkdir /fluentd/etc/output_flows
+RUN mkdir /fluentd/etc/output_dns
+RUN mkdir /fluentd/etc/output_tsee_audit
+RUN mkdir /fluentd/etc/output_kube_audit
+RUN mkdir /fluentd/etc/output_compliance_reports
+RUN mkdir /fluentd/etc/output_bgp
+RUN mkdir /fluentd/etc/output_ids_events
+RUN mkdir /fluentd/etc/output_l7
+RUN mkdir /fluentd/etc/output_runtime
+RUN mkdir /fluentd/etc/output_waf
+
+# Cleanup /tmp for the next stage
+RUN rm -fr /tmp/*
+
+################################################################################
+# Build the actual scratch-based fluentd image
+################################################################################
+
+FROM scratch
+
+ENV PATH=$PATH:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
 ENV LD_PRELOAD=""
 ENV RUBYLIB="/usr/lib/ruby/gems/3.0.0/gems/resolv-0.2.1/lib"
 ENV FLUENTD_CONF="fluent.conf"
 
+# Add fluentd and ruby
+COPY --from=builder /fluentd/ /fluentd/
+COPY --from=builder /var/lib/ruby/ /var/lib/ruby/
+
+# Add binaries needed by fluentd scripts
+COPY --from=builder /bin/bash /bin/bash
+COPY --from=builder /bin/sh /bin/sh
+COPY --from=builder /usr/bin/bash /usr/bin/bash
+COPY --from=builder /bin/sed /bin/sed
+COPY --from=builder /bin/test /bin/test
+COPY --from=builder /bin/echo /bin/echo
+COPY --from=builder /bin/cat /bin/cat
+COPY --from=builder /bin/cp /bin/cp
+COPY --from=builder /bin/curl /bin/curl
+COPY --from=builder /bin/awk /bin/awk
+COPY --from=builder /bin/sort /bin/sort
+COPY --from=builder /bin/ls /bin/ls
+COPY --from=builder /bin/which /bin/which
+COPY --from=builder /usr/bin/coreutils /usr/bin/coreutils
+COPY --from=builder /usr/bin/rm /usr/bin/rm
+COPY --from=builder /usr/bin/tar /usr/bin/tar
+COPY --from=builder /usr/bin/jq /usr/bin/jq
+COPY --from=builder /usr/bin/fluentd /usr/bin/fluentd
+COPY --from=builder /usr/bin/fluent-gem /usr/bin/fluent-gem
+COPY --from=builder /usr/bin/ldd /usr/bin/ldd
+
+# Add scripts needed by fluentd
+COPY --from=builder /bin/readiness.sh /bin/readiness.sh
+COPY --from=builder /bin/liveness.sh /bin/liveness.sh
+COPY --from=builder /bin/syslog-environment.sh /bin/syslog-environment.sh
+COPY --from=builder /bin/syslog-config.sh /bin/syslog-config.sh
+COPY --from=builder /bin/splunk-environment.sh /bin/splunk-environment.sh
+COPY --from=builder /bin/splunk-config.sh /bin/splunk-config.sh
+COPY --from=builder /bin/sumo-environment.sh /bin/sumo-environment.sh
+COPY --from=builder /bin/sumo-config.sh /bin/sumo-config.sh
+COPY --from=builder /bin/ee_entrypoint.sh /bin/ee_entrypoint.sh
+COPY --from=builder /bin/eks-log-forwarder-startup /bin/
+
+# We copy everything from /lib64 because Fluentd requires a large number of libraries to be copied over
+# It can run in multiple flavours (splunk, syslog) etc and those configurations will be done at runtime
+COPY --from=builder /lib64/ /lib64/
+
+# add /tmp
+COPY --from=builder /tmp /tmp/
+
+# libc/nss
+COPY --from=builder /etc/group /etc/group
+COPY --from=builder /etc/hosts /etc/hosts
+COPY --from=builder /etc/networks /etc/networks
+COPY --from=builder /etc/nsswitch.conf /etc/nsswitch.conf
+COPY --from=builder /etc/passwd /etc/passwd
+COPY --from=builder /etc/shadow /etc/shadow
+
+# Add scripts and configuration files for fluentd
 ADD elastic_mapping_flows.template /fluentd/etc/elastic_mapping_flows.template
 ADD elastic_mapping_dns.template /fluentd/etc/elastic_mapping_dns.template
 ADD elastic_mapping_audits.template /fluentd/etc/elastic_mapping_audits.template
@@ -146,44 +249,6 @@ ENV ELASTIC_RUNTIME_INDEX_SHARDS=1
 ENV ELASTIC_RUNTIME_INDEX_REPLICAS=0
 
 ENV SYSLOG_PACKET_SIZE=1024
-
-COPY readiness.sh /bin/
-RUN chmod +x /bin/readiness.sh
-
-COPY liveness.sh /bin/
-RUN chmod +x /bin/liveness.sh
-
-COPY syslog-environment.sh /bin/
-COPY syslog-config.sh /bin/
-RUN chmod +x /bin/syslog-config.sh /bin/syslog-environment.sh
-
-COPY splunk-environment.sh /bin/
-RUN chmod +x /bin/splunk-environment.sh
-
-COPY splunk-config.sh /bin/
-RUN chmod +x /bin/splunk-config.sh
-
-COPY sumo-environment.sh /bin/
-RUN chmod +x /bin/sumo-environment.sh
-
-COPY sumo-config.sh /bin/
-RUN chmod +x /bin/sumo-config.sh
-
-COPY ee_entrypoint.sh /bin/
-RUN chmod +x /bin/ee_entrypoint.sh
-
-COPY eks/bin/eks-log-forwarder-startup /bin/
-
-RUN mkdir /fluentd/etc/output_flows
-RUN mkdir /fluentd/etc/output_dns
-RUN mkdir /fluentd/etc/output_tsee_audit
-RUN mkdir /fluentd/etc/output_kube_audit
-RUN mkdir /fluentd/etc/output_compliance_reports
-RUN mkdir /fluentd/etc/output_bgp
-RUN mkdir /fluentd/etc/output_ids_events
-RUN mkdir /fluentd/etc/output_l7
-RUN mkdir /fluentd/etc/output_runtime
-RUN mkdir /fluentd/etc/output_waf
 
 EXPOSE 24284
 
