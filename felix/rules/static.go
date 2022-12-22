@@ -429,8 +429,7 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 		)
 	}
 	if ipVersion == 4 && r.EgressIPEnabled && !r.BPFEnabled {
-		// When Egress IP is enabled, auto-allow VXLAN traffic to egress gateway client
-		// with destination IP as host IP.
+		// Auto-allow VXLAN traffic destined to egress.calico. Such traffic has destination of the local host and expected udp port. Therefore we need to explicitly accept it in INPUT chain.
 		match := Match().ProtocolNum(ProtoUDP)
 		match = match.DestAddrType(AddrTypeLocal)
 		match = match.
