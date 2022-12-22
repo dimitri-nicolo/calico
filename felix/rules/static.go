@@ -428,6 +428,21 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 			// baked into the crypto routing table.
 		)
 	}
+	if ipVersion == 4 && r.EgressIPEnabled && !r.BPFEnabled {
+		// When Egress IP is enabled, auto-allow VXLAN traffic to egress gateway client
+		// with destination IP as host IP.
+		match := Match().ProtocolNum(ProtoUDP)
+		match = match.DestAddrType(AddrTypeLocal)
+		match = match.
+			DestPorts(
+				uint16(r.Config.EgressIPVXLANPort), // egress.calico
+			)
+		inputRules = append(inputRules, Rule{
+			Match:   match,
+			Action:  r.filterAllowAction,
+			Comment: []string{"Allow VXLAN UDP traffic to egress clients"},
+		})
+	}
 
 	if r.KubeIPVSSupportEnabled {
 		// Check if packet belongs to forwarded traffic. (e.g. part of an ipvs connection).
