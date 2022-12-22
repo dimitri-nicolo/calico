@@ -28,10 +28,30 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: BGPPeer
 metadata:
+  name: peer-a1-v6
+spec:
+  nodeSelector: "egress == 'true'"
+  peerIP: fd00:0:1234:1111::1
+  asNumber: 64512
+  sourceAddress: None
+---
+apiVersion: projectcalico.org/v3
+kind: BGPPeer
+metadata:
   name: peer-b1
 spec:
   nodeSelector: "egress == 'true'"
   peerIP: 172.31.21.1
+  asNumber: 64512
+  sourceAddress: None
+---
+apiVersion: projectcalico.org/v3
+kind: BGPPeer
+metadata:
+  name: peer-b1-v6
+spec:
+  nodeSelector: "egress == 'true'"
+  peerIP: fd00:0:1234:2222::1
   asNumber: 64512
   sourceAddress: None
 ---
@@ -48,6 +68,16 @@ spec:
 apiVersion: projectcalico.org/v3
 kind: BGPPeer
 metadata:
+  name: peer-b2-v6
+spec:
+  nodeSelector: "egress == 'true'"
+  peerIP: fd00:0:1234:2222::3
+  asNumber: 64512
+  sourceAddress: None
+---
+apiVersion: projectcalico.org/v3
+kind: BGPPeer
+metadata:
   name: peer-c1
 spec:
   nodeSelector: "egress == 'true'"
@@ -55,13 +85,27 @@ spec:
   asNumber: 64512
   sourceAddress: None
 ---
+---
+apiVersion: projectcalico.org/v3
+kind: BGPPeer
+metadata:
+  name: peer-c1-v6
+spec:
+  nodeSelector: "egress == 'true'"
+  peerIP: fd00:0:1234:3333::1
+  asNumber: 64512
+  sourceAddress: None
 EOF
 
     # Label and annotate nodes.
     ${kubectl} label node kind-worker egress=true --overwrite
 
-    # Makes sure kind-worker use the correct node ip for node-node mesh.
-    ${kubectl} annotate node kind-worker projectcalico.org/IPv4Address=$nodeIP --overwrite
+    # This is necessary for the correct node ip to be used on the node-node mesh.
+    ${kubectl} set env daemonset/calico-node -n kube-system IP_AUTODETECTION_METHOD=kubernetes-internal-ip
+    ${kubectl} set env daemonset/calico-node -n kube-system IP6_AUTODETECTION_METHOD=kubernetes-internal-ip
+
+    # Restart the calico-node daemonset to apply the changes.
+    ${kubectl} rollout restart daemonset/calico-node -n kube-system
 }
 
 function do_setup {
@@ -93,21 +137,23 @@ function do_setup {
     #  +---------------------------------------------------------------------------------+
     #  |                                                                                 |
     #  +---------------------------------------------------------------------------------+
-    #                  kind-worker (node ip 172.18.0.x)
+    #                  kind-worker (node ip 172.24.0.x)
 
-    docker network create --subnet=172.31.11.0/24 --ip-range=172.31.11.0/24 --gateway 172.31.11.2 enetA
-    docker network create --subnet=172.31.21.0/24 --ip-range=172.31.21.0/24 --gateway 172.31.21.2 enetB
-    docker network create --subnet=172.31.31.0/24 --ip-range=172.31.31.0/24 --gateway 172.31.31.2 enetC
+    # Create external networks
+    docker network create --subnet=172.31.11.0/24 --gateway 172.31.11.2 --ipv6 --subnet=fd00:0:1234:1111::/64 --gateway fd00:0:1234:1111::2 enetA
+    docker network create --subnet=172.31.21.0/24 --gateway 172.31.21.2 --ipv6 --subnet=fd00:0:1234:2222::/64 --gateway fd00:0:1234:2222::2 enetB
+    docker network create --subnet=172.31.31.0/24 --gateway 172.31.31.2 --ipv6 --subnet=fd00:0:1234:3333::/64 --gateway fd00:0:1234:3333::2 enetC
 
-    # Create routers for external networks.
-    docker run -d --privileged --net=enetA --ip=172.31.11.1 --name=bird-a1 ${ROUTER_IMAGE}
-    docker run -d --privileged --net=enetB --ip=172.31.21.1 --name=bird-b1 ${ROUTER_IMAGE}
-    docker run -d --privileged --net=enetB --ip=172.31.21.3 --name=bird-b2 ${ROUTER_IMAGE}
-    docker run -d --privileged --net=enetC --ip=172.31.31.1 --name=bird-c1 ${ROUTER_IMAGE}
+    # Create routers on external networks
+    docker run -d --privileged --net=enetA --ip=172.31.11.1 --ip6=fd00:0:1234:1111::1 --name=bird-a1 ${ROUTER_IMAGE}
+    docker run -d --privileged --net=enetB --ip=172.31.21.1 --ip6=fd00:0:1234:2222::1 --name=bird-b1 ${ROUTER_IMAGE}
+    docker run -d --privileged --net=enetB --ip=172.31.21.3 --ip6=fd00:0:1234:2222::3 --name=bird-b2 ${ROUTER_IMAGE}
+    docker run -d --privileged --net=enetC --ip=172.31.31.1 --ip6=fd00:0:1234:3333::1 --name=bird-c1 ${ROUTER_IMAGE}
 
-    docker network connect --ip=172.31.11.4 enetA kind-worker
-    docker network connect --ip=172.31.21.4 enetB kind-worker
-    docker network connect --ip=172.31.31.4 enetC kind-worker
+    # Connect kind-worker to networks
+    docker network connect --ip=172.31.11.4 --ip6=fd00:0:1234:1111::4 enetA kind-worker
+    docker network connect --ip=172.31.21.4 --ip6=fd00:0:1234:2222::4 enetB kind-worker
+    docker network connect --ip=172.31.31.4 --ip6=fd00:0:1234:3333::4 enetC kind-worker
 
     # Configure Router end of cluster node peerings.
     # Note default route will be filtered out for each router. 
@@ -138,6 +184,33 @@ protocol bgp node1 from nodes {
 EOF
     docker exec bird-a1 birdcl configure
 
+    cat <<EOF | docker exec -i bird-a1 sh -c "cat > /etc/bird6/nodes-enetA-v6.conf"
+template bgp nodes {
+  description "Connection to BGP peer";
+  local as 64512;
+  direct;
+  gateway recursive;
+  import all;
+  export filter {
+      if net = ::/0 then reject;
+      accept;
+  };
+  add paths on;
+  graceful restart;
+  graceful restart time 0;
+  long lived graceful restart yes;
+  connect delay time 2;
+  connect retry time 5;
+  error wait time 5,30;
+  next hop self;
+  bfd graceful;
+}
+protocol bgp node1 from nodes {
+  neighbor fd00:0:1234:1111::4 as 64512;
+}
+EOF
+    docker exec bird-a1 birdcl6 configure
+
     cat <<EOF | docker exec -i bird-b1 sh -c "cat > /etc/bird/nodes-enetB.conf"
 template bgp nodes {
   description "Connection to BGP peer";
@@ -164,6 +237,33 @@ protocol bgp node1 from nodes {
 }
 EOF
     docker exec bird-b1 birdcl configure
+
+    cat <<EOF | docker exec -i bird-b1 sh -c "cat > /etc/bird6/nodes-enetB-v6.conf"
+template bgp nodes {
+  description "Connection to BGP peer";
+  local as 64512;
+  direct;
+  gateway recursive;
+  import all;
+  export filter {
+      if net = ::/0 then reject;
+      accept;
+  };
+  add paths on;
+  graceful restart;
+  graceful restart time 0;
+  long lived graceful restart yes;
+  connect delay time 2;
+  connect retry time 5;
+  error wait time 5,30;
+  next hop self;
+  bfd graceful;
+}
+protocol bgp node1 from nodes {
+  neighbor fd00:0:1234:2222::4 as 64512;
+}
+EOF
+    docker exec bird-b1 birdcl6 configure
 
      cat <<EOF | docker exec -i bird-b2 sh -c "cat > /etc/bird/nodes-enetB.conf"
 template bgp nodes {
@@ -192,6 +292,33 @@ protocol bgp node1 from nodes {
 EOF
     docker exec bird-b2 birdcl configure
 
+    cat <<EOF | docker exec -i bird-b2 sh -c "cat > /etc/bird6/nodes-enetB-v6.conf"
+template bgp nodes {
+  description "Connection to BGP peer";
+  local as 64512;
+  direct;
+  gateway recursive;
+  import all;
+  export filter {
+      if net = ::/0 then reject;
+      accept;
+  };
+  add paths on;
+  graceful restart;
+  graceful restart time 0;
+  long lived graceful restart yes;
+  connect delay time 2;
+  connect retry time 5;
+  error wait time 5,30;
+  next hop self;
+  bfd graceful;
+}
+protocol bgp node1 from nodes {
+  neighbor fd00:0:1234:2222::4 as 64512;
+}
+EOF
+    docker exec bird-b2 birdcl6 configure
+
          cat <<EOF | docker exec -i bird-c1 sh -c "cat > /etc/bird/nodes-enetC.conf"
 template bgp nodes {
   description "Connection to BGP peer";
@@ -219,6 +346,33 @@ protocol bgp node1 from nodes {
 EOF
     docker exec bird-c1 birdcl configure
 
+    cat <<EOF | docker exec -i bird-c1 sh -c "cat > /etc/bird6/nodes-enetC-v6.conf"
+template bgp nodes {
+  description "Connection to BGP peer";
+  local as 64512;
+  direct;
+  gateway recursive;
+  import all;
+  export filter {
+      if net = ::/0 then reject;
+      accept;
+  };
+  add paths on;
+  graceful restart;
+  graceful restart time 0;
+  long lived graceful restart yes;
+  connect delay time 2;
+  connect retry time 5;
+  error wait time 5,30;
+  next hop self;
+  bfd graceful;
+}
+protocol bgp node1 from nodes {
+  neighbor fd00:0:1234:3333::4 as 64512;
+}
+EOF
+    docker exec bird-c1 birdcl6 configure
+
     # Create BGPConfiguration, BGPPeers etc.
     add_calico_resources
 
@@ -228,9 +382,8 @@ EOF
     docker exec bird-b2 ip route add blackhole 10.233.21.9
     docker exec bird-c1 ip route add blackhole 10.233.31.8
 
-
     # Add nginx docker containers to each external network (as docker-in-docker on the external bird containers)
-    docker exec bird-a1 docker network create --subnet 172.31.41.0/24 --ip-range 172.31.41.0/24 --gateway 172.31.41.2 servernetA
+    docker exec bird-a1 docker network create --subnet 172.31.41.0/24 --gateway 172.31.41.2 servernetA --ipv6 --subnet=fd00:0:1234:4444::/64 --gateway fd00:0:1234:4444::2
     docker exec bird-a1 mkdir -p /tmp/nginx
     cat <<EOF | docker exec -i bird-a1 sh -c "cat > /tmp/nginx/index.html"
 server A
@@ -238,7 +391,7 @@ EOF
     docker exec bird-a1 chmod -R 0755 /tmp/nginx/
     docker exec bird-a1 docker run --network servernetA --ip 172.31.41.1 -d --name nginx-a -v /tmp/nginx/:/usr/share/nginx/html:ro nginx
 
-    docker exec bird-b1 docker network create --subnet 172.31.41.0/24 --ip-range 172.31.41.0/24 --gateway 172.31.41.2 servernetB
+    docker exec bird-b1 docker network create --subnet 172.31.41.0/24 --gateway 172.31.41.2 servernetB --ipv6 --subnet=fd00:0:1234:4444::/64 --gateway fd00:0:1234:4444::2
     docker exec bird-b1 mkdir -p /tmp/nginx
     cat <<EOF | docker exec -i bird-b1 sh -c "cat > /tmp/nginx/index.html"
 server B
@@ -246,7 +399,7 @@ EOF
     docker exec bird-b1 chmod -R 0755 /tmp/nginx/
     docker exec bird-b1 docker run --network servernetB --ip 172.31.41.1 -d --name nginx-b -v /tmp/nginx/:/usr/share/nginx/html:ro nginx
 
-    docker exec bird-c1 docker network create --subnet 172.31.41.0/24 --ip-range 172.31.41.0/24 --gateway 172.31.41.2 servernetC
+    docker exec bird-c1 docker network create --subnet 172.31.41.0/24 --gateway 172.31.41.2 servernetC --ipv6 --subnet=fd00:0:1234:4444::/64 --gateway fd00:0:1234:4444::2
     docker exec bird-c1 mkdir -p /tmp/nginx
     cat <<EOF | docker exec -i bird-c1 sh -c "cat > /tmp/nginx/index.html"
 server C
