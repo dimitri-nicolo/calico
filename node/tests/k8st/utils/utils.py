@@ -194,7 +194,7 @@ def function_name(f):
         return "<unknown function>"
 
 
-def run(command, logerr=True, allow_fail=False, allow_codes=[]):
+def run(command, logerr=True, allow_fail=False, allow_codes=[], returnerr=False):
     out = ""
     _log.info("[%s] %s", datetime.datetime.now(), command)
     try:
@@ -207,6 +207,8 @@ def run(command, logerr=True, allow_fail=False, allow_codes=[]):
             _log.info("Failure output:\n%s", e.output)
         if not (allow_fail or e.returncode in allow_codes):
             raise
+        if returnerr:
+            return e.output
     return out
 
 
@@ -220,16 +222,16 @@ def curl(hostname, container="kube-node-extra"):
     return run(cmd)
 
 
-def kubectl(args, logerr=True, allow_fail=False, allow_codes=[], timeout=0):
+def kubectl(args, logerr=True, allow_fail=False, allow_codes=[], returnerr=False):
     if timeout == 0:
         cmd = "kubectl "
     else:
         cmd = "timeout -s %d kubectl " % timeout
     return run(cmd + args,
-            logerr=logerr,
-            allow_fail=allow_fail,
-            allow_codes=allow_codes)
-
+               logerr=logerr,
+               allow_fail=allow_fail,
+               allow_codes=allow_codes,
+               returnerr=returnerr)
 
 def calicoctl(args, allow_fail=False):
     return kubectl("exec -i -n kube-system calicoctl -- /calicoctl --allow-version-mismatch " + args,
