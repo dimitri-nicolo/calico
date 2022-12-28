@@ -464,10 +464,10 @@ func (p *pip) SearchAndProcessFlowLogs(
 
 // aggregateRawFlowBucket aggregates the raw aggregation bucket into the further aggregated sets of related buckets in
 // the supplied cache. The cache is updated as a result of the aggregation.
-// -  The rawFlowKey is the composite aggregation key common to all entries in the flow (i.e. it contains the first
-//    PIPCompositeSourcesNumSameFlow indices)
-// -  The rawBucket contains the full set of indices for the connection which, with the exception of reporter, action,
-//    and the rawFlowKey indices, will be filtered out.
+//   - The rawFlowKey is the composite aggregation key common to all entries in the flow (i.e. it contains the first
+//     PIPCompositeSourcesNumSameFlow indices)
+//   - The rawBucket contains the full set of indices for the connection which, with the exception of reporter, action,
+//     and the rawFlowKey indices, will be filtered out.
 func aggregateRawFlowBucket(
 	reporter api.ReporterType,
 	rawFlowKey []elastic.CompositeAggregationSourceValue,
@@ -575,11 +575,7 @@ func (s sortedCache) Less(i, j int) bool {
 	// Action index is equal, check source action.
 	si = s[i].CompositeAggregationKey[elastic.FlowCompositeSourcesIdxSourceAction].String()
 	sj = s[j].CompositeAggregationKey[elastic.FlowCompositeSourcesIdxSourceAction].String()
-	if si < sj { //nolint:golint,gosimple
-		return true
-	}
-
-	return false
+	return si < sj
 }
 
 // Swap implements the Sort interface.

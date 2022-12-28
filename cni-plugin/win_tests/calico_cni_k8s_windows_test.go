@@ -350,6 +350,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				}
 
 				wrkload, err := ids.CalculateWorkloadEndpointName(false)
+				//nolint:staticcheck // Ignore SA1019 deprecated
 				interfaceName := k8sconversion.NewConverter().VethNameForWorkload(nsName, name)
 				Expect(err).NotTo(HaveOccurred())
 				log.Debugf("interfaceName : %v", interfaceName)

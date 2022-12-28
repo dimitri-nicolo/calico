@@ -343,6 +343,7 @@ func CreateHostVeth(containerId, k8sName, k8sNamespace, nodename string) error {
 			return err
 		}
 
+		//nolint:staticcheck // Ignore SA1019 deprecated
 		hostVethName = k8sconversion.NewConverter().VethNameForWorkload(k8sNamespace, workloadName)
 	}
 

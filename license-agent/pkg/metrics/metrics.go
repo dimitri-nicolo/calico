@@ -28,7 +28,7 @@ const (
 	Valid
 )
 
-//Declare Prometheus metrics variables
+// Declare Prometheus metrics variables
 var (
 	gaugeNumDays = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "license_number_of_days",
@@ -50,8 +50,8 @@ var (
 	wg sync.WaitGroup
 )
 
-//License Reporter contains data which is required to start webserver,
-//and serve prometheus requests
+// License Reporter contains data which is required to start webserver,
+// and serve prometheus requests
 type LicenseReporter struct {
 	//Prometheus requests are served on this port
 	port int
@@ -116,8 +116,8 @@ func (lr *LicenseReporter) servePrometheusMetrics() {
 	wg.Done()
 }
 
-//Continuously scrape License Validity, Number of days license valid
-//Maximum number of nodes licensed and Number of nodes in Use
+// Continuously scrape License Validity, Number of days license valid
+// Maximum number of nodes licensed and Number of nodes in Use
 func (lr *LicenseReporter) startReporter() {
 	for {
 		//Get Licensekey from datastore, only if license exists scrape data
@@ -152,24 +152,24 @@ func (lr *LicenseReporter) startReporter() {
 	}
 }
 
-//Decode License, get expiry date, maximum allowed nodes
+// Decode License, get expiry date, maximum allowed nodes
 func (lr *LicenseReporter) LicenseHandler(lic apiv3.LicenseKey) (isValid bool, daysToExpire, maxNodes int) {
 
-	//Decode the LicenseKey
+	// Decode the LicenseKey
 	claims, err := licenseClient.Decode(lic)
 	if err != nil {
 		log.Warnf("License is corrupted. Please Contact Tigera support")
 		return false, 0, 0
 	}
 
-	//Check if License is Valid
+	// Check if License is Valid
 	if licStatus := claims.Validate(); licStatus != licenseClient.Valid {
 		log.Warnf("License has expired. Please Contact Tigera support")
 		return false, 0, 0
 	}
 
-	//Find number of days license valid, Maximum nodes
-	durationInHours := int(claims.Claims.Expiry.Time().Sub(time.Now()).Hours()) //nolint:golint,gosimple
+	// Find number of days license valid, Maximum nodes
+	durationInHours := int(time.Until(claims.Claims.Expiry.Time()).Hours())
 	maxNodes = *claims.Nodes
 	return true, durationInHours / 24, maxNodes
 }

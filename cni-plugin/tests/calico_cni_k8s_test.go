@@ -268,6 +268,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			wrkload, err := ids.CalculateWorkloadEndpointName(false)
 			Expect(err).NotTo(HaveOccurred())
 
+			//nolint:staticcheck // Ignore SA1019 deprecated
 			interfaceName := k8sconversion.NewConverter().VethNameForWorkload(testutils.K8S_TEST_NS, name)
 
 			// The endpoint is created
@@ -427,6 +428,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 				}
 
 				wrkload, err := ids.CalculateWorkloadEndpointName(false)
+				//nolint:staticcheck // Ignore SA1019 deprecated
 				interfaceName := k8sconversion.NewConverter().VethNameForWorkload(testutils.K8S_TEST_NS, name)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -1948,6 +1950,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			wrkload, err := ids.CalculateWorkloadEndpointName(false)
 			Expect(err).NotTo(HaveOccurred())
 
+			//nolint:staticcheck // Ignore SA1019 deprecated
 			interfaceName := k8sconversion.NewConverter().VethNameForWorkload(testutils.K8S_TEST_NS, name)
 
 			// The endpoint is created
@@ -2132,6 +2135,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			wrkload, err := ids.CalculateWorkloadEndpointName(false)
 			Expect(err).NotTo(HaveOccurred())
 
+			//nolint:staticcheck // Ignore SA1019 deprecated
 			interfaceName := k8sconversion.NewConverter().VethNameForWorkload(testutils.K8S_TEST_NS, name)
 
 			// Make sure WorkloadEndpoint is created and has the requested IP in the datastore.
@@ -2263,6 +2267,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			wrkload, err := ids.CalculateWorkloadEndpointName(false)
 			Expect(err).NotTo(HaveOccurred())
 
+			//nolint:staticcheck // Ignore SA1019 deprecated
 			interfaceName := k8sconversion.NewConverter().VethNameForWorkload(testutils.K8S_TEST_NS, name)
 
 			// Make sure WorkloadEndpoint is created and has the requested IP in the datastore.
@@ -3026,6 +3031,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			}
 
 			wrkload, err := ids.CalculateWorkloadEndpointName(false)
+			//nolint:staticcheck // Ignore SA1019 deprecated
 			interfaceName := k8sconversion.NewConverter().VethNameForWorkload(testutils.K8S_TEST_NS, name)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -3173,6 +3179,7 @@ var _ = Describe("Kubernetes CNI tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			mac := contVeth.Attrs().HardwareAddr
+			//nolint:staticcheck // Ignore SA1019 deprecated
 			interfaceName := k8sconversion.NewConverter().VethNameForWorkload(testutils.K8S_TEST_NS, name)
 
 			// The endpoint is created
