@@ -66,6 +66,18 @@ func (o *Obj) AttachKprobe(progName, fn string) (*Link, error) {
 	panic("LIBBPF syscall stub")
 }
 
+func (o *Obj) AttachXDP(ifName, progName string, oldFD int, mode uint) (int, error) {
+	panic("LIBBPF syscall stub")
+}
+
+func DetachXDP(ifName string, mode uint) error {
+	panic("LIBBPF syscall stub")
+}
+
+func GetXDPProgramID(ifName string) (int, error) {
+	panic("LIBBPF syscall stub")
+}
+
 func (o *Obj) AttachCGroup(_, _ string) (*Link, error) {
 	panic("LIBBPF syscall stub")
 }
