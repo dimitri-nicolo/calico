@@ -428,6 +428,7 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 			// baked into the crypto routing table.
 		)
 	}
+
 	if ipVersion == 4 && r.EgressIPEnabled && !r.BPFEnabled {
 		// Auto-allow VXLAN traffic destined to egress.calico.
 		// Such traffic has destination of the local host and expected udp port.
@@ -441,6 +442,14 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 				Comment: []string{"Allow VXLAN UDP traffic to egress clients"},
 			},
 		)
+		// Auto-allow egress gateways health probes.
+		inputRules = append(inputRules, Rule{
+			Match: Match().ProtocolNum(ProtoTCP).DestAddrType(AddrTypeLocal).SourceIPPortSet(
+				r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllEGWHealthPorts)),
+			Action:  r.filterAllowAction,
+			Comment: []string{"Accept egress gateway health port probe traffic"},
+		})
+
 	}
 
 	if r.KubeIPVSSupportEnabled {
