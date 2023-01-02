@@ -429,13 +429,19 @@ syn_force_policy:
 	}
 
 	// Auto allow VXLAN packets to egress gateways to leave the client's host
-	if (CALI_F_FROM_HOST && EGRESS_IP_ENABLED &&
+	if (CALI_F_HEP && EGRESS_IP_ENABLED &&
 			!skb_refresh_validate_ptrs(ctx, UDP_SIZE) &&
-			is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT) &&
-			(ctx->state->ip_src == HOST_IP)) {
-		CALI_DEBUG("Allow VXLAN packet to Egress Gateways\n");
-		COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
-		goto skip_policy;
+			is_vxlan_tunnel(ctx->ip_header, EGW_VXLAN_PORT)) {
+		__be32 ip_addr = CALI_F_FROM_HOST ? ctx->state->ip_src : ctx->state->ip_dst;
+		if (ip_addr == HOST_IP) {
+			if (CALI_F_FROM_HOST) {
+				CALI_DEBUG("Allow VXLAN packet to Egress Gateways\n");
+			} else {
+				CALI_DEBUG("Allow VXLAN packet from Egress Gateways\n");
+			}
+			COUNTER_INC(ctx, CALI_REASON_ACCEPTED_BY_EGW);
+			goto skip_policy;
+		}
 	}
 
 	// Auto-allow VXLAN packets from/to egress gateway pod
@@ -1517,13 +1523,17 @@ int calico_tc_skb_drop(struct __sk_buff *skb)
 		return TC_ACT_SHOT;
 	}
 
-	if (CALI_F_FROM_HOST && EGRESS_IP_ENABLED &&
-			(ctx.state->ip_src == HOST_IP) &&
-			dest_is_egw_health(ctx.state->ip_dst, ctx.state->dport)) {
-		// Auto Allow health check traffic to EGW pod
-		CALI_DEBUG("Allow EGW health check packets\n");
-		COUNTER_INC(&ctx, CALI_REASON_ACCEPTED_BY_EGW);
-		goto allow;
+	if (CALI_F_HEP && EGRESS_IP_ENABLED) {
+                __be32 host_ip = CALI_F_FROM_HOST ? ctx.state->ip_src : ctx.state->ip_dst;
+                __be32 ipset_ip = CALI_F_FROM_HOST ? ctx.state->ip_dst : ctx.state->ip_src;
+                __be16 ipset_port = CALI_F_FROM_HOST ? ctx.state->dport : ctx.state->sport;
+		if ((host_ip == HOST_IP) &&
+			is_egw_health_packet(ipset_ip, ipset_port)) {
+			// Auto Allow health check traffic to EGW pod
+			CALI_DEBUG("Allow EGW health check packets\n");
+			COUNTER_INC(&ctx, CALI_REASON_ACCEPTED_BY_EGW);
+			goto allow;
+		}
 	}
 
 	update_rule_counters(ctx.state);
