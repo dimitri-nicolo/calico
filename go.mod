@@ -3,7 +3,7 @@ module github.com/projectcalico/calico
 go 1.18
 
 require (
-	github.com/BurntSushi/toml v0.3.1
+	github.com/BurntSushi/toml v1.2.0
 	github.com/Masterminds/sprig v2.20.0+incompatible
 	github.com/Microsoft/hcsshim v0.8.22
 	github.com/PaloAltoNetworks/pango v0.8.0
