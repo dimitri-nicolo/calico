@@ -57,6 +57,9 @@ func addFuncs(out, in map[string]interface{}) {
 	}
 }
 
+// EmitExternalNetworkTableName returns a formatted name for use as a BIRD table, truncating and hashing if the provided
+// name would result in a table name longer than the max allowable length of 64 chars.
+// e.g. input of "my-external-network" would result in output of "'T_my-external-network'"
 func EmitExternalNetworkTableName(name string) (string, error) {
 	pieces := []string{"T_", ""}
 	resizedName, err := truncateAndHashName(name, maxBIRDSymLen-len(strings.Join(pieces, "")))
@@ -68,6 +71,9 @@ func EmitExternalNetworkTableName(name string) (string, error) {
 	return fmt.Sprintf("'%s'", fullName), nil
 }
 
+// emitBGPFilterStatement produces a single comparison expression to be used within a multi-statement BIRD filter
+// function.
+// e.g input of ("In", "77.0.0.1/16", "accept") produces output of "if ( net ~ 77.0.0.1/16 ) then { accept; }"
 func emitBGPFilterStatement(matchOperator, cidr, action string) (string, error) {
 	matchOperatorLUT := map[string]string{
 		string(v3.Equal): "=",
@@ -106,6 +112,19 @@ func EmitBGPFilterFunctionName(filterName, direction, version string) (string, e
 	return fmt.Sprintf("'%s'", fullName), nil
 }
 
+// EmitBIRDExternalNetworkConfig generates BIRD config for the tables and kernel protocol configuration based on
+// configured ExternalNetwork resources.
+//
+// e.g. for ExternalNetwork resource configured as follows:
+//
+// kind: ExternalNetwork
+// apiVersion: projectcalico.org/v3
+// metadata:
+//   name: test-enet
+// spec:
+//   routeTableIndex: 7
+//
+// Would produce the following string array that can be easily output via BIRD config template:
 func EmitBIRDExternalNetworkConfig(selfIP string, externalNetworkKVPs memkv.KVPairs, globalPeersKVP memkv.KVPairs,
 	nodeSpecificPeersKVP memkv.KVPairs) ([]string, error) {
 	lines := []string{}
