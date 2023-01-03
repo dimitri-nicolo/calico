@@ -14,36 +14,30 @@
 
 package main
 
-// XXX staticcheck disabled for the whole import as golangci-lint ignores
-// specific directives, still an open issue:
-// https://github.com/golangci/golangci-lint/issues/741
-//
-// SA1019 prometheus is using that lib and so need we
-// github.com/golang/protobuf/proto is deprecated and fails lint
-
-//nolint:staticcheck
 import (
 	"context"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/golang/protobuf/proto"
+	log "github.com/sirupsen/logrus"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/push"
-	log "github.com/sirupsen/logrus"
+
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
-
-	"github.com/projectcalico/calico/licensing/utils"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	client "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
 	cerrors "github.com/projectcalico/calico/libcalico-go/lib/errors"
 	"github.com/projectcalico/calico/libcalico-go/lib/options"
+	"github.com/projectcalico/calico/licensing/utils"
 )
 
 // Global config - these are set by arguments on the ginkgo command line.

@@ -14432,6 +14432,79 @@ spec:
             description: AmazonCloudIntegrationStatus defines the observed state of
               AmazonCloudIntegration
             properties:
+              conditions:
+                description: Conditions represents the latest observed set of conditions
+                  for the component. A component may be one or more of Ready, Progressing,
+                  Degraded or other customer types.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n \ttype FooStatus struct{ \t    // Represents the observations
+                    of a foo's current state. \t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\" \t    //
+                    +patchMergeKey=type \t    // +patchStrategy=merge \t    // +listType=map
+                    \t    // +listMapKey=type \t    Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other fields
+                    \t}"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
               state:
                 description: State provides user-readable status.
                 type: string
@@ -14467,7 +14540,7 @@ spec:
               AmazonCloudIntegration
             type: object
         type: object
-    served: false
+    served: true
     storage: false
     subresources:
       status: {}
@@ -14499,7 +14572,8 @@ spec:
     schema:
       openAPIV3Schema:
         description: APIServer installs the Tigera API server and related resources.
-          At most one instance of this resource is supported. It must be named "tigera-secure".
+          At most one instance of this resource is supported. It must be named "default"
+          or "tigera-secure".
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -14947,9 +15021,6 @@ spec:
                                                     or empty namespaces list means
                                                     "this pod's namespace". An empty
                                                     selector ({}) matches all namespaces.
-                                                    This field is beta-level and is
-                                                    only honored when PodAffinityNamespaceSelector
-                                                    feature is enabled.
                                                   properties:
                                                     matchExpressions:
                                                       description: matchExpressions
@@ -15020,7 +15091,7 @@ spec:
                                                     field and the ones selected by
                                                     namespaceSelector. null or empty
                                                     namespaces list and null namespaceSelector
-                                                    means "this pod's namespace"
+                                                    means "this pod's namespace".
                                                   items:
                                                     type: string
                                                   type: array
@@ -15144,10 +15215,7 @@ spec:
                                                 field. null selector and null or empty
                                                 namespaces list means "this pod's
                                                 namespace". An empty selector ({})
-                                                matches all namespaces. This field
-                                                is beta-level and is only honored
-                                                when PodAffinityNamespaceSelector
-                                                feature is enabled.
+                                                matches all namespaces.
                                               properties:
                                                 matchExpressions:
                                                   description: matchExpressions is
@@ -15213,7 +15281,7 @@ spec:
                                                 in this field and the ones selected
                                                 by namespaceSelector. null or empty
                                                 namespaces list and null namespaceSelector
-                                                means "this pod's namespace"
+                                                means "this pod's namespace".
                                               items:
                                                 type: string
                                               type: array
@@ -15341,9 +15409,6 @@ spec:
                                                     or empty namespaces list means
                                                     "this pod's namespace". An empty
                                                     selector ({}) matches all namespaces.
-                                                    This field is beta-level and is
-                                                    only honored when PodAffinityNamespaceSelector
-                                                    feature is enabled.
                                                   properties:
                                                     matchExpressions:
                                                       description: matchExpressions
@@ -15414,7 +15479,7 @@ spec:
                                                     field and the ones selected by
                                                     namespaceSelector. null or empty
                                                     namespaces list and null namespaceSelector
-                                                    means "this pod's namespace"
+                                                    means "this pod's namespace".
                                                   items:
                                                     type: string
                                                   type: array
@@ -15538,10 +15603,7 @@ spec:
                                                 field. null selector and null or empty
                                                 namespaces list means "this pod's
                                                 namespace". An empty selector ({})
-                                                matches all namespaces. This field
-                                                is beta-level and is only honored
-                                                when PodAffinityNamespaceSelector
-                                                feature is enabled.
+                                                matches all namespaces.
                                               properties:
                                                 matchExpressions:
                                                   description: matchExpressions is
@@ -15607,7 +15669,7 @@ spec:
                                                 in this field and the ones selected
                                                 by namespaceSelector. null or empty
                                                 namespaces list and null namespaceSelector
-                                                means "this pod's namespace"
+                                                means "this pod's namespace".
                                               items:
                                                 type: string
                                               type: array
@@ -15813,6 +15875,215 @@ spec:
                                       type: string
                                   type: object
                                 type: array
+                              topologySpreadConstraints:
+                                description: TopologySpreadConstraints describes how
+                                  a group of pods ought to spread across topology
+                                  domains. Scheduler will schedule pods in a way which
+                                  abides by the constraints. All topologySpreadConstraints
+                                  are ANDed.
+                                items:
+                                  description: TopologySpreadConstraint specifies
+                                    how to spread matching pods among the given topology.
+                                  properties:
+                                    labelSelector:
+                                      description: LabelSelector is used to find matching
+                                        pods. Pods that match this label selector
+                                        are counted to determine the number of pods
+                                        in their corresponding topology domain.
+                                      properties:
+                                        matchExpressions:
+                                          description: matchExpressions is a list
+                                            of label selector requirements. The requirements
+                                            are ANDed.
+                                          items:
+                                            description: A label selector requirement
+                                              is a selector that contains values,
+                                              a key, and an operator that relates
+                                              the key and values.
+                                            properties:
+                                              key:
+                                                description: key is the label key
+                                                  that the selector applies to.
+                                                type: string
+                                              operator:
+                                                description: operator represents a
+                                                  key's relationship to a set of values.
+                                                  Valid operators are In, NotIn, Exists
+                                                  and DoesNotExist.
+                                                type: string
+                                              values:
+                                                description: values is an array of
+                                                  string values. If the operator is
+                                                  In or NotIn, the values array must
+                                                  be non-empty. If the operator is
+                                                  Exists or DoesNotExist, the values
+                                                  array must be empty. This array
+                                                  is replaced during a strategic merge
+                                                  patch.
+                                                items:
+                                                  type: string
+                                                type: array
+                                            required:
+                                            - key
+                                            - operator
+                                            type: object
+                                          type: array
+                                        matchLabels:
+                                          additionalProperties:
+                                            type: string
+                                          description: matchLabels is a map of {key,value}
+                                            pairs. A single {key,value} in the matchLabels
+                                            map is equivalent to an element of matchExpressions,
+                                            whose key field is "key", the operator
+                                            is "In", and the values array contains
+                                            only "value". The requirements are ANDed.
+                                          type: object
+                                      type: object
+                                    matchLabelKeys:
+                                      description: MatchLabelKeys is a set of pod
+                                        label keys to select the pods over which spreading
+                                        will be calculated. The keys are used to lookup
+                                        values from the incoming pod labels, those
+                                        key-value labels are ANDed with labelSelector
+                                        to select the group of existing pods over
+                                        which spreading will be calculated for the
+                                        incoming pod. Keys that don't exist in the
+                                        incoming pod labels will be ignored. A null
+                                        or empty list means only match against labelSelector.
+                                      items:
+                                        type: string
+                                      type: array
+                                      x-kubernetes-list-type: atomic
+                                    maxSkew:
+                                      description: 'MaxSkew describes the degree to
+                                        which pods may be unevenly distributed. When
+                                        `whenUnsatisfiable=DoNotSchedule`, it is the
+                                        maximum permitted difference between the number
+                                        of matching pods in the target topology and
+                                        the global minimum. The global minimum is
+                                        the minimum number of matching pods in an
+                                        eligible domain or zero if the number of eligible
+                                        domains is less than MinDomains. For example,
+                                        in a 3-zone cluster, MaxSkew is set to 1,
+                                        and pods with the same labelSelector spread
+                                        as 2/2/1: In this case, the global minimum
+                                        is 1. | zone1 | zone2 | zone3 | |  P P  |  P
+                                        P  |   P   | - if MaxSkew is 1, incoming pod
+                                        can only be scheduled to zone3 to become 2/2/2;
+                                        scheduling it onto zone1(zone2) would make
+                                        the ActualSkew(3-1) on zone1(zone2) violate
+                                        MaxSkew(1). - if MaxSkew is 2, incoming pod
+                                        can be scheduled onto any zone. When `whenUnsatisfiable=ScheduleAnyway`,
+                                        it is used to give higher precedence to topologies
+                                        that satisfy it. It''s a required field. Default
+                                        value is 1 and 0 is not allowed.'
+                                      format: int32
+                                      type: integer
+                                    minDomains:
+                                      description: "MinDomains indicates a minimum
+                                        number of eligible domains. When the number
+                                        of eligible domains with matching topology
+                                        keys is less than minDomains, Pod Topology
+                                        Spread treats \"global minimum\" as 0, and
+                                        then the calculation of Skew is performed.
+                                        And when the number of eligible domains with
+                                        matching topology keys equals or greater than
+                                        minDomains, this value has no effect on scheduling.
+                                        As a result, when the number of eligible domains
+                                        is less than minDomains, scheduler won't schedule
+                                        more than maxSkew Pods to those domains. If
+                                        value is nil, the constraint behaves as if
+                                        MinDomains is equal to 1. Valid values are
+                                        integers greater than 0. When value is not
+                                        nil, WhenUnsatisfiable must be DoNotSchedule.
+                                        \n For example, in a 3-zone cluster, MaxSkew
+                                        is set to 2, MinDomains is set to 5 and pods
+                                        with the same labelSelector spread as 2/2/2:
+                                        | zone1 | zone2 | zone3 | |  P P  |  P P  |
+                                        \ P P  | The number of domains is less than
+                                        5(MinDomains), so \"global minimum\" is treated
+                                        as 0. In this situation, new pod with the
+                                        same labelSelector cannot be scheduled, because
+                                        computed skew will be 3(3 - 0) if new Pod
+                                        is scheduled to any of the three zones, it
+                                        will violate MaxSkew. \n This is a beta field
+                                        and requires the MinDomainsInPodTopologySpread
+                                        feature gate to be enabled (enabled by default)."
+                                      format: int32
+                                      type: integer
+                                    nodeAffinityPolicy:
+                                      description: "NodeAffinityPolicy indicates how
+                                        we will treat Pod's nodeAffinity/nodeSelector
+                                        when calculating pod topology spread skew.
+                                        Options are: - Honor: only nodes matching
+                                        nodeAffinity/nodeSelector are included in
+                                        the calculations. - Ignore: nodeAffinity/nodeSelector
+                                        are ignored. All nodes are included in the
+                                        calculations. \n If this value is nil, the
+                                        behavior is equivalent to the Honor policy.
+                                        This is a alpha-level feature enabled by the
+                                        NodeInclusionPolicyInPodTopologySpread feature
+                                        flag."
+                                      type: string
+                                    nodeTaintsPolicy:
+                                      description: "NodeTaintsPolicy indicates how
+                                        we will treat node taints when calculating
+                                        pod topology spread skew. Options are: - Honor:
+                                        nodes without taints, along with tainted nodes
+                                        for which the incoming pod has a toleration,
+                                        are included. - Ignore: node taints are ignored.
+                                        All nodes are included. \n If this value is
+                                        nil, the behavior is equivalent to the Ignore
+                                        policy. This is a alpha-level feature enabled
+                                        by the NodeInclusionPolicyInPodTopologySpread
+                                        feature flag."
+                                      type: string
+                                    topologyKey:
+                                      description: TopologyKey is the key of node
+                                        labels. Nodes that have a label with this
+                                        key and identical values are considered to
+                                        be in the same topology. We consider each
+                                        <key, value> as a "bucket", and try to put
+                                        balanced number of pods into each bucket.
+                                        We define a domain as a particular instance
+                                        of a topology. Also, we define an eligible
+                                        domain as a domain whose nodes meet the requirements
+                                        of nodeAffinityPolicy and nodeTaintsPolicy.
+                                        e.g. If TopologyKey is "kubernetes.io/hostname",
+                                        each Node is a domain of that topology. And,
+                                        if TopologyKey is "topology.kubernetes.io/zone",
+                                        each zone is a domain of that topology. It's
+                                        a required field.
+                                      type: string
+                                    whenUnsatisfiable:
+                                      description: 'WhenUnsatisfiable indicates how
+                                        to deal with a pod if it doesn''t satisfy
+                                        the spread constraint. - DoNotSchedule (default)
+                                        tells the scheduler not to schedule it. -
+                                        ScheduleAnyway tells the scheduler to schedule
+                                        the pod in any location,   but giving higher
+                                        precedence to topologies that would help reduce
+                                        the   skew. A constraint is considered "Unsatisfiable"
+                                        for an incoming pod if and only if every possible
+                                        node assignment for that pod would violate
+                                        "MaxSkew" on some topology. For example, in
+                                        a 3-zone cluster, MaxSkew is set to 1, and
+                                        pods with the same labelSelector spread as
+                                        3/1/1: | zone1 | zone2 | zone3 | | P P P |   P   |   P   |
+                                        If WhenUnsatisfiable is set to DoNotSchedule,
+                                        incoming pod can only be scheduled to zone2(zone3)
+                                        to become 3/2/1(3/1/2) as ActualSkew(2-1)
+                                        on zone2(zone3) satisfies MaxSkew(1). In other
+                                        words, the cluster can still be imbalanced,
+                                        but scheduler won''t make it *more* imbalanced.
+                                        It''s a required field.'
+                                      type: string
+                                  required:
+                                  - maxSkew
+                                  - topologyKey
+                                  - whenUnsatisfiable
+                                  type: object
+                                type: array
                             type: object
                         type: object
                     type: object
@@ -15821,6 +16092,79 @@ spec:
           status:
             description: Most recently observed status for the Tigera API server.
             properties:
+              conditions:
+                description: Conditions represents the latest observed set of conditions
+                  for the component. A component may be one or more of Ready, Progressing,
+                  Degraded or other customer types.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n \ttype FooStatus struct{ \t    // Represents the observations
+                    of a foo's current state. \t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\" \t    //
+                    +patchMergeKey=type \t    // +patchStrategy=merge \t    // +listType=map
+                    \t    // +listMapKey=type \t    Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other fields
+                    \t}"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
               state:
                 description: State provides user-readable status.
                 type: string
@@ -15903,6 +16247,79 @@ spec:
           status:
             description: ApplicationLayerStatus defines the observed state of ApplicationLayer
             properties:
+              conditions:
+                description: Conditions represents the latest observed set of conditions
+                  for the component. A component may be one or more of Ready, Progressing,
+                  Degraded or other customer types.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n \ttype FooStatus struct{ \t    // Represents the observations
+                    of a foo's current state. \t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\" \t    //
+                    +patchMergeKey=type \t    // +patchStrategy=merge \t    // +listType=map
+                    \t    // +listMapKey=type \t    Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other fields
+                    \t}"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
               state:
                 description: State provides user-readable status.
                 type: string
@@ -16134,6 +16551,79 @@ spec:
           status:
             description: AuthenticationStatus defines the observed state of Authentication
             properties:
+              conditions:
+                description: Conditions represents the latest observed set of conditions
+                  for the component. A component may be one or more of Ready, Progressing,
+                  Degraded or other customer types.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n \ttype FooStatus struct{ \t    // Represents the observations
+                    of a foo's current state. \t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\" \t    //
+                    +patchMergeKey=type \t    // +patchStrategy=merge \t    // +listType=map
+                    \t    // +listMapKey=type \t    Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other fields
+                    \t}"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
               state:
                 description: State provides user-readable status.
                 type: string
@@ -16193,6 +16683,79 @@ spec:
           status:
             description: Most recently observed state for Tigera compliance reporting.
             properties:
+              conditions:
+                description: Conditions represents the latest observed set of conditions
+                  for the component. A component may be one or more of Ready, Progressing,
+                  Degraded or other customer types.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n \ttype FooStatus struct{ \t    // Represents the observations
+                    of a foo's current state. \t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\" \t    //
+                    +patchMergeKey=type \t    // +patchStrategy=merge \t    // +listType=map
+                    \t    // +listMapKey=type \t    Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other fields
+                    \t}"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
               state:
                 description: State provides user-readable status.
                 type: string
@@ -16761,9 +17324,6 @@ spec:
                                                     or empty namespaces list means
                                                     "this pod's namespace". An empty
                                                     selector ({}) matches all namespaces.
-                                                    This field is beta-level and is
-                                                    only honored when PodAffinityNamespaceSelector
-                                                    feature is enabled.
                                                   properties:
                                                     matchExpressions:
                                                       description: matchExpressions
@@ -16834,7 +17394,7 @@ spec:
                                                     field and the ones selected by
                                                     namespaceSelector. null or empty
                                                     namespaces list and null namespaceSelector
-                                                    means "this pod's namespace"
+                                                    means "this pod's namespace".
                                                   items:
                                                     type: string
                                                   type: array
@@ -16958,10 +17518,7 @@ spec:
                                                 field. null selector and null or empty
                                                 namespaces list means "this pod's
                                                 namespace". An empty selector ({})
-                                                matches all namespaces. This field
-                                                is beta-level and is only honored
-                                                when PodAffinityNamespaceSelector
-                                                feature is enabled.
+                                                matches all namespaces.
                                               properties:
                                                 matchExpressions:
                                                   description: matchExpressions is
@@ -17027,7 +17584,7 @@ spec:
                                                 in this field and the ones selected
                                                 by namespaceSelector. null or empty
                                                 namespaces list and null namespaceSelector
-                                                means "this pod's namespace"
+                                                means "this pod's namespace".
                                               items:
                                                 type: string
                                               type: array
@@ -17155,9 +17712,6 @@ spec:
                                                     or empty namespaces list means
                                                     "this pod's namespace". An empty
                                                     selector ({}) matches all namespaces.
-                                                    This field is beta-level and is
-                                                    only honored when PodAffinityNamespaceSelector
-                                                    feature is enabled.
                                                   properties:
                                                     matchExpressions:
                                                       description: matchExpressions
@@ -17228,7 +17782,7 @@ spec:
                                                     field and the ones selected by
                                                     namespaceSelector. null or empty
                                                     namespaces list and null namespaceSelector
-                                                    means "this pod's namespace"
+                                                    means "this pod's namespace".
                                                   items:
                                                     type: string
                                                   type: array
@@ -17352,10 +17906,7 @@ spec:
                                                 field. null selector and null or empty
                                                 namespaces list means "this pod's
                                                 namespace". An empty selector ({})
-                                                matches all namespaces. This field
-                                                is beta-level and is only honored
-                                                when PodAffinityNamespaceSelector
-                                                feature is enabled.
+                                                matches all namespaces.
                                               properties:
                                                 matchExpressions:
                                                   description: matchExpressions is
@@ -17421,7 +17972,7 @@ spec:
                                                 in this field and the ones selected
                                                 by namespaceSelector. null or empty
                                                 namespaces list and null namespaceSelector
-                                                means "this pod's namespace"
+                                                means "this pod's namespace".
                                               items:
                                                 type: string
                                               type: array
@@ -18180,9 +18731,6 @@ spec:
                                                     or empty namespaces list means
                                                     "this pod's namespace". An empty
                                                     selector ({}) matches all namespaces.
-                                                    This field is beta-level and is
-                                                    only honored when PodAffinityNamespaceSelector
-                                                    feature is enabled.
                                                   properties:
                                                     matchExpressions:
                                                       description: matchExpressions
@@ -18253,7 +18801,7 @@ spec:
                                                     field and the ones selected by
                                                     namespaceSelector. null or empty
                                                     namespaces list and null namespaceSelector
-                                                    means "this pod's namespace"
+                                                    means "this pod's namespace".
                                                   items:
                                                     type: string
                                                   type: array
@@ -18377,10 +18925,7 @@ spec:
                                                 field. null selector and null or empty
                                                 namespaces list means "this pod's
                                                 namespace". An empty selector ({})
-                                                matches all namespaces. This field
-                                                is beta-level and is only honored
-                                                when PodAffinityNamespaceSelector
-                                                feature is enabled.
+                                                matches all namespaces.
                                               properties:
                                                 matchExpressions:
                                                   description: matchExpressions is
@@ -18446,7 +18991,7 @@ spec:
                                                 in this field and the ones selected
                                                 by namespaceSelector. null or empty
                                                 namespaces list and null namespaceSelector
-                                                means "this pod's namespace"
+                                                means "this pod's namespace".
                                               items:
                                                 type: string
                                               type: array
@@ -18574,9 +19119,6 @@ spec:
                                                     or empty namespaces list means
                                                     "this pod's namespace". An empty
                                                     selector ({}) matches all namespaces.
-                                                    This field is beta-level and is
-                                                    only honored when PodAffinityNamespaceSelector
-                                                    feature is enabled.
                                                   properties:
                                                     matchExpressions:
                                                       description: matchExpressions
@@ -18647,7 +19189,7 @@ spec:
                                                     field and the ones selected by
                                                     namespaceSelector. null or empty
                                                     namespaces list and null namespaceSelector
-                                                    means "this pod's namespace"
+                                                    means "this pod's namespace".
                                                   items:
                                                     type: string
                                                   type: array
@@ -18771,10 +19313,7 @@ spec:
                                                 field. null selector and null or empty
                                                 namespaces list means "this pod's
                                                 namespace". An empty selector ({})
-                                                matches all namespaces. This field
-                                                is beta-level and is only honored
-                                                when PodAffinityNamespaceSelector
-                                                feature is enabled.
+                                                matches all namespaces.
                                               properties:
                                                 matchExpressions:
                                                   description: matchExpressions is
@@ -18840,7 +19379,7 @@ spec:
                                                 in this field and the ones selected
                                                 by namespaceSelector. null or empty
                                                 namespaces list and null namespaceSelector
-                                                means "this pod's namespace"
+                                                means "this pod's namespace".
                                               items:
                                                 type: string
                                               type: array
@@ -19482,9 +20021,6 @@ spec:
                                                     or empty namespaces list means
                                                     "this pod's namespace". An empty
                                                     selector ({}) matches all namespaces.
-                                                    This field is beta-level and is
-                                                    only honored when PodAffinityNamespaceSelector
-                                                    feature is enabled.
                                                   properties:
                                                     matchExpressions:
                                                       description: matchExpressions
@@ -19555,7 +20091,7 @@ spec:
                                                     field and the ones selected by
                                                     namespaceSelector. null or empty
                                                     namespaces list and null namespaceSelector
-                                                    means "this pod's namespace"
+                                                    means "this pod's namespace".
                                                   items:
                                                     type: string
                                                   type: array
@@ -19679,10 +20215,7 @@ spec:
                                                 field. null selector and null or empty
                                                 namespaces list means "this pod's
                                                 namespace". An empty selector ({})
-                                                matches all namespaces. This field
-                                                is beta-level and is only honored
-                                                when PodAffinityNamespaceSelector
-                                                feature is enabled.
+                                                matches all namespaces.
                                               properties:
                                                 matchExpressions:
                                                   description: matchExpressions is
@@ -19748,7 +20281,7 @@ spec:
                                                 in this field and the ones selected
                                                 by namespaceSelector. null or empty
                                                 namespaces list and null namespaceSelector
-                                                means "this pod's namespace"
+                                                means "this pod's namespace".
                                               items:
                                                 type: string
                                               type: array
@@ -19876,9 +20409,6 @@ spec:
                                                     or empty namespaces list means
                                                     "this pod's namespace". An empty
                                                     selector ({}) matches all namespaces.
-                                                    This field is beta-level and is
-                                                    only honored when PodAffinityNamespaceSelector
-                                                    feature is enabled.
                                                   properties:
                                                     matchExpressions:
                                                       description: matchExpressions
@@ -19949,7 +20479,7 @@ spec:
                                                     field and the ones selected by
                                                     namespaceSelector. null or empty
                                                     namespaces list and null namespaceSelector
-                                                    means "this pod's namespace"
+                                                    means "this pod's namespace".
                                                   items:
                                                     type: string
                                                   type: array
@@ -20073,10 +20603,7 @@ spec:
                                                 field. null selector and null or empty
                                                 namespaces list means "this pod's
                                                 namespace". An empty selector ({})
-                                                matches all namespaces. This field
-                                                is beta-level and is only honored
-                                                when PodAffinityNamespaceSelector
-                                                feature is enabled.
+                                                matches all namespaces.
                                               properties:
                                                 matchExpressions:
                                                   description: matchExpressions is
@@ -20142,7 +20669,7 @@ spec:
                                                 in this field and the ones selected
                                                 by namespaceSelector. null or empty
                                                 namespaces list and null namespaceSelector
-                                                means "this pod's namespace"
+                                                means "this pod's namespace".
                                               items:
                                                 type: string
                                               type: array
@@ -20603,9 +21130,7 @@ spec:
                           the possibility that the resources consumed by the daemonset
                           on any given node can double if the readiness check fails,
                           and so resource intensive daemonsets should take into account
-                          that they may cause evictions during disruption. This is
-                          beta field and enabled/disabled by DaemonSetUpdateSurge
-                          feature gate.'
+                          that they may cause evictions during disruption.'
                         x-kubernetes-int-or-string: true
                       maxUnavailable:
                         anyOf:
@@ -20900,6 +21425,53 @@ spec:
                         maximum: 2147483647
                         minimum: 0
                         type: integer
+                      strategy:
+                        description: The deployment strategy to use to replace existing
+                          pods with new ones.
+                        properties:
+                          rollingUpdate:
+                            description: Rolling update config params. Present only
+                              if DeploymentStrategyType = RollingUpdate. to be.
+                            properties:
+                              maxSurge:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                description: 'The maximum number of pods that can
+                                  be scheduled above the desired number of pods. Value
+                                  can be an absolute number (ex: 5) or a percentage
+                                  of desired pods (ex: 10%). This can not be 0 if
+                                  MaxUnavailable is 0. Absolute number is calculated
+                                  from percentage by rounding up. Defaults to 25%.
+                                  Example: when this is set to 30%, the new ReplicaSet
+                                  can be scaled up immediately when the rolling update
+                                  starts, such that the total number of old and new
+                                  pods do not exceed 130% of desired pods. Once old
+                                  pods have been killed, new ReplicaSet can be scaled
+                                  up further, ensuring that total number of pods running
+                                  at any time during the update is at most 130% of
+                                  desired pods.'
+                                x-kubernetes-int-or-string: true
+                              maxUnavailable:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                description: 'The maximum number of pods that can
+                                  be unavailable during the update. Value can be an
+                                  absolute number (ex: 5) or a percentage of desired
+                                  pods (ex: 10%). Absolute number is calculated from
+                                  percentage by rounding down. This can not be 0 if
+                                  MaxSurge is 0. Defaults to 25%. Example: when this
+                                  is set to 30%, the old ReplicaSet can be scaled
+                                  down to 70% of desired pods immediately when the
+                                  rolling update starts. Once new pods are ready,
+                                  old ReplicaSet can be scaled down further, followed
+                                  by scaling up the new ReplicaSet, ensuring that
+                                  the total number of pods available at all times
+                                  during the update is at least 70% of desired pods.'
+                                x-kubernetes-int-or-string: true
+                            type: object
+                        type: object
                       template:
                         description: Template describes the typha Deployment pod that
                           will be created.
@@ -21291,9 +21863,6 @@ spec:
                                                     or empty namespaces list means
                                                     "this pod's namespace". An empty
                                                     selector ({}) matches all namespaces.
-                                                    This field is beta-level and is
-                                                    only honored when PodAffinityNamespaceSelector
-                                                    feature is enabled.
                                                   properties:
                                                     matchExpressions:
                                                       description: matchExpressions
@@ -21364,7 +21933,7 @@ spec:
                                                     field and the ones selected by
                                                     namespaceSelector. null or empty
                                                     namespaces list and null namespaceSelector
-                                                    means "this pod's namespace"
+                                                    means "this pod's namespace".
                                                   items:
                                                     type: string
                                                   type: array
@@ -21488,10 +22057,7 @@ spec:
                                                 field. null selector and null or empty
                                                 namespaces list means "this pod's
                                                 namespace". An empty selector ({})
-                                                matches all namespaces. This field
-                                                is beta-level and is only honored
-                                                when PodAffinityNamespaceSelector
-                                                feature is enabled.
+                                                matches all namespaces.
                                               properties:
                                                 matchExpressions:
                                                   description: matchExpressions is
@@ -21557,7 +22123,7 @@ spec:
                                                 in this field and the ones selected
                                                 by namespaceSelector. null or empty
                                                 namespaces list and null namespaceSelector
-                                                means "this pod's namespace"
+                                                means "this pod's namespace".
                                               items:
                                                 type: string
                                               type: array
@@ -21685,9 +22251,6 @@ spec:
                                                     or empty namespaces list means
                                                     "this pod's namespace". An empty
                                                     selector ({}) matches all namespaces.
-                                                    This field is beta-level and is
-                                                    only honored when PodAffinityNamespaceSelector
-                                                    feature is enabled.
                                                   properties:
                                                     matchExpressions:
                                                       description: matchExpressions
@@ -21758,7 +22321,7 @@ spec:
                                                     field and the ones selected by
                                                     namespaceSelector. null or empty
                                                     namespaces list and null namespaceSelector
-                                                    means "this pod's namespace"
+                                                    means "this pod's namespace".
                                                   items:
                                                     type: string
                                                   type: array
@@ -21882,10 +22445,7 @@ spec:
                                                 field. null selector and null or empty
                                                 namespaces list means "this pod's
                                                 namespace". An empty selector ({})
-                                                matches all namespaces. This field
-                                                is beta-level and is only honored
-                                                when PodAffinityNamespaceSelector
-                                                feature is enabled.
+                                                matches all namespaces.
                                               properties:
                                                 matchExpressions:
                                                   description: matchExpressions is
@@ -21951,7 +22511,7 @@ spec:
                                                 in this field and the ones selected
                                                 by namespaceSelector. null or empty
                                                 namespaces list and null namespaceSelector
-                                                means "this pod's namespace"
+                                                means "this pod's namespace".
                                               items:
                                                 type: string
                                               type: array
@@ -22098,6 +22658,21 @@ spec:
                                   WARNING: Please note that this field will modify
                                   the default calico-typha Deployment nodeSelector.'
                                 type: object
+                              terminationGracePeriodSeconds:
+                                description: Optional duration in seconds the pod
+                                  needs to terminate gracefully. May be decreased
+                                  in delete request. Value must be non-negative integer.
+                                  The value zero indicates stop immediately via the
+                                  kill signal (no opportunity to shut down). If this
+                                  value is nil, the default grace period will be used
+                                  instead. The grace period is the duration in seconds
+                                  after the processes running in the pod are sent
+                                  a termination signal and the time when the processes
+                                  are forcibly halted with a kill signal. Set this
+                                  value longer than the expected cleanup time for
+                                  your process. Defaults to 30 seconds.
+                                format: int64
+                                type: integer
                               tolerations:
                                 description: 'Tolerations is the typha pod''s tolerations.
                                   If specified, this overrides any tolerations that
@@ -22149,6 +22724,215 @@ spec:
                                         value should be empty, otherwise just a regular
                                         string.
                                       type: string
+                                  type: object
+                                type: array
+                              topologySpreadConstraints:
+                                description: TopologySpreadConstraints describes how
+                                  a group of pods ought to spread across topology
+                                  domains. Scheduler will schedule pods in a way which
+                                  abides by the constraints. All topologySpreadConstraints
+                                  are ANDed.
+                                items:
+                                  description: TopologySpreadConstraint specifies
+                                    how to spread matching pods among the given topology.
+                                  properties:
+                                    labelSelector:
+                                      description: LabelSelector is used to find matching
+                                        pods. Pods that match this label selector
+                                        are counted to determine the number of pods
+                                        in their corresponding topology domain.
+                                      properties:
+                                        matchExpressions:
+                                          description: matchExpressions is a list
+                                            of label selector requirements. The requirements
+                                            are ANDed.
+                                          items:
+                                            description: A label selector requirement
+                                              is a selector that contains values,
+                                              a key, and an operator that relates
+                                              the key and values.
+                                            properties:
+                                              key:
+                                                description: key is the label key
+                                                  that the selector applies to.
+                                                type: string
+                                              operator:
+                                                description: operator represents a
+                                                  key's relationship to a set of values.
+                                                  Valid operators are In, NotIn, Exists
+                                                  and DoesNotExist.
+                                                type: string
+                                              values:
+                                                description: values is an array of
+                                                  string values. If the operator is
+                                                  In or NotIn, the values array must
+                                                  be non-empty. If the operator is
+                                                  Exists or DoesNotExist, the values
+                                                  array must be empty. This array
+                                                  is replaced during a strategic merge
+                                                  patch.
+                                                items:
+                                                  type: string
+                                                type: array
+                                            required:
+                                            - key
+                                            - operator
+                                            type: object
+                                          type: array
+                                        matchLabels:
+                                          additionalProperties:
+                                            type: string
+                                          description: matchLabels is a map of {key,value}
+                                            pairs. A single {key,value} in the matchLabels
+                                            map is equivalent to an element of matchExpressions,
+                                            whose key field is "key", the operator
+                                            is "In", and the values array contains
+                                            only "value". The requirements are ANDed.
+                                          type: object
+                                      type: object
+                                    matchLabelKeys:
+                                      description: MatchLabelKeys is a set of pod
+                                        label keys to select the pods over which spreading
+                                        will be calculated. The keys are used to lookup
+                                        values from the incoming pod labels, those
+                                        key-value labels are ANDed with labelSelector
+                                        to select the group of existing pods over
+                                        which spreading will be calculated for the
+                                        incoming pod. Keys that don't exist in the
+                                        incoming pod labels will be ignored. A null
+                                        or empty list means only match against labelSelector.
+                                      items:
+                                        type: string
+                                      type: array
+                                      x-kubernetes-list-type: atomic
+                                    maxSkew:
+                                      description: 'MaxSkew describes the degree to
+                                        which pods may be unevenly distributed. When
+                                        `whenUnsatisfiable=DoNotSchedule`, it is the
+                                        maximum permitted difference between the number
+                                        of matching pods in the target topology and
+                                        the global minimum. The global minimum is
+                                        the minimum number of matching pods in an
+                                        eligible domain or zero if the number of eligible
+                                        domains is less than MinDomains. For example,
+                                        in a 3-zone cluster, MaxSkew is set to 1,
+                                        and pods with the same labelSelector spread
+                                        as 2/2/1: In this case, the global minimum
+                                        is 1. | zone1 | zone2 | zone3 | |  P P  |  P
+                                        P  |   P   | - if MaxSkew is 1, incoming pod
+                                        can only be scheduled to zone3 to become 2/2/2;
+                                        scheduling it onto zone1(zone2) would make
+                                        the ActualSkew(3-1) on zone1(zone2) violate
+                                        MaxSkew(1). - if MaxSkew is 2, incoming pod
+                                        can be scheduled onto any zone. When `whenUnsatisfiable=ScheduleAnyway`,
+                                        it is used to give higher precedence to topologies
+                                        that satisfy it. It''s a required field. Default
+                                        value is 1 and 0 is not allowed.'
+                                      format: int32
+                                      type: integer
+                                    minDomains:
+                                      description: "MinDomains indicates a minimum
+                                        number of eligible domains. When the number
+                                        of eligible domains with matching topology
+                                        keys is less than minDomains, Pod Topology
+                                        Spread treats \"global minimum\" as 0, and
+                                        then the calculation of Skew is performed.
+                                        And when the number of eligible domains with
+                                        matching topology keys equals or greater than
+                                        minDomains, this value has no effect on scheduling.
+                                        As a result, when the number of eligible domains
+                                        is less than minDomains, scheduler won't schedule
+                                        more than maxSkew Pods to those domains. If
+                                        value is nil, the constraint behaves as if
+                                        MinDomains is equal to 1. Valid values are
+                                        integers greater than 0. When value is not
+                                        nil, WhenUnsatisfiable must be DoNotSchedule.
+                                        \n For example, in a 3-zone cluster, MaxSkew
+                                        is set to 2, MinDomains is set to 5 and pods
+                                        with the same labelSelector spread as 2/2/2:
+                                        | zone1 | zone2 | zone3 | |  P P  |  P P  |
+                                        \ P P  | The number of domains is less than
+                                        5(MinDomains), so \"global minimum\" is treated
+                                        as 0. In this situation, new pod with the
+                                        same labelSelector cannot be scheduled, because
+                                        computed skew will be 3(3 - 0) if new Pod
+                                        is scheduled to any of the three zones, it
+                                        will violate MaxSkew. \n This is a beta field
+                                        and requires the MinDomainsInPodTopologySpread
+                                        feature gate to be enabled (enabled by default)."
+                                      format: int32
+                                      type: integer
+                                    nodeAffinityPolicy:
+                                      description: "NodeAffinityPolicy indicates how
+                                        we will treat Pod's nodeAffinity/nodeSelector
+                                        when calculating pod topology spread skew.
+                                        Options are: - Honor: only nodes matching
+                                        nodeAffinity/nodeSelector are included in
+                                        the calculations. - Ignore: nodeAffinity/nodeSelector
+                                        are ignored. All nodes are included in the
+                                        calculations. \n If this value is nil, the
+                                        behavior is equivalent to the Honor policy.
+                                        This is a alpha-level feature enabled by the
+                                        NodeInclusionPolicyInPodTopologySpread feature
+                                        flag."
+                                      type: string
+                                    nodeTaintsPolicy:
+                                      description: "NodeTaintsPolicy indicates how
+                                        we will treat node taints when calculating
+                                        pod topology spread skew. Options are: - Honor:
+                                        nodes without taints, along with tainted nodes
+                                        for which the incoming pod has a toleration,
+                                        are included. - Ignore: node taints are ignored.
+                                        All nodes are included. \n If this value is
+                                        nil, the behavior is equivalent to the Ignore
+                                        policy. This is a alpha-level feature enabled
+                                        by the NodeInclusionPolicyInPodTopologySpread
+                                        feature flag."
+                                      type: string
+                                    topologyKey:
+                                      description: TopologyKey is the key of node
+                                        labels. Nodes that have a label with this
+                                        key and identical values are considered to
+                                        be in the same topology. We consider each
+                                        <key, value> as a "bucket", and try to put
+                                        balanced number of pods into each bucket.
+                                        We define a domain as a particular instance
+                                        of a topology. Also, we define an eligible
+                                        domain as a domain whose nodes meet the requirements
+                                        of nodeAffinityPolicy and nodeTaintsPolicy.
+                                        e.g. If TopologyKey is "kubernetes.io/hostname",
+                                        each Node is a domain of that topology. And,
+                                        if TopologyKey is "topology.kubernetes.io/zone",
+                                        each zone is a domain of that topology. It's
+                                        a required field.
+                                      type: string
+                                    whenUnsatisfiable:
+                                      description: 'WhenUnsatisfiable indicates how
+                                        to deal with a pod if it doesn''t satisfy
+                                        the spread constraint. - DoNotSchedule (default)
+                                        tells the scheduler not to schedule it. -
+                                        ScheduleAnyway tells the scheduler to schedule
+                                        the pod in any location,   but giving higher
+                                        precedence to topologies that would help reduce
+                                        the   skew. A constraint is considered "Unsatisfiable"
+                                        for an incoming pod if and only if every possible
+                                        node assignment for that pod would violate
+                                        "MaxSkew" on some topology. For example, in
+                                        a 3-zone cluster, MaxSkew is set to 1, and
+                                        pods with the same labelSelector spread as
+                                        3/1/1: | zone1 | zone2 | zone3 | | P P P |   P   |   P   |
+                                        If WhenUnsatisfiable is set to DoNotSchedule,
+                                        incoming pod can only be scheduled to zone2(zone3)
+                                        to become 3/2/1(3/1/2) as ActualSkew(2-1)
+                                        on zone2(zone3) satisfies MaxSkew(1). In other
+                                        words, the cluster can still be imbalanced,
+                                        but scheduler won''t make it *more* imbalanced.
+                                        It''s a required field.'
+                                      type: string
+                                  required:
+                                  - maxSkew
+                                  - topologyKey
+                                  - whenUnsatisfiable
                                   type: object
                                 type: array
                             type: object
@@ -22645,10 +23429,7 @@ spec:
                                                         namespaces list means "this
                                                         pod's namespace". An empty
                                                         selector ({}) matches all
-                                                        namespaces. This field is
-                                                        beta-level and is only honored
-                                                        when PodAffinityNamespaceSelector
-                                                        feature is enabled.
+                                                        namespaces.
                                                       properties:
                                                         matchExpressions:
                                                           description: matchExpressions
@@ -22726,7 +23507,7 @@ spec:
                                                         ones selected by namespaceSelector.
                                                         null or empty namespaces list
                                                         and null namespaceSelector
-                                                        means "this pod's namespace"
+                                                        means "this pod's namespace".
                                                       items:
                                                         type: string
                                                       type: array
@@ -22861,9 +23642,6 @@ spec:
                                                     or empty namespaces list means
                                                     "this pod's namespace". An empty
                                                     selector ({}) matches all namespaces.
-                                                    This field is beta-level and is
-                                                    only honored when PodAffinityNamespaceSelector
-                                                    feature is enabled.
                                                   properties:
                                                     matchExpressions:
                                                       description: matchExpressions
@@ -22934,7 +23712,7 @@ spec:
                                                     field and the ones selected by
                                                     namespaceSelector. null or empty
                                                     namespaces list and null namespaceSelector
-                                                    means "this pod's namespace"
+                                                    means "this pod's namespace".
                                                   items:
                                                     type: string
                                                   type: array
@@ -23072,10 +23850,7 @@ spec:
                                                         namespaces list means "this
                                                         pod's namespace". An empty
                                                         selector ({}) matches all
-                                                        namespaces. This field is
-                                                        beta-level and is only honored
-                                                        when PodAffinityNamespaceSelector
-                                                        feature is enabled.
+                                                        namespaces.
                                                       properties:
                                                         matchExpressions:
                                                           description: matchExpressions
@@ -23153,7 +23928,7 @@ spec:
                                                         ones selected by namespaceSelector.
                                                         null or empty namespaces list
                                                         and null namespaceSelector
-                                                        means "this pod's namespace"
+                                                        means "this pod's namespace".
                                                       items:
                                                         type: string
                                                       type: array
@@ -23288,9 +24063,6 @@ spec:
                                                     or empty namespaces list means
                                                     "this pod's namespace". An empty
                                                     selector ({}) matches all namespaces.
-                                                    This field is beta-level and is
-                                                    only honored when PodAffinityNamespaceSelector
-                                                    feature is enabled.
                                                   properties:
                                                     matchExpressions:
                                                       description: matchExpressions
@@ -23361,7 +24133,7 @@ spec:
                                                     field and the ones selected by
                                                     namespaceSelector. null or empty
                                                     namespaces list and null namespaceSelector
-                                                    means "this pod's namespace"
+                                                    means "this pod's namespace".
                                                   items:
                                                     type: string
                                                   type: array
@@ -24169,10 +24941,7 @@ spec:
                                                         namespaces list means "this
                                                         pod's namespace". An empty
                                                         selector ({}) matches all
-                                                        namespaces. This field is
-                                                        beta-level and is only honored
-                                                        when PodAffinityNamespaceSelector
-                                                        feature is enabled.
+                                                        namespaces.
                                                       properties:
                                                         matchExpressions:
                                                           description: matchExpressions
@@ -24250,7 +25019,7 @@ spec:
                                                         ones selected by namespaceSelector.
                                                         null or empty namespaces list
                                                         and null namespaceSelector
-                                                        means "this pod's namespace"
+                                                        means "this pod's namespace".
                                                       items:
                                                         type: string
                                                       type: array
@@ -24385,9 +25154,6 @@ spec:
                                                     or empty namespaces list means
                                                     "this pod's namespace". An empty
                                                     selector ({}) matches all namespaces.
-                                                    This field is beta-level and is
-                                                    only honored when PodAffinityNamespaceSelector
-                                                    feature is enabled.
                                                   properties:
                                                     matchExpressions:
                                                       description: matchExpressions
@@ -24458,7 +25224,7 @@ spec:
                                                     field and the ones selected by
                                                     namespaceSelector. null or empty
                                                     namespaces list and null namespaceSelector
-                                                    means "this pod's namespace"
+                                                    means "this pod's namespace".
                                                   items:
                                                     type: string
                                                   type: array
@@ -24596,10 +25362,7 @@ spec:
                                                         namespaces list means "this
                                                         pod's namespace". An empty
                                                         selector ({}) matches all
-                                                        namespaces. This field is
-                                                        beta-level and is only honored
-                                                        when PodAffinityNamespaceSelector
-                                                        feature is enabled.
+                                                        namespaces.
                                                       properties:
                                                         matchExpressions:
                                                           description: matchExpressions
@@ -24677,7 +25440,7 @@ spec:
                                                         ones selected by namespaceSelector.
                                                         null or empty namespaces list
                                                         and null namespaceSelector
-                                                        means "this pod's namespace"
+                                                        means "this pod's namespace".
                                                       items:
                                                         type: string
                                                       type: array
@@ -24812,9 +25575,6 @@ spec:
                                                     or empty namespaces list means
                                                     "this pod's namespace". An empty
                                                     selector ({}) matches all namespaces.
-                                                    This field is beta-level and is
-                                                    only honored when PodAffinityNamespaceSelector
-                                                    feature is enabled.
                                                   properties:
                                                     matchExpressions:
                                                       description: matchExpressions
@@ -24885,7 +25645,7 @@ spec:
                                                     field and the ones selected by
                                                     namespaceSelector. null or empty
                                                     namespaces list and null namespaceSelector
-                                                    means "this pod's namespace"
+                                                    means "this pod's namespace".
                                                   items:
                                                     type: string
                                                   type: array
@@ -25573,10 +26333,7 @@ spec:
                                                         namespaces list means "this
                                                         pod's namespace". An empty
                                                         selector ({}) matches all
-                                                        namespaces. This field is
-                                                        beta-level and is only honored
-                                                        when PodAffinityNamespaceSelector
-                                                        feature is enabled.
+                                                        namespaces.
                                                       properties:
                                                         matchExpressions:
                                                           description: matchExpressions
@@ -25654,7 +26411,7 @@ spec:
                                                         ones selected by namespaceSelector.
                                                         null or empty namespaces list
                                                         and null namespaceSelector
-                                                        means "this pod's namespace"
+                                                        means "this pod's namespace".
                                                       items:
                                                         type: string
                                                       type: array
@@ -25789,9 +26546,6 @@ spec:
                                                     or empty namespaces list means
                                                     "this pod's namespace". An empty
                                                     selector ({}) matches all namespaces.
-                                                    This field is beta-level and is
-                                                    only honored when PodAffinityNamespaceSelector
-                                                    feature is enabled.
                                                   properties:
                                                     matchExpressions:
                                                       description: matchExpressions
@@ -25862,7 +26616,7 @@ spec:
                                                     field and the ones selected by
                                                     namespaceSelector. null or empty
                                                     namespaces list and null namespaceSelector
-                                                    means "this pod's namespace"
+                                                    means "this pod's namespace".
                                                   items:
                                                     type: string
                                                   type: array
@@ -26000,10 +26754,7 @@ spec:
                                                         namespaces list means "this
                                                         pod's namespace". An empty
                                                         selector ({}) matches all
-                                                        namespaces. This field is
-                                                        beta-level and is only honored
-                                                        when PodAffinityNamespaceSelector
-                                                        feature is enabled.
+                                                        namespaces.
                                                       properties:
                                                         matchExpressions:
                                                           description: matchExpressions
@@ -26081,7 +26832,7 @@ spec:
                                                         ones selected by namespaceSelector.
                                                         null or empty namespaces list
                                                         and null namespaceSelector
-                                                        means "this pod's namespace"
+                                                        means "this pod's namespace".
                                                       items:
                                                         type: string
                                                       type: array
@@ -26216,9 +26967,6 @@ spec:
                                                     or empty namespaces list means
                                                     "this pod's namespace". An empty
                                                     selector ({}) matches all namespaces.
-                                                    This field is beta-level and is
-                                                    only honored when PodAffinityNamespaceSelector
-                                                    feature is enabled.
                                                   properties:
                                                     matchExpressions:
                                                       description: matchExpressions
@@ -26289,7 +27037,7 @@ spec:
                                                     field and the ones selected by
                                                     namespaceSelector. null or empty
                                                     namespaces list and null namespaceSelector
-                                                    means "this pod's namespace"
+                                                    means "this pod's namespace".
                                                   items:
                                                     type: string
                                                   type: array
@@ -26765,8 +27513,7 @@ spec:
                               by the daemonset on any given node can double if the
                               readiness check fails, and so resource intensive daemonsets
                               should take into account that they may cause evictions
-                              during disruption. This is beta field and enabled/disabled
-                              by DaemonSetUpdateSurge feature gate.'
+                              during disruption.'
                             x-kubernetes-int-or-string: true
                           maxUnavailable:
                             anyOf:
@@ -27074,6 +27821,56 @@ spec:
                             maximum: 2147483647
                             minimum: 0
                             type: integer
+                          strategy:
+                            description: The deployment strategy to use to replace
+                              existing pods with new ones.
+                            properties:
+                              rollingUpdate:
+                                description: Rolling update config params. Present
+                                  only if DeploymentStrategyType = RollingUpdate.
+                                  to be.
+                                properties:
+                                  maxSurge:
+                                    anyOf:
+                                    - type: integer
+                                    - type: string
+                                    description: 'The maximum number of pods that
+                                      can be scheduled above the desired number of
+                                      pods. Value can be an absolute number (ex: 5)
+                                      or a percentage of desired pods (ex: 10%). This
+                                      can not be 0 if MaxUnavailable is 0. Absolute
+                                      number is calculated from percentage by rounding
+                                      up. Defaults to 25%. Example: when this is set
+                                      to 30%, the new ReplicaSet can be scaled up
+                                      immediately when the rolling update starts,
+                                      such that the total number of old and new pods
+                                      do not exceed 130% of desired pods. Once old
+                                      pods have been killed, new ReplicaSet can be
+                                      scaled up further, ensuring that total number
+                                      of pods running at any time during the update
+                                      is at most 130% of desired pods.'
+                                    x-kubernetes-int-or-string: true
+                                  maxUnavailable:
+                                    anyOf:
+                                    - type: integer
+                                    - type: string
+                                    description: 'The maximum number of pods that
+                                      can be unavailable during the update. Value
+                                      can be an absolute number (ex: 5) or a percentage
+                                      of desired pods (ex: 10%). Absolute number is
+                                      calculated from percentage by rounding down.
+                                      This can not be 0 if MaxSurge is 0. Defaults
+                                      to 25%. Example: when this is set to 30%, the
+                                      old ReplicaSet can be scaled down to 70% of
+                                      desired pods immediately when the rolling update
+                                      starts. Once new pods are ready, old ReplicaSet
+                                      can be scaled down further, followed by scaling
+                                      up the new ReplicaSet, ensuring that the total
+                                      number of pods available at all times during
+                                      the update is at least 70% of desired pods.'
+                                    x-kubernetes-int-or-string: true
+                                type: object
+                            type: object
                           template:
                             description: Template describes the typha Deployment pod
                               that will be created.
@@ -27499,10 +28296,7 @@ spec:
                                                         namespaces list means "this
                                                         pod's namespace". An empty
                                                         selector ({}) matches all
-                                                        namespaces. This field is
-                                                        beta-level and is only honored
-                                                        when PodAffinityNamespaceSelector
-                                                        feature is enabled.
+                                                        namespaces.
                                                       properties:
                                                         matchExpressions:
                                                           description: matchExpressions
@@ -27580,7 +28374,7 @@ spec:
                                                         ones selected by namespaceSelector.
                                                         null or empty namespaces list
                                                         and null namespaceSelector
-                                                        means "this pod's namespace"
+                                                        means "this pod's namespace".
                                                       items:
                                                         type: string
                                                       type: array
@@ -27715,9 +28509,6 @@ spec:
                                                     or empty namespaces list means
                                                     "this pod's namespace". An empty
                                                     selector ({}) matches all namespaces.
-                                                    This field is beta-level and is
-                                                    only honored when PodAffinityNamespaceSelector
-                                                    feature is enabled.
                                                   properties:
                                                     matchExpressions:
                                                       description: matchExpressions
@@ -27788,7 +28579,7 @@ spec:
                                                     field and the ones selected by
                                                     namespaceSelector. null or empty
                                                     namespaces list and null namespaceSelector
-                                                    means "this pod's namespace"
+                                                    means "this pod's namespace".
                                                   items:
                                                     type: string
                                                   type: array
@@ -27926,10 +28717,7 @@ spec:
                                                         namespaces list means "this
                                                         pod's namespace". An empty
                                                         selector ({}) matches all
-                                                        namespaces. This field is
-                                                        beta-level and is only honored
-                                                        when PodAffinityNamespaceSelector
-                                                        feature is enabled.
+                                                        namespaces.
                                                       properties:
                                                         matchExpressions:
                                                           description: matchExpressions
@@ -28007,7 +28795,7 @@ spec:
                                                         ones selected by namespaceSelector.
                                                         null or empty namespaces list
                                                         and null namespaceSelector
-                                                        means "this pod's namespace"
+                                                        means "this pod's namespace".
                                                       items:
                                                         type: string
                                                       type: array
@@ -28142,9 +28930,6 @@ spec:
                                                     or empty namespaces list means
                                                     "this pod's namespace". An empty
                                                     selector ({}) matches all namespaces.
-                                                    This field is beta-level and is
-                                                    only honored when PodAffinityNamespaceSelector
-                                                    feature is enabled.
                                                   properties:
                                                     matchExpressions:
                                                       description: matchExpressions
@@ -28215,7 +29000,7 @@ spec:
                                                     field and the ones selected by
                                                     namespaceSelector. null or empty
                                                     namespaces list and null namespaceSelector
-                                                    means "this pod's namespace"
+                                                    means "this pod's namespace".
                                                   items:
                                                     type: string
                                                   type: array
@@ -28370,6 +29155,22 @@ spec:
                                       WARNING: Please note that this field will modify
                                       the default calico-typha Deployment nodeSelector.'
                                     type: object
+                                  terminationGracePeriodSeconds:
+                                    description: Optional duration in seconds the
+                                      pod needs to terminate gracefully. May be decreased
+                                      in delete request. Value must be non-negative
+                                      integer. The value zero indicates stop immediately
+                                      via the kill signal (no opportunity to shut
+                                      down). If this value is nil, the default grace
+                                      period will be used instead. The grace period
+                                      is the duration in seconds after the processes
+                                      running in the pod are sent a termination signal
+                                      and the time when the processes are forcibly
+                                      halted with a kill signal. Set this value longer
+                                      than the expected cleanup time for your process.
+                                      Defaults to 30 seconds.
+                                    format: int64
+                                    type: integer
                                   tolerations:
                                     description: 'Tolerations is the typha pod''s
                                       tolerations. If specified, this overrides any
@@ -28425,6 +29226,232 @@ spec:
                                           type: string
                                       type: object
                                     type: array
+                                  topologySpreadConstraints:
+                                    description: TopologySpreadConstraints describes
+                                      how a group of pods ought to spread across topology
+                                      domains. Scheduler will schedule pods in a way
+                                      which abides by the constraints. All topologySpreadConstraints
+                                      are ANDed.
+                                    items:
+                                      description: TopologySpreadConstraint specifies
+                                        how to spread matching pods among the given
+                                        topology.
+                                      properties:
+                                        labelSelector:
+                                          description: LabelSelector is used to find
+                                            matching pods. Pods that match this label
+                                            selector are counted to determine the
+                                            number of pods in their corresponding
+                                            topology domain.
+                                          properties:
+                                            matchExpressions:
+                                              description: matchExpressions is a list
+                                                of label selector requirements. The
+                                                requirements are ANDed.
+                                              items:
+                                                description: A label selector requirement
+                                                  is a selector that contains values,
+                                                  a key, and an operator that relates
+                                                  the key and values.
+                                                properties:
+                                                  key:
+                                                    description: key is the label
+                                                      key that the selector applies
+                                                      to.
+                                                    type: string
+                                                  operator:
+                                                    description: operator represents
+                                                      a key's relationship to a set
+                                                      of values. Valid operators are
+                                                      In, NotIn, Exists and DoesNotExist.
+                                                    type: string
+                                                  values:
+                                                    description: values is an array
+                                                      of string values. If the operator
+                                                      is In or NotIn, the values array
+                                                      must be non-empty. If the operator
+                                                      is Exists or DoesNotExist, the
+                                                      values array must be empty.
+                                                      This array is replaced during
+                                                      a strategic merge patch.
+                                                    items:
+                                                      type: string
+                                                    type: array
+                                                required:
+                                                - key
+                                                - operator
+                                                type: object
+                                              type: array
+                                            matchLabels:
+                                              additionalProperties:
+                                                type: string
+                                              description: matchLabels is a map of
+                                                {key,value} pairs. A single {key,value}
+                                                in the matchLabels map is equivalent
+                                                to an element of matchExpressions,
+                                                whose key field is "key", the operator
+                                                is "In", and the values array contains
+                                                only "value". The requirements are
+                                                ANDed.
+                                              type: object
+                                          type: object
+                                        matchLabelKeys:
+                                          description: MatchLabelKeys is a set of
+                                            pod label keys to select the pods over
+                                            which spreading will be calculated. The
+                                            keys are used to lookup values from the
+                                            incoming pod labels, those key-value labels
+                                            are ANDed with labelSelector to select
+                                            the group of existing pods over which
+                                            spreading will be calculated for the incoming
+                                            pod. Keys that don't exist in the incoming
+                                            pod labels will be ignored. A null or
+                                            empty list means only match against labelSelector.
+                                          items:
+                                            type: string
+                                          type: array
+                                          x-kubernetes-list-type: atomic
+                                        maxSkew:
+                                          description: 'MaxSkew describes the degree
+                                            to which pods may be unevenly distributed.
+                                            When `whenUnsatisfiable=DoNotSchedule`,
+                                            it is the maximum permitted difference
+                                            between the number of matching pods in
+                                            the target topology and the global minimum.
+                                            The global minimum is the minimum number
+                                            of matching pods in an eligible domain
+                                            or zero if the number of eligible domains
+                                            is less than MinDomains. For example,
+                                            in a 3-zone cluster, MaxSkew is set to
+                                            1, and pods with the same labelSelector
+                                            spread as 2/2/1: In this case, the global
+                                            minimum is 1. | zone1 | zone2 | zone3
+                                            | |  P P  |  P P  |   P   | - if MaxSkew
+                                            is 1, incoming pod can only be scheduled
+                                            to zone3 to become 2/2/2; scheduling it
+                                            onto zone1(zone2) would make the ActualSkew(3-1)
+                                            on zone1(zone2) violate MaxSkew(1). -
+                                            if MaxSkew is 2, incoming pod can be scheduled
+                                            onto any zone. When `whenUnsatisfiable=ScheduleAnyway`,
+                                            it is used to give higher precedence to
+                                            topologies that satisfy it. It''s a required
+                                            field. Default value is 1 and 0 is not
+                                            allowed.'
+                                          format: int32
+                                          type: integer
+                                        minDomains:
+                                          description: "MinDomains indicates a minimum
+                                            number of eligible domains. When the number
+                                            of eligible domains with matching topology
+                                            keys is less than minDomains, Pod Topology
+                                            Spread treats \"global minimum\" as 0,
+                                            and then the calculation of Skew is performed.
+                                            And when the number of eligible domains
+                                            with matching topology keys equals or
+                                            greater than minDomains, this value has
+                                            no effect on scheduling. As a result,
+                                            when the number of eligible domains is
+                                            less than minDomains, scheduler won't
+                                            schedule more than maxSkew Pods to those
+                                            domains. If value is nil, the constraint
+                                            behaves as if MinDomains is equal to 1.
+                                            Valid values are integers greater than
+                                            0. When value is not nil, WhenUnsatisfiable
+                                            must be DoNotSchedule. \n For example,
+                                            in a 3-zone cluster, MaxSkew is set to
+                                            2, MinDomains is set to 5 and pods with
+                                            the same labelSelector spread as 2/2/2:
+                                            | zone1 | zone2 | zone3 | |  P P  |  P
+                                            P  |  P P  | The number of domains is
+                                            less than 5(MinDomains), so \"global minimum\"
+                                            is treated as 0. In this situation, new
+                                            pod with the same labelSelector cannot
+                                            be scheduled, because computed skew will
+                                            be 3(3 - 0) if new Pod is scheduled to
+                                            any of the three zones, it will violate
+                                            MaxSkew. \n This is a beta field and requires
+                                            the MinDomainsInPodTopologySpread feature
+                                            gate to be enabled (enabled by default)."
+                                          format: int32
+                                          type: integer
+                                        nodeAffinityPolicy:
+                                          description: "NodeAffinityPolicy indicates
+                                            how we will treat Pod's nodeAffinity/nodeSelector
+                                            when calculating pod topology spread skew.
+                                            Options are: - Honor: only nodes matching
+                                            nodeAffinity/nodeSelector are included
+                                            in the calculations. - Ignore: nodeAffinity/nodeSelector
+                                            are ignored. All nodes are included in
+                                            the calculations. \n If this value is
+                                            nil, the behavior is equivalent to the
+                                            Honor policy. This is a alpha-level feature
+                                            enabled by the NodeInclusionPolicyInPodTopologySpread
+                                            feature flag."
+                                          type: string
+                                        nodeTaintsPolicy:
+                                          description: "NodeTaintsPolicy indicates
+                                            how we will treat node taints when calculating
+                                            pod topology spread skew. Options are:
+                                            - Honor: nodes without taints, along with
+                                            tainted nodes for which the incoming pod
+                                            has a toleration, are included. - Ignore:
+                                            node taints are ignored. All nodes are
+                                            included. \n If this value is nil, the
+                                            behavior is equivalent to the Ignore policy.
+                                            This is a alpha-level feature enabled
+                                            by the NodeInclusionPolicyInPodTopologySpread
+                                            feature flag."
+                                          type: string
+                                        topologyKey:
+                                          description: TopologyKey is the key of node
+                                            labels. Nodes that have a label with this
+                                            key and identical values are considered
+                                            to be in the same topology. We consider
+                                            each <key, value> as a "bucket", and try
+                                            to put balanced number of pods into each
+                                            bucket. We define a domain as a particular
+                                            instance of a topology. Also, we define
+                                            an eligible domain as a domain whose nodes
+                                            meet the requirements of nodeAffinityPolicy
+                                            and nodeTaintsPolicy. e.g. If TopologyKey
+                                            is "kubernetes.io/hostname", each Node
+                                            is a domain of that topology. And, if
+                                            TopologyKey is "topology.kubernetes.io/zone",
+                                            each zone is a domain of that topology.
+                                            It's a required field.
+                                          type: string
+                                        whenUnsatisfiable:
+                                          description: 'WhenUnsatisfiable indicates
+                                            how to deal with a pod if it doesn''t
+                                            satisfy the spread constraint. - DoNotSchedule
+                                            (default) tells the scheduler not to schedule
+                                            it. - ScheduleAnyway tells the scheduler
+                                            to schedule the pod in any location,   but
+                                            giving higher precedence to topologies
+                                            that would help reduce the   skew. A constraint
+                                            is considered "Unsatisfiable" for an incoming
+                                            pod if and only if every possible node
+                                            assignment for that pod would violate
+                                            "MaxSkew" on some topology. For example,
+                                            in a 3-zone cluster, MaxSkew is set to
+                                            1, and pods with the same labelSelector
+                                            spread as 3/1/1: | zone1 | zone2 | zone3
+                                            | | P P P |   P   |   P   | If WhenUnsatisfiable
+                                            is set to DoNotSchedule, incoming pod
+                                            can only be scheduled to zone2(zone3)
+                                            to become 3/2/1(3/1/2) as ActualSkew(2-1)
+                                            on zone2(zone3) satisfies MaxSkew(1).
+                                            In other words, the cluster can still
+                                            be imbalanced, but scheduler won''t make
+                                            it *more* imbalanced. It''s a required
+                                            field.'
+                                          type: string
+                                      required:
+                                      - maxSkew
+                                      - topologyKey
+                                      - whenUnsatisfiable
+                                      type: object
+                                    type: array
                                 type: object
                             type: object
                         type: object
@@ -28450,13 +29477,14 @@ spec:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
                     use as an array at the field path .status.conditions.  For example,
-                    type FooStatus struct{     // Represents the observations of a
-                    foo's current state.     // Known .status.conditions.type are:
-                    \"Available\", \"Progressing\", and \"Degraded\"     // +patchMergeKey=type
-                    \    // +patchStrategy=merge     // +listType=map     // +listMapKey=type
-                    \    Conditions []metav1.Condition `json:\"conditions,omitempty\"
-                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`
-                    \n     // other fields }"
+                    \n \ttype FooStatus struct{ \t    // Represents the observations
+                    of a foo's current state. \t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\" \t    //
+                    +patchMergeKey=type \t    // +patchStrategy=merge \t    // +listType=map
+                    \t    // +listMapKey=type \t    Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other fields
+                    \t}"
                   properties:
                     lastTransitionTime:
                       description: lastTransitionTime is the last time the condition
@@ -28654,6 +29682,79 @@ spec:
           status:
             description: Most recently observed state for Tigera intrusion detection.
             properties:
+              conditions:
+                description: Conditions represents the latest observed set of conditions
+                  for the component. A component may be one or more of Ready, Progressing,
+                  Degraded or other customer types.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n \ttype FooStatus struct{ \t    // Represents the observations
+                    of a foo's current state. \t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\" \t    //
+                    +patchMergeKey=type \t    // +patchStrategy=merge \t    // +listType=map
+                    \t    // +listMapKey=type \t    Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other fields
+                    \t}"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
               state:
                 description: State provides user-readable status.
                 type: string
@@ -28788,9 +29889,9 @@ spec:
                         description: 'Location of the syslog server. example: tcp://1.2.3.4:601'
                         type: string
                       logTypes:
-                        description: LogTypes contains a list of types of logs to
-                          export to syslog. By default, if this field is omitted,
-                          it will be set to include all possible values.
+                        description: 'If no values are provided, the list will be
+                          updated to include log types Audit, DNS and Flows. Default:
+                          Audit, DNS, Flows'
                         items:
                           description: SyslogLogType represents the allowable log
                             types for syslog. Allowable values are Audit, DNS, Flows
@@ -28831,6 +29932,79 @@ spec:
           status:
             description: Most recently observed state for Tigera log collection.
             properties:
+              conditions:
+                description: Conditions represents the latest observed set of conditions
+                  for the component. A component may be one or more of Ready, Progressing,
+                  Degraded or other customer types.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n \ttype FooStatus struct{ \t    // Represents the observations
+                    of a foo's current state. \t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\" \t    //
+                    +patchMergeKey=type \t    // +patchStrategy=merge \t    // +listType=map
+                    \t    // +listMapKey=type \t    Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other fields
+                    \t}"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
               state:
                 description: State provides user-readable status.
                 type: string
@@ -29093,6 +30267,79 @@ spec:
           status:
             description: Most recently observed state for Tigera log storage.
             properties:
+              conditions:
+                description: Conditions represents the latest observed set of conditions
+                  for the component. A component may be one or more of Ready, Progressing,
+                  Degraded or other customer types.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n \ttype FooStatus struct{ \t    // Represents the observations
+                    of a foo's current state. \t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\" \t    //
+                    +patchMergeKey=type \t    // +patchStrategy=merge \t    // +listType=map
+                    \t    // +listMapKey=type \t    Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other fields
+                    \t}"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
               elasticsearchHash:
                 description: ElasticsearchHash represents the current revision and
                   configuration of the installed Elasticsearch cluster. This is an
@@ -29183,6 +30430,84 @@ spec:
                     - Public
                     type: string
                 type: object
+            type: object
+          status:
+            description: ManagementClusterConnectionStatus defines the observed state
+              of ManagementClusterConnection
+            properties:
+              conditions:
+                description: Conditions represents the latest observed set of conditions
+                  for the component. A component may be one or more of Ready, Progressing,
+                  Degraded or other customer types.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n \ttype FooStatus struct{ \t    // Represents the observations
+                    of a foo's current state. \t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\" \t    //
+                    +patchMergeKey=type \t    // +patchStrategy=merge \t    // +listType=map
+                    \t    // +listMapKey=type \t    Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other fields
+                    \t}"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
             type: object
         type: object
     served: true
@@ -29370,6 +30695,79 @@ spec:
                     - OAuth
                     type: string
                 type: object
+              conditions:
+                description: Conditions represents the latest observed set of conditions
+                  for the component. A component may be one or more of Ready, Progressing,
+                  Degraded or other customer types.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n \ttype FooStatus struct{ \t    // Represents the observations
+                    of a foo's current state. \t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\" \t    //
+                    +patchMergeKey=type \t    // +patchStrategy=merge \t    // +listType=map
+                    \t    // +listMapKey=type \t    Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other fields
+                    \t}"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
               state:
                 description: State provides user-readable status.
                 type: string
@@ -29427,6 +30825,79 @@ spec:
           status:
             description: MonitorStatus defines the observed state of Tigera monitor.
             properties:
+              conditions:
+                description: Conditions represents the latest observed set of conditions
+                  for the component. A component may be one or more of Ready, Progressing,
+                  Degraded or other customer types.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n \ttype FooStatus struct{ \t    // Represents the observations
+                    of a foo's current state. \t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\" \t    //
+                    +patchMergeKey=type \t    // +patchStrategy=merge \t    // +listType=map
+                    \t    // +listMapKey=type \t    Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other fields
+                    \t}"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
               state:
                 description: State provides user-readable status.
                 type: string

@@ -24,10 +24,6 @@ SRC_FILES = $(shell find pkg cmd -name '*.go') \
 		$(shell find ../libcalico-go/lib -name '*.go') \
 		$(shell find ../lma/pkg -name '*.go')
 
-# Exclude deprecation warnings (SA1019), since failing on deprecation defeats the purpose
-# of deprecating.
-LINT_ARGS += --exclude SA1019
-
 # We use -X to insert the version information into the placeholder variables
 # in the version package.
 VERSION_FLAGS   = -X $(PACKAGE_NAME)/pkg/version.BuildVersion=$(GIT_VERSION) \
@@ -52,7 +48,7 @@ build: bin/packetcapture-$(ARCH)
 bin/packetcapture-$(ARCH): $(SRC_FILES)
 		$(DOCKER_GO_BUILD_CGO) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/$*/*.go'
+			go build -o $@ -v -ldflags "-linkmode external -extldflags -static $(VERSION_FLAGS)" cmd/$*/*.go'
 
 ###############################################################################
 # BUILD IMAGE

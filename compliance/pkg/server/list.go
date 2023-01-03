@@ -277,13 +277,13 @@ func getSortQueryParams(vals url.Values) (sortBy []api.ReportSortBy, err error) 
 		if strings.HasSuffix(field, SortAscendingSuffix) {
 			ascending = true
 			field = strings.TrimSuffix(field, SortAscendingSuffix)
-		} else if strings.HasSuffix(field, SortDescendingSuffix) { //nolint:golint,gosimple
+		} else {
 			field = strings.TrimSuffix(field, SortDescendingSuffix)
 		}
 
 		// Validate the field is a valid sortBy option.
 		if !stringSliceContains(field, ValidSortBy) {
-			return nil, fmt.Errorf("Invalid sortBy query parameter value: %s", field)
+			return nil, fmt.Errorf("invalid sortBy query parameter value: %s", field)
 		}
 
 		// Track whether or not we have a start time sortBy field.

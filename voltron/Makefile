@@ -21,10 +21,6 @@ include ../lib.Makefile
 ##########################################################################################
 # Define some constants
 ##########################################################################################
-# Exclude deprecation warnings (SA1019), since failing on deprecation defeats the purpose
-# of deprecating.
-LINT_ARGS += --exclude SA1019
-
 BRANCH_NAME ?= $(PIN_BRANCH)
 
 # Some env vars that devs might find useful:

@@ -408,6 +408,102 @@ EOF
             self.validate_egress_ip(client_no_annotations, server, gw_red.ip)
             self.validate_egress_ip(client_annotation_override, server, gw_red.ip)
 
+    def test_egress_ip_host_endpoint_policy(self):
+        with DiagsCollector():
+            client, server, gw = self.setup_client_server_gateway("kind-worker2")
+
+            # Create auto HEPs
+            patchStr = "{\"spec\": {\"controllers\": {\"node\": {\"hostEndpoint\": {\"autoCreate\": \"Enabled\"}}}}}"
+            patchStr_disable = "{\"spec\": {\"controllers\": {\"node\": {\"hostEndpoint\": {\"autoCreate\": \"Disabled\"}}}}}"
+            kubectl("patch kubecontrollersconfiguration default --patch '%s'" % (patchStr)).strip()
+
+            calicoctl("""apply -f - << EOF
+apiVersion: projectcalico.org/v3
+kind: GlobalNetworkPolicy
+metadata:
+  name: default-deny-all-heps
+spec:
+  selector: projectcalico.org/created-by == "calico-kube-controllers"
+  types:
+  - Ingress
+  - Egress
+EOF
+""")
+            calicoctl("""apply -f - << EOF
+apiVersion: projectcalico.org/v3
+kind: GlobalNetworkPolicy
+metadata:
+  name: allowed-flows-all-heps
+spec:
+  selector: projectcalico.org/created-by == "calico-kube-controllers"
+  ingress:
+  # localhost to localhost ingress
+  - action: Allow
+    destination:
+      nets:
+      - 127.0.0.0/8
+  # kube-apiserver to kubelet ingress
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: has(node-role.kubernetes.io/control-plane)
+    destination:
+      ports:
+      - 10250
+  # prometheus to calico-node ingress
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: projectcalico.org/created-by == "calico-kube-controllers"
+    destination:
+      ports:
+      - 9081
+      - 9091
+      - 9900
+  egress:
+  # localhost to localhost egress (both ingress&egress required, conntrack entry stays in SYN_SENT with egress only?)
+  - action: Allow
+    destination:
+      nets:
+      - 127.0.0.0/8
+  - action: Allow
+    source: {}
+    destination:
+      domains:
+        - k8s.gcr.io
+        - storage.googleapis.com
+EOF
+""")
+
+            calicoctl("""apply -f - << EOF
+apiVersion: projectcalico.org/v3
+kind: GlobalNetworkPolicy
+metadata:
+  name: allowed-flows-control-plane-heps
+spec:
+  selector: has(node-role.kubernetes.io/control-plane)
+  egress:
+  # kube-apiserver to kubelet egress (selects all destinations to include self) - kubectl logs, port-forwarding
+  - action: Allow
+    destination:
+      ports:
+      - 10250
+    protocol: TCP
+  # kube-apiserver to tigera-apiserver egress
+  - action: Allow
+    protocol: TCP
+    destination:
+      namespaceSelector: projectcalico.org/name == 'tigera-system'
+      selector: k8s-app == 'tigera-apiserver'
+EOF
+""")
+            self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy allowed-flows-control-plane-heps"))
+            self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy allowed-flows-all-heps"))
+            self.add_cleanup(lambda: calicoctl("delete globalnetworkpolicy default-deny-all-heps"))
+            self.add_cleanup(lambda: kubectl("patch kubecontrollersconfiguration default --patch '%s'" % (patchStr_disable)).strip())
+            retry_until_success(client.can_connect, retries=3, wait_time=1, function_kwargs={"ip": server.ip, "port": server.port})
+            self.validate_egress_ip(client, server, gw.ip)
+
     def test_egress_ip_with_policy_to_server(self):
 
         with DiagsCollector():

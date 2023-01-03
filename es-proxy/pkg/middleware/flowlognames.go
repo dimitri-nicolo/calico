@@ -432,6 +432,7 @@ func checkEndpointRBAC(rbacHelper rbac.FlowHelper, ep EndpointInfo) bool {
 	case flowLogEndpointTypeNs:
 		// Check if this is a global networkset
 		if ep.Namespace == "-" {
+			//nolint:staticcheck // Ignore SA1019 deprecated
 			allowGlobalNs, err := rbacHelper.CanListGlobalNetworkSets()
 			if err != nil {
 				log.WithError(err).Info("Error checking global network set list permissions")
@@ -439,6 +440,7 @@ func checkEndpointRBAC(rbacHelper rbac.FlowHelper, ep EndpointInfo) bool {
 			return allowGlobalNs
 		} else {
 			// Check if access to networksets across all namespaces is granted.
+			//nolint:staticcheck // Ignore SA1019 deprecated
 			allowAllNs, err := rbacHelper.CanListNetworkSets("")
 			if err != nil {
 				log.WithError(err).Info("Error checking networkset list permissions across all namespaces")
@@ -450,6 +452,7 @@ func checkEndpointRBAC(rbacHelper rbac.FlowHelper, ep EndpointInfo) bool {
 			}
 
 			// Check the permissions against the specific namespace
+			//nolint:staticcheck // Ignore SA1019 deprecated
 			allowNs, err := rbacHelper.CanListNetworkSets(ep.Namespace)
 			if err != nil {
 				log.WithError(err).Infof("Error checking networkset list permissions for namespace %s", ep.Namespace)
@@ -458,6 +461,7 @@ func checkEndpointRBAC(rbacHelper rbac.FlowHelper, ep EndpointInfo) bool {
 		}
 	case flowLogEndpointTypeWep:
 		// Check if access to pods across all namespaces is granted
+		//nolint:staticcheck // Ignore SA1019 deprecated
 		allowAllWep, err := rbacHelper.CanListPods("")
 		if err != nil {
 			log.WithError(err).Info("Error checking pod list permissions across all namespaces")
@@ -469,12 +473,14 @@ func checkEndpointRBAC(rbacHelper rbac.FlowHelper, ep EndpointInfo) bool {
 		}
 
 		// Check the permissions against the specific namespace
+		//nolint:staticcheck // Ignore SA1019 deprecated
 		allowWep, err := rbacHelper.CanListPods(ep.Namespace)
 		if err != nil {
 			log.WithError(err).Infof("Error checking pod list permissions for namespace %s", ep.Namespace)
 		}
 		return allowWep
 	case flowLogEndpointTypeHep:
+		//nolint:staticcheck // Ignore SA1019 deprecated
 		allowHep, err := rbacHelper.CanListHostEndpoints()
 		if err != nil {
 			log.WithError(err).Info("Error checking host endpoint list permissions")

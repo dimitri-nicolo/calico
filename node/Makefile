@@ -336,7 +336,7 @@ K8ST_IMAGE_TARS=calico-node.tar calico-apiserver.tar cnx-node.tar calico-cni.tar
 
 ifeq ($(SEMAPHORE_GIT_REF_TYPE), pull-request)
 # Determine the tests to run using the test spider tool, which emits a list of impacted packages.
-WHAT=$(shell $(DOCKER_GO_BUILD) $(GIT_CONFIG_SSH) go run ../hack/test/spider -commit-range=${SEMAPHORE_GIT_COMMIT_RANGE} -filter-dir node/)
+WHAT=$(shell $(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go run ../hack/test/spider -commit-range=${SEMAPHORE_GIT_COMMIT_RANGE} -filter-dir node/')
 else
 # By default, run all tests.
 WHAT=$(shell find . -name "*_test.go" | xargs dirname | sort -u)
@@ -487,10 +487,11 @@ tests/k8st/reliable-nc/bin/reliable-nc: tests/k8st/reliable-nc/reliable-nc.go
 ## on a test environment which doesn't support dual tor, and excludes egress IP tests which
 ## reconfigure the cluster configuration.
 K8ST_TO_RUN ?= -A vanilla
+EGRESS_KIND_CONFIG=./tests/k8st/egress-ip-tests/kind.config
 
 .PHONY: egress-ip-test
 egress-ip-test:
-	$(MAKE) k8s-test K8ST_TO_RUN="-A egress_ip"
+	KIND_CONFIG=$(EGRESS_KIND_CONFIG) $(MAKE) k8s-test K8ST_TO_RUN="-A egress_ip"
 
 .PHONY: k8s-test
 k8s-test:

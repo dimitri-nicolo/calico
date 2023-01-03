@@ -429,6 +429,29 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 		)
 	}
 
+	if ipVersion == 4 && r.EgressIPEnabled && !r.BPFEnabled {
+		// Auto-allow VXLAN traffic destined to egress.calico.
+		// Such traffic has destination of the local host and expected udp port.
+		// Therefore we need to explicitly accept it in INPUT chain.
+		inputRules = append(inputRules,
+			Rule{
+				Match: Match().ProtocolNum(ProtoUDP).
+					DestPorts(uint16(r.Config.EgressIPVXLANPort)).
+					DestAddrType(AddrTypeLocal),
+				Action:  r.filterAllowAction,
+				Comment: []string{"Allow VXLAN UDP traffic to egress clients"},
+			},
+		)
+		// Auto-allow egress gateways health probes.
+		inputRules = append(inputRules, Rule{
+			Match: Match().ProtocolNum(ProtoTCP).DestAddrType(AddrTypeLocal).SourceIPPortSet(
+				r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllEGWHealthPorts)),
+			Action:  r.filterAllowAction,
+			Comment: []string{"Accept egress gateway health port probe traffic"},
+		})
+
+	}
+
 	if r.KubeIPVSSupportEnabled {
 		// Check if packet belongs to forwarded traffic. (e.g. part of an ipvs connection).
 		// If it is, set endpoint mark and skip "to local host" rules below.
