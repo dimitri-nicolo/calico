@@ -48,7 +48,7 @@
 #include "egw.h"
 #include "rule_counters.h"
 
-#if !defined(__BPFTOOL_LOADER__) && !defined (__IPTOOL_LOADER__)
+#if !defined(__BPFTOOL_LOADER__)
 const volatile struct cali_tc_globals __globals;
 #endif
 

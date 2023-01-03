@@ -377,11 +377,11 @@ func collectKubernetesResource(dir string) {
 	}, common.Cmd{
 		Info:     "Collect namespaces (yaml)",
 		CmdStr:   "kubectl get namespaces -o wide",
-		FilePath: fmt.Sprintf("%s/namespaces.yaml", dir),
+		FilePath: fmt.Sprintf("%s/namespaces.txt", dir),
 	}, common.Cmd{
 		Info:     "Collect namespaces (wide text)",
 		CmdStr:   "kubectl get namespaces -o yaml",
-		FilePath: fmt.Sprintf("%s/namespaces.txt", dir),
+		FilePath: fmt.Sprintf("%s/namespaces.yaml", dir),
 	})
 	common.ExecAllCmdsWriteToFile(commands)
 }
