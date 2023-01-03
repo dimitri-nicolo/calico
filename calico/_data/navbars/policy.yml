@@ -18,11 +18,10 @@ section:
   path: /security/networksets
 - title: Global default deny policy best practices
   path: /security/default-deny   
-- title: Policy life cycle and automation
-  path: /security/policy-lifecycle/
-  section: 
-  - title: Stage, preview impacts, and enforce policy
-    path: /security/staged-network-policies
+- title: Create policy recommendation
+  path: /security/generate-policy-recommendation
+- title: Stage, preview impacts, and enforce policy
+  path: /security/staged-network-policies
 - title: Troubleshoot policies
   path: /security/policy-troubleshooting    
 - title: Calico Enterprise network policy for beginners
