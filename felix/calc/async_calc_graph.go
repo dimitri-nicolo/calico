@@ -77,13 +77,14 @@ type AsyncCalcGraph struct {
 	*CalcGraph
 	inputEvents      chan interface{}
 	outputChannels   []chan<- interface{}
-	eventBuffer      *EventSequencer
+	eventSequencer   *EventSequencer
 	beenInSync       bool
 	needToSendInSync bool
 	syncStatusNow    api.SyncStatus
 	healthAggregator *health.HealthAggregator
 
 	flushTicks       <-chan time.Time
+	healthTicks      <-chan time.Time
 	flushLeakyBucket int
 	dirty            bool
 
@@ -91,8 +92,9 @@ type AsyncCalcGraph struct {
 }
 
 const (
-	healthName     = "async_calc_graph"
+	healthName     = "CalculationGraph"
 	healthInterval = 10 * time.Second
+	healthTimeout  = 30 * time.Second
 )
 
 type featureChecker interface {
@@ -112,27 +114,26 @@ func NewAsyncCalcGraph(
 		log.Warning("Not licensed for Tiers feature. " +
 			"If this is unexpected, contact Tigera support or email licensing@tigera.io")
 	}
-	eventBuffer := NewEventSequencer(conf)
-	calcGraph := NewCalculationGraph(eventBuffer, lookupCache, conf, tierSupportEnabled)
-	if conf.IPSecEnabled() {
-		log.Info("IPsec enabled, adding the binding calculator to calculation graph")
-		calcGraph.EnableIPSec(eventBuffer)
-	}
+	eventSequencer := NewEventSequencer(conf)
 	g := &AsyncCalcGraph{
-		CalcGraph:        calcGraph,
 		inputEvents:      make(chan interface{}, 10),
 		outputChannels:   outputChannels,
-		eventBuffer:      eventBuffer,
+		eventSequencer:   eventSequencer,
 		healthAggregator: healthAggregator,
 	}
+	g.CalcGraph = NewCalculationGraph(eventSequencer, lookupCache, conf, tierSupportEnabled, g.reportHealth)
 	if conf.DebugSimulateCalcGraphHangAfter != 0 {
 		log.WithField("delay", conf.DebugSimulateCalcGraphHangAfter).Warn(
 			"Simulating a calculation graph hang.")
 		g.debugHangC = time.After(conf.DebugSimulateCalcGraphHangAfter)
 	}
-	eventBuffer.Callback = g.onEvent
+	if conf.IPSecEnabled() {
+		log.Info("IPsec enabled, adding the binding calculator to calculation graph")
+		g.CalcGraph.EnableIPSec(eventSequencer)
+	}
+	eventSequencer.Callback = g.onEvent
 	if healthAggregator != nil {
-		healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, healthInterval*2)
+		healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, healthTimeout)
 	}
 	return g
 }
@@ -153,7 +154,6 @@ func (acg *AsyncCalcGraph) OnStatusUpdated(status api.SyncStatus) {
 
 func (acg *AsyncCalcGraph) loop() {
 	log.Info("AsyncCalcGraph running")
-	healthTicks := time.NewTicker(healthInterval).C
 	acg.reportHealth()
 	for {
 		select {
@@ -201,7 +201,7 @@ func (acg *AsyncCalcGraph) loop() {
 			if acg.flushLeakyBucket < leakyBucketSize {
 				acg.flushLeakyBucket++
 			}
-		case <-healthTicks:
+		case <-acg.healthTicks:
 			acg.reportHealth()
 		case <-acg.debugHangC:
 			log.Warning("Debug hang simulation timer popped, hanging the calculation graph!!")
@@ -229,7 +229,12 @@ func (acg *AsyncCalcGraph) maybeFlush() {
 	if acg.flushLeakyBucket > 0 {
 		log.Debug("Not throttled: flushing event buffer")
 		acg.flushLeakyBucket--
-		acg.eventBuffer.Flush()
+		flushStart := time.Now()
+		acg.eventSequencer.Flush()
+		flushDuration := time.Since(flushStart)
+		if flushDuration > time.Second {
+			log.WithField("time", flushDuration).Info("Flush took over 1s.")
+		}
 		if acg.needToSendInSync {
 			log.Info("First flush after becoming in sync, sending InSync message.")
 			acg.onEvent(&proto.InSync{})
@@ -242,17 +247,32 @@ func (acg *AsyncCalcGraph) maybeFlush() {
 }
 
 func (acg *AsyncCalcGraph) onEvent(event interface{}) {
-	log.Debug("Sending output event on channel")
+	log.Debug("Sending output event on channel(s)")
+	healthTickCount := 0
+	startTime := time.Now()
+channelLoop:
 	for _, c := range acg.outputChannels {
-		c <- event
+		for {
+			select {
+			case c <- event:
+				continue channelLoop
+			case <-acg.healthTicks:
+				acg.reportHealth()
+				healthTickCount++
+				if healthTickCount > 1 {
+					log.WithField("time", startTime).Info(
+						"Flushing updates to the dataplane is taking a long time")
+				}
+			}
+		}
 	}
 	countOutputEvents.Inc()
-	log.Debug("Sent output event on channel")
+	log.Debug("Sent output event on channel(s)")
 }
 
 func (acg *AsyncCalcGraph) Start() {
 	log.Info("Starting AsyncCalcGraph")
-	flushTicker := time.NewTicker(tickInterval)
-	acg.flushTicks = flushTicker.C
+	acg.flushTicks = time.NewTicker(tickInterval).C
+	acg.healthTicks = time.NewTicker(healthInterval).C
 	go acg.loop()
 }

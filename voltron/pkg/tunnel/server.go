@@ -71,6 +71,7 @@ func WithClientCert(cert *x509.Certificate) ServerOption {
 			s.clientCertPool.AddCert(xCert)
 			certPem = rest
 		}
+		//nolint:staticcheck // Ignore SA1019 deprecated
 		if len(s.clientCertPool.Subjects()) < 1 {
 			return errors.Errorf("no block in cert key")
 		}

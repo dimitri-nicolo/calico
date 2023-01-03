@@ -63,16 +63,18 @@ func newCaptureManager(captures capture.ActiveCaptures, wlInterfacePrefixes []st
 }
 
 func (c *captureManager) OnUpdate(protoBufMsg interface{}) {
-	log.WithField("msg", protoBufMsg).Debug("Received message")
 	switch msg := protoBufMsg.(type) {
 	case *proto.WorkloadEndpointUpdate:
 		// store workload endpoint id to a workload endpoint
+		log.WithField("msg", protoBufMsg).Debug("Received WorkloadEndpointUpdate")
 		c.pendingWlEpUpdates[*msg.Id] = msg.Endpoint
 	case *proto.WorkloadEndpointRemove:
 		// store workload endpoint id to nil
+		log.WithField("msg", protoBufMsg).Debug("Received WorkloadEndpointRemove")
 		c.pendingWlEpUpdates[*msg.Id] = nil
 	case *proto.PacketCaptureUpdate:
 		// store a packet capture id to workload endpoint id
+		log.WithField("msg", protoBufMsg).Debug("Received PacketCaptureUpdate")
 		var key = capture.Key{
 			WorkloadEndpointId: msg.Endpoint.WorkloadId,
 			CaptureName:        msg.Id.Name,
@@ -80,6 +82,7 @@ func (c *captureManager) OnUpdate(protoBufMsg interface{}) {
 		}
 		c.pendingPacketCaptures[key] = &protoPacketCaptureUpdate{msg.Endpoint, msg.Specification}
 	case *proto.PacketCaptureRemove:
+		log.WithField("msg", protoBufMsg).Debug("Received PacketCaptureRemove")
 		var key = capture.Key{
 			WorkloadEndpointId: msg.Endpoint.WorkloadId,
 			CaptureName:        msg.Id.Name,
@@ -94,6 +97,7 @@ func (c *captureManager) OnUpdate(protoBufMsg interface{}) {
 		}
 	case *ifaceUpdate:
 		// store interface name to its state
+		log.WithField("msg", protoBufMsg).Debug("Received ifaceUpdate")
 		c.pendingInterfaceUpdates[msg.Name] = msg.State
 	}
 }

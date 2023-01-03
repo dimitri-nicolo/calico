@@ -110,14 +110,6 @@ run-ad-image-fv: gen-crt-key
 		${ANOMALY_DETECTION_API_IMAGE}:latest-$(ARCH)
 
 ###############################################################################
-# Static checks
-###############################################################################
-# See .golangci.yml for golangci-lint config
-# SA1019 are deprecation checks, we don't want to fail on those because it means a library update that deprecates something
-# requires immediate removing of the deprecated functions.
-LINT_ARGS += --exclude SA1019
-
-###############################################################################
 # CI/CD
 ###############################################################################
 

@@ -22,5 +22,5 @@ blocks:
         - name: Call Build Hook
           commands:
             - export BRANCH_NAME=${SEMAPHORE_GIT_BRANCH/./_}
-            - export HOOK=NETLIFY_${BRANCH_NAME/-/_}
+            - export HOOK=NETLIFY_${BRANCH_NAME//-/_}
             - curl -X POST -d {} https://api.netlify.com/build_hooks/${!HOOK}

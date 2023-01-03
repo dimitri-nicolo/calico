@@ -568,6 +568,7 @@ func startSideService(w *Workload) (*SideService, error) {
 type PersistentConnectionOpts struct {
 	SourcePort          int
 	MonitorConnectivity bool
+	Timeout             time.Duration
 }
 
 func (w *Workload) StartPersistentConnection(ip string, port int,
@@ -582,6 +583,7 @@ func (w *Workload) StartPersistentConnection(ip string, port int,
 		NamespacePath:       w.namespacePath,
 		SourcePort:          opts.SourcePort,
 		MonitorConnectivity: opts.MonitorConnectivity,
+		Timeout:             opts.Timeout,
 	}
 
 	err := pc.Start()

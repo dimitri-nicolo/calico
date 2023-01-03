@@ -107,14 +107,6 @@ fv: image run-k8s-apiserver run-elastic
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) ginkgo -r test/'
 
 ###############################################################################
-# Static checks
-###############################################################################
-# See .golangci.yml for golangci-lint config
-# SA1019 are deprecation checks, we don't want to fail on those because it means a library update that deprecates something
-# requires immediate removing of the deprecated functions.
-LINT_ARGS += --exclude SA1019
-
-###############################################################################
 # CI/CD
 ###############################################################################
 .PHONY: ci cd
