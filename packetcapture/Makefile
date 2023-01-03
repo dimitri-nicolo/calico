@@ -48,7 +48,7 @@ build: bin/packetcapture-$(ARCH)
 bin/packetcapture-$(ARCH): $(SRC_FILES)
 		$(DOCKER_GO_BUILD_CGO) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v -ldflags "$(VERSION_FLAGS)" cmd/$*/*.go'
+			go build -o $@ -v -ldflags "-linkmode external -extldflags -static $(VERSION_FLAGS)" cmd/$*/*.go'
 
 ###############################################################################
 # BUILD IMAGE
