@@ -112,6 +112,26 @@ func EmitBGPFilterFunctionName(filterName, direction, version string) (string, e
 	return fmt.Sprintf("'%s'", fullName), nil
 }
 
+func emitExternalNetworkProtoStatement(peerNamePrefix, selfIP, externalNetworkName string, peer backends.BGPPeer) string {
+	if peer.PeerIP.String() == selfIP || peer.ExternalNetwork != externalNetworkName {
+		return "" // Skip ourselves because we don't generate a protocol definition for ourselves
+	}
+	var sep string
+	if peer.PeerIP.Version() == 4 {
+		sep = "."
+	} else {
+		sep = ":"
+	}
+	ipParts := strings.Split(peer.PeerIP.String(), sep)
+	ipParts = append([]string{peerNamePrefix}, ipParts...)
+	if peer.Port > 0 {
+		portStrParts := []string{"port", strconv.Itoa(int(peer.Port))}
+		ipParts = append(ipParts, portStrParts...)
+	}
+	peerProtoStatement := fmt.Sprintf("    if proto = \"%s\" then accept;", strings.Join(ipParts, "_"))
+	return peerProtoStatement
+}
+
 // EmitBIRDExternalNetworkConfig generates BIRD config for the tables and kernel protocol configuration based on
 // configured ExternalNetwork resources.
 //
@@ -125,6 +145,22 @@ func EmitBGPFilterFunctionName(filterName, direction, version string) (string, e
 //   routeTableIndex: 7
 //
 // Would produce the following string array that can be easily output via BIRD config template:
+//
+// []string {
+//   "# ExternalNetwork test-enet",
+//   "table 'T_test-enet';",
+//   "protocol kernel 'K_test-enet' from kernel_template {",
+//   "  device routes yes;",
+//   "  table 'T_test-enet';",
+//   "  kernel table 7;",
+//   "  export filter {",
+//   "    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+//   "    if proto = \"Global_10_192_0_3\" then accept;",
+//   "    if proto = \"Global_10_192_0_4\" then accept;",
+//   "    reject;",
+//   "  };",
+//   "}",
+//  }
 func EmitBIRDExternalNetworkConfig(selfIP string, externalNetworkKVPs memkv.KVPairs, globalPeersKVP memkv.KVPairs,
 	nodeSpecificPeersKVP memkv.KVPairs) ([]string, error) {
 	lines := []string{}
@@ -164,25 +200,9 @@ func EmitBIRDExternalNetworkConfig(selfIP string, externalNetworkKVPs memkv.KVPa
 			if err != nil {
 				return []string{}, fmt.Errorf("Error unmarshalling JSON into backend BGPPeer: %s", err)
 			}
-			if globalPeer.PeerIP.String() == selfIP {
-				continue // Skip ourselves because we don't generate a protocol definition for ourselves
-			}
-			if globalPeer.ExternalNetwork == externalNetworkName {
-				var sep string
-				if globalPeer.PeerIP.Version() == 4 {
-					sep = "."
-				} else {
-					sep = ":"
-				}
-				ipParts := strings.Split(globalPeer.PeerIP.String(), sep)
-				ipParts = append([]string{"Global"}, ipParts...)
-				if globalPeer.Port > 0 {
-					portStrParts := []string{"port", strconv.Itoa(int(globalPeer.Port))}
-					ipParts = append(ipParts, portStrParts...)
-				}
-				peerProtoStr := fmt.Sprintf("    if proto = \"%s\" then accept;", strings.Join(ipParts, "_"))
-				bgpPeerProtocols = append(bgpPeerProtocols, peerProtoStr)
-			}
+			peerProtoStr := emitExternalNetworkProtoStatement("Global", selfIP, externalNetworkName,
+				globalPeer)
+			bgpPeerProtocols = append(bgpPeerProtocols, peerProtoStr)
 		}
 
 		for _, nodeSpecificPeerKVP := range nodeSpecificPeersKVP {
@@ -191,22 +211,9 @@ func EmitBIRDExternalNetworkConfig(selfIP string, externalNetworkKVPs memkv.KVPa
 			if err != nil {
 				return []string{}, fmt.Errorf("Error unmarshalling JSON into backend BGPPeer: %s", err)
 			}
-			if nodeSpecificPeer.ExternalNetwork == externalNetworkName {
-				var sep string
-				if nodeSpecificPeer.PeerIP.Version() == 4 {
-					sep = "."
-				} else {
-					sep = ":"
-				}
-				ipParts := strings.Split(nodeSpecificPeer.PeerIP.String(), sep)
-				ipParts = append([]string{"Node"}, ipParts...)
-				if nodeSpecificPeer.Port > 0 {
-					portStrParts := []string{"port", strconv.Itoa(int(nodeSpecificPeer.Port))}
-					ipParts = append(ipParts, portStrParts...)
-				}
-				peerProtoStr := fmt.Sprintf("    if proto = \"%s\" then accept;", strings.Join(ipParts, "_"))
-				bgpPeerProtocols = append(bgpPeerProtocols, peerProtoStr)
-			}
+			peerProtoStr := emitExternalNetworkProtoStatement("Node", selfIP, externalNetworkName,
+				nodeSpecificPeer)
+			bgpPeerProtocols = append(bgpPeerProtocols, peerProtoStr)
 		}
 
 		kernelName := strings.Replace(tableName, "T_", "K_", 1)
