@@ -31,6 +31,7 @@ type TcGlobalData struct {
 	NatOut        uint32
 	EgwVxlanPort  uint16
 	EgwHealthPort uint16
+	Jumps         [16]uint32
 }
 
 type TcStatsGlobalData struct {
