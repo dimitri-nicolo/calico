@@ -34,6 +34,7 @@ import (
 	"github.com/tigera/api/pkg/lib/numorstring"
 
 	"github.com/projectcalico/calico/felix/bpf/conntrack"
+	conntrackv3 "github.com/projectcalico/calico/felix/bpf/conntrack/v3"
 	"github.com/projectcalico/calico/felix/fv/connectivity"
 	"github.com/projectcalico/calico/felix/fv/containers"
 	"github.com/projectcalico/calico/felix/fv/infrastructure"
@@ -129,7 +130,7 @@ func makeBPFConntrackEntry(ifIndex int, aIP, bIP net.IP, trusted bool) (conntrac
 	// DNS server is not trusted.
 	flags := uint16(0)
 	if trusted {
-		flags = conntrack.FlagTrustDNS
+		flags = conntrackv3.FlagTrustDNS
 	}
 
 	return conntrack.NewKey(17 /* UDP */, aIP, 53, bIP, 53), conntrack.NewValueNormal(now, now, flags, a2bLeg, b2aLeg)

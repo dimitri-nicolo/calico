@@ -26,11 +26,11 @@ import (
 	"github.com/projectcalico/calico/felix/bpf"
 )
 
-// struct calico_ct_key {
-//   uint32_t protocol;
-//   __be32 addr_a, addr_b; // NBO
-//   uint16_t port_a, port_b; // HBO
-// };
+//	struct calico_ct_key {
+//	  uint32_t protocol;
+//	  __be32 addr_a, addr_b; // NBO
+//	  uint16_t port_a, port_b; // HBO
+//	};
 const KeySize = 16
 const ValueSize = 88
 const MaxEntries = 512000
@@ -184,8 +184,8 @@ const (
 	FlagNATFwdDsr uint16 = (1 << 1)
 	FlagNATNPFwd  uint16 = (1 << 2)
 	FlagSkipFIB   uint16 = (1 << 3)
-	FlagReserved4 uint16 = (1 << 4)
-	FlagReserved5 uint16 = (1 << 5)
+	FlagTrustDNS  uint16 = (1 << 4)
+	FlagEgressGW  uint16 = (1 << 5)
 	FlagExtLocal  uint16 = (1 << 6)
 	FlagViaNATIf  uint16 = (1 << 7)
 	FlagSrcDstBA  uint16 = (1 << 8)
