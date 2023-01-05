@@ -224,7 +224,7 @@ type bpfEndpointManager struct {
 
 	bpfPolicyDebugEnabled bool
 
-	routeTable    *routetable.RouteTable
+	routeTable    routetable.RouteTableInterface
 	services      map[serviceKey][]ip.V4CIDR
 	dirtyServices set.Set[serviceKey]
 
