@@ -17,8 +17,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/projectcalico/calico/confd/pkg/backends"
-	"github.com/projectcalico/calico/confd/pkg/resource/template"
 	"math"
 	"net"
 	"os"
@@ -27,6 +25,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/projectcalico/calico/confd/pkg/backends"
+	"github.com/projectcalico/calico/confd/pkg/resource/template"
 
 	log "github.com/sirupsen/logrus"
 

@@ -2,10 +2,11 @@ package template
 
 import (
 	"encoding/json"
-	"github.com/projectcalico/calico/confd/pkg/backends"
-	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 	"reflect"
 	"testing"
+
+	"github.com/projectcalico/calico/confd/pkg/backends"
+	cnet "github.com/projectcalico/calico/libcalico-go/lib/net"
 
 	"github.com/kelseyhightower/memkv"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"

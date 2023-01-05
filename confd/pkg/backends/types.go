@@ -1,8 +1,9 @@
 package backends
 
 import (
-	"github.com/projectcalico/calico/libcalico-go/lib/net"
 	"github.com/tigera/api/pkg/lib/numorstring"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/net"
 )
 
 type BGPPeer struct {

@@ -15,12 +15,13 @@ package calico
 
 import (
 	"fmt"
-	"github.com/projectcalico/calico/confd/pkg/resource/template"
 	"net"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/projectcalico/calico/confd/pkg/resource/template"
 
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
