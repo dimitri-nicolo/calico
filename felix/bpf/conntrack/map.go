@@ -31,11 +31,11 @@ import (
 	curVer "github.com/projectcalico/calico/felix/bpf/conntrack/v3"
 )
 
-// struct calico_ct_key {
-//   uint32_t protocol;
-//   __be32 addr_a, addr_b; // NBO
-//   uint16_t port_a, port_b; // HBO
-// };
+//	struct calico_ct_key {
+//	  uint32_t protocol;
+//	  __be32 addr_a, addr_b; // NBO
+//	  uint16_t port_a, port_b; // HBO
+//	};
 const KeySize = curVer.KeySize
 
 const (
@@ -55,16 +55,6 @@ const (
 	TypeNormal uint8 = iota
 	TypeNATForward
 	TypeNATReverse
-
-	FlagNATOut    uint16 = (1 << 0)
-	FlagNATFwdDsr uint16 = (1 << 1)
-	FlagNATNPFwd  uint16 = (1 << 2)
-	FlagSkipFIB   uint16 = (1 << 3)
-	FlagTrustDNS  uint16 = (1 << 4)
-	FlagEgressGW  uint16 = (1 << 5)
-	FlagExtLocal  uint16 = (1 << 6)
-	FlagViaNATIf  uint16 = (1 << 7)
-	FlagSrcDstBA  uint16 = (1 << 8)
 )
 
 // NewValueNormal creates a new Value of type TypeNormal based on the given parameters
