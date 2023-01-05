@@ -25,4 +25,5 @@ type BGPPeer struct {
 	TTLSecurity       uint8                `json:"ttl_security"`
 	ExternalNetwork   string               `json:"external_network"`
 	Filters           []string             `json:"filters"`
+	ReachableBy       string               `json:"reachable_by"`
 }

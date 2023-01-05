@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2022 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -552,7 +552,7 @@ func (c *client) updatePeersV1() {
 				host, port := parseIPPort(v3res.Spec.PeerIP)
 				ip := cnet.ParseIP(host)
 				if ip == nil {
-					log.Warning("PeerIP is not assigned or is malformed")
+					log.Error("PeerIP is not assigned or is malformed")
 					continue
 				}
 
@@ -584,6 +584,20 @@ func (c *client) updatePeersV1() {
 					ttlSecurityHopCount = *v3res.Spec.TTLSecurity
 				}
 
+				var reachableBy string
+				if v3res.Spec.ReachableBy != "" {
+					reachableByAddr := cnet.ParseIP(v3res.Spec.ReachableBy)
+					if reachableByAddr == nil {
+						log.Error("ReachableBy address is malformed")
+						continue
+					}
+
+					if reachableByAddr.Version() != ip.Version() {
+						log.Error("ReachableBy address family does not match PeerIP")
+						continue
+					}
+					reachableBy = v3res.Spec.ReachableBy
+				}
 				peers = append(peers, &backends.BGPPeer{
 					PeerIP:          *ip,
 					ASNum:           v3res.Spec.ASNumber,
@@ -595,6 +609,7 @@ func (c *client) updatePeersV1() {
 					ExternalNetwork: v3res.Spec.ExternalNetwork,
 					Filters:         v3res.Spec.Filters,
 					NumAllowLocalAS: numLocalAS,
+					ReachableBy:     reachableBy,
 				})
 			}
 			log.Debugf("Peers %#v", peers)
@@ -800,6 +815,10 @@ func (c *client) nodeAsBGPPeers(nodeName string, v4 bool, v6 bool, v3peer *apiv3
 
 		peer.ExternalNetwork = v3peer.Spec.ExternalNetwork
 		peer.Filters = v3peer.Spec.Filters
+
+		if v3peer.Spec.ReachableBy != "" {
+			peer.ReachableBy = v3peer.Spec.ReachableBy
+		}
 
 		// If peer node has listenPort set in BGPConfiguration, use that.
 		if port, ok := c.nodeListenPorts[nodeName]; ok {
@@ -1821,7 +1840,6 @@ func (c *client) DeleteStaticRoutes(cidrs []string) {
 
 func (c *client) setPeerConfigFieldsFromV3Resource(peers []*backends.BGPPeer, v3res *apiv3.BGPPeer) {
 	// Get the password, if one is configured
-	// Get the password, if one is configured.
 	password := c.getPassword(v3res)
 
 	// If the BGPPeer has SourceAddress UseNodeIP, a potential direct connection

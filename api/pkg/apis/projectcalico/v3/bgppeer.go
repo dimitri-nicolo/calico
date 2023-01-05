@@ -139,6 +139,11 @@ type BGPPeerSpec struct {
 	// Name of the external network to which this peer belongs.
 	// +optional
 	ExternalNetwork string `json:"externalNetwork,omitempty" validate:"omitempty,name"`
+
+	// Add an exact, i.e. /32, static route toward peer IP in order to prevent route flapping.
+	// ReachableBy contains the address of the gateway which peer can be reached by.
+	// +optional
+	ReachableBy string `json:"reachableBy,omitempty" validate:"omitempty,reachableBy"`
 }
 
 type SourceAddress string
