@@ -4151,7 +4151,7 @@ kind: Node
 apiVersion: projectcalico.org/v3
 metadata:
   name: kube-node-2
-labels:
+  labels:
     global_peer: yes
 spec:
   bgp:
