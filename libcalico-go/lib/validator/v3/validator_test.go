@@ -3840,6 +3840,7 @@ func init() {
 			Communities:          []api.Community{{Name: "community-test", Value: "101:5695"}},
 			PrefixAdvertisements: []api.PrefixAdvertisement{{CIDR: "2001:4860::/128", Communities: []string{"community-test", "8988:202"}}},
 		}, true),
+
 		// PacketCapture validation
 		Entry("should reject a packet capture with an invalid selector", api.PacketCapture{
 			ObjectMeta: v1.ObjectMeta{

@@ -370,6 +370,7 @@ func init() {
 	registerStructValidator(validate, validateRouteTableIDRange, api.RouteTableIDRange{})
 	registerStructValidator(validate, validateRouteTableRange, api.RouteTableRange{})
 	registerStructValidator(validate, validateBGPConfigurationSpec, api.BGPConfigurationSpec{})
+	registerStructValidator(validate, validateBlockAffinitySpec, libapi.BlockAffinitySpec{})
 	registerStructValidator(validate, validatePacketCapture, api.PacketCapture{})
 	registerStructValidator(validate, validatePacketCaptureSpec, api.PacketCaptureSpec{})
 	registerStructValidator(validate, validatePacketCaptureRule, api.PacketCaptureRule{})

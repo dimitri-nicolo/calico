@@ -45,6 +45,7 @@ import (
 	"github.com/projectcalico/calico/apiserver/pkg/apiserver"
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authenticationreview"
 	"github.com/projectcalico/calico/apiserver/pkg/registry/projectcalico/authorizationreview"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/apiconfig"
 	libapiv3 "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	libclient "github.com/projectcalico/calico/libcalico-go/lib/clientv3"
