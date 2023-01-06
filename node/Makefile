@@ -540,7 +540,6 @@ EXTERNAL_NETWORK_ST_TO_RUN=external-network-tests/test_external_network.py -s --
 .PHONY: external-network-run-test
 external-network-run-test:
 	@echo "Starting to run external network tests..."
-	#KUBECONFIG=$(KIND_KUBECONFIG) $(EXTERNAL_NETWORK_DIR)/bird-config.sh
 	docker run -t --rm \
 	    -v $(PWD):/code \
 	    -v /var/run/docker.sock:/var/run/docker.sock \

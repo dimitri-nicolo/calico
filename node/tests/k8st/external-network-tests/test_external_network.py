@@ -48,7 +48,7 @@ class TestExternalNetwork(TestBase):
         return result
 
     def _checkRouteInExternalBird(self, birdContainer, birdPeer, routeRegex, peerIP, ipv6=False, present=True):
-        """Check that a route is present/not present in an external (plaing docker container) bird instance"""
+        """Check that a route is present/not present in an external (plain docker container) bird instance"""
         def fn():
             birdCmd = "birdcl6" if ipv6 else "birdcl"
             routes = run("docker exec %s %s show route protocol %s" % (birdContainer, birdCmd, birdPeer))
