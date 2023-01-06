@@ -2,6 +2,7 @@ package template
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -12,7 +13,17 @@ import (
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 )
 
-const maxFuncNameLen = 66 //Max BIRD symbol length of 64 + 2 for bookending single quotes
+const (
+	maxFuncNameLen       = 66 //Max BIRD symbol length of 64 + 2 for bookending single quotes
+	v4GlobalPeerIP1Str   = "77.0.0.1"
+	v4GlobalPeerIP2Str   = "77.0.0.2"
+	v6GlobalPeerIP1Str   = "7700::1"
+	v6GlobalPeerIP2Str   = "7700::2"
+	v4ExplicitPeerIP1Str = "44.0.0.1"
+	v4ExplicitPeerIP2Str = "44.0.0.2"
+	v6ExplicitPeerIP1Str = "4400::1"
+	v6ExplicitPeerIP2Str = "4400::2"
+)
 
 func Test_EmitBGPFilterFunctionName(t *testing.T) {
 	str := "should-not-be-truncated"
@@ -101,230 +112,643 @@ func Test_EmitBIRDBGPFilterFuncs(t *testing.T) {
 	}
 }
 
-func Test_BIRDExternalNetworkConfig(t *testing.T) {
-	testRouteTableIdx := uint32(7)
-	testEnet := v3.ExternalNetwork{
-		Spec: v3.ExternalNetworkSpec{
-			RouteTableIndex: &testRouteTableIdx,
-		},
-	}
-
-	enetJSON, err := json.Marshal(testEnet)
+func resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworksKVP, globalPeersKVP, explicitPeersKVP memkv.KVPairs, expected []string, t *testing.T) {
+	result, err := EmitBIRDExternalNetworkConfig("dontcare", externalNetworksKVP, globalPeersKVP, explicitPeersKVP)
 	if err != nil {
-		t.Errorf("Error marshalling ExternalNetwork into JSON: %s", err)
+		t.Errorf("Unexpected error: %s", err)
 	}
+	if !reflect.DeepEqual(result, expected) {
+		t.Errorf("Expected did not match result.\nGenerated: %s\nExpected: %s", result, expected)
+	}
+}
 
-	externalNetworkKVPs := memkv.KVPairs{
-		memkv.KVPair{
-			Key:   "/test-enet",
+func constructExternalNetworkKVPs(idxs []uint32, t *testing.T) memkv.KVPairs {
+	var kvps memkv.KVPairs
+	for i, idx := range idxs {
+		testEnet := v3.ExternalNetwork{
+			Spec: v3.ExternalNetworkSpec{
+				RouteTableIndex: &idx,
+			},
+		}
+		enetJSON, err := json.Marshal(testEnet)
+		if err != nil {
+			t.Errorf("Error marshalling ExternalNetwork into JSON: %s", err)
+		}
+		kvp := memkv.KVPair{
+			Key:   fmt.Sprintf("test-enet-%d", i+1),
 			Value: string(enetJSON),
-		},
+		}
+		kvps = append(kvps, kvp)
 	}
+	return kvps
+}
 
-	v4GlobalPeerIP1 := cnet.ParseIP("77.0.0.1")
-	v4GlobalPeer1 := backends.BGPPeer{
-		PeerIP:          *v4GlobalPeerIP1,
-		ExternalNetwork: "test-enet",
-	}
+func constructBGPPeerKVPs(peerIPStrs []string, enet string, t *testing.T) memkv.KVPairs {
+	var kvps memkv.KVPairs
+	for _, peerIPStr := range peerIPStrs {
+		peerIP := cnet.ParseIP(peerIPStr)
+		peer := backends.BGPPeer{
+			PeerIP:          *peerIP,
+			ExternalNetwork: enet,
+		}
 
-	v4GlobalPeerIP2 := cnet.ParseIP("77.0.0.2")
-	v4GlobalPeer2 := backends.BGPPeer{
-		PeerIP:          *v4GlobalPeerIP2,
-		Port:            uint16(777),
-		ExternalNetwork: "test-enet",
-	}
+		peerJSON, err := json.Marshal(peer)
+		if err != nil {
+			t.Errorf("Error marshalling peer into JSON: %s", err)
+		}
 
-	v4GlobalPeer1JSON, err := json.Marshal(v4GlobalPeer1)
-	if err != nil {
-		t.Errorf("Error marshalling v4 global peer 1 into JSON: %s", err)
-	}
-
-	v4GlobalPeer2JSON, err := json.Marshal(v4GlobalPeer2)
-	if err != nil {
-		t.Errorf("Error marshalling v4 global peer 2 into JSON: %s", err)
-	}
-
-	v4GlobalPeersKVP := memkv.KVPairs{
-		memkv.KVPair{
+		kvp := memkv.KVPair{
 			Key:   "dontcare",
-			Value: string(v4GlobalPeer1JSON),
-		},
-		memkv.KVPair{
-			Key:   "dontcare",
-			Value: string(v4GlobalPeer2JSON),
-		},
+			Value: string(peerJSON),
+		}
+		kvps = append(kvps, kvp)
 	}
+	return kvps
+}
 
-	v6GlobalPeerIP1 := cnet.ParseIP("7700::1")
-	v6GlobalPeer1 := backends.BGPPeer{
-		PeerIP:          *v6GlobalPeerIP1,
-		ExternalNetwork: "test-enet",
-	}
-
-	v6GlobalPeerIP2 := cnet.ParseIP("7700::2")
-	v6GlobalPeer2 := backends.BGPPeer{
-		PeerIP:          *v6GlobalPeerIP2,
-		Port:            uint16(777),
-		ExternalNetwork: "test-enet",
-	}
-
-	v6GlobalPeer1JSON, err := json.Marshal(v6GlobalPeer1)
-	if err != nil {
-		t.Errorf("Error marshalling v6 global peer 1 into JSON: %s", err)
-	}
-
-	v6GlobalPeer2JSON, err := json.Marshal(v6GlobalPeer2)
-	if err != nil {
-		t.Errorf("Error marshalling v6 global peer 2 into JSON: %s", err)
-	}
-
-	v6GlobalPeersKVP := memkv.KVPairs{
-		memkv.KVPair{
-			Key:   "dontcare",
-			Value: string(v6GlobalPeer1JSON),
-		},
-		memkv.KVPair{
-			Key:   "dontcare",
-			Value: string(v6GlobalPeer2JSON),
-		},
-	}
-
-	v4ExplicitPeerIP1 := cnet.ParseIP("44.0.0.1")
-	v4ExplicitPeer1 := backends.BGPPeer{
-		PeerIP:          *v4ExplicitPeerIP1,
-		ExternalNetwork: "test-enet",
-	}
-
-	v4ExplicitPeerIP2 := cnet.ParseIP("44.0.0.2")
-	v4ExplicitPeer2 := backends.BGPPeer{
-		PeerIP:          *v4ExplicitPeerIP2,
-		Port:            uint16(444),
-		ExternalNetwork: "test-enet",
-	}
-
-	v4ExplicitPeer1JSON, err := json.Marshal(v4ExplicitPeer1)
-	if err != nil {
-		t.Errorf("Error marshalling v4 explicit peer 1 into JSON: %s", err)
-	}
-
-	v4ExplicitPeer2JSON, err := json.Marshal(v4ExplicitPeer2)
-	if err != nil {
-		t.Errorf("Error marshalling v4 explicit peer 2 into JSON: %s", err)
-	}
-
-	v4NodeSpecificPeersKVP := memkv.KVPairs{
-		memkv.KVPair{
-			Key:   "dontcare",
-			Value: string(v4ExplicitPeer1JSON),
-		},
-		memkv.KVPair{
-			Key:   "dontcare",
-			Value: string(v4ExplicitPeer2JSON),
-		},
-	}
-
-	v6ExplicitPeerIP1 := cnet.ParseIP("4400::1")
-	v6ExplicitPeer1 := backends.BGPPeer{
-		PeerIP:          *v6ExplicitPeerIP1,
-		ExternalNetwork: "test-enet",
-	}
-
-	v6ExplicitPeerIP2 := cnet.ParseIP("4400::2")
-	v6ExplicitPeer2 := backends.BGPPeer{
-		PeerIP:          *v6ExplicitPeerIP2,
-		Port:            uint16(444),
-		ExternalNetwork: "test-enet",
-	}
-
-	v6ExplicitPeer1JSON, err := json.Marshal(v6ExplicitPeer1)
-	if err != nil {
-		t.Errorf("Error marshalling v6 explicit peer 1 into JSON: %s", err)
-	}
-
-	v6ExplicitPeer2JSON, err := json.Marshal(v6ExplicitPeer2)
-	if err != nil {
-		t.Errorf("Error marshalling v6 explicit peer 2 into JSON: %s", err)
-	}
-
-	v6NodeSpecificPeersKVP := memkv.KVPairs{
-		memkv.KVPair{
-			Key:   "dontcare",
-			Value: string(v6ExplicitPeer1JSON),
-		},
-		memkv.KVPair{
-			Key:   "dontcare",
-			Value: string(v6ExplicitPeer2JSON),
-		},
-	}
-
+func Test_BIRDExternalNetwork_NoExternalNetworks(t *testing.T) {
 	expectedEmptyBIRDCfgStr := []string{
 		"# No ExternalNetworks configured",
 	}
 
-	expectedBIRDCfgStrV4 := []string{
-		"# ExternalNetwork test-enet",
-		"table 'T_test-enet';",
-		"protocol kernel 'K_test-enet' from kernel_template {",
+	resultCheckerForEmitBIRDExternalNetworkConfig(memkv.KVPairs{}, memkv.KVPairs{}, memkv.KVPairs{},
+		expectedEmptyBIRDCfgStr, t)
+}
+
+func Test_EmitBIRDExternalNetwork_EmptyAllPeers(t *testing.T) {
+	routeTableIdxs := []uint32{7}
+	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
+
+	expectedBIRDCfgStr := []string{
+		"# ExternalNetwork test-enet-1",
+		"table 'T_test-enet-1';",
+		"protocol kernel 'K_test-enet-1' from kernel_template {",
 		"  device routes yes;",
-		"  table 'T_test-enet';",
+		"  table 'T_test-enet-1';",
+		"  kernel table 7;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    reject;",
+		"  };",
+		"}",
+	}
+
+	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, memkv.KVPairs{}, memkv.KVPairs{},
+		expectedBIRDCfgStr, t)
+}
+
+func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleGlobalBGPPeerV4(t *testing.T) {
+	routeTableIdx1 := uint32(7)
+	routeTableIdxs := []uint32{routeTableIdx1}
+	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
+
+	globalPeerIPStrs := []string{v4GlobalPeerIP1Str}
+	globalPeersKVPs := constructBGPPeerKVPs(globalPeerIPStrs, externalNetworkKVPs[0].Key, t)
+
+	expectedBIRDCfgStr := []string{
+		"# ExternalNetwork test-enet-1",
+		"table 'T_test-enet-1';",
+		"protocol kernel 'K_test-enet-1' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-1';",
 		"  kernel table 7;",
 		"  export filter {",
 		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
 		"    if proto = \"Global_77_0_0_1\" then accept;",
-		"    if proto = \"Global_77_0_0_2_port_777\" then accept;",
-		"    if proto = \"Node_44_0_0_1\" then accept;",
-		"    if proto = \"Node_44_0_0_2_port_444\" then accept;",
 		"    reject;",
 		"  };",
 		"}",
 	}
 
-	expectedBIRDCfgStrV6 := []string{
-		"# ExternalNetwork test-enet",
-		"table 'T_test-enet';",
-		"protocol kernel 'K_test-enet' from kernel_template {",
+	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, globalPeersKVPs, memkv.KVPairs{},
+		expectedBIRDCfgStr, t)
+}
+
+func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleGlobalBGPPeerV6(t *testing.T) {
+	routeTableIdx1 := uint32(7)
+	routeTableIdxs := []uint32{routeTableIdx1}
+	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
+
+	globalPeerIPStrs := []string{v6GlobalPeerIP1Str}
+	globalPeersKVPs := constructBGPPeerKVPs(globalPeerIPStrs, externalNetworkKVPs[0].Key, t)
+
+	expectedBIRDCfgStr := []string{
+		"# ExternalNetwork test-enet-1",
+		"table 'T_test-enet-1';",
+		"protocol kernel 'K_test-enet-1' from kernel_template {",
 		"  device routes yes;",
-		"  table 'T_test-enet';",
+		"  table 'T_test-enet-1';",
 		"  kernel table 7;",
 		"  export filter {",
 		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
 		"    if proto = \"Global_7700__1\" then accept;",
-		"    if proto = \"Global_7700__2_port_777\" then accept;",
-		"    if proto = \"Node_4400__1\" then accept;",
-		"    if proto = \"Node_4400__2_port_444\" then accept;",
 		"    reject;",
 		"  };",
 		"}",
 	}
 
-	emptyCfgResult, err := EmitBIRDExternalNetworkConfig("dontcare", memkv.KVPairs{}, memkv.KVPairs{}, memkv.KVPairs{})
-	if err != nil {
-		t.Errorf("Unexpected error while calling EmitBIRDExternalNetworkConfig on empty KVPairs: %s", err)
-	}
-	if !reflect.DeepEqual(emptyCfgResult, expectedEmptyBIRDCfgStr) {
-		t.Errorf("Generated ExternalNetwork BIRD config when ExternalNetwork KVPairs struct is empty differs from expectation:\nGenerated: %s\nExpected = %s",
-			emptyCfgResult, expectedEmptyBIRDCfgStr)
+	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, globalPeersKVPs, memkv.KVPairs{},
+		expectedBIRDCfgStr, t)
+}
+
+func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_MultipleGlobalBGPPeersV4(t *testing.T) {
+	routeTableIdx1 := uint32(7)
+	routeTableIdxs := []uint32{routeTableIdx1}
+	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
+
+	globalPeerIPStrs := []string{v4GlobalPeerIP1Str, v4GlobalPeerIP2Str}
+	globalPeersKVPs := constructBGPPeerKVPs(globalPeerIPStrs, externalNetworkKVPs[0].Key, t)
+
+	expectedBIRDCfgStr := []string{
+		"# ExternalNetwork test-enet-1",
+		"table 'T_test-enet-1';",
+		"protocol kernel 'K_test-enet-1' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-1';",
+		"  kernel table 7;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    if proto = \"Global_77_0_0_1\" then accept;",
+		"    if proto = \"Global_77_0_0_2\" then accept;",
+		"    reject;",
+		"  };",
+		"}",
 	}
 
-	v4BIRDCfgResult, err := EmitBIRDExternalNetworkConfig("dontcare", externalNetworkKVPs, v4GlobalPeersKVP,
-		v4NodeSpecificPeersKVP)
-	if err != nil {
-		t.Errorf("Unexpected error while generating v4 BIRD ExternalNetwork config: %s", err)
-	}
-	if !reflect.DeepEqual(v4BIRDCfgResult, expectedBIRDCfgStrV4) {
-		t.Errorf("Generated v4 ExternalNetwork BIRD config differs from expectation:\nGenerated = %s\nExpected = %s",
-			v4BIRDCfgResult, expectedBIRDCfgStrV4)
+	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, globalPeersKVPs, memkv.KVPairs{},
+		expectedBIRDCfgStr, t)
+}
+
+func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_MultipleGlobalBGPPeersV6(t *testing.T) {
+	routeTableIdx1 := uint32(7)
+	routeTableIdxs := []uint32{routeTableIdx1}
+	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
+
+	globalPeerIPStrs := []string{v6GlobalPeerIP1Str, v6GlobalPeerIP2Str}
+	globalPeersKVPs := constructBGPPeerKVPs(globalPeerIPStrs, externalNetworkKVPs[0].Key, t)
+
+	expectedBIRDCfgStr := []string{
+		"# ExternalNetwork test-enet-1",
+		"table 'T_test-enet-1';",
+		"protocol kernel 'K_test-enet-1' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-1';",
+		"  kernel table 7;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    if proto = \"Global_7700__1\" then accept;",
+		"    if proto = \"Global_7700__2\" then accept;",
+		"    reject;",
+		"  };",
+		"}",
 	}
 
-	v6BIRDCfgResult, err := EmitBIRDExternalNetworkConfig("dontcare", externalNetworkKVPs, v6GlobalPeersKVP,
-		v6NodeSpecificPeersKVP)
-	if err != nil {
-		t.Errorf("Unexpected error while generating v6 BIRD ExternalNetwork config: %s", err)
+	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, globalPeersKVPs, memkv.KVPairs{},
+		expectedBIRDCfgStr, t)
+}
+
+func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleGlobalBGPPeerV4(t *testing.T) {
+	routeTableIdx1 := uint32(7)
+	RouteTableIdx2 := uint32(4)
+	routeTableIdxs := []uint32{routeTableIdx1, RouteTableIdx2}
+	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
+
+	globalPeerIPStrs1 := []string{v4GlobalPeerIP1Str}
+	globalPeersKVPs1 := constructBGPPeerKVPs(globalPeerIPStrs1, externalNetworkKVPs[0].Key, t)
+	globalPeerIPStrs2 := []string{v4GlobalPeerIP2Str}
+	globalPeersKVPs2 := constructBGPPeerKVPs(globalPeerIPStrs2, externalNetworkKVPs[1].Key, t)
+	globalPeersKVPs := append(globalPeersKVPs1, globalPeersKVPs2...)
+
+	expectedBIRDCfgStr := []string{
+		"# ExternalNetwork test-enet-1",
+		"table 'T_test-enet-1';",
+		"protocol kernel 'K_test-enet-1' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-1';",
+		"  kernel table 7;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    if proto = \"Global_77_0_0_1\" then accept;",
+		"    reject;",
+		"  };",
+		"}",
+		"# ExternalNetwork test-enet-2",
+		"table 'T_test-enet-2';",
+		"protocol kernel 'K_test-enet-2' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-2';",
+		"  kernel table 4;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    if proto = \"Global_77_0_0_2\" then accept;",
+		"    reject;",
+		"  };",
+		"}",
 	}
-	if !reflect.DeepEqual(v6BIRDCfgResult, expectedBIRDCfgStrV6) {
-		t.Errorf("Generated v6 ExternalNetwork BIRD config differs from expectation:\nGenerated = %s\nExpected = %s",
-			v6BIRDCfgResult, expectedBIRDCfgStrV6)
+
+	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, globalPeersKVPs, memkv.KVPairs{},
+		expectedBIRDCfgStr, t)
+}
+
+func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleGlobalBGPPeerV6(t *testing.T) {
+	routeTableIdx1 := uint32(7)
+	RouteTableIdx2 := uint32(4)
+	routeTableIdxs := []uint32{routeTableIdx1, RouteTableIdx2}
+	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
+
+	globalPeerIPStrs1 := []string{v6GlobalPeerIP1Str}
+	globalPeersKVPs1 := constructBGPPeerKVPs(globalPeerIPStrs1, externalNetworkKVPs[0].Key, t)
+	globalPeerIPStrs2 := []string{v6GlobalPeerIP2Str}
+	globalPeersKVPs2 := constructBGPPeerKVPs(globalPeerIPStrs2, externalNetworkKVPs[1].Key, t)
+	globalPeersKVPs := append(globalPeersKVPs1, globalPeersKVPs2...)
+
+	expectedBIRDCfgStr := []string{
+		"# ExternalNetwork test-enet-1",
+		"table 'T_test-enet-1';",
+		"protocol kernel 'K_test-enet-1' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-1';",
+		"  kernel table 7;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    if proto = \"Global_7700__1\" then accept;",
+		"    reject;",
+		"  };",
+		"}",
+		"# ExternalNetwork test-enet-2",
+		"table 'T_test-enet-2';",
+		"protocol kernel 'K_test-enet-2' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-2';",
+		"  kernel table 4;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    if proto = \"Global_7700__2\" then accept;",
+		"    reject;",
+		"  };",
+		"}",
 	}
+
+	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, globalPeersKVPs, memkv.KVPairs{},
+		expectedBIRDCfgStr, t)
+}
+
+func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleExplicitBGPPeerV4(t *testing.T) {
+	routeTableIdx1 := uint32(7)
+	routeTableIdxs := []uint32{routeTableIdx1}
+	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
+
+	explicitPeerIPStrs := []string{v4ExplicitPeerIP1Str}
+	explicitPeersKVPs := constructBGPPeerKVPs(explicitPeerIPStrs, externalNetworkKVPs[0].Key, t)
+
+	expectedBIRDCfgStr := []string{
+		"# ExternalNetwork test-enet-1",
+		"table 'T_test-enet-1';",
+		"protocol kernel 'K_test-enet-1' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-1';",
+		"  kernel table 7;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    if proto = \"Node_44_0_0_1\" then accept;",
+		"    reject;",
+		"  };",
+		"}",
+	}
+
+	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, memkv.KVPairs{}, explicitPeersKVPs,
+		expectedBIRDCfgStr, t)
+}
+
+func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleExplicitBGPPeerV6(t *testing.T) {
+	routeTableIdx1 := uint32(7)
+	routeTableIdxs := []uint32{routeTableIdx1}
+	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
+
+	explicitPeerIPStrs := []string{v6ExplicitPeerIP1Str}
+	explicitPeersKVPs := constructBGPPeerKVPs(explicitPeerIPStrs, externalNetworkKVPs[0].Key, t)
+
+	expectedBIRDCfgStr := []string{
+		"# ExternalNetwork test-enet-1",
+		"table 'T_test-enet-1';",
+		"protocol kernel 'K_test-enet-1' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-1';",
+		"  kernel table 7;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    if proto = \"Node_4400__1\" then accept;",
+		"    reject;",
+		"  };",
+		"}",
+	}
+
+	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, memkv.KVPairs{}, explicitPeersKVPs,
+		expectedBIRDCfgStr, t)
+}
+
+func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_MultipleExplicitBGPPeerV4(t *testing.T) {
+	routeTableIdx1 := uint32(7)
+	routeTableIdxs := []uint32{routeTableIdx1}
+	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
+
+	explicitPeerIPStrs := []string{v4ExplicitPeerIP1Str, v4ExplicitPeerIP2Str}
+	explicitPeersKVPs := constructBGPPeerKVPs(explicitPeerIPStrs, externalNetworkKVPs[0].Key, t)
+
+	expectedBIRDCfgStr := []string{
+		"# ExternalNetwork test-enet-1",
+		"table 'T_test-enet-1';",
+		"protocol kernel 'K_test-enet-1' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-1';",
+		"  kernel table 7;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    if proto = \"Node_44_0_0_1\" then accept;",
+		"    if proto = \"Node_44_0_0_2\" then accept;",
+		"    reject;",
+		"  };",
+		"}",
+	}
+
+	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, memkv.KVPairs{}, explicitPeersKVPs,
+		expectedBIRDCfgStr, t)
+}
+
+func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_MultipleExplicitBGPPeerV6(t *testing.T) {
+	routeTableIdx1 := uint32(7)
+	routeTableIdxs := []uint32{routeTableIdx1}
+	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
+
+	explicitPeerIPStrs := []string{v6ExplicitPeerIP1Str, v6ExplicitPeerIP2Str}
+	explicitPeersKVPs := constructBGPPeerKVPs(explicitPeerIPStrs, externalNetworkKVPs[0].Key, t)
+
+	expectedBIRDCfgStr := []string{
+		"# ExternalNetwork test-enet-1",
+		"table 'T_test-enet-1';",
+		"protocol kernel 'K_test-enet-1' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-1';",
+		"  kernel table 7;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    if proto = \"Node_4400__1\" then accept;",
+		"    if proto = \"Node_4400__2\" then accept;",
+		"    reject;",
+		"  };",
+		"}",
+	}
+
+	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, memkv.KVPairs{}, explicitPeersKVPs,
+		expectedBIRDCfgStr, t)
+}
+
+func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleExplicitBGPPeerV4(t *testing.T) {
+	routeTableIdx1 := uint32(7)
+	routeTableIdx2 := uint32(4)
+	routeTableIdxs := []uint32{routeTableIdx1, routeTableIdx2}
+	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
+
+	explicitPeerIPStrs1 := []string{v4ExplicitPeerIP1Str}
+	explicitPeersKVPs1 := constructBGPPeerKVPs(explicitPeerIPStrs1, externalNetworkKVPs[0].Key, t)
+	explicitPeerIPStrs2 := []string{v4ExplicitPeerIP2Str}
+	explicitPeersKVPs2 := constructBGPPeerKVPs(explicitPeerIPStrs2, externalNetworkKVPs[1].Key, t)
+	explicitPeersKVPs := append(explicitPeersKVPs1, explicitPeersKVPs2...)
+
+	expectedBIRDCfgStr := []string{
+		"# ExternalNetwork test-enet-1",
+		"table 'T_test-enet-1';",
+		"protocol kernel 'K_test-enet-1' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-1';",
+		"  kernel table 7;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    if proto = \"Node_44_0_0_1\" then accept;",
+		"    reject;",
+		"  };",
+		"}",
+		"# ExternalNetwork test-enet-2",
+		"table 'T_test-enet-2';",
+		"protocol kernel 'K_test-enet-2' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-2';",
+		"  kernel table 4;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    if proto = \"Node_44_0_0_2\" then accept;",
+		"    reject;",
+		"  };",
+		"}",
+	}
+
+	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, memkv.KVPairs{}, explicitPeersKVPs,
+		expectedBIRDCfgStr, t)
+}
+
+func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleExplicitBGPPeerV6(t *testing.T) {
+	routeTableIdx1 := uint32(7)
+	routeTableIdx2 := uint32(4)
+	routeTableIdxs := []uint32{routeTableIdx1, routeTableIdx2}
+	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
+
+	explicitPeerIPStrs1 := []string{v6ExplicitPeerIP1Str}
+	explicitPeersKVPs1 := constructBGPPeerKVPs(explicitPeerIPStrs1, externalNetworkKVPs[0].Key, t)
+	explicitPeerIPStrs2 := []string{v6ExplicitPeerIP2Str}
+	explicitPeersKVPs2 := constructBGPPeerKVPs(explicitPeerIPStrs2, externalNetworkKVPs[1].Key, t)
+	explicitPeersKVPs := append(explicitPeersKVPs1, explicitPeersKVPs2...)
+
+	expectedBIRDCfgStr := []string{
+		"# ExternalNetwork test-enet-1",
+		"table 'T_test-enet-1';",
+		"protocol kernel 'K_test-enet-1' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-1';",
+		"  kernel table 7;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    if proto = \"Node_4400__1\" then accept;",
+		"    reject;",
+		"  };",
+		"}",
+		"# ExternalNetwork test-enet-2",
+		"table 'T_test-enet-2';",
+		"protocol kernel 'K_test-enet-2' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-2';",
+		"  kernel table 4;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    if proto = \"Node_4400__2\" then accept;",
+		"    reject;",
+		"  };",
+		"}",
+	}
+
+	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, memkv.KVPairs{}, explicitPeersKVPs,
+		expectedBIRDCfgStr, t)
+}
+
+func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleExplicitAndSingleGlobalBGPPeerV4(t *testing.T) {
+	routeTableIdx1 := uint32(7)
+	routeTableIdxs := []uint32{routeTableIdx1}
+	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
+
+	globalPeerIPStrs := []string{v4GlobalPeerIP1Str}
+	globalPeersKVPs := constructBGPPeerKVPs(globalPeerIPStrs, externalNetworkKVPs[0].Key, t)
+	explicitPeerIPStrs := []string{v4ExplicitPeerIP1Str}
+	explicitPeersKVPs := constructBGPPeerKVPs(explicitPeerIPStrs, externalNetworkKVPs[0].Key, t)
+
+	expectedBIRDCfgStr := []string{
+		"# ExternalNetwork test-enet-1",
+		"table 'T_test-enet-1';",
+		"protocol kernel 'K_test-enet-1' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-1';",
+		"  kernel table 7;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    if proto = \"Global_77_0_0_1\" then accept;",
+		"    if proto = \"Node_44_0_0_1\" then accept;",
+		"    reject;",
+		"  };",
+		"}",
+	}
+
+	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, globalPeersKVPs, explicitPeersKVPs,
+		expectedBIRDCfgStr, t)
+}
+
+func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleExplicitAndSingleGlobalBGPPeerV6(t *testing.T) {
+	routeTableIdx1 := uint32(7)
+	routeTableIdxs := []uint32{routeTableIdx1}
+	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
+
+	globalPeerIPStrs := []string{v6GlobalPeerIP1Str}
+	globalPeersKVPs := constructBGPPeerKVPs(globalPeerIPStrs, externalNetworkKVPs[0].Key, t)
+	explicitPeerIPStrs := []string{v6ExplicitPeerIP1Str}
+	explicitPeersKVPs := constructBGPPeerKVPs(explicitPeerIPStrs, externalNetworkKVPs[0].Key, t)
+
+	expectedBIRDCfgStr := []string{
+		"# ExternalNetwork test-enet-1",
+		"table 'T_test-enet-1';",
+		"protocol kernel 'K_test-enet-1' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-1';",
+		"  kernel table 7;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    if proto = \"Global_7700__1\" then accept;",
+		"    if proto = \"Node_4400__1\" then accept;",
+		"    reject;",
+		"  };",
+		"}",
+	}
+
+	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, globalPeersKVPs, explicitPeersKVPs,
+		expectedBIRDCfgStr, t)
+}
+
+func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleExplicitAndMultipleGlobalBGPPeerV4(t *testing.T) {
+	routeTableIdx1 := uint32(7)
+	routeTableIdx2 := uint32(4)
+	routeTableIdxs := []uint32{routeTableIdx1, routeTableIdx2}
+	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
+
+	globalPeerIPStrs1 := []string{v4GlobalPeerIP1Str}
+	globalPeersKVPs1 := constructBGPPeerKVPs(globalPeerIPStrs1, externalNetworkKVPs[0].Key, t)
+	globalPeerIPStrs2 := []string{v4GlobalPeerIP2Str}
+	globalPeersKVPs2 := constructBGPPeerKVPs(globalPeerIPStrs2, externalNetworkKVPs[1].Key, t)
+	globalPeersKVPs := append(globalPeersKVPs1, globalPeersKVPs2...)
+
+	explicitPeerIPStrs1 := []string{v4ExplicitPeerIP1Str}
+	explicitPeersKVPs1 := constructBGPPeerKVPs(explicitPeerIPStrs1, externalNetworkKVPs[0].Key, t)
+	explicitPeerIPStrs2 := []string{v4ExplicitPeerIP2Str}
+	explicitPeersKVPs2 := constructBGPPeerKVPs(explicitPeerIPStrs2, externalNetworkKVPs[1].Key, t)
+	explicitPeersKVPs := append(explicitPeersKVPs1, explicitPeersKVPs2...)
+
+	expectedBIRDCfgStr := []string{
+		"# ExternalNetwork test-enet-1",
+		"table 'T_test-enet-1';",
+		"protocol kernel 'K_test-enet-1' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-1';",
+		"  kernel table 7;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    if proto = \"Global_77_0_0_1\" then accept;",
+		"    if proto = \"Node_44_0_0_1\" then accept;",
+		"    reject;",
+		"  };",
+		"}",
+		"# ExternalNetwork test-enet-2",
+		"table 'T_test-enet-2';",
+		"protocol kernel 'K_test-enet-2' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-2';",
+		"  kernel table 4;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    if proto = \"Global_77_0_0_2\" then accept;",
+		"    if proto = \"Node_44_0_0_2\" then accept;",
+		"    reject;",
+		"  };",
+		"}",
+	}
+
+	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, globalPeersKVPs, explicitPeersKVPs,
+		expectedBIRDCfgStr, t)
+}
+
+func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleExplicitAndMultipleGlobalBGPPeerV6(t *testing.T) {
+	routeTableIdx1 := uint32(7)
+	routeTableIdx2 := uint32(4)
+	routeTableIdxs := []uint32{routeTableIdx1, routeTableIdx2}
+	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
+
+	globalPeerIPStrs1 := []string{v6GlobalPeerIP1Str}
+	globalPeersKVPs1 := constructBGPPeerKVPs(globalPeerIPStrs1, externalNetworkKVPs[0].Key, t)
+	globalPeerIPStrs2 := []string{v6GlobalPeerIP2Str}
+	globalPeersKVPs2 := constructBGPPeerKVPs(globalPeerIPStrs2, externalNetworkKVPs[1].Key, t)
+	globalPeersKVPs := append(globalPeersKVPs1, globalPeersKVPs2...)
+
+	explicitPeerIPStrs1 := []string{v6ExplicitPeerIP1Str}
+	explicitPeersKVPs1 := constructBGPPeerKVPs(explicitPeerIPStrs1, externalNetworkKVPs[0].Key, t)
+	explicitPeerIPStrs2 := []string{v6ExplicitPeerIP2Str}
+	explicitPeersKVPs2 := constructBGPPeerKVPs(explicitPeerIPStrs2, externalNetworkKVPs[1].Key, t)
+	explicitPeersKVPs := append(explicitPeersKVPs1, explicitPeersKVPs2...)
+
+	expectedBIRDCfgStr := []string{
+		"# ExternalNetwork test-enet-1",
+		"table 'T_test-enet-1';",
+		"protocol kernel 'K_test-enet-1' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-1';",
+		"  kernel table 7;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    if proto = \"Global_7700__1\" then accept;",
+		"    if proto = \"Node_4400__1\" then accept;",
+		"    reject;",
+		"  };",
+		"}",
+		"# ExternalNetwork test-enet-2",
+		"table 'T_test-enet-2';",
+		"protocol kernel 'K_test-enet-2' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-2';",
+		"  kernel table 4;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    if proto = \"Global_7700__2\" then accept;",
+		"    if proto = \"Node_4400__2\" then accept;",
+		"    reject;",
+		"  };",
+		"}",
+	}
+
+	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, globalPeersKVPs, explicitPeersKVPs,
+		expectedBIRDCfgStr, t)
 }
 
 func Test_EmitExternalNetworkTableName(t *testing.T) {
