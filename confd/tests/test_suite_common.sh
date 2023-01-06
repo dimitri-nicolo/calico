@@ -3861,11 +3861,11 @@ test_bgp_filters() {
 }
 
 test_bgp_reachable_by() {
-  test_bgp_reachable_by_for_global_peer
+  test_bgp_reachable_by_for_global_peers
   test_bgp_reachable_by_for_route_reflectors
 }
 
-test_bgp_reachable_by_for_global_peer() {
+test_bgp_reachable_by_for_global_peers() {
 
     # For KDD, run Typha and clean up the output directory.
     if [ "$DATASTORE_TYPE" = kubernetes ]; then
@@ -3951,7 +3951,7 @@ spec:
   keepOriginalNextHop: true
 EOF
 
-    test_confd_templates reachable_by/global_peer
+    test_confd_templates reachable_by/global_peers
 
     # Kill confd.
     kill -9 $CONFD_PID
