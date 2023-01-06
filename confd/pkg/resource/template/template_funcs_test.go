@@ -167,7 +167,7 @@ func constructBGPPeerKVPs(peerIPStrs []string, enet string, port uint16, t *test
 	return kvps
 }
 
-func Test_BIRDExternalNetwork_NoExternalNetworks(t *testing.T) {
+func Test_BIRDExternalNetworkConfig_NoExternalNetworks(t *testing.T) {
 	expectedEmptyBIRDCfgStr := []string{
 		"# No ExternalNetworks configured",
 	}
@@ -176,7 +176,7 @@ func Test_BIRDExternalNetwork_NoExternalNetworks(t *testing.T) {
 		expectedEmptyBIRDCfgStr, t)
 }
 
-func Test_EmitBIRDExternalNetwork_EmptyAllPeers(t *testing.T) {
+func Test_EmitBIRDExternalNetworkConfig_EmptyAllPeers(t *testing.T) {
 	routeTableIdxs := []uint32{7}
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
 
@@ -198,7 +198,7 @@ func Test_EmitBIRDExternalNetwork_EmptyAllPeers(t *testing.T) {
 		expectedBIRDCfgStr, t)
 }
 
-func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleGlobalBGPPeerV4(t *testing.T) {
+func Test_EmitBIRDExternalNetworkConfig_SingleExternalNetwork_SingleGlobalBGPPeerV4(t *testing.T) {
 	routeTableIdx1 := uint32(7)
 	routeTableIdxs := []uint32{routeTableIdx1}
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
@@ -225,7 +225,7 @@ func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleGlobalBGPPeerV4(t 
 		expectedBIRDCfgStr, t)
 }
 
-func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleGlobalBGPPeerV6(t *testing.T) {
+func Test_EmitBIRDExternalNetworkConfig_SingleExternalNetwork_SingleGlobalBGPPeerV6(t *testing.T) {
 	routeTableIdx1 := uint32(7)
 	routeTableIdxs := []uint32{routeTableIdx1}
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
@@ -252,7 +252,7 @@ func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleGlobalBGPPeerV6(t 
 		expectedBIRDCfgStr, t)
 }
 
-func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_MultipleGlobalBGPPeersV4(t *testing.T) {
+func Test_EmitBIRDExternalNetworkConfig_SingleExternalNetwork_MultipleGlobalBGPPeersV4(t *testing.T) {
 	routeTableIdx1 := uint32(7)
 	routeTableIdxs := []uint32{routeTableIdx1}
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
@@ -280,7 +280,7 @@ func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_MultipleGlobalBGPPeersV4
 		expectedBIRDCfgStr, t)
 }
 
-func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_MultipleGlobalBGPPeersV6(t *testing.T) {
+func Test_EmitBIRDExternalNetworkConfig_SingleExternalNetwork_MultipleGlobalBGPPeersV6(t *testing.T) {
 	routeTableIdx1 := uint32(7)
 	routeTableIdxs := []uint32{routeTableIdx1}
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
@@ -308,7 +308,7 @@ func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_MultipleGlobalBGPPeersV6
 		expectedBIRDCfgStr, t)
 }
 
-func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleGlobalBGPPeerV4(t *testing.T) {
+func Test_EmitBIRDExternalNetworkConfig_MultipleExternalNetwork_MultipleGlobalBGPPeerV4(t *testing.T) {
 	routeTableIdx1 := uint32(7)
 	RouteTableIdx2 := uint32(4)
 	routeTableIdxs := []uint32{routeTableIdx1, RouteTableIdx2}
@@ -351,7 +351,7 @@ func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleGlobalBGPPeerV
 		expectedBIRDCfgStr, t)
 }
 
-func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleGlobalBGPPeerV6(t *testing.T) {
+func Test_EmitBIRDExternalNetworkConfig_MultipleExternalNetwork_MultipleGlobalBGPPeerV6(t *testing.T) {
 	routeTableIdx1 := uint32(7)
 	RouteTableIdx2 := uint32(4)
 	routeTableIdxs := []uint32{routeTableIdx1, RouteTableIdx2}
@@ -394,7 +394,7 @@ func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleGlobalBGPPeerV
 		expectedBIRDCfgStr, t)
 }
 
-func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleExplicitBGPPeerV4(t *testing.T) {
+func Test_EmitBIRDExternalNetworkConfig_SingleExternalNetwork_SingleExplicitBGPPeerV4(t *testing.T) {
 	routeTableIdx1 := uint32(7)
 	routeTableIdxs := []uint32{routeTableIdx1}
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
@@ -421,7 +421,7 @@ func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleExplicitBGPPeerV4(
 		expectedBIRDCfgStr, t)
 }
 
-func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleExplicitBGPPeerV6(t *testing.T) {
+func Test_EmitBIRDExternalNetworkConfig_SingleExternalNetwork_SingleExplicitBGPPeerV6(t *testing.T) {
 	routeTableIdx1 := uint32(7)
 	routeTableIdxs := []uint32{routeTableIdx1}
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
@@ -448,7 +448,7 @@ func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleExplicitBGPPeerV6(
 		expectedBIRDCfgStr, t)
 }
 
-func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_MultipleExplicitBGPPeerV4(t *testing.T) {
+func Test_EmitBIRDExternalNetworkConfig_SingleExternalNetwork_MultipleExplicitBGPPeerV4(t *testing.T) {
 	routeTableIdx1 := uint32(7)
 	routeTableIdxs := []uint32{routeTableIdx1}
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
@@ -476,7 +476,7 @@ func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_MultipleExplicitBGPPeerV
 		expectedBIRDCfgStr, t)
 }
 
-func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_MultipleExplicitBGPPeerV6(t *testing.T) {
+func Test_EmitBIRDExternalNetworkConfig_SingleExternalNetwork_MultipleExplicitBGPPeerV6(t *testing.T) {
 	routeTableIdx1 := uint32(7)
 	routeTableIdxs := []uint32{routeTableIdx1}
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
@@ -504,7 +504,7 @@ func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_MultipleExplicitBGPPeerV
 		expectedBIRDCfgStr, t)
 }
 
-func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleExplicitBGPPeerV4(t *testing.T) {
+func Test_EmitBIRDExternalNetworkConfig_MultipleExternalNetwork_MultipleExplicitBGPPeerV4(t *testing.T) {
 	routeTableIdx1 := uint32(7)
 	routeTableIdx2 := uint32(4)
 	routeTableIdxs := []uint32{routeTableIdx1, routeTableIdx2}
@@ -547,7 +547,7 @@ func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleExplicitBGPPee
 		expectedBIRDCfgStr, t)
 }
 
-func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleExplicitBGPPeerV6(t *testing.T) {
+func Test_EmitBIRDExternalNetworkConfig_MultipleExternalNetwork_MultipleExplicitBGPPeerV6(t *testing.T) {
 	routeTableIdx1 := uint32(7)
 	routeTableIdx2 := uint32(4)
 	routeTableIdxs := []uint32{routeTableIdx1, routeTableIdx2}
@@ -590,7 +590,7 @@ func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleExplicitBGPPee
 		expectedBIRDCfgStr, t)
 }
 
-func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleExplicitAndSingleGlobalBGPPeerV4(t *testing.T) {
+func Test_EmitBIRDExternalNetworkConfig_SingleExternalNetwork_SingleExplicitAndSingleGlobalBGPPeerV4(t *testing.T) {
 	routeTableIdx1 := uint32(7)
 	routeTableIdxs := []uint32{routeTableIdx1}
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
@@ -620,7 +620,7 @@ func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleExplicitAndSingleG
 		expectedBIRDCfgStr, t)
 }
 
-func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleExplicitAndSingleGlobalBGPPeerV6(t *testing.T) {
+func Test_EmitBIRDExternalNetworkConfig_SingleExternalNetwork_SingleExplicitAndSingleGlobalBGPPeerV6(t *testing.T) {
 	routeTableIdx1 := uint32(7)
 	routeTableIdxs := []uint32{routeTableIdx1}
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
@@ -650,7 +650,7 @@ func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleExplicitAndSingleG
 		expectedBIRDCfgStr, t)
 }
 
-func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleExplicitAndMultipleGlobalBGPPeerV4(t *testing.T) {
+func Test_EmitBIRDExternalNetworkConfig_MultipleExternalNetwork_MultipleExplicitAndMultipleGlobalBGPPeerV4(t *testing.T) {
 	routeTableIdx1 := uint32(7)
 	routeTableIdx2 := uint32(4)
 	routeTableIdxs := []uint32{routeTableIdx1, routeTableIdx2}
@@ -701,7 +701,7 @@ func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleExplicitAndMul
 		expectedBIRDCfgStr, t)
 }
 
-func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleExplicitAndMultipleGlobalBGPPeerV6(t *testing.T) {
+func Test_EmitBIRDExternalNetworkConfig_MultipleExternalNetwork_MultipleExplicitAndMultipleGlobalBGPPeerV6(t *testing.T) {
 	routeTableIdx1 := uint32(7)
 	routeTableIdx2 := uint32(4)
 	routeTableIdxs := []uint32{routeTableIdx1, routeTableIdx2}
