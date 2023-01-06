@@ -143,13 +143,14 @@ func constructExternalNetworkKVPs(idxs []uint32, t *testing.T) memkv.KVPairs {
 	return kvps
 }
 
-func constructBGPPeerKVPs(peerIPStrs []string, enet string, t *testing.T) memkv.KVPairs {
+func constructBGPPeerKVPs(peerIPStrs []string, enet string, port uint16, t *testing.T) memkv.KVPairs {
 	var kvps memkv.KVPairs
 	for _, peerIPStr := range peerIPStrs {
 		peerIP := cnet.ParseIP(peerIPStr)
 		peer := backends.BGPPeer{
 			PeerIP:          *peerIP,
 			ExternalNetwork: enet,
+			Port:            port,
 		}
 
 		peerJSON, err := json.Marshal(peer)
@@ -203,7 +204,7 @@ func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleGlobalBGPPeerV4(t 
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
 
 	globalPeerIPStrs := []string{v4GlobalPeerIP1Str}
-	globalPeersKVPs := constructBGPPeerKVPs(globalPeerIPStrs, externalNetworkKVPs[0].Key, t)
+	globalPeersKVPs := constructBGPPeerKVPs(globalPeerIPStrs, externalNetworkKVPs[0].Key, 0, t)
 
 	expectedBIRDCfgStr := []string{
 		"# ExternalNetwork test-enet-1",
@@ -230,7 +231,7 @@ func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleGlobalBGPPeerV6(t 
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
 
 	globalPeerIPStrs := []string{v6GlobalPeerIP1Str}
-	globalPeersKVPs := constructBGPPeerKVPs(globalPeerIPStrs, externalNetworkKVPs[0].Key, t)
+	globalPeersKVPs := constructBGPPeerKVPs(globalPeerIPStrs, externalNetworkKVPs[0].Key, 0, t)
 
 	expectedBIRDCfgStr := []string{
 		"# ExternalNetwork test-enet-1",
@@ -257,7 +258,7 @@ func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_MultipleGlobalBGPPeersV4
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
 
 	globalPeerIPStrs := []string{v4GlobalPeerIP1Str, v4GlobalPeerIP2Str}
-	globalPeersKVPs := constructBGPPeerKVPs(globalPeerIPStrs, externalNetworkKVPs[0].Key, t)
+	globalPeersKVPs := constructBGPPeerKVPs(globalPeerIPStrs, externalNetworkKVPs[0].Key, 0, t)
 
 	expectedBIRDCfgStr := []string{
 		"# ExternalNetwork test-enet-1",
@@ -285,7 +286,7 @@ func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_MultipleGlobalBGPPeersV6
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
 
 	globalPeerIPStrs := []string{v6GlobalPeerIP1Str, v6GlobalPeerIP2Str}
-	globalPeersKVPs := constructBGPPeerKVPs(globalPeerIPStrs, externalNetworkKVPs[0].Key, t)
+	globalPeersKVPs := constructBGPPeerKVPs(globalPeerIPStrs, externalNetworkKVPs[0].Key, 0, t)
 
 	expectedBIRDCfgStr := []string{
 		"# ExternalNetwork test-enet-1",
@@ -314,9 +315,9 @@ func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleGlobalBGPPeerV
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
 
 	globalPeerIPStrs1 := []string{v4GlobalPeerIP1Str}
-	globalPeersKVPs1 := constructBGPPeerKVPs(globalPeerIPStrs1, externalNetworkKVPs[0].Key, t)
+	globalPeersKVPs1 := constructBGPPeerKVPs(globalPeerIPStrs1, externalNetworkKVPs[0].Key, 0, t)
 	globalPeerIPStrs2 := []string{v4GlobalPeerIP2Str}
-	globalPeersKVPs2 := constructBGPPeerKVPs(globalPeerIPStrs2, externalNetworkKVPs[1].Key, t)
+	globalPeersKVPs2 := constructBGPPeerKVPs(globalPeerIPStrs2, externalNetworkKVPs[1].Key, 0, t)
 	globalPeersKVPs := append(globalPeersKVPs1, globalPeersKVPs2...)
 
 	expectedBIRDCfgStr := []string{
@@ -357,9 +358,9 @@ func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleGlobalBGPPeerV
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
 
 	globalPeerIPStrs1 := []string{v6GlobalPeerIP1Str}
-	globalPeersKVPs1 := constructBGPPeerKVPs(globalPeerIPStrs1, externalNetworkKVPs[0].Key, t)
+	globalPeersKVPs1 := constructBGPPeerKVPs(globalPeerIPStrs1, externalNetworkKVPs[0].Key, 0, t)
 	globalPeerIPStrs2 := []string{v6GlobalPeerIP2Str}
-	globalPeersKVPs2 := constructBGPPeerKVPs(globalPeerIPStrs2, externalNetworkKVPs[1].Key, t)
+	globalPeersKVPs2 := constructBGPPeerKVPs(globalPeerIPStrs2, externalNetworkKVPs[1].Key, 0, t)
 	globalPeersKVPs := append(globalPeersKVPs1, globalPeersKVPs2...)
 
 	expectedBIRDCfgStr := []string{
@@ -399,7 +400,7 @@ func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleExplicitBGPPeerV4(
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
 
 	explicitPeerIPStrs := []string{v4ExplicitPeerIP1Str}
-	explicitPeersKVPs := constructBGPPeerKVPs(explicitPeerIPStrs, externalNetworkKVPs[0].Key, t)
+	explicitPeersKVPs := constructBGPPeerKVPs(explicitPeerIPStrs, externalNetworkKVPs[0].Key, 0, t)
 
 	expectedBIRDCfgStr := []string{
 		"# ExternalNetwork test-enet-1",
@@ -426,7 +427,7 @@ func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleExplicitBGPPeerV6(
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
 
 	explicitPeerIPStrs := []string{v6ExplicitPeerIP1Str}
-	explicitPeersKVPs := constructBGPPeerKVPs(explicitPeerIPStrs, externalNetworkKVPs[0].Key, t)
+	explicitPeersKVPs := constructBGPPeerKVPs(explicitPeerIPStrs, externalNetworkKVPs[0].Key, 0, t)
 
 	expectedBIRDCfgStr := []string{
 		"# ExternalNetwork test-enet-1",
@@ -453,7 +454,7 @@ func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_MultipleExplicitBGPPeerV
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
 
 	explicitPeerIPStrs := []string{v4ExplicitPeerIP1Str, v4ExplicitPeerIP2Str}
-	explicitPeersKVPs := constructBGPPeerKVPs(explicitPeerIPStrs, externalNetworkKVPs[0].Key, t)
+	explicitPeersKVPs := constructBGPPeerKVPs(explicitPeerIPStrs, externalNetworkKVPs[0].Key, 0, t)
 
 	expectedBIRDCfgStr := []string{
 		"# ExternalNetwork test-enet-1",
@@ -481,7 +482,7 @@ func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_MultipleExplicitBGPPeerV
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
 
 	explicitPeerIPStrs := []string{v6ExplicitPeerIP1Str, v6ExplicitPeerIP2Str}
-	explicitPeersKVPs := constructBGPPeerKVPs(explicitPeerIPStrs, externalNetworkKVPs[0].Key, t)
+	explicitPeersKVPs := constructBGPPeerKVPs(explicitPeerIPStrs, externalNetworkKVPs[0].Key, 0, t)
 
 	expectedBIRDCfgStr := []string{
 		"# ExternalNetwork test-enet-1",
@@ -510,9 +511,9 @@ func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleExplicitBGPPee
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
 
 	explicitPeerIPStrs1 := []string{v4ExplicitPeerIP1Str}
-	explicitPeersKVPs1 := constructBGPPeerKVPs(explicitPeerIPStrs1, externalNetworkKVPs[0].Key, t)
+	explicitPeersKVPs1 := constructBGPPeerKVPs(explicitPeerIPStrs1, externalNetworkKVPs[0].Key, 0, t)
 	explicitPeerIPStrs2 := []string{v4ExplicitPeerIP2Str}
-	explicitPeersKVPs2 := constructBGPPeerKVPs(explicitPeerIPStrs2, externalNetworkKVPs[1].Key, t)
+	explicitPeersKVPs2 := constructBGPPeerKVPs(explicitPeerIPStrs2, externalNetworkKVPs[1].Key, 0, t)
 	explicitPeersKVPs := append(explicitPeersKVPs1, explicitPeersKVPs2...)
 
 	expectedBIRDCfgStr := []string{
@@ -553,9 +554,9 @@ func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleExplicitBGPPee
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
 
 	explicitPeerIPStrs1 := []string{v6ExplicitPeerIP1Str}
-	explicitPeersKVPs1 := constructBGPPeerKVPs(explicitPeerIPStrs1, externalNetworkKVPs[0].Key, t)
+	explicitPeersKVPs1 := constructBGPPeerKVPs(explicitPeerIPStrs1, externalNetworkKVPs[0].Key, 0, t)
 	explicitPeerIPStrs2 := []string{v6ExplicitPeerIP2Str}
-	explicitPeersKVPs2 := constructBGPPeerKVPs(explicitPeerIPStrs2, externalNetworkKVPs[1].Key, t)
+	explicitPeersKVPs2 := constructBGPPeerKVPs(explicitPeerIPStrs2, externalNetworkKVPs[1].Key, 0, t)
 	explicitPeersKVPs := append(explicitPeersKVPs1, explicitPeersKVPs2...)
 
 	expectedBIRDCfgStr := []string{
@@ -595,9 +596,9 @@ func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleExplicitAndSingleG
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
 
 	globalPeerIPStrs := []string{v4GlobalPeerIP1Str}
-	globalPeersKVPs := constructBGPPeerKVPs(globalPeerIPStrs, externalNetworkKVPs[0].Key, t)
+	globalPeersKVPs := constructBGPPeerKVPs(globalPeerIPStrs, externalNetworkKVPs[0].Key, 0, t)
 	explicitPeerIPStrs := []string{v4ExplicitPeerIP1Str}
-	explicitPeersKVPs := constructBGPPeerKVPs(explicitPeerIPStrs, externalNetworkKVPs[0].Key, t)
+	explicitPeersKVPs := constructBGPPeerKVPs(explicitPeerIPStrs, externalNetworkKVPs[0].Key, 0, t)
 
 	expectedBIRDCfgStr := []string{
 		"# ExternalNetwork test-enet-1",
@@ -625,9 +626,9 @@ func Test_EmitBIRDExternalNetwork_SingleExternalNetwork_SingleExplicitAndSingleG
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
 
 	globalPeerIPStrs := []string{v6GlobalPeerIP1Str}
-	globalPeersKVPs := constructBGPPeerKVPs(globalPeerIPStrs, externalNetworkKVPs[0].Key, t)
+	globalPeersKVPs := constructBGPPeerKVPs(globalPeerIPStrs, externalNetworkKVPs[0].Key, 0, t)
 	explicitPeerIPStrs := []string{v6ExplicitPeerIP1Str}
-	explicitPeersKVPs := constructBGPPeerKVPs(explicitPeerIPStrs, externalNetworkKVPs[0].Key, t)
+	explicitPeersKVPs := constructBGPPeerKVPs(explicitPeerIPStrs, externalNetworkKVPs[0].Key, 0, t)
 
 	expectedBIRDCfgStr := []string{
 		"# ExternalNetwork test-enet-1",
@@ -656,15 +657,15 @@ func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleExplicitAndMul
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
 
 	globalPeerIPStrs1 := []string{v4GlobalPeerIP1Str}
-	globalPeersKVPs1 := constructBGPPeerKVPs(globalPeerIPStrs1, externalNetworkKVPs[0].Key, t)
+	globalPeersKVPs1 := constructBGPPeerKVPs(globalPeerIPStrs1, externalNetworkKVPs[0].Key, 0, t)
 	globalPeerIPStrs2 := []string{v4GlobalPeerIP2Str}
-	globalPeersKVPs2 := constructBGPPeerKVPs(globalPeerIPStrs2, externalNetworkKVPs[1].Key, t)
+	globalPeersKVPs2 := constructBGPPeerKVPs(globalPeerIPStrs2, externalNetworkKVPs[1].Key, 0, t)
 	globalPeersKVPs := append(globalPeersKVPs1, globalPeersKVPs2...)
 
 	explicitPeerIPStrs1 := []string{v4ExplicitPeerIP1Str}
-	explicitPeersKVPs1 := constructBGPPeerKVPs(explicitPeerIPStrs1, externalNetworkKVPs[0].Key, t)
+	explicitPeersKVPs1 := constructBGPPeerKVPs(explicitPeerIPStrs1, externalNetworkKVPs[0].Key, 0, t)
 	explicitPeerIPStrs2 := []string{v4ExplicitPeerIP2Str}
-	explicitPeersKVPs2 := constructBGPPeerKVPs(explicitPeerIPStrs2, externalNetworkKVPs[1].Key, t)
+	explicitPeersKVPs2 := constructBGPPeerKVPs(explicitPeerIPStrs2, externalNetworkKVPs[1].Key, 0, t)
 	explicitPeersKVPs := append(explicitPeersKVPs1, explicitPeersKVPs2...)
 
 	expectedBIRDCfgStr := []string{
@@ -707,15 +708,15 @@ func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleExplicitAndMul
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
 
 	globalPeerIPStrs1 := []string{v6GlobalPeerIP1Str}
-	globalPeersKVPs1 := constructBGPPeerKVPs(globalPeerIPStrs1, externalNetworkKVPs[0].Key, t)
+	globalPeersKVPs1 := constructBGPPeerKVPs(globalPeerIPStrs1, externalNetworkKVPs[0].Key, 0, t)
 	globalPeerIPStrs2 := []string{v6GlobalPeerIP2Str}
-	globalPeersKVPs2 := constructBGPPeerKVPs(globalPeerIPStrs2, externalNetworkKVPs[1].Key, t)
+	globalPeersKVPs2 := constructBGPPeerKVPs(globalPeerIPStrs2, externalNetworkKVPs[1].Key, 0, t)
 	globalPeersKVPs := append(globalPeersKVPs1, globalPeersKVPs2...)
 
 	explicitPeerIPStrs1 := []string{v6ExplicitPeerIP1Str}
-	explicitPeersKVPs1 := constructBGPPeerKVPs(explicitPeerIPStrs1, externalNetworkKVPs[0].Key, t)
+	explicitPeersKVPs1 := constructBGPPeerKVPs(explicitPeerIPStrs1, externalNetworkKVPs[0].Key, 0, t)
 	explicitPeerIPStrs2 := []string{v6ExplicitPeerIP2Str}
-	explicitPeersKVPs2 := constructBGPPeerKVPs(explicitPeerIPStrs2, externalNetworkKVPs[1].Key, t)
+	explicitPeersKVPs2 := constructBGPPeerKVPs(explicitPeerIPStrs2, externalNetworkKVPs[1].Key, 0, t)
 	explicitPeersKVPs := append(explicitPeersKVPs1, explicitPeersKVPs2...)
 
 	expectedBIRDCfgStr := []string{
@@ -742,6 +743,107 @@ func Test_EmitBIRDExternalNetwork_MultipleExternalNetwork_MultipleExplicitAndMul
 		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
 		"    if proto = \"Global_7700__2\" then accept;",
 		"    if proto = \"Node_4400__2\" then accept;",
+		"    reject;",
+		"  };",
+		"}",
+	}
+
+	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, globalPeersKVPs, explicitPeersKVPs,
+		expectedBIRDCfgStr, t)
+}
+
+func Test_EmitBIRDExternalNetworkConfig_PeersWithNonExistentExternalNetwork(t *testing.T) {
+	routeTableIdx1 := uint32(7)
+	routeTableIdxs := []uint32{routeTableIdx1}
+	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
+
+	globalPeerIPStrs := []string{v4GlobalPeerIP1Str}
+	globalPeersKVPs := constructBGPPeerKVPs(globalPeerIPStrs, "NonExistentExternalNetwork", 0, t)
+
+	explicitPeerIPStrs := []string{v4ExplicitPeerIP1Str}
+	explicitPeersKVPs := constructBGPPeerKVPs(explicitPeerIPStrs, "NonExistentExternalNetwork", 0, t)
+
+	expectedBIRDCfgStr := []string{
+		"# ExternalNetwork test-enet-1",
+		"table 'T_test-enet-1';",
+		"protocol kernel 'K_test-enet-1' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-1';",
+		"  kernel table 7;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    reject;",
+		"  };",
+		"}",
+	}
+
+	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, globalPeersKVPs, explicitPeersKVPs,
+		expectedBIRDCfgStr, t)
+}
+
+func Test_EmitBIRDExternalNetworkConfig_MultiplePeersSomeWithExternalNetworksSomeWithout(t *testing.T) {
+	routeTableIdx1 := uint32(7)
+	routeTableIdxs := []uint32{routeTableIdx1}
+	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
+
+	globalPeerIPStrs1 := []string{v4GlobalPeerIP1Str, v6GlobalPeerIP1Str}
+	globalPeersKVPs1 := constructBGPPeerKVPs(globalPeerIPStrs1, "NonExistentExternalNetwork", 0, t)
+	globalPeerIPStrs2 := []string{v4GlobalPeerIP2Str, v6GlobalPeerIP2Str}
+	globalPeersKVPs2 := constructBGPPeerKVPs(globalPeerIPStrs2, externalNetworkKVPs[0].Key, 0, t)
+	globalPeersKVPs := append(globalPeersKVPs1, globalPeersKVPs2...)
+
+	explicitPeerIPStrs1 := []string{v4ExplicitPeerIP1Str, v6ExplicitPeerIP1Str}
+	explicitPeersKVPs1 := constructBGPPeerKVPs(explicitPeerIPStrs1, "", 0, t)
+	explicitPeerIPStrs2 := []string{v4ExplicitPeerIP2Str, v6ExplicitPeerIP2Str}
+	explicitPeersKVPs2 := constructBGPPeerKVPs(explicitPeerIPStrs2, externalNetworkKVPs[0].Key, 0, t)
+	explicitPeersKVPs := append(explicitPeersKVPs1, explicitPeersKVPs2...)
+
+	expectedBIRDCfgStr := []string{
+		"# ExternalNetwork test-enet-1",
+		"table 'T_test-enet-1';",
+		"protocol kernel 'K_test-enet-1' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-1';",
+		"  kernel table 7;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    if proto = \"Global_77_0_0_2\" then accept;",
+		"    if proto = \"Global_7700__2\" then accept;",
+		"    if proto = \"Node_44_0_0_2\" then accept;",
+		"    if proto = \"Node_4400__2\" then accept;",
+		"    reject;",
+		"  };",
+		"}",
+	}
+
+	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, globalPeersKVPs, explicitPeersKVPs,
+		expectedBIRDCfgStr, t)
+}
+
+func Test_EmitBIRDExternalNetworkConfig_PeersWithPorts(t *testing.T) {
+	routeTableIdx1 := uint32(7)
+	routeTableIdxs := []uint32{routeTableIdx1}
+	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
+
+	globalPeerIPStrs := []string{v4GlobalPeerIP1Str, v6GlobalPeerIP1Str}
+	globalPeersKVPs := constructBGPPeerKVPs(globalPeerIPStrs, externalNetworkKVPs[0].Key, 77, t)
+
+	explicitPeerIPStrs := []string{v4ExplicitPeerIP1Str, v6ExplicitPeerIP1Str}
+	explicitPeersKVPs := constructBGPPeerKVPs(explicitPeerIPStrs, externalNetworkKVPs[0].Key, 44, t)
+
+	expectedBIRDCfgStr := []string{
+		"# ExternalNetwork test-enet-1",
+		"table 'T_test-enet-1';",
+		"protocol kernel 'K_test-enet-1' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-1';",
+		"  kernel table 7;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    if proto = \"Global_77_0_0_1_port_77\" then accept;",
+		"    if proto = \"Global_7700__1_port_77\" then accept;",
+		"    if proto = \"Node_44_0_0_1_port_44\" then accept;",
+		"    if proto = \"Node_4400__1_port_44\" then accept;",
 		"    reject;",
 		"  };",
 		"}",
