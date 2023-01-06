@@ -17,12 +17,16 @@ const (
 	maxFuncNameLen       = 66 //Max BIRD symbol length of 64 + 2 for bookending single quotes
 	v4GlobalPeerIP1Str   = "77.0.0.1"
 	v4GlobalPeerIP2Str   = "77.0.0.2"
+	v4GlobalPeerIP3Str   = "77.0.0.3"
 	v6GlobalPeerIP1Str   = "7700::1"
 	v6GlobalPeerIP2Str   = "7700::2"
+	v6GlobalPeerIP3Str   = "7700::3"
 	v4ExplicitPeerIP1Str = "44.0.0.1"
 	v4ExplicitPeerIP2Str = "44.0.0.2"
+	v4ExplicitPeerIP3Str = "44.0.0.3"
 	v6ExplicitPeerIP1Str = "4400::1"
 	v6ExplicitPeerIP2Str = "4400::2"
+	v6ExplicitPeerIP3Str = "4400::3"
 )
 
 func Test_EmitBGPFilterFunctionName(t *testing.T) {
@@ -200,20 +204,27 @@ func Test_EmitBIRDExternalNetworkConfig_EmptyAllPeers(t *testing.T) {
 
 func Test_EmitBIRDExternalNetworkConfig_MultiplePeersSomeWithExternalNetworksSomeWithout(t *testing.T) {
 	routeTableIdx1 := uint32(7)
-	routeTableIdxs := []uint32{routeTableIdx1}
+	routeTableIdx2 := uint32(4)
+	routeTableIdxs := []uint32{routeTableIdx1, routeTableIdx2}
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
 
 	globalPeerIPStrs1 := []string{v4GlobalPeerIP1Str, v6GlobalPeerIP1Str}
 	globalPeersKVPs1 := constructBGPPeerKVPs(globalPeerIPStrs1, "NonExistentExternalNetwork", 0, t)
 	globalPeerIPStrs2 := []string{v4GlobalPeerIP2Str, v6GlobalPeerIP2Str}
 	globalPeersKVPs2 := constructBGPPeerKVPs(globalPeerIPStrs2, externalNetworkKVPs[0].Key, 0, t)
+	globalPeerIPStrs3 := []string{v4GlobalPeerIP3Str, v6GlobalPeerIP3Str}
+	globalPeersKVPs3 := constructBGPPeerKVPs(globalPeerIPStrs3, externalNetworkKVPs[1].Key, 0, t)
 	globalPeersKVPs := append(globalPeersKVPs1, globalPeersKVPs2...)
+	globalPeersKVPs = append(globalPeersKVPs, globalPeersKVPs3...)
 
 	explicitPeerIPStrs1 := []string{v4ExplicitPeerIP1Str, v6ExplicitPeerIP1Str}
 	explicitPeersKVPs1 := constructBGPPeerKVPs(explicitPeerIPStrs1, "", 0, t)
 	explicitPeerIPStrs2 := []string{v4ExplicitPeerIP2Str, v6ExplicitPeerIP2Str}
 	explicitPeersKVPs2 := constructBGPPeerKVPs(explicitPeerIPStrs2, externalNetworkKVPs[0].Key, 0, t)
+	explicitPeerIPStrs3 := []string{v4ExplicitPeerIP3Str, v6ExplicitPeerIP3Str}
+	explicitPeersKVPs3 := constructBGPPeerKVPs(explicitPeerIPStrs3, externalNetworkKVPs[1].Key, 0, t)
 	explicitPeersKVPs := append(explicitPeersKVPs1, explicitPeersKVPs2...)
+	explicitPeersKVPs = append(explicitPeersKVPs, explicitPeersKVPs3...)
 
 	expectedBIRDCfgStr := []string{
 		"# ExternalNetwork test-enet-1",
@@ -228,6 +239,21 @@ func Test_EmitBIRDExternalNetworkConfig_MultiplePeersSomeWithExternalNetworksSom
 		"    if proto = \"Global_7700__2\" then accept;",
 		"    if proto = \"Node_44_0_0_2\" then accept;",
 		"    if proto = \"Node_4400__2\" then accept;",
+		"    reject;",
+		"  };",
+		"}",
+		"# ExternalNetwork test-enet-2",
+		"table 'T_test-enet-2';",
+		"protocol kernel 'K_test-enet-2' from kernel_template {",
+		"  device routes yes;",
+		"  table 'T_test-enet-2';",
+		"  kernel table 4;",
+		"  export filter {",
+		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		"    if proto = \"Global_77_0_0_3\" then accept;",
+		"    if proto = \"Global_7700__3\" then accept;",
+		"    if proto = \"Node_44_0_0_3\" then accept;",
+		"    if proto = \"Node_4400__3\" then accept;",
 		"    reject;",
 		"  };",
 		"}",
