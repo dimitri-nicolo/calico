@@ -119,6 +119,7 @@ COPY --from=builder /usr/bin/sh /usr/bin/sh
 COPY --from=builder /usr/bin/sleep /usr/bin/sleep
 COPY --from=builder /usr/bin/touch /usr/bin/touch
 COPY --from=builder /usr/bin/uname /usr/bin/uname
+COPY --from=builder /usr/bin/yes /usr/bin/yes
 COPY --from=builder /usr/sbin/chroot /usr/sbin/chroot
 
 COPY --from=builder /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
