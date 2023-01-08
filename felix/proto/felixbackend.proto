@@ -181,6 +181,11 @@ message ToDataplane {
     PacketCaptureUpdate packet_capture_update = 128;
     // PacketCaptureRemove is sent to stop packetcapture.
     PacketCaptureRemove packet_capture_remove = 129;
+
+    // ExternalNetworkUpdate is sent when a ExternalNetwork is added/updated.
+    ExternalNetworkUpdate external_network_update = 130;
+    // ExternalNetworkRemove is sent when a ExternalNetwork is removed.
+    ExternalNetworkRemove external_network_remove = 131;
   }
 }
 
@@ -453,6 +458,7 @@ message WorkloadEndpoint {
   repeated string aws_elastic_ips = 102;
   int32 egress_max_next_hops = 103;
   repeated string allow_spoofed_source_prefixes = 10;
+  repeated string external_network_names = 105;
 }
 
 message WorkloadEndpointRemove {
@@ -902,4 +908,22 @@ message ServiceUpdate {
 message ServiceRemove {
 	string name = 1;
 	string namespace = 2;
+}
+
+message ExternalNetworkID {
+  string name = 1;
+}
+
+message ExternalNetwork {
+  string name = 1;
+  uint32 route_table_index = 2;
+}
+
+message ExternalNetworkUpdate {
+  ExternalNetworkID id = 1;
+  ExternalNetwork network = 2;
+}
+
+message ExternalNetworkRemove {
+  ExternalNetworkID id = 1;;
 }

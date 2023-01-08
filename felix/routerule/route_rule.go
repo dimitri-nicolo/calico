@@ -50,6 +50,7 @@ type RouteRules struct {
 	IPVersion int
 
 	// Routing table indexes which is exclusively managed by us.
+	// If it has no member, it means we accept a rule with any table index.
 	tableIndexSet set.Set[int]
 
 	netlinkFamily  int
@@ -70,6 +71,16 @@ type RouteRules struct {
 	// For example, egress ip manager considers two rules are matching if they
 	// have same FWMark , source ip matching condition.
 	matchForRemove RulesMatchFunc
+	// Rules filter function for cleanup.
+	// routerule dataplane can be configured in two different modes:
+	// 1. Exclusive: routerule is configured with a fixed range of table index and manage every rule referring a table
+	//    index in that range. For any rule falls into this category，routerule dataplane cleans up
+	//    any rule which is not needed, regardless of its ownership.
+	//    In this case, filterForCleanup should be set to nil which means no filter needed.
+	// 2. Open: Table index range is not fixed and the index could be used by third parties. routerule dataplane
+	//    clean up any stale rule if they satisfies filterForCleanup function. For example, external network
+	//    manager set this function to match EgressFWMark and an unique priority.
+	filterForCleanup RuleFilterFunc
 
 	// activeRules holds rules which should be programmed.
 	// Note: it's very unusual to have a set of pointers since set updates use shallow comparisons.  In this
@@ -89,12 +100,16 @@ func New(
 	tableIndexSet set.Set[int],
 	updateFunc RulesMatchFunc,
 	removeFunc RulesMatchFunc,
+	cleanupFunc RuleFilterFunc,
 	netlinkTimeout time.Duration,
 	newNetlinkHandle func() (HandleIface, error),
 	opRecorder logutils.OpRecorder,
 ) (*RouteRules, error) {
-	if tableIndexSet.Len() == 0 {
-		return nil, TableIndexFailed
+	// Validate tableIndexSet if we are running in an exclusive mode (cleanup filter function is nil).
+	if cleanupFunc == nil {
+		if tableIndexSet.Len() == 0 {
+			return nil, TableIndexFailed
+		}
 	}
 
 	indexOK := true
@@ -121,6 +136,7 @@ func New(
 		IPVersion:        ipVersion,
 		matchForUpdate:   updateFunc,
 		matchForRemove:   removeFunc,
+		filterForCleanup: cleanupFunc,
 		tableIndexSet:    tableIndexSet,
 		activeRules:      set.New[*Rule](),
 		netlinkFamily:    ipVersionToNetlinkFamily(ipVersion),
@@ -155,6 +171,15 @@ func (r *RouteRules) GetAllActiveRules() []*Rule {
 	return active
 }
 
+// Check if we accept a index as a valid table index.
+func (r *RouteRules) IsValidTableIndex(index int) bool {
+	if r.tableIndexSet.Len() == 0 {
+		// Always accept an index if we don't set a fixed range of table indices.
+		return true
+	}
+	return r.tableIndexSet.Contains(index)
+}
+
 // Set a Rule. Add to activeRules if it does not already exist based on matchForUpdate function.
 func (r *RouteRules) SetRule(rule *Rule) {
 
@@ -162,7 +187,7 @@ func (r *RouteRules) SetRule(rule *Rule) {
 		log.WithField("rule", rule).Warnf("Rule does not match family %d, ignoring.", r.netlinkFamily)
 	}
 
-	if !r.tableIndexSet.Contains(rule.nlRule.Table) {
+	if !r.IsValidTableIndex(rule.nlRule.Table) {
 		log.WithField("tableindex", rule.nlRule.Table).Panic("Unknown Table Index")
 	}
 
@@ -190,6 +215,10 @@ func (r *RouteRules) RemoveRule(rule *Rule) {
 func (r *RouteRules) QueueResync() {
 	r.logCxt.Debug("Queueing a resync of routing rules.")
 	r.inSync = false
+}
+
+func (r *RouteRules) InSync() bool {
+	return r.inSync
 }
 
 func (r *RouteRules) getNetlinkHandle() (HandleIface, error) {
@@ -256,7 +285,7 @@ func (r *RouteRules) InitFromKernel() {
 	felixRules := make([]*Rule, 0)
 	for _, rule := range rules {
 		rule := rule
-		if r.tableIndexSet.Contains(rule.Table) {
+		if r.IsValidTableIndex(rule.Table) {
 			rule.Family = r.netlinkFamily // feels hacky, but following what other parts of this module do
 			rr := FromNetlinkRule(&rule)  // '&rule' would be the same for all iterations here, so we index into rules list explicitly
 			felixRules = append(felixRules, rr)
@@ -298,8 +327,8 @@ func (r *RouteRules) Apply() error {
 	for _, nlRule := range nlRules {
 		// Give each loop a fresh copy of nlRule since we would need to use pointer later.
 		nlRule := nlRule
-		if r.tableIndexSet.Contains(nlRule.Table) {
-			// Table index of the rule is managed by us.
+		if r.IsValidTableIndex(nlRule.Table) {
+			// Table index of the rule is managed by us or accepted as desired.
 			// Be careful, do not use &nlRule below as it remain same value through iterations.
 			dataplaneRule := FromNetlinkRule(&nlRule)
 			if activeRule := r.getActiveRule(dataplaneRule, r.matchForUpdate); activeRule != nil {
@@ -307,9 +336,9 @@ func (r *RouteRules) Apply() error {
 				activeRule.LogCxt().WithField("nlRule", nlRule).Debug(
 					"Rule from netlink is in our active set, no need to add it.")
 				toAdd.Discard(activeRule)
-			} else {
+			} else if (r.filterForCleanup == nil) || (r.filterForCleanup(dataplaneRule)) {
 				log.WithField("nlRule", nlRule).Debug(
-					"Rule from netlink not in our active set, remove it.")
+					"Rule from netlink not in our active set and pass cleanup filter, remove it.")
 				toRemove.Add(dataplaneRule)
 			}
 		}

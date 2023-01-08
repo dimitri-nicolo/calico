@@ -190,6 +190,14 @@ func (p *passthruCallbackRecorder) OnGlobalBGPConfigUpdate(*v3.BGPConfiguration)
 	Fail("OnGlobalBGPConfigUpdate received")
 }
 
+func (p *passthruCallbackRecorder) OnExternalNetworkUpdate(*proto.ExternalNetworkUpdate) {
+	Fail("OnExternalNetworkUpdate received")
+}
+
+func (p *passthruCallbackRecorder) OnExternalNetworkRemove(*proto.ExternalNetworkRemove) {
+	Fail("OnExternalNetworkRemove received")
+}
+
 func labelsKV(name string, labels map[string]string) model.KVPair {
 	var value interface{}
 	if labels != nil {

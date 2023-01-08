@@ -445,8 +445,8 @@ EOF
         return json.loads(run("kubectl get po %s -n %s -o json | jq '.metadata.annotations'" %
                            (self.name, self.ns)).strip().strip('"'))
 
-    def execute(self, cmd):
-        return kubectl("exec %s -n %s -- %s" % (self.name, self.ns, cmd))
+    def execute(self, cmd, timeout=0):
+        return kubectl("exec %s -n %s -- %s" % (self.name, self.ns, cmd), timeout=timeout)
 
 
 class TestBaseV6(TestBase):

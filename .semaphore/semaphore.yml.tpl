@@ -539,9 +539,15 @@ blocks:
       commands:
       - cd node
     jobs:
-    - name: "Node: egress-ip"
+    - name: "Node: egress-ip no-overlay"
       commands:
-      - ../.semaphore/run-and-monitor egress-ip-test.log make egress-ip-test
+      - ../.semaphore/run-and-monitor egress-ip-test.log make egress-ip-test K8ST_TO_RUN="-A egress_ip_no_overlay"
+    - name: "Node: egress-ip ipip"
+      commands:
+      - ../.semaphore/run-and-monitor egress-ip-test.log make egress-ip-test K8ST_TO_RUN="-A egress_ip_ipip"
+    - name: "Node: egress-ip vxlan"
+      commands:
+      - ../.semaphore/run-and-monitor egress-ip-test.log make egress-ip-test K8ST_TO_RUN="-A egress_ip_vxlan"
     epilogue:
       always:
         commands:

@@ -252,6 +252,7 @@ func NewWithShims(
 		set.From(config.RoutingTableIndex),
 		routerule.RulesMatchSrcFWMarkTable,
 		routerule.RulesMatchSrcFWMarkTable,
+		nil,
 		netlinkTimeout,
 		func() (routerule.HandleIface, error) {
 			return newRouteRuleNetlink()

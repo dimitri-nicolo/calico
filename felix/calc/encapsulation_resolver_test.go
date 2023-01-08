@@ -499,3 +499,7 @@ func (e *encapResolverCallbackRecorder) OnNamespaceRemove(id proto.NamespaceID) 
 func (e *encapResolverCallbackRecorder) OnGlobalBGPConfigUpdate(*apiv3.BGPConfiguration) {
 	Fail("OnGlobalBGPConfigUpdate received")
 }
+
+func (e *encapResolverCallbackRecorder) OnExternalNetworkUpdate(*apiv3.ExternalNetwork) {
+	Fail("OnExternalNetworkUpdate received")
+}

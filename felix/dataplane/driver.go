@@ -413,6 +413,9 @@ func StartDataplaneDriver(configParams *config.Config,
 			EgressGatewayPollInterval:     configParams.EgressGatewayPollInterval,
 			EgressGatewayPollFailureCount: configParams.EgressGatewayPollFailureCount,
 
+			ExternalNetworkEnabled:             configParams.ExternalNetworkCheckEnabled(),
+			ExternalNetworkRoutingRulePriority: configParams.ExternalNetworkRoutingRulePriority,
+
 			ConfigChangedRestartCallback: configChangedRestartCallback,
 			FatalErrorRestartCallback:    fatalErrorCallback,
 			ChildExitedRestartCallback:   childExitedRestartCallback,

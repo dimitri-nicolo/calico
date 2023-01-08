@@ -159,6 +159,7 @@ func NewAWSIPManager(
 		set.FromArray(routeTableIndexes),
 		routerule.RulesMatchPrioSrcTable,
 		routerule.RulesMatchPrioSrcTable,
+		nil,
 		dpConfig.NetlinkTimeout,
 		func() (routerule.HandleIface, error) {
 			return netlink.NewHandle(syscall.NETLINK_ROUTE)
@@ -947,6 +948,7 @@ type routeRulesNewFn func(
 	tableIndexSet set.Set[int],
 	updateFunc routerule.RulesMatchFunc,
 	removeFunc routerule.RulesMatchFunc,
+	cleanupFunc routerule.RuleFilterFunc,
 	netlinkTimeout time.Duration,
 	newNetlinkHandle func() (routerule.HandleIface, error),
 	opRecorder logutils.OpRecorder,
@@ -983,11 +985,12 @@ func realRouteRuleNew(
 	indexSet set.Set[int],
 	updateFunc routerule.RulesMatchFunc,
 	removeFunc routerule.RulesMatchFunc,
+	cleanupFunc routerule.RuleFilterFunc,
 	timeout time.Duration,
 	handle func() (routerule.HandleIface, error),
 	recorder logutils.OpRecorder,
 ) (routeRules, error) {
-	return routerule.New(version, indexSet, updateFunc, removeFunc, timeout, handle, recorder)
+	return routerule.New(version, indexSet, updateFunc, removeFunc, cleanupFunc, timeout, handle, recorder)
 }
 
 func realRouteTableNew(

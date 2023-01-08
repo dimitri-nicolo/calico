@@ -182,9 +182,10 @@ var _ = Describe("Test Pod conversion", func() {
 				Namespace: "default",
 				Annotations: map[string]string{
 					"arbitrary": "annotation",
-					"egress.projectcalico.org/namespaceSelector": "wblack == 'white'",
-					"egress.projectcalico.org/selector":          "wred == 'green'",
-					"cni.projectcalico.org/awsElasticIPs":        "[\"44.55.66.77\",\"88.55.66.77\"]",
+					"egress.projectcalico.org/namespaceSelector":    "wblack == 'white'",
+					"egress.projectcalico.org/selector":             "wred == 'green'",
+					"cni.projectcalico.org/awsElasticIPs":           "[\"44.55.66.77\",\"88.55.66.77\"]",
+					"egress.projectcalico.org/externalNetworkNames": "[\"net0\",\"net1\"]",
 				},
 				Labels: map[string]string{
 					"labelA": "valueA",
@@ -317,6 +318,9 @@ var _ = Describe("Test Pod conversion", func() {
 			Selector:          "wred == \"green\"",
 		}))
 		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.AWSElasticIPs).To(ConsistOf("44.55.66.77", "88.55.66.77"))
+
+		// Check external networks
+		Expect(wep.Value.(*libapiv3.WorkloadEndpoint).Spec.ExternalNetworkNames).To(ConsistOf("net0", "net1"))
 	})
 
 	It("should parse a Pod with dual stack IPs to a WorkloadEndpoint", func() {

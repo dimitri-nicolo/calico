@@ -2892,6 +2892,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.ExternalNetworkRoutingRulePriority != nil {
+		in, out := &in.ExternalNetworkRoutingRulePriority, &out.ExternalNetworkRoutingRulePriority
+		*out = new(int)
+		**out = **in
+	}
 	if in.WireguardEnabled != nil {
 		in, out := &in.WireguardEnabled, &out.WireguardEnabled
 		*out = new(bool)

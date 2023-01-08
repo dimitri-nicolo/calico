@@ -99,6 +99,23 @@ func (h *DataplanePassthru) OnUpdate(update api.Update) (filterOut bool) {
 			log.WithField("update", update).Debug("Passing through global BGPConfiguration")
 			bgpConfig, _ := update.Value.(*v3.BGPConfiguration)
 			h.callbacks.OnGlobalBGPConfigUpdate(bgpConfig)
+		} else if key.Kind == v3.KindExternalNetwork {
+			log.WithField("update", update).Debug("Passing through external network")
+			id := proto.ExternalNetworkID{Name: key.Name}
+			if update.Value == nil {
+				h.callbacks.OnExternalNetworkRemove(&proto.ExternalNetworkRemove{Id: &id})
+			} else {
+				var routeTableIndex uint32
+				externalNetwork, _ := update.Value.(*v3.ExternalNetwork)
+				if externalNetwork.Spec.RouteTableIndex != nil {
+					routeTableIndex = *externalNetwork.Spec.RouteTableIndex
+				}
+				network := proto.ExternalNetwork{
+					Name:            key.Name,
+					RouteTableIndex: routeTableIndex,
+				}
+				h.callbacks.OnExternalNetworkUpdate(&proto.ExternalNetworkUpdate{Id: &id, Network: &network})
+			}
 		} else if key.Kind == model.KindKubernetesService {
 			log.WithField("update", update).Debug("Passing through a Service")
 			if update.Value == nil {

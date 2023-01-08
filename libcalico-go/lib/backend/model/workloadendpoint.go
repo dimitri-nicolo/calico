@@ -157,7 +157,6 @@ type WorkloadEndpoint struct {
 	IPv6Nets                   []net.IPNet       `json:"ipv6_nets"`
 	IPv4NAT                    []IPNAT           `json:"ipv4_nat,omitempty"`
 	IPv6NAT                    []IPNAT           `json:"ipv6_nat,omitempty"`
-	AWSElasticIPs              []string          `json:"aws_elastic_ips,omitempty"`
 	Labels                     map[string]string `json:"labels,omitempty"`
 	IPv4Gateway                *net.IP           `json:"ipv4_gateway,omitempty" validate:"omitempty,ipv4"`
 	IPv6Gateway                *net.IP           `json:"ipv6_gateway,omitempty" validate:"omitempty,ipv6"`
@@ -170,6 +169,8 @@ type WorkloadEndpoint struct {
 	EgressMaxNextHops          int       `json:"egress_max_next_hops,omitempty" validate:"omitempty"`
 	DeletionTimestamp          time.Time `json:"deletion_timestamp,omitempty"`
 	DeletionGracePeriodSeconds int64     `json:"deletion_grace_period_seconds,omitempty"`
+	AWSElasticIPs              []string  `json:"aws_elastic_ips,omitempty"`
+	ExternalNetworkNames       []string  `json:"external_network_names,omitempty"`
 }
 
 type EndpointPort struct {

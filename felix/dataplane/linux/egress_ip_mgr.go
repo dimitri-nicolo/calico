@@ -45,17 +45,17 @@ import (
 // One EgressIPSet defines one egress routing table which consists of ECMP routes.
 // One ECMP route is associated with one vxlan L2 route (static ARP and FDB entry)
 //
+//	  WEP  WEP  WEP                    WEP  WEP  WEP
+//	    \   |   /                        \   |   /
+//	     \  |  / (Match Src FWMark)       \  |  /
+//	      \ | /                            \ | /
+//	Route Table (EgressIPSet)           Route Table n
+//	   <Index 200>                        <Index n>
+//	     default                           default
+//	      / | \                              / | \
+//	     /  |  \                            /  |  \
+//	    /   |   \                          /   |   \
 //
-//            WEP  WEP  WEP                    WEP  WEP  WEP
-//              \   |   /                        \   |   /
-//               \  |  / (Match Src FWMark)       \  |  /
-//                \ | /                            \ | /
-//          Route Table (EgressIPSet)           Route Table n
-//             <Index 200>                        <Index n>
-//               default                           default
-//                / | \                              / | \
-//               /  |  \                            /  |  \
-//              /   |   \                          /   |   \
 // L3 route GatewayIP...GatewayIP_n            GatewayIP...GatewayIP_n
 //
 // L2 routes  ARP/FDB...ARP/FDB                   ARP/FDB...ARP/FDB
@@ -126,6 +126,7 @@ type routeRulesGenerator interface {
 		ipVersion int,
 		tableIndexSet set.Set[int],
 		updateFunc, removeFunc routerule.RulesMatchFunc,
+		cleanupFunc routerule.RuleFilterFunc,
 		netlinkTimeout time.Duration,
 		recorder logutils.OpRecorder,
 	) routeRules
@@ -139,6 +140,7 @@ func (f *routeRulesFactory) NewRouteRules(
 	ipVersion int,
 	tableIndexSet set.Set[int],
 	updateFunc, removeFunc routerule.RulesMatchFunc,
+	cleanupFunc routerule.RuleFilterFunc,
 	netlinkTimeout time.Duration,
 	opRecorder logutils.OpRecorder,
 ) routeRules {
@@ -149,6 +151,7 @@ func (f *routeRulesFactory) NewRouteRules(
 		tableIndexSet,
 		updateFunc,
 		removeFunc,
+		cleanupFunc,
 		netlinkTimeout,
 		func() (routerule.HandleIface, error) {
 			return netlink.NewHandle(syscall.NETLINK_ROUTE)
@@ -538,6 +541,7 @@ func (m *egressIPManager) completeDeferredWork() error {
 			m.tableIndexSet,
 			routerule.RulesMatchSrcFWMarkTable,
 			routerule.RulesMatchSrcFWMarkTable,
+			nil,
 			m.dpConfig.NetlinkTimeout,
 			m.opRecorder,
 		)
@@ -1139,7 +1143,7 @@ func (m *egressIPManager) createWorkloadRuleAndTableWithIndex(workloadID proto.W
 	m.createRouteTable(index, hopIPs)
 	m.workloadToTableIndex[workloadID] = index
 	for _, srcIP := range workload.Ipv4Nets {
-		m.createRouteRule(srcIP, index)
+		m.createRouteRule(ip.FromIPOrCIDRString(srcIP), index)
 	}
 	return nil
 }
@@ -1169,14 +1173,6 @@ func (m *egressIPManager) newRouteTable(tableNum int) routetable.RouteTableInter
 		int(m.dpConfig.DeviceRouteProtocol),
 		true,
 		m.opRecorder)
-}
-
-func (m *egressIPManager) newRouteRule(srcIP string) *routerule.Rule {
-	ipAddr := ip.MustParseCIDROrIP(srcIP).ToIPNet()
-	return routerule.
-		NewRule(4, m.dpConfig.EgressIPRoutingRulePriority).
-		MatchSrcAddress(ipAddr).
-		MatchFWMark(m.dpConfig.RulesConfig.IptablesMarkEgress)
 }
 
 func (m *egressIPManager) getNextTableIndex() (int, error) {
@@ -1225,21 +1221,31 @@ func (m *egressIPManager) deleteRouteTable(index int) {
 	m.tableIndexStack.Push(index)
 }
 
-func (m *egressIPManager) createRouteRule(srcIP string, tableIndex int) {
+func newRouteRule(priority int, fwMark uint32, srcIP ip.Addr, tableIndex int) *routerule.Rule {
+	ipAddr := srcIP.AsCIDR().ToIPNet()
+	return routerule.
+		NewRule(4, priority).
+		MatchSrcAddress(ipAddr).
+		MatchFWMark(fwMark).
+		GoToTable(tableIndex)
+}
+
+func (m *egressIPManager) createRouteRule(srcIP ip.Addr, tableIndex int) {
 	log.WithFields(log.Fields{
 		"srcIP":      srcIP,
 		"tableIndex": tableIndex,
 	}).Debug("Creating route rule.")
-	rule := m.newRouteRule(srcIP).GoToTable(tableIndex)
+	rule := newRouteRule(m.dpConfig.EgressIPRoutingRulePriority,
+		m.dpConfig.RulesConfig.IptablesMarkEgress,
+		srcIP, tableIndex)
 	m.routeRules.SetRule(rule)
 }
 
 func (m *egressIPManager) deleteRouteRule(srcIP ip.Addr, tableIndex int) *routerule.Rule {
 	log.WithField("srcIP", srcIP).Debug("Deleting route rule.")
-	rule := routerule.NewRule(4, m.dpConfig.EgressIPRoutingRulePriority).
-		MatchSrcAddress(srcIP.AsCIDR().ToIPNet()).
-		MatchFWMark(m.dpConfig.RulesConfig.IptablesMarkEgress).
-		GoToTable(tableIndex)
+	rule := newRouteRule(m.dpConfig.EgressIPRoutingRulePriority,
+		m.dpConfig.RulesConfig.IptablesMarkEgress,
+		srcIP, tableIndex)
 	m.routeRules.RemoveRule(rule)
 	return rule
 }

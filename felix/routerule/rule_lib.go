@@ -30,6 +30,10 @@ type Rule struct {
 	nlRule *netlink.Rule
 }
 
+func NewEmptyRule() *Rule {
+	return &Rule{nlRule: netlink.NewRule()}
+}
+
 func NewRule(ipVersion, priority int) *Rule {
 	r := &Rule{nlRule: netlink.NewRule()}
 	r.nlRule.Family = ipVersionToNetlinkFamily(ipVersion)
@@ -113,6 +117,9 @@ func (r *Rule) Copy() *Rule {
 	nlRule := *r.NetLinkRule()
 	return &Rule{nlRule: &nlRule}
 }
+
+// Check if a rule is valid.
+type RuleFilterFunc func(r *Rule) bool
 
 // Functions to check if two rule match "enough" to be considered the same for update/removal.
 type RulesMatchFunc func(r, p *Rule) bool

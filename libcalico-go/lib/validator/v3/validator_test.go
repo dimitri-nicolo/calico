@@ -999,6 +999,18 @@ func init() {
 		Entry("should reject an invalid egress ip routing rule priority",
 			api.FelixConfigurationSpec{EgressIPRoutingRulePriority: &invalidRulePriority}, false),
 
+		Entry("should reject an invalid ExternalNetworkSupport value 'Foo'",
+			api.FelixConfigurationSpec{ExternalNetworkSupport: "Foo"}, false),
+		Entry("should accept a valid ExternalNetworkSupport value 'Disabled'",
+			api.FelixConfigurationSpec{ExternalNetworkSupport: "Disabled"}, true),
+		Entry("should accept a valid ExternalNetworkSupport value 'Enabled'",
+			api.FelixConfigurationSpec{ExternalNetworkSupport: "Enabled"}, true),
+
+		Entry("should accept a valid external network routing rule priority",
+			api.FelixConfigurationSpec{ExternalNetworkRoutingRulePriority: &validRulePriority}, true),
+		Entry("should reject an invalid external network routing rule priority",
+			api.FelixConfigurationSpec{ExternalNetworkRoutingRulePriority: &invalidRulePriority}, false),
+
 		Entry("should reject capture dir set to empty", api.FelixConfigurationSpec{CaptureDir: strPtr("")}, false),
 		Entry("should reject capture rotation set to 0", api.FelixConfigurationSpec{CaptureRotationSeconds: intptr(0)}, false),
 		Entry("should reject capture max files set to 0", api.FelixConfigurationSpec{CaptureMaxFiles: intptr(0)}, false),
@@ -1140,6 +1152,16 @@ func init() {
 			libapiv3.WorkloadEndpointSpec{
 				InterfaceName: "cali012371237",
 				AWSElasticIPs: []string{"garbage"},
+			}, false),
+		Entry("should accept workload endpoint with an external network name",
+			libapiv3.WorkloadEndpointSpec{
+				InterfaceName:        "cali012371237",
+				ExternalNetworkNames: []string{"net0"},
+			}, true),
+		Entry("should reject workload endpoint with a bad external network name",
+			libapiv3.WorkloadEndpointSpec{
+				InterfaceName:        "cali012371237",
+				ExternalNetworkNames: []string{"net0%"},
 			}, false),
 
 		// (API) HostEndpointSpec

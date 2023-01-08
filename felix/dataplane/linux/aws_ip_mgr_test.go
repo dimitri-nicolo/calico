@@ -1316,6 +1316,7 @@ func (f *awsIPMgrFakes) NewRouteRules(
 	tableIndexSet set.Set[int],
 	updateFunc routerule.RulesMatchFunc,
 	removeFunc routerule.RulesMatchFunc,
+	cleanupFunc routerule.RuleFilterFunc,
 	netlinkTimeout time.Duration,
 	newNetlinkHandle func() (routerule.HandleIface, error),
 	opRecorder logutils.OpRecorder) (routeRules, error) {

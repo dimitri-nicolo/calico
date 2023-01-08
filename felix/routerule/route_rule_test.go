@@ -51,13 +51,14 @@ var _ = Describe("RouteRules Construct", func() {
 		}
 	})
 
-	It("should not be constructable with no table index", func() {
+	It("should not be constructable with no table index for exclusive mode", func() {
 		tableIndexSet := set.New[int]()
 		_, err := New(
 			4,
 			tableIndexSet,
 			RulesMatchSrcFWMarkTable,
 			RulesMatchSrcFWMark,
+			nil,
 			10*time.Second,
 			dataplane.NewNetlinkHandle,
 			logutils.NewSummarizer("test loop"),
@@ -65,13 +66,39 @@ var _ = Describe("RouteRules Construct", func() {
 		Expect(err).To(HaveOccurred())
 	})
 
-	It("should not be constructable with wrong table index", func() {
+	It("should be constructable with no table index for open mode", func() {
+		tableIndexSet := set.New[int]()
+		var CreatedByUs RuleFilterFunc = func(r *Rule) bool {
+			// Return true if the rule is created by this manager.
+			nlRule := r.NetLinkRule()
+			if (nlRule.Mark == 0x100) &&
+				(nlRule.Mask == 0x100) &&
+				(nlRule.Priority == 100) {
+				return true
+			}
+			return false
+		}
+		_, err := New(
+			4,
+			tableIndexSet,
+			RulesMatchSrcFWMarkTable,
+			RulesMatchSrcFWMark,
+			CreatedByUs,
+			10*time.Second,
+			dataplane.NewNetlinkHandle,
+			logutils.NewSummarizer("test loop"),
+		)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("should not be constructable with wrong table index for exclusive mode", func() {
 		tableIndexSet := set.From(0, 10)
 		_, err := New(
 			4,
 			tableIndexSet,
 			RulesMatchSrcFWMarkTable,
 			RulesMatchSrcFWMark,
+			nil,
 			10*time.Second,
 			dataplane.NewNetlinkHandle,
 			logutils.NewSummarizer("test loop"),
@@ -85,6 +112,7 @@ var _ = Describe("RouteRules Construct", func() {
 			tableIndexSet,
 			RulesMatchSrcFWMarkTable,
 			RulesMatchSrcFWMark,
+			nil,
 			10*time.Second,
 			dataplane.NewNetlinkHandle,
 			logutils.NewSummarizer("test loop"),
@@ -98,6 +126,7 @@ var _ = Describe("RouteRules Construct", func() {
 			tableIndexSet,
 			RulesMatchSrcFWMarkTable,
 			RulesMatchSrcFWMark,
+			nil,
 			10*time.Second,
 			dataplane.NewNetlinkHandle,
 			logutils.NewSummarizer("test loop"),
@@ -112,6 +141,7 @@ var _ = Describe("RouteRules Construct", func() {
 			tableIndexSet,
 			RulesMatchSrcFWMarkTable,
 			RulesMatchSrcFWMark,
+			nil,
 			10*time.Second,
 			dataplane.NewNetlinkHandle,
 			logutils.NewSummarizer("test loop"),
@@ -140,6 +170,7 @@ var _ = Describe("RouteRules with RulesMatchPrioSrcTable match func", func() {
 			tableIndexSet,
 			RulesMatchPrioSrcTable,
 			RulesMatchPrioSrcTable,
+			nil,
 			10*time.Second,
 			dataplane.NewNetlinkHandle,
 			logutils.NewSummarizer("test loop"),
@@ -196,7 +227,7 @@ var _ = Describe("RouteRules with RulesMatchPrioSrcTable match func", func() {
 	})
 })
 
-var _ = Describe("RouteRules", func() {
+var _ = Describe("RouteRules in exclusive mode", func() {
 	var dataplane *mockDataplane
 	var rrs *RouteRules
 
@@ -215,6 +246,7 @@ var _ = Describe("RouteRules", func() {
 			tableIndexSet,
 			RulesMatchSrcFWMarkTable,
 			RulesMatchSrcFWMark,
+			nil,
 			10*time.Second,
 			dataplane.NewNetlinkHandle,
 			logutils.NewSummarizer("test loop"),
@@ -461,6 +493,143 @@ var _ = Describe("RouteRules", func() {
 				}
 			})
 		}
+	})
+})
+
+var _ = Describe("RouteRules in open mode", func() {
+	var dataplane *mockDataplane
+	var rrs *RouteRules
+	ourPriority := 100
+	notOurPriority := 200
+	ourMark := 0x100
+	notOurMark := 0x200
+
+	BeforeEach(func() {
+		dataplane = &mockDataplane{
+			ruleKeyToRule:   map[string]netlink.Rule{},
+			addedRuleKeys:   set.New[string](),
+			deletedRuleKeys: set.New[string](),
+		}
+
+		tableIndexSet := set.New[int]()
+
+		// Create RouteRule with cleanup filter to match priority 100 and FWMark 0x100.
+		var err error
+		var CreatedByUs RuleFilterFunc = func(r *Rule) bool {
+			// Return true if the rule is created by this manager.
+			nlRule := r.NetLinkRule()
+			if (nlRule.Mark == ourMark) &&
+				(nlRule.Mask == ourMark) &&
+				(nlRule.Priority == ourPriority) {
+				return true
+			}
+			return false
+		}
+		rrs, err = New(
+			4,
+			tableIndexSet,
+			RulesMatchSrcFWMarkTable,
+			RulesMatchSrcFWMark,
+			CreatedByUs,
+			10*time.Second,
+			dataplane.NewNetlinkHandle,
+			logutils.NewSummarizer("test loop"),
+		)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rrs).ToNot(BeNil())
+	})
+
+	Context("with existing cali and nonCali rules", func() {
+		var cali1Rule, cali2Rule, nonCaliRule1, nonCaliRule2 netlink.Rule
+		BeforeEach(func() {
+			// Calico rule in both control plane and dataplane.
+			cali1Rule = netlink.Rule{
+				Priority:          ourPriority,
+				Family:            unix.AF_INET,
+				Src:               mustParseCIDR("10.0.0.1/32"),
+				Mark:              ourMark,
+				Mask:              ourMark,
+				Table:             1,
+				Invert:            true,
+				Goto:              -1,
+				Flow:              -1,
+				SuppressIfgroup:   -1,
+				SuppressPrefixlen: -1,
+			}
+			dataplane.addMockRule(&cali1Rule)
+			Expect(rrs).ToNot(BeNil())
+
+			// Set rule to control plane.
+			rrs.SetRule(FromNetlinkRule(&cali1Rule))
+
+			// Calico rule in dataplane only.
+			cali2Rule = netlink.Rule{
+				Priority:          ourPriority,
+				Family:            unix.AF_INET,
+				Src:               mustParseCIDR("10.0.0.2/32"),
+				Mark:              ourMark,
+				Mask:              ourMark,
+				Table:             2,
+				Invert:            false,
+				Goto:              -1,
+				Flow:              -1,
+				SuppressIfgroup:   -1,
+				SuppressPrefixlen: -1,
+			}
+			dataplane.addMockRule(&cali2Rule)
+
+			// Non Calico rule (mark mismatch) in dataplane only.
+			nonCaliRule1 = netlink.Rule{
+				Priority:          ourPriority,
+				Family:            unix.AF_INET,
+				Src:               mustParseCIDR("10.0.0.3/32"),
+				Mark:              notOurMark,
+				Mask:              notOurMark,
+				Table:             3,
+				Invert:            true,
+				Goto:              -1,
+				Flow:              -1,
+				SuppressIfgroup:   -1,
+				SuppressPrefixlen: -1,
+			}
+			dataplane.addMockRule(&nonCaliRule1)
+
+			// Non Calico rule (priority mismatch) in dataplane only.
+			nonCaliRule2 = netlink.Rule{
+				Priority:          notOurPriority,
+				Family:            unix.AF_INET,
+				Src:               mustParseCIDR("10.0.0.4/32"),
+				Mark:              ourMark,
+				Mask:              ourMark,
+				Table:             4,
+				Invert:            true,
+				Goto:              -1,
+				Flow:              -1,
+				SuppressIfgroup:   -1,
+				SuppressPrefixlen: -1,
+			}
+			dataplane.addMockRule(&nonCaliRule2)
+		})
+
+		It("should remove Calico rule not in control plane", func() {
+			rrs.QueueResync()
+			err := rrs.Apply()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(dataplane.ruleKeyToRule).To(ConsistOf(cali1Rule, nonCaliRule1, nonCaliRule2))
+			Expect(dataplane.deletedRuleKeys.Contains(makeRuleKey("10.0.0.2/32", ourMark, 2))).To(BeTrue())
+		})
+
+		It("should remove the first Calico rule", func() {
+			rule := NewRule(4, ourPriority).
+				Not().
+				MatchSrcAddress(*mustParseCIDR("10.0.0.1/32")).
+				MatchFWMark(uint32(ourMark))
+			rrs.RemoveRule(rule)
+			err := rrs.Apply()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(dataplane.ruleKeyToRule).To(ConsistOf(nonCaliRule1, nonCaliRule2))
+			Expect(dataplane.deletedRuleKeys.Contains(makeRuleKey("10.0.0.1/32", ourMark, 1))).To(BeTrue())
+		})
 	})
 })
 

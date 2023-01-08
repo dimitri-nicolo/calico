@@ -1288,14 +1288,12 @@ class NetcatClientTCP(Pod):
         except subprocess.CalledProcessError:
             _log.exception("Failed to access server")
             _log.warning("'%s' failed to connect, when connection was expected", self.name)
-            stop_for_debug()
             raise self.ConnectionError
 
     def cannot_connect(self, ip, port, command="nc"):
         try:
             self.check_connected(ip, port, command)
             _log.warning("'%s' unexpectedly connected", self.name)
-            stop_for_debug()
             raise self.ConnectionError
         except subprocess.CalledProcessError:
             _log.info("'%s' failed to connect, as expected", self.name)
@@ -1303,7 +1301,7 @@ class NetcatClientTCP(Pod):
     def check_connected(self, ip, port, command="nc"):
         self.last_output = ""
         if command == "nc":
-            self.last_output = self.execute("nc -w 2 %s %d </dev/null" % (ip, port))
+            self.last_output = self.execute("nc -w 2 %s %d </dev/null" % (ip, port), timeout=3)
         elif command == "wget":
             self.last_output = self.execute("wget -T 2 %s:%d -O -" % (ip, port))
         else:
@@ -1334,28 +1332,34 @@ class TestEgressIPNoOverlay(_TestEgressIP):
     def setUp(self):
         super(_TestEgressIP, self).setUp()
         self.env_ippool_setup(backend="NoOverlay", wireguard=False)
+TestEgressIPNoOverlay.egress_ip_no_overlay = True
 
 class TestEgressIPWithIPIP(_TestEgressIP):
     def setUp(self):
         super(_TestEgressIP, self).setUp()
         self.env_ippool_setup(backend="IPIP", wireguard=False)
+TestEgressIPWithIPIP.egress_ip_ipip = True
 
 class TestEgressIPWithVXLAN(_TestEgressIP):
     def setUp(self):
         super(_TestEgressIP, self).setUp()
         self.env_ippool_setup(backend="VXLAN", wireguard=False)
+TestEgressIPWithVXLAN.egress_ip_vxlan = True
 
 class TestEgressIPNoOverlayAndWireguard(TestEgressIPNoOverlay):
     def setUp(self):
         super(_TestEgressIP, self).setUp()
         self.env_ippool_setup(backend="NoOverlay", wireguard=True)
+TestEgressIPNoOverlayAndWireguard.egress_ip_no_overlay = True
 
 class TestEgressIPWithIPIPAndWireguard(TestEgressIPWithIPIP):
     def setUp(self):
         super(_TestEgressIP, self).setUp()
         self.env_ippool_setup(backend="IPIP", wireguard=True)
+TestEgressIPWithIPIPAndWireguard.egress_ip_ipip = True
 
 class TestEgressIPWithVXLANAndWireguard(_TestEgressIP):
     def setUp(self):
         super(_TestEgressIP, self).setUp()
         self.env_ippool_setup(backend="VXLAN", wireguard=True)
+TestEgressIPWithVXLANAndWireguard.egress_ip_vxlan = True

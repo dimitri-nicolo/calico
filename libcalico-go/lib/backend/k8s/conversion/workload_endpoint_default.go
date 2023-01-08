@@ -280,6 +280,15 @@ func (wc defaultWorkloadEndpointConverter) podToDefaultWorkloadEndpoint(pod *kap
 		}
 	}
 
+	var externalNetworks []string
+	if annotation, ok := pod.Annotations[AnnotationEgressExternalNetworkNames]; ok {
+		// Parse Annotation data
+		err := json.Unmarshal([]byte(annotation), &externalNetworks)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse '%s' as JSON: %s", annotation, err)
+		}
+	}
+
 	// Get the container ID if present.  This is used in the CNI plugin to distinguish different pods that have
 	// the same name.  For example, restarted stateful set pods.
 	containerID := pod.Annotations[AnnotationContainerID]
@@ -311,6 +320,7 @@ func (wc defaultWorkloadEndpointConverter) podToDefaultWorkloadEndpoint(pod *kap
 		EgressGateway:              egressAnnotationsToV3Spec(pod.Annotations),
 		ServiceAccountName:         pod.Spec.ServiceAccountName,
 		AllowSpoofedSourcePrefixes: requestedSourcePrefixes,
+		ExternalNetworkNames:       externalNetworks,
 	}
 	wep.Status = libapiv3.WorkloadEndpointStatus{
 		Phase:         string(pod.Status.Phase),

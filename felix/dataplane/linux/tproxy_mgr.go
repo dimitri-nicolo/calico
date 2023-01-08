@@ -89,6 +89,7 @@ func newTProxyManager(
 		set.From(idx4),
 		routerule.RulesMatchSrcFWMarkTable,
 		routerule.RulesMatchSrcFWMarkTable,
+		nil,
 		dpConfig.NetlinkTimeout,
 		func() (routerule.HandleIface, error) {
 			return netlinkshim.NewRealNetlink()
@@ -137,6 +138,7 @@ func newTProxyManager(
 			set.From(idx6),
 			routerule.RulesMatchSrcFWMarkTable,
 			routerule.RulesMatchSrcFWMarkTable,
+			nil,
 			dpConfig.NetlinkTimeout,
 			func() (routerule.HandleIface, error) {
 				return netlinkshim.NewRealNetlink()

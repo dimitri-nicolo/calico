@@ -3501,6 +3501,21 @@ func schema_libcalico_go_lib_apis_v3_WorkloadEndpointSpec(ref common.ReferenceCa
 							Ref:         ref("github.com/tigera/api/pkg/apis/projectcalico/v3.EgressSpec"),
 						},
 					},
+					"externalNetworkNames": {
+						SchemaProps: spec.SchemaProps{
+							Description: "A list of names of the external networks who are associated with the endpoint for egress traffic.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},

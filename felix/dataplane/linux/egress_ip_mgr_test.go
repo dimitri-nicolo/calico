@@ -252,12 +252,12 @@ var _ = Describe("EgressIPManager", func() {
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
 
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(0, "set0", []string{"10.0.240.0/32"}, 0))
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(1, "set0", []string{"10.0.241.0/32"}, 0))
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(2, "set0", []string{"10.0.242.0/32"}, 0))
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(3, "set1", []string{"10.0.243.0/32"}, 2))
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(4, "set1", []string{"10.0.244.0/32"}, 2))
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(5, "set1", []string{"10.0.245.0/32"}, 2))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, "set0", []string{"10.0.240.0/32"}, 0))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(1, "set0", []string{"10.0.241.0/32"}, 0))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(2, "set0", []string{"10.0.242.0/32"}, 0))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(3, "set1", []string{"10.0.243.0/32"}, 2))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(4, "set1", []string{"10.0.244.0/32"}, 2))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(5, "set1", []string{"10.0.245.0/32"}, 2))
 
 			err = manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
@@ -446,14 +446,14 @@ var _ = Describe("EgressIPManager", func() {
 
 		It("should report unhealthy if run out of table index", func() {
 			for i := 2; i < 10; i++ {
-				manager.OnUpdate(dummyWorkloadEndpointUpdate(i, "set0", []string{fmt.Sprintf("10.0.24%d.0/32", i)}, 0))
+				manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(i, "set0", []string{fmt.Sprintf("10.0.24%d.0/32", i)}, 0))
 			}
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(manager.tableIndexStack.Len()).To(Equal(0))
 
-			breakingWorkloadUpdate := dummyWorkloadEndpointUpdate(11, "set0", []string{"10.0.250.0/32"}, 0)
+			breakingWorkloadUpdate := dummyWorkloadEndpointUpdateEgressIP(11, "set0", []string{"10.0.250.0/32"}, 0)
 			manager.OnUpdate(breakingWorkloadUpdate)
 
 			err = manager.CompleteDeferredWork()
@@ -477,7 +477,7 @@ var _ = Describe("EgressIPManager", func() {
 		})
 
 		It("should use same table if endpoint has second ip address", func() {
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(6, "set0", []string{"10.0.246.0/32", "10.1.246.0/32"}, 0))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(6, "set0", []string{"10.0.246.0/32", "10.1.246.0/32"}, 0))
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
 
@@ -526,7 +526,7 @@ var _ = Describe("EgressIPManager", func() {
 					formatActiveEgressMemberStr("10.0.1.3"),
 				},
 			})
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(2, "set1", []string{"10.0.242.0/32"}, 0))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(2, "set1", []string{"10.0.242.0/32"}, 0))
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
@@ -572,7 +572,7 @@ var _ = Describe("EgressIPManager", func() {
 			Expect(rr.hasRule(100, "10.0.240.0/32", 0x200, 2)).To(BeFalse())
 
 			// Update pod-0 to use ipset set1.
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(0, "set1", []string{"10.0.240.0/32"}, 0))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, "set1", []string{"10.0.240.0/32"}, 0))
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
@@ -741,9 +741,9 @@ var _ = Describe("EgressIPManager", func() {
 			})
 
 			// Create new endpoint6. It has specified 3 next hops, but only 2 are currently available.
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(6, "set0", []string{"10.0.246.0/32"}, 3))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(6, "set0", []string{"10.0.246.0/32"}, 3))
 			// Create new endpoint7. It has specified 0 next hops, and so will be allocated all available hops.
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(7, "set0", []string{"10.0.247.0/32"}, 0))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(7, "set0", []string{"10.0.247.0/32"}, 0))
 
 			err = manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
@@ -757,9 +757,9 @@ var _ = Describe("EgressIPManager", func() {
 			})
 
 			// Create new endpoint8. It has specified 3 next hops, which are currently available.
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(8, "set0", []string{"10.0.248.0/32"}, 3))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(8, "set0", []string{"10.0.248.0/32"}, 3))
 			// Create new endpoint9. It has specified 0 next hops, and so will be allocated all available hops.
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(9, "set0", []string{"10.0.249.0/32"}, 0))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(9, "set0", []string{"10.0.249.0/32"}, 0))
 
 			err = manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
@@ -981,7 +981,7 @@ var _ = Describe("EgressIPManager", func() {
 				AddedMembers:   []string{formatTerminatingEgressMemberStr("10.0.3.0", nowTime, inSixtySecsTime), "10.0.3.1"},
 				RemovedMembers: []string{"10.0.1.1"},
 			})
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(2, "set1", []string{"10.0.242.0"}, 0))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(2, "set1", []string{"10.0.242.0"}, 0))
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
@@ -1095,7 +1095,7 @@ var _ = Describe("EgressIPManager", func() {
 		})
 
 		It("should allocate a new rule and table with three hops when maxNextHops is zero", func() {
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(0, "set0", []string{"10.0.240.0/32"}, 0))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, "set0", []string{"10.0.240.0/32"}, 0))
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
@@ -1103,7 +1103,7 @@ var _ = Describe("EgressIPManager", func() {
 		})
 
 		It("should allocate a new rule and table with one hop when maxNextHops is one", func() {
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(0, "set0", []string{"10.0.240.0/32"}, 1))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, "set0", []string{"10.0.240.0/32"}, 1))
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
@@ -1111,7 +1111,7 @@ var _ = Describe("EgressIPManager", func() {
 		})
 
 		It("should allocate a new rule and table with two hops when maxNextHops is two", func() {
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(0, "set0", []string{"10.0.240.0/32"}, 2))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, "set0", []string{"10.0.240.0/32"}, 2))
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
@@ -1119,7 +1119,7 @@ var _ = Describe("EgressIPManager", func() {
 		})
 
 		It("should allocate a new rule and table with three hops when maxNextHops is three", func() {
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(0, "set0", []string{"10.0.240.0/32"}, 3))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, "set0", []string{"10.0.240.0/32"}, 3))
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
@@ -1127,12 +1127,12 @@ var _ = Describe("EgressIPManager", func() {
 		})
 
 		It("should allocate rules and tables with an even distribution of one hop starting at random index when maxNextHops is one", func() {
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(0, "set0", []string{"10.0.240.0/32"}, 1))
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(1, "set0", []string{"10.0.240.1/32"}, 1))
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(2, "set0", []string{"10.0.240.2/32"}, 1))
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(3, "set0", []string{"10.0.240.3/32"}, 1))
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(4, "set0", []string{"10.0.240.4/32"}, 1))
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(5, "set0", []string{"10.0.240.5/32"}, 1))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, "set0", []string{"10.0.240.0/32"}, 1))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(1, "set0", []string{"10.0.240.1/32"}, 1))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(2, "set0", []string{"10.0.240.2/32"}, 1))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(3, "set0", []string{"10.0.240.3/32"}, 1))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(4, "set0", []string{"10.0.240.4/32"}, 1))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(5, "set0", []string{"10.0.240.5/32"}, 1))
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
@@ -1145,12 +1145,12 @@ var _ = Describe("EgressIPManager", func() {
 		})
 
 		It("should allocate rules and tables with an even distribution of two hops starting at random index when maxNextHops is two", func() {
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(0, "set0", []string{"10.0.240.0/32"}, 2))
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(1, "set0", []string{"10.0.240.1/32"}, 2))
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(2, "set0", []string{"10.0.240.2/32"}, 2))
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(3, "set0", []string{"10.0.240.3/32"}, 2))
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(4, "set0", []string{"10.0.240.4/32"}, 2))
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(5, "set0", []string{"10.0.240.5/32"}, 2))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, "set0", []string{"10.0.240.0/32"}, 2))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(1, "set0", []string{"10.0.240.1/32"}, 2))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(2, "set0", []string{"10.0.240.2/32"}, 2))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(3, "set0", []string{"10.0.240.3/32"}, 2))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(4, "set0", []string{"10.0.240.4/32"}, 2))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(5, "set0", []string{"10.0.240.5/32"}, 2))
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
@@ -1175,12 +1175,12 @@ var _ = Describe("EgressIPManager", func() {
 				Type:    proto.IPSetUpdate_EGRESS_IP,
 			})
 
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(0, "set0", []string{"10.0.240.0/32"}, 1))
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(1, "set0", []string{"10.0.240.1/32"}, 1))
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(2, "set0", []string{"10.0.240.2/32"}, 1))
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(3, "set0", []string{"10.0.240.3/32"}, 1))
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(4, "set0", []string{"10.0.240.4/32"}, 1))
-			manager.OnUpdate(dummyWorkloadEndpointUpdate(5, "set0", []string{"10.0.240.5/32"}, 1))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(0, "set0", []string{"10.0.240.0/32"}, 1))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(1, "set0", []string{"10.0.240.1/32"}, 1))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(2, "set0", []string{"10.0.240.2/32"}, 1))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(3, "set0", []string{"10.0.240.3/32"}, 1))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(4, "set0", []string{"10.0.240.4/32"}, 1))
+			manager.OnUpdate(dummyWorkloadEndpointUpdateEgressIP(5, "set0", []string{"10.0.240.5/32"}, 1))
 
 			err := manager.CompleteDeferredWork()
 			Expect(err).ToNot(HaveOccurred())
@@ -1213,7 +1213,7 @@ func dummyWorkloadEndpointID(podNum int) proto.WorkloadEndpointID {
 	}
 }
 
-func dummyWorkloadEndpointUpdate(podNum int, ipSetId string, cidrs []string, nextHops int) *proto.WorkloadEndpointUpdate {
+func dummyWorkloadEndpointUpdate(podNum int, ipSetId string, cidrs []string, nextHops int, externalNetworkNames []string) *proto.WorkloadEndpointUpdate {
 	return &proto.WorkloadEndpointUpdate{
 		Id: &proto.WorkloadEndpointID{
 			OrchestratorId: "k8s",
@@ -1221,22 +1221,32 @@ func dummyWorkloadEndpointUpdate(podNum int, ipSetId string, cidrs []string, nex
 			EndpointId:     fmt.Sprintf("endpoint-id-%d", podNum),
 		},
 		Endpoint: &proto.WorkloadEndpoint{
-			State:             "active",
-			Mac:               "01:02:03:04:05:06",
-			Name:              fmt.Sprintf("cali12345-%d", podNum),
-			ProfileIds:        []string{},
-			Tiers:             []*proto.TierInfo{},
-			Ipv4Nets:          cidrs,
-			Ipv6Nets:          []string{"2001:db8:2::2/128"},
-			EgressIpSetId:     ipSetId,
-			EgressMaxNextHops: int32(nextHops),
+			State:                "active",
+			Mac:                  "01:02:03:04:05:06",
+			Name:                 fmt.Sprintf("cali12345-%d", podNum),
+			ProfileIds:           []string{},
+			Tiers:                []*proto.TierInfo{},
+			Ipv4Nets:             cidrs,
+			Ipv6Nets:             []string{"2001:db8:2::2/128"},
+			EgressIpSetId:        ipSetId,
+			EgressMaxNextHops:    int32(nextHops),
+			ExternalNetworkNames: externalNetworkNames,
 		},
 	}
+}
+
+func dummyWorkloadEndpointUpdateEgressIP(podNum int, ipSetId string, cidrs []string, nextHops int) *proto.WorkloadEndpointUpdate {
+	return dummyWorkloadEndpointUpdate(podNum, ipSetId, cidrs, nextHops, []string{})
+}
+
+func dummyWorkloadEndpointUpdateExternalNetwork(podNum int, cidrs []string, externalNetworkNames []string) *proto.WorkloadEndpointUpdate {
+	return dummyWorkloadEndpointUpdate(podNum, "", cidrs, 0, externalNetworkNames)
 }
 
 type mockRouteRules struct {
 	matchForUpdate routerule.RulesMatchFunc
 	matchForRemove routerule.RulesMatchFunc
+	cleanupFunc    routerule.RuleFilterFunc
 	activeRules    set.Set[*routerule.Rule]
 }
 
@@ -1303,6 +1313,23 @@ func (r *mockRouteRules) hasRule(priority int, src string, mark int, table int) 
 	return result
 }
 
+func (r *mockRouteRules) hasRuleWithSrc(priority int, src string, mark int) bool {
+	result := false
+	r.activeRules.Iter(func(rule *routerule.Rule) error {
+		nlRule := rule.NetLinkRule()
+		rule.LogCxt().Debug("checking rule")
+		if nlRule.Priority == priority &&
+			nlRule.Family == unix.AF_INET &&
+			nlRule.Src.String() == src &&
+			nlRule.Mark == mark &&
+			nlRule.Invert == false {
+			result = true
+		}
+		return nil
+	})
+	return result
+}
+
 type mockRouteTableFactory struct {
 	count  int
 	tables map[int]*mockRouteTable
@@ -1342,12 +1369,14 @@ func (f *mockRouteRulesFactory) NewRouteRules(
 	ipVersion int,
 	tableIndexSet set.Set[int],
 	updateFunc, removeFunc routerule.RulesMatchFunc,
+	cleanupFunc routerule.RuleFilterFunc,
 	netlinkTimeout time.Duration,
 	opRecorder logutils.OpRecorder,
 ) routeRules {
 	rr := &mockRouteRules{
-		matchForUpdate: routerule.RulesMatchSrcFWMarkTable,
-		matchForRemove: routerule.RulesMatchSrcFWMark,
+		matchForUpdate: updateFunc,
+		matchForRemove: removeFunc,
+		cleanupFunc:    cleanupFunc,
 		activeRules:    set.New[*routerule.Rule](),
 	}
 	f.routeRules = rr

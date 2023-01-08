@@ -162,6 +162,7 @@ def retry_until_success(fun,
             if ex_class and e.__class__ is not ex_class:
                 _log.exception("Hit unexpected exception in function - "
                                "not retrying.")
+                stop_for_debug()
                 raise
             if retry < retries:
                 _log.debug("Hit exception in function - retrying: %s", e)
@@ -170,6 +171,7 @@ def retry_until_success(fun,
                 if log_exception:
                     _log.exception("Function %s did not succeed before "
                                    "timeout.", fun)
+                stop_for_debug()
                 raise
         else:
             # Successfully ran the function
@@ -216,11 +218,15 @@ def curl(hostname, container="kube-node-extra"):
     return run(cmd)
 
 
-def kubectl(args, logerr=True, allow_fail=False, allow_codes=[]):
-    return run("kubectl " + args,
-               logerr=logerr,
-               allow_fail=allow_fail,
-               allow_codes=allow_codes)
+def kubectl(args, logerr=True, allow_fail=False, allow_codes=[], timeout=0):
+    if timeout == 0:
+        cmd = "kubectl "
+    else:
+        cmd = "timeout -s %d kubectl " % timeout
+    return run(cmd + args,
+            logerr=logerr,
+            allow_fail=allow_fail,
+            allow_codes=allow_codes)
 
 
 def calicoctl(args, allow_fail=False):

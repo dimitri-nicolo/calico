@@ -5871,6 +5871,20 @@ func schema_pkg_apis_projectcalico_v3_FelixConfigurationSpec(ref common.Referenc
 							Format:      "",
 						},
 					},
+					"externalNetworkSupport": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExternalNetworkSupport defines two different support modes for external network function. [Default: Disabled] - Disabled:  External network function is disabled. - Enabled:   External network function is enabled.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"externalNetworkRoutingRulePriority": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExternalNetworkRoutingRulePriority controls the priority value to use for the external network routing rule. [Default: 102]",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 					"wireguardEnabled": {
 						SchemaProps: spec.SchemaProps{
 							Description: "WireguardEnabled controls whether Wireguard is enabled for IPv4 (encapsulating IPv4 traffic over an IPv4 underlay network). [Default: false]",

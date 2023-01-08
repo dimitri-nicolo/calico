@@ -221,6 +221,7 @@ func ConvertWorkloadEndpointV3ToV1Value(val interface{}) (interface{}, error) {
 		AWSElasticIPs:              v3res.Spec.AWSElasticIPs,
 		DeletionTimestamp:          deletionTimestamp,
 		DeletionGracePeriodSeconds: deletionGracePeriodSeconds,
+		ExternalNetworkNames:       v3res.Spec.ExternalNetworkNames,
 	}
 
 	if v3res.Spec.EgressGateway != nil {

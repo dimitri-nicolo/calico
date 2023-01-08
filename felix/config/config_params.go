@@ -525,6 +525,10 @@ type Config struct {
 	EgressGatewayPollInterval     time.Duration `config:"seconds;10"`
 	EgressGatewayPollFailureCount int           `config:"int;3"`
 
+	// Config for external networks.
+	ExternalNetworkSupport             string `config:"oneof(Disabled,Enabled);Disabled"`
+	ExternalNetworkRoutingRulePriority int    `config:"int;102"`
+
 	// Config for packet capturing
 	CaptureDir             string `config:"string;/var/log/calico/pcap"`
 	CaptureMaxSizeBytes    int    `config:"int;10000000"`
@@ -702,6 +706,10 @@ func (config *Config) OpenstackActive() bool {
 	}
 	log.Debug("No evidence this is an OpenStack deployment; disabling OpenStack special-cases")
 	return false
+}
+
+func (c *Config) ExternalNetworkCheckEnabled() bool {
+	return c.ExternalNetworkSupport == "Enabled"
 }
 
 func (c *Config) EgressIPCheckEnabled() bool {

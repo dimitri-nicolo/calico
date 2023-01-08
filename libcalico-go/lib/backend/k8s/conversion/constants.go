@@ -43,6 +43,7 @@ const (
 	AnnotationEgressGatewayMaintenanceGatewayIP = "egress.projectcalico.org/gatewayMaintenanceGatewayIP"
 	AnnotationEgressGatewayMaintenanceStarted   = "egress.projectcalico.org/gatewayMaintenanceStartedTimestamp"
 	AnnotationEgressGatewayMaintenanceFinished  = "egress.projectcalico.org/gatewayMaintenanceFinishedTimestamp"
+	AnnotationEgressExternalNetworkNames        = "egress.projectcalico.org/externalNetworkNames"
 	SecurityGroupLabelPrefix                    = "sg.aws.tigera.io"
 
 	// AnnotationContainerID stores the container ID of the pod.  This allows us to disambiguate different pods

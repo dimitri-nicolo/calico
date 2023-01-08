@@ -792,6 +792,13 @@ type FelixConfigurationSpec struct {
 	// run in network-policy mode only.
 	RouteSyncDisabled *bool `json:"routeSyncDisabled,omitempty"`
 
+	// ExternalNetworkSupport defines two different support modes for external network function. [Default: Disabled]
+	// - Disabled:  External network function is disabled.
+	// - Enabled:   External network function is enabled.
+	ExternalNetworkSupport string `json:"externalNetworkSupport,omitempty" validate:"omitempty,oneof=Disabled Enabled"`
+	// ExternalNetworkRoutingRulePriority controls the priority value to use for the external network routing rule. [Default: 102]
+	ExternalNetworkRoutingRulePriority *int `json:"externalNetworkRoutingRulePriority,omitempty" validate:"omitempty,gt=0,lt=32766"`
+
 	// WireguardEnabled controls whether Wireguard is enabled for IPv4 (encapsulating IPv4 traffic over an IPv4 underlay network). [Default: false]
 	WireguardEnabled *bool `json:"wireguardEnabled,omitempty"`
 	// WireguardEnabledV6 controls whether Wireguard is enabled for IPv6 (encapsulating IPv6 traffic over an IPv6 underlay network). [Default: false]

@@ -491,7 +491,7 @@ EGRESS_KIND_CONFIG=./tests/k8st/egress-ip-tests/kind.config
 
 .PHONY: egress-ip-test
 egress-ip-test:
-	KIND_CONFIG=$(EGRESS_KIND_CONFIG) $(MAKE) k8s-test K8ST_TO_RUN="-A egress_ip"
+	KIND_CONFIG=$(EGRESS_KIND_CONFIG) $(MAKE) k8s-test
 
 .PHONY: k8s-test
 k8s-test:

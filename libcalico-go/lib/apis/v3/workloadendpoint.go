@@ -89,6 +89,8 @@ type WorkloadEndpointSpec struct {
 	AllowSpoofedSourcePrefixes []string `json:"allowSpoofedSourcePrefixes,omitempty" validate:"omitempty,dive,ip"`
 	// Egress control.
 	EgressGateway *apiv3.EgressSpec `json:"egressGateway,omitempty" validate:"omitempty"`
+	// A list of names of the external networks who are associated with the endpoint for egress traffic.
+	ExternalNetworkNames []string `json:"externalNetworkNames,omitempty" validate:"omitempty,dive,name"`
 }
 
 // WorkloadEndpointStatus contains the status for a WorkloadEndpoint resource.

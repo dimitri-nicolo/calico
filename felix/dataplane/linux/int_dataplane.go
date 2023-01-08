@@ -273,6 +273,9 @@ type Config struct {
 	EgressGatewayPollInterval     time.Duration
 	EgressGatewayPollFailureCount int
 
+	ExternalNetworkEnabled             bool
+	ExternalNetworkRoutingRulePriority int
+
 	// Optional stats collector
 	Collector collector.Collector
 
@@ -329,7 +332,7 @@ type UpdateBatchResolver interface {
 // and ipsets.  It communicates with the datastore-facing part of Felix via the
 // Send/RecvMessage methods, which operate on the protobuf-defined API objects.
 //
-// Architecture
+// # Architecture
 //
 // The internal dataplane driver is organised around a main event loop, which handles
 // update events from the datastore and dataplane.
@@ -346,7 +349,7 @@ type UpdateBatchResolver interface {
 // In addition, it allows for different managers to make updates without having to
 // coordinate on their sequencing.
 //
-// Requirements on the API
+// # Requirements on the API
 //
 // The internal dataplane does not do consistency checks on the incoming data (as the
 // old Python-based driver used to do).  It expects to be told about dependent resources
@@ -432,6 +435,8 @@ type InternalDataplane struct {
 
 	egwHealthReportC chan EGWHealthReport
 	egressIPManager  *egressIPManager
+
+	externalNetworkManager *externalNetworkManager
 }
 
 const (
@@ -1118,6 +1123,14 @@ func NewIntDataplaneDriver(config Config, stopChan chan *sync.WaitGroup) *Intern
 		} else if err = netlink.LinkDel(link); err != nil {
 			log.WithError(err).Error("Failed to delete unwanted egress VXLAN device")
 		}
+	}
+
+	if config.ExternalNetworkEnabled {
+		dp.externalNetworkManager = newExternalNetworkManager(
+			config,
+			dp.loopSummarizer,
+		)
+		dp.RegisterManager(dp.externalNetworkManager)
 	}
 
 	var routeTableV4 routetable.RouteTableInterface

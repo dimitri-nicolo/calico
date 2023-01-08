@@ -536,6 +536,87 @@ var _ = Describe("PacketCaptures update/remove", func() {
 	})
 })
 
+var _ = Describe("ExternalNetwork update/remove", func() {
+	var uut *calc.EventSequencer
+	var recorder *dataplaneRecorder
+
+	BeforeEach(func() {
+		uut = calc.NewEventSequencer(&dummyConfigInterface{})
+		recorder = &dataplaneRecorder{}
+		uut.Callback = recorder.record
+	})
+
+	It("should flush latest update", func() {
+		uut.OnExternalNetworkUpdate(&proto.ExternalNetworkUpdate{
+			Id:      &proto.ExternalNetworkID{Name: "test"},
+			Network: &proto.ExternalNetwork{Name: "test", RouteTableIndex: 100},
+		})
+		uut.OnExternalNetworkUpdate(&proto.ExternalNetworkUpdate{
+			Id:      &proto.ExternalNetworkID{Name: "test"},
+			Network: &proto.ExternalNetwork{Name: "test", RouteTableIndex: 200},
+		})
+		uut.Flush()
+		Expect(recorder.Messages).To(Equal([]interface{}{
+			&proto.ExternalNetworkUpdate{
+				Id:      &proto.ExternalNetworkID{Name: "test"},
+				Network: &proto.ExternalNetwork{Name: "test", RouteTableIndex: 200},
+			}}))
+	})
+
+	It("should coalesce add + remove", func() {
+		uut.OnExternalNetworkUpdate(&proto.ExternalNetworkUpdate{
+			Id:      &proto.ExternalNetworkID{Name: "test"},
+			Network: &proto.ExternalNetwork{Name: "test", RouteTableIndex: 200},
+		})
+		uut.OnExternalNetworkRemove(&proto.ExternalNetworkRemove{
+			Id: &proto.ExternalNetworkID{Name: "test"},
+		})
+		uut.Flush()
+		Expect(recorder.Messages).To(BeNil())
+	})
+
+	It("should coalesce remove + add", func() {
+		uut.OnExternalNetworkRemove(&proto.ExternalNetworkRemove{
+			Id: &proto.ExternalNetworkID{Name: "test"},
+		})
+		uut.OnExternalNetworkUpdate(&proto.ExternalNetworkUpdate{
+			Id:      &proto.ExternalNetworkID{Name: "test"},
+			Network: &proto.ExternalNetwork{Name: "test", RouteTableIndex: 200},
+		})
+		uut.Flush()
+		Expect(recorder.Messages).To(Equal([]interface{}{
+			&proto.ExternalNetworkUpdate{
+				Id:      &proto.ExternalNetworkID{Name: "test"},
+				Network: &proto.ExternalNetwork{Name: "test", RouteTableIndex: 200},
+			}}))
+	})
+
+	It("should send remove for flushed accounts", func() {
+		uut.OnExternalNetworkUpdate(&proto.ExternalNetworkUpdate{
+			Id:      &proto.ExternalNetworkID{Name: "test"},
+			Network: &proto.ExternalNetwork{Name: "test", RouteTableIndex: 200},
+		})
+		uut.Flush()
+		Expect(recorder.Messages).To(Equal([]interface{}{
+			&proto.ExternalNetworkUpdate{
+				Id:      &proto.ExternalNetworkID{Name: "test"},
+				Network: &proto.ExternalNetwork{Name: "test", RouteTableIndex: 200},
+			}}))
+
+		// Clear messages
+		recorder.Messages = make([]interface{}, 0)
+
+		uut.OnExternalNetworkRemove(&proto.ExternalNetworkRemove{
+			Id: &proto.ExternalNetworkID{Name: "test"},
+		})
+		uut.Flush()
+		Expect(recorder.Messages).To(Equal([]interface{}{
+			&proto.ExternalNetworkRemove{
+				Id: &proto.ExternalNetworkID{Name: "test"},
+			}}))
+	})
+})
+
 type dataplaneRecorder struct {
 	Messages []interface{}
 }

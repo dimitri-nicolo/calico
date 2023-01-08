@@ -758,6 +758,11 @@ func (in *WorkloadEndpointSpec) DeepCopyInto(out *WorkloadEndpointSpec) {
 		*out = new(projectcalicov3.EgressSpec)
 		**out = **in
 	}
+	if in.ExternalNetworkNames != nil {
+		in, out := &in.ExternalNetworkNames, &out.ExternalNetworkNames
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 
