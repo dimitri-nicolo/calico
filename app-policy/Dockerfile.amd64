@@ -15,6 +15,7 @@
 ARG GIT_VERSION=unknown
 ARG UBI_IMAGE
 ARG UBI_IMAGE_FULL
+ARG MODSEC_VERSION=v3.0.8
 
 
 FROM ${UBI_IMAGE_FULL} as build
@@ -23,7 +24,7 @@ RUN dnf install -y https://www6.atomicorp.com/channels/atomic/centos/8/x86_64/RP
 
 RUN dnf install --disableplugin=subscription-manager -y git gcc gcc-c++ make GeoIP-devel libtool libcurl-devel libxml2-devel pcre-devel && \
       git clone https://github.com/spiderlabs/modsecurity modsecurity && \
-      cd modsecurity && git checkout ${MODSEC_VERSION:-v3.0.6} && \
+      cd modsecurity && git checkout ${MODSEC_VERSION} && \
       git submodule init && git submodule update && \
       ./build.sh && ./configure && make && make install
 
