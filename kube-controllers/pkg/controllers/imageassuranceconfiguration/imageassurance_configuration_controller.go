@@ -48,6 +48,7 @@ func New(
 		restartChan:                        restartChan,
 		imageAssuranceNamespace:            resource.ImageAssuranceNameSpaceName,
 		admissionControllerClusterRoleName: cfg.AdmissionControllerClusterRoleName,
+		crAdaptorClusterRoleName:           cfg.CRAdaptorClusterRoleName,
 		intrusionDetectionClusterRoleName:  cfg.IntrusionDetectionControllerClusterRoleName,
 		scannerClusterRoleName:             cfg.ScannerClusterRoleName,
 		scannerCLIClusterRoleName:          cfg.ScannerCLIClusterRoleName,
@@ -93,11 +94,17 @@ func New(
 			&corev1.Secret{}, worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
 		)
 
-		// In managed cluster we need to watch tigera-image-assurance-api-pod-blocker-api-access key, which contains
+		// In managed cluster we need to watch tigera-image-assurance-admission-controller-api-access key, which contains
 		// service account token for accessing image assurance api for updates and deletes.
 		w.AddWatch(
 			cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "secrets", r.imageAssuranceNamespace,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ManagedIAAdmissionControllerResourceName))),
+			&corev1.Secret{}, worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
+		)
+
+		w.AddWatch(
+			cache.NewListWatchFromClient(managedK8sCLI.CoreV1().RESTClient(), "secrets", r.imageAssuranceNamespace,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ManagedIACRAdaptorResourceName))),
 			&corev1.Secret{}, worker.ResourceWatchUpdate, worker.ResourceWatchDelete,
 		)
 
@@ -126,6 +133,14 @@ func New(
 		w.AddWatch(
 			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "serviceaccounts", r.managementOperatorNamespace,
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", fmt.Sprintf(resource.ManagementIAAdmissionControllerResourceNameFormat,
+					r.clusterName)))),
+			&corev1.ServiceAccount{},
+			worker.ResourceWatchUpdate, worker.ResourceWatchDelete, worker.ResourceWatchAdd,
+		)
+
+		w.AddWatch(
+			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "serviceaccounts", r.managementOperatorNamespace,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", fmt.Sprintf(resource.ManagementIACRAdaptorResourceNameFormat,
 					r.clusterName)))),
 			&corev1.ServiceAccount{},
 			worker.ResourceWatchUpdate, worker.ResourceWatchDelete, worker.ResourceWatchAdd,
