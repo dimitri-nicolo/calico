@@ -126,3 +126,7 @@ promotions:
     pipeline_file: ../license-agent/.semaphore/test-cut-release.yml
     auto_promote:
       when: "result = 'passed'"
+  - name: Test Cut Pod2daemon Release
+    pipeline_file: ../pod2daemon/.semaphore/test-cut-release.yml
+    auto_promote:
+      when: "result = 'passed'"
