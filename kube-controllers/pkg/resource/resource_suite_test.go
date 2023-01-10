@@ -13,6 +13,6 @@ import (
 
 func TestConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../../report/copy_suite.xml")
+	junitReporter := reporters.NewJUnitReporter("../../report/copy_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Copy Suite", []Reporter{junitReporter})
 }

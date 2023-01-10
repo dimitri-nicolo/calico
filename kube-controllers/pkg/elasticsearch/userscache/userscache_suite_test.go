@@ -13,6 +13,6 @@ import (
 
 func TestConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../../report/userscache.xml")
+	junitReporter := reporters.NewJUnitReporter("../../report/userscache.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "OIDCUserCache Suite", []Reporter{junitReporter})
 }

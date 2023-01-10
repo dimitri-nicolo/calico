@@ -101,7 +101,7 @@ func assertResponse(expected expected, err error, mockES *mockES) {
 
 var _ = Describe("Elasticsearch", func() {
 	fipsModeEnabled := true
-	FDescribeTable("DeleteUser",
+	DescribeTable("DeleteUser",
 		func(mock mockReq, expected expected) {
 			// Configure ES to return a specific response
 			var es = configureESMock(mock)

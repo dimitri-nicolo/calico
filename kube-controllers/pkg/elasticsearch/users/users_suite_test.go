@@ -13,6 +13,6 @@ import (
 
 func TestConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../../report/elasticsearch_users_suite.xml")
+	junitReporter := reporters.NewJUnitReporter("../../report/elasticsearch_users_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Elasticsearch Users Suite", []Reporter{junitReporter})
 }

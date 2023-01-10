@@ -21,6 +21,6 @@ func init() {
 
 func TestConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../../report/authorization.xml")
+	junitReporter := reporters.NewJUnitReporter("../../report/authorization.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Authorization controller Suite", []Reporter{junitReporter})
 }

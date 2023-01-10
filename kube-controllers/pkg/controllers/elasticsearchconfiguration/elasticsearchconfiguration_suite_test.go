@@ -21,6 +21,6 @@ func init() {
 
 func TestConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../../report/elasticsearchconfiguration_suite.xml")
+	junitReporter := reporters.NewJUnitReporter("../../report/elasticsearchconfiguration_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Elasticsearch configuration controller Suite", []Reporter{junitReporter})
 }
