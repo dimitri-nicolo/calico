@@ -232,6 +232,8 @@ section:
       path: /reference/typha/overview
     - title: Configuration
       path: /reference/typha/configuration
+    - title: Prometheus statistics
+      path: /reference/typha/prometheus
 - title: Configuration on public clouds
   path: /reference/public-cloud/
   section:
