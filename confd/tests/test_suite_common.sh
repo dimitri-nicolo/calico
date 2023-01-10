@@ -29,6 +29,7 @@ execute_test_suite() {
         run_extra_test test_bgp_ttl_security
         run_extra_test test_bgp_filters
         run_extra_test test_bgp_reachable_by
+        run_extra_test test_externalnetworks
     fi
 
     if [ "$DATASTORE_TYPE" = etcdv3 ]; then
@@ -42,6 +43,7 @@ execute_test_suite() {
         run_extra_test test_bgp_ttl_security
         run_extra_test test_bgp_filters
         run_extra_test test_bgp_reachable_by
+        run_extra_test test_externalnetworks
         echo "Extra etcdv3 tests passed"
     fi
 
@@ -1075,6 +1077,8 @@ compare_templates() {
         $CALICOCTL get bgpconfigs -o yaml > ${LOGPATH}/bgpconfig.yaml
         echo "Copying bgp peers to ${LOGPATH}/bgppeers.yaml"
         $CALICOCTL get bgppeers -o yaml > ${LOGPATH}/bgppeers.yaml
+        echo "Copying external networks to ${LOGPATH}/externalnetworks.yaml"
+        $CALICOCTL get externalnetworks -o yaml > ${LOGPATH}/externalnetworks.yaml
         echo "Copying bgp filters to ${LOGPATH}/bgpfilters.yaml"
         $CALICOCTL get bgpfilters -o yaml > ${LOGPATH}/bgpfilters.yaml
         echo "Copying ip pools to ${LOGPATH}/ippools.yaml"
@@ -4102,4 +4106,224 @@ EOF
     if [ "$DATASTORE_TYPE" = kubernetes ]; then
         kill_typha
     fi
+}
+
+test_externalnetworks_global_peers() {
+    # For KDD, run Typha and clean up the output directory.
+    if [ "$DATASTORE_TYPE" = kubernetes ]; then
+        start_typha
+        rm -f /etc/calico/confd/config/*
+    fi
+
+    # Run confd as a background process.
+    echo "Running confd as background process"
+    NODENAME=kube-master BGP_LOGSEVERITYSCREEN="debug" confd -confdir=/etc/calico/confd >$LOGPATH/logd1 2>&1 &
+    CONFD_PID=$!
+    echo "Running with PID " $CONFD_PID
+
+    # Turn the node-mesh off
+    turn_mesh_off
+    # Create 3 nodes and an ExternalNetwork then peer all the nodes with a global BGPPeer
+    $CALICOCTL apply -f - <<EOF
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: kube-master
+  labels:
+      global_peer: yes
+spec:
+  bgp:
+    ipv4Address: 10.192.0.2/16
+    ipv6Address: "2001::103/64"
+---
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: kube-node-1
+  labels:
+      global_peer: yes
+spec:
+  bgp:
+    ipv4Address: 10.192.0.3/16
+    ipv6Address: "2001::102/64"
+---
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: kube-node-2
+  labels:
+    global_peer: yes
+spec:
+  bgp:
+    ipv4Address: 10.192.0.4/16
+    ipv6Address: "2001::104/64"
+---
+kind: ExternalNetwork
+apiVersion: projectcalico.org/v3
+metadata:
+  name: test-enet
+spec:
+  routeTableIndex: 7
+---
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: global-peer-with-external-network
+spec:
+  peerSelector: has(global_peer)
+  externalNetwork: test-enet
+EOF
+
+    test_confd_templates externalnetwork/global_peer
+
+    # Kill confd.
+    kill -9 $CONFD_PID
+
+    # Turn the node-mesh back on.
+    turn_mesh_on
+
+    # Delete remaining resources.
+    $CALICOCTL delete externalnetwork test-enet
+    $CALICOCTL delete bgppeer global-peer-with-external-network
+    if [ "$DATASTORE_TYPE" = etcdv3 ]; then
+      $CALICOCTL delete node kube-master
+      $CALICOCTL delete node kube-node-1
+      $CALICOCTL delete node kube-node-2
+    fi
+
+    # For KDD, kill Typha.
+    if [ "$DATASTORE_TYPE" = kubernetes ]; then
+        kill_typha
+    fi
+}
+
+test_externalnetworks_explicit_peers() {
+    # For KDD, run Typha and clean up the output directory.
+    if [ "$DATASTORE_TYPE" = kubernetes ]; then
+        start_typha
+        rm -f /etc/calico/confd/config/*
+    fi
+
+    # Run confd as a background process.
+    echo "Running confd as background process"
+    NODENAME=kube-master BGP_LOGSEVERITYSCREEN="debug" confd -confdir=/etc/calico/confd >$LOGPATH/logd1 2>&1 &
+    CONFD_PID=$!
+    echo "Running with PID " $CONFD_PID
+
+    # Turn the node-mesh off
+    turn_mesh_off
+    # Create 3 nodes and an ExternalNetwork then peer the master node explicitly with each of the other 2 nodes
+    $CALICOCTL apply -f - <<EOF
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: kube-master
+spec:
+  bgp:
+    ipv4Address: 10.192.0.2/16
+    ipv6Address: "2001::103/64"
+---
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: kube-node-1
+spec:
+  bgp:
+    ipv4Address: 10.192.0.3/16
+    ipv6Address: "2001::102/64"
+---
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: kube-node-2
+spec:
+  bgp:
+    ipv4Address: 10.192.0.4/16
+    ipv6Address: "2001::104/64"
+---
+kind: ExternalNetwork
+apiVersion: projectcalico.org/v3
+metadata:
+  name: test-enet-1
+spec:
+  routeTableIndex: 7
+---
+kind: ExternalNetwork
+apiVersion: projectcalico.org/v3
+metadata:
+  name: test-enet-2
+spec:
+  routeTableIndex: 4
+---
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: explicit-peer-1-with-external-network-v4
+spec:
+  node: kube-master
+  peerIP: 10.192.0.3
+  asNumber: 64517
+  externalNetwork: test-enet-1
+---
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: explicit-peer-1-with-external-network-v6
+spec:
+  node: kube-master
+  peerIP: 2001::102
+  asNumber: 64517
+  externalNetwork: test-enet-1
+---
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: explicit-peer-2-with-external-network-v4
+spec:
+  node: kube-master
+  peerIP: 10.192.0.4
+  asNumber: 64517
+  externalNetwork: test-enet-2
+---
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: explicit-peer-2-with-external-network-v6
+spec:
+  node: kube-master
+  peerIP: 2001::104
+  asNumber: 64517
+  externalNetwork: test-enet-2
+EOF
+
+    test_confd_templates externalnetwork/explicit_peer
+
+    # Kill confd.
+    kill -9 $CONFD_PID
+
+    # Turn the node-mesh back on.
+    turn_mesh_on
+
+    # Delete remaining resources.
+    $CALICOCTL delete externalnetwork test-enet-1
+    $CALICOCTL delete externalnetwork test-enet-2
+    $CALICOCTL delete bgppeer explicit-peer-1-with-external-network-v4
+    $CALICOCTL delete bgppeer explicit-peer-1-with-external-network-v6
+    $CALICOCTL delete bgppeer explicit-peer-2-with-external-network-v4
+    $CALICOCTL delete bgppeer explicit-peer-2-with-external-network-v6
+    if [ "$DATASTORE_TYPE" = etcdv3 ]; then
+      $CALICOCTL delete node kube-master
+      $CALICOCTL delete node kube-node-1
+      $CALICOCTL delete node kube-node-2
+    fi
+
+    # For KDD, kill Typha.
+    if [ "$DATASTORE_TYPE" = kubernetes ]; then
+        kill_typha
+    fi
+}
+
+test_externalnetworks() {
+  test_externalnetworks_global_peers
+  test_externalnetworks_explicit_peers
 }

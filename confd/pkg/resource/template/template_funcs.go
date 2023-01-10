@@ -16,6 +16,12 @@ import (
 
 	"github.com/kelseyhightower/memkv"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
+
+	"github.com/projectcalico/calico/confd/pkg/backends"
+)
+
+const (
+	maxBIRDSymLen = 64
 )
 
 func newFuncMap() map[string]interface{} {
@@ -40,7 +46,9 @@ func newFuncMap() map[string]interface{} {
 	m["base64Encode"] = Base64Encode
 	m["base64Decode"] = Base64Decode
 	m["hashToIPv4"] = hashToIPv4
-	m["emitFunctionName"] = EmitFunctionName
+	m["emitBIRDExternalNetworkConfig"] = EmitBIRDExternalNetworkConfig
+	m["emitExternalNetworkTableName"] = EmitExternalNetworkTableName
+	m["emitFunctionName"] = EmitBGPFilterFunctionName
 	m["emitBIRDBGPFilterFuncs"] = EmitBIRDBGPFilterFuncs
 	return m
 }
@@ -51,7 +59,22 @@ func addFuncs(out, in map[string]interface{}) {
 	}
 }
 
-func emitFilterStatement(matchOperator, cidr, action string) (string, error) {
+// EmitExternalNetworkTableName returns a formatted name for use as a BIRD table, truncating and hashing if the provided
+// name would result in a table name longer than the max allowable length of 64 chars.
+// e.g. input of "my-external-network" would result in output of "'T_my-external-network'"
+func EmitExternalNetworkTableName(name string) (string, error) {
+	prefix := "T_"
+	resizedName, err := truncateAndHashName(name, maxBIRDSymLen-len(prefix))
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("'%s%s'", prefix, resizedName), nil
+}
+
+// emitBGPFilterStatement produces a single comparison expression to be used within a multi-statement BIRD filter
+// function.
+// e.g input of ("In", "77.0.0.1/16", "accept") produces output of "if ( net ~ 77.0.0.1/16 ) then { accept; }"
+func emitBGPFilterStatement(matchOperator, cidr, action string) (string, error) {
 	matchOperatorLUT := map[string]string{
 		string(v3.Equal): "=",
 		v3.NotEqual:      "!=",
@@ -68,10 +91,10 @@ func emitFilterStatement(matchOperator, cidr, action string) (string, error) {
 	return fmt.Sprintf("if ( net %s %s ) then { %s; }", op, cidr, strings.ToLower(action)), nil
 }
 
-// EmitFunctionName returns a formatted name for use as a BIRD function, truncating and hashing if the provided
+// EmitBGPFilterFunctionName returns a formatted name for use as a BIRD function, truncating and hashing if the provided
 // name would result in a function name longer than the max allowable length of 64 chars.
 // e.g. input of ("my-bgp-filter", "import", "4") would result in output of "'bgp_my-bpg-filter_importFilterV4'"
-func EmitFunctionName(filterName, direction, version string) (string, error) {
+func EmitBGPFilterFunctionName(filterName, direction, version string) (string, error) {
 	normalizedDirection := strings.ToLower(direction)
 	switch normalizedDirection {
 	case "import":
@@ -80,7 +103,6 @@ func EmitFunctionName(filterName, direction, version string) (string, error) {
 		return "", fmt.Errorf("Provided direction '%s' does not map to either 'import' or 'export'", direction)
 	}
 	pieces := []string{"bgp_", "", "_", normalizedDirection, "FilterV", version}
-	maxBIRDSymLen := 64
 	resizedName, err := truncateAndHashName(filterName, maxBIRDSymLen-len(strings.Join(pieces, "")))
 	if err != nil {
 		return "", err
@@ -88,6 +110,130 @@ func EmitFunctionName(filterName, direction, version string) (string, error) {
 	pieces[1] = resizedName
 	fullName := strings.Join(pieces, "")
 	return fmt.Sprintf("'%s'", fullName), nil
+}
+
+// EmitBIRDExternalNetworkConfig generates BIRD config for the tables and kernel protocol configuration based on
+// configured ExternalNetwork resources.
+//
+// e.g. for ExternalNetwork resource configured as follows:
+//
+// kind: ExternalNetwork
+// apiVersion: projectcalico.org/v3
+// metadata:
+//   name: test-enet
+// spec:
+//   routeTableIndex: 7
+//
+// Would produce the following string array that can be easily output via BIRD config template:
+//
+// []string {
+//   "# ExternalNetwork test-enet",
+//   "table 'T_test-enet';",
+//   "protocol kernel 'K_test-enet' from kernel_template {",
+//   "  device routes yes;",
+//   "  table 'T_test-enet';",
+//   "  kernel table 7;",
+//   "  export filter {",
+//   "    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+//   "    if proto = \"Global_10_192_0_3\" then accept;",
+//   "    if proto = \"Global_10_192_0_4\" then accept;",
+//   "    reject;",
+//   "  };",
+//   "}",
+//  }
+func EmitBIRDExternalNetworkConfig(selfIP string, externalNetworkKVPs memkv.KVPairs, globalPeersKVP memkv.KVPairs,
+	nodeSpecificPeersKVP memkv.KVPairs) ([]string, error) {
+	lines := []string{}
+	var line string
+	if len(externalNetworkKVPs) == 0 {
+		line = fmt.Sprint("# No ExternalNetworks configured")
+		lines = append(lines, line)
+		return lines, nil
+	}
+	for _, kvp := range externalNetworkKVPs {
+		var externalNetwork v3.ExternalNetwork
+		err := json.Unmarshal([]byte(kvp.Value), &externalNetwork)
+		if err != nil {
+			return []string{}, fmt.Errorf("Error unmarshalling JSON into ExternalNetwork: %s", err)
+		}
+		var routeTableIndex uint32
+		if externalNetwork.Spec.RouteTableIndex != nil {
+			routeTableIndex = *externalNetwork.Spec.RouteTableIndex
+		}
+		externalNetworkName := path.Base(kvp.Key)
+		tableName, err := EmitExternalNetworkTableName(externalNetworkName)
+		if err != nil {
+			return []string{}, err
+		}
+
+		line = fmt.Sprintf("# ExternalNetwork %s", externalNetworkName)
+		lines = append(lines, line)
+
+		line = fmt.Sprintf("table %s;", tableName)
+		lines = append(lines, line)
+
+		emitExternalNetworkProtoStatements := func(peerNamePrefix, selfIP, externalNetworkName string, peers memkv.KVPairs) ([]string, error) {
+			var eNetProtoStatements []string
+			for _, peer := range peers {
+				var backendPeer backends.BGPPeer
+				err = json.Unmarshal([]byte(peer.Value), &backendPeer)
+				if err != nil {
+					return []string{}, fmt.Errorf("Error unmarshalling JSON into backend BGPPeer: %s", err)
+				}
+				if backendPeer.PeerIP.String() == selfIP || backendPeer.ExternalNetwork != externalNetworkName {
+					continue // Skip ourselves because we don't generate a protocol definition for ourselves
+				}
+				var sep string
+				if backendPeer.PeerIP.Version() == 4 {
+					sep = "."
+				} else {
+					sep = ":"
+				}
+				ipParts := strings.Split(backendPeer.PeerIP.String(), sep)
+				ipParts = append([]string{peerNamePrefix}, ipParts...)
+				if backendPeer.Port > 0 {
+					portStrParts := []string{"port", strconv.Itoa(int(backendPeer.Port))}
+					ipParts = append(ipParts, portStrParts...)
+				}
+				eNetProtoStatements = append(eNetProtoStatements,
+					fmt.Sprintf("    if proto = \"%s\" then accept;", strings.Join(ipParts, "_")))
+			}
+			return eNetProtoStatements, nil
+		}
+
+		kernelName := strings.Replace(tableName, "T_", "K_", 1)
+		kernel := []string{
+			fmt.Sprintf("protocol kernel %s from kernel_template {", kernelName),
+			"  device routes yes;",
+			fmt.Sprintf("  table %s;", tableName),
+			fmt.Sprintf("  kernel table %d;", routeTableIndex),
+			"  export filter {",
+			"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
+		}
+
+		kLines, err := emitExternalNetworkProtoStatements("Global", selfIP, externalNetworkName,
+			globalPeersKVP)
+		if err != nil {
+			return []string{}, err
+		}
+		kernel = append(kernel, kLines...)
+
+		kLines, err = emitExternalNetworkProtoStatements("Node", selfIP, externalNetworkName,
+			nodeSpecificPeersKVP)
+		if err != nil {
+			return []string{}, err
+		}
+		kernel = append(kernel, kLines...)
+
+		kernel = append(kernel, []string{
+			"    reject;",
+			"  };",
+			"}",
+		}...)
+
+		lines = append(lines, kernel...)
+	}
+	return lines, nil
 }
 
 // EmitBIRDBGPFilterFuncs generates a set of BIRD functions for BGPFilter resources that have been packaged into KVPairs.
@@ -177,7 +323,7 @@ func EmitBIRDBGPFilterFuncs(pairs memkv.KVPairs, version int) ([]string, error) 
 		var filterFuncName string
 		var filterRule string
 		if emitImports {
-			filterFuncName, err = EmitFunctionName(filterName, "import", versionStr)
+			filterFuncName, err = EmitBGPFilterFunctionName(filterName, "import", versionStr)
 			if err != nil {
 				return []string{}, err
 			}
@@ -199,7 +345,7 @@ func EmitBIRDBGPFilterFuncs(pairs memkv.KVPairs, version int) ([]string, error) 
 			}
 
 			for _, fields := range ruleFields {
-				filterRule, err = emitFilterStatement(fields[0], fields[1], fields[2])
+				filterRule, err = emitBGPFilterStatement(fields[0], fields[1], fields[2])
 				if err != nil {
 					return []string{}, err
 				}
@@ -212,7 +358,7 @@ func EmitBIRDBGPFilterFuncs(pairs memkv.KVPairs, version int) ([]string, error) 
 		}
 
 		if emitExports {
-			filterFuncName, err = EmitFunctionName(filterName, "export", versionStr)
+			filterFuncName, err = EmitBGPFilterFunctionName(filterName, "export", versionStr)
 			if err != nil {
 				return []string{}, err
 			}
@@ -234,7 +380,7 @@ func EmitBIRDBGPFilterFuncs(pairs memkv.KVPairs, version int) ([]string, error) 
 			}
 
 			for _, fields := range ruleFields {
-				filterRule, err = emitFilterStatement(fields[0], fields[1], fields[2])
+				filterRule, err = emitBGPFilterStatement(fields[0], fields[1], fields[2])
 				if err != nil {
 					return []string{}, err
 				}

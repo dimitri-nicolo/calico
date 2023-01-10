@@ -99,6 +99,7 @@ var OpenSourceAPIs = set{
 	libapi.NewNode().GetObjectKind().GroupVersionKind().String():                      true,
 	api.NewProfile().GetObjectKind().GroupVersionKind().String():                      true,
 	api.NewStagedGlobalNetworkPolicy().GetObjectKind().GroupVersionKind().String():    true,
+	api.NewExternalNetwork().GetObjectKind().GroupVersionKind().String():              true,
 	api.NewBGPFilter().GetObjectKind().GroupVersionKind().String():                    true,
 }
 

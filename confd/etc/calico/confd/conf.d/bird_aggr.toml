@@ -7,5 +7,6 @@ keys = [
     "/bgp/v1/global",
     "/ipam/v2/host//NODENAME/ipv4/block",
     "/staticroutes",
+    "/resources/v3/projectcalico.org/externalnetworks",
 ]
 reload_cmd = "sv hup bird || true"

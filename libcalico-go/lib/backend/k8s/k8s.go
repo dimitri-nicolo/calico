@@ -339,6 +339,13 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		resources.NewExternalNetworkClient(cs, crdClientV1),
 	)
 
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindExternalNetwork,
+		resources.NewExternalNetworkClient(cs, crdClientV1),
+	)
+
 	if !ca.K8sUsePodCIDR {
 		// Using Calico IPAM - use CRDs to back IPAM resources.
 		log.Debug("Calico is configured to use calico-ipam")
