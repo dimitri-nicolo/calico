@@ -13,6 +13,6 @@ import (
 
 func TestConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("../../../report/managedcluster_suite.xml")
+	junitReporter := reporters.NewJUnitReporter("../../report/managedcluster_suite.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Managed cluster controller Suite", []Reporter{junitReporter})
 }
