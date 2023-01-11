@@ -26,9 +26,13 @@ const (
 	EnvHealthEnabled      = "HEALTH_ENABLED"
 	EnvSyncNodeLabels     = "SYNC_NODE_LABELS"
 	EnvAutoHostEndpoints  = "AUTO_HOST_ENDPOINTS"
+	EnvTLSKey             = "TLS_KEY_PATH"
+	EnvTLSCert            = "TLS_CRT_PATH"
+	EnvCAFile             = "CA_CRT_PATH"
+	EnvCommonName         = "CLIENT_COMMON_NAME"
 )
 
-var AllEnvs = []string{EnvLogLevel, EnvReconcilerPeriod, EnvEnabledControllers, EnvCompactionPeriod, EnvHealthEnabled, EnvSyncNodeLabels, EnvAutoHostEndpoints}
+var AllEnvs = []string{EnvLogLevel, EnvReconcilerPeriod, EnvEnabledControllers, EnvCompactionPeriod, EnvHealthEnabled, EnvSyncNodeLabels, EnvAutoHostEndpoints, EnvTLSKey, EnvTLSCert, EnvCAFile, EnvCommonName}
 
 // Config represents the configuration we load from the environment variables
 type Config struct {
