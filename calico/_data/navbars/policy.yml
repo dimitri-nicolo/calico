@@ -12,6 +12,8 @@ section:
     section:
     - title: Change allow-tigera tier behavior
       path: /security/allow-tigera
+  - title: Network policy tutorial
+    path: /security/policy-tutorial-ui
   - title: Create RBAC for tiered policy
     path: /security/rbac-tiered-policies
 - title: Get started with network sets
