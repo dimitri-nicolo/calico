@@ -119,6 +119,10 @@ promotions:
   pipeline_file: push-images/voltron.yml
   auto_promote:
     when: "branch =~ 'master|release-'"
+- name: Push pod2daemon images
+  pipeline_file: push-images/pod2daemon.yml
+  auto_promote:
+    when: "branch =~ 'master|release-'"
 - name: Publish Helm Charts
   pipeline_file: docs/helm-charts.yml
   auto_promote:
