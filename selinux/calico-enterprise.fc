@@ -1,0 +1,7 @@
+# Copyright (c) 2023 Tigera, Inc. All rights reserved.
+
+/var/lib/calico(/.*)?  gen_context(system_u:object_r:container_var_lib_t,s0)
+/var/log/calico(/.*)?  gen_context(system_u:object_r:container_log_t,s0)
+/var/run/calico(/.*)?  gen_context(system_u:object_r:container_var_run_t,s0)
+
+/mnt/tigera(/.*)?      gen_context(system_u:object_r:container_file_t,s0)
