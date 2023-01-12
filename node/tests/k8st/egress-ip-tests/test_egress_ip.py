@@ -9,7 +9,8 @@ from datetime import datetime
 from random import randint
 
 from tests.k8st.test_base import Container, Pod, TestBase
-from tests.k8st.utils.utils import DiagsCollector, calicoctl, kubectl, run, node_info, retry_until_success, stop_for_debug
+from tests.k8st.utils.utils import DiagsCollector, calicoctl, kubectl, run, \
+        node_info, retry_until_success, stop_for_debug, update_ds_env
 
 _log = logging.getLogger(__name__)
 
@@ -37,6 +38,10 @@ class _TestEgressIP(TestBase):
     def setUp(self):
         super(_TestEgressIP, self).setUp()
 
+    def tearDown(self):
+        super(_TestEgressIP, self).tearDown()
+
+    @classmethod
     def env_ippool_setup(self, backend, wireguard):
         self.disableDefaultDenyTest = False
         newEnv = {"FELIX_PolicySyncPathPrefix": "/var/run/nodeagent",
@@ -66,7 +71,7 @@ class _TestEgressIP(TestBase):
         if wireguard:
             self.disableDefaultDenyTest = True
             newEnv["FELIX_WIREGUARDENABLED"] = "true"
-        self.update_ds_env("calico-node", "kube-system", newEnv)
+        update_ds_env("calico-node", "kube-system", newEnv)
 
         # Create egress IP pool.
         self.egress_cidr = "10.10.10.0/29"
@@ -83,13 +88,9 @@ spec:
   ipipMode: %s
 EOF
 """ % (self.egress_cidr, modeVxlan, modeIPIP))
-        self.add_cleanup(lambda: calicoctl("delete ippool egress-ippool-1"))
-
+       
         # After restarting felixes, wait for 20s to ensure Felix is past its route-cleanup grace period.
         time.sleep(20)
-
-    def tearDown(self):
-        super(_TestEgressIP, self).tearDown()
 
     def test_access_service_node_port(self):
 
@@ -170,6 +171,8 @@ EOF
                 self.cleanups.remove(pod.delete)
                 gw_ips.remove(pod.ip)
                 self.check_ecmp_routes(client, servers, gw_ips, allowed_untaken_count=1)
+                for s in servers:
+                    self.server_del_route(s, pod)
 
             # No Gateway pods in the cluster.
             # Validate all egress ip related ARP and FDB entries been removed.
@@ -188,6 +191,12 @@ EOF
             gw_ips = [gw.ip, gw2.ip, gw3.ip]
             for g in [gw, gw2, gw3]:
                 g.wait_ready()
+
+            # Add route to server. The IPAM block size is /29, We could have a new ip for a new gw.
+            for s in servers:
+                self.server_add_route(s, gw)
+                self.server_add_route(s, gw2)
+                self.server_add_route(s, gw3)
 
             self.check_ecmp_routes(client, servers, gw_ips, allowed_untaken_count=1)
 
@@ -245,7 +254,7 @@ EOF
             # Break one of the gateway's ICMP probes, it should be taken out of service.
             self.server_del_route(servers[0], gw)
             gw.wait_not_ready()
-
+ 
             def check_routes(expected):
                 tables = self.read_client_hops_for_node(client.nodename)
                 hops = tables[client.ip]["hops"]
@@ -346,8 +355,8 @@ EOF
             _log.info("--- Start restarting calico/node ---")
             oldEnv = {"FELIX_LOGSEVERITYSCREEN": log_level}
             newEnv = {"FELIX_LOGSEVERITYSCREEN": new_log_level}
-            self.update_ds_env("calico-node", "kube-system", newEnv)
-            self.add_cleanup(lambda: self.update_ds_env("calico-node", "kube-system", oldEnv))
+            update_ds_env("calico-node", "kube-system", newEnv)
+            self.add_cleanup(lambda: update_ds_env("calico-node", "kube-system", oldEnv))
 
             # client_red should send egress packets via gw3, gw3_1
             self.check_ecmp_routes(client_red, servers, [gw3.ip, gw3_1.ip], allowed_untaken_count=1)
@@ -402,7 +411,7 @@ EOF
 
             # Set EgressIPSupport to EnabledPerNamespace.
             newEnv = {"FELIX_EGRESSIPSUPPORT": "EnabledPerNamespace"}
-            self.update_ds_env("calico-node", "kube-system", newEnv)
+            update_ds_env("calico-node", "kube-system", newEnv)
 
             # Validate egress ip again, pod annotations should be ignored.
             self.validate_egress_ip(client_no_annotations, server, gw_red.ip)
@@ -844,10 +853,10 @@ EOF
             _log.info("--- Restarting calico/node with routeTableRage 1,200 ---")
             oldEnv = {"FELIX_ROUTETABLERANGES": "201-250"}
             newEnv = {"FELIX_ROUTETABLERANGES": "1-200"}
-            self.update_ds_env("calico-node", "kube-system", newEnv)
+            update_ds_env("calico-node", "kube-system", newEnv)
 
             def undo_route_table_range():
-                self.update_ds_env("calico-node", "kube-system", {"FELIX_ROUTETABLERANGES": "1-250"})
+                update_ds_env("calico-node", "kube-system", {"FELIX_ROUTETABLERANGES": "1-250"})
             self.add_cleanup(undo_route_table_range)
 
             # Create 3 egress gateways, with an IP from that pool.
@@ -925,7 +934,7 @@ EOF
             run("docker exec %s ip route show table %s" % (node, "211"))
 
             _log.info("--- Restarting calico/node with routeTableRage 201-250 ---")
-            self.update_ds_env("calico-node", "kube-system", oldEnv)
+            update_ds_env("calico-node", "kube-system", oldEnv)
 
             retry_until_success(self.has_ip_rule, retries=3, wait_time=3, function_kwargs={"nodename": c3.nodename, "ip": c3.ip})
 
@@ -1092,9 +1101,24 @@ EOF
         self.add_cleanup(client.delete)
         client.wait_ready()
 
+        # At this point, since gw is not ready (no return route from server),
+        # ip rule is created but route should be set as invalid eventually. (e.g. unreachable route)
+        def check_routes(expected):
+                tables = self.read_client_hops_for_node(client.nodename)
+                hops = tables[client.ip]["hops"]
+                assert set(hops) == set(expected), ("Expected client's hops to be %s not %s." % (expected, hops))
+        retry_until_success(check_routes, retries=3, wait_time=3, function_args=[[]])
+
         # Give the server a route back to the egress IP.
         self.server_add_route(server, gateway)
         gateway.wait_ready()
+
+        # Route to gw should be ready.
+        # Without waiting for route to be ready, it is possible the traffic hit 
+        # unreachable route or the transition phrase from unreachable route to a valid route.
+        # What we found is that `kubectl exec test 1 -- nc -w 2` sometimes hung. We added
+        # `timeout -s 3 kubectl` to workaround this issue, but kubectl still panics in some cases.
+        retry_until_success(check_routes, retries=3, wait_time=3, function_args=[[gateway.ip]])
 
         self.validate_egress_ip(client, server, gateway.ip)
 
@@ -1329,37 +1353,81 @@ class NetcatClientTCP(Pod):
         pass
 
 class TestEgressIPNoOverlay(_TestEgressIP):
+    @classmethod
+    def setupClass(klass):
+        """This method runs once for each class before any tests are run"""
+        _TestEgressIP.env_ippool_setup(backend="NoOverlay", wireguard=False)
+
+    @classmethod
+    def teardownClass(klass):
+        """This method runs once for each class _after_ all tests are run"""
+        calicoctl("delete ippool egress-ippool-1")
+
     def setUp(self):
         super(_TestEgressIP, self).setUp()
-        self.env_ippool_setup(backend="NoOverlay", wireguard=False)
 TestEgressIPNoOverlay.egress_ip_no_overlay = True
 
 class TestEgressIPWithIPIP(_TestEgressIP):
+    @classmethod
+    def setupClass(klass):
+        _TestEgressIP.env_ippool_setup(backend="IPIP", wireguard=False)
+
+    @classmethod
+    def teardownClass(klass):
+        calicoctl("delete ippool egress-ippool-1")
+
     def setUp(self):
         super(_TestEgressIP, self).setUp()
-        self.env_ippool_setup(backend="IPIP", wireguard=False)
 TestEgressIPWithIPIP.egress_ip_ipip = True
 
 class TestEgressIPWithVXLAN(_TestEgressIP):
+    @classmethod
+    def setupClass(klass):
+        _TestEgressIP.env_ippool_setup(backend="VXLAN", wireguard=False)
+
+    @classmethod
+    def teardownClass(klass):
+        calicoctl("delete ippool egress-ippool-1")
+
     def setUp(self):
         super(_TestEgressIP, self).setUp()
-        self.env_ippool_setup(backend="VXLAN", wireguard=False)
 TestEgressIPWithVXLAN.egress_ip_vxlan = True
 
 class TestEgressIPNoOverlayAndWireguard(TestEgressIPNoOverlay):
+    @classmethod
+    def setupClass(klass):
+        _TestEgressIP.env_ippool_setup(backend="NoOverlay", wireguard=True)
+
+    @classmethod
+    def teardownClass(klass):
+        calicoctl("delete ippool egress-ippool-1")
+
     def setUp(self):
         super(_TestEgressIP, self).setUp()
-        self.env_ippool_setup(backend="NoOverlay", wireguard=True)
 TestEgressIPNoOverlayAndWireguard.egress_ip_no_overlay = True
 
 class TestEgressIPWithIPIPAndWireguard(TestEgressIPWithIPIP):
+    @classmethod
+    def setupClass(klass):
+        _TestEgressIP.env_ippool_setup(backend="IPIP", wireguard=True)
+
+    @classmethod
+    def teardownClass(klass):
+        calicoctl("delete ippool egress-ippool-1")
+
     def setUp(self):
         super(_TestEgressIP, self).setUp()
-        self.env_ippool_setup(backend="IPIP", wireguard=True)
 TestEgressIPWithIPIPAndWireguard.egress_ip_ipip = True
 
 class TestEgressIPWithVXLANAndWireguard(_TestEgressIP):
+    @classmethod
+    def setupClass(klass):
+        _TestEgressIP.env_ippool_setup(backend="VXLAN", wireguard=True)
+
+    @classmethod
+    def teardownClass(klass):
+        calicoctl("delete ippool egress-ippool-1")
+
     def setUp(self):
         super(_TestEgressIP, self).setUp()
-        self.env_ippool_setup(backend="VXLAN", wireguard=True)
 TestEgressIPWithVXLANAndWireguard.egress_ip_vxlan = True

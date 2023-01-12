@@ -17,7 +17,7 @@ import json
 
 from tests.k8st.test_base import TestBaseV6
 from tests.k8st.utils.utils import start_external_node_with_bgp, \
-        retry_until_success, run, curl, DiagsCollector, calicoctl, kubectl, node_info
+        retry_until_success, run, curl, DiagsCollector, calicoctl, kubectl, node_info, update_ds_env
 
 _log = logging.getLogger(__name__)
 
@@ -107,7 +107,7 @@ class _TestBGPAdvertV6(TestBaseV6):
         )
 
         # Enable debug logging
-        self.update_ds_env("calico-node",
+        update_ds_env("calico-node",
                            "kube-system",
                            {"BGP_LOGSEVERITYSCREEN": "debug"})
 
