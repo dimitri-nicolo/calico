@@ -34,7 +34,7 @@ This is required to prevent Linux nodes from borrowing IP addresses from Windows
 kubectl patch ipamconfigurations default --type merge --patch='{"spec": {"strictAffinity": true}}'
 ```
 
-> **Note**: If the above command failed to find ipamconfigurations resource, you need to install Calico API server. Please refer to [installing the Calico API server]({{site.baseurl}}/maintenance/install-apiserver).
+> **Note**: If the above command failed to find ipamconfigurations resource, you need to install the Calico API server.
 {: .alert .alert-info}
 
 #### Install {{site.prodnameWindows}} manually
