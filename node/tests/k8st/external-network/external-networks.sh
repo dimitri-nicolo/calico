@@ -409,6 +409,8 @@ EOF
 }
 
 function do_cleanup {
+    ${kubectl} label node kind-worker egress- --overwrite
+
     docker rm -f bird-a1 bird-b1 bird-b2 bird-c1
 
     docker network disconnect enetA kind-worker || true
