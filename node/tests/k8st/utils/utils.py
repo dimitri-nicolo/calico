@@ -108,8 +108,7 @@ def start_external_node_with_bgp(name, bird_peer_config=None, bird6_peer_config=
 
     elif bird6_peer_config:
         # Install desired peer config.
-        output = run("docker inspect -f '{{range .NetworkSettings.Networks}}{{.GlobalIPv6Address}}{{end}}' %s" % name)
-        birdy_ip = output.strip()
+        birdy_ip = "2001:20::20"
         run("docker exec %s sysctl -w net.ipv6.conf.all.disable_ipv6=0" % name)
         run("docker exec %s sysctl -w net.ipv6.conf.all.forwarding=1" % name)
 
@@ -121,6 +120,7 @@ def start_external_node_with_bgp(name, bird_peer_config=None, bird6_peer_config=
         run("docker exec %s sysctl -w net.ipv6.fib_multipath_hash_policy=1" % name,
             allow_fail=True)
 
+        run("docker exec %s ip -6 a a %s/64 dev eth0" % (name, birdy_ip))
         with open('peers.conf', 'w') as peerconfig:
             peerconfig.write(bird6_peer_config.replace("ip@local", birdy_ip))
         run("docker cp peers.conf %s:/etc/bird6/peers.conf" % name)
@@ -222,7 +222,7 @@ def curl(hostname, container="kube-node-extra"):
     return run(cmd)
 
 
-def kubectl(args, logerr=True, allow_fail=False, allow_codes=[], returnerr=False):
+def kubectl(args, logerr=True, allow_fail=False, allow_codes=[], timeout=0, returnerr=False):
     if timeout == 0:
         cmd = "kubectl "
     else:
@@ -270,16 +270,14 @@ def node_info():
 
     master_node = kubectl("get node --selector='node-role.kubernetes.io/control-plane' -o jsonpath='{.items[0].metadata.name}'")
     nodes.append(master_node)
-    master_ip6 = kubectl("get node --selector='node-role.kubernetes.io/control-plane' -o jsonpath='{.items[0].status.addresses[1].address}'")
-    ip6s.append(master_ip6)
+    ip6s.append(ipv6_map[master_node])
     master_ip = kubectl("get node --selector='node-role.kubernetes.io/control-plane' -o jsonpath='{.items[0].status.addresses[0].address}'")
     ips.append(master_ip)
 
     for i in range(3):
         node = kubectl("get node --selector='!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[%d].metadata.name}'" % i)
         nodes.append(node)
-        node_ip6 = kubectl("get node --selector='!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[%d].status.addresses[1].address}'" % i)
-        ip6s.append(node_ip6)
+        ip6s.append(ipv6_map[node])
         node_ip = kubectl("get node --selector='!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[%d].status.addresses[0].address}'" % i)
         ips.append(node_ip)
     return nodes, ips, ip6s

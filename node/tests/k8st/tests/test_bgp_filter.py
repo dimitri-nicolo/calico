@@ -4,7 +4,7 @@ import logging
 import re
 
 from tests.k8st.test_base import Container, Pod, TestBase
-from tests.k8st.utils.utils import DiagsCollector, calicoctl, kubectl, run, retry_until_success, node_info, start_external_node_with_bgp
+from tests.k8st.utils.utils import DiagsCollector, calicoctl, kubectl, run, retry_until_success, node_info, start_external_node_with_bgp, update_ds_env
 
 _log = logging.getLogger(__name__)
 
@@ -60,9 +60,9 @@ class TestBGPFilter(TestBase):
         self.egress_calico_pod = self.get_calico_node_pod(self.egress_node)
 
         # Enable debug logging
-        self.update_ds_env("calico-node",
-                           "kube-system",
-                           {"BGP_LOGSEVERITYSCREEN": "debug"})
+        update_ds_env("calico-node",
+                      "kube-system",
+                      {"BGP_LOGSEVERITYSCREEN": "debug"})
 
         # Establish BGPPeer from cluster nodes to node-extra
         kubectl("""apply -f - << EOF
