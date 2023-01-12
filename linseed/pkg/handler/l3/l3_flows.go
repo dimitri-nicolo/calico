@@ -15,7 +15,7 @@ import (
 )
 
 type NetworkFlows struct {
-	//TODO: Add storage
+	// TODO: Add storage
 }
 
 func (n NetworkFlows) SupportedAPIs() map[string]http.Handler {
@@ -30,7 +30,6 @@ func (n NetworkFlows) URL() string {
 
 func (n NetworkFlows) Post() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-
 		reqParams := v1.L3FlowParams{
 			QueryParams: &v1.QueryParams{
 				Timeout: &metav1.Duration{Duration: 60 * time.Second},
@@ -62,14 +61,14 @@ func (n NetworkFlows) Post() http.HandlerFunc {
 
 		for _, s := range reqParams.Statistics {
 			switch s {
-			case v1.CONNECTION:
-				response.ConnectionStats = &v1.ConnectionStats{}
-			case v1.TCP:
+			case v1.StatsTypeTraffic:
+				response.TrafficStats = &v1.TrafficStats{}
+			case v1.StatsTypeTCP:
 				response.TCPStats = &v1.TCPStats{}
-			case v1.PROCESS:
+			case v1.StatsTypeProcess:
 				response.ProcessStats = &v1.ProcessStats{}
-			case v1.FLOW:
-				response.Stats = &v1.Stats{}
+			case v1.StatsTypeFlowLog:
+				response.LogStats = &v1.LogStats{}
 			}
 		}
 

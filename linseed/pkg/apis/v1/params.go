@@ -13,6 +13,7 @@ import (
 type QueryParams struct {
 	// TimeRange will filter data generated within the specified time range
 	TimeRange *lmav1.TimeRange `json:"time_range" validate:"required"`
+
 	// Timeout will limit requests to read/write data to the desired duration
 	Timeout *v1.Duration `json:"timeout" validate:"omitempty"`
 }

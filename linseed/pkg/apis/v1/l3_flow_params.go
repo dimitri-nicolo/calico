@@ -2,22 +2,25 @@
 
 package v1
 
-const (
-	CONNECTION StatsType = "connection"
-	TCP        StatsType = "tcp"
-	FLOW       StatsType = "flow"
-	PROCESS    StatsType = "process"
-
-	WEP        EndpointType = "wep"
-	HEP        EndpointType = "hep"
-	NETWORK    EndpointType = "net"
-	NETWORKSET EndpointType = "ns"
-)
-
-// StatsType are types of aggregated statistics
+// Types of stats available for querying on an L3 flow.
 type StatsType string
 
+const (
+	StatsTypeTraffic StatsType = "traffic"
+	StatsTypeTCP     StatsType = "tcp"
+	StatsTypeFlowLog StatsType = "flow"
+	StatsTypeProcess StatsType = "process"
+)
+
+// Types of endpoints present in log data.
 type EndpointType string
+
+const (
+	WEP        EndpointType = "wep"
+	HEP        EndpointType = "hep"
+	Network    EndpointType = "net"
+	NetworkSet EndpointType = "ns"
+)
 
 // L3FlowParams define querying parameters to retrieve L3 Flows
 type L3FlowParams struct {
@@ -41,6 +44,9 @@ type L3FlowParams struct {
 	// - allow users to specify a desired time that the request should run
 	// until cancelling the execution
 	QueryParams *QueryParams `json:"query_params" validate:"required"`
+
+	// Limit the maximum number of returned results.
+	MaxResults int
 }
 
 type Endpoint struct {
