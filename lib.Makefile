@@ -178,7 +178,8 @@ UBI_IMAGE ?= registry.access.redhat.com/ubi8/ubi-minimal:$(UBI_VERSION)
 UBI_IMAGE_FULL  ?= registry.access.redhat.com/ubi8/ubi:$(UBI_VERSION)
 
 ifeq ($(GIT_USE_SSH),true)
-	GIT_CONFIG_SSH ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/";
+	GIT_CONFIG_SSH ?= git config --global url."ssh://git@github.com/".insteadOf "https://github.com/" && \
+	git config --global --add safe.directory "*";
 endif
 
 # Get version from git.
