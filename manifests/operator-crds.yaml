@@ -2418,6 +2418,8 @@ status:
   conditions: []
   storedVersions: []
 ---
+# Source: crds/operator.tigera.io_egressgateways_crd.yaml
+---
 # Source: crds/operator.tigera.io_imagesets_crd.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
