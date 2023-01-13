@@ -9,11 +9,7 @@ trap 'echo "INT received, simply exiting..."; exit 0' INT
 trap 'echo "TERM received, simply exiting..."; exit 0' TERM
 trap 'echo "HUP received, simply exiting..."; exit 0' HUP
 
-: ${EGRESS_VXLAN_VNI:=4097}
-
-: ${DAEMON_LOG_SEVERITY:=info}
-
-: ${DAEMON_SOCKET_PATH:=/var/run/nodeagent/socket}
+: ${DAEMON_SOCKET_PATH:=/var/run/calico/nodeagent/socket}
 
 if [ -z "$EGRESS_POD_IP" ]
 then
@@ -21,5 +17,17 @@ then
     exit 1
 fi
 
+if [ -z "$LOG_SEVERITY" ]
+then
+    echo "LOG_SEVERITY not defined."
+    exit 1
+fi
+
+if [ -z "$EGRESS_VXLAN_VNI" ]
+then
+    echo "EGRESS_VXLAN_VNI not defined."
+    exit 1
+fi
+
 echo Egress gateway starting...
-/egressd start $EGRESS_POD_IP --log-severity $DAEMON_LOG_SEVERITY --vni $EGRESS_VXLAN_VNI --socket-path $DAEMON_SOCKET_PATH
+/egressd start $EGRESS_POD_IP --log-severity $LOG_SEVERITY --vni $EGRESS_VXLAN_VNI --socket-path $DAEMON_SOCKET_PATH

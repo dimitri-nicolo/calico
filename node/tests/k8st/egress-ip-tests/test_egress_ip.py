@@ -1207,6 +1207,10 @@ spec:
       valueFrom:
         fieldRef:
           fieldPath: status.podIP
+    - name: EGRESS_VXLAN_PORT
+      value: "4790"
+    - name: EGRESS_VXLAN_VNI
+      value: "4097"
     imagePullPolicy: Never
     securityContext:
       privileged: true
@@ -1239,6 +1243,10 @@ spec:
     # port defined below.
     - name: HEALTH_PORT
       value: "8080"
+    - name: LOG_SEVERITY
+      value: "Info"
+    - name: EGRESS_VXLAN_VNI
+      value: "4097"
     # Use downward API to tell the pod its own IP address.
     - name: EGRESS_POD_IP
       valueFrom:
@@ -1250,7 +1258,7 @@ spec:
         add: ["NET_ADMIN"]
     command: ["/start-gateway.sh"]
     volumeMounts:
-        - mountPath: /var/run
+        - mountPath: /var/run/calico
           name: policysync
     ports:
         - name: health

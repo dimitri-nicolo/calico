@@ -18,13 +18,21 @@ trap 'echo "HUP received, simply exiting..."; exit 0' HUP
 : ${IPTABLES_BACKEND:=legacy}
 iptables=iptables-${IPTABLES_BACKEND}
 
-: ${EGRESS_VXLAN_VNI:=4097}
-
-: ${EGRESS_VXLAN_PORT:=4790}
-
 if [ -z "$EGRESS_POD_IP" ]
 then
     echo "EGRESS_POD_IP not defined."
+    exit 1
+fi
+
+if [ -z "$EGRESS_VXLAN_VNI" ]
+then
+    echo "EGRESS_VXLAN_VNI not defined."
+    exit 1
+fi
+
+if [ -z "$EGRESS_VXLAN_PORT" ]
+then
+    echo "EGRESS_VXLAN_PORT not defined."
     exit 1
 fi
 
