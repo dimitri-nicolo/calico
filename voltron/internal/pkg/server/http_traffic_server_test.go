@@ -92,6 +92,7 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 			server.WithExternalCredsFiles(externalCertFile, externalKeyFile),
 			server.WithInternalCredFiles(internalCertFile, internalKeyFile),
 			server.WithDefaultProxy(defaultProxy),
+			server.WithUnauthenticatedTargets([]string{"/"}),
 		}
 
 		srv, err = server.New(

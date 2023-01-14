@@ -159,6 +159,14 @@ func WithKubernetesAPITargets(tgts []regexp.Regexp) Option {
 	}
 }
 
+// WithUnauthenticatedTargets sets a whitelist target paths that do not need authentication
+func WithUnauthenticatedTargets(tgts []string) Option {
+	return func(s *Server) error {
+		s.unauthenticatedTargetPaths = tgts
+		return nil
+	}
+}
+
 // WithSNIServiceMap sets the service map used by the SNI proxy to say where to proxy traffic from a specific host to.
 func WithSNIServiceMap(serviceMap map[string]string) Option {
 	return func(s *Server) error {

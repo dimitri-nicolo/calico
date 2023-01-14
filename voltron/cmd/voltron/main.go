@@ -43,6 +43,21 @@ func main() {
 		`^/apis/?`,
 	})
 
+	unauthenticatedTargets := []string{
+		// Need this unauthenticated so a browswer can download the manager UI webcode.
+		"/",
+		// We need the es/version unauthenticated so the liveness probe for es-proxy
+		// can be successful.
+		"/tigera-elasticsearch/version",
+		// We use special token authentication with Kibana so it doesn't need to be
+		// authenticated.
+		cfg.KibanaBasePath,
+	}
+	if cfg.DexEnabled {
+		// Dex endpoints setup auth tokens so we can't authenticate access.
+		unauthenticatedTargets = append(unauthenticatedTargets, cfg.DexBasePath)
+	}
+
 	if err != nil {
 		log.WithError(err).Fatalf("Failed to parse tunnel target whitelist.")
 	}
@@ -133,6 +148,7 @@ func main() {
 			server.WithSNIServiceMap(sniServiceMap),
 			server.WithFIPSModeEnabled(cfg.FIPSModeEnabled),
 			server.WithCheckManagedClusterAuthorizationBeforeProxy(cfg.CheckManagedClusterAuthorizationBeforeProxy),
+			server.WithUnauthenticatedTargets(unauthenticatedTargets),
 		)
 	}
 
@@ -152,6 +168,17 @@ func main() {
 			Dest:             cfg.ElasticEndpoint,
 			PathRegexp:       []byte("^/tigera-elasticsearch/?"),
 			PathReplace:      []byte("/"),
+			AllowInsecureTLS: true,
+		},
+		{
+			// Define this a separate path because the liveness probe for es-proxy goes through
+			// voltron and does not need to be authenticated but the rest of tigera-elasticsearch
+			// does. With this defined this Path will be matched specifically and we can serve
+			// it unauthenticated.
+			Path:             "/tigera-elasticsearch/version",
+			Dest:             cfg.ElasticEndpoint,
+			PathRegexp:       []byte("^/tigera-elasticsearch/version?"),
+			PathReplace:      []byte("/version"),
 			AllowInsecureTLS: true,
 		},
 		{

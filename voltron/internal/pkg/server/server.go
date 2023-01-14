@@ -61,9 +61,10 @@ type Server struct {
 	config        *rest.Config
 	authenticator auth.JWTAuth
 
-	defaultProxy          *proxy.Proxy
-	tunnelTargetWhitelist []regexp.Regexp
-	kubernetesAPITargets  []regexp.Regexp
+	defaultProxy               *proxy.Proxy
+	tunnelTargetWhitelist      []regexp.Regexp
+	kubernetesAPITargets       []regexp.Regexp
+	unauthenticatedTargetPaths []string
 
 	clusters *clusters
 	health   *health
@@ -322,14 +323,13 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 	isK8sRequest := requestPathMatches(r, s.kubernetesAPITargets)
 	shouldUseTunnel := requestPathMatches(r, s.tunnelTargetWhitelist) && hasClusterHeader
 
-	// If shouldUseTunnel=true, we do authn checks & impersonation and the request will be sent to guardian.
-	// If isK8sRequest=true, we also do authn checks & impersonation.
-	// If neither is true, we just proxy the request. Authn will be handled there.
-	if (!shouldUseTunnel || !hasClusterHeader) && !isK8sRequest {
-		// This is a request for the backend servers in the management cluster, like es-proxy or compliance.
+	if requestTargetPathMatches(r, s.defaultProxy, s.unauthenticatedTargetPaths) {
+		// This request is to a target that can be unauthenticated
 		s.defaultProxy.ServeHTTP(w, r)
 		return
 	}
+
+	// For everything else we authenticate before forwarding on a request
 
 	if len(chdr) > 1 {
 		msg := fmt.Sprintf("multiple %q headers", ClusterHeaderField)
@@ -344,6 +344,16 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), status)
 		return
 	}
+
+	// If shouldUseTunnel=true, we do impersonation and the request will be sent to guardian.
+	// If isK8sRequest=true, we do impersonation.
+	// If neither is true, we proxy the request without impersonation. Authn will also be handled there.
+	if (!shouldUseTunnel || !hasClusterHeader) && !isK8sRequest {
+		// This is a request for the backend servers in the management cluster, like es-proxy or compliance.
+		s.defaultProxy.ServeHTTP(w, r)
+		return
+	}
+
 	addImpersonationHeaders(r, usr)
 	removeAuthHeaders(r)
 
@@ -405,6 +415,22 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 func requestPathMatches(r *http.Request, targetPaths []regexp.Regexp) bool {
 	for _, p := range targetPaths {
 		if p.MatchString(r.URL.Path) {
+			return true
+		}
+	}
+	return false
+}
+
+// Determine whether or not the given request should use the tunnel proxying
+// by comparing its URL path against the provide list of regex expressions
+// (representing paths for targets that the request might be going to).
+func requestTargetPathMatches(r *http.Request, prxy *proxy.Proxy, targetPaths []string) bool {
+	if prxy == nil {
+		return false
+	}
+	path := prxy.GetTargetPath(r)
+	for _, p := range targetPaths {
+		if p == path {
 			return true
 		}
 	}
