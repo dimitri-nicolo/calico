@@ -210,7 +210,7 @@ func (p *proxy) dial(url string) (net.Conn, error) {
 		}
 
 		log.WithError(err).Errorf("failed to open a connection to %s, will retry in %d seconds (attempt %d of %d)", url, p.retryInterval, i, p.retryAttempts+1)
-		time.Sleep(p.retryInterval * time.Second)
+		time.Sleep(p.retryInterval)
 	}
 
 	return nil, err
