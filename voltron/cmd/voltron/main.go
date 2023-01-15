@@ -67,6 +67,7 @@ func main() {
 		server.WithKeepAliveSettings(cfg.KeepAliveEnable, cfg.KeepAliveInterval),
 		server.WithExternalCredsFiles(cfg.HTTPSCert, cfg.HTTPSKey),
 		server.WithKubernetesAPITargets(kubernetesAPITargets),
+		server.WithUnauthenticatedTargets(unauthenticatedTargets),
 	}
 
 	config := bootstrap.NewRestConfig(cfg.K8sConfigPath)
@@ -148,7 +149,6 @@ func main() {
 			server.WithSNIServiceMap(sniServiceMap),
 			server.WithFIPSModeEnabled(cfg.FIPSModeEnabled),
 			server.WithCheckManagedClusterAuthorizationBeforeProxy(cfg.CheckManagedClusterAuthorizationBeforeProxy),
-			server.WithUnauthenticatedTargets(unauthenticatedTargets),
 		)
 	}
 
