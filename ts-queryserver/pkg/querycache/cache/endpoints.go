@@ -1,13 +1,16 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
 package cache
 
 import (
 	log "github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/tools/cache"
 
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/calico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/api"
@@ -32,6 +35,7 @@ type EndpointsCache interface {
 	GetEndpoint(model.Key) api.Endpoint
 	RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface)
 	RegisterWithLabelHandler(handler labelhandler.Interface)
+	RegisterWithSharedInformer(factory informers.SharedInformerFactory, stopCh <-chan struct{})
 }
 
 // NewEndpointsCache creates a new instance of an EndpointsCache.
@@ -111,7 +115,6 @@ func (c *endpointsCache) onUpdate(update dispatcherv1v3.Update) {
 		// All endpoints are unprotected initially. policyEndpointMatch() will
 		// remove them from this set if policies apply on this endpoint.
 		ec.unprotectedEndpoints.Add(uv3.Key)
-		ec.updateFailedEndpoints(uv3)
 	case bapi.UpdateTypeKVUpdated:
 		ed := ec.endpoints[uv3.Key]
 		wasUnlabelled := !ed.IsLabelled()
@@ -122,13 +125,41 @@ func (c *endpointsCache) onUpdate(update dispatcherv1v3.Update) {
 		ed := ec.endpoints[uv3.Key]
 		ec.unprotectedEndpoints.Discard(uv3.Key)
 		ec.updateHasLabelsCounts(!ed.IsLabelled(), false)
+		// When a Pod is failed and removed from the cluster, we will get
+		// a WEP delete event together with phase equals Failed. The failed
+		// WEP key is added into the failedEndpoints collection and reported
+		// back to Manager. As the WEP is deleted, we won't get future events
+		// for Pod deletion either by human or controllers. We need a separate
+		// onPodDelete() notification function to track this and remove the
+		// failed WEP from the failedEndpoints collection.
 		ec.updateFailedEndpoints(uv3)
 		delete(ec.endpoints, uv3.Key)
 	}
 
-	if uv3.Key.(model.ResourceKey).Kind == libapi.KindWorkloadEndpoint && len(ec.endpoints) == 0 {
-		// Workload endpoints cache is empty for this namespace. Delete from the cache.
-		delete(c.workloadEndpointsByNamespace, uv3.Key.(model.ResourceKey).Namespace)
+	if uv3.Key.(model.ResourceKey).Kind == libapi.KindWorkloadEndpoint {
+		c.maybeDeleteEndpointCacheByNamespace(ec, uv3.Key.(model.ResourceKey).Namespace)
+	}
+}
+
+func (c *endpointsCache) onPodDelete(obj interface{}) {
+	pod, ok := obj.(*corev1.Pod)
+	if !ok {
+		log.Debug("onPodDelete is called but the obj isn't *corev1.Pod type")
+		return
+	}
+
+	wepConverter := conversion.NewWorkloadEndpointConverter()
+	kvps, err := wepConverter.PodToWorkloadEndpoints(pod)
+	if err != nil {
+		log.Debug("failed to convert a pod to wep in onPodDelete")
+		return
+	}
+
+	key := kvps[0].Key
+	if ec := c.getEndpointCache(key, false); ec != nil {
+		ec.failedEndpoints.Discard(key)
+
+		c.maybeDeleteEndpointCacheByNamespace(ec, pod.GetNamespace())
 	}
 }
 
@@ -146,6 +177,21 @@ func (c *endpointsCache) RegisterWithDispatcher(dispatcher dispatcherv1v3.Interf
 
 func (c *endpointsCache) RegisterWithLabelHandler(handler labelhandler.Interface) {
 	handler.RegisterPolicyHandler(c.policyEndpointMatch)
+}
+
+func (c *endpointsCache) RegisterWithSharedInformer(factory informers.SharedInformerFactory, stopCh <-chan struct{}) {
+	informer := factory.Core().V1().Pods().Informer()
+	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		DeleteFunc: c.onPodDelete,
+	})
+	go informer.Run(stopCh)
+}
+
+func (c *endpointsCache) maybeDeleteEndpointCacheByNamespace(ec *endpointCache, namespace string) {
+	if len(ec.endpoints) == 0 && ec.failedEndpoints.Len() == 0 {
+		// Workload endpoints cache is empty for this namespace. Delete from the cache.
+		delete(c.workloadEndpointsByNamespace, namespace)
+	}
 }
 
 func (c *endpointsCache) policyEndpointMatch(matchType labelhandler.MatchType, polKey model.Key, epKey model.Key) {
@@ -187,6 +233,7 @@ func (c *endpointCache) updateHasLabelsCounts(before, after bool) {
 }
 
 func (c *endpointCache) updateFailedEndpoints(uv3 *bapi.Update) {
+	// We only consider failed WEPs (Pods) for now. HEPs failures are not monitored yet.
 	if wep, ok := uv3.Value.(*libapi.WorkloadEndpoint); ok {
 		if wep.Status.Phase == string(corev1.PodFailed) {
 			c.failedEndpoints.Add(uv3.Key)

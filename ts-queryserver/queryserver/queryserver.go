@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020, 2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
 package main
 
 import (
@@ -43,7 +43,6 @@ func init() {
 }
 
 func main() {
-
 	flag.Parse()
 	if version {
 		_ = PrintVersion()
@@ -94,10 +93,11 @@ func main() {
 	handler := handler.NewAuthHandler(authJWT)
 
 	// Start the server.
-	if err := server.Start(cfg, serverCfg, handler); err != nil {
+	srv := server.NewServer(k8sClient, cfg, serverCfg, handler)
+	if err := srv.Start(); err != nil {
 		log.WithError(err).Fatal("Error starting queryserver")
 	}
 
 	// Wait while the server is running.
-	server.Wait()
+	srv.Wait()
 }
