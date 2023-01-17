@@ -237,6 +237,15 @@ func (c *cachedQuery) runQueryEndpoints(cxt context.Context, req QueryEndpointsR
 			req.Policy, req.RuleDirection, req.RuleIndex, req.RuleEntity, req.RuleNegatedSelector,
 		)
 		if err != nil {
+			// When the policy requested from Manager can't be found, we should still return
+			// a 200 OK response with an empty list of items instead of a 400 Bad Request.
+			// It is still a valid request but we just can't find anything requested.
+			if _, ok := err.(errors.ErrorResourceDoesNotExist); ok {
+				return &QueryEndpointsResp{
+					Count: 0,
+					Items: []Endpoint{},
+				}, nil
+			}
 			return nil, err
 		}
 	}
