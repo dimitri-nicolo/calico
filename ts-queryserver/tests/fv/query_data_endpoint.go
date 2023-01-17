@@ -423,6 +423,24 @@ func endpointTestQueryData() []testQueryData {
 			},
 		},
 		{
+			"multiple weps and heps, tier1 policy - query with valid policy name but it can't be found in the cluster",
+			[]resourcemgr.ResourceObject{
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+			},
+			client.QueryEndpointsReq{
+				Policy: model.ResourceKey{
+					Kind:      apiv3.KindNetworkPolicy,
+					Namespace: "some-ns-can-not-be-found",
+					Name:      "some-name-can-not-be-found",
+				},
+			},
+			&client.QueryEndpointsResp{
+				Count: 0,
+				Items: []client.Endpoint{},
+			},
+		},
+		{
 			"multiple weps and heps, tier1 policy - endpoints matching policy selector gnp1_t1_o3",
 			[]resourcemgr.ResourceObject{
 				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
