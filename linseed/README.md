@@ -32,7 +32,7 @@ make test
 | LINSEED_HOST        |        <empty>         |   Host for the service |
 | LINSEED_LOG_LEVEL     |         `Info`         |    Log Level across service |
 | LINSEED_CERT        | `/certs/https/tls.crt` |    Path to tls cert |
-| LINSEED_KEY        | `/certs/https/tls.KEY` |    Path tp tls key |
+| LINSEED_KEY        | `/certs/https/tls.key` |    Path tp tls key |
 | LINSEED_FIPS_MODE_ENABLED |        `false`         |    FIPSModeEnabled Enables FIPS 140-2 verified crypto mode |
 
 <!---
@@ -42,8 +42,8 @@ Describe what permissions needs in k8s cluster
 
 ## Docs
 
-[Low level design for changes to the log storage subsystem](https://docs.google.com/document/d/1raHOohq0UWlLD9ygqsvu4vPMNNS9iGeY5xhHKt0O3Hc/edit?usp=sharing)
-[Multitenancy Proposal](https://docs.google.com/document/d/1HM0gba3hlR_cdTqHWc-NSqoiGHrVdTc_g1w3k8NmSdM/edit?usp=sharing)
+- [Low level design for changes to the log storage subsystem](https://docs.google.com/document/d/1raHOohq0UWlLD9ygqsvu4vPMNNS9iGeY5xhHKt0O3Hc/edit?usp=sharing)
+- [Multitenancy Proposal](https://docs.google.com/document/d/1HM0gba3hlR_cdTqHWc-NSqoiGHrVdTc_g1w3k8NmSdM/edit?usp=sharing)
 
 
 

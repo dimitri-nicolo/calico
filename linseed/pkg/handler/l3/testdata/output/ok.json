@@ -1,0 +1,20 @@
+{
+  "source": {
+    "type": "",
+    "name": "",
+    "aggregated_name": "",
+    "namespace": "",
+    "port": 0,
+    "labels": null
+  },
+  "destination": {
+    "type": "",
+    "name": "",
+    "aggregated_name": "",
+    "namespace": "",
+    "port": 0,
+    "labels": null
+  },
+  "actions": null,
+  "reporter": ""
+}

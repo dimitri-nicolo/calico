@@ -3,34 +3,26 @@
 package main
 
 import (
-	"flag"
+	"context"
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/projectcalico/calico/linseed/pkg/handler/l3"
 
 	"github.com/kelseyhightower/envconfig"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/crypto/pkg/tls"
-	"github.com/projectcalico/calico/linseed/pkg/config"
-	"github.com/projectcalico/calico/linseed/pkg/handler"
-)
+	"github.com/projectcalico/calico/linseed/pkg/server"
 
-var (
-	versionFlag = flag.Bool("version", false, "Print version information")
+	"github.com/projectcalico/calico/linseed/pkg/config"
 )
 
 func main() {
-	// Parse all command-line flags
-	flag.Parse()
-
-	// For --version use case
-	if *versionFlag {
-		handler.Version()
-		os.Exit(0)
-	}
-
+	// Read and reconcile configuration
 	cfg := config.Config{}
 	if err := envconfig.Process(config.EnvConfigPrefix, &cfg); err != nil {
 		panic(err)
@@ -38,21 +30,38 @@ func main() {
 
 	// Configure logging
 	config.ConfigureLogging(cfg.LogLevel)
-
 	log.Debugf("Starting with %#v", cfg)
 
-	var addr = fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
-	log.Infof("Listening for HTTPS requests at %s", addr)
-	// Define handlers
-	http.Handle("/version", handler.VersionCheck())
-	http.Handle("/health", handler.HealthCheck())
-	http.Handle("/metrics", promhttp.Handler())
+	// Register for termination signals
+	var signalChan = make(chan os.Signal, 1)
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
 	// Start server
-	server := &http.Server{
-		Addr:      addr,
-		TLSConfig: tls.NewTLSConfig(cfg.FIPSModeEnabled),
-	}
+	var addr = fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
+	server := server.NewServer(addr, cfg.FIPSModeEnabled,
+		server.WithMiddlewares(server.Middlewares()),
+		server.WithAPIVersionRoutes("/api/v1", server.UnpackRoutes(
+			&l3.NetworkFlows{},
+			&l3.NetworkLogs{},
+		)...),
+		server.WithRoutes(server.UtilityRoutes()...),
+	)
 
-	log.Fatal(server.ListenAndServeTLS(cfg.HTTPSCert, cfg.HTTPSKey))
+	go func() {
+		log.Infof("Listening for HTTPS requests at %s", addr)
+		if err := server.ListenAndServeTLS(cfg.HTTPSCert, cfg.HTTPSKey); err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+
+	// Listen for termination signals
+	<-signalChan
+
+	// Graceful shutdown of the server
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatalf("server shutdown failed: %+v", err)
+	}
+	log.Info("Server is shutting down")
 }

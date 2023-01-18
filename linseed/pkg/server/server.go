@@ -1,0 +1,71 @@
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+
+package server
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+
+	"github.com/projectcalico/calico/crypto/pkg/tls"
+)
+
+// Server defines a custom http server that can be configured to respond to different routes
+// and make use of multiple  and serves only HTTPS traffic
+type Server struct {
+	srv    *http.Server
+	router *chi.Mux
+}
+
+// NewServer creates a new Server that binds on addr, with a TLSConfig that can be tailored
+// to match FIPS requirements and apply different customizations
+func NewServer(addr string, fipsEnabled bool, opts ...Option) *Server {
+
+	const (
+		defaultIdleTimeout  = 120 * time.Second
+		defaultReadTimeout  = 5 * time.Second
+		defaultWriteTimeout = 10 * time.Second
+	)
+
+	mux := chi.NewRouter()
+
+	srv := &http.Server{
+		Addr:         addr,
+		TLSConfig:    tls.NewTLSConfig(fipsEnabled),
+		Handler:      mux,
+		IdleTimeout:  defaultIdleTimeout,
+		ReadTimeout:  defaultReadTimeout,
+		WriteTimeout: defaultWriteTimeout,
+	}
+
+	server := &Server{
+		srv:    srv,
+		router: mux,
+	}
+
+	for _, opt := range opts {
+		opt(server)
+	}
+
+	return server
+}
+
+// ListenAndServeTLS is a blocking request that will listen on the provided network address
+// and serves incoming TLS requests. All traffic will be encrypted with certFile, keyFile provided
+func (s *Server) ListenAndServeTLS(certFile, keyFile string) error {
+	if s.srv == nil {
+		return fmt.Errorf("no server is currently configured")
+	}
+	return s.srv.ListenAndServeTLS(certFile, keyFile)
+}
+
+// Shutdown gracefully shutdowns the server
+func (s *Server) Shutdown(ctx context.Context) error {
+	if s.srv == nil {
+		return fmt.Errorf("no server is currently configured")
+	}
+	return s.srv.Shutdown(ctx)
+}

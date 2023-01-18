@@ -192,3 +192,11 @@ func EncodeError(dst http.ResponseWriter, err error) {
 		http.Error(dst, err.Error(), http.StatusInternalServerError)
 	}
 }
+
+// JSONError encodes the error to the response writer destination in a json format
+func JSONError(w http.ResponseWriter, error error, code int) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(error)
+}

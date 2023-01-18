@@ -1,12 +1,11 @@
-// Copyright 2022 Tigera. All rights reserved.
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-package handler
+package middleware
 
 import (
 	"encoding/json"
 	"net/http"
-
-	log "github.com/sirupsen/logrus"
+	"strings"
 )
 
 type state struct {
@@ -14,14 +13,11 @@ type state struct {
 }
 
 // HealthCheck returns 200 OK status code and a json response on GET request with the status
-// A 404 FileNotFound will be returned if other method is used.
-func HealthCheck() http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		log.Tracef("%s for %s from %s", req.Method, req.URL, req.RemoteAddr)
+// The request will be passed to be served by the next middleware handler
+func HealthCheck(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		var s = state{Status: "ok"}
-
-		switch req.Method {
-		case http.MethodGet:
+		if req.Method == http.MethodGet && strings.EqualFold(req.URL.Path, "/health") {
 			js, err := json.MarshalIndent(s, "", "  ")
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -39,8 +35,11 @@ func HealthCheck() http.HandlerFunc {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-		default:
-			http.NotFound(w, req)
+
+			// write state and return 200 ok
+			return
 		}
-	}
+		next.ServeHTTP(w, req)
+
+	})
 }

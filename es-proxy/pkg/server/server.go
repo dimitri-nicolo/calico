@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/projectcalico/calico/lma/pkg/httputils"
+
 	log "github.com/sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -276,7 +278,7 @@ func Start(cfg *Config) error {
 
 	server = &http.Server{
 		Addr:    cfg.ListenAddr,
-		Handler: middleware.LogRequestHeaders(sm),
+		Handler: httputils.LogRequestHeaders(sm),
 	}
 	server.TLSConfig = calicotls.NewTLSConfig(cfg.FIPSModeEnabled)
 	wg.Add(1)

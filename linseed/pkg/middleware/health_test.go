@@ -1,6 +1,6 @@
-// Copyright 2022 Tigera. All rights reserved.
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-package handler_test
+package middleware_test
 
 import (
 	"io"
@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/projectcalico/calico/linseed/pkg/handler"
+	"github.com/projectcalico/calico/linseed/pkg/middleware"
 )
 
 func TestHealthCheck(t *testing.T) {
@@ -22,6 +22,7 @@ func TestHealthCheck(t *testing.T) {
 
 	type testInput struct {
 		method string
+		path   string
 	}
 
 	tests := []struct {
@@ -29,15 +30,19 @@ func TestHealthCheck(t *testing.T) {
 		given testInput
 		want  testResult
 	}{
-		{name: "200 OK", given: testInput{"GET"}, want: testResult{httpStatus: 200, httpBody: `{"status":"ok"}`}},
-		{name: "404 Not found", given: testInput{"POST"}, want: testResult{httpStatus: 404, httpBody: `404 page not found`}},
+		{name: "Get HealthCheck", given: testInput{"GET", "/health"}, want: testResult{httpStatus: 200, httpBody: `{"status":"ok"}`}},
+		{name: "Not matching path", given: testInput{"GET", "/healthz"}, want: testResult{httpStatus: 404, httpBody: `404 page not found`}},
+		{name: "Not matching method", given: testInput{"POST", "/health"}, want: testResult{httpStatus: 404, httpBody: `404 page not found`}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			healthCheck := handler.HealthCheck()
+			testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				http.NotFound(w, r)
+			})
+			healthCheck := middleware.HealthCheck(testHandler)
 
 			rec := httptest.NewRecorder()
-			req, err := http.NewRequest(tt.given.method, "/health", nil)
+			req, err := http.NewRequest(tt.given.method, tt.given.path, nil)
 			assert.NoError(t, err)
 
 			healthCheck.ServeHTTP(rec, req)

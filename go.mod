@@ -36,6 +36,7 @@ require (
 	github.com/florianl/go-nfqueue v1.2.0
 	github.com/gavv/monotime v0.0.0-20190418164738-30dba4353424
 	github.com/ghodss/yaml v1.0.0
+	github.com/go-chi/chi/v5 v5.0.8
 	github.com/go-ini/ini v1.63.2
 	github.com/go-openapi/runtime v0.23.3
 	github.com/go-sql-driver/mysql v1.5.0

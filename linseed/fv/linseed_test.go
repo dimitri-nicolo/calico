@@ -15,22 +15,27 @@ import (
 
 func TestFV_Linseed(t *testing.T) {
 	var addr = "localhost:8444"
+
 	var tests = []struct {
-		name string
-		path string
+		name           string
+		path           string
+		method         string
+		wantStatusCode int
+		wantBody       string
 	}{
-		{name: "should return 404 for / request", path: "/"},
-		{name: "should return 404 for /foo request", path: "/foo"},
-		{name: "should return 404 for /api/v1/flows/foo request", path: "/api/v1/flows/foo"},
+		{name: "should return 404 for /", path: "/", method: "GET", wantStatusCode: 404, wantBody: "404 page not found"},
+		{name: "should return 404 for /foo", path: "/foo", method: "GET", wantStatusCode: 404, wantBody: "404 page not found"},
+		{name: "should return 404 for /api/v1/flows/foo", path: "/api/v1/flows/foo", method: "GET", wantStatusCode: 404, wantBody: "404 page not found"},
+		{name: "should return 405 for DELETE /version", path: "/version", method: "DELETE", wantStatusCode: 405, wantBody: ""},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			client := secureHTTPClient(t)
-			res, resBody := doRequest(t, client, "GET", fmt.Sprintf("https://%s%s", addr, tt.path))
+			res, resBody := doRequest(t, client, tt.method, fmt.Sprintf("https://%s%s", addr, tt.path))
 
-			assert.Equal(t, http.StatusNotFound, res.StatusCode)
-			assert.Equal(t, "404 page not found", strings.Trim(string(resBody), "\n"))
+			assert.Equal(t, tt.wantStatusCode, res.StatusCode)
+			assert.Equal(t, tt.wantBody, strings.Trim(string(resBody), "\n"))
 
 			return
 		})
