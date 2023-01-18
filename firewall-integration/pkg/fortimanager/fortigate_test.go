@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020, 2023 Tigera, Inc. All rights reserved.
 package fortimanager_test
 
 import (
@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 
 	"github.com/jarcoal/httpmock"
 	. "github.com/onsi/ginkgo"
@@ -174,7 +175,7 @@ var _ = Describe("Test Fortigate Address object", func() {
 	var fc fn.FortiFWClientApi
 	BeforeEach(func() {
 		frclient := NewMockRestClient(jsonContentType, false)
-		fc = fn.NewFortiGateClient("", "fortigate.dev", "test", frclient)
+		fc = fn.NewFortiGateClient("", "fortigate.dev", "test", "", frclient)
 	})
 
 	It("Validate FortiGate Address object", func() {
@@ -287,7 +288,7 @@ var _ = Describe("Test Fortigate Address Group Object", func() {
 	var fc fn.FortiFWClientApi
 	BeforeEach(func() {
 		frclient := NewMockRestClient(jsonContentType, false)
-		fc = fn.NewFortiGateClient("", "fortigate.dev", "test", frclient)
+		fc = fn.NewFortiGateClient("", "fortigate.dev", "test", "", frclient)
 	})
 
 	It("Validate FortiGate Address Groups", func() {
@@ -399,6 +400,35 @@ var _ = Describe("Test Fortigate Address Group Object", func() {
 			// Update an valid Firewall Address Group, but expect Error from mock
 			err = fc.UpdateFirewallAddressGroup(testAddrGrp)
 			Expect(err).Should(HaveOccurred())
+		})
+	})
+})
+
+var _ = Describe("Fortigate URL construction", func() {
+
+	It("construct correct Fortigate URL", func() {
+		check := func(vdom string) {
+			fc := fn.FortiGateClient{
+				Name:        "",
+				Ip:          "fortigate.dev",
+				Vdom:        vdom,
+				AccessToken: "test",
+				Client:      nil,
+			}
+			actualURLString := fc.URL("api/v2/cmdb/address")
+			actualURL, err := url.Parse(actualURLString)
+			Expect(err).To(BeNil())
+			Expect(actualURL.Scheme).Should(Equal("https"))
+			Expect(actualURL.Host).Should(Equal("fortigate.dev"))
+			values := actualURL.Query()
+			Expect(values.Get("access_token")).Should(Equal("test"))
+			Expect(values.Get("vdom")).Should(Equal(vdom))
+		}
+		Context("With VDOM", func() {
+			check("morpheus")
+		})
+		Context("Without VDOM", func() {
+			check("")
 		})
 	})
 })

@@ -238,6 +238,7 @@ type FortiGateConfig struct {
 	Name   string          `yaml:"name"`
 	Ip     string          `yaml:"ip"`
 	ApiKey FortiGateApiKey `yaml:"apikey"`
+	Vdom   string          `yaml:"vdom"`
 }
 
 type FortiMgrConfig struct {
@@ -259,6 +260,7 @@ type FwFortiDevConfig struct {
 	ApiKey   string
 	PkgName  string
 	Tier     string
+	Vdom     string
 }
 
 type reqFWPolicyPkgParams struct {

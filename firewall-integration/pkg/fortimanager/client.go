@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 
 	"strings"
 
@@ -35,15 +36,17 @@ type FortiGateClient struct {
 	Ip          string
 	AccessToken string
 	Client      FortiGateRestClientApi
+	Vdom        string
 }
 
-func NewFortiGateClient(name, ip, accessToken string, fg FortiGateRestClientApi) FortiFWClientApi {
+func NewFortiGateClient(name, ip, accessToken, vdom string, fg FortiGateRestClientApi) FortiFWClientApi {
 	return &FortiGateClient{
 		Name:        name,
 		Adom:        "",
 		Ip:          ip,
 		AccessToken: accessToken,
 		Client:      fg,
+		Vdom:        vdom,
 	}
 }
 
@@ -95,8 +98,7 @@ func (f *FortiGateClient) CreateFirewallAddress(fortiFWAddr FortiFWAddress) erro
 	}
 
 	//create a URL string for HTTP POST
-	url := fmt.Sprintf("https://%s/api/v2/cmdb/firewall/address?access_token=%s",
-		f.Ip, f.AccessToken)
+	url := f.URL("/api/v2/cmdb/firewall/address")
 
 	//Marshal data
 	bytesRepresentation, err := json.Marshal(fwAddrObj)
@@ -144,7 +146,7 @@ func (f *FortiGateClient) UpdateFirewallAddress(fortiFWAddr FortiFWAddress) erro
 	}
 
 	//create a URL string for HTTP PUT request
-	url := fmt.Sprintf("https://%s/api/v2/cmdb/firewall/address/%s?access_token=%s", f.Ip, fortiFWAddr.Name, f.AccessToken)
+	url := f.URL(fmt.Sprintf("/api/v2/cmdb/firewall/address/%s", fortiFWAddr.Name))
 
 	//Marshal data
 	bytesRepresentation, err := json.Marshal(fwAddrObj)
@@ -183,7 +185,7 @@ func (f *FortiGateClient) UpdateFirewallAddress(fortiFWAddr FortiFWAddress) erro
 //Delete the Firewall Address in FortiGate device
 func (f *FortiGateClient) DeleteFirewallAddress(fortiFWAddr FortiFWAddress) error {
 	//create a URL string for delete request
-	url := fmt.Sprintf("https://%s/api/v2/cmdb/firewall/address/%s?access_token=%s", f.Ip, fortiFWAddr.Name, f.AccessToken)
+	url := f.URL(fmt.Sprintf("/api/v2/cmdb/firewall/address/%s", fortiFWAddr.Name))
 
 	//http Delete  request to FortiGate Device
 	b, err := f.Client.FortiGateRestDelete(url)
@@ -217,7 +219,7 @@ func (f *FortiGateClient) DeleteFirewallAddress(fortiFWAddr FortiFWAddress) erro
 //Get all Firewall Addresses in FortiGate
 func (f *FortiGateClient) ListAllFirewallAddresses() ([]FortiFWAddress, error) {
 	//create a URL string for Getting all FW addresses
-	url := fmt.Sprintf("https://%s/api/v2/cmdb/firewall/address?access_token=%s", f.Ip, f.AccessToken)
+	url := f.URL("/api/v2/cmdb/firewall/address")
 
 	fwAddressObjs := []FortiFWAddress{}
 	//http GET request to FortiGate Device
@@ -274,8 +276,8 @@ func (f *FortiGateClient) ListAllFirewallAddresses() ([]FortiFWAddress, error) {
 //Get the Firewall Address object from FortiGate
 func (f *FortiGateClient) GetFirewallAddress(fwAddr string) (FortiFWAddress, error) {
 	//create a URL string for getting the FW address object
-	url := fmt.Sprintf("https://%s/api/v2/cmdb/firewall/address/%s?access_token=%s",
-		f.Ip, fwAddr, f.AccessToken)
+	url := f.URL(fmt.Sprintf("/api/v2/cmdb/firewall/address/%s", fwAddr))
+
 	var fwAddressObj FortiFWAddress
 
 	//http GET request to FortiGate Device
@@ -299,7 +301,7 @@ func (f *FortiGateClient) GetFirewallAddress(fwAddr string) (FortiFWAddress, err
 			tempStr := fmt.Sprintf("FwAddress :%s in Fortigate(%s)", fwAddr, f.Ip)
 			return fwAddressObj, ErrorResourceDoesNotExist{Identifier: tempStr, Err: errors.New("unable to find the specified object")}
 		default:
-			return fwAddressObj, fmt.Errorf("Unhandled error code %v status %v", code, res.Status)
+			return fwAddressObj, fmt.Errorf("unhandled error code %v status %v", code, res.Status)
 		}
 	}
 	//Convert return data to FortiFwAddress format
@@ -314,7 +316,7 @@ func (f *FortiGateClient) GetFirewallAddress(fwAddr string) (FortiFWAddress, err
 			"subnet":       res.Result[0].Subnet,
 			"subnetLength": len(subnetParts),
 		}).Error("FortiGate Firewall Address subnet value incorrect values.")
-		return fwAddressObj, errors.New("Incorrect return value from FortiGate")
+		return fwAddressObj, errors.New("incorrect return value from FortiGate")
 	}
 	fwAddressObj.Comment = res.Result[0].Comment
 	fwAddressObj.Name = res.Result[0].Name
@@ -328,13 +330,13 @@ func (f *FortiGateClient) GetFirewallAddress(fwAddr string) (FortiFWAddress, err
 //Get all Firewall address Groups present in the FortiGate
 func (f *FortiGateClient) ListAllFirewallAddressGroups() ([]FortiFWAddressGroup, error) {
 	//URL string for getting the FW address Group
-	url := fmt.Sprintf("https://%s/api/v2/cmdb/firewall/addrgrp?access_token=%s", f.Ip, f.AccessToken)
+	url := f.URL("/api/v2/cmdb/firewall/addrgrp")
 
 	fwAddressGroups := []FortiFWAddressGroup{}
 	//http GET request to FortiGate Device
 	b, err := f.Client.FortiGateRestGet(url)
 	if err != nil {
-		log.Error("Unable to do http-Get with FortiGate device")
+		log.Error("unable to do http-Get with FortiGate device")
 		return fwAddressGroups, ErrorUnknownConnectionIssue{Err: err}
 	}
 	var res RespFortiGateAddressGrp
@@ -346,7 +348,7 @@ func (f *FortiGateClient) ListAllFirewallAddressGroups() ([]FortiFWAddressGroup,
 	}
 
 	if res.HttpStatus != FortiGateReturnSuccess {
-		return fwAddressGroups, fmt.Errorf("Error when fetching firewall addresses %v", err)
+		return fwAddressGroups, fmt.Errorf("error when fetching firewall addresses %v", err)
 	}
 
 	for _, result := range res.Result {
@@ -366,8 +368,7 @@ func (f *FortiGateClient) ListAllFirewallAddressGroups() ([]FortiFWAddressGroup,
 func (f *FortiGateClient) GetFirewallAddressGroup(fwAddr string) (FortiFWAddressGroup, error) {
 
 	//URL string for getting the FW address Group
-	url := fmt.Sprintf("https://%s/api/v2/cmdb/firewall/addrgrp/%s?access_token=%s",
-		f.Ip, fwAddr, f.AccessToken)
+	url := f.URL(fmt.Sprintf("/api/v2/cmdb/firewall/addrgrp/%s", fwAddr))
 
 	var fwAddresses FortiFWAddressGroup
 	//http GET request to FortiGate Device
@@ -391,7 +392,7 @@ func (f *FortiGateClient) GetFirewallAddressGroup(fwAddr string) (FortiFWAddress
 			tempStr := fmt.Sprintf("FwAddressGroup :%s in Fortigate(%s)", fwAddr, f.Ip)
 			return fwAddresses, ErrorResourceDoesNotExist{Identifier: tempStr, Err: errors.New("unable to find the specified object")}
 		default:
-			return fwAddresses, fmt.Errorf("Unhandled error code %v status %v", code, res.Status)
+			return fwAddresses, fmt.Errorf("unhandled error code %v status %v", code, res.Status)
 		}
 	}
 
@@ -407,7 +408,7 @@ func (f *FortiGateClient) GetFirewallAddressGroup(fwAddr string) (FortiFWAddress
 func (f *FortiGateClient) UpdateFirewallAddressGroup(fwAddrGrpObj FortiFWAddressGroup) error {
 
 	//create a URL string for HTTP PUT request
-	url := fmt.Sprintf("https://%s/api/v2/cmdb/firewall/addrgrp/%s?access_token=%s", f.Ip, fwAddrGrpObj.Name, f.AccessToken)
+	url := f.URL(fmt.Sprintf("/api/v2/cmdb/firewall/addrgrp/%s", fwAddrGrpObj.Name))
 	//Create a payload for http post request
 	var req RespFortiGateFWAddressGrpData
 	req.Name = fwAddrGrpObj.Name
@@ -449,7 +450,7 @@ func (f *FortiGateClient) UpdateFirewallAddressGroup(fwAddrGrpObj FortiFWAddress
 			tempStr := fmt.Sprintf("FwAddressGroup :%s in Fortigate(%s)", fwAddrGrpObj.Name, f.Ip)
 			return ErrorResourceDoesNotExist{Identifier: tempStr, Err: errors.New("unable to find the specified object")}
 		default:
-			return fmt.Errorf("Unhandled error code %v status %v", code, res.Status)
+			return fmt.Errorf("unhandled error code %v status %v", code, res.Status)
 		}
 	}
 
@@ -461,7 +462,7 @@ func (f *FortiGateClient) UpdateFirewallAddressGroup(fwAddrGrpObj FortiFWAddress
 func (f *FortiGateClient) CreateFirewallAddressGroup(fwAddrGrp FortiFWAddressGroup) error {
 
 	//create a URL string for HTTP POST
-	url := fmt.Sprintf("https://%s/api/v2/cmdb/firewall/addrgrp?access_token=%s", f.Ip, f.AccessToken)
+	url := f.URL("/api/v2/cmdb/firewall/addrgrp")
 
 	//Create a payload for http request
 	var req RespFortiGateFWAddressGrpData
@@ -504,7 +505,7 @@ func (f *FortiGateClient) CreateFirewallAddressGroup(fwAddrGrp FortiFWAddressGro
 			tempStr := fmt.Sprintf("FwAddressGroup :%s in Fortigate(%s)", fwAddrGrp.Name, f.Ip)
 			return ErrorResourceDoesNotExist{Identifier: tempStr, Err: errors.New("unable to find the specified object")}
 		default:
-			return fmt.Errorf("Unhandled error code %v status %v", code, res.Status)
+			return fmt.Errorf("unhandled error code %v status %v", code, res.Status)
 		}
 	}
 
@@ -514,7 +515,7 @@ func (f *FortiGateClient) CreateFirewallAddressGroup(fwAddrGrp FortiFWAddressGro
 //Delete the Firewall Address Group in FortiGate device
 func (f *FortiGateClient) DeleteFirewallAddressGroup(addrGrpName string) error {
 	//create a URL string for delete request
-	url := fmt.Sprintf("https://%s/api/v2/cmdb/firewall/addrgrp/%s?access_token=%s", f.Ip, addrGrpName, f.AccessToken)
+	url := f.URL(fmt.Sprintf("/api/v2/cmdb/firewall/addrgrp/%s", addrGrpName))
 
 	//http Delete  request to FortiGate Device
 	b, err := f.Client.FortiGateRestDelete(url)
@@ -536,7 +537,7 @@ func (f *FortiGateClient) DeleteFirewallAddressGroup(addrGrpName string) error {
 			tempStr := fmt.Sprintf("FwAddress :%s in Fortigate(%s)", addrGrpName, f.Ip)
 			return ErrorResourceDoesNotExist{Identifier: tempStr, Err: errors.New("unable to find the specified object")}
 		default:
-			return fmt.Errorf("Unhandled error code %v status %v", code, res.Status)
+			return fmt.Errorf("unhandled error code %v status %v", code, res.Status)
 		}
 	}
 
@@ -551,6 +552,22 @@ func (f *FortiGateClient) GetFirewallPolicyPackage(pkgName string) error {
 // Get the policy package from FortiManager DB
 func (f *FortiGateClient) ListAllFirewallRulesInPkg(pkgName string) ([]FortiFWPolicy, error) {
 	return nil, nil
+}
+
+// URL returns a URL as a string with the access token and vdom parameters.
+func (f *FortiGateClient) URL(path string) string {
+	queryParams := url.Values{}
+	queryParams.Set("access_token", f.AccessToken)
+	if f.Vdom != "" {
+		queryParams.Set("vdom", f.Vdom)
+	}
+	url := url.URL{
+		Scheme:   "https",
+		Host:     f.Ip,
+		Path:     path,
+		RawQuery: queryParams.Encode(),
+	}
+	return url.String()
 }
 
 func (f *FortiManagerClient) fortimanagerRestPost(req SessionManager, resp interface{}, adom string, addrName string) error {

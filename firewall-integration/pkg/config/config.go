@@ -1,4 +1,4 @@
-// Copyright 2019 Tigera Inc. All rights reserved.
+// Copyright 2019, 2023 Tigera Inc. All rights reserved.
 
 package config
 
@@ -21,6 +21,7 @@ type FwFortiGateConfig struct {
 	Ip     string
 	Port   string
 	ApiKey string
+	Vdom   string
 }
 
 type FwFortiMgrConfig struct {

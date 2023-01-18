@@ -1,4 +1,4 @@
-// Copyright 2019, 2021-2022 Tigera Inc. All rights reserved.
+// Copyright 2019, 2021-2023 Tigera Inc. All rights reserved.
 
 package main
 
@@ -182,7 +182,7 @@ func main() {
 			fortiMClients := make(map[string]fortilib.FortiFWClientApi)
 			for _, fgt := range fgts {
 				frclient := fortilib.NewFortiGateRestClient(jsonContentType, cfg.FwInsecureSkipVerify).(*fortilib.FortiGateRestClient)
-				fclient := fortilib.NewFortiGateClient(fgt.Ip, fgt.Ip, fgt.ApiKey, frclient)
+				fclient := fortilib.NewFortiGateClient(fgt.Ip, fgt.Ip, fgt.ApiKey, fgt.Vdom, frclient)
 				fortiGClients[fgt.Ip] = fclient
 			}
 
@@ -334,6 +334,7 @@ func getFortiDevicesConfig(fortiCfgPath string, k8sClient *kubernetes.Clientset,
 				Name:   fg.Name,
 				Ip:     fg.Ip,
 				ApiKey: string(data.Data[key]),
+				Vdom:   fg.Vdom,
 			}
 			fwFortiDevCfgs = append(fwFortiDevCfgs, fgtCfg)
 		}
