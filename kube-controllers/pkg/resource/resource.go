@@ -45,6 +45,8 @@ const (
 	ImageAssurancePodWatcherClusterRoleName           = "tigera-image-assurance-pod-watcher-api-access"
 	ImageAssurancePodWatcherServiceAccountName        = "tigera-image-assurance-pod-watcher-api-access"
 	ImageAssurancePodWatcherClusterRoleBindingName    = "tigera-image-assurance-pod-watcher-api-access"
+	ImageAssuranceOperatorServiceAccountName          = "tigera-image-assurance-operator-api-access"
+	ImageAssuranceOperatorClusterRoleBindingName      = "tigera-image-assurance-operator-api-access"
 )
 
 func CreateHashFromObject(obj interface{}) (string, error) {

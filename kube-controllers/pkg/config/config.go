@@ -82,6 +82,7 @@ type Config struct {
 	ImageAssuranceAdmissionControllerClusterRoleName          string `split_words:"true"`
 	ImageAssuranceCRAdaptorClusterRoleName                    string `split_words:"true"`
 	ImageAssurancePodWatcherClusterRoleName                   string `split_words:"true"`
+	ImageAssuranceOperatorClusterRoleName                     string `split_words:"true"`
 
 	KubeControllersConfigName string `split_words:"true"`
 }
