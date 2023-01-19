@@ -142,6 +142,12 @@ EOF
         result = retry_until_success(fn, wait_time=3)
         return result
 
+    def _assert_route_present_in_cluster_bird(self, calicoPod, route, peerIP, ipv6=False, globalPeer=False):
+        self._check_route_in_cluster_bird(calicoPod, route, peerIP, ipv6=ipv6, globalPeer=globalPeer, present=True)
+
+    def _assert_route_not_present_in_cluster_bird(self, calicoPod, route, peerIP, ipv6=False, globalPeer=False):
+        self._check_route_in_cluster_bird(calicoPod, route, peerIP, ipv6=ipv6, globalPeer=globalPeer, present=False)
+
     def _check_route_in_external_bird(self, birdContainer, birdPeer, routeRegex, peerIPRegex, ipv6=False, present=True):
         """Check that a route is present/not present in an external (plain docker container) bird instance"""
         def fn():
@@ -155,6 +161,12 @@ EOF
             return result
         result = retry_until_success(fn, wait_time=3)
         return result
+
+    def _assert_route_present_in_external_bird(self, birdContainer, birdPeer, routeRegex, peerIPRegex, ipv6=False):
+        self._check_route_in_external_bird(birdContainer, birdPeer, routeRegex, peerIPRegex, ipv6=ipv6, present=True)
+
+    def _assert_route_not_present_in_external_bird(self, birdContainer, birdPeer, routeRegex, peerIPRegex, ipv6=False):
+        self._check_route_in_external_bird(birdContainer, birdPeer, routeRegex, peerIPRegex, ipv6=ipv6, present=False)
 
     def _patch_peer_filters(self, peer, filters):
         """Patch BGPFilters in a BGPPeer"""
@@ -202,18 +214,18 @@ EOF
                 run("docker exec kube-node-extra-v6 birdcl6 configure")
                 self.add_cleanup(lambda: run("docker exec kube-node-extra-v6 sh -c 'rm /etc/bird6/static-route.conf; birdcl6 configure'"))
 
-            # Check that the egress node has the route advertised by the external bird instance
+            # Check that the egress node (i.e., the cluster node that peers through BGP with the external bird instance) has the route advertised by the external bird instance
             if ipv4:
-                self._check_route_in_cluster_bird(self.egress_calico_pod, external_route_v4, self.external_node_ip)
+                self._assert_route_present_in_cluster_bird(self.egress_calico_pod, external_route_v4, self.external_node_ip)
             if ipv6:
-                self._check_route_in_cluster_bird(self.egress_calico_pod, external_route_v6, self.external_node_ip6, ipv6=True)
+                self._assert_route_present_in_cluster_bird(self.egress_calico_pod, external_route_v6, self.external_node_ip6, ipv6=True)
 
             # Check that the external bird instance has a route for an IPAM block from the default IP pool
             if ipv4:
-                self._check_route_in_external_bird("kube-node-extra", "Mesh_with_node_1", cluster_route_regex_v4, re.escape(self.egress_node_ip))
+                self._assert_route_present_in_external_bird("kube-node-extra", "Mesh_with_node_1", cluster_route_regex_v4, re.escape(self.egress_node_ip))
             if ipv6:
                 # Use link-local address as 'via'
-                self._check_route_in_external_bird("kube-node-extra-v6", "Mesh_with_node_1", cluster_route_regex_v6, "fe80::.*", ipv6=True)
+                self._assert_route_present_in_external_bird("kube-node-extra-v6", "Mesh_with_node_1", cluster_route_regex_v6, "fe80::.*", ipv6=True)
 
             # Add BGPFilter with export rule and check that the external bird instance no longer has the route for an IPAM block from the default IP pool
             if ipv4:
@@ -234,7 +246,7 @@ EOF
                 self.add_cleanup(lambda: kubectl("delete bgpfilter test-filter-export-1"))
                 self.add_cleanup(lambda: self._patch_peer_filters("node-extra.peer", []))
 
-                self._check_route_in_external_bird("kube-node-extra", "Mesh_with_node_1", cluster_route_regex_v4, re.escape(self.egress_node_ip), present=False)
+                self._assert_route_not_present_in_external_bird("kube-node-extra", "Mesh_with_node_1", cluster_route_regex_v4, re.escape(self.egress_node_ip))
             if ipv6:
                 kubectl("""apply -f - <<EOF
 apiVersion: projectcalico.org/v3
@@ -254,7 +266,7 @@ EOF
                 self.add_cleanup(lambda: self._patch_peer_filters("node-extra-v6.peer", []))
 
                 # Use link-local address as 'via'
-                self._check_route_in_external_bird("kube-node-extra-v6", "Mesh_with_node_1", cluster_route_regex_v6, "fe80::.*", ipv6=True, present=False)
+                self._assert_route_not_present_in_external_bird("kube-node-extra-v6", "Mesh_with_node_1", cluster_route_regex_v6, "fe80::.*", ipv6=True)
 
             # Add BGPFilter with import rule and check that the egress node no longer has the route advertised by the external bird instance
             if ipv4:
@@ -275,7 +287,7 @@ EOF
                 self.add_cleanup(lambda: kubectl("delete bgpfilter test-filter-import-1"))
                 self.add_cleanup(lambda: self._patch_peer_filters("node-extra.peer", []))
 
-                self._check_route_in_cluster_bird(self.egress_calico_pod, external_route_v4, self.external_node_ip, present=False)
+                self._assert_route_not_present_in_cluster_bird(self.egress_calico_pod, external_route_v4, self.external_node_ip)
             if ipv6:
                 kubectl("""apply -f - <<EOF
 apiVersion: projectcalico.org/v3
@@ -294,7 +306,7 @@ EOF
                 self.add_cleanup(lambda: kubectl("delete bgpfilter test-filter-import-v6-1"))
                 self.add_cleanup(lambda: self._patch_peer_filters("node-extra-v6.peer", []))
 
-                self._check_route_in_cluster_bird(self.egress_calico_pod, external_route_v6, self.external_node_ip6, ipv6=True, present=False)
+                self._assert_route_not_present_in_cluster_bird(self.egress_calico_pod, external_route_v6, self.external_node_ip6, ipv6=True)
 
     def _test_bgp_filter_ordering(self, ipv4, ipv6):
         """Test multiple rules per filter and multiple filters per peer, as well as
@@ -372,9 +384,9 @@ EOF
 
             # Check that routes are present
             if ipv4:
-                self._check_route_in_cluster_bird(self.egress_calico_pod, external_route_v4, self.external_node_ip, present=True)
+                self._assert_route_present_in_cluster_bird(self.egress_calico_pod, external_route_v4, self.external_node_ip)
             if ipv6:
-                self._check_route_in_cluster_bird(self.egress_calico_pod, external_route_v6, self.external_node_ip6, ipv6=True, present=True)
+                self._assert_route_present_in_cluster_bird(self.egress_calico_pod, external_route_v6, self.external_node_ip6, ipv6=True)
 
             # Add additional filters with multiple rules that should result in the routes being rejected
             if ipv4:
@@ -424,9 +436,9 @@ EOF
 
             # Check that routes are no longer present
             if ipv4:
-                self._check_route_in_cluster_bird(self.egress_calico_pod, external_route_v4, self.external_node_ip, present=False)
+                self._assert_route_not_present_in_cluster_bird(self.egress_calico_pod, external_route_v4, self.external_node_ip)
             if ipv6:
-                self._check_route_in_cluster_bird(self.egress_calico_pod, external_route_v6, self.external_node_ip6, ipv6=True, present=False)
+                self._assert_route_not_present_in_cluster_bird(self.egress_calico_pod, external_route_v6, self.external_node_ip6, ipv6=True)
 
             # Add an additional filter with both IPv4 and IPv6 rules that should result in the routes being accepted
             if ipv4 and ipv6:
@@ -473,8 +485,8 @@ EOF
                 self.add_cleanup(lambda: self._patch_peer_filters("node-extra-v6.peer", []))
 
                 # Check that routes are present
-                self._check_route_in_cluster_bird(self.egress_calico_pod, external_route_v4, self.external_node_ip, present=True)
-                self._check_route_in_cluster_bird(self.egress_calico_pod, external_route_v6, self.external_node_ip6, ipv6=True, present=True)
+                self._assert_route_present_in_cluster_bird(self.egress_calico_pod, external_route_v4, self.external_node_ip)
+                self._assert_route_present_in_cluster_bird(self.egress_calico_pod, external_route_v6, self.external_node_ip6, ipv6=True)
 
     def _test_bgp_filter_global_peer(self, ipv4, ipv6):
         """Test BGP import filters with global BGP peers"""
@@ -519,9 +531,9 @@ EOF
 
             # Check that route is present
             if ipv4:
-                self._check_route_in_cluster_bird(self.egress_calico_pod, external_route_v4, self.external_node_ip, globalPeer=True, present=True)
+                self._assert_route_present_in_cluster_bird(self.egress_calico_pod, external_route_v4, self.external_node_ip, globalPeer=True)
             if ipv6:
-                self._check_route_in_cluster_bird(self.egress_calico_pod, external_route_v6, self.external_node_ip6, globalPeer=True, ipv6=True, present=True)
+                self._assert_route_present_in_cluster_bird(self.egress_calico_pod, external_route_v6, self.external_node_ip6, globalPeer=True, ipv6=True)
 
             # Add BGPFilter with import rule and check that the route is no longer present
             if ipv4:
@@ -542,7 +554,7 @@ EOF
                 self.add_cleanup(lambda: kubectl("delete bgpfilter test-filter-import-1"))
                 self.add_cleanup(lambda: self._patch_peer_filters("node-extra.peer", []))
 
-                self._check_route_in_cluster_bird(self.egress_calico_pod, external_route_v4, self.external_node_ip, globalPeer=True, present=False)
+                self._assert_route_not_present_in_cluster_bird(self.egress_calico_pod, external_route_v4, self.external_node_ip, globalPeer=True)
             if ipv6:
                 kubectl("""apply -f - <<EOF
 apiVersion: projectcalico.org/v3
@@ -561,7 +573,7 @@ EOF
                 self.add_cleanup(lambda: kubectl("delete bgpfilter test-filter-import-v6-1"))
                 self.add_cleanup(lambda: self._patch_peer_filters("node-extra-v6.peer", []))
 
-                self._check_route_in_cluster_bird(self.egress_calico_pod, external_route_v6, self.external_node_ip6, globalPeer=True, ipv6=True, present=False)
+                self._assert_route_not_present_in_cluster_bird(self.egress_calico_pod, external_route_v6, self.external_node_ip6, globalPeer=True, ipv6=True)
 
     def test_bgp_filter_validation(self):
         with DiagsCollector():
