@@ -37,6 +37,7 @@ type reconciler struct {
 	restartChan                 chan<- string
 
 	admissionControllerClusterRoleName string
+	crAdaptorClusterRoleName           string
 	intrusionDetectionClusterRoleName  string
 	scannerClusterRoleName             string
 	scannerCLIClusterRoleName          string
@@ -93,6 +94,11 @@ func (c *reconciler) Reconcile(name types.NamespacedName) error {
 			reqLogger.Errorf("error reconciling admission controller secrets %+v", err)
 			return err
 		}
+
+		if err := c.reconcileCRAdaptorSecret(); err != nil {
+			reqLogger.Errorf("error reconciling cr adaptor secrets %+v", err)
+			return err
+		}
 	}
 
 	reqLogger.Info("Finished reconciling ImageAssurance credentials")
@@ -111,6 +117,9 @@ func (c *reconciler) reconcileConfigMap() error {
 
 	configMap.ObjectMeta.Namespace = c.imageAssuranceNamespace
 	configMap.ObjectMeta.Name = resource.ImageAssuranceConfigMapName
+
+	// Add the cluster name to the secret so Image Assurance components know what cluster they're running in.
+	configMap.Data["clusterName"] = c.clusterName
 
 	if err := resource.WriteConfigMapToK8s(c.managedK8sCLI, resource.CopyConfigMap(configMap)); err != nil {
 		return err
@@ -164,12 +173,41 @@ func (c *reconciler) reconcileAdmissionControllerSecret() error {
 	return nil
 }
 
+// reconcileCRAdaptorSecret reconciles secrets for the CR Adaptor from management cluster to managed cluster.
+func (c *reconciler) reconcileCRAdaptorSecret() error {
+	sa, err := c.managementK8sCLI.CoreV1().ServiceAccounts(c.managementOperatorNamespace).Get(context.Background(),
+		fmt.Sprintf(resource.ManagementIACRAdaptorResourceNameFormat, c.clusterName), metav1.GetOptions{})
+
+	if err != nil {
+		return err
+	}
+
+	saSecret, err := c.managementK8sCLI.CoreV1().Secrets(c.managementOperatorNamespace).Get(context.Background(),
+		sa.Secrets[0].Name, metav1.GetOptions{})
+
+	if err != nil {
+		return err
+	}
+
+	managedSecret := c.managedCRAdaptorControllerSecret(saSecret)
+	if err := resource.WriteSecretToK8s(c.managedK8sCLI, resource.CopySecret(managedSecret)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // reconcileServiceAccount ensures that service account exists in management cluster. We don't
 // need to check for the existence of service account, we always write, if nothing has changed it's a no-op, else it's updated.
 func (c *reconciler) reconcileServiceAccounts() error {
 	// Admission controller only runs in the managed cluster.
 	if !c.management {
 		sa := c.admissionControllerServiceAccount()
+		if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, sa); err != nil {
+			return err
+		}
+
+		sa = c.crAdaptorServiceAccount()
 		if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, sa); err != nil {
 			return err
 		}
@@ -200,6 +238,11 @@ func (c *reconciler) reconcileClusterRoleBinding() error {
 	// Admission controller only runs in the managed cluster.
 	if !c.management {
 		crb := c.admissionControllerClusterRoleBinding()
+		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, crb); err != nil {
+			return err
+		}
+
+		crb = c.crAdaptorClusterRoleBinding()
 		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, crb); err != nil {
 			return err
 		}
@@ -255,12 +298,34 @@ func (c *reconciler) managedAdmissionControllerSecret(mgmtSecret *corev1.Secret)
 	}
 }
 
+func (c *reconciler) managedCRAdaptorControllerSecret(mgmtSecret *corev1.Secret) *corev1.Secret {
+	return &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      resource.ManagedIACRAdaptorResourceName,
+			Namespace: c.imageAssuranceNamespace,
+		},
+		Data: mgmtSecret.Data,
+	}
+}
+
 // admissionControllerServiceAccount returns a definition for service account
 func (c *reconciler) admissionControllerServiceAccount() *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{Kind: rbacv1.ServiceAccountKind, APIVersion: "v1"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf(resource.ManagementIAAdmissionControllerResourceNameFormat, c.clusterName),
+			Namespace: c.managementOperatorNamespace,
+		},
+	}
+}
+
+// crAdaptorServiceAccount returns a definition for service account
+func (c *reconciler) crAdaptorServiceAccount() *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{Kind: rbacv1.ServiceAccountKind, APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf(resource.ManagementIACRAdaptorResourceNameFormat, c.clusterName),
 			Namespace: c.managementOperatorNamespace,
 		},
 	}
@@ -316,6 +381,29 @@ func (c *reconciler) admissionControllerClusterRoleBinding() *rbacv1.ClusterRole
 			{
 				Kind:      rbacv1.ServiceAccountKind,
 				Name:      fmt.Sprintf(resource.ManagementIAAdmissionControllerResourceNameFormat, c.clusterName),
+				Namespace: c.managementOperatorNamespace,
+			},
+		},
+	}
+}
+
+// crAdaptorClusterRoleBinding returns a definition for cluster role binding
+func (c *reconciler) crAdaptorClusterRoleBinding() *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		TypeMeta: metav1.TypeMeta{Kind: "ClusterRoleBinding", APIVersion: "rbac.authorization.k8s.io/v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   fmt.Sprintf(resource.ManagementIACRAdaptorResourceNameFormat, c.clusterName),
+			Labels: map[string]string{},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     c.crAdaptorClusterRoleName,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      fmt.Sprintf(resource.ManagementIACRAdaptorResourceNameFormat, c.clusterName),
 				Namespace: c.managementOperatorNamespace,
 			},
 		},

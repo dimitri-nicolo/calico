@@ -80,6 +80,7 @@ type Config struct {
 	ImageAssuranceScannerCLIClusterRoleName                   string `split_words:"true"`
 	ImageAssuranceScannerCLITokenSecretName                   string `split_words:"true"`
 	ImageAssuranceAdmissionControllerClusterRoleName          string `split_words:"true"`
+	ImageAssuranceCRAdaptorClusterRoleName                    string `split_words:"true"`
 	ImageAssurancePodWatcherClusterRoleName                   string `split_words:"true"`
 
 	KubeControllersConfigName string `split_words:"true"`

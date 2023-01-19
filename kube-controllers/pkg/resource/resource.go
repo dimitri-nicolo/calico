@@ -31,6 +31,9 @@ const (
 	ManagedIAAdmissionControllerResourceName          = "tigera-image-assurance-admission-controller-api-access"
 	ManagementIAAdmissionControllerResourceNameFormat = "tigera-image-assurance-%s-admission-controller-api-access"
 
+	ManagedIACRAdaptorResourceName          = "tigera-image-assurance-cr-adaptor-api-access"
+	ManagementIACRAdaptorResourceNameFormat = "tigera-image-assurance-%s-cr-adaptor-api-access"
+
 	ImageAssuranceIDSControllerClusterRoleName        = "tigera-image-assurance-intrusion-detection-controller"
 	ImageAssuranceIDSControllerServiceAccountName     = "tigera-image-assurance-intrusion-detection-controller-api-access"
 	ImageAssuranceIDSControllerClusterRoleBindingName = "tigera-image-assurance-intrusion-detection-controller-api-access"
