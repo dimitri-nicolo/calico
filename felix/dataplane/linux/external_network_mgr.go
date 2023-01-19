@@ -272,3 +272,12 @@ func (m *externalNetworkManager) ProgramRouteRules() {
 		return nil
 	})
 }
+
+func (m *externalNetworkManager) GetRouteRules() []routeRules {
+	if m.routeRules != nil {
+		return []routeRules{m.routeRules}
+	}
+	return nil
+}
+
+var _ ManagerWithRouteRules = (*externalNetworkManager)(nil)
