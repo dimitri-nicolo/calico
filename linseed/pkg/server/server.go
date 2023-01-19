@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/projectcalico/calico/crypto/pkg/tls"
@@ -47,7 +49,11 @@ func NewServer(addr string, fipsEnabled bool, opts ...Option) *Server {
 	}
 
 	for _, opt := range opts {
-		opt(server)
+		err := opt(server)
+		if err != nil {
+			log.WithError(err).Fatal("invalid options applied to server")
+			return nil
+		}
 	}
 
 	return server
