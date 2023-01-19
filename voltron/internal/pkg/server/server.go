@@ -387,11 +387,11 @@ func (s *Server) clusterMuxer(w http.ResponseWriter, r *http.Request) {
 		}, nil)
 		if err != nil {
 			log.Errorf("Could not authenticate user for cluster: %s", err)
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
 		if !ok {
-			http.Error(w, "not authorized for managed cluster", http.StatusUnauthorized)
+			http.Error(w, "not authorized for managed cluster", http.StatusForbidden)
 			return
 		}
 	}
