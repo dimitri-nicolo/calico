@@ -199,7 +199,7 @@ func EmitBIRDExternalNetworkConfig(selfIP string, externalNetworkKVPs memkv.KVPa
 	}
 
 	if len(peerReferencedExternalNetworks) == 0 {
-		line = fmt.Sprint("# No ExternalNetworks configured for any of this node's BGP peers")
+		line = "# No ExternalNetworks configured for any of this node's BGP peers"
 		lines = append(lines, line)
 		return lines, nil
 	}
