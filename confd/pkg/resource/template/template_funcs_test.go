@@ -185,17 +185,7 @@ func Test_EmitBIRDExternalNetworkConfig_EmptyAllPeers(t *testing.T) {
 	externalNetworkKVPs := constructExternalNetworkKVPs(routeTableIdxs, t)
 
 	expectedBIRDCfgStr := []string{
-		"# ExternalNetwork test-enet-1",
-		"table 'T_test-enet-1';",
-		"protocol kernel 'K_test-enet-1' from kernel_template {",
-		"  device routes yes;",
-		"  table 'T_test-enet-1';",
-		"  kernel table 7;",
-		"  export filter {",
-		"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
-		"    reject;",
-		"  };",
-		"}",
+		"# No ExternalNetworks configured for any of this node's BGP peers",
 	}
 
 	resultCheckerForEmitBIRDExternalNetworkConfig(externalNetworkKVPs, memkv.KVPairs{}, memkv.KVPairs{},
@@ -242,6 +232,12 @@ func Test_EmitBIRDExternalNetworkConfig_MultiplePeersSomeWithExternalNetworksSom
 		"    reject;",
 		"  };",
 		"}",
+		"protocol direct 'D_test-enet-1' from direct_template {",
+		"  table 'T_test-enet-1';",
+		"}",
+		"protocol static 'S_test-enet-1' from static_template {",
+		"  table 'T_test-enet-1';",
+		"}",
 		"# ExternalNetwork test-enet-2",
 		"table 'T_test-enet-2';",
 		"protocol kernel 'K_test-enet-2' from kernel_template {",
@@ -256,6 +252,12 @@ func Test_EmitBIRDExternalNetworkConfig_MultiplePeersSomeWithExternalNetworksSom
 		"    if proto = \"Node_4400__3\" then accept;",
 		"    reject;",
 		"  };",
+		"}",
+		"protocol direct 'D_test-enet-2' from direct_template {",
+		"  table 'T_test-enet-2';",
+		"}",
+		"protocol static 'S_test-enet-2' from static_template {",
+		"  table 'T_test-enet-2';",
 		"}",
 	}
 
@@ -289,6 +291,12 @@ func Test_EmitBIRDExternalNetworkConfig_PeersWithPorts(t *testing.T) {
 		"    if proto = \"Node_4400__1_port_44\" then accept;",
 		"    reject;",
 		"  };",
+		"}",
+		"protocol direct 'D_test-enet-1' from direct_template {",
+		"  table 'T_test-enet-1';",
+		"}",
+		"protocol static 'S_test-enet-1' from static_template {",
+		"  table 'T_test-enet-1';",
 		"}",
 	}
 

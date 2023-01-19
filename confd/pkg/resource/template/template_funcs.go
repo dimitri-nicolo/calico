@@ -144,9 +144,62 @@ func EmitBGPFilterFunctionName(filterName, direction, version string) (string, e
 func EmitBIRDExternalNetworkConfig(selfIP string, externalNetworkKVPs memkv.KVPairs, globalPeersKVP memkv.KVPairs,
 	nodeSpecificPeersKVP memkv.KVPairs) ([]string, error) {
 	lines := []string{}
+	peerReferencedExternalNetworks := map[string][]string{}
 	var line string
+
 	if len(externalNetworkKVPs) == 0 {
-		line = fmt.Sprint("# No ExternalNetworks configured")
+		return []string{"# No ExternalNetworks configured"}, nil
+	}
+
+	emitExternalNetworkProtoStatements := func(peerNamePrefix, selfIP string, peers memkv.KVPairs) (map[string][]string, error) {
+		eNetProtoStatements := make(map[string][]string)
+		for _, peer := range peers {
+			var backendPeer backends.BGPPeer
+			err := json.Unmarshal([]byte(peer.Value), &backendPeer)
+			if err != nil {
+				return map[string][]string{}, fmt.Errorf("Error unmarshalling JSON into backend BGPPeer: %s", err)
+			}
+			if backendPeer.PeerIP.String() == selfIP || backendPeer.ExternalNetwork == "" {
+				continue // Skip ourselves because we don't generate a protocol definition for ourselves
+			}
+			var sep string
+			if backendPeer.PeerIP.Version() == 4 {
+				sep = "."
+			} else {
+				sep = ":"
+			}
+			ipParts := strings.Split(backendPeer.PeerIP.String(), sep)
+			ipParts = append([]string{peerNamePrefix}, ipParts...)
+			if backendPeer.Port > 0 {
+				portStrParts := []string{"port", strconv.Itoa(int(backendPeer.Port))}
+				ipParts = append(ipParts, portStrParts...)
+			}
+			eNetProtoStatements[backendPeer.ExternalNetwork] = append(eNetProtoStatements[backendPeer.ExternalNetwork],
+				fmt.Sprintf("    if proto = \"%s\" then accept;", strings.Join(ipParts, "_")))
+		}
+		return eNetProtoStatements, nil
+	}
+
+	globalEnetProtoStatements, err := emitExternalNetworkProtoStatements("Global", selfIP, globalPeersKVP)
+	if err != nil {
+		return []string{}, err
+	}
+
+	explicitEnetProtoStatements, err := emitExternalNetworkProtoStatements("Node", selfIP, nodeSpecificPeersKVP)
+	if err != nil {
+		return []string{}, err
+	}
+
+	for enet, statements := range globalEnetProtoStatements {
+		peerReferencedExternalNetworks[enet] = append(peerReferencedExternalNetworks[enet], statements...)
+	}
+
+	for enet, statements := range explicitEnetProtoStatements {
+		peerReferencedExternalNetworks[enet] = append(peerReferencedExternalNetworks[enet], statements...)
+	}
+
+	if len(peerReferencedExternalNetworks) == 0 {
+		line = fmt.Sprint("# No ExternalNetworks configured for any of this node's BGP peers")
 		lines = append(lines, line)
 		return lines, nil
 	}
@@ -156,11 +209,15 @@ func EmitBIRDExternalNetworkConfig(selfIP string, externalNetworkKVPs memkv.KVPa
 		if err != nil {
 			return []string{}, fmt.Errorf("Error unmarshalling JSON into ExternalNetwork: %s", err)
 		}
+		externalNetworkName := path.Base(kvp.Key)
+		peerStatements, ok := peerReferencedExternalNetworks[externalNetworkName]
+		if !ok {
+			continue // No peers reference this external network so we don't need to emit any config for it
+		}
 		var routeTableIndex uint32
 		if externalNetwork.Spec.RouteTableIndex != nil {
 			routeTableIndex = *externalNetwork.Spec.RouteTableIndex
 		}
-		externalNetworkName := path.Base(kvp.Key)
 		tableName, err := EmitExternalNetworkTableName(externalNetworkName)
 		if err != nil {
 			return []string{}, err
@@ -172,35 +229,6 @@ func EmitBIRDExternalNetworkConfig(selfIP string, externalNetworkKVPs memkv.KVPa
 		line = fmt.Sprintf("table %s;", tableName)
 		lines = append(lines, line)
 
-		emitExternalNetworkProtoStatements := func(peerNamePrefix, selfIP, externalNetworkName string, peers memkv.KVPairs) ([]string, error) {
-			var eNetProtoStatements []string
-			for _, peer := range peers {
-				var backendPeer backends.BGPPeer
-				err = json.Unmarshal([]byte(peer.Value), &backendPeer)
-				if err != nil {
-					return []string{}, fmt.Errorf("Error unmarshalling JSON into backend BGPPeer: %s", err)
-				}
-				if backendPeer.PeerIP.String() == selfIP || backendPeer.ExternalNetwork != externalNetworkName {
-					continue // Skip ourselves because we don't generate a protocol definition for ourselves
-				}
-				var sep string
-				if backendPeer.PeerIP.Version() == 4 {
-					sep = "."
-				} else {
-					sep = ":"
-				}
-				ipParts := strings.Split(backendPeer.PeerIP.String(), sep)
-				ipParts = append([]string{peerNamePrefix}, ipParts...)
-				if backendPeer.Port > 0 {
-					portStrParts := []string{"port", strconv.Itoa(int(backendPeer.Port))}
-					ipParts = append(ipParts, portStrParts...)
-				}
-				eNetProtoStatements = append(eNetProtoStatements,
-					fmt.Sprintf("    if proto = \"%s\" then accept;", strings.Join(ipParts, "_")))
-			}
-			return eNetProtoStatements, nil
-		}
-
 		kernelName := strings.Replace(tableName, "T_", "K_", 1)
 		kernel := []string{
 			fmt.Sprintf("protocol kernel %s from kernel_template {", kernelName),
@@ -211,19 +239,7 @@ func EmitBIRDExternalNetworkConfig(selfIP string, externalNetworkKVPs memkv.KVPa
 			"    print \"route: \", net, \", from, \", \", \", proto, \", \", bgp_next_hop;",
 		}
 
-		kLines, err := emitExternalNetworkProtoStatements("Global", selfIP, externalNetworkName,
-			globalPeersKVP)
-		if err != nil {
-			return []string{}, err
-		}
-		kernel = append(kernel, kLines...)
-
-		kLines, err = emitExternalNetworkProtoStatements("Node", selfIP, externalNetworkName,
-			nodeSpecificPeersKVP)
-		if err != nil {
-			return []string{}, err
-		}
-		kernel = append(kernel, kLines...)
+		kernel = append(kernel, peerStatements...)
 
 		kernel = append(kernel, []string{
 			"    reject;",
@@ -232,6 +248,22 @@ func EmitBIRDExternalNetworkConfig(selfIP string, externalNetworkKVPs memkv.KVPa
 		}...)
 
 		lines = append(lines, kernel...)
+
+		directName := strings.Replace(tableName, "T_", "D_", 1)
+		direct := []string{
+			fmt.Sprintf("protocol direct %s from direct_template {", directName),
+			fmt.Sprintf("  table %s;", tableName),
+			"}",
+		}
+		lines = append(lines, direct...)
+
+		staticName := strings.Replace(tableName, "T_", "S_", 1)
+		static := []string{
+			fmt.Sprintf("protocol static %s from static_template {", staticName),
+			fmt.Sprintf("  table %s;", tableName),
+			"}",
+		}
+		lines = append(lines, static...)
 	}
 	return lines, nil
 }
