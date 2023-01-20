@@ -4524,7 +4524,7 @@ apiVersion: projectcalico.org/v3
 metadata:
   name: kube-node-1
   labels:
-      global_peer: yes
+      global_peer_1: yes
 spec:
   bgp:
     ipv4Address: 10.192.0.3/16
@@ -4535,7 +4535,7 @@ apiVersion: projectcalico.org/v3
 metadata:
   name: kube-node-2
   labels:
-    global_peer: yes
+      global_peer_2: yes
 spec:
   bgp:
     ipv4Address: 10.192.0.4/16
@@ -4553,8 +4553,15 @@ apiVersion: projectcalico.org/v3
 metadata:
   name: global-peer-with-external-network
 spec:
-  peerSelector: has(global_peer)
+  peerSelector: has(global_peer_1)
   externalNetwork: test-enet
+---
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: global-peer-without-external-network
+spec:
+  peerSelector: has(global_peer_2)
 EOF
 
     test_confd_templates externalnetwork/delete_enet_while_peer_still_references/step1
@@ -4571,6 +4578,7 @@ EOF
 
     # Delete remaining resources.
     $CALICOCTL delete bgppeer global-peer-with-external-network
+    $CALICOCTL delete bgppeer global-peer-without-external-network
     if [ "$DATASTORE_TYPE" = etcdv3 ]; then
       $CALICOCTL delete node kube-master
       $CALICOCTL delete node kube-node-1

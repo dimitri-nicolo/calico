@@ -251,6 +251,8 @@ template bgp bgp_template {
 {{- if eq $data.ip ($node_ip) }}
 # Skipping ourselves ({{$node_ip}})
 {{- else}}
+{{- $peer_external_network_exists := and $data.external_network (exists (printf "/resources/v3/projectcalico.org/externalnetworks/%s" $data.external_network)) }}
+{{- if or $peer_external_network_exists (eq "" $data.external_network) }}
 protocol bgp Global_{{$id}} from bgp_template {
   neighbor {{$data.ip}} {{if $data.port }}port {{ $data.port }} {{end}}as {{$data.as_num}};
 {{- if eq $data.source_addr "UseNodeIP"}}
@@ -297,9 +299,9 @@ protocol bgp Global_{{$id}} from bgp_template {
                 was rejected so use default reject behaviour on export */}}
   };  # Only want to export routes for workloads.
   gateway {{$data.gateway_mode}};
-{{- if ne ($data.external_network) "" }}{{ if exists (printf "/resources/v3/projectcalico.org/externalnetworks/%s" $data.external_network) }}
+{{- if $peer_external_network_exists }}
   table {{ emitExternalNetworkTableName ($data.external_network) }};
-{{ end }}{{- end }}
+{{ end }}
 {{- if and ($data.calico_node) (gt $data.ip $node_ip)}}
   passive on; # Peering is unidirectional, peer will connect to us.
 {{- end}}
@@ -329,6 +331,9 @@ protocol bgp Global_{{$id}} from bgp_template {
   allow local as {{$data.num_allow_local_as}};
 {{- end}}
 }
+{{- else }}
+# Omitting BGPPeer {{ .Key }}'s config due to missing specified ExternalNetwork '{{ $data.external_network }}'
+{{- end }}
 {{- end}}
 {{end}}
 {{else}}# No global peers configured.{{end}}
@@ -346,6 +351,8 @@ protocol bgp Global_{{$id}} from bgp_template {
 {{- if eq $data.ip ($node_ip) }}
 # Skipping ourselves ({{$node_ip}})
 {{- else}}
+{{- $peer_external_network_exists := and $data.external_network (exists (printf "/resources/v3/projectcalico.org/externalnetworks/%s" $data.external_network)) }}
+{{- if or $peer_external_network_exists (eq "" $data.external_network) }}
 protocol bgp Node_{{$id}} from bgp_template {
   neighbor {{$data.ip}} {{if $data.port }}port {{ $data.port }} {{end}}as {{$data.as_num}};
 {{- if eq $data.source_addr "UseNodeIP"}}
@@ -392,9 +399,9 @@ protocol bgp Node_{{$id}} from bgp_template {
                 was rejected so use default reject behaviour on export */}}
   };  # Only want to export routes for workloads.
   gateway {{$data.gateway_mode}};
-{{- if ne ($data.external_network) "" }}{{ if exists (printf "/resources/v3/projectcalico.org/externalnetworks/%s" $data.external_network) }}
+{{- if $peer_external_network_exists }}
   table {{ emitExternalNetworkTableName ($data.external_network) }};
-{{- end }}{{- end }}
+{{ end }}
 {{- if eq $data.restart_mode "LongLivedGracefulRestart"}}
   graceful restart time 0;
   long lived graceful restart yes;
@@ -421,6 +428,9 @@ protocol bgp Node_{{$id}} from bgp_template {
   allow local as {{$data.num_allow_local_as}};
 {{- end}}
 }
+{{- else }}
+# Omitting BGPPeer {{ .Key }}'s config due to missing specified ExternalNetwork '{{ $data.external_network }}'
+{{- end }}
 {{- end}}
 {{end}}
 {{else}}# No node-specific peers configured.{{end}}
