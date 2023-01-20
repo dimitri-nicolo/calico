@@ -15,98 +15,40 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var (
-	// These are the keys which define a flow in ES, and will be used to create buckets in the ES result.
-	flowCompositeSources = []lmaelastic.AggCompositeSourceInfo{
-		{Name: "dest_type", Field: "dest_type"},
-		{Name: "dest_namespace", Field: "dest_namespace"},
-		{Name: "dest_name_aggr", Field: "dest_name_aggr"},
-		{Name: "dest_service_namespace", Field: "dest_service_namespace", Order: "desc"},
-		{Name: "dest_service_name", Field: "dest_service_name"},
-		{Name: "dest_service_port_name", Field: "dest_service_port"},
-		{Name: "dest_service_port_num", Field: "dest_service_port_num", AllowMissingBucket: true},
-		{Name: "proto", Field: "proto"},
-		{Name: "dest_port_num", Field: "dest_port"},
-		{Name: "source_type", Field: "source_type"},
-		{Name: "source_namespace", Field: "source_namespace"},
-		{Name: "source_name_aggr", Field: "source_name_aggr"},
-		{Name: "process_name", Field: "process_name"},
-		{Name: "reporter", Field: "reporter"},
-		{Name: "action", Field: "action"},
-	}
-
-	// Track mapping of field name to its index in the ES response.
-	// TODO: Right now, this is unused.
-	fieldToIndex map[string]int
-)
-
-func init() {
-	// Build mappings of field name to its corresponding index. Since ES reponses are
-	// ordered according to the order of the composite sources, we need the indices to match.
-	fieldToIndex = map[string]int{}
-
-	for idx, source := range flowCompositeSources {
-		fieldToIndex[source.Field] = idx
-	}
+// These are the keys which define a flow in ES, and will be used to create buckets in the ES result.
+var flowCompositeSources = []lmaelastic.AggCompositeSourceInfo{
+	{Name: "dest_type", Field: "dest_type"},
+	{Name: "dest_namespace", Field: "dest_namespace"},
+	{Name: "dest_name_aggr", Field: "dest_name_aggr"},
+	{Name: "dest_service_namespace", Field: "dest_service_namespace", Order: "desc"},
+	{Name: "dest_service_name", Field: "dest_service_name"},
+	{Name: "dest_service_port_name", Field: "dest_service_port"},
+	{Name: "dest_service_port_num", Field: "dest_service_port_num", AllowMissingBucket: true},
+	{Name: "proto", Field: "proto"},
+	{Name: "dest_port_num", Field: "dest_port"},
+	{Name: "source_type", Field: "source_type"},
+	{Name: "source_namespace", Field: "source_namespace"},
+	{Name: "source_name_aggr", Field: "source_name_aggr"},
+	{Name: "process_name", Field: "process_name"},
+	{Name: "reporter", Field: "reporter"},
+	{Name: "action", Field: "action"},
 }
-
-// TODO: Replace this with the fieldToIndex mapping.
-const (
-	// The ordering of these composite sources is important. We want to enumerate all services across all sources for
-	// a given destination, and we need to ensure:
-	FlowDestTypeIdx = iota
-	FlowDestNamespaceIdx
-	FlowDestNameAggrIdx
-	FlowDestServiceNamespaceIdx
-	FlowDestServiceNameIdx
-	FlowDestServicePortNameIdx
-	FlowDestServicePortNumIdx
-	FlowProtoIdx
-	FlowDestPortNumIdx
-	FlowSourceTypeIdx
-	FlowSourceNamespaceIdx
-	FlowSourceNameAggrIdx
-	FlowProcessIdx
-	FlowReporterIdx
-	FlowActionIdx
-)
 
 // FlowBackend implements the Backend interface for flows stored
 // in elasticsearch in the legacy storage model.
 type FlowBackend struct {
 	// Elasticsearch client.
-	client *elastic.Client
-
 	lmaclient lmaelastic.Client
+
+	// Track mapping of field name to its index in the ES response.
+	ft *fieldTracker
 }
 
 func NewFlowBackend(c lmaelastic.Client) *FlowBackend {
 	return &FlowBackend{
-		client:    c.Backend(),
 		lmaclient: c,
+		ft:        newFieldTracker(flowCompositeSources),
 	}
-}
-
-// TODO: Move this to a common flows package.
-type GetOptions struct {
-	// Common options for scoping the request.
-	Cluster string
-	Tenant  string
-
-	// Identifiers for a flow
-	StartTime string
-	EndTime   string
-
-	// Sets a limit on number of returned flows.
-	MaxFlows int
-}
-
-// TODO: Fill this out. Belongs in common API package.
-type LabelMatch struct{}
-
-func contextLogger(opts v1.L3FlowParams) *logrus.Entry {
-	f := logrus.Fields{}
-	return logrus.WithFields(f)
 }
 
 const (
@@ -143,7 +85,7 @@ func (b *FlowBackend) Initialize(ctx context.Context) error {
 
 // List returns all flows which match the given options.
 func (b *FlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3FlowParams) ([]v1.L3Flow, error) {
-	log := contextLogger(opts)
+	log := contextLogger(i)
 
 	if i.Cluster == "" {
 		log.Fatal("BUG: No cluster ID set on flow request")
@@ -210,13 +152,6 @@ func (b *FlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3Fl
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	singleDashToBlank := func(s string) string {
-		if s == "-" {
-			return ""
-		}
-		return s
-	}
-
 	log.Infof("Listing flows from index %s", aggQueryL3.DocumentIndex)
 
 	allFlows := []v1.L3Flow{}
@@ -228,22 +163,21 @@ func (b *FlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3Fl
 		log.Infof("Processing bucket built from %d flows", bucket.DocCount)
 		key := bucket.CompositeAggregationKey
 
+		// Build the flow, starting with the key.
 		flow := v1.L3Flow{Key: v1.L3FlowKey{}}
-
-		// Build the key for this flow.
-		flow.Key.Reporter = key[FlowReporterIdx].String()
-		flow.Key.Action = key[FlowActionIdx].String()
-		flow.Key.Protocol = key[FlowProtoIdx].String()
+		flow.Key.Reporter = b.ft.ValueString(key, "reporter")
+		flow.Key.Action = b.ft.ValueString(key, "action")
+		flow.Key.Protocol = b.ft.ValueString(key, "proto")
 		flow.Key.Source = v1.Endpoint{
-			Type:           v1.EndpointType(key[FlowSourceTypeIdx].String()),
-			AggregatedName: singleDashToBlank(key[FlowSourceNameAggrIdx].String()),
-			Namespace:      singleDashToBlank(key[FlowSourceNamespaceIdx].String()),
+			Type:           v1.EndpointType(b.ft.ValueString(key, "source_type")),
+			AggregatedName: b.ft.ValueString(key, "source_name_aggr"),
+			Namespace:      b.ft.ValueString(key, "source_namespace"),
 		}
 		flow.Key.Destination = v1.Endpoint{
-			Type:           v1.EndpointType(key[FlowDestTypeIdx].String()),
-			AggregatedName: singleDashToBlank(key[FlowDestNameAggrIdx].String()),
-			Namespace:      singleDashToBlank(key[FlowDestNamespaceIdx].String()),
-			Port:           int64(key[FlowDestPortNumIdx].Float64()),
+			Type:           v1.EndpointType(b.ft.ValueString(key, "dest_type")),
+			AggregatedName: b.ft.ValueString(key, "dest_name_aggr"),
+			Namespace:      b.ft.ValueString(key, "dest_namespace"),
+			Port:           b.ft.ValueInt64(key, "dest_port"),
 		}
 
 		// Build the flow.
@@ -254,10 +188,10 @@ func (b *FlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3Fl
 		}
 
 		flow.Service = &v1.Service{
-			Name:      singleDashToBlank(key[FlowDestServiceNameIdx].String()),
-			Namespace: singleDashToBlank(key[FlowDestServiceNamespaceIdx].String()),
-			Port:      int32(key[FlowDestServicePortNumIdx].Float64()),
-			PortName:  singleDashToBlank(key[FlowDestServicePortNameIdx].String()),
+			Name:      b.ft.ValueString(key, "dest_service_name"),
+			Namespace: b.ft.ValueString(key, "dest_service_namespace"),
+			Port:      b.ft.ValueInt32(key, "dest_service_port_num"),
+			PortName:  b.ft.ValueString(key, "dest_service_port"),
 		}
 
 		flow.TrafficStats = &v1.TrafficStats{
@@ -285,7 +219,7 @@ func (b *FlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3Fl
 
 		// Determine the process info if available in the logs.
 		// var processes v1.GraphEndpointProcesses
-		processName := singleDashToBlank(key[FlowProcessIdx].String())
+		processName := b.ft.ValueString(key, "process_name")
 		if processName != "" {
 			flow.Process = &v1.Process{Name: processName}
 			flow.ProcessStats = &v1.ProcessStats{
@@ -328,12 +262,7 @@ func (b *FlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3Fl
 	return allFlows, nil
 }
 
-func (b *FlowBackend) Get(ctx context.Context, opts GetOptions) (*v1.L3Flow, error) {
-	return nil, fmt.Errorf("Not implemented")
-}
-
 func buildFlowsIndex(cluster string) string {
-	// TODO: Handle presence of a tenant ID
 	return fmt.Sprintf("tigera_secure_ee_flows.%s", cluster)
 }
 

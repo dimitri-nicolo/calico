@@ -4,6 +4,7 @@ package legacy_test
 import (
 	"context"
 	"fmt"
+	"net"
 	"testing"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestListFlows tests running a real elasticsearch query to list flows.
@@ -49,7 +51,7 @@ func TestListFlows(t *testing.T) {
 	assert.Len(t, r, 1)
 
 	// Assert that the flow data is populated correctly.
-	assert.Equal(t, r[0], expected)
+	assert.Equal(t, expected, r[0])
 
 	// Clean up after ourselves by deleting the index.
 	_, err = esClient.DeleteIndex(fmt.Sprintf("tigera_secure_ee_flows.%s", clusterInfo.Cluster)).Do(ctx)
@@ -63,7 +65,8 @@ func populateFlowData(t *testing.T, ctx context.Context, client lmaelastic.Clien
 	_, _ = client.Backend().DeleteIndex(fmt.Sprintf("tigera_secure_ee_flows.%s", cluster)).Do(ctx)
 
 	// Instantiate a FlowBackend.
-	b := legacy.NewFlowLogBackend(client)
+	b, err := legacy.NewFlowLogBackend(client)
+	require.NoError(t, err)
 
 	// The expected flow log - we'll populate fields as we go.
 	expected := v1.L3Flow{}
@@ -100,6 +103,8 @@ func populateFlowData(t *testing.T, ctx context.Context, client lmaelastic.Clien
 			DestType:             "wep",
 			DestNamespace:        "kube-system",
 			DestNameAggr:         "kube-dns-*",
+			DestIP:               net.ParseIP("10.0.0.10"),
+			SourceIP:             net.ParseIP("192.168.1.1"),
 			DestServiceNamespace: "kube-system",
 			DestServiceName:      "kube-dns",
 			DestServicePort:      "53",
@@ -126,7 +131,7 @@ func populateFlowData(t *testing.T, ctx context.Context, client lmaelastic.Clien
 		}
 
 		err := b.Create(ctx, bapi.ClusterInfo{Cluster: cluster}, f)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Increment fields on the expected flow based on the flow log that was
 		// just added.
