@@ -82,12 +82,6 @@ func main() {
 			auth.WithUsernamePrefix(cfg.OIDCAuthUsernamePrefix),
 			auth.WithGroupsPrefix(cfg.OIDCAuthGroupsPrefix),
 		}
-		if cfg.CalicoCloudRequireTenantClaim {
-			if cfg.CalicoCloudTenantClaim == "" {
-				log.Panic("Tenant claim not specified")
-			}
-			opts = append(opts, auth.WithCalicoCloudTenantClaim(cfg.CalicoCloudTenantClaim))
-		}
 		dex, err := auth.NewDexAuthenticator(
 			cfg.OIDCAuthIssuer,
 			cfg.OIDCAuthClientID,
