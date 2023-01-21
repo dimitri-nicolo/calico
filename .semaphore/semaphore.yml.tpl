@@ -794,6 +794,21 @@ blocks:
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
 
+- name: 'crypto'
+  run:
+    when: "false or change_in(['/*', '/crypto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+  dependencies: ["Prerequisites"]
+  task:
+    secrets:
+      - name: test-customer-license
+    prologue:
+      commands:
+        - cd crypto
+    jobs:
+      - name: "crypto tests"
+        commands:
+          - ../.semaphore/run-and-monitor ci.log make ci
+
 - name: 'deep-packet-inspection'
   run:
     when: "${FORCE_RUN} or change_in(['/*', '/deep-packet-inspection/', '/api/', '/libcalico-go/', '/lma/', '/typha/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
