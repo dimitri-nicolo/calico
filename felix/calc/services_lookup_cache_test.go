@@ -48,6 +48,9 @@ var _ = Describe("ServiceLookupsCache tests", func() {
 		key1 = model.ResourceKey{Kind: model.KindKubernetesService, Name: "service1", Namespace: "ns1"}
 		spec1 = kapiv1.ServiceSpec{
 			ClusterIP: clusterIPStr,
+			ClusterIPs: []string{
+				clusterIPStr,
+			},
 			ExternalIPs: []string{
 				extIP1Str,
 				extIP2Str,
@@ -107,6 +110,9 @@ var _ = Describe("ServiceLookupsCache tests", func() {
 				Value: &kapiv1.Service{
 					Spec: kapiv1.ServiceSpec{
 						ClusterIP: clusterIPStr,
+						ClusterIPs: []string{
+							clusterIPStr,
+						},
 						ExternalIPs: []string{
 							extIP1Str,
 							extIP2Str,
@@ -147,6 +153,9 @@ var _ = Describe("ServiceLookupsCache tests", func() {
 				Value: &kapiv1.Service{
 					Spec: kapiv1.ServiceSpec{
 						ClusterIP: clusterIPStr,
+						ClusterIPs: []string{
+							clusterIPStr,
+						},
 						ExternalIPs: []string{
 							extIP1Str,
 							extIP2Str,

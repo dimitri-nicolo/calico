@@ -1423,7 +1423,7 @@ func (r *DefaultRuleRenderer) StaticMangleTableChains(ipVersion uint8) (chains [
 			Rules: []Rule{
 				{
 					Comment: []string{"Proxy selected services"},
-					Match:   Match().DestIPPortSet(nameForIPSet("tproxy-services")),
+					Match:   Match().DestIPPortSet(nameForIPSet("tproxy-svc-ips")),
 					Action:  JumpAction{Target: ChainManglePreroutingTProxySvc},
 				},
 				{

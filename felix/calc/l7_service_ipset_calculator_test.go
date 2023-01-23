@@ -50,7 +50,7 @@ type output struct {
 	ipv6Port bool
 }
 
-var _ = Describe("L7FrontEndResolver", func() {
+var _ = Describe("L7ServiceIPSetsCalculator", func() {
 
 	var configEnabled = &config.Config{TPROXYMode: "EnabledAllServices"}
 
@@ -58,12 +58,12 @@ var _ = Describe("L7FrontEndResolver", func() {
 		func(updates []api.Update, addedMembers []output, removedMembers []output, conf *config.Config) {
 			var mockCallbacks = &ipSetMockCallbacks{}
 
-			mockCallbacks.On("OnIPSetAdded", calc.TPROXYServicesIPSet, proto.IPSetUpdate_IP_AND_PORT)
+			mockCallbacks.On("OnIPSetAdded", calc.TPROXYServiceIPsIPSet, proto.IPSetUpdate_IP_AND_PORT)
 			mockCallbacks.On("OnIPSetAdded", calc.TPROXYNodePortsTCPIPSet, proto.IPSetUpdate_PORTS)
 
 			for _, addedMember := range addedMembers {
 				switch addedMember.setId {
-				case calc.TPROXYServicesIPSet:
+				case calc.TPROXYServiceIPsIPSet:
 					member := labelindex.IPSetMember{
 						PortNumber: uint16(addedMember.port),
 						Protocol:   addedMember.protocol,
@@ -87,7 +87,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 
 			for _, removedMember := range removedMembers {
 				switch removedMember.setId {
-				case calc.TPROXYServicesIPSet:
+				case calc.TPROXYServiceIPsIPSet:
 					member := labelindex.IPSetMember{
 						PortNumber: uint16(removedMember.port),
 						Protocol:   removedMember.protocol,
@@ -109,7 +109,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 				}
 			}
 
-			var resolver = calc.NewL7FrontEndResolver(mockCallbacks, conf)
+			var resolver = calc.NewL7ServiceIPSetsCalculator(mockCallbacks, conf)
 
 			for _, update := range updates {
 				resolver.OnResourceUpdate(update)
@@ -126,6 +126,9 @@ var _ = Describe("L7FrontEndResolver", func() {
 					Value: &kapiv1.Service{
 						Spec: kapiv1.ServiceSpec{
 							ClusterIP: "10.0.0.0",
+							ClusterIPs: []string{
+								"10.0.0.0",
+							},
 							ExternalIPs: []string{
 								"10.0.0.10",
 								"10.0.0.20",
@@ -153,6 +156,9 @@ var _ = Describe("L7FrontEndResolver", func() {
 					Value: &kapiv1.Service{
 						Spec: kapiv1.ServiceSpec{
 							ClusterIP: "10.0.0.0",
+							ClusterIPs: []string{
+								"10.0.0.0",
+							},
 							ExternalIPs: []string{
 								"10.0.0.10",
 								"10.0.0.20",
@@ -171,17 +177,17 @@ var _ = Describe("L7FrontEndResolver", func() {
 				UpdateType: api.UpdateTypeKVNew,
 			}},
 			[]output{{
-				setId:    calc.TPROXYServicesIPSet,
+				setId:    calc.TPROXYServiceIPsIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServicesIPSet,
+				setId:    calc.TPROXYServiceIPsIPSet,
 				ipAddr:   "10.0.0.10",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServicesIPSet,
+				setId:    calc.TPROXYServiceIPsIPSet,
 				ipAddr:   "10.0.0.20",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
@@ -205,6 +211,9 @@ var _ = Describe("L7FrontEndResolver", func() {
 						ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
 						Spec: kapiv1.ServiceSpec{
 							ClusterIP: "10.0.0.0",
+							ClusterIPs: []string{
+								"10.0.0.0",
+							},
 							ExternalIPs: []string{
 								"10.0.0.10",
 								"10.0.0.20",
@@ -223,17 +232,17 @@ var _ = Describe("L7FrontEndResolver", func() {
 				UpdateType: api.UpdateTypeKVNew,
 			}},
 			[]output{{
-				setId:    calc.TPROXYServicesIPSet,
+				setId:    calc.TPROXYServiceIPsIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServicesIPSet,
+				setId:    calc.TPROXYServiceIPsIPSet,
 				ipAddr:   "10.0.0.10",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServicesIPSet,
+				setId:    calc.TPROXYServiceIPsIPSet,
 				ipAddr:   "10.0.0.20",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
@@ -256,6 +265,9 @@ var _ = Describe("L7FrontEndResolver", func() {
 						ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
 						Spec: kapiv1.ServiceSpec{
 							ClusterIP: "10.0.0.0",
+							ClusterIPs: []string{
+								"10.0.0.0",
+							},
 							ExternalIPs: []string{
 								"10.0.0.10",
 								"10.0.0.20",
@@ -285,6 +297,9 @@ var _ = Describe("L7FrontEndResolver", func() {
 						ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
 						Spec: kapiv1.ServiceSpec{
 							ClusterIP: "10.0.0.0",
+							ClusterIPs: []string{
+								"10.0.0.0",
+							},
 							ExternalIPs: []string{
 								"10.0.0.10",
 								"10.0.0.20",
@@ -308,6 +323,9 @@ var _ = Describe("L7FrontEndResolver", func() {
 						ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
 						Spec: kapiv1.ServiceSpec{
 							ClusterIP: "10.0.0.0",
+							ClusterIPs: []string{
+								"10.0.0.0",
+							},
 							ExternalIPs: []string{
 								"10.0.0.10",
 								"10.0.0.20",
@@ -325,17 +343,17 @@ var _ = Describe("L7FrontEndResolver", func() {
 				UpdateType: api.UpdateTypeKVUpdated,
 			}},
 			[]output{{
-				setId:    calc.TPROXYServicesIPSet,
+				setId:    calc.TPROXYServiceIPsIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServicesIPSet,
+				setId:    calc.TPROXYServiceIPsIPSet,
 				ipAddr:   "10.0.0.10",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServicesIPSet,
+				setId:    calc.TPROXYServiceIPsIPSet,
 				ipAddr:   "10.0.0.20",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
@@ -365,6 +383,9 @@ var _ = Describe("L7FrontEndResolver", func() {
 						ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
 						Spec: kapiv1.ServiceSpec{
 							ClusterIP: "10.0.0.0",
+							ClusterIPs: []string{
+								"10.0.0.0",
+							},
 							ExternalIPs: []string{
 								"10.0.0.10",
 								"10.0.0.20",
@@ -388,17 +409,17 @@ var _ = Describe("L7FrontEndResolver", func() {
 				UpdateType: api.UpdateTypeKVDeleted,
 			}},
 			[]output{{
-				setId:    calc.TPROXYServicesIPSet,
+				setId:    calc.TPROXYServiceIPsIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServicesIPSet,
+				setId:    calc.TPROXYServiceIPsIPSet,
 				ipAddr:   "10.0.0.10",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServicesIPSet,
+				setId:    calc.TPROXYServiceIPsIPSet,
 				ipAddr:   "10.0.0.20",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
@@ -411,17 +432,17 @@ var _ = Describe("L7FrontEndResolver", func() {
 				ipv6Port: true,
 			}},
 			[]output{{
-				setId:    calc.TPROXYServicesIPSet,
+				setId:    calc.TPROXYServiceIPsIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServicesIPSet,
+				setId:    calc.TPROXYServiceIPsIPSet,
 				ipAddr:   "10.0.0.10",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServicesIPSet,
+				setId:    calc.TPROXYServiceIPsIPSet,
 				ipAddr:   "10.0.0.20",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
@@ -443,6 +464,9 @@ var _ = Describe("L7FrontEndResolver", func() {
 						ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
 						Spec: kapiv1.ServiceSpec{
 							ClusterIP: "10.0.0.0",
+							ClusterIPs: []string{
+								"10.0.0.0",
+							},
 							ExternalIPs: []string{
 								"10.0.0.10",
 								"10.0.0.20",
@@ -469,17 +493,17 @@ var _ = Describe("L7FrontEndResolver", func() {
 				UpdateType: api.UpdateTypeKVNew,
 			}},
 			[]output{{
-				setId:    calc.TPROXYServicesIPSet,
+				setId:    calc.TPROXYServiceIPsIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServicesIPSet,
+				setId:    calc.TPROXYServiceIPsIPSet,
 				ipAddr:   "10.0.0.10",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServicesIPSet,
+				setId:    calc.TPROXYServiceIPsIPSet,
 				ipAddr:   "10.0.0.20",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
@@ -492,17 +516,17 @@ var _ = Describe("L7FrontEndResolver", func() {
 				ipv6Port: true,
 			}},
 			[]output{{
-				setId:    calc.TPROXYServicesIPSet,
+				setId:    calc.TPROXYServiceIPsIPSet,
 				ipAddr:   "10.0.0.0",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServicesIPSet,
+				setId:    calc.TPROXYServiceIPsIPSet,
 				ipAddr:   "10.0.0.10",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
 			}, {
-				setId:    calc.TPROXYServicesIPSet,
+				setId:    calc.TPROXYServiceIPsIPSet,
 				ipAddr:   "10.0.0.20",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,
@@ -524,6 +548,9 @@ var _ = Describe("L7FrontEndResolver", func() {
 						ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
 						Spec: kapiv1.ServiceSpec{
 							ClusterIP: "2001:569:7007:1a00:45ac:2caa:a3be:5e10",
+							ClusterIPs: []string{
+								"2001:569:7007:1a00:45ac:2caa:a3be:5e10",
+							},
 							Ports: []kapiv1.ServicePort{
 								{
 									Port:     123,
@@ -538,7 +565,7 @@ var _ = Describe("L7FrontEndResolver", func() {
 				UpdateType: api.UpdateTypeKVNew,
 			}},
 			[]output{{
-				setId:    calc.TPROXYServicesIPSet,
+				setId:    calc.TPROXYServiceIPsIPSet,
 				ipAddr:   "2001:569:7007:1a00:45ac:2caa:a3be:5e10",
 				port:     123,
 				protocol: labelindex.ProtocolTCP,

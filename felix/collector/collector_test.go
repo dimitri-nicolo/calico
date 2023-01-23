@@ -286,6 +286,9 @@ var (
 		ObjectMeta: metav1.ObjectMeta{Name: "test-svc", Namespace: "test-namespace"},
 		Spec: kapiv1.ServiceSpec{
 			ClusterIP: "10.10.10.10",
+			ClusterIPs: []string{
+				"10.10.10.10",
+			},
 			Ports: []kapiv1.ServicePort{
 				{
 					Name:       "nginx",
@@ -1578,6 +1581,9 @@ var _ = Describe("Conntrack Datasource", func() {
 						Port:     int32(dstPortDNAT),
 					}},
 					ClusterIP: "192.168.0.2",
+					ClusterIPs: []string{
+						"192.168.0.2",
+					},
 				},
 				},
 			})
@@ -1610,6 +1616,9 @@ var _ = Describe("Conntrack Datasource", func() {
 						Port:     int32(dstPortDNAT),
 					}},
 					ClusterIP: "192.168.0.2",
+					ClusterIPs: []string{
+						"192.168.0.2",
+					},
 				},
 				},
 			})

@@ -459,6 +459,7 @@ var baseTests = []StateList{
 	{
 		withOutL7Annotation,
 		clusterIPWithL7Annotation,
+		epslcAppendWithL7Annotation,
 		externalIPWithL7Annotation,
 		deleteClusterIPL7Annotation,
 		deleteExternalIPL7Annotation,
@@ -898,7 +899,7 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 	var state State
 	var sentInSync bool
 	var lastStats StatsUpdate
-	var l7Resolver *L7FrontEndResolver
+	var l7Resolver *L7ServiceIPSetsCalculator
 
 	tierSupportEnabled := licenseMonitor.GetFeatureStatus(features.Tiers)
 	BeforeEach(func() {
@@ -915,7 +916,7 @@ func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, 
 		conf.Encapsulation = config.Encapsulation{VXLANEnabled: true, VXLANEnabledV6: true}
 		calcGraph = NewCalculationGraph(eventBuf, lookupsCache, conf, tierSupportEnabled, func() {})
 		calcGraph.EnableIPSec(eventBuf)
-		l7Resolver = NewL7FrontEndResolver(eventBuf, conf)
+		l7Resolver = NewL7ServiceIPSetsCalculator(eventBuf, conf)
 		statsCollector := NewStatsCollector(func(stats StatsUpdate) error {
 			lastStats = stats
 			return nil

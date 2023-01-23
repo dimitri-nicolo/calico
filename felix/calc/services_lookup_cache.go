@@ -55,7 +55,7 @@ type portProtoKey struct {
 // update dispatcher.
 //
 // This component should included in other components which can register
-// themselves with update dispatcher. Ex ServiceLookupsCache and L7FrontEndResolver
+// themselves with update dispatcher. Ex ServiceLookupsCache and L7ServiceIPSetsCalculator
 //
 // It processes the updates passed to it and creates three maps. One contains all services
 // passed to it, other two contains node port services, regular services.
@@ -83,9 +83,11 @@ func (suh *ServiceUpdateHandler) handleService(
 	log.Debugf("Handle service %s", key)
 
 	// Construct a full set of service IPs from the cluster IP and other ExternalIPs.
-	serviceIPs := make([][16]byte, 0, len(svc.ExternalIPs)+1)
-	if ipa, ok := IPStringToArray(svc.ClusterIP); ok {
-		serviceIPs = append(serviceIPs, ipa)
+	serviceIPs := make([][16]byte, 0, len(svc.ExternalIPs)+len(svc.ClusterIPs))
+	for _, c := range svc.ClusterIPs {
+		if ipa, ok := IPStringToArray(c); ok {
+			serviceIPs = append(serviceIPs, ipa)
+		}
 	}
 	for _, e := range svc.ExternalIPs {
 		if ipa, ok := IPStringToArray(e); ok {

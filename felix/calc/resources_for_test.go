@@ -61,7 +61,7 @@ var (
 	namedPortInheritIPSetID     = namedPortID(inheritSelector, "tcp", "tcpport")
 	httpMatchMethod             = HTTPMatch{Methods: []string{"GET"}}
 	serviceAccountSelector      = "name == 'sa1'"
-	tproxyIpSetSelector         = "tproxy-services"
+	tproxyIpSetSelector         = "tproxy-svc-ips"
 	tproxyIpSetNodeports        = "tproxy-nodeports-tcp"
 )
 
@@ -1034,9 +1034,12 @@ var localIPAMBlockWithBorrows = AllocationBlock{
 var svcWithOutL7Annotation = KVPair{
 	Key: ResourceKey{Kind: model.KindKubernetesService, Name: "service1", Namespace: "ns1"},
 	Value: &kapiv1.Service{
-		ObjectMeta: metav1.ObjectMeta{Name: "service2"},
+		ObjectMeta: metav1.ObjectMeta{Name: "service1", Namespace: "ns1"},
 		Spec: kapiv1.ServiceSpec{
 			ClusterIP: "10.0.0.0",
+			ClusterIPs: []string{
+				"10.0.0.0",
+			},
 			ExternalIPs: []string{
 				"10.0.0.10",
 			},
@@ -1058,6 +1061,9 @@ var svcWithL7Annotation = KVPair{
 		ObjectMeta: metav1.ObjectMeta{Name: "service2", Annotations: map[string]string{"projectcalico.org/l7-logging": "true"}},
 		Spec: kapiv1.ServiceSpec{
 			ClusterIP: "10.0.0.0",
+			ClusterIPs: []string{
+				"10.0.0.0",
+			},
 			Ports: []kapiv1.ServicePort{
 				{
 					Port:     123,
@@ -1091,6 +1097,35 @@ var externalSvcWithL7Annotation = KVPair{
 	},
 }
 
+var epslcForSvcWithL7Annotation = KVPair{
+	Key: model.ResourceKey{Kind: model.KindKubernetesEndpointSlice, Name: "service2", Namespace: "ns2"},
+	Value: &discovery.EndpointSlice{
+		ObjectMeta: metav1.ObjectMeta{Name: "service2", Namespace: "ns2", Labels: map[string]string{"kubernetes.io/service-name": "service2"}},
+		Endpoints: []discovery.Endpoint{
+			{Addresses: []string{"10.0.0.1"}},
+		},
+		Ports: []discovery.EndpointPort{
+			{Port: &svcWithL7Annotation.Value.(*kapiv1.Service).Spec.Ports[0].Port,
+				Protocol: &tcp},
+		},
+	},
+}
+
+var epslcForSvcWithL7Annotation2 = KVPair{
+	Key: model.ResourceKey{Kind: model.KindKubernetesEndpointSlice, Name: "service2-2", Namespace: "ns2"},
+	Value: &discovery.EndpointSlice{
+		ObjectMeta: metav1.ObjectMeta{Name: "service2-2", Namespace: "ns2", Labels: map[string]string{"kubernetes.io/service-name": "service2"}},
+		Endpoints: []discovery.Endpoint{
+			{Addresses: []string{"10.0.0.2"}},
+			{Addresses: []string{"10.0.0.3"}},
+		},
+		Ports: []discovery.EndpointPort{
+			{Port: &svcWithL7Annotation.Value.(*kapiv1.Service).Spec.Ports[0].Port,
+				Protocol: &tcp},
+		},
+	},
+}
+
 var deleteSvcWithL7Annotation = KVPair{
 	Key:   model.ResourceKey{Kind: model.KindKubernetesService, Name: "service2", Namespace: "ns2"},
 	Value: nil,
@@ -1098,6 +1133,16 @@ var deleteSvcWithL7Annotation = KVPair{
 
 var deleteExternalSvcWithL7Annotation = KVPair{
 	Key:   model.ResourceKey{Kind: model.KindKubernetesService, Name: "service3", Namespace: "ns2"},
+	Value: nil,
+}
+
+var deleteEpslcForSvcWithL7Annotation = KVPair{
+	Key:   model.ResourceKey{Kind: model.KindKubernetesEndpointSlice, Name: "service2", Namespace: "ns2"},
+	Value: nil,
+}
+
+var deleteEpslcForSvcWithL7Annotation2 = KVPair{
+	Key:   model.ResourceKey{Kind: model.KindKubernetesEndpointSlice, Name: "service2-2", Namespace: "ns2"},
 	Value: nil,
 }
 
