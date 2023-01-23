@@ -50,7 +50,7 @@ var _ = Describe("Prometheus Proxy Query test", func() {
 		req, _ := http.NewRequest("GET", "/test-endpoint", nil)
 		req.Header.Set("Authorization", jwt.BearerTokenHeader())
 
-		mAuth.On("Authenticate", req).Return(userInfo, 200, nil)
+		mAuth.On("Authenticate", req).Return(userInfo, http.StatusOK, nil)
 		addAccessReviewsReactor(fakeK8sCli, true, userInfo)
 		var requestReceived *http.Request
 
@@ -82,7 +82,7 @@ var _ = Describe("Prometheus Proxy Query test", func() {
 		rr := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/test-endpoint", nil)
 		proxy.ServeHTTP(rr, req)
-		Expect(rr.Code).To(Equal(401))
+		Expect(rr.Code).To(Equal(http.StatusUnauthorized))
 		Expect(requestReceived).To(BeNil())
 	})
 
@@ -90,7 +90,7 @@ var _ = Describe("Prometheus Proxy Query test", func() {
 		req, _ := http.NewRequest("GET", "/test-endpoint", nil)
 		req.Header.Set("Authorization", jwt.BearerTokenHeader())
 
-		mAuth.On("Authenticate", req).Return(userInfo, 200, nil)
+		mAuth.On("Authenticate", req).Return(userInfo, http.StatusOK, nil)
 		addAccessReviewsReactor(fakeK8sCli, false, userInfo)
 		var requestReceived *http.Request
 
@@ -103,7 +103,7 @@ var _ = Describe("Prometheus Proxy Query test", func() {
 		Expect(err).NotTo(HaveOccurred())
 		rr := httptest.NewRecorder()
 		proxy.ServeHTTP(rr, req)
-		Expect(rr.Code).To(Equal(403))
+		Expect(rr.Code).To(Equal(http.StatusForbidden))
 		Expect(requestReceived).To(BeNil())
 	})
 })

@@ -69,7 +69,7 @@ func Proxy(proxy *httputil.ReverseProxy, authn auth.JWTAuth) (http.HandlerFunc, 
 			resources = createResources
 		} else {
 			// At this time only HTTP GET/POST are allowed
-			w.WriteHeader(405)
+			w.WriteHeader(http.StatusMethodNotAllowed)
 			_, err := w.Write([]byte("Method Not Allowed"))
 			if err != nil {
 				log.Errorf("Error when writing body to response: %v", err)
@@ -82,7 +82,7 @@ func Proxy(proxy *httputil.ReverseProxy, authn auth.JWTAuth) (http.HandlerFunc, 
 		for _, res := range resources {
 			ok, err := authn.Authorize(usr, res, nil)
 			if err != nil {
-				w.WriteHeader(500)
+				w.WriteHeader(http.StatusInternalServerError)
 				_, err := w.Write([]byte(err.Error()))
 				if err != nil {
 					log.Errorf("Error when writing body to response: %v", err)
@@ -96,7 +96,7 @@ func Proxy(proxy *httputil.ReverseProxy, authn auth.JWTAuth) (http.HandlerFunc, 
 		}
 
 		if !authorized {
-			w.WriteHeader(403)
+			w.WriteHeader(http.StatusForbidden)
 			_, err := w.Write([]byte(fmt.Sprintf("user %v is not authorized to perform %v https:tigera-api:8080", usr, req.Method)))
 			if err != nil {
 				log.Errorf("Error when writing body to response: %v", err)
