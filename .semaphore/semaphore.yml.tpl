@@ -799,8 +799,6 @@ blocks:
     when: "false or change_in(['/*', '/crypto/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
   task:
-    secrets:
-      - name: test-customer-license
     prologue:
       commands:
         - cd crypto
