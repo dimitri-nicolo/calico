@@ -1,0 +1,51 @@
+# {{ upper .Name }}
+
+<!---
+Describe what the component is doing and what is its role in Calico/Tigera ecosystem
+--->
+
+## Building and testing
+
+To build this locally, use one of the following commands:
+
+```
+make image
+```
+
+or
+
+```
+make ci
+```
+
+## Adding and running test
+
+To run all tests
+
+```
+make test
+```
+
+## Configuration and permissions
+
+| ENV                |       Default value        |            Description |
+|--------------------|:--------------------------:|-----------------------:|
+| {{ snakecase .Name |       upper }}_PORT        |                 `8444` | Local Port to start the service |
+| {{ snakecase .Name |       upper }}_HOST        |                <empty> |   Host for the service |
+| {{ snakecase .Name |     upper }}_LOG_LEVEL     |                 `Info` |    Log Level across service |
+| {{ snakecase .Name |       upper }}_CERT        | `/certs/https/tls.crt` |    Path to tls cert |
+| {{ snakecase .Name |        upper }}_KEY        | `/certs/https/tls.key` |    Path tp tls key |
+| {{ snakecase .Name | upper }}_FIPS_MODE_ENABLED |                `false` |    FIPSModeEnabled Enables FIPS 140-2 verified crypto mode |
+
+<!---
+Describe what permissions needs in k8s cluster
+--->
+
+
+## Docs
+
+<!---
+Add documentation links
+--->
+
+
