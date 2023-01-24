@@ -151,15 +151,15 @@ func (c *endpointsCache) onPodDelete(obj interface{}) {
 	wepConverter := conversion.NewWorkloadEndpointConverter()
 	kvps, err := wepConverter.PodToWorkloadEndpoints(pod)
 	if err != nil {
-		log.Debug("failed to convert a pod to wep in onPodDelete")
+		log.WithError(err).Warn("failed to convert a pod to wep in Pod deletion callback.")
 		return
 	}
 
-	key := kvps[0].Key
-	if ec := c.getEndpointCache(key, false); ec != nil {
-		ec.failedEndpoints.Discard(key)
-
-		c.maybeDeleteEndpointCacheByNamespace(ec, pod.GetNamespace())
+	for _, kvp := range kvps {
+		if ec := c.getEndpointCache(kvp.Key, false); ec != nil {
+			ec.failedEndpoints.Discard(kvp.Key)
+			c.maybeDeleteEndpointCacheByNamespace(ec, pod.GetNamespace())
+		}
 	}
 }
 
