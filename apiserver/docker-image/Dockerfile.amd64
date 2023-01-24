@@ -11,8 +11,8 @@ RUN rm -rf /tmp
 RUN mkdir /tmp
 
 FROM scratch
-COPY --from=ubi --chown 999 /code /code
-COPY --from=ubi --chown 999 /tmp /tmp
+COPY --from=ubi /code /code
+COPY --from=ubi /tmp /tmp
 
 ADD bin/apiserver-amd64 /code/apiserver
 ADD bin/filecheck-amd64 /code/filecheck
