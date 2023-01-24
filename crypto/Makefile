@@ -18,7 +18,7 @@ fv: setup-fv bin/fips-test-build
 	# remove times and dates from file
 	sed -i '1,4d;19d' tmp/nmap.log
 	# If the ciphers are as expected, we get exit code 0.
-	diff fv/expected-nmap.log  tmp/nmap.log
+	diff --strip-trailing-cr fv/expected-nmap.log  tmp/nmap.log
 
 bin/fips-test-build:
 	$(call build_cgo_boring_binary, $(PACKAGE_NAME)/fv/main, $@)
