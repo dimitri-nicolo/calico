@@ -30,4 +30,5 @@ pod2daemon/node-driver-registrar/
 
 # Sub-chart created as part of build.
 charts/tigera-operator/charts
+crypto/tmp
 
