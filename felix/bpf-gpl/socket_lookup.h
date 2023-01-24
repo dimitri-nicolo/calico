@@ -5,6 +5,8 @@
 #ifndef __CALI_LOOKUP_H__
 #define __CALI_LOOKUP_H__
 
+#include "types.h"
+
 static CALI_BPF_INLINE void socket_lookup(struct cali_tc_ctx *ctx) {
 	struct bpf_sock *sk = NULL;
 	struct bpf_sock_tuple tuple={};
