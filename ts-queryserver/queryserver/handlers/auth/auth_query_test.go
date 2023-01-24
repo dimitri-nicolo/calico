@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Tigera. All rights reserved.
+// Copyright (c) 2022-2023 Tigera. All rights reserved.
 package authhandler_test
 
 import (
@@ -58,7 +58,8 @@ var _ = Describe("Queryserver query auth test", func() {
 			&rest.Config{BearerToken: jwt.ToString()}, fakeK8sCli, lmaauth.WithAuthenticator(iss, mAuth))
 		Expect(err).NotTo(HaveOccurred())
 
-		qh = query.NewQuery(client.NewQueryInterface(c))
+		stopCh := make(chan struct{})
+		qh = query.NewQuery(client.NewQueryInterface(fakeK8sCli, c, stopCh))
 	})
 
 	It("returns a valid handler", func() {

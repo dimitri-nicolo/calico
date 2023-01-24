@@ -356,6 +356,8 @@ func (m multusWorkloadEndpointConverter) workloadEndpointForPodInterface(pod *ka
 		wep.Spec.EgressGateway = nil
 	}
 
+	wep.Status.Phase = string(pod.Status.Phase)
+
 	// Embed the workload endpoint into a KVPair.
 	kvp := model.KVPair{
 		Key: model.ResourceKey{

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
 package client
 
 import (
@@ -6,6 +6,9 @@ import (
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
+
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
 
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
@@ -24,7 +27,7 @@ import (
 )
 
 // NewQueryInterface returns a queryable resource cache.
-func NewQueryInterface(ci clientv3.Interface) QueryInterface {
+func NewQueryInterface(k8sClient kubernetes.Interface, ci clientv3.Interface, stopCh <-chan struct{}) QueryInterface {
 	cq := &cachedQuery{
 		policies:                   cache.NewPoliciesCache(),
 		endpoints:                  cache.NewEndpointsCache(),
@@ -75,6 +78,10 @@ func NewQueryInterface(ci clientv3.Interface) QueryInterface {
 	// Register the policy and endpoint caches for updates from the label handler.
 	cq.endpoints.RegisterWithLabelHandler(cq.policyEndpointLabelHandler)
 	cq.policies.RegisterWithLabelHandler(cq.policyEndpointLabelHandler)
+
+	// Register informers for resource caches.
+	factory := informers.NewSharedInformerFactory(k8sClient, 0)
+	cq.endpoints.RegisterWithSharedInformer(factory, stopCh)
 
 	// Create a SyncerQueryHandler which ensures syncer updates and query requests are
 	// serialized. This handler will pass syncer updates to the dispatcher (see below),

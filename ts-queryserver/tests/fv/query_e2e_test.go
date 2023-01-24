@@ -1,10 +1,10 @@
-// Copyright (c) 2018-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
 package fv
 
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -18,6 +18,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	log "github.com/sirupsen/logrus"
+
+	"k8s.io/client-go/kubernetes/fake"
 
 	apiv3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
 
@@ -45,22 +47,27 @@ var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3,
 			By("Cleaning the datastore")
 			be, err := backend.NewClient(config)
 			Expect(err).NotTo(HaveOccurred())
-			_ = be.Clean()
+			err = be.Clean()
+			Expect(err).NotTo(HaveOccurred())
 
 			// Choose an arbitrary port for the server to listen on.
 			By("Choosing an arbitrary available local port for the queryserver")
-			listener, _ := net.Listen("tcp", "127.0.0.1:0")
+			listener, err := net.Listen("tcp", "127.0.0.1:0")
+			Expect(err).NotTo(HaveOccurred())
 			addr := listener.Addr().String()
 			listener.Close()
 
 			// Get server configuration variables meant for FVs.
 			servercfg := getDummyConfigFromEnvFv(addr, "", "")
 
+			fakeK8sClient := fake.NewSimpleClientset()
 			mh := &mockHandler{}
 
 			By("Starting the queryserver")
-			_ = server.Start(&config, servercfg, mh)
-			defer server.Stop()
+			srv := server.NewServer(fakeK8sClient, &config, servercfg, mh)
+			err = srv.Start()
+			Expect(err).NotTo(HaveOccurred())
+			defer srv.Stop()
 
 			var configured map[model.ResourceKey]resourcemgr.ResourceObject
 			var netClient = &http.Client{Timeout: time.Second * 10}
@@ -101,7 +108,7 @@ func getQueryFunction(tqd testQueryData, addr string, netClient *http.Client) fu
 			return err
 		}
 		defer r.Body.Close()
-		bodyBytes, err := ioutil.ReadAll(r.Body)
+		bodyBytes, err := io.ReadAll(r.Body)
 		if err != nil {
 			return err
 		}
@@ -243,7 +250,7 @@ func crossCheckPolicyQuery(tqd testQueryData, addr string, netClient *http.Clien
 		r, err := netClient.Get(qurl)
 		Expect(err).NotTo(HaveOccurred())
 		defer r.Body.Close()
-		bodyBytes, err := ioutil.ReadAll(r.Body)
+		bodyBytes, err := io.ReadAll(r.Body)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(r.StatusCode).To(Equal(http.StatusOK))
 		output := client.QueryEndpointsResp{}
@@ -280,7 +287,7 @@ func crossCheckEndpointQuery(tqd testQueryData, addr string, netClient *http.Cli
 		r, err := netClient.Get(qurl)
 		Expect(err).NotTo(HaveOccurred())
 		defer r.Body.Close()
-		bodyBytes, err := ioutil.ReadAll(r.Body)
+		bodyBytes, err := io.ReadAll(r.Body)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(r.StatusCode).To(Equal(http.StatusOK))
 		output := client.QueryPoliciesResp{}
