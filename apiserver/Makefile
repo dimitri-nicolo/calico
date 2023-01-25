@@ -83,14 +83,16 @@ cd: image-all cd-common
 # Some will have dedicated targets to make it easier to type, for example
 # "apiserver" instead of "$(BINDIR)/apiserver".
 #########################################################################
-$(BINDIR)/apiserver-$(ARCH): $(K8SAPISERVER_GO_FILES)
+$(BINDIR)/apiserver $(BINDIR)/apiserver-amd64: $(K8SAPISERVER_GO_FILES)
 	mkdir -p $(BINDIR)
-	$(call build_cgo_boring_binary, $(PACKAGE_NAME)/cmd/apiserver, $@)
+	$(call build_static_cgo_boring_binary, $(PACKAGE_NAME)/cmd/apiserver, $@)
 
+$(BINDIR)/apiserver-ppc64le $(BINDIR)/apiserver-arm64: $(K8SAPISERVER_GO_FILES)
+	mkdir -p $(BINDIR)
+	$(call build_binary, $(PACKAGE_NAME)/cmd/apiserver, $@)
 
 $(BINDIR)/filecheck-$(ARCH): $(K8SAPISERVER_GO_FILES)
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(CALICO_BUILD) \
-		sh -c '$(GIT_CONFIG_SSH) go build -v -o $@ -ldflags "$(VERSION_FLAGS)" $(PACKAGE_NAME)/cmd/filecheck'
+	$(call build_binary, $(PACKAGE_NAME)/cmd/filecheck, $@)
 
 ###############################################################################
 # Building the image

@@ -167,16 +167,6 @@ endif
 GO_BUILD_IMAGE ?= calico/go-build
 CALICO_BUILD    = $(GO_BUILD_IMAGE):$(GO_BUILD_VER)
 
-
-# We use BoringCrypto as FIPS validated cryptography in order to allow users to run in FIPS Mode (amd64 only).
-ifeq ($(ARCH), $(filter $(ARCH),amd64))
-GOEXPERIMENT?=boringcrypto
-TAGS?=boringcrypto,osusergo,netgo
-CGO_ENABLED?=1
-else
-CGO_ENABLED?=0
-endif
-
 # Build a static binary with boring crypto support.
 # This function expects you to pass in two arguments:
 #   1st arg: path/to/input/package(s)
@@ -184,13 +174,22 @@ endif
 # Only when arch = amd64 it will use boring crypto to build the binary.
 # Uses VERSION_FLAGS when set.
 # TODO: once all images can be built using this function, we can revert the $(DOCKER_RUN)... line with $(DOCKER_BUILD_CGO)
-define build_cgo_boring_binary
-	echo "building a static binary..."
-	$(DOCKER_RUN) -e CGO_ENABLED=$(CGO_ENABLED) $(GO_BUILD_IMAGE):$(GO19_BUILD_VER) \
+define build_static_cgo_boring_binary
+    $(DOCKER_RUN) -e CGO_ENABLED=1 $(GO_BUILD_IMAGE):$(GO19_BUILD_VER) \
+        sh -c '$(GIT_CONFIG_SSH) \
+        GOEXPERIMENT=boringcrypto go build -o $(2)  \
+        -tags boringcrypto,osusergo,netgo -v -buildvcs=false \
+        -ldflags "$(VERSION_FLAGS) -linkmode external -extldflags -static" \
+        $(1)'
+endef
+
+# For binaries that do not require boring crypto.
+define build_binary
+	$(DOCKER_RUN) $(GO_BUILD_IMAGE):$(GO19_BUILD_VER) \
 		sh -c '$(GIT_CONFIG_SSH) \
-		GOEXPERIMENT=$(GOEXPERIMENT) go build -o $(2)  \
-		-tags $(TAGS) -v -buildvcs=false \
-		-ldflags "$(VERSION_FLAGS) -linkmode external -extldflags -static" \
+		go build -o $(2)  \
+		-v -buildvcs=false \
+		-ldflags "$(VERSION_FLAGS)" \
 		$(1)'
 endef
 
