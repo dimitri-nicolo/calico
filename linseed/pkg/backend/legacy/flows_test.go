@@ -10,15 +10,13 @@ import (
 	"time"
 
 	"github.com/olivere/elastic/v7"
-	"github.com/stretchr/testify/assert"
-
-	"github.com/stretchr/testify/require"
-
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/require"
 )
 
 // TestListFlows tests running a real elasticsearch query to list flows.
@@ -28,7 +26,7 @@ func TestListFlows(t *testing.T) {
 	// Create an elasticsearch client to use for the test. For this test, we use a real
 	// elasticsearch instance created via "make run-elastic".
 	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	client := lmaelastic.NewWithClient(esClient)
 
 	// Instantiate a FlowBackend.
@@ -50,15 +48,15 @@ func TestListFlows(t *testing.T) {
 
 	// Query for flows. There should be a single flow from the populated data.
 	r, err := b.List(ctx, clusterInfo, opts)
-	assert.NoError(t, err)
-	assert.Len(t, r, 1)
+	require.NoError(t, err)
+	require.Len(t, r, 1)
 
 	// Assert that the flow data is populated correctly.
-	assert.Equal(t, expected, r[0])
+	require.Equal(t, expected, r[0])
 
 	// Clean up after ourselves by deleting the index.
 	_, err = esClient.DeleteIndex(fmt.Sprintf("tigera_secure_ee_flows.%s", clusterInfo.Cluster)).Do(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 // populateFlowData writes a series of flow logs to elasticsearch, and returns the FlowLog that we
@@ -67,7 +65,7 @@ func populateFlowData(t *testing.T, ctx context.Context, client lmaelastic.Clien
 	// Clear out any old data first.
 	_, _ = client.Backend().DeleteIndex(fmt.Sprintf("tigera_secure_ee_flows.%s", cluster)).Do(ctx)
 
-	// Instantiate a flowBackend.
+	// Instantiate a FlowBackend.
 	b := legacy.NewFlowLogBackend(client)
 
 	// The expected flow log - we'll populate fields as we go.
@@ -96,7 +94,14 @@ func populateFlowData(t *testing.T, ctx context.Context, client lmaelastic.Clien
 		Port:      53,
 		PortName:  "53",
 	}
-	// Service:           {Name: "kube-dns", Namespace: "default", Port: 53, PortName: "53"},
+	expected.DestinationLabels = []v1.FlowLabels{{Key: "dest_iteration", Values: []string{}}}
+	expected.SourceLabels = []v1.FlowLabels{
+		{Key: "bread", Values: []string{"rye"}},
+		{Key: "cheese", Values: []string{"brie"}},
+		{Key: "wine", Values: []string{"none"}},
+	}
+
+	batch := []bapi.FlowLog{}
 
 	for i := 0; i < 10; i++ {
 		f := bapi.FlowLog{
@@ -130,10 +135,28 @@ func populateFlowData(t *testing.T, ctx context.Context, client lmaelastic.Clien
 			PacketsOut: 2 * i,
 			BytesIn:    64,
 			BytesOut:   128,
+
+			// Add label information.
+			SourceLabels: bapi.FlowLogLabels{
+				Labels: []string{
+					"bread=rye",
+					"cheese=brie",
+					"wine=none",
+				},
+			},
+			DestLabels: bapi.FlowLogLabels{
+				// We want a variety of label keys and values,
+				// so base this one off of the loop variable.
+				// Note: We use a nested terms aggregation to get labels, which has an
+				// inherent maximum number of buckets of 10. As a result, if a flow has more than
+				// 10 labels, not all of them will be shown. We might be able to use a composite aggregation instead,
+				// but these are more expensive.
+				Labels: []string{fmt.Sprintf("dest_iteration=%d", i)},
+			},
 		}
 
-		err := b.Create(ctx, bapi.ClusterInfo{Cluster: cluster}, f)
-		require.NoError(t, err)
+		// Add it to the batch
+		batch = append(batch, f)
 
 		// Increment fields on the expected flow based on the flow log that was
 		// just added.
@@ -144,7 +167,23 @@ func populateFlowData(t *testing.T, ctx context.Context, client lmaelastic.Clien
 		expected.TrafficStats.BytesOut += int64(f.BytesOut)
 		expected.TrafficStats.PacketsIn += int64(f.PacketsIn)
 		expected.TrafficStats.PacketsOut += int64(f.PacketsOut)
+		expected.DestinationLabels[0].Values = append(expected.DestinationLabels[0].Values, fmt.Sprintf("%d", i))
 	}
 
+	err := b.Create(ctx, bapi.ClusterInfo{Cluster: cluster}, batch)
+	require.NoError(t, err)
+
+	// Refresh the index so that data is readily available for the test. Otherwise, we need to wait
+	// for the refresh interval to occur.
+	index := fmt.Sprintf("tigera_secure_ee_flows.%s", cluster)
+	err = refreshIndex(ctx, client, index)
+	require.NoError(t, err)
+
 	return expected
+}
+
+func refreshIndex(ctx context.Context, c lmaelastic.Client, index string) error {
+	logrus.WithField("index", index).Info("[TEST] Refreshing index")
+	_, err := c.Backend().Refresh(index).Do(ctx)
+	return err
 }

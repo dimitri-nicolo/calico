@@ -6,3 +6,6 @@ import _ "embed"
 
 //go:embed flowlog.json
 var FlowLogTemplate string
+
+//go:embed l7log.json
+var L7LogTemplate string

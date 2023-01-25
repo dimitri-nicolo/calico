@@ -28,11 +28,11 @@ type L3Flow struct {
 
 	// DestinationLabels are the labels applied to the destination during the lifetime
 	// of this flow. Note that a single label may have had multiple values throughout this flow's life.
-	DestinationLabels []LabelSelector `json:"destination_labels,omitempty"`
+	DestinationLabels []FlowLabels `json:"destination_labels,omitempty"`
 
 	// SourceLabels are the labels applied to the source during the lifetime
 	// of this flow. Note that a single label may have had multiple values throughout this flow's life.
-	SourceLabels []LabelSelector `json:"source_labels,omitempty"`
+	SourceLabels []FlowLabels `json:"source_labels,omitempty"`
 
 	// TrafficStats contains summarized traffic stats for this flow.
 	TrafficStats *TrafficStats `json:"connection_stats,omitempty"`
@@ -45,6 +45,13 @@ type L3Flow struct {
 
 	// ProcessStats are process aggregated metrics generated from the traffic described by the L3 flows.
 	ProcessStats *ProcessStats `json:"process_stats,omitempty"`
+}
+
+// FlowLabels represents a single label and all of its seen values over the course of
+// a flow's life.
+type FlowLabels struct {
+	Key    string
+	Values []string
 }
 
 // LogStats represent the number of flows aggregated into this entry

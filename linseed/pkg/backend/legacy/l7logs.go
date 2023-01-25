@@ -1,19 +1,16 @@
-// Copyright (c) 2023 Tigera, Inc. All rights reserved.
-
 package legacy
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/olivere/elastic/v7"
-
+	elastic "github.com/olivere/elastic/v7"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
-type flowLogBackend struct {
+type l7LogBackend struct {
 	client    *elastic.Client
 	lmaclient lmaelastic.Client
 
@@ -21,19 +18,20 @@ type flowLogBackend struct {
 	initialized bool
 }
 
-func NewFlowLogBackend(c lmaelastic.Client) bapi.FlowLogBackend {
-	return &flowLogBackend{
+func NewL7LogBackend(c lmaelastic.Client) bapi.L7LogBackend {
+	b := &l7LogBackend{
 		client:    c.Backend(),
 		lmaclient: c,
 	}
+	return b
 }
 
-func (b *flowLogBackend) Initialize(ctx context.Context) error {
+func (b *l7LogBackend) Initialize(ctx context.Context) error {
 	var err error
 	if !b.initialized {
-		// Create a template with mappings for all new flow log indices.
-		_, err = b.client.IndexPutTemplate("flow_log_template").
-			BodyString(templates.FlowLogTemplate).
+		// Create a template with mappings for all new log indices.
+		_, err = b.client.IndexPutTemplate("l7_log_template").
+			BodyString(templates.L7LogTemplate).
 			Create(false).
 			Do(ctx)
 		if err != nil {
@@ -44,8 +42,8 @@ func (b *flowLogBackend) Initialize(ctx context.Context) error {
 	return nil
 }
 
-// Create the given flow log in elasticsearch.
-func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []bapi.FlowLog) error {
+// Create the given log in elasticsearch.
+func (b *l7LogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []bapi.L7Log) error {
 	log := contextLogger(i)
 
 	// Initialize if we haven't yet.
@@ -59,9 +57,9 @@ func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []
 	}
 
 	// Determine the index to write to. It will be automatically created based on the configured
-	// flow template if it does not already exist.
-	index := fmt.Sprintf("tigera_secure_ee_flows.%s", i.Cluster)
-	log.Infof("Writing flow logs in bulk to index %s", index)
+	// template if it does not already exist.
+	index := fmt.Sprintf("tigera_secure_ee_l7.%s", i.Cluster)
+	log.Infof("Writing L7 logs in bulk to index %s", index)
 
 	// Build a bulk request using the provided logs.
 	bulk := b.client.Bulk()
@@ -70,7 +68,7 @@ func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []
 		if f.Cluster != "" {
 			// For the legacy backend, the Cluster ID is encoded into the index
 			// and not the log itself. Fail the entire batch.
-			return fmt.Errorf("cluster ID should not be set on flow log")
+			return fmt.Errorf("cluster ID should not be set on L7 log")
 		}
 
 		// Add this log to the bulk request.
@@ -84,11 +82,11 @@ func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []
 	// Send the bulk request.
 	resp, err := bulk.Do(ctx)
 	if err != nil {
-		log.Errorf("Error writing flow log: %s", err)
-		return fmt.Errorf("failed to write flow log: %s", err)
+		log.Errorf("Error writing L7 log: %s", err)
+		return fmt.Errorf("failed to write L7 log: %s", err)
 	}
 
-	log.WithField("count", len(logs)).Infof("Wrote flow log to index: %+v", resp)
+	log.WithField("count", len(logs)).Infof("Wrote L7 logs to index: %+v", resp)
 
 	return nil
 }
