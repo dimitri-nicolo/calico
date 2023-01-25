@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
-	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
@@ -55,7 +54,7 @@ func NewProfileStorage(opts Options) (registry.DryRunnableStorage, factory.Destr
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
-		versioner:         etcd.APIObjectVersioner{},
+		versioner:         APIObjectVersioner{},
 		aapiType:          reflect.TypeOf(v3.Profile{}),
 		aapiListType:      reflect.TypeOf(v3.ProfileList{}),
 		libCalicoType:     reflect.TypeOf(v3.Profile{}),

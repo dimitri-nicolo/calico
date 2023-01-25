@@ -7,7 +7,6 @@ import (
 
 	"golang.org/x/net/context"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
-	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -37,7 +36,7 @@ func NewGlobalThreatFeedStatusStorage(opts Options) (registry.DryRunnableStorage
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:          c,
 		codec:           opts.RESTOptions.StorageConfig.Codec,
-		versioner:       etcd.APIObjectVersioner{},
+		versioner:       APIObjectVersioner{},
 		aapiType:        reflect.TypeOf(v3.GlobalThreatFeed{}),
 		isNamespaced:    false,
 		update:          updateFn,

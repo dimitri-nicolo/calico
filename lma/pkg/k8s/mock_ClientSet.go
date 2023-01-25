@@ -52,6 +52,8 @@ import (
 
 	networkingv1 "k8s.io/client-go/kubernetes/typed/networking/v1"
 
+	networkingv1alpha1 "k8s.io/client-go/kubernetes/typed/networking/v1alpha1"
+
 	networkingv1beta1 "k8s.io/client-go/kubernetes/typed/networking/v1beta1"
 
 	nodev1 "k8s.io/client-go/kubernetes/typed/node/v1"
@@ -594,6 +596,22 @@ func (_m *MockClientSet) NetworkingV1() networkingv1.NetworkingV1Interface {
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(networkingv1.NetworkingV1Interface)
+		}
+	}
+
+	return r0
+}
+
+// NetworkingV1alpha1 provides a mock function with given fields:
+func (_m *MockClientSet) NetworkingV1alpha1() networkingv1alpha1.NetworkingV1alpha1Interface {
+	ret := _m.Called()
+
+	var r0 networkingv1alpha1.NetworkingV1alpha1Interface
+	if rf, ok := ret.Get(0).(func() networkingv1alpha1.NetworkingV1alpha1Interface); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(networkingv1alpha1.NetworkingV1alpha1Interface)
 		}
 	}
 

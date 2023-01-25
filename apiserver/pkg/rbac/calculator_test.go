@@ -8,7 +8,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/types"
+	gomegatypes "github.com/onsi/gomega/types"
 
 	rbac_v1 "k8s.io/api/rbac/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
@@ -1107,23 +1107,23 @@ var _ = Describe("RBAC calculator tests", func() {
 	})
 })
 
-func haveMatchAllForVerbs(expectedVerbs ...Verb) GomegaMatcher {
+func haveMatchAllForVerbs(expectedVerbs ...Verb) gomegatypes.GomegaMatcher {
 	return haveMatchForVerbs([]Match{{}}, expectedVerbs...)
 }
 
-func haveMatchNoneForVerbs(expectedVerbs ...Verb) GomegaMatcher {
+func haveMatchNoneForVerbs(expectedVerbs ...Verb) gomegatypes.GomegaMatcher {
 	return haveMatchForVerbs(nil, expectedVerbs...)
 }
 
-func haveMatchNoneForAllVerbs() GomegaMatcher {
+func haveMatchNoneForAllVerbs() gomegatypes.GomegaMatcher {
 	return haveOnlyMatchesForVerbs(nil, AllVerbs...)
 }
 
 // haveMatchForVerbs asserts that the passed verbs all have matches equal to the passed matches.
 // it does nothing to assert on the remaining verbs. this should be done separately, probably with a subsequent call
 // to this function.
-func haveMatchForVerbs(matches []Match, verbs ...Verb) GomegaMatcher {
-	matchers := []GomegaMatcher{}
+func haveMatchForVerbs(matches []Match, verbs ...Verb) gomegatypes.GomegaMatcher {
+	matchers := []gomegatypes.GomegaMatcher{}
 	for _, verb := range verbs {
 		matchers = append(matchers, HaveKey(verb))
 		matchers = append(matchers, HaveKeyWithValue(verb, matches))
@@ -1134,8 +1134,8 @@ func haveMatchForVerbs(matches []Match, verbs ...Verb) GomegaMatcher {
 
 // haveOnlyMatchesForVerbs tests that the passed verbs all have matches equal to the passed matches,
 // and that all other known verbs are nil.
-func haveOnlyMatchesForVerbs(matches []Match, verbs ...Verb) GomegaMatcher {
-	matchers := []GomegaMatcher{
+func haveOnlyMatchesForVerbs(matches []Match, verbs ...Verb) gomegatypes.GomegaMatcher {
+	matchers := []gomegatypes.GomegaMatcher{
 		HaveLen(len(AllVerbs)),
 	}
 	for _, verb := range AllVerbs {

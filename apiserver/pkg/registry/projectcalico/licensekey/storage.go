@@ -56,6 +56,10 @@ func (r *StatusREST) New() runtime.Object {
 	return &calico.LicenseKey{}
 }
 
+func (r *StatusREST) Destroy() {
+	r.store.Destroy()
+}
+
 // Update alters the status subset of an object.
 func (r *StatusREST) Update(ctx context.Context, name string, objInfo rest.UpdatedObjectInfo, createValidation rest.ValidateObjectFunc,
 	updateValidation rest.ValidateObjectUpdateFunc, forceAllowCreate bool, options *metav1.UpdateOptions) (runtime.Object, bool, error) {
