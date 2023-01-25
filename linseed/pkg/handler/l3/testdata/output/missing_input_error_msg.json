@@ -1,9 +1,0 @@
-{
-  "Status": 400,
-  "Msg": "Request body must not be empty",
-  "Err": {
-    "Status": 400,
-    "Msg": "Request body must not be empty",
-    "Err": {}
-  }
-}

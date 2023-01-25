@@ -20,7 +20,7 @@ type FlowLogBackend interface {
 	Initialize(context.Context) error
 
 	// Create creates the given L3 logs.
-	Create(context.Context, ClusterInfo, []FlowLog) error
+	Create(context.Context, ClusterInfo, []v1.FlowLog) error
 }
 
 // L7FlowBackend defines the interface for interacting with L7 flows.
@@ -28,7 +28,7 @@ type L7FlowBackend interface {
 	List(context.Context, ClusterInfo, v1.L7FlowParams) ([]v1.L7Flow, error)
 }
 
-// L7FlowBackend defines the interface for interacting with L7 flow logs.
+// L7LogBackend defines the interface for interacting with L7 flow logs.
 type L7LogBackend interface {
 	// Initialize initializes the backend and must be called prior to using this interface.
 	// This should be called exactly once. Multiple calls to this function will have no effect.

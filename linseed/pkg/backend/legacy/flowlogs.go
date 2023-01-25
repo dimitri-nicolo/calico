@@ -6,6 +6,8 @@ import (
 	"context"
 	"fmt"
 
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+
 	"github.com/olivere/elastic/v7"
 
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
@@ -45,7 +47,7 @@ func (b *flowLogBackend) Initialize(ctx context.Context) error {
 }
 
 // Create the given flow log in elasticsearch.
-func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []bapi.FlowLog) error {
+func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v1.FlowLog) error {
 	log := contextLogger(i)
 
 	// Initialize if we haven't yet.

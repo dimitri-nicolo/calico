@@ -102,10 +102,10 @@ func populateFlowData(t *testing.T, ctx context.Context, client lmaelastic.Clien
 		{Key: "wine", Values: []string{"none"}},
 	}
 
-	batch := []bapi.FlowLog{}
+	batch := []v1.FlowLog{}
 
 	for i := 0; i < 10; i++ {
-		f := bapi.FlowLog{
+		f := v1.FlowLog{
 			StartTime:            fmt.Sprintf("%d", time.Now().Unix()),
 			EndTime:              fmt.Sprintf("%d", time.Now().Unix()),
 			DestType:             "wep",
@@ -138,14 +138,14 @@ func populateFlowData(t *testing.T, ctx context.Context, client lmaelastic.Clien
 			BytesOut:   128,
 
 			// Add label information.
-			SourceLabels: bapi.FlowLogLabels{
+			SourceLabels: v1.FlowLogLabels{
 				Labels: []string{
 					"bread=rye",
 					"cheese=brie",
 					"wine=none",
 				},
 			},
-			DestLabels: bapi.FlowLogLabels{
+			DestLabels: v1.FlowLogLabels{
 				// We want a variety of label keys and values,
 				// so base this one off of the loop variable.
 				// Note: We use a nested terms aggregation to get labels, which has an

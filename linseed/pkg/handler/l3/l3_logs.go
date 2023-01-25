@@ -11,7 +11,7 @@ type NetworkLogs struct {
 
 func (n NetworkLogs) SupportedAPIs() map[string]http.Handler {
 	return map[string]http.Handler{
-		"POST": n.Post(),
+		"POST": n.Serve(),
 	}
 }
 
@@ -19,7 +19,7 @@ func (n NetworkLogs) URL() string {
 	return "/flows/network/logs"
 }
 
-func (n NetworkLogs) Post() http.HandlerFunc {
+func (n NetworkLogs) Serve() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		_, err := w.Write([]byte("net-logs"))
 		if err != nil {

@@ -41,10 +41,10 @@ func main() {
 
 	//TODO: check if we need to add es connection as part of the ready probe
 	esClient := backend.MustGetElasticClient(toElasticConfig(cfg))
-	logsBackend := legacy.NewFlowLogBackend(esClient)
+	flowLogsBackend := legacy.NewFlowLogBackend(esClient)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
-	err := logsBackend.Initialize(ctx)
+	err := flowLogsBackend.Initialize(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -56,6 +56,7 @@ func main() {
 		server.WithMiddlewares(server.Middlewares(cfg)),
 		server.WithAPIVersionRoutes("/api/v1", server.UnpackRoutes(
 			l3.NewNetworkFlows(flowBackend),
+			l3.NewBulkIngestion(flowLogsBackend),
 			&l3.NetworkLogs{},
 		)...),
 		server.WithRoutes(server.UtilityRoutes()...),

@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
 
@@ -33,7 +35,7 @@ func TestCreateFlowLog(t *testing.T) {
 	}
 
 	// Create a dummy flow.
-	f := bapi.FlowLog{
+	f := v1.FlowLog{
 		StartTime:            fmt.Sprintf("%d", time.Now().Unix()),
 		EndTime:              fmt.Sprintf("%d", time.Now().Unix()),
 		DestType:             "wep",
@@ -58,7 +60,7 @@ func TestCreateFlowLog(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err = b.Create(ctx, clusterInfo, []bapi.FlowLog{f})
+	err = b.Create(ctx, clusterInfo, []v1.FlowLog{f})
 	require.NoError(t, err)
 
 	// Clean up after ourselves by deleting the index.

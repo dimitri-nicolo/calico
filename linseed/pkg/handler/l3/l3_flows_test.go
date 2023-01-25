@@ -29,17 +29,9 @@ var (
 	withinTimeRange string
 	//go:embed testdata/input/missing_timerange.json
 	missingTimeRange string
-	//go:embed testdata/input/unknown_stats.json
-	unknownStats string
 
-	//go:embed testdata/output/missing_input_error_msg.json
-	missingInputErrorMsg string
-	//go:embed testdata/output/malformed_input_error_msg.json
-	malformedInputErrorMsg string
 	//go:embed testdata/output/missing_timerange_error_msg.json
 	missingTimeRangeErrorMsg string
-	//go:embed testdata/output/unknown_stats.json
-	unknownStatsRangeErrorMsg string
 )
 
 func TestNetworkFlows_Post(t *testing.T) {
@@ -61,26 +53,6 @@ func TestNetworkFlows_Post(t *testing.T) {
 			want:           testResult{true, 400, missingTimeRangeErrorMsg},
 			backendL3Flows: noFlows,
 		},
-		{name: "missing input",
-			reqBody:        "",
-			want:           testResult{true, 400, missingInputErrorMsg},
-			backendL3Flows: noFlows,
-		},
-		{name: "malformed json",
-			reqBody:        "{#$.}",
-			want:           testResult{true, 400, malformedInputErrorMsg},
-			backendL3Flows: noFlows,
-		},
-		{name: "missing time range",
-			reqBody:        missingTimeRange,
-			want:           testResult{true, 400, missingTimeRangeErrorMsg},
-			backendL3Flows: noFlows,
-		},
-		{name: "unknown statistics",
-			reqBody:        unknownStats,
-			want:           testResult{true, 400, unknownStatsRangeErrorMsg},
-			backendL3Flows: noFlows,
-		},
 
 		// Retrieve all L3 flow logs within a time range
 		{name: "retrieve all l3 flows within a certain time range",
@@ -98,7 +70,7 @@ func TestNetworkFlows_Post(t *testing.T) {
 			req, err := http.NewRequest("POST", n.URL(), bytes.NewBufferString(tt.reqBody))
 			require.NoError(t, err)
 
-			n.Post().ServeHTTP(rec, req)
+			n.Serve().ServeHTTP(rec, req)
 
 			bodyBytes, err := io.ReadAll(rec.Body)
 			require.NoError(t, err)

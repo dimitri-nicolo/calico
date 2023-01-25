@@ -15,27 +15,13 @@ type MockFlowBackend struct {
 	mock.Mock
 }
 
-// Initialize provides a mock function with given fields: ctx
-func (_m *MockFlowBackend) Initialize(ctx context.Context) error {
-	ret := _m.Called(ctx)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = rf(ctx)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// List provides a mock function with given fields: ctx, i, opts
-func (_m *MockFlowBackend) List(ctx context.Context, i ClusterInfo, opts v1.L3FlowParams) ([]v1.L3Flow, error) {
-	ret := _m.Called(ctx, i, opts)
+// List provides a mock function with given fields: _a0, _a1, _a2
+func (_m *MockFlowBackend) List(_a0 context.Context, _a1 ClusterInfo, _a2 v1.L3FlowParams) ([]v1.L3Flow, error) {
+	ret := _m.Called(_a0, _a1, _a2)
 
 	var r0 []v1.L3Flow
 	if rf, ok := ret.Get(0).(func(context.Context, ClusterInfo, v1.L3FlowParams) []v1.L3Flow); ok {
-		r0 = rf(ctx, i, opts)
+		r0 = rf(_a0, _a1, _a2)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]v1.L3Flow)
@@ -44,7 +30,7 @@ func (_m *MockFlowBackend) List(ctx context.Context, i ClusterInfo, opts v1.L3Fl
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, ClusterInfo, v1.L3FlowParams) error); ok {
-		r1 = rf(ctx, i, opts)
+		r1 = rf(_a0, _a1, _a2)
 	} else {
 		r1 = ret.Error(1)
 	}

@@ -1,14 +1,8 @@
-package api
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+
+package v1
 
 import "net"
-
-type FlowLogPolicy struct {
-	AllPolicies string `json:"all_policies"`
-}
-
-type FlowLogLabels struct {
-	Labels []string `json:"labels"`
-}
 
 type FlowLog struct {
 	// Destination fields.
@@ -83,4 +77,12 @@ type FlowLog struct {
 	// Cluster should not be set directly by calling code.
 	// Rather, this is set by the backend when creating the flow log.
 	Cluster string `json:"cluster,omitempty"`
+}
+
+type FlowLogPolicy struct {
+	AllPolicies string `json:"all_policies"`
+}
+
+type FlowLogLabels struct {
+	Labels []string `json:"labels"`
 }
