@@ -101,7 +101,7 @@ bin/scaleloader-$(ARCH): $(SRC_FILES)
 	    go build -v -o $@ -ldflags "$(VERSION_FLAGS)" cmd/mockdata-scaleloader/scaleloader.go'
 
 .PHONY: bin/kube-bench-$(ARCH)
-bin/kube-bench-$(ARCH): cmd/kube-bench/main.go
+bin/kube-bench-$(ARCH): check-kube-bench-update cmd/kube-bench/main.go
 	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o $@ -ldflags "$(VERSION_FLAGS)" cmd/kube-bench/main.go'
 
@@ -109,6 +109,20 @@ bin/kube-bench-$(ARCH): cmd/kube-bench/main.go
 bin/benchmarker-$(ARCH): $(SRC_FILES)
 	$(DOCKER_GO_BUILD_CGO) sh -c '$(GIT_CONFIG_SSH) \
 	    go build -v -o $@ -ldflags "$(VERSION_FLAGS)" cmd/benchmarker/benchmarker.go'
+
+K8S_CLIENT_VERSION := $(shell grep -E 'k8s.io/apiserver' ../go.mod | awk '{print$$2;exit}')
+check-kube-bench-update:
+	if [ "$(K8S_CLIENT_VERSION)" = "v0.25.2" ]; then \
+		echo "No need for kube-bench update"; \
+	else \
+		echo "************ \n"; \
+		echo "It looks like we have updated k8s client version.\n";\
+		echo "Please check if benchmarker needs to be updated with latest kube-bench version.\n"; \
+		echo "Instructions to update benchmarker can be found in README.md#Benchmarker \n"; \
+		echo "Once updated (or after verifying that it is not needed) update the check on K8S_CLIENT_VERSION and continue. \n"; \
+		echo "****** \n"; \
+        exit 1; \
+	fi;
 
 ###############################################################################
 # Building the report files
@@ -186,24 +200,10 @@ $(COMPLIANCE_SCALELOADER_CONTAINER_CREATED): docker-image/scaleloader/Dockerfile
 # Build the tigera/compliance-benchmarker docker image, which contains only Compliance benchmarker.
 KUBE_BENCH_VERSION := $(shell grep -E 'github.com/aquasecurity/kube-bench' ../go.mod | awk '{print$$2;exit}')
 $(COMPLIANCE_BENCHMARKER_IMAGE): $(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED)
-$(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED): check-kubebench-update docker-image/benchmarker/Dockerfile.$(ARCH) bin/benchmarker-$(ARCH) bin/kube-bench-$(ARCH) register
+$(COMPLIANCE_BENCHMARKER_CONTAINER_CREATED): docker-image/benchmarker/Dockerfile.$(ARCH) bin/benchmarker-$(ARCH) bin/kube-bench-$(ARCH) register
 	$(DOCKER_BUILD) --build-arg KUBECTL_VERSION=$(KUBECTL_VERSION) --build-arg KUBE_BENCH_VERSION=$(KUBE_BENCH_VERSION) -t $(COMPLIANCE_BENCHMARKER_IMAGE):latest-$(ARCH) -f docker-image/benchmarker/Dockerfile.$(ARCH) . --load
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest BUILD_IMAGES=$(COMPLIANCE_BENCHMARKER_IMAGE)
 	touch $@
-
-K8S_CLIENT_VERSION := $(shell grep -E 'k8s.io/apiserver' ../go.mod | awk '{print$$2;exit}')
-check-kubebench-update:
-	if [ "$(K8S_CLIENT_VERSION)" = "v0.25.2" ]; then \
-		echo "No need for kubebench update"; \
-	else \
-		echo "************ \n"; \
-		echo "It looks like we have updated k8s client version.\n";\
-		echo "Please check if benchmarker needs to be updated with latest kube-bench version.\n"; \
-		echo "Instructions to update benchmarker can be found in README.md#Benchmarker \n"; \
-		echo "Once updated (or after verifying that it is not needed) update the check on K8S_CLIENT_VERSION and continue. \n"; \
-		echo "****** \n"; \
-        exit 1; \
-	fi;
 
 .PHONY: clean
 clean:
