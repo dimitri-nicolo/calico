@@ -26,7 +26,7 @@ type L3Flow struct {
 	// Policies applied to this flow.
 	Policies []string `json:"policies,omitempty"`
 
-	// DesintationLabels are the labels applied to the destination during the lifetime
+	// DestinationLabels are the labels applied to the destination during the lifetime
 	// of this flow. Note that a single label may have had multiple values throughout this flow's life.
 	DestinationLabels []LabelSelector `json:"destination_labels,omitempty"`
 
@@ -61,12 +61,6 @@ type LogStats struct {
 
 // ProcessStats represent the number of processes aggregated into this entry
 type ProcessStats struct {
-	// NamesCount is the total process names aggregated into this entry
-	NamesCount int64 `json:"names_count"`
-
-	// IDsCount is the total number of IDs for a process aggregated into this entry
-	IDsCount int64 `json:"ids_count"`
-
 	MinNumNamesPerFlow int `json:"min_num_names_per_flow"`
 	MaxNumNamesPerFlow int `json:"max_num_names_per_flow"`
 	MinNumIDsPerFlow   int `json:"min_num_ids_per_flow"`
@@ -133,4 +127,8 @@ type Service struct {
 	Namespace string `json:"namespace"`
 	Port      int32  `json:"port"`
 	PortName  string `json:"port_name"`
+}
+
+type L3FlowResponse struct {
+	L3Flows []L3Flow `json:"l3_flows" validate:"omitempty"`
 }

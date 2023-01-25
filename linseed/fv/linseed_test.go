@@ -5,16 +5,29 @@
 package fv_test
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/olivere/elastic/v7"
+	"github.com/stretchr/testify/require"
+
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestFV_Linseed(t *testing.T) {
 	var addr = "localhost:8444"
+	var elasticEndpoint = "http://localhost:9200"
+	var cluster = "cluster"
+	var tenant = "tenant"
 
 	var tests = []struct {
 		name           string
@@ -32,7 +45,7 @@ func TestFV_Linseed(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			client := secureHTTPClient(t)
-			res, resBody := doRequest(t, client, tt.method, fmt.Sprintf("https://%s%s", addr, tt.path))
+			res, resBody := doRequest(t, client, noBodyHTTPReqSpec(tt.method, fmt.Sprintf("https://%s%s", addr, tt.path), tenant, cluster))
 
 			assert.Equal(t, tt.wantStatusCode, res.StatusCode)
 			assert.Equal(t, tt.wantBody, strings.Trim(string(resBody), "\n"))
@@ -43,9 +56,42 @@ func TestFV_Linseed(t *testing.T) {
 
 	t.Run("should deny any HTTP connection", func(t *testing.T) {
 		var client = &http.Client{}
-		res, resBody := doRequest(t, client, "GET", fmt.Sprintf("http://%s/", addr))
+		res, resBody := doRequest(t, client, noBodyHTTPReqSpec("GET", fmt.Sprintf("http://%s/", addr), tenant, cluster))
 
 		assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 		assert.Equal(t, "Client sent an HTTP request to an HTTPS server.", strings.Trim(string(resBody), "\n"))
+	})
+
+	t.Run("should return flows from Elastic", func(t *testing.T) {
+		// setup Elastic client
+		esClient, err := elastic.NewClient(
+			elastic.SetURL(elasticEndpoint),
+			elastic.SetErrorLog(log.New(os.Stderr, "ELASTIC ", log.LstdFlags)),
+			elastic.SetInfoLog(log.New(os.Stdout, "", log.LstdFlags)))
+		require.NoError(t, err)
+
+		// ingest flow logs into ES
+		b := LegacyBackend{esClient: esClient, t: t}
+		b.deleteFlowLogs()
+		b.ingestFlow()
+
+		// setup HTTP client and HTTP request
+		client := secureHTTPClient(t)
+		flowParams := v1.L3FlowParams{
+			QueryParams: &v1.QueryParams{
+				TimeRange: &lmav1.TimeRange{
+					From: time.Unix(from, 0),
+					To:   time.Unix(to, 0),
+				},
+			},
+		}
+		body, err := json.Marshal(&flowParams)
+		require.NoError(t, err)
+		spec := jsonPostHTTPReqSpec(fmt.Sprintf("https://%s%s", addr, "/api/v1/flows/network"), tenant, cluster, body)
+		// make the request to retrieve flows
+		res, resBody := doRequest(t, client, spec)
+
+		assert.Equal(t, http.StatusOK, res.StatusCode)
+		assert.JSONEq(t, flow, strings.Trim(string(resBody), "\n"))
 	})
 }

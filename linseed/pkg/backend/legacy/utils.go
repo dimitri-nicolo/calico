@@ -3,9 +3,10 @@ package legacy
 import (
 	"log"
 
+	"github.com/sirupsen/logrus"
+
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-	"github.com/sirupsen/logrus"
 )
 
 // contextLogger returns a suitable context logger for use in a request to the backend.

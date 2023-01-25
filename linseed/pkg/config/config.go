@@ -21,6 +21,20 @@ type Config struct {
 
 	// FIPSModeEnabled Enables FIPS 140-2 verified crypto mode.
 	FIPSModeEnabled bool `default:"false" split_words:"true"`
+
+	// ExpectedTenantID will be verified against x-tenant-id header for all API calls
+	// in a multi-tenant environment
+	// If left empty, x-tenant-id header is not required as Linseed will run in a
+	// single-tenant environment
+	ExpectedTenantID string `default:"" split_words:"true"`
+
+	// Elastic configuration
+	ElasticEndpoint       string `default:"http://localhost:9200" split_words:"true"`
+	ElasticUsername       string `default:"" split_words:"true"`
+	ElasticPassword       string `default:"" split_words:"true" json:",omitempty"`
+	ElasticCABundlePath   string `default:"/certs/elasticsearch/tls.crt" split_words:"true"`
+	ElasticClientKeyPath  string `default:"/certs/elasticsearch/client.key" split_words:"true"`
+	ElasticClientCertPath string `default:"/certs/elasticsearch/client.crt" split_words:"true"`
 }
 
 // Return a string representation on the Config instance.

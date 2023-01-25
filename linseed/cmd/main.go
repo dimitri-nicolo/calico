@@ -11,6 +11,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/olivere/elastic/v7"
+
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy"
+	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+
 	"github.com/projectcalico/calico/linseed/pkg/handler/l3"
 
 	"github.com/kelseyhightower/envconfig"
@@ -36,12 +41,29 @@ func main() {
 	var signalChan = make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
+	//TODO: secure connections with ES
+	//TODO: check if we need to add es connection as part of the ready probe
+	esClient, err := elastic.NewClient(
+		elastic.SetURL(cfg.ElasticEndpoint),
+		elastic.SetErrorLog(log.New()),
+		elastic.SetInfoLog(log.New()))
+	if err != nil {
+		log.Fatal(err)
+	}
+	client := lmaelastic.NewWithClient(esClient)
+	logsBackend := legacy.NewFlowLogBackend(client)
+	err = logsBackend.Initialize(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+	flowBackend := legacy.NewFlowBackend(client)
+
 	// Start server
 	var addr = fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
 	server := server.NewServer(addr, cfg.FIPSModeEnabled,
-		server.WithMiddlewares(server.Middlewares()),
+		server.WithMiddlewares(server.Middlewares(cfg)),
 		server.WithAPIVersionRoutes("/api/v1", server.UnpackRoutes(
-			&l3.NetworkFlows{},
+			l3.NewNetworkFlows(flowBackend),
 			&l3.NetworkLogs{},
 		)...),
 		server.WithRoutes(server.UtilityRoutes()...),

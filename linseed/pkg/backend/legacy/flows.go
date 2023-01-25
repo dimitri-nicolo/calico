@@ -7,12 +7,13 @@ import (
 	"strings"
 	"time"
 
-	elastic "github.com/olivere/elastic/v7"
+	"github.com/olivere/elastic/v7"
+	"github.com/sirupsen/logrus"
+
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
-	"github.com/sirupsen/logrus"
 )
 
 // These are the keys which define a flow in ES, and will be used to create buckets in the ES result.
@@ -34,9 +35,9 @@ var flowCompositeSources = []lmaelastic.AggCompositeSourceInfo{
 	{Name: "action", Field: "action"},
 }
 
-// FlowBackend implements the Backend interface for flows stored
+// flowBackend implements the Backend interface for flows stored
 // in elasticsearch in the legacy storage model.
-type FlowBackend struct {
+type flowBackend struct {
 	// Elasticsearch client.
 	lmaclient lmaelastic.Client
 
@@ -44,8 +45,8 @@ type FlowBackend struct {
 	ft *fieldTracker
 }
 
-func NewFlowBackend(c lmaelastic.Client) *FlowBackend {
-	return &FlowBackend{
+func NewFlowBackend(c lmaelastic.Client) bapi.FlowBackend {
+	return &flowBackend{
 		lmaclient: c,
 		ft:        newFieldTracker(flowCompositeSources),
 	}
@@ -79,12 +80,12 @@ const (
 	FlowAggMeanTCPMSS                  = "tcp_mean_mss"
 )
 
-func (b *FlowBackend) Initialize(ctx context.Context) error {
+func (b *flowBackend) Initialize(ctx context.Context) error {
 	return nil
 }
 
 // List returns all flows which match the given options.
-func (b *FlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3FlowParams) ([]v1.L3Flow, error) {
+func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3FlowParams) ([]v1.L3Flow, error) {
 	log := contextLogger(i)
 
 	if i.Cluster == "" {
@@ -154,7 +155,7 @@ func (b *FlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3Fl
 
 	log.Infof("Listing flows from index %s", aggQueryL3.DocumentIndex)
 
-	allFlows := []v1.L3Flow{}
+	var allFlows []v1.L3Flow
 
 	// Perform the request.
 	// TODO: We're iterating over a channel. We need to support paging.

@@ -24,10 +24,6 @@ SRC_FILES = $(shell find pkg cmd -name '*.go') \
 		$(shell find ../libcalico-go/lib -name '*.go') \
 		$(shell find ../lma/pkg -name '*.go')
 
-# Exclude deprecation warnings (SA1019), since failing on deprecation defeats the purpose
-# of deprecating.
-LINT_ARGS += --exclude SA1019
-
 # We use -X to insert the version information into the placeholder variables
 # in the version package.
 VERSION_FLAGS   = -X $(PACKAGE_NAME)/pkg/config/version.BuildVersion=$(GIT_VERSION) \
@@ -89,6 +85,10 @@ clean:
 ###############################################################################
 # Testing
 ###############################################################################
+MOCKERY_FILE_PATHS= \
+	pkg/backend/api/FlowBackend \
+	pkg/backend/api/FlowLogBackend
+
 GINKGO_ARGS += -cover -timeout 20m
 GINKGO = ginkgo $(GINKGO_ARGS)
 
@@ -98,7 +98,7 @@ GINKGO = ginkgo $(GINKGO_ARGS)
 
 .PHONY: ut
 ## Run only Unit Tests.
-ut:
+ut: run-elastic
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) -r pkg/*'
 
 st:
@@ -121,7 +121,7 @@ stop-image:
 	-docker rm -f $(shell docker ps -aq --filter "name=tigera-$(LINSEED_IMAGE)")
 
 ## Run the ginkgo FVs
-fv: clean image run-image build-tests
+fv: clean image build-tests run-elastic run-image
 	 $(DOCKER_RUN) \
 	 	-e KUBECONFIG=/home/user/certs/kubeconfig \
 		-v $(CERTS_PATH):/home/user/certs \
@@ -141,7 +141,7 @@ build-tests: $(shell find ./fv -type f -name '*.go' -print)
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ## Building the image is required for fvs.
-ci: clean static-checks ut fv
+ci: clean static-checks tests
 
 ## Deploys images to registry
 cd: image-all cd-common

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/projectcalico/calico/linseed/pkg/config"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -46,12 +48,15 @@ func UtilityRoutes() []Route {
 }
 
 // Middlewares defines all available intermediary handlers
-func Middlewares() []func(http.Handler) http.Handler {
+func Middlewares(cfg config.Config) []func(http.Handler) http.Handler {
+	clusterInfo := middleware.NewClusterInfo(cfg.ExpectedTenantID)
 	return []func(http.Handler) http.Handler{
 		// LogRequestHeaders needs to be placed before any middlewares that mutate the request
 		httputils.LogRequestHeaders,
 		// HealthCheck is defined as middleware in order to bypass any route matching
 		middleware.HealthCheck,
+		// ClusterInfoOld will extract cluster and tenant information from the request to identify the caller
+		clusterInfo.Extract(),
 	}
 }
 
@@ -90,7 +95,7 @@ func WithRoutes(routes ...Route) Option {
 	}
 }
 
-// WithMiddlewares will intruct the internal router to make use of the desired middlewares
+// WithMiddlewares will instruct the internal router to make use of the desired middlewares
 func WithMiddlewares(middlewares []func(http.Handler) http.Handler) Option {
 	return func(s *Server) error {
 		if s.router == nil {

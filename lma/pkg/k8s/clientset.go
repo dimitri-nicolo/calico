@@ -24,6 +24,9 @@ const (
 
 	// The cluster ID to include in the x-headers of the modified HTTP client.
 	XClusterIDHeader = "x-cluster-id"
+
+	// The tenant ID to include in the x-headers of the modified HTTP client.
+	XTenantIDHeader = "x-tenant-id"
 )
 
 type ClientSetFactory interface {

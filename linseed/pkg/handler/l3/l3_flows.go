@@ -3,19 +3,27 @@
 package l3
 
 import (
+	"context"
 	"net/http"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+	"github.com/projectcalico/calico/linseed/pkg/middleware"
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
 type NetworkFlows struct {
-	// TODO: Add storage
+	backend bapi.FlowBackend
+}
+
+func NewNetworkFlows(backend bapi.FlowBackend) *NetworkFlows {
+	return &NetworkFlows{
+		backend: backend,
+	}
 }
 
 func (n NetworkFlows) SupportedAPIs() map[string]http.Handler {
@@ -30,11 +38,7 @@ func (n NetworkFlows) URL() string {
 
 func (n NetworkFlows) Post() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		reqParams := v1.L3FlowParams{
-			QueryParams: &v1.QueryParams{
-				Timeout: &metav1.Duration{Duration: 60 * time.Second},
-			},
-		}
+		reqParams := &v1.L3FlowParams{}
 
 		// Decode the http request body into the struct.
 		if err := httputils.Decode(w, req, &reqParams); err != nil {
@@ -57,20 +61,28 @@ func (n NetworkFlows) Post() http.HandlerFunc {
 			return
 		}
 
-		response := v1.L3Flow{}
-
-		for _, s := range reqParams.Statistics {
-			switch s {
-			case v1.StatsTypeTraffic:
-				response.TrafficStats = &v1.TrafficStats{}
-			case v1.StatsTypeTCP:
-				response.TCPStats = &v1.TCPStats{}
-			case v1.StatsTypeProcess:
-				response.ProcessStats = &v1.ProcessStats{}
-			case v1.StatsTypeFlowLog:
-				response.LogStats = &v1.LogStats{}
-			}
+		if reqParams.QueryParams.Timeout == nil {
+			reqParams.QueryParams.Timeout = &metav1.Duration{Duration: v1.DefaultTimeOut}
 		}
+
+		// List flows from backend
+		ctx, cancel := context.WithTimeout(context.Background(), reqParams.QueryParams.Timeout.Duration)
+		defer cancel()
+		clusterInfo := bapi.ClusterInfo{
+			Cluster: middleware.ClusterIDFromContext(req.Context()),
+			Tenant:  middleware.TenantIDFromContext(req.Context()),
+		}
+		flows, err := n.backend.List(ctx, clusterInfo, *reqParams)
+		if err != nil {
+			httputils.JSONError(w, &httputils.HttpStatusError{
+				Status: http.StatusInternalServerError,
+				Msg:    err.Error(),
+				Err:    err,
+			}, http.StatusInternalServerError)
+			return
+		}
+
+		response := v1.L3FlowResponse{L3Flows: flows}
 
 		httputils.Encode(w, response)
 	}

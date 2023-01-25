@@ -2,7 +2,7 @@
 
 package v1
 
-// Types of stats available for querying on an L3 flow.
+// StatsType is different types of stats available for querying on an L3 flow.
 type StatsType string
 
 const (
@@ -12,7 +12,7 @@ const (
 	StatsTypeProcess StatsType = "process"
 )
 
-// Types of endpoints present in log data.
+// EndpointType is different types of endpoints present in log data.
 type EndpointType string
 
 const (

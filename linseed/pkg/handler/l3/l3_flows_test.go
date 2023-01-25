@@ -1,16 +1,27 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-package l3
+package l3_test
 
 import (
 	"bytes"
 	_ "embed"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
+	"github.com/projectcalico/calico/linseed/pkg/handler/l3"
+
+	"github.com/projectcalico/calico/linseed/pkg/backend/api"
+
+	"github.com/stretchr/testify/mock"
+
 	"github.com/stretchr/testify/assert"
+
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 var (
@@ -18,10 +29,6 @@ var (
 	withinTimeRange string
 	//go:embed testdata/input/missing_timerange.json
 	missingTimeRange string
-	//go:embed testdata/input/all_stats.json
-	allStats string
-	//go:embed testdata/input/only_tcp_stats.json
-	onlyTCPStats string
 	//go:embed testdata/input/unknown_stats.json
 	unknownStats string
 
@@ -33,72 +40,98 @@ var (
 	missingTimeRangeErrorMsg string
 	//go:embed testdata/output/unknown_stats.json
 	unknownStatsRangeErrorMsg string
-	//go:embed testdata/output/only_tcp_stats.json
-	onlyTCPStatsMsg string
-	//go:embed testdata/output/all_stats.json
-	allStatsMsg string
-	//go:embed testdata/output/ok.json
-	okMsg string
 )
 
 func TestNetworkFlows_Post(t *testing.T) {
 	type testResult struct {
 		wantErr    bool
 		httpStatus int
-		httpBody   string
+		errorMsg   string
 	}
 
 	tests := []struct {
-		name    string
-		reqBody string
-		want    testResult
+		name           string
+		reqBody        string
+		want           testResult
+		backendL3Flows []v1.L3Flow
 	}{
 		// Failure to parse request and validate
 		{name: "empty json",
-			reqBody: "{}",
-			want:    testResult{true, 400, missingTimeRangeErrorMsg}},
+			reqBody:        "{}",
+			want:           testResult{true, 400, missingTimeRangeErrorMsg},
+			backendL3Flows: noFlows,
+		},
 		{name: "missing input",
-			reqBody: "",
-			want:    testResult{true, 400, missingInputErrorMsg}},
+			reqBody:        "",
+			want:           testResult{true, 400, missingInputErrorMsg},
+			backendL3Flows: noFlows,
+		},
 		{name: "malformed json",
-			reqBody: "{#$.}",
-			want:    testResult{true, 400, malformedInputErrorMsg}},
+			reqBody:        "{#$.}",
+			want:           testResult{true, 400, malformedInputErrorMsg},
+			backendL3Flows: noFlows,
+		},
 		{name: "missing time range",
-			reqBody: missingTimeRange,
-			want:    testResult{true, 400, missingTimeRangeErrorMsg}},
+			reqBody:        missingTimeRange,
+			want:           testResult{true, 400, missingTimeRangeErrorMsg},
+			backendL3Flows: noFlows,
+		},
 		{name: "unknown statistics",
-			reqBody: unknownStats,
-			want:    testResult{true, 400, unknownStatsRangeErrorMsg}},
+			reqBody:        unknownStats,
+			want:           testResult{true, 400, unknownStatsRangeErrorMsg},
+			backendL3Flows: noFlows,
+		},
 
 		// Retrieve all L3 flow logs within a time range
 		{name: "retrieve all l3 flows within a certain time range",
-			reqBody: withinTimeRange,
-			want:    testResult{false, 200, okMsg}},
-		// Retrieve all L3 flow logs with all statistics
-		{name: "retrieve all l3 flows with all statistics",
-			reqBody: allStats,
-			want:    testResult{false, 200, allStatsMsg}},
-		// Retrieve only TCP statistics for the L3 flow logs
-		{name: "retrieve all l3 flows and generate only TCP statistics",
-			reqBody: onlyTCPStats,
-			want:    testResult{false, 200, onlyTCPStatsMsg}},
+			reqBody:        withinTimeRange,
+			want:           testResult{false, 200, ""},
+			backendL3Flows: flows,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n := NetworkFlows{}
+			n := networkFlows(tt.backendL3Flows)
 
 			rec := httptest.NewRecorder()
 			req, err := http.NewRequest("POST", n.URL(), bytes.NewBufferString(tt.reqBody))
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			n.Post().ServeHTTP(rec, req)
 
 			bodyBytes, err := io.ReadAll(rec.Body)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
+			var wantBody string
+			if tt.want.wantErr {
+				wantBody = tt.want.errorMsg
+			} else {
+				wantBody = marshallResponse(t, tt.backendL3Flows)
+			}
 			assert.Equal(t, tt.want.httpStatus, rec.Result().StatusCode)
-			assert.JSONEq(t, tt.want.httpBody, string(bodyBytes))
+			assert.JSONEq(t, wantBody, string(bodyBytes))
 		})
 	}
+}
+
+func networkFlows(flows []v1.L3Flow) *l3.NetworkFlows {
+	mockBackend := &api.MockFlowBackend{}
+	n := l3.NewNetworkFlows(mockBackend)
+
+	// mock backend to return the required flows
+	mockBackend.On("List", mock.Anything,
+		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("v1.L3FlowParams")).Return(flows, nil)
+
+	return n
+}
+
+func marshallResponse(t *testing.T, flows []v1.L3Flow) string {
+	response := v1.L3FlowResponse{}
+	response.L3Flows = flows
+
+	newData, err := json.Marshal(response)
+	require.NoError(t, err)
+
+	return string(newData)
 }

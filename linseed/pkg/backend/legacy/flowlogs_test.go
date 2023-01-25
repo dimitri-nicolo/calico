@@ -1,3 +1,5 @@
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+
 package legacy_test
 
 import (
@@ -7,11 +9,12 @@ import (
 	"testing"
 	"time"
 
-	elastic "github.com/olivere/elastic/v7"
+	"github.com/olivere/elastic/v7"
+	"github.com/stretchr/testify/require"
+
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-	"github.com/stretchr/testify/require"
 )
 
 // TestCreateFlowLog tests running a real elasticsearch query to create a flow log.
@@ -23,15 +26,14 @@ func TestCreateFlowLog(t *testing.T) {
 	client := lmaelastic.NewWithClient(esClient)
 
 	// Instantiate a flowlog backend.
-	b, err := legacy.NewFlowLogBackend(client)
-	require.NoError(t, err)
+	b := legacy.NewFlowLogBackend(client)
 
 	clusterInfo := bapi.ClusterInfo{
 		Cluster: "testcluster",
 	}
 
 	// Create a dummy flow.
-	f := legacy.FlowLog{
+	f := bapi.FlowLog{
 		StartTime:            fmt.Sprintf("%d", time.Now().Unix()),
 		EndTime:              fmt.Sprintf("%d", time.Now().Unix()),
 		DestType:             "wep",

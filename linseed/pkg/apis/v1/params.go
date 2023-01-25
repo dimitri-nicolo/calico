@@ -3,10 +3,16 @@
 package v1
 
 import (
+	"time"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
+
+// DefaultTimeOut is the default timeout that an API will run its query
+// until it cancels the execution
+const DefaultTimeOut = 60 * time.Second
 
 // QueryParams are request parameters that are shared across
 // all APIs

@@ -3,8 +3,9 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
+
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 
 	"github.com/projectcalico/calico/linseed/pkg/config"
 )
@@ -26,22 +27,6 @@ func VersionCheck() http.HandlerFunc {
 	}
 
 	return func(w http.ResponseWriter, req *http.Request) {
-		js, err := json.MarshalIndent(v, "", "  ")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		_, err = w.Write(js)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		_, err = w.Write([]byte{'\n'})
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		httputils.Encode(w, v)
 	}
 }

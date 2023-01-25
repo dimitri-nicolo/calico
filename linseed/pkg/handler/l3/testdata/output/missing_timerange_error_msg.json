@@ -1,12 +1,12 @@
 {
   "Status": 400,
-  "Msg": "error with field TimeRange = '\u003cnil\u003e' (Reason: failed to validate Field: TimeRange because of Tag: required )",
+  "Msg": "error with field QueryParams = '\u003cnil\u003e' (Reason: failed to validate Field: QueryParams because of Tag: required )",
   "Err": {
     "ErroredFields": [
       {
-        "Name": "TimeRange",
+        "Name": "QueryParams",
         "Value": null,
-        "Reason": "Reason: failed to validate Field: TimeRange because of Tag: required "
+        "Reason": "Reason: failed to validate Field: QueryParams because of Tag: required "
       }
     ]
   }

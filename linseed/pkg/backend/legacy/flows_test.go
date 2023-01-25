@@ -1,4 +1,5 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
+
 package legacy_test
 
 import (
@@ -8,14 +9,16 @@ import (
 	"testing"
 	"time"
 
-	elastic "github.com/olivere/elastic/v7"
+	"github.com/olivere/elastic/v7"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/stretchr/testify/require"
+
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // TestListFlows tests running a real elasticsearch query to list flows.
@@ -64,9 +67,8 @@ func populateFlowData(t *testing.T, ctx context.Context, client lmaelastic.Clien
 	// Clear out any old data first.
 	_, _ = client.Backend().DeleteIndex(fmt.Sprintf("tigera_secure_ee_flows.%s", cluster)).Do(ctx)
 
-	// Instantiate a FlowBackend.
-	b, err := legacy.NewFlowLogBackend(client)
-	require.NoError(t, err)
+	// Instantiate a flowBackend.
+	b := legacy.NewFlowLogBackend(client)
 
 	// The expected flow log - we'll populate fields as we go.
 	expected := v1.L3Flow{}
@@ -97,7 +99,7 @@ func populateFlowData(t *testing.T, ctx context.Context, client lmaelastic.Clien
 	// Service:           {Name: "kube-dns", Namespace: "default", Port: 53, PortName: "53"},
 
 	for i := 0; i < 10; i++ {
-		f := legacy.FlowLog{
+		f := bapi.FlowLog{
 			StartTime:            fmt.Sprintf("%d", time.Now().Unix()),
 			EndTime:              fmt.Sprintf("%d", time.Now().Unix()),
 			DestType:             "wep",
