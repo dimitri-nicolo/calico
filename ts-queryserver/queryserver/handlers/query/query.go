@@ -94,9 +94,14 @@ type query struct {
 }
 
 func (q *query) Summary(w http.ResponseWriter, r *http.Request) {
+	ts, err := q.getTimestamp(r)
+	if err != nil {
+		q.writeError(w, err, http.StatusBadRequest)
+		return
+	}
 	// /summary endpoint is called by Manager dashboard endpoints card.
 	q.runQuery(w, r, client.QueryClusterReq{
-		Timestamp:          q.getTimestamp(r),
+		Timestamp:          ts,
 		PrometheusEndpoint: q.cfg.PrometheusEndpoint,
 		Token:              q.getToken(r),
 	}, false)
@@ -511,29 +516,30 @@ func (q *query) getSort(r *http.Request) *client.Sort {
 	}
 }
 
-func (q *query) getTimestamp(r *http.Request) *time.Time {
+func (q *query) getTimestamp(r *http.Request) (*time.Time, error) {
 	// "from" and "to" query string parameters are sent when /summary endpoint gets called.
 	// As the summary data reflects a single data point, we have decided to use the end (to)
 	// timestamp to fetch current (in-memory) or historical (time-series data store) data.
 	qsTo := r.URL.Query().Get("to")
 	if qsTo == "" {
-		log.Warn("failed to get timestamp from query parameter")
-		return nil
+		err := fmt.Errorf("failed to get timestamp from query parameter")
+		log.Warn(err.Error())
+		return nil, err
 	}
 
 	now := time.Now()
 	to, _, err := timeutils.ParseTime(now, &qsTo)
 	if err != nil || to == nil {
 		log.WithError(err).Warnf("failed to parse datetime from query parameter to=%s", qsTo)
-		return nil
+		return nil, err
 	}
 
 	// if to equals now, reset time range to nil to get data from memory.
 	if to.Equal(now) {
 		log.Debug("set time range to nil when to == now")
-		return nil
+		return nil, nil
 	}
-	return to
+	return to, nil
 }
 
 func (q *query) getToken(r *http.Request) string {

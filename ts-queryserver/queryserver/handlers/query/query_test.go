@@ -146,7 +146,8 @@ var _ = Describe("Queryserver query tests", func() {
 			params.Add("to", "now-5m")
 			r.URL.RawQuery = params.Encode()
 
-			ts := q.getTimestamp(r)
+			ts, err := q.getTimestamp(r)
+			Expect(err).NotTo(HaveOccurred())
 			Expect(ts).NotTo(BeNil())
 			Expect(ts.IsZero()).To(BeFalse())
 		})
@@ -159,7 +160,8 @@ var _ = Describe("Queryserver query tests", func() {
 			params.Add("to", "now-0m")
 			r.URL.RawQuery = params.Encode()
 
-			ts := q.getTimestamp(r)
+			ts, err := q.getTimestamp(r)
+			Expect(err).NotTo(HaveOccurred())
 			Expect(ts).To(BeNil())
 		})
 
@@ -172,14 +174,16 @@ var _ = Describe("Queryserver query tests", func() {
 			params.Add("to", "abc")
 			r.URL.RawQuery = params.Encode()
 
-			ts := q.getTimestamp(r)
+			ts, err := q.getTimestamp(r)
+			Expect(err).To(HaveOccurred())
 			Expect(ts).To(BeNil())
 
 			// missing to
 			params = make(url.Values)
 			r.URL.RawQuery = params.Encode()
 
-			ts = q.getTimestamp(r)
+			ts, err = q.getTimestamp(r)
+			Expect(err).To(HaveOccurred())
 			Expect(ts).To(BeNil())
 		})
 
