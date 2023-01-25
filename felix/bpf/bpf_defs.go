@@ -48,7 +48,6 @@ type PolicyDebugInfo struct {
 }
 
 const (
-	ObjectDir      = "/usr/lib/calico/bpf"
 	RuntimeProgDir = "/var/run/calico/bpf/prog"
 	RuntimePolDir  = "/var/run/calico/bpf/policy"
 )

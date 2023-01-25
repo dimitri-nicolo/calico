@@ -44,6 +44,7 @@ struct cali_ctlb_globals {
 
 struct cali_xdp_globals {
 	__u8 iface_name[16];
+	__u32 jumps[16];
 };
 
 struct cali_stats_globals {

@@ -41,7 +41,6 @@
 #include "parsing.h"
 #include "ipv6.h"
 #include "tc.h"
-#include "policy_program.h"
 #include "tcp_stats.h"
 #include "socket_lookup.h"
 #include "failsafe.h"
@@ -612,7 +611,7 @@ syn_force_policy:
 
 do_policy:
 	CALI_DEBUG("About to jump to policy program.\n");
-	CALI_JUMP_TO(ctx, PROG_INDEX_POLICY);
+	CALI_JUMP_TO_POLICY(ctx);
 	if (CALI_F_HEP) {
 		CALI_DEBUG("HEP with no policy, allow.\n");
 		goto skip_policy;
@@ -645,6 +644,7 @@ skip_policy:
 	ctx->state->pol_rc = CALI_POL_ALLOW;
 	ctx->state->flags |= CALI_ST_SKIP_POLICY;
 	CALI_JUMP_TO(ctx, PROG_INDEX_ALLOWED);
+	CALI_DEBUG("jump failed\n");
 	/* should not reach here */
 	goto deny;
 
