@@ -1,0 +1,23 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "__name__": "queryserver_node_total",
+          "endpoint": "queryserver",
+          "instance": "192.168.106.154:8080",
+          "job": "tigera-api",
+          "namespace": "tigera-system",
+          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "service": "tigera-api"
+        },
+        "value": [
+          1670822699.151,
+          "78"
+        ]
+      }
+    ]
+  }
+}

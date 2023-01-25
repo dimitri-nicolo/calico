@@ -1,0 +1,130 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "__name__": "queryserver_network_policy_total",
+          "endpoint": "queryserver",
+          "instance": "192.168.106.154:8080",
+          "job": "tigera-api",
+          "namespace": "calico-system",
+          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "service": "tigera-api"
+        },
+        "value": [
+          1670880909.865,
+          "1"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "queryserver_network_policy_total",
+          "endpoint": "queryserver",
+          "instance": "192.168.106.154:8080",
+          "job": "tigera-api",
+          "namespace": "calico-system",
+          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "service": "tigera-api",
+          "type": "unmatched"
+        },
+        "value": [
+          1670880909.865,
+          "2"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "queryserver_network_policy_total",
+          "endpoint": "queryserver",
+          "instance": "192.168.106.154:8080",
+          "job": "tigera-api",
+          "namespace": "kube-system",
+          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "service": "tigera-api"
+        },
+        "value": [
+          1670880909.865,
+          "3"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "queryserver_network_policy_total",
+          "endpoint": "queryserver",
+          "instance": "192.168.106.154:8080",
+          "job": "tigera-api",
+          "namespace": "kube-system",
+          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "service": "tigera-api",
+          "type": "unmatched"
+        },
+        "value": [
+          1670880909.865,
+          "4"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "queryserver_network_policy_total",
+          "endpoint": "queryserver",
+          "instance": "192.168.106.154:8080",
+          "job": "tigera-api",
+          "namespace": "tigera-system",
+          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "service": "tigera-api"
+        },
+        "value": [
+          1670880909.865,
+          "5"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "queryserver_network_policy_total",
+          "endpoint": "queryserver",
+          "instance": "192.168.106.154:8080",
+          "job": "tigera-api",
+          "namespace": "tigera-system",
+          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "service": "tigera-api",
+          "type": "unmatched"
+        },
+        "value": [
+          1670880909.865,
+          "6"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "queryserver_network_policy_total",
+          "endpoint": "queryserver",
+          "instance": "192.168.106.154:8080",
+          "job": "tigera-api",
+          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "service": "tigera-api"
+        },
+        "value": [
+          1670880909.865,
+          "7"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "queryserver_network_policy_total",
+          "endpoint": "queryserver",
+          "instance": "192.168.106.154:8080",
+          "job": "tigera-api",
+          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "service": "tigera-api",
+          "type": "unmatched"
+        },
+        "value": [
+          1670880909.865,
+          "8"
+        ]
+      }
+    ]
+  }
+}

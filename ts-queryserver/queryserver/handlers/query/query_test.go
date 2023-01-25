@@ -1,11 +1,12 @@
-// Copyright (c) 2022 Tigera. All rights reserved.
-package query_test
+// Copyright (c) 2022-2023 Tigera. All rights reserved.
+package query
 
 import (
 	_ "embed"
 	"fmt"
 	"io"
 	"net/http/httptest"
+	"net/url"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -13,7 +14,6 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/client"
-	"github.com/projectcalico/calico/ts-queryserver/queryserver/handlers/query"
 )
 
 var (
@@ -21,82 +21,172 @@ var (
 	expectedMetrics string
 )
 
-var _ = Describe("Queryserver query metrics test", func() {
+var _ = Describe("Queryserver query tests", func() {
 
-	It("should export metrics", func() {
-		qi := client.MockQueryInterface{}
-		qi.On("RunQuery", mock.Anything, mock.Anything).Return(&client.QueryClusterResp{
-			NumHostEndpoints:                1,
-			NumUnlabelledHostEndpoints:      2,
-			NumUnprotectedHostEndpoints:     3,
-			NumWorkloadEndpoints:            4,
-			NumUnlabelledWorkloadEndpoints:  5,
-			NumUnprotectedWorkloadEndpoints: 6,
-			NumFailedWorkloadEndpoints:      7,
-			NamespaceCounts: map[string]client.QueryClusterNamespaceCounts{
-				"ns1": {
-					NumWorkloadEndpoints:            8,
-					NumUnlabelledWorkloadEndpoints:  9,
-					NumUnprotectedWorkloadEndpoints: 10,
-					NumFailedWorkloadEndpoints:      11,
+	Context("Prometheus metrics export", func() {
+
+		It("should export metrics", func() {
+			qi := client.MockQueryInterface{}
+			qi.On("RunQuery", mock.Anything, mock.Anything).Return(&client.QueryClusterResp{
+				NumGlobalNetworkPolicies:          1,
+				NumUnmatchedGlobalNetworkPolicies: 2,
+				NumNetworkPolicies:                3,
+				NumUnmatchedNetworkPolicies:       4,
+				NumHostEndpoints:                  5,
+				NumUnlabelledHostEndpoints:        6,
+				NumUnprotectedHostEndpoints:       7,
+				NumWorkloadEndpoints:              8,
+				NumUnlabelledWorkloadEndpoints:    9,
+				NumUnprotectedWorkloadEndpoints:   10,
+				NumFailedWorkloadEndpoints:        11,
+				NumNodes:                          12,
+				NumNodesWithNoEndpoints:           13,
+				NumNodesWithNoHostEndpoints:       14,
+				NumNodesWithNoWorkloadEndpoints:   15,
+				NamespaceCounts: map[string]client.QueryClusterNamespaceCounts{
+					"ns1": {
+						NumNetworkPolicies:              16,
+						NumUnmatchedNetworkPolicies:     17,
+						NumWorkloadEndpoints:            18,
+						NumUnlabelledWorkloadEndpoints:  19,
+						NumUnprotectedWorkloadEndpoints: 20,
+						NumFailedWorkloadEndpoints:      21,
+					},
+					"ns2": {
+						NumNetworkPolicies:              22,
+						NumUnmatchedNetworkPolicies:     23,
+						NumWorkloadEndpoints:            24,
+						NumUnlabelledWorkloadEndpoints:  25,
+						NumUnprotectedWorkloadEndpoints: 26,
+						NumFailedWorkloadEndpoints:      27,
+					},
 				},
-				"ns2": {
-					NumWorkloadEndpoints:            12,
-					NumUnlabelledWorkloadEndpoints:  13,
-					NumUnprotectedWorkloadEndpoints: 14,
-					NumFailedWorkloadEndpoints:      15,
-				},
-			},
-		}, nil)
+			}, nil)
 
-		r := httptest.NewRequest("GET", "http://example.com/foo", nil)
-		w := httptest.NewRecorder()
+			r := httptest.NewRequest("GET", "http://example.com/foo", nil)
+			w := httptest.NewRecorder()
 
-		q := query.NewQuery(&qi)
-		q.Metrics(w, r)
+			q := NewQuery(&qi, nil)
+			q.Metrics(w, r)
 
-		resp := w.Result()
-		Expect(resp).NotTo(BeNil())
-		body, err := io.ReadAll(resp.Body)
-		Expect(err).NotTo(HaveOccurred())
+			resp := w.Result()
+			Expect(resp).NotTo(BeNil())
+			body, err := io.ReadAll(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
 
-		Expect(string(body)).To(Equal(expectedMetrics))
+			Expect(string(body)).To(Equal(expectedMetrics))
+		})
+
+		It("should write nothing when query interface failed to query", func() {
+			qi := client.MockQueryInterface{}
+			qi.On("RunQuery", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("RunQuery failed"))
+
+			r := httptest.NewRequest("GET", "http://example.com/foo", nil)
+			w := httptest.NewRecorder()
+
+			q := NewQuery(&qi, nil)
+			q.Metrics(w, r)
+
+			resp := w.Result()
+			Expect(resp).NotTo(BeNil())
+			body, err := io.ReadAll(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(string(body)).To(Equal(""))
+		})
+
+		It("should write nothing when response isn't of type QueryClusterResp", func() {
+			qi := client.MockQueryInterface{}
+			qi.On("RunQuery", mock.Anything, mock.Anything).Return(nil, nil)
+
+			r := httptest.NewRequest("GET", "http://example.com/foo", nil)
+			w := httptest.NewRecorder()
+
+			q := NewQuery(&qi, nil)
+			q.Metrics(w, r)
+
+			resp := w.Result()
+			Expect(resp).NotTo(BeNil())
+			body, err := io.ReadAll(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(string(body)).To(Equal(""))
+		})
 	})
 
-	It("should write nothing when query interface failed to query", func() {
-		qi := client.MockQueryInterface{}
-		qi.On("RunQuery", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("RunQuery failed"))
+	Context("Summary request header parsing", func() {
 
-		r := httptest.NewRequest("GET", "http://example.com/foo", nil)
-		w := httptest.NewRecorder()
+		It("should get validate Authorization token from request header", func() {
+			q := query{qi: &client.MockQueryInterface{}, cfg: nil}
+			r := httptest.NewRequest("GET", "http://example.com/foo", nil)
 
-		q := query.NewQuery(&qi)
-		q.Metrics(w, r)
+			token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+			r.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
-		resp := w.Result()
-		Expect(resp).NotTo(BeNil())
-		body, err := io.ReadAll(resp.Body)
-		Expect(err).NotTo(HaveOccurred())
+			t := q.getToken(r)
+			Expect(t).To(Equal(token))
+		})
 
-		Expect(string(body)).To(Equal(""))
-	})
+		It("should return an empty string when Authorization token is invalid", func() {
+			q := query{qi: &client.MockQueryInterface{}, cfg: nil}
+			r := httptest.NewRequest("GET", "http://example.com/foo", nil)
 
-	It("should write nothing when response isn't of type QueryClusterResp", func() {
-		qi := client.MockQueryInterface{}
-		qi.On("RunQuery", mock.Anything, mock.Anything).Return(nil, nil)
+			token := "invalid-token"
+			r.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
-		r := httptest.NewRequest("GET", "http://example.com/foo", nil)
-		w := httptest.NewRecorder()
+			t := q.getToken(r)
+			Expect(t).To(Equal(""))
+		})
 
-		q := query.NewQuery(&qi)
-		q.Metrics(w, r)
+		It("should return a timestamp when to is valid in the request query parameter list", func() {
+			q := query{qi: &client.MockQueryInterface{}, cfg: nil}
+			r := httptest.NewRequest("GET", "http://example.com/foo", nil)
 
-		resp := w.Result()
-		Expect(resp).NotTo(BeNil())
-		body, err := io.ReadAll(resp.Body)
-		Expect(err).NotTo(HaveOccurred())
+			params := r.URL.Query()
+			params.Add("to", "now-5m")
+			r.URL.RawQuery = params.Encode()
 
-		Expect(string(body)).To(Equal(""))
+			ts, err := q.getTimestamp(r)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ts).NotTo(BeNil())
+			Expect(ts.IsZero()).To(BeFalse())
+		})
+
+		It("should return nil when to is now in the request query parameter list", func() {
+			q := query{qi: &client.MockQueryInterface{}, cfg: nil}
+			r := httptest.NewRequest("GET", "http://example.com/foo", nil)
+
+			params := r.URL.Query()
+			params.Add("to", "now-0m")
+			r.URL.RawQuery = params.Encode()
+
+			ts, err := q.getTimestamp(r)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ts).To(BeNil())
+		})
+
+		It("should return nil when to is invalid in the request query parameter list", func() {
+			q := query{qi: &client.MockQueryInterface{}, cfg: nil}
+			r := httptest.NewRequest("GET", "http://example.com/foo", nil)
+
+			// not a time
+			params := make(url.Values)
+			params.Add("to", "abc")
+			r.URL.RawQuery = params.Encode()
+
+			ts, err := q.getTimestamp(r)
+			Expect(err).To(HaveOccurred())
+			Expect(ts).To(BeNil())
+
+			// missing to
+			params = make(url.Values)
+			r.URL.RawQuery = params.Encode()
+
+			ts, err = q.getTimestamp(r)
+			Expect(err).To(HaveOccurred())
+			Expect(ts).To(BeNil())
+		})
+
 	})
 
 })

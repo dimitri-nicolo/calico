@@ -163,14 +163,32 @@ func (c *cachedQuery) RunQuery(cxt context.Context, req interface{}) (interface{
 }
 
 func (c *cachedQuery) runQuerySummary(cxt context.Context, req QueryClusterReq) (*QueryClusterResp, error) {
+	// This function is called by /summary (from Manager dashboard) and /metrics (from Prometheus).
+	// Queryserver serves both as a data source and a consumer. When time range is invalid,
+	// we get summary data from the in-memory cache (Prometheus and dashboard "to" equals now).
+	// when time range is valid, we get historical summary data from time-series database.
+	endpointsCache := c.endpoints
+	policiesCache := c.policies
+	nodeCache := c.nodes
+	if req.Timestamp != nil {
+		promClient, err := cache.NewPrometheusClient(req.PrometheusEndpoint, req.Token)
+		if err != nil {
+			return nil, err
+		}
+
+		endpointsCache = cache.NewEndpointsCacheHistory(promClient, *req.Timestamp)
+		policiesCache = cache.NewPoliciesCacheHistory(promClient, *req.Timestamp)
+		nodeCache = cache.NewNodeCacheHistory(promClient, *req.Timestamp)
+	}
+
 	// Get the summary counts for the endpoints, summing up the per namespace counts.
-	hepSummary := c.endpoints.TotalHostEndpoints()
+	hepSummary := endpointsCache.TotalHostEndpoints()
 	totWEP := 0
 	numUnlabelledWEP := 0
 	numUnprotectedWEP := 0
 	numFailedWEP := 0
 	namespaceSummary := make(map[string]QueryClusterNamespaceCounts)
-	for ns, weps := range c.endpoints.TotalWorkloadEndpointsByNamespace() {
+	for ns, weps := range endpointsCache.TotalWorkloadEndpointsByNamespace() {
 		totWEP += weps.Total
 		numUnlabelledWEP += weps.NumWithNoLabels
 		numUnprotectedWEP += weps.NumWithNoPolicies
@@ -184,10 +202,10 @@ func (c *cachedQuery) runQuerySummary(cxt context.Context, req QueryClusterReq) 
 	}
 
 	// Get the summary counts for policies, summing up the per namespace counts.
-	gnpSummary := c.policies.TotalGlobalNetworkPolicies()
+	gnpSummary := policiesCache.TotalGlobalNetworkPolicies()
 	totNP := 0
 	numUnmatchedNP := 0
-	for ns, nps := range c.policies.TotalNetworkPoliciesByNamespace() {
+	for ns, nps := range policiesCache.TotalNetworkPoliciesByNamespace() {
 		totNP += nps.Total
 		numUnmatchedNP += nps.NumUnmatched
 
@@ -210,10 +228,10 @@ func (c *cachedQuery) runQuerySummary(cxt context.Context, req QueryClusterReq) 
 		NumUnprotectedHostEndpoints:       hepSummary.NumWithNoPolicies,
 		NumUnprotectedWorkloadEndpoints:   numUnprotectedWEP,
 		NumFailedWorkloadEndpoints:        numFailedWEP,
-		NumNodes:                          c.nodes.TotalNodes(),
-		NumNodesWithNoEndpoints:           c.nodes.TotalNodesWithNoEndpoints(),
-		NumNodesWithNoWorkloadEndpoints:   c.nodes.TotalNodesWithNoWorkloadEndpoints(),
-		NumNodesWithNoHostEndpoints:       c.nodes.TotalNodesWithNoHostEndpoints(),
+		NumNodes:                          nodeCache.TotalNodes(),
+		NumNodesWithNoEndpoints:           nodeCache.TotalNodesWithNoEndpoints(),
+		NumNodesWithNoWorkloadEndpoints:   nodeCache.TotalNodesWithNoWorkloadEndpoints(),
+		NumNodesWithNoHostEndpoints:       nodeCache.TotalNodesWithNoHostEndpoints(),
 		NamespaceCounts:                   namespaceSummary,
 	}
 	return resp, nil

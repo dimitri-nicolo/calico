@@ -1,0 +1,52 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "__name__": "queryserver_host_endpoints_total",
+          "endpoint": "queryserver",
+          "instance": "192.168.106.154:8080",
+          "job": "tigera-api",
+          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "service": "tigera-api"
+        },
+        "value": [
+          1670866517.163,
+          "11"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "queryserver_host_endpoints_total",
+          "endpoint": "queryserver",
+          "instance": "192.168.106.154:8080",
+          "job": "tigera-api",
+          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "service": "tigera-api",
+          "type": "unlabeled"
+        },
+        "value": [
+          1670866517.163,
+          "22"
+        ]
+      },
+      {
+        "metric": {
+          "__name__": "queryserver_host_endpoints_total",
+          "endpoint": "queryserver",
+          "instance": "192.168.106.154:8080",
+          "job": "tigera-api",
+          "pod": "tigera-apiserver-7bcfdbf658-46622",
+          "service": "tigera-api",
+          "type": "unprotected"
+        },
+        "value": [
+          1670866517.163,
+          "33"
+        ]
+      }
+    ]
+  }
+}

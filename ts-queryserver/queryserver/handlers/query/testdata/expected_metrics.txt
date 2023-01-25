@@ -1,19 +1,37 @@
+# HELP queryserver_global_network_policy_total Total number of global network policies in a cluster. Type can be one of unmatched or empty.
+# TYPE queryserver_global_network_policy_total gauge
+queryserver_global_network_policy_total{type=""} 1
+queryserver_global_network_policy_total{type="unmatched"} 2
 # HELP queryserver_host_endpoints_total Total number of host endpoints in the cluster. Type can be one of unlabeled, unprotected, or empty.
 # TYPE queryserver_host_endpoints_total gauge
-queryserver_host_endpoints_total{namespace="",type=""} 1
-queryserver_host_endpoints_total{namespace="",type="unlabeled"} 2
-queryserver_host_endpoints_total{namespace="",type="unprotected"} 3
+queryserver_host_endpoints_total{namespace="",type=""} 5
+queryserver_host_endpoints_total{namespace="",type="unlabeled"} 6
+queryserver_host_endpoints_total{namespace="",type="unprotected"} 7
+# HELP queryserver_network_policy_total Total number of network policies in a cluster or a namespace. Type can be one of unmatched or empty.
+# TYPE queryserver_network_policy_total gauge
+queryserver_network_policy_total{namespace="",type=""} 3
+queryserver_network_policy_total{namespace="",type="unmatched"} 4
+queryserver_network_policy_total{namespace="ns1",type=""} 16
+queryserver_network_policy_total{namespace="ns1",type="unmatched"} 17
+queryserver_network_policy_total{namespace="ns2",type=""} 22
+queryserver_network_policy_total{namespace="ns2",type="unmatched"} 23
+# HELP queryserver_node_total Total number of nodes in a cluster. Type can be one of no-endpoints, no-host-endpoints, no-workload-endpoints, or empty
+# TYPE queryserver_node_total gauge
+queryserver_node_total{type=""} 12
+queryserver_node_total{type="no-endpoints"} 13
+queryserver_node_total{type="no-host-endpoints"} 14
+queryserver_node_total{type="no-workload-endpoints"} 15
 # HELP queryserver_workload_endpoints_total Total number of workload endpoints in a cluster or a namespace. Type can be one of unlabeled, unprotected, failed, or empty.
 # TYPE queryserver_workload_endpoints_total gauge
-queryserver_workload_endpoints_total{namespace="",type=""} 4
-queryserver_workload_endpoints_total{namespace="",type="failed"} 7
-queryserver_workload_endpoints_total{namespace="",type="unlabeled"} 5
-queryserver_workload_endpoints_total{namespace="",type="unprotected"} 6
-queryserver_workload_endpoints_total{namespace="ns1",type=""} 8
-queryserver_workload_endpoints_total{namespace="ns1",type="failed"} 11
-queryserver_workload_endpoints_total{namespace="ns1",type="unlabeled"} 9
-queryserver_workload_endpoints_total{namespace="ns1",type="unprotected"} 10
-queryserver_workload_endpoints_total{namespace="ns2",type=""} 12
-queryserver_workload_endpoints_total{namespace="ns2",type="failed"} 15
-queryserver_workload_endpoints_total{namespace="ns2",type="unlabeled"} 13
-queryserver_workload_endpoints_total{namespace="ns2",type="unprotected"} 14
+queryserver_workload_endpoints_total{namespace="",type=""} 8
+queryserver_workload_endpoints_total{namespace="",type="failed"} 11
+queryserver_workload_endpoints_total{namespace="",type="unlabeled"} 9
+queryserver_workload_endpoints_total{namespace="",type="unprotected"} 10
+queryserver_workload_endpoints_total{namespace="ns1",type=""} 18
+queryserver_workload_endpoints_total{namespace="ns1",type="failed"} 21
+queryserver_workload_endpoints_total{namespace="ns1",type="unlabeled"} 19
+queryserver_workload_endpoints_total{namespace="ns1",type="unprotected"} 20
+queryserver_workload_endpoints_total{namespace="ns2",type=""} 24
+queryserver_workload_endpoints_total{namespace="ns2",type="failed"} 27
+queryserver_workload_endpoints_total{namespace="ns2",type="unlabeled"} 25
+queryserver_workload_endpoints_total{namespace="ns2",type="unprotected"} 26

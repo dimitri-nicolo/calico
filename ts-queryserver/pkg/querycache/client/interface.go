@@ -1,8 +1,9 @@
-// Copyright (c) 2018-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
 package client
 
 import (
 	"context"
+	"time"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
 )
@@ -21,6 +22,11 @@ type QueryInterface interface {
 }
 
 type QueryClusterReq struct {
+	// timestamp for the historical summary data point
+	Timestamp *time.Time
+	// prometheus endpoint to retrieve historical data
+	PrometheusEndpoint string
+	Token              string
 }
 
 type QueryClusterResp struct {

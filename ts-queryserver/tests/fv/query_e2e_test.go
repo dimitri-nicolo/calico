@@ -181,7 +181,7 @@ func calculateQueryUrl(addr string, query interface{}) string {
 		parms = appendPageParms(parms, qt.Page)
 		parms = appendSortParms(parms, qt.Sort)
 	case client.QueryClusterReq:
-		u += "summary"
+		u += "summary?from=now-15m&to=now-0m"
 	}
 
 	if len(parms) == 0 {
