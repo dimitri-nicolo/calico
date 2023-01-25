@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Tigera, Inc. All rights reserved.
 package query
 
 import (
@@ -32,7 +32,7 @@ var (
 		Help: "Total number of global network policies in a cluster. Type can be one of unmatched or empty.",
 	}, []string{"type"})
 
-	nodeGuage = promauto.With(prometheusRegistry).NewGaugeVec(prometheus.GaugeOpts{
+	nodeGauge = promauto.With(prometheusRegistry).NewGaugeVec(prometheus.GaugeOpts{
 		Name: "queryserver_node_total",
 		Help: "Total number of nodes in a cluster. Type can be one of no-endpoints, no-host-endpoints, no-workload-endpoints, or empty",
 	}, []string{"type"})

@@ -3,17 +3,13 @@ package client
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
-	"os"
 
 	log "github.com/sirupsen/logrus"
 
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 
-	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -167,21 +163,22 @@ func (c *cachedQuery) RunQuery(cxt context.Context, req interface{}) (interface{
 }
 
 func (c *cachedQuery) runQuerySummary(cxt context.Context, req QueryClusterReq) (*QueryClusterResp, error) {
-	// by default, we get summary data from in-memory cache.
-	// when datetime range is valid, we get historical summary data from time-series database.
+	// This function is called by /summary (from Manager dashboard) and /metrics (from Prometheus).
+	// Queryserver serves both as a data source and a consumer. When time range is invalid,
+	// we get summary data from the in-memory cache (Prometheus and dashboard "to" equals now).
+	// when time range is valid, we get historical summary data from time-series database.
 	endpointsCache := c.endpoints
 	policiesCache := c.policies
 	nodeCache := c.nodes
-	if req.TimeRange != nil {
-		tlsConfig, err := getTLSConfig(req.FIPSModeEnabled)
+	if req.Timestamp != nil {
+		promClient, err := cache.NewPrometheusClient(req.PrometheusEndpoint, req.Token)
 		if err != nil {
-			log.WithError(err).Warn("failed to get TLS config to retrieve historical summary data")
 			return nil, err
 		}
 
-		endpointsCache = cache.NewEndpointsCacheHistory(req.PrometheusEndpoint, req.Token, tlsConfig, req.TimeRange)
-		policiesCache = cache.NewPoliciesCacheHistory(req.PrometheusEndpoint, req.Token, tlsConfig, req.TimeRange)
-		nodeCache = cache.NewNodeCacheHistory(req.PrometheusEndpoint, req.Token, tlsConfig, req.TimeRange)
+		endpointsCache = cache.NewEndpointsCacheHistory(promClient, *req.Timestamp)
+		policiesCache = cache.NewPoliciesCacheHistory(promClient, *req.Timestamp)
+		nodeCache = cache.NewNodeCacheHistory(promClient, *req.Timestamp)
 	}
 
 	// Get the summary counts for the endpoints, summing up the per namespace counts.
@@ -893,22 +890,4 @@ func getDispachers(cq *cachedQuery) []dispatcherv1v3.Resource {
 	}
 
 	return dispatchers
-}
-
-func getTLSConfig(fipsMode bool) (*tls.Config, error) {
-	caBundle, err := os.ReadFile(os.Getenv("TRUSTED_BUNDLE_PATH"))
-	if err != nil {
-		return nil, err
-	}
-
-	caCertPool := x509.NewCertPool()
-	ok := caCertPool.AppendCertsFromPEM(caBundle)
-	if !ok {
-		return nil, fmt.Errorf("failed to parse root certificate")
-	}
-
-	tlsConfig := calicotls.NewTLSConfig(fipsMode)
-	tlsConfig.RootCAs = caCertPool
-
-	return tlsConfig, nil
 }

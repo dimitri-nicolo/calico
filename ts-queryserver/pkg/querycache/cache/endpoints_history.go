@@ -1,13 +1,12 @@
-// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
 package cache
 
 import (
-	"crypto/tls"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/informers"
 
-	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	prommodel "github.com/prometheus/common/model"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -23,37 +22,31 @@ const (
 )
 
 // NewEndpointsCacheHistory creates a new instance of an EndpointsCacheHistory
-func NewEndpointsCacheHistory(address, token string, tlsConfig *tls.Config, timeRange *promv1.Range) EndpointsCache {
-	return &endpointsCacheHistory{
-		promClient: NewPrometheusClient(address, token, tlsConfig),
-		timeRange:  timeRange,
-	}
+func NewEndpointsCacheHistory(c *PrometheusClient, ts time.Time) EndpointsCache {
+	return &endpointsCacheHistory{promClient: c, timestamp: ts}
 }
 
 // endpointsCacheHistory implements the EndpointsCache interface. It retrieves historical
 // host and workload endpoints count data from Prometheus.
 type endpointsCacheHistory struct {
 	promClient *PrometheusClient
-	timeRange  *promv1.Range
+	timestamp  time.Time
 }
 
 func (ch *endpointsCacheHistory) TotalHostEndpoints() api.EndpointSummary {
 	var eps api.EndpointSummary
 
-	if ch.promClient != nil {
-		res, err := ch.promClient.Query("queryserver_host_endpoints_total", ch.timeRange.End)
-		if err != nil {
-			log.WithError(err).Warn("failed to get historical data for total host endpoints")
-			return eps
-		}
+	res, err := ch.promClient.Query("queryserver_host_endpoints_total", ch.timestamp)
+	if err != nil {
+		log.WithError(err).Warn("failed to get historical data for total host endpoints")
+		return eps
+	}
 
-		if res.Type() == prommodel.ValVector {
-			vec := res.(prommodel.Vector)
-			for _, v := range vec {
-				ch.fillHostEndpoints(v, &eps)
-			}
+	if res.Type() == prommodel.ValVector {
+		vec := res.(prommodel.Vector)
+		for _, v := range vec {
+			ch.fillHostEndpoints(v, &eps)
 		}
-
 	}
 	return eps
 }
@@ -61,18 +54,16 @@ func (ch *endpointsCacheHistory) TotalHostEndpoints() api.EndpointSummary {
 func (ch *endpointsCacheHistory) TotalWorkloadEndpointsByNamespace() map[string]api.EndpointSummary {
 	epsm := make(map[string]api.EndpointSummary)
 
-	if ch.promClient != nil {
-		res, err := ch.promClient.Query("queryserver_workload_endpoints_total", ch.timeRange.End)
-		if err != nil {
-			log.WithError(err).Warn("failed to get historical data for total workload endpoints")
-			return epsm
-		}
+	res, err := ch.promClient.Query("queryserver_workload_endpoints_total", ch.timestamp)
+	if err != nil {
+		log.WithError(err).Warn("failed to get historical data for total workload endpoints")
+		return epsm
+	}
 
-		if res.Type() == prommodel.ValVector {
-			vec := res.(prommodel.Vector)
-			for _, v := range vec {
-				ch.fillWorkloadEndpoints(v, epsm)
-			}
+	if res.Type() == prommodel.ValVector {
+		vec := res.(prommodel.Vector)
+		for _, v := range vec {
+			ch.fillWorkloadEndpoints(v, epsm)
 		}
 	}
 	return epsm

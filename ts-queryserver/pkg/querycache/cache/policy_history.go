@@ -1,12 +1,11 @@
-// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
 package cache
 
 import (
-	"crypto/tls"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
-	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	prommodel "github.com/prometheus/common/model"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/backend/model"
@@ -21,35 +20,30 @@ const (
 )
 
 // NewPoliciesCacheHistory creates a new instance of a PolicyCacheHistory
-func NewPoliciesCacheHistory(address, token string, tlsConfig *tls.Config, timeRange *promv1.Range) PoliciesCache {
-	return &policiesCacheHistory{
-		promClient: NewPrometheusClient(address, token, tlsConfig),
-		timeRange:  timeRange,
-	}
+func NewPoliciesCacheHistory(c *PrometheusClient, ts time.Time) PoliciesCache {
+	return &policiesCacheHistory{promClient: c, timestamp: ts}
 }
 
 // policiesCacheHistory implements the PolicyCache interface. It retrieves historical
 // node count data from Prometheus.
 type policiesCacheHistory struct {
 	promClient *PrometheusClient
-	timeRange  *promv1.Range
+	timestamp  time.Time
 }
 
 func (ch *policiesCacheHistory) TotalGlobalNetworkPolicies() api.PolicySummary {
 	var ps api.PolicySummary
 
-	if ch.promClient != nil {
-		res, err := ch.promClient.Query("queryserver_global_network_policy_total", ch.timeRange.End)
-		if err != nil {
-			log.WithError(err).Warn("failed to get historical data for total global network policies")
-			return ps
-		}
+	res, err := ch.promClient.Query("queryserver_global_network_policy_total", ch.timestamp)
+	if err != nil {
+		log.WithError(err).Warn("failed to get historical data for total global network policies")
+		return ps
+	}
 
-		if res.Type() == prommodel.ValVector {
-			vec := res.(prommodel.Vector)
-			for _, v := range vec {
-				ch.fillGlobalNetworkPolicies(v, &ps)
-			}
+	if res.Type() == prommodel.ValVector {
+		vec := res.(prommodel.Vector)
+		for _, v := range vec {
+			ch.fillGlobalNetworkPolicies(v, &ps)
 		}
 	}
 	return ps
@@ -58,18 +52,16 @@ func (ch *policiesCacheHistory) TotalGlobalNetworkPolicies() api.PolicySummary {
 func (ch *policiesCacheHistory) TotalNetworkPoliciesByNamespace() map[string]api.PolicySummary {
 	psm := make(map[string]api.PolicySummary)
 
-	if ch.promClient != nil {
-		res, err := ch.promClient.Query("queryserver_network_policy_total", ch.timeRange.End)
-		if err != nil {
-			log.WithError(err).Warn("failed to get historical data for total network policies")
-			return psm
-		}
+	res, err := ch.promClient.Query("queryserver_network_policy_total", ch.timestamp)
+	if err != nil {
+		log.WithError(err).Warn("failed to get historical data for total network policies")
+		return psm
+	}
 
-		if res.Type() == prommodel.ValVector {
-			vec := res.(prommodel.Vector)
-			for _, v := range vec {
-				ch.fillNetworkPolicies(v, psm)
-			}
+	if res.Type() == prommodel.ValVector {
+		vec := res.(prommodel.Vector)
+		for _, v := range vec {
+			ch.fillNetworkPolicies(v, psm)
 		}
 	}
 	return psm

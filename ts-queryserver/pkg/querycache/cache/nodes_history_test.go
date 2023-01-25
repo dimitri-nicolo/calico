@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
 package cache_test
 
 import (
@@ -10,8 +10,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 
 	"github.com/projectcalico/calico/ts-queryserver/pkg/querycache/cache"
 )
@@ -28,17 +26,6 @@ var (
 )
 
 var _ = Describe("Querycache node historical cache tests", func() {
-	var (
-		timeRange *promv1.Range
-	)
-
-	BeforeEach(func() {
-		now := time.Now()
-		timeRange = &promv1.Range{
-			Start: now.Add(-15 * time.Minute),
-			End:   now,
-		}
-	})
 
 	Context("Retrieve historical data from Prometheus", func() {
 		It("should retrieve historical data for total nodes count from Prometheus", func() {
@@ -54,7 +41,10 @@ var _ = Describe("Querycache node historical cache tests", func() {
 			}))
 			defer ts.Close()
 
-			nodeCache := cache.NewNodeCacheHistory(ts.URL, "fake-jwt-token", nil, timeRange)
+			promClient, err := cache.NewPrometheusClient(ts.URL, "fake-jwt-token")
+			Expect(err).NotTo(HaveOccurred())
+
+			nodeCache := cache.NewNodeCacheHistory(promClient, time.Now())
 			Expect(nodeCache).NotTo(BeNil())
 
 			n := nodeCache.TotalNodes()
@@ -75,7 +65,10 @@ var _ = Describe("Querycache node historical cache tests", func() {
 			}))
 			defer ts.Close()
 
-			nodeCache := cache.NewNodeCacheHistory(ts.URL, "fake-jwt-token", nil, timeRange)
+			promClient, err := cache.NewPrometheusClient(ts.URL, "fake-jwt-token")
+			Expect(err).NotTo(HaveOccurred())
+
+			nodeCache := cache.NewNodeCacheHistory(promClient, time.Now())
 			Expect(nodeCache).NotTo(BeNil())
 
 			n := nodeCache.TotalNodesWithNoEndpoints()
@@ -96,7 +89,10 @@ var _ = Describe("Querycache node historical cache tests", func() {
 			}))
 			defer ts.Close()
 
-			nodeCache := cache.NewNodeCacheHistory(ts.URL, "fake-jwt-token", nil, timeRange)
+			promClient, err := cache.NewPrometheusClient(ts.URL, "fake-jwt-token")
+			Expect(err).NotTo(HaveOccurred())
+
+			nodeCache := cache.NewNodeCacheHistory(promClient, time.Now())
 			Expect(nodeCache).NotTo(BeNil())
 
 			n := nodeCache.TotalNodesWithNoHostEndpoints()
@@ -117,7 +113,10 @@ var _ = Describe("Querycache node historical cache tests", func() {
 			}))
 			defer ts.Close()
 
-			nodeCache := cache.NewNodeCacheHistory(ts.URL, "fake-jwt-token", nil, timeRange)
+			promClient, err := cache.NewPrometheusClient(ts.URL, "fake-jwt-token")
+			Expect(err).NotTo(HaveOccurred())
+
+			nodeCache := cache.NewNodeCacheHistory(promClient, time.Now())
 			Expect(nodeCache).NotTo(BeNil())
 
 			n := nodeCache.TotalNodesWithNoWorkloadEndpoints()
@@ -135,7 +134,10 @@ var _ = Describe("Querycache node historical cache tests", func() {
 			}))
 			defer ts.Close()
 
-			nodeCache := cache.NewNodeCacheHistory(ts.URL, "fake-jwt-token", nil, timeRange)
+			promClient, err := cache.NewPrometheusClient(ts.URL, "fake-jwt-token")
+			Expect(err).NotTo(HaveOccurred())
+
+			nodeCache := cache.NewNodeCacheHistory(promClient, time.Now())
 			Expect(nodeCache).NotTo(BeNil())
 
 			n := nodeCache.TotalNodes()
@@ -153,7 +155,10 @@ var _ = Describe("Querycache node historical cache tests", func() {
 			}))
 			defer ts.Close()
 
-			nodeCache := cache.NewNodeCacheHistory(ts.URL, "fake-jwt-token", nil, timeRange)
+			promClient, err := cache.NewPrometheusClient(ts.URL, "fake-jwt-token")
+			Expect(err).NotTo(HaveOccurred())
+
+			nodeCache := cache.NewNodeCacheHistory(promClient, time.Now())
 			Expect(nodeCache).NotTo(BeNil())
 
 			n := nodeCache.TotalNodesWithNoEndpoints()
@@ -171,7 +176,10 @@ var _ = Describe("Querycache node historical cache tests", func() {
 			}))
 			defer ts.Close()
 
-			nodeCache := cache.NewNodeCacheHistory(ts.URL, "fake-jwt-token", nil, timeRange)
+			promClient, err := cache.NewPrometheusClient(ts.URL, "fake-jwt-token")
+			Expect(err).NotTo(HaveOccurred())
+
+			nodeCache := cache.NewNodeCacheHistory(promClient, time.Now())
 			Expect(nodeCache).NotTo(BeNil())
 
 			n := nodeCache.TotalNodesWithNoHostEndpoints()
@@ -189,7 +197,10 @@ var _ = Describe("Querycache node historical cache tests", func() {
 			}))
 			defer ts.Close()
 
-			nodeCache := cache.NewNodeCacheHistory(ts.URL, "fake-jwt-token", nil, timeRange)
+			promClient, err := cache.NewPrometheusClient(ts.URL, "fake-jwt-token")
+			Expect(err).NotTo(HaveOccurred())
+
+			nodeCache := cache.NewNodeCacheHistory(promClient, time.Now())
 			Expect(nodeCache).NotTo(BeNil())
 
 			n := nodeCache.TotalNodesWithNoWorkloadEndpoints()

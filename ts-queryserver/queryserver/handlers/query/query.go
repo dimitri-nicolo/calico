@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018-2023 Tigera, Inc. All rights reserved.
 package query
 
 import (
@@ -14,7 +14,8 @@ import (
 	"github.com/SermoDigital/jose/jws"
 	log "github.com/sirupsen/logrus"
 
-	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/prometheus/client_golang/prometheus"
 
 	libapi "github.com/projectcalico/calico/libcalico-go/lib/apis/v3"
@@ -93,15 +94,16 @@ type query struct {
 }
 
 func (q *query) Summary(w http.ResponseWriter, r *http.Request) {
+	// /summary endpoint is called by Manager dashboard endpoints card.
 	q.runQuery(w, r, client.QueryClusterReq{
-		TimeRange:          q.getTimeRange(r),
+		Timestamp:          q.getTimestamp(r),
 		PrometheusEndpoint: q.cfg.PrometheusEndpoint,
-		FIPSModeEnabled:    q.cfg.FIPSModeEnabled,
 		Token:              q.getToken(r),
 	}, false)
 }
 
 func (q *query) Metrics(w http.ResponseWriter, r *http.Request) {
+	// /metrics endpoint is called by Prometheus to fetch historical data.
 	resp, err := q.qi.RunQuery(context.Background(), client.QueryClusterReq{})
 	if err != nil {
 		log.Warnf("failed to get metrics")
@@ -114,25 +116,25 @@ func (q *query) Metrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hostEndpointsGauge.With(prometheus.Labels{"namespace": "", "type": ""}).Set(float64(clusterResp.NumHostEndpoints))
-	hostEndpointsGauge.With(prometheus.Labels{"namespace": "", "type": "unlabeled"}).Set(float64(clusterResp.NumUnlabelledHostEndpoints))
-	hostEndpointsGauge.With(prometheus.Labels{"namespace": "", "type": "unprotected"}).Set(float64(clusterResp.NumUnprotectedHostEndpoints))
+	hostEndpointsGauge.With(prometheus.Labels{"namespace": corev1.NamespaceAll, "type": ""}).Set(float64(clusterResp.NumHostEndpoints))
+	hostEndpointsGauge.With(prometheus.Labels{"namespace": corev1.NamespaceAll, "type": "unlabeled"}).Set(float64(clusterResp.NumUnlabelledHostEndpoints))
+	hostEndpointsGauge.With(prometheus.Labels{"namespace": corev1.NamespaceAll, "type": "unprotected"}).Set(float64(clusterResp.NumUnprotectedHostEndpoints))
 
-	workloadEndpointsGauge.With(prometheus.Labels{"namespace": "", "type": ""}).Set(float64(clusterResp.NumWorkloadEndpoints))
-	workloadEndpointsGauge.With(prometheus.Labels{"namespace": "", "type": "unlabeled"}).Set(float64(clusterResp.NumUnlabelledWorkloadEndpoints))
-	workloadEndpointsGauge.With(prometheus.Labels{"namespace": "", "type": "unprotected"}).Set(float64(clusterResp.NumUnprotectedWorkloadEndpoints))
-	workloadEndpointsGauge.With(prometheus.Labels{"namespace": "", "type": "failed"}).Set(float64(clusterResp.NumFailedWorkloadEndpoints))
+	workloadEndpointsGauge.With(prometheus.Labels{"namespace": corev1.NamespaceAll, "type": ""}).Set(float64(clusterResp.NumWorkloadEndpoints))
+	workloadEndpointsGauge.With(prometheus.Labels{"namespace": corev1.NamespaceAll, "type": "unlabeled"}).Set(float64(clusterResp.NumUnlabelledWorkloadEndpoints))
+	workloadEndpointsGauge.With(prometheus.Labels{"namespace": corev1.NamespaceAll, "type": "unprotected"}).Set(float64(clusterResp.NumUnprotectedWorkloadEndpoints))
+	workloadEndpointsGauge.With(prometheus.Labels{"namespace": corev1.NamespaceAll, "type": "failed"}).Set(float64(clusterResp.NumFailedWorkloadEndpoints))
 
-	networkPolicyGauge.With(prometheus.Labels{"namespace": "", "type": ""}).Set(float64(clusterResp.NumNetworkPolicies))
-	networkPolicyGauge.With(prometheus.Labels{"namespace": "", "type": "unmatched"}).Set(float64(clusterResp.NumUnmatchedNetworkPolicies))
+	networkPolicyGauge.With(prometheus.Labels{"namespace": corev1.NamespaceAll, "type": ""}).Set(float64(clusterResp.NumNetworkPolicies))
+	networkPolicyGauge.With(prometheus.Labels{"namespace": corev1.NamespaceAll, "type": "unmatched"}).Set(float64(clusterResp.NumUnmatchedNetworkPolicies))
 
 	globalNetworkPolicyGauge.With(prometheus.Labels{"type": ""}).Set(float64(clusterResp.NumGlobalNetworkPolicies))
 	globalNetworkPolicyGauge.With(prometheus.Labels{"type": "unmatched"}).Set(float64(clusterResp.NumUnmatchedGlobalNetworkPolicies))
 
-	nodeGuage.With(prometheus.Labels{"type": ""}).Set(float64(clusterResp.NumNodes))
-	nodeGuage.With(prometheus.Labels{"type": "no-endpoints"}).Set(float64(clusterResp.NumNodesWithNoEndpoints))
-	nodeGuage.With(prometheus.Labels{"type": "no-host-endpoints"}).Set(float64(clusterResp.NumNodesWithNoHostEndpoints))
-	nodeGuage.With(prometheus.Labels{"type": "no-workload-endpoints"}).Set(float64(clusterResp.NumNodesWithNoWorkloadEndpoints))
+	nodeGauge.With(prometheus.Labels{"type": ""}).Set(float64(clusterResp.NumNodes))
+	nodeGauge.With(prometheus.Labels{"type": "no-endpoints"}).Set(float64(clusterResp.NumNodesWithNoEndpoints))
+	nodeGauge.With(prometheus.Labels{"type": "no-host-endpoints"}).Set(float64(clusterResp.NumNodesWithNoHostEndpoints))
+	nodeGauge.With(prometheus.Labels{"type": "no-workload-endpoints"}).Set(float64(clusterResp.NumNodesWithNoWorkloadEndpoints))
 
 	for k, v := range clusterResp.NamespaceCounts {
 		workloadEndpointsGauge.With(prometheus.Labels{"namespace": k, "type": ""}).Set(float64(v.NumWorkloadEndpoints))
@@ -509,24 +511,29 @@ func (q *query) getSort(r *http.Request) *client.Sort {
 	}
 }
 
-func (q *query) getTimeRange(r *http.Request) *promv1.Range {
+func (q *query) getTimestamp(r *http.Request) *time.Time {
+	// "from" and "to" query string parameters are sent when /summary endpoint gets called.
+	// As the summary data reflects a single data point, we have decided to use the end (to)
+	// timestamp to fetch current (in-memory) or historical (time-series data store) data.
+	qsTo := r.URL.Query().Get("to")
+	if qsTo == "" {
+		log.Warn("failed to get timestamp from query parameter")
+		return nil
+	}
+
 	now := time.Now()
-
-	s := r.URL.Query().Get("from")
-	from, _, err := timeutils.ParseTime(now, &s)
-	if err != nil || from == nil {
-		log.WithError(err).Debugf("failed to parse datetime from query parameter from=%s", s)
-		return nil
-	}
-
-	s = r.URL.Query().Get("to")
-	to, _, err := timeutils.ParseTime(now, &s)
+	to, _, err := timeutils.ParseTime(now, &qsTo)
 	if err != nil || to == nil {
-		log.WithError(err).Debugf("failed to parse datetime from query parameter to=%s", s)
+		log.WithError(err).Warnf("failed to parse datetime from query parameter to=%s", qsTo)
 		return nil
 	}
 
-	return &promv1.Range{Start: *from, End: *to}
+	// if to equals now, reset time range to nil to get data from memory.
+	if to.Equal(now) {
+		log.Debug("set time range to nil when to == now")
+		return nil
+	}
+	return to
 }
 
 func (q *query) getToken(r *http.Request) string {

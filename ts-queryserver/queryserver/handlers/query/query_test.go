@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Tigera. All rights reserved.
+// Copyright (c) 2022-2023 Tigera. All rights reserved.
 package query
 
 import (
@@ -138,56 +138,49 @@ var _ = Describe("Queryserver query tests", func() {
 			Expect(t).To(Equal(""))
 		})
 
-		It("should return a time range when both from and to are valid in the request query parameter list", func() {
+		It("should return a timestamp when to is valid in the request query parameter list", func() {
 			q := query{qi: &client.MockQueryInterface{}, cfg: nil}
 			r := httptest.NewRequest("GET", "http://example.com/foo", nil)
 
 			params := r.URL.Query()
-			params.Add("from", "now-15m")
 			params.Add("to", "now-5m")
 			r.URL.RawQuery = params.Encode()
 
-			timeRange := q.getTimeRange(r)
-			Expect(timeRange).NotTo(BeNil())
-			Expect(timeRange.Start.IsZero()).To(BeFalse())
-			Expect(timeRange.End.IsZero()).To(BeFalse())
+			ts := q.getTimestamp(r)
+			Expect(ts).NotTo(BeNil())
+			Expect(ts.IsZero()).To(BeFalse())
 		})
 
-		It("should return nil when either from or to are invalid in the request query parameter list", func() {
+		It("should return nil when to is now in the request query parameter list", func() {
 			q := query{qi: &client.MockQueryInterface{}, cfg: nil}
 			r := httptest.NewRequest("GET", "http://example.com/foo", nil)
 
-			// invalid to
+			params := r.URL.Query()
+			params.Add("to", "now-0m")
+			r.URL.RawQuery = params.Encode()
+
+			ts := q.getTimestamp(r)
+			Expect(ts).To(BeNil())
+		})
+
+		It("should return nil when to is invalid in the request query parameter list", func() {
+			q := query{qi: &client.MockQueryInterface{}, cfg: nil}
+			r := httptest.NewRequest("GET", "http://example.com/foo", nil)
+
+			// not a time
 			params := make(url.Values)
-			params.Add("from", "now-15m")
+			params.Add("to", "abc")
 			r.URL.RawQuery = params.Encode()
 
-			timeRange := q.getTimeRange(r)
-			Expect(timeRange).To(BeNil())
+			ts := q.getTimestamp(r)
+			Expect(ts).To(BeNil())
 
-			// invalid from
-			params = make(url.Values)
-			params.Add("to", "now-15m")
-			r.URL.RawQuery = params.Encode()
-
-			timeRange = q.getTimeRange(r)
-			Expect(timeRange).To(BeNil())
-
-			// invalid from or to
-			params = make(url.Values)
-			params.Add("from", "abc")
-			params.Add("to", "")
-			r.URL.RawQuery = params.Encode()
-
-			timeRange = q.getTimeRange(r)
-			Expect(timeRange).To(BeNil())
-
-			// missing both from and to
+			// missing to
 			params = make(url.Values)
 			r.URL.RawQuery = params.Encode()
 
-			timeRange = q.getTimeRange(r)
-			Expect(timeRange).To(BeNil())
+			ts = q.getTimestamp(r)
+			Expect(ts).To(BeNil())
 		})
 
 	})
