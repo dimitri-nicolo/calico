@@ -2,24 +2,16 @@
   "l3_flows": [
     {
       "key": {
-        "Action": "allow",
-        "Reporter": "src",
-        "Protocol": "tcp",
+        "action": "allow",
+        "reporter": "src",
+        "protocol": "tcp",
         "source": {
           "type": "wep",
           "name": "",
           "aggregated_name": "tigera-apiserver-6f7965f6b8-*",
           "namespace": "tigera-system",
           "port": 0,
-          "labels": [
-            {"key": "apiserver", "values": ["true"]},
-            {"key": "app.kubernetes.io/name", "values": ["tigera-apiserver"]},
-            {"key": "k8s-app", "values": ["tigera-apiserver"]},
-            {"key": "pod-template-hash", "values": ["6f7965f6b8"]},
-            {"key": "projectcalico.org/namespace", "values": ["tigera-system"]},
-            {"key": "projectcalico.org/orchestrator", "values": ["k8s"]},
-            {"key": "projectcalico.org/serviceaccount", "values": ["tigera-apiserver"]}
-	  ]
+          "labels": null
         },
         "destination": {
           "type": "ns",
@@ -27,12 +19,7 @@
           "aggregated_name": "kse.kubernetes",
           "namespace": "default",
           "port": 6443,
-          "labels": [
-            {"key": "component", "values": ["apiserver"]},
-            {"key": "endpoints.projectcalico.org/serviceName", "values": ["kubernetes"]},
-            {"key": "projectcalico.org/namespace", "values": ["default"]},
-            {"key": "provider", "values": ["kubernetes"]}
-	  ]
+          "labels": null
         }
       },
       "process": {
@@ -44,6 +31,21 @@
         "port": 443,
         "port_name": "https"
       },
+      "source_labels": [
+        {"key": "apiserver", "values": ["true"]},
+        {"key": "app.kubernetes.io/name", "values": ["tigera-apiserver"]},
+        {"key": "k8s-app", "values": ["tigera-apiserver"]},
+        {"key": "pod-template-hash", "values": ["6f7965f6b8"]},
+        {"key": "projectcalico.org/namespace", "values": ["tigera-system"]},
+        {"key": "projectcalico.org/orchestrator", "values": ["k8s"]},
+        {"key": "projectcalico.org/serviceaccount", "values": ["tigera-apiserver"]}
+      ],
+      "destination_labels": [
+        {"key": "component", "values": ["apiserver"]},
+        {"key": "endpoints.projectcalico.org/serviceName", "values": ["kubernetes"]},
+        {"key": "projectcalico.org/namespace", "values": ["default"]},
+        {"key": "provider", "values": ["kubernetes"]}
+      ],
       "connection_stats": {
         "packets_in": 0,
         "packets_out": 0,

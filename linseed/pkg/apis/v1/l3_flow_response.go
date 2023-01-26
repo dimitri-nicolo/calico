@@ -5,9 +5,9 @@ package v1
 // L3FlowKey represents the identifiers for an L3 Flow.
 type L3FlowKey struct {
 	// Common fields
-	Action   string
-	Reporter string
-	Protocol string
+	Action   string `json:"action"`
+	Reporter string `json:"reporter"`
+	Protocol string `json:"protocol"`
 
 	// Source and destination information.
 	Source      Endpoint `json:"source"`
@@ -50,8 +50,8 @@ type L3Flow struct {
 // FlowLabels represents a single label and all of its seen values over the course of
 // a flow's life.
 type FlowLabels struct {
-	Key    string
-	Values []string
+	Key    string   `json:"key"`
+	Values []string `json:"values"`
 }
 
 // LogStats represent the number of flows aggregated into this entry
