@@ -1403,7 +1403,8 @@ ELASTIC_IMAGE   ?= docker.elastic.co/elasticsearch/elasticsearch:$(ELASTIC_VERSI
 
 ## Run elasticsearch as a container (tigera-elastic)
 .PHONY: run-elastic
-run-elastic: stop-elastic
+run-elastic: $(REPO_ROOT)/.elasticsearch.created
+$(REPO_ROOT)/.elasticsearch.created:
 	# Run ES on Docker.
 	docker run --detach \
 	--net=host \
@@ -1413,9 +1414,11 @@ run-elastic: stop-elastic
 
 	# Wait until ES is accepting requests.
 	@while ! docker exec tigera-elastic curl localhost:9200 2> /dev/null; do echo "Waiting for Elasticsearch to come up..."; sleep 2; done
+	touch $@
 
 ## Stop elasticsearch with name tigera-elastic
 .PHONY: stop-elastic
 stop-elastic:
 	-docker rm -f tigera-elastic
+	rm -rf $(REPO_ROOT)/.elasticsearch.created
 

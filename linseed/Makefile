@@ -102,19 +102,21 @@ ut: run-elastic
 	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) -r pkg/*'
 
 st:
+	@echo "No STs"
+
 ###############################################################################
 # FV Tests
 ###############################################################################
 
+# Run Linseed as a local Docker container
 run-image: stop-image
-	# Run Linseed on Docker.
 	docker run --detach \
-	--net=host \
-    --name=tigera-$(LINSEED_IMAGE) \
-    -v $(REPO_ROOT)/linseed/fv/cert/localhost.crt:/certs/https/tls.crt \
-    -v $(REPO_ROOT)/linseed/fv/cert/localhost.key:/certs/https/tls.key \
-    tigera/$(LINSEED_IMAGE):latest
-    # Wait until Linseed is accepting requests.
+		--net=host \
+		--name=tigera-$(LINSEED_IMAGE) \
+		-v $(REPO_ROOT)/linseed/fv/cert/localhost.crt:/certs/https/tls.crt \
+		-v $(REPO_ROOT)/linseed/fv/cert/localhost.key:/certs/https/tls.key \
+		tigera/$(LINSEED_IMAGE):latest
+	# Wait until Linseed is accepting requests.
 	while ! docker ps -q --filter "name=tigera-$(LINSEED)"; do echo "Waiting for linseed to come up..."; sleep 2; done
 
 stop-image:
@@ -141,7 +143,7 @@ build-tests: $(shell find ./fv -type f -name '*.go' -print)
 ## run CI cycle - build, test, etc.
 ## Run UTs and only if they pass build image and continue along.
 ## Building the image is required for fvs.
-ci: clean static-checks tests
+ci: clean static-checks test
 
 ## Deploys images to registry
 cd: image-all cd-common
