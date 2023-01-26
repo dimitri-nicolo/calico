@@ -55,6 +55,7 @@ func New(
 		scannerCLITokenSecretName:          cfg.ScannerCLITokenSecretName,
 		podWatcherClusterRoleName:          cfg.PodWatcherClusterRoleName,
 		operatorClusterRoleName:            cfg.OperatorCloudClusterRoleName,
+		runtimeCleanerClusterRoleName:      cfg.RuntimeCleanerClusterRoleName,
 	}
 
 	// The high requeue attempts is because it's unlikely we would receive an event after failure to re trigger a
@@ -189,6 +190,12 @@ func New(
 				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", r.scannerCLITokenSecretName))),
 			&corev1.Secret{},
 			worker.ResourceWatchDelete, worker.ResourceWatchAdd,
+		)
+		w.AddWatch(
+			cache.NewListWatchFromClient(managementK8sCLI.CoreV1().RESTClient(), "serviceaccounts", r.managementOperatorNamespace,
+				fields.ParseSelectorOrDie(fmt.Sprintf("metadata.name=%s", resource.ImageAssuranceRuntimeCleanerServiceAccountName))),
+			&corev1.ServiceAccount{},
+			worker.ResourceWatchUpdate, worker.ResourceWatchDelete, worker.ResourceWatchAdd,
 		)
 	}
 
