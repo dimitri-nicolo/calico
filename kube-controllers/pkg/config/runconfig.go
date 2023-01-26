@@ -128,6 +128,7 @@ type ImageAssuranceConfig struct {
 	ScannerCLIClusterRoleName                   string
 	ScannerCLITokenSecretName                   string
 	PodWatcherClusterRoleName                   string
+	OperatorCloudClusterRoleName                string
 }
 
 type RunConfigController struct {
@@ -418,6 +419,7 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 		rc.ImageAssurance.ScannerCLITokenSecretName = envCfg.ImageAssuranceScannerCLITokenSecretName
 		rc.ImageAssurance.ScannerCLIClusterRoleName = envCfg.ImageAssuranceScannerCLIClusterRoleName
 		rc.ImageAssurance.PodWatcherClusterRoleName = envCfg.ImageAssurancePodWatcherClusterRoleName
+		rc.ImageAssurance.OperatorCloudClusterRoleName = envCfg.ImageAssuranceOperatorClusterRoleName
 	}
 	if rc.ManagedCluster != nil {
 		rc.ManagedCluster.NumberOfWorkers = envCfg.ManagedClusterWorkers
@@ -429,6 +431,7 @@ func mergeConfig(envVars map[string]string, envCfg Config, apiCfg v3.KubeControl
 		rc.ManagedCluster.ImageAssuranceConfig.ScannerCLIClusterRoleName = envCfg.ImageAssuranceScannerCLIClusterRoleName
 		rc.ManagedCluster.ImageAssuranceConfig.ScannerCLITokenSecretName = envCfg.ImageAssuranceScannerCLITokenSecretName
 		rc.ManagedCluster.ImageAssuranceConfig.PodWatcherClusterRoleName = envCfg.ImageAssurancePodWatcherClusterRoleName
+		rc.ManagedCluster.ImageAssuranceConfig.OperatorCloudClusterRoleName = envCfg.ImageAssuranceOperatorClusterRoleName
 		rc.ManagedCluster.ImageAssuranceConfig.AdmissionControllerClusterRoleName = envCfg.ImageAssuranceAdmissionControllerClusterRoleName
 		rc.ManagedCluster.ImageAssuranceConfig.CRAdaptorClusterRoleName = envCfg.ImageAssuranceCRAdaptorClusterRoleName
 		rc.ManagedCluster.MultiClusterForwardingEndpoint = envCfg.MultiClusterForwardingEndpoint

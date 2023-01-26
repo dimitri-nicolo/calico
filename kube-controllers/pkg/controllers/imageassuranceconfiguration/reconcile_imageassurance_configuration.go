@@ -43,6 +43,7 @@ type reconciler struct {
 	scannerCLIClusterRoleName          string
 	scannerCLITokenSecretName          string
 	podWatcherClusterRoleName          string
+	operatorClusterRoleName            string
 }
 
 // Reconcile makes sure that the managed cluster this is running for has all the configuration needed for it's components
@@ -227,6 +228,10 @@ func (c *reconciler) reconcileServiceAccounts() error {
 		if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, psa); err != nil {
 			return err
 		}
+		operatorSA := c.operatorServiceAccount()
+		if err := resource.WriteServiceAccountToK8s(c.managementK8sCLI, operatorSA); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -264,6 +269,10 @@ func (c *reconciler) reconcileClusterRoleBinding() error {
 		}
 		pcrb := c.podWatcherClusterRoleBinding()
 		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, pcrb); err != nil {
+			return err
+		}
+		operatorCRB := c.operatorClusterRoleBinding()
+		if err := resource.WriteClusterRoleBindingToK8s(c.managementK8sCLI, operatorCRB); err != nil {
 			return err
 		}
 	}
@@ -359,6 +368,17 @@ func (c *reconciler) podWatcherServiceAccount() *corev1.ServiceAccount {
 		TypeMeta: metav1.TypeMeta{Kind: rbacv1.ServiceAccountKind, APIVersion: "v1"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      resource.ImageAssurancePodWatcherServiceAccountName,
+			Namespace: c.managementOperatorNamespace,
+		},
+	}
+}
+
+// operatorServiceAccount returns a definition for service account.
+func (c *reconciler) operatorServiceAccount() *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{Kind: rbacv1.ServiceAccountKind, APIVersion: "v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      resource.ImageAssuranceOperatorServiceAccountName,
 			Namespace: c.managementOperatorNamespace,
 		},
 	}
@@ -473,6 +493,29 @@ func (c *reconciler) podWatcherClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 			{
 				Kind:      rbacv1.ServiceAccountKind,
 				Name:      resource.ImageAssurancePodWatcherServiceAccountName,
+				Namespace: c.managementOperatorNamespace,
+			},
+		},
+	}
+}
+
+// operatorClusterRoleBinding returns a definition for cluster role binding
+func (c *reconciler) operatorClusterRoleBinding() *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		TypeMeta: metav1.TypeMeta{Kind: "ClusterRoleBinding", APIVersion: "rbac.authorization.k8s.io/v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   resource.ImageAssuranceOperatorClusterRoleBindingName,
+			Labels: map[string]string{},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     c.operatorClusterRoleName,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      resource.ImageAssuranceOperatorServiceAccountName,
 				Namespace: c.managementOperatorNamespace,
 			},
 		},
