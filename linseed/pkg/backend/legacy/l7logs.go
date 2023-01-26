@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	elastic "github.com/olivere/elastic/v7"
+
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"

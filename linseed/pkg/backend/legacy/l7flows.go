@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/sirupsen/logrus"
+	kapiv1 "k8s.io/apimachinery/pkg/types"
+
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-	"github.com/sirupsen/logrus"
-	kapiv1 "k8s.io/apimachinery/pkg/types"
 )
 
 // l7FlowBackend implements the Backend interface for flows stored

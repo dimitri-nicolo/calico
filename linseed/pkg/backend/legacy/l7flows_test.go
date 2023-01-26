@@ -8,13 +8,14 @@ import (
 	"time"
 
 	elastic "github.com/olivere/elastic/v7"
+	"github.com/stretchr/testify/require"
+	kapiv1 "k8s.io/apimachinery/pkg/types"
+
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-	"github.com/stretchr/testify/require"
-	kapiv1 "k8s.io/apimachinery/pkg/types"
 )
 
 // TestListL7Flows tests running a real elasticsearch query to list L7 flows.

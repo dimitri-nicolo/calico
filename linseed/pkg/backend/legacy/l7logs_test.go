@@ -7,10 +7,11 @@ import (
 	"time"
 
 	elastic "github.com/olivere/elastic/v7"
+	"github.com/stretchr/testify/require"
+
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-	"github.com/stretchr/testify/require"
 )
 
 // TestCreateL7Log tests running a real elasticsearch query to create an L7 log.
