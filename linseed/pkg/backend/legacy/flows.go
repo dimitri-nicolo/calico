@@ -319,7 +319,7 @@ func buildFlowsIndex(cluster string) string {
 func getLabelsFromLabelAggregation(log *logrus.Entry, terms map[string]*lmaelastic.AggregatedTerm, k string) []v1.FlowLabels {
 	tracker := newLabelTracker()
 	logrus.Debugf("%s buckets: %+v", k, terms[k].Buckets)
-	for i, _ := range terms[k].Buckets {
+	for i := range terms[k].Buckets {
 		label, ok := i.(string)
 		if !ok {
 			log.WithField("value", i).Warning("skipping bucket with non-string label")

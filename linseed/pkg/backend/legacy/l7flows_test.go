@@ -164,7 +164,7 @@ func populateL7FlowData(t *testing.T, ctx context.Context, client lmaelastic.Cli
 	// Refresh the index so that data is readily available for the test. Otherwise, we need to wait
 	// for the refresh interval to occur.
 	index := fmt.Sprintf("tigera_secure_ee_l7.%s", cluster)
-	refreshIndex(ctx, client, index)
+	err = refreshIndex(ctx, client, index)
 	require.NoError(t, err)
 
 	return expected
