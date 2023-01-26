@@ -11,7 +11,15 @@
           "aggregated_name": "tigera-apiserver-6f7965f6b8-*",
           "namespace": "tigera-system",
           "port": 0,
-          "labels": null
+          "labels": [
+            {"key": "apiserver", "values": ["true"]},
+            {"key": "app.kubernetes.io/name", "values": ["tigera-apiserver"]},
+            {"key": "k8s-app", "values": ["tigera-apiserver"]},
+            {"key": "pod-template-hash", "values": ["6f7965f6b8"]},
+            {"key": "projectcalico.org/namespace", "values": ["tigera-system"]},
+            {"key": "projectcalico.org/orchestrator", "values": ["k8s"]},
+            {"key": "projectcalico.org/serviceaccount", "values": ["tigera-apiserver"]}
+	  ]
         },
         "destination": {
           "type": "ns",
@@ -19,7 +27,12 @@
           "aggregated_name": "kse.kubernetes",
           "namespace": "default",
           "port": 6443,
-          "labels": null
+          "labels": [
+            {"key": "component", "values": ["apiserver"]},
+            {"key": "endpoints.projectcalico.org/serviceName", "values": ["kubernetes"]},
+            {"key": "projectcalico.org/namespace", "values": ["default"]},
+            {"key": "provider", "values": ["kubernetes"]}
+	  ]
         }
       },
       "process": {
