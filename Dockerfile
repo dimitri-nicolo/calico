@@ -14,9 +14,6 @@
 
 FROM ruby:2.7-alpine3.16 as builder
 
-# Need to define root user explicitly (for remaining setup) and be numeric for k8s validation
-USER 0
-
 RUN apk update && apk upgrade \
 && apk add --no-cache \
         curl \
@@ -75,10 +72,7 @@ RUN apk update && apk upgrade \
 
 
 
-RUN addgroup -S fluent && adduser -S -G fluent fluent \
-    && mkdir -p /fluentd/log \
-    && mkdir -p /fluentd/etc /fluentd/plugins \
-    && chown -R fluent /fluentd && chgrp -R fluent /fluentd
+RUN mkdir -p /fluentd/etc /fluentd/log /fluentd/plugins
 
 COPY readiness.sh /bin/
 RUN chmod +x /bin/readiness.sh
