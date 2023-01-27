@@ -85,14 +85,11 @@ module Fluent::Plugin
       config_set_default :@type, 'json'
     end
 
-    config_section :auth, required: false, multi: false do
-      desc 'The method for HTTP authentication'
-      config_param :method, :enum, list: [:basic], default: :basic
-      desc 'The username for basic authentication'
-      config_param :username, :string, default: nil
-      desc 'The password for basic authentication'
-      config_param :password, :string, default: nil, secret: true
-    end
+    # custom params for calico Authorization bearer token support.
+    config_param :authentication, :enum, list: [:none, :basic, :bearer],  :default => :none
+    config_param :username, :string, :default => ''
+    config_param :password, :string, :default => '', :secret => true
+    config_param :token, :string, :default => '', :secret => true
 
     def initialize
       super
@@ -236,8 +233,11 @@ module Fluent::Plugin
             when :put
               Net::HTTP::Put.new(uri.request_uri)
             end
-      if @auth
-        req.basic_auth(@auth.username, @auth.password)
+      # custom change for calico Authorization bearer token support.
+      if @authentication == :basic
+         req.basic_auth(@username, @password)
+      elsif @authentication == :bearer
+         req['authorization'] = "bearer #{@token}"
       end
       set_headers(req, chunk)
       req.body = @json_array ? "[#{chunk.read.chop}]" : chunk.read
