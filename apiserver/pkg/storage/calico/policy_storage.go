@@ -12,8 +12,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
-	"k8s.io/apiserver/pkg/storage"
-	etcd "k8s.io/apiserver/pkg/storage/etcd3"
+	k8sStorage "k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -83,7 +82,7 @@ func NewNetworkPolicyStorage(opts Options) (registry.DryRunnableStorage, factory
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
-		versioner:         APIObjectVersioner{&etcd.APIObjectVersioner{}},
+		versioner:         APIObjectVersioner{&k8sStorage.APIObjectVersioner{}},
 		aapiType:          reflect.TypeOf(v3.NetworkPolicy{}),
 		aapiListType:      reflect.TypeOf(v3.NetworkPolicyList{}),
 		libCalicoType:     reflect.TypeOf(v3.NetworkPolicy{}),
@@ -136,7 +135,7 @@ func (rc NetworkPolicyConverter) convertToAAPI(libcalicoObject resourceObject, a
 	aapiPolicy.Labels["projectcalico.org/tier"] = aapiPolicy.Spec.Tier
 }
 
-func (rc NetworkPolicyConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
+func (rc NetworkPolicyConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred k8sStorage.SelectionPredicate) {
 	lcgPolicyList := libcalicoListObject.(*v3.NetworkPolicyList)
 	aapiPolicyList := aapiListObj.(*v3.NetworkPolicyList)
 	if libcalicoListObject == nil {

@@ -25,6 +25,10 @@ func (r *REST) New() runtime.Object {
 	return &v3.AuthorizationReview{}
 }
 
+func (r *REST) Destroy() {
+
+}
+
 // NewList returns a new shell of a binding list
 func NewList() runtime.Object {
 	return &v3.AuthorizationReviewList{}

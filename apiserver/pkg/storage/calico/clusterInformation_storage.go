@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
-	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/clientv3"
@@ -41,7 +40,7 @@ func NewClusterInformationStorage(opts Options) (registry.DryRunnableStorage, fa
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
-		versioner:         etcd.APIObjectVersioner{},
+		versioner:         APIObjectVersioner{},
 		aapiType:          reflect.TypeOf(v3.ClusterInformation{}),
 		aapiListType:      reflect.TypeOf(v3.ClusterInformationList{}),
 		libCalicoType:     reflect.TypeOf(v3.ClusterInformation{}),

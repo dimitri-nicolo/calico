@@ -40,6 +40,10 @@ func (r *StatusREST) New() runtime.Object {
 	return &calico.PacketCapture{}
 }
 
+func (r *StatusREST) Destroy() {
+	r.store.Destroy()
+}
+
 // Get retrieves the object from the storage. It is required to support Patch.
 func (r *StatusREST) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
 	return r.store.Get(ctx, name, options)

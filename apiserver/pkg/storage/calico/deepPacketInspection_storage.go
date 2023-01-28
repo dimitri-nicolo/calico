@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/storage"
-	etcd "k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
 
 	features "github.com/projectcalico/calico/licensing/client/features"
@@ -58,7 +57,7 @@ func NewDeepPacketInspectionStorage(opts Options) (registry.DryRunnableStorage, 
 	dryRunnableStorage := registry.DryRunnableStorage{Storage: &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
-		versioner:         etcd.APIObjectVersioner{},
+		versioner:         APIObjectVersioner{},
 		aapiType:          reflect.TypeOf(v3.DeepPacketInspection{}),
 		aapiListType:      reflect.TypeOf(v3.DeepPacketInspectionList{}),
 		libCalicoType:     reflect.TypeOf(v3.DeepPacketInspection{}),
