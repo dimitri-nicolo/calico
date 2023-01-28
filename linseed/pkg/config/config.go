@@ -29,12 +29,16 @@ type Config struct {
 	ExpectedTenantID string `default:"" split_words:"true"`
 
 	// Elastic configuration
-	ElasticEndpoint       string `default:"http://localhost:9200" split_words:"true"`
-	ElasticUsername       string `default:"" split_words:"true"`
-	ElasticPassword       string `default:"" split_words:"true" json:",omitempty"`
-	ElasticCABundlePath   string `default:"/certs/elasticsearch/tls.crt" split_words:"true"`
-	ElasticClientKeyPath  string `default:"/certs/elasticsearch/client.key" split_words:"true"`
-	ElasticClientCertPath string `default:"/certs/elasticsearch/client.crt" split_words:"true"`
+	ElasticEndpoint        string `default:"https://tigera-secure-es-http.tigera-elasticsearch.svc:9200" split_words:"true"`
+	ElasticUsername        string `default:"" split_words:"true"`
+	ElasticPassword        string `default:"" split_words:"true" json:",omitempty"`
+	ElasticCABundlePath    string `default:"/certs/elasticsearch/tls.crt" split_words:"true"`
+	ElasticClientKeyPath   string `default:"/certs/elasticsearch/client.key" split_words:"true"`
+	ElasticClientCertPath  string `default:"/certs/elasticsearch/client.crt" split_words:"true"`
+	ElasticGZIPEnabled     bool   `default:"false" split_words:"true"`
+	ElasticMTLSEnabled     bool   `default:"false" split_words:"true"`
+	ElasticScheme          string `default:"https" split_words:"true"`
+	ElasticSniffingEnabled bool   `default:"false" split_words:"true"`
 }
 
 // Return a string representation on the Config instance.

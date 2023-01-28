@@ -115,6 +115,8 @@ run-image: stop-image
 		--name=tigera-$(LINSEED_IMAGE) \
 		-v $(REPO_ROOT)/linseed/fv/cert/localhost.crt:/certs/https/tls.crt \
 		-v $(REPO_ROOT)/linseed/fv/cert/localhost.key:/certs/https/tls.key \
+		-e LINSEED_ELASTIC_ENDPOINT="http://localhost:9200" \
+		-e LINSEED_ELASTIC_SCHEME="http" \
 		tigera/$(LINSEED_IMAGE):latest
 	# Wait until Linseed is accepting requests.
 	while ! docker ps -q --filter "name=tigera-$(LINSEED)"; do echo "Waiting for linseed to come up..."; sleep 2; done

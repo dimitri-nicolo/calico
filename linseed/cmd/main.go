@@ -11,11 +11,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/olivere/elastic/v7"
+	"github.com/projectcalico/calico/linseed/pkg/backend"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-
 	"github.com/projectcalico/calico/linseed/pkg/handler/l3"
 
 	"github.com/kelseyhightower/envconfig"
@@ -41,22 +39,16 @@ func main() {
 	var signalChan = make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
-	//TODO: secure connections with ES
 	//TODO: check if we need to add es connection as part of the ready probe
-	esClient, err := elastic.NewClient(
-		elastic.SetURL(cfg.ElasticEndpoint),
-		elastic.SetErrorLog(log.New()),
-		elastic.SetInfoLog(log.New()))
+	esClient := backend.MustGetElasticClient(toElasticConfig(cfg))
+	logsBackend := legacy.NewFlowLogBackend(esClient)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	err := logsBackend.Initialize(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	client := lmaelastic.NewWithClient(esClient)
-	logsBackend := legacy.NewFlowLogBackend(client)
-	err = logsBackend.Initialize(context.Background())
-	if err != nil {
-		log.Fatal(err)
-	}
-	flowBackend := legacy.NewFlowBackend(client)
+	flowBackend := legacy.NewFlowBackend(esClient)
 
 	// Start server
 	var addr = fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
@@ -80,10 +72,38 @@ func main() {
 	<-signalChan
 
 	// Graceful shutdown of the server
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	if err := server.Shutdown(ctx); err != nil {
+	shutDownCtx, shutDownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutDownCancel()
+	if err := server.Shutdown(shutDownCtx); err != nil {
 		log.Fatalf("server shutdown failed: %+v", err)
 	}
 	log.Info("Server is shutting down")
+}
+
+func toElasticConfig(cfg config.Config) backend.ElasticConfig {
+	if cfg.ElasticUsername == "" || cfg.ElasticPassword == "" {
+		log.Warn("No credentials were passed in for Elastic. Will connect to ES without credentials")
+
+		return backend.ElasticConfig{
+			URL:             cfg.ElasticEndpoint,
+			LogLevel:        cfg.LogLevel,
+			FIPSModeEnabled: cfg.FIPSModeEnabled,
+			GZIPEnabled:     cfg.ElasticGZIPEnabled,
+			Scheme:          cfg.ElasticScheme,
+			EnableSniffing:  cfg.ElasticSniffingEnabled,
+		}
+	}
+
+	return backend.ElasticConfig{
+		URL:               cfg.ElasticEndpoint,
+		Username:          cfg.ElasticUsername,
+		Password:          cfg.ElasticPassword,
+		LogLevel:          cfg.LogLevel,
+		CACertPath:        cfg.ElasticCABundlePath,
+		ClientCertPath:    cfg.ElasticClientCertPath,
+		ClientCertKeyPath: cfg.ElasticClientKeyPath,
+		FIPSModeEnabled:   cfg.FIPSModeEnabled,
+		GZIPEnabled:       cfg.ElasticGZIPEnabled,
+		Scheme:            cfg.ElasticScheme,
+	}
 }
