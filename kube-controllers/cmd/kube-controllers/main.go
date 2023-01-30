@@ -16,8 +16,11 @@ package main
 
 import (
 	"context"
+	cryptotls "crypto/tls"
+	"crypto/x509"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -26,7 +29,6 @@ import (
 
 	"github.com/pkg/profile"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-
 	log "github.com/sirupsen/logrus"
 	"go.etcd.io/etcd/client/pkg/v3/srv"
 	"go.etcd.io/etcd/client/pkg/v3/transport"
@@ -39,6 +41,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"github.com/projectcalico/calico/crypto/pkg/tls"
+	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	"github.com/projectcalico/calico/kube-controllers/pkg/config"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/authorization"
 	"github.com/projectcalico/calico/kube-controllers/pkg/controllers/controller"
@@ -61,6 +64,7 @@ import (
 	lclient "github.com/projectcalico/calico/licensing/client"
 	"github.com/projectcalico/calico/licensing/client/features"
 	"github.com/projectcalico/calico/licensing/monitor"
+	"github.com/projectcalico/calico/typha/pkg/tlsutils"
 
 	"github.com/projectcalico/calico/kube-controllers/pkg/status"
 	bapi "github.com/projectcalico/calico/libcalico-go/lib/backend/api"
@@ -112,6 +116,11 @@ var (
 
 	// fipsModeEnabled enables FIPS 140-2 validated crypto mode.
 	fipsModeEnabled bool
+
+	certKey    string
+	cert       string
+	requiredCN string
+	caFile     string
 )
 
 func init() {
@@ -273,11 +282,56 @@ func main() {
 	if runCfg.PrometheusPort != 0 {
 		// Serve prometheus metrics.
 		log.Infof("Starting Prometheus metrics server on port %d", runCfg.PrometheusPort)
+
+		if v, ok = os.LookupEnv(config.EnvTLSKey); ok {
+			certKey = v
+		}
+		if v, ok = os.LookupEnv(config.EnvTLSCert); ok {
+			cert = v
+		}
+		if v, ok = os.LookupEnv(config.EnvCommonName); ok {
+			requiredCN = v
+		}
+
+		tlsConfig := calicotls.NewTLSConfig(fipsModeEnabled)
+		tlsConfig.ClientAuth = cryptotls.RequireAndVerifyClientCert
+
+		if caFile, ok = os.LookupEnv(config.EnvCAFile); ok {
+			// Create a CA certificate pool.
+			caCert, err := ioutil.ReadFile(caFile)
+			if err != nil {
+				log.Fatal(err)
+			}
+			caCertPool := x509.NewCertPool()
+			caCertPool.AppendCertsFromPEM(caCert)
+			tlsConfig.RootCAs = caCertPool
+		}
+
 		go func() {
 			http.Handle("/metrics", promhttp.Handler())
-			err := http.ListenAndServe(fmt.Sprintf(":%d", runCfg.PrometheusPort), nil)
-			if err != nil {
-				log.WithError(err).Fatal("Failed to serve prometheus metrics")
+			if cert == "" || certKey == "" {
+				log.Infof("Serve http prometheus metrics")
+				err := http.ListenAndServe(fmt.Sprintf(":%d", runCfg.PrometheusPort), nil)
+				if err != nil {
+					log.WithError(err).Fatal("Failed to serve http prometheus metrics")
+				}
+			} else {
+				if caFile != "" {
+					tlsConfig.VerifyPeerCertificate = tlsutils.CertificateVerifier(
+						log.WithField("caFile", caFile),
+						tlsConfig.RootCAs,
+						requiredCN,
+						"",
+					)
+				}
+				server := &http.Server{
+					Addr:      fmt.Sprintf(":%d", runCfg.PrometheusPort),
+					TLSConfig: tlsConfig,
+				}
+				err = server.ListenAndServeTLS(cert, certKey)
+				if err != nil {
+					log.WithError(err).Fatal("Failed to serve https prometheus metrics")
+				}
 			}
 		}()
 	}
