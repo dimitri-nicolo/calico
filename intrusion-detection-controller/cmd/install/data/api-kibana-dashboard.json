@@ -246,10 +246,16 @@
     }
   },
   {
+    "id":"42009a10-9d9f-11ed-a437-c917e049b351",
     "type": "index-pattern",
+    "version":"WzEwNTc0NjcsMjdd",
     "attributes": {
       "title": "tigera_secure_ee_runtime*",
       "timeFieldName": "start_time"
+    },
+    "references": [],
+    "migrationVersion":{
+      "index-pattern":"7.6.0"
     }
   },
   {
