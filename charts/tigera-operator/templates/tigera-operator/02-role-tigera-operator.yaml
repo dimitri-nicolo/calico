@@ -135,6 +135,7 @@ rules:
     - ippools
     - kubecontrollersconfigurations
     - bgpconfigurations
+    - externalnetworks
     verbs:
     - get
     - list
