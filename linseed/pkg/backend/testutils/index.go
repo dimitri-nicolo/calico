@@ -3,8 +3,9 @@ package testutils
 import (
 	"context"
 
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	"github.com/sirupsen/logrus"
+
+	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 func RefreshIndex(ctx context.Context, c lmaelastic.Client, index string) error {

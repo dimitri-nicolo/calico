@@ -2,13 +2,14 @@
   "index_patterns": ["tigera_secure_ee_audit*"],
   "mappings": {
     "properties": {
+      "timestamp": { "type": "date" },
       "apiVersion": { "type": "keyword" },
-      "auditID": { "type": "keyword" },
+      "AuditID": { "type": "keyword" },
       "kind": { "type": "keyword" },
-      "level": { "type": "keyword" },
+      "Level": { "type": "keyword" },
       "metadata": { "type": "object", "enabled": false },
       "name": { "type": "keyword" },
-      "objectRef": {
+      "ObjectRef": {
         "properties": {
           "apiGroup": { "type": "keyword" },
           "apiVersion": { "type": "keyword" },
@@ -17,10 +18,10 @@
           "namespace": { "type": "keyword" }
         }
       },
-      "requestObject": { "type": "object", "enabled": false },
-      "requestReceivedTimestamp": { "type": "date" },
-      "requestURI": { "type": "keyword" },
-      "responseObject": {
+      "RequestObject": { "type": "object", "enabled": false },
+      "RequestReceivedTimestamp": { "type": "date" },
+      "RequestURI": { "type": "keyword" },
+      "ResponseObject": {
         "properties": {
           "apiVersion": { "type": "keyword" },
           "kind": { "type": "keyword" },
@@ -30,24 +31,23 @@
           "data": { "type": "object", "enabled": false }
         }
       },
-      "responseStatus": {
+      "ResponseStatus": {
         "properties": {
           "code": { "type": "long" },
           "metadata": { "type": "object", "enabled": false }
         }
       },
-      "sourceIPs": { "type": "text" },
-      "stage": { "type": "text" },
-      "stageTimestamp": { "type": "date" },
-      "timestamp": { "type": "date" },
-      "user": {
+      "SourceIPs": { "type": "text" },
+      "Stage": { "type": "text" },
+      "StageTimestamp": { "type": "date" },
+      "User": {
         "properties": {
           "groups": { "type": "keyword" },
           "username": { "type": "keyword" },
           "uid": { "type": "keyword" }
         }
       },
-      "verb": { "type": "keyword" }
+      "Verb": { "type": "keyword" }
     }
   }
 }

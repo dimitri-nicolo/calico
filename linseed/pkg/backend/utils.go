@@ -4,8 +4,9 @@ import (
 	"log"
 	"strconv"
 
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	"github.com/sirupsen/logrus"
+
+	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 // FieldTracker is a helper for returning data from a CompositeAggregationKey.

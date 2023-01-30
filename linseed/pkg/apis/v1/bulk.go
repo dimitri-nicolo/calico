@@ -1,3 +1,5 @@
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+
 package v1
 
 // BulkResponse summarizes the results of a bulk creation operation.

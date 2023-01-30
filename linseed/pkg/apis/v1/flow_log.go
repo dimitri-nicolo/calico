@@ -2,7 +2,9 @@
 
 package v1
 
-import "net"
+import (
+	"net"
+)
 
 type FlowLog struct {
 	// Destination fields.

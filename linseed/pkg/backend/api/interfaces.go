@@ -5,6 +5,8 @@ package api
 import (
 	"context"
 
+	"k8s.io/apiserver/pkg/apis/audit"
+
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
@@ -51,4 +53,17 @@ type DNSLogBackend interface {
 
 	// Create creates the given logs.
 	Create(context.Context, ClusterInfo, []v1.DNSLog) (*v1.BulkResponse, error)
+}
+
+// AuditBackend defines the interface for interacting with audit logs.
+type AuditBackend interface {
+	// Initialize initializes the backend and must be called prior to using this interface.
+	// This should be called exactly once. Multiple calls to this function will have no effect.
+	Initialize(context.Context) error
+
+	// Create creates the given logs.
+	Create(context.Context, ClusterInfo, []audit.Event) error
+
+	// List lists logs that match the given parameters.
+	List(context.Context, ClusterInfo, v1.AuditLogParams) ([]audit.Event, error)
 }
