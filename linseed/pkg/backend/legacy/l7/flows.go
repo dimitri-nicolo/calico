@@ -1,5 +1,5 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
-package legacy
+package l7
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	kapiv1 "k8s.io/apimachinery/pkg/types"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/backend"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
@@ -22,7 +23,7 @@ type l7FlowBackend struct {
 	lmaclient lmaelastic.Client
 
 	// Track mapping of field name to its index in the ES response.
-	ft *fieldTracker
+	ft *backend.FieldTracker
 
 	// The sources and aggregations to use when building an aggregation query against ES.
 	compositeSources []lmaelastic.AggCompositeSourceInfo
@@ -66,7 +67,7 @@ func NewL7FlowBackend(c lmaelastic.Client) bapi.L7FlowBackend {
 
 	return &l7FlowBackend{
 		lmaclient: c,
-		ft:        newFieldTracker(compositeSources),
+		ft:        backend.NewFieldTracker(compositeSources),
 
 		// Configuration for the aggregation queries we make against ES.
 		compositeSources: compositeSources,
@@ -91,7 +92,7 @@ const (
 
 // List returns all flows which match the given options.
 func (b *l7FlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L7FlowParams) ([]v1.L7Flow, error) {
-	log := contextLogger(i)
+	log := bapi.ContextLogger(i)
 
 	if i.Cluster == "" {
 		log.Fatal("BUG: No cluster ID set on L7 flow request")

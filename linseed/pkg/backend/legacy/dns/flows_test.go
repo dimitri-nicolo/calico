@@ -1,6 +1,6 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-package legacy_test
+package dns_test
 
 import (
 	"context"
@@ -15,7 +15,8 @@ import (
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/dns"
+	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
@@ -31,7 +32,7 @@ func TestListDNSFlows(t *testing.T) {
 	client := lmaelastic.NewWithClient(esClient)
 
 	// Instantiate a FlowBackend.
-	b := legacy.NewDNSFlowBackend(client)
+	b := dns.NewDNSFlowBackend(client)
 
 	// Timeout the test after 5 seconds.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -69,7 +70,7 @@ func populateDNSLogData(t *testing.T, ctx context.Context, client lmaelastic.Cli
 	_, _ = client.Backend().DeleteIndex(index).Do(ctx)
 
 	// Instantiate a backend to create logs.
-	b := legacy.NewDNSLogBackend(client)
+	b := dns.NewDNSLogBackend(client)
 
 	// The expected flow log - we'll populate fields as we go.
 	expected := v1.DNSFlow{}
@@ -142,7 +143,7 @@ func populateDNSLogData(t *testing.T, ctx context.Context, client lmaelastic.Cli
 
 	// Refresh the index so that data is readily available for the test. Otherwise, we need to wait
 	// for the refresh interval to occur.
-	err = refreshIndex(ctx, client, index)
+	err = testutils.RefreshIndex(ctx, client, index)
 	require.NoError(t, err)
 
 	return expected

@@ -1,6 +1,6 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-package legacy_test
+package dns_test
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/dns"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
@@ -28,7 +28,7 @@ func TestCreateDNSLog(t *testing.T) {
 	client := lmaelastic.NewWithClient(esClient)
 
 	// Instantiate a backend.
-	b := legacy.NewDNSLogBackend(client)
+	b := dns.NewDNSLogBackend(client)
 
 	clusterInfo := bapi.ClusterInfo{
 		Cluster: "testcluster",

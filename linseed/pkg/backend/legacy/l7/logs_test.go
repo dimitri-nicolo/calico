@@ -1,4 +1,4 @@
-package legacy_test
+package l7_test
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/l7"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
@@ -23,7 +23,7 @@ func TestCreateL7Log(t *testing.T) {
 	client := lmaelastic.NewWithClient(esClient)
 
 	// Instantiate a flowlog backend.
-	b := legacy.NewL7LogBackend(client)
+	b := l7.NewL7LogBackend(client)
 
 	clusterInfo := bapi.ClusterInfo{
 		Cluster: "testcluster",

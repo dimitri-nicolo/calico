@@ -1,5 +1,5 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
-package legacy_test
+package l7_test
 
 import (
 	"context"
@@ -13,7 +13,8 @@ import (
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/l7"
+	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
@@ -29,7 +30,7 @@ func TestListL7Flows(t *testing.T) {
 	client := lmaelastic.NewWithClient(esClient)
 
 	// Instantiate a FlowBackend.
-	b := legacy.NewL7FlowBackend(client)
+	b := l7.NewL7FlowBackend(client)
 
 	// Timeout the test after 5 seconds.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -65,7 +66,7 @@ func populateL7FlowData(t *testing.T, ctx context.Context, client lmaelastic.Cli
 	_, _ = client.Backend().DeleteIndex(fmt.Sprintf("tigera_secure_ee_l7.%s.*", cluster)).Do(ctx)
 
 	// Instantiate a FlowBackend.
-	b := legacy.NewL7LogBackend(client)
+	b := l7.NewL7LogBackend(client)
 
 	// The expected flow log - we'll populate fields as we go.
 	expected := v1.L7Flow{}
@@ -164,7 +165,7 @@ func populateL7FlowData(t *testing.T, ctx context.Context, client lmaelastic.Cli
 	// Refresh the index so that data is readily available for the test. Otherwise, we need to wait
 	// for the refresh interval to occur.
 	index := fmt.Sprintf("tigera_secure_ee_l7.%s.*", cluster)
-	err = refreshIndex(ctx, client, index)
+	err = testutils.RefreshIndex(ctx, client, index)
 	require.NoError(t, err)
 
 	return expected

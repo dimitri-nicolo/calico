@@ -13,7 +13,7 @@ import (
 
 	"github.com/projectcalico/calico/linseed/pkg/backend"
 
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
 	"github.com/projectcalico/calico/linseed/pkg/handler/l3"
 
 	"github.com/kelseyhightower/envconfig"
@@ -36,22 +36,22 @@ func main() {
 	log.Debugf("Starting with %#v", cfg)
 
 	// Register for termination signals
-	var signalChan = make(chan os.Signal, 1)
+	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
-	//TODO: check if we need to add es connection as part of the ready probe
+	// TODO: check if we need to add es connection as part of the ready probe
 	esClient := backend.MustGetElasticClient(toElasticConfig(cfg))
-	flowLogsBackend := legacy.NewFlowLogBackend(esClient)
+	flowLogsBackend := flows.NewFlowLogBackend(esClient)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 	err := flowLogsBackend.Initialize(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	flowBackend := legacy.NewFlowBackend(esClient)
+	flowBackend := flows.NewFlowBackend(esClient)
 
 	// Start server
-	var addr = fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
+	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
 	server := server.NewServer(addr, cfg.FIPSModeEnabled,
 		server.WithMiddlewares(server.Middlewares(cfg)),
 		server.WithAPIVersionRoutes("/api/v1", server.UnpackRoutes(

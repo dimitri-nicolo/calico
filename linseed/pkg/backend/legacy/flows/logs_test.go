@@ -1,6 +1,6 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-package legacy_test
+package flows_test
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
@@ -28,7 +28,7 @@ func TestCreateFlowLog(t *testing.T) {
 	client := lmaelastic.NewWithClient(esClient)
 
 	// Instantiate a flowlog backend.
-	b := legacy.NewFlowLogBackend(client)
+	b := flows.NewFlowLogBackend(client)
 
 	clusterInfo := bapi.ClusterInfo{
 		Cluster: "testcluster",

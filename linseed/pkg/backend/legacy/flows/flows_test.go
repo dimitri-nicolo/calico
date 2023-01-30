@@ -1,6 +1,6 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-package legacy_test
+package flows_test
 
 import (
 	"context"
@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/olivere/elastic/v7"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
+	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
@@ -31,7 +31,7 @@ func TestListFlows(t *testing.T) {
 	client := lmaelastic.NewWithClient(esClient)
 
 	// Instantiate a FlowBackend.
-	b := legacy.NewFlowBackend(client)
+	b := flows.NewFlowBackend(client)
 
 	// Timeout the test after 5 seconds.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -67,7 +67,7 @@ func populateFlowData(t *testing.T, ctx context.Context, client lmaelastic.Clien
 	_, _ = client.Backend().DeleteIndex(fmt.Sprintf("tigera_secure_ee_flows.%s.*", cluster)).Do(ctx)
 
 	// Instantiate a FlowBackend.
-	b := legacy.NewFlowLogBackend(client)
+	b := flows.NewFlowLogBackend(client)
 
 	// The expected flow log - we'll populate fields as we go.
 	expected := v1.L3Flow{}
@@ -180,14 +180,8 @@ func populateFlowData(t *testing.T, ctx context.Context, client lmaelastic.Clien
 	// Refresh the index so that data is readily available for the test. Otherwise, we need to wait
 	// for the refresh interval to occur.
 	index := fmt.Sprintf("tigera_secure_ee_flows.%s.*", cluster)
-	err = refreshIndex(ctx, client, index)
+	err = testutils.RefreshIndex(ctx, client, index)
 	require.NoError(t, err)
 
 	return expected
-}
-
-func refreshIndex(ctx context.Context, c lmaelastic.Client, index string) error {
-	logrus.WithField("index", index).Info("[TEST] Refreshing index")
-	_, err := c.Backend().Refresh(index).Do(ctx)
-	return err
 }

@@ -1,4 +1,4 @@
-package legacy
+package l7
 
 import (
 	"context"
@@ -46,7 +46,7 @@ func (b *l7LogBackend) Initialize(ctx context.Context) error {
 
 // Create the given log in elasticsearch.
 func (b *l7LogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []bapi.L7Log) error {
-	log := contextLogger(i)
+	log := bapi.ContextLogger(i)
 
 	// Initialize if we haven't yet.
 	err := b.Initialize(ctx)
