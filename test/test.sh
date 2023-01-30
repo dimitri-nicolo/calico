@@ -141,6 +141,17 @@ EKS_CLOUDWATCH_LOG_FETCH_INTERVAL=10
 EOM
 )
 
+LINSEED_VARS=$(cat <<EOM
+LINSEED_TOKEN=SAMPLETOKEN
+LINSEED_CA_PATH=/etc/flu/ca.pem
+LINSEED_ENDPOINT=ENDPOINT
+LINSEED_CERT_PATH=/etc/flu/crt.pem
+LINSEED_KEY_PATH=/etc/flu/key.pem
+LINSEED_FLUSH_INTERVAL=5s
+EOM
+)
+
+
 # Test with ES not secure
 cat > $TEST_DIR/tmp/es-no-secure.env <<EOM
 $STANDARD_ENV_VARS
@@ -309,6 +320,21 @@ SPLUNK_CA_FILE=/etc/ssl/splunk/ca.pem
 EOM
 
 checkConfiguration $TEST_DIR/tmp/splunk-self-signed-ca.env splunk-self-signed-ca "Splunk - self signed ca config"
+
+
+# Test with linssed enabled
+cat > $TEST_DIR/tmp/linseed.env << EOM
+$STANDARD_ENV_VARS
+FLUENTD_ES_SECURE=true
+LINSEED_ENABLED=true
+$ES_SECURE_VARS
+$LINSEED_VARS
+EOM
+
+TMP=$(tempfile)
+checkConfiguration $TEST_DIR/tmp/linseed.env linseed "LINSEED API with default params"
+
+
 
 rm -f $TMP
 

@@ -46,6 +46,9 @@ if [ "${MANAGED_K8S}" == "true" ]; then
   source ${ROOT_DIR}/bin/syslog-environment.sh
   source ${ROOT_DIR}/bin/syslog-config.sh
 
+  source ${ROOT_DIR}/bin/linseed-environment.sh
+  source ${ROOT_DIR}/bin/linseed-config.sh
+
   source ${ROOT_DIR}/bin/splunk-environment.sh
   source ${ROOT_DIR}/bin/splunk-config.sh
 
@@ -174,6 +177,9 @@ fi
 
 source ${ROOT_DIR}/bin/syslog-environment.sh
 source ${ROOT_DIR}/bin/syslog-config.sh
+
+source ${ROOT_DIR}/bin/linseed-environment.sh
+source ${ROOT_DIR}/bin/linseed-config.sh
 
 source ${ROOT_DIR}/bin/splunk-environment.sh
 source ${ROOT_DIR}/bin/splunk-config.sh

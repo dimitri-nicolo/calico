@@ -74,6 +74,7 @@ COPY output_match /fluentd/etc/output_match
 COPY outputs /fluentd/etc/outputs
 COPY inputs /fluentd/etc/inputs
 COPY filters /fluentd/etc/filters
+COPY rubyplugin /fluentd/plugins
 
 # Compliance reports logs needs a regex pattern because there will be
 # multiple logs (one per report type), e.g. compliance.network-access.reports.log
@@ -114,7 +115,19 @@ ENV ELASTIC_BGP_INDEX_REPLICAS=0
 ENV ELASTIC_RUNTIME_INDEX_SHARDS=1
 ENV ELASTIC_RUNTIME_INDEX_REPLICAS=0
 
+ENV LINSEED_ENABLED=true
+
 ENV SYSLOG_PACKET_SIZE=1024
+
+#LINSEED DEFAULT PARAMS
+ENV LINSEED_ENABLED=false
+ENV LINSEED_ENDPOINT=ENDPOINT
+ENV LINSEED_TOKEN=SAMPLETOKEN
+ENV LINSEED_CA_PATH=/etc/flu/ca.pem
+ENV LINSEED_CERT_PATH=/etc/flu/crt.pem
+ENV LINSEED_KEY_PATH=/etc/flu/key.pem
+ENV LINSEED_FLUSH_INTERVAL=5s
+
 
 COPY readiness.sh /bin/
 COPY liveness.sh /bin/
@@ -126,6 +139,8 @@ COPY sumo-environment.sh /bin/
 COPY sumo-config.sh /bin/
 COPY ee_entrypoint.sh /bin/
 COPY eks/bin/eks-log-forwarder-startup.exe /bin/
+COPY linseed-environment.sh /bin/
+COPY linseed-config.sh /bin/
 
 RUN powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_flows" \
  && powershell -command "mkdir $env:ROOT_DIR\fluentd\etc\output_dns" \
