@@ -12,3 +12,6 @@ var L7LogTemplate string
 
 //go:embed dnslog.json
 var DNSLogTemplate string
+
+//go:embed audit.json
+var AuditTemplate string
