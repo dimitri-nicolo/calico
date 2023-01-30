@@ -144,6 +144,7 @@ var _ = infrastructure.DatastoreDescribe("_BPF-SAFE_ VXLAN topology before addin
 				if BPFMode() {
 					ensureAllNodesBPFProgramsAttached(felixes)
 				}
+
 				cc = &connectivity.Checker{}
 			})
 
