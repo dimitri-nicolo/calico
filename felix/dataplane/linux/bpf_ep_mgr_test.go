@@ -190,7 +190,7 @@ var _ = Describe("BPF Endpoint Manager", func() {
 		maps                 *bpfmap.Maps
 		rrConfigNormal       rules.Config
 		ruleRenderer         rules.RuleRenderer
-		filterTableV4        iptablesTable
+		filterTableV4        IptablesTable
 		lookupsCache         *calc.LookupsCache
 		actionOnDrop         string
 		enableTcpStats       bool
