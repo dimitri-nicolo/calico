@@ -27,8 +27,6 @@ import (
 var (
 	//go:embed testdata/input/all_l3flows_within_timerange.json
 	withinTimeRange string
-	//go:embed testdata/input/missing_timerange.json
-	missingTimeRange string
 
 	//go:embed testdata/output/missing_timerange_error_msg.json
 	missingTimeRangeErrorMsg string
@@ -68,6 +66,7 @@ func TestNetworkFlows_Post(t *testing.T) {
 
 			rec := httptest.NewRecorder()
 			req, err := http.NewRequest("POST", n.URL(), bytes.NewBufferString(tt.reqBody))
+			req.Header.Set("Content-Type", "application/json")
 			require.NoError(t, err)
 
 			n.Serve().ServeHTTP(rec, req)

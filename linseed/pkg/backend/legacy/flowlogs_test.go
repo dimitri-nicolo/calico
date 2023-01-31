@@ -60,8 +60,9 @@ func TestCreateFlowLog(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err = b.Create(ctx, clusterInfo, []v1.FlowLog{f})
+	response, err := b.Create(ctx, clusterInfo, []v1.FlowLog{f})
 	require.NoError(t, err)
+	require.Equal(t, response.Failed, 0)
 
 	// Clean up after ourselves by deleting the index.
 	_, err = esClient.DeleteIndex(fmt.Sprintf("tigera_secure_ee_flows.%s", clusterInfo.Cluster)).Do(ctx)

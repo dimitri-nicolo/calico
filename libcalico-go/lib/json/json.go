@@ -14,7 +14,10 @@
 
 package json
 
-import jsoniter "github.com/json-iterator/go"
+import (
+	jsoniter "github.com/json-iterator/go"
+	"io"
+)
 
 // Marshal is a drop in replacement for encoding/json.Marshall, which uses jsoniter for better performance.
 func Marshal(v any) ([]byte, error) {
@@ -24,4 +27,8 @@ func Marshal(v any) ([]byte, error) {
 // Unmarshal is a drop in replacement for encoding/json.Unmarshal which uses jsoniter for better performance.
 func Unmarshal(data []byte, v any) error {
 	return jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(data, v)
+}
+
+func NewDecoder(reader io.Reader) *jsoniter.Decoder {
+	return jsoniter.NewDecoder(reader)
 }

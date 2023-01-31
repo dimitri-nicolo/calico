@@ -4,7 +4,10 @@ package handler
 
 import (
 	"bytes"
-	"encoding/json"
+	"strings"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
+
 	"errors"
 	"io"
 	"net/http"
@@ -18,22 +21,22 @@ import (
 // an HTTP request body can have
 const maxBytes = 2000000
 
-// ReqParams is the collection of request parameters types
+// RequestParams is the collection of request parameters types
 // that will be decoded and validated from an HTTP request
-type ReqParams interface {
+type RequestParams interface {
 	v1.L3FlowParams | v1.L7FlowParams
 }
 
-// BulkReqParams is the collection of request parameters types
+// BulkRequestParams is the collection of request parameters types
 // for bulk requests that will be decoded and validated from an HTTP request
-type BulkReqParams interface {
+type BulkRequestParams interface {
 	v1.FlowLog
 }
 
 // DecodeAndValidateBulkParams will decode and validate input parameters
 // passed on the HTTP body of a bulk request. In case the input parameters
 // are invalid or cannot be decoded, an HTTPStatusError will be returned
-func DecodeAndValidateBulkParams[T BulkReqParams](w http.ResponseWriter, req *http.Request) ([]T, error) {
+func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req *http.Request) ([]T, error) {
 	var bulkParams []T
 
 	// Check content-type
@@ -84,11 +87,21 @@ func DecodeAndValidateBulkParams[T BulkReqParams](w http.ResponseWriter, req *ht
 		}
 		// decode each newline to its correspondent structure
 		var input T
-		if err := json.Unmarshal(line, &input); err != nil {
-			return bulkParams, &httputils.HttpStatusError{
-				Status: http.StatusBadRequest,
-				Msg:    "Request body contains badly-formed JSON",
-				Err:    err,
+		dec := json.NewDecoder(bytes.NewReader(line))
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(&input); err != nil {
+			if strings.Contains(err.Error(), "found unknown field: newfields") {
+				return bulkParams, &httputils.HttpStatusError{
+					Status: http.StatusBadRequest,
+					Msg:    "Unknown fields detected in the input JSON",
+					Err:    err,
+				}
+			} else {
+				return bulkParams, &httputils.HttpStatusError{
+					Status: http.StatusBadRequest,
+					Msg:    "Request body contains badly-formed JSON",
+					Err:    err,
+				}
 			}
 		}
 		bulkParams = append(bulkParams, input)
@@ -100,7 +113,7 @@ func DecodeAndValidateBulkParams[T BulkReqParams](w http.ResponseWriter, req *ht
 // DecodeAndValidateReqParams will decode and validate input parameters
 // passed on the HTTP body of a request. In case the input parameters
 // are invalid or cannot be decoded, an HTTPStatusError will be returned
-func DecodeAndValidateReqParams[T ReqParams](w http.ResponseWriter, req *http.Request) (*T, error) {
+func DecodeAndValidateReqParams[T RequestParams](w http.ResponseWriter, req *http.Request) (*T, error) {
 	reqParams := new(T)
 
 	if req.Header.Get("Content-Type") != "application/json" {

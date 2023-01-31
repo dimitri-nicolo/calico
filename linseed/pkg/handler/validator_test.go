@@ -25,7 +25,7 @@ import (
 const jsonContentType = "application/json"
 
 func TestDecodeAndValidateReqParams(t *testing.T) {
-	type testCase[T handler.ReqParams] struct {
+	type testCase[T handler.RequestParams] struct {
 		name       string
 		req        *http.Request
 		want       *T
@@ -55,7 +55,6 @@ func TestDecodeAndValidateReqParams(t *testing.T) {
 
 		{"with time range", req(marshall[v1.L3FlowParams](params), jsonContentType), &params,
 			false, "", 200},
-		//TODO: Add more test cases
 	}
 
 	for _, tt := range tests {
@@ -110,7 +109,7 @@ func encode[T any](params []T) string {
 }
 
 func TestValidateBulkParams(t *testing.T) {
-	type testCase[T handler.BulkReqParams] struct {
+	type testCase[T handler.BulkRequestParams] struct {
 		name       string
 		req        *http.Request
 		want       []T
@@ -165,11 +164,10 @@ func TestValidateBulkParams(t *testing.T) {
 			true, "Received a request with content-type that is not supported", http.StatusUnsupportedMediaType},
 		{"newline in json field value", req("{\"dest_name_aggr\":\"lorem lipsum\n\"}", jsonContentType), []v1.FlowLog{},
 			true, "Request body contains badly-formed JSON", http.StatusBadRequest},
+		{"new fields", req("{\"newfields\":\"any\"}", jsonContentType), []v1.FlowLog{},
+			true, "Unknown fields detected in the input JSON", http.StatusBadRequest},
 
 		{"escaped newline in json field value", req("{\"dest_name_aggr\":\"lorem lipsum\\n\"}", jsonContentType), []v1.FlowLog{{DestNameAggr: "lorem lipsum\n"}},
-			false, "", http.StatusOK},
-		// TODO: Is this correct ? Should we allow new fields to be passed in or should we reject them ?
-		{"new fields", req("{\"newfields\":\"any\"}", jsonContentType), []v1.FlowLog{{}},
 			false, "", http.StatusOK},
 		{"bulk insert", req(encode[v1.FlowLog](params), jsonContentType), params, false, "", 200},
 	}

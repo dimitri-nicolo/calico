@@ -6,7 +6,7 @@ import "net/http"
 
 // Handler is a custom handler that defines what HTTP actions are provided when querying a resource
 type Handler interface {
-	// Serve determines how requests are serviced by this handler
+	// Serve returns a function which processes requests sent to this handle
 	Serve() http.HandlerFunc
 
 	// URL will return the URL path defined to make queries

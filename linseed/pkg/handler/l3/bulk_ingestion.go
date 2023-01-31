@@ -38,13 +38,19 @@ func (b BulkIngestion) URL() string {
 
 func (b BulkIngestion) Serve() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		logs, err := handler.DecodeAndValidateBulkParams(w, req)
+		logs, err := handler.DecodeAndValidateBulkParams[v1.FlowLog](w, req)
 
 		if err != nil {
 			log.WithError(err).Error("failed to decode/validate request parameters")
 			var httpErr *httputils.HttpStatusError
 			if errors.As(err, &httpErr) {
 				httputils.JSONError(w, httpErr, httpErr.Status)
+			} else {
+				httputils.JSONError(w, &httputils.HttpStatusError{
+					Err:    err,
+					Msg:    err.Error(),
+					Status: http.StatusBadRequest,
+				}, http.StatusBadRequest)
 			}
 			return
 		}
@@ -56,7 +62,7 @@ func (b BulkIngestion) Serve() http.HandlerFunc {
 			Tenant:  middleware.TenantIDFromContext(req.Context()),
 		}
 
-		err = b.backend.Create(ctx, clusterInfo, logs)
+		response, err := b.backend.Create(ctx, clusterInfo, logs)
 		if err != nil {
 			httputils.JSONError(w, &httputils.HttpStatusError{
 				Status: http.StatusInternalServerError,
@@ -65,5 +71,6 @@ func (b BulkIngestion) Serve() http.HandlerFunc {
 			}, http.StatusInternalServerError)
 			return
 		}
+		httputils.Encode(w, response)
 	}
 }

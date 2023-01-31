@@ -47,13 +47,13 @@ func (b *flowLogBackend) Initialize(ctx context.Context) error {
 }
 
 // Create the given flow log in elasticsearch.
-func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v1.FlowLog) error {
+func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v1.FlowLog) (*v1.BulkResponse, error) {
 	log := contextLogger(i)
 
 	// Initialize if we haven't yet.
 	err := b.Initialize(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if i.Cluster == "" {
@@ -69,12 +69,6 @@ func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []
 	bulk := b.client.Bulk()
 
 	for _, f := range logs {
-		if f.Cluster != "" {
-			// For the legacy backend, the Cluster ID is encoded into the index
-			// and not the log itself. Fail the entire batch.
-			return fmt.Errorf("cluster ID should not be set on flow log")
-		}
-
 		// Add this log to the bulk request.
 		req := elastic.NewBulkIndexRequest().Index(index).Doc(f)
 		bulk.Add(req)
@@ -87,10 +81,28 @@ func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []
 	resp, err := bulk.Do(ctx)
 	if err != nil {
 		log.Errorf("Error writing flow log: %s", err)
-		return fmt.Errorf("failed to write flow log: %s", err)
+		return nil, fmt.Errorf("failed to write flow log: %s", err)
 	}
+
+	resp.Failed()
+	resp.Succeeded()
 
 	log.WithField("count", len(logs)).Infof("Wrote flow log to index: %+v", resp)
 
-	return nil
+	bulkErrors := []v1.BulkError{}
+
+	if resp.Errors {
+		for _, fail := range resp.Failed() {
+			bulkErrors = append(bulkErrors, v1.BulkError{
+				Message: fmt.Sprintf("%s failed with %s due to %s", fail.Error.ResourceId, fail.Error.Type, fail.Error.Reason),
+			})
+		}
+	}
+
+	return &v1.BulkResponse{
+		Total:     len(resp.Items),
+		Succeeded: len(resp.Succeeded()),
+		Failed:    len(resp.Failed()),
+		Errors:    bulkErrors,
+	}, nil
 }

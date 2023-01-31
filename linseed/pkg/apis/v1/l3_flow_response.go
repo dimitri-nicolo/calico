@@ -137,5 +137,5 @@ type Service struct {
 }
 
 type L3FlowResponse struct {
-	L3Flows []L3Flow `json:"l3_flows" validate:"omitempty"`
+	L3Flows []L3Flow `json:"l3_flows,omitempty" validate:"omitempty"`
 }

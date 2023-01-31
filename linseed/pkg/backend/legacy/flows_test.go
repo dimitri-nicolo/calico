@@ -171,8 +171,9 @@ func populateFlowData(t *testing.T, ctx context.Context, client lmaelastic.Clien
 		expected.DestinationLabels[0].Values = append(expected.DestinationLabels[0].Values, fmt.Sprintf("%d", i))
 	}
 
-	err := b.Create(ctx, bapi.ClusterInfo{Cluster: cluster}, batch)
+	response, err := b.Create(ctx, bapi.ClusterInfo{Cluster: cluster}, batch)
 	require.NoError(t, err)
+	require.Equal(t, response.Failed, 0)
 
 	// Refresh the index so that data is readily available for the test. Otherwise, we need to wait
 	// for the refresh interval to occur.

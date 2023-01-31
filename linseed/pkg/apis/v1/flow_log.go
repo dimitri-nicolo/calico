@@ -73,10 +73,6 @@ type FlowLog struct {
 
 	StartTime string `json:"start_time"`
 	EndTime   string `json:"end_time"`
-
-	// Cluster should not be set directly by calling code.
-	// Rather, this is set by the backend when creating the flow log.
-	Cluster string `json:"cluster,omitempty"`
 }
 
 type FlowLogPolicy struct {
@@ -85,4 +81,16 @@ type FlowLogPolicy struct {
 
 type FlowLogLabels struct {
 	Labels []string `json:"labels"`
+}
+
+type BulkError struct {
+	Message string `json:"message"`
+}
+
+type BulkResponse struct {
+	Total     int `json:"total"`
+	Succeeded int `json:"succeeded"`
+	Failed    int `json:"failed"`
+
+	Errors []BulkError `json:"errors,omitempty"`
 }
