@@ -80,7 +80,7 @@ func TestBulkIngestion_Serve(t *testing.T) {
 
 			rec := httptest.NewRecorder()
 			req, err := http.NewRequest("POST", b.URL(), bytes.NewBufferString(tt.reqBody))
-			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Content-Type", "application/x-ndjson")
 			require.NoError(t, err)
 
 			b.Serve().ServeHTTP(rec, req)
