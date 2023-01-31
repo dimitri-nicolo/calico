@@ -168,7 +168,7 @@ define build_static_cgo_boring_binary
     $(DOCKER_RUN) -e CGO_ENABLED=1 $(GO_BUILD_IMAGE):$(GO19_BUILD_VER) \
         sh -c '$(GIT_CONFIG_SSH) \
         GOEXPERIMENT=boringcrypto go build -o $(2)  \
-        -tags boringcrypto,osusergo,netgo -v -buildvcs=false \
+        -tags fipsstrict,osusergo,netgo -v -buildvcs=false \
         -ldflags "$(VERSION_FLAGS) -linkmode external -extldflags -static" \
         $(1)'
 endef
