@@ -4,6 +4,7 @@ package anomalydetection
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -53,15 +55,15 @@ var (
 )
 
 type adDetectionReconciler struct {
-	managementClusterCtx context.Context
+	managementClusterCtx  context.Context
+	managementClusterName string
 
 	k8sClient                   kubernetes.Interface
 	calicoCLI                   calicoclient.Interface
 	podTemplateQuery            podtemplate.ADPodTemplateQuery
 	detectionCycleResourceCache rcache.ResourceCache
 
-	clusterName string
-	namespace   string
+	namespace string
 
 	detectionJobsMutex        sync.Mutex
 	detectionADDetectorStates map[string]detectionCycleState
@@ -147,33 +149,48 @@ func (r *adDetectionReconciler) reconcile() bool {
 		Namespace: r.namespace,
 	}
 
-	detectionCronJobToReconcileInterface, found := r.detectionCycleResourceCache.Get(detectionCronJobNameKey)
+	forceDelete := false
+	// skip the check if it is an udpate to a detector for the management cluster
+	if detectionJobState.ClusterName != r.managementClusterName {
+		// variant tenant id might be present in calico cloud but managed clusters resoruces would not contain this name
+		clusterNameToQuery := detectionJobState.ClusterName
+		tenantIDPrefix := os.Getenv("ELASTIC_INDEX_TENANT_ID")
+		if strings.HasPrefix(clusterNameToQuery, tenantIDPrefix) {
+			clusterNameToQuery = strings.Trim(clusterNameToQuery, tenantIDPrefix+".")
+		}
 
-	if !found {
+		mc, err := r.calicoCLI.ProjectcalicoV3().ManagedClusters().Get(context.Background(), clusterNameToQuery, metav1.GetOptions{})
+		if err != nil && !k8serrors.IsNotFound(err) {
+			log.Errorf("invalid state, received request to delete training cronjob %s, not marked for deletion",
+				detectionCronJobNameKey)
+			return true
+		}
+
+		forceDelete = k8serrors.IsNotFound(err) || !clusterConnected(mc)
+	}
+
+	detectionCronJobToReconcileInterface, found := r.detectionCycleResourceCache.Get(detectionCronJobNameKey)
+	if forceDelete || (!found && detectionJobState.GlobalAlert == nil && detectionJobState.CronJob == nil) {
 		// not found in the resource cache, check the state if it is marked for deletion
 
 		// Handle Deletion
 		// nil GlobalAlert and Cronjob indicates entry is indicated for deletion
-		if detectionJobState.GlobalAlert == nil && detectionJobState.CronJob == nil {
-			// at this point the CronJob as a value in the ResourceCache has been removed, we can only deal with data in the
-			// reconciler's detection state map
-			log.Infof("Deleting detection cronJob job for %s", detectionCronJobNameKey)
+		// at this point the CronJob as a value in the ResourceCache has been removed, we can only deal with data in the
+		// reconciler's detection state map
+		log.Infof("Deleting detection cronJob job for %s", detectionCronJobNameKey)
 
-			// update status before deletion with Active == false
-			err := util.DeleteCronJobWithRetry(r.managementClusterCtx, r.k8sClient, r.namespace,
-				detectionCronJobNameKey)
+		// update status before deletion with Active == false
+		err := util.DeleteCronJobWithRetry(r.managementClusterCtx, r.k8sClient, r.namespace,
+			detectionCronJobNameKey)
 
-			if err != nil && !errors.IsNotFound(err) { // do not report error if it's not found as it is already deleted
-				log.WithError(err).Errorf("Unable to delete stored detection CronJob %s", detectionCronJobNameKey)
-			}
-
-			delete(r.detectionADDetectorStates, detectionCronJobNameKey)
-			return true
-		} else { // not in resource cache and state does not think it's for delete, throw error
-			log.Errorf("invalid cache, received request to delete detection cronjob %s, not marked for deletion",
-				detectionCronJobNameKey)
-			return true
+		if err != nil && !errors.IsNotFound(err) { // do not report error if it's not found as it is already deleted
+			log.WithError(err).Errorf("Unable to delete stored detection CronJob %s", detectionCronJobNameKey)
 		}
+
+		delete(r.detectionADDetectorStates, detectionCronJobNameKey)
+		r.detectionCycleResourceCache.Delete(detectionCronJobNameKey)
+		return true
+
 	}
 
 	detectionCronJobToReconcile, ok := detectionCronJobToReconcileInterface.(batchv1.CronJob)
@@ -444,6 +461,24 @@ func (r *adDetectionReconciler) removeDetector(detectionState DetectionCycleRequ
 
 	detectionStateKey := r.getDetectionCycleCronJobNameForGlobaAlert(detectionState.ClusterName, detectionState.GlobalAlert.Name)
 	r.removeDetectionCycleFromResourceCache(detectionStateKey)
+}
+
+func (r *adDetectionReconciler) stopAllDetectionCyclesForCluster(clusterName string) error {
+	cronJobList, err := r.k8sClient.BatchV1().CronJobs(r.namespace).List(r.managementClusterCtx, metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s", ClusterKey, clusterName),
+	})
+
+	log.Infof("removing all cronjobs for cluster %s", clusterName)
+
+	if err != nil {
+		return err
+	}
+
+	for _, detectionCronJobForCluster := range cronJobList.Items {
+		r.removeDetectionCycleFromResourceCache(detectionCronJobForCluster.Name)
+	}
+
+	return nil
 }
 
 func (r *adDetectionReconciler) removeDetectionCycleFromResourceCache(key string) {

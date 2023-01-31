@@ -25,4 +25,6 @@ type AnomalyDetectionController interface {
 	// RemoveManagedJob removes from the list of jobs managed by the ADDetectorController.
 	// Usually called when a Done() signal is received from the parent context
 	RemoveDetector(resource interface{}) error
+
+	StopADForCluster(clusterName string)
 }

@@ -55,8 +55,9 @@ type adJobTrainingController struct {
 }
 
 type TrainingDetectorsRequest struct {
-	ClusterName string
-	GlobalAlert *v3.GlobalAlert
+	ClusterName      string
+	IsManagedCluster bool
+	GlobalAlert      *v3.GlobalAlert
 }
 
 // NewADJobTrainingController creates and reconciles cycles that train for all the AnomalyDetection models daily
@@ -66,6 +67,7 @@ func NewADJobTrainingController(k8sClient kubernetes.Interface,
 	clusterName string) controller.AnomalyDetectionController {
 
 	adTrainingReconciler := &adJobTrainingReconciler{
+		managementClusterName:       clusterName,
 		calicoCLI:                   calicoCLI,
 		k8sClient:                   k8sClient,
 		podTemplateQuery:            podTemplateQuery,
@@ -158,8 +160,13 @@ func (c *adJobTrainingController) RemoveDetector(resource interface{}) error {
 	return nil
 }
 
+func (c *adJobTrainingController) StopADForCluster(clusterName string) {
+	_ = c.adTrainingReconciler.stopTrainigCycleForCluster(clusterName)
+}
+
 // Close cancels the ADJobController worker context and removes health check for all
-//  the objects that worker watches.
+//
+//	the objects that worker watches.
 func (c *adJobTrainingController) Close() {
 	c.adTrainingReconciler.Close()
 	c.cancel()

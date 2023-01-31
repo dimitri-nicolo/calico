@@ -60,7 +60,7 @@ func NewADJobDetectionController(ctx context.Context, k8sClient kubernetes.Inter
 		k8sClient:                 k8sClient,
 		podTemplateQuery:          podTemplateQuery,
 		detectionADDetectorStates: make(map[string]detectionCycleState),
-		clusterName:               clusterName,
+		managementClusterName:     clusterName,
 		namespace:                 namespace,
 	}
 
@@ -116,6 +116,10 @@ func (c *adJobDetectionController) AddDetector(resource interface{}) error {
 		return err
 	}
 	return nil
+}
+
+func (c *adJobDetectionController) StopADForCluster(clusterName string) {
+	_ = c.adJobDetectionReconciler.stopAllDetectionCyclesForCluster(clusterName)
 }
 
 // RemoveDetector removes from the list of jobs managed by the detection controller.

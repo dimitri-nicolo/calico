@@ -64,7 +64,8 @@ func (r *managedClusterReconciler) Reconcile(namespacedName types.NamespacedName
 	}
 
 	if k8serrors.IsNotFound(err) {
-		// we are done closing the goroutine, nothing more to do for deleted managed cluster
+		// we are done closing the goroutine, only stop AD Operations for deleted managed cluster
+		r.stopADForCluster(namespacedName.Name)
 		return nil
 	}
 
@@ -74,9 +75,20 @@ func (r *managedClusterReconciler) Reconcile(namespacedName types.NamespacedName
 		}
 	} else {
 		log.Infof("Managed cluster %s is not connected", namespacedName.Name)
+		r.stopADForCluster(namespacedName.Name)
 	}
 
 	return nil
+}
+
+func (r *managedClusterReconciler) stopADForCluster(clusterName string) {
+	if r.adTrainingController != nil {
+		r.adTrainingController.StopADForCluster(clusterName)
+	}
+
+	if r.adDetectionController != nil {
+		r.adDetectionController.StopADForCluster(clusterName)
+	}
 }
 
 // startManagedClusterAlertController creates a client for the managed cluster, starts a new GlobalAlertController

@@ -4,6 +4,7 @@ package anomalydetection
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -38,7 +39,8 @@ var (
 )
 
 type adJobTrainingReconciler struct {
-	managementClusterCtx context.Context
+	managementClusterCtx  context.Context
+	managementClusterName string
 
 	k8sClient                  kubernetes.Interface
 	calicoCLI                  calicoclient.Interface
@@ -61,12 +63,12 @@ type trainingCycleStatePerCluster struct {
 // listTrainingCronJobs called by r.trainingCycleStatePerCluster (rcache.ResourceCache) to poll the current
 // deployed Cronjobs relating to the DetectionCycleState controlled by the Detection Controller
 func (r *adJobTrainingReconciler) listTrainingCronJobs() (map[string]interface{}, error) {
-	detectionCronJobs := make(map[string]interface{})
-	detectionJobLabelByteStr := maputil.CreateLabelValuePairStr(TrainingCycleLabels())
+	trainingCronJobs := make(map[string]interface{})
+	trainingJobLabelByteStr := maputil.CreateLabelValuePairStr(TrainingCycleLabels())
 
-	detectionCronJobList, err := r.k8sClient.BatchV1().CronJobs(r.namespace).List(r.managementClusterCtx,
+	trainingCronJobList, err := r.k8sClient.BatchV1().CronJobs(r.namespace).List(r.managementClusterCtx,
 		metav1.ListOptions{
-			LabelSelector: detectionJobLabelByteStr,
+			LabelSelector: trainingJobLabelByteStr,
 		})
 
 	if err != nil {
@@ -74,13 +76,13 @@ func (r *adJobTrainingReconciler) listTrainingCronJobs() (map[string]interface{}
 		return nil, err
 	}
 
-	for _, detectionCronJob := range detectionCronJobList.Items {
-		util.EmptyCronJobResourceValues(&detectionCronJob)
+	for _, trainingCronJob := range trainingCronJobList.Items {
+		util.EmptyCronJobResourceValues(&trainingCronJob)
 
-		detectionCronJobs[detectionCronJob.Name] = detectionCronJob
+		trainingCronJobs[trainingCronJob.Name] = trainingCronJob
 	}
 
-	return detectionCronJobs, nil
+	return trainingCronJobs, nil
 }
 
 func (r *adJobTrainingReconciler) Run(stop <-chan struct{}) {
@@ -130,33 +132,49 @@ func (r *adJobTrainingReconciler) reconcile() bool {
 		return true
 	}
 
-	trainingCronJobToReconcileInterface, found := r.trainingCycleResourceCache.Get(trainingCronJobNameKey)
-	if !found {
-		// not found in the resource cache, check the state if it is marked for deletion
+	forceDelete := false
+	// skip the check if it is an udpate to a detector for the management cluster
+	if trainingCronJobStaterForCluster.ClusterName != r.managementClusterName {
+		// variant tenant id might be present in calico cloud but managed clusters resoruces would not contain this name
+		clusterNameToQuery := trainingCronJobStaterForCluster.ClusterName
+		tenantIDPrefix := os.Getenv("ELASTIC_INDEX_TENANT_ID")
+		if strings.HasPrefix(trainingCronJobStaterForCluster.ClusterName, tenantIDPrefix) {
+			clusterNameToQuery = strings.Trim(clusterNameToQuery, tenantIDPrefix+".")
+		}
 
-		// Handle Deletion
-		// only remove the training cronjob for the cluster if there are no globalalerts deployed for the cluster
-		if trainingCronJobStaterForCluster.GlobalAlerts == nil &&
-			trainingCronJobStaterForCluster.CronJob == nil {
-			// at this point the CronJob as a value in the ResourceCache has been removed, we can only deal with data in the
-			// reconciler's training state map
-			log.Infof("Deleting training cronJob job for %s", trainingCronJobNameKey)
-
-			err := util.DeleteCronJobWithRetry(r.managementClusterCtx, r.k8sClient, r.namespace,
-				trainingCronJobNameKey)
-
-			if err != nil && !k8serrors.IsNotFound(err) { // do not report error if it's not found as it is already deleted
-				log.WithError(err).Errorf("Unable to delete stored training CronJob %s", trainingCronJobNameKey)
-				return true
-			}
-
-			delete(r.trainingDetectorsPerCluster, trainingCronJobNameKey)
-			return true
-		} else {
-			log.Errorf("invalid state, received request to delete training cronjob %s, not marked for deletion",
+		managedCluster, err := r.calicoCLI.ProjectcalicoV3().ManagedClusters().Get(context.Background(), clusterNameToQuery, metav1.GetOptions{})
+		if err != nil && !k8serrors.IsNotFound(err) {
+			log.Errorf("unable to query for required managed cluster info for %s",
 				trainingCronJobNameKey)
 			return true
 		}
+
+		forceDelete = k8serrors.IsNotFound(err) || !clusterConnected(managedCluster)
+	}
+	trainingCronJobToReconcileInterface, found := r.trainingCycleResourceCache.Get(trainingCronJobNameKey)
+
+	if forceDelete || (!found && trainingCronJobStaterForCluster.GlobalAlerts == nil &&
+		trainingCronJobStaterForCluster.CronJob == nil) {
+		// forcedelete or not found in the resource cache and check the state if it is marked for deletion
+
+		// Handle Deletion
+		// only remove the training cronjob for the cluster if there are no globalalerts deployed for the cluster
+
+		// at this point the CronJob as a value in the ResourceCache has been removed, we can only deal with data in the
+		// reconciler's training state map
+		log.Infof("Deleting training cronJob job for %s", trainingCronJobNameKey)
+
+		err := util.DeleteCronJobWithRetry(r.managementClusterCtx, r.k8sClient, r.namespace,
+			trainingCronJobNameKey)
+
+		if err != nil && !k8serrors.IsNotFound(err) { // do not report error if it's not found as it is already deleted
+			log.WithError(err).Errorf("Unable to delete stored training CronJob %s", trainingCronJobNameKey)
+			return true
+		}
+		r.trainingCycleResourceCache.Delete(trainingCronJobNameKey)
+		delete(r.trainingDetectorsPerCluster, trainingCronJobNameKey)
+
+		return true
 	}
 
 	trainingCronJobToReconcile, ok := trainingCronJobToReconcileInterface.(batchv1.CronJob)
@@ -411,7 +429,7 @@ func (r *adJobTrainingReconciler) createInitialTrainingJobForCluster(
 	clusterName string, cronJobName string, adTrainingJobPT v1.PodTemplate,
 ) (*batchv1.Job, error) {
 	trainingLabels := TrainingJobLabels()
-	trainingLabels["cluster"] = clusterName
+	trainingLabels[ClusterKey] = clusterName
 
 	// Restart policy set to 'Never' and a backoffLimit of zero means that in the event that it
 	// results in an error, the initial training job would not be put in a crashloop since we have the
@@ -514,6 +532,21 @@ func (r *adJobTrainingReconciler) removeTrainingCycles(mcs TrainingDetectorsRequ
 	managedTrainingDetectorsForCluster.CronJob = trainingCronJob
 	r.trainingDetectorsPerCluster[trainingCycleCronJobNameKey] = managedTrainingDetectorsForCluster
 	r.trainingCycleResourceCache.Set(trainingCycleCronJobNameKey, *managedTrainingDetectorsForCluster.CronJob)
+	return nil
+}
+
+func (r *adJobTrainingReconciler) stopTrainigCycleForCluster(clusterName string) error {
+	trainingCycleCronJobNameKey := r.getTrainingCycleJobNameForCluster(clusterName)
+	managedTrainingDetectorsForCluster, found := r.trainingDetectorsPerCluster[trainingCycleCronJobNameKey]
+
+	if !found {
+		log.Debugf("Ignore unmanaged Resource: %s", trainingCycleCronJobNameKey)
+		return nil
+	}
+
+	r.removeTrainingCycleFromResourceCache(trainingCycleCronJobNameKey, &managedTrainingDetectorsForCluster)
+	r.trainingDetectorsPerCluster[trainingCycleCronJobNameKey] = managedTrainingDetectorsForCluster
+
 	return nil
 }
 
