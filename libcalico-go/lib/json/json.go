@@ -15,8 +15,9 @@
 package json
 
 import (
-	jsoniter "github.com/json-iterator/go"
 	"io"
+
+	jsoniter "github.com/json-iterator/go"
 )
 
 // Marshal is a drop in replacement for encoding/json.Marshall, which uses jsoniter for better performance.
