@@ -52,11 +52,12 @@ type FlowLog struct {
 	NumFlowsCompleted int `json:"num_flows_completed"`
 
 	// Process stats.
-	NumProcessNames int    `json:"num_process_names"`
-	NumProcessIDs   int    `json:"num_process_ids"`
-	ProcessName     string `json:"process_name"`
-	NumProcessArgs  int    `json:"num_process_args"`
-	ProcessArgs     string `json:"process_args"`
+	NumProcessNames int      `json:"num_process_names"`
+	NumProcessIDs   int      `json:"num_process_ids"`
+	ProcessName     string   `json:"process_name"`
+	NumProcessArgs  int      `json:"num_process_args"`
+	ProcessArgs     []string `json:"process_args"`
+	ProcessID       string   `json:"process_id"`
 
 	// TCP stats.
 	TCPMinSendCongestionWindow  int `json:"tcp_min_send_congestion_window"`

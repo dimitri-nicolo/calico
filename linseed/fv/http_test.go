@@ -26,6 +26,19 @@ type httpReqSpec struct {
 	headers map[string]string
 }
 
+func (h *httpReqSpec) AddHeaders(headers map[string]string) {
+	if h.headers == nil {
+		h.headers = make(map[string]string)
+	}
+	for k, v := range headers {
+		h.headers[k] = v
+	}
+}
+
+func (h *httpReqSpec) SetBody(body string) {
+	h.body = []byte(body)
+}
+
 func noBodyHTTPReqSpec(method, url, tenant, cluster string) httpReqSpec {
 	return httpReqSpec{
 		method: method,

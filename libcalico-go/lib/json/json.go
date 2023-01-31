@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2022-2023 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ func Unmarshal(data []byte, v any) error {
 	return jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(data, v)
 }
 
+// NewDecoder will return a jsoniter decoder
 func NewDecoder(reader io.Reader) *jsoniter.Decoder {
 	return jsoniter.NewDecoder(reader)
 }

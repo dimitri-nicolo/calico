@@ -78,7 +78,7 @@ func TestNetworkFlows_Post(t *testing.T) {
 			if tt.want.wantErr {
 				wantBody = tt.want.errorMsg
 			} else {
-				wantBody = marshallResponse(t, tt.backendL3Flows)
+				wantBody = marshalResponse(t, tt.backendL3Flows)
 			}
 			assert.Equal(t, tt.want.httpStatus, rec.Result().StatusCode)
 			assert.JSONEq(t, wantBody, string(bodyBytes))
@@ -97,7 +97,7 @@ func networkFlows(flows []v1.L3Flow) *l3.NetworkFlows {
 	return n
 }
 
-func marshallResponse(t *testing.T, flows []v1.L3Flow) string {
+func marshalResponse(t *testing.T, flows []v1.L3Flow) string {
 	response := v1.L3FlowResponse{}
 	response.L3Flows = flows
 

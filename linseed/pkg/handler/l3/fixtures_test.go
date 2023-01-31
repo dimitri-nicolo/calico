@@ -72,12 +72,9 @@ var flowLogs = []v1.FlowLog{
 		ProcessName:     "./server",
 		NumProcessNames: 1,
 		NumProcessIDs:   1,
-		ProcessArgs:     "-",
 		NumProcessArgs:  0,
-		//"process_id":"4067",
-		//"process_args":[
-		//"-"
-		//],
+		ProcessArgs:     []string{"-"},
+		ProcessID:       "9667",
 	},
 	{
 		SourceNameAggr:  "source-*",
@@ -107,13 +104,9 @@ var flowLogs = []v1.FlowLog{
 		ProcessName:     "./server",
 		NumProcessNames: 1,
 		NumProcessIDs:   1,
-		ProcessArgs:     "-",
+		ProcessArgs:     []string{"-"},
+		ProcessID:       "9666",
 		NumProcessArgs:  0,
-
-		//"process_id":"4067",
-		//"process_args":[
-		//"-"
-		//],
 	},
 }
 

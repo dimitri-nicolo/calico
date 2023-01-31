@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
+	chimiddleware "github.com/go-chi/chi/v5/middleware"
+
 	"github.com/projectcalico/calico/linseed/pkg/config"
 
 	"github.com/go-chi/chi/v5"
@@ -55,6 +57,8 @@ func Middlewares(cfg config.Config) []func(http.Handler) http.Handler {
 		httputils.LogRequestHeaders,
 		// HealthCheck is defined as middleware in order to bypass any route matching
 		middleware.HealthCheck,
+		// AllowContentType allows only specific content types for the requests
+		chimiddleware.AllowContentType("application/json", "application/x-ndjson"),
 		// ClusterInfoOld will extract cluster and tenant information from the request to identify the caller
 		clusterInfo.Extract(),
 	}

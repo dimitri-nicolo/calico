@@ -4,13 +4,12 @@ package handler
 
 import (
 	"bytes"
-	"strings"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/json"
-
 	"errors"
 	"io"
 	"net/http"
+	"strings"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
@@ -20,6 +19,17 @@ import (
 // maxBytes represents the maximum bytes
 // an HTTP request body can have
 const maxBytes = 2000000
+
+// newlineJsonContent is the supported content type
+// for bulk APIs
+const newlineJsonContent = "application/x-ndjson"
+
+// jsonContent is the supported content type
+// for bulk APIs
+const jsonContent = "application/json"
+
+// contentType is the content type header
+const contentType = "Content-Type"
 
 // RequestParams is the collection of request parameters types
 // that will be decoded and validated from an HTTP request
@@ -40,7 +50,8 @@ func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req
 	var bulkParams []T
 
 	// Check content-type
-	if req.Header.Get("Content-Type") != "application/json" {
+	content := strings.ToLower(strings.TrimSpace(req.Header.Get(contentType)))
+	if content != newlineJsonContent {
 		return bulkParams, &httputils.HttpStatusError{
 			Status: http.StatusUnsupportedMediaType,
 			Msg:    "Received a request with content-type that is not supported",
@@ -61,18 +72,10 @@ func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req
 	req.Body = http.MaxBytesReader(w, req.Body, maxBytes)
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		if len(body) >= maxBytes {
-			return bulkParams, &httputils.HttpStatusError{
-				Status: http.StatusRequestEntityTooLarge,
-				Msg:    err.Error(),
-				Err:    err,
-			}
-		} else {
-			return bulkParams, &httputils.HttpStatusError{
-				Status: http.StatusBadRequest,
-				Msg:    err.Error(),
-				Err:    err,
-			}
+		return bulkParams, &httputils.HttpStatusError{
+			Status: http.StatusBadRequest,
+			Msg:    err.Error(),
+			Err:    err,
 		}
 	}
 
@@ -90,18 +93,10 @@ func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req
 		dec := json.NewDecoder(bytes.NewReader(line))
 		dec.DisallowUnknownFields()
 		if err := dec.Decode(&input); err != nil {
-			if strings.Contains(err.Error(), "found unknown field: newfields") {
-				return bulkParams, &httputils.HttpStatusError{
-					Status: http.StatusBadRequest,
-					Msg:    "Unknown fields detected in the input JSON",
-					Err:    err,
-				}
-			} else {
-				return bulkParams, &httputils.HttpStatusError{
-					Status: http.StatusBadRequest,
-					Msg:    "Request body contains badly-formed JSON",
-					Err:    err,
-				}
+			return bulkParams, &httputils.HttpStatusError{
+				Status: http.StatusBadRequest,
+				Msg:    "Request body contains badly-formed JSON",
+				Err:    err,
 			}
 		}
 		bulkParams = append(bulkParams, input)
@@ -116,7 +111,8 @@ func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req
 func DecodeAndValidateReqParams[T RequestParams](w http.ResponseWriter, req *http.Request) (*T, error) {
 	reqParams := new(T)
 
-	if req.Header.Get("Content-Type") != "application/json" {
+	content := strings.ToLower(strings.TrimSpace(req.Header.Get(contentType)))
+	if content != jsonContent {
 		return reqParams, &httputils.HttpStatusError{
 			Status: http.StatusUnsupportedMediaType,
 			Msg:    "Received a request with content-type that is not supported",

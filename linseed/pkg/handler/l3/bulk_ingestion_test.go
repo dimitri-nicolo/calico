@@ -52,7 +52,7 @@ func TestBulkIngestion_Serve(t *testing.T) {
 			backendFlowLogs: flowLogs,
 			backendError:    nil,
 			backendResponse: bulkResponseSuccess,
-			reqBody:         marshall(flowLogs),
+			reqBody:         marshal(flowLogs),
 			want:            testResult{false, 200, ""},
 		},
 
@@ -61,7 +61,7 @@ func TestBulkIngestion_Serve(t *testing.T) {
 			backendFlowLogs: flowLogs,
 			backendError:    errors.New("any error"),
 			backendResponse: nil,
-			reqBody:         marshall(flowLogs),
+			reqBody:         marshal(flowLogs),
 			want:            testResult{true, 500, "{\"Status\":500,\"Msg\":\"any error\",\"Err\":{}}"},
 		},
 
@@ -70,7 +70,7 @@ func TestBulkIngestion_Serve(t *testing.T) {
 			backendFlowLogs: flowLogs,
 			backendError:    nil,
 			backendResponse: bulkResponsePartialSuccess,
-			reqBody:         marshall(flowLogs),
+			reqBody:         marshal(flowLogs),
 			want:            testResult{false, 200, ""},
 		},
 	}
@@ -92,7 +92,7 @@ func TestBulkIngestion_Serve(t *testing.T) {
 			if tt.want.wantErr {
 				wantBody = tt.want.errorMsg
 			} else {
-				wantBody = marshallBulkResponse(t, tt.backendResponse)
+				wantBody = marshalBulkResponse(t, tt.backendResponse)
 			}
 			fmt.Println(string(bodyBytes))
 			assert.Equal(t, tt.want.httpStatus, rec.Result().StatusCode)
@@ -112,7 +112,7 @@ func bulkFlowLogs(response *v1.BulkResponse, err error) *l3.BulkIngestion {
 	return b
 }
 
-func marshall(flowLogs []v1.FlowLog) string {
+func marshal(flowLogs []v1.FlowLog) string {
 	var logs []string
 
 	for _, p := range flowLogs {
@@ -123,7 +123,7 @@ func marshall(flowLogs []v1.FlowLog) string {
 	return strings.Join(logs, "\n")
 }
 
-func marshallBulkResponse(t *testing.T, response *v1.BulkResponse) string {
+func marshalBulkResponse(t *testing.T, response *v1.BulkResponse) string {
 	newData, err := json.Marshal(response)
 	require.NoError(t, err)
 

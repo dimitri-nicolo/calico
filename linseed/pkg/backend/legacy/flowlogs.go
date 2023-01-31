@@ -84,12 +84,9 @@ func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []
 		return nil, fmt.Errorf("failed to write flow log: %s", err)
 	}
 
-	resp.Failed()
-	resp.Succeeded()
-
 	log.WithField("count", len(logs)).Infof("Wrote flow log to index: %+v", resp)
 
-	bulkErrors := []v1.BulkError{}
+	var bulkErrors []v1.BulkError
 
 	if resp.Errors {
 		for _, fail := range resp.Failed() {
