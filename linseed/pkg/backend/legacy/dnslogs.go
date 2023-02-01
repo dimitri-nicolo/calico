@@ -6,16 +6,15 @@ import (
 	"context"
 	"fmt"
 
-	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-
 	"github.com/olivere/elastic/v7"
 
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
-type flowLogBackend struct {
+type dnsLogBackend struct {
 	client    *elastic.Client
 	lmaclient lmaelastic.Client
 
@@ -23,19 +22,19 @@ type flowLogBackend struct {
 	initialized bool
 }
 
-func NewFlowLogBackend(c lmaelastic.Client) bapi.FlowLogBackend {
-	return &flowLogBackend{
+func NewDNSLogBackend(c lmaelastic.Client) bapi.DNSLogBackend {
+	return &dnsLogBackend{
 		client:    c.Backend(),
 		lmaclient: c,
 	}
 }
 
-func (b *flowLogBackend) Initialize(ctx context.Context) error {
+func (b *dnsLogBackend) Initialize(ctx context.Context) error {
 	var err error
 	if !b.initialized {
-		// Create a template with mappings for all new flow log indices.
-		_, err = b.client.IndexPutTemplate("flow_log_template").
-			BodyString(templates.FlowLogTemplate).
+		// Create a template with mappings for all new indices.
+		_, err = b.client.IndexPutTemplate("dns_log_template").
+			BodyString(templates.DNSLogTemplate).
 			Create(false).
 			Do(ctx)
 		if err != nil {
@@ -46,8 +45,7 @@ func (b *flowLogBackend) Initialize(ctx context.Context) error {
 	return nil
 }
 
-// Create the given flow log in elasticsearch.
-func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v1.FlowLog) (*v1.BulkResponse, error) {
+func (b *dnsLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v1.DNSLog) (*v1.BulkResponse, error) {
 	log := contextLogger(i)
 
 	// Initialize if we haven't yet.
@@ -61,9 +59,9 @@ func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []
 	}
 
 	// Determine the index to write to. It will be automatically created based on the configured
-	// flow template if it does not already exist.
-	index := fmt.Sprintf("tigera_secure_ee_flows.%s", i.Cluster)
-	log.Debugf("Writing flow logs in bulk to index %s", index)
+	// template if it does not already exist.
+	index := fmt.Sprintf("tigera_secure_ee_dns.%s", i.Cluster)
+	log.Debugf("Writing DNS logs in bulk to index %s", index)
 
 	// Build a bulk request using the provided logs.
 	bulk := b.client.Bulk()
@@ -77,10 +75,10 @@ func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []
 	// Send the bulk request.
 	resp, err := bulk.Do(ctx)
 	if err != nil {
-		log.Errorf("Error writing flow log: %s", err)
-		return nil, fmt.Errorf("failed to write flow log: %s", err)
+		log.Errorf("Error writing DNS log: %s", err)
+		return nil, fmt.Errorf("failed to write DNS log: %s", err)
 	}
-	log.WithField("count", len(logs)).Debugf("Wrote flow log to index: %+v", resp)
+	log.WithField("count", len(logs)).Debugf("Wrote DNS log to index: %+v", resp)
 
 	return &v1.BulkResponse{
 		Total:     len(resp.Items),

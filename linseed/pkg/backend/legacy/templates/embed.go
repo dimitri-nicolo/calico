@@ -9,3 +9,6 @@ var FlowLogTemplate string
 
 //go:embed l7log.json
 var L7LogTemplate string
+
+//go:embed dnslog.json
+var DNSLogTemplate string

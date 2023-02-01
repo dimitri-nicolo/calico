@@ -12,6 +12,8 @@ import (
 
 	"github.com/google/gopacket/layers"
 
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -20,21 +22,21 @@ var _ = Describe("DNS log type tests", func() {
 	Describe("DNSRData tests", func() {
 		Context("With IP address", func() {
 			ipstr := "127.0.0.1"
-			r := DNSRData{nil, net.ParseIP(ipstr)}
+			r := v1.DNSRData{nil, net.ParseIP(ipstr)}
 			It("Should return the IP string", func() {
 				Expect(r.String()).Should(Equal(ipstr))
 			})
 		})
 		Context("With NS", func() {
 			nsstr := "ns1.tigera.io."
-			r := DNSRData{nil, nsstr}
+			r := v1.DNSRData{nil, nsstr}
 			It("Should return the right hostname", func() {
 				Expect(r.String()).Should(Equal(nsstr))
 			})
 		})
 		Context("With TXT", func() {
 			txt := [][]byte{[]byte("foo"), []byte("bar")}
-			r := DNSRData{nil, txt}
+			r := v1.DNSRData{nil, txt}
 			It("Should return the strings joined together", func() {
 				Expect(r.String()).Should(Equal("foobar"))
 			})
@@ -49,7 +51,7 @@ var _ = Describe("DNS log type tests", func() {
 				Expire:  86400,
 				Minimum: 1800,
 			}
-			r := DNSRData{nil, soa}
+			r := v1.DNSRData{nil, soa}
 			It("Should return the zone formatted SOA", func() {
 				Expect(r.String()).Should(Equal("tigera.io. root.tigera.io. 1 3600 60 86400 1800"))
 			})
@@ -61,7 +63,7 @@ var _ = Describe("DNS log type tests", func() {
 				Port:     53,
 				Name:     []byte("ns.tigera.io."),
 			}
-			r := DNSRData{nil, srv}
+			r := v1.DNSRData{nil, srv}
 			It("Should return the zone formatted SRV", func() {
 				Expect(r.String()).Should(Equal("10 20 53 ns.tigera.io."))
 			})
@@ -71,27 +73,27 @@ var _ = Describe("DNS log type tests", func() {
 				Preference: 10,
 				Name:       []byte("mail.tigera.io."),
 			}
-			r := DNSRData{nil, mx}
+			r := v1.DNSRData{nil, mx}
 			It("Should return the zone formatted MX", func() {
 				Expect(r.String()).Should(Equal("10 mail.tigera.io."))
 			})
 		})
 		Context("With bytes", func() {
 			b := []byte("abc")
-			r := DNSRData{nil, b}
+			r := v1.DNSRData{nil, b}
 			It("Should return the base64 encoded string", func() {
 				Expect(r.String()).Should(Equal("YWJj"))
 			})
 		})
 		Context("With unexpected", func() {
-			r := DNSRData{}
+			r := v1.DNSRData{}
 			It("Should return \"nil\"", func() {
 				Expect(r.String()).Should(Equal("<nil>"))
 			})
 		})
 		Context("JSON marshal", func() {
 			t := "test"
-			r := DNSRData{Raw: []byte("junk"), Decoded: t}
+			r := v1.DNSRData{Raw: []byte("junk"), Decoded: t}
 			It("Should only encode the decoded as a string", func() {
 				b, err := json.Marshal(&r)
 				Expect(err).ShouldNot(HaveOccurred())
@@ -103,138 +105,136 @@ var _ = Describe("DNS log type tests", func() {
 	Describe("DNSRdatas", func() {
 		Context("Len function", func() {
 			It("Nil array", func() {
-				Expect(DNSRDatas(nil).Len()).Should(Equal(0))
+				Expect(v1.DNSRDatas(nil).Len()).Should(Equal(0))
 			})
 			It("Empty array", func() {
-				Expect(DNSRDatas{}.Len()).Should(Equal(0))
+				Expect(v1.DNSRDatas{}.Len()).Should(Equal(0))
 			})
 			It("Array with stuff in it", func() {
-				Expect(DNSRDatas{{}, {}}.Len()).Should(Equal(2))
+				Expect(v1.DNSRDatas{{}, {}}.Len()).Should(Equal(2))
 			})
 		})
 
 		Context("Less function", func() {
 			It("Less", func() {
-				Expect(DNSRDatas{{Raw: []byte("a")}, {Raw: []byte("b")}}.Less(0, 1)).Should(BeTrue())
+				Expect(v1.DNSRDatas{{Raw: []byte("a")}, {Raw: []byte("b")}}.Less(0, 1)).Should(BeTrue())
 			})
 			It("Equal", func() {
-				Expect(DNSRDatas{{Raw: []byte("a")}, {Raw: []byte("a")}}.Less(0, 1)).Should(BeFalse())
+				Expect(v1.DNSRDatas{{Raw: []byte("a")}, {Raw: []byte("a")}}.Less(0, 1)).Should(BeFalse())
 			})
 			It("Greater", func() {
-				Expect(DNSRDatas{{Raw: []byte("a")}, {Raw: []byte("b")}}.Less(1, 0)).Should(BeFalse())
+				Expect(v1.DNSRDatas{{Raw: []byte("a")}, {Raw: []byte("b")}}.Less(1, 0)).Should(BeFalse())
 			})
 			It("Same", func() {
-				Expect(DNSRDatas{{Raw: []byte("a")}, {Raw: []byte("b")}}.Less(0, 0)).Should(BeFalse())
+				Expect(v1.DNSRDatas{{Raw: []byte("a")}, {Raw: []byte("b")}}.Less(0, 0)).Should(BeFalse())
 			})
 		})
 
 		Context("Swap function", func() {
-			var r DNSRDatas
+			var r v1.DNSRDatas
 			BeforeEach(func() {
-				r = DNSRDatas{{Raw: []byte("a")}, {Raw: []byte("b")}}
+				r = v1.DNSRDatas{{Raw: []byte("a")}, {Raw: []byte("b")}}
 			})
 
 			It("Swapped", func() {
 				r.Swap(0, 1)
-				Expect(r).Should(Equal(DNSRDatas{{Raw: []byte("b")}, {Raw: []byte("a")}}))
+				Expect(r).Should(Equal(v1.DNSRDatas{{Raw: []byte("b")}, {Raw: []byte("a")}}))
 			})
 
 			It("Swapped same", func() {
 				r.Swap(0, 0)
-				Expect(r).Should(Equal(DNSRDatas{{Raw: []byte("a")}, {Raw: []byte("b")}}))
+				Expect(r).Should(Equal(v1.DNSRDatas{{Raw: []byte("a")}, {Raw: []byte("b")}}))
 			})
 		})
-
 	})
 
-	Describe("DNSName", func() {
+	Describe("v1.DNSName", func() {
 		Context("A", func() {
-			n := DNSName{"tigera.io.", DNSClass(layers.DNSClassIN), DNSType(layers.DNSTypeA)}
+			n := v1.DNSName{"tigera.io.", v1.DNSClass(layers.DNSClassIN), v1.DNSType(layers.DNSTypeA)}
 			It("String", func() {
 				Expect(n.String()).Should(Equal("tigera.io. IN A"))
 			})
 		})
 		Context("Unknown Class", func() {
-			n := DNSName{"tigera.io.", DNSClass(5), DNSType(layers.DNSTypeA)}
+			n := v1.DNSName{"tigera.io.", v1.DNSClass(5), v1.DNSType(layers.DNSTypeA)}
 			It("String", func() {
 				Expect(n.String()).Should(Equal("tigera.io. #5 A"))
 			})
 		})
 		Context("Unknown type", func() {
-			n := DNSName{"tigera.io.", DNSClass(layers.DNSClassIN), DNSType(254)}
+			n := v1.DNSName{"tigera.io.", v1.DNSClass(layers.DNSClassIN), v1.DNSType(254)}
 			It("String", func() {
 				Expect(n.String()).Should(Equal("tigera.io. IN #254"))
 			})
 		})
 		Context("Comparator", func() {
 			It("Less, same root", func() {
-				Expect(DNSName{Name: "a.b."}.Less(DNSName{Name: "b.b."})).Should(BeTrue())
+				Expect(v1.DNSName{Name: "a.b."}.Less(v1.DNSName{Name: "b.b."})).Should(BeTrue())
 			})
 			It("Equal", func() {
-				Expect(DNSName{Name: "a.b."}.Less(DNSName{Name: "a.b."})).Should(BeFalse())
+				Expect(v1.DNSName{Name: "a.b."}.Less(v1.DNSName{Name: "a.b."})).Should(BeFalse())
 			})
 			It("Greater, same root", func() {
-				Expect(DNSName{Name: "b.b."}.Less(DNSName{Name: "a.b."})).Should(BeFalse())
+				Expect(v1.DNSName{Name: "b.b."}.Less(v1.DNSName{Name: "a.b."})).Should(BeFalse())
 			})
 			It("Less, subdomain on right", func() {
-				Expect(DNSName{Name: "a.b."}.Less(DNSName{Name: "c.a.b."})).Should(BeTrue())
+				Expect(v1.DNSName{Name: "a.b."}.Less(v1.DNSName{Name: "c.a.b."})).Should(BeTrue())
 			})
 			It("Greater, subdomain on right", func() {
-				Expect(DNSName{Name: "b.b."}.Less(DNSName{Name: "c.a.b."})).Should(BeFalse())
+				Expect(v1.DNSName{Name: "b.b."}.Less(v1.DNSName{Name: "c.a.b."})).Should(BeFalse())
 			})
 			It("Less, subdomain on left", func() {
-				Expect(DNSName{Name: "c.a.b."}.Less(DNSName{Name: "b.b."})).Should(BeTrue())
+				Expect(v1.DNSName{Name: "c.a.b."}.Less(v1.DNSName{Name: "b.b."})).Should(BeTrue())
 			})
 			It("Greater, subdomain on left", func() {
-				Expect(DNSName{Name: "c.a.b."}.Less(DNSName{Name: "a.b."})).Should(BeFalse())
+				Expect(v1.DNSName{Name: "c.a.b."}.Less(v1.DNSName{Name: "a.b."})).Should(BeFalse())
 			})
 			It("Longer names", func() {
-				Expect(DNSName{Name: "cd.ab."}.Less(DNSName{Name: "abcd."})).Should(BeTrue())
+				Expect(v1.DNSName{Name: "cd.ab."}.Less(v1.DNSName{Name: "abcd."})).Should(BeTrue())
 			})
 			It("Different classes", func() {
-				Expect(DNSName{Name: "a.", Class: DNSClass(1)}.Less(DNSName{Name: "a.", Class: DNSClass(2)})).Should(BeTrue())
-				Expect(DNSName{Name: "a.", Class: DNSClass(2)}.Less(DNSName{Name: "a.", Class: DNSClass(1)})).Should(BeFalse())
+				Expect(v1.DNSName{Name: "a.", Class: v1.DNSClass(1)}.Less(v1.DNSName{Name: "a.", Class: v1.DNSClass(2)})).Should(BeTrue())
+				Expect(v1.DNSName{Name: "a.", Class: v1.DNSClass(2)}.Less(v1.DNSName{Name: "a.", Class: v1.DNSClass(1)})).Should(BeFalse())
 			})
 			It("Different types", func() {
-				Expect(DNSName{Name: "a.", Type: DNSType(1)}.Less(DNSName{Name: "a.", Type: DNSType(2)})).Should(BeTrue())
-				Expect(DNSName{Name: "a.", Type: DNSType(2)}.Less(DNSName{Name: "a.", Type: DNSType(1)})).Should(BeFalse())
+				Expect(v1.DNSName{Name: "a.", Type: v1.DNSType(1)}.Less(v1.DNSName{Name: "a.", Type: v1.DNSType(2)})).Should(BeTrue())
+				Expect(v1.DNSName{Name: "a.", Type: v1.DNSType(2)}.Less(v1.DNSName{Name: "a.", Type: v1.DNSType(1)})).Should(BeFalse())
 			})
 			It("sorts correctly", func() {
-				a := DNSNames{
-					DNSName{Name: "b."},
-					DNSName{Name: "a."},
-					DNSName{Name: "c."},
-					DNSName{Name: "a.", Type: DNSType(1)},
+				a := v1.DNSNames{
+					v1.DNSName{Name: "b."},
+					v1.DNSName{Name: "a."},
+					v1.DNSName{Name: "c."},
+					v1.DNSName{Name: "a.", Type: v1.DNSType(1)},
 				}
 				sort.Stable(a)
-				Expect(a).Should(Equal(DNSNames{
-					DNSName{Name: "a."},
-					DNSName{Name: "a.", Type: DNSType(1)},
-					DNSName{Name: "b."},
-					DNSName{Name: "c."},
+				Expect(a).Should(Equal(v1.DNSNames{
+					v1.DNSName{Name: "a."},
+					v1.DNSName{Name: "a.", Type: v1.DNSType(1)},
+					v1.DNSName{Name: "b."},
+					v1.DNSName{Name: "c."},
 				}))
 			})
 		})
 		Context("JSON", func() {
 			It("All knowns", func() {
-				n := DNSName{"tigera.io.", DNSClass(layers.DNSClassIN), DNSType(layers.DNSTypeA)}
+				n := v1.DNSName{"tigera.io.", v1.DNSClass(layers.DNSClassIN), v1.DNSType(layers.DNSTypeA)}
 				b, err := json.Marshal(n)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(string(b)).Should(Equal(`{"name":"tigera.io.","class":"IN","type":"A"}`))
 			})
 			It("Unknowns", func() {
-				n := DNSName{"tigera.io.", DNSClass(5), DNSType(254)}
+				n := v1.DNSName{"tigera.io.", v1.DNSClass(5), v1.DNSType(254)}
 				b, err := json.Marshal(n)
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(string(b)).Should(Equal(`{"name":"tigera.io.","class":5,"type":254}`))
-
 			})
 		})
 	})
 
-	Describe("DNSRRSets", func() {
+	Describe("v1.DNSRRSets", func() {
 		Context("Empty", func() {
-			r := make(DNSRRSets)
+			r := make(v1.DNSRRSets)
 
 			It("Empty", func() {
 				Expect(r.String()).Should(Equal(""))
@@ -242,13 +242,13 @@ var _ = Describe("DNS log type tests", func() {
 		})
 
 		Context("Populated", func() {
-			r := make(DNSRRSets)
+			r := make(v1.DNSRRSets)
 
-			r[DNSName{"tigera.io.", DNSClass(layers.DNSClassIN), DNSType(layers.DNSTypeA)}] = DNSRDatas{
+			r[v1.DNSName{"tigera.io.", v1.DNSClass(layers.DNSClassIN), v1.DNSType(layers.DNSTypeA)}] = v1.DNSRDatas{
 				{Decoded: net.ParseIP("127.0.0.1")},
 				{Decoded: net.ParseIP("192.168.0.1")},
 			}
-			r[DNSName{"cname.tigera.io.", DNSClass(layers.DNSClassIN), DNSType(layers.DNSTypeCNAME)}] = DNSRDatas{
+			r[v1.DNSName{"cname.tigera.io.", v1.DNSClass(layers.DNSClassIN), v1.DNSType(layers.DNSTypeCNAME)}] = v1.DNSRDatas{
 				{Decoded: "www.tigera.io."},
 			}
 
@@ -263,24 +263,24 @@ var _ = Describe("DNS log type tests", func() {
 
 		Context("Add function", func() {
 			It("Empty set should add a record", func() {
-				r := make(DNSRRSets)
-				name := DNSName{"tigera.io", 1, 1}
+				r := make(v1.DNSRRSets)
+				name := v1.DNSName{"tigera.io", 1, 1}
 
-				r.Add(name, DNSRData{Raw: []byte("2"), Decoded: "test1"})
+				r.Add(name, v1.DNSRData{Raw: []byte("2"), Decoded: "test1"})
 				Expect(r).Should(HaveLen(1))
 				Expect(r[name]).Should(HaveLen(1))
 			})
 
 			It("Set with a duplicate key should add records in the right order", func() {
-				r := make(DNSRRSets)
-				name := DNSName{"tigera.io", 1, 1}
+				r := make(v1.DNSRRSets)
+				name := v1.DNSName{"tigera.io", 1, 1}
 
-				r.Add(name, DNSRData{Raw: []byte("2"), Decoded: "test1"})
-				r.Add(name, DNSRData{Raw: []byte("1"), Decoded: "test2"})
-				r.Add(name, DNSRData{Raw: []byte("3"), Decoded: "test3"})
+				r.Add(name, v1.DNSRData{Raw: []byte("2"), Decoded: "test1"})
+				r.Add(name, v1.DNSRData{Raw: []byte("1"), Decoded: "test2"})
+				r.Add(name, v1.DNSRData{Raw: []byte("3"), Decoded: "test3"})
 
 				Expect(r).Should(HaveLen(1))
-				Expect(r[name]).Should(Equal(DNSRDatas{
+				Expect(r[name]).Should(Equal(v1.DNSRDatas{
 					{Raw: []byte("1"), Decoded: "test2"},
 					{Raw: []byte("2"), Decoded: "test1"},
 					{Raw: []byte("3"), Decoded: "test3"},
@@ -288,10 +288,10 @@ var _ = Describe("DNS log type tests", func() {
 			})
 
 			It("Set with a different key should add a second record", func() {
-				r := make(DNSRRSets)
+				r := make(v1.DNSRRSets)
 
-				r.Add(DNSName{"tigera.io", 1, 1}, DNSRData{Raw: []byte("1"), Decoded: "test1"})
-				r.Add(DNSName{"tigera.io", 1, 2}, DNSRData{Raw: []byte("2"), Decoded: "test2"})
+				r.Add(v1.DNSName{"tigera.io", 1, 1}, v1.DNSRData{Raw: []byte("1"), Decoded: "test1"})
+				r.Add(v1.DNSName{"tigera.io", 1, 2}, v1.DNSRData{Raw: []byte("2"), Decoded: "test2"})
 
 				Expect(r).Should(HaveLen(2))
 			})
@@ -348,8 +348,8 @@ var _ = Describe("DNS log type tests", func() {
 
 				a := DNSSpec{
 					Servers: map[EndpointMetadataWithIP]DNSLabels{
-						{EndpointMetadata: EndpointMetadata{Name: "ns1"}}: {"a": "b"},
-						{EndpointMetadata: EndpointMetadata{Name: "ns2"}}: {"d": "e"},
+						{Endpoint: v1.Endpoint{Name: "ns1"}}: {"a": "b"},
+						{Endpoint: v1.Endpoint{Name: "ns2"}}: {"d": "e"},
 					},
 					ClientLabels: DNSLabels{
 						"0": "0",
@@ -360,8 +360,8 @@ var _ = Describe("DNS log type tests", func() {
 				}
 				b := DNSSpec{
 					Servers: map[EndpointMetadataWithIP]DNSLabels{
-						{EndpointMetadata: EndpointMetadata{Name: "ns1"}}: {"b": "c", "a": "h"},
-						{EndpointMetadata: EndpointMetadata{Name: "ns3"}}: {"f": "g"},
+						{Endpoint: v1.Endpoint{Name: "ns1"}}: {"b": "c", "a": "h"},
+						{Endpoint: v1.Endpoint{Name: "ns3"}}: {"f": "g"},
 					},
 					ClientLabels: DNSLabels{
 						"1": "2",
@@ -375,9 +375,9 @@ var _ = Describe("DNS log type tests", func() {
 				Expect(a.ClientLabels).Should(HaveLen(0))
 				Expect(a.Count).Should(Equal(origCount + b.Count))
 				Expect(a.Servers).Should(Equal(map[EndpointMetadataWithIP]DNSLabels{
-					{EndpointMetadata: EndpointMetadata{Name: "ns1"}}: {},
-					{EndpointMetadata: EndpointMetadata{Name: "ns2"}}: {"d": "e"},
-					{EndpointMetadata: EndpointMetadata{Name: "ns3"}}: {"f": "g"},
+					{Endpoint: v1.Endpoint{Name: "ns1"}}: {},
+					{Endpoint: v1.Endpoint{Name: "ns2"}}: {"d": "e"},
+					{Endpoint: v1.Endpoint{Name: "ns3"}}: {"f": "g"},
 				}))
 			})
 		})
@@ -385,47 +385,51 @@ var _ = Describe("DNS log type tests", func() {
 
 	Describe("DNSLog Tests", func() {
 		var clientIP *string
-		var l *DNSLog
+		var l *v1.DNSLog
 
 		JustBeforeEach(func() {
-			t := time.Date(2019, 07, 02, 0, 0, 0, 0, time.UTC)
-			l = &DNSLog{
+			t := time.Date(2019, 0o7, 0o2, 0, 0, 0, 0, time.UTC)
+
+			var ip *net.IP
+			if clientIP != nil {
+				tmpIP := net.ParseIP(*clientIP)
+				ip = &tmpIP
+			}
+			l = &v1.DNSLog{
 				StartTime:       t,
 				EndTime:         t.Add(time.Minute),
-				Type:            DNSLogTypeLog,
+				Type:            v1.DNSLogTypeLog,
 				Count:           5,
 				ClientName:      "test-1",
 				ClientNameAggr:  "test-*",
 				ClientNamespace: "test-ns",
-				ClientIP:        clientIP,
+				ClientIP:        ip,
 				ClientLabels: map[string]string{
 					"t1": "a",
 				},
-				Servers: []DNSServer{
+				Servers: []v1.DNSServer{
 					{
-						EndpointMetadataWithIP: EndpointMetadataWithIP{
-							EndpointMetadata: EndpointMetadata{
-								Type:           "Pod",
-								Namespace:      "test2-ns",
-								Name:           "test-2",
-								AggregatedName: "test-*",
-							},
-							IP: "192.168.0.1",
+						Endpoint: v1.Endpoint{
+							Type:           "Pod",
+							Namespace:      "test2-ns",
+							Name:           "test-2",
+							AggregatedName: "test-*",
 						},
+						IP: net.ParseIP("192.168.0.1"),
 						Labels: map[string]string{
 							"t2": "b",
 						},
 					},
 				},
 				QName:  "tigera.io",
-				QClass: DNSClass(layers.DNSClassIN),
-				QType:  DNSType(layers.DNSTypeA),
-				RCode:  DNSResponseCode(layers.DNSResponseCodeNoErr),
-				RRSets: DNSRRSets{
+				QClass: v1.DNSClass(layers.DNSClassIN),
+				QType:  v1.DNSType(layers.DNSTypeA),
+				RCode:  v1.DNSResponseCode(layers.DNSResponseCodeNoErr),
+				RRSets: v1.DNSRRSets{
 					{
 						Name:  "tigera.io",
-						Class: DNSClass(layers.DNSClassIN),
-						Type:  DNSType(layers.DNSTypeA),
+						Class: v1.DNSClass(layers.DNSClassIN),
+						Type:  v1.DNSType(layers.DNSTypeA),
 					}: {
 						{Decoded: net.ParseIP("127.0.0.1")},
 						{Decoded: net.ParseIP("127.0.0.2")},
@@ -460,17 +464,17 @@ var _ = Describe("DNS log type tests", func() {
 		})
 	})
 
-	Describe("DNSLog Tests - IDNA", func() {
-		var l *DNSLog
+	Describe("v1.DNSLog Tests - IDNA", func() {
+		var l *v1.DNSLog
 		var jl map[string]interface{}
 
 		BeforeEach(func() {
-			t := time.Date(2019, 07, 02, 0, 0, 0, 0, time.UTC)
-			clientIP := "10.10.11.1"
-			l = &DNSLog{
+			t := time.Date(2019, 0o7, 0o2, 0, 0, 0, 0, time.UTC)
+			clientIP := net.ParseIP("10.10.11.1")
+			l = &v1.DNSLog{
 				StartTime:       t,
 				EndTime:         t.Add(time.Minute),
-				Type:            DNSLogTypeLog,
+				Type:            v1.DNSLogTypeLog,
 				Count:           5,
 				ClientName:      "test-1",
 				ClientNameAggr:  "test-*",
@@ -479,66 +483,64 @@ var _ = Describe("DNS log type tests", func() {
 				ClientLabels: map[string]string{
 					"t1": "a",
 				},
-				Servers: []DNSServer{
+				Servers: []v1.DNSServer{
 					{
-						EndpointMetadataWithIP: EndpointMetadataWithIP{
-							EndpointMetadata: EndpointMetadata{
-								Type:           "Pod",
-								Namespace:      "test2-ns",
-								Name:           "test-2",
-								AggregatedName: "test-*",
-							},
-							IP: "192.168.0.1",
+						Endpoint: v1.Endpoint{
+							Type:           "Pod",
+							Namespace:      "test2-ns",
+							Name:           "test-2",
+							AggregatedName: "test-*",
 						},
+						IP: net.ParseIP("192.168.0.1"),
 						Labels: map[string]string{
 							"t2": "b",
 						},
 					},
 				},
 				QName:  "www.xn--mlstrm-pua6k.com",
-				QClass: DNSClass(layers.DNSClassIN),
-				QType:  DNSType(layers.DNSTypeA),
-				RCode:  DNSResponseCode(layers.DNSResponseCodeNoErr),
-				RRSets: DNSRRSets{
+				QClass: v1.DNSClass(layers.DNSClassIN),
+				QType:  v1.DNSType(layers.DNSTypeA),
+				RCode:  v1.DNSResponseCode(layers.DNSResponseCodeNoErr),
+				RRSets: v1.DNSRRSets{
 					{
 						Name:  "www.xn--mlstrm-pua6k.com",
-						Class: DNSClass(layers.DNSClassIN),
-						Type:  DNSType(layers.DNSTypeCNAME),
+						Class: v1.DNSClass(layers.DNSClassIN),
+						Type:  v1.DNSType(layers.DNSTypeCNAME),
 					}: {{Decoded: "xn--mlmer-srensen-bnbg.gate"}},
 					{
 						Name:  "xn--mlmer-srensen-bnbg.gate",
-						Class: DNSClass(layers.DNSClassIN),
-						Type:  DNSType(layers.DNSTypeA),
+						Class: v1.DNSClass(layers.DNSClassIN),
+						Type:  v1.DNSType(layers.DNSTypeA),
 					}: {{Decoded: net.ParseIP("127.0.0.1")}},
 					{
 						Name:  "xn--mlmer-srensen-bnbg.gate",
-						Class: DNSClass(layers.DNSClassIN),
-						Type:  DNSType(layers.DNSTypeSOA),
+						Class: v1.DNSClass(layers.DNSClassIN),
+						Type:  v1.DNSType(layers.DNSTypeSOA),
 					}: {{Decoded: layers.DNSSOA{MName: []byte("xn--mlmer-srensen-bnbg.gate"), RName: []byte("xn--mlmer-srensen-bnbg.gate")}}},
 					{
 						Name:  "_sip._tcp.xn--mlmer-srensen-bnbg.gate",
-						Class: DNSClass(layers.DNSClassIN),
-						Type:  DNSType(layers.DNSTypeSRV),
+						Class: v1.DNSClass(layers.DNSClassIN),
+						Type:  v1.DNSType(layers.DNSTypeSRV),
 					}: {{Decoded: layers.DNSSRV{Name: []byte("sip.xn--mlmer-srensen-bnbg.gate")}}},
 					{
 						Name:  "www.xn--ggblaxu6ii5ec9ad.es",
-						Class: DNSClass(layers.DNSClassIN),
-						Type:  DNSType(layers.DNSTypeMX),
+						Class: v1.DNSClass(layers.DNSClassIN),
+						Type:  v1.DNSType(layers.DNSTypeMX),
 					}: {{Decoded: layers.DNSMX{Name: []byte("mail.xn--ggblaxu6ii5ec9ad.es")}}},
 					{
 						Name:  "xn--mlmer-srensen-bnbg*.gate", // Not a real ACE label
-						Class: DNSClass(layers.DNSClassIN),
-						Type:  DNSType(layers.DNSTypeA),
+						Class: v1.DNSClass(layers.DNSClassIN),
+						Type:  v1.DNSType(layers.DNSTypeA),
 					}: {{Decoded: net.ParseIP("127.0.0.1")}},
 					{
 						Name:  "txt.txt.txt",
-						Class: DNSClass(layers.DNSClassIN),
-						Type:  DNSType(layers.DNSTypeTXT),
+						Class: v1.DNSClass(layers.DNSClassIN),
+						Type:  v1.DNSType(layers.DNSTypeTXT),
 					}: {{Decoded: [][]byte{[]byte("xn--mlmer-srensen-bnbg.gate")}}},
 					{
 						Name:  "wks.wks.wks",
-						Class: DNSClass(layers.DNSClassIN),
-						Type:  DNSType(layers.DNSTypeWKS),
+						Class: v1.DNSClass(layers.DNSClassIN),
+						Type:  v1.DNSType(layers.DNSTypeWKS),
 					}: {{Decoded: []byte("xn--mlmer-srensen-bnbg.gate")}},
 				},
 			}

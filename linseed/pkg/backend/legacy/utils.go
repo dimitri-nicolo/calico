@@ -3,11 +3,8 @@ package legacy
 import (
 	"log"
 	"strconv"
-	"time"
 
 	"github.com/sirupsen/logrus"
-
-	elastic "github.com/olivere/elastic/v7"
 
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
@@ -83,8 +80,4 @@ func newFieldTracker(sources []lmaelastic.AggCompositeSourceInfo) *fieldTracker 
 		t.fieldToIndex[source.Field] = idx
 	}
 	return &t
-}
-
-func newTimeRangeQuery(from, to time.Time) elastic.Query {
-	return elastic.NewRangeQuery("end_time").Gt(from.Unix()).Lte(to.Unix())
 }

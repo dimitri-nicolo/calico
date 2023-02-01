@@ -10,16 +10,14 @@
           "name": "",
           "aggregated_name": "tigera-apiserver-6f7965f6b8-*",
           "namespace": "tigera-system",
-          "port": 0,
-          "labels": null
+          "port": 0
         },
         "destination": {
           "type": "ns",
           "name": "",
           "aggregated_name": "kse.kubernetes",
           "namespace": "default",
-          "port": 6443,
-          "labels": null
+          "port": 6443
         }
       },
       "process": {

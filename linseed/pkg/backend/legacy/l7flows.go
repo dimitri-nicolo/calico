@@ -12,6 +12,7 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
+	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 )
 
 // l7FlowBackend implements the Backend interface for flows stored
@@ -110,7 +111,7 @@ func (b *l7FlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L7
 	// Build the aggregation request.
 	query := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           buildL7FlowsIndex(i.Cluster),
-		Query:                   newTimeRangeQuery(start, end),
+		Query:                   lmaindex.L7Logs().NewTimeRangeQuery(start, end),
 		Name:                    "flows",
 		AggCompositeSourceInfos: b.compositeSources,
 		AggSumInfos:             b.aggSums,
@@ -132,7 +133,7 @@ func (b *l7FlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L7
 	// TODO: We're iterating over a channel. We need to support paging.
 	buckets, errors := b.lmaclient.SearchCompositeAggregations(ctx, query, nil)
 	for bucket := range buckets {
-		log.Infof("Processing bucket built from %d flows", bucket.DocCount)
+		log.Infof("Processing bucket built from %d logs", bucket.DocCount)
 		key := bucket.CompositeAggregationKey
 
 		f := v1.L7Flow{Key: v1.L7FlowKey{}}

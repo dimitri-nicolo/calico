@@ -83,15 +83,3 @@ type FlowLogPolicy struct {
 type FlowLogLabels struct {
 	Labels []string `json:"labels"`
 }
-
-type BulkError struct {
-	Message string `json:"message"`
-}
-
-type BulkResponse struct {
-	Total     int `json:"total"`
-	Succeeded int `json:"succeeded"`
-	Failed    int `json:"failed"`
-
-	Errors []BulkError `json:"errors,omitempty"`
-}

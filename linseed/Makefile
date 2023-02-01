@@ -74,7 +74,7 @@ $(LINSEED_CONTAINER_CREATED): docker-image/Dockerfile.$(ARCH) bin/linseed-$(ARCH
 	touch $@
 
 .PHONY: clean
-clean:
+clean: stop-elastic
 	rm -rf bin \
 		report/*.xml \
 		config/
@@ -89,9 +89,6 @@ MOCKERY_FILE_PATHS= \
 	pkg/backend/api/FlowBackend \
 	pkg/backend/api/FlowLogBackend
 
-GINKGO_ARGS += -cover -timeout 20m
-GINKGO = ginkgo $(GINKGO_ARGS)
-
 #############################################
 # Run unit level tests
 #############################################
@@ -99,7 +96,7 @@ GINKGO = ginkgo $(GINKGO_ARGS)
 .PHONY: ut
 ## Run only Unit Tests.
 ut: run-elastic
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) $(GINKGO) -r pkg/*'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./...'
 
 st:
 	@echo "No STs"
@@ -109,7 +106,7 @@ st:
 ###############################################################################
 
 # Run Linseed as a local Docker container
-run-image: stop-image
+run-image: stop-image run-elastic
 	docker run --detach \
 		--net=host \
 		--name=tigera-$(LINSEED_IMAGE) \
@@ -119,18 +116,17 @@ run-image: stop-image
 		-e LINSEED_ELASTIC_SCHEME="http" \
 		tigera/$(LINSEED_IMAGE):latest
 	# Wait until Linseed is accepting requests.
-	while ! docker ps -q --filter "name=tigera-$(LINSEED)"; do echo "Waiting for linseed to come up..."; sleep 2; done
+	while ! curl -k https://localhost:8444/health; do echo "Waiting for linseed to come up..."; sleep 2; done
 
 stop-image:
 	-docker rm -f $(shell docker ps -aq --filter "name=tigera-$(LINSEED_IMAGE)")
 
-## Run the ginkgo FVs
-fv: clean image build-tests run-elastic run-image
+## Run the FVs
+fv: clean image build-tests run-image
 	 $(DOCKER_RUN) \
 	 	-e KUBECONFIG=/home/user/certs/kubeconfig \
 		-v $(CERTS_PATH):/home/user/certs \
-	 	-e ETCD_ENDPOINTS=http://$(LOCAL_IP_ENV):2379 $(CALICO_BUILD) \
-		 sh -c '$(GIT_CONFIG_SSH) cd fv && ./fv.test $(GINKGO) -ginkgo.slowSpecThreshold 30'
+	 	$(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) cd fv && ./fv.test'
 
 # We pre-build the test binary so that we can run it outside a container and allow it
 # to interact with docker.

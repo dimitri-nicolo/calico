@@ -50,12 +50,11 @@ type L3FlowParams struct {
 }
 
 type Endpoint struct {
-	Type           EndpointType    `json:"type" validate:"omitempty,oneof=wep hep net ns"`
-	Name           string          `json:"name" validate:"omitempty"`
-	AggregatedName string          `json:"aggregated_name" validate:"omitempty"`
-	Namespace      string          `json:"namespace" validate:"omitempty"`
-	Port           int64           `json:"port" validate:"omitempty"`
-	Labels         []LabelSelector `json:"labels" validate:"omitempty"`
+	Type           EndpointType `json:"type" validate:"omitempty,oneof=wep hep net ns"`
+	Name           string       `json:"name" validate:"omitempty"`
+	AggregatedName string       `json:"aggregated_name" validate:"omitempty"`
+	Namespace      string       `json:"namespace" validate:"omitempty"`
+	Port           int64        `json:"port" validate:"omitempty"`
 }
 
 type LabelSelector struct {

@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/felix/rules"
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
 // DNSAggregationKind determines how DNS logs are aggregated
@@ -64,7 +65,6 @@ func (d *dnsLogAggregator) PerNodeLimit(l int) DNSLogAggregator {
 
 func (d *dnsLogAggregator) FeedUpdate(update DNSUpdate) error {
 	meta, spec, err := NewDNSMetaSpecFromUpdate(update, d.kind)
-
 	if err != nil {
 		return err
 	}
@@ -87,8 +87,8 @@ func (d *dnsLogAggregator) FeedUpdate(update DNSUpdate) error {
 	return nil
 }
 
-func (d *dnsLogAggregator) Get() []*DNSLog {
-	var dnsLogs []*DNSLog
+func (d *dnsLogAggregator) Get() []*v1.DNSLog {
+	var dnsLogs []*v1.DNSLog
 	aggregationEndTime := time.Now()
 
 	// Ensure that we can't add or aggregate new logs into the store at the
@@ -113,10 +113,10 @@ func (d *dnsLogAggregator) Get() []*DNSLog {
 		// Emit an Elastic log to alert about the unlogged updates.  This log has no content
 		// except for the time period and the number of updates that could not be fully
 		// logged.
-		excessLog := &DNSLog{
+		excessLog := &v1.DNSLog{
 			StartTime: d.aggregationStartTime,
 			EndTime:   aggregationEndTime,
-			Type:      DNSLogTypeUnlogged,
+			Type:      v1.DNSLogTypeUnlogged,
 			Count:     uint(d.numUnloggedUpdates),
 		}
 		dnsLogs = append(dnsLogs, excessLog)

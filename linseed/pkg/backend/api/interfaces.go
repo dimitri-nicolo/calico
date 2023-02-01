@@ -37,3 +37,18 @@ type L7LogBackend interface {
 	// Create creates the given L7 logs.
 	Create(context.Context, ClusterInfo, []L7Log) error
 }
+
+// DNSFlowBackend defines the interface for interacting with DNS flows
+type DNSFlowBackend interface {
+	List(context.Context, ClusterInfo, v1.DNSFlowParams) ([]v1.DNSFlow, error)
+}
+
+// DNSLogBackend defines the interface for interacting with DNS logs
+type DNSLogBackend interface {
+	// Initialize initializes the backend and must be called prior to using this interface.
+	// This should be called exactly once. Multiple calls to this function will have no effect.
+	Initialize(context.Context) error
+
+	// Create creates the given logs.
+	Create(context.Context, ClusterInfo, []v1.DNSLog) (*v1.BulkResponse, error)
+}
