@@ -16,7 +16,7 @@ COPY --from=ubi /lib64/libnss_dns.so.2 /lib64/libnss_dns.so.2
 COPY --from=ubi /lib64/libpthread.so.0 /lib64/libpthread.so.0
 COPY --from=ubi /lib64/libresolv.so.2 /lib64/libresolv.so.2
 
-ADD bin/voltron-amd64 /usr/bin/voltron
+COPY bin/voltron-amd64 /usr/bin/voltron
 
 USER 10001:10001
 

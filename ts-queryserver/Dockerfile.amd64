@@ -7,7 +7,7 @@ RUN microdnf upgrade
 
 FROM scratch
 
-ADD bin/cnx-queryserver-amd64 /usr/bin/cnx-queryserver
+COPY bin/cnx-queryserver-amd64 /usr/bin/cnx-queryserver
 
 # Copy dependencies from UBI to scratch
 COPY --from=ubi /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2

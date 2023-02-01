@@ -14,8 +14,8 @@ FROM scratch
 COPY --from=ubi /code /code
 COPY --from=ubi /tmp /tmp
 
-ADD bin/apiserver-amd64 /code/apiserver
-ADD bin/filecheck-amd64 /code/filecheck
+COPY bin/apiserver-amd64 /code/apiserver
+COPY bin/filecheck-amd64 /code/filecheck
 
 WORKDIR /code
 

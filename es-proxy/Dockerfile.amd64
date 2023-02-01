@@ -8,7 +8,7 @@ RUN mkdir -p /etc/es-proxy
 
 FROM scratch
 
-ADD bin/es-proxy-amd64 /usr/bin/es-proxy
+COPY bin/es-proxy-amd64 /usr/bin/es-proxy
 # /etc/es-proxy directory used for storing self-signed certificates
 COPY --chown=10001:10001 --from=ubi /etc/es-proxy /etc/es-proxy/
 

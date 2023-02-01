@@ -24,7 +24,7 @@ RUN chmod +x /sbin/tini
 
 # Add in top-level license file
 RUN mkdir /licenses
-ADD licenses /licenses
+COPY licenses /licenses
 COPY LICENSE /licenses
 
 FROM scratch
@@ -55,12 +55,12 @@ COPY --from=ubi /etc/nsswitch.conf /etc/nsswitch.conf
 
 # Put our binary in /code rather than directly in /usr/bin.  This allows the downstream builds
 # to more easily extract the build artefacts from the container.
-ADD bin/calico-typha-amd64 /code/calico-typha
-ADD bin/wrapper-amd64 /code/wrapper
-ADD typha.cfg /etc/calico/typha.cfg
+COPY bin/calico-typha-amd64 /code/calico-typha
+COPY bin/wrapper-amd64 /code/wrapper
+COPY typha.cfg /etc/calico/typha.cfg
 
-# Add nsswitch.conf so that we correctly resolve localhost based on /etc/hosts.
-ADD nsswitch.conf /etc/nsswitch.conf
+# Copy nsswitch.conf so that we correctly resolve localhost based on /etc/hosts.
+COPY nsswitch.conf /etc/nsswitch.conf
 
 WORKDIR /code
 ENV PATH="$PATH:/code"

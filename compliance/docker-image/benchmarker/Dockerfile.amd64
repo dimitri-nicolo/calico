@@ -20,8 +20,8 @@ RUN curl -sfL https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubec
 
 FROM scratch
 
-ADD bin/benchmarker-amd64 /usr/bin/compliance-benchmarker
-ADD bin/kube-bench-amd64 /usr/bin/kube-bench
+COPY bin/benchmarker-amd64 /usr/bin/compliance-benchmarker
+COPY bin/kube-bench-amd64 /usr/bin/kube-bench
 
 COPY --from=ubi /etc/kube-bench /etc/kube-bench/
 COPY --from=ubi /usr/bin/kubectl /usr/bin/kubectl

@@ -18,7 +18,7 @@ FROM --platform=linux/amd64 alpine:latest as base
 # Create dirs we need that we copy over in the final stage.
 RUN mkdir /CalicoUpgrade /CalicoBin
 
-ADD build/* /CalicoBin/
+COPY build/* /CalicoBin/
 
 FROM mcr.microsoft.com/windows/nanoserver:${WINDOWS_VERSION}
 

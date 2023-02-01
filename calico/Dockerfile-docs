@@ -4,7 +4,7 @@ LABEL maintainer="eric@tigera.io"
 ENV JEKYLL_UID=501
 
 RUN gem install --no-rdoc --no-ri jekyll-redirect-from
-ADD _site /srv/jekyll/_site
-COPY _config.yml /srv/jekyll
+COPY _site /srv/jekyll/_site/
+COPY _config.yml /srv/jekyll/
 
 CMD jekyll serve --skip-initial-build --no-watch --config _config.yml > /dev/null 2>&1

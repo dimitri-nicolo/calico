@@ -6,7 +6,7 @@ RUN microdnf upgrade
 
 FROM scratch
 
-ADD bin/{{ lower .Name }}-amd64 /usr/bin/{{ lower .Name }}
+COPY bin/{{ lower .Name }}-amd64 /usr/bin/{{ lower .Name }}
 
 USER 10001:10001
 

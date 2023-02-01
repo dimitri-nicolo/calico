@@ -153,7 +153,7 @@ RUN test -f /sbin/modprobe || ln -s /usr/sbin/modprobe /sbin/modprobe
 
 # Clean out as many files as we can from the filesystem.  We no longer need dnf or the platform python install
 # or any of its dependencies.
-# ADD clean-up-filesystem.sh /
+# COPY clean-up-filesystem.sh /
 # RUN /clean-up-filesystem.sh
 
 # Copy everything into a fresh scratch image so that naive CVE scanners don't pick up binaries and libraries
@@ -163,5 +163,5 @@ FROM scratch
 # base ubi image has been cleaned from 
 COPY --from=ubi / /
 
-ADD install-gateway.sh /install-gateway.sh
+COPY install-gateway.sh /install-gateway.sh
 CMD ["/install-gateway.sh"]

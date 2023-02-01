@@ -65,10 +65,10 @@ COPY --from=wgtool /usr/bin/wg /usr/bin/wg
 RUN update-alternatives --set iptables /usr/sbin/iptables-legacy
 RUN update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
 
-ADD felix.cfg /etc/calico/felix.cfg
-ADD calico-felix-wrapper /usr/bin
+COPY felix.cfg /etc/calico/felix.cfg
+COPY calico-felix-wrapper /usr/bin/
 
-COPY --from=bpftool /bpftool /usr/bin
+COPY --from=bpftool /bpftool /usr/bin/
 WORKDIR /code
 
 # Run felix (via the wrapper script) by default

@@ -149,7 +149,7 @@ RUN test -f /sbin/modprobe || ln -s /usr/sbin/modprobe /sbin/modprobe
 
 # Clean out as many files as we can from the filesystem.  We no longer need dnf or the platform python install
 # or any of its dependencies.
-ADD clean-up-filesystem.sh /
+COPY clean-up-filesystem.sh /
 RUN /clean-up-filesystem.sh
 
 # Copy everything into a fresh scratch image so that naive CVE scanners don't pick up binaries and libraries
@@ -166,5 +166,5 @@ COPY --from=ubi /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
 COPY --from=ubi /lib64/libpthread.so.0 /lib64/libpthread.so.0
 COPY --from=ubi /lib64/libc.so.6 /lib64/libc.so.6
 
-ADD init-gateway.sh /init-gateway.sh
-ADD start-gateway.sh /start-gateway.sh
+COPY init-gateway.sh /init-gateway.sh
+COPY start-gateway.sh /start-gateway.sh

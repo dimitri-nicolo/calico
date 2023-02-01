@@ -44,8 +44,8 @@ COPY --from=build /usr/lib64/libGeoIP.* /usr/lib64/
 FROM scratch
 
 COPY --from=ubi /licenses /licenses
-ADD bin/dikastes-amd64 /dikastes
-ADD bin/healthz-amd64 /healthz
+COPY bin/dikastes-amd64 /dikastes
+COPY bin/healthz-amd64 /healthz
 
 # Include libraries from UBI for dynamic linking.
 #

@@ -1,6 +1,6 @@
 FROM scratch
 
-ADD bin/anomaly-detection-api-amd64 /usr/bin/anomaly-detection-api
+COPY bin/anomaly-detection-api-amd64 /usr/bin/anomaly-detection-api
 
 USER 10001:10001
 

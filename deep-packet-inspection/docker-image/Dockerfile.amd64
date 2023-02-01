@@ -78,7 +78,7 @@ RUN mkdir -p /usr/local/etc/rules \
 
 FROM scratch
 
-ADD bin/deep-packet-inspection-amd64 /usr/bin/deep-packet-inspection
+COPY bin/deep-packet-inspection-amd64 /usr/bin/deep-packet-inspection
 
 # Copy Snort and related files over
 COPY --from=snort /usr/local/bin/snort /usr/bin/snort

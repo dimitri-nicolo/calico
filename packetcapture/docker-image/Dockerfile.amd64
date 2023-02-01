@@ -1,6 +1,6 @@
 FROM scratch
 
-ADD bin/packetcapture-amd64 /usr/bin/packetcapture
+COPY bin/packetcapture-amd64 /usr/bin/packetcapture
 
 USER 10001:10001
 

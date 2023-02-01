@@ -7,7 +7,7 @@ RUN microdnf upgrade
 
 FROM scratch
 
-ADD bin/continuous-policy-recommendation-amd64 /usr/bin/continuous-policy-recommendation
+COPY bin/continuous-policy-recommendation-amd64 /usr/bin/continuous-policy-recommendation
 
 # Because we build our binary with CGO, we need to add the necessary *.so files for dynamic linking.
 # If *.so files are missing, you will see an error saying that your entrypoint cannot be found.
