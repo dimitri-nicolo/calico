@@ -64,7 +64,6 @@ kubectl_retry 10 create ns ${NEW_NAME}
 for x in node-certs typha-certs; do
   copy_resource_to_ns Secret $x ${NEW_NAME}
 done
-copy_resource_to_ns ConfigMap typha-ca ${NEW_NAME}
 
 # Switch the active operator
 PATCH_FILE=$(mktemp)
