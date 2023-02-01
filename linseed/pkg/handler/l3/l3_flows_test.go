@@ -90,9 +90,19 @@ func networkFlows(flows []v1.L3Flow) *l3.NetworkFlows {
 	mockBackend := &api.MockFlowBackend{}
 	n := l3.NewNetworkFlows(mockBackend)
 
+	flowChan := make(chan []v1.L3Flow, 1)
+	flowChan <- flows
+	close(flowChan)
+
+	// Use this helper so that we return a receive-only channel, as
+	// is expected by the interface.
+	c := func(ch chan []v1.L3Flow) <-chan []v1.L3Flow {
+		return ch
+	}
+
 	// mock backend to return the required flows
 	mockBackend.On("List", mock.Anything,
-		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("v1.L3FlowParams")).Return(flows, nil)
+		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("v1.L3FlowParams")).Return(c(flowChan), nil)
 
 	return n
 }

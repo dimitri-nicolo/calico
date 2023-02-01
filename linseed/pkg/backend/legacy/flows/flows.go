@@ -152,8 +152,89 @@ const (
 	FlowAggMeanTCPMSS                  = "tcp_mean_mss"
 )
 
+// convertBucket turns a composite aggregation bucket into an L3Flow.
+func (b *flowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.CompositeAggregationBucket) v1.L3Flow {
+	log.Infof("Processing bucket built from %d logs", bucket.DocCount)
+	key := bucket.CompositeAggregationKey
+
+	// TODO: Handle policy report aggregations
+
+	// Build the flow, starting with the key.
+	flow := v1.L3Flow{Key: v1.L3FlowKey{}}
+	flow.Key.Reporter = b.ft.ValueString(key, "reporter")
+	flow.Key.Action = b.ft.ValueString(key, "action")
+	flow.Key.Protocol = b.ft.ValueString(key, "proto")
+	flow.Key.Source = v1.Endpoint{
+		Type:           v1.EndpointType(b.ft.ValueString(key, "source_type")),
+		AggregatedName: b.ft.ValueString(key, "source_name_aggr"),
+		Namespace:      b.ft.ValueString(key, "source_namespace"),
+	}
+	flow.Key.Destination = v1.Endpoint{
+		Type:           v1.EndpointType(b.ft.ValueString(key, "dest_type")),
+		AggregatedName: b.ft.ValueString(key, "dest_name_aggr"),
+		Namespace:      b.ft.ValueString(key, "dest_namespace"),
+		Port:           b.ft.ValueInt64(key, "dest_port"),
+	}
+
+	// Build the flow.
+	flow.LogStats = &v1.LogStats{
+		LogCount:  int64(bucket.AggregatedSums[FlowAggSumNumFlows]),
+		Started:   int64(bucket.AggregatedSums[FlowAggSumNumFlowsStarted]),
+		Completed: int64(bucket.AggregatedSums[FlowAggSumNumFlowsCompleted]),
+	}
+
+	flow.Service = &v1.Service{
+		Name:      b.ft.ValueString(key, "dest_service_name"),
+		Namespace: b.ft.ValueString(key, "dest_service_namespace"),
+		Port:      b.ft.ValueInt32(key, "dest_service_port_num"),
+		PortName:  b.ft.ValueString(key, "dest_service_port"),
+	}
+
+	flow.TrafficStats = &v1.TrafficStats{
+		PacketsIn:  int64(bucket.AggregatedSums[FlowAggSumPacketsIn]),
+		PacketsOut: int64(bucket.AggregatedSums[FlowAggSumPacketsOut]),
+		BytesIn:    int64(bucket.AggregatedSums[FlowAggSumBytesIn]),
+		BytesOut:   int64(bucket.AggregatedSums[FlowAggSumBytesOut]),
+	}
+
+	if flow.Key.Protocol == "tcp" {
+		flow.TCPStats = &v1.TCPStats{
+			TotalRetransmissions:     int64(bucket.AggregatedSums[FlowAggSumTCPRetranmissions]),
+			LostPackets:              int64(bucket.AggregatedSums[FlowAggSumTCPLostPackets]),
+			UnrecoveredTo:            int64(bucket.AggregatedSums[FlowAggSumTCPUnrecoveredTO]),
+			MinSendCongestionWindow:  bucket.AggregatedMin[FlowAggMinTCPSendCongestionWindow],
+			MinMSS:                   bucket.AggregatedMin[FlowAggMinTCPMSS],
+			MaxSmoothRTT:             bucket.AggregatedMax[FlowAggMaxTCPSmoothRTT],
+			MaxMinRTT:                bucket.AggregatedMax[FlowAggMaxTCPMinRTT],
+			MeanSendCongestionWindow: bucket.AggregatedMean[FlowAggMeanTCPSendCongestionWindow],
+			MeanSmoothRTT:            bucket.AggregatedMean[FlowAggMeanTCPSmoothRTT],
+			MeanMinRTT:               bucket.AggregatedMean[FlowAggMeanTCPMinRTT],
+			MeanMSS:                  bucket.AggregatedMean[FlowAggMeanTCPMSS],
+		}
+	}
+
+	// Determine the process info if available in the logs.
+	// var processes v1.GraphEndpointProcesses
+	processName := b.ft.ValueString(key, "process_name")
+	if processName != "" {
+		flow.Process = &v1.Process{Name: processName}
+		flow.ProcessStats = &v1.ProcessStats{
+			MinNumNamesPerFlow: int(bucket.AggregatedMin[FlowAggMinProcessNames]),
+			MaxNumNamesPerFlow: int(bucket.AggregatedMax[FlowAggMaxProcessNames]),
+			MinNumIDsPerFlow:   int(bucket.AggregatedMin[FlowAggMinProcessIds]),
+			MaxNumIDsPerFlow:   int(bucket.AggregatedMax[FlowAggMaxProcessIds]),
+		}
+	}
+
+	// Handle label aggregation.
+	flow.DestinationLabels = getLabelsFromLabelAggregation(log, bucket.AggregatedTerms, "dest_labels")
+	flow.SourceLabels = getLabelsFromLabelAggregation(log, bucket.AggregatedTerms, "source_labels")
+
+	return flow
+}
+
 // List returns all flows which match the given options.
-func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3FlowParams) ([]v1.L3Flow, error) {
+func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3FlowParams) (<-chan []v1.L3Flow, <-chan error) {
 	log := bapi.ContextLogger(i)
 
 	if i.Cluster == "" {
@@ -191,126 +272,10 @@ func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3Fl
 		AggNestedTermInfos:      b.aggNested,
 		MaxBucketsPerQuery:      numResults,
 	}
-
-	// Context for the ES request.
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	log.Infof("Listing flows from index %s", query.DocumentIndex)
-
-	var allFlows []v1.L3Flow
+	log.Debugf("Listing flows from index %s", query.DocumentIndex)
 
 	// Perform the request.
-	// TODO: We're iterating over a channel. We need to support paging.
-	buckets, errors := b.lmaclient.SearchCompositeAggregations(ctx, query, nil)
-	for bucket := range buckets {
-		log.Infof("Processing bucket built from %d logs", bucket.DocCount)
-		key := bucket.CompositeAggregationKey
-
-		// Build the flow, starting with the key.
-		flow := v1.L3Flow{Key: v1.L3FlowKey{}}
-		flow.Key.Reporter = b.ft.ValueString(key, "reporter")
-		flow.Key.Action = b.ft.ValueString(key, "action")
-		flow.Key.Protocol = b.ft.ValueString(key, "proto")
-		flow.Key.Source = v1.Endpoint{
-			Type:           v1.EndpointType(b.ft.ValueString(key, "source_type")),
-			AggregatedName: b.ft.ValueString(key, "source_name_aggr"),
-			Namespace:      b.ft.ValueString(key, "source_namespace"),
-		}
-		flow.Key.Destination = v1.Endpoint{
-			Type:           v1.EndpointType(b.ft.ValueString(key, "dest_type")),
-			AggregatedName: b.ft.ValueString(key, "dest_name_aggr"),
-			Namespace:      b.ft.ValueString(key, "dest_namespace"),
-			Port:           b.ft.ValueInt64(key, "dest_port"),
-		}
-
-		// Build the flow.
-		flow.LogStats = &v1.LogStats{
-			FlowLogCount: bucket.DocCount,
-			LogCount:     int64(bucket.AggregatedSums[FlowAggSumNumFlows]),
-			Started:      int64(bucket.AggregatedSums[FlowAggSumNumFlowsStarted]),
-			Completed:    int64(bucket.AggregatedSums[FlowAggSumNumFlowsCompleted]),
-		}
-
-		flow.Service = &v1.Service{
-			Name:      b.ft.ValueString(key, "dest_service_name"),
-			Namespace: b.ft.ValueString(key, "dest_service_namespace"),
-			Port:      b.ft.ValueInt32(key, "dest_service_port_num"),
-			PortName:  b.ft.ValueString(key, "dest_service_port"),
-		}
-
-		flow.TrafficStats = &v1.TrafficStats{
-			PacketsIn:  int64(bucket.AggregatedSums[FlowAggSumPacketsIn]),
-			PacketsOut: int64(bucket.AggregatedSums[FlowAggSumPacketsOut]),
-			BytesIn:    int64(bucket.AggregatedSums[FlowAggSumBytesIn]),
-			BytesOut:   int64(bucket.AggregatedSums[FlowAggSumBytesOut]),
-		}
-
-		if flow.Key.Protocol == "tcp" {
-			flow.TCPStats = &v1.TCPStats{
-				TotalRetransmissions:     int64(bucket.AggregatedSums[FlowAggSumTCPRetranmissions]),
-				LostPackets:              int64(bucket.AggregatedSums[FlowAggSumTCPLostPackets]),
-				UnrecoveredTo:            int64(bucket.AggregatedSums[FlowAggSumTCPUnrecoveredTO]),
-				MinSendCongestionWindow:  bucket.AggregatedMin[FlowAggMinTCPSendCongestionWindow],
-				MinMSS:                   bucket.AggregatedMin[FlowAggMinTCPMSS],
-				MaxSmoothRTT:             bucket.AggregatedMax[FlowAggMaxTCPSmoothRTT],
-				MaxMinRTT:                bucket.AggregatedMax[FlowAggMaxTCPMinRTT],
-				MeanSendCongestionWindow: bucket.AggregatedMean[FlowAggMeanTCPSendCongestionWindow],
-				MeanSmoothRTT:            bucket.AggregatedMean[FlowAggMeanTCPSmoothRTT],
-				MeanMinRTT:               bucket.AggregatedMean[FlowAggMeanTCPMinRTT],
-				MeanMSS:                  bucket.AggregatedMean[FlowAggMeanTCPMSS],
-			}
-		}
-
-		// Determine the process info if available in the logs.
-		// var processes v1.GraphEndpointProcesses
-		processName := b.ft.ValueString(key, "process_name")
-		if processName != "" {
-			flow.Process = &v1.Process{Name: processName}
-			flow.ProcessStats = &v1.ProcessStats{
-				MinNumNamesPerFlow: int(bucket.AggregatedMin[FlowAggMinProcessNames]),
-				MaxNumNamesPerFlow: int(bucket.AggregatedMax[FlowAggMaxProcessNames]),
-				MinNumIDsPerFlow:   int(bucket.AggregatedMin[FlowAggMinProcessIds]),
-				MaxNumIDsPerFlow:   int(bucket.AggregatedMax[FlowAggMaxProcessIds]),
-			}
-		}
-
-		// Handle label aggregation.
-		flow.DestinationLabels = getLabelsFromLabelAggregation(log, bucket.AggregatedTerms, "dest_labels")
-		flow.SourceLabels = getLabelsFromLabelAggregation(log, bucket.AggregatedTerms, "source_labels")
-
-		// TODO: Handle policy report aggregations
-
-		// Add the flow to the batch.
-		allFlows = append(allFlows, flow)
-
-		// Track the number of flows. Bail if we hit the absolute maximum number of flows.
-		if opts.MaxResults != 0 && len(allFlows) >= opts.MaxResults {
-			log.Warnf("Maximum number of flows (%d) reached. Stopping flow processing", opts.MaxResults)
-			break
-		}
-	}
-
-	// TODO: check for errors. This is a temporary hack so that we
-	// get some error reporting at least.
-	select {
-	case err := <-errors:
-		if err != nil {
-			log.Errorf("Error processing list request: %s", err)
-			return allFlows, err
-		}
-	default:
-		// No error
-	}
-
-	// Adjust some of the statistics based on the aggregation interval.
-	// timeInterval := tr.Duration()
-	// l3Flushes := float64(timeInterval) / float64(fc.L3FlowFlushInterval)
-	// for i := range fs {
-	// 	fs[i].Stats.Connections.TotalPerSampleInterval = int64(float64(fs[i].Stats.Connections.TotalPerSampleInterval) / l3Flushes)
-	// }
-
-	return allFlows, nil
+	return lmaelastic.CompositeSearch[v1.L3Flow](ctx, b.lmaclient, query, log, b.convertBucket)
 }
 
 func buildFlowsIndex(cluster string) string {

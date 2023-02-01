@@ -48,9 +48,15 @@ func TestListFlows(t *testing.T) {
 	opts.QueryParams.TimeRange.To = time.Now().Add(5 * time.Second)
 
 	// Query for flows. There should be a single flow from the populated data.
-	r, err := b.List(ctx, clusterInfo, opts)
+	resultsChan, errors := b.List(ctx, clusterInfo, opts)
+	r := []v1.L3Flow{}
+	for p := range resultsChan {
+		r = append(r, p...)
+	}
+
 	require.NoError(t, err)
 	require.Len(t, r, 1)
+	require.Empty(t, errors)
 
 	// Assert that the flow data is populated correctly.
 	require.Equal(t, expected, r[0])

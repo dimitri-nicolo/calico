@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/olivere/elastic/v7"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -541,6 +542,110 @@ func (c *mockComplianceClient) SearchCompositeAggregations(
 	startAfterKey CompositeAggregationKey,
 ) (<-chan *CompositeAggregationBucket, <-chan error) {
 	return searchCompositeAggregationsHelper(ctx, query, startAfterKey, c)
+}
+
+// CompositeSearch performs a paged composite aggregation search against elastic, and returns a channel
+// of paged results. Each item sent over the channel is a single page of results.
+func CompositeSearch[T any](ctx context.Context, c Client, query *CompositeAggregationQuery, log *logrus.Entry, convert func(*logrus.Entry, *CompositeAggregationBucket) T) (<-chan []T, <-chan error) {
+	// Create the results and errs channel. We will send at most a single page at a time.
+	results := make(chan []T, 1)
+	errs := make(chan error, 1)
+
+	// Perform the ES query on a go-routine.
+	go func() {
+		// Close the two channels when the go routine completes.
+		defer func() {
+			close(results)
+			close(errs)
+		}()
+
+		// Query the document index. We aren't interested in the actual search results but rather only the aggregated
+		// results.
+		searchQuery := c.Backend().Search().
+			Index(query.DocumentIndex).
+			Size(0).
+			Query(query.Query)
+
+		// If a start after key was supplied then convert to the appropriate format for the client.
+		var resultsAfter map[string]interface{}
+
+		// Construct the Aggregation for the query.
+		compiledCompositeAgg := query.getCompositeAggregation()
+
+		// Issue the query to Elasticsearch and send results out through the results channel. We terminate the search if:
+		// - there are no more "buckets" returned by Elasticsearch or the equivalent no-or-empty "after_key" in the
+		//   aggregated search results,
+		// - we hit an error, or
+		// - the context indicates "done"
+		for {
+			if resultsAfter != nil {
+				log.Debugf("Enumerating after key %+v", resultsAfter)
+				compiledCompositeAgg = compiledCompositeAgg.AggregateAfter(resultsAfter)
+			}
+
+			log.Debugf("Listing flows from index %s", query.DocumentIndex)
+			queryAgg := searchQuery.Aggregation(query.Name, compiledCompositeAgg)
+			searchResult, err := c.Do(ctx, queryAgg)
+			if err != nil {
+				// We hit an error, exit. This may be a context done error, but that's fine, pass the error on.
+				log.WithError(err).Debugf("Error searching %s", query.DocumentIndex)
+				errs <- err
+				return
+			}
+
+			// Exit if the search timed out. We return a very specific error type that can be recognized by the
+			// consumer - this is useful in propagating the timeout up the stack when we are doing server side
+			// aggregation.
+			if searchResult.TimedOut {
+				log.Errorf("Elastic query timed out: %s", query.DocumentIndex)
+				errs <- TimedOutError(fmt.Sprintf("timed out querying %s", query.DocumentIndex))
+			}
+
+			// Extract the buckets from the search results. If there are no results the buckets item will not be
+			// present.
+			//TODO(rlb): If this processing proves to be too slow we may need to use a streaming json unserializer and
+			//           hook directly into the HTTP client.
+			rawResults, ok := searchResult.Aggregations.Composite(query.Name)
+			if !ok {
+				log.Infof("No results for composite query of %s", query.DocumentIndex)
+				return
+			}
+
+			// Loop through each of the items in the buckets and convert to a page of objects.
+			page := []T{}
+			for _, item := range rawResults.Buckets {
+				cab, err := query.ConvertBucket(item)
+				if err != nil {
+					log.WithError(err).Error("error processing ES composite aggregation bucket")
+					errs <- err
+					return
+
+				}
+				// Now convert to the desired output type.
+				page = append(page, convert(log, cab))
+			}
+
+			select {
+			case results <- page:
+				// Result successfully in channel.
+			case <-ctx.Done():
+				// Context indicates done, exit immediately.
+				log.WithError(ctx.Err()).Debug("Context done")
+				errs <- ctx.Err()
+				return
+			}
+
+			// If we get the requested number of buckets then there may be more results to obtain.
+			if len(rawResults.Buckets) < query.getMaxBuckets() || rawResults.AfterKey == nil || len(rawResults.AfterKey) == 0 {
+				log.Debugf("Completed processing %s", query.DocumentIndex)
+				return
+			}
+
+			resultsAfter = rawResults.AfterKey
+		}
+	}()
+
+	return results, errs
 }
 
 func searchCompositeAggregationsHelper(

@@ -42,7 +42,6 @@ func (n NetworkFlows) URL() string {
 func (n NetworkFlows) Serve() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		reqParams, err := handler.DecodeAndValidateReqParams[v1.L3FlowParams](w, req)
-
 		if err != nil {
 			log.WithError(err).Error("Failed to decode/validate request parameters")
 			var httpErr *httputils.HttpStatusError
@@ -69,15 +68,27 @@ func (n NetworkFlows) Serve() http.HandlerFunc {
 			Cluster: middleware.ClusterIDFromContext(req.Context()),
 			Tenant:  middleware.TenantIDFromContext(req.Context()),
 		}
-		flows, err := n.backend.List(ctx, clusterInfo, *reqParams)
-		if err != nil {
-			log.WithError(err).Error("Failed to list flows")
-			httputils.JSONError(w, &httputils.HttpStatusError{
-				Status: http.StatusInternalServerError,
-				Msg:    err.Error(),
-				Err:    err,
-			}, http.StatusInternalServerError)
-			return
+		resultChan, errors := n.backend.List(ctx, clusterInfo, *reqParams)
+
+		// TODO: For now, we simply aggregate all of the given pages and errors. But longer term, we want to
+		// propagate the pages through to the client.
+		var flows []v1.L3Flow
+		for r := range resultChan {
+			flows = append(flows, r...)
+		}
+		select {
+		case err := <-errors:
+			if err != nil {
+				log.WithError(err).Error("Failed to list flows")
+				httputils.JSONError(w, &httputils.HttpStatusError{
+					Status: http.StatusInternalServerError,
+					Msg:    err.Error(),
+					Err:    err,
+				}, http.StatusInternalServerError)
+				return
+			}
+		default:
+			// No error
 		}
 
 		response := v1.L3FlowResponse{L3Flows: flows}
