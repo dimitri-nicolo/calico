@@ -3,6 +3,7 @@ package legacy
 import (
 	"context"
 	"fmt"
+	"time"
 
 	elastic "github.com/olivere/elastic/v7"
 
@@ -59,7 +60,7 @@ func (b *l7LogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []ba
 
 	// Determine the index to write to. It will be automatically created based on the configured
 	// template if it does not already exist.
-	index := fmt.Sprintf("tigera_secure_ee_l7.%s", i.Cluster)
+	index := fmt.Sprintf("tigera_secure_ee_l7.%s.%s", i.Cluster, time.Now().Format("2006-01-02"))
 	log.Infof("Writing L7 logs in bulk to index %s", index)
 
 	// Build a bulk request using the provided logs.

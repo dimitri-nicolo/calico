@@ -312,7 +312,7 @@ func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3Fl
 }
 
 func buildFlowsIndex(cluster string) string {
-	return fmt.Sprintf("tigera_secure_ee_flows.%s", cluster)
+	return fmt.Sprintf("tigera_secure_ee_flows.%s.*", cluster)
 }
 
 // getLabelsFromLabelAggregation parses the labels out from the given aggregation and puts them into a map map[string][]FlowResponseLabels

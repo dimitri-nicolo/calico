@@ -15,8 +15,13 @@ type BulkError struct {
 }
 
 func (e BulkError) Error() string {
-	return fmt.Sprintf("Error creating resource as part of a bulk operation. resource=%s type=%s reason=%s",
-		e.Resource, e.Type, e.Reason)
+	if e.Resource == "" {
+		// For some errors, there is no specific resource
+		fmtString := "Error during a bulk operation. type=%s reason=%s"
+		return fmt.Sprintf(fmtString, e.Type, e.Reason)
+	}
+	fmtString := "Error creating resource as part of a bulk operation. resource=%s type=%s reason=%s"
+	return fmt.Sprintf(fmtString, e.Resource, e.Type, e.Reason)
 }
 
 // GetBulkErrors returns a slie of bulk errors from an Elastic BulkResponse,

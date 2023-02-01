@@ -56,14 +56,14 @@ func TestListDNSFlows(t *testing.T) {
 	require.Equal(t, expected, r[0])
 
 	// Clean up after ourselves by deleting the index.
-	_, err = esClient.DeleteIndex(fmt.Sprintf("tigera_secure_ee_dns.%s", clusterInfo.Cluster)).Do(ctx)
+	_, err = esClient.DeleteIndex(fmt.Sprintf("tigera_secure_ee_dns.%s.*", clusterInfo.Cluster)).Do(ctx)
 	require.NoError(t, err)
 }
 
 // populateDNSLogData writes a series of DNS logs to elasticsearch, and returns the DNSFlow that we
 // should expect to exist as a result. This can be used to assert round-tripping and aggregation against ES is working correctly.
 func populateDNSLogData(t *testing.T, ctx context.Context, client lmaelastic.Client, cluster string) v1.DNSFlow {
-	index := fmt.Sprintf("tigera_secure_ee_dns.%s", cluster)
+	index := fmt.Sprintf("tigera_secure_ee_dns.%s.*", cluster)
 
 	// Clear out any old data first.
 	_, _ = client.Backend().DeleteIndex(index).Do(ctx)

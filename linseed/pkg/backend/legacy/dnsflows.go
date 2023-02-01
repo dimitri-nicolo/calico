@@ -175,5 +175,5 @@ func (b *dnsFlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.D
 }
 
 func buildDNSIndex(cluster string) string {
-	return fmt.Sprintf("tigera_secure_ee_dns.%s", cluster)
+	return fmt.Sprintf("tigera_secure_ee_dns.%s.*", cluster)
 }

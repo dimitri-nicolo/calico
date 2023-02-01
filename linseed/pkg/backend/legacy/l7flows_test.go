@@ -54,7 +54,7 @@ func TestListL7Flows(t *testing.T) {
 	require.Equal(t, expected, r[0])
 
 	// Clean up after ourselves by deleting the index.
-	_, err = esClient.DeleteIndex(fmt.Sprintf("tigera_secure_ee_l7.%s", clusterInfo.Cluster)).Do(ctx)
+	_, err = esClient.DeleteIndex(fmt.Sprintf("tigera_secure_ee_l7.%s.*", clusterInfo.Cluster)).Do(ctx)
 	require.NoError(t, err)
 }
 
@@ -62,7 +62,7 @@ func TestListL7Flows(t *testing.T) {
 // should expect to exist as a result. This can be used to assert round-tripping and aggregation against ES is working correctly.
 func populateL7FlowData(t *testing.T, ctx context.Context, client lmaelastic.Client, cluster string) v1.L7Flow {
 	// Clear out any old data first.
-	_, _ = client.Backend().DeleteIndex(fmt.Sprintf("tigera_secure_ee_l7.%s", cluster)).Do(ctx)
+	_, _ = client.Backend().DeleteIndex(fmt.Sprintf("tigera_secure_ee_l7.%s.*", cluster)).Do(ctx)
 
 	// Instantiate a FlowBackend.
 	b := legacy.NewL7LogBackend(client)
@@ -163,7 +163,7 @@ func populateL7FlowData(t *testing.T, ctx context.Context, client lmaelastic.Cli
 
 	// Refresh the index so that data is readily available for the test. Otherwise, we need to wait
 	// for the refresh interval to occur.
-	index := fmt.Sprintf("tigera_secure_ee_l7.%s", cluster)
+	index := fmt.Sprintf("tigera_secure_ee_l7.%s.*", cluster)
 	err = refreshIndex(ctx, client, index)
 	require.NoError(t, err)
 

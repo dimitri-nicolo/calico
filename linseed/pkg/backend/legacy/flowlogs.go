@@ -5,6 +5,7 @@ package legacy
 import (
 	"context"
 	"fmt"
+	"time"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 
@@ -62,7 +63,7 @@ func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []
 
 	// Determine the index to write to. It will be automatically created based on the configured
 	// flow template if it does not already exist.
-	index := fmt.Sprintf("tigera_secure_ee_flows.%s", i.Cluster)
+	index := fmt.Sprintf("tigera_secure_ee_flows.%s.%s", i.Cluster, time.Now().Format("2006-01-02"))
 	log.Debugf("Writing flow logs in bulk to index %s", index)
 
 	// Build a bulk request using the provided logs.

@@ -205,5 +205,5 @@ func (b *l7FlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L7
 }
 
 func buildL7FlowsIndex(cluster string) string {
-	return fmt.Sprintf("tigera_secure_ee_l7.%s", cluster)
+	return fmt.Sprintf("tigera_secure_ee_l7.%s.*", cluster)
 }

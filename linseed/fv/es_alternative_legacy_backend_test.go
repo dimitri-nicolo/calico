@@ -44,7 +44,7 @@ func (b *LegacyBackend) delete(index string) {
 }
 
 func (b *LegacyBackend) ingestFlow() {
-	b.ingest("tigera_secure_ee_flows.cluster", flowLog, flowID)
+	b.ingest("tigera_secure_ee_flows.cluster.2006-01-02", flowLog, flowID)
 }
 
 func (b *LegacyBackend) deleteFlowLogs() {

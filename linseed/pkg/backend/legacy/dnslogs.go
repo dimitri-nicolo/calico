@@ -5,6 +5,7 @@ package legacy
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/olivere/elastic/v7"
 
@@ -60,7 +61,7 @@ func (b *dnsLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 
 	// Determine the index to write to. It will be automatically created based on the configured
 	// template if it does not already exist.
-	index := fmt.Sprintf("tigera_secure_ee_dns.%s", i.Cluster)
+	index := fmt.Sprintf("tigera_secure_ee_dns.%s.%s", i.Cluster, time.Now().Format("2006-01-02"))
 	log.Debugf("Writing DNS logs in bulk to index %s", index)
 
 	// Build a bulk request using the provided logs.

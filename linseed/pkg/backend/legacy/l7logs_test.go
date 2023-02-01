@@ -47,6 +47,6 @@ func TestCreateL7Log(t *testing.T) {
 	require.NoError(t, err)
 
 	// Clean up after ourselves by deleting the index.
-	_, err = esClient.DeleteIndex(fmt.Sprintf("tigera_secure_ee_l7.%s", clusterInfo.Cluster)).Do(ctx)
+	_, err = esClient.DeleteIndex(fmt.Sprintf("tigera_secure_ee_l7.%s.*", clusterInfo.Cluster)).Do(ctx)
 	require.NoError(t, err)
 }
