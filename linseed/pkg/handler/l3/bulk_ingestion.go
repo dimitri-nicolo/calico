@@ -41,7 +41,7 @@ func (b BulkIngestion) Serve() http.HandlerFunc {
 		logs, err := handler.DecodeAndValidateBulkParams[v1.FlowLog](w, req)
 
 		if err != nil {
-			log.WithError(err).Error("failed to decode/validate request parameters")
+			log.WithError(err).Error("Failed to decode/validate request parameters")
 			var httpErr *httputils.HttpStatusError
 			if errors.As(err, &httpErr) {
 				httputils.JSONError(w, httpErr, httpErr.Status)
@@ -64,6 +64,7 @@ func (b BulkIngestion) Serve() http.HandlerFunc {
 
 		response, err := b.backend.Create(ctx, clusterInfo, logs)
 		if err != nil {
+			log.WithError(err).Error("Failed to ingest flow logs")
 			httputils.JSONError(w, &httputils.HttpStatusError{
 				Status: http.StatusInternalServerError,
 				Msg:    err.Error(),
@@ -71,6 +72,7 @@ func (b BulkIngestion) Serve() http.HandlerFunc {
 			}, http.StatusInternalServerError)
 			return
 		}
+		log.Debugf("Bulk response is: %+v", response)
 		httputils.Encode(w, response)
 	}
 }

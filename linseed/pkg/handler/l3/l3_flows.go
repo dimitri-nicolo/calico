@@ -44,10 +44,16 @@ func (n NetworkFlows) Serve() http.HandlerFunc {
 		reqParams, err := handler.DecodeAndValidateReqParams[v1.L3FlowParams](w, req)
 
 		if err != nil {
-			log.WithError(err).Error("failed to decode/validate request parameters")
+			log.WithError(err).Error("Failed to decode/validate request parameters")
 			var httpErr *httputils.HttpStatusError
 			if errors.As(err, &httpErr) {
 				httputils.JSONError(w, httpErr, httpErr.Status)
+			} else {
+				httputils.JSONError(w, &httputils.HttpStatusError{
+					Err:    err,
+					Msg:    err.Error(),
+					Status: http.StatusBadRequest,
+				}, http.StatusBadRequest)
 			}
 			return
 		}
@@ -65,6 +71,7 @@ func (n NetworkFlows) Serve() http.HandlerFunc {
 		}
 		flows, err := n.backend.List(ctx, clusterInfo, *reqParams)
 		if err != nil {
+			log.WithError(err).Error("Failed to list flows")
 			httputils.JSONError(w, &httputils.HttpStatusError{
 				Status: http.StatusInternalServerError,
 				Msg:    err.Error(),
@@ -75,6 +82,7 @@ func (n NetworkFlows) Serve() http.HandlerFunc {
 
 		response := v1.L3FlowResponse{L3Flows: flows}
 
+		log.Debugf("Flow response is: %+v", response)
 		httputils.Encode(w, response)
 	}
 }
