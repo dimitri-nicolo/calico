@@ -37,7 +37,7 @@ func NewBackend(c lmaelastic.Client) bapi.AuditBackend {
 	}
 }
 
-func (b *backend) index(kind string, cluster string) string {
+func (b *backend) index(kind v1.AuditLogType, cluster string) string {
 	return fmt.Sprintf("tigera_secure_ee_audit_%s.%s", kind, cluster)
 }
 
@@ -58,7 +58,7 @@ func (b *backend) Initialize(ctx context.Context) error {
 }
 
 // Create the given logs in elasticsearch.
-func (b *backend) Create(ctx context.Context, i bapi.ClusterInfo, logs []audit.Event) error {
+func (b *backend) Create(ctx context.Context, kind v1.AuditLogType, i bapi.ClusterInfo, logs []audit.Event) error {
 	log := bapi.ContextLogger(i)
 
 	// Initialize if we haven't yet.
@@ -68,14 +68,13 @@ func (b *backend) Create(ctx context.Context, i bapi.ClusterInfo, logs []audit.E
 	}
 
 	if i.Cluster == "" {
-		log.Fatal("BUG: No cluster ID on request")
+		return fmt.Errorf("no cluster ID on request")
 	}
 
 	// Determine the index to write to. It will be automatically created based on the configured
 	// template if it does not already exist.
-	// TODO: Support EE audit in addition to kube audit logs.
-	index := b.index("kube", i.Cluster)
-	log.Infof("Writing audit logs in bulk to index %s", index)
+	index := b.index(kind, i.Cluster)
+	log.Debugf("Writing audit logs in bulk to index %s", index)
 
 	// Build a bulk request using the provided logs.
 	bulk := b.client.Bulk()
@@ -106,7 +105,7 @@ func (b *backend) Create(ctx context.Context, i bapi.ClusterInfo, logs []audit.E
 		return fmt.Errorf("failed to write log: %s", err)
 	}
 
-	log.WithField("count", len(logs)).Infof("Wrote log to index: %+v", resp)
+	log.WithField("count", len(logs)).Debugf("Wrote log to index: %+v", resp)
 
 	return nil
 }
@@ -117,6 +116,15 @@ func (b *backend) List(ctx context.Context, i api.ClusterInfo, opts v1.AuditLogP
 
 	if i.Cluster == "" {
 		return nil, fmt.Errorf("no cluster ID on request")
+	}
+
+	switch opts.Type {
+	case v1.AuditLogTypeEE:
+	case v1.AuditLogTypeKube:
+	case "":
+		return nil, fmt.Errorf("no audit log type provided on List request")
+	default:
+		return nil, fmt.Errorf("invalid audit log type: %s", opts.Type)
 	}
 
 	// Default the number of results to 1000 if there is no limit
@@ -141,7 +149,7 @@ func (b *backend) List(ctx context.Context, i api.ClusterInfo, opts v1.AuditLogP
 
 	// Build the query.
 	query := b.client.Search().
-		Index(b.index("kube", i.Cluster)).
+		Index(b.index(opts.Type, i.Cluster)).
 		Size(numResults).
 		Query(q)
 

@@ -86,7 +86,7 @@ func TestCreateAuditLog(t *testing.T) {
 	}
 
 	// Create the event in ES.
-	err = b.Create(ctx, clusterInfo, []kaudit.Event{f})
+	err = b.Create(ctx, v1.AuditLogTypeKube, clusterInfo, []kaudit.Event{f})
 	require.NoError(t, err)
 
 	// Refresh the index.
@@ -94,9 +94,15 @@ func TestCreateAuditLog(t *testing.T) {
 	require.NoError(t, err)
 
 	// List the event, assert that it matches the one we just wrote.
-	results, err := b.List(ctx, clusterInfo, v1.AuditLogParams{})
+	results, err := b.List(ctx, clusterInfo, v1.AuditLogParams{Type: v1.AuditLogTypeKube})
 	require.NoError(t, err)
 	require.Equal(t, 1, len(results))
+
+	// MicroTime doesn't JSON serialize and deserialize properly, so we need to force the results to
+	// match here. When you serialize and deserialize a MicroTime, the microsecond precision is lost
+	// and so the resulting objects do not match.
+	f.RequestReceivedTimestamp = results[0].RequestReceivedTimestamp
+	f.StageTimestamp = results[0].StageTimestamp
 	require.Equal(t, f, results[0])
 
 	// Clean up after ourselves by deleting the index.
