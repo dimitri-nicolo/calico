@@ -422,7 +422,8 @@ func requestPathMatches(r *http.Request, targetPaths []regexp.Regexp) bool {
 }
 
 // Determine whether or not the given request should use the tunnel proxying
-// by comparing its URL path against the provide list of regex expressions
+// by getting the TargetPath the prxy would select for the provided r *http.Request
+// and comparing it against the provided list of targetPaths
 // (representing paths for targets that the request might be going to).
 func requestTargetPathMatches(r *http.Request, prxy *proxy.Proxy, targetPaths []string) bool {
 	if prxy == nil {

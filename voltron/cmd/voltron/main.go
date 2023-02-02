@@ -177,7 +177,7 @@ func main() {
 			// it unauthenticated.
 			Path:             "/tigera-elasticsearch/version",
 			Dest:             cfg.ElasticEndpoint,
-			PathRegexp:       []byte("^/tigera-elasticsearch/version?"),
+			PathRegexp:       []byte("^/tigera-elasticsearch/version$"),
 			PathReplace:      []byte("/version"),
 			AllowInsecureTLS: true,
 		},
