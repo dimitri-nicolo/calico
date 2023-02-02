@@ -56,8 +56,13 @@ type FlowLabels struct {
 
 // LogStats represent the number of flows aggregated into this entry
 type LogStats struct {
-	// LogCount is the number of flow logs aggregated into this entry.
+	// LogCount is the total number of raw flow logs - prior to client-side aggregation - that were
+	// aggregated into this entry. This is in contrast to FlowLogCount, which is the number of
+	// flow log entries from Elasticsearch used to generate this flow.
 	LogCount int64 `json:"count"`
+
+	// FlowLogCount is the number of flow logs in Elasticsearch used to generate this flow.
+	FlowLogCount int64 `json:"flowLogCount"`
 
 	// Completed is the number of flow logs that finished and aggregated into during this entry.
 	Completed int64 `json:"completed"`

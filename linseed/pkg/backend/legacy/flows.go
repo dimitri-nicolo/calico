@@ -225,9 +225,10 @@ func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3Fl
 
 		// Build the flow.
 		flow.LogStats = &v1.LogStats{
-			LogCount:  int64(bucket.AggregatedSums[FlowAggSumNumFlows]),
-			Started:   int64(bucket.AggregatedSums[FlowAggSumNumFlowsStarted]),
-			Completed: int64(bucket.AggregatedSums[FlowAggSumNumFlowsCompleted]),
+			FlowLogCount: bucket.DocCount,
+			LogCount:     int64(bucket.AggregatedSums[FlowAggSumNumFlows]),
+			Started:      int64(bucket.AggregatedSums[FlowAggSumNumFlowsStarted]),
+			Completed:    int64(bucket.AggregatedSums[FlowAggSumNumFlowsCompleted]),
 		}
 
 		flow.Service = &v1.Service{

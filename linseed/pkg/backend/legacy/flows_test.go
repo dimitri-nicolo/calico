@@ -88,7 +88,9 @@ func populateFlowData(t *testing.T, ctx context.Context, client lmaelastic.Clien
 		},
 	}
 	expected.TrafficStats = &v1.TrafficStats{}
-	expected.LogStats = &v1.LogStats{}
+	expected.LogStats = &v1.LogStats{
+		FlowLogCount: 10,
+	}
 	expected.Service = &v1.Service{
 		Name:      "kube-dns",
 		Namespace: "kube-system",
