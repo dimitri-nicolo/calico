@@ -65,6 +65,7 @@
       },
       "log_stats": {
         "count": 1,
+        "flowLogCount": 1,
         "completed": 0,
         "started": 0
       },
