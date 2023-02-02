@@ -65,7 +65,7 @@ func main() {
 	opts := []server.Option{
 		server.WithDefaultAddr(addr),
 		server.WithKeepAliveSettings(cfg.KeepAliveEnable, cfg.KeepAliveInterval),
-		server.WithExternalCredsFiles(cfg.HTTPSCert, cfg.HTTPSKey),
+		server.WithExternalCredFiles(cfg.HTTPSCert, cfg.HTTPSKey),
 		server.WithKubernetesAPITargets(kubernetesAPITargets),
 		server.WithUnauthenticatedTargets(unauthenticatedTargets),
 	}
