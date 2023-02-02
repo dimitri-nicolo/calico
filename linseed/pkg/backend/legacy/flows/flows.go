@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	elastic "github.com/olivere/elastic/v7"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend"
@@ -154,11 +155,11 @@ func NewFlowBackend(c lmaelastic.Client) bapi.FlowBackend {
 }
 
 // List returns all flows which match the given options.
-func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3FlowParams) (<-chan []v1.L3Flow, <-chan error) {
+func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3FlowParams) (*v1.Results[v1.L3Flow], error) {
 	log := bapi.ContextLogger(i)
 
 	if i.Cluster == "" {
-		return nil, backend.ErrorToChannel(fmt.Errorf("no cluster ID provided on List call"))
+		return nil, fmt.Errorf("no cluster ID provided on List call")
 	}
 
 	// Default the number of results to 1000 if there is no limit
@@ -184,7 +185,11 @@ func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3Fl
 	log.Debugf("Listing flows from index %s", query.DocumentIndex)
 
 	// Perform the request.
-	return lmaelastic.CompositeSearch[v1.L3Flow](ctx, b.lmaclient, query, log, b.convertBucket)
+	page, key, err := lmaelastic.PagedSearch[v1.L3Flow](ctx, b.lmaclient, query, log, b.convertBucket, opts.AfterKey)
+	return &v1.Results[v1.L3Flow]{
+		Items:    page,
+		AfterKey: key,
+	}, err
 }
 
 // convertBucket turns a composite aggregation bucket into an L3Flow.

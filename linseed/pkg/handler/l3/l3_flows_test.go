@@ -46,14 +46,16 @@ func TestNetworkFlows_Post(t *testing.T) {
 		backendL3Flows []v1.L3Flow
 	}{
 		// Failure to parse request and validate
-		{name: "empty json",
+		{
+			name:           "empty json",
 			reqBody:        "{}",
 			want:           testResult{true, 400, missingTimeRangeErrorMsg},
 			backendL3Flows: noFlows,
 		},
 
 		// Retrieve all L3 flow logs within a time range
-		{name: "retrieve all l3 flows within a certain time range",
+		{
+			name:           "retrieve all l3 flows within a certain time range",
 			reqBody:        withinTimeRange,
 			want:           testResult{false, 200, ""},
 			backendL3Flows: flows,
@@ -90,19 +92,14 @@ func networkFlows(flows []v1.L3Flow) *l3.NetworkFlows {
 	mockBackend := &api.MockFlowBackend{}
 	n := l3.NewNetworkFlows(mockBackend)
 
-	flowChan := make(chan []v1.L3Flow, 1)
-	flowChan <- flows
-	close(flowChan)
-
-	// Use this helper so that we return a receive-only channel, as
-	// is expected by the interface.
-	c := func(ch chan []v1.L3Flow) <-chan []v1.L3Flow {
-		return ch
+	res := v1.Results[v1.L3Flow]{
+		Items:    flows,
+		AfterKey: nil,
 	}
 
 	// mock backend to return the required flows
 	mockBackend.On("List", mock.Anything,
-		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("v1.L3FlowParams")).Return(c(flowChan), nil)
+		mock.AnythingOfType("api.ClusterInfo"), mock.AnythingOfType("v1.L3FlowParams")).Return(&res, nil)
 
 	return n
 }

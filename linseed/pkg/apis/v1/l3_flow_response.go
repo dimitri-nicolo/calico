@@ -14,6 +14,11 @@ type L3FlowKey struct {
 	Destination Endpoint `json:"destination"`
 }
 
+type Results[T any] struct {
+	Items    []T         `json:"items"`
+	AfterKey interface{} `json:"after_key"`
+}
+
 // L3Flow represents a summary of connection and traffic information between two
 // endpoints over a given period of time, as reported by one of said endpoints.
 type L3Flow struct {
@@ -142,5 +147,6 @@ type Service struct {
 }
 
 type L3FlowResponse struct {
-	L3Flows []L3Flow `json:"l3_flows,omitempty" validate:"omitempty"`
+	L3Flows  []L3Flow    `json:"l3_flows,omitempty" validate:"omitempty"`
+	AfterKey interface{} `json:"after_key"`
 }

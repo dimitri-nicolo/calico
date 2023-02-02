@@ -48,18 +48,33 @@ func TestListFlows(t *testing.T) {
 	opts.QueryParams.TimeRange.To = time.Now().Add(5 * time.Second)
 
 	// Query for flows. There should be a single flow from the populated data.
-	resultsChan, errors := b.List(ctx, clusterInfo, opts)
-	r := []v1.L3Flow{}
-	for p := range resultsChan {
-		r = append(r, p...)
-	}
+	// r, err := b.List(ctx, clusterInfo, opts)
+	// require.NoError(t, err)
+	// require.Len(t, r.Items, 1)
+	// require.Nil(t, r.AfterKey)
+	// require.Empty(t, err)
 
+	// // Assert that the flow data is populated correctly.
+	// require.Equal(t, expected, r.Items[0])
+
+	// Query again, but this time with a small page size.
+	opts.MaxResults = 1
+	r, err := b.List(ctx, clusterInfo, opts)
 	require.NoError(t, err)
-	require.Len(t, r, 1)
-	require.Empty(t, errors)
+	require.Len(t, r.Items, 1)
+	require.NotNil(t, r.AfterKey)
+	require.Empty(t, err)
+
+	// Repeat it, with an after key.
+	opts.AfterKey = r.AfterKey
+	r, err = b.List(ctx, clusterInfo, opts)
+	require.NoError(t, err)
+	require.Len(t, r.Items, 1)
+	require.NotNil(t, r.AfterKey)
+	require.Empty(t, err)
 
 	// Assert that the flow data is populated correctly.
-	require.Equal(t, expected, r[0])
+	require.Equal(t, expected, r.Items[0])
 
 	// Clean up after ourselves by deleting the index.
 	_, err = esClient.DeleteIndex(fmt.Sprintf("tigera_secure_ee_flows.%s.*", clusterInfo.Cluster)).Do(ctx)
