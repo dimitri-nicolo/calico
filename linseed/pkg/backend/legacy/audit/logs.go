@@ -127,13 +127,6 @@ func (b *backend) List(ctx context.Context, i api.ClusterInfo, opts v1.AuditLogP
 		return nil, fmt.Errorf("invalid audit log type: %s", opts.Type)
 	}
 
-	// Default the number of results to 1000 if there is no limit
-	// set on the query.
-	numResults := opts.MaxResults
-	if numResults == 0 {
-		numResults = 1000
-	}
-
 	// Parse times from the request. We default to a time-range query
 	// if no other search parameters are given.
 	var start, end time.Time
@@ -150,7 +143,7 @@ func (b *backend) List(ctx context.Context, i api.ClusterInfo, opts v1.AuditLogP
 	// Build the query.
 	query := b.client.Search().
 		Index(b.index(opts.Type, i.Cluster)).
-		Size(numResults).
+		Size(opts.QueryParams.GetMaxResults()).
 		Query(q)
 
 	results, err := query.Do(ctx)

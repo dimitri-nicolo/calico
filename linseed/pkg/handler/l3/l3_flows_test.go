@@ -92,8 +92,8 @@ func networkFlows(flows []v1.L3Flow) *l3.NetworkFlows {
 	mockBackend := &api.MockFlowBackend{}
 	n := l3.NewNetworkFlows(mockBackend)
 
-	res := v1.Results[v1.L3Flow]{
-		Items:    flows,
+	res := v1.L3FlowResponse{
+		L3Flows:  flows,
 		AfterKey: nil,
 	}
 

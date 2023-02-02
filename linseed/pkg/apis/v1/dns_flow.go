@@ -3,7 +3,6 @@ package v1
 // DNSFlowParams provide query options for listing DNS flows.
 type DNSFlowParams struct {
 	QueryParams *QueryParams `json:"query_params"`
-	MaxResults  int          `json:"max_results"`
 }
 
 // DNSFlowKey are the identifiers for a DNS flow.

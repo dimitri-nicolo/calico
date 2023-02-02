@@ -95,13 +95,6 @@ func (b *dnsFlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.D
 		end = time.Now()
 	}
 
-	// Default the number of results to 1000 if there is no limit
-	// set on the query.
-	numResults := opts.MaxResults
-	if numResults == 0 {
-		numResults = 1000
-	}
-
 	// Build the aggregation request.
 	query := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           buildDNSIndex(i.Cluster),
@@ -113,7 +106,7 @@ func (b *dnsFlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.D
 		AggMinInfos:             b.aggMins,
 		AggMeanInfos:            b.aggMeans,
 		AggNestedTermInfos:      b.aggNested,
-		MaxBucketsPerQuery:      numResults,
+		MaxBucketsPerQuery:      opts.QueryParams.GetMaxResults(),
 	}
 
 	// Context for the ES request.
@@ -154,8 +147,8 @@ func (b *dnsFlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.D
 		allFlows = append(allFlows, flow)
 
 		// Track the number of flows. Bail if we hit the absolute maximum number of flows.
-		if opts.MaxResults != 0 && len(allFlows) >= opts.MaxResults {
-			log.Warnf("Maximum number of flows (%d) reached. Stopping flow processing", opts.MaxResults)
+		if opts.QueryParams.GetMaxResults() != 0 && len(allFlows) >= opts.QueryParams.GetMaxResults() {
+			log.Warnf("Maximum number of flows (%d) reached. Stopping flow processing", opts.QueryParams.GetMaxResults())
 			break
 		}
 	}

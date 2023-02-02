@@ -155,7 +155,7 @@ func NewFlowBackend(c lmaelastic.Client) bapi.FlowBackend {
 }
 
 // List returns all flows which match the given options.
-func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3FlowParams) (*v1.Results[v1.L3Flow], error) {
+func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3FlowParams) (*v1.L3FlowResponse, error) {
 	log := bapi.ContextLogger(i)
 
 	if i.Cluster == "" {
@@ -164,7 +164,7 @@ func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3Fl
 
 	// Default the number of results to 1000 if there is no limit
 	// set on the query.
-	numResults := opts.MaxResults
+	numResults := opts.QueryParams.MaxResults
 	if numResults == 0 {
 		numResults = 1000
 	}
@@ -185,9 +185,9 @@ func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3Fl
 	log.Debugf("Listing flows from index %s", query.DocumentIndex)
 
 	// Perform the request.
-	page, key, err := lmaelastic.PagedSearch[v1.L3Flow](ctx, b.lmaclient, query, log, b.convertBucket, opts.AfterKey)
-	return &v1.Results[v1.L3Flow]{
-		Items:    page,
+	page, key, err := lmaelastic.PagedSearch(ctx, b.lmaclient, query, log, b.convertBucket, opts.QueryParams.AfterKey)
+	return &v1.L3FlowResponse{
+		L3Flows:  page,
 		AfterKey: key,
 	}, err
 }

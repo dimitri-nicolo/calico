@@ -69,7 +69,7 @@ func (n NetworkFlows) Serve() http.HandlerFunc {
 			Tenant:  middleware.TenantIDFromContext(req.Context()),
 		}
 
-		results, err := n.backend.List(ctx, clusterInfo, *reqParams)
+		response, err := n.backend.List(ctx, clusterInfo, *reqParams)
 		if err != nil {
 			log.WithError(err).Error("Failed to list flows")
 			httputils.JSONError(w, &httputils.HttpStatusError{
@@ -79,8 +79,6 @@ func (n NetworkFlows) Serve() http.HandlerFunc {
 			}, http.StatusInternalServerError)
 			return
 		}
-
-		response := v1.L3FlowResponse{L3Flows: results.Items, AfterKey: results.AfterKey}
 
 		log.Debugf("Flow response is: %+v", response)
 		httputils.Encode(w, response)

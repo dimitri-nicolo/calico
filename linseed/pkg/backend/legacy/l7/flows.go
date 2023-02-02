@@ -119,7 +119,7 @@ func (b *l7FlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L7
 		AggMaxInfos:             b.aggMaxs,
 		AggMinInfos:             b.aggMins,
 		AggMeanInfos:            b.aggMeans,
-		MaxBucketsPerQuery:      opts.MaxResults,
+		MaxBucketsPerQuery:      opts.QueryParams.GetMaxResults(),
 	}
 
 	// Context for the ES request.
@@ -184,8 +184,8 @@ func (b *l7FlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L7
 		allFlows = append(allFlows, f)
 
 		// Track the number of flows. Bail if we hit the absolute maximum number of flows.
-		if opts.MaxResults != 0 && len(allFlows) >= opts.MaxResults {
-			log.Warnf("Maximum number of L7 flows (%d) reached. Stopping flow processing", opts.MaxResults)
+		if opts.QueryParams.GetMaxResults() != 0 && len(allFlows) >= opts.QueryParams.GetMaxResults() {
+			log.Warnf("Maximum number of L7 flows (%d) reached. Stopping flow processing", opts.QueryParams.GetMaxResults())
 			break
 		}
 	}

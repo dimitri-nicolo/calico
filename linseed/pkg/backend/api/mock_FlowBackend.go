@@ -16,15 +16,15 @@ type MockFlowBackend struct {
 }
 
 // List provides a mock function with given fields: _a0, _a1, _a2
-func (_m *MockFlowBackend) List(_a0 context.Context, _a1 ClusterInfo, _a2 v1.L3FlowParams) (*v1.Results[v1.L3Flow], error) {
+func (_m *MockFlowBackend) List(_a0 context.Context, _a1 ClusterInfo, _a2 v1.L3FlowParams) (*v1.L3FlowResponse, error) {
 	ret := _m.Called(_a0, _a1, _a2)
 
-	var r0 *v1.Results[v1.L3Flow]
-	if rf, ok := ret.Get(0).(func(context.Context, ClusterInfo, v1.L3FlowParams) *v1.Results[v1.L3Flow]); ok {
+	var r0 *v1.L3FlowResponse
+	if rf, ok := ret.Get(0).(func(context.Context, ClusterInfo, v1.L3FlowParams) *v1.L3FlowResponse); ok {
 		r0 = rf(_a0, _a1, _a2)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.Results[v1.L3Flow])
+			r0 = ret.Get(0).(*v1.L3FlowResponse)
 		}
 	}
 

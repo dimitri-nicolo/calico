@@ -6,14 +6,7 @@ import (
 
 // L7FlowParams define querying parameters to retrieve L7 Flows
 type L7FlowParams struct {
-	// QueryParams are general query parameters for flows, such as:
-	// - filter and aggregate flows within a desired time range
-	// - allow users to specify a desired time that the request should run
-	// until cancelling the execution
 	QueryParams *QueryParams `json:"query_params" validate:"required"`
-
-	// Limit the maximum number of returned results.
-	MaxResults int
 }
 
 // Defines a port on a Kuberentes Service.
