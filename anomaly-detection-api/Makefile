@@ -99,13 +99,14 @@ gen-crt-key:
 run-ad-image-fv: gen-crt-key
 	docker rm -f ${AD_API_FV_TEST_CONTAINER_NAME} || true
 	$(DOCKER_RUN) \
-	  --detach \
+		--detach \
 		-v ${PACKAGE_ROOT}/fv/resources/tls/tls.crt:/tls/tls.crt:ro \
 		-v ${PACKAGE_ROOT}/fv/resources/tls/tls.key:/tls/tls.key:ro \
 		-e LISTEN_ADDR="localhost:8080" \
 		-e DEBUG_RBAC_DISABLED="true" \
 		-e STORAGE_PATH="./fv/temp" \
 		-e LOG_LEVEL=debug \
+		-u ${LOCAL_USER_ID} \
 		--name ${AD_API_FV_TEST_CONTAINER_NAME} \
 		${ANOMALY_DETECTION_API_IMAGE}:latest-$(ARCH)
 
