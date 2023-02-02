@@ -129,7 +129,7 @@ var _ = Describe("Server Proxy to tunnel", func() {
 			k8sAPI,
 			config,
 			mockAuthenticator,
-			server.WithExternalCredsFiles("dog/gopher.crt", "dog/gopher.key"),
+			server.WithExternalCredFiles("dog/gopher.crt", "dog/gopher.key"),
 			server.WithInternalCredFiles("dog/gopher.crt", "dog/gopher.key"),
 		)
 		Expect(err).To(HaveOccurred())

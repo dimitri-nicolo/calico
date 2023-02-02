@@ -1,15 +1,22 @@
-// Copyright (c) 2020-2021 Tigera, Inc. All rights reserved.
+// Copyright (c) 2020-2023 Tigera, Inc. All rights reserved.
 
 package server_test
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
-	"io/ioutil"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"io"
+	"math/big"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -38,14 +45,14 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 
 		mockAuthenticator  *auth.MockJWTAuth
 		srv                *server.Server
-		externalCertFile   string
-		externalKeyFile    string
-		internalCertFile   string
-		internalKeyFile    string
-		externalCACert     string
 		externalServerName string
-		internalCACert     string
 		internalServerName string
+		externalCACert     []byte
+		externalCert       []byte
+		externalKey        []byte
+		internalCACert     []byte
+		internalCert       []byte
+		internalKey        []byte
 		listener           net.Listener
 		address            net.Addr
 	)
@@ -88,10 +95,10 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 		By("Creating and starting server that only serves HTTPS traffic")
 		var opts = []server.Option{
 			server.WithDefaultAddr(address.String()),
-			server.WithKeepAliveSettings(true, 100),
-			server.WithExternalCredsFiles(externalCertFile, externalKeyFile),
-			server.WithInternalCredFiles(internalCertFile, internalKeyFile),
 			server.WithDefaultProxy(defaultProxy),
+			server.WithExternalCreds(externalCert, externalKey),
+			server.WithInternalCreds(internalCert, internalKey),
+			server.WithKeepAliveSettings(true, 100),
 			server.WithUnauthenticatedTargets([]string{"/"}),
 		}
 
@@ -119,9 +126,7 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 			var err error
 
 			var rootCAs = x509.NewCertPool()
-			caCert, err := ioutil.ReadFile(externalCACert)
-			Expect(err).NotTo(HaveOccurred())
-			rootCAs.AppendCertsFromPEM(caCert)
+			rootCAs.AppendCertsFromPEM(externalCACert)
 
 			tr := &http.Transport{
 				TLSClientConfig: &tls.Config{
@@ -137,7 +142,7 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(200))
 
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(body)).To(Equal("Success"))
 		})
@@ -146,9 +151,7 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 			var err error
 
 			var rootCAs = x509.NewCertPool()
-			caCert, err := ioutil.ReadFile(internalCACert)
-			Expect(err).NotTo(HaveOccurred())
-			rootCAs.AppendCertsFromPEM(caCert)
+			rootCAs.AppendCertsFromPEM(internalCACert)
 
 			tr := &http.Transport{
 				TLSClientConfig: &tls.Config{
@@ -164,7 +167,7 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(200))
 
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(body)).To(Equal("Success"))
 		})
@@ -173,9 +176,7 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 			var err error
 
 			var rootCAs = x509.NewCertPool()
-			caCert, err := ioutil.ReadFile(externalCACert)
-			Expect(err).NotTo(HaveOccurred())
-			rootCAs.AppendCertsFromPEM(caCert)
+			rootCAs.AppendCertsFromPEM(externalCACert)
 
 			tr := &http2.Transport{
 				TLSClientConfig: &tls.Config{
@@ -193,7 +194,7 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(200))
 
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(body)).To(Equal("Success"))
 		})
@@ -211,46 +212,114 @@ var _ = Describe("Creating an HTTPS server that only proxies traffic", func() {
 
 	Context("Using self signed root CA certs with DNS set to voltron", func() {
 		BeforeEach(func() {
-			internalCertFile = "testdata/rootCA-tunnel-generation.pem"
-			externalCertFile = "testdata/rootCA-tunnel-generation.pem"
-			internalKeyFile = "testdata/rootCA-tunnel-generation.key"
-			externalKeyFile = "testdata/rootCA-tunnel-generation.key"
-			externalCACert = "testdata/rootCA-tunnel-generation.pem"
-			internalCACert = "testdata/rootCA-tunnel-generation.pem"
 			externalServerName = "voltron"
 			internalServerName = "voltron"
+
+			key, cert, err := generateKeyCert("tigera-voltron", "voltron")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(key).NotTo(BeNil())
+			Expect(cert).NotTo(BeNil())
+
+			externalCACert = cert
+			externalCert = cert
+			externalKey = key
+			internalCACert = cert
+			internalCert = cert
+			internalKey = key
 		})
 
 		assertHTTPSServerBehaviour()
 	})
 
 	Context("Using certs that have PKCS8 Key format", func() {
+		var err error
+
 		BeforeEach(func() {
-			internalCertFile = "testdata/cert-pkcs8-format.pem"
-			externalCertFile = "testdata/cert-pkcs8-format.pem"
-			internalKeyFile = "testdata/key-pkcs8-format.pem"
-			externalKeyFile = "testdata/key-pkcs8-format.pem"
-			externalCACert = "testdata/cert-pkcs8-format.pem"
-			internalCACert = "testdata/cert-pkcs8-format.pem"
 			externalServerName = "cnx-manager.calico-monitoring.svc"
 			internalServerName = "cnx-manager.calico-monitoring.svc"
+
+			externalCACert, err = os.ReadFile("testdata/cert-pkcs8-format.pem")
+			Expect(err).NotTo(HaveOccurred())
+			externalCert, err = os.ReadFile("testdata/cert-pkcs8-format.pem")
+			Expect(err).NotTo(HaveOccurred())
+			externalKey, err = os.ReadFile("testdata/key-pkcs8-format.pem")
+			Expect(err).NotTo(HaveOccurred())
+			internalCACert, err = os.ReadFile("testdata/cert-pkcs8-format.pem")
+			Expect(err).NotTo(HaveOccurred())
+			internalCert, err = os.ReadFile("testdata/cert-pkcs8-format.pem")
+			Expect(err).NotTo(HaveOccurred())
+			internalKey, err = os.ReadFile("testdata/key-pkcs8-format.pem")
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		assertHTTPSServerBehaviour()
 	})
 
 	Context("Using two set of certs for internal and external HTTPS traffic", func() {
+		var err error
+
 		BeforeEach(func() {
-			externalCertFile = "testdata/localhost.pem"
-			internalCertFile = "testdata/tigera-manager-svc.pem"
-			externalKeyFile = "testdata/localhost.key"
-			internalKeyFile = "testdata/tigera-manager-svc.key"
-			externalCACert = "testdata/localhost-intermediate-CA.pem"
-			internalCACert = "testdata/tigera-manager-svc-intermediate-CA.pem"
 			externalServerName = "localhost"
 			internalServerName = "tigera-manager.tigera-manager.svc"
+
+			externalCACert, err = os.ReadFile("testdata/localhost-intermediate-CA.pem")
+			Expect(err).NotTo(HaveOccurred())
+			externalCert, err = os.ReadFile("testdata/localhost.pem")
+			Expect(err).NotTo(HaveOccurred())
+			externalKey, err = os.ReadFile("testdata/localhost.key")
+			Expect(err).NotTo(HaveOccurred())
+			internalCACert, err = os.ReadFile("testdata/tigera-manager-svc-intermediate-CA.pem")
+			Expect(err).NotTo(HaveOccurred())
+			internalCert, err = os.ReadFile("testdata/tigera-manager-svc.pem")
+			Expect(err).NotTo(HaveOccurred())
+			internalKey, err = os.ReadFile("testdata/tigera-manager-svc.key")
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		assertHTTPSServerBehaviour()
 	})
 })
+
+func generateKeyCert(commonName, dnsName string) ([]byte, []byte, error) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	keyPem := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(key),
+	})
+
+	pn := pkix.Name{
+		CommonName:   commonName,
+		Country:      []string{"US"},
+		Locality:     []string{"San Francisco"},
+		Organization: []string{"Tigera, Inc."},
+		Province:     []string{"California"},
+	}
+
+	tpl := &x509.Certificate{
+		BasicConstraintsValid: true,
+		DNSNames:              []string{dnsName},
+		EmailAddresses:        []string{"contact@tigera.io"},
+		IPAddresses:           []net.IP{net.IPv4(127, 0, 0, 1)},
+		Issuer:                pn,
+		NotAfter:              time.Now().AddDate(1, 0, 0),
+		NotBefore:             time.Now(),
+		SerialNumber:          big.NewInt(123),
+		Subject:               pn,
+	}
+
+	cert, err := x509.CreateCertificate(rand.Reader, tpl, tpl, &key.PublicKey, key)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	certPem := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: cert,
+	})
+
+	return keyPem, certPem, nil
+}

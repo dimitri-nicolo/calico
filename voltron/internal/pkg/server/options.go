@@ -31,9 +31,9 @@ type ProxyTarget struct {
 	Dest    string
 }
 
-// WithExternalCredsFiles sets the default cert and key to be used for the TLS
+// WithExternalCredFiles sets the default cert and key to be used for the TLS
 // connections for external traffic (UI).
-func WithExternalCredsFiles(certFile, keyFile string) Option {
+func WithExternalCredFiles(certFile, keyFile string) Option {
 	return func(s *Server) error {
 		var err error
 
