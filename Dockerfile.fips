@@ -63,10 +63,7 @@ RUN yum install -y --setopt=tsflags=nodocs \
  && ./configure && make \
  && mv lib/libjemalloc.so.2 /usr/lib \
  && rm -rf /tmp/* /var/tmp/* /usr/lib/ruby/gems/*/cache/*.gem \
- && mkdir -p /fluentd/log \
- && mkdir -p /fluentd/etc /fluentd/plugins \
- && groupadd -r fluent && useradd -r -g fluent fluent \
- && chown -R fluent /fluentd && chgrp -R fluent /fluentd \
+ && mkdir -p /fluentd/etc /fluentd/log /fluentd/plugins \
  && mkdir -p /fluentd/cloned \
  && cd /fluentd/cloned \
  && git clone --branch v$FLUENTD_VERSION https://github.com/fluent/fluentd  \
