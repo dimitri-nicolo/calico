@@ -65,6 +65,7 @@
     elasticsearch:
       image: tigera/elasticsearch
       version: master
+      fips-image: true
     cloud-controllers:
       image: tigera/cloud-controllers
       version: master
@@ -104,6 +105,7 @@
     tigera-cni:
       image: tigera/cni
       version: master
+      fips-image: true
     firewall-integration:
       image: tigera/firewall-integration
       version: master
