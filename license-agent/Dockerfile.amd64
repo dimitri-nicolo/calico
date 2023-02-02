@@ -1,5 +1,5 @@
 FROM scratch
 
-ADD bin/license-agent-amd64 /usr/bin/license-agent
+COPY bin/license-agent-amd64 /usr/bin/license-agent
 
 ENTRYPOINT ["/usr/bin/license-agent"]

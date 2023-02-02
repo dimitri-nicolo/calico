@@ -53,9 +53,8 @@ COPY --from=snort /var/log/snort/ /var/log/snort/
 
 COPY docker-image/snort.conf /etc/snort/snort.conf
 
-COPY bin/controller-amd64 /controller
+COPY bin/controller-amd64 /usr/bin/honeypod-controller
 
-WORKDIR /
+USER 10001:10001
 
-USER 999
-ENTRYPOINT ["/controller"]
+ENTRYPOINT ["/usr/bin/honeypod-controller"]

@@ -4,14 +4,10 @@ FROM ${UBI_IMAGE} as ubi
 
 RUN microdnf upgrade
 
-# create /etc/firewall-integration directory and provide RW permission access to USER 1001
-RUN mkdir -p /etc/firewall-integration
-RUN chown -R 1001 /etc/firewall-integration
 
 FROM scratch
-# /etc/firewall-integration directory used for storing self-signed certificates
-COPY --chown=1001 --from=ubi /etc/firewall-integration /etc/firewall-integration
-ADD --chown=1001 bin/firewall-integration-amd64 /firewall-integration
+
+COPY bin/firewall-integration-amd64 /usr/bin/firewall-integration
 
 # Because we build our binary with CGO, we need to add the necessary *.so files for dynamic linking.
 # If *.so files are missing, you will see an error saying that your entrypoint cannot be found.
@@ -20,5 +16,6 @@ COPY --from=ubi /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
 COPY --from=ubi /lib64/libpthread.so.0 /lib64/libpthread.so.0
 COPY --from=ubi /lib64/libc.so.6 /lib64/libc.so.6
 
-USER 1001
-ENTRYPOINT ["/firewall-integration"]
+USER 10001:10001
+
+ENTRYPOINT ["/usr/bin/firewall-integration"]

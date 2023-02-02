@@ -2,16 +2,12 @@ ARG UBI_IMAGE
 
 FROM ${UBI_IMAGE} as ubi
 
-RUN microdnf update
+RUN microdnf upgrade
 
-# create /etc/prometheus-service directory and provide RW permission access to USER 1001
-RUN mkdir -p /etc/prometheus-service
-RUN chown -R 1001 /etc/prometheus-service
 
 FROM scratch
 
-COPY --chown=1001 --from=ubi /etc/prometheus-service /etc/prometheus-service
-ADD --chown=1001 bin/prometheus-service-amd64 /prometheus-service
+COPY bin/prometheus-service-amd64 /usr/bin/prometheus-service
 
 # Because we build our binary with CGO, we need to add the necessary *.so files for dynamic linking.
 # If *.so files are missing, you will see an error saying that your entrypoint cannot be found.
@@ -20,6 +16,6 @@ COPY --from=ubi /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
 COPY --from=ubi /lib64/libpthread.so.0 /lib64/libpthread.so.0
 COPY --from=ubi /lib64/libc.so.6 /lib64/libc.so.6
 
-USER 1001
+USER 10001:10001
 
-ENTRYPOINT ["/prometheus-service"]
+ENTRYPOINT ["/usr/bin/prometheus-service"]

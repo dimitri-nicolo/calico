@@ -11,9 +11,9 @@ RUN curl -OL https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64
 RUN chmod +x jq-linux64
 RUN mv jq-linux64 /bin/jq
 
-ADD entrypoint.sh /entrypoint.sh
+COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-ADD bin/scaleloader-amd64 /usr/bin/compliance-scaleloader
+COPY bin/scaleloader-amd64 /usr/bin/compliance-scaleloader
 COPY playbooks/ /playbooks/
 COPY scenarios/ /playbooks/
 WORKDIR /playbooks

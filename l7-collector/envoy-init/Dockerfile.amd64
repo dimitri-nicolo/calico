@@ -24,7 +24,7 @@ COPY --from=base /usr/lib/libxtables.so.12 /usr/lib/libxtables.so.12
 COPY --from=base /usr/lib/xtables/* /usr/lib/xtables/
 COPY --from=base /run /run
 
-ADD init_iptables.sh /usr/bin/init_iptables.sh
+COPY init_iptables.sh /usr/bin/init_iptables.sh
 
 ENV PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 

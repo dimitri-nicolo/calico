@@ -1,14 +1,7 @@
-ARG UBI_IMAGE
-
-FROM ${UBI_IMAGE} as ubi
-
-RUN microdnf upgrade
-
 FROM scratch
 
-ADD bin/packetcapture-amd64 /usr/bin/packetcapture
+COPY bin/packetcapture-amd64 /usr/bin/packetcapture
 
-USER 1001
+USER 10001:10001
 
-# Now define the command-line call to start your application
 ENTRYPOINT ["/usr/bin/packetcapture"]

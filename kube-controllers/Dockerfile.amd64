@@ -63,8 +63,8 @@ COPY --from=ubi /lib64/libnss_files.so.2 /lib64/libnss_files.so.2
 COPY --from=ubi /etc/host.conf /etc/host.conf
 COPY --from=ubi /etc/nsswitch.conf /etc/nsswitch.conf
 
-ADD bin/kube-controllers-linux-amd64 /usr/bin/kube-controllers
-ADD bin/check-status-linux-amd64 /usr/bin/check-status
-ADD bin/wrapper-amd64 /usr/bin/wrapper
+COPY bin/kube-controllers-linux-amd64 /usr/bin/kube-controllers
+COPY bin/check-status-linux-amd64 /usr/bin/check-status
+COPY bin/wrapper-amd64 /usr/bin/wrapper
 USER 999
 ENTRYPOINT ["/usr/bin/wrapper", "/usr/bin/kube-controllers"]

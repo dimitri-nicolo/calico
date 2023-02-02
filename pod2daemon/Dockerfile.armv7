@@ -14,7 +14,7 @@
 
 FROM arm32v7/alpine:3.16
 
-ADD flexvol/docker/flexvol.sh /usr/local/bin/
-ADD bin/flexvol-armv7 /usr/local/bin/flexvol
+COPY flexvol/docker/flexvol.sh /usr/local/bin/
+COPY bin/flexvol-armv7 /usr/local/bin/flexvol
 
 ENTRYPOINT ["/usr/local/bin/flexvol.sh"]

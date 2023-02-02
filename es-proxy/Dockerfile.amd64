@@ -4,14 +4,13 @@ FROM ${UBI_IMAGE} as ubi
 
 RUN microdnf upgrade
 
-# create /etc/es-proxy directory and provide RW permission access to USER 1001
 RUN mkdir -p /etc/es-proxy
-RUN chown -R 1001 /etc/es-proxy
 
 FROM scratch
+
+COPY bin/es-proxy-amd64 /usr/bin/es-proxy
 # /etc/es-proxy directory used for storing self-signed certificates
-COPY --chown=1001 --from=ubi /etc/es-proxy /etc/es-proxy
-ADD --chown=1001 bin/es-proxy-amd64 /es-proxy
+COPY --chown=10001:10001 --from=ubi /etc/es-proxy /etc/es-proxy/
 
 # Because we build our binary with CGO, we need to add the necessary *.so files for dynamic linking.
 # If *.so files are missing, you will see an error saying that your entrypoint cannot be found.
@@ -35,5 +34,6 @@ COPY --from=ubi /etc/networks /etc/networks
 COPY --from=ubi /etc/passwd /etc/passwd
 COPY --from=ubi /etc/shadow /etc/shadow
 
-USER 1001
-ENTRYPOINT ["/es-proxy"]
+USER 10001:10001
+
+ENTRYPOINT ["/usr/bin/es-proxy"]

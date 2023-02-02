@@ -14,7 +14,7 @@
 FROM scratch
 LABEL maintainer "Marc Crebassa <aalaesar@gmail.com>"
 
-ADD bin/kubectl-armv7 /usr/bin/kubectl
-ADD bin/kube-controllers-linux-armv7 /usr/bin/kube-controllers
-ADD bin/check-status-linux-armv7 /usr/bin/check-status
+COPY bin/kubectl-armv7 /usr/bin/kubectl
+COPY bin/kube-controllers-linux-armv7 /usr/bin/kube-controllers
+COPY bin/check-status-linux-armv7 /usr/bin/check-status
 ENTRYPOINT ["/usr/bin/kube-controllers"]

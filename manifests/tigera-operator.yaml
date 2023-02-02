@@ -32988,6 +32988,17 @@ spec:
             - name: var-lib-calico
               readOnly: true
               mountPath: /var/lib/calico
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            runAsGroup: 10001
+            runAsNonRoot: true
+            runAsUser: 10001
+            seccompProfile:
+              type: RuntimeDefault
           env:
             - name: WATCH_NAMESPACE
               value: ""
