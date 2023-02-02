@@ -69,3 +69,12 @@ func singleDashToBlank(s string) string {
 	}
 	return s
 }
+
+// ErrorToChannel is a helper for converting a single error to a channel. This is
+// useful since a number of interfaces return a channel of errors to deal with asynchronous
+// operators, but sometimes we need to just send an error.
+func ErrorToChannel(err error) <-chan error {
+	ch := make(chan error, 1)
+	ch <- err
+	return ch
+}

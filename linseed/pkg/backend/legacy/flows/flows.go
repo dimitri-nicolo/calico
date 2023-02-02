@@ -10,12 +10,41 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	elastic "github.com/olivere/elastic/v7"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
+)
+
+const (
+	// TODO(rlb): We might want to abbreviate these to reduce the amount of data on the wire, json parsing and
+	//           memory footprint.  Possibly a significant saving with large clusters or long time ranges.  These
+	//           could be anything really as long as each is unique.
+	FlowAggSumNumFlows                 = "sum_num_flows"
+	FlowAggSumNumFlowsStarted          = "sum_num_flows_started"
+	FlowAggSumNumFlowsCompleted        = "sum_num_flows_completed"
+	FlowAggSumPacketsIn                = "sum_packets_in"
+	FlowAggSumBytesIn                  = "sum_bytes_in"
+	FlowAggSumPacketsOut               = "sum_packets_out"
+	FlowAggSumBytesOut                 = "sum_bytes_out"
+	FlowAggSumTCPRetranmissions        = "sum_tcp_total_retransmissions"
+	FlowAggSumTCPLostPackets           = "sum_tcp_lost_packets"
+	FlowAggSumTCPUnrecoveredTO         = "sum_tcp_unrecovered_to"
+	FlowAggMinProcessNames             = "process_names_min_num"
+	FlowAggMinProcessIds               = "process_ids_min_num"
+	FlowAggMinTCPSendCongestionWindow  = "tcp_min_send_congestion_window"
+	FlowAggMinTCPMSS                   = "tcp_min_mss"
+	FlowAggMaxProcessNames             = "process_names_max_num"
+	FlowAggMaxProcessIds               = "process_ids_max_num"
+	FlowAggMaxTCPSmoothRTT             = "tcp_max_smooth_rtt"
+	FlowAggMaxTCPMinRTT                = "tcp_max_min_rtt"
+	FlowAggMeanTCPSendCongestionWindow = "tcp_mean_send_congestion_window"
+	FlowAggMeanTCPSmoothRTT            = "tcp_mean_smooth_rtt"
+	FlowAggMeanTCPMinRTT               = "tcp_mean_min_rtt"
+	FlowAggMeanTCPMSS                  = "tcp_mean_mss"
 )
 
 // flowBackend implements the Backend interface for flows stored
@@ -124,33 +153,39 @@ func NewFlowBackend(c lmaelastic.Client) bapi.FlowBackend {
 	}
 }
 
-const (
-	// TODO(rlb): We might want to abbreviate these to reduce the amount of data on the wire, json parsing and
-	//           memory footprint.  Possibly a significant saving with large clusters or long time ranges.  These
-	//           could be anything really as long as each is unique.
-	FlowAggSumNumFlows                 = "sum_num_flows"
-	FlowAggSumNumFlowsStarted          = "sum_num_flows_started"
-	FlowAggSumNumFlowsCompleted        = "sum_num_flows_completed"
-	FlowAggSumPacketsIn                = "sum_packets_in"
-	FlowAggSumBytesIn                  = "sum_bytes_in"
-	FlowAggSumPacketsOut               = "sum_packets_out"
-	FlowAggSumBytesOut                 = "sum_bytes_out"
-	FlowAggSumTCPRetranmissions        = "sum_tcp_total_retransmissions"
-	FlowAggSumTCPLostPackets           = "sum_tcp_lost_packets"
-	FlowAggSumTCPUnrecoveredTO         = "sum_tcp_unrecovered_to"
-	FlowAggMinProcessNames             = "process_names_min_num"
-	FlowAggMinProcessIds               = "process_ids_min_num"
-	FlowAggMinTCPSendCongestionWindow  = "tcp_min_send_congestion_window"
-	FlowAggMinTCPMSS                   = "tcp_min_mss"
-	FlowAggMaxProcessNames             = "process_names_max_num"
-	FlowAggMaxProcessIds               = "process_ids_max_num"
-	FlowAggMaxTCPSmoothRTT             = "tcp_max_smooth_rtt"
-	FlowAggMaxTCPMinRTT                = "tcp_max_min_rtt"
-	FlowAggMeanTCPSendCongestionWindow = "tcp_mean_send_congestion_window"
-	FlowAggMeanTCPSmoothRTT            = "tcp_mean_smooth_rtt"
-	FlowAggMeanTCPMinRTT               = "tcp_mean_min_rtt"
-	FlowAggMeanTCPMSS                  = "tcp_mean_mss"
-)
+// List returns all flows which match the given options.
+func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3FlowParams) (<-chan []v1.L3Flow, <-chan error) {
+	log := bapi.ContextLogger(i)
+
+	if i.Cluster == "" {
+		return nil, backend.ErrorToChannel(fmt.Errorf("no cluster ID provided on List call"))
+	}
+
+	// Default the number of results to 1000 if there is no limit
+	// set on the query.
+	numResults := opts.MaxResults
+	if numResults == 0 {
+		numResults = 1000
+	}
+
+	// Build the aggregation request.
+	query := &lmaelastic.CompositeAggregationQuery{
+		DocumentIndex:           b.index(i),
+		Query:                   b.buildQuery(i, opts),
+		Name:                    "buckets",
+		AggCompositeSourceInfos: b.compositeSources,
+		AggSumInfos:             b.aggSums,
+		AggMaxInfos:             b.aggMaxs,
+		AggMinInfos:             b.aggMins,
+		AggMeanInfos:            b.aggMeans,
+		AggNestedTermInfos:      b.aggNested,
+		MaxBucketsPerQuery:      numResults,
+	}
+	log.Debugf("Listing flows from index %s", query.DocumentIndex)
+
+	// Perform the request.
+	return lmaelastic.CompositeSearch[v1.L3Flow](ctx, b.lmaclient, query, log, b.convertBucket)
+}
 
 // convertBucket turns a composite aggregation bucket into an L3Flow.
 func (b *flowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.CompositeAggregationBucket) v1.L3Flow {
@@ -233,15 +268,8 @@ func (b *flowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 	return flow
 }
 
-// List returns all flows which match the given options.
-func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3FlowParams) (<-chan []v1.L3Flow, <-chan error) {
-	log := bapi.ContextLogger(i)
-
-	if i.Cluster == "" {
-		log.Fatal("BUG: No cluster ID set on flow request")
-	}
-
-	// Parse times from the request.
+// buildQuery builds an elastic query using the given parameters.
+func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts v1.L3FlowParams) elastic.Query {
 	var start, end time.Time
 	if opts.QueryParams != nil && opts.QueryParams.TimeRange != nil {
 		start = opts.QueryParams.TimeRange.From
@@ -251,31 +279,7 @@ func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3Fl
 		start = time.Now().Add(-5 * time.Minute)
 		end = time.Now()
 	}
-
-	// Default the number of results to 1000 if there is no limit
-	// set on the query.
-	numResults := opts.MaxResults
-	if numResults == 0 {
-		numResults = 1000
-	}
-
-	// Build the aggregation request.
-	query := &lmaelastic.CompositeAggregationQuery{
-		DocumentIndex:           b.index(i),
-		Query:                   lmaindex.FlowLogs().NewTimeRangeQuery(start, end),
-		Name:                    "buckets",
-		AggCompositeSourceInfos: b.compositeSources,
-		AggSumInfos:             b.aggSums,
-		AggMaxInfos:             b.aggMaxs,
-		AggMinInfos:             b.aggMins,
-		AggMeanInfos:            b.aggMeans,
-		AggNestedTermInfos:      b.aggNested,
-		MaxBucketsPerQuery:      numResults,
-	}
-	log.Debugf("Listing flows from index %s", query.DocumentIndex)
-
-	// Perform the request.
-	return lmaelastic.CompositeSearch[v1.L3Flow](ctx, b.lmaclient, query, log, b.convertBucket)
+	return lmaindex.FlowLogs().NewTimeRangeQuery(start, end)
 }
 
 func (b *flowBackend) index(i bapi.ClusterInfo) string {
