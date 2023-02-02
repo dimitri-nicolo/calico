@@ -261,9 +261,9 @@ func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3Fl
 
 	// Build the aggregation request.
 	query := &lmaelastic.CompositeAggregationQuery{
-		DocumentIndex:           buildFlowsIndex(i.Cluster),
+		DocumentIndex:           b.index(i),
 		Query:                   lmaindex.FlowLogs().NewTimeRangeQuery(start, end),
-		Name:                    "flog_buckets",
+		Name:                    "buckets",
 		AggCompositeSourceInfos: b.compositeSources,
 		AggSumInfos:             b.aggSums,
 		AggMaxInfos:             b.aggMaxs,
@@ -278,15 +278,20 @@ func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3Fl
 	return lmaelastic.CompositeSearch[v1.L3Flow](ctx, b.lmaclient, query, log, b.convertBucket)
 }
 
-func buildFlowsIndex(cluster string) string {
-	return fmt.Sprintf("tigera_secure_ee_flows.%s.*", cluster)
+func (b *flowBackend) index(i bapi.ClusterInfo) string {
+	if i.Tenant != "" {
+		// If a tenant is provided, then we must include it in the index.
+		return fmt.Sprintf("tigera_secure_ee_flows.%s.%s.*", i.Tenant, i.Cluster)
+	}
+
+	// Otherwise, this is a single-tenant cluster and we only need the cluster.
+	return fmt.Sprintf("tigera_secure_ee_flows.%s.*", i.Cluster)
 }
 
 // getLabelsFromLabelAggregation parses the labels out from the given aggregation and puts them into a map map[string][]FlowResponseLabels
 // that can be sent back in the response.
 func getLabelsFromLabelAggregation(log *logrus.Entry, terms map[string]*lmaelastic.AggregatedTerm, k string) []v1.FlowLabels {
 	tracker := newLabelTracker()
-	logrus.Debugf("%s buckets: %+v", k, terms[k].Buckets)
 	for i := range terms[k].Buckets {
 		label, ok := i.(string)
 		if !ok {
