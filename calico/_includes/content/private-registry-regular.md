@@ -11,6 +11,8 @@ In order to install images from your private registry, you must first pull the i
    {% unless component[1].image contains "-windows" -%}
    {% if component[1].registry %}{% assign registry = component[1].registry | append: "/" %}{% else %}{% assign registry = page.registry -%} {% endif -%}
    docker pull {{ registry }}{{ component[1].image }}:{{component[1].version}}
+   {% if component[1].fips-image %}docker pull {{ registry }}{{ component[1].image }}:{{component[1].version}}-fips
+   {% endif -%}
    {% endunless -%}
    {% endif -%}
    {% endfor -%}
@@ -35,6 +37,8 @@ In order to install images from your private registry, you must first pull the i
    {% unless component[1].image contains "-windows" -%}
    {% if component[1].registry %}{% assign registry = component[1].registry | append: "/" %}{% else %}{% assign registry = page.registry -%} {% endif -%}
    docker tag {{ registry }}{{ component[1].image }}:{{component[1].version}} $PRIVATE_REGISTRY/{{ component[1].image }}:{{component[1].version}}
+   {% if component[1].fips-image %}docker tag {{ registry }}{{ component[1].image }}:{{component[1].version}}-fips $PRIVATE_REGISTRY/{{ component[1].image }}:{{component[1].version}}-fips
+   {% endif -%}
    {% endunless -%}
    {% endif -%}
    {% endfor -%}
@@ -58,6 +62,8 @@ In order to install images from your private registry, you must first pull the i
    {% if component[1].image -%}
    {% unless component[1].image contains "-windows" -%}
    docker push $PRIVATE_REGISTRY/{{ component[1].image }}:{{component[1].version}}
+   {% if component[1].fips-image %}docker push $PRIVATE_REGISTRY/{{ component[1].image }}:{{component[1].version}}-fips
+   {% endif -%}
    {% endunless -%}
    {% endif -%}
    {% endfor -%}
