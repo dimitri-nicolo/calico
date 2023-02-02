@@ -181,15 +181,12 @@
     # to the docs & manifest tooling not to default to the tigera registry.
     # The Prometheus + eck-operator images are third-party images that have been ported to quay.io/tigera
     flexvol:
-      image: calico/pod2daemon-flexvol
+      image: tigera/pod2daemon-flexvol
       version: master
-      registry: quay.io
     csi-driver:
-      image: calico/csi
+      image: tigera/csi
       version: master
-      registry: quay.io
     csi-node-driver-registrar:
-      image: calico/node-driver-registrar
+      image: tigera/node-driver-registrar
       version: master
-      registry: quay.io
 
