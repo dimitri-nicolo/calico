@@ -327,6 +327,13 @@ func (wc defaultWorkloadEndpointConverter) podToDefaultWorkloadEndpoint(pod *kap
 		EgressGateway: annotationsToEgressGatewaySpec(pod.Annotations),
 	}
 
+	if v, ok := pod.Annotations["k8s.v1.cni.cncf.io/network-status"]; ok {
+		if wep.Annotations == nil {
+			wep.Annotations = make(map[string]string)
+		}
+		wep.Annotations["k8s.v1.cni.cncf.io/network-status"] = v
+	}
+
 	// Embed the workload endpoint into a KVPair.
 	kvp := model.KVPair{
 		Key: model.ResourceKey{
