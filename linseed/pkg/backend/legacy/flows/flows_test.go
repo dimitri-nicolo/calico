@@ -25,9 +25,9 @@ var (
 	ctx    context.Context
 )
 
-// beforeEach runs common logic before each test, and also returns a function to perform teardown
+// setupTest runs common logic before each test, and also returns a function to perform teardown
 // after each test.
-func setupSuite(t *testing.T) func() {
+func setupTest(t *testing.T) func() {
 	// Create an elasticsearch client to use for the test. For this suite, we use a real
 	// elasticsearch instance created via "make run-elastic".
 	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"))
@@ -54,7 +54,7 @@ func setupSuite(t *testing.T) func() {
 
 // TestListFlows tests running a real elasticsearch query to list flows.
 func TestListFlows(t *testing.T) {
-	defer setupSuite(t)()
+	defer setupTest(t)()
 
 	clusterInfo := bapi.ClusterInfo{Cluster: "mycluster"}
 
@@ -99,7 +99,7 @@ func TestListFlows(t *testing.T) {
 
 // TestMultipleFlows tests that we return multiple flows properly.
 func TestMultipleFlows(t *testing.T) {
-	defer setupSuite(t)()
+	defer setupTest(t)()
 
 	// Both flows use the same cluster information.
 	clusterInfo := bapi.ClusterInfo{Cluster: "mycluster"}
@@ -163,7 +163,7 @@ func TestMultipleFlows(t *testing.T) {
 
 // TestPagination tests that we return multiple flows properly using pagination.
 func TestPagination(t *testing.T) {
-	defer setupSuite(t)()
+	defer setupTest(t)()
 
 	// Both flows use the same cluster information.
 	clusterInfo := bapi.ClusterInfo{Cluster: "mycluster"}
