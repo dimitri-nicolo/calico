@@ -61,14 +61,14 @@ func (n NetworkFlows) Serve() http.HandlerFunc {
 			reqParams.QueryParams.Timeout = &metav1.Duration{Duration: v1.DefaultTimeOut}
 		}
 
-		// List flows from backend
-		ctx, cancel := context.WithTimeout(context.Background(), reqParams.QueryParams.Timeout.Duration)
-		defer cancel()
 		clusterInfo := bapi.ClusterInfo{
 			Cluster: middleware.ClusterIDFromContext(req.Context()),
 			Tenant:  middleware.TenantIDFromContext(req.Context()),
 		}
 
+		// List flows from backend
+		ctx, cancel := context.WithTimeout(context.Background(), reqParams.QueryParams.Timeout.Duration)
+		defer cancel()
 		response, err := n.backend.List(ctx, clusterInfo, *reqParams)
 		if err != nil {
 			log.WithError(err).Error("Failed to list flows")

@@ -28,7 +28,7 @@ type QueryParams struct {
 	// AfterKey is used for pagination. If set, the query will start from the given AfterKey.
 	// This is generally passed straight through to the datastore, and its type cannot be
 	// guaranteed.
-	AfterKey interface{} `json:"after_key"`
+	AfterKey map[string]interface{} `json:"after_key"`
 }
 
 func (p *QueryParams) GetMaxResults() int {

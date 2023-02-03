@@ -11,5 +11,5 @@ type List[T any] struct {
 	// are additional items to return. If nil, it means the request
 	// was fully satisfied. If non-nil, it can be included on a subsequent
 	// request to retrieve the next page of items.
-	AfterKey interface{} `json:"after_key,omitempty"`
+	AfterKey map[string]interface{} `json:"after_key,omitempty"`
 }

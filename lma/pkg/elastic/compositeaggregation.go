@@ -550,8 +550,8 @@ func PagedSearch[T any](ctx context.Context,
 	query *CompositeAggregationQuery,
 	log *logrus.Entry,
 	convert func(*logrus.Entry, *CompositeAggregationBucket) *T,
-	resultsAfter interface{},
-) ([]T, interface{}, error) {
+	resultsAfter map[string]interface{},
+) ([]T, map[string]interface{}, error) {
 	// Query the document index. We aren't interested in the actual search results but rather only the aggregated
 	// results.
 	searchQuery := c.Backend().Search().
@@ -564,11 +564,7 @@ func PagedSearch[T any](ctx context.Context,
 
 	if resultsAfter != nil {
 		log.Debugf("Enumerating after key %+v", resultsAfter)
-		a, ok := resultsAfter.(map[string]interface{})
-		if !ok {
-			return nil, nil, fmt.Errorf("wrong type for afterKey (%t)", resultsAfter)
-		}
-		compiledCompositeAgg = compiledCompositeAgg.AggregateAfter(a)
+		compiledCompositeAgg = compiledCompositeAgg.AggregateAfter(resultsAfter)
 	}
 
 	log.Debugf("Listing flows from index %s", query.DocumentIndex)
