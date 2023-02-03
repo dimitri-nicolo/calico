@@ -155,7 +155,7 @@ func NewFlowBackend(c lmaelastic.Client) bapi.FlowBackend {
 }
 
 // List returns all flows which match the given options.
-func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3FlowParams) (*v1.L3FlowResponse, error) {
+func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3FlowParams) (*v1.List[v1.L3Flow], error) {
 	log := bapi.ContextLogger(i)
 
 	if i.Cluster == "" {
@@ -186,8 +186,8 @@ func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3Fl
 
 	// Perform the request.
 	page, key, err := lmaelastic.PagedSearch(ctx, b.lmaclient, query, log, b.convertBucket, opts.QueryParams.AfterKey)
-	return &v1.L3FlowResponse{
-		L3Flows:  page,
+	return &v1.List[v1.L3Flow]{
+		Items:    page,
 		AfterKey: key,
 	}, err
 }

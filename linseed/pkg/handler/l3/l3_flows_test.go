@@ -92,8 +92,8 @@ func networkFlows(flows []v1.L3Flow) *l3.NetworkFlows {
 	mockBackend := &api.MockFlowBackend{}
 	n := l3.NewNetworkFlows(mockBackend)
 
-	res := v1.L3FlowResponse{
-		L3Flows:  flows,
+	res := v1.List[v1.L3Flow]{
+		Items:    flows,
 		AfterKey: nil,
 	}
 
@@ -105,8 +105,8 @@ func networkFlows(flows []v1.L3Flow) *l3.NetworkFlows {
 }
 
 func marshalResponse(t *testing.T, flows []v1.L3Flow) string {
-	response := v1.L3FlowResponse{}
-	response.L3Flows = flows
+	response := v1.List[v1.L3Flow]{}
+	response.Items = flows
 
 	newData, err := json.Marshal(response)
 	require.NoError(t, err)

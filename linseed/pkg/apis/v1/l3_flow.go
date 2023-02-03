@@ -198,8 +198,3 @@ type LabelSelector struct {
 	Operator string   `json:"operator"`
 	Values   []string `json:"values"`
 }
-
-type L3FlowResponse struct {
-	L3Flows  []L3Flow    `json:"l3_flows,omitempty" validate:"omitempty"`
-	AfterKey interface{} `json:"after_key"`
-}

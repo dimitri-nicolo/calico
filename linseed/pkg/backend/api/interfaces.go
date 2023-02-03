@@ -12,7 +12,7 @@ import (
 
 // FlowBackend defines the interface for interacting with L3 flows
 type FlowBackend interface {
-	List(context.Context, ClusterInfo, v1.L3FlowParams) (*v1.L3FlowResponse, error)
+	List(context.Context, ClusterInfo, v1.L3FlowParams) (*v1.List[v1.L3Flow], error)
 }
 
 // FlowLogBackend defines the interface for interacting with L3 flow logs
