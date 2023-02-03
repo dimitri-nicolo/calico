@@ -2,7 +2,7 @@
   "index_patterns": ["tigera_secure_ee_l7*"],
   "mappings": {
     "_source": {
-      "enabled": false
+      "enabled": true 
     },
     "properties": {
       "@timestamp": {
