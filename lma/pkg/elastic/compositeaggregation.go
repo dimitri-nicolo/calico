@@ -469,8 +469,7 @@ func (c CompositeAggregationKey) SameBucket(other CompositeAggregationKey) bool 
 
 // CompositeAggregationSourceValue contains the name and value of a source in a composite aggregation key.
 // TODO(rlb): I'm not sure we need the name in this structure since it can be inferred from the Query and we aren't
-//
-//	using it for self-consistency checks when comparing sets of keys.
+// using it for self-consistency checks when comparing sets of keys.
 type CompositeAggregationSourceValue struct {
 	Name  string
 	Value interface{}
@@ -544,7 +543,8 @@ func (c *mockComplianceClient) SearchCompositeAggregations(
 	return searchCompositeAggregationsHelper(ctx, query, startAfterKey, c)
 }
 
-// PagedSearch returns a page of items.
+// PagedSearch returns a page of items. If there are more items to retrieve, a key will also be returned
+// which can be used on subsequent calls to retrive the next page.
 func PagedSearch[T any](ctx context.Context,
 	c Client,
 	query *CompositeAggregationQuery,
@@ -567,7 +567,7 @@ func PagedSearch[T any](ctx context.Context,
 		compiledCompositeAgg = compiledCompositeAgg.AggregateAfter(resultsAfter)
 	}
 
-	log.Debugf("Listing flows from index %s", query.DocumentIndex)
+	log.Debugf("Performing composite aggregation against index %s", query.DocumentIndex)
 	queryAgg := searchQuery.Aggregation(query.Name, compiledCompositeAgg)
 	searchResult, err := c.Do(ctx, queryAgg)
 	if err != nil {
@@ -617,7 +617,8 @@ func PagedSearch[T any](ctx context.Context,
 		return page, nil, nil
 	}
 
-	// There's another page after this one - return the AfterKey.
+	// There's another page after this one - return the AfterKey so that callers can
+	// use it to query the next page.
 	return page, rawResults.AfterKey, nil
 }
 
