@@ -49,7 +49,7 @@ func TestListL7Flows(t *testing.T) {
 	// Query for flows. There should be a single flow from the populated data.
 	r, err := b.List(ctx, clusterInfo, opts)
 	require.NoError(t, err)
-	require.Len(t, r, 1)
+	require.Len(t, r.Items, 1)
 
 	// Assert that the flow data is populated correctly.
 	require.Equal(t, expected, r.Items[0])

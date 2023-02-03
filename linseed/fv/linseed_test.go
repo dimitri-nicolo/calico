@@ -24,12 +24,12 @@ import (
 )
 
 func TestFV_Linseed(t *testing.T) {
-	var addr = "localhost:8444"
-	var elasticEndpoint = "http://localhost:9200"
-	var cluster = "cluster"
-	var tenant = "tenant"
+	addr := "localhost:8444"
+	elasticEndpoint := "http://localhost:9200"
+	cluster := "cluster"
+	tenant := ""
 
-	var tests = []struct {
+	tests := []struct {
 		name           string
 		path           string
 		method         string
@@ -38,20 +38,32 @@ func TestFV_Linseed(t *testing.T) {
 		wantStatusCode int
 		wantBody       string
 	}{
-		{name: "should return 404 for /",
-			path: "/", method: "GET", wantStatusCode: 404, wantBody: "404 page not found"},
-		{name: "should return 404 for /foo",
-			path: "/foo", method: "GET", wantStatusCode: 404, wantBody: "404 page not found"},
-		{name: "should return 404 for /api/v1/flows/foo",
-			path: "/api/v1/flows/foo", method: "GET", wantStatusCode: 404, wantBody: "404 page not found"},
-		{name: "should return 405 for DELETE /version",
-			path: "/version", method: "DELETE", wantStatusCode: 405, wantBody: ""},
-		{name: "should return 415 unsupported content type for /api/v1/flows/network",
+		{
+			name: "should return 404 for /",
+			path: "/", method: "GET", wantStatusCode: 404, wantBody: "404 page not found",
+		},
+		{
+			name: "should return 404 for /foo",
+			path: "/foo", method: "GET", wantStatusCode: 404, wantBody: "404 page not found",
+		},
+		{
+			name: "should return 404 for /api/v1/flows/foo",
+			path: "/api/v1/flows/foo", method: "GET", wantStatusCode: 404, wantBody: "404 page not found",
+		},
+		{
+			name: "should return 405 for DELETE /version",
+			path: "/version", method: "DELETE", wantStatusCode: 405, wantBody: "",
+		},
+		{
+			name: "should return 415 unsupported content type for /api/v1/flows/network",
 			path: "/api/v1/flows/network", method: "POST",
-			headers: contentType("text/plain"), body: "{}", wantStatusCode: 415, wantBody: ""},
-		{name: "should return 415 unsupported content type for /api/v1/bulk/flows/network/logs",
+			headers: contentType("text/plain"), body: "{}", wantStatusCode: 415, wantBody: "",
+		},
+		{
+			name: "should return 415 unsupported content type for /api/v1/bulk/flows/network/logs",
 			path: "/api/v1/bulk/flows/network/logs", method: "POST",
-			headers: contentType("text/plain"), body: "{}", wantStatusCode: 415, wantBody: ""},
+			headers: contentType("text/plain"), body: "{}", wantStatusCode: 415, wantBody: "",
+		},
 	}
 
 	for _, tt := range tests {
@@ -70,7 +82,7 @@ func TestFV_Linseed(t *testing.T) {
 	}
 
 	t.Run("should deny any HTTP connection", func(t *testing.T) {
-		var client = &http.Client{}
+		client := &http.Client{}
 		res, resBody := doRequest(t, client, noBodyHTTPReqSpec("GET", fmt.Sprintf("http://%s/", addr), tenant, cluster))
 
 		assert.Equal(t, http.StatusBadRequest, res.StatusCode)
@@ -102,10 +114,10 @@ func TestFV_Linseed(t *testing.T) {
 		}
 		body, err := json.Marshal(&flowParams)
 		require.NoError(t, err)
+
 		spec := jsonPostHTTPReqSpec(fmt.Sprintf("https://%s%s", addr, "/api/v1/flows/network"), tenant, cluster, body)
 		// make the request to retrieve flows
 		res, resBody := doRequest(t, client, spec)
-
 		assert.Equal(t, http.StatusOK, res.StatusCode)
 		assert.JSONEq(t, flow, strings.Trim(string(resBody), "\n"))
 	})

@@ -218,9 +218,10 @@ func (b *flowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 
 	// Build the flow.
 	flow.LogStats = &v1.LogStats{
-		LogCount:  int64(bucket.AggregatedSums[FlowAggSumNumFlows]),
-		Started:   int64(bucket.AggregatedSums[FlowAggSumNumFlowsStarted]),
-		Completed: int64(bucket.AggregatedSums[FlowAggSumNumFlowsCompleted]),
+		FlowLogCount: bucket.DocCount,
+		LogCount:     int64(bucket.AggregatedSums[FlowAggSumNumFlows]),
+		Started:      int64(bucket.AggregatedSums[FlowAggSumNumFlowsStarted]),
+		Completed:    int64(bucket.AggregatedSums[FlowAggSumNumFlowsCompleted]),
 	}
 
 	flow.Service = &v1.Service{
