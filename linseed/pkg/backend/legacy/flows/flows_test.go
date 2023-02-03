@@ -5,7 +5,6 @@ package flows_test
 import (
 	"context"
 	"fmt"
-	"net"
 	"testing"
 	"time"
 
@@ -20,25 +19,65 @@ import (
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
-// TestListFlows tests running a real elasticsearch query to list flows.
-func TestListFlows(t *testing.T) {
-	clusterInfo := bapi.ClusterInfo{Cluster: "mycluster"}
+var (
+	client lmaelastic.Client
+	b      bapi.FlowBackend
+	ctx    context.Context
+)
 
-	// Create an elasticsearch client to use for the test. For this test, we use a real
+// beforeEach runs common logic before each test, and also returns a function to perform teardown
+// after each test.
+func setupSuite(t *testing.T) func() {
+	// Create an elasticsearch client to use for the test. For this suite, we use a real
 	// elasticsearch instance created via "make run-elastic".
 	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"))
 	require.NoError(t, err)
-	client := lmaelastic.NewWithClient(esClient)
+	client = lmaelastic.NewWithClient(esClient)
 
-	// Instantiate a FlowBackend.
-	b := flows.NewFlowBackend(client)
+	// Cleanup any data that might left over from a previous failed run.
+	_, err = client.Backend().DeleteIndex("tigera_secure_ee_flows.*").Do(context.Background())
+	require.NoError(t, err)
+
+	// Create a FlowBackend to use.
+	b = flows.NewFlowBackend(client)
+
+	// Each test should take less than 5 seconds.
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+
+	// Function contains teardown logic.
+	return func() {
+		// Cancel the context
+		cancel()
+	}
+}
+
+// TestListFlows tests running a real elasticsearch query to list flows.
+func TestListFlows(t *testing.T) {
+	defer setupSuite(t)()
+
+	clusterInfo := bapi.ClusterInfo{Cluster: "mycluster"}
 
 	// Timeout the test after 5 seconds.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	// Put some data into ES so we can query it.
-	expected := populateFlowData(t, ctx, client, clusterInfo.Cluster)
+	bld := NewFlowLogBuilder()
+	bld.WithType("wep").
+		WithSourceNamespace("default").
+		WithDestNamespace("kube-system").
+		WithDestName("kube-dns-*").
+		WithDestIP("10.0.0.10").
+		WithDestService("kube-dns", 53).
+		WithDestPort(53).
+		WithProtocol("udp").
+		WithSourceName("my-deployment").
+		WithSourceIP("192.168.1.1").
+		WithRandomFlowStats().WithRandomPacketStats().
+		WithReporter("src").WithAction("allowed").
+		WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
+	expected := populateFlowData(t, ctx, bld, client, clusterInfo.Cluster)
 
 	// Set time range so that we capture all of the populated flow logs.
 	opts := v1.L3FlowParams{}
@@ -56,112 +95,104 @@ func TestListFlows(t *testing.T) {
 
 	// Assert that the flow data is populated correctly.
 	require.Equal(t, expected, r.L3Flows[0])
+}
 
-	// Clean up after ourselves by deleting the index.
-	_, err = esClient.DeleteIndex(fmt.Sprintf("tigera_secure_ee_flows.%s.*", clusterInfo.Cluster)).Do(ctx)
+// TestMultipleFlows tests that we return multiple flows properly.
+func TestMultipleFlows(t *testing.T) {
+	defer setupSuite(t)()
+
+	// Both flows use the same cluster information.
+	clusterInfo := bapi.ClusterInfo{Cluster: "mycluster"}
+
+	// Timeout the test after 5 seconds.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Template for flow #1.
+	bld := NewFlowLogBuilder()
+	bld.WithType("wep").
+		WithSourceNamespace("tigera-operator").
+		WithDestNamespace("kube-system").
+		WithDestName("kube-dns-*").
+		WithDestIP("10.0.0.10").
+		WithDestService("kube-dns", 53).
+		WithDestPort(53).
+		WithProtocol("udp").
+		WithSourceName("tigera-operator").
+		WithSourceIP("34.15.66.3").
+		WithRandomFlowStats().WithRandomPacketStats().
+		WithReporter("src").WithAction("allowed").
+		WithSourceLabels("bread=rye", "cheese=brie", "wine=none") // TODO
+	exp1 := populateFlowData(t, ctx, bld, client, clusterInfo.Cluster)
+
+	// Template for flow #2.
+	bld2 := NewFlowLogBuilder()
+	bld2.WithType("wep").
+		WithSourceNamespace("default").
+		WithDestNamespace("kube-system").
+		WithDestName("kube-dns-*").
+		WithDestIP("10.0.0.10").
+		WithDestService("kube-dns", 53).
+		WithDestPort(53).
+		WithProtocol("udp").
+		WithSourceName("my-deployment").
+		WithSourceIP("192.168.1.1").
+		WithRandomFlowStats().WithRandomPacketStats().
+		WithReporter("src").WithAction("allowed").
+		WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
+	exp2 := populateFlowData(t, ctx, bld2, client, clusterInfo.Cluster)
+
+	// Set time range so that we capture all of the populated flow logs.
+	opts := v1.L3FlowParams{}
+	opts.QueryParams = &v1.QueryParams{}
+	opts.QueryParams.TimeRange = &lmav1.TimeRange{}
+	opts.QueryParams.TimeRange.From = time.Now().Add(-5 * time.Second)
+	opts.QueryParams.TimeRange.To = time.Now().Add(5 * time.Second)
+
+	// Query for flows. There should be a single flow from the populated data.
+	r, err := b.List(ctx, clusterInfo, opts)
 	require.NoError(t, err)
+	require.Len(t, r.L3Flows, 2)
+	require.Nil(t, r.AfterKey)
+	require.Empty(t, err)
+
+	// Assert that the flow data is populated correctly.
+	require.Equal(t, exp1, r.L3Flows[1])
+	require.Equal(t, exp2, r.L3Flows[0])
 }
 
 // populateFlowData writes a series of flow logs to elasticsearch, and returns the FlowLog that we
 // should expect to exist as a result. This can be used to assert round-tripping and aggregation against ES is working correctly.
-func populateFlowData(t *testing.T, ctx context.Context, client lmaelastic.Client, cluster string) v1.L3Flow {
-	// Clear out any old data first.
-	_, _ = client.Backend().DeleteIndex(fmt.Sprintf("tigera_secure_ee_flows.%s.*", cluster)).Do(ctx)
+func populateFlowData(t *testing.T, ctx context.Context, b *flowLogBuilder, client lmaelastic.Client, cluster string) v1.L3Flow {
+	batch := []v1.FlowLog{}
 
-	// Instantiate a FlowBackend.
-	b := flows.NewFlowLogBackend(client)
+	// Initialize the expected output based on the given builder template.
+	expected := b.ExpectedFlow()
 
-	// The expected flow log - we'll populate fields as we go.
-	expected := v1.L3Flow{}
-	expected.Key = v1.L3FlowKey{
-		Action:   "allowed",
-		Reporter: "src",
-		Protocol: "udp",
-		Source: v1.Endpoint{
-			Namespace:      "default",
-			Type:           "wep",
-			AggregatedName: "my-deployment",
-		},
-		Destination: v1.Endpoint{
-			Namespace:      "kube-system",
-			Type:           "wep",
-			AggregatedName: "kube-dns-*",
-			Port:           53,
-		},
-	}
-	expected.TrafficStats = &v1.TrafficStats{}
-	expected.LogStats = &v1.LogStats{
-		FlowLogCount: 10,
-	}
-	expected.Service = &v1.Service{
-		Name:      "kube-dns",
-		Namespace: "kube-system",
-		Port:      53,
-		PortName:  "53",
-	}
-	expected.DestinationLabels = []v1.FlowLabels{{Key: "dest_iteration", Values: []string{}}}
+	// Labels are an aggregation across all flow logs created in the loop below.
+	// TODO: This should be calculated by the builder.
 	expected.SourceLabels = []v1.FlowLabels{
 		{Key: "bread", Values: []string{"rye"}},
 		{Key: "cheese", Values: []string{"brie"}},
 		{Key: "wine", Values: []string{"none"}},
 	}
-
-	batch := []v1.FlowLog{}
+	expected.DestinationLabels = []v1.FlowLabels{{Key: "dest_iteration", Values: []string{}}}
 
 	for i := 0; i < 10; i++ {
-		f := v1.FlowLog{
-			StartTime:            fmt.Sprintf("%d", time.Now().Unix()),
-			EndTime:              fmt.Sprintf("%d", time.Now().Unix()),
-			DestType:             "wep",
-			DestNamespace:        "kube-system",
-			DestNameAggr:         "kube-dns-*",
-			DestIP:               net.ParseIP("10.0.0.10"),
-			SourceIP:             net.ParseIP("192.168.1.1"),
-			DestServiceNamespace: "kube-system",
-			DestServiceName:      "kube-dns",
-			DestServicePort:      "53",
-			DestServicePortNum:   53,
-			Protocol:             "udp",
-			DestPort:             53,
-			SourceType:           "wep",
-			SourceNamespace:      "default",
-			SourceNameAggr:       "my-deployment",
-			ProcessName:          "-",
-			Reporter:             "src",
-			Action:               "allowed",
+		// We want a variety of label keys and values,
+		// so base this one off of the loop variable.
+		// Note: We use a nested terms aggregation to get labels, which has an
+		// inherent maximum number of buckets of 10. As a result, if a flow has more than
+		// 10 labels, not all of them will be shown. We might be able to use a composite aggregation instead,
+		// but these are more expensive.
+		b2 := b.Copy()
+		b2.WithDestLabels(fmt.Sprintf("dest_iteration=%d", i))
 
-			// Flow stats.
-			NumFlows:          3,
-			NumFlowsStarted:   3,
-			NumFlowsCompleted: 1,
-
-			// Packet stats
-			PacketsIn:  i,
-			PacketsOut: 2 * i,
-			BytesIn:    64,
-			BytesOut:   128,
-
-			// Add label information.
-			SourceLabels: v1.FlowLogLabels{
-				Labels: []string{
-					"bread=rye",
-					"cheese=brie",
-					"wine=none",
-				},
-			},
-			DestLabels: v1.FlowLogLabels{
-				// We want a variety of label keys and values,
-				// so base this one off of the loop variable.
-				// Note: We use a nested terms aggregation to get labels, which has an
-				// inherent maximum number of buckets of 10. As a result, if a flow has more than
-				// 10 labels, not all of them will be shown. We might be able to use a composite aggregation instead,
-				// but these are more expensive.
-				Labels: []string{fmt.Sprintf("dest_iteration=%d", i)},
-			},
-		}
+		f, err := b2.Build()
+		require.NoError(t, err)
 
 		// Add it to the batch
-		batch = append(batch, f)
+		batch = append(batch, *f)
 
 		// Increment fields on the expected flow based on the flow log that was
 		// just added.
@@ -175,7 +206,8 @@ func populateFlowData(t *testing.T, ctx context.Context, client lmaelastic.Clien
 		expected.DestinationLabels[0].Values = append(expected.DestinationLabels[0].Values, fmt.Sprintf("%d", i))
 	}
 
-	response, err := b.Create(ctx, bapi.ClusterInfo{Cluster: cluster}, batch)
+	// Instantiate a FlowBackend.
+	response, err := flows.NewFlowLogBackend(client).Create(ctx, bapi.ClusterInfo{Cluster: cluster}, batch)
 	require.NoError(t, err)
 	require.Equal(t, response.Failed, 0)
 
@@ -185,5 +217,5 @@ func populateFlowData(t *testing.T, ctx context.Context, client lmaelastic.Clien
 	err = testutils.RefreshIndex(ctx, client, index)
 	require.NoError(t, err)
 
-	return expected
+	return *expected
 }
