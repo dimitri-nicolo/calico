@@ -251,6 +251,7 @@ func populateFlowData(t *testing.T, ctx context.Context, b *flowLogBuilder, clie
 		{Key: "wine", Values: []string{"none"}},
 	}
 	expected.DestinationLabels = []v1.FlowLabels{{Key: "dest_iteration", Values: []string{}}}
+	expected.LogStats.FlowLogCount = int64(10)
 
 	for i := 0; i < 10; i++ {
 		// We want a variety of label keys and values,
