@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path"
+	"strings"
 
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 	"github.com/sirupsen/logrus"
@@ -26,6 +28,7 @@ type Request struct {
 	headers http.Header
 	verb    string
 	params  any
+	path    string
 }
 
 // Verb sets the verb this request will use.
@@ -37,6 +40,11 @@ func (r *Request) Verb(verb string) *Request {
 // Params sets parameters to pass in the request body.
 func (r *Request) Params(p any) *Request {
 	r.params = p
+	return r
+}
+
+func (r *Request) Path(p string) *Request {
+	r.path = p
 	return r
 }
 
@@ -55,11 +63,19 @@ func (r *Request) SetHeader(key string, values ...string) *Request {
 func (r *Request) Do(ctx context.Context) *Result {
 	request, err := json.Marshal(r.params)
 
+	// This is temporary, until we upgrade to go1.19 which has
+	// native support for this via url.JoinPath
+	JoinPath := func(base string, paths ...string) string {
+		p := path.Join(paths...)
+		return fmt.Sprintf("%s/%s", strings.TrimRight(base, "/"), strings.TrimLeft(p, "/"))
+	}
+	url := JoinPath(r.client.config.URL, r.path)
+
 	// Build the request.
 	req, err := http.NewRequestWithContext(
 		ctx,
 		r.verb,
-		r.client.config.URL,
+		url,
 		bytes.NewBuffer(request),
 	)
 	req.Header.Set("x-cluster-id", r.client.clusterID)
@@ -81,7 +97,7 @@ func (r *Request) Do(ctx context.Context) *Result {
 		err:        err,
 		body:       responseByte,
 		statusCode: response.StatusCode,
-		url:        r.client.config.URL,
+		path:       r.path,
 	}
 }
 
@@ -89,7 +105,7 @@ type Result struct {
 	err        error
 	body       []byte
 	statusCode int
-	url        string
+	path       string
 }
 
 // Into decodes the body of the result into the given structure. obj should be a pointer.
@@ -102,8 +118,8 @@ func (r *Result) Into(obj any) error {
 	}
 
 	if r.statusCode == http.StatusNotFound {
-		// The URL wasn't found. We shouldn't parse the response as JSON.
-		return fmt.Errorf("server returned not found for URL %s: %s", r.url, string(r.body))
+		// The path wasn't found. We shouldn't parse the response as JSON.
+		return fmt.Errorf("server returned not found for path %s: %s", r.path, string(r.body))
 	} else if r.statusCode != http.StatusOK {
 		// A structured error returned by the server - parse it.
 		httpError := httputils.HttpStatusError{}

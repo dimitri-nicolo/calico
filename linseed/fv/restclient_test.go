@@ -19,7 +19,7 @@ func TestFV_RESTClient(t *testing.T) {
 	// Build a basic RESTClient.
 	cfg := rest.Config{
 		CACertPath: "cert/RootCA.crt",
-		URL:        fmt.Sprintf("https://localhost:8444/api/v1/flows/network"),
+		URL:        fmt.Sprintf("https://localhost:8444/"),
 	}
 	rc, err := rest.NewClient(cluster, tenant, cfg)
 	require.NoError(t, err)
@@ -36,7 +36,11 @@ func TestFV_RESTClient(t *testing.T) {
 		}
 		flows := v1.List[v1.L3Flow]{}
 
-		err = rc.Post().Params(&params).Do(context.TODO()).Into(&flows)
+		err = rc.Post().
+			Path("/api/v1/flows/network").
+			Params(&params).
+			Do(context.TODO()).
+			Into(&flows)
 		require.NoError(t, err)
 	})
 
@@ -45,19 +49,15 @@ func TestFV_RESTClient(t *testing.T) {
 		// in an error, since it is missing required fields.
 		params := v1.L3FlowParams{}
 		flows := v1.List[v1.L3Flow]{}
-		err = rc.Post().Params(&params).Do(context.TODO()).Into(&flows)
+		err = rc.Post().
+			Path("/api/v1/flows/network").
+			Params(&params).
+			Do(context.TODO()).
+			Into(&flows)
 		require.Error(t, err)
 	})
 
 	t.Run("should handle a 404 response", func(t *testing.T) {
-		// Build a basic RESTClient.
-		cfg := rest.Config{
-			CACertPath: "cert/RootCA.crt",
-			URL:        fmt.Sprintf("https://localhost:8444/bad/url"),
-		}
-		rc, err := rest.NewClient(cluster, tenant, cfg)
-		require.NoError(t, err)
-
 		// Build and send a request.
 		params := v1.L3FlowParams{
 			QueryParams: &v1.QueryParams{
@@ -69,7 +69,11 @@ func TestFV_RESTClient(t *testing.T) {
 		}
 		flows := v1.List[v1.L3Flow]{}
 
-		err = rc.Post().Params(&params).Do(context.TODO()).Into(&flows)
+		err = rc.Post().
+			Path("/bad/url").
+			Params(&params).
+			Do(context.TODO()).
+			Into(&flows)
 		require.Error(t, err)
 	})
 }

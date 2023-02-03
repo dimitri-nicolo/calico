@@ -22,7 +22,10 @@ type RESTClient struct {
 }
 
 type Config struct {
-	URL             string
+	// The base URL of the server
+	URL string
+
+	// TLS configuration.
 	CACertPath      string
 	ClientCertPath  string
 	ClientKeyPath   string
