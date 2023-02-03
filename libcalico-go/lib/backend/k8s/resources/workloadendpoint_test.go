@@ -990,6 +990,16 @@ var _ = Describe("WorkloadEndpointClient with multi-NICs enabled", func() {
 								apiv3.LabelNetworkNamespace: "testNamespace",
 								apiv3.LabelNetworkInterface: "ens4",
 							},
+							Annotations: map[string]string{
+								nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+									{
+										Name:      "calico-default-network",
+										Interface: "ens4",
+										IPs:       []string{"192.168.91.113"},
+										Mac:       "9e:e7:7e:9d:8f:e0",
+									},
+								}),
+							},
 						},
 						Spec: libapiv3.WorkloadEndpointSpec{
 							Orchestrator:  "k8s",
@@ -1073,6 +1083,28 @@ var _ = Describe("WorkloadEndpointClient with multi-NICs enabled", func() {
 								apiv3.LabelNetwork:          "calico1",
 								apiv3.LabelNetworkNamespace: "testNamespace",
 								apiv3.LabelNetworkInterface: "net1",
+							},
+							Annotations: map[string]string{
+								nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+									{
+										Name:      "calico-default-network",
+										Interface: "ens4",
+										IPs:       []string{"192.168.91.113"},
+										Mac:       "9e:e7:7e:9d:8f:e0",
+									},
+									{
+										Name:      "calico1",
+										Interface: "net1",
+										IPs:       []string{"192.168.91.114"},
+										Mac:       "62:45:f5:10:97:c1",
+									},
+									{
+										Name:      "calico2",
+										Interface: "net2",
+										IPs:       []string{"192.168.91.115"},
+										Mac:       "62:76:f5:90:27:c1",
+									},
+								}),
 							},
 						},
 						Spec: libapiv3.WorkloadEndpointSpec{
@@ -1201,6 +1233,28 @@ var _ = Describe("WorkloadEndpointClient with multi-NICs enabled", func() {
 											apiv3.LabelNetworkNamespace: "testNamespace",
 											apiv3.LabelNetworkInterface: "ens4",
 										},
+										Annotations: map[string]string{
+											nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+												{
+													Name:      "calico-default-network",
+													Interface: "ens4",
+													IPs:       []string{"192.168.91.113"},
+													Mac:       "9e:e7:7e:9d:8f:e0",
+												},
+												{
+													Name:      "calico1",
+													Interface: "net1",
+													IPs:       []string{"192.168.91.114"},
+													Mac:       "62:45:f5:10:97:c1",
+												},
+												{
+													Name:      "calico2",
+													Interface: "net2",
+													IPs:       []string{"192.168.91.115"},
+													Mac:       "62:76:f5:90:27:c1",
+												},
+											}),
+										},
 									},
 									Spec: libapiv3.WorkloadEndpointSpec{
 										Orchestrator:  "k8s",
@@ -1227,6 +1281,28 @@ var _ = Describe("WorkloadEndpointClient with multi-NICs enabled", func() {
 											apiv3.LabelNetworkNamespace: "testNamespace",
 											apiv3.LabelNetworkInterface: "net1",
 										},
+										Annotations: map[string]string{
+											nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+												{
+													Name:      "calico-default-network",
+													Interface: "ens4",
+													IPs:       []string{"192.168.91.113"},
+													Mac:       "9e:e7:7e:9d:8f:e0",
+												},
+												{
+													Name:      "calico1",
+													Interface: "net1",
+													IPs:       []string{"192.168.91.114"},
+													Mac:       "62:45:f5:10:97:c1",
+												},
+												{
+													Name:      "calico2",
+													Interface: "net2",
+													IPs:       []string{"192.168.91.115"},
+													Mac:       "62:76:f5:90:27:c1",
+												},
+											}),
+										},
 									},
 									Spec: libapiv3.WorkloadEndpointSpec{
 										Orchestrator:  "k8s",
@@ -1252,6 +1328,28 @@ var _ = Describe("WorkloadEndpointClient with multi-NICs enabled", func() {
 											apiv3.LabelNetwork:          "calico2",
 											apiv3.LabelNetworkNamespace: "testNamespace",
 											apiv3.LabelNetworkInterface: "net2",
+										},
+										Annotations: map[string]string{
+											nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+												{
+													Name:      "calico-default-network",
+													Interface: "ens4",
+													IPs:       []string{"192.168.91.113"},
+													Mac:       "9e:e7:7e:9d:8f:e0",
+												},
+												{
+													Name:      "calico1",
+													Interface: "net1",
+													IPs:       []string{"192.168.91.114"},
+													Mac:       "62:45:f5:10:97:c1",
+												},
+												{
+													Name:      "calico2",
+													Interface: "net2",
+													IPs:       []string{"192.168.91.115"},
+													Mac:       "62:76:f5:90:27:c1",
+												},
+											}),
 										},
 									},
 									Spec: libapiv3.WorkloadEndpointSpec{
@@ -1336,6 +1434,14 @@ var _ = Describe("WorkloadEndpointClient with multi-NICs enabled", func() {
 										apiv3.LabelNetwork:          "calico-default-network",
 										apiv3.LabelNetworkNamespace: "testNamespace",
 										apiv3.LabelNetworkInterface: "ens4",
+									},
+									Annotations: map[string]string{
+										nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{{
+											Name:      "calico-default-network",
+											Interface: "ens4",
+											IPs:       []string{"192.168.91.113"},
+											Mac:       "9e:e7:7e:9d:8f:e0",
+										}}),
 									},
 								},
 								Spec: libapiv3.WorkloadEndpointSpec{
@@ -1424,6 +1530,16 @@ var _ = Describe("WorkloadEndpointClient with multi-NICs enabled", func() {
 										apiv3.LabelNetworkNamespace: "testNamespace",
 										apiv3.LabelNetworkInterface: "ens4",
 									},
+									Annotations: map[string]string{
+										nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+											{
+												Name:      "calico-default-network",
+												Interface: "ens4",
+												IPs:       []string{"192.168.91.113"},
+												Mac:       "9e:e7:7e:9d:8f:e0",
+											},
+										}),
+									},
 								},
 								Spec: libapiv3.WorkloadEndpointSpec{
 									Orchestrator:  "k8s",
@@ -1449,6 +1565,16 @@ var _ = Describe("WorkloadEndpointClient with multi-NICs enabled", func() {
 										apiv3.LabelNetwork:          "calico-default-network",
 										apiv3.LabelNetworkNamespace: "testNamespace",
 										apiv3.LabelNetworkInterface: "ens4",
+									},
+									Annotations: map[string]string{
+										nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+											{
+												Name:      "calico-default-network",
+												Interface: "ens4",
+												IPs:       []string{"192.168.91.120"},
+												Mac:       "1e:a7:7e:8d:8f:e0",
+											},
+										}),
 									},
 								},
 								Spec: libapiv3.WorkloadEndpointSpec{
@@ -1547,6 +1673,22 @@ var _ = Describe("WorkloadEndpointClient with multi-NICs enabled", func() {
 										apiv3.LabelNetworkNamespace: "testNamespace",
 										apiv3.LabelNetworkInterface: "ens4",
 									},
+									Annotations: map[string]string{
+										nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+											{
+												Name:      "calico-default-network",
+												Interface: "ens4",
+												IPs:       []string{"192.168.91.113"},
+												Mac:       "9e:e7:7e:9d:8f:e0",
+											},
+											{
+												Name:      "cali1",
+												Interface: "net1",
+												IPs:       []string{"192.168.91.114"},
+												Mac:       "7f:e7:3e:9d:8f:a0",
+											},
+										}),
+									},
 								},
 								Spec: libapiv3.WorkloadEndpointSpec{
 									Orchestrator:  "k8s",
@@ -1572,6 +1714,22 @@ var _ = Describe("WorkloadEndpointClient with multi-NICs enabled", func() {
 										apiv3.LabelNetwork:          "cali1",
 										apiv3.LabelNetworkNamespace: "testNamespace",
 										apiv3.LabelNetworkInterface: "net1",
+									},
+									Annotations: map[string]string{
+										nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+											{
+												Name:      "calico-default-network",
+												Interface: "ens4",
+												IPs:       []string{"192.168.91.113"},
+												Mac:       "9e:e7:7e:9d:8f:e0",
+											},
+											{
+												Name:      "cali1",
+												Interface: "net1",
+												IPs:       []string{"192.168.91.114"},
+												Mac:       "7f:e7:3e:9d:8f:a0",
+											},
+										}),
 									},
 								},
 								Spec: libapiv3.WorkloadEndpointSpec{
@@ -1599,6 +1757,22 @@ var _ = Describe("WorkloadEndpointClient with multi-NICs enabled", func() {
 										apiv3.LabelNetworkNamespace: "testNamespace",
 										apiv3.LabelNetworkInterface: "ens4",
 									},
+									Annotations: map[string]string{
+										nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+											{
+												Name:      "calico-default-network",
+												Interface: "ens4",
+												IPs:       []string{"192.168.91.120"},
+												Mac:       "1e:a7:7e:8d:8f:e0",
+											},
+											{
+												Name:      "s2cali1",
+												Interface: "net1",
+												IPs:       []string{"192.168.91.121"},
+												Mac:       "5a:a7:7e:8d:8f:e1",
+											},
+										}),
+									},
 								},
 								Spec: libapiv3.WorkloadEndpointSpec{
 									Orchestrator:  "k8s",
@@ -1624,6 +1798,22 @@ var _ = Describe("WorkloadEndpointClient with multi-NICs enabled", func() {
 										apiv3.LabelNetwork:          "s2cali1",
 										apiv3.LabelNetworkNamespace: "testNamespace",
 										apiv3.LabelNetworkInterface: "net1",
+									},
+									Annotations: map[string]string{
+										nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+											{
+												Name:      "calico-default-network",
+												Interface: "ens4",
+												IPs:       []string{"192.168.91.120"},
+												Mac:       "1e:a7:7e:8d:8f:e0",
+											},
+											{
+												Name:      "s2cali1",
+												Interface: "net1",
+												IPs:       []string{"192.168.91.121"},
+												Mac:       "5a:a7:7e:8d:8f:e1",
+											},
+										}),
 									},
 								},
 								Spec: libapiv3.WorkloadEndpointSpec{
@@ -1698,6 +1888,28 @@ var _ = Describe("WorkloadEndpointClient with multi-NICs enabled", func() {
 									apiv3.LabelNetworkNamespace: "testNamespace",
 									apiv3.LabelNetworkInterface: "ens4",
 								},
+								Annotations: map[string]string{
+									nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+										{
+											Name:      "calico-default-network",
+											Interface: "ens4",
+											IPs:       []string{"192.168.91.113"},
+											Mac:       "9e:e7:7e:9d:8f:e0",
+										},
+										{
+											Name:      "cali1",
+											Interface: "net1",
+											IPs:       []string{"192.168.91.114"},
+											Mac:       "7f:e7:3e:9d:8f:a0",
+										},
+										{
+											Name:      "cali2",
+											Interface: "net2",
+											IPs:       []string{"192.168.91.115"},
+											Mac:       "2a:e7:7e:9d:8f:a3",
+										},
+									}),
+								},
 							},
 							Spec: libapiv3.WorkloadEndpointSpec{
 								Orchestrator:  "k8s",
@@ -1724,6 +1936,28 @@ var _ = Describe("WorkloadEndpointClient with multi-NICs enabled", func() {
 									apiv3.LabelNetworkNamespace: "testNamespace",
 									apiv3.LabelNetworkInterface: "net1",
 								},
+								Annotations: map[string]string{
+									nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+										{
+											Name:      "calico-default-network",
+											Interface: "ens4",
+											IPs:       []string{"192.168.91.113"},
+											Mac:       "9e:e7:7e:9d:8f:e0",
+										},
+										{
+											Name:      "cali1",
+											Interface: "net1",
+											IPs:       []string{"192.168.91.114"},
+											Mac:       "7f:e7:3e:9d:8f:a0",
+										},
+										{
+											Name:      "cali2",
+											Interface: "net2",
+											IPs:       []string{"192.168.91.115"},
+											Mac:       "2a:e7:7e:9d:8f:a3",
+										},
+									}),
+								},
 							},
 							Spec: libapiv3.WorkloadEndpointSpec{
 								Orchestrator:  "k8s",
@@ -1749,6 +1983,28 @@ var _ = Describe("WorkloadEndpointClient with multi-NICs enabled", func() {
 									apiv3.LabelNetwork:          "cali2",
 									apiv3.LabelNetworkNamespace: "testNamespace",
 									apiv3.LabelNetworkInterface: "net2",
+								},
+								Annotations: map[string]string{
+									nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
+										{
+											Name:      "calico-default-network",
+											Interface: "ens4",
+											IPs:       []string{"192.168.91.113"},
+											Mac:       "9e:e7:7e:9d:8f:e0",
+										},
+										{
+											Name:      "cali1",
+											Interface: "net1",
+											IPs:       []string{"192.168.91.114"},
+											Mac:       "7f:e7:3e:9d:8f:a0",
+										},
+										{
+											Name:      "cali2",
+											Interface: "net2",
+											IPs:       []string{"192.168.91.115"},
+											Mac:       "2a:e7:7e:9d:8f:a3",
+										},
+									}),
 								},
 							},
 							Spec: libapiv3.WorkloadEndpointSpec{
