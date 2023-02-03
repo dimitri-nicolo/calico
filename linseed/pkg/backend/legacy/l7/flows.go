@@ -10,6 +10,7 @@ import (
 	kapiv1 "k8s.io/apimachinery/pkg/types"
 
 	elastic "github.com/olivere/elastic/v7"
+
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
