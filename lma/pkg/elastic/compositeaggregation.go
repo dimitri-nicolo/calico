@@ -563,7 +563,7 @@ func PagedSearch[T any](ctx context.Context,
 	compiledCompositeAgg := query.getCompositeAggregation()
 
 	if resultsAfter != nil {
-		log.Infof("Enumerating after key %+v", resultsAfter)
+		log.Debugf("Enumerating after key %+v", resultsAfter)
 		a, ok := resultsAfter.(map[string]interface{})
 		if !ok {
 			return nil, nil, fmt.Errorf("wrong type for afterKey (%t)", resultsAfter)

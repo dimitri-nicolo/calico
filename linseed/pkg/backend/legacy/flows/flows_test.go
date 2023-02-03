@@ -149,7 +149,7 @@ func TestMultipleFlows(t *testing.T) {
 	opts.QueryParams.TimeRange.From = time.Now().Add(-5 * time.Second)
 	opts.QueryParams.TimeRange.To = time.Now().Add(5 * time.Second)
 
-	// Query for flows. There should be a single flow from the populated data.
+	// Query for flows. There should be two flows from the populated data.
 	r, err := b.List(ctx, clusterInfo, opts)
 	require.NoError(t, err)
 	require.Len(t, r.L3Flows, 2)
@@ -159,6 +159,80 @@ func TestMultipleFlows(t *testing.T) {
 	// Assert that the flow data is populated correctly.
 	require.Equal(t, exp1, r.L3Flows[1])
 	require.Equal(t, exp2, r.L3Flows[0])
+}
+
+// TestPagination tests that we return multiple flows properly using pagination.
+func TestPagination(t *testing.T) {
+	defer setupSuite(t)()
+
+	// Both flows use the same cluster information.
+	clusterInfo := bapi.ClusterInfo{Cluster: "mycluster"}
+
+	// Timeout the test after 5 seconds.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Template for flow #1.
+	bld := NewFlowLogBuilder()
+	bld.WithType("wep").
+		WithSourceNamespace("tigera-operator").
+		WithDestNamespace("kube-system").
+		WithDestName("kube-dns-*").
+		WithDestIP("10.0.0.10").
+		WithDestService("kube-dns", 53).
+		WithDestPort(53).
+		WithProtocol("udp").
+		WithSourceName("tigera-operator").
+		WithSourceIP("34.15.66.3").
+		WithRandomFlowStats().WithRandomPacketStats().
+		WithReporter("src").WithAction("allowed").
+		WithSourceLabels("bread=rye", "cheese=brie", "wine=none") // TODO
+	exp1 := populateFlowData(t, ctx, bld, client, clusterInfo.Cluster)
+
+	// Template for flow #2.
+	bld2 := NewFlowLogBuilder()
+	bld2.WithType("wep").
+		WithSourceNamespace("default").
+		WithDestNamespace("kube-system").
+		WithDestName("kube-dns-*").
+		WithDestIP("10.0.0.10").
+		WithDestService("kube-dns", 53).
+		WithDestPort(53).
+		WithProtocol("udp").
+		WithSourceName("my-deployment").
+		WithSourceIP("192.168.1.1").
+		WithRandomFlowStats().WithRandomPacketStats().
+		WithReporter("src").WithAction("allowed").
+		WithSourceLabels("bread=rye", "cheese=brie", "wine=none")
+	exp2 := populateFlowData(t, ctx, bld2, client, clusterInfo.Cluster)
+
+	// Set time range so that we capture all of the populated flow logs.
+	opts := v1.L3FlowParams{}
+	opts.QueryParams = &v1.QueryParams{}
+	opts.QueryParams.TimeRange = &lmav1.TimeRange{}
+	opts.QueryParams.TimeRange.From = time.Now().Add(-5 * time.Second)
+	opts.QueryParams.TimeRange.To = time.Now().Add(5 * time.Second)
+
+	// Also set a max results of 1, so that we only get one flow at a time.
+	opts.QueryParams.MaxResults = 1
+
+	// Query for flows. There should be a single flow from the populated data.
+	r, err := b.List(ctx, clusterInfo, opts)
+	require.NoError(t, err)
+	require.Len(t, r.L3Flows, 1)
+	require.NotNil(t, r.AfterKey)
+	require.Empty(t, err)
+	require.Equal(t, exp2, r.L3Flows[0])
+
+	// Now, send another request. This time, passing in the pagination key
+	// returned from the first. We should get the second flow.
+	opts.QueryParams.AfterKey = r.AfterKey
+	r, err = b.List(ctx, clusterInfo, opts)
+	require.NoError(t, err)
+	require.Len(t, r.L3Flows, 1)
+	require.NotNil(t, r.AfterKey)
+	require.Empty(t, err)
+	require.Equal(t, exp1, r.L3Flows[0])
 }
 
 // populateFlowData writes a series of flow logs to elasticsearch, and returns the FlowLog that we
