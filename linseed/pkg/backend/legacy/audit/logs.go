@@ -54,17 +54,17 @@ func (b *auditLogBackend) Initialize(ctx context.Context) error {
 }
 
 // Create the given logs in elasticsearch.
-func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i bapi.ClusterInfo, logs []audit.Event) error {
+func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i bapi.ClusterInfo, logs []audit.Event) (*v1.BulkResponse, error) {
 	log := bapi.ContextLogger(i)
 
 	// Initialize if we haven't yet.
 	err := b.Initialize(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if i.Cluster == "" {
-		return fmt.Errorf("no cluster ID on request")
+		return nil, fmt.Errorf("no cluster ID on request")
 	}
 
 	// Determine the index to write to. It will be automatically created based on the configured
@@ -86,7 +86,7 @@ func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i ba
 		encoder := kaudit.Codecs.LegacyCodec(groupVersion)
 		bs, err := runtime.Encode(encoder, &f)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// Add this log to the bulk request.
@@ -98,12 +98,17 @@ func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i ba
 	resp, err := bulk.Do(ctx)
 	if err != nil {
 		log.Errorf("Error writing log: %s", err)
-		return fmt.Errorf("failed to write log: %s", err)
+		return nil, fmt.Errorf("failed to write log: %s", err)
 	}
 
 	log.WithField("count", len(logs)).Debugf("Wrote log to index: %+v", resp)
 
-	return nil
+	return &v1.BulkResponse{
+		Total:     len(resp.Items),
+		Succeeded: len(resp.Succeeded()),
+		Failed:    len(resp.Failed()),
+		Errors:    v1.GetBulkErrors(resp),
+	}, nil
 }
 
 // List lists logs that match the given parameters.

@@ -62,7 +62,7 @@ type AuditBackend interface {
 	Initialize(context.Context) error
 
 	// Create creates the given logs.
-	Create(context.Context, v1.AuditLogType, ClusterInfo, []audit.Event) error
+	Create(context.Context, v1.AuditLogType, ClusterInfo, []audit.Event) (*v1.BulkResponse, error)
 
 	// List lists logs that match the given parameters.
 	List(context.Context, ClusterInfo, v1.AuditLogParams) (*v1.List[audit.Event], error)

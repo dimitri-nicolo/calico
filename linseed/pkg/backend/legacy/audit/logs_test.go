@@ -86,8 +86,9 @@ func TestCreateAuditLog(t *testing.T) {
 	}
 
 	// Create the event in ES.
-	err = b.Create(ctx, v1.AuditLogTypeKube, clusterInfo, []kaudit.Event{f})
+	resp, err := b.Create(ctx, v1.AuditLogTypeKube, clusterInfo, []kaudit.Event{f})
 	require.NoError(t, err)
+	require.Equal(t, 0, len(resp.Errors))
 
 	// Refresh the index.
 	err = testutils.RefreshIndex(ctx, client, fmt.Sprintf("tigera_secure_ee_audit_kube.%s", clusterInfo.Cluster))
