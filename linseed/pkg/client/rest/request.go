@@ -9,6 +9,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/projectcalico/calico/lma/pkg/httputils"
+	"github.com/sirupsen/logrus"
 )
 
 func NewRequest(c *RESTClient) *Request {
@@ -78,6 +81,7 @@ func (r *Request) Do(ctx context.Context) *Result {
 		err:        err,
 		body:       responseByte,
 		statusCode: response.StatusCode,
+		url:        r.client.config.URL,
 	}
 }
 
@@ -85,6 +89,7 @@ type Result struct {
 	err        error
 	body       []byte
 	statusCode int
+	url        string
 }
 
 // Into decodes the body of the result into the given structure. obj should be a pointer.
@@ -96,9 +101,24 @@ func (r *Result) Into(obj any) error {
 		return fmt.Errorf("no body returned from request. status=%d", r.statusCode)
 	}
 
+	if r.statusCode == http.StatusNotFound {
+		// The URL wasn't found. We shouldn't parse the response as JSON.
+		return fmt.Errorf("server returned not found for URL %s: %s", r.url, string(r.body))
+	} else if r.statusCode != http.StatusOK {
+		// A structured error returned by the server - parse it.
+		httpError := httputils.HttpStatusError{}
+		err := json.Unmarshal(r.body, &httpError)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal error response: %s", err)
+		}
+		return &httpError
+	}
+
+	// Got an OK response - unmarshal it into the expected type.
 	err := json.Unmarshal(r.body, obj)
 	if err != nil {
-		return err
+		logrus.WithField("body", string(r.body)).Errorf("Error unmarshalling response")
+		return fmt.Errorf("error unmarshalling response : %s", err)
 	}
 
 	return nil
