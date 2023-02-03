@@ -776,7 +776,6 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 									"pod":                       "simplePod",
 								},
 								Annotations: map[string]string{
-									nettypes.NetworkAttachmentAnnot: "calico1,calico2",
 									nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
 										{
 											Name:      "calico-default-network",
@@ -826,7 +825,6 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 									"pod":                       "simplePod",
 								},
 								Annotations: map[string]string{
-									nettypes.NetworkAttachmentAnnot: "calico1,calico2",
 									nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
 										{
 											Name:      "calico-default-network",
@@ -876,7 +874,6 @@ var _ = Describe("multusWorkloadEndpointConverter", func() {
 									"pod":                       "simplePod",
 								},
 								Annotations: map[string]string{
-									nettypes.NetworkAttachmentAnnot: "calico1,calico2",
 									nettypes.NetworkStatusAnnot: mustMarshal([]*nettypes.NetworkStatus{
 										{
 											Name:      "calico-default-network",
