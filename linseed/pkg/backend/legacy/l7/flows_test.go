@@ -52,7 +52,7 @@ func TestListL7Flows(t *testing.T) {
 	require.Len(t, r, 1)
 
 	// Assert that the flow data is populated correctly.
-	require.Equal(t, expected, r[0])
+	require.Equal(t, expected, r.Items[0])
 
 	// Clean up after ourselves by deleting the index.
 	_, err = esClient.DeleteIndex(fmt.Sprintf("tigera_secure_ee_l7.%s.*", clusterInfo.Cluster)).Do(ctx)

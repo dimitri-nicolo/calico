@@ -96,14 +96,14 @@ func TestCreateAuditLog(t *testing.T) {
 	// List the event, assert that it matches the one we just wrote.
 	results, err := b.List(ctx, clusterInfo, v1.AuditLogParams{Type: v1.AuditLogTypeKube})
 	require.NoError(t, err)
-	require.Equal(t, 1, len(results))
+	require.Equal(t, 1, len(results.Items))
 
 	// MicroTime doesn't JSON serialize and deserialize properly, so we need to force the results to
 	// match here. When you serialize and deserialize a MicroTime, the microsecond precision is lost
 	// and so the resulting objects do not match.
-	f.RequestReceivedTimestamp = results[0].RequestReceivedTimestamp
-	f.StageTimestamp = results[0].StageTimestamp
-	require.Equal(t, f, results[0])
+	f.RequestReceivedTimestamp = results.Items[0].RequestReceivedTimestamp
+	f.StageTimestamp = results.Items[0].StageTimestamp
+	require.Equal(t, f, results.Items[0])
 
 	// Clean up after ourselves by deleting the index.
 	_, err = esClient.DeleteIndex(fmt.Sprintf("tigera_secure_ee_audit_kube.%s", clusterInfo.Cluster)).Do(ctx)

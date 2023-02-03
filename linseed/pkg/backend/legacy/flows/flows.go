@@ -159,7 +159,7 @@ func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3Fl
 	log := bapi.ContextLogger(i)
 
 	if i.Cluster == "" {
-		return nil, fmt.Errorf("no cluster ID provided on List call")
+		return nil, fmt.Errorf("no cluster ID provided on request")
 	}
 
 	// Default the number of results to 1000 if there is no limit
@@ -193,7 +193,7 @@ func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3Fl
 }
 
 // convertBucket turns a composite aggregation bucket into an L3Flow.
-func (b *flowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.CompositeAggregationBucket) v1.L3Flow {
+func (b *flowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.CompositeAggregationBucket) *v1.L3Flow {
 	log.Infof("Processing bucket built from %d logs", bucket.DocCount)
 	key := bucket.CompositeAggregationKey
 
@@ -270,7 +270,7 @@ func (b *flowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 	flow.DestinationLabels = getLabelsFromLabelAggregation(log, bucket.AggregatedTerms, "dest_labels")
 	flow.SourceLabels = getLabelsFromLabelAggregation(log, bucket.AggregatedTerms, "source_labels")
 
-	return flow
+	return &flow
 }
 
 // buildQuery builds an elastic query using the given parameters.

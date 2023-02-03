@@ -549,7 +549,7 @@ func PagedSearch[T any](ctx context.Context,
 	c Client,
 	query *CompositeAggregationQuery,
 	log *logrus.Entry,
-	convert func(*logrus.Entry, *CompositeAggregationBucket) T,
+	convert func(*logrus.Entry, *CompositeAggregationBucket) *T,
 	resultsAfter interface{},
 ) ([]T, interface{}, error) {
 	// Query the document index. We aren't interested in the actual search results but rather only the aggregated
@@ -607,8 +607,11 @@ func PagedSearch[T any](ctx context.Context,
 			return nil, nil, err
 
 		}
+
 		// Now convert to the desired output type.
-		page = append(page, convert(log, cab))
+		if obj := convert(log, cab); obj != nil {
+			page = append(page, *obj)
+		}
 	}
 
 	// If we get fewer than the requested number of buckets, or if there is no AfterKey, it means that there are no more

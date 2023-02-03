@@ -89,12 +89,12 @@ func TestListFlows(t *testing.T) {
 	// Query for flows. There should be a single flow from the populated data.
 	r, err := b.List(ctx, clusterInfo, opts)
 	require.NoError(t, err)
-	require.Len(t, r.L3Flows, 1)
+	require.Len(t, r.Items, 1)
 	require.Nil(t, r.AfterKey)
 	require.Empty(t, err)
 
 	// Assert that the flow data is populated correctly.
-	require.Equal(t, expected, r.L3Flows[0])
+	require.Equal(t, expected, r.Items[0])
 }
 
 // TestMultipleFlows tests that we return multiple flows properly.
@@ -152,13 +152,13 @@ func TestMultipleFlows(t *testing.T) {
 	// Query for flows. There should be two flows from the populated data.
 	r, err := b.List(ctx, clusterInfo, opts)
 	require.NoError(t, err)
-	require.Len(t, r.L3Flows, 2)
+	require.Len(t, r.Items, 2)
 	require.Nil(t, r.AfterKey)
 	require.Empty(t, err)
 
 	// Assert that the flow data is populated correctly.
-	require.Equal(t, exp1, r.L3Flows[1])
-	require.Equal(t, exp2, r.L3Flows[0])
+	require.Equal(t, exp1, r.Items[1])
+	require.Equal(t, exp2, r.Items[0])
 }
 
 // TestPagination tests that we return multiple flows properly using pagination.
@@ -219,20 +219,20 @@ func TestPagination(t *testing.T) {
 	// Query for flows. There should be a single flow from the populated data.
 	r, err := b.List(ctx, clusterInfo, opts)
 	require.NoError(t, err)
-	require.Len(t, r.L3Flows, 1)
+	require.Len(t, r.Items, 1)
 	require.NotNil(t, r.AfterKey)
 	require.Empty(t, err)
-	require.Equal(t, exp2, r.L3Flows[0])
+	require.Equal(t, exp2, r.Items[0])
 
 	// Now, send another request. This time, passing in the pagination key
 	// returned from the first. We should get the second flow.
 	opts.QueryParams.AfterKey = r.AfterKey
 	r, err = b.List(ctx, clusterInfo, opts)
 	require.NoError(t, err)
-	require.Len(t, r.L3Flows, 1)
+	require.Len(t, r.Items, 1)
 	require.NotNil(t, r.AfterKey)
 	require.Empty(t, err)
-	require.Equal(t, exp1, r.L3Flows[0])
+	require.Equal(t, exp1, r.Items[0])
 }
 
 // populateFlowData writes a series of flow logs to elasticsearch, and returns the FlowLog that we

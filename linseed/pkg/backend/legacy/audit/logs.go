@@ -22,7 +22,7 @@ import (
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
-type backend struct {
+type auditLogBackend struct {
 	client    *elastic.Client
 	lmaclient lmaelastic.Client
 
@@ -31,17 +31,13 @@ type backend struct {
 }
 
 func NewBackend(c lmaelastic.Client) bapi.AuditBackend {
-	return &backend{
+	return &auditLogBackend{
 		client:    c.Backend(),
 		lmaclient: c,
 	}
 }
 
-func (b *backend) index(kind v1.AuditLogType, cluster string) string {
-	return fmt.Sprintf("tigera_secure_ee_audit_%s.%s", kind, cluster)
-}
-
-func (b *backend) Initialize(ctx context.Context) error {
+func (b *auditLogBackend) Initialize(ctx context.Context) error {
 	var err error
 	if !b.initialized {
 		// Create a template with mappings for all new log indices.
@@ -58,7 +54,7 @@ func (b *backend) Initialize(ctx context.Context) error {
 }
 
 // Create the given logs in elasticsearch.
-func (b *backend) Create(ctx context.Context, kind v1.AuditLogType, i bapi.ClusterInfo, logs []audit.Event) error {
+func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i bapi.ClusterInfo, logs []audit.Event) error {
 	log := bapi.ContextLogger(i)
 
 	// Initialize if we haven't yet.
@@ -73,14 +69,14 @@ func (b *backend) Create(ctx context.Context, kind v1.AuditLogType, i bapi.Clust
 
 	// Determine the index to write to. It will be automatically created based on the configured
 	// template if it does not already exist.
-	index := b.index(kind, i.Cluster)
+	index := b.index(kind, i)
 	log.Debugf("Writing audit logs in bulk to index %s", index)
 
 	// Build a bulk request using the provided logs.
 	bulk := b.client.Bulk()
 
 	for _, f := range logs {
-		// Kubernetes audit.Entry objects require special serialization that differs from the
+		// Kubernetes audit.Event objects require special serialization that differs from the
 		// default json implementation. So use that here. This is taken from the k8s source:
 		// https://github.com/kubernetes/kubernetes/blob/v1.25.0/staging/src/k8s.io/apiserver/plugin/pkg/audit/log/backend.go#L76-L81
 		groupVersion := schema.GroupVersion{
@@ -111,7 +107,7 @@ func (b *backend) Create(ctx context.Context, kind v1.AuditLogType, i bapi.Clust
 }
 
 // List lists logs that match the given parameters.
-func (b *backend) List(ctx context.Context, i api.ClusterInfo, opts v1.AuditLogParams) ([]audit.Event, error) {
+func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.AuditLogParams) (*v1.List[audit.Event], error) {
 	log := bapi.ContextLogger(i)
 
 	if i.Cluster == "" {
@@ -127,24 +123,11 @@ func (b *backend) List(ctx context.Context, i api.ClusterInfo, opts v1.AuditLogP
 		return nil, fmt.Errorf("invalid audit log type: %s", opts.Type)
 	}
 
-	// Parse times from the request. We default to a time-range query
-	// if no other search parameters are given.
-	var start, end time.Time
-	if opts.QueryParams != nil && opts.QueryParams.TimeRange != nil {
-		start = opts.QueryParams.TimeRange.From
-		end = opts.QueryParams.TimeRange.To
-	} else {
-		// Default to the latest 5 minute window.
-		start = time.Now().Add(-5 * time.Minute)
-		end = time.Now()
-	}
-	q := elastic.NewRangeQuery("requestReceivedTimestamp").Gt(start).Lte(end)
-
 	// Build the query.
 	query := b.client.Search().
-		Index(b.index(opts.Type, i.Cluster)).
+		Index(b.index(opts.Type, i)).
 		Size(opts.QueryParams.GetMaxResults()).
-		Query(q)
+		Query(b.buildQuery(i, opts))
 
 	results, err := query.Do(ctx)
 	if err != nil {
@@ -162,5 +145,34 @@ func (b *backend) List(ctx context.Context, i api.ClusterInfo, opts v1.AuditLogP
 		events = append(events, e)
 	}
 
-	return events, nil
+	return &v1.List[audit.Event]{
+		Items:    events,
+		AfterKey: nil, // TODO: Support pagination.
+	}, nil
+}
+
+// buildQuery builds an elastic query using the given parameters.
+func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts v1.AuditLogParams) elastic.Query {
+	// Parse times from the request. We default to a time-range query
+	// if no other search parameters are given.
+	var start, end time.Time
+	if opts.QueryParams != nil && opts.QueryParams.TimeRange != nil {
+		start = opts.QueryParams.TimeRange.From
+		end = opts.QueryParams.TimeRange.To
+	} else {
+		// Default to the latest 5 minute window.
+		start = time.Now().Add(-5 * time.Minute)
+		end = time.Now()
+	}
+	return elastic.NewRangeQuery("requestReceivedTimestamp").Gt(start).Lte(end)
+}
+
+func (b *auditLogBackend) index(kind v1.AuditLogType, i bapi.ClusterInfo) string {
+	if i.Tenant != "" {
+		// If a tenant is provided, then we must include it in the index.
+		return fmt.Sprintf("tigera_secure_ee_audit_%s.%s.%s", kind, i.Tenant, i.Cluster)
+	}
+
+	// Otherwise, this is a single-tenant cluster and we only need the cluster.
+	return fmt.Sprintf("tigera_secure_ee_audit_%s.%s", kind, i.Cluster)
 }

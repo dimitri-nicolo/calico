@@ -27,7 +27,7 @@ type FlowLogBackend interface {
 
 // L7FlowBackend defines the interface for interacting with L7 flows.
 type L7FlowBackend interface {
-	List(context.Context, ClusterInfo, v1.L7FlowParams) ([]v1.L7Flow, error)
+	List(context.Context, ClusterInfo, v1.L7FlowParams) (*v1.List[v1.L7Flow], error)
 }
 
 // L7LogBackend defines the interface for interacting with L7 flow logs.
@@ -42,7 +42,7 @@ type L7LogBackend interface {
 
 // DNSFlowBackend defines the interface for interacting with DNS flows
 type DNSFlowBackend interface {
-	List(context.Context, ClusterInfo, v1.DNSFlowParams) ([]v1.DNSFlow, error)
+	List(context.Context, ClusterInfo, v1.DNSFlowParams) (*v1.List[v1.DNSFlow], error)
 }
 
 // DNSLogBackend defines the interface for interacting with DNS logs
@@ -65,5 +65,5 @@ type AuditBackend interface {
 	Create(context.Context, v1.AuditLogType, ClusterInfo, []audit.Event) error
 
 	// List lists logs that match the given parameters.
-	List(context.Context, ClusterInfo, v1.AuditLogParams) ([]audit.Event, error)
+	List(context.Context, ClusterInfo, v1.AuditLogParams) (*v1.List[audit.Event], error)
 }
