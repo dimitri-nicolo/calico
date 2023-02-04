@@ -22,8 +22,10 @@ import (
 	"github.com/projectcalico/calico/linseed/pkg/handler"
 )
 
-const jsonContentType = "application/json"
-const jsonNewlineContentType = "application/x-ndjson"
+const (
+	jsonContentType        = "application/json"
+	jsonNewlineContentType = "application/x-ndjson"
+)
 
 func TestDecodeAndValidateReqParams(t *testing.T) {
 	type testCase[T handler.RequestParams] struct {
@@ -35,25 +37,37 @@ func TestDecodeAndValidateReqParams(t *testing.T) {
 		statusCode int
 	}
 
-	params := v1.L3FlowParams{QueryParams: &v1.QueryParams{TimeRange: &lmav1.TimeRange{
+	params := v1.L3FlowParams{QueryParams: v1.QueryParams{TimeRange: &lmav1.TimeRange{
 		From: time.Unix(0, 0),
 		To:   time.Unix(0, 0),
 	}}}
 
 	tests := []testCase[v1.L3FlowParams]{
-		{"no body", reqNoBody(jsonContentType), &v1.L3FlowParams{},
-			true, "empty request body", http.StatusBadRequest},
-		{"empty body", req("", jsonContentType), &v1.L3FlowParams{},
-			true, "Request body must not be empty", http.StatusBadRequest},
-		{"empty json", req("{}", jsonContentType), &v1.L3FlowParams{},
-			true, "error with field QueryParams = '<nil>' (Reason: failed to validate Field: QueryParams because of Tag: required )", http.StatusBadRequest},
-		{"malformed json", req("{#4FEF}", jsonContentType), &v1.L3FlowParams{},
-			true, "Request body contains badly-formed JSON (at position 2)", http.StatusBadRequest},
-		{"other content-type", req(marshall[v1.L3FlowParams](params), "application/xml"), &params,
-			true, "Received a request with content-type that is not supported", http.StatusUnsupportedMediaType},
+		{
+			"no body", reqNoBody(jsonContentType), &v1.L3FlowParams{},
+			true, "empty request body", http.StatusBadRequest,
+		},
+		{
+			"empty body", req("", jsonContentType), &v1.L3FlowParams{},
+			true, "Request body must not be empty", http.StatusBadRequest,
+		},
+		{
+			"empty json", req("{}", jsonContentType), &v1.L3FlowParams{},
+			true, "error with field QueryParams = '<nil>' (Reason: failed to validate Field: QueryParams because of Tag: required )", http.StatusBadRequest,
+		},
+		{
+			"malformed json", req("{#4FEF}", jsonContentType), &v1.L3FlowParams{},
+			true, "Request body contains badly-formed JSON (at position 2)", http.StatusBadRequest,
+		},
+		{
+			"other content-type", req(marshall(params), "application/xml"), &params,
+			true, "Received a request with content-type that is not supported", http.StatusUnsupportedMediaType,
+		},
 
-		{"with time range", req(marshall[v1.L3FlowParams](params), jsonContentType), &params,
-			false, "", 200},
+		{
+			"with time range", req(marshall(params), jsonContentType), &params,
+			false, "", 200,
+		},
 	}
 
 	for _, tt := range tests {
@@ -147,30 +161,56 @@ func TestValidateBulkParams(t *testing.T) {
 	}
 
 	tests := []testCase[v1.FlowLog]{
-		{"no body", reqNoBody(jsonNewlineContentType), []v1.FlowLog{},
-			true, "Received a request with an empty body", http.StatusBadRequest},
-		{"empty body", req("", jsonNewlineContentType), []v1.FlowLog{},
-			true, "Request body contains badly-formed JSON", http.StatusBadRequest},
-		{"empty json", req("{}", jsonNewlineContentType), []v1.FlowLog{},
-			true, "Request body contains an empty JSON", http.StatusBadRequest},
-		{"multiple empty jsons", req("{}\n{}", jsonNewlineContentType), []v1.FlowLog{},
-			true, "Request body contains an empty JSON", http.StatusBadRequest},
-		{"malformed json", req("{#4FEF}", jsonNewlineContentType), []v1.FlowLog{},
-			true, "Request body contains badly-formed JSON", http.StatusBadRequest},
-		{"other content-type", req(encode[v1.FlowLog](params), "application/xml"), params,
-			true, "Received a request with content-type that is not supported", http.StatusUnsupportedMediaType},
-		{"newline in json field value", req("{\"dest_name_aggr\":\"lorem lipsum\n\"}", jsonNewlineContentType), []v1.FlowLog{},
-			true, "Request body contains badly-formed JSON", http.StatusBadRequest},
-		{"new fields", req("{\"newfields\":\"any\"}", jsonNewlineContentType), []v1.FlowLog{},
-			true, "Request body contains badly-formed JSON", http.StatusBadRequest},
+		{
+			"no body", reqNoBody(jsonNewlineContentType),
+			[]v1.FlowLog{},
+			true, "Received a request with an empty body", http.StatusBadRequest,
+		},
+		{
+			"empty body", req("", jsonNewlineContentType),
+			[]v1.FlowLog{},
+			true, "Request body contains badly-formed JSON", http.StatusBadRequest,
+		},
+		{
+			"empty json", req("{}", jsonNewlineContentType),
+			[]v1.FlowLog{},
+			true, "Request body contains an empty JSON", http.StatusBadRequest,
+		},
+		{
+			"multiple empty jsons", req("{}\n{}", jsonNewlineContentType),
+			[]v1.FlowLog{},
+			true, "Request body contains an empty JSON", http.StatusBadRequest,
+		},
+		{
+			"malformed json", req("{#4FEF}", jsonNewlineContentType),
+			[]v1.FlowLog{},
+			true, "Request body contains badly-formed JSON", http.StatusBadRequest,
+		},
+		{
+			"other content-type", req(encode(params), "application/xml"), params,
+			true, "Received a request with content-type that is not supported", http.StatusUnsupportedMediaType,
+		},
+		{
+			"newline in json field value", req("{\"dest_name_aggr\":\"lorem lipsum\n\"}", jsonNewlineContentType),
+			[]v1.FlowLog{},
+			true, "Request body contains badly-formed JSON", http.StatusBadRequest,
+		},
+		{
+			"new fields", req("{\"newfields\":\"any\"}", jsonNewlineContentType),
+			[]v1.FlowLog{},
+			true, "Request body contains badly-formed JSON", http.StatusBadRequest,
+		},
 
-		{"escaped newline in json field value", req("{\"dest_name_aggr\":\"lorem lipsum\\n\"}", jsonNewlineContentType), []v1.FlowLog{{DestNameAggr: "lorem lipsum\n"}},
-			false, "", http.StatusOK},
-		{"bulk insert", req(encode[v1.FlowLog](params), jsonNewlineContentType), params, false, "", 200},
+		{
+			"escaped newline in json field value", req("{\"dest_name_aggr\":\"lorem lipsum\\n\"}", jsonNewlineContentType),
+			[]v1.FlowLog{{DestNameAggr: "lorem lipsum\n"}},
+			false, "", http.StatusOK,
+		},
+		{"bulk insert", req(encode(params), jsonNewlineContentType), params, false, "", 200},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := handler.DecodeAndValidateBulkParams[v1.FlowLog](httptest.NewRecorder(), tt.req)
+			got, err := handler.DecodeAndValidateBulkParams(httptest.NewRecorder(), tt.req)
 			if tt.wantErr {
 				require.Error(t, err)
 

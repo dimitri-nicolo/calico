@@ -77,7 +77,6 @@ func TestListFlows(t *testing.T) {
 
 	// Set time range so that we capture all of the populated flow logs.
 	opts := v1.L3FlowParams{}
-	opts.QueryParams = &v1.QueryParams{}
 	opts.QueryParams.TimeRange = &lmav1.TimeRange{}
 	opts.QueryParams.TimeRange.From = time.Now().Add(-5 * time.Second)
 	opts.QueryParams.TimeRange.To = time.Now().Add(5 * time.Second)
@@ -136,7 +135,6 @@ func TestMultipleFlows(t *testing.T) {
 
 	// Set time range so that we capture all of the populated flow logs.
 	opts := v1.L3FlowParams{}
-	opts.QueryParams = &v1.QueryParams{}
 	opts.QueryParams.TimeRange = &lmav1.TimeRange{}
 	opts.QueryParams.TimeRange.From = time.Now().Add(-5 * time.Second)
 	opts.QueryParams.TimeRange.To = time.Now().Add(5 * time.Second)
@@ -347,7 +345,6 @@ func TestPagination(t *testing.T) {
 
 	// Set time range so that we capture all of the populated flow logs.
 	opts := v1.L3FlowParams{}
-	opts.QueryParams = &v1.QueryParams{}
 	opts.QueryParams.TimeRange = &lmav1.TimeRange{}
 	opts.QueryParams.TimeRange.From = time.Now().Add(-5 * time.Second)
 	opts.QueryParams.TimeRange.To = time.Now().Add(5 * time.Second)

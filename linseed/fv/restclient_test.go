@@ -31,7 +31,7 @@ func TestFV_RESTClient(t *testing.T) {
 	t.Run("should handle an OK response", func(t *testing.T) {
 		// Build and send a request.
 		params := v1.L3FlowParams{
-			QueryParams: &v1.QueryParams{
+			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
 					From: time.Now().Add(-5 * time.Second),
 					To:   time.Now(),
@@ -64,7 +64,7 @@ func TestFV_RESTClient(t *testing.T) {
 	t.Run("should handle a 404 response", func(t *testing.T) {
 		// Build and send a request.
 		params := v1.L3FlowParams{
-			QueryParams: &v1.QueryParams{
+			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
 					From: time.Now().Add(-5 * time.Second),
 					To:   time.Now(),

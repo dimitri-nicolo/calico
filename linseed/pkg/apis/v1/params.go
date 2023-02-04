@@ -14,6 +14,11 @@ import (
 // until it cancels the execution
 const DefaultTimeOut = 60 * time.Second
 
+type Params interface {
+	GetMaxResults() int
+	SetAfterKey(map[string]interface{})
+}
+
 // QueryParams are request parameters that are shared across all APIs
 type QueryParams struct {
 	// TimeRange will filter data generated within the specified time range
@@ -36,4 +41,8 @@ func (p *QueryParams) GetMaxResults() int {
 		return 1000
 	}
 	return p.MaxResults
+}
+
+func (p *QueryParams) SetAfterKey(k map[string]interface{}) {
+	p.AfterKey = k
 }
