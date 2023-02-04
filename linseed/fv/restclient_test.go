@@ -2,14 +2,14 @@ package fv
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-	"github.com/stretchr/testify/require"
 )
 
 func TestFV_RESTClient(t *testing.T) {
@@ -19,7 +19,7 @@ func TestFV_RESTClient(t *testing.T) {
 	// Build a basic RESTClient.
 	cfg := rest.Config{
 		CACertPath: "cert/RootCA.crt",
-		URL:        fmt.Sprintf("https://localhost:8444/"),
+		URL:        "https://localhost:8444/",
 	}
 	rc, err := rest.NewClient(cluster, tenant, cfg)
 	require.NoError(t, err)

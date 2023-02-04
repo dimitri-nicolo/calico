@@ -12,8 +12,9 @@ import (
 	"path"
 	"strings"
 
-	"github.com/projectcalico/calico/lma/pkg/httputils"
 	"github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
 func NewRequest(c *RESTClient) *Request {
@@ -62,6 +63,11 @@ func (r *Request) SetHeader(key string, values ...string) *Request {
 
 func (r *Request) Do(ctx context.Context) *Result {
 	request, err := json.Marshal(r.params)
+	if err != nil {
+		return &Result{
+			err: fmt.Errorf("error marshalling request param: %s", err),
+		}
+	}
 
 	// This is temporary, until we upgrade to go1.19 which has
 	// native support for this via url.JoinPath
@@ -78,6 +84,11 @@ func (r *Request) Do(ctx context.Context) *Result {
 		url,
 		bytes.NewBuffer(request),
 	)
+	if err != nil {
+		return &Result{
+			err: fmt.Errorf("error creating new request: %s", err),
+		}
+	}
 	req.Header.Set("x-cluster-id", r.client.clusterID)
 	req.Header.Set("x-tenant-id", r.client.tenantID)
 	req.Header.Set("Content-Type", "application/json")
