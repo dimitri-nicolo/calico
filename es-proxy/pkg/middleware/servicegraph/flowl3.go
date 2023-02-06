@@ -7,14 +7,14 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/set"
-
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
-	elasticvariant "github.com/projectcalico/calico/es-proxy/pkg/elastic"
-
+	"github.com/projectcalico/calico/libcalico-go/lib/set"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
+
+	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	"github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
 
 // This file provides the main interface into elasticsearch for service graph. It is used to load flows for a given
@@ -58,85 +58,7 @@ const (
 )
 
 var (
-	flowCompositeSources = []lmaelastic.AggCompositeSourceInfo{
-		{Name: "dest_type", Field: "dest_type"},
-		{Name: "dest_namespace", Field: "dest_namespace"},
-		{Name: "dest_name_aggr", Field: "dest_name_aggr"},
-		{Name: "dest_service_namespace", Field: "dest_service_namespace", Order: "desc"},
-		{Name: "dest_service_name", Field: "dest_service_name"},
-		{Name: "dest_service_port_name", Field: "dest_service_port"},
-		{Name: "dest_service_port_num", Field: "dest_service_port_num", AllowMissingBucket: true},
-		{Name: "proto", Field: "proto"},
-		{Name: "dest_port_num", Field: "dest_port"},
-		{Name: "source_type", Field: "source_type"},
-		{Name: "source_namespace", Field: "source_namespace"},
-		{Name: "source_name_aggr", Field: "source_name_aggr"},
-		{Name: "process_name", Field: "process_name"},
-		{Name: "reporter", Field: "reporter"},
-		{Name: "action", Field: "action"},
-	}
 	zeroGraphTCPStats = v1.GraphTCPStats{}
-)
-
-const (
-	//TODO(rlb): We might want to abbreviate these to reduce the amount of data on the wire, json parsing and
-	//           memory footprint.  Possibly a significant saving with large clusters or long time ranges.  These
-	//           could be anything really as long as each is unique.
-	FlowAggSumNumFlows                 = "sum_num_flows"
-	FlowAggSumNumFlowsStarted          = "sum_num_flows_started"
-	FlowAggSumNumFlowsCompleted        = "sum_num_flows_completed"
-	FlowAggSumPacketsIn                = "sum_packets_in"
-	FlowAggSumBytesIn                  = "sum_bytes_in"
-	FlowAggSumPacketsOut               = "sum_packets_out"
-	FlowAggSumBytesOut                 = "sum_bytes_out"
-	FlowAggSumTCPRetranmissions        = "sum_tcp_total_retransmissions"
-	FlowAggSumTCPLostPackets           = "sum_tcp_lost_packets"
-	FlowAggSumTCPUnrecoveredTO         = "sum_tcp_unrecovered_to"
-	FlowAggMinProcessNames             = "process_names_min_num"
-	FlowAggMinProcessIds               = "process_ids_min_num"
-	FlowAggMinTCPSendCongestionWindow  = "tcp_min_send_congestion_window"
-	FlowAggMinTCPMSS                   = "tcp_min_mss"
-	FlowAggMaxProcessNames             = "process_names_max_num"
-	FlowAggMaxProcessIds               = "process_ids_max_num"
-	FlowAggMaxTCPSmoothRTT             = "tcp_max_smooth_rtt"
-	FlowAggMaxTCPMinRTT                = "tcp_max_min_rtt"
-	FlowAggMeanTCPSendCongestionWindow = "tcp_mean_send_congestion_window"
-	FlowAggMeanTCPSmoothRTT            = "tcp_mean_smooth_rtt"
-	FlowAggMeanTCPMinRTT               = "tcp_mean_min_rtt"
-	FlowAggMeanTCPMSS                  = "tcp_mean_mss"
-)
-
-var (
-	flowAggregationSums = []lmaelastic.AggSumInfo{
-		{Name: FlowAggSumNumFlows, Field: "num_flows"},
-		{Name: FlowAggSumNumFlowsStarted, Field: "num_flows_started"},
-		{Name: FlowAggSumNumFlowsCompleted, Field: "num_flows_completed"},
-		{Name: FlowAggSumPacketsIn, Field: "packets_in"},
-		{Name: FlowAggSumBytesIn, Field: "bytes_in"},
-		{Name: FlowAggSumPacketsOut, Field: "packets_out"},
-		{Name: FlowAggSumBytesOut, Field: "bytes_out"},
-		{Name: FlowAggSumTCPRetranmissions, Field: "tcp_total_retransmissions"},
-		{Name: FlowAggSumTCPLostPackets, Field: "tcp_lost_packets"},
-		{Name: FlowAggSumTCPUnrecoveredTO, Field: "tcp_unrecovered_to"},
-	}
-	flowAggregationMin = []lmaelastic.AggMaxMinInfo{
-		{Name: FlowAggMinProcessNames, Field: "num_process_names"},
-		{Name: FlowAggMinProcessIds, Field: "num_process_ids"},
-		{Name: FlowAggMinTCPSendCongestionWindow, Field: "tcp_min_send_congestion_window"},
-		{Name: FlowAggMinTCPMSS, Field: "tcp_min_mss"},
-	}
-	flowAggregationMax = []lmaelastic.AggMaxMinInfo{
-		{Name: FlowAggMaxProcessNames, Field: "num_process_names"},
-		{Name: FlowAggMaxProcessIds, Field: "num_process_ids"},
-		{Name: FlowAggMaxTCPSmoothRTT, Field: "tcp_max_smooth_rtt"},
-		{Name: FlowAggMaxTCPMinRTT, Field: "tcp_max_min_rtt"},
-	}
-	flowAggregationMean = []lmaelastic.AggMeanInfo{
-		{Name: FlowAggMeanTCPSendCongestionWindow, Field: "tcp_mean_send_congestion_window"},
-		{Name: FlowAggMeanTCPSmoothRTT, Field: "tcp_mean_smooth_rtt"},
-		{Name: FlowAggMeanTCPMinRTT, Field: "tcp_mean_min_rtt"},
-		{Name: FlowAggMeanTCPMSS, Field: "tcp_mean_mss"},
-	}
 )
 
 type FlowEndpoint struct {
@@ -204,17 +126,34 @@ func GetL3FlowData(
 		progress.Complete(err)
 	}()
 
-	index := lmaindex.FlowLogs().GetIndex(elasticvariant.AddIndexInfix(cluster))
-	aggQueryL3 := &lmaelastic.CompositeAggregationQuery{
-		DocumentIndex:           index,
-		Query:                   lmaindex.FlowLogs().NewTimeRangeQuery(tr.From, tr.To),
-		Name:                    flowsBucketName,
-		AggCompositeSourceInfos: flowCompositeSources,
-		AggSumInfos:             flowAggregationSums,
-		AggMaxInfos:             flowAggregationMax,
-		AggMinInfos:             flowAggregationMin,
-		AggMeanInfos:            flowAggregationMean,
-		MaxBucketsPerQuery:      cfg.ServiceGraphCacheMaxBucketsPerQuery,
+	config := rest.Config{
+		URL:             "https://tigera-linseed.tigera-elasticsearch.svc",
+		CACertPath:      "/etc/pki/tls/certs/tigera-ca-bundle.crt",
+		ClientKeyPath:   "",
+		ClientCertPath:  "",
+		FIPSModeEnabled: true,
+	}
+	rc, err := lsclient.NewClient("", "", config)
+	if err != nil {
+		return nil, fmt.Errorf("error getting rest client for l3 flows %s", err)
+	}
+
+	l3flowparams := lsv1.L3FlowParams{
+		QueryParams: &lsv1.QueryParams{
+			TimeRange: &lmav1.TimeRange{
+				From: tr.From,
+				To:   tr.To,
+			},
+		},
+	}
+	l3flows, err := rc.L3Flows().List(ctx, l3flowparams)
+	if err != nil {
+		return nil, fmt.Errorf("error getting l3 flows %s", err)
+	}
+
+	var flows []lsv1.L3Flow
+	if l3flows.Items != nil {
+		flows = l3flows.Items
 	}
 
 	addFlows := func(dgd *destinationGroupData, lastDestGp *FlowEndpoint) {
@@ -222,78 +161,85 @@ func GetL3FlowData(
 		progress.SetAggregated(len(fs))
 	}
 
-	// Perform the L3 composite aggregation query.
-	// Always ensure we cancel the query if we bail early.
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	rcvdL3Buckets, rcvdL3Errors := es.SearchCompositeAggregations(ctx, aggQueryL3, nil)
-
 	var lastDestGp *FlowEndpoint
 	var dgd *destinationGroupData
-	for bucket := range rcvdL3Buckets {
+	for _, flow := range flows {
 		progress.IncRaw()
-		key := bucket.CompositeAggregationKey
-		reporter := key[FlowReporterIdx].String()
-		action := key[FlowActionIdx].String()
-		proto := singleDashToBlank(key[FlowProtoIdx].String())
-		processName := singleDashToBlank(key[FlowProcessIdx].String())
-		source := FlowEndpoint{
-			Type:      mapRawTypeToGraphNodeType(key[FlowSourceTypeIdx].String(), true),
-			NameAggr:  singleDashToBlank(key[FlowSourceNameAggrIdx].String()),
-			Namespace: singleDashToBlank(key[FlowSourceNamespaceIdx].String()),
+		reporter := flow.Key.Reporter
+		action := flow.Key.Action
+		proto := flow.Key.Protocol
+		processName := ""
+		if flow.Process != nil {
+			processName = flow.Process.Name
 		}
-		svc := v1.ServicePort{
-			NamespacedName: v1.NamespacedName{
-				Name:      singleDashToBlank(key[FlowDestServiceNameIdx].String()),
-				Namespace: singleDashToBlank(key[FlowDestServiceNamespaceIdx].String()),
-			},
-			PortName: singleDashToBlank(key[FlowDestServicePortNameIdx].String()),
-			Port:     int(key[FlowDestServicePortNumIdx].Float64()),
-			Protocol: proto,
+
+		source := FlowEndpoint{
+			Type:      mapRawTypeToGraphNodeType(string(flow.Key.Source.Type), true),
+			NameAggr:  flow.Key.Source.AggregatedName,
+			Namespace: flow.Key.Source.Namespace,
+		}
+		svc := v1.ServicePort{}
+		if flow.Service != nil {
+			svc = v1.ServicePort{
+				NamespacedName: v1.NamespacedName{
+					Name:      flow.Service.Name,
+					Namespace: flow.Service.Namespace,
+				},
+				PortName: flow.Service.PortName,
+				Port:     int(flow.Service.Port),
+				Protocol: proto,
+			}
 		}
 		dest := FlowEndpoint{
-			Type:      mapRawTypeToGraphNodeType(key[FlowDestTypeIdx].String(), true),
-			NameAggr:  singleDashToBlank(key[FlowDestNameAggrIdx].String()),
-			Namespace: singleDashToBlank(key[FlowDestNamespaceIdx].String()),
-			PortNum:   int(key[FlowDestPortNumIdx].Float64()),
+			Type:      mapRawTypeToGraphNodeType(string(flow.Key.Destination.Type), true),
+			NameAggr:  flow.Key.Destination.AggregatedName,
+			Namespace: flow.Key.Destination.Namespace,
+			PortNum:   int(flow.Key.Destination.Port),
 			Protocol:  proto,
 		}
-		gcs := v1.GraphConnectionStats{
-			TotalPerSampleInterval: int64(bucket.AggregatedSums[FlowAggSumNumFlows]),
-			Started:                int64(bucket.AggregatedSums[FlowAggSumNumFlowsStarted]),
-			Completed:              int64(bucket.AggregatedSums[FlowAggSumNumFlowsCompleted]),
+		gcs := v1.GraphConnectionStats{}
+		if flow.LogStats != nil {
+			gcs = v1.GraphConnectionStats{
+				TotalPerSampleInterval: flow.LogStats.LogCount,
+				Started:                flow.LogStats.Started,
+				Completed:              flow.LogStats.Completed,
+			}
 		}
-		gps := &v1.GraphPacketStats{
-			PacketsIn:  int64(bucket.AggregatedSums[FlowAggSumPacketsIn]),
-			PacketsOut: int64(bucket.AggregatedSums[FlowAggSumPacketsOut]),
-			BytesIn:    int64(bucket.AggregatedSums[FlowAggSumBytesIn]),
-			BytesOut:   int64(bucket.AggregatedSums[FlowAggSumBytesOut]),
+		gps := &v1.GraphPacketStats{}
+		if flow.TrafficStats != nil {
+			gps = &v1.GraphPacketStats{
+				PacketsIn:  flow.TrafficStats.PacketsIn,
+				PacketsOut: flow.TrafficStats.PacketsOut,
+				BytesIn:    flow.TrafficStats.BytesIn,
+				BytesOut:   flow.TrafficStats.BytesOut,
+			}
 		}
 
 		// Determine the endpoint key used to group together service groups.
 		destGp := GetServiceGroupFlowEndpointKey(dest)
 
 		var tcp *v1.GraphTCPStats
-		if proto == "tcp" {
+		if proto == "tcp" && flow.TCPStats != nil {
+			tcpStats := flow.TCPStats
 			tcp = &v1.GraphTCPStats{
-				SumTotalRetransmissions:  int64(bucket.AggregatedSums[FlowAggSumTCPRetranmissions]),
-				SumLostPackets:           int64(bucket.AggregatedSums[FlowAggSumTCPLostPackets]),
-				SumUnrecoveredTo:         int64(bucket.AggregatedSums[FlowAggSumTCPUnrecoveredTO]),
-				MinSendCongestionWindow:  bucket.AggregatedMin[FlowAggMinTCPSendCongestionWindow],
-				MinSendMSS:               bucket.AggregatedMin[FlowAggMinTCPMSS],
-				MaxSmoothRTT:             bucket.AggregatedMax[FlowAggMaxTCPSmoothRTT],
-				MaxMinRTT:                bucket.AggregatedMax[FlowAggMaxTCPMinRTT],
-				MeanSendCongestionWindow: bucket.AggregatedMean[FlowAggMeanTCPSendCongestionWindow],
-				MeanSmoothRTT:            bucket.AggregatedMean[FlowAggMeanTCPSmoothRTT],
-				MeanMinRTT:               bucket.AggregatedMean[FlowAggMeanTCPMinRTT],
-				MeanMSS:                  bucket.AggregatedMean[FlowAggMeanTCPMSS],
+				SumTotalRetransmissions:  tcpStats.TotalRetransmissions,
+				SumLostPackets:           tcpStats.LostPackets,
+				SumUnrecoveredTo:         tcpStats.UnrecoveredTo,
+				MinSendCongestionWindow:  tcpStats.MinSendCongestionWindow,
+				MinSendMSS:               tcpStats.MinMSS,
+				MaxSmoothRTT:             tcpStats.MaxSmoothRTT,
+				MaxMinRTT:                tcpStats.MaxMinRTT,
+				MeanSendCongestionWindow: tcpStats.MeanSendCongestionWindow,
+				MeanSmoothRTT:            tcpStats.MeanSmoothRTT,
+				MeanMinRTT:               tcpStats.MeanMinRTT,
+				MeanMSS:                  tcpStats.MeanMSS,
 			}
 
 			// TCP stats have min and means which could be adversely impacted by zero data which indicates
 			// no data rather than actually 0. Only set the document number if the data is non-zero. This prevents us
 			// diluting when merging with non-zero data.
-			if *tcp != zeroGraphTCPStats {
-				tcp.Count = bucket.DocCount
+			if *tcp != zeroGraphTCPStats && flow.LogStats != nil {
+				tcp.Count = flow.LogStats.FlowLogCount
 			} else {
 				tcp = nil
 			}
@@ -308,14 +254,15 @@ func GetL3FlowData(
 
 		// Determine the process info if available in the logs.
 		var processes v1.GraphEndpointProcesses
-		if processName != "" {
+		if processName != "" && flow.ProcessStats != nil {
+			processStats := flow.ProcessStats
 			processes = v1.GraphEndpointProcesses{
 				processName: v1.GraphEndpointProcess{
 					Name:               processName,
-					MinNumNamesPerFlow: int(bucket.AggregatedMin[FlowAggMinProcessNames]),
-					MaxNumNamesPerFlow: int(bucket.AggregatedMax[FlowAggMaxProcessNames]),
-					MinNumIDsPerFlow:   int(bucket.AggregatedMin[FlowAggMinProcessIds]),
-					MaxNumIDsPerFlow:   int(bucket.AggregatedMax[FlowAggMaxProcessIds]),
+					MinNumNamesPerFlow: processStats.MinNumNamesPerFlow,
+					MaxNumNamesPerFlow: processStats.MaxNumNamesPerFlow,
+					MinNumIDsPerFlow:   processStats.MinNumIDsPerFlow,
+					MaxNumIDsPerFlow:   processStats.MaxNumIDsPerFlow,
 				},
 			}
 		}
@@ -357,8 +304,8 @@ func GetL3FlowData(
 	for i := range fs {
 		fs[i].Stats.Connections.TotalPerSampleInterval = int64(float64(fs[i].Stats.Connections.TotalPerSampleInterval) / l3Flushes)
 	}
+	return fs, nil
 
-	return fs, <-rcvdL3Errors
 }
 
 func singleDashToBlank(val string) string {
