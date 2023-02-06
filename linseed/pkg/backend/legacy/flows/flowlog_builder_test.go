@@ -134,6 +134,11 @@ func (b *flowLogBuilder) WithDestPort(port int) *flowLogBuilder {
 	return b
 }
 
+func (b *flowLogBuilder) WithSourcePort(port int) *flowLogBuilder {
+	b.log.SourcePort = port
+	return b
+}
+
 func (b *flowLogBuilder) WithDestService(name string, port int) *flowLogBuilder {
 	b.log.DestServiceName = name
 	b.log.DestServicePort = fmt.Sprintf("%d", port)

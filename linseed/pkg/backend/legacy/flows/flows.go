@@ -276,6 +276,7 @@ func (b *flowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 
 // buildQuery builds an elastic query using the given parameters.
 func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts v1.L3FlowParams) elastic.Query {
+	// Start with a time-based constraint.
 	var start, end time.Time
 	if opts.QueryParams != nil && opts.QueryParams.TimeRange != nil {
 		start = opts.QueryParams.TimeRange.From
@@ -285,7 +286,53 @@ func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts v1.L3FlowParams) elast
 		start = time.Now().Add(-5 * time.Minute)
 		end = time.Now()
 	}
-	return lmaindex.FlowLogs().NewTimeRangeQuery(start, end)
+
+	// Keep tabs of all the constraints we want to apply to the request.
+	// Every request has at least a time-range limitation.
+	constraints := []elastic.Query{
+		lmaindex.FlowLogs().NewTimeRangeQuery(start, end),
+	}
+
+	// Add in constraints based on the source, if specified.
+	if src := opts.Source; src != nil {
+		if src.AggregatedName != "" {
+			constraints = append(constraints, elastic.NewTermQuery("source_name_aggr", src.AggregatedName))
+		}
+		if src.Type != "" {
+			constraints = append(constraints, elastic.NewTermQuery("source_type", src.Type))
+		}
+		if src.Namespace != "" {
+			constraints = append(constraints, elastic.NewTermQuery("source_namespace", src.Namespace))
+		}
+		if src.Port != 0 {
+			constraints = append(constraints, elastic.NewTermQuery("source_port", src.Port))
+		}
+	}
+
+	// Add in constraints based on the destination, if specified.
+	if dst := opts.Destination; dst != nil {
+		if dst.AggregatedName != "" {
+			constraints = append(constraints, elastic.NewTermQuery("dest_name_aggr", dst.AggregatedName))
+		}
+		if dst.Type != "" {
+			constraints = append(constraints, elastic.NewTermQuery("dest_type", dst.Type))
+		}
+		if dst.Namespace != "" {
+			constraints = append(constraints, elastic.NewTermQuery("dest_namespace", dst.Namespace))
+		}
+		if dst.Port != 0 {
+			constraints = append(constraints, elastic.NewTermQuery("dest_port", dst.Port))
+		}
+	}
+
+	if len(constraints) == 1 {
+		// This is just a time-range query. We don't need to join multiple
+		// constraints together.
+		return constraints[0]
+	}
+
+	// We need to perform a boolean query with multiple constraints.
+	return elastic.NewBoolQuery().Filter(constraints...)
 }
 
 func (b *flowBackend) index(i bapi.ClusterInfo) string {
