@@ -31,9 +31,6 @@ type Config struct {
 	OIDCAuthGroupsClaim    string `default:"groups" split_words:"true"`
 	OIDCAuthGroupsPrefix   string `split_words:"true"`
 
-	CalicoCloudRequireTenantClaim bool   `envconfig:"CALICO_CLOUD_REQUIRE_TENANT_CLAIM" default:"false"`
-	CalicoCloudTenantClaim        string `envconfig:"CALICO_CLOUD_TENANT_CLAIM"`
-
 	// Multi-cluster settings
 	MultiClusterForwardingCA       string `default:"/manager-tls/cert"`
 	MultiClusterForwardingEndpoint string `default:"https://localhost:9443"`
