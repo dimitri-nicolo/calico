@@ -53,7 +53,7 @@ func TestDecodeAndValidateReqParams(t *testing.T) {
 		},
 		{
 			"empty json", req("{}", jsonContentType), &v1.L3FlowParams{},
-			true, "error with field QueryParams = '<nil>' (Reason: failed to validate Field: QueryParams because of Tag: required )", http.StatusBadRequest,
+			true, "error with field TimeRange = '<nil>' (Reason: failed to validate Field: TimeRange because of Tag: required )", http.StatusBadRequest,
 		},
 		{
 			"malformed json", req("{#4FEF}", jsonContentType), &v1.L3FlowParams{},

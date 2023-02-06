@@ -98,12 +98,12 @@ func (b *dnsFlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.D
 		AggMinInfos:             b.aggMins,
 		AggMeanInfos:            b.aggMeans,
 		AggNestedTermInfos:      b.aggNested,
-		MaxBucketsPerQuery:      opts.QueryParams.GetMaxResults(),
+		MaxBucketsPerQuery:      opts.GetMaxResults(),
 	}
 	log.Infof("Listing DNS flows from index %s", query.DocumentIndex)
 
 	// Perform the request.
-	page, key, err := lmaelastic.PagedSearch(ctx, b.lmaclient, query, log, b.convertBucket, opts.QueryParams.AfterKey)
+	page, key, err := lmaelastic.PagedSearch(ctx, b.lmaclient, query, log, b.convertBucket, opts.AfterKey)
 	return &v1.List[v1.DNSFlow]{
 		Items:    page,
 		AfterKey: key,
@@ -139,9 +139,9 @@ func (b *dnsFlowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.Com
 func (b *dnsFlowBackend) buildQuery(i bapi.ClusterInfo, opts v1.DNSFlowParams) elastic.Query {
 	// Parse times from the request.
 	var start, end time.Time
-	if opts.QueryParams != nil && opts.QueryParams.TimeRange != nil {
-		start = opts.QueryParams.TimeRange.From
-		end = opts.QueryParams.TimeRange.To
+	if opts.TimeRange != nil {
+		start = opts.TimeRange.From
+		end = opts.TimeRange.To
 	} else {
 		// Default to the latest 5 minute window.
 		start = time.Now().Add(-5 * time.Minute)

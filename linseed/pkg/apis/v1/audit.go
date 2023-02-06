@@ -4,7 +4,7 @@ package v1
 
 // AuditLogParams provide query options for listing audit logs.
 type AuditLogParams struct {
-	QueryParams *QueryParams `json:"query_params"`
+	QueryParams `json:",inline" validate:"required"`
 	Type        AuditLogType `json:"type"`
 }
 

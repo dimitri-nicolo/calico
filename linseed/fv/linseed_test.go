@@ -105,7 +105,7 @@ func TestFV_Linseed(t *testing.T) {
 		// setup HTTP client and HTTP request
 		client := secureHTTPClient(t)
 		flowParams := v1.L3FlowParams{
-			QueryParams: &v1.QueryParams{
+			QueryParams: v1.QueryParams{
 				TimeRange: &lmav1.TimeRange{
 					From: time.Unix(from, 0),
 					To:   time.Unix(to, 0),

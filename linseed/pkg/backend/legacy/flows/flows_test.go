@@ -77,9 +77,9 @@ func TestListFlows(t *testing.T) {
 
 	// Set time range so that we capture all of the populated flow logs.
 	opts := v1.L3FlowParams{}
-	opts.QueryParams.TimeRange = &lmav1.TimeRange{}
-	opts.QueryParams.TimeRange.From = time.Now().Add(-5 * time.Second)
-	opts.QueryParams.TimeRange.To = time.Now().Add(5 * time.Second)
+	opts.TimeRange = &lmav1.TimeRange{}
+	opts.TimeRange.From = time.Now().Add(-5 * time.Second)
+	opts.TimeRange.To = time.Now().Add(5 * time.Second)
 
 	// Query for flows. There should be a single flow from the populated data.
 	r, err := b.List(ctx, clusterInfo, opts)
@@ -135,9 +135,9 @@ func TestMultipleFlows(t *testing.T) {
 
 	// Set time range so that we capture all of the populated flow logs.
 	opts := v1.L3FlowParams{}
-	opts.QueryParams.TimeRange = &lmav1.TimeRange{}
-	opts.QueryParams.TimeRange.From = time.Now().Add(-5 * time.Second)
-	opts.QueryParams.TimeRange.To = time.Now().Add(5 * time.Second)
+	opts.TimeRange = &lmav1.TimeRange{}
+	opts.TimeRange.From = time.Now().Add(-5 * time.Second)
+	opts.TimeRange.To = time.Now().Add(5 * time.Second)
 
 	// Query for flows. There should be two flows from the populated data.
 	r, err := b.List(ctx, clusterInfo, opts)
@@ -184,7 +184,7 @@ func TestFlowFiltering(t *testing.T) {
 		{
 			Name: "should query a flow based on source type",
 			Params: v1.L3FlowParams{
-				QueryParams: &v1.QueryParams{TimeRange: tr},
+				QueryParams: v1.QueryParams{TimeRange: tr},
 				Source:      &v1.Endpoint{Type: "wep"},
 			},
 			ExpectFlow1: true,
@@ -193,7 +193,7 @@ func TestFlowFiltering(t *testing.T) {
 		{
 			Name: "should query a flow based on destination type",
 			Params: v1.L3FlowParams{
-				QueryParams: &v1.QueryParams{TimeRange: tr},
+				QueryParams: v1.QueryParams{TimeRange: tr},
 				Destination: &v1.Endpoint{Type: "wep"},
 			},
 			ExpectFlow1: true,
@@ -202,7 +202,7 @@ func TestFlowFiltering(t *testing.T) {
 		{
 			Name: "should query a flow based on source namespace",
 			Params: v1.L3FlowParams{
-				QueryParams: &v1.QueryParams{TimeRange: tr},
+				QueryParams: v1.QueryParams{TimeRange: tr},
 				Source:      &v1.Endpoint{Namespace: "default"},
 			},
 			ExpectFlow1: false, // Flow 1 has source namespace tigera-operator
@@ -211,7 +211,7 @@ func TestFlowFiltering(t *testing.T) {
 		{
 			Name: "should query a flow based on destination namespace",
 			Params: v1.L3FlowParams{
-				QueryParams: &v1.QueryParams{TimeRange: tr},
+				QueryParams: v1.QueryParams{TimeRange: tr},
 				Destination: &v1.Endpoint{Namespace: "kube-system"},
 			},
 			ExpectFlow1: false, // Flow 1 has dest namespace openshift-system
@@ -220,7 +220,7 @@ func TestFlowFiltering(t *testing.T) {
 		{
 			Name: "should query a flow based on source port",
 			Params: v1.L3FlowParams{
-				QueryParams: &v1.QueryParams{TimeRange: tr},
+				QueryParams: v1.QueryParams{TimeRange: tr},
 				Source:      &v1.Endpoint{Port: 1010},
 			},
 			ExpectFlow1: true,
@@ -229,7 +229,7 @@ func TestFlowFiltering(t *testing.T) {
 		{
 			Name: "should query a flow based on destination port",
 			Params: v1.L3FlowParams{
-				QueryParams: &v1.QueryParams{TimeRange: tr},
+				QueryParams: v1.QueryParams{TimeRange: tr},
 				Destination: &v1.Endpoint{Port: 1053},
 			},
 			ExpectFlow1: true,
@@ -345,12 +345,12 @@ func TestPagination(t *testing.T) {
 
 	// Set time range so that we capture all of the populated flow logs.
 	opts := v1.L3FlowParams{}
-	opts.QueryParams.TimeRange = &lmav1.TimeRange{}
-	opts.QueryParams.TimeRange.From = time.Now().Add(-5 * time.Second)
-	opts.QueryParams.TimeRange.To = time.Now().Add(5 * time.Second)
+	opts.TimeRange = &lmav1.TimeRange{}
+	opts.TimeRange.From = time.Now().Add(-5 * time.Second)
+	opts.TimeRange.To = time.Now().Add(5 * time.Second)
 
 	// Also set a max results of 1, so that we only get one flow at a time.
-	opts.QueryParams.MaxResults = 1
+	opts.MaxResults = 1
 
 	// Query for flows. There should be a single flow from the populated data.
 	r, err := b.List(ctx, clusterInfo, opts)
@@ -362,7 +362,7 @@ func TestPagination(t *testing.T) {
 
 	// Now, send another request. This time, passing in the pagination key
 	// returned from the first. We should get the second flow.
-	opts.QueryParams.AfterKey = r.AfterKey
+	opts.AfterKey = r.AfterKey
 	r, err = b.List(ctx, clusterInfo, opts)
 	require.NoError(t, err)
 	require.Len(t, r.Items, 1)

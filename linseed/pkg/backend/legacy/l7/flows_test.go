@@ -41,10 +41,9 @@ func TestListL7Flows(t *testing.T) {
 
 	// Set time range so that we capture all of the populated flow logs.
 	opts := v1.L7FlowParams{}
-	opts.QueryParams = &v1.QueryParams{}
-	opts.QueryParams.TimeRange = &lmav1.TimeRange{}
-	opts.QueryParams.TimeRange.From = time.Now().Add(-5 * time.Second)
-	opts.QueryParams.TimeRange.To = time.Now().Add(5 * time.Second)
+	opts.TimeRange = &lmav1.TimeRange{}
+	opts.TimeRange.From = time.Now().Add(-5 * time.Second)
+	opts.TimeRange.To = time.Now().Add(5 * time.Second)
 
 	// Query for flows. There should be a single flow from the populated data.
 	r, err := b.List(ctx, clusterInfo, opts)

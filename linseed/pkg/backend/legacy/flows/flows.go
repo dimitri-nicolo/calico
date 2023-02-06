@@ -162,13 +162,6 @@ func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3Fl
 		return nil, fmt.Errorf("no cluster ID provided on request")
 	}
 
-	// Default the number of results to 1000 if there is no limit
-	// set on the query.
-	numResults := opts.QueryParams.MaxResults
-	if numResults == 0 {
-		numResults = 1000
-	}
-
 	// Build the aggregation request.
 	query := &lmaelastic.CompositeAggregationQuery{
 		DocumentIndex:           b.index(i),
@@ -180,12 +173,12 @@ func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3Fl
 		AggMinInfos:             b.aggMins,
 		AggMeanInfos:            b.aggMeans,
 		AggNestedTermInfos:      b.aggNested,
-		MaxBucketsPerQuery:      numResults,
+		MaxBucketsPerQuery:      opts.GetMaxResults(),
 	}
 	log.Debugf("Listing flows from index %s", query.DocumentIndex)
 
 	// Perform the request.
-	page, key, err := lmaelastic.PagedSearch(ctx, b.lmaclient, query, log, b.convertBucket, opts.QueryParams.AfterKey)
+	page, key, err := lmaelastic.PagedSearch(ctx, b.lmaclient, query, log, b.convertBucket, opts.AfterKey)
 	return &v1.List[v1.L3Flow]{
 		Items:    page,
 		AfterKey: key,
@@ -277,9 +270,9 @@ func (b *flowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 func (b *flowBackend) buildQuery(i bapi.ClusterInfo, opts v1.L3FlowParams) elastic.Query {
 	// Start with a time-based constraint.
 	var start, end time.Time
-	if opts.QueryParams != nil && opts.QueryParams.TimeRange != nil {
-		start = opts.QueryParams.TimeRange.From
-		end = opts.QueryParams.TimeRange.To
+	if opts.TimeRange != nil {
+		start = opts.TimeRange.From
+		end = opts.TimeRange.To
 	} else {
 		// Default to the latest 5 minute window.
 		start = time.Now().Add(-5 * time.Minute)

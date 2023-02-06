@@ -6,7 +6,7 @@ import (
 
 // L7FlowParams define querying parameters to retrieve L7 Flows
 type L7FlowParams struct {
-	QueryParams *QueryParams `json:"query_params" validate:"required"`
+	QueryParams `json:",inline" validate:"required"`
 }
 
 // Defines a port on a Kuberentes Service.

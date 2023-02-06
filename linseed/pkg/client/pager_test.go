@@ -20,13 +20,13 @@ func setupTest(t *testing.T) func() {
 }
 
 func TestPager(t *testing.T) {
-	// We'll use a dummy ListFunc that returns two pages of results.
-
 	type result struct {
 		List  *v1.List[v1.L3Flow]
 		Error error
 	}
 
+	// getListFunc takes a slice of results and returns a ListFunc that returns
+	// a subsequent result on every call.
 	getListFunc := func(testData []result) client.ListFunc[v1.L3Flow] {
 		i := 0
 		return func(context.Context, v1.Params) (*v1.List[v1.L3Flow], error) {

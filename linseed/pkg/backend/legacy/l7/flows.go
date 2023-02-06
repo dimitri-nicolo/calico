@@ -110,13 +110,13 @@ func (b *l7FlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L7
 		AggMaxInfos:             b.aggMaxs,
 		AggMinInfos:             b.aggMins,
 		AggMeanInfos:            b.aggMeans,
-		MaxBucketsPerQuery:      opts.QueryParams.GetMaxResults(),
+		MaxBucketsPerQuery:      opts.GetMaxResults(),
 	}
 
 	log.Debugf("Listing flows from index %s", query.DocumentIndex)
 
 	// Perform the request.
-	page, key, err := lmaelastic.PagedSearch(ctx, b.lmaclient, query, log, b.convertBucket, opts.QueryParams.AfterKey)
+	page, key, err := lmaelastic.PagedSearch(ctx, b.lmaclient, query, log, b.convertBucket, opts.AfterKey)
 	return &v1.List[v1.L7Flow]{
 		Items:    page,
 		AfterKey: key,
@@ -175,9 +175,9 @@ func (b *l7FlowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.Comp
 func (b *l7FlowBackend) buildQuery(i bapi.ClusterInfo, opts v1.L7FlowParams) elastic.Query {
 	// Parse times from the request.
 	var start, end time.Time
-	if opts.QueryParams != nil && opts.QueryParams.TimeRange != nil {
-		start = opts.QueryParams.TimeRange.From
-		end = opts.QueryParams.TimeRange.To
+	if opts.TimeRange != nil {
+		start = opts.TimeRange.From
+		end = opts.TimeRange.To
 	} else {
 		// Default to the latest 5 minute window.
 		start = time.Now().Add(-5 * time.Minute)

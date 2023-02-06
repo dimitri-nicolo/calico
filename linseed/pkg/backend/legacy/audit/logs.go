@@ -131,7 +131,7 @@ func (b *auditLogBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.A
 	// Build the query.
 	query := b.client.Search().
 		Index(b.index(opts.Type, i)).
-		Size(opts.QueryParams.GetMaxResults()).
+		Size(opts.GetMaxResults()).
 		Query(b.buildQuery(i, opts))
 
 	results, err := query.Do(ctx)
@@ -161,9 +161,9 @@ func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts v1.AuditLogParams)
 	// Parse times from the request. We default to a time-range query
 	// if no other search parameters are given.
 	var start, end time.Time
-	if opts.QueryParams != nil && opts.QueryParams.TimeRange != nil {
-		start = opts.QueryParams.TimeRange.From
-		end = opts.QueryParams.TimeRange.To
+	if opts.TimeRange != nil {
+		start = opts.TimeRange.From
+		end = opts.TimeRange.To
 	} else {
 		// Default to the latest 5 minute window.
 		start = time.Now().Add(-5 * time.Minute)
