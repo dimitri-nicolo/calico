@@ -34,6 +34,9 @@ import (
 	lmaindex "github.com/projectcalico/calico/lma/pkg/elastic/index"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
 	"github.com/projectcalico/calico/lma/pkg/list"
+
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
+	lsrest "github.com/projectcalico/calico/linseed/pkg/client/rest"
 )
 
 var (
@@ -102,6 +105,20 @@ func Start(cfg *Config) error {
 		return err
 	}
 
+	// Create linseed Client.
+	config := lsrest.Config{
+		URL:             "https://tigera-linseed.tigera-elasticsearch.svc",
+		CACertPath:      "/etc/pki/tls/certs/tigera-ca-bundle.crt",
+		ClientKeyPath:   "",
+		ClientCertPath:  "",
+		FIPSModeEnabled: true,
+	}
+	linseed, err := lsclient.NewClient("", "", config)
+	if err != nil {
+		log.WithError(err).Error("failed to create linseed client")
+		return err
+	}
+
 	k8sClientFactory := datastore.NewClusterCtxK8sClientFactory(restConfig, cfg.VoltronCAPath, cfg.VoltronURL)
 	authz := lmaauth.NewRBACAuthorizer(k8sCli)
 
@@ -130,7 +147,7 @@ func Start(cfg *Config) error {
 					servicegraph.NewServiceGraphHandler(
 						context.Background(),
 						authz,
-						esClient,
+						linseed,
 						k8sClientSetFactory,
 						&servicegraph.Config{
 							ServiceGraphCacheMaxEntries:           cfg.ServiceGraphCacheMaxEntries,

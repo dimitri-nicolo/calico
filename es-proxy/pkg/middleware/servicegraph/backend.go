@@ -14,6 +14,8 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/auth"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 	"github.com/projectcalico/calico/lma/pkg/k8s"
+
+	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 )
 
 // Sanity check the realServiceGraphBackend satisfies the ServiceGraphBackend interface.
@@ -24,7 +26,7 @@ type ServiceGraphBackend interface {
 	// These methods access data for the cache and therefore use an application context rather than the user request
 	// context.
 	GetFlowConfig(ctx context.Context, cluster string) (*FlowConfig, error)
-	GetL3FlowData(ctx context.Context, cluster string, tr lmav1.TimeRange, fc *FlowConfig) ([]L3Flow, error)
+	GetL3FlowData(ctx context.Context, tr lmav1.TimeRange, fc *FlowConfig) ([]L3Flow, error)
 	GetL7FlowData(ctx context.Context, cluster string, tr lmav1.TimeRange) ([]L7Flow, error)
 	GetDNSData(ctx context.Context, cluster string, tr lmav1.TimeRange) ([]DNSLog, error)
 	GetEvents(ctx context.Context, cluster string, tr lmav1.TimeRange) ([]Event, error)
@@ -44,6 +46,7 @@ type realServiceGraphBackend struct {
 	elastic          lmaelastic.Client
 	clientSetFactory k8s.ClientSetFactory
 	config           *Config
+	linseed          lsclient.Client
 }
 
 func (r *realServiceGraphBackend) GetPodsLabels(ctx context.Context, cluster string) (map[v1.NamespacedName]LabelSelectors, error) {
@@ -152,9 +155,9 @@ func (r *realServiceGraphBackend) GetFlowConfig(ctx context.Context, cluster str
 }
 
 func (r *realServiceGraphBackend) GetL3FlowData(
-	ctx context.Context, cluster string, tr lmav1.TimeRange, fc *FlowConfig,
+	ctx context.Context, tr lmav1.TimeRange, fc *FlowConfig,
 ) ([]L3Flow, error) {
-	return GetL3FlowData(ctx, r.elastic, cluster, tr, fc, r.config)
+	return GetL3FlowData(ctx, r.linseed, tr, fc, r.config)
 }
 
 func (r *realServiceGraphBackend) GetDNSData(
@@ -291,7 +294,7 @@ func (m *MockServiceGraphBackend) GetFlowConfig(ctx context.Context, cluster str
 }
 
 func (m *MockServiceGraphBackend) GetL3FlowData(
-	ctx context.Context, cluster string, tr lmav1.TimeRange, fc *FlowConfig,
+	ctx context.Context, tr lmav1.TimeRange, fc *FlowConfig,
 ) ([]L3Flow, error) {
 	m.waitElastic()
 	m.lock.Lock()

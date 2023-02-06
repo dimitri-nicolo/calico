@@ -583,7 +583,7 @@ func (s *serviceGraphCache) populateData(e *cacheEntry, d *cacheData) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		rawL3, errL3 = s.backend.GetL3FlowData(e.ctx, e.cluster, d.timeRange, flowConfig)
+		rawL3, errL3 = s.backend.GetL3FlowData(e.ctx, d.timeRange, flowConfig)
 	}()
 	wg.Add(1)
 	go func() {

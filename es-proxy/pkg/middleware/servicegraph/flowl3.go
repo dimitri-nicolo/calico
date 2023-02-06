@@ -9,12 +9,9 @@ import (
 
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
-
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
-	"github.com/projectcalico/calico/linseed/pkg/client/rest"
+	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
 // This file provides the main interface into elasticsearch for service graph. It is used to load flows for a given
@@ -117,7 +114,7 @@ type L3FlowData struct {
 //     when an endpoint is subjected to a port scan.
 //   - Stats for TCP and Processes are aggregated for each flow.
 func GetL3FlowData(
-	ctx context.Context, es lmaelastic.Client, cluster string, tr lmav1.TimeRange,
+	ctx context.Context, linseed lsclient.Client, tr lmav1.TimeRange,
 	fc *FlowConfig, cfg *Config,
 ) (fs []L3Flow, err error) {
 	// Trace progress.
@@ -125,18 +122,6 @@ func GetL3FlowData(
 	defer func() {
 		progress.Complete(err)
 	}()
-
-	config := rest.Config{
-		URL:             "https://tigera-linseed.tigera-elasticsearch.svc",
-		CACertPath:      "/etc/pki/tls/certs/tigera-ca-bundle.crt",
-		ClientKeyPath:   "",
-		ClientCertPath:  "",
-		FIPSModeEnabled: true,
-	}
-	rc, err := lsclient.NewClient("", "", config)
-	if err != nil {
-		return nil, fmt.Errorf("error getting rest client for l3 flows %s", err)
-	}
 
 	l3flowparams := lsv1.L3FlowParams{
 		QueryParams: &lsv1.QueryParams{
@@ -146,14 +131,9 @@ func GetL3FlowData(
 			},
 		},
 	}
-	l3flows, err := rc.L3Flows().List(ctx, l3flowparams)
+	l3flows, err := linseed.L3Flows().List(ctx, l3flowparams)
 	if err != nil {
 		return nil, fmt.Errorf("error getting l3 flows %s", err)
-	}
-
-	var flows []lsv1.L3Flow
-	if l3flows.Items != nil {
-		flows = l3flows.Items
 	}
 
 	addFlows := func(dgd *destinationGroupData, lastDestGp *FlowEndpoint) {
@@ -163,7 +143,7 @@ func GetL3FlowData(
 
 	var lastDestGp *FlowEndpoint
 	var dgd *destinationGroupData
-	for _, flow := range flows {
+	for _, flow := range l3flows.Items {
 		progress.IncRaw()
 		reporter := flow.Key.Reporter
 		action := flow.Key.Action
@@ -255,14 +235,13 @@ func GetL3FlowData(
 		// Determine the process info if available in the logs.
 		var processes v1.GraphEndpointProcesses
 		if processName != "" && flow.ProcessStats != nil {
-			processStats := flow.ProcessStats
 			processes = v1.GraphEndpointProcesses{
 				processName: v1.GraphEndpointProcess{
 					Name:               processName,
-					MinNumNamesPerFlow: processStats.MinNumNamesPerFlow,
-					MaxNumNamesPerFlow: processStats.MaxNumNamesPerFlow,
-					MinNumIDsPerFlow:   processStats.MinNumIDsPerFlow,
-					MaxNumIDsPerFlow:   processStats.MaxNumIDsPerFlow,
+					MinNumNamesPerFlow: flow.ProcessStats.MinNumNamesPerFlow,
+					MaxNumNamesPerFlow: flow.ProcessStats.MaxNumNamesPerFlow,
+					MinNumIDsPerFlow:   flow.ProcessStats.MinNumIDsPerFlow,
+					MaxNumIDsPerFlow:   flow.ProcessStats.MaxNumIDsPerFlow,
 				},
 			}
 		}
