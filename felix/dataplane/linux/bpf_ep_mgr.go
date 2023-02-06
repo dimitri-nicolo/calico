@@ -2248,4 +2248,3 @@ func (m *bpfEndpointManager) addRuleInfo(rule *proto.Rule, idx int,
 	return matchID
 }
 
-//ruleMatchID(dir rules.RuleDir, action string, owner rules.RuleOwnerType, idx int, name string) polprog.RuleMatchID
