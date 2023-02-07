@@ -2247,4 +2247,3 @@ func (m *bpfEndpointManager) addRuleInfo(rule *proto.Rule, idx int,
 
 	return matchID
 }
-
