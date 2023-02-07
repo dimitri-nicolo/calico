@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+ARG UBI_IMAGE
 ARG ARCH=x86_64
 ARG GIT_VERSION=unknown
 ARG IPTABLES_VER=1.8.2-16
@@ -80,13 +81,13 @@ RUN sed -i '/%files$/a \
 # Finally rebuild iptables.
 RUN rpmbuild -bb /root/rpmbuild/SPECS/iptables.spec
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.7 as ubi
+FROM ${UBI_IMAGE} as ubi
 ARG ARCH
 ARG GIT_VERSION
 ARG IPTABLES_VER
 
 # Update base packages to pick up security updates.
-RUN microdnf update
+RUN microdnf upgrade
 
 # Required labels for certification
 LABEL name="Calico egress gateway" \
