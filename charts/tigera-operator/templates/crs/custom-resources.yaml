@@ -27,7 +27,7 @@ spec:
 apiVersion: operator.tigera.io/v1
 kind: APIServer
 metadata:
-  name: default
+  name: tigera-secure
 spec:
 {{ $apiServerSpec | toYaml | indent 2 }}
 {{ end }}
