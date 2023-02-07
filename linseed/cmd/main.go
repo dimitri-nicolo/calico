@@ -11,12 +11,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend"
 
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
-	"github.com/projectcalico/calico/linseed/pkg/handler/l3"
+	l7backend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/l7"
+	l3 "github.com/projectcalico/calico/linseed/pkg/handler/l3"
+	l7 "github.com/projectcalico/calico/linseed/pkg/handler/l7"
 
 	"github.com/kelseyhightower/envconfig"
 	log "github.com/sirupsen/logrus"
@@ -46,15 +48,21 @@ func main() {
 	cache := templates.NewTemplateCache(esClient, cfg.ElasticShards, cfg.ElasticReplicas)
 	flowLogsBackend := flows.NewFlowLogBackend(esClient, cache)
 	flowBackend := flows.NewFlowBackend(esClient)
+	l7FlowBackend := l7backend.NewL7FlowBackend(esClient)
 
 	// Start server
 	addr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
 	server := server.NewServer(addr, cfg.FIPSModeEnabled,
 		server.WithMiddlewares(server.Middlewares(cfg)),
 		server.WithAPIVersionRoutes("/api/v1", server.UnpackRoutes(
-			l3.NewNetworkFlows(flowBackend),
+			// L3 flow and log APIs.
+			l3.NewFlows(flowBackend),
 			l3.NewBulkIngestion(flowLogsBackend),
 			&l3.NetworkLogs{},
+
+			// L7 flow and log APIs.
+			l7.NewFlows(l7FlowBackend),
+			&l7.L7Logs{},
 		)...),
 		server.WithRoutes(server.UtilityRoutes()...),
 	)

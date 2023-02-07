@@ -1,6 +1,6 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
-package l3
+package l7
 
 import (
 	"context"
@@ -19,29 +19,29 @@ import (
 	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
-type NetworkFlows struct {
-	backend bapi.FlowBackend
+type flows struct {
+	backend bapi.L7FlowBackend
 }
 
-func NewFlows(backend bapi.FlowBackend) *NetworkFlows {
-	return &NetworkFlows{
+func NewFlows(backend bapi.L7FlowBackend) *flows {
+	return &flows{
 		backend: backend,
 	}
 }
 
-func (n NetworkFlows) SupportedAPIs() map[string]http.Handler {
+func (n flows) SupportedAPIs() map[string]http.Handler {
 	return map[string]http.Handler{
 		"POST": n.Serve(),
 	}
 }
 
-func (n NetworkFlows) URL() string {
-	return "/flows/network"
+func (n flows) URL() string {
+	return baseURL
 }
 
-func (n NetworkFlows) Serve() http.HandlerFunc {
+func (n flows) Serve() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		reqParams, err := handler.DecodeAndValidateReqParams[v1.L3FlowParams](w, req)
+		reqParams, err := handler.DecodeAndValidateReqParams[v1.L7FlowParams](w, req)
 		if err != nil {
 			log.WithError(err).Error("Failed to decode/validate request parameters")
 			var httpErr *httputils.HttpStatusError
@@ -66,7 +66,6 @@ func (n NetworkFlows) Serve() http.HandlerFunc {
 			Tenant:  middleware.TenantIDFromContext(req.Context()),
 		}
 
-		// List flows from backend
 		ctx, cancel := context.WithTimeout(context.Background(), reqParams.Timeout.Duration)
 		defer cancel()
 		response, err := n.backend.List(ctx, clusterInfo, *reqParams)
@@ -80,7 +79,7 @@ func (n NetworkFlows) Serve() http.HandlerFunc {
 			return
 		}
 
-		log.Debugf("Flow response is: %+v", response)
+		log.Debugf("%s response is: %+v", baseURL, response)
 		httputils.Encode(w, response)
 	}
 }
