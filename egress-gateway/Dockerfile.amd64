@@ -80,7 +80,7 @@ RUN sed -i '/%files$/a \
 # Finally rebuild iptables.
 RUN rpmbuild -bb /root/rpmbuild/SPECS/iptables.spec
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.5 as ubi
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.7 as ubi
 ARG ARCH
 ARG GIT_VERSION
 ARG IPTABLES_VER
