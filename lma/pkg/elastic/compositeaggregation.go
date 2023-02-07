@@ -597,6 +597,7 @@ func PagedSearch[T any](ctx context.Context,
 	// Loop through each of the items in the buckets and convert to a page of objects.
 	page := []T{}
 	for _, item := range rawResults.Buckets {
+		log.Debugf("Processing bucket built from %d logs", item.DocCount)
 		cab, err := query.ConvertBucket(item)
 		if err != nil {
 			log.WithError(err).Error("error processing ES composite aggregation bucket")

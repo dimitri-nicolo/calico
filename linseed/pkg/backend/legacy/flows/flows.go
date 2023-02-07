@@ -194,7 +194,6 @@ func (b *flowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.L3Fl
 
 // convertBucket turns a composite aggregation bucket into an L3Flow.
 func (b *flowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.CompositeAggregationBucket) *v1.L3Flow {
-	log.Infof("Processing bucket built from %d logs", bucket.DocCount)
 	key := bucket.CompositeAggregationKey
 
 	// TODO: Handle policy report aggregations

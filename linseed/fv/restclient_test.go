@@ -1,4 +1,8 @@
-package fv
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
+
+//go:build fvtests
+
+package fv_test
 
 import (
 	"context"

@@ -15,3 +15,6 @@ var DNSLogTemplate string
 
 //go:embed audit.json
 var AuditTemplate string
+
+//go:embed bgp.json
+var BGPTemplate string

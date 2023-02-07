@@ -67,3 +67,16 @@ type AuditBackend interface {
 	// List lists logs that match the given parameters.
 	List(context.Context, ClusterInfo, v1.AuditLogParams) (*v1.List[audit.Event], error)
 }
+
+// BGPBackend defines the interface for interacting with bgp logs.
+type BGPBackend interface {
+	// Initialize initializes the backend and must be called prior to using this interface.
+	// This should be called exactly once. Multiple calls to this function will have no effect.
+	Initialize(context.Context) error
+
+	// Create creates the given logs.
+	Create(context.Context, ClusterInfo, []v1.BGPLog) (*v1.BulkResponse, error)
+
+	// List lists logs that match the given parameters.
+	List(context.Context, ClusterInfo, v1.BGPLogParams) (*v1.List[v1.BGPLog], error)
+}

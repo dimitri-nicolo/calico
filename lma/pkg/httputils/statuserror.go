@@ -8,13 +8,13 @@ import (
 
 type HttpStatusError struct {
 	// Status http status code of the request error.
-	Status int `json:"status"`
+	Status int `json:"Status"`
 
 	// Http status error message.
-	Msg string `json:"msg"`
+	Msg string `json:"Msg"`
 
 	// Error cause of http status request.
-	Err error `json:"-"`
+	Err error `json:"Err"`
 }
 
 // Error implementation of error type Error function, which returns the http status message

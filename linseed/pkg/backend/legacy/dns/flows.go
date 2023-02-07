@@ -112,7 +112,6 @@ func (b *dnsFlowBackend) List(ctx context.Context, i bapi.ClusterInfo, opts v1.D
 
 // convertBucket turns a composite aggregation bucket into an DNSFlow.
 func (b *dnsFlowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.CompositeAggregationBucket) *v1.DNSFlow {
-	log.Infof("Processing bucket built from %d logs", bucket.DocCount)
 	key := bucket.CompositeAggregationKey
 
 	// Build the flow, starting with the key.

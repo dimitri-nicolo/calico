@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Tigera, Inc. All rights reserved.
+// Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
 //go:build fvtests
 
@@ -64,13 +64,13 @@ func jsonPostHTTPReqSpec(url, tenant, cluster string, body []byte) httpReqSpec {
 }
 
 func doRequest(t *testing.T, client *http.Client, spec httpReqSpec) (*http.Response, []byte) {
-	var req, err = http.NewRequest(spec.method, spec.url, bytes.NewBuffer(spec.body))
+	req, err := http.NewRequest(spec.method, spec.url, bytes.NewBuffer(spec.body))
 	for k, v := range spec.headers {
 		req.Header.Set(k, v)
 	}
 	require.NoError(t, err)
 
-	var res = &http.Response{}
+	res := &http.Response{}
 	res, err = client.Do(req)
 	require.NoError(t, err)
 	defer res.Body.Close()
