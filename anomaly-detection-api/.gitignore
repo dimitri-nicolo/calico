@@ -1,3 +1,2 @@
-/fv/fv.test
-/fv/resources/tls
-/anomaly-detection-api-amd64
+fv/fv.test
+fv/resources/tls
