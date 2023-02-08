@@ -11,7 +11,7 @@ import (
 
 // L7FlowsInterface has methods related to flows.
 type L7FlowsInterface interface {
-	List(ctx context.Context, params v1.L7FlowParams) (v1.List[v1.L7Flow], error)
+	List(ctx context.Context, params v1.Params) (*v1.List[v1.L7Flow], error)
 }
 
 // L7Flows implements L7FlowsInterface.
@@ -26,16 +26,16 @@ func newL7Flows(c *client, cluster string) L7FlowsInterface {
 }
 
 // List gets the l3 flow list for the given flow input params.
-func (f *l7Flows) List(ctx context.Context, params v1.L7FlowParams) (v1.List[v1.L7Flow], error) {
+func (f *l7Flows) List(ctx context.Context, params v1.Params) (*v1.List[v1.L7Flow], error) {
 	flows := v1.List[v1.L7Flow]{}
 	err := f.restClient.Post().
 		Path("/api/v1/flows/l7").
-		Params(&params).
+		Params(params).
 		Cluster(f.clusterID).
 		Do(ctx).
 		Into(&flows)
 	if err != nil {
-		return flows, err
+		return &flows, err
 	}
-	return flows, nil
+	return &flows, nil
 }

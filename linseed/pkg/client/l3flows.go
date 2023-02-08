@@ -11,7 +11,7 @@ import (
 
 // L3FlowsInterface has methods related to flows.
 type L3FlowsInterface interface {
-	List(ctx context.Context, params v1.L3FlowParams) (v1.List[v1.L3Flow], error)
+	List(ctx context.Context, params v1.Params) (*v1.List[v1.L3Flow], error)
 }
 
 // L3Flows implements L3FlowsInterface.
@@ -26,16 +26,16 @@ func newL3Flows(c *client, cluster string) L3FlowsInterface {
 }
 
 // List gets the l3 flow list for the given flow input params.
-func (f *l3Flows) List(ctx context.Context, flowParams v1.L3FlowParams) (v1.List[v1.L3Flow], error) {
+func (f *l3Flows) List(ctx context.Context, params v1.Params) (*v1.List[v1.L3Flow], error) {
 	flows := v1.List[v1.L3Flow]{}
 	err := f.restClient.Post().
 		Path("/api/v1/flows/network").
-		Params(&flowParams).
+		Params(params).
 		Cluster(f.clusterID).
 		Do(ctx).
 		Into(&flows)
 	if err != nil {
-		return flows, err
+		return nil, err
 	}
-	return flows, nil
+	return &flows, nil
 }

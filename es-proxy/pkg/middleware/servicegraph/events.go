@@ -27,9 +27,7 @@ const (
 	K8sEventTypeWarning = "Warning"
 )
 
-var (
-	replicaRegex = regexp.MustCompile("-[a-z0-9]{5}$")
-)
+var replicaRegex = regexp.MustCompile("-[a-z0-9]{5}$")
 
 // The extracted event information. This is simply an ID with a set of graph endpoints that it may correspond to. There
 // is a bit of guesswork here - so the graphconstructor will use this as best effort to track down the appropriate
@@ -131,7 +129,7 @@ func getTigeraEvents(
 	cfg *Config,
 ) (results []Event, err error) {
 	// Trace progress.
-	progress := newElasticProgress("events", tr)
+	progress := newProgress("events", tr)
 	defer func() {
 		progress.Complete(err)
 	}()

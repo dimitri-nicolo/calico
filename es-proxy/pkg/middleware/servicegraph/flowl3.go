@@ -9,49 +9,21 @@ import (
 
 	v1 "github.com/projectcalico/calico/es-proxy/pkg/apis/v1"
 	"github.com/projectcalico/calico/libcalico-go/lib/set"
+	lapi "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	lsv1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/client"
 	lsclient "github.com/projectcalico/calico/linseed/pkg/client"
 	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 )
 
-// This file provides the main interface into elasticsearch for service graph. It is used to load flows for a given
+// This file provides the main interface into L3 flows for service graph. It is used to load flows for a given
 // time range, to correlate the source and destination flows and to aggregate out ports and protocols that are not
-// accessed via a service. Where elasticsearch raw flow logs may contain separate source and destination flows, this
+// accessed via a service. Where flow logs may contain separate source and destination flows, this
 // will return a single flow with statistics for allowed, denied-at-source and denied-at-dest.
 
 const (
 	maxAggregatedProtocol              = 10
 	maxAggregatedPortRangesPerProtocol = 5
-)
-
-const (
-	flowsBucketName = "flows"
-)
-
-const (
-	// The ordering of these composite sources is important. We want to enumerate all services across all sources for
-	// a given destination, and we need to ensure:
-	// - service (DNATed) flows are returned before non-service flows
-	// - all sources are enumerated for a given destination port
-	// This allows us to decide whether a destination port and protocol is being accessed by a service or not (and
-	// remember it could be accessed via a service for one source and directly for another). If the endpoint+port+proto
-	// is not accessed via a service then we'll aggregate the port and proto - this prevents things like port scans
-	// from making the graph unreadable.
-	FlowDestTypeIdx = iota
-	FlowDestNamespaceIdx
-	FlowDestNameAggrIdx
-	FlowDestServiceNamespaceIdx
-	FlowDestServiceNameIdx
-	FlowDestServicePortNameIdx
-	FlowDestServicePortNumIdx
-	FlowProtoIdx
-	FlowDestPortNumIdx
-	FlowSourceTypeIdx
-	FlowSourceNamespaceIdx
-	FlowSourceNameAggrIdx
-	FlowProcessIdx
-	FlowReporterIdx
-	FlowActionIdx
 )
 
 var zeroGraphTCPStats = v1.GraphTCPStats{}
@@ -116,157 +88,153 @@ func GetL3FlowData(
 	fc *FlowConfig, cfg *Config,
 ) (fs []L3Flow, err error) {
 	// Trace progress.
-	progress := newElasticProgress("l3", tr)
+	progress := newProgress("l3", tr)
 	defer func() {
 		progress.Complete(err)
 	}()
-
-	l3flowparams := lsv1.L3FlowParams{
-		QueryParams: lsv1.QueryParams{
-			TimeRange: &lmav1.TimeRange{
-				From: tr.From,
-				To:   tr.To,
-			},
-		},
-	}
-	l3flows, err := linseed.L3Flows(cluster).List(ctx, l3flowparams)
-	if err != nil {
-		return nil, fmt.Errorf("error getting l3 flows %s", err)
-	}
 
 	addFlows := func(dgd *destinationGroupData, lastDestGp *FlowEndpoint) {
 		fs = append(fs, dgd.getFlows(lastDestGp)...)
 		progress.SetAggregated(len(fs))
 	}
 
+	// Create the list pager.
+	params := lsv1.L3FlowParams{
+		QueryParams: lsv1.QueryParams{TimeRange: &tr},
+	}
+	pager := client.NewListPager[lapi.L3Flow](&params)
+	results, errors := pager.Stream(ctx, linseed.L3Flows(cluster).List)
+
 	var lastDestGp *FlowEndpoint
 	var dgd *destinationGroupData
-	for _, flow := range l3flows.Items {
-		progress.IncRaw()
-		reporter := flow.Key.Reporter
-		action := flow.Key.Action
-		proto := flow.Key.Protocol
-		processName := ""
-		if flow.Process != nil {
-			processName = flow.Process.Name
-		}
-
-		source := FlowEndpoint{
-			Type:      mapRawTypeToGraphNodeType(string(flow.Key.Source.Type), true),
-			NameAggr:  flow.Key.Source.AggregatedName,
-			Namespace: flow.Key.Source.Namespace,
-		}
-		svc := v1.ServicePort{}
-		if flow.Service != nil {
-			svc = v1.ServicePort{
-				NamespacedName: v1.NamespacedName{
-					Name:      flow.Service.Name,
-					Namespace: flow.Service.Namespace,
-				},
-				PortName: flow.Service.PortName,
-				Port:     int(flow.Service.Port),
-				Protocol: proto,
-			}
-		}
-		dest := FlowEndpoint{
-			Type:      mapRawTypeToGraphNodeType(string(flow.Key.Destination.Type), true),
-			NameAggr:  flow.Key.Destination.AggregatedName,
-			Namespace: flow.Key.Destination.Namespace,
-			PortNum:   int(flow.Key.Destination.Port),
-			Protocol:  proto,
-		}
-		gcs := v1.GraphConnectionStats{}
-		if flow.LogStats != nil {
-			gcs = v1.GraphConnectionStats{
-				TotalPerSampleInterval: flow.LogStats.LogCount,
-				Started:                flow.LogStats.Started,
-				Completed:              flow.LogStats.Completed,
-			}
-		}
-		gps := &v1.GraphPacketStats{}
-		if flow.TrafficStats != nil {
-			gps = &v1.GraphPacketStats{
-				PacketsIn:  flow.TrafficStats.PacketsIn,
-				PacketsOut: flow.TrafficStats.PacketsOut,
-				BytesIn:    flow.TrafficStats.BytesIn,
-				BytesOut:   flow.TrafficStats.BytesOut,
-			}
-		}
-
-		// Determine the endpoint key used to group together service groups.
-		destGp := GetServiceGroupFlowEndpointKey(dest)
-
-		var tcp *v1.GraphTCPStats
-		if proto == "tcp" && flow.TCPStats != nil {
-			tcpStats := flow.TCPStats
-			tcp = &v1.GraphTCPStats{
-				SumTotalRetransmissions:  tcpStats.TotalRetransmissions,
-				SumLostPackets:           tcpStats.LostPackets,
-				SumUnrecoveredTo:         tcpStats.UnrecoveredTo,
-				MinSendCongestionWindow:  tcpStats.MinSendCongestionWindow,
-				MinSendMSS:               tcpStats.MinMSS,
-				MaxSmoothRTT:             tcpStats.MaxSmoothRTT,
-				MaxMinRTT:                tcpStats.MaxMinRTT,
-				MeanSendCongestionWindow: tcpStats.MeanSendCongestionWindow,
-				MeanSmoothRTT:            tcpStats.MeanSmoothRTT,
-				MeanMinRTT:               tcpStats.MeanMinRTT,
-				MeanMSS:                  tcpStats.MeanMSS,
+	for page := range results {
+		for _, flow := range page.Items {
+			progress.IncRaw()
+			reporter := flow.Key.Reporter
+			action := flow.Key.Action
+			proto := flow.Key.Protocol
+			processName := ""
+			if flow.Process != nil {
+				processName = flow.Process.Name
 			}
 
-			// TCP stats have min and means which could be adversely impacted by zero data which indicates
-			// no data rather than actually 0. Only set the document number if the data is non-zero. This prevents us
-			// diluting when merging with non-zero data.
-			if *tcp != zeroGraphTCPStats && flow.LogStats != nil {
-				tcp.Count = flow.LogStats.FlowLogCount
-			} else {
-				tcp = nil
+			source := FlowEndpoint{
+				Type:      mapRawTypeToGraphNodeType(string(flow.Key.Source.Type), true),
+				NameAggr:  flow.Key.Source.AggregatedName,
+				Namespace: flow.Key.Source.Namespace,
 			}
-		}
-
-		// If the source and/or dest group have changed, and we were in the middle of reconciling multiple flows then
-		// calculate the final flows.
-		if dgd != nil && (destGp == nil || lastDestGp == nil || *destGp != *lastDestGp) {
-			addFlows(dgd, lastDestGp)
-			dgd = nil
-		}
-
-		// Determine the process info if available in the logs.
-		var processes v1.GraphEndpointProcesses
-		if processName != "" && flow.ProcessStats != nil {
-			processes = v1.GraphEndpointProcesses{
-				processName: v1.GraphEndpointProcess{
-					Name:               processName,
-					MinNumNamesPerFlow: flow.ProcessStats.MinNumNamesPerFlow,
-					MaxNumNamesPerFlow: flow.ProcessStats.MaxNumNamesPerFlow,
-					MinNumIDsPerFlow:   flow.ProcessStats.MinNumIDsPerFlow,
-					MaxNumIDsPerFlow:   flow.ProcessStats.MaxNumIDsPerFlow,
-				},
+			svc := v1.ServicePort{}
+			if flow.Service != nil {
+				svc = v1.ServicePort{
+					NamespacedName: v1.NamespacedName{
+						Name:      flow.Service.Name,
+						Namespace: flow.Service.Namespace,
+					},
+					PortName: flow.Service.PortName,
+					Port:     int(flow.Service.Port),
+					Protocol: proto,
+				}
 			}
-		}
-
-		// The enumeration order ensures that for any endpoint pair we'll enumerate services before no-services for all
-		// sources.
-		if dgd == nil {
-			log.Debugf("Collating flows: %s -> %s", source, destGp)
-			dgd = newDestinationGroupData()
-		}
-		if log.IsLevelEnabled(log.DebugLevel) {
-			if svc.Name != "" {
-				log.Debugf("- Processing %s reported flow: %s -> %s -> %s", reporter, source, svc, dest)
-			} else {
-				log.Debugf("- Processing %s reported flow: %s -> %s", reporter, source, dest)
+			dest := FlowEndpoint{
+				Type:      mapRawTypeToGraphNodeType(string(flow.Key.Destination.Type), true),
+				NameAggr:  flow.Key.Destination.AggregatedName,
+				Namespace: flow.Key.Destination.Namespace,
+				PortNum:   int(flow.Key.Destination.Port),
+				Protocol:  proto,
 			}
-		}
-		dgd.add(reporter, action, source, svc, dest,
-			flowStats{packetStats: gps, connStats: gcs, tcpStats: tcp, processes: processes},
-		)
+			gcs := v1.GraphConnectionStats{}
+			if flow.LogStats != nil {
+				gcs = v1.GraphConnectionStats{
+					TotalPerSampleInterval: flow.LogStats.LogCount,
+					Started:                flow.LogStats.Started,
+					Completed:              flow.LogStats.Completed,
+				}
+			}
+			gps := &v1.GraphPacketStats{}
+			if flow.TrafficStats != nil {
+				gps = &v1.GraphPacketStats{
+					PacketsIn:  flow.TrafficStats.PacketsIn,
+					PacketsOut: flow.TrafficStats.PacketsOut,
+					BytesIn:    flow.TrafficStats.BytesIn,
+					BytesOut:   flow.TrafficStats.BytesOut,
+				}
+			}
 
-		// Store the last dest group.
-		lastDestGp = destGp
+			// Determine the endpoint key used to group together service groups.
+			destGp := GetServiceGroupFlowEndpointKey(dest)
 
-		// Track the number of aggregated flows. Bail if we hit the absolute maximum number of aggregated flows.
-		if len(fs) > cfg.ServiceGraphCacheMaxAggregatedRecords {
-			return fs, DataTruncatedError
+			var tcp *v1.GraphTCPStats
+			if proto == "tcp" && flow.TCPStats != nil {
+				tcpStats := flow.TCPStats
+				tcp = &v1.GraphTCPStats{
+					SumTotalRetransmissions:  tcpStats.TotalRetransmissions,
+					SumLostPackets:           tcpStats.LostPackets,
+					SumUnrecoveredTo:         tcpStats.UnrecoveredTo,
+					MinSendCongestionWindow:  tcpStats.MinSendCongestionWindow,
+					MinSendMSS:               tcpStats.MinMSS,
+					MaxSmoothRTT:             tcpStats.MaxSmoothRTT,
+					MaxMinRTT:                tcpStats.MaxMinRTT,
+					MeanSendCongestionWindow: tcpStats.MeanSendCongestionWindow,
+					MeanSmoothRTT:            tcpStats.MeanSmoothRTT,
+					MeanMinRTT:               tcpStats.MeanMinRTT,
+					MeanMSS:                  tcpStats.MeanMSS,
+				}
+
+				// TCP stats have min and means which could be adversely impacted by zero data which indicates
+				// no data rather than actually 0. Only set the document number if the data is non-zero. This prevents us
+				// diluting when merging with non-zero data.
+				if *tcp != zeroGraphTCPStats && flow.LogStats != nil {
+					tcp.Count = flow.LogStats.FlowLogCount
+				} else {
+					tcp = nil
+				}
+			}
+
+			// If the source and/or dest group have changed, and we were in the middle of reconciling multiple flows then
+			// calculate the final flows.
+			if dgd != nil && (destGp == nil || lastDestGp == nil || *destGp != *lastDestGp) {
+				addFlows(dgd, lastDestGp)
+				dgd = nil
+			}
+
+			// Determine the process info if available in the logs.
+			var processes v1.GraphEndpointProcesses
+			if processName != "" && flow.ProcessStats != nil {
+				processes = v1.GraphEndpointProcesses{
+					processName: v1.GraphEndpointProcess{
+						Name:               processName,
+						MinNumNamesPerFlow: flow.ProcessStats.MinNumNamesPerFlow,
+						MaxNumNamesPerFlow: flow.ProcessStats.MaxNumNamesPerFlow,
+						MinNumIDsPerFlow:   flow.ProcessStats.MinNumIDsPerFlow,
+						MaxNumIDsPerFlow:   flow.ProcessStats.MaxNumIDsPerFlow,
+					},
+				}
+			}
+
+			// The enumeration order ensures that for any endpoint pair we'll enumerate services before no-services for all
+			// sources.
+			if dgd == nil {
+				log.Debugf("Collating flows: %s -> %s", source, destGp)
+				dgd = newDestinationGroupData()
+			}
+			if log.IsLevelEnabled(log.DebugLevel) {
+				if svc.Name != "" {
+					log.Debugf("- Processing %s reported flow: %s -> %s -> %s", reporter, source, svc, dest)
+				} else {
+					log.Debugf("- Processing %s reported flow: %s -> %s", reporter, source, dest)
+				}
+			}
+			dgd.add(reporter, action, source, svc, dest,
+				flowStats{packetStats: gps, connStats: gcs, tcpStats: tcp, processes: processes},
+			)
+
+			// Store the last dest group.
+			lastDestGp = destGp
+
+			// Track the number of aggregated flows. Bail if we hit the absolute maximum number of aggregated flows.
+			if len(fs) > cfg.ServiceGraphCacheMaxAggregatedRecords {
+				return fs, DataTruncatedError
+			}
 		}
 	}
 
@@ -281,7 +249,7 @@ func GetL3FlowData(
 	for i := range fs {
 		fs[i].Stats.Connections.TotalPerSampleInterval = int64(float64(fs[i].Stats.Connections.TotalPerSampleInterval) / l3Flushes)
 	}
-	return fs, nil
+	return fs, <-errors
 }
 
 func singleDashToBlank(val string) string {

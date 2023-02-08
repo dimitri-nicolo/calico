@@ -370,7 +370,7 @@ func (handler *flowHandler) ServeHTTP(w http.ResponseWriter, rawRequest *http.Re
 	log.Debug("Querying Linseed for flow(s).")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	flows, err := handler.client.L3Flows(req.clusterName).List(ctx, params)
+	flows, err := handler.client.L3Flows(req.clusterName).List(ctx, &params)
 	if err != nil {
 		log.WithError(err).Error("failed to get flows")
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)

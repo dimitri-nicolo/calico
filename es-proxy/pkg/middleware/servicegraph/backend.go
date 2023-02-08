@@ -168,7 +168,7 @@ func (r *realServiceGraphBackend) GetDNSData(
 func (r *realServiceGraphBackend) GetL7FlowData(
 	ctx context.Context, cluster string, tr lmav1.TimeRange,
 ) ([]L7Flow, error) {
-	return GetL7FlowData(ctx, r.elastic, cluster, tr, r.config)
+	return GetL7FlowData(ctx, r.linseed, cluster, tr, r.config)
 }
 
 func (r *realServiceGraphBackend) GetEvents(

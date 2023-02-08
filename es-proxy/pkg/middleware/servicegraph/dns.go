@@ -29,16 +29,14 @@ const (
 	dnsRcodeIdx
 )
 
-var (
-	dnsCompositeSources = []lmaelastic.AggCompositeSourceInfo{
-		{Name: "client_namespace", Field: "client_namespace"},
-		{Name: "client_name_aggr", Field: "client_name_aggr"},
-		{Name: "rcode", Field: "rcode"},
-	}
-)
+var dnsCompositeSources = []lmaelastic.AggCompositeSourceInfo{
+	{Name: "client_namespace", Field: "client_namespace"},
+	{Name: "client_name_aggr", Field: "client_name_aggr"},
+	{Name: "rcode", Field: "rcode"},
+}
 
 const (
-	//TODO(rlb): We might want to abbreviate these to reduce the amount of data on the wire, json parsing and
+	// TODO(rlb): We might want to abbreviate these to reduce the amount of data on the wire, json parsing and
 	//           memory footprint.  Possibly a significant saving with large clusters or long time ranges.
 	dnsAggSumCount         = "sum_count"
 	dnsAggSumLatencyCount  = "sum_latency_count"
@@ -69,7 +67,7 @@ func GetDNSClientData(
 	cfg *Config,
 ) (logs []DNSLog, err error) {
 	// Trace progress.
-	progress := newElasticProgress("dns", tr)
+	progress := newProgress("dns", tr)
 	defer func() {
 		progress.Complete(err)
 	}()
