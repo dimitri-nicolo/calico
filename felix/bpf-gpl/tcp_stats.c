@@ -14,7 +14,7 @@ int calico_tcp_stats(struct __sk_buff *skb)
 	struct cali_tc_ctx ctx = {
 		.skb = skb,
 	};
-	if (!skb_refresh_validate_ptrs(&ctx, UDP_SIZE)) {
+	if (!skb_refresh_validate_ptrs(&ctx, TCP_SIZE)) {
 		if ((ip_hdr(&ctx)->ihl == 5) && (ip_hdr(&ctx)->protocol == IPPROTO_TCP)) {
 			socket_lookup(&ctx);
 		}
