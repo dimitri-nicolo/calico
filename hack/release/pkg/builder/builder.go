@@ -56,40 +56,102 @@ type ReleaseBuilder struct {
 // releaseImages returns the set of images that should be expected for a release.
 // This function needs to be kept up-to-date with the actual release artifacts produced for a
 // release if images are added or removed.
-func releaseImages(version, operatorVersion string) []string {
-	return []string{
-		fmt.Sprintf("quay.io/tigera/operator:%s", operatorVersion),
-		fmt.Sprintf("calico/typha:%s", version),
-		fmt.Sprintf("calico/ctl:%s", version),
-		fmt.Sprintf("calico/node:%s", version),
-		fmt.Sprintf("calico/cni:%s", version),
-		fmt.Sprintf("calico/apiserver:%s", version),
-		fmt.Sprintf("calico/kube-controllers:%s", version),
-		fmt.Sprintf("calico/windows:%s", version),
-		fmt.Sprintf("calico/dikastes:%s", version),
-		fmt.Sprintf("calico/pod2daemon-flexvol:%s", version),
-		fmt.Sprintf("calico/csi:%s", version),
-		fmt.Sprintf("calico/node-driver-registrar:%s", version),
+func releaseImages(version, operatorVersion, registry string, overrides []string) []string {
+	imgs := []string{
+		fmt.Sprintf("%soperator:%s", registry, operatorVersion),
+		fmt.Sprintf("%scnx-manager:%s", registry, version),
+		fmt.Sprintf("%svoltron:%s", registry, version),
+		fmt.Sprintf("%sguardian:%s", registry, version),
+		fmt.Sprintf("%scnx-apiserver:%s", registry, version),
+		fmt.Sprintf("%scnx-queryserver:%s", registry, version),
+		fmt.Sprintf("%skube-controllers:%s", registry, version),
+		fmt.Sprintf("%scalicoq:%s", registry, version),
+		fmt.Sprintf("%stypha:%s", registry, version),
+		fmt.Sprintf("%scalicoctl:%s", registry, version),
+		fmt.Sprintf("%scnx-node:%s", registry, version),
+		fmt.Sprintf("%sdikastes:%s", registry, version),
+		fmt.Sprintf("%sdex:%s", registry, version),
+		fmt.Sprintf("%sfluentd:%s", registry, version),
+		fmt.Sprintf("%ses-proxy:%s", registry, version),
+		fmt.Sprintf("%skibana:%s", registry, version),
+		fmt.Sprintf("%selasticsearch:%s", registry, version),
+		fmt.Sprintf("%scloud-controllers:%s", registry, version),
+		fmt.Sprintf("%sintrusion-detection-job-installer:%s", registry, version),
+		fmt.Sprintf("%ses-curator:%s", registry, version),
+		fmt.Sprintf("%sintrusion-detection-controller:%s", registry, version),
+		fmt.Sprintf("%scompliance-controller:%s", registry, version),
+		fmt.Sprintf("%scompliance-reporter:%s", registry, version),
+		fmt.Sprintf("%scompliance-snapshotter:%s", registry, version),
+		fmt.Sprintf("%scompliance-server:%s", registry, version),
+		fmt.Sprintf("%scompliance-benchmarker:%s", registry, version),
+		fmt.Sprintf("%singress-collector:%s", registry, version),
+		fmt.Sprintf("%sl7-collector:%s", registry, version),
+		fmt.Sprintf("%slicense-agent:%s", registry, version),
+		fmt.Sprintf("%scni:%s", registry, version),
+		fmt.Sprintf("%sfirewall-integration:%s", registry, version),
+		fmt.Sprintf("%segress-gateway:%s", registry, version),
+		fmt.Sprintf("%shoneypod:%s", registry, version),
+		fmt.Sprintf("%shoneypod-exp-service:%s", registry, version),
+		fmt.Sprintf("%shoneypod-controller:%s", registry, version),
+		fmt.Sprintf("%sanomaly_detection_jobs:%s", registry, version),
+		fmt.Sprintf("%sanomaly-detection-api:%s", registry, version),
+		fmt.Sprintf("%selasticsearch-metrics:%s", registry, version),
+		fmt.Sprintf("%spacketcapture:%s", registry, version),
+		fmt.Sprintf("%sprometheus:%s", registry, version),
+		fmt.Sprintf("%sprometheus-operator:%s", registry, version),
+		fmt.Sprintf("%sprometheus-config-reloader:%s", registry, version),
+		fmt.Sprintf("%sprometheus-service:%s", registry, version),
+		fmt.Sprintf("%ses-gateway:%s", registry, version),
+		fmt.Sprintf("%sdeep-packet-inspection:%s", registry, version),
+		fmt.Sprintf("%seck-operator:%s", registry, version),
+		fmt.Sprintf("%salertmanager:%s", registry, version),
+		fmt.Sprintf("%senvoy:%s", registry, version),
+		fmt.Sprintf("%senvoy-init:%s", registry, version),
+		fmt.Sprintf("%spod2daemon-flexvol:%s", registry, version),
+		fmt.Sprintf("%scsi:%s", registry, version),
+		fmt.Sprintf("%snode-driver-registrar:%s", registry, version),
+		fmt.Sprintf("%skey-cert-provisioner:%s", registry, "1.15.1"), // TODO
+		fmt.Sprintf("%sfluentd-windows:%s", registry, version),
+		fmt.Sprintf("%scalico-windows:%s", registry, version),
+		fmt.Sprintf("%scalico-windows-upgrade:%s", registry, version),
 	}
+
+	// Iterate through any overrides and set them.
+	// Overrides are of the form <image>:version
+	for _, o := range overrides {
+		name := strings.Split(o, ":")[0]
+		ver := strings.Split(o, ":")[1]
+		for i, img := range imgs {
+			if strings.Contains(img, fmt.Sprintf("%s:", name)) {
+				// Found a match. Override the version.
+				imgs[i] = fmt.Sprintf("%s%s:%s", registry, name, ver)
+				logrus.Info("Using %s instead of %s", imgs[i], img)
+			}
+		}
+	}
+	return imgs
 }
 
-func (r *ReleaseBuilder) BuildMetadata(dir string) error {
+func (r *ReleaseBuilder) BuildMetadata(dir string, overrides ...string) error {
 	type metadata struct {
 		Version          string   `json:"version"`
 		OperatorVersion  string   `json:"operator_version" yaml:"operatorVersion"`
 		Images           []string `json:"images"`
 		HelmChartVersion string   `json:"helm_chart_version" yaml:"helmChartVersion"`
+		CalicoVersion    string   `json:"calico_oss_version" yaml:"CalicoOSSVersion"`
 	}
 
 	// Determine the versions to use based on the manifests, which should
 	// have already been updated with the correct tags.
 	calicoVersion, operatorVersion := r.getVersionsFromManifests()
+	registry := r.getRegistryFromManifests()
 
 	m := metadata{
 		Version:          calicoVersion,
 		OperatorVersion:  operatorVersion,
-		Images:           releaseImages(calicoVersion, operatorVersion),
-		HelmChartVersion: calicoVersion,
+		Images:           releaseImages(calicoVersion, operatorVersion, registry, overrides),
+		HelmChartVersion: fmt.Sprintf("%s-0", calicoVersion), // TODO: Detect the suffix.
+		CalicoVersion:    r.determineCalicoVersion(),
 	}
 
 	// Render it as yaml and write it to a file.
@@ -104,6 +166,17 @@ func (r *ReleaseBuilder) BuildMetadata(dir string) error {
 	}
 
 	return nil
+}
+
+// Get the CALICO_VERSION from the node Makefile. This is the version
+// of OSS Calico that we are most recently based off of.
+func (r *ReleaseBuilder) determineCalicoVersion() string {
+	args := []string{"-Po", `CALICO_VERSION=\K(.*)`, "Makefile"}
+	out, err := r.runner.RunInDir("node", "grep", args, nil)
+	if err != nil {
+		panic(err)
+	}
+	return out
 }
 
 // BuildRelease creates a Calico release.
@@ -562,7 +635,7 @@ func (r *ReleaseBuilder) assertManifestVersions(ver string) error {
 // getVersionsFromManifests returns the Calico and Operator versions in-use by this
 // release based on the generated manifests to be used for this release.
 func (r *ReleaseBuilder) getVersionsFromManifests() (string, string) {
-	manifests := []string{"calico.yaml", "tigera-operator.yaml"}
+	manifests := []string{"calicoctl.yaml", "tigera-operator.yaml"}
 
 	var operatorVersion, version string
 	for _, m := range manifests {
@@ -579,7 +652,7 @@ func (r *ReleaseBuilder) getVersionsFromManifests() (string, string) {
 				splits := strings.SplitAfter(i, ":")
 				operatorVersion = splits[len(splits)-1]
 				logrus.Infof("Using version %s from image %s", version, i)
-			} else if strings.Contains(i, "calico/") && version == "" {
+			} else if strings.Contains(i, "tigera/") && version == "" {
 				splits := strings.SplitAfter(i, ":")
 				version = splits[len(splits)-1]
 				logrus.Infof("Using version %s from image %s", version, i)
@@ -598,6 +671,26 @@ func (r *ReleaseBuilder) getVersionsFromManifests() (string, string) {
 	}
 
 	return version, operatorVersion
+}
+
+func (r *ReleaseBuilder) getRegistryFromManifests() string {
+	args := []string{"-Po", `image:\K(.*)`, "calicoctl.yaml"}
+	out, err := r.runner.RunInDir("manifests", "grep", args, nil)
+	if err != nil {
+		panic(err)
+	}
+	imgs := strings.Split(out, "\n")
+	for _, i := range imgs {
+		if strings.Contains(i, "operator") {
+			continue
+		} else if strings.Contains(i, "tigera/") {
+			splits := strings.SplitAfter(i, "/tigera/")
+			registry := splits[0]
+			logrus.Infof("Using registry %s from image %s", registry, i)
+			return registry
+		}
+	}
+	panic("Missing version!")
 }
 
 // determineReleaseVersion uses historical clues to figure out the next semver
