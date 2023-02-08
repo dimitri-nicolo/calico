@@ -156,12 +156,8 @@ func main() {
 
 	// Check if required index exists
 	exists, err := c.EventsIndexExists(ctx)
-	if err != nil {
+	if err != nil || !exists {
 		log.WithError(err).Fatal("Failed to check event index existence.")
-	} else if !exists {
-		if err := c.CreateEventsIndex(ctx); err != nil {
-			log.WithError(err).Fatal("Failed to create event index.")
-		}
 	}
 
 	clientCalico, err := clientv3.NewFromEnv()
