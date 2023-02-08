@@ -94,13 +94,13 @@ sub-image-%:
 
 $(EGRESS_GATEWAY_IMAGE): $(GATEWAY_CONTAINER_CREATED)
 $(GATEWAY_CONTAINER_CREATED): register ./Dockerfile.$(ARCH) $(GATEWAY_CONTAINER_FILES) $(GATEWAY_DAEMON_EXECUTABLE)
-	docker build --pull -t $(EGRESS_GATEWAY_IMAGE):latest-$(ARCH) . --build-arg GIT_VERSION=$(GIT_VERSION) -f ./Dockerfile.$(ARCH)
+	$(DOCKER_BUILD) -t $(EGRESS_GATEWAY_IMAGE):latest-$(ARCH) -f Dockerfile.$(ARCH) . --load
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
 
 $(EGRESS_GATEWAY_TESTING_IMAGE): $(GATEWAY_TEST_CONTAINER_CREATED)
 $(GATEWAY_TEST_CONTAINER_CREATED): register ./test/Dockerfile.$(ARCH) $(GATEWAY_CONTAINER_FILES) $(GATEWAY_DAEMON_EXECUTABLE)
-	docker build --pull -t $(EGRESS_GATEWAY_TESTING_IMAGE):latest-$(ARCH) . --build-arg GIT_VERSION=$(GIT_VERSION) -f ./test/Dockerfile.$(ARCH)
+	$(DOCKER_BUILD) -t $(EGRESS_GATEWAY_TESTING_IMAGE):latest-$(ARCH) -f test/Dockerfile.$(ARCH) . --load
 	touch $@
 
 ## Run the tests in a container. Useful for CI, Mac dev
