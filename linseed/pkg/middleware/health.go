@@ -17,7 +17,7 @@ type state struct {
 // The request will be passed to be served by the next middleware handler
 func HealthCheck(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		var s = state{Status: "ok"}
+		s := state{Status: "ok"}
 		if req.Method == http.MethodGet && strings.EqualFold(req.URL.Path, "/health") {
 			// write state and return 200 ok
 			httputils.Encode(w, s)

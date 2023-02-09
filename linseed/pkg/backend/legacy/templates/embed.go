@@ -2,19 +2,31 @@
 
 package templates
 
-import _ "embed"
+import (
+	_ "embed"
 
-//go:embed flowlog.json
-var FlowLogTemplate string
+	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
+)
 
-//go:embed l7log.json
-var L7LogTemplate string
+//go:embed flowlog_mappings.json
+var FlowLogMappings string
 
-//go:embed dnslog.json
-var DNSLogTemplate string
+//go:embed l7log_mappings.json
+var L7LogMappings string
 
-//go:embed audit.json
-var AuditTemplate string
+//go:embed dnslog_mappings.json
+var DNSLogMappings string
 
-//go:embed bgp.json
-var BGPTemplate string
+//go:embed dnslog_settings.json
+var DNSLogSettings string
+
+//go:embed audit_mappings.json
+var AuditMappings string
+
+//go:embed bgp_mappings.json
+var BGPMappings string
+
+// SettingsLookup will keep track if an index requires special settings, add its settings template to the map.
+var SettingsLookup = map[bapi.LogsType]string{
+	bapi.DNSLogs: DNSLogSettings,
+}

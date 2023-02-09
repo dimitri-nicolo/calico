@@ -8,6 +8,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
+
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
 
@@ -21,6 +27,7 @@ import (
 
 var (
 	client lmaelastic.Client
+	cache  bapi.Cache
 	b      bapi.FlowBackend
 	ctx    context.Context
 )
@@ -30,13 +37,18 @@ var (
 func setupTest(t *testing.T) func() {
 	// Create an elasticsearch client to use for the test. For this suite, we use a real
 	// elasticsearch instance created via "make run-elastic".
-	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"))
+	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(log.New()))
 	require.NoError(t, err)
 	client = lmaelastic.NewWithClient(esClient)
+	cache = templates.NewTemplateCache(client, 1, 0)
 
 	// Cleanup any data that might left over from a previous failed run.
-	_, err = client.Backend().DeleteIndex("tigera_secure_ee_flows.*").Do(context.Background())
+	exists, err := client.Backend().IndexExists("tigera_secure_ee_flows.*").Do(context.Background())
 	require.NoError(t, err)
+	if exists {
+		_, err = client.Backend().DeleteIndex("tigera_secure_ee_flows.*").Do(context.Background())
+		require.NoError(t, err)
+	}
 
 	// Create a FlowBackend to use.
 	b = flows.NewFlowBackend(client)
@@ -45,9 +57,14 @@ func setupTest(t *testing.T) func() {
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 
+	// Hook logrus into testing.T
+	logrus.SetLevel(logrus.DebugLevel)
+	logCancel := logutils.RedirectLogrusToTestingT(t)
+
 	// Function contains teardown logic.
 	return func() {
-		// Cancel the context
+		// Cancel the context and logging config.
+		logCancel()
 		cancel()
 	}
 }
@@ -418,9 +435,10 @@ func populateFlowData(t *testing.T, ctx context.Context, b *flowLogBuilder, clie
 	}
 
 	// Instantiate a FlowBackend.
-	response, err := flows.NewFlowLogBackend(client).Create(ctx, bapi.ClusterInfo{Cluster: cluster}, batch)
+	response, err := flows.NewFlowLogBackend(client, cache).Create(ctx, bapi.ClusterInfo{Cluster: cluster}, batch)
 	require.NoError(t, err)
-	require.Equal(t, response.Failed, 0)
+	require.Equal(t, []v1.BulkError(nil), response.Errors)
+	require.Equal(t, 0, response.Failed)
 
 	// Refresh the index so that data is readily available for the test. Otherwise, we need to wait
 	// for the refresh interval to occur.

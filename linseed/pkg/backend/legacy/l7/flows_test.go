@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
+
 	elastic "github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
 	kapiv1 "k8s.io/apimachinery/pkg/types"
@@ -28,6 +30,7 @@ func TestListL7Flows(t *testing.T) {
 	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"))
 	require.NoError(t, err)
 	client := lmaelastic.NewWithClient(esClient)
+	cache := templates.NewTemplateCache(client, 1, 0)
 
 	// Instantiate a FlowBackend.
 	b := l7.NewL7FlowBackend(client)
@@ -37,7 +40,7 @@ func TestListL7Flows(t *testing.T) {
 	defer cancel()
 
 	// Put some data into ES so we can query it.
-	expected := populateL7FlowData(t, ctx, client, clusterInfo.Cluster)
+	expected := populateL7FlowData(t, ctx, client, cache, clusterInfo.Cluster)
 
 	// Set time range so that we capture all of the populated flow logs.
 	opts := v1.L7FlowParams{}
@@ -60,12 +63,12 @@ func TestListL7Flows(t *testing.T) {
 
 // populateFlowData writes a series of flow logs to elasticsearch, and returns the FlowLog that we
 // should expect to exist as a result. This can be used to assert round-tripping and aggregation against ES is working correctly.
-func populateL7FlowData(t *testing.T, ctx context.Context, client lmaelastic.Client, cluster string) v1.L7Flow {
+func populateL7FlowData(t *testing.T, ctx context.Context, client lmaelastic.Client, cache bapi.Cache, cluster string) v1.L7Flow {
 	// Clear out any old data first.
 	_, _ = client.Backend().DeleteIndex(fmt.Sprintf("tigera_secure_ee_l7.%s.*", cluster)).Do(ctx)
 
 	// Instantiate a FlowBackend.
-	b := l7.NewL7LogBackend(client)
+	b := l7.NewL7LogBackend(client, cache)
 
 	// The expected flow log - we'll populate fields as we go.
 	expected := v1.L7Flow{}
@@ -158,8 +161,9 @@ func populateL7FlowData(t *testing.T, ctx context.Context, client lmaelastic.Cli
 	expected.Stats.MeanDuration = durationMeanTotal / int64(numFlows)
 
 	// Create the batch all at once.
-	err := b.Create(ctx, bapi.ClusterInfo{Cluster: cluster}, batch)
+	response, err := b.Create(ctx, bapi.ClusterInfo{Cluster: cluster}, batch)
 	require.NoError(t, err)
+	require.Equal(t, response.Failed, 0)
 
 	// Refresh the index so that data is readily available for the test. Otherwise, we need to wait
 	// for the refresh interval to occur.

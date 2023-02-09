@@ -5,7 +5,6 @@ package l3_test
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -38,17 +37,21 @@ func TestBulkIngestion_Serve(t *testing.T) {
 		want            testResult
 	}{
 		// Failure to parse request and validate
-		{name: "empty json",
+		{
+			name:            "malformed json",
 			backendFlowLogs: noFlowLogs,
 			backendError:    nil,
 			backendResponse: nil,
-			reqBody:         "{}",
-			want: testResult{true, 400,
-				"{\"Status\":400,\"Msg\":\"Request body contains an empty JSON\",\"Err\":null}"},
+			reqBody:         "{#}",
+			want: testResult{
+				true, 400,
+				"{\"Status\":400,\"Msg\":\"Request body contains badly-formed JSON\",\"Err\":{}}",
+			},
 		},
 
 		// Ingest all flow logs
-		{name: "ingest flows logs",
+		{
+			name:            "ingest flows logs",
 			backendFlowLogs: flowLogs,
 			backendError:    nil,
 			backendResponse: bulkResponseSuccess,
@@ -57,7 +60,8 @@ func TestBulkIngestion_Serve(t *testing.T) {
 		},
 
 		// Fails to ingest all flow logs
-		{name: "fail to ingest all flows logs",
+		{
+			name:            "fail to ingest all flows logs",
 			backendFlowLogs: flowLogs,
 			backendError:    errors.New("any error"),
 			backendResponse: nil,
@@ -66,7 +70,8 @@ func TestBulkIngestion_Serve(t *testing.T) {
 		},
 
 		// Ingest some flow logs
-		{name: "ingest some flows logs",
+		{
+			name:            "ingest some flows logs",
 			backendFlowLogs: flowLogs,
 			backendError:    nil,
 			backendResponse: bulkResponsePartialSuccess,
@@ -94,7 +99,6 @@ func TestBulkIngestion_Serve(t *testing.T) {
 			} else {
 				wantBody = marshalBulkResponse(t, tt.backendResponse)
 			}
-			fmt.Println(string(bodyBytes))
 			assert.Equal(t, tt.want.httpStatus, rec.Result().StatusCode)
 			assert.JSONEq(t, wantBody, string(bodyBytes))
 		})

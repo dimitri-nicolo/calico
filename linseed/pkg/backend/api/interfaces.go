@@ -17,10 +17,6 @@ type FlowBackend interface {
 
 // FlowLogBackend defines the interface for interacting with L3 flow logs
 type FlowLogBackend interface {
-	// Initialize initializes the backend and must be called prior to using this interface.
-	// This should be called exactly once. Multiple calls to this function will have no effect.
-	Initialize(context.Context) error
-
 	// Create creates the given L3 logs.
 	Create(context.Context, ClusterInfo, []v1.FlowLog) (*v1.BulkResponse, error)
 }
@@ -32,12 +28,8 @@ type L7FlowBackend interface {
 
 // L7LogBackend defines the interface for interacting with L7 flow logs.
 type L7LogBackend interface {
-	// Initialize initializes the backend and must be called prior to using this interface.
-	// This should be called exactly once. Multiple calls to this function will have no effect.
-	Initialize(context.Context) error
-
 	// Create creates the given L7 logs.
-	Create(context.Context, ClusterInfo, []L7Log) error
+	Create(context.Context, ClusterInfo, []L7Log) (*v1.BulkResponse, error)
 }
 
 // DNSFlowBackend defines the interface for interacting with DNS flows
@@ -47,20 +39,12 @@ type DNSFlowBackend interface {
 
 // DNSLogBackend defines the interface for interacting with DNS logs
 type DNSLogBackend interface {
-	// Initialize initializes the backend and must be called prior to using this interface.
-	// This should be called exactly once. Multiple calls to this function will have no effect.
-	Initialize(context.Context) error
-
 	// Create creates the given logs.
 	Create(context.Context, ClusterInfo, []v1.DNSLog) (*v1.BulkResponse, error)
 }
 
 // AuditBackend defines the interface for interacting with audit logs.
 type AuditBackend interface {
-	// Initialize initializes the backend and must be called prior to using this interface.
-	// This should be called exactly once. Multiple calls to this function will have no effect.
-	Initialize(context.Context) error
-
 	// Create creates the given logs.
 	Create(context.Context, v1.AuditLogType, ClusterInfo, []audit.Event) (*v1.BulkResponse, error)
 
@@ -70,13 +54,35 @@ type AuditBackend interface {
 
 // BGPBackend defines the interface for interacting with bgp logs.
 type BGPBackend interface {
-	// Initialize initializes the backend and must be called prior to using this interface.
-	// This should be called exactly once. Multiple calls to this function will have no effect.
-	Initialize(context.Context) error
-
 	// Create creates the given logs.
 	Create(context.Context, ClusterInfo, []v1.BGPLog) (*v1.BulkResponse, error)
 
 	// List lists logs that match the given parameters.
 	List(context.Context, ClusterInfo, v1.BGPLogParams) (*v1.List[v1.BGPLog], error)
+}
+
+// LogsType determines the type of logs supported
+// to be ingested via bulk APIs
+type LogsType string
+
+const (
+	FlowsLogs     LogsType = "flows"
+	DNSLogs       LogsType = "dns"
+	L7Logs        LogsType = "l7"
+	AuditEELogs   LogsType = "audit_ee"
+	AuditKubeLogs LogsType = "audit_kube"
+	BGPLogs       LogsType = "bgp"
+)
+
+// Cache is a cache for the templates in order
+// to create mappings, write aliases and rollover
+// indices only once. It will store as key-value pair
+// a definition of the template. The key used
+// is composed of types of logs and cluster info
+type Cache interface {
+	// InitializeIfNeeded will retrieve the template from the cache. If not found,
+	// tt will proceed to store a template against the pairs of
+	// LogsType and ClusterInfo. An error will be returned if template creation
+	// or index boostrap fails.
+	InitializeIfNeeded(context.Context, LogsType, ClusterInfo) error
 }

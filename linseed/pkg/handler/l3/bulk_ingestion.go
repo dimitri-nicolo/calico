@@ -39,7 +39,6 @@ func (b BulkIngestion) URL() string {
 func (b BulkIngestion) Serve() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		logs, err := handler.DecodeAndValidateBulkParams[v1.FlowLog](w, req)
-
 		if err != nil {
 			log.WithError(err).Error("Failed to decode/validate request parameters")
 			var httpErr *httputils.HttpStatusError

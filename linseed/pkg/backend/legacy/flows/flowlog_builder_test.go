@@ -2,8 +2,9 @@ package flows_test
 
 import (
 	"fmt"
-	"net"
 	"time"
+
+	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
@@ -34,10 +35,10 @@ func (b *flowLogBuilder) Copy() *flowLogBuilder {
 
 func (b *flowLogBuilder) Build() (*v1.FlowLog, error) {
 	// If no start and end times were set, default them.
-	if b.log.StartTime == "" {
+	if b.log.StartTime == 0 {
 		b.WithStartTime(time.Now())
 	}
-	if b.log.EndTime == "" {
+	if b.log.EndTime == 0 {
 		b.WithEndTime(time.Now())
 	}
 
@@ -75,7 +76,7 @@ func (b *flowLogBuilder) ExpectedFlow() *v1.L3Flow {
 				Namespace:      b.log.DestNamespace,
 				Type:           v1.EndpointType(b.log.DestType),
 				AggregatedName: b.log.DestNameAggr,
-				Port:           int64(b.log.DestPort),
+				Port:           *b.log.DestPort,
 			},
 		},
 		TrafficStats: &v1.TrafficStats{},
@@ -83,19 +84,19 @@ func (b *flowLogBuilder) ExpectedFlow() *v1.L3Flow {
 		Service: &v1.Service{
 			Name:      b.log.DestServiceName,
 			Namespace: b.log.DestServiceNamespace,
-			Port:      int32(b.log.DestServicePortNum),
-			PortName:  b.log.DestServicePort,
+			Port:      *b.log.DestServicePortNum,
+			PortName:  b.log.DestServicePortName,
 		},
 	}
 }
 
 func (b *flowLogBuilder) WithSourceIP(ip string) *flowLogBuilder {
-	b.log.SourceIP = net.ParseIP(ip)
+	b.log.SourceIP = testutils.StringPtr(ip)
 	return b
 }
 
 func (b *flowLogBuilder) WithDestIP(ip string) *flowLogBuilder {
-	b.log.DestIP = net.ParseIP(ip)
+	b.log.DestIP = testutils.StringPtr(ip)
 	return b
 }
 
@@ -115,12 +116,12 @@ func (b *flowLogBuilder) WithDestName(n string) *flowLogBuilder {
 }
 
 func (b *flowLogBuilder) WithStartTime(t time.Time) *flowLogBuilder {
-	b.log.StartTime = fmt.Sprintf("%d", time.Now().Unix())
+	b.log.StartTime = time.Now().Unix()
 	return b
 }
 
 func (b *flowLogBuilder) WithEndTime(t time.Time) *flowLogBuilder {
-	b.log.EndTime = fmt.Sprintf("%d", time.Now().Unix())
+	b.log.EndTime = time.Now().Unix()
 	return b
 }
 
@@ -130,19 +131,19 @@ func (b *flowLogBuilder) WithProtocol(p string) *flowLogBuilder {
 }
 
 func (b *flowLogBuilder) WithDestPort(port int) *flowLogBuilder {
-	b.log.DestPort = port
+	b.log.DestPort = testutils.Int64Ptr(int64(port))
 	return b
 }
 
 func (b *flowLogBuilder) WithSourcePort(port int) *flowLogBuilder {
-	b.log.SourcePort = port
+	b.log.SourcePort = testutils.Int64Ptr(int64(port))
 	return b
 }
 
 func (b *flowLogBuilder) WithDestService(name string, port int) *flowLogBuilder {
 	b.log.DestServiceName = name
-	b.log.DestServicePort = fmt.Sprintf("%d", port)
-	b.log.DestServicePortNum = port
+	b.log.DestServicePortName = fmt.Sprintf("%d", port)
+	b.log.DestServicePortNum = testutils.Int64Ptr(int64(port))
 	return b
 }
 
@@ -198,14 +199,14 @@ func (b *flowLogBuilder) WithDestNamespace(n string) *flowLogBuilder {
 }
 
 func (b *flowLogBuilder) WithSourceLabels(labels ...string) *flowLogBuilder {
-	b.log.SourceLabels = v1.FlowLogLabels{
+	b.log.SourceLabels = &v1.FlowLogLabels{
 		Labels: labels,
 	}
 	return b
 }
 
 func (b *flowLogBuilder) WithDestLabels(labels ...string) *flowLogBuilder {
-	b.log.DestLabels = v1.FlowLogLabels{
+	b.log.DestLabels = &v1.FlowLogLabels{
 		Labels: labels,
 	}
 	return b

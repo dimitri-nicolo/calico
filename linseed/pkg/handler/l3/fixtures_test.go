@@ -2,7 +2,10 @@
 
 package l3_test
 
-import v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+import (
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+)
 
 var (
 	noFlows []v1.L3Flow
@@ -51,22 +54,22 @@ var (
 			SourceNameAggr:  "source-*",
 			SourceNamespace: "source-ns",
 			SourceType:      "wep",
-			SourceLabels:    v1.FlowLogLabels{Labels: []string{"k8s-app=source-app", "projectcalico.org/namespace=source-ns"}},
+			SourceLabels:    &v1.FlowLogLabels{Labels: []string{"k8s-app=source-app", "projectcalico.org/namespace=source-ns"}},
 
 			DestNameAggr:  "dest-*",
 			DestNamespace: "dest-ns",
-			DestPort:      443,
+			DestPort:      testutils.Int64Ptr(443),
 			DestType:      "ns",
-			DestLabels:    v1.FlowLogLabels{Labels: []string{"k8s-app=dest-app", "projectcalico.org/namespace=dest-ns"}},
+			DestLabels:    &v1.FlowLogLabels{Labels: []string{"k8s-app=dest-app", "projectcalico.org/namespace=dest-ns"}},
 
 			DestServiceNamespace: "dest-ns",
 			DestServiceName:      "svc",
-			DestServicePortNum:   443,
+			DestServicePortNum:   testutils.Int64Ptr(443),
 
 			Protocol: "tcp",
 			Action:   "allow",
 			Reporter: "src",
-			Policies: []v1.FlowLogPolicy{{AllPolicies: "0|allow-tigera|dest-ns/allow-svc.dest-access|allow|1"}},
+			Policies: &v1.FlowLogPolicy{AllPolicies: []string{"0|allow-tigera|dest-ns/allow-svc.dest-access|allow|1"}},
 
 			NumFlows:          1,
 			NumFlowsCompleted: 0,
@@ -83,22 +86,22 @@ var (
 			SourceNameAggr:  "source-*",
 			SourceNamespace: "source-ns",
 			SourceType:      "wep",
-			SourceLabels:    v1.FlowLogLabels{Labels: []string{"k8s-app=source-app", "projectcalico.org/namespace=source-ns"}},
+			SourceLabels:    &v1.FlowLogLabels{Labels: []string{"k8s-app=source-app", "projectcalico.org/namespace=source-ns"}},
 
 			DestNameAggr:  "dest-*",
 			DestNamespace: "dest-ns",
-			DestPort:      443,
+			DestPort:      testutils.Int64Ptr(443),
 			DestType:      "ns",
-			DestLabels:    v1.FlowLogLabels{Labels: []string{"k8s-app=dest-app", "projectcalico.org/namespace=dest-ns"}},
+			DestLabels:    &v1.FlowLogLabels{Labels: []string{"k8s-app=dest-app", "projectcalico.org/namespace=dest-ns"}},
 
 			DestServiceNamespace: "dest-ns",
 			DestServiceName:      "svc",
-			DestServicePortNum:   443,
+			DestServicePortNum:   testutils.Int64Ptr(443),
 
 			Protocol: "tcp",
 			Action:   "allow",
 			Reporter: "src",
-			Policies: []v1.FlowLogPolicy{{AllPolicies: "0|allow-tigera|dest-ns/allow-svc.dest-access|allow|1"}},
+			Policies: &v1.FlowLogPolicy{AllPolicies: []string{"0|allow-tigera|dest-ns/allow-svc.dest-access|allow|1"}},
 
 			NumFlows:          1,
 			NumFlowsCompleted: 0,

@@ -18,7 +18,6 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
@@ -26,51 +25,45 @@ type auditLogBackend struct {
 	client    *elastic.Client
 	lmaclient lmaelastic.Client
 
-	// Tracks whether the backend has been initialized.
-	initialized bool
+	templates bapi.Cache
 }
 
-func NewBackend(c lmaelastic.Client) bapi.AuditBackend {
+func NewBackend(c lmaelastic.Client, cache bapi.Cache) bapi.AuditBackend {
 	return &auditLogBackend{
 		client:    c.Backend(),
 		lmaclient: c,
+		templates: cache,
 	}
-}
-
-func (b *auditLogBackend) Initialize(ctx context.Context) error {
-	var err error
-	if !b.initialized {
-		// Create a template with mappings for all new log indices.
-		_, err = b.client.IndexPutTemplate("audit_template").
-			BodyString(templates.AuditTemplate).
-			Create(false).
-			Do(ctx)
-		if err != nil {
-			return err
-		}
-		b.initialized = true
-	}
-	return nil
 }
 
 // Create the given logs in elasticsearch.
 func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i bapi.ClusterInfo, logs []audit.Event) (*v1.BulkResponse, error) {
 	log := bapi.ContextLogger(i)
 
-	// Initialize if we haven't yet.
-	err := b.Initialize(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	if i.Cluster == "" {
 		return nil, fmt.Errorf("no cluster ID on request")
 	}
 
-	// Determine the index to write to. It will be automatically created based on the configured
-	// template if it does not already exist.
-	index := b.index(kind, i)
-	log.Debugf("Writing audit logs in bulk to index %s", index)
+	var logType bapi.LogsType
+	switch kind {
+	case v1.AuditLogTypeEE:
+		logType = bapi.AuditEELogs
+	case v1.AuditLogTypeKube:
+		logType = bapi.AuditKubeLogs
+	case "":
+		return nil, fmt.Errorf("no audit log type provided on List request")
+	default:
+		return nil, fmt.Errorf("invalid audit log type: %s", kind)
+	}
+
+	err := b.templates.InitializeIfNeeded(ctx, logType, i)
+	if err != nil {
+		return nil, err
+	}
+
+	// Determine the index to write to using an alias
+	alias := b.writeAlias(kind, i)
+	log.Debugf("Writing audit logs in bulk to alias %s", alias)
 
 	// Build a bulk request using the provided logs.
 	bulk := b.client.Bulk()
@@ -90,7 +83,7 @@ func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i ba
 		}
 
 		// Add this log to the bulk request.
-		req := elastic.NewBulkIndexRequest().Index(index).Doc(string(bs))
+		req := elastic.NewBulkIndexRequest().Index(alias).Doc(string(bs))
 		bulk.Add(req)
 	}
 
@@ -175,9 +168,13 @@ func (b *auditLogBackend) buildQuery(i bapi.ClusterInfo, opts v1.AuditLogParams)
 func (b *auditLogBackend) index(kind v1.AuditLogType, i bapi.ClusterInfo) string {
 	if i.Tenant != "" {
 		// If a tenant is provided, then we must include it in the index.
-		return fmt.Sprintf("tigera_secure_ee_audit_%s.%s.%s", kind, i.Tenant, i.Cluster)
+		return fmt.Sprintf("tigera_secure_ee_audit_%s.%s.%s.*", kind, i.Tenant, i.Cluster)
 	}
 
 	// Otherwise, this is a single-tenant cluster and we only need the cluster.
-	return fmt.Sprintf("tigera_secure_ee_audit_%s.%s", kind, i.Cluster)
+	return fmt.Sprintf("tigera_secure_ee_audit_%s.%s.*", kind, i.Cluster)
+}
+
+func (b *auditLogBackend) writeAlias(kind v1.AuditLogType, i bapi.ClusterInfo) string {
+	return fmt.Sprintf("tigera_secure_ee_audit_%s.%s.", kind, i.Cluster)
 }

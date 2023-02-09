@@ -219,7 +219,7 @@ func (b *flowBackend) convertBucket(log *logrus.Entry, bucket *lmaelastic.Compos
 	flow.Service = &v1.Service{
 		Name:      b.ft.ValueString(key, "dest_service_name"),
 		Namespace: b.ft.ValueString(key, "dest_service_namespace"),
-		Port:      b.ft.ValueInt32(key, "dest_service_port_num"),
+		Port:      b.ft.ValueInt64(key, "dest_service_port_num"),
 		PortName:  b.ft.ValueString(key, "dest_service_port"),
 	}
 

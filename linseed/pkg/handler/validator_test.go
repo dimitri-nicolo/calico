@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -109,13 +111,13 @@ func marshall[T any](params T) string {
 	return string(newData)
 }
 
-func encode[T any](params []T) string {
+func encode[T any](params []T, delim string) string {
 	var buffer bytes.Buffer
 
 	for _, p := range params {
 		newData, _ := json.Marshal(p)
 		buffer.Write(newData)
-		buffer.WriteString("\n")
+		buffer.WriteString(delim)
 	}
 
 	return buffer.String()
@@ -136,11 +138,11 @@ func TestValidateBulkParams(t *testing.T) {
 			DestType:          "wep",
 			DestNamespace:     "ns-dest",
 			DestNameAggr:      "dest-*",
-			DestPort:          90001,
+			DestPort:          testutils.Int64Ptr(90001),
 			SourceType:        "wep",
 			SourceNamespace:   "ns-source",
 			SourceNameAggr:    "source-*",
-			SourcePort:        443,
+			SourcePort:        testutils.Int64Ptr(443),
 			NumFlows:          1,
 			NumFlowsStarted:   1,
 			NumFlowsCompleted: 0,
@@ -149,11 +151,11 @@ func TestValidateBulkParams(t *testing.T) {
 			DestType:          "wep",
 			DestNamespace:     "ns-dest",
 			DestNameAggr:      "dest-*",
-			DestPort:          90002,
+			DestPort:          testutils.Int64Ptr(90002),
 			SourceType:        "wep",
 			SourceNamespace:   "ns-source",
 			SourceNameAggr:    "source-*",
-			SourcePort:        443,
+			SourcePort:        testutils.Int64Ptr(443),
 			NumFlows:          1,
 			NumFlowsStarted:   1,
 			NumFlowsCompleted: 0,
@@ -172,22 +174,12 @@ func TestValidateBulkParams(t *testing.T) {
 			true, "Request body contains badly-formed JSON", http.StatusBadRequest,
 		},
 		{
-			"empty json", req("{}", jsonNewlineContentType),
-			[]v1.FlowLog{},
-			true, "Request body contains an empty JSON", http.StatusBadRequest,
-		},
-		{
-			"multiple empty jsons", req("{}\n{}", jsonNewlineContentType),
-			[]v1.FlowLog{},
-			true, "Request body contains an empty JSON", http.StatusBadRequest,
-		},
-		{
 			"malformed json", req("{#4FEF}", jsonNewlineContentType),
 			[]v1.FlowLog{},
 			true, "Request body contains badly-formed JSON", http.StatusBadRequest,
 		},
 		{
-			"other content-type", req(encode(params), "application/xml"), params,
+			"other content-type", req(encode(params, "\n"), "application/xml"), params,
 			true, "Received a request with content-type that is not supported", http.StatusUnsupportedMediaType,
 		},
 		{
@@ -206,7 +198,18 @@ func TestValidateBulkParams(t *testing.T) {
 			[]v1.FlowLog{{DestNameAggr: "lorem lipsum\n"}},
 			false, "", http.StatusOK,
 		},
-		{"bulk insert", req(encode(params), jsonNewlineContentType), params, false, "", 200},
+
+		{
+			"bulk insert -  Linux", req(encode[v1.FlowLog](params, "\n"), jsonNewlineContentType),
+			params, false, "",
+			200,
+		},
+
+		{
+			"bulk insert - Windows", req(encode[v1.FlowLog](params, "\r\n"), jsonNewlineContentType),
+			params, false, "",
+			200,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

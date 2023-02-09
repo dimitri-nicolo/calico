@@ -25,7 +25,6 @@ type Server struct {
 // NewServer creates a new Server that binds on addr, with a TLSConfig that can be tailored
 // to match FIPS requirements and apply different customizations
 func NewServer(addr string, fipsEnabled bool, opts ...Option) *Server {
-
 	const (
 		defaultIdleTimeout  = 120 * time.Second
 		defaultReadTimeout  = 5 * time.Second

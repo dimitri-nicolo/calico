@@ -24,13 +24,8 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 )
 
-var (
-	//go:embed testdata/input/all_l3flows_within_timerange.json
-	withinTimeRange string
-
-	//go:embed testdata/output/missing_timerange_error_msg.json
-	missingTimeRangeErrorMsg string
-)
+//go:embed testdata/input/all_l3flows_within_timerange.json
+var withinTimeRange string
 
 func TestNetworkFlows_Post(t *testing.T) {
 	type testResult struct {
@@ -47,9 +42,12 @@ func TestNetworkFlows_Post(t *testing.T) {
 	}{
 		// Failure to parse request and validate
 		{
-			name:           "empty json",
-			reqBody:        "{}",
-			want:           testResult{true, 400, missingTimeRangeErrorMsg},
+			name:    "malformed json",
+			reqBody: "{#}",
+			want: testResult{
+				true, 400,
+				`{"Msg":"Request body contains badly-formed JSON (at position 2)", "Status":400, "Err":{"Offset":2}}`,
+			},
 			backendL3Flows: noFlows,
 		},
 

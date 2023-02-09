@@ -5,7 +5,7 @@
 package fv_test
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -16,9 +16,6 @@ import (
 
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
-
-	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
-	lmav1 "github.com/projectcalico/calico/lma/pkg/apis/v1"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -89,7 +86,7 @@ func TestFV_Linseed(t *testing.T) {
 		assert.Equal(t, "Client sent an HTTP request to an HTTPS server.", strings.Trim(string(resBody), "\n"))
 	})
 
-	t.Run("should return flows from Elastic", func(t *testing.T) {
+	t.Run("should ingest flow logs to Elastic", func(t *testing.T) {
 		// setup Elastic client
 		esClient, err := elastic.NewClient(
 			elastic.SetURL(elasticEndpoint),
@@ -97,29 +94,24 @@ func TestFV_Linseed(t *testing.T) {
 			elastic.SetInfoLog(log.New(os.Stdout, "", log.LstdFlags)))
 		require.NoError(t, err)
 
-		// ingest flow logs into ES
-		b := LegacyBackend{esClient: esClient, t: t}
-		b.deleteFlowLogs()
-		b.ingestFlow()
-
 		// setup HTTP client and HTTP request
 		client := secureHTTPClient(t)
-		flowParams := v1.L3FlowParams{
-			QueryParams: v1.QueryParams{
-				TimeRange: &lmav1.TimeRange{
-					From: time.Unix(from, 0),
-					To:   time.Unix(to, 0),
-				},
-			},
-		}
-		body, err := json.Marshal(&flowParams)
-		require.NoError(t, err)
-
-		spec := jsonPostHTTPReqSpec(fmt.Sprintf("https://%s%s", addr, "/api/v1/flows/network"), tenant, cluster, body)
-		// make the request to retrieve flows
+		spec := xndJSONPostHTTPReqSpec(fmt.Sprintf("https://%s%s", addr, "/api/v1/bulk/flows/network/logs"),
+			tenant, cluster, []byte(flowLogsLinux))
+		// make the request to ingest flows
 		res, resBody := doRequest(t, client, spec)
 		assert.Equal(t, http.StatusOK, res.StatusCode)
-		assert.JSONEq(t, flow, strings.Trim(string(resBody), "\n"))
+		assert.JSONEq(t, "{\"failed\":0, \"succeeded\":25, \"total\":25}", strings.Trim(string(resBody), "\n"))
+
+		index := fmt.Sprintf("tigera_secure_ee_flows.cluster.*")
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		_, err = esClient.Refresh(index).Do(ctx)
+		require.NoError(t, err)
+		query := elastic.NewTermQuery("end_time", "1675469001")
+		result, err := esClient.Search().Index("tigera_secure_ee_flows.cluster.*").Query(query).Do(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, result.Hits.TotalHits.Value, int64(25))
 	})
 }
 

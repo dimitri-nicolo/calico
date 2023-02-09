@@ -1407,6 +1407,7 @@ run-elastic: $(REPO_ROOT)/.elasticsearch.created
 $(REPO_ROOT)/.elasticsearch.created:
 	# Run ES on Docker.
 	docker run --detach \
+	-m 2GB \
 	--net=host \
 	--name=tigera-elastic \
 	-e "discovery.type=single-node" \

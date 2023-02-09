@@ -5,9 +5,12 @@ package flows_test
 import (
 	"context"
 	"fmt"
-	"net"
 	"testing"
 	"time"
+
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
+
+	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 
@@ -26,9 +29,10 @@ func TestCreateFlowLog(t *testing.T) {
 	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"))
 	require.NoError(t, err)
 	client := lmaelastic.NewWithClient(esClient)
+	cache := templates.NewTemplateCache(client, 1, 0)
 
 	// Instantiate a flowlog backend.
-	b := flows.NewFlowLogBackend(client)
+	b := flows.NewFlowLogBackend(client, cache)
 
 	clusterInfo := bapi.ClusterInfo{
 		Cluster: "testcluster",
@@ -36,19 +40,18 @@ func TestCreateFlowLog(t *testing.T) {
 
 	// Create a dummy flow.
 	f := v1.FlowLog{
-		StartTime:            fmt.Sprintf("%d", time.Now().Unix()),
-		EndTime:              fmt.Sprintf("%d", time.Now().Unix()),
+		StartTime:            time.Now().Unix(),
+		EndTime:              time.Now().Unix(),
 		DestType:             "wep",
 		DestNamespace:        "kube-system",
 		DestNameAggr:         "kube-dns-*",
 		DestServiceNamespace: "default",
 		DestServiceName:      "kube-dns",
-		DestServicePort:      "53",
-		DestServicePortNum:   53,
-		DestIP:               net.ParseIP("fe80::0"),
-		SourceIP:             net.ParseIP("fe80::1"),
+		DestServicePortNum:   testutils.Int64Ptr(53),
+		DestIP:               testutils.StringPtr("fe80::0"),
+		SourceIP:             testutils.StringPtr("fe80::1"),
 		Protocol:             "udp",
-		DestPort:             53,
+		DestPort:             testutils.Int64Ptr(53),
 		SourceType:           "wep",
 		SourceNamespace:      "default",
 		SourceNameAggr:       "my-deployment",
@@ -62,7 +65,7 @@ func TestCreateFlowLog(t *testing.T) {
 
 	response, err := b.Create(ctx, clusterInfo, []v1.FlowLog{f})
 	require.NoError(t, err)
-	require.Equal(t, response.Failed, 0)
+	require.Equal(t, 0, response.Failed)
 
 	// Clean up after ourselves by deleting the index.
 	_, err = esClient.DeleteIndex(fmt.Sprintf("tigera_secure_ee_flows.%s.*", clusterInfo.Cluster)).Do(ctx)

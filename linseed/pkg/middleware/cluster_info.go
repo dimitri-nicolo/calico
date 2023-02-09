@@ -29,13 +29,13 @@ func (m ClusterInfo) Extract() func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			// extract cluster id
-			var clusterID = req.Header.Get(lmak8s.XClusterIDHeader)
+			clusterID := req.Header.Get(lmak8s.XClusterIDHeader)
 			if clusterID == "" {
 				clusterID = lmak8s.DefaultCluster
 			}
 
 			// extract tenant id
-			var tenant = req.Header.Get(lmak8s.XTenantIDHeader)
+			tenant := req.Header.Get(lmak8s.XTenantIDHeader)
 			if m.expectedTenantID != "" && tenant != m.expectedTenantID {
 				httputils.JSONError(w, &httputils.HttpStatusError{
 					Status: http.StatusUnauthorized,

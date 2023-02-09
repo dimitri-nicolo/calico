@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
+
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
 
@@ -33,13 +35,14 @@ func setupTest(t *testing.T) func() {
 	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"))
 	require.NoError(t, err)
 	client = lmaelastic.NewWithClient(esClient)
+	cache := templates.NewTemplateCache(client, 1, 0)
 
 	// Cleanup any data that might left over from a previous failed run.
 	_, err = esClient.DeleteIndex("tigera_secure_ee_bgp*").Do(context.Background())
 	require.NoError(t, err)
 
 	// Instantiate a backend.
-	b = bgp.NewBackend(client)
+	b = bgp.NewBackend(client, cache)
 
 	// Each test should take less than 5 seconds.
 	var cancel context.CancelFunc

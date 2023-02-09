@@ -96,7 +96,7 @@ MOCKERY_FILE_PATHS= \
 .PHONY: ut
 ## Run only Unit Tests.
 ut: run-elastic
-	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./...'
+	$(DOCKER_GO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./... -cover'
 
 st:
 	@echo "No STs"

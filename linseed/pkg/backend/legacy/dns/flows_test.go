@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
+
 	"github.com/google/gopacket/layers"
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
@@ -30,6 +32,7 @@ func TestListDNSFlows(t *testing.T) {
 	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"))
 	require.NoError(t, err)
 	client := lmaelastic.NewWithClient(esClient)
+	cache := templates.NewTemplateCache(client, 1, 0)
 
 	// Instantiate a FlowBackend.
 	b := dns.NewDNSFlowBackend(client)
@@ -39,7 +42,7 @@ func TestListDNSFlows(t *testing.T) {
 	defer cancel()
 
 	// Put some data into ES so we can query it.
-	expected := populateDNSLogData(t, ctx, client, clusterInfo.Cluster)
+	expected := populateDNSLogData(t, ctx, client, cache, clusterInfo.Cluster)
 
 	// Set time range so that we capture all of the populated flow logs.
 	opts := v1.DNSFlowParams{}
@@ -62,14 +65,14 @@ func TestListDNSFlows(t *testing.T) {
 
 // populateDNSLogData writes a series of DNS logs to elasticsearch, and returns the DNSFlow that we
 // should expect to exist as a result. This can be used to assert round-tripping and aggregation against ES is working correctly.
-func populateDNSLogData(t *testing.T, ctx context.Context, client lmaelastic.Client, cluster string) v1.DNSFlow {
+func populateDNSLogData(t *testing.T, ctx context.Context, client lmaelastic.Client, cache bapi.Cache, cluster string) v1.DNSFlow {
 	index := fmt.Sprintf("tigera_secure_ee_dns.%s.*", cluster)
 
 	// Clear out any old data first.
 	_, _ = client.Backend().DeleteIndex(index).Do(ctx)
 
 	// Instantiate a backend to create logs.
-	b := dns.NewDNSLogBackend(client)
+	b := dns.NewDNSLogBackend(client, cache)
 
 	// The expected flow log - we'll populate fields as we go.
 	expected := v1.DNSFlow{}

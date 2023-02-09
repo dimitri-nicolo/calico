@@ -5,20 +5,18 @@ package middleware_test
 
 import (
 	"io"
-
-	"github.com/projectcalico/calico/linseed/pkg/middleware"
-	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
-
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/projectcalico/calico/linseed/pkg/middleware"
+	lmak8s "github.com/projectcalico/calico/lma/pkg/k8s"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestClusterInfo(t *testing.T) {
-
-	var httpErrorMsg = "{\"Status\":401,\"Msg\":\"Missing tenant identifier\",\"Err\":{}}"
+	httpErrorMsg := "{\"Status\":401,\"Msg\":\"Missing tenant identifier\",\"Err\":{}}"
 
 	tests := []struct {
 		name          string
@@ -38,7 +36,6 @@ func TestClusterInfo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				// Expect cluster ID and tenant ID to be set on the context
 				assert.Equal(t, middleware.ClusterIDFromContext(r.Context()), tt.clusterID)
@@ -46,7 +43,7 @@ func TestClusterInfo(t *testing.T) {
 			})
 
 			clusterInfo := middleware.NewClusterInfo(tt.tenantIDCheck).Extract()
-			var req, err = http.NewRequest("POST", "/flows/network", nil)
+			req, err := http.NewRequest("POST", "/flows/network", nil)
 
 			// Set cluster and tenant ID header
 			req.Header.Set(lmak8s.XClusterIDHeader, tt.xClusterID)

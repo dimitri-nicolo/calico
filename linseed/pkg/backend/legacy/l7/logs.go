@@ -3,12 +3,12 @@ package l7
 import (
 	"context"
 	"fmt"
-	"time"
 
 	elastic "github.com/olivere/elastic/v7"
 
+	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
+
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
@@ -16,52 +16,34 @@ type l7LogBackend struct {
 	client    *elastic.Client
 	lmaclient lmaelastic.Client
 
-	// Tracks whether the backend has been initialized.
-	initialized bool
+	templates bapi.Cache
 }
 
-func NewL7LogBackend(c lmaelastic.Client) bapi.L7LogBackend {
+func NewL7LogBackend(c lmaelastic.Client, cache bapi.Cache) bapi.L7LogBackend {
 	b := &l7LogBackend{
 		client:    c.Backend(),
 		lmaclient: c,
+		templates: cache,
 	}
 	return b
 }
 
-func (b *l7LogBackend) Initialize(ctx context.Context) error {
-	var err error
-	if !b.initialized {
-		// Create a template with mappings for all new log indices.
-		_, err = b.client.IndexPutTemplate("l7_log_template").
-			BodyString(templates.L7LogTemplate).
-			Create(false).
-			Do(ctx)
-		if err != nil {
-			return err
-		}
-		b.initialized = true
-	}
-	return nil
-}
-
 // Create the given log in elasticsearch.
-func (b *l7LogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []bapi.L7Log) error {
+func (b *l7LogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []bapi.L7Log) (*v1.BulkResponse, error) {
 	log := bapi.ContextLogger(i)
 
-	// Initialize if we haven't yet.
-	err := b.Initialize(ctx)
-	if err != nil {
-		return err
-	}
-
 	if i.Cluster == "" {
-		log.Fatal("BUG: No cluster ID on request")
+		return nil, fmt.Errorf("no cluster ID on request")
 	}
 
-	// Determine the index to write to. It will be automatically created based on the configured
-	// template if it does not already exist.
-	index := fmt.Sprintf("tigera_secure_ee_l7.%s.%s", i.Cluster, time.Now().Format("2006-01-02"))
-	log.Infof("Writing L7 logs in bulk to index %s", index)
+	err := b.templates.InitializeIfNeeded(ctx, bapi.L7Logs, i)
+	if err != nil {
+		return nil, err
+	}
+
+	// Determine the index to write to using an alias
+	alias := b.writeAlias(i)
+	log.Debugf("Writing L7 logs in bulk to alias %s", alias)
 
 	// Build a bulk request using the provided logs.
 	bulk := b.client.Bulk()
@@ -70,11 +52,11 @@ func (b *l7LogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []ba
 		if f.Cluster != "" {
 			// For the legacy backend, the Cluster ID is encoded into the index
 			// and not the log itself. Fail the entire batch.
-			return fmt.Errorf("cluster ID should not be set on L7 log")
+			return nil, fmt.Errorf("cluster ID should not be set on L7 log")
 		}
 
 		// Add this log to the bulk request.
-		req := elastic.NewBulkIndexRequest().Index(index).Doc(f)
+		req := elastic.NewBulkIndexRequest().Index(alias).Doc(f)
 		bulk.Add(req)
 
 		// TODO: Set a size-limit per-bulk-request. Is it possible that we receive a batch
@@ -85,10 +67,19 @@ func (b *l7LogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []ba
 	resp, err := bulk.Do(ctx)
 	if err != nil {
 		log.Errorf("Error writing L7 log: %s", err)
-		return fmt.Errorf("failed to write L7 log: %s", err)
+		return nil, fmt.Errorf("failed to write L7 log: %s", err)
 	}
 
 	log.WithField("count", len(logs)).Infof("Wrote L7 logs to index: %+v", resp)
 
-	return nil
+	return &v1.BulkResponse{
+		Total:     len(resp.Items),
+		Succeeded: len(resp.Succeeded()),
+		Failed:    len(resp.Failed()),
+		Errors:    v1.GetBulkErrors(resp),
+	}, nil
+}
+
+func (b *l7LogBackend) writeAlias(i bapi.ClusterInfo) string {
+	return fmt.Sprintf("tigera_secure_ee_l7.%s.", i.Cluster)
 }

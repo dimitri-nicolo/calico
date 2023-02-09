@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
+
 	"github.com/projectcalico/calico/linseed/pkg/backend"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
@@ -41,13 +43,8 @@ func main() {
 
 	// TODO: check if we need to add es connection as part of the ready probe
 	esClient := backend.MustGetElasticClient(toElasticConfig(cfg))
-	flowLogsBackend := flows.NewFlowLogBackend(esClient)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-	defer cancel()
-	err := flowLogsBackend.Initialize(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
+	cache := templates.NewTemplateCache(esClient, cfg.ElasticShards, cfg.ElasticReplicas)
+	flowLogsBackend := flows.NewFlowLogBackend(esClient, cache)
 	flowBackend := flows.NewFlowBackend(esClient)
 
 	// Start server

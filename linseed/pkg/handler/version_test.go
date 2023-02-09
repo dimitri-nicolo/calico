@@ -23,8 +23,10 @@ func TestVersionCheck(t *testing.T) {
 		name string
 		want testResult
 	}{
-		{"200 OK",
-			testResult{200, "{\"buildDate\":\"\",\"gitCommit\":\"\",\"gitTag\":\"\",\"buildVersion\":\"\"}"}},
+		{
+			"200 OK",
+			testResult{200, "{\"buildDate\":\"\",\"gitCommit\":\"\",\"gitTag\":\"\",\"buildVersion\":\"\"}"},
+		},
 	}
 
 	for _, tt := range tests {

@@ -76,7 +76,7 @@ type ElasticConfig struct {
 // MustGetElasticClient will create an elastic client or stop execution
 // if configurations like certificate paths are invalid
 func MustGetElasticClient(config ElasticConfig) lmaelastic.Client {
-	var options = []elastic.ClientOptionFunc{
+	options := []elastic.ClientOptionFunc{
 		elastic.SetURL(config.URL),
 		elastic.SetScheme(config.Scheme),
 		elastic.SetGzip(config.GZIPEnabled),
@@ -95,7 +95,7 @@ func MustGetElasticClient(config ElasticConfig) lmaelastic.Client {
 	switch strings.ToLower(config.LogLevel) {
 	case "error":
 		options = append(options, elastic.SetErrorLog(log))
-	case "info":
+	case "info", "debug", "warning":
 		options = append(options, elastic.SetInfoLog(log))
 	case "trace":
 		options = append(options, elastic.SetTraceLog(log))

@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
+
 	"github.com/google/gopacket/layers"
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
@@ -26,9 +28,10 @@ func TestCreateDNSLog(t *testing.T) {
 	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"))
 	require.NoError(t, err)
 	client := lmaelastic.NewWithClient(esClient)
+	cache := templates.NewTemplateCache(client, 1, 0)
 
 	// Instantiate a backend.
-	b := dns.NewDNSLogBackend(client)
+	b := dns.NewDNSLogBackend(client, cache)
 
 	clusterInfo := bapi.ClusterInfo{
 		Cluster: "testcluster",

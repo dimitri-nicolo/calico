@@ -63,6 +63,19 @@ func jsonPostHTTPReqSpec(url, tenant, cluster string, body []byte) httpReqSpec {
 	}
 }
 
+func xndJSONPostHTTPReqSpec(url, tenant, cluster string, body []byte) httpReqSpec {
+	return httpReqSpec{
+		method: "POST",
+		url:    url,
+		headers: map[string]string{
+			"x-cluster-id": cluster,
+			"x-tenant-id":  tenant,
+			"Content-Type": "application/x-ndjson",
+		},
+		body: body,
+	}
+}
+
 func doRequest(t *testing.T, client *http.Client, spec httpReqSpec) (*http.Response, []byte) {
 	req, err := http.NewRequest(spec.method, spec.url, bytes.NewBuffer(spec.body))
 	for k, v := range spec.headers {

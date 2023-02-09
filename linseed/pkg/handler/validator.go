@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/calico/libcalico-go/lib/json"
 
 	validator "github.com/projectcalico/calico/libcalico-go/lib/validator/v3"
@@ -79,27 +81,32 @@ func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req
 		}
 	}
 
-	// bulk requests will have json delimitated by a newline
-	for _, line := range bytes.Split(body, []byte{'\n'}) {
-		if string(line) == "{}" {
-			return bulkParams, &httputils.HttpStatusError{
-				Status: http.StatusBadRequest,
-				Msg:    "Request body contains an empty JSON",
-				Err:    err,
-			}
-		}
-		// decode each newline to its correspondent structure
+	trimBody := bytes.Trim(body, "\n")
+	d := json.NewDecoder(bytes.NewReader(trimBody))
+	d.DisallowUnknownFields()
+	for {
 		var input T
-		dec := json.NewDecoder(bytes.NewReader(line))
-		dec.DisallowUnknownFields()
-		if err := dec.Decode(&input); err != nil {
-			return bulkParams, &httputils.HttpStatusError{
-				Status: http.StatusBadRequest,
-				Msg:    "Request body contains badly-formed JSON",
-				Err:    err,
+		err := d.Decode(&input)
+		if err != nil {
+			if err != io.EOF {
+				log.WithError(err).Errorf("Failed to decode message for %s", trimBody)
+				return bulkParams, &httputils.HttpStatusError{
+					Status: http.StatusBadRequest,
+					Msg:    "Request body contains badly-formed JSON",
+					Err:    err,
+				}
 			}
+			break
 		}
 		bulkParams = append(bulkParams, input)
+	}
+
+	if len(bulkParams) == 0 {
+		return bulkParams, &httputils.HttpStatusError{
+			Status: http.StatusBadRequest,
+			Msg:    "Request body contains badly-formed JSON",
+			Err:    errors.New("json is malformed or empty"),
+		}
 	}
 
 	return bulkParams, nil

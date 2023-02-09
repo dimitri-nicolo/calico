@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
+
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
 	v3 "github.com/tigera/api/pkg/apis/projectcalico/v3"
@@ -41,13 +43,14 @@ func setupTest(t *testing.T) func() {
 	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"))
 	require.NoError(t, err)
 	client = lmaelastic.NewWithClient(esClient)
+	cache := templates.NewTemplateCache(client, 1, 0)
 
 	// Cleanup any data that might left over from a previous failed run.
 	_, err = esClient.DeleteIndex("tigera_secure_ee_audit_*").Do(context.Background())
 	require.NoError(t, err)
 
 	// Instantiate a backend.
-	b = audit.NewBackend(client)
+	b = audit.NewBackend(client, cache)
 
 	// Each test should take less than 5 seconds.
 	var cancel context.CancelFunc
@@ -112,7 +115,7 @@ func TestCreateKubeAuditLog(t *testing.T) {
 	require.Equal(t, 0, len(resp.Errors))
 
 	// Refresh the index.
-	err = testutils.RefreshIndex(ctx, client, fmt.Sprintf("tigera_secure_ee_audit_kube.%s", clusterInfo.Cluster))
+	err = testutils.RefreshIndex(ctx, client, fmt.Sprintf("tigera_secure_ee_audit_kube.%s.*", clusterInfo.Cluster))
 	require.NoError(t, err)
 
 	// List the event, assert that it matches the one we just wrote.
@@ -180,7 +183,7 @@ func TestCreateEEAuditLog(t *testing.T) {
 	require.Equal(t, 0, len(resp.Errors))
 
 	// Refresh the index.
-	err = testutils.RefreshIndex(ctx, client, fmt.Sprintf("tigera_secure_ee_audit_ee.%s", clusterInfo.Cluster))
+	err = testutils.RefreshIndex(ctx, client, fmt.Sprintf("tigera_secure_ee_audit_ee.%s.*", clusterInfo.Cluster))
 	require.NoError(t, err)
 
 	// List the event, assert that it matches the one we just wrote.

@@ -39,6 +39,8 @@ type Config struct {
 	ElasticMTLSEnabled     bool   `default:"false" split_words:"true"`
 	ElasticScheme          string `default:"https" split_words:"true"`
 	ElasticSniffingEnabled bool   `default:"false" split_words:"true"`
+	ElasticReplicas        int    `envconfig:"ELASTIC_REPLICAS" default:"0"`
+	ElasticShards          int    `envconfig:"ELASTIC_SHARDS" default:"1"`
 }
 
 // Return a string representation on the Config instance.
