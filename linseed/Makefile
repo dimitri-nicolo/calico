@@ -88,7 +88,8 @@ clean: stop-elastic
 MOCKERY_FILE_PATHS= \
 	pkg/backend/api/FlowBackend \
 	pkg/backend/api/FlowLogBackend \
-	pkg/backend/api/L7FlowBackend
+	pkg/backend/api/L7FlowBackend \
+	pkg/backend/api/DNSFlowBackend
 
 #############################################
 # Run unit level tests
