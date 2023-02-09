@@ -38,6 +38,11 @@ class TestBGPFilter(TestBase):
     def setUp(self):
         super(TestBGPFilter, self).setUp()
 
+        # Enable debug logging
+        update_ds_env("calico-node",
+                      "kube-system",
+                      {"BGP_LOGSEVERITYSCREEN": "debug"})
+
         # Create test namespace
         self.ns = "bgpfilter-test"
         self.create_namespace(self.ns)
@@ -58,11 +63,6 @@ class TestBGPFilter(TestBase):
         kubectl("label node %s egress=true --overwrite" % self.egress_node)
 
         self.egress_calico_pod = self.get_calico_node_pod(self.egress_node)
-
-        # Enable debug logging
-        update_ds_env("calico-node",
-                      "kube-system",
-                      {"BGP_LOGSEVERITYSCREEN": "debug"})
 
         # Establish BGPPeer from cluster nodes to node-extra
         kubectl("""apply -f - << EOF
