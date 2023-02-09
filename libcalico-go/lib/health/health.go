@@ -109,41 +109,40 @@ func (r *reporterState) String() string {
 		r.name, r.reports.String(), r.latest.String(), timestampStr, agoStr, timeoutStr)
 }
 
-func (r *reporterState) HasReadinessProblem() bool {
+func (r *reporterState) readiness() (bool, string) {
 	if !r.reports.Ready {
-		return false
+		return true, "-"
 	}
 	if r.TimedOut() {
-		log.WithField("name", r.name).Warn("Report timed out")
-		return true
+		return false, "timed out"
 	}
-	return !r.latest.Ready
+	if r.latest.Ready {
+		return true, "reporting ready"
+	}
+	return false, "reporting non-ready"
 }
 
-func (r *reporterState) HasLivenessProblem() bool {
+func (r *reporterState) liveness() (bool, string) {
 	if !r.reports.Live {
-		return false
+		return true, "-"
 	}
 	if r.TimedOut() {
-		log.WithField("name", r.name).Warn("Report timed out")
-		return true
+		return false, "timed out"
 	}
-	return !r.latest.Live
+	if r.latest.Live {
+		return true, "reporting live"
+	}
+	return false, "reporting non-live"
 }
 
 // TimedOut checks whether the reporter is due for another report. This is the case when
 // the reports are configured to expire and the time since the last report exceeds the report timeout duration.
 func (r *reporterState) TimedOut() bool {
-	timeout := r.Timeout()
-	return timeout != 0 && time.Since(r.timestamp) > timeout
-}
-
-func (r *reporterState) Timeout() time.Duration {
-	o := GlobalOverride(r.name)
-	if o != nil {
-		return *o
+	timeout := r.timeout
+	if o := GlobalOverride(r.name); o != nil {
+		timeout = *o
 	}
-	return r.timeout
+	return timeout != 0 && time.Since(r.timestamp) > timeout
 }
 
 // A HealthAggregator receives health reports from individual reporters (which are typically
@@ -166,6 +165,9 @@ type HealthAggregator struct {
 
 	// HTTP server.  Non-nil when there should be a server running.
 	httpServer *http.Server
+
+	// Track whether we have ever previously reported as ready overall.
+	everReady bool
 }
 
 // RegisterReporter registers a reporter with a HealthAggregator.  The aggregator uses NAME to
@@ -256,8 +258,6 @@ func genResponse(rsp http.ResponseWriter, quality string, state bool, detail str
 		if len(detail) == 0 {
 			status = StatusGoodNoContent
 		}
-	} else {
-		log.Warn("Health: not " + quality)
 	}
 	rsp.WriteHeader(status)
 	rsp.Write([]byte(detail))
@@ -281,29 +281,19 @@ func (aggregator *HealthAggregator) Summary() *HealthReport {
 	// Now for each reporter...
 	for _, reporter := range aggregator.reporters {
 		log.WithField("reporter", reporter).Debug("Checking state of reporter")
-		livenessStr := "-"
-		if reporter.HasLivenessProblem() {
-			log.WithField("name", reporter.name).Warn("Reporter is not live.")
+		live, livenessStr := reporter.liveness()
+		if !live {
+			log.WithField("name", reporter.name).Warnf("Reporter is not live: %v.", livenessStr)
 			summary.Live = false
-			if reporter.TimedOut() {
-				livenessStr = "timed out"
-			} else {
-				livenessStr = "reporting non-live"
-			}
-		} else if reporter.reports.Live {
-			livenessStr = "reporting live"
 		}
-		readinessStr := "-"
-		if reporter.HasReadinessProblem() {
-			log.WithField("name", reporter.name).Warn("Reporter is not ready.")
-			summary.Ready = false
-			if reporter.TimedOut() {
-				readinessStr = "timed out"
+		ready, readinessStr := reporter.readiness()
+		if !ready {
+			if aggregator.everReady {
+				log.WithField("name", reporter.name).Warnf("Reporter is not ready: %v.", readinessStr)
 			} else {
-				readinessStr = "reporting non-ready"
+				log.WithField("name", reporter.name).Infof("Reporter is not ready: %v.", readinessStr)
 			}
-		} else if reporter.reports.Ready {
-			readinessStr = "reporting ready"
+			summary.Ready = false
 		}
 		componentNames = append(componentNames, reporter.name)
 
@@ -344,6 +334,10 @@ func (aggregator *HealthAggregator) Summary() *HealthReport {
 	if aggregator.lastReport == nil || *summary != *aggregator.lastReport {
 		aggregator.lastReport = summary
 		log.Infof("Overall health status changed: live=%v ready=%v\n%s", summary.Live, summary.Ready, summary.Detail)
+	}
+
+	if summary.Ready {
+		aggregator.everReady = true
 	}
 
 	return summary
