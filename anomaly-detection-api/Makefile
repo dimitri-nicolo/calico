@@ -2,14 +2,8 @@ include ../metadata.mk
 
 PACKAGE_NAME ?= github.com/projectcalico/calico/anomaly-detection-api
 
-###############################################################################
-# Build
-###############################################################################
-# This section builds the output binaries.
-# Some will have dedicated targets to make it easier to type, for example
-# "anomaly-detection-api" instead of "$(BINDIR)/anomaly-detection-api".
 ANOMALY_DETECTION_API_IMAGE ?=anomaly-detection-api
-BUILD_IMAGES        ?=$(ANOMALY_DETECTION_API_IMAGE)
+BUILD_IMAGES ?= $(ANOMALY_DETECTION_API_IMAGE)
 
 ##############################################################################
 # Include ../lib.Makefile before anything else
@@ -18,55 +12,54 @@ BUILD_IMAGES        ?=$(ANOMALY_DETECTION_API_IMAGE)
 ##############################################################################
 include ../lib.Makefile
 
-build: anomaly-detection-api
-
 BINDIR?=bin
-BUILD_DIR?=build
-TOP_SRC_DIRS=pkg
-TEST_DIRS     ?= $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*_test.go \
-                   -exec dirname {} \\; | sort | uniq")
-SRC_FILES= $(shell sh -c "find pkg cmd -name \\*.go")
+TEST_DIRS ?= $(shell find pkg -name '*_test.go' -exec dirname {} \; | sort | uniq)
+SRC_FILES = $(shell find pkg cmd -name '*.go') \
+	$(shell find ../crypto/pkg -name '*.go') \
+	$(shell find ../lma/pkg -name '*.go')
+AD_API_FV_TEST_CONTAINER_NAME ?=fv-ad-api-test
 
-anomaly-detection-api: $(BINDIR)/anomaly-detection-api
+###############################################################################
+# Build the binary
+###############################################################################
+.PHONY: build
+build: $(BINDIR)/anomaly-detection-api-$(ARCH)
 
-$(BINDIR)/anomaly-detection-api: $(BINDIR)/anomaly-detection-api-amd64
-	$(DOCKER_GO_BUILD) \
-		sh -c 'cd $(BINDIR) && ln -s -T anomaly-detection-api-$(ARCH) anomaly-detection-api'
-
+.PHONY: bin/anomaly-detection-api-$(ARCH)
 $(BINDIR)/anomaly-detection-api-$(ARCH): $(SRC_FILES)
-ifndef RELEASE_BUILD
-	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
-else
-	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
-endif
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(GIT_CONFIG_SSH) \
-			go build -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd" && \
-				( ldd $(BINDIR)/anomaly-detection-api-$(ARCH) 2>&1 | \
-	                grep -q -e "Not a valid dynamic program" -e "not a dynamic executable" || \
-				( echo "Error: $(BINDIR)/anomaly-detection-api-$(ARCH) was not statically linked"; false ) )'
+			go build -o $@ -v $(LDFLAGS) cmd/main.go'
 
-# Build the docker image.
-.PHONY: $(BUILD_IMAGES) $(addsuffix -$(ARCH),$(BUILD_IMAGES))
+###############################################################################
+# Build the image
+###############################################################################
+ANOMALY_DETECTION_API_CONTAINER_CREATED=.anomaly-detection-api.created-$(ARCH)
 
-# by default, build the image for the target architecture
 .PHONY: image-all
 image-all: $(addprefix sub-image-,$(ARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-.PHONY: clean image
-image: $(BUILD_IMAGES)
-$(ANOMALY_DETECTION_API_IMAGE): $(ANOMALY_DETECTION_API_IMAGE)-$(ARCH)
-$(ANOMALY_DETECTION_API_IMAGE)-$(ARCH): $(BINDIR)/anomaly-detection-api-$(ARCH)
-	$(DOCKER_BUILD) -t $(ANOMALY_DETECTION_API_IMAGE):latest-$(ARCH) -f ./Dockerfile.$(ARCH) .
+.PHONY: image
+image: $(ANOMALY_DETECTION_API_IMAGE)
+
+$(ANOMALY_DETECTION_API_IMAGE): $(ANOMALY_DETECTION_API_CONTAINER_CREATED)
+$(ANOMALY_DETECTION_API_CONTAINER_CREATED): Dockerfile.$(ARCH) $(BINDIR)/anomaly-detection-api-$(ARCH)
+	$(DOCKER_BUILD) -t $(ANOMALY_DETECTION_API_IMAGE):latest-$(ARCH) -f ./Dockerfile.$(ARCH) . --load
 	$(MAKE) retag-build-images-with-registries VALIDARCHES=$(ARCH) IMAGETAG=latest
 	touch $@
+
+.PHONY: clean
+clean:
+	rm -rf $(BINDIR)
+	rm -f $(ANOMALY_DETECTION_API_CONTAINER_CREATED)
+	-docker image rm -f $$(docker images $(ANOMALY_DETECTION_API_IMAGE) -a -q)
+	-docker image rm -f $$(docker images $(AD_API_FV_TEST_CONTAINER_NAME) -a -q)
 
 ##########################################################################
 # Testing
 ##########################################################################
-AD_API_FV_TEST_CONTAINER_NAME ?="fv-ad-api-test"
 PACKAGE_ROOT=$(shell sh -c "pwd")
 
 report-dir:
@@ -85,8 +78,8 @@ fv: report-dir run-ad-image-fv fv/fv.test
 	docker rm -f ${AD_API_FV_TEST_CONTAINER_NAME} || true
 
 fv/fv.test: $(shell find ./fv -type f -name '*.go' -print)
-# We pre-build the test binary so that we can run it outside a container and allow it
-# to interact with docker.
+	# We pre-build the test binary so that we can run it outside a container and allow it
+	# to interact with docker.
 	$(DOCKER_RUN) $(CALICO_BUILD) sh -c '$(GIT_CONFIG_SSH) go test ./fv -c --tags fvtests -o fv/fv.test'
 
 gen-crt-key:
@@ -96,7 +89,7 @@ gen-crt-key:
 		-addext "keyUsage = digitalSignature" \
 		-addext "subjectAltName = DNS:localhost"
 
-run-ad-image-fv: gen-crt-key
+run-ad-image-fv: image gen-crt-key
 	docker rm -f ${AD_API_FV_TEST_CONTAINER_NAME} || true
 	$(DOCKER_RUN) \
 		--detach \
@@ -113,15 +106,9 @@ run-ad-image-fv: gen-crt-key
 ###############################################################################
 # CI/CD
 ###############################################################################
+.PHONY: ci cd
 
-ci: clean image static-checks ut fv
+ci: clean static-checks ut fv
 
 ## Deploys images to registry
 cd: image-all cd-common
-
-.PHONY: clean
-clean:
-	docker rmi -f $(ANOMALY_DETECTION_API_IMAGE):latest > /dev/null 2>&1
-	docker rmi -f $(ANOMALY_DETECTION_API_IMAGE):latest-$(ARCH) > /dev/null 2>&1
-	docker rm -f ${AD_API_FV_TEST_CONTAINER_NAME}  > /dev/null 2>&1
-	rm -rf $(BINDIR) .go-pkg-cache Makefile.common*Test targets

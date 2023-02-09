@@ -751,7 +751,7 @@ blocks:
 
 - name: 'anomaly-detection-api'
   run:
-    when: "change_in(['/*', '/anomaly-detection-api/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
+    when: "change_in(['/*', '/anomaly-detection-api/', '/crypto/', '/lma/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
   dependencies: ["Prerequisites"]
   task:
     secrets:
@@ -1021,20 +1021,6 @@ blocks:
     - name: "voltron tests"
       commands:
       - ../.semaphore/run-and-monitor ci.log make ci
-
-- name: "Documentation"
-  run:
-    when: "${FORCE_RUN} or change_in(['/*', '/calico/'], {exclude: ['/**/.gitignore', '/**/README.md', '/**/LICENSE']})"
-  dependencies: ["Prerequisites"]
-  task:
-    prologue:
-      commands:
-      - cd calico
-    jobs:
-    - name: "htmlproofer, kubeval"
-      commands:
-      - ../.semaphore/run-and-monitor htmlproofer.log make htmlproofer
-      - ../.semaphore/run-and-monitor kubeval.log make kubeval
 
 after_pipeline:
   task:
