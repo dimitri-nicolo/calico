@@ -24,6 +24,7 @@ static CALI_BPF_INLINE int calico_unittest_entry (struct __sk_buff *skb)
 	int err;
 	struct cali_tc_ctx ctx = {
 		.skb = skb,
+		.ipheader_len = IP_SIZE,
 	};
 
 	if (skb_refresh_validate_ptrs(&ctx, UDP_SIZE)) {
