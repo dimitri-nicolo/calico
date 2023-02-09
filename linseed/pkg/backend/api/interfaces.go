@@ -61,6 +61,15 @@ type BGPBackend interface {
 	List(context.Context, ClusterInfo, v1.BGPLogParams) (*v1.List[v1.BGPLog], error)
 }
 
+// EventsBackend defines the interface for interacting with events.
+type EventsBackend interface {
+	// Create creates the given logs.
+	Create(context.Context, ClusterInfo, []v1.Event) (*v1.BulkResponse, error)
+
+	// List lists logs that match the given parameters.
+	List(context.Context, ClusterInfo, v1.EventParams) (*v1.List[v1.Event], error)
+}
+
 // LogsType determines the type of logs supported
 // to be ingested via bulk APIs
 type LogsType string

@@ -14,8 +14,7 @@ const (
 	EventTime                 = "time"
 )
 
-type EventBulkProcessor interface {
-}
+type EventBulkProcessor interface{}
 
 type EventsSearchFields struct {
 	Description     string  `json:"description,omitempty"`
@@ -37,6 +36,7 @@ type EventsSearchFields struct {
 	Type            string  `json:"type,omitempty"`
 }
 
+// TODO: Replace this with the one from Linseed
 type EventsData struct {
 	Description string `json:"description" validate:"required"`
 	Origin      string `json:"origin" validate:"required"`
