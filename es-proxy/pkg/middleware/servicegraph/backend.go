@@ -162,7 +162,7 @@ func (r *realServiceGraphBackend) GetL3FlowData(
 func (r *realServiceGraphBackend) GetDNSData(
 	ctx context.Context, cluster string, tr lmav1.TimeRange,
 ) ([]DNSLog, error) {
-	return GetDNSClientData(ctx, r.elastic, cluster, tr, r.config)
+	return GetDNSClientData(ctx, r.linseed, cluster, tr, r.config)
 }
 
 func (r *realServiceGraphBackend) GetL7FlowData(

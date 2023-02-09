@@ -11,7 +11,7 @@ import (
 
 // DNSFlowsInterface has methods related to flows.
 type DNSFlowsInterface interface {
-	List(ctx context.Context, params v1.Params) (v1.List[v1.DNSFlow], error)
+	List(ctx context.Context, params v1.Params) (*v1.List[v1.DNSFlow], error)
 }
 
 // DNSFlows implements DNSFlowsInterface.
@@ -26,7 +26,7 @@ func newDNSFlows(c *client, cluster string) DNSFlowsInterface {
 }
 
 // List gets the flow list for the given flow input params.
-func (f *dnsFlows) List(ctx context.Context, params v1.Params) (v1.List[v1.DNSFlow], error) {
+func (f *dnsFlows) List(ctx context.Context, params v1.Params) (*v1.List[v1.DNSFlow], error) {
 	flows := v1.List[v1.DNSFlow]{}
 	err := f.restClient.Post().
 		Path("/api/v1/flows/dns").
@@ -35,7 +35,7 @@ func (f *dnsFlows) List(ctx context.Context, params v1.Params) (v1.List[v1.DNSFl
 		Do(ctx).
 		Into(&flows)
 	if err != nil {
-		return flows, err
+		return &flows, err
 	}
-	return flows, nil
+	return &flows, nil
 }
