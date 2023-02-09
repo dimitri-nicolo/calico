@@ -52,6 +52,9 @@ The geeky details of what you get:
    ```bash
    kubectl create -f {{ "/manifests/tigera-operator.yaml" | absolute_url }}
    ```
+   
+   > **Note**: Due to the large size of the CRD bundle, `kubectl apply` might exceed request limits. Instead, use `kubectl create` or `kubectl replace`.
+   {: .alert .alert-info}
 
 1. Install the Prometheus operator and related custom resource definitions. The Prometheus operator is used to deploy Prometheus server and Alertmanager to monitor {{site.prodname}} metrics.
 
