@@ -9,10 +9,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-
 	"github.com/olivere/elastic/v7"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	calicotls "github.com/projectcalico/calico/crypto/pkg/tls"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
@@ -87,10 +85,8 @@ func MustGetElasticClient(config ElasticConfig) lmaelastic.Client {
 		options = append(options, elastic.SetBasicAuth(config.Username, config.Password))
 	}
 
-	log := log.New()
-	log.SetFormatter(&logutils.Formatter{})
-	log.SetOutput(os.Stdout)
-	log.AddHook(&logutils.ContextHook{})
+	// Use the standard logger to inherit configuration.
+	log := logrus.StandardLogger()
 
 	switch strings.ToLower(config.LogLevel) {
 	case "error":
@@ -104,7 +100,7 @@ func MustGetElasticClient(config ElasticConfig) lmaelastic.Client {
 	options = append(options, elastic.SetHttpClient(mustGetHTTPClient(config)))
 	esClient, err := elastic.NewClient(options...)
 	if err != nil {
-		log.WithError(err).Fatal("Failed to create Elastic client")
+		logrus.WithError(err).Fatal("Failed to create Elastic client")
 	}
 
 	return lmaelastic.NewWithClient(esClient)
@@ -112,7 +108,7 @@ func MustGetElasticClient(config ElasticConfig) lmaelastic.Client {
 
 func mustGetHTTPClient(config ElasticConfig) *http.Client {
 	if config.CACertPath == "" || config.ClientCertPath == "" || config.ClientCertKeyPath == "" {
-		log.Warn("No certificates were passed in for Elastic. Will use a default HTTP client")
+		logrus.Warn("No certificates were passed in for Elastic. Will use a default HTTP client")
 		return http.DefaultClient
 	}
 
@@ -136,7 +132,7 @@ func mustGetClientCert(config ElasticConfig) tls.Certificate {
 	// Read client certificate
 	clientCert, err := tls.LoadX509KeyPair(config.ClientCertPath, config.ClientCertKeyPath)
 	if err != nil {
-		log.WithError(err).Fatal("Failed load client x509 certificates")
+		logrus.WithError(err).Fatal("Failed load client x509 certificates")
 	}
 	return clientCert
 }
@@ -145,14 +141,14 @@ func mustGetCACertPool(config ElasticConfig) *x509.CertPool {
 	// Read CA cert file
 	caCert, err := os.ReadFile(config.CACertPath)
 	if err != nil {
-		log.WithError(err).Fatal("Failed to read CA certificate")
+		logrus.WithError(err).Fatal("Failed to read CA certificate")
 	}
 
 	// Append CA to cert pool
 	caCertPool := x509.NewCertPool()
 	ok := caCertPool.AppendCertsFromPEM(caCert)
 	if !ok {
-		log.Fatal("Failed to parse root certificate")
+		logrus.Fatal("Failed to parse root certificate")
 	}
 	return caCertPool
 }

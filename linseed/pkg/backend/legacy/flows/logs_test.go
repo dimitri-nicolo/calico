@@ -3,43 +3,21 @@
 package flows_test
 
 import (
-	"context"
-	"fmt"
 	"testing"
 	"time"
-
-	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 
-	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
 
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/flows"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
-
-func setup(t *testing.T) func() {
-	return logutils.RedirectLogrusToTestingT(t)
-}
 
 // TestCreateFlowLog tests running a real elasticsearch query to create a flow log.
 func TestCreateFlowLog(t *testing.T) {
-	defer setup(t)()
-
-	// Create an elasticsearch client to use for the test. For this test, we use a real
-	// elasticsearch instance created via "make run-elastic".
-	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"))
-	require.NoError(t, err)
-	client := lmaelastic.NewWithClient(esClient)
-	cache := templates.NewTemplateCache(client, 1, 0)
-
-	// Instantiate a flowlog backend.
-	b := flows.NewFlowLogBackend(client, cache)
+	defer setupTest(t)()
 
 	clusterInfo := bapi.ClusterInfo{
 		Cluster: "testcluster",
@@ -67,15 +45,8 @@ func TestCreateFlowLog(t *testing.T) {
 		Action:               "allowed",
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	response, err := b.Create(ctx, clusterInfo, []v1.FlowLog{f})
+	response, err := flb.Create(ctx, clusterInfo, []v1.FlowLog{f})
 	require.NoError(t, err)
 	require.Equal(t, []v1.BulkError(nil), response.Errors)
 	require.Equal(t, 0, response.Failed)
-
-	// Clean up after ourselves by deleting the index.
-	_, err = esClient.DeleteIndex(fmt.Sprintf("tigera_secure_ee_flows.%s.*", clusterInfo.Cluster)).Do(ctx)
-	require.NoError(t, err)
 }

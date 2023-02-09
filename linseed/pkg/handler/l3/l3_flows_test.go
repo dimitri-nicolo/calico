@@ -88,7 +88,7 @@ func TestNetworkFlows_Post(t *testing.T) {
 
 func networkFlows(flows []v1.L3Flow) *l3.NetworkFlows {
 	mockBackend := &api.MockFlowBackend{}
-	n := l3.NewNetworkFlows(mockBackend)
+	n := l3.NewFlows(mockBackend)
 
 	res := v1.List[v1.L3Flow]{
 		Items:    flows,

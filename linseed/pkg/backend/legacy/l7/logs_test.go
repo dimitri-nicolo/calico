@@ -6,7 +6,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
+	"github.com/projectcalico/calico/linseed/pkg/config"
 
 	elastic "github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
@@ -18,9 +22,14 @@ import (
 
 // TestCreateL7Log tests running a real elasticsearch query to create an L7 log.
 func TestCreateL7Log(t *testing.T) {
-	// Create an elasticsearch client to use for the test. For this test, we use a real
+	// Hook logrus into testing.T
+	config.ConfigureLogging("DEBUG")
+	logCancel := logutils.RedirectLogrusToTestingT(t)
+	defer logCancel()
+
+	// Create an elasticsearch client to use for the test. For this suite, we use a real
 	// elasticsearch instance created via "make run-elastic".
-	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"))
+	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
 	require.NoError(t, err)
 	client := lmaelastic.NewWithClient(esClient)
 	cache := templates.NewTemplateCache(client, 1, 0)

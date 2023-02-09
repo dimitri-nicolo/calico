@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/olivere/elastic/v7"
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apiserver/pkg/apis/audit"
@@ -93,8 +94,11 @@ func (b *auditLogBackend) Create(ctx context.Context, kind v1.AuditLogType, i ba
 		log.Errorf("Error writing log: %s", err)
 		return nil, fmt.Errorf("failed to write log: %s", err)
 	}
-
-	log.WithField("count", len(logs)).Debugf("Wrote log to index: %+v", resp)
+	fields := logrus.Fields{
+		"succeeded": len(resp.Succeeded()),
+		"failed":    len(resp.Failed()),
+	}
+	log.WithFields(fields).Debugf("Audit log bulk request complete: %+v", resp)
 
 	return &v1.BulkResponse{
 		Total:     len(resp.Items),

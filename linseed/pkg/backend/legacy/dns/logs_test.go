@@ -4,38 +4,22 @@ package dns_test
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"testing"
 	"time"
 
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
-
 	"github.com/google/gopacket/layers"
-	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/dns"
-	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 // TestCreateDNSLog tests running a real elasticsearch query to create a DNS log.
 func TestCreateDNSLog(t *testing.T) {
-	// Create an elasticsearch client to use for the test. For this test, we use a real
-	// elasticsearch instance created via "make run-elastic".
-	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"))
-	require.NoError(t, err)
-	client := lmaelastic.NewWithClient(esClient)
-	cache := templates.NewTemplateCache(client, 1, 0)
+	defer setupTest(t)()
 
-	// Instantiate a backend.
-	b := dns.NewDNSLogBackend(client, cache)
-
-	clusterInfo := bapi.ClusterInfo{
-		Cluster: "testcluster",
-	}
+	clusterInfo := bapi.ClusterInfo{Cluster: "testcluster"}
 
 	ip := net.ParseIP("10.0.1.1")
 
@@ -80,11 +64,7 @@ func TestCreateDNSLog(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	resp, err := b.Create(ctx, clusterInfo, []v1.DNSLog{f})
+	resp, err := lb.Create(ctx, clusterInfo, []v1.DNSLog{f})
 	require.NoError(t, err)
 	require.Empty(t, resp.Errors)
-
-	// Clean up after ourselves by deleting the index.
-	_, err = esClient.DeleteIndex(fmt.Sprintf("tigera_secure_ee_dns.%s.*", clusterInfo.Cluster)).Do(ctx)
-	require.NoError(t, err)
 }

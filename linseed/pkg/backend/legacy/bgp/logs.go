@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/olivere/elastic/v7"
+	"github.com/sirupsen/logrus"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
@@ -63,8 +64,11 @@ func (b *bgpLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []v
 		log.Errorf("Error writing log: %s", err)
 		return nil, fmt.Errorf("failed to write log: %s", err)
 	}
-
-	log.WithField("count", len(logs)).Debugf("Wrote logs to index: %+v", resp)
+	fields := logrus.Fields{
+		"succeeded": len(resp.Succeeded()),
+		"failed":    len(resp.Failed()),
+	}
+	log.WithFields(fields).Debugf("BGP log bulk request complete: %+v", resp)
 
 	return &v1.BulkResponse{
 		Total:     len(resp.Items),

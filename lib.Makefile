@@ -1417,6 +1417,10 @@ $(REPO_ROOT)/.elasticsearch.created:
 	@while ! docker exec tigera-elastic curl localhost:9200 2> /dev/null; do echo "Waiting for Elasticsearch to come up..."; sleep 2; done
 	touch $@
 
+	# Configure elastic to ignore high watermark errors, since this is just for tests.
+	curl -XPUT -H "Content-Type: application/json" http://localhost:9200/_cluster/settings -d '{"transient": {"cluster.routing.allocation.disk.threshold_enabled": false }}'
+	curl -XPUT -H "Content-Type: application/json" http://localhost:9200/_all/_settings -d '{"index.blocks.read_only_allow_delete": null}'
+
 ## Stop elasticsearch with name tigera-elastic
 .PHONY: stop-elastic
 stop-elastic:

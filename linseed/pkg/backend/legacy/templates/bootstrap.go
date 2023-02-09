@@ -34,29 +34,44 @@ var IndexBootstrapper Load = func(ctx context.Context, client *elastic.Client, c
 		return nil, err
 	}
 
-	var exists bool
+	var aliasExists bool
 	for _, row := range response {
 		if row.Alias == config.Alias() {
-			exists = true
+			aliasExists = true
 			break
 		}
 	}
 
-	if !exists {
-		logrus.Infof("Creating bootstrap index %s", config.BootstrapIndexName())
-		aliasJson := fmt.Sprintf(`{"%s": {"is_write_index": true}}`, config.Alias())
-
-		// Create the bootstrap index and mark it to be used for writes
-		response, err := client.
-			CreateIndex(config.BootstrapIndexName()).
-			BodyJson(map[string]interface{}{"aliases": json.RawMessage(aliasJson)}).
-			Do(ctx)
+	if !aliasExists {
+		indexExists, err := client.IndexExists(config.BootstrapIndexName()).Do(ctx)
 		if err != nil {
 			return nil, err
 		}
-		if !response.Acknowledged {
-			return nil, fmt.Errorf("failed to acknowledge index creation")
+		if !indexExists {
+			logrus.WithField("name", config.BootstrapIndexName()).Infof("Creating bootstrap index")
+			aliasJson := fmt.Sprintf(`{"%s": {"is_write_index": true}}`, config.Alias())
+
+			// Create the bootstrap index and mark it to be used for writes
+			response, err := client.
+				CreateIndex(config.BootstrapIndexName()).
+				BodyJson(map[string]interface{}{"aliases": json.RawMessage(aliasJson)}).
+				Do(ctx)
+			if err != nil {
+				return nil, err
+			}
+			if !response.Acknowledged {
+				return nil, fmt.Errorf("failed to acknowledge index creation")
+			}
+			logrus.WithField("name", response.Index).Info("Bootstrap index created")
+		} else {
+			// Alias doesn't exist, but the index does.
+			logrus.WithField("name", config.BootstrapIndexName()).Infof("Creating alias for index")
+			_, err := client.Alias().Add(config.BootstrapIndexName(), config.Alias()).Do(ctx)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
+
 	return template, nil
 }

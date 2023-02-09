@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	elastic "github.com/olivere/elastic/v7"
+	"github.com/sirupsen/logrus"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 
@@ -69,8 +70,11 @@ func (b *l7LogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []ba
 		log.Errorf("Error writing L7 log: %s", err)
 		return nil, fmt.Errorf("failed to write L7 log: %s", err)
 	}
-
-	log.WithField("count", len(logs)).Infof("Wrote L7 logs to index: %+v", resp)
+	fields := logrus.Fields{
+		"succeeded": len(resp.Succeeded()),
+		"failed":    len(resp.Failed()),
+	}
+	log.WithFields(fields).Debugf("L7 log bulk request complete: %+v", resp)
 
 	return &v1.BulkResponse{
 		Total:     len(resp.Items),

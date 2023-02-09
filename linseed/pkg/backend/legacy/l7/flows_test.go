@@ -7,7 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
+	"github.com/projectcalico/calico/linseed/pkg/config"
 
 	elastic "github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
@@ -21,23 +25,55 @@ import (
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
+var (
+	client lmaelastic.Client
+	cache  bapi.Cache
+	b      bapi.L7FlowBackend
+	lb     bapi.L7LogBackend
+	ctx    context.Context
+)
+
+// setupTest runs common logic before each test, and also returns a function to perform teardown
+// after each test.
+func setupTest(t *testing.T) func() {
+	// Hook logrus into testing.T
+	config.ConfigureLogging("DEBUG")
+	logCancel := logutils.RedirectLogrusToTestingT(t)
+
+	// Create an elasticsearch client to use for the test. For this suite, we use a real
+	// elasticsearch instance created via "make run-elastic".
+	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
+	require.NoError(t, err)
+	client = lmaelastic.NewWithClient(esClient)
+	cache = templates.NewTemplateCache(client, 1, 0)
+
+	// Create backends to use.
+	b = l7.NewL7FlowBackend(client)
+	lb = l7.NewL7LogBackend(client, cache)
+
+	// Each test should take less than 5 seconds.
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+
+	// Function contains teardown logic.
+	return func() {
+		// Cancel the context.
+		cancel()
+
+		// Cleanup any data that might left over from a previous failed run.
+		err = testutils.CleanupIndices(context.Background(), esClient, "tigera_secure_ee_l7")
+		require.NoError(t, err)
+
+		// Cancel logging
+		logCancel()
+	}
+}
+
 // TestListL7Flows tests running a real elasticsearch query to list L7 flows.
 func TestListL7Flows(t *testing.T) {
+	defer setupTest(t)()
+
 	clusterInfo := bapi.ClusterInfo{Cluster: "mycluster"}
-
-	// Create an elasticsearch client to use for the test. For this test, we use a real
-	// elasticsearch instance created via "make run-elastic".
-	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"))
-	require.NoError(t, err)
-	client := lmaelastic.NewWithClient(esClient)
-	cache := templates.NewTemplateCache(client, 1, 0)
-
-	// Instantiate a FlowBackend.
-	b := l7.NewL7FlowBackend(client)
-
-	// Timeout the test after 5 seconds.
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 
 	// Put some data into ES so we can query it.
 	expected := populateL7FlowData(t, ctx, client, cache, clusterInfo.Cluster)
@@ -55,21 +91,11 @@ func TestListL7Flows(t *testing.T) {
 
 	// Assert that the flow data is populated correctly.
 	require.Equal(t, expected, r.Items[0])
-
-	// Clean up after ourselves by deleting the index.
-	_, err = esClient.DeleteIndex(fmt.Sprintf("tigera_secure_ee_l7.%s.*", clusterInfo.Cluster)).Do(ctx)
-	require.NoError(t, err)
 }
 
 // populateFlowData writes a series of flow logs to elasticsearch, and returns the FlowLog that we
 // should expect to exist as a result. This can be used to assert round-tripping and aggregation against ES is working correctly.
 func populateL7FlowData(t *testing.T, ctx context.Context, client lmaelastic.Client, cache bapi.Cache, cluster string) v1.L7Flow {
-	// Clear out any old data first.
-	_, _ = client.Backend().DeleteIndex(fmt.Sprintf("tigera_secure_ee_l7.%s.*", cluster)).Do(ctx)
-
-	// Instantiate a FlowBackend.
-	b := l7.NewL7LogBackend(client, cache)
-
 	// The expected flow log - we'll populate fields as we go.
 	expected := v1.L7Flow{}
 	expected.Key = v1.L7FlowKey{
@@ -161,7 +187,7 @@ func populateL7FlowData(t *testing.T, ctx context.Context, client lmaelastic.Cli
 	expected.Stats.MeanDuration = durationMeanTotal / int64(numFlows)
 
 	// Create the batch all at once.
-	response, err := b.Create(ctx, bapi.ClusterInfo{Cluster: cluster}, batch)
+	response, err := lb.Create(ctx, bapi.ClusterInfo{Cluster: cluster}, batch)
 	require.NoError(t, err)
 	require.Equal(t, response.Failed, 0)
 

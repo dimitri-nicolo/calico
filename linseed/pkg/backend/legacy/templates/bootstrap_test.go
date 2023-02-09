@@ -9,10 +9,14 @@ import (
 	"time"
 
 	"github.com/olivere/elastic/v7"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
+	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	"github.com/projectcalico/calico/linseed/pkg/config"
 )
 
 var (
@@ -21,14 +25,14 @@ var (
 )
 
 func setupTest(t *testing.T) func() {
+	// Hook logrus into testing.T
+	config.ConfigureLogging("DEBUG")
+	logCancel := logutils.RedirectLogrusToTestingT(t)
+
 	// Create an elasticsearch client to use for the test. For this suite, we use a real
 	// elasticsearch instance created via "make run-elastic".
 	var err error
-	client, err = elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"))
-	require.NoError(t, err)
-
-	// Cleanup any data that might left over from a previous failed run.
-	_, err = client.DeleteIndex("tigera_secure_ee_flows.*").Do(context.Background())
+	client, err = elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
 	require.NoError(t, err)
 
 	// Each test should take less than 5 seconds.
@@ -36,12 +40,17 @@ func setupTest(t *testing.T) func() {
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 
 	return func() {
+		// Cleanup after ourselves.
+		err = testutils.CleanupIndices(context.Background(), client, "tigera_secure_ee_flows.test")
+		require.NoError(t, err)
+
 		// Cancel the context
 		cancel()
+		logCancel()
 	}
 }
 
-func TestBoostrapTemplate(t *testing.T) {
+func TestBootstrapTemplate(t *testing.T) {
 	defer setupTest(t)()
 
 	// Check that the template returned has the correct
@@ -62,7 +71,7 @@ func TestBoostrapTemplate(t *testing.T) {
 	index := fmt.Sprintf("tigera_secure_ee_flows.test.%s-%s-000001", application, time.Now().Format("20060102"))
 	indexExists, err := client.IndexExists(index).Do(ctx)
 	require.NoError(t, err)
-	require.True(t, indexExists)
+	require.True(t, indexExists, "index doesn't exist: %s", index)
 
 	// Check that write alias exists
 	responseAlias, err := client.CatAliases().Do(ctx)
@@ -80,7 +89,7 @@ func TestBoostrapTemplate(t *testing.T) {
 	require.True(t, hasAlias)
 }
 
-func TestBoostrapTemplateMultipleTimes(t *testing.T) {
+func TestBootstrapTemplateMultipleTimes(t *testing.T) {
 	defer setupTest(t)()
 
 	templateConfig := templates.NewTemplateConfig(bapi.FlowsLogs, bapi.ClusterInfo{Cluster: "test"})

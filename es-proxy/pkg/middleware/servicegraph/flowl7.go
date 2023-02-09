@@ -121,9 +121,9 @@ func GetL7FlowData(ctx context.Context, lsClient client.Client, cluster string, 
 
 			if log.IsLevelEnabled(log.DebugLevel) {
 				if svc.Name != "" {
-					log.Debugf("Processing L7 flow: %s -> %s -> %s (code %s)", source, svc, dest, code)
+					log.Debugf("Processing L7 flow: %s -> %s -> %s (code %d)", source, svc, dest, code)
 				} else {
-					log.Debugf("Processing L7 flow: %s -> %s (code %s)", source, dest, code)
+					log.Debugf("Processing L7 flow: %s -> %s (code %d)", source, dest, code)
 				}
 			}
 

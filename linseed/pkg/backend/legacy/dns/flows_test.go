@@ -9,7 +9,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
+	"github.com/projectcalico/calico/linseed/pkg/config"
 
 	"github.com/google/gopacket/layers"
 	"github.com/olivere/elastic/v7"
@@ -23,26 +27,65 @@ import (
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
+var (
+	client lmaelastic.Client
+	cache  bapi.Cache
+	b      bapi.DNSFlowBackend
+	lb     bapi.DNSLogBackend
+	ctx    context.Context
+)
+
+// setupTest runs common logic before each test, and also returns a function to perform teardown
+// after each test.
+func setupTest(t *testing.T) func() {
+	// Hook logrus into testing.T
+	config.ConfigureLogging("DEBUG")
+	logCancel := logutils.RedirectLogrusToTestingT(t)
+
+	// Create an elasticsearch client to use for the test. For this suite, we use a real
+	// elasticsearch instance created via "make run-elastic".
+	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
+	require.NoError(t, err)
+
+	// Create an elasticsearch client to use for the test. For this suite, we use a real
+	// elasticsearch instance created via "make run-elastic".
+	client = lmaelastic.NewWithClient(esClient)
+	cache = templates.NewTemplateCache(client, 1, 0)
+
+	// Instantiate backends.
+	b = dns.NewDNSFlowBackend(client)
+	lb = dns.NewDNSLogBackend(client, cache)
+
+	// Each test should take less than 5 seconds.
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+
+	// Function contains teardown logic.
+	return func() {
+		// Cancel the context.
+		cancel()
+
+		// Cleanup any data that might left over from a previous failed run.
+		err = testutils.CleanupIndices(context.Background(), esClient, "tigera_secure_ee_dns")
+		require.NoError(t, err)
+
+		// Cancel logging
+		logCancel()
+	}
+}
+
 // TestListDNSFlows tests running a real elasticsearch query to list DNS flows.
 func TestListDNSFlows(t *testing.T) {
+	defer setupTest(t)()
+
 	clusterInfo := bapi.ClusterInfo{Cluster: "mycluster"}
-
-	// Create an elasticsearch client to use for the test. For this test, we use a real
-	// elasticsearch instance created via "make run-elastic".
-	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"))
-	require.NoError(t, err)
-	client := lmaelastic.NewWithClient(esClient)
-	cache := templates.NewTemplateCache(client, 1, 0)
-
-	// Instantiate a FlowBackend.
-	b := dns.NewDNSFlowBackend(client)
 
 	// Timeout the test after 5 seconds.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	// Put some data into ES so we can query it.
-	expected := populateDNSLogData(t, ctx, client, cache, clusterInfo.Cluster)
+	expected := populateDNSLogData(t, ctx, client, clusterInfo.Cluster)
 
 	// Set time range so that we capture all of the populated flow logs.
 	opts := v1.DNSFlowParams{}
@@ -57,23 +100,11 @@ func TestListDNSFlows(t *testing.T) {
 
 	// Assert that the flow data is populated correctly.
 	require.Equal(t, expected, r.Items[0])
-
-	// Clean up after ourselves by deleting the index.
-	_, err = esClient.DeleteIndex(fmt.Sprintf("tigera_secure_ee_dns.%s.*", clusterInfo.Cluster)).Do(ctx)
-	require.NoError(t, err)
 }
 
 // populateDNSLogData writes a series of DNS logs to elasticsearch, and returns the DNSFlow that we
 // should expect to exist as a result. This can be used to assert round-tripping and aggregation against ES is working correctly.
-func populateDNSLogData(t *testing.T, ctx context.Context, client lmaelastic.Client, cache bapi.Cache, cluster string) v1.DNSFlow {
-	index := fmt.Sprintf("tigera_secure_ee_dns.%s.*", cluster)
-
-	// Clear out any old data first.
-	_, _ = client.Backend().DeleteIndex(index).Do(ctx)
-
-	// Instantiate a backend to create logs.
-	b := dns.NewDNSLogBackend(client, cache)
-
+func populateDNSLogData(t *testing.T, ctx context.Context, client lmaelastic.Client, cluster string) v1.DNSFlow {
 	// The expected flow log - we'll populate fields as we go.
 	expected := v1.DNSFlow{}
 	expected.Key = v1.DNSFlowKey{
@@ -139,12 +170,13 @@ func populateDNSLogData(t *testing.T, ctx context.Context, client lmaelastic.Cli
 		expected.LatencyStats.LatencyCount += f.LatencyCount
 	}
 
-	resp, err := b.Create(ctx, bapi.ClusterInfo{Cluster: cluster}, batch)
+	resp, err := lb.Create(ctx, bapi.ClusterInfo{Cluster: cluster}, batch)
 	require.NoError(t, err)
 	require.Empty(t, resp.Errors)
 
 	// Refresh the index so that data is readily available for the test. Otherwise, we need to wait
 	// for the refresh interval to occur.
+	index := fmt.Sprintf("tigera_secure_ee_dns.%s.", cluster)
 	err = testutils.RefreshIndex(ctx, client, index)
 	require.NoError(t, err)
 

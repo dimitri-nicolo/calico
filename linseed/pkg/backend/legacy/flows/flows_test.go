@@ -14,10 +14,10 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
+	"github.com/projectcalico/calico/linseed/pkg/config"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
@@ -33,63 +33,32 @@ import (
 var (
 	client lmaelastic.Client
 	cache  bapi.Cache
-	b      bapi.FlowBackend
+	fb     bapi.FlowBackend
+	flb    bapi.FlowLogBackend
 	ctx    context.Context
 )
-
-func cleanupIndices(ctx context.Context, client *elastic.Client) error {
-	indices, err := client.CatIndices().Do(ctx)
-	if err != nil {
-		return err
-	}
-	for _, idx := range indices {
-		if !strings.HasPrefix(idx.Index, "tigera_secure_ee_flows") {
-			// Skip indicies that aren't for flows.
-			continue
-		}
-		_, err = client.DeleteIndex(idx.Index).Do(ctx)
-		if err != nil {
-			return err
-		}
-	}
-	aliases, err := client.CatAliases().Do(ctx)
-	if err != nil {
-		return err
-	}
-	for _, a := range aliases {
-		if !strings.HasPrefix(a.Alias, "tigera_secure_ee_flows") {
-			// Skip aliases that aren't for flows.
-			continue
-		}
-		_, err = client.DeleteIndex(a.Alias).Do(ctx)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
 
 // setupTest runs common logic before each test, and also returns a function to perform teardown
 // after each test.
 func setupTest(t *testing.T) func() {
+	// Hook logrus into testing.T
+	config.ConfigureLogging("DEBUG")
+	logCancel := logutils.RedirectLogrusToTestingT(t)
+
 	// Create an elasticsearch client to use for the test. For this suite, we use a real
 	// elasticsearch instance created via "make run-elastic".
-	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(log.New()))
+	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
 	require.NoError(t, err)
 	client = lmaelastic.NewWithClient(esClient)
 	cache = templates.NewTemplateCache(client, 1, 0)
 
-	// Create a FlowBackend to use.
-	b = flows.NewFlowBackend(client)
+	// Create backends to use.
+	fb = flows.NewFlowBackend(client)
+	flb = flows.NewFlowLogBackend(client, cache)
 
-	// Each test should take less than 5 seconds.
+	// Set a timeout for each test.
 	var cancel context.CancelFunc
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
-
-	// Hook logrus into testing.T
-	logrus.SetLevel(logrus.DebugLevel)
-	logCancel := logutils.RedirectLogrusToTestingT(t)
+	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 
 	// Function contains teardown logic.
 	return func() {
@@ -97,7 +66,7 @@ func setupTest(t *testing.T) func() {
 		cancel()
 
 		// Cleanup any data that might left over from a previous failed run.
-		err = cleanupIndices(context.Background(), esClient)
+		err = testutils.CleanupIndices(context.Background(), esClient, "tigera_secure_ee_flows")
 		require.NoError(t, err)
 
 		// Cancel logging
@@ -109,7 +78,7 @@ func setupTest(t *testing.T) func() {
 func TestListFlows(t *testing.T) {
 	defer setupTest(t)()
 
-	clusterInfo := bapi.ClusterInfo{Cluster: "mycluster"}
+	clusterInfo := bapi.ClusterInfo{Cluster: "cluster"}
 
 	// Put some data into ES so we can query it.
 	bld := NewFlowLogBuilder()
@@ -145,11 +114,11 @@ func TestListFlows(t *testing.T) {
 	// Set time range so that we capture all of the populated flow logs.
 	opts := v1.L3FlowParams{}
 	opts.TimeRange = &lmav1.TimeRange{}
-	opts.TimeRange.From = time.Now().Add(-5 * time.Second)
-	opts.TimeRange.To = time.Now().Add(5 * time.Second)
+	opts.TimeRange.From = time.Now().Add(-5 * time.Minute)
+	opts.TimeRange.To = time.Now().Add(5 * time.Minute)
 
 	// Query for flows. There should be a single flow from the populated data.
-	r, err := b.List(ctx, clusterInfo, opts)
+	r, err := fb.List(ctx, clusterInfo, opts)
 	require.NoError(t, err)
 	require.Len(t, r.Items, 1)
 	require.Nil(t, r.AfterKey)
@@ -164,7 +133,7 @@ func TestMultipleFlows(t *testing.T) {
 	defer setupTest(t)()
 
 	// Both flows use the same cluster information.
-	clusterInfo := bapi.ClusterInfo{Cluster: "mycluster"}
+	clusterInfo := bapi.ClusterInfo{Cluster: "cluster"}
 
 	// Template for flow #1.
 	bld := NewFlowLogBuilder()
@@ -203,11 +172,11 @@ func TestMultipleFlows(t *testing.T) {
 	// Set time range so that we capture all of the populated flow logs.
 	opts := v1.L3FlowParams{}
 	opts.TimeRange = &lmav1.TimeRange{}
-	opts.TimeRange.From = time.Now().Add(-5 * time.Second)
-	opts.TimeRange.To = time.Now().Add(5 * time.Second)
+	opts.TimeRange.From = time.Now().Add(-5 * time.Minute)
+	opts.TimeRange.To = time.Now().Add(5 * time.Minute)
 
 	// Query for flows. There should be two flows from the populated data.
-	r, err := b.List(ctx, clusterInfo, opts)
+	r, err := fb.List(ctx, clusterInfo, opts)
 	require.NoError(t, err)
 	require.Len(t, r.Items, 2)
 	require.Nil(t, r.AfterKey)
@@ -220,7 +189,7 @@ func TestMultipleFlows(t *testing.T) {
 
 func TestFlowFiltering(t *testing.T) {
 	// Use the same cluster information.
-	clusterInfo := bapi.ClusterInfo{Cluster: "mycluster"}
+	clusterInfo := bapi.ClusterInfo{Cluster: "cluster"}
 
 	type testCase struct {
 		Name   string
@@ -249,16 +218,11 @@ func TestFlowFiltering(t *testing.T) {
 		return num
 	}
 
-	// Common time-range for the test.
-	tr := &lmav1.TimeRange{}
-	tr.From = time.Now().Add(-5 * time.Second)
-	tr.To = time.Now().Add(5 * time.Second)
-
 	testcases := []testCase{
 		{
 			Name: "should query a flow based on source type",
 			Params: v1.L3FlowParams{
-				QueryParams: v1.QueryParams{TimeRange: tr},
+				QueryParams: v1.QueryParams{},
 				Source:      &v1.Endpoint{Type: "wep"},
 			},
 			ExpectFlow1: true,
@@ -267,7 +231,7 @@ func TestFlowFiltering(t *testing.T) {
 		{
 			Name: "should query a flow based on destination type",
 			Params: v1.L3FlowParams{
-				QueryParams: v1.QueryParams{TimeRange: tr},
+				QueryParams: v1.QueryParams{},
 				Destination: &v1.Endpoint{Type: "wep"},
 			},
 			ExpectFlow1: true,
@@ -276,7 +240,7 @@ func TestFlowFiltering(t *testing.T) {
 		{
 			Name: "should query a flow based on source namespace",
 			Params: v1.L3FlowParams{
-				QueryParams: v1.QueryParams{TimeRange: tr},
+				QueryParams: v1.QueryParams{},
 				Source:      &v1.Endpoint{Namespace: "default"},
 			},
 			ExpectFlow1: false, // Flow 1 has source namespace tigera-operator
@@ -285,7 +249,7 @@ func TestFlowFiltering(t *testing.T) {
 		{
 			Name: "should query a flow based on destination namespace",
 			Params: v1.L3FlowParams{
-				QueryParams: v1.QueryParams{TimeRange: tr},
+				QueryParams: v1.QueryParams{},
 				Destination: &v1.Endpoint{Namespace: "kube-system"},
 			},
 			ExpectFlow1: false, // Flow 1 has dest namespace openshift-system
@@ -294,7 +258,7 @@ func TestFlowFiltering(t *testing.T) {
 		{
 			Name: "should query a flow based on source port",
 			Params: v1.L3FlowParams{
-				QueryParams: v1.QueryParams{TimeRange: tr},
+				QueryParams: v1.QueryParams{},
 				Source:      &v1.Endpoint{Port: 1010},
 			},
 			ExpectFlow1: true,
@@ -303,7 +267,7 @@ func TestFlowFiltering(t *testing.T) {
 		{
 			Name: "should query a flow based on destination port",
 			Params: v1.L3FlowParams{
-				QueryParams: v1.QueryParams{TimeRange: tr},
+				QueryParams: v1.QueryParams{},
 				Destination: &v1.Endpoint{Port: 1053},
 			},
 			ExpectFlow1: true,
@@ -312,7 +276,7 @@ func TestFlowFiltering(t *testing.T) {
 		{
 			Name: "should query a flow based on source label equal selector",
 			Params: v1.L3FlowParams{
-				QueryParams: v1.QueryParams{TimeRange: tr},
+				QueryParams: v1.QueryParams{},
 				SourceSelectors: []v1.LabelSelector{
 					{
 						Key:      "bread",
@@ -327,7 +291,7 @@ func TestFlowFiltering(t *testing.T) {
 		{
 			Name: "should query a flow based on dest label equal selector",
 			Params: v1.L3FlowParams{
-				QueryParams: v1.QueryParams{TimeRange: tr},
+				QueryParams: v1.QueryParams{},
 				DestinationSelectors: []v1.LabelSelector{
 					{
 						Key:      "dest_iteration",
@@ -343,7 +307,7 @@ func TestFlowFiltering(t *testing.T) {
 		{
 			Name: "should query a flow based on dest label selector matching none",
 			Params: v1.L3FlowParams{
-				QueryParams: v1.QueryParams{TimeRange: tr},
+				QueryParams: v1.QueryParams{},
 				DestinationSelectors: []v1.LabelSelector{
 					{
 						Key:      "cranberry",
@@ -359,7 +323,7 @@ func TestFlowFiltering(t *testing.T) {
 		{
 			Name: "should query a flow based on multiple source labels",
 			Params: v1.L3FlowParams{
-				QueryParams: v1.QueryParams{TimeRange: tr},
+				QueryParams: v1.QueryParams{},
 				SourceSelectors: []v1.LabelSelector{
 					{
 						Key:      "bread",
@@ -379,7 +343,7 @@ func TestFlowFiltering(t *testing.T) {
 		{
 			Name: "should query a flow based on multiple destination values for a single label",
 			Params: v1.L3FlowParams{
-				QueryParams: v1.QueryParams{TimeRange: tr},
+				QueryParams: v1.QueryParams{},
 				DestinationSelectors: []v1.LabelSelector{
 					{
 						Key:      "dest_iteration",
@@ -395,9 +359,9 @@ func TestFlowFiltering(t *testing.T) {
 			NumLogs:     2,
 		},
 		{
-			Name: "should query a flow based on multiple destination values for a single label, not comprehensive",
+			Name: "should query a flow based on multiple destination values for a single label not comprehensive",
 			Params: v1.L3FlowParams{
-				QueryParams: v1.QueryParams{TimeRange: tr},
+				QueryParams: v1.QueryParams{},
 				DestinationSelectors: []v1.LabelSelector{
 					{
 						Key:      "dest_iteration",
@@ -424,6 +388,14 @@ func TestFlowFiltering(t *testing.T) {
 		// to query one or more flows.
 		t.Run(testcase.Name, func(t *testing.T) {
 			defer setupTest(t)()
+
+			// Set the time range for the test. We set this per-test
+			// so that the time range captures the windows that the logs
+			// are created in.
+			tr := &lmav1.TimeRange{}
+			tr.From = time.Now().Add(-5 * time.Minute)
+			tr.To = time.Now().Add(5 * time.Minute)
+			testcase.Params.QueryParams.TimeRange = tr
 
 			numLogs := testcase.NumLogs
 			if numLogs == 0 {
@@ -467,7 +439,7 @@ func TestFlowFiltering(t *testing.T) {
 			exp2 := populateFlowDataN(t, ctx, bld2, client, clusterInfo.Cluster, numLogs)
 
 			// Query for flows.
-			r, err := b.List(ctx, clusterInfo, testcase.Params)
+			r, err := fb.List(ctx, clusterInfo, testcase.Params)
 			require.NoError(t, err)
 			require.Len(t, r.Items, numExpected(testcase))
 			require.Nil(t, r.AfterKey)
@@ -493,11 +465,7 @@ func TestPagination(t *testing.T) {
 	defer setupTest(t)()
 
 	// Both flows use the same cluster information.
-	clusterInfo := bapi.ClusterInfo{Cluster: "mycluster"}
-
-	// Timeout the test after 5 seconds.
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	clusterInfo := bapi.ClusterInfo{Cluster: "cluster"}
 
 	// Template for flow #1.
 	bld := NewFlowLogBuilder()
@@ -536,14 +504,14 @@ func TestPagination(t *testing.T) {
 	// Set time range so that we capture all of the populated flow logs.
 	opts := v1.L3FlowParams{}
 	opts.TimeRange = &lmav1.TimeRange{}
-	opts.TimeRange.From = time.Now().Add(-5 * time.Second)
-	opts.TimeRange.To = time.Now().Add(5 * time.Second)
+	opts.TimeRange.From = time.Now().Add(-5 * time.Minute)
+	opts.TimeRange.To = time.Now().Add(5 * time.Minute)
 
 	// Also set a max results of 1, so that we only get one flow at a time.
 	opts.MaxResults = 1
 
 	// Query for flows. There should be a single flow from the populated data.
-	r, err := b.List(ctx, clusterInfo, opts)
+	r, err := fb.List(ctx, clusterInfo, opts)
 	require.NoError(t, err)
 	require.Len(t, r.Items, 1)
 	require.NotNil(t, r.AfterKey)
@@ -553,7 +521,7 @@ func TestPagination(t *testing.T) {
 	// Now, send another request. This time, passing in the pagination key
 	// returned from the first. We should get the second flow.
 	opts.AfterKey = r.AfterKey
-	r, err = b.List(ctx, clusterInfo, opts)
+	r, err = fb.List(ctx, clusterInfo, opts)
 	require.NoError(t, err)
 	require.Len(t, r.Items, 1)
 	require.NotNil(t, r.AfterKey)
@@ -578,6 +546,10 @@ func TestElasticResponses(t *testing.T) {
 
 	// setupAndTeardown initializes and tears down each test.
 	setupAndTeardown := func(t *testing.T, elasticResponse []byte) func() {
+		// Hook logrus into testing.T
+		config.ConfigureLogging("DEBUG")
+		logCancel := logutils.RedirectLogrusToTestingT(t)
+
 		// Create a mock server to return elastic responses.
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(200)
@@ -591,20 +563,21 @@ func TestElasticResponses(t *testing.T) {
 		client = lmaelastic.NewWithClient(esClient)
 
 		// Create a FlowBackend using the client.
-		b = flows.NewFlowBackend(client)
+		fb = flows.NewFlowBackend(client)
 
 		// Basic parameters for each test.
 		clusterInfo.Cluster = "cluster"
 		opts.TimeRange = &lmav1.TimeRange{}
-		opts.TimeRange.From = time.Now().Add(-5 * time.Second)
-		opts.TimeRange.To = time.Now().Add(5 * time.Second)
+		opts.TimeRange.From = time.Now().Add(-5 * time.Minute)
+		opts.TimeRange.To = time.Now().Add(5 * time.Minute)
 
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
+		ctx, cancel = context.WithTimeout(context.Background(), 1*time.Minute)
 
 		// Teardown goes within this returned func.
 		return func() {
 			cancel()
+			logCancel()
 		}
 	}
 
@@ -656,7 +629,7 @@ func TestElasticResponses(t *testing.T) {
 			defer setupAndTeardown(t, bs)()
 
 			// Query for flows.
-			_, err = b.List(ctx, clusterInfo, opts)
+			_, err = fb.List(ctx, clusterInfo, opts)
 			if testcase.err {
 				require.Error(t, err)
 			} else {
@@ -712,15 +685,27 @@ func populateFlowDataN(t *testing.T, ctx context.Context, b *flowLogBuilder, cli
 		expected.DestinationLabels[0].Values = append(expected.DestinationLabels[0].Values, fmt.Sprintf("%d", i))
 	}
 
-	// Instantiate a FlowBackend.
-	response, err := flows.NewFlowLogBackend(client, cache).Create(ctx, bapi.ClusterInfo{Cluster: cluster}, batch)
+	// Create the batch.
+	response, err := flb.Create(ctx, bapi.ClusterInfo{Cluster: cluster}, batch)
 	require.NoError(t, err)
 	require.Equal(t, []v1.BulkError(nil), response.Errors)
 	require.Equal(t, 0, response.Failed)
 
 	// Refresh the index so that data is readily available for the test. Otherwise, we need to wait
-	// for the refresh interval to occur.
-	index := fmt.Sprintf("tigera_secure_ee_flows.%s.*", cluster)
+	// for the refresh interval to occur. Lookup the actual index name that was created to
+	// perform the refresh.
+	indices, err := client.Backend().CatIndices().Do(ctx)
+	require.NoError(t, err)
+	prefix := fmt.Sprintf("tigera_secure_ee_flows.%s.", cluster)
+	var index string
+	for _, idx := range indices {
+		if strings.HasPrefix(idx.Index, prefix) {
+			// Match
+			index = idx.Index
+			break
+		}
+	}
+	require.NotEqual(t, "", index)
 	err = testutils.RefreshIndex(ctx, client, index)
 	require.NoError(t, err)
 

@@ -7,7 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
+	"github.com/projectcalico/calico/linseed/pkg/config"
 
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/require"
@@ -30,16 +34,16 @@ var (
 // setupTest runs common logic before each test, and also returns a function to perform teardown
 // after each test.
 func setupTest(t *testing.T) func() {
+	// Hook logrus into testing.T
+	config.ConfigureLogging("DEBUG")
+	logCancel := logutils.RedirectLogrusToTestingT(t)
+
 	// Create an elasticsearch client to use for the test. For this suite, we use a real
 	// elasticsearch instance created via "make run-elastic".
-	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"))
+	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
 	require.NoError(t, err)
 	client = lmaelastic.NewWithClient(esClient)
 	cache := templates.NewTemplateCache(client, 1, 0)
-
-	// Cleanup any data that might left over from a previous failed run.
-	_, err = esClient.DeleteIndex("tigera_secure_ee_bgp*").Do(context.Background())
-	require.NoError(t, err)
 
 	// Instantiate a backend.
 	b = bgp.NewBackend(client, cache)
@@ -50,8 +54,11 @@ func setupTest(t *testing.T) func() {
 
 	// Function contains teardown logic.
 	return func() {
+		testutils.CleanupIndices(context.Background(), esClient, "tigera_secure_ee_bgp")
+
 		// Cancel the context
 		cancel()
+		logCancel()
 	}
 }
 
@@ -72,7 +79,7 @@ func TestCreateBGPLog(t *testing.T) {
 	// Create the event in ES.
 	resp, err := b.Create(ctx, clusterInfo, []v1.BGPLog{f})
 	require.NoError(t, err)
-	require.Equal(t, 0, len(resp.Errors))
+	require.Equal(t, []v1.BulkError(nil), resp.Errors)
 	require.Equal(t, 1, resp.Total)
 	require.Equal(t, 0, resp.Failed)
 	require.Equal(t, 1, resp.Succeeded)
