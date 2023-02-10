@@ -23,13 +23,8 @@ import (
 	"context"
 	"fmt"
 
-<<<<<<< HEAD
 	log "github.com/sirupsen/logrus"
 	api "github.com/tigera/api/pkg/apis/projectcalico/v3"
-=======
-	api "github.com/projectcalico/api/pkg/apis/projectcalico/v3"
-	log "github.com/sirupsen/logrus"
->>>>>>> 933bbb9dcb
 
 	"github.com/projectcalico/calico/felix/bpf"
 	"github.com/projectcalico/calico/felix/bpf/counters"
