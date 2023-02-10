@@ -2,20 +2,28 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/name: calico-prometheus-operator
+    app.kubernetes.io/version: 0.62.0
   name: calico-prometheus-operator
   namespace: tigera-prometheus
-  labels:
-    operator: prometheus
 spec:
   replicas: 1
   selector:
     matchLabels:
-      operator: prometheus
+      app.kubernetes.io/component: controller
+      app.kubernetes.io/name: calico-prometheus-operator
   template:
     metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: calico-prometheus-operator
       labels:
-        operator: prometheus
+        app.kubernetes.io/component: controller
+        app.kubernetes.io/name: calico-prometheus-operator
+        app.kubernetes.io/version: 0.62.0
     spec:
+      automountServiceAccountToken: true
       nodeSelector:
         kubernetes.io/os: linux
       serviceAccountName: calico-prometheus-operator
@@ -24,29 +32,29 @@ spec:
       imagePullSecrets:
         - name: {{ $key }}
       {{- end }}
-      
       {{- end }}
       containers:
       - name: calico-prometheus-operator
         image: {{.Values.prometheusOperator.image}}:{{.Values.prometheusOperator.tag}}
         args:
-          - --prometheus-config-reloader={{.Values.prometheusConfigReloader.image}}:{{.Values.prometheusConfigReloader.tag}}
-          - --config-reloader-memory-request=25Mi
-          - --namespaces=tigera-prometheus
           - --cluster-domain=cluster.local
+          - --config-reloader-memory-request=50Mi
+          - --namespaces=tigera-prometheus
+          - --prometheus-config-reloader={{.Values.prometheusConfigReloader.image}}:{{.Values.prometheusConfigReloader.tag}}
         resources:
           requests:
             cpu: 100m
-            memory: 50Mi
+            memory: 100Mi
           limits:
             cpu: 200m
-            memory: 100Mi
+            memory: 200Mi
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
             drop:
             - ALL
           privileged: false
+          readOnlyRootFilesystem: true
           runAsGroup: 10001
           runAsNonRoot: true
           runAsUser: 10001
