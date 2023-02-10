@@ -307,6 +307,7 @@ type Config struct {
 	KubeClientSet kubernetes.Interface
 
 	FeatureDetectOverrides map[string]string
+	FeatureGates           map[string]string
 
 	PacketCapture capture.Config
 

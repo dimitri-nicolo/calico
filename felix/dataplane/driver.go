@@ -475,6 +475,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			IPAMClient: ipamClient,
 
 			FeatureDetectOverrides: configParams.FeatureDetectOverride,
+			FeatureGates:           configParams.FeatureGates,
 
 			RouteSource: configParams.RouteSource,
 
