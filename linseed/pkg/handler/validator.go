@@ -123,7 +123,7 @@ func DecodeAndValidateReqParams[T RequestParams](w http.ResponseWriter, req *htt
 	if content != jsonContent {
 		return reqParams, &httputils.HttpStatusError{
 			Status: http.StatusUnsupportedMediaType,
-			Msg:    "Received a request with content-type that is not supported",
+			Msg:    fmt.Sprintf("Received a request with content-type (%s) that is not supported", content),
 			Err:    errors.New("content-type not supported"),
 		}
 	}

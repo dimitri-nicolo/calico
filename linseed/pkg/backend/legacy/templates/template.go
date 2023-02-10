@@ -84,7 +84,7 @@ func (c *TemplateConfig) indexPatterns() string {
 
 func (c *TemplateConfig) mappings() string {
 	switch c.logsType {
-	case bapi.FlowsLogs:
+	case bapi.FlowLogs:
 		return FlowLogMappings
 	case bapi.DNSLogs:
 		return DNSLogMappings

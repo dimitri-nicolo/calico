@@ -29,7 +29,7 @@ func TestBoostrapTemplate(t *testing.T) {
 	expectedTemplate.Settings["number_of_shards"] = 1
 	expectedTemplate.Settings["number_of_replicas"] = 0
 
-	config := NewTemplateConfig(bapi.FlowsLogs, bapi.ClusterInfo{Cluster: "test"}, WithApplication("test-app"))
+	config := NewTemplateConfig(bapi.FlowLogs, bapi.ClusterInfo{Cluster: "test"}, WithApplication("test-app"))
 	template, err := config.Build()
 	require.NoError(t, err)
 	assertTemplate(t, expectedTemplate, template)

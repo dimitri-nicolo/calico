@@ -90,7 +90,7 @@ func TestL7FlowsHandler(t *testing.T) {
 			n := flowHandler(tt.backendFlows)
 
 			rec := httptest.NewRecorder()
-			req, err := http.NewRequest("POST", n.URL(), bytes.NewBufferString(tt.reqBody))
+			req, err := http.NewRequest("POST", n.APIS()[0].URL, bytes.NewBufferString(tt.reqBody))
 			req.Header.Set("Content-Type", "application/json")
 			require.NoError(t, err)
 

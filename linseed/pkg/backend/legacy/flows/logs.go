@@ -39,7 +39,7 @@ func (b *flowLogBackend) Create(ctx context.Context, i bapi.ClusterInfo, logs []
 		return nil, fmt.Errorf("No cluster ID on request")
 	}
 
-	err := b.templates.InitializeIfNeeded(ctx, bapi.FlowsLogs, i)
+	err := b.templates.InitializeIfNeeded(ctx, bapi.FlowLogs, i)
 	if err != nil {
 		return nil, err
 	}

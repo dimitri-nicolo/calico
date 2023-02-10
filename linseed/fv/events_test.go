@@ -1,5 +1,7 @@
 // Copyright (c) 2023 Tigera, Inc. All rights reserved.
 
+//go:build fvtests
+
 package fv_test
 
 import (
@@ -93,7 +95,7 @@ func TestFV_Events(t *testing.T) {
 		require.Equal(t, bulk.Succeeded, 1, "create event did not succeed")
 
 		// Refresh elasticsearch so that results appear.
-		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_events.cluster.")
+		testutils.RefreshIndex(ctx, lmaClient, "tigera_secure_ee_events*")
 
 		// Read it back.
 		params := v1.EventParams{

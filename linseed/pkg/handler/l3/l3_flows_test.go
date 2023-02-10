@@ -65,7 +65,7 @@ func TestNetworkFlows_Post(t *testing.T) {
 			n := networkFlows(tt.backendL3Flows)
 
 			rec := httptest.NewRecorder()
-			req, err := http.NewRequest("POST", n.URL(), bytes.NewBufferString(tt.reqBody))
+			req, err := http.NewRequest("POST", n.APIS()[0].URL, bytes.NewBufferString(tt.reqBody))
 			req.Header.Set("Content-Type", "application/json")
 			require.NoError(t, err)
 

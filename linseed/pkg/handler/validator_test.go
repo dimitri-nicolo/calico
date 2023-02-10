@@ -63,7 +63,7 @@ func TestDecodeAndValidateReqParams(t *testing.T) {
 		},
 		{
 			"other content-type", req(marshall(params), "application/xml"), &params,
-			true, "Received a request with content-type that is not supported", http.StatusUnsupportedMediaType,
+			true, "Received a request with content-type (application/xml) that is not supported", http.StatusUnsupportedMediaType,
 		},
 
 		{
@@ -180,7 +180,7 @@ func TestValidateBulkParams(t *testing.T) {
 		},
 		{
 			"other content-type", req(encode(params, "\n"), "application/xml"), params,
-			true, "Received a request with content-type that is not supported", http.StatusUnsupportedMediaType,
+			true, "Received a request with content-type (application/xml) that is not supported", http.StatusUnsupportedMediaType,
 		},
 		{
 			"newline in json field value", req("{\"dest_name_aggr\":\"lorem lipsum\n\"}", jsonNewlineContentType),
@@ -213,7 +213,7 @@ func TestValidateBulkParams(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := handler.DecodeAndValidateBulkParams(httptest.NewRecorder(), tt.req)
+			got, err := handler.DecodeAndValidateBulkParams[v1.FlowLog](httptest.NewRecorder(), tt.req)
 			if tt.wantErr {
 				require.Error(t, err)
 

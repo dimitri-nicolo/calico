@@ -84,7 +84,7 @@ func TestBulkIngestion_Serve(t *testing.T) {
 			b := bulkFlowLogs(tt.backendResponse, tt.backendError)
 
 			rec := httptest.NewRecorder()
-			req, err := http.NewRequest("POST", b.URL(), bytes.NewBufferString(tt.reqBody))
+			req, err := http.NewRequest("POST", b.APIS()[0].URL, bytes.NewBufferString(tt.reqBody))
 			req.Header.Set("Content-Type", "application/x-ndjson")
 			require.NoError(t, err)
 

@@ -88,9 +88,10 @@ func TestDNSFlowsHandler(t *testing.T) {
 			defer setupTest(t)()
 
 			n := flowHandler(tt.backendFlows)
+			url := n.APIS()[0].URL
 
 			rec := httptest.NewRecorder()
-			req, err := http.NewRequest("POST", n.URL(), bytes.NewBufferString(tt.reqBody))
+			req, err := http.NewRequest("POST", url, bytes.NewBufferString(tt.reqBody))
 			req.Header.Set("Content-Type", "application/json")
 			require.NoError(t, err)
 

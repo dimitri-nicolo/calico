@@ -75,7 +75,7 @@ type EventsBackend interface {
 type LogsType string
 
 const (
-	FlowsLogs     LogsType = "flows"
+	FlowLogs      LogsType = "flows"
 	DNSLogs       LogsType = "dns"
 	L7Logs        LogsType = "l7"
 	AuditEELogs   LogsType = "audit_ee"

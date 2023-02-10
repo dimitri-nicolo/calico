@@ -43,16 +43,15 @@ func (b *eventsBackend) Create(ctx context.Context, i bapi.ClusterInfo, events [
 		return nil, err
 	}
 
-	// Determine the index to write to. It will be automatically created based on the configured
-	// template if it does not already exist.
-	index := b.writeIndex(i)
-	log.Debugf("Writing events in bulk to index %s", index)
+	// Determine the index to write to using an alias
+	alias := b.writeAlias(i)
+	log.Debugf("Writing events in bulk to index %s", alias)
 
 	// Build a bulk request using the provided events.
 	bulk := b.client.Bulk()
 
 	for _, event := range events {
-		req := elastic.NewBulkIndexRequest().Index(index).Doc(event)
+		req := elastic.NewBulkIndexRequest().Index(alias).Doc(event)
 		bulk.Add(req)
 	}
 
@@ -81,7 +80,7 @@ func (b *eventsBackend) List(ctx context.Context, i api.ClusterInfo, opts v1.Eve
 
 	// Build the query.
 	query := b.client.Search().
-		Index(b.writeIndex(i) + "*").
+		Index(b.index(i)).
 		Size(opts.QueryParams.GetMaxResults()).
 		Query(b.buildQuery(i, opts))
 
@@ -123,12 +122,16 @@ func (b *eventsBackend) buildQuery(i bapi.ClusterInfo, opts v1.EventParams) elas
 	return elastic.NewRangeQuery("time").Gt(start.Unix()).Lte(end.Unix())
 }
 
-func (b *eventsBackend) writeIndex(i bapi.ClusterInfo) string {
+func (b *eventsBackend) index(i bapi.ClusterInfo) string {
 	if i.Tenant != "" {
 		// If a tenant is provided, then we must include it in the index.
-		return fmt.Sprintf("tigera_secure_ee_events.%s.%s.", i.Tenant, i.Cluster)
+		return fmt.Sprintf("tigera_secure_ee_events.%s.%s.*", i.Tenant, i.Cluster)
 	}
 
 	// Otherwise, this is a single-tenant cluster and we only need the cluster.
+	return fmt.Sprintf("tigera_secure_ee_events.%s.*", i.Cluster)
+}
+
+func (b *eventsBackend) writeAlias(i bapi.ClusterInfo) string {
 	return fmt.Sprintf("tigera_secure_ee_events.%s.", i.Cluster)
 }

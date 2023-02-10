@@ -56,7 +56,7 @@ func TestBootstrapTemplate(t *testing.T) {
 	// Check that the template returned has the correct
 	// index_patterns, ILM policy, mappings and shards and replicas
 	application := "app-test"
-	templateConfig := templates.NewTemplateConfig(bapi.FlowsLogs, bapi.ClusterInfo{Cluster: "test"},
+	templateConfig := templates.NewTemplateConfig(bapi.FlowLogs, bapi.ClusterInfo{Cluster: "test"},
 		templates.WithApplication(application))
 
 	_, err := templates.IndexBootstrapper(ctx, client, templateConfig)
@@ -92,7 +92,7 @@ func TestBootstrapTemplate(t *testing.T) {
 func TestBootstrapTemplateMultipleTimes(t *testing.T) {
 	defer setupTest(t)()
 
-	templateConfig := templates.NewTemplateConfig(bapi.FlowsLogs, bapi.ClusterInfo{Cluster: "test"})
+	templateConfig := templates.NewTemplateConfig(bapi.FlowLogs, bapi.ClusterInfo{Cluster: "test"})
 
 	for i := 0; i < 10; i++ {
 		_, err := templates.IndexBootstrapper(ctx, client, templateConfig)
