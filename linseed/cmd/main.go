@@ -16,8 +16,10 @@ import (
 
 	"github.com/projectcalico/calico/linseed/pkg/backend"
 
+	dnsbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/dns"
 	eventbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/events"
 	l7backend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/l7"
+	"github.com/projectcalico/calico/linseed/pkg/handler/dns"
 	"github.com/projectcalico/calico/linseed/pkg/handler/events"
 	l3 "github.com/projectcalico/calico/linseed/pkg/handler/l3"
 	l7 "github.com/projectcalico/calico/linseed/pkg/handler/l7"
@@ -53,6 +55,7 @@ func main() {
 	flowLogsBackend := flows.NewFlowLogBackend(esClient, cache)
 	eventBackend := eventbackend.NewBackend(esClient, cache)
 	flowBackend := flows.NewFlowBackend(esClient)
+	dnsFlowBackend := dnsbackend.NewDNSFlowBackend(esClient)
 	l7FlowBackend := l7backend.NewL7FlowBackend(esClient)
 
 	// Start server
@@ -68,6 +71,9 @@ func main() {
 			// L7 flow and log APIs.
 			l7.NewFlows(l7FlowBackend),
 			&l7.L7Logs{},
+
+			// DNS flow and log APIs.
+			dns.NewFlows(dnsFlowBackend),
 
 			// Events
 			events.NewEvents(eventBackend),
