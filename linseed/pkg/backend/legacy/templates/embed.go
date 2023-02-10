@@ -26,7 +26,7 @@ var AuditMappings string
 //go:embed bgp_mappings.json
 var BGPMappings string
 
-//go:embed events.json
+//go:embed events_mappings.json
 var EventsMappings string
 
 // SettingsLookup will keep track if an index requires special settings, add its settings template to the map.

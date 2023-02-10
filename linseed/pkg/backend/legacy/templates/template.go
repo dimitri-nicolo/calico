@@ -94,6 +94,8 @@ func (c *TemplateConfig) mappings() string {
 		return AuditMappings
 	case bapi.BGPLogs:
 		return BGPMappings
+	case bapi.Events:
+		return EventsMappings
 	default:
 		panic("log type not implemented")
 	}

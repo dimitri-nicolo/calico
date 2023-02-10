@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/olivere/elastic/v7"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 
 	"github.com/projectcalico/calico/libcalico-go/lib/logutils"
@@ -16,7 +17,9 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
 	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/events"
+	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	"github.com/projectcalico/calico/linseed/pkg/backend/testutils"
+	"github.com/projectcalico/calico/linseed/pkg/config"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
@@ -24,33 +27,35 @@ var (
 	client lmaelastic.Client
 	b      bapi.EventsBackend
 	ctx    context.Context
+	cache  bapi.Cache
 )
 
 // setupTest runs common logic before each test, and also returns a function to perform teardown
 // after each test.
 func setupTest(t *testing.T) func() {
+	// Hook logrus into testing.T
+	config.ConfigureLogging("DEBUG")
+	logCancel := logutils.RedirectLogrusToTestingT(t)
+
 	// Create an elasticsearch client to use for the test. For this suite, we use a real
 	// elasticsearch instance created via "make run-elastic".
-	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"))
+	esClient, err := elastic.NewSimpleClient(elastic.SetURL("http://localhost:9200"), elastic.SetInfoLog(logrus.StandardLogger()))
 	require.NoError(t, err)
 	client = lmaelastic.NewWithClient(esClient)
-
-	// Cleanup any data that might left over from a previous failed run.
-	_, err = esClient.DeleteIndex("tigera_secure_ee_events*").Do(context.Background())
-	require.NoError(t, err)
+	cache = templates.NewTemplateCache(client, 1, 0)
 
 	// Instantiate a backend.
-	b = events.NewBackend(client)
+	b = events.NewBackend(client, cache)
 
 	// Each test should take less than 5 seconds.
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 
-	// Configure logging.
-	logCancel := logutils.RedirectLogrusToTestingT(t)
-
 	// Function contains teardown logic.
 	return func() {
+		err = testutils.CleanupIndices(context.Background(), esClient, "tigera_secure_ee_events")
+		require.NoError(t, err)
+
 		cancel()
 		logCancel()
 	}
@@ -105,7 +110,7 @@ func TestCreateEvent(t *testing.T) {
 
 	// List the events and make sure the one we created is present.
 	results, err := b.List(ctx, clusterInfo, v1.EventParams{
-		QueryParams: &v1.QueryParams{
+		QueryParams: v1.QueryParams{
 			TimeRange: &lmav1.TimeRange{
 				From: time.Now().Add(-1 * time.Minute),
 				To:   time.Now().Add(1 * time.Minute),

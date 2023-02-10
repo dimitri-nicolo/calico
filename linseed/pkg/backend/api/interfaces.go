@@ -81,6 +81,7 @@ const (
 	AuditEELogs   LogsType = "audit_ee"
 	AuditKubeLogs LogsType = "audit_kube"
 	BGPLogs       LogsType = "bgp"
+	Events        LogsType = "events"
 )
 
 // Cache is a cache for the templates in order

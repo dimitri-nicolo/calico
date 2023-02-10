@@ -13,47 +13,34 @@ import (
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/backend/api"
 	bapi "github.com/projectcalico/calico/linseed/pkg/backend/api"
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 	lmaelastic "github.com/projectcalico/calico/lma/pkg/elastic"
 )
 
 type eventsBackend struct {
 	client    *elastic.Client
 	lmaclient lmaelastic.Client
+	templates bapi.Cache
 }
 
-func NewBackend(c lmaelastic.Client) bapi.EventsBackend {
+func NewBackend(c lmaelastic.Client, cache bapi.Cache) bapi.EventsBackend {
 	return &eventsBackend{
 		client:    c.Backend(),
 		lmaclient: c,
+		templates: cache,
 	}
-}
-
-func (b *eventsBackend) Initialize(ctx context.Context) error {
-	var err error
-	// Create a template with mappings for all new indices.
-	_, err = b.client.IndexPutTemplate("events_template").
-		BodyString(templates.EventsTemplate).
-		Create(false).
-		Do(ctx)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // Create the given events in elasticsearch.
 func (b *eventsBackend) Create(ctx context.Context, i bapi.ClusterInfo, events []v1.Event) (*v1.BulkResponse, error) {
 	log := bapi.ContextLogger(i)
 
-	// Initialize if we haven't yet.
-	err := b.Initialize(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	if i.Cluster == "" {
 		return nil, fmt.Errorf("no cluster ID on request")
+	}
+
+	err := b.templates.InitializeIfNeeded(ctx, bapi.Events, i)
+	if err != nil {
+		return nil, err
 	}
 
 	// Determine the index to write to. It will be automatically created based on the configured
@@ -125,7 +112,7 @@ func (b *eventsBackend) buildQuery(i bapi.ClusterInfo, opts v1.EventParams) elas
 	// Parse times from the request. We default to a time-range query
 	// if no other search parameters are given.
 	var start, end time.Time
-	if opts.QueryParams != nil && opts.QueryParams.TimeRange != nil {
+	if opts.QueryParams.TimeRange != nil {
 		start = opts.QueryParams.TimeRange.From
 		end = opts.QueryParams.TimeRange.To
 	} else {
