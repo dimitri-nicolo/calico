@@ -48,6 +48,7 @@ var _ = Describe("Elasticsearch events index", func() {
 		cfg = MustLoadConfig()
 	})
 
+	// TODO: Port these tests to Linseed
 	Context("create and update events index", func() {
 		var (
 			esClient *elastic.Client
@@ -269,7 +270,6 @@ var _ = Describe("Elasticsearch events index", func() {
 		It("should not return error for missing ID while adding events", func() {
 			data.Origin = "03_test_lma"
 			By("inserting data into Elasticsearch", func() {
-
 				_, err := elasticClientManaged.PutSecurityEventWithID(ctx, data, "")
 				Expect(err).ShouldNot(HaveOccurred())
 			})
@@ -626,7 +626,6 @@ var _ = Describe("Elasticsearch events index", func() {
 			}, 10*time.Second, 3*time.Second).Should(Equal(220))
 		})
 	})
-
 })
 
 func sptr(s string) *string {

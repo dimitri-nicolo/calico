@@ -3,8 +3,6 @@ package elastic
 
 import (
 	_ "embed"
-
-	"github.com/projectcalico/calico/linseed/pkg/backend/legacy/templates"
 )
 
 const (
@@ -26,11 +24,12 @@ var (
 	//go:embed mappings/benchmark.json
 	benchmarksMapping string
 
-	// New events index mapping starting from Calico Enterprise v3.12.
-	// Security events are written in this new format and a read/write alias is created for this new events index.
-	// See design doc: https://docs.google.com/document/d/1W-qpjI1KWnLYJ0Rc13CkVVdZEIlviKTJ20N-YbF70hA/edit?usp=sharing
-	// In Calico Enterprise v3.14, A new "dismissed" field is added to this new mapping.
-	eventsMapping string = templates.EventsTemplate
+	// TODO CASEY
+	// This has moved to Linseed. Leaving this here for now so the code still builds, but we'll
+	// eventually need to clean this up once all components that write events
+	// have been moved over to Linseed.
+	//go:embed mappings/events.json
+	eventsMapping string
 
 	// Old events index mapping up to Calico Enterprise v3.11.
 	// Security events written to this old events index are readonly from Calico Enterprise v3.12,
