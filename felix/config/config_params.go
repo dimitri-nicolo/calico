@@ -538,7 +538,7 @@ type Config struct {
 	Variant string `config:"string;CalicoEnterprise"`
 
 	// Configures MTU auto-detection.
-	MTUIfacePattern *regexp.Regexp `config:"regexp;^((en|wl|ww|sl|ib)[opsx].*|(eth|wlan|wwan).*)"`
+	MTUIfacePattern *regexp.Regexp `config:"regexp;^((en|wl|ww|sl|ib)[copsx].*|(eth|wlan|wwan).*)"`
 
 	// Configures Transparent proxying modes
 	TPROXYMode             string `config:"oneof(Disabled,Enabled,EnabledAllServices);Disabled"`
