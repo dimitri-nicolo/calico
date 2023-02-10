@@ -13,8 +13,6 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
-
-	"github.com/projectcalico/calico/lma/pkg/httputils"
 )
 
 func NewRequest(c *RESTClient) *Request {
@@ -25,12 +23,13 @@ func NewRequest(c *RESTClient) *Request {
 
 // Request is a helper struct for building an HTTP request.
 type Request struct {
-	client    *RESTClient
-	headers   http.Header
-	verb      string
-	params    any
-	path      string
-	clusterID string
+	client      *RESTClient
+	contentType string
+	verb        string
+	params      any
+	body        any
+	path        string
+	clusterID   string
 }
 
 // Verb sets the verb this request will use.
@@ -45,6 +44,12 @@ func (r *Request) Params(p any) *Request {
 	return r
 }
 
+// BodyJSON sets the body
+func (r *Request) BodyJSON(p any) *Request {
+	r.body = p
+	return r
+}
+
 func (r *Request) Path(p string) *Request {
 	r.path = p
 	return r
@@ -56,23 +61,35 @@ func (r *Request) Cluster(c string) *Request {
 	return r
 }
 
-// Set HTTP headers on the request.
-func (r *Request) SetHeader(key string, values ...string) *Request {
-	if r.headers == nil {
-		r.headers = http.Header{}
-	}
-	r.headers.Del(key)
-	for _, value := range values {
-		r.headers.Add(key, value)
-	}
+func (r *Request) ContentType(c string) *Request {
+	r.contentType = c
 	return r
 }
 
 func (r *Request) Do(ctx context.Context) *Result {
-	request, err := json.Marshal(r.params)
-	if err != nil {
+	if r.body != nil && r.params != nil {
 		return &Result{
-			err: fmt.Errorf("error marshalling request param: %s", err),
+			err: fmt.Errorf("cannot specify body and params on same requst"),
+		}
+	}
+
+	var err error
+	var body []byte
+	if r.params != nil {
+		body, err = json.Marshal(r.params)
+		if err != nil {
+			return &Result{
+				err: fmt.Errorf("error marshalling request param: %s", err),
+			}
+		}
+	}
+	if r.body != nil {
+		var ok bool
+		body, ok = r.body.([]byte)
+		if !ok {
+			return &Result{
+				err: fmt.Errorf("body must be a slice of bytes"),
+			}
 		}
 	}
 
@@ -89,7 +106,7 @@ func (r *Request) Do(ctx context.Context) *Result {
 		ctx,
 		r.verb,
 		url,
-		bytes.NewBuffer(request),
+		bytes.NewBuffer(body),
 	)
 	if err != nil {
 		return &Result{
@@ -98,7 +115,12 @@ func (r *Request) Do(ctx context.Context) *Result {
 	}
 	req.Header.Set("x-cluster-id", r.clusterID)
 	req.Header.Set("x-tenant-id", r.client.tenantID)
-	req.Header.Set("Content-Type", "application/json")
+
+	if r.contentType == "" {
+		req.Header.Set("Content-Type", "application/json")
+	} else {
+		req.Header.Set("Content-Type", r.contentType)
+	}
 
 	// Perform the request.
 	response, err := r.client.client.Do(req)
@@ -140,19 +162,29 @@ func (r *Result) Into(obj any) error {
 		return fmt.Errorf("server returned not found for path %s: %s", r.path, string(r.body))
 	} else if r.statusCode != http.StatusOK {
 		// A structured error returned by the server - parse it.
-		httpError := httputils.HttpStatusError{}
+
+		// TODO: JSON can't unmarshal the error type, so we need to skip that field.
+		// this is a temporary workaround.
+		type httpStatusError struct {
+			// Status http status code of the request error.
+			Status int `json:"Status"`
+
+			// Http status error message.
+			Msg string `json:"Msg"`
+		}
+		httpError := httpStatusError{}
 		err := json.Unmarshal(r.body, &httpError)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal error response: %s", err)
 		}
-		return &httpError
+		return fmt.Errorf("[status %d] %s", httpError.Status, httpError.Msg)
 	}
 
 	// Got an OK response - unmarshal it into the expected type.
 	err := json.Unmarshal(r.body, obj)
 	if err != nil {
 		logrus.WithField("body", string(r.body)).Errorf("Error unmarshalling response")
-		return fmt.Errorf("error unmarshalling response : %s", err)
+		return fmt.Errorf("error unmarshalling response: %s", err)
 	}
 
 	return nil

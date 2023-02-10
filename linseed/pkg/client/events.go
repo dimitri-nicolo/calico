@@ -4,6 +4,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 
 	v1 "github.com/projectcalico/calico/linseed/pkg/apis/v1"
 	"github.com/projectcalico/calico/linseed/pkg/client/rest"
@@ -11,7 +12,8 @@ import (
 
 // EventsInterface has methods related to events.
 type EventsInterface interface {
-	List(ctx context.Context, params v1.Params) (*v1.List[v1.Event], error)
+	List(context.Context, v1.Params) (*v1.List[v1.Event], error)
+	Create(context.Context, []v1.Event) (*v1.BulkResponse, error)
 }
 
 // Events implements EventsInterface.
@@ -38,4 +40,28 @@ func (f *events) List(ctx context.Context, params v1.Params) (*v1.List[v1.Event]
 		return nil, err
 	}
 	return &events, nil
+}
+
+func (f *events) Create(ctx context.Context, events []v1.Event) (*v1.BulkResponse, error) {
+	var err error
+	body := []byte{}
+	for _, e := range events {
+		// Add each item, separated by a newline.
+		out, err := json.Marshal(e)
+		if err != nil {
+			return nil, err
+		}
+		body = append(body, out...)
+		body = append(body, []byte("\n")...)
+	}
+
+	resp := v1.BulkResponse{}
+	err = f.restClient.Post().
+		Path("/api/v1/events/bulk").
+		Cluster(f.clusterID).
+		BodyJSON(body).
+		ContentType("application/x-ndjson").
+		Do(ctx).
+		Into(&resp)
+	return &resp, err
 }

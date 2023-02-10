@@ -31,10 +31,8 @@ func UnpackRoutes(handlers ...handler.Handler) []Route {
 	var routes []Route
 
 	for _, h := range handlers {
-		for k, v := range h.SupportedAPIs() {
-			routes = append(routes, []Route{
-				{k, h.URL(), v},
-			}...)
+		for _, m := range h.APIS() {
+			routes = append(routes, []Route{{m.Method, m.URL, m.Handler}}...)
 		}
 	}
 

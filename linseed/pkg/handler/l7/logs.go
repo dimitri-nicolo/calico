@@ -6,15 +6,21 @@ package l7
 import (
 	"fmt"
 	"net/http"
+
+	"github.com/projectcalico/calico/linseed/pkg/handler"
 )
 
 type L7Logs struct {
 	// TODO: Add storage
 }
 
-func (n L7Logs) SupportedAPIs() map[string]http.Handler {
-	return map[string]http.Handler{
-		"POST": n.Serve(),
+func (n L7Logs) APIS() []handler.API {
+	return []handler.API{
+		{
+			Method:  "POST",
+			URL:     fmt.Sprintf("%s/logs", baseURL),
+			Handler: n.Serve(),
+		},
 	}
 }
 

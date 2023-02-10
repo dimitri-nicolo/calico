@@ -26,14 +26,14 @@ func NewBulkIngestion(backend bapi.FlowLogBackend) *BulkIngestion {
 	}
 }
 
-func (b BulkIngestion) SupportedAPIs() map[string]http.Handler {
-	return map[string]http.Handler{
-		"POST": b.Serve(),
+func (b BulkIngestion) APIS() []handler.API {
+	return []handler.API{
+		{
+			Method:  "POST",
+			URL:     "/bulk/flows/network/logs",
+			Handler: b.Serve(),
+		},
 	}
-}
-
-func (b BulkIngestion) URL() string {
-	return "/bulk/flows/network/logs"
 }
 
 func (b BulkIngestion) Serve() http.HandlerFunc {

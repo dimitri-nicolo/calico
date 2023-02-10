@@ -5,6 +5,7 @@ package handler
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -42,7 +43,7 @@ type RequestParams interface {
 // BulkRequestParams is the collection of request parameters types
 // for bulk requests that will be decoded and validated from an HTTP request
 type BulkRequestParams interface {
-	v1.FlowLog
+	v1.FlowLog | v1.Event
 }
 
 // DecodeAndValidateBulkParams will decode and validate input parameters
@@ -56,7 +57,7 @@ func DecodeAndValidateBulkParams[T BulkRequestParams](w http.ResponseWriter, req
 	if content != newlineJsonContent {
 		return bulkParams, &httputils.HttpStatusError{
 			Status: http.StatusUnsupportedMediaType,
-			Msg:    "Received a request with content-type that is not supported",
+			Msg:    fmt.Sprintf("Received a request with content-type (%s) that is not supported", content),
 			Err:    errors.New("content-type not supported"),
 		}
 	}

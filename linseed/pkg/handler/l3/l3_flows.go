@@ -29,14 +29,14 @@ func NewFlows(backend bapi.FlowBackend) *NetworkFlows {
 	}
 }
 
-func (n NetworkFlows) SupportedAPIs() map[string]http.Handler {
-	return map[string]http.Handler{
-		"POST": n.Serve(),
+func (n NetworkFlows) APIS() []handler.API {
+	return []handler.API{
+		{
+			Method:  "POST",
+			URL:     "/flows/network",
+			Handler: n.Serve(),
+		},
 	}
-}
-
-func (n NetworkFlows) URL() string {
-	return "/flows/network"
 }
 
 func (n NetworkFlows) Serve() http.HandlerFunc {

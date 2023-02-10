@@ -117,6 +117,7 @@ run-image: stop-image run-elastic
 		-v $(REPO_ROOT)/linseed/fv/cert/localhost.key:/certs/https/tls.key \
 		-e LINSEED_ELASTIC_ENDPOINT="http://localhost:9200" \
 		-e LINSEED_ELASTIC_SCHEME="http" \
+		-e LINSEED_LOG_LEVEL="debug" \
 		tigera/$(LINSEED_IMAGE):latest
 	# Wait until Linseed is accepting requests.
 	while ! curl -k https://localhost:8444/health; do echo "Waiting for linseed to come up..."; sleep 2; done

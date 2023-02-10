@@ -16,7 +16,9 @@ import (
 
 	"github.com/projectcalico/calico/linseed/pkg/backend"
 
+	eventbackend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/events"
 	l7backend "github.com/projectcalico/calico/linseed/pkg/backend/legacy/l7"
+	"github.com/projectcalico/calico/linseed/pkg/handler/events"
 	l3 "github.com/projectcalico/calico/linseed/pkg/handler/l3"
 	l7 "github.com/projectcalico/calico/linseed/pkg/handler/l7"
 
@@ -46,7 +48,10 @@ func main() {
 	// TODO: check if we need to add es connection as part of the ready probe
 	esClient := backend.MustGetElasticClient(toElasticConfig(cfg))
 	cache := templates.NewTemplateCache(esClient, cfg.ElasticShards, cfg.ElasticReplicas)
+
+	// Create all of the necessary backends.
 	flowLogsBackend := flows.NewFlowLogBackend(esClient, cache)
+	eventBackend := eventbackend.NewBackend(esClient, cache)
 	flowBackend := flows.NewFlowBackend(esClient)
 	l7FlowBackend := l7backend.NewL7FlowBackend(esClient)
 
@@ -63,6 +68,9 @@ func main() {
 			// L7 flow and log APIs.
 			l7.NewFlows(l7FlowBackend),
 			&l7.L7Logs{},
+
+			// Events
+			events.NewEvents(eventBackend),
 		)...),
 		server.WithRoutes(server.UtilityRoutes()...),
 	)

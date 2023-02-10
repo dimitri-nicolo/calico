@@ -3,20 +3,24 @@
 
 package l3
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/projectcalico/calico/linseed/pkg/handler"
+)
 
 type NetworkLogs struct {
-	//TODO: Add storage
+	// TODO: Add storage
 }
 
-func (n NetworkLogs) SupportedAPIs() map[string]http.Handler {
-	return map[string]http.Handler{
-		"POST": n.Serve(),
+func (n NetworkLogs) APIS() []handler.API {
+	return []handler.API{
+		{
+			Method:  "POST",
+			URL:     "/flows/network/logs",
+			Handler: n.Serve(),
+		},
 	}
-}
-
-func (n NetworkLogs) URL() string {
-	return "/flows/network/logs"
 }
 
 func (n NetworkLogs) Serve() http.HandlerFunc {
