@@ -46,7 +46,7 @@ const (
 )
 
 const (
-	numBaseFelixConfigs = 121
+	numBaseFelixConfigs = 120
 )
 
 // Separate const block to avoid conflicts when merging from OS.
